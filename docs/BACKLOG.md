@@ -35,7 +35,7 @@ embedded storage with zero external services.
 
 ## EPIC 1 — Skeleton & storage (slice 1)
 
-**T1.1 · Config schema + loader**
+**T1.1 · Config schema + loader** ✅ 2026-07-09
 Own YAML schema (NOT upstream's JSON schemas): server block, connections list
 (github, generic-git), index dir, auth token. AC: invalid config fails fast
 with line-level errors; example config in `docs/`.

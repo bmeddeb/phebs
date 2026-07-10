@@ -1,0 +1,31 @@
+# phebs configuration — annotated reference (T1.1).
+# phebs' own schema; not compatible with Sourcebot's config.json
+# (an importer is planned, PORT_MAP §8).
+
+server:
+  # Listen address. Default ":3070".
+  addr: ":3070"
+  # All state lives here: shards at <data_dir>/index, bare repos at
+  # <data_dir>/repos/<host>/<path>.git, embedded DB at <data_dir>/db.
+  # Default "~/.phebs".
+  data_dir: "~/.phebs"
+
+auth:
+  # Single bearer token for the API. Empty/omitted = open API
+  # (serve logs a warning). Hashed at rest once T1.2 lands.
+  api_key: "change-me"
+
+# Sources of repos to sync (Epic 2). Names: lowercase [a-z0-9-], unique.
+connections:
+  # GitHub over PAT: at least one of orgs, users, repos.
+  - name: github-personal
+    type: github
+    token: "ghp_..." # env expansion lands with T2.2
+    users: [bmeddeb]
+    orgs: []
+    repos: [] # "owner/name"
+
+  # A single repo over plain git protocol(s).
+  - name: zoekt-mirror
+    type: git
+    url: https://github.com/sourcegraph/zoekt.git
