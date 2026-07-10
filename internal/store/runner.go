@@ -21,8 +21,8 @@ type Runner struct {
 	HeartbeatEvery time.Duration // default Interval/3
 	StaleAfter     time.Duration // reaper cutoff; default 4x HeartbeatEvery
 	MaxAttempts    int           // executions before a job is failed; default 3
-	Backoff        func(attempts int) time.Duration
-	Who            string // claim owner label; default host-pid
+	Backoff        func(err error, attempts int) time.Duration // default DefaultBackoff (per-class)
+	Who            string                                      // claim owner label; default host-pid
 }
 
 func (r *Runner) defaults() {
@@ -39,7 +39,7 @@ func (r *Runner) defaults() {
 		r.MaxAttempts = 3
 	}
 	if r.Backoff == nil {
-		r.Backoff = func(attempts int) time.Duration { return 30 * time.Second << attempts }
+		r.Backoff = DefaultBackoff
 	}
 	if r.Who == "" {
 		host, _ := os.Hostname()
@@ -58,6 +58,7 @@ func (r *Runner) Run(ctx context.Context) {
 		}
 		if n, err := r.Store.ReapStale(ctx, r.Kind, r.StaleAfter, r.MaxAttempts); err == nil && n > 0 {
 			log.Printf("runner %s: reaped %d stale %s", r.Who, n, r.Kind)
+			jobsTotal.WithLabelValues(string(r.Kind), "reaped").Add(float64(n))
 		}
 		for ctx.Err() == nil {
 			job, err := r.Store.ClaimJob(ctx, r.Kind, r.Who)
@@ -91,12 +92,17 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 	stopHB()
 	switch {
 	case err == nil:
+		recordJob(r.Kind, "done")
 		_ = r.Store.SetJobStatus(ctx, job.ID, StatusDone, "")
 	case job.Attempts+1 >= r.MaxAttempts:
 		log.Printf("runner %s: %s %s failed permanently: %v", r.Who, job.Kind, job.Target, err)
+		recordJob(r.Kind, "failed")
+		recordJobError(r.Kind, err)
 		_ = r.Store.SetJobStatus(ctx, job.ID, StatusFailed, err.Error())
 	default:
-		_ = r.Store.RequeueJob(ctx, job.ID, err.Error(), time.Now().UTC().Add(r.Backoff(job.Attempts+1)))
+		recordJob(r.Kind, "requeued")
+		recordJobError(r.Kind, err)
+		_ = r.Store.RequeueJob(ctx, job.ID, err.Error(), time.Now().UTC().Add(r.Backoff(err, job.Attempts+1)))
 	}
 }
 

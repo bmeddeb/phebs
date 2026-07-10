@@ -194,6 +194,35 @@ func TestShortCircuitAndForce(t *testing.T) {
 	}
 }
 
+// classifyChild: SIGKILL → oom, integrity text → corrupt-shard, else generic.
+func TestClassifyChild(t *testing.T) {
+	killed := exec.Command("sh", "-c", "kill -KILL $$")
+	killErr := killed.Run()
+	if killErr == nil {
+		t.Fatal("expected SIGKILL failure")
+	}
+
+	tests := []struct {
+		name   string
+		raw    error
+		output string
+		want   store.ErrClass
+	}{
+		{"sigkill is oom", killErr, "", store.ClassOOM},
+		{"corrupt output", os.ErrInvalid, "shard file corrupt", store.ClassCorrupt},
+		{"checksum output", os.ErrInvalid, "checksum mismatch in shard", store.ClassCorrupt},
+		{"anything else", os.ErrInvalid, "some other failure", store.ClassGeneric},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := indexer.ClassifyChildForTest(tt.raw, tt.output)
+			if got := store.Classify(err); got != tt.want {
+				t.Errorf("class = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIndexMissingRepo(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

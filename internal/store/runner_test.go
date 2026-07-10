@@ -105,7 +105,7 @@ func TestRunnerRetriesThenFails(t *testing.T) {
 			return errors.New("boom")
 		},
 		Interval: 30 * time.Millisecond, MaxAttempts: 2,
-		Backoff: func(int) time.Duration { return time.Millisecond },
+		Backoff: func(error, int) time.Duration { return time.Millisecond },
 	}
 	if _, err := s.CreateJob(ctx, JobSync, "doomed"); err != nil {
 		t.Fatal(err)

@@ -8,11 +8,17 @@ package indexer
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"syscall"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
@@ -74,11 +80,55 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("index %s: zoekt-git-index: %w\n%s", repo.Name, err, out.String())
+		return classifyChild(fmt.Errorf("index %s: zoekt-git-index: %w\n%s", repo.Name, err, out.String()), err, out.String())
 	}
+	indexDuration.Observe(time.Since(start).Seconds())
+	shardBytes.Set(dirBytes(indexDir))
 	if err := ix.Store.SetRepoIndexed(ctx, repo.Name, head, time.Now().UTC()); err != nil {
 		return fmt.Errorf("index %s: record state: %w", repo.Name, err)
 	}
-	_ = start // duration metric lands with T3.3
 	return nil
 }
+
+// classifyChild tags child-builder failures per the T3.3 taxonomy: SIGKILL
+// means the OOM reaper got it (the whole point of the process boundary);
+// integrity complaints mean a corrupt shard.
+func classifyChild(wrapped, raw error, output string) error {
+	var ee *exec.ExitError
+	if errors.As(raw, &ee) {
+		if ws, ok := ee.Sys().(syscall.WaitStatus); ok && ws.Signaled() && ws.Signal() == syscall.SIGKILL {
+			return store.WithClass(store.ClassOOM, wrapped)
+		}
+	}
+	lower := strings.ToLower(output)
+	if strings.Contains(lower, "corrupt") || strings.Contains(lower, "checksum mismatch") {
+		return store.WithClass(store.ClassCorrupt, wrapped)
+	}
+	return wrapped
+}
+
+func dirBytes(dir string) float64 {
+	var total int64
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0
+	}
+	for _, e := range entries {
+		if fi, err := e.Info(); err == nil && !fi.IsDir() {
+			total += fi.Size()
+		}
+	}
+	return float64(total)
+}
+
+var (
+	indexDuration = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "phebs_index_duration_seconds",
+		Help:    "Wall time of successful zoekt-git-index child runs.",
+		Buckets: prometheus.ExponentialBuckets(0.1, 2, 12), // 100ms .. ~3.4min
+	})
+	shardBytes = promauto.NewGauge(prometheus.GaugeOpts{
+		Name: "phebs_index_shard_bytes",
+		Help: "Total bytes of shard files under $DATA/index.",
+	})
+)

@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
@@ -16,9 +18,30 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, out.String())
+		werr := fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, out.String())
+		if isAuthFailure(out.String()) {
+			return "", store.WithClass(store.ClassAuth, werr)
+		}
+		return "", werr
 	}
 	return strings.TrimSpace(out.String()), nil
+}
+
+// isAuthFailure sniffs git's credential complaints (T3.3 clone-auth class).
+func isAuthFailure(output string) bool {
+	for _, marker := range []string{
+		"Authentication failed",
+		"could not read Username",
+		"could not read Password",
+		"Permission denied",
+		"Invalid username or token",
+		"HTTP Basic: Access denied",
+	} {
+		if strings.Contains(output, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 // Mirror clones cloneURL as a bare mirror into dir, or incrementally fetches

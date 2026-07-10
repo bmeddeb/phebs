@@ -81,7 +81,7 @@ double-execution under 3 concurrent pollers (test).
 config flag (default off, mirroring upstream's isAutoCleanupDisabled
 semantics). AC: status endpoint reflects sync/index state transitions live.
 
-## EPIC 3 — Index (slice 3)
+## EPIC 3 — Index (slice 3) ✅ 2026-07-09 — demoed: sync→index chain to shards via `make dev`
 
 **T3.1 · Indexer (same-SHA child builder)** ✅ 2026-07-09 *(>1GB memory soak deferred to P6 capacity spike)*
 `indexing_job` consumer → child `zoekt-git-index` **built from our own go.mod
@@ -93,7 +93,7 @@ appears after sync completes; memory bounded on a large repo (pick one >1GB).
 Skip when `indexedCommitHash == HEAD`; `--force` path for manual reindex.
 AC: no-op reindex completes <100ms without touching shards.
 
-**T3.3 · Failure taxonomy + metrics**
+**T3.3 · Failure taxonomy + metrics** ✅ 2026-07-09
 Classified errors (clone-auth, index-oom, corrupt-shard), backoff per class;
 Prometheus counters (jobs by state, index duration, shard bytes). AC: /metrics
 exposes counters; forced failure lands in the right class with retry schedule.

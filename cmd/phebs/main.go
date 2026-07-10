@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/indexer"
@@ -95,6 +97,7 @@ func serve(args []string) error {
 	}
 	mux := http.NewServeMux()
 	mux.Handle("/api/", api.New(api.Options{Version: version, APIKey: cfg.Auth.APIKey, Store: st}))
+	mux.Handle("GET /metrics", promhttp.Handler()) // T3.3; unauthenticated like /api/health
 	mux.Handle("/", http.FileServerFS(dist))
 
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
