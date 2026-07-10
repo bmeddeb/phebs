@@ -47,7 +47,7 @@ AC: idempotent apply; store package with typed CRUD for repo + jobs behind an
 interface (keeps the Postgres exit open per PLAN §3); unit tests against
 ephemeral embedded (`surrealkv://`) stores.
 
-**T1.3 · SPIKE: job-claim semantics** — *gates EPIC 2*
+**T1.3 · SPIKE: job-claim semantics** ✅ 2026-07-09 *(optimistic claim won — see PLAN ADR)* — *gates EPIC 2*
 Benchmark optimistic `UPDATE … WHERE status = 'pending'` claim vs
 record-lock pattern under N concurrent pollers; measure double-claim rate and
 latency. AC: decision ADR in PLAN.md + chosen claim statement landed in store

@@ -3,7 +3,9 @@ package store_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os/exec"
+	"sync"
 	"testing"
 	"time"
 
@@ -135,6 +137,57 @@ func TestJobLifecycle(t *testing.T) {
 				t.Errorf("unknown id err = %v, want ErrNotFound", err)
 			}
 		})
+	}
+}
+
+// TestClaimJobConcurrent is the T1.3 AC: N concurrent pollers drain the
+// queue through the shipped ClaimJob with zero double-claims.
+func TestClaimJobConcurrent(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	const jobs, workers = 100, 5
+
+	for i := range jobs {
+		if _, err := s.CreateJob(ctx, store.JobIndex, fmt.Sprintf("repo-%d", i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var mu sync.Mutex
+	claimed := map[string]string{}
+	var wg sync.WaitGroup
+	for w := range workers {
+		wg.Add(1)
+		go func(who string) {
+			defer wg.Done()
+			for {
+				job, err := s.ClaimJob(ctx, store.JobIndex, who)
+				if errors.Is(err, store.ErrNotFound) {
+					return
+				}
+				if err != nil {
+					t.Errorf("%s: %v", who, err)
+					return
+				}
+				if job.Status != store.StatusClaimed || job.ClaimedBy != who {
+					t.Errorf("claimed job = %+v, want status claimed by %s", job, who)
+				}
+				mu.Lock()
+				if prev, dup := claimed[job.ID]; dup {
+					t.Errorf("double claim: %s by %s and %s", job.ID, prev, who)
+				}
+				claimed[job.ID] = who
+				mu.Unlock()
+			}
+		}(fmt.Sprintf("w%d", w))
+	}
+	wg.Wait()
+
+	if len(claimed) != jobs {
+		t.Errorf("claimed %d unique jobs, want %d", len(claimed), jobs)
+	}
+	if left, _ := s.ListJobs(ctx, store.JobIndex, store.StatusPending); len(left) != 0 {
+		t.Errorf("%d jobs still pending", len(left))
 	}
 }
 

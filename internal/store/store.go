@@ -76,6 +76,7 @@ type Store interface {
 
 	CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error)
 	ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) // status "" = all
+	ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) // ErrNotFound when queue drained
 	SetJobStatus(ctx context.Context, id string, status JobStatus, errMsg string) error
 
 	Close(ctx context.Context) error

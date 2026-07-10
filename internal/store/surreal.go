@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"strings"
 	"time"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
@@ -169,6 +170,80 @@ func (s *Surreal) ListJobs(ctx context.Context, kind JobKind, status JobStatus) 
 		jobs[i] = r.toJob(kind)
 	}
 	return jobs, nil
+}
+
+// claimSQL is the T1.3 spike winner: optimistic conditional update, no
+// explicit transaction. The UPDATE re-checks status = 'pending' so a lost
+// race returns empty instead of double-claiming; losing costs one cheap read
+// versus a server-side transaction abort (see PLAN.md 2026-07-09 ADR).
+const claimSQL = `
+LET $cand = (SELECT id, created_at FROM type::table($table) WHERE status = 'pending' ORDER BY created_at LIMIT 1)[0].id;
+RETURN IF $cand != NONE THEN
+    (UPDATE $cand SET status = 'claimed', claimed_by = $who, claimed_at = time::now()
+     WHERE status = 'pending' RETURN AFTER)
+ELSE [] END;`
+
+// ClaimJob atomically claims the oldest pending job of kind for who. It
+// retries internally on lost races and returns ErrNotFound once no pending
+// jobs remain.
+func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) {
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		res, err := surrealdb.Query[[]jobRec](ctx, s.db, claimSQL,
+			map[string]any{"table": string(kind), "who": who})
+		if err != nil {
+			if isRetryable(err) {
+				continue
+			}
+			return nil, err
+		}
+		rows := firstNonEmpty(res)
+		if len(rows) > 0 {
+			j := rows[0].toJob(kind)
+			return &j, nil
+		}
+		n, err := s.countPending(ctx, kind)
+		if err != nil {
+			return nil, err
+		}
+		if n == 0 {
+			return nil, fmt.Errorf("no pending %s: %w", kind, ErrNotFound)
+		}
+	}
+}
+
+// firstNonEmpty returns the first statement result carrying rows; the RETURN
+// statement's position differs with and without BEGIN..COMMIT.
+func firstNonEmpty(res *[]surrealdb.QueryResult[[]jobRec]) []jobRec {
+	for _, r := range *res {
+		if len(r.Result) > 0 {
+			return r.Result
+		}
+	}
+	return nil
+}
+
+func isRetryable(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "conflict") || strings.Contains(msg, "retry")
+}
+
+func (s *Surreal) countPending(ctx context.Context, kind JobKind) (int, error) {
+	res, err := surrealdb.Query[[]struct {
+		Count int `json:"count"`
+	}](ctx, s.db,
+		"SELECT count() AS count FROM type::table($table) WHERE status = 'pending' GROUP ALL",
+		map[string]any{"table": string(kind)})
+	if err != nil {
+		return 0, err
+	}
+	rows := (*res)[0].Result
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	return rows[0].Count, nil
 }
 
 func (s *Surreal) SetJobStatus(ctx context.Context, id string, status JobStatus, errMsg string) error {
