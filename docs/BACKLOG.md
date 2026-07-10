@@ -98,7 +98,7 @@ Classified errors (clone-auth, index-oom, corrupt-shard), backoff per class;
 Prometheus counters (jobs by state, index duration, shard bytes). AC: /metrics
 exposes counters; forced failure lands in the right class with retry schedule.
 
-## EPIC 4 — Search (slice 4)
+## EPIC 4 — Search (slice 4) ✅ 2026-07-09 — demoed: search/stream/source/tree live via `make dev`
 
 **T4.1 · Query pipeline** ✅ 2026-07-09 *(visibility via zoekt's `public:` atom; `archived:`/`fork:`/`public:` → RepoSet)*
 `zoekt/query.Parse` + metadata pre-pass: `archived:` `fork:` `visibility:`
