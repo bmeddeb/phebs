@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Input } from 'baseui/input'
 import { Button } from 'baseui/button'
 import { Tag, KIND as TAG_KIND } from 'baseui/tag'
+import { Checkbox } from 'baseui/checkbox'
 import { Notification, KIND } from 'baseui/notification'
 import type { LanguageSupport } from '@codemirror/language'
 import { streamSearch } from '../api'
@@ -16,6 +17,8 @@ import { FOCUS_SEARCH } from '../App'
 
 type Phase = 'idle' | 'streaming' | 'done' | 'error'
 
+const fileKey = (f: FileResult) => f.repo + '\0' + f.path
+
 export default function SearchPage({ params }: { params: URLSearchParams }) {
   const urlQuery = params.get('q') ?? ''
   const [css] = useStyletron()
@@ -25,8 +28,11 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   const [stats, setStats] = useState<Stats | null>(null)
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState('')
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState(-1)
   const stopRef = useRef<() => void>(() => {})
   const inputRef = useRef<HTMLInputElement>(null)
+  const rowRefs = useRef(new Map<string, HTMLDivElement>())
 
   useEffect(() => {
     const onFocus = () => inputRef.current?.focus()
@@ -37,6 +43,8 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   // the hash is the source of truth: searching = navigating
   useEffect(() => {
     setInput(urlQuery)
+    setSelected(-1)
+    setCollapsed(new Set())
     if (!urlQuery) {
       setPhase('idle')
       setFiles([])
@@ -62,7 +70,67 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     return () => stopRef.current()
   }, [urlQuery])
 
-  const repoCount = new Set(files.map((f) => f.repo)).size
+  // group by repo, preserving arrival order
+  const groups = useMemo(() => {
+    const m = new Map<string, FileResult[]>()
+    for (const f of files) {
+      const list = m.get(f.repo) ?? []
+      list.push(f)
+      m.set(f.repo, list)
+    }
+    return [...m.entries()]
+  }, [files])
+
+  // files reachable by keyboard: those in expanded groups, in render order
+  const visible = useMemo(
+    () => groups.filter(([repo]) => !collapsed.has(repo)).flatMap(([, fs]) => fs),
+    [groups, collapsed],
+  )
+
+  // keyboard navigation: j/k move a file cursor, Enter opens, y copies, o folds
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement
+      const typing = el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key === 'j' || e.key === 'k') {
+        e.preventDefault()
+        setSelected((s) => {
+          const next = e.key === 'j' ? s + 1 : s - 1
+          return Math.max(0, Math.min(visible.length - 1, next))
+        })
+      } else if (e.key === 'Enter' && selected >= 0 && visible[selected]) {
+        const f = visible[selected]
+        navigate('/file', { repo: f.repo, path: f.path, L: String(f.chunks[0]?.ranges[0]?.start_line ?? 1) })
+      } else if (e.key === 'y' && selected >= 0 && visible[selected]) {
+        navigator.clipboard?.writeText(visible[selected].path)
+      } else if (e.key === 'o' && selected >= 0 && visible[selected]) {
+        const repo = visible[selected].repo
+        setCollapsed((c) => {
+          const n = new Set(c)
+          n.has(repo) ? n.delete(repo) : n.add(repo)
+          return n
+        })
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [visible, selected])
+
+  // keep the selected card in view
+  useEffect(() => {
+    if (selected < 0 || !visible[selected]) return
+    rowRefs.current.get(fileKey(visible[selected]))?.scrollIntoView({ block: 'nearest' })
+  }, [selected, visible])
+
+  const toggleGroup = (repo: string) =>
+    setCollapsed((c) => {
+      const n = new Set(c)
+      n.has(repo) ? n.delete(repo) : n.add(repo)
+      return n
+    })
+
+  const repoCount = groups.length
 
   return (
     <div>
@@ -112,16 +180,32 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
 
       <HelperChips input={input} setInput={setInput} inputRef={inputRef} />
 
+      {phase === 'streaming' && (
+        <div
+          className={css({
+            height: '2px',
+            marginTop: '10px',
+            borderRadius: '2px',
+            backgroundImage: `linear-gradient(90deg, transparent 0%, ${tok.accent} 50%, transparent 100%)`,
+            backgroundSize: '50% 100%',
+            backgroundRepeat: 'no-repeat',
+            animationName: { '0%': { backgroundPosition: '-60% 0' }, '100%': { backgroundPosition: '160% 0' } },
+            animationDuration: '1.2s',
+            animationTimingFunction: 'linear',
+            animationIterationCount: 'infinite',
+          })}
+        />
+      )}
+
       {phase !== 'idle' && (
         <div
           className={css({
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '10px',
             fontSize: '13px',
             color: tok.textTertiary,
             marginTop: '12px',
-            marginBottom: '4px',
           })}
         >
           {phase === 'streaming' && (
@@ -144,23 +228,168 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
             {repoCount > 0 ? ` · ${repoCount} ${repoCount === 1 ? 'repository' : 'repositories'}` : ''}
             {phase === 'streaming' ? ' · searching…' : ''}
           </span>
+          <div className={css({ flex: 1 })} />
+          {visible.length > 0 && (
+            <span className={css({ display: 'flex', gap: '10px', color: tok.textTertiary })}>
+              <Kbd>j</Kbd><Kbd>k</Kbd> navigate · <Kbd>↵</Kbd> open · <Kbd>y</Kbd> copy · <Kbd>o</Kbd> fold
+            </span>
+          )}
         </div>
       )}
 
-      <div className={css({ marginTop: '8px' })}>
-        {phase === 'error' && (
-          <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto' } } }}>
-            {error}
-          </Notification>
+      <div className={css({ display: 'flex', gap: '28px', marginTop: '16px', alignItems: 'flex-start' })}>
+        {files.length > 0 && (
+          <FacetRail files={files} query={urlQuery} />
         )}
-        {phase === 'streaming' && files.length === 0 && <SkeletonCards />}
-        {phase === 'done' && files.length === 0 && (
-          <div className={css({ padding: '48px 0', textAlign: 'center', color: tok.textTertiary })}>
-            No results for <span className={css({ fontFamily: FONTS.MONO, color: tok.textPrimary })}>{urlQuery}</span>.
-          </div>
-        )}
-        <ResultList files={files} />
+        <div className={css({ flex: 1, minWidth: 0 })}>
+          {phase === 'error' && (
+            <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
+              {error}
+            </Notification>
+          )}
+          {phase === 'streaming' && files.length === 0 && <SkeletonCards />}
+          {phase === 'done' && files.length === 0 && (
+            <div className={css({ padding: '48px 0', textAlign: 'center', color: tok.textTertiary })}>
+              No results for <span className={css({ fontFamily: FONTS.MONO, color: tok.textPrimary })}>{urlQuery}</span>.
+            </div>
+          )}
+          {groups.map(([repo, repoFiles]) => (
+            <RepoGroup
+              key={repo}
+              repo={repo}
+              files={repoFiles}
+              open={!collapsed.has(repo)}
+              onToggle={() => toggleGroup(repo)}
+              selectedKey={selected >= 0 ? fileKey(visible[selected]!) : ''}
+              registerRef={(k, el) => {
+                if (el) rowRefs.current.set(k, el)
+                else rowRefs.current.delete(k)
+              }}
+            />
+          ))}
+        </div>
       </div>
+    </div>
+  )
+}
+
+function Kbd({ children }: { children: React.ReactNode }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <kbd
+      className={css({
+        fontFamily: FONTS.MONO,
+        fontSize: '11px',
+        padding: '1px 5px',
+        border: `1px solid ${tok.kbdBorder}`,
+        borderRadius: '4px',
+        color: tok.textSecondary,
+      })}
+    >
+      {children}
+    </kbd>
+  )
+}
+
+// FacetRail derives repo and language counts from the streamed files; each
+// facet toggles a repo:/lang: term in the query and re-navigates.
+function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+
+  const repos = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const f of files) m.set(f.repo, (m.get(f.repo) ?? 0) + 1)
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+  }, [files])
+
+  const langs = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const f of files) {
+      const l = (f.language || extLang(f.path)).toLowerCase()
+      m.set(l, (m.get(l) ?? 0) + 1)
+    }
+    return [...m.entries()].sort((a, b) => b[1] - a[1])
+  }, [files])
+
+  const terms = new Set(query.split(/\s+/).filter(Boolean))
+  const toggle = (term: string) => {
+    const next = new Set(terms)
+    next.has(term) ? next.delete(term) : next.add(term)
+    navigate('/search', { q: [...next].join(' ') })
+  }
+  const shortRepo = (r: string) => r.slice(r.lastIndexOf('/') + 1)
+
+  return (
+    <aside className={css({ width: '224px', flexShrink: 0 })}>
+      <FacetSection title="Repositories">
+        {repos.map(([repo, n]) => {
+          const term = `repo:${shortRepo(repo)}`
+          return (
+            <FacetRow key={repo} onClick={() => toggle(term)}>
+              <Checkbox checked={terms.has(term)} onChange={() => toggle(term)} overrides={{ Checkmark: { style: { marginTop: 0, marginBottom: 0 } } }} />
+              <span className={css({ flex: 1, fontSize: '13px', color: tok.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
+                {shortRepo(repo)}
+              </span>
+              <span className={css({ fontSize: '12px', color: tok.textTertiary })}>{n}</span>
+            </FacetRow>
+          )
+        })}
+      </FacetSection>
+      {langs.length > 0 && (
+        <FacetSection title="Languages">
+          {langs.map(([lang, n]) => {
+            const term = `lang:${lang}`
+            const active = terms.has(term)
+            return (
+              <FacetRow key={lang} onClick={() => toggle(term)}>
+                <span className={css({ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: langColor('x.' + lang) })} />
+                <span className={css({ flex: 1, fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? tok.textPrimary : tok.textSecondary })}>
+                  {lang}
+                </span>
+                <span className={css({ fontSize: '12px', color: tok.textTertiary })}>{n}</span>
+              </FacetRow>
+            )
+          })}
+        </FacetSection>
+      )}
+    </aside>
+  )
+}
+
+function FacetSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <div className={css({ marginBottom: '20px' })}>
+      <div className={css({ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: tok.textTertiary, marginBottom: '6px' })}>
+        {title}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function FacetRow({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <div
+      onClick={onClick}
+      className={css({
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        height: '32px',
+        paddingLeft: '4px',
+        paddingRight: '4px',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        ':hover': { backgroundColor: tok.hoverFill },
+      })}
+    >
+      {children}
     </div>
   )
 }
@@ -222,43 +451,29 @@ function countMatches(files: FileResult[]): number {
   return files.reduce((n, f) => n + f.chunks.reduce((m, c) => m + c.ranges.length, 0), 0)
 }
 
-function ResultList({ files }: { files: FileResult[] }) {
-  const byRepo = new Map<string, FileResult[]>()
-  for (const f of files) {
-    const list = byRepo.get(f.repo) ?? []
-    list.push(f)
-    byRepo.set(f.repo, list)
-  }
-  return (
-    <div>
-      {[...byRepo.entries()].map(([repo, repoFiles]) => (
-        <RepoGroup key={repo} repo={repo} files={repoFiles} />
-      ))}
-    </div>
-  )
-}
-
-function RepoGroup({ repo, files }: { repo: string; files: FileResult[] }) {
+function RepoGroup({
+  repo,
+  files,
+  open,
+  onToggle,
+  selectedKey,
+  registerRef,
+}: {
+  repo: string
+  files: FileResult[]
+  open: boolean
+  onToggle: () => void
+  selectedKey: string
+  registerRef: (key: string, el: HTMLDivElement | null) => void
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [open, setOpen] = useState(true)
   const matches = countMatches(files)
   return (
     <section className={css({ marginTop: '28px' })}>
       <button
-        onClick={() => setOpen((o) => !o)}
-        className={css({
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          width: '100%',
-          border: 'none',
-          background: 'none',
-          padding: '0 0 8px 0',
-          cursor: 'pointer',
-          color: tok.textPrimary,
-          textAlign: 'left',
-        })}
+        onClick={onToggle}
+        className={css({ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '0 0 8px 0', cursor: 'pointer', color: tok.textPrimary, textAlign: 'left' })}
       >
         <span className={css({ color: tok.textTertiary, display: 'flex' })}>
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -269,12 +484,23 @@ function RepoGroup({ repo, files }: { repo: string; files: FileResult[] }) {
         </Tag>
         <span className={css({ flex: 1, height: '1px', backgroundColor: tok.innerSep })} />
       </button>
-      {open && files.map((f) => <FileBlock key={f.repo + f.path} file={f} />)}
+      {open &&
+        files.map((f) => (
+          <FileBlock key={f.repo + f.path} file={f} selected={fileKey(f) === selectedKey} registerRef={registerRef} />
+        ))}
     </section>
   )
 }
 
-function FileBlock({ file }: { file: FileResult }) {
+function FileBlock({
+  file,
+  selected,
+  registerRef,
+}: {
+  file: FileResult
+  selected: boolean
+  registerRef: (key: string, el: HTMLDivElement | null) => void
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [lang, setLang] = useState<LanguageSupport | null>(null)
@@ -295,25 +521,17 @@ function FileBlock({ file }: { file: FileResult }) {
 
   return (
     <div
+      ref={(el) => registerRef(fileKey(file), el)}
       className={css({
-        border: `1px solid ${tok.cardBorder}`,
+        border: `1px solid ${selected ? tok.accent : tok.cardBorder}`,
+        boxShadow: selected ? `0 0 0 1px ${tok.accent}` : 'none',
         borderRadius: '8px',
         marginTop: '10px',
         overflow: 'hidden',
         backgroundColor: tok.pageBg,
       })}
     >
-      <div
-        className={css({
-          height: '40px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          paddingLeft: '12px',
-          paddingRight: '10px',
-          borderBottom: `1px solid ${tok.innerSep}`,
-        })}
-      >
+      <div className={css({ height: '40px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', paddingRight: '10px', borderBottom: `1px solid ${tok.innerSep}` })}>
         <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(file.path), flexShrink: 0 })} />
         <a href={fileHref} className={css({ textDecoration: 'none', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>
           <span className={css({ color: tok.textTertiary })}>{dir}</span>
@@ -349,38 +567,14 @@ function ChunkView({
   const tok = usePhebsTokens()
   const lines = chunk.content.replace(/\n$/, '').split('\n')
   return (
-    <div
-      className={css({
-        borderTop: first ? 'none' : `1px solid ${tok.innerSep}`,
-        paddingTop: '4px',
-        paddingBottom: '4px',
-      })}
-    >
+    <div className={css({ borderTop: first ? 'none' : `1px solid ${tok.innerSep}`, paddingTop: '4px', paddingBottom: '4px' })}>
       {lines.map((line, i) => {
         const lineNo = chunk.start_line + i
         return (
-          <div
-            key={i}
-            className={css({
-              display: 'flex',
-              fontFamily: FONTS.MONO,
-              fontSize: '13px',
-              lineHeight: '20px',
-              ':hover': { backgroundColor: tok.hoverFill },
-            })}
-          >
+          <div key={i} className={css({ display: 'flex', fontFamily: FONTS.MONO, fontSize: '13px', lineHeight: '20px', ':hover': { backgroundColor: tok.hoverFill } })}>
             <a
               href={href('/file', { repo: file.repo, path: file.path, L: String(lineNo) })}
-              className={css({
-                flexShrink: 0,
-                width: '48px',
-                paddingRight: '12px',
-                textAlign: 'right',
-                color: tok.gutter,
-                textDecoration: 'none',
-                userSelect: 'none',
-                ':hover': { color: tok.accent },
-              })}
+              className={css({ flexShrink: 0, width: '48px', paddingRight: '12px', textAlign: 'right', color: tok.gutter, textDecoration: 'none', userSelect: 'none', ':hover': { color: tok.accent } })}
             >
               {lineNo}
             </a>
@@ -396,14 +590,7 @@ function ChunkView({
 
 // renderLine tokenizes one source line and overlays match ranges, emitting
 // styled spans (syntax color + match background where they intersect).
-function renderLine(
-  line: string,
-  lineNo: number,
-  ranges: Range[],
-  lang: LanguageSupport | null,
-  mode: 'light' | 'dark',
-  matchBg: string,
-) {
+function renderLine(line: string, lineNo: number, ranges: Range[], lang: LanguageSupport | null, mode: 'light' | 'dark', matchBg: string) {
   const tokens = tokenize(line, lang, mode)
   const matches = matchSpans(line, lineNo, ranges)
   const nodes: React.ReactNode[] = []
@@ -437,7 +624,6 @@ function renderLine(
   return nodes
 }
 
-// matchSpans returns the [from,to) column ranges of matches on lineNo.
 function matchSpans(line: string, lineNo: number, ranges: Range[]): { from: number; to: number }[] {
   const spans: { from: number; to: number }[] = []
   for (const r of ranges) {
@@ -462,16 +648,7 @@ function CopyButton({ text, title }: { text: string; title: string }) {
         setDone(true)
         setTimeout(() => setDone(false), 1200)
       }}
-      className={css({
-        display: 'flex',
-        border: 'none',
-        background: 'none',
-        cursor: 'pointer',
-        color: done ? tok.statusGreen : tok.textTertiary,
-        padding: '4px',
-        borderRadius: '6px',
-        ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill },
-      })}
+      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.statusGreen : tok.textTertiary, padding: '4px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
     >
       {done ? <CheckIcon /> : <CopyIcon />}
     </button>
@@ -507,3 +684,13 @@ function SkeletonCards() {
   )
 }
 
+// extLang maps a file extension to a lang: filter name when the API doesn't
+// supply a language.
+function extLang(path: string): string {
+  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
+  const map: Record<string, string> = {
+    go: 'go', ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
+    py: 'python', md: 'markdown', json: 'json', proto: 'protobuf', sh: 'shell', yaml: 'yaml', yml: 'yaml',
+  }
+  return map[ext] ?? ext ?? 'text'
+}
