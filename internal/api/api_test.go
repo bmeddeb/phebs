@@ -4,12 +4,16 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
 // fakeStore panics on methods the API never touches.
@@ -116,6 +120,58 @@ func TestStreamSearchSSE(t *testing.T) {
 	body := rec.Body.String()
 	if !strings.Contains(body, "event: done") || !strings.Contains(body, `"match_count":0`) {
 		t.Errorf("stream body missing done event with stats:\n%s", body)
+	}
+}
+
+// TestFileServing drives /api/source, /api/folder_contents, and /api/tree
+// against a real mirrored fixture (regression: embedded input structs made
+// huma drop the repo query param).
+func TestFileServing(t *testing.T) {
+	origin := t.TempDir()
+	run := func(args ...string) {
+		full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-C", origin}, args...)
+		if out, err := exec.Command("git", full...).CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	run("init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "hello.txt"), []byte("hi there\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "x")
+
+	dataDir := t.TempDir()
+	if err := phebssync.Mirror(context.Background(), "file://"+origin,
+		phebssync.RepoDir(dataDir, "github.com/foo/bar")); err != nil {
+		t.Fatal(err)
+	}
+	h := api.New(api.Options{Version: "t", Store: &fakeStore{}, DataDir: dataDir})
+
+	get := func(path string) (int, string) {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code, rec.Body.String()
+	}
+
+	if code, body := get("/api/source?repo=github.com/foo/bar&path=hello.txt"); code != 200 ||
+		!strings.Contains(body, `"content":"hi there\n"`) || !strings.Contains(body, `"encoding":"utf8"`) {
+		t.Errorf("source = %d %s", code, body)
+	}
+	if code, body := get("/api/folder_contents?repo=github.com/foo/bar"); code != 200 ||
+		!strings.Contains(body, `"name":"hello.txt"`) {
+		t.Errorf("folder_contents = %d %s", code, body)
+	}
+	if code, body := get("/api/tree?repo=github.com/foo/bar"); code != 200 ||
+		!strings.Contains(body, `"paths":["hello.txt"]`) {
+		t.Errorf("tree = %d %s", code, body)
+	}
+	if code, _ := get("/api/source?repo=github.com/foo/bar&path=../../etc/passwd"); code != 400 {
+		t.Errorf("traversal path status = %d, want 400", code)
+	}
+	if code, _ := get("/api/source?repo=github.com/no/pe&path=x"); code != 404 {
+		t.Errorf("unknown repo status = %d, want 404", code)
 	}
 }
 

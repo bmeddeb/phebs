@@ -133,8 +133,10 @@ func New(opts Options) http.Handler {
 		Repo string `query:"repo" required:"true" example:"github.com/foo/bar"`
 		Ref  string `query:"ref" doc:"commit-ish; default HEAD"`
 	}
+	// no struct embedding: huma resolves query params on flat fields only
 	type sourceIn struct {
-		repoRefIn
+		Repo string `query:"repo" required:"true" example:"github.com/foo/bar"`
+		Ref  string `query:"ref" doc:"commit-ish; default HEAD"`
 		Path string `query:"path" required:"true"`
 	}
 	type sourceOut struct {
@@ -163,7 +165,8 @@ func New(opts Options) http.Handler {
 	})
 
 	type folderIn struct {
-		repoRefIn
+		Repo string `query:"repo" required:"true" example:"github.com/foo/bar"`
+		Ref  string `query:"ref" doc:"commit-ish; default HEAD"`
 		Path string `query:"path" doc:"directory; default repo root"`
 	}
 	type folderOut struct {
