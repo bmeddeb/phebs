@@ -122,7 +122,7 @@ traversal fuzz test.
 
 ## EPIC 5 — UI (slice 5)
 
-**T5.1 · Vite + React + TS scaffold, embedded**
+**T5.1 · Vite + React + TS scaffold, embedded** ✅ 2026-07-09 *(build-tag embed: no committed artifacts, `go build` green without npm)*
 `go:embed` production build; dev proxy to huma. AC: single binary serves UI.
 
 **T5.2 · Search page**

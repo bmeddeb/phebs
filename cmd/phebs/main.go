@@ -7,7 +7,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -93,7 +92,7 @@ func serve(args []string) error {
 		go ixRunner.Run(ctx)
 	}
 
-	dist, err := fs.Sub(ui.Dist, "dist")
+	dist, err := ui.FS()
 	if err != nil {
 		return err
 	}

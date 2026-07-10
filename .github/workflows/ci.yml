@@ -36,3 +36,9 @@ jobs:
           cache-dependency-path: ui/package-lock.json
       - run: npm ci
       - run: npm run build
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Verify embedded-UI build
+        run: go build -tags ui ./...
+        working-directory: .
