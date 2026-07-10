@@ -70,6 +70,11 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return fmt.Errorf("index %s: %w", repo.Name, err)
 	}
+	// zoekt.name makes shard repo names equal store names, which the T4.1
+	// RepoSet pre-pass depends on; the child reads it from the repo config
+	if _, err := sync.GitConfig(ctx, dir, "zoekt.name", repo.Name); err != nil {
+		return fmt.Errorf("index %s: set zoekt.name: %w", repo.Name, err)
+	}
 	args := []string{"-index", indexDir}
 	if force {
 		// defeat the child's own shard-freshness check too

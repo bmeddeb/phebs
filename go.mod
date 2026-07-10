@@ -5,6 +5,7 @@ go 1.26
 require (
 	github.com/danielgtaylor/huma/v2 v2.38.0
 	github.com/prometheus/client_golang v1.23.2
+	github.com/sourcegraph/zoekt v0.0.0-20260709064101-33f1f18af292
 	github.com/surrealdb/surrealdb.go v1.5.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -59,7 +60,6 @@ require (
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/sourcegraph/go-ctags v0.0.0-20250729094530-349a251d78d8 // indirect
-	github.com/sourcegraph/zoekt v0.0.0-20260709064101-33f1f18af292 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/wasilibs/go-re2 v1.10.0 // indirect
 	github.com/wasilibs/wazero-helpers v0.0.0-20240620070341-3dff1577cd52 // indirect

@@ -100,7 +100,7 @@ exposes counters; forced failure lands in the right class with retry schedule.
 
 ## EPIC 4 — Search (slice 4)
 
-**T4.1 · Query pipeline**
+**T4.1 · Query pipeline** ✅ 2026-07-09 *(visibility via zoekt's `public:` atom; `archived:`/`fork:`/`public:` → RepoSet)*
 `zoekt/query.Parse` + metadata pre-pass: `archived:` `fork:` `visibility:`
 compiled to `query.RepoSet` from DB. AC: table-driven tests mapping input
 strings → expected zoekt query trees.

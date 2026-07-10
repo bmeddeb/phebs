@@ -59,6 +59,11 @@ func Mirror(ctx context.Context, cloneURL, dir string, gitCfg ...string) error {
 	return err
 }
 
+// GitConfig sets a config key in a repo (used for zoekt.name).
+func GitConfig(ctx context.Context, dir, key, value string) (string, error) {
+	return runGit(ctx, dir, "config", key, value)
+}
+
 // DefaultBranch reads the symref target of HEAD in a bare repo.
 func DefaultBranch(ctx context.Context, dir string) (string, error) {
 	return runGit(ctx, dir, "symbolic-ref", "--short", "HEAD")
