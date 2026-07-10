@@ -5,8 +5,11 @@ import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { EditorState, type Extension } from '@codemirror/state'
 import { EditorView, lineNumbers, Decoration } from '@codemirror/view'
-import type { LanguageSupport } from '@codemirror/language'
+import { syntaxHighlighting } from '@codemirror/language'
 import { fetchSource } from '../api'
+import { languageFor } from '../lang'
+import { highlightStyle } from '../highlight'
+import { usePhebsTokens, useMode } from '../theme'
 
 // T5.3: CodeMirror 6 read-only viewer with line anchors (?L=42 deep links)
 // and language by extension.
@@ -56,8 +59,6 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   )
 }
 
-const focusLineDeco = Decoration.line({ attributes: { style: 'background: #FFEA8A66' } })
-
 function CodeViewer({
   content,
   path,
@@ -67,7 +68,9 @@ function CodeViewer({
   path: string
   focusLine: number
 }) {
-  const [css, theme] = useStyletron()
+  const [css] = useStyletron()
+  const { mode } = useMode()
+  const tok = usePhebsTokens()
   const host = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,25 +78,36 @@ function CodeViewer({
     let cancelled = false
     let view: EditorView | undefined
 
+    // deep-link line: blue background + 2px accent left border (design handoff)
+    const focusDeco = Decoration.line({
+      attributes: { style: `background:${tok.selectedLineBg}; box-shadow: inset 2px 0 0 ${tok.accent}` },
+    })
+
     languageFor(path).then((lang) => {
       if (cancelled || !host.current) return
       const extensions: Extension[] = [
         lineNumbers(),
         EditorView.editable.of(false),
         EditorState.readOnly.of(true),
-        EditorView.theme({
-          '&': { fontSize: '13px' },
-          '.cm-gutters': { backgroundColor: 'transparent', border: 'none' },
-        }),
+        syntaxHighlighting(highlightStyle(mode)),
+        EditorView.theme(
+          {
+            '&': { fontSize: '13px', color: tok.plainCode, backgroundColor: tok.pageBg },
+            '.cm-content': { fontFamily: 'ui-monospace, "SF Mono", Menlo, Monaco, monospace' },
+            '.cm-gutters': { backgroundColor: 'transparent', border: 'none', color: tok.gutter },
+            '.cm-lineNumbers .cm-gutterElement': { paddingRight: '12px', minWidth: '44px' },
+            '.cm-cursor': { display: 'none' },
+          },
+          { dark: mode === 'dark' },
+        ),
       ]
       if (lang) extensions.push(lang)
 
-      // deep link (?L=42): static line decoration + scroll on mount
       const probe = EditorState.create({ doc: content })
       let anchor = -1
       if (focusLine > 0 && focusLine <= probe.doc.lines) {
         anchor = probe.doc.line(focusLine).from
-        extensions.push(EditorView.decorations.of(Decoration.set([focusLineDeco.range(anchor)])))
+        extensions.push(EditorView.decorations.of(Decoration.set([focusDeco.range(anchor)])))
       }
 
       view = new EditorView({
@@ -109,43 +123,16 @@ function CodeViewer({
       cancelled = true
       view?.destroy()
     }
-  }, [content, path, focusLine])
+  }, [content, path, focusLine, mode, tok])
 
   return (
     <div
       ref={host}
       className={css({
-        border: `1px solid ${theme.colors.borderOpaque}`,
-        borderRadius: theme.borders.radius300,
+        border: `1px solid ${tok.cardBorder}`,
+        borderRadius: '8px',
         overflow: 'hidden',
       })}
     />
   )
-}
-
-// languageFor lazily loads the CM6 language pack for the file extension so
-// language bundles stay out of the initial chunk.
-async function languageFor(path: string): Promise<LanguageSupport | null> {
-  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
-  switch (ext) {
-    case 'go':
-      return (await import('@codemirror/lang-go')).go()
-    case 'js':
-    case 'jsx':
-    case 'ts':
-    case 'tsx':
-      return (await import('@codemirror/lang-javascript')).javascript({
-        jsx: ext.endsWith('x'),
-        typescript: ext.startsWith('t'),
-      })
-    case 'py':
-      return (await import('@codemirror/lang-python')).python()
-    case 'md':
-    case 'markdown':
-      return (await import('@codemirror/lang-markdown')).markdown()
-    case 'json':
-      return (await import('@codemirror/lang-json')).json()
-    default:
-      return null
-  }
 }
