@@ -129,7 +129,7 @@ traversal fuzz test.
 Query box + SSE-driven result list (repo/file grouping, match counts).
 AC: streaming renders incrementally; empty/error states.
 
-**T5.3 · File viewer**
+**T5.3 · File viewer** ✅ 2026-07-09
 CodeMirror 6 read-only, match decorations, line anchors (`#L42`), language
 by extension. AC: deep link to file+line from a search result works.
 
