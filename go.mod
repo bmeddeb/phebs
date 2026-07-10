@@ -3,6 +3,7 @@ module github.com/bmeddeb/phebs
 go 1.26
 
 require (
+	github.com/danielgtaylor/huma/v2 v2.38.0
 	github.com/surrealdb/surrealdb.go v1.5.1
 	gopkg.in/yaml.v3 v3.0.1
 )

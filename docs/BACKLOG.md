@@ -33,7 +33,7 @@ Makefile/justfile targets (`dev`, `test`, `lint`). Embedded SurrealDB
 only for server-mode testing. AC: `make dev` boots the phebs skeleton on
 embedded storage with zero external services.
 
-## EPIC 1 — Skeleton & storage (slice 1)
+## EPIC 1 — Skeleton & storage (slice 1) ✅ 2026-07-09 — demoed via `make dev`
 
 **T1.1 · Config schema + loader** ✅ 2026-07-09
 Own YAML schema (NOT upstream's JSON schemas): server block, connections list
@@ -53,7 +53,7 @@ record-lock pattern under N concurrent pollers; measure double-claim rate and
 latency. AC: decision ADR in PLAN.md + chosen claim statement landed in store
 layer with a concurrency test proving zero double-claims.
 
-**T1.4 · huma skeleton**
+**T1.4 · huma skeleton** ✅ 2026-07-09
 `/api/health`, `/api/version`, `/api/openapi.json`, `GET /api/repos` (read
 from store). Bearer-token middleware (single API key). AC: OpenAPI doc
 renders; endpoints covered by httptest.
