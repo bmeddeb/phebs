@@ -1,0 +1,16 @@
+# Server-mode SurrealDB for testing only. `make dev` uses embedded surrealkv
+# (PLAN §1); this file exists per BACKLOG T0.5 for server-mode experiments.
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:v3
+    # ponytail: root because the image's non-root user can't write the named
+    # volume; local test DB only — swap for a chown init step if it ever matters
+    user: "0:0"
+    command: start --user root --pass root surrealkv:/data/phebs
+    ports:
+      - "8000:8000"
+    volumes:
+      - surreal-data:/data
+
+volumes:
+  surreal-data:
