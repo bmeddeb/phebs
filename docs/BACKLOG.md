@@ -10,24 +10,24 @@ Conventions: `T<epic>.<n>` · deps listed only where they cross epics or gate.
 
 ## EPIC 0 — Bootstrap
 
-**T0.1 · Repo home + module path** — *decision ticket*
+**T0.1 · Repo home + module path** ✅ 2026-07-09 — *decision ticket; remote push deferred (local-only for now)*
 Pick GitHub home (`phebs` handle is squatted; options: under your user, or org
 `phebs-dev` / `getphebs`). AC: repo exists, README.md skeleton pushed, module
 path fixed in PLAN.md ADR.
 
-**T0.2 · License** — *decision ticket*
+**T0.2 · License** ✅ 2026-07-09 — *decision ticket*
 Recommend Apache-2.0 (patent grant, matches zoekt ecosystem); MIT acceptable.
 AC: LICENSE + copyright line committed; README license section unblocked.
 
-**T0.3 · Scaffold**
+**T0.3 · Scaffold** ✅ 2026-07-09
 `go.mod` (latest stable Go, 1.26 line), layout: `cmd/phebs/`,
 `internal/{config,store,sync,indexer,search,api}`, `ui/` (Vite app),
 `go:embed` stub for UI. AC: `go build ./...` green on empty skeleton.
 
-**T0.4 · CI**
+**T0.4 · CI** ✅ 2026-07-09 *(workflow committed; first real run needs the remote)*
 golangci-lint + `go test ./...` + UI build job. AC: PR gate green on main.
 
-**T0.5 · Dev environment**
+**T0.5 · Dev environment** ✅ 2026-07-09
 Makefile/justfile targets (`dev`, `test`, `lint`). Embedded SurrealDB
 (`surrealkv://`) is the dev default per PLAN §1; optional compose file exists
 only for server-mode testing. AC: `make dev` boots the phebs skeleton on
