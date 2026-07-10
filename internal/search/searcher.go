@@ -105,6 +105,34 @@ func (s *Searcher) Search(ctx context.Context, raw string, opts Options) (*Resul
 	return toResult(res), nil
 }
 
+// Stream compiles raw and forwards each zoekt result batch to sink as it
+// arrives, returning the aggregate stats.
+//
+// Flush cadence (T4.3 decision): per-chunk — every shard-level batch zoekt
+// emits goes straight out, no timers. zoekt already batches internally, so
+// event volume is bounded by shard count, and latency-to-first-result stays
+// minimal. Revisit with time-batching only if fleet-scale fan-in (P6) makes
+// event volume a problem.
+func (s *Searcher) Stream(ctx context.Context, raw string, opts Options, sink func(*Result)) (*Stats, error) {
+	q, err := Compile(ctx, s.st, raw)
+	if err != nil {
+		return nil, err
+	}
+	var agg Stats
+	err = s.z.StreamSearch(ctx, q, opts.zoekt(), zoekt.SenderFunc(func(r *zoekt.SearchResult) {
+		agg.MatchCount += r.MatchCount
+		agg.FileCount += r.FileCount
+		agg.DurationMS += r.Duration.Milliseconds()
+		if len(r.Files) > 0 {
+			sink(toResult(r))
+		}
+	}))
+	if err != nil {
+		return nil, fmt.Errorf("stream search: %w", err)
+	}
+	return &agg, nil
+}
+
 func toResult(res *zoekt.SearchResult) *Result {
 	out := &Result{
 		Files: make([]FileResult, 0, len(res.Files)),

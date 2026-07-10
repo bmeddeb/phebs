@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -91,6 +92,30 @@ func TestAPI(t *testing.T) {
 				t.Errorf("%s: body %q missing %q", tt.path, rec.Body, tt.wantBody)
 			}
 		})
+	}
+}
+
+// SSE wiring: an empty index streams no results but must emit a `done`
+// event with stats over text/event-stream. (Progressive multi-event behavior
+// is covered by search.TestStream and the epic demo.)
+func TestStreamSearchSSE(t *testing.T) {
+	searcher, err := search.Open(t.TempDir(), &fakeStore{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+
+	h := api.New(api.Options{Version: "t", Store: &fakeStore{}, Search: searcher})
+	req := httptest.NewRequest(http.MethodGet, "/api/stream_search?q=needle", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+
+	if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/event-stream") {
+		t.Fatalf("Content-Type = %q, want text/event-stream", ct)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "event: done") || !strings.Contains(body, `"match_count":0`) {
+		t.Errorf("stream body missing done event with stats:\n%s", body)
 	}
 }
 

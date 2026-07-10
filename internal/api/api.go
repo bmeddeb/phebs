@@ -10,6 +10,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
+	"github.com/danielgtaylor/huma/v2/sse"
 
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -93,6 +94,33 @@ func New(opts Options) http.Handler {
 			return nil, huma.Error500InternalServerError("search", err)
 		}
 		return &searchOut{Body: res}, nil
+	})
+
+	type streamErr struct {
+		Message string `json:"message"`
+	}
+	sse.Register(api, huma.Operation{
+		OperationID: "stream-search",
+		Method:      http.MethodGet,
+		Path:        "/api/stream_search",
+		Summary:     "Streamed search (SSE): `results` events per shard batch, then `done` with aggregate stats",
+	}, map[string]any{
+		"results": &search.Result{},
+		"done":    &search.Stats{},
+		"error":   &streamErr{},
+	}, func(ctx context.Context, in *searchIn, send sse.Sender) {
+		if opts.Search == nil {
+			_ = send(sse.Message{Data: &streamErr{Message: "search unavailable"}})
+			return
+		}
+		stats, err := opts.Search.Stream(ctx, in.Q,
+			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines},
+			func(r *search.Result) { _ = send(sse.Message{Data: r}) })
+		if err != nil {
+			_ = send(sse.Message{Data: &streamErr{Message: err.Error()}})
+			return
+		}
+		_ = send(sse.Message{Data: stats})
 	})
 
 	type reindexIn struct {

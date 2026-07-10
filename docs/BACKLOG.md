@@ -110,7 +110,7 @@ strings → expected zoekt query trees.
 options (maxMatches, context lines). AC: golden-file tests over a fixture
 repo; p50 latency budget recorded in PLAN.md.
 
-**T4.3 · `/api/stream_search` (SSE)**
+**T4.3 · `/api/stream_search` (SSE)** ✅ 2026-07-09 *(flush cadence: per shard batch — documented in search.Stream)*
 Streamed via `Searcher.StreamSearch`; decide + document flush cadence
 inline (per-chunk vs time-batched). AC: curl shows progressive events;
 cancellation propagates (client disconnect stops the search).

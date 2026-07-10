@@ -168,6 +168,35 @@ func TestSearchGolden(t *testing.T) {
 	}
 }
 
+// T4.3: streaming forwards batches progressively and aggregates stats;
+// a cancelled context stops the search.
+func TestStream(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	s := corpus(t, ctx)
+
+	var batches []*search.Result
+	stats, err := s.Stream(ctx, "phebsNeedle", search.Options{}, func(r *search.Result) {
+		batches = append(batches, r)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(batches) == 0 {
+		t.Fatal("no batches streamed")
+	}
+	if stats.MatchCount != 3 {
+		t.Errorf("aggregate MatchCount = %d, want 3", stats.MatchCount)
+	}
+
+	// cancellation propagates
+	dead, kill := context.WithCancel(ctx)
+	kill()
+	if _, err := s.Stream(dead, "phebsNeedle", search.Options{}, func(*search.Result) {}); err == nil {
+		t.Error("cancelled context: want error, got nil")
+	}
+}
+
 // T4.2 AC: p50 latency on the fixture corpus, recorded in PLAN.md.
 func TestSearchLatencyP50(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
