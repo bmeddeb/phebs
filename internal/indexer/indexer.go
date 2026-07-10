@@ -25,15 +25,20 @@ import (
 )
 
 // FindBinary locates zoekt-git-index: env override, next to our executable,
-// then PATH. `make dev` builds it and sets the env var.
+// ./bin beside the executable (the `make build` layout), then PATH.
 func FindBinary() (string, error) {
 	if p := os.Getenv("PHEBS_ZOEKT_GIT_INDEX"); p != "" {
 		return p, nil
 	}
 	if exe, err := os.Executable(); err == nil {
-		p := filepath.Join(filepath.Dir(exe), "zoekt-git-index")
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
+		dir := filepath.Dir(exe)
+		for _, p := range []string{
+			filepath.Join(dir, "zoekt-git-index"),
+			filepath.Join(dir, "bin", "zoekt-git-index"),
+		} {
+			if _, err := os.Stat(p); err == nil {
+				return p, nil
+			}
 		}
 	}
 	return exec.LookPath("zoekt-git-index")

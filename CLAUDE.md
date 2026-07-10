@@ -11,6 +11,8 @@ CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
 - `docs/PORT_MAP.md` — upstream analysis, scope, license verdict, EE counter-plan.
 - `docs/BACKLOG.md` — epics + PR-sized tickets. Work proceeds in ticket order;
   branch names carry ticket IDs (e.g. `t1.3-job-claim-spike`).
+- `docs/MANUAL.md` — the user manual. Behavior changes (config, API, UI,
+  operations) update it in the same PR.
 
 ## Stack
 

@@ -84,6 +84,14 @@ the source HEAD and re-syncs/re-indexes on movement; mirror follows the
 source's checked-out branch; `sync.poll_interval` tunes end-to-end latency.
 AC: commit in a watched repo becomes searchable within seconds (measured
 ~1.4s at 1s cadence); watcher enqueues exactly one deduped job per HEAD move.
+
+**TD.1 · User manual + README refresh** ✅ 2026-07-10 — *added post-P1*
+`docs/MANUAL.md`: install, config reference, connections (GitHub/git/local/
+watch), search syntax, UI, API, operations, troubleshooting, development.
+README brought to P1 reality (quick start, status, Apache-2.0). Doc rule
+added to CLAUDE.md: behavior changes update the manual in the same PR.
+Drive-by fixes from verifying the quickstart: `make build` binary now finds
+`bin/zoekt-git-index`; UI page title.
 `GET /api/repo-status`; orphaned repos (no connection) flagged; cleanup behind
 config flag (default off, mirroring upstream's isAutoCleanupDisabled
 semantics). AC: status endpoint reflects sync/index state transitions live.

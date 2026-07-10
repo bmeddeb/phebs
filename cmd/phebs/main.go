@@ -90,7 +90,7 @@ func serve(args []string) error {
 
 	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
 	if bin, err := indexer.FindBinary(); err != nil {
-		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make dev builds it)")
+		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make build provides it; or set PHEBS_ZOEKT_GIT_INDEX)")
 	} else {
 		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
