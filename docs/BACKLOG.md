@@ -60,7 +60,7 @@ renders; endpoints covered by httptest.
 
 ## EPIC 2 — Sync (slice 2)
 
-**T2.1 · Generic-git adapter**
+**T2.1 · Generic-git adapter** ✅ 2026-07-09
 Connection → repo rows; clone/fetch **bare** repos via exec git into
 deterministic disk layout (`$DATA/repos/<host>/<path>.git`). AC: add a
 connection, repos appear in DB and on disk; refetch is incremental.
