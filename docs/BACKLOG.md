@@ -83,7 +83,7 @@ semantics). AC: status endpoint reflects sync/index state transitions live.
 
 ## EPIC 3 — Index (slice 3)
 
-**T3.1 · Indexer (same-SHA child builder)**
+**T3.1 · Indexer (same-SHA child builder)** ✅ 2026-07-09 *(>1GB memory soak deferred to P6 capacity spike)*
 `indexing_job` consumer → child `zoekt-git-index` **built from our own go.mod
 SHA** (`go build github.com/sourcegraph/zoekt/cmd/zoekt-git-index`), OOM-isolated
 per PLAN §1; HEAD-only; shards to `$DATA/index`. Search stays in-process. AC: P0 spike behavior reproduced inside the job system; shard

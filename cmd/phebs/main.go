@@ -17,6 +17,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/ui"
@@ -78,6 +79,15 @@ func serve(args []string) error {
 	}
 	runner := &store.Runner{Store: st, Kind: store.JobSync, Handle: phebssync.Handler(cfg, st)}
 	go runner.Run(ctx)
+
+	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
+	if bin, err := indexer.FindBinary(); err != nil {
+		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make dev builds it)")
+	} else {
+		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st}
+		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle}
+		go ixRunner.Run(ctx)
+	}
 
 	dist, err := fs.Sub(ui.Dist, "dist")
 	if err != nil {

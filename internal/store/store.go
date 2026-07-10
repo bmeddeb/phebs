@@ -85,6 +85,10 @@ type Store interface {
 	ListRepos(ctx context.Context) ([]Repo, error)
 	DeleteRepo(ctx context.Context, name string) error
 
+	// SetRepoIndexed records a successful index run without touching the
+	// sync-owned fields of the row.
+	SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error
+
 	// SetRepoConnections replaces conn's membership set; PruneConnections
 	// drops membership of connections no longer configured.
 	SetRepoConnections(ctx context.Context, conn string, repos []string) error

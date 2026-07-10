@@ -120,6 +120,19 @@ func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
 	return err
 }
 
+func (s *Surreal) SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error {
+	results, err := surrealdb.Query[[]Repo](ctx, s.db,
+		`UPDATE $rid SET indexed_commit_hash = $hash, indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`,
+		map[string]any{"rid": repoID(name), "hash": commitHash, "at": at})
+	if err != nil {
+		return err
+	}
+	if len((*results)[0].Result) == 0 {
+		return fmt.Errorf("repo %q: %w", name, ErrNotFound)
+	}
+	return nil
+}
+
 // --- connection membership + status ---
 
 func (s *Surreal) SetRepoConnections(ctx context.Context, conn string, repos []string) error {

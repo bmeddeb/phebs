@@ -112,11 +112,39 @@ func Handler(cfg *config.Config, st store.Store) func(context.Context, store.Job
 		if err := st.SetRepoConnections(ctx, conn.Name, names); err != nil {
 			return err
 		}
+		if err := enqueueIndexJobs(ctx, st, names); err != nil {
+			return err
+		}
 		if cfg.Sync.CleanupOrphans {
 			return CleanupOrphans(ctx, st, cfg.Server.DataDir)
 		}
 		return nil
 	}
+}
+
+// enqueueIndexJobs chains indexing after a sync: one job per synced repo
+// unless one is already queued or in flight. The indexer's short-circuit
+// makes redundant jobs cheap.
+func enqueueIndexJobs(ctx context.Context, st store.Store, names []string) error {
+	inFlight := map[string]bool{}
+	for _, status := range []store.JobStatus{store.StatusPending, store.StatusClaimed, store.StatusRunning} {
+		jobs, err := st.ListJobs(ctx, store.JobIndex, status)
+		if err != nil {
+			return err
+		}
+		for _, j := range jobs {
+			inFlight[j.Target] = true
+		}
+	}
+	for _, name := range names {
+		if inFlight[name] {
+			continue
+		}
+		if _, err := st.CreateJob(ctx, store.JobIndex, name); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // EnqueueMissing creates a sync job per configured connection unless one is
