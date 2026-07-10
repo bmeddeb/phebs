@@ -130,6 +130,70 @@ func TestIndexViaJob(t *testing.T) {
 	}
 }
 
+// shardStamps maps shard file → mtime, to prove a no-op touched nothing.
+func shardStamps(t *testing.T, dataDir string) map[string]time.Time {
+	t.Helper()
+	shards, err := filepath.Glob(filepath.Join(dataDir, "index", "*.zoekt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stamps := map[string]time.Time{}
+	for _, s := range shards {
+		fi, err := os.Stat(s)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stamps[s] = fi.ModTime()
+	}
+	return stamps
+}
+
+// T3.2 AC: reindexing an unchanged HEAD is a no-op in <100ms that leaves
+// shards untouched; force rebuilds anyway.
+func TestShortCircuitAndForce(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+
+	repo, _ := st.GetRepo(ctx, name)
+	if err := ix.Index(ctx, *repo, false); err != nil {
+		t.Fatal(err)
+	}
+	before := shardStamps(t, dataDir)
+	if len(before) == 0 {
+		t.Fatal("no shards after first index")
+	}
+
+	repo, _ = st.GetRepo(ctx, name) // re-read: row now carries indexed_commit_hash
+	start := time.Now()
+	if err := ix.Index(ctx, *repo, false); err != nil {
+		t.Fatal(err)
+	}
+	if noop := time.Since(start); noop > 100*time.Millisecond {
+		t.Errorf("no-op reindex took %v, want <100ms", noop)
+	}
+	for s, mt := range shardStamps(t, dataDir) {
+		if !mt.Equal(before[s]) {
+			t.Errorf("no-op touched shard %s", s)
+		}
+	}
+
+	time.Sleep(1100 * time.Millisecond) // ensure a distinguishable shard mtime
+	if err := ix.Index(ctx, *repo, true); err != nil {
+		t.Fatalf("forced: %v", err)
+	}
+	rebuilt := false
+	for s, mt := range shardStamps(t, dataDir) {
+		if !mt.Equal(before[s]) {
+			rebuilt = true
+		}
+	}
+	if !rebuilt {
+		t.Error("force did not rebuild any shard")
+	}
+}
+
 func TestIndexMissingRepo(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()

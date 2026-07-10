@@ -86,8 +86,10 @@ type Store interface {
 	DeleteRepo(ctx context.Context, name string) error
 
 	// SetRepoIndexed records a successful index run without touching the
-	// sync-owned fields of the row.
+	// sync-owned fields of the row; ClearRepoIndexState wipes the recorded
+	// commit so the next index run rebuilds (the force path).
 	SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error
+	ClearRepoIndexState(ctx context.Context, name string) error
 
 	// SetRepoConnections replaces conn's membership set; PruneConnections
 	// drops membership of connections no longer configured.
@@ -104,4 +106,22 @@ type Store interface {
 	ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error)
 
 	Close(ctx context.Context) error
+}
+
+// EnqueueUnlessInFlight creates a job unless one is already pending, claimed,
+// or running for the same target.
+func EnqueueUnlessInFlight(ctx context.Context, st Store, kind JobKind, target string) error {
+	for _, status := range []JobStatus{StatusPending, StatusClaimed, StatusRunning} {
+		jobs, err := st.ListJobs(ctx, kind, status)
+		if err != nil {
+			return err
+		}
+		for _, j := range jobs {
+			if j.Target == target {
+				return nil
+			}
+		}
+	}
+	_, err := st.CreateJob(ctx, kind, target)
+	return err
 }

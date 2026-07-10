@@ -89,7 +89,7 @@ SHA** (`go build github.com/sourcegraph/zoekt/cmd/zoekt-git-index`), OOM-isolate
 per PLAN §1; HEAD-only; shards to `$DATA/index`. Search stays in-process. AC: P0 spike behavior reproduced inside the job system; shard
 appears after sync completes; memory bounded on a large repo (pick one >1GB).
 
-**T3.2 · Incremental short-circuit**
+**T3.2 · Incremental short-circuit** ✅ 2026-07-09
 Skip when `indexedCommitHash == HEAD`; `--force` path for manual reindex.
 AC: no-op reindex completes <100ms without touching shards.
 

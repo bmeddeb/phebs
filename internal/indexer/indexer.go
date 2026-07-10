@@ -56,13 +56,21 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if err != nil {
 		return fmt.Errorf("index %s: resolve HEAD: %w", repo.Name, err)
 	}
+	if !force && head != "" && head == repo.IndexedCommitHash {
+		return nil // T3.2: HEAD unchanged, shards current
+	}
 
 	indexDir := filepath.Join(ix.DataDir, "index")
 	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return fmt.Errorf("index %s: %w", repo.Name, err)
 	}
+	args := []string{"-index", indexDir}
+	if force {
+		// defeat the child's own shard-freshness check too
+		args = append(args, "-incremental=false")
+	}
 	start := time.Now()
-	cmd := exec.CommandContext(ctx, ix.Bin, "-index", indexDir, dir)
+	cmd := exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	if err := cmd.Run(); err != nil {

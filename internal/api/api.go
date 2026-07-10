@@ -4,6 +4,7 @@ package api
 import (
 	"context"
 	"crypto/subtle"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -69,6 +70,34 @@ func New(opts Options) http.Handler {
 		return &reposOut{Body: repos}, nil
 	})
 
+	type reindexIn struct {
+		Body struct {
+			Repo  string `json:"repo" required:"true" example:"github.com/foo/bar"`
+			Force bool   `json:"force,omitempty" doc:"rebuild even when HEAD is already indexed"`
+		}
+	}
+	type reindexOut struct {
+		Body struct {
+			Enqueued bool `json:"enqueued"`
+		}
+	}
+	huma.Post(api, "/api/reindex", func(ctx context.Context, in *reindexIn) (*reindexOut, error) {
+		if in.Body.Force {
+			// clearing the recorded commit defeats the T3.2 short-circuit
+			if err := opts.Store.ClearRepoIndexState(ctx, in.Body.Repo); err != nil {
+				return nil, reindexErr(in.Body.Repo, err)
+			}
+		} else if _, err := opts.Store.GetRepo(ctx, in.Body.Repo); err != nil {
+			return nil, reindexErr(in.Body.Repo, err)
+		}
+		if err := store.EnqueueUnlessInFlight(ctx, opts.Store, store.JobIndex, in.Body.Repo); err != nil {
+			return nil, huma.Error500InternalServerError("enqueue", err)
+		}
+		out := &reindexOut{}
+		out.Body.Enqueued = true
+		return out, nil
+	})
+
 	type repoStatusOut struct {
 		Body []store.RepoStatus
 	}
@@ -81,6 +110,13 @@ func New(opts Options) http.Handler {
 	})
 
 	return mux
+}
+
+func reindexErr(repo string, err error) error {
+	if errors.Is(err, store.ErrNotFound) {
+		return huma.Error404NotFound("unknown repo " + repo)
+	}
+	return huma.Error500InternalServerError("reindex", err)
 }
 
 // openPath: liveness and API discovery stay unauthenticated.

@@ -126,21 +126,8 @@ func Handler(cfg *config.Config, st store.Store) func(context.Context, store.Job
 // unless one is already queued or in flight. The indexer's short-circuit
 // makes redundant jobs cheap.
 func enqueueIndexJobs(ctx context.Context, st store.Store, names []string) error {
-	inFlight := map[string]bool{}
-	for _, status := range []store.JobStatus{store.StatusPending, store.StatusClaimed, store.StatusRunning} {
-		jobs, err := st.ListJobs(ctx, store.JobIndex, status)
-		if err != nil {
-			return err
-		}
-		for _, j := range jobs {
-			inFlight[j.Target] = true
-		}
-	}
 	for _, name := range names {
-		if inFlight[name] {
-			continue
-		}
-		if _, err := st.CreateJob(ctx, store.JobIndex, name); err != nil {
+		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobIndex, name); err != nil {
 			return err
 		}
 	}
@@ -151,21 +138,8 @@ func enqueueIndexJobs(ctx context.Context, st store.Store, names []string) error
 // already queued or in flight. ponytail: boot-time enqueue only; periodic
 // re-sync cadence comes with the webhook/freshness work (P2 github-app).
 func EnqueueMissing(ctx context.Context, st store.Store, cfg *config.Config) error {
-	inFlight := map[string]bool{}
-	for _, status := range []store.JobStatus{store.StatusPending, store.StatusClaimed, store.StatusRunning} {
-		jobs, err := st.ListJobs(ctx, store.JobSync, status)
-		if err != nil {
-			return err
-		}
-		for _, j := range jobs {
-			inFlight[j.Target] = true
-		}
-	}
 	for _, conn := range cfg.Connections {
-		if inFlight[conn.Name] {
-			continue
-		}
-		if _, err := st.CreateJob(ctx, store.JobSync, conn.Name); err != nil {
+		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobSync, conn.Name); err != nil {
 			return err
 		}
 	}
