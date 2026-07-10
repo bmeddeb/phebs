@@ -11,6 +11,7 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 
+	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -18,6 +19,7 @@ type Options struct {
 	Version string
 	APIKey  string // empty = open API; serve logs the warning
 	Store   store.Store
+	Search  *search.Searcher // nil = search endpoints answer 503
 }
 
 // New builds the /api/* handler: health, version, repos, plus the OpenAPI
@@ -68,6 +70,29 @@ func New(opts Options) http.Handler {
 			return nil, huma.Error500InternalServerError("list repos", err)
 		}
 		return &reposOut{Body: repos}, nil
+	})
+
+	type searchIn struct {
+		Q            string `query:"q" required:"true" example:"phebsNeedle repo:foo lang:go"`
+		MaxMatches   int    `query:"max_matches" doc:"documents shown, default 50, cap 500"`
+		ContextLines int    `query:"context_lines" doc:"context lines per match, cap 10"`
+	}
+	type searchOut struct {
+		Body *search.Result
+	}
+	huma.Get(api, "/api/search", func(ctx context.Context, in *searchIn) (*searchOut, error) {
+		if opts.Search == nil {
+			return nil, huma.Error503ServiceUnavailable("search unavailable")
+		}
+		res, err := opts.Search.Search(ctx, in.Q,
+			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines})
+		if err != nil {
+			if strings.Contains(err.Error(), "parse query") {
+				return nil, huma.Error400BadRequest(err.Error())
+			}
+			return nil, huma.Error500InternalServerError("search", err)
+		}
+		return &searchOut{Body: res}, nil
 	})
 
 	type reindexIn struct {

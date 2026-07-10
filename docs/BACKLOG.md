@@ -105,7 +105,7 @@ exposes counters; forced failure lands in the right class with retry schedule.
 compiled to `query.RepoSet` from DB. AC: table-driven tests mapping input
 strings → expected zoekt query trees.
 
-**T4.2 · `/api/search` (JSON)**
+**T4.2 · `/api/search` (JSON)** ✅ 2026-07-09
 `shards.NewDirectorySearcher` singleton with shard watch; bounded result
 options (maxMatches, context lines). AC: golden-file tests over a fixture
 repo; p50 latency budget recorded in PLAN.md.

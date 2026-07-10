@@ -1,0 +1,192 @@
+package search_test
+
+// End-to-end searcher tests: fixture repos → mirrors → real zoekt-git-index
+// child → shards → Searcher. Goldens under testdata/; refresh with -update.
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"sort"
+	"testing"
+	"time"
+
+	"github.com/bmeddeb/phebs/internal/indexer"
+	"github.com/bmeddeb/phebs/internal/search"
+	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/internal/sync"
+)
+
+var update = flag.Bool("update", false, "rewrite golden files")
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	if _, err := indexer.FindBinary(); err != nil {
+		dir, err := os.MkdirTemp("", "phebs-zoekt")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer func() { _ = os.RemoveAll(dir) }()
+		bin := filepath.Join(dir, "zoekt-git-index")
+		out, err := exec.Command("go", "build", "-o", bin,
+			"github.com/sourcegraph/zoekt/cmd/zoekt-git-index").CombinedOutput()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "build zoekt-git-index: %v\n%s", err, out)
+			os.Exit(1)
+		}
+		_ = os.Setenv("PHEBS_ZOEKT_GIT_INDEX", bin)
+	}
+	os.Exit(m.Run())
+}
+
+func gitc(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-C", dir}, args...)
+	if out, err := exec.Command("git", full...).CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+}
+
+// corpus builds two indexed repos: "plain" and "forked" (IsFork in the DB).
+func corpus(t *testing.T, ctx context.Context) *search.Searcher {
+	t.Helper()
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	dataDir := t.TempDir()
+	st, err := store.OpenLocal(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+
+	bin, err := indexer.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix := &indexer.Indexer{DataDir: dataDir, Bin: bin, Store: st}
+
+	fixtures := []struct {
+		repo  string
+		fork  bool
+		files map[string]string
+	}{
+		{"example.com/plain", false, map[string]string{
+			"greet.go": "package main\n\n// phebsNeedle lives here\nfunc greet() string { return \"hi\" }\n",
+			"doc.md":   "# docs\n\nphebsNeedle appears in prose too.\n",
+		}},
+		{"example.com/forked", true, map[string]string{
+			"fork.go": "package fork\n\nvar phebsNeedle = 42\n",
+		}},
+	}
+	for _, f := range fixtures {
+		origin := t.TempDir()
+		gitc(t, origin, "init", "-b", "main")
+		names := make([]string, 0, len(f.files))
+		for name := range f.files {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			if err := os.WriteFile(filepath.Join(origin, name), []byte(f.files[name]), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		gitc(t, origin, "add", ".")
+		gitc(t, origin, "commit", "-m", "fixture")
+
+		if err := sync.Mirror(ctx, "file://"+origin, sync.RepoDir(dataDir, f.repo)); err != nil {
+			t.Fatal(err)
+		}
+		repo := store.Repo{Name: f.repo, CloneURL: "file://" + origin, IsFork: f.fork, IsPublic: true}
+		if err := st.UpsertRepo(ctx, repo); err != nil {
+			t.Fatal(err)
+		}
+		if err := ix.Index(ctx, repo, false); err != nil {
+			t.Fatalf("index %s: %v", f.repo, err)
+		}
+	}
+
+	s, err := search.Open(filepath.Join(dataDir, "index"), st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(s.Close)
+	return s
+}
+
+// T4.2 AC: golden-file tests over a fixture corpus.
+func TestSearchGolden(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	s := corpus(t, ctx)
+
+	tests := []struct {
+		name   string
+		q      string
+		golden string
+	}{
+		{"basic", "phebsNeedle", "golden_basic.json"},
+		{"repo filtered", "phebsNeedle fork:no", "golden_no_forks.json"},
+		{"lang filtered", "phebsNeedle lang:go repo:plain", "golden_lang_go.json"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := s.Search(ctx, tt.q, search.Options{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			res.Stats.DurationMS = 0 // nondeterministic
+			sort.Slice(res.Files, func(i, j int) bool {
+				a, b := res.Files[i], res.Files[j]
+				return a.Repo+a.Path < b.Repo+b.Path
+			})
+			got, err := json.MarshalIndent(res, "", "  ")
+			if err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join("testdata", tt.golden)
+			if *update {
+				if err := os.WriteFile(path, append(got, '\n'), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+			want, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("missing golden (run with -update): %v", err)
+			}
+			if string(append(got, '\n')) != string(want) {
+				t.Errorf("golden mismatch for %q:\n got: %s\nwant: %s", tt.q, got, want)
+			}
+		})
+	}
+}
+
+// T4.2 AC: p50 latency on the fixture corpus, recorded in PLAN.md.
+func TestSearchLatencyP50(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	s := corpus(t, ctx)
+
+	const runs = 100
+	lat := make([]time.Duration, runs)
+	for i := range runs {
+		t0 := time.Now()
+		if _, err := s.Search(ctx, "phebsNeedle", search.Options{}); err != nil {
+			t.Fatal(err)
+		}
+		lat[i] = time.Since(t0)
+	}
+	sort.Slice(lat, func(i, j int) bool { return lat[i] < lat[j] })
+	p50, p95 := lat[runs/2], lat[runs*95/100]
+	t.Logf("fixture corpus search: p50=%v p95=%v", p50, p95)
+	if p50 > 50*time.Millisecond {
+		t.Errorf("p50 = %v exceeds the 50ms budget (PLAN.md)", p50)
+	}
+}

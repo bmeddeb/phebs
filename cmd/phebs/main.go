@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/indexer"
+	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/ui"
@@ -95,8 +97,18 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
+	indexDir := filepath.Join(cfg.Server.DataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		return fmt.Errorf("create index dir: %w", err)
+	}
+	searcher, err := search.Open(indexDir, st)
+	if err != nil {
+		return err
+	}
+	defer searcher.Close()
+
 	mux := http.NewServeMux()
-	mux.Handle("/api/", api.New(api.Options{Version: version, APIKey: cfg.Auth.APIKey, Store: st}))
+	mux.Handle("/api/", api.New(api.Options{Version: version, APIKey: cfg.Auth.APIKey, Store: st, Search: searcher}))
 	mux.Handle("GET /metrics", promhttp.Handler()) // T3.3; unauthenticated like /api/health
 	mux.Handle("/", http.FileServerFS(dist))
 

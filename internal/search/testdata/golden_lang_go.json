@@ -1,0 +1,28 @@
+{
+  "files": [
+    {
+      "repo": "example.com/plain",
+      "path": "greet.go",
+      "language": "Go",
+      "chunks": [
+        {
+          "content": "// phebsNeedle lives here\n",
+          "start_line": 3,
+          "ranges": [
+            {
+              "start_line": 3,
+              "start_col": 4,
+              "end_line": 3,
+              "end_col": 15
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "match_count": 1,
+    "file_count": 1,
+    "duration_ms": 0
+  }
+}

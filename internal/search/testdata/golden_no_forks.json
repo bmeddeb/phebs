@@ -1,0 +1,47 @@
+{
+  "files": [
+    {
+      "repo": "example.com/plain",
+      "path": "doc.md",
+      "language": "Markdown",
+      "chunks": [
+        {
+          "content": "phebsNeedle appears in prose too.\n",
+          "start_line": 3,
+          "ranges": [
+            {
+              "start_line": 3,
+              "start_col": 1,
+              "end_line": 3,
+              "end_col": 12
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "repo": "example.com/plain",
+      "path": "greet.go",
+      "language": "Go",
+      "chunks": [
+        {
+          "content": "// phebsNeedle lives here\n",
+          "start_line": 3,
+          "ranges": [
+            {
+              "start_line": 3,
+              "start_col": 4,
+              "end_line": 3,
+              "end_col": 15
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "stats": {
+    "match_count": 2,
+    "file_count": 2,
+    "duration_ms": 0
+  }
+}
