@@ -68,6 +68,15 @@ type Job struct {
 	FinishedAt  *time.Time `json:"finished_at,omitempty"`
 }
 
+// RepoStatus is a repo row annotated with connection membership and the
+// most recent indexing job — the /api/repo-status shape.
+type RepoStatus struct {
+	Repo
+	Orphaned     bool     `json:"orphaned"` // no connection claims this repo
+	Connections  []string `json:"connections,omitempty"`
+	LastIndexJob *Job     `json:"last_index_job,omitempty"`
+}
+
 // Store is the persistence boundary. IDs cross it as opaque strings so no
 // SurrealDB types leak into callers.
 type Store interface {
@@ -75,6 +84,12 @@ type Store interface {
 	GetRepo(ctx context.Context, name string) (*Repo, error) // ErrNotFound when absent
 	ListRepos(ctx context.Context) ([]Repo, error)
 	DeleteRepo(ctx context.Context, name string) error
+
+	// SetRepoConnections replaces conn's membership set; PruneConnections
+	// drops membership of connections no longer configured.
+	SetRepoConnections(ctx context.Context, conn string, repos []string) error
+	PruneConnections(ctx context.Context, keep []string) error
+	RepoStatuses(ctx context.Context) ([]RepoStatus, error)
 
 	CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error)
 	ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) // status "" = all

@@ -58,7 +58,7 @@ layer with a concurrency test proving zero double-claims.
 from store). Bearer-token middleware (single API key). AC: OpenAPI doc
 renders; endpoints covered by httptest.
 
-## EPIC 2 — Sync (slice 2)
+## EPIC 2 — Sync (slice 2) ✅ 2026-07-09 — demoed: live sync of a public repo via `make dev`
 
 **T2.1 · Generic-git adapter** ✅ 2026-07-09
 Connection → repo rows; clone/fetch **bare** repos via exec git into
@@ -76,7 +76,7 @@ done/failed; heartbeat + stale-claim reaper; bounded retries with backoff.
 Depends: T1.3. AC: kill -9 during a job → job recovered by reaper; no
 double-execution under 3 concurrent pollers (test).
 
-**T2.4 · Repo status + orphan policy**
+**T2.4 · Repo status + orphan policy** ✅ 2026-07-09
 `GET /api/repo-status`; orphaned repos (no connection) flagged; cleanup behind
 config flag (default off, mirroring upstream's isAutoCleanupDisabled
 semantics). AC: status endpoint reflects sync/index state transitions live.

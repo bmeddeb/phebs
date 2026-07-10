@@ -77,8 +77,12 @@ func TestSyncGenericEndToEnd(t *testing.T) {
 	t.Cleanup(func() { _ = st.Close(context.Background()) })
 
 	conn := config.Connection{Name: "fixture", Type: "git", URL: "file://" + origin}
-	if err := sync.SyncConnection(ctx, st, dataDir, conn); err != nil {
+	names, err := sync.SyncConnection(ctx, st, dataDir, conn)
+	if err != nil {
 		t.Fatalf("first sync: %v", err)
+	}
+	if len(names) != 1 {
+		t.Fatalf("synced names = %v, want one", names)
 	}
 
 	// repo row in DB
@@ -103,7 +107,7 @@ func TestSyncGenericEndToEnd(t *testing.T) {
 	}
 	gitc(t, origin, "add", ".")
 	gitc(t, origin, "commit", "-m", "two")
-	if err := sync.SyncConnection(ctx, st, dataDir, conn); err != nil {
+	if _, err := sync.SyncConnection(ctx, st, dataDir, conn); err != nil {
 		t.Fatalf("resync: %v", err)
 	}
 	if head, origHead := gitc(t, dir, "rev-parse", "HEAD"), gitc(t, origin, "rev-parse", "HEAD"); head != origHead {
@@ -111,8 +115,84 @@ func TestSyncGenericEndToEnd(t *testing.T) {
 	}
 }
 
+// TestOrchestration drives EnqueueMissing → Handler → membership → orphan
+// cleanup, the exact path serve wires up.
+func TestOrchestration(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "a.txt"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "init")
+
+	dataDir := t.TempDir()
+	st, err := store.OpenLocal(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+
+	cfg := &config.Config{
+		Server:      config.Server{DataDir: dataDir},
+		Sync:        config.Sync{CleanupOrphans: true},
+		Connections: []config.Connection{{Name: "c1", Type: "git", URL: "file://" + origin}},
+	}
+
+	// boot enqueue is idempotent while a job is in flight
+	if err := sync.EnqueueMissing(ctx, st, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := sync.EnqueueMissing(ctx, st, cfg); err != nil {
+		t.Fatal(err)
+	}
+	pending, _ := st.ListJobs(ctx, store.JobSync, store.StatusPending)
+	if len(pending) != 1 {
+		t.Fatalf("pending jobs = %d, want 1 (dedupe)", len(pending))
+	}
+
+	// execute like the runner would
+	job, err := st.ClaimJob(ctx, store.JobSync, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sync.Handler(cfg, st)(ctx, *job); err != nil {
+		t.Fatalf("handler: %v", err)
+	}
+
+	name, _ := sync.RepoName("file://" + origin)
+	statuses, err := st.RepoStatuses(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(statuses) != 1 || statuses[0].Name != name || statuses[0].Orphaned {
+		t.Fatalf("statuses = %+v, want %s owned by c1", statuses, name)
+	}
+
+	// connection dropped from config → prune → orphan cleanup removes row + mirror
+	cfg.Connections = nil
+	if err := st.PruneConnections(ctx, []string{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := sync.CleanupOrphans(ctx, st, dataDir); err != nil {
+		t.Fatal(err)
+	}
+	if repos, _ := st.ListRepos(ctx); len(repos) != 0 {
+		t.Errorf("repos after cleanup = %+v, want none", repos)
+	}
+	if _, err := os.Stat(sync.RepoDir(dataDir, name)); !os.IsNotExist(err) {
+		t.Errorf("mirror still on disk after cleanup: %v", err)
+	}
+}
+
 func TestSyncUnsupportedType(t *testing.T) {
-	err := sync.SyncConnection(context.Background(), nil, t.TempDir(),
+	_, err := sync.SyncConnection(context.Background(), nil, t.TempDir(),
 		config.Connection{Name: "x", Type: "svn"})
 	if err == nil || !strings.Contains(err.Error(), "unsupported type") {
 		t.Errorf("err = %v, want unsupported type", err)

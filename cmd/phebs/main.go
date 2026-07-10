@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
 	"github.com/bmeddeb/phebs/ui"
 )
 
@@ -62,6 +63,21 @@ func serve(args []string) error {
 	if cfg.Auth.APIKey == "" {
 		log.Print("WARNING: auth.api_key is empty — the API is open")
 	}
+
+	// sync pipeline: prune membership of dropped connections, enqueue boot
+	// syncs, run one jittered poller
+	names := make([]string, 0, len(cfg.Connections))
+	for _, c := range cfg.Connections {
+		names = append(names, c.Name)
+	}
+	if err := st.PruneConnections(ctx, names); err != nil {
+		return fmt.Errorf("prune connections: %w", err)
+	}
+	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
+		return fmt.Errorf("enqueue sync jobs: %w", err)
+	}
+	runner := &store.Runner{Store: st, Kind: store.JobSync, Handle: phebssync.Handler(cfg, st)}
+	go runner.Run(ctx)
 
 	dist, err := fs.Sub(ui.Dist, "dist")
 	if err != nil {

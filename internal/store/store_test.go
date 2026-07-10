@@ -140,6 +140,66 @@ func TestJobLifecycle(t *testing.T) {
 	}
 }
 
+func TestRepoStatusesAndOrphans(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+
+	for _, name := range []string{"h/a", "h/b", "h/c"} {
+		if err := s.UpsertRepo(ctx, store.Repo{Name: name, CloneURL: "u"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.SetRepoConnections(ctx, "conn1", []string{"h/a", "h/b"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoConnections(ctx, "conn2", []string{"h/b"}); err != nil {
+		t.Fatal(err)
+	}
+	job, err := s.CreateJob(ctx, store.JobIndex, "h/a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = job
+
+	statuses, err := s.RepoStatuses(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byName := map[string]store.RepoStatus{}
+	for _, st := range statuses {
+		byName[st.Name] = st
+	}
+	if st := byName["h/a"]; st.Orphaned || len(st.Connections) != 1 || st.LastIndexJob == nil {
+		t.Errorf("h/a = %+v, want conn1 membership and an index job", st)
+	}
+	if st := byName["h/b"]; st.Orphaned || len(st.Connections) != 2 {
+		t.Errorf("h/b = %+v, want two connections", st)
+	}
+	if st := byName["h/c"]; !st.Orphaned {
+		t.Errorf("h/c = %+v, want orphaned", st)
+	}
+
+	// replacement semantics: conn1 drops h/a → only conn2 memberships remain relevant
+	if err := s.SetRepoConnections(ctx, "conn1", []string{"h/b"}); err != nil {
+		t.Fatal(err)
+	}
+	// prune: conn2 removed from config entirely
+	if err := s.PruneConnections(ctx, []string{"conn1"}); err != nil {
+		t.Fatal(err)
+	}
+	statuses, _ = s.RepoStatuses(ctx)
+	byName = map[string]store.RepoStatus{}
+	for _, st := range statuses {
+		byName[st.Name] = st
+	}
+	if !byName["h/a"].Orphaned {
+		t.Error("h/a should be orphaned after conn1 dropped it")
+	}
+	if st := byName["h/b"]; st.Orphaned || len(st.Connections) != 1 || st.Connections[0] != "conn1" {
+		t.Errorf("h/b = %+v, want only conn1 after prune", st)
+	}
+}
+
 // TestClaimJobConcurrent is the T1.3 AC: N concurrent pollers drain the
 // queue through the shipped ClaimJob with zero double-claims.
 func TestClaimJobConcurrent(t *testing.T) {

@@ -20,7 +20,14 @@ import (
 type Config struct {
 	Server      Server       `yaml:"server"`
 	Auth        Auth         `yaml:"auth"`
+	Sync        Sync         `yaml:"sync"`
 	Connections []Connection `yaml:"connections"`
+}
+
+type Sync struct {
+	// CleanupOrphans deletes repo rows and mirrors no connection claims
+	// (mirrors upstream's isAutoCleanupDisabled semantics, default off).
+	CleanupOrphans bool `yaml:"cleanup_orphans"`
 }
 
 type Server struct {

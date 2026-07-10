@@ -8,6 +8,7 @@ DEFINE INDEX IF NOT EXISTS repo_name ON repo FIELDS name UNIQUE;
 
 DEFINE TABLE IF NOT EXISTS connection SCHEMALESS;
 DEFINE TABLE IF NOT EXISTS repo_connection SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS repo_connection_pair ON repo_connection FIELDS connection, repo UNIQUE;
 
 DEFINE TABLE IF NOT EXISTS connection_sync_job SCHEMALESS;
 DEFINE FIELD IF NOT EXISTS status ON connection_sync_job TYPE string

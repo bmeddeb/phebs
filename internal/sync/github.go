@@ -31,7 +31,7 @@ type ghRepo struct {
 	PushedAt      *time.Time `json:"pushed_at"`
 }
 
-func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config.Connection) error {
+func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
 	c := &ghClient{base: ghAPIBase, token: conn.Token}
 
 	seen := map[string]ghRepo{}
@@ -46,18 +46,18 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 	}
 	for _, org := range conn.Orgs {
 		if err := collect(c.listRepos(ctx, "/orgs/"+org+"/repos?per_page=100&type=all")); err != nil {
-			return fmt.Errorf("connection %s: org %s: %w", conn.Name, org, err)
+			return nil, fmt.Errorf("connection %s: org %s: %w", conn.Name, org, err)
 		}
 	}
 	for _, user := range conn.Users {
 		if err := collect(c.listRepos(ctx, "/users/"+user+"/repos?per_page=100&type=owner")); err != nil {
-			return fmt.Errorf("connection %s: user %s: %w", conn.Name, user, err)
+			return nil, fmt.Errorf("connection %s: user %s: %w", conn.Name, user, err)
 		}
 	}
 	for _, full := range conn.Repos {
 		var r ghRepo
 		if _, err := c.getJSON(ctx, c.base+"/repos/"+full, &r); err != nil {
-			return fmt.Errorf("connection %s: repo %s: %w", conn.Name, full, err)
+			return nil, fmt.Errorf("connection %s: repo %s: %w", conn.Name, full, err)
 		}
 		seen[r.FullName] = r
 	}
@@ -70,6 +70,7 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		gitCfg = []string{"-c", "http.extraheader=Authorization: Basic " + basic}
 	}
 
+	var names []string
 	for _, r := range seen {
 		if excluded(r, conn.Exclude) {
 			continue
@@ -77,7 +78,7 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		name := "github.com/" + r.FullName
 		dir := RepoDir(dataDir, name)
 		if err := Mirror(ctx, r.CloneURL, dir, gitCfg...); err != nil {
-			return fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
+			return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
 		}
 		repo := store.Repo{
 			Name:             name,
@@ -94,10 +95,11 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 			ExternalHostURL:  "https://github.com",
 		}
 		if err := st.UpsertRepo(ctx, repo); err != nil {
-			return fmt.Errorf("connection %s: upsert %s: %w", conn.Name, name, err)
+			return nil, fmt.Errorf("connection %s: upsert %s: %w", conn.Name, name, err)
 		}
+		names = append(names, name)
 	}
-	return nil
+	return names, nil
 }
 
 func excluded(r ghRepo, ex config.Exclude) bool {

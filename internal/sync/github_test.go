@@ -146,8 +146,12 @@ func TestSyncGitHubEndToEnd(t *testing.T) {
 
 	conn := config.Connection{Name: "gh", Type: "github", Users: []string{"ben"},
 		Exclude: config.Exclude{Archived: true}}
-	if err := SyncConnection(ctx, st, dataDir, conn); err != nil {
+	names, err := SyncConnection(ctx, st, dataDir, conn)
+	if err != nil {
 		t.Fatalf("sync: %v", err)
+	}
+	if len(names) != 1 || names[0] != "github.com/ben/keep" {
+		t.Errorf("synced names = %v, want just ben/keep", names)
 	}
 
 	repo, err := st.GetRepo(ctx, "github.com/ben/keep")

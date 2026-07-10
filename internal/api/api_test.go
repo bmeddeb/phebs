@@ -18,6 +18,13 @@ func (fakeStore) ListRepos(context.Context) ([]store.Repo, error) {
 	return []store.Repo{{Name: "github.com/foo/bar", CloneURL: "https://github.com/foo/bar.git"}}, nil
 }
 
+func (fakeStore) RepoStatuses(context.Context) ([]store.RepoStatus, error) {
+	return []store.RepoStatus{{
+		Repo:     store.Repo{Name: "github.com/foo/bar"},
+		Orphaned: true,
+	}}, nil
+}
+
 func TestAPI(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -34,6 +41,8 @@ func TestAPI(t *testing.T) {
 		{"repos wrong token", "sekrit", "/api/repos", "Bearer nope", 401, "bearer token"},
 		{"repos right token", "sekrit", "/api/repos", "Bearer sekrit", 200, "github.com/foo/bar"},
 		{"repos open when no key", "", "/api/repos", "", 200, "github.com/foo/bar"},
+		{"repo-status", "sekrit", "/api/repo-status", "Bearer sekrit", 200, `"orphaned":true`},
+		{"repo-status no token", "sekrit", "/api/repo-status", "", 401, "bearer token"},
 		{"unknown route", "sekrit", "/api/nope", "Bearer sekrit", 404, ""},
 	}
 

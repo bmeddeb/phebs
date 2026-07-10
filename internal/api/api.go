@@ -69,6 +69,17 @@ func New(opts Options) http.Handler {
 		return &reposOut{Body: repos}, nil
 	})
 
+	type repoStatusOut struct {
+		Body []store.RepoStatus
+	}
+	huma.Get(api, "/api/repo-status", func(ctx context.Context, _ *struct{}) (*repoStatusOut, error) {
+		statuses, err := opts.Store.RepoStatuses(ctx)
+		if err != nil {
+			return nil, huma.Error500InternalServerError("repo statuses", err)
+		}
+		return &repoStatusOut{Body: statuses}, nil
+	})
+
 	return mux
 }
 

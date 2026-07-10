@@ -12,8 +12,12 @@ server:
 
 auth:
   # Single bearer token for the API. Empty/omitted = open API
-  # (serve logs a warning). Hashed at rest once T1.2 lands.
+  # (serve logs a warning).
   api_key: "change-me"
+
+sync:
+  # Delete repo rows + mirrors no connection claims (default off).
+  cleanup_orphans: false
 
 # Sources of repos to sync (Epic 2). Names: lowercase [a-z0-9-], unique.
 connections:

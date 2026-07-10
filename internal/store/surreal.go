@@ -120,6 +120,66 @@ func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
 	return err
 }
 
+// --- connection membership + status ---
+
+func (s *Surreal) SetRepoConnections(ctx context.Context, conn string, repos []string) error {
+	_, err := surrealdb.Query[any](ctx, s.db, `
+DELETE repo_connection WHERE connection = $conn;
+FOR $r IN $repos { CREATE repo_connection CONTENT { connection: $conn, repo: $r } };`,
+		map[string]any{"conn": conn, "repos": repos})
+	return err
+}
+
+func (s *Surreal) PruneConnections(ctx context.Context, keep []string) error {
+	_, err := surrealdb.Query[any](ctx, s.db,
+		"DELETE repo_connection WHERE connection NOT IN $keep",
+		map[string]any{"keep": keep})
+	return err
+}
+
+// RepoStatuses joins repos, membership, and latest indexing jobs in Go.
+// ponytail: three queries + maps, no server-side joins; revisit if repo
+// counts make it slow.
+func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
+	repos, err := s.ListRepos(ctx)
+	if err != nil {
+		return nil, err
+	}
+	memb, err := surrealdb.Query[[]struct {
+		Connection string `json:"connection"`
+		Repo       string `json:"repo"`
+	}](ctx, s.db, "SELECT connection, repo FROM repo_connection", nil)
+	if err != nil {
+		return nil, err
+	}
+	conns := map[string][]string{}
+	for _, m := range (*memb)[0].Result {
+		conns[m.Repo] = append(conns[m.Repo], m.Connection)
+	}
+	jobs, err := s.ListJobs(ctx, JobIndex, "")
+	if err != nil {
+		return nil, err
+	}
+	latest := map[string]*Job{}
+	for i := range jobs {
+		j := jobs[i]
+		if cur, ok := latest[j.Target]; !ok || j.CreatedAt.After(cur.CreatedAt) {
+			latest[j.Target] = &j
+		}
+	}
+
+	statuses := make([]RepoStatus, len(repos))
+	for i, r := range repos {
+		statuses[i] = RepoStatus{
+			Repo:         r,
+			Connections:  conns[r.Name],
+			Orphaned:     len(conns[r.Name]) == 0,
+			LastIndexJob: latest[r.Name],
+		}
+	}
+	return statuses, nil
+}
+
 // --- jobs ---
 
 // jobRec pairs Job's fields with the SurrealDB record id for decoding.

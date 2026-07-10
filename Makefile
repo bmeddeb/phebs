@@ -1,7 +1,7 @@
 .PHONY: dev test lint ui db-server
 
-dev: ## boot the phebs skeleton — embedded storage, zero external services
-	go run ./cmd/phebs serve
+dev: ## boot phebs — zero external services (ARGS="-config phebs.yaml" for flags)
+	go run ./cmd/phebs serve $(ARGS)
 
 test:
 	go test ./...
