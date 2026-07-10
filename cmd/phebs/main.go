@@ -108,7 +108,10 @@ func serve(args []string) error {
 	defer searcher.Close()
 
 	mux := http.NewServeMux()
-	mux.Handle("/api/", api.New(api.Options{Version: version, APIKey: cfg.Auth.APIKey, Store: st, Search: searcher}))
+	mux.Handle("/api/", api.New(api.Options{
+		Version: version, APIKey: cfg.Auth.APIKey,
+		Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
+	}))
 	mux.Handle("GET /metrics", promhttp.Handler()) // T3.3; unauthenticated like /api/health
 	mux.Handle("/", http.FileServerFS(dist))
 

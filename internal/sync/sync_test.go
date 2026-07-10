@@ -43,7 +43,7 @@ func TestRepoName(t *testing.T) {
 }
 
 // gitc runs git for fixture setup with identity flags.
-func gitc(t *testing.T, dir string, args ...string) string {
+func gitc(t testing.TB, dir string, args ...string) string {
 	t.Helper()
 	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-C", dir}, args...)
 	out, err := exec.Command("git", full...).CombinedOutput()

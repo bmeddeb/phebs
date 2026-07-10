@@ -4,9 +4,11 @@ package api
 import (
 	"context"
 	"crypto/subtle"
+	"encoding/base64"
 	"errors"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
 type Options struct {
@@ -21,6 +24,7 @@ type Options struct {
 	APIKey  string // empty = open API; serve logs the warning
 	Store   store.Store
 	Search  *search.Searcher // nil = search endpoints answer 503
+	DataDir string           // bare mirrors for file serving (T4.4)
 }
 
 // New builds the /api/* handler: health, version, repos, plus the OpenAPI
@@ -123,6 +127,81 @@ func New(opts Options) http.Handler {
 		_ = send(sse.Message{Data: stats})
 	})
 
+	// --- file serving (T4.4): git plumbing over bare mirrors ---
+
+	type repoRefIn struct {
+		Repo string `query:"repo" required:"true" example:"github.com/foo/bar"`
+		Ref  string `query:"ref" doc:"commit-ish; default HEAD"`
+	}
+	type sourceIn struct {
+		repoRefIn
+		Path string `query:"path" required:"true"`
+	}
+	type sourceOut struct {
+		Body struct {
+			Content  string `json:"content"`
+			Encoding string `json:"encoding" enum:"utf8,base64"`
+			Size     int    `json:"size"`
+		}
+	}
+	huma.Get(api, "/api/source", func(ctx context.Context, in *sourceIn) (*sourceOut, error) {
+		if _, err := opts.Store.GetRepo(ctx, in.Repo); err != nil {
+			return nil, gitErr(err)
+		}
+		content, err := phebssync.CatFile(ctx, opts.DataDir, in.Repo, in.Ref, in.Path)
+		if err != nil {
+			return nil, gitErr(err)
+		}
+		out := &sourceOut{}
+		out.Body.Size = len(content)
+		if utf8.Valid(content) {
+			out.Body.Content, out.Body.Encoding = string(content), "utf8"
+		} else {
+			out.Body.Content, out.Body.Encoding = base64.StdEncoding.EncodeToString(content), "base64"
+		}
+		return out, nil
+	})
+
+	type folderIn struct {
+		repoRefIn
+		Path string `query:"path" doc:"directory; default repo root"`
+	}
+	type folderOut struct {
+		Body struct {
+			Entries []phebssync.TreeEntry `json:"entries"`
+		}
+	}
+	huma.Get(api, "/api/folder_contents", func(ctx context.Context, in *folderIn) (*folderOut, error) {
+		if _, err := opts.Store.GetRepo(ctx, in.Repo); err != nil {
+			return nil, gitErr(err)
+		}
+		entries, err := phebssync.FolderContents(ctx, opts.DataDir, in.Repo, in.Ref, in.Path)
+		if err != nil {
+			return nil, gitErr(err)
+		}
+		out := &folderOut{}
+		out.Body.Entries = entries
+		return out, nil
+	})
+
+	type treeOut struct {
+		Body struct {
+			Paths []string `json:"paths"`
+		}
+	}
+	huma.Get(api, "/api/tree", func(ctx context.Context, in *repoRefIn) (*treeOut, error) {
+		if _, err := opts.Store.GetRepo(ctx, in.Repo); err != nil {
+			return nil, gitErr(err)
+		}
+		paths, err := phebssync.TreePaths(ctx, opts.DataDir, in.Repo, in.Ref)
+		if err != nil {
+			return nil, gitErr(err)
+		}
+		out := &treeOut{}
+		out.Body.Paths = paths
+		return out, nil
+	})
+
 	type reindexIn struct {
 		Body struct {
 			Repo  string `json:"repo" required:"true" example:"github.com/foo/bar"`
@@ -163,6 +242,19 @@ func New(opts Options) http.Handler {
 	})
 
 	return mux
+}
+
+// gitErr maps read-path failures onto HTTP: bad input 400, missing
+// repo/ref/path 404, the rest 500.
+func gitErr(err error) error {
+	switch {
+	case errors.Is(err, phebssync.ErrBadInput):
+		return huma.Error400BadRequest(err.Error())
+	case errors.Is(err, store.ErrNotFound):
+		return huma.Error404NotFound(err.Error())
+	default:
+		return huma.Error500InternalServerError("git read", err)
+	}
 }
 
 func reindexErr(repo string, err error) error {

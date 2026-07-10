@@ -115,7 +115,7 @@ Streamed via `Searcher.StreamSearch`; decide + document flush cadence
 inline (per-chunk vs time-batched). AC: curl shows progressive events;
 cancellation propagates (client disconnect stops the search).
 
-**T4.4 · File serving: `/api/source`, `/api/tree`, `/api/folder_contents`**
+**T4.4 · File serving: `/api/source`, `/api/tree`, `/api/folder_contents`** ✅ 2026-07-09
 Serve from bare repos via git plumbing (`cat-file`, `ls-tree`) rather than
 zoekt content tricks. AC: content matches checkout byte-for-byte; path
 traversal fuzz test.
