@@ -13,6 +13,8 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -28,6 +30,18 @@ type Sync struct {
 	// CleanupOrphans deletes repo rows and mirrors no connection claims
 	// (mirrors upstream's isAutoCleanupDisabled semantics, default off).
 	CleanupOrphans bool `yaml:"cleanup_orphans"`
+	// PollInterval is the job-runner poll cadence (Go duration, default
+	// "15s"). Lower it when watch mode should feel instant.
+	PollInterval string `yaml:"poll_interval"`
+}
+
+// Interval returns the parsed poll cadence; validation guarantees the
+// string parses, so the default only covers the empty case.
+func (s Sync) Interval() time.Duration {
+	if d, err := time.ParseDuration(s.PollInterval); err == nil && d > 0 {
+		return d
+	}
+	return 15 * time.Second
 }
 
 type Server struct {
@@ -58,8 +72,18 @@ type Connection struct {
 	Repos   []string `yaml:"repos"` // "owner/name"
 	Exclude Exclude  `yaml:"exclude"`
 
-	// git only: clone URL of a single repository.
+	// git only: clone URL of a single repository. Plain absolute paths and
+	// file:// URLs point at local repos.
 	URL string `yaml:"url"`
+	// Watch (local git only): poll the repo's HEAD and re-sync/re-index
+	// when it moves — live search over a working repo.
+	Watch bool `yaml:"watch"`
+}
+
+// IsLocalURL reports whether a git connection URL points at a repo on this
+// machine (plain absolute path or file://).
+func IsLocalURL(url string) bool {
+	return strings.HasPrefix(url, "/") || strings.HasPrefix(url, "file://")
 }
 
 // Exclude filters repos out of a github connection's listing.
@@ -142,6 +166,12 @@ func (c *Config) validate(lines []int) error {
 		errs = append(errs, fmt.Errorf("line %d: connections[%d]: %s", line, i, fmt.Sprintf(format, args...)))
 	}
 
+	if c.Sync.PollInterval != "" {
+		if d, err := time.ParseDuration(c.Sync.PollInterval); err != nil || d <= 0 {
+			errs = append(errs, fmt.Errorf("sync.poll_interval %q: not a positive Go duration", c.Sync.PollInterval))
+		}
+	}
+
 	seen := map[string]bool{}
 	for i, conn := range c.Connections {
 		switch {
@@ -162,6 +192,9 @@ func (c *Config) validate(lines []int) error {
 			if conn.URL != "" {
 				fail(i, "url is only valid for type git")
 			}
+			if conn.Watch {
+				fail(i, "watch is only valid for local git connections")
+			}
 			for _, pat := range conn.Exclude.Repos {
 				if _, err := path.Match(pat, "x/y"); err != nil {
 					fail(i, "bad exclude pattern %q: %v", pat, err)
@@ -173,6 +206,9 @@ func (c *Config) validate(lines []int) error {
 			}
 			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" || !conn.Exclude.isZero() {
 				fail(i, "orgs/users/repos/token/exclude are only valid for type github")
+			}
+			if conn.Watch && !IsLocalURL(conn.URL) {
+				fail(i, "watch requires a local url (absolute path or file://)")
 			}
 		case "":
 			fail(i, "type is required (github or git)")

@@ -17,9 +17,16 @@ import (
 )
 
 // RepoName derives the canonical repo name (host/path, no .git) from a clone
-// URL. file:// and other host-less URLs land under "local/".
+// URL. file:// URLs and plain absolute paths land under "local/".
 func RepoName(cloneURL string) (string, error) {
 	s := strings.TrimSuffix(cloneURL, ".git")
+	if strings.HasPrefix(s, "/") {
+		p := strings.Trim(filepath.Clean(s), "/")
+		if p == "" {
+			return "", fmt.Errorf("clone path %q has no repo path", cloneURL)
+		}
+		return "local/" + p, nil
+	}
 	if strings.Contains(s, "://") {
 		u, err := url.Parse(s)
 		if err != nil {
@@ -74,6 +81,9 @@ func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn confi
 	if err := Mirror(ctx, conn.URL, dir); err != nil {
 		return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
 	}
+	if config.IsLocalURL(conn.URL) {
+		followSourceHead(ctx, LocalPath(conn.URL), dir)
+	}
 	branch, err := DefaultBranch(ctx, dir)
 	if err != nil {
 		return nil, fmt.Errorf("connection %s: default branch of %s: %w", conn.Name, name, err)
@@ -88,6 +98,22 @@ func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn confi
 		return nil, fmt.Errorf("connection %s: upsert %s: %w", conn.Name, name, err)
 	}
 	return []string{name}, nil
+}
+
+// LocalPath strips the file:// scheme from a local clone URL.
+func LocalPath(url string) string { return strings.TrimPrefix(url, "file://") }
+
+// followSourceHead points the mirror's HEAD at the branch the source repo
+// has checked out — a watched working repo should be searched on the branch
+// its owner is on (2026-07-09 ADR). Detached HEAD (mid-rebase, bisect)
+// keeps the mirror's previous HEAD: the commit may not be on any fetched
+// ref yet, and the next sync catches up.
+func followSourceHead(ctx context.Context, sourcePath, mirrorDir string) {
+	branchRef, err := runGit(ctx, sourcePath, "symbolic-ref", "HEAD")
+	if err != nil {
+		return
+	}
+	_, _ = runGit(ctx, mirrorDir, "symbolic-ref", "HEAD", branchRef)
 }
 
 // Handler adapts connection syncing to the store.Runner: the job target is

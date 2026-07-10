@@ -77,6 +77,13 @@ Depends: T1.3. AC: kill -9 during a job → job recovered by reaper; no
 double-execution under 3 concurrent pollers (test).
 
 **T2.4 · Repo status + orphan policy** ✅ 2026-07-09
+
+**T2.5 · Local repos + watch mode** ✅ 2026-07-09 — *added post-P1*
+Plain local paths as generic-git URLs (hardlink mirrors); `watch: true` polls
+the source HEAD and re-syncs/re-indexes on movement; mirror follows the
+source's checked-out branch; `sync.poll_interval` tunes end-to-end latency.
+AC: commit in a watched repo becomes searchable within seconds (measured
+~1.4s at 1s cadence); watcher enqueues exactly one deduped job per HEAD move.
 `GET /api/repo-status`; orphaned repos (no connection) flagged; cleanup behind
 config flag (default off, mirroring upstream's isAutoCleanupDisabled
 semantics). AC: status endpoint reflects sync/index state transitions live.

@@ -80,15 +80,21 @@ func serve(args []string) error {
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
 	}
-	runner := &store.Runner{Store: st, Kind: store.JobSync, Handle: phebssync.Handler(cfg, st)}
+	runner := &store.Runner{Store: st, Kind: store.JobSync, Handle: phebssync.Handler(cfg, st),
+		Interval: cfg.Sync.Interval()}
 	go runner.Run(ctx)
+	if watched := phebssync.Watched(cfg); len(watched) > 0 {
+		log.Printf("watch mode: polling %d local repo(s)", len(watched))
+		go (&phebssync.Watcher{Store: st, Conns: watched}).Run(ctx)
+	}
 
 	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
 	if bin, err := indexer.FindBinary(); err != nil {
 		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make dev builds it)")
 	} else {
 		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st}
-		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle}
+		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
+			Interval: cfg.Sync.Interval()}
 		go ixRunner.Run(ctx)
 	}
 

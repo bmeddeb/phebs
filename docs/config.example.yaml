@@ -18,6 +18,9 @@ auth:
 sync:
   # Delete repo rows + mirrors no connection claims (default off).
   cleanup_orphans: false
+  # Job-runner poll cadence (Go duration, default 15s). Lower it when
+  # watch mode should feel instant.
+  poll_interval: 15s
 
 # Sources of repos to sync (Epic 2). Names: lowercase [a-z0-9-], unique.
 connections:
@@ -37,3 +40,11 @@ connections:
   - name: zoekt-mirror
     type: git
     url: https://github.com/sourcegraph/zoekt.git
+
+  # A local working repo with watch mode: commits (and branch switches)
+  # become searchable within seconds. The index follows whatever branch is
+  # checked out. Pair with sync.poll_interval for snappier turnaround.
+  - name: my-project
+    type: git
+    url: /Users/ben/src/my-project
+    watch: true
