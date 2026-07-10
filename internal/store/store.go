@@ -54,16 +54,18 @@ type Repo struct {
 // Job is one row in a job table. Target is the connection name for sync jobs
 // and the repo name for indexing jobs.
 type Job struct {
-	ID         string     `json:"-"` // "table:key" record id, set on read
-	Kind       JobKind    `json:"-"`
-	Target     string     `json:"target"`
-	Status     JobStatus  `json:"status"`
-	Attempts   int        `json:"attempts"`
-	Error      string     `json:"error,omitempty"`
-	CreatedAt  time.Time  `json:"created_at"`
-	ClaimedBy  string     `json:"claimed_by,omitempty"`
-	ClaimedAt  *time.Time `json:"claimed_at,omitempty"`
-	FinishedAt *time.Time `json:"finished_at,omitempty"`
+	ID          string     `json:"-"` // "table:key" record id, set on read
+	Kind        JobKind    `json:"-"`
+	Target      string     `json:"target"`
+	Status      JobStatus  `json:"status"`
+	Attempts    int        `json:"attempts"` // executions so far
+	Error       string     `json:"error,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	NotBefore   *time.Time `json:"not_before,omitempty"` // backoff gate for claims
+	ClaimedBy   string     `json:"claimed_by,omitempty"`
+	ClaimedAt   *time.Time `json:"claimed_at,omitempty"`
+	HeartbeatAt *time.Time `json:"heartbeat_at,omitempty"`
+	FinishedAt  *time.Time `json:"finished_at,omitempty"`
 }
 
 // Store is the persistence boundary. IDs cross it as opaque strings so no
@@ -76,8 +78,11 @@ type Store interface {
 
 	CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error)
 	ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) // status "" = all
-	ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) // ErrNotFound when queue drained
+	ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) // ErrNotFound when nothing claimable
 	SetJobStatus(ctx context.Context, id string, status JobStatus, errMsg string) error
+	HeartbeatJob(ctx context.Context, id string) error
+	RequeueJob(ctx context.Context, id string, errMsg string, notBefore time.Time) error // attempts+1, back to pending
+	ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error)
 
 	Close(ctx context.Context) error
 }

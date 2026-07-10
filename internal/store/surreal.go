@@ -177,9 +177,11 @@ func (s *Surreal) ListJobs(ctx context.Context, kind JobKind, status JobStatus) 
 // race returns empty instead of double-claiming; losing costs one cheap read
 // versus a server-side transaction abort (see PLAN.md 2026-07-09 ADR).
 const claimSQL = `
-LET $cand = (SELECT id, created_at FROM type::table($table) WHERE status = 'pending' ORDER BY created_at LIMIT 1)[0].id;
+LET $cand = (SELECT id, created_at FROM type::table($table)
+    WHERE status = 'pending' AND (not_before = NONE OR not_before <= time::now())
+    ORDER BY created_at LIMIT 1)[0].id;
 RETURN IF $cand != NONE THEN
-    (UPDATE $cand SET status = 'claimed', claimed_by = $who, claimed_at = time::now()
+    (UPDATE $cand SET status = 'claimed', claimed_by = $who, claimed_at = time::now(), heartbeat_at = time::now()
      WHERE status = 'pending' RETURN AFTER)
 ELSE [] END;`
 
@@ -234,7 +236,7 @@ func (s *Surreal) countPending(ctx context.Context, kind JobKind) (int, error) {
 	res, err := surrealdb.Query[[]struct {
 		Count int `json:"count"`
 	}](ctx, s.db,
-		"SELECT count() AS count FROM type::table($table) WHERE status = 'pending' GROUP ALL",
+		"SELECT count() AS count FROM type::table($table) WHERE status = 'pending' AND (not_before = NONE OR not_before <= time::now()) GROUP ALL",
 		map[string]any{"table": string(kind)})
 	if err != nil {
 		return 0, err
@@ -244,6 +246,57 @@ func (s *Surreal) countPending(ctx context.Context, kind JobKind) (int, error) {
 		return 0, nil
 	}
 	return rows[0].Count, nil
+}
+
+// HeartbeatJob refreshes the liveness stamp of an in-flight job. A no-op if
+// the job already reached a terminal state (races with completion are benign).
+func (s *Surreal) HeartbeatJob(ctx context.Context, id string) error {
+	_, err := surrealdb.Query[any](ctx, s.db,
+		"UPDATE type::record($id) SET heartbeat_at = time::now() WHERE status IN ['claimed', 'running']",
+		map[string]any{"id": id})
+	return err
+}
+
+// RequeueJob returns a failed execution to the queue with attempts+1 and a
+// backoff gate; claim state is cleared.
+func (s *Surreal) RequeueJob(ctx context.Context, id string, errMsg string, notBefore time.Time) error {
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
+		`UPDATE type::record($id) SET status = 'pending', attempts += 1, error = $err,
+		 not_before = $nb, claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE RETURN AFTER`,
+		map[string]any{"id": id, "err": errMsg, "nb": notBefore})
+	if err != nil {
+		return err
+	}
+	if len((*results)[0].Result) == 0 {
+		return fmt.Errorf("job %q: %w", id, ErrNotFound)
+	}
+	return nil
+}
+
+// ReapStale rescues jobs whose worker died: claimed/running rows without a
+// recent heartbeat go back to pending (attempts+1), or to failed once
+// maxAttempts is exhausted. Returns how many rows it touched.
+// ponytail: staleness cutoff computed on the Go clock vs server-side
+// heartbeats — same host today (supervised child); revisit for fleet mode.
+func (s *Surreal) ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error) {
+	cutoff := time.Now().UTC().Add(-staleAfter)
+	vars := map[string]any{"table": string(kind), "cutoff": cutoff, "max": maxAttempts}
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db, `
+UPDATE type::table($table) SET status = 'pending', attempts += 1, error = 'reaped: stale claim',
+    claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE
+    WHERE status IN ['claimed', 'running'] AND heartbeat_at != NONE AND heartbeat_at < $cutoff AND attempts + 1 < $max
+    RETURN AFTER;
+UPDATE type::table($table) SET status = 'failed', error = 'reaped: stale claim, attempts exhausted', finished_at = time::now()
+    WHERE status IN ['claimed', 'running'] AND heartbeat_at != NONE AND heartbeat_at < $cutoff
+    RETURN AFTER;`, vars)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, r := range *results {
+		n += len(r.Result)
+	}
+	return n, nil
 }
 
 func (s *Surreal) SetJobStatus(ctx context.Context, id string, status JobStatus, errMsg string) error {

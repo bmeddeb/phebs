@@ -70,7 +70,7 @@ List repos by org/user with include/exclude filters (name, archived, fork).
 AC: rate-limit aware pagination; repo metadata (defaultBranch, pushedAt,
 webUrl, external_*) persisted per §5.
 
-**T2.3 · Jittered poller + sync-job lifecycle**
+**T2.3 · Jittered poller + sync-job lifecycle** ✅ 2026-07-09
 Poll loop with jitter per PLAN.md; job states pending→claimed→running→
 done/failed; heartbeat + stale-claim reaper; bounded retries with backoff.
 Depends: T1.3. AC: kill -9 during a job → job recovered by reaper; no
