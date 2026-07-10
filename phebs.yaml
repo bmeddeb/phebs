@@ -1,0 +1,4 @@
+connections:
+  - name: zoekt
+    type: git
+    url: https://github.com/sourcegraph/zoekt.git
