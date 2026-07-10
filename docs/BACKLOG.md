@@ -120,7 +120,7 @@ Serve from bare repos via git plumbing (`cat-file`, `ls-tree`) rather than
 zoekt content tricks. AC: content matches checkout byte-for-byte; path
 traversal fuzz test.
 
-## EPIC 5 — UI (slice 5)
+## EPIC 5 — UI (slice 5) ✅ 2026-07-09 — demoed in-browser: search/viewer/repos on Base Web via `make dev`
 
 **T5.1 · Vite + React + TS scaffold, embedded** ✅ 2026-07-09 *(build-tag embed: no committed artifacts, `go build` green without npm)*
 `go:embed` production build; dev proxy to huma. AC: single binary serves UI.
@@ -133,7 +133,7 @@ AC: streaming renders incrementally; empty/error states.
 CodeMirror 6 read-only, match decorations, line anchors (`#L42`), language
 by extension. AC: deep link to file+line from a search result works.
 
-**T5.4 · Repos page**
+**T5.4 · Repos page** ✅ 2026-07-09
 Table over `/api/repo-status`: sync/index state, timestamps, force-reindex
 button. AC: reindex button enqueues job visible in status within one poll.
 
