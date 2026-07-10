@@ -65,7 +65,7 @@ Connection → repo rows; clone/fetch **bare** repos via exec git into
 deterministic disk layout (`$DATA/repos/<host>/<path>.git`). AC: add a
 connection, repos appear in DB and on disk; refetch is incremental.
 
-**T2.2 · GitHub adapter (PAT)**
+**T2.2 · GitHub adapter (PAT)** ✅ 2026-07-09 *(fake-API tests; live PAT run pending)*
 List repos by org/user with include/exclude filters (name, archived, fork).
 AC: rate-limit aware pagination; repo metadata (defaultBranch, pushedAt,
 webUrl, external_*) persisted per §5.

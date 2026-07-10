@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 
@@ -42,15 +43,27 @@ type Connection struct {
 	Name string `yaml:"name"` // required, unique, [a-z0-9-]+
 	Type string `yaml:"type"` // "github" or "git"
 
-	// github only. Token is a PAT; env expansion lands with T2.2, which is
-	// the first ticket that actually uses it.
-	Token string   `yaml:"token"`
-	Orgs  []string `yaml:"orgs"`
-	Users []string `yaml:"users"`
-	Repos []string `yaml:"repos"` // "owner/name"
+	// github only. Token is a PAT; ${ENV} references are expanded so secrets
+	// stay out of the file.
+	Token   string   `yaml:"token"`
+	Orgs    []string `yaml:"orgs"`
+	Users   []string `yaml:"users"`
+	Repos   []string `yaml:"repos"` // "owner/name"
+	Exclude Exclude  `yaml:"exclude"`
 
 	// git only: clone URL of a single repository.
 	URL string `yaml:"url"`
+}
+
+// Exclude filters repos out of a github connection's listing.
+type Exclude struct {
+	Archived bool     `yaml:"archived"`
+	Forks    bool     `yaml:"forks"`
+	Repos    []string `yaml:"repos"` // glob patterns on "owner/name"
+}
+
+func (e Exclude) isZero() bool {
+	return !e.Archived && !e.Forks && len(e.Repos) == 0
 }
 
 var nameRE = regexp.MustCompile(`^[a-z0-9-]+$`)
@@ -142,12 +155,17 @@ func (c *Config) validate(lines []int) error {
 			if conn.URL != "" {
 				fail(i, "url is only valid for type git")
 			}
+			for _, pat := range conn.Exclude.Repos {
+				if _, err := path.Match(pat, "x/y"); err != nil {
+					fail(i, "bad exclude pattern %q: %v", pat, err)
+				}
+			}
 		case "git":
 			if conn.URL == "" {
 				fail(i, "git connection requires url")
 			}
-			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" {
-				fail(i, "orgs/users/repos/token are only valid for type github")
+			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" || !conn.Exclude.isZero() {
+				fail(i, "orgs/users/repos/token/exclude are only valid for type github")
 			}
 		case "":
 			fail(i, "type is required (github or git)")
@@ -159,6 +177,9 @@ func (c *Config) validate(lines []int) error {
 }
 
 func (c *Config) applyDefaults() error {
+	for i := range c.Connections {
+		c.Connections[i].Token = os.ExpandEnv(c.Connections[i].Token)
+	}
 	if c.Server.Addr == "" {
 		c.Server.Addr = ":3070"
 	}

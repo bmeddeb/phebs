@@ -20,10 +20,14 @@ connections:
   # GitHub over PAT: at least one of orgs, users, repos.
   - name: github-personal
     type: github
-    token: "ghp_..." # env expansion lands with T2.2
+    token: "${GITHUB_TOKEN}" # ${ENV} expanded — keep secrets out of this file
     users: [bmeddeb]
     orgs: []
     repos: [] # "owner/name"
+    exclude:
+      archived: true
+      forks: false
+      repos: ["*/*-mirror"] # glob on owner/name
 
   # A single repo over plain git protocol(s).
   - name: zoekt-mirror

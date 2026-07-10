@@ -54,6 +54,8 @@ func SyncConnection(ctx context.Context, st store.Store, dataDir string, conn co
 	switch conn.Type {
 	case "git":
 		return syncGeneric(ctx, st, dataDir, conn)
+	case "github":
+		return syncGitHub(ctx, st, dataDir, conn)
 	default:
 		return fmt.Errorf("connection %s: unsupported type %q", conn.Name, conn.Type)
 	}

@@ -22,16 +22,17 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 }
 
 // Mirror clones cloneURL as a bare mirror into dir, or incrementally fetches
-// if the mirror already exists.
-func Mirror(ctx context.Context, cloneURL, dir string) error {
+// if the mirror already exists. gitCfg holds per-invocation `-c` flags (e.g.
+// auth headers) that must never persist into the mirror's config.
+func Mirror(ctx context.Context, cloneURL, dir string, gitCfg ...string) error {
 	if _, err := os.Stat(filepath.Join(dir, "HEAD")); err == nil {
-		_, err := runGit(ctx, dir, "fetch", "--prune", "origin")
+		_, err := runGit(ctx, dir, append(gitCfg, "fetch", "--prune", "origin")...)
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 		return fmt.Errorf("create repo dir: %w", err)
 	}
-	_, err := runGit(ctx, "", "clone", "--mirror", cloneURL, dir)
+	_, err := runGit(ctx, "", append(gitCfg, "clone", "--mirror", cloneURL, dir)...)
 	return err
 }
 
