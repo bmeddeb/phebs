@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "phebs-demo",
+      "runtimeExecutable": "make",
+      "runtimeArgs": [
+        "dev",
+        "ARGS=-config /private/tmp/claude-501/-Users-ben-phebs-com/d8f550af-1d38-4ff0-9cf2-4fd95c18f165/scratchpad/demo.yaml"
+      ],
+      "port": 3070
+    }
+  ]
+}

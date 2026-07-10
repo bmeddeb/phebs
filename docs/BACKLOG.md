@@ -125,7 +125,7 @@ traversal fuzz test.
 **T5.1 · Vite + React + TS scaffold, embedded** ✅ 2026-07-09 *(build-tag embed: no committed artifacts, `go build` green without npm)*
 `go:embed` production build; dev proxy to huma. AC: single binary serves UI.
 
-**T5.2 · Search page**
+**T5.2 · Search page** ✅ 2026-07-09 *(Base Web — public open-source `baseui`, no internal assets)*
 Query box + SSE-driven result list (repo/file grouping, match counts).
 AC: streaming renders incrementally; empty/error states.
 
