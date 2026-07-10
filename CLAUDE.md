@@ -1,0 +1,53 @@
+# CLAUDE.md — phebs
+
+Self-hosted code search in one Go binary. Ground-up, **reference-only** port of
+Sourcebot: zoekt in-process, SurrealDB 3.0, huma OpenAPI, Vite + React +
+CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
+
+## Source of truth (read before working)
+
+- `PLAN.md` — architecture + dated ADR bullets. Every decision lands here as an
+  ADR bullet **in the same PR** as the change. No other design docs.
+- `docs/PORT_MAP.md` — upstream analysis, scope, license verdict, EE counter-plan.
+- `docs/BACKLOG.md` — epics + PR-sized tickets. Work proceeds in ticket order;
+  branch names carry ticket IDs (e.g. `t1.3-job-claim-spike`).
+
+## Stack
+
+Go (latest stable, 1.26 line) · `github.com/sourcegraph/zoekt` as a library for
+**serving** (`query.Parse`, `shards.DirectorySearcher`); index **builds** via a
+child `zoekt-git-index` compiled from the same go.mod SHA (OOM isolation) ·
+SurrealDB 3.0 **embedded** (`surrealkv://`) for state **and** job queues
+(jittered polling — no Redis, no BullMQ; server mode only in the P6 fleet
+profile) · huma v2 for the API (OpenAPI free) · exec `git` for clone/fetch into
+bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
+
+## Layout
+
+`cmd/phebs/` · `internal/{config,store,sync,indexer,search,api}` · `ui/` ·
+`docs/` · shards at `$DATA/index`, bare repos at `$DATA/repos/<host>/<path>.git`
+
+## Conventions
+
+- PR-sized, stacked changes; one ticket per PR; ACs in BACKLOG.md are the merge bar.
+- Table-driven tests. Every epic ends demoable via `make dev` — an epic that
+  can't be shown end-to-end is not done.
+- golangci-lint clean. `context.Context` first param. Errors wrapped with `%w`,
+  classified at boundaries (T3.3 taxonomy).
+- HEAD-only indexing. Single-tenant posture; the per-user RepoSet hook in the
+  search pre-pass stays reserved but unimplemented.
+
+## Hard rules
+
+- **Never open, copy, or paraphrase upstream Sourcebot source.** Behavior, docs,
+  and API shapes are the only reference. Never read any path under `ee/` in the
+  upstream repo under any circumstances. Upstream is FSL-1.1 + proprietary ee/;
+  phebs is Apache-2.0 (confirmed, T0.2) and must stay uncontaminated.
+- Depend on upstream `github.com/sourcegraph/zoekt`, not the sourcebot-dev fork.
+- No employer code, credentials, hosts, or infrastructure. Personal project,
+  personal hardware.
+
+## Current state
+
+Epic 0 (bootstrap) on `t0-bootstrap`. T0.1 decided: module path
+`github.com/bmeddeb/phebs`. T0.2 decided: Apache-2.0. See PLAN.md decision log.
