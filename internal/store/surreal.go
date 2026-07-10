@@ -1,0 +1,188 @@
+package store
+
+import (
+	"context"
+	_ "embed"
+	"fmt"
+	"time"
+
+	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/models"
+)
+
+//go:embed schema.surql
+var schema string
+
+// Surreal implements Store over the official SDK (WebSocket RPC).
+type Surreal struct {
+	db   *surrealdb.DB
+	stop func() // non-nil when we supervise a local child
+}
+
+var _ Store = (*Surreal)(nil)
+
+// OpenLocal starts a supervised surreal child storing under dataDir and
+// connects to it. This is the single-node default (dev and prod).
+func OpenLocal(ctx context.Context, dataDir string) (*Surreal, error) {
+	endpoint, stop, err := startLocal(ctx, dataDir)
+	if err != nil {
+		return nil, err
+	}
+	s, err := Open(ctx, endpoint, "root", "root", "phebs", "phebs")
+	if err != nil {
+		stop()
+		return nil, err
+	}
+	s.stop = stop
+	return s, nil
+}
+
+// Open connects to a running SurrealDB, selects ns/db, and applies the
+// schema idempotently. Server-mode path for the fleet profile.
+func Open(ctx context.Context, endpoint, user, pass, namespace, database string) (*Surreal, error) {
+	db, err := surrealdb.FromEndpointURLString(ctx, endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("connect %s: %w", endpoint, err)
+	}
+	if _, err := db.SignIn(ctx, surrealdb.Auth{Username: user, Password: pass}); err != nil {
+		return nil, fmt.Errorf("signin: %w", err)
+	}
+	if err := db.Use(ctx, namespace, database); err != nil {
+		return nil, fmt.Errorf("use %s/%s: %w", namespace, database, err)
+	}
+	s := &Surreal{db: db}
+	if err := s.applySchema(ctx); err != nil {
+		return nil, fmt.Errorf("apply schema: %w", err)
+	}
+	return s, nil
+}
+
+func (s *Surreal) applySchema(ctx context.Context) error {
+	results, err := surrealdb.Query[any](ctx, s.db, schema, nil)
+	if err != nil {
+		return err
+	}
+	for i, r := range *results {
+		if r.Error != nil {
+			return fmt.Errorf("statement %d: %s", i, r.Error.Message)
+		}
+	}
+	return nil
+}
+
+func (s *Surreal) Close(ctx context.Context) error {
+	err := s.db.Close(ctx)
+	if s.stop != nil {
+		s.stop()
+	}
+	return err
+}
+
+// --- repos ---
+
+// repoID builds the record id repo:⟨name⟩; passing it as a typed param
+// sidesteps escaping of names like "github.com/foo/bar".
+func repoID(name string) models.RecordID { return models.NewRecordID("repo", name) }
+
+func (s *Surreal) UpsertRepo(ctx context.Context, r Repo) error {
+	_, err := surrealdb.Query[any](ctx, s.db,
+		"UPSERT $rid CONTENT $repo",
+		map[string]any{"rid": repoID(r.Name), "repo": r})
+	return err
+}
+
+func (s *Surreal) GetRepo(ctx context.Context, name string) (*Repo, error) {
+	results, err := surrealdb.Query[[]Repo](ctx, s.db,
+		"SELECT * FROM $rid",
+		map[string]any{"rid": repoID(name)})
+	if err != nil {
+		return nil, err
+	}
+	rows := (*results)[0].Result
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("repo %q: %w", name, ErrNotFound)
+	}
+	return &rows[0], nil
+}
+
+func (s *Surreal) ListRepos(ctx context.Context) ([]Repo, error) {
+	results, err := surrealdb.Query[[]Repo](ctx, s.db, "SELECT * FROM repo ORDER BY name", nil)
+	if err != nil {
+		return nil, err
+	}
+	return (*results)[0].Result, nil
+}
+
+func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
+	_, err := surrealdb.Query[any](ctx, s.db,
+		"DELETE $rid", map[string]any{"rid": repoID(name)})
+	return err
+}
+
+// --- jobs ---
+
+// jobRec pairs Job's fields with the SurrealDB record id for decoding.
+type jobRec struct {
+	Job
+	RecID *models.RecordID `json:"id"`
+}
+
+func (j jobRec) toJob(kind JobKind) Job {
+	out := j.Job
+	out.Kind = kind
+	if j.RecID != nil {
+		out.ID = j.RecID.String()
+	}
+	return out
+}
+
+func (s *Surreal) CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error) {
+	job := Job{Target: target, Status: StatusPending, CreatedAt: time.Now().UTC()}
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
+		"CREATE type::table($table) CONTENT $job",
+		map[string]any{"table": string(kind), "job": job})
+	if err != nil {
+		return nil, err
+	}
+	rows := (*results)[0].Result
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("create %s: empty result", kind)
+	}
+	out := rows[0].toJob(kind)
+	return &out, nil
+}
+
+func (s *Surreal) ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) {
+	sql := "SELECT * FROM type::table($table) ORDER BY created_at"
+	vars := map[string]any{"table": string(kind)}
+	if status != "" {
+		sql = "SELECT * FROM type::table($table) WHERE status = $status ORDER BY created_at"
+		vars["status"] = string(status)
+	}
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db, sql, vars)
+	if err != nil {
+		return nil, err
+	}
+	rows := (*results)[0].Result
+	jobs := make([]Job, len(rows))
+	for i, r := range rows {
+		jobs[i] = r.toJob(kind)
+	}
+	return jobs, nil
+}
+
+func (s *Surreal) SetJobStatus(ctx context.Context, id string, status JobStatus, errMsg string) error {
+	sql := "UPDATE type::record($id) SET status = $status, error = $err"
+	if status == StatusDone || status == StatusFailed {
+		sql += ", finished_at = time::now()"
+	}
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db, sql,
+		map[string]any{"id": id, "status": string(status), "err": errMsg})
+	if err != nil {
+		return err
+	}
+	if len((*results)[0].Result) == 0 {
+		return fmt.Errorf("job %q: %w", id, ErrNotFound)
+	}
+	return nil
+}

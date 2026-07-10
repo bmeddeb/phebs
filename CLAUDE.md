@@ -17,7 +17,8 @@ CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
 Go (latest stable, 1.26 line) · `github.com/sourcegraph/zoekt` as a library for
 **serving** (`query.Parse`, `shards.DirectorySearcher`); index **builds** via a
 child `zoekt-git-index` compiled from the same go.mod SHA (OOM isolation) ·
-SurrealDB 3.0 **embedded** (`surrealkv://`) for state **and** job queues
+SurrealDB 3.0 as a **supervised local child** (`surrealkv://`, official Go SDK
+over WS — no embedded Go engine, 2026-07-09 ADR) for state **and** job queues
 (jittered polling — no Redis, no BullMQ; server mode only in the P6 fleet
 profile) · huma v2 for the API (OpenAPI free) · exec `git` for clone/fetch into
 bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.

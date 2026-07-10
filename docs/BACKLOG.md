@@ -40,7 +40,7 @@ Own YAML schema (NOT upstream's JSON schemas): server block, connections list
 (github, generic-git), index dir, auth token. AC: invalid config fails fast
 with line-level errors; example config in `docs/`.
 
-**T1.2 · SurrealDB schema + store layer**
+**T1.2 · SurrealDB schema + store layer** ✅ 2026-07-09 *(supervised-child pivot — see PLAN ADR)*
 `DEFINE TABLE` .surql applied at boot for §5 tables: `repo`, `connection`,
 `repo_connection`, `connection_sync_job`, `indexing_job`, `user`, `api_key`.
 AC: idempotent apply; store package with typed CRUD for repo + jobs behind an

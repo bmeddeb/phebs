@@ -20,7 +20,7 @@ retrieved verbatim). Everything else carries the session's substance.
 | Language | Go ≥1.24 (build on latest stable, 1.26 line) | — |
 | Search engine | zoekt imported as a library (`shards`, `query`) for serving; **index builds via child `zoekt-git-index` built from the same go.mod SHA** (OOM isolation — zoekt itself isolates builds) | none needed — battle-tested |
 | zoekt source | **Upstream `sourcegraph/zoekt` (Apache-2.0), one version for reader and writer.** Reader/writer shard skew structurally impossible; shards are derived data, rebuildable from bare repos. sourcebot-dev fork verified as a light tracker — not used | temporary `-replace` only to browse legacy shards |
-| Database | SurrealDB ≥3.0 **embedded** via Go SDK (`surrealkv://`, CGo) for single-node; **server mode in the fleet profile** | store interfaces → Postgres impl |
+| Database | SurrealDB ≥3.0 as a **supervised local child** (`surreal start surrealkv://…`, loopback-only) for single-node, official Go SDK over WS — no embedded Go engine exists (2026-07-09 ADR); **server mode in the fleet profile** | store interfaces → Postgres impl |
 | Job queue | Lease table on SurrealDB; claim conflict behavior characterized via invariant checker + Elle (P2 single-node, P6 distributed) | asynq + Redis |
 | Queue wakeups | **Jittered polling.** LIVE SELECT wakeups are a thundering herd under fleet concurrency (every insert wakes every claimer; N−1 abort) | — |
 | Live updates | LIVE SELECT → SSE **for UI status fan-out only** (confirmed working through the embedded engine); never for queue wakeups | — |
@@ -86,7 +86,7 @@ single-node correctness is proved first.
 
 | Risk | Mitigation |
 |---|---|
-| CGo (embedded Surreal): cross-compile pain | Linux/amd64+arm64 container only; CI builds; fleet profile drops CGo-embedded entirely (server mode) |
+| `surreal` child binary must be present on host/image | Same posture as git + ctags children: install step in CI and dev docs; bundled in the P5 image |
 | Reader/writer shard skew | Structurally eliminated: library + `zoekt-git-index` from one module version |
 | Queue double-claims under concurrency | Idempotent handlers; P2 invariant checker in CI; Elle characterization single-node (P2) and distributed (P6) before trusting exactly-once anywhere |
 | Thundering herd on job inserts | Designed out: jittered polling, owner-scoped claims, per-kind concurrency caps |
@@ -132,3 +132,4 @@ single-node correctness is proved first.
 | 2026-07-09 | Execution granularity | BACKLOG.md epics/tickets are the work units; ADRs land here in the same PR as the change |
 | 2026-07-09 | T0.1 repo home / module path | **`github.com/bmeddeb/phebs`** — under personal user; org names deferred until there's a reason |
 | 2026-07-09 | T0.2 license | **Apache-2.0 confirmed**; LICENSE + copyright line land in t0-bootstrap |
+| 2026-07-09 | Embedded SurrealDB reality check (T1.2) | Official Go SDK is WS/HTTP only; `surrealdb.c.go` is v0.1.0 CGo requiring a manual Rust lib build. Pivot: **supervised local `surreal` child** on `surrealkv://`, loopback root creds, official SDK over WS. Single-command dev kept; CGo cross-compile risk deleted; LIVE SELECT unaffected; fleet cutover = same SDK, different URL. Revisit c.go if it matures |
