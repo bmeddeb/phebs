@@ -137,6 +137,23 @@ traversal fuzz test.
 
 ## EPIC 5 — UI (slice 5) ✅ 2026-07-09 — demoed in-browser: search/viewer/repos on Base Web via `make dev`
 
+**T5.5 · UI redesign (Base Web design handoff)** ✅ 2026-07-10 — *added post-P1*
+Applied the Uber design-language handoff on stock `baseui` (LightTheme/DarkTheme).
+- **a** — theme foundation: dark mode + toggle (localStorage), mono/sans fonts,
+  role→hex token map for non-semantic colors, redesigned 56px header shell.
+- **b** — syntax highlighting: CM6 `HighlightStyle` in the file viewer + a Lezer
+  standalone tokenizer for search-result chunks; styled match highlight;
+  redesigned file cards; blue deep-link line.
+- **c** — search workbench: facet rail (repos/languages, client-derived),
+  keyboard nav (j/k/enter/y/o), collapsible groups, streaming indicator bar +
+  skeleton + Stop.
+- **d** — file viewer (breadcrumb, sticky metadata header, commit pill,
+  permalink/open-in-search) + repos table (status dots, connection pills,
+  commit chips, per-row search/reindex, Reindex all).
+Deferred (need API additions, flagged in handoff): did-you-mean & speculative
+looseners (2b–2d), per-shard progress / stuck-search (3c/3d), file-tree column,
+context expander, auto-retry on stream drop.
+
 **T5.1 · Vite + React + TS scaffold, embedded** ✅ 2026-07-09 *(build-tag embed: no committed artifacts, `go build` green without npm)*
 `go:embed` production build; dev proxy to huma. AC: single binary serves UI.
 
