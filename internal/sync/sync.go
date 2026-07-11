@@ -198,16 +198,18 @@ func checkCloneURL(conn config.Connection, cloneURL string) error {
 
 // SyncConnection resolves conn to repo rows, mirrors them to disk, and
 // returns the names it synced (the connection's current membership set).
-func SyncConnection(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
+// A non-nil acl additionally mirrors private repos' host ACLs into
+// permission edges (T10.3); type git has no ACL source and ignores it.
+func SyncConnection(ctx context.Context, st store.Store, dataDir string, conn config.Connection, acl store.PermissionStore) ([]string, error) {
 	switch conn.Type {
 	case "git":
 		return syncGeneric(ctx, st, dataDir, conn)
 	case "github":
-		return syncGitHub(ctx, st, dataDir, conn)
+		return syncGitHub(ctx, st, dataDir, conn, acl)
 	case "gitlab":
-		return syncGitLab(ctx, st, dataDir, conn)
+		return syncGitLab(ctx, st, dataDir, conn, acl)
 	case "gitea":
-		return syncGitea(ctx, st, dataDir, conn)
+		return syncGitea(ctx, st, dataDir, conn, acl)
 	default:
 		return nil, fmt.Errorf("connection %s: unsupported type %q", conn.Name, conn.Type)
 	}
@@ -391,7 +393,7 @@ func Handler(cfg *config.Config, st store.Store) func(context.Context, store.Job
 		if conn == nil {
 			return fmt.Errorf("connection %q no longer in config", job.Target)
 		}
-		names, syncErr := SyncConnection(ctx, st, cfg.Server.DataDir, *conn)
+		names, syncErr := SyncConnection(ctx, st, cfg.Server.DataDir, *conn, ACLStore(cfg, st))
 		// Preserve partial progress: one persistently broken repository must
 		// not prevent repositories already fetched during this run from being
 		// indexed. Membership is still replaced only on total success.

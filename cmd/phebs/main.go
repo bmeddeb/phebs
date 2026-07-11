@@ -11,7 +11,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -173,6 +175,52 @@ func serve(args []string) error {
 		go ixRunner.Run(ctx)
 	}
 
+	// T10.3: permission-aware visibility. Presence of the permissions block
+	// enables enforcement; the closure resolves one request's predicate (nil
+	// for administrators). Non-admins see public repos, repos their mapped
+	// code-host identities grant, and always_visible matches — resolution
+	// fails closed to public+always_visible on any error.
+	var visibleFor func(ctx context.Context) func(store.Repo) bool
+	if cfg.Permissions != nil {
+		perms := cfg.Permissions
+		idsByEmail := make(map[string][]string, len(perms.Users))
+		for email, ids := range perms.Users {
+			key := strings.ToLower(email)
+			for _, id := range ids {
+				idsByEmail[key] = append(idsByEmail[key], strings.ToLower(id))
+			}
+		}
+		alwaysVisible := func(name string) bool {
+			for _, pat := range perms.AlwaysVisible {
+				if ok, _ := path.Match(pat, name); ok {
+					return true
+				}
+			}
+			return false
+		}
+		visibleFor = func(ctx context.Context) func(store.Repo) bool {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if ok && principal.IsAdmin {
+				return nil // administrators see everything
+			}
+			granted := map[string]bool{}
+			if ok && principal.User != nil {
+				if ids := idsByEmail[principal.User.NormalizedEmail]; len(ids) > 0 {
+					names, err := st.ListPermittedRepos(ctx, ids)
+					if err != nil {
+						log.Printf("resolve permitted repos: %v (failing closed)", err)
+					}
+					for _, name := range names {
+						granted[name] = true
+					}
+				}
+			}
+			return func(r store.Repo) bool {
+				return r.IsPublic || granted[r.Name] || alwaysVisible(r.Name)
+			}
+		}
+	}
+
 	dist, err := ui.FS()
 	if err != nil {
 		return err
@@ -200,6 +248,7 @@ func serve(args []string) error {
 			log.Printf("usage event: %v", err)
 		}
 	}
+	searcher.Visible = visibleFor // T10.3: the per-user RepoSet pre-pass
 	codeNavigation := codenav.New(codenav.Options{DataDir: cfg.Server.DataDir})
 
 	// repository-membership webhook events re-sync every remote connection
@@ -217,15 +266,22 @@ func serve(args []string) error {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin
 		},
-		AuditRecord: auditRecord, AuditLog: st, Analytics: st,
+		AuditRecord: auditRecord, AuditLog: st, Analytics: st, Visible: visibleFor,
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
 	})
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
 	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
-		CodeNav: codeNavigation,
+		CodeNav: codeNavigation, Visible: visibleFor,
 	})
-	mcpHandler := mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server { return mcpServer }, nil)
+	// Stateless (T10.3): in stateful mode every tool call runs with the
+	// session INITIATOR's context, so one user's session smears their
+	// permissions onto whoever posts to it (the SDK's hijack guard is inert
+	// without its own auth package). Stateless makes each POST carry its own
+	// authenticated principal; phebs tools are plain request/response, so
+	// nothing is lost.
+	mcpHandler := mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server { return mcpServer },
+		&mcpsdk.StreamableHTTPOptions{Stateless: true})
 	handler := newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist))
 
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}

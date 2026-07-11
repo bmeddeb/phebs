@@ -57,7 +57,7 @@ func TestSyncFollowsSourceBranch(t *testing.T) {
 	t.Cleanup(func() { _ = st.Close(context.Background()) })
 
 	conn := config.Connection{Name: "w", Type: "git", URL: origin, Watch: true} // plain path
-	if _, err := sync.SyncConnection(ctx, st, dataDir, conn); err != nil {
+	if _, err := sync.SyncConnection(ctx, st, dataDir, conn, nil); err != nil {
 		t.Fatalf("first sync: %v", err)
 	}
 	name, _ := sync.RepoName(origin)
@@ -77,7 +77,7 @@ func TestSyncFollowsSourceBranch(t *testing.T) {
 	gitc(t, origin, "add", ".")
 	gitc(t, origin, "commit", "-m", "on feature")
 
-	if _, err := sync.SyncConnection(ctx, st, dataDir, conn); err != nil {
+	if _, err := sync.SyncConnection(ctx, st, dataDir, conn, nil); err != nil {
 		t.Fatalf("resync: %v", err)
 	}
 	repo, _ = st.GetRepo(ctx, name)

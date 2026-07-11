@@ -28,7 +28,16 @@ type glProject struct {
 	} `json:"forked_from_project"`
 }
 
-func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
+// glMember is the subset of a project member object consumed by permission
+// syncing (T10.3). Reporter (20) is the lowest level that reads code in a
+// private project; /members/all includes inherited group members.
+type glMember struct {
+	Username    string `json:"username"`
+	State       string `json:"state"`
+	AccessLevel int    `json:"access_level"`
+}
+
+func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config.Connection, acl store.PermissionStore) ([]string, error) {
 	base := strings.TrimSuffix(conn.URL, "/")
 	if base == "" {
 		base = "https://gitlab.com"
@@ -123,6 +132,17 @@ func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config
 			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		names = append(names, name)
+		if acl != nil && p.Visibility != "public" { // "internal" also fails closed
+			members, err := listPages[glMember](ctx, c,
+				"/projects/"+strconv.FormatInt(p.ID, 10)+"/members/all?per_page=100")
+			identities := make([]string, 0, len(members))
+			for _, m := range members {
+				if m.Username != "" && m.State == "active" && m.AccessLevel >= 20 {
+					identities = append(identities, hostIdentity(prefix, m.Username))
+				}
+			}
+			mirrorACL(ctx, acl, name, identities, err)
+		}
 	}
 	return names, nil
 }

@@ -19,8 +19,10 @@ import (
 
 // Compile parses raw and applies the pre-passes: `context:<name>` atoms
 // (T8.1) become a RepoSet of the named config-defined repo set, and repo
-// metadata atoms are rewritten against the DB. The per-user RepoSet hook for
-// permission filtering stays reserved (CLAUDE.md).
+// metadata atoms are rewritten against the DB. Per-user permission filtering
+// (T10.3) is a system constraint, not query syntax — it lives in
+// (*Searcher).compile via the Visible hook, intersecting everything Compile
+// produces (context: expansions included).
 func Compile(ctx context.Context, st store.Store, contexts map[string][]string, raw string) (query.Q, error) {
 	// context: is phebs syntax, not zoekt's — extract it string-level
 	// before query.Parse ever sees it.

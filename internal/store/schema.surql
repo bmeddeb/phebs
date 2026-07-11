@@ -45,6 +45,12 @@ DEFINE INDEX IF NOT EXISTS audit_event_created ON audit_event FIELDS created_at;
 DEFINE TABLE IF NOT EXISTS usage_event SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS usage_event_created ON usage_event FIELDS created_at;
 
+-- repo <-> code-host identity permission edges (T10.3), mirrored from host
+-- ACLs; the search pre-pass compiles them into a per-user RepoSet.
+DEFINE TABLE IF NOT EXISTS repo_permission SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS repo_permission_pair ON repo_permission FIELDS repo, identity UNIQUE;
+DEFINE INDEX IF NOT EXISTS repo_permission_identity ON repo_permission FIELDS identity;
+
 DEFINE TABLE IF NOT EXISTS repo_fetch_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON repo_fetch_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];

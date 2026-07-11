@@ -38,7 +38,7 @@ func registerHistory(api huma.API, opts Options) {
 	}
 	type blameOut struct{ Body phebssync.BlameResult }
 	huma.Get(api, "/api/blame", func(ctx context.Context, in *blameIn) (*blameOut, error) {
-		ref, err := historyRef(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := historyRef(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return nil, gitErr(err)
 		}
@@ -58,7 +58,7 @@ func registerHistory(api huma.API, opts Options) {
 	}
 	type commitsOut struct{ Body phebssync.CommitListResult }
 	huma.Get(api, "/api/commits", func(ctx context.Context, in *commitsIn) (*commitsOut, error) {
-		ref, err := historyRef(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := historyRef(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return nil, gitErr(err)
 		}
@@ -77,7 +77,7 @@ func registerHistory(api huma.API, opts Options) {
 	}
 	type commitOut struct{ Body phebssync.CommitResult }
 	huma.Get(api, "/api/commit", func(ctx context.Context, in *commitIn) (*commitOut, error) {
-		ref, err := historyRef(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := historyRef(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return nil, gitErr(err)
 		}
@@ -97,7 +97,7 @@ func registerHistory(api huma.API, opts Options) {
 	}
 	type diffOut struct{ Body phebssync.DiffResult }
 	huma.Get(api, "/api/diff", func(ctx context.Context, in *diffIn) (*diffOut, error) {
-		head, err := historyRef(ctx, opts.Store, in.Repo, in.Head)
+		head, err := historyRef(ctx, opts, in.Repo, in.Head)
 		if err != nil {
 			return nil, gitErr(err)
 		}
@@ -114,12 +114,16 @@ func registerHistory(api huma.API, opts Options) {
 	})
 }
 
-func historyRef(ctx context.Context, st store.Store, repoName, requested string) (string, error) {
-	repo, err := st.GetRepo(ctx, repoName)
+func historyRef(ctx context.Context, opts Options, repoName, requested string) (string, error) {
+	repo, err := opts.Store.GetRepo(ctx, repoName)
 	if err != nil {
 		return "", err
 	}
 	if repo.Deleting {
+		return "", store.ErrNotFound
+	}
+	// T10.3: permission denials are indistinguishable from missing repos.
+	if allow := repoFilter(ctx, opts); allow != nil && !allow(*repo) {
 		return "", store.ErrNotFound
 	}
 	if requested != "" {

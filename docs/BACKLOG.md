@@ -346,12 +346,15 @@ no query text stored; Go-side windowed aggregation; admin-gated
 repos) with zero chart dependencies. **Zero telemetry** — events never leave
 the machine. `analytics.retention` (default 365d) shares the 12h sweep.
 
-**T10.3 · Permission syncing + permission-aware search** — *Sourcebot paid/EE; the durable moat*
-Mirror code-host ACLs into repo↔user edges; compile a per-user `RepoSet` at
-query time (the hook is reserved in the search pre-pass — native, not
-post-filter). AC: a user sees only repos their code-host grants; no results
-leak across the boundary; the filter is applied in the query, not after.
-Deps: T9.1.
+**T10.3 · Permission syncing + permission-aware search** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs; the durable moat*
+`repo_permission` edges (`<host>:<login>` → repo) mirrored in the adapters'
+per-repo loops for private repos (GitHub/GitLab/Gitea; replace-set writes,
+stale-kept on failure); config map links users → identities; enforcement
+opt-in via the `permissions:` block. Per-user `RepoSet` compiled in the
+search pre-pass (`Searcher.Visible` fills the reserved hook — in-query, not
+post-filter); the same predicate gates listings, file/history/code-nav reads,
+and all MCP tools (denial ≡ 404). MCP runs stateless to stop session-principal
+smearing. Leak tests across search/stream/API/MCP. Deps: T9.1.
 
 **T10.4 · Multi-branch / tag indexing (`rev:`)** — *Sourcebot free (up to 64 revs/repo)*
 **Architectural, not a ticket-sized change** — HEAD-only is a core P1

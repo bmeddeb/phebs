@@ -82,7 +82,7 @@ func TestSyncGiteaEndToEnd(t *testing.T) {
 		Orgs: []string{"acme"}, Users: []string{"dev"}, Repos: []string{"solo/tool"},
 		Exclude: config.Exclude{Forks: true},
 	}
-	names, err := SyncConnection(ctx, st, dataDir, conn)
+	names, err := SyncConnection(ctx, st, dataDir, conn, nil)
 	if err != nil {
 		t.Fatalf("sync: %v", err)
 	}

@@ -146,6 +146,7 @@ connections:
 | `webhook.secret` | *(empty)* | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars |
 | `audit.retention` | `2160h` | audit events older than this are pruned twice a day; `"0"` keeps them forever |
 | `analytics.retention` | `8760h` | local usage events older than this are pruned twice a day; `"0"` keeps them forever |
+| `permissions` | *(none)* | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything |
 
 ### Authentication
 
@@ -708,6 +709,37 @@ well as a reindex; the next start requires first-user enrollment.
 - OIDC authorizes every verified identity admitted by the configured provider.
   Apply membership/domain policy at that provider; phebs does not add a second
   allowlist.
+
+### Permission-aware search
+
+Adding a `permissions:` block turns on per-user visibility (T10.3). While a
+connection syncs, each **private** repo's collaborator list is mirrored from
+the code host (GitHub collaborators with `affiliation=all`; GitLab
+`members/all` at Reporter or above; Gitea collaborators plus the owner —
+org-team grants are not expanded) into local `repo_permission` edges keyed
+`<host>:<login>`. Public repos are visible to every authenticated user and
+never cost an ACL call. A failed listing keeps the previous grants rather
+than locking users out; the next successful sync corrects them.
+
+```yaml
+permissions:
+  users:
+    ben@meddeb.me: ["github.com:bmeddeb", "gitea.example.com:ben"]
+  always_visible: ["local/*"]
+```
+
+`users` maps a phebs account (by email) to its code-host identities — the
+explicit, operator-controlled link. `always_visible` globs cover repos with
+no ACL source (`type: git`, local watches), which are otherwise visible only
+to administrators. Administrators always see everything.
+
+Enforcement compiles the user's allowed set **into the search query itself**
+(the pre-pass RepoSet — never post-filtered), and the same predicate gates
+file/tree/source reads, history, code navigation, repo listings, and every
+MCP tool. A repo the caller cannot see behaves exactly like one that does
+not exist. Enable the block, then re-sync (or wait for the resync cadence)
+so edges exist before relying on them. MCP sessions run stateless so each
+request is evaluated as its own authenticated caller.
 
 ### Audit log
 

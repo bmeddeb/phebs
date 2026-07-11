@@ -74,6 +74,17 @@ audit:
 analytics:
   retention: 8760h
 
+# Permission-aware search (T10.3). PRESENCE of this block turns enforcement
+# on: non-administrators then see only public repos, repos their mapped
+# code-host identities grant, and always_visible matches — across search,
+# file/history/code-nav reads, listings, and MCP. Identities are
+# "<host>:<login>" where <host> is the repo-name prefix that host produces.
+# ACLs mirror during sync (private repos only), so enable this, then re-sync.
+# permissions:
+#   users:
+#     ben@meddeb.me: ["github.com:bmeddeb", "gitea.example.com:ben"]
+#   always_visible: ["local/*"]  # repos with no ACL source (type git)
+
 # Named repo sets for `context:<name>` search filters (T8.1). Patterns are
 # globs on full repo names; `*` does not cross `/`.
 contexts:

@@ -26,6 +26,12 @@ type Options struct {
 	DataDir string                    // bare mirrors for read_file
 	CodeNav *codenav.Service          // nil = SCIP tools report unavailable
 	History *phebssync.HistoryService // nil = construct from DataDir
+	// Visible resolves the caller's repo visibility (T10.3); nil disables
+	// permission filtering. search_code is covered inside the searcher; this
+	// hook gates the tools that bypass it (read_file, list_repos, SCIP,
+	// history). Requires per-request principals — serve runs the streamable
+	// handler stateless so tool contexts carry the current caller.
+	Visible func(ctx context.Context) func(store.Repo) bool
 }
 
 // maxFileBytes caps read_file output: a whole-file dump larger than this
@@ -72,7 +78,7 @@ func NewServer(opts Options) *sdk.Server {
 		Name:        "read_file",
 		Description: "Read a file (or a line range of it) from an indexed repository at its indexed revision.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in readIn) (*sdk.CallToolResult, readOut, error) {
-		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := indexedRevision(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return nil, readOut{}, err
 		}
@@ -94,9 +100,13 @@ func NewServer(opts Options) *sdk.Server {
 		if err != nil {
 			return nil, reposOut{}, err
 		}
+		allow := repoFilter(ctx, opts)
 		out := reposOut{Repos: make([]repoInfo, 0, len(repos))}
 		for _, r := range repos {
 			if r.Deleting || r.IndexedCommitHash == "" {
+				continue
+			}
+			if allow != nil && !allow(r) {
 				continue
 			}
 			out.Repos = append(out.Repos, repoInfo{
@@ -127,7 +137,7 @@ func registerCodeNavigationTools(s *sdk.Server, opts Options) {
 		if opts.CodeNav == nil {
 			return codenav.Query{}, errors.New("code navigation unavailable: no SCIP service configured")
 		}
-		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := indexedRevision(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return codenav.Query{}, err
 		}
@@ -184,7 +194,7 @@ func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.Histor
 		Name:        "blame",
 		Description: "Attribute each source line to a commit at an immutable revision, following moves and renames. Large results report truncated=true.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in blameIn) (*sdk.CallToolResult, phebssync.BlameResult, error) {
-		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := indexedRevision(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return nil, phebssync.BlameResult{}, err
 		}
@@ -203,7 +213,7 @@ func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.Histor
 		Name:        "list_commits",
 		Description: "List commits reachable from an immutable revision, optionally scoped to a file and followed across renames.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in commitsIn) (*sdk.CallToolResult, phebssync.CommitListResult, error) {
-		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := indexedRevision(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return nil, phebssync.CommitListResult{}, err
 		}
@@ -221,7 +231,7 @@ func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.Histor
 		Name:        "get_commit",
 		Description: "Get commit metadata, parents, and first-parent file changes for one immutable revision.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in commitIn) (*sdk.CallToolResult, phebssync.CommitResult, error) {
-		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := indexedRevision(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return nil, phebssync.CommitResult{}, err
 		}
@@ -240,7 +250,7 @@ func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.Histor
 		Name:        "diff",
 		Description: "Return a bounded unified diff and structured file statistics. Binary files are summarized and large patches report truncated=true.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in diffIn) (*sdk.CallToolResult, phebssync.DiffResult, error) {
-		head, err := indexedRevision(ctx, opts.Store, in.Repo, in.Head)
+		head, err := indexedRevision(ctx, opts, in.Repo, in.Head)
 		if err != nil {
 			return nil, phebssync.DiffResult{}, err
 		}
@@ -254,16 +264,21 @@ func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.Histor
 	})
 }
 
-func indexedRevision(ctx context.Context, st store.Store, repoName, requested string) (string, error) {
-	if st == nil {
+func indexedRevision(ctx context.Context, opts Options, repoName, requested string) (string, error) {
+	if opts.Store == nil {
 		return "", errors.New("repository store unavailable")
 	}
-	repo, err := st.GetRepo(ctx, repoName)
+	repo, err := opts.Store.GetRepo(ctx, repoName)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return "", fmt.Errorf("unknown repo %q (use list_repos for names)", repoName)
 		}
 		return "", err
+	}
+	// T10.3: a permission denial reads exactly like a missing repo —
+	// disclosing existence would itself be a leak.
+	if allow := repoFilter(ctx, opts); allow != nil && !allow(*repo) {
+		return "", fmt.Errorf("unknown repo %q (use list_repos for names)", repoName)
 	}
 	if repo.Deleting {
 		return "", fmt.Errorf("repo %q is being deleted", repoName)
@@ -275,6 +290,14 @@ func indexedRevision(ctx context.Context, st store.Store, repoName, requested st
 		return requested, nil
 	}
 	return repo.IndexedCommitHash, nil
+}
+
+// repoFilter resolves the request's visibility predicate; nil = everything.
+func repoFilter(ctx context.Context, opts Options) func(store.Repo) bool {
+	if opts.Visible == nil {
+		return nil
+	}
+	return opts.Visible(ctx)
 }
 
 // reposOut is list_repos' result shape.

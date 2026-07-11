@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	pathpkg "path"
@@ -237,6 +238,13 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	}
 	if err := st.DeleteRepo(ctx, name); err != nil {
 		return rollback(fmt.Errorf("cleanup %s row: %w", name, err))
+	}
+	// T10.3: drop grants so a future repo reusing this name starts with none.
+	// Best-effort — the row is gone, so stale edges grant nothing today.
+	if ps, ok := st.(store.PermissionStore); ok {
+		if err := ps.DeleteRepoPermissions(ctx, name); err != nil {
+			log.Printf("prune permissions for %s: %v", name, err)
+		}
 	}
 	return true, nil
 }

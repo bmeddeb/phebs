@@ -28,6 +28,12 @@ type Config struct {
 	Webhook     Webhook      `yaml:"webhook"`
 	Audit       Audit        `yaml:"audit"`
 	Analytics   Analytics    `yaml:"analytics"`
+	// Permissions enables permission-aware search (T10.3) when the block is
+	// present: non-administrators then see only public repositories, the
+	// repositories their mapped code-host identities grant, and
+	// always_visible matches. Omit the block to keep every authenticated
+	// user seeing everything (the single-tenant default).
+	Permissions *Permissions `yaml:"permissions"`
 	Connections []Connection `yaml:"connections"`
 	// Contexts are named repo sets for `context:<name>` search filters
 	// (T8.1): name → glob patterns matched against full repo names
@@ -78,6 +84,19 @@ type Analytics struct {
 // RetentionFor returns the parsed usage retention; 0 means keep forever.
 func (a Analytics) RetentionFor() time.Duration {
 	return retention(a.Retention, 365*24*time.Hour)
+}
+
+// Permissions maps phebs users to code-host identities and declares repos
+// visible to everyone. Identities are "<host>:<login>" where <host> is the
+// first segment of the repo names that host produces ("github.com:bmeddeb",
+// "gitea.example.com:ben"); matching is case-insensitive.
+type Permissions struct {
+	// Users maps a phebs user's email to their code-host identities.
+	Users map[string][]string `yaml:"users"`
+	// AlwaysVisible are repo-name globs every authenticated user may see —
+	// the escape hatch for repos with no code-host ACL source (type git,
+	// local watches). `*` does not cross `/`.
+	AlwaysVisible []string `yaml:"always_visible"`
 }
 
 func retention(raw string, def time.Duration) time.Duration {
@@ -385,6 +404,25 @@ func (c *Config) validate(lines []int) error {
 		for _, scope := range oidc.Scopes {
 			if strings.TrimSpace(scope) == "" || strings.ContainsAny(scope, " \t\r\n") {
 				errs = append(errs, fmt.Errorf("auth.oidc scope %q must be one non-empty token", scope))
+			}
+		}
+	}
+
+	if p := c.Permissions; p != nil {
+		for email, identities := range p.Users {
+			if !strings.Contains(email, "@") || strings.TrimSpace(email) != email || email == "" {
+				errs = append(errs, fmt.Errorf("permissions.users: key %q must be an email address", email))
+			}
+			for _, id := range identities {
+				host, login, ok := strings.Cut(id, ":")
+				if !ok || host == "" || login == "" || strings.ContainsAny(id, " \t\r\n/") {
+					errs = append(errs, fmt.Errorf("permissions.users[%s]: identity %q must be \"<host>:<login>\"", email, id))
+				}
+			}
+		}
+		for _, pat := range p.AlwaysVisible {
+			if _, err := path.Match(pat, "x/y"); err != nil {
+				errs = append(errs, fmt.Errorf("permissions.always_visible: bad pattern %q: %v", pat, err))
 			}
 		}
 	}

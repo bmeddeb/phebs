@@ -26,7 +26,13 @@ type gtRepo struct {
 	UpdatedAt     *time.Time `json:"updated_at"`
 }
 
-func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
+// gtUser is the subset of a collaborator object consumed by permission
+// syncing (T10.3).
+type gtUser struct {
+	Login string `json:"login"`
+}
+
+func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.Connection, acl store.PermissionStore) ([]string, error) {
 	base := strings.TrimSuffix(conn.URL, "/")
 	prefix, err := hostPrefix(base)
 	if err != nil {
@@ -111,6 +117,22 @@ func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.
 			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		names = append(names, name)
+		if acl != nil && r.Private {
+			// Gitea collaborators exclude the owner — add it explicitly.
+			// ponytail: org-team-granted access is not mirrored; union
+			// /repos/{o}/{r}/teams -> /teams/{id}/members if demand appears.
+			collaborators, err := listPages[gtUser](ctx, c, "/repos/"+r.FullName+"/collaborators?limit=50")
+			identities := make([]string, 0, len(collaborators)+1)
+			if owner, _, ok := strings.Cut(r.FullName, "/"); ok && owner != "" {
+				identities = append(identities, hostIdentity(prefix, owner))
+			}
+			for _, u := range collaborators {
+				if u.Login != "" {
+					identities = append(identities, hostIdentity(prefix, u.Login))
+				}
+			}
+			mirrorACL(ctx, acl, name, identities, err)
+		}
 	}
 	return names, nil
 }

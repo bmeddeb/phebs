@@ -298,7 +298,7 @@ func TestSyncGitHubEndToEnd(t *testing.T) {
 
 	conn := config.Connection{Name: "gh", Type: "github", Users: []string{"ben"},
 		Exclude: config.Exclude{Archived: true}}
-	names, err := SyncConnection(ctx, st, dataDir, conn)
+	names, err := SyncConnection(ctx, st, dataDir, conn, nil)
 	if err != nil {
 		t.Fatalf("sync: %v", err)
 	}
@@ -386,7 +386,7 @@ func TestSyncGitHubAuthedUserListsPrivate(t *testing.T) {
 
 	// "Ben" vs login "ben": the match must be case-insensitive.
 	conn := config.Connection{Name: "gh", Type: "github", Token: "tok", Users: []string{"Ben"}}
-	names, err := SyncConnection(ctx, st, dataDir, conn)
+	names, err := SyncConnection(ctx, st, dataDir, conn, nil)
 	if err != nil {
 		t.Fatalf("sync: %v", err)
 	}

@@ -27,7 +27,7 @@ func registerCodeNavigation(api huma.API, opts Options) {
 		if opts.CodeNav == nil {
 			return codenav.Query{}, huma.Error503ServiceUnavailable("code navigation unavailable")
 		}
-		ref, err := historyRef(ctx, opts.Store, in.Repo, in.Ref)
+		ref, err := historyRef(ctx, opts, in.Repo, in.Ref)
 		if err != nil {
 			return codenav.Query{}, gitErr(err)
 		}

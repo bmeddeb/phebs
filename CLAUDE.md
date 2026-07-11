@@ -38,7 +38,8 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 - golangci-lint clean. `context.Context` first param. Errors wrapped with `%w`,
   classified at boundaries (T3.3 taxonomy).
 - HEAD-only indexing. Single-tenant posture; the per-user RepoSet hook in the
-  search pre-pass stays reserved but unimplemented.
+  search pre-pass is `Searcher.Visible` (T10.3), enabled only when the config
+  has a `permissions:` block.
 
 ## Hard rules
 

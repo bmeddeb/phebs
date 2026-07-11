@@ -41,6 +41,11 @@ type Options struct {
 	// T10.2 analytics: serves GET /api/analytics; nil answers 503.
 	Analytics store.AnalyticsStore
 
+	// Visible resolves the caller's repo visibility (T10.3): it returns this
+	// request's predicate, or nil when the caller may see everything. A nil
+	// field disables permission filtering (tests, permissions block absent).
+	Visible func(ctx context.Context) func(store.Repo) bool
+
 	// T7.4 webhook: empty secret leaves POST /api/webhook unregistered.
 	// ResyncConnections are the code-host connection names to re-sync on
 	// repository-membership events.
@@ -96,9 +101,10 @@ func New(opts Options) http.Handler {
 		if err != nil {
 			return nil, huma.Error500InternalServerError("list repos", err)
 		}
+		allow := repoFilter(ctx, opts)
 		visible := repos[:0]
 		for _, repo := range repos {
-			if !repo.Deleting {
+			if !repo.Deleting && (allow == nil || allow(repo)) {
 				visible = append(visible, sanitizeRepo(repo))
 			}
 		}
@@ -175,7 +181,7 @@ func New(opts Options) http.Handler {
 		}
 	}
 	huma.Get(api, "/api/source", func(ctx context.Context, in *sourceIn) (*sourceOut, error) {
-		if err := requireReadableRepo(ctx, opts.Store, in.Repo); err != nil {
+		if err := requireReadableRepo(ctx, opts, in.Repo); err != nil {
 			return nil, gitErr(err)
 		}
 		content, err := phebssync.CatFile(ctx, opts.DataDir, in.Repo, in.Ref, in.Path)
@@ -203,7 +209,7 @@ func New(opts Options) http.Handler {
 		}
 	}
 	huma.Get(api, "/api/folder_contents", func(ctx context.Context, in *folderIn) (*folderOut, error) {
-		if err := requireReadableRepo(ctx, opts.Store, in.Repo); err != nil {
+		if err := requireReadableRepo(ctx, opts, in.Repo); err != nil {
 			return nil, gitErr(err)
 		}
 		entries, err := phebssync.FolderContents(ctx, opts.DataDir, in.Repo, in.Ref, in.Path)
@@ -221,7 +227,7 @@ func New(opts Options) http.Handler {
 		}
 	}
 	huma.Get(api, "/api/tree", func(ctx context.Context, in *repoRefIn) (*treeOut, error) {
-		if err := requireReadableRepo(ctx, opts.Store, in.Repo); err != nil {
+		if err := requireReadableRepo(ctx, opts, in.Repo); err != nil {
 			return nil, gitErr(err)
 		}
 		paths, err := phebssync.TreePaths(ctx, opts.DataDir, in.Repo, in.Ref)
@@ -275,9 +281,10 @@ func New(opts Options) http.Handler {
 		if err != nil {
 			return nil, huma.Error500InternalServerError("repo statuses", err)
 		}
+		allow := repoFilter(ctx, opts)
 		visible := statuses[:0]
 		for _, status := range statuses {
-			if !status.Deleting {
+			if !status.Deleting && (allow == nil || allow(status.Repo)) {
 				status.Repo = sanitizeRepo(status.Repo)
 				visible = append(visible, status)
 			}
@@ -298,15 +305,28 @@ func New(opts Options) http.Handler {
 	return mux
 }
 
-func requireReadableRepo(ctx context.Context, st store.Store, name string) error {
-	repo, err := st.GetRepo(ctx, name)
+func requireReadableRepo(ctx context.Context, opts Options, name string) error {
+	repo, err := opts.Store.GetRepo(ctx, name)
 	if err != nil {
 		return err
 	}
 	if repo.Deleting {
 		return fmt.Errorf("repo %q: %w", name, store.ErrNotFound)
 	}
+	// T10.3: a permission denial is indistinguishable from a missing repo —
+	// disclosing existence would itself be a leak.
+	if allow := repoFilter(ctx, opts); allow != nil && !allow(*repo) {
+		return fmt.Errorf("repo %q: %w", name, store.ErrNotFound)
+	}
 	return nil
+}
+
+// repoFilter resolves the request's visibility predicate; nil = everything.
+func repoFilter(ctx context.Context, opts Options) func(store.Repo) bool {
+	if opts.Visible == nil {
+		return nil
+	}
+	return opts.Visible(ctx)
 }
 
 func sanitizeRepo(repo store.Repo) store.Repo {

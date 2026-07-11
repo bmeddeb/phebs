@@ -30,6 +30,13 @@ type Searcher struct {
 	// through Search/Stream. Assigned once at startup; the callback resolves
 	// the actor and must never block on failure.
 	Usage func(ctx context.Context, event store.UsageEvent)
+	// Visible is the per-user RepoSet hook (T10.3), filling the reservation
+	// noted in CLAUDE.md. Called once per query with the request context, it
+	// returns the caller's repo predicate — or nil when the caller may see
+	// everything (administrators). A nil field disables permission filtering.
+	// Filtering happens here, in the pre-pass, so REST, SSE, and MCP inherit
+	// it and nothing is post-filtered.
+	Visible func(ctx context.Context) func(store.Repo) bool
 }
 
 // usageRepoCap bounds the distinct repo names recorded per search, in result
@@ -230,13 +237,23 @@ func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string
 	if err != nil {
 		return nil, nil, fmt.Errorf("resolve searchable repos: %w", err)
 	}
+	var allow func(store.Repo) bool
+	if s.Visible != nil {
+		allow = s.Visible(ctx)
+	}
 	names := make([]string, 0, len(repos))
 	versions := make(map[string]string, len(repos))
 	for _, repo := range repos {
-		if !repo.Deleting && repo.IndexedCommitHash != "" {
-			names = append(names, repo.Name)
-			versions[repo.Name] = repo.IndexedCommitHash
+		if repo.Deleting || repo.IndexedCommitHash == "" {
+			continue
 		}
+		// T10.3: filtering versions too makes toResult's revision check a
+		// second fail-closed gate over the permission boundary.
+		if allow != nil && !allow(repo) {
+			continue
+		}
+		names = append(names, repo.Name)
+		versions[repo.Name] = repo.IndexedCommitHash
 	}
 	return query.Simplify(query.NewAnd(query.NewRepoSet(names...), q)), versions, nil
 }

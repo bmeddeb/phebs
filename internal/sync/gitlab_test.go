@@ -107,7 +107,7 @@ func TestSyncGitLabEndToEnd(t *testing.T) {
 		Groups: []string{"team/platform"}, Users: []string{"dev"}, Repos: []string{"solo/tool"},
 		Exclude: config.Exclude{Archived: true},
 	}
-	names, err := SyncConnection(ctx, st, dataDir, conn)
+	names, err := SyncConnection(ctx, st, dataDir, conn, nil)
 	if err != nil {
 		t.Fatalf("sync: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestSyncGitLabRejectsTraversal(t *testing.T) {
 	defer srv.Close()
 
 	conn := config.Connection{Name: "gl", Type: "gitlab", URL: srv.URL, Users: []string{"x"}}
-	_, err := syncGitLab(context.Background(), nil, t.TempDir(), conn)
+	_, err := syncGitLab(context.Background(), nil, t.TempDir(), conn, nil)
 	if err == nil || !strings.Contains(err.Error(), "unsafe repo name") {
 		t.Fatalf("want unsafe-repo-name error, got %v", err)
 	}

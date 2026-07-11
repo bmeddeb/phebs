@@ -41,7 +41,13 @@ type ghRepo struct {
 	PushedAt      *time.Time `json:"pushed_at"`
 }
 
-func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
+// ghUser is the subset of a collaborator object consumed by permission
+// syncing (T10.3).
+type ghUser struct {
+	Login string `json:"login"`
+}
+
+func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config.Connection, acl store.PermissionStore) ([]string, error) {
 	c := &hostClient{base: ghAPIBase, accept: "application/vnd.github+json"}
 	// token precedence: App installation token when configured, else PAT,
 	// else anonymous (public repos only). gitToken is what git fetches use.
@@ -168,6 +174,19 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		names = append(names, name)
+		if acl != nil && r.Private {
+			// affiliation=all includes owner, direct, outside, and
+			// org/team-derived collaborators.
+			collaborators, err := listPages[ghUser](ctx, c,
+				"/repos/"+r.FullName+"/collaborators?per_page=100&affiliation=all")
+			identities := make([]string, 0, len(collaborators))
+			for _, u := range collaborators {
+				if u.Login != "" {
+					identities = append(identities, hostIdentity("github.com", u.Login))
+				}
+			}
+			mirrorACL(ctx, acl, name, identities, err)
+		}
 	}
 	return names, nil
 }

@@ -137,7 +137,7 @@ func TestSyncGitHubAppMode(t *testing.T) {
 		App: config.GitHubApp{ID: 12345, InstallationID: 77, PrivateKeyPath: keyPath}}
 
 	for run := 1; run <= 2; run++ {
-		names, err := SyncConnection(ctx, st, dataDir, conn)
+		names, err := SyncConnection(ctx, st, dataDir, conn, nil)
 		if err != nil {
 			t.Fatalf("sync run %d: %v", run, err)
 		}
@@ -212,7 +212,7 @@ func TestSyncGitHubAppUserSelectorUsesInstallationRepos(t *testing.T) {
 	t.Cleanup(func() { _ = st.Close(context.Background()) })
 	conn := config.Connection{Name: "gha", Type: "github", Users: []string{"ben"},
 		App: config.GitHubApp{ID: 12345, InstallationID: 88, PrivateKeyPath: keyPath}}
-	names, err := SyncConnection(ctx, st, t.TempDir(), conn)
+	names, err := SyncConnection(ctx, st, t.TempDir(), conn, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

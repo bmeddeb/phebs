@@ -45,7 +45,7 @@ func TestFetchHandler(t *testing.T) {
 		Connections: []config.Connection{{Name: "c1", Type: "git", URL: origin}},
 	}
 	// initial sync creates the mirror and membership
-	names, err := SyncConnection(ctx, st, dataDir, cfg.Connections[0])
+	names, err := SyncConnection(ctx, st, dataDir, cfg.Connections[0], nil)
 	if err != nil {
 		t.Fatal(err)
 	}

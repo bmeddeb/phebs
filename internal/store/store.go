@@ -166,6 +166,18 @@ type AnalyticsStore interface {
 	PruneUsageEvents(ctx context.Context, cutoff time.Time) (int, error)
 }
 
+// PermissionStore mirrors code-host ACLs as repo↔identity edges (T10.3).
+// Identities are lower-cased "<host>:<login>" strings; the sync adapters
+// write them and the per-user search pre-pass reads them.
+type PermissionStore interface {
+	// SetRepoPermissions transactionally replaces one repo's granted
+	// identity set, so a shrunken host ACL revokes atomically.
+	SetRepoPermissions(ctx context.Context, repo string, identities []string) error
+	// ListPermittedRepos returns the repo names granted to any identity.
+	ListPermittedRepos(ctx context.Context, identities []string) ([]string, error)
+	DeleteRepoPermissions(ctx context.Context, repo string) error
+}
+
 // AuthStats drives the public auth status and the one-time setup gate.
 type AuthStats struct {
 	Users         int

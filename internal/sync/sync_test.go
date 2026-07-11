@@ -104,7 +104,7 @@ func TestSyncGenericEndToEnd(t *testing.T) {
 	t.Cleanup(func() { _ = st.Close(context.Background()) })
 
 	conn := config.Connection{Name: "fixture", Type: "git", URL: "file://" + origin}
-	names, err := sync.SyncConnection(ctx, st, dataDir, conn)
+	names, err := sync.SyncConnection(ctx, st, dataDir, conn, nil)
 	if err != nil {
 		t.Fatalf("first sync: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestSyncGenericEndToEnd(t *testing.T) {
 	}
 	gitc(t, origin, "add", ".")
 	gitc(t, origin, "commit", "-m", "two")
-	if _, err := sync.SyncConnection(ctx, st, dataDir, conn); err != nil {
+	if _, err := sync.SyncConnection(ctx, st, dataDir, conn, nil); err != nil {
 		t.Fatalf("resync: %v", err)
 	}
 	if head, origHead := gitc(t, dir, "rev-parse", "HEAD"), gitc(t, origin, "rev-parse", "HEAD"); head != origHead {
@@ -220,7 +220,7 @@ func TestOrchestration(t *testing.T) {
 
 func TestSyncUnsupportedType(t *testing.T) {
 	_, err := sync.SyncConnection(context.Background(), nil, t.TempDir(),
-		config.Connection{Name: "x", Type: "svn"})
+		config.Connection{Name: "x", Type: "svn"}, nil)
 	if err == nil || !strings.Contains(err.Error(), "unsupported type") {
 		t.Errorf("err = %v, want unsupported type", err)
 	}
