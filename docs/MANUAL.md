@@ -98,7 +98,7 @@ sync:
 
 connections:
   - name: my-conn         # required; unique; [a-z0-9-]+
-    type: github | gitlab | git
+    type: github | gitlab | gitea | git
     # ... see per-type fields below
 ```
 
@@ -160,6 +160,29 @@ fetches (HTTP basic as the `oauth2` pseudo-user, injected per-invocation) —
 it is never written into mirror config or the database. Rate limits are
 honored automatically (429 `Retry-After`). Repos are named
 `<host>/<full/project/path>`.
+
+### `type: gitea` connections
+
+```yaml
+- name: gitea-forge
+  type: gitea
+  url: https://gitea.example.com  # required: base URL of the instance
+  token: "${GITEA_TOKEN}"         # PAT; omit for public repos only
+  orgs:  [acme]                   # all repos of each org
+  users: [dev]                    # all repos owned by each user
+  repos: [owner/name]             # explicit repos
+  exclude:
+    archived: true
+    forks: true
+    repos: ["*/*-mirror"]
+```
+
+`url` is required (there is no canonical hosted Gitea); at least one of
+`orgs`/`users`/`repos` too. Listings are requester-scoped, so a token sees
+its accessible private repos. The token authenticates the API
+(`Authorization: token …`) and git fetches (HTTP basic, token as username,
+injected per-invocation) — never persisted. Repos are named
+`<host>/<owner>/<name>`.
 
 ### `type: git` connections
 

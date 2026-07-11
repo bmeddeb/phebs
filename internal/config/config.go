@@ -62,12 +62,12 @@ type Auth struct {
 // Connection declares one source of repos to sync (Epic 2 consumes these).
 type Connection struct {
 	Name string `yaml:"name"` // required, unique, [a-z0-9-]+
-	Type string `yaml:"type"` // "github", "gitlab", or "git"
+	Type string `yaml:"type"` // "github", "gitlab", "gitea", or "git"
 
-	// github/gitlab. Token is a PAT; ${ENV} references are expanded so
+	// code-host types. Token is a PAT; ${ENV} references are expanded so
 	// secrets stay out of the file.
 	Token   string   `yaml:"token"`
-	Orgs    []string `yaml:"orgs"`   // github: all repos of each org
+	Orgs    []string `yaml:"orgs"`   // github/gitea: all repos of each org
 	Groups  []string `yaml:"groups"` // gitlab: all projects of each group (subgroups included)
 	Users   []string `yaml:"users"`
 	Repos   []string `yaml:"repos"` // explicit "owner/name" (gitlab: full project path)
@@ -75,7 +75,8 @@ type Connection struct {
 
 	// git: clone URL of a single repository (plain absolute paths and
 	// file:// URLs point at local repos). gitlab: optional http(s) base URL
-	// of a self-hosted instance (default https://gitlab.com).
+	// of a self-hosted instance (default https://gitlab.com). gitea:
+	// required http(s) base URL.
 	URL string `yaml:"url"`
 	// Watch (local git only): poll the repo's HEAD and re-sync/re-index
 	// when it moves — live search over a working repo.
@@ -195,7 +196,7 @@ func (c *Config) validate(lines []int) error {
 				fail(i, "groups is only valid for type gitlab (github uses orgs)")
 			}
 			if conn.URL != "" {
-				fail(i, "url is only valid for type git or gitlab")
+				fail(i, "url is not valid for type github")
 			}
 			if conn.Watch {
 				fail(i, "watch is only valid for local git connections")
@@ -206,10 +207,24 @@ func (c *Config) validate(lines []int) error {
 				fail(i, "gitlab connection needs at least one of groups, users, repos")
 			}
 			if len(conn.Orgs) > 0 {
-				fail(i, "orgs is only valid for type github (gitlab uses groups)")
+				fail(i, "orgs is only valid for type github/gitea (gitlab uses groups)")
 			}
-			if conn.URL != "" && !strings.HasPrefix(conn.URL, "http://") && !strings.HasPrefix(conn.URL, "https://") {
+			if conn.URL != "" && !isHTTPBase(conn.URL) {
 				fail(i, "gitlab url must be an http(s) base URL, got %q", conn.URL)
+			}
+			if conn.Watch {
+				fail(i, "watch is only valid for local git connections")
+			}
+			validateExcludes(fail, i, conn.Exclude)
+		case "gitea":
+			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0 {
+				fail(i, "gitea connection needs at least one of orgs, users, repos")
+			}
+			if len(conn.Groups) > 0 {
+				fail(i, "groups is only valid for type gitlab (gitea uses orgs)")
+			}
+			if !isHTTPBase(conn.URL) {
+				fail(i, "gitea connection requires an http(s) base url, got %q", conn.URL)
 			}
 			if conn.Watch {
 				fail(i, "watch is only valid for local git connections")
@@ -226,12 +241,17 @@ func (c *Config) validate(lines []int) error {
 				fail(i, "watch requires a local url (absolute path or file://)")
 			}
 		case "":
-			fail(i, "type is required (github, gitlab, or git)")
+			fail(i, "type is required (github, gitlab, gitea, or git)")
 		default:
-			fail(i, "unknown type %q (want github, gitlab, or git)", conn.Type)
+			fail(i, "unknown type %q (want github, gitlab, gitea, or git)", conn.Type)
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// isHTTPBase reports whether s can serve as a code-host API base URL.
+func isHTTPBase(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
 func validateExcludes(fail func(int, string, ...any), i int, ex Exclude) {

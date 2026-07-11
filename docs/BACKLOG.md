@@ -222,10 +222,12 @@ repos, excludes, Link-header pagination + 429 Retry-After, §5 metadata,
 oauth2-basic authenticated clone. Shared `hostClient` extracted from the
 GitHub adapter. Path-traversal guard on server-supplied project paths.
 
-**T7.2 · Gitea connector** — *Sourcebot free*
-`type: gitea` connection (PAT + base URL for self-hosted). AC: a Gitea org
-syncs + indexes. *(Bitbucket Cloud/DC, Azure DevOps, Gerrit follow as
-T7.x by demand — same adapter shape.)*
+**T7.2 · Gitea connector** ✅ 2026-07-11 — *Sourcebot free*
+`type: gitea` (PAT + required base URL): orgs/users/repos on the shared
+`hostClient`. **Verified live against a real Gitea 1.26 container**: private
+org repo synced, indexed, searched; token-as-basic-username clone auth
+confirmed; token absent from data dir. *(Bitbucket Cloud/DC, Azure DevOps,
+Gerrit follow as T7.x by demand — same adapter shape.)*
 
 **T7.3 · GitHub App auth** — *Sourcebot paid/EE — OSS in phebs*
 `ghinstallation` installation-token auth as an alternative to PATs (higher

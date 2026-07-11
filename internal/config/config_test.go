@@ -55,7 +55,22 @@ connections:
 		{
 			"github with url",
 			"connections:\n  - {name: gh, type: github, users: [u], url: x}\n",
-			"url is only valid for type git or gitlab",
+			"url is not valid for type github",
+		},
+		{
+			"gitea without url",
+			"connections:\n  - {name: gt, type: gitea, orgs: [o]}\n",
+			"gitea connection requires an http(s) base url",
+		},
+		{
+			"gitea with groups",
+			"connections:\n  - {name: gt, type: gitea, orgs: [o], url: 'https://g.example.com', groups: [g]}\n",
+			"groups is only valid for type gitlab",
+		},
+		{
+			"gitea valid",
+			"connections:\n  - {name: gt, type: gitea, orgs: [o], url: 'https://g.example.com'}\n",
+			"",
 		},
 		{
 			"github with groups",
