@@ -205,6 +205,48 @@ func TestSearchNegatedFilter(t *testing.T) {
 	}
 }
 
+// T8.1 AC: context:<name> restricts results to the named repo set, end to
+// end over real shards.
+func TestSearchContext(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	s := corpus(t, ctx)
+	s.Contexts = map[string][]string{
+		"plainset": {"example.com/plain"},
+		"all":      {"example.com/*"},
+	}
+
+	res, err := s.Search(ctx, "phebsNeedle context:plainset", search.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Files) == 0 {
+		t.Fatal("context-scoped search returned nothing")
+	}
+	for _, f := range res.Files {
+		if f.Repo != "example.com/plain" {
+			t.Errorf("context:plainset leaked %s/%s", f.Repo, f.Path)
+		}
+	}
+
+	// glob context matches both fixture repos
+	res, err = s.Search(ctx, "phebsNeedle context:all", search.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repos := map[string]bool{}
+	for _, f := range res.Files {
+		repos[f.Repo] = true
+	}
+	if !repos["example.com/plain"] || !repos["example.com/forked"] {
+		t.Errorf("context:all matched %v, want both fixture repos", repos)
+	}
+
+	if _, err := s.Search(ctx, "phebsNeedle context:missing", search.Options{}); err == nil {
+		t.Error("unknown context should error")
+	}
+}
+
 // T4.3: streaming forwards batches progressively and aggregates stats;
 // a cancelled context stops the search.
 func TestStream(t *testing.T) {

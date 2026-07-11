@@ -252,11 +252,12 @@ watch/boot-owned. Moves "periodic re-sync" partial → have.
 
 ## EPIC 8 — Differentiators: paid features, OSS in phebs *(Wave 2 — high value)*
 
-**T8.1 · Search contexts** — *Sourcebot paid/EE — OSS in phebs*
-`search_context` table + `context:<name>` pre-pass compiled to a `query.RepoSet`
-(the hook already exists in `internal/search/query.go`); contexts defined in
-config. AC: `context:foo` restricts results to the named repo set; table-driven
-tests; CRUD or config-defined contexts documented.
+**T8.1 · Search contexts** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+Config-defined contexts (name → repo-name globs) + string-level `context:`
+extraction ahead of `query.Parse` (zoekt has no such atom), compiled to one
+`RepoSet` AND'd over the query; multiple atoms union. Table-driven Compile
+tests + e2e over real shards. No DB table — config is the single source;
+add CRUD when a UI needs it.
 
 **T8.2 · MCP server** — *Sourcebot paid/EE — OSS in phebs; flagship differentiator (PLAN P4)*
 Official `modelcontextprotocol/go-sdk` server exposing `search_code`,

@@ -56,10 +56,31 @@ func TestCompile(t *testing.T) {
 			notFalse: true, contains: []string{"or", "lang:Go", "reposet"}},
 
 		{name: "parse error", raw: "(unbalanced", err: true},
+
+		// T8.1 search contexts: config-defined repo sets, string-level atom.
+		{name: "context restricts to its set", raw: "context:pub needle",
+			want: `(and (reposet h/public-archived h/public-plain) substr:"needle")`},
+		{name: "context exact-name pattern", raw: "context:one needle",
+			want: `(and (reposet h/private-fork) substr:"needle")`},
+		{name: "two contexts union", raw: "context:pub context:one needle",
+			contains: []string{"reposet", "h/private-fork", "h/public-plain", `substr:"needle"`}},
+		{name: "context matching nothing yields empty set", raw: "context:none needle",
+			want: `FALSE`}, // empty RepoSet AND anything simplifies to no results
+		{name: "quoted context stays content", raw: `"context:pub" needle`,
+			contains: []string{`substr:"context:pub"`, `substr:"needle"`}},
+		{name: "unknown context", raw: "context:nope needle", err: true},
+		{name: "context without terms", raw: "context:pub", err: true},
+		{name: "negated context", raw: "-context:pub needle", err: true},
+		{name: "context with empty name", raw: "context: needle", err: true},
+	}
+	contexts := map[string][]string{
+		"pub":  {"h/public-*"},
+		"one":  {"h/private-fork"},
+		"none": {"other-host/*"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			q, err := search.Compile(context.Background(), fakeStore{}, tt.raw)
+			q, err := search.Compile(context.Background(), fakeStore{}, contexts, tt.raw)
 			if (err != nil) != tt.err {
 				t.Fatalf("Compile(%q) err = %v, wantErr %v", tt.raw, err, tt.err)
 			}

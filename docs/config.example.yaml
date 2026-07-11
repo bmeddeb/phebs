@@ -29,6 +29,12 @@ webhook:
   # Verifies X-Hub-Signature-256 payload signatures (GitHub and Gitea).
   secret: "${WEBHOOK_SECRET}"
 
+# Named repo sets for `context:<name>` search filters (T8.1). Patterns are
+# globs on full repo names; `*` does not cross `/`.
+contexts:
+  backend:
+    - "github.com/acme/api-*"
+
 # Sources of repos to sync (Epic 2). Names: lowercase [a-z0-9-], unique.
 connections:
   # GitHub over PAT: at least one of orgs, users, repos.

@@ -9,17 +9,30 @@ package search
 import (
 	"context"
 	"fmt"
+	"path"
+	"strings"
 
 	"github.com/sourcegraph/zoekt/query"
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-// Compile parses raw and applies the metadata pre-pass. `context:` (search
-// contexts, P2) will hook in here too; the per-user RepoSet hook for
+// Compile parses raw and applies the pre-passes: `context:<name>` atoms
+// (T8.1) become a RepoSet of the named config-defined repo set, and repo
+// metadata atoms are rewritten against the DB. The per-user RepoSet hook for
 // permission filtering stays reserved (CLAUDE.md).
-func Compile(ctx context.Context, st store.Store, raw string) (query.Q, error) {
-	q, err := query.Parse(raw)
+func Compile(ctx context.Context, st store.Store, contexts map[string][]string, raw string) (query.Q, error) {
+	// context: is phebs syntax, not zoekt's — extract it string-level
+	// before query.Parse ever sees it.
+	ctxNames, rest, err := extractContexts(raw)
+	if err != nil {
+		return nil, err
+	}
+	if len(ctxNames) > 0 && strings.TrimSpace(rest) == "" {
+		return nil, fmt.Errorf("parse query: context: needs search terms alongside it")
+	}
+
+	q, err := query.Parse(rest)
 	if err != nil {
 		return nil, fmt.Errorf("parse query: %w", err)
 	}
@@ -55,7 +68,88 @@ func Compile(ctx context.Context, st store.Store, raw string) (query.Q, error) {
 	if loadErr != nil {
 		return nil, fmt.Errorf("resolve repo filters: %w", loadErr)
 	}
+
+	// contexts AND onto the whole query as one RepoSet; multiple context:
+	// atoms union their sets (a repo in any named set matches)
+	if len(ctxNames) > 0 {
+		set := map[string]bool{}
+		for _, name := range ctxNames {
+			patterns, ok := contexts[name]
+			if !ok {
+				return nil, fmt.Errorf("unknown search context %q", name)
+			}
+			if !loaded {
+				repos, loadErr = st.ListRepos(ctx)
+				loaded = true
+				if loadErr != nil {
+					return nil, fmt.Errorf("resolve search context: %w", loadErr)
+				}
+			}
+			for _, r := range repos {
+				for _, pat := range patterns {
+					if ok, _ := path.Match(pat, r.Name); ok {
+						set[r.Name] = true
+						break
+					}
+				}
+			}
+		}
+		names := make([]string, 0, len(set))
+		for n := range set {
+			names = append(names, n)
+		}
+		q = query.NewAnd(query.NewRepoSet(names...), q)
+	}
 	return query.Simplify(q), nil
+}
+
+// extractContexts strips whitespace-delimited `context:<name>` atoms from a
+// raw query (double-quoted strings are respected — a quoted "context:x" is
+// content, not a filter). Negation isn't supported: contexts are scopes,
+// not predicates.
+func extractContexts(raw string) (names []string, rest string, err error) {
+	var kept []string
+	for _, tok := range splitQuery(raw) {
+		switch {
+		case strings.HasPrefix(tok, "context:"):
+			name := strings.TrimPrefix(tok, "context:")
+			if name == "" {
+				return nil, "", fmt.Errorf("parse query: context: needs a name")
+			}
+			names = append(names, name)
+		case strings.HasPrefix(tok, "-context:"):
+			return nil, "", fmt.Errorf("parse query: -context: is not supported (contexts are scopes)")
+		default:
+			kept = append(kept, tok)
+		}
+	}
+	return names, strings.Join(kept, " "), nil
+}
+
+// splitQuery fields raw on whitespace, keeping double-quoted spans intact.
+func splitQuery(raw string) []string {
+	var out []string
+	var cur strings.Builder
+	inQuote := false
+	flush := func() {
+		if cur.Len() > 0 {
+			out = append(out, cur.String())
+			cur.Reset()
+		}
+	}
+	for _, r := range raw {
+		switch {
+		case r == '"':
+			inQuote = !inQuote
+			cur.WriteRune(r)
+		case !inQuote && (r == ' ' || r == '\t'):
+			flush()
+		default:
+			cur.WriteRune(r)
+		}
+	}
+	flush()
+	return out
 }
 
 func matchesRawConfig(r store.Repo, rc query.RawConfig) bool {

@@ -118,6 +118,7 @@ func serve(args []string) error {
 		return err
 	}
 	defer searcher.Close()
+	searcher.Contexts = cfg.Contexts // T8.1: context:<name> filters
 
 	// repository-membership webhook events re-sync every remote connection
 	var resyncNames []string

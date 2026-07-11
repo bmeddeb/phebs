@@ -19,6 +19,9 @@ import (
 type Searcher struct {
 	z  zoekt.Streamer
 	st store.Store
+	// Contexts backs `context:<name>` filters (T8.1); assigned once at
+	// startup from config.
+	Contexts map[string][]string
 }
 
 func Open(indexDir string, st store.Store) (*Searcher, error) {
@@ -99,7 +102,7 @@ type Stats struct {
 
 // Search compiles raw (T4.1 pre-pass included) and runs one bounded search.
 func (s *Searcher) Search(ctx context.Context, raw string, opts Options) (*Result, error) {
-	q, err := Compile(ctx, s.st, raw)
+	q, err := Compile(ctx, s.st, s.Contexts, raw)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +122,7 @@ func (s *Searcher) Search(ctx context.Context, raw string, opts Options) (*Resul
 // minimal. Revisit with time-batching only if fleet-scale fan-in (P6) makes
 // event volume a problem.
 func (s *Searcher) Stream(ctx context.Context, raw string, opts Options, sink func(*Result)) (*Stats, error) {
-	q, err := Compile(ctx, s.st, raw)
+	q, err := Compile(ctx, s.st, s.Contexts, raw)
 	if err != nil {
 		return nil, err
 	}

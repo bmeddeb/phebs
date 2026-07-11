@@ -308,6 +308,7 @@ implicit AND; prefix any atom with `-` to negate it.
 | `archived:yes\|no` | filter by repo archived state *(phebs, from repo metadata)* |
 | `fork:yes\|no` | filter by fork state *(phebs)* |
 | `public:yes\|no` | filter by visibility *(phebs)* |
+| `context:backend` | restrict to a named repo set *(phebs, see below)* |
 
 Examples:
 
@@ -316,7 +317,30 @@ watchModeNeedle repo:my-project
 "TODO(ben)" -file:vendor/ lang:go
 sym:ClaimJob fork:no
 case:yes Searcher file:internal/
+ClaimJob context:backend
 ```
+
+### Search contexts
+
+Contexts are named repo sets defined in config — shorthand for scoping
+queries to a slice of the index:
+
+```yaml
+contexts:
+  backend:
+    - "github.com/acme/api-*"
+    - "gitlab.example.com/team/platform/*"
+  docs:
+    - "github.com/acme/handbook"
+```
+
+`context:backend needle` searches only repos whose full name matches one of
+the set's glob patterns (`*` does not cross `/`; a pattern without wildcards
+is an exact name). Multiple `context:` atoms union their sets. A context is
+a scope, not a predicate: it applies to the whole query and can't be
+negated. Unknown names are an error; the atom is top-level phebs syntax, so
+`context:` inside parentheses is passed to zoekt (and rejected) rather than
+resolved.
 
 Result bounds: `max_matches` (default 50 files, cap 500) and `context_lines`
 (default 0, cap 10) on the API; searches are capped at 10 s of wall time.

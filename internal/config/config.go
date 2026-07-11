@@ -25,6 +25,10 @@ type Config struct {
 	Sync        Sync         `yaml:"sync"`
 	Webhook     Webhook      `yaml:"webhook"`
 	Connections []Connection `yaml:"connections"`
+	// Contexts are named repo sets for `context:<name>` search filters
+	// (T8.1): name → glob patterns matched against full repo names
+	// ("github.com/acme/api-*"; `*` does not cross `/`).
+	Contexts map[string][]string `yaml:"contexts"`
 }
 
 type Sync struct {
@@ -220,6 +224,20 @@ func (c *Config) validate(lines []int) error {
 	if ri := c.Sync.ResyncInterval; ri != "" && ri != "0" {
 		if d, err := time.ParseDuration(ri); err != nil || d <= 0 {
 			errs = append(errs, fmt.Errorf("sync.resync_interval %q: not a positive Go duration (or \"0\" to disable)", ri))
+		}
+	}
+
+	for name, patterns := range c.Contexts {
+		if !nameRE.MatchString(name) {
+			errs = append(errs, fmt.Errorf("contexts: name %q must match %s", name, nameRE))
+		}
+		if len(patterns) == 0 {
+			errs = append(errs, fmt.Errorf("contexts: %q has no repo patterns", name))
+		}
+		for _, pat := range patterns {
+			if _, err := path.Match(pat, "x/y"); err != nil {
+				errs = append(errs, fmt.Errorf("contexts: %q: bad pattern %q: %v", name, pat, err))
+			}
 		}
 	}
 
