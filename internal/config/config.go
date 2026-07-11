@@ -221,7 +221,13 @@ func (c *Config) validate(lines []int) error {
 
 func (c *Config) applyDefaults() error {
 	// ${ENV} expansion for secrets kept out of the file (see docs/MANUAL.md).
-	c.Auth.APIKey = os.ExpandEnv(c.Auth.APIKey)
+	// A non-empty api_key that expands to empty means an unset/misspelled env
+	// var — fail closed rather than silently disabling API auth.
+	if raw := c.Auth.APIKey; raw != "" {
+		if c.Auth.APIKey = os.ExpandEnv(raw); c.Auth.APIKey == "" {
+			return fmt.Errorf("auth.api_key %q expands to empty (unset environment variable?); refusing to start with auth disabled", raw)
+		}
+	}
 	for i := range c.Connections {
 		c.Connections[i].Token = os.ExpandEnv(c.Connections[i].Token)
 	}

@@ -110,6 +110,19 @@ func TestEnvExpansion(t *testing.T) {
 	}
 }
 
+// A non-empty api_key referencing an unset env var must fail closed, not
+// expand to "" and silently disable API auth.
+func TestAPIKeyUnsetEnvFailsClosed(t *testing.T) {
+	_, err := Parse([]byte("auth:\n  api_key: \"${PHEBS_DEFINITELY_UNSET_KEY}\"\n"))
+	if err == nil || !strings.Contains(err.Error(), "expands to empty") {
+		t.Fatalf("Parse err = %v, want fail-closed on unset api_key env var", err)
+	}
+	// an intentionally-empty api_key (open API by design) still parses.
+	if _, err := Parse([]byte("auth:\n  api_key: \"\"\n")); err != nil {
+		t.Errorf("empty api_key should stay valid (open API), got %v", err)
+	}
+}
+
 func TestValidateReportsAllErrors(t *testing.T) {
 	in := "connections:\n  - {name: a, type: git}\n  - {name: a, type: github}\n"
 	_, err := Parse([]byte(in))

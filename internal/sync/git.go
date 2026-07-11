@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/store"
@@ -27,17 +28,23 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
-// redactArgs joins argv for error messages with the credential-bearing
-// `-c http.extraheader=Authorization: …` value scrubbed — errors are
-// persisted to the job row and logged, so the PAT must never appear there.
+// urlCredRE matches userinfo in a URL (scheme://user:pass@host) so a clone
+// URL with embedded credentials — the only auth path for a private type:git
+// repo, since token is github-only — can be scrubbed from error strings.
+var urlCredRE = regexp.MustCompile(`([a-zA-Z][a-zA-Z0-9+.\-]*://)[^/@\s]+@`)
+
+// redactArgs joins argv for error messages with credentials scrubbed — errors
+// are persisted to the job row and logged, so neither the GitHub PAT (injected
+// via `-c http.extraheader=Authorization: …`) nor userinfo embedded in a clone
+// URL may appear there.
 func redactArgs(args []string) string {
 	out := make([]string, len(args))
 	for i, a := range args {
 		if strings.Contains(a, "http.extraheader") || strings.Contains(a, "Authorization") {
 			out[i] = "http.extraheader=<redacted>"
-		} else {
-			out[i] = a
+			continue
 		}
+		out[i] = urlCredRE.ReplaceAllString(a, "$1<redacted>@")
 	}
 	return strings.Join(out, " ")
 }

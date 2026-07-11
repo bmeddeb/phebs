@@ -192,4 +192,15 @@ func TestRedactArgs(t *testing.T) {
 	if !strings.Contains(got, "clone") || !strings.Contains(got, "--mirror") {
 		t.Errorf("redactArgs dropped non-secret args: %q", got)
 	}
+
+	// credentials embedded in a clone URL (the only auth path for a private
+	// type:git repo) must also be scrubbed.
+	urlSecret := "ghp_urlToken123"
+	got = redactArgs([]string{"clone", "--mirror", "https://user:" + urlSecret + "@gitea.internal/team/repo.git", "/tmp/x"})
+	if strings.Contains(got, urlSecret) || strings.Contains(got, "user:") {
+		t.Errorf("redactArgs leaked URL credential: %q", got)
+	}
+	if !strings.Contains(got, "gitea.internal/team/repo.git") {
+		t.Errorf("redactArgs mangled the host/path: %q", got)
+	}
 }
