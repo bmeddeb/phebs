@@ -73,6 +73,36 @@ connections:
 			"",
 		},
 		{
+			"app with token",
+			"connections:\n  - {name: gh, type: github, token: t, app: {id: 1, installation_id: 2, private_key_path: /k.pem}}\n",
+			"app and token are mutually exclusive",
+		},
+		{
+			"app missing ids",
+			"connections:\n  - {name: gh, type: github, app: {private_key_path: /k.pem}}\n",
+			"app requires id and installation_id",
+		},
+		{
+			"app both key forms",
+			"connections:\n  - {name: gh, type: github, app: {id: 1, installation_id: 2, private_key_path: /k.pem, private_key: x}}\n",
+			"exactly one of private_key_path, private_key",
+		},
+		{
+			"app no key",
+			"connections:\n  - {name: gh, type: github, app: {id: 1, installation_id: 2}}\n",
+			"exactly one of private_key_path, private_key",
+		},
+		{
+			"app on gitlab",
+			"connections:\n  - {name: gl, type: gitlab, groups: [g], app: {id: 1, installation_id: 2, private_key_path: /k.pem}}\n",
+			"app is only valid for type github",
+		},
+		{
+			"app without selectors is valid",
+			"connections:\n  - {name: gh, type: github, app: {id: 1, installation_id: 2, private_key_path: /k.pem}}\n",
+			"",
+		},
+		{
 			"github with groups",
 			"connections:\n  - {name: gh, type: github, users: [u], groups: [g]}\n",
 			"groups is only valid for type gitlab",

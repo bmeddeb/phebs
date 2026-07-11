@@ -229,10 +229,12 @@ org repo synced, indexed, searched; token-as-basic-username clone auth
 confirmed; token absent from data dir. *(Bitbucket Cloud/DC, Azure DevOps,
 Gerrit follow as T7.x by demand — same adapter shape.)*
 
-**T7.3 · GitHub App auth** — *Sourcebot paid/EE — OSS in phebs*
-`ghinstallation` installation-token auth as an alternative to PATs (higher
-rate limits, per-install scoping). AC: an App-authed connection syncs; tokens
-refresh; falls back cleanly if not configured.
+**T7.3 · GitHub App auth** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs* *(fake-API tests; live App run pending)*
+`app:` block (id, installation_id, PEM key by path or inline env) on github
+connections; stdlib RS256 JWT → installation token per sync run (always
+fresh — AC "tokens refresh"), so no `ghinstallation`/go-github dependency.
+No selectors → syncs the installation's granted repos. PAT/anon connections
+unchanged (AC "falls back cleanly").
 Deps: T2.2.
 
 **T7.4 · Webhook-driven reindex** — *Sourcebot paid/EE — OSS in phebs*

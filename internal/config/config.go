@@ -73,6 +73,10 @@ type Connection struct {
 	Repos   []string `yaml:"repos"` // explicit "owner/name" (gitlab: full project path)
 	Exclude Exclude  `yaml:"exclude"`
 
+	// github only: authenticate as a GitHub App installation instead of a
+	// PAT (higher rate limits, per-install scoping).
+	App GitHubApp `yaml:"app"`
+
 	// git: clone URL of a single repository (plain absolute paths and
 	// file:// URLs point at local repos). gitlab: optional http(s) base URL
 	// of a self-hosted instance (default https://gitlab.com). gitea:
@@ -88,6 +92,19 @@ type Connection struct {
 func IsLocalURL(url string) bool {
 	return strings.HasPrefix(url, "/") || strings.HasPrefix(url, "file://")
 }
+
+// GitHubApp authenticates a github connection as an App installation.
+// Exactly one of PrivateKeyPath / PrivateKey (inline PEM, ${ENV} expanded)
+// is required.
+type GitHubApp struct {
+	ID             int64  `yaml:"id"`
+	InstallationID int64  `yaml:"installation_id"`
+	PrivateKeyPath string `yaml:"private_key_path"`
+	PrivateKey     string `yaml:"private_key"`
+}
+
+// IsZero reports whether no app block was configured.
+func (a GitHubApp) IsZero() bool { return a == GitHubApp{} }
 
 // Exclude filters repos out of a github connection's listing.
 type Exclude struct {
@@ -189,8 +206,21 @@ func (c *Config) validate(lines []int) error {
 
 		switch conn.Type {
 		case "github":
-			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0 {
-				fail(i, "github connection needs at least one of orgs, users, repos")
+			// app-authed connections may omit selectors: they default to
+			// everything the installation was granted
+			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0 && conn.App.IsZero() {
+				fail(i, "github connection needs at least one of orgs, users, repos (or an app block)")
+			}
+			if !conn.App.IsZero() {
+				if conn.Token != "" {
+					fail(i, "app and token are mutually exclusive")
+				}
+				if conn.App.ID <= 0 || conn.App.InstallationID <= 0 {
+					fail(i, "app requires id and installation_id")
+				}
+				if (conn.App.PrivateKeyPath == "") == (conn.App.PrivateKey == "") {
+					fail(i, "app requires exactly one of private_key_path, private_key")
+				}
 			}
 			if len(conn.Groups) > 0 {
 				fail(i, "groups is only valid for type gitlab (github uses orgs)")
@@ -206,6 +236,9 @@ func (c *Config) validate(lines []int) error {
 			if len(conn.Groups)+len(conn.Users)+len(conn.Repos) == 0 {
 				fail(i, "gitlab connection needs at least one of groups, users, repos")
 			}
+			if !conn.App.IsZero() {
+				fail(i, "app is only valid for type github")
+			}
 			if len(conn.Orgs) > 0 {
 				fail(i, "orgs is only valid for type github/gitea (gitlab uses groups)")
 			}
@@ -219,6 +252,9 @@ func (c *Config) validate(lines []int) error {
 		case "gitea":
 			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0 {
 				fail(i, "gitea connection needs at least one of orgs, users, repos")
+			}
+			if !conn.App.IsZero() {
+				fail(i, "app is only valid for type github")
 			}
 			if len(conn.Groups) > 0 {
 				fail(i, "groups is only valid for type gitlab (gitea uses orgs)")
@@ -234,8 +270,8 @@ func (c *Config) validate(lines []int) error {
 			if conn.URL == "" {
 				fail(i, "git connection requires url")
 			}
-			if len(conn.Orgs)+len(conn.Groups)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" || !conn.Exclude.isZero() {
-				fail(i, "orgs/groups/users/repos/token/exclude are only valid for code-host types")
+			if len(conn.Orgs)+len(conn.Groups)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" || !conn.Exclude.isZero() || !conn.App.IsZero() {
+				fail(i, "orgs/groups/users/repos/token/exclude/app are only valid for code-host types")
 			}
 			if conn.Watch && !IsLocalURL(conn.URL) {
 				fail(i, "watch requires a local url (absolute path or file://)")
@@ -273,6 +309,7 @@ func (c *Config) applyDefaults() error {
 	}
 	for i := range c.Connections {
 		c.Connections[i].Token = os.ExpandEnv(c.Connections[i].Token)
+		c.Connections[i].App.PrivateKey = os.ExpandEnv(c.Connections[i].App.PrivateKey)
 	}
 	if c.Server.Addr == "" {
 		c.Server.Addr = ":3070"

@@ -137,6 +137,28 @@ fine-grained PAT restricted to select repositories still gets all public
 repos). Other users list public repos only; private repos elsewhere are
 reachable via `orgs:` or explicit `repos:` entries.
 
+#### GitHub App auth
+
+Instead of a PAT, a github connection can authenticate as an App
+installation (higher rate limits, per-install scoping):
+
+```yaml
+- name: gh-app
+  type: github
+  app:
+    id: 12345                  # the App's ID
+    installation_id: 67890     # the installation on your org/account
+    private_key_path: /etc/phebs/app.pem   # or private_key: "${APP_KEY_PEM}"
+  orgs: [my-org]               # optional — omit selectors to sync every
+                               # repo the installation was granted
+```
+
+`app` and `token` are mutually exclusive. Each sync run exchanges the App's
+key for a fresh ~1-hour installation token (RS256 JWT, no cached state), so
+tokens never go stale. Installation tokens have no user identity: `users:`
+entries list public repos only under App auth. Without any selectors the
+connection syncs exactly the installation's granted repositories.
+
 ### `type: gitlab` connections
 
 ```yaml

@@ -33,8 +33,19 @@ type ghRepo struct {
 
 func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
 	c := &hostClient{base: ghAPIBase, accept: "application/vnd.github+json"}
-	if conn.Token != "" {
-		c.auth = "Bearer " + conn.Token
+	// token precedence: App installation token when configured, else PAT,
+	// else anonymous (public repos only). gitToken is what git fetches use.
+	gitToken := conn.Token
+	appMode := !conn.App.IsZero()
+	if appMode {
+		tok, err := appToken(ctx, ghAPIBase, conn.App)
+		if err != nil {
+			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+		}
+		gitToken = tok
+	}
+	if gitToken != "" {
+		c.auth = "Bearer " + gitToken
 	}
 
 	seen := map[string]ghRepo{}
@@ -52,14 +63,23 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 			return nil, fmt.Errorf("connection %s: org %s: %w", conn.Name, org, err)
 		}
 	}
+	// App mode with no selectors: sync exactly what the installation was
+	// granted.
+	if appMode && len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0 {
+		if err := collect(listInstallationRepos(ctx, c)); err != nil {
+			return nil, fmt.Errorf("connection %s: installation repos: %w", conn.Name, err)
+		}
+	}
+
 	// /users/{name}/repos only ever returns public repos, even with a PAT
 	// (verified live, T6.3), so the token owner's account is ALSO listed via
 	// /user/repos for its private repos. Union, not replacement: /user/repos
 	// alone misses public repos when a fine-grained PAT is restricted to
 	// select repositories, and a shrunken listing plus cleanup_orphans would
-	// silently delete mirrors and shards.
+	// silently delete mirrors and shards. Installation tokens have no "own
+	// account" (/user is 403 for them), so App mode skips the resolution.
 	var login string
-	if conn.Token != "" && len(conn.Users) > 0 {
+	if conn.Token != "" && !appMode && len(conn.Users) > 0 {
 		var me struct {
 			Login string `json:"login"`
 		}
@@ -86,11 +106,12 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		seen[r.FullName] = r
 	}
 
-	// git config for authenticated clone/fetch; the token never lands in the
-	// mirror's config or the repo row.
+	// git config for authenticated clone/fetch (installation tokens work as
+	// x-access-token too); the token never lands in the mirror's config or
+	// the repo row.
 	var gitCfg []string
-	if conn.Token != "" {
-		basic := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + conn.Token))
+	if gitToken != "" {
+		basic := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + gitToken))
 		gitCfg = []string{"-c", "http.extraheader=Authorization: Basic " + basic}
 	}
 
