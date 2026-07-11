@@ -64,6 +64,11 @@ webhook:
   # Verifies X-Hub-Signature-256 payload signatures (GitHub and Gitea).
   secret: "${WEBHOOK_SECRET}"
 
+# Audit log (T10.1). Recording is always on; retention prunes old events
+# twice a day (default 2160h = 90 days, "0" keeps forever).
+audit:
+  retention: 2160h
+
 # Named repo sets for `context:<name>` search filters (T8.1). Patterns are
 # globs on full repo names; `*` does not cross `/`.
 contexts:

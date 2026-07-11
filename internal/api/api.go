@@ -32,6 +32,12 @@ type Options struct {
 	// standalone handler's test and embedding behavior.
 	IsAdmin func(context.Context) bool
 
+	// T10.1 audit log. AuditRecord is called for every mutating huma operation
+	// (serve resolves the actor from the request context); nil disables
+	// recording. AuditLog serves GET /api/audit; nil answers 503.
+	AuditRecord func(ctx context.Context, event store.AuditEvent)
+	AuditLog    store.AuditStore
+
 	// T7.4 webhook: empty secret leaves POST /api/webhook unregistered.
 	// ResyncConnections are the code-host connection names to re-sync on
 	// repository-membership events.
@@ -55,6 +61,7 @@ func New(opts Options) http.Handler {
 		}
 		_ = huma.WriteErr(api, ctx, http.StatusUnauthorized, "invalid or missing bearer token")
 	})
+	registerAuditMiddleware(api, opts)
 
 	type healthOut struct {
 		Body struct {
@@ -241,6 +248,7 @@ func New(opts Options) http.Handler {
 		if err := phebssync.ValidateRepoName(in.Body.Repo); err != nil {
 			return nil, huma.Error400BadRequest("invalid repository name")
 		}
+		setAuditTarget(ctx, in.Body.Repo)
 		repo, err := opts.Store.GetRepo(ctx, in.Body.Repo)
 		if err != nil {
 			return nil, reindexErr(in.Body.Repo, err)
@@ -276,6 +284,7 @@ func New(opts Options) http.Handler {
 
 	registerHistory(api, opts)
 	registerCodeNavigation(api, opts)
+	registerAudit(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

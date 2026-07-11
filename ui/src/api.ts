@@ -81,6 +81,25 @@ export interface CreatedAPIKey {
   token: string
 }
 
+// T10.1: one append-only audit record
+export interface AuditEvent {
+  id: string
+  action: string
+  target?: string
+  actor_id?: string
+  actor_email?: string
+  api_key_id?: string
+  auth_method?: string
+  source_ip?: string
+  status: number
+  created_at: string
+}
+
+export interface AuditPage {
+  events: AuditEvent[]
+  has_more: boolean
+}
+
 export interface GitIdentity {
   name: string
   email: string
@@ -248,6 +267,9 @@ export const postReindex = (repo: string, force: boolean) =>
   }).then((res) => {
     if (!res.ok) throw new Error(`reindex failed: ${res.status}`)
   })
+
+export const fetchAudit = (offset: number, limit = 50, signal?: AbortSignal) =>
+  getJSON<AuditPage>(`/api/audit?${query({ offset, limit })}`, signal)
 
 export const fetchAPIKeys = (signal?: AbortSignal) =>
   getJSON<{ keys: APIKeySummary[] }>('/api/auth/keys', signal)

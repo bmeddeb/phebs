@@ -36,6 +36,11 @@ DEFINE INDEX IF NOT EXISTS auth_session_expiry ON auth_session FIELDS expiry;
 -- requests from both observing an empty user table.
 DEFINE TABLE IF NOT EXISTS auth_setup SCHEMALESS;
 
+-- Append-only audit trail (T10.1); the index keeps the retention sweep and
+-- newest-first listing cheap.
+DEFINE TABLE IF NOT EXISTS audit_event SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS audit_event_created ON audit_event FIELDS created_at;
+
 DEFINE TABLE IF NOT EXISTS repo_fetch_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON repo_fetch_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];

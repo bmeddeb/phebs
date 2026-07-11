@@ -68,9 +68,48 @@ func serve(args []string) error {
 	}
 	defer func() { _ = st.Close(context.Background()) }()
 
-	authService, err := auth.New(ctx, auth.Options{Config: cfg.Auth, Store: st})
+	// T10.1: one audit recorder feeds the auth surface and the huma middleware.
+	// The actor comes from the request principal when the caller did not
+	// already resolve it; recording failures never fail the request.
+	auditRecord := func(ctx context.Context, event store.AuditEvent) {
+		if principal, ok := auth.PrincipalFromContext(ctx); ok {
+			if event.ActorID == "" && principal.User != nil {
+				event.ActorID, event.ActorEmail = principal.User.ID, principal.User.Email
+			}
+			if event.APIKeyID == "" {
+				event.APIKeyID = principal.APIKeyID
+			}
+			if event.AuthMethod == "" {
+				event.AuthMethod = principal.AuthMethod
+			}
+		}
+		// The action already completed; a client disconnect must not lose it.
+		if err := st.AppendAuditEvent(context.WithoutCancel(ctx), event); err != nil {
+			log.Printf("audit: %v", err)
+		}
+	}
+
+	authService, err := auth.New(ctx, auth.Options{Config: cfg.Auth, Store: st, Audit: auditRecord})
 	if err != nil {
 		return err
+	}
+	if retention := cfg.Audit.RetentionFor(); retention > 0 {
+		go func() { // T10.1 retention sweep: boot, then twice a day
+			ticker := time.NewTicker(12 * time.Hour)
+			defer ticker.Stop()
+			for {
+				if n, err := st.PruneAuditEvents(ctx, time.Now().UTC().Add(-retention)); err != nil {
+					log.Printf("audit retention: %v", err)
+				} else if n > 0 {
+					log.Printf("audit retention: pruned %d event(s)", n)
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+				}
+			}
+		}()
 	}
 	if setupToken := authService.SetupToken(); setupToken != "" {
 		log.Printf("first-run setup token: %s", setupToken)
@@ -156,6 +195,7 @@ func serve(args []string) error {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin
 		},
+		AuditRecord: auditRecord, AuditLog: st,
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
 	})
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.

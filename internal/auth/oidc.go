@@ -148,5 +148,6 @@ func (s *Service) handleOIDCCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not start session")
 		return
 	}
+	s.audit(r, user, "auth.oidc.login", "", http.StatusOK)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

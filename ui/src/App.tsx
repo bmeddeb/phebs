@@ -15,6 +15,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BlamePage = lazy(() => import('./pages/BlamePage'))
 const CommitPage = lazy(() => import('./pages/CommitPage'))
+const AuditPage = lazy(() => import('./pages/AuditPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
@@ -47,6 +48,7 @@ export default function App() {
   else if (path.startsWith('/blame')) page = <BlamePage params={params} />
   else if (path.startsWith('/commit')) page = <CommitPage params={params} />
   else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} />
+  else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 
@@ -54,7 +56,7 @@ export default function App() {
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
-      <Header path={path} email={status.user?.email ?? ''} onLogout={() => void logout().catch(() => {})} />
+      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} onLogout={() => void logout().catch(() => {})} />
       <main
         className={css({
           maxWidth: wide ? '100%' : '1080px',
@@ -81,13 +83,14 @@ export default function App() {
   )
 }
 
-function Header({ path, email, onLogout }: { path: string; email: string; onLogout: () => void }) {
+function Header({ path, email, isAdmin, onLogout }: { path: string; email: string; isAdmin: boolean; onLogout: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode, toggle } = useMode()
 
   const isSettings = path.startsWith('/settings')
   const isRepos = path.startsWith('/repos')
+  const isAudit = path.startsWith('/audit')
   const isSearch = path === '/' || path.startsWith('/search')
 
   return (
@@ -126,6 +129,7 @@ function Header({ path, email, onLogout }: { path: string; email: string; onLogo
       <nav className={css({ display: 'flex', gap: '20px', alignItems: 'center', height: '100%', '@media screen and (max-width: 720px)': { gap: '12px' } })}>
         <NavLink href="#/" label="Search" active={isSearch} />
         <NavLink href="#/repos" label="Repos" active={isRepos} />
+        {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
         <NavLink href="#/settings" label="Settings" active={isSettings} />
       </nav>
       <div className={css({ flex: 1 })} />

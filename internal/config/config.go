@@ -26,6 +26,7 @@ type Config struct {
 	Auth        Auth         `yaml:"auth"`
 	Sync        Sync         `yaml:"sync"`
 	Webhook     Webhook      `yaml:"webhook"`
+	Audit       Audit        `yaml:"audit"`
 	Connections []Connection `yaml:"connections"`
 	// Contexts are named repo sets for `context:<name>` search filters
 	// (T8.1): name → glob patterns matched against full repo names
@@ -50,6 +51,29 @@ type Webhook struct {
 	// Secret verifies X-Hub-Signature-256 payload signatures; empty leaves
 	// the endpoint disabled. ${ENV} references are expanded.
 	Secret string `yaml:"secret"`
+}
+
+// Audit configures the append-only action log (T10.1). Recording is always
+// on; only retention is tunable.
+type Audit struct {
+	// Retention prunes audit events older than this Go duration.
+	// Default "2160h" (90 days); "0" keeps events forever.
+	Retention string `yaml:"retention"`
+}
+
+// RetentionFor returns the parsed audit retention; 0 means keep forever.
+func (a Audit) RetentionFor() time.Duration {
+	if a.Retention == "" {
+		return 90 * 24 * time.Hour
+	}
+	if a.Retention == "0" {
+		return 0
+	}
+	d, err := time.ParseDuration(a.Retention)
+	if err != nil || d < 0 { // validation guarantees this branch is dead
+		return 90 * 24 * time.Hour
+	}
+	return d
 }
 
 // Interval returns the parsed poll cadence; validation guarantees the
@@ -298,6 +322,11 @@ func (c *Config) validate(lines []int) error {
 	if ri := c.Sync.ResyncInterval; ri != "" && ri != "0" {
 		if d, err := time.ParseDuration(ri); err != nil || d <= 0 {
 			errs = append(errs, fmt.Errorf("sync.resync_interval %q: not a positive Go duration (or \"0\" to disable)", ri))
+		}
+	}
+	if ar := c.Audit.Retention; ar != "" && ar != "0" {
+		if d, err := time.ParseDuration(ar); err != nil || d <= 0 {
+			errs = append(errs, fmt.Errorf("audit.retention %q: not a positive Go duration (or \"0\" to keep forever)", ar))
 		}
 	}
 	if raw := c.Auth.SessionLifetime; raw != "" {

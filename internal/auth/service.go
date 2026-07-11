@@ -37,6 +37,9 @@ type Options struct {
 	// ArgonConcurrency bounds memory-hard password work. Zero selects the
 	// production default of four concurrent hashes.
 	ArgonConcurrency int
+	// Audit records authentication and key-lifecycle events (T10.1). Nil
+	// disables recording; failures inside the callback must not fail requests.
+	Audit func(ctx context.Context, event store.AuditEvent)
 }
 
 // Service is safe for concurrent HTTP use.
@@ -55,6 +58,7 @@ type Service struct {
 	oidcLimits  *loginLimiter
 	clientIPs   clientIPResolver
 	argonSlots  chan struct{}
+	auditFn     func(ctx context.Context, event store.AuditEvent)
 
 	setupMu    sync.RWMutex
 	setupToken string
@@ -107,6 +111,7 @@ func New(ctx context.Context, options Options) (*Service, error) {
 		oidcLimits:  newLoginLimiter(12, 5*time.Minute, 4096),
 		clientIPs:   clientIPs,
 		argonSlots:  make(chan struct{}, argonConcurrency),
+		auditFn:     options.Audit,
 	}
 
 	s.sessions = scs.New()
@@ -266,6 +271,21 @@ func (s *Service) cleanExpiredSessions(ctx context.Context) {
 			_, _ = s.store.DeleteExpiredAuthSessions(ctx, s.now())
 		}
 	}
+}
+
+// audit records one auth-surface event (T10.1). The source IP uses the same
+// trusted-proxy resolution as the login limiter buckets. user is nil for
+// unauthenticated outcomes such as failed logins.
+func (s *Service) audit(r *http.Request, user *store.User, action, target string, status int) {
+	if s.auditFn == nil {
+		return
+	}
+	event := store.AuditEvent{Action: action, Target: target, Status: status,
+		SourceIP: s.clientIPs.clientKey(r)}
+	if user != nil {
+		event.ActorID, event.ActorEmail, event.AuthMethod = user.ID, user.Email, "session"
+	}
+	s.auditFn(r.Context(), event)
 }
 
 func normalizeEmail(raw string) (string, error) {

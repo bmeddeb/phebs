@@ -332,10 +332,12 @@ classifier and bounded reader serve all three callers without weakening any cap.
 
 ## EPIC 10 — Enterprise surface *(Wave 4 — build-our-own, PORT_MAP §12)*
 
-**T10.1 · Audit log** — *Sourcebot paid/EE*
-Append-only SurrealDB table + huma middleware recording admin/user actions;
-retention config. AC: mutating actions land in the log; a read endpoint/page
-lists them; near-zero overhead.
+**T10.1 · Audit log** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+Append-only `audit_event` table (narrow `AuditStore`), huma middleware
+recording every mutating operation by operation ID + injected recorder for
+the non-huma auth surface (logins incl. failures, setup, logout, key
+lifecycle, OIDC); synchronous non-fatal writes; `audit.retention` sweep
+(default 90d); admin-gated `GET /api/audit` + `#/audit` page with paging.
 
 **T10.2 · Analytics** — *Sourcebot paid/EE*
 Local usage events + aggregations, one minimal dashboard page. **Zero

@@ -117,6 +117,32 @@ type APIKey struct {
 	RevokedAt  *time.Time `json:"revoked_at,omitempty"`
 }
 
+// AuditEvent is one append-only record of an admin or user action (T10.1).
+// Actor fields are empty for unauthenticated actions (e.g. failed logins).
+type AuditEvent struct {
+	ID         string    `json:"id"`
+	Action     string    `json:"action"`               // "auth.login", "post-api-reindex", …
+	Target     string    `json:"target,omitempty"`     // action-specific: repo name, key id, email
+	ActorID    string    `json:"actor_id,omitempty"`   // user record id
+	ActorEmail string    `json:"actor_email,omitempty"`
+	APIKeyID   string    `json:"api_key_id,omitempty"`
+	AuthMethod string    `json:"auth_method,omitempty"` // "session" | "api_key" | ""
+	SourceIP   string    `json:"source_ip,omitempty"`
+	Status     int       `json:"status"` // HTTP status the action resolved to
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// AuditStore is separate from Store for the same reason as AuthStore: test
+// doubles elsewhere must not grow methods. Append-only is enforced Go-side by
+// not exposing update or single-row delete methods.
+type AuditStore interface {
+	AppendAuditEvent(ctx context.Context, event AuditEvent) error
+	// ListAuditEvents returns events newest-first.
+	ListAuditEvents(ctx context.Context, offset, limit int) ([]AuditEvent, error)
+	// PruneAuditEvents deletes events created at or before cutoff (retention).
+	PruneAuditEvents(ctx context.Context, cutoff time.Time) (int, error)
+}
+
 // AuthStats drives the public auth status and the one-time setup gate.
 type AuthStats struct {
 	Users         int

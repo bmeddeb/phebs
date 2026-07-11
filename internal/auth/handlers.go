@@ -129,6 +129,7 @@ func (s *Service) handleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		reservation.fail(s.now())
+		s.audit(r, nil, "auth.login", email, http.StatusUnauthorized)
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
@@ -141,6 +142,7 @@ func (s *Service) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	reservation.success()
+	s.audit(r, user, "auth.login", "", http.StatusOK)
 	if err := s.writeStatus(w, r, Principal{User: user, AuthMethod: "session", IsAdmin: user.IsAdmin}, true); err != nil {
 		writeError(w, http.StatusInternalServerError, "authentication unavailable")
 	}
@@ -213,6 +215,7 @@ func (s *Service) handleSetup(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not start session")
 		return
 	}
+	s.audit(r, user, "auth.setup", "", http.StatusOK)
 	if err := s.writeStatus(w, r, Principal{User: user, AuthMethod: "session", IsAdmin: true}, true); err != nil {
 		writeError(w, http.StatusInternalServerError, "authentication unavailable")
 	}
@@ -239,6 +242,8 @@ func (s *Service) handleLogout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not end session")
 		return
 	}
+	principal, _ := PrincipalFromContext(r.Context())
+	s.audit(r, principal.User, "auth.logout", "", http.StatusNoContent)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -299,6 +304,7 @@ func (s *Service) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 			Hash: bearerHash(token), CreatedAt: s.now(),
 		})
 		if createErr == nil {
+			s.audit(r, user, "auth.key.create", key.ID, http.StatusCreated)
 			w.Header().Set("Cache-Control", "no-store")
 			writeJSON(w, http.StatusCreated, map[string]any{"key": publicKey(key), "token": token})
 			return
@@ -329,6 +335,7 @@ func (s *Service) handleDeleteKey(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not revoke API key")
 		return
 	}
+	s.audit(r, user, "auth.key.revoke", id, http.StatusNoContent)
 	w.WriteHeader(http.StatusNoContent)
 }
 

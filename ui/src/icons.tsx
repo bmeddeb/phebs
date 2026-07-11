@@ -57,3 +57,6 @@ export const TrashIcon = ({ size = 16 }: IconProps) =>
 
 export const LogoutIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7" /><path d="M9.5 5 13 8l-3.5 3M13 8H6" /></>)
+
+export const AuditIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><rect x="3" y="2" width="10" height="12" rx="1.5" /><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" /></>)

@@ -144,6 +144,7 @@ connections:
 | `sync.poll_interval` | `15s` | Go duration; job pollers wake with ±50 % jitter around it |
 | `sync.resync_interval` | `1h` | re-sync cadence for remote connections; `"0"` disables |
 | `webhook.secret` | *(empty)* | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars |
+| `audit.retention` | `2160h` | audit events older than this are pruned twice a day; `"0"` keeps them forever |
 
 ### Authentication
 
@@ -537,6 +538,10 @@ deep-linkable hash routes:
   orphan flags, indexed commit, and administrator-only **Reindex** controls
   (a forced rebuild defeats the incremental short-circuit).
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
+- **Audit** (`#/audit`, administrators only) — the recorded action trail:
+  logins (including failures), setup, logout, API-key lifecycle, and every
+  mutating API operation, newest first with actor, target, status, and
+  source IP.
 
 The UI uses its DB-backed session cookie and automatically supplies CSRF
 tokens on mutations. A `401` clears stale authenticated state and returns to
@@ -567,6 +572,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/repos` | GET | repo rows |
 | `/api/repo-status` | GET | repos + connections + orphan flag + last index job |
 | `/api/reindex` | POST | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job |
+| `/api/audit?offset=&limit=` | GET | administrator only: audit events, newest first, `has_more` paging |
 | `/api/webhook` | POST | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set |
 | `/api/mcp` | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8) |
 | `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413 |
@@ -697,6 +703,21 @@ well as a reindex; the next start requires first-user enrollment.
 - OIDC authorizes every verified identity admitted by the configured provider.
   Apply membership/domain policy at that provider; phebs does not add a second
   allowlist.
+
+### Audit log
+
+Every mutating action is appended to an audit trail in the local database
+(T10.1): local and OIDC logins (including failed local attempts), first-run
+setup, logout, API-key creation and revocation, and each mutating API
+operation (recorded by operation ID, e.g. `post-api-reindex` with the repo as
+target). Events carry the actor (user, or API key for bearer calls), the
+resolved client IP (trusted-proxy aware on the auth surface), and the
+response status. Recording is synchronous but non-fatal: a failed write is
+logged and never fails the request. Read the trail at `#/audit` or
+`GET /api/audit` (administrators only). `audit.retention` (default 90 days)
+prunes old events at boot and twice a day; `"0"` disables pruning. Webhook
+deliveries are not audited — they are machine traffic with no principal, and
+their effects are visible as jobs.
 
 ### Job system
 
