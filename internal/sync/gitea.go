@@ -28,11 +28,10 @@ type gtRepo struct {
 
 func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
 	base := strings.TrimSuffix(conn.URL, "/")
-	u, err := url.Parse(base)
-	if err != nil || u.Host == "" {
-		return nil, fmt.Errorf("connection %s: gitea url %q has no host", conn.Name, base)
+	prefix, err := hostPrefix(base)
+	if err != nil {
+		return nil, fmt.Errorf("connection %s: gitea: %w", conn.Name, err)
 	}
-	host := u.Host
 
 	c := &hostClient{base: base + "/api/v1"}
 	if conn.Token != "" {
@@ -83,8 +82,11 @@ func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.
 			continue
 		}
 		// self-hosted servers are less trusted input than a SaaS host
-		name, err := safeName(host+"/"+r.FullName, r.CloneURL)
+		name, err := safeName(prefix+"/"+r.FullName, r.CloneURL)
 		if err != nil {
+			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+		}
+		if err := checkCloneURL(conn, r.CloneURL); err != nil {
 			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		dir := RepoDir(dataDir, name)

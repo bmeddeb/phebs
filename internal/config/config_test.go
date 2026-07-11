@@ -3,6 +3,7 @@ package config
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestParse(t *testing.T) {
@@ -127,6 +128,16 @@ connections:
 			"connections:\n  - {name: gl, type: gitlab, groups: [team/platform], url: 'https://git.example.com'}\n",
 			"",
 		},
+		{
+			"bad resync_interval",
+			"sync:\n  resync_interval: soonish\n",
+			"sync.resync_interval \"soonish\"",
+		},
+		{
+			"resync_interval disabled",
+			"sync:\n  resync_interval: \"0\"\n",
+			"",
+		},
 		{"missing type", "connections:\n  - name: a\n", "type is required"},
 		{"unknown type", "connections:\n  - {name: a, type: svn}\n", "unknown type \"svn\""},
 		{"bad name charset", "connections:\n  - {name: Bad_Name, type: git, url: u}\n", "must match"},
@@ -203,5 +214,31 @@ func TestValidateReportsAllErrors(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error %q missing %q", err, want)
 		}
+	}
+}
+
+func TestResyncEvery(t *testing.T) {
+	cases := []struct {
+		in   string
+		want time.Duration
+	}{
+		{"", time.Hour},
+		{"0", 0},
+		{"30m", 30 * time.Minute},
+	}
+	for _, tt := range cases {
+		if got := (Sync{ResyncInterval: tt.in}).ResyncEvery(); got != tt.want {
+			t.Errorf("ResyncEvery(%q) = %v, want %v", tt.in, got, tt.want)
+		}
+	}
+}
+
+// Like api_key and webhook.secret, an app private key referencing an unset
+// env var must fail at boot, not as a cryptic per-sync PEM error.
+func TestAppKeyUnsetEnvFailsClosed(t *testing.T) {
+	in := "connections:\n  - {name: gh, type: github, app: {id: 1, installation_id: 2, private_key: '${PHEBS_TEST_UNSET_KEY}'}}\n"
+	_, err := Parse([]byte(in))
+	if err == nil || !strings.Contains(err.Error(), "app.private_key") {
+		t.Fatalf("Parse() err = %v, want app.private_key fail-closed error", err)
 	}
 }

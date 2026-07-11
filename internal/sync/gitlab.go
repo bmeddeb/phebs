@@ -33,11 +33,10 @@ func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config
 	if base == "" {
 		base = "https://gitlab.com"
 	}
-	u, err := url.Parse(base)
-	if err != nil || u.Host == "" {
-		return nil, fmt.Errorf("connection %s: gitlab url %q has no host", conn.Name, base)
+	prefix, err := hostPrefix(base)
+	if err != nil {
+		return nil, fmt.Errorf("connection %s: gitlab: %w", conn.Name, err)
 	}
-	host := u.Host
 
 	c := &hostClient{base: base + "/api/v4"}
 	if conn.Token != "" {
@@ -55,9 +54,11 @@ func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config
 		return nil
 	}
 	// group and project paths contain slashes ("group/subgroup"); GitLab
-	// takes them URL-encoded in the path segment.
+	// takes them URL-encoded in the path segment. with_shared=false: projects
+	// merely shared INTO the group live in foreign namespaces the user never
+	// selected (Epic 7 review).
 	for _, group := range conn.Groups {
-		p := "/groups/" + url.PathEscape(group) + "/projects?per_page=100&include_subgroups=true"
+		p := "/groups/" + url.PathEscape(group) + "/projects?per_page=100&include_subgroups=true&with_shared=false"
 		if err := collect(listPages[glProject](ctx, c, p)); err != nil {
 			return nil, fmt.Errorf("connection %s: group %s: %w", conn.Name, group, err)
 		}
@@ -93,8 +94,11 @@ func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config
 		}
 		// a self-hosted server is less trusted input than gitlab.com: reject
 		// paths that would escape $DATA
-		name, err := safeName(host+"/"+p.PathWithNamespace, p.HTTPURLToRepo)
+		name, err := safeName(prefix+"/"+p.PathWithNamespace, p.HTTPURLToRepo)
 		if err != nil {
+			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+		}
+		if err := checkCloneURL(conn, p.HTTPURLToRepo); err != nil {
 			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		dir := RepoDir(dataDir, name)

@@ -74,6 +74,7 @@ func TestSyncGitHubAppMode(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
+	allowFileClones(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 

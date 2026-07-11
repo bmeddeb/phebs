@@ -71,6 +71,61 @@ func RepoDir(dataDir, name string) string {
 	return filepath.Join(dataDir, "repos", name+".git")
 }
 
+// hostPrefix derives the repo-name prefix from a code-host base URL,
+// keeping any subpath (an instance at example.com/gitea names repos
+// "example.com/gitea/owner/name") so names align with what
+// RepoName(clone_url) derives — webhook fetches match on that (T7.4).
+func hostPrefix(base string) (string, error) {
+	u, err := url.Parse(base)
+	if err != nil || u.Host == "" {
+		return "", fmt.Errorf("base url %q has no host", base)
+	}
+	return strings.Trim(u.Host+u.Path, "/"), nil
+}
+
+// cloneOrigin returns the scheme and host a connection's clone URLs must
+// live on; empty host means unconstrained (operator-configured git URLs).
+func cloneOrigin(conn config.Connection) (scheme, host string) {
+	switch conn.Type {
+	case "github":
+		return "https", "github.com"
+	case "gitlab", "gitea":
+		base := conn.URL
+		if base == "" {
+			base = "https://gitlab.com"
+		}
+		if u, err := url.Parse(base); err == nil {
+			return u.Scheme, u.Host
+		}
+	}
+	return "", ""
+}
+
+// checkCloneURL rejects a server-supplied clone URL pointing away from the
+// connection's own origin: git sends the connection's credentials
+// (http.extraheader) to whatever host it contacts, so a hostile or MITM'd
+// code host must not be able to steer that traffic elsewhere (SSRF,
+// Epic 7 review).
+// testAllowOffOriginClones disables checkCloneURL in tests only — fixtures
+// clone from file:// origins a real code host would never hand out.
+var testAllowOffOriginClones = false
+
+func checkCloneURL(conn config.Connection, cloneURL string) error {
+	if testAllowOffOriginClones {
+		return nil
+	}
+	scheme, host := cloneOrigin(conn)
+	if host == "" {
+		return nil
+	}
+	u, err := url.Parse(cloneURL)
+	if err != nil || u.Scheme != scheme || !strings.EqualFold(u.Host, host) {
+		return fmt.Errorf("clone url %q is off-origin (connection %s expects %s://%s); refusing to send credentials",
+			cloneURL, conn.Name, scheme, host)
+	}
+	return nil
+}
+
 // SyncConnection resolves conn to repo rows, mirrors them to disk, and
 // returns the names it synced (the connection's current membership set).
 func SyncConnection(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {

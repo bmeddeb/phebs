@@ -18,12 +18,31 @@ import (
 // dispatches on (fetch vs sync).
 type jobStore struct {
 	fakeStore
-	jobs []string // "kind:target"
+	jobs     []string // "kind:target"
+	inFlight []store.Job
+	repoErr  error // non-nil: GetRepo fails with this for every repo
 }
 
 func (f *jobStore) CreateJob(_ context.Context, kind store.JobKind, target string) (*store.Job, error) {
 	f.jobs = append(f.jobs, string(kind)+":"+target)
 	return &store.Job{Target: target}, nil
+}
+
+func (f *jobStore) ListJobs(_ context.Context, kind store.JobKind, status store.JobStatus) ([]store.Job, error) {
+	var out []store.Job
+	for _, j := range f.inFlight {
+		if j.Kind == kind && j.Status == status {
+			out = append(out, j)
+		}
+	}
+	return out, nil
+}
+
+func (f *jobStore) GetRepo(ctx context.Context, name string) (*store.Repo, error) {
+	if f.repoErr != nil {
+		return nil, f.repoErr
+	}
+	return f.fakeStore.GetRepo(ctx, name)
 }
 
 func sign(secret, body string) string {
@@ -55,6 +74,8 @@ func TestWebhook(t *testing.T) {
 		{"push without clone_url", "push", `{}`, sign(secret, `{}`), 400, nil},
 		{"repository event re-syncs connections", "repository", `{}`, sign(secret, `{}`), 202,
 			[]string{"connection_sync_job:gh", "connection_sync_job:gl"}},
+		{"installation_repositories event re-syncs connections", "installation_repositories", `{}`, sign(secret, `{}`), 202,
+			[]string{"connection_sync_job:gh", "connection_sync_job:gl"}},
 		{"unhandled event ignored", "star", `{}`, sign(secret, `{}`), 202, nil},
 	}
 	for _, tt := range tests {
@@ -78,6 +99,69 @@ func TestWebhook(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Epic 7 review regressions: truncation-as-401, store-error-as-202, and the
+// running-fetch lost-wakeup.
+func TestWebhookEdgeCases(t *testing.T) {
+	const secret = "hush"
+	pushKnown := `{"repository":{"clone_url":"https://github.com/foo/bar.git"}}`
+	newReq := func(event, body string) *http.Request {
+		req := httptest.NewRequest(http.MethodPost, "/api/webhook", strings.NewReader(body))
+		req.Header.Set("X-GitHub-Event", event)
+		req.Header.Set("X-Hub-Signature-256", sign(secret, body))
+		return req
+	}
+	newAPI := func(fs *jobStore) http.Handler {
+		return api.New(api.Options{Version: "t", Store: fs, WebhookSecret: secret,
+			ResyncConnections: []string{"gh"}})
+	}
+
+	t.Run("oversize body is 413, not bad-signature", func(t *testing.T) {
+		big := `{"pad":"` + strings.Repeat("x", 25<<20) + `"}` // > 25MB
+		rec := httptest.NewRecorder()
+		newAPI(&jobStore{}).ServeHTTP(rec, newReq("push", big))
+		if rec.Code != http.StatusRequestEntityTooLarge {
+			t.Fatalf("status = %d, want 413", rec.Code)
+		}
+	})
+
+	t.Run("store failure is 500, not unknown-repo 202", func(t *testing.T) {
+		fs := &jobStore{repoErr: context.DeadlineExceeded}
+		rec := httptest.NewRecorder()
+		newAPI(fs).ServeHTTP(rec, newReq("push", pushKnown))
+		if rec.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500 (sender must retry)", rec.Code)
+		}
+		if len(fs.jobs) != 0 {
+			t.Errorf("jobs = %v, want none", fs.jobs)
+		}
+	})
+
+	t.Run("push during running fetch still enqueues", func(t *testing.T) {
+		fs := &jobStore{inFlight: []store.Job{
+			{Kind: store.JobFetch, Target: "github.com/foo/bar", Status: store.StatusRunning},
+		}}
+		rec := httptest.NewRecorder()
+		newAPI(fs).ServeHTTP(rec, newReq("push", pushKnown))
+		if rec.Code != http.StatusAccepted {
+			t.Fatalf("status = %d, want 202", rec.Code)
+		}
+		if len(fs.jobs) != 1 || fs.jobs[0] != "repo_fetch_job:github.com/foo/bar" {
+			t.Fatalf("jobs = %v, want one fetch despite the running job (lost-wakeup)", fs.jobs)
+		}
+	})
+
+	t.Run("pending fetch still dedupes", func(t *testing.T) {
+		fs := &jobStore{inFlight: []store.Job{
+			{Kind: store.JobFetch, Target: "github.com/foo/bar", Status: store.StatusPending},
+		}}
+		rec := httptest.NewRecorder()
+		newAPI(fs).ServeHTTP(rec, newReq("push", pushKnown))
+		if rec.Code != http.StatusAccepted || len(fs.jobs) != 0 {
+			t.Fatalf("code=%d jobs=%v, want 202 and no duplicate of the pending job", rec.Code, fs.jobs)
+		}
+	})
 }
 
 func TestWebhookDisabledWithoutSecret(t *testing.T) {

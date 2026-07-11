@@ -345,7 +345,13 @@ func (c *Config) applyDefaults() error {
 	}
 	for i := range c.Connections {
 		c.Connections[i].Token = os.ExpandEnv(c.Connections[i].Token)
-		c.Connections[i].App.PrivateKey = os.ExpandEnv(c.Connections[i].App.PrivateKey)
+		// like api_key/webhook.secret: an unset env var must fail at boot,
+		// not surface as a cryptic per-sync PEM error
+		if raw := c.Connections[i].App.PrivateKey; raw != "" {
+			if c.Connections[i].App.PrivateKey = os.ExpandEnv(raw); c.Connections[i].App.PrivateKey == "" {
+				return fmt.Errorf("connections[%d]: app.private_key %q expands to empty (unset environment variable?)", i, raw)
+			}
+		}
 	}
 	if c.Server.Addr == "" {
 		c.Server.Addr = ":3070"

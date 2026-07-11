@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	stdsync "sync"
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -66,10 +67,20 @@ func isAuthFailure(output string) bool {
 	return false
 }
 
+// mirrorLocks serializes git operations per mirror dir: a webhook fetch and
+// a connection sync run on independent job runners and would otherwise race
+// git's ref locks on the same bare repo (Epic 7 review). In-process is
+// enough — one phebs owns $DATA.
+var mirrorLocks stdsync.Map
+
 // Mirror clones cloneURL as a bare mirror into dir, or incrementally fetches
 // if the mirror already exists. gitCfg holds per-invocation `-c` flags (e.g.
 // auth headers) that must never persist into the mirror's config.
 func Mirror(ctx context.Context, cloneURL, dir string, gitCfg ...string) error {
+	mu, _ := mirrorLocks.LoadOrStore(dir, &stdsync.Mutex{})
+	mu.(*stdsync.Mutex).Lock()
+	defer mu.(*stdsync.Mutex).Unlock()
+
 	if _, err := os.Stat(filepath.Join(dir, "HEAD")); err == nil {
 		_, err := runGit(ctx, dir, append(gitCfg, "fetch", "--prune", "origin")...)
 		return err

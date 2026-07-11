@@ -119,6 +119,9 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 			continue
 		}
 		name := "github.com/" + r.FullName
+		if err := checkCloneURL(conn, r.CloneURL); err != nil {
+			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+		}
 		dir := RepoDir(dataDir, name)
 		if err := Mirror(ctx, r.CloneURL, dir, gitCfg...); err != nil {
 			return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)

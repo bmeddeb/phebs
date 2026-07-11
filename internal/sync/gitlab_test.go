@@ -30,6 +30,7 @@ func TestSyncGitLabEndToEnd(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
+	allowFileClones(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -62,6 +63,9 @@ func TestSyncGitLabEndToEnd(t *testing.T) {
 			if r.URL.Query().Get("include_subgroups") != "true" {
 				t.Error("group listing missing include_subgroups=true")
 			}
+			if r.URL.Query().Get("with_shared") != "false" {
+				t.Error("group listing missing with_shared=false (shared foreign projects would be synced)")
+			}
 			switch r.URL.Query().Get("page") {
 			case "", "1":
 				if rateLimitHits == 0 { // first hit: stall the client once
@@ -70,7 +74,7 @@ func TestSyncGitLabEndToEnd(t *testing.T) {
 					w.WriteHeader(http.StatusTooManyRequests)
 					return
 				}
-				w.Header().Set("Link", fmt.Sprintf(`<http://%s/api/v4/groups/team%%2Fplatform/projects?page=2&include_subgroups=true>; rel="next"`, r.Host))
+				w.Header().Set("Link", fmt.Sprintf(`<http://%s/api/v4/groups/team%%2Fplatform/projects?page=2&include_subgroups=true&with_shared=false>; rel="next"`, r.Host))
 				_ = json.NewEncoder(w).Encode([]glProject{
 					proj(1, "team/platform/api", "private", false),
 					proj(2, "team/platform/old", "private", true), // excluded: archived

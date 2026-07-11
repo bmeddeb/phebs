@@ -163,6 +163,21 @@ func (s *Surreal) PruneConnections(ctx context.Context, keep []string) error {
 	return err
 }
 
+func (s *Surreal) GetRepoConnections(ctx context.Context, repo string) ([]string, error) {
+	memb, err := surrealdb.Query[[]struct {
+		Connection string `json:"connection"`
+	}](ctx, s.db, "SELECT connection FROM repo_connection WHERE repo = $repo",
+		map[string]any{"repo": repo})
+	if err != nil {
+		return nil, err
+	}
+	var conns []string
+	for _, m := range (*memb)[0].Result {
+		conns = append(conns, m.Connection)
+	}
+	return conns, nil
+}
+
 // RepoStatuses joins repos, membership, and latest indexing jobs in Go.
 // ponytail: three queries + maps, no server-side joins; revisit if repo
 // counts make it slow.

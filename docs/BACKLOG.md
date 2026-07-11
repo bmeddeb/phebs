@@ -213,7 +213,7 @@ typing guard + collapse guard/facet toggling (styletron+baseui render, mocked
 lang/highlight), and the T6.2 buildTree unit tests. CI wiring lands with the
 first CI pipeline (none exists yet).
 
-## EPIC 7 — Connectors & freshness *(Wave 1 — the biggest free-tier gap)*
+## EPIC 7 — Connectors & freshness ✅ 2026-07-11 *(Wave 1 — the biggest free-tier gap)*
 
 **T7.1 · GitLab connector** ✅ 2026-07-11 — *Sourcebot free* *(fake-API tests; live run pending)*
 `type: gitlab` (PAT, optional self-hosted `url:`): groups (subgroups

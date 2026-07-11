@@ -97,6 +97,9 @@ type Store interface {
 	SetRepoConnections(ctx context.Context, conn string, repos []string) error
 	PruneConnections(ctx context.Context, keep []string) error
 	RepoStatuses(ctx context.Context) ([]RepoStatus, error)
+	// GetRepoConnections lists the connections claiming one repo (the
+	// T7.4 fetch path resolves credentials through it).
+	GetRepoConnections(ctx context.Context, repo string) ([]string, error)
 
 	CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error)
 	ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) // status "" = all
@@ -112,7 +115,20 @@ type Store interface {
 // EnqueueUnlessInFlight creates a job unless one is already pending, claimed,
 // or running for the same target.
 func EnqueueUnlessInFlight(ctx context.Context, st Store, kind JobKind, target string) error {
-	for _, status := range []JobStatus{StatusPending, StatusClaimed, StatusRunning} {
+	return enqueueUnless(ctx, st, kind, target,
+		StatusPending, StatusClaimed, StatusRunning)
+}
+
+// EnqueueUnlessPending creates a job unless one is already *pending* for the
+// same target. Unlike EnqueueUnlessInFlight it does enqueue while a job for
+// the target is claimed/running — events that arrive mid-run (a push during
+// an in-flight fetch) must not be lost to the dedup (T7.4 review).
+func EnqueueUnlessPending(ctx context.Context, st Store, kind JobKind, target string) error {
+	return enqueueUnless(ctx, st, kind, target, StatusPending)
+}
+
+func enqueueUnless(ctx context.Context, st Store, kind JobKind, target string, statuses ...JobStatus) error {
+	for _, status := range statuses {
 		jobs, err := st.ListJobs(ctx, kind, status)
 		if err != nil {
 			return err

@@ -21,6 +21,14 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
+// allowFileClones lets e2e fixtures clone from file:// origins that the
+// clone-URL origin check (Epic 7 review) would rightly reject in prod.
+func allowFileClones(t *testing.T) {
+	t.Helper()
+	testAllowOffOriginClones = true
+	t.Cleanup(func() { testAllowOffOriginClones = false })
+}
+
 // gitc runs git for fixture setup (internal-test twin of the one in sync_test.go).
 func gitc(t *testing.T, dir string, args ...string) string {
 	t.Helper()
@@ -112,6 +120,7 @@ func TestSyncGitHubEndToEnd(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
+	allowFileClones(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
@@ -188,6 +197,7 @@ func TestSyncGitHubAuthedUserListsPrivate(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
+	allowFileClones(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 

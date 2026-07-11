@@ -54,7 +54,8 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 **P1 complete (2026-07-09): Epics 0–5 shipped and demoed** — sync → index →
 search → UI, single binary, all local. UI is Base Web (public open-source
-`baseui`). **Epic 6 (Wave 0 quick wins) done 2026-07-10** — incl. the live
-T2.2 PAT verification (T6.3) and the Vitest UI harness (T6.4). No git remote
-yet; CI has never run. Next per BACKLOG: Epic 7 (Wave 1) — GitLab/Gitea
-connectors, GitHub App auth, webhook reindex, re-sync cadence.
+`baseui`). **Epic 6 done 2026-07-10** (live T2.2 PAT verification, Vitest UI
+harness). **Epic 7 done 2026-07-11** (GitLab + Gitea connectors — Gitea
+verified live in Docker, GitHub App auth via stdlib JWT, HMAC webhook
+reindex — verified live, re-sync cadence). No git remote yet; CI has never
+run. Next per BACKLOG: Epic 8 (Wave 2) — search contexts → MCP server.

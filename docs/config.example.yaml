@@ -21,6 +21,13 @@ sync:
   # Job-runner poll cadence (Go duration, default 15s). Lower it when
   # watch mode should feel instant.
   poll_interval: 15s
+  # Re-sync cadence for remote connections (T7.5). Default 1h; "0" disables.
+  resync_interval: 1h
+
+# Push webhooks (T7.4): omit the whole block to leave POST /api/webhook off.
+webhook:
+  # Verifies X-Hub-Signature-256 payload signatures (GitHub and Gitea).
+  secret: "${WEBHOOK_SECRET}"
 
 # Sources of repos to sync (Epic 2). Names: lowercase [a-z0-9-], unique.
 connections:
@@ -35,6 +42,32 @@ connections:
       archived: true
       forks: false
       repos: ["*/*-mirror"] # glob on owner/name
+
+  # GitHub as an App installation (T7.3) — higher rate limits, per-install
+  # scoping. `app` and `token` are mutually exclusive; omit all selectors to
+  # sync exactly the repos the installation was granted.
+  - name: github-app
+    type: github
+    app:
+      id: 12345
+      installation_id: 67890
+      private_key_path: /etc/phebs/app.pem # or private_key: "${APP_KEY_PEM}"
+
+  # GitLab over PAT (T7.1): at least one of groups, users, repos.
+  - name: gitlab-work
+    type: gitlab
+    url: https://git.example.com # omit for gitlab.com
+    token: "${GITLAB_TOKEN}"
+    groups: [team/platform] # subgroups included
+    users: []
+    repos: [] # full project path
+
+  # Gitea over PAT (T7.2): base url required; orgs/users/repos.
+  - name: gitea-forge
+    type: gitea
+    url: https://gitea.example.com
+    token: "${GITEA_TOKEN}"
+    orgs: [acme]
 
   # A single repo over plain git protocol(s).
   - name: zoekt-mirror

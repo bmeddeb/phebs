@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -26,10 +27,18 @@ func webhookHandler(opts Options) http.HandlerFunc {
 		w.WriteHeader(code)
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": status})
 	}
+	// GitHub caps webhook payloads at 25 MB; a silently truncated body would
+	// HMAC-mismatch and report a misleading "bad signature", so over-limit
+	// bodies are rejected distinctly instead.
+	const maxBody = 25 << 20
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+		body, err := io.ReadAll(io.LimitReader(r.Body, maxBody+1))
 		if err != nil {
 			respond(w, http.StatusBadRequest, "unreadable body")
+			return
+		}
+		if len(body) > maxBody {
+			respond(w, http.StatusRequestEntityTooLarge, "payload exceeds 25MB")
 			return
 		}
 		if !validSignature(body, r.Header.Get("X-Hub-Signature-256"), opts.WebhookSecret) {
@@ -57,10 +66,19 @@ func webhookHandler(opts Options) http.HandlerFunc {
 				return
 			}
 			if _, err := opts.Store.GetRepo(r.Context(), name); err != nil {
-				respond(w, http.StatusAccepted, "unknown repo "+name+" ignored")
+				if errors.Is(err, store.ErrNotFound) {
+					respond(w, http.StatusAccepted, "unknown repo "+name+" ignored")
+					return
+				}
+				// a store failure is not "unknown repo": let the sender
+				// retry rather than lose the push behind a 2xx
+				respond(w, http.StatusInternalServerError, "repo lookup failed")
 				return
 			}
-			if err := store.EnqueueUnlessInFlight(r.Context(), opts.Store, store.JobFetch, name); err != nil {
+			// pending-only dedup: a push landing while a fetch is already
+			// running must queue another round, or its commits wait for the
+			// resync cadence (lost-wakeup)
+			if err := store.EnqueueUnlessPending(r.Context(), opts.Store, store.JobFetch, name); err != nil {
 				respond(w, http.StatusInternalServerError, "enqueue failed")
 				return
 			}

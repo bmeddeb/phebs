@@ -67,6 +67,13 @@ func FetchHandler(cfg *config.Config, st store.Store) func(context.Context, stor
 		if err != nil {
 			return err
 		}
+		// the stored CloneURL is server-supplied data: re-check it against
+		// the claiming connection before sending its credentials anywhere
+		// (also fails closed when the connection was repurposed since the
+		// row was written)
+		if err := checkCloneURL(conn, repo.CloneURL); err != nil {
+			return fmt.Errorf("fetch %s: %w", job.Target, err)
+		}
 		gitCfg, err := cloneAuth(ctx, conn)
 		if err != nil {
 			return fmt.Errorf("fetch %s: %w", job.Target, err)
@@ -81,18 +88,13 @@ func FetchHandler(cfg *config.Config, st store.Store) func(context.Context, stor
 // claimingConnection resolves the configured connection that owns a repo, so
 // a fetch can reuse its credentials.
 func claimingConnection(ctx context.Context, cfg *config.Config, st store.Store, repoName string) (config.Connection, error) {
-	statuses, err := st.RepoStatuses(ctx)
+	claims, err := st.GetRepoConnections(ctx, repoName)
 	if err != nil {
 		return config.Connection{}, err
 	}
-	for _, s := range statuses {
-		if s.Name != repoName {
-			continue
-		}
-		for _, c := range cfg.Connections {
-			if slices.Contains(s.Connections, c.Name) {
-				return c, nil
-			}
+	for _, c := range cfg.Connections {
+		if slices.Contains(claims, c.Name) {
+			return c, nil
 		}
 	}
 	return config.Connection{}, fmt.Errorf("fetch %s: no configured connection claims it", repoName)
