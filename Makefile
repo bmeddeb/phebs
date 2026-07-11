@@ -15,8 +15,8 @@ build: bin/zoekt-git-index ui ## release binary with embedded UI
 test:
 	go test ./...
 
-ui-test: ## Vitest UI tests (T6.4)
-	cd ui && npm test
+ui-test: ## Vitest UI tests (T6.4); npm install is incremental (~1s when current)
+	cd ui && npm install --no-audit --no-fund && npm test
 
 lint:
 	golangci-lint run

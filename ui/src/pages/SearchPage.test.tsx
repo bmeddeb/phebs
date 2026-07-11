@@ -125,15 +125,16 @@ test('stream error renders a notification', async () => {
 })
 
 // j/k clamp to [0, len-1]; Enter deep-links the selected file with its first match line.
-for (const [name, keys] of [
-  ['j then Enter opens the first file', ['j']],
-  ['k at top clamps: Enter still opens the first file', ['j', 'k', 'k']],
+for (const [name, keys, want] of [
+  ['j then Enter opens the first file', ['j'], '#/file?repo=github.com/a/one&path=cmd/main.go&L=3'],
+  ['k at top clamps: Enter still opens the first file', ['j', 'k', 'k'], '#/file?repo=github.com/a/one&path=cmd/main.go&L=3'],
+  ['j past the end clamps: Enter opens the last file', ['j', 'j', 'j', 'j'], '#/file?repo=github.com/b/two&path=src/index.ts&L=7'],
 ] as const) {
   test(name, async () => {
     await allFiles()
     for (const k of keys) key(k)
     key('Enter')
-    expect(hash()).toBe('#/file?repo=github.com/a/one&path=cmd/main.go&L=3')
+    expect(hash()).toBe(want)
   })
 }
 

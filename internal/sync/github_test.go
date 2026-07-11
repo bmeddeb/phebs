@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -179,7 +181,8 @@ func TestSyncGitHubEndToEnd(t *testing.T) {
 
 // Regression (T6.3, found live): /users/{name}/repos never returns private
 // repos, even authenticated. A users: entry naming the token's own login must
-// list via /user/repos instead.
+// ALSO list /user/repos — union, not replacement, because /user/repos alone
+// omits public repos under a select-repositories fine-grained PAT.
 func TestSyncGitHubAuthedUserListsPrivate(t *testing.T) {
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
@@ -200,17 +203,20 @@ func TestSyncGitHubAuthedUserListsPrivate(t *testing.T) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		switch r.URL.Path {
+		// real GitHub URLs are case-insensitive; the config says "Ben"
+		switch strings.ToLower(r.URL.Path) {
 		case "/user":
 			_, _ = w.Write([]byte(`{"login":"ben"}`))
-		case "/user/repos":
+		case "/user/repos": // token grant: the private repo only
 			_ = json.NewEncoder(w).Encode([]ghRepo{
 				{ID: 7, FullName: "ben/secret", CloneURL: "file://" + origin,
 					DefaultBranch: "main", Private: true},
 			})
-		case "/users/ben/repos":
-			t.Error("listed via public /users/{name}/repos; private repos would be missing")
-			w.WriteHeader(http.StatusNotFound)
+		case "/users/ben/repos": // public listing: the public repo only
+			_ = json.NewEncoder(w).Encode([]ghRepo{
+				{ID: 8, FullName: "ben/pub", CloneURL: "file://" + origin,
+					DefaultBranch: "main"},
+			})
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -234,8 +240,10 @@ func TestSyncGitHubAuthedUserListsPrivate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sync: %v", err)
 	}
-	if len(names) != 1 || names[0] != "github.com/ben/secret" {
-		t.Fatalf("synced names = %v, want just ben/secret", names)
+	sort.Strings(names)
+	want := []string{"github.com/ben/pub", "github.com/ben/secret"}
+	if !slices.Equal(names, want) {
+		t.Fatalf("synced names = %v, want %v (public + private union)", names, want)
 	}
 	repo, err := st.GetRepo(ctx, "github.com/ben/secret")
 	if err != nil {

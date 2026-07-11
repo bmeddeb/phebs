@@ -7,6 +7,7 @@ class FakeEventSource {
   static instances: FakeEventSource[] = []
   url: string
   closed = false
+  onerror: Listener | null = null
   private listeners = new Map<string, Listener[]>()
 
   constructor(url: string) {
@@ -24,6 +25,9 @@ class FakeEventSource {
 
   emit(type: string, data?: string) {
     for (const fn of this.listeners.get(type) ?? []) fn({ data })
+    // real EventSource dispatches error events to the onerror IDL attribute
+    // too — modeling it is what pins the error-clobber bug (see api.ts).
+    if (type === 'error') this.onerror?.({ data })
   }
 }
 

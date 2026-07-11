@@ -50,9 +50,11 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		}
 	}
 	// /users/{name}/repos only ever returns public repos, even with a PAT
-	// (verified live, T6.3). A users: entry naming the token's own account
-	// must list via /user/repos to see private repos, so resolve the token's
-	// login once.
+	// (verified live, T6.3), so the token owner's account is ALSO listed via
+	// /user/repos for its private repos. Union, not replacement: /user/repos
+	// alone misses public repos when a fine-grained PAT is restricted to
+	// select repositories, and a shrunken listing plus cleanup_orphans would
+	// silently delete mirrors and shards.
 	var login string
 	if conn.Token != "" && len(conn.Users) > 0 {
 		var me struct {
@@ -64,12 +66,13 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		login = me.Login
 	}
 	for _, user := range conn.Users {
-		p := "/users/" + user + "/repos?per_page=100&type=owner"
-		if strings.EqualFold(user, login) { // GitHub logins are case-insensitive
-			p = "/user/repos?per_page=100&type=owner"
-		}
-		if err := collect(c.listRepos(ctx, p)); err != nil {
+		if err := collect(c.listRepos(ctx, "/users/"+user+"/repos?per_page=100&type=owner")); err != nil {
 			return nil, fmt.Errorf("connection %s: user %s: %w", conn.Name, user, err)
+		}
+		if strings.EqualFold(user, login) { // GitHub logins are case-insensitive
+			if err := collect(c.listRepos(ctx, "/user/repos?per_page=100&type=owner")); err != nil {
+				return nil, fmt.Errorf("connection %s: user %s: %w", conn.Name, user, err)
+			}
 		}
 	}
 	for _, full := range conn.Repos {
