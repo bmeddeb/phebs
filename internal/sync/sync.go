@@ -200,6 +200,31 @@ func CleanupOrphans(ctx context.Context, st store.Store, dataDir string) error {
 		if err := os.RemoveAll(RepoDir(dataDir, s.Name)); err != nil {
 			return fmt.Errorf("cleanup %s mirror: %w", s.Name, err)
 		}
+		if err := RemoveShards(dataDir, s.Name); err != nil {
+			return fmt.Errorf("cleanup %s shards: %w", s.Name, err)
+		}
+	}
+	return nil
+}
+
+// RemoveShards deletes a repo's zoekt shards from $DATA/index. Without this an
+// orphaned repo's content stays searchable (the searcher keeps every on-disk
+// shard mounted). Shards are named url.QueryEscape(name)_v<ver>.<n>.zoekt; the
+// _v separator anchors the glob so a name that prefixes another can't match
+// its shards.
+// ponytail: misses repos whose escaped name exceeds 200 chars (zoekt then
+// truncates+hashes the prefix) — vanishingly rare; those shards leak as they
+// did for every repo before this existed.
+func RemoveShards(dataDir, name string) error {
+	glob := filepath.Join(dataDir, "index", url.QueryEscape(name)+"_v*.zoekt")
+	shards, err := filepath.Glob(glob)
+	if err != nil {
+		return err
+	}
+	for _, s := range shards {
+		if err := os.Remove(s); err != nil && !os.IsNotExist(err) {
+			return err
+		}
 	}
 	return nil
 }

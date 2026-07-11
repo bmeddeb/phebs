@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/store"
@@ -155,4 +156,75 @@ func FuzzCatFilePath(f *testing.F) {
 			t.Fatalf("path %q returned content not belonging to the repo", path)
 		}
 	})
+}
+
+// buildRepo mirrors a one-commit repo with the given files and returns (dataDir, name).
+func buildRepo(t *testing.T, files map[string]string) (string, string) {
+	t.Helper()
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	for path, content := range files {
+		full := filepath.Join(origin, path)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "x")
+	dataDir := t.TempDir()
+	const name = "example.com/quoting"
+	if err := sync.Mirror(context.Background(), "file://"+origin, sync.RepoDir(dataDir, name)); err != nil {
+		t.Fatal(err)
+	}
+	return dataDir, name
+}
+
+// Non-ASCII filenames must come back verbatim (core.quotePath=false), and be
+// openable — pre-fix git C-quoted them so listing showed garbage and open 404'd.
+func TestNonASCIIPaths(t *testing.T) {
+	ctx := context.Background()
+	dataDir, name := buildRepo(t, map[string]string{"docs/café.md": "unicode\n"})
+
+	entries, err := sync.FolderContents(ctx, dataDir, name, "", "docs")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name != "café.md" {
+		t.Fatalf("FolderContents = %+v, want unquoted café.md", entries)
+	}
+	got, err := sync.CatFile(ctx, dataDir, name, "", "docs/café.md")
+	if err != nil {
+		t.Fatalf("CatFile(café.md): %v", err)
+	}
+	if string(got) != "unicode\n" {
+		t.Errorf("content = %q", got)
+	}
+	paths, err := sync.TreePaths(ctx, dataDir, name, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 1 || paths[0] != "docs/café.md" {
+		t.Errorf("TreePaths = %v, want [docs/café.md]", paths)
+	}
+}
+
+// CatFile refuses blobs over MaxBlobBytes (prevents OOM on multi-GB files).
+func TestBlobSizeCap(t *testing.T) {
+	ctx := context.Background()
+	dataDir, name := buildRepo(t, map[string]string{"big.txt": strings.Repeat("A", 4096)})
+
+	orig := sync.MaxBlobBytes
+	sync.MaxBlobBytes = 1024
+	defer func() { sync.MaxBlobBytes = orig }()
+
+	if _, err := sync.CatFile(ctx, dataDir, name, "", "big.txt"); !errors.Is(err, sync.ErrTooLarge) {
+		t.Errorf("CatFile(4KB, cap 1KB) err = %v, want ErrTooLarge", err)
+	}
+	sync.MaxBlobBytes = 1 << 20
+	if _, err := sync.CatFile(ctx, dataDir, name, "", "big.txt"); err != nil {
+		t.Errorf("CatFile under cap should succeed, got %v", err)
+	}
 }

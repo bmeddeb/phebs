@@ -204,3 +204,37 @@ func TestRedactArgs(t *testing.T) {
 		t.Errorf("redactArgs mangled the host/path: %q", got)
 	}
 }
+
+func TestRateLimitedNeverSpins(t *testing.T) {
+	mk := func(status int, hdr map[string]string) *http.Response {
+		h := http.Header{}
+		for k, v := range hdr {
+			h.Set(k, v)
+		}
+		return &http.Response{StatusCode: status, Header: h}
+	}
+	cases := []struct {
+		name string
+		resp *http.Response
+	}{
+		{"retry-after seconds", mk(429, map[string]string{"Retry-After": "30"})},
+		{"retry-after http-date", mk(429, map[string]string{"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"})},
+		{"retry-after garbage", mk(403, map[string]string{"Retry-After": "soon"})},
+		{"ratelimit past reset", mk(403, map[string]string{"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1"})},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			wait, limited := rateLimited(c.resp)
+			if !limited {
+				t.Fatalf("expected limited=true")
+			}
+			if wait < time.Second {
+				t.Errorf("wait = %v, want >= 1s (a 0 wait hot-loops the retry)", wait)
+			}
+		})
+	}
+	// a plain 403 with no rate-limit headers is NOT a rate limit
+	if _, limited := rateLimited(mk(403, nil)); limited {
+		t.Error("plain 403 should not be treated as rate limited")
+	}
+}

@@ -26,9 +26,15 @@ func startLocal(ctx context.Context, dataDir string) (endpoint string, stop func
 	// child. Revisit only if flaky in CI.
 	_ = l.Close()
 
+	// Detach the child command from the caller's (signal) context: on Ctrl-C
+	// the DB must outlive the HTTP drain and in-flight terminal job writes,
+	// and is stopped only via stop() from Surreal.Close (after the drain).
+	// waitHealthy below still honors ctx for startup cancellation.
+	cmdCtx := context.WithoutCancel(ctx)
+
 	// ponytail: root/root is loopback-only for the supervised child; real
 	// creds arrive with the fleet profile's server mode (P6).
-	cmd := exec.CommandContext(ctx, "surreal", "start",
+	cmd := exec.CommandContext(cmdCtx, "surreal", "start",
 		"--bind", addr,
 		"--user", "root", "--pass", "root",
 		"--log", "warn",

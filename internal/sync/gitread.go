@@ -52,14 +52,18 @@ func checkPath(s string) error {
 }
 
 func runGitRaw(ctx context.Context, dir string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	// core.quotePath=false: emit UTF-8 paths verbatim instead of C-quoting
+	// (octal-escaping, double-wrapping) non-ASCII names, which would make
+	// ls-tree output unparseable and the resulting names unopenable.
+	full := append([]string{"-c", "core.quotePath=false"}, args...)
+	cmd := exec.CommandContext(ctx, "git", full...)
 	cmd.Dir = dir
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
 		msg := stderr.String()
 		werr := fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, msg)
-		for _, marker := range []string{"does not exist", "invalid object name", "Not a valid object name", "not a valid object", "bad revision"} {
+		for _, marker := range []string{"does not exist", "invalid object name", "Not a valid object name", "not a valid object", "bad revision", "not a tree object", "bad file"} {
 			if strings.Contains(msg, marker) {
 				return nil, fmt.Errorf("%w: %w", store.ErrNotFound, werr)
 			}
@@ -80,7 +84,18 @@ func spec(ref, path string) string {
 	return ref + ":" + path
 }
 
-// CatFile returns the exact blob bytes of path at ref.
+// MaxBlobBytes caps a single /api/source read. cat-file buffers the whole
+// blob, then the API copies it to a string (or a 4/3 base64 string) and JSON-
+// encodes it — several × the blob in transient memory, in the process that
+// also serves search. A multi-GB blob would OOM the binary. Var so tests can
+// lower it without materializing a huge fixture.
+var MaxBlobBytes int64 = 10 << 20 // 10 MiB
+
+// ErrTooLarge is returned when a blob exceeds MaxBlobBytes.
+var ErrTooLarge = errors.New("file too large")
+
+// CatFile returns the exact blob bytes of path at ref, refusing blobs over
+// MaxBlobBytes (checked cheaply via cat-file -s before reading the content).
 func CatFile(ctx context.Context, dataDir, repoName, ref, path string) ([]byte, error) {
 	if err := errors.Join(checkRef(ref), checkPath(path)); err != nil {
 		return nil, err
@@ -88,7 +103,15 @@ func CatFile(ctx context.Context, dataDir, repoName, ref, path string) ([]byte, 
 	if path == "" {
 		return nil, fmt.Errorf("empty path: %w", ErrBadInput)
 	}
-	return runGitRaw(ctx, RepoDir(dataDir, repoName), "cat-file", "blob", spec(ref, path))
+	dir := RepoDir(dataDir, repoName)
+	sizeOut, err := runGitRaw(ctx, dir, "cat-file", "-s", spec(ref, path))
+	if err != nil {
+		return nil, err
+	}
+	if n, perr := strconv.ParseInt(strings.TrimSpace(string(sizeOut)), 10, 64); perr == nil && n > MaxBlobBytes {
+		return nil, fmt.Errorf("%s is %d bytes (limit %d): %w", path, n, MaxBlobBytes, ErrTooLarge)
+	}
+	return runGitRaw(ctx, dir, "cat-file", "blob", spec(ref, path))
 }
 
 type TreeEntry struct {

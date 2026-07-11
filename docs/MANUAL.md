@@ -106,7 +106,7 @@ connections:
 |---|---|---|
 | `server.addr` | `:3070` | |
 | `server.data_dir` | `~/.phebs` | `~` expands; created if missing |
-| `auth.api_key` | *(empty)* | empty leaves the API open and logs a warning; `${ENV}` references are expanded |
+| `auth.api_key` | *(empty)* | empty leaves the API open and logs a warning; `${ENV}` references are expanded — a non-empty key that expands to empty (unset var) fails startup rather than silently opening the API |
 | `sync.cleanup_orphans` | `false` | see [orphans](#orphans-and-cleanup) |
 | `sync.poll_interval` | `15s` | Go duration; job pollers wake with ±50 % jitter around it |
 
@@ -185,7 +185,7 @@ time`. With `sync.poll_interval: 1s`, a commit is searchable in ~1–2 s.
 A repo no connection claims (you removed the connection or narrowed its
 filters) is flagged **orphaned** on the Repos page and in `/api/repo-status`.
 By default orphans are kept; set `sync.cleanup_orphans: true` to delete their
-rows and mirrors after each sync. phebs only ever deletes mirrors it created
+rows, mirrors, and index shards after each sync. phebs only ever deletes data it created
 under its own data directory.
 
 ## 5. Searching
@@ -257,7 +257,7 @@ and `/metrics`.
 | `/api/repos` | GET | repo rows |
 | `/api/repo-status` | GET | repos + connections + orphan flag + last index job |
 | `/api/reindex` | POST | `{"repo":"github.com/foo/bar","force":true}` → enqueue index job |
-| `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64 |
+| `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413 |
 | `/api/folder_contents?repo=&path=&ref=` | GET | one directory level |
 | `/api/tree?repo=&ref=` | GET | all file paths, recursive |
 | `/metrics` | GET | Prometheus metrics |

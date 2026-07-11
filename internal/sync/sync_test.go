@@ -2,6 +2,7 @@ package sync_test
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -201,5 +202,35 @@ func TestSyncUnsupportedType(t *testing.T) {
 		config.Connection{Name: "x", Type: "svn"})
 	if err == nil || !strings.Contains(err.Error(), "unsupported type") {
 		t.Errorf("err = %v, want unsupported type", err)
+	}
+}
+
+func TestRemoveShards(t *testing.T) {
+	dataDir := t.TempDir()
+	idx := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(idx, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// zoekt names shards url.QueryEscape(name)_v<ver>.<n>.zoekt
+	write := func(fname string) {
+		if err := os.WriteFile(filepath.Join(idx, fname), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	esc := url.QueryEscape("h/foo")       // h%2Ffoo
+	escBar := url.QueryEscape("h/foobar") // h%2Ffoobar (foo is a prefix)
+	write(esc + "_v16.00000.zoekt")
+	write(esc + "_v16.00001.zoekt")
+	write(escBar + "_v16.00000.zoekt")
+
+	if err := sync.RemoveShards(dataDir, "h/foo"); err != nil {
+		t.Fatal(err)
+	}
+	left, _ := filepath.Glob(filepath.Join(idx, "*.zoekt"))
+	if len(left) != 1 || filepath.Base(left[0]) != escBar+"_v16.00000.zoekt" {
+		t.Errorf("after RemoveShards(h/foo), remaining = %v; want only h/foobar's shard (the _v anchor must prevent prefix over-match)", left)
+	}
+	if err := sync.RemoveShards(dataDir, "h/foo"); err != nil {
+		t.Errorf("second RemoveShards errored: %v", err)
 	}
 }

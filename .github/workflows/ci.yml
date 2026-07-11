@@ -20,7 +20,7 @@ jobs:
         run: |
           curl -sSf https://install.surrealdb.com | sh
           echo "$HOME/.surrealdb" >> "$GITHUB_PATH"
-      - run: go test ./...
+      - run: go test -race ./...
 
   ui:
     runs-on: ubuntu-latest

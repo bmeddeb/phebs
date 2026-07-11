@@ -90,19 +90,24 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 
 	err := r.Handle(ctx, job)
 	stopHB()
+
+	// Record the terminal status on a context detached from cancellation: a
+	// job that finished as shutdown began must not be left status='running'
+	// (the reaper would re-run an already-succeeded job next boot).
+	writeCtx := context.WithoutCancel(ctx)
 	switch {
 	case err == nil:
 		recordJob(r.Kind, "done")
-		_ = r.Store.SetJobStatus(ctx, job.ID, StatusDone, "")
+		_ = r.Store.SetJobStatus(writeCtx, job.ID, StatusDone, "")
 	case job.Attempts+1 >= r.MaxAttempts:
 		log.Printf("runner %s: %s %s failed permanently: %v", r.Who, job.Kind, job.Target, err)
 		recordJob(r.Kind, "failed")
 		recordJobError(r.Kind, err)
-		_ = r.Store.SetJobStatus(ctx, job.ID, StatusFailed, err.Error())
+		_ = r.Store.SetJobStatus(writeCtx, job.ID, StatusFailed, err.Error())
 	default:
 		recordJob(r.Kind, "requeued")
 		recordJobError(r.Kind, err)
-		_ = r.Store.RequeueJob(ctx, job.ID, err.Error(), time.Now().UTC().Add(r.Backoff(err, job.Attempts+1)))
+		_ = r.Store.RequeueJob(writeCtx, job.ID, err.Error(), time.Now().UTC().Add(r.Backoff(err, job.Attempts+1)))
 	}
 }
 

@@ -178,19 +178,32 @@ func rateLimited(resp *http.Response) (time.Duration, bool) {
 	if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
 		return 0, false
 	}
+	// Retry-After is delta-seconds OR an HTTP-date (RFC 9110); proxies/CDNs
+	// emit either. A bare Atoi on the date form yields 0 → a hot retry loop,
+	// so fall back to date parsing, then to a sane floor.
 	if ra := resp.Header.Get("Retry-After"); ra != "" {
-		secs, _ := strconv.Atoi(ra)
-		return time.Duration(secs) * time.Second, true
+		if secs, err := strconv.Atoi(strings.TrimSpace(ra)); err == nil {
+			return clampWait(time.Duration(secs) * time.Second), true
+		}
+		if t, err := http.ParseTime(ra); err == nil {
+			return clampWait(time.Until(t)), true
+		}
+		return 60 * time.Second, true // unparseable: back off, don't spin
 	}
 	if resp.Header.Get("X-RateLimit-Remaining") == "0" {
 		reset, _ := strconv.ParseInt(resp.Header.Get("X-RateLimit-Reset"), 10, 64)
-		wait := time.Until(time.Unix(reset, 0))
-		if wait < 0 {
-			wait = 0
-		}
-		return wait, true
+		return clampWait(time.Until(time.Unix(reset, 0))), true
 	}
 	return 0, false // plain 403: permissions, not rate limiting
+}
+
+// clampWait floors a rate-limit wait at 1s so a zero/negative value (clock
+// skew, already-past reset) can't spin the retry loop.
+func clampWait(d time.Duration) time.Duration {
+	if d < time.Second {
+		return time.Second
+	}
+	return d
 }
 
 // nextLink extracts the rel="next" URL from a Link header.

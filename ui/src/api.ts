@@ -98,13 +98,23 @@ export function streamSearch(
     es.close()
     onDone(JSON.parse(e.data))
   })
+  // A single 'error' handler: EventSource fires this event type for BOTH a
+  // server-sent `event: error` (has e.data — a real backend message) and a
+  // connection-level failure (no data). A separate es.onerror would fire for
+  // the same event and clobber the real message with 'connection lost'.
   es.addEventListener('error', (e: MessageEvent) => {
     es.close()
-    onError(e.data ? JSON.parse(e.data).message : 'stream failed')
+    if (e.data) {
+      let msg = 'search failed'
+      try {
+        msg = JSON.parse(e.data).message ?? msg
+      } catch {
+        /* keep default */
+      }
+      onError(msg)
+    } else {
+      onError('connection lost')
+    }
   })
-  es.onerror = () => {
-    es.close()
-    onError('connection lost')
-  }
   return () => es.close()
 }
