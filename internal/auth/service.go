@@ -53,6 +53,7 @@ type Service struct {
 	dummyHash   string
 	loginLimits *loginLimiter
 	oidcLimits  *loginLimiter
+	clientIPs   clientIPResolver
 	argonSlots  chan struct{}
 
 	setupMu    sync.RWMutex
@@ -95,11 +96,16 @@ func New(ctx context.Context, options Options) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("auth: prepare password verifier: %w", err)
 	}
+	clientIPs, err := newClientIPResolver(options.Config.TrustedProxies)
+	if err != nil {
+		return nil, fmt.Errorf("auth: trusted proxies: %w", err)
+	}
 	s := &Service{
 		store: options.Store, cfg: options.Config, now: now,
 		httpClient: options.HTTPClient, dummyHash: dummyHash,
 		loginLimits: newLoginLimiter(8, 5*time.Minute, 4096),
 		oidcLimits:  newLoginLimiter(12, 5*time.Minute, 4096),
+		clientIPs:   clientIPs,
 		argonSlots:  make(chan struct{}, argonConcurrency),
 	}
 

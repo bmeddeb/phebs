@@ -15,7 +15,8 @@ type snapshot struct {
 	definitions       map[string][]indexedLocation
 	references        map[string][]indexedLocation
 	symbols           map[string]*symbolInfo
-	referenceEdges    map[string]map[string]struct{}
+	referenceTargets  map[string]map[string]struct{}
+	referenceSources  map[string]map[string]struct{}
 	validSymbols      map[string]bool
 	occurrenceCount   int
 	documentCount     int
@@ -76,12 +77,13 @@ type symbolInfo struct {
 
 func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snapshot, error) {
 	result := &snapshot{
-		documents:      make(map[string]*document),
-		definitions:    make(map[string][]indexedLocation),
-		references:     make(map[string][]indexedLocation),
-		symbols:        make(map[string]*symbolInfo),
-		referenceEdges: make(map[string]map[string]struct{}),
-		validSymbols:   make(map[string]bool),
+		documents:        make(map[string]*document),
+		definitions:      make(map[string][]indexedLocation),
+		references:       make(map[string][]indexedLocation),
+		symbols:          make(map[string]*symbolInfo),
+		referenceTargets: make(map[string]map[string]struct{}),
+		referenceSources: make(map[string]map[string]struct{}),
+		validSymbols:     make(map[string]bool),
 	}
 	metadataSeen := false
 	visitor := scip.IndexVisitor{
@@ -164,6 +166,13 @@ func (s *snapshot) addDocument(input *scip.Document, limits parseLimits) error {
 		if occurrence.GetSymbol() == "" {
 			continue
 		}
+		// A stale or partially corrupt index should not make unrelated symbols
+		// unusable. Count malformed occurrences against the semantic limit, but
+		// do not retain them or validate payload that cannot produce a location.
+		r, ok := occurrence.SourceRange()
+		if !ok || r.Validate() != nil {
+			continue
+		}
 		if len(occurrence.GetSymbol()) > limits.symbolBytes {
 			return fmt.Errorf("document %q occurrence symbol is %d bytes (limit %d): %w", docPath, len(occurrence.GetSymbol()), limits.symbolBytes, ErrSemanticLimit)
 		}
@@ -172,13 +181,6 @@ func (s *snapshot) addDocument(input *scip.Document, limits parseLimits) error {
 		}
 		if err := validateHoverContent(occurrence.GetOverrideDocumentation(), "", "", limits); err != nil {
 			return fmt.Errorf("document %q occurrence: %w", docPath, err)
-		}
-		r, ok := occurrence.SourceRange()
-		if !ok {
-			return fmt.Errorf("document %q has invalid occurrence range", docPath)
-		}
-		if err := r.Validate(); err != nil {
-			return fmt.Errorf("document %q has invalid occurrence range: %w", docPath, err)
 		}
 		storedOccurrence := &scip.Occurrence{
 			Symbol:                occurrence.GetSymbol(),
@@ -270,7 +272,7 @@ func (s *snapshot) addSymbol(docPath string, input *scip.SymbolInformation, limi
 			info.definitionSymbols = appendUnique(info.definitionSymbols, related)
 		}
 		if relationship.GetIsReference() {
-			s.addReferenceEdge(key, related)
+			s.addReferenceRelationship(key, related)
 		}
 	}
 	return nil
@@ -342,29 +344,27 @@ func (s *snapshot) validateSymbol(symbol string) error {
 	return nil
 }
 
-func (s *snapshot) addReferenceEdge(left, right string) {
-	if s.referenceEdges[left] == nil {
-		s.referenceEdges[left] = make(map[string]struct{})
+func (s *snapshot) addReferenceRelationship(source, target string) {
+	if s.referenceTargets[source] == nil {
+		s.referenceTargets[source] = make(map[string]struct{})
 	}
-	if s.referenceEdges[right] == nil {
-		s.referenceEdges[right] = make(map[string]struct{})
+	if s.referenceSources[target] == nil {
+		s.referenceSources[target] = make(map[string]struct{})
 	}
-	s.referenceEdges[left][right] = struct{}{}
-	s.referenceEdges[right][left] = struct{}{}
+	s.referenceTargets[source][target] = struct{}{}
+	s.referenceSources[target][source] = struct{}{}
 }
 
 func (s *snapshot) relatedReferenceSymbols(start string) []string {
 	seen := map[string]bool{start: true}
-	queue := []string{start}
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-		for related := range s.referenceEdges[current] {
-			if !seen[related] {
-				seen[related] = true
-				queue = append(queue, related)
-			}
-		}
+	// SCIP reference relationships are bidirectional for lookup, but they are
+	// not transitive. Include direct targets and their registered inverse only;
+	// walking the graph would merge unrelated override/mixin families.
+	for related := range s.referenceTargets[start] {
+		seen[related] = true
+	}
+	for related := range s.referenceSources[start] {
+		seen[related] = true
 	}
 	result := make([]string, 0, len(seen))
 	for key := range seen {
@@ -376,19 +376,11 @@ func (s *snapshot) relatedReferenceSymbols(start string) []string {
 
 func (s *snapshot) relatedDefinitionSymbols(start string) []string {
 	seen := map[string]bool{start: true}
-	queue := []string{start}
-	for len(queue) > 0 {
-		current := queue[0]
-		queue = queue[1:]
-		info := s.symbols[current]
-		if info == nil {
-			continue
-		}
+	// Definition relationships override this symbol's target. They are
+	// directional and apply only one hop according to the SCIP protocol.
+	if info := s.symbols[start]; info != nil {
 		for _, related := range info.definitionSymbols {
-			if !seen[related] {
-				seen[related] = true
-				queue = append(queue, related)
-			}
+			seen[related] = true
 		}
 	}
 	result := make([]string, 0, len(seen))

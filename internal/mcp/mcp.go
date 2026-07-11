@@ -234,7 +234,7 @@ func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.Histor
 		Head         string `json:"head,omitempty" jsonschema:"head commit-ish; defaults to the repository's indexed commit"`
 		Base         string `json:"base,omitempty" jsonschema:"base commit-ish; defaults to head's first parent"`
 		Path         string `json:"path,omitempty" jsonschema:"optional exact path filter"`
-		ContextLines int    `json:"context_lines,omitempty" jsonschema:"unified context lines; default 3, maximum 20"`
+		ContextLines *int   `json:"context_lines,omitempty" jsonschema:"unified context lines; default 3, maximum 20"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:        "diff",
@@ -244,9 +244,12 @@ func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.Histor
 		if err != nil {
 			return nil, phebssync.DiffResult{}, err
 		}
-		result, err := history.Diff(ctx, phebssync.DiffRequest{
-			Repo: in.Repo, Base: in.Base, Head: head, Path: in.Path, ContextLines: in.ContextLines,
-		})
+		request := phebssync.DiffRequest{Repo: in.Repo, Base: in.Base, Head: head, Path: in.Path}
+		if in.ContextLines != nil {
+			request.ContextLines = *in.ContextLines
+			request.ContextLinesSet = true
+		}
+		result, err := history.Diff(ctx, request)
 		return nil, result, err
 	})
 }

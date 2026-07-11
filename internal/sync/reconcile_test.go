@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -18,10 +20,22 @@ type reconcileStore struct {
 	orphan   bool
 	enqueued int
 	cleared  int
+	deleted  bool
 }
 
 func (s *reconcileStore) ListRepos(context.Context) ([]store.Repo, error) {
+	if s.deleted {
+		return nil, nil
+	}
 	return []store.Repo{s.repo}, nil
+}
+
+func (s *reconcileStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
+	if s.deleted || name != s.repo.Name {
+		return nil, store.ErrNotFound
+	}
+	repo := s.repo
+	return &repo, nil
 }
 
 func (s *reconcileStore) UpsertRepo(_ context.Context, repo store.Repo) error {
@@ -31,6 +45,9 @@ func (s *reconcileStore) UpsertRepo(_ context.Context, repo store.Repo) error {
 }
 
 func (s *reconcileStore) RepoStatuses(context.Context) ([]store.RepoStatus, error) {
+	if s.deleted {
+		return nil, nil
+	}
 	connections := []string{"c"}
 	if s.orphan {
 		connections = nil
@@ -39,8 +56,20 @@ func (s *reconcileStore) RepoStatuses(context.Context) ([]store.RepoStatus, erro
 }
 
 func (s *reconcileStore) SetRepoDeleting(_ context.Context, _ string, deleting bool) error {
+	if s.deleted {
+		return store.ErrNotFound
+	}
 	s.repo.Deleting = deleting
 	return nil
+}
+
+func (s *reconcileStore) DeleteRepo(context.Context, string) error {
+	s.deleted = true
+	return nil
+}
+
+func (s *reconcileStore) CancelPendingJobs(context.Context, store.JobKind, string) (int, error) {
+	return 0, nil
 }
 
 func (s *reconcileStore) EnqueuePending(_ context.Context, kind store.JobKind, target string, force bool) (*store.Job, error) {
@@ -285,6 +314,120 @@ func TestReconcileClearsCommittedRevisionWithoutShard(t *testing.T) {
 	}
 	if st.repo.IndexedCommitHash != "" {
 		t.Fatalf("indexed hash = %q, want fail-closed empty state", st.repo.IndexedCommitHash)
+	}
+}
+
+func TestReconcileRevisionRepairWaitsForRepositoryLock(t *testing.T) {
+	dataDir := t.TempDir()
+	repo := store.Repo{
+		Name:              "example.com/team/repo",
+		CloneURL:          "https://example.com/team/repo.git",
+		IndexedCommitHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	}
+	dir := RepoDir(dataDir, repo.Name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	st := &reconcileStore{repo: repo}
+	unlock := repowork.Lock(dir)
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+	report := ReconcileReport{}
+	err := reconcileIndexedRevisions(ctx, st, dataDir, []store.Repo{repo}, &report)
+	unlock()
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("reconcileIndexedRevisions error = %v, want context deadline", err)
+	}
+	if st.cleared != 0 || report.RevisionRepairs != 0 {
+		t.Fatalf("state cleared without repository lock: report=%+v cleared=%d", report, st.cleared)
+	}
+}
+
+func TestReconcilePreservesUnreadableShardAndCommittedState(t *testing.T) {
+	dataDir := t.TempDir()
+	repo := store.Repo{
+		Name:              "example.com/team/repo",
+		CloneURL:          "https://example.com/team/repo.git",
+		IndexedCommitHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+	}
+	dir := RepoDir(dataDir, repo.Name)
+	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.Command("git", "init", "--bare", dir).CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	shard := filepath.Join(indexDir, "half-written.zoekt")
+	if err := os.WriteFile(shard, []byte("incomplete"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	st := &reconcileStore{repo: repo}
+	report, err := ReconcileArtifacts(t.Context(), st, dataDir, true)
+	if err != nil {
+		t.Fatalf("ReconcileArtifacts failed on unreadable shard: %v", err)
+	}
+	if st.cleared != 0 || report.RevisionRepairs != 0 {
+		t.Fatalf("incomplete audit cleared committed state: report=%+v cleared=%d", report, st.cleared)
+	}
+	if _, err := os.Stat(shard); err != nil {
+		t.Fatalf("unreadable shard was removed: %v", err)
+	}
+}
+
+func TestDeleteRepoArtifactsReactivatesRowAfterDiskFailure(t *testing.T) {
+	dataDir := t.TempDir()
+	repo := store.Repo{Name: "example.com/team/repo"}
+	dir := RepoDir(dataDir, repo.Name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(indexDir, "unreadable.zoekt"), []byte("incomplete"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	st := &reconcileStore{repo: repo, orphan: true}
+	deleted, err := deleteRepoArtifacts(t.Context(), st, dataDir, repo.Name)
+	if err == nil || deleted {
+		t.Fatalf("deleteRepoArtifacts = %v, %v; want disk audit failure", deleted, err)
+	}
+	if st.repo.Deleting {
+		t.Fatal("failed cleanup left repository marked deleting")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "HEAD")); err != nil {
+		t.Fatalf("failed cleanup removed mirror: %v", err)
+	}
+}
+
+func TestReconcileHonorsCanceledContextBeforeFilesystemAudit(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	visited := false
+	err := walkMirrorDirs(ctx, t.TempDir(), func(string) error {
+		visited = true
+		return nil
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("walkMirrorDirs error = %v, want context.Canceled", err)
+	}
+	if visited {
+		t.Fatal("walkMirrorDirs visited filesystem entries after cancellation")
 	}
 }
 

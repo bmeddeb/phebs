@@ -109,6 +109,7 @@ func TestToolCalls(t *testing.T) {
 		CodeNav: codenav.New(codenav.Options{DataDir: dataDir}),
 		History: phebssync.NewHistoryService(dataDir),
 	})
+	var advancedRef string
 
 	t.Run("list_repos", func(t *testing.T) {
 		out, res := callTool[reposOut](t, s, "list_repos", nil)
@@ -133,11 +134,16 @@ func TestToolCalls(t *testing.T) {
 	})
 
 	t.Run("read_file defaults to indexed revision", func(t *testing.T) {
-		if err := os.WriteFile(filepath.Join(origin, "hello.txt"), []byte("new head\n"), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(origin, "hello.txt"), []byte("l1\nchanged\nl3\nl4\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		gitc(t, origin, "add", "hello.txt")
 		gitc(t, origin, "commit", "-m", "advance mirror")
+		gitOut, err := exec.Command("git", "-C", origin, "rev-parse", "HEAD").Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		advancedRef = strings.TrimSpace(string(gitOut))
 		if err := phebssync.Mirror(t.Context(), "file://"+origin, phebssync.RepoDir(dataDir, repo.Name)); err != nil {
 			t.Fatal(err)
 		}
@@ -232,6 +238,14 @@ func TestToolCalls(t *testing.T) {
 		})
 		if res.IsError || diff.Head != indexedRef || diff.Truncated || diff.Patch == "" {
 			t.Fatalf("diff = %+v, error=%v content=%v", diff, res.IsError, res.Content)
+		}
+
+		zeroContext, res := callTool[phebssync.DiffResult](t, s, "diff", map[string]any{
+			"repo": repo.Name, "base": indexedRef, "head": advancedRef, "context_lines": 0,
+		})
+		if res.IsError || !strings.Contains(zeroContext.Patch, "-l2\n+changed") ||
+			strings.Contains(zeroContext.Patch, "\n l1\n") || strings.Contains(zeroContext.Patch, "\n l3\n") {
+			t.Fatalf("zero-context MCP diff = %+v, error=%v content=%v", zeroContext, res.IsError, res.Content)
 		}
 	})
 }

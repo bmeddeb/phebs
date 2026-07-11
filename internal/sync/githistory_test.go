@@ -29,6 +29,7 @@ func newHistoryFixture(t *testing.T) historyFixture {
 
 	writeFixtureFile(t, origin, "old/name.txt", []byte("alpha\ncommon\nomega\n"))
 	writeFixtureFile(t, origin, "asset.bin", []byte{0x00, 0x01, 0x02})
+	writeFixtureFile(t, origin, "latin1.txt", []byte{'c', 'a', 'f', 0xe9, '\n'})
 	writeFixtureFile(t, origin, "empty.txt", nil)
 	gitc(t, origin, "add", ".")
 	gitc(t, origin, "commit", "-m", "initial files")
@@ -153,6 +154,16 @@ func TestHistoryBlameBoundsEmptyAndBinary(t *testing.T) {
 		t.Fatalf("binary blame err = %v, want ErrBinaryFile", err)
 	}
 
+	latin1, err := svc.Blame(context.Background(), sync.BlameRequest{
+		Repo: fx.repo, Ref: fx.head, Path: "latin1.txt",
+	})
+	if err != nil {
+		t.Fatalf("non-UTF-8 text blame: %v", err)
+	}
+	if len(latin1.Lines) != 1 || latin1.Lines[0].Content != "caf?" {
+		t.Fatalf("non-UTF-8 text blame = %+v", latin1.Lines)
+	}
+
 	workBounded := sync.NewHistoryService(fx.dataDir)
 	workBounded.MaxBlameBlobBytes = 8
 	if _, err := workBounded.Blame(context.Background(), sync.BlameRequest{
@@ -223,8 +234,8 @@ func TestHistoryCommitIncludesParentsAndRename(t *testing.T) {
 	if len(root.Commit.ParentIDs) != 0 {
 		t.Errorf("root parents = %v", root.Commit.ParentIDs)
 	}
-	if len(root.Changes) != 3 {
-		t.Errorf("root changes = %+v, want three added files", root.Changes)
+	if len(root.Changes) != 4 {
+		t.Errorf("root changes = %+v, want four added files", root.Changes)
 	}
 }
 
@@ -270,6 +281,18 @@ func TestHistoryDiffTextBinaryPathAndTruncation(t *testing.T) {
 	if len(filtered.Files) != 1 || filtered.Files[0].Path != "old/name.txt" ||
 		!strings.Contains(filtered.Patch, "+changed") {
 		t.Errorf("filtered diff = %+v\n%s", filtered.Files, filtered.Patch)
+	}
+
+	zeroContext, err := svc.Diff(context.Background(), sync.DiffRequest{
+		Repo: fx.repo, Base: fx.root, Head: fx.edit, Path: "old/name.txt",
+		ContextLines: 0, ContextLinesSet: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(zeroContext.Patch, "-common\n+changed") ||
+		strings.Contains(zeroContext.Patch, "\n alpha\n") || strings.Contains(zeroContext.Patch, "\n omega\n") {
+		t.Errorf("zero-context diff contains surrounding lines:\n%s", zeroContext.Patch)
 	}
 
 	bounded := sync.NewHistoryService(fx.dataDir)

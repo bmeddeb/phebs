@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/react'
-import { afterEach, expect, test, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
@@ -17,12 +17,12 @@ const fixture = vi.hoisted(() => {
     author: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
     committer: { name: 'Ada', email: 'ada@example.com', time: '2026-07-11T10:00:00Z' },
   }
-  return { commit }
+  return { commit, fetchCommits: vi.fn() }
 })
 
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
-  fetchCommits: async () => ({ revision: fixture.commit.id, commits: [fixture.commit], offset: 0, has_more: false }),
+  fetchCommits: fixture.fetchCommits,
   fetchCommit: async () => ({
     revision: fixture.commit.id,
     commit: fixture.commit,
@@ -54,6 +54,11 @@ const page = (child: React.ReactNode) => (
   </StyletronProvider>
 )
 
+beforeEach(() => {
+  fixture.fetchCommits.mockReset()
+  fixture.fetchCommits.mockResolvedValue({ revision: fixture.commit.id, commits: [fixture.commit], offset: 0, has_more: false })
+})
+
 afterEach(cleanup)
 
 test('history links commits at the immutable revision', async () => {
@@ -61,6 +66,33 @@ test('history links commits at the immutable revision', async () => {
   const link = await screen.findByRole('link', { name: /Add launch status/ })
   expect(link.getAttribute('href')).toContain(`ref=${fixture.commit.id}`)
   expect(document.body.textContent).toContain('Ada · ada@example.com')
+})
+
+test('history ignores a stale load-more response after navigation', async () => {
+  const oldCommit = { ...fixture.commit, id: 'c'.repeat(40), short_id: 'ccccccc', subject: 'Old repository commit' }
+  const staleCommit = { ...fixture.commit, id: 'd'.repeat(40), short_id: 'ddddddd', subject: 'Stale page commit' }
+  const newCommit = { ...fixture.commit, id: 'e'.repeat(40), short_id: 'eeeeeee', subject: 'New repository commit' }
+  let resolveStale!: (value: { revision: string; commits: Array<typeof fixture.commit>; offset: number; has_more: boolean }) => void
+  const stalePage = new Promise<{ revision: string; commits: Array<typeof fixture.commit>; offset: number; has_more: boolean }>((resolve) => {
+    resolveStale = resolve
+  })
+  fixture.fetchCommits
+    .mockResolvedValueOnce({ revision: oldCommit.id, commits: [oldCommit], offset: 0, has_more: true })
+    .mockReturnValueOnce(stalePage)
+    .mockResolvedValueOnce({ revision: newCommit.id, commits: [newCommit], offset: 0, has_more: false })
+
+  const { rerender } = render(page(<HistoryPage params={new URLSearchParams('repo=example.com%2Fold')} />))
+  await screen.findByText('Old repository commit')
+  fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+  await waitFor(() => expect(fixture.fetchCommits).toHaveBeenCalledTimes(2))
+  const staleSignal = fixture.fetchCommits.mock.calls[1][5] as AbortSignal
+
+  rerender(page(<HistoryPage params={new URLSearchParams('repo=example.com%2Fnew')} />))
+  await screen.findByText('New repository commit')
+  expect(staleSignal.aborted).toBe(true)
+
+  resolveStale({ revision: oldCommit.id, commits: [staleCommit], offset: 50, has_more: false })
+  await waitFor(() => expect(screen.queryByText('Stale page commit')).toBeNull())
 })
 
 test('commit renders bounded patch rows and does not link a deleted file at the new revision', async () => {

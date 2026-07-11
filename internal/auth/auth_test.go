@@ -111,17 +111,12 @@ func (m *memoryAuthStore) UpsertOIDCUser(_ context.Context, issuer, subject, ema
 		return nil, fmt.Errorf("unverified")
 	}
 	m.setupComplete = true
-	for id, user := range m.users {
+	for _, user := range m.users {
 		if user.OIDCIssuer == issuer && user.OIDCSubject == subject {
 			return &user, nil
 		}
 		if user.NormalizedEmail == normalizedEmail {
-			if user.OIDCSubject != "" && (user.OIDCIssuer != issuer || user.OIDCSubject != subject) {
-				return nil, store.ErrConflict
-			}
-			user.OIDCIssuer, user.OIDCSubject, user.DisplayName = issuer, subject, displayName
-			m.users[id] = user
-			return &user, nil
+			return nil, store.ErrConflict
 		}
 	}
 	id := fmt.Sprintf("oidc-%d", len(m.users)+1)
@@ -130,6 +125,40 @@ func (m *memoryAuthStore) UpsertOIDCUser(_ context.Context, issuer, subject, ema
 		IsAdmin: len(m.users) == 0, CreatedAt: time.Now().UTC(), UpdatedAt: time.Now().UTC()}
 	m.users[id] = user
 	return &user, nil
+}
+
+func TestMalformedLoginDoesNotConsumeAttemptQuota(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	st := newMemoryAuthStore()
+	service, err := New(ctx, Options{Store: st, Config: config.Auth{
+		CookieSecure: insecureCookieConfig(),
+		BootstrapUser: config.BootstrapUser{
+			Email: "admin@example.com", Password: "correct horse battery staple",
+		},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := service.LoadAndSave(service.Handler())
+	login := func(body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(body))
+		req.RemoteAddr = "192.0.2.1:1234"
+		req.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, req)
+		return response
+	}
+	for range 8 {
+		response := login(`{`)
+		if response.Code != http.StatusBadRequest {
+			t.Fatalf("malformed login = %d, want 400", response.Code)
+		}
+	}
+	response := login(`{"email":"admin@example.com","password":"correct horse battery staple"}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("valid login after malformed bodies = %d: %s", response.Code, response.Body.String())
+	}
 }
 
 func (m *memoryAuthStore) MarkUserLogin(_ context.Context, id string, at time.Time) error {

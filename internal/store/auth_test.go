@@ -43,13 +43,13 @@ func TestAuthUsersAndOIDCIdentity(t *testing.T) {
 		t.Fatalf("AuthStats = %+v, want 1 user/password user", stats)
 	}
 
-	linked, err := s.UpsertOIDCUser(ctx, "https://idp.example", "subject-1",
-		"Admin@example.com", "admin@example.com", "OIDC Admin", true)
-	if err != nil {
-		t.Fatalf("link OIDC: %v", err)
+	if _, err := s.UpsertOIDCUser(ctx, "https://idp.example", "subject-1",
+		"Admin@example.com", "admin@example.com", "OIDC Admin", true); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("OIDC email collision err = %v, want ErrConflict", err)
 	}
-	if linked.ID != admin.ID || linked.OIDCSubject != "subject-1" {
-		t.Fatalf("linked user = %+v, want existing admin", linked)
+	stillLocal, err := s.GetUserByID(ctx, admin.ID)
+	if err != nil || stillLocal.OIDCIssuer != "" || stillLocal.OIDCSubject != "" {
+		t.Fatalf("OIDC collision modified local admin: user=%+v err=%v", stillLocal, err)
 	}
 	if _, err := s.UpsertOIDCUser(ctx, "https://idp.example", "subject-2",
 		"Admin@example.com", "admin@example.com", "Attacker", true); !errors.Is(err, store.ErrConflict) {
@@ -66,6 +66,11 @@ func TestAuthUsersAndOIDCIdentity(t *testing.T) {
 	}
 	if newUser.IsAdmin {
 		t.Fatal("second user unexpectedly became admin")
+	}
+	repeated, err := s.UpsertOIDCUser(ctx, "https://idp.example", "subject-3",
+		"new@example.com", "new@example.com", "Updated Name", true)
+	if err != nil || repeated.ID != newUser.ID {
+		t.Fatalf("repeat OIDC identity = %+v, %v; want user %q", repeated, err, newUser.ID)
 	}
 }
 

@@ -25,6 +25,11 @@ auth:
   # Sessions also have a fixed 30-minute idle timeout.
   session_lifetime: 12h
 
+  # Optional CIDRs for every trusted reverse-proxy hop, including the direct
+  # peer. Phebs then walks X-Forwarded-For for per-client login limits. Leave
+  # empty when reached directly. Never configure client networks here.
+  # trusted_proxies: ["127.0.0.1/32", "10.0.0.10/32"]
+
   # Optional one-time first administrator. The password is Argon2id-hashed;
   # remove this block after first startup because changing it does not rotate
   # the stored password. Without bootstrap_user or OIDC, startup logs an

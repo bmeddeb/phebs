@@ -315,6 +315,21 @@ commits, binary and truncated diffs, literal/path-safe inputs, invalid refs,
 cancellation, paging, mutable-HEAD isolation, producer termination at output
 limits, aggregate metadata bounds, and race execution.
 
+**TD.3 · Epic 9 corrective review** ✅ 2026-07-11 — *release hardening*
+Closed proxy-aware authentication throttling, credential-free quota exhaustion,
+OIDC email auto-linking, reconcile/index publication races, deletion rollback,
+SCIP stale-range tolerance/reference semantics/negative caching, non-UTF-8
+blame, explicit zero-context diffs, and history pagination request races. Also
+made repository locks cancellable, idempotent, and idle-evicted; unreadable shard
+audits and filesystem reconciliation are now non-destructive and cancellable.
+
+**TD.4 · Shared bounded Git object reader** — *internal consolidation*
+Factor source/history/SCIP Git reads onto one immutable-OID primitive with
+per-call byte limits and shared not-found classification. Do not route SCIP
+through the current source helper: its global 10 MiB blob contract conflicts
+with SCIP's independent 64 MiB index and per-source limits. AC: one tested error
+classifier and bounded reader serve all three callers without weakening any cap.
+
 ## EPIC 10 — Enterprise surface *(Wave 4 — build-our-own, PORT_MAP §12)*
 
 **T10.1 · Audit log** — *Sourcebot paid/EE*

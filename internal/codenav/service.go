@@ -13,9 +13,17 @@ import (
 	"github.com/scip-code/scip/bindings/go/scip"
 )
 
+const (
+	// Result validation is deliberately oversampled but bounded: corrupt ranges
+	// cannot trigger source reads for every occurrence in a million-hit index.
+	maxDefinitionRangeCandidates = 512
+	maxReferenceRangeCandidates  = MaxReferenceLocations*2 + 1
+)
+
 type cacheEntry struct {
 	revision string
 	index    *snapshot
+	loadErr  error
 	bytes    int64
 	element  *list.Element
 }
@@ -111,9 +119,13 @@ func (s *Service) ingestLocked(ctx context.Context, repo, revision string) (Avai
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			return Availability{}, fmt.Errorf("parse committed SCIP index: %w", err)
 		}
-		// Never retain an older revision after observing a malformed replacement.
-		s.deleteEntry(repo)
-		return Availability{}, fmt.Errorf("parse committed SCIP index: %w", err)
+		// Cache malformed committed indexes by immutable revision. This prevents
+		// every query from rereading and reparsing the same bounded-but-large blob.
+		loadErr := fmt.Errorf("parse committed SCIP index: %w", err)
+		if cacheErr := s.storeEntry(repo, cacheEntry{revision: revision, loadErr: loadErr}); cacheErr != nil {
+			return Availability{}, errors.Join(loadErr, cacheErr)
+		}
+		return Availability{}, loadErr
 	}
 	if err := s.storeEntry(repo, cacheEntry{revision: revision, index: index}); err != nil {
 		return Availability{}, err
@@ -153,23 +165,20 @@ func (s *Service) Definition(ctx context.Context, q Query) (DefinitionResult, er
 	key := symbolKey(doc.path, result.Symbol)
 	keys := entry.index.relatedDefinitionSymbols(key)
 
-	var best *indexedLocation
-	for _, definitionKey := range keys {
-		for _, location := range entry.index.definitions[definitionKey] {
-			if best == nil || compareIndexedLocations(location, *best) < 0 {
-				candidate := location
-				best = &candidate
-			}
+	indexed, _ := topLocations(entry.index.definitions, keys, maxDefinitionRangeCandidates)
+	for _, location := range indexed {
+		if err := ctx.Err(); err != nil {
+			return DefinitionResult{}, err
+		}
+		converted, err := converter.location(location)
+		if err == nil {
+			result.Location = &converted
+			return result, nil
+		}
+		if !isSkippableLocationError(err) {
+			return DefinitionResult{}, err
 		}
 	}
-	if best == nil {
-		return result, nil
-	}
-	location, err := converter.location(*best)
-	if err != nil {
-		return DefinitionResult{}, err
-	}
-	result.Location = &location
 	return result, nil
 }
 
@@ -186,12 +195,22 @@ func (s *Service) References(ctx context.Context, q Query) (ReferencesResult, er
 	start := symbolKey(doc.path, result.Symbol)
 	keys := entry.index.relatedReferenceSymbols(start)
 
-	indexed, truncated := entry.index.topReferences(keys, MaxReferenceLocations)
-	result.Truncated = truncated
+	indexed, candidatesTruncated := entry.index.topReferences(keys, maxReferenceRangeCandidates)
+	result.Truncated = candidatesTruncated
 	for _, location := range indexed {
+		if err := ctx.Err(); err != nil {
+			return ReferencesResult{}, err
+		}
 		converted, err := converter.location(location)
 		if err != nil {
+			if isSkippableLocationError(err) {
+				continue
+			}
 			return ReferencesResult{}, err
+		}
+		if len(result.Locations) == MaxReferenceLocations {
+			result.Truncated = true
+			break
 		}
 		result.Locations = append(result.Locations, converted)
 	}
@@ -222,6 +241,9 @@ func (s *Service) Hover(ctx context.Context, q Query) (HoverResult, error) {
 	}
 	converted, err := converter.codeRange(doc.path, fromSCIPRange(r), doc.encoding)
 	if err != nil {
+		if isSkippableLocationError(err) {
+			return result, nil
+		}
 		return HoverResult{}, err
 	}
 	hover := &HoverInfo{
@@ -286,19 +308,19 @@ func (s *Service) resolve(ctx context.Context, q Query) (Query, cacheEntry, *doc
 
 func (s *Service) ensure(ctx context.Context, repo, revision string) (cacheEntry, error) {
 	if entry, ok := s.loadEntry(repo, revision); ok {
-		return entry, nil
+		return entry, entry.loadErr
 	}
 	lock := s.repoLock(repo)
 	lock.Lock()
 	defer lock.Unlock()
 	if entry, ok := s.loadEntry(repo, revision); ok {
-		return entry, nil
+		return entry, entry.loadErr
 	}
 	if _, err := s.ingestLocked(ctx, repo, revision); err != nil {
 		return cacheEntry{}, err
 	}
 	entry, _ := s.loadEntry(repo, revision)
-	return entry, nil
+	return entry, entry.loadErr
 }
 
 func (s *Service) validateRevision(repo, revision string) (string, string, error) {
@@ -391,7 +413,16 @@ func cacheEntryBytes(repo string, entry cacheEntry) int64 {
 	if entry.index != nil {
 		bytes += entry.index.estimatedBytes
 	}
+	if entry.loadErr != nil {
+		bytes += int64(len(entry.loadErr.Error()))
+	}
 	return bytes
+}
+
+func isSkippableLocationError(err error) bool {
+	return errors.Is(err, ErrInvalidInput) ||
+		errors.Is(err, ErrUnsupportedEncoding) ||
+		errors.Is(err, errBlobNotFound)
 }
 
 func sortIndexedLocations(locations []indexedLocation) {
@@ -439,6 +470,10 @@ func (h *maxLocationHeap) Pop() any {
 }
 
 func (s *snapshot) topReferences(keys []string, limit int) ([]indexedLocation, bool) {
+	return topLocations(s.references, keys, limit)
+}
+
+func topLocations(locationsBySymbol map[string][]indexedLocation, keys []string, limit int) ([]indexedLocation, bool) {
 	if limit <= 0 {
 		return []indexedLocation{}, true
 	}
@@ -449,7 +484,7 @@ func (s *snapshot) topReferences(keys []string, limit int) ([]indexedLocation, b
 	heap.Init(locations)
 	truncated := false
 	for _, key := range keys {
-		for _, location := range s.references[key] {
+		for _, location := range locationsBySymbol[key] {
 			if _, ok := selected[location]; ok {
 				continue
 			}

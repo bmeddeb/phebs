@@ -95,9 +95,13 @@ type Auth struct {
 	// out; the default listener may be exposed beyond loopback.
 	CookieSecure *bool `yaml:"cookie_secure"`
 	// SessionLifetime is an absolute SCS session lifetime (default 12h).
-	SessionLifetime string        `yaml:"session_lifetime"`
-	BootstrapUser   BootstrapUser `yaml:"bootstrap_user"`
-	OIDC            OIDC          `yaml:"oidc"`
+	SessionLifetime string `yaml:"session_lifetime"`
+	// TrustedProxies contains CIDRs for reverse-proxy hops. An
+	// X-Forwarded-For chain is considered only when the direct peer is in one
+	// of these networks; forwarded headers from every other peer are ignored.
+	TrustedProxies []string      `yaml:"trusted_proxies"`
+	BootstrapUser  BootstrapUser `yaml:"bootstrap_user"`
+	OIDC           OIDC          `yaml:"oidc"`
 }
 
 // BootstrapUser creates the first local administrator, once. The password is
@@ -300,6 +304,15 @@ func (c *Config) validate(lines []int) error {
 		d, err := time.ParseDuration(raw)
 		if err != nil || d < 15*time.Minute || d > 30*24*time.Hour {
 			errs = append(errs, fmt.Errorf("auth.session_lifetime %q: must be a Go duration from 15m through 720h", raw))
+		}
+	}
+	for _, cidr := range c.Auth.TrustedProxies {
+		if strings.TrimSpace(cidr) != cidr || cidr == "" {
+			errs = append(errs, fmt.Errorf("auth.trusted_proxies entry %q must be a CIDR without surrounding whitespace", cidr))
+			continue
+		}
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			errs = append(errs, fmt.Errorf("auth.trusted_proxies entry %q must be a valid CIDR", cidr))
 		}
 	}
 	if bootstrap := c.Auth.BootstrapUser; !bootstrap.IsZero() {

@@ -182,10 +182,9 @@ func (s *Surreal) GetUserByEmail(ctx context.Context, normalizedEmail string) (*
 	return u, nil
 }
 
-// UpsertOIDCUser links a verified OIDC identity to an existing user with the
-// same verified email, or creates a user. A subject can never be re-linked to
-// another account, and unverified email claims are rejected by the service and
-// again here at the persistence boundary.
+// UpsertOIDCUser returns an existing issuer/subject identity or creates a new
+// user. Email equality alone never links identities: an OIDC login colliding
+// with an existing local or OIDC account fails closed.
 func (s *Surreal) UpsertOIDCUser(ctx context.Context, issuer, subject, email, normalizedEmail, displayName string, emailVerified bool) (*User, error) {
 	if !emailVerified {
 		return nil, errors.New("OIDC email is not verified")
@@ -205,15 +204,10 @@ func (s *Surreal) UpsertOIDCUser(ctx context.Context, issuer, subject, email, no
 		`BEGIN;
 UPSERT $guard SET completed_at = IF completed_at = NONE THEN $now ELSE completed_at END RETURN NONE;
 LET $identity = (SELECT id FROM user WHERE oidc_issuer = $issuer AND oidc_subject = $subject LIMIT 1)[0].id;
-LET $by_email = (SELECT id, oidc_issuer, oidc_subject FROM user WHERE normalized_email = $normalized_email LIMIT 1)[0];
+LET $by_email = (SELECT id FROM user WHERE normalized_email = $normalized_email LIMIT 1)[0];
 LET $has_users = array::len(SELECT id FROM user LIMIT 1) > 0;
 RETURN IF $identity != NONE THEN
     (UPDATE $identity SET display_name = IF $display_name != '' THEN $display_name ELSE display_name END,
-        updated_at = $now RETURN AFTER)
-ELSE IF $by_email.id != NONE AND ($by_email.oidc_issuer = NONE OR $by_email.oidc_issuer = NULL OR $by_email.oidc_issuer = '' OR
-        ($by_email.oidc_issuer = $issuer AND $by_email.oidc_subject = $subject)) THEN
-    (UPDATE $by_email.id SET oidc_issuer = $issuer, oidc_subject = $subject,
-        display_name = IF $display_name != '' THEN $display_name ELSE display_name END,
         updated_at = $now RETURN AFTER)
 ELSE IF $by_email.id = NONE THEN
     (CREATE $rid SET email = $email, normalized_email = $normalized_email,

@@ -94,7 +94,7 @@ func (s *Service) writeStatus(w http.ResponseWriter, r *http.Request, principal 
 }
 
 func (s *Service) handleLogin(w http.ResponseWriter, r *http.Request) {
-	key := clientKey(r)
+	key := s.clientIPs.clientKey(r)
 	reservation, ok := s.loginLimits.reserve(key, s.now())
 	if !ok {
 		w.Header().Set("Retry-After", "300")
@@ -107,7 +107,6 @@ func (s *Service) handleLogin(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
-		reservation.fail(s.now())
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -148,7 +147,7 @@ func (s *Service) handleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) handleSetup(w http.ResponseWriter, r *http.Request) {
-	key := clientKey(r)
+	key := s.clientIPs.clientKey(r)
 	reservation, ok := s.loginLimits.reserve(key, s.now())
 	if !ok {
 		w.Header().Set("Retry-After", "300")
@@ -163,7 +162,6 @@ func (s *Service) handleSetup(w http.ResponseWriter, r *http.Request) {
 		SetupToken  string `json:"setup_token"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
-		reservation.fail(s.now())
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -140,13 +142,79 @@ func (r *attemptReservation) success() {
 	r.active = false
 }
 
-func clientKey(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil && host != "" {
-		return host
+type clientIPResolver struct {
+	trustedProxies []*net.IPNet
+}
+
+func newClientIPResolver(cidrs []string) (clientIPResolver, error) {
+	resolver := clientIPResolver{trustedProxies: make([]*net.IPNet, 0, len(cidrs))}
+	for _, cidr := range cidrs {
+		_, network, err := net.ParseCIDR(cidr)
+		if err != nil {
+			return clientIPResolver{}, fmt.Errorf("invalid CIDR %q", cidr)
+		}
+		resolver.trustedProxies = append(resolver.trustedProxies, network)
 	}
-	if r.RemoteAddr != "" {
-		return r.RemoteAddr
+	return resolver, nil
+}
+
+func (c clientIPResolver) clientKey(r *http.Request) string {
+	peer := remoteIP(r.RemoteAddr)
+	if peer == nil {
+		if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil && host != "" {
+			return host
+		}
+		if r.RemoteAddr != "" {
+			return r.RemoteAddr
+		}
+		return "unknown"
 	}
-	return "unknown"
+	if !c.trusted(peer) {
+		return peer.String()
+	}
+
+	// Walk from the proxy nearest to phebs toward the originating client.
+	// The first address outside the configured proxy boundary is the client;
+	// this prevents a spoofed left-most value from overriding an appended
+	// chain. A malformed chain fails closed to the direct peer bucket.
+	values := r.Header.Values("X-Forwarded-For")
+	forwarded := strings.Split(strings.Join(values, ","), ",")
+	var furthest net.IP
+	for i := len(forwarded) - 1; i >= 0; i-- {
+		candidate := net.ParseIP(strings.TrimSpace(forwarded[i]))
+		if candidate == nil {
+			return peer.String()
+		}
+		furthest = candidate
+		if !c.trusted(candidate) {
+			return candidate.String()
+		}
+	}
+	if furthest != nil {
+		return furthest.String()
+	}
+	return peer.String()
+}
+
+func (c clientIPResolver) trusted(ip net.IP) bool {
+	for _, network := range c.trustedProxies {
+		if network.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+func remoteIP(remoteAddr string) net.IP {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err == nil {
+		if unzoned, _, ok := strings.Cut(host, "%"); ok {
+			host = unzoned
+		}
+		return net.ParseIP(host)
+	}
+	if unzoned, _, ok := strings.Cut(remoteAddr, "%"); ok {
+		remoteAddr = unzoned
+	}
+	return net.ParseIP(remoteAddr)
 }

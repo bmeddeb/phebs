@@ -132,6 +132,8 @@ type AuthStore interface {
 	CreateUser(ctx context.Context, user User) (*User, error)
 	GetUserByID(ctx context.Context, id string) (*User, error)
 	GetUserByEmail(ctx context.Context, normalizedEmail string) (*User, error)
+	// UpsertOIDCUser finds an exact issuer/subject identity or creates one;
+	// an email collision never links accounts implicitly.
 	UpsertOIDCUser(ctx context.Context, issuer, subject, email, normalizedEmail, displayName string, emailVerified bool) (*User, error)
 	MarkUserLogin(ctx context.Context, id string, at time.Time) error
 

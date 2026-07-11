@@ -137,6 +137,7 @@ connections:
 | `auth.api_key` | *(empty)* | legacy migration key only; its SHA-256 hash is imported into the DB, and omission removes the legacy row; it does not make an empty configuration unauthenticated |
 | `auth.cookie_secure` | `true` | `Secure` session-cookie attribute; set `false` only for intentional plain-HTTP development |
 | `auth.session_lifetime` | `12h` | absolute lifetime, Go duration from `15m` through `720h`; fixed idle timeout is 30 minutes |
+| `auth.trusted_proxies` | `[]` | trusted reverse-proxy hop CIDRs, including the direct peer, allowed in `X-Forwarded-For` resolution for per-client auth throttling; never include client networks |
 | `auth.bootstrap_user` | *(none)* | optional one-time first local administrator; requires `email` and a password of at least 12 bytes |
 | `auth.oidc` | *(none)* | one OIDC provider; requires issuer/client/secret/redirect URL; HTTPS except loopback tests |
 | `sync.cleanup_orphans` | `false` | see [orphans](#orphans-and-cleanup) |
@@ -175,9 +176,13 @@ Browser sessions live in SurrealDB and survive process restarts. The cookie is
 `HttpOnly`, `SameSite=Lax`, `Secure` by default, and stores only a random
 token whose SHA-256 hash is persisted. Unsafe cookie-authenticated requests
 also require the per-session `X-CSRF-Token`; the UI supplies it. Login/setup
-attempts reserve a per-peer slot before password work (8 attempts per 5
-minutes), and Argon2id work is globally capped at four concurrent hashes;
-overload fails with `429` instead of growing memory without bound.
+attempts reserve a per-client slot before password work (8 credential failures
+per 5 minutes), and Argon2id work is globally capped at four concurrent hashes;
+overload fails with `429` instead of growing memory without bound. By default
+the client is the direct peer. Behind a reverse proxy, list every trusted proxy
+hop CIDR, including the direct peer, under `auth.trusted_proxies`; forwarded
+headers from all other peers are ignored, and trusted chains are walked from
+the nearest proxy outward.
 
 #### API keys and legacy migration
 
@@ -209,9 +214,9 @@ auth:
 Register the redirect URL exactly at the provider. Discovery happens during
 startup and failure stops the server. The authorization-code flow uses PKCE,
 state, and nonce, verifies the ID token and access-token hash when present,
-and requires `email_verified=true`. Identities bind to issuer + subject. A
-verified email may link an existing local account that has no different OIDC
-identity; conflicting identities fail closed. Anonymous authorization-flow
+and requires `email_verified=true`. Identities bind only to issuer + subject;
+email equality never links an OIDC identity to an existing local or OIDC
+account, and collisions fail closed. Anonymous authorization-flow
 sessions expire after 10 minutes, starts are rate limited, and starting a new
 flow never clears an already authenticated browser session.
 
@@ -501,8 +506,12 @@ files, binary markers, and its first-parent diff. Root commits compare against
 the empty tree. Blame is capped at 50,000 lines and 10 MiB source blobs, commit
 pages at 200 rows, aggregate metadata at 64 MiB, and patch text at 2 MiB with
 an explicit `truncated` flag. Git producers are canceled when a hard output
-limit is reached. Every request validates the repository/path and pins supplied
-branch names to immutable object IDs before subsequent Git commands run.
+limit is reached. NUL-bearing blobs are rejected as binary; other non-UTF-8
+line content is returned with invalid byte sequences replaced for JSON display.
+Diff context defaults to three lines when omitted, while an explicit
+`context_lines=0` returns zero-context hunks. Every request validates the
+repository/path and pins supplied branch names to immutable object IDs before
+subsequent Git commands run.
 
 ## 6. Web UI
 
@@ -569,7 +578,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/blame?repo=&path=&ref=` | GET | line-to-commit attribution, rename-aware |
 | `/api/commits?repo=&ref=&path=&limit=&offset=` | GET | commit history; optional path follows renames |
 | `/api/commit?repo=&ref=` | GET | commit metadata, parents, and changed files |
-| `/api/diff?repo=&head=&base=&path=&context_lines=` | GET | bounded unified diff and file statistics |
+| `/api/diff?repo=&head=&base=&path=&context_lines=` | GET | bounded unified diff and file statistics; context defaults to 3 and accepts explicit 0 |
 | `/metrics` | GET | Prometheus metrics |
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch
@@ -620,7 +629,7 @@ Ten tools:
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
 units. Omitted `ref`/`head` values resolve to the DB's immutable indexed
-commit. Binary blame, unknown repos, deleting repos, and unindexed repos come
+commit. NUL-bearing binary blame, unknown repos, deleting repos, and unindexed repos come
 back as tool errors rather than drifting to mutable mirror HEAD.
 
 ### Claude Code
@@ -672,9 +681,10 @@ well as a reindex; the next start requires first-user enrollment.
 ### Security boundary
 
 - Use HTTPS outside loopback and keep `auth.cookie_secure: true`. When a
-  reverse proxy terminates TLS, restrict direct access to phebs; phebs uses the
-  direct peer address for login throttling and does not trust forwarded-IP
-  headers.
+  reverse proxy terminates TLS, restrict direct access to phebs and configure
+  every trusted proxy-hop CIDR in `auth.trusted_proxies` so clients receive
+  separate login buckets. Phebs ignores forwarded-IP headers unless the direct
+  peer is trusted.
 - Health, version, OpenAPI/docs, auth status/enrollment/login/OIDC routes, and
   `/metrics` are public. Search, repository content, code navigation, history,
   and MCP require a session or API key. Reindexing additionally requires an

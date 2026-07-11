@@ -33,8 +33,13 @@ connections:
 		},
 		{
 			"auth bootstrap valid",
-			"auth:\n  cookie_secure: false\n  session_lifetime: 8h\n  bootstrap_user: {email: admin@example.com, password: 'long-enough-password'}\n",
+			"auth:\n  cookie_secure: false\n  session_lifetime: 8h\n  trusted_proxies: ['127.0.0.1/32', 'fd00::/8']\n  bootstrap_user: {email: admin@example.com, password: 'long-enough-password'}\n",
 			"",
+		},
+		{
+			"auth invalid trusted proxy",
+			"auth:\n  trusted_proxies: ['127.0.0.1']\n",
+			"auth.trusted_proxies entry \"127.0.0.1\" must be a valid CIDR",
 		},
 		{
 			"auth bootstrap partial",

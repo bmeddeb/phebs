@@ -25,7 +25,7 @@ func (s *Service) handleOIDCStart(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "OIDC login is not configured")
 		return
 	}
-	if !s.oidcLimits.consume(clientKey(r), s.now()) {
+	if !s.oidcLimits.consume(s.clientIPs.clientKey(r), s.now()) {
 		w.Header().Set("Retry-After", "300")
 		writeError(w, http.StatusTooManyRequests, "too many OIDC login attempts")
 		return

@@ -353,19 +353,3 @@ func bearerOK(ctx huma.Context, key string) bool {
 	tok, ok := strings.CutPrefix(ctx.Header("Authorization"), "Bearer ")
 	return ok && subtle.ConstantTimeCompare([]byte(tok), []byte(key)) == 1
 }
-
-// RequireBearer guards a non-huma handler (the MCP mount) with the same
-// bearer scheme as the API; an empty key leaves it open, matching /api/*.
-func RequireBearer(key string, h http.Handler) http.Handler {
-	if key == "" {
-		return h
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if !ok || subtle.ConstantTimeCompare([]byte(tok), []byte(key)) != 1 {
-			http.Error(w, `{"error":"invalid or missing bearer token"}`, http.StatusUnauthorized)
-			return
-		}
-		h.ServeHTTP(w, r)
-	})
-}

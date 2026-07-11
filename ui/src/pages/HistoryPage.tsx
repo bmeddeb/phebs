@@ -17,6 +17,10 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const generation = useRef(0)
+  const requestKey = `${repo}\u0000${ref}\u0000${path}`
+  const latestRequestKey = useRef(requestKey)
+  const loadMoreController = useRef<AbortController | null>(null)
+  latestRequestKey.current = requestKey
   const [commits, setCommits] = useState<GitCommit[]>([])
   const [revision, setRevision] = useState(ref)
   const [hasMore, setHasMore] = useState(false)
@@ -26,37 +30,57 @@ export default function HistoryPage({ params }: { params: URLSearchParams }) {
 
   useEffect(() => {
     const current = ++generation.current
+    const currentRequestKey = requestKey
     const controller = new AbortController()
+    loadMoreController.current?.abort()
+    loadMoreController.current = null
     setLoading(true)
+    setLoadingMore(false)
     setError('')
     setCommits([])
     fetchCommits(repo, ref, path, 50, 0, controller.signal)
       .then((result) => {
-        if (current !== generation.current) return
+        if (current !== generation.current || currentRequestKey !== latestRequestKey.current) return
         setCommits(result.commits)
         setRevision(result.revision)
         setHasMore(result.has_more)
       })
       .catch((cause) => {
-        if (!isAbortError(cause) && current === generation.current) setError(String(cause))
+        if (!isAbortError(cause) && current === generation.current && currentRequestKey === latestRequestKey.current) {
+          setError(String(cause))
+        }
       })
       .finally(() => {
-        if (current === generation.current) setLoading(false)
+        if (current === generation.current && currentRequestKey === latestRequestKey.current) setLoading(false)
       })
-    return () => controller.abort()
-  }, [repo, ref, path])
+    return () => {
+      controller.abort()
+      loadMoreController.current?.abort()
+    }
+  }, [repo, ref, path, requestKey])
 
   const loadMore = async () => {
+    const current = generation.current
+    const currentRequestKey = requestKey
+    const controller = new AbortController()
+    loadMoreController.current?.abort()
+    loadMoreController.current = controller
     setLoadingMore(true)
     setError('')
     try {
-      const result = await fetchCommits(repo, revision, path, 50, commits.length)
+      const result = await fetchCommits(repo, revision, path, 50, commits.length, controller.signal)
+      if (controller.signal.aborted || current !== generation.current || currentRequestKey !== latestRequestKey.current) return
       setCommits((current) => [...current, ...result.commits])
       setHasMore(result.has_more)
     } catch (cause) {
-      setError(String(cause))
+      if (!isAbortError(cause) && current === generation.current && currentRequestKey === latestRequestKey.current) {
+        setError(String(cause))
+      }
     } finally {
-      setLoadingMore(false)
+      if (loadMoreController.current === controller) {
+        loadMoreController.current = null
+        setLoadingMore(false)
+      }
     }
   }
 

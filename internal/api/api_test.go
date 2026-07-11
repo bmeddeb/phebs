@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -292,6 +293,15 @@ func TestHistoryEndpointsUseIndexedRevision(t *testing.T) {
 		if code != http.StatusOK || !strings.Contains(body, tc.want) || !strings.Contains(body, head) {
 			t.Errorf("GET %s = %d %s, want %q and indexed hash", tc.path, code, body, tc.want)
 		}
+	}
+	code, body := get("/api/diff?repo=github.com/foo/bar&context_lines=0")
+	var zeroContext phebssync.DiffResult
+	if err := json.Unmarshal([]byte(body), &zeroContext); err != nil {
+		t.Fatalf("decode zero-context diff: %v (%s)", err, body)
+	}
+	if code != http.StatusOK || !strings.Contains(zeroContext.Patch, "+second") ||
+		strings.Contains(zeroContext.Patch, "\n first\n") {
+		t.Errorf("zero-context API diff = %d %q", code, zeroContext.Patch)
 	}
 	if code, _ := get("/api/blame?repo=github.com/foo/bar&path=../../etc/passwd"); code != http.StatusBadRequest {
 		t.Errorf("blame traversal status = %d, want 400", code)

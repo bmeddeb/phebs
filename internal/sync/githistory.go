@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -128,11 +127,12 @@ type CommitResult struct {
 }
 
 type DiffRequest struct {
-	Repo         string
-	Base         string
-	Head         string
-	Path         string
-	ContextLines int
+	Repo            string
+	Base            string
+	Head            string
+	Path            string
+	ContextLines    int
+	ContextLinesSet bool
 }
 
 type DiffResult struct {
@@ -226,7 +226,7 @@ func (s *HistoryService) Blame(ctx context.Context, req BlameRequest) (BlameResu
 	if truncatedOutput {
 		return result, fmt.Errorf("blame output exceeds %d bytes: %w", s.maxHistoryOutput(), ErrTooLarge)
 	}
-	if bytes.IndexByte(out, 0) >= 0 || !utf8.Valid(out) {
+	if bytes.IndexByte(out, 0) >= 0 {
 		return result, fmt.Errorf("%s at %s (%s): %w", req.Path, oid, blob, ErrBinaryFile)
 	}
 
@@ -346,7 +346,11 @@ func (s *HistoryService) Diff(ctx context.Context, req DiffRequest) (DiffResult,
 	if err := errors.Join(dirErr, checkRef(req.Base), checkRef(req.Head), checkPath(req.Path)); err != nil {
 		return result, err
 	}
-	if req.ContextLines < 0 || req.ContextLines > defaultMaxContextLines {
+	contextLines := req.ContextLines
+	if !req.ContextLinesSet && contextLines == 0 {
+		contextLines = defaultDiffContextLines
+	}
+	if contextLines < 0 || contextLines > defaultMaxContextLines {
 		return result, fmt.Errorf("context lines must be between 0 and %d: %w", defaultMaxContextLines, ErrBadInput)
 	}
 	head, err := resolveCommit(ctx, dir, req.Head)
@@ -375,10 +379,6 @@ func (s *HistoryService) Diff(ctx context.Context, req DiffRequest) (DiffResult,
 	files, err := loadChanges(ctx, dir, base, head, req.Path, s.maxHistoryOutput())
 	if err != nil {
 		return result, err
-	}
-	contextLines := req.ContextLines
-	if contextLines == 0 {
-		contextLines = defaultDiffContextLines
 	}
 	args := diffCommand(base, head,
 		"--patch", "--no-ext-diff", "--no-textconv", "--no-color",
@@ -545,11 +545,11 @@ func parseBlame(out []byte) ([]BlameLine, []string, error) {
 			row := string(rows[i])
 			i++
 			if strings.HasPrefix(row, "filename ") {
-				line.OriginalPath = strings.TrimPrefix(row, "filename ")
+				line.OriginalPath = strings.ToValidUTF8(strings.TrimPrefix(row, "filename "), "?")
 				continue
 			}
 			if strings.HasPrefix(row, "\t") {
-				line.Content = strings.TrimPrefix(row, "\t")
+				line.Content = strings.ToValidUTF8(strings.TrimPrefix(row, "\t"), "?")
 				foundContent = true
 				break
 			}

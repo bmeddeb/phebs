@@ -9,6 +9,7 @@ import (
 	pathpkg "path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/sourcegraph/zoekt/index"
 
@@ -38,6 +39,9 @@ var ErrCredentialAudit = errors.New("credential artifact audit failed")
 func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cleanupEnabled bool) (ReconcileReport, error) {
 	var report ReconcileReport
 	var errs []error
+	if err := ctx.Err(); err != nil {
+		return report, err
+	}
 
 	repos, err := st.ListRepos(ctx)
 	if err != nil {
@@ -45,6 +49,9 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 	}
 	invalidNames := legacyLayoutCollisions(repos)
 	for _, repo := range repos {
+		if err := ctx.Err(); err != nil {
+			return report, errors.Join(append(errs, err)...)
+		}
 		nameErr := ValidateRepoName(repo.Name)
 		if nameErr == nil {
 			_, nameErr = SafeRepoDir(dataDir, repo.Name)
@@ -75,6 +82,9 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 		return report, errors.Join(append(errs, err)...)
 	}
 	for _, status := range statuses {
+		if err := ctx.Err(); err != nil {
+			return report, errors.Join(append(errs, err)...)
+		}
 		if !status.Orphaned {
 			continue
 		}
@@ -104,6 +114,9 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 	live := make(map[string]bool, len(repos))
 	liveMirrors := make(map[string]bool, len(repos))
 	for _, repo := range repos {
+		if err := ctx.Err(); err != nil {
+			return report, errors.Join(append(errs, err)...)
+		}
 		if !repo.Deleting || invalidNames[repo.Name] {
 			live[repo.Name] = true
 			if key, ok := legacyArtifactKey(repo.Name); ok {
@@ -111,10 +124,10 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 			}
 		}
 	}
-	if err := reconcileUntrackedShards(dataDir, live, cleanupEnabled, &report); err != nil {
+	if err := reconcileUntrackedShards(ctx, dataDir, live, cleanupEnabled, &report); err != nil {
 		errs = append(errs, err)
 	}
-	if err := reconcileUntrackedMirrors(dataDir, liveMirrors, cleanupEnabled, &report); err != nil {
+	if err := reconcileUntrackedMirrors(ctx, dataDir, liveMirrors, cleanupEnabled, &report); err != nil {
 		errs = append(errs, err)
 	}
 	if err := reconcileIndexedRevisions(ctx, st, dataDir, repos, &report); err != nil {
@@ -178,18 +191,29 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	if err := st.SetRepoDeleting(ctx, name, true); err != nil {
 		return false, fmt.Errorf("mark %s deleting: %w", name, err)
 	}
+	rollback := func(cause error) (bool, error) {
+		rollbackCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		if err := st.SetRepoDeleting(rollbackCtx, name, false); err != nil && !errors.Is(err, store.ErrNotFound) {
+			cause = errors.Join(cause, fmt.Errorf("reactivate %s after failed cleanup: %w", name, err))
+		}
+		return false, cause
+	}
 	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
-			return false, fmt.Errorf("cancel %s jobs for %s: %w", kind, name, err)
+			return rollback(fmt.Errorf("cancel %s jobs for %s: %w", kind, name, err))
 		}
 	}
 
-	unlock := repowork.Lock(dir)
+	unlock, err := repowork.LockContext(ctx, dir)
+	if err != nil {
+		return rollback(err)
+	}
 	defer unlock()
 	// Close the enqueue-before-lock window.
 	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
-			return false, fmt.Errorf("cancel late %s jobs for %s: %w", kind, name, err)
+			return rollback(fmt.Errorf("cancel late %s jobs for %s: %w", kind, name, err))
 		}
 	}
 	current, err := st.GetRepo(ctx, name)
@@ -197,29 +221,38 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("recheck cleanup identity for %s: %w", name, err)
+		return rollback(fmt.Errorf("recheck cleanup identity for %s: %w", name, err))
 	}
 	if !current.Deleting {
 		return false, nil // a concurrent sync reactivated this repository
 	}
-	if err := removeRepoShardsByMetadata(dataDir, name); err != nil {
-		return false, fmt.Errorf("cleanup %s shards: %w", name, err)
+	if err := removeRepoShardsByMetadata(ctx, dataDir, name); err != nil {
+		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
+	}
+	if err := ctx.Err(); err != nil {
+		return rollback(err)
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return false, fmt.Errorf("cleanup %s mirror: %w", name, err)
+		return rollback(fmt.Errorf("cleanup %s mirror: %w", name, err))
 	}
 	if err := st.DeleteRepo(ctx, name); err != nil {
-		return false, fmt.Errorf("cleanup %s row: %w", name, err)
+		return rollback(fmt.Errorf("cleanup %s row: %w", name, err))
 	}
 	return true, nil
 }
 
-func removeRepoShardsByMetadata(dataDir, name string) error {
+func removeRepoShardsByMetadata(ctx context.Context, dataDir, name string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	paths, err := shardPaths(dataDir)
 	if err != nil {
 		return err
 	}
 	for _, shard := range paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		repos, _, err := index.ReadMetadataPath(shard)
 		if err != nil {
 			return fmt.Errorf("read %s: %w", filepath.Base(shard), err)
@@ -234,6 +267,9 @@ func removeRepoShardsByMetadata(dataDir, name string) error {
 			return fmt.Errorf("shard %s mixes %q with live repositories", filepath.Base(shard), name)
 		}
 		if allTarget {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if err := os.Remove(shard); err != nil && !os.IsNotExist(err) {
 				return err
 			}
@@ -242,16 +278,23 @@ func removeRepoShardsByMetadata(dataDir, name string) error {
 	return nil
 }
 
-func reconcileUntrackedShards(dataDir string, live map[string]bool, remove bool, report *ReconcileReport) error {
+func reconcileUntrackedShards(ctx context.Context, dataDir string, live map[string]bool, remove bool, report *ReconcileReport) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	paths, err := shardPaths(dataDir)
 	if err != nil {
 		return err
 	}
 	var errs []error
 	for _, shard := range paths {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(append(errs, err)...)
+		}
 		repos, _, err := index.ReadMetadataPath(shard)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("audit shard %s: %w", filepath.Base(shard), err))
+			// A builder can briefly expose an unreadable final path while swapping
+			// shards. Never classify or remove a shard whose ownership is unknown.
 			continue
 		}
 		orphan := len(repos) > 0
@@ -266,6 +309,9 @@ func reconcileUntrackedShards(dataDir string, live map[string]bool, remove bool,
 		}
 		report.UntrackedShards++
 		if remove {
+			if err := ctx.Err(); err != nil {
+				return errors.Join(append(errs, err)...)
+			}
 			if err := os.Remove(shard); err != nil && !os.IsNotExist(err) {
 				errs = append(errs, err)
 			} else {
@@ -276,9 +322,9 @@ func reconcileUntrackedShards(dataDir string, live map[string]bool, remove bool,
 	return errors.Join(errs...)
 }
 
-func reconcileUntrackedMirrors(dataDir string, liveArtifacts map[string]bool, remove bool, report *ReconcileReport) error {
+func reconcileUntrackedMirrors(ctx context.Context, dataDir string, liveArtifacts map[string]bool, remove bool, report *ReconcileReport) error {
 	root := filepath.Join(dataDir, "repos")
-	return walkMirrorDirs(root, func(path string) error {
+	return walkMirrorDirs(ctx, root, func(path string) error {
 		rel, err := filepath.Rel(root, path)
 		if err != nil {
 			return err
@@ -288,7 +334,17 @@ func reconcileUntrackedMirrors(dataDir string, liveArtifacts map[string]bool, re
 		if !validArtifact || !liveArtifacts[artifact] {
 			report.UntrackedMirrors++
 			if remove {
-				unlock := repowork.Lock(path)
+				if err := ctx.Err(); err != nil {
+					return err
+				}
+				unlock, lockErr := repowork.LockContext(ctx, path)
+				if lockErr != nil {
+					return lockErr
+				}
+				if err := ctx.Err(); err != nil {
+					unlock()
+					return err
+				}
 				err = os.RemoveAll(path)
 				unlock()
 				if err != nil {
@@ -302,16 +358,114 @@ func reconcileUntrackedMirrors(dataDir string, liveArtifacts map[string]bool, re
 }
 
 func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir string, repos []store.Repo, report *ReconcileReport) error {
-	paths, err := shardPaths(dataDir)
+	versions, complete, err := indexedVersions(ctx, dataDir)
 	if err != nil {
 		return err
 	}
-	versions := map[string]map[string]bool{}
 	var errs []error
+
+	for _, repo := range repos {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(append(errs, err)...)
+		}
+		if repo.Deleting || ValidateRepoName(repo.Name) != nil {
+			continue
+		}
+		repoVersions, hasShard := versions[repo.Name]
+		mismatch := repo.IndexedCommitHash != "" && complete && indexStateMismatch(repo.IndexedCommitHash, repoVersions, hasShard)
+		needsIndex := repo.IndexedCommitHash == "" || mismatch
+		if !needsIndex {
+			continue
+		}
+		dir, dirErr := SafeRepoDir(dataDir, repo.Name)
+		if dirErr != nil {
+			errs = append(errs, dirErr)
+			continue
+		}
+
+		// The indexer owns this same lock from before the child starts through
+		// shard publication and SetRepoIndexed. Re-read both sides while holding
+		// it so a mid-swap snapshot can never clear a newly committed revision.
+		unlock, lockErr := repowork.LockContext(ctx, dir)
+		if lockErr != nil {
+			errs = append(errs, lockErr)
+			continue
+		}
+		fresh, freshErr := st.GetRepo(ctx, repo.Name)
+		if errors.Is(freshErr, store.ErrNotFound) {
+			unlock()
+			continue
+		}
+		if freshErr != nil {
+			unlock()
+			errs = append(errs, fmt.Errorf("reload revision state for %s: %w", repo.Name, freshErr))
+			continue
+		}
+		if fresh.Deleting {
+			unlock()
+			continue
+		}
+
+		force := hasShard
+		if fresh.IndexedCommitHash != "" {
+			freshVersions, freshComplete, auditErr := indexedVersions(ctx, dataDir)
+			if auditErr != nil {
+				unlock()
+				errs = append(errs, auditErr)
+				continue
+			}
+			freshSet, freshHasShard := freshVersions[repo.Name]
+			if !freshComplete || !indexStateMismatch(fresh.IndexedCommitHash, freshSet, freshHasShard) {
+				unlock()
+				continue
+			}
+			if err := st.ClearRepoIndexState(ctx, repo.Name); err != nil {
+				unlock()
+				errs = append(errs, fmt.Errorf("clear mismatched index state for %s: %w", repo.Name, err))
+				continue
+			}
+			report.RevisionRepairs++
+			force = true
+		}
+		if err := ctx.Err(); err != nil {
+			unlock()
+			errs = append(errs, err)
+			continue
+		}
+		if _, statErr := os.Stat(filepath.Join(dir, "HEAD")); statErr != nil {
+			unlock()
+			if !os.IsNotExist(statErr) {
+				errs = append(errs, statErr)
+			}
+			continue
+		}
+		if _, err := st.EnqueuePending(ctx, store.JobIndex, repo.Name, force); err != nil {
+			errs = append(errs, fmt.Errorf("enqueue revision repair for %s: %w", repo.Name, err))
+		}
+		unlock()
+	}
+	return errors.Join(errs...)
+}
+
+func indexedVersions(ctx context.Context, dataDir string) (map[string]map[string]bool, bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
+	paths, err := shardPaths(dataDir)
+	if err != nil {
+		return nil, false, err
+	}
+	versions := map[string]map[string]bool{}
+	complete := true
 	for _, shard := range paths {
+		if err := ctx.Err(); err != nil {
+			return nil, false, err
+		}
 		metadata, _, readErr := index.ReadMetadataPath(shard)
 		if readErr != nil {
-			errs = append(errs, fmt.Errorf("audit revision %s: %w", filepath.Base(shard), readErr))
+			// An unreadable shard may be in the middle of an atomic builder swap.
+			// Treat the snapshot as incomplete and decline destructive repairs.
+			complete = false
 			continue
 		}
 		for _, indexedRepo := range metadata {
@@ -325,40 +479,11 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 			}
 		}
 	}
+	return versions, complete, nil
+}
 
-	for _, repo := range repos {
-		if repo.Deleting || ValidateRepoName(repo.Name) != nil {
-			continue
-		}
-		indexedVersions, hasShard := versions[repo.Name]
-		mismatch := repo.IndexedCommitHash != "" && (!hasShard || len(indexedVersions) != 1 || !indexedVersions[repo.IndexedCommitHash])
-		needsIndex := repo.IndexedCommitHash == "" || mismatch
-		if !needsIndex {
-			continue
-		}
-		if mismatch {
-			if err := st.ClearRepoIndexState(ctx, repo.Name); err != nil {
-				errs = append(errs, fmt.Errorf("clear mismatched index state for %s: %w", repo.Name, err))
-				continue
-			}
-			report.RevisionRepairs++
-		}
-		dir, dirErr := SafeRepoDir(dataDir, repo.Name)
-		if dirErr != nil {
-			errs = append(errs, dirErr)
-			continue
-		}
-		if _, statErr := os.Stat(filepath.Join(dir, "HEAD")); statErr != nil {
-			if !os.IsNotExist(statErr) {
-				errs = append(errs, statErr)
-			}
-			continue
-		}
-		if _, err := st.EnqueuePending(ctx, store.JobIndex, repo.Name, mismatch || hasShard); err != nil {
-			errs = append(errs, fmt.Errorf("enqueue revision repair for %s: %w", repo.Name, err))
-		}
-	}
-	return errors.Join(errs...)
+func indexStateMismatch(commitHash string, versions map[string]bool, hasShard bool) bool {
+	return !hasShard || len(versions) != 1 || !versions[commitHash]
 }
 
 func scrubRepoCredentials(ctx context.Context, st store.Store, repo store.Repo) (bool, error) {
@@ -387,6 +512,9 @@ func scrubRepoCredentials(ctx context.Context, st store.Store, repo store.Repo) 
 }
 
 func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.Repo, report *ReconcileReport) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	root := filepath.Join(dataDir, "repos")
 	if info, err := os.Lstat(root); err == nil && info.Mode()&os.ModeSymlink != 0 {
 		return errors.New("managed repos root is a symlink")
@@ -395,6 +523,9 @@ func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.R
 	}
 	seen := map[string]bool{}
 	for _, repo := range repos {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		path, pathErr := legacyMirrorDir(dataDir, repo.Name)
 		if pathErr != nil {
 			if errors.Is(pathErr, ErrBadInput) {
@@ -415,7 +546,7 @@ func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.R
 		}
 	}
 
-	return walkMirrorDirs(root, func(path string) error {
+	return walkMirrorDirs(ctx, root, func(path string) error {
 		if !seen[repowork.CanonicalKey(path)] {
 			changed, err := scrubMirrorAt(ctx, path)
 			if err != nil {
@@ -430,7 +561,10 @@ func scrubMirrorCredentials(ctx context.Context, dataDir string, repos []store.R
 }
 
 func scrubMirrorAt(ctx context.Context, path string) (bool, error) {
-	unlock := repowork.Lock(path)
+	unlock, err := repowork.LockContext(ctx, path)
+	if err != nil {
+		return false, err
+	}
 	defer unlock()
 	return scrubRemoteURLs(ctx, path, "origin")
 }
@@ -489,7 +623,10 @@ var bareRepoInternalDirs = map[string]bool{
 // mirror, including legacy mirrors nested beneath an outer *.git directory.
 // Once inside a bare repo it prunes Git's own storage trees, which may contain
 // millions of loose objects, but continues through non-Git namespace paths.
-func walkMirrorDirs(root string, visit func(string) error) error {
+func walkMirrorDirs(ctx context.Context, root string, visit func(string) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	info, err := os.Lstat(root)
 	if os.IsNotExist(err) {
 		return nil
@@ -505,6 +642,9 @@ func walkMirrorDirs(root string, visit func(string) error) error {
 	}
 	var walk func(string, bool) error
 	walk = func(dir string, atBareRoot bool) error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		entries, err := os.ReadDir(dir)
 		if os.IsNotExist(err) {
 			return nil
@@ -513,6 +653,9 @@ func walkMirrorDirs(root string, visit func(string) error) error {
 			return err
 		}
 		for _, entry := range entries {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if entry.Type()&os.ModeSymlink != 0 {
 				return fmt.Errorf("managed repos tree contains symlink %q", filepath.Join(dir, entry.Name()))
 			}

@@ -3,12 +3,30 @@ package api
 import (
 	"context"
 	"errors"
+	"reflect"
 
 	"github.com/danielgtaylor/huma/v2"
 
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
+
+type optionalIntParam struct {
+	Value int
+	IsSet bool
+}
+
+func (o optionalIntParam) Schema(registry huma.Registry) *huma.Schema {
+	return huma.SchemaFromType(registry, reflect.TypeOf(o.Value))
+}
+
+func (o *optionalIntParam) Receiver() reflect.Value {
+	return reflect.ValueOf(o).Elem().FieldByName("Value")
+}
+
+func (o *optionalIntParam) OnParamSet(isSet bool, _ any) {
+	o.IsSet = isSet
+}
 
 func registerHistory(api huma.API, opts Options) {
 	service := phebssync.NewHistoryService(opts.DataDir)
@@ -71,11 +89,11 @@ func registerHistory(api huma.API, opts Options) {
 	})
 
 	type diffIn struct {
-		Repo         string `query:"repo" required:"true"`
-		Base         string `query:"base" doc:"base commit; defaults to head's first parent"`
-		Head         string `query:"head" doc:"head commit; defaults to the indexed commit"`
-		Path         string `query:"path" doc:"optional path filter"`
-		ContextLines int    `query:"context_lines" minimum:"0" maximum:"20"`
+		Repo         string           `query:"repo" required:"true"`
+		Base         string           `query:"base" doc:"base commit; defaults to head's first parent"`
+		Head         string           `query:"head" doc:"head commit; defaults to the indexed commit"`
+		Path         string           `query:"path" doc:"optional path filter"`
+		ContextLines optionalIntParam `query:"context_lines" minimum:"0" maximum:"20"`
 	}
 	type diffOut struct{ Body phebssync.DiffResult }
 	huma.Get(api, "/api/diff", func(ctx context.Context, in *diffIn) (*diffOut, error) {
@@ -83,9 +101,12 @@ func registerHistory(api huma.API, opts Options) {
 		if err != nil {
 			return nil, gitErr(err)
 		}
-		result, err := service.Diff(ctx, phebssync.DiffRequest{
-			Repo: in.Repo, Base: in.Base, Head: head, Path: in.Path, ContextLines: in.ContextLines,
-		})
+		request := phebssync.DiffRequest{Repo: in.Repo, Base: in.Base, Head: head, Path: in.Path}
+		if in.ContextLines.IsSet {
+			request.ContextLines = in.ContextLines.Value
+			request.ContextLinesSet = true
+		}
+		result, err := service.Diff(ctx, request)
 		if err != nil {
 			return nil, historyErr(err)
 		}
