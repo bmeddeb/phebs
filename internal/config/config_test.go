@@ -95,6 +95,21 @@ func TestDefaults(t *testing.T) {
 	}
 }
 
+func TestEnvExpansion(t *testing.T) {
+	t.Setenv("PHEBS_TEST_KEY", "s3cret")
+	t.Setenv("PHEBS_TEST_TOK", "ghp_xyz")
+	cfg, err := Parse([]byte("auth:\n  api_key: \"${PHEBS_TEST_KEY}\"\nconnections:\n  - {name: gh, type: github, users: [u], token: \"${PHEBS_TEST_TOK}\"}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Auth.APIKey != "s3cret" {
+		t.Errorf("api_key = %q, want expanded s3cret (MANUAL claims ${ENV} expansion)", cfg.Auth.APIKey)
+	}
+	if cfg.Connections[0].Token != "ghp_xyz" {
+		t.Errorf("token = %q, want expanded", cfg.Connections[0].Token)
+	}
+}
+
 func TestValidateReportsAllErrors(t *testing.T) {
 	in := "connections:\n  - {name: a, type: git}\n  - {name: a, type: github}\n"
 	_, err := Parse([]byte(in))

@@ -260,7 +260,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
               files={repoFiles}
               open={!collapsed.has(repo)}
               onToggle={() => toggleGroup(repo)}
-              selectedKey={selected >= 0 ? fileKey(visible[selected]!) : ''}
+              selectedKey={selected >= 0 && visible[selected] ? fileKey(visible[selected]) : ''}
               registerRef={(k, el) => {
                 if (el) rowRefs.current.set(k, el)
                 else rowRefs.current.delete(k)

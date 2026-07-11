@@ -168,6 +168,43 @@ func TestSearchGolden(t *testing.T) {
 	}
 }
 
+// Regression: a NEGATED metadata filter must exclude the matching repos, not
+// collapse the whole query to FALSE. Pre-fix, Compile hoisted the RawConfig
+// atom globally and `-fork:yes` simplified to zero results.
+func TestSearchNegatedFilter(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	s := corpus(t, ctx) // fixtures: example.com/plain (not fork), example.com/forked (fork)
+
+	// -fork:yes == "not a fork": the fork must be excluded, plain kept.
+	res, err := s.Search(ctx, "phebsNeedle -fork:yes", search.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repos := map[string]bool{}
+	for _, f := range res.Files {
+		repos[f.Repo] = true
+	}
+	if len(res.Files) == 0 {
+		t.Fatal("negated filter returned zero results (the pre-fix FALSE-collapse bug)")
+	}
+	if !repos["example.com/plain"] {
+		t.Error("expected example.com/plain in results")
+	}
+	if repos["example.com/forked"] {
+		t.Error("example.com/forked should be excluded by -fork:yes")
+	}
+
+	// An OR'd metadata atom must keep matches from the non-metadata branch.
+	res, err = s.Search(ctx, "(fork:yes or lang:go) phebsNeedle", search.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Files) == 0 {
+		t.Error("OR'd metadata query returned zero results")
+	}
+}
+
 // T4.3: streaming forwards batches progressively and aggregates stats;
 // a cancelled context stops the search.
 func TestStream(t *testing.T) {

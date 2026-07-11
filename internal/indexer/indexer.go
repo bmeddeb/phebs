@@ -80,11 +80,13 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if _, err := sync.GitConfig(ctx, dir, "zoekt.name", repo.Name); err != nil {
 		return fmt.Errorf("index %s: set zoekt.name: %w", repo.Name, err)
 	}
-	args := []string{"-index", indexDir}
-	if force {
-		// defeat the child's own shard-freshness check too
-		args = append(args, "-incremental=false")
-	}
+	// Always -incremental=false. phebs's own short-circuit above (indexed hash
+	// == HEAD) already skips redundant runs, so by the time we invoke the
+	// child a real build is wanted. Leaving zoekt's own incremental skip on
+	// silently no-ops a force reindex when HEAD is unchanged: the API force
+	// path clears our recorded hash but the on-disk shard still matches HEAD,
+	// so zoekt would skip and force would do nothing.
+	args := []string{"-index", indexDir, "-incremental=false"}
 	start := time.Now()
 	cmd := exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
 	var out bytes.Buffer

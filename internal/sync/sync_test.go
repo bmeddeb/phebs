@@ -28,6 +28,11 @@ func TestRepoName(t *testing.T) {
 		{"file:///tmp/origin", "local/tmp/origin", false},
 		{"https://example.com/", "", true},
 		{"not a url at all", "", true},
+		// path traversal must be rejected: a .. segment would let RepoDir
+		// escape $DATA and CleanupOrphans RemoveAll outside it.
+		{"https://example.com/../../../../etc/x", "", true},
+		{"git@example.com:../../../../etc/x", "", true},
+		{"https://example.com/a/../b", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {

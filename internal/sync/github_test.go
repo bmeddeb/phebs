@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -173,5 +174,22 @@ func TestSyncGitHubEndToEnd(t *testing.T) {
 	all, _ := st.ListRepos(ctx)
 	if len(all) != 1 {
 		t.Errorf("ListRepos = %d rows, want 1", len(all))
+	}
+}
+
+// Regression: git errors are persisted to the job row and logged, so the
+// credential-bearing -c http.extraheader arg must be redacted from them.
+func TestRedactArgs(t *testing.T) {
+	secret := "aValidLookingBase64Token=="
+	args := []string{
+		"-c", "http.extraheader=Authorization: Basic " + secret,
+		"clone", "--mirror", "https://github.com/foo/bar.git", "/tmp/x",
+	}
+	got := redactArgs(args)
+	if strings.Contains(got, secret) || strings.Contains(got, "Authorization") {
+		t.Errorf("redactArgs leaked the credential: %q", got)
+	}
+	if !strings.Contains(got, "clone") || !strings.Contains(got, "--mirror") {
+		t.Errorf("redactArgs dropped non-secret args: %q", got)
 	}
 }

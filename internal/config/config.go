@@ -220,6 +220,8 @@ func (c *Config) validate(lines []int) error {
 }
 
 func (c *Config) applyDefaults() error {
+	// ${ENV} expansion for secrets kept out of the file (see docs/MANUAL.md).
+	c.Auth.APIKey = os.ExpandEnv(c.Auth.APIKey)
 	for i := range c.Connections {
 		c.Connections[i].Token = os.ExpandEnv(c.Connections[i].Token)
 	}

@@ -41,8 +41,13 @@ func (o Options) zoekt() *zoekt.SearchOptions {
 	max := clamp(o.MaxMatches, 50, 500)
 	return &zoekt.SearchOptions{
 		ChunkMatches:       true,
-		MaxDocDisplayCount: max,
-		TotalMaxMatchCount: max,
+		MaxDocDisplayCount: max, // documents returned to the client
+		// TotalMaxMatchCount bounds total matches COLLECTED across shards, not
+		// documents shown. It must be >> MaxDocDisplayCount or a common term
+		// fills the budget inside the first shard and the remaining
+		// shards/repos are never searched (zoekt's own default is 1,000,000).
+		// Generous safety cap; MaxWallTime is the real backstop.
+		TotalMaxMatchCount: 100000,
 		NumContextLines:    clamp(o.ContextLines, 0, 10),
 		MaxWallTime:        10 * time.Second,
 	}

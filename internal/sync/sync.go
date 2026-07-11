@@ -25,7 +25,7 @@ func RepoName(cloneURL string) (string, error) {
 		if p == "" {
 			return "", fmt.Errorf("clone path %q has no repo path", cloneURL)
 		}
-		return "local/" + p, nil
+		return safeName("local/"+p, cloneURL)
 	}
 	if strings.Contains(s, "://") {
 		u, err := url.Parse(s)
@@ -40,16 +40,28 @@ func RepoName(cloneURL string) (string, error) {
 		if p == "" {
 			return "", fmt.Errorf("clone url %q has no repo path", cloneURL)
 		}
-		return host + "/" + p, nil
+		return safeName(host+"/"+p, cloneURL)
 	}
 	// scp-like syntax: [user@]host:path
 	if h, p, ok := strings.Cut(s, ":"); ok && !strings.Contains(h, "/") && p != "" {
 		if _, host, ok := strings.Cut(h, "@"); ok {
 			h = host
 		}
-		return h + "/" + strings.Trim(p, "/"), nil
+		return safeName(h+"/"+strings.Trim(p, "/"), cloneURL)
 	}
 	return "", fmt.Errorf("unrecognized clone url %q", cloneURL)
+}
+
+// safeName rejects names containing a ".." path segment. Without this the
+// URL/scp branches (which don't filepath.Clean) could yield a name whose
+// RepoDir escapes $DATA — and CleanupOrphans would then RemoveAll outside it.
+func safeName(name, cloneURL string) (string, error) {
+	for _, seg := range strings.Split(name, "/") {
+		if seg == ".." {
+			return "", fmt.Errorf("clone url %q yields unsafe repo name %q", cloneURL, name)
+		}
+	}
+	return name, nil
 }
 
 // RepoDir is the deterministic on-disk location of a repo's bare mirror.

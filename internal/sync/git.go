@@ -18,13 +18,28 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	if err := cmd.Run(); err != nil {
-		werr := fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), err, out.String())
+		werr := fmt.Errorf("git %s: %w\n%s", redactArgs(args), err, out.String())
 		if isAuthFailure(out.String()) {
 			return "", store.WithClass(store.ClassAuth, werr)
 		}
 		return "", werr
 	}
 	return strings.TrimSpace(out.String()), nil
+}
+
+// redactArgs joins argv for error messages with the credential-bearing
+// `-c http.extraheader=Authorization: …` value scrubbed — errors are
+// persisted to the job row and logged, so the PAT must never appear there.
+func redactArgs(args []string) string {
+	out := make([]string, len(args))
+	for i, a := range args {
+		if strings.Contains(a, "http.extraheader") || strings.Contains(a, "Authorization") {
+			out[i] = "http.extraheader=<redacted>"
+		} else {
+			out[i] = a
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 // isAuthFailure sniffs git's credential complaints (T3.3 clone-auth class).

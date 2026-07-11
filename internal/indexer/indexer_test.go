@@ -148,6 +148,56 @@ func shardStamps(t *testing.T, dataDir string) map[string]time.Time {
 	return stamps
 }
 
+// Regression: the API force-reindex path (ClearRepoIndexState, then enqueue a
+// plain job the runner drains via Handle) must actually rebuild the shard even
+// when HEAD is unchanged. Pre-fix, Handle called Index(force=false) which
+// omitted -incremental=false, so zoekt skipped the rebuild and force no-op'd.
+func TestForceReindexViaJobRebuilds(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, head := fixture(t, ctx, st, dataDir)
+
+	// first index establishes the shard + recorded commit
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); err != nil {
+		t.Fatal(err)
+	}
+	before := shardStamps(t, dataDir)
+	if len(before) == 0 {
+		t.Fatal("no shard after first index")
+	}
+	time.Sleep(1100 * time.Millisecond) // distinguishable mtime
+
+	// simulate POST /api/reindex {force:true}: clear state, enqueue, drain
+	if err := st.ClearRepoIndexState(ctx, name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := st.CreateJob(ctx, store.JobIndex, name); err != nil {
+		t.Fatal(err)
+	}
+	job, err := st.ClaimJob(ctx, store.JobIndex, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Handle(ctx, *job); err != nil { // HEAD unchanged since first index
+		t.Fatalf("Handle: %v", err)
+	}
+
+	rebuilt := false
+	for s, mt := range shardStamps(t, dataDir) {
+		if !mt.Equal(before[s]) {
+			rebuilt = true
+		}
+	}
+	if !rebuilt {
+		t.Error("force reindex via job did not rebuild the shard (HEAD unchanged, zoekt skipped)")
+	}
+	repo, _ := st.GetRepo(ctx, name)
+	if repo.IndexedCommitHash != head {
+		t.Errorf("indexed hash = %q, want re-recorded %q", repo.IndexedCommitHash, head)
+	}
+}
+
 // T3.2 AC: reindexing an unchanged HEAD is a no-op in <100ms that leaves
 // shards untouched; force rebuilds anyway.
 func TestShortCircuitAndForce(t *testing.T) {
