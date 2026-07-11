@@ -351,6 +351,7 @@ next boot.
 | `make dev-api` | backend-only loop (placeholder UI page, fast) |
 | `make build` | release binary `./phebs` with embedded UI |
 | `make test` | `go test ./...` — store/sync/indexer tests spawn real surreal children and need the `surreal` binary; zoekt-git-index is auto-built by the test harness |
+| `make ui-test` | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree |
 | `make lint` | golangci-lint |
 | `make ui` | production UI build only |
 | `make db-server` | SurrealDB in server mode via docker compose (testing only) |

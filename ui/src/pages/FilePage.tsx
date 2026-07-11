@@ -74,14 +74,15 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   )
 }
 
-interface TreeNode {
+export interface TreeNode {
   name: string
   path: string
   dir: boolean
   children: TreeNode[]
 }
 
-function buildTree(paths: string[]): TreeNode {
+// exported for tests (T6.4)
+export function buildTree(paths: string[]): TreeNode {
   const root: TreeNode = { name: '', path: '', dir: true, children: [] }
   for (const p of paths) {
     const parts = p.split('/')

@@ -182,7 +182,7 @@ paid/EE), from public docs/pricing only — never their source, never `ee/`.
 
 ---
 
-## EPIC 6 — Parity quick wins *(Wave 0 — days each, no architecture change)*
+## EPIC 6 — Parity quick wins ✅ 2026-07-10 *(Wave 0 — days each, no architecture change)*
 
 **T6.1 · Broaden syntax highlighting** ✅ 2026-07-10 — *Sourcebot free (100+ langs)*
 Added CM6 language packs beyond the initial ~6: official Lezer grammars
@@ -196,7 +196,7 @@ Verified: YAML + TypeScript highlight in the viewer; header shows the language.
 nested tree, auto-expands the path to the current file, active-row bar, dirs
 toggle, files navigate. Verified: auto-expand + active highlight; clicking a
 collapsed dir reveals its files; file rows deep-link. Moves "file explorer"
-partial → have. *(buildTree unit test pending T6.4 Vitest harness.)*
+partial → have. *(buildTree unit test landed with T6.4.)*
 
 **T6.3 · Live GitHub PAT verification** ✅ 2026-07-10 — *closes a testing caveat*
 Ran the adapter live (200-repo account): `users:` pagination, `orgs:`,
@@ -205,11 +205,13 @@ token verified absent from mirrors/data/API. Finding fixed: `users:` naming
 the token's own login now lists via `/user/repos` so its private repos are
 seen (public endpoint omits them); regression test added. ADR 2026-07-10.
 
-**T6.4 · UI test harness (Vitest)** — *review gap: zero UI tests*
-Add Vitest + Testing Library; cover the streaming reducer, keyboard nav
-(j/k/enter/o and the collapse guard), facet toggling, and SSE error handling
-(the crash and error-clobber bugs would have been caught). AC: `npm test`
-runs in CI; the streaming/keyboard/facet paths have tests.
+**T6.4 · UI test harness (Vitest)** ✅ 2026-07-10 — *review gap: zero UI tests*
+Vitest + jsdom + Testing Library (`test` block in vite.config.ts, `npm test` /
+`make ui-test`). 23 cases: streamSearch SSE contract incl. the error-clobber
+distinction (fake EventSource), SearchPage streaming/keyboard nav with clamp +
+typing guard + collapse guard/facet toggling (styletron+baseui render, mocked
+lang/highlight), and the T6.2 buildTree unit tests. CI wiring lands with the
+first CI pipeline (none exists yet).
 
 ## EPIC 7 — Connectors & freshness *(Wave 1 — the biggest free-tier gap)*
 

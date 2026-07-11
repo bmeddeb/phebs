@@ -1,4 +1,4 @@
-.PHONY: dev dev-api build test lint ui db-server
+.PHONY: dev dev-api build test ui-test lint ui db-server
 
 bin/zoekt-git-index: go.mod go.sum ## index builder, same module SHA as the server (PLAN §1.1)
 	go build -o $@ github.com/sourcegraph/zoekt/cmd/zoekt-git-index
@@ -14,6 +14,9 @@ build: bin/zoekt-git-index ui ## release binary with embedded UI
 
 test:
 	go test ./...
+
+ui-test: ## Vitest UI tests (T6.4)
+	cd ui && npm test
 
 lint:
 	golangci-lint run
