@@ -2,6 +2,7 @@ package indexer_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -99,6 +100,35 @@ func shardCount(t *testing.T, dataDir string) int {
 	return len(shards)
 }
 
+type failIndexedStore struct{ store.Store }
+
+func (failIndexedStore) SetRepoIndexed(context.Context, string, string, time.Time) error {
+	return errors.New("injected index state failure")
+}
+
+func TestIndexStateFailureRemovesUncommittedShard(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+	ix.Store = failIndexedStore{Store: st}
+
+	err := ix.Index(ctx, store.Repo{Name: name}, false)
+	if err == nil || !strings.Contains(err.Error(), "injected index state failure") {
+		t.Fatalf("Index error = %v, want injected store failure", err)
+	}
+	if got := shardCount(t, dataDir); got != 0 {
+		t.Fatalf("shards after failed state commit = %d, want 0", got)
+	}
+	repo, getErr := st.GetRepo(ctx, name)
+	if getErr != nil {
+		t.Fatal(getErr)
+	}
+	if repo.IndexedCommitHash != "" {
+		t.Fatalf("indexed hash after failed state commit = %q, want empty", repo.IndexedCommitHash)
+	}
+}
+
 // T3.1 AC: index a synced mirror through the job system; a shard appears and
 // the repo row records the indexed commit.
 func TestIndexViaJob(t *testing.T) {
@@ -148,10 +178,8 @@ func shardStamps(t *testing.T, dataDir string) map[string]time.Time {
 	return stamps
 }
 
-// Regression: the API force-reindex path (ClearRepoIndexState, then enqueue a
-// plain job the runner drains via Handle) must actually rebuild the shard even
-// when HEAD is unchanged. Pre-fix, Handle called Index(force=false) which
-// omitted -incremental=false, so zoekt skipped the rebuild and force no-op'd.
+// Regression: a force bit persisted on an index job must reach Handle and
+// rebuild the shard even when HEAD is unchanged.
 func TestForceReindexViaJobRebuilds(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -168,11 +196,8 @@ func TestForceReindexViaJobRebuilds(t *testing.T) {
 	}
 	time.Sleep(1100 * time.Millisecond) // distinguishable mtime
 
-	// simulate POST /api/reindex {force:true}: clear state, enqueue, drain
-	if err := st.ClearRepoIndexState(ctx, name); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := st.CreateJob(ctx, store.JobIndex, name); err != nil {
+	// simulate POST /api/reindex {force:true}: enqueue/upgrade, then drain
+	if _, err := st.EnqueuePending(ctx, store.JobIndex, name, true); err != nil {
 		t.Fatal(err)
 	}
 	job, err := st.ClaimJob(ctx, store.JobIndex, "test")
@@ -273,13 +298,51 @@ func TestClassifyChild(t *testing.T) {
 	}
 }
 
-func TestIndexMissingRepo(t *testing.T) {
+func TestIndexMissingRepoIsIgnored(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	ix, _, _ := newIndexer(t, ctx)
 
 	err := ix.Index(ctx, store.Repo{Name: "github.com/no/such"}, false)
-	if err == nil || !strings.Contains(err.Error(), "resolve HEAD") {
-		t.Errorf("err = %v, want resolve HEAD failure", err)
+	if err != nil {
+		t.Errorf("err = %v, want deleted repo job ignored", err)
+	}
+}
+
+func TestHandleDeletingRepoDoesNotTouchMirror(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+	if err := st.SetRepoDeleting(ctx, name, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.RemoveAll(sync.RepoDir(dataDir, name)); err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Handle(ctx, store.Job{Target: name}); err != nil {
+		t.Errorf("Handle deleting repo: %v", err)
+	}
+}
+
+func TestCanceledIndexChildIsNotClassifiedOOM(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+
+	bin := filepath.Join(t.TempDir(), "busy-indexer")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nwhile :; do :; done\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ix.Bin = bin
+	runCtx, stop := context.WithCancel(ctx)
+	time.AfterFunc(100*time.Millisecond, stop)
+	err := ix.Index(runCtx, store.Repo{Name: name}, true)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+	if got := store.Classify(err); got == store.ClassOOM {
+		t.Errorf("canceled child classified as %q, want non-OOM", got)
 	}
 }

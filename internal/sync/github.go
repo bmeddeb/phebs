@@ -3,8 +3,11 @@ package sync
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"path"
 	"strconv"
 	"strings"
@@ -16,6 +19,14 @@ import (
 
 // ghAPIBase is a var so tests can point the adapter at a fake server.
 var ghAPIBase = "https://api.github.com"
+
+const (
+	maxHostPages        = 1000
+	hostRequestTimeout  = 30 * time.Second
+	maxHostRedirects    = 10
+	maxRateLimitWait    = time.Minute
+	maxRateLimitRetries = 1
+)
 
 // ghRepo is the subset of the REST repo object phebs consumes (PORT_MAP §5).
 type ghRepo struct {
@@ -62,11 +73,21 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 			return nil, fmt.Errorf("connection %s: org %s: %w", conn.Name, org, err)
 		}
 	}
-	// App mode with no selectors: sync exactly what the installation was
-	// granted.
-	if appMode && len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0 {
-		if err := collect(listInstallationRepos(ctx, c)); err != nil {
+	// Installation repositories are authoritative for App-authenticated user
+	// selectors: /users/{name}/repos is public-only even with an installation
+	// token. Filter the granted set locally so private personal repositories
+	// are included without reaching the identity-only /user endpoints.
+	if appMode && (len(conn.Users) > 0 || len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0) {
+		granted, err := listInstallationRepos(ctx, c)
+		if err != nil {
 			return nil, fmt.Errorf("connection %s: installation repos: %w", conn.Name, err)
+		}
+		if len(conn.Users) == 0 {
+			if err := collect(granted, nil); err != nil {
+				return nil, err
+			}
+		} else if err := collect(filterInstallationUsers(granted, conn.Users), nil); err != nil {
+			return nil, err
 		}
 	}
 
@@ -88,6 +109,9 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		login = me.Login
 	}
 	for _, user := range conn.Users {
+		if appMode {
+			continue
+		}
 		if err := collect(listPages[ghRepo](ctx, c, "/users/"+user+"/repos?per_page=100&type=owner")); err != nil {
 			return nil, fmt.Errorf("connection %s: user %s: %w", conn.Name, user, err)
 		}
@@ -119,17 +143,17 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 			continue
 		}
 		name := "github.com/" + r.FullName
-		if err := checkCloneURL(conn, r.CloneURL); err != nil {
-			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+		cloneURL, err := SanitizeURL(r.CloneURL)
+		if err != nil {
+			return names, fmt.Errorf("connection %s: clone url for %s: %w", conn.Name, name, err)
 		}
-		dir := RepoDir(dataDir, name)
-		if err := Mirror(ctx, r.CloneURL, dir, gitCfg...); err != nil {
-			return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
+		if err := checkCloneURL(conn, cloneURL); err != nil {
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		repo := store.Repo{
 			Name:             name,
 			DisplayName:      r.FullName,
-			CloneURL:         r.CloneURL,
+			CloneURL:         cloneURL,
 			WebURL:           r.HTMLURL,
 			DefaultBranch:    r.DefaultBranch,
 			IsFork:           r.Fork,
@@ -140,12 +164,29 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 			ExternalHostType: "github",
 			ExternalHostURL:  "https://github.com",
 		}
-		if err := st.UpsertRepo(ctx, repo); err != nil {
-			return nil, fmt.Errorf("connection %s: upsert %s: %w", conn.Name, name, err)
+		if err := mirrorAndUpsert(ctx, st, dataDir, repo, gitCfg...); err != nil {
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		names = append(names, name)
 	}
 	return names, nil
+}
+
+func filterInstallationUsers(repos []ghRepo, users []string) []ghRepo {
+	selected := make([]ghRepo, 0, len(repos))
+	for _, repo := range repos {
+		owner, _, ok := strings.Cut(repo.FullName, "/")
+		if !ok {
+			continue
+		}
+		for _, user := range users {
+			if strings.EqualFold(owner, user) {
+				selected = append(selected, repo)
+				break
+			}
+		}
+	}
+	return selected
 }
 
 // excluded applies a connection's exclude filters to one listed repo,
@@ -171,29 +212,50 @@ type hostClient struct {
 	base   string
 	auth   string
 	accept string // Accept header; empty means "application/json"
+	client *http.Client
 }
 
 // listPages follows Link rel="next" pagination until exhausted.
 func listPages[T any](ctx context.Context, c *hostClient, p string) ([]T, error) {
 	var all []T
-	url := c.base + p
-	for url != "" {
+	current, err := c.endpoint(p)
+	if err != nil {
+		return nil, err
+	}
+	visited := map[string]bool{}
+	pages := 0
+	for current != "" {
+		if pages >= maxHostPages {
+			return nil, fmt.Errorf("pagination exceeds %d pages", maxHostPages)
+		}
+		key := paginationKey(current)
+		if visited[key] {
+			return nil, fmt.Errorf("pagination cycle detected")
+		}
+		visited[key] = true
 		var page []T
-		next, err := c.getJSON(ctx, url, &page)
+		next, err := c.getJSON(ctx, current, &page)
 		if err != nil {
 			return nil, err
 		}
 		all = append(all, page...)
-		url = next
+		current = next
+		pages++
 	}
 	return all, nil
 }
 
 // getJSON performs one GET, waiting out rate limits (Retry-After or
 // X-RateLimit-Reset) and returning the rel="next" link if any.
-func (c *hostClient) getJSON(ctx context.Context, url string, v any) (next string, err error) {
+func (c *hostClient) getJSON(ctx context.Context, rawURL string, v any) (next string, err error) {
+	requestURL, err := c.resolveRequestURL(rawURL)
+	if err != nil {
+		return "", err
+	}
+	client := c.requestClient()
+	rateLimitRetries := 0
 	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 		if err != nil {
 			return "", err
 		}
@@ -205,13 +267,20 @@ func (c *hostClient) getJSON(ctx context.Context, url string, v any) (next strin
 		if c.auth != "" {
 			req.Header.Set("Authorization", c.auth)
 		}
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := client.Do(req)
 		if err != nil {
-			return "", err
+			return "", hostRequestError(err)
 		}
 
-		if wait, limited := rateLimited(resp); limited {
+		if wait, limited, limitErr := rateLimited(resp); limited {
 			_ = resp.Body.Close()
+			if limitErr != nil {
+				return "", limitErr
+			}
+			if rateLimitRetries >= maxRateLimitRetries {
+				return "", fmt.Errorf("rate-limit retry budget exhausted after %d retry", maxRateLimitRetries)
+			}
+			rateLimitRetries++
 			select {
 			case <-ctx.Done():
 				return "", ctx.Err()
@@ -221,38 +290,167 @@ func (c *hostClient) getJSON(ctx context.Context, url string, v any) (next strin
 		}
 		if resp.StatusCode != http.StatusOK {
 			_ = resp.Body.Close()
-			return "", fmt.Errorf("GET %s: %s", url, resp.Status)
+			return "", fmt.Errorf("API GET returned HTTP %d", resp.StatusCode)
 		}
 		err = json.NewDecoder(resp.Body).Decode(v)
 		_ = resp.Body.Close()
 		if err != nil {
-			return "", fmt.Errorf("GET %s: decode: %w", url, err)
+			return "", fmt.Errorf("decode API response: %w", err)
 		}
-		return nextLink(resp.Header.Get("Link")), nil
+		rawNext := nextLink(resp.Header.Get("Link"))
+		if rawNext == "" {
+			return "", nil
+		}
+		responseURL := requestURL
+		if resp.Request != nil && resp.Request.URL != nil {
+			responseURL = resp.Request.URL.String()
+		}
+		return c.resolveLink(responseURL, rawNext)
 	}
 }
 
-func rateLimited(resp *http.Response) (time.Duration, bool) {
+func (c *hostClient) endpoint(p string) (string, error) {
+	return c.resolveRequestURL(strings.TrimRight(c.base, "/") + "/" + strings.TrimLeft(p, "/"))
+}
+
+func (c *hostClient) resolveRequestURL(raw string) (string, error) {
+	base, err := url.Parse(c.base)
+	if err != nil {
+		return "", errors.New("invalid API base URL")
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", errors.New("invalid API URL")
+	}
+	if !u.IsAbs() {
+		u = base.ResolveReference(u)
+	}
+	if err := sameAPIOrigin(base, u); err != nil {
+		return "", err
+	}
+	u.Fragment = ""
+	return u.String(), nil
+}
+
+func (c *hostClient) resolveLink(current, rawLink string) (string, error) {
+	currentURL, err := url.Parse(current)
+	if err != nil {
+		return "", err
+	}
+	ref, err := url.Parse(rawLink)
+	if err != nil {
+		return "", errors.New("invalid pagination link")
+	}
+	return c.resolveRequestURL(currentURL.ResolveReference(ref).String())
+}
+
+func sameAPIOrigin(base, candidate *url.URL) error {
+	baseScheme, baseHost, ok := normalizedOrigin(base)
+	if !ok {
+		return errors.New("API base must be an HTTP(S) URL without userinfo")
+	}
+	candidateScheme, candidateHost, ok := normalizedOrigin(candidate)
+	if !ok || candidateScheme != baseScheme || candidateHost != baseHost {
+		return fmt.Errorf("refusing off-origin API URL (expected %s://%s)", baseScheme, baseHost)
+	}
+	return nil
+}
+
+func normalizedOrigin(u *url.URL) (scheme, host string, ok bool) {
+	scheme = strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" || u.User != nil || u.Hostname() == "" {
+		return "", "", false
+	}
+	name := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if port == "" {
+		if scheme == "http" {
+			port = "80"
+		} else {
+			port = "443"
+		}
+	}
+	return scheme, net.JoinHostPort(name, port), true
+}
+
+func (c *hostClient) requestClient() *http.Client {
+	base := http.DefaultClient
+	if c.client != nil {
+		base = c.client
+	}
+	client := *base
+	if client.Timeout <= 0 || client.Timeout > hostRequestTimeout {
+		client.Timeout = hostRequestTimeout
+	}
+	previous := client.CheckRedirect
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) >= maxHostRedirects {
+			return fmt.Errorf("stopped after %d redirects", maxHostRedirects)
+		}
+		baseURL, err := url.Parse(c.base)
+		if err != nil {
+			return err
+		}
+		if err := sameAPIOrigin(baseURL, req.URL); err != nil {
+			return err
+		}
+		if previous != nil {
+			return previous(req, via)
+		}
+		return nil
+	}
+	return &client
+}
+
+func paginationKey(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return raw
+	}
+	u.Fragment = ""
+	return u.String()
+}
+
+func hostRequestError(err error) error {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		return fmt.Errorf("API request failed: %w", urlErr.Err)
+	}
+	return fmt.Errorf("API request failed: %w", err)
+}
+
+func rateLimited(resp *http.Response) (time.Duration, bool, error) {
 	if resp.StatusCode != http.StatusForbidden && resp.StatusCode != http.StatusTooManyRequests {
-		return 0, false
+		return 0, false, nil
 	}
 	// Retry-After is delta-seconds OR an HTTP-date (RFC 9110); proxies/CDNs
 	// emit either. A bare Atoi on the date form yields 0 → a hot retry loop,
 	// so fall back to date parsing, then to a sane floor.
 	if ra := resp.Header.Get("Retry-After"); ra != "" {
 		if secs, err := strconv.Atoi(strings.TrimSpace(ra)); err == nil {
-			return clampWait(time.Duration(secs) * time.Second), true
+			if secs > int(maxRateLimitWait/time.Second) {
+				return 0, true, fmt.Errorf("rate-limit wait exceeds maximum %s", maxRateLimitWait)
+			}
+			return boundedRateLimitWait(time.Duration(secs) * time.Second)
 		}
 		if t, err := http.ParseTime(ra); err == nil {
-			return clampWait(time.Until(t)), true
+			return boundedRateLimitWait(time.Until(t))
 		}
-		return 60 * time.Second, true // unparseable: back off, don't spin
+		return boundedRateLimitWait(time.Minute) // unparseable: back off, don't spin
 	}
 	if resp.Header.Get("X-RateLimit-Remaining") == "0" {
 		reset, _ := strconv.ParseInt(resp.Header.Get("X-RateLimit-Reset"), 10, 64)
-		return clampWait(time.Until(time.Unix(reset, 0))), true
+		return boundedRateLimitWait(time.Until(time.Unix(reset, 0)))
 	}
-	return 0, false // plain 403: permissions, not rate limiting
+	return 0, false, nil // plain 403: permissions, not rate limiting
+}
+
+func boundedRateLimitWait(d time.Duration) (time.Duration, bool, error) {
+	d = clampWait(d)
+	if d > maxRateLimitWait {
+		return 0, true, fmt.Errorf("rate-limit wait exceeds maximum %s", maxRateLimitWait)
+	}
+	return d, true, nil
 }
 
 // clampWait floors a rate-limit wait at 1s so a zero/negative value (clock

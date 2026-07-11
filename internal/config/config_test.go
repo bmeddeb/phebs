@@ -31,8 +31,49 @@ connections:
 `,
 			"",
 		},
+		{
+			"auth bootstrap valid",
+			"auth:\n  cookie_secure: false\n  session_lifetime: 8h\n  bootstrap_user: {email: admin@example.com, password: 'long-enough-password'}\n",
+			"",
+		},
+		{
+			"auth bootstrap partial",
+			"auth:\n  bootstrap_user: {email: admin@example.com}\n",
+			"auth.bootstrap_user requires email and password",
+		},
+		{
+			"auth session too short",
+			"auth:\n  session_lifetime: 5m\n",
+			"auth.session_lifetime",
+		},
+		{
+			"OIDC valid loopback",
+			"auth:\n  oidc: {issuer_url: 'http://127.0.0.1:9090/realms/test', client_id: phebs, client_secret: secret, redirect_url: 'http://localhost:3070/api/auth/oidc/callback'}\n",
+			"",
+		},
+		{
+			"OIDC partial",
+			"auth:\n  oidc: {issuer_url: 'https://idp.example', client_id: phebs}\n",
+			"auth.oidc requires issuer_url, client_id, client_secret, and redirect_url",
+		},
+		{
+			"OIDC external HTTP rejected",
+			"auth:\n  oidc: {issuer_url: 'http://idp.example', client_id: phebs, client_secret: secret, redirect_url: 'https://phebs.example/api/auth/oidc/callback'}\n",
+			"issuer_url must use HTTPS",
+		},
+		{
+			"OIDC credential URL rejected",
+			"auth:\n  oidc: {issuer_url: 'https://user:secret@idp.example', client_id: phebs, client_secret: secret, redirect_url: 'https://phebs.example/api/auth/oidc/callback'}\n",
+			"without credentials, query, or fragment",
+		},
+		{
+			"OIDC bad scope",
+			"auth:\n  oidc: {issuer_url: 'https://idp.example', client_id: phebs, client_secret: secret, redirect_url: 'https://phebs.example/api/auth/oidc/callback', scopes: ['bad scope']}\n",
+			"must be one non-empty token",
+		},
 		{"unknown field", "server:\n  adress: \":8080\"\n", "line 2: field adress not found"},
 		{"bad type value", "server:\n  addr: [1, 2]\n", "line 2"},
+		{"glob data dir", "server:\n  data_dir: '/tmp/phebs[*]'\n", "data_dir must not contain glob metacharacters"},
 		{
 			"duplicate names",
 			"connections:\n  - {name: a, type: git, url: u}\n  - {name: a, type: git, url: u}\n",
@@ -54,6 +95,96 @@ connections:
 			"only valid for code-host types",
 		},
 		{
+			"git with http auth",
+			"connections:\n  - {name: g, type: git, url: 'https://git.example.com/team/repo.git', http_auth: {username: bot, password: secret}}\n",
+			"",
+		},
+		{
+			"git http auth requires http",
+			"connections:\n  - {name: g, type: git, url: 'ssh://git@git.example.com/team/repo.git', http_auth: {username: bot, password: secret}}\n",
+			"http_auth requires an HTTP(S) git url",
+		},
+		{
+			"git http auth requires both fields",
+			"connections:\n  - {name: g, type: git, url: 'https://git.example.com/team/repo.git', http_auth: {username: bot}}\n",
+			"http_auth requires both username and password",
+		},
+		{
+			"http auth only on generic git",
+			"connections:\n  - {name: gh, type: github, users: [u], http_auth: {username: bot, password: secret}}\n",
+			"http_auth is only valid for type git",
+		},
+		{
+			"git url credentials rejected",
+			"connections:\n  - {name: g, type: git, url: 'https://user:secret@git.example.com/team/repo.git'}\n",
+			"move the username and password to http_auth",
+		},
+		{
+			"malformed git http url rejected",
+			"connections:\n  - {name: g, type: git, url: 'https://user:secret@%zz/repo.git'}\n",
+			"git HTTP(S) url is invalid",
+		},
+		{
+			"opaque http credentials rejected",
+			"connections:\n  - {name: g, type: git, url: 'https:user:secret@git.example.com/team/repo.git'}\n",
+			"move the username and password to http_auth",
+		},
+		{
+			"single slash http credentials rejected",
+			"connections:\n  - {name: g, type: git, url: 'https:/user:secret@git.example.com/team/repo.git'}\n",
+			"move the username and password to http_auth",
+		},
+		{
+			"opaque http url rejected",
+			"connections:\n  - {name: g, type: git, url: 'https:git.example.com/team/repo.git'}\n",
+			"git HTTP(S) url is invalid",
+		},
+		{
+			"http url without host rejected",
+			"connections:\n  - {name: g, type: git, url: 'https:///team/repo.git'}\n",
+			"git HTTP(S) url is invalid",
+		},
+		{
+			"http query rejected",
+			"connections:\n  - {name: g, type: git, url: 'https://git.example.com/team/repo.git?token=secret'}\n",
+			"must not contain a query or fragment",
+		},
+		{
+			"http fragment rejected",
+			"connections:\n  - {name: g, type: git, url: 'https://git.example.com/team/repo.git#credential'}\n",
+			"must not contain a query or fragment",
+		},
+		{
+			"ssh password rejected",
+			"connections:\n  - {name: g, type: git, url: 'ssh://git:secret@git.example.com/team/repo.git'}\n",
+			"move the username and password to http_auth",
+		},
+		{
+			"other scheme userinfo rejected",
+			"connections:\n  - {name: g, type: git, url: 'ftp://user:secret@git.example.com/team/repo.git'}\n",
+			"move the username and password to http_auth",
+		},
+		{
+			"scheme relative userinfo rejected",
+			"connections:\n  - {name: g, type: git, url: '//user:secret@git.example.com/team/repo.git'}\n",
+			"move the username and password to http_auth",
+		},
+		{
+			"ssh url username remains valid",
+			"connections:\n  - {name: g, type: git, url: 'ssh://git@git.example.com/team/repo.git'}\n",
+			"",
+		},
+		{
+			"git plus ssh username remains valid",
+			"connections:\n  - {name: g, type: git, url: 'git+ssh://git@git.example.com/team/repo.git'}\n",
+			"",
+		},
+		{
+			"scp path containing at remains valid",
+			"connections:\n  - {name: g, type: git, url: 'git.example.com:team/repo@release'}\n",
+			"",
+		},
+		{
 			"github with url",
 			"connections:\n  - {name: gh, type: github, users: [u], url: x}\n",
 			"url is not valid for type github",
@@ -72,6 +203,11 @@ connections:
 			"gitea valid",
 			"connections:\n  - {name: gt, type: gitea, orgs: [o], url: 'https://g.example.com'}\n",
 			"",
+		},
+		{
+			"gitea query rejected",
+			"connections:\n  - {name: gt, type: gitea, orgs: [o], url: 'https://g.example.com?token=secret'}\n",
+			"gitea url must not contain a query or fragment",
 		},
 		{
 			"app with token",
@@ -129,6 +265,11 @@ connections:
 			"",
 		},
 		{
+			"gitlab fragment rejected",
+			"connections:\n  - {name: gl, type: gitlab, groups: [team/platform], url: 'https://git.example.com#secret'}\n",
+			"gitlab url must not contain a query or fragment",
+		},
+		{
 			"bad resync_interval",
 			"sync:\n  resync_interval: soonish\n",
 			"sync.resync_interval \"soonish\"",
@@ -183,23 +324,50 @@ connections:
 	}
 }
 
+func TestURLCredentialErrorsDoNotLeak(t *testing.T) {
+	tests := []struct {
+		url, secret string
+	}{
+		{"https:bot:opaque-secret@git.example/repo.git", "opaque-secret"},
+		{"ssh://bot:ssh-secret@git.example/repo.git", "ssh-secret"},
+		{"ftp://bot:ftp-secret@git.example/repo.git", "ftp-secret"},
+		{"https://git.example/repo.git?token=query-secret", "query-secret"},
+	}
+	for _, tt := range tests {
+		_, err := Parse([]byte("connections:\n  - {name: g, type: git, url: '" + tt.url + "'}\n"))
+		if err == nil {
+			t.Fatalf("Parse accepted credential-bearing URL %q", tt.url)
+		}
+		if strings.Contains(err.Error(), tt.secret) {
+			t.Errorf("Parse error leaked %q: %v", tt.secret, err)
+		}
+	}
+}
+
 func TestDefaults(t *testing.T) {
 	cfg, err := Parse([]byte("{}"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Server.Addr != ":3070" {
-		t.Errorf("Addr = %q, want :3070", cfg.Server.Addr)
+	if cfg.Server.Addr != "127.0.0.1:3070" {
+		t.Errorf("Addr = %q, want 127.0.0.1:3070", cfg.Server.Addr)
 	}
 	if !strings.HasSuffix(cfg.Server.DataDir, ".phebs") || strings.HasPrefix(cfg.Server.DataDir, "~") {
 		t.Errorf("DataDir = %q, want expanded ~/.phebs", cfg.Server.DataDir)
+	}
+	if !cfg.Auth.SecureCookies() || cfg.Auth.SessionDuration() != 12*time.Hour {
+		t.Errorf("auth defaults: secure=%v lifetime=%v", cfg.Auth.SecureCookies(), cfg.Auth.SessionDuration())
 	}
 }
 
 func TestEnvExpansion(t *testing.T) {
 	t.Setenv("PHEBS_TEST_KEY", "s3cret")
 	t.Setenv("PHEBS_TEST_TOK", "ghp_xyz")
-	cfg, err := Parse([]byte("auth:\n  api_key: \"${PHEBS_TEST_KEY}\"\nconnections:\n  - {name: gh, type: github, users: [u], token: \"${PHEBS_TEST_TOK}\"}\n"))
+	t.Setenv("PHEBS_TEST_USER", "git-bot")
+	t.Setenv("PHEBS_TEST_PASS", "git-password")
+	t.Setenv("PHEBS_TEST_BOOTSTRAP", "bootstrap-password")
+	t.Setenv("PHEBS_TEST_OIDC", "oidc-secret")
+	cfg, err := Parse([]byte("auth:\n  api_key: \"${PHEBS_TEST_KEY}\"\n  bootstrap_user: {email: admin@example.com, password: '${PHEBS_TEST_BOOTSTRAP}'}\n  oidc: {issuer_url: 'https://idp.example', client_id: phebs, client_secret: '${PHEBS_TEST_OIDC}', redirect_url: 'https://phebs.example/api/auth/oidc/callback'}\nconnections:\n  - {name: gh, type: github, users: [u], token: \"${PHEBS_TEST_TOK}\"}\n  - {name: git, type: git, url: 'https://git.example/repo.git', http_auth: {username: '${PHEBS_TEST_USER}', password: '${PHEBS_TEST_PASS}'}}\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,18 +377,48 @@ func TestEnvExpansion(t *testing.T) {
 	if cfg.Connections[0].Token != "ghp_xyz" {
 		t.Errorf("token = %q, want expanded", cfg.Connections[0].Token)
 	}
+	if cfg.Connections[1].HTTPAuth != (HTTPAuth{Username: "git-bot", Password: "git-password"}) {
+		t.Errorf("http_auth = %+v, want expanded credentials", cfg.Connections[1].HTTPAuth)
+	}
+	if cfg.Auth.BootstrapUser.Password != "bootstrap-password" || cfg.Auth.OIDC.ClientSecret != "oidc-secret" {
+		t.Errorf("auth secrets not expanded: bootstrap=%q oidc=%q", cfg.Auth.BootstrapUser.Password, cfg.Auth.OIDC.ClientSecret)
+	}
 }
 
 // A non-empty api_key referencing an unset env var must fail closed, not
 // expand to "" and silently disable API auth.
 func TestAPIKeyUnsetEnvFailsClosed(t *testing.T) {
 	_, err := Parse([]byte("auth:\n  api_key: \"${PHEBS_DEFINITELY_UNSET_KEY}\"\n"))
-	if err == nil || !strings.Contains(err.Error(), "expands to empty") {
+	if err == nil || !strings.Contains(err.Error(), "unset or empty environment variable") {
 		t.Fatalf("Parse err = %v, want fail-closed on unset api_key env var", err)
 	}
 	// an intentionally-empty api_key (open API by design) still parses.
 	if _, err := Parse([]byte("auth:\n  api_key: \"\"\n")); err != nil {
 		t.Errorf("empty api_key should stay valid (open API), got %v", err)
+	}
+}
+
+func TestSecretEnvExpansionFailsClosed(t *testing.T) {
+	t.Setenv("PHEBS_TEST_EMPTY_SECRET", "")
+	tests := []struct {
+		name, in, field string
+	}{
+		{"partial api key", "auth:\n  api_key: 'prefix-${PHEBS_TEST_EMPTY_SECRET}'\n", "auth.api_key"},
+		{"bootstrap password", "auth:\n  bootstrap_user: {email: admin@example.com, password: '${PHEBS_TEST_EMPTY_SECRET}'}\n", "auth.bootstrap_user.password"},
+		{"OIDC client secret", "auth:\n  oidc: {issuer_url: 'https://idp.example', client_id: phebs, client_secret: '${PHEBS_TEST_EMPTY_SECRET}', redirect_url: 'https://phebs.example/api/auth/oidc/callback'}\n", "auth.oidc.client_secret"},
+		{"webhook", "webhook:\n  secret: '${PHEBS_TEST_EMPTY_SECRET}'\n", "webhook.secret"},
+		{"pat", "connections:\n  - {name: gh, type: github, users: [u], token: '${PHEBS_TEST_EMPTY_SECRET}'}\n", "connections[0].token"},
+		{"app key", "connections:\n  - {name: gh, type: github, app: {id: 1, installation_id: 2, private_key: '${PHEBS_TEST_EMPTY_SECRET}'}}\n", "connections[0].app.private_key"},
+		{"http username", "connections:\n  - {name: git, type: git, url: 'https://git.example/repo.git', http_auth: {username: '${PHEBS_TEST_EMPTY_SECRET}', password: pass}}\n", "connections[0].http_auth.username"},
+		{"http password", "connections:\n  - {name: git, type: git, url: 'https://git.example/repo.git', http_auth: {username: bot, password: '${PHEBS_TEST_EMPTY_SECRET}'}}\n", "connections[0].http_auth.password"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Parse([]byte(tt.in))
+			if err == nil || !strings.Contains(err.Error(), tt.field) || !strings.Contains(err.Error(), "unset or empty") {
+				t.Fatalf("Parse() err = %v, want strict %s expansion error", err, tt.field)
+			}
+		})
 	}
 }
 

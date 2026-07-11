@@ -11,7 +11,11 @@ import (
 	"unicode/utf8"
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/scip-code/scip/bindings/go/scip"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
+	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -83,16 +87,28 @@ func TestToolCalls(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(origin, "bin.dat"), []byte{0x00, 0x01, 0xff, 0xfe}, 0o644); err != nil {
 		t.Fatal(err)
 	}
+	writeCodeNavFixture(t, origin)
 	gitc(t, origin, "add", ".")
 	gitc(t, origin, "commit", "-m", "fixture")
 
 	dataDir := t.TempDir()
-	repo := store.Repo{Name: "example.com/demo", DefaultBranch: "main", IsPublic: true}
+	indexedRef := strings.TrimSpace(func() string {
+		out, err := exec.Command("git", "-C", origin, "rev-parse", "HEAD").Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(out)
+	}())
+	repo := store.Repo{Name: "example.com/demo", DefaultBranch: "main", IsPublic: true, IndexedCommitHash: indexedRef}
 	if err := phebssync.Mirror(t.Context(), "file://"+origin, phebssync.RepoDir(dataDir, repo.Name)); err != nil {
 		t.Fatal(err)
 	}
 	st := fakeStore{repos: []store.Repo{repo}}
-	s := NewServer(Options{Version: "test", Store: st, DataDir: dataDir})
+	s := NewServer(Options{
+		Version: "test", Store: st, DataDir: dataDir,
+		CodeNav: codenav.New(codenav.Options{DataDir: dataDir}),
+		History: phebssync.NewHistoryService(dataDir),
+	})
 
 	t.Run("list_repos", func(t *testing.T) {
 		out, res := callTool[reposOut](t, s, "list_repos", nil)
@@ -116,6 +132,27 @@ func TestToolCalls(t *testing.T) {
 		}
 	})
 
+	t.Run("read_file defaults to indexed revision", func(t *testing.T) {
+		if err := os.WriteFile(filepath.Join(origin, "hello.txt"), []byte("new head\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		gitc(t, origin, "add", "hello.txt")
+		gitc(t, origin, "commit", "-m", "advance mirror")
+		if err := phebssync.Mirror(t.Context(), "file://"+origin, phebssync.RepoDir(dataDir, repo.Name)); err != nil {
+			t.Fatal(err)
+		}
+
+		out, res := callTool[readOut](t, s, "read_file", map[string]any{
+			"repo": "example.com/demo", "path": "hello.txt",
+		})
+		if res.IsError {
+			t.Fatalf("read_file errored: %v", res.Content)
+		}
+		if out.Content != "l1\nl2\nl3\nl4" {
+			t.Errorf("default read followed mutable HEAD: %q", out.Content)
+		}
+	})
+
 	t.Run("read_file unknown repo is a tool error", func(t *testing.T) {
 		_, res := callTool[readOut](t, s, "read_file", map[string]any{"repo": "no/such", "path": "x"})
 		if !res.IsError {
@@ -129,6 +166,147 @@ func TestToolCalls(t *testing.T) {
 			t.Error("expected tool error for a binary file")
 		}
 	})
+
+	t.Run("code navigation uses indexed revision and UTF-16", func(t *testing.T) {
+		definition, res := callTool[codenav.DefinitionResult](t, s, "find_definitions", map[string]any{
+			"repo": repo.Name, "path": "use/use.go", "line": 1, "character": 29,
+		})
+		if res.IsError || !definition.Available || definition.Location == nil {
+			t.Fatalf("find_definitions = %+v, error=%v content=%v", definition, res.IsError, res.Content)
+		}
+		if definition.Location.Revision != indexedRef || definition.Location.Path != "lib/rocket.go" ||
+			definition.Location.Encoding != codenav.EncodingUTF16 || definition.Location.Range.Start.Character != 5 {
+			t.Errorf("definition = %+v", definition)
+		}
+
+		references, res := callTool[codenav.ReferencesResult](t, s, "find_references", map[string]any{
+			"repo": repo.Name, "path": "lib/rocket.go", "line": 1, "character": 6,
+		})
+		if res.IsError || len(references.Locations) != 1 {
+			t.Fatalf("find_references = %+v, error=%v content=%v", references, res.IsError, res.Content)
+		}
+		if references.Locations[0].Revision != indexedRef ||
+			references.Locations[0].Range.Start.Character != 28 ||
+			references.Locations[0].Encoding != codenav.EncodingUTF16 {
+			t.Errorf("reference = %+v", references.Locations[0])
+		}
+
+		hover, res := callTool[codenav.HoverResult](t, s, "hover", map[string]any{
+			"repo": repo.Name, "path": "use/use.go", "line": 1, "character": 29,
+		})
+		if res.IsError || hover.Hover == nil || hover.Hover.DisplayName != "Rocket" ||
+			hover.Hover.Encoding != codenav.EncodingUTF16 {
+			t.Fatalf("hover = %+v, error=%v content=%v", hover, res.IsError, res.Content)
+		}
+	})
+
+	t.Run("history tools default to indexed revision", func(t *testing.T) {
+		blame, res := callTool[phebssync.BlameResult](t, s, "blame", map[string]any{
+			"repo": repo.Name, "path": "hello.txt",
+		})
+		if res.IsError || blame.Revision != indexedRef || len(blame.Lines) != 4 {
+			t.Fatalf("blame = %+v, error=%v content=%v", blame, res.IsError, res.Content)
+		}
+		for _, line := range blame.Lines {
+			if line.CommitID != indexedRef {
+				t.Errorf("blame followed mutable HEAD: %+v", line)
+			}
+		}
+
+		commits, res := callTool[phebssync.CommitListResult](t, s, "list_commits", map[string]any{
+			"repo": repo.Name,
+		})
+		if res.IsError || commits.Revision != indexedRef || len(commits.Commits) != 1 || commits.Commits[0].ID != indexedRef {
+			t.Fatalf("list_commits = %+v, error=%v content=%v", commits, res.IsError, res.Content)
+		}
+
+		commit, res := callTool[phebssync.CommitResult](t, s, "get_commit", map[string]any{
+			"repo": repo.Name,
+		})
+		if res.IsError || commit.Revision != indexedRef || commit.Commit.ID != indexedRef {
+			t.Fatalf("get_commit = %+v, error=%v content=%v", commit, res.IsError, res.Content)
+		}
+
+		diff, res := callTool[phebssync.DiffResult](t, s, "diff", map[string]any{
+			"repo": repo.Name,
+		})
+		if res.IsError || diff.Head != indexedRef || diff.Truncated || diff.Patch == "" {
+			t.Fatalf("diff = %+v, error=%v content=%v", diff, res.IsError, res.Content)
+		}
+	})
+}
+
+func TestEpic9ToolsRejectDeletingAndUnindexedRepos(t *testing.T) {
+	repos := []store.Repo{
+		{Name: "example.com/deleting", IndexedCommitHash: strings.Repeat("a", 40), Deleting: true},
+		{Name: "example.com/unindexed"},
+	}
+	st := fakeStore{repos: repos}
+	dataDir := t.TempDir()
+	s := NewServer(Options{
+		Version: "test", Store: st, DataDir: dataDir,
+		CodeNav: codenav.New(codenav.Options{DataDir: dataDir}),
+	})
+
+	tools := []struct {
+		name string
+		args map[string]any
+	}{
+		{"find_definitions", map[string]any{"path": "x.go", "line": 0, "character": 0, "ref": strings.Repeat("b", 40)}},
+		{"find_references", map[string]any{"path": "x.go", "line": 0, "character": 0, "ref": strings.Repeat("b", 40)}},
+		{"hover", map[string]any{"path": "x.go", "line": 0, "character": 0, "ref": strings.Repeat("b", 40)}},
+		{"blame", map[string]any{"path": "x.go", "ref": "main"}},
+		{"list_commits", map[string]any{"ref": "main"}},
+		{"get_commit", map[string]any{"ref": "main"}},
+		{"diff", map[string]any{"head": "main"}},
+	}
+	for _, repo := range repos {
+		for _, tool := range tools {
+			t.Run(repo.Name+"/"+tool.name, func(t *testing.T) {
+				args := make(map[string]any, len(tool.args)+1)
+				for key, value := range tool.args {
+					args[key] = value
+				}
+				args["repo"] = repo.Name
+				_, result := callTool[map[string]any](t, s, tool.name, args)
+				if !result.IsError {
+					t.Fatalf("%s accepted repo %+v with explicit revision", tool.name, repo)
+				}
+			})
+		}
+	}
+}
+
+func writeCodeNavFixture(t *testing.T, origin string) {
+	t.Helper()
+	for _, path := range []string{"lib/rocket.go", "use/use.go"} {
+		data, err := os.ReadFile(filepath.Join("..", "codenav", "testdata", "repo", path))
+		if err != nil {
+			t.Fatal(err)
+		}
+		full := filepath.Join(origin, path)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	jsonIndex, err := os.ReadFile(filepath.Join("..", "codenav", "testdata", "index.scip.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	index := &scip.Index{}
+	if err := protojson.Unmarshal(jsonIndex, index); err != nil {
+		t.Fatal(err)
+	}
+	data, err := proto.Marshal(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(origin, codenav.DefaultIndexPath), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // sliceLines is pure — the range/cap arithmetic is the fiddly part of
@@ -205,8 +383,8 @@ func TestSliceLinesEmpty(t *testing.T) {
 	}
 }
 
-// TestToolSchemas: the server exposes exactly the three tools with object
-// schemas (the SDK enforces the rest of the contract).
+// TestToolSchemas: every tool has an object schema (the SDK enforces the rest
+// of the contract), including Epic 9's code-navigation and history tools.
 func TestToolSchemas(t *testing.T) {
 	ctx := t.Context()
 	s := NewServer(Options{Version: "test"})
@@ -224,16 +402,34 @@ func TestToolSchemas(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := map[string]bool{}
+	schemas := map[string]string{}
 	for _, tool := range tools.Tools {
 		got[tool.Name] = true
 		js, _ := json.Marshal(tool.InputSchema)
+		schemas[tool.Name] = string(js)
 		if !strings.Contains(string(js), `"object"`) {
 			t.Errorf("%s input schema not an object: %s", tool.Name, js)
 		}
 	}
-	for _, want := range []string{"search_code", "read_file", "list_repos"} {
+	wantTools := []string{
+		"search_code", "read_file", "list_repos",
+		"find_definitions", "find_references", "hover",
+		"blame", "list_commits", "get_commit", "diff",
+	}
+	for _, want := range wantTools {
 		if !got[want] {
 			t.Errorf("tool %s missing (have %v)", want, got)
+		}
+	}
+	if len(got) != len(wantTools) {
+		t.Errorf("tool set = %v, want exactly %v", got, wantTools)
+	}
+	for _, name := range []string{"find_definitions", "find_references", "hover"} {
+		if !strings.Contains(schemas[name], "UTF-16") {
+			t.Errorf("%s schema does not specify UTF-16 positions: %s", name, schemas[name])
+		}
+		if strings.Contains(schemas[name], `"encoding"`) {
+			t.Errorf("%s exposes a caller-selectable encoding: %s", name, schemas[name])
 		}
 	}
 }

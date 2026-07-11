@@ -11,7 +11,11 @@ import (
 	"time"
 )
 
-var ErrNotFound = errors.New("not found")
+var (
+	ErrNotFound  = errors.New("not found")
+	ErrConflict  = errors.New("conflict")
+	ErrLeaseLost = errors.New("job lease lost")
+)
 
 type JobKind string
 
@@ -25,11 +29,12 @@ const (
 type JobStatus string
 
 const (
-	StatusPending JobStatus = "pending"
-	StatusClaimed JobStatus = "claimed"
-	StatusRunning JobStatus = "running"
-	StatusDone    JobStatus = "done"
-	StatusFailed  JobStatus = "failed"
+	StatusPending  JobStatus = "pending"
+	StatusClaimed  JobStatus = "claimed"
+	StatusRunning  JobStatus = "running"
+	StatusDone     JobStatus = "done"
+	StatusFailed   JobStatus = "failed"
+	StatusCanceled JobStatus = "canceled"
 )
 
 // Repo mirrors the upstream Repo model's P1 fields (PORT_MAP §5).
@@ -50,6 +55,7 @@ type Repo struct {
 	ExternalID        string         `json:"external_id,omitempty"`
 	ExternalHostType  string         `json:"external_code_host_type,omitempty"`
 	ExternalHostURL   string         `json:"external_code_host_url,omitempty"`
+	Deleting          bool           `json:"deleting,omitempty"`
 }
 
 // Job is one row in a job table. Target is the connection name for sync jobs
@@ -67,6 +73,8 @@ type Job struct {
 	ClaimedAt   *time.Time `json:"claimed_at,omitempty"`
 	HeartbeatAt *time.Time `json:"heartbeat_at,omitempty"`
 	FinishedAt  *time.Time `json:"finished_at,omitempty"`
+	Force       bool       `json:"force,omitempty"`
+	LeaseToken  string     `json:"-" cbor:"lease_token,omitempty"`
 }
 
 // RepoStatus is a repo row annotated with connection membership and the
@@ -78,6 +86,68 @@ type RepoStatus struct {
 	LastIndexJob *Job     `json:"last_index_job,omitempty"`
 }
 
+// User is the shared identity behind local-password and OIDC logins. Secret
+// material is represented only by a one-way password hash.
+type User struct {
+	ID              string     `json:"id"`
+	Email           string     `json:"email"`
+	NormalizedEmail string     `json:"normalized_email"`
+	DisplayName     string     `json:"display_name,omitempty"`
+	PasswordHash    string     `json:"-"`
+	OIDCIssuer      string     `json:"-"`
+	OIDCSubject     string     `json:"-"`
+	IsAdmin         bool       `json:"is_admin"`
+	Disabled        bool       `json:"disabled"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	LastLoginAt     *time.Time `json:"last_login_at,omitempty"`
+}
+
+// APIKey stores only a SHA-256 digest of a generated high-entropy bearer key.
+// ID and Prefix are safe for management UIs; Hash is never serialized.
+type APIKey struct {
+	ID         string     `json:"id"`
+	UserID     string     `json:"user_id,omitempty"`
+	Name       string     `json:"name"`
+	Prefix     string     `json:"prefix"`
+	Hash       string     `json:"-"`
+	CreatedAt  time.Time  `json:"created_at"`
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	RevokedAt  *time.Time `json:"revoked_at,omitempty"`
+}
+
+// AuthStats drives the public auth status and the one-time setup gate.
+type AuthStats struct {
+	Users         int
+	PasswordUsers int
+	SetupComplete bool
+}
+
+// AuthStore is deliberately separate from Store so existing sync/search test
+// doubles do not need authentication methods. Surreal implements both.
+type AuthStore interface {
+	AuthStats(ctx context.Context) (AuthStats, error)
+	CreateFirstUser(ctx context.Context, user User) (*User, error)
+	CreateUser(ctx context.Context, user User) (*User, error)
+	GetUserByID(ctx context.Context, id string) (*User, error)
+	GetUserByEmail(ctx context.Context, normalizedEmail string) (*User, error)
+	UpsertOIDCUser(ctx context.Context, issuer, subject, email, normalizedEmail, displayName string, emailVerified bool) (*User, error)
+	MarkUserLogin(ctx context.Context, id string, at time.Time) error
+
+	CreateAPIKey(ctx context.Context, key APIKey) (*APIKey, error)
+	GetAPIKey(ctx context.Context, id string) (*APIKey, error)
+	ListAPIKeys(ctx context.Context, userID string) ([]APIKey, error)
+	RevokeAPIKey(ctx context.Context, id, userID string, at time.Time) error
+	TouchAPIKey(ctx context.Context, id string, at time.Time) error
+	SetLegacyAPIKey(ctx context.Context, hash string, at time.Time) error
+
+	CommitAuthSession(ctx context.Context, tokenHash string, data []byte, expiry time.Time) error
+	FindAuthSession(ctx context.Context, tokenHash string, now time.Time) ([]byte, bool, error)
+	DeleteAuthSession(ctx context.Context, tokenHash string) error
+	DeleteExpiredAuthSessions(ctx context.Context, now time.Time) (int, error)
+}
+
 // Store is the persistence boundary. IDs cross it as opaque strings so no
 // SurrealDB types leak into callers.
 type Store interface {
@@ -85,10 +155,11 @@ type Store interface {
 	GetRepo(ctx context.Context, name string) (*Repo, error) // ErrNotFound when absent
 	ListRepos(ctx context.Context) ([]Repo, error)
 	DeleteRepo(ctx context.Context, name string) error
+	SetRepoDeleting(ctx context.Context, name string, deleting bool) error
 
 	// SetRepoIndexed records a successful index run without touching the
-	// sync-owned fields of the row; ClearRepoIndexState wipes the recorded
-	// commit so the next index run rebuilds (the force path).
+	// sync-owned fields of the row. ClearRepoIndexState remains available for
+	// repair tooling; normal forced rebuilds travel on Job.Force.
 	SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error
 	ClearRepoIndexState(ctx context.Context, name string) error
 
@@ -102,43 +173,36 @@ type Store interface {
 	GetRepoConnections(ctx context.Context, repo string) ([]string, error)
 
 	CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error)
+	// EnqueuePending atomically creates at most one pending job for target.
+	// Calls made while a job is claimed/running create one pending successor;
+	// force upgrades an existing pending job and is never downgraded.
+	EnqueuePending(ctx context.Context, kind JobKind, target string, force bool) (*Job, error)
 	ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) // status "" = all
-	ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) // ErrNotFound when nothing claimable
-	SetJobStatus(ctx context.Context, id string, status JobStatus, errMsg string) error
-	HeartbeatJob(ctx context.Context, id string) error
-	RequeueJob(ctx context.Context, id string, errMsg string, notBefore time.Time) error // attempts+1, back to pending
+	ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error)        // ErrNotFound when nothing claimable
+	SetJobStatus(ctx context.Context, job Job, status JobStatus, errMsg string) error
+	HeartbeatJob(ctx context.Context, job Job) error
+	RequeueJob(ctx context.Context, job Job, errMsg string, notBefore time.Time) error // attempts+1, back to pending
+	ReleaseJob(ctx context.Context, job Job, errMsg string) error                      // back to pending without consuming an attempt
+	CancelPendingJobs(ctx context.Context, kind JobKind, target string) (int, error)
 	ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error)
 
 	Close(ctx context.Context) error
 }
 
-// EnqueueUnlessInFlight creates a job unless one is already pending, claimed,
-// or running for the same target.
-func EnqueueUnlessInFlight(ctx context.Context, st Store, kind JobKind, target string) error {
-	return enqueueUnless(ctx, st, kind, target,
-		StatusPending, StatusClaimed, StatusRunning)
-}
-
-// EnqueueUnlessPending creates a job unless one is already *pending* for the
-// same target. Unlike EnqueueUnlessInFlight it does enqueue while a job for
-// the target is claimed/running — events that arrive mid-run (a push during
-// an in-flight fetch) must not be lost to the dedup (T7.4 review).
-func EnqueueUnlessPending(ctx context.Context, st Store, kind JobKind, target string) error {
-	return enqueueUnless(ctx, st, kind, target, StatusPending)
-}
-
-func enqueueUnless(ctx context.Context, st Store, kind JobKind, target string, statuses ...JobStatus) error {
-	for _, status := range statuses {
-		jobs, err := st.ListJobs(ctx, kind, status)
-		if err != nil {
-			return err
-		}
-		for _, j := range jobs {
-			if j.Target == target {
-				return nil
-			}
-		}
-	}
-	_, err := st.CreateJob(ctx, kind, target)
+// EnqueuePending persists a freshness event without allowing duplicate pending
+// successors. force is meaningful for index jobs and harmless for other kinds.
+func EnqueuePending(ctx context.Context, st Store, kind JobKind, target string, force bool) error {
+	_, err := st.EnqueuePending(ctx, kind, target, force)
 	return err
+}
+
+// EnqueueUnlessInFlight is retained for existing callers. It now uses the
+// lossless pending-successor behavior of EnqueuePending.
+func EnqueueUnlessInFlight(ctx context.Context, st Store, kind JobKind, target string) error {
+	return EnqueuePending(ctx, st, kind, target, false)
+}
+
+// EnqueueUnlessPending is the non-force compatibility alias.
+func EnqueueUnlessPending(ctx context.Context, st Store, kind JobKind, target string) error {
+	return EnqueuePending(ctx, st, kind, target, false)
 }

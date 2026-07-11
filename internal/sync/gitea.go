@@ -81,22 +81,22 @@ func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.
 		if excluded(r.FullName, r.Archived, r.Fork, conn.Exclude) {
 			continue
 		}
-		// self-hosted servers are less trusted input than a SaaS host
-		name, err := safeName(prefix+"/"+r.FullName, r.CloneURL)
+		cloneURL, err := SanitizeURL(r.CloneURL)
 		if err != nil {
-			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+			return names, fmt.Errorf("connection %s: sanitize clone url: %w", conn.Name, err)
 		}
-		if err := checkCloneURL(conn, r.CloneURL); err != nil {
-			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+		// self-hosted servers are less trusted input than a SaaS host
+		name, err := safeName(prefix+"/"+r.FullName, cloneURL)
+		if err != nil {
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
-		dir := RepoDir(dataDir, name)
-		if err := Mirror(ctx, r.CloneURL, dir, gitCfg...); err != nil {
-			return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
+		if err := checkCloneURL(conn, cloneURL); err != nil {
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		repo := store.Repo{
 			Name:             name,
 			DisplayName:      r.FullName,
-			CloneURL:         r.CloneURL,
+			CloneURL:         cloneURL,
 			WebURL:           r.HTMLURL,
 			DefaultBranch:    r.DefaultBranch,
 			IsFork:           r.Fork,
@@ -107,8 +107,8 @@ func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.
 			ExternalHostType: "gitea",
 			ExternalHostURL:  base,
 		}
-		if err := st.UpsertRepo(ctx, repo); err != nil {
-			return nil, fmt.Errorf("connection %s: upsert %s: %w", conn.Name, name, err)
+		if err := mirrorAndUpsert(ctx, st, dataDir, repo, gitCfg...); err != nil {
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		names = append(names, name)
 	}

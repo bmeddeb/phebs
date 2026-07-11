@@ -4,10 +4,12 @@ import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import SearchPage from './SearchPage'
+import { runeColumnToUTF16Offset } from '../util'
 import type { Chunk, FileResult, Range, SearchResult, Stats } from '../api'
 
 // streamSearch fake: tests drive the captured callbacks to simulate the SSE stream.
 type Callbacks = {
+  calls?: string[]
   onBatch?: (r: SearchResult) => void
   onDone?: (s: Stats) => void
   onError?: (msg: string) => void
@@ -17,11 +19,12 @@ const stream = vi.hoisted(() => ({} as Callbacks))
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
   streamSearch: (
-    _q: string,
+    q: string,
     onBatch: Callbacks['onBatch'],
     onDone: Callbacks['onDone'],
     onError: Callbacks['onError'],
   ) => {
+    stream.calls = [...(stream.calls ?? []), q]
     Object.assign(stream, { onBatch, onDone, onError })
     return () => {}
   },
@@ -47,18 +50,21 @@ const chunk = (content: string, start_line: number, ranges: Range[]): Chunk => (
 const aMain: FileResult = {
   repo: 'github.com/a/one',
   path: 'cmd/main.go',
+  ref: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   language: 'Go',
   chunks: [chunk('func main() {\n', 3, [range(3, 1, 3, 5)])],
 }
 const aUtil: FileResult = {
   repo: 'github.com/a/one',
   path: 'pkg/util.go',
+  ref: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   language: 'Go',
   chunks: [chunk('func util() {\n', 10, [range(10, 1, 10, 5)])],
 }
 const bIndex: FileResult = {
   repo: 'github.com/b/two',
   path: 'src/index.ts',
+  ref: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
   language: 'TypeScript',
   chunks: [chunk('function index() {\n', 7, [range(7, 1, 7, 9)])],
 }
@@ -92,6 +98,7 @@ beforeEach(() => {
   delete stream.onBatch
   delete stream.onDone
   delete stream.onError
+  stream.calls = []
 })
 afterEach(cleanup)
 
@@ -126,9 +133,9 @@ test('stream error renders a notification', async () => {
 
 // j/k clamp to [0, len-1]; Enter deep-links the selected file with its first match line.
 for (const [name, keys, want] of [
-  ['j then Enter opens the first file', ['j'], '#/file?repo=github.com/a/one&path=cmd/main.go&L=3'],
-  ['k at top clamps: Enter still opens the first file', ['j', 'k', 'k'], '#/file?repo=github.com/a/one&path=cmd/main.go&L=3'],
-  ['j past the end clamps: Enter opens the last file', ['j', 'j', 'j', 'j'], '#/file?repo=github.com/b/two&path=src/index.ts&L=7'],
+  ['j then Enter opens the first file', ['j'], '#/file?repo=github.com/a/one&path=cmd/main.go&ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&L=3'],
+  ['k at top clamps: Enter still opens the first file', ['j', 'k', 'k'], '#/file?repo=github.com/a/one&path=cmd/main.go&ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&L=3'],
+  ['j past the end clamps: Enter opens the last file', ['j', 'j', 'j', 'j'], '#/file?repo=github.com/b/two&path=src/index.ts&ref=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb&L=7'],
 ] as const) {
   test(name, async () => {
     await allFiles()
@@ -153,7 +160,7 @@ test('collapse guard: j selects from visible files only', async () => {
   fireEvent.click(screen.getByText('github.com/a/one')) // fold first repo
   key('j')
   key('Enter')
-  expect(hash()).toBe('#/file?repo=github.com/b/two&path=src/index.ts&L=7')
+  expect(hash()).toBe('#/file?repo=github.com/b/two&path=src/index.ts&ref=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb&L=7')
 })
 
 test('typing guard: keys are ignored while the input is focused', async () => {
@@ -168,6 +175,26 @@ test('facet rows toggle lang:/repo: terms into the query', async () => {
   await allFiles()
   fireEvent.click(screen.getByText('go')) // language facet
   expect(hash()).toBe('#/search?q=foo+lang:go')
-  fireEvent.click(screen.getByText('one')) // repo facet (short name)
-  expect(hash()).toBe('#/search?q=foo+repo:one')
+  fireEvent.click(screen.getByText('one'))
+  expect(hash()).toBe('#/search?q=foo+repo:"^github\\\\.com/a/one$"')
+})
+
+test('submitting the current query starts a fresh search generation', async () => {
+  renderSearch()
+  expect(stream.calls).toEqual(['foo'])
+  fireEvent.submit(screen.getByRole('textbox').closest('form')!)
+  expect(stream.calls).toEqual(['foo', 'foo'])
+})
+
+test('repository facet buttons expose their pressed state', async () => {
+  await allFiles()
+  const button = screen.getByRole('button', { name: 'Add repository filter github.com/a/one' })
+  expect(button.getAttribute('aria-pressed')).toBe('false')
+  fireEvent.click(button)
+})
+
+test('rune columns convert to JavaScript UTF-16 offsets', () => {
+  expect(runeColumnToUTF16Offset('🙂match', 1)).toBe(0)
+  expect(runeColumnToUTF16Offset('🙂match', 2)).toBe(2)
+  expect(runeColumnToUTF16Offset('🙂match', 7)).toBe(7)
 })

@@ -3,10 +3,13 @@ package sync
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"os"
 	"slices"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -48,6 +51,8 @@ func cloneAuth(ctx context.Context, conn config.Connection) ([]string, error) {
 		}
 		// Gitea resolves basic-auth usernames as tokens
 		return basicExtraheader(conn.Token + ":"), nil
+	case "git":
+		return HTTPBasicAuthConfig(conn.HTTPAuth.Username, conn.HTTPAuth.Password), nil
 	default:
 		return nil, nil
 	}
@@ -59,9 +64,22 @@ func cloneAuth(ctx context.Context, conn config.Connection) ([]string, error) {
 // connection sync this never lists the host — one push, one fetch.
 func FetchHandler(cfg *config.Config, st store.Store) func(context.Context, store.Job) error {
 	return func(ctx context.Context, job store.Job) error {
-		repo, err := st.GetRepo(ctx, job.Target)
+		dir, err := SafeRepoDir(cfg.Server.DataDir, job.Target)
 		if err != nil {
 			return fmt.Errorf("fetch %s: %w", job.Target, err)
+		}
+		unlock := repowork.Lock(dir)
+		defer unlock()
+
+		repo, err := st.GetRepo(ctx, job.Target)
+		if err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return nil // cleanup won after this fetch was queued
+			}
+			return fmt.Errorf("fetch %s: %w", job.Target, err)
+		}
+		if repo.Deleting {
+			return nil
 		}
 		conn, err := claimingConnection(ctx, cfg, st, job.Target)
 		if err != nil {
@@ -78,8 +96,18 @@ func FetchHandler(cfg *config.Config, st store.Store) func(context.Context, stor
 		if err != nil {
 			return fmt.Errorf("fetch %s: %w", job.Target, err)
 		}
-		if err := Mirror(ctx, repo.CloneURL, RepoDir(cfg.Server.DataDir, job.Target), gitCfg...); err != nil {
+		if err := mirrorLocked(ctx, repo.CloneURL, dir, gitCfg...); err != nil {
 			return fmt.Errorf("fetch %s: %w", job.Target, err)
+		}
+		// Cleanup may mark the row while the fetch owns the mirror lock. Keep
+		// the lock through this identity check so an old job cannot mutate a
+		// delete-and-recreated repository generation.
+		current, err := st.GetRepo(ctx, job.Target)
+		if errors.Is(err, store.ErrNotFound) || err == nil && current.Deleting {
+			return os.RemoveAll(dir)
+		}
+		if err != nil {
+			return fmt.Errorf("fetch %s: reload repo: %w", job.Target, err)
 		}
 		return store.EnqueueUnlessInFlight(ctx, st, store.JobIndex, job.Target)
 	}

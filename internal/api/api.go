@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"unicode/utf8"
@@ -14,6 +15,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/danielgtaylor/huma/v2/sse"
 
+	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -24,7 +26,11 @@ type Options struct {
 	APIKey  string // empty = open API; serve logs the warning
 	Store   store.Store
 	Search  *search.Searcher // nil = search endpoints answer 503
+	CodeNav *codenav.Service // nil = precise code navigation answers 503
 	DataDir string           // bare mirrors for file serving (T4.4)
+	// IsAdmin is set by serve to gate operational mutations. Nil preserves the
+	// standalone handler's test and embedding behavior.
+	IsAdmin func(context.Context) bool
 
 	// T7.4 webhook: empty secret leaves POST /api/webhook unregistered.
 	// ResyncConnections are the code-host connection names to re-sync on
@@ -80,7 +86,13 @@ func New(opts Options) http.Handler {
 		if err != nil {
 			return nil, huma.Error500InternalServerError("list repos", err)
 		}
-		return &reposOut{Body: repos}, nil
+		visible := repos[:0]
+		for _, repo := range repos {
+			if !repo.Deleting {
+				visible = append(visible, sanitizeRepo(repo))
+			}
+		}
+		return &reposOut{Body: visible}, nil
 	})
 
 	type searchIn struct {
@@ -153,7 +165,7 @@ func New(opts Options) http.Handler {
 		}
 	}
 	huma.Get(api, "/api/source", func(ctx context.Context, in *sourceIn) (*sourceOut, error) {
-		if _, err := opts.Store.GetRepo(ctx, in.Repo); err != nil {
+		if err := requireReadableRepo(ctx, opts.Store, in.Repo); err != nil {
 			return nil, gitErr(err)
 		}
 		content, err := phebssync.CatFile(ctx, opts.DataDir, in.Repo, in.Ref, in.Path)
@@ -181,7 +193,7 @@ func New(opts Options) http.Handler {
 		}
 	}
 	huma.Get(api, "/api/folder_contents", func(ctx context.Context, in *folderIn) (*folderOut, error) {
-		if _, err := opts.Store.GetRepo(ctx, in.Repo); err != nil {
+		if err := requireReadableRepo(ctx, opts.Store, in.Repo); err != nil {
 			return nil, gitErr(err)
 		}
 		entries, err := phebssync.FolderContents(ctx, opts.DataDir, in.Repo, in.Ref, in.Path)
@@ -199,7 +211,7 @@ func New(opts Options) http.Handler {
 		}
 	}
 	huma.Get(api, "/api/tree", func(ctx context.Context, in *repoRefIn) (*treeOut, error) {
-		if _, err := opts.Store.GetRepo(ctx, in.Repo); err != nil {
+		if err := requireReadableRepo(ctx, opts.Store, in.Repo); err != nil {
 			return nil, gitErr(err)
 		}
 		paths, err := phebssync.TreePaths(ctx, opts.DataDir, in.Repo, in.Ref)
@@ -223,15 +235,20 @@ func New(opts Options) http.Handler {
 		}
 	}
 	huma.Post(api, "/api/reindex", func(ctx context.Context, in *reindexIn) (*reindexOut, error) {
-		if in.Body.Force {
-			// clearing the recorded commit defeats the T3.2 short-circuit
-			if err := opts.Store.ClearRepoIndexState(ctx, in.Body.Repo); err != nil {
-				return nil, reindexErr(in.Body.Repo, err)
-			}
-		} else if _, err := opts.Store.GetRepo(ctx, in.Body.Repo); err != nil {
+		if opts.IsAdmin != nil && !opts.IsAdmin(ctx) {
+			return nil, huma.Error403Forbidden("administrator access required")
+		}
+		if err := phebssync.ValidateRepoName(in.Body.Repo); err != nil {
+			return nil, huma.Error400BadRequest("invalid repository name")
+		}
+		repo, err := opts.Store.GetRepo(ctx, in.Body.Repo)
+		if err != nil {
 			return nil, reindexErr(in.Body.Repo, err)
 		}
-		if err := store.EnqueueUnlessInFlight(ctx, opts.Store, store.JobIndex, in.Body.Repo); err != nil {
+		if repo.Deleting {
+			return nil, huma.Error409Conflict("repository is being deleted")
+		}
+		if err := store.EnqueuePending(ctx, opts.Store, store.JobIndex, in.Body.Repo, in.Body.Force); err != nil {
 			return nil, huma.Error500InternalServerError("enqueue", err)
 		}
 		out := &reindexOut{}
@@ -247,8 +264,18 @@ func New(opts Options) http.Handler {
 		if err != nil {
 			return nil, huma.Error500InternalServerError("repo statuses", err)
 		}
-		return &repoStatusOut{Body: statuses}, nil
+		visible := statuses[:0]
+		for _, status := range statuses {
+			if !status.Deleting {
+				status.Repo = sanitizeRepo(status.Repo)
+				visible = append(visible, status)
+			}
+		}
+		return &repoStatusOut{Body: visible}, nil
 	})
+
+	registerHistory(api, opts)
+	registerCodeNavigation(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {
@@ -256,6 +283,35 @@ func New(opts Options) http.Handler {
 	}
 
 	return mux
+}
+
+func requireReadableRepo(ctx context.Context, st store.Store, name string) error {
+	repo, err := st.GetRepo(ctx, name)
+	if err != nil {
+		return err
+	}
+	if repo.Deleting {
+		return fmt.Errorf("repo %q: %w", name, store.ErrNotFound)
+	}
+	return nil
+}
+
+func sanitizeRepo(repo store.Repo) store.Repo {
+	safe, err := phebssync.SanitizeURL(repo.CloneURL)
+	if err != nil {
+		// A legacy malformed URL may contain credentials but cannot be parsed
+		// safely enough to retain any portion in an API response.
+		repo.CloneURL = ""
+	} else {
+		repo.CloneURL = safe
+	}
+	if repo.WebURL, err = phebssync.SanitizeHTTPURL(repo.WebURL); err != nil {
+		repo.WebURL = ""
+	}
+	if repo.ExternalHostURL, err = phebssync.SanitizeHTTPURL(repo.ExternalHostURL); err != nil {
+		repo.ExternalHostURL = ""
+	}
+	return repo
 }
 
 // gitErr maps read-path failures onto HTTP: bad input 400, missing
@@ -283,7 +339,14 @@ func reindexErr(repo string, err error) error {
 // openPath: liveness and API discovery stay unauthenticated.
 func openPath(p string) bool {
 	return p == "/api/health" || p == "/api/version" ||
-		strings.HasPrefix(p, "/api/openapi") || p == "/api/docs"
+		strings.HasPrefix(p, "/api/openapi") || strings.HasPrefix(p, "/api/docs")
+}
+
+// IsAuthenticationExempt reports paths whose own trust boundary does not use
+// user/session authentication. Webhooks verify the provider signature over
+// their raw body; liveness and API discovery remain public.
+func IsAuthenticationExempt(p string) bool {
+	return openPath(p) || p == "/api/webhook"
 }
 
 func bearerOK(ctx huma.Context, key string) bool {

@@ -6,6 +6,8 @@ package sync
 
 import (
 	"context"
+	"crypto/sha1"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
@@ -15,12 +17,18 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 // RepoName derives the canonical repo name (host/path, no .git) from a clone
 // URL. file:// URLs and plain absolute paths land under "local/".
 func RepoName(cloneURL string) (string, error) {
+	safeURL, err := SanitizeURL(cloneURL)
+	if err != nil {
+		return "", errors.New("invalid clone URL")
+	}
+	cloneURL = safeURL
 	s := strings.TrimSuffix(cloneURL, ".git")
 	if strings.HasPrefix(s, "/") {
 		p := strings.Trim(filepath.Clean(s), "/")
@@ -54,21 +62,83 @@ func RepoName(cloneURL string) (string, error) {
 	return "", fmt.Errorf("unrecognized clone url %q", cloneURL)
 }
 
-// safeName rejects names containing a ".." path segment. Without this the
-// URL/scp branches (which don't filepath.Clean) could yield a name whose
-// RepoDir escapes $DATA — and CleanupOrphans would then RemoveAll outside it.
+// safeName applies the canonical repository-name invariant to names derived
+// from operator URLs and untrusted code-host API responses.
 func safeName(name, cloneURL string) (string, error) {
-	for _, seg := range strings.Split(name, "/") {
-		if seg == ".." {
-			return "", fmt.Errorf("clone url %q yields unsafe repo name %q", cloneURL, name)
-		}
+	if err := ValidateRepoName(name); err != nil {
+		return "", fmt.Errorf("clone url %q yields unsafe repo name: %w", cloneURL, err)
 	}
 	return name, nil
 }
 
-// RepoDir is the deterministic on-disk location of a repo's bare mirror.
+// ValidateRepoName rejects names that can escape, alias, or nest another
+// mirror in the legacy host/path.git disk layout.
+func ValidateRepoName(name string) error {
+	if name == "" || filepath.IsAbs(name) || strings.ContainsRune(name, 0) || strings.Contains(name, `\`) {
+		return fmt.Errorf("unsafe repository name: %w", ErrBadInput)
+	}
+	normalized := strings.ReplaceAll(name, `\`, "/")
+	parts := strings.Split(normalized, "/")
+	for i, part := range parts {
+		if part == "" || part == "." || part == ".." {
+			return fmt.Errorf("unsafe repository name: %w", ErrBadInput)
+		}
+		for _, r := range part {
+			if r < 0x20 || r == 0x7f {
+				return fmt.Errorf("unsafe repository name: %w", ErrBadInput)
+			}
+		}
+		if i < len(parts)-1 && strings.HasSuffix(strings.ToLower(part), ".git") {
+			return fmt.Errorf("repository namespace ending in .git is unsupported: %w", ErrBadInput)
+		}
+	}
+	return nil
+}
+
+// RepoDir is the deterministic on-disk location of a validated repo name.
 func RepoDir(dataDir, name string) string {
 	return filepath.Join(dataDir, "repos", name+".git")
+}
+
+// SafeRepoDir validates an untrusted/persisted repo name and refuses symlinked
+// path components beneath the managed repos root before returning its path.
+func SafeRepoDir(dataDir, name string) (string, error) {
+	if err := ValidateRepoName(name); err != nil {
+		return "", err
+	}
+	root, err := filepath.Abs(filepath.Join(dataDir, "repos"))
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(root, filepath.FromSlash(name)+".git")
+	rel, err := filepath.Rel(root, dir)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("repository path escapes data directory: %w", ErrBadInput)
+	}
+	current := root
+	components := strings.Split(filepath.Dir(rel), string(filepath.Separator))
+	for _, component := range components {
+		if component == "." || component == "" {
+			continue
+		}
+		if info, statErr := os.Lstat(current); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
+			return "", fmt.Errorf("repository path contains symlink: %w", ErrBadInput)
+		} else if statErr != nil && !os.IsNotExist(statErr) {
+			return "", statErr
+		}
+		current = filepath.Join(current, component)
+	}
+	if info, statErr := os.Lstat(current); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
+		return "", fmt.Errorf("repository path contains symlink: %w", ErrBadInput)
+	} else if statErr != nil && !os.IsNotExist(statErr) {
+		return "", statErr
+	}
+	if info, statErr := os.Lstat(dir); statErr == nil && info.Mode()&os.ModeSymlink != 0 {
+		return "", fmt.Errorf("repository mirror is a symlink: %w", ErrBadInput)
+	} else if statErr != nil && !os.IsNotExist(statErr) {
+		return "", statErr
+	}
+	return dir, nil
 }
 
 // hostPrefix derives the repo-name prefix from a code-host base URL,
@@ -146,12 +216,25 @@ func SyncConnection(ctx context.Context, st store.Store, dataDir string, conn co
 // syncGeneric mirrors the single repo a generic-git connection points at.
 // Mirror first, upsert after: a failed clone must not leave a phantom row.
 func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
-	name, err := RepoName(conn.URL)
+	cloneURL, err := SanitizeURL(conn.URL)
 	if err != nil {
 		return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
 	}
-	dir := RepoDir(dataDir, name)
-	if err := Mirror(ctx, conn.URL, dir); err != nil {
+	name, err := RepoName(cloneURL)
+	if err != nil {
+		return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+	}
+	dir, err := SafeRepoDir(dataDir, name)
+	if err != nil {
+		return nil, fmt.Errorf("connection %s: mirror path: %w", conn.Name, err)
+	}
+	unlock := repowork.Lock(dir)
+	defer unlock()
+	if err := ensureRepoArtifactAvailable(ctx, st, dataDir, name, dir); err != nil {
+		return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+	}
+	gitCfg := HTTPBasicAuthConfig(conn.HTTPAuth.Username, conn.HTTPAuth.Password)
+	if err := mirrorLocked(ctx, cloneURL, dir, gitCfg...); err != nil {
 		return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
 	}
 	if config.IsLocalURL(conn.URL) {
@@ -163,14 +246,118 @@ func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn confi
 	}
 	repo := store.Repo{
 		Name:             name,
-		CloneURL:         conn.URL,
+		CloneURL:         cloneURL,
 		DefaultBranch:    branch,
 		ExternalHostType: "git",
 	}
 	if err := st.UpsertRepo(ctx, repo); err != nil {
 		return nil, fmt.Errorf("connection %s: upsert %s: %w", conn.Name, name, err)
 	}
+	if err := st.SetRepoDeleting(ctx, name, false); err != nil {
+		return nil, fmt.Errorf("connection %s: reactivate %s: %w", conn.Name, name, err)
+	}
 	return []string{name}, nil
+}
+
+// mirrorAndUpsert serializes the runtime identity check, mirror mutation, and
+// row publication. The lower-cased repowork key also fences case aliases on
+// case-insensitive filesystems before either URL can reset the other's origin.
+func mirrorAndUpsert(ctx context.Context, st store.Store, dataDir string, repo store.Repo, gitCfg ...string) error {
+	dir, err := SafeRepoDir(dataDir, repo.Name)
+	if err != nil {
+		return fmt.Errorf("mirror path for %s: %w", repo.Name, err)
+	}
+	unlock := repowork.Lock(dir)
+	defer unlock()
+	if err := ensureRepoArtifactAvailable(ctx, st, dataDir, repo.Name, dir); err != nil {
+		return err
+	}
+	if err := mirrorLocked(ctx, repo.CloneURL, dir, gitCfg...); err != nil {
+		return fmt.Errorf("mirror %s: %w", repo.Name, err)
+	}
+	repo.WebURL, _ = SanitizeHTTPURL(repo.WebURL)
+	repo.ExternalHostURL, _ = SanitizeHTTPURL(repo.ExternalHostURL)
+	if err := st.UpsertRepo(ctx, repo); err != nil {
+		return fmt.Errorf("upsert %s: %w", repo.Name, err)
+	}
+	if err := st.SetRepoDeleting(ctx, repo.Name, false); err != nil {
+		return fmt.Errorf("reactivate %s: %w", repo.Name, err)
+	}
+	return nil
+}
+
+func ensureRepoArtifactAvailable(ctx context.Context, st store.Store, dataDir, name, dir string) error {
+	candidate, ok := legacyArtifactKey(name)
+	if !ok {
+		return fmt.Errorf("repository %q has no safe artifact identity: %w", name, ErrBadInput)
+	}
+	repos, err := st.ListRepos(ctx)
+	if err != nil {
+		return fmt.Errorf("check repository artifact identity: %w", err)
+	}
+	for _, existing := range repos {
+		if existing.Name == name {
+			continue
+		}
+		artifact, artifactOK := legacyArtifactKey(existing.Name)
+		if artifactOK && artifactsCollide(candidate, artifact) {
+			return fmt.Errorf("repository %q conflicts with persisted repository %q: %w", name, existing.Name, ErrBadInput)
+		}
+	}
+	root := filepath.Join(dataDir, "repos")
+	if err := rejectCaseFoldDiskAlias(root, dir); err != nil {
+		return fmt.Errorf("repository %q: %w", name, err)
+	}
+	return nil
+}
+
+func artifactsCollide(left, right string) bool {
+	return left == right || strings.HasPrefix(left, right+"/") || strings.HasPrefix(right, left+"/")
+}
+
+func rejectCaseFoldDiskAlias(root, target string) error {
+	rel, err := filepath.Rel(root, target)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("artifact path escapes repository root: %w", ErrBadInput)
+	}
+	current := root
+	for _, component := range strings.Split(rel, string(filepath.Separator)) {
+		entries, readErr := os.ReadDir(current)
+		if os.IsNotExist(readErr) {
+			return nil
+		}
+		if readErr != nil {
+			return readErr
+		}
+		candidateInfo, candidateErr := os.Lstat(filepath.Join(current, component))
+		if candidateErr != nil && !os.IsNotExist(candidateErr) {
+			return candidateErr
+		}
+		exact := false
+		for _, entry := range entries {
+			if entry.Name() == component {
+				exact = true
+				break
+			}
+			if candidateErr == nil {
+				entryInfo, infoErr := entry.Info()
+				if infoErr != nil {
+					return infoErr
+				}
+				if os.SameFile(candidateInfo, entryInfo) {
+					return fmt.Errorf("artifact component %q resolves to existing %q: %w", component, entry.Name(), ErrBadInput)
+				}
+			}
+			if repowork.CanonicalKey(entry.Name()) == repowork.CanonicalKey(component) {
+				return fmt.Errorf("artifact component %q aliases existing %q by filesystem identity: %w", component, entry.Name(), ErrBadInput)
+			}
+		}
+		if !exact {
+			return nil
+		}
+		current = filepath.Join(current, component)
+	}
+	return nil
 }
 
 // LocalPath strips the file:// scheme from a local clone URL.
@@ -204,26 +391,30 @@ func Handler(cfg *config.Config, st store.Store) func(context.Context, store.Job
 		if conn == nil {
 			return fmt.Errorf("connection %q no longer in config", job.Target)
 		}
-		names, err := SyncConnection(ctx, st, cfg.Server.DataDir, *conn)
-		if err != nil {
+		names, syncErr := SyncConnection(ctx, st, cfg.Server.DataDir, *conn)
+		// Preserve partial progress: one persistently broken repository must
+		// not prevent repositories already fetched during this run from being
+		// indexed. Membership is still replaced only on total success.
+		if err := enqueueIndexJobs(ctx, st, names); err != nil {
 			return err
+		}
+		if syncErr != nil {
+			return syncErr
 		}
 		if err := st.SetRepoConnections(ctx, conn.Name, names); err != nil {
 			return err
 		}
-		if err := enqueueIndexJobs(ctx, st, names); err != nil {
-			return err
-		}
 		if cfg.Sync.CleanupOrphans {
-			return CleanupOrphans(ctx, st, cfg.Server.DataDir)
+			_, err := ReconcileArtifacts(ctx, st, cfg.Server.DataDir, true)
+			return err
 		}
 		return nil
 	}
 }
 
 // enqueueIndexJobs chains indexing after a sync: one job per synced repo
-// unless one is already queued or in flight. The indexer's short-circuit
-// makes redundant jobs cheap.
+// through one pending slot. Work already running gets one successor so a
+// freshness event is not lost.
 func enqueueIndexJobs(ctx context.Context, st store.Store, names []string) error {
 	for _, name := range names {
 		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobIndex, name); err != nil {
@@ -233,8 +424,7 @@ func enqueueIndexJobs(ctx context.Context, st store.Store, names []string) error
 	return nil
 }
 
-// EnqueueMissing creates a sync job per configured connection unless one is
-// already queued or in flight.
+// EnqueueMissing ensures one pending sync slot per configured connection.
 func EnqueueMissing(ctx context.Context, st store.Store, cfg *config.Config) error {
 	for _, conn := range cfg.Connections {
 		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobSync, conn.Name); err != nil {
@@ -252,8 +442,8 @@ func IsRemote(conn config.Connection) bool {
 
 // Resync enqueues re-sync jobs for remote connections on a fixed cadence
 // (T7.5) — freshness without webhooks. EnqueueUnlessInFlight is the
-// debounce: a connection still syncing (or already queued) is skipped, so
-// slow syncs never pile up.
+// debounce: repeated ticks collapse into one pending successor, so slow syncs
+// never pile up and still run once more after an in-flight snapshot.
 func Resync(ctx context.Context, st store.Store, cfg *config.Config, every time.Duration) {
 	t := time.NewTicker(every)
 	defer t.Stop()
@@ -276,45 +466,67 @@ func Resync(ctx context.Context, st store.Store, cfg *config.Config, every time.
 
 // CleanupOrphans deletes repo rows and mirrors that no connection claims.
 func CleanupOrphans(ctx context.Context, st store.Store, dataDir string) error {
-	statuses, err := st.RepoStatuses(ctx)
-	if err != nil {
-		return err
-	}
-	for _, s := range statuses {
-		if !s.Orphaned {
-			continue
-		}
-		if err := st.DeleteRepo(ctx, s.Name); err != nil {
-			return fmt.Errorf("cleanup %s: %w", s.Name, err)
-		}
-		if err := os.RemoveAll(RepoDir(dataDir, s.Name)); err != nil {
-			return fmt.Errorf("cleanup %s mirror: %w", s.Name, err)
-		}
-		if err := RemoveShards(dataDir, s.Name); err != nil {
-			return fmt.Errorf("cleanup %s shards: %w", s.Name, err)
-		}
-	}
-	return nil
+	_, err := ReconcileArtifacts(ctx, st, dataDir, true)
+	return err
 }
 
 // RemoveShards deletes a repo's zoekt shards from $DATA/index. Without this an
 // orphaned repo's content stays searchable (the searcher keeps every on-disk
 // shard mounted). Shards are named url.QueryEscape(name)_v<ver>.<n>.zoekt; the
-// _v separator anchors the glob so a name that prefixes another can't match
-// its shards.
-// ponytail: misses repos whose escaped name exceeds 200 chars (zoekt then
-// truncates+hashes the prefix) — vanishingly rare; those shards leak as they
-// did for every repo before this existed.
+// last _v separator identifies the exact escaped repository prefix; using a
+// simple prefix test would make h/foo delete h/foo_victim. Zoekt's long-name
+// truncation/hash scheme is mirrored below.
 func RemoveShards(dataDir, name string) error {
-	glob := filepath.Join(dataDir, "index", url.QueryEscape(name)+"_v*.zoekt")
-	shards, err := filepath.Glob(glob)
+	prefix := url.QueryEscape(name)
+	if len(prefix) > 200 {
+		hash := fmt.Sprintf("%x", sha1.Sum([]byte(prefix)))
+		prefix = prefix[:200] + hash[:8]
+	}
+	shards, err := shardPaths(dataDir)
 	if err != nil {
 		return err
 	}
 	for _, s := range shards {
+		base := strings.TrimSuffix(filepath.Base(s), ".zoekt")
+		delimiter := strings.LastIndex(base, "_v")
+		if delimiter < 0 || base[:delimiter] != prefix {
+			continue
+		}
 		if err := os.Remove(s); err != nil && !os.IsNotExist(err) {
 			return err
 		}
 	}
 	return nil
+}
+
+func shardPaths(dataDir string) ([]string, error) {
+	dir := filepath.Join(dataDir, "index")
+	info, err := os.Lstat(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		return nil, errors.New("managed index directory is a symlink")
+	}
+	if !info.IsDir() {
+		return nil, errors.New("managed index path is not a directory")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	paths := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Type()&os.ModeSymlink != 0 {
+			return nil, fmt.Errorf("managed index contains symlink %q", entry.Name())
+		}
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".zoekt") {
+			continue
+		}
+		paths = append(paths, filepath.Join(dir, entry.Name()))
+	}
+	return paths, nil
 }

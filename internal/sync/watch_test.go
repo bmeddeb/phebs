@@ -111,6 +111,9 @@ func TestWatcherEnqueuesOnHeadMove(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = st.Close(context.Background()) })
+	if _, err := st.EnqueuePending(ctx, store.JobSync, "w", false); err != nil {
+		t.Fatal(err)
+	}
 
 	conn := config.Connection{Name: "w", Type: "git", URL: origin, Watch: true}
 	w := &sync.Watcher{Store: st, Conns: []config.Connection{conn}, Interval: 40 * time.Millisecond}
@@ -124,10 +127,10 @@ func TestWatcherEnqueuesOnHeadMove(t *testing.T) {
 		return len(jobs)
 	}
 
-	// idle: several ticks, nothing enqueued
+	// idle: several ticks, the watcher reuses the boot-time pending job
 	time.Sleep(300 * time.Millisecond)
-	if n := pendingCount(); n != 0 {
-		t.Fatalf("idle watcher enqueued %d jobs, want 0", n)
+	if n := pendingCount(); n != 1 {
+		t.Fatalf("idle watcher has %d pending jobs, want the single boot job", n)
 	}
 
 	// commit → exactly one sync job, deduped across subsequent ticks

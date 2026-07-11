@@ -1,0 +1,47 @@
+{
+  "metadata": {
+    "toolInfo": {
+      "name": "phebs-fixture-indexer",
+      "version": "1.0.0"
+    },
+    "projectRoot": "file:///fixture",
+    "textDocumentEncoding": "UTF8"
+  },
+  "documents": [
+    {
+      "relativePath": "lib/rocket.go",
+      "language": "go",
+      "positionEncoding": "UTF8CodeUnitOffsetFromLineStart",
+      "occurrences": [
+        {
+          "range": [1, 5, 11],
+          "symbol": "go gomod example.com/fixture v1.0.0 Rocket().",
+          "symbolRoles": 1
+        }
+      ],
+      "symbols": [
+        {
+          "symbol": "go gomod example.com/fixture v1.0.0 Rocket().",
+          "documentation": ["Rocket returns a launch status."],
+          "kind": "Function",
+          "displayName": "Rocket",
+          "signatureDocumentation": {
+            "language": "go",
+            "text": "func Rocket() string"
+          }
+        }
+      ]
+    },
+    {
+      "relativePath": "use/use.go",
+      "language": "go",
+      "positionEncoding": "UTF8CodeUnitOffsetFromLineStart",
+      "occurrences": [
+        {
+          "range": [1, 30, 36],
+          "symbol": "go gomod example.com/fixture v1.0.0 Rocket()."
+        }
+      ]
+    }
+  ]
+}

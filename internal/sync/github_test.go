@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,6 +21,10 @@ import (
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
 
 // allowFileClones lets e2e fixtures clone from file:// origins that the
 // clone-URL origin check (Epic 7 review) would rightly reject in prod.
@@ -90,7 +95,7 @@ func TestListReposPaginationAndRateLimit(t *testing.T) {
 				w.WriteHeader(http.StatusForbidden)
 				return
 			}
-			w.Header().Set("Link", fmt.Sprintf(`<http://%s/orgs/o/repos?page=2>; rel="next"`, r.Host))
+			w.Header().Set("Link", `<?page=2>; rel="next"`)
 			_ = json.NewEncoder(w).Encode([]ghRepo{{FullName: "o/r1"}, {FullName: "o/r2"}})
 		case "2":
 			_ = json.NewEncoder(w).Encode([]ghRepo{{FullName: "o/r3"}})
@@ -110,6 +115,140 @@ func TestListReposPaginationAndRateLimit(t *testing.T) {
 	}
 	if rateLimitHits != 1 {
 		t.Errorf("rate limit exercised %d times, want 1", rateLimitHits)
+	}
+}
+
+func TestListPagesRejectsOffOriginBeforeSendingAuth(t *testing.T) {
+	var offOriginHits int
+	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		offOriginHits++
+		if auth := r.Header.Get("Authorization"); auth != "" {
+			t.Errorf("credential forwarded off-origin: %q", auth)
+		}
+		_ = json.NewEncoder(w).Encode([]ghRepo{})
+	}))
+	defer evil.Close()
+
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Link", `<`+evil.URL+`/repos?page=2>; rel="next"`)
+		_ = json.NewEncoder(w).Encode([]ghRepo{{FullName: "o/r1"}})
+	}))
+	defer api.Close()
+
+	c := &hostClient{base: api.URL, auth: "Bearer private-token"}
+	_, err := listPages[ghRepo](context.Background(), c, "/repos")
+	if err == nil || !strings.Contains(err.Error(), "off-origin") {
+		t.Fatalf("listPages error = %v, want off-origin rejection", err)
+	}
+	if offOriginHits != 0 {
+		t.Fatalf("off-origin server received %d requests, want 0", offOriginHits)
+	}
+}
+
+func TestListPagesRejectsPaginationCycle(t *testing.T) {
+	var hits int
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.Header().Set("Link", `</repos>; rel="next"`)
+		_ = json.NewEncoder(w).Encode([]ghRepo{{FullName: "o/r1"}})
+	}))
+	defer api.Close()
+
+	c := &hostClient{base: api.URL}
+	_, err := listPages[ghRepo](context.Background(), c, "/repos")
+	if err == nil || !strings.Contains(err.Error(), "pagination cycle") {
+		t.Fatalf("listPages error = %v, want cycle rejection", err)
+	}
+	if hits != 1 {
+		t.Errorf("requests = %d, want 1 before detecting cycle", hits)
+	}
+}
+
+func TestListPagesCapsPageCount(t *testing.T) {
+	var calls int
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		calls++
+		header := http.Header{}
+		header.Set("Link", fmt.Sprintf(`</repos?page=%d>; rel="next"`, calls+1))
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     header,
+			Body:       io.NopCloser(strings.NewReader("[]")),
+			Request:    req,
+		}, nil
+	})
+	c := &hostClient{base: "https://api.example", client: &http.Client{Transport: transport}}
+	_, err := listPages[ghRepo](context.Background(), c, "/repos?page=1")
+	if err == nil || !strings.Contains(err.Error(), "pagination exceeds") {
+		t.Fatalf("listPages error = %v, want page-cap rejection", err)
+	}
+	if calls != maxHostPages {
+		t.Errorf("requests = %d, want cap %d", calls, maxHostPages)
+	}
+}
+
+func TestHostClientRejectsOffOriginRedirect(t *testing.T) {
+	var offOriginHits int
+	evil := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		offOriginHits++
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer evil.Close()
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, evil.URL+"/steal", http.StatusFound)
+	}))
+	defer api.Close()
+
+	c := &hostClient{base: api.URL, auth: "Bearer private-token"}
+	var out []ghRepo
+	if _, err := c.getJSON(context.Background(), api.URL+"/repos", &out); err == nil || !strings.Contains(err.Error(), "off-origin") {
+		t.Fatalf("getJSON error = %v, want off-origin redirect rejection", err)
+	}
+	if offOriginHits != 0 {
+		t.Fatalf("redirect target received %d requests, want 0", offOriginHits)
+	}
+}
+
+func TestHostErrorsDoNotReflectUntrustedSecrets(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Link", fmt.Sprintf(`<http://reflected-private-token@%s/repos?page=2>; rel="next"`, r.Host))
+		_ = json.NewEncoder(w).Encode([]ghRepo{})
+	}))
+	defer api.Close()
+	c := &hostClient{base: api.URL, auth: "Bearer private-token"}
+	if _, err := listPages[ghRepo](context.Background(), c, "/repos"); err == nil {
+		t.Fatal("listPages accepted pagination URL userinfo")
+	} else if strings.Contains(err.Error(), "reflected-private-token") || strings.Contains(err.Error(), "private-token") {
+		t.Fatalf("pagination error leaked reflected secret: %v", err)
+	}
+
+	transport := roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Status:     "500 reflected-private-token",
+			Header:     http.Header{},
+			Body:       io.NopCloser(strings.NewReader("")),
+			Request:    req,
+		}, nil
+	})
+	c = &hostClient{base: "https://api.example", client: &http.Client{Transport: transport}}
+	var out []ghRepo
+	if _, err := c.getJSON(context.Background(), "https://api.example/repos", &out); err == nil {
+		t.Fatal("getJSON accepted HTTP 500")
+	} else if strings.Contains(err.Error(), "reflected-private-token") {
+		t.Fatalf("status error leaked reflected secret: %v", err)
+	}
+}
+
+func TestFilterInstallationUsers(t *testing.T) {
+	repos := []ghRepo{
+		{FullName: "Ben/private", Private: true},
+		{FullName: "other/repo"},
+		{FullName: "malformed"},
+	}
+	got := filterInstallationUsers(repos, []string{"ben"})
+	if len(got) != 1 || got[0].FullName != "Ben/private" || !got[0].Private {
+		t.Fatalf("filterInstallationUsers = %+v, want private Ben repo", got)
 	}
 }
 
@@ -291,6 +430,14 @@ func TestRedactArgs(t *testing.T) {
 	if !strings.Contains(got, "gitea.internal/team/repo.git") {
 		t.Errorf("redactArgs mangled the host/path: %q", got)
 	}
+
+	got = redactArgs([]string{"clone", "https:opaque-user:opaque-secret@git.internal/team/repo.git"})
+	if strings.Contains(got, "opaque-user") || strings.Contains(got, "opaque-secret") {
+		t.Errorf("redactArgs leaked opaque HTTP credentials: %q", got)
+	}
+	if !strings.Contains(got, "git.internal/team/repo.git") {
+		t.Errorf("redactArgs mangled opaque HTTP host/path: %q", got)
+	}
 }
 
 func TestRateLimitedNeverSpins(t *testing.T) {
@@ -306,13 +453,16 @@ func TestRateLimitedNeverSpins(t *testing.T) {
 		resp *http.Response
 	}{
 		{"retry-after seconds", mk(429, map[string]string{"Retry-After": "30"})},
-		{"retry-after http-date", mk(429, map[string]string{"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"})},
+		{"retry-after http-date", mk(429, map[string]string{"Retry-After": time.Now().Add(30 * time.Second).UTC().Format(http.TimeFormat)})},
 		{"retry-after garbage", mk(403, map[string]string{"Retry-After": "soon"})},
 		{"ratelimit past reset", mk(403, map[string]string{"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "1"})},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			wait, limited := rateLimited(c.resp)
+			wait, limited, err := rateLimited(c.resp)
+			if err != nil {
+				t.Fatalf("rateLimited error = %v", err)
+			}
 			if !limited {
 				t.Fatalf("expected limited=true")
 			}
@@ -321,8 +471,66 @@ func TestRateLimitedNeverSpins(t *testing.T) {
 			}
 		})
 	}
+	tooLong := []struct {
+		name string
+		resp *http.Response
+	}{
+		{"retry-after seconds", mk(429, map[string]string{"Retry-After": "3600"})},
+		{"retry-after date", mk(429, map[string]string{"Retry-After": time.Now().Add(time.Hour).UTC().Format(http.TimeFormat)})},
+		{"rate-limit reset", mk(403, map[string]string{
+			"X-RateLimit-Remaining": "0",
+			"X-RateLimit-Reset":     fmt.Sprint(time.Now().Add(time.Hour).Unix()),
+		})},
+	}
+	for _, c := range tooLong {
+		t.Run("excessive "+c.name, func(t *testing.T) {
+			wait, limited, err := rateLimited(c.resp)
+			if !limited || err == nil || !strings.Contains(err.Error(), "exceeds maximum") {
+				t.Fatalf("rateLimited = (%v, %v, %v), want bounded-wait error", wait, limited, err)
+			}
+		})
+	}
 	// a plain 403 with no rate-limit headers is NOT a rate limit
-	if _, limited := rateLimited(mk(403, nil)); limited {
+	if _, limited, err := rateLimited(mk(403, nil)); limited || err != nil {
 		t.Error("plain 403 should not be treated as rate limited")
+	}
+}
+
+func TestHostClientFailsExcessiveRateLimitWithoutSleeping(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Retry-After", "3600")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer srv.Close()
+	c := &hostClient{base: srv.URL}
+	started := time.Now()
+	var out []ghRepo
+	_, err := c.getJSON(context.Background(), srv.URL+"/repos", &out)
+	if err == nil || !strings.Contains(err.Error(), "exceeds maximum") {
+		t.Fatalf("getJSON error = %v, want excessive rate-limit wait error", err)
+	}
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("getJSON occupied the runner for %v", elapsed)
+	}
+}
+
+func TestHostClientBoundsRepeatedRateLimits(t *testing.T) {
+	var hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.Header().Set("Retry-After", "0")
+		w.WriteHeader(http.StatusTooManyRequests)
+	}))
+	defer srv.Close()
+	c := &hostClient{base: srv.URL}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	var out []ghRepo
+	_, err := c.getJSON(ctx, srv.URL+"/repos", &out)
+	if err == nil || !strings.Contains(err.Error(), "retry budget exhausted") {
+		t.Fatalf("getJSON error = %v, want retry-budget error", err)
+	}
+	if hits != maxRateLimitRetries+1 {
+		t.Fatalf("rate-limit requests = %d, want %d", hits, maxRateLimitRetries+1)
 	}
 }

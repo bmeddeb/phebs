@@ -35,20 +35,24 @@ func appToken(ctx context.Context, apiBase string, app config.GitHubApp) (string
 		return "", err
 	}
 
-	url := fmt.Sprintf("%s/app/installations/%d/access_tokens", apiBase, app.InstallationID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	c := &hostClient{base: apiBase}
+	tokenURL, err := c.endpoint(fmt.Sprintf("/app/installations/%d/access_tokens", app.InstallationID))
+	if err != nil {
+		return "", fmt.Errorf("create installation token: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, nil)
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Authorization", "Bearer "+jwt)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := c.requestClient().Do(req)
 	if err != nil {
-		return "", fmt.Errorf("create installation token: %w", err)
+		return "", fmt.Errorf("create installation token: %w", hostRequestError(err))
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("create installation token: %s", resp.Status)
+		return "", fmt.Errorf("create installation token: HTTP %d", resp.StatusCode)
 	}
 	var out struct {
 		Token string `json:"token"`
@@ -115,17 +119,31 @@ func appJWT(appID int64, key *rsa.PrivateKey, now time.Time) (string, error) {
 // wrapper object, not a bare array.
 func listInstallationRepos(ctx context.Context, c *hostClient) ([]ghRepo, error) {
 	var all []ghRepo
-	url := c.base + "/installation/repositories?per_page=100"
-	for url != "" {
+	current, err := c.endpoint("/installation/repositories?per_page=100")
+	if err != nil {
+		return nil, err
+	}
+	visited := map[string]bool{}
+	pages := 0
+	for current != "" {
+		if pages >= maxHostPages {
+			return nil, fmt.Errorf("pagination exceeds %d pages", maxHostPages)
+		}
+		key := paginationKey(current)
+		if visited[key] {
+			return nil, fmt.Errorf("pagination cycle detected")
+		}
+		visited[key] = true
 		var page struct {
 			Repositories []ghRepo `json:"repositories"`
 		}
-		next, err := c.getJSON(ctx, url, &page)
+		next, err := c.getJSON(ctx, current, &page)
 		if err != nil {
 			return nil, err
 		}
 		all = append(all, page.Repositories...)
-		url = next
+		current = next
+		pages++
 	}
 	return all, nil
 }

@@ -9,6 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -75,7 +77,8 @@ func (s Sync) ResyncEvery() time.Duration {
 }
 
 type Server struct {
-	// Addr is the listen address. Default ":3070".
+	// Addr is the listen address. Default "127.0.0.1:3070"; deployments that
+	// intentionally expose phebs should configure a trusted TLS proxy.
 	Addr string `yaml:"addr"`
 	// DataDir holds all state: shards at <DataDir>/index, bare repos at
 	// <DataDir>/repos/<host>/<path>.git, the embedded DB at <DataDir>/db.
@@ -84,9 +87,62 @@ type Server struct {
 }
 
 type Auth struct {
-	// APIKey is the single bearer token for the API (T1.4). Empty means the
-	// API is open; serve logs a loud warning in that case.
+	// APIKey is the legacy bearer token. Epic 9 imports only its hash into the
+	// api_key table; new clients should create individually revocable keys.
 	APIKey string `yaml:"api_key"`
+	// CookieSecure controls the Secure attribute on browser session cookies.
+	// It defaults to true. Plain-HTTP local development must explicitly opt
+	// out; the default listener may be exposed beyond loopback.
+	CookieSecure *bool `yaml:"cookie_secure"`
+	// SessionLifetime is an absolute SCS session lifetime (default 12h).
+	SessionLifetime string        `yaml:"session_lifetime"`
+	BootstrapUser   BootstrapUser `yaml:"bootstrap_user"`
+	OIDC            OIDC          `yaml:"oidc"`
+}
+
+// BootstrapUser creates the first local administrator, once. The password is
+// environment-expandable and is hashed before the user is persisted.
+type BootstrapUser struct {
+	Email       string `yaml:"email"`
+	DisplayName string `yaml:"display_name"`
+	Password    string `yaml:"password"`
+}
+
+// IsZero reports whether no bootstrap user was configured.
+func (u BootstrapUser) IsZero() bool { return u == BootstrapUser{} }
+
+// OIDC configures one OpenID Connect provider. Provider discovery, ID-token
+// verification, nonce checking, and PKCE are handled by coreos/go-oidc.
+type OIDC struct {
+	IssuerURL    string   `yaml:"issuer_url"`
+	ClientID     string   `yaml:"client_id"`
+	ClientSecret string   `yaml:"client_secret"`
+	RedirectURL  string   `yaml:"redirect_url"`
+	Scopes       []string `yaml:"scopes"`
+}
+
+// IsZero reports whether OIDC login is disabled.
+func (o OIDC) IsZero() bool {
+	return o.IssuerURL == "" && o.ClientID == "" && o.ClientSecret == "" &&
+		o.RedirectURL == "" && len(o.Scopes) == 0
+}
+
+// SessionDuration returns the validated absolute session lifetime.
+func (a Auth) SessionDuration() time.Duration {
+	if a.SessionLifetime == "" {
+		return 12 * time.Hour
+	}
+	d, err := time.ParseDuration(a.SessionLifetime)
+	if err != nil {
+		return 12 * time.Hour
+	}
+	return d
+}
+
+// SecureCookies reports the session cookie transport policy. Secure is the
+// fail-closed default; local HTTP development explicitly opts out.
+func (a Auth) SecureCookies() bool {
+	return a.CookieSecure == nil || *a.CookieSecure
 }
 
 // Connection declares one source of repos to sync (Epic 2 consumes these).
@@ -112,10 +168,24 @@ type Connection struct {
 	// of a self-hosted instance (default https://gitlab.com). gitea:
 	// required http(s) base URL.
 	URL string `yaml:"url"`
+	// HTTPAuth supplies Basic authentication for an HTTP(S) generic-git
+	// connection. Credentials are injected into each git invocation and are
+	// never embedded in URL or persisted in the mirror config.
+	HTTPAuth HTTPAuth `yaml:"http_auth"`
 	// Watch (local git only): poll the repo's HEAD and re-sync/re-index
 	// when it moves — live search over a working repo.
 	Watch bool `yaml:"watch"`
 }
+
+// HTTPAuth is the username/password pair used by a generic HTTP(S) Git
+// remote. Both fields support environment expansion.
+type HTTPAuth struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+// IsZero reports whether no HTTP authentication was configured.
+func (a HTTPAuth) IsZero() bool { return a == HTTPAuth{} }
 
 // IsLocalURL reports whether a git connection URL points at a repo on this
 // machine (plain absolute path or file://).
@@ -226,6 +296,34 @@ func (c *Config) validate(lines []int) error {
 			errs = append(errs, fmt.Errorf("sync.resync_interval %q: not a positive Go duration (or \"0\" to disable)", ri))
 		}
 	}
+	if raw := c.Auth.SessionLifetime; raw != "" {
+		d, err := time.ParseDuration(raw)
+		if err != nil || d < 15*time.Minute || d > 30*24*time.Hour {
+			errs = append(errs, fmt.Errorf("auth.session_lifetime %q: must be a Go duration from 15m through 720h", raw))
+		}
+	}
+	if bootstrap := c.Auth.BootstrapUser; !bootstrap.IsZero() {
+		if strings.TrimSpace(bootstrap.Email) == "" || bootstrap.Password == "" {
+			errs = append(errs, errors.New("auth.bootstrap_user requires email and password"))
+		}
+	}
+	if oidc := c.Auth.OIDC; !oidc.IsZero() {
+		if oidc.IssuerURL == "" || oidc.ClientID == "" || oidc.ClientSecret == "" || oidc.RedirectURL == "" {
+			errs = append(errs, errors.New("auth.oidc requires issuer_url, client_id, client_secret, and redirect_url"))
+		} else {
+			if err := validateAuthURL("issuer_url", oidc.IssuerURL); err != nil {
+				errs = append(errs, err)
+			}
+			if err := validateAuthURL("redirect_url", oidc.RedirectURL); err != nil {
+				errs = append(errs, err)
+			}
+		}
+		for _, scope := range oidc.Scopes {
+			if strings.TrimSpace(scope) == "" || strings.ContainsAny(scope, " \t\r\n") {
+				errs = append(errs, fmt.Errorf("auth.oidc scope %q must be one non-empty token", scope))
+			}
+		}
+	}
 
 	for name, patterns := range c.Contexts {
 		if !nameRE.MatchString(name) {
@@ -252,6 +350,17 @@ func (c *Config) validate(lines []int) error {
 			fail(i, "duplicate name %q", conn.Name)
 		}
 		seen[conn.Name] = true
+
+		if hasDisallowedURLCredentials(conn.URL) {
+			if conn.Type == "git" {
+				fail(i, "url must not contain credentials; move the username and password to http_auth")
+			} else {
+				fail(i, "url must not contain credentials")
+			}
+		}
+		if conn.Type != "git" && !conn.HTTPAuth.IsZero() {
+			fail(i, "http_auth is only valid for type git")
+		}
 
 		switch conn.Type {
 		case "github":
@@ -292,7 +401,10 @@ func (c *Config) validate(lines []int) error {
 				fail(i, "orgs is only valid for type github/gitea (gitlab uses groups)")
 			}
 			if conn.URL != "" && !isHTTPBase(conn.URL) {
-				fail(i, "gitlab url must be an http(s) base URL, got %q", conn.URL)
+				fail(i, "gitlab url must be an http(s) base URL")
+			}
+			if httpURLHasQueryOrFragment(conn.URL) {
+				fail(i, "gitlab url must not contain a query or fragment")
 			}
 			if conn.Watch {
 				fail(i, "watch is only valid for local git connections")
@@ -309,7 +421,10 @@ func (c *Config) validate(lines []int) error {
 				fail(i, "groups is only valid for type gitlab (gitea uses orgs)")
 			}
 			if !isHTTPBase(conn.URL) {
-				fail(i, "gitea connection requires an http(s) base url, got %q", conn.URL)
+				fail(i, "gitea connection requires an http(s) base url")
+			}
+			if httpURLHasQueryOrFragment(conn.URL) {
+				fail(i, "gitea url must not contain a query or fragment")
 			}
 			if conn.Watch {
 				fail(i, "watch is only valid for local git connections")
@@ -318,6 +433,20 @@ func (c *Config) validate(lines []int) error {
 		case "git":
 			if conn.URL == "" {
 				fail(i, "git connection requires url")
+			}
+			if looksHTTPURL(conn.URL) && !isHTTPURL(conn.URL) {
+				fail(i, "git HTTP(S) url is invalid")
+			}
+			if isHTTPURL(conn.URL) && httpURLHasQueryOrFragment(conn.URL) {
+				fail(i, "git HTTP(S) url must not contain a query or fragment; move credentials to http_auth")
+			}
+			if !conn.HTTPAuth.IsZero() {
+				if !isHTTPURL(conn.URL) {
+					fail(i, "http_auth requires an HTTP(S) git url")
+				}
+				if conn.HTTPAuth.Username == "" || conn.HTTPAuth.Password == "" {
+					fail(i, "http_auth requires both username and password")
+				}
 			}
 			if len(conn.Orgs)+len(conn.Groups)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" || !conn.Exclude.isZero() || !conn.App.IsZero() {
 				fail(i, "orgs/groups/users/repos/token/exclude/app are only valid for code-host types")
@@ -336,7 +465,69 @@ func (c *Config) validate(lines []int) error {
 
 // isHTTPBase reports whether s can serve as a code-host API base URL.
 func isHTTPBase(s string) bool {
-	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
+	return isHTTPURL(s)
+}
+
+func isHTTPURL(s string) bool {
+	u, err := url.Parse(s)
+	return err == nil && u.Opaque == "" && (strings.EqualFold(u.Scheme, "http") || strings.EqualFold(u.Scheme, "https")) && u.Hostname() != ""
+}
+
+func looksHTTPURL(s string) bool {
+	lower := strings.ToLower(s)
+	return strings.HasPrefix(lower, "http:") || strings.HasPrefix(lower, "https:")
+}
+
+var apparentHTTPCredRE = regexp.MustCompile(`(?i)^https?:/*[^/?#@\s]*@`)
+
+func hasDisallowedURLCredentials(s string) bool {
+	if isSCPLikeURL(s) {
+		return false
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return apparentHTTPCredRE.MatchString(s)
+	}
+	if u.User != nil {
+		if isSSHScheme(u.Scheme) {
+			_, hasPassword := u.User.Password()
+			return hasPassword
+		}
+		return true
+	}
+	authority, _, _ := strings.Cut(u.Opaque, "/")
+	userinfo, _, hasUserinfo := strings.Cut(authority, "@")
+	if hasUserinfo {
+		return !isSSHScheme(u.Scheme) || strings.Contains(userinfo, ":")
+	}
+	return apparentHTTPCredRE.MatchString(s)
+}
+
+func isSSHScheme(s string) bool {
+	switch strings.ToLower(s) {
+	case "ssh", "git+ssh", "ssh+git", "sftp":
+		return true
+	default:
+		return false
+	}
+}
+
+func isSCPLikeURL(s string) bool {
+	host, repoPath, ok := strings.Cut(s, ":")
+	if !ok || repoPath == "" || strings.Contains(host, "/") || strings.HasPrefix(repoPath, "//") {
+		return false
+	}
+	switch strings.ToLower(host) {
+	case "http", "https", "ssh", "git", "ftp", "file", "sftp", "rsync", "git+ssh", "ssh+git":
+		return false
+	default:
+		return true
+	}
+}
+
+func httpURLHasQueryOrFragment(s string) bool {
+	u, err := url.Parse(s)
+	return err == nil && (u.RawQuery != "" || u.ForceQuery || u.Fragment != "")
 }
 
 func validateExcludes(fail func(int, string, ...any), i int, ex Exclude) {
@@ -347,32 +538,56 @@ func validateExcludes(fail func(int, string, ...any), i int, ex Exclude) {
 	}
 }
 
-func (c *Config) applyDefaults() error {
-	// ${ENV} expansion for secrets kept out of the file (see docs/MANUAL.md).
-	// A non-empty api_key that expands to empty means an unset/misspelled env
-	// var — fail closed rather than silently disabling API auth.
-	if raw := c.Auth.APIKey; raw != "" {
-		if c.Auth.APIKey = os.ExpandEnv(raw); c.Auth.APIKey == "" {
-			return fmt.Errorf("auth.api_key %q expands to empty (unset environment variable?); refusing to start with auth disabled", raw)
-		}
+func validateAuthURL(field, raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
+		return fmt.Errorf("auth.oidc.%s must be an absolute URL without credentials, query, or fragment", field)
 	}
-	if raw := c.Webhook.Secret; raw != "" {
-		if c.Webhook.Secret = os.ExpandEnv(raw); c.Webhook.Secret == "" {
-			return fmt.Errorf("webhook.secret %q expands to empty (unset environment variable?); refusing to start with an unverifiable webhook", raw)
-		}
+	if u.Scheme == "https" {
+		return nil
+	}
+	host := strings.Trim(u.Hostname(), "[]")
+	if u.Scheme == "http" && (host == "localhost" || net.ParseIP(host) != nil && net.ParseIP(host).IsLoopback()) {
+		return nil
+	}
+	return fmt.Errorf("auth.oidc.%s must use HTTPS (HTTP is allowed only for loopback testing)", field)
+}
+
+func (c *Config) applyDefaults() error {
+	// Secret expansion is strict: a referenced variable that is absent or
+	// empty is a configuration error, even when other literal text would keep
+	// the final value non-empty. This prevents a typo from silently weakening
+	// authentication or changing which private repositories are visible.
+	var err error
+	if c.Auth.APIKey, err = expandSecret("auth.api_key", c.Auth.APIKey); err != nil {
+		return err
+	}
+	if c.Auth.BootstrapUser.Password, err = expandSecret("auth.bootstrap_user.password", c.Auth.BootstrapUser.Password); err != nil {
+		return err
+	}
+	if c.Auth.OIDC.ClientSecret, err = expandSecret("auth.oidc.client_secret", c.Auth.OIDC.ClientSecret); err != nil {
+		return err
+	}
+	if c.Webhook.Secret, err = expandSecret("webhook.secret", c.Webhook.Secret); err != nil {
+		return err
 	}
 	for i := range c.Connections {
-		c.Connections[i].Token = os.ExpandEnv(c.Connections[i].Token)
-		// like api_key/webhook.secret: an unset env var must fail at boot,
-		// not surface as a cryptic per-sync PEM error
-		if raw := c.Connections[i].App.PrivateKey; raw != "" {
-			if c.Connections[i].App.PrivateKey = os.ExpandEnv(raw); c.Connections[i].App.PrivateKey == "" {
-				return fmt.Errorf("connections[%d]: app.private_key %q expands to empty (unset environment variable?)", i, raw)
-			}
+		conn := &c.Connections[i]
+		if conn.Token, err = expandSecret(fmt.Sprintf("connections[%d].token", i), conn.Token); err != nil {
+			return err
+		}
+		if conn.App.PrivateKey, err = expandSecret(fmt.Sprintf("connections[%d].app.private_key", i), conn.App.PrivateKey); err != nil {
+			return err
+		}
+		if conn.HTTPAuth.Username, err = expandSecret(fmt.Sprintf("connections[%d].http_auth.username", i), conn.HTTPAuth.Username); err != nil {
+			return err
+		}
+		if conn.HTTPAuth.Password, err = expandSecret(fmt.Sprintf("connections[%d].http_auth.password", i), conn.HTTPAuth.Password); err != nil {
+			return err
 		}
 	}
 	if c.Server.Addr == "" {
-		c.Server.Addr = ":3070"
+		c.Server.Addr = "127.0.0.1:3070"
 	}
 	if c.Server.DataDir == "" {
 		c.Server.DataDir = "~/.phebs"
@@ -388,6 +603,32 @@ func (c *Config) applyDefaults() error {
 	if err != nil {
 		return fmt.Errorf("resolve data_dir: %w", err)
 	}
+	if strings.ContainsAny(abs, `*?[\`) {
+		return errors.New("server.data_dir must not contain glob metacharacters (*, ?, [, or \\)")
+	}
 	c.Server.DataDir = abs
 	return nil
+}
+
+func expandSecret(field, raw string) (string, error) {
+	if raw == "" {
+		return "", nil
+	}
+	var unavailable []string
+	seen := map[string]bool{}
+	expanded := os.Expand(raw, func(name string) string {
+		value, ok := os.LookupEnv(name)
+		if (!ok || value == "") && !seen[name] {
+			seen[name] = true
+			unavailable = append(unavailable, name)
+		}
+		return value
+	})
+	if len(unavailable) > 0 {
+		return "", fmt.Errorf("%s references unset or empty environment variable %q", field, strings.Join(unavailable, ", "))
+	}
+	if expanded == "" {
+		return "", fmt.Errorf("%s expands to empty; refusing to start", field)
+	}
+	return expanded, nil
 }

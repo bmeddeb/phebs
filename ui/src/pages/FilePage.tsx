@@ -1,24 +1,52 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { EditorState, type Extension } from '@codemirror/state'
 import { EditorView, lineNumbers, Decoration } from '@codemirror/view'
 import { syntaxHighlighting } from '@codemirror/language'
-import { fetchSource, fetchRepoStatus, fetchTree } from '../api'
-import type { RepoStatus } from '../api'
+import {
+  fetchDefinition,
+  fetchFolderContents,
+  fetchHover,
+  fetchReferences,
+  fetchRepoStatus,
+  fetchSource,
+} from '../api'
+import type {
+  CodeLocation,
+  DefinitionResult,
+  HoverResult,
+  ReferencesResult,
+  RepoStatus,
+  TreeEntry,
+} from '../api'
 import { languageFor, langColor, langName } from '../lang'
 import { highlightStyle } from '../highlight'
 import { usePhebsTokens, useMode, FONTS } from '../theme'
 import { href, navigate } from '../router'
 import { CopyIcon, CheckIcon, CommitIcon, SearchIcon, ChevronRight, ChevronDown } from '../icons'
-import { humanSize, relTime } from '../util'
+import { ancestorFolders, fileFilter, humanSize, isAbortError, relTime, repoFilter } from '../util'
+
+interface SourcePosition {
+  line: number
+  character: number
+}
+
+interface CodeNavigationState {
+  loading: boolean
+  definition?: DefinitionResult
+  references?: ReferencesResult
+  hover?: HoverResult
+  error?: string
+}
 
 // T5.3/T5.5: CodeMirror 6 read-only viewer with breadcrumbs, a sticky
 // metadata header, ?L= deep-link line, and syntax highlighting.
 export default function FilePage({ params }: { params: URLSearchParams }) {
   const repo = params.get('repo') ?? ''
   const path = params.get('path') ?? ''
+  const ref = params.get('ref') ?? ''
   const line = Number(params.get('L') ?? '0')
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -26,34 +54,99 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   const [error, setError] = useState('')
   const [binary, setBinary] = useState(false)
   const [meta, setMeta] = useState<RepoStatus | null>(null)
+  const [metaLoaded, setMetaLoaded] = useState(false)
+  const [navPosition, setNavPosition] = useState<SourcePosition | null>(null)
+  const [navigation, setNavigation] = useState<CodeNavigationState | null>(null)
+  const sourceGeneration = useRef(0)
+  const metaGeneration = useRef(0)
+  const navGeneration = useRef(0)
+  const resolvingRef = !ref && !metaLoaded
+  const effectiveRef = ref || meta?.indexed_commit_hash || ''
 
   useEffect(() => {
+    const generation = ++sourceGeneration.current
+    const controller = new AbortController()
     setContent(null)
     setError('')
     setBinary(false)
+    setNavPosition(null)
+    setNavigation(null)
+    if (resolvingRef) return
     if (!repo || !path) {
       setError('missing repo or path')
       return
     }
-    fetchSource(repo, path)
+    if (!effectiveRef) {
+      setError('repository has no indexed revision')
+      return
+    }
+    fetchSource(repo, path, effectiveRef, controller.signal)
       .then((f) => {
+        if (generation !== sourceGeneration.current) return
         if (f.encoding === 'base64') setBinary(true)
         else setContent(f.content)
       })
-      .catch((e) => setError(String(e)))
-  }, [repo, path])
+      .catch((e) => {
+        if (!isAbortError(e) && generation === sourceGeneration.current) setError(String(e))
+      })
+    return () => controller.abort()
+  }, [repo, path, effectiveRef, resolvingRef])
 
   useEffect(() => {
-    fetchRepoStatus()
-      .then((rows) => setMeta(rows.find((r) => r.name === repo) ?? null))
-      .catch(() => {})
+    const generation = ++metaGeneration.current
+    const controller = new AbortController()
+    setMeta(null)
+    setMetaLoaded(false)
+    fetchRepoStatus(controller.signal)
+      .then((rows) => {
+        if (generation === metaGeneration.current) {
+          setMeta(rows.find((r) => r.name === repo) ?? null)
+          setMetaLoaded(true)
+        }
+      })
+      .catch((error) => {
+        if (!isAbortError(error) && generation === metaGeneration.current) setMetaLoaded(true)
+      })
+    return () => controller.abort()
   }, [repo])
+
+  useEffect(() => {
+    const generation = ++navGeneration.current
+    const controller = new AbortController()
+    if (!navPosition || !repo || !path || !effectiveRef) return
+    setNavigation({ loading: true })
+    Promise.all([
+      fetchDefinition(repo, effectiveRef, path, navPosition.line, navPosition.character, controller.signal),
+      fetchReferences(repo, effectiveRef, path, navPosition.line, navPosition.character, controller.signal),
+      fetchHover(repo, effectiveRef, path, navPosition.line, navPosition.character, controller.signal),
+    ])
+      .then(([definition, references, hover]) => {
+        if (generation === navGeneration.current) {
+          setNavigation({ loading: false, definition, references, hover })
+        }
+      })
+      .catch((error) => {
+        if (!isAbortError(error) && generation === navGeneration.current) {
+          setNavigation({ loading: false, error: String(error) })
+        }
+      })
+    return () => controller.abort()
+  }, [repo, path, effectiveRef, navPosition])
+
+  const selectPosition = useCallback((line: number, character: number) => {
+    setNavPosition({ line, character })
+  }, [])
 
   return (
     <div>
-      <Breadcrumb repo={repo} path={path} meta={meta} />
-      <div className={css({ display: 'flex', gap: '16px', alignItems: 'flex-start' })}>
-        {repo && <FileTree repo={repo} current={path} />}
+      <Breadcrumb repo={repo} path={path} ref={effectiveRef} meta={meta} />
+      <div className={css({
+        display: 'flex',
+        gap: '16px',
+        alignItems: 'flex-start',
+        '@media screen and (max-width: 720px)': { flexDirection: 'column' },
+      })}>
+        {repo && effectiveRef && <FileTree repo={repo} ref={effectiveRef} current={path} />}
         <div className={css({ flex: 1, minWidth: 0 })}>
           {error && (
             <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
@@ -63,9 +156,23 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
           {binary && <div className={css({ color: tok.textTertiary, padding: '24px 0' })}>Binary file — not rendered.</div>}
           {content === null && !error && !binary && <Spinner $size="small" />}
           {content !== null && (
-            <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
-              <CodeHeader path={path} content={content} line={line} meta={meta} />
-              <CodeViewer content={content} path={path} focusLine={line} />
+            <div className={css({ display: 'flex', alignItems: 'flex-start', gap: '16px', '@media screen and (max-width: 960px)': { flexDirection: 'column' } })}>
+              <div className={css({ flex: 1, minWidth: 0, width: '100%', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
+                <CodeHeader path={path} content={content} line={line} meta={meta} />
+                <CodeViewer
+                  content={content}
+                  path={path}
+                  focusLine={line}
+                  selectedLine={navPosition ? navPosition.line + 1 : 0}
+                  onPosition={selectPosition}
+                />
+              </div>
+              {navPosition && (
+                <CodeNavigationPanel
+                  position={navPosition}
+                  navigation={navigation}
+                />
+              )}
             </div>
           )}
         </div>
@@ -74,79 +181,229 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   )
 }
 
-export interface TreeNode {
-  name: string
-  path: string
-  dir: boolean
-  children: TreeNode[]
-}
-
-// exported for tests (T6.4)
-export function buildTree(paths: string[]): TreeNode {
-  const root: TreeNode = { name: '', path: '', dir: true, children: [] }
-  for (const p of paths) {
-    const parts = p.split('/')
-    let cur = root
-    let acc = ''
-    parts.forEach((part, i) => {
-      acc = acc ? acc + '/' + part : part
-      const isFile = i === parts.length - 1
-      let child = cur.children.find((c) => c.name === part && c.dir === !isFile)
-      if (!child) {
-        child = { name: part, path: acc, dir: !isFile, children: [] }
-        cur.children.push(child)
-      }
-      cur = child
-    })
-  }
-  const sort = (n: TreeNode) => {
-    n.children.sort((a, b) => (a.dir !== b.dir ? (a.dir ? -1 : 1) : a.name.localeCompare(b.name)))
-    n.children.forEach(sort)
-  }
-  sort(root)
-  return root
-}
-
-// FileTree renders the repo's file tree over /api/tree, with the path to the
-// current file expanded. Dirs collapse/expand; files navigate the viewer.
-function FileTree({ repo, current }: { repo: string; current: string }) {
+function CodeNavigationPanel({
+  position,
+  navigation,
+}: {
+  position: SourcePosition
+  navigation: CodeNavigationState | null
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const [root, setRoot] = useState<TreeNode | null>(null)
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const definition = navigation?.definition
+  const references = navigation?.references
+  const hover = navigation?.hover?.hover
+  const unavailable = navigation && !navigation.loading && !navigation.error &&
+    !definition?.available && !references?.available && !navigation.hover?.available
+  const empty = navigation && !navigation.loading && !navigation.error && !unavailable &&
+    !definition?.location && !hover && !references?.locations.length
 
-  useEffect(() => {
-    let live = true
-    fetchTree(repo)
-      .then((r) => {
-        if (!live) return
-        setRoot(buildTree(r.paths))
-        // expand every ancestor dir of the current file
-        const anc = new Set<string>()
-        const parts = current.split('/')
-        let acc = ''
-        for (let i = 0; i < parts.length - 1; i++) {
-          acc = acc ? acc + '/' + parts[i] : parts[i]
-          anc.add(acc)
-        }
-        setExpanded(anc)
-      })
-      .catch(() => {})
-    return () => {
-      live = false
-    }
-  }, [repo, current])
-
-  const toggle = (p: string) =>
-    setExpanded((s) => {
-      const n = new Set(s)
-      n.has(p) ? n.delete(p) : n.add(p)
-      return n
-    })
-
-  if (!root) return null
   return (
     <aside
+      aria-label="Code navigation"
+      className={css({
+        width: '300px',
+        flexShrink: 0,
+        position: 'sticky',
+        top: '72px',
+        borderLeft: `1px solid ${tok.innerSep}`,
+        paddingLeft: '16px',
+        maxHeight: 'calc(100vh - 96px)',
+        overflowY: 'auto',
+        '@media screen and (max-width: 960px)': {
+          width: '100%',
+          position: 'static',
+          maxHeight: 'none',
+          borderLeft: 'none',
+          borderTop: `1px solid ${tok.innerSep}`,
+          paddingLeft: 0,
+          paddingTop: '14px',
+        },
+      })}
+    >
+      <div className={css({ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '14px' })}>
+        <h2 className={css({ margin: 0, fontSize: '14px', color: tok.textPrimary })}>Code navigation</h2>
+        <span className={css({ fontFamily: FONTS.MONO, fontSize: '11px', color: tok.textTertiary })}>
+          {position.line + 1}:{position.character + 1}
+        </span>
+      </div>
+      {navigation?.loading && <Spinner $size="small" />}
+      {navigation?.error && (
+        <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}>
+          {navigation.error}
+        </Notification>
+      )}
+      {unavailable && <PanelMessage>SCIP data is not available for this revision.</PanelMessage>}
+      {empty && <PanelMessage>No precise symbol exists at this position.</PanelMessage>}
+      {hover && (
+        <section className={css({ marginBottom: '18px' })}>
+          <PanelTitle>Hover</PanelTitle>
+          <div className={css({ fontSize: '13px', fontWeight: 600, color: tok.textPrimary, overflowWrap: 'anywhere' })}>
+            {hover.display_name || hover.symbol}
+          </div>
+          {hover.kind && <div className={css({ marginTop: '3px', fontSize: '11px', color: tok.textTertiary })}>{hover.kind}</div>}
+          {hover.signature && (
+            <pre className={css({ marginTop: '8px', marginBottom: 0, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap', fontFamily: FONTS.MONO, fontSize: '12px', color: tok.plainCode, backgroundColor: tok.fill, borderRadius: '6px' })}>
+              {hover.signature}
+            </pre>
+          )}
+          {hover.documentation?.map((paragraph, index) => (
+            <p key={`${index}:${paragraph}`} className={css({ marginTop: '8px', marginBottom: 0, fontSize: '12px', lineHeight: 1.5, color: tok.textSecondary, overflowWrap: 'anywhere' })}>
+              {paragraph}
+            </p>
+          ))}
+        </section>
+      )}
+      {definition?.location && (
+        <section className={css({ marginBottom: '18px' })}>
+          <PanelTitle>Definition</PanelTitle>
+          <LocationLink location={definition.location} />
+        </section>
+      )}
+      {!!references?.locations.length && (
+        <section>
+          <PanelTitle>References ({references.locations.length}{references.truncated ? '+' : ''})</PanelTitle>
+          <div className={css({ display: 'grid', gap: '2px' })}>
+            {references.locations.slice(0, 100).map((location, index) => (
+              <LocationLink
+                key={`${location.path}:${location.range.start.line}:${location.range.start.character}:${index}`}
+                location={location}
+              />
+            ))}
+          </div>
+          {references.locations.length > 100 && (
+            <div className={css({ marginTop: '6px', fontSize: '11px', color: tok.textTertiary })}>
+              Showing the first 100 references.
+            </div>
+          )}
+        </section>
+      )}
+    </aside>
+  )
+}
+
+function PanelTitle({ children }: { children: React.ReactNode }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return <h3 className={css({ marginTop: 0, marginBottom: '7px', fontSize: '11px', fontWeight: 600, color: tok.textTertiary, textTransform: 'uppercase' })}>{children}</h3>
+}
+
+function PanelMessage({ children }: { children: React.ReactNode }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return <div className={css({ fontSize: '12px', color: tok.textTertiary })}>{children}</div>
+}
+
+function LocationLink({ location }: { location: CodeLocation }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const line = location.range.start.line + 1
+  return (
+    <a
+      href={href('/file', { repo: location.repo, path: location.path, ref: location.revision, L: String(line) })}
+      className={css({ display: 'block', minWidth: 0, paddingTop: '5px', paddingBottom: '5px', color: tok.accent, fontFamily: FONTS.MONO, fontSize: '11px', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ':hover': { textDecoration: 'underline' } })}
+      title={`${location.path}:${line}`}
+    >
+      {location.path}:{line}
+    </a>
+  )
+}
+
+interface FolderRecord {
+  entries?: TreeEntry[]
+  error?: string
+  loading: boolean
+}
+
+const folderKey = (repo: string, ref: string, path: string) =>
+  `${repo}\0${ref}\0${path}`
+
+function joinPath(parent: string, name: string): string {
+  return parent ? `${parent}/${name}` : name
+}
+
+function sortEntries(entries: TreeEntry[]): TreeEntry[] {
+  return [...entries].sort((left, right) => {
+    const leftDirectory = left.type === 'dir'
+    const rightDirectory = right.type === 'dir'
+    if (leftDirectory !== rightDirectory) return leftDirectory ? -1 : 1
+    return left.name.localeCompare(right.name)
+  })
+}
+
+function FileTree({ repo, ref, current }: { repo: string; ref: string; current: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const cache = useRef(new Map<string, FolderRecord>())
+  const controller = useRef(new AbortController())
+  const generation = useRef(0)
+  const [, renderCache] = useState(0)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  const loadFolder = useCallback(
+    (path: string) => {
+      const key = folderKey(repo, ref, path)
+      const cached = cache.current.get(key)
+      if (cached?.loading || cached?.entries) return
+
+      const requestGeneration = generation.current
+      cache.current.set(key, { loading: true })
+      renderCache((value) => value + 1)
+      fetchFolderContents(repo, ref, path, controller.current.signal)
+        .then(({ entries }) => {
+          if (requestGeneration !== generation.current) return
+          cache.current.set(key, { entries: sortEntries(entries), loading: false })
+          renderCache((value) => value + 1)
+        })
+        .catch((error) => {
+          if (isAbortError(error) || requestGeneration !== generation.current) return
+          cache.current.set(key, { error: String(error), loading: false })
+          renderCache((value) => value + 1)
+        })
+    },
+    [repo, ref],
+  )
+
+  useEffect(() => {
+    controller.current.abort()
+    const activeController = new AbortController()
+    controller.current = activeController
+    generation.current++
+    for (const [key, record] of cache.current) {
+      if (record.loading) cache.current.delete(key)
+    }
+    setExpanded(new Set())
+    return () => {
+      activeController.abort()
+    }
+  }, [repo, ref])
+
+  useEffect(() => {
+    const ancestors = ancestorFolders(current)
+    setExpanded((value) => {
+      const next = new Set(value)
+      for (const path of ancestors) next.add(path)
+      return next
+    })
+    for (const path of ['', ...ancestors]) loadFolder(path)
+  }, [current, loadFolder])
+
+  const toggle = (path: string) => {
+    setExpanded((value) => {
+      const next = new Set(value)
+      if (next.has(path)) next.delete(path)
+      else {
+        next.add(path)
+        loadFolder(path)
+      }
+      return next
+    })
+  }
+
+  const record = cache.current.get(folderKey(repo, ref, ''))
+  return (
+    <aside
+      aria-label="Repository files"
       className={css({
         width: '240px',
         flexShrink: 0,
@@ -158,42 +415,77 @@ function FileTree({ repo, current }: { repo: string; current: string }) {
         overflowY: 'auto',
         paddingTop: '6px',
         paddingBottom: '6px',
+        '@media screen and (max-width: 720px)': {
+          width: '100%',
+          position: 'static',
+          maxHeight: '280px',
+        },
       })}
     >
-      {root.children.map((c) => (
-        <TreeRow key={c.path} node={c} depth={0} current={current} repo={repo} expanded={expanded} toggle={toggle} />
+      {record?.loading && <TreeMessage text="Loading files…" />}
+      {record?.error && (
+        <TreeRetry message={record.error} onRetry={() => loadFolder('')} />
+      )}
+      {record?.entries?.map((entry) => (
+        <TreeRow
+          key={`${entry.type}:${entry.name}`}
+          entry={entry}
+          parentPath=""
+          depth={0}
+          current={current}
+          repo={repo}
+          ref={ref}
+          expanded={expanded}
+          cache={cache.current}
+          onToggle={toggle}
+          onRetry={loadFolder}
+        />
       ))}
     </aside>
   )
 }
 
 function TreeRow({
-  node,
+  entry,
+  parentPath,
   depth,
   current,
   repo,
+  ref,
   expanded,
-  toggle,
+  cache,
+  onToggle,
+  onRetry,
 }: {
-  node: TreeNode
+  entry: TreeEntry
+  parentPath: string
   depth: number
   current: string
   repo: string
+  ref: string
   expanded: Set<string>
-  toggle: (p: string) => void
+  cache: Map<string, FolderRecord>
+  onToggle: (path: string) => void
+  onRetry: (path: string) => void
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const isOpen = expanded.has(node.path)
-  const active = !node.dir && node.path === current
+  const path = joinPath(parentPath, entry.name)
+  const isDirectory = entry.type === 'dir'
+  const isOpen = isDirectory && expanded.has(path)
+  const active = !isDirectory && path === current
   const rowStyle = css({
     display: 'flex',
     alignItems: 'center',
     gap: '4px',
+    width: '100%',
     height: '28px',
     paddingLeft: `${8 + depth * 12}px`,
     paddingRight: '8px',
+    border: 'none',
     fontSize: '13px',
+    fontFamily: 'inherit',
+    textAlign: 'left',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -204,43 +496,131 @@ function TreeRow({
     backgroundColor: active ? tok.fill : 'transparent',
     boxShadow: active ? `inset 2px 0 0 ${tok.textPrimary}` : 'none',
     ':hover': { backgroundColor: active ? tok.fill : tok.hoverFill },
+    ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
   })
 
-  if (node.dir) {
+  if (isDirectory) {
+    const record = cache.get(folderKey(repo, ref, path))
     return (
       <div>
-        <div className={rowStyle} onClick={() => toggle(node.path)}>
+        <button
+          type="button"
+          aria-expanded={isOpen}
+          onClick={() => onToggle(path)}
+          className={rowStyle}
+        >
           <span className={css({ display: 'flex', color: tok.textTertiary, flexShrink: 0 })}>
             {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </span>
-          <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{node.name}</span>
-        </div>
+          <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{entry.name}</span>
+        </button>
+        {isOpen && record?.loading && <TreeMessage text="Loading…" depth={depth + 1} />}
+        {isOpen && record?.error && (
+          <TreeRetry message={record.error} depth={depth + 1} onRetry={() => onRetry(path)} />
+        )}
         {isOpen &&
-          node.children.map((c) => (
-            <TreeRow key={c.path} node={c} depth={depth + 1} current={current} repo={repo} expanded={expanded} toggle={toggle} />
+          record?.entries?.map((child) => (
+            <TreeRow
+              key={`${child.type}:${child.name}`}
+              entry={child}
+              parentPath={path}
+              depth={depth + 1}
+              current={current}
+              repo={repo}
+              ref={ref}
+              expanded={expanded}
+              cache={cache}
+              onToggle={onToggle}
+              onRetry={onRetry}
+            />
           ))}
       </div>
     )
   }
+
+  const fileParams = { repo, path, ...(ref ? { ref } : {}) }
   return (
-    <a href={href('/file', { repo, path: node.path })} className={rowStyle}>
-      <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(node.path), flexShrink: 0, marginLeft: '2px', marginRight: '2px' })} />
-      <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{node.name}</span>
+    <a href={href('/file', fileParams)} className={rowStyle} aria-current={active ? 'page' : undefined}>
+      <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(path), flexShrink: 0, marginLeft: '2px', marginRight: '2px' })} />
+      <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{entry.name}</span>
     </a>
   )
 }
 
-function Breadcrumb({ repo, path, meta }: { repo: string; path: string; meta: RepoStatus | null }) {
+function TreeMessage({ text, depth = 0 }: { text: string; depth?: number }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const short = repo.slice(repo.lastIndexOf('/') + 1)
+  return (
+    <div
+      role="status"
+      className={css({
+        height: '28px',
+        paddingLeft: `${12 + depth * 12}px`,
+        display: 'flex',
+        alignItems: 'center',
+        fontSize: '12px',
+        color: tok.textTertiary,
+      })}
+    >
+      {text}
+    </div>
+  )
+}
+
+function TreeRetry({
+  message,
+  depth = 0,
+  onRetry,
+}: {
+  message: string
+  depth?: number
+  onRetry: () => void
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  return (
+    <button
+      type="button"
+      title={message}
+      onClick={onRetry}
+      className={css({
+        width: '100%',
+        height: '28px',
+        paddingLeft: `${12 + depth * 12}px`,
+        border: 'none',
+        backgroundColor: 'transparent',
+        color: tok.statusRed,
+        fontSize: '12px',
+        textAlign: 'left',
+        cursor: 'pointer',
+        ':hover': { backgroundColor: tok.hoverFill },
+      })}
+    >
+      Retry folder
+    </button>
+  )
+}
+
+function Breadcrumb({
+  repo,
+  path,
+  ref,
+  meta,
+}: {
+  repo: string
+  path: string
+  ref: string
+  meta: RepoStatus | null
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
   const slash = path.lastIndexOf('/')
   const dir = slash === -1 ? '' : path.slice(0, slash + 1)
   const name = slash === -1 ? path : path.slice(slash + 1)
   return (
     <div className={css({ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' })}>
-      <div className={css({ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', minWidth: 0 })}>
-        <a href={href('/search', { q: `repo:${short}` })} className={css({ color: tok.textTertiary, textDecoration: 'none', ':hover': { color: tok.textPrimary, textDecoration: 'underline' } })}>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', minWidth: 0, maxWidth: '100%' })}>
+        <a href={href('/search', { q: repoFilter(repo) })} className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: tok.textTertiary, textDecoration: 'none', ':hover': { color: tok.textPrimary, textDecoration: 'underline' } })}>
           {repo}
         </a>
         <span className={css({ color: tok.textTertiary })}>/</span>
@@ -249,24 +629,46 @@ function Breadcrumb({ repo, path, meta }: { repo: string; path: string; meta: Re
         <CopyInline text={path} title="Copy path" />
       </div>
       <div className={css({ flex: 1 })} />
-      {meta?.indexed_commit_hash && (
+      {(ref || meta?.indexed_commit_hash) && (
         <span className={css({ display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FONTS.MONO, fontSize: '12px', color: tok.textSecondary, border: `1px solid ${tok.cardBorder}`, borderRadius: '999px', padding: '3px 10px' })}>
           <CommitIcon size={13} />
-          {meta.default_branch ?? 'HEAD'} · {meta.indexed_commit_hash.slice(0, 7)}
+          {ref ? `commit · ${ref.slice(0, 7)}` : `${meta?.default_branch ?? 'HEAD'} · ${meta?.indexed_commit_hash?.slice(0, 7)}`}
         </span>
       )}
       <button
-        onClick={() => navigator.clipboard?.writeText(window.location.href)}
+        type="button"
+        onClick={() => navigator.clipboard?.writeText(
+          `${window.location.href.split('#')[0]}${href('/file', { repo, path, ...(ref ? { ref } : {}) })}`,
+        )}
         className={css(btnStyle(tok))}
       >
         Copy permalink
       </button>
       <button
-        onClick={() => navigate('/search', { q: `file:${path.slice(slash + 1)}` })}
+        type="button"
+        onClick={() => navigate('/search', { q: fileFilter(path) })}
         className={css(btnStyle(tok))}
       >
         <SearchIcon size={13} /> Open in search
       </button>
+      {ref && (
+        <button
+          type="button"
+          onClick={() => navigate('/blame', { repo, path, ref })}
+          className={css(btnStyle(tok))}
+        >
+          Blame
+        </button>
+      )}
+      {ref && (
+        <button
+          type="button"
+          onClick={() => navigate('/history', { repo, path, ref })}
+          className={css(btnStyle(tok))}
+        >
+          <CommitIcon size={13} /> History
+        </button>
+      )}
     </div>
   )
 }
@@ -310,11 +712,15 @@ function CodeHeader({ path, content, line, meta }: { path: string; content: stri
         borderBottom: `1px solid ${tok.innerSep}`,
         borderTopLeftRadius: '8px',
         borderTopRightRadius: '8px',
+        '@media screen and (max-width: 720px)': {
+          height: 'auto',
+          minHeight: '44px',
+        },
       })}
     >
       <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(path) })} />
       <span className={css({ fontSize: '13px', fontWeight: 600, color: tok.textPrimary })}>{name}</span>
-      <span className={css({ fontSize: '12px', color: tok.textTertiary })}>
+      <span className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { display: 'none' } })}>
         {langName(path)} · {lineCount} lines · {humanSize(bytes)}
         {meta?.indexed_at ? ` · indexed ${relTime(meta.indexed_at)}` : ''}
       </span>
@@ -354,10 +760,14 @@ function CodeViewer({
   content,
   path,
   focusLine,
+  selectedLine,
+  onPosition,
 }: {
   content: string
   path: string
   focusLine: number
+  selectedLine: number
+  onPosition: (line: number, character: number) => void
 }) {
   const [css] = useStyletron()
   const { mode } = useMode()
@@ -396,10 +806,22 @@ function CodeViewer({
 
       const probe = EditorState.create({ doc: content })
       let anchor = -1
-      if (focusLine > 0 && focusLine <= probe.doc.lines) {
-        anchor = probe.doc.line(focusLine).from
+      const highlightedLine = selectedLine || focusLine
+      if (highlightedLine > 0 && highlightedLine <= probe.doc.lines) {
+        anchor = probe.doc.line(highlightedLine).from
         extensions.push(EditorView.decorations.of(Decoration.set([focusDeco.range(anchor)])))
       }
+
+      extensions.push(EditorView.domEventHandlers({
+        click(event, activeView) {
+          if (!activeView.contentDOM.contains(event.target as Node)) return false
+          const offset = activeView.posAtCoords({ x: event.clientX, y: event.clientY })
+          if (offset === null) return false
+          const sourceLine = activeView.state.doc.lineAt(offset)
+          onPosition(sourceLine.number - 1, offset - sourceLine.from)
+          return false
+        },
+      }))
 
       view = new EditorView({
         state: EditorState.create({ doc: content, extensions }),
@@ -414,7 +836,7 @@ function CodeViewer({
       cancelled = true
       view?.destroy()
     }
-  }, [content, path, focusLine, mode, tok])
+  }, [content, path, focusLine, selectedLine, onPosition, mode, tok])
 
   return <div ref={host} className={css({ overflow: 'hidden', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' })} />
 }

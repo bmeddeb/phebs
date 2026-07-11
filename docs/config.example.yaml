@@ -3,17 +3,47 @@
 # (an importer is planned, PORT_MAP §8).
 
 server:
-  # Listen address. Default ":3070".
-  addr: ":3070"
+  # Listen address. Default "127.0.0.1:3070". Expose phebs only through a
+  # trusted TLS reverse proxy unless this is an isolated development host.
+  addr: "127.0.0.1:3070"
   # All state lives here: shards at <data_dir>/index, bare repos at
-  # <data_dir>/repos/<host>/<path>.git, embedded DB at <data_dir>/db.
+  # <data_dir>/repos/<host>/<path>.git, supervised DB at <data_dir>/db
+  # (including users, API-key hashes, and sessions).
   # Default "~/.phebs".
   data_dir: "~/.phebs"
 
 auth:
-  # Single bearer token for the API. Empty/omitted = open API
-  # (serve logs a warning).
-  api_key: "change-me"
+  # Migration only: imports this legacy bearer as a SHA-256 hash into the
+  # database. Sign in, create a named/revocable key under Settings, migrate
+  # clients, then remove api_key; omission deletes the legacy DB key.
+  # api_key: "${PHEBS_LEGACY_API_KEY}"
+
+  # Session cookies are Secure by default. Keep true behind HTTPS. Set false
+  # only for deliberate plain-HTTP local development such as localhost:3070.
+  cookie_secure: true
+  # Absolute session lifetime (default 12h, accepted range 15m..720h).
+  # Sessions also have a fixed 30-minute idle timeout.
+  session_lifetime: 12h
+
+  # Optional one-time first administrator. The password is Argon2id-hashed;
+  # remove this block after first startup because changing it does not rotate
+  # the stored password. Without bootstrap_user or OIDC, startup logs an
+  # ephemeral setup token for the browser's first-run form.
+  # bootstrap_user:
+  #   email: admin@example.com
+  #   display_name: Phebs Admin
+  #   password: "${PHEBS_BOOTSTRAP_PASSWORD}" # at least 12 bytes
+
+  # Optional single OpenID Connect provider. Discovery runs at startup;
+  # openid/profile/email are always requested, with these additional scopes.
+  # The provider must return a verified email. HTTPS is required except for
+  # loopback test providers, and redirect_url must match the IdP registration.
+  # oidc:
+  #   issuer_url: https://idp.example.com
+  #   client_id: phebs
+  #   client_secret: "${PHEBS_OIDC_CLIENT_SECRET}"
+  #   redirect_url: https://phebs.example.com/api/auth/oidc/callback
+  #   scopes: [groups]
 
 sync:
   # Delete repo rows + mirrors no connection claims (default off).
@@ -79,6 +109,15 @@ connections:
   - name: zoekt-mirror
     type: git
     url: https://github.com/sourcegraph/zoekt.git
+
+  # Private HTTP Git uses transient Basic auth. Never put credentials,
+  # query tokens, or fragments in url; those forms fail validation.
+  - name: private-git
+    type: git
+    url: https://git.example.com/team/private.git
+    http_auth:
+      username: "${GIT_HTTP_USERNAME}"
+      password: "${GIT_HTTP_PASSWORD}"
 
   # A local working repo with watch mode: commits (and branch switches)
   # become searchable within seconds. The index follows whatever branch is

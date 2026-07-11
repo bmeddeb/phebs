@@ -20,6 +20,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
 )
@@ -52,17 +53,35 @@ type Indexer struct {
 
 // Handle adapts Index to the store.Runner: the job target is the repo name.
 func (ix *Indexer) Handle(ctx context.Context, job store.Job) error {
-	repo, err := ix.Store.GetRepo(ctx, job.Target)
-	if err != nil {
-		return err
-	}
-	return ix.Index(ctx, *repo, false)
+	return ix.Index(ctx, store.Repo{Name: job.Target}, job.Force)
 }
 
 // Index runs the child builder over the repo's bare mirror (HEAD-only, the
 // child's default) and records the indexed commit on success.
 func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error {
-	dir := sync.RepoDir(ix.DataDir, repo.Name)
+	target := repo.Name
+	dir, err := sync.SafeRepoDir(ix.DataDir, target)
+	if err != nil {
+		return fmt.Errorf("index %s: %w", target, err)
+	}
+	unlock := repowork.Lock(dir)
+	defer unlock()
+
+	fresh, err := ix.Store.GetRepo(ctx, target)
+	if errors.Is(err, store.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("index %s: reload repo: %w", target, err)
+	}
+	if fresh.Deleting {
+		return nil
+	}
+	if fresh.Name != target {
+		return fmt.Errorf("index %s: stored repository name mismatch", target)
+	}
+	repo = *fresh
+
 	head, err := sync.Head(ctx, dir)
 	if err != nil {
 		return fmt.Errorf("index %s: resolve HEAD: %w", repo.Name, err)
@@ -83,23 +102,41 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	// Always -incremental=false. phebs's own short-circuit above (indexed hash
 	// == HEAD) already skips redundant runs, so by the time we invoke the
 	// child a real build is wanted. Leaving zoekt's own incremental skip on
-	// silently no-ops a force reindex when HEAD is unchanged: the API force
-	// path clears our recorded hash but the on-disk shard still matches HEAD,
-	// so zoekt would skip and force would do nothing.
+	// silently no-ops a force job when HEAD and the on-disk shard are unchanged.
 	args := []string{"-index", indexDir, "-incremental=false"}
 	start := time.Now()
 	cmd := exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	if err := cmd.Run(); err != nil {
-		return classifyChild(fmt.Errorf("index %s: zoekt-git-index: %w\n%s", repo.Name, err, out.String()), err, out.String())
+		wrapped := fmt.Errorf("index %s: zoekt-git-index: %w\n%s", repo.Name, err, out.String())
+		if ctx.Err() != nil {
+			return fmt.Errorf("%v: %w", wrapped, ctx.Err())
+		}
+		return classifyChild(wrapped, err, out.String())
 	}
 	indexDuration.Observe(time.Since(start).Seconds())
 	shardBytes.Set(dirBytes(indexDir))
 	if err := ix.Store.SetRepoIndexed(ctx, repo.Name, head, time.Now().UTC()); err != nil {
-		return fmt.Errorf("index %s: record state: %w", repo.Name, err)
+		// The child has already replaced the shard. If the DB commit fails,
+		// remove both sides of the claimed state so search cannot serve revision
+		// B while MCP defaults to the previously recorded revision A.
+		clearErr := ix.Store.ClearRepoIndexState(ctx, repo.Name)
+		removeErr := sync.RemoveShards(ix.DataDir, repo.Name)
+		return errors.Join(
+			fmt.Errorf("index %s: record state: %w", repo.Name, err),
+			wrapIfError("clear index state", clearErr),
+			wrapIfError("remove uncommitted shards", removeErr),
+		)
 	}
 	return nil
+}
+
+func wrapIfError(action string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", action, err)
 }
 
 // classifyChild tags child-builder failures per the T3.3 taxonomy: SIGKILL

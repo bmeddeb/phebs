@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -21,15 +22,73 @@ type fakeStore struct {
 	store.Store
 	cleared  []string
 	enqueued []string
+	forces   []bool
+}
+
+type urlStore struct {
+	fakeStore
+	cloneURL        string
+	webURL          string
+	externalHostURL string
+}
+
+type historyStore struct {
+	fakeStore
+	hash string
+}
+
+func (s *historyStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
+	if name != "github.com/foo/bar" {
+		return nil, store.ErrNotFound
+	}
+	return &store.Repo{Name: name, IndexedCommitHash: s.hash}, nil
+}
+
+func (s *urlStore) ListRepos(context.Context) ([]store.Repo, error) {
+	return []store.Repo{{Name: "github.com/foo/bar", CloneURL: s.cloneURL, WebURL: s.webURL, ExternalHostURL: s.externalHostURL}}, nil
+}
+
+func (s *urlStore) RepoStatuses(context.Context) ([]store.RepoStatus, error) {
+	return []store.RepoStatus{{
+		Repo:     store.Repo{Name: "github.com/foo/bar", CloneURL: s.cloneURL, WebURL: s.webURL, ExternalHostURL: s.externalHostURL},
+		Orphaned: true,
+	}}, nil
 }
 
 func (fakeStore) ListRepos(context.Context) ([]store.Repo, error) {
-	return []store.Repo{{Name: "github.com/foo/bar", CloneURL: "https://github.com/foo/bar.git"}}, nil
+	return []store.Repo{{Name: "github.com/foo/bar", CloneURL: "https://user:api-secret@github.com/foo/bar.git"}}, nil
+}
+
+func TestRepoResponsesStripURLCredentials(t *testing.T) {
+	for _, cloneURL := range []string{
+		"https://user:api-secret@github.com/foo/bar.git",
+		"https://user:api-secret@%zz/foo/bar.git",
+		"https:user:api-secret@github.com/foo/bar.git",
+		"https://github.com/foo/bar.git?access_token=api-secret",
+		"ssh://user:api-secret@github.com/foo/bar.git",
+	} {
+		h := api.New(api.Options{Version: "t", Store: &urlStore{
+			cloneURL:        cloneURL,
+			webURL:          "https://user:web-secret@github.com/foo/bar?token=web-secret",
+			externalHostURL: "https://user:host-secret@github.com#host-secret",
+		}})
+		for _, path := range []string{"/api/repos", "/api/repo-status"} {
+			req := httptest.NewRequest(http.MethodGet, path, nil)
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK {
+				t.Fatalf("%s status = %d", path, rec.Code)
+			}
+			if strings.Contains(rec.Body.String(), "secret") || strings.Contains(rec.Body.String(), "user:") || strings.Contains(rec.Body.String(), "?token=") {
+				t.Errorf("%s leaked URL credentials: %s", path, rec.Body.String())
+			}
+		}
+	}
 }
 
 func (fakeStore) RepoStatuses(context.Context) ([]store.RepoStatus, error) {
 	return []store.RepoStatus{{
-		Repo:     store.Repo{Name: "github.com/foo/bar"},
+		Repo:     store.Repo{Name: "github.com/foo/bar", CloneURL: "https://user:api-secret@github.com/foo/bar.git"},
 		Orphaned: true,
 	}}, nil
 }
@@ -56,6 +115,12 @@ func (f *fakeStore) ListJobs(context.Context, store.JobKind, store.JobStatus) ([
 func (f *fakeStore) CreateJob(_ context.Context, _ store.JobKind, target string) (*store.Job, error) {
 	f.enqueued = append(f.enqueued, target)
 	return &store.Job{Target: target}, nil
+}
+
+func (f *fakeStore) EnqueuePending(_ context.Context, kind store.JobKind, target string, force bool) (*store.Job, error) {
+	f.enqueued = append(f.enqueued, target)
+	f.forces = append(f.forces, force)
+	return &store.Job{Kind: kind, Target: target, Force: force}, nil
 }
 
 func TestAPI(t *testing.T) {
@@ -175,6 +240,77 @@ func TestFileServing(t *testing.T) {
 	}
 }
 
+func TestHistoryEndpointsUseIndexedRevision(t *testing.T) {
+	origin := t.TempDir()
+	run := func(args ...string) string {
+		full := append([]string{"-c", "user.name=History User", "-c", "user.email=history@example.com", "-C", origin}, args...)
+		out, err := exec.Command("git", full...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	run("init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "hello.txt"), []byte("first\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "first")
+	if err := os.WriteFile(filepath.Join(origin, "hello.txt"), []byte("first\nsecond\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "second")
+	head := run("rev-parse", "HEAD")
+
+	dataDir := t.TempDir()
+	if err := phebssync.Mirror(context.Background(), "file://"+origin,
+		phebssync.RepoDir(dataDir, "github.com/foo/bar")); err != nil {
+		t.Fatal(err)
+	}
+	h := api.New(api.Options{
+		Version: "t", Store: &historyStore{hash: head}, DataDir: dataDir,
+		CodeNav: codenav.New(codenav.Options{DataDir: dataDir}),
+	})
+
+	get := func(path string) (int, string) {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code, rec.Body.String()
+	}
+	for _, tc := range []struct {
+		path string
+		want string
+	}{
+		{"/api/blame?repo=github.com/foo/bar&path=hello.txt", `"content":"second"`},
+		{"/api/commits?repo=github.com/foo/bar&path=hello.txt", `"subject":"second"`},
+		{"/api/commit?repo=github.com/foo/bar", `"status":"modified"`},
+		{"/api/diff?repo=github.com/foo/bar", `+second`},
+	} {
+		code, body := get(tc.path)
+		if code != http.StatusOK || !strings.Contains(body, tc.want) || !strings.Contains(body, head) {
+			t.Errorf("GET %s = %d %s, want %q and indexed hash", tc.path, code, body, tc.want)
+		}
+	}
+	if code, _ := get("/api/blame?repo=github.com/foo/bar&path=../../etc/passwd"); code != http.StatusBadRequest {
+		t.Errorf("blame traversal status = %d, want 400", code)
+	}
+	for _, endpoint := range []string{"find_definitions", "find_references", "hover"} {
+		path := "/api/" + endpoint + "?repo=github.com/foo/bar&path=hello.txt&line=0&character=1"
+		if code, body := get(path); code != http.StatusOK || !strings.Contains(body, `"available":false`) {
+			t.Errorf("GET %s = %d %s, want graceful unavailable SCIP result", path, code, body)
+		}
+	}
+	if code, _ := get("/api/hover?repo=github.com/foo/bar&ref=HEAD&path=hello.txt&line=0&character=1"); code != http.StatusBadRequest {
+		t.Errorf("hover symbolic ref status = %d, want 400", code)
+	}
+	missingRef := strings.Repeat("f", 40)
+	if code, _ := get("/api/hover?repo=github.com/foo/bar&ref=" + missingRef + "&path=hello.txt&line=0&character=1"); code != http.StatusNotFound {
+		t.Errorf("hover missing full ref status = %d, want 404", code)
+	}
+}
+
 func TestReindex(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -185,7 +321,7 @@ func TestReindex(t *testing.T) {
 	}{
 		{"unknown repo", `{"repo":"github.com/no/pe"}`, 404, 0, 0},
 		{"plain reindex", `{"repo":"github.com/foo/bar"}`, 200, 0, 1},
-		{"forced reindex", `{"repo":"github.com/foo/bar","force":true}`, 200, 1, 1},
+		{"forced reindex", `{"repo":"github.com/foo/bar","force":true}`, 200, 0, 1},
 		{"unknown forced", `{"repo":"github.com/no/pe","force":true}`, 404, 0, 0},
 	}
 	for _, tt := range tests {
@@ -206,6 +342,23 @@ func TestReindex(t *testing.T) {
 			if len(fs.enqueued) != tt.wantEnqueued {
 				t.Errorf("enqueued = %v, want %d jobs", fs.enqueued, tt.wantEnqueued)
 			}
+			if tt.name == "forced reindex" && (len(fs.forces) != 1 || !fs.forces[0]) {
+				t.Errorf("forced reindex did not persist force on the pending job: %v", fs.forces)
+			}
 		})
+	}
+}
+
+func TestReindexRequiresAdministratorWhenConfigured(t *testing.T) {
+	h := api.New(api.Options{
+		Version: "t", Store: &fakeStore{},
+		IsAdmin: func(context.Context) bool { return false },
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/reindex", strings.NewReader(`{"repo":"github.com/foo/bar"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), "administrator") {
+		t.Fatalf("reindex as non-admin = %d %s, want 403", rec.Code, rec.Body)
 	}
 }

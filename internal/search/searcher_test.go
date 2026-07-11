@@ -23,6 +23,26 @@ import (
 
 var update = flag.Bool("update", false, "rewrite golden files")
 
+func TestOpenRejectsGlobMetacharacters(t *testing.T) {
+	if _, err := search.Open(filepath.Join(t.TempDir(), "data[*]", "index"), nil); err == nil {
+		t.Fatal("Open accepted a glob-bearing index path")
+	}
+}
+
+func TestOpenRejectsSymlinkedShard(t *testing.T) {
+	indexDir := t.TempDir()
+	target := filepath.Join(t.TempDir(), "outside.zoekt")
+	if err := os.WriteFile(target, []byte("outside"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(indexDir, "linked.zoekt")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := search.Open(indexDir, nil); err == nil {
+		t.Fatal("Open accepted a symlinked shard")
+	}
+}
+
 func TestMain(m *testing.M) {
 	flag.Parse()
 	if _, err := indexer.FindBinary(); err != nil {
@@ -54,6 +74,11 @@ func gitc(t *testing.T, dir string, args ...string) {
 
 // corpus builds two indexed repos: "plain" and "forked" (IsFork in the DB).
 func corpus(t *testing.T, ctx context.Context) *search.Searcher {
+	s, _ := corpusWithStore(t, ctx)
+	return s
+}
+
+func corpusWithStore(t *testing.T, ctx context.Context) (*search.Searcher, store.Store) {
 	t.Helper()
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
@@ -117,7 +142,7 @@ func corpus(t *testing.T, ctx context.Context) *search.Searcher {
 		t.Fatal(err)
 	}
 	t.Cleanup(s.Close)
-	return s
+	return s, st
 }
 
 // T4.2 AC: golden-file tests over a fixture corpus.
@@ -140,6 +165,12 @@ func TestSearchGolden(t *testing.T) {
 			res, err := s.Search(ctx, tt.q, search.Options{})
 			if err != nil {
 				t.Fatal(err)
+			}
+			for i := range res.Files {
+				if res.Files[i].Ref == "" {
+					t.Errorf("%s: search result %s/%s has no indexed ref", tt.q, res.Files[i].Repo, res.Files[i].Path)
+				}
+				res.Files[i].Ref = "" // commit hashes include fixture commit time; goldens cover the remaining wire shape
 			}
 			res.Stats.DurationMS = 0 // nondeterministic
 			sort.Slice(res.Files, func(i, j int) bool {
@@ -245,6 +276,47 @@ func TestSearchContext(t *testing.T) {
 	if _, err := s.Search(ctx, "phebsNeedle context:missing", search.Options{}); err == nil {
 		t.Error("unknown context should error")
 	}
+}
+
+func TestSearchExcludesShardWithoutRepoRow(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	s, st := corpusWithStore(t, ctx)
+	repo, err := st.GetRepo(ctx, "example.com/forked")
+	if err != nil {
+		t.Fatal(err)
+	}
+	indexedHash := repo.IndexedCommitHash
+	if err := st.SetRepoIndexed(ctx, "example.com/forked", "mismatched-revision", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	assertHidden := func(stage string) {
+		res, err := s.Search(ctx, "phebsNeedle", search.Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, file := range res.Files {
+			if file.Repo == "example.com/forked" {
+				t.Fatalf("%s shard leaked into results: %+v", stage, file)
+			}
+		}
+	}
+	assertHidden("revision mismatch")
+	if err := st.ClearRepoIndexState(ctx, "example.com/forked"); err != nil {
+		t.Fatal(err)
+	}
+	assertHidden("unindexed")
+	if err := st.SetRepoIndexed(ctx, "example.com/forked", indexedHash, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetRepoDeleting(ctx, "example.com/forked", true); err != nil {
+		t.Fatal(err)
+	}
+	assertHidden("deleting")
+	if err := st.DeleteRepo(ctx, "example.com/forked"); err != nil {
+		t.Fatal(err)
+	}
+	assertHidden("untracked")
 }
 
 // T4.3: streaming forwards batches progressively and aggregates stats;

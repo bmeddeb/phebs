@@ -1,5 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { streamSearch } from './api'
+import {
+  createAPIKey,
+  fetchDefinition,
+  fetchFolderContents,
+  fetchHover,
+  fetchReferences,
+  fetchRepoStatus,
+  fetchSource,
+  revokeAPIKey,
+  streamSearch,
+} from './api'
+import { setCSRFToken } from './authSession'
 
 type Listener = (e: { data?: string }) => void
 
@@ -50,8 +61,8 @@ describe('streamSearch', () => {
   it('delivers parsed results batches to onBatch in order', () => {
     const batches: unknown[] = []
     streamSearch('q', (r) => batches.push(r), vi.fn(), vi.fn())
-    const b1 = { files: [{ repo: 'r1', path: 'a.go', chunks: [] }], stats: { match_count: 1, file_count: 1, duration_ms: 2 } }
-    const b2 = { files: [{ repo: 'r2', path: 'b.go', chunks: [] }], stats: { match_count: 3, file_count: 1, duration_ms: 4 } }
+    const b1 = { files: [{ repo: 'r1', path: 'a.go', ref: 'aaa', chunks: [] }], stats: { match_count: 1, file_count: 1, duration_ms: 2 } }
+    const b2 = { files: [{ repo: 'r2', path: 'b.go', ref: 'bbb', chunks: [] }], stats: { match_count: 3, file_count: 1, duration_ms: 4 } }
     last().emit('results', JSON.stringify(b1))
     last().emit('results', JSON.stringify(b2))
     expect(batches).toEqual([b1, b2])
@@ -90,5 +101,106 @@ describe('streamSearch', () => {
     expect(last().closed).toBe(false)
     cancel()
     expect(last().closed).toBe(true)
+  })
+
+  it.each([
+    ['invalid JSON', 'not json'],
+    ['missing files', JSON.stringify({ stats: { match_count: 0, file_count: 0, duration_ms: 1 } })],
+    ['missing immutable ref', JSON.stringify({ files: [{ repo: 'r', path: 'x', chunks: [] }], stats: { match_count: 0, file_count: 1, duration_ms: 1 } })],
+  ])('rejects malformed results events: %s', (_name, data) => {
+    const onBatch = vi.fn()
+    const onError = vi.fn()
+    streamSearch('q', onBatch, vi.fn(), onError)
+    last().emit('results', data)
+    expect(onBatch).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledWith('invalid search results event')
+    expect(last().closed).toBe(true)
+  })
+
+  it('rejects a malformed done event through the same error callback', () => {
+    const onDone = vi.fn()
+    const onError = vi.fn()
+    streamSearch('q', vi.fn(), onDone, onError)
+    last().emit('done', '{"duration_ms":"fast"}')
+    expect(onDone).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledWith('invalid search done event')
+    expect(last().closed).toBe(true)
+  })
+})
+
+describe('request helpers', () => {
+  afterEach(() => {
+    setCSRFToken()
+    vi.unstubAllGlobals()
+  })
+
+  it('passes AbortSignal through repository status requests', async () => {
+    const signal = new AbortController().signal
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => [] })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchRepoStatus(signal)
+    expect(fetchMock).toHaveBeenCalledWith('/api/repo-status', {
+      credentials: 'same-origin',
+      signal,
+    })
+  })
+
+  it('includes immutable refs in source and lazy folder requests', async () => {
+    const signal = new AbortController().signal
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ entries: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchSource('github.com/a/repo', 'src/a b.go', 'abc123', signal)
+    await fetchFolderContents('github.com/a/repo', 'abc123', 'src', signal)
+    expect(fetchMock.mock.calls[0]).toEqual([
+      '/api/source?repo=github.com%2Fa%2Frepo&path=src%2Fa+b.go&ref=abc123',
+      { credentials: 'same-origin', signal },
+    ])
+    expect(fetchMock.mock.calls[1]).toEqual([
+      '/api/folder_contents?repo=github.com%2Fa%2Frepo&ref=abc123&path=src',
+      { credentials: 'same-origin', signal },
+    ])
+  })
+
+  it('uses zero-based UTF-16 source positions for precise navigation', async () => {
+    const signal = new AbortController().signal
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ available: false }) })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchDefinition('github.com/a/repo', 'a'.repeat(40), 'src/rocket.go', 7, 13, signal)
+    await fetchReferences('github.com/a/repo', 'a'.repeat(40), 'src/rocket.go', 7, 13, signal)
+    await fetchHover('github.com/a/repo', 'a'.repeat(40), 'src/rocket.go', 7, 13, signal)
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      `/api/find_definitions?repo=github.com%2Fa%2Frepo&ref=${'a'.repeat(40)}&path=src%2Frocket.go&line=7&character=13&encoding=utf16`,
+      `/api/find_references?repo=github.com%2Fa%2Frepo&ref=${'a'.repeat(40)}&path=src%2Frocket.go&line=7&character=13&encoding=utf16`,
+      `/api/hover?repo=github.com%2Fa%2Frepo&ref=${'a'.repeat(40)}&path=src%2Frocket.go&line=7&character=13&encoding=utf16`,
+    ])
+  })
+
+  it('attaches the in-memory CSRF token to API-key mutations', async () => {
+    setCSRFToken('csrf-settings')
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ key: { id: 'key1' }, token: 'phebs_token' }),
+      })
+      .mockResolvedValueOnce({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    await createAPIKey('CI')
+    await revokeAPIKey('key1')
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
+      credentials: 'same-origin',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-settings' },
+    })
+    expect(fetchMock.mock.calls[1]).toEqual([
+      '/api/auth/keys/key1',
+      {
+        credentials: 'same-origin',
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': 'csrf-settings' },
+      },
+    ])
   })
 })

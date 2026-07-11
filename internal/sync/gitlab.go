@@ -92,23 +92,23 @@ func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config
 		if excluded(p.PathWithNamespace, p.Archived, p.ForkedFrom != nil, conn.Exclude) {
 			continue
 		}
+		cloneURL, err := SanitizeURL(p.HTTPURLToRepo)
+		if err != nil {
+			return names, fmt.Errorf("connection %s: sanitize clone url: %w", conn.Name, err)
+		}
 		// a self-hosted server is less trusted input than gitlab.com: reject
 		// paths that would escape $DATA
-		name, err := safeName(prefix+"/"+p.PathWithNamespace, p.HTTPURLToRepo)
+		name, err := safeName(prefix+"/"+p.PathWithNamespace, cloneURL)
 		if err != nil {
-			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
-		if err := checkCloneURL(conn, p.HTTPURLToRepo); err != nil {
-			return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
-		}
-		dir := RepoDir(dataDir, name)
-		if err := Mirror(ctx, p.HTTPURLToRepo, dir, gitCfg...); err != nil {
-			return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
+		if err := checkCloneURL(conn, cloneURL); err != nil {
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		repo := store.Repo{
 			Name:             name,
 			DisplayName:      p.PathWithNamespace,
-			CloneURL:         p.HTTPURLToRepo,
+			CloneURL:         cloneURL,
 			WebURL:           p.WebURL,
 			DefaultBranch:    p.DefaultBranch,
 			IsFork:           p.ForkedFrom != nil,
@@ -119,8 +119,8 @@ func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config
 			ExternalHostType: "gitlab",
 			ExternalHostURL:  base,
 		}
-		if err := st.UpsertRepo(ctx, repo); err != nil {
-			return nil, fmt.Errorf("connection %s: upsert %s: %w", conn.Name, name, err)
+		if err := mirrorAndUpsert(ctx, st, dataDir, repo, gitCfg...); err != nil {
+			return names, fmt.Errorf("connection %s: %w", conn.Name, err)
 		}
 		names = append(names, name)
 	}

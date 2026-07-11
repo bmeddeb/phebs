@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+export const FOCUS_SEARCH = 'phebs-focus-search'
+
 // Hash router: works from a static go:embed file server, no fallback route
 // needed. Format: #/page?key=value.
 export function useHashRoute(): [string, URLSearchParams] {

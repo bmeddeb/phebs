@@ -260,8 +260,8 @@ tests + e2e over real shards. No DB table — config is the single source;
 add CRUD when a UI needs it.
 
 **T8.2 · MCP server** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs; flagship differentiator (PLAN P4)*
-Official go-sdk server at `/api/mcp` (Streamable HTTP, same bearer as the
-API): `search_code` (full query syntax incl. `context:`), `read_file`
+Official go-sdk server at `/api/mcp` (Streamable HTTP, same authentication as
+the API): `search_code` (full query syntax incl. `context:`), `read_file`
 (ranged), `list_repos`. **Verified live from Claude Code**: a headless
 session listed repos, searched the needle, and read the file — all correct.
 Deps: T8.1.
@@ -271,28 +271,49 @@ Large-file truncation on line boundaries with a `truncated` flag + ranged
 re-reads; binary/unknown-repo tool errors; MANUAL §8 with copy-paste
 `claude mcp add` + `.mcp.json` config. AC met by the live agent session.
 
-## EPIC 9 — Auth & code navigation *(Wave 3 — heavier lifts)*
+**TD.2 · Epics 1–8 stabilization review** ✅ 2026-07-11 — *release hardening*
+Closed the cross-epic correctness gaps found after Wave 2: fail-closed clone
+credential handling and pagination, atomic pending successors + fenced leases,
+repo-wide fetch/index/cleanup locking, startup artifact and shard-revision
+reconciliation, immutable search/file/MCP refs, lazy request-safe file browsing,
+exact query filters, Unicode highlights, accessibility, and durable UI tests /
+lint in CI. Regression coverage includes concurrent enqueue/reaper races,
+cleanup traversal/collisions, stale shards, failed index-state commits, private
+App selectors, malformed URLs, transactional membership rollback, literal
+artifact paths, and responsive UI corrections.
 
-**T9.1 · DB-backed users, sessions, multiple API keys** — *Sourcebot free (login/members)*
-Activate the reserved `user`/`api_key` tables: scs sessions, hashed multi-key
-auth, a minimal login. UI attaches the bearer token. AC: a user logs in; keys
-are created/revoked; the UI no longer relies on an open API.
+## EPIC 9 — Auth & code navigation ✅ 2026-07-11 *(Wave 3 — heavier lifts)*
 
-**T9.2 · OIDC / SSO** — *Sourcebot paid/EE (enterprise SSO)*
-`coreos/go-oidc` login, no seat gating (SAML only on demand). AC: OIDC login
-against a test IdP; sessions bridge to the T9.1 model.
-Deps: T9.1.
+**T9.1 · DB-backed users, sessions, multiple API keys** ✅ 2026-07-11 — *Sourcebot free (login/members)*
+Surreal-backed users/SCS sessions, Argon2id local passwords, hashed named API
+keys, one-time setup/bootstrap, login/logout, CSRF, Settings key lifecycle,
+and always-on API/MCP auth. Tests cover atomic first-user creation, session
+restart persistence, key create/use/revoke, legacy config-key hash migration,
+rate limiting, malformed credentials, and CSRF enforcement.
 
-**T9.3 · Code navigation (SCIP)** — *Sourcebot paid/EE (Pro code nav) — PLAN P4*
-Beyond base `sym:`: ingest SCIP indexes (Apache-2.0) for precise
-go-to-definition / find-references / hover. AC: def/ref/hover on a fixture repo
-with a committed SCIP index; graceful when absent.
+**T9.2 · OIDC / SSO** ✅ 2026-07-11 — *Sourcebot paid/EE (enterprise SSO)*
+`coreos/go-oidc` discovery + authorization code/PKCE/state/nonce, verified
+ID-token email, stable issuer/subject linking, and T9.1 session bridging with
+no seat gate. A fake IdP test completes redirect → callback → persisted user
+→ authenticated session, verifies PKCE + nonce wiring, and rejects callback
+replay after one-time state consumption.
 
-**T9.4 · Git history / blame / commit / diff** — *Sourcebot free (history + blame)*
-`/api/blame`, `/api/commits`, `/api/commit`, `/api/diff` off the existing bare
-mirrors via git plumbing (`gitread.go`), plus viewer surfaces. AC: blame lines
-map to commits; a commit's diff renders; path-safe like the other read
-endpoints.
+**T9.3 · Code navigation (SCIP)** ✅ 2026-07-11 — *Sourcebot paid/EE (Pro code nav) — PLAN P4*
+Lazy immutable `index.scip` ingestion from the indexed commit; precise
+definition/reference/hover API, file-viewer panel, and MCP tools with UTF-8/
+UTF-16/UTF-32 conversion and 500-reference cap. Fixture tests prove def/ref/
+hover, Unicode positions, revision replacement, strict revision/path
+validation, deterministic reference bounds, canceled-ingest snapshot
+preservation, bounded semantic/cache/source budgets, oversized hover rejection,
+LRU eviction, and graceful `available:false` when the index is absent.
+
+**T9.4 · Git history / blame / commit / diff** ✅ 2026-07-11 — *Sourcebot free (history + blame)*
+Revision-pinned `/api/blame`, `/api/commits`, `/api/commit`, `/api/diff`, three
+viewer routes, and four MCP tools over bare-mirror Git plumbing. Multi-commit
+fixture tests cover blame line mapping, rename-following history, parents/root
+commits, binary and truncated diffs, literal/path-safe inputs, invalid refs,
+cancellation, paging, mutable-HEAD isolation, producer termination at output
+limits, aggregate metadata bounds, and race execution.
 
 ## EPIC 10 — Enterprise surface *(Wave 4 — build-our-own, PORT_MAP §12)*
 

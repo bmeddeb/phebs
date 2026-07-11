@@ -58,9 +58,13 @@ func (w *Watcher) Run(ctx context.Context) {
 			if err != nil {
 				continue // repo busy or gone; next tick retries
 			}
-			if prev, ok := last[conn.Name]; ok && prev != head {
-				if err := store.EnqueueUnlessInFlight(ctx, w.Store, store.JobSync, conn.Name); err == nil {
-					log.Printf("watch: %s HEAD moved to %.10s, sync enqueued", conn.Name, head)
+			prev, seen := last[conn.Name]
+			if !seen || prev != head {
+				if err := store.EnqueuePending(ctx, w.Store, store.JobSync, conn.Name, false); err != nil {
+					continue // do not advance the baseline until the intent is durable
+				}
+				if seen {
+					log.Printf("watch: %s HEAD moved to %.10s, sync requested", conn.Name, head)
 				}
 			}
 			last[conn.Name] = head

@@ -48,3 +48,12 @@ export const MoonIcon = ({ size = 16 }: IconProps) =>
 
 export const WarningIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><path d="M8 2 15 14H1L8 2Z" /><path d="M8 6.5v3.5M8 12h.01" /></>)
+
+export const KeyIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><circle cx="5.25" cy="10.75" r="2.75" /><path d="m7.25 8.75 5.5-5.5M10 6h2v2" /></>)
+
+export const TrashIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><path d="M3.5 4.5h9M6 4.5V3h4v1.5M5 6.5v6M8 6.5v6M11 6.5v6M4.5 4.5l.5 9h6l.5-9" /></>)
+
+export const LogoutIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7" /><path d="M9.5 5 13 8l-3.5 3M13 8H6" /></>)

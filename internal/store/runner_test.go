@@ -129,6 +129,38 @@ func TestRunnerRetriesThenFails(t *testing.T) {
 	}
 }
 
+func TestRunnerShutdownReleasesWithoutConsumingAttempt(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	started := make(chan struct{})
+	r := &Runner{
+		Store: s,
+		Kind:  JobIndex,
+		Handle: func(ctx context.Context, _ Job) error {
+			close(started)
+			<-ctx.Done()
+			return ctx.Err()
+		},
+		Interval: 20 * time.Millisecond,
+		Who:      "shutdown-worker",
+	}
+	if _, err := s.EnqueuePending(ctx, JobIndex, "interrupted", false); err != nil {
+		t.Fatal(err)
+	}
+	go r.Run(ctx)
+	select {
+	case <-started:
+	case <-time.After(10 * time.Second):
+		t.Fatal("handler never started")
+	}
+	cancel()
+
+	waitFor(t, 10*time.Second, func() bool {
+		jobs, err := s.ListJobs(context.Background(), JobIndex, StatusPending)
+		return err == nil && len(jobs) == 1 && jobs[0].Attempts == 0
+	}, "canceled job was not released without an attempt")
+}
+
 // T2.3 AC: a worker killed mid-job (simulated: stale heartbeat, no live
 // heartbeater) is recovered by the reaper and re-executed by someone else.
 func TestReaperRecoversDeadWorker(t *testing.T) {
@@ -148,7 +180,6 @@ func TestReaperRecoversDeadWorker(t *testing.T) {
 		map[string]any{"id": job.ID}); err != nil {
 		t.Fatal(err)
 	}
-
 	// too fresh to reap with a 2h cutoff
 	if n, err := s.ReapStale(ctx, JobSync, 2*time.Hour, 3); err != nil || n != 0 {
 		t.Fatalf("ReapStale(2h) = %d, %v; want 0 reaped", n, err)
@@ -182,6 +213,139 @@ func TestReaperRecoversDeadWorker(t *testing.T) {
 	}
 }
 
+func TestReaperDoesNotStealRefreshedLease(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name        string
+		attempts    int
+		maxAttempts int
+	}{
+		{name: "requeue path", attempts: 0, maxAttempts: 3},
+		{name: "exhausted path", attempts: 2, maxAttempts: 3},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			target := "refreshed-" + tt.name
+			if _, err := s.CreateJob(ctx, JobSync, target); err != nil {
+				t.Fatal(err)
+			}
+			claimed, err := s.ClaimJob(ctx, JobSync, "live-worker")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.SetJobStatus(ctx, *claimed, StatusRunning, ""); err != nil {
+				t.Fatal(err)
+			}
+
+			oldHeartbeat := time.Now().UTC().Add(-time.Hour)
+			if _, err := surrealdb.Query[any](ctx, s.db,
+				"UPDATE type::record($id) SET heartbeat_at = $heartbeat, attempts = $attempts",
+				map[string]any{"id": claimed.ID, "heartbeat": oldHeartbeat, "attempts": tt.attempts}); err != nil {
+				t.Fatal(err)
+			}
+			rows, err := s.ListJobs(ctx, JobSync, StatusRunning)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var observed Job
+			for _, row := range rows {
+				if row.ID == claimed.ID {
+					observed = row
+				}
+			}
+			if observed.HeartbeatAt == nil {
+				t.Fatal("stale candidate was not observed")
+			}
+			cutoff := time.Now().UTC().Add(-30 * time.Minute)
+
+			// This heartbeat lands after the reaper's SELECT but before its
+			// transition. The observed-heartbeat predicate must reject the reap.
+			if err := s.HeartbeatJob(ctx, *claimed); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.reapOne(ctx, observed, cutoff, tt.maxAttempts); !errors.Is(err, ErrLeaseLost) {
+				t.Fatalf("reap after refreshed heartbeat = %v, want ErrLeaseLost", err)
+			}
+
+			rows, err = s.ListJobs(ctx, JobSync, StatusRunning)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].ID != claimed.ID || rows[0].HeartbeatAt == nil || !rows[0].HeartbeatAt.After(cutoff) {
+				t.Fatalf("running job after rejected reap = %+v", rows)
+			}
+			if err := s.SetJobStatus(ctx, *claimed, StatusDone, ""); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestSchemaRequeuesLegacyUnfencedJob(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := context.Background()
+	job, err := s.CreateJob(ctx, JobSync, "legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		`UPDATE type::record($id) SET status = 'running', claimed_by = 'old-worker',
+		 claimed_at = time::now(), heartbeat_at = time::now(), lease_token = NONE,
+		 pending_key = NONE`, map[string]any{"id": job.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.applySchema(ctx); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := s.ListJobs(ctx, JobSync, StatusPending)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 1 || pending[0].Attempts != 1 || pending[0].ClaimedBy != "" {
+		t.Fatalf("migrated legacy job = %+v, want pending attempts=1 without owner", pending)
+	}
+}
+
+func TestSchemaKeepsLegacyPendingSuccessor(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := context.Background()
+	active, err := s.CreateJob(ctx, JobSync, "legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		`UPDATE type::record($id) SET status = 'running', claimed_by = 'old-worker',
+		 claimed_at = time::now(), heartbeat_at = time::now(), lease_token = NONE,
+		 pending_key = NONE`, map[string]any{"id": active.ID}); err != nil {
+		t.Fatal(err)
+	}
+	successor, err := s.CreateJob(ctx, JobSync, "legacy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		"UPDATE type::record($id) SET pending_key = NONE",
+		map[string]any{"id": successor.ID}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.applySchema(ctx); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := s.ListJobs(ctx, JobSync, StatusPending)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 1 || pending[0].ID != successor.ID {
+		t.Fatalf("pending after migration = %+v, want original successor", pending)
+	}
+	canceled, err := s.ListJobs(ctx, JobSync, StatusCanceled)
+	if err != nil || len(canceled) != 1 || canceled[0].ID != active.ID {
+		t.Fatalf("canceled after migration = %+v, %v; want legacy active", canceled, err)
+	}
+}
+
 // Backoff gate: a requeued job is invisible to claims until not_before passes.
 func TestRequeueBackoffGate(t *testing.T) {
 	s := newRunnerStore(t)
@@ -196,7 +360,10 @@ func TestRequeueBackoffGate(t *testing.T) {
 		t.Fatal(err)
 	}
 	gate := time.Now().UTC().Add(3 * time.Second)
-	if err := s.RequeueJob(ctx, claimed.ID, "try later", gate); err != nil {
+	if err := s.SetJobStatus(ctx, *claimed, StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RequeueJob(ctx, *claimed, "try later", gate); err != nil {
 		t.Fatal(err)
 	}
 
@@ -207,4 +374,88 @@ func TestRequeueBackoffGate(t *testing.T) {
 		j, err := s.ClaimJob(ctx, JobIndex, "w2")
 		return err == nil && j.ID == job.ID
 	}, "job never became claimable after backoff")
+}
+
+type flakyRunnerStore struct {
+	Store
+	mu                 sync.Mutex
+	terminalFailures   int
+	statuses           []JobStatus
+	heartbeatLeaseLost bool
+}
+
+func (s *flakyRunnerStore) SetJobStatus(_ context.Context, _ Job, status JobStatus, _ string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.statuses = append(s.statuses, status)
+	if status != StatusRunning && s.terminalFailures > 0 {
+		s.terminalFailures--
+		return errors.New("temporary store failure")
+	}
+	return nil
+}
+
+func (s *flakyRunnerStore) HeartbeatJob(context.Context, Job) error {
+	if s.heartbeatLeaseLost {
+		return ErrLeaseLost
+	}
+	return nil
+}
+
+func TestRunnerRetriesTerminalPersistence(t *testing.T) {
+	st := &flakyRunnerStore{terminalFailures: 2}
+	r := &Runner{
+		Store:          st,
+		Kind:           JobSync,
+		Handle:         func(context.Context, Job) error { return nil },
+		HeartbeatEvery: time.Second,
+		Who:            "terminal-retry",
+	}
+	r.execute(context.Background(), Job{
+		ID: "connection_sync_job:test", Kind: JobSync, Target: "conn",
+		ClaimedBy: "terminal-retry", LeaseToken: "lease",
+	})
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	doneWrites := 0
+	for _, status := range st.statuses {
+		if status == StatusDone {
+			doneWrites++
+		}
+	}
+	if doneWrites != 3 {
+		t.Errorf("done writes = %d, want 3 (two retries)", doneWrites)
+	}
+}
+
+func TestRunnerStopsHandlerWhenHeartbeatLosesLease(t *testing.T) {
+	st := &flakyRunnerStore{heartbeatLeaseLost: true}
+	handlerStopped := make(chan struct{})
+	r := &Runner{
+		Store: st,
+		Kind:  JobSync,
+		Handle: func(ctx context.Context, _ Job) error {
+			<-ctx.Done()
+			close(handlerStopped)
+			return ctx.Err()
+		},
+		HeartbeatEvery: 10 * time.Millisecond,
+		Who:            "stale-worker",
+	}
+	r.execute(context.Background(), Job{
+		ID: "connection_sync_job:test", Kind: JobSync, Target: "conn",
+		ClaimedBy: "stale-worker", LeaseToken: "old-lease",
+	})
+	select {
+	case <-handlerStopped:
+	default:
+		t.Fatal("handler context was not canceled after lease loss")
+	}
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if len(st.statuses) != 1 || st.statuses[0] != StatusRunning {
+		t.Errorf("status writes = %v, want only running transition", st.statuses)
+	}
 }

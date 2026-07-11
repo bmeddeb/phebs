@@ -13,6 +13,7 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -21,17 +22,24 @@ import (
 type Options struct {
 	Version string
 	Store   store.Store
-	Search  *search.Searcher // nil = search_code reports unavailable
-	DataDir string           // bare mirrors for read_file
+	Search  *search.Searcher          // nil = search_code reports unavailable
+	DataDir string                    // bare mirrors for read_file
+	CodeNav *codenav.Service          // nil = SCIP tools report unavailable
+	History *phebssync.HistoryService // nil = construct from DataDir
 }
 
 // maxFileBytes caps read_file output: a whole-file dump larger than this
 // wastes an agent's context window; ranged reads cover the rest.
 const maxFileBytes = 200_000
 
-// NewServer builds the phebs MCP server: search_code, read_file, list_repos.
+// NewServer builds the phebs MCP server over search, immutable source reads,
+// SCIP navigation, and bounded Git history plumbing.
 func NewServer(opts Options) *sdk.Server {
 	s := sdk.NewServer(&sdk.Implementation{Name: "phebs", Version: opts.Version}, nil)
+	history := opts.History
+	if history == nil {
+		history = phebssync.NewHistoryService(opts.DataDir)
+	}
 
 	type searchIn struct {
 		Query        string `json:"query" jsonschema:"zoekt query syntax: plain terms AND together and patterns are regex; filters include repo: file: lang: sym: case:yes content: plus phebs' archived:/fork:/public:yes|no and context:<name> (named repo set); prefix any atom with - to negate"`
@@ -56,7 +64,7 @@ func NewServer(opts Options) *sdk.Server {
 	type readIn struct {
 		Repo      string `json:"repo" jsonschema:"full repo name as returned by list_repos or search_code, e.g. github.com/acme/api"`
 		Path      string `json:"path" jsonschema:"file path within the repo"`
-		Ref       string `json:"ref,omitempty" jsonschema:"commit-ish; default HEAD (the indexed revision)"`
+		Ref       string `json:"ref,omitempty" jsonschema:"commit-ish; defaults to the repository's indexed commit"`
 		StartLine int    `json:"start_line,omitempty" jsonschema:"1-based first line to return; default 1"`
 		EndLine   int    `json:"end_line,omitempty" jsonschema:"1-based last line to return, inclusive; default end of file"`
 	}
@@ -64,13 +72,11 @@ func NewServer(opts Options) *sdk.Server {
 		Name:        "read_file",
 		Description: "Read a file (or a line range of it) from an indexed repository at its indexed revision.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in readIn) (*sdk.CallToolResult, readOut, error) {
-		if _, err := opts.Store.GetRepo(ctx, in.Repo); err != nil {
-			if errors.Is(err, store.ErrNotFound) {
-				return nil, readOut{}, fmt.Errorf("unknown repo %q (use list_repos for names)", in.Repo)
-			}
+		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		if err != nil {
 			return nil, readOut{}, err
 		}
-		content, err := phebssync.CatFile(ctx, opts.DataDir, in.Repo, in.Ref, in.Path)
+		content, err := phebssync.CatFile(ctx, opts.DataDir, in.Repo, ref, in.Path)
 		if err != nil {
 			return nil, readOut{}, err
 		}
@@ -90,6 +96,9 @@ func NewServer(opts Options) *sdk.Server {
 		}
 		out := reposOut{Repos: make([]repoInfo, 0, len(repos))}
 		for _, r := range repos {
+			if r.Deleting || r.IndexedCommitHash == "" {
+				continue
+			}
 			out.Repos = append(out.Repos, repoInfo{
 				Name: r.Name, DefaultBranch: r.DefaultBranch, WebURL: r.WebURL,
 				IsPublic: r.IsPublic, IsFork: r.IsFork, IsArchived: r.IsArchived,
@@ -99,7 +108,170 @@ func NewServer(opts Options) *sdk.Server {
 		return nil, out, nil
 	})
 
+	registerCodeNavigationTools(s, opts)
+	registerHistoryTools(s, opts, history)
+
 	return s
+}
+
+type positionIn struct {
+	Repo      string `json:"repo" jsonschema:"full repository name as returned by list_repos"`
+	Path      string `json:"path" jsonschema:"source file path within the repository"`
+	Ref       string `json:"ref,omitempty" jsonschema:"full indexed commit object ID; defaults to the repository's indexed commit"`
+	Line      int32  `json:"line" jsonschema:"zero-based source line"`
+	Character int32  `json:"character" jsonschema:"zero-based UTF-16 code-unit offset from line start"`
+}
+
+func registerCodeNavigationTools(s *sdk.Server, opts Options) {
+	query := func(ctx context.Context, in positionIn) (codenav.Query, error) {
+		if opts.CodeNav == nil {
+			return codenav.Query{}, errors.New("code navigation unavailable: no SCIP service configured")
+		}
+		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		if err != nil {
+			return codenav.Query{}, err
+		}
+		return codenav.Query{
+			Repo: in.Repo, Revision: ref, Path: in.Path,
+			Line: in.Line, Character: in.Character, Encoding: codenav.EncodingUTF16,
+		}, nil
+	}
+
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "find_definitions",
+		Description: "Find the precise SCIP definition for the symbol at a zero-based UTF-16 source position. Returns available=false when the indexed revision has no committed SCIP index.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in positionIn) (*sdk.CallToolResult, codenav.DefinitionResult, error) {
+		q, err := query(ctx, in)
+		if err != nil {
+			return nil, codenav.DefinitionResult{}, err
+		}
+		result, err := opts.CodeNav.Definition(ctx, q)
+		return nil, result, err
+	})
+
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "find_references",
+		Description: "Find precise SCIP references for the symbol at a zero-based UTF-16 source position. Returned ranges use zero-based UTF-16 positions.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in positionIn) (*sdk.CallToolResult, codenav.ReferencesResult, error) {
+		q, err := query(ctx, in)
+		if err != nil {
+			return nil, codenav.ReferencesResult{}, err
+		}
+		result, err := opts.CodeNav.References(ctx, q)
+		return nil, result, err
+	})
+
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "hover",
+		Description: "Return SCIP signature, documentation, and symbol metadata at a zero-based UTF-16 source position.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in positionIn) (*sdk.CallToolResult, codenav.HoverResult, error) {
+		q, err := query(ctx, in)
+		if err != nil {
+			return nil, codenav.HoverResult{}, err
+		}
+		result, err := opts.CodeNav.Hover(ctx, q)
+		return nil, result, err
+	})
+}
+
+func registerHistoryTools(s *sdk.Server, opts Options, history *phebssync.HistoryService) {
+	type blameIn struct {
+		Repo string `json:"repo" jsonschema:"full repository name as returned by list_repos"`
+		Path string `json:"path" jsonschema:"file path within the repository"`
+		Ref  string `json:"ref,omitempty" jsonschema:"commit-ish; defaults to the repository's indexed commit"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "blame",
+		Description: "Attribute each source line to a commit at an immutable revision, following moves and renames. Large results report truncated=true.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in blameIn) (*sdk.CallToolResult, phebssync.BlameResult, error) {
+		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		if err != nil {
+			return nil, phebssync.BlameResult{}, err
+		}
+		result, err := history.Blame(ctx, phebssync.BlameRequest{Repo: in.Repo, Ref: ref, Path: in.Path})
+		return nil, result, err
+	})
+
+	type commitsIn struct {
+		Repo   string `json:"repo" jsonschema:"full repository name as returned by list_repos"`
+		Ref    string `json:"ref,omitempty" jsonschema:"commit-ish; defaults to the repository's indexed commit"`
+		Path   string `json:"path,omitempty" jsonschema:"optional file path; history follows renames"`
+		Limit  int    `json:"limit,omitempty" jsonschema:"commits per page; default 50, cap 200"`
+		Offset int    `json:"offset,omitempty" jsonschema:"zero-based commit offset, cap 10000"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "list_commits",
+		Description: "List commits reachable from an immutable revision, optionally scoped to a file and followed across renames.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in commitsIn) (*sdk.CallToolResult, phebssync.CommitListResult, error) {
+		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		if err != nil {
+			return nil, phebssync.CommitListResult{}, err
+		}
+		result, err := history.Commits(ctx, phebssync.CommitListRequest{
+			Repo: in.Repo, Ref: ref, Path: in.Path, Limit: in.Limit, Offset: in.Offset,
+		})
+		return nil, result, err
+	})
+
+	type commitIn struct {
+		Repo string `json:"repo" jsonschema:"full repository name as returned by list_repos"`
+		Ref  string `json:"ref,omitempty" jsonschema:"commit-ish; defaults to the repository's indexed commit"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "get_commit",
+		Description: "Get commit metadata, parents, and first-parent file changes for one immutable revision.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in commitIn) (*sdk.CallToolResult, phebssync.CommitResult, error) {
+		ref, err := indexedRevision(ctx, opts.Store, in.Repo, in.Ref)
+		if err != nil {
+			return nil, phebssync.CommitResult{}, err
+		}
+		result, err := history.Commit(ctx, phebssync.CommitRequest{Repo: in.Repo, Ref: ref})
+		return nil, result, err
+	})
+
+	type diffIn struct {
+		Repo         string `json:"repo" jsonschema:"full repository name as returned by list_repos"`
+		Head         string `json:"head,omitempty" jsonschema:"head commit-ish; defaults to the repository's indexed commit"`
+		Base         string `json:"base,omitempty" jsonschema:"base commit-ish; defaults to head's first parent"`
+		Path         string `json:"path,omitempty" jsonschema:"optional exact path filter"`
+		ContextLines int    `json:"context_lines,omitempty" jsonschema:"unified context lines; default 3, maximum 20"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "diff",
+		Description: "Return a bounded unified diff and structured file statistics. Binary files are summarized and large patches report truncated=true.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in diffIn) (*sdk.CallToolResult, phebssync.DiffResult, error) {
+		head, err := indexedRevision(ctx, opts.Store, in.Repo, in.Head)
+		if err != nil {
+			return nil, phebssync.DiffResult{}, err
+		}
+		result, err := history.Diff(ctx, phebssync.DiffRequest{
+			Repo: in.Repo, Base: in.Base, Head: head, Path: in.Path, ContextLines: in.ContextLines,
+		})
+		return nil, result, err
+	})
+}
+
+func indexedRevision(ctx context.Context, st store.Store, repoName, requested string) (string, error) {
+	if st == nil {
+		return "", errors.New("repository store unavailable")
+	}
+	repo, err := st.GetRepo(ctx, repoName)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return "", fmt.Errorf("unknown repo %q (use list_repos for names)", repoName)
+		}
+		return "", err
+	}
+	if repo.Deleting {
+		return "", fmt.Errorf("repo %q is being deleted", repoName)
+	}
+	if repo.IndexedCommitHash == "" {
+		return "", fmt.Errorf("repo %q has no indexed revision yet", repoName)
+	}
+	if requested != "" {
+		return requested, nil
+	}
+	return repo.IndexedCommitHash, nil
 }
 
 // reposOut is list_repos' result shape.

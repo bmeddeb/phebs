@@ -65,7 +65,8 @@ func webhookHandler(opts Options) http.HandlerFunc {
 				respond(w, http.StatusBadRequest, "unrecognized clone_url")
 				return
 			}
-			if _, err := opts.Store.GetRepo(r.Context(), name); err != nil {
+			repo, err := opts.Store.GetRepo(r.Context(), name)
+			if err != nil {
 				if errors.Is(err, store.ErrNotFound) {
 					respond(w, http.StatusAccepted, "unknown repo "+name+" ignored")
 					return
@@ -73,6 +74,10 @@ func webhookHandler(opts Options) http.HandlerFunc {
 				// a store failure is not "unknown repo": let the sender
 				// retry rather than lose the push behind a 2xx
 				respond(w, http.StatusInternalServerError, "repo lookup failed")
+				return
+			}
+			if repo.Deleting {
+				respond(w, http.StatusAccepted, "unknown repo "+name+" ignored")
 				return
 			}
 			// pending-only dedup: a push landing while a fetch is already
@@ -85,10 +90,16 @@ func webhookHandler(opts Options) http.HandlerFunc {
 			respond(w, http.StatusAccepted, "fetch enqueued for "+name)
 		case "repository", "installation_repositories":
 			// membership may have changed: re-list the code-host connections
+			failed := false
 			for _, conn := range opts.ResyncConnections {
 				if err := store.EnqueueUnlessInFlight(r.Context(), opts.Store, store.JobSync, conn); err != nil {
 					log.Printf("webhook: enqueue sync %s: %v", conn, err)
+					failed = true
 				}
+			}
+			if failed {
+				respond(w, http.StatusInternalServerError, "connection re-sync enqueue failed")
+				return
 			}
 			respond(w, http.StatusAccepted, "connection re-sync enqueued")
 		default:

@@ -43,6 +43,8 @@ export interface PhebsTokens {
   selectedText: string
   matchBg: string
   plainCode: string
+  addedLineBg: string
+  deletedLineBg: string
   statusGreen: string
   statusBlue: string
   statusRed: string
@@ -65,6 +67,8 @@ const LIGHT: PhebsTokens = {
   selectedText: '#175BCC',
   matchBg: '#FBE5B6',
   plainCode: '#000000',
+  addedLineBg: '#ECF8F0',
+  deletedLineBg: '#FFF0F2',
   statusGreen: '#0E8345',
   statusBlue: '#276EF1',
   statusRed: '#DE1135',
@@ -87,6 +91,8 @@ const DARK: PhebsTokens = {
   selectedText: '#93B4EE',
   matchBg: '#4C3111',
   plainCode: '#DEDEDE',
+  addedLineBg: '#10291A',
+  deletedLineBg: '#35161B',
   statusGreen: '#5C9D70',
   statusBlue: '#5E8BDB',
   statusRed: '#DE5B5D',

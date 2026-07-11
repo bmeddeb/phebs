@@ -73,6 +73,12 @@ func TestRepoCRUD(t *testing.T) {
 	}
 
 	// upsert same name = update in place, not a duplicate
+	if err := s.SetRepoIndexed(ctx, repos[0].Name, "abc123", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoDeleting(ctx, repos[0].Name, true); err != nil {
+		t.Fatal(err)
+	}
 	repos[0].DefaultBranch = "trunk"
 	if err := s.UpsertRepo(ctx, repos[0]); err != nil {
 		t.Fatal(err)
@@ -86,6 +92,10 @@ func TestRepoCRUD(t *testing.T) {
 	}
 	if all[1].DefaultBranch != "trunk" { // ordered by name: example.com first
 		t.Errorf("updated DefaultBranch = %q, want trunk", all[1].DefaultBranch)
+	}
+	if all[1].IndexedCommitHash != "abc123" || all[1].IndexedAt == nil ||
+		all[1].LatestJobStatus != "done" || !all[1].Deleting {
+		t.Errorf("sync upsert erased index/deletion state: %+v", all[1])
 	}
 
 	if err := s.DeleteRepo(ctx, "example.com/baz"); err != nil {
@@ -118,10 +128,17 @@ func TestJobLifecycle(t *testing.T) {
 				t.Fatalf("pending = %+v, want the created job", pending)
 			}
 
-			if err := s.SetJobStatus(ctx, job.ID, store.StatusRunning, ""); err != nil {
+			claimed, err := s.ClaimJob(ctx, kind, "lifecycle-test")
+			if err != nil {
+				t.Fatalf("claim: %v", err)
+			}
+			if claimed.LeaseToken == "" {
+				t.Fatal("claimed job has no lease token")
+			}
+			if err := s.SetJobStatus(ctx, *claimed, store.StatusRunning, ""); err != nil {
 				t.Fatalf("to running: %v", err)
 			}
-			if err := s.SetJobStatus(ctx, job.ID, store.StatusFailed, "boom"); err != nil {
+			if err := s.SetJobStatus(ctx, *claimed, store.StatusFailed, "boom"); err != nil {
 				t.Fatalf("to failed: %v", err)
 			}
 
@@ -133,10 +150,130 @@ func TestJobLifecycle(t *testing.T) {
 				t.Fatalf("failed job = %+v, want error recorded and finished_at set", failed)
 			}
 
-			if err := s.SetJobStatus(ctx, string(kind)+":nope", store.StatusDone, ""); !errors.Is(err, store.ErrNotFound) {
-				t.Errorf("unknown id err = %v, want ErrNotFound", err)
+			missing := *claimed
+			missing.ID = string(kind) + ":nope"
+			if err := s.SetJobStatus(ctx, missing, store.StatusDone, ""); !errors.Is(err, store.ErrLeaseLost) {
+				t.Errorf("unknown lease err = %v, want ErrLeaseLost", err)
 			}
 		})
+	}
+}
+
+func TestEnqueuePendingCollapsesConcurrentSuccessorsAndUpgradesForce(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+
+	enqueueMany := func(forceOne bool) {
+		t.Helper()
+		const callers = 32
+		errs := make(chan error, callers)
+		var wg sync.WaitGroup
+		for i := range callers {
+			wg.Add(1)
+			go func(force bool) {
+				defer wg.Done()
+				_, err := s.EnqueuePending(ctx, store.JobIndex, "github.com/acme/repo", force)
+				errs <- err
+			}(forceOne && i == callers-1)
+		}
+		wg.Wait()
+		close(errs)
+		for err := range errs {
+			if err != nil {
+				t.Errorf("EnqueuePending: %v", err)
+			}
+		}
+	}
+
+	enqueueMany(true)
+	pending, err := s.ListJobs(ctx, store.JobIndex, store.StatusPending)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 1 || !pending[0].Force {
+		t.Fatalf("initial pending jobs = %+v, want one forced job", pending)
+	}
+
+	active, err := s.ClaimJob(ctx, store.JobIndex, "active-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *active, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	// Events arriving after the claim collapse into exactly one successor.
+	enqueueMany(true)
+	pending, err = s.ListJobs(ctx, store.JobIndex, store.StatusPending)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 1 || !pending[0].Force || pending[0].ID == active.ID {
+		t.Fatalf("successor jobs = %+v, want one distinct forced pending job", pending)
+	}
+	if err := s.RequeueJob(ctx, *active, "retry", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	pending, err = s.ListJobs(ctx, store.JobIndex, store.StatusPending)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pending) != 1 || pending[0].Attempts != 1 || !pending[0].Force {
+		t.Fatalf("merged retry successor = %+v, want one forced job with attempts=1", pending)
+	}
+
+	if n, err := s.CancelPendingJobs(ctx, store.JobIndex, active.Target); err != nil || n != 1 {
+		t.Fatalf("CancelPendingJobs = %d, %v; want 1", n, err)
+	}
+	canceled, err := s.ListJobs(ctx, store.JobIndex, store.StatusCanceled)
+	if err != nil || len(canceled) != 2 {
+		t.Fatalf("canceled jobs = %+v, %v; want superseded active and canceled successor", canceled, err)
+	}
+}
+
+func TestLeaseFencesReapedWorker(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if _, err := s.EnqueuePending(ctx, store.JobIndex, "repo", false); err != nil {
+		t.Fatal(err)
+	}
+	old, err := s.ClaimJob(ctx, store.JobIndex, "old-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *old, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := s.ReapStale(ctx, store.JobIndex, -time.Second, 3); err != nil || n != 1 {
+		t.Fatalf("ReapStale = %d, %v; want 1", n, err)
+	}
+
+	current, err := s.ClaimJob(ctx, store.JobIndex, "new-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if old.LeaseToken == current.LeaseToken {
+		t.Fatal("reclaimed job reused its lease token")
+	}
+	if err := s.SetJobStatus(ctx, *current, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+
+	for name, mutate := range map[string]func() error{
+		"heartbeat": func() error { return s.HeartbeatJob(ctx, *old) },
+		"complete":  func() error { return s.SetJobStatus(ctx, *old, store.StatusDone, "") },
+		"requeue": func() error {
+			return s.RequeueJob(ctx, *old, "stale", time.Now().UTC())
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := mutate(); !errors.Is(err, store.ErrLeaseLost) {
+				t.Errorf("stale mutation error = %v, want ErrLeaseLost", err)
+			}
+		})
+	}
+	if err := s.SetJobStatus(ctx, *current, store.StatusDone, ""); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -200,6 +337,33 @@ func TestRepoStatusesAndOrphans(t *testing.T) {
 	}
 }
 
+func TestSetRepoConnectionsRollsBackFailedReplacement(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.SetRepoConnections(ctx, "conn", []string{"h/original"}); err != nil {
+		t.Fatal(err)
+	}
+	// The unique pair index rejects the duplicate create. The preceding delete
+	// must roll back with it rather than exposing an empty membership snapshot.
+	if err := s.SetRepoConnections(ctx, "conn", []string{"h/replacement", "h/replacement"}); err == nil {
+		t.Fatal("duplicate replacement unexpectedly succeeded")
+	}
+	connections, err := s.GetRepoConnections(ctx, "h/original")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(connections) != 1 || connections[0] != "conn" {
+		t.Fatalf("original connections = %v, want [conn] after rollback", connections)
+	}
+	connections, err = s.GetRepoConnections(ctx, "h/replacement")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(connections) != 0 {
+		t.Fatalf("replacement connections = %v, want none after rollback", connections)
+	}
+}
+
 // TestClaimJobConcurrent is the T1.3 AC: N concurrent pollers drain the
 // queue through the shipped ClaimJob with zero double-claims.
 func TestClaimJobConcurrent(t *testing.T) {
@@ -253,11 +417,15 @@ func TestClaimJobConcurrent(t *testing.T) {
 
 func TestJobStatusEnumEnforced(t *testing.T) {
 	s := newTestStore(t)
-	job, err := s.CreateJob(context.Background(), store.JobSync, "t")
+	_, err := s.CreateJob(context.Background(), store.JobSync, "t")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetJobStatus(context.Background(), job.ID, "bogus", ""); err == nil {
+	claimed, err := s.ClaimJob(context.Background(), store.JobSync, "enum-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(context.Background(), *claimed, "bogus", ""); err == nil {
 		t.Error("bogus status accepted; schema ASSERT should reject it")
 	}
 }

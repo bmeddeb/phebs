@@ -86,9 +86,9 @@ func TestFetchHandler(t *testing.T) {
 		t.Errorf("no indexing job chained for %s (jobs %+v)", name, jobs)
 	}
 
-	// a repo absent from the store fails on lookup
-	if err := FetchHandler(cfg, st)(ctx, store.Job{Target: "github.com/x/y"}); err == nil {
-		t.Error("fetch of unknown repo succeeded, want error")
+	// a repo removed after its job was queued is a terminal no-op
+	if err := FetchHandler(cfg, st)(ctx, store.Job{Target: "github.com/x/y"}); err != nil {
+		t.Errorf("fetch of deleted repo = %v, want no-op", err)
 	}
 
 	// a repo present but claimed by NO configured connection must fail, not

@@ -25,11 +25,16 @@ search you host yourself, without running a constellation of services to get it.
 - **One binary.** [zoekt](https://github.com/sourcegraph/zoekt) is linked
   in-process as a library for search; index builds run as an OOM-isolated
   child compiled from the same module version. The web UI is embedded.
-- **One database, supervised.** [SurrealDB](https://surrealdb.com) holds repo
-  state and job queues on local disk, started and stopped with phebs — zero
-  external services.
+- **One database, supervised.** [SurrealDB](https://surrealdb.com) holds auth,
+  repo state, and job queues on local disk, started and stopped with phebs —
+  zero external services.
 - **Live search over your working repos.** Watch mode notices commits and
   branch switches in local repositories and reindexes within seconds.
+- **Authentication included.** Persisted browser sessions, Argon2id local
+  login, revocable API keys, and optional OIDC protect the UI, API, and MCP.
+- **Code intelligence at the indexed commit.** Committed SCIP indexes provide
+  definitions/references/hover; bare-mirror plumbing provides blame, history,
+  commit detail, and bounded diffs.
 - **Scales sideways (planned).** The fleet profile shards repos across
   replicas by rendezvous hashing with gRPC scatter-gather queries.
 
@@ -42,6 +47,10 @@ make build                          # UI + zoekt child + ./phebs
 
 ```yaml
 # phebs.yaml
+server:
+  addr: "127.0.0.1:3070"           # local quick start
+auth:
+  cookie_secure: false              # plain-HTTP localhost only
 connections:
   - name: zoekt
     type: git
@@ -52,14 +61,20 @@ connections:
     watch: true                     # commits searchable in seconds
 ```
 
-**[→ Full user manual](./docs/MANUAL.md)** — configuration reference, GitHub
-connections, search syntax, HTTP API, operations, troubleshooting.
+On first start, copy the setup token printed in the local log into the browser
+to create the administrator. Keep the default secure cookie setting under
+HTTPS; see the manual for bootstrap-user and OIDC deployment.
+
+**[→ Full user manual](./docs/MANUAL.md)** — authentication/OIDC, repository
+connections, search and SCIP, Git history, HTTP/MCP APIs, operations, and
+troubleshooting.
 
 ## Architecture
 
-zoekt in-process for trigram search · SurrealDB 3.0 for state and queues ·
+zoekt in-process for trigram search · SurrealDB 3.0 for state, auth, and queues ·
 [huma](https://github.com/danielgtaylor/huma) for the OpenAPI surface ·
-Vite + React + [Base Web](https://baseweb.design) + CodeMirror 6 in front ·
+committed SCIP for precise navigation · Vite + React +
+[Base Web](https://baseweb.design) + CodeMirror 6 in front ·
 gRPC scatter-gather across a rendezvous-hashed fleet (planned, P6).
 
 ```mermaid
@@ -71,7 +86,7 @@ flowchart LR
     SYNC --> GIT[("Git hosts &<br/>local repos")]
     SYNC --> IDX["zoekt-git-index<br/>(same-SHA child)"]
     IDX --> ZK
-    API <--> DB[("SurrealDB 3.0<br/>supervised child<br/>state · jobs")]
+    API <--> DB[("SurrealDB 3.0<br/>supervised child<br/>auth · state · jobs")]
     COORD -.->|"gRPC scatter-gather<br/>(fleet mode, planned)"| PEERS["Peer replicas"]
 ```
 
@@ -93,13 +108,14 @@ Every decision lands as a dated ADR bullet in [PLAN.md](./PLAN.md). Highlights:
 
 ## Status
 
-**P1 complete, Waves 0–2 shipped** — sync (GitHub incl. App auth, GitLab,
+**P1 complete, Waves 0–3 shipped** — sync (GitHub incl. App auth, GitLab,
 Gitea, any git URL, local), job queue with crash recovery, incremental
 indexing, HMAC push webhooks + periodic re-sync, search API (JSON + SSE)
-with named search contexts, an MCP server for agents (verified live from
-Claude Code), file serving, web UI with tests, watch mode, Prometheus
-metrics. See [BACKLOG.md](./docs/BACKLOG.md) for what's done and what's
-next (Wave 3: auth → code nav → history).
+with named search contexts, DB-backed login/API keys and OIDC, committed SCIP
+navigation, Git blame/history/diffs, a ten-tool MCP server for agents,
+revision-pinned file serving, fenced queue leases, startup artifact
+reconciliation, web UI with tests, watch mode, and Prometheus metrics. See
+[BACKLOG.md](./docs/BACKLOG.md) for what shipped and Wave 4 enterprise scope.
 
 ## Lineage & acknowledgements
 

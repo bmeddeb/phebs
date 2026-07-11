@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { HeadingSmall } from 'baseui/typography'
 import { Notification, KIND } from 'baseui/notification'
@@ -8,35 +8,70 @@ import type { RepoStatus } from '../api'
 import { usePhebsTokens, FONTS } from '../theme'
 import { navigate } from '../router'
 import { SearchIcon, CopyIcon, CheckIcon } from '../icons'
-import { relTime } from '../util'
+import { isAbortError, relTime, repoFilter } from '../util'
 
 // T5.4/T5.5: repo table over /api/repo-status, polled so job-state
 // transitions and the reindex buttons' effects show up within one cycle.
 const POLL_MS = 3000
 
-export default function ReposPage() {
+export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [repos, setRepos] = useState<RepoStatus[] | null>(null)
   const [error, setError] = useState('')
+  const [reindexingAll, setReindexingAll] = useState(false)
+  const refreshGeneration = useRef(0)
+  const refreshController = useRef<AbortController | null>(null)
 
-  const refresh = useCallback(() => {
-    fetchRepoStatus()
-      .then((r) => {
-        setRepos(r)
-        setError('')
-      })
-      .catch((e) => setError(String(e)))
+  const refresh = useCallback(async () => {
+    const generation = ++refreshGeneration.current
+    refreshController.current?.abort()
+    const controller = new AbortController()
+    refreshController.current = controller
+    try {
+      const rows = await fetchRepoStatus(controller.signal)
+      if (generation !== refreshGeneration.current) return
+      setRepos(rows)
+      setError('')
+    } catch (caught) {
+      if (!isAbortError(caught) && generation === refreshGeneration.current) {
+        setError(String(caught))
+      }
+    }
   }, [])
 
   useEffect(() => {
-    refresh()
-    const id = setInterval(refresh, POLL_MS)
-    return () => clearInterval(id)
+    void refresh()
+    const id = setInterval(() => void refresh(), POLL_MS)
+    return () => {
+      clearInterval(id)
+      refreshController.current?.abort()
+    }
   }, [refresh])
 
-  const reindex = (name: string) => {
-    postReindex(name, true).then(refresh).catch((e) => setError(String(e)))
+  const reindex = async (name: string) => {
+    try {
+      await postReindex(name, true)
+      await refresh()
+    } catch (caught) {
+      setError(String(caught))
+    }
+  }
+
+  const reindexAll = async () => {
+    setReindexingAll(true)
+    try {
+      const outcomes = await Promise.allSettled(
+        (repos ?? []).map((repo) => postReindex(repo.name, true)),
+      )
+      await refresh()
+      const failed = outcomes.find((outcome) => outcome.status === 'rejected')
+      if (failed?.status === 'rejected') throw failed.reason
+    } catch (caught) {
+      setError(String(caught))
+    } finally {
+      setReindexingAll(false)
+    }
   }
 
   if (error)
@@ -48,7 +83,7 @@ export default function ReposPage() {
   if (repos === null) return <Spinner $size="small" />
 
   const indexed = repos.filter((r) => r.indexed_commit_hash).length
-  const running = repos.filter((r) => r.last_index_job && !['done', 'failed'].includes(r.last_index_job.status)).length
+  const running = repos.filter((r) => r.last_index_job && !['done', 'failed', 'canceled'].includes(r.last_index_job.status)).length
 
   return (
     <div>
@@ -61,12 +96,16 @@ export default function ReposPage() {
           </div>
         </div>
         <div className={css({ flex: 1 })} />
-        <button
-          onClick={() => repos.forEach((r) => reindex(r.name))}
-          className={css({ fontSize: '13px', color: tok.textSecondary, backgroundColor: tok.fill, border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary } })}
-        >
-          Reindex all
-        </button>
+        {isAdmin && (
+          <button
+            type="button"
+            disabled={reindexingAll}
+            onClick={() => void reindexAll()}
+            className={css({ fontSize: '13px', color: tok.textSecondary, backgroundColor: tok.fill, border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary } })}
+          >
+            {reindexingAll ? 'Queuing…' : 'Reindex all'}
+          </button>
+        )}
       </div>
 
       {repos.length === 0 ? (
@@ -90,7 +129,7 @@ export default function ReposPage() {
             </thead>
             <tbody>
               {repos.map((r) => (
-                <Row key={r.name} repo={r} onReindex={() => reindex(r.name)} />
+                <Row key={r.name} repo={r} canReindex={isAdmin} onReindex={() => void reindex(r.name)} />
               ))}
             </tbody>
           </table>
@@ -100,12 +139,11 @@ export default function ReposPage() {
   )
 }
 
-function Row({ repo, onReindex }: { repo: RepoStatus; onReindex: () => void }) {
+function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: boolean; onReindex: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const short = repo.name.slice(repo.name.lastIndexOf('/') + 1)
   const job = repo.last_index_job
-  const running = !!job && !['done', 'failed'].includes(job.status)
+  const running = !!job && !['done', 'failed', 'canceled'].includes(job.status)
   const cell = css({ padding: '12px 12px 12px 0', verticalAlign: 'top' })
   return (
     <tr className={css({ borderBottom: `1px solid ${tok.innerSep}`, ':hover': { backgroundColor: tok.hoverFill } })}>
@@ -142,29 +180,33 @@ function Row({ repo, onReindex }: { repo: RepoStatus; onReindex: () => void }) {
       <td className={cell}>
         <div className={css({ display: 'flex', gap: '4px', justifyContent: 'flex-end' })}>
           <button
+            type="button"
             title="Search in this repo"
-            onClick={() => navigate('/search', { q: `repo:${short} ` })}
+            onClick={() => navigate('/search', { q: `${repoFilter(repo.name)} ` })}
             className={css(iconBtn(tok))}
           >
             <SearchIcon size={14} />
           </button>
-          <button
-            disabled={running}
-            onClick={onReindex}
-            className={css({
-              fontSize: '13px',
-              color: running ? tok.textTertiary : tok.textSecondary,
-              backgroundColor: tok.fill,
-              border: 'none',
-              borderRadius: '8px',
-              padding: '6px 12px',
-              cursor: running ? 'default' : 'pointer',
-              opacity: running ? 0.6 : 1,
-              ':hover': running ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
-            })}
-          >
-            {job?.status === 'failed' ? 'Retry' : 'Reindex'}
-          </button>
+          {canReindex && (
+            <button
+              type="button"
+              disabled={running}
+              onClick={onReindex}
+              className={css({
+                fontSize: '13px',
+                color: running ? tok.textTertiary : tok.textSecondary,
+                backgroundColor: tok.fill,
+                border: 'none',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                cursor: running ? 'default' : 'pointer',
+                opacity: running ? 0.6 : 1,
+                ':hover': running ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
+              })}
+            >
+              {job?.status === 'failed' ? 'Retry' : 'Reindex'}
+            </button>
+          )}
         </div>
       </td>
     </tr>
@@ -178,8 +220,9 @@ function Status({ job }: { job: RepoStatus['last_index_job'] }) {
   const map: Record<string, { color: string; label: string }> = {
     done: { color: tok.statusGreen, label: 'Indexed' },
     failed: { color: tok.statusRed, label: 'Failed' },
+    canceled: { color: tok.gutter, label: 'Canceled' },
   }
-  const running = !['done', 'failed'].includes(job.status)
+  const running = !['done', 'failed', 'canceled'].includes(job.status)
   const s = map[job.status] ?? { color: tok.statusBlue, label: 'Indexing…' }
   return (
     <div>

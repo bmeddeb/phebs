@@ -159,6 +159,68 @@ func TestSyncGitHubAppMode(t *testing.T) {
 	}
 }
 
+func TestSyncGitHubAppUserSelectorUsesInstallationRepos(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	allowFileClones(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	_, keyPath := testAppKey(t)
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "private.go"), []byte("package private\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "init")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/88/access_tokens":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"token":"ghs_inst"}`))
+		case r.URL.Path == "/installation/repositories":
+			if r.Header.Get("Authorization") != "Bearer ghs_inst" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			page := struct {
+				Repositories []ghRepo `json:"repositories"`
+			}{[]ghRepo{
+				{ID: 10, FullName: "Ben/secret", CloneURL: "file://" + origin, DefaultBranch: "main", Private: true},
+				{ID: 11, FullName: "other/repo", CloneURL: "file://" + origin, DefaultBranch: "main", Private: true},
+			}}
+			_ = json.NewEncoder(w).Encode(page)
+		case strings.HasPrefix(r.URL.Path, "/users/") || r.URL.Path == "/user" || r.URL.Path == "/user/repos":
+			t.Errorf("App user selector must use installation repositories, got %s", r.URL.Path)
+			w.WriteHeader(http.StatusForbidden)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	old := ghAPIBase
+	ghAPIBase = srv.URL
+	t.Cleanup(func() { ghAPIBase = old })
+	st, err := store.OpenLocal(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+	conn := config.Connection{Name: "gha", Type: "github", Users: []string{"ben"},
+		App: config.GitHubApp{ID: 12345, InstallationID: 88, PrivateKeyPath: keyPath}}
+	names, err := SyncConnection(ctx, st, t.TempDir(), conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(names) != 1 || names[0] != "github.com/Ben/secret" {
+		t.Fatalf("synced names = %v, want selected private repository", names)
+	}
+}
+
 func TestLoadAppKeyForms(t *testing.T) {
 	key, path := testAppKey(t)
 	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)

@@ -19,6 +19,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -32,7 +34,7 @@ var version = "0.1.0-dev" // ponytail: ldflags stamping when releases exist
 
 func main() {
 	if len(os.Args) < 2 || os.Args[1] != "serve" {
-		fmt.Fprintln(os.Stderr, "usage: phebs serve [-config phebs.yaml] [-addr :3070]")
+		fmt.Fprintln(os.Stderr, "usage: phebs serve [-config phebs.yaml] [-addr 127.0.0.1:3070]")
 		os.Exit(2)
 	}
 	if err := serve(os.Args[2:]); err != nil {
@@ -66,8 +68,12 @@ func serve(args []string) error {
 	}
 	defer func() { _ = st.Close(context.Background()) }()
 
-	if cfg.Auth.APIKey == "" {
-		log.Print("WARNING: auth.api_key is empty — the API is open")
+	authService, err := auth.New(ctx, auth.Options{Config: cfg.Auth, Store: st})
+	if err != nil {
+		return err
+	}
+	if setupToken := authService.SetupToken(); setupToken != "" {
+		log.Printf("first-run setup token: %s", setupToken)
 	}
 
 	// sync pipeline: prune membership of dropped connections, enqueue boot
@@ -78,6 +84,18 @@ func serve(args []string) error {
 	}
 	if err := st.PruneConnections(ctx, names); err != nil {
 		return fmt.Errorf("prune connections: %w", err)
+	}
+	report, reconcileErr := phebssync.ReconcileArtifacts(ctx, st, cfg.Server.DataDir, cfg.Sync.CleanupOrphans)
+	if reconcileErr != nil {
+		// Reconciliation establishes the artifact/search trust boundary. A
+		// failed quarantine, revision clear, or credential scrub must not leave
+		// the server running against state it could not prove safe.
+		return fmt.Errorf("artifact reconciliation: %w", reconcileErr)
+	}
+	if report.OrphanRepos+report.UntrackedShards+report.UntrackedMirrors+report.CredentialsFixed+report.InvalidRepos+report.RevisionRepairs > 0 {
+		log.Printf("artifact reconciliation: orphans=%d shards=%d mirrors=%d credentials_scrubbed=%d invalid_repos=%d revision_repairs=%d deleted=%d",
+			report.OrphanRepos, report.UntrackedShards, report.UntrackedMirrors, report.CredentialsFixed,
+			report.InvalidRepos, report.RevisionRepairs, report.Deleted)
 	}
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
@@ -121,6 +139,7 @@ func serve(args []string) error {
 	}
 	defer searcher.Close()
 	searcher.Contexts = cfg.Contexts // T8.1: context:<name> filters
+	codeNavigation := codenav.New(codenav.Options{DataDir: cfg.Server.DataDir})
 
 	// repository-membership webhook events re-sync every remote connection
 	var resyncNames []string
@@ -129,22 +148,25 @@ func serve(args []string) error {
 			resyncNames = append(resyncNames, c.Name)
 		}
 	}
-	mux := http.NewServeMux()
-	mux.Handle("/api/", api.New(api.Options{
-		Version: version, APIKey: cfg.Auth.APIKey,
-		Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
+	apiHandler := api.New(api.Options{
+		Version: version,
+		Store:   st, Search: searcher, DataDir: cfg.Server.DataDir,
+		CodeNav: codeNavigation,
+		IsAdmin: func(ctx context.Context) bool {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			return ok && principal.IsAdmin
+		},
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
-	}))
-	// T8.2: MCP over Streamable HTTP, same bearer as the API
+	})
+	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
 	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
+		CodeNav: codeNavigation,
 	})
-	mux.Handle("/api/mcp", api.RequireBearer(cfg.Auth.APIKey,
-		mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server { return mcpServer }, nil)))
-	mux.Handle("GET /metrics", promhttp.Handler()) // T3.3; unauthenticated like /api/health
-	mux.Handle("/", http.FileServerFS(dist))
+	mcpHandler := mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server { return mcpServer }, nil)
+	handler := newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist))
 
-	srv := &http.Server{Addr: cfg.Server.Addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -157,6 +179,23 @@ func serve(args []string) error {
 		return err
 	}
 	return nil
+}
+
+func newHTTPHandler(authService *auth.Service, apiHandler, mcpHandler, metricsHandler, uiHandler http.Handler) http.Handler {
+	mux := http.NewServeMux()
+	protectedAPI := authService.Require(apiHandler)
+	mux.Handle("/api/auth/", authService.Handler())
+	mux.Handle("/api/mcp", authService.Require(mcpHandler))
+	mux.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if api.IsAuthenticationExempt(r.URL.Path) {
+			apiHandler.ServeHTTP(w, r)
+			return
+		}
+		protectedAPI.ServeHTTP(w, r)
+	}))
+	mux.Handle("GET /metrics", metricsHandler)
+	mux.Handle("/", uiHandler)
+	return authService.LoadAndSave(mux)
 }
 
 func loadConfig(path string) (*config.Config, error) {

@@ -2,6 +2,8 @@ package sync_test
 
 import (
 	"context"
+	"crypto/sha1"
+	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
@@ -34,6 +36,10 @@ func TestRepoName(t *testing.T) {
 		{"https://example.com/../../../../etc/x", "", true},
 		{"git@example.com:../../../../etc/x", "", true},
 		{"https://example.com/a/../b", "", true},
+		{"https://example.com/a/./b", "", true},
+		{"https://example.com/a//b", "", true},
+		{"https://example.com/team.git/repo", "", true},
+		{"https:user:secret@example.com/repo.git", "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.in, func(t *testing.T) {
@@ -45,6 +51,21 @@ func TestRepoName(t *testing.T) {
 				t.Errorf("RepoName(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSafeRepoDirRejectsSymlinkedParent(t *testing.T) {
+	dataDir := t.TempDir()
+	outside := t.TempDir()
+	root := filepath.Join(dataDir, "repos")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "example.com")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := sync.SafeRepoDir(dataDir, "example.com/team/repo"); err == nil {
+		t.Fatal("SafeRepoDir accepted a symlinked namespace")
 	}
 }
 
@@ -219,18 +240,86 @@ func TestRemoveShards(t *testing.T) {
 	}
 	esc := url.QueryEscape("h/foo")       // h%2Ffoo
 	escBar := url.QueryEscape("h/foobar") // h%2Ffoobar (foo is a prefix)
+	escVictim := url.QueryEscape("h/foo_victim")
 	write(esc + "_v16.00000.zoekt")
 	write(esc + "_v16.00001.zoekt")
 	write(escBar + "_v16.00000.zoekt")
+	write(escVictim + "_v16.00000.zoekt")
 
 	if err := sync.RemoveShards(dataDir, "h/foo"); err != nil {
 		t.Fatal(err)
 	}
 	left, _ := filepath.Glob(filepath.Join(idx, "*.zoekt"))
-	if len(left) != 1 || filepath.Base(left[0]) != escBar+"_v16.00000.zoekt" {
-		t.Errorf("after RemoveShards(h/foo), remaining = %v; want only h/foobar's shard (the _v anchor must prevent prefix over-match)", left)
+	if len(left) != 2 {
+		t.Fatalf("after RemoveShards(h/foo), remaining = %v; want both neighboring repos", left)
+	}
+	remaining := map[string]bool{}
+	for _, path := range left {
+		remaining[filepath.Base(path)] = true
+	}
+	for _, want := range []string{escBar + "_v16.00000.zoekt", escVictim + "_v16.00000.zoekt"} {
+		if !remaining[want] {
+			t.Errorf("after RemoveShards(h/foo), remaining = %v; missing %s", left, want)
+		}
 	}
 	if err := sync.RemoveShards(dataDir, "h/foo"); err != nil {
 		t.Errorf("second RemoveShards errored: %v", err)
+	}
+
+	longName := "gitlab.example.com/" + strings.Repeat("nested/", 35) + "repo"
+	prefix := url.QueryEscape(longName)
+	hash := fmt.Sprintf("%x", sha1.Sum([]byte(prefix)))
+	longShard := prefix[:200] + hash[:8] + "_v16.00000.zoekt"
+	write(longShard)
+	if err := sync.RemoveShards(dataDir, longName); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(idx, longShard)); !os.IsNotExist(err) {
+		t.Errorf("long-name shard still exists after cleanup: %v", err)
+	}
+}
+
+func TestRemoveShardsTreatsDataDirMetacharactersLiterally(t *testing.T) {
+	base := t.TempDir()
+	dataDir := filepath.Join(base, "data[*]")
+	sibling := filepath.Join(base, "dataX")
+	name := url.QueryEscape("h/foo") + "_v16.00000.zoekt"
+	for _, root := range []string{dataDir, sibling} {
+		if err := os.MkdirAll(filepath.Join(root, "index"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "index", name), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := sync.RemoveShards(dataDir, "h/foo"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dataDir, "index", name)); !os.IsNotExist(err) {
+		t.Fatalf("literal data-dir shard was not removed: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(sibling, "index", name)); err != nil {
+		t.Fatalf("sibling shard was touched through glob metacharacters: %v", err)
+	}
+}
+
+func TestRemoveShardsRejectsSymlinkedIndexEntry(t *testing.T) {
+	dataDir := t.TempDir()
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "outside.zoekt")
+	if err := os.WriteFile(target, []byte("keep"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(indexDir, "h%2Ffoo_v1.zoekt")); err != nil {
+		t.Fatal(err)
+	}
+	if err := sync.RemoveShards(dataDir, "h/foo"); err == nil {
+		t.Fatal("RemoveShards accepted a symlinked shard")
+	}
+	if _, err := os.Stat(target); err != nil {
+		t.Fatalf("outside shard target was touched: %v", err)
 	}
 }

@@ -1,20 +1,26 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useStyletron } from 'baseui'
-import { useHashRoute } from './router'
+import { Spinner } from 'baseui/spinner'
+import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
+import { FOCUS_SEARCH, useHashRoute } from './router'
 import { useMode, usePhebsTokens } from './theme'
-import { SunIcon, MoonIcon } from './icons'
-import SearchPage from './pages/SearchPage'
-import FilePage from './pages/FilePage'
-import ReposPage from './pages/ReposPage'
+import { LogoutIcon, MoonIcon, SunIcon } from './icons'
+import { useAuth } from './auth'
+import LoginPage from './pages/LoginPage'
 
-// FOCUS_SEARCH lets the global "/" shortcut reach the search input without
-// threading a ref through the router.
-export const FOCUS_SEARCH = 'phebs-focus-search'
+const SearchPage = lazy(() => import('./pages/SearchPage'))
+const FilePage = lazy(() => import('./pages/FilePage'))
+const ReposPage = lazy(() => import('./pages/ReposPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const HistoryPage = lazy(() => import('./pages/HistoryPage'))
+const BlamePage = lazy(() => import('./pages/BlamePage'))
+const CommitPage = lazy(() => import('./pages/CommitPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const { status, loading, error: authError, logout } = useAuth()
 
   // "/" focuses search from anywhere (unless already typing)
   useEffect(() => {
@@ -30,16 +36,25 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  if (loading) {
+    return <div className={css({ minHeight: '100vh', display: 'grid', placeItems: 'center', backgroundColor: tok.pageBg })}><Spinner $size="small" /></div>
+  }
+  if (!status || (status.auth_required && !status.authenticated)) return <LoginPage />
+
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
-  else if (path.startsWith('/repos')) page = <ReposPage />
+  else if (path.startsWith('/history')) page = <HistoryPage params={params} />
+  else if (path.startsWith('/blame')) page = <BlamePage params={params} />
+  else if (path.startsWith('/commit')) page = <CommitPage params={params} />
+  else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} />
+  else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 
   const wide = !path.startsWith('/repos') // all pages full-width; kept for future narrowing
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
-      <Header path={path} />
+      <Header path={path} email={status.user?.email ?? ''} onLogout={() => void logout().catch(() => {})} />
       <main
         className={css({
           maxWidth: wide ? '100%' : '1080px',
@@ -48,21 +63,32 @@ export default function App() {
           paddingRight: '24px',
           paddingTop: '24px',
           paddingBottom: '48px',
+          '@media screen and (max-width: 720px)': {
+            paddingLeft: '16px',
+            paddingRight: '16px',
+            paddingTop: '16px',
+          },
         })}
       >
-        {page}
+        {authError && (
+          <Notification kind={NOTIFICATION_KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
+            {authError}
+          </Notification>
+        )}
+        <Suspense fallback={<Spinner $size="small" />}>{page}</Suspense>
       </main>
     </div>
   )
 }
 
-function Header({ path }: { path: string }) {
+function Header({ path, email, onLogout }: { path: string; email: string; onLogout: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode, toggle } = useMode()
 
+  const isSettings = path.startsWith('/settings')
   const isRepos = path.startsWith('/repos')
-  const isSearch = !isRepos && !path.startsWith('/file')
+  const isSearch = path === '/' || path.startsWith('/search')
 
   return (
     <header
@@ -78,6 +104,11 @@ function Header({ path }: { path: string }) {
         position: 'sticky',
         top: 0,
         zIndex: 10,
+        '@media screen and (max-width: 720px)': {
+          gap: '10px',
+          paddingLeft: '16px',
+          paddingRight: '16px',
+        },
       })}
     >
       <a
@@ -87,39 +118,18 @@ function Header({ path }: { path: string }) {
           fontWeight: 700,
           color: tok.textPrimary,
           textDecoration: 'none',
-          letterSpacing: '-0.01em',
+          letterSpacing: '0',
         })}
       >
         phebs
       </a>
-      <nav className={css({ display: 'flex', gap: '20px', alignItems: 'center', height: '100%' })}>
+      <nav className={css({ display: 'flex', gap: '20px', alignItems: 'center', height: '100%', '@media screen and (max-width: 720px)': { gap: '12px' } })}>
         <NavLink href="#/" label="Search" active={isSearch} />
         <NavLink href="#/repos" label="Repos" active={isRepos} />
+        <NavLink href="#/settings" label="Settings" active={isSettings} />
       </nav>
       <div className={css({ flex: 1 })} />
-      <span
-        className={css({
-          fontSize: '12px',
-          color: tok.textTertiary,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-        })}
-      >
-        <kbd
-          className={css({
-            fontFamily: 'ui-monospace, Menlo, monospace',
-            fontSize: '11px',
-            padding: '2px 6px',
-            border: `1px solid ${tok.kbdBorder}`,
-            borderRadius: '4px',
-            color: tok.textSecondary,
-          })}
-        >
-          /
-        </kbd>
-        to search
-      </span>
+      {email && <span className={css({ fontSize: '12px', color: tok.textTertiary, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '@media screen and (max-width: 720px)': { display: 'none' } })}>{email}</span>}
       <button
         onClick={toggle}
         aria-label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -138,6 +148,26 @@ function Header({ path }: { path: string }) {
         })}
       >
         {mode === 'dark' ? <SunIcon /> : <MoonIcon />}
+      </button>
+      <button
+        onClick={onLogout}
+        aria-label="Sign out"
+        title="Sign out"
+        className={css({
+          width: '32px',
+          height: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: `1px solid ${tok.cardBorder}`,
+          borderRadius: '8px',
+          background: 'none',
+          cursor: 'pointer',
+          color: tok.textSecondary,
+          ':hover': { backgroundColor: tok.hoverFill },
+        })}
+      >
+        <LogoutIcon />
       </button>
     </header>
   )

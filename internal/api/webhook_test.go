@@ -18,9 +18,25 @@ import (
 // dispatches on (fetch vs sync).
 type jobStore struct {
 	fakeStore
-	jobs     []string // "kind:target"
-	inFlight []store.Job
-	repoErr  error // non-nil: GetRepo fails with this for every repo
+	jobs         []string // "kind:target"
+	inFlight     []store.Job
+	repoErr      error // non-nil: GetRepo fails with this for every repo
+	enqueueErr   error
+	repoDeleting bool
+}
+
+func (f *jobStore) EnqueuePending(_ context.Context, kind store.JobKind, target string, force bool) (*store.Job, error) {
+	if f.enqueueErr != nil {
+		return nil, f.enqueueErr
+	}
+	for i := range f.inFlight {
+		if f.inFlight[i].Kind == kind && f.inFlight[i].Target == target && f.inFlight[i].Status == store.StatusPending {
+			f.inFlight[i].Force = f.inFlight[i].Force || force
+			return &f.inFlight[i], nil
+		}
+	}
+	f.jobs = append(f.jobs, string(kind)+":"+target)
+	return &store.Job{Kind: kind, Target: target, Status: store.StatusPending, Force: force}, nil
 }
 
 func (f *jobStore) CreateJob(_ context.Context, kind store.JobKind, target string) (*store.Job, error) {
@@ -42,7 +58,11 @@ func (f *jobStore) GetRepo(ctx context.Context, name string) (*store.Repo, error
 	if f.repoErr != nil {
 		return nil, f.repoErr
 	}
-	return f.fakeStore.GetRepo(ctx, name)
+	repo, err := f.fakeStore.GetRepo(ctx, name)
+	if repo != nil {
+		repo.Deleting = f.repoDeleting
+	}
+	return repo, err
 }
 
 func sign(secret, body string) string {
@@ -160,6 +180,24 @@ func TestWebhookEdgeCases(t *testing.T) {
 		newAPI(fs).ServeHTTP(rec, newReq("push", pushKnown))
 		if rec.Code != http.StatusAccepted || len(fs.jobs) != 0 {
 			t.Fatalf("code=%d jobs=%v, want 202 and no duplicate of the pending job", rec.Code, fs.jobs)
+		}
+	})
+
+	t.Run("deleting repo ignores push", func(t *testing.T) {
+		fs := &jobStore{repoDeleting: true}
+		rec := httptest.NewRecorder()
+		newAPI(fs).ServeHTTP(rec, newReq("push", pushKnown))
+		if rec.Code != http.StatusAccepted || len(fs.jobs) != 0 {
+			t.Fatalf("code=%d jobs=%v, want deleting repo ignored", rec.Code, fs.jobs)
+		}
+	})
+
+	t.Run("membership enqueue failure is retriable", func(t *testing.T) {
+		fs := &jobStore{enqueueErr: context.DeadlineExceeded}
+		rec := httptest.NewRecorder()
+		newAPI(fs).ServeHTTP(rec, newReq("repository", `{}`))
+		if rec.Code != http.StatusInternalServerError {
+			t.Fatalf("status = %d, want 500 so sender retries", rec.Code)
 		}
 	})
 }

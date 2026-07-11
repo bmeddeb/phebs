@@ -3,21 +3,20 @@ import { useStyletron } from 'baseui'
 import { Input } from 'baseui/input'
 import { Button } from 'baseui/button'
 import { Tag, KIND as TAG_KIND } from 'baseui/tag'
-import { Checkbox } from 'baseui/checkbox'
 import { Notification, KIND } from 'baseui/notification'
 import type { LanguageSupport } from '@codemirror/language'
 import { streamSearch } from '../api'
 import type { FileResult, Range, Stats } from '../api'
-import { href, navigate } from '../router'
+import { FOCUS_SEARCH, href, navigate } from '../router'
 import { usePhebsTokens, useMode, FONTS } from '../theme'
 import { languageFor, langColor } from '../lang'
 import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
-import { FOCUS_SEARCH } from '../App'
+import { repoFilter, runeColumnToUTF16Offset, splitQueryTerms } from '../util'
 
 type Phase = 'idle' | 'streaming' | 'done' | 'error'
 
-const fileKey = (f: FileResult) => f.repo + '\0' + f.path
+const fileKey = (f: FileResult) => f.repo + '\0' + f.ref + '\0' + f.path
 
 export default function SearchPage({ params }: { params: URLSearchParams }) {
   const urlQuery = params.get('q') ?? ''
@@ -30,6 +29,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState(-1)
+  const [searchGeneration, setSearchGeneration] = useState(0)
   const stopRef = useRef<() => void>(() => {})
   const inputRef = useRef<HTMLInputElement>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
@@ -68,7 +68,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
       },
     )
     return () => stopRef.current()
-  }, [urlQuery])
+  }, [urlQuery, searchGeneration])
 
   // group by repo, preserving arrival order
   const groups = useMemo(() => {
@@ -101,14 +101,20 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
         })
       } else if (e.key === 'Enter' && selected >= 0 && visible[selected]) {
         const f = visible[selected]
-        navigate('/file', { repo: f.repo, path: f.path, L: String(f.chunks[0]?.ranges[0]?.start_line ?? 1) })
+        navigate('/file', {
+          repo: f.repo,
+          path: f.path,
+          ref: f.ref,
+          L: String(f.chunks[0]?.ranges[0]?.start_line ?? 1),
+        })
       } else if (e.key === 'y' && selected >= 0 && visible[selected]) {
         navigator.clipboard?.writeText(visible[selected].path)
       } else if (e.key === 'o' && selected >= 0 && visible[selected]) {
         const repo = visible[selected].repo
         setCollapsed((c) => {
           const n = new Set(c)
-          n.has(repo) ? n.delete(repo) : n.add(repo)
+          if (n.has(repo)) n.delete(repo)
+          else n.add(repo)
           return n
         })
       }
@@ -126,7 +132,8 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   const toggleGroup = (repo: string) =>
     setCollapsed((c) => {
       const n = new Set(c)
-      n.has(repo) ? n.delete(repo) : n.add(repo)
+      if (n.has(repo)) n.delete(repo)
+      else n.add(repo)
       return n
     })
 
@@ -137,7 +144,10 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          if (input.trim()) navigate('/search', { q: input.trim() })
+          const next = input.trim()
+          if (!next) return
+          if (next === urlQuery) setSearchGeneration((generation) => generation + 1)
+          else navigate('/search', { q: next })
         }}
         className={css({ display: 'flex', gap: '8px' })}
       >
@@ -199,6 +209,9 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
 
       {phase !== 'idle' && (
         <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
           className={css({
             display: 'flex',
             alignItems: 'center',
@@ -230,14 +243,20 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
           </span>
           <div className={css({ flex: 1 })} />
           {visible.length > 0 && (
-            <span className={css({ display: 'flex', gap: '10px', color: tok.textTertiary })}>
+            <span className={css({ display: 'flex', gap: '10px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { display: 'none' } })}>
               <Kbd>j</Kbd><Kbd>k</Kbd> navigate · <Kbd>↵</Kbd> open · <Kbd>y</Kbd> copy · <Kbd>o</Kbd> fold
             </span>
           )}
         </div>
       )}
 
-      <div className={css({ display: 'flex', gap: '28px', marginTop: '16px', alignItems: 'flex-start' })}>
+      <div className={css({
+        display: 'flex',
+        gap: '28px',
+        marginTop: '16px',
+        alignItems: 'flex-start',
+        '@media screen and (max-width: 720px)': { flexDirection: 'column', gap: '12px' },
+      })}>
         {files.length > 0 && (
           <FacetRail files={files} query={urlQuery} />
         )}
@@ -313,22 +332,55 @@ function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
     return [...m.entries()].sort((a, b) => b[1] - a[1])
   }, [files])
 
-  const terms = new Set(query.split(/\s+/).filter(Boolean))
+  const terms = new Set(splitQueryTerms(query))
   const toggle = (term: string) => {
     const next = new Set(terms)
-    next.has(term) ? next.delete(term) : next.add(term)
+    if (next.has(term)) next.delete(term)
+    else next.add(term)
     navigate('/search', { q: [...next].join(' ') })
   }
   const shortRepo = (r: string) => r.slice(r.lastIndexOf('/') + 1)
 
   return (
-    <aside className={css({ width: '224px', flexShrink: 0 })}>
+    <aside className={css({
+      width: '224px',
+      flexShrink: 0,
+      '@media screen and (max-width: 720px)': {
+        display: 'flex',
+        gap: '16px',
+        width: '100%',
+        overflowX: 'auto',
+        paddingBottom: '4px',
+      },
+    })}>
       <FacetSection title="Repositories">
         {repos.map(([repo, n]) => {
-          const term = `repo:${shortRepo(repo)}`
+          const term = repoFilter(repo)
+          const active = terms.has(term)
           return (
-            <FacetRow key={repo} onClick={() => toggle(term)}>
-              <Checkbox checked={terms.has(term)} onChange={() => toggle(term)} overrides={{ Checkmark: { style: { marginTop: 0, marginBottom: 0 } } }} />
+            <FacetRow
+              key={repo}
+              active={active}
+              label={`${active ? 'Remove' : 'Add'} repository filter ${repo}`}
+              onClick={() => toggle(term)}
+            >
+              <span
+                aria-hidden="true"
+                className={css({
+                  width: '14px',
+                  height: '14px',
+                  border: `1px solid ${active ? tok.accent : tok.kbdBorder}`,
+                  borderRadius: '3px',
+                  backgroundColor: active ? tok.accent : 'transparent',
+                  color: tok.pageBg,
+                  fontSize: '11px',
+                  lineHeight: '12px',
+                  textAlign: 'center',
+                  flexShrink: 0,
+                })}
+              >
+                {active ? '✓' : ''}
+              </span>
               <span className={css({ flex: 1, fontSize: '13px', color: tok.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
                 {shortRepo(repo)}
               </span>
@@ -343,7 +395,12 @@ function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
             const term = `lang:${lang}`
             const active = terms.has(term)
             return (
-              <FacetRow key={lang} onClick={() => toggle(term)}>
+              <FacetRow
+                key={lang}
+                active={active}
+                label={`${active ? 'Remove' : 'Add'} language filter ${lang}`}
+                onClick={() => toggle(term)}
+              >
                 <span className={css({ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: langColor('x.' + lang) })} />
                 <span className={css({ flex: 1, fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? tok.textPrimary : tok.textSecondary })}>
                   {lang}
@@ -362,7 +419,13 @@ function FacetSection({ title, children }: { title: string; children: React.Reac
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
-    <div className={css({ marginBottom: '20px' })}>
+    <div className={css({
+      marginBottom: '20px',
+      '@media screen and (max-width: 720px)': {
+        flex: '1 0 180px',
+        marginBottom: 0,
+      },
+    })}>
       <div className={css({ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: tok.textTertiary, marginBottom: '6px' })}>
         {title}
       </div>
@@ -371,11 +434,24 @@ function FacetSection({ title, children }: { title: string; children: React.Reac
   )
 }
 
-function FacetRow({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function FacetRow({
+  active,
+  label,
+  onClick,
+  children,
+}: {
+  active: boolean
+  label: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
-    <div
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={active}
       onClick={onClick}
       className={css({
         display: 'flex',
@@ -385,12 +461,18 @@ function FacetRow({ onClick, children }: { onClick: () => void; children: React.
         paddingLeft: '4px',
         paddingRight: '4px',
         borderRadius: '6px',
+        width: '100%',
+        border: 'none',
+        backgroundColor: 'transparent',
+        color: 'inherit',
+        textAlign: 'left',
         cursor: 'pointer',
         ':hover': { backgroundColor: tok.hoverFill },
+        ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
       })}
     >
       {children}
-    </div>
+    </button>
   )
 }
 
@@ -472,13 +554,15 @@ function RepoGroup({
   return (
     <section className={css({ marginTop: '28px' })}>
       <button
+        type="button"
+        aria-expanded={open}
         onClick={onToggle}
         className={css({ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '0 0 8px 0', cursor: 'pointer', color: tok.textPrimary, textAlign: 'left' })}
       >
         <span className={css({ color: tok.textTertiary, display: 'flex' })}>
           {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
-        <span className={css({ fontSize: '16px', fontWeight: 500 })}>{repo}</span>
+        <span className={css({ fontSize: '16px', fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{repo}</span>
         <Tag closeable={false} kind={TAG_KIND.neutral}>
           {matches} {matches === 1 ? 'match' : 'matches'} · {files.length} {files.length === 1 ? 'file' : 'files'}
         </Tag>
@@ -486,7 +570,7 @@ function RepoGroup({
       </button>
       {open &&
         files.map((f) => (
-          <FileBlock key={f.repo + f.path} file={f} selected={fileKey(f) === selectedKey} registerRef={registerRef} />
+          <FileBlock key={fileKey(f)} file={f} selected={fileKey(f) === selectedKey} registerRef={registerRef} />
         ))}
     </section>
   )
@@ -517,7 +601,12 @@ function FileBlock({
   const slash = file.path.lastIndexOf('/')
   const dir = slash === -1 ? '' : file.path.slice(0, slash + 1)
   const name = slash === -1 ? file.path : file.path.slice(slash + 1)
-  const fileHref = href('/file', { repo: file.repo, path: file.path, ...(firstLine ? { L: String(firstLine) } : {}) })
+  const fileHref = href('/file', {
+    repo: file.repo,
+    path: file.path,
+    ref: file.ref,
+    ...(firstLine ? { L: String(firstLine) } : {}),
+  })
 
   return (
     <div
@@ -573,12 +662,17 @@ function ChunkView({
         return (
           <div key={i} className={css({ display: 'flex', fontFamily: FONTS.MONO, fontSize: '13px', lineHeight: '20px', ':hover': { backgroundColor: tok.hoverFill } })}>
             <a
-              href={href('/file', { repo: file.repo, path: file.path, L: String(lineNo) })}
+              href={href('/file', {
+                repo: file.repo,
+                path: file.path,
+                ref: file.ref,
+                L: String(lineNo),
+              })}
               className={css({ flexShrink: 0, width: '48px', paddingRight: '12px', textAlign: 'right', color: tok.gutter, textDecoration: 'none', userSelect: 'none', ':hover': { color: tok.accent } })}
             >
               {lineNo}
             </a>
-            <code className={css({ whiteSpace: 'pre', overflowX: 'auto', tabSize: 4, color: tok.plainCode, paddingRight: '12px' })}>
+            <code className={css({ flex: '1 1 0', minWidth: 0, whiteSpace: 'pre', overflowX: 'auto', tabSize: 4, color: tok.plainCode, paddingRight: '12px' })}>
               {renderLine(line, lineNo, chunk.ranges, lang, mode, tok.matchBg)}
             </code>
           </div>
@@ -628,8 +722,8 @@ function matchSpans(line: string, lineNo: number, ranges: Range[]): { from: numb
   const spans: { from: number; to: number }[] = []
   for (const r of ranges) {
     if (lineNo < r.start_line || lineNo > r.end_line) continue
-    const from = lineNo === r.start_line ? r.start_col - 1 : 0
-    const to = lineNo === r.end_line ? r.end_col - 1 : line.length
+    const from = lineNo === r.start_line ? runeColumnToUTF16Offset(line, r.start_col) : 0
+    const to = lineNo === r.end_line ? runeColumnToUTF16Offset(line, r.end_col) : line.length
     spans.push({ from: Math.max(0, from), to: Math.min(line.length, to) })
   }
   return spans

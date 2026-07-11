@@ -84,27 +84,27 @@ func TestClassifiedFailureSchedule(t *testing.T) {
 		t.Errorf("recorded error = %q, want class-prefixed message", requeued.Error)
 	}
 
-	// the failure is visible under the auth class label
-	families, err := prometheus.DefaultGatherer.Gather()
-	if err != nil {
-		t.Fatal(err)
-	}
-	found := false
-	for _, mf := range families {
-		if mf.GetName() != "phebs_job_errors_total" {
-			continue
+	// The row transition and metric update are consecutive but not atomic;
+	// wait until the runner records the successful requeue.
+	waitFor(t, 5*time.Second, func() bool {
+		families, err := prometheus.DefaultGatherer.Gather()
+		if err != nil {
+			return false
 		}
-		for _, m := range mf.GetMetric() {
-			labels := map[string]string{}
-			for _, l := range m.GetLabel() {
-				labels[l.GetName()] = l.GetValue()
+		for _, mf := range families {
+			if mf.GetName() != "phebs_job_errors_total" {
+				continue
 			}
-			if labels["class"] == "auth" && strings.Contains(labels["kind"], "sync") && m.GetCounter().GetValue() >= 1 {
-				found = true
+			for _, m := range mf.GetMetric() {
+				labels := map[string]string{}
+				for _, l := range m.GetLabel() {
+					labels[l.GetName()] = l.GetValue()
+				}
+				if labels["class"] == "auth" && strings.Contains(labels["kind"], "sync") && m.GetCounter().GetValue() >= 1 {
+					return true
+				}
 			}
 		}
-	}
-	if !found {
-		t.Error(`phebs_job_errors_total{class="auth"} not incremented`)
-	}
+		return false
+	}, `phebs_job_errors_total{class="auth"} not incremented`)
 }

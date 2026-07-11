@@ -2,7 +2,10 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -68,6 +71,98 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 			return fmt.Errorf("statement %d: %s", i, r.Error.Message)
 		}
 	}
+	if err := s.migrateLegacyJobs(ctx); err != nil {
+		return err
+	}
+	results, err = surrealdb.Query[any](ctx, s.db, pendingJobIndexes, nil)
+	if err != nil {
+		return err
+	}
+	for i, r := range *results {
+		if r.Error != nil {
+			return fmt.Errorf("pending index statement %d: %s", i, r.Error.Message)
+		}
+	}
+	return nil
+}
+
+const pendingJobIndexes = `
+DEFINE INDEX IF NOT EXISTS connection_sync_job_pending_key ON connection_sync_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS indexing_job_pending_key ON indexing_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS pending_key UNIQUE;`
+
+// migrateLegacyJobs runs before the pending-key indexes are installed. Old
+// rows had no lease or pending slot, and may contain an active job plus a
+// successor. Keep the oldest pending row, cancel duplicates, then requeue only
+// an unfenced active row that has no successor.
+func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
+	for _, kind := range []JobKind{JobSync, JobIndex, JobFetch} {
+		jobs, err := s.ListJobs(ctx, kind, "")
+		if err != nil {
+			return fmt.Errorf("migrate %s: list: %w", kind, err)
+		}
+		pending := make(map[string]bool)
+		for _, job := range jobs {
+			if job.Status != StatusPending {
+				continue
+			}
+			if pending[job.Target] {
+				if err := s.updateLegacyJob(ctx, job.ID,
+					`status = 'canceled', error = 'migration: duplicate pending job',
+					 finished_at = time::now(), pending_key = NONE`, StatusPending); err != nil {
+					return fmt.Errorf("migrate %s duplicate %s: %w", kind, job.ID, err)
+				}
+				continue
+			}
+			if err := s.updateLegacyJob(ctx, job.ID, "pending_key = $target", StatusPending,
+				"target", job.Target); err != nil {
+				return fmt.Errorf("migrate %s pending %s: %w", kind, job.ID, err)
+			}
+			pending[job.Target] = true
+		}
+
+		for _, job := range jobs {
+			if (job.Status != StatusClaimed && job.Status != StatusRunning) || job.LeaseToken != "" {
+				continue
+			}
+			if pending[job.Target] {
+				if err := s.updateLegacyJob(ctx, job.ID,
+					`status = 'canceled', attempts = $attempts,
+					 error = 'migration: unfenced job superseded', finished_at = time::now(),
+					 claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE,
+					 lease_token = NONE, pending_key = NONE`, job.Status,
+					"attempts", job.Attempts+1); err != nil {
+					return fmt.Errorf("migrate %s superseded %s: %w", kind, job.ID, err)
+				}
+				continue
+			}
+			if err := s.updateLegacyJob(ctx, job.ID,
+				`status = 'pending', attempts = $attempts,
+				 error = 'requeued: legacy claim without lease', not_before = NONE,
+				 claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE,
+				 lease_token = NONE, pending_key = $target`, job.Status,
+				"attempts", job.Attempts+1, "target", job.Target); err != nil {
+				return fmt.Errorf("migrate %s active %s: %w", kind, job.ID, err)
+			}
+			pending[job.Target] = true
+		}
+	}
+	return nil
+}
+
+func (s *Surreal) updateLegacyJob(ctx context.Context, id, set string, expected JobStatus, pairs ...any) error {
+	vars := map[string]any{"id": id, "expected": string(expected)}
+	for i := 0; i < len(pairs); i += 2 {
+		vars[pairs[i].(string)] = pairs[i+1]
+	}
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
+		"UPDATE type::record($id) SET "+set+" WHERE status = $expected RETURN AFTER", vars)
+	if err != nil {
+		return err
+	}
+	if len(firstNonEmpty(results)) == 0 {
+		return fmt.Errorf("job %q changed during migration", id)
+	}
 	return nil
 }
 
@@ -87,8 +182,36 @@ func repoID(name string) models.RecordID { return models.NewRecordID("repo", nam
 
 func (s *Surreal) UpsertRepo(ctx context.Context, r Repo) error {
 	_, err := surrealdb.Query[any](ctx, s.db,
-		"UPSERT $rid CONTENT $repo",
-		map[string]any{"rid": repoID(r.Name), "repo": r})
+		`UPSERT $rid SET
+			name = $name,
+			display_name = $display_name,
+			clone_url = $clone_url,
+			web_url = $web_url,
+			default_branch = $default_branch,
+			is_fork = $is_fork,
+			is_archived = $is_archived,
+			is_public = $is_public,
+			metadata = $metadata,
+			pushed_at = $pushed_at,
+			external_id = $external_id,
+			external_code_host_type = $external_host_type,
+			external_code_host_url = $external_host_url`,
+		map[string]any{
+			"rid":                repoID(r.Name),
+			"name":               r.Name,
+			"display_name":       r.DisplayName,
+			"clone_url":          r.CloneURL,
+			"web_url":            r.WebURL,
+			"default_branch":     r.DefaultBranch,
+			"is_fork":            r.IsFork,
+			"is_archived":        r.IsArchived,
+			"is_public":          r.IsPublic,
+			"metadata":           r.Metadata,
+			"pushed_at":          r.PushedAt,
+			"external_id":        r.ExternalID,
+			"external_host_type": r.ExternalHostType,
+			"external_host_url":  r.ExternalHostURL,
+		})
 	return err
 }
 
@@ -118,6 +241,19 @@ func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
 	_, err := surrealdb.Query[any](ctx, s.db,
 		"DELETE $rid", map[string]any{"rid": repoID(name)})
 	return err
+}
+
+func (s *Surreal) SetRepoDeleting(ctx context.Context, name string, deleting bool) error {
+	results, err := surrealdb.Query[[]Repo](ctx, s.db,
+		"UPDATE $rid SET deleting = $deleting RETURN AFTER",
+		map[string]any{"rid": repoID(name), "deleting": deleting})
+	if err != nil {
+		return err
+	}
+	if len((*results)[0].Result) == 0 {
+		return fmt.Errorf("repo %q: %w", name, ErrNotFound)
+	}
+	return nil
 }
 
 func (s *Surreal) SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error {
@@ -150,8 +286,10 @@ func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
 
 func (s *Surreal) SetRepoConnections(ctx context.Context, conn string, repos []string) error {
 	_, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
 DELETE repo_connection WHERE connection = $conn;
-FOR $r IN $repos { CREATE repo_connection CONTENT { connection: $conn, repo: $r } };`,
+FOR $r IN $repos { CREATE repo_connection CONTENT { connection: $conn, repo: $r } };
+COMMIT;`,
 		map[string]any{"conn": conn, "repos": repos})
 	return err
 }
@@ -239,10 +377,13 @@ func (j jobRec) toJob(kind JobKind) Job {
 }
 
 func (s *Surreal) CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error) {
-	job := Job{Target: target, Status: StatusPending, CreatedAt: time.Now().UTC()}
+	created := time.Now().UTC()
 	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
-		"CREATE type::table($table) CONTENT $job",
-		map[string]any{"table": string(kind), "job": job})
+		`CREATE type::table($table) CONTENT {
+			target: $target, status: 'pending', attempts: 0,
+			created_at: $created, pending_key: $target, force: false
+		}`,
+		map[string]any{"table": string(kind), "target": target, "created": created})
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +393,49 @@ func (s *Surreal) CreateJob(ctx context.Context, kind JobKind, target string) (*
 	}
 	out := rows[0].toJob(kind)
 	return &out, nil
+}
+
+const enqueuePendingSQL = `
+BEGIN;
+LET $pending = (SELECT id, created_at FROM type::table($table)
+    WHERE pending_key = $target AND status = 'pending'
+    ORDER BY created_at LIMIT 1)[0].id;
+RETURN IF $pending != NONE THEN
+    (UPDATE $pending SET force = IF $force THEN true ELSE force END RETURN AFTER)
+ELSE
+    (CREATE type::table($table) CONTENT {
+        target: $target,
+        status: 'pending',
+        attempts: 0,
+        created_at: time::now(),
+        pending_key: $target,
+        force: $force
+    } RETURN AFTER)
+END;
+COMMIT;`
+
+const maxQueueRetries = 64
+
+// EnqueuePending atomically ensures that target has one pending job. An
+// already-running job is deliberately ignored: the pending row is its single
+// successor, preserving events that arrive after the worker took its snapshot.
+func (s *Surreal) EnqueuePending(ctx context.Context, kind JobKind, target string, force bool) (*Job, error) {
+	for attempt := 0; ; attempt++ {
+		results, err := surrealdb.Query[[]jobRec](ctx, s.db, enqueuePendingSQL,
+			map[string]any{"table": string(kind), "target": target, "force": force})
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return nil, err
+		}
+		rows := firstNonEmpty(results)
+		if len(rows) == 0 {
+			return nil, fmt.Errorf("enqueue %s %q: empty result", kind, target)
+		}
+		job := rows[0].toJob(kind)
+		return &job, nil
+	}
 }
 
 func (s *Surreal) ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) {
@@ -282,7 +466,8 @@ LET $cand = (SELECT id, created_at FROM type::table($table)
     WHERE status = 'pending' AND (not_before = NONE OR not_before <= time::now())
     ORDER BY created_at LIMIT 1)[0].id;
 RETURN IF $cand != NONE THEN
-    (UPDATE $cand SET status = 'claimed', claimed_by = $who, claimed_at = time::now(), heartbeat_at = time::now()
+    (UPDATE $cand SET status = 'claimed', claimed_by = $who, lease_token = $lease, pending_key = NONE,
+     claimed_at = time::now(), heartbeat_at = time::now()
      WHERE status = 'pending' RETURN AFTER)
 ELSE [] END;`
 
@@ -294,8 +479,12 @@ func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job,
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
+		lease, err := newLeaseToken()
+		if err != nil {
+			return nil, err
+		}
 		res, err := surrealdb.Query[[]jobRec](ctx, s.db, claimSQL,
-			map[string]any{"table": string(kind), "who": who})
+			map[string]any{"table": string(kind), "who": who, "lease": lease})
 		if err != nil {
 			if isRetryable(err) {
 				continue
@@ -317,6 +506,14 @@ func (s *Surreal) ClaimJob(ctx context.Context, kind JobKind, who string) (*Job,
 	}
 }
 
+func newLeaseToken() (string, error) {
+	var token [16]byte
+	if _, err := rand.Read(token[:]); err != nil {
+		return "", fmt.Errorf("generate job lease: %w", err)
+	}
+	return hex.EncodeToString(token[:]), nil
+}
+
 // firstNonEmpty returns the first statement result carrying rows; the RETURN
 // statement's position differs with and without BEGIN..COMMIT.
 func firstNonEmpty(res *[]surrealdb.QueryResult[[]jobRec]) []jobRec {
@@ -331,6 +528,14 @@ func firstNonEmpty(res *[]surrealdb.QueryResult[[]jobRec]) []jobRec {
 func isRetryable(err error) bool {
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "conflict") || strings.Contains(msg, "retry")
+}
+
+func isRetryableEnqueue(err error) bool {
+	if isRetryable(err) {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unique") || strings.Contains(msg, "already contains")
 }
 
 func (s *Surreal) countPending(ctx context.Context, kind JobKind) (int, error) {
@@ -349,29 +554,138 @@ func (s *Surreal) countPending(ctx context.Context, kind JobKind) (int, error) {
 	return rows[0].Count, nil
 }
 
-// HeartbeatJob refreshes the liveness stamp of an in-flight job. A no-op if
-// the job already reached a terminal state (races with completion are benign).
-func (s *Surreal) HeartbeatJob(ctx context.Context, id string) error {
-	_, err := surrealdb.Query[any](ctx, s.db,
-		"UPDATE type::record($id) SET heartbeat_at = time::now() WHERE status IN ['claimed', 'running']",
-		map[string]any{"id": id})
-	return err
+// HeartbeatJob refreshes a running lease. A zero-row update is never benign:
+// the row may have been reaped and reclaimed, so the old worker must stop.
+func (s *Surreal) HeartbeatJob(ctx context.Context, job Job) error {
+	return s.updateLease(ctx, job,
+		"UPDATE type::record($id) SET heartbeat_at = time::now() WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who RETURN AFTER",
+		nil)
 }
 
 // RequeueJob returns a failed execution to the queue with attempts+1 and a
 // backoff gate; claim state is cleared.
-func (s *Surreal) RequeueJob(ctx context.Context, id string, errMsg string, notBefore time.Time) error {
+func (s *Surreal) RequeueJob(ctx context.Context, job Job, errMsg string, notBefore time.Time) error {
+	return s.returnToPending(ctx, job, errMsg, notBefore, true, nil)
+}
+
+// ReleaseJob is the shutdown path: work returns to pending immediately without
+// being counted as a failed attempt.
+func (s *Surreal) ReleaseJob(ctx context.Context, job Job, errMsg string) error {
+	return s.returnToPending(ctx, job, errMsg, time.Time{}, false, nil)
+}
+
+type heartbeatFence struct {
+	observed time.Time
+	cutoff   time.Time
+}
+
+// Compare heartbeat instants as epoch nanoseconds. Plain time.Time query
+// parameters do not round-trip as Surreal datetime values for equality.
+const returnToPendingSQL = `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+    AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff)))[0].id;
+LET $successor = (SELECT id, created_at FROM type::table($table)
+    WHERE pending_key = $target AND status = 'pending'
+    ORDER BY created_at LIMIT 1)[0].id;
+LET $merged = IF $owned != NONE AND $successor != NONE THEN
+    (UPDATE $successor SET
+        force = IF $force THEN true ELSE force END,
+        attempts = IF $increment THEN $attempts ELSE attempts END,
+        error = $err,
+        not_before = IF $increment THEN $nb ELSE NONE END
+     RETURN AFTER)
+ELSE [] END;
+RETURN IF $owned = NONE THEN []
+ELSE IF $successor != NONE THEN
+    (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
+        finished_at = time::now(), lease_token = NONE, pending_key = NONE
+     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+     AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff))
+     RETURN AFTER)
+ELSE
+    (UPDATE type::record($id) SET status = 'pending', attempts = $attempts, error = $err,
+        not_before = IF $increment THEN $nb ELSE NONE END,
+        claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE,
+        lease_token = NONE, finished_at = NONE, pending_key = $target
+     WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+     AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff))
+     RETURN AFTER)
+END;
+COMMIT;`
+
+func (s *Surreal) returnToPending(ctx context.Context, job Job, errMsg string, notBefore time.Time, increment bool, fence *heartbeatFence) error {
+	if job.ID == "" || job.LeaseToken == "" || job.ClaimedBy == "" {
+		return fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
+	}
+	vars := map[string]any{
+		"id":              job.ID,
+		"table":           string(job.Kind),
+		"target":          job.Target,
+		"lease":           job.LeaseToken,
+		"who":             job.ClaimedBy,
+		"force":           job.Force,
+		"attempts":        job.Attempts + btoi(increment),
+		"increment":       increment,
+		"err":             errMsg,
+		"superseded":      "superseded by pending successor: " + errMsg,
+		"nb":              notBefore,
+		"reaping":         fence != nil,
+		"heartbeat_nanos": int64(0),
+		"cutoff":          time.Time{},
+	}
+	if fence != nil {
+		vars["heartbeat_nanos"] = fence.observed.UnixNano()
+		vars["cutoff"] = fence.cutoff
+	}
+	for attempt := 0; ; attempt++ {
+		results, err := surrealdb.Query[[]jobRec](ctx, s.db, returnToPendingSQL, vars)
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return err
+		}
+		if !queryContainsJob(results, job.ID) {
+			return fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
+		}
+		return nil
+	}
+}
+
+func queryContainsJob(results *[]surrealdb.QueryResult[[]jobRec], id string) bool {
+	for _, result := range *results {
+		for _, row := range result.Result {
+			if row.RecID != nil && row.RecID.String() == id {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func btoi(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+func (s *Surreal) CancelPendingJobs(ctx context.Context, kind JobKind, target string) (int, error) {
 	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
-		`UPDATE type::record($id) SET status = 'pending', attempts += 1, error = $err,
-		 not_before = $nb, claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE RETURN AFTER`,
-		map[string]any{"id": id, "err": errMsg, "nb": notBefore})
+		`UPDATE type::table($table) SET status = 'canceled', error = 'repository deleting',
+		 finished_at = time::now(), not_before = NONE, pending_key = NONE
+		 WHERE target = $target AND status = 'pending' RETURN AFTER`,
+		map[string]any{"table": string(kind), "target": target})
 	if err != nil {
-		return err
+		return 0, err
 	}
-	if len((*results)[0].Result) == 0 {
-		return fmt.Errorf("job %q: %w", id, ErrNotFound)
+	n := 0
+	for _, result := range *results {
+		n += len(result.Result)
 	}
-	return nil
+	return n, nil
 }
 
 // ReapStale rescues jobs whose worker died: claimed/running rows without a
@@ -381,37 +695,82 @@ func (s *Surreal) RequeueJob(ctx context.Context, id string, errMsg string, notB
 // heartbeats — same host today (supervised child); revisit for fleet mode.
 func (s *Surreal) ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error) {
 	cutoff := time.Now().UTC().Add(-staleAfter)
-	vars := map[string]any{"table": string(kind), "cutoff": cutoff, "max": maxAttempts}
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db, `
-UPDATE type::table($table) SET status = 'pending', attempts += 1, error = 'reaped: stale claim',
-    claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE
-    WHERE status IN ['claimed', 'running'] AND heartbeat_at != NONE AND heartbeat_at < $cutoff AND attempts + 1 < $max
-    RETURN AFTER;
-UPDATE type::table($table) SET status = 'failed', error = 'reaped: stale claim, attempts exhausted', finished_at = time::now()
-    WHERE status IN ['claimed', 'running'] AND heartbeat_at != NONE AND heartbeat_at < $cutoff
-    RETURN AFTER;`, vars)
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
+		`SELECT * FROM type::table($table)
+		 WHERE status IN ['claimed', 'running'] AND heartbeat_at != NONE AND heartbeat_at < $cutoff
+		 ORDER BY heartbeat_at`,
+		map[string]any{"table": string(kind), "cutoff": cutoff})
 	if err != nil {
 		return 0, err
 	}
-	n := 0
-	for _, r := range *results {
-		n += len(r.Result)
+	rows := (*results)[0].Result
+	n, varErr := 0, error(nil)
+	for _, row := range rows {
+		job := row.toJob(kind)
+		err := s.reapOne(ctx, job, cutoff, maxAttempts)
+		switch {
+		case err == nil:
+			n++
+		case errors.Is(err, ErrLeaseLost):
+			// The worker recovered or another reaper won the race.
+		default:
+			if varErr == nil {
+				varErr = err
+			}
+		}
 	}
-	return n, nil
+	return n, varErr
 }
 
-func (s *Surreal) SetJobStatus(ctx context.Context, id string, status JobStatus, errMsg string) error {
-	sql := "UPDATE type::record($id) SET status = $status, error = $err"
-	if status == StatusDone || status == StatusFailed {
-		sql += ", finished_at = time::now()"
+func (s *Surreal) reapOne(ctx context.Context, job Job, cutoff time.Time, maxAttempts int) error {
+	if job.HeartbeatAt == nil {
+		return fmt.Errorf("job %q has no observed heartbeat: %w", job.ID, ErrLeaseLost)
 	}
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db, sql,
-		map[string]any{"id": id, "status": string(status), "err": errMsg})
+	fence := &heartbeatFence{observed: *job.HeartbeatAt, cutoff: cutoff}
+	if job.Attempts+1 >= maxAttempts {
+		return s.updateLease(ctx, job,
+			`UPDATE type::record($id) SET status = 'failed',
+			 error = 'reaped: stale claim, attempts exhausted', finished_at = time::now(),
+			 lease_token = NONE, pending_key = NONE
+			 WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
+			 AND time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff
+			 RETURN AFTER`,
+			map[string]any{"heartbeat_nanos": fence.observed.UnixNano(), "cutoff": fence.cutoff})
+	}
+	return s.returnToPending(ctx, job, "reaped: stale claim", time.Now().UTC(), true, fence)
+}
+
+func (s *Surreal) SetJobStatus(ctx context.Context, job Job, status JobStatus, errMsg string) error {
+	var sql string
+	switch status {
+	case StatusRunning:
+		sql = `UPDATE type::record($id) SET status = 'running', error = $err
+			WHERE status = 'claimed' AND lease_token = $lease AND claimed_by = $who RETURN AFTER`
+	case StatusDone, StatusFailed:
+		sql = `UPDATE type::record($id) SET status = $status, error = $err,
+			finished_at = time::now(), lease_token = NONE, pending_key = NONE
+			WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who RETURN AFTER`
+	default:
+		return fmt.Errorf("invalid leased job transition to %q", status)
+	}
+	return s.updateLease(ctx, job, sql,
+		map[string]any{"status": string(status), "err": errMsg})
+}
+
+func (s *Surreal) updateLease(ctx context.Context, job Job, sql string, extra map[string]any) error {
+	if job.ID == "" || job.LeaseToken == "" || job.ClaimedBy == "" {
+		return fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
+	}
+	vars := map[string]any{"id": job.ID, "lease": job.LeaseToken, "who": job.ClaimedBy}
+	for key, value := range extra {
+		vars[key] = value
+	}
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db, sql, vars)
 	if err != nil {
 		return err
 	}
-	if len((*results)[0].Result) == 0 {
-		return fmt.Errorf("job %q: %w", id, ErrNotFound)
+	if len(firstNonEmpty(results)) == 0 {
+		return fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
 	}
 	return nil
 }
