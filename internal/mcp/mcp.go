@@ -80,9 +80,6 @@ func NewServer(opts Options) *sdk.Server {
 		return nil, sliceLines(string(content), in.StartLine, in.EndLine), nil
 	})
 
-	type reposOut struct {
-		Repos []repoInfo `json:"repos"`
-	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:        "list_repos",
 		Description: "List every indexed repository with its metadata (name, branch, visibility, last index time).",
@@ -105,6 +102,11 @@ func NewServer(opts Options) *sdk.Server {
 	return s
 }
 
+// reposOut is list_repos' result shape.
+type reposOut struct {
+	Repos []repoInfo `json:"repos"`
+}
+
 type repoInfo struct {
 	Name          string     `json:"name"`
 	DefaultBranch string     `json:"default_branch,omitempty"`
@@ -125,9 +127,14 @@ type readOut struct {
 }
 
 // sliceLines applies an optional 1-based inclusive line range, then a size
-// cap on whole-line boundaries (T8.3: a multi-MB dump only wastes agent
-// context — the Truncated flag points at ranged re-reads).
+// cap (T8.3: a multi-MB dump only wastes agent context — the Truncated flag
+// points at ranged re-reads). Whole lines are kept while they fit; a single
+// line that alone exceeds the cap is byte-truncated (UTF-8-safe) so progress
+// is always made — the pre-fix code let the first line through uncapped.
 func sliceLines(content string, start, end int) readOut {
+	if content == "" {
+		return readOut{TotalLine: 0} // empty file: zero lines, not one
+	}
 	lines := strings.Split(strings.TrimSuffix(content, "\n"), "\n")
 	total := len(lines)
 	if start < 1 {
@@ -140,20 +147,46 @@ func sliceLines(content string, start, end int) readOut {
 		end = total
 	}
 
-	size := 0
+	var b strings.Builder
 	last := start - 1 // index one past the final included line
+	truncated := false
 	for i := start - 1; i < end; i++ {
-		if size+len(lines[i])+1 > maxFileBytes && last > start-1 {
+		line := lines[i]
+		sep := 0
+		if b.Len() > 0 {
+			sep = 1 // the '\n' joining this line to the previous
+		}
+		if b.Len()+sep+len(line) > maxFileBytes {
+			if b.Len() == 0 { // first line alone overflows: deliver a safe prefix
+				b.WriteString(truncateUTF8(line, maxFileBytes))
+				last = i + 1
+			}
+			truncated = true
 			break
 		}
-		size += len(lines[i]) + 1
+		if sep == 1 {
+			b.WriteByte('\n')
+		}
+		b.WriteString(line)
 		last = i + 1
 	}
 	return readOut{
-		Content:   strings.Join(lines[start-1:last], "\n"),
+		Content:   b.String(),
 		StartLine: start,
 		EndLine:   last,
 		TotalLine: total,
-		Truncated: last < end,
+		Truncated: truncated,
 	}
+}
+
+// truncateUTF8 cuts s to at most max bytes without splitting a rune.
+func truncateUTF8(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	s = s[:max]
+	for len(s) > 0 && !utf8.ValidString(s) {
+		s = s[:len(s)-1]
+	}
+	return s
 }

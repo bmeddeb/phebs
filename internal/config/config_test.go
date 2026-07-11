@@ -138,6 +138,26 @@ connections:
 			"sync:\n  resync_interval: \"0\"\n",
 			"",
 		},
+		{
+			"context bad name",
+			"contexts:\n  Bad_Name: [\"h/*\"]\n",
+			"contexts: name \"Bad_Name\" must match",
+		},
+		{
+			"context empty patterns",
+			"contexts:\n  backend: []\n",
+			"contexts: \"backend\" has no repo patterns",
+		},
+		{
+			"context bad glob",
+			"contexts:\n  backend: [\"a[\"]\n",
+			"bad pattern",
+		},
+		{
+			"context valid",
+			"contexts:\n  backend: [\"github.com/acme/api-*\"]\n",
+			"",
+		},
 		{"missing type", "connections:\n  - name: a\n", "type is required"},
 		{"unknown type", "connections:\n  - {name: a, type: svn}\n", "unknown type \"svn\""},
 		{"bad name charset", "connections:\n  - {name: Bad_Name, type: git, url: u}\n", "must match"},

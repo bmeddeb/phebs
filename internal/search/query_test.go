@@ -72,6 +72,17 @@ func TestCompile(t *testing.T) {
 		{name: "context without terms", raw: "context:pub", err: true},
 		{name: "negated context", raw: "-context:pub needle", err: true},
 		{name: "context with empty name", raw: "context: needle", err: true},
+		{name: "grouped context rejected", raw: "(context:pub or repo:x) needle", err: true},
+		{name: "context glued to closing paren rejected", raw: "(needle context:pub)", err: true},
+
+		// Escape-aware tokenizer (Epic 8 review): escaped quotes/whitespace
+		// must not corrupt the residual or misfire context extraction.
+		{name: "quoted phrase with spaces keeps content", raw: `"a b c" context:pub`,
+			contains: []string{`substr:"a b c"`, "reposet"}},
+		{name: "escaped quote does not break extraction", raw: `"a \" b" context:one`,
+			contains: []string{"reposet", "h/private-fork"}},
+		{name: "escaped tab in a bare atom is preserved", raw: `foo\	bar`,
+			want: "substr:\"foo\\tbar\""},
 	}
 	contexts := map[string][]string{
 		"pub":  {"h/public-*"},

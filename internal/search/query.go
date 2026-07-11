@@ -103,22 +103,27 @@ func Compile(ctx context.Context, st store.Store, contexts map[string][]string, 
 	return query.Simplify(q), nil
 }
 
-// extractContexts strips whitespace-delimited `context:<name>` atoms from a
-// raw query (double-quoted strings are respected — a quoted "context:x" is
-// content, not a filter). Negation isn't supported: contexts are scopes,
-// not predicates.
+// extractContexts strips top-level `context:<name>` atoms from a raw query,
+// leaving the rest for query.Parse. A context is a scope, not a predicate:
+// it is only honored as a bare whitespace-delimited term. Grouped (`(context:…`)
+// and negated (`-context:…`) forms are rejected rather than passed to zoekt,
+// which would silently treat them as substring matches.
 func extractContexts(raw string) (names []string, rest string, err error) {
 	var kept []string
 	for _, tok := range splitQuery(raw) {
 		switch {
 		case strings.HasPrefix(tok, "context:"):
-			name := strings.TrimPrefix(tok, "context:")
-			if name == "" {
-				return nil, "", fmt.Errorf("parse query: context: needs a name")
+			name := tok[len("context:"):]
+			if name == "" || strings.ContainsAny(name, "()") {
+				return nil, "", fmt.Errorf("parse query: context: takes a bare name, got %q", tok)
 			}
 			names = append(names, name)
 		case strings.HasPrefix(tok, "-context:"):
-			return nil, "", fmt.Errorf("parse query: -context: is not supported (contexts are scopes)")
+			return nil, "", fmt.Errorf("parse query: -context: is not supported (contexts are scopes, not predicates)")
+		case strings.HasPrefix(strings.TrimLeft(tok, "("), "context:"):
+			// ponytail: rejects a regex atom literally starting "(context:"
+			// too — pathological; a loud error beats a silent mis-scope.
+			return nil, "", fmt.Errorf("parse query: context: cannot be grouped in parentheses, got %q", tok)
 		default:
 			kept = append(kept, tok)
 		}
@@ -126,11 +131,16 @@ func extractContexts(raw string) (names []string, rest string, err error) {
 	return names, strings.Join(kept, " "), nil
 }
 
-// splitQuery fields raw on whitespace, keeping double-quoted spans intact.
+// splitQuery fields raw into zoekt-level tokens the way query.Parse lexes:
+// a backslash escapes the next rune, and a double-quoted span (with \"
+// escapes inside) is one token. Only unescaped, unquoted whitespace
+// separates tokens, so each token's bytes are preserved exactly — rejoining
+// the non-context tokens with single spaces can't change what zoekt matches
+// (an escaped tab stays an escaped tab, not a space).
 func splitQuery(raw string) []string {
 	var out []string
 	var cur strings.Builder
-	inQuote := false
+	inQuote, esc := false, false
 	flush := func() {
 		if cur.Len() > 0 {
 			out = append(out, cur.String())
@@ -139,10 +149,16 @@ func splitQuery(raw string) []string {
 	}
 	for _, r := range raw {
 		switch {
+		case esc:
+			cur.WriteRune(r)
+			esc = false
+		case r == '\\':
+			cur.WriteRune(r)
+			esc = true
 		case r == '"':
 			inQuote = !inQuote
 			cur.WriteRune(r)
-		case !inQuote && (r == ' ' || r == '\t'):
+		case !inQuote && (r == ' ' || r == '\t' || r == '\n' || r == '\r'):
 			flush()
 		default:
 			cur.WriteRune(r)

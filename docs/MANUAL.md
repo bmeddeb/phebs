@@ -339,9 +339,9 @@ contexts:
 the set's glob patterns (`*` does not cross `/`; a pattern without wildcards
 is an exact name). Multiple `context:` atoms union their sets. A context is
 a scope, not a predicate: it applies to the whole query and can't be
-negated. Unknown names are an error; the atom is top-level phebs syntax, so
-`context:` inside parentheses is passed to zoekt (and rejected) rather than
-resolved.
+negated or grouped in parentheses — both forms, and an unknown name, are
+rejected with an error. Inside a double-quoted string `context:` is plain
+content, not a filter.
 
 Result bounds: `max_matches` (default 50 files, cap 500) and `context_lines`
 (default 0, cap 10) on the API; searches are capped at 10 s of wall time.
@@ -385,7 +385,7 @@ and `/metrics`.
 | `/api/repo-status` | GET | repos + connections + orphan flag + last index job |
 | `/api/reindex` | POST | `{"repo":"github.com/foo/bar","force":true}` → enqueue index job |
 | `/api/webhook` | POST | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set |
-| `/api/mcp` | POST/GET | MCP over Streamable HTTP (see §8) |
+| `/api/mcp` | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8) |
 | `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413 |
 | `/api/folder_contents?repo=&path=&ref=` | GET | one directory level |
 | `/api/tree?repo=&ref=` | GET | all file paths, recursive |
@@ -413,7 +413,7 @@ Three tools:
 | Tool | Purpose |
 |---|---|
 | `search_code` | full query syntax from §5, including `context:` sets; returns files with line-numbered chunks and match ranges |
-| `read_file` | file content at the indexed revision; optional `start_line`/`end_line`; oversize output is truncated on line boundaries with a `truncated` flag inviting a ranged re-read |
+| `read_file` | file content at the indexed revision; optional `start_line`/`end_line`; output over 200 KB is truncated (on a line boundary where one fits) with a `truncated` flag inviting a ranged re-read. Blobs over 10 MiB are rejected outright, like `/api/source`. |
 | `list_repos` | every indexed repo with branch/visibility/index-time metadata |
 
 Binary files and unknown repos come back as tool errors, not blobs.
