@@ -69,6 +69,9 @@ async function getJSON<T>(url: string): Promise<T> {
 
 export const fetchRepoStatus = () => getJSON<RepoStatus[]>('/api/repo-status')
 
+export const fetchTree = (repo: string) =>
+  getJSON<{ paths: string[] }>(`/api/tree?repo=${encodeURIComponent(repo)}`)
+
 export const fetchSource = (repo: string, path: string) =>
   getJSON<SourceFile>(
     `/api/source?repo=${encodeURIComponent(repo)}&path=${encodeURIComponent(path)}`,

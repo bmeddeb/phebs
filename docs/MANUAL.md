@@ -229,8 +229,10 @@ Served at `/` from the binary. Three views, all deep-linkable (hash routes):
   repo → file, with match counts and highlighted spans. Line numbers link
   into the viewer.
 - **File viewer** (`#/file?repo=…&path=…&L=42`) — read-only CodeMirror with
-  syntax highlighting (Go, JS/TS, Python, Markdown, JSON) and a highlighted,
-  scrolled-to anchor line.
+  syntax highlighting across ~30 languages (Go, JS/TS, Python, Rust, Java,
+  C/C++, C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …), a file-tree navigation
+  column that auto-expands to the current file, and a highlighted, scrolled-to
+  anchor line.
 - **Repos** (`#/repos`) — sync/index state per repo (polled every 3 s),
   orphan flags, indexed commit, and a **Reindex** button (forces a full
   rebuild, defeating the incremental short-circuit).

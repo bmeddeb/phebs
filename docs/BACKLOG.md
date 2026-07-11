@@ -184,19 +184,19 @@ paid/EE), from public docs/pricing only — never their source, never `ee/`.
 
 ## EPIC 6 — Parity quick wins *(Wave 0 — days each, no architecture change)*
 
-**T6.1 · Broaden syntax highlighting** — *Sourcebot free (100+ langs)*
-Add the common CM6 language packs beyond the current ~6 (Rust, Java, C/C++,
-C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …) to `ui/src/lang.ts` and the
-Lezer chunk tokenizer. AC: a file in each added language renders highlighted
-in the viewer and in search-result chunks; bundle stays code-split (packs load
-lazily). Moves "syntax highlighting" partial → have.
+**T6.1 · Broaden syntax highlighting** ✅ 2026-07-10 — *Sourcebot free (100+ langs)*
+Added CM6 language packs beyond the initial ~6: official Lezer grammars
+(Rust, Java, C/C++, PHP, SQL, HTML, CSS, XML, YAML) + legacy stream modes
+(Ruby, shell, C#, Kotlin, Scala, Swift, Lua, Perl, Dart, TOML, Dockerfile) in
+`ui/src/lang.ts`, each a lazy code-split chunk. Shared `langName`/`langColor`.
+Verified: YAML + TypeScript highlight in the viewer; header shows the language.
 
-**T6.2 · File-tree navigation column** — *Sourcebot free (file explorer)*
-Wire the deferred 240px tree column in `FilePage` over the existing
-`/api/tree` + `/api/folder_contents` endpoints: collapsed siblings, expanded
-path to the current file, active-row highlight. AC: clicking a directory
-expands it; clicking a file navigates the viewer; deep-linkable. Moves "file
-explorer" partial → have.
+**T6.2 · File-tree navigation column** ✅ 2026-07-10 — *Sourcebot free (file explorer)*
+240px sticky tree column in `FilePage` over `/api/tree` (`fetchTree`): builds a
+nested tree, auto-expands the path to the current file, active-row bar, dirs
+toggle, files navigate. Verified: auto-expand + active highlight; clicking a
+collapsed dir reveals its files; file rows deep-link. Moves "file explorer"
+partial → have. *(buildTree unit test pending T6.4 Vitest harness.)*
 
 **T6.3 · Live GitHub PAT verification** — *closes a testing caveat*
 Run the T2.2 GitHub adapter end-to-end against a real PAT (org/user/repo

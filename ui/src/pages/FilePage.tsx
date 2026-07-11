@@ -5,13 +5,13 @@ import { Spinner } from 'baseui/spinner'
 import { EditorState, type Extension } from '@codemirror/state'
 import { EditorView, lineNumbers, Decoration } from '@codemirror/view'
 import { syntaxHighlighting } from '@codemirror/language'
-import { fetchSource, fetchRepoStatus } from '../api'
+import { fetchSource, fetchRepoStatus, fetchTree } from '../api'
 import type { RepoStatus } from '../api'
-import { languageFor, langColor } from '../lang'
+import { languageFor, langColor, langName } from '../lang'
 import { highlightStyle } from '../highlight'
 import { usePhebsTokens, useMode, FONTS } from '../theme'
 import { href, navigate } from '../router'
-import { CopyIcon, CheckIcon, CommitIcon, SearchIcon } from '../icons'
+import { CopyIcon, CheckIcon, CommitIcon, SearchIcon, ChevronRight, ChevronDown } from '../icons'
 import { humanSize, relTime } from '../util'
 
 // T5.3/T5.5: CodeMirror 6 read-only viewer with breadcrumbs, a sticky
@@ -52,20 +52,180 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
   return (
     <div>
       <Breadcrumb repo={repo} path={path} meta={meta} />
-      {error && (
-        <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto' } } }}>
-          {error}
-        </Notification>
-      )}
-      {binary && <div className={css({ color: tok.textTertiary, padding: '24px 0' })}>Binary file — not rendered.</div>}
-      {content === null && !error && !binary && <Spinner $size="small" />}
-      {content !== null && (
-        <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
-          <CodeHeader path={path} content={content} line={line} meta={meta} />
-          <CodeViewer content={content} path={path} focusLine={line} />
+      <div className={css({ display: 'flex', gap: '16px', alignItems: 'flex-start' })}>
+        {repo && <FileTree repo={repo} current={path} />}
+        <div className={css({ flex: 1, minWidth: 0 })}>
+          {error && (
+            <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
+              {error}
+            </Notification>
+          )}
+          {binary && <div className={css({ color: tok.textTertiary, padding: '24px 0' })}>Binary file — not rendered.</div>}
+          {content === null && !error && !binary && <Spinner $size="small" />}
+          {content !== null && (
+            <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
+              <CodeHeader path={path} content={content} line={line} meta={meta} />
+              <CodeViewer content={content} path={path} focusLine={line} />
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
+  )
+}
+
+interface TreeNode {
+  name: string
+  path: string
+  dir: boolean
+  children: TreeNode[]
+}
+
+function buildTree(paths: string[]): TreeNode {
+  const root: TreeNode = { name: '', path: '', dir: true, children: [] }
+  for (const p of paths) {
+    const parts = p.split('/')
+    let cur = root
+    let acc = ''
+    parts.forEach((part, i) => {
+      acc = acc ? acc + '/' + part : part
+      const isFile = i === parts.length - 1
+      let child = cur.children.find((c) => c.name === part && c.dir === !isFile)
+      if (!child) {
+        child = { name: part, path: acc, dir: !isFile, children: [] }
+        cur.children.push(child)
+      }
+      cur = child
+    })
+  }
+  const sort = (n: TreeNode) => {
+    n.children.sort((a, b) => (a.dir !== b.dir ? (a.dir ? -1 : 1) : a.name.localeCompare(b.name)))
+    n.children.forEach(sort)
+  }
+  sort(root)
+  return root
+}
+
+// FileTree renders the repo's file tree over /api/tree, with the path to the
+// current file expanded. Dirs collapse/expand; files navigate the viewer.
+function FileTree({ repo, current }: { repo: string; current: string }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const [root, setRoot] = useState<TreeNode | null>(null)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    let live = true
+    fetchTree(repo)
+      .then((r) => {
+        if (!live) return
+        setRoot(buildTree(r.paths))
+        // expand every ancestor dir of the current file
+        const anc = new Set<string>()
+        const parts = current.split('/')
+        let acc = ''
+        for (let i = 0; i < parts.length - 1; i++) {
+          acc = acc ? acc + '/' + parts[i] : parts[i]
+          anc.add(acc)
+        }
+        setExpanded(anc)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [repo, current])
+
+  const toggle = (p: string) =>
+    setExpanded((s) => {
+      const n = new Set(s)
+      n.has(p) ? n.delete(p) : n.add(p)
+      return n
+    })
+
+  if (!root) return null
+  return (
+    <aside
+      className={css({
+        width: '240px',
+        flexShrink: 0,
+        border: `1px solid ${tok.cardBorder}`,
+        borderRadius: '8px',
+        position: 'sticky',
+        top: '72px',
+        maxHeight: 'calc(100vh - 96px)',
+        overflowY: 'auto',
+        paddingTop: '6px',
+        paddingBottom: '6px',
+      })}
+    >
+      {root.children.map((c) => (
+        <TreeRow key={c.path} node={c} depth={0} current={current} repo={repo} expanded={expanded} toggle={toggle} />
+      ))}
+    </aside>
+  )
+}
+
+function TreeRow({
+  node,
+  depth,
+  current,
+  repo,
+  expanded,
+  toggle,
+}: {
+  node: TreeNode
+  depth: number
+  current: string
+  repo: string
+  expanded: Set<string>
+  toggle: (p: string) => void
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const isOpen = expanded.has(node.path)
+  const active = !node.dir && node.path === current
+  const rowStyle = css({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    height: '28px',
+    paddingLeft: `${8 + depth * 12}px`,
+    paddingRight: '8px',
+    fontSize: '13px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    textDecoration: 'none',
+    color: active ? tok.textPrimary : tok.textSecondary,
+    fontWeight: active ? 500 : 400,
+    backgroundColor: active ? tok.fill : 'transparent',
+    boxShadow: active ? `inset 2px 0 0 ${tok.textPrimary}` : 'none',
+    ':hover': { backgroundColor: active ? tok.fill : tok.hoverFill },
+  })
+
+  if (node.dir) {
+    return (
+      <div>
+        <div className={rowStyle} onClick={() => toggle(node.path)}>
+          <span className={css({ display: 'flex', color: tok.textTertiary, flexShrink: 0 })}>
+            {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </span>
+          <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{node.name}</span>
+        </div>
+        {isOpen &&
+          node.children.map((c) => (
+            <TreeRow key={c.path} node={c} depth={depth + 1} current={current} repo={repo} expanded={expanded} toggle={toggle} />
+          ))}
+      </div>
+    )
+  }
+  return (
+    <a href={href('/file', { repo, path: node.path })} className={rowStyle}>
+      <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(node.path), flexShrink: 0, marginLeft: '2px', marginRight: '2px' })} />
+      <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{node.name}</span>
+    </a>
   )
 }
 
@@ -188,14 +348,6 @@ function CopyInline({ text, title }: { text: string; title: string }) {
   )
 }
 
-function langName(path: string): string {
-  const ext = path.slice(path.lastIndexOf('.') + 1).toLowerCase()
-  const map: Record<string, string> = {
-    go: 'Go', ts: 'TypeScript', tsx: 'TypeScript', js: 'JavaScript', jsx: 'JavaScript',
-    py: 'Python', md: 'Markdown', json: 'JSON', proto: 'Protobuf', sh: 'Shell', yaml: 'YAML', yml: 'YAML',
-  }
-  return map[ext] ?? (ext ? ext.toUpperCase() : 'Text')
-}
 
 function CodeViewer({
   content,
