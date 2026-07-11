@@ -62,18 +62,20 @@ type Auth struct {
 // Connection declares one source of repos to sync (Epic 2 consumes these).
 type Connection struct {
 	Name string `yaml:"name"` // required, unique, [a-z0-9-]+
-	Type string `yaml:"type"` // "github" or "git"
+	Type string `yaml:"type"` // "github", "gitlab", or "git"
 
-	// github only. Token is a PAT; ${ENV} references are expanded so secrets
-	// stay out of the file.
+	// github/gitlab. Token is a PAT; ${ENV} references are expanded so
+	// secrets stay out of the file.
 	Token   string   `yaml:"token"`
-	Orgs    []string `yaml:"orgs"`
+	Orgs    []string `yaml:"orgs"`   // github: all repos of each org
+	Groups  []string `yaml:"groups"` // gitlab: all projects of each group (subgroups included)
 	Users   []string `yaml:"users"`
-	Repos   []string `yaml:"repos"` // "owner/name"
+	Repos   []string `yaml:"repos"` // explicit "owner/name" (gitlab: full project path)
 	Exclude Exclude  `yaml:"exclude"`
 
-	// git only: clone URL of a single repository. Plain absolute paths and
-	// file:// URLs point at local repos.
+	// git: clone URL of a single repository (plain absolute paths and
+	// file:// URLs point at local repos). gitlab: optional http(s) base URL
+	// of a self-hosted instance (default https://gitlab.com).
 	URL string `yaml:"url"`
 	// Watch (local git only): poll the repo's HEAD and re-sync/re-index
 	// when it moves — live search over a working repo.
@@ -189,34 +191,55 @@ func (c *Config) validate(lines []int) error {
 			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) == 0 {
 				fail(i, "github connection needs at least one of orgs, users, repos")
 			}
+			if len(conn.Groups) > 0 {
+				fail(i, "groups is only valid for type gitlab (github uses orgs)")
+			}
 			if conn.URL != "" {
-				fail(i, "url is only valid for type git")
+				fail(i, "url is only valid for type git or gitlab")
 			}
 			if conn.Watch {
 				fail(i, "watch is only valid for local git connections")
 			}
-			for _, pat := range conn.Exclude.Repos {
-				if _, err := path.Match(pat, "x/y"); err != nil {
-					fail(i, "bad exclude pattern %q: %v", pat, err)
-				}
+			validateExcludes(fail, i, conn.Exclude)
+		case "gitlab":
+			if len(conn.Groups)+len(conn.Users)+len(conn.Repos) == 0 {
+				fail(i, "gitlab connection needs at least one of groups, users, repos")
 			}
+			if len(conn.Orgs) > 0 {
+				fail(i, "orgs is only valid for type github (gitlab uses groups)")
+			}
+			if conn.URL != "" && !strings.HasPrefix(conn.URL, "http://") && !strings.HasPrefix(conn.URL, "https://") {
+				fail(i, "gitlab url must be an http(s) base URL, got %q", conn.URL)
+			}
+			if conn.Watch {
+				fail(i, "watch is only valid for local git connections")
+			}
+			validateExcludes(fail, i, conn.Exclude)
 		case "git":
 			if conn.URL == "" {
 				fail(i, "git connection requires url")
 			}
-			if len(conn.Orgs)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" || !conn.Exclude.isZero() {
-				fail(i, "orgs/users/repos/token/exclude are only valid for type github")
+			if len(conn.Orgs)+len(conn.Groups)+len(conn.Users)+len(conn.Repos) > 0 || conn.Token != "" || !conn.Exclude.isZero() {
+				fail(i, "orgs/groups/users/repos/token/exclude are only valid for code-host types")
 			}
 			if conn.Watch && !IsLocalURL(conn.URL) {
 				fail(i, "watch requires a local url (absolute path or file://)")
 			}
 		case "":
-			fail(i, "type is required (github or git)")
+			fail(i, "type is required (github, gitlab, or git)")
 		default:
-			fail(i, "unknown type %q (want github or git)", conn.Type)
+			fail(i, "unknown type %q (want github, gitlab, or git)", conn.Type)
 		}
 	}
 	return errors.Join(errs...)
+}
+
+func validateExcludes(fail func(int, string, ...any), i int, ex Exclude) {
+	for _, pat := range ex.Repos {
+		if _, err := path.Match(pat, "x/y"); err != nil {
+			fail(i, "bad exclude pattern %q: %v", pat, err)
+		}
+	}
 }
 
 func (c *Config) applyDefaults() error {

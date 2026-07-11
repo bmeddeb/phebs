@@ -34,22 +34,23 @@ func gitc(t *testing.T, dir string, args ...string) string {
 
 func TestExcluded(t *testing.T) {
 	tests := []struct {
-		name string
-		repo ghRepo
-		ex   config.Exclude
-		want bool
+		name           string
+		full           string
+		archived, fork bool
+		ex             config.Exclude
+		want           bool
 	}{
-		{"no filters", ghRepo{FullName: "a/b"}, config.Exclude{}, false},
-		{"archived out", ghRepo{FullName: "a/b", Archived: true}, config.Exclude{Archived: true}, true},
-		{"archived kept when off", ghRepo{FullName: "a/b", Archived: true}, config.Exclude{}, false},
-		{"fork out", ghRepo{FullName: "a/b", Fork: true}, config.Exclude{Forks: true}, true},
-		{"glob match", ghRepo{FullName: "a/b-mirror"}, config.Exclude{Repos: []string{"*/*-mirror"}}, true},
-		{"glob miss", ghRepo{FullName: "a/b"}, config.Exclude{Repos: []string{"c/*"}}, false},
+		{"no filters", "a/b", false, false, config.Exclude{}, false},
+		{"archived out", "a/b", true, false, config.Exclude{Archived: true}, true},
+		{"archived kept when off", "a/b", true, false, config.Exclude{}, false},
+		{"fork out", "a/b", false, true, config.Exclude{Forks: true}, true},
+		{"glob match", "a/b-mirror", false, false, config.Exclude{Repos: []string{"*/*-mirror"}}, true},
+		{"glob miss", "a/b", false, false, config.Exclude{Repos: []string{"c/*"}}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := excluded(tt.repo, tt.ex); got != tt.want {
-				t.Errorf("excluded(%+v, %+v) = %v, want %v", tt.repo, tt.ex, got, tt.want)
+			if got := excluded(tt.full, tt.archived, tt.fork, tt.ex); got != tt.want {
+				t.Errorf("excluded(%q, %v, %v, %+v) = %v, want %v", tt.full, tt.archived, tt.fork, tt.ex, got, tt.want)
 			}
 		})
 	}
@@ -91,8 +92,8 @@ func TestListReposPaginationAndRateLimit(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := &ghClient{base: srv.URL, token: "tok"}
-	repos, err := c.listRepos(context.Background(), "/orgs/o/repos")
+	c := &hostClient{base: srv.URL, auth: "Bearer tok"}
+	repos, err := listPages[ghRepo](context.Background(), c, "/orgs/o/repos")
 	if err != nil {
 		t.Fatal(err)
 	}

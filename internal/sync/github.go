@@ -32,7 +32,10 @@ type ghRepo struct {
 }
 
 func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
-	c := &ghClient{base: ghAPIBase, token: conn.Token}
+	c := &hostClient{base: ghAPIBase, accept: "application/vnd.github+json"}
+	if conn.Token != "" {
+		c.auth = "Bearer " + conn.Token
+	}
 
 	seen := map[string]ghRepo{}
 	collect := func(repos []ghRepo, err error) error {
@@ -45,7 +48,7 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		return nil
 	}
 	for _, org := range conn.Orgs {
-		if err := collect(c.listRepos(ctx, "/orgs/"+org+"/repos?per_page=100&type=all")); err != nil {
+		if err := collect(listPages[ghRepo](ctx, c, "/orgs/"+org+"/repos?per_page=100&type=all")); err != nil {
 			return nil, fmt.Errorf("connection %s: org %s: %w", conn.Name, org, err)
 		}
 	}
@@ -66,11 +69,11 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 		login = me.Login
 	}
 	for _, user := range conn.Users {
-		if err := collect(c.listRepos(ctx, "/users/"+user+"/repos?per_page=100&type=owner")); err != nil {
+		if err := collect(listPages[ghRepo](ctx, c, "/users/"+user+"/repos?per_page=100&type=owner")); err != nil {
 			return nil, fmt.Errorf("connection %s: user %s: %w", conn.Name, user, err)
 		}
 		if strings.EqualFold(user, login) { // GitHub logins are case-insensitive
-			if err := collect(c.listRepos(ctx, "/user/repos?per_page=100&type=owner")); err != nil {
+			if err := collect(listPages[ghRepo](ctx, c, "/user/repos?per_page=100&type=owner")); err != nil {
 				return nil, fmt.Errorf("connection %s: user %s: %w", conn.Name, user, err)
 			}
 		}
@@ -93,7 +96,7 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 
 	var names []string
 	for _, r := range seen {
-		if excluded(r, conn.Exclude) {
+		if excluded(r.FullName, r.Archived, r.Fork, conn.Exclude) {
 			continue
 		}
 		name := "github.com/" + r.FullName
@@ -123,29 +126,37 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 	return names, nil
 }
 
-func excluded(r ghRepo, ex config.Exclude) bool {
-	if ex.Archived && r.Archived || ex.Forks && r.Fork {
+// excluded applies a connection's exclude filters to one listed repo,
+// matched on its host-native full path (github "owner/name", gitlab
+// "group/subgroup/project").
+func excluded(fullName string, archived, fork bool, ex config.Exclude) bool {
+	if ex.Archived && archived || ex.Forks && fork {
 		return true
 	}
 	for _, pat := range ex.Repos {
-		if ok, _ := path.Match(pat, r.FullName); ok {
+		if ok, _ := path.Match(pat, fullName); ok {
 			return true
 		}
 	}
 	return false
 }
 
-type ghClient struct {
-	base  string
-	token string
+// hostClient is the shared REST plumbing for code-host adapters: one GET
+// with rate-limit waits plus Link-header pagination (GitHub, GitLab, and
+// Gitea all speak RFC 5988 Link + Retry-After). auth is the full
+// Authorization header value ("Bearer x", "token x"); empty sends none.
+type hostClient struct {
+	base   string
+	auth   string
+	accept string // Accept header; empty means "application/json"
 }
 
-// listRepos follows Link rel="next" pagination until exhausted.
-func (c *ghClient) listRepos(ctx context.Context, p string) ([]ghRepo, error) {
-	var all []ghRepo
+// listPages follows Link rel="next" pagination until exhausted.
+func listPages[T any](ctx context.Context, c *hostClient, p string) ([]T, error) {
+	var all []T
 	url := c.base + p
 	for url != "" {
-		var page []ghRepo
+		var page []T
 		next, err := c.getJSON(ctx, url, &page)
 		if err != nil {
 			return nil, err
@@ -158,15 +169,19 @@ func (c *ghClient) listRepos(ctx context.Context, p string) ([]ghRepo, error) {
 
 // getJSON performs one GET, waiting out rate limits (Retry-After or
 // X-RateLimit-Reset) and returning the rel="next" link if any.
-func (c *ghClient) getJSON(ctx context.Context, url string, v any) (next string, err error) {
+func (c *hostClient) getJSON(ctx context.Context, url string, v any) (next string, err error) {
 	for {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			return "", err
 		}
-		req.Header.Set("Accept", "application/vnd.github+json")
-		if c.token != "" {
-			req.Header.Set("Authorization", "Bearer "+c.token)
+		accept := c.accept
+		if accept == "" {
+			accept = "application/json"
+		}
+		req.Header.Set("Accept", accept)
+		if c.auth != "" {
+			req.Header.Set("Authorization", c.auth)
 		}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {

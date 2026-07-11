@@ -50,12 +50,37 @@ connections:
 		{
 			"git with github fields",
 			"connections:\n  - {name: g, type: git, url: u, orgs: [x]}\n",
-			"only valid for type github",
+			"only valid for code-host types",
 		},
 		{
 			"github with url",
 			"connections:\n  - {name: gh, type: github, users: [u], url: x}\n",
-			"url is only valid for type git",
+			"url is only valid for type git or gitlab",
+		},
+		{
+			"github with groups",
+			"connections:\n  - {name: gh, type: github, users: [u], groups: [g]}\n",
+			"groups is only valid for type gitlab",
+		},
+		{
+			"gitlab without selectors",
+			"connections:\n  - {name: gl, type: gitlab}\n",
+			"gitlab connection needs at least one of groups, users, repos",
+		},
+		{
+			"gitlab with orgs",
+			"connections:\n  - {name: gl, type: gitlab, orgs: [x]}\n",
+			"orgs is only valid for type github",
+		},
+		{
+			"gitlab bad base url",
+			"connections:\n  - {name: gl, type: gitlab, groups: [g], url: git@example.com}\n",
+			"must be an http(s) base URL",
+		},
+		{
+			"gitlab valid",
+			"connections:\n  - {name: gl, type: gitlab, groups: [team/platform], url: 'https://git.example.com'}\n",
+			"",
 		},
 		{"missing type", "connections:\n  - name: a\n", "type is required"},
 		{"unknown type", "connections:\n  - {name: a, type: svn}\n", "unknown type \"svn\""},

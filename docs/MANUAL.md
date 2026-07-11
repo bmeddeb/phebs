@@ -98,7 +98,7 @@ sync:
 
 connections:
   - name: my-conn         # required; unique; [a-z0-9-]+
-    type: github | git
+    type: github | gitlab | git
     # ... see per-type fields below
 ```
 
@@ -136,6 +136,30 @@ lists the token owner via the authenticated endpoint and unions the two (a
 fine-grained PAT restricted to select repositories still gets all public
 repos). Other users list public repos only; private repos elsewhere are
 reachable via `orgs:` or explicit `repos:` entries.
+
+### `type: gitlab` connections
+
+```yaml
+- name: gitlab-work
+  type: gitlab
+  url: https://git.example.com  # self-hosted base URL; omit for gitlab.com
+  token: "${GITLAB_TOKEN}"      # PAT; omit for public projects only
+  groups: [team/platform]       # all projects of each group, subgroups included
+  users:  [dev]                 # all projects owned by each user
+  repos:  [solo/tool]           # explicit projects by full path
+  exclude:
+    archived: true
+    forks: true
+    repos: ["*/*/sandbox-*"]    # glob on the full project path
+```
+
+At least one of `groups`/`users`/`repos` is required. Unlike GitHub, GitLab's
+user listing is requester-scoped, so a token's own private projects appear
+without special-casing. The token authenticates the API (bearer) and git
+fetches (HTTP basic as the `oauth2` pseudo-user, injected per-invocation) —
+it is never written into mirror config or the database. Rate limits are
+honored automatically (429 `Retry-After`). Repos are named
+`<host>/<full/project/path>`.
 
 ### `type: git` connections
 

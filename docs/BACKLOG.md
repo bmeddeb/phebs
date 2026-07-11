@@ -215,11 +215,12 @@ first CI pipeline (none exists yet).
 
 ## EPIC 7 — Connectors & freshness *(Wave 1 — the biggest free-tier gap)*
 
-**T7.1 · GitLab connector** — *Sourcebot free*
-`type: gitlab` connection (PAT): list by group/user with include/exclude
-filters, rate-limit-aware pagination, §5 metadata, authenticated clone.
-Closest analog to the GitHub adapter. AC: a GitLab group syncs + indexes;
-metadata persisted; incremental refetch.
+**T7.1 · GitLab connector** ✅ 2026-07-11 — *Sourcebot free* *(fake-API tests; live run pending)*
+`type: gitlab` (PAT, optional self-hosted `url:`): groups (subgroups
+included), users (requester-scoped — own private projects appear), explicit
+repos, excludes, Link-header pagination + 429 Retry-After, §5 metadata,
+oauth2-basic authenticated clone. Shared `hostClient` extracted from the
+GitHub adapter. Path-traversal guard on server-supplied project paths.
 
 **T7.2 · Gitea connector** — *Sourcebot free*
 `type: gitea` connection (PAT + base URL for self-hosted). AC: a Gitea org
