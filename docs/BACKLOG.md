@@ -173,9 +173,149 @@ button. AC: reindex button enqueues job visible in status within one poll.
 
 ## P1 cut line
 
-Everything above ships = P1. Then pull from PORT_MAP §12 in this order:
-**P2:** search-contexts → MCP server (OSS) → GitHub App + webhook reindex.
-**P3:** SCIP code-nav → OIDC → audit → analytics.
+Everything above ships = P1 (complete 2026-07-10). The post-P1 roadmap below
+closes the Sourcebot free/paid feature gaps (derived 2026-07-10 from a
+public-sources feature comparison + PORT_MAP §12). Waves are ordered by
+value-over-effort and dependency; tickets are PR-sized, ACs are the merge bar.
+Sourcebot tier in each ticket = where that feature sits upstream (free vs
+paid/EE), from public docs/pricing only — never their source, never `ee/`.
+
+---
+
+## EPIC 6 — Parity quick wins *(Wave 0 — days each, no architecture change)*
+
+**T6.1 · Broaden syntax highlighting** — *Sourcebot free (100+ langs)*
+Add the common CM6 language packs beyond the current ~6 (Rust, Java, C/C++,
+C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …) to `ui/src/lang.ts` and the
+Lezer chunk tokenizer. AC: a file in each added language renders highlighted
+in the viewer and in search-result chunks; bundle stays code-split (packs load
+lazily). Moves "syntax highlighting" partial → have.
+
+**T6.2 · File-tree navigation column** — *Sourcebot free (file explorer)*
+Wire the deferred 240px tree column in `FilePage` over the existing
+`/api/tree` + `/api/folder_contents` endpoints: collapsed siblings, expanded
+path to the current file, active-row highlight. AC: clicking a directory
+expands it; clicking a file navigates the viewer; deep-linkable. Moves "file
+explorer" partial → have.
+
+**T6.3 · Live GitHub PAT verification** — *closes a testing caveat*
+Run the T2.2 GitHub adapter end-to-end against a real PAT (org/user/repo
+listing, rate-limit handling, private-repo clone). AC: a private repo syncs +
+indexes + searches; findings (if any) fixed; ADR notes the verified run.
+
+**T6.4 · UI test harness (Vitest)** — *review gap: zero UI tests*
+Add Vitest + Testing Library; cover the streaming reducer, keyboard nav
+(j/k/enter/o and the collapse guard), facet toggling, and SSE error handling
+(the crash and error-clobber bugs would have been caught). AC: `npm test`
+runs in CI; the streaming/keyboard/facet paths have tests.
+
+## EPIC 7 — Connectors & freshness *(Wave 1 — the biggest free-tier gap)*
+
+**T7.1 · GitLab connector** — *Sourcebot free*
+`type: gitlab` connection (PAT): list by group/user with include/exclude
+filters, rate-limit-aware pagination, §5 metadata, authenticated clone.
+Closest analog to the GitHub adapter. AC: a GitLab group syncs + indexes;
+metadata persisted; incremental refetch.
+
+**T7.2 · Gitea connector** — *Sourcebot free*
+`type: gitea` connection (PAT + base URL for self-hosted). AC: a Gitea org
+syncs + indexes. *(Bitbucket Cloud/DC, Azure DevOps, Gerrit follow as
+T7.x by demand — same adapter shape.)*
+
+**T7.3 · GitHub App auth** — *Sourcebot paid/EE — OSS in phebs*
+`ghinstallation` installation-token auth as an alternative to PATs (higher
+rate limits, per-install scoping). AC: an App-authed connection syncs; tokens
+refresh; falls back cleanly if not configured.
+Deps: T2.2.
+
+**T7.4 · Webhook-driven reindex** — *Sourcebot paid/EE — OSS in phebs*
+`POST /api/webhook` (GitHub push/repository events, HMAC-verified) →
+event-driven sync/reindex of the affected repo. AC: a push webhook makes the
+change searchable without waiting for a poll; signature rejection tested.
+Deps: T7.3.
+
+**T7.5 · Periodic re-sync cadence** — *Sourcebot free (auto-freshness)*
+Debounced periodic re-sync for remote connections (config interval), on top
+of boot-time + watch + manual. AC: a remote repo's new commits become
+searchable within the configured cadence without restart; monorepo debounce
+respected. Moves "periodic re-sync" partial → have.
+
+## EPIC 8 — Differentiators: paid features, OSS in phebs *(Wave 2 — high value)*
+
+**T8.1 · Search contexts** — *Sourcebot paid/EE — OSS in phebs*
+`search_context` table + `context:<name>` pre-pass compiled to a `query.RepoSet`
+(the hook already exists in `internal/search/query.go`); contexts defined in
+config. AC: `context:foo` restricts results to the named repo set; table-driven
+tests; CRUD or config-defined contexts documented.
+
+**T8.2 · MCP server** — *Sourcebot paid/EE — OSS in phebs; flagship differentiator (PLAN P4)*
+Official `modelcontextprotocol/go-sdk` server exposing `search_code`,
+`read_file`, `list_repos` over the existing search/source/store internals,
+token-auth. AC: the server is reachable from Claude Code; each tool returns
+correct results against a fixture corpus; MANUAL documents setup.
+Deps: T8.1 (contexts usable as a search scope).
+
+**T8.3 · MCP integration + polish**
+Streaming/large-result handling, error surfaces, and a MANUAL section with a
+copy-paste Claude Code config. AC: a real agent session searches + reads files
+end-to-end.
+
+## EPIC 9 — Auth & code navigation *(Wave 3 — heavier lifts)*
+
+**T9.1 · DB-backed users, sessions, multiple API keys** — *Sourcebot free (login/members)*
+Activate the reserved `user`/`api_key` tables: scs sessions, hashed multi-key
+auth, a minimal login. UI attaches the bearer token. AC: a user logs in; keys
+are created/revoked; the UI no longer relies on an open API.
+
+**T9.2 · OIDC / SSO** — *Sourcebot paid/EE (enterprise SSO)*
+`coreos/go-oidc` login, no seat gating (SAML only on demand). AC: OIDC login
+against a test IdP; sessions bridge to the T9.1 model.
+Deps: T9.1.
+
+**T9.3 · Code navigation (SCIP)** — *Sourcebot paid/EE (Pro code nav) — PLAN P4*
+Beyond base `sym:`: ingest SCIP indexes (Apache-2.0) for precise
+go-to-definition / find-references / hover. AC: def/ref/hover on a fixture repo
+with a committed SCIP index; graceful when absent.
+
+**T9.4 · Git history / blame / commit / diff** — *Sourcebot free (history + blame)*
+`/api/blame`, `/api/commits`, `/api/commit`, `/api/diff` off the existing bare
+mirrors via git plumbing (`gitread.go`), plus viewer surfaces. AC: blame lines
+map to commits; a commit's diff renders; path-safe like the other read
+endpoints.
+
+## EPIC 10 — Enterprise surface *(Wave 4 — build-our-own, PORT_MAP §12)*
+
+**T10.1 · Audit log** — *Sourcebot paid/EE*
+Append-only SurrealDB table + huma middleware recording admin/user actions;
+retention config. AC: mutating actions land in the log; a read endpoint/page
+lists them; near-zero overhead.
+
+**T10.2 · Analytics** — *Sourcebot paid/EE*
+Local usage events + aggregations, one minimal dashboard page. **Zero
+telemetry** (deliberate divergence from upstream's phone-home). AC: search
+volume / top repos render from local data only.
+
+**T10.3 · Permission syncing + permission-aware search** — *Sourcebot paid/EE; the durable moat*
+Mirror code-host ACLs into repo↔user edges; compile a per-user `RepoSet` at
+query time (the hook is reserved in the search pre-pass — native, not
+post-filter). AC: a user sees only repos their code-host grants; no results
+leak across the boundary; the filter is applied in the query, not after.
+Deps: T9.1.
+
+**T10.4 · Multi-branch / tag indexing (`rev:`)** — *Sourcebot free (up to 64 revs/repo)*
+**Architectural, not a ticket-sized change** — HEAD-only is a core P1
+assumption (indexer, watch, freshness all lean on it). Gated on real demand;
+sequence last. AC: an explicit per-repo branch allowlist (cap ≈8 per PLAN §1)
+indexes + serves multiple revisions behind `rev:`.
+
+## Deliberate non-goals *(per PORT_MAP §7/§12)*
+
+SCIM provisioning, multi-org RBAC / seats, and a cloned "Ask" chat app —
+phebs stays **MCP-first** (agents bring their own chat) and **single-tenant**.
+Kubernetes/Helm waits for the P6 fleet profile. Anonymous-access and
+entitlement gating are deleted outright (config bool, no license backend).
+
+---
 
 ## Standing rules
 
