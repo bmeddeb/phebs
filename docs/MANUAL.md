@@ -145,6 +145,7 @@ connections:
 | `sync.resync_interval` | `1h` | re-sync cadence for remote connections; `"0"` disables |
 | `webhook.secret` | *(empty)* | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars |
 | `audit.retention` | `2160h` | audit events older than this are pruned twice a day; `"0"` keeps them forever |
+| `analytics.retention` | `8760h` | local usage events older than this are pruned twice a day; `"0"` keeps them forever |
 
 ### Authentication
 
@@ -542,6 +543,9 @@ deep-linkable hash routes:
   logins (including failures), setup, logout, API-key lifecycle, and every
   mutating API operation, newest first with actor, target, status, and
   source IP.
+- **Analytics** (`#/analytics`, administrators only) — 30-day search volume,
+  searches per day, average duration, and the repositories appearing most in
+  results — computed entirely from local usage events.
 
 The UI uses its DB-backed session cookie and automatically supplies CSRF
 tokens on mutations. A `401` clears stale authenticated state and returns to
@@ -573,6 +577,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/repo-status` | GET | repos + connections + orphan flag + last index job |
 | `/api/reindex` | POST | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job |
 | `/api/audit?offset=&limit=` | GET | administrator only: audit events, newest first, `has_more` paging |
+| `/api/analytics?days=` | GET | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
 | `/api/webhook` | POST | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set |
 | `/api/mcp` | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8) |
 | `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413 |
@@ -718,6 +723,16 @@ logged and never fails the request. Read the trail at `#/audit` or
 prunes old events at boot and twice a day; `"0"` disables pruning. Webhook
 deliveries are not audited — they are machine traffic with no principal, and
 their effects are visible as jobs.
+
+### Analytics — zero telemetry
+
+Every completed search (UI, API, SSE, and MCP alike — they share one search
+path) records a local `usage_event`: who searched, how long it took, and the
+repositories that appeared in results (capped at the 20 most relevant). The
+query text is deliberately **not** stored. Events never leave the machine and
+nothing phones home — a deliberate divergence from upstream's telemetry.
+The `#/analytics` dashboard and `GET /api/analytics` aggregate them on demand;
+`analytics.retention` (default 365 days, `"0"` forever) bounds growth.
 
 ### Job system
 

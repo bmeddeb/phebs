@@ -339,10 +339,12 @@ the non-huma auth surface (logins incl. failures, setup, logout, key
 lifecycle, OIDC); synchronous non-fatal writes; `audit.retention` sweep
 (default 90d); admin-gated `GET /api/audit` + `#/audit` page with paging.
 
-**T10.2 · Analytics** — *Sourcebot paid/EE*
-Local usage events + aggregations, one minimal dashboard page. **Zero
-telemetry** (deliberate divergence from upstream's phone-home). AC: search
-volume / top repos render from local data only.
+**T10.2 · Analytics** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+`usage_event` recorded by one `Searcher.Usage` hook (covers REST/SSE/MCP);
+no query text stored; Go-side windowed aggregation; admin-gated
+`GET /api/analytics` + `#/analytics` dashboard (tiles, per-day bars, top
+repos) with zero chart dependencies. **Zero telemetry** — events never leave
+the machine. `analytics.retention` (default 365d) shares the 12h sweep.
 
 **T10.3 · Permission syncing + permission-aware search** — *Sourcebot paid/EE; the durable moat*
 Mirror code-host ACLs into repo↔user edges; compile a per-user `RepoSet` at

@@ -100,6 +100,14 @@ export interface AuditPage {
   has_more: boolean
 }
 
+// T10.2: local usage aggregates (zero telemetry — computed from local data)
+export interface AnalyticsSummary {
+  total_searches: number
+  avg_duration_ms: number
+  daily: { date: string; count: number }[]
+  top_repos: { name: string; count: number }[]
+}
+
 export interface GitIdentity {
   name: string
   email: string
@@ -270,6 +278,9 @@ export const postReindex = (repo: string, force: boolean) =>
 
 export const fetchAudit = (offset: number, limit = 50, signal?: AbortSignal) =>
   getJSON<AuditPage>(`/api/audit?${query({ offset, limit })}`, signal)
+
+export const fetchAnalytics = (days = 30, signal?: AbortSignal) =>
+  getJSON<AnalyticsSummary>(`/api/analytics?${query({ days })}`, signal)
 
 export const fetchAPIKeys = (signal?: AbortSignal) =>
   getJSON<{ keys: APIKeySummary[] }>('/api/auth/keys', signal)

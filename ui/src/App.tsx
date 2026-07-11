@@ -16,6 +16,7 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BlamePage = lazy(() => import('./pages/BlamePage'))
 const CommitPage = lazy(() => import('./pages/CommitPage'))
 const AuditPage = lazy(() => import('./pages/AuditPage'))
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
@@ -49,6 +50,7 @@ export default function App() {
   else if (path.startsWith('/commit')) page = <CommitPage params={params} />
   else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
+  else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 
@@ -91,6 +93,7 @@ function Header({ path, email, isAdmin, onLogout }: { path: string; email: strin
   const isSettings = path.startsWith('/settings')
   const isRepos = path.startsWith('/repos')
   const isAudit = path.startsWith('/audit')
+  const isAnalytics = path.startsWith('/analytics')
   const isSearch = path === '/' || path.startsWith('/search')
 
   return (
@@ -130,6 +133,7 @@ function Header({ path, email, isAdmin, onLogout }: { path: string; email: strin
         <NavLink href="#/" label="Search" active={isSearch} />
         <NavLink href="#/repos" label="Repos" active={isRepos} />
         {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
+        {isAdmin && <NavLink href="#/analytics" label="Analytics" active={isAnalytics} />}
         <NavLink href="#/settings" label="Settings" active={isSettings} />
       </nav>
       <div className={css({ flex: 1 })} />

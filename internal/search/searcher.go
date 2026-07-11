@@ -25,7 +25,16 @@ type Searcher struct {
 	// Contexts backs `context:<name>` filters (T8.1); assigned once at
 	// startup from config.
 	Contexts map[string][]string
+	// Usage, when set, receives one event per successfully completed search
+	// (T10.2). This single hook covers REST, SSE, and MCP, which all funnel
+	// through Search/Stream. Assigned once at startup; the callback resolves
+	// the actor and must never block on failure.
+	Usage func(ctx context.Context, event store.UsageEvent)
 }
+
+// usageRepoCap bounds the distinct repo names recorded per search, in result
+// (relevance) order.
+const usageRepoCap = 20
 
 func Open(indexDir string, st store.Store) (*Searcher, error) {
 	// NewDirectorySearcher uses filepath.Glob internally. Reject metacharacters
@@ -135,7 +144,15 @@ func (s *Searcher) Search(ctx context.Context, raw string, opts Options) (*Resul
 	if err != nil {
 		return nil, fmt.Errorf("search: %w", err)
 	}
-	return toResult(res, versions), nil
+	result := toResult(res, versions)
+	if s.Usage != nil {
+		repos := newRepoCollector()
+		for _, f := range result.Files {
+			repos.add(f.Repo)
+		}
+		s.Usage(ctx, usageEvent(result.Stats, repos))
+	}
+	return result, nil
 }
 
 // Stream compiles raw and forwards each zoekt result batch to sink as it
@@ -152,11 +169,15 @@ func (s *Searcher) Stream(ctx context.Context, raw string, opts Options, sink fu
 		return nil, err
 	}
 	var agg Stats
+	repos := newRepoCollector()
 	err = s.z.StreamSearch(ctx, q, opts.zoekt(), zoekt.SenderFunc(func(r *zoekt.SearchResult) {
 		batch := toResult(r, versions)
 		agg.MatchCount += batch.Stats.MatchCount
 		agg.FileCount += batch.Stats.FileCount
 		agg.DurationMS += batch.Stats.DurationMS
+		for _, f := range batch.Files {
+			repos.add(f.Repo)
+		}
 		if len(batch.Files) > 0 {
 			sink(batch)
 		}
@@ -164,7 +185,37 @@ func (s *Searcher) Stream(ctx context.Context, raw string, opts Options, sink fu
 	if err != nil {
 		return nil, fmt.Errorf("stream search: %w", err)
 	}
+	if s.Usage != nil {
+		s.Usage(ctx, usageEvent(agg, repos))
+	}
 	return &agg, nil
+}
+
+// repoCollector keeps the first usageRepoCap distinct repo names in result
+// order (zoekt relevance order, so the cap drops the least relevant tail).
+type repoCollector struct {
+	seen  map[string]bool
+	names []string
+}
+
+func newRepoCollector() *repoCollector {
+	return &repoCollector{seen: make(map[string]bool)}
+}
+
+func (c *repoCollector) add(name string) {
+	if len(c.names) >= usageRepoCap || c.seen[name] {
+		return
+	}
+	c.seen[name] = true
+	c.names = append(c.names, name)
+}
+
+func usageEvent(stats Stats, repos *repoCollector) store.UsageEvent {
+	return store.UsageEvent{
+		Kind: "search", Repos: repos.names,
+		MatchCount: stats.MatchCount, FileCount: stats.FileCount,
+		DurationMS: stats.DurationMS,
+	}
 }
 
 // compile applies the user query and then fails closed to repository rows the

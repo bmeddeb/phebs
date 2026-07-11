@@ -38,6 +38,9 @@ type Options struct {
 	AuditRecord func(ctx context.Context, event store.AuditEvent)
 	AuditLog    store.AuditStore
 
+	// T10.2 analytics: serves GET /api/analytics; nil answers 503.
+	Analytics store.AnalyticsStore
+
 	// T7.4 webhook: empty secret leaves POST /api/webhook unregistered.
 	// ResyncConnections are the code-host connection names to re-sync on
 	// repository-membership events.
@@ -285,6 +288,7 @@ func New(opts Options) http.Handler {
 	registerHistory(api, opts)
 	registerCodeNavigation(api, opts)
 	registerAudit(api, opts)
+	registerAnalytics(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

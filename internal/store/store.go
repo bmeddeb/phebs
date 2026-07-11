@@ -143,6 +143,29 @@ type AuditStore interface {
 	PruneAuditEvents(ctx context.Context, cutoff time.Time) (int, error)
 }
 
+// UsageEvent is one local usage record (T10.2). phebs never phones home:
+// events exist only in the local database and feed the local dashboard.
+type UsageEvent struct {
+	ID         string    `json:"id"`
+	Kind       string    `json:"kind"` // "search"
+	ActorID    string    `json:"actor_id,omitempty"`
+	APIKeyID   string    `json:"api_key_id,omitempty"`
+	Repos      []string  `json:"repos,omitempty"` // distinct repos with matches, capped
+	MatchCount int       `json:"match_count"`
+	FileCount  int       `json:"file_count"`
+	DurationMS int64     `json:"duration_ms"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// AnalyticsStore records and reads local usage events; aggregation happens
+// in the caller (single-node scale, see api.registerAnalytics).
+type AnalyticsStore interface {
+	RecordUsageEvent(ctx context.Context, event UsageEvent) error
+	// ListUsageEvents returns events created after since, oldest first.
+	ListUsageEvents(ctx context.Context, since time.Time) ([]UsageEvent, error)
+	PruneUsageEvents(ctx context.Context, cutoff time.Time) (int, error)
+}
+
 // AuthStats drives the public auth status and the one-time setup gate.
 type AuthStats struct {
 	Users         int

@@ -27,6 +27,7 @@ type Config struct {
 	Sync        Sync         `yaml:"sync"`
 	Webhook     Webhook      `yaml:"webhook"`
 	Audit       Audit        `yaml:"audit"`
+	Analytics   Analytics    `yaml:"analytics"`
 	Connections []Connection `yaml:"connections"`
 	// Contexts are named repo sets for `context:<name>` search filters
 	// (T8.1): name → glob patterns matched against full repo names
@@ -63,15 +64,32 @@ type Audit struct {
 
 // RetentionFor returns the parsed audit retention; 0 means keep forever.
 func (a Audit) RetentionFor() time.Duration {
-	if a.Retention == "" {
-		return 90 * 24 * time.Hour
+	return retention(a.Retention, 90*24*time.Hour)
+}
+
+// Analytics configures local usage events (T10.2). Recording is always on
+// and never leaves the machine (zero telemetry).
+type Analytics struct {
+	// Retention prunes usage events older than this Go duration.
+	// Default "8760h" (365 days); "0" keeps events forever.
+	Retention string `yaml:"retention"`
+}
+
+// RetentionFor returns the parsed usage retention; 0 means keep forever.
+func (a Analytics) RetentionFor() time.Duration {
+	return retention(a.Retention, 365*24*time.Hour)
+}
+
+func retention(raw string, def time.Duration) time.Duration {
+	if raw == "" {
+		return def
 	}
-	if a.Retention == "0" {
+	if raw == "0" {
 		return 0
 	}
-	d, err := time.ParseDuration(a.Retention)
+	d, err := time.ParseDuration(raw)
 	if err != nil || d < 0 { // validation guarantees this branch is dead
-		return 90 * 24 * time.Hour
+		return def
 	}
 	return d
 }
@@ -324,9 +342,13 @@ func (c *Config) validate(lines []int) error {
 			errs = append(errs, fmt.Errorf("sync.resync_interval %q: not a positive Go duration (or \"0\" to disable)", ri))
 		}
 	}
-	if ar := c.Audit.Retention; ar != "" && ar != "0" {
-		if d, err := time.ParseDuration(ar); err != nil || d <= 0 {
-			errs = append(errs, fmt.Errorf("audit.retention %q: not a positive Go duration (or \"0\" to keep forever)", ar))
+	for field, raw := range map[string]string{
+		"audit.retention": c.Audit.Retention, "analytics.retention": c.Analytics.Retention,
+	} {
+		if raw != "" && raw != "0" {
+			if d, err := time.ParseDuration(raw); err != nil || d <= 0 {
+				errs = append(errs, fmt.Errorf("%s %q: not a positive Go duration (or \"0\" to keep forever)", field, raw))
+			}
 		}
 	}
 	if raw := c.Auth.SessionLifetime; raw != "" {

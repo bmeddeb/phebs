@@ -69,6 +69,11 @@ webhook:
 audit:
   retention: 2160h
 
+# Local usage analytics (T10.2). Zero telemetry: events exist only in the
+# local DB and feed #/analytics. Default 8760h = 365 days, "0" keeps forever.
+analytics:
+  retention: 8760h
+
 # Named repo sets for `context:<name>` search filters (T8.1). Patterns are
 # globs on full repo names; `*` does not cross `/`.
 contexts:

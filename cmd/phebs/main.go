@@ -93,16 +93,25 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
-	if retention := cfg.Audit.RetentionFor(); retention > 0 {
-		go func() { // T10.1 retention sweep: boot, then twice a day
+	// T10.1/T10.2 retention sweep: boot, then twice a day
+	auditRetention, usageRetention := cfg.Audit.RetentionFor(), cfg.Analytics.RetentionFor()
+	if auditRetention > 0 || usageRetention > 0 {
+		go func() {
 			ticker := time.NewTicker(12 * time.Hour)
 			defer ticker.Stop()
 			for {
-				if n, err := st.PruneAuditEvents(ctx, time.Now().UTC().Add(-retention)); err != nil {
-					log.Printf("audit retention: %v", err)
-				} else if n > 0 {
-					log.Printf("audit retention: pruned %d event(s)", n)
+				sweep := func(name string, keep time.Duration, prune func(context.Context, time.Time) (int, error)) {
+					if keep <= 0 {
+						return
+					}
+					if n, err := prune(ctx, time.Now().UTC().Add(-keep)); err != nil {
+						log.Printf("%s retention: %v", name, err)
+					} else if n > 0 {
+						log.Printf("%s retention: pruned %d event(s)", name, n)
+					}
 				}
+				sweep("audit", auditRetention, st.PruneAuditEvents)
+				sweep("analytics", usageRetention, st.PruneUsageEvents)
 				select {
 				case <-ctx.Done():
 					return
@@ -178,6 +187,19 @@ func serve(args []string) error {
 	}
 	defer searcher.Close()
 	searcher.Contexts = cfg.Contexts // T8.1: context:<name> filters
+	// T10.2: one usage event per completed search (REST, SSE, and MCP all
+	// funnel through the searcher). Local only — phebs never phones home.
+	searcher.Usage = func(ctx context.Context, event store.UsageEvent) {
+		if principal, ok := auth.PrincipalFromContext(ctx); ok {
+			if principal.User != nil {
+				event.ActorID = principal.User.ID
+			}
+			event.APIKeyID = principal.APIKeyID
+		}
+		if err := st.RecordUsageEvent(context.WithoutCancel(ctx), event); err != nil {
+			log.Printf("usage event: %v", err)
+		}
+	}
 	codeNavigation := codenav.New(codenav.Options{DataDir: cfg.Server.DataDir})
 
 	// repository-membership webhook events re-sync every remote connection
@@ -195,7 +217,7 @@ func serve(args []string) error {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin
 		},
-		AuditRecord: auditRecord, AuditLog: st,
+		AuditRecord: auditRecord, AuditLog: st, Analytics: st,
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
 	})
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.

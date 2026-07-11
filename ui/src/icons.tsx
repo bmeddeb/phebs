@@ -60,3 +60,6 @@ export const LogoutIcon = ({ size = 16 }: IconProps) =>
 
 export const AuditIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><rect x="3" y="2" width="10" height="12" rx="1.5" /><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" /></>)
+
+export const ChartIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><path d="M2.5 2.5v11h11" /><path d="M5.5 10.5v-3M8.5 10.5v-6M11.5 10.5v-4.5" /></>)
