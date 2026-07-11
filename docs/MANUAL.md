@@ -13,9 +13,10 @@ configuring, and operating phebs. For architecture and design rationale see
 5. [Searching](#5-searching)
 6. [Web UI](#6-web-ui)
 7. [HTTP API](#7-http-api)
-8. [Operations](#8-operations)
-9. [Troubleshooting](#9-troubleshooting)
-10. [Developing phebs](#10-developing-phebs)
+8. [Agents (MCP)](#8-agents-mcp)
+9. [Operations](#9-operations)
+10. [Troubleshooting](#10-troubleshooting)
+11. [Developing phebs](#11-developing-phebs)
 
 ---
 
@@ -384,6 +385,7 @@ and `/metrics`.
 | `/api/repo-status` | GET | repos + connections + orphan flag + last index job |
 | `/api/reindex` | POST | `{"repo":"github.com/foo/bar","force":true}` → enqueue index job |
 | `/api/webhook` | POST | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set |
+| `/api/mcp` | POST/GET | MCP over Streamable HTTP (see §8) |
 | `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413 |
 | `/api/folder_contents?repo=&path=&ref=` | GET | one directory level |
 | `/api/tree?repo=&ref=` | GET | all file paths, recursive |
@@ -400,7 +402,48 @@ curl -X POST localhost:3070/api/reindex \
   -H 'Content-Type: application/json' -d '{"repo":"github.com/foo/bar","force":true}'
 ```
 
-## 8. Operations
+## 8. Agents (MCP)
+
+phebs is an MCP server: agents search and read your code through the same
+index the UI uses. The endpoint is `/api/mcp` (Streamable HTTP, official MCP
+go-sdk), guarded by the same `auth.api_key` bearer as the rest of the API.
+
+Three tools:
+
+| Tool | Purpose |
+|---|---|
+| `search_code` | full query syntax from §5, including `context:` sets; returns files with line-numbered chunks and match ranges |
+| `read_file` | file content at the indexed revision; optional `start_line`/`end_line`; oversize output is truncated on line boundaries with a `truncated` flag inviting a ranged re-read |
+| `list_repos` | every indexed repo with branch/visibility/index-time metadata |
+
+Binary files and unknown repos come back as tool errors, not blobs.
+
+### Claude Code
+
+```bash
+claude mcp add --transport http phebs http://localhost:3070/api/mcp \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+or the equivalent `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "phebs": {
+      "type": "http",
+      "url": "http://localhost:3070/api/mcp",
+      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
+    }
+  }
+}
+```
+
+Any MCP client speaking Streamable HTTP works the same way. Verified live
+against Claude Code: a headless session listed repos, ran a scoped search,
+and read the matching file end-to-end (T8.3).
+
+## 9. Operations
 
 ### Data layout
 
@@ -448,7 +491,7 @@ SIGINT/SIGTERM drains gracefully: the HTTP server stops, the SurrealDB child
 is stopped with it. In-flight jobs left behind are recovered by the reaper on
 next boot.
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -462,7 +505,7 @@ next boot.
 | repo tagged `orphaned` | no connection claims it anymore | re-add the connection, or enable `sync.cleanup_orphans` |
 | sync fails with `auth: git …` and retries slowly | credential failure, classified `auth` (10 m backoff) | fix the token; reindex/restart to retry immediately |
 
-## 10. Developing phebs
+## 11. Developing phebs
 
 | Target | Does |
 |---|---|

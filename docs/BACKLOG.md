@@ -250,7 +250,7 @@ Deps: T7.3.
 remote connections; `EnqueueUnlessInFlight` is the debounce, local repos stay
 watch/boot-owned. Moves "periodic re-sync" partial → have.
 
-## EPIC 8 — Differentiators: paid features, OSS in phebs *(Wave 2 — high value)*
+## EPIC 8 — Differentiators: paid features, OSS in phebs ✅ 2026-07-11 *(Wave 2 — high value)*
 
 **T8.1 · Search contexts** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
 Config-defined contexts (name → repo-name globs) + string-level `context:`
@@ -259,17 +259,17 @@ extraction ahead of `query.Parse` (zoekt has no such atom), compiled to one
 tests + e2e over real shards. No DB table — config is the single source;
 add CRUD when a UI needs it.
 
-**T8.2 · MCP server** — *Sourcebot paid/EE — OSS in phebs; flagship differentiator (PLAN P4)*
-Official `modelcontextprotocol/go-sdk` server exposing `search_code`,
-`read_file`, `list_repos` over the existing search/source/store internals,
-token-auth. AC: the server is reachable from Claude Code; each tool returns
-correct results against a fixture corpus; MANUAL documents setup.
-Deps: T8.1 (contexts usable as a search scope).
+**T8.2 · MCP server** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs; flagship differentiator (PLAN P4)*
+Official go-sdk server at `/api/mcp` (Streamable HTTP, same bearer as the
+API): `search_code` (full query syntax incl. `context:`), `read_file`
+(ranged), `list_repos`. **Verified live from Claude Code**: a headless
+session listed repos, searched the needle, and read the file — all correct.
+Deps: T8.1.
 
-**T8.3 · MCP integration + polish**
-Streaming/large-result handling, error surfaces, and a MANUAL section with a
-copy-paste Claude Code config. AC: a real agent session searches + reads files
-end-to-end.
+**T8.3 · MCP integration + polish** ✅ 2026-07-11
+Large-file truncation on line boundaries with a `truncated` flag + ranged
+re-reads; binary/unknown-repo tool errors; MANUAL §8 with copy-paste
+`claude mcp add` + `.mcp.json` config. AC met by the live agent session.
 
 ## EPIC 9 — Auth & code navigation *(Wave 3 — heavier lifts)*
 

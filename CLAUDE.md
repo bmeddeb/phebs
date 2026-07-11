@@ -58,4 +58,6 @@ search → UI, single binary, all local. UI is Base Web (public open-source
 harness). **Epic 7 done 2026-07-11** (GitLab + Gitea connectors — Gitea
 verified live in Docker, GitHub App auth via stdlib JWT, HMAC webhook
 reindex — verified live, re-sync cadence). No git remote yet; CI has never
-run. Next per BACKLOG: Epic 8 (Wave 2) — search contexts → MCP server.
+run. **Epic 8 done 2026-07-11** (search contexts; MCP server at /api/mcp —
+verified live from a headless Claude Code session). Next per BACKLOG:
+Epic 9 (Wave 3) — users/sessions/API keys → OIDC → SCIP code nav → history.

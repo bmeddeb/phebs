@@ -93,12 +93,13 @@ Every decision lands as a dated ADR bullet in [PLAN.md](./PLAN.md). Highlights:
 
 ## Status
 
-**P1 complete, Waves 0–1 shipped** — sync (GitHub incl. App auth, GitLab,
+**P1 complete, Waves 0–2 shipped** — sync (GitHub incl. App auth, GitLab,
 Gitea, any git URL, local), job queue with crash recovery, incremental
-indexing, HMAC push webhooks + periodic re-sync, search API (JSON + SSE),
-file serving, web UI with tests, watch mode, Prometheus metrics. See
-[BACKLOG.md](./docs/BACKLOG.md) for what's done and what's next
-(Wave 2: search contexts → MCP server).
+indexing, HMAC push webhooks + periodic re-sync, search API (JSON + SSE)
+with named search contexts, an MCP server for agents (verified live from
+Claude Code), file serving, web UI with tests, watch mode, Prometheus
+metrics. See [BACKLOG.md](./docs/BACKLOG.md) for what's done and what's
+next (Wave 3: auth → code nav → history).
 
 ## Lineage & acknowledgements
 

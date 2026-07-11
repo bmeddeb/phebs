@@ -15,11 +15,13 @@ import (
 	"syscall"
 	"time"
 
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/indexer"
+	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -133,6 +135,12 @@ func serve(args []string) error {
 		Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
 	}))
+	// T8.2: MCP over Streamable HTTP, same bearer as the API
+	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
+		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
+	})
+	mux.Handle("/api/mcp", api.RequireBearer(cfg.Auth.APIKey,
+		mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server { return mcpServer }, nil)))
 	mux.Handle("GET /metrics", promhttp.Handler()) // T3.3; unauthenticated like /api/health
 	mux.Handle("/", http.FileServerFS(dist))
 
