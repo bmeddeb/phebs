@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -75,8 +74,7 @@ func syncGitea(ctx context.Context, st store.Store, dataDir string, conn config.
 	// from persisted errors by redactArgs.
 	var gitCfg []string
 	if conn.Token != "" {
-		basic := base64.StdEncoding.EncodeToString([]byte(conn.Token + ":"))
-		gitCfg = []string{"-c", "http.extraheader=Authorization: Basic " + basic}
+		gitCfg = basicExtraheader(conn.Token + ":")
 	}
 
 	var names []string

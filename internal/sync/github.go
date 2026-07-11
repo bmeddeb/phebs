@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -111,8 +110,7 @@ func syncGitHub(ctx context.Context, st store.Store, dataDir string, conn config
 	// the repo row.
 	var gitCfg []string
 	if gitToken != "" {
-		basic := base64.StdEncoding.EncodeToString([]byte("x-access-token:" + gitToken))
-		gitCfg = []string{"-c", "http.extraheader=Authorization: Basic " + basic}
+		gitCfg = basicExtraheader("x-access-token:" + gitToken)
 	}
 
 	var names []string

@@ -83,9 +83,16 @@ func serve(args []string) error {
 	runner := &store.Runner{Store: st, Kind: store.JobSync, Handle: phebssync.Handler(cfg, st),
 		Interval: cfg.Sync.Interval()}
 	go runner.Run(ctx)
+	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st),
+		Interval: cfg.Sync.Interval()}
+	go fetchRunner.Run(ctx)
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
 		log.Printf("watch mode: polling %d local repo(s)", len(watched))
 		go (&phebssync.Watcher{Store: st, Conns: watched}).Run(ctx)
+	}
+	// T7.5: periodic freshness for remote connections
+	if every := cfg.Sync.ResyncEvery(); every > 0 {
+		go phebssync.Resync(ctx, st, cfg, every)
 	}
 
 	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
@@ -112,10 +119,18 @@ func serve(args []string) error {
 	}
 	defer searcher.Close()
 
+	// repository-membership webhook events re-sync every remote connection
+	var resyncNames []string
+	for _, c := range cfg.Connections {
+		if phebssync.IsRemote(c) {
+			resyncNames = append(resyncNames, c.Name)
+		}
+	}
 	mux := http.NewServeMux()
 	mux.Handle("/api/", api.New(api.Options{
 		Version: version, APIKey: cfg.Auth.APIKey,
 		Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
+		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
 	}))
 	mux.Handle("GET /metrics", promhttp.Handler()) // T3.3; unauthenticated like /api/health
 	mux.Handle("/", http.FileServerFS(dist))

@@ -7,10 +7,12 @@ package sync
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -177,8 +179,7 @@ func enqueueIndexJobs(ctx context.Context, st store.Store, names []string) error
 }
 
 // EnqueueMissing creates a sync job per configured connection unless one is
-// already queued or in flight. ponytail: boot-time enqueue only; periodic
-// re-sync cadence comes with the webhook/freshness work (P2 github-app).
+// already queued or in flight.
 func EnqueueMissing(ctx context.Context, st store.Store, cfg *config.Config) error {
 	for _, conn := range cfg.Connections {
 		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobSync, conn.Name); err != nil {
@@ -186,6 +187,36 @@ func EnqueueMissing(ctx context.Context, st store.Store, cfg *config.Config) err
 		}
 	}
 	return nil
+}
+
+// IsRemote reports whether a connection's freshness depends on a remote
+// host — local repos are covered by boot-time sync and watch mode.
+func IsRemote(conn config.Connection) bool {
+	return conn.Type != "git" || !config.IsLocalURL(conn.URL)
+}
+
+// Resync enqueues re-sync jobs for remote connections on a fixed cadence
+// (T7.5) — freshness without webhooks. EnqueueUnlessInFlight is the
+// debounce: a connection still syncing (or already queued) is skipped, so
+// slow syncs never pile up.
+func Resync(ctx context.Context, st store.Store, cfg *config.Config, every time.Duration) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			for _, conn := range cfg.Connections {
+				if !IsRemote(conn) {
+					continue
+				}
+				if err := store.EnqueueUnlessInFlight(ctx, st, store.JobSync, conn.Name); err != nil {
+					log.Printf("resync: enqueue %s: %v", conn.Name, err)
+				}
+			}
+		}
+	}
 }
 
 // CleanupOrphans deletes repo rows and mirrors that no connection claims.

@@ -23,6 +23,7 @@ type Config struct {
 	Server      Server       `yaml:"server"`
 	Auth        Auth         `yaml:"auth"`
 	Sync        Sync         `yaml:"sync"`
+	Webhook     Webhook      `yaml:"webhook"`
 	Connections []Connection `yaml:"connections"`
 }
 
@@ -33,6 +34,16 @@ type Sync struct {
 	// PollInterval is the job-runner poll cadence (Go duration, default
 	// "15s"). Lower it when watch mode should feel instant.
 	PollInterval string `yaml:"poll_interval"`
+	// ResyncInterval re-syncs remote connections on a cadence (T7.5).
+	// Go duration, default "1h"; "0" disables.
+	ResyncInterval string `yaml:"resync_interval"`
+}
+
+// Webhook configures POST /api/webhook (T7.4).
+type Webhook struct {
+	// Secret verifies X-Hub-Signature-256 payload signatures; empty leaves
+	// the endpoint disabled. ${ENV} references are expanded.
+	Secret string `yaml:"secret"`
 }
 
 // Interval returns the parsed poll cadence; validation guarantees the
@@ -42,6 +53,21 @@ func (s Sync) Interval() time.Duration {
 		return d
 	}
 	return 15 * time.Second
+}
+
+// ResyncEvery returns the parsed re-sync cadence; 0 means disabled.
+func (s Sync) ResyncEvery() time.Duration {
+	if s.ResyncInterval == "" {
+		return time.Hour
+	}
+	if s.ResyncInterval == "0" {
+		return 0
+	}
+	d, err := time.ParseDuration(s.ResyncInterval)
+	if err != nil || d < 0 { // validation guarantees this branch is dead
+		return time.Hour
+	}
+	return d
 }
 
 type Server struct {
@@ -191,6 +217,11 @@ func (c *Config) validate(lines []int) error {
 			errs = append(errs, fmt.Errorf("sync.poll_interval %q: not a positive Go duration", c.Sync.PollInterval))
 		}
 	}
+	if ri := c.Sync.ResyncInterval; ri != "" && ri != "0" {
+		if d, err := time.ParseDuration(ri); err != nil || d <= 0 {
+			errs = append(errs, fmt.Errorf("sync.resync_interval %q: not a positive Go duration (or \"0\" to disable)", ri))
+		}
+	}
 
 	seen := map[string]bool{}
 	for i, conn := range c.Connections {
@@ -305,6 +336,11 @@ func (c *Config) applyDefaults() error {
 	if raw := c.Auth.APIKey; raw != "" {
 		if c.Auth.APIKey = os.ExpandEnv(raw); c.Auth.APIKey == "" {
 			return fmt.Errorf("auth.api_key %q expands to empty (unset environment variable?); refusing to start with auth disabled", raw)
+		}
+	}
+	if raw := c.Webhook.Secret; raw != "" {
+		if c.Webhook.Secret = os.ExpandEnv(raw); c.Webhook.Secret == "" {
+			return fmt.Errorf("webhook.secret %q expands to empty (unset environment variable?); refusing to start with an unverifiable webhook", raw)
 		}
 	}
 	for i := range c.Connections {

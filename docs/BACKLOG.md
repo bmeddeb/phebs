@@ -237,17 +237,18 @@ No selectors → syncs the installation's granted repos. PAT/anon connections
 unchanged (AC "falls back cleanly").
 Deps: T2.2.
 
-**T7.4 · Webhook-driven reindex** — *Sourcebot paid/EE — OSS in phebs*
-`POST /api/webhook` (GitHub push/repository events, HMAC-verified) →
-event-driven sync/reindex of the affected repo. AC: a push webhook makes the
-change searchable without waiting for a poll; signature rejection tested.
+**T7.4 · Webhook-driven reindex** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
+`POST /api/webhook` (HMAC `X-Hub-Signature-256`, constant-time, 404 when no
+secret): push → targeted `repo_fetch_job` (fetch + reindex, no host
+re-listing); repository/installation events → remote-connection re-sync.
+**Verified live**: Gitea container webhook (GitHub-compat headers) → push →
+searchable with `resync_interval: "0"`; bad signature 401 live + tested.
 Deps: T7.3.
 
-**T7.5 · Periodic re-sync cadence** — *Sourcebot free (auto-freshness)*
-Debounced periodic re-sync for remote connections (config interval), on top
-of boot-time + watch + manual. AC: a remote repo's new commits become
-searchable within the configured cadence without restart; monorepo debounce
-respected. Moves "periodic re-sync" partial → have.
+**T7.5 · Periodic re-sync cadence** ✅ 2026-07-11 — *Sourcebot free (auto-freshness)*
+`sync.resync_interval` (default `1h`, `"0"` disables) enqueues re-syncs for
+remote connections; `EnqueueUnlessInFlight` is the debounce, local repos stay
+watch/boot-owned. Moves "periodic re-sync" partial → have.
 
 ## EPIC 8 — Differentiators: paid features, OSS in phebs *(Wave 2 — high value)*
 

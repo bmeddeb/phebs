@@ -2,7 +2,6 @@ package sync
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -84,8 +83,7 @@ func syncGitLab(ctx context.Context, st store.Store, dataDir string, conn config
 	// scrubs it from persisted errors).
 	var gitCfg []string
 	if conn.Token != "" {
-		basic := base64.StdEncoding.EncodeToString([]byte("oauth2:" + conn.Token))
-		gitCfg = []string{"-c", "http.extraheader=Authorization: Basic " + basic}
+		gitCfg = basicExtraheader("oauth2:" + conn.Token)
 	}
 
 	var names []string

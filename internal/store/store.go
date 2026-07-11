@@ -19,6 +19,7 @@ type JobKind string
 const (
 	JobSync  JobKind = "connection_sync_job"
 	JobIndex JobKind = "indexing_job"
+	JobFetch JobKind = "repo_fetch_job" // webhook-driven single-repo fetch (T7.4)
 )
 
 type JobStatus string

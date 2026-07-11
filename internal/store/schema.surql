@@ -22,3 +22,8 @@ DEFINE INDEX IF NOT EXISTS indexing_job_status ON indexing_job FIELDS status;
 
 DEFINE TABLE IF NOT EXISTS user SCHEMALESS;
 DEFINE TABLE IF NOT EXISTS api_key SCHEMALESS;
+
+DEFINE TABLE IF NOT EXISTS repo_fetch_job SCHEMALESS;
+DEFINE FIELD IF NOT EXISTS status ON repo_fetch_job TYPE string
+    ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed'];
+DEFINE INDEX IF NOT EXISTS repo_fetch_job_status ON repo_fetch_job FIELDS status;

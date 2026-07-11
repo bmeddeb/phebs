@@ -109,6 +109,8 @@ connections:
 | `auth.api_key` | *(empty)* | empty leaves the API open and logs a warning; `${ENV}` references are expanded — a non-empty key that expands to empty (unset var) fails startup rather than silently opening the API |
 | `sync.cleanup_orphans` | `false` | see [orphans](#orphans-and-cleanup) |
 | `sync.poll_interval` | `15s` | Go duration; job pollers wake with ±50 % jitter around it |
+| `sync.resync_interval` | `1h` | re-sync cadence for remote connections; `"0"` disables |
+| `webhook.secret` | *(empty)* | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars |
 
 ### `type: github` connections
 
@@ -236,11 +238,33 @@ synced repo. Re-syncs are incremental (`git fetch --prune`).
 Beyond boot, syncs happen when:
 
 - a **watched** local repo's HEAD moves (see below);
+- the **re-sync cadence** fires (`sync.resync_interval`, default `1h`, `"0"`
+  disables): every remote connection is re-synced, skipping any still in
+  flight — local repos are covered by boot and watch instead;
+- a **push webhook** arrives (see below);
 - you press **Reindex** in the UI or call `POST /api/reindex` (re-index only);
 - phebs restarts.
 
-*(Periodic re-sync cadence and GitHub webhook-driven sync are on the roadmap —
-P2 in [BACKLOG.md](./BACKLOG.md).)*
+### Push webhooks
+
+`POST /api/webhook` turns code-host push events into targeted fetches — the
+changed repo is fetched and reindexed without waiting for a poll, and without
+re-listing the host:
+
+```yaml
+webhook:
+  secret: "${WEBHOOK_SECRET}"   # required to enable the endpoint
+```
+
+Point a GitHub (or Gitea — it sends GitHub-compatible headers, verified live)
+webhook at `https://your-phebs/api/webhook` with content type
+`application/json` and the same secret. Payload signatures
+(`X-Hub-Signature-256`) are verified in constant time; the endpoint does not
+exist unless a secret is configured, and it ignores pushes for repos phebs
+doesn't know. `repository` and `installation_repositories` events (repo
+created/deleted/renamed, App grants changed) re-sync the remote connections
+so membership catches up. GitLab webhooks use a different scheme and are not
+yet supported — the re-sync cadence covers those.
 
 ### Watch mode (local repos)
 
@@ -335,6 +359,7 @@ and `/metrics`.
 | `/api/repos` | GET | repo rows |
 | `/api/repo-status` | GET | repos + connections + orphan flag + last index job |
 | `/api/reindex` | POST | `{"repo":"github.com/foo/bar","force":true}` → enqueue index job |
+| `/api/webhook` | POST | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set |
 | `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413 |
 | `/api/folder_contents?repo=&path=&ref=` | GET | one directory level |
 | `/api/tree?repo=&ref=` | GET | all file paths, recursive |

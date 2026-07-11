@@ -25,6 +25,12 @@ type Options struct {
 	Store   store.Store
 	Search  *search.Searcher // nil = search endpoints answer 503
 	DataDir string           // bare mirrors for file serving (T4.4)
+
+	// T7.4 webhook: empty secret leaves POST /api/webhook unregistered.
+	// ResyncConnections are the code-host connection names to re-sync on
+	// repository-membership events.
+	WebhookSecret     string
+	ResyncConnections []string
 }
 
 // New builds the /api/* handler: health, version, repos, plus the OpenAPI
@@ -243,6 +249,11 @@ func New(opts Options) http.Handler {
 		}
 		return &repoStatusOut{Body: statuses}, nil
 	})
+
+	// raw handler, not huma: HMAC over the exact body bytes is the auth
+	if opts.WebhookSecret != "" {
+		mux.HandleFunc("POST /api/webhook", webhookHandler(opts))
+	}
 
 	return mux
 }
