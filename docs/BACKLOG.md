@@ -198,10 +198,12 @@ toggle, files navigate. Verified: auto-expand + active highlight; clicking a
 collapsed dir reveals its files; file rows deep-link. Moves "file explorer"
 partial → have. *(buildTree unit test pending T6.4 Vitest harness.)*
 
-**T6.3 · Live GitHub PAT verification** — *closes a testing caveat*
-Run the T2.2 GitHub adapter end-to-end against a real PAT (org/user/repo
-listing, rate-limit handling, private-repo clone). AC: a private repo syncs +
-indexes + searches; findings (if any) fixed; ADR notes the verified run.
+**T6.3 · Live GitHub PAT verification** ✅ 2026-07-10 — *closes a testing caveat*
+Ran the adapter live (200-repo account): `users:` pagination, `orgs:`,
+`repos:`, exclude globs — 5 kept repos (4 private) synced, indexed, searched;
+token verified absent from mirrors/data/API. Finding fixed: `users:` naming
+the token's own login now lists via `/user/repos` so its private repos are
+seen (public endpoint omits them); regression test added. ADR 2026-07-10.
 
 **T6.4 · UI test harness (Vitest)** — *review gap: zero UI tests*
 Add Vitest + Testing Library; cover the streaming reducer, keyboard nav

@@ -130,6 +130,12 @@ bearer to api.github.com and injected into git fetches per-invocation — it is
 never written into mirror config or the database. Rate limits are honored
 automatically (the sync waits out `Retry-After` / `X-RateLimit-Reset`).
 
+A `users:` entry naming the token's own account includes that account's
+private repos (GitHub's public user listing omits them, so phebs switches to
+the authenticated endpoint for the token owner). Other users list public
+repos only; private repos elsewhere are reachable via `orgs:` or explicit
+`repos:` entries.
+
 ### `type: git` connections
 
 ```yaml

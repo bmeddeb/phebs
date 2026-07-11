@@ -177,6 +177,75 @@ func TestSyncGitHubEndToEnd(t *testing.T) {
 	}
 }
 
+// Regression (T6.3, found live): /users/{name}/repos never returns private
+// repos, even authenticated. A users: entry naming the token's own login must
+// list via /user/repos instead.
+func TestSyncGitHubAuthedUserListsPrivate(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "s.go"), []byte("package s\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "init")
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer tok" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		switch r.URL.Path {
+		case "/user":
+			_, _ = w.Write([]byte(`{"login":"ben"}`))
+		case "/user/repos":
+			_ = json.NewEncoder(w).Encode([]ghRepo{
+				{ID: 7, FullName: "ben/secret", CloneURL: "file://" + origin,
+					DefaultBranch: "main", Private: true},
+			})
+		case "/users/ben/repos":
+			t.Error("listed via public /users/{name}/repos; private repos would be missing")
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	old := ghAPIBase
+	ghAPIBase = srv.URL
+	t.Cleanup(func() { ghAPIBase = old })
+
+	dataDir := t.TempDir()
+	st, err := store.OpenLocal(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+
+	// "Ben" vs login "ben": the match must be case-insensitive.
+	conn := config.Connection{Name: "gh", Type: "github", Token: "tok", Users: []string{"Ben"}}
+	names, err := SyncConnection(ctx, st, dataDir, conn)
+	if err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if len(names) != 1 || names[0] != "github.com/ben/secret" {
+		t.Fatalf("synced names = %v, want just ben/secret", names)
+	}
+	repo, err := st.GetRepo(ctx, "github.com/ben/secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.IsPublic {
+		t.Error("private repo persisted as public")
+	}
+}
+
 // Regression: git errors are persisted to the job row and logged, so the
 // credential-bearing -c http.extraheader arg must be redacted from them.
 func TestRedactArgs(t *testing.T) {

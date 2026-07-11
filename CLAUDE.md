@@ -55,5 +55,5 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 **P1 complete (2026-07-09): Epics 0–5 shipped and demoed** — sync → index →
 search → UI, single binary, all local. UI is Base Web (public open-source
 `baseui`). No git remote yet; CI has never run. Next per BACKLOG cut line:
-P2 — search-contexts → MCP server → GitHub App + webhook reindex. Live PAT
-verification of T2.2 still pending.
+P2 — search-contexts → MCP server → GitHub App + webhook reindex. T2.2 PAT
+verification done live (T6.3, 2026-07-10).
