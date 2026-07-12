@@ -6,7 +6,7 @@
       "runtimeExecutable": "make",
       "runtimeArgs": [
         "dev",
-        "ARGS=-config /private/tmp/claude-501/-Users-ben-phebs-com/d8f550af-1d38-4ff0-9cf2-4fd95c18f165/scratchpad/demo.yaml"
+        "ARGS=-config /private/tmp/claude-501/-Users-ben-phebs-com/055639d7-4eff-436d-a55f-20af9f87c2c9/scratchpad/demo/demo.yaml"
       ],
       "port": 3070
     },

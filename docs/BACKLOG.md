@@ -330,7 +330,7 @@ through the current source helper: its global 10 MiB blob contract conflicts
 with SCIP's independent 64 MiB index and per-source limits. AC: one tested error
 classifier and bounded reader serve all three callers without weakening any cap.
 
-## EPIC 10 — Enterprise surface *(Wave 4 — build-our-own, PORT_MAP §12)*
+## EPIC 10 — Enterprise surface ✅ 2026-07-11 *(Wave 4 — build-our-own, PORT_MAP §12)* — demoed live via `make dev`: audit trail, analytics dashboard, and admin-vs-non-admin visibility over API + stateless MCP. T10.4 stays gated on real demand per its own ticket text.
 
 **T10.1 · Audit log** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
 Append-only `audit_event` table (narrow `AuditStore`), huma middleware
