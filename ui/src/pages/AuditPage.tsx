@@ -26,7 +26,15 @@ export default function AuditPage({ isAdmin }: { isAdmin: boolean }) {
     fetchAudit(offset, PAGE, controller.signal)
       .then((page) => {
         if (gen !== generation.current) return
-        setEvents((prev) => (offset === 0 ? page.events : [...prev, ...page.events]))
+        // New events arriving between pages shift offset paging; dedupe by id
+        // so a shifted page never renders duplicate rows.
+        // ponytail: rows pruned mid-scroll can still be skipped; move to a
+        // created_at cursor if that ever matters.
+        setEvents((prev) => {
+          if (offset === 0) return page.events
+          const seen = new Set(prev.map((e) => e.id))
+          return [...prev, ...page.events.filter((e) => !seen.has(e.id))]
+        })
         setHasMore(page.has_more)
         setError('')
       })

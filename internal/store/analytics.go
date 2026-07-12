@@ -98,15 +98,9 @@ func (s *Surreal) ListUsageEvents(ctx context.Context, since time.Time) ([]Usage
 }
 
 func (s *Surreal) PruneUsageEvents(ctx context.Context, cutoff time.Time) (int, error) {
-	results, err := surrealdb.Query[[]usageEventRec](ctx, s.db,
-		"DELETE usage_event WHERE created_at <= $cutoff RETURN BEFORE",
-		map[string]any{"cutoff": cutoff})
+	n, err := s.pruneByCreatedAt(ctx, "usage_event", cutoff)
 	if err != nil {
 		return 0, fmt.Errorf("prune usage events: %w", err)
-	}
-	n := 0
-	for _, result := range *results {
-		n += len(result.Result)
 	}
 	return n, nil
 }

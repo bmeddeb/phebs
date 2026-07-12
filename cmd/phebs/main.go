@@ -19,6 +19,7 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
@@ -185,7 +186,9 @@ func serve(args []string) error {
 		perms := cfg.Permissions
 		idsByEmail := make(map[string][]string, len(perms.Users))
 		for email, ids := range perms.Users {
-			key := strings.ToLower(email)
+			// same normalization pipeline as auth's NormalizedEmail, or a
+			// non-NFC Unicode config key would silently never match
+			key := strings.ToLower(norm.NFC.String(email))
 			for _, id := range ids {
 				idsByEmail[key] = append(idsByEmail[key], strings.ToLower(id))
 			}
@@ -285,7 +288,9 @@ func serve(args []string) error {
 	handler := newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist))
 
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
+	shutdownDone := make(chan struct{})
 	go func() {
+		defer close(shutdownDone)
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -296,6 +301,10 @@ func serve(args []string) error {
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
+	// ListenAndServe returns as soon as Shutdown STARTS; wait for the drain so
+	// in-flight handlers (and their audit/usage writes) finish before the
+	// deferred store/searcher Closes run.
+	<-shutdownDone
 	return nil
 }
 

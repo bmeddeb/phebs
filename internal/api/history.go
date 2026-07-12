@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -115,22 +116,26 @@ func registerHistory(api huma.API, opts Options) {
 }
 
 func historyRef(ctx context.Context, opts Options, repoName, requested string) (string, error) {
+	// Resolve the permission predicate before the existence check so missing
+	// and forbidden repos cost the same work (no timing oracle), and wrap
+	// every denial with the same message shape the store uses for missing
+	// repos (no body oracle) — T10.3.
+	allow := repoFilter(ctx, opts)
 	repo, err := opts.Store.GetRepo(ctx, repoName)
 	if err != nil {
 		return "", err
 	}
 	if repo.Deleting {
-		return "", store.ErrNotFound
+		return "", fmt.Errorf("repo %q: %w", repoName, store.ErrNotFound)
 	}
-	// T10.3: permission denials are indistinguishable from missing repos.
-	if allow := repoFilter(ctx, opts); allow != nil && !allow(*repo) {
-		return "", store.ErrNotFound
+	if allow != nil && !allow(*repo) {
+		return "", fmt.Errorf("repo %q: %w", repoName, store.ErrNotFound)
 	}
 	if requested != "" {
 		return requested, nil
 	}
 	if repo.IndexedCommitHash == "" {
-		return "", store.ErrNotFound
+		return "", fmt.Errorf("repo %q: %w", repoName, store.ErrNotFound)
 	}
 	return repo.IndexedCommitHash, nil
 }

@@ -88,8 +88,9 @@ func (a Analytics) RetentionFor() time.Duration {
 
 // Permissions maps phebs users to code-host identities and declares repos
 // visible to everyone. Identities are "<host>:<login>" where <host> is the
-// first segment of the repo names that host produces ("github.com:bmeddeb",
-// "gitea.example.com:ben"); matching is case-insensitive.
+// repo-name prefix that host produces ("github.com:bmeddeb",
+// "gitea.example.com:ben", "git.example.com/gitlab:ben" for a path-hosted
+// instance); matching is case-insensitive.
 type Permissions struct {
 	// Users maps a phebs user's email to their code-host identities.
 	Users map[string][]string `yaml:"users"`
@@ -313,6 +314,12 @@ func Parse(data []byte) (*Config, error) {
 	var doc yaml.Node
 	// cannot fail: the strict decode above already parsed the same bytes
 	_ = yaml.Unmarshal(data, &doc)
+	// A bare `permissions:` key decodes to a nil pointer (YAML null), which
+	// would silently DISABLE the enforcement its presence promises (T10.3).
+	// Presence is the documented switch, so null means the empty block.
+	if cfg.Permissions == nil && hasTopLevelKey(&doc, "permissions") {
+		cfg.Permissions = &Permissions{}
+	}
 	if err := cfg.validate(connectionLines(&doc)); err != nil {
 		return nil, err
 	}
@@ -320,6 +327,20 @@ func Parse(data []byte) (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// hasTopLevelKey reports whether the document's root mapping contains key.
+func hasTopLevelKey(doc *yaml.Node, key string) bool {
+	if len(doc.Content) == 0 {
+		return false
+	}
+	root := doc.Content[0]
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		if root.Content[i].Value == key {
+			return true
+		}
+	}
+	return false
 }
 
 // connectionLines returns the YAML line of each entry under "connections".
@@ -414,8 +435,11 @@ func (c *Config) validate(lines []int) error {
 				errs = append(errs, fmt.Errorf("permissions.users: key %q must be an email address", email))
 			}
 			for _, id := range identities {
+				// The host part is the repo-name prefix, which keeps its
+				// subpath for path-hosted instances ("git.example.com/gitlab"),
+				// so "/" is legal before the colon. The login never has one.
 				host, login, ok := strings.Cut(id, ":")
-				if !ok || host == "" || login == "" || strings.ContainsAny(id, " \t\r\n/") {
+				if !ok || host == "" || login == "" || strings.ContainsAny(id, " \t\r\n") || strings.Contains(login, "/") {
 					errs = append(errs, fmt.Errorf("permissions.users[%s]: identity %q must be \"<host>:<login>\"", email, id))
 				}
 			}

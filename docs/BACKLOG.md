@@ -356,6 +356,16 @@ post-filter); the same predicate gates listings, file/history/code-nav reads,
 and all MCP tools (denial ≡ 404). MCP runs stateless to stop session-principal
 smearing. Leak tests across search/stream/API/MCP. Deps: T9.1.
 
+**TD.5 · Epic 10 corrective review** ✅ 2026-07-11 — *release hardening*
+Closed the adversarial-review findings: permission-denial responses now match
+missing-repo responses in body and work performed (no existence/timing
+oracle); path-hosted GitLab/Gitea identity hosts are expressible in config;
+permissions email keys share auth's NFC normalization; a bare `permissions:`
+key enables enforcement as documented; retention prunes count-then-delete
+without materializing rows; shutdown drains in-flight requests (and their
+audit/usage writes) before the store closes; the audit page dedupes pages
+shifted by live writes. Regression tests pin each.
+
 **T10.4 · Multi-branch / tag indexing (`rev:`)** — *Sourcebot free (up to 64 revs/repo)*
 **Architectural, not a ticket-sized change** — HEAD-only is a core P1
 assumption (indexer, watch, freshness all lean on it). Gated on real demand;

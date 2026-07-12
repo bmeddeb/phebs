@@ -3,8 +3,10 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/api"
@@ -35,7 +37,9 @@ func (twoRepoStore) GetRepo(_ context.Context, name string) (*store.Repo, error)
 	case "github.com/ok/visible", "github.com/no/hidden":
 		return &store.Repo{Name: name, IndexedCommitHash: "aaa"}, nil
 	}
-	return nil, store.ErrNotFound
+	// the real store wraps with the repo name (surreal.go) — mirror it so
+	// body-parity assertions test the production message shapes
+	return nil, fmt.Errorf("repo %q: %w", name, store.ErrNotFound)
 }
 
 // T10.3: every per-repo read surface hides forbidden repos as if they did
@@ -68,22 +72,31 @@ func TestPermissionFilteringAcrossReadSurfaces(t *testing.T) {
 		}
 	}
 
-	// per-repo reads: forbidden is indistinguishable from missing (404),
-	// and never an existence-confirming 403
-	for _, path := range []string{
-		"/api/source?repo=github.com/no/hidden&path=f.go",
-		"/api/folder_contents?repo=github.com/no/hidden",
-		"/api/tree?repo=github.com/no/hidden",
-		"/api/blame?repo=github.com/no/hidden&path=f.go",
-		"/api/commits?repo=github.com/no/hidden",
-		"/api/commit?repo=github.com/no/hidden",
-		"/api/diff?repo=github.com/no/hidden",
+	// per-repo reads: forbidden is indistinguishable from missing — same 404
+	// status AND same body shape (a differing message is an existence oracle)
+	for _, tc := range []struct{ forbidden, missing string }{
+		{"/api/source?repo=github.com/no/hidden&path=f.go", "/api/source?repo=github.com/no/absent&path=f.go"},
+		{"/api/folder_contents?repo=github.com/no/hidden", "/api/folder_contents?repo=github.com/no/absent"},
+		{"/api/tree?repo=github.com/no/hidden", "/api/tree?repo=github.com/no/absent"},
+		{"/api/blame?repo=github.com/no/hidden&path=f.go", "/api/blame?repo=github.com/no/absent&path=f.go"},
+		{"/api/commits?repo=github.com/no/hidden", "/api/commits?repo=github.com/no/absent"},
+		{"/api/commit?repo=github.com/no/hidden", "/api/commit?repo=github.com/no/absent"},
+		{"/api/diff?repo=github.com/no/hidden", "/api/diff?repo=github.com/no/absent"},
 		// codenav endpoints share historyRef and are covered by the paths
 		// above; with a nil CodeNav service they 503 before the repo gate,
 		// identically for granted and forbidden repos.
 	} {
-		if rec := get(path); rec.Code != http.StatusNotFound {
-			t.Errorf("GET %s = %d, want 404", path, rec.Code)
+		forbidden, missing := get(tc.forbidden), get(tc.missing)
+		if forbidden.Code != http.StatusNotFound || missing.Code != http.StatusNotFound {
+			t.Errorf("GET %s/%s = %d/%d, want 404/404", tc.forbidden, tc.missing, forbidden.Code, missing.Code)
+			continue
+		}
+		shape := func(s string) string {
+			return strings.ReplaceAll(strings.ReplaceAll(s, "github.com/no/hidden", "R"), "github.com/no/absent", "R")
+		}
+		if shape(forbidden.Body.String()) != shape(missing.Body.String()) {
+			t.Errorf("GET %s: forbidden body %q differs from missing body %q — existence oracle",
+				tc.forbidden, forbidden.Body.String(), missing.Body.String())
 		}
 	}
 

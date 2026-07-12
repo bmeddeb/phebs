@@ -58,6 +58,20 @@ test('renders events and pages with load more', async () => {
   expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull()
 })
 
+test('load more dedupes rows shifted into the next page by new events', async () => {
+  api.fetchAudit
+    .mockResolvedValueOnce({ events: [event(1), event(2)], has_more: true })
+    // a new event arrived server-side, shifting event 2 into page two
+    .mockResolvedValueOnce({ events: [event(2), event(3)], has_more: false })
+
+  page()
+  await screen.findAllByText('auth.login')
+  fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
+  await waitFor(() => expect(api.fetchAudit).toHaveBeenCalledTimes(2))
+  // header row + 3 unique events — the duplicate e2 must not render twice
+  await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(4))
+})
+
 test('non-admins get a notice, no fetch', () => {
   page(false)
   expect(screen.getByText(/requires administrator access/)).toBeTruthy()

@@ -306,6 +306,10 @@ func New(opts Options) http.Handler {
 }
 
 func requireReadableRepo(ctx context.Context, opts Options, name string) error {
+	// T10.3: a permission denial is indistinguishable from a missing repo —
+	// disclosing existence would itself be a leak. The predicate resolves
+	// before the existence check so both paths cost the same work.
+	allow := repoFilter(ctx, opts)
 	repo, err := opts.Store.GetRepo(ctx, name)
 	if err != nil {
 		return err
@@ -313,9 +317,7 @@ func requireReadableRepo(ctx context.Context, opts Options, name string) error {
 	if repo.Deleting {
 		return fmt.Errorf("repo %q: %w", name, store.ErrNotFound)
 	}
-	// T10.3: a permission denial is indistinguishable from a missing repo —
-	// disclosing existence would itself be a leak.
-	if allow := repoFilter(ctx, opts); allow != nil && !allow(*repo) {
+	if allow != nil && !allow(*repo) {
 		return fmt.Errorf("repo %q: %w", name, store.ErrNotFound)
 	}
 	return nil

@@ -97,15 +97,41 @@ func (s *Surreal) ListAuditEvents(ctx context.Context, offset, limit int) ([]Aud
 }
 
 func (s *Surreal) PruneAuditEvents(ctx context.Context, cutoff time.Time) (int, error) {
-	results, err := surrealdb.Query[[]auditEventRec](ctx, s.db,
-		"DELETE audit_event WHERE created_at <= $cutoff RETURN BEFORE",
-		map[string]any{"cutoff": cutoff})
+	n, err := s.pruneByCreatedAt(ctx, "audit_event", cutoff)
 	if err != nil {
 		return 0, fmt.Errorf("prune audit events: %w", err)
 	}
+	return n, nil
+}
+
+// pruneByCreatedAt counts then deletes with RETURN NONE so a large backlog
+// never ships row payloads over the websocket. New rows are stamped with the
+// current time, so nothing lands at or before a past cutoff between the two
+// statements.
+func (s *Surreal) pruneByCreatedAt(ctx context.Context, table string, cutoff time.Time) (int, error) {
+	type counts struct {
+		N int `json:"n"`
+	}
+	results, err := surrealdb.Query[[]counts](ctx, s.db,
+		"SELECT count() AS n FROM type::table($table) WHERE created_at <= $cutoff GROUP ALL",
+		map[string]any{"table": table, "cutoff": cutoff})
+	if err != nil {
+		return 0, err
+	}
 	n := 0
 	for _, result := range *results {
-		n += len(result.Result)
+		if len(result.Result) > 0 {
+			n = result.Result[0].N
+			break
+		}
+	}
+	if n == 0 {
+		return 0, nil
+	}
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		"DELETE type::table($table) WHERE created_at <= $cutoff RETURN NONE",
+		map[string]any{"table": table, "cutoff": cutoff}); err != nil {
+		return 0, err
 	}
 	return n, nil
 }
