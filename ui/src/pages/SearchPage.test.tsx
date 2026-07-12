@@ -18,6 +18,7 @@ const stream = vi.hoisted(() => ({} as Callbacks))
 
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
+  fetchRepoStatus: async () => [],
   streamSearch: (
     q: string,
     onBatch: Callbacks['onBatch'],
@@ -68,6 +69,13 @@ const bIndex: FileResult = {
   language: 'TypeScript',
   chunks: [chunk('function index() {\n', 7, [range(7, 1, 7, 9)])],
 }
+const contextBeforeMatch: FileResult = {
+  repo: 'github.com/context/lines',
+  path: 'context.go',
+  ref: 'cccccccccccccccccccccccccccccccccccccccc',
+  language: 'Go',
+  chunks: [chunk('// context\nfunc match() {', 2, [range(3, 6, 3, 11)])],
+}
 const batch = (files: FileResult[]): SearchResult => ({
   files,
   stats: { match_count: files.length, file_count: files.length, duration_ms: 5 },
@@ -105,17 +113,39 @@ afterEach(cleanup)
 test('streaming: batches render incrementally while phase stays streaming', async () => {
   renderSearch()
   await act(async () => stream.onBatch!(batch([aMain, aUtil])))
-  expect(document.body.textContent).toContain('2 matches in 2 files')
+  expect(document.body.textContent).toContain('2 matches · 2 files')
   expect(document.body.textContent).toContain('searching…')
+  expect(screen.getByTestId('streaming-skeleton')).toBeTruthy()
   expect(screen.getByText('main.go')).toBeTruthy()
   expect(screen.getByText('util.go')).toBeTruthy()
   expect(screen.queryByText('index.ts')).toBeNull()
 
   await act(async () => stream.onBatch!(batch([bIndex])))
-  expect(document.body.textContent).toContain('3 matches in 3 files')
+  expect(document.body.textContent).toContain('3 matches · 3 files')
   expect(document.body.textContent).toContain('searching…')
+  expect(screen.getByTestId('streaming-skeleton')).toBeTruthy()
   expect(screen.getByText('index.ts')).toBeTruthy()
   expect(screen.getByText('github.com/b/two')).toBeTruthy()
+})
+
+test('streaming skeleton unmounts when the stream completes', async () => {
+  renderSearch()
+  await act(async () => stream.onBatch!(batch([aMain])))
+  expect(screen.getByTestId('streaming-skeleton')).toBeTruthy()
+
+  await act(async () => stream.onDone!({ match_count: 1, file_count: 1, duration_ms: 3 }))
+  expect(screen.queryByTestId('streaming-skeleton')).toBeNull()
+  expect(screen.getByRole('button', { name: /github\.com\/a\/one/, expanded: true })).toBeTruthy()
+})
+
+test('stopping a stream preserves partial-state semantics', async () => {
+  renderSearch()
+  fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
+
+  expect(document.body.textContent).toContain('stopped')
+  expect(document.body.textContent).not.toContain('No results for foo.')
+  expect(screen.queryByTestId('streaming-skeleton')).toBeNull()
+  expect(screen.getByRole('button', { name: 'Search' })).toBeTruthy()
 })
 
 test('done with zero files shows no-results message', async () => {
@@ -169,6 +199,28 @@ test('typing guard: keys are ignored while the input is focused', async () => {
   key('j')
   key('Enter')
   expect(window.location.hash).toBe('')
+})
+
+test('keyboard shortcuts are ignored while another control is focused', async () => {
+  await allFiles()
+  key('j')
+  const fold = screen.getByRole('button', { name: /github\.com\/a\/one/, expanded: true })
+  fold.focus()
+  key('Enter')
+  expect(window.location.hash).toBe('')
+})
+
+test('keyboard selection highlights the first match rather than leading context', async () => {
+  renderSearch()
+  await act(async () => stream.onBatch!(batch([contextBeforeMatch])))
+  await blurInput()
+  key('j')
+  expect(document.querySelector('[data-selected-line="true"]')?.textContent).toContain('3func match() {')
+})
+
+test('the search textbox has a stable accessible name', () => {
+  renderSearch()
+  expect(screen.getByRole('textbox', { name: 'Search code' })).toBeTruthy()
 })
 
 test('facet rows toggle lang:/repo: terms into the query', async () => {

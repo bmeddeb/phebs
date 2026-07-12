@@ -843,11 +843,6 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 Live UI development: run `make dev-api`, then `cd ui && npm run dev` — Vite
 serves on :5173 and proxies `/api` to :3070.
 
-Repository documentation map: [PLAN.md](../PLAN.md) (architecture + every
-decision as a dated ADR) · [PORT_MAP.md](./PORT_MAP.md) (upstream analysis
-and scope) · [BACKLOG.md](./BACKLOG.md) (tickets, acceptance criteria, and
-what's done) · this manual (user-facing behavior).
-
 phebs is an independent, reference-only reimplementation inspired by
 [Sourcebot](https://github.com/sourcebot-dev/sourcebot) — no upstream code is
 used. phebs is licensed Apache-2.0.

@@ -1,30 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Input } from 'baseui/input'
-import { Button } from 'baseui/button'
-import { Tag, KIND as TAG_KIND } from 'baseui/tag'
 import { Notification, KIND } from 'baseui/notification'
 import type { LanguageSupport } from '@codemirror/language'
-import { streamSearch } from '../api'
+import { fetchRepoStatus, streamSearch } from '../api'
 import type { FileResult, Range, Stats } from '../api'
 import { FOCUS_SEARCH, href, navigate } from '../router'
 import { usePhebsTokens, useMode, FONTS } from '../theme'
 import { languageFor, langColor } from '../lang'
 import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
-import { repoFilter, runeColumnToUTF16Offset, splitQueryTerms } from '../util'
+import { isAbortError, relTime, repoFilter, runeColumnToUTF16Offset, splitQueryTerms } from '../util'
 
-type Phase = 'idle' | 'streaming' | 'done' | 'error'
+type Phase = 'idle' | 'streaming' | 'stopped' | 'done' | 'error'
 
 const fileKey = (f: FileResult) => f.repo + '\0' + f.ref + '\0' + f.path
+const firstMatchLine = (f: FileResult) =>
+  f.chunks.find((chunk) => chunk.ranges.length > 0)?.ranges[0]?.start_line
 
 export default function SearchPage({ params }: { params: URLSearchParams }) {
   const urlQuery = params.get('q') ?? ''
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const { mode } = useMode()
   const [input, setInput] = useState(urlQuery)
   const [files, setFiles] = useState<FileResult[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
+  const [indexedAtByRepo, setIndexedAtByRepo] = useState<Map<string, string>>(new Map())
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -33,11 +35,29 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   const stopRef = useRef<() => void>(() => {})
   const inputRef = useRef<HTMLInputElement>(null)
   const rowRefs = useRef(new Map<string, HTMLDivElement>())
+  const seenReposRef = useRef(new Set<string>())
+  const seenFilesRef = useRef(new Set<string>())
 
   useEffect(() => {
     const onFocus = () => inputRef.current?.focus()
     window.addEventListener(FOCUS_SEARCH, onFocus)
     return () => window.removeEventListener(FOCUS_SEARCH, onFocus)
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetchRepoStatus(controller.signal)
+      .then((repos) => {
+        const indexed = new Map<string, string>()
+        for (const repo of repos) {
+          if (repo.indexed_at) indexed.set(repo.name, repo.indexed_at)
+        }
+        setIndexedAtByRepo(indexed)
+      })
+      .catch((cause) => {
+        if (!isAbortError(cause)) setIndexedAtByRepo(new Map())
+      })
+    return () => controller.abort()
   }, [])
 
   // the hash is the source of truth: searching = navigating
@@ -87,12 +107,37 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     [groups, collapsed],
   )
 
+  const entering = useMemo(() => {
+    const repos = new Set<string>()
+    const files = new Set<string>()
+    for (const [repo, repoFiles] of groups) {
+      if (!seenReposRef.current.has(repo)) repos.add(repo)
+      for (const file of repoFiles) {
+        const key = fileKey(file)
+        if (!seenFilesRef.current.has(key)) files.add(key)
+      }
+    }
+    return { repos, files }
+  }, [groups])
+
+  useEffect(() => {
+    for (const [repo, repoFiles] of groups) {
+      seenReposRef.current.add(repo)
+      for (const file of repoFiles) seenFilesRef.current.add(fileKey(file))
+    }
+  }, [groups])
+
+  useEffect(() => {
+    seenReposRef.current.clear()
+    seenFilesRef.current.clear()
+  }, [urlQuery, searchGeneration])
+
   // keyboard navigation: j/k move a file cursor, Enter opens, y copies, o folds
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = document.activeElement
-      const typing = el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
-      if (typing || e.metaKey || e.ctrlKey || e.altKey) return
+      const interactive = el instanceof Element && el.closest('input, textarea, select, button, a, [contenteditable="true"], [role="button"], [role="link"]')
+      if (interactive || e.metaKey || e.ctrlKey || e.altKey) return
       if (e.key === 'j' || e.key === 'k') {
         e.preventDefault()
         setSelected((s) => {
@@ -105,7 +150,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
           repo: f.repo,
           path: f.path,
           ref: f.ref,
-          L: String(f.chunks[0]?.ranges[0]?.start_line ?? 1),
+          L: String(firstMatchLine(f) ?? 1),
         })
       } else if (e.key === 'y' && selected >= 0 && visible[selected]) {
         navigator.clipboard?.writeText(visible[selected].path)
@@ -139,6 +184,11 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
 
   const repoCount = groups.length
 
+  const stopSearch = () => {
+    stopRef.current()
+    setPhase('stopped')
+  }
+
   return (
     <div>
       <form
@@ -149,124 +199,104 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
           if (next === urlQuery) setSearchGeneration((generation) => generation + 1)
           else navigate('/search', { q: next })
         }}
-        className={css({ display: 'flex', gap: '8px' })}
+        className={css({ width: '100%', position: 'relative' })}
       >
-        <div className={css({ flex: 1 })}>
-          <Input
-            inputRef={inputRef as React.RefObject<HTMLInputElement>}
-            value={input}
-            onChange={(e) => setInput(e.currentTarget.value)}
-            placeholder='Search code — try  func.*Parse  repo:zoekt  lang:go  "exact phrase"'
-            clearable
-            autoFocus
-            startEnhancer={<SearchIcon />}
-            overrides={{
-              Root: { style: { height: '48px', borderTopLeftRadius: '8px', borderTopRightRadius: '8px', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' } },
-              Input: { style: { fontFamily: FONTS.MONO, fontSize: '15px' } },
-            }}
+        <Input
+          inputRef={inputRef as React.RefObject<HTMLInputElement>}
+          value={input}
+          onChange={(e) => setInput(e.currentTarget.value)}
+          name="q"
+          aria-label="Search code"
+          placeholder='Search code — try func.*Parse repo:zoekt lang:go "exact phrase"'
+          clearable
+          autoFocus
+          startEnhancer={<SearchIcon size={14} />}
+          endEnhancer={(
+            <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
+              <Kbd>/</Kbd>
+              <button
+                type={phase === 'streaming' ? 'button' : 'submit'}
+                onClick={phase === 'streaming' ? stopSearch : undefined}
+                className={css({
+                  height: '32px',
+                  minWidth: '70px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  paddingLeft: '14px',
+                  paddingRight: '14px',
+                  fontFamily: FONTS.SANS,
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: phase === 'streaming' ? tok.textSecondary : tok.pageBg,
+                  backgroundColor: phase === 'streaming' ? tok.fill : mode === 'dark' ? tok.textSecondary : tok.textPrimary,
+                  boxShadow: phase === 'streaming' ? `inset 0 0 0 1px ${tok.kbdBorder}` : 'none',
+                  cursor: 'pointer',
+                  ':hover': { backgroundColor: phase === 'streaming' ? tok.kbdBorder : mode === 'dark' ? tok.textTertiary : '#333333' },
+                  ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
+                })}
+              >
+                {phase === 'streaming' ? 'Stop' : 'Search'}
+              </button>
+            </div>
+          )}
+          overrides={{
+            Root: { style: { height: '44px', borderTopLeftRadius: '8px', borderTopRightRadius: '8px', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' } },
+            InputContainer: { style: { height: '44px' } },
+            Input: { style: { fontFamily: FONTS.MONO, fontSize: '14px', lineHeight: '20px' } },
+            StartEnhancer: { style: { paddingLeft: '14px', paddingRight: '2px' } },
+            EndEnhancer: { style: { paddingLeft: '8px', paddingRight: '6px', backgroundColor: 'transparent' } },
+          }}
+        />
+        {phase === 'streaming' && (
+          <div
+            aria-hidden="true"
+            className={css({
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              bottom: '-6px',
+              height: '2px',
+              borderRadius: '2px',
+              backgroundImage: `linear-gradient(90deg, transparent 0%, ${tok.accent} 50%, transparent 100%)`,
+              backgroundSize: '50% 100%',
+              backgroundRepeat: 'no-repeat',
+              animationName: { '0%': { backgroundPosition: '-60% 0' }, '100%': { backgroundPosition: '160% 0' } },
+              animationDuration: '1.2s',
+              animationTimingFunction: 'linear',
+              animationIterationCount: 'infinite',
+              '@media (prefers-reduced-motion: reduce)': { animationName: 'none', backgroundColor: tok.accent, backgroundImage: 'none' },
+            })}
           />
-        </div>
-        {phase === 'streaming' ? (
-          <Button
-            type="button"
-            kind="secondary"
-            onClick={() => {
-              stopRef.current()
-              setPhase('done')
-            }}
-            overrides={{ BaseButton: { style: { height: '48px', borderTopLeftRadius: '8px', borderTopRightRadius: '8px', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' } } }}
-          >
-            Stop
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            overrides={{ BaseButton: { style: { height: '48px', borderTopLeftRadius: '8px', borderTopRightRadius: '8px', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' } } }}
-          >
-            Search
-          </Button>
         )}
       </form>
 
-      <HelperChips input={input} setInput={setInput} inputRef={inputRef} />
-
-      {phase === 'streaming' && (
-        <div
-          className={css({
-            height: '2px',
-            marginTop: '10px',
-            borderRadius: '2px',
-            backgroundImage: `linear-gradient(90deg, transparent 0%, ${tok.accent} 50%, transparent 100%)`,
-            backgroundSize: '50% 100%',
-            backgroundRepeat: 'no-repeat',
-            animationName: { '0%': { backgroundPosition: '-60% 0' }, '100%': { backgroundPosition: '160% 0' } },
-            animationDuration: '1.2s',
-            animationTimingFunction: 'linear',
-            animationIterationCount: 'infinite',
-          })}
-        />
-      )}
-
-      {phase !== 'idle' && (
-        <div
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          className={css({
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '13px',
-            color: tok.textTertiary,
-            marginTop: '12px',
-          })}
-        >
-          {phase === 'streaming' && (
-            <span
-              className={css({
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: tok.statusBlue,
-                animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
-                animationDuration: '1.4s',
-                animationIterationCount: 'infinite',
-              })}
-            />
-          )}
-          <span>
-            <b className={css({ color: tok.textPrimary })}>{countMatches(files)}</b> matches in{' '}
-            <b className={css({ color: tok.textPrimary })}>{files.length}</b> files
-            {stats ? ` · ${stats.duration_ms}ms` : ''}
-            {repoCount > 0 ? ` · ${repoCount} ${repoCount === 1 ? 'repository' : 'repositories'}` : ''}
-            {phase === 'streaming' ? ' · searching…' : ''}
-          </span>
-          <div className={css({ flex: 1 })} />
-          {visible.length > 0 && (
-            <span className={css({ display: 'flex', gap: '10px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { display: 'none' } })}>
-              <Kbd>j</Kbd><Kbd>k</Kbd> navigate · <Kbd>↵</Kbd> open · <Kbd>y</Kbd> copy · <Kbd>o</Kbd> fold
-            </span>
-          )}
-        </div>
-      )}
+      <SearchMeta
+        input={input}
+        setInput={setInput}
+        inputRef={inputRef}
+        phase={phase}
+        files={files}
+        stats={stats}
+        repoCount={repoCount}
+        showNavigation={visible.length > 0}
+      />
 
       <div className={css({
         display: 'flex',
         gap: '28px',
-        marginTop: '16px',
+        marginTop: '14px',
         alignItems: 'flex-start',
         '@media screen and (max-width: 720px)': { flexDirection: 'column', gap: '12px' },
       })}>
         {files.length > 0 && (
           <FacetRail files={files} query={urlQuery} />
         )}
-        <div className={css({ flex: 1, minWidth: 0 })}>
+        <div className={css({ flex: '1 1 0', minWidth: 0, '@media screen and (max-width: 720px)': { width: '100%' } })}>
           {phase === 'error' && (
             <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
               {error}
             </Notification>
           )}
-          {phase === 'streaming' && files.length === 0 && <SkeletonCards />}
           {phase === 'done' && files.length === 0 && (
             <div className={css({ padding: '48px 0', textAlign: 'center', color: tok.textTertiary })}>
               No results for <span className={css({ fontFamily: FONTS.MONO, color: tok.textPrimary })}>{urlQuery}</span>.
@@ -277,6 +307,9 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
               key={repo}
               repo={repo}
               files={repoFiles}
+              indexedAt={indexedAtByRepo.get(repo)}
+              animateCard={entering.repos.has(repo)}
+              enteringFiles={entering.files}
               open={!collapsed.has(repo)}
               onToggle={() => toggleGroup(repo)}
               selectedKey={selected >= 0 && visible[selected] ? fileKey(visible[selected]) : ''}
@@ -286,6 +319,7 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
               }}
             />
           ))}
+          {phase === 'streaming' && <SkeletonCards />}
         </div>
       </div>
     </div>
@@ -343,7 +377,7 @@ function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
 
   return (
     <aside className={css({
-      width: '224px',
+      width: '200px',
       flexShrink: 0,
       '@media screen and (max-width: 720px)': {
         display: 'flex',
@@ -367,24 +401,24 @@ function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
               <span
                 aria-hidden="true"
                 className={css({
-                  width: '14px',
-                  height: '14px',
+                  width: '13px',
+                  height: '13px',
                   border: `1px solid ${active ? tok.accent : tok.kbdBorder}`,
                   borderRadius: '3px',
                   backgroundColor: active ? tok.accent : 'transparent',
-                  color: tok.pageBg,
+                  color: '#FFFFFF',
                   fontSize: '11px',
-                  lineHeight: '12px',
+                  lineHeight: '11px',
                   textAlign: 'center',
                   flexShrink: 0,
                 })}
               >
                 {active ? '✓' : ''}
               </span>
-              <span className={css({ flex: 1, fontSize: '13px', color: tok.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
+              <span className={css({ flex: 1, fontSize: '12.5px', color: tok.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>
                 {shortRepo(repo)}
               </span>
-              <span className={css({ fontSize: '12px', color: tok.textTertiary })}>{n}</span>
+              <span className={css({ fontSize: '11px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{n}</span>
             </FacetRow>
           )
         })}
@@ -402,10 +436,10 @@ function FacetRail({ files, query }: { files: FileResult[]; query: string }) {
                 onClick={() => toggle(term)}
               >
                 <span className={css({ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: langColor('x.' + lang) })} />
-                <span className={css({ flex: 1, fontSize: '13px', fontWeight: active ? 600 : 400, color: active ? tok.textPrimary : tok.textSecondary })}>
+                <span className={css({ flex: 1, fontSize: '12.5px', fontWeight: active ? 600 : 400, color: active ? tok.textPrimary : tok.textSecondary })}>
                   {lang}
                 </span>
-                <span className={css({ fontSize: '12px', color: tok.textTertiary })}>{n}</span>
+                <span className={css({ fontSize: '11px', color: tok.textTertiary, fontVariantNumeric: 'tabular-nums' })}>{n}</span>
               </FacetRow>
             )
           })}
@@ -424,6 +458,8 @@ function FacetSection({ title, children }: { title: string; children: React.Reac
       '@media screen and (max-width: 720px)': {
         flex: '1 0 180px',
         marginBottom: 0,
+        maxHeight: '180px',
+        overflowY: 'auto',
       },
     })}>
       <div className={css({ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase', color: tok.textTertiary, marginBottom: '6px' })}>
@@ -457,7 +493,7 @@ function FacetRow({
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        height: '32px',
+        height: '30px',
         paddingLeft: '4px',
         paddingRight: '4px',
         borderRadius: '6px',
@@ -478,53 +514,105 @@ function FacetRow({
 
 const OPERATORS = ['repo:', 'lang:', 'file:', 'sym:', 'case:yes', '-', '"exact phrase"']
 
-function HelperChips({
+function SearchMeta({
   input,
   setInput,
   inputRef,
+  phase,
+  files,
+  stats,
+  repoCount,
+  showNavigation,
 }: {
   input: string
   setInput: (s: string) => void
   inputRef: React.RefObject<HTMLInputElement | null>
+  phase: Phase
+  files: FileResult[]
+  stats: Stats | null
+  repoCount: number
+  showNavigation: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const matchCount = countMatches(files)
   const insert = (op: string) => {
     const sep = input && !input.endsWith(' ') ? ' ' : ''
     setInput(input + sep + op)
     inputRef.current?.focus()
   }
   return (
-    <div className={css({ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', flexWrap: 'wrap' })}>
-      {OPERATORS.map((op) => (
-        <button
-          key={op}
-          type="button"
-          onClick={() => insert(op)}
-          className={css({
-            fontFamily: FONTS.MONO,
-            fontSize: '12px',
-            padding: '4px 8px',
-            borderRadius: '6px',
-            border: 'none',
-            backgroundColor: tok.fill,
-            color: tok.textSecondary,
-            cursor: 'pointer',
-            ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary },
-          })}
-        >
-          {op}
-        </button>
-      ))}
+    <div className={css({ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px', minHeight: '22px', '@media screen and (max-width: 900px)': { alignItems: 'flex-start', flexDirection: 'column' } })}>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' })}>
+        {OPERATORS.map((op) => (
+          <button
+            key={op}
+            type="button"
+            onClick={() => insert(op)}
+            className={css({
+              fontFamily: FONTS.MONO,
+              fontSize: '11px',
+              lineHeight: '14px',
+              padding: '3px 7px',
+              borderRadius: '5px',
+              border: 'none',
+              backgroundColor: tok.fill,
+              color: tok.textSecondary,
+              cursor: 'pointer',
+              ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary },
+              ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
+            })}
+          >
+            {op}
+          </button>
+        ))}
+      </div>
       <div className={css({ flex: 1 })} />
-      <a
-        href="https://github.com/sourcegraph/zoekt/blob/main/doc/query_syntax.md"
-        target="_blank"
-        rel="noreferrer"
-        className={css({ fontSize: '12px', color: tok.textTertiary, textDecoration: 'none', ':hover': { color: tok.accent } })}
+      <div
+        className={css({ display: 'flex', alignItems: 'center', gap: '7px', minHeight: '22px', fontSize: '12px', color: tok.textTertiary, whiteSpace: 'nowrap', '@media screen and (max-width: 720px)': { whiteSpace: 'normal', flexWrap: 'wrap' } })}
       >
-        Search syntax ↗
-      </a>
+        {phase === 'streaming' && (
+          <span
+            aria-hidden="true"
+            className={css({
+              width: '8px',
+              height: '8px',
+              flexShrink: 0,
+              borderRadius: '50%',
+              backgroundColor: tok.statusBlue,
+              animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
+              animationDuration: '1.4s',
+              animationIterationCount: 'infinite',
+              '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+            })}
+          />
+        )}
+        {phase !== 'idle' && (
+          <span role="status" aria-live="polite" aria-atomic="true" className={css({ fontVariantNumeric: 'tabular-nums' })}>
+            <b className={css({ color: tok.textPrimary, fontWeight: 600 })}>{matchCount}</b> {matchCount === 1 ? 'match' : 'matches'} ·{' '}
+            <b className={css({ color: tok.textPrimary, fontWeight: 600 })}>{files.length}</b> {files.length === 1 ? 'file' : 'files'}
+            {stats ? ` · ${stats.duration_ms}ms · ${repoCount} ${repoCount === 1 ? 'repository' : 'repositories'}` : ''}
+            {phase === 'streaming' ? ' · searching…' : ''}
+            {phase === 'stopped' ? ' · stopped' : ''}
+          </span>
+        )}
+        {showNavigation && (
+          <>
+            <span aria-hidden="true" className={css({ width: '1px', height: '12px', backgroundColor: tok.innerSep, '@media screen and (max-width: 720px)': { display: 'none' } })} />
+            <span className={css({ display: 'flex', alignItems: 'center', gap: '5px', '@media screen and (max-width: 720px)': { display: 'none' } })}>
+              <Kbd>j</Kbd><Kbd>k</Kbd> navigate
+            </span>
+          </>
+        )}
+        <a
+          href="https://github.com/sourcegraph/zoekt/blob/main/doc/query_syntax.md"
+          target="_blank"
+          rel="noreferrer"
+          className={css({ fontSize: '12px', color: tok.textTertiary, textDecoration: 'none', ':hover': { color: tok.accent } })}
+        >
+          Syntax ↗
+        </a>
+      </div>
     </div>
   )
 }
@@ -536,6 +624,9 @@ function countMatches(files: FileResult[]): number {
 function RepoGroup({
   repo,
   files,
+  indexedAt,
+  animateCard,
+  enteringFiles,
   open,
   onToggle,
   selectedKey,
@@ -543,6 +634,9 @@ function RepoGroup({
 }: {
   repo: string
   files: FileResult[]
+  indexedAt?: string
+  animateCard: boolean
+  enteringFiles: Set<string>
   open: boolean
   onToggle: () => void
   selectedKey: string
@@ -552,25 +646,67 @@ function RepoGroup({
   const tok = usePhebsTokens()
   const matches = countMatches(files)
   return (
-    <section className={css({ marginTop: '28px' })}>
+    <section
+      className={css({
+        border: `1px solid ${tok.cardBorder}`,
+        borderRadius: '8px',
+        marginBottom: '14px',
+        overflow: 'hidden',
+        backgroundColor: tok.pageBg,
+        ...(animateCard ? {
+          animationName: { from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+          animationDuration: '320ms',
+          animationTimingFunction: 'cubic-bezier(.22,1,.36,1)',
+          '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+        } : {}),
+      })}
+    >
       <button
         type="button"
         aria-expanded={open}
         onClick={onToggle}
-        className={css({ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', border: 'none', background: 'none', padding: '0 0 8px 0', cursor: 'pointer', color: tok.textPrimary, textAlign: 'left' })}
+        className={css({
+          display: 'flex',
+          alignItems: 'center',
+          gap: '7px',
+          width: '100%',
+          height: '38px',
+          border: 'none',
+          borderBottom: open ? `1px solid ${tok.innerSep}` : 'none',
+          backgroundColor: tok.bandBg,
+          paddingLeft: '12px',
+          paddingRight: '12px',
+          cursor: 'pointer',
+          color: tok.textPrimary,
+          textAlign: 'left',
+          ':hover': { backgroundColor: tok.hoverFill },
+          ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
+        })}
       >
         <span className={css({ color: tok.textTertiary, display: 'flex' })}>
-          {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         </span>
-        <span className={css({ fontSize: '16px', fontWeight: 500, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{repo}</span>
-        <Tag closeable={false} kind={TAG_KIND.neutral}>
+        <span className={css({ fontSize: '14px', fontWeight: 600, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{repo}</span>
+        <span className={css({ fontSize: '12px', color: tok.textTertiary, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' })}>
           {matches} {matches === 1 ? 'match' : 'matches'} · {files.length} {files.length === 1 ? 'file' : 'files'}
-        </Tag>
-        <span className={css({ flex: 1, height: '1px', backgroundColor: tok.innerSep })} />
+        </span>
+        <span className={css({ flex: 1 })} />
+        {indexedAt && (
+          <span className={css({ fontSize: '11px', color: tok.gutter, whiteSpace: 'nowrap' })}>
+            indexed {relTime(indexedAt)}
+          </span>
+        )}
       </button>
       {open &&
-        files.map((f) => (
-          <FileBlock key={fileKey(f)} file={f} selected={fileKey(f) === selectedKey} registerRef={registerRef} />
+        files.map((f, index) => (
+          <FileBlock
+            key={fileKey(f)}
+            file={f}
+            first={index === 0}
+            selected={fileKey(f) === selectedKey}
+            animate={enteringFiles.has(fileKey(f)) && !animateCard}
+            registerRef={registerRef}
+          />
         ))}
     </section>
   )
@@ -578,11 +714,15 @@ function RepoGroup({
 
 function FileBlock({
   file,
+  first,
   selected,
+  animate,
   registerRef,
 }: {
   file: FileResult
+  first: boolean
   selected: boolean
+  animate: boolean
   registerRef: (key: string, el: HTMLDivElement | null) => void
 }) {
   const [css] = useStyletron()
@@ -596,7 +736,7 @@ function FileBlock({
     }
   }, [file.path])
 
-  const firstLine = file.chunks[0]?.ranges[0]?.start_line
+  const firstLine = firstMatchLine(file)
   const matches = file.chunks.reduce((m, c) => m + c.ranges.length, 0)
   const slash = file.path.lastIndexOf('/')
   const dir = slash === -1 ? '' : file.path.slice(0, slash + 1)
@@ -612,29 +752,31 @@ function FileBlock({
     <div
       ref={(el) => registerRef(fileKey(file), el)}
       className={css({
-        border: `1px solid ${selected ? tok.accent : tok.cardBorder}`,
-        boxShadow: selected ? `0 0 0 1px ${tok.accent}` : 'none',
-        borderRadius: '8px',
-        marginTop: '10px',
-        overflow: 'hidden',
+        borderTop: first ? 'none' : `1px solid ${tok.innerSep}`,
         backgroundColor: tok.pageBg,
+        ...(animate ? {
+          animationName: { from: { opacity: 0, transform: 'translateY(7px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+          animationDuration: '320ms',
+          animationTimingFunction: 'cubic-bezier(.22,1,.36,1)',
+          '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+        } : {}),
       })}
     >
-      <div className={css({ height: '40px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', paddingRight: '10px', borderBottom: `1px solid ${tok.innerSep}` })}>
+      <div className={css({ height: '32px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', paddingRight: '10px', borderBottom: `1px solid ${tok.innerSep}` })}>
         <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(file.path), flexShrink: 0 })} />
-        <a href={fileHref} className={css({ textDecoration: 'none', fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>
+        <a href={fileHref} className={css({ textDecoration: 'none', fontSize: '12.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>
           <span className={css({ color: tok.textTertiary })}>{dir}</span>
           <span className={css({ color: tok.textPrimary, fontWeight: 500 })}>{name}</span>
         </a>
         <div className={css({ flex: 1 })} />
-        <span className={css({ fontSize: '12px', color: tok.textTertiary, whiteSpace: 'nowrap' })}>{matches} {matches === 1 ? 'match' : 'matches'}</span>
+        <span className={css({ fontSize: '11px', color: tok.textTertiary, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' })}>{matches}</span>
         <CopyButton text={file.path} title="Copy path" />
-        <a href={fileHref} title="Open file" className={css({ display: 'flex', color: tok.textTertiary, padding: '4px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}>
-          <OpenIcon />
+        <a href={fileHref} title="Open file" className={css({ display: 'flex', color: tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}>
+          <OpenIcon size={13} />
         </a>
       </div>
       {file.chunks.map((chunk, i) => (
-        <ChunkView key={i} chunk={chunk} file={file} lang={lang} first={i === 0} />
+        <ChunkView key={i} chunk={chunk} file={file} lang={lang} first={i === 0} selectedLine={selected ? firstLine : undefined} />
       ))}
     </div>
   )
@@ -645,11 +787,13 @@ function ChunkView({
   file,
   lang,
   first,
+  selectedLine,
 }: {
   chunk: FileResult['chunks'][number]
   file: FileResult
   lang: LanguageSupport | null
   first: boolean
+  selectedLine?: number
 }) {
   const [css] = useStyletron()
   const { mode } = useMode()
@@ -660,7 +804,15 @@ function ChunkView({
       {lines.map((line, i) => {
         const lineNo = chunk.start_line + i
         return (
-          <div key={i} className={css({ display: 'flex', fontFamily: FONTS.MONO, fontSize: '13px', lineHeight: '20px', ':hover': { backgroundColor: tok.hoverFill } })}>
+          <div key={i} data-selected-line={lineNo === selectedLine ? 'true' : undefined} className={css({
+            display: 'flex',
+            fontFamily: FONTS.MONO,
+            fontSize: '12.5px',
+            lineHeight: '18px',
+            backgroundColor: lineNo === selectedLine ? tok.selectedLineBg : 'transparent',
+            boxShadow: lineNo === selectedLine ? `inset 2px 0 0 ${tok.accent}` : 'none',
+            ':hover': { backgroundColor: lineNo === selectedLine ? tok.selectedLineBg : tok.hoverFill },
+          })}>
             <a
               href={href('/file', {
                 repo: file.repo,
@@ -668,7 +820,7 @@ function ChunkView({
                 ref: file.ref,
                 L: String(lineNo),
               })}
-              className={css({ flexShrink: 0, width: '48px', paddingRight: '12px', textAlign: 'right', color: tok.gutter, textDecoration: 'none', userSelect: 'none', ':hover': { color: tok.accent } })}
+              className={css({ flexShrink: 0, width: '40px', paddingRight: '10px', textAlign: 'right', color: tok.gutter, textDecoration: 'none', userSelect: 'none', ':hover': { color: tok.accent } })}
             >
               {lineNo}
             </a>
@@ -742,9 +894,9 @@ function CopyButton({ text, title }: { text: string; title: string }) {
         setDone(true)
         setTimeout(() => setDone(false), 1200)
       }}
-      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.statusGreen : tok.textTertiary, padding: '4px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
+      className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.statusGreen : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
     >
-      {done ? <CheckIcon /> : <CopyIcon />}
+      {done ? <CheckIcon size={13} /> : <CopyIcon size={13} />}
     </button>
   )
 }
@@ -759,21 +911,18 @@ function SkeletonCards() {
     animationDuration: '1.4s',
     animationIterationCount: 'infinite',
     borderRadius: '4px',
+    '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
   })
   return (
-    <div>
-      {[0, 1].map((k) => (
-        <div key={k} className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', marginTop: '10px', overflow: 'hidden' })}>
-          <div className={css({ height: '40px', display: 'flex', alignItems: 'center', paddingLeft: '12px', borderBottom: `1px solid ${tok.innerSep}` })}>
-            <div className={`${shimmer} ${css({ width: '220px', height: '12px' })}`} />
-          </div>
-          <div className={css({ padding: '12px' })}>
-            {[60, 80, 45].map((w, i) => (
-              <div key={i} className={`${shimmer} ${css({ width: `${w}%`, height: '10px', marginBottom: '8px' })}`} />
-            ))}
-          </div>
-        </div>
-      ))}
+    <div data-testid="streaming-skeleton" className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', marginBottom: '14px', overflow: 'hidden' })} aria-hidden="true">
+      <div className={css({ height: '38px', display: 'flex', alignItems: 'center', paddingLeft: '12px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.innerSep}` })}>
+        <div className={`${shimmer} ${css({ width: '200px', height: '11px' })}`} />
+      </div>
+      <div className={css({ display: 'grid', gap: '8px', padding: '10px 12px' })}>
+        {[60, 80, 45].map((w, i) => (
+          <div key={i} className={`${shimmer} ${css({ width: `${w}%`, height: '9px' })}`} />
+        ))}
+      </div>
     </div>
   )
 }

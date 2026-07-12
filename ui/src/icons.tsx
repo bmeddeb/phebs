@@ -1,6 +1,62 @@
 // Inline 16×16 icons, stroke: currentColor, 1.5px — the design handoff's icon
 // set. Sized via the `size` prop; color inherits from the parent.
+import type { Ref } from 'react'
+import { usePhebsTokens } from './theme'
+
 type IconProps = { size?: number }
+
+interface PhebsMarkProps extends IconProps {
+  dotRef?: Ref<SVGCircleElement>
+  pulseRef?: Ref<SVGCircleElement>
+}
+
+export function PhebsMark({ size = 24, dotRef, pulseRef }: PhebsMarkProps) {
+  const tok = usePhebsTokens()
+  const animatedPartStyle = { transformBox: 'fill-box' as const, transformOrigin: 'center' }
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      style={{ display: 'block', flexShrink: 0 }}
+      aria-hidden
+    >
+      <path
+        d="M21 8.5 V7.5 A4.5 4.5 0 0 0 16.5 3 H7.5 A4.5 4.5 0 0 0 3 7.5 V16.5 A4.5 4.5 0 0 0 7.5 21 H16.5 A4.5 4.5 0 0 0 21 16.5 V15.5"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        strokeLinecap="round"
+      />
+      <path
+        d="M23.5 12 H18.5"
+        stroke={tok.gutter}
+        strokeWidth={0.9}
+        strokeDasharray="1.8 1.6"
+      />
+      <circle
+        ref={pulseRef}
+        cx="15.5"
+        cy="12"
+        r="7"
+        fill="none"
+        stroke={tok.accent}
+        strokeWidth={0.6}
+        opacity={0}
+        style={animatedPartStyle}
+      />
+      <circle
+        ref={dotRef}
+        cx="15.5"
+        cy="12"
+        r="1.9"
+        fill={tok.accent}
+        style={animatedPartStyle}
+      />
+    </svg>
+  )
+}
 
 function svg(size: number, children: React.ReactNode) {
   return (

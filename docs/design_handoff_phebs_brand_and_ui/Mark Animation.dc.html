@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    html, body { margin: 0; padding: 0; min-height: 100vh; }
+    body { font-family: system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background: #F6F6F6; }
+    a { color: #276EF1; }
+    a:hover { color: #175BCC; }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; flex-direction: column; gap: 14px; padding: 32px; box-sizing: border-box;">
+  <div style="display: flex; align-items: baseline; gap: 12px;">
+    <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px; color: #5E5E5E; border: 1px solid #DDDDDD; border-radius: 4px; padding: 2px 7px; background: #FFFFFF;">Motion</span>
+    <h1 style="margin: 0; font-size: 16px; font-weight: 600; color: #000000;">Context Port — logo animation</h1>
+    <span style="font-size: 13px; color: #5E5E5E;">Port draws on → context dot docks through the gap → accept pulse → wordmark. 4.6s loop, exportable to video.</span>
+  </div>
+
+  <div style="flex: 1; min-height: 620px; border: 1px solid #E8E8E8; border-radius: 12px; overflow: hidden; background: #FFFFFF;">
+    <x-import component-from-global-scope="MarkScene" from="./animations.jsx ./mark-scene.jsx" dark="{{ isDark }}" hint-size="100%,620px"></x-import>
+  </div>
+
+  <div style="font-size: 12px; color: #5E5E5E;">Space to play/pause · ←/→ to step · 0 to reset. Use the Dark tweak to preview the splash on black.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;dark&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Preview&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      isDark: this.props.dark ?? false,
+    };
+  }
+}
+</script>
+</body>
+</html>

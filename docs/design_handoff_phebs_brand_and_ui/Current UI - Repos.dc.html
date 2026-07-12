@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    html, body { margin: 0; padding: 0; min-height: 100vh; }
+    body { font-family: system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background: #FFFFFF; }
+    a { color: #276EF1; }
+    a:hover { color: #175BCC; }
+    @keyframes phebs-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  </style>
+</helmet>
+
+<div data-screen-label="Repos" style="min-height: 100vh; background-color: #FFFFFF; color: #000000;">
+
+  <!-- ================= Header ================= -->
+  <header style="height: 56px; display: flex; align-items: center; gap: 24px; padding-left: 24px; padding-right: 24px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF; position: sticky; top: 0; z-index: 10;">
+    <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#276EF1"></circle></svg><span style="font-size: 20px; font-weight: 700; color: #000000; letter-spacing: 0;">phebs</span></a>
+    <nav style="display: flex; gap: 20px; align-items: center; height: 100%;">
+      <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Search</a>
+      <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 500; color: #000000; text-decoration: none; box-shadow: inset 0 -2px 0 #000000;">Repos</a>
+      <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Audit</a>
+      <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Analytics</a>
+      <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Settings</a>
+    </nav>
+    <div style="flex: 1;"></div>
+    <span style="font-size: 12px; color: #5E5E5E; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">admin@meddeb.me</span>
+    <button aria-label="Switch to dark theme" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 8px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5 5.5 5.5 0 1 0 13.5 9.5Z"></path></svg>
+    </button>
+    <button aria-label="Sign out" title="Sign out" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 8px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+    </button>
+  </header>
+
+  <main style="max-width: 100%; margin: 0 auto; padding: 24px 24px 48px 24px;">
+
+    <!-- Page heading -->
+    <div style="display: flex; align-items: flex-end; gap: 16px; margin-bottom: 20px;">
+      <div>
+        <h2 style="margin: 0 0 4px 0; font-size: 24px; line-height: 32px; font-weight: 700; color: #000000;">Repositories</h2>
+        <div style="font-size: 13px; color: #5E5E5E;">4 repositories · 2 indexed · 1 indexing</div>
+      </div>
+      <div style="flex: 1;"></div>
+      <button type="button" style="font-size: 13px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Reindex all</button>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+          <tr style="border-bottom: 1px solid #E8E8E8;">
+            <th style="text-align: left; font-size: 13px; font-weight: 500; color: #5E5E5E; padding: 0 12px 10px 0; white-space: nowrap;">Repository</th>
+            <th style="text-align: left; font-size: 13px; font-weight: 500; color: #5E5E5E; padding: 0 12px 10px 0; white-space: nowrap;">Connection</th>
+            <th style="text-align: left; font-size: 13px; font-weight: 500; color: #5E5E5E; padding: 0 12px 10px 0; white-space: nowrap;">Status</th>
+            <th style="text-align: left; font-size: 13px; font-weight: 500; color: #5E5E5E; padding: 0 12px 10px 0; white-space: nowrap;">Last indexed</th>
+            <th style="text-align: left; font-size: 13px; font-weight: 500; color: #5E5E5E; padding: 0 12px 10px 0; white-space: nowrap;">Commit</th>
+            <th style="text-align: left; font-size: 13px; font-weight: 500; color: #5E5E5E; padding: 0 12px 10px 0; white-space: nowrap;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Row: indexed -->
+          <tr style="border-bottom: 1px solid #F3F3F3;" style-hover="background-color: #F6F6F6;">
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 500; color: #000000;">github.com/meddeb/phebs</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <span style="font-size: 12px; background-color: #F3F3F3; color: #4B4B4B; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">github</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <span style="display: flex; align-items: center; gap: 6px; color: #4B4B4B;"><span style="width: 8px; height: 8px; border-radius: 50%; background-color: #0E8345; flex-shrink: 0;"></span> Indexed</span>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div>
+                <div style="color: #4B4B4B;">2 h ago</div>
+                <div style="font-size: 12px; color: #5E5E5E;">7/11/2026, 9:14:03 AM</div>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <button title="Copy commit" onClick="{{ copyCommit }}" style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; color: #4B4B4B; background-color: #F6F6F6; border: 1px solid #E8E8E8; border-radius: 6px; padding: 3px 8px; cursor: pointer;" style-hover="color: #000000;">
+                a3f82c1
+                <span style="display: flex; color: {{ commitCopyColor }};">
+                  <sc-if value="{{ commitCopied }}" hint-placeholder-val="{{ false }}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8.5 3.2 3.2L13 4.5"></path></svg></sc-if>
+                  <sc-if value="{{ commitNotCopied }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></sc-if>
+                </span>
+              </button>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; color: #5E5E5E; background-color: transparent; border: none; border-radius: 8px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                </button>
+                <button type="button" style="font-size: 13px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; opacity: 1;" style-hover="background-color: #F6F6F6; color: #000000;">Reindex</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row: indexing (running) -->
+          <tr style="border-bottom: 1px solid #F3F3F3;" style-hover="background-color: #F6F6F6;">
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 500; color: #000000;">github.com/sourcegraph/zoekt</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <span style="font-size: 12px; background-color: #F3F3F3; color: #4B4B4B; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">zoekt</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <span style="display: flex; align-items: center; gap: 6px; color: #4B4B4B;"><span style="width: 8px; height: 8px; border-radius: 50%; background-color: #276EF1; flex-shrink: 0; animation: phebs-pulse 1.4s infinite;"></span> Indexing…</span>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div>
+                <div style="color: #4B4B4B;">1 d ago</div>
+                <div style="font-size: 12px; color: #5E5E5E;">7/10/2026, 8:02:47 AM</div>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <button title="Copy commit" style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; color: #4B4B4B; background-color: #F6F6F6; border: 1px solid #E8E8E8; border-radius: 6px; padding: 3px 8px; cursor: pointer;" style-hover="color: #000000;">
+                09c1d44
+                <span style="display: flex; color: #5E5E5E;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></span>
+              </button>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; color: #5E5E5E; background-color: transparent; border: none; border-radius: 8px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                </button>
+                <button type="button" disabled="{{ true }}" style="font-size: 13px; font-family: inherit; color: #5E5E5E; background-color: #F3F3F3; border: none; border-radius: 8px; padding: 6px 12px; cursor: default; opacity: 0.6;">Reindex</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row: failed -->
+          <tr style="border-bottom: 1px solid #F3F3F3;" style-hover="background-color: #F6F6F6;">
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 500; color: #000000;">my-project</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <span style="font-size: 12px; background-color: #F3F3F3; color: #4B4B4B; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">local</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div>
+                <span style="display: flex; align-items: center; gap: 6px; color: #4B4B4B;"><span style="width: 8px; height: 8px; border-radius: 50%; background-color: #DE1135; flex-shrink: 0;"></span> Failed</span>
+                <div title="zoekt-git-index: exit status 137 (OOM)" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; color: #DE1135; margin-top: 2px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">zoekt-git-index: exit status 137 (OOM)</div>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div>
+                <div style="color: #4B4B4B;">3 d ago</div>
+                <div style="font-size: 12px; color: #5E5E5E;">7/8/2026, 4:31:12 PM</div>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <button title="Copy commit" style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; color: #4B4B4B; background-color: #F6F6F6; border: 1px solid #E8E8E8; border-radius: 6px; padding: 3px 8px; cursor: pointer;" style-hover="color: #000000;">
+                f21b7ce
+                <span style="display: flex; color: #5E5E5E;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></span>
+              </button>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; color: #5E5E5E; background-color: transparent; border: none; border-radius: 8px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                </button>
+                <button type="button" style="font-size: 13px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Retry</button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Row: orphaned / never indexed -->
+          <tr style="border-bottom: 1px solid #F3F3F3;" style-hover="background-color: #F6F6F6;">
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-weight: 500; color: #000000;">gitea.local/tools/scratch</span>
+                <span style="font-size: 12px; background-color: #FFF0E9; color: #A33B04; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">orphaned</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <span style="color: #5E5E5E;">—</span>
+              </div>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <span style="display: flex; align-items: center; gap: 6px; color: #5E5E5E;"><span style="width: 8px; height: 8px; border-radius: 50%; background-color: #A6A6A6; flex-shrink: 0;"></span> never indexed</span>
+            </td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;"><span style="color: #5E5E5E;">—</span></td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;"><span style="color: #5E5E5E;">—</span></td>
+            <td style="padding: 12px 12px 12px 0; vertical-align: top;">
+              <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; color: #5E5E5E; background-color: transparent; border: none; border-radius: 8px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                </button>
+                <button type="button" style="font-size: 13px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Reindex</button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { commitCopied: false };
+  renderVals() {
+    return {
+      commitCopied: this.state.commitCopied,
+      commitNotCopied: !this.state.commitCopied,
+      commitCopyColor: this.state.commitCopied ? '#0E8345' : '#5E5E5E',
+      copyCommit: () => {
+        if (navigator.clipboard) navigator.clipboard.writeText('a3f82c1e9d4b2f7a8c5e1b3d6f9a2c4e7b8d1f3a');
+        this.setState({ commitCopied: true });
+        setTimeout(() => this.setState({ commitCopied: false }), 1200);
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

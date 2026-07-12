@@ -1,6 +1,14 @@
-# phebs configuration — annotated reference (T1.1).
-# phebs' own schema; not compatible with Sourcebot's config.json
-# (an importer is planned, PORT_MAP §8).
+# phebs configuration - exhaustive annotated reference (T1.1).
+# phebs' own schema; not compatible with Sourcebot's config.json.
+# This file passes strict config parsing as written. Connector URLs, selectors,
+# paths, and identities are illustrative and must be replaced before use.
+# Optional integrations use empty values, while commented examples show how to
+# enable them. Unknown keys fail validation.
+# ${ENV} expansion is supported only by documented secret fields; every
+# referenced variable must exist and be non-empty.
+# Secret-capable fields are auth.api_key, auth.bootstrap_user.password,
+# auth.oidc.client_secret, webhook.secret, connections[].token,
+# connections[].app.private_key, and connections[].http_auth username/password.
 
 server:
   # Listen address. Default "127.0.0.1:3070". Expose phebs only through a
@@ -9,13 +17,15 @@ server:
   # All state lives here: shards at <data_dir>/index, bare repos at
   # <data_dir>/repos/<host>/<path>.git, supervised DB at <data_dir>/db
   # (including users, API-key hashes, and sessions).
-  # Default "~/.phebs".
+  # Default "~/.phebs". `~` is expanded and the result must be an absolute,
+  # literal path without glob metacharacters (*, ?, [, or backslash).
   data_dir: "~/.phebs"
 
 auth:
   # Migration only: imports this legacy bearer as a SHA-256 hash into the
   # database. Sign in, create a named/revocable key under Settings, migrate
   # clients, then remove api_key; omission deletes the legacy DB key.
+  api_key: ""
   # api_key: "${PHEBS_LEGACY_API_KEY}"
 
   # Session cookies are Secure by default. Keep true behind HTTPS. Set false
@@ -27,31 +37,44 @@ auth:
 
   # Optional CIDRs for every trusted reverse-proxy hop, including the direct
   # peer. Phebs then walks X-Forwarded-For for per-client login limits. Leave
-  # empty when reached directly. Never configure client networks here.
+  # empty when reached directly. Values must be exact CIDRs without surrounding
+  # whitespace. Never configure client networks here.
+  trusted_proxies: []
   # trusted_proxies: ["127.0.0.1/32", "10.0.0.10/32"]
 
-  # Optional one-time first administrator. The password is Argon2id-hashed;
+  # Optional one-time first administrator. All-empty keeps it disabled. The
+  # password is Argon2id-hashed and must be 12..1024 bytes when configured;
   # remove this block after first startup because changing it does not rotate
   # the stored password. Without bootstrap_user or OIDC, startup logs an
   # ephemeral setup token for the browser's first-run form.
-  # bootstrap_user:
-  #   email: admin@example.com
-  #   display_name: Phebs Admin
-  #   password: "${PHEBS_BOOTSTRAP_PASSWORD}" # at least 12 bytes
+  bootstrap_user:
+    email: ""
+    display_name: ""
+    password: ""
+    # email: admin@example.com
+    # display_name: Phebs Admin
+    # password: "${PHEBS_BOOTSTRAP_PASSWORD}"
 
-  # Optional single OpenID Connect provider. Discovery runs at startup;
-  # openid/profile/email are always requested, with these additional scopes.
-  # The provider must return a verified email. HTTPS is required except for
-  # loopback test providers, and redirect_url must match the IdP registration.
-  # oidc:
-  #   issuer_url: https://idp.example.com
-  #   client_id: phebs
-  #   client_secret: "${PHEBS_OIDC_CLIENT_SECRET}"
-  #   redirect_url: https://phebs.example.com/api/auth/oidc/callback
-  #   scopes: [groups]
+  # Optional single OpenID Connect provider. All-empty keeps it disabled.
+  # Discovery runs at startup; openid/profile/email are always requested,
+  # with these additional scopes.
+  # The provider must return a verified email. URLs must be absolute and omit
+  # credentials, query, and fragment. HTTPS is required except for loopback
+  # tests. Each extra scope is one non-whitespace token.
+  oidc:
+    issuer_url: ""
+    client_id: ""
+    client_secret: ""
+    redirect_url: ""
+    scopes: []
+    # issuer_url: https://idp.example.com
+    # client_id: phebs
+    # client_secret: "${PHEBS_OIDC_CLIENT_SECRET}"
+    # redirect_url: https://phebs.example.com/api/auth/oidc/callback
+    # scopes: [groups]
 
 sync:
-  # Delete repo rows + mirrors no connection claims (default off).
+  # Delete repo rows and mirrors that no connection claims (default off).
   cleanup_orphans: false
   # Job-runner poll cadence (Go duration, default 15s). Lower it when
   # watch mode should feel instant.
@@ -59,10 +82,11 @@ sync:
   # Re-sync cadence for remote connections (T7.5). Default 1h; "0" disables.
   resync_interval: 1h
 
-# Push webhooks (T7.4): omit the whole block to leave POST /api/webhook off.
+# Push webhooks (T7.4). Empty leaves POST /api/webhook disabled.
 webhook:
   # Verifies X-Hub-Signature-256 payload signatures (GitHub and Gitea).
-  secret: "${WEBHOOK_SECRET}"
+  secret: ""
+  # secret: "${WEBHOOK_SECRET}"
 
 # Audit log (T10.1). Recording is always on; retention prunes old events
 # twice a day (default 2160h = 90 days, "0" keeps forever).
@@ -84,19 +108,28 @@ analytics:
 #   users:
 #     ben@meddeb.me: ["github.com:bmeddeb", "gitea.example.com:ben"]
 #   always_visible: ["local/*"]  # repos with no ACL source (type git)
+# User keys must be email addresses. Identity values are "<host>:<login>";
+# logins cannot contain whitespace or `/`. always_visible values are valid
+# path.Match globs. Keep the entire block absent to disable enforcement.
 
 # Named repo sets for `context:<name>` search filters (T8.1). Patterns are
-# globs on full repo names; `*` does not cross `/`.
+# path.Match globs on full repo names; `*` does not cross `/`. Names match
+# [a-z0-9-]+ and every context needs at least one pattern.
 contexts:
   backend:
     - "github.com/acme/api-*"
 
-# Sources of repos to sync (Epic 2). Names: lowercase [a-z0-9-], unique.
+# Sources of repos to sync (Epic 2). Names are required, unique, and match
+# [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must
+# omit embedded credentials, query, and fragment. Code-host tokens are optional
+# for public listings; uncomment their secret fields for private repositories.
 connections:
-  # GitHub over PAT: at least one of orgs, users, repos.
+  # GitHub: at least one of orgs, users, repos unless app is configured.
+  # GitHub forbids url/groups/http_auth/watch.
   - name: github-personal
     type: github
-    token: "${GITHUB_TOKEN}" # ${ENV} expanded — keep secrets out of this file
+    token: ""
+    # token: "${GITHUB_TOKEN}"
     users: [bmeddeb]
     orgs: []
     repos: [] # "owner/name"
@@ -107,29 +140,46 @@ connections:
 
   # GitHub as an App installation (T7.3) — higher rate limits, per-install
   # scoping. `app` and `token` are mutually exclusive; omit all selectors to
-  # sync exactly the repos the installation was granted.
+  # sync exactly the repos the installation was granted. Exactly one of
+  # private_key_path or private_key is required. Paths are literal and do not
+  # support ${ENV}; the inline private_key secret does.
   - name: github-app
     type: github
     app:
       id: 12345
       installation_id: 67890
-      private_key_path: /etc/phebs/app.pem # or private_key: "${APP_KEY_PEM}"
+      private_key_path: /etc/phebs/app.pem
+      # private_key: "${APP_KEY_PEM}"
 
-  # GitLab over PAT (T7.1): at least one of groups, users, repos.
+  # GitLab: at least one of groups, users, repos. URL defaults to
+  # https://gitlab.com when empty. orgs/app/http_auth/watch are invalid.
   - name: gitlab-work
     type: gitlab
     url: https://git.example.com # omit for gitlab.com
-    token: "${GITLAB_TOKEN}"
+    token: ""
+    # token: "${GITLAB_TOKEN}"
     groups: [team/platform] # subgroups included
     users: []
     repos: [] # full project path
+    exclude:
+      archived: false
+      forks: false
+      repos: []
 
-  # Gitea over PAT (T7.2): base url required; orgs/users/repos.
+  # Gitea: HTTP(S) base URL and at least one of orgs/users/repos are required.
+  # groups/app/http_auth/watch are invalid.
   - name: gitea-forge
     type: gitea
     url: https://gitea.example.com
-    token: "${GITEA_TOKEN}"
+    token: ""
+    # token: "${GITEA_TOKEN}"
     orgs: [acme]
+    users: []
+    repos: []
+    exclude:
+      archived: false
+      forks: false
+      repos: []
 
   # A single repo over plain git protocol(s).
   - name: zoekt-mirror
@@ -137,17 +187,21 @@ connections:
     url: https://github.com/sourcegraph/zoekt.git
 
   # Private HTTP Git uses transient Basic auth. Never put credentials,
-  # query tokens, or fragments in url; those forms fail validation.
+  # query tokens, or fragments in url; those forms fail validation. http_auth
+  # is valid only for generic HTTP(S) Git and requires both fields when enabled.
   - name: private-git
     type: git
     url: https://git.example.com/team/private.git
     http_auth:
-      username: "${GIT_HTTP_USERNAME}"
-      password: "${GIT_HTTP_PASSWORD}"
+      username: ""
+      password: ""
+      # username: "${GIT_HTTP_USERNAME}"
+      # password: "${GIT_HTTP_PASSWORD}"
 
   # A local working repo with watch mode: commits (and branch switches)
   # become searchable within seconds. The index follows whatever branch is
-  # checked out. Pair with sync.poll_interval for snappier turnaround.
+  # checked out. watch is valid only for generic Git with an absolute local or
+  # file:// URL. Pair with sync.poll_interval for snappier turnaround.
   - name: my-project
     type: git
     url: /Users/ben/src/my-project

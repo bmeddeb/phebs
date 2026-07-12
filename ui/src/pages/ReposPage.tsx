@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
-import { HeadingSmall } from 'baseui/typography'
 import { Notification, KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import { fetchRepoStatus, postReindex } from '../api'
@@ -86,22 +85,35 @@ export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
   const running = repos.filter((r) => r.last_index_job && !['done', 'failed', 'canceled'].includes(r.last_index_job.status)).length
 
   return (
-    <div>
-      <div className={css({ display: 'flex', alignItems: 'flex-end', gap: '16px', marginBottom: '20px' })}>
-        <div>
-          <HeadingSmall margin="0 0 4px 0">Repositories</HeadingSmall>
-          <div className={css({ fontSize: '13px', color: tok.textTertiary })}>
-            {repos.length} {repos.length === 1 ? 'repository' : 'repositories'} · {indexed} indexed
-            {running > 0 ? ` · ${running} indexing` : ''}
-          </div>
-        </div>
-        <div className={css({ flex: 1 })} />
+    <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'hidden' })}>
+      <div className={css({ height: '38px', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 12px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.cardBorder}` })}>
+        <span className={css({ fontSize: '14px', lineHeight: '18px', fontWeight: 600, color: tok.textPrimary })}>
+          Repositories
+        </span>
+        <span className={css({ fontSize: '12px', lineHeight: '16px', color: tok.textTertiary, '@media screen and (max-width: 520px)': { display: 'none' } })}>
+          {repos.length} · {indexed} indexed · {running} indexing
+        </span>
+        <span className={css({ flex: 1 })} />
         {isAdmin && (
           <button
             type="button"
             disabled={reindexingAll}
             onClick={() => void reindexAll()}
-            className={css({ fontSize: '13px', color: tok.textSecondary, backgroundColor: tok.fill, border: 'none', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary } })}
+            className={css({
+              height: '26px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontSize: '12.5px',
+              lineHeight: '16px',
+              color: tok.textSecondary,
+              backgroundColor: tok.fill,
+              border: 'none',
+              borderRadius: '7px',
+              padding: '0 10px',
+              cursor: reindexingAll ? 'default' : 'pointer',
+              opacity: reindexingAll ? 0.6 : 1,
+              ':hover': reindexingAll ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
+            })}
           >
             {reindexingAll ? 'Queuing…' : 'Reindex all'}
           </button>
@@ -109,18 +121,18 @@ export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
       </div>
 
       {repos.length === 0 ? (
-        <div className={css({ color: tok.textTertiary, padding: '32px 0' })}>
+        <div className={css({ color: tok.textTertiary, padding: '28px 12px', fontSize: '13px' })}>
           No repos yet — add a connection to the config and restart.
         </div>
       ) : (
         <div className={css({ overflowX: 'auto' })}>
-          <table className={css({ width: '100%', borderCollapse: 'collapse', fontSize: '14px' })}>
+          <table className={css({ width: '100%', minWidth: '860px', borderCollapse: 'collapse', fontSize: '13px' })}>
             <thead>
-              <tr className={css({ borderBottom: `1px solid ${tok.cardBorder}` })}>
+              <tr className={css({ borderBottom: `1px solid ${tok.innerSep}` })}>
                 {['Repository', 'Connection', 'Status', 'Last indexed', 'Commit', ''].map((h, i) => (
                   <th
                     key={i}
-                    className={css({ textAlign: 'left', fontSize: '13px', fontWeight: 500, color: tok.textTertiary, padding: '0 12px 10px 0', whiteSpace: 'nowrap' })}
+                    className={css({ textAlign: i === 5 ? 'right' : 'left', fontSize: '11.5px', lineHeight: '14px', fontWeight: 500, color: tok.textTertiary, padding: '8px 12px', whiteSpace: 'nowrap' })}
                   >
                     {h}
                   </th>
@@ -144,17 +156,17 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
   const tok = usePhebsTokens()
   const job = repo.last_index_job
   const running = !!job && !['done', 'failed', 'canceled'].includes(job.status)
-  const cell = css({ padding: '12px 12px 12px 0', verticalAlign: 'top' })
+  const cell = css({ height: '40px', padding: '0 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' })
   return (
-    <tr className={css({ borderBottom: `1px solid ${tok.innerSep}`, ':hover': { backgroundColor: tok.hoverFill } })}>
+    <tr className={css({ height: '40px', borderBottom: `1px solid ${tok.innerSep}`, ':last-child': { borderBottom: 'none' }, ':hover': { backgroundColor: tok.hoverFill } })}>
       <td className={cell}>
         <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
           <span className={css({ fontWeight: 500, color: tok.textPrimary })}>{repo.name}</span>
-          {repo.orphaned && <Pill text="orphaned" bg="#FFF0E9" fg="#A33B04" />}
+          {repo.orphaned && <Pill text="orphaned" bg={tok.deletedLineBg} fg={tok.statusRed} />}
         </div>
       </td>
       <td className={cell}>
-        <div className={css({ display: 'flex', gap: '4px', flexWrap: 'wrap' })}>
+        <div className={css({ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'nowrap' })}>
           {(repo.connections ?? []).map((c) => (
             <Pill key={c} text={c} bg={tok.fill} fg={tok.textSecondary} />
           ))}
@@ -166,10 +178,9 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
       </td>
       <td className={cell}>
         {repo.indexed_at ? (
-          <div>
-            <div className={css({ color: tok.textSecondary })}>{relTime(repo.indexed_at)}</div>
-            <div className={css({ fontSize: '12px', color: tok.textTertiary })}>{new Date(repo.indexed_at).toLocaleString()}</div>
-          </div>
+          <span className={css({ color: tok.textSecondary })} title={new Date(repo.indexed_at).toLocaleString()}>
+            {relTime(repo.indexed_at)}
+          </span>
         ) : (
           <span className={css({ color: tok.textTertiary })}>—</span>
         )}
@@ -185,7 +196,7 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
             onClick={() => navigate('/search', { q: `${repoFilter(repo.name)} ` })}
             className={css(iconBtn(tok))}
           >
-            <SearchIcon size={14} />
+            <SearchIcon size={13} />
           </button>
           {canReindex && (
             <button
@@ -193,12 +204,16 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
               disabled={running}
               onClick={onReindex}
               className={css({
-                fontSize: '13px',
+                height: '26px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                fontSize: '12.5px',
+                lineHeight: '16px',
                 color: running ? tok.textTertiary : tok.textSecondary,
                 backgroundColor: tok.fill,
                 border: 'none',
-                borderRadius: '8px',
-                padding: '6px 12px',
+                borderRadius: '7px',
+                padding: '0 10px',
                 cursor: running ? 'default' : 'pointer',
                 opacity: running ? 0.6 : 1,
                 ':hover': running ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
@@ -225,16 +240,15 @@ function Status({ job }: { job: RepoStatus['last_index_job'] }) {
   const running = !['done', 'failed', 'canceled'].includes(job.status)
   const s = map[job.status] ?? { color: tok.statusBlue, label: 'Indexing…' }
   return (
-    <div>
-      <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.textSecondary })}>
-        <Dot color={s.color} pulse={running} /> {s.label}
-      </span>
+    <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, color: tok.textSecondary })}>
+      <Dot color={s.color} pulse={running} />
+      <span className={css({ flexShrink: 0 })}>{s.label}</span>
       {job.status === 'failed' && job.error && (
-        <div className={css({ fontFamily: FONTS.MONO, fontSize: '12px', color: tok.statusRed, marginTop: '2px', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })} title={job.error}>
+        <span className={css({ minWidth: 0, maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONTS.MONO, fontSize: '11px', color: tok.statusRed })} title={job.error}>
           {job.error}
-        </div>
+        </span>
       )}
-    </div>
+    </span>
   )
 }
 
@@ -243,13 +257,18 @@ function Dot({ color, pulse }: { color: string; pulse?: boolean }) {
   return (
     <span
       className={css({
-        width: '8px',
-        height: '8px',
+        width: '7px',
+        height: '7px',
         borderRadius: '50%',
         backgroundColor: color,
         flexShrink: 0,
         ...(pulse
-          ? { animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } }, animationDuration: '1.4s', animationIterationCount: 'infinite' }
+          ? {
+              animationName: { '0%,100%': { opacity: 1 }, '50%': { opacity: 0.35 } },
+              animationDuration: '1.4s',
+              animationIterationCount: 'infinite',
+              '@media (prefers-reduced-motion: reduce)': { animationName: 'none' },
+            }
           : {}),
       })}
     />
@@ -269,20 +288,21 @@ function CommitChip({ hash }: { hash: string }) {
   const [done, setDone] = useState(false)
   return (
     <button
+      type="button"
       title="Copy commit"
       onClick={() => {
         navigator.clipboard?.writeText(hash)
         setDone(true)
         setTimeout(() => setDone(false), 1200)
       }}
-      className={css({ display: 'inline-flex', alignItems: 'center', gap: '6px', fontFamily: FONTS.MONO, fontSize: '12px', color: tok.textSecondary, backgroundColor: tok.hoverFill, border: `1px solid ${tok.cardBorder}`, borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', ':hover': { color: tok.textPrimary } })}
+      className={css({ display: 'inline-flex', alignItems: 'center', gap: '5px', fontFamily: FONTS.MONO, fontSize: '11.5px', lineHeight: '15px', color: tok.textSecondary, backgroundColor: tok.hoverFill, border: `1px solid ${tok.cardBorder}`, borderRadius: '5px', padding: '2px 7px', cursor: 'pointer', ':hover': { color: tok.textPrimary } })}
     >
       {hash.slice(0, 7)}
-      <span className={css({ display: 'flex', color: done ? tok.statusGreen : tok.textTertiary })}>{done ? <CheckIcon size={13} /> : <CopyIcon size={13} />}</span>
+      <span className={css({ display: 'flex', color: done ? tok.statusGreen : tok.textTertiary })}>{done ? <CheckIcon size={12} /> : <CopyIcon size={12} />}</span>
     </button>
   )
 }
 
 function iconBtn(tok: ReturnType<typeof usePhebsTokens>) {
-  return { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', color: tok.textTertiary, backgroundColor: 'transparent', border: 'none', borderRadius: '8px', cursor: 'pointer', ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary } }
+  return { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', color: tok.textTertiary, backgroundColor: 'transparent', border: 'none', borderRadius: '7px', cursor: 'pointer', ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary } }
 }

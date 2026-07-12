@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -28,10 +28,15 @@ function renderLogin() {
   return render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
-        <AuthProvider><LoginPage /></AuthProvider>
+        <AuthProvider><LoginBoundary /></AuthProvider>
       </BaseProvider>
     </StyletronProvider>,
   )
+}
+
+function LoginBoundary() {
+  const { status: current } = useAuth()
+  return current?.authenticated ? <div>Authenticated application</div> : <LoginPage />
 }
 
 afterEach(() => {
@@ -52,7 +57,20 @@ test('OIDC-only login hides unusable password controls', async () => {
   expect(fetchMock).toHaveBeenCalledWith('/api/auth/status', { credentials: 'same-origin' })
 })
 
-test('first-run setup sends the operator token and establishes auth state', async () => {
+test('password and OIDC login methods are separated without changing either action', async () => {
+  const fetchMock = vi.fn().mockResolvedValue(jsonResponse(status({
+    oidc_enabled: true,
+    password_enabled: true,
+  })))
+  vi.stubGlobal('fetch', fetchMock)
+  renderLogin()
+
+  expect(await screen.findByRole('button', { name: 'Sign in' })).toBeTruthy()
+  expect(screen.getByText('or')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Continue with SSO' })).toBeTruthy()
+})
+
+test('first-run setup normalizes operator input and enters the authenticated application', async () => {
   const fetchMock = vi.fn()
     .mockResolvedValueOnce(jsonResponse(status({ setup_required: true, password_enabled: false })))
     .mockResolvedValueOnce(jsonResponse(status({
@@ -64,12 +82,14 @@ test('first-run setup sends the operator token and establishes auth state', asyn
   vi.stubGlobal('fetch', fetchMock)
   renderLogin()
 
-  fireEvent.change(await screen.findByRole('textbox', { name: 'Email' }), { target: { value: 'admin@example.com' } })
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Email' }), { target: { value: '  admin@example.com  ' } })
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long enough password' } })
-  fireEvent.change(screen.getByLabelText('Setup token'), { target: { value: 'operator-token' } })
+  fireEvent.change(screen.getByLabelText('Setup token'), { target: { value: '  operator-token  ' } })
   fireEvent.click(screen.getByRole('button', { name: 'Create administrator' }))
 
-  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+  expect(await screen.findByText('Authenticated application')).toBeTruthy()
+  expect(screen.queryByRole('button', { name: 'Create administrator' })).toBeNull()
+  expect(fetchMock).toHaveBeenCalledTimes(2)
   const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit]
   expect(url).toBe('/api/auth/setup')
   expect(init.credentials).toBe('same-origin')
@@ -78,6 +98,20 @@ test('first-run setup sends the operator token and establishes auth state', asyn
     password: 'long enough password',
     setup_token: 'operator-token',
   })
+})
+
+test('first-run setup reports a missing token instead of silently doing nothing', async () => {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce(jsonResponse(status({ setup_required: true, password_enabled: false })))
+  vi.stubGlobal('fetch', fetchMock)
+  renderLogin()
+
+  fireEvent.change(await screen.findByRole('textbox', { name: 'Email' }), { target: { value: 'admin@example.com' } })
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'long enough password' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Create administrator' }))
+
+  expect(await screen.findByText('Enter the setup token from the server log.')).toBeTruthy()
+  expect(fetchMock).toHaveBeenCalledTimes(1)
 })
 
 test('login renders the backend error message without raw JSON', async () => {

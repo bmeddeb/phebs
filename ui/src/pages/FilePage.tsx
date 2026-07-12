@@ -139,7 +139,7 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
 
   return (
     <div>
-      <Breadcrumb repo={repo} path={path} ref={effectiveRef} meta={meta} />
+      <Breadcrumb repo={repo} path={path} ref={effectiveRef} pinned={Boolean(ref)} meta={meta} />
       <div className={css({
         display: 'flex',
         gap: '16px',
@@ -147,7 +147,7 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
         '@media screen and (max-width: 720px)': { flexDirection: 'column' },
       })}>
         {repo && effectiveRef && <FileTree repo={repo} ref={effectiveRef} current={path} />}
-        <div className={css({ flex: 1, minWidth: 0 })}>
+        <div className={css({ flex: 1, minWidth: 0, '@media screen and (max-width: 720px)': { width: '100%' } })}>
           {error && (
             <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
               {error}
@@ -157,7 +157,7 @@ export default function FilePage({ params }: { params: URLSearchParams }) {
           {content === null && !error && !binary && <Spinner $size="small" />}
           {content !== null && (
             <div className={css({ display: 'flex', alignItems: 'flex-start', gap: '16px', '@media screen and (max-width: 960px)': { flexDirection: 'column' } })}>
-              <div className={css({ flex: 1, minWidth: 0, width: '100%', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px' })}>
+              <div className={css({ flex: 1, minWidth: 0, width: '100%', border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'clip' })}>
                 <CodeHeader path={path} content={content} line={line} meta={meta} />
                 <CodeViewer
                   content={content}
@@ -202,82 +202,81 @@ function CodeNavigationPanel({
     <aside
       aria-label="Code navigation"
       className={css({
-        width: '300px',
+        width: '280px',
+        boxSizing: 'border-box',
         flexShrink: 0,
         position: 'sticky',
-        top: '72px',
-        borderLeft: `1px solid ${tok.innerSep}`,
-        paddingLeft: '16px',
-        maxHeight: 'calc(100vh - 96px)',
+        top: '68px',
+        border: `1px solid ${tok.cardBorder}`,
+        borderRadius: '8px',
+        maxHeight: 'calc(100vh - 84px)',
         overflowY: 'auto',
         '@media screen and (max-width: 960px)': {
           width: '100%',
           position: 'static',
           maxHeight: 'none',
-          borderLeft: 'none',
-          borderTop: `1px solid ${tok.innerSep}`,
-          paddingLeft: 0,
-          paddingTop: '14px',
         },
       })}
     >
-      <div className={css({ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '14px' })}>
-        <h2 className={css({ margin: 0, fontSize: '14px', color: tok.textPrimary })}>Code navigation</h2>
+      <div className={css({ height: '36px', display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '12px', paddingRight: '12px', backgroundColor: tok.bandBg, borderBottom: `1px solid ${tok.innerSep}`, borderTopLeftRadius: '8px', borderTopRightRadius: '8px' })}>
+        <h2 className={css({ margin: 0, fontSize: '12.5px', lineHeight: '18px', fontWeight: 600, color: tok.textPrimary })}>Code navigation</h2>
         <span className={css({ fontFamily: FONTS.MONO, fontSize: '11px', color: tok.textTertiary })}>
           {position.line + 1}:{position.character + 1}
         </span>
       </div>
-      {navigation?.loading && <Spinner $size="small" />}
-      {navigation?.error && (
-        <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}>
-          {navigation.error}
-        </Notification>
-      )}
-      {unavailable && <PanelMessage>SCIP data is not available for this revision.</PanelMessage>}
-      {empty && <PanelMessage>No precise symbol exists at this position.</PanelMessage>}
-      {hover && (
-        <section className={css({ marginBottom: '18px' })}>
-          <PanelTitle>Hover</PanelTitle>
-          <div className={css({ fontSize: '13px', fontWeight: 600, color: tok.textPrimary, overflowWrap: 'anywhere' })}>
-            {hover.display_name || hover.symbol}
-          </div>
-          {hover.kind && <div className={css({ marginTop: '3px', fontSize: '11px', color: tok.textTertiary })}>{hover.kind}</div>}
-          {hover.signature && (
-            <pre className={css({ marginTop: '8px', marginBottom: 0, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap', fontFamily: FONTS.MONO, fontSize: '12px', color: tok.plainCode, backgroundColor: tok.fill, borderRadius: '6px' })}>
-              {hover.signature}
-            </pre>
-          )}
-          {hover.documentation?.map((paragraph, index) => (
-            <p key={`${index}:${paragraph}`} className={css({ marginTop: '8px', marginBottom: 0, fontSize: '12px', lineHeight: 1.5, color: tok.textSecondary, overflowWrap: 'anywhere' })}>
-              {paragraph}
-            </p>
-          ))}
-        </section>
-      )}
-      {definition?.location && (
-        <section className={css({ marginBottom: '18px' })}>
-          <PanelTitle>Definition</PanelTitle>
-          <LocationLink location={definition.location} />
-        </section>
-      )}
-      {!!references?.locations.length && (
-        <section>
-          <PanelTitle>References ({references.locations.length}{references.truncated ? '+' : ''})</PanelTitle>
-          <div className={css({ display: 'grid', gap: '2px' })}>
-            {references.locations.slice(0, 100).map((location, index) => (
-              <LocationLink
-                key={`${location.path}:${location.range.start.line}:${location.range.start.character}:${index}`}
-                location={location}
-              />
-            ))}
-          </div>
-          {references.locations.length > 100 && (
-            <div className={css({ marginTop: '6px', fontSize: '11px', color: tok.textTertiary })}>
-              Showing the first 100 references.
+      <div className={css({ padding: '12px' })}>
+        {navigation?.loading && <Spinner $size="small" />}
+        {navigation?.error && (
+          <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', margin: 0 } } }}>
+            {navigation.error}
+          </Notification>
+        )}
+        {unavailable && <PanelMessage>SCIP data is not available for this revision.</PanelMessage>}
+        {empty && <PanelMessage>No precise symbol exists at this position.</PanelMessage>}
+        {hover && (
+          <section className={css({ marginBottom: '16px' })}>
+            <PanelTitle>Hover</PanelTitle>
+            <div className={css({ fontSize: '12.5px', lineHeight: '18px', fontWeight: 600, color: tok.textPrimary, overflowWrap: 'anywhere' })}>
+              {hover.display_name || hover.symbol}
             </div>
-          )}
-        </section>
-      )}
+            {hover.kind && <div className={css({ marginTop: '3px', fontSize: '11px', color: tok.textTertiary })}>{hover.kind}</div>}
+            {hover.signature && (
+              <pre className={css({ marginTop: '8px', marginBottom: 0, padding: '8px', overflowX: 'auto', whiteSpace: 'pre-wrap', fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '16px', color: tok.plainCode, backgroundColor: tok.fill, borderRadius: '6px' })}>
+                {hover.signature}
+              </pre>
+            )}
+            {hover.documentation?.map((paragraph, index) => (
+              <p key={`${index}:${paragraph}`} className={css({ marginTop: '8px', marginBottom: 0, fontSize: '12px', lineHeight: '18px', color: tok.textSecondary, overflowWrap: 'anywhere' })}>
+                {paragraph}
+              </p>
+            ))}
+          </section>
+        )}
+        {definition?.location && (
+          <section className={css({ marginBottom: '16px' })}>
+            <PanelTitle>Definition</PanelTitle>
+            <LocationLink location={definition.location} />
+          </section>
+        )}
+        {!!references?.locations.length && (
+          <section>
+            <PanelTitle>References ({references.locations.length}{references.truncated ? '+' : ''})</PanelTitle>
+            <div className={css({ display: 'grid' })}>
+              {references.locations.slice(0, 100).map((location, index) => (
+                <LocationLink
+                  key={`${location.path}:${location.range.start.line}:${location.range.start.character}:${index}`}
+                  location={location}
+                />
+              ))}
+            </div>
+            {references.locations.length > 100 && (
+              <div className={css({ marginTop: '6px', fontSize: '11px', color: tok.textTertiary })}>
+                Showing the first 100 references.
+              </div>
+            )}
+          </section>
+        )}
+      </div>
     </aside>
   )
 }
@@ -285,7 +284,7 @@ function CodeNavigationPanel({
 function PanelTitle({ children }: { children: React.ReactNode }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <h3 className={css({ marginTop: 0, marginBottom: '7px', fontSize: '11px', fontWeight: 600, color: tok.textTertiary, textTransform: 'uppercase' })}>{children}</h3>
+  return <h3 className={css({ marginTop: 0, marginBottom: '7px', fontSize: '10.5px', lineHeight: '14px', fontWeight: 600, letterSpacing: '0.05em', color: tok.textTertiary, textTransform: 'uppercase' })}>{children}</h3>
 }
 
 function PanelMessage({ children }: { children: React.ReactNode }) {
@@ -301,7 +300,7 @@ function LocationLink({ location }: { location: CodeLocation }) {
   return (
     <a
       href={href('/file', { repo: location.repo, path: location.path, ref: location.revision, L: String(line) })}
-      className={css({ display: 'block', minWidth: 0, paddingTop: '5px', paddingBottom: '5px', color: tok.accent, fontFamily: FONTS.MONO, fontSize: '11px', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ':hover': { textDecoration: 'underline' } })}
+      className={css({ display: 'block', minWidth: 0, paddingTop: '3px', paddingBottom: '3px', color: tok.accent, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '16px', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ':hover': { textDecoration: 'underline' } })}
       title={`${location.path}:${line}`}
     >
       {location.path}:{line}
@@ -405,16 +404,17 @@ function FileTree({ repo, ref, current }: { repo: string; ref: string; current: 
     <aside
       aria-label="Repository files"
       className={css({
-        width: '240px',
+        width: '220px',
+        boxSizing: 'border-box',
         flexShrink: 0,
         border: `1px solid ${tok.cardBorder}`,
         borderRadius: '8px',
         position: 'sticky',
-        top: '72px',
-        maxHeight: 'calc(100vh - 96px)',
+        top: '68px',
+        maxHeight: 'calc(100vh - 84px)',
         overflowY: 'auto',
-        paddingTop: '6px',
-        paddingBottom: '6px',
+        paddingTop: '4px',
+        paddingBottom: '4px',
         '@media screen and (max-width: 720px)': {
           width: '100%',
           position: 'static',
@@ -479,11 +479,12 @@ function TreeRow({
     alignItems: 'center',
     gap: '4px',
     width: '100%',
-    height: '28px',
-    paddingLeft: `${8 + depth * 12}px`,
+    boxSizing: 'border-box',
+    height: '26px',
+    paddingLeft: `${8 + depth * 10}px`,
     paddingRight: '8px',
     border: 'none',
-    fontSize: '13px',
+    fontSize: '12.5px',
     fontFamily: 'inherit',
     textAlign: 'left',
     cursor: 'pointer',
@@ -510,7 +511,7 @@ function TreeRow({
           className={rowStyle}
         >
           <span className={css({ display: 'flex', color: tok.textTertiary, flexShrink: 0 })}>
-            {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            {isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </span>
           <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{entry.name}</span>
         </button>
@@ -541,7 +542,7 @@ function TreeRow({
   const fileParams = { repo, path, ...(ref ? { ref } : {}) }
   return (
     <a href={href('/file', fileParams)} className={rowStyle} aria-current={active ? 'page' : undefined}>
-      <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(path), flexShrink: 0, marginLeft: '2px', marginRight: '2px' })} />
+      <span className={css({ width: '7px', height: '7px', borderRadius: '2px', backgroundColor: langColor(path), flexShrink: 0, marginLeft: '2px', marginRight: '2px' })} />
       <span className={css({ overflow: 'hidden', textOverflow: 'ellipsis' })}>{entry.name}</span>
     </a>
   )
@@ -554,8 +555,8 @@ function TreeMessage({ text, depth = 0 }: { text: string; depth?: number }) {
     <div
       role="status"
       className={css({
-        height: '28px',
-        paddingLeft: `${12 + depth * 12}px`,
+        height: '26px',
+        paddingLeft: `${12 + depth * 10}px`,
         display: 'flex',
         alignItems: 'center',
         fontSize: '12px',
@@ -585,8 +586,8 @@ function TreeRetry({
       onClick={onRetry}
       className={css({
         width: '100%',
-        height: '28px',
-        paddingLeft: `${12 + depth * 12}px`,
+        height: '26px',
+        paddingLeft: `${12 + depth * 10}px`,
         border: 'none',
         backgroundColor: 'transparent',
         color: tok.statusRed,
@@ -605,11 +606,13 @@ function Breadcrumb({
   repo,
   path,
   ref,
+  pinned,
   meta,
 }: {
   repo: string
   path: string
   ref: string
+  pinned: boolean
   meta: RepoStatus | null
 }) {
   const [css] = useStyletron()
@@ -618,21 +621,20 @@ function Breadcrumb({
   const dir = slash === -1 ? '' : path.slice(0, slash + 1)
   const name = slash === -1 ? path : path.slice(slash + 1)
   return (
-    <div className={css({ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' })}>
-      <div className={css({ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', minWidth: 0, maxWidth: '100%' })}>
+    <div className={css({ height: '32px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'nowrap', '@media screen and (max-width: 720px)': { height: 'auto', minHeight: '32px', flexWrap: 'wrap' } })}>
+      <div className={css({ display: 'flex', alignItems: 'center', gap: '4px', flex: '1 1 240px', fontSize: '13px', minWidth: 0, maxWidth: '100%' })}>
         <a href={href('/search', { q: repoFilter(repo) })} className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: tok.textTertiary, textDecoration: 'none', ':hover': { color: tok.textPrimary, textDecoration: 'underline' } })}>
           {repo}
         </a>
         <span className={css({ color: tok.textTertiary })}>/</span>
         {dir && <span className={css({ color: tok.textTertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}>{dir}</span>}
-        <span className={css({ color: tok.textPrimary, fontWeight: 600 })}>{name}</span>
-        <CopyInline text={path} title="Copy path" />
+        <span className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: tok.textPrimary, fontWeight: 600 })}>{name}</span>
+        <CopyInline text={path} title="Copy path" size={12} />
       </div>
-      <div className={css({ flex: 1 })} />
       {(ref || meta?.indexed_commit_hash) && (
-        <span className={css({ display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FONTS.MONO, fontSize: '12px', color: tok.textSecondary, border: `1px solid ${tok.cardBorder}`, borderRadius: '999px', padding: '3px 10px' })}>
-          <CommitIcon size={13} />
-          {ref ? `commit · ${ref.slice(0, 7)}` : `${meta?.default_branch ?? 'HEAD'} · ${meta?.indexed_commit_hash?.slice(0, 7)}`}
+        <span className={css({ display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '16px', color: tok.textSecondary, border: `1px solid ${tok.cardBorder}`, borderRadius: '999px', padding: '2px 9px', whiteSpace: 'nowrap' })}>
+          <CommitIcon size={12} />
+          {pinned ? `commit · ${ref.slice(0, 7)}` : `${meta?.default_branch ?? 'HEAD'} · ${(ref || meta?.indexed_commit_hash)?.slice(0, 7)}`}
         </span>
       )}
       <button
@@ -642,14 +644,15 @@ function Breadcrumb({
         )}
         className={css(btnStyle(tok))}
       >
-        Copy permalink
+        Permalink
       </button>
       <button
         type="button"
+        aria-label="Open in search"
         onClick={() => navigate('/search', { q: fileFilter(path) })}
         className={css(btnStyle(tok))}
       >
-        <SearchIcon size={13} /> Open in search
+        <SearchIcon size={13} /> Search
       </button>
       {ref && (
         <button
@@ -678,14 +681,18 @@ function btnStyle(tok: ReturnType<typeof usePhebsTokens>) {
     display: 'flex',
     alignItems: 'center',
     gap: '5px',
-    fontSize: '13px',
+    height: '28px',
+    fontSize: '12.5px',
+    fontFamily: 'inherit',
     color: tok.textSecondary,
     backgroundColor: tok.fill,
     border: 'none',
-    borderRadius: '8px',
-    padding: '6px 12px',
+    borderRadius: '7px',
+    padding: '0 10px',
+    whiteSpace: 'nowrap',
     cursor: 'pointer',
     ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary },
+    ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
   }
 }
 
@@ -700,42 +707,42 @@ function CodeHeader({ path, content, line, meta }: { path: string; content: stri
     <div
       className={css({
         position: 'sticky',
-        top: '56px',
+        top: '52px',
         zIndex: 5,
-        height: '44px',
+        height: '36px',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
         paddingLeft: '12px',
         paddingRight: '12px',
-        backgroundColor: tok.pageBg,
+        backgroundColor: tok.bandBg,
         borderBottom: `1px solid ${tok.innerSep}`,
         borderTopLeftRadius: '8px',
         borderTopRightRadius: '8px',
         '@media screen and (max-width: 720px)': {
           height: 'auto',
-          minHeight: '44px',
+          minHeight: '36px',
         },
       })}
     >
       <span className={css({ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: langColor(path) })} />
-      <span className={css({ fontSize: '13px', fontWeight: 600, color: tok.textPrimary })}>{name}</span>
-      <span className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { display: 'none' } })}>
+      <span className={css({ fontSize: '12.5px', fontWeight: 600, color: tok.textPrimary })}>{name}</span>
+      <span className={css({ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11.5px', color: tok.textTertiary, '@media screen and (max-width: 720px)': { display: 'none' } })}>
         {langName(path)} · {lineCount} lines · {humanSize(bytes)}
         {meta?.indexed_at ? ` · indexed ${relTime(meta.indexed_at)}` : ''}
       </span>
       <div className={css({ flex: 1 })} />
       {line > 0 && (
-        <span className={css({ fontFamily: FONTS.MONO, fontSize: '12px', color: tok.selectedText, backgroundColor: tok.selectedLineBg, borderRadius: '6px', padding: '2px 8px' })}>
+        <span className={css({ fontFamily: FONTS.MONO, fontSize: '11px', color: tok.selectedText, backgroundColor: tok.selectedLineBg, borderRadius: '5px', padding: '2px 8px' })}>
           L{line}
         </span>
       )}
-      <CopyInline text={content} title="Copy file contents" />
+      <CopyInline text={content} title="Copy file contents" size={13} />
     </div>
   )
 }
 
-function CopyInline({ text, title }: { text: string; title: string }) {
+function CopyInline({ text, title, size = 14 }: { text: string; title: string; size?: number }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [done, setDone] = useState(false)
@@ -750,7 +757,7 @@ function CopyInline({ text, title }: { text: string; title: string }) {
       }}
       className={css({ display: 'flex', border: 'none', background: 'none', cursor: 'pointer', color: done ? tok.statusGreen : tok.textTertiary, padding: '3px', borderRadius: '6px', ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill } })}
     >
-      {done ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
+      {done ? <CheckIcon size={size} /> : <CopyIcon size={size} />}
     </button>
   )
 }
@@ -793,10 +800,10 @@ function CodeViewer({
         syntaxHighlighting(highlightStyle(mode)),
         EditorView.theme(
           {
-            '&': { fontSize: '13px', color: tok.plainCode, backgroundColor: tok.pageBg },
-            '.cm-content': { fontFamily: 'ui-monospace, "SF Mono", Menlo, Monaco, monospace' },
+            '&': { fontSize: '12.5px', lineHeight: '18px', color: tok.plainCode, backgroundColor: tok.pageBg },
+            '.cm-content': { fontFamily: 'ui-monospace, "SF Mono", Menlo, Monaco, monospace', lineHeight: '18px' },
             '.cm-gutters': { backgroundColor: 'transparent', border: 'none', color: tok.gutter },
-            '.cm-lineNumbers .cm-gutterElement': { paddingRight: '12px', minWidth: '44px' },
+            '.cm-lineNumbers .cm-gutterElement': { paddingRight: '10px', minWidth: '40px' },
             '.cm-cursor': { display: 'none' },
           },
           { dark: mode === 'dark' },

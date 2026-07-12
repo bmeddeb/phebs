@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    html, body { margin: 0; padding: 0; min-height: 100vh; }
+    body { font-family: system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background: #F6F6F6; }
+    a { color: #276EF1; }
+    a:hover { color: #175BCC; }
+  </style>
+</helmet>
+
+<div style="min-height: 100vh; display: flex; flex-direction: column; gap: 20px; padding: 32px; box-sizing: border-box;">
+  <div style="display: flex; align-items: baseline; gap: 12px;">
+    <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px; color: #5E5E5E; border: 1px solid #DDDDDD; border-radius: 4px; padding: 2px 7px; background: #FFFFFF;">Motion</span>
+    <h1 style="margin: 0; font-size: 16px; font-weight: 600; color: #000000;">Header micro-interaction — hover the logo</h1>
+    <span style="font-size: 13px; color: #5E5E5E;">The context dot re-docks on every hover: slides in through the gap (clipped by the mark's edge), lands with a soft overshoot, one accept pulse. ~550ms, skipped under reduced-motion.</span>
+  </div>
+
+  <!-- ── Light header ── -->
+  <div style="border: 1px solid #DDDDDD; border-radius: 12px; overflow: hidden; background: #FFFFFF;">
+    <header style="height: 56px; display: flex; align-items: center; gap: 24px; padding-left: 24px; padding-right: 24px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF;">
+      <a href="#/" onMouseEnter="{{ dockLight }}" style="display: flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path>
+          <path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path>
+          <circle ref="{{ ringL }}" cx="15.5" cy="12" r="7" stroke="#276EF1" stroke-width="0.6" fill="none" opacity="0" style="transform-box: fill-box; transform-origin: center;"></circle>
+          <circle ref="{{ dotL }}" cx="15.5" cy="12" r="1.9" fill="#276EF1" style="transform-box: fill-box; transform-origin: center;"></circle>
+        </svg>
+        <span style="font-size: 20px; font-weight: 700; color: #000000; letter-spacing: 0;">phebs</span>
+      </a>
+      <nav style="display: flex; gap: 20px; align-items: center; height: 100%;">
+        <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 500; color: #000000; text-decoration: none; box-shadow: inset 0 -2px 0 #000000;">Search</a>
+        <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Repos</a>
+        <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Settings</a>
+      </nav>
+      <div style="flex: 1;"></div>
+      <span style="font-size: 12px; color: #5E5E5E;">admin@meddeb.me</span>
+      <button aria-label="Switch theme" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 8px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5 5.5 5.5 0 1 0 13.5 9.5Z"></path></svg>
+      </button>
+    </header>
+    <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAFAFA; font-size: 11px; color: #5E5E5E;">Light · hover "phebs"</div>
+  </div>
+
+  <!-- ── Dark header ── -->
+  <div style="border: 1px solid #383838; border-radius: 12px; overflow: hidden; background: #000000;">
+    <header style="height: 56px; display: flex; align-items: center; gap: 24px; padding-left: 24px; padding-right: 24px; border-bottom: 1px solid #383838; background-color: #000000;">
+      <a href="#/" onMouseEnter="{{ dockDark }}" style="display: flex; align-items: center; gap: 8px; text-decoration: none; cursor: pointer;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path>
+          <path d="M23.5 12 H 18.5" stroke="#5D5D5D" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path>
+          <circle ref="{{ ringD }}" cx="15.5" cy="12" r="7" stroke="#5E8BDB" stroke-width="0.6" fill="none" opacity="0" style="transform-box: fill-box; transform-origin: center;"></circle>
+          <circle ref="{{ dotD }}" cx="15.5" cy="12" r="1.9" fill="#5E8BDB" style="transform-box: fill-box; transform-origin: center;"></circle>
+        </svg>
+        <span style="font-size: 20px; font-weight: 700; color: #FFFFFF; letter-spacing: 0;">phebs</span>
+      </a>
+      <nav style="display: flex; gap: 20px; align-items: center; height: 100%;">
+        <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 500; color: #FFFFFF; text-decoration: none; box-shadow: inset 0 -2px 0 #FFFFFF;">Search</a>
+        <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Repos</a>
+        <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Settings</a>
+      </nav>
+      <div style="flex: 1;"></div>
+      <span style="font-size: 12px; color: #ABABAB;">admin@meddeb.me</span>
+      <button aria-label="Switch theme" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 8px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M13 3l-1 1M4 12l-1 1"></path></svg>
+      </button>
+    </header>
+    <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #161616; font-size: 11px; color: #ABABAB;">Dark · hover "phebs"</div>
+  </div>
+
+  <div style="font-size: 12px; color: #5E5E5E; line-height: 1.6;">Implementation note for the real app: two <span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace;">el.animate()</span> calls on <span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace;">mouseenter</span> (dot: translateX 11px → 0 with ease-out-back; ring: scale 0.25 → 1 fading) — no CSS classes, no re-render, respects <span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace;">prefers-reduced-motion</span>.</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.dotL = React.createRef();
+    this.ringL = React.createRef();
+    this.dotD = React.createRef();
+    this.ringD = React.createRef();
+  }
+
+  dock(dotRef, ringRef) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+    if (dot && dot.animate) {
+      dot.animate(
+        [
+          { transform: 'translateX(11px)', opacity: 0 },
+          { transform: 'translateX(-0.8px)', opacity: 1, offset: 0.72 },
+          { transform: 'translateX(0px)', opacity: 1 },
+        ],
+        { duration: 550, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      );
+    }
+    if (ring && ring.animate) {
+      ring.animate(
+        [
+          { transform: 'scale(0.25)', opacity: 0.45 },
+          { transform: 'scale(1)', opacity: 0 },
+        ],
+        { duration: 450, delay: 400, easing: 'ease-out', fill: 'backwards' },
+      );
+    }
+  }
+
+  renderVals() {
+    return {
+      dotL: this.dotL,
+      ringL: this.ringL,
+      dotD: this.dotD,
+      ringD: this.ringD,
+      dockLight: () => this.dock(this.dotL, this.ringL),
+      dockDark: () => this.dock(this.dotD, this.ringD),
+    };
+  }
+}
+</script>
+</body>
+</html>

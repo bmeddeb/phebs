@@ -1,3 +1,5 @@
+# Minimal local development config. See docs/config.example.yaml for every
+# supported option, default, validation rule, and connector mode.
 connections:
   - name: zoekt
     type: git

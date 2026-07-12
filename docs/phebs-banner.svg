@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="240" viewBox="0 0 960 240">
+  <rect width="960" height="240" fill="#FFFFFF" />
+  <rect x="0.5" y="0.5" width="959" height="239" fill="none" stroke="#E8E8E8" />
+  <g transform="translate(330, 76) scale(3.6667)">
+    <path d="M21 8.5 V7.5 A4.5 4.5 0 0 0 16.5 3 H7.5 A4.5 4.5 0 0 0 3 7.5 V16.5 A4.5 4.5 0 0 0 7.5 21 H16.5 A4.5 4.5 0 0 0 21 16.5 V15.5" fill="none" stroke="#000000" stroke-width="1.8" stroke-linecap="round" />
+    <path d="M26 12 H18.5" fill="none" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6" />
+    <circle cx="15.5" cy="12" r="1.9" fill="#276EF1" />
+  </g>
+  <text x="446" y="134" font-family="system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#000000">phebs</text>
+  <text x="480" y="180" text-anchor="middle" font-family="system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="17" fill="#5E5E5E">Self-hosted code search in one Go binary.</text>
+</svg>

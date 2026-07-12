@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas"></meta>
+  <style>
+    html, body { margin: 0; padding: 0; }
+    body { font-family: system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background: #ECECEC; }
+    a { color: #276EF1; }
+    a:hover { color: #175BCC; }
+  </style>
+</helmet>
+
+<section style="padding: 40px; display: flex; flex-direction: column; gap: 24px;">
+  <div style="display: flex; align-items: baseline; gap: 12px;">
+    <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px; color: #5E5E5E; border: 1px solid #DDDDDD; border-radius: 4px; padding: 2px 7px; background: #FFFFFF;">Turn 2</span>
+    <h1 style="margin: 0; font-size: 16px; font-weight: 600; color: #000000;">Refined rail — rolled out to File, Repos, Login</h1>
+    <span style="font-size: 13px; color: #5E5E5E;">Direction <a href="#1a">1a</a> applied: 52px chrome, carded surfaces with band headers, 26–40px rows, denser code. Search lives in <a href="#1a">1a</a> below.</span>
+  </div>
+
+  <!-- ══════════════════════ Option 2a — File view ══════════════════════ -->
+  <div id="2a" style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <a href="#2a" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #4B4B4B; border: 1px solid #DDDDDD; border-radius: 4px; padding: 1px 6px; text-decoration: none; background: #FFFFFF;">2a</a>
+      <span style="font-size: 13px; font-weight: 600; color: #000000;">File view</span>
+      <span style="font-size: 12px; color: #5E5E5E;">— single 40px toolbar, carded tree + code + nav panel, 18px code lines</span>
+    </div>
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- ─────────── 2a LIGHT ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #DDDDDD; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+        <div style="background-color: #FFFFFF; color: #000000;">
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#276EF1"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #000000;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #5E5E5E;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5 5.5 5.5 0 1 0 13.5 9.5Z"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <main style="padding: 16px 20px 36px 20px;">
+            <!-- single toolbar row -->
+            <div style="display: flex; align-items: center; gap: 8px; height: 32px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 13px; min-width: 0;">
+                <a href="#/search" style="color: #5E5E5E; text-decoration: none; white-space: nowrap;" style-hover="color: #000000; text-decoration: underline;">github.com/meddeb/phebs</a>
+                <span style="color: #A6A6A6;">/</span>
+                <span style="color: #5E5E5E; white-space: nowrap;">internal/search/</span>
+                <span style="color: #000000; font-weight: 600;">searcher.go</span>
+                <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+              </div>
+              <div style="flex: 1;"></div>
+              <span style="display: flex; align-items: center; gap: 5px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #4B4B4B; border: 1px solid #E8E8E8; border-radius: 999px; padding: 2px 9px;">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"></circle><path d="M8 2v3.5M8 10.5V14"></path></svg>
+                main · a3f82c1
+              </span>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Permalink</button>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                Search
+              </button>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Blame</button>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">History</button>
+            </div>
+
+            <div style="display: flex; gap: 16px; align-items: flex-start;">
+              <!-- tree card -->
+              <aside style="width: 220px; flex-shrink: 0; border: 1px solid #E8E8E8; border-radius: 8px; padding: 4px 0; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>bin</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>cmd</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>docs</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>internal</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>api</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>auth</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>codenav</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>search</div>
+                <a href="#2a" aria-current="page" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 28px; font-size: 12.5px; color: #000000; font-weight: 500; background-color: #F3F3F3; box-shadow: inset 2px 0 0 #000000; text-decoration: none;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>searcher.go
+                </a>
+                <a href="#2a" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 28px; font-size: 12.5px; color: #4B4B4B; text-decoration: none;" style-hover="background-color: #F6F6F6;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>searcher_test.go
+                </a>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>store</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>sync</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6;"><span style="display: flex; color: #A6A6A6;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>ui</div>
+                <a href="#2a" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #4B4B4B; text-decoration: none;" style-hover="background-color: #F6F6F6;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #A6A6A6; flex-shrink: 0; margin-left: 2px;"></span>go.mod
+                </a>
+                <a href="#2a" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #4B4B4B; text-decoration: none;" style-hover="background-color: #F6F6F6;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #5E5E5E; flex-shrink: 0; margin-left: 2px;"></span>README.md
+                </a>
+              </aside>
+
+              <!-- code card -->
+              <div style="flex: 1; min-width: 0; border: 1px solid #E8E8E8; border-radius: 8px; overflow: hidden;">
+                <div style="height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background-color: #FAFAFA; border-bottom: 1px solid #F3F3F3;">
+                  <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974;"></span>
+                  <span style="font-size: 12.5px; font-weight: 600; color: #000000;">searcher.go</span>
+                  <span style="font-size: 11.5px; color: #5E5E5E;">Go · 302 lines · 9.4 KB · indexed 2 h ago</span>
+                  <div style="flex: 1;"></div>
+                  <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #175BCC; background-color: #EFF4FE; border-radius: 5px; padding: 1px 6px;">L46</span>
+                  <button type="button" title="Copy file contents" style="display: flex; border: none; background: none; cursor: pointer; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                </div>
+                <div style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12.5px; line-height: 18px; color: #000000; padding: 4px 0;">
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">42</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #868686; font-style: italic;">// usageRepoCap bounds the distinct repo names recorded per search, in result</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">43</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #868686; font-style: italic;">// (relevance) order.</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">44</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #7C3EC3;">const</span> usageRepoCap <span style="color: #5E5E5E;">=</span> <span style="color: #A95F03;">20</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">45</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"></span></div>
+                  <div style="display: flex; background-color: #EFF4FE; box-shadow: inset 2px 0 0 #276EF1;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">46</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #7C3EC3;">func</span> <span style="color: #175BCC;">Open</span><span style="color: #5E5E5E;">(</span>indexDir <span style="color: #016974;">string</span><span style="color: #5E5E5E;">,</span> st store<span style="color: #5E5E5E;">.</span><span style="color: #016974;">Store</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">(*</span><span style="color: #016974;">Searcher</span><span style="color: #5E5E5E;">,</span> <span style="color: #016974;">error</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">47</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #868686; font-style: italic;">// NewDirectorySearcher uses filepath.Glob internally. Reject metacharacters</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">48</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #868686; font-style: italic;">// at this boundary too so library callers cannot mount sibling shards.</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">49</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #7C3EC3;">if</span> strings<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">ContainsAny</span><span style="color: #5E5E5E;">(</span>indexDir<span style="color: #5E5E5E;">,</span> <span style="color: #166C3B;">`*?[\`</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">50</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">		<span style="color: #7C3EC3;">return</span> <span style="color: #A95F03;">nil</span><span style="color: #5E5E5E;">,</span> fmt<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">Errorf</span><span style="color: #5E5E5E;">(</span><span style="color: #166C3B;">"open shard dir: path contains glob metacharacters"</span><span style="color: #5E5E5E;">)</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">51</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #5E5E5E;">}</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #F6F6F6;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; user-select: none;">52</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #7C3EC3;">if</span> info<span style="color: #5E5E5E;">,</span> err <span style="color: #5E5E5E;">:=</span> os<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">Lstat</span><span style="color: #5E5E5E;">(</span>indexDir<span style="color: #5E5E5E;">)</span><span style="color: #5E5E5E;">;</span> err <span style="color: #5E5E5E;">==</span> <span style="color: #A95F03;">nil</span> <span style="color: #5E5E5E;">{</span></span></div>
+                </div>
+              </div>
+
+              <!-- code nav card -->
+              <aside style="width: 280px; flex-shrink: 0; border: 1px solid #E8E8E8; border-radius: 8px; overflow: hidden;">
+                <div style="height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background-color: #FAFAFA; border-bottom: 1px solid #F3F3F3;">
+                  <span style="font-size: 12.5px; font-weight: 600; color: #000000;">Code navigation</span>
+                  <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #5E5E5E;">46:6</span>
+                </div>
+                <div style="padding: 12px;">
+                  <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; color: #5E5E5E; text-transform: uppercase; margin-bottom: 6px;">Hover</div>
+                  <div style="font-size: 12.5px; font-weight: 600; color: #000000;">Open</div>
+                  <div style="margin-top: 2px; font-size: 11px; color: #5E5E5E;">function</div>
+                  <pre style="margin: 8px 0 0 0; padding: 8px; overflow-x: auto; white-space: pre-wrap; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #000000; background-color: #F3F3F3; border-radius: 6px;">func Open(indexDir string, st store.Store) (*Searcher, error)</pre>
+                  <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; color: #5E5E5E; text-transform: uppercase; margin: 14px 0 6px 0;">Definition</div>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #276EF1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">internal/search/searcher.go:46</a>
+                  <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; color: #5E5E5E; text-transform: uppercase; margin: 14px 0 6px 0;">References (3)</div>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #276EF1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">cmd/phebs/serve.go:118</a>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #276EF1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">internal/api/server.go:74</a>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #276EF1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">internal/search/searcher_test.go:31</a>
+                </div>
+              </aside>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAFAFA; border-top: 1px solid #E8E8E8; font-size: 11px; color: #5E5E5E;">Light</div>
+      </div>
+
+      <!-- ─────────── 2a DARK ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #383838; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+        <div style="background-color: #000000; color: #FFFFFF;">
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #383838; background-color: #000000;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#5D5D5D" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#5E8BDB"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #FFFFFF;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #ABABAB;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M13 3l-1 1M4 12l-1 1"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <main style="padding: 16px 20px 36px 20px;">
+            <div style="display: flex; align-items: center; gap: 8px; height: 32px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 13px; min-width: 0;">
+                <a href="#/search" style="color: #ABABAB; text-decoration: none; white-space: nowrap;" style-hover="color: #FFFFFF; text-decoration: underline;">github.com/meddeb/phebs</a>
+                <span style="color: #5D5D5D;">/</span>
+                <span style="color: #ABABAB; white-space: nowrap;">internal/search/</span>
+                <span style="color: #FFFFFF; font-weight: 600;">searcher.go</span>
+                <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+              </div>
+              <div style="flex: 1;"></div>
+              <span style="display: flex; align-items: center; gap: 5px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #C4C4C4; border: 1px solid #383838; border-radius: 999px; padding: 2px 9px;">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"></circle><path d="M8 2v3.5M8 10.5V14"></path></svg>
+                main · a3f82c1
+              </span>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">Permalink</button>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                Search
+              </button>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">Blame</button>
+              <button type="button" style="display: flex; align-items: center; gap: 5px; height: 28px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">History</button>
+            </div>
+
+            <div style="display: flex; gap: 16px; align-items: flex-start;">
+              <aside style="width: 220px; flex-shrink: 0; border: 1px solid #383838; border-radius: 8px; padding: 4px 0; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>bin</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>cmd</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>docs</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>internal</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>api</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>auth</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>codenav</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>search</div>
+                <a href="#2a" aria-current="page" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 28px; font-size: 12.5px; color: #FFFFFF; font-weight: 500; background-color: #292929; box-shadow: inset 2px 0 0 #FFFFFF; text-decoration: none;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #72C1CD; flex-shrink: 0;"></span>searcher.go
+                </a>
+                <a href="#2a" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 28px; font-size: 12.5px; color: #C4C4C4; text-decoration: none;" style-hover="background-color: #161616;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #72C1CD; flex-shrink: 0;"></span>searcher_test.go
+                </a>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>store</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px 0 18px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>sync</div>
+                <div style="display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616;"><span style="display: flex; color: #5D5D5D;"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 4 4 4-4 4"></path></svg></span>ui</div>
+                <a href="#2a" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #C4C4C4; text-decoration: none;" style-hover="background-color: #161616;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #5D5D5D; flex-shrink: 0; margin-left: 2px;"></span>go.mod
+                </a>
+                <a href="#2a" style="display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; font-size: 12.5px; color: #C4C4C4; text-decoration: none;" style-hover="background-color: #161616;">
+                  <span style="width: 7px; height: 7px; border-radius: 2px; background-color: #ABABAB; flex-shrink: 0; margin-left: 2px;"></span>README.md
+                </a>
+              </aside>
+
+              <div style="flex: 1; min-width: 0; border: 1px solid #383838; border-radius: 8px; overflow: hidden;">
+                <div style="height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background-color: #161616; border-bottom: 1px solid #292929;">
+                  <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD;"></span>
+                  <span style="font-size: 12.5px; font-weight: 600; color: #FFFFFF;">searcher.go</span>
+                  <span style="font-size: 11.5px; color: #ABABAB;">Go · 302 lines · 9.4 KB · indexed 2 h ago</span>
+                  <div style="flex: 1;"></div>
+                  <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #93B4EE; background-color: #182946; border-radius: 5px; padding: 1px 6px;">L46</span>
+                  <button type="button" title="Copy file contents" style="display: flex; border: none; background: none; cursor: pointer; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #292929;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                </div>
+                <div style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12.5px; line-height: 18px; color: #DEDEDE; padding: 4px 0;">
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">42</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #717171; font-style: italic;">// usageRepoCap bounds the distinct repo names recorded per search, in result</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">43</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #717171; font-style: italic;">// (relevance) order.</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">44</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #BDA7E4;">const</span> usageRepoCap <span style="color: #ABABAB;">=</span> <span style="color: #DEA85E;">20</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">45</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"></span></div>
+                  <div style="display: flex; background-color: #182946; box-shadow: inset 2px 0 0 #5E8BDB;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">46</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;"><span style="color: #BDA7E4;">func</span> <span style="color: #93B4EE;">Open</span><span style="color: #ABABAB;">(</span>indexDir <span style="color: #72C1CD;">string</span><span style="color: #ABABAB;">,</span> st store<span style="color: #ABABAB;">.</span><span style="color: #72C1CD;">Store</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">(*</span><span style="color: #72C1CD;">Searcher</span><span style="color: #ABABAB;">,</span> <span style="color: #72C1CD;">error</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">{</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">47</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #717171; font-style: italic;">// NewDirectorySearcher uses filepath.Glob internally. Reject metacharacters</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">48</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #717171; font-style: italic;">// at this boundary too so library callers cannot mount sibling shards.</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">49</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #BDA7E4;">if</span> strings<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">ContainsAny</span><span style="color: #ABABAB;">(</span>indexDir<span style="color: #ABABAB;">,</span> <span style="color: #8FC19C;">`*?[\`</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">{</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">50</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">		<span style="color: #BDA7E4;">return</span> <span style="color: #DEA85E;">nil</span><span style="color: #ABABAB;">,</span> fmt<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">Errorf</span><span style="color: #ABABAB;">(</span><span style="color: #8FC19C;">"open shard dir: path contains glob metacharacters"</span><span style="color: #ABABAB;">)</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">51</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #ABABAB;">}</span></span></div>
+                  <div style="display: flex;" style-hover="background-color: #161616;"><span style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; user-select: none;">52</span><span style="flex: 1; white-space: pre; overflow-x: auto; tab-size: 4; padding-right: 12px;">	<span style="color: #BDA7E4;">if</span> info<span style="color: #ABABAB;">,</span> err <span style="color: #ABABAB;">:=</span> os<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">Lstat</span><span style="color: #ABABAB;">(</span>indexDir<span style="color: #ABABAB;">)</span><span style="color: #ABABAB;">;</span> err <span style="color: #ABABAB;">==</span> <span style="color: #DEA85E;">nil</span> <span style="color: #ABABAB;">{</span></span></div>
+                </div>
+              </div>
+
+              <aside style="width: 280px; flex-shrink: 0; border: 1px solid #383838; border-radius: 8px; overflow: hidden;">
+                <div style="height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background-color: #161616; border-bottom: 1px solid #292929;">
+                  <span style="font-size: 12.5px; font-weight: 600; color: #FFFFFF;">Code navigation</span>
+                  <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #ABABAB;">46:6</span>
+                </div>
+                <div style="padding: 12px;">
+                  <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; color: #ABABAB; text-transform: uppercase; margin-bottom: 6px;">Hover</div>
+                  <div style="font-size: 12.5px; font-weight: 600; color: #FFFFFF;">Open</div>
+                  <div style="margin-top: 2px; font-size: 11px; color: #ABABAB;">function</div>
+                  <pre style="margin: 8px 0 0 0; padding: 8px; overflow-x: auto; white-space: pre-wrap; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #DEDEDE; background-color: #292929; border-radius: 6px;">func Open(indexDir string, st store.Store) (*Searcher, error)</pre>
+                  <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; color: #ABABAB; text-transform: uppercase; margin: 14px 0 6px 0;">Definition</div>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #5E8BDB; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">internal/search/searcher.go:46</a>
+                  <div style="font-size: 10.5px; font-weight: 600; letter-spacing: 0.05em; color: #ABABAB; text-transform: uppercase; margin: 14px 0 6px 0;">References (3)</div>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #5E8BDB; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">cmd/phebs/serve.go:118</a>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #5E8BDB; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">internal/api/server.go:74</a>
+                  <a href="#2a" style="display: block; padding: 3px 0; color: #5E8BDB; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" style-hover="text-decoration: underline;">internal/search/searcher_test.go:31</a>
+                </div>
+              </aside>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #161616; border-top: 1px solid #383838; font-size: 11px; color: #ABABAB;">Dark</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Option 2b — Repos ══════════════════════ -->
+  <div id="2b" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <a href="#2b" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #4B4B4B; border: 1px solid #DDDDDD; border-radius: 4px; padding: 1px 6px; text-decoration: none; background: #FFFFFF;">2b</a>
+      <span style="font-size: 13px; font-weight: 600; color: #000000;">Repos</span>
+      <span style="font-size: 12px; color: #5E5E5E;">— carded table with band header, 40px single-line rows, counts moved onto the band</span>
+    </div>
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- ─────────── 2b LIGHT ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #DDDDDD; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+        <div style="background-color: #FFFFFF; color: #000000;">
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#276EF1"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #000000;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: #000000; text-decoration: none; box-shadow: inset 0 -2px 0 #000000;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #5E5E5E;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5 5.5 5.5 0 1 0 13.5 9.5Z"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <main style="padding: 16px 20px 36px 20px;">
+            <div style="border: 1px solid #E8E8E8; border-radius: 8px; overflow: hidden;">
+              <div style="height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background-color: #FAFAFA; border-bottom: 1px solid #F3F3F3;">
+                <span style="font-size: 14px; font-weight: 600; color: #000000;">Repositories</span>
+                <span style="font-size: 12px; color: #5E5E5E;">4 · 2 indexed · 1 indexing</span>
+                <span style="flex: 1;"></span>
+                <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Reindex all</button>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #F3F3F3;">
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #5E5E5E; padding: 8px 12px; white-space: nowrap;">Repository</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #5E5E5E; padding: 8px 12px; white-space: nowrap;">Connection</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #5E5E5E; padding: 8px 12px; white-space: nowrap;">Status</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #5E5E5E; padding: 8px 12px; white-space: nowrap;">Last indexed</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #5E5E5E; padding: 8px 12px; white-space: nowrap;">Commit</th>
+                    <th style="padding: 8px 12px;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom: 1px solid #F3F3F3; height: 40px;" style-hover="background-color: #F6F6F6;">
+                    <td style="padding: 0 12px; font-weight: 500; color: #000000; white-space: nowrap;">github.com/meddeb/phebs</td>
+                    <td style="padding: 0 12px;"><span style="font-size: 11.5px; background-color: #F3F3F3; color: #4B4B4B; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">github</span></td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #4B4B4B;"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #0E8345;"></span>Indexed</span></td>
+                    <td style="padding: 0 12px; color: #4B4B4B;" title="7/11/2026, 9:14:03 AM">2 h ago</td>
+                    <td style="padding: 0 12px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11.5px; color: #4B4B4B; background-color: #F6F6F6; border: 1px solid #E8E8E8; border-radius: 5px; padding: 2px 7px;">a3f82c1</span></td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #A6A6A6; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Reindex</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #F3F3F3; height: 40px;" style-hover="background-color: #F6F6F6;">
+                    <td style="padding: 0 12px; font-weight: 500; color: #000000; white-space: nowrap;">github.com/sourcegraph/zoekt</td>
+                    <td style="padding: 0 12px;"><span style="font-size: 11.5px; background-color: #F3F3F3; color: #4B4B4B; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">zoekt</span></td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #4B4B4B;"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #276EF1; animation: phebs-pulse 1.4s infinite;"></span>Indexing…</span></td>
+                    <td style="padding: 0 12px; color: #4B4B4B;" title="7/10/2026, 8:02:47 AM">1 d ago</td>
+                    <td style="padding: 0 12px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11.5px; color: #4B4B4B; background-color: #F6F6F6; border: 1px solid #E8E8E8; border-radius: 5px; padding: 2px 7px;">09c1d44</span></td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #A6A6A6; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #A6A6A6; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: default; opacity: 0.6;">Reindex</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #F3F3F3; height: 40px;" style-hover="background-color: #F6F6F6;">
+                    <td style="padding: 0 12px; font-weight: 500; color: #000000; white-space: nowrap;">my-project</td>
+                    <td style="padding: 0 12px;"><span style="font-size: 11.5px; background-color: #F3F3F3; color: #4B4B4B; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">local</span></td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #4B4B4B;" title="zoekt-git-index: exit status 137 (OOM)"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #DE1135;"></span>Failed <span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; color: #DE1135; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">exit 137 (OOM)</span></span></td>
+                    <td style="padding: 0 12px; color: #4B4B4B;" title="7/8/2026, 4:31:12 PM">3 d ago</td>
+                    <td style="padding: 0 12px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11.5px; color: #4B4B4B; background-color: #F6F6F6; border: 1px solid #E8E8E8; border-radius: 5px; padding: 2px 7px;">f21b7ce</span></td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #A6A6A6; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Retry</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="height: 40px;" style-hover="background-color: #F6F6F6;">
+                    <td style="padding: 0 12px; white-space: nowrap;"><span style="display: inline-flex; align-items: center; gap: 8px;"><span style="font-weight: 500; color: #000000;">gitea.local/tools/scratch</span><span style="font-size: 11.5px; background-color: #FFF0E9; color: #A33B04; border-radius: 999px; padding: 2px 8px;">orphaned</span></span></td>
+                    <td style="padding: 0 12px; color: #A6A6A6;">—</td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #5E5E5E;"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #A6A6A6;"></span>never indexed</span></td>
+                    <td style="padding: 0 12px; color: #A6A6A6;">—</td>
+                    <td style="padding: 0 12px; color: #A6A6A6;">—</td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #A6A6A6; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #4B4B4B; background-color: #F3F3F3; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">Reindex</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAFAFA; border-top: 1px solid #E8E8E8; font-size: 11px; color: #5E5E5E;">Light</div>
+      </div>
+
+      <!-- ─────────── 2b DARK ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #383838; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+        <div style="background-color: #000000; color: #FFFFFF;">
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #383838; background-color: #000000;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#5D5D5D" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#5E8BDB"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #FFFFFF;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: #FFFFFF; text-decoration: none; box-shadow: inset 0 -2px 0 #FFFFFF;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #ABABAB;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M13 3l-1 1M4 12l-1 1"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <main style="padding: 16px 20px 36px 20px;">
+            <div style="border: 1px solid #383838; border-radius: 8px; overflow: hidden;">
+              <div style="height: 38px; display: flex; align-items: center; gap: 10px; padding: 0 12px; background-color: #161616; border-bottom: 1px solid #292929;">
+                <span style="font-size: 14px; font-weight: 600; color: #FFFFFF;">Repositories</span>
+                <span style="font-size: 12px; color: #ABABAB;">4 · 2 indexed · 1 indexing</span>
+                <span style="flex: 1;"></span>
+                <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">Reindex all</button>
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #292929;">
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #ABABAB; padding: 8px 12px; white-space: nowrap;">Repository</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #ABABAB; padding: 8px 12px; white-space: nowrap;">Connection</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #ABABAB; padding: 8px 12px; white-space: nowrap;">Status</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #ABABAB; padding: 8px 12px; white-space: nowrap;">Last indexed</th>
+                    <th style="text-align: left; font-size: 11.5px; font-weight: 500; color: #ABABAB; padding: 8px 12px; white-space: nowrap;">Commit</th>
+                    <th style="padding: 8px 12px;"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom: 1px solid #292929; height: 40px;" style-hover="background-color: #161616;">
+                    <td style="padding: 0 12px; font-weight: 500; color: #FFFFFF; white-space: nowrap;">github.com/meddeb/phebs</td>
+                    <td style="padding: 0 12px;"><span style="font-size: 11.5px; background-color: #292929; color: #C4C4C4; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">github</span></td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #C4C4C4;"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #5C9D70;"></span>Indexed</span></td>
+                    <td style="padding: 0 12px; color: #C4C4C4;" title="7/11/2026, 9:14:03 AM">2 h ago</td>
+                    <td style="padding: 0 12px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11.5px; color: #C4C4C4; background-color: #161616; border: 1px solid #383838; border-radius: 5px; padding: 2px 7px;">a3f82c1</span></td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #5D5D5D; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">Reindex</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #292929; height: 40px;" style-hover="background-color: #161616;">
+                    <td style="padding: 0 12px; font-weight: 500; color: #FFFFFF; white-space: nowrap;">github.com/sourcegraph/zoekt</td>
+                    <td style="padding: 0 12px;"><span style="font-size: 11.5px; background-color: #292929; color: #C4C4C4; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">zoekt</span></td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #C4C4C4;"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #5E8BDB; animation: phebs-pulse 1.4s infinite;"></span>Indexing…</span></td>
+                    <td style="padding: 0 12px; color: #C4C4C4;" title="7/10/2026, 8:02:47 AM">1 d ago</td>
+                    <td style="padding: 0 12px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11.5px; color: #C4C4C4; background-color: #161616; border: 1px solid #383838; border-radius: 5px; padding: 2px 7px;">09c1d44</span></td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #5D5D5D; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #5D5D5D; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: default; opacity: 0.6;">Reindex</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid #292929; height: 40px;" style-hover="background-color: #161616;">
+                    <td style="padding: 0 12px; font-weight: 500; color: #FFFFFF; white-space: nowrap;">my-project</td>
+                    <td style="padding: 0 12px;"><span style="font-size: 11.5px; background-color: #292929; color: #C4C4C4; border-radius: 999px; padding: 2px 8px; white-space: nowrap;">local</span></td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #C4C4C4;" title="zoekt-git-index: exit status 137 (OOM)"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #DE5B5D;"></span>Failed <span style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; color: #DE5B5D; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">exit 137 (OOM)</span></span></td>
+                    <td style="padding: 0 12px; color: #C4C4C4;" title="7/8/2026, 4:31:12 PM">3 d ago</td>
+                    <td style="padding: 0 12px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11.5px; color: #C4C4C4; background-color: #161616; border: 1px solid #383838; border-radius: 5px; padding: 2px 7px;">f21b7ce</span></td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #5D5D5D; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">Retry</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr style="height: 40px;" style-hover="background-color: #161616;">
+                    <td style="padding: 0 12px; white-space: nowrap;"><span style="display: inline-flex; align-items: center; gap: 8px;"><span style="font-weight: 500; color: #FFFFFF;">gitea.local/tools/scratch</span><span style="font-size: 11.5px; background-color: #35161B; color: #DE5B5D; border-radius: 999px; padding: 2px 8px;">orphaned</span></span></td>
+                    <td style="padding: 0 12px; color: #5D5D5D;">—</td>
+                    <td style="padding: 0 12px;"><span style="display: flex; align-items: center; gap: 6px; color: #ABABAB;"><span style="width: 7px; height: 7px; border-radius: 50%; background-color: #5D5D5D;"></span>never indexed</span></td>
+                    <td style="padding: 0 12px; color: #5D5D5D;">—</td>
+                    <td style="padding: 0 12px; color: #5D5D5D;">—</td>
+                    <td style="padding: 0 12px;">
+                      <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                        <button type="button" title="Search in this repo" style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; color: #5D5D5D; background: transparent; border: none; border-radius: 7px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></button>
+                        <button type="button" style="height: 26px; font-size: 12.5px; font-family: inherit; color: #C4C4C4; background-color: #292929; border: none; border-radius: 7px; padding: 0 10px; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">Reindex</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #161616; border-top: 1px solid #383838; font-size: 11px; color: #ABABAB;">Dark</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Option 2c — Login ══════════════════════ -->
+  <div id="2c" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <a href="#2c" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #4B4B4B; border: 1px solid #DDDDDD; border-radius: 4px; padding: 1px 6px; text-decoration: none; background: #FFFFFF;">2c</a>
+      <span style="font-size: 13px; font-weight: 600; color: #000000;">Login</span>
+      <span style="font-size: 12px; color: #5E5E5E;">— lockup with mark, 44px fields, tighter rhythm; SSO separated by hairline</span>
+    </div>
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- ─────────── 2c LIGHT ─────────── -->
+      <div style="width: 580px; flex-shrink: 0; border: 1px solid #DDDDDD; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+        <div style="background-color: #FFFFFF; min-height: 520px; display: grid; place-items: center; padding: 24px; box-sizing: border-box;">
+          <div style="width: 100%; max-width: 360px;">
+            <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 24px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#276EF1"></circle></svg>
+              <span style="font-size: 24px; font-weight: 700; color: #000000;">phebs</span>
+            </div>
+            <div style="font-size: 18px; font-weight: 600; color: #000000; margin-bottom: 16px;">Sign in</div>
+            <div style="display: grid; gap: 12px;">
+              <div style="display: flex; align-items: center; height: 44px; border-radius: 8px; border: 2px solid #F3F3F3; background-color: #F3F3F3; box-sizing: border-box;">
+                <span style="font-size: 15px; color: #5E5E5E; padding: 0 13px;">Email</span>
+              </div>
+              <div style="display: flex; align-items: center; height: 44px; border-radius: 8px; border: 2px solid #F3F3F3; background-color: #F3F3F3; box-sizing: border-box;">
+                <span style="font-size: 15px; color: #5E5E5E; padding: 0 13px;">Password</span>
+              </div>
+              <button type="button" style="height: 44px; border-radius: 8px; border: none; background-color: #000000; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 500; cursor: pointer;" style-hover="background-color: #333333;">Sign in</button>
+              <div style="display: flex; align-items: center; gap: 10px; margin: 2px 0;">
+                <span style="flex: 1; height: 1px; background: #F3F3F3;"></span>
+                <span style="font-size: 11px; color: #A6A6A6;">or</span>
+                <span style="flex: 1; height: 1px; background: #F3F3F3;"></span>
+              </div>
+              <button type="button" style="height: 44px; border-radius: 8px; border: none; background-color: #F3F3F3; color: #000000; font-family: inherit; font-size: 15px; font-weight: 500; cursor: pointer;" style-hover="background-color: #DDDDDD;">Continue with SSO</button>
+            </div>
+          </div>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAFAFA; border-top: 1px solid #E8E8E8; font-size: 11px; color: #5E5E5E;">Light</div>
+      </div>
+
+      <!-- ─────────── 2c DARK ─────────── -->
+      <div style="width: 580px; flex-shrink: 0; border: 1px solid #383838; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+        <div style="background-color: #000000; min-height: 520px; display: grid; place-items: center; padding: 24px; box-sizing: border-box;">
+          <div style="width: 100%; max-width: 360px;">
+            <div style="display: flex; align-items: center; gap: 9px; margin-bottom: 24px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#5D5D5D" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#5E8BDB"></circle></svg>
+              <span style="font-size: 24px; font-weight: 700; color: #FFFFFF;">phebs</span>
+            </div>
+            <div style="font-size: 18px; font-weight: 600; color: #FFFFFF; margin-bottom: 16px;">Sign in</div>
+            <div style="display: grid; gap: 12px;">
+              <div style="display: flex; align-items: center; height: 44px; border-radius: 8px; border: 2px solid #292929; background-color: #292929; box-sizing: border-box;">
+                <span style="font-size: 15px; color: #ABABAB; padding: 0 13px;">Email</span>
+              </div>
+              <div style="display: flex; align-items: center; height: 44px; border-radius: 8px; border: 2px solid #292929; background-color: #292929; box-sizing: border-box;">
+                <span style="font-size: 15px; color: #ABABAB; padding: 0 13px;">Password</span>
+              </div>
+              <button type="button" style="height: 44px; border-radius: 8px; border: none; background-color: #C4C4C4; color: #000000; font-family: inherit; font-size: 15px; font-weight: 500; cursor: pointer;" style-hover="background-color: #ABABAB;">Sign in</button>
+              <div style="display: flex; align-items: center; gap: 10px; margin: 2px 0;">
+                <span style="flex: 1; height: 1px; background: #292929;"></span>
+                <span style="font-size: 11px; color: #5D5D5D;">or</span>
+                <span style="flex: 1; height: 1px; background: #292929;"></span>
+              </div>
+              <button type="button" style="height: 44px; border-radius: 8px; border: none; background-color: #292929; color: #FFFFFF; font-family: inherit; font-size: 15px; font-weight: 500; cursor: pointer;" style-hover="background-color: #484848;">Continue with SSO</button>
+            </div>
+          </div>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #161616; border-top: 1px solid #383838; font-size: 11px; color: #ABABAB;">Dark</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="height: 0;"></div>
+</section>
+
+<section style="padding: 40px; display: flex; flex-direction: column; gap: 24px;">
+  <div style="display: flex; align-items: baseline; gap: 12px;">
+    <span style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px; color: #5E5E5E; border: 1px solid #DDDDDD; border-radius: 4px; padding: 2px 7px; background: #FFFFFF;">Turn 1</span>
+    <h1 style="margin: 0; font-size: 16px; font-weight: 600; color: #000000;">Search — enhanced (density + layout), light &amp; dark</h1>
+    <span style="font-size: 13px; color: #5E5E5E;">Same query &amp; results as the recreation for apples-to-apples comparison. Mark shown: 2c "Context Port".</span>
+  </div>
+
+  <!-- ══════════════════════ Option 1a — Refined rail ══════════════════════ -->
+  <div id="1a" style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <a href="#1a" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #4B4B4B; border: 1px solid #DDDDDD; border-radius: 4px; padding: 1px 6px; text-decoration: none; background: #FFFFFF;">1a</a>
+      <span style="font-size: 13px; font-weight: 600; color: #000000;">Refined rail</span>
+      <span style="font-size: 12px; color: #5E5E5E;">— keeps today's anatomy; one card per repo, denser rows, facet bars, tighter chrome</span>
+    </div>
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- ─────────── 1a LIGHT ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #DDDDDD; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+        <div style="background-color: #FFFFFF; color: #000000;">
+          <!-- header: 52px, mark + tighter nav, / hint -->
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#276EF1"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #000000; letter-spacing: 0;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: #000000; text-decoration: none; box-shadow: inset 0 -2px 0 #000000;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #5E5E5E;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5 5.5 5.5 0 1 0 13.5 9.5Z"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <main style="padding: 20px 20px 40px 20px;">
+            <!-- search row: input with embedded run button; operators inline right -->
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div style="flex: 1; display: flex; align-items: center; height: 44px; border-radius: 8px; border: 2px solid #F3F3F3; background-color: #F3F3F3; box-sizing: border-box;">
+                <span style="display: flex; align-items: center; padding-left: 12px; color: #000000;">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                </span>
+                <span style="flex: 1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 14px; color: #000000; padding: 0 8px;">Searcher</span>
+                <span style="display: flex; align-items: center; gap: 6px; padding-right: 6px;">
+                  <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B; background: #FFFFFF;">/</kbd>
+                  <button type="button" style="height: 32px; border-radius: 6px; border: none; background-color: #000000; color: #FFFFFF; font-family: inherit; font-size: 13px; font-weight: 500; padding: 0 14px; cursor: pointer;" style-hover="background-color: #333333;">Search</button>
+                </span>
+              </div>
+            </div>
+            <!-- operators + syntax link -->
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">repo:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">lang:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">file:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">sym:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">case:yes</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">"exact phrase"</button>
+              <div style="flex: 1;"></div>
+              <span style="font-size: 12px; color: #5E5E5E;"><b style="color: #000000; font-weight: 600;">11</b> matches · <b style="color: #000000; font-weight: 600;">4</b> files · 96ms · 2 repositories</span>
+              <span style="width: 1px; height: 12px; background: #E8E8E8;"></span>
+              <span style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #5E5E5E;"><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">j</kbd><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">k</kbd> navigate</span>
+              <a href="#syntax" style="font-size: 12px; color: #5E5E5E; text-decoration: none;" style-hover="color: #276EF1;">Syntax ↗</a>
+            </div>
+
+            <div style="display: flex; gap: 24px; margin-top: 14px; align-items: flex-start;">
+              <!-- facet rail with count bars -->
+              <aside style="width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 18px;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5E5E5E; margin-bottom: 6px;">Repositories</div>
+                  <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; border-radius: 6px; width: 100%; border: none; background-color: transparent; text-align: left; cursor: pointer; position: relative;" style-hover="background-color: #F6F6F6;">
+                    <span style="width: 13px; height: 13px; border: 1px solid #DDDDDD; border-radius: 3px; flex-shrink: 0; box-sizing: border-box;"></span>
+                    <span style="flex: 1; min-width: 0; font-size: 13px; color: #4B4B4B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">phebs</span>
+                    <span style="font-size: 11px; color: #5E5E5E; font-variant-numeric: tabular-nums;">2</span>
+                  </button>
+                  <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; border-radius: 6px; width: 100%; border: none; background-color: transparent; text-align: left; cursor: pointer; position: relative;" style-hover="background-color: #F6F6F6;">
+                    <span style="width: 13px; height: 13px; border: 1px solid #DDDDDD; border-radius: 3px; flex-shrink: 0; box-sizing: border-box;"></span>
+                    <span style="flex: 1; min-width: 0; font-size: 13px; color: #4B4B4B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">zoekt</span>
+                    <span style="font-size: 11px; color: #5E5E5E; font-variant-numeric: tabular-nums;">2</span>
+                  </button>
+                </div>
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5E5E5E; margin-bottom: 6px;">Languages</div>
+                  <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; border-radius: 6px; width: 100%; border: none; background-color: transparent; text-align: left; cursor: pointer;" style-hover="background-color: #F6F6F6;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #016974; flex-shrink: 0;"></span>
+                    <span style="flex: 1; font-size: 13px; color: #4B4B4B;">go</span>
+                    <span style="font-size: 11px; color: #5E5E5E; font-variant-numeric: tabular-nums;">4</span>
+                  </button>
+                </div>
+              </aside>
+
+              <!-- results: ONE card per repo, slim file headers, 18px code lines -->
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px;">
+
+                <!-- repo card: phebs -->
+                <div style="border: 1px solid #E8E8E8; border-radius: 8px; overflow: hidden; background-color: #FFFFFF;">
+                  <button type="button" style="width: 100%; height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: none; background-color: #FAFAFA; cursor: pointer; text-align: left; border-bottom: 1px solid #F3F3F3;">
+                    <span style="color: #5E5E5E; display: flex;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>
+                    <span style="font-size: 14px; font-weight: 600; color: #000000;">github.com/meddeb/phebs</span>
+                    <span style="font-size: 12px; color: #5E5E5E;">7 matches · 2 files</span>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #A6A6A6;">indexed 2 h ago</span>
+                  </button>
+
+                  <!-- file: searcher.go -->
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background-color: #FFFFFF;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #5E5E5E;">internal/search/</span><span style="color: #000000; font-weight: 500;">searcher.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #5E5E5E;">5</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #F6F6F6;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">46</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;"><span style="color: #7C3EC3;">func</span> <span style="color: #175BCC;">Open</span><span style="color: #5E5E5E;">(</span>indexDir <span style="color: #016974;">string</span><span style="color: #5E5E5E;">,</span> st store<span style="color: #5E5E5E;">.</span><span style="color: #016974;">Store</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">(*</span><span style="background-color: #FBE5B6; border-radius: 2px; color: #016974;">Searcher</span><span style="color: #5E5E5E;">,</span> <span style="color: #016974;">error</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+                    </div>
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #F6F6F6;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">49</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	<span style="color: #7C3EC3;">if</span> strings<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">ContainsAny</span><span style="color: #5E5E5E;">(</span>indexDir<span style="color: #5E5E5E;">,</span> <span style="color: #166C3B;">`*?[\`</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+                    </div>
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px; background-color: #EFF4FE; box-shadow: inset 2px 0 0 #276EF1;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">68</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	z<span style="color: #5E5E5E;">,</span> err <span style="color: #5E5E5E;">:=</span> zoektsearch<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">NewDirectory<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span><span style="color: #5E5E5E;">(</span>indexDir<span style="color: #5E5E5E;">)</span></code>
+                    </div>
+                  </div>
+                  <div style="height: 1px; background: #F3F3F3;"></div>
+
+                  <!-- file: searcher_test.go -->
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background-color: #FFFFFF;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #5E5E5E;">internal/search/</span><span style="color: #000000; font-weight: 500;">searcher_test.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #5E5E5E;">2</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #F6F6F6;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">31</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	s<span style="color: #5E5E5E;">,</span> err <span style="color: #5E5E5E;">:=</span> search<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">Open</span><span style="color: #5E5E5E;">(</span>dir<span style="color: #5E5E5E;">,</span> st<span style="color: #5E5E5E;">)</span> <span style="color: #868686; font-style: italic;">// returns *<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span></code>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- repo card: zoekt -->
+                <div style="border: 1px solid #E8E8E8; border-radius: 8px; overflow: hidden; background-color: #FFFFFF;">
+                  <button type="button" style="width: 100%; height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: none; background-color: #FAFAFA; cursor: pointer; text-align: left; border-bottom: 1px solid #F3F3F3;">
+                    <span style="color: #5E5E5E; display: flex;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>
+                    <span style="font-size: 14px; font-weight: 600; color: #000000;">github.com/sourcegraph/zoekt</span>
+                    <span style="font-size: 12px; color: #5E5E5E;">4 matches · 2 files</span>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #A6A6A6;">indexed 1 d ago</span>
+                  </button>
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px;"><span style="color: #000000; font-weight: 500;">api.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #5E5E5E;">2</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #F6F6F6;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">113</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;"><span style="color: #7C3EC3;">type</span> <span style="background-color: #FBE5B6; border-radius: 2px;"><span style="color: #016974;">Searcher</span></span> <span style="color: #7C3EC3;">interface</span> <span style="color: #5E5E5E;">{</span></code>
+                    </div>
+                  </div>
+                  <div style="height: 1px; background: #F3F3F3;"></div>
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px;"><span style="color: #5E5E5E;">shards/</span><span style="color: #000000; font-weight: 500;">shards.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #5E5E5E;">2</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #A6A6A6; padding: 3px; border-radius: 5px;" style-hover="color: #000000; background-color: #F6F6F6;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #F6F6F6;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">344</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;"><span style="color: #7C3EC3;">func</span> <span style="color: #175BCC;">NewDirectory<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span><span style="color: #5E5E5E;">(</span>dir <span style="color: #016974;">string</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">(</span>zoekt<span style="color: #5E5E5E;">.</span><span style="color: #016974;">Searcher</span><span style="color: #5E5E5E;">,</span> <span style="color: #016974;">error</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAFAFA; border-top: 1px solid #E8E8E8; font-size: 11px; color: #5E5E5E;">Light</div>
+      </div>
+
+      <!-- ─────────── 1a DARK ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #383838; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+        <div style="background-color: #000000; color: #FFFFFF;">
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #383838; background-color: #000000;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#5D5D5D" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#5E8BDB"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #FFFFFF; letter-spacing: 0;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: #FFFFFF; text-decoration: none; box-shadow: inset 0 -2px 0 #FFFFFF;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #ABABAB;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M13 3l-1 1M4 12l-1 1"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <main style="padding: 20px 20px 40px 20px;">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <div style="flex: 1; display: flex; align-items: center; height: 44px; border-radius: 8px; border: 2px solid #292929; background-color: #292929; box-sizing: border-box;">
+                <span style="display: flex; align-items: center; padding-left: 12px; color: #FFFFFF;">
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+                </span>
+                <span style="flex: 1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 14px; color: #FFFFFF; padding: 0 8px;">Searcher</span>
+                <span style="display: flex; align-items: center; gap: 6px; padding-right: 6px;">
+                  <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4; background: #000000;">/</kbd>
+                  <button type="button" style="height: 32px; border-radius: 6px; border: none; background-color: #C4C4C4; color: #000000; font-family: inherit; font-size: 13px; font-weight: 500; padding: 0 14px; cursor: pointer;" style-hover="background-color: #ABABAB;">Search</button>
+                </span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap;">
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #292929; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">repo:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #292929; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">lang:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #292929; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">file:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #292929; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">sym:</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #292929; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">case:yes</button>
+              <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 3px 7px; border-radius: 5px; border: none; background-color: #292929; color: #C4C4C4; cursor: pointer;" style-hover="background-color: #161616; color: #FFFFFF;">"exact phrase"</button>
+              <div style="flex: 1;"></div>
+              <span style="font-size: 12px; color: #ABABAB;"><b style="color: #FFFFFF; font-weight: 600;">11</b> matches · <b style="color: #FFFFFF; font-weight: 600;">4</b> files · 96ms · 2 repositories</span>
+              <span style="width: 1px; height: 12px; background: #383838;"></span>
+              <span style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #ABABAB;"><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4;">j</kbd><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4;">k</kbd> navigate</span>
+              <a href="#syntax" style="font-size: 12px; color: #ABABAB; text-decoration: none;" style-hover="color: #5E8BDB;">Syntax ↗</a>
+            </div>
+
+            <div style="display: flex; gap: 24px; margin-top: 14px; align-items: flex-start;">
+              <aside style="width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 18px;">
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #ABABAB; margin-bottom: 6px;">Repositories</div>
+                  <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; border-radius: 6px; width: 100%; border: none; background-color: transparent; text-align: left; cursor: pointer; position: relative;" style-hover="background-color: #161616;">
+                    <span style="width: 13px; height: 13px; border: 1px solid #383838; border-radius: 3px; flex-shrink: 0; box-sizing: border-box;"></span>
+                    <span style="flex: 1; min-width: 0; font-size: 13px; color: #C4C4C4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">phebs</span>
+                    <span style="font-size: 11px; color: #ABABAB; font-variant-numeric: tabular-nums;">2</span>
+                  </button>
+                  <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; border-radius: 6px; width: 100%; border: none; background-color: transparent; text-align: left; cursor: pointer; position: relative;" style-hover="background-color: #161616;">
+                    <span style="width: 13px; height: 13px; border: 1px solid #383838; border-radius: 3px; flex-shrink: 0; box-sizing: border-box;"></span>
+                    <span style="flex: 1; min-width: 0; font-size: 13px; color: #C4C4C4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">zoekt</span>
+                    <span style="font-size: 11px; color: #ABABAB; font-variant-numeric: tabular-nums;">2</span>
+                  </button>
+                </div>
+                <div>
+                  <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #ABABAB; margin-bottom: 6px;">Languages</div>
+                  <button type="button" style="display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px; border-radius: 6px; width: 100%; border: none; background-color: transparent; text-align: left; cursor: pointer;" style-hover="background-color: #161616;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #72C1CD; flex-shrink: 0;"></span>
+                    <span style="flex: 1; font-size: 13px; color: #C4C4C4;">go</span>
+                    <span style="font-size: 11px; color: #ABABAB; font-variant-numeric: tabular-nums;">4</span>
+                  </button>
+                </div>
+              </aside>
+
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px;">
+
+                <div style="border: 1px solid #383838; border-radius: 8px; overflow: hidden; background-color: #000000;">
+                  <button type="button" style="width: 100%; height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: none; background-color: #161616; cursor: pointer; text-align: left; border-bottom: 1px solid #292929;">
+                    <span style="color: #ABABAB; display: flex;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>
+                    <span style="font-size: 14px; font-weight: 600; color: #FFFFFF;">github.com/meddeb/phebs</span>
+                    <span style="font-size: 12px; color: #ABABAB;">7 matches · 2 files</span>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #5D5D5D;">indexed 2 h ago</span>
+                  </button>
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #ABABAB;">internal/search/</span><span style="color: #FFFFFF; font-weight: 500;">searcher.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #ABABAB;">5</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #161616;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">46</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE; padding-right: 12px;"><span style="color: #BDA7E4;">func</span> <span style="color: #93B4EE;">Open</span><span style="color: #ABABAB;">(</span>indexDir <span style="color: #72C1CD;">string</span><span style="color: #ABABAB;">,</span> st store<span style="color: #ABABAB;">.</span><span style="color: #72C1CD;">Store</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">(*</span><span style="background-color: #4C3111; border-radius: 2px; color: #72C1CD;">Searcher</span><span style="color: #ABABAB;">,</span> <span style="color: #72C1CD;">error</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">{</span></code>
+                    </div>
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #161616;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">49</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE; padding-right: 12px;">	<span style="color: #BDA7E4;">if</span> strings<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">ContainsAny</span><span style="color: #ABABAB;">(</span>indexDir<span style="color: #ABABAB;">,</span> <span style="color: #8FC19C;">`*?[\`</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">{</span></code>
+                    </div>
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px; background-color: #182946; box-shadow: inset 2px 0 0 #5E8BDB;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">68</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE; padding-right: 12px;">	z<span style="color: #ABABAB;">,</span> err <span style="color: #ABABAB;">:=</span> zoektsearch<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">NewDirectory<span style="background-color: #4C3111; border-radius: 2px;">Searcher</span></span><span style="color: #ABABAB;">(</span>indexDir<span style="color: #ABABAB;">)</span></code>
+                    </div>
+                  </div>
+                  <div style="height: 1px; background: #292929;"></div>
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #ABABAB;">internal/search/</span><span style="color: #FFFFFF; font-weight: 500;">searcher_test.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #ABABAB;">2</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #161616;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">31</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE; padding-right: 12px;">	s<span style="color: #ABABAB;">,</span> err <span style="color: #ABABAB;">:=</span> search<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">Open</span><span style="color: #ABABAB;">(</span>dir<span style="color: #ABABAB;">,</span> st<span style="color: #ABABAB;">)</span> <span style="color: #717171; font-style: italic;">// returns *<span style="background-color: #4C3111; border-radius: 2px;">Searcher</span></span></code>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="border: 1px solid #383838; border-radius: 8px; overflow: hidden; background-color: #000000;">
+                  <button type="button" style="width: 100%; height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: none; background-color: #161616; cursor: pointer; text-align: left; border-bottom: 1px solid #292929;">
+                    <span style="color: #ABABAB; display: flex;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 4 4 4-4"></path></svg></span>
+                    <span style="font-size: 14px; font-weight: 600; color: #FFFFFF;">github.com/sourcegraph/zoekt</span>
+                    <span style="font-size: 12px; color: #ABABAB;">4 matches · 2 files</span>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #5D5D5D;">indexed 1 d ago</span>
+                  </button>
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px;"><span style="color: #FFFFFF; font-weight: 500;">api.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #ABABAB;">2</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #161616;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">113</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE; padding-right: 12px;"><span style="color: #BDA7E4;">type</span> <span style="background-color: #4C3111; border-radius: 2px;"><span style="color: #72C1CD;">Searcher</span></span> <span style="color: #BDA7E4;">interface</span> <span style="color: #ABABAB;">{</span></code>
+                    </div>
+                  </div>
+                  <div style="height: 1px; background: #292929;"></div>
+                  <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px;">
+                    <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD; flex-shrink: 0;"></span>
+                    <a href="#/file" style="text-decoration: none; font-size: 12.5px;"><span style="color: #ABABAB;">shards/</span><span style="color: #FFFFFF; font-weight: 500;">shards.go</span></a>
+                    <span style="flex: 1;"></span>
+                    <span style="font-size: 11px; color: #ABABAB;">2</span>
+                    <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></button>
+                    <a href="#/file" title="Open file" style="display: flex; color: #5D5D5D; padding: 3px; border-radius: 5px;" style-hover="color: #FFFFFF; background-color: #161616;"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg></a>
+                  </div>
+                  <div style="padding: 2px 0 6px 0;">
+                    <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 18px;" style-hover="background-color: #161616;">
+                      <a href="#/file" style="flex-shrink: 0; width: 40px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">344</a>
+                      <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE; padding-right: 12px;"><span style="color: #BDA7E4;">func</span> <span style="color: #93B4EE;">NewDirectory<span style="background-color: #4C3111; border-radius: 2px;">Searcher</span></span><span style="color: #ABABAB;">(</span>dir <span style="color: #72C1CD;">string</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">(</span>zoekt<span style="color: #ABABAB;">.</span><span style="color: #72C1CD;">Searcher</span><span style="color: #ABABAB;">,</span> <span style="color: #72C1CD;">error</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">{</span></code>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #161616; border-top: 1px solid #383838; font-size: 11px; color: #ABABAB;">Dark</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════ Option 1b — Command line ══════════════════════ -->
+  <div id="1b" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <a href="#1b" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; color: #4B4B4B; border: 1px solid #DDDDDD; border-radius: 4px; padding: 1px 6px; text-decoration: none; background: #FFFFFF;">1b</a>
+      <span style="font-size: 13px; font-weight: 600; color: #000000;">Command line</span>
+      <span style="font-size: 12px; color: #5E5E5E;">— grep-flat results, colorized query tokens, facets as chips: maximum density, no cards</span>
+    </div>
+    <div style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap;">
+
+      <!-- ─────────── 1b LIGHT ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #DDDDDD; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
+        <div style="background-color: #FFFFFF; color: #000000;">
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#276EF1"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #000000;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: #000000; text-decoration: none; box-shadow: inset 0 -2px 0 #000000;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #5E5E5E;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5 5.5 5.5 0 1 0 13.5 9.5Z"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 7px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <!-- command bar: docked, full-bleed, colorized tokens -->
+          <div style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF;">
+            <span style="display: flex; color: #5E5E5E;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></span>
+            <span style="flex: 1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 14px; color: #000000;">Searcher <span style="color: #175BCC;">lang:</span><span style="color: #166C3B;">go</span><span style="display: inline-block; width: 2px; height: 16px; background: #276EF1; vertical-align: text-bottom; margin-left: 1px;"></span></span>
+            <span style="font-size: 12px; color: #5E5E5E;"><b style="color: #000000; font-weight: 600;">11</b> matches · <b style="color: #000000; font-weight: 600;">4</b> files · 96ms</span>
+            <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">↵</kbd>
+          </div>
+          <!-- facet chips -->
+          <div style="display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 20px; border-bottom: 1px solid #F3F3F3; background-color: #FFFFFF;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #A6A6A6;">Filter</span>
+            <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid #E8E8E8; background: #FFFFFF; font-size: 12px; color: #4B4B4B; cursor: pointer;" style-hover="border-color: #A6A6A6;">phebs <span style="color: #A6A6A6; font-variant-numeric: tabular-nums;">2</span></button>
+            <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid #E8E8E8; background: #FFFFFF; font-size: 12px; color: #4B4B4B; cursor: pointer;" style-hover="border-color: #A6A6A6;">zoekt <span style="color: #A6A6A6; font-variant-numeric: tabular-nums;">2</span></button>
+            <span style="width: 1px; height: 14px; background: #E8E8E8; margin: 0 4px;"></span>
+            <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid #276EF1; background: #EFF4FE; font-size: 12px; color: #175BCC; font-weight: 500; cursor: pointer;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #016974;"></span>go <span style="font-variant-numeric: tabular-nums;">4</span> ✕</button>
+            <div style="flex: 1;"></div>
+            <span style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #5E5E5E;"><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">j</kbd><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">k</kbd> navigate · <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">↵</kbd> open · <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">o</kbd> fold</span>
+          </div>
+
+          <main style="padding: 8px 20px 40px 20px;">
+            <!-- repo divider -->
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 14px; margin-bottom: 4px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5E5E5E;">github.com/meddeb/phebs</span>
+              <span style="font-size: 11px; color: #A6A6A6;">7 · 2 files</span>
+              <span style="flex: 1; height: 1px; background: #F3F3F3;"></span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #5E5E5E;">internal/search/</span><span style="color: #000000; font-weight: 600;">searcher.go</span></a>
+              <span style="font-size: 11px; color: #A6A6A6;">5 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #F6F6F6;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">46</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000;"><span style="color: #7C3EC3;">func</span> <span style="color: #175BCC;">Open</span><span style="color: #5E5E5E;">(</span>indexDir <span style="color: #016974;">string</span><span style="color: #5E5E5E;">,</span> st store<span style="color: #5E5E5E;">.</span><span style="color: #016974;">Store</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">(*</span><span style="background-color: #FBE5B6; border-radius: 2px; color: #016974;">Searcher</span><span style="color: #5E5E5E;">,</span> <span style="color: #016974;">error</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px; background-color: #EFF4FE; box-shadow: inset 2px 0 0 #276EF1;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">68</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000;">	z<span style="color: #5E5E5E;">,</span> err <span style="color: #5E5E5E;">:=</span> zoektsearch<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">NewDirectory<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span><span style="color: #5E5E5E;">(</span>indexDir<span style="color: #5E5E5E;">)</span></code>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px; margin-top: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #5E5E5E;">internal/search/</span><span style="color: #000000; font-weight: 600;">searcher_test.go</span></a>
+              <span style="font-size: 11px; color: #A6A6A6;">2 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #F6F6F6;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">31</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000;">	s<span style="color: #5E5E5E;">,</span> err <span style="color: #5E5E5E;">:=</span> search<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">Open</span><span style="color: #5E5E5E;">(</span>dir<span style="color: #5E5E5E;">,</span> st<span style="color: #5E5E5E;">)</span> <span style="color: #868686; font-style: italic;">// returns *<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span></code>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 20px; margin-bottom: 4px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5E5E5E;">github.com/sourcegraph/zoekt</span>
+              <span style="font-size: 11px; color: #A6A6A6;">4 · 2 files</span>
+              <span style="flex: 1; height: 1px; background: #F3F3F3;"></span>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #000000; font-weight: 600;">api.go</span></a>
+              <span style="font-size: 11px; color: #A6A6A6;">2 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #F6F6F6;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">113</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000;"><span style="color: #7C3EC3;">type</span> <span style="background-color: #FBE5B6; border-radius: 2px;"><span style="color: #016974;">Searcher</span></span> <span style="color: #7C3EC3;">interface</span> <span style="color: #5E5E5E;">{</span></code>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px; margin-top: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #5E5E5E;">shards/</span><span style="color: #000000; font-weight: 600;">shards.go</span></a>
+              <span style="font-size: 11px; color: #A6A6A6;">2 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #F6F6F6;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">344</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000;"><span style="color: #7C3EC3;">func</span> <span style="color: #175BCC;">NewDirectory<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span><span style="color: #5E5E5E;">(</span>dir <span style="color: #016974;">string</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">(</span>zoekt<span style="color: #5E5E5E;">.</span><span style="color: #016974;">Searcher</span><span style="color: #5E5E5E;">,</span> <span style="color: #016974;">error</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #FAFAFA; border-top: 1px solid #E8E8E8; font-size: 11px; color: #5E5E5E;">Light</div>
+      </div>
+
+      <!-- ─────────── 1b DARK ─────────── -->
+      <div style="width: 1180px; flex-shrink: 0; border: 1px solid #383838; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.3);">
+        <div style="background-color: #000000; color: #FFFFFF;">
+          <header style="height: 52px; display: flex; align-items: center; gap: 20px; padding-left: 20px; padding-right: 20px; border-bottom: 1px solid #383838; background-color: #000000;">
+            <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#5D5D5D" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#5E8BDB"></circle></svg>
+              <span style="font-size: 17px; font-weight: 700; color: #FFFFFF;">phebs</span>
+            </a>
+            <nav style="display: flex; gap: 18px; align-items: center; height: 100%;">
+              <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 500; color: #FFFFFF; text-decoration: none; box-shadow: inset 0 -2px 0 #FFFFFF;">Search</a>
+              <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Repos</a>
+              <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Audit</a>
+              <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Analytics</a>
+              <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 13px; font-weight: 400; color: #ABABAB; text-decoration: none;" style-hover="color: #FFFFFF;">Settings</a>
+            </nav>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 12px; color: #ABABAB;">admin@meddeb.me</span>
+            <button aria-label="Switch theme" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"></circle><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M13 3l-1 1M4 12l-1 1"></path></svg>
+            </button>
+            <button aria-label="Sign out" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid #383838; border-radius: 7px; background: none; cursor: pointer; color: #C4C4C4;" style-hover="background-color: #161616;">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+            </button>
+          </header>
+
+          <div style="display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px; border-bottom: 1px solid #383838; background-color: #000000;">
+            <span style="display: flex; color: #ABABAB;"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg></span>
+            <span style="flex: 1; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 14px; color: #FFFFFF;">Searcher <span style="color: #93B4EE;">lang:</span><span style="color: #8FC19C;">go</span><span style="display: inline-block; width: 2px; height: 16px; background: #5E8BDB; vertical-align: text-bottom; margin-left: 1px;"></span></span>
+            <span style="font-size: 12px; color: #ABABAB;"><b style="color: #FFFFFF; font-weight: 600;">11</b> matches · <b style="color: #FFFFFF; font-weight: 600;">4</b> files · 96ms</span>
+            <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4;">↵</kbd>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 20px; border-bottom: 1px solid #292929; background-color: #000000;">
+            <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5D5D5D;">Filter</span>
+            <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid #383838; background: #000000; font-size: 12px; color: #C4C4C4; cursor: pointer;" style-hover="border-color: #5D5D5D;">phebs <span style="color: #5D5D5D; font-variant-numeric: tabular-nums;">2</span></button>
+            <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid #383838; background: #000000; font-size: 12px; color: #C4C4C4; cursor: pointer;" style-hover="border-color: #5D5D5D;">zoekt <span style="color: #5D5D5D; font-variant-numeric: tabular-nums;">2</span></button>
+            <span style="width: 1px; height: 14px; background: #383838; margin: 0 4px;"></span>
+            <button type="button" style="display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; border: 1px solid #5E8BDB; background: #182946; font-size: 12px; color: #93B4EE; font-weight: 500; cursor: pointer;"><span style="width: 7px; height: 7px; border-radius: 50%; background: #72C1CD;"></span>go <span style="font-variant-numeric: tabular-nums;">4</span> ✕</button>
+            <div style="flex: 1;"></div>
+            <span style="display: flex; gap: 8px; align-items: center; font-size: 11px; color: #ABABAB;"><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4;">j</kbd><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4;">k</kbd> navigate · <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4;">↵</kbd> open · <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 10px; padding: 1px 4px; border: 1px solid #383838; border-radius: 4px; color: #C4C4C4;">o</kbd> fold</span>
+          </div>
+
+          <main style="padding: 8px 20px 40px 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 14px; margin-bottom: 4px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #ABABAB;">github.com/meddeb/phebs</span>
+              <span style="font-size: 11px; color: #5D5D5D;">7 · 2 files</span>
+              <span style="flex: 1; height: 1px; background: #292929;"></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #ABABAB;">internal/search/</span><span style="color: #FFFFFF; font-weight: 600;">searcher.go</span></a>
+              <span style="font-size: 11px; color: #5D5D5D;">5 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #161616;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">46</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE;"><span style="color: #BDA7E4;">func</span> <span style="color: #93B4EE;">Open</span><span style="color: #ABABAB;">(</span>indexDir <span style="color: #72C1CD;">string</span><span style="color: #ABABAB;">,</span> st store<span style="color: #ABABAB;">.</span><span style="color: #72C1CD;">Store</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">(*</span><span style="background-color: #4C3111; border-radius: 2px; color: #72C1CD;">Searcher</span><span style="color: #ABABAB;">,</span> <span style="color: #72C1CD;">error</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">{</span></code>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px; background-color: #182946; box-shadow: inset 2px 0 0 #5E8BDB;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">68</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE;">	z<span style="color: #ABABAB;">,</span> err <span style="color: #ABABAB;">:=</span> zoektsearch<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">NewDirectory<span style="background-color: #4C3111; border-radius: 2px;">Searcher</span></span><span style="color: #ABABAB;">(</span>indexDir<span style="color: #ABABAB;">)</span></code>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px; margin-top: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #ABABAB;">internal/search/</span><span style="color: #FFFFFF; font-weight: 600;">searcher_test.go</span></a>
+              <span style="font-size: 11px; color: #5D5D5D;">2 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #161616;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">31</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE;">	s<span style="color: #ABABAB;">,</span> err <span style="color: #ABABAB;">:=</span> search<span style="color: #ABABAB;">.</span><span style="color: #93B4EE;">Open</span><span style="color: #ABABAB;">(</span>dir<span style="color: #ABABAB;">,</span> st<span style="color: #ABABAB;">)</span> <span style="color: #717171; font-style: italic;">// returns *<span style="background-color: #4C3111; border-radius: 2px;">Searcher</span></span></code>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-top: 20px; margin-bottom: 4px;">
+              <span style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #ABABAB;">github.com/sourcegraph/zoekt</span>
+              <span style="font-size: 11px; color: #5D5D5D;">4 · 2 files</span>
+              <span style="flex: 1; height: 1px; background: #292929;"></span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #FFFFFF; font-weight: 600;">api.go</span></a>
+              <span style="font-size: 11px; color: #5D5D5D;">2 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #161616;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">113</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE;"><span style="color: #BDA7E4;">type</span> <span style="background-color: #4C3111; border-radius: 2px;"><span style="color: #72C1CD;">Searcher</span></span> <span style="color: #BDA7E4;">interface</span> <span style="color: #ABABAB;">{</span></code>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; height: 28px; margin-top: 6px;">
+              <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #72C1CD;"></span>
+              <a href="#/file" style="text-decoration: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, monospace; font-size: 12px;"><span style="color: #ABABAB;">shards/</span><span style="color: #FFFFFF; font-weight: 600;">shards.go</span></a>
+              <span style="font-size: 11px; color: #5D5D5D;">2 matches</span>
+            </div>
+            <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12.5px; line-height: 19px;" style-hover="background-color: #161616;">
+              <a href="#/file" style="flex-shrink: 0; width: 44px; padding-right: 10px; text-align: right; color: #5D5D5D; text-decoration: none; user-select: none;" style-hover="color: #5E8BDB;">344</a>
+              <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #DEDEDE;"><span style="color: #BDA7E4;">func</span> <span style="color: #93B4EE;">NewDirectory<span style="background-color: #4C3111; border-radius: 2px;">Searcher</span></span><span style="color: #ABABAB;">(</span>dir <span style="color: #72C1CD;">string</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">(</span>zoekt<span style="color: #ABABAB;">.</span><span style="color: #72C1CD;">Searcher</span><span style="color: #ABABAB;">,</span> <span style="color: #72C1CD;">error</span><span style="color: #ABABAB;">)</span> <span style="color: #ABABAB;">{</span></code>
+            </div>
+          </main>
+        </div>
+        <div style="height: 30px; display: flex; align-items: center; padding: 0 12px; background: #161616; border-top: 1px solid #383838; font-size: 11px; color: #ABABAB;">Dark</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    html, body { margin: 0; padding: 0; min-height: 100vh; }
+    body { font-family: system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background: #FFFFFF; }
+    a { color: #276EF1; }
+    a:hover { color: #175BCC; }
+    @keyframes phebs-stream { 0% { background-position: -60% 0; } 100% { background-position: 160% 0; } }
+    @keyframes phebs-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+  </style>
+</helmet>
+
+<div data-screen-label="Search" style="min-height: 100vh; background-color: #FFFFFF; color: #000000;">
+
+  <!-- ================= Header (App.tsx Header) ================= -->
+  <header style="height: 56px; display: flex; align-items: center; gap: 24px; padding-left: 24px; padding-right: 24px; border-bottom: 1px solid #E8E8E8; background-color: #FFFFFF; position: sticky; top: 0; z-index: 10;">
+    <a href="#/" style="display: flex; align-items: center; gap: 8px; text-decoration: none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M21 8.5 V 7.5 A 4.5 4.5 0 0 0 16.5 3 H 7.5 A 4.5 4.5 0 0 0 3 7.5 V 16.5 A 4.5 4.5 0 0 0 7.5 21 H 16.5 A 4.5 4.5 0 0 0 21 16.5 V 15.5" stroke="#000000" stroke-width="1.8" stroke-linecap="round"></path><path d="M23.5 12 H 18.5" stroke="#A6A6A6" stroke-width="0.9" stroke-dasharray="1.8 1.6"></path><circle cx="15.5" cy="12" r="1.9" fill="#276EF1"></circle></svg><span style="font-size: 20px; font-weight: 700; color: #000000; letter-spacing: 0;">phebs</span></a>
+    <nav style="display: flex; gap: 20px; align-items: center; height: 100%;">
+      <a href="#/" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 500; color: #000000; text-decoration: none; box-shadow: inset 0 -2px 0 #000000;">Search</a>
+      <a href="#/repos" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Repos</a>
+      <a href="#/audit" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Audit</a>
+      <a href="#/analytics" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Analytics</a>
+      <a href="#/settings" style="height: 100%; display: flex; align-items: center; font-size: 14px; font-weight: 400; color: #5E5E5E; text-decoration: none;" style-hover="color: #000000;">Settings</a>
+    </nav>
+    <div style="flex: 1;"></div>
+    <span style="font-size: 12px; color: #5E5E5E; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">admin@meddeb.me</span>
+    <button aria-label="Switch to dark theme" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 8px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5 5.5 5.5 0 1 0 13.5 9.5Z"></path></svg>
+    </button>
+    <button aria-label="Sign out" title="Sign out" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: 1px solid #E8E8E8; border-radius: 8px; background: none; cursor: pointer; color: #4B4B4B;" style-hover="background-color: #F6F6F6;">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13H7"></path><path d="M9.5 5 13 8l-3.5 3M13 8H6"></path></svg>
+    </button>
+  </header>
+
+  <!-- ================= Main ================= -->
+  <main style="max-width: 100%; margin: 0 auto; padding: 24px 24px 48px 24px;">
+
+    <!-- Search form: baseui Input (48px override) + primary Button -->
+    <form style="display: flex; gap: 8px;" onSubmit="{{ noopSubmit }}">
+      <div style="flex: 1;">
+        <div style="display: flex; align-items: center; height: 48px; border-radius: 8px; border: 2px solid #F3F3F3; background-color: #F3F3F3; box-sizing: border-box;">
+          <span style="display: flex; align-items: center; padding-left: 12px; color: #000000;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5 14 14"></path></svg>
+          </span>
+          <input value="{{ query }}" onChange="{{ onQueryChange }}" placeholder='Search code — try  func.*Parse  repo:zoekt  lang:go  "exact phrase"' style="flex: 1; min-width: 0; background: transparent; border: none; outline: none; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 15px; color: #000000; padding: 0 8px; line-height: 24px;"></input>
+          <button type="button" aria-label="Clear value" onClick="{{ clearQuery }}" style="display: flex; align-items: center; border: none; background: none; cursor: pointer; color: #000000; padding: 0 12px 0 4px;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"></path></svg>
+          </button>
+        </div>
+      </div>
+      <button type="submit" style="height: 48px; border-radius: 8px; border: none; background-color: #000000; color: #FFFFFF; font-family: inherit; font-size: 16px; line-height: 20px; font-weight: 500; padding: 0 16px; cursor: pointer;" style-hover="background-color: #333333;">Search</button>
+    </form>
+
+    <!-- Helper chips (HelperChips) -->
+    <div style="display: flex; align-items: center; gap: 6px; margin-top: 10px; flex-wrap: wrap;">
+      <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">repo:</button>
+      <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">lang:</button>
+      <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">file:</button>
+      <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">sym:</button>
+      <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">case:yes</button>
+      <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">-</button>
+      <button type="button" style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 12px; padding: 4px 8px; border-radius: 6px; border: none; background-color: #F3F3F3; color: #4B4B4B; cursor: pointer;" style-hover="background-color: #F6F6F6; color: #000000;">"exact phrase"</button>
+      <div style="flex: 1;"></div>
+      <a href="https://github.com/sourcegraph/zoekt/blob/main/doc/query_syntax.md" target="_blank" rel="noreferrer" style="font-size: 12px; color: #5E5E5E; text-decoration: none;" style-hover="color: #276EF1;">Search syntax ↗</a>
+    </div>
+
+    <!-- Streaming progress bar -->
+    <sc-if value="{{ isStreaming }}" hint-placeholder-val="{{ false }}">
+      <div style="height: 2px; margin-top: 10px; border-radius: 2px; background-image: linear-gradient(90deg, transparent 0%, #276EF1 50%, transparent 100%); background-size: 50% 100%; background-repeat: no-repeat; animation: phebs-stream 1.2s linear infinite;"></div>
+    </sc-if>
+
+    <!-- Stats row -->
+    <div role="status" style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #5E5E5E; margin-top: 12px;">
+      <sc-if value="{{ isStreaming }}" hint-placeholder-val="{{ false }}">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #276EF1; animation: phebs-pulse 1.4s infinite;"></span>
+      </sc-if>
+      <span><b style="color: #000000;">11</b> matches in <b style="color: #000000;">4</b> files{{ statsSuffix }}</span>
+      <div style="flex: 1;"></div>
+      <span style="display: flex; gap: 10px; align-items: center; color: #5E5E5E;">
+        <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">j</kbd><kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">k</kbd> navigate · <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">↵</kbd> open · <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">y</kbd> copy · <kbd style="font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 11px; padding: 1px 5px; border: 1px solid #DDDDDD; border-radius: 4px; color: #4B4B4B;">o</kbd> fold
+      </span>
+    </div>
+
+    <!-- Results: facet rail + result groups -->
+    <div style="display: flex; gap: 28px; margin-top: 16px; align-items: flex-start;">
+
+      <!-- Facet rail -->
+      <aside style="width: 224px; flex-shrink: 0;">
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5E5E5E; margin-bottom: 6px;">Repositories</div>
+          <button type="button" style="display: flex; align-items: center; gap: 8px; height: 32px; padding-left: 4px; padding-right: 4px; border-radius: 6px; width: 100%; border: none; background-color: transparent; color: inherit; text-align: left; cursor: pointer;" style-hover="background-color: #F6F6F6;">
+            <span aria-hidden="true" style="width: 14px; height: 14px; border: 1px solid #DDDDDD; border-radius: 3px; background-color: transparent; flex-shrink: 0; box-sizing: border-box;"></span>
+            <span style="flex: 1; font-size: 13px; color: #4B4B4B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">phebs</span>
+            <span style="font-size: 12px; color: #5E5E5E;">2</span>
+          </button>
+          <button type="button" style="display: flex; align-items: center; gap: 8px; height: 32px; padding-left: 4px; padding-right: 4px; border-radius: 6px; width: 100%; border: none; background-color: transparent; color: inherit; text-align: left; cursor: pointer;" style-hover="background-color: #F6F6F6;">
+            <span aria-hidden="true" style="width: 14px; height: 14px; border: 1px solid #DDDDDD; border-radius: 3px; background-color: transparent; flex-shrink: 0; box-sizing: border-box;"></span>
+            <span style="flex: 1; font-size: 13px; color: #4B4B4B; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">zoekt</span>
+            <span style="font-size: 12px; color: #5E5E5E;">2</span>
+          </button>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #5E5E5E; margin-bottom: 6px;">Languages</div>
+          <button type="button" style="display: flex; align-items: center; gap: 8px; height: 32px; padding-left: 4px; padding-right: 4px; border-radius: 6px; width: 100%; border: none; background-color: transparent; color: inherit; text-align: left; cursor: pointer;" style-hover="background-color: #F6F6F6;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #016974;"></span>
+            <span style="flex: 1; font-size: 13px; font-weight: 400; color: #4B4B4B;">go</span>
+            <span style="font-size: 12px; color: #5E5E5E;">4</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Result groups -->
+      <div style="flex: 1; min-width: 0;">
+
+        <!-- Repo group: phebs -->
+        <section style="margin-top: 28px;">
+          <button type="button" aria-expanded="{{ phebsOpen }}" onClick="{{ togglePhebs }}" style="display: flex; align-items: center; gap: 8px; width: 100%; border: none; background: none; padding: 0 0 8px 0; cursor: pointer; color: #000000; text-align: left;">
+            <span style="color: #5E5E5E; display: flex;">
+              <sc-if value="{{ phebsOpen }}" hint-placeholder-val="{{ true }}">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"></path></svg>
+              </sc-if>
+              <sc-if value="{{ phebsClosed }}" hint-placeholder-val="{{ false }}">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 4 4 4-4 4"></path></svg>
+              </sc-if>
+            </span>
+            <span style="font-size: 16px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">github.com/meddeb/phebs</span>
+            <span style="display: inline-flex; align-items: center; height: 24px; padding: 4px 6px; box-sizing: border-box; border-radius: 4px; background-color: #F3F3F3; color: #5E5E5E; font-size: 14px; line-height: 16px; font-weight: 500; margin: 5px; white-space: nowrap;">7 matches · 2 files</span>
+            <span style="flex: 1; height: 1px; background-color: #F3F3F3;"></span>
+          </button>
+
+          <sc-if value="{{ phebsOpen }}" hint-placeholder-val="{{ true }}">
+            <!-- File card: internal/search/searcher.go -->
+            <div style="border: 1px solid #E8E8E8; border-radius: 8px; margin-top: 10px; overflow: hidden; background-color: #FFFFFF;">
+              <div style="height: 40px; display: flex; align-items: center; gap: 8px; padding-left: 12px; padding-right: 10px; border-bottom: 1px solid #F3F3F3;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                <a href="#/file" style="text-decoration: none; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #5E5E5E;">internal/search/</span><span style="color: #000000; font-weight: 500;">searcher.go</span></a>
+                <div style="flex: 1;"></div>
+                <span style="font-size: 12px; color: #5E5E5E; white-space: nowrap;">5 matches</span>
+                <button type="button" title="Copy path" onClick="{{ copyPath1 }}" style="display: flex; border: none; background: none; cursor: pointer; color: {{ copy1Color }}; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <sc-if value="{{ copy1Done }}" hint-placeholder-val="{{ false }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8.5 3.2 3.2L13 4.5"></path></svg></sc-if>
+                  <sc-if value="{{ copy1NotDone }}" hint-placeholder-val="{{ true }}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg></sc-if>
+                </button>
+                <a href="#/file" title="Open file" style="display: flex; color: #5E5E5E; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg>
+                </a>
+              </div>
+              <!-- chunk 1: L46-50 -->
+              <div style="padding-top: 4px; padding-bottom: 4px;">
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">46</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;"><span style="color: #7C3EC3;">func</span> <span style="color: #175BCC;">Open</span><span style="color: #5E5E5E;">(</span>indexDir <span style="color: #016974;">string</span><span style="color: #5E5E5E;">,</span> st store<span style="color: #5E5E5E;">.</span><span style="color: #016974;">Store</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">(*</span><span style="background-color: #FBE5B6; border-radius: 2px; color: #016974;">Searcher</span><span style="color: #5E5E5E;">,</span> <span style="color: #016974;">error</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+                </div>
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">47</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	<span style="color: #868686; font-style: italic;">// NewDirectorySearcher uses filepath.Glob internally. Reject metacharacters</span></code>
+                </div>
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">48</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	<span style="color: #868686; font-style: italic;">// at this boundary too so library callers cannot mount sibling shards.</span></code>
+                </div>
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">49</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	<span style="color: #7C3EC3;">if</span> strings<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">ContainsAny</span><span style="color: #5E5E5E;">(</span>indexDir<span style="color: #5E5E5E;">,</span> <span style="color: #166C3B;">`*?[\`</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+                </div>
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">50</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">		<span style="color: #7C3EC3;">return</span> <span style="color: #A95F03;">nil</span><span style="color: #5E5E5E;">,</span> fmt<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">Errorf</span><span style="color: #5E5E5E;">(</span><span style="color: #166C3B;">"open shard dir: path contains glob metacharacters"</span><span style="color: #5E5E5E;">)</span></code>
+                </div>
+              </div>
+              <!-- chunk 2: L68-69 -->
+              <div style="border-top: 1px solid #F3F3F3; padding-top: 4px; padding-bottom: 4px;">
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">68</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	z<span style="color: #5E5E5E;">,</span> err <span style="color: #5E5E5E;">:=</span> zoektsearch<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">NewDirectory<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span><span style="color: #5E5E5E;">(</span>indexDir<span style="color: #5E5E5E;">)</span></code>
+                </div>
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">69</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	<span style="color: #7C3EC3;">if</span> err <span style="color: #5E5E5E;">!=</span> <span style="color: #A95F03;">nil</span> <span style="color: #5E5E5E;">{</span></code>
+                </div>
+              </div>
+            </div>
+
+            <!-- File card: internal/search/types.go -->
+            <div style="border: 1px solid #E8E8E8; border-radius: 8px; margin-top: 10px; overflow: hidden; background-color: #FFFFFF;">
+              <div style="height: 40px; display: flex; align-items: center; gap: 8px; padding-left: 12px; padding-right: 10px; border-bottom: 1px solid #F3F3F3;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                <a href="#/file" style="text-decoration: none; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #5E5E5E;">internal/search/</span><span style="color: #000000; font-weight: 500;">searcher_test.go</span></a>
+                <div style="flex: 1;"></div>
+                <span style="font-size: 12px; color: #5E5E5E; white-space: nowrap;">2 matches</span>
+                <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5E5E5E; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg>
+                </button>
+                <a href="#/file" title="Open file" style="display: flex; color: #5E5E5E; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg>
+                </a>
+              </div>
+              <div style="padding-top: 4px; padding-bottom: 4px;">
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">31</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	s<span style="color: #5E5E5E;">,</span> err <span style="color: #5E5E5E;">:=</span> search<span style="color: #5E5E5E;">.</span><span style="color: #175BCC;">Open</span><span style="color: #5E5E5E;">(</span>dir<span style="color: #5E5E5E;">,</span> st<span style="color: #5E5E5E;">)</span> <span style="color: #868686; font-style: italic;">// returns *<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span></code>
+                </div>
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">32</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;">	<span style="color: #7C3EC3;">if</span> err <span style="color: #5E5E5E;">!=</span> <span style="color: #A95F03;">nil</span> <span style="color: #5E5E5E;">{</span></code>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </section>
+
+        <!-- Repo group: zoekt -->
+        <section style="margin-top: 28px;">
+          <button type="button" aria-expanded="{{ zoektOpen }}" onClick="{{ toggleZoekt }}" style="display: flex; align-items: center; gap: 8px; width: 100%; border: none; background: none; padding: 0 0 8px 0; cursor: pointer; color: #000000; text-align: left;">
+            <span style="color: #5E5E5E; display: flex;">
+              <sc-if value="{{ zoektOpen }}" hint-placeholder-val="{{ true }}">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4 6 4 4 4-4"></path></svg>
+              </sc-if>
+              <sc-if value="{{ zoektClosed }}" hint-placeholder-val="{{ false }}">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 4 4 4-4 4"></path></svg>
+              </sc-if>
+            </span>
+            <span style="font-size: 16px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">github.com/sourcegraph/zoekt</span>
+            <span style="display: inline-flex; align-items: center; height: 24px; padding: 4px 6px; box-sizing: border-box; border-radius: 4px; background-color: #F3F3F3; color: #5E5E5E; font-size: 14px; line-height: 16px; font-weight: 500; margin: 5px; white-space: nowrap;">4 matches · 2 files</span>
+            <span style="flex: 1; height: 1px; background-color: #F3F3F3;"></span>
+          </button>
+
+          <sc-if value="{{ zoektOpen }}" hint-placeholder-val="{{ true }}">
+            <!-- File card: api.go -->
+            <div style="border: 1px solid #E8E8E8; border-radius: 8px; margin-top: 10px; overflow: hidden; background-color: #FFFFFF;">
+              <div style="height: 40px; display: flex; align-items: center; gap: 8px; padding-left: 12px; padding-right: 10px; border-bottom: 1px solid #F3F3F3;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                <a href="#/file" style="text-decoration: none; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #000000; font-weight: 500;">api.go</span></a>
+                <div style="flex: 1;"></div>
+                <span style="font-size: 12px; color: #5E5E5E; white-space: nowrap;">2 matches</span>
+                <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5E5E5E; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg>
+                </button>
+                <a href="#/file" title="Open file" style="display: flex; color: #5E5E5E; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg>
+                </a>
+              </div>
+              <div style="padding-top: 4px; padding-bottom: 4px;">
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">112</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;"><span style="color: #868686; font-style: italic;">// <span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span> provides search and list operations over indexed shards.</span></code>
+                </div>
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">113</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;"><span style="color: #7C3EC3;">type</span> <span style="background-color: #FBE5B6; border-radius: 2px;"><span style="color: #016974;">Searcher</span></span> <span style="color: #7C3EC3;">interface</span> <span style="color: #5E5E5E;">{</span></code>
+                </div>
+              </div>
+            </div>
+
+            <!-- File card: shards/shards.go -->
+            <div style="border: 1px solid #E8E8E8; border-radius: 8px; margin-top: 10px; overflow: hidden; background-color: #FFFFFF;">
+              <div style="height: 40px; display: flex; align-items: center; gap: 8px; padding-left: 12px; padding-right: 10px; border-bottom: 1px solid #F3F3F3;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background-color: #016974; flex-shrink: 0;"></span>
+                <a href="#/file" style="text-decoration: none; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><span style="color: #5E5E5E;">shards/</span><span style="color: #000000; font-weight: 500;">shards.go</span></a>
+                <div style="flex: 1;"></div>
+                <span style="font-size: 12px; color: #5E5E5E; white-space: nowrap;">2 matches</span>
+                <button type="button" title="Copy path" style="display: flex; border: none; background: none; cursor: pointer; color: #5E5E5E; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5.5" y="5.5" width="7.5" height="7.5" rx="1.5"></rect><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5"></path></svg>
+                </button>
+                <a href="#/file" title="Open file" style="display: flex; color: #5E5E5E; padding: 4px; border-radius: 6px;" style-hover="color: #000000; background-color: #F6F6F6;">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3H3.5A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8A1.5 1.5 0 0 0 13 12.5v-3"></path><path d="M9.5 2.5H13.5V6.5"></path><path d="M13.5 2.5 7.5 8.5"></path></svg>
+                </a>
+              </div>
+              <div style="padding-top: 4px; padding-bottom: 4px;">
+                <div style="display: flex; font-family: ui-monospace, 'SF Mono', Menlo, Monaco, 'Cascadia Code', monospace; font-size: 13px; line-height: 20px;" style-hover="background-color: #F6F6F6;">
+                  <a href="#/file" style="flex-shrink: 0; width: 48px; padding-right: 12px; text-align: right; color: #A6A6A6; text-decoration: none; user-select: none;" style-hover="color: #276EF1;">344</a>
+                  <code style="flex: 1 1 0; min-width: 0; white-space: pre; overflow-x: auto; tab-size: 4; color: #000000; padding-right: 12px;"><span style="color: #7C3EC3;">func</span> <span style="color: #175BCC;">NewDirectory<span style="background-color: #FBE5B6; border-radius: 2px;">Searcher</span></span><span style="color: #5E5E5E;">(</span>dir <span style="color: #016974;">string</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">(</span>zoekt<span style="color: #5E5E5E;">.</span><span style="color: #016974;">Searcher</span><span style="color: #5E5E5E;">,</span> <span style="color: #016974;">error</span><span style="color: #5E5E5E;">)</span> <span style="color: #5E5E5E;">{</span></code>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </section>
+
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;phase&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;done&quot;, &quot;streaming&quot;], &quot;default&quot;: &quot;done&quot;, &quot;tsType&quot;: &quot;'done' | 'streaming'&quot;, &quot;section&quot;: &quot;Search state&quot;}}">
+class Component extends DCLogic {
+  state = {
+    query: 'Searcher',
+    phebsOpen: true,
+    zoektOpen: true,
+    copy1Done: false,
+  };
+
+  componentDidMount() {
+    this._onKey = (e) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey) return;
+      const el = document.activeElement;
+      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+      if (typing) return;
+      e.preventDefault();
+      const input = document.querySelector('input');
+      if (input) input.focus();
+    };
+    window.addEventListener('keydown', this._onKey);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._onKey);
+  }
+
+  renderVals() {
+    const phase = this.props.phase ?? 'done';
+    const isStreaming = phase === 'streaming';
+    return {
+      query: this.state.query,
+      onQueryChange: (e) => this.setState({ query: e.currentTarget.value }),
+      clearQuery: () => this.setState({ query: '' }),
+      noopSubmit: (e) => e.preventDefault(),
+      isStreaming: isStreaming,
+      statsSuffix: isStreaming ? ' · 2 repositories · searching…' : ' · 96ms · 2 repositories',
+      phebsOpen: this.state.phebsOpen,
+      phebsClosed: !this.state.phebsOpen,
+      togglePhebs: () => this.setState((s) => ({ phebsOpen: !s.phebsOpen })),
+      zoektOpen: this.state.zoektOpen,
+      zoektClosed: !this.state.zoektOpen,
+      toggleZoekt: () => this.setState((s) => ({ zoektOpen: !s.zoektOpen })),
+      copy1Done: this.state.copy1Done,
+      copy1NotDone: !this.state.copy1Done,
+      copy1Color: this.state.copy1Done ? '#0E8345' : '#5E5E5E',
+      copyPath1: () => {
+        if (navigator.clipboard) navigator.clipboard.writeText('internal/search/searcher.go');
+        this.setState({ copy1Done: true });
+        setTimeout(() => this.setState({ copy1Done: false }), 1200);
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

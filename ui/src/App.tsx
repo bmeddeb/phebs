@@ -5,6 +5,7 @@ import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { FOCUS_SEARCH, useHashRoute } from './router'
 import { useMode, usePhebsTokens } from './theme'
 import { LogoutIcon, MoonIcon, SunIcon } from './icons'
+import { BrandLoader, BrandLockup } from './Brand'
 import { useAuth } from './auth'
 import LoginPage from './pages/LoginPage'
 
@@ -39,7 +40,7 @@ export default function App() {
   }, [])
 
   if (loading) {
-    return <div className={css({ minHeight: '100vh', display: 'grid', placeItems: 'center', backgroundColor: tok.pageBg })}><Spinner $size="small" /></div>
+    return <div className={css({ minHeight: '100vh', display: 'grid', placeItems: 'center', backgroundColor: tok.pageBg })}><BrandLoader /></div>
   }
   if (!status || (status.auth_required && !status.authenticated)) return <LoginPage />
 
@@ -54,23 +55,26 @@ export default function App() {
   else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 
-  const wide = !path.startsWith('/repos') // all pages full-width; kept for future narrowing
+  const compactMain = path.startsWith('/file') || path.startsWith('/repos')
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
       <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} onLogout={() => void logout().catch(() => {})} />
       <main
         className={css({
-          maxWidth: wide ? '100%' : '1080px',
+          width: '100%',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
           margin: '0 auto',
-          paddingLeft: '24px',
-          paddingRight: '24px',
-          paddingTop: '24px',
-          paddingBottom: '48px',
+          paddingLeft: '20px',
+          paddingRight: '20px',
+          paddingTop: compactMain ? '16px' : '20px',
+          paddingBottom: compactMain ? '36px' : '40px',
           '@media screen and (max-width: 720px)': {
             paddingLeft: '16px',
             paddingRight: '16px',
             paddingTop: '16px',
+            paddingBottom: '32px',
           },
         })}
       >
@@ -99,12 +103,12 @@ function Header({ path, email, isAdmin, onLogout }: { path: string; email: strin
   return (
     <header
       className={css({
-        height: '56px',
+        height: '52px',
         display: 'flex',
         alignItems: 'center',
-        gap: '24px',
-        paddingLeft: '24px',
-        paddingRight: '24px',
+        gap: '20px',
+        paddingLeft: '20px',
+        paddingRight: '20px',
         borderBottom: `1px solid ${tok.cardBorder}`,
         backgroundColor: tok.pageBg,
         position: 'sticky',
@@ -117,65 +121,75 @@ function Header({ path, email, isAdmin, onLogout }: { path: string; email: strin
         },
       })}
     >
-      <a
-        href="#/"
-        className={css({
-          fontSize: '20px',
-          fontWeight: 700,
-          color: tok.textPrimary,
-          textDecoration: 'none',
-          letterSpacing: '0',
-        })}
-      >
-        phebs
-      </a>
-      <nav className={css({ display: 'flex', gap: '20px', alignItems: 'center', height: '100%', '@media screen and (max-width: 720px)': { gap: '12px' } })}>
+      <BrandLockup href="#/" markSize={18} wordmarkSize={17} gap={8} />
+      <nav className={css({
+        display: 'flex',
+        gap: '18px',
+        alignItems: 'center',
+        height: '100%',
+        '@media screen and (max-width: 720px)': {
+          flex: '1 1 auto',
+          minWidth: 0,
+          gap: '12px',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollbarWidth: 'none',
+        },
+      })}>
         <NavLink href="#/" label="Search" active={isSearch} />
         <NavLink href="#/repos" label="Repos" active={isRepos} />
         {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
         {isAdmin && <NavLink href="#/analytics" label="Analytics" active={isAnalytics} />}
         <NavLink href="#/settings" label="Settings" active={isSettings} />
       </nav>
-      <div className={css({ flex: 1 })} />
+      <div className={css({ flex: 1, '@media screen and (max-width: 720px)': { display: 'none' } })} />
       {email && <span className={css({ fontSize: '12px', color: tok.textTertiary, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', '@media screen and (max-width: 720px)': { display: 'none' } })}>{email}</span>}
       <button
         onClick={toggle}
         aria-label={mode === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         className={css({
-          width: '32px',
-          height: '32px',
+          width: '28px',
+          height: '28px',
+          boxSizing: 'border-box',
+          flexShrink: 0,
+          padding: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           border: `1px solid ${tok.cardBorder}`,
-          borderRadius: '8px',
+          borderRadius: '7px',
           background: 'none',
           cursor: 'pointer',
           color: tok.textSecondary,
           ':hover': { backgroundColor: tok.hoverFill },
+          ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
         })}
       >
-        {mode === 'dark' ? <SunIcon /> : <MoonIcon />}
+        {mode === 'dark' ? <SunIcon size={14} /> : <MoonIcon size={14} />}
       </button>
       <button
         onClick={onLogout}
         aria-label="Sign out"
         title="Sign out"
         className={css({
-          width: '32px',
-          height: '32px',
+          width: '28px',
+          height: '28px',
+          boxSizing: 'border-box',
+          flexShrink: 0,
+          padding: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           border: `1px solid ${tok.cardBorder}`,
-          borderRadius: '8px',
+          borderRadius: '7px',
           background: 'none',
           cursor: 'pointer',
           color: tok.textSecondary,
           ':hover': { backgroundColor: tok.hoverFill },
+          ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
         })}
       >
-        <LogoutIcon />
+        <LogoutIcon size={14} />
       </button>
     </header>
   )
@@ -191,12 +205,13 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
         height: '100%',
         display: 'flex',
         alignItems: 'center',
-        fontSize: '14px',
+        fontSize: '13px',
         fontWeight: active ? 500 : 400,
         color: active ? tok.textPrimary : tok.textTertiary,
         textDecoration: 'none',
         boxShadow: active ? `inset 0 -2px 0 ${tok.textPrimary}` : 'none',
         ':hover': { color: tok.textPrimary },
+        ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
       })}
     >
       {label}

@@ -31,6 +31,7 @@ export interface PhebsTokens {
   pageBg: string
   fill: string
   hoverFill: string
+  bandBg: string
   textPrimary: string
   textSecondary: string
   textTertiary: string
@@ -55,6 +56,7 @@ const LIGHT: PhebsTokens = {
   pageBg: '#FFFFFF',
   fill: '#F3F3F3',
   hoverFill: '#F6F6F6',
+  bandBg: '#FAFAFA',
   textPrimary: '#000000',
   textSecondary: '#4B4B4B',
   textTertiary: '#5E5E5E',
@@ -79,6 +81,7 @@ const DARK: PhebsTokens = {
   pageBg: '#000000',
   fill: '#292929',
   hoverFill: '#161616',
+  bandBg: '#161616',
   textPrimary: '#FFFFFF',
   textSecondary: '#C4C4C4',
   textTertiary: '#ABABAB',

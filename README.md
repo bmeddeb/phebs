@@ -1,10 +1,8 @@
 <div align="center">
 
-# phebs
+<img src="./docs/phebs-banner.svg" alt="phebs — Self-hosted code search in one Go binary." width="960">
 
 *pronounced **"febz"***
-
-Self-hosted code search in one Go binary.
 
 </div>
 

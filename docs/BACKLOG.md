@@ -372,6 +372,150 @@ assumption (indexer, watch, freshness all lean on it). Gated on real demand;
 sequence last. AC: an explicit per-repo branch allowlist (cap ≈8 per PLAN §1)
 indexes + serves multiple revisions behind `rev:`.
 
+---
+
+## Contract-intelligence annex *(adopted 2026-07-12 — see the two PLAN.md ADRs of that date)*
+
+> Before you change an RPC or field, phebs identifies who may be affected,
+> cites the exact source evidence, and tells you what remains unknown.
+
+Annex, not pivot: "self-hosted code search in one binary" stays the identity;
+Epics 12–15 are gated on T11.1. Commodity surfaces (spec-to-spec diffing,
+runtime topology, catalog UX, PR delivery, scorecards) are integrated or
+deferred, never rebuilt. phebs produces immutable, permission-safe proof
+bundles; workflow layers (Workbench) reference bundle IDs and never recompute
+or weaken phebs's conclusions. Public corpora validate mechanics only; an
+authorized **external** design partner is required before broader graph or
+completion claims — no implicit employer-estate exception. Absent a partner by
+Epic 15 completion, the broader platform pivot freezes.
+
+## EPIC 11 — Validation gate *(annex Stage 0)*
+
+**T11.1 · SPIKE: Validate revision-pinned Go/gRPC consumer evidence and service identity resolution** — *gates Epics 12–15*
+Corpus: ≥4 systems including a multi-service monorepo, shared libraries
+containing gRPC calls, multiple versions/vendored copies of generated protobuf
+code, conflicting image/deployment/Helm/`service.name` identities, and
+tests/mocks/generated/vendor directories. ≥200 positive examples, ≥100 hard
+negatives, 30% blind holdout. Public systems validate mechanics, not
+production completeness. The spike also fixes the evidence schema (atoms +
+`snapshot_evidence` associations, per the PLAN evidence-model ADR) before any
+extractor breadth — retrofitting provenance is costlier than starting with it.
+AC — four gates, measured separately:
+1. **Evidence integrity (fail ⇒ stop the initiative):** 100% of emitted
+   evidence resolves to the exact repo/commit/file/span; identical input +
+   extractor version ⇒ identical `evidence_atom_id`s; a failed extraction
+   never publishes a partial replacement set; permission filtering precedes
+   aggregation; no invisible repository or service name — or count — leaks
+   through any result, including coverage manifests.
+2. **Operation extraction:** ≥98% precision and ≥90% recall on eligible direct
+   Go/gRPC patterns; ≥90% precision within every individual fixture;
+   registration / client call / test / mock / generated / vendor references
+   classified separately. Contract identity is the fully-qualified proto
+   service+method — no global service identity required for this gate.
+3. **Service/deployable identity:** ≥99% pairwise precision on high-confidence
+   merges (target zero false merges in the blind holdout); ≥95% end-to-end
+   precision on caller-deployable → operation edges; low coverage acceptable;
+   **abstention is success**. Logical service, deployable, build target,
+   image, workload, and runtime `service.name` stay distinct related entities.
+4. **Field references:** the assertion is `REFERENCES_PROTO_FIELD` only (never
+   `READS_RPC_RESPONSE_FIELD`); ≥98% direct getter/selector precision; ≥90%
+   recall within the SCIP-eligible population; read/write/test/generated/
+   unknown classification; canonical field identity
+   `(contract_lineage_id, message_full_name, field_number)` mapped across ≥2
+   consumer dependency versions.
+Exit: gates 2+3 pass → Epics 12–15 as designed · gate 2 passes, 3 fails →
+wedge ships with consumers grouped by repository/build target · gate 1 or 2
+fails → stop; post-mortem ADR.
+
+## EPIC 12 — Provenance schema & protobuf facts *(gated: T11.1)*
+
+**T12.1 · Evidence & assertion store**
+Content-addressed `evidence_atom` + `snapshot_evidence` associations, semantic
+assertions (supporting **and contradicting** atoms), identity assertions,
+coverage manifests, extraction runs — per the PLAN evidence-model ADR. Narrow
+`EvidenceStore` interface (house style); deterministic confidence tiers only.
+AC: an identical blob vendored in two repos yields one atom and two
+associations with independent visibility; atomic staged publish survives a
+mid-publish kill (prior facts intact, no partial set); proof-aware retention
+honored — no deletion of evidence referenced by a retained bundle.
+
+**T12.2 · Extraction job kind**
+`extraction_job` chained after indexing (as index chains after sync);
+extracted-commit short-circuit (T3.2 pattern); `extract` class in the T3.3
+failure taxonomy; **pure-reader invariant enforced** (no exec, no dynamic
+loading, no corpus writes, no network while parsing). AC: a reindex chains
+exactly one extraction per new commit; kill mid-run leaves published facts
+intact; invariant violations are structurally impossible in the runner (no
+exec/network capability in the extractor context), asserted by test.
+
+**T12.3 · Protobuf declared-plane extractor**
+protocompile-based: `.proto` → services, methods, messages, fields with exact
+spans; canonical descriptor-derived IDs including `contract_lineage_id`.
+AC: on the fixture corpus every declared operation/field is an assertion
+whose evidence atom resolves to the pinned commit and span in the file viewer.
+
+## EPIC 13 — Implementations, consumers, field references *(gated: T11.1)*
+
+**T13.1 · Implementation & consumer resolution (Go/gRPC)**
+`RegisterXServer` implementation pinning; typed generated-client call-site
+resolution; `code_role` classification (production/test/mock/generated/
+vendor). AC: spike-level precision reproduced on the fixture corpus by the
+productized extractor; every edge cites its atoms.
+
+**T13.2 · SCIP proto-field references**
+`REFERENCES_PROTO_FIELD` assertions from cross-repo SCIP references over
+generated accessors; read/write/test/generated/unknown classification; field
+lineage across consumer dependency versions. AC: a renamed field (same number,
+same lineage) tracks as one identity across two consumer versions.
+
+**T13.3 · Coverage manifests**
+Per-answer coverage certificate: repositories searched (the caller's visible
+universe only), revisions, protocols supported, extractors applied + failures,
+SCIP availability, unresolved candidates, freshness. AC: the certificate
+provably changes when one repo's extraction fails; adversarial test shows no
+invisible-repo leakage through names or counts.
+
+## EPIC 14 — Query, proof bundles & MCP *(gated: T11.1)*
+
+**T14.1 · Query API + proof bundles**
+huma endpoints for `find_operation_consumers`, `find_proto_field_references`,
+`get_extraction_coverage`; immutable self-contained proof bundles embedding
+assertions, coverage certificate, extractor versions, and `visibility_context`
+(principal, authorization provider, permission snapshot, visible-repo-set
+digest). Bundles re-authorize on read — a bundle ID is not a bearer
+credential; revoked repository access revokes old bundles. AC: admin and
+member asking the same question produce different immutable bundle IDs; the
+member bundle names no invisible repository.
+
+**T14.2 · MCP tools**
+The annex tools on the existing stateless `/api/mcp` server:
+`find_operation_consumers`, `find_proto_field_references`,
+`check_contract_compatibility`, `get_extraction_coverage`. AC: a live agent
+session answers "who consumes this RPC/field?" with citations and coverage.
+
+**T14.3 · Contract compatibility via pinned Buf child**
+`check_contract_compatibility`: version-pinned `buf` child built from go.mod
+(zoekt-git-index house pattern), sandboxed per the PLAN ADR — phebs-produced
+descriptor inputs or sanitized temp tree, no network, CPU/memory/time limits,
+never `buf generate`/protoc plugins/repository scripts; Buf version, args, and
+result recorded in the extraction run. phebs enriches Buf's spec-level
+verdicts with evidence-derived consumers. AC: a wire-breaking field change
+reports the breaking rule **and** the affected consumers with call-site
+citations.
+
+## EPIC 15 — Contract impact report *(read-only; the first user-facing annex workflow — independent acceptance gate)*
+
+**T15.1 · Report API + page**
+For a contract, or a contract change between two extraction runs: known
+consumers with exact call sites, field references, compatibility
+classification, unresolved candidates, unsupported repositories/patterns,
+evidence freshness — every row clickable through to pinned evidence.
+Explicitly absent: PR comments/checks (separate ADR — read-only →
+code-host-writer posture change), diagrams, service dossiers, runtime data.
+AC: demoable via `make dev` on the fixture corpus; bounded-proof language
+throughout ("no blockers found within the stated evidence scope"), coverage
+certificate rendered with every conclusion.
+
 ## Deliberate non-goals *(per PORT_MAP §7/§12)*
 
 SCIM provisioning, multi-org RBAC / seats, and a cloned "Ask" chat app —
