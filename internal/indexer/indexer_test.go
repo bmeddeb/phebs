@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/indexer"
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
 )
@@ -430,5 +431,25 @@ func TestOnIndexedErrorPropagatesAndRetriesOnShortCircuit(t *testing.T) {
 		if !stamp.Equal(before[shard]) {
 			t.Errorf("chain retry rebuilt shard %s", shard)
 		}
+	}
+}
+
+// A held mirror lock (e.g. a long extraction) must not park the serial index
+// runner uncancellably: the lock wait honors the job context.
+func TestIndexerLockWaitHonorsContext(t *testing.T) {
+	dataDir := t.TempDir()
+	name := "example.com/held/repo"
+	dir, err := sync.SafeRepoDir(dataDir, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unlock := repowork.Lock(dir)
+	defer unlock()
+
+	ix := &indexer.Indexer{DataDir: dataDir}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("blocked index error = %v, want context.DeadlineExceeded", err)
 	}
 }

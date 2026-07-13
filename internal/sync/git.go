@@ -216,7 +216,10 @@ func HTTPBasicAuthConfig(username, password string) []string {
 // if the mirror already exists. gitCfg holds per-invocation `-c` flags (e.g.
 // auth headers) that must never persist into the mirror's config.
 func Mirror(ctx context.Context, cloneURL, dir string, gitCfg ...string) error {
-	unlock := repowork.Lock(dir)
+	unlock, err := repowork.LockContext(ctx, dir)
+	if err != nil {
+		return fmt.Errorf("lock mirror: %w", err)
+	}
 	defer unlock()
 	return mirrorLocked(ctx, cloneURL, dir, gitCfg...)
 }

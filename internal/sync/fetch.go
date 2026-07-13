@@ -68,7 +68,10 @@ func FetchHandler(cfg *config.Config, st store.Store) func(context.Context, stor
 		if err != nil {
 			return fmt.Errorf("fetch %s: %w", job.Target, err)
 		}
-		unlock := repowork.Lock(dir)
+		unlock, err := repowork.LockContext(ctx, dir)
+		if err != nil {
+			return fmt.Errorf("fetch %s: lock mirror: %w", job.Target, err)
+		}
 		defer unlock()
 
 		repo, err := st.GetRepo(ctx, job.Target)

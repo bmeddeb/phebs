@@ -230,7 +230,10 @@ func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn confi
 	if err != nil {
 		return nil, fmt.Errorf("connection %s: mirror path: %w", conn.Name, err)
 	}
-	unlock := repowork.Lock(dir)
+	unlock, err := repowork.LockContext(ctx, dir)
+	if err != nil {
+		return nil, fmt.Errorf("connection %s: lock mirror: %w", conn.Name, err)
+	}
 	defer unlock()
 	if err := ensureRepoArtifactAvailable(ctx, st, dataDir, name, dir); err != nil {
 		return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
@@ -269,7 +272,10 @@ func mirrorAndUpsert(ctx context.Context, st store.Store, dataDir string, repo s
 	if err != nil {
 		return fmt.Errorf("mirror path for %s: %w", repo.Name, err)
 	}
-	unlock := repowork.Lock(dir)
+	unlock, err := repowork.LockContext(ctx, dir)
+	if err != nil {
+		return fmt.Errorf("lock mirror for %s: %w", repo.Name, err)
+	}
 	defer unlock()
 	if err := ensureRepoArtifactAvailable(ctx, st, dataDir, repo.Name, dir); err != nil {
 		return err

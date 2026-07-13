@@ -71,7 +71,10 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if err != nil {
 		return fmt.Errorf("index %s: %w", target, err)
 	}
-	unlock := repowork.Lock(dir)
+	unlock, err := repowork.LockContext(ctx, dir)
+	if err != nil {
+		return fmt.Errorf("index %s: lock mirror: %w", target, err)
+	}
 	defer unlock()
 
 	fresh, err := ix.Store.GetRepo(ctx, target)
