@@ -833,9 +833,9 @@ boundary. A candidate `.proto` symlink, any gitlink (whose subtree coverage is
 unknown), or more than 100 placements of one content atom also prevents
 publication; unrelated symlinks are skipped. A non-candidate file whose name
 cannot be represented safely (control bytes, a backslash, invalid UTF-8, or a
-leading `-`) stays inside the coverage certificate and file count but is
-never readable by extractors; a candidate with such a name fails the run
-closed. Re-indexing the same
+leading `-`) is included in the published coverage certificate's
+`corpus_file_count` but is never readable by extractors; a candidate with
+such a name fails the run closed. Re-indexing the same
 commit/extractor version short-circuits. Like the rest of phebs's
 HEAD-freshness queues, successive index events may coalesce before extraction;
 only the latest indexed revision can pass the publication guard. Opt-in

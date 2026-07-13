@@ -419,7 +419,6 @@ type verifiedCorpus struct {
 	currentContent    string
 	currentLineIndex  []int
 	corpusFileCount   int
-	corpusScopeDigest string
 	inventoryComplete bool
 	enumerated        map[string]struct{}
 	enumeratedOrder   []string
@@ -472,13 +471,19 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	candidates := make(map[string]struct{})
 	pathBytes := 0
 	unreadable := 0
-	hash := sha256.New()
 	err := c.inner.WalkFiles(ctx, func(filePath string) error {
+		if len(paths)+unreadable >= maxCorpusFiles {
+			return fmt.Errorf("corpus inventory exceeds %d-file limit", maxCorpusFiles)
+		}
+		if len(filePath) > maxCorpusInventoryPathBytes-pathBytes {
+			return fmt.Errorf("corpus inventory exceeds %d-byte aggregate path limit", maxCorpusInventoryPathBytes)
+		}
+		pathBytes += len(filePath)
 		if pathErr := checkCorpusPath(filePath); pathErr != nil {
-			// A regular file whose name cannot be represented safely is kept
-			// inside the coverage certificate but never enumerated: extractors
-			// cannot see or Read it. Only a candidate with such a name is a
-			// coverage gap, and that fails closed.
+			// A regular file whose name cannot be represented safely contributes
+			// to the published corpus file count but is never enumerated:
+			// extractors cannot see or Read it. Only a candidate with such a
+			// name is a coverage gap, and that fails closed.
 			isCandidate, candErr := callCandidate(candidate, filePath)
 			if candErr != nil {
 				return candErr
@@ -486,21 +491,11 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 			if isCandidate {
 				return fmt.Errorf("candidate path is not readable: %w", pathErr)
 			}
-			if len(paths)+unreadable >= maxCorpusFiles {
-				return fmt.Errorf("corpus inventory exceeds %d-file limit", maxCorpusFiles)
-			}
 			unreadable++
-			_, _ = fmt.Fprintf(hash, "%d:%s;", len(filePath), filePath)
 			return nil
 		}
 		if _, duplicate := enumerated[filePath]; duplicate {
 			return fmt.Errorf("corpus inventory repeats path %q", filePath)
-		}
-		if len(paths)+unreadable >= maxCorpusFiles {
-			return fmt.Errorf("corpus inventory exceeds %d-file limit", maxCorpusFiles)
-		}
-		if len(filePath) > maxCorpusInventoryPathBytes-pathBytes {
-			return fmt.Errorf("corpus inventory exceeds %d-byte aggregate path limit", maxCorpusInventoryPathBytes)
 		}
 		isCandidate, err := callCandidate(candidate, filePath)
 		if err != nil {
@@ -508,11 +503,9 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 		}
 		enumerated[filePath] = struct{}{}
 		paths = append(paths, filePath)
-		pathBytes += len(filePath)
 		if isCandidate {
 			candidates[filePath] = struct{}{}
 		}
-		_, _ = fmt.Fprintf(hash, "%d:%s;", len(filePath), filePath)
 		return nil
 	})
 	if err != nil {
@@ -527,7 +520,6 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	c.enumeratedOrder = paths
 	c.candidates = candidates
 	c.corpusFileCount = len(paths) + unreadable
-	c.corpusScopeDigest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
 	c.inventoryComplete = true
 	return nil
 }

@@ -154,9 +154,9 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 					break
 				}
 				// Entries with unrepresentable names are still visited so the
-				// harness can keep them inside the coverage certificate; they are
-				// never recorded as readable. The harness fails closed when such
-				// an entry is an extraction candidate.
+				// harness includes them in the published corpus file count; they
+				// are never recorded as readable. The harness fails closed when
+				// such an entry is an extraction candidate.
 				if checkCorpusPath(entry.path) == nil {
 					oids[entry.path] = entry.oid
 				}
@@ -285,7 +285,7 @@ type treeRecord struct {
 
 // parseTreeRecord validates record structure and object id only. Path rules
 // are the harness's policy: the walk surfaces every regular entry, valid name
-// or not, so unreadable names stay inside the coverage certificate.
+// or not, so unreadable names contribute to the published corpus file count.
 func parseTreeRecord(record []byte) (treeRecord, error) {
 	meta, name, ok := bytes.Cut(record, []byte{'\t'})
 	fields := strings.Fields(string(meta))

@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/store"
 )
 
 type corpusGitFixture struct {
@@ -165,6 +166,17 @@ func TestGitCorpusReadsPathspecMagicLiterally(t *testing.T) {
 	}
 }
 
+func TestGitCorpusReadAbsentWalkedPathReturnsNotFound(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	head := f.commitFile("api.proto", "content", "content")
+	f.cloneMirror()
+
+	_, err := walkThenRead(t, GitCorpus(f.dataDir).New(f.repoName, head), "missing.proto")
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("Read missing path error = %v, want ErrNotFound", err)
+	}
+}
+
 func TestReadNULRecordRejectsTruncatedRecord(t *testing.T) {
 	_, err := readNULRecord(bufio.NewReader(strings.NewReader("unterminated")), 64)
 	if !errors.Is(err, io.ErrUnexpectedEOF) {
@@ -254,7 +266,7 @@ func TestGitCorpusRejectsOversizedBlob(t *testing.T) {
 
 func TestUnreadableNamesCountedInCoverageButNotEnumerated(t *testing.T) {
 	f := newCorpusGitFixture(t)
-	cleanHead := f.commitFile("api.proto", `syntax = "proto3";`, "proto")
+	f.commitFile("api.proto", `syntax = "proto3";`, "proto")
 	oddHead := f.commitFile(`fixtures\case.txt`, "windows-origin fixture", "odd name")
 	f.cloneMirror()
 	isProto := func(p string) bool { return strings.HasSuffix(p, ".proto") }
@@ -271,15 +283,6 @@ func TestUnreadableNamesCountedInCoverageButNotEnumerated(t *testing.T) {
 	}
 	if _, err := verified.Read(context.Background(), "api.proto"); err != nil {
 		t.Fatalf("candidate read: %v", err)
-	}
-
-	// The unreadable entry still participates in the coverage certificate.
-	clean := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, cleanHead))
-	if err := clean.Inventory(context.Background(), isProto); err != nil {
-		t.Fatalf("clean Inventory: %v", err)
-	}
-	if clean.corpusScopeDigest == verified.corpusScopeDigest {
-		t.Fatal("scope digest ignores unreadable entries")
 	}
 }
 
@@ -309,6 +312,14 @@ func TestVerifiedCorpusRejectsChangingOrIncorrectDigest(t *testing.T) {
 
 func TestVerifiedCorpusBoundsAggregateInventoryPathBytes(t *testing.T) {
 	verified := newVerifiedCorpus(pathFloodCorpus{})
+	err := verified.Inventory(context.Background(), func(string) bool { return false })
+	if err == nil || !strings.Contains(err.Error(), "aggregate path limit") {
+		t.Fatalf("Inventory error = %v", err)
+	}
+}
+
+func TestVerifiedCorpusBoundsUnreadableAggregateInventoryPathBytes(t *testing.T) {
+	verified := newVerifiedCorpus(unreadablePathFloodCorpus{})
 	err := verified.Inventory(context.Background(), func(string) bool { return false })
 	if err == nil || !strings.Contains(err.Error(), "aggregate path limit") {
 		t.Fatalf("Inventory error = %v", err)
@@ -350,5 +361,26 @@ func (pathFloodCorpus) WalkFiles(_ context.Context, visit func(string) error) er
 	}
 }
 func (pathFloodCorpus) Read(context.Context, string) (sdk.Blob, error) {
+	return sdk.Blob{}, errors.New("unexpected read")
+}
+
+type unreadablePathFloodCorpus struct{}
+
+func (unreadablePathFloodCorpus) RepoName() string { return "r" }
+func (unreadablePathFloodCorpus) Commit() string   { return unitCommit }
+func (unreadablePathFloodCorpus) WalkFiles(_ context.Context, visit func(string) error) error {
+	// Each path is individually within the Git corpus record limit but contains
+	// a forbidden backslash. Stop just beyond the aggregate threshold so a
+	// missing unreadable-path check fails quickly instead of reaching the much
+	// larger file-count limit.
+	prefix := `\` + strings.Repeat("p", maxCorpusPathBytes-9)
+	for i := 0; i < maxCorpusInventoryPathBytes/maxCorpusPathBytes+2; i++ {
+		if err := visit(prefix + fmt.Sprintf("%08d", i)); err != nil {
+			return err
+		}
+	}
+	return errors.New("unreadable path flood escaped aggregate limit")
+}
+func (unreadablePathFloodCorpus) Read(context.Context, string) (sdk.Blob, error) {
 	return sdk.Blob{}, errors.New("unexpected read")
 }

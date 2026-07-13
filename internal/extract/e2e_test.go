@@ -69,6 +69,11 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "api", "v1", "demo.proto"), []byte(demoProto), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	// This legal Git filename is deliberately outside the harness's readable
+	// path policy. It must still survive into the persisted corpus file count.
+	if err := os.WriteFile(filepath.Join(src, "-fixture.txt"), []byte("non-candidate fixture"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	git(src, "add", ".")
 	git(src, "commit", "-q", "-m", "add proto")
 	head := git(src, "rev-parse", "HEAD")
@@ -102,7 +107,7 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if run.Commit != head {
 		t.Fatalf("run pinned to %s, want %s", run.Commit, head)
 	}
-	if run.Coverage.CorpusFileCount != 1 || run.Coverage.CandidateFileCount != 1 ||
+	if run.Coverage.CorpusFileCount != 2 || run.Coverage.CandidateFileCount != 1 ||
 		run.Coverage.ReadFileCount != 1 || run.Coverage.ReadBytes != int64(len(demoProto)) ||
 		len(run.Coverage.SourceScopeDigest) != len("sha256:")+64 ||
 		!strings.HasPrefix(run.Coverage.SourceScopeDigest, "sha256:") {

@@ -232,8 +232,15 @@ func TestResync(t *testing.T) {
 	}}
 
 	rctx, rcancel := context.WithCancel(ctx)
-	defer rcancel()
-	go Resync(rctx, st, cfg, 10*time.Millisecond)
+	resyncDone := make(chan struct{})
+	go func() {
+		defer close(resyncDone)
+		Resync(rctx, st, cfg, 10*time.Millisecond)
+	}()
+	defer func() {
+		rcancel()
+		<-resyncDone
+	}()
 
 	deadline := time.Now().Add(10 * time.Second)
 	for {
