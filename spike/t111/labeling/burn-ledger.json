@@ -1,0 +1,34 @@
+{
+  "schema_version": "t111-burn-ledger-v1",
+  "projection": "system,path,start_line,end_line; all legacy labeled/template site coordinates; predicates and values deliberately ignored",
+  "sources": [
+    {
+      "path": "sites.dev.jsonl",
+      "records": 335,
+      "sha256": "sha256:fa8f3afa5aa4c08828b9ee1d51e895d5d6d463141f87a5029c876f57e86e344e"
+    },
+    {
+      "path": "sites.holdout.jsonl",
+      "records": 143,
+      "sha256": "sha256:400c652c8bb2f92a6f3334288210d8f3d224f08857b2cadc0c17cf4eea264160"
+    },
+    {
+      "path": "g34.sites.dev.jsonl",
+      "records": 171,
+      "sha256": "sha256:7f829018ff4e117e5781430c626aef35f9d244fdc4e8c002f8d44b9f8fe80ccb"
+    },
+    {
+      "path": "g34.sites.holdout.jsonl",
+      "records": 72,
+      "sha256": "sha256:2e47a0dcebc97111c51f63553ddd474631abe90a7425fe701f6ad5025e2b56c5"
+    },
+    {
+      "path": "g3h2.sites.jsonl",
+      "records": 56,
+      "sha256": "sha256:8981b570a32fb99e8ad48218a16ad15a46bcb301728f0558daf68eb98c951205"
+    }
+  ],
+  "coordinate_count": 700,
+  "coordinates_sha256": "sha256:a5eaca08b5177d8ed4720ebda3fc4bc05ec38d502cf29d11a0d51bccafebe575",
+  "ledger_digest": "sha256:5de294a48f171f82c9813b85b9f62bdcb8eee62a2af886e2d2ed4a7aad6270b7"
+}

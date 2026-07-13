@@ -391,7 +391,7 @@ Epic 15 completion, the broader platform pivot freezes.
 
 ## EPIC 11 — Validation gate *(annex Stage 0)*
 
-**T11.1 · SPIKE: Validate revision-pinned Go/gRPC consumer evidence and service identity resolution** — *gates Epics 12–15*
+**T11.1 · SPIKE: Validate revision-pinned Go/gRPC consumer evidence and service identity resolution** 🚧 *validation rerun on `t11.1-validation-redo`; gates Epics 12–15. The 2026-07-12 completion claim is retracted: G1 and G2 are not established, G3 did not pass, and G4 lacks the required recall/lineage proof. See the superseding PLAN ADR and `spike/t111/REPORT.md`.*
 Corpus: ≥4 systems including a multi-service monorepo, shared libraries
 containing gRPC calls, multiple versions/vendored copies of generated protobuf
 code, conflicting image/deployment/Helm/`service.name` identities, and
@@ -427,7 +427,7 @@ Exit: gates 2+3 pass → Epics 12–15 as designed · gate 2 passes, 3 fails →
 wedge ships with consumers grouped by repository/build target · gate 1 or 2
 fails → stop; post-mortem ADR.
 
-## EPIC 12 — Provenance schema & protobuf facts *(gated: T11.1)*
+## EPIC 12 — Provenance schema & protobuf facts *(gated: T11.1 validation rerun not established)*
 
 **T12.1 · Evidence & assertion store**
 Content-addressed `evidence_atom` + `snapshot_evidence` associations, semantic

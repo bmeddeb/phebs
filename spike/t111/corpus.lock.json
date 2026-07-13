@@ -1,0 +1,32 @@
+[
+  {
+    "name": "online-boutique",
+    "git_url": "https://github.com/GoogleCloudPlatform/microservices-demo",
+    "commit": "ea0fcf429ff59d861867370d75586095dd253813",
+    "note": "polyglot 11-service demo; per-service vendored generated proto copies; K8s + Helm + Kustomize; documented architecture diagram = ground-truth seed"
+  },
+  {
+    "name": "temporal",
+    "git_url": "https://github.com/temporalio/temporal",
+    "commit": "1d4be84b3771a03e870f09db74bee9e437469b0d",
+    "note": "multi-service Go monorepo (frontend/history/matching/worker) with internal gRPC; gomock mocks of clients; helm chart in a separate repo (identity conflicts)"
+  },
+  {
+    "name": "loki",
+    "git_url": "https://github.com/grafana/loki",
+    "commit": "fbf98eb42291cd09cf019956a1812e35dbbadbbf",
+    "note": "single binary/image, many workload identities selected by -target; worst-case service/deployable identity scenario"
+  },
+  {
+    "name": "dapr",
+    "git_url": "https://github.com/dapr/dapr",
+    "commit": "1991f9484f4dd47502e7329c838ceae42f6ca179",
+    "note": "multiple deployables from one repo (daprd/operator/injector/placement/sentry/scheduler); sidecar identity twist (service.name vs app-id)"
+  },
+  {
+    "name": "temporal-helm",
+    "git_url": "https://github.com/temporalio/helm-charts",
+    "commit": "9f4d328c31c77c323d272d0c5f615cf02bd46dab",
+    "note": "manifest-only companion for temporal: the cross-repo identity case (workload names live here, code lives in temporalio/temporal)"
+  }
+]

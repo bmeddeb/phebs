@@ -1,0 +1,478 @@
+{"site_id": "temporal:tests/testcore/taskpoller.go:246", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RespondWorkflowTaskFailed", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/scheduler/staging/single.go:50", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/querier/ingester_querier.go:262", "extracted": true, "object": "/logproto.Querier/QuerySample", "role": "production", "tier": "exact"}
+{"site_id": "temporal:client/admin/client_gen.go:369", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/PurgeDLQTasks", "role": "generated", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/sentry/validator/jwks/shared.go:94", "extracted": true, "object": "/dapr.proto.sentry.v1.CA/SignCertificate", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/actors/http/ttl.go:140", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/grpc/internal/grpcsync/callback_serializer.go:75", "extracted": false}
+{"site_id": "temporal:service/matching/matching_engine_test.go:568", "extracted": false}
+{"site_id": "online-boutique:src/productcatalogservice/genproto/demo_grpc.pb.go:47", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:63", "extracted": true, "object": "/hipstershop.CartService/EmptyCart", "role": "production", "tier": "exact"}
+{"site_id": "temporal:common/namespace/nsregistry/registry_test.go:862", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:5513", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/PollActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:client/history/metric_client_gen.go:205", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/ForceDeleteWorkflowExecution", "role": "generated", "tier": "exact"}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:78", "extracted": false}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:8072", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/serviceinvocation/grpc/proxy.go:79", "extracted": false}
+{"site_id": "temporal:service/frontend/operator_handler_test.go:1382", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/state/grpc/customerrors.go:167", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/QueryStateAlpha1", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/compactor/deletion/grpc_request_handler_test.go:102", "extracted": true, "object": "/grpc.Compactor/GetDeleteRequests", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/jobs/delete.go:78", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ListJobs", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/conversation/alpha2/grpc/messagetypes.go:272", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ConverseAlpha2", "role": "test", "tier": "exact"}
+{"site_id": "temporal:service/history/shard/context_test.go:447", "extracted": false}
+{"site_id": "dapr:pkg/proto/operator/v1/operator_grpc.pb.go:435", "extracted": false}
+{"site_id": "loki:vendor/github.com/prometheus/client_golang/prometheus/histogram.go:835", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/serviceinvocation/grpc/daprapitoken/remotenotoken.go:107", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:58", "extracted": true, "object": "/hipstershop.CartService/GetCart", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/distributor/ingest_limits.go:52", "extracted": true, "object": "/proto.IngestLimitsFrontend/ExceedsLimits", "role": "production", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:1494", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/call/local.go:66", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeActor", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/shippingservice/shippingservice_test.go:106", "extracted": false}
+{"site_id": "loki:pkg/limits/frontend/ring.go:194", "extracted": true, "object": "/proto.IngestLimits/UpdateRates", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/components/state/pluggable_test.go:229", "extracted": false}
+{"site_id": "temporal:tests/timeskipping_fast_forward_test.go:150", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/parquet-go/parquet-go/writer.go:2247", "extracted": false}
+{"site_id": "online-boutique:src/productcatalogservice/product_catalog_test.go:59", "extracted": false}
+{"site_id": "dapr:pkg/api/grpc/grpc_test.go:3473", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ExecuteStateTransaction", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/productcatalogservice/genproto/demo_grpc.pb.go:956", "extracted": false}
+{"site_id": "temporal:common/searchattribute/manager_test.go:232", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/dissemination/call/concurrent.go:102", "extracted": true, "object": "/dapr.proto.placement.v1.Placement/ReportDaprStatus", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/activity_standalone_test.go:4763", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/ListActivityExecutions", "role": "test", "tier": "exact"}
+{"site_id": "temporal:chasm/lib/activity/frontend.go:345", "extracted": true, "object": "/temporal.server.chasm.lib.activity.proto.v1.ActivityService/RequestCancelActivityExecution", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/activity_standalone_test.go:2941", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DeleteActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/scheduler/concurrency/nolimit.go:54", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/actors/reminders/failurepolicy/drop/failed.go:64", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/RegisterActorReminder", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/actors/lock/call/reentry/max/defaultmax.go:78", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeActor", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/operator/cache/cache_test.go:133", "extracted": false}
+{"site_id": "loki:pkg/logproto/logproto.pb.go:5824", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:52", "extracted": true, "object": "/hipstershop.ProductCatalogService/GetProduct", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/scheduler/api/deletebynameprefix.go:186", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ListJobs", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/shippingservice/genproto/demo_grpc.pb.go:539", "extracted": false}
+{"site_id": "loki:vendor/github.com/grafana/dskit/kv/etcd/mock.go:500", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/pubsub/grpc/errors.go:341", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/BulkPublishEvent", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/serviceinvocation/http/hopbyhop.go:392", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1316", "extracted": false}
+{"site_id": "loki:pkg/logproto/logproto.pb.go:5700", "extracted": false}
+{"site_id": "dapr:pkg/proto/components/v1/state_grpc.pb.go:651", "extracted": false}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:1620", "extracted": false}
+{"site_id": "loki:pkg/compactor/jobqueue/queue_test.go:154", "extracted": true, "object": "/grpc.JobQueue/Loop", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/grafana/dskit/server/fake_server.pb.go:335", "extracted": false}
+{"site_id": "dapr:pkg/proto/operator/v1/operator_grpc.pb.go:84", "extracted": false}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:98", "extracted": false}
+{"site_id": "loki:pkg/logproto/compat.go:427", "extracted": false}
+{"site_id": "loki:vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_metricsdata.go:54", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/grpc/internal/xds/balancer/outlierdetection/balancer.go:365", "extracted": false}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:1585", "extracted": false}
+{"site_id": "online-boutique:src/checkoutservice/main.go:333", "extracted": true, "object": "/hipstershop.CartService/EmptyCart", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/operator/api/httpendpointupdate/basic.go:83", "extracted": true, "object": "/dapr.proto.operator.v1.Operator/HTTPEndpointUpdate", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/operator/v1/operator_grpc.pb.go:576", "extracted": false}
+{"site_id": "dapr:pkg/api/grpc/grpc.go:685", "extracted": false}
+{"site_id": "online-boutique:src/checkoutservice/genproto/demo_grpc.pb.go:428", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:4090", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/golang/protobuf/proto/extensions.go:287", "extracted": false}
+{"site_id": "temporal:tests/schedule_test.go:1719", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/CountSchedules", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/checkoutservice/main.go:325", "extracted": true, "object": "/hipstershop.CartService/GetCart", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/api/grpc/auth.go:56", "extracted": false}
+{"site_id": "temporal:client/history/metric_client_gen.go:289", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/GetReplicationMessages", "role": "generated", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/conversation/alpha1/grpc/scrubpii.go:151", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ConverseAlpha1", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/apache/thrift/lib/go/thrift/multiplexed_protocol.go:205", "extracted": false}
+{"site_id": "loki:vendor/github.com/klauspost/compress/s2/encode_amd64.go:164", "extracted": false}
+{"site_id": "dapr:pkg/channel/grpc/grpc_channel.go:214", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/placement/authz/nomtls.go:87", "extracted": true, "object": "/dapr.proto.placement.v1.Placement/ReportDaprStatus", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_anyvalue.go:210", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/grpc/internal/xds/xdsclient/xdsresource/name.go:78", "extracted": false}
+{"site_id": "temporal:client/admin/retryable_client_gen.go:67", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/CancelDLQJob", "role": "generated", "tier": "exact"}
+{"site_id": "temporal:client/history/client_gen.go:1401", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/TerminateWorkflowExecution", "role": "generated", "tier": "exact"}
+{"site_id": "dapr:pkg/api/grpc/crypto_test.go:60", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/EncryptAlpha1", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/shippingservice/genproto/demo_grpc.pb.go:590", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/scheduler/api/list/crud.go:244", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:658", "extracted": false}
+{"site_id": "loki:pkg/querier/multi_tenant_querier_test.go:343", "extracted": false}
+{"site_id": "loki:pkg/compactor/jobqueue/queue_test.go:129", "extracted": true, "object": "/grpc.JobQueue/Loop", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/querier/ingester_querier.go:442", "extracted": true, "object": "/logproto.Querier/GetStats", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/runtime/v1/appcallback_grpc.pb.go:230", "extracted": false}
+{"site_id": "dapr:pkg/diagnostics/http_monitoring_test.go:399", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/lock/call/reentry/max/hop/custommax.go:145", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeActor", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/productcatalogservice/genproto/demo_grpc.pb.go:141", "extracted": false}
+{"site_id": "dapr:pkg/client/clientset/versioned/typed/configuration/v1alpha1/configuration.go:87", "extracted": false}
+{"site_id": "loki:pkg/querier/ingester_querier.go:358", "extracted": true, "object": "/logproto.Querier/Series", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/actors/internal/scheduler/scheduler.go:268", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ListJobs", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/testing/directmessaging_mock.go:39", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2975", "extracted": false}
+{"site_id": "loki:pkg/indexgateway/client.go:307", "extracted": true, "object": "/indexgatewaypb.IndexGateway/LabelValuesForMetricName", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:8064", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1406", "extracted": false}
+{"site_id": "online-boutique:src/productcatalogservice/product_catalog_test.go:92", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2456", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/jobs/delete.go:118", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ListJobs", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/google.golang.org/grpc/internal/xds/balancer/outlierdetection/subconn_wrapper.go:85", "extracted": false}
+{"site_id": "loki:pkg/querier/ingester_querier.go:390", "extracted": true, "object": "/logproto.Querier/TailersCount", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/distributor/ingest_limits.go:69", "extracted": true, "object": "/proto.IngestLimitsFrontend/UpdateRates", "role": "production", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2993", "extracted": false}
+{"site_id": "temporal:service/frontend/workflow_handler.go:3206", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/QueryWorkflow", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/runtime/scheduler/internal/clients/wrapper/wrapper.go:52", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/DeleteJob", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/config.go:594", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/grpc/internal/xds/clients/internal/syncutil/callback_serializer.go:75", "extracted": false}
+{"site_id": "temporal:client/frontend/client_gen.go:879", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RespondQueryTaskCompleted", "role": "generated", "tier": "exact"}
+{"site_id": "temporal:tests/xdc/nexus_request_forwarding_test.go:638", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/PollNexusTaskQueue", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/grafana/dskit/kv/consul/client.go:61", "extracted": false}
+{"site_id": "loki:pkg/pattern/ingester_test.go:829", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:2180", "extracted": false}
+{"site_id": "temporal:tests/purge_dlq_tasks_api_test.go:111", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/PurgeDLQTasks", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/frontend/rpc.go:68", "extracted": true, "object": "/hipstershop.CartService/AddItem", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:7795", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:257", "extracted": false}
+{"site_id": "loki:pkg/querier/ingester_querier.go:277", "extracted": true, "object": "/logproto.Querier/Label", "role": "production", "tier": "exact"}
+{"site_id": "temporal:service/history/api/respondactivitytaskcanceled/api.go:57", "extracted": false}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:757", "extracted": false}
+{"site_id": "loki:vendor/github.com/grafana/dskit/server/fake_server.pb.go:411", "extracted": false}
+{"site_id": "online-boutique:src/shippingservice/shippingservice_test.go:50", "extracted": false}
+{"site_id": "temporal:tools/tdbg/dlq_v2_service.go:275", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/MergeDLQTasks", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_logrecord.go:70", "extracted": false}
+{"site_id": "dapr:pkg/proto/scheduler/v1/scheduler_grpc.pb.go:191", "extracted": false}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:1402", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/reminders/duetime.go:118", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/RegisterActorReminder", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/serviceinvocation/grpc/proxy.go:81", "extracted": false}
+{"site_id": "temporal:client/history/client_gen.go:1183", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/RespondWorkflowTaskCompleted", "role": "generated", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:8263", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/httpserver/corsdefaultapitoken.go:104", "extracted": false}
+{"site_id": "temporal:tests/activity_api_batch_reset_test.go:278", "extracted": false}
+{"site_id": "online-boutique:src/frontend/genproto/demo_grpc.pb.go:678", "extracted": false}
+{"site_id": "online-boutique:src/frontend/genproto/demo_grpc.pb.go:372", "extracted": false}
+{"site_id": "temporal:tests/update_workflow_test.go:5672", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/google.golang.org/grpc/internal/transport/controlbuf.go:82", "extracted": false}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:1441", "extracted": false}
+{"site_id": "temporal:chasm/lib/nexusoperation/frontend.go:283", "extracted": true, "object": "/temporal.server.chasm.lib.nexusoperation.proto.v1.NexusOperationService/TerminateNexusOperation", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/activity_standalone_test.go:2987", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/TerminateActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:service/matching/matching_engine_test.go:4943", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/lock/reminders/remote/grpc.go:105", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/RegisterActorReminder", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/activity_standalone_test.go:6674", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/TerminateActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/productcatalogservice/product_catalog_test.go:71", "extracted": false}
+{"site_id": "temporal:tests/advanced_visibility_test.go:486", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/ListWorkflowExecutions", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1970", "extracted": false}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:7203", "extracted": false}
+{"site_id": "dapr:pkg/client/clientset/versioned/typed/configuration/v1alpha1/configuration.go:44", "extracted": false}
+{"site_id": "dapr:pkg/proto/placement/v1/placement_grpc.pb.go:42", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:6152", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/PollActivityTaskQueue", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:7618", "extracted": false}
+{"site_id": "dapr:pkg/proto/components/v1/bindings_grpc.pb.go:271", "extracted": false}
+{"site_id": "temporal:tests/nexus_api_validation_test.go:294", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RespondNexusTaskCompleted", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go:1475", "extracted": false}
+{"site_id": "loki:pkg/querier/ingester_querier.go:293", "extracted": true, "object": "/logproto.Querier/Tail", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/placement/disstimeout/repeated.go:83", "extracted": true, "object": "/dapr.proto.placement.v1.Placement/ReportDaprStatus", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/sentry/validator/insecure/insecure.go:78", "extracted": true, "object": "/dapr.proto.sentry.v1.CA/SignCertificate", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:670", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:3011", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/shutdown/graceful/invocation/grpc/caller.go:84", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeService", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/actors/state/grpc.go:128", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ExecuteActorStateTransaction", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/compactor/jobqueue/worker.go:147", "extracted": true, "object": "/grpc.JobQueue/Loop", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/tracing/actors/actors.go:123", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/declarative/operator/v2alpha1/missing/grpc.go:125", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetMetadata", "role": "test", "tier": "exact"}
+{"site_id": "temporal:service/frontend/workflow_handler.go:3242", "extracted": false}
+{"site_id": "temporal:tests/activity_api_batch_update_options_test.go:123", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartBatchOperation", "role": "test", "tier": "exact"}
+{"site_id": "temporal:service/history/api/updateactivityoptions/api.go:62", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/serviceinvocation/grpc/appapitoken/selfwithtoken.go:81", "extracted": false}
+{"site_id": "dapr:pkg/proto/components/v1/state_grpc.pb.go:544", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:31", "extracted": true, "object": "/hipstershop.CurrencyService/GetSupportedCurrencies", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/state/grpc/compname.go:106", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/SaveState", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/signal_workflow_test.go:417", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:client/admin/retryable_client_gen.go:487", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/MergeDLQMessages", "role": "generated", "tier": "exact"}
+{"site_id": "loki:pkg/compactor/deletion/grpc_request_handler_test.go:123", "extracted": true, "object": "/grpc.Compactor/GetCacheGenNumbers", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:306", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:5443", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RespondActivityTaskFailed", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/api/universal/jobs.go:151", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/DeleteJob", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/logproto/indexgateway.pb.go:791", "extracted": false}
+{"site_id": "dapr:pkg/proto/operator/v1/operatorconnect/operator.connect.go:108", "extracted": false}
+{"site_id": "temporal:client/frontend/retryable_client_gen.go:37", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/CountNexusOperationExecutions", "role": "generated", "tier": "exact"}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:691", "extracted": false}
+{"site_id": "loki:vendor/github.com/miekg/dns/serve_mux.go:112", "extracted": false}
+{"site_id": "dapr:pkg/proto/components/v1/pubsub_grpc.pb.go:151", "extracted": false}
+{"site_id": "loki:pkg/logproto/indexgateway.pb.go:738", "extracted": false}
+{"site_id": "temporal:service/history/api/respondworkflowtaskcompleted/workflow_task_completed_handler.go:1165", "extracted": false}
+{"site_id": "temporal:client/admin/metric_client_gen.go:597", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/RemoveTask", "role": "generated", "tier": "exact"}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:1009", "extracted": false}
+{"site_id": "loki:pkg/indexgateway/client.go:265", "extracted": true, "object": "/indexgatewaypb.IndexGateway/GetChunkRef", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/programmatic/grpc/missing.go:86", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetMetadata", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/frontend/handlers.go:354", "extracted": true, "object": "/hipstershop.CheckoutService/PlaceOrder", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/hotreload/operator/informer/secretrotation.go:202", "extracted": false}
+{"site_id": "temporal:service/history/history_engine_test.go:3152", "extracted": false}
+{"site_id": "online-boutique:src/checkoutservice/genproto/demo_grpc.pb.go:374", "extracted": false}
+{"site_id": "temporal:tests/schedule_test.go:3812", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/PatchSchedule", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/frontend/rpc.go:126", "extracted": false}
+{"site_id": "temporal:tests/xdc/user_data_replication_test.go:269", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RegisterNamespace", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/worker_deployment_test.go:3786", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/CreateWorkerDeployment", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/resiliency/resiliency.go:639", "extracted": false}
+{"site_id": "loki:pkg/distributor/ratestore.go:299", "extracted": true, "object": "/logproto.StreamData/GetStreamRates", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/components/v1/state_grpc.pb.go:304", "extracted": false}
+{"site_id": "loki:pkg/pattern/tee_service.go:347", "extracted": true, "object": "/logproto.Pattern/Push", "role": "production", "tier": "exact"}
+{"site_id": "online-boutique:src/frontend/genproto/demo_grpc.pb.go:1160", "extracted": false}
+{"site_id": "temporal:tests/workflow_test.go:154", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/ruler/evaluator_remote.go:245", "extracted": true, "object": "/httpgrpc.HTTP/Handle", "role": "production", "tier": "exact"}
+{"site_id": "online-boutique:src/checkoutservice/genproto/demo_grpc.pb.go:372", "extracted": false}
+{"site_id": "online-boutique:src/frontend/genproto/demo_grpc.pb.go:166", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1308", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/lock/timers/remote.go:104", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/RegisterActorTimer", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/messaging/direct_messaging.go:394", "extracted": true, "object": "/dapr.proto.internals.v1.ServiceInvocation/CallLocalStream", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/logproto/logproto.pb.go:6049", "extracted": false}
+{"site_id": "temporal:client/admin/metric_client_gen.go:135", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/DescribeDLQJob", "role": "generated", "tier": "exact"}
+{"site_id": "loki:pkg/compactor/deletion/grpc_request_handler_test.go:90", "extracted": true, "object": "/grpc.Compactor/GetDeleteRequests", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/querier/worker/scheduler_processor.go:81", "extracted": true, "object": "/schedulerpb.SchedulerForQuerier/NotifyQuerierShutdown", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/logql/log/fmt_test.go:1024", "extracted": false}
+{"site_id": "online-boutique:src/checkoutservice/main.go:344", "extracted": true, "object": "/hipstershop.ProductCatalogService/GetProduct", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/hotreload/operator/crypto.go:352", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/DecryptAlpha1", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:93", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/call/h2c/resiliency.go:82", "extracted": false}
+{"site_id": "loki:vendor/github.com/golang/protobuf/proto/discard.go:26", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:88", "extracted": true, "object": "/hipstershop.ShippingService/GetQuote", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/google.golang.org/grpc/encoding/gzip/gzip.go:80", "extracted": false}
+{"site_id": "temporal:service/frontend/admin_handler.go:708", "extracted": false}
+{"site_id": "online-boutique:src/checkoutservice/genproto/demo_grpc.pb.go:93", "extracted": false}
+{"site_id": "loki:vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_exportmetricsservicerequest.go:53", "extracted": false}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:6698", "extracted": false}
+{"site_id": "loki:vendor/github.com/yuin/gopher-lua/iolib.go:249", "extracted": false}
+{"site_id": "loki:pkg/compactor/deletion/grpc_request_handler_test.go:140", "extracted": true, "object": "/grpc.Compactor/GetCacheGenNumbers", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/jobs/delete.go:140", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ListJobs", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/querier/worker/frontend_processor.go:66", "extracted": true, "object": "/frontend.Frontend/Process", "role": "production", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1203", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1274", "extracted": false}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:8299", "extracted": false}
+{"site_id": "online-boutique:src/shippingservice/genproto/demo_grpc.pb.go:141", "extracted": false}
+{"site_id": "temporal:client/matching/client_gen.go:73", "extracted": true, "object": "/temporal.server.api.matchingservice.v1.MatchingService/CancelOutstandingWorkerPolls", "role": "generated", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/components/v1/componentsconnect/secretstore.connect.go:63", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/programmatic/grpc/rawpayload.go:85", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/PublishEvent", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/resiliency/apps/retry/grpc.go:231", "extracted": true, "object": "/dapr.proto.runtime.v1.AppCallback/OnInvoke", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/shippingservice/genproto/demo_grpc.pb.go:1160", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/hotreload/selfhosted/pubsub/grpc.go:141", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetMetadata", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/api/grpc/proxy/testserviceV1/test.v1.pb.go:355", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:267", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:2076", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RequestCancelActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:8068", "extracted": false}
+{"site_id": "dapr:pkg/api/grpc/manager/pool_test.go:186", "extracted": false}
+{"site_id": "loki:pkg/compactor/client/grpc.go:114", "extracted": true, "object": "/grpc.Compactor/GetDeleteRequests", "role": "production", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:993", "extracted": false}
+{"site_id": "temporal:service/history/ndc/workflow_state_replicator_test.go:220", "extracted": false}
+{"site_id": "loki:pkg/lokifrontend/frontend/v1/frontendv1pb/frontend.pb.go:490", "extracted": false}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:117", "extracted": false}
+{"site_id": "temporal:service/matching/workers/registry_test.go:472", "extracted": false}
+{"site_id": "temporal:service/worker/migration/activities.go:482", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/GenerateLastHistoryReplicationTasks", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/pubsub/scopes/protectedtopics.go:170", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetMetadata", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:829", "extracted": false}
+{"site_id": "temporal:client/history/retryable_client_gen.go:937", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/SignalWithStartWorkflowExecution", "role": "generated", "tier": "exact"}
+{"site_id": "dapr:pkg/api/grpc/grpc_test.go:2677", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeBinding", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/api/http/server_test.go:96", "extracted": false}
+{"site_id": "temporal:tests/namespace_test.go:354", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeNamespace", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/httpserver/corsdefaultapitoken.go:129", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:5546", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/PollActivityTaskQueue", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/sentry/server/server_test.go:326", "extracted": true, "object": "/dapr.proto.sentry.v1.CA/SignCertificate", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/api/grpc/crypto_test.go:105", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/EncryptAlpha1", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/declarative/selfhosted/v2alpha1/basic/grpc.go:74", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/PublishEvent", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/lokifrontend/frontend/v2/frontend_scheduler_worker.go:235", "extracted": true, "object": "/schedulerpb.SchedulerForFrontend/FrontendLoop", "role": "production", "tier": "exact"}
+{"site_id": "temporal:service/history/interfaces/engine.go:80", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:432", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/scheduler/api/failurepolicy.go:109", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/indexgateway/client.go:293", "extracted": true, "object": "/indexgatewaypb.IndexGateway/LabelNamesForMetricName", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:7784", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/shutdown/block/timeout.go:174", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetState", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1815", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/programmatic/grpc/bulk.go:123", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/BulkPublishEvent", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/indexgateway/client.go:348", "extracted": true, "object": "/indexgatewaypb.IndexGateway/GetShards", "role": "production", "tier": "exact"}
+{"site_id": "temporal:client/frontend/metric_client_gen.go:709", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/ListScheduleMatchingTimes", "role": "generated", "tier": "exact"}
+{"site_id": "loki:pkg/bloomgateway/client.go:190", "extracted": true, "object": "/logproto.BloomGateway/PrefetchBloomBlocks", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/querier/ingester_querier.go:472", "extracted": true, "object": "/logproto.Querier/GetVolume", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/querier/queryrange/codec_test.go:996", "extracted": false}
+{"site_id": "online-boutique:src/productcatalogservice/genproto/demo_grpc.pb.go:539", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:5680", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RespondActivityTaskCompleted", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/ui/handler.go:367", "extracted": false}
+{"site_id": "temporal:tests/xdc/chasm_test.go:399", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/DescribeMutableState", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:1674", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go:261", "extracted": false}
+{"site_id": "dapr:tests/apps/crypto/utils.go:88", "extracted": false}
+{"site_id": "loki:pkg/ingester/stream_test.go:243", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:455", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/RespondActivityTaskCompleted", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/limits/frontend/ring.go:388", "extracted": true, "object": "/proto.IngestLimits/GetAssignedPartitions", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/hashicorp/go-metrics/prometheus/prometheus.go:192", "extracted": false}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:8425", "extracted": false}
+{"site_id": "loki:pkg/lokifrontend/frontend/v2/frontendv2pb/frontend.pb.go:376", "extracted": false}
+{"site_id": "loki:pkg/querier/worker/scheduler_processor.go:97", "extracted": true, "object": "/schedulerpb.SchedulerForQuerier/QuerierLoop", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/hotreload/operator/pubsub/grpc.go:183", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetMetadata", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/components/v1/state_grpc.pb.go:244", "extracted": false}
+{"site_id": "temporal:tests/signal_workflow_test.go:1789", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tools/tdbg/dlq_v1_service.go:172", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/MergeDLQMessages", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/tracing/baggage/serviceinvocation.go:186", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeService", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/checkoutservice/main.go:314", "extracted": true, "object": "/hipstershop.ShippingService/GetQuote", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/ruler/storage/wal/util.go:77", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/timers/remote/grpc.go:109", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/RegisterActorTimer", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_spanevent.go:59", "extracted": false}
+{"site_id": "loki:vendor/github.com/redis/go-redis/v9/sentinel.go:779", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go:268", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/scheduler/api/repeats.go:73", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/api/http/universal_test.go:424", "extracted": false}
+{"site_id": "temporal:tests/nexus_endpoint_test.go:79", "extracted": true, "object": "/temporal.server.api.matchingservice.v1.MatchingService/ListNexusEndpoints", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/hotreload/selfhosted/binding/input/grpc.go:255", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetMetadata", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/components/v1/state_grpc.pb.go:418", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:131", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1700", "extracted": false}
+{"site_id": "loki:pkg/limits/proto/limits.pb.go:1233", "extracted": false}
+{"site_id": "loki:pkg/ruler/base/api.go:168", "extracted": false}
+{"site_id": "temporal:tests/worker_deployment_test.go:936", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeWorkerDeployment", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/stream/mixed.go:91", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/SubscribeTopicEventsAlpha1", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1133", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:123", "extracted": true, "object": "/hipstershop.AdService/GetAds", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/xdc/stream_based_replication_test.go:1021", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/checkoutservice/main.go:370", "extracted": true, "object": "/hipstershop.PaymentService/Charge", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/querier/worker/frontend_processor.go:54", "extracted": true, "object": "/frontend.Frontend/NotifyClientShutdown", "role": "production", "tier": "exact"}
+{"site_id": "temporal:common/predicates/or_test.go:37", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:6052", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/TerminateActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/timeskipping_propagation_test.go:691", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/TerminateWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2276", "extracted": false}
+{"site_id": "temporal:tests/xdc/stream_based_replication_test.go:675", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/DeleteWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:service/worker/parentclosepolicy/workflow.go:108", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/TerminateWorkflowExecution", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/actors/lock/call/local/chain/grpc.go:67", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeActor", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/querier/ingester_querier.go:246", "extracted": true, "object": "/logproto.Querier/Query", "role": "production", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:123", "extracted": false}
+{"site_id": "loki:pkg/ruler/base/ruler.go:1001", "extracted": true, "object": "/base.Ruler/Rules", "role": "production", "tier": "exact"}
+{"site_id": "temporal:service/history/transfer_queue_active_task_executor_test.go:1741", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/operator/api/authz.go:129", "extracted": true, "object": "/dapr.proto.operator.v1.Operator/ComponentUpdate", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/scheduler/metrics/jobsdeletedtotal.go:102", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/DeleteJob", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/scheduler/api/ha.go:93", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/DeleteJob", "role": "test", "tier": "exact"}
+{"site_id": "temporal:client/frontend/client_gen.go:229", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeNexusOperationExecution", "role": "generated", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/client/v3/kv.go:164", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/appcallback.connect.go:210", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:1203", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:2342", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:256", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:5980", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/jobs/grpc/appapitoken.go:79", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2121", "extracted": false}
+{"site_id": "loki:vendor/go.etcd.io/etcd/client/v3/auth.go:64", "extracted": false}
+{"site_id": "temporal:chasm/lib/nexusoperation/gen/nexusoperationpb/v1/service_grpc.pb.go:238", "extracted": false}
+{"site_id": "loki:pkg/indexgateway/client.go:335", "extracted": true, "object": "/indexgatewaypb.IndexGateway/GetVolume", "role": "production", "tier": "exact"}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:675", "extracted": false}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:110", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1336", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:1898", "extracted": false}
+{"site_id": "loki:pkg/pattern/ingester_querier.go:58", "extracted": true, "object": "/logproto.Pattern/Query", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_link.go:52", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/appcallback.connect.go:91", "extracted": false}
+{"site_id": "dapr:pkg/channel/testing/channel_mock.go:70", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/dissemination/drain/clamp/clamp.go:104", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeActor", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/logproto/indexgateway.pb.go:684", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/appcallback_grpc.pb.go:509", "extracted": false}
+{"site_id": "dapr:pkg/actors/internal/scheduler/scheduler.go:234", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/DeleteByMetadata", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/worker_deployment_version_test.go:1303", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/ListWorkerDeployments", "role": "test", "tier": "exact"}
+{"site_id": "temporal:service/frontend/workflow_handler_test.go:924", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/grpc/internal/transport/readyreader/ready_reader.go:101", "extracted": false}
+{"site_id": "temporal:service/history/ndc/hsm_state_replicator_test.go:638", "extracted": false}
+{"site_id": "loki:cmd/dataobj-inspect/stats.go:327", "extracted": false}
+{"site_id": "temporal:tests/activity_standalone_test.go:1923", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/scheduler/scheduler.go:578", "extracted": true, "object": "/frontendv2pb.FrontendForQuerier/QueryResult", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/scheduler/failurepolicy/drop/failed.go:58", "extracted": true, "object": "/dapr.proto.scheduler.v1.Scheduler/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/frontend/genproto/demo_grpc.pb.go:374", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/grpc/credentials/alts/internal/conn/record.go:273", "extracted": false}
+{"site_id": "online-boutique:src/productcatalogservice/product_catalog_test.go:80", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/protobuf/encoding/prototext/encode.go:370", "extracted": false}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:957", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/stream/multi.go:99", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/SubscribeTopicEventsAlpha1", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/logproto/indexgateway.pb.go:533", "extracted": false}
+{"site_id": "dapr:tests/integration/framework/process/pubsub/component.go:89", "extracted": false}
+{"site_id": "dapr:pkg/actors/targets/app/transport/http/http_test.go:66", "extracted": false}
+{"site_id": "temporal:client/frontend/metric_client_gen.go:625", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/ListBatchOperations", "role": "generated", "tier": "exact"}
+{"site_id": "loki:pkg/compactor/client/grpc.go:136", "extracted": true, "object": "/grpc.Compactor/GetCacheGenNumbers", "role": "production", "tier": "exact"}
+{"site_id": "online-boutique:src/shippingservice/genproto/demo_grpc.pb.go:439", "extracted": false}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:782", "extracted": false}
+{"site_id": "temporal:tests/xdc/replication_enable_test.go:313", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/AddOrUpdateRemoteCluster", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/compactor/deletion/grpc_request_handler_test.go:152", "extracted": true, "object": "/grpc.Compactor/GetCacheGenNumbers", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/tracing/baggage/outputbinding.go:139", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeBinding", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2633", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:889", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/grpc/balancer/rls/balancer.go:631", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/actors/state/grpc.go:58", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetActorState", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/xdc/failover_test.go:1244", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/SignalWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/checkoutservice/main.go:360", "extracted": true, "object": "/hipstershop.CurrencyService/Convert", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/components/v1/pubsub_grpc.pb.go:49", "extracted": false}
+{"site_id": "temporal:tests/transient_task_test.go:145", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/bloombuild/builder/builder.go:213", "extracted": true, "object": "/protos.PlannerForBuilder/BuilderLoop", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/components/v1/componentsconnect/bindings.connect.go:206", "extracted": false}
+{"site_id": "loki:pkg/querier/ingester_querier.go:500", "extracted": true, "object": "/logproto.Querier/GetDetectedLabels", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/schedule_test.go:2363", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:common/namespace/nsregistry/registry_test.go:649", "extracted": false}
+{"site_id": "loki:vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go:8281", "extracted": false}
+{"site_id": "temporal:service/matching/matching_engine_test.go:4041", "extracted": false}
+{"site_id": "temporal:service/frontend/admin_handler.go:459", "extracted": false}
+{"site_id": "loki:vendor/google.golang.org/protobuf/reflect/protoreflect/value_equal.go:97", "extracted": false}
+{"site_id": "online-boutique:src/shippingservice/genproto/demo_grpc.pb.go:373", "extracted": false}
+{"site_id": "online-boutique:src/checkoutservice/main.go:387", "extracted": true, "object": "/hipstershop.ShippingService/ShipOrder", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/go.etcd.io/etcd/client/v3/auth.go:91", "extracted": false}
+{"site_id": "loki:vendor/github.com/yuin/gopher-lua/mathlib.go:116", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/workflow/loadbalance/timer.go:61", "extracted": false}
+{"site_id": "temporal:tests/schedule_test.go:3599", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeSchedule", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/pattern/tee_service.go:429", "extracted": true, "object": "/logproto.Pattern/Push", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/advanced_visibility_test.go:341", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:625", "extracted": false}
+{"site_id": "dapr:pkg/api/grpc/proxy/handler_test.go:595", "extracted": true, "object": "/mwitkow.testproto.TestService/PingStream", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/querier/worker/scheduler_processor.go:254", "extracted": true, "object": "/frontendv2pb.FrontendForQuerier/QueryResult", "role": "production", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/scheduler/v1/scheduler_grpc.pb.go:208", "extracted": false}
+{"site_id": "temporal:tests/client_misc_test.go:817", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/DescribeMutableState", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/compactor/client/grpc/grpc.pb.go:829", "extracted": false}
+{"site_id": "dapr:pkg/api/grpc/grpc_test.go:3571", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/SubscribeConfiguration", "role": "test", "tier": "exact"}
+{"site_id": "loki:pkg/indexgateway/client.go:279", "extracted": true, "object": "/indexgatewaypb.IndexGateway/GetSeries", "role": "production", "tier": "exact"}
+{"site_id": "online-boutique:src/shippingservice/shippingservice_test.go:73", "extracted": false}
+{"site_id": "temporal:client/history/metric_client_gen.go:37", "extracted": true, "object": "/temporal.server.api.historyservice.v1.HistoryService/CloseShard", "role": "generated", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/subscriptions/declarative/selfhosted/v2alpha1/rawpayload/grpc.go:122", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/PublishEvent", "role": "test", "tier": "exact"}
+{"site_id": "temporal:client/frontend/client_gen.go:659", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/PollWorkflowExecutionUpdate", "role": "generated", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:1047", "extracted": false}
+{"site_id": "loki:pkg/querier/ingester_querier.go:342", "extracted": true, "object": "/logproto.Querier/Tail", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/querier/ingester_querier.go:421", "extracted": true, "object": "/logproto.Querier/GetChunkIDs", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/versioning_test.go:1021", "extracted": false}
+{"site_id": "dapr:pkg/api/grpc/proxy/testservice/test_grpc.pb.go:234", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go:1397", "extracted": false}
+{"site_id": "temporal:service/history/ndc/workflow_resetter.go:242", "extracted": false}
+{"site_id": "dapr:pkg/actors/callbackstream/callbackstream.go:300", "extracted": false}
+{"site_id": "loki:vendor/github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime/policy_api_version.go:70", "extracted": false}
+{"site_id": "loki:pkg/compactor/deletion/grpc_request_handler_test.go:70", "extracted": true, "object": "/grpc.Compactor/GetDeleteRequests", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2463", "extracted": false}
+{"site_id": "loki:pkg/logproto/logproto.pb.go:5517", "extracted": false}
+{"site_id": "loki:pkg/limits/frontend/ring.go:144", "extracted": true, "object": "/proto.IngestLimits/ExceedsLimits", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/activity_standalone_test.go:2823", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/TerminateActivityExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/activity_api_reset_test.go:198", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/ResetActivity", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/continue_as_new_test.go:940", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/prometheus/prometheus/tsdb/head_dedupelabels.go:39", "extracted": false}
+{"site_id": "loki:vendor/github.com/parquet-go/jsonlite/value.go:448", "extracted": false}
+{"site_id": "dapr:pkg/proto/operator/v1/operatorconnect/operator.connect.go:118", "extracted": false}
+{"site_id": "dapr:pkg/sentry/server/ca/jwt/jwt_test.go:134", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:81", "extracted": true, "object": "/hipstershop.CurrencyService/Convert", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/jobs/delete.go:74", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/worker_deployment_test.go:1141", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeWorkerDeployment", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/jobs/noapp.go:57", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/ScheduleJob", "role": "test", "tier": "exact"}
+{"site_id": "online-boutique:src/checkoutservice/main.go:380", "extracted": true, "object": "/hipstershop.EmailService/SendOrderConfirmation", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/go-kit/log/logfmt_logger.go:44", "extracted": false}
+{"site_id": "loki:pkg/bloombuild/builder/builder.go:110", "extracted": true, "object": "/protos.PlannerForBuilder/NotifyBuilderShutdown", "role": "production", "tier": "exact"}
+{"site_id": "temporal:tests/pause_workflow_execution_test.go:2078", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/ResetWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go:1433", "extracted": false}
+{"site_id": "loki:pkg/bloomgateway/client.go:254", "extracted": true, "object": "/logproto.BloomGateway/FilterChunkRefs", "role": "production", "tier": "exact"}
+{"site_id": "online-boutique:src/frontend/rpc.go:100", "extracted": true, "object": "/hipstershop.RecommendationService/ListRecommendations", "role": "production", "tier": "exact"}
+{"site_id": "loki:pkg/logproto/bloomgateway.pb.go:748", "extracted": false}
+{"site_id": "dapr:pkg/proto/components/v1/pubsub_grpc.pb.go:102", "extracted": false}
+{"site_id": "loki:pkg/indexgateway/client.go:321", "extracted": true, "object": "/indexgatewaypb.IndexGateway/GetStats", "role": "production", "tier": "exact"}
+{"site_id": "loki:vendor/github.com/prometheus/prometheus/model/textparse/protobufparse.go:620", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:2576", "extracted": false}
+{"site_id": "online-boutique:src/shippingservice/genproto/demo_grpc.pb.go:538", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go:312", "extracted": false}
+{"site_id": "dapr:pkg/proto/runtime/v1/dapr_grpc.pb.go:232", "extracted": false}
+{"site_id": "temporal:tests/reset_workflow_test.go:200", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/DescribeWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/daprd/shutdown/graceful/timein.go:73", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/InvokeService", "role": "test", "tier": "exact"}
+{"site_id": "dapr:pkg/runtime/pubsub/publisher/publisher_test.go:185", "extracted": false}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:1072", "extracted": false}
+{"site_id": "loki:vendor/github.com/redis/go-redis/v9/sentinel.go:714", "extracted": false}
+{"site_id": "temporal:tools/tdbg/commands.go:77", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/GetWorkflowExecutionRawHistoryV2", "role": "production", "tier": "exact"}
+{"site_id": "temporal:api/adminservice/v1/service_grpc.pb.go:656", "extracted": false}
+{"site_id": "online-boutique:src/frontend/rpc.go:46", "extracted": true, "object": "/hipstershop.ProductCatalogService/ListProducts", "role": "production", "tier": "exact"}
+{"site_id": "dapr:tests/integration/suite/operator/api/resiliencyupdate/basic.go:113", "extracted": false}
+{"site_id": "dapr:tests/integration/suite/daprd/workflow/scheduler/raise.go:108", "extracted": true, "object": "/dapr.proto.runtime.v1.Dapr/GetWorkflowBeta1", "role": "test", "tier": "exact"}
+{"site_id": "temporal:api/matchingservice/v1/service_grpc.pb.go:207", "extracted": false}
+{"site_id": "loki:vendor/github.com/grafana/loki/pkg/push/push-rf1.pb.go:105", "extracted": false}
+{"site_id": "temporal:tests/xdc/failover_test.go:1979", "extracted": true, "object": "/temporal.api.workflowservice.v1.WorkflowService/StartWorkflowExecution", "role": "test", "tier": "exact"}
+{"site_id": "temporal:tests/admin_batch_refresh_workflow_tasks_test.go:174", "extracted": true, "object": "/temporal.server.api.adminservice.v1.AdminService/StartAdminBatchOperation", "role": "test", "tier": "exact"}
+{"site_id": "loki:vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_location.go:57", "extracted": false}
+{"site_id": "temporal:api/historyservice/v1/service_grpc.pb.go:2013", "extracted": false}
+{"site_id": "dapr:pkg/api/grpc/proxy/testservice/test_grpc.pb.go:29", "extracted": false}

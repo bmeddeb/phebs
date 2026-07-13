@@ -5,3 +5,8 @@ node_modules/
 /data/
 coverage.out
 *.test
+
+# T11.1 spike: corpus clones and extraction output are derived, never committed
+spike/t111/corpus/
+spike/t111/out/
+/t111

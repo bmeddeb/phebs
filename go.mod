@@ -4,6 +4,7 @@ go 1.26
 
 require (
 	github.com/alexedwards/scs/v2 v2.9.0
+	github.com/bufbuild/protocompile v0.14.1
 	github.com/coreos/go-oidc/v3 v3.16.0
 	github.com/danielgtaylor/huma/v2 v2.38.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
@@ -12,8 +13,10 @@ require (
 	github.com/sourcegraph/zoekt v0.0.0-20260709064101-33f1f18af292
 	github.com/surrealdb/surrealdb.go v1.5.1
 	golang.org/x/crypto v0.50.0
+	golang.org/x/mod v0.34.0
 	golang.org/x/oauth2 v0.35.0
 	golang.org/x/text v0.36.0
+	golang.org/x/tools v0.43.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 )
