@@ -49,6 +49,13 @@ type Indexer struct {
 	DataDir string // mirrors under DataDir/repos, shards under DataDir/index
 	Bin     string // zoekt-git-index path (FindBinary)
 	Store   store.Store
+
+	// OnIndexed, when set, runs once the indexed state is known current — the
+	// index→extract chain hook (T12.2), mirroring how sync chains index. It also
+	// runs on an unchanged-HEAD short circuit: if persisting the successor job
+	// failed after a prior index commit, the retried index job must be able to
+	// repair that missing chain without rebuilding the shard.
+	OnIndexed func(ctx context.Context, repoName, commit string) error
 }
 
 // Handle adapts Index to the store.Runner: the job target is the repo name.
@@ -87,7 +94,7 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		return fmt.Errorf("index %s: resolve HEAD: %w", repo.Name, err)
 	}
 	if !force && head != "" && head == repo.IndexedCommitHash {
-		return nil // T3.2: HEAD unchanged, shards current
+		return ix.afterIndexed(ctx, repo.Name, head) // T3.2: shards current; repair/confirm the chain
 	}
 
 	indexDir := filepath.Join(ix.DataDir, "index")
@@ -128,6 +135,16 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 			wrapIfError("clear index state", clearErr),
 			wrapIfError("remove uncommitted shards", removeErr),
 		)
+	}
+	return ix.afterIndexed(ctx, repo.Name, head)
+}
+
+func (ix *Indexer) afterIndexed(ctx context.Context, repoName, commit string) error {
+	if ix.OnIndexed == nil {
+		return nil
+	}
+	if err := ix.OnIndexed(ctx, repoName, commit); err != nil {
+		return fmt.Errorf("index %s: chain post-index work: %w", repoName, err)
 	}
 	return nil
 }

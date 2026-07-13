@@ -22,12 +22,13 @@ import (
 )
 
 type Config struct {
-	Server      Server       `yaml:"server"`
-	Auth        Auth         `yaml:"auth"`
-	Sync        Sync         `yaml:"sync"`
-	Webhook     Webhook      `yaml:"webhook"`
-	Audit       Audit        `yaml:"audit"`
-	Analytics   Analytics    `yaml:"analytics"`
+	Server       Server       `yaml:"server"`
+	Auth         Auth         `yaml:"auth"`
+	Sync         Sync         `yaml:"sync"`
+	Webhook      Webhook      `yaml:"webhook"`
+	Audit        Audit        `yaml:"audit"`
+	Analytics    Analytics    `yaml:"analytics"`
+	Experimental Experimental `yaml:"experimental"`
 	// Permissions enables permission-aware search (T10.3) when the block is
 	// present: non-administrators then see only public repositories, the
 	// repositories their mapped code-host identities grant, and
@@ -39,6 +40,16 @@ type Config struct {
 	// (T8.1): name → glob patterns matched against full repo names
 	// ("github.com/acme/api-*"; `*` does not cross `/`).
 	Contexts map[string][]string `yaml:"contexts"`
+}
+
+// Experimental contains opt-in work whose validation gate has not passed.
+// Options here must remain off by default and must not be promoted without a
+// superseding PLAN decision.
+type Experimental struct {
+	// ProvisionalProtoExtraction enables the T12 declared-protobuf reader.
+	// T11.1 remains STOP/not established and its repo/path lineage is not the
+	// canonical descriptor/module lineage required to complete T12.3.
+	ProvisionalProtoExtraction bool `yaml:"provisional_proto_extraction"`
 }
 
 type Sync struct {

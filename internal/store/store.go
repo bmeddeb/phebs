@@ -12,18 +12,20 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("not found")
-	ErrConflict  = errors.New("conflict")
-	ErrLeaseLost = errors.New("job lease lost")
+	ErrNotFound    = errors.New("not found")
+	ErrConflict    = errors.New("conflict")
+	ErrLeaseLost   = errors.New("job lease lost")
+	ErrResultLimit = errors.New("result limit exceeded")
 )
 
 type JobKind string
 
 // Job kinds name their SurrealDB table directly.
 const (
-	JobSync  JobKind = "connection_sync_job"
-	JobIndex JobKind = "indexing_job"
-	JobFetch JobKind = "repo_fetch_job" // webhook-driven single-repo fetch (T7.4)
+	JobSync    JobKind = "connection_sync_job"
+	JobIndex   JobKind = "indexing_job"
+	JobFetch   JobKind = "repo_fetch_job" // webhook-driven single-repo fetch (T7.4)
+	JobExtract JobKind = "extraction_job" // evidence extraction, chained after indexing (T12.2)
 )
 
 type JobStatus string
@@ -121,9 +123,9 @@ type APIKey struct {
 // Actor fields are empty for unauthenticated actions (e.g. failed logins).
 type AuditEvent struct {
 	ID         string    `json:"id"`
-	Action     string    `json:"action"`               // "auth.login", "post-api-reindex", …
-	Target     string    `json:"target,omitempty"`     // action-specific: repo name, key id, email
-	ActorID    string    `json:"actor_id,omitempty"`   // user record id
+	Action     string    `json:"action"`             // "auth.login", "post-api-reindex", …
+	Target     string    `json:"target,omitempty"`   // action-specific: repo name, key id, email
+	ActorID    string    `json:"actor_id,omitempty"` // user record id
 	ActorEmail string    `json:"actor_email,omitempty"`
 	APIKeyID   string    `json:"api_key_id,omitempty"`
 	AuthMethod string    `json:"auth_method,omitempty"` // "session" | "api_key" | ""
@@ -176,6 +178,161 @@ type PermissionStore interface {
 	// ListPermittedRepos returns the repo names granted to any identity.
 	ListPermittedRepos(ctx context.Context, identities []string) ([]string, error)
 	DeleteRepoPermissions(ctx context.Context, repo string) error
+}
+
+// Confidence tiers are deterministic (PLAN ADR 2026-07-12); numeric
+// confidence is deliberately absent until calibrated on blind holdouts.
+const (
+	TierExact      = "exact"
+	TierDerived    = "derived"
+	TierHeuristic  = "heuristic"
+	TierUnresolved = "unresolved"
+)
+
+// EvidenceAtom is content identity: identical vendored blobs across commits
+// and repositories dedupe to one atom. Repository placement — and therefore
+// authorization — never lives here (SnapshotEvidence carries it).
+type EvidenceAtom struct {
+	ID                  string    `json:"atom_id"` // "ea_" + sha256 over the length-delimited fields
+	SchemaVersion       string    `json:"schema_version"`
+	BlobDigest          string    `json:"blob_digest"`
+	StartByte           int       `json:"start_byte"`
+	EndByte             int       `json:"end_byte"`
+	RuleID              string    `json:"rule_id"`
+	ExtractorVersion    string    `json:"extractor_version"`
+	AdapterConfigDigest string    `json:"adapter_config_digest"`
+	FactFingerprint     string    `json:"fact_fingerprint"`
+	FirstSeen           time.Time `json:"first_seen"`
+}
+
+// SnapshotEvidence places one atom in one repository snapshot. last_verified
+// for an atom derives from its associations; compacting associations never
+// deletes shared atoms.
+type SnapshotEvidence struct {
+	ID              string    `json:"occurrence_id"` // stable placement identity; excludes the extraction run
+	AtomID          string    `json:"atom_id"`
+	Repo            string    `json:"repo"`
+	Commit          string    `json:"commit"`
+	Path            string    `json:"path"`
+	StartLine       int       `json:"start_line"`
+	EndLine         int       `json:"end_line"`
+	VisibilityScope string    `json:"visibility_scope"` // "repo:<name>" — evaluated per caller at read time
+	RunID           string    `json:"run_id"`
+	ObservedAt      time.Time `json:"observed_at"`
+}
+
+// Assertion is one semantic claim carrying supporting AND contradicting atom
+// references. Subject semantics are predicate-specific; the declaration-plane
+// extractor currently uses the repository-relative source path.
+type Assertion struct {
+	ID        string `json:"id"` // stable semantic identity; excludes evidence references and the extraction run
+	Predicate string `json:"predicate"`
+	Subject   string `json:"subject"`
+	Object    string `json:"object"`
+	// Lineage separates same-named contracts from unrelated descriptor sets
+	// (ADR 2026-07-12: the complete field key is (contract_lineage_id,
+	// message_full_name, field_number) — encoded here as (Lineage, Object)).
+	// Derived conservatively; two lineages merge only when identity
+	// resolution proves they share one, never by name equality.
+	Lineage       string   `json:"lineage,omitempty"`
+	Tier          string   `json:"tier"`
+	CodeRole      string   `json:"code_role,omitempty"`
+	Repo          string   `json:"repo"`
+	Supporting    []string `json:"supporting"` // atom ids
+	Contradicting []string `json:"contradicting,omitempty"`
+	RunID         string   `json:"run_id"`
+	Detail        string   `json:"detail,omitempty"`
+}
+
+// CoverageManifest is the per-run honesty record: what was attempted, what
+// failed, what stayed unresolved. Every conclusion built on this run's
+// assertions cites it ("no blockers found within the stated evidence scope").
+type CoverageManifest struct {
+	Protocols          []string `json:"protocols,omitempty"`
+	Failures           []string `json:"failures,omitempty"` // extraction failures, load errors
+	CorpusFileCount    int      `json:"corpus_file_count"`
+	CandidateFileCount int      `json:"candidate_file_count"`
+	ReadFileCount      int      `json:"read_file_count"`
+	ReadBytes          int64    `json:"read_bytes"`
+	SourceScopeDigest  string   `json:"source_scope_digest,omitempty"` // digest of sorted (path, blob digest, length)
+	UnresolvedCount    int      `json:"unresolved_count"`
+	AssertionCount     int      `json:"assertion_count"`
+	AtomCount          int      `json:"atom_count"`
+}
+
+// ExtractionRun is the atomic publication unit: rows written under a staged
+// run are invisible; PublishExtractionRun flips status in one transaction and
+// supersedes the prior published run for (repo, domain). A failed or killed
+// run therefore never publishes a partial replacement set.
+type ExtractionRun struct {
+	ID          string           `json:"id"`
+	Repo        string           `json:"repo"`
+	Commit      string           `json:"commit"`
+	Domain      string           `json:"domain"` // e.g. "proto-contract"
+	Extractor   string           `json:"extractor"`
+	Status      string           `json:"status"` // staged | published | superseded | aborted
+	StartedAt   time.Time        `json:"started_at"`
+	PublishedAt *time.Time       `json:"published_at,omitempty"`
+	Coverage    CoverageManifest `json:"coverage"`
+}
+
+// AssertionQuery filters published assertions. Repo is mandatory; the other
+// empty fields match anything within that caller-authorized repository.
+type AssertionQuery struct {
+	Predicate string
+	Subject   string
+	Object    string
+	Repo      string
+	Limit     int // 0 = default cap
+}
+
+// EvidenceResolution is the click-through from one assertion support id to
+// its immutable content span and repository occurrence. Callers authorize the
+// repository before invoking ResolveEvidence; the store also binds repo, run,
+// and atom in one current-or-pinned-retained query.
+type EvidenceResolution struct {
+	Atom        EvidenceAtom       `json:"atom"`
+	Occurrences []SnapshotEvidence `json:"occurrences"`
+}
+
+// EvidenceStore is the T12.1 provenance layer, separate from Store per the
+// narrow-interface house style. Assertion readers only ever see published
+// runs; evidence resolution additionally permits pinned superseded runs.
+type EvidenceStore interface {
+	BeginExtractionRun(ctx context.Context, repo, commit, domain, extractor string) (*ExtractionRun, error)
+	// AddEvidence atomically upserts content-keyed atoms and their occurrence
+	// associations/assertions under a staged run. Every association and atom
+	// reference must be present in the same self-contained batch. Caller
+	// timestamps and run ids are ignored/filled by the store. Exact retries and
+	// non-conflicting support unions are idempotent; attribute or contradiction
+	// conflicts fail the transaction.
+	AddEvidence(ctx context.Context, runID string, atoms []EvidenceAtom, assocs []SnapshotEvidence, asserts []Assertion) error
+	// PublishExtractionRun atomically verifies that the repository still
+	// exists, is not deleting, and is indexed at the run's commit; validates
+	// caller counts against stored rows; publishes the run; and supersedes the
+	// previous published run for the same (repo, domain).
+	PublishExtractionRun(ctx context.Context, runID string, coverage CoverageManifest) error
+	AbortExtractionRun(ctx context.Context, runID string) error
+	// LatestPublishedRun returns ErrNotFound when the (repo, domain) pair has
+	// never published.
+	LatestPublishedRun(ctx context.Context, repo, domain string) (*ExtractionRun, error)
+	// ListAssertions reads assertions of published runs only. Repo is required;
+	// callers must authorize that repository before invoking the method. A
+	// result exceeding Limit fails with ErrResultLimit rather than truncating.
+	ListAssertions(ctx context.Context, q AssertionQuery) ([]Assertion, error)
+	// ResolveEvidence resolves one current or pinned-retained assertion support
+	// id. Repo is a required authorization scope and must match the run and all
+	// returned occurrences.
+	ResolveEvidence(ctx context.Context, repo, runID, atomID string) (*EvidenceResolution, error)
+	// PinRun idempotently exempts a published or superseded run from sweeps
+	// (proof-bundle / checkpoint retention).
+	PinRun(ctx context.Context, runID, kind string) error
+	// SweepEvidence deletes rows of aborted, stale-staged, and superseded
+	// UNPINNED runs. Shared atoms survive while any association references
+	// them. Each call considers at most one run; ingestion caps each run at
+	// 10,000 association+assertion rows and 20,000 evidence-reference edges,
+	// providing a hard row/payload work bound. Returns 0 or 1.
+	SweepEvidence(ctx context.Context, now time.Time, staleStagedAfter time.Duration) (int, error)
 }
 
 // AuthStats drives the public auth status and the one-time setup gate.

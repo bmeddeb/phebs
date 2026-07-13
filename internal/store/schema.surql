@@ -55,3 +55,47 @@ DEFINE TABLE IF NOT EXISTS repo_fetch_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON repo_fetch_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS repo_fetch_job_status ON repo_fetch_job FIELDS status;
+
+DEFINE TABLE IF NOT EXISTS extraction_job SCHEMALESS;
+DEFINE FIELD OVERWRITE status ON extraction_job TYPE string
+    ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS extraction_job_status ON extraction_job FIELDS status;
+
+-- Contract-intelligence evidence layer (T12.1, PLAN ADRs 2026-07-12).
+-- Atoms are content-keyed and shared across repos/commits; repository
+-- placement (and therefore authorization) lives in snapshot_evidence.
+-- Rows become visible only through their run's status: staged rows are
+-- invisible to readers, publish is a single-transaction status flip.
+DEFINE TABLE IF NOT EXISTS evidence_atom SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS evidence_atom_key ON evidence_atom FIELDS atom_id UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS snapshot_evidence SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS snapshot_evidence_atom ON snapshot_evidence FIELDS atom_id;
+DEFINE INDEX IF NOT EXISTS snapshot_evidence_run ON snapshot_evidence FIELDS run_id;
+-- association_key includes the extraction run; occurrence_id deliberately
+-- does not. Retrying one staged batch is therefore idempotent without
+-- confusing content identity with repository placement identity.
+DEFINE INDEX IF NOT EXISTS snapshot_evidence_association_key ON snapshot_evidence FIELDS association_key UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS assertion SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS assertion_run ON assertion FIELDS run_id;
+DEFINE INDEX IF NOT EXISTS assertion_pred_obj ON assertion FIELDS predicate, object;
+DEFINE INDEX IF NOT EXISTS assertion_run_semantic ON assertion FIELDS assertion_key UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS extraction_run SCHEMALESS;
+DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
+    ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted'];
+DEFINE INDEX IF NOT EXISTS extraction_run_scope ON extraction_run FIELDS repo, domain, status;
+-- Retention selects a tiny oldest eligible set. Keep status/quarantine and
+-- age/order fields together so that LIMIT does not require sorting the entire
+-- historical run table as it grows.
+DEFINE INDEX IF NOT EXISTS extraction_run_retention ON extraction_run
+    FIELDS retention_quarantined, status, started_at, run_id;
+-- Only a published row carries published_key. Its unique index is installed
+-- after Open migrates any pre-slot rows, alongside the pending-job indexes.
+
+-- Proof-aware retention: a pinned run (and everything it references) is
+-- immune to sweeps regardless of supersession or age.
+DEFINE TABLE IF NOT EXISTS evidence_pin SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS evidence_pin_run ON evidence_pin FIELDS run_id;
+DEFINE INDEX IF NOT EXISTS evidence_pin_identity ON evidence_pin FIELDS pin_key UNIQUE;

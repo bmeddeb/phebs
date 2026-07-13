@@ -346,3 +346,85 @@ func TestCanceledIndexChildIsNotClassifiedOOM(t *testing.T) {
 		t.Errorf("canceled child classified as %q, want non-OOM", got)
 	}
 }
+
+// T12.2: OnIndexed (the index→extract chain hook) fires after a successful
+// state commit and on an unchanged-HEAD retry, but never on commit failure.
+func TestOnIndexedChainsFreshAndCurrentCommit(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, head := fixture(t, ctx, st, dataDir)
+
+	var fired []string
+	ix.OnIndexed = func(_ context.Context, repo, commit string) error {
+		fired = append(fired, repo+"@"+commit)
+		return nil
+	}
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); err != nil {
+		t.Fatalf("index: %v", err)
+	}
+	if len(fired) != 1 || fired[0] != name+"@"+head {
+		t.Fatalf("OnIndexed after fresh index = %v", fired)
+	}
+	// Unchanged HEAD avoids the shard rebuild but confirms/repairs the chain.
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); err != nil {
+		t.Fatalf("short-circuit index: %v", err)
+	}
+	if len(fired) != 2 || fired[1] != name+"@"+head {
+		t.Fatalf("OnIndexed after short-circuit = %v", fired)
+	}
+	// A failed state commit must not fire the chain.
+	ix.Store = failIndexedStore{Store: st}
+	if err := ix.Index(ctx, store.Repo{Name: name}, true); err == nil {
+		t.Fatal("forced index with failing state commit succeeded")
+	}
+	if len(fired) != 2 {
+		t.Fatalf("OnIndexed fired despite state-commit failure: %v", fired)
+	}
+}
+
+// A post-index enqueue failure must fail the index job. Its retry sees the
+// already-current shard and retries only the chain hook, preventing a lost
+// extraction event without doing another expensive build.
+func TestOnIndexedErrorPropagatesAndRetriesOnShortCircuit(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, head := fixture(t, ctx, st, dataDir)
+
+	wantErr := errors.New("injected enqueue failure")
+	calls := 0
+	ix.OnIndexed = func(_ context.Context, repo, commit string) error {
+		calls++
+		if repo != name || commit != head {
+			t.Fatalf("OnIndexed(%q, %q), want (%q, %q)", repo, commit, name, head)
+		}
+		if calls == 1 {
+			return wantErr
+		}
+		return nil
+	}
+
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); !errors.Is(err, wantErr) {
+		t.Fatalf("first index error = %v, want %v", err, wantErr)
+	}
+	repo, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.IndexedCommitHash != head {
+		t.Fatalf("indexed commit after chain failure = %q, want %q", repo.IndexedCommitHash, head)
+	}
+	before := shardStamps(t, dataDir)
+	if err := ix.Index(ctx, store.Repo{Name: name}, false); err != nil {
+		t.Fatalf("retry index: %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("OnIndexed calls = %d, want 2", calls)
+	}
+	for shard, stamp := range shardStamps(t, dataDir) {
+		if !stamp.Equal(before[shard]) {
+			t.Errorf("chain retry rebuilt shard %s", shard)
+		}
+	}
+}

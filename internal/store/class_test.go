@@ -23,6 +23,7 @@ func TestClassifyAndBackoff(t *testing.T) {
 		{"auth", WithClass(ClassAuth, base), ClassAuth, 20 * time.Minute},
 		{"oom", WithClass(ClassOOM, base), ClassOOM, 10 * time.Minute},
 		{"corrupt", WithClass(ClassCorrupt, base), ClassCorrupt, 2 * time.Second},
+		{"extract", WithClass(ClassExtract, base), ClassExtract, 4 * time.Minute},
 		{"wrapped classified", fmt.Errorf("outer: %w", WithClass(ClassAuth, base)), ClassAuth, 20 * time.Minute},
 	}
 	for _, tt := range tests {

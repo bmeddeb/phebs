@@ -14,6 +14,7 @@ const (
 	ClassAuth    ErrClass = "auth"          // clone/fetch credential failures
 	ClassOOM     ErrClass = "oom"           // index child killed (memory)
 	ClassCorrupt ErrClass = "corrupt-shard" // shard integrity failures
+	ClassExtract ErrClass = "extract"       // evidence extraction failures (T12.2)
 	ClassGeneric ErrClass = "generic"
 )
 
@@ -52,6 +53,8 @@ func DefaultBackoff(err error, attempts int) time.Duration {
 		base = 5 * time.Minute
 	case ClassCorrupt:
 		base = time.Second // delete-and-rebuild usually fixes it; retry soon
+	case ClassExtract:
+		base = 2 * time.Minute // usually deterministic parse issues; fast retries won't heal them
 	}
 	d := base << attempts
 	if max := 1 * time.Hour; d > max {

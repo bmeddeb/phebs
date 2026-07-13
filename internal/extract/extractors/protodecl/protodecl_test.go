@@ -1,0 +1,364 @@
+package protodecl_test
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
+	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/store"
+)
+
+type memoryCorpus struct {
+	repo, commit string
+	files        map[string]string
+	readErrors   map[string]error
+}
+
+func (c memoryCorpus) RepoName() string { return c.repo }
+func (c memoryCorpus) Commit() string   { return c.commit }
+func (c memoryCorpus) WalkFiles(ctx context.Context, visit func(string) error) error {
+	paths := make([]string, 0, len(c.files)+len(c.readErrors))
+	for filePath := range c.files {
+		paths = append(paths, filePath)
+	}
+	for filePath := range c.readErrors {
+		if _, present := c.files[filePath]; !present {
+			paths = append(paths, filePath)
+		}
+	}
+	sort.Strings(paths)
+	for _, filePath := range paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := visit(filePath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (c memoryCorpus) Read(_ context.Context, filePath string) (sdk.Blob, error) {
+	if err := c.readErrors[filePath]; err != nil {
+		return sdk.Blob{}, err
+	}
+	content, ok := c.files[filePath]
+	if !ok {
+		return sdk.Blob{}, errors.New("not found")
+	}
+	digest := sha256.Sum256([]byte(content))
+	return sdk.Blob{Content: content, Digest: "sha256:" + hex.EncodeToString(digest[:])}, nil
+}
+
+func extractFacts(t *testing.T, corpus memoryCorpus) ([]sdk.Fact, sdk.Coverage, error) {
+	t.Helper()
+	var facts []sdk.Fact
+	coverage, err := protodecl.New().Extract(context.Background(), corpus, func(fact sdk.Fact) error {
+		facts = append(facts, fact)
+		return nil
+	})
+	return facts, coverage, err
+}
+
+func findFact(t *testing.T, facts []sdk.Fact, object string) sdk.Fact {
+	t.Helper()
+	for _, fact := range facts {
+		if fact.Assertion.Object == object {
+			return fact
+		}
+	}
+	t.Fatalf("fact %q not found in %+v", object, facts)
+	return sdk.Fact{}
+}
+
+func atomID(fact sdk.Fact) string {
+	return store.ComputeAtomID(store.EvidenceAtom{
+		SchemaVersion: fact.Atom.SchemaVersion, BlobDigest: fact.Atom.BlobDigest,
+		StartByte: fact.Atom.StartByte, EndByte: fact.Atom.EndByte,
+		RuleID: fact.Atom.RuleID, ExtractorVersion: protodecl.New().Version(),
+		AdapterConfigDigest: fact.Atom.AdapterConfigDigest,
+		FactFingerprint:     fact.Atom.FactFingerprint,
+	})
+}
+
+func TestFieldIdentitySurvivesRename(t *testing.T) {
+	v1, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "v1", files: map[string]string{
+			"api.proto": `syntax = "proto3"; package demo; message Item { string old_name = 7; }`,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v2, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "v2", files: map[string]string{
+			"api.proto": `syntax = "proto3"; package demo; message Item { string new_name = 7; }`,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldFact := findFact(t, v1, "demo.Item#7")
+	newFact := findFact(t, v2, "demo.Item#7")
+	if oldFact.Assertion.Lineage != newFact.Assertion.Lineage {
+		t.Fatalf("rename changed lineage: %q != %q", oldFact.Assertion.Lineage, newFact.Assertion.Lineage)
+	}
+	if strings.Contains(oldFact.Assertion.Object, "old_name") ||
+		strings.Contains(newFact.Assertion.Object, "new_name") {
+		t.Fatalf("field name leaked into canonical object")
+	}
+	if !strings.Contains(oldFact.Assertion.Detail, `"old_name"`) ||
+		!strings.Contains(newFact.Assertion.Detail, `"new_name"`) {
+		t.Fatalf("versioned field detail missing names: %q / %q",
+			oldFact.Assertion.Detail, newFact.Assertion.Detail)
+	}
+	toAssertion := func(fact sdk.Fact) store.Assertion {
+		return store.Assertion{
+			Predicate: fact.Assertion.Predicate, Subject: fact.Assertion.Subject,
+			Object: fact.Assertion.Object, Lineage: fact.Assertion.Lineage,
+			Tier: fact.Assertion.Tier, CodeRole: fact.Assertion.CodeRole,
+			Repo: "r", Detail: fact.Assertion.Detail,
+		}
+	}
+	if oldID, newID := store.ComputeAssertionID(toAssertion(oldFact)), store.ComputeAssertionID(toAssertion(newFact)); oldID != newID {
+		t.Fatalf("field rename changed semantic assertion identity: %s != %s", oldID, newID)
+	}
+}
+
+func TestCoverageMarksLineageAsProvisional(t *testing.T) {
+	_, coverage, err := extractFacts(t, memoryCorpus{repo: "r", commit: "c", files: map[string]string{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(coverage.Protocols, ","); got != "protobuf,lineage-provisional-repo-path-v1" {
+		t.Fatalf("coverage protocols = %q", got)
+	}
+}
+
+func TestIdenticalCrossRepoBlobDeduplicatesAtom(t *testing.T) {
+	content := `syntax = "proto3"; package demo; message Item { string name = 1; }`
+	aFacts, _, err := extractFacts(t, memoryCorpus{
+		repo: "host/a", commit: "a", files: map[string]string{"vendor/api.proto": content},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	bFacts, _, err := extractFacts(t, memoryCorpus{
+		repo: "host/b", commit: "b", files: map[string]string{"vendor/api.proto": content},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := findFact(t, aFacts, "demo.Item#1")
+	b := findFact(t, bFacts, "demo.Item#1")
+	if a.Assertion.Lineage == b.Assertion.Lineage {
+		t.Fatal("repository placement should keep assertion lineages separate")
+	}
+	if atomID(a) != atomID(b) {
+		t.Fatalf("identical blobs did not deduplicate: %s != %s", atomID(a), atomID(b))
+	}
+}
+
+func TestSameDirectoryDuplicateFQNsStaySeparate(t *testing.T) {
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{
+			"roots/a.proto": `syntax = "proto3"; package demo; message Item { string a = 1; }`,
+			"roots/b.proto": `syntax = "proto3"; package demo; message Item { string b = 1; }`,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var lineages []string
+	for _, fact := range facts {
+		if fact.Assertion.Object == "demo.Item#1" {
+			lineages = append(lineages, fact.Assertion.Lineage)
+		}
+	}
+	if len(lineages) != 2 || lineages[0] == lineages[1] {
+		t.Fatalf("same-directory duplicate lineages = %v", lineages)
+	}
+	for _, lineage := range lineages {
+		if len(lineage) != len("provisional_repo_path_v1_")+64 {
+			t.Fatalf("lineage hash was truncated: %q", lineage)
+		}
+	}
+}
+
+func TestPackageLessAndPackageFirstPass(t *testing.T) {
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{
+			"plain.proto": `syntax = "proto3"; service Greeter { rpc Hello (Req) returns (Req); } message Req { string value = 1; }`,
+			"late.proto":  `syntax = "proto3"; message Before { string value = 2; } package late;`,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, object := range []string{"Greeter/Hello", "Req#1", "late.Before#2"} {
+		fact := findFact(t, facts, object)
+		if strings.HasPrefix(fact.Assertion.Object, ".") {
+			t.Fatalf("package-less object has leading dot: %q", fact.Assertion.Object)
+		}
+	}
+}
+
+func TestProto2GroupsAndEligibleFieldForms(t *testing.T) {
+	content := `syntax = "proto2";
+message Outer {
+  optional group Key = 4 { required string id = 1; }
+  oneof choice {
+    string value = 5;
+    group Choice = 6 { optional int32 nested = 1; }
+  }
+}`
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{"groups.proto": content},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, object := range []string{"Outer#4", "Outer.Key#1", "Outer#5", "Outer#6", "Outer.Choice#1"} {
+		findFact(t, facts, object)
+	}
+	if got := findFact(t, facts, "Outer#4").Assertion.Detail; !strings.Contains(got, `"name":"key"`) {
+		t.Fatalf("group descriptor field detail = %q, want lowercase field name", got)
+	}
+	if got := findFact(t, facts, "Outer#6").Assertion.Detail; !strings.Contains(got, `"name":"choice"`) {
+		t.Fatalf("oneof group descriptor field detail = %q, want lowercase field name", got)
+	}
+}
+
+func TestParserComplexityLimitsFailClosed(t *testing.T) {
+	tests := []struct {
+		name, content, want string
+	}{
+		{
+			name:    "structural depth",
+			content: `syntax = "proto3"; ` + strings.Repeat("message M {", 129),
+			want:    "structural-depth limit",
+		},
+		{
+			name:    "adjacent structural tokens",
+			content: strings.Repeat("{", 129),
+			want:    "structural-depth limit",
+		},
+		{
+			name:    "token count",
+			content: strings.Repeat(";", 500_001),
+			want:    "token proto parser limit",
+		},
+		{
+			name:    "source bytes",
+			content: strings.Repeat(" ", (4<<20)+1),
+			want:    "byte proto parser limit",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			_, coverage, err := extractFacts(t, memoryCorpus{
+				repo: "r", commit: "c", files: map[string]string{"hostile.proto": test.content},
+			})
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("Extract error = %v", err)
+			}
+			if len(coverage.Protocols) != 0 {
+				t.Fatalf("failed extraction returned coverage: %+v", coverage)
+			}
+		})
+	}
+}
+
+func TestParserComplexityScanIgnoresCommentsAndStrings(t *testing.T) {
+	content := `syntax = "proto3";
+// {{{{{[[[[[((((
+message M {
+  string value = 1 [json_name = "{{{{{[[[[[(((("];
+  /* {{{{{[[[[[(((( */
+}`
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{"comments.proto": content},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	findFact(t, facts, "M#1")
+}
+
+func TestDeclaredProtoRoleClassification(t *testing.T) {
+	content := `syntax = "proto3"; message M { string value = 1; }`
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{
+			"tests/vendor/a.proto": content,
+			"testdata/b.proto":     content,
+			"api/c.proto":          content,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		"tests/vendor/a.proto": "vendor",
+		"testdata/b.proto":     "test",
+		"api/c.proto":          "production",
+	}
+	for _, fact := range facts {
+		if expected, ok := want[fact.Path]; ok && fact.Assertion.CodeRole != expected {
+			t.Fatalf("role for %s = %q, want %q", fact.Path, fact.Assertion.CodeRole, expected)
+		}
+		delete(want, fact.Path)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing facts for paths: %v", want)
+	}
+}
+
+func TestRelativeExtensionFailsClosed(t *testing.T) {
+	for _, extendee := range []string{"Base", ".demo.Base"} {
+		content := `syntax = "proto2"; package demo; message Base { extensions 100 to max; }
+extend ` + extendee + ` { optional string ambiguous = 100; }`
+		_, coverage, err := extractFacts(t, memoryCorpus{
+			repo: "r", commit: "c", files: map[string]string{"extension.proto": content},
+		})
+		if err == nil || !strings.Contains(err.Error(), "require descriptor linking") {
+			t.Fatalf("extension %q error = %v", extendee, err)
+		}
+		if len(coverage.Protocols) != 0 {
+			t.Fatalf("failed extraction returned successful coverage: %+v", coverage)
+		}
+	}
+}
+
+func TestCandidateReadAndParseFailuresFailClosed(t *testing.T) {
+	tests := []memoryCorpus{
+		{repo: "r", commit: "c", readErrors: map[string]error{"bad.proto": errors.New("read failed")}},
+		{repo: "r", commit: "c", files: map[string]string{"bad.proto": `syntax = "proto3"; message`}},
+	}
+	for _, corpus := range tests {
+		_, coverage, err := extractFacts(t, corpus)
+		if err == nil {
+			t.Fatal("candidate failure reported success")
+		}
+		if len(coverage.Protocols) != 0 {
+			t.Fatalf("failed extraction returned successful coverage: %+v", coverage)
+		}
+	}
+}
+
+func TestEmitterErrorPropagates(t *testing.T) {
+	want := errors.New("stage failed")
+	corpus := memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{
+			"api.proto": `syntax = "proto3"; message M { string x = 1; }`,
+		},
+	}
+	_, err := protodecl.New().Extract(context.Background(), corpus, func(sdk.Fact) error { return want })
+	if !errors.Is(err, want) {
+		t.Fatalf("Extract error = %v, want emitter failure", err)
+	}
+}

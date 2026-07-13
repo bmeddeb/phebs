@@ -200,7 +200,7 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 		}
 		return false, cause
 	}
-	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex} {
+	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex, store.JobExtract} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel %s jobs for %s: %w", kind, name, err))
 		}
@@ -212,7 +212,7 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	}
 	defer unlock()
 	// Close the enqueue-before-lock window.
-	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex} {
+	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex, store.JobExtract} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel late %s jobs for %s: %w", kind, name, err))
 		}

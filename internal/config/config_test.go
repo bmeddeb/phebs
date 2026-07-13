@@ -329,6 +329,24 @@ connections:
 	}
 }
 
+func TestProvisionalProtoExtractionIsExplicitOptIn(t *testing.T) {
+	cfg, err := Parse([]byte("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Experimental.ProvisionalProtoExtraction {
+		t.Fatal("provisional protobuf extraction enabled by default")
+	}
+
+	cfg, err = Parse([]byte("experimental:\n  provisional_proto_extraction: true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Experimental.ProvisionalProtoExtraction {
+		t.Fatal("explicit provisional protobuf extraction opt-in was ignored")
+	}
+}
+
 func TestURLCredentialErrorsDoNotLeak(t *testing.T) {
 	tests := []struct {
 		url, secret string

@@ -7,12 +7,14 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
@@ -136,4 +138,249 @@ func webhookSignature(body []byte, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write(body)
 	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
+}
+
+type extractionBackfillStore struct {
+	store.Store
+	repos      []store.Repo
+	listErr    error
+	enqueueErr error
+	pending    map[string]store.Job
+	created    int
+}
+
+func (s *extractionBackfillStore) ListRepos(context.Context) ([]store.Repo, error) {
+	if s.listErr != nil {
+		return nil, s.listErr
+	}
+	return s.repos, nil
+}
+
+func (s *extractionBackfillStore) EnqueuePending(
+	_ context.Context, kind store.JobKind, target string, force bool,
+) (*store.Job, error) {
+	if s.enqueueErr != nil {
+		return nil, s.enqueueErr
+	}
+	if kind != store.JobExtract {
+		return nil, errors.New("unexpected non-extraction job")
+	}
+	if s.pending == nil {
+		s.pending = make(map[string]store.Job)
+	}
+	if job, ok := s.pending[target]; ok {
+		return &job, nil
+	}
+	job := store.Job{Kind: kind, Target: target, Status: store.StatusPending, Force: force}
+	s.pending[target] = job
+	s.created++
+	return &job, nil
+}
+
+func TestEnqueueExtractionBackfillIndexedLiveReposOnlyAndDedupes(t *testing.T) {
+	st := &extractionBackfillStore{repos: []store.Repo{
+		{Name: "example.com/live/one", IndexedCommitHash: "a"},
+		{Name: "example.com/unindexed"},
+		{Name: "example.com/deleting", IndexedCommitHash: "b", Deleting: true},
+		{Name: "example.com/live/two", IndexedCommitHash: "c"},
+	}}
+	if err := enqueueExtractionBackfill(t.Context(), st); err != nil {
+		t.Fatalf("first backfill: %v", err)
+	}
+	if err := enqueueExtractionBackfill(t.Context(), st); err != nil {
+		t.Fatalf("second backfill: %v", err)
+	}
+	if st.created != 2 || len(st.pending) != 2 {
+		t.Fatalf("created=%d pending=%v, want one job for each of two live indexed repos", st.created, st.pending)
+	}
+	for _, target := range []string{"example.com/live/one", "example.com/live/two"} {
+		if _, ok := st.pending[target]; !ok {
+			t.Errorf("missing backfill job for %s", target)
+		}
+	}
+}
+
+func TestEnqueueExtractionBackfillPropagatesListError(t *testing.T) {
+	want := errors.New("list failed")
+	err := enqueueExtractionBackfill(t.Context(), &extractionBackfillStore{listErr: want})
+	if !errors.Is(err, want) {
+		t.Fatalf("error = %v, want wrapped %v", err, want)
+	}
+}
+
+func TestEnqueueExtractionBackfillPropagatesEnqueueError(t *testing.T) {
+	want := errors.New("enqueue failed")
+	st := &extractionBackfillStore{
+		repos:      []store.Repo{{Name: "example.com/live", IndexedCommitHash: "a"}},
+		enqueueErr: want,
+	}
+	err := enqueueExtractionBackfill(t.Context(), st)
+	if !errors.Is(err, want) {
+		t.Fatalf("error = %v, want wrapped %v", err, want)
+	}
+}
+
+type evidenceMaintenanceStore struct {
+	store.EvidenceStore
+	calls       chan time.Duration
+	results     []evidenceSweepResult
+	resultIndex int
+	count       int
+	err         error
+}
+
+type evidenceSweepResult struct {
+	count int
+	err   error
+}
+
+func (s *evidenceMaintenanceStore) SweepEvidence(
+	_ context.Context, _ time.Time, staleStagedAfter time.Duration,
+) (int, error) {
+	s.calls <- staleStagedAfter
+	if s.resultIndex < len(s.results) {
+		result := s.results[s.resultIndex]
+		s.resultIndex++
+		return result.count, result.err
+	}
+	return s.count, s.err
+}
+
+func TestEvidenceSweepPassStopsWhenDrained(t *testing.T) {
+	st := &evidenceMaintenanceStore{
+		calls: make(chan time.Duration, 3),
+		results: []evidenceSweepResult{
+			{count: 1}, {count: 1}, {count: 0},
+		},
+	}
+	deleted, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
+	if err != nil || deleted != 2 || backlog {
+		t.Fatalf("runEvidenceSweepPass = (%d, %v, %v), want (2, false, nil)", deleted, backlog, err)
+	}
+	if len(st.calls) != 3 {
+		t.Fatalf("sweep calls = %d, want 3", len(st.calls))
+	}
+}
+
+func TestEvidenceSweepPassCapsLikelyBacklog(t *testing.T) {
+	st := &evidenceMaintenanceStore{
+		calls: make(chan time.Duration, evidenceSweepMaxRunsPerPass), count: 1,
+	}
+	deleted, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
+	if err != nil || deleted != evidenceSweepMaxRunsPerPass || !backlog {
+		t.Fatalf("runEvidenceSweepPass = (%d, %v, %v), want (%d, true, nil)",
+			deleted, backlog, err, evidenceSweepMaxRunsPerPass)
+	}
+	if len(st.calls) != evidenceSweepMaxRunsPerPass {
+		t.Fatalf("sweep calls = %d, want %d", len(st.calls), evidenceSweepMaxRunsPerPass)
+	}
+}
+
+func TestEvidenceSweepPassStopsOnError(t *testing.T) {
+	want := errors.New("sweep failed")
+	st := &evidenceMaintenanceStore{
+		calls: make(chan time.Duration, 2),
+		results: []evidenceSweepResult{
+			{count: 1}, {err: want},
+		},
+	}
+	deleted, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
+	if deleted != 1 || backlog || !errors.Is(err, want) {
+		t.Fatalf("runEvidenceSweepPass = (%d, %v, %v), want (1, false, %v)", deleted, backlog, err, want)
+	}
+	if len(st.calls) != 2 {
+		t.Fatalf("sweep calls = %d, want 2", len(st.calls))
+	}
+}
+
+func TestEvidenceMaintenanceUsesBacklogDelayThenReturnsIdle(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	st := &evidenceMaintenanceStore{
+		calls: make(chan time.Duration, evidenceSweepMaxRunsPerPass+2),
+		results: append(
+			make([]evidenceSweepResult, evidenceSweepMaxRunsPerPass),
+			evidenceSweepResult{count: 0},
+		),
+	}
+	for i := range evidenceSweepMaxRunsPerPass {
+		st.results[i].count = 1
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		runEvidenceMaintenance(ctx, st, time.Hour, 10*time.Millisecond, 24*time.Hour)
+	}()
+
+	for i := 0; i < evidenceSweepMaxRunsPerPass+1; i++ {
+		select {
+		case staleAge := <-st.calls:
+			if staleAge != 24*time.Hour {
+				t.Fatalf("stale staged age = %s, want 24h", staleAge)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("timed out after %d maintenance sweep call(s)", i)
+		}
+	}
+	select {
+	case <-st.calls:
+		t.Fatal("drained maintenance pass did not return to the idle interval")
+	case <-time.After(25 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("evidence maintenance did not stop after cancellation")
+	}
+}
+
+func TestEvidenceMaintenanceIdleBootWaitsForIdleInterval(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	st := &evidenceMaintenanceStore{calls: make(chan time.Duration, 2)}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		runEvidenceMaintenance(ctx, st, time.Hour, 10*time.Millisecond, 24*time.Hour)
+	}()
+	select {
+	case staleAge := <-st.calls:
+		if staleAge != 24*time.Hour {
+			t.Fatalf("stale staged age = %s, want 24h", staleAge)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("boot evidence sweep did not run")
+	}
+	select {
+	case <-st.calls:
+		t.Fatal("idle maintenance retried on the backlog delay")
+	case <-time.After(25 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("evidence maintenance did not stop after cancellation")
+	}
+}
+
+func TestEvidenceMaintenanceCanceledBeforeBootDoesNoWork(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	st := &evidenceMaintenanceStore{calls: make(chan time.Duration, 1)}
+	runEvidenceMaintenance(ctx, st, time.Hour, time.Second, 24*time.Hour)
+	if len(st.calls) != 0 {
+		t.Fatalf("canceled maintenance made %d sweep call(s)", len(st.calls))
+	}
+}
+
+func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
+	if got := evidenceExtractors(false); len(got) != 0 {
+		t.Fatalf("default extractor registry = %d entries, want disabled", len(got))
+	}
+	got := evidenceExtractors(true)
+	if len(got) != 1 || got[0].Domain() != "proto-contract" {
+		t.Fatalf("opt-in extractor registry = %#v", got)
+	}
 }

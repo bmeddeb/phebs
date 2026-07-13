@@ -98,6 +98,12 @@ audit:
 analytics:
   retention: 8760h
 
+# Validation-gated work. Keep disabled in production. The provisional proto
+# reader has exact source provenance, but T11.1 is STOP/not established and it
+# does not yet have canonical descriptor/module lineage (T12.3).
+experimental:
+  provisional_proto_extraction: false
+
 # Permission-aware search (T10.3). PRESENCE of this block turns enforcement
 # on: non-administrators then see only public repos, repos their mapped
 # code-host identities grant, and always_visible matches — across search,

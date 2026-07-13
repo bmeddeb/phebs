@@ -146,6 +146,7 @@ connections:
 | `webhook.secret` | *(empty)* | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars |
 | `audit.retention` | `2160h` | audit events older than this are pruned twice a day; `"0"` keeps them forever |
 | `analytics.retention` | `8760h` | local usage events older than this are pruned twice a day; `"0"` keeps them forever |
+| `experimental.provisional_proto_extraction` | `false` | development-only opt-in for the validation-gated reader described below; not canonical contract lineage |
 | `permissions` | *(none)* | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything |
 
 ### Authentication
@@ -768,8 +769,9 @@ The `#/analytics` dashboard and `GET /api/analytics` aggregate them on demand;
 
 ### Job system
 
-Sync, fetch, and index work runs through queues in SurrealDB, drained by pollers that
-wake every `poll_interval` (±50 % jitter). Job states:
+Sync, fetch, index, and extraction work runs through queues in SurrealDB,
+drained by one poller per kind that wakes every `poll_interval` (±50 %
+jitter). Job states:
 `pending → claimed → running → done | failed | canceled`.
 
 Each target has at most one pending slot. An event arriving while work is
@@ -784,17 +786,77 @@ replaced transactionally, so a failed refresh preserves the last complete set.
   `/api/repo-status` and the UI).
 - **Backoff by failure class:** generic `30s × 2ⁿ`; auth failures `10m × 2ⁿ`
   (a bad token won't heal in seconds); OOM-killed index children `5m × 2ⁿ`;
-  corrupt shards retry after `1s` (rebuild usually fixes them). Capped at 1 h.
+  corrupt shards retry after `1s` (rebuild usually fixes them); extraction
+  failures `2m × 2ⁿ` (usually deterministic parse issues). Capped at 1 h.
 - **Crash recovery:** running jobs heartbeat; a reaper requeues jobs whose
   worker died (stale heartbeat), or fails them once attempts are exhausted.
   Kill phebs mid-index and the job recovers on next boot.
+
+### Experimental contract-intelligence extraction
+
+This reader is **disabled by default**. T11.1 remains STOP/not established,
+and T12.3 still lacks the trusted protobuf module/root identity needed for
+canonical descriptor lineage. To exercise the reviewed storage and extraction
+mechanics on a development corpus only, opt in explicitly:
+
+```yaml
+experimental:
+  provisional_proto_extraction: true
+```
+
+When enabled, every successful index schedules a bounded read of declared
+protobuf contracts for that repository. The worker binds the read to the
+latest indexed full commit. Each RPC, fully qualified by its service, becomes
+a `DECLARES_OPERATION` assertion and each message field a `DECLARES_FIELD`
+assertion, backed by a content-keyed evidence atom bound to the repository,
+commit, path, digest, byte span, and line span. A trusted inventory requires
+every `.proto` candidate to be read. Extraction runs publish atomically: a
+read, parse, provenance, limit, cancellation, or publication failure leaves
+the prior published facts intact.
+
+Lineage is deliberately machine-labeled
+`provisional_repo_path_v1_<sha256>` and separates repository paths instead of
+guessing descriptor identity. It prevents name-only cross-repository merges,
+but a file move fragments lineage and an unrelated contract replacing the
+same path can reuse it. The parser does not resolve imports, module roots, or
+extensions; extension declarations fail closed. These facts must not drive
+compatibility, migration, or negative-proof conclusions as though canonical
+lineage had been established.
+
+The run is bounded to 200,000 regular inventory paths and 16 MiB of aggregate
+path text, 10 MiB per source blob, 512 MiB of distinct source reads, 5,000
+emitted facts, and a cooperative 15-minute context deadline. A candidate
+parser input is further limited to 4 MiB, 500,000 lexical tokens, and 128
+structural levels. The in-process protobuf parser cannot be preempted inside
+one parse call, so this is not yet a hard CPU/memory/process isolation
+boundary. A candidate `.proto` symlink, any gitlink (whose subtree coverage is
+unknown), or more than 100 placements of one content atom also prevents
+publication; unrelated symlinks are skipped. Re-indexing the same
+commit/extractor version short-circuits. Like the rest of phebs's
+HEAD-freshness queues, successive index events may coalesce before extraction;
+only the latest indexed revision can pass the publication guard. Opt-in
+startup backfills indexed repositories even when new indexing is unavailable.
+There is not yet a query or MCP surface for these assertions; operational
+state is visible through the database and
+`phebs_jobs_total{kind="extraction_job"}`.
+
+Proof-aware retention checks at startup and hourly while idle. Every
+current-schema run is limited to 10,000 stored association/assertion rows and
+20,000 evidence references. One eligible aborted, superseded, or
+24-hour-stale staged run is reclaimed per transaction, with at most eight
+transactions in a pass. A full pass yields for five seconds before another
+bounded pass; a drained pass returns to the hourly idle interval. Pinned
+proof/checkpoint runs and atoms still shared by another run are retained. Rows
+migrated from the retracted, pre-bound evidence schema are hidden and
+quarantined from automatic cleanup; an administrator must inspect and remove
+that legacy data directly if desired.
 
 ### Metrics
 
 | Metric | Type | Labels |
 |---|---|---|
 | `phebs_jobs_total` | counter | `kind`, `result` (`done`/`failed`/`requeued`/`released`/`reaped`) |
-| `phebs_job_errors_total` | counter | `kind`, `class` (`auth`/`oom`/`corrupt-shard`/`generic`) |
+| `phebs_job_errors_total` | counter | `kind`, `class` (`auth`/`oom`/`corrupt-shard`/`extract`/`generic`) |
 | `phebs_index_duration_seconds` | histogram | — |
 | `phebs_index_shard_bytes` | gauge | — |
 

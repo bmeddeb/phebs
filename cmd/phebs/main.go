@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/search"
@@ -34,6 +37,13 @@ import (
 )
 
 var version = "0.1.0-dev" // ponytail: ldflags stamping when releases exist
+
+const (
+	evidenceSweepIdleInterval   = time.Hour
+	evidenceSweepBacklogDelay   = 5 * time.Second
+	evidenceSweepMaxRunsPerPass = 8
+	evidenceStagedMaxAge        = 24 * time.Hour
+)
 
 func main() {
 	if len(os.Args) < 2 || os.Args[1] != "serve" {
@@ -71,6 +81,26 @@ func serve(args []string) error {
 	}
 	defer func() { _ = st.Close(context.Background()) }()
 
+	// Every service-owned goroutine is joined before the store is closed.
+	// Calling cancel in this later-registered defer also covers startup and
+	// ListenAndServe failures, not just signal-driven shutdown.
+	var background sync.WaitGroup
+	runBackground := func(run func()) {
+		background.Add(1)
+		go func() {
+			defer background.Done()
+			run()
+		}()
+	}
+	var stopBackgroundOnce sync.Once
+	stopBackground := func() {
+		stopBackgroundOnce.Do(func() {
+			cancel()
+			background.Wait()
+		})
+	}
+	defer stopBackground()
+
 	// T10.1: one audit recorder feeds the auth surface and the huma middleware.
 	// The actor comes from the request principal when the caller did not
 	// already resolve it; recording failures never fail the request.
@@ -99,7 +129,7 @@ func serve(args []string) error {
 	// T10.1/T10.2 retention sweep: boot, then twice a day
 	auditRetention, usageRetention := cfg.Audit.RetentionFor(), cfg.Analytics.RetentionFor()
 	if auditRetention > 0 || usageRetention > 0 {
-		go func() {
+		runBackground(func() {
 			ticker := time.NewTicker(12 * time.Hour)
 			defer ticker.Stop()
 			for {
@@ -121,7 +151,7 @@ func serve(args []string) error {
 				case <-ticker.C:
 				}
 			}
-		}()
+		})
 	}
 	if setupToken := authService.SetupToken(); setupToken != "" {
 		log.Printf("first-run setup token: %s", setupToken)
@@ -153,27 +183,58 @@ func serve(args []string) error {
 	}
 	runner := &store.Runner{Store: st, Kind: store.JobSync, Handle: phebssync.Handler(cfg, st),
 		Interval: cfg.Sync.Interval()}
-	go runner.Run(ctx)
+	runBackground(func() { runner.Run(ctx) })
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st),
 		Interval: cfg.Sync.Interval()}
-	go fetchRunner.Run(ctx)
+	runBackground(func() { fetchRunner.Run(ctx) })
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
 		log.Printf("watch mode: polling %d local repo(s)", len(watched))
-		go (&phebssync.Watcher{Store: st, Conns: watched}).Run(ctx)
+		runBackground(func() { (&phebssync.Watcher{Store: st, Conns: watched}).Run(ctx) })
 	}
 	// T7.5: periodic freshness for remote connections
 	if every := cfg.Sync.ResyncEvery(); every > 0 {
-		go phebssync.Resync(ctx, st, cfg, every)
+		runBackground(func() { phebssync.Resync(ctx, st, cfg, every) })
 	}
+
+	// Extraction is an independent queue consumer: it must drain boot
+	// backfill even when this binary cannot start new zoekt index children.
+	// One runner processes repositories serially, bounding extraction
+	// concurrency and its Git/parser resource use at this integration seam.
+	var onIndexed func(context.Context, string, string) error
+	if exs := evidenceExtractors(cfg.Experimental.ProvisionalProtoExtraction); len(exs) > 0 {
+		log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
+		worker := &extract.Worker{
+			Repos: st, Evidence: st,
+			NewCorpus:  extract.GitCorpus(cfg.Server.DataDir),
+			Extractors: exs,
+		}
+		if err := enqueueExtractionBackfill(ctx, st); err != nil {
+			return err
+		}
+		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: worker.Handle,
+			Interval: cfg.Sync.Interval()}
+		runBackground(func() { exRunner.Run(ctx) })
+		onIndexed = func(ctx context.Context, name, commit string) error {
+			if err := store.EnqueueUnlessInFlight(ctx, st, store.JobExtract, name); err != nil {
+				return fmt.Errorf("enqueue extraction for %s@%s: %w", name, commit, err)
+			}
+			return nil
+		}
+	}
+	runBackground(func() {
+		runEvidenceMaintenance(
+			ctx, st, evidenceSweepIdleInterval, evidenceSweepBacklogDelay, evidenceStagedMaxAge,
+		)
+	})
 
 	// index pipeline: same-SHA zoekt-git-index child consumes indexing_job
 	if bin, err := indexer.FindBinary(); err != nil {
 		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make build provides it; or set PHEBS_ZOEKT_GIT_INDEX)")
 	} else {
-		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st}
+		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st, OnIndexed: onIndexed}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
 			Interval: cfg.Sync.Interval()}
-		go ixRunner.Run(ctx)
+		runBackground(func() { ixRunner.Run(ctx) })
 	}
 
 	// T10.3: permission-aware visibility. Presence of the permissions block
@@ -237,6 +298,10 @@ func serve(args []string) error {
 		return err
 	}
 	defer searcher.Close()
+	// Registered after Close so workers stop before the searcher's deferred
+	// close; stopBackground is idempotent and its earlier defer still protects
+	// startup failures before the searcher exists.
+	defer stopBackground()
 	searcher.Contexts = cfg.Contexts // T8.1: context:<name> filters
 	// T10.2: one usage event per completed search (REST, SSE, and MCP all
 	// funnel through the searcher). Local only — phebs never phones home.
@@ -289,13 +354,13 @@ func serve(args []string) error {
 
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
 	shutdownDone := make(chan struct{})
-	go func() {
+	runBackground(func() {
 		defer close(shutdownDone)
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)
-	}()
+	})
 
 	log.Printf("phebs %s listening on %s (data: %s)", version, cfg.Server.Addr, cfg.Server.DataDir)
 	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
@@ -331,4 +396,109 @@ func loadConfig(path string) (*config.Config, error) {
 	}
 	log.Print("no -config given; using defaults")
 	return config.Parse([]byte("{}"))
+}
+
+// evidenceExtractors is the validation-gated registry. The provisional
+// declared-protobuf reader stays absent unless the operator explicitly opts
+// in; T11.1/T12.3 do not support default production activation.
+func evidenceExtractors(provisionalProto bool) []extract.Extractor {
+	if !provisionalProto {
+		return nil
+	}
+	return []extract.Extractor{protodecl.New()}
+}
+
+// enqueueExtractionBackfill closes the upgrade gap for repositories indexed
+// before extraction existed. The queue provides one pending slot per target,
+// so restart and partial-progress retries are idempotent. Any store failure is
+// fatal to startup rather than silently leaving a repository unextracted.
+func enqueueExtractionBackfill(ctx context.Context, st store.Store) error {
+	repos, err := st.ListRepos(ctx)
+	if err != nil {
+		return fmt.Errorf("backfill extraction jobs: list repositories: %w", err)
+	}
+	for _, repo := range repos {
+		if err := ctx.Err(); err != nil {
+			return fmt.Errorf("backfill extraction jobs: %w", err)
+		}
+		if repo.IndexedCommitHash == "" || repo.Deleting {
+			continue
+		}
+		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobExtract, repo.Name); err != nil {
+			return fmt.Errorf("backfill extraction job for %s: %w", repo.Name, err)
+		}
+	}
+	return nil
+}
+
+// runEvidenceSweepPass reclaims a bounded burst of individually bounded runs.
+// Hitting the cap is only a backlog signal: the caller yields before starting
+// another pass so retention cannot monopolize the database.
+func runEvidenceSweepPass(
+	ctx context.Context, evidence store.EvidenceStore, staleStagedAfter time.Duration,
+) (deleted int, backlogLikely bool, err error) {
+	for range evidenceSweepMaxRunsPerPass {
+		if err := ctx.Err(); err != nil {
+			return deleted, false, err
+		}
+		n, err := evidence.SweepEvidence(ctx, time.Now().UTC(), staleStagedAfter)
+		if err != nil {
+			return deleted, false, err
+		}
+		if n == 0 {
+			return deleted, false, nil
+		}
+		if n != 1 {
+			return deleted, false, fmt.Errorf("evidence retention: invalid sweep count %d", n)
+		}
+		deleted++
+	}
+	return deleted, true, nil
+}
+
+// runEvidenceMaintenance checks immediately at boot. Empty stores cost one
+// query per idle interval; a likely backlog is processed in bounded bursts
+// separated by a short yield. Pinned proof/checkpoint runs are excluded by the
+// store, and each individual deletion transaction remains independently
+// bounded by the evidence-store ingestion caps.
+func runEvidenceMaintenance(
+	ctx context.Context, evidence store.EvidenceStore,
+	idleInterval, backlogDelay, staleStagedAfter time.Duration,
+) {
+	if idleInterval <= 0 || backlogDelay <= 0 {
+		log.Printf("evidence retention disabled: invalid idle/backlog intervals %s/%s", idleInterval, backlogDelay)
+		return
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	delay := time.Duration(0)
+	for {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+		}
+		deleted, backlogLikely, err := runEvidenceSweepPass(ctx, evidence, staleStagedAfter)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("evidence retention: %v", err)
+			delay = idleInterval
+			continue
+		}
+		if deleted > 0 {
+			log.Printf("evidence retention: swept %d run(s)", deleted)
+		}
+		if backlogLikely {
+			delay = backlogDelay
+		} else {
+			delay = idleInterval
+		}
+	}
 }

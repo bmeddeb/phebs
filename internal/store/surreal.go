@@ -74,7 +74,10 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateLegacyJobs(ctx); err != nil {
 		return err
 	}
-	results, err = surrealdb.Query[any](ctx, s.db, pendingJobIndexes, nil)
+	if err := s.migrateEvidenceRuns(ctx); err != nil {
+		return err
+	}
+	results, err = surrealdb.Query[any](ctx, s.db, pendingJobIndexes+evidenceIndexes, nil)
 	if err != nil {
 		return err
 	}
@@ -89,14 +92,18 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 const pendingJobIndexes = `
 DEFINE INDEX IF NOT EXISTS connection_sync_job_pending_key ON connection_sync_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS indexing_job_pending_key ON indexing_job FIELDS pending_key UNIQUE;
-DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS pending_key UNIQUE;`
+DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;`
+
+const evidenceIndexes = `
+DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;`
 
 // migrateLegacyJobs runs before the pending-key indexes are installed. Old
 // rows had no lease or pending slot, and may contain an active job plus a
 // successor. Keep the oldest pending row, cancel duplicates, then requeue only
 // an unfenced active row that has no successor.
 func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
-	for _, kind := range []JobKind{JobSync, JobIndex, JobFetch} {
+	for _, kind := range []JobKind{JobSync, JobIndex, JobFetch, JobExtract} {
 		jobs, err := s.ListJobs(ctx, kind, "")
 		if err != nil {
 			return fmt.Errorf("migrate %s: list: %w", kind, err)
@@ -148,6 +155,84 @@ func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// migrateEvidenceRuns installs the explicit string run_id used by bounded
+// joins and assigns the one optional unique publication slot per repo/domain.
+// Rows from the retracted implementation have no run_id or typed atom links;
+// retire them fail-closed so a current extractor must republish them. Because
+// historical runs predate ingestion bounds, quarantine them from automatic
+// retention; pins and rows remain for audit or explicit administrator cleanup.
+func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
+	const batch = 128
+	for {
+		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
+			`SELECT * FROM extraction_run
+                WHERE store_schema_version = NONE OR store_schema_version != $schema
+                   OR run_id = NONE OR run_id = ''
+                   OR retention_quarantined = NONE
+                   OR (status = 'published' AND published_key = NONE)
+                   OR (status != 'published' AND published_key != NONE)
+                ORDER BY repo, domain, published_at DESC, started_at DESC, id
+                LIMIT $limit`, map[string]any{"limit": batch, "schema": evidenceStoreSchemaVersion})
+		if err != nil {
+			return fmt.Errorf("migrate evidence runs: list: %w", err)
+		}
+		var candidates []extractionRunRec
+		for _, result := range *results {
+			candidates = append(candidates, result.Result...)
+		}
+		if len(candidates) == 0 {
+			return nil // steady-state Open performs only the bounded empty read
+		}
+		for _, row := range candidates {
+			legacy := row.StoreSchema != evidenceStoreSchemaVersion
+			run := row.run()
+			if run.ID == "" {
+				return errors.New("migrate evidence runs: row has no string record id")
+			}
+			status := run.Status
+			key := ""
+			if legacy {
+				switch status {
+				case "published":
+					status = "superseded"
+				case "staged":
+					status = "aborted"
+				}
+			} else if status == "published" {
+				existing, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
+					`SELECT * FROM extraction_run
+                            WHERE repo = $repo AND domain = $domain AND status = 'published'
+                              AND published_key != NONE AND id != $rid LIMIT 1`,
+					map[string]any{
+						"repo": run.Repo, "domain": run.Domain, "rid": extractionRunID(run.ID),
+					})
+				if err != nil {
+					return fmt.Errorf("migrate evidence run %s: publication lookup: %w", run.ID, err)
+				}
+				if len(firstExtractionRows(existing)) > 0 {
+					status = "superseded"
+				} else {
+					key = publishedKey(run.Repo, run.Domain)
+				}
+			}
+			setKey := "published_key = NONE"
+			vars := map[string]any{
+				"rid": extractionRunID(run.ID), "run_id": run.ID, "status": status,
+				"store_schema_version":  evidenceStoreSchemaVersion,
+				"retention_quarantined": legacy,
+			}
+			if key != "" {
+				setKey = "published_key = $published_key"
+				vars["published_key"] = key
+			}
+			if _, err := surrealdb.Query[any](ctx, s.db,
+				"UPDATE $rid SET run_id = $run_id, status = $status, store_schema_version = $store_schema_version, retention_quarantined = $retention_quarantined, "+setKey+" RETURN NONE", vars); err != nil {
+				return fmt.Errorf("migrate evidence run %s: %w", run.ID, err)
+			}
+		}
+	}
 }
 
 func (s *Surreal) updateLegacyJob(ctx context.Context, id, set string, expected JobStatus, pairs ...any) error {
@@ -239,7 +324,18 @@ func (s *Surreal) ListRepos(ctx context.Context) ([]Repo, error) {
 
 func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
 	_, err := surrealdb.Query[any](ctx, s.db,
-		"DELETE $rid", map[string]any{"rid": repoID(name)})
+		`BEGIN;
+UPDATE extraction_run SET status = 'superseded', published_key = NONE
+    WHERE repo = $name AND status = 'published' RETURN NONE;
+UPDATE extraction_run SET status = 'aborted', published_key = NONE
+    WHERE repo = $name AND status = 'staged' RETURN NONE;
+UPDATE extraction_job SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
+DELETE repo_permission WHERE repo = $name RETURN NONE;
+DELETE repo_connection WHERE repo = $name RETURN NONE;
+DELETE $rid RETURN NONE;
+COMMIT;`, map[string]any{"rid": repoID(name), "name": name})
 	return err
 }
 

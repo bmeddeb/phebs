@@ -1,0 +1,195 @@
+package extract_test
+
+import (
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"os"
+	"path"
+	"strconv"
+	"strings"
+	"testing"
+	"testing/fstest"
+)
+
+var extractorImportAllowlist = map[string]bool{
+	"bytes":         true,
+	"context":       true,
+	"crypto/sha256": true,
+	"encoding/hex":  true,
+	"errors":        true,
+	"fmt":           true,
+	"path":          true,
+	"sort":          true,
+	"strconv":       true,
+	"strings":       true,
+
+	"github.com/bufbuild/protocompile/ast":      true,
+	"github.com/bufbuild/protocompile/parser":   true,
+	"github.com/bufbuild/protocompile/reporter": true,
+
+	"github.com/bmeddeb/phebs/internal/extract/sdk": true,
+}
+
+var sdkImportAllowlist = map[string]bool{"context": true}
+
+// TestPureReaderImports is allowlist-based: an extractor cannot bypass a
+// direct os/exec/net ban by importing an internal helper or a new third-party
+// capability wrapper. All production Go files recursively below extractors/
+// are checked, as is the capability-neutral SDK they receive.
+func TestPureReaderImports(t *testing.T) {
+	violations, err := scanPureSources(os.DirFS("."), ".")
+	if err != nil {
+		t.Fatalf("scan pure-reader sources: %v", err)
+	}
+	for _, violation := range violations {
+		t.Error(violation)
+	}
+}
+
+// Regression: the former denylist accepted this transitive bypass because the
+// extractor itself did not import os/exec. The allowlist rejects the internal
+// wrapper import before the helper can expose its capable function.
+func TestPureReaderRejectsInternalCapabilityBypass(t *testing.T) {
+	fixture := fstest.MapFS{
+		"extractors/bypass/bypass.go": &fstest.MapFile{Data: []byte(`package bypass
+import (
+    "context"
+    "github.com/bmeddeb/phebs/internal/sync"
+)
+var _ = context.Background
+var _ = sync.CatFile
+`)},
+		"sdk/sdk.go": &fstest.MapFile{Data: []byte("package sdk\nimport \"context\"\nvar _ context.Context\n")},
+	}
+	violations, err := scanPureSources(fixture, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(violations) != 1 || !strings.Contains(violations[0], "internal/sync") {
+		t.Fatalf("violations = %v, want internal capability bypass", violations)
+	}
+}
+
+func TestPureReaderRejectsLinkedProductionArtifact(t *testing.T) {
+	fixture := fstest.MapFS{
+		"extractors/native/native.go":   &fstest.MapFile{Data: []byte("package native\n")},
+		"extractors/native/bypass.syso": &fstest.MapFile{Data: []byte("native object")},
+		"sdk/sdk.go":                    &fstest.MapFile{Data: []byte("package sdk\nimport \"context\"\nvar _ context.Context\n")},
+	}
+	violations, err := scanPureSources(fixture, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(violations) != 1 || !strings.Contains(violations[0], "bypass.syso") {
+		t.Fatalf("violations = %v, want linked artifact rejection", violations)
+	}
+}
+
+func TestPureReaderRejectsWorkOutsidePanicBoundary(t *testing.T) {
+	fixture := fstest.MapFS{
+		"extractors/async/async.go": &fstest.MapFile{Data: []byte(`package async
+import "context"
+func bad(ctx context.Context) {
+    go func() { panic("outside boundary") }()
+    context.AfterFunc(ctx, func() { panic("outside boundary") })
+}
+`)},
+		"sdk/sdk.go": &fstest.MapFile{Data: []byte("package sdk\nimport \"context\"\nvar _ context.Context\n")},
+	}
+	violations, err := scanPureSources(fixture, ".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(violations) != 2 {
+		t.Fatalf("violations = %v, want goroutine and AfterFunc rejection", violations)
+	}
+}
+
+func scanPureSources(fsys fs.FS, root string) ([]string, error) {
+	var violations []string
+	for _, target := range []struct {
+		dir     string
+		allowed map[string]bool
+	}{
+		{dir: path.Join(root, "extractors"), allowed: extractorImportAllowlist},
+		{dir: path.Join(root, "sdk"), allowed: sdkImportAllowlist},
+	} {
+		if _, err := fs.Stat(fsys, target.dir); err != nil {
+			return nil, fmt.Errorf("%s missing: %w", target.dir, err)
+		}
+		err := fs.WalkDir(fsys, target.dir, func(filePath string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			if entry.Type()&fs.ModeSymlink != 0 {
+				violations = append(violations,
+					fmt.Sprintf("%s is a non-allowlisted production symlink", filePath))
+				return nil
+			}
+			if !strings.HasSuffix(filePath, ".go") {
+				violations = append(violations,
+					fmt.Sprintf("%s is a non-allowlisted production artifact", filePath))
+				return nil
+			}
+			if strings.HasSuffix(filePath, "_test.go") {
+				return nil
+			}
+			source, err := fs.ReadFile(fsys, filePath)
+			if err != nil {
+				return fmt.Errorf("read %s: %w", filePath, err)
+			}
+			fset := token.NewFileSet()
+			parsed, err := parser.ParseFile(fset, filePath, source, 0)
+			if err != nil {
+				return fmt.Errorf("parse %s: %w", filePath, err)
+			}
+			contextAliases := map[string]bool{}
+			for _, spec := range parsed.Imports {
+				importPath, err := strconv.Unquote(spec.Path.Value)
+				if err != nil {
+					return fmt.Errorf("parse import in %s: %w", filePath, err)
+				}
+				if !target.allowed[importPath] {
+					violations = append(violations,
+						fmt.Sprintf("%s imports non-allowlisted capability %q", filePath, importPath))
+				}
+				if spec.Name != nil && spec.Name.Name == "." {
+					violations = append(violations,
+						fmt.Sprintf("%s uses a non-allowlisted dot import", filePath))
+				}
+				if importPath == "context" {
+					alias := "context"
+					if spec.Name != nil {
+						alias = spec.Name.Name
+					}
+					contextAliases[alias] = true
+				}
+			}
+			ast.Inspect(parsed, func(node ast.Node) bool {
+				switch typed := node.(type) {
+				case *ast.GoStmt:
+					violations = append(violations,
+						fmt.Sprintf("%s starts a goroutine outside the worker panic boundary", filePath))
+				case *ast.SelectorExpr:
+					identifier, ok := typed.X.(*ast.Ident)
+					if ok && contextAliases[identifier.Name] && typed.Sel.Name == "AfterFunc" {
+						violations = append(violations,
+							fmt.Sprintf("%s schedules context.AfterFunc outside the worker panic boundary", filePath))
+					}
+				}
+				return true
+			})
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return violations, nil
+}

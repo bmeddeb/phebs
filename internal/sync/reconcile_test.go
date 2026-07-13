@@ -16,11 +16,12 @@ import (
 
 type reconcileStore struct {
 	store.Store
-	repo     store.Repo
-	orphan   bool
-	enqueued int
-	cleared  int
-	deleted  bool
+	repo          store.Repo
+	orphan        bool
+	enqueued      int
+	cleared       int
+	deleted       bool
+	canceledKinds []store.JobKind
 }
 
 func (s *reconcileStore) ListRepos(context.Context) ([]store.Repo, error) {
@@ -68,7 +69,8 @@ func (s *reconcileStore) DeleteRepo(context.Context, string) error {
 	return nil
 }
 
-func (s *reconcileStore) CancelPendingJobs(context.Context, store.JobKind, string) (int, error) {
+func (s *reconcileStore) CancelPendingJobs(_ context.Context, kind store.JobKind, _ string) (int, error) {
+	s.canceledKinds = append(s.canceledKinds, kind)
 	return 0, nil
 }
 
@@ -412,6 +414,23 @@ func TestDeleteRepoArtifactsReactivatesRowAfterDiskFailure(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dir, "HEAD")); err != nil {
 		t.Fatalf("failed cleanup removed mirror: %v", err)
+	}
+}
+
+func TestDeleteRepoArtifactsCancelsExtractionJobs(t *testing.T) {
+	st := &reconcileStore{repo: store.Repo{Name: "example.com/team/repo"}, orphan: true}
+	deleted, err := deleteRepoArtifacts(t.Context(), st, t.TempDir(), st.repo.Name)
+	if err != nil || !deleted {
+		t.Fatalf("deleteRepoArtifacts = %v, %v; want successful deletion", deleted, err)
+	}
+	var extractCancellations int
+	for _, kind := range st.canceledKinds {
+		if kind == store.JobExtract {
+			extractCancellations++
+		}
+	}
+	if extractCancellations != 2 {
+		t.Fatalf("extraction job cancellations = %d, want 2 (before and after repo lock)", extractCancellations)
 	}
 }
 
