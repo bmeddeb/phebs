@@ -53,9 +53,6 @@ var errStaleRun = errors.New("stale extraction run")
 
 // Handle adapts the worker to store.Runner: the job target is the repo name.
 func (w *Worker) Handle(ctx context.Context, job store.Job) error {
-	ctx, cancel := context.WithTimeout(ctx, extractionTimeout)
-	defer cancel()
-
 	extractors, err := w.validate()
 	if err != nil {
 		return store.WithClass(store.ClassExtract, fmt.Errorf("extract %s: %w", job.Target, err))
@@ -64,6 +61,9 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 	// Lock before loading the repository row. Fetch, indexing, mirror deletion,
 	// and corpus reads now share one critical section, so a worker cannot pin a
 	// row and then race removal or mutation of the corresponding object store.
+	// The wait uses the job context, not the extraction budget: queueing behind
+	// a long index or fetch of the same mirror is not extraction work, and the
+	// runner's lease heartbeat keeps the claim alive while blocked here.
 	unlock, err := w.NewCorpus.Lock(ctx, job.Target)
 	if err != nil {
 		return store.WithClass(store.ClassExtract,
@@ -74,6 +74,10 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 			fmt.Errorf("extract %s: corpus lock returned no release function", job.Target))
 	}
 	defer unlock()
+
+	// The extraction budget starts once the mirror is fenced.
+	ctx, cancel := context.WithTimeout(ctx, extractionTimeout)
+	defer cancel()
 
 	repo, err := w.Repos.GetRepo(ctx, job.Target)
 	if errors.Is(err, store.ErrNotFound) {
@@ -467,15 +471,32 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	enumerated := make(map[string]struct{})
 	candidates := make(map[string]struct{})
 	pathBytes := 0
+	unreadable := 0
 	hash := sha256.New()
 	err := c.inner.WalkFiles(ctx, func(filePath string) error {
-		if err := checkCorpusPath(filePath); err != nil {
-			return err
+		if pathErr := checkCorpusPath(filePath); pathErr != nil {
+			// A regular file whose name cannot be represented safely is kept
+			// inside the coverage certificate but never enumerated: extractors
+			// cannot see or Read it. Only a candidate with such a name is a
+			// coverage gap, and that fails closed.
+			isCandidate, candErr := callCandidate(candidate, filePath)
+			if candErr != nil {
+				return candErr
+			}
+			if isCandidate {
+				return fmt.Errorf("candidate path is not readable: %w", pathErr)
+			}
+			if len(paths)+unreadable >= maxCorpusFiles {
+				return fmt.Errorf("corpus inventory exceeds %d-file limit", maxCorpusFiles)
+			}
+			unreadable++
+			_, _ = fmt.Fprintf(hash, "%d:%s;", len(filePath), filePath)
+			return nil
 		}
 		if _, duplicate := enumerated[filePath]; duplicate {
 			return fmt.Errorf("corpus inventory repeats path %q", filePath)
 		}
-		if len(paths) >= maxCorpusFiles {
+		if len(paths)+unreadable >= maxCorpusFiles {
 			return fmt.Errorf("corpus inventory exceeds %d-file limit", maxCorpusFiles)
 		}
 		if len(filePath) > maxCorpusInventoryPathBytes-pathBytes {
@@ -505,7 +526,7 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	c.enumerated = enumerated
 	c.enumeratedOrder = paths
 	c.candidates = candidates
-	c.corpusFileCount = len(paths)
+	c.corpusFileCount = len(paths) + unreadable
 	c.corpusScopeDigest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
 	c.inventoryComplete = true
 	return nil

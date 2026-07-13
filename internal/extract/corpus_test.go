@@ -119,6 +119,16 @@ func TestCorpusRejectsInvalidPathsAndMutableRefs(t *testing.T) {
 	}
 }
 
+// walkThenRead mirrors the production order: reads are only served for
+// entries recorded by the pinned-commit walk.
+func walkThenRead(t *testing.T, corpus sdk.Corpus, filePath string) (sdk.Blob, error) {
+	t.Helper()
+	if err := corpus.WalkFiles(context.Background(), func(string) error { return nil }); err != nil {
+		t.Fatalf("WalkFiles: %v", err)
+	}
+	return corpus.Read(context.Background(), filePath)
+}
+
 func TestGitCorpusIgnoresMutableReplaceRefs(t *testing.T) {
 	f := newCorpusGitFixture(t)
 	oldCommit := f.commitFile("api.proto", "old immutable content", "old")
@@ -127,7 +137,7 @@ func TestGitCorpusIgnoresMutableReplaceRefs(t *testing.T) {
 	f.git(mirror, "replace", oldCommit, newCommit)
 
 	corpus := GitCorpus(f.dataDir).New(f.repoName, oldCommit)
-	blob, err := corpus.Read(context.Background(), "api.proto")
+	blob, err := walkThenRead(t, corpus, "api.proto")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +156,7 @@ func TestGitCorpusReadsPathspecMagicLiterally(t *testing.T) {
 	f.git(f.source, "commit", "-q", "-m", "literal pathspec")
 	head := f.git(f.source, "rev-parse", "HEAD")
 	f.cloneMirror()
-	blob, err := GitCorpus(f.dataDir).New(f.repoName, head).Read(context.Background(), filePath)
+	blob, err := walkThenRead(t, GitCorpus(f.dataDir).New(f.repoName, head), filePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,16 +237,61 @@ func TestGitCorpusRejectsExternalAlternates(t *testing.T) {
 	}
 }
 
-func TestGitCorpusRejectsOversizedBlobBeforeReading(t *testing.T) {
+func TestGitCorpusRejectsOversizedBlob(t *testing.T) {
 	if testing.Short() {
 		t.Skip("large boundedness fixture")
 	}
 	f := newCorpusGitFixture(t)
 	head := f.commitFile("large.proto", strings.Repeat("x", int(MaxBlobBytes)+1), "large")
 	f.cloneMirror()
-	_, err := GitCorpus(f.dataDir).New(f.repoName, head).Read(context.Background(), "large.proto")
+	// The bounded runner stops reading at the cap, so memory stays bounded
+	// even though there is no separate size pre-check anymore.
+	_, err := walkThenRead(t, GitCorpus(f.dataDir).New(f.repoName, head), "large.proto")
 	if err == nil || !strings.Contains(err.Error(), "exceeds") {
 		t.Fatalf("oversized blob error = %v", err)
+	}
+}
+
+func TestUnreadableNamesCountedInCoverageButNotEnumerated(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	cleanHead := f.commitFile("api.proto", `syntax = "proto3";`, "proto")
+	oddHead := f.commitFile(`fixtures\case.txt`, "windows-origin fixture", "odd name")
+	f.cloneMirror()
+	isProto := func(p string) bool { return strings.HasSuffix(p, ".proto") }
+
+	verified := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, oddHead))
+	if err := verified.Inventory(context.Background(), isProto); err != nil {
+		t.Fatalf("Inventory: %v", err)
+	}
+	if verified.corpusFileCount != 2 {
+		t.Fatalf("corpusFileCount = %d, want 2", verified.corpusFileCount)
+	}
+	if _, err := verified.Read(context.Background(), `fixtures\case.txt`); err == nil {
+		t.Fatal("unreadable name was readable")
+	}
+	if _, err := verified.Read(context.Background(), "api.proto"); err != nil {
+		t.Fatalf("candidate read: %v", err)
+	}
+
+	// The unreadable entry still participates in the coverage certificate.
+	clean := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, cleanHead))
+	if err := clean.Inventory(context.Background(), isProto); err != nil {
+		t.Fatalf("clean Inventory: %v", err)
+	}
+	if clean.corpusScopeDigest == verified.corpusScopeDigest {
+		t.Fatal("scope digest ignores unreadable entries")
+	}
+}
+
+func TestUnreadableCandidateNameFailsClosed(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	head := f.commitFile(`bad\name.proto`, `syntax = "proto3";`, "bad candidate")
+	f.cloneMirror()
+	verified := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, head))
+	err := verified.Inventory(context.Background(),
+		func(p string) bool { return strings.HasSuffix(p, ".proto") })
+	if err == nil || !strings.Contains(err.Error(), "not readable") {
+		t.Fatalf("Inventory error = %v", err)
 	}
 }
 

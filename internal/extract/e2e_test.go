@@ -145,6 +145,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	// slice the immutable Git blob. This proves the persisted click-through,
 	// rather than merely re-running the extractor in memory.
 	corpus := extract.GitCorpus(dataDir).New(repoName, head)
+	if err := corpus.WalkFiles(ctx, func(string) error { return nil }); err != nil {
+		t.Fatalf("walk corpus: %v", err)
+	}
 	allAssertions := append(append([]store.Assertion(nil), ops...), fields...)
 	foundRetries := false
 	foundMultilineRPC := false

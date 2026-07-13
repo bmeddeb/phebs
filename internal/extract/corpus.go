@@ -13,8 +13,8 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
@@ -72,6 +72,12 @@ type gitCorpus struct {
 	dataDir string
 	repo    string
 	commit  string
+
+	mu sync.Mutex
+	// oids maps each walked regular-file path to its blob object id, so Read
+	// is a single immutable cat-file instead of re-resolving commit, tree, and
+	// size per call. Populated by WalkFiles; reads require a completed walk.
+	oids map[string]string
 }
 
 func (g *gitCorpus) RepoName() string { return g.repo }
@@ -113,6 +119,7 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	var walkErr error
 	previous := ""
 	fileCount := 0
+	oids := make(map[string]string)
 	for {
 		record, readErr := readNULRecord(reader, maxTreeRecordBytes)
 		if len(record) > 0 {
@@ -144,9 +151,16 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 				fileCount++
 				if fileCount > maxCorpusFiles {
 					walkErr = fmt.Errorf("walk corpus: more than %d regular files", maxCorpusFiles)
-				} else {
-					walkErr = visit(entry.path)
+					break
 				}
+				// Entries with unrepresentable names are still visited so the
+				// harness can keep them inside the coverage certificate; they are
+				// never recorded as readable. The harness fails closed when such
+				// an entry is an extraction candidate.
+				if checkCorpusPath(entry.path) == nil {
+					oids[entry.path] = entry.oid
+				}
+				walkErr = visit(entry.path)
 			}
 			if walkErr != nil {
 				break
@@ -167,67 +181,40 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	if err := cmd.Wait(); err != nil {
 		return gitRunError(ctx, "ls-tree", err, stderr.String())
 	}
+	g.mu.Lock()
+	g.oids = oids
+	g.mu.Unlock()
 	return nil
 }
 
+// Read serves blob content by the object id recorded during WalkFiles: one
+// immutable cat-file per read instead of re-verifying the commit and
+// re-resolving path, type, and size through four child processes. Object ids
+// never change, so a walked entry cannot be swapped underneath the run, and a
+// path outside the walked tree is simply not found.
 func (g *gitCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error) {
 	dir, err := g.repoDir()
 	if err != nil {
 		return sdk.Blob{}, err
 	}
-	if err := checkCommit(g.commit); err != nil {
-		return sdk.Blob{}, err
-	}
 	if err := checkCorpusPath(filePath); err != nil {
 		return sdk.Blob{}, err
 	}
-	if err := ensureCommit(ctx, dir, g.commit); err != nil {
-		return sdk.Blob{}, err
+	g.mu.Lock()
+	oids := g.oids
+	g.mu.Unlock()
+	if oids == nil {
+		return sdk.Blob{}, fmt.Errorf("read corpus %q: read before corpus walk", filePath)
 	}
-
-	// Resolve the path with ls-tree and an argv separator, not a rev:path
-	// expression. This avoids path/revision grammar ambiguity and also lets us
-	// reject symlinks and gitlinks before reading their object bytes.
-	// Force literal top-level pathspec semantics. `--` protects option parsing,
-	// but by itself does not disable Git's glob and `:(magic)` path syntax.
-	literalPathspec := ":(top,literal)" + filePath
-	out, err := runGitBounded(ctx, dir, maxTreeRecordBytes+1,
-		"ls-tree", "-z", "--full-tree", g.commit, "--", literalPathspec)
-	if err != nil {
-		return sdk.Blob{}, fmt.Errorf("read corpus %q: resolve: %w", filePath, err)
-	}
-	record, rest, ok := bytes.Cut(out, []byte{0})
-	if !ok || len(record) == 0 || len(rest) != 0 {
+	oid, ok := oids[filePath]
+	if !ok {
 		return sdk.Blob{}, fmt.Errorf("read corpus %q: %w", filePath, store.ErrNotFound)
 	}
-	entry, err := parseTreeRecord(record)
-	if err != nil {
-		return sdk.Blob{}, err
-	}
-	if entry.path != filePath {
-		return sdk.Blob{}, fmt.Errorf("read corpus %q: git returned %q", filePath, entry.path)
-	}
-	if entry.objectType != "blob" || (entry.mode != "100644" && entry.mode != "100755") {
-		return sdk.Blob{}, fmt.Errorf("read corpus %q: not a regular blob", filePath)
-	}
-
-	sizeOut, err := runGitBounded(ctx, dir, 128, "cat-file", "-s", entry.oid)
-	if err != nil {
-		return sdk.Blob{}, fmt.Errorf("read corpus %q: size: %w", filePath, err)
-	}
-	size, err := strconv.ParseInt(strings.TrimSpace(string(sizeOut)), 10, 64)
-	if err != nil || size < 0 {
-		return sdk.Blob{}, fmt.Errorf("read corpus %q: invalid blob size %q", filePath, sizeOut)
-	}
-	if size > MaxBlobBytes {
-		return sdk.Blob{}, fmt.Errorf("read corpus %q: %d bytes exceeds %d-byte limit", filePath, size, MaxBlobBytes)
-	}
-	content, err := runGitBounded(ctx, dir, MaxBlobBytes+1, "cat-file", "blob", entry.oid)
+	// runGitBounded caps memory at the limit regardless of blob size, and
+	// errors past it, so no separate cat-file -s pre-check is needed.
+	content, err := runGitBounded(ctx, dir, MaxBlobBytes, "cat-file", "blob", oid)
 	if err != nil {
 		return sdk.Blob{}, fmt.Errorf("read corpus %q: content: %w", filePath, err)
-	}
-	if int64(len(content)) != size {
-		return sdk.Blob{}, fmt.Errorf("read corpus %q: expected %d bytes, read %d", filePath, size, len(content))
 	}
 	digest := sha256.Sum256(content)
 	return sdk.Blob{Content: string(content), Digest: "sha256:" + hex.EncodeToString(digest[:])}, nil
@@ -296,20 +283,19 @@ type treeRecord struct {
 	path       string
 }
 
+// parseTreeRecord validates record structure and object id only. Path rules
+// are the harness's policy: the walk surfaces every regular entry, valid name
+// or not, so unreadable names stay inside the coverage certificate.
 func parseTreeRecord(record []byte) (treeRecord, error) {
 	meta, name, ok := bytes.Cut(record, []byte{'\t'})
 	fields := strings.Fields(string(meta))
-	if !ok || len(fields) != 3 {
+	if !ok || len(fields) != 3 || len(name) == 0 {
 		return treeRecord{}, fmt.Errorf("walk corpus: malformed ls-tree record")
-	}
-	p := string(name)
-	if err := checkCorpusPath(p); err != nil {
-		return treeRecord{}, fmt.Errorf("walk corpus: %w", err)
 	}
 	if err := checkObjectID(fields[2]); err != nil {
 		return treeRecord{}, fmt.Errorf("walk corpus: %w", err)
 	}
-	return treeRecord{mode: fields[0], objectType: fields[1], oid: fields[2], path: p}, nil
+	return treeRecord{mode: fields[0], objectType: fields[1], oid: fields[2], path: string(name)}, nil
 }
 
 func checkObjectID(oid string) error {

@@ -447,6 +447,31 @@ func TestWorkerPreservesUnexplainedPublishConflict(t *testing.T) {
 	}
 }
 
+// Waiting behind a long index or fetch of the same mirror must not consume
+// the extraction budget: the lock waits on the job context and the timeout
+// starts once the mirror is fenced.
+func TestExtractionBudgetStartsAfterMirrorLock(t *testing.T) {
+	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
+	lock := func(ctx context.Context, _ string) (func(), error) {
+		if _, hasDeadline := ctx.Deadline(); hasDeadline {
+			t.Fatal("lock wait consumes the extraction budget")
+		}
+		return func() {}, nil
+	}
+	extractor := unitExtractor{domain: "unit", version: "1",
+		extract: func(ctx context.Context, _ sdk.Corpus, _ sdk.Emit) (sdk.Coverage, error) {
+			if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+				t.Fatal("extractor runs without the extraction budget")
+			}
+			return sdk.Coverage{}, nil
+		}}
+	worker := Worker{Repos: readyRepoGetter(repo), Evidence: newMemoryEvidence(),
+		NewCorpus: unitFactory(lock), Extractors: []Extractor{extractor}}
+	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestWorkerLocksBeforeRepositoryReloadAndCorpusUse(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	locked := false
