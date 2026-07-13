@@ -208,6 +208,98 @@ func TestPackageLessAndPackageFirstPass(t *testing.T) {
 	}
 }
 
+func TestEmittedSpansAreHalfOpenAndLineExact(t *testing.T) {
+	assertSpan := func(t *testing.T, content string, fact sdk.Fact, source string) {
+		t.Helper()
+		start, end := fact.Atom.StartByte, fact.Atom.EndByte
+		if start < 0 || end <= start || end > len(content) {
+			t.Fatalf("invalid emitted byte span [%d,%d)", start, end)
+		}
+		if got := content[start:end]; got != source {
+			t.Fatalf("source[%d:%d] = %q, want %q", start, end, got, source)
+		}
+		// EndByte is exclusive, so the persisted inclusive EndLine must be
+		// derived from EndByte-1 (the trusted worker applies the same check).
+		lineAt := func(offset int) int {
+			return 1 + strings.Count(content[:offset], "\n")
+		}
+		if want := lineAt(start); fact.StartLine != want {
+			t.Fatalf("StartLine = %d, want %d", fact.StartLine, want)
+		}
+		if want := lineAt(end - 1); fact.EndLine != want {
+			t.Fatalf("EndLine = %d, want %d", fact.EndLine, want)
+		}
+	}
+
+	content := `syntax = "proto3";
+// A non-ASCII prefix verifies that offsets remain byte-oriented: café.
+package demo;
+service Greeter {
+  rpc Multiline(Request) returns (Reply) {
+}
+}
+message Request {
+  string value = 1;
+}
+message Reply {}
+`
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{"spans.proto": content},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		object, source string
+	}{
+		{
+			object: "demo.Greeter/Multiline",
+			source: "rpc Multiline(Request) returns (Reply) {\n}",
+		},
+		{object: "demo.Request#1", source: "string value = 1;"},
+	}
+	for _, test := range tests {
+		t.Run(test.object, func(t *testing.T) {
+			assertSpan(t, content, findFact(t, facts, test.object), test.source)
+		})
+	}
+
+	t.Run("UTF-8 in emitted text without final newline", func(t *testing.T) {
+		content := `syntax = "proto2";
+message Request {
+  optional string value = 1 [default = "café"];
+}`
+		facts, _, err := extractFacts(t, memoryCorpus{
+			repo: "r", commit: "c", files: map[string]string{"utf8.proto": content},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertSpan(t, content, findFact(t, facts, "Request#1"),
+			`optional string value = 1 [default = "café"];`)
+	})
+
+	t.Run("CRLF multiline without final newline", func(t *testing.T) {
+		content := strings.Join([]string{
+			`syntax = "proto3";`,
+			`service Greeter {`,
+			`  rpc CRLF(Request) returns (Request) {`,
+			`}`,
+			`}`,
+			`message Request {}`,
+		}, "\r\n")
+		facts, _, err := extractFacts(t, memoryCorpus{
+			repo: "r", commit: "c", files: map[string]string{"crlf.proto": content},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertSpan(t, content, findFact(t, facts, "Greeter/CRLF"),
+			"rpc CRLF(Request) returns (Request) {\r\n}")
+	})
+}
+
 func TestProto2GroupsAndEligibleFieldForms(t *testing.T) {
 	content := `syntax = "proto2";
 message Outer {

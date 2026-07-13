@@ -841,15 +841,30 @@ state is visible through the database and
 `phebs_jobs_total{kind="extraction_job"}`.
 
 Proof-aware retention checks at startup and hourly while idle. Every
-current-schema run is limited to 10,000 stored association/assertion rows and
-20,000 evidence references. One eligible aborted, superseded, or
+compatible-format run is limited to 10,000 stored association/assertion rows
+and 20,000 evidence references. One eligible aborted, superseded, or
 24-hour-stale staged run is reclaimed per transaction, with at most eight
 transactions in a pass. A full pass yields for five seconds before another
 bounded pass; a drained pass returns to the hourly idle interval. Pinned
 proof/checkpoint runs and atoms still shared by another run are retained. Rows
 migrated from the retracted, pre-bound evidence schema are hidden and
 quarantined from automatic cleanup; an administrator must inspect and remove
-that legacy data directly if desired.
+that legacy data directly if desired. If two run records claim the same
+logical run identity, all proof under that identity is likewise hidden,
+unwritable, unpinnable, and exempt from automatic retention until an
+administrator resolves the ambiguity.
+
+The exact store-writer generation is separate from the stable evidence-format
+version. Staged evidence writes and publication require the exact writer
+generation, while compatible published reads, proof resolution, pinning, and
+retention use the format version. A later compatible writer bump therefore
+cannot strand an existing pinned proof bundle; an unknown format remains
+hidden and untouched.
+
+Evidence migrations assume exclusive startup against the store. Mixed-version
+rolling writers, or rolling an older writer back onto the same remote
+endpoint, are not supported; the supervised local deployment already provides
+that single-writer boundary.
 
 ### Metrics
 

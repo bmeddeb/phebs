@@ -400,13 +400,17 @@ func TestOnIndexedErrorPropagatesAndRetriesOnShortCircuit(t *testing.T) {
 			t.Fatalf("OnIndexed(%q, %q), want (%q, %q)", repo, commit, name, head)
 		}
 		if calls == 1 {
-			return wantErr
+			return store.WithClass(store.ClassExtract, wantErr)
 		}
 		return nil
 	}
 
-	if err := ix.Index(ctx, store.Repo{Name: name}, false); !errors.Is(err, wantErr) {
+	err := ix.Index(ctx, store.Repo{Name: name}, false)
+	if !errors.Is(err, wantErr) {
 		t.Fatalf("first index error = %v, want %v", err, wantErr)
+	}
+	if class := store.Classify(err); class != store.ClassExtract {
+		t.Fatalf("first index error class = %q, want %q", class, store.ClassExtract)
 	}
 	repo, err := st.GetRepo(ctx, name)
 	if err != nil {

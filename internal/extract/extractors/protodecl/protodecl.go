@@ -112,21 +112,30 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 	role := roleFor(relPath)
 	emitNode := func(predicate, object, rule, detail string, node ast.Node) error {
 		info := fileNode.NodeInfo(node)
-		start, end := info.Start(), info.End()
-		if start.Offset < 0 || end.Offset <= start.Offset || end.Offset > len(blob.Content) ||
-			start.Line <= 0 || end.Line < start.Line {
+		start, raw := info.Start(), info.RawText()
+		// protocompile v0.14.1 documents End as exclusive, but End().Offset
+		// identifies the final byte of the node (only End().Col is advanced).
+		// Derive the half-open end from the documented exact RawText instead, so
+		// byte spans remain correct if that upstream inconsistency is fixed.
+		if start.Offset < 0 || start.Offset >= len(blob.Content) || len(raw) == 0 ||
+			len(raw) > len(blob.Content)-start.Offset || start.Line <= 0 {
 			return fmt.Errorf("invalid parser span for %s", object)
 		}
+		endByte := start.Offset + len(raw)
+		if blob.Content[start.Offset:endByte] != raw {
+			return fmt.Errorf("parser text does not match source span for %s", object)
+		}
+		endLine := start.Line + strings.Count(raw[:len(raw)-1], "\n")
 		return emit(sdk.Fact{
 			Atom: sdk.AtomInput{
 				SchemaVersion: schemaVersion, BlobDigest: blob.Digest,
-				StartByte: start.Offset, EndByte: end.Offset, RuleID: rule,
+				StartByte: start.Offset, EndByte: endByte, RuleID: rule,
 				AdapterConfigDigest: adapterConfigDigest,
 				// Lineage is placement-derived and must not enter content identity:
 				// identical vendored blobs in different repositories share atoms.
 				FactFingerprint: predicate + "|" + object,
 			},
-			Path: relPath, StartLine: start.Line, EndLine: end.Line,
+			Path: relPath, StartLine: start.Line, EndLine: endLine,
 			Assertion: sdk.AssertionInput{
 				Predicate: predicate, Subject: relPath, Object: object,
 				Lineage: lineage, Tier: "exact", CodeRole: role, Detail: detail,

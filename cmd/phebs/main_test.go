@@ -220,6 +220,18 @@ func TestEnqueueExtractionBackfillPropagatesEnqueueError(t *testing.T) {
 	}
 }
 
+func TestEnqueueExtractionAfterIndexClassifiesEnqueueError(t *testing.T) {
+	want := errors.New("enqueue failed")
+	err := enqueueExtractionAfterIndex(t.Context(), &extractionBackfillStore{enqueueErr: want},
+		"example.com/live", "abc123")
+	if !errors.Is(err, want) {
+		t.Fatalf("error = %v, want wrapped %v", err, want)
+	}
+	if class := store.Classify(err); class != store.ClassExtract {
+		t.Fatalf("class = %q, want %q", class, store.ClassExtract)
+	}
+}
+
 type evidenceMaintenanceStore struct {
 	store.EvidenceStore
 	calls       chan time.Duration

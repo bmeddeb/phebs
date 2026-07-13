@@ -19,17 +19,24 @@ import (
 var _ EvidenceStore = (*Surreal)(nil)
 
 const (
-	evidenceStoreSchemaVersion        = "t12-store-v3"
-	evidenceSweepBatchSize            = 1
-	maxEvidenceRowsPerRun             = 10_000
-	maxEvidenceBatchRows              = maxEvidenceRowsPerRun
-	maxEvidenceRefsPerAssertion       = 4096
-	maxEvidenceReferenceEdges         = 20_000
-	maxEvidenceIdentityBytes          = 64 << 10
-	maxEvidencePathBytes              = 4096
-	maxEvidenceOccurrences            = 100
-	maxCoverageFileCount              = 10_000_000
-	maxCoverageReadBytes        int64 = 1 << 50
+	// Store schema is the exact writer generation. Evidence format is the
+	// stable read/pin contract: a newer writer may keep the same format when
+	// its proof bundle remains backwards-compatible.
+	evidenceStoreSchemaVersion               = "t12-store-v4"
+	evidencePreviousStoreSchemaVersion       = "t12-store-v3"
+	evidenceFormatVersion                    = "t12-evidence-v1"
+	evidenceMigrationVersion                 = "t12-evidence-migration-v2"
+	evidenceMigrationBatchSize               = 128
+	evidenceSweepBatchSize                   = 1
+	maxEvidenceRowsPerRun                    = 10_000
+	maxEvidenceBatchRows                     = maxEvidenceRowsPerRun
+	maxEvidenceRefsPerAssertion              = 4096
+	maxEvidenceReferenceEdges                = 20_000
+	maxEvidenceIdentityBytes                 = 64 << 10
+	maxEvidencePathBytes                     = 4096
+	maxEvidenceOccurrences                   = 100
+	maxCoverageFileCount                     = 10_000_000
+	maxCoverageReadBytes               int64 = 1 << 50
 )
 
 func hashIdentity(prefix string, fields ...string) string {
@@ -109,6 +116,7 @@ type extractionRunRec struct {
 	PublishedAt *time.Time       `json:"published_at,omitempty"`
 	Coverage    CoverageManifest `json:"coverage"`
 	StoreSchema string           `json:"store_schema_version"`
+	Format      string           `json:"evidence_format_version"`
 }
 
 func (r extractionRunRec) run() ExtractionRun {
@@ -156,11 +164,15 @@ func (s *Surreal) BeginExtractionRun(ctx context.Context, repo, commit, domain, 
 		`CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
             extractor = $extractor, status = 'staged', started_at = $now,
             store_schema_version = $store_schema_version,
+			evidence_format_version = $evidence_format_version,
+			evidence_migration_version = $evidence_migration_version,
             retention_quarantined = false, staged_revision = 0, retention_revision = 0 RETURN AFTER`,
 		map[string]any{
 			"rid": extractionRunID(id), "run_id": id, "repo": repo, "commit": commit,
 			"domain": domain, "extractor": extractor, "now": time.Now().UTC(),
-			"store_schema_version": evidenceStoreSchemaVersion,
+			"store_schema_version":       evidenceStoreSchemaVersion,
+			"evidence_format_version":    evidenceFormatVersion,
+			"evidence_migration_version": evidenceMigrationVersion,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("begin extraction run: %w", err)
@@ -173,12 +185,47 @@ func (s *Surreal) BeginExtractionRun(ctx context.Context, repo, commit, domain, 
 	return &run, nil
 }
 
+// A claimant can retain another run's logical id either directly (an unknown
+// writer that migration must not touch) or through a quarantine marker after
+// its physical row is canonicalized. Child rows carry only that logical id, so
+// the physical owner must fail closed in both cases; otherwise claimant proof
+// is indistinguishable from owner proof on reads and retention. IF guards the
+// byte casts so malformed schemaless values cannot make eligibility error.
+const evidenceRunHasNoAmbiguousClaimantSQL = `evidence_migration_ambiguous_run_id = NONE
+	AND record::id(id) NOT IN (
+	SELECT VALUE evidence_migration_ambiguous_run_id FROM extraction_run
+	WHERE IF type::is_string(evidence_migration_ambiguous_run_id)
+		THEN evidence_migration_ambiguous_run_id != ''
+			AND bytes::len(<bytes>evidence_migration_ambiguous_run_id) <= $max_evidence_identity_bytes
+		ELSE false END
+	)
+	AND record::id(id) NOT IN (
+	SELECT VALUE run_id FROM extraction_run
+	WHERE IF type::is_string(run_id)
+		THEN run_id != ''
+			AND bytes::len(<bytes>run_id) <= $max_evidence_identity_bytes
+			AND run_id != record::id(id)
+		ELSE false END
+)`
+
 func (s *Surreal) getRun(ctx context.Context, runID string) (*ExtractionRun, error) {
 	if strings.TrimSpace(runID) == "" {
 		return nil, ErrNotFound
 	}
 	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-		"SELECT * FROM $rid", map[string]any{"rid": extractionRunID(runID)})
+		`SELECT * FROM $rid
+			WHERE store_schema_version = $store_schema_version
+				  AND evidence_format_version = $evidence_format_version
+				  AND retention_quarantined = false
+				  AND run_id = record::id(id)
+				  AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+				  AND ((status = 'published' AND published_key != NONE)
+				OR (status != 'published' AND published_key = NONE))`, map[string]any{
+			"rid":                         extractionRunID(runID),
+			"store_schema_version":        evidenceStoreSchemaVersion,
+			"evidence_format_version":     evidenceFormatVersion,
+			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("get extraction run: %w", err)
 	}
@@ -188,6 +235,27 @@ func (s *Surreal) getRun(ctx context.Context, runID string) (*ExtractionRun, err
 	}
 	run := rows[0].run()
 	return &run, nil
+}
+
+type extractionRunIdentityRec struct {
+	RecID *models.RecordID `json:"id"`
+}
+
+// extractionRunExists intentionally decodes only the physical identity. It is
+// used to distinguish a hidden incompatible/quarantined row from a missing
+// row without decoding legacy or future payload fields.
+func (s *Surreal) extractionRunExists(ctx context.Context, runID string) (bool, error) {
+	results, err := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
+		"SELECT id FROM $rid", map[string]any{"rid": extractionRunID(runID)})
+	if err != nil {
+		return false, err
+	}
+	for _, result := range *results {
+		if len(result.Result) > 0 {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func normalizeAtom(a EvidenceAtom, now time.Time) (EvidenceAtom, error) {
@@ -465,7 +533,14 @@ func normalizeEvidenceBatch(run *ExtractionRun, atoms []EvidenceAtom, assocs []S
 
 const addEvidenceSQL = `
 BEGIN;
-LET $locked = UPDATE $run SET staged_revision += 1 WHERE status = 'staged' RETURN AFTER;
+LET $locked = UPDATE $run SET staged_revision += 1
+    WHERE status = 'staged'
+      AND store_schema_version = $store_schema_version
+	      AND evidence_format_version = $evidence_format_version
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		  AND published_key = NONE
+      AND retention_quarantined = false RETURN AFTER;
 LET $safe_atoms = IF array::len($locked) = 1 THEN $atoms ELSE [] END;
 FOR $a IN $safe_atoms {
     UPSERT $a.rid SET atom_id = $a.atom_id, schema_version = $a.schema_version,
@@ -536,6 +611,9 @@ func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []Evidenc
 		"run": extractionRunID(runID), "run_id": runID, "atoms": batch.atoms,
 		"assocs": batch.assocs, "asserts": batch.asserts,
 		"max_run_rows": maxEvidenceRowsPerRun, "max_reference_edges": maxEvidenceReferenceEdges,
+		"store_schema_version":        evidenceStoreSchemaVersion,
+		"evidence_format_version":     evidenceFormatVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	for attempt := 0; ; attempt++ {
 		results, queryErr := surrealdb.Query[[]extractionRunRec](ctx, s.db, addEvidenceSQL, vars)
@@ -561,7 +639,14 @@ func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []Evidenc
 
 const publishExtractionRunSQL = `
 BEGIN;
-LET $locked = UPDATE $rid SET staged_revision += 1 WHERE status = 'staged' RETURN AFTER;
+LET $locked = UPDATE $rid SET staged_revision += 1
+    WHERE status = 'staged'
+      AND store_schema_version = $store_schema_version
+	      AND evidence_format_version = $evidence_format_version
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		  AND published_key = NONE
+      AND retention_quarantined = false RETURN AFTER;
 LET $assertion_count = array::len(SELECT VALUE assertion_id FROM assertion WHERE run_id = $run_id);
 LET $association_count = array::len(SELECT VALUE occurrence_id FROM snapshot_evidence WHERE run_id = $run_id);
 LET $atom_count = array::len(array::distinct(SELECT VALUE atom_id FROM snapshot_evidence WHERE run_id = $run_id));
@@ -583,11 +668,19 @@ LET $repo_ok = IF array::len($locked) = 1 AND $counts_ok THEN
 LET $ready = array::len($locked) = 1 AND array::len($repo_ok) = 1 AND $counts_ok;
 LET $old = IF $ready THEN
     (UPDATE extraction_run SET status = 'superseded', published_key = NONE
-        WHERE repo = $repo AND domain = $domain AND status = 'published' AND run_id != $run_id RETURN AFTER)
+        WHERE repo = $repo AND domain = $domain AND status = 'published' AND run_id != $run_id
+	          AND store_schema_version = $store_schema_version
+	          AND evidence_format_version = $evidence_format_version
+			  AND run_id = record::id(id) AND published_key != NONE
+			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+	          AND retention_quarantined = false RETURN AFTER)
     ELSE [] END;
 RETURN IF $ready THEN
     (UPDATE $rid SET status = 'published', published_key = $published_key,
-        published_at = $now, coverage = $coverage WHERE status = 'staged' RETURN AFTER)
+			published_at = $now, coverage = $coverage
+			WHERE status = 'staged' AND run_id = record::id(id)
+			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+			  AND published_key = NONE RETURN AFTER)
     ELSE [] END;
 COMMIT;`
 
@@ -632,10 +725,13 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 		"domain": run.Domain, "published_key": publishedKey(run.Repo, run.Domain),
 		"now": time.Now().UTC(), "coverage": coverage,
 		"want_assertions": coverage.AssertionCount, "want_atoms": coverage.AtomCount,
-		"want_unresolved":          coverage.UnresolvedCount,
-		"max_occurrences_per_atom": maxEvidenceOccurrences,
-		"max_run_rows":             maxEvidenceRowsPerRun,
-		"max_reference_edges":      maxEvidenceReferenceEdges,
+		"want_unresolved":             coverage.UnresolvedCount,
+		"max_occurrences_per_atom":    maxEvidenceOccurrences,
+		"max_run_rows":                maxEvidenceRowsPerRun,
+		"max_reference_edges":         maxEvidenceReferenceEdges,
+		"store_schema_version":        evidenceStoreSchemaVersion,
+		"evidence_format_version":     evidenceFormatVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	for attempt := 0; ; attempt++ {
 		results, queryErr := surrealdb.Query[[]extractionRunRec](ctx, s.db, publishExtractionRunSQL, vars)
@@ -662,8 +758,20 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 	for attempt := 0; ; attempt++ {
 		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-			"UPDATE $rid SET status = 'aborted', published_key = NONE WHERE status = 'staged' RETURN AFTER",
-			map[string]any{"rid": extractionRunID(runID)})
+			`UPDATE $rid SET status = 'aborted', published_key = NONE
+				WHERE status = 'staged'
+				  AND store_schema_version = $store_schema_version
+					  AND evidence_format_version = $evidence_format_version
+					  AND run_id = record::id(id)
+					  AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+					  AND published_key = NONE
+				  AND retention_quarantined = false RETURN AFTER`,
+			map[string]any{
+				"rid":                         extractionRunID(runID),
+				"store_schema_version":        evidenceStoreSchemaVersion,
+				"evidence_format_version":     evidenceFormatVersion,
+				"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+			})
 		if err != nil {
 			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
@@ -687,8 +795,19 @@ func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 func (s *Surreal) LatestPublishedRun(ctx context.Context, repo, domain string) (*ExtractionRun, error) {
 	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
 		`SELECT * FROM extraction_run WHERE repo = $repo AND domain = $domain
-            AND status = 'published' ORDER BY published_at DESC, run_id LIMIT 1`,
-		map[string]any{"repo": repo, "domain": domain})
+			AND status = 'published'
+				AND evidence_format_version = $evidence_format_version
+				AND retention_quarantined = false
+				AND run_id = record::id(id)
+				AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+				AND published_key = $published_key
+			ORDER BY published_at DESC, run_id LIMIT 1`,
+		map[string]any{
+			"repo": repo, "domain": domain,
+			"evidence_format_version":     evidenceFormatVersion,
+			"published_key":               publishedKey(repo, domain),
+			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		})
 	if err != nil {
 		return nil, fmt.Errorf("latest published run: %w", err)
 	}
@@ -733,8 +852,19 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 	if limit > 5000 {
 		return nil, fmt.Errorf("list assertions: maximum limit is 5000: %w", ErrResultLimit)
 	}
-	where := "run_id IN (SELECT VALUE run_id FROM extraction_run WHERE status = 'published')"
-	vars := map[string]any{"limit": limit + 1}
+	where := `run_id IN (SELECT VALUE run_id FROM extraction_run
+		WHERE status = 'published'
+		  AND repo = $repo
+			  AND evidence_format_version = $evidence_format_version
+			  AND retention_quarantined = false
+			  AND run_id = record::id(id)
+			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+			  AND published_key != NONE)`
+	vars := map[string]any{
+		"limit":                       limit + 1,
+		"evidence_format_version":     evidenceFormatVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+	}
 	if q.Predicate != "" {
 		where += " AND predicate = $predicate"
 		vars["predicate"] = q.Predicate
@@ -807,19 +937,25 @@ func (s *Surreal) ResolveEvidence(ctx context.Context, repo, runID, atomID strin
 	results, err := surrealdb.Query[[]evidenceResolutionRec](ctx, s.db,
 		`SELECT * FROM snapshot_evidence
             WHERE repo = $repo AND run_id = $run AND atom_id = $atom
-              AND commit IN (SELECT VALUE commit FROM extraction_run
-                  WHERE run_id = $run AND repo = $repo)
-              AND run_id IN (SELECT VALUE run_id FROM extraction_run
-                  WHERE run_id = $run AND repo = $repo
-                    AND store_schema_version = $store_schema_version
-                    AND retention_quarantined = false
-                    AND (status = 'published' OR
-                        (status = 'superseded' AND run_id IN
-                            (SELECT VALUE run_id FROM evidence_pin WHERE run_id = $run))))
+	              AND commit IN (SELECT VALUE commit FROM extraction_run
+					  WHERE id = $run_rid AND run_id = $run AND repo = $repo
+						AND run_id = record::id(id)
+						AND `+evidenceRunHasNoAmbiguousClaimantSQL+`)
+				  AND run_id IN (SELECT VALUE run_id FROM extraction_run
+					  WHERE id = $run_rid AND run_id = $run AND repo = $repo
+						AND run_id = record::id(id)
+						AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+						AND evidence_format_version = $evidence_format_version
+					AND retention_quarantined = false
+					AND ((status = 'published' AND published_key != NONE) OR
+						(status = 'superseded' AND published_key = NONE AND run_id IN
+							(SELECT VALUE run_id FROM evidence_pin WHERE run_id = $run))))
             ORDER BY occurrence_id LIMIT $limit FETCH atom_record`,
 		map[string]any{
-			"repo": repo, "run": runID, "atom": atomID,
-			"limit": maxEvidenceOccurrences + 1, "store_schema_version": evidenceStoreSchemaVersion,
+			"repo": repo, "run": runID, "run_rid": extractionRunID(runID), "atom": atomID,
+			"limit":                       maxEvidenceOccurrences + 1,
+			"evidence_format_version":     evidenceFormatVersion,
+			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("resolve evidence: %w", err)
@@ -859,9 +995,12 @@ type evidencePinRec struct {
 const pinRunSQL = `
 BEGIN;
 LET $locked = UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
-    WHERE status IN ['published', 'superseded']
-      AND store_schema_version = $store_schema_version
-      AND retention_quarantined = false RETURN AFTER;
+	WHERE ((status = 'published' AND published_key != NONE)
+		OR (status = 'superseded' AND published_key = NONE))
+		  AND evidence_format_version = $evidence_format_version
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+	      AND retention_quarantined = false RETURN AFTER;
 RETURN IF array::len($locked) = 1 THEN
     (UPSERT $pin SET pin_key = $pin_key, run_id = $run_id, kind = $kind,
         created_at = IF created_at = NONE THEN $now ELSE created_at END RETURN AFTER)
@@ -880,7 +1019,8 @@ func (s *Surreal) PinRun(ctx context.Context, runID, kind string) error {
 	vars := map[string]any{
 		"rid": extractionRunID(runID), "pin": evidencePinRecordID(runID, kind),
 		"pin_key": pinKey, "run_id": runID, "kind": kind, "now": time.Now().UTC(),
-		"store_schema_version": evidenceStoreSchemaVersion,
+		"evidence_format_version":     evidenceFormatVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	for attempt := 0; ; attempt++ {
 		results, err := surrealdb.Query[[]evidencePinRec](ctx, s.db, pinRunSQL, vars)
@@ -899,6 +1039,13 @@ func (s *Surreal) PinRun(ctx context.Context, runID, kind string) error {
 		}
 		current, stateErr := s.getRun(ctx, runID)
 		if errors.Is(stateErr, ErrNotFound) {
+			exists, existsErr := s.extractionRunExists(ctx, runID)
+			if existsErr != nil {
+				return fmt.Errorf("pin run %s: check existence: %w", runID, existsErr)
+			}
+			if exists {
+				return fmt.Errorf("pin run %s: run is incompatible or quarantined: %w", runID, ErrConflict)
+			}
 			return fmt.Errorf("pin run %s: %w", runID, ErrNotFound)
 		}
 		if stateErr != nil {
@@ -912,7 +1059,11 @@ const sweepRunSQL = `
 BEGIN;
 LET $locked = UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
     WHERE (status IN ['aborted', 'superseded'] OR (status = 'staged' AND started_at <= $cutoff))
-    AND (retention_quarantined = NONE OR retention_quarantined = false)
+		AND evidence_format_version = $evidence_format_version
+		AND retention_quarantined = false
+		AND run_id = record::id(id)
+		AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		AND published_key = NONE
     AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0 RETURN AFTER;
 LET $gone = SELECT atom_id FROM snapshot_evidence
     WHERE run_id = $run AND array::len($locked) = 1;
@@ -924,8 +1075,18 @@ FOR $row IN $gone {
         DELETE evidence_atom WHERE atom_id = $aid RETURN NONE
     }
 };
-RETURN IF array::len($locked) = 1 THEN (DELETE $rid RETURN BEFORE) ELSE [] END;
+LET $deleted = IF array::len($locked) = 1 THEN (DELETE $rid RETURN BEFORE) ELSE [] END;
+RETURN [{ deleted: array::len($deleted) }];
 COMMIT;`
+
+type evidenceSweepCandidateRec struct {
+	RecID *models.RecordID `json:"id"`
+	RunID string           `json:"run_id"`
+}
+
+type evidenceSweepResultRec struct {
+	Deleted int `json:"deleted"`
+}
 
 // SweepEvidence implements proof-aware, bounded retention. Candidate
 // discovery is only an optimization: status/age and absence of a pin are
@@ -935,37 +1096,52 @@ func (s *Surreal) SweepEvidence(ctx context.Context, now time.Time, staleStagedA
 		return 0, errors.New("sweep evidence: stale duration cannot be negative")
 	}
 	cutoff := now.UTC().Add(-staleStagedAfter)
-	runResults, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-		`SELECT * FROM extraction_run
+	runResults, err := surrealdb.Query[[]evidenceSweepCandidateRec](ctx, s.db,
+		`SELECT id, run_id, started_at OMIT started_at FROM extraction_run
             WHERE (status IN ['aborted', 'superseded'] OR (status = 'staged' AND started_at <= $cutoff))
-              AND (retention_quarantined = NONE OR retention_quarantined = false)
-              AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
-            ORDER BY started_at, run_id LIMIT $limit`,
-		map[string]any{"cutoff": cutoff, "limit": evidenceSweepBatchSize})
+				  AND evidence_format_version = $evidence_format_version
+				  AND retention_quarantined = false
+				  AND run_id = record::id(id)
+				  AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+				  AND published_key = NONE
+				  AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
+			ORDER BY started_at, run_id LIMIT $limit`,
+		map[string]any{
+			"cutoff": cutoff, "limit": evidenceSweepBatchSize,
+			"evidence_format_version":     evidenceFormatVersion,
+			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		})
 	if err != nil {
 		return 0, fmt.Errorf("sweep evidence: candidates: %w", err)
 	}
-	var candidates []string
+	var candidates []evidenceSweepCandidateRec
 	for _, result := range *runResults {
 		for _, row := range result.Result {
-			if run := row.run(); run.ID != "" {
-				candidates = append(candidates, run.ID)
+			if row.RecID != nil && row.RunID != "" {
+				candidates = append(candidates, row)
 			}
 		}
 	}
 	deleted := 0
-	for _, runID := range candidates {
-		vars := map[string]any{"rid": extractionRunID(runID), "run": runID, "cutoff": cutoff}
+	for _, candidate := range candidates {
+		runID := candidate.RunID
+		vars := map[string]any{
+			"rid": *candidate.RecID, "run": runID, "cutoff": cutoff,
+			"evidence_format_version":     evidenceFormatVersion,
+			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		}
 		for attempt := 0; ; attempt++ {
-			results, queryErr := surrealdb.Query[[]extractionRunRec](ctx, s.db, sweepRunSQL, vars)
+			results, queryErr := surrealdb.Query[[]evidenceSweepResultRec](ctx, s.db, sweepRunSQL, vars)
 			if queryErr != nil {
 				if isRetryable(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 					continue
 				}
 				return deleted, fmt.Errorf("sweep evidence: run %s: %w", runID, queryErr)
 			}
-			if len(firstExtractionRows(results)) == 1 {
-				deleted++
+			for _, result := range *results {
+				for _, row := range result.Result {
+					deleted += row.Deleted
+				}
 			}
 			break
 		}

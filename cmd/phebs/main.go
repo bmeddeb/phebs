@@ -215,10 +215,7 @@ func serve(args []string) error {
 			Interval: cfg.Sync.Interval()}
 		runBackground(func() { exRunner.Run(ctx) })
 		onIndexed = func(ctx context.Context, name, commit string) error {
-			if err := store.EnqueueUnlessInFlight(ctx, st, store.JobExtract, name); err != nil {
-				return fmt.Errorf("enqueue extraction for %s@%s: %w", name, commit, err)
-			}
-			return nil
+			return enqueueExtractionAfterIndex(ctx, st, name, commit)
 		}
 	}
 	runBackground(func() {
@@ -406,6 +403,14 @@ func evidenceExtractors(provisionalProto bool) []extract.Extractor {
 		return nil
 	}
 	return []extract.Extractor{protodecl.New()}
+}
+
+func enqueueExtractionAfterIndex(ctx context.Context, st store.Store, repo, commit string) error {
+	if err := store.EnqueueUnlessInFlight(ctx, st, store.JobExtract, repo); err != nil {
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("enqueue extraction for %s@%s: %w", repo, commit, err))
+	}
+	return nil
 }
 
 // enqueueExtractionBackfill closes the upgrade gap for repositories indexed

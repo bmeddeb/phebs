@@ -19,7 +19,8 @@ const demoProto = `syntax = "proto3";
 package demo;
 
 service Greeter {
-  rpc SayHello(HelloRequest) returns (HelloReply) {}
+  rpc SayHello(HelloRequest) returns (HelloReply) {
+}
   rpc SayGoodbye(HelloRequest) returns (HelloReply) {}
 }
 
@@ -146,6 +147,7 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	corpus := extract.GitCorpus(dataDir).New(repoName, head)
 	allAssertions := append(append([]store.Assertion(nil), ops...), fields...)
 	foundRetries := false
+	foundMultilineRPC := false
 	for _, assertion := range allAssertions {
 		if assertion.RunID != run.ID || len(assertion.Supporting) != 1 {
 			t.Fatalf("assertion has invalid run/support binding: %+v", assertion)
@@ -180,13 +182,23 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 				matchedSubject = true
 			}
 			if assertion.Object == "demo.HelloRequest#7" {
-				if source != "int32 retries = 7" {
+				if source != "int32 retries = 7;" {
 					t.Fatalf("retries span slices to %q", source)
 				}
 				if assertion.Detail != `{"schema":"proto-field-detail-v1","name":"retries"}` {
 					t.Fatalf("retries detail = %q", assertion.Detail)
 				}
 				foundRetries = true
+			}
+			if assertion.Object == "demo.Greeter/SayHello" {
+				if source != "rpc SayHello(HelloRequest) returns (HelloReply) {\n}" {
+					t.Fatalf("multiline RPC span slices to %q", source)
+				}
+				if occurrence.StartLine != 6 || occurrence.EndLine != 7 {
+					t.Fatalf("multiline RPC line span = %d-%d, want 6-7",
+						occurrence.StartLine, occurrence.EndLine)
+				}
+				foundMultilineRPC = true
 			}
 		}
 		if !matchedSubject {
@@ -195,6 +207,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	}
 	if !foundRetries {
 		t.Fatal("stored retries evidence not found")
+	}
+	if !foundMultilineRPC {
+		t.Fatal("stored multiline RPC evidence not found")
 	}
 
 	// Determinism: re-running the worker on the same commit short-circuits

@@ -46,6 +46,16 @@ func (f fakeCorpus) Read(context.Context, string) (sdk.Blob, error) {
 	return sdk.Blob{Content: "x", Digest: "sha256:" + hex.EncodeToString(sum[:])}, nil
 }
 
+type fakeCorpusFactory struct{}
+
+func (fakeCorpusFactory) Lock(context.Context, string) (func(), error) {
+	return func() {}, nil
+}
+
+func (fakeCorpusFactory) New(repo, commit string) sdk.Corpus {
+	return fakeCorpus{repo, commit}
+}
+
 type fakeExtractor struct {
 	domain  string
 	version string
@@ -82,9 +92,7 @@ func (f *fakeExtractor) Extract(ctx context.Context, c extract.Corpus, emit sdk.
 }
 
 func fakeFactory() extract.CorpusFactory {
-	return extract.CorpusFactoryFuncs{
-		NewFunc: func(r, c string) extract.Corpus { return fakeCorpus{r, c} },
-	}
+	return fakeCorpusFactory{}
 }
 
 func seedIndexedRepo(t *testing.T, s *store.Surreal, name, commit string) {

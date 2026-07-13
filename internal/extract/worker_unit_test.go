@@ -171,11 +171,23 @@ func (*memoryEvidence) SweepEvidence(context.Context, time.Time, time.Duration) 
 	return 0, nil
 }
 
-func unitFactory(lock func(context.Context, string) (func(), error)) CorpusFactory {
-	return CorpusFactoryFuncs{
-		LockFunc: lock,
-		NewFunc:  func(repo, commit string) sdk.Corpus { return unitCorpus{repo: repo, commit: commit} },
+type unitCorpusFactory struct {
+	lock func(context.Context, string) (func(), error)
+}
+
+func (f unitCorpusFactory) Lock(ctx context.Context, repo string) (func(), error) {
+	if f.lock == nil {
+		return func() {}, nil
 	}
+	return f.lock(ctx, repo)
+}
+
+func (unitCorpusFactory) New(repo, commit string) sdk.Corpus {
+	return unitCorpus{repo: repo, commit: commit}
+}
+
+func unitFactory(lock func(context.Context, string) (func(), error)) CorpusFactory {
+	return unitCorpusFactory{lock: lock}
 }
 
 func unitFact(filePath, object string) sdk.Fact {

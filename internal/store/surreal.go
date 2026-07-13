@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
@@ -95,8 +96,11 @@ DEFINE INDEX IF NOT EXISTS indexing_job_pending_key ON indexing_job FIELDS pendi
 DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;`
 
-const evidenceIndexes = `
-DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;`
+var evidenceIndexes = fmt.Sprintf(`
+DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
+    ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted']
+        OR $this.evidence_format_version != '%s';
+DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;`, evidenceFormatVersion)
 
 // migrateLegacyJobs runs before the pending-key indexes are installed. Old
 // rows had no lease or pending slot, and may contain an active job plus a
@@ -157,79 +161,395 @@ func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
 	return nil
 }
 
-// migrateEvidenceRuns installs the explicit string run_id used by bounded
-// joins and assigns the one optional unique publication slot per repo/domain.
-// Rows from the retracted implementation have no run_id or typed atom links;
-// retire them fail-closed so a current extractor must republish them. Because
-// historical runs predate ingestion bounds, quarantine them from automatic
-// retention; pins and rows remain for audit or explicit administrator cleanup.
-func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
-	const batch = 128
+type evidenceRunMigrationRec struct {
+	RecID                *models.RecordID `json:"id"`
+	RunID                any              `json:"run_id"`
+	Repo                 any              `json:"repo"`
+	Domain               any              `json:"domain"`
+	Status               any              `json:"status"`
+	StoreSchema          any              `json:"store_schema_version"`
+	Format               any              `json:"evidence_format_version"`
+	AmbiguousRunID       any              `json:"evidence_migration_ambiguous_run_id"`
+	RetentionQuarantined any              `json:"retention_quarantined"`
+}
+
+type evidenceMigrationStateRec struct {
+	RecID   *models.RecordID `json:"id"`
+	Version any              `json:"version"`
+}
+
+type evidencePinMigrationRec struct {
+	RecID *models.RecordID `json:"id"`
+	Kind  any              `json:"kind"`
+}
+
+func (s *Surreal) migrateEvidencePins(ctx context.Context, oldRunID, runID string) error {
 	for {
-		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-			`SELECT * FROM extraction_run
-                WHERE store_schema_version = NONE OR store_schema_version != $schema
-                   OR run_id = NONE OR run_id = ''
-                   OR retention_quarantined = NONE
-                   OR (status = 'published' AND published_key = NONE)
-                   OR (status != 'published' AND published_key != NONE)
-                ORDER BY repo, domain, published_at DESC, started_at DESC, id
-                LIMIT $limit`, map[string]any{"limit": batch, "schema": evidenceStoreSchemaVersion})
+		results, err := surrealdb.Query[[]evidencePinMigrationRec](ctx, s.db,
+			`SELECT id, kind FROM evidence_pin WHERE run_id = $old_run_id
+				ORDER BY id LIMIT $limit`, map[string]any{
+				"old_run_id": oldRunID, "limit": evidenceMigrationBatchSize,
+			})
+		if err != nil {
+			return err
+		}
+		var pins []evidencePinMigrationRec
+		for _, result := range *results {
+			pins = append(pins, result.Result...)
+		}
+		if len(pins) == 0 {
+			return nil
+		}
+
+		canonical := make([]map[string]any, 0, len(pins))
+		raw := make([]map[string]any, 0, len(pins))
+		for _, pin := range pins {
+			if pin.RecID == nil {
+				return errors.New("pin has no physical record id")
+			}
+			kind, kindOK := migrationString(pin.Kind)
+			if !kindOK || kind == "" || kind != strings.TrimSpace(kind) ||
+				!utf8.ValidString(kind) || len(kind) > maxEvidenceIdentityBytes {
+				raw = append(raw, map[string]any{"rid": *pin.RecID})
+				continue
+			}
+			canonical = append(canonical, map[string]any{
+				"old_rid": *pin.RecID, "new_rid": evidencePinRecordID(runID, kind),
+				"pin_key": hashIdentity("pin_", runID, kind), "kind": kind,
+			})
+		}
+
+		migrationResults, err := surrealdb.Query[any](ctx, s.db,
+			`BEGIN;
+			FOR $p IN $canonical {
+				LET $old_created_at = (SELECT VALUE created_at FROM $p.old_rid LIMIT 1)[0];
+				DELETE $p.old_rid RETURN NONE;
+				UPSERT $p.new_rid SET pin_key = $p.pin_key, run_id = $run_id, kind = $p.kind,
+					created_at = IF created_at = NONE THEN ($old_created_at ?? time::now())
+						ELSE created_at END RETURN NONE;
+			};
+			FOR $p IN $raw {
+				UPDATE $p.rid SET run_id = $run_id RETURN NONE;
+			};
+			COMMIT;`, map[string]any{
+				"canonical": canonical, "raw": raw, "run_id": runID,
+			})
+		if err != nil {
+			return err
+		}
+		for i, result := range *migrationResults {
+			if result.Error != nil {
+				return fmt.Errorf("pin batch statement %d: %s", i, result.Error.Message)
+			}
+		}
+	}
+}
+
+func migrationString(value any) (string, bool) {
+	valueString, ok := value.(string)
+	return valueString, ok
+}
+
+func migrationBool(value any) (bool, bool) {
+	valueBool, ok := value.(bool)
+	return valueBool, ok
+}
+
+func evidenceMigrationStateID() models.RecordID {
+	return models.NewRecordID("store_migration", "evidence_runs")
+}
+
+func (s *Surreal) evidenceMigrationComplete(ctx context.Context) (bool, error) {
+	results, err := surrealdb.Query[[]evidenceMigrationStateRec](ctx, s.db,
+		"SELECT id, version FROM $rid", map[string]any{"rid": evidenceMigrationStateID()})
+	if err != nil {
+		return false, err
+	}
+	for _, result := range *results {
+		for _, row := range result.Result {
+			if version, ok := migrationString(row.Version); ok && version == evidenceMigrationVersion {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+func evidenceMigrationPhysicalID(row evidenceRunMigrationRec) (models.RecordID, string, error) {
+	if row.RecID == nil {
+		return models.RecordID{}, "", errors.New("row has no physical record id")
+	}
+	id, ok := row.RecID.ID.(string)
+	if !ok || strings.TrimSpace(id) == "" || !utf8.ValidString(id) || len(id) > maxEvidenceIdentityBytes {
+		return models.RecordID{}, "", errors.New("row physical record id is not bounded UTF-8")
+	}
+	return *row.RecID, id, nil
+}
+
+func isLegacyEvidenceStoreSchema(schema string, present bool) bool {
+	return !present || schema == "" || schema == "t12-store-v1" || schema == "t12-store-v2"
+}
+
+func validEvidenceRunStatus(status string) bool {
+	return status == "staged" || status == "published" || status == "superseded" || status == "aborted"
+}
+
+// migrateEvidenceRuns upgrades only formats this binary understands. Rows
+// from the retracted implementation are retired and quarantined, while the
+// immediately preceding compatible writer is upgraded in place. Unknown
+// future writer/format pairs are deliberately neither decoded nor mutated.
+//
+// The physical record id is authoritative. Per-row migration markers make a
+// crash resume monotonically; the global marker is written only after the
+// bounded candidate scan is empty, so steady-state Open never scans run rows.
+func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
+	complete, err := s.evidenceMigrationComplete(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate evidence runs: read completion marker: %w", err)
+	}
+	if complete {
+		return nil
+	}
+
+	for {
+		results, err := surrealdb.Query[[]evidenceRunMigrationRec](ctx, s.db,
+			`SELECT id, run_id, repo, domain, status, store_schema_version,
+				evidence_format_version, evidence_migration_ambiguous_run_id,
+				retention_quarantined
+			FROM extraction_run
+			WHERE store_schema_version = NONE
+			   OR NOT (type::is_string(store_schema_version))
+			   OR store_schema_version = ''
+			   OR store_schema_version IN $legacy_schemas
+			   OR (store_schema_version = $previous_schema
+				   AND (evidence_format_version = NONE
+					OR NOT (type::is_string(evidence_format_version))
+					OR evidence_format_version = ''
+					OR evidence_format_version = $format))
+			   OR (store_schema_version = $schema
+				   AND (evidence_format_version = NONE
+					OR NOT (type::is_string(evidence_format_version))
+					OR evidence_format_version = ''
+					OR (evidence_format_version = $format AND (
+						evidence_migration_version = NONE
+						OR evidence_migration_version != $migration
+						OR run_id = NONE OR NOT (type::is_string(run_id))
+						OR run_id = '' OR run_id != record::id(id)
+						OR retention_quarantined = NONE
+						OR retention_quarantined NOT IN [true, false]
+						OR status = NONE OR NOT (type::is_string(status))
+							OR status NOT IN ['staged', 'published', 'superseded', 'aborted']
+							OR (status = 'published' AND published_key = NONE)
+							OR (status != 'published' AND published_key != NONE)
+							OR (retention_quarantined = true AND published_key != NONE)
+							OR (evidence_migration_ambiguous_run_id != NONE AND (
+								NOT (type::is_string(evidence_migration_ambiguous_run_id))
+								OR evidence_migration_ambiguous_run_id = ''
+								OR retention_quarantined != true))
+						))))
+			ORDER BY id LIMIT $limit`, map[string]any{
+				"limit": evidenceMigrationBatchSize, "schema": evidenceStoreSchemaVersion,
+				"previous_schema": evidencePreviousStoreSchemaVersion,
+				"legacy_schemas":  []string{"t12-store-v1", "t12-store-v2"},
+				"format":          evidenceFormatVersion, "migration": evidenceMigrationVersion,
+			})
 		if err != nil {
 			return fmt.Errorf("migrate evidence runs: list: %w", err)
 		}
-		var candidates []extractionRunRec
+		var candidates []evidenceRunMigrationRec
 		for _, result := range *results {
 			candidates = append(candidates, result.Result...)
 		}
 		if len(candidates) == 0 {
-			return nil // steady-state Open performs only the bounded empty read
-		}
-		for _, row := range candidates {
-			legacy := row.StoreSchema != evidenceStoreSchemaVersion
-			run := row.run()
-			if run.ID == "" {
-				return errors.New("migrate evidence runs: row has no string record id")
+			if _, err := surrealdb.Query[any](ctx, s.db,
+				`UPSERT $rid SET version = $version, completed_at = time::now() RETURN NONE`,
+				map[string]any{"rid": evidenceMigrationStateID(), "version": evidenceMigrationVersion}); err != nil {
+				return fmt.Errorf("migrate evidence runs: write completion marker: %w", err)
 			}
-			status := run.Status
-			key := ""
+			return nil
+		}
+
+		for _, row := range candidates {
+			rid, runID, idErr := evidenceMigrationPhysicalID(row)
+			if idErr != nil {
+				return fmt.Errorf("migrate evidence runs: %w", idErr)
+			}
+			schema, schemaPresent := migrationString(row.StoreSchema)
+			legacy := isLegacyEvidenceStoreSchema(schema, schemaPresent)
+			if !legacy && schema != evidencePreviousStoreSchemaVersion && schema != evidenceStoreSchemaVersion {
+				return fmt.Errorf("migrate evidence run %s: candidate has unknown writer schema", runID)
+			}
+
+			oldRunID, oldRunIDPresent := migrationString(row.RunID)
+			oldRunIDUsable := oldRunIDPresent && oldRunID != "" && utf8.ValidString(oldRunID) &&
+				len(oldRunID) <= maxEvidenceIdentityBytes
+			rewriteRunID := oldRunIDUsable && oldRunID != runID
+
+			format, formatPresent := migrationString(row.Format)
+			knownWriter := schema == evidencePreviousStoreSchemaVersion || schema == evidenceStoreSchemaVersion
+			malformedFormat := knownWriter && ((formatPresent && format == "") ||
+				(!formatPresent && row.Format != nil))
+			status, statusPresent := migrationString(row.Status)
+			quarantined := legacy || malformedFormat
+			ambiguousMarkerPresent := row.AmbiguousRunID != nil
+			ambiguousRunID, hasAmbiguousRunID := migrationString(row.AmbiguousRunID)
+			hasAmbiguousRunID = hasAmbiguousRunID && ambiguousRunID != "" &&
+				utf8.ValidString(ambiguousRunID) && len(ambiguousRunID) <= maxEvidenceIdentityBytes
+			quarantined = quarantined || ambiguousMarkerPresent
+			if !legacy {
+				if existing, ok := migrationBool(row.RetentionQuarantined); ok {
+					quarantined = quarantined || existing
+				} else if row.RetentionQuarantined != nil {
+					quarantined = true
+				}
+			}
+
 			if legacy {
+				switch status {
+				case "published":
+					status = "superseded"
+				case "superseded":
+					status = "superseded"
+				case "staged", "aborted":
+					status = "aborted"
+				default:
+					status = "aborted"
+				}
+			} else if !statusPresent || !validEvidenceRunStatus(status) {
+				status = "aborted"
+				quarantined = true
+			}
+
+			ambiguousOwnership := false
+			if rewriteRunID && !quarantined {
+				owners, ownerErr := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
+					`SELECT id FROM extraction_run
+						WHERE id != $rid AND (
+							id = $old_rid OR run_id = $old_run_id
+							OR evidence_migration_ambiguous_run_id = $old_run_id)
+						LIMIT 1`, map[string]any{
+						"rid": rid, "old_rid": extractionRunID(oldRunID), "old_run_id": oldRunID,
+					})
+				if ownerErr != nil {
+					return fmt.Errorf("migrate evidence run %s: ownership lookup: %w", runID, ownerErr)
+				}
+				for _, result := range *owners {
+					ambiguousOwnership = ambiguousOwnership || len(result.Result) > 0
+				}
+				if ambiguousOwnership {
+					rewriteRunID = false
+					quarantined = true
+					ambiguousRunID = oldRunID
+					hasAmbiguousRunID = true
+				}
+			}
+
+			// A valid old string can be repaired transactionally across all proof
+			// rows only when no other physical/claiming owner exists. Missing,
+			// malformed, ambiguous, or staged identities are retired rather than
+			// reopened for writes.
+			if !legacy && oldRunID != runID && (!oldRunIDUsable || status == "staged") {
+				quarantined = true
+			}
+			key := ""
+			if status == "published" && !quarantined {
+				repo, repoOK := migrationString(row.Repo)
+				domain, domainOK := migrationString(row.Domain)
+				if !repoOK || !domainOK || repo == "" || domain == "" ||
+					!utf8.ValidString(repo) || !utf8.ValidString(domain) ||
+					len(repo) > maxEvidenceIdentityBytes || len(domain) > maxEvidenceIdentityBytes {
+					status = "superseded"
+					quarantined = true
+				} else {
+					canonicalKey := publishedKey(repo, domain)
+					owners, lookupErr := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
+						`SELECT id FROM extraction_run
+							WHERE published_key = $published_key AND id != $rid LIMIT 1`, map[string]any{
+							"rid": rid, "published_key": canonicalKey,
+						})
+					if lookupErr != nil {
+						return fmt.Errorf("migrate evidence run %s: publication lookup: %w", runID, lookupErr)
+					}
+					ownerExists := false
+					for _, result := range *owners {
+						ownerExists = ownerExists || len(result.Result) > 0
+					}
+					if ownerExists {
+						status = "superseded"
+					} else {
+						key = canonicalKey
+					}
+				}
+			}
+			if quarantined {
 				switch status {
 				case "published":
 					status = "superseded"
 				case "staged":
 					status = "aborted"
 				}
-			} else if status == "published" {
-				existing, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-					`SELECT * FROM extraction_run
-                            WHERE repo = $repo AND domain = $domain AND status = 'published'
-                              AND published_key != NONE AND id != $rid LIMIT 1`,
-					map[string]any{
-						"repo": run.Repo, "domain": run.Domain, "rid": extractionRunID(run.ID),
-					})
-				if err != nil {
-					return fmt.Errorf("migrate evidence run %s: publication lookup: %w", run.ID, err)
+				// Pre-bound or otherwise untrusted rows retain their original
+				// child/pin logical ids for audit. Only bounded compatible repairs
+				// are eligible to relink proof rows.
+				rewriteRunID = false
+			}
+			// Canonicalizing a terminal claimant while intentionally retaining its
+			// children under a usable old logical id must reserve that id. Without
+			// the marker, a canonical physical owner could read or sweep the
+			// indistinguishable proof after this row stops directly claiming it.
+			if oldRunIDUsable && oldRunID != runID && !rewriteRunID {
+				if hasAmbiguousRunID && ambiguousRunID != oldRunID {
+					return fmt.Errorf("migrate evidence run %s: conflicting ambiguity markers %q and %q",
+						runID, ambiguousRunID, oldRunID)
 				}
-				if len(firstExtractionRows(existing)) > 0 {
-					status = "superseded"
-				} else {
-					key = publishedKey(run.Repo, run.Domain)
+				ambiguousRunID = oldRunID
+				hasAmbiguousRunID = true
+			}
+
+			if rewriteRunID {
+				pinErr := s.migrateEvidencePins(ctx, oldRunID, runID)
+				if pinErr != nil {
+					return fmt.Errorf("migrate evidence run %s: pins: %w", runID, pinErr)
 				}
 			}
-			setKey := "published_key = NONE"
+
 			vars := map[string]any{
-				"rid": extractionRunID(run.ID), "run_id": run.ID, "status": status,
-				"store_schema_version":  evidenceStoreSchemaVersion,
-				"retention_quarantined": legacy,
+				"rid": rid, "run_id": runID, "old_run_id": oldRunID,
+				"rewrite_run_id": rewriteRunID, "status": status,
+				"store_schema_version":       evidenceStoreSchemaVersion,
+				"evidence_format_version":    evidenceFormatVersion,
+				"evidence_migration_version": evidenceMigrationVersion,
+				"retention_quarantined":      quarantined,
+				"has_published_key":          key != "", "published_key": key,
+				"has_ambiguous_run_id": hasAmbiguousRunID,
+				"ambiguous_run_id":     ambiguousRunID,
 			}
-			if key != "" {
-				setKey = "published_key = $published_key"
-				vars["published_key"] = key
+			updated, updateErr := surrealdb.Query[[]evidenceMigrationStateRec](ctx, s.db,
+				`BEGIN;
+				LET $updated = UPDATE $rid SET run_id = $run_id, status = $status,
+					store_schema_version = $store_schema_version,
+					evidence_format_version = $evidence_format_version,
+					evidence_migration_version = $evidence_migration_version,
+					retention_quarantined = $retention_quarantined,
+					evidence_migration_ambiguous_run_id = IF $has_ambiguous_run_id
+						THEN $ambiguous_run_id ELSE NONE END,
+					published_key = IF $has_published_key THEN $published_key ELSE NONE END
+					RETURN AFTER;
+				UPDATE snapshot_evidence SET run_id = $run_id
+					WHERE $rewrite_run_id AND run_id = $old_run_id RETURN NONE;
+				UPDATE assertion SET run_id = $run_id
+					WHERE $rewrite_run_id AND run_id = $old_run_id RETURN NONE;
+				RETURN $updated;
+				COMMIT;`, vars)
+			if updateErr != nil {
+				return fmt.Errorf("migrate evidence run %s: %w", runID, updateErr)
 			}
-			if _, err := surrealdb.Query[any](ctx, s.db,
-				"UPDATE $rid SET run_id = $run_id, status = $status, store_schema_version = $store_schema_version, retention_quarantined = $retention_quarantined, "+setKey+" RETURN NONE", vars); err != nil {
-				return fmt.Errorf("migrate evidence run %s: %w", run.ID, err)
+			progressed := false
+			for _, result := range *updated {
+				progressed = progressed || len(result.Result) == 1
+			}
+			if !progressed {
+				return fmt.Errorf("migrate evidence run %s: physical record update made no progress", runID)
 			}
 		}
 	}

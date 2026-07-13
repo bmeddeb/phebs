@@ -45,6 +45,10 @@ DEFINE INDEX IF NOT EXISTS audit_event_created ON audit_event FIELDS created_at;
 DEFINE TABLE IF NOT EXISTS usage_event SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS usage_event_created ON usage_event FIELDS created_at;
 
+-- Fixed-id completion records let bounded data migrations skip table scans on
+-- steady-state Open. A marker is written only after every row update commits.
+DEFINE TABLE IF NOT EXISTS store_migration SCHEMALESS;
+
 -- repo <-> code-host identity permission edges (T10.3), mirrored from host
 -- ACLs; the search pre-pass compiles them into a per-user RepoSet.
 DEFINE TABLE IF NOT EXISTS repo_permission SCHEMALESS;
@@ -83,9 +87,10 @@ DEFINE INDEX IF NOT EXISTS assertion_pred_obj ON assertion FIELDS predicate, obj
 DEFINE INDEX IF NOT EXISTS assertion_run_semantic ON assertion FIELDS assertion_key UNIQUE;
 
 DEFINE TABLE IF NOT EXISTS extraction_run SCHEMALESS;
-DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
-    ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted'];
 DEFINE INDEX IF NOT EXISTS extraction_run_scope ON extraction_run FIELDS repo, domain, status;
+DEFINE INDEX IF NOT EXISTS extraction_run_run_id ON extraction_run FIELDS run_id;
+DEFINE INDEX IF NOT EXISTS extraction_run_ambiguous_run_id ON extraction_run
+    FIELDS evidence_migration_ambiguous_run_id;
 -- Retention selects a tiny oldest eligible set. Keep status/quarantine and
 -- age/order fields together so that LIMIT does not require sorting the entire
 -- historical run table as it grows.

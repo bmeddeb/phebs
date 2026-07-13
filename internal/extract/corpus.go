@@ -68,26 +68,6 @@ func (f gitCorpusFactory) New(repoName, commit string) sdk.Corpus {
 	return &gitCorpus{dataDir: f.dataDir, repo: repoName, commit: commit}
 }
 
-// CorpusFactoryFuncs is a test adapter. Production should use GitCorpus.
-type CorpusFactoryFuncs struct {
-	LockFunc func(context.Context, string) (func(), error)
-	NewFunc  func(repoName, commit string) sdk.Corpus
-}
-
-func (f CorpusFactoryFuncs) Lock(ctx context.Context, repoName string) (func(), error) {
-	if f.LockFunc == nil {
-		return func() {}, nil
-	}
-	return f.LockFunc(ctx, repoName)
-}
-
-func (f CorpusFactoryFuncs) New(repoName, commit string) sdk.Corpus {
-	if f.NewFunc == nil {
-		return nil
-	}
-	return f.NewFunc(repoName, commit)
-}
-
 type gitCorpus struct {
 	dataDir string
 	repo    string
