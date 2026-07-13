@@ -643,20 +643,29 @@ func (s *Surreal) ListRepos(ctx context.Context) ([]Repo, error) {
 }
 
 func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
-	_, err := surrealdb.Query[any](ctx, s.db,
-		`BEGIN;
+	// The caller has already destroyed disk artifacts, so an unretried
+	// optimistic-transaction conflict would roll the repo back to live while
+	// its mirror and shards are gone. Retry like every other multi-statement
+	// writer in this store.
+	for attempt := 0; ; attempt++ {
+		_, err := surrealdb.Query[any](ctx, s.db,
+			`BEGIN;
 UPDATE extraction_run SET status = 'superseded', published_key = NONE
     WHERE repo = $name AND status = 'published' RETURN NONE;
 UPDATE extraction_run SET status = 'aborted', published_key = NONE
     WHERE repo = $name AND status = 'staged' RETURN NONE;
 UPDATE extraction_job SET status = 'canceled', error = 'repository deleting',
-    finished_at = time::now(), pending_key = NONE
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
     WHERE target = $name AND status = 'pending' RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
 DELETE repo_connection WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
 COMMIT;`, map[string]any{"rid": repoID(name), "name": name})
-	return err
+		if err != nil && isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+			continue
+		}
+		return err
+	}
 }
 
 func (s *Surreal) SetRepoDeleting(ctx context.Context, name string, deleting bool) error {
@@ -941,17 +950,26 @@ func firstNonEmpty(res *[]surrealdb.QueryResult[[]jobRec]) []jobRec {
 	return nil
 }
 
+// permanentErrMarker prefixes THROW messages for deterministic rule
+// violations. Without it, THROW text like "conflicting attributes" matches
+// the transient substrings below and a permanent error is retried to the cap.
+const permanentErrMarker = "phebs-permanent:"
+
 func isRetryable(err error) bool {
 	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, permanentErrMarker) {
+		return false
+	}
 	return strings.Contains(msg, "conflict") || strings.Contains(msg, "retry")
 }
 
 func isRetryableEnqueue(err error) bool {
-	if isRetryable(err) {
-		return true
-	}
 	msg := strings.ToLower(err.Error())
-	return strings.Contains(msg, "unique") || strings.Contains(msg, "already contains")
+	if strings.Contains(msg, permanentErrMarker) {
+		return false
+	}
+	return isRetryable(err) ||
+		strings.Contains(msg, "unique") || strings.Contains(msg, "already contains")
 }
 
 func (s *Surreal) countPending(ctx context.Context, kind JobKind) (int, error) {

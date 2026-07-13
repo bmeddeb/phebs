@@ -208,24 +208,42 @@ const evidenceRunHasNoAmbiguousClaimantSQL = `evidence_migration_ambiguous_run_i
 		ELSE false END
 )`
 
+// evidenceRunProbeHasNoClaimantSQL is the same fail-closed guard for
+// statements that operate on one known run: $probe_run_id / $probe_rid name
+// the run the statement targets, so both claimant lookups become indexed
+// equality probes instead of the scan-form subqueries above. Equality against
+// a real bounded run id preserves the scan form's type and byte-cap
+// semantics (a non-string or oversized value can never equal one).
+const evidenceRunProbeHasNoClaimantSQL = `evidence_migration_ambiguous_run_id = NONE
+	AND array::len(SELECT id FROM extraction_run
+		WHERE evidence_migration_ambiguous_run_id = $probe_run_id LIMIT 1) = 0
+	AND array::len(SELECT id FROM extraction_run
+		WHERE run_id = $probe_run_id AND id != $probe_rid LIMIT 1) = 0`
+
+func addProbeVars(vars map[string]any, runID string) {
+	vars["probe_run_id"] = runID
+	vars["probe_rid"] = extractionRunID(runID)
+}
+
 func (s *Surreal) getRun(ctx context.Context, runID string) (*ExtractionRun, error) {
 	if strings.TrimSpace(runID) == "" {
 		return nil, ErrNotFound
 	}
+	vars := map[string]any{
+		"rid":                     extractionRunID(runID),
+		"store_schema_version":    evidenceStoreSchemaVersion,
+		"evidence_format_version": evidenceFormatVersion,
+	}
+	addProbeVars(vars, runID)
 	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
 		`SELECT * FROM $rid
 			WHERE store_schema_version = $store_schema_version
 				  AND evidence_format_version = $evidence_format_version
 				  AND retention_quarantined = false
 				  AND run_id = record::id(id)
-				  AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+				  AND `+evidenceRunProbeHasNoClaimantSQL+`
 				  AND ((status = 'published' AND published_key != NONE)
-				OR (status != 'published' AND published_key = NONE))`, map[string]any{
-			"rid":                         extractionRunID(runID),
-			"store_schema_version":        evidenceStoreSchemaVersion,
-			"evidence_format_version":     evidenceFormatVersion,
-			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
-		})
+				OR (status != 'published' AND published_key = NONE))`, vars)
 	if err != nil {
 		return nil, fmt.Errorf("get extraction run: %w", err)
 	}
@@ -538,7 +556,7 @@ LET $locked = UPDATE $run SET staged_revision += 1
       AND store_schema_version = $store_schema_version
 	      AND evidence_format_version = $evidence_format_version
 		  AND run_id = record::id(id)
-		  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		  AND published_key = NONE
       AND retention_quarantined = false RETURN AFTER;
 LET $safe_atoms = IF array::len($locked) = 1 THEN $atoms ELSE [] END;
@@ -565,12 +583,12 @@ FOR $x IN $safe_asserts {
         FROM assertion WHERE id = $x.rid LIMIT 1)[0];
     IF $existing != NONE AND
        ($existing.attribute_key = NONE OR $existing.attribute_key != $x.attribute_key) {
-        THROW 'duplicate semantic assertion has conflicting attributes'
+        THROW 'phebs-permanent: duplicate semantic assertion has conflicting attributes'
     };
     IF $existing != NONE AND
        (array::len(array::intersect($existing.supporting ?? [], $x.contradicting)) > 0 OR
         array::len(array::intersect($existing.contradicting ?? [], $x.supporting)) > 0) {
-        THROW 'assertion evidence cannot both support and contradict'
+        THROW 'phebs-permanent: assertion evidence cannot both support and contradict'
     };
     UPSERT $x.rid SET assertion_id = $x.assertion_id, assertion_key = $x.assertion_key,
         attribute_key = $x.attribute_key,
@@ -586,7 +604,7 @@ LET $reference_edges =
     array::len(array::flatten(SELECT VALUE supporting FROM assertion WHERE run_id = $run_id)) +
     array::len(array::flatten(SELECT VALUE contradicting FROM assertion WHERE run_id = $run_id));
 IF $run_rows > $max_run_rows OR $reference_edges > $max_reference_edges {
-    THROW 'evidence run exceeds a bounded storage limit'
+    THROW 'phebs-permanent: evidence run exceeds a bounded storage limit'
 };
 RETURN IF array::len($locked) = 1 THEN $locked ELSE [] END;
 COMMIT;`
@@ -611,15 +629,20 @@ func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []Evidenc
 		"run": extractionRunID(runID), "run_id": runID, "atoms": batch.atoms,
 		"assocs": batch.assocs, "asserts": batch.asserts,
 		"max_run_rows": maxEvidenceRowsPerRun, "max_reference_edges": maxEvidenceReferenceEdges,
-		"store_schema_version":        evidenceStoreSchemaVersion,
-		"evidence_format_version":     evidenceFormatVersion,
-		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		"store_schema_version":    evidenceStoreSchemaVersion,
+		"evidence_format_version": evidenceFormatVersion,
 	}
+	addProbeVars(vars, runID)
 	for attempt := 0; ; attempt++ {
 		results, queryErr := surrealdb.Query[[]extractionRunRec](ctx, s.db, addEvidenceSQL, vars)
 		if queryErr != nil {
 			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
+			}
+			msg := queryErr.Error()
+			if strings.Contains(msg, "conflicting attributes") ||
+				strings.Contains(msg, "support and contradict") {
+				return fmt.Errorf("add evidence to run %s: %w: %v", runID, ErrConflict, queryErr)
 			}
 			return fmt.Errorf("add evidence to run %s: %w", runID, queryErr)
 		}
@@ -644,7 +667,7 @@ LET $locked = UPDATE $rid SET staged_revision += 1
       AND store_schema_version = $store_schema_version
 	      AND evidence_format_version = $evidence_format_version
 		  AND run_id = record::id(id)
-		  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		  AND published_key = NONE
       AND retention_quarantined = false RETURN AFTER;
 LET $assertion_count = array::len(SELECT VALUE assertion_id FROM assertion WHERE run_id = $run_id);
@@ -679,7 +702,7 @@ RETURN IF $ready THEN
     (UPDATE $rid SET status = 'published', published_key = $published_key,
 			published_at = $now, coverage = $coverage
 			WHERE status = 'staged' AND run_id = record::id(id)
-			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+			  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 			  AND published_key = NONE RETURN AFTER)
     ELSE [] END;
 COMMIT;`
@@ -733,6 +756,7 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 		"evidence_format_version":     evidenceFormatVersion,
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
+	addProbeVars(vars, runID)
 	for attempt := 0; ; attempt++ {
 		results, queryErr := surrealdb.Query[[]extractionRunRec](ctx, s.db, publishExtractionRunSQL, vars)
 		if queryErr != nil {
@@ -757,21 +781,21 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 
 func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 	for attempt := 0; ; attempt++ {
+		vars := map[string]any{
+			"rid":                     extractionRunID(runID),
+			"store_schema_version":    evidenceStoreSchemaVersion,
+			"evidence_format_version": evidenceFormatVersion,
+		}
+		addProbeVars(vars, runID)
 		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
 			`UPDATE $rid SET status = 'aborted', published_key = NONE
 				WHERE status = 'staged'
 				  AND store_schema_version = $store_schema_version
 					  AND evidence_format_version = $evidence_format_version
 					  AND run_id = record::id(id)
-					  AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+					  AND `+evidenceRunProbeHasNoClaimantSQL+`
 					  AND published_key = NONE
-				  AND retention_quarantined = false RETURN AFTER`,
-			map[string]any{
-				"rid":                         extractionRunID(runID),
-				"store_schema_version":        evidenceStoreSchemaVersion,
-				"evidence_format_version":     evidenceFormatVersion,
-				"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
-			})
+				  AND retention_quarantined = false RETURN AFTER`, vars)
 		if err != nil {
 			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
@@ -934,29 +958,29 @@ func (s *Surreal) ResolveEvidence(ctx context.Context, repo, runID, atomID strin
 		!utf8.ValidString(runID) || !utf8.ValidString(atomID) {
 		return nil, errors.New("resolve evidence: invalid bounded identifier")
 	}
+	vars := map[string]any{
+		"repo": repo, "run": runID, "run_rid": extractionRunID(runID), "atom": atomID,
+		"limit":                   maxEvidenceOccurrences + 1,
+		"evidence_format_version": evidenceFormatVersion,
+	}
+	addProbeVars(vars, runID)
 	results, err := surrealdb.Query[[]evidenceResolutionRec](ctx, s.db,
 		`SELECT * FROM snapshot_evidence
             WHERE repo = $repo AND run_id = $run AND atom_id = $atom
 	              AND commit IN (SELECT VALUE commit FROM extraction_run
 					  WHERE id = $run_rid AND run_id = $run AND repo = $repo
 						AND run_id = record::id(id)
-						AND `+evidenceRunHasNoAmbiguousClaimantSQL+`)
+						AND `+evidenceRunProbeHasNoClaimantSQL+`)
 				  AND run_id IN (SELECT VALUE run_id FROM extraction_run
 					  WHERE id = $run_rid AND run_id = $run AND repo = $repo
 						AND run_id = record::id(id)
-						AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
+						AND `+evidenceRunProbeHasNoClaimantSQL+`
 						AND evidence_format_version = $evidence_format_version
 					AND retention_quarantined = false
 					AND ((status = 'published' AND published_key != NONE) OR
 						(status = 'superseded' AND published_key = NONE AND run_id IN
 							(SELECT VALUE run_id FROM evidence_pin WHERE run_id = $run))))
-            ORDER BY occurrence_id LIMIT $limit FETCH atom_record`,
-		map[string]any{
-			"repo": repo, "run": runID, "run_rid": extractionRunID(runID), "atom": atomID,
-			"limit":                       maxEvidenceOccurrences + 1,
-			"evidence_format_version":     evidenceFormatVersion,
-			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
-		})
+            ORDER BY occurrence_id LIMIT $limit FETCH atom_record`, vars)
 	if err != nil {
 		return nil, fmt.Errorf("resolve evidence: %w", err)
 	}
@@ -999,7 +1023,7 @@ LET $locked = UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
 		OR (status = 'superseded' AND published_key = NONE))
 		  AND evidence_format_version = $evidence_format_version
 		  AND run_id = record::id(id)
-		  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 	      AND retention_quarantined = false RETURN AFTER;
 RETURN IF array::len($locked) = 1 THEN
     (UPSERT $pin SET pin_key = $pin_key, run_id = $run_id, kind = $kind,
@@ -1019,9 +1043,9 @@ func (s *Surreal) PinRun(ctx context.Context, runID, kind string) error {
 	vars := map[string]any{
 		"rid": extractionRunID(runID), "pin": evidencePinRecordID(runID, kind),
 		"pin_key": pinKey, "run_id": runID, "kind": kind, "now": time.Now().UTC(),
-		"evidence_format_version":     evidenceFormatVersion,
-		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		"evidence_format_version": evidenceFormatVersion,
 	}
+	addProbeVars(vars, runID)
 	for attempt := 0; ; attempt++ {
 		results, err := surrealdb.Query[[]evidencePinRec](ctx, s.db, pinRunSQL, vars)
 		if err != nil {
@@ -1062,7 +1086,7 @@ LET $locked = UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
 		AND evidence_format_version = $evidence_format_version
 		AND retention_quarantined = false
 		AND run_id = record::id(id)
-		AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		AND published_key = NONE
     AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0 RETURN AFTER;
 LET $gone = SELECT atom_id FROM snapshot_evidence
@@ -1127,9 +1151,9 @@ func (s *Surreal) SweepEvidence(ctx context.Context, now time.Time, staleStagedA
 		runID := candidate.RunID
 		vars := map[string]any{
 			"rid": *candidate.RecID, "run": runID, "cutoff": cutoff,
-			"evidence_format_version":     evidenceFormatVersion,
-			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+			"evidence_format_version": evidenceFormatVersion,
 		}
+		addProbeVars(vars, runID)
 		for attempt := 0; ; attempt++ {
 			results, queryErr := surrealdb.Query[[]evidenceSweepResultRec](ctx, s.db, sweepRunSQL, vars)
 			if queryErr != nil {

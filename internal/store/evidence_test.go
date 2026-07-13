@@ -364,11 +364,13 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 	if err := s.AddEvidence(ctx, run.ID, atoms, assocs, assertions); err != nil {
 		t.Fatalf("add: %v", err)
 	}
-	if err := s.AddEvidence(ctx, run.ID, atoms, assocs, []store.Assertion{duplicate}); err == nil {
-		t.Fatal("cross-batch support/contradiction merge accepted")
+	// Both THROWs are deterministic: they must surface as ErrConflict after a
+	// single attempt, not retry to the queue cap on the "conflicting" text.
+	if err := s.AddEvidence(ctx, run.ID, atoms, assocs, []store.Assertion{duplicate}); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("cross-batch support/contradiction merge = %v, want ErrConflict", err)
 	}
-	if err := s.AddEvidence(ctx, run.ID, atoms, assocs, []store.Assertion{attributeConflict}); err == nil {
-		t.Fatal("cross-batch assertion attribute mutation accepted")
+	if err := s.AddEvidence(ctx, run.ID, atoms, assocs, []store.Assertion{attributeConflict}); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("cross-batch assertion attribute mutation = %v, want ErrConflict", err)
 	}
 	if err := s.AddEvidence(ctx, run.ID, atoms, assocs, assertions); err != nil {
 		t.Fatalf("exact retry: %v", err)
