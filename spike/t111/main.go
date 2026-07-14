@@ -54,7 +54,7 @@ func main() {
 			fatal("proto: %v", err)
 		}
 		if !*protoOnly {
-			goFacts, err := extractGoGRPC(entry.Name, entry.Commit, root)
+			goFacts, err := extractGoGRPC(entry.Name, entry.Commit, root, entry.GoBuildTags)
 			if err != nil {
 				fatal("go: %v", err)
 			}
@@ -119,7 +119,7 @@ func main() {
 				decls = append(decls, f)
 			}
 		}
-		facts, err := extractFieldRefs(entry.Name, entry.Commit, root, decls)
+		facts, err := extractFieldRefs(entry.Name, entry.Commit, root, decls, entry.GoBuildTags)
 		if err != nil {
 			fatal("fields: %v", err)
 		}
@@ -221,7 +221,7 @@ func extractionSnapshot(lock, corpusDir, system string) (*CorpusEntry, string, s
 	if err != nil {
 		return nil, "", "", nil, err
 	}
-	snapshot, cleanup, err := snapshotCorpus(root, entry.Commit)
+	snapshot, cleanup, err := snapshotCorpus(root, *entry)
 	if err != nil {
 		return nil, "", "", nil, fmt.Errorf("snapshot corpus %s: %w", system, err)
 	}
@@ -229,6 +229,7 @@ func extractionSnapshot(lock, corpusDir, system string) (*CorpusEntry, string, s
 }
 
 func validateAndPublish(entry CorpusEntry, corpusRoot, snapshot, path string, facts []Fact) error {
+	sortFacts(facts)
 	if err := validateSnapshotFacts(entry, snapshot, facts); err != nil {
 		return fmt.Errorf("validate extracted facts: %w", err)
 	}
@@ -243,6 +244,28 @@ func validateAndPublish(entry CorpusEntry, corpusRoot, snapshot, path string, fa
 		return fmt.Errorf("publish facts: %w", err)
 	}
 	return nil
+}
+
+func sortFacts(facts []Fact) {
+	sort.Slice(facts, func(i, j int) bool {
+		a, b := facts[i], facts[j]
+		if a.Path != b.Path {
+			return a.Path < b.Path
+		}
+		if a.StartByte != b.StartByte {
+			return a.StartByte < b.StartByte
+		}
+		if a.EndByte != b.EndByte {
+			return a.EndByte < b.EndByte
+		}
+		if a.Predicate != b.Predicate {
+			return a.Predicate < b.Predicate
+		}
+		if a.Object != b.Object {
+			return a.Object < b.Object
+		}
+		return a.AtomID < b.AtomID
+	})
 }
 
 type publishHooks struct {

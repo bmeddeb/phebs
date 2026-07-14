@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -118,8 +121,161 @@ func TestRecursiveTreeRejectsGitlink(t *testing.T) {
 	commit := gitTestOutput(t, repo, "rev-parse", "HEAD")
 	gitTestOutput(t, repo, "update-index", "--add", "--cacheinfo", "160000,"+commit+",nested")
 	tree := gitTestOutput(t, repo, "write-tree")
-	if _, err := recursiveTree(repo, tree); err == nil || !strings.Contains(err.Error(), "gitlink") {
+	if _, err := recursiveTree(repo, tree, nil); err == nil || !strings.Contains(err.Error(), "gitlink") {
 		t.Fatalf("gitlink was not rejected: %v", err)
+	}
+}
+
+func TestRecursiveTreeAllowsOnlyExactReviewedGitlink(t *testing.T) {
+	repo := initTestRepository(t)
+	commit := gitTestOutput(t, repo, "rev-parse", "HEAD")
+	gitTestOutput(t, repo, "update-index", "--add", "--cacheinfo", "160000,"+commit+",nested")
+	tree := gitTestOutput(t, repo, "write-tree")
+	exclusion := CorpusGitlinkExclusion{Path: "nested", ObjectID: commit, Reason: "reviewed non-code fixture"}
+	entries, err := recursiveTree(repo, tree, []CorpusGitlinkExclusion{exclusion})
+	if err != nil {
+		t.Fatalf("exact reviewed gitlink rejected: %v", err)
+	}
+	for _, entry := range entries {
+		if entry.path == exclusion.Path {
+			t.Fatal("excluded gitlink was returned for materialization")
+		}
+	}
+	wrong := exclusion
+	wrong.ObjectID = strings.Repeat("0", 40)
+	if _, err := recursiveTree(repo, tree, []CorpusGitlinkExclusion{wrong}); err == nil || !strings.Contains(err.Error(), "changed") {
+		t.Fatalf("gitlink object mismatch was not rejected: %v", err)
+	}
+	missing := exclusion
+	missing.Path = "elsewhere"
+	if _, err := recursiveTree(repo, tree, []CorpusGitlinkExclusion{missing}); err == nil || !strings.Contains(err.Error(), "not explicitly excluded") {
+		t.Fatalf("undeclared gitlink was not rejected before unused policy: %v", err)
+	}
+}
+
+func TestCorpusPolicyValidation(t *testing.T) {
+	valid := CorpusEntry{
+		Name: "repo", GitURL: "https://example.test/repo", Commit: strings.Repeat("a", 40),
+		ExcludedGitlinks: []CorpusGitlinkExclusion{{
+			Path: "docs/theme", ObjectID: strings.Repeat("b", 40), Reason: "reviewed non-code tree",
+		}},
+		GoBuildTags: []string{"unit"},
+	}
+	if err := validateCorpusEntry(valid); err != nil {
+		t.Fatalf("valid corpus policy rejected: %v", err)
+	}
+	bad := valid
+	bad.GoBuildTags = []string{"unit,prod"}
+	if err := validateCorpusEntry(bad); err == nil {
+		t.Fatal("ambiguous Go build tags accepted")
+	}
+	bad = valid
+	bad.ExcludedGitlinks[0].Reason = ""
+	if err := validateCorpusEntry(bad); err == nil {
+		t.Fatal("gitlink exclusion without rationale accepted")
+	}
+}
+
+func TestResolveRegisteredServiceRequiresUniqueFullProtoName(t *testing.T) {
+	dir := t.TempDir()
+	one := filepath.Join(dir, "one_grpc.pb.go")
+	if err := os.WriteFile(one, []byte(`package pb
+var Cart_ServiceDesc = grpc.ServiceDesc{ServiceName: "shop.v1.Cart"}
+var Other_ServiceDesc = grpc.ServiceDesc{ServiceName: "shop.v1.Other"}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolveRegisteredService([]string{one}, "Cart"); got != "shop.v1.Cart" {
+		t.Fatalf("registered service = %q, want fully-qualified proto name", got)
+	}
+	two := filepath.Join(dir, "two_grpc.pb.go")
+	if err := os.WriteFile(two, []byte(`package pb
+var Cart2_ServiceDesc = grpc.ServiceDesc{ServiceName: "legacy.Cart"}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolveRegisteredService([]string{one, two}, "Cart"); got != "" {
+		t.Fatalf("ambiguous registered service did not abstain: %q", got)
+	}
+}
+
+func TestServiceNameLiteralRequiresStaticProtoIdentity(t *testing.T) {
+	expression, err := parser.ParseExpr(`grpc.ServiceDesc{ServiceName: "shop.v1.Cart"}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	literal, ok := expression.(*ast.CompositeLit)
+	if !ok {
+		t.Fatalf("parsed expression = %T", expression)
+	}
+	if got := serviceNameLiteral(literal); got != "shop.v1.Cart" {
+		t.Fatalf("service name = %q", got)
+	}
+	dynamic, err := parser.ParseExpr(`grpc.ServiceDesc{ServiceName: serviceName}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := serviceNameLiteral(dynamic.(*ast.CompositeLit)); got != "" {
+		t.Fatalf("dynamic service name did not abstain: %q", got)
+	}
+	if validProtoServiceName("shop..Cart") || validProtoServiceName("9shop.Cart") {
+		t.Fatal("invalid proto service identity accepted")
+	}
+}
+
+func TestRegisterHelperForwarderIsNotAnImplementationSite(t *testing.T) {
+	source := `package pb
+func RegisterCartServer(s Registrar, srv CartServer) {
+	s.RegisterService(&Cart_ServiceDesc, srv)
+}
+
+func TestPackageClosureAndFactOrderAreDeterministic(t *testing.T) {
+	depA := &packages.Package{ID: "a", PkgPath: "example/a"}
+	depZ := &packages.Package{ID: "z", PkgPath: "example/z"}
+	root := &packages.Package{
+		ID: "root", PkgPath: "example/root",
+		Imports: map[string]*packages.Package{"example/z": depZ, "example/a": depA},
+	}
+	closure := packageClosure([]*packages.Package{root})
+	gotIDs := make([]string, len(closure))
+	for i, pkg := range closure {
+		gotIDs[i] = pkg.ID
+	}
+	if got := strings.Join(gotIDs, ","); got != "a,root,z" {
+		t.Fatalf("package closure order = %q", got)
+	}
+	facts := []Fact{
+		{Path: "z.go", StartByte: 1, AtomID: "z"},
+		{Path: "a.go", StartByte: 9, AtomID: "b"},
+		{Path: "a.go", StartByte: 2, AtomID: "a"},
+	}
+	sortFacts(facts)
+	if facts[0].AtomID != "a" || facts[1].AtomID != "b" || facts[2].AtomID != "z" {
+		t.Fatalf("fact order = %+v", facts)
+	}
+}
+func install(s Registrar, impl CartServer) {
+	s.RegisterService(&Cart_ServiceDesc, impl)
+}`
+	file, err := parser.ParseFile(token.NewFileSet(), "cart.go", source, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forwarders := registerHelperForwarders(file)
+	var direct []token.Pos
+	ast.Inspect(file, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		selector, ok := call.Fun.(*ast.SelectorExpr)
+		if ok && selector.Sel.Name == "RegisterService" {
+			direct = append(direct, call.Pos())
+		}
+		return true
+	})
+	if len(direct) != 2 || !forwarders[direct[0]] || forwarders[direct[1]] {
+		t.Fatalf("forwarder classification = %v for calls %v", forwarders, direct)
 	}
 }
 
@@ -185,6 +341,44 @@ func TestSemanticInputsVerifyAndBindExternalModule(t *testing.T) {
 	}
 	if _, err := verifyPackageSemanticInputs(root, "0123456789abcdef", pkgs); err == nil || !strings.Contains(err.Error(), "content mismatch") {
 		t.Fatalf("tampered module was not rejected: %v", err)
+	}
+}
+
+func TestSemanticInputsBindVendoredModuleInsideSnapshot(t *testing.T) {
+	root := realTempDir(t)
+	vendorDir := filepath.Join(root, "vendor", "example.test", "dep", "sub")
+	if err := os.MkdirAll(vendorDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	source := filepath.Join(vendorDir, "dep.go")
+	if err := os.WriteFile(source, []byte("package sub\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg := &packages.Package{
+		PkgPath:         "example.test/dep/sub",
+		GoFiles:         []string{source},
+		CompiledGoFiles: []string{source},
+		Module:          &packages.Module{Path: "example.test/dep", Version: "v1.2.3"},
+	}
+	digest, err := verifyPackageSemanticInputs(root, "0123456789abcdef", []*packages.Package{pkg})
+	if err != nil {
+		t.Fatalf("pinned vendored module rejected: %v", err)
+	}
+	if !strings.HasPrefix(digest, "sha256:") {
+		t.Fatalf("vendored module digest = %q", digest)
+	}
+	ordinary := filepath.Join(root, "ordinary")
+	if err := os.MkdirAll(ordinary, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ordinarySource := filepath.Join(ordinary, "dep.go")
+	if err := os.WriteFile(ordinarySource, []byte("package dep\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	pkg.GoFiles = []string{ordinarySource}
+	pkg.CompiledGoFiles = nil
+	if _, err := verifyPackageSemanticInputs(root, "0123456789abcdef", []*packages.Package{pkg}); err == nil || !strings.Contains(err.Error(), "not below vendor/") {
+		t.Fatalf("unrooted module with empty Dir was accepted: %v", err)
 	}
 }
 

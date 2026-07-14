@@ -80,6 +80,8 @@ func TestClassifyRole(t *testing.T) {
 		{"vendor/pb/x_mock.go", mock, roleVendor}, // vendor wins
 		{"internal/mocks/client_mock.go", mock, roleMock},
 		{"internal/foo/bar_mock.go", plain, roleMock}, // path signal alone
+		{"internal/fake/client.go", plain, roleMock},
+		{"internal/foo/client_fake.go", plain, roleMock},
 		{"genproto/demo_grpc.pb.go", gen, roleGenerated},
 		{"internal/svc/handler_test.go", plain, roleTest},
 		{"internal/svc/handler.go", plain, roleProduction},

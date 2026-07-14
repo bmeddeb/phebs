@@ -58,10 +58,12 @@ func pathHasMockSegment(relPath string) bool {
 	parts := strings.Split(relPath, "/")
 	for i, seg := range parts {
 		isFile := i == len(parts)-1
-		if seg == "mock" || seg == "mocks" || seg == "mocksgen" {
+		if seg == "mock" || seg == "mocks" || seg == "mocksgen" || seg == "fake" || seg == "fakes" {
 			return true
 		}
-		if isFile && (strings.HasPrefix(seg, "mock_") || strings.HasSuffix(seg, "_mock.go") || strings.HasSuffix(seg, "_mock_test.go")) {
+		if isFile && (strings.HasPrefix(seg, "mock_") || strings.HasPrefix(seg, "fake_") ||
+			strings.HasSuffix(seg, "_mock.go") || strings.HasSuffix(seg, "_mock_test.go") ||
+			strings.HasSuffix(seg, "_fake.go") || strings.HasSuffix(seg, "_fake_test.go")) {
 			return true
 		}
 	}

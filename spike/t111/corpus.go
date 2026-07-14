@@ -28,10 +28,22 @@ var (
 // CorpusEntry pins one system to an exact commit. corpus.lock.json is the
 // committed source of truth; clones land in spike/t111/corpus/ (gitignored).
 type CorpusEntry struct {
-	Name   string `json:"name"`
-	GitURL string `json:"git_url"`
-	Commit string `json:"commit"`
-	Note   string `json:"note,omitempty"`
+	Name             string                   `json:"name"`
+	GitURL           string                   `json:"git_url"`
+	Commit           string                   `json:"commit"`
+	Note             string                   `json:"note,omitempty"`
+	ExcludedGitlinks []CorpusGitlinkExclusion `json:"excluded_gitlinks,omitempty"`
+	GoBuildTags      []string                 `json:"go_build_tags,omitempty"`
+}
+
+// CorpusGitlinkExclusion is a reviewed boundary in the benchmark population.
+// Both the path and the gitlink object ID must match the pinned parent tree;
+// moving or updating the gitlink therefore invalidates the lock instead of
+// silently changing which content the harness omits.
+type CorpusGitlinkExclusion struct {
+	Path     string `json:"path"`
+	ObjectID string `json:"object_id"`
+	Reason   string `json:"reason"`
 }
 
 func loadCorpus(lockPath string) ([]CorpusEntry, error) {
@@ -43,7 +55,71 @@ func loadCorpus(lockPath string) ([]CorpusEntry, error) {
 	if err := json.Unmarshal(b, &entries); err != nil {
 		return nil, fmt.Errorf("parse corpus lock: %w", err)
 	}
+	seen := make(map[string]bool, len(entries))
+	for i := range entries {
+		if err := validateCorpusEntry(entries[i]); err != nil {
+			return nil, fmt.Errorf("corpus lock entry %d: %w", i+1, err)
+		}
+		if seen[entries[i].Name] {
+			return nil, fmt.Errorf("corpus lock entry %d: duplicate system %q", i+1, entries[i].Name)
+		}
+		seen[entries[i].Name] = true
+	}
 	return entries, nil
+}
+
+func validateCorpusEntry(entry CorpusEntry) error {
+	if entry.Name == "" || entry.GitURL == "" {
+		return fmt.Errorf("name and git_url are required")
+	}
+	if !isLowerHexObjectID(entry.Commit) {
+		return fmt.Errorf("commit %q is not a full lowercase SHA-1 object ID", entry.Commit)
+	}
+	seenPaths := make(map[string]bool, len(entry.ExcludedGitlinks))
+	for _, exclusion := range entry.ExcludedGitlinks {
+		clean := pathpkg.Clean(exclusion.Path)
+		if clean != exclusion.Path || clean == "." || pathpkg.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, "../") {
+			return fmt.Errorf("invalid excluded gitlink path %q", exclusion.Path)
+		}
+		if !isLowerHexObjectID(exclusion.ObjectID) {
+			return fmt.Errorf("excluded gitlink %q has invalid object ID %q", exclusion.Path, exclusion.ObjectID)
+		}
+		if strings.TrimSpace(exclusion.Reason) == "" {
+			return fmt.Errorf("excluded gitlink %q has no review rationale", exclusion.Path)
+		}
+		if seenPaths[exclusion.Path] {
+			return fmt.Errorf("duplicate excluded gitlink path %q", exclusion.Path)
+		}
+		seenPaths[exclusion.Path] = true
+	}
+	seenTags := make(map[string]bool, len(entry.GoBuildTags))
+	for _, tag := range entry.GoBuildTags {
+		if tag == "" || strings.ContainsAny(tag, ", \t\r\n") {
+			return fmt.Errorf("invalid Go build tag %q", tag)
+		}
+		for _, r := range tag {
+			if (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9') && r != '_' && r != '.' {
+				return fmt.Errorf("invalid Go build tag %q", tag)
+			}
+		}
+		if seenTags[tag] {
+			return fmt.Errorf("duplicate Go build tag %q", tag)
+		}
+		seenTags[tag] = true
+	}
+	return nil
+}
+
+func isLowerHexObjectID(value string) bool {
+	if len(value) != 40 {
+		return false
+	}
+	for _, r := range value {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // syncCorpus materializes each entry at its pinned commit via a shallow
@@ -144,11 +220,11 @@ func verifyCorpus(root, pinnedCommit string) error {
 // working tree. Gitlinks are rejected because their content is not identified
 // by the parent tree alone. In-tree symlinks are created only after every blob
 // path and target has been checked to remain inside the snapshot.
-func snapshotCorpus(root, pinnedCommit string) (snapshot string, cleanup func(), err error) {
-	if err := verifyCorpus(root, pinnedCommit); err != nil {
+func snapshotCorpus(root string, entry CorpusEntry) (snapshot string, cleanup func(), err error) {
+	if err := verifyCorpus(root, entry.Commit); err != nil {
 		return "", nil, err
 	}
-	entries, err := recursiveTree(root, pinnedCommit)
+	entries, err := recursiveTree(root, entry.Commit, entry.ExcludedGitlinks)
 	if err != nil {
 		return "", nil, err
 	}
@@ -169,7 +245,11 @@ type treeEntry struct {
 	mode, objectType, objectID, path string
 }
 
-func recursiveTree(root, commit string) ([]treeEntry, error) {
+func recursiveTree(root, commit string, exclusions []CorpusGitlinkExclusion) ([]treeEntry, error) {
+	expected := make(map[string]CorpusGitlinkExclusion, len(exclusions))
+	for _, exclusion := range exclusions {
+		expected[exclusion.Path] = exclusion
+	}
 	raw, err := gitBytes(root, "ls-tree", "-rz", "--full-tree", commit)
 	if err != nil {
 		return nil, fmt.Errorf("list pinned tree: %w", err)
@@ -200,12 +280,31 @@ func recursiveTree(root, commit string) ([]treeEntry, error) {
 		seen[name] = true
 		entry := treeEntry{mode: meta[0], objectType: meta[1], objectID: meta[2], path: name}
 		if entry.mode == "160000" || entry.objectType == "commit" {
-			return nil, fmt.Errorf("gitlink %s is unsupported: recursive content is not pinned by the parent blob tree", name)
+			exclusion, ok := expected[name]
+			if !ok {
+				return nil, fmt.Errorf("gitlink %s is unsupported and not explicitly excluded: recursive content is not pinned by the parent blob tree", name)
+			}
+			if entry.mode != "160000" || entry.objectType != "commit" || entry.objectID != exclusion.ObjectID {
+				return nil, fmt.Errorf("excluded gitlink %s changed: got %s %s %s, want 160000 commit %s", name, entry.mode, entry.objectType, entry.objectID, exclusion.ObjectID)
+			}
+			delete(expected, name)
+			continue
+		}
+		if _, declared := expected[name]; declared {
+			return nil, fmt.Errorf("excluded gitlink %s is now %s %s, not a gitlink", name, entry.mode, entry.objectType)
 		}
 		if entry.objectType != "blob" || (entry.mode != "100644" && entry.mode != "100755" && entry.mode != "120000") {
 			return nil, fmt.Errorf("unsupported pinned tree entry %s (%s %s)", name, entry.mode, entry.objectType)
 		}
 		entries = append(entries, entry)
+	}
+	if len(expected) != 0 {
+		missing := make([]string, 0, len(expected))
+		for name := range expected {
+			missing = append(missing, name)
+		}
+		sort.Strings(missing)
+		return nil, fmt.Errorf("declared gitlink exclusions are absent from pinned tree: %s", strings.Join(missing, ", "))
 	}
 	return entries, nil
 }
@@ -327,7 +426,7 @@ func validateFacts(entry CorpusEntry, facts []Fact, readBlob func(string) ([]byt
 	cache := map[string][]byte{}
 	for i, fact := range facts {
 		if fact.Predicate == "EXTRACTION_FAILURE" || fact.Predicate == "LOAD_ERRORS" {
-			return fmt.Errorf("fact %d: extractor diagnostic %s: %s", i+1, fact.Predicate, fact.Object)
+			return fmt.Errorf("fact %d: extractor diagnostic %s in %s (%s): %s", i+1, fact.Predicate, fact.Subject, fact.Path, fact.Object)
 		}
 		if !validPredicates[fact.Predicate] {
 			return fmt.Errorf("fact %d: unsupported predicate %q", i+1, fact.Predicate)

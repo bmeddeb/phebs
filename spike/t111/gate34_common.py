@@ -15,6 +15,7 @@ import heapq
 import json
 import math
 import os
+import re
 import subprocess
 import tempfile
 from collections import defaultdict
@@ -24,9 +25,10 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 SCHEMA_VERSION = "t111-g34-v3"
 MANIFEST_SCHEMA_VERSION = "t111-g34-manifest-v1"
-BURN_LEDGER_SCHEMA_VERSION = "t111-burn-ledger-v1"
-PRODUCER_SCHEMA_VERSION = "t111-v3"
-PRODUCER_EXTRACTOR_VERSION = "spike-0.3.0"
+BURN_LEDGER_SCHEMA_VERSION = "t111-burn-ledger-v2"
+LEGACY_BURN_LEDGER_SCHEMA_VERSION = "t111-burn-ledger-v1"
+PRODUCER_SCHEMA_VERSION = "t111-v4"
+PRODUCER_EXTRACTOR_VERSION = "spike-0.5.0"
 
 VALID_TIERS = frozenset({"exact", "derived", "heuristic", "unresolved"})
 VALID_ACCESS = frozenset(
@@ -694,8 +696,36 @@ def _git(root: Path, args: Sequence[str], *, text: bool = False) -> bytes | str:
     return result.stdout
 
 
-def _tree_entries(root: Path, commit: str) -> list[tuple[str, str, str, str]]:
-    """Read a pinned tree and reject every gitlink before caller filtering."""
+def _gitlink_exclusions(
+    records: Sequence[Mapping[str, Any]] | None,
+) -> dict[str, Mapping[str, Any]]:
+    expected: dict[str, Mapping[str, Any]] = {}
+    for record in records or ():
+        if not isinstance(record, Mapping):
+            raise ValidationError(f"bad excluded_gitlinks record: {record!r}")
+        relative = str(record.get("path", ""))
+        object_id = str(record.get("object_id", ""))
+        reason = str(record.get("reason", "")).strip()
+        _safe_relative(relative)
+        if not re.fullmatch(r"[0-9a-f]{40}", object_id):
+            raise ValidationError(
+                f"excluded gitlink {relative!r} has invalid object ID {object_id!r}"
+            )
+        if not reason:
+            raise ValidationError(f"excluded gitlink {relative!r} has no review rationale")
+        if relative in expected:
+            raise ValidationError(f"duplicate excluded gitlink path: {relative!r}")
+        expected[relative] = dict(record)
+    return expected
+
+
+def _tree_entries(
+    root: Path,
+    commit: str,
+    excluded_gitlinks: Sequence[Mapping[str, Any]] | None = None,
+) -> list[tuple[str, str, str, str]]:
+    """Read a pinned tree, permitting only exact reviewed gitlink boundaries."""
+    expected = _gitlink_exclusions(excluded_gitlinks)
     raw = _git(root, ["ls-tree", "-r", "-z", commit])
     assert isinstance(raw, bytes)
     result: list[tuple[str, str, str, str]] = []
@@ -711,12 +741,30 @@ def _tree_entries(root: Path, commit: str) -> list[tuple[str, str, str, str]]:
         mode, kind, object_id = fields
         relative = path_bytes.decode("utf-8", errors="surrogateescape")
         _safe_relative(relative)
-        # A gitlink is a corpus boundary, even when its path does not have the
-        # suffix a particular scanner requested. Silently filtering it first
-        # would make the claimed population omit an unpinned nested repository.
         if mode == "160000" or kind == "commit":
-            raise ValidationError(f"refusing gitlink {relative!r} in pinned corpus {root}")
+            exclusion = expected.get(relative)
+            if exclusion is None:
+                raise ValidationError(
+                    f"refusing undeclared gitlink {relative!r} in pinned corpus {root}"
+                )
+            wanted = str(exclusion["object_id"])
+            if mode != "160000" or kind != "commit" or object_id != wanted:
+                raise ValidationError(
+                    f"excluded gitlink {relative!r} changed: got {mode} {kind} "
+                    f"{object_id}, want 160000 commit {wanted}"
+                )
+            del expected[relative]
+            continue
+        if relative in expected:
+            raise ValidationError(
+                f"excluded gitlink {relative!r} is now {mode} {kind}, not a gitlink"
+            )
         result.append((mode, kind, object_id, relative))
+    if expected:
+        raise ValidationError(
+            "declared gitlink exclusions are absent from pinned tree: "
+            + ", ".join(sorted(expected))
+        )
     return result
 
 
@@ -738,7 +786,7 @@ def verify_corpus(
             raise ValidationError(f"corpus {system} HEAD {head} != lock {expected}")
         if dirty:
             raise ValidationError(f"corpus {system} is dirty; benchmark input is not immutable")
-        _tree_entries(root, expected)
+        _tree_entries(root, expected, locks[system].get("excluded_gitlinks"))
 
 
 def git_blob(root: Path, commit: str, relative: str) -> bytes:
@@ -765,9 +813,16 @@ def git_blob(root: Path, commit: str, relative: str) -> bytes:
     return data
 
 
-def source_blobs(root: Path, commit: str, suffix: str = ".go") -> Iterator[tuple[str, bytes]]:
+def source_blobs(
+    root: Path,
+    commit: str,
+    suffix: str = ".go",
+    excluded_gitlinks: Sequence[Mapping[str, Any]] | None = None,
+) -> Iterator[tuple[str, bytes]]:
     entries: list[tuple[str, str]] = []
-    for mode, kind, object_id, relative in _tree_entries(root, commit):
+    for mode, kind, object_id, relative in _tree_entries(
+        root, commit, excluded_gitlinks
+    ):
         if not relative.endswith(suffix):
             continue
         if kind != "blob" or mode not in {"100644", "100755"}:
@@ -1270,7 +1325,9 @@ def _coordinate_digest(coordinates: Iterable[Mapping[str, Any]]) -> str:
     return sha256_bytes("".join(value + "\n" for value in encoded).encode("utf-8"))
 
 
-def load_burn_ledger(path: Path) -> tuple[list[dict[str, Any]], str]:
+def _load_legacy_burn_ledger(path: Path, ledger: Mapping[str, Any]) -> tuple[list[dict[str, Any]], str]:
+    """Load the historical path-referencing v1 ledger."""
+
     ledger = read_json(path)
     required = {
         "schema_version", "projection", "sources", "coordinate_count",
@@ -1282,7 +1339,7 @@ def load_burn_ledger(path: Path) -> tuple[list[dict[str, Any]], str]:
     supplied = unsigned.pop("ledger_digest")
     if supplied != digest_value(unsigned):
         raise ValidationError("burn ledger self-digest mismatch")
-    if ledger["schema_version"] != BURN_LEDGER_SCHEMA_VERSION:
+    if ledger["schema_version"] != LEGACY_BURN_LEDGER_SCHEMA_VERSION:
         raise ValidationError("unsupported burn ledger schema")
     sources = ledger["sources"]
     if not isinstance(sources, list) or not sources:
@@ -1302,6 +1359,237 @@ def load_burn_ledger(path: Path) -> tuple[list[dict[str, Any]], str]:
     if len(result) != ledger["coordinate_count"] or coordinate_digest != ledger["coordinates_sha256"]:
         raise ValidationError("burn coordinate projection does not match committed ledger")
     return result, coordinate_digest
+
+
+def _burn_cohort_coordinate(record: Mapping[str, Any]) -> dict[str, Any]:
+    if set(record) != {"system", "path", "start_line", "end_line"}:
+        raise ValidationError(f"bad burn cohort coordinate fields: {record!r}")
+    coordinate = _legacy_coordinate(record)
+    if coordinate is None:
+        raise ValidationError(f"bad burn cohort coordinate: {record!r}")
+    return coordinate
+
+
+def _burn_source_artifacts(
+    cohort_id: str, raw_artifacts: Any,
+) -> list[dict[str, Any]]:
+    """Validate and defensively normalize burn-cohort artifact provenance."""
+
+    if not isinstance(raw_artifacts, list):
+        raise ValidationError(f"{cohort_id}: invalid source artifact provenance")
+    normalized: list[dict[str, Any]] = []
+    for item in raw_artifacts:
+        if not (
+            isinstance(item, dict)
+            and set(item) == {"path", "records", "sha256"}
+            and isinstance(item["path"], str)
+            and _is_int(item["records"])
+            and item["records"] >= 0
+            and isinstance(item["sha256"], str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", item["sha256"])
+        ):
+            raise ValidationError(f"{cohort_id}: invalid source artifact provenance")
+        normalized.append(
+            {
+                "path": item["path"],
+                "records": item["records"],
+                "sha256": item["sha256"],
+            }
+        )
+    return normalized
+
+
+def build_burn_ledger(cohorts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Build a canonical, self-digested v2 burn-ledger document."""
+
+    normalized: list[dict[str, Any]] = []
+    projection: dict[str, dict[str, Any]] = {}
+    cohort_ids: set[str] = set()
+    for raw in cohorts:
+        cohort_id = raw.get("cohort_id")
+        if not isinstance(cohort_id, str) or not cohort_id or cohort_id in cohort_ids:
+            raise ValidationError("burn cohort IDs must be unique nonempty strings")
+        cohort_ids.add(cohort_id)
+        input_binding = raw.get("input_binding")
+        if input_binding is not None and not (
+            isinstance(input_binding, str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", input_binding)
+        ):
+            raise ValidationError(f"{cohort_id}: invalid input binding")
+        source_commits = raw.get("source_commits")
+        if (
+            not isinstance(source_commits, dict)
+            or not source_commits
+            or not all(
+                isinstance(system, str)
+                and system
+                and isinstance(commit, str)
+                and re.fullmatch(r"[0-9a-f]{40}", commit)
+                for system, commit in source_commits.items()
+            )
+        ):
+            raise ValidationError(f"{cohort_id}: invalid source commits")
+        source_artifacts = _burn_source_artifacts(
+            cohort_id, raw.get("source_artifacts", [])
+        )
+        coordinates_by_key: dict[str, dict[str, Any]] = {}
+        raw_coordinates = raw.get("coordinates")
+        if not isinstance(raw_coordinates, Sequence) or isinstance(
+            raw_coordinates, (str, bytes)
+        ):
+            raise ValidationError(f"{cohort_id}: burn cohort has no coordinates")
+        for item in raw_coordinates:
+            if not isinstance(item, Mapping):
+                raise ValidationError(f"{cohort_id}: malformed coordinate")
+            coordinate = _burn_cohort_coordinate(item)
+            if coordinate["system"] not in source_commits:
+                raise ValidationError(
+                    f"{cohort_id}: coordinate system has no source commit: "
+                    f"{coordinate['system']}"
+                )
+            coordinates_by_key[canonical_json(coordinate)] = coordinate
+        coordinates = [coordinates_by_key[key] for key in sorted(coordinates_by_key)]
+        if not coordinates:
+            raise ValidationError(f"{cohort_id}: burn cohort has no coordinates")
+        digest = _coordinate_digest(coordinates)
+        for coordinate in coordinates:
+            projection[canonical_json(coordinate)] = coordinate
+        normalized.append(
+            {
+                "cohort_id": cohort_id,
+                "input_binding": input_binding,
+                "source_commits": dict(sorted(source_commits.items())),
+                "source_artifacts": source_artifacts,
+                "coordinates": coordinates,
+                "coordinate_count": len(coordinates),
+                "coordinates_sha256": digest,
+            }
+        )
+    if not normalized:
+        raise ValidationError("burn ledger has no cohorts")
+    normalized.sort(key=lambda row: row["cohort_id"])
+    projected = [projection[key] for key in sorted(projection)]
+    unsigned = {
+        "schema_version": BURN_LEDGER_SCHEMA_VERSION,
+        "projection": (
+            "system,path,start_line,end_line; disclosed labeler coordinates; "
+            "predicates and values deliberately ignored"
+        ),
+        "cohorts": normalized,
+        "coordinate_count": len(projected),
+        "coordinates_sha256": _coordinate_digest(projected),
+    }
+    return {**unsigned, "ledger_digest": digest_value(unsigned)}
+
+
+def load_burn_ledger_cohorts(path: Path) -> tuple[list[dict[str, Any]], str]:
+    """Load self-contained v2 burn cohorts with source-commit provenance."""
+
+    ledger = read_json(path)
+    required = {
+        "schema_version", "projection", "cohorts", "coordinate_count",
+        "coordinates_sha256", "ledger_digest",
+    }
+    if set(ledger) != required:
+        raise ValidationError("burn ledger fields are incomplete or unexpected")
+    unsigned = dict(ledger)
+    supplied = unsigned.pop("ledger_digest")
+    if supplied != digest_value(unsigned):
+        raise ValidationError("burn ledger self-digest mismatch")
+    if ledger["schema_version"] != BURN_LEDGER_SCHEMA_VERSION:
+        raise ValidationError("unsupported burn ledger schema")
+    raw_cohorts = ledger["cohorts"]
+    if not isinstance(raw_cohorts, list) or not raw_cohorts:
+        raise ValidationError("burn ledger has no cohorts")
+    cohorts: list[dict[str, Any]] = []
+    cohort_ids: set[str] = set()
+    projection: dict[str, dict[str, Any]] = {}
+    for raw in raw_cohorts:
+        if not isinstance(raw, dict) or set(raw) != {
+            "cohort_id", "input_binding", "source_commits", "source_artifacts",
+            "coordinates", "coordinate_count", "coordinates_sha256",
+        }:
+            raise ValidationError("malformed burn cohort")
+        cohort_id = raw["cohort_id"]
+        if not isinstance(cohort_id, str) or not cohort_id or cohort_id in cohort_ids:
+            raise ValidationError("burn cohort IDs must be unique nonempty strings")
+        cohort_ids.add(cohort_id)
+        input_binding = raw["input_binding"]
+        if input_binding is not None and not (
+            isinstance(input_binding, str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", input_binding)
+        ):
+            raise ValidationError(f"{cohort_id}: invalid input binding")
+        source_commits = raw["source_commits"]
+        if (
+            not isinstance(source_commits, dict)
+            or not source_commits
+            or not all(
+                isinstance(system, str)
+                and system
+                and isinstance(commit, str)
+                and re.fullmatch(r"[0-9a-f]{40}", commit)
+                for system, commit in source_commits.items()
+            )
+        ):
+            raise ValidationError(f"{cohort_id}: invalid source commits")
+        source_artifacts = _burn_source_artifacts(cohort_id, raw["source_artifacts"])
+        raw_coordinates = raw["coordinates"]
+        if not isinstance(raw_coordinates, list) or not raw_coordinates:
+            raise ValidationError(f"{cohort_id}: burn cohort has no coordinates")
+        unique: dict[str, dict[str, Any]] = {}
+        for item in raw_coordinates:
+            if not isinstance(item, dict):
+                raise ValidationError(f"{cohort_id}: malformed coordinate")
+            coordinate = _burn_cohort_coordinate(item)
+            if coordinate["system"] not in source_commits:
+                raise ValidationError(
+                    f"{cohort_id}: coordinate system has no source commit: "
+                    f"{coordinate['system']}"
+                )
+            unique[canonical_json(coordinate)] = coordinate
+        coordinates = [unique[key] for key in sorted(unique)]
+        digest = _coordinate_digest(coordinates)
+        if (
+            len(coordinates) != raw["coordinate_count"]
+            or digest != raw["coordinates_sha256"]
+        ):
+            raise ValidationError(f"{cohort_id}: coordinate projection mismatch")
+        for coordinate in coordinates:
+            projection[canonical_json(coordinate)] = coordinate
+        cohorts.append(
+            {
+                "cohort_id": cohort_id,
+                "input_binding": input_binding,
+                "source_commits": dict(sorted(source_commits.items())),
+                "source_artifacts": source_artifacts,
+                "coordinates": coordinates,
+                "coordinate_count": len(coordinates),
+                "coordinates_sha256": digest,
+            }
+        )
+    projected = [projection[key] for key in sorted(projection)]
+    projected_digest = _coordinate_digest(projected)
+    if (
+        len(projected) != ledger["coordinate_count"]
+        or projected_digest != ledger["coordinates_sha256"]
+    ):
+        raise ValidationError("burn coordinate projection does not match committed ledger")
+    return cohorts, projected_digest
+
+
+def load_burn_ledger(path: Path) -> tuple[list[dict[str, Any]], str]:
+    """Load either historical v1 or append-only self-contained v2 burn history."""
+
+    ledger = read_json(path)
+    if ledger.get("schema_version") == LEGACY_BURN_LEDGER_SCHEMA_VERSION:
+        return _load_legacy_burn_ledger(path, ledger)
+    cohorts, digest = load_burn_ledger_cohorts(path)
+    projection: dict[str, dict[str, Any]] = {}
+    for cohort in cohorts:
+        for coordinate in cohort["coordinates"]:
+            projection[canonical_json(coordinate)] = coordinate
+    return [projection[key] for key in sorted(projection)], digest
 
 
 def coordinate_for(record: Mapping[str, Any]) -> dict[str, Any]:

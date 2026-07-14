@@ -2,26 +2,41 @@
   {
     "name": "online-boutique",
     "git_url": "https://github.com/GoogleCloudPlatform/microservices-demo",
-    "commit": "ea0fcf429ff59d861867370d75586095dd253813",
+    "commit": "9a4616e77f0f9cbcbecaf27d711c38890dda1404",
     "note": "polyglot 11-service demo; per-service vendored generated proto copies; K8s + Helm + Kustomize; documented architecture diagram = ground-truth seed"
   },
   {
     "name": "temporal",
     "git_url": "https://github.com/temporalio/temporal",
-    "commit": "1d4be84b3771a03e870f09db74bee9e437469b0d",
-    "note": "multi-service Go monorepo (frontend/history/matching/worker) with internal gRPC; gomock mocks of clients; helm chart in a separate repo (identity conflicts)"
+    "commit": "962a6ed378f9fcc272c5a3dee3adb238c283eda7",
+    "note": "multi-service Go monorepo (frontend/history/matching/worker) with internal gRPC; gomock mocks of clients; helm chart in a separate repo (identity conflicts)",
+    "excluded_gitlinks": [
+      {
+        "path": "develop/docker-compose/grafana/provisioning/temporalio-dashboards",
+        "object_id": "590cbf37af8cef99387b2a1f88c163728b003ea4",
+        "reason": "Grafana dashboard provisioning assets only; no Go or proto candidate files. Exact omission is part of the locked benchmark population."
+      }
+    ]
   },
   {
     "name": "loki",
     "git_url": "https://github.com/grafana/loki",
-    "commit": "fbf98eb42291cd09cf019956a1812e35dbbadbbf",
-    "note": "single binary/image, many workload identities selected by -target; worst-case service/deployable identity scenario"
+    "commit": "0afa1a40c1df7431d64f28dabfefd646815f65b4",
+    "note": "single binary/image, many workload identities selected by -target; worst-case service/deployable identity scenario",
+    "excluded_gitlinks": [
+      {
+        "path": "operator/website/themes/doks",
+        "object_id": "14fe597271d6efc7d77461798f22a6af068300d2",
+        "reason": "Documentation website theme only; no Go or proto candidate files. Exact omission is part of the locked benchmark population."
+      }
+    ]
   },
   {
     "name": "dapr",
     "git_url": "https://github.com/dapr/dapr",
-    "commit": "1991f9484f4dd47502e7329c838ceae42f6ca179",
-    "note": "multiple deployables from one repo (daprd/operator/injector/placement/sentry/scheduler); sidecar identity twist (service.name vs app-id)"
+    "commit": "3352a18c62ec6890c432b34f9969ce8e8da1f6ef",
+    "note": "multiple deployables from one repo (daprd/operator/injector/placement/sentry/scheduler); sidecar identity twist (service.name vs app-id)",
+    "go_build_tags": ["unit"]
   },
   {
     "name": "temporal-helm",

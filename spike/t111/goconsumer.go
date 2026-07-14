@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -24,14 +26,14 @@ import (
 // the VTA pass, later), and dynamic invocation is out of scope. Failures to
 // load a module are emitted as EXTRACTION_FAILURE facts, not swallowed —
 // coverage honesty is gate 1.
-func extractGoGRPC(system, commit, root string) ([]Fact, error) {
+func extractGoGRPC(system, commit, root string, buildTags []string) ([]Fact, error) {
 	mods, err := findGoModules(root)
 	if err != nil {
 		return nil, fmt.Errorf("find modules: %w", err)
 	}
 	var facts []Fact
 	for _, mod := range mods {
-		modFacts, merr := extractModule(system, commit, root, mod)
+		modFacts, merr := extractModule(system, commit, root, mod, buildTags)
 		if merr != nil {
 			rel, _ := filepath.Rel(root, mod)
 			rel = filepath.ToSlash(rel)
@@ -79,7 +81,7 @@ type clientIface struct {
 	methods  map[string]string // method name → "/pkg.Service/Method" (tier exact) or "" (derived)
 }
 
-func extractModule(system, commit, root, modDir string) ([]Fact, error) {
+func extractModule(system, commit, root, modDir string, buildTags []string) ([]Fact, error) {
 	if err := validateLocalReplaces(root, modDir); err != nil {
 		return nil, err
 	}
@@ -87,13 +89,21 @@ func extractModule(system, commit, root, modDir string) ([]Fact, error) {
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
 			packages.NeedImports | packages.NeedDeps | packages.NeedTypes |
 			packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedModule,
-		Dir:   modDir,
-		Tests: true,
-		Env:   goPackageEnv(modDir),
+		Dir:        modDir,
+		Tests:      true,
+		Env:        goPackageEnv(modDir),
+		BuildFlags: packageBuildFlags(buildTags),
 	}
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
+	}
+	// A valid tooling-only module may contain only a go.mod (Loki's
+	// operator/.bingo). packages.Load returns an empty slice and nil error for
+	// ./... in that case. It has an exactly measured empty Go population, not
+	// an unbound semantic input or a hidden load failure.
+	if len(pkgs) == 0 {
+		return nil, nil
 	}
 	semanticInputs, err := verifyPackageSemanticInputs(root, commit, pkgs)
 	if err != nil {
@@ -106,20 +116,14 @@ func extractModule(system, commit, root, modDir string) ([]Fact, error) {
 	// across the whole dependency graph (generated code may live in deps,
 	// e.g. temporalio/api or vendored genproto).
 	clients := map[*types.TypeName]*clientIface{}
-	registers := map[types.Object]string{} // Register func obj → service name
-	seen := map[*packages.Package]bool{}
-	var index func(p *packages.Package)
-	index = func(p *packages.Package) {
-		if p == nil || seen[p] {
-			return
-		}
-		seen[p] = true
-		for _, imp := range p.Imports {
-			index(imp)
-		}
+	registers := map[types.Object]string{} // Register func obj → fully-qualified proto service
+	serviceDescs := map[types.Object]string{}
+	graph := packageClosure(pkgs)
+	for _, p := range graph {
 		if p.Types == nil {
-			return
+			continue
 		}
+		indexServiceDescriptors(p, serviceDescs)
 		scope := p.Types.Scope()
 		for _, name := range scope.Names() {
 			obj := scope.Lookup(name)
@@ -142,17 +146,21 @@ func extractModule(system, commit, root, modDir string) ([]Fact, error) {
 				strings.HasPrefix(name, "Register") && strings.HasSuffix(name, "Server") {
 				svc := strings.TrimSuffix(strings.TrimPrefix(name, "Register"), "Server")
 				if svc != "" && isRegisterShape(fn) {
-					registers[obj] = svc
+					// A Go symbol name is not contract identity. Generated
+					// ServiceDesc metadata carries the fully-qualified proto
+					// service; ambiguity or missing metadata abstains.
+					if full := resolveRegisteredService(p.GoFiles, svc); full != "" {
+						registers[obj] = full
+					}
 				}
 			}
 		}
 	}
-	for _, p := range pkgs {
-		index(p)
-	}
 	resolveFullMethods(clients)
 
-	// Pass 2: walk syntax of the module's own packages for call sites.
+	// Pass 2: walk every dependency package whose source is itself inside the
+	// pinned snapshot. This includes vendor/ packages, but excludes external
+	// module-cache source even though pass 1 may use it to resolve types.
 	var facts []Fact
 	digests := map[string]string{}
 	contents := map[string][]byte{}
@@ -173,13 +181,18 @@ func extractModule(system, commit, root, modDir string) ([]Fact, error) {
 	}
 
 	emitted := map[string]bool{} // dedupe test-variant double loads by atom+path
-	for _, p := range pkgs {
+	for _, p := range graph {
 		if p.TypesInfo == nil {
 			continue
 		}
-		modRel, _ := filepath.Rel(root, modDir)
-		subject := filepath.ToSlash(filepath.Join(modRel, strings.TrimPrefix(p.PkgPath, modulePath(p))))
 		for _, file := range p.Syntax {
+			filename := p.Fset.Position(file.Pos()).Filename
+			fileRel, inside := relativeWithin(root, filename)
+			if !inside {
+				continue
+			}
+			subject := filepath.ToSlash(filepath.Dir(fileRel))
+			registerForwarders := registerHelperForwarders(file)
 			ast.Inspect(file, func(n ast.Node) bool {
 				call, ok := n.(*ast.CallExpr)
 				if !ok {
@@ -189,15 +202,31 @@ func extractModule(system, commit, root, modDir string) ([]Fact, error) {
 				if !ok {
 					if id, ok2 := call.Fun.(*ast.Ident); ok2 {
 						if svc, ok3 := registers[p.TypesInfo.Uses[id]]; ok3 {
-							facts = appendUnique(facts, emitted, implementsFact(p, svc, subject, system, commit, root, call, fileInfo))
+							facts = appendUnique(facts, emitted, implementsFact(p, svc, subject, system, commit, root, call, fileInfo,
+								"go-grpc-register-v2", "registration=generated-helper"))
 						}
 					}
 					return true
 				}
 				// Register<Svc>Server called as pb.RegisterFooServer(...)
 				if svc, ok2 := registers[p.TypesInfo.Uses[sel.Sel]]; ok2 {
-					facts = appendUnique(facts, emitted, implementsFact(p, svc, subject, system, commit, root, call, fileInfo))
+					facts = appendUnique(facts, emitted, implementsFact(p, svc, subject, system, commit, root, call, fileInfo,
+						"go-grpc-register-v2", "registration=generated-helper"))
 					return true
+				}
+				// Hand-written direct registration is an implementation pin
+				// only when the grpc.ServiceDesc identity is statically exact.
+				// Generated Register<S>Server wrapper internals merely forward
+				// an implementation and are not separate implementation sites.
+				if isGRPCRegisterService(p.TypesInfo, sel) && len(call.Args) >= 2 && !registerForwarders[call.Pos()] {
+					rel, _, _, _, _, _, content := fileInfo(p.Fset, call.Pos(), call.End())
+					if classifyRole(rel, content) != roleGenerated {
+						if svc := registeredServiceFromExpr(p.TypesInfo, call.Args[0], serviceDescs); svc != "" {
+							facts = appendUnique(facts, emitted, implementsFact(p, svc, subject, system, commit, root, call, fileInfo,
+								"go-grpc-register-service-v1", "registration=direct-service-desc"))
+							return true
+						}
+					}
 				}
 				// Client interface method call.
 				selInfo, ok2 := p.TypesInfo.Selections[sel]
@@ -269,6 +298,78 @@ func extractModule(system, commit, root, modDir string) ([]Fact, error) {
 	return bindSemanticInputs(facts, semanticInputs), nil
 }
 
+func packageClosure(roots []*packages.Package) []*packages.Package {
+	seen := map[*packages.Package]bool{}
+	var visit func(*packages.Package)
+	visit = func(pkg *packages.Package) {
+		if pkg == nil || seen[pkg] {
+			return
+		}
+		seen[pkg] = true
+		imports := make([]string, 0, len(pkg.Imports))
+		for path := range pkg.Imports {
+			imports = append(imports, path)
+		}
+		sort.Strings(imports)
+		for _, path := range imports {
+			visit(pkg.Imports[path])
+		}
+	}
+	orderedRoots := append([]*packages.Package(nil), roots...)
+	sort.Slice(orderedRoots, func(i, j int) bool { return orderedRoots[i].ID < orderedRoots[j].ID })
+	for _, root := range orderedRoots {
+		visit(root)
+	}
+	result := make([]*packages.Package, 0, len(seen))
+	for pkg := range seen {
+		result = append(result, pkg)
+	}
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].ID != result[j].ID {
+			return result[i].ID < result[j].ID
+		}
+		return result[i].PkgPath < result[j].PkgPath
+	})
+	return result
+}
+
+// registerHelperForwarders marks the grpc.RegisterService call inside every
+// Register<S>Server helper. That wrapper body forwards an implementation; it
+// is not itself an application implementation-registration occurrence. The
+// structural rule also works for generated files under vendor/, whose role is
+// intentionally vendor rather than generated.
+func registerHelperForwarders(file *ast.File) map[token.Pos]bool {
+	positions := map[token.Pos]bool{}
+	for _, declaration := range file.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok || function.Body == nil || function.Name == nil ||
+			!strings.HasPrefix(function.Name.Name, "Register") || !strings.HasSuffix(function.Name.Name, "Server") {
+			continue
+		}
+		ast.Inspect(function.Body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if ok && selector.Sel.Name == "RegisterService" {
+				positions[call.Pos()] = true
+			}
+			return true
+		})
+	}
+	return positions
+}
+
+func packageBuildFlags(tags []string) []string {
+	if len(tags) == 0 {
+		return nil
+	}
+	ordered := append([]string(nil), tags...)
+	sort.Strings(ordered)
+	return []string{"-tags=" + strings.Join(ordered, ",")}
+}
+
 func modulePath(p *packages.Package) string {
 	if p.Module != nil {
 		return p.Module.Path
@@ -287,11 +388,136 @@ func appendUnique(facts []Fact, emitted map[string]bool, f Fact) []Fact {
 
 func implementsFact(p *packages.Package, svc, subject, system, commit, root string, call *ast.CallExpr,
 	fileInfo func(*token.FileSet, token.Pos, token.Pos) (string, int, int, int, int, string, []byte),
+	ruleID, detail string,
 ) Fact {
 	rel, sb, eb, sl, el, digest, content := fileInfo(p.Fset, call.Pos(), call.End())
 	role := classifyRole(rel, content)
 	return newFact("IMPLEMENTS_SERVICE", subject, svc, role, tierExact,
-		system, commit, rel, sb, eb, sl, el, "go-grpc-register-v1", digest, "")
+		system, commit, rel, sb, eb, sl, el, ruleID, digest, detail)
+}
+
+func isGRPCRegisterService(info *types.Info, selector *ast.SelectorExpr) bool {
+	selection := info.Selections[selector]
+	if selection == nil || selection.Kind() != types.MethodVal {
+		return false
+	}
+	obj := selection.Obj()
+	return obj != nil && obj.Name() == "RegisterService" && obj.Pkg() != nil && obj.Pkg().Path() == "google.golang.org/grpc"
+}
+
+func registeredServiceFromExpr(info *types.Info, expr ast.Expr, descriptors map[types.Object]string) string {
+	for {
+		switch value := expr.(type) {
+		case *ast.ParenExpr:
+			expr = value.X
+			continue
+		case *ast.UnaryExpr:
+			if value.Op == token.AND {
+				expr = value.X
+				continue
+			}
+		case *ast.CompositeLit:
+			if isGRPCServiceDesc(info.TypeOf(value)) {
+				return serviceNameLiteral(value)
+			}
+		case *ast.Ident:
+			return descriptors[info.Uses[value]]
+		case *ast.SelectorExpr:
+			return descriptors[info.Uses[value.Sel]]
+		}
+		return ""
+	}
+}
+
+func isGRPCServiceDesc(value types.Type) bool {
+	if pointer, ok := value.(*types.Pointer); ok {
+		value = pointer.Elem()
+	}
+	return isNamedType(value, "google.golang.org/grpc", "ServiceDesc")
+}
+
+func serviceNameLiteral(literal *ast.CompositeLit) string {
+	for _, element := range literal.Elts {
+		pair, ok := element.(*ast.KeyValueExpr)
+		if !ok {
+			continue
+		}
+		key, ok := pair.Key.(*ast.Ident)
+		if !ok || key.Name != "ServiceName" {
+			continue
+		}
+		value, ok := pair.Value.(*ast.BasicLit)
+		if !ok || value.Kind != token.STRING {
+			return ""
+		}
+		full, err := strconv.Unquote(value.Value)
+		if err != nil || !validProtoServiceName(full) {
+			return ""
+		}
+		return full
+	}
+	return ""
+}
+
+func validProtoServiceName(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, segment := range strings.Split(value, ".") {
+		if segment == "" {
+			return false
+		}
+		for index, r := range segment {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_' || (index > 0 && r >= '0' && r <= '9') {
+				continue
+			}
+			return false
+		}
+	}
+	return true
+}
+
+func indexServiceDescriptors(pkg *packages.Package, descriptors map[types.Object]string) {
+	if pkg.TypesInfo == nil {
+		return
+	}
+	for _, file := range pkg.Syntax {
+		ast.Inspect(file, func(node ast.Node) bool {
+			switch declaration := node.(type) {
+			case *ast.ValueSpec:
+				for index, name := range declaration.Names {
+					if index >= len(declaration.Values) {
+						continue
+					}
+					if full := registeredServiceFromExpr(pkg.TypesInfo, declaration.Values[index], descriptors); full != "" {
+						if obj := pkg.TypesInfo.Defs[name]; obj != nil {
+							descriptors[obj] = full
+						}
+					}
+				}
+			case *ast.AssignStmt:
+				for index, left := range declaration.Lhs {
+					if index >= len(declaration.Rhs) {
+						continue
+					}
+					name, ok := left.(*ast.Ident)
+					if !ok {
+						continue
+					}
+					if full := registeredServiceFromExpr(pkg.TypesInfo, declaration.Rhs[index], descriptors); full != "" {
+						obj := pkg.TypesInfo.Defs[name]
+						if obj == nil {
+							obj = pkg.TypesInfo.Uses[name]
+						}
+						if obj != nil {
+							descriptors[obj] = full
+						}
+					}
+				}
+			}
+			return true
+		})
+	}
 }
 
 // asGRPCClientIface returns metadata iff the named type has the
@@ -385,6 +611,35 @@ func isNamedType(t types.Type, pkgPath, name string) bool {
 }
 
 var fullMethodRe = regexp.MustCompile(`"(/[\w.]+\.(\w+)/(\w+))"`)
+var serviceNameRe = regexp.MustCompile(`\bServiceName\s*:\s*"([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)"`)
+
+// resolveRegisteredService reads generated grpc.ServiceDesc initializers and
+// returns a contract-level service identity only when one value uniquely
+// matches the Register<S>Server symbol. This avoids treating the short Go
+// symbol as globally meaningful and fails closed when two proto packages map
+// to the same Go package/name.
+func resolveRegisteredService(goFiles []string, short string) string {
+	matches := map[string]bool{}
+	for _, path := range goFiles {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		for _, match := range serviceNameRe.FindAllSubmatch(content, -1) {
+			full := string(match[1])
+			if full == short || strings.HasSuffix(full, "."+short) {
+				matches[full] = true
+			}
+		}
+	}
+	if len(matches) != 1 {
+		return ""
+	}
+	for full := range matches {
+		return full
+	}
+	return ""
+}
 
 // resolveFullMethods reads each client interface's declaring file (and its
 // sibling generated files) and maps method names to the exact full-method

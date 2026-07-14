@@ -256,7 +256,9 @@ def generated_field_vocabulary(
     names: set[str] = set()
     for system in FIELD_SYSTEMS:
         root, commit = corpus_dir / system, str(locks[system]["commit"])
-        for relative, data in source_blobs(root, commit):
+        for relative, data in source_blobs(
+            root, commit, excluded_gitlinks=locks[system].get("excluded_gitlinks")
+        ):
             if not relative.endswith(".pb.go"):
                 continue
             for match in PROTO_FIELD_RE.finditer(data):
@@ -399,7 +401,9 @@ def gate4_candidate_sites(
 
     for system in FIELD_SYSTEMS:
         commit, root = str(locks[system]["commit"]), corpus_dir / system
-        for relative, data in source_blobs(root, commit):
+        for relative, data in source_blobs(
+            root, commit, excluded_gitlinks=locks[system].get("excluded_gitlinks")
+        ):
             hint = role_hint(relative, data)
             for raw in candidates_in_file(system, commit, relative, data):
                 lookup_key = (

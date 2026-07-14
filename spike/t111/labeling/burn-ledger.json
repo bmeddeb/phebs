@@ -1,34 +1,4250 @@
 {
-  "schema_version": "t111-burn-ledger-v1",
-  "projection": "system,path,start_line,end_line; all legacy labeled/template site coordinates; predicates and values deliberately ignored",
-  "sources": [
+  "cohorts": [
     {
-      "path": "sites.dev.jsonl",
-      "records": 335,
-      "sha256": "sha256:fa8f3afa5aa4c08828b9ee1d51e895d5d6d463141f87a5029c876f57e86e344e"
-    },
-    {
-      "path": "sites.holdout.jsonl",
-      "records": 143,
-      "sha256": "sha256:400c652c8bb2f92a6f3334288210d8f3d224f08857b2cadc0c17cf4eea264160"
-    },
-    {
-      "path": "g34.sites.dev.jsonl",
-      "records": 171,
-      "sha256": "sha256:7f829018ff4e117e5781430c626aef35f9d244fdc4e8c002f8d44b9f8fe80ccb"
-    },
-    {
-      "path": "g34.sites.holdout.jsonl",
-      "records": 72,
-      "sha256": "sha256:2e47a0dcebc97111c51f63553ddd474631abe90a7425fe701f6ad5025e2b56c5"
-    },
-    {
-      "path": "g3h2.sites.jsonl",
-      "records": 56,
-      "sha256": "sha256:8981b570a32fb99e8ad48218a16ad15a46bcb301728f0558daf68eb98c951205"
+      "cohort_id": "legacy-v1-disclosures",
+      "coordinate_count": 700,
+      "coordinates": [
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/adservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/cartservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/checkoutservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/currencyservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/emailservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/frontend.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/paymentservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/recommendationservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kubernetes-manifests/shippingservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/base/adservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/base/cartservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/base/currencyservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/base/emailservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/base/paymentservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/base/recommendationservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/base/shippingservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/components/shopping-assistant/shoppingassistantservice.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "kustomize/components/without-loadgenerator/delete-loadgenerator.patch.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/bundle/community/manifests/loki-operator-controller-manager-metrics-service_v1_service.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/config/overlays/community/manager_run_flags_patch.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/config/overlays/community/manager_webhook_patch.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/hack/addon_grafana_gateway_ocp.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/hack/addons_cert_manager.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/hack/addons_dev.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/hack/addons_hydra.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "operator/hack/addons_ocp.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "production/helm/loki/docs/examples/enterprise/batchjob.yaml",
+          "start_line": 1,
+          "system": "loki"
+        },
+        {
+          "end_line": 1,
+          "path": "release/kubernetes-manifests.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "skaffold.yaml",
+          "start_line": 1,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/actorclientapp/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/actorfeatures/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/actorload/deploy/testclient.yml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/binding_input/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/binding_output/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/configurationapp/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/hellodapr/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/injectorapp/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/job-publisher/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/middleware/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/perf/service_invocation_grpc/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/perf/service_invocation_http/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/perf/tester/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/pubsub-bulk-subscriber/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/runtime_init/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/service_invocation_external/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/service_invocation_grpc_proxy_client/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/apps/service_invocation_grpc_proxy_server/service.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/config/externalinvocationcrd.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1,
+          "path": "tests/config/tailscale_subnet_router.yaml",
+          "start_line": 1,
+          "system": "dapr"
+        },
+        {
+          "end_line": 100,
+          "path": "pkg/compactor/client/grpc/grpc.pb.go",
+          "start_line": 100,
+          "system": "loki"
+        },
+        {
+          "end_line": 100,
+          "path": "src/checkoutservice/money/money.go",
+          "start_line": 100,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 100,
+          "path": "src/frontend/rpc.go",
+          "start_line": 100,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1001,
+          "path": "pkg/ruler/base/ruler.go",
+          "start_line": 1001,
+          "system": "loki"
+        },
+        {
+          "end_line": 1009,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 1009,
+          "system": "temporal"
+        },
+        {
+          "end_line": 101,
+          "path": "vendor/google.golang.org/grpc/internal/transport/readyreader/ready_reader.go",
+          "start_line": 101,
+          "system": "loki"
+        },
+        {
+          "end_line": 1017,
+          "path": "pkg/proto/runtime/v1/crypto.pb.go",
+          "start_line": 1017,
+          "system": "dapr"
+        },
+        {
+          "end_line": 102,
+          "path": "pkg/compactor/deletion/grpc_request_handler_test.go",
+          "start_line": 102,
+          "system": "loki"
+        },
+        {
+          "end_line": 102,
+          "path": "pkg/proto/components/v1/pubsub_grpc.pb.go",
+          "start_line": 102,
+          "system": "dapr"
+        },
+        {
+          "end_line": 102,
+          "path": "tests/integration/suite/actors/dissemination/call/concurrent.go",
+          "start_line": 102,
+          "system": "dapr"
+        },
+        {
+          "end_line": 102,
+          "path": "tests/integration/suite/daprd/metadata/actors/withactors.go",
+          "start_line": 102,
+          "system": "dapr"
+        },
+        {
+          "end_line": 102,
+          "path": "tests/integration/suite/scheduler/metrics/jobsdeletedtotal.go",
+          "start_line": 102,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1021,
+          "path": "tests/versioning_test.go",
+          "start_line": 1021,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1021,
+          "path": "tests/xdc/stream_based_replication_test.go",
+          "start_line": 1021,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1024,
+          "path": "pkg/logql/log/fmt_test.go",
+          "start_line": 1024,
+          "system": "loki"
+        },
+        {
+          "end_line": 104,
+          "path": "tests/integration/suite/actors/dissemination/drain/clamp/clamp.go",
+          "start_line": 104,
+          "system": "dapr"
+        },
+        {
+          "end_line": 104,
+          "path": "tests/integration/suite/actors/lock/timers/remote.go",
+          "start_line": 104,
+          "system": "dapr"
+        },
+        {
+          "end_line": 104,
+          "path": "tests/integration/suite/daprd/httpserver/corsdefaultapitoken.go",
+          "start_line": 104,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1046,
+          "path": "tests/signal_workflow_test.go",
+          "start_line": 1046,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1047,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 1047,
+          "system": "temporal"
+        },
+        {
+          "end_line": 105,
+          "path": "client/history/client.go",
+          "start_line": 105,
+          "system": "temporal"
+        },
+        {
+          "end_line": 105,
+          "path": "pkg/api/grpc/crypto_test.go",
+          "start_line": 105,
+          "system": "dapr"
+        },
+        {
+          "end_line": 105,
+          "path": "tests/integration/suite/actors/lock/reminders/remote/grpc.go",
+          "start_line": 105,
+          "system": "dapr"
+        },
+        {
+          "end_line": 105,
+          "path": "vendor/github.com/grafana/loki/pkg/push/push-rf1.pb.go",
+          "start_line": 105,
+          "system": "loki"
+        },
+        {
+          "end_line": 106,
+          "path": "src/shippingservice/shippingservice_test.go",
+          "start_line": 106,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 106,
+          "path": "tests/integration/suite/daprd/state/grpc/compname.go",
+          "start_line": 106,
+          "system": "dapr"
+        },
+        {
+          "end_line": 107,
+          "path": "tests/integration/suite/daprd/serviceinvocation/grpc/daprapitoken/remotenotoken.go",
+          "start_line": 107,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1072,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 1072,
+          "system": "temporal"
+        },
+        {
+          "end_line": 108,
+          "path": "pkg/proto/operator/v1/operatorconnect/operator.connect.go",
+          "start_line": 108,
+          "system": "dapr"
+        },
+        {
+          "end_line": 108,
+          "path": "service/worker/parentclosepolicy/workflow.go",
+          "start_line": 108,
+          "system": "temporal"
+        },
+        {
+          "end_line": 108,
+          "path": "tests/integration/suite/daprd/workflow/scheduler/raise.go",
+          "start_line": 108,
+          "system": "dapr"
+        },
+        {
+          "end_line": 109,
+          "path": "tests/integration/suite/actors/timers/remote/grpc.go",
+          "start_line": 109,
+          "system": "dapr"
+        },
+        {
+          "end_line": 109,
+          "path": "tests/integration/suite/scheduler/api/failurepolicy.go",
+          "start_line": 109,
+          "system": "dapr"
+        },
+        {
+          "end_line": 110,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 110,
+          "system": "temporal"
+        },
+        {
+          "end_line": 110,
+          "path": "pkg/bloombuild/builder/builder.go",
+          "start_line": 110,
+          "system": "loki"
+        },
+        {
+          "end_line": 110,
+          "path": "pkg/compactor/jobqueue/worker_test.go",
+          "start_line": 110,
+          "system": "loki"
+        },
+        {
+          "end_line": 110,
+          "path": "pkg/util/metrics_helper.go",
+          "start_line": 110,
+          "system": "loki"
+        },
+        {
+          "end_line": 111,
+          "path": "tests/purge_dlq_tasks_api_test.go",
+          "start_line": 111,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1112,
+          "path": "src/productcatalogservice/genproto/demo.pb.go",
+          "start_line": 1112,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 112,
+          "path": "vendor/github.com/miekg/dns/serve_mux.go",
+          "start_line": 112,
+          "system": "loki"
+        },
+        {
+          "end_line": 113,
+          "path": "tests/integration/suite/operator/api/resiliencyupdate/basic.go",
+          "start_line": 113,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1133,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1133,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1133,
+          "path": "components/nexusoperations/executors.go",
+          "start_line": 1133,
+          "system": "temporal"
+        },
+        {
+          "end_line": 114,
+          "path": "pkg/compactor/client/grpc.go",
+          "start_line": 114,
+          "system": "loki"
+        },
+        {
+          "end_line": 1141,
+          "path": "tests/worker_deployment_test.go",
+          "start_line": 1141,
+          "system": "temporal"
+        },
+        {
+          "end_line": 116,
+          "path": "vendor/github.com/yuin/gopher-lua/mathlib.go",
+          "start_line": 116,
+          "system": "loki"
+        },
+        {
+          "end_line": 1160,
+          "path": "src/frontend/genproto/demo_grpc.pb.go",
+          "start_line": 1160,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1160,
+          "path": "src/shippingservice/genproto/demo_grpc.pb.go",
+          "start_line": 1160,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1161,
+          "path": "src/frontend/genproto/demo.pb.go",
+          "start_line": 1161,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1165,
+          "path": "service/history/api/respondworkflowtaskcompleted/workflow_task_completed_handler.go",
+          "start_line": 1165,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1166,
+          "path": "service/history/replication/executable_task_test.go",
+          "start_line": 1166,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1168,
+          "path": "src/productcatalogservice/genproto/demo.pb.go",
+          "start_line": 1168,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 117,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 117,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1171,
+          "path": "service/history/api/respondworkflowtaskcompleted/workflow_task_completed_handler.go",
+          "start_line": 1171,
+          "system": "temporal"
+        },
+        {
+          "end_line": 118,
+          "path": "pkg/proto/operator/v1/operatorconnect/operator.connect.go",
+          "start_line": 118,
+          "system": "dapr"
+        },
+        {
+          "end_line": 118,
+          "path": "tests/integration/suite/actors/reminders/duetime.go",
+          "start_line": 118,
+          "system": "dapr"
+        },
+        {
+          "end_line": 118,
+          "path": "tests/integration/suite/daprd/jobs/delete.go",
+          "start_line": 118,
+          "system": "dapr"
+        },
+        {
+          "end_line": 118,
+          "path": "tests/integration/suite/placement/dissemination/batchconnect.go",
+          "start_line": 118,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1183,
+          "path": "client/history/client_gen.go",
+          "start_line": 1183,
+          "system": "temporal"
+        },
+        {
+          "end_line": 119,
+          "path": "src/frontend/money/money.go",
+          "start_line": 119,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 120,
+          "path": "src/frontend/money/money.go",
+          "start_line": 120,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 120,
+          "path": "tools/tdbg/dlq_service.go",
+          "start_line": 120,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1203,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1203,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1203,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 1203,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1218,
+          "path": "pkg/loki/modules.go",
+          "start_line": 1218,
+          "system": "loki"
+        },
+        {
+          "end_line": 122,
+          "path": "pkg/runtime/scheduler/internal/clients/wrapper/wrapper.go",
+          "start_line": 122,
+          "system": "dapr"
+        },
+        {
+          "end_line": 122,
+          "path": "tests/integration/suite/daprd/subscriptions/declarative/selfhosted/v2alpha1/rawpayload/grpc.go",
+          "start_line": 122,
+          "system": "dapr"
+        },
+        {
+          "end_line": 123,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 123,
+          "system": "temporal"
+        },
+        {
+          "end_line": 123,
+          "path": "pkg/compactor/deletion/grpc_request_handler_test.go",
+          "start_line": 123,
+          "system": "loki"
+        },
+        {
+          "end_line": 123,
+          "path": "src/frontend/rpc.go",
+          "start_line": 123,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 123,
+          "path": "tests/activity_api_batch_update_options_test.go",
+          "start_line": 123,
+          "system": "temporal"
+        },
+        {
+          "end_line": 123,
+          "path": "tests/integration/suite/daprd/subscriptions/programmatic/grpc/bulk.go",
+          "start_line": 123,
+          "system": "dapr"
+        },
+        {
+          "end_line": 123,
+          "path": "tests/integration/suite/daprd/tracing/actors/actors.go",
+          "start_line": 123,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1233,
+          "path": "pkg/limits/proto/limits.pb.go",
+          "start_line": 1233,
+          "system": "loki"
+        },
+        {
+          "end_line": 1244,
+          "path": "tests/xdc/failover_test.go",
+          "start_line": 1244,
+          "system": "temporal"
+        },
+        {
+          "end_line": 125,
+          "path": "tests/integration/suite/daprd/subscriptions/declarative/operator/v2alpha1/missing/grpc.go",
+          "start_line": 125,
+          "system": "dapr"
+        },
+        {
+          "end_line": 126,
+          "path": "src/frontend/rpc.go",
+          "start_line": 126,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1274,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1274,
+          "system": "temporal"
+        },
+        {
+          "end_line": 128,
+          "path": "tests/integration/suite/actors/state/grpc.go",
+          "start_line": 128,
+          "system": "dapr"
+        },
+        {
+          "end_line": 129,
+          "path": "pkg/compactor/jobqueue/queue_test.go",
+          "start_line": 129,
+          "system": "loki"
+        },
+        {
+          "end_line": 129,
+          "path": "tests/integration/suite/daprd/httpserver/corsdefaultapitoken.go",
+          "start_line": 129,
+          "system": "dapr"
+        },
+        {
+          "end_line": 129,
+          "path": "tests/integration/suite/operator/api/authz.go",
+          "start_line": 129,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1303,
+          "path": "tests/worker_deployment_version_test.go",
+          "start_line": 1303,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1308,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1308,
+          "system": "temporal"
+        },
+        {
+          "end_line": 131,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 131,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1316,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1316,
+          "system": "temporal"
+        },
+        {
+          "end_line": 133,
+          "path": "pkg/operator/cache/cache_test.go",
+          "start_line": 133,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1336,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1336,
+          "system": "temporal"
+        },
+        {
+          "end_line": 134,
+          "path": "pkg/sentry/server/ca/jwt/jwt_test.go",
+          "start_line": 134,
+          "system": "dapr"
+        },
+        {
+          "end_line": 135,
+          "path": "client/admin/metric_client_gen.go",
+          "start_line": 135,
+          "system": "temporal"
+        },
+        {
+          "end_line": 135,
+          "path": "pkg/injector/patcher/sidecar_volumes.go",
+          "start_line": 135,
+          "system": "dapr"
+        },
+        {
+          "end_line": 136,
+          "path": "pkg/compactor/client/grpc.go",
+          "start_line": 136,
+          "system": "loki"
+        },
+        {
+          "end_line": 1365,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 1365,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1382,
+          "path": "service/frontend/operator_handler_test.go",
+          "start_line": 1382,
+          "system": "temporal"
+        },
+        {
+          "end_line": 139,
+          "path": "tests/integration/suite/daprd/tracing/baggage/outputbinding.go",
+          "start_line": 139,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1397,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go",
+          "start_line": 1397,
+          "system": "dapr"
+        },
+        {
+          "end_line": 140,
+          "path": "pkg/compactor/deletion/grpc_request_handler_test.go",
+          "start_line": 140,
+          "system": "loki"
+        },
+        {
+          "end_line": 140,
+          "path": "tests/integration/suite/actors/http/ttl.go",
+          "start_line": 140,
+          "system": "dapr"
+        },
+        {
+          "end_line": 140,
+          "path": "tests/integration/suite/daprd/jobs/delete.go",
+          "start_line": 140,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1401,
+          "path": "client/history/client_gen.go",
+          "start_line": 1401,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1402,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 1402,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1406,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1406,
+          "system": "temporal"
+        },
+        {
+          "end_line": 141,
+          "path": "src/productcatalogservice/genproto/demo_grpc.pb.go",
+          "start_line": 141,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 141,
+          "path": "src/shippingservice/genproto/demo_grpc.pb.go",
+          "start_line": 141,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 141,
+          "path": "tests/integration/suite/daprd/hotreload/selfhosted/pubsub/grpc.go",
+          "start_line": 141,
+          "system": "dapr"
+        },
+        {
+          "end_line": 142,
+          "path": "src/shippingservice/genproto/demo.pb.go",
+          "start_line": 142,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 143,
+          "path": "src/productcatalogservice/server.go",
+          "start_line": 143,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1433,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go",
+          "start_line": 1433,
+          "system": "dapr"
+        },
+        {
+          "end_line": 144,
+          "path": "pkg/limits/frontend/ring.go",
+          "start_line": 144,
+          "system": "loki"
+        },
+        {
+          "end_line": 1441,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 1441,
+          "system": "temporal"
+        },
+        {
+          "end_line": 145,
+          "path": "tests/integration/suite/actors/lock/call/reentry/max/hop/custommax.go",
+          "start_line": 145,
+          "system": "dapr"
+        },
+        {
+          "end_line": 145,
+          "path": "tests/transient_task_test.go",
+          "start_line": 145,
+          "system": "temporal"
+        },
+        {
+          "end_line": 146,
+          "path": "src/shippingservice/main.go",
+          "start_line": 146,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1466,
+          "path": "operator/internal/manifests/storage/configure_test.go",
+          "start_line": 1466,
+          "system": "loki"
+        },
+        {
+          "end_line": 147,
+          "path": "pkg/compactor/jobqueue/worker.go",
+          "start_line": 147,
+          "system": "loki"
+        },
+        {
+          "end_line": 147,
+          "path": "src/productcatalogservice/catalog_loader.go",
+          "start_line": 147,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1475,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go",
+          "start_line": 1475,
+          "system": "dapr"
+        },
+        {
+          "end_line": 148,
+          "path": "service/history/replication/eventhandler/remote_history_paginated_fetcher_test.go",
+          "start_line": 148,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1494,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 1494,
+          "system": "temporal"
+        },
+        {
+          "end_line": 150,
+          "path": "tests/timeskipping_fast_forward_test.go",
+          "start_line": 150,
+          "system": "temporal"
+        },
+        {
+          "end_line": 151,
+          "path": "pkg/api/universal/jobs.go",
+          "start_line": 151,
+          "system": "dapr"
+        },
+        {
+          "end_line": 151,
+          "path": "pkg/proto/components/v1/pubsub_grpc.pb.go",
+          "start_line": 151,
+          "system": "dapr"
+        },
+        {
+          "end_line": 151,
+          "path": "tests/integration/suite/daprd/conversation/alpha1/grpc/scrubpii.go",
+          "start_line": 151,
+          "system": "dapr"
+        },
+        {
+          "end_line": 152,
+          "path": "pkg/compactor/deletion/grpc_request_handler_test.go",
+          "start_line": 152,
+          "system": "loki"
+        },
+        {
+          "end_line": 152,
+          "path": "tests/integration/suite/scheduler/kubernetes/prefix.go",
+          "start_line": 152,
+          "system": "dapr"
+        },
+        {
+          "end_line": 154,
+          "path": "pkg/compactor/jobqueue/queue_test.go",
+          "start_line": 154,
+          "system": "loki"
+        },
+        {
+          "end_line": 154,
+          "path": "tests/workflow_test.go",
+          "start_line": 154,
+          "system": "temporal"
+        },
+        {
+          "end_line": 158,
+          "path": "tests/integration/suite/actors/timers/hdata.go",
+          "start_line": 158,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1585,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 1585,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1588,
+          "path": "src/productcatalogservice/genproto/demo.pb.go",
+          "start_line": 1588,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1599,
+          "path": "pkg/loki/modules.go",
+          "start_line": 1599,
+          "system": "loki"
+        },
+        {
+          "end_line": 1620,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 1620,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1631,
+          "path": "common/persistence/persistence-tests/metadata_persistence_v2.go",
+          "start_line": 1631,
+          "system": "temporal"
+        },
+        {
+          "end_line": 164,
+          "path": "vendor/github.com/klauspost/compress/s2/encode_amd64.go",
+          "start_line": 164,
+          "system": "loki"
+        },
+        {
+          "end_line": 164,
+          "path": "vendor/go.etcd.io/etcd/client/v3/kv.go",
+          "start_line": 164,
+          "system": "loki"
+        },
+        {
+          "end_line": 166,
+          "path": "service/history/replication/eventhandler/history_events_handler_test.go",
+          "start_line": 166,
+          "system": "temporal"
+        },
+        {
+          "end_line": 166,
+          "path": "src/frontend/genproto/demo_grpc.pb.go",
+          "start_line": 166,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 167,
+          "path": "tests/integration/suite/daprd/state/grpc/customerrors.go",
+          "start_line": 167,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1674,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 1674,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1678,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 1678,
+          "system": "temporal"
+        },
+        {
+          "end_line": 168,
+          "path": "pkg/ruler/base/api.go",
+          "start_line": 168,
+          "system": "loki"
+        },
+        {
+          "end_line": 170,
+          "path": "service/matching/task_validation.go",
+          "start_line": 170,
+          "system": "temporal"
+        },
+        {
+          "end_line": 170,
+          "path": "tests/integration/suite/daprd/pubsub/scopes/protectedtopics.go",
+          "start_line": 170,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1700,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1700,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1719,
+          "path": "tests/schedule_test.go",
+          "start_line": 1719,
+          "system": "temporal"
+        },
+        {
+          "end_line": 172,
+          "path": "tools/tdbg/dlq_v1_service.go",
+          "start_line": 172,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1729,
+          "path": "common/worker_versioning/worker_versioning_test.go",
+          "start_line": 1729,
+          "system": "temporal"
+        },
+        {
+          "end_line": 174,
+          "path": "tests/admin_batch_refresh_workflow_tasks_test.go",
+          "start_line": 174,
+          "system": "temporal"
+        },
+        {
+          "end_line": 174,
+          "path": "tests/integration/suite/daprd/shutdown/block/timeout.go",
+          "start_line": 174,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1741,
+          "path": "service/history/transfer_queue_active_task_executor_test.go",
+          "start_line": 1741,
+          "system": "temporal"
+        },
+        {
+          "end_line": 176,
+          "path": "tools/tdbg/task_queue_commands.go",
+          "start_line": 176,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1789,
+          "path": "tests/signal_workflow_test.go",
+          "start_line": 1789,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1815,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1815,
+          "system": "temporal"
+        },
+        {
+          "end_line": 182,
+          "path": "pkg/runtime/scheduler/internal/cluster/cluster.go",
+          "start_line": 182,
+          "system": "dapr"
+        },
+        {
+          "end_line": 183,
+          "path": "tests/integration/suite/daprd/hotreload/operator/pubsub/grpc.go",
+          "start_line": 183,
+          "system": "dapr"
+        },
+        {
+          "end_line": 184,
+          "path": "pkg/components/pubsub/pluggable.go",
+          "start_line": 184,
+          "system": "dapr"
+        },
+        {
+          "end_line": 185,
+          "path": "pkg/runtime/pubsub/publisher/publisher_test.go",
+          "start_line": 185,
+          "system": "dapr"
+        },
+        {
+          "end_line": 185,
+          "path": "tests/integration/suite/daprd/serviceinvocation/grpc/reservedchars/aclbypass.go",
+          "start_line": 185,
+          "system": "dapr"
+        },
+        {
+          "end_line": 186,
+          "path": "pkg/api/grpc/manager/pool_test.go",
+          "start_line": 186,
+          "system": "dapr"
+        },
+        {
+          "end_line": 186,
+          "path": "tests/integration/suite/daprd/tracing/baggage/serviceinvocation.go",
+          "start_line": 186,
+          "system": "dapr"
+        },
+        {
+          "end_line": 186,
+          "path": "tests/integration/suite/scheduler/api/deletebynameprefix.go",
+          "start_line": 186,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1862,
+          "path": "pkg/loki/modules.go",
+          "start_line": 1862,
+          "system": "loki"
+        },
+        {
+          "end_line": 1866,
+          "path": "pkg/loki/modules.go",
+          "start_line": 1866,
+          "system": "loki"
+        },
+        {
+          "end_line": 189,
+          "path": "src/shippingservice/genproto/demo.pb.go",
+          "start_line": 189,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 1898,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1898,
+          "system": "temporal"
+        },
+        {
+          "end_line": 190,
+          "path": "pkg/bloomgateway/client.go",
+          "start_line": 190,
+          "system": "loki"
+        },
+        {
+          "end_line": 191,
+          "path": "pkg/proto/scheduler/v1/scheduler_grpc.pb.go",
+          "start_line": 191,
+          "system": "dapr"
+        },
+        {
+          "end_line": 192,
+          "path": "vendor/github.com/hashicorp/go-metrics/prometheus/prometheus.go",
+          "start_line": 192,
+          "system": "loki"
+        },
+        {
+          "end_line": 1923,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 1923,
+          "system": "temporal"
+        },
+        {
+          "end_line": 194,
+          "path": "pkg/limits/frontend/ring.go",
+          "start_line": 194,
+          "system": "loki"
+        },
+        {
+          "end_line": 195,
+          "path": "pkg/api/universal/jobs.go",
+          "start_line": 195,
+          "system": "dapr"
+        },
+        {
+          "end_line": 1970,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 1970,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1979,
+          "path": "tests/xdc/failover_test.go",
+          "start_line": 1979,
+          "system": "temporal"
+        },
+        {
+          "end_line": 198,
+          "path": "tests/activity_api_reset_test.go",
+          "start_line": 198,
+          "system": "temporal"
+        },
+        {
+          "end_line": 1980,
+          "path": "pkg/loki/modules.go",
+          "start_line": 1980,
+          "system": "loki"
+        },
+        {
+          "end_line": 2,
+          "path": "charts/dapr/charts/dapr_operator/templates/dapr_operator_deployment.yaml",
+          "start_line": 2,
+          "system": "dapr"
+        },
+        {
+          "end_line": 200,
+          "path": "tests/reset_workflow_test.go",
+          "start_line": 200,
+          "system": "temporal"
+        },
+        {
+          "end_line": 201,
+          "path": "tests/integration/suite/daprd/subscriptions/declarative/operator/v2alpha1/scopes/grpc.go",
+          "start_line": 201,
+          "system": "dapr"
+        },
+        {
+          "end_line": 2013,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2013,
+          "system": "temporal"
+        },
+        {
+          "end_line": 202,
+          "path": "tests/integration/suite/daprd/hotreload/operator/informer/secretrotation.go",
+          "start_line": 202,
+          "system": "dapr"
+        },
+        {
+          "end_line": 2022,
+          "path": "pkg/loki/modules.go",
+          "start_line": 2022,
+          "system": "loki"
+        },
+        {
+          "end_line": 2026,
+          "path": "pkg/proto/runtime/v1/actors.pb.go",
+          "start_line": 2026,
+          "system": "dapr"
+        },
+        {
+          "end_line": 205,
+          "path": "client/history/metric_client_gen.go",
+          "start_line": 205,
+          "system": "temporal"
+        },
+        {
+          "end_line": 205,
+          "path": "vendor/github.com/apache/thrift/lib/go/thrift/multiplexed_protocol.go",
+          "start_line": 205,
+          "system": "loki"
+        },
+        {
+          "end_line": 206,
+          "path": "pkg/proto/components/v1/componentsconnect/bindings.connect.go",
+          "start_line": 206,
+          "system": "dapr"
+        },
+        {
+          "end_line": 207,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 207,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2076,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 2076,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2078,
+          "path": "tests/pause_workflow_execution_test.go",
+          "start_line": 2078,
+          "system": "temporal"
+        },
+        {
+          "end_line": 208,
+          "path": "pkg/proto/scheduler/v1/scheduler_grpc.pb.go",
+          "start_line": 208,
+          "system": "dapr"
+        },
+        {
+          "end_line": 209,
+          "path": "service/worker/deletenamespace/deleteexecutions/activities.go",
+          "start_line": 209,
+          "system": "temporal"
+        },
+        {
+          "end_line": 210,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/appcallback.connect.go",
+          "start_line": 210,
+          "system": "dapr"
+        },
+        {
+          "end_line": 210,
+          "path": "vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_anyvalue.go",
+          "start_line": 210,
+          "system": "loki"
+        },
+        {
+          "end_line": 212,
+          "path": "operator/internal/manifests/querier.go",
+          "start_line": 212,
+          "system": "loki"
+        },
+        {
+          "end_line": 2121,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2121,
+          "system": "temporal"
+        },
+        {
+          "end_line": 213,
+          "path": "pkg/bloombuild/builder/builder.go",
+          "start_line": 213,
+          "system": "loki"
+        },
+        {
+          "end_line": 214,
+          "path": "pkg/channel/grpc/grpc_channel.go",
+          "start_line": 214,
+          "system": "dapr"
+        },
+        {
+          "end_line": 2180,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 2180,
+          "system": "dapr"
+        },
+        {
+          "end_line": 219,
+          "path": "common/nexus/link_converter_test.go",
+          "start_line": 219,
+          "system": "temporal"
+        },
+        {
+          "end_line": 219,
+          "path": "operator/internal/manifests/query-frontend.go",
+          "start_line": 219,
+          "system": "loki"
+        },
+        {
+          "end_line": 220,
+          "path": "service/history/ndc/workflow_state_replicator_test.go",
+          "start_line": 220,
+          "system": "temporal"
+        },
+        {
+          "end_line": 223,
+          "path": "operator/internal/manifests/node_placement_test.go",
+          "start_line": 223,
+          "system": "loki"
+        },
+        {
+          "end_line": 2247,
+          "path": "vendor/github.com/parquet-go/parquet-go/writer.go",
+          "start_line": 2247,
+          "system": "loki"
+        },
+        {
+          "end_line": 2276,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2276,
+          "system": "temporal"
+        },
+        {
+          "end_line": 229,
+          "path": "client/frontend/client_gen.go",
+          "start_line": 229,
+          "system": "temporal"
+        },
+        {
+          "end_line": 229,
+          "path": "common/persistence/serialization/serializer.go",
+          "start_line": 229,
+          "system": "temporal"
+        },
+        {
+          "end_line": 229,
+          "path": "pkg/components/state/pluggable_test.go",
+          "start_line": 229,
+          "system": "dapr"
+        },
+        {
+          "end_line": 230,
+          "path": "pkg/proto/runtime/v1/appcallback_grpc.pb.go",
+          "start_line": 230,
+          "system": "dapr"
+        },
+        {
+          "end_line": 230,
+          "path": "pkg/runtime/pubsub/subscriptions.go",
+          "start_line": 230,
+          "system": "dapr"
+        },
+        {
+          "end_line": 231,
+          "path": "src/frontend/handlers.go",
+          "start_line": 231,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 231,
+          "path": "tests/integration/suite/daprd/resiliency/apps/retry/grpc.go",
+          "start_line": 231,
+          "system": "dapr"
+        },
+        {
+          "end_line": 232,
+          "path": "common/searchattribute/manager_test.go",
+          "start_line": 232,
+          "system": "temporal"
+        },
+        {
+          "end_line": 232,
+          "path": "pkg/api/universal/jobs.go",
+          "start_line": 232,
+          "system": "dapr"
+        },
+        {
+          "end_line": 232,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 232,
+          "system": "dapr"
+        },
+        {
+          "end_line": 234,
+          "path": "pkg/actors/internal/scheduler/scheduler.go",
+          "start_line": 234,
+          "system": "dapr"
+        },
+        {
+          "end_line": 234,
+          "path": "pkg/api/grpc/proxy/testservice/test_grpc.pb.go",
+          "start_line": 234,
+          "system": "dapr"
+        },
+        {
+          "end_line": 2342,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 2342,
+          "system": "dapr"
+        },
+        {
+          "end_line": 235,
+          "path": "pkg/lokifrontend/frontend/v2/frontend_scheduler_worker.go",
+          "start_line": 235,
+          "system": "loki"
+        },
+        {
+          "end_line": 2363,
+          "path": "tests/schedule_test.go",
+          "start_line": 2363,
+          "system": "temporal"
+        },
+        {
+          "end_line": 238,
+          "path": "chasm/lib/nexusoperation/gen/nexusoperationpb/v1/service_grpc.pb.go",
+          "start_line": 238,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2383,
+          "path": "pkg/bloombuild/protos/types.pb.go",
+          "start_line": 2383,
+          "system": "loki"
+        },
+        {
+          "end_line": 24,
+          "path": "pkg/logproto/alias.go",
+          "start_line": 24,
+          "system": "loki"
+        },
+        {
+          "end_line": 242,
+          "path": "service/history/ndc/workflow_resetter.go",
+          "start_line": 242,
+          "system": "temporal"
+        },
+        {
+          "end_line": 242,
+          "path": "service/worker/batcher/workflow.go",
+          "start_line": 242,
+          "system": "temporal"
+        },
+        {
+          "end_line": 243,
+          "path": "pkg/ingester/stream_test.go",
+          "start_line": 243,
+          "system": "loki"
+        },
+        {
+          "end_line": 243,
+          "path": "tools/tdbg/commands.go",
+          "start_line": 243,
+          "system": "temporal"
+        },
+        {
+          "end_line": 244,
+          "path": "pkg/proto/components/v1/state_grpc.pb.go",
+          "start_line": 244,
+          "system": "dapr"
+        },
+        {
+          "end_line": 244,
+          "path": "tests/integration/suite/scheduler/api/list/crud.go",
+          "start_line": 244,
+          "system": "dapr"
+        },
+        {
+          "end_line": 244,
+          "path": "tests/integration/suite/scheduler/authz/mtls.go",
+          "start_line": 244,
+          "system": "dapr"
+        },
+        {
+          "end_line": 245,
+          "path": "pkg/ruler/evaluator_remote.go",
+          "start_line": 245,
+          "system": "loki"
+        },
+        {
+          "end_line": 2456,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2456,
+          "system": "temporal"
+        },
+        {
+          "end_line": 246,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 246,
+          "system": "loki"
+        },
+        {
+          "end_line": 246,
+          "path": "tests/testcore/taskpoller.go",
+          "start_line": 246,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2463,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2463,
+          "system": "temporal"
+        },
+        {
+          "end_line": 249,
+          "path": "pkg/api/grpc/server.go",
+          "start_line": 249,
+          "system": "dapr"
+        },
+        {
+          "end_line": 249,
+          "path": "vendor/github.com/yuin/gopher-lua/iolib.go",
+          "start_line": 249,
+          "system": "loki"
+        },
+        {
+          "end_line": 251,
+          "path": "pkg/api/grpc/server.go",
+          "start_line": 251,
+          "system": "dapr"
+        },
+        {
+          "end_line": 254,
+          "path": "pkg/bloomgateway/client.go",
+          "start_line": 254,
+          "system": "loki"
+        },
+        {
+          "end_line": 254,
+          "path": "pkg/querier/worker/scheduler_processor.go",
+          "start_line": 254,
+          "system": "loki"
+        },
+        {
+          "end_line": 255,
+          "path": "helm-chart/templates/cartservice.yaml",
+          "start_line": 255,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 255,
+          "path": "tests/integration/suite/daprd/hotreload/selfhosted/binding/input/grpc.go",
+          "start_line": 255,
+          "system": "dapr"
+        },
+        {
+          "end_line": 256,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 256,
+          "system": "dapr"
+        },
+        {
+          "end_line": 257,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 257,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2576,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 2576,
+          "system": "dapr"
+        },
+        {
+          "end_line": 26,
+          "path": "vendor/github.com/golang/protobuf/proto/discard.go",
+          "start_line": 26,
+          "system": "loki"
+        },
+        {
+          "end_line": 261,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go",
+          "start_line": 261,
+          "system": "dapr"
+        },
+        {
+          "end_line": 262,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 262,
+          "system": "loki"
+        },
+        {
+          "end_line": 2633,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2633,
+          "system": "temporal"
+        },
+        {
+          "end_line": 265,
+          "path": "pkg/indexgateway/client.go",
+          "start_line": 265,
+          "system": "loki"
+        },
+        {
+          "end_line": 267,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 267,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2677,
+          "path": "pkg/api/grpc/grpc_test.go",
+          "start_line": 2677,
+          "system": "dapr"
+        },
+        {
+          "end_line": 268,
+          "path": "pkg/actors/internal/scheduler/scheduler.go",
+          "start_line": 268,
+          "system": "dapr"
+        },
+        {
+          "end_line": 268,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go",
+          "start_line": 268,
+          "system": "dapr"
+        },
+        {
+          "end_line": 268,
+          "path": "tests/signal_with_start_from_workflow_test.go",
+          "start_line": 268,
+          "system": "temporal"
+        },
+        {
+          "end_line": 269,
+          "path": "tests/xdc/user_data_replication_test.go",
+          "start_line": 269,
+          "system": "temporal"
+        },
+        {
+          "end_line": 270,
+          "path": "pkg/resiliency/resiliency.go",
+          "start_line": 270,
+          "system": "dapr"
+        },
+        {
+          "end_line": 271,
+          "path": "pkg/proto/components/v1/bindings_grpc.pb.go",
+          "start_line": 271,
+          "system": "dapr"
+        },
+        {
+          "end_line": 272,
+          "path": "tests/integration/suite/daprd/conversation/alpha2/grpc/messagetypes.go",
+          "start_line": 272,
+          "system": "dapr"
+        },
+        {
+          "end_line": 273,
+          "path": "vendor/google.golang.org/grpc/credentials/alts/internal/conn/record.go",
+          "start_line": 273,
+          "system": "loki"
+        },
+        {
+          "end_line": 275,
+          "path": "tools/tdbg/dlq_v2_service.go",
+          "start_line": 275,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2750,
+          "path": "operator/internal/manifests/storage/configure_test.go",
+          "start_line": 2750,
+          "system": "loki"
+        },
+        {
+          "end_line": 277,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 277,
+          "system": "loki"
+        },
+        {
+          "end_line": 278,
+          "path": "tests/activity_api_batch_reset_test.go",
+          "start_line": 278,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2780,
+          "path": "service/frontend/workflow_handler_test.go",
+          "start_line": 2780,
+          "system": "temporal"
+        },
+        {
+          "end_line": 279,
+          "path": "pkg/indexgateway/client.go",
+          "start_line": 279,
+          "system": "loki"
+        },
+        {
+          "end_line": 28,
+          "path": "pkg/internal/loader/validate/workflowaccesspolicy_test.go",
+          "start_line": 28,
+          "system": "dapr"
+        },
+        {
+          "end_line": 2823,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 2823,
+          "system": "temporal"
+        },
+        {
+          "end_line": 283,
+          "path": "chasm/lib/nexusoperation/frontend.go",
+          "start_line": 283,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2866,
+          "path": "pkg/querier/queryrange/queryrange.pb.go",
+          "start_line": 2866,
+          "system": "loki"
+        },
+        {
+          "end_line": 287,
+          "path": "vendor/github.com/golang/protobuf/proto/extensions.go",
+          "start_line": 287,
+          "system": "loki"
+        },
+        {
+          "end_line": 289,
+          "path": "client/history/metric_client_gen.go",
+          "start_line": 289,
+          "system": "temporal"
+        },
+        {
+          "end_line": 29,
+          "path": "helm-chart/templates/cartservice.yaml",
+          "start_line": 29,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 29,
+          "path": "pkg/api/grpc/proxy/testservice/test_grpc.pb.go",
+          "start_line": 29,
+          "system": "dapr"
+        },
+        {
+          "end_line": 293,
+          "path": "pkg/indexgateway/client.go",
+          "start_line": 293,
+          "system": "loki"
+        },
+        {
+          "end_line": 293,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 293,
+          "system": "loki"
+        },
+        {
+          "end_line": 294,
+          "path": "tests/nexus_api_validation_test.go",
+          "start_line": 294,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2941,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 2941,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2975,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2975,
+          "system": "temporal"
+        },
+        {
+          "end_line": 2987,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 2987,
+          "system": "temporal"
+        },
+        {
+          "end_line": 299,
+          "path": "pkg/distributor/ratestore.go",
+          "start_line": 299,
+          "system": "loki"
+        },
+        {
+          "end_line": 2993,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 2993,
+          "system": "temporal"
+        },
+        {
+          "end_line": 3,
+          "path": "charts/dapr/charts/dapr_placement/templates/dapr_placement_statefulset.yaml",
+          "start_line": 3,
+          "system": "dapr"
+        },
+        {
+          "end_line": 300,
+          "path": "pkg/actors/callbackstream/callbackstream.go",
+          "start_line": 300,
+          "system": "dapr"
+        },
+        {
+          "end_line": 300,
+          "path": "pkg/actors/router/router.go",
+          "start_line": 300,
+          "system": "dapr"
+        },
+        {
+          "end_line": 300,
+          "path": "pkg/querier/worker/scheduler_processor.go",
+          "start_line": 300,
+          "system": "loki"
+        },
+        {
+          "end_line": 3011,
+          "path": "api/historyservice/v1/service_grpc.pb.go",
+          "start_line": 3011,
+          "system": "temporal"
+        },
+        {
+          "end_line": 3016,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 3016,
+          "system": "temporal"
+        },
+        {
+          "end_line": 304,
+          "path": "pkg/proto/components/v1/state_grpc.pb.go",
+          "start_line": 304,
+          "system": "dapr"
+        },
+        {
+          "end_line": 304,
+          "path": "tests/integration/suite/daprd/state/grpc/errors.go",
+          "start_line": 304,
+          "system": "dapr"
+        },
+        {
+          "end_line": 306,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 306,
+          "system": "dapr"
+        },
+        {
+          "end_line": 307,
+          "path": "pkg/indexgateway/client.go",
+          "start_line": 307,
+          "system": "loki"
+        },
+        {
+          "end_line": 31,
+          "path": "helm-chart/templates/adservice.yaml",
+          "start_line": 31,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 31,
+          "path": "helm-chart/templates/currencyservice.yaml",
+          "start_line": 31,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 31,
+          "path": "helm-chart/templates/emailservice.yaml",
+          "start_line": 31,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 31,
+          "path": "src/frontend/rpc.go",
+          "start_line": 31,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 312,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/dapr.connect.go",
+          "start_line": 312,
+          "system": "dapr"
+        },
+        {
+          "end_line": 313,
+          "path": "tests/xdc/replication_enable_test.go",
+          "start_line": 313,
+          "system": "temporal"
+        },
+        {
+          "end_line": 314,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 314,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 3152,
+          "path": "service/history/history_engine_test.go",
+          "start_line": 3152,
+          "system": "temporal"
+        },
+        {
+          "end_line": 3197,
+          "path": "service/history/workflow/mutable_state_impl.go",
+          "start_line": 3197,
+          "system": "temporal"
+        },
+        {
+          "end_line": 320,
+          "path": "service/history/api/recordactivitytaskstarted/api.go",
+          "start_line": 320,
+          "system": "temporal"
+        },
+        {
+          "end_line": 3206,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 3206,
+          "system": "temporal"
+        },
+        {
+          "end_line": 321,
+          "path": "pkg/indexgateway/client.go",
+          "start_line": 321,
+          "system": "loki"
+        },
+        {
+          "end_line": 321,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 321,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 322,
+          "path": "service/matching/forwarder_test.go",
+          "start_line": 322,
+          "system": "temporal"
+        },
+        {
+          "end_line": 3224,
+          "path": "tests/worker_deployment_test.go",
+          "start_line": 3224,
+          "system": "temporal"
+        },
+        {
+          "end_line": 324,
+          "path": "tests/nexus_endpoint_test.go",
+          "start_line": 324,
+          "system": "temporal"
+        },
+        {
+          "end_line": 3242,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 3242,
+          "system": "temporal"
+        },
+        {
+          "end_line": 325,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 325,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 326,
+          "path": "pkg/sentry/server/server_test.go",
+          "start_line": 326,
+          "system": "dapr"
+        },
+        {
+          "end_line": 327,
+          "path": "cmd/dataobj-inspect/stats.go",
+          "start_line": 327,
+          "system": "loki"
+        },
+        {
+          "end_line": 333,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 333,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 335,
+          "path": "pkg/indexgateway/client.go",
+          "start_line": 335,
+          "system": "loki"
+        },
+        {
+          "end_line": 335,
+          "path": "vendor/github.com/grafana/dskit/server/fake_server.pb.go",
+          "start_line": 335,
+          "system": "loki"
+        },
+        {
+          "end_line": 341,
+          "path": "tests/advanced_visibility_test.go",
+          "start_line": 341,
+          "system": "temporal"
+        },
+        {
+          "end_line": 341,
+          "path": "tests/integration/suite/daprd/pubsub/grpc/errors.go",
+          "start_line": 341,
+          "system": "dapr"
+        },
+        {
+          "end_line": 342,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 342,
+          "system": "loki"
+        },
+        {
+          "end_line": 343,
+          "path": "pkg/querier/multi_tenant_querier_test.go",
+          "start_line": 343,
+          "system": "loki"
+        },
+        {
+          "end_line": 343,
+          "path": "tests/pause_workflow_execution_test.go",
+          "start_line": 343,
+          "system": "temporal"
+        },
+        {
+          "end_line": 344,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 344,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 345,
+          "path": "chasm/lib/activity/frontend.go",
+          "start_line": 345,
+          "system": "temporal"
+        },
+        {
+          "end_line": 347,
+          "path": "pkg/pattern/tee_service.go",
+          "start_line": 347,
+          "system": "loki"
+        },
+        {
+          "end_line": 3473,
+          "path": "pkg/api/grpc/grpc_test.go",
+          "start_line": 3473,
+          "system": "dapr"
+        },
+        {
+          "end_line": 348,
+          "path": "pkg/indexgateway/client.go",
+          "start_line": 348,
+          "system": "loki"
+        },
+        {
+          "end_line": 352,
+          "path": "tests/integration/suite/daprd/hotreload/operator/crypto.go",
+          "start_line": 352,
+          "system": "dapr"
+        },
+        {
+          "end_line": 354,
+          "path": "src/frontend/handlers.go",
+          "start_line": 354,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 354,
+          "path": "tests/namespace_test.go",
+          "start_line": 354,
+          "system": "temporal"
+        },
+        {
+          "end_line": 355,
+          "path": "pkg/api/grpc/proxy/testserviceV1/test.v1.pb.go",
+          "start_line": 355,
+          "system": "dapr"
+        },
+        {
+          "end_line": 357,
+          "path": "tests/integration/suite/daprd/hotreload/operator/crypto.go",
+          "start_line": 357,
+          "system": "dapr"
+        },
+        {
+          "end_line": 3571,
+          "path": "pkg/api/grpc/grpc_test.go",
+          "start_line": 3571,
+          "system": "dapr"
+        },
+        {
+          "end_line": 358,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 358,
+          "system": "loki"
+        },
+        {
+          "end_line": 3589,
+          "path": "pkg/engine/internal/proto/physicalpb/physicalpb.pb.go",
+          "start_line": 3589,
+          "system": "loki"
+        },
+        {
+          "end_line": 3599,
+          "path": "tests/schedule_test.go",
+          "start_line": 3599,
+          "system": "temporal"
+        },
+        {
+          "end_line": 360,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 360,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 362,
+          "path": "service/worker/workerdeployment/client.go",
+          "start_line": 362,
+          "system": "temporal"
+        },
+        {
+          "end_line": 3620,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 3620,
+          "system": "temporal"
+        },
+        {
+          "end_line": 365,
+          "path": "src/frontend/handlers.go",
+          "start_line": 365,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 365,
+          "path": "vendor/google.golang.org/grpc/internal/xds/balancer/outlierdetection/balancer.go",
+          "start_line": 365,
+          "system": "loki"
+        },
+        {
+          "end_line": 367,
+          "path": "pkg/ui/handler.go",
+          "start_line": 367,
+          "system": "loki"
+        },
+        {
+          "end_line": 3677,
+          "path": "tests/worker_deployment_test.go",
+          "start_line": 3677,
+          "system": "temporal"
+        },
+        {
+          "end_line": 369,
+          "path": "client/admin/client_gen.go",
+          "start_line": 369,
+          "system": "temporal"
+        },
+        {
+          "end_line": 37,
+          "path": "client/frontend/retryable_client_gen.go",
+          "start_line": 37,
+          "system": "temporal"
+        },
+        {
+          "end_line": 37,
+          "path": "client/history/metric_client_gen.go",
+          "start_line": 37,
+          "system": "temporal"
+        },
+        {
+          "end_line": 37,
+          "path": "common/predicates/or_test.go",
+          "start_line": 37,
+          "system": "temporal"
+        },
+        {
+          "end_line": 370,
+          "path": "pkg/scheduler/scheduler.go",
+          "start_line": 370,
+          "system": "loki"
+        },
+        {
+          "end_line": 370,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 370,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 370,
+          "path": "vendor/google.golang.org/protobuf/encoding/prototext/encode.go",
+          "start_line": 370,
+          "system": "loki"
+        },
+        {
+          "end_line": 372,
+          "path": "src/checkoutservice/genproto/demo_grpc.pb.go",
+          "start_line": 372,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 372,
+          "path": "src/frontend/genproto/demo_grpc.pb.go",
+          "start_line": 372,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 373,
+          "path": "src/shippingservice/genproto/demo_grpc.pb.go",
+          "start_line": 373,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 374,
+          "path": "src/checkoutservice/genproto/demo_grpc.pb.go",
+          "start_line": 374,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 374,
+          "path": "src/frontend/genproto/demo_grpc.pb.go",
+          "start_line": 374,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 375,
+          "path": "pkg/querier/queryrange/downstreamer_test.go",
+          "start_line": 375,
+          "system": "loki"
+        },
+        {
+          "end_line": 376,
+          "path": "pkg/lokifrontend/frontend/v2/frontendv2pb/frontend.pb.go",
+          "start_line": 376,
+          "system": "loki"
+        },
+        {
+          "end_line": 377,
+          "path": "src/frontend/genproto/demo.pb.go",
+          "start_line": 377,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 3786,
+          "path": "tests/worker_deployment_test.go",
+          "start_line": 3786,
+          "system": "temporal"
+        },
+        {
+          "end_line": 379,
+          "path": "pkg/messaging/v1/invoke_method_request_test.go",
+          "start_line": 379,
+          "system": "dapr"
+        },
+        {
+          "end_line": 380,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 380,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 3812,
+          "path": "tests/schedule_test.go",
+          "start_line": 3812,
+          "system": "temporal"
+        },
+        {
+          "end_line": 382,
+          "path": "operator/internal/manifests/service_test.go",
+          "start_line": 382,
+          "system": "loki"
+        },
+        {
+          "end_line": 384,
+          "path": "src/shippingservice/genproto/demo.pb.go",
+          "start_line": 384,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 387,
+          "path": "src/checkoutservice/main.go",
+          "start_line": 387,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 388,
+          "path": "pkg/limits/frontend/ring.go",
+          "start_line": 388,
+          "system": "loki"
+        },
+        {
+          "end_line": 39,
+          "path": "pkg/testing/directmessaging_mock.go",
+          "start_line": 39,
+          "system": "dapr"
+        },
+        {
+          "end_line": 39,
+          "path": "vendor/github.com/prometheus/prometheus/tsdb/head_dedupelabels.go",
+          "start_line": 39,
+          "system": "loki"
+        },
+        {
+          "end_line": 390,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 390,
+          "system": "loki"
+        },
+        {
+          "end_line": 392,
+          "path": "tests/integration/suite/daprd/serviceinvocation/http/hopbyhop.go",
+          "start_line": 392,
+          "system": "dapr"
+        },
+        {
+          "end_line": 394,
+          "path": "pkg/messaging/direct_messaging.go",
+          "start_line": 394,
+          "system": "dapr"
+        },
+        {
+          "end_line": 396,
+          "path": "pkg/proto/components/v1/bindings.pb.go",
+          "start_line": 396,
+          "system": "dapr"
+        },
+        {
+          "end_line": 399,
+          "path": "pkg/diagnostics/http_monitoring_test.go",
+          "start_line": 399,
+          "system": "dapr"
+        },
+        {
+          "end_line": 399,
+          "path": "tests/xdc/chasm_test.go",
+          "start_line": 399,
+          "system": "temporal"
+        },
+        {
+          "end_line": 4041,
+          "path": "service/matching/matching_engine_test.go",
+          "start_line": 4041,
+          "system": "temporal"
+        },
+        {
+          "end_line": 4090,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 4090,
+          "system": "temporal"
+        },
+        {
+          "end_line": 411,
+          "path": "vendor/github.com/grafana/dskit/server/fake_server.pb.go",
+          "start_line": 411,
+          "system": "loki"
+        },
+        {
+          "end_line": 414,
+          "path": "pkg/bloomgateway/util_test.go",
+          "start_line": 414,
+          "system": "loki"
+        },
+        {
+          "end_line": 417,
+          "path": "tests/signal_workflow_test.go",
+          "start_line": 417,
+          "system": "temporal"
+        },
+        {
+          "end_line": 418,
+          "path": "pkg/proto/components/v1/state_grpc.pb.go",
+          "start_line": 418,
+          "system": "dapr"
+        },
+        {
+          "end_line": 42,
+          "path": "pkg/components/bindings/output_pluggable.go",
+          "start_line": 42,
+          "system": "dapr"
+        },
+        {
+          "end_line": 42,
+          "path": "pkg/proto/placement/v1/placement_grpc.pb.go",
+          "start_line": 42,
+          "system": "dapr"
+        },
+        {
+          "end_line": 421,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 421,
+          "system": "loki"
+        },
+        {
+          "end_line": 4221,
+          "path": "service/history/workflow/mutable_state_impl.go",
+          "start_line": 4221,
+          "system": "temporal"
+        },
+        {
+          "end_line": 424,
+          "path": "pkg/api/http/universal_test.go",
+          "start_line": 424,
+          "system": "dapr"
+        },
+        {
+          "end_line": 427,
+          "path": "pkg/logproto/compat.go",
+          "start_line": 427,
+          "system": "loki"
+        },
+        {
+          "end_line": 428,
+          "path": "src/checkoutservice/genproto/demo_grpc.pb.go",
+          "start_line": 428,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 429,
+          "path": "pkg/pattern/tee_service.go",
+          "start_line": 429,
+          "system": "loki"
+        },
+        {
+          "end_line": 432,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 432,
+          "system": "temporal"
+        },
+        {
+          "end_line": 435,
+          "path": "pkg/proto/operator/v1/operator_grpc.pb.go",
+          "start_line": 435,
+          "system": "dapr"
+        },
+        {
+          "end_line": 439,
+          "path": "src/shippingservice/genproto/demo_grpc.pb.go",
+          "start_line": 439,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 44,
+          "path": "common/rpc/interceptor/routing_key_extractor_gen.go",
+          "start_line": 44,
+          "system": "temporal"
+        },
+        {
+          "end_line": 44,
+          "path": "pkg/client/clientset/versioned/typed/configuration/v1alpha1/configuration.go",
+          "start_line": 44,
+          "system": "dapr"
+        },
+        {
+          "end_line": 44,
+          "path": "vendor/github.com/go-kit/log/logfmt_logger.go",
+          "start_line": 44,
+          "system": "loki"
+        },
+        {
+          "end_line": 442,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 442,
+          "system": "loki"
+        },
+        {
+          "end_line": 447,
+          "path": "service/history/shard/context_test.go",
+          "start_line": 447,
+          "system": "temporal"
+        },
+        {
+          "end_line": 448,
+          "path": "vendor/github.com/parquet-go/jsonlite/value.go",
+          "start_line": 448,
+          "system": "loki"
+        },
+        {
+          "end_line": 45,
+          "path": "pkg/internal/loader/kubernetes/subscriptions.go",
+          "start_line": 45,
+          "system": "dapr"
+        },
+        {
+          "end_line": 455,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 455,
+          "system": "temporal"
+        },
+        {
+          "end_line": 459,
+          "path": "service/frontend/admin_handler.go",
+          "start_line": 459,
+          "system": "temporal"
+        },
+        {
+          "end_line": 459,
+          "path": "service/history/api/recordworkflowtaskstarted/api.go",
+          "start_line": 459,
+          "system": "temporal"
+        },
+        {
+          "end_line": 46,
+          "path": "pkg/internal/loader/kubernetes/httpendpoints.go",
+          "start_line": 46,
+          "system": "dapr"
+        },
+        {
+          "end_line": 46,
+          "path": "src/frontend/rpc.go",
+          "start_line": 46,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 468,
+          "path": "pkg/loki/modules.go",
+          "start_line": 468,
+          "system": "loki"
+        },
+        {
+          "end_line": 47,
+          "path": "src/productcatalogservice/genproto/demo_grpc.pb.go",
+          "start_line": 47,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 472,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 472,
+          "system": "loki"
+        },
+        {
+          "end_line": 472,
+          "path": "service/matching/workers/registry_test.go",
+          "start_line": 472,
+          "system": "temporal"
+        },
+        {
+          "end_line": 4739,
+          "path": "tests/versioning_test.go",
+          "start_line": 4739,
+          "system": "temporal"
+        },
+        {
+          "end_line": 4763,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 4763,
+          "system": "temporal"
+        },
+        {
+          "end_line": 481,
+          "path": "service/frontend/service.go",
+          "start_line": 481,
+          "system": "temporal"
+        },
+        {
+          "end_line": 482,
+          "path": "service/worker/migration/activities.go",
+          "start_line": 482,
+          "system": "temporal"
+        },
+        {
+          "end_line": 486,
+          "path": "tests/advanced_visibility_test.go",
+          "start_line": 486,
+          "system": "temporal"
+        },
+        {
+          "end_line": 487,
+          "path": "client/admin/retryable_client_gen.go",
+          "start_line": 487,
+          "system": "temporal"
+        },
+        {
+          "end_line": 49,
+          "path": "pkg/proto/components/v1/pubsub_grpc.pb.go",
+          "start_line": 49,
+          "system": "dapr"
+        },
+        {
+          "end_line": 490,
+          "path": "pkg/lokifrontend/frontend/v1/frontendv1pb/frontend.pb.go",
+          "start_line": 490,
+          "system": "loki"
+        },
+        {
+          "end_line": 492,
+          "path": "src/frontend/genproto/demo.pb.go",
+          "start_line": 492,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 4943,
+          "path": "service/matching/matching_engine_test.go",
+          "start_line": 4943,
+          "system": "temporal"
+        },
+        {
+          "end_line": 50,
+          "path": "pkg/internal/loader/kubernetes/mcpservers.go",
+          "start_line": 50,
+          "system": "dapr"
+        },
+        {
+          "end_line": 50,
+          "path": "src/productcatalogservice/product_catalog_test.go",
+          "start_line": 50,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 50,
+          "path": "src/shippingservice/shippingservice_test.go",
+          "start_line": 50,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 50,
+          "path": "tests/integration/suite/scheduler/staging/single.go",
+          "start_line": 50,
+          "system": "dapr"
+        },
+        {
+          "end_line": 500,
+          "path": "pkg/querier/ingester_querier.go",
+          "start_line": 500,
+          "system": "loki"
+        },
+        {
+          "end_line": 500,
+          "path": "vendor/github.com/grafana/dskit/kv/etcd/mock.go",
+          "start_line": 500,
+          "system": "loki"
+        },
+        {
+          "end_line": 506,
+          "path": "pkg/actors/targets/workflow/orchestrator/timer_test.go",
+          "start_line": 506,
+          "system": "dapr"
+        },
+        {
+          "end_line": 509,
+          "path": "pkg/proto/runtime/v1/appcallback_grpc.pb.go",
+          "start_line": 509,
+          "system": "dapr"
+        },
+        {
+          "end_line": 51,
+          "path": "src/productcatalogservice/product_catalog_test.go",
+          "start_line": 51,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 52,
+          "path": "pkg/distributor/ingest_limits.go",
+          "start_line": 52,
+          "system": "loki"
+        },
+        {
+          "end_line": 52,
+          "path": "pkg/runtime/scheduler/internal/clients/wrapper/wrapper.go",
+          "start_line": 52,
+          "system": "dapr"
+        },
+        {
+          "end_line": 52,
+          "path": "src/frontend/rpc.go",
+          "start_line": 52,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 52,
+          "path": "vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_link.go",
+          "start_line": 52,
+          "system": "loki"
+        },
+        {
+          "end_line": 521,
+          "path": "pkg/lokifrontend/frontend/v2/frontendv2pb/frontend.pb.go",
+          "start_line": 521,
+          "system": "loki"
+        },
+        {
+          "end_line": 525,
+          "path": "pkg/loki/modules.go",
+          "start_line": 525,
+          "system": "loki"
+        },
+        {
+          "end_line": 529,
+          "path": "pkg/api/http/actors.go",
+          "start_line": 529,
+          "system": "dapr"
+        },
+        {
+          "end_line": 53,
+          "path": "vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_exportmetricsservicerequest.go",
+          "start_line": 53,
+          "system": "loki"
+        },
+        {
+          "end_line": 533,
+          "path": "pkg/logproto/indexgateway.pb.go",
+          "start_line": 533,
+          "system": "loki"
+        },
+        {
+          "end_line": 538,
+          "path": "src/shippingservice/genproto/demo_grpc.pb.go",
+          "start_line": 538,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 539,
+          "path": "src/productcatalogservice/genproto/demo_grpc.pb.go",
+          "start_line": 539,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 539,
+          "path": "src/shippingservice/genproto/demo_grpc.pb.go",
+          "start_line": 539,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 54,
+          "path": "pkg/querier/worker/frontend_processor.go",
+          "start_line": 54,
+          "system": "loki"
+        },
+        {
+          "end_line": 54,
+          "path": "tests/integration/suite/scheduler/concurrency/nolimit.go",
+          "start_line": 54,
+          "system": "dapr"
+        },
+        {
+          "end_line": 54,
+          "path": "vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_metricsdata.go",
+          "start_line": 54,
+          "system": "loki"
+        },
+        {
+          "end_line": 544,
+          "path": "pkg/proto/components/v1/state_grpc.pb.go",
+          "start_line": 544,
+          "system": "dapr"
+        },
+        {
+          "end_line": 5443,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 5443,
+          "system": "temporal"
+        },
+        {
+          "end_line": 5513,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 5513,
+          "system": "temporal"
+        },
+        {
+          "end_line": 5517,
+          "path": "pkg/logproto/logproto.pb.go",
+          "start_line": 5517,
+          "system": "loki"
+        },
+        {
+          "end_line": 5525,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 5525,
+          "system": "temporal"
+        },
+        {
+          "end_line": 5546,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 5546,
+          "system": "temporal"
+        },
+        {
+          "end_line": 56,
+          "path": "pkg/api/grpc/auth.go",
+          "start_line": 56,
+          "system": "dapr"
+        },
+        {
+          "end_line": 56,
+          "path": "pkg/components/pubsub/pluggable.go",
+          "start_line": 56,
+          "system": "dapr"
+        },
+        {
+          "end_line": 5672,
+          "path": "tests/update_workflow_test.go",
+          "start_line": 5672,
+          "system": "temporal"
+        },
+        {
+          "end_line": 568,
+          "path": "service/matching/matching_engine_test.go",
+          "start_line": 568,
+          "system": "temporal"
+        },
+        {
+          "end_line": 5680,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 5680,
+          "system": "temporal"
+        },
+        {
+          "end_line": 57,
+          "path": "pkg/storage/util_test.go",
+          "start_line": 57,
+          "system": "loki"
+        },
+        {
+          "end_line": 57,
+          "path": "service/history/api/respondactivitytaskcanceled/api.go",
+          "start_line": 57,
+          "system": "temporal"
+        },
+        {
+          "end_line": 57,
+          "path": "tests/integration/suite/daprd/jobs/noapp.go",
+          "start_line": 57,
+          "system": "dapr"
+        },
+        {
+          "end_line": 57,
+          "path": "tests/integration/suite/scheduler/staging/reconnect/jobs.go",
+          "start_line": 57,
+          "system": "dapr"
+        },
+        {
+          "end_line": 57,
+          "path": "vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_location.go",
+          "start_line": 57,
+          "system": "loki"
+        },
+        {
+          "end_line": 5700,
+          "path": "pkg/logproto/logproto.pb.go",
+          "start_line": 5700,
+          "system": "loki"
+        },
+        {
+          "end_line": 576,
+          "path": "pkg/proto/operator/v1/operator_grpc.pb.go",
+          "start_line": 576,
+          "system": "dapr"
+        },
+        {
+          "end_line": 576,
+          "path": "tests/nexus_endpoint_test.go",
+          "start_line": 576,
+          "system": "temporal"
+        },
+        {
+          "end_line": 578,
+          "path": "pkg/scheduler/scheduler.go",
+          "start_line": 578,
+          "system": "loki"
+        },
+        {
+          "end_line": 58,
+          "path": "operator/internal/manifests/openshift/rbac.go",
+          "start_line": 58,
+          "system": "loki"
+        },
+        {
+          "end_line": 58,
+          "path": "pkg/pattern/ingester_querier.go",
+          "start_line": 58,
+          "system": "loki"
+        },
+        {
+          "end_line": 58,
+          "path": "src/frontend/rpc.go",
+          "start_line": 58,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 58,
+          "path": "tests/integration/suite/actors/state/grpc.go",
+          "start_line": 58,
+          "system": "dapr"
+        },
+        {
+          "end_line": 58,
+          "path": "tests/integration/suite/daprd/subscriptions/programmatic/grpc/deadletter.go",
+          "start_line": 58,
+          "system": "dapr"
+        },
+        {
+          "end_line": 58,
+          "path": "tests/integration/suite/scheduler/failurepolicy/drop/failed.go",
+          "start_line": 58,
+          "system": "dapr"
+        },
+        {
+          "end_line": 5824,
+          "path": "pkg/logproto/logproto.pb.go",
+          "start_line": 5824,
+          "system": "loki"
+        },
+        {
+          "end_line": 59,
+          "path": "src/productcatalogservice/product_catalog_test.go",
+          "start_line": 59,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 59,
+          "path": "vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_spanevent.go",
+          "start_line": 59,
+          "system": "loki"
+        },
+        {
+          "end_line": 590,
+          "path": "src/shippingservice/genproto/demo_grpc.pb.go",
+          "start_line": 590,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 594,
+          "path": "vendor/go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc/config.go",
+          "start_line": 594,
+          "system": "loki"
+        },
+        {
+          "end_line": 595,
+          "path": "pkg/api/grpc/proxy/handler_test.go",
+          "start_line": 595,
+          "system": "dapr"
+        },
+        {
+          "end_line": 597,
+          "path": "client/admin/metric_client_gen.go",
+          "start_line": 597,
+          "system": "temporal"
+        },
+        {
+          "end_line": 5980,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 5980,
+          "system": "temporal"
+        },
+        {
+          "end_line": 60,
+          "path": "pkg/api/grpc/crypto_test.go",
+          "start_line": 60,
+          "system": "dapr"
+        },
+        {
+          "end_line": 6049,
+          "path": "pkg/logproto/logproto.pb.go",
+          "start_line": 6049,
+          "system": "loki"
+        },
+        {
+          "end_line": 6052,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 6052,
+          "system": "temporal"
+        },
+        {
+          "end_line": 608,
+          "path": "service/history/timer_queue_active_task_executor.go",
+          "start_line": 608,
+          "system": "temporal"
+        },
+        {
+          "end_line": 61,
+          "path": "tests/integration/suite/daprd/subscriptions/declarative/operator/v2alpha1/basic/grpc.go",
+          "start_line": 61,
+          "system": "dapr"
+        },
+        {
+          "end_line": 61,
+          "path": "tests/integration/suite/daprd/workflow/loadbalance/timer.go",
+          "start_line": 61,
+          "system": "dapr"
+        },
+        {
+          "end_line": 61,
+          "path": "vendor/github.com/grafana/dskit/kv/consul/client.go",
+          "start_line": 61,
+          "system": "loki"
+        },
+        {
+          "end_line": 614,
+          "path": "src/frontend/genproto/demo.pb.go",
+          "start_line": 614,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 6152,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 6152,
+          "system": "temporal"
+        },
+        {
+          "end_line": 62,
+          "path": "service/history/api/updateactivityoptions/api.go",
+          "start_line": 62,
+          "system": "temporal"
+        },
+        {
+          "end_line": 620,
+          "path": "vendor/github.com/prometheus/prometheus/model/textparse/protobufparse.go",
+          "start_line": 620,
+          "system": "loki"
+        },
+        {
+          "end_line": 622,
+          "path": "tests/cron_test.go",
+          "start_line": 622,
+          "system": "temporal"
+        },
+        {
+          "end_line": 625,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 625,
+          "system": "temporal"
+        },
+        {
+          "end_line": 625,
+          "path": "client/frontend/metric_client_gen.go",
+          "start_line": 625,
+          "system": "temporal"
+        },
+        {
+          "end_line": 63,
+          "path": "operator/internal/manifests/mutate_test.go",
+          "start_line": 63,
+          "system": "loki"
+        },
+        {
+          "end_line": 63,
+          "path": "pkg/proto/components/v1/componentsconnect/secretstore.connect.go",
+          "start_line": 63,
+          "system": "dapr"
+        },
+        {
+          "end_line": 63,
+          "path": "src/frontend/rpc.go",
+          "start_line": 63,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 631,
+          "path": "vendor/google.golang.org/grpc/balancer/rls/balancer.go",
+          "start_line": 631,
+          "system": "loki"
+        },
+        {
+          "end_line": 637,
+          "path": "tools/tdbg/commands.go",
+          "start_line": 637,
+          "system": "temporal"
+        },
+        {
+          "end_line": 638,
+          "path": "service/history/ndc/hsm_state_replicator_test.go",
+          "start_line": 638,
+          "system": "temporal"
+        },
+        {
+          "end_line": 638,
+          "path": "tests/xdc/nexus_request_forwarding_test.go",
+          "start_line": 638,
+          "system": "temporal"
+        },
+        {
+          "end_line": 639,
+          "path": "pkg/resiliency/resiliency.go",
+          "start_line": 639,
+          "system": "dapr"
+        },
+        {
+          "end_line": 64,
+          "path": "tests/integration/suite/actors/reminders/failurepolicy/drop/failed.go",
+          "start_line": 64,
+          "system": "dapr"
+        },
+        {
+          "end_line": 64,
+          "path": "vendor/go.etcd.io/etcd/client/v3/auth.go",
+          "start_line": 64,
+          "system": "loki"
+        },
+        {
+          "end_line": 649,
+          "path": "common/namespace/nsregistry/registry_test.go",
+          "start_line": 649,
+          "system": "temporal"
+        },
+        {
+          "end_line": 65,
+          "path": "pkg/components/pubsub/pluggable.go",
+          "start_line": 65,
+          "system": "dapr"
+        },
+        {
+          "end_line": 651,
+          "path": "pkg/proto/components/v1/state_grpc.pb.go",
+          "start_line": 651,
+          "system": "dapr"
+        },
+        {
+          "end_line": 655,
+          "path": "pkg/ingester/instance_test.go",
+          "start_line": 655,
+          "system": "loki"
+        },
+        {
+          "end_line": 656,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 656,
+          "system": "temporal"
+        },
+        {
+          "end_line": 658,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 658,
+          "system": "temporal"
+        },
+        {
+          "end_line": 659,
+          "path": "client/frontend/client_gen.go",
+          "start_line": 659,
+          "system": "temporal"
+        },
+        {
+          "end_line": 66,
+          "path": "pkg/actors/targets/app/transport/http/http_test.go",
+          "start_line": 66,
+          "system": "dapr"
+        },
+        {
+          "end_line": 66,
+          "path": "pkg/querier/worker/frontend_processor.go",
+          "start_line": 66,
+          "system": "loki"
+        },
+        {
+          "end_line": 66,
+          "path": "tests/integration/suite/actors/call/local.go",
+          "start_line": 66,
+          "system": "dapr"
+        },
+        {
+          "end_line": 664,
+          "path": "pkg/config/configuration.go",
+          "start_line": 664,
+          "system": "dapr"
+        },
+        {
+          "end_line": 6674,
+          "path": "tests/activity_standalone_test.go",
+          "start_line": 6674,
+          "system": "temporal"
+        },
+        {
+          "end_line": 6698,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 6698,
+          "system": "loki"
+        },
+        {
+          "end_line": 67,
+          "path": "client/admin/retryable_client_gen.go",
+          "start_line": 67,
+          "system": "temporal"
+        },
+        {
+          "end_line": 67,
+          "path": "tests/integration/suite/actors/lock/call/local/chain/grpc.go",
+          "start_line": 67,
+          "system": "dapr"
+        },
+        {
+          "end_line": 67,
+          "path": "tests/sizelimit_test.go",
+          "start_line": 67,
+          "system": "temporal"
+        },
+        {
+          "end_line": 670,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 670,
+          "system": "temporal"
+        },
+        {
+          "end_line": 675,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 675,
+          "system": "temporal"
+        },
+        {
+          "end_line": 675,
+          "path": "tests/xdc/stream_based_replication_test.go",
+          "start_line": 675,
+          "system": "temporal"
+        },
+        {
+          "end_line": 678,
+          "path": "src/frontend/genproto/demo_grpc.pb.go",
+          "start_line": 678,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 68,
+          "path": "pkg/dataobj/compaction/v2/calculator.go",
+          "start_line": 68,
+          "system": "loki"
+        },
+        {
+          "end_line": 68,
+          "path": "src/frontend/rpc.go",
+          "start_line": 68,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 68,
+          "path": "tests/integration/suite/scheduler/embed/userpass.go",
+          "start_line": 68,
+          "system": "dapr"
+        },
+        {
+          "end_line": 680,
+          "path": "service/frontend/admin_handler.go",
+          "start_line": 680,
+          "system": "temporal"
+        },
+        {
+          "end_line": 684,
+          "path": "pkg/logproto/indexgateway.pb.go",
+          "start_line": 684,
+          "system": "loki"
+        },
+        {
+          "end_line": 685,
+          "path": "pkg/api/grpc/grpc.go",
+          "start_line": 685,
+          "system": "dapr"
+        },
+        {
+          "end_line": 6856,
+          "path": "pkg/logproto/logproto.pb.go",
+          "start_line": 6856,
+          "system": "loki"
+        },
+        {
+          "end_line": 69,
+          "path": "pkg/distributor/ingest_limits.go",
+          "start_line": 69,
+          "system": "loki"
+        },
+        {
+          "end_line": 691,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 691,
+          "system": "temporal"
+        },
+        {
+          "end_line": 691,
+          "path": "tests/timeskipping_propagation_test.go",
+          "start_line": 691,
+          "system": "temporal"
+        },
+        {
+          "end_line": 695,
+          "path": "pkg/api/grpc/proxy/handler_test.go",
+          "start_line": 695,
+          "system": "dapr"
+        },
+        {
+          "end_line": 70,
+          "path": "pkg/channel/testing/channel_mock.go",
+          "start_line": 70,
+          "system": "dapr"
+        },
+        {
+          "end_line": 70,
+          "path": "pkg/compactor/deletion/grpc_request_handler_test.go",
+          "start_line": 70,
+          "system": "loki"
+        },
+        {
+          "end_line": 70,
+          "path": "vendor/github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime/policy_api_version.go",
+          "start_line": 70,
+          "system": "loki"
+        },
+        {
+          "end_line": 70,
+          "path": "vendor/go.opentelemetry.io/collector/pdata/internal/generated_proto_logrecord.go",
+          "start_line": 70,
+          "system": "loki"
+        },
+        {
+          "end_line": 705,
+          "path": "tests/xdc/user_data_replication_test.go",
+          "start_line": 705,
+          "system": "temporal"
+        },
+        {
+          "end_line": 708,
+          "path": "service/frontend/admin_handler.go",
+          "start_line": 708,
+          "system": "temporal"
+        },
+        {
+          "end_line": 709,
+          "path": "client/frontend/metric_client_gen.go",
+          "start_line": 709,
+          "system": "temporal"
+        },
+        {
+          "end_line": 71,
+          "path": "src/productcatalogservice/product_catalog_test.go",
+          "start_line": 71,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 714,
+          "path": "vendor/github.com/redis/go-redis/v9/sentinel.go",
+          "start_line": 714,
+          "system": "loki"
+        },
+        {
+          "end_line": 719,
+          "path": "pkg/dataobj/internal/metadata/filemd/filemd.pb.go",
+          "start_line": 719,
+          "system": "loki"
+        },
+        {
+          "end_line": 72,
+          "path": "pkg/components/bindings/output_pluggable.go",
+          "start_line": 72,
+          "system": "dapr"
+        },
+        {
+          "end_line": 72,
+          "path": "pkg/components/secretstores/pluggable.go",
+          "start_line": 72,
+          "system": "dapr"
+        },
+        {
+          "end_line": 72,
+          "path": "src/productcatalogservice/catalog_loader.go",
+          "start_line": 72,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 7203,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 7203,
+          "system": "loki"
+        },
+        {
+          "end_line": 73,
+          "path": "charts/dapr/charts/dapr_operator/templates/dapr_operator_deployment.yaml",
+          "start_line": 73,
+          "system": "dapr"
+        },
+        {
+          "end_line": 73,
+          "path": "client/matching/client_gen.go",
+          "start_line": 73,
+          "system": "temporal"
+        },
+        {
+          "end_line": 73,
+          "path": "src/shippingservice/shippingservice_test.go",
+          "start_line": 73,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 73,
+          "path": "tests/integration/suite/daprd/shutdown/graceful/timein.go",
+          "start_line": 73,
+          "system": "dapr"
+        },
+        {
+          "end_line": 73,
+          "path": "tests/integration/suite/scheduler/api/repeats.go",
+          "start_line": 73,
+          "system": "dapr"
+        },
+        {
+          "end_line": 738,
+          "path": "pkg/logproto/indexgateway.pb.go",
+          "start_line": 738,
+          "system": "loki"
+        },
+        {
+          "end_line": 74,
+          "path": "helm-chart/templates/opentelemetry-collector.yaml",
+          "start_line": 74,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 74,
+          "path": "tests/integration/suite/daprd/jobs/delete.go",
+          "start_line": 74,
+          "system": "dapr"
+        },
+        {
+          "end_line": 74,
+          "path": "tests/integration/suite/daprd/subscriptions/declarative/selfhosted/v2alpha1/basic/grpc.go",
+          "start_line": 74,
+          "system": "dapr"
+        },
+        {
+          "end_line": 748,
+          "path": "pkg/logproto/bloomgateway.pb.go",
+          "start_line": 748,
+          "system": "loki"
+        },
+        {
+          "end_line": 75,
+          "path": "vendor/google.golang.org/grpc/internal/grpcsync/callback_serializer.go",
+          "start_line": 75,
+          "system": "loki"
+        },
+        {
+          "end_line": 75,
+          "path": "vendor/google.golang.org/grpc/internal/xds/clients/internal/syncutil/callback_serializer.go",
+          "start_line": 75,
+          "system": "loki"
+        },
+        {
+          "end_line": 757,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 757,
+          "system": "temporal"
+        },
+        {
+          "end_line": 76,
+          "path": "service/history/service.go",
+          "start_line": 76,
+          "system": "temporal"
+        },
+        {
+          "end_line": 76,
+          "path": "src/frontend/money/money.go",
+          "start_line": 76,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 7618,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 7618,
+          "system": "loki"
+        },
+        {
+          "end_line": 77,
+          "path": "pkg/ruler/storage/wal/util.go",
+          "start_line": 77,
+          "system": "loki"
+        },
+        {
+          "end_line": 77,
+          "path": "tools/tdbg/commands.go",
+          "start_line": 77,
+          "system": "temporal"
+        },
+        {
+          "end_line": 7784,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 7784,
+          "system": "loki"
+        },
+        {
+          "end_line": 779,
+          "path": "vendor/github.com/redis/go-redis/v9/sentinel.go",
+          "start_line": 779,
+          "system": "loki"
+        },
+        {
+          "end_line": 7795,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 7795,
+          "system": "loki"
+        },
+        {
+          "end_line": 78,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 78,
+          "system": "temporal"
+        },
+        {
+          "end_line": 78,
+          "path": "src/shippingservice/shippingservice_test.go",
+          "start_line": 78,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 78,
+          "path": "tests/integration/suite/actors/lock/call/reentry/max/defaultmax.go",
+          "start_line": 78,
+          "system": "dapr"
+        },
+        {
+          "end_line": 78,
+          "path": "tests/integration/suite/daprd/jobs/delete.go",
+          "start_line": 78,
+          "system": "dapr"
+        },
+        {
+          "end_line": 78,
+          "path": "tests/integration/suite/sentry/validator/insecure/insecure.go",
+          "start_line": 78,
+          "system": "dapr"
+        },
+        {
+          "end_line": 78,
+          "path": "vendor/google.golang.org/grpc/internal/xds/xdsclient/xdsresource/name.go",
+          "start_line": 78,
+          "system": "loki"
+        },
+        {
+          "end_line": 782,
+          "path": "api/matchingservice/v1/service_grpc.pb.go",
+          "start_line": 782,
+          "system": "temporal"
+        },
+        {
+          "end_line": 783,
+          "path": "tests/schedule_migration_test.go",
+          "start_line": 783,
+          "system": "temporal"
+        },
+        {
+          "end_line": 79,
+          "path": "service/history/workflow/activity.go",
+          "start_line": 79,
+          "system": "temporal"
+        },
+        {
+          "end_line": 79,
+          "path": "tests/integration/suite/daprd/jobs/grpc/appapitoken.go",
+          "start_line": 79,
+          "system": "dapr"
+        },
+        {
+          "end_line": 79,
+          "path": "tests/integration/suite/daprd/serviceinvocation/grpc/proxy.go",
+          "start_line": 79,
+          "system": "dapr"
+        },
+        {
+          "end_line": 79,
+          "path": "tests/nexus_endpoint_test.go",
+          "start_line": 79,
+          "system": "temporal"
+        },
+        {
+          "end_line": 791,
+          "path": "pkg/logproto/indexgateway.pb.go",
+          "start_line": 791,
+          "system": "loki"
+        },
+        {
+          "end_line": 794,
+          "path": "pkg/ruler/base/ruler.go",
+          "start_line": 794,
+          "system": "loki"
+        },
+        {
+          "end_line": 80,
+          "path": "service/history/interfaces/engine.go",
+          "start_line": 80,
+          "system": "temporal"
+        },
+        {
+          "end_line": 80,
+          "path": "src/productcatalogservice/product_catalog_test.go",
+          "start_line": 80,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 80,
+          "path": "vendor/google.golang.org/grpc/encoding/gzip/gzip.go",
+          "start_line": 80,
+          "system": "loki"
+        },
+        {
+          "end_line": 8064,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 8064,
+          "system": "loki"
+        },
+        {
+          "end_line": 8068,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 8068,
+          "system": "loki"
+        },
+        {
+          "end_line": 8072,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 8072,
+          "system": "loki"
+        },
+        {
+          "end_line": 81,
+          "path": "pkg/querier/worker/scheduler_processor.go",
+          "start_line": 81,
+          "system": "loki"
+        },
+        {
+          "end_line": 81,
+          "path": "src/frontend/rpc.go",
+          "start_line": 81,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 81,
+          "path": "tests/integration/suite/daprd/serviceinvocation/grpc/appapitoken/selfwithtoken.go",
+          "start_line": 81,
+          "system": "dapr"
+        },
+        {
+          "end_line": 81,
+          "path": "tests/integration/suite/daprd/serviceinvocation/grpc/proxy.go",
+          "start_line": 81,
+          "system": "dapr"
+        },
+        {
+          "end_line": 811,
+          "path": "pkg/loki/modules.go",
+          "start_line": 811,
+          "system": "loki"
+        },
+        {
+          "end_line": 812,
+          "path": "tests/apps/service_invocation/app.go",
+          "start_line": 812,
+          "system": "dapr"
+        },
+        {
+          "end_line": 815,
+          "path": "tests/apps/service_invocation/app.go",
+          "start_line": 815,
+          "system": "dapr"
+        },
+        {
+          "end_line": 817,
+          "path": "tests/client_misc_test.go",
+          "start_line": 817,
+          "system": "temporal"
+        },
+        {
+          "end_line": 82,
+          "path": "tests/integration/suite/actors/call/h2c/resiliency.go",
+          "start_line": 82,
+          "system": "dapr"
+        },
+        {
+          "end_line": 82,
+          "path": "tests/integration/suite/daprd/subscriptions/declarative/operator/v2alpha1/routes/emptymatch/grpc.go",
+          "start_line": 82,
+          "system": "dapr"
+        },
+        {
+          "end_line": 82,
+          "path": "vendor/google.golang.org/grpc/internal/transport/controlbuf.go",
+          "start_line": 82,
+          "system": "loki"
+        },
+        {
+          "end_line": 8263,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 8263,
+          "system": "loki"
+        },
+        {
+          "end_line": 8281,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 8281,
+          "system": "loki"
+        },
+        {
+          "end_line": 829,
+          "path": "pkg/compactor/client/grpc/grpc.pb.go",
+          "start_line": 829,
+          "system": "loki"
+        },
+        {
+          "end_line": 829,
+          "path": "pkg/pattern/ingester_test.go",
+          "start_line": 829,
+          "system": "loki"
+        },
+        {
+          "end_line": 829,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 829,
+          "system": "dapr"
+        },
+        {
+          "end_line": 8299,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 8299,
+          "system": "loki"
+        },
+        {
+          "end_line": 83,
+          "path": "tests/integration/suite/daprd/placement/disstimeout/repeated.go",
+          "start_line": 83,
+          "system": "dapr"
+        },
+        {
+          "end_line": 83,
+          "path": "tests/integration/suite/operator/api/httpendpointupdate/basic.go",
+          "start_line": 83,
+          "system": "dapr"
+        },
+        {
+          "end_line": 835,
+          "path": "vendor/github.com/prometheus/client_golang/prometheus/histogram.go",
+          "start_line": 835,
+          "system": "loki"
+        },
+        {
+          "end_line": 84,
+          "path": "pkg/proto/operator/v1/operator_grpc.pb.go",
+          "start_line": 84,
+          "system": "dapr"
+        },
+        {
+          "end_line": 84,
+          "path": "tests/integration/suite/daprd/shutdown/graceful/invocation/grpc/caller.go",
+          "start_line": 84,
+          "system": "dapr"
+        },
+        {
+          "end_line": 8425,
+          "path": "vendor/go.etcd.io/etcd/api/v3/etcdserverpb/rpc.pb.go",
+          "start_line": 8425,
+          "system": "loki"
+        },
+        {
+          "end_line": 85,
+          "path": "tests/integration/suite/daprd/subscriptions/programmatic/grpc/rawpayload.go",
+          "start_line": 85,
+          "system": "dapr"
+        },
+        {
+          "end_line": 85,
+          "path": "vendor/google.golang.org/grpc/internal/xds/balancer/outlierdetection/subconn_wrapper.go",
+          "start_line": 85,
+          "system": "loki"
+        },
+        {
+          "end_line": 86,
+          "path": "tests/integration/suite/daprd/subscriptions/programmatic/grpc/missing.go",
+          "start_line": 86,
+          "system": "dapr"
+        },
+        {
+          "end_line": 862,
+          "path": "common/namespace/nsregistry/registry_test.go",
+          "start_line": 862,
+          "system": "temporal"
+        },
+        {
+          "end_line": 87,
+          "path": "pkg/client/clientset/versioned/typed/configuration/v1alpha1/configuration.go",
+          "start_line": 87,
+          "system": "dapr"
+        },
+        {
+          "end_line": 87,
+          "path": "pkg/compactor/deletion/delete_request_test.go",
+          "start_line": 87,
+          "system": "loki"
+        },
+        {
+          "end_line": 87,
+          "path": "service/matching/pri_forwarder.go",
+          "start_line": 87,
+          "system": "temporal"
+        },
+        {
+          "end_line": 87,
+          "path": "src/checkoutservice/genproto/demo.pb.go",
+          "start_line": 87,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 87,
+          "path": "tests/integration/suite/placement/authz/nomtls.go",
+          "start_line": 87,
+          "system": "dapr"
+        },
+        {
+          "end_line": 879,
+          "path": "client/frontend/client_gen.go",
+          "start_line": 879,
+          "system": "temporal"
+        },
+        {
+          "end_line": 88,
+          "path": "src/frontend/rpc.go",
+          "start_line": 88,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 88,
+          "path": "tests/apps/crypto/utils.go",
+          "start_line": 88,
+          "system": "dapr"
+        },
+        {
+          "end_line": 88,
+          "path": "tests/integration/suite/daprd/placement/daprddisstimeout/defaultnoreset.go",
+          "start_line": 88,
+          "system": "dapr"
+        },
+        {
+          "end_line": 889,
+          "path": "pkg/proto/runtime/v1/dapr_grpc.pb.go",
+          "start_line": 889,
+          "system": "dapr"
+        },
+        {
+          "end_line": 89,
+          "path": "pkg/actors/targets/workflow/orchestrator/signing/verify.go",
+          "start_line": 89,
+          "system": "dapr"
+        },
+        {
+          "end_line": 89,
+          "path": "tests/integration/framework/process/pubsub/component.go",
+          "start_line": 89,
+          "system": "dapr"
+        },
+        {
+          "end_line": 891,
+          "path": "common/persistence/history_manager.go",
+          "start_line": 891,
+          "system": "temporal"
+        },
+        {
+          "end_line": 90,
+          "path": "pkg/compactor/deletion/grpc_request_handler_test.go",
+          "start_line": 90,
+          "system": "loki"
+        },
+        {
+          "end_line": 91,
+          "path": "pkg/proto/runtime/v1/runtimeconnect/appcallback.connect.go",
+          "start_line": 91,
+          "system": "dapr"
+        },
+        {
+          "end_line": 91,
+          "path": "pkg/runtime/subscription/postman/grpc/grpc.go",
+          "start_line": 91,
+          "system": "dapr"
+        },
+        {
+          "end_line": 91,
+          "path": "tests/integration/suite/daprd/serviceinvocation/grpc/basic.go",
+          "start_line": 91,
+          "system": "dapr"
+        },
+        {
+          "end_line": 91,
+          "path": "tests/integration/suite/daprd/subscriptions/stream/mixed.go",
+          "start_line": 91,
+          "system": "dapr"
+        },
+        {
+          "end_line": 91,
+          "path": "vendor/go.etcd.io/etcd/client/v3/auth.go",
+          "start_line": 91,
+          "system": "loki"
+        },
+        {
+          "end_line": 92,
+          "path": "src/productcatalogservice/product_catalog_test.go",
+          "start_line": 92,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 92,
+          "path": "src/shippingservice/main.go",
+          "start_line": 92,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 924,
+          "path": "service/frontend/workflow_handler_test.go",
+          "start_line": 924,
+          "system": "temporal"
+        },
+        {
+          "end_line": 93,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 93,
+          "system": "temporal"
+        },
+        {
+          "end_line": 93,
+          "path": "src/checkoutservice/genproto/demo_grpc.pb.go",
+          "start_line": 93,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 93,
+          "path": "tests/integration/suite/placement/timeout/unlock.go",
+          "start_line": 93,
+          "system": "dapr"
+        },
+        {
+          "end_line": 93,
+          "path": "tests/integration/suite/scheduler/api/ha.go",
+          "start_line": 93,
+          "system": "dapr"
+        },
+        {
+          "end_line": 936,
+          "path": "tests/worker_deployment_test.go",
+          "start_line": 936,
+          "system": "temporal"
+        },
+        {
+          "end_line": 937,
+          "path": "client/history/retryable_client_gen.go",
+          "start_line": 937,
+          "system": "temporal"
+        },
+        {
+          "end_line": 94,
+          "path": "tests/integration/suite/sentry/validator/jwks/shared.go",
+          "start_line": 94,
+          "system": "dapr"
+        },
+        {
+          "end_line": 940,
+          "path": "tests/continue_as_new_test.go",
+          "start_line": 940,
+          "system": "temporal"
+        },
+        {
+          "end_line": 95,
+          "path": "helm-chart/templates/loadgenerator.yaml",
+          "start_line": 95,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 956,
+          "path": "src/productcatalogservice/genproto/demo_grpc.pb.go",
+          "start_line": 956,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 957,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 957,
+          "system": "temporal"
+        },
+        {
+          "end_line": 96,
+          "path": "pkg/api/http/server_test.go",
+          "start_line": 96,
+          "system": "dapr"
+        },
+        {
+          "end_line": 97,
+          "path": "pkg/querier/worker/scheduler_processor.go",
+          "start_line": 97,
+          "system": "loki"
+        },
+        {
+          "end_line": 97,
+          "path": "vendor/google.golang.org/protobuf/reflect/protoreflect/value_equal.go",
+          "start_line": 97,
+          "system": "loki"
+        },
+        {
+          "end_line": 970,
+          "path": "src/frontend/genproto/demo.pb.go",
+          "start_line": 970,
+          "system": "online-boutique"
+        },
+        {
+          "end_line": 972,
+          "path": "operator/internal/manifests/mutate_test.go",
+          "start_line": 972,
+          "system": "loki"
+        },
+        {
+          "end_line": 98,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 98,
+          "system": "temporal"
+        },
+        {
+          "end_line": 982,
+          "path": "service/frontend/workflow_handler.go",
+          "start_line": 982,
+          "system": "temporal"
+        },
+        {
+          "end_line": 99,
+          "path": "tests/integration/suite/daprd/subscriptions/stream/multi.go",
+          "start_line": 99,
+          "system": "dapr"
+        },
+        {
+          "end_line": 993,
+          "path": "api/adminservice/v1/service_grpc.pb.go",
+          "start_line": 993,
+          "system": "temporal"
+        },
+        {
+          "end_line": 996,
+          "path": "pkg/querier/queryrange/codec_test.go",
+          "start_line": 996,
+          "system": "loki"
+        }
+      ],
+      "coordinates_sha256": "sha256:a5eaca08b5177d8ed4720ebda3fc4bc05ec38d502cf29d11a0d51bccafebe575",
+      "input_binding": null,
+      "source_artifacts": [
+        {
+          "path": "sites.dev.jsonl",
+          "records": 335,
+          "sha256": "sha256:fa8f3afa5aa4c08828b9ee1d51e895d5d6d463141f87a5029c876f57e86e344e"
+        },
+        {
+          "path": "sites.holdout.jsonl",
+          "records": 143,
+          "sha256": "sha256:400c652c8bb2f92a6f3334288210d8f3d224f08857b2cadc0c17cf4eea264160"
+        },
+        {
+          "path": "g34.sites.dev.jsonl",
+          "records": 171,
+          "sha256": "sha256:7f829018ff4e117e5781430c626aef35f9d244fdc4e8c002f8d44b9f8fe80ccb"
+        },
+        {
+          "path": "g34.sites.holdout.jsonl",
+          "records": 72,
+          "sha256": "sha256:2e47a0dcebc97111c51f63553ddd474631abe90a7425fe701f6ad5025e2b56c5"
+        },
+        {
+          "path": "g3h2.sites.jsonl",
+          "records": 56,
+          "sha256": "sha256:8981b570a32fb99e8ad48218a16ad15a46bcb301728f0558daf68eb98c951205"
+        }
+      ],
+      "source_commits": {
+        "dapr": "1991f9484f4dd47502e7329c838ceae42f6ca179",
+        "loki": "fbf98eb42291cd09cf019956a1812e35dbbadbbf",
+        "online-boutique": "ea0fcf429ff59d861867370d75586095dd253813",
+        "temporal": "1d4be84b3771a03e870f09db74bee9e437469b0d"
+      }
     }
   ],
   "coordinate_count": 700,
   "coordinates_sha256": "sha256:a5eaca08b5177d8ed4720ebda3fc4bc05ec38d502cf29d11a0d51bccafebe575",
-  "ledger_digest": "sha256:5de294a48f171f82c9813b85b9f62bdcb8eee62a2af886e2d2ed4a7aad6270b7"
+  "ledger_digest": "sha256:cf8ea6d914bcaf64bf8ab0b707f69278c53bfe5f696caa91920c66926e9f9c03",
+  "projection": "system,path,start_line,end_line; disclosed labeler coordinates; predicates and values deliberately ignored",
+  "schema_version": "t111-burn-ledger-v2"
 }

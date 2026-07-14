@@ -24,7 +24,7 @@ import (
 // stays package-abstained (tier derived).
 //
 // access kinds: getter_read | field_read | field_write | construct
-func extractFieldRefs(system, commit, root string, declared []Fact) ([]Fact, error) {
+func extractFieldRefs(system, commit, root string, declared []Fact, buildTags []string) ([]Fact, error) {
 	if abs, err := filepath.Abs(root); err == nil {
 		root = abs
 	}
@@ -71,7 +71,7 @@ func extractFieldRefs(system, commit, root string, declared []Fact) ([]Fact, err
 	}
 	var facts []Fact
 	for _, mod := range mods {
-		modFacts, merr := fieldRefsForModule(system, commit, root, mod, uniqueDecl)
+		modFacts, merr := fieldRefsForModule(system, commit, root, mod, uniqueDecl, buildTags)
 		if merr != nil {
 			rel, _ := filepath.Rel(root, mod)
 			rel = filepath.ToSlash(rel)
@@ -109,7 +109,7 @@ func parseProtoTag(tag string) (num, name string, ok bool) {
 	return m[1], m[2], true
 }
 
-func fieldRefsForModule(system, commit, root, modDir string, uniqueDecl func(msg, num string) string) ([]Fact, error) {
+func fieldRefsForModule(system, commit, root, modDir string, uniqueDecl func(msg, num string) string, buildTags []string) ([]Fact, error) {
 	if err := validateLocalReplaces(root, modDir); err != nil {
 		return nil, err
 	}
@@ -117,9 +117,10 @@ func fieldRefsForModule(system, commit, root, modDir string, uniqueDecl func(msg
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
 			packages.NeedImports | packages.NeedDeps | packages.NeedTypes |
 			packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedModule,
-		Dir:   modDir,
-		Tests: true,
-		Env:   goPackageEnv(modDir),
+		Dir:        modDir,
+		Tests:      true,
+		Env:        goPackageEnv(modDir),
+		BuildFlags: packageBuildFlags(buildTags),
 	}
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {

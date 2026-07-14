@@ -11,27 +11,28 @@ import (
 	"sort"
 	"strings"
 
+	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/sumdb/dirhash"
 	"golang.org/x/tools/go/packages"
 )
 
 // verifyPackageSemanticInputs proves that every external module used by the
-// Go type checker still has the content committed by its module sum. Local
-// modules and replaces must live in the exact Git snapshot and are bound by
-// commit plus repository-relative directory. The returned digest is recorded
-// on every type-derived fact, so a shared module cache is never an unrecorded
-// semantic input.
+// Go type checker still has the content committed by a go.sum in the checkout.
+// Local modules and replacements are instead bound to the exact commit and
+// repository-relative directory. Vendored dependencies are bound to their
+// commit-backed vendor roots because go/packages omits Module.Dir for them.
 func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.Package) (string, error) {
 	rootReal, err := filepath.EvalSymlinks(snapshotRoot)
 	if err != nil {
 		return "", fmt.Errorf("resolve snapshot root: %w", err)
 	}
-	descriptors := map[string]struct{}{}
-	validatedModules := map[string]struct{}{}
 	sums, err := snapshotModuleSums(rootReal)
 	if err != nil {
 		return "", err
 	}
+
+	descriptors := make(map[string]struct{})
+	validatedModules := make(map[string]struct{})
 	var validationErr error
 	packages.Visit(pkgs, nil, func(pkg *packages.Package) {
 		if validationErr != nil || pkg == nil || pkg.Module == nil {
@@ -44,14 +45,12 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 			effective = module.Replace
 			replacement = module.Replace.Path + "@" + module.Replace.Version
 		}
-		// In -mod=vendor mode go/packages reports the module identity but
-		// leaves Module.Dir empty. Bind that dependency to the exact vendored
-		// directory in the pinned snapshot; never mistake an arbitrary source
-		// path for vendored content.
+
+		// In vendor mode, go/packages reports the required module identity but
+		// leaves Module.Dir empty. The import path remains rooted below the
+		// required module path even for a replaced implementation.
 		if effective.Dir == "" {
-			// Go's vendor tree is keyed by the required/import module path,
-			// even when modules.txt records a replacement implementation.
-			vendorRel, vendorErr := vendoredModuleRoot(rootReal, module.Path, pkg)
+			vendorRel, vendorErr := semanticVendoredModuleRoot(rootReal, module.Path, pkg)
 			if vendorErr != nil {
 				validationErr = fmt.Errorf("module %s@%s has no resolved directory: %w", module.Path, module.Version, vendorErr)
 				return
@@ -59,7 +58,7 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 			validationKey := strings.Join([]string{
 				module.Path, module.Version, replacement, effective.Path, effective.Version, vendorRel,
 			}, "\x00")
-			if _, alreadyValidated := validatedModules[validationKey]; alreadyValidated {
+			if _, ok := validatedModules[validationKey]; ok {
 				return
 			}
 			validatedModules[validationKey] = struct{}{}
@@ -69,24 +68,27 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 			}, "\x00")] = struct{}{}
 			return
 		}
+
 		validationKey := strings.Join([]string{
 			module.Path, module.Version, replacement, effective.Path, effective.Version, effective.Dir,
 		}, "\x00")
-		if _, alreadyValidated := validatedModules[validationKey]; alreadyValidated {
+		if _, ok := validatedModules[validationKey]; ok {
 			return
 		}
 		validatedModules[validationKey] = struct{}{}
+
 		dirReal, resolveErr := filepath.EvalSymlinks(effective.Dir)
 		if resolveErr != nil {
 			validationErr = fmt.Errorf("resolve module %s@%s directory: %w", module.Path, module.Version, resolveErr)
 			return
 		}
-		if rel, inside := relativeWithin(rootReal, dirReal); inside {
+		if rel, inside := semanticRelativeWithin(rootReal, dirReal); inside {
 			descriptors[strings.Join([]string{
 				"snapshot", module.Path, module.Version, replacement, commit, filepath.ToSlash(rel),
 			}, "\x00")] = struct{}{}
 			return
 		}
+
 		expectedSum := sums[effective.Path+"@"+effective.Version]
 		if effective.Path == "" || effective.Version == "" || expectedSum == "" {
 			validationErr = fmt.Errorf("external module %s@%s lacks a versioned content sum", effective.Path, effective.Version)
@@ -112,24 +114,15 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 	if len(descriptors) == 0 {
 		return "", fmt.Errorf("go package graph has no bound module inputs")
 	}
-	ordered := make([]string, 0, len(descriptors))
-	for descriptor := range descriptors {
-		ordered = append(ordered, descriptor)
-	}
-	sort.Strings(ordered)
-	h := sha256.New()
-	for _, descriptor := range ordered {
-		_, _ = fmt.Fprintf(h, "%d:%s;", len(descriptor), descriptor)
-	}
-	return "sha256:" + hex.EncodeToString(h.Sum(nil)), nil
+	return digestSemanticDescriptors(descriptors), nil
 }
 
-func vendoredModuleRoot(snapshotRoot, modulePath string, pkg *packages.Package) (string, error) {
+func semanticVendoredModuleRoot(snapshotRoot, modulePath string, pkg *packages.Package) (string, error) {
 	if modulePath == "" {
 		return "", fmt.Errorf("missing module path")
 	}
 	marker := "vendor/" + modulePath
-	roots := map[string]bool{}
+	roots := make(map[string]struct{})
 	files := append(append([]string(nil), pkg.GoFiles...), pkg.CompiledGoFiles...)
 	for _, source := range files {
 		if source == "" {
@@ -139,7 +132,7 @@ func vendoredModuleRoot(snapshotRoot, modulePath string, pkg *packages.Package) 
 		if err != nil {
 			return "", fmt.Errorf("resolve vendored source %s: %w", source, err)
 		}
-		rel, inside := relativeWithin(snapshotRoot, real)
+		rel, inside := semanticRelativeWithin(snapshotRoot, real)
 		if !inside {
 			return "", fmt.Errorf("source %s is outside the pinned snapshot", source)
 		}
@@ -155,8 +148,7 @@ func vendoredModuleRoot(snapshotRoot, modulePath string, pkg *packages.Package) 
 		if start < 0 {
 			return "", fmt.Errorf("source %s is not below %s", rel, marker)
 		}
-		root := rel[:start+len(marker)]
-		roots[root] = true
+		roots[rel[:start+len(marker)]] = struct{}{}
 	}
 	if len(roots) != 1 {
 		ordered := make([]string, 0, len(roots))
@@ -177,7 +169,7 @@ func vendoredModuleRoot(snapshotRoot, modulePath string, pkg *packages.Package) 
 }
 
 func snapshotModuleSums(root string) (map[string]string, error) {
-	sums := map[string]string{}
+	sums := make(map[string]string)
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -224,22 +216,75 @@ func snapshotModuleSums(root string) (map[string]string, error) {
 	return sums, nil
 }
 
-func relativeWithin(root, candidate string) (string, bool) {
+// validateLocalReplaces rejects module sources whose content is selected by a
+// host path rather than by the pinned checkout or a versioned module sum.
+func validateLocalReplaces(snapshotRoot, modDir string) error {
+	content, err := os.ReadFile(filepath.Join(modDir, "go.mod"))
+	if err != nil {
+		return fmt.Errorf("read go.mod: %w", err)
+	}
+	parsed, err := modfile.Parse("go.mod", content, nil)
+	if err != nil {
+		return fmt.Errorf("parse go.mod: %w", err)
+	}
+	rootReal, err := filepath.EvalSymlinks(snapshotRoot)
+	if err != nil {
+		return fmt.Errorf("resolve snapshot root: %w", err)
+	}
+	for _, replacement := range parsed.Replace {
+		if replacement.New.Version != "" {
+			continue
+		}
+		if filepath.IsAbs(replacement.New.Path) {
+			return fmt.Errorf("local replace %s => %s is absolute", replacement.Old.Path, replacement.New.Path)
+		}
+		target := filepath.Clean(filepath.Join(modDir, filepath.FromSlash(replacement.New.Path)))
+		targetReal, err := filepath.EvalSymlinks(target)
+		if err != nil {
+			return fmt.Errorf("resolve local replace %s => %s: %w", replacement.Old.Path, replacement.New.Path, err)
+		}
+		if _, inside := semanticRelativeWithin(rootReal, targetReal); !inside {
+			return fmt.Errorf("local replace %s => %s escapes the immutable snapshot", replacement.Old.Path, replacement.New.Path)
+		}
+		info, err := os.Stat(targetReal)
+		if err != nil || !info.IsDir() {
+			return fmt.Errorf("local replace %s => %s is not an in-snapshot directory", replacement.Old.Path, replacement.New.Path)
+		}
+	}
+	return nil
+}
+
+func combineSemanticInputDigests(byModule map[string]string) (string, error) {
+	if len(byModule) == 0 {
+		return "", fmt.Errorf("no module semantic input digests")
+	}
+	descriptors := make(map[string]struct{}, len(byModule))
+	for module, digest := range byModule {
+		if module == "" || digest == "" {
+			return "", fmt.Errorf("incomplete module semantic input digest")
+		}
+		descriptors[strings.Join([]string{"module-scan", module, digest}, "\x00")] = struct{}{}
+	}
+	return digestSemanticDescriptors(descriptors), nil
+}
+
+func digestSemanticDescriptors(descriptors map[string]struct{}) string {
+	ordered := make([]string, 0, len(descriptors))
+	for descriptor := range descriptors {
+		ordered = append(ordered, descriptor)
+	}
+	sort.Strings(ordered)
+	h := sha256.New()
+	for _, descriptor := range ordered {
+		_, _ = fmt.Fprintf(h, "%d:%s;", len(descriptor), descriptor)
+	}
+	return "sha256:" + hex.EncodeToString(h.Sum(nil))
+}
+
+func semanticRelativeWithin(root, candidate string) (string, bool) {
 	rel, err := filepath.Rel(root, candidate)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	if err != nil || filepath.IsAbs(rel) || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return "", false
 	}
 	return rel, true
-}
-
-func bindSemanticInputs(facts []Fact, digest string) []Fact {
-	for index := range facts {
-		fact := &facts[index]
-		fact.SemanticInputsDigest = digest
-		fact.FactFingerprint = factFingerprintWithInputs(
-			fact.Predicate, fact.Subject, fact.Object, fact.Detail, digest,
-		)
-		fact.AtomID = fact.atom().ID()
-	}
-	return facts
 }
