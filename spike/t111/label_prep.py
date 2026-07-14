@@ -99,8 +99,10 @@ LEGACY_DIAGNOSTIC_SEED = 111
 SEED = LEGACY_DIAGNOSTIC_SEED
 GATE_RECALL_HOLDOUT_PER_SYSTEM = 200
 GATE_RECALL_DEV_PER_SYSTEM = 120
-GATE_PRECISION_HOLDOUT_PER_SYSTEM = 800
-GATE_PRECISION_DEV_PER_SYSTEM = 60
+# Full-population sentinel: every fresh emitted client-call precision site in
+# the committed fixtures is assigned to the probability-one holdout.
+GATE_PRECISION_HOLDOUT_PER_SYSTEM = 1_000_000
+GATE_PRECISION_DEV_PER_SYSTEM = 0
 GATE_RECALL_MIN_PER_STRATUM = 30
 GATE_PRECISION_MIN_PER_STRATUM = 15
 GATE_REGISTRATION_RECALL_HOLDOUT_PER_SYSTEM = 1_000_000
@@ -2740,6 +2742,15 @@ def preflight_gate_design(
             ):
                 reasons.append(
                     f"{frame} stratum {row['id']} has zero holdout inclusion probability"
+                )
+    for frame, family in (
+        (FRAME_CALL_PRECISION, "client-call"),
+        (FRAME_REGISTRATION_PRECISION, "registration"),
+    ):
+        for row in frames[frame]["strata"]:
+            if int(row["holdout_sample_size"]) != int(row["sample_population_size"]):
+                reasons.append(
+                    f"{family} precision stratum {row['id']} is not an exhaustive fresh holdout"
                 )
 
     def precision_bound(frame: str, scope: str | None = None) -> Fraction:

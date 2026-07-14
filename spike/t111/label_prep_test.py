@@ -21,6 +21,15 @@ import label_prep as prep  # noqa: E402
 
 
 class Gate2PreparationTests(unittest.TestCase):
+    def test_gate_sampling_config_exhausts_fresh_call_precision(self) -> None:
+        config = prep.gate_sampling_config()
+        self.assertEqual(config["precision_holdout_per_system"], 1_000_000)
+        self.assertEqual(config["precision_dev_per_system"], 0)
+        self.assertEqual(
+            config["precision_holdout_per_system"],
+            config["registration_precision_holdout_per_system"],
+        )
+
     def test_current_lock_binds_build_tags_and_exact_gitlink_exclusions(self) -> None:
         entries = prep.load_corpus_entries(prep.DEFAULT_LOCK, prep.SYSTEMS)
         self.assertEqual(entries["dapr"]["go_build_tags"], ["unit"])
@@ -744,9 +753,16 @@ func wire(s Server) {
             impossible,
             raise_on_failure=False,
         )
-        self.assertEqual(diagnostic["family_size"], 6)
+        self.assertEqual(diagnostic["family_size"], 4)
         with self.assertRaisesRegex(prep.PrepError, "statistically incapable"):
             prep.preflight_gate_design(impossible)
+
+        nonexhaustive_precision = self._power_manifest(population=300, holdout=300)
+        nonexhaustive_precision["frames"][prep.FRAME_CALL_PRECISION]["strata"][0][
+            "holdout_sample_size"
+        ] = 299
+        with self.assertRaisesRegex(prep.PrepError, "not an exhaustive fresh holdout"):
+            prep.preflight_gate_design(nonexhaustive_precision)
 
         unsampled = self._power_manifest(population=300, holdout=300)
         unsampled["frames"][prep.FRAME_CALL_PRECISION]["strata"].append(
@@ -799,15 +815,15 @@ func wire(s Server) {
                 row["dev_sample_size"] = 10
         report = prep.preflight_gate_design(manifest)
         best = report["best_case"]
-        self.assertEqual(best["holdout_unique_floor"], 200)
-        self.assertEqual(best["dev_unique_ceiling"], 180)
-        self.assertEqual(best["selected_unique_ceiling"], 405)
+        self.assertEqual(best["holdout_unique_floor"], 400)
+        self.assertEqual(best["dev_unique_ceiling"], 120)
+        self.assertEqual(best["selected_unique_ceiling"], 545)
         self.assertAlmostEqual(
-            best["blind_fraction_lower_bound"], 200 / 405, places=15
+            best["blind_fraction_lower_bound"], 400 / 545, places=15
         )
         # Any realized overlap can only reduce the unique dev denominator or
         # increase the unique holdout numerator relative to these bounds.
-        for realized_holdout, realized_dev in ((200, 180), (250, 20), (300, 0)):
+        for realized_holdout, realized_dev in ((400, 120), (450, 20), (500, 0)):
             actual = realized_holdout / (25 + realized_holdout + realized_dev)
             self.assertGreaterEqual(actual, best["blind_fraction_lower_bound"])
 
@@ -1110,7 +1126,9 @@ func wire(s Server) {
 
     @staticmethod
     def _power_manifest(population: int, holdout: int) -> dict[str, object]:
-        def stratum(identifier: str, system: str, label: str) -> dict[str, object]:
+        def stratum(
+            identifier: str, system: str, label: str, holdout_size: int
+        ) -> dict[str, object]:
             return {
                 "id": identifier,
                 "system": system,
@@ -1118,7 +1136,7 @@ func wire(s Server) {
                 "population_size": population,
                 "sample_population_size": population,
                 "census_size": 0,
-                "holdout_sample_size": min(holdout, population),
+                "holdout_sample_size": min(holdout_size, population),
                 "dev_sample_size": 0,
             }
 
@@ -1141,16 +1159,26 @@ func wire(s Server) {
             "holdout": {"unique_census_sites": 0},
             "frames": {
                 prep.FRAME_CALL_PRECISION: {
-                    "strata": [stratum("fixture|production", "fixture", "production")]
+                    "strata": [
+                        stratum(
+                            "fixture|production", "fixture", "production", population
+                        )
+                    ]
                 },
                 prep.FRAME_CALL_RECALL: {
-                    "strata": [stratum("fixture|risk", "fixture", "risk")]
+                    "strata": [stratum("fixture|risk", "fixture", "risk", holdout)]
                 },
                 prep.FRAME_REGISTRATION_PRECISION: {
-                    "strata": [stratum("fixture|production", "fixture", "production")]
+                    "strata": [
+                        stratum(
+                            "fixture|production", "fixture", "production", population
+                        )
+                    ]
                 },
                 prep.FRAME_REGISTRATION_RECALL: {
-                    "strata": [stratum("fixture|production", "fixture", "production")]
+                    "strata": [
+                        stratum("fixture|production", "fixture", "production", holdout)
+                    ]
                 },
                 prep.FRAME_ROLE: {"strata": role_strata},
             },

@@ -83,3 +83,18 @@ Attempt 3 uses extractor `spike-0.5.1` and the full append-only burn ledger.
 No attempt claim may be created until exact corpus synchronization, gitlink
 review, deterministic fact regeneration, carry-forward resolution, full tests,
 and a write-suppressed attainable-power preflight all pass.
+
+After locked population enumeration and burn carry-forward—but before an
+attempt claim, public commitment, external entropy, sampled-coordinate
+publication, or labeling—the inherited 800-per-system client-call precision
+quota failed the write-suppressed capacity check solely because its
+seed-independent blind-fraction lower bound was 24.76%, below the fixed 30%
+minimum. The prospective design was therefore changed to a probability-one
+fresh precision holdout with exact enumeration, using the same
+1,000,000-per-system sentinel as the registration precision frame and no
+precision development allocation. This does not remove any burn, lower a
+threshold, or use a realized random rank. The amendment used only locked
+population and carry-forward capacity counts, never correctness outcomes. With
+the locked populations it raises the conservative blind-fraction lower bound to
+44.86%, eliminates precision-sampling uncertainty, and leaves the design
+statistically attainable.

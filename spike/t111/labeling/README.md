@@ -38,8 +38,9 @@ Gate 2 v3 measures two reference families independently:
 
 - Client calls: an extractor-independent typed recall frame over Go call
   expressions whose statically resolved receiver implements a discovered gRPC
-  client interface, plus a probability sample of emitted `CALLS_OPERATION`
-  facts. Package/type-load gaps fail closed.
+  client interface, plus an exhaustive probability-one fresh holdout containing
+  every emitted `CALLS_OPERATION` fact. Previously disclosed facts remain in
+  the permanent census. Package/type-load gaps fail closed.
 - Server registrations: an extractor-independent lexical recall frame over
   call-shaped `Register<Name>Server(...)` sites and direct
   `server.RegisterService(...)` sites, plus a precision frame containing every
@@ -62,6 +63,14 @@ the test path signal is `_test.go` or an exact `tests`, `testing`, or `testdata`
 segment. This taxonomy is supplied verbatim to reviewers.
 extractor role output remains hidden until scoring. Every sampled reference
 requires an exact role match.
+
+| Frame | Fresh holdout | Development | Gate treatment |
+|---|---:|---:|---|
+| Client-call recall | up to 200 per fixture, stratified | up to 120 per fixture | finite-population bounds |
+| Client-call precision | exhaustive (`pi = 1`) | 0 | exact enumeration |
+| Registration recall | exhaustive (`pi = 1`) | 0 | exact enumeration |
+| Registration precision | exhaustive (`pi = 1`) | 0 | exact enumeration |
+| Source role | up to 20 per role | up to 10 per role | every selected role must match exactly |
 
 The manifest binds the exact corpus lock, all four commits, declared gitlink
 exclusions, Dapr's `unit` build tag, fact files, extractor configuration, burn
@@ -112,6 +121,15 @@ The `t111-gate2-input-commitment-v2` frame strata intentionally omit realized
 development allocation fields. Its development-site ceiling is derived only
 from the fixed quotas and fixed post-holdout frame capacities, so the exact
 commitment bytes reconstruct identically for every later public seed.
+
+The fixed client-call precision quota is an exhaustive-population sentinel of
+1,000,000 sites per fixture. It exceeds every committed fresh precision
+population, so every such site has holdout inclusion probability 1 and no
+precision-frame site remains for development allocation. The exact population,
+sample size, inclusion probability, and sampling configuration are all bound
+into the input commitment. Preflight rejects either client-call or registration
+precision if any fresh stratum is not exhaustively held out, so the sentinel
+cannot silently degrade into sampling.
 
 The Gate 2 v3 protocol commitment's `committed_at` is a scheduled activation
 time at least 30 minutes in the future. Before that activation, publish the
@@ -333,10 +351,12 @@ joint confidence:
 - at least 90% precision for every fixture; and
 - complete, exact classification of the five-role cohort.
 
-These are full-population estimates: census outcomes enter exactly and only the
-fresh holdout population is expanded with finite-population hypergeometric
-bounds. Missing inputs, provenance drift, unresolved labels, review-protocol
-violations, or a failed threshold produce `NOT ESTABLISHED`.
+These are full-population estimates: permanent-census outcomes and exhaustive
+fresh precision outcomes enter exactly. Only non-exhaustive fresh holdout
+populations—the recall frames in the fixed design—are expanded with
+finite-population hypergeometric bounds. Missing inputs, provenance drift,
+unresolved labels, review-protocol violations, or a failed threshold produce
+`NOT ESTABLISHED`.
 
 ## Downstream scope
 
