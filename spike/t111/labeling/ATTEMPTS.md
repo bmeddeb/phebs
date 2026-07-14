@@ -39,3 +39,29 @@ extractor outcome.
 Attempt 2 uses `t111-gate2-input-commitment-v2`, whose public bytes and power
 ceiling depend only on committed populations, census/holdout sizes, fixed
 development quotas, and post-holdout capacities—not on a realized seed rank.
+
+### Attempt 2 — sealed result
+
+- Input binding: `sha256:eca70ead55594e43c635356444196ce6b9c0c7c4e9a50a0a21451918bc6c8a8d`
+- Scheduled activation: `2026-07-14T16:42:40.009797Z`
+- Initial input commitment: [GitHub Gist](https://gist.github.com/bmeddeb/889e67caa7eae870b3038ddee506bc7b), revision `90f008c2d975951f753f5155d660fc9f7c47eb11`
+- First eligible public pulse: `https://beacon.nist.gov/beacon/2.0/chain/2/pulse/1859412`, timestamp `2026-07-14T16:43:00.000Z`
+- Frozen labels: 3,028; SHA-256 `8ba4c8966802426b55d45bdbf83bfb78ed5955badcc741a492c2dcd94da39112`
+- Adjudication: 307 overlap sites, 2 disagreements, 4 adjudicated, 0 unresolved
+- Initial label commitment: [GitHub Gist](https://gist.github.com/bmeddeb/f0323d02e3969f0c76499a9a99aa4bfe), revision `20990867a593c4bac3e024d88b87498cdefe672e`
+- Disposition: **Gate 2 NOT ESTABLISHED** on the one permitted holdout score.
+
+Every client-call and registration confidence bound passed, as did benchmark
+support and the blind-fraction requirement. Four role cohorts were exact, but
+the `test` cohort was 148/149. The post-score burned-coordinate review found
+that both source classifiers recognized exact `tests` and `testdata` path
+segments but omitted the exact `testing` segment used by reusable test support.
+The frozen human label was therefore correct and the extractor emitted
+`production` incorrectly.
+
+Attempt 2 remains immutable and must not be relabeled, rescored, reseeded, or
+reused. The prospective correction is extractor `spike-0.5.1`, which adds the
+exact `testing` segment to the fixed test-role taxonomy and makes that rule
+explicit to reviewers. Any validation of the correction requires a genuinely
+new four-commit source lineage and must carry every Attempt-2 disclosure into
+the append-only burn census.

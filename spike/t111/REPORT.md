@@ -1,3 +1,39 @@
+# T11.1 validation rerun — sealed Gate 2 result
+
+**Date:** 2026-07-14 · **Branch:** `t11.1-gate-revalidation` · **Status:**
+**STOP / NOT ESTABLISHED**
+
+The corrected Gate 2 v3 protocol completed one sealed, publicly committed
+holdout evaluation over 3,028 frozen labels. Every exact confidence bound
+passed:
+
+- client calls: 100.00% point precision, 98.77% lower bound; 98.57%
+  population recall, 95.93% lower bound; every fixture above 98.51%;
+- registrations: 99.21% precision and lower bound; 93.33% population recall
+  and lower bound; every fixture above 98.50%;
+- benchmark support: 1,266 positives and 148 hard negatives; and
+- blind holdout: 75.46% against the 30% minimum.
+
+Gate 2 is nevertheless **NOT ESTABLISHED** because role classification is an
+exact all-cohort requirement: `generated` 38/38, `mock` 1/1, `production`
+249/249, `vendor` 21/21, but `test` 148/149. The one-score rule forbids
+relabeling or rescoring this attempt.
+
+The burned-coordinate postmortem isolated the miss to reusable test support
+under an exact `testing` path segment. Both the producer and independent source
+classifier recognized only `tests` and `testdata`, emitted `production`, and
+therefore shared the same blind spot. The human source label `test` was
+correct. Extractor `spike-0.5.1` prospectively adds the exact `testing` segment,
+bumps the evidence version, and adds matching Go/Python regressions and explicit
+reviewer guidance. Proving that correction requires a new official-head
+four-commit lineage, full burn-ledger carry-forward, a fresh public seed and
+labels, and one new score. Attempt 2 remains immutable. See
+`spike/t111/labeling/ATTEMPTS.md` for public commitments and lineage.
+
+Epics 13–15 remain gated.
+
+---
+
 # T11.1 validation rerun — prior outcome retracted
 
 **Date:** 2026-07-12 · **Branch:** `t11.1-validation-redo` · **Status:**
