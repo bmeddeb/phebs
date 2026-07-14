@@ -58,6 +58,8 @@ forwarding call is a hard negative, while a hand-written direct
 A fifth frame samples emitted references across `production`, `test`, `mock`,
 `generated`, and `vendor`. Expected roles are derived from source only with the
 fixed precedence `vendor > mock/fake > generated > test > production`;
+the test path signal is `_test.go` or an exact `tests`, `testing`, or `testdata`
+segment. This taxonomy is supplied verbatim to reviewers.
 extractor role output remains hidden until scoring. Every sampled reference
 requires an exact role match.
 

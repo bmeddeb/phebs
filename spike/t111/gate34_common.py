@@ -28,7 +28,7 @@ MANIFEST_SCHEMA_VERSION = "t111-g34-manifest-v1"
 BURN_LEDGER_SCHEMA_VERSION = "t111-burn-ledger-v2"
 LEGACY_BURN_LEDGER_SCHEMA_VERSION = "t111-burn-ledger-v1"
 PRODUCER_SCHEMA_VERSION = "t111-v4"
-PRODUCER_EXTRACTOR_VERSION = "spike-0.5.0"
+PRODUCER_EXTRACTOR_VERSION = "spike-0.5.1"
 
 VALID_TIERS = frozenset({"exact", "derived", "heuristic", "unresolved"})
 VALID_ACCESS = frozenset(

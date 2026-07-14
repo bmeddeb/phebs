@@ -11,6 +11,8 @@ from gate34_common import (
     GATE3_MERGE_PREDICATES,
     LEGACY_BURN_LEDGER_SCHEMA_VERSION,
     ValidationError,
+    _coordinate_digest,
+    _legacy_coordinate,
     _tree_entries,
     build_burn_ledger,
     digest_value,
@@ -144,14 +146,14 @@ class Gate34IntegrityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "source artifact provenance"):
             build_burn_ledger(invalid)
 
-    def test_current_burn_projection_remains_loadable_as_v1(self) -> None:
+    def test_legacy_burn_projection_remains_loadable_after_v2_append(self) -> None:
         labeling = Path(__file__).resolve().parent / "labeling"
         current_path = labeling / "burn-ledger.json"
         current_document = json.loads(current_path.read_text(encoding="utf-8"))
         self.assertEqual(
             current_document["schema_version"], BURN_LEDGER_SCHEMA_VERSION
         )
-        current_coordinates, current_digest = load_burn_ledger(current_path)
+        current_coordinates, _ = load_burn_ledger(current_path)
         legacy_names = (
             "sites.dev.jsonl",
             "sites.holdout.jsonl",
@@ -163,10 +165,16 @@ class Gate34IntegrityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             sources = []
+            projected = []
             for name in legacy_names:
                 source = labeling / name
                 copied = root / name
                 copied.write_bytes(source.read_bytes())
+                projected.extend(
+                    coordinate
+                    for row in read_jsonl(source)
+                    if (coordinate := _legacy_coordinate(row)) is not None
+                )
                 sources.append(
                     {
                         "path": name,
@@ -174,6 +182,12 @@ class Gate34IntegrityTests(unittest.TestCase):
                         "sha256": sha256_file(source),
                     }
                 )
+            unique = {
+                json.dumps(coordinate, sort_keys=True, separators=(",", ":")): coordinate
+                for coordinate in projected
+            }
+            expected_coordinates = [unique[key] for key in sorted(unique)]
+            expected_digest = _coordinate_digest(expected_coordinates)
             unsigned = {
                 "schema_version": LEGACY_BURN_LEDGER_SCHEMA_VERSION,
                 "projection": (
@@ -181,8 +195,8 @@ class Gate34IntegrityTests(unittest.TestCase):
                     "site coordinates; predicates and values deliberately ignored"
                 ),
                 "sources": sources,
-                "coordinate_count": len(current_coordinates),
-                "coordinates_sha256": current_digest,
+                "coordinate_count": len(expected_coordinates),
+                "coordinates_sha256": expected_digest,
             }
             legacy_path = root / "burn-ledger-v1.json"
             self._write_json(
@@ -191,8 +205,13 @@ class Gate34IntegrityTests(unittest.TestCase):
             )
             legacy_coordinates, legacy_digest = load_burn_ledger(legacy_path)
 
-        self.assertEqual(legacy_coordinates, current_coordinates)
-        self.assertEqual(legacy_digest, current_digest)
+        self.assertEqual(legacy_coordinates, expected_coordinates)
+        self.assertEqual(legacy_digest, expected_digest)
+        current_keys = {
+            json.dumps(coordinate, sort_keys=True, separators=(",", ":"))
+            for coordinate in current_coordinates
+        }
+        self.assertTrue(set(unique).issubset(current_keys))
 
     def test_exposed_population_cannot_be_silently_shrunk(self) -> None:
         require_fresh_blind_population(0)

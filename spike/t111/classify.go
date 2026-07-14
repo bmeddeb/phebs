@@ -35,10 +35,11 @@ func classifyRole(relPath string, content []byte) string {
 }
 
 // hasTestSegment catches test code that doesn't use the _test.go suffix —
-// dapr's integration suite lives under tests/integration/... as plain .go.
+// dapr's integration suite lives under tests/integration/... as plain .go,
+// while Temporal's reusable test support lives under common/testing/.
 func hasTestSegment(relPath string) bool {
 	for _, seg := range strings.Split(relPath, "/") {
-		if seg == "tests" || seg == "testdata" {
+		if seg == "tests" || seg == "testing" || seg == "testdata" {
 			return true
 		}
 	}

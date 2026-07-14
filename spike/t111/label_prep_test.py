@@ -67,6 +67,12 @@ func wire(s Server) {
         self.assertEqual(prep.source_code_role("pkg/service_fake.go", "package p\n"), "mock")
         self.assertEqual(prep.source_code_role("tests/generated_test.go", generated), "generated")
         self.assertEqual(prep.source_code_role("pkg/service_test.go", "package p\n"), "test")
+        self.assertEqual(
+            prep.source_code_role(
+                "common/testing/taskpoller/taskpoller.go", "package taskpoller\n"
+            ),
+            "test",
+        )
         self.assertEqual(prep.source_code_role("pkg/service.go", "package p\n"), "production")
 
     def test_site_identity_changes_with_commit(self) -> None:
@@ -94,8 +100,15 @@ func wire(s Server) {
         self.assertEqual(
             binding["carry_forward_schema"], "t111-burn-carry-forward-census-v2"
         )
+        # Cohort overlap and source translation may collapse multiple historical
+        # disclosures onto one active interval. Every historical projection
+        # still has at least one fail-closed resolution record.
+        self.assertGreater(binding["active_coordinate_count"], 0)
         self.assertGreaterEqual(
-            binding["active_coordinate_count"], binding["coordinate_count"]
+            binding["resolution_count"], binding["coordinate_count"]
+        )
+        self.assertLessEqual(
+            binding["active_coordinate_count"], binding["resolution_count"]
         )
         self.assertEqual(binding["resolution_count"], sum(binding["resolution_dispositions"].values()))
         self.assertTrue(all(active[system] for system in prep.SYSTEMS))

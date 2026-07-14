@@ -1668,7 +1668,9 @@ def source_code_role(path: str, content: str) -> str:
         return "mock"
     if GENERATED_HEADER.search(content[:4096]):
         return "generated"
-    if leaf.endswith("_test.go") or any(part in {"tests", "testdata"} for part in parts):
+    if leaf.endswith("_test.go") or any(
+        part in {"tests", "testing", "testdata"} for part in parts
+    ):
         return "test"
     return "production"
 

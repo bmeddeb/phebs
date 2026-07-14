@@ -84,6 +84,7 @@ func TestClassifyRole(t *testing.T) {
 		{"internal/foo/client_fake.go", plain, roleMock},
 		{"genproto/demo_grpc.pb.go", gen, roleGenerated},
 		{"internal/svc/handler_test.go", plain, roleTest},
+		{"common/testing/taskpoller/taskpoller.go", plain, roleTest},
 		{"internal/svc/handler.go", plain, roleProduction},
 	}
 	for _, c := range cases {
