@@ -283,7 +283,8 @@ type AssertionQuery struct {
 	Subject   string
 	Object    string
 	Repo      string
-	Limit     int // 0 = default cap
+	RunID     string // empty = any published run for Repo
+	Limit     int    // 0 = default cap
 }
 
 // EvidenceResolution is the click-through from one assertion support id to

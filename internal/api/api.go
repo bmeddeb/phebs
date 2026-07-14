@@ -41,6 +41,11 @@ type Options struct {
 	// T10.2 analytics: serves GET /api/analytics; nil answers 503.
 	Analytics store.AnalyticsStore
 
+	// Evidence enables the permission-filtered provisional evidence view. A
+	// nil store leaves the route unregistered so the dark-launch default has
+	// no discoverable read surface.
+	Evidence store.EvidenceStore
+
 	// Visible resolves the caller's repo visibility (T10.3): it returns this
 	// request's predicate, or nil when the caller may see everything. A nil
 	// field disables permission filtering (tests, permissions block absent).
@@ -296,6 +301,7 @@ func New(opts Options) http.Handler {
 	registerCodeNavigation(api, opts)
 	registerAudit(api, opts)
 	registerAnalytics(api, opts)
+	registerEvidence(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

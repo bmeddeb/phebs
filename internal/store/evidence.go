@@ -869,6 +869,9 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 	if !utf8.ValidString(q.Repo) || len(q.Repo) > maxEvidenceIdentityBytes {
 		return nil, errors.New("list assertions: invalid repo scope")
 	}
+	if q.RunID != "" && (!utf8.ValidString(q.RunID) || len(q.RunID) > maxEvidenceIdentityBytes) {
+		return nil, errors.New("list assertions: invalid run scope")
+	}
 	limit := q.Limit
 	if limit <= 0 {
 		limit = 1000
@@ -888,6 +891,21 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 		"limit":                       limit + 1,
 		"evidence_format_version":     evidenceFormatVersion,
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+	}
+	if q.RunID != "" {
+		where = `run_id = $run_id AND run_id IN (SELECT VALUE run_id FROM extraction_run
+			WHERE id = $run_rid
+			  AND run_id = $run_id
+			  AND status = 'published'
+			  AND repo = $repo
+			  AND evidence_format_version = $evidence_format_version
+			  AND retention_quarantined = false
+			  AND run_id = record::id(id)
+			  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+			  AND published_key != NONE)`
+		vars["run_id"] = q.RunID
+		vars["run_rid"] = extractionRunID(q.RunID)
+		addProbeVars(vars, q.RunID)
 	}
 	if q.Predicate != "" {
 		where += " AND predicate = $predicate"

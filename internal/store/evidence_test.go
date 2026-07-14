@@ -227,6 +227,14 @@ func TestEvidenceStagedRunsInvisibleAndAtomicPublish(t *testing.T) {
 	if len(got) != 1 || got[0].Object != "o3" {
 		t.Fatalf("supersession not atomic: %v", got)
 	}
+	runScoped, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, RunID: run3.ID})
+	if err != nil || len(runScoped) != 1 || runScoped[0].Object != "o3" {
+		t.Fatalf("run-scoped published assertions = %v, %v", runScoped, err)
+	}
+	superseded, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, RunID: run1.ID})
+	if err != nil || len(superseded) != 0 {
+		t.Fatalf("run-scoped query exposed superseded assertions = %v, %v", superseded, err)
+	}
 	// Double-publish and adding to a published run both refuse.
 	if err := s.PublishExtractionRun(ctx, run3.ID, testCoverage(0, 0)); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("double publish = %v", err)

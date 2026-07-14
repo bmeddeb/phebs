@@ -13,6 +13,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -82,6 +83,8 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 		t.Fatalf("login response = %s, err %v", login, err)
 	}
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/repos", "", nil, http.StatusOK, "[]")
+	assertStatus(t, client, http.MethodGet, server.URL+"/api/evidence?domain=proto-contract", "", nil,
+		http.StatusNotFound, "404")
 	assertStatus(t, client, http.MethodPost, server.URL+"/api/reindex", `{"repo":"github.com/no/repo"}`,
 		http.Header{"Content-Type": []string{"application/json"}}, http.StatusForbidden, "CSRF")
 	assertStatus(t, client, http.MethodPost, server.URL+"/api/reindex", `{"repo":"github.com/no/repo"}`,
@@ -102,6 +105,119 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/repos", "", bearerHeaders, http.StatusOK, "[]")
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/mcp", "", bearerHeaders, http.StatusNoContent, "")
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/auth/keys", "", bearerHeaders, http.StatusForbidden, "browser session")
+}
+
+func TestEvidenceViewUsesAuthenticatedPrincipal(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	st, err := store.OpenLocal(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+
+	const (
+		visibleRepo = "github.com/allowed/evidence"
+		hiddenRepo  = "github.com/secret/hidden-evidence-service"
+	)
+	seedHTTPTestEvidence(t, st, visibleRepo, "visible.Service/Get")
+	seedHTTPTestEvidence(t, st, hiddenRepo, "secret.HiddenService/Call")
+
+	insecure := false
+	authService, err := auth.New(ctx, auth.Options{Store: st, Config: config.Auth{
+		CookieSecure: &insecure,
+		BootstrapUser: config.BootstrapUser{
+			Email: "admin@example.com", Password: "integration-password",
+		},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var principalResolutions atomic.Int32
+	apiHandler := api.New(api.Options{
+		Version: "test", Store: st, Evidence: st,
+		Visible: func(ctx context.Context) func(store.Repo) bool {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok || principal.User == nil || principal.User.NormalizedEmail != "admin@example.com" {
+				return func(store.Repo) bool { return false }
+			}
+			principalResolutions.Add(1)
+			return func(repo store.Repo) bool { return repo.Name == visibleRepo }
+		},
+	})
+	server := httptest.NewServer(newHTTPHandler(
+		authService,
+		apiHandler,
+		http.NotFoundHandler(),
+		http.NotFoundHandler(),
+		http.NotFoundHandler(),
+	))
+	defer server.Close()
+
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{Jar: jar}
+	assertStatus(t, client, http.MethodGet, server.URL+"/api/evidence?domain=proto-contract", "", nil,
+		http.StatusUnauthorized, "authentication required")
+	if principalResolutions.Load() != 0 {
+		t.Fatal("unauthenticated evidence request reached the visibility resolver")
+	}
+	assertStatus(t, client, http.MethodPost, server.URL+"/api/auth/login",
+		`{"email":"admin@example.com","password":"integration-password"}`,
+		http.Header{"Content-Type": []string{"application/json"}}, http.StatusOK, `"authenticated":true`)
+	response := assertStatus(t, client, http.MethodGet, server.URL+"/api/evidence?domain=proto-contract", "", nil,
+		http.StatusOK, `"visible_repository_count":1`)
+	if principalResolutions.Load() != 1 {
+		t.Fatalf("authenticated visibility resolutions = %d, want 1", principalResolutions.Load())
+	}
+	if !bytes.Contains(response, []byte(visibleRepo)) || bytes.Contains(response, []byte(hiddenRepo)) ||
+		bytes.Contains(response, []byte("HiddenService")) {
+		t.Fatalf("authenticated evidence visibility = %s", response)
+	}
+}
+
+func seedHTTPTestEvidence(t *testing.T, st *store.Surreal, repo, object string) {
+	t.Helper()
+	ctx := t.Context()
+	commit := "commit-" + strings.ReplaceAll(repo, "/", "-")
+	if err := st.UpsertRepo(ctx, store.Repo{Name: repo, CloneURL: "https://example.test/repo.git"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetRepoIndexed(ctx, repo, commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	run, err := st.BeginExtractionRun(ctx, repo, commit, "proto-contract", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	atom := store.EvidenceAtom{
+		SchemaVersion: "test-v1", BlobDigest: "sha256:" + strings.Repeat("a", 64),
+		StartByte: 0, EndByte: 1, RuleID: "test-rule", ExtractorVersion: "test",
+		AdapterConfigDigest: "sha256:" + strings.Repeat("b", 64), FactFingerprint: object,
+	}
+	atom.ID = store.ComputeAtomID(atom)
+	if err := st.AddEvidence(ctx, run.ID,
+		[]store.EvidenceAtom{atom},
+		[]store.SnapshotEvidence{{
+			AtomID: atom.ID, Repo: repo, Commit: commit, Path: "api.proto",
+			StartLine: 1, EndLine: 1, VisibilityScope: "repo:" + repo,
+		}},
+		[]store.Assertion{{
+			Predicate: "DECLARES_OPERATION", Subject: "api.proto", Object: object,
+			Tier: store.TierExact, Repo: repo, Supporting: []string{atom.ID},
+		}},
+	); err != nil {
+		t.Fatal(err)
+	}
+	coverage := store.CoverageManifest{
+		CorpusFileCount: 1, CandidateFileCount: 1, ReadFileCount: 1, ReadBytes: 1,
+		SourceScopeDigest: "sha256:" + strings.Repeat("c", 64), AssertionCount: 1, AtomCount: 1,
+	}
+	if err := st.PublishExtractionRun(ctx, run.ID, coverage); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func assertStatus(t *testing.T, client *http.Client, method, target, body string, headers http.Header, want int, contains string) []byte {
