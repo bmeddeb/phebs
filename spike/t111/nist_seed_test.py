@@ -30,7 +30,7 @@ class NistSeedCeremonyTest(unittest.TestCase):
             "committed_at": self.committed_at,
         }
         commitment = {
-            "schema": "t111-gate2-input-commitment-v1",
+            "schema": prep.INPUT_COMMITMENT_SCHEMA,
             "committed_at": self.committed_at,
             "input_binding": self.input_binding,
             "attempt_claim": claim,

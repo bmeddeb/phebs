@@ -106,9 +106,15 @@ commit-set attempt claim. Do not request randomness unless
 `power_analysis.attainable` is `true`; that is a design-capacity result, not a
 Gate 2 pass.
 
-The v3 commitment's `committed_at` is a scheduled activation time at least 30
-minutes in the future. Before that activation, publish the exact commitment
-document as a new public GitHub Gist and verify its initial revision:
+The `t111-gate2-input-commitment-v2` frame strata intentionally omit realized
+development allocation fields. Its development-site ceiling is derived only
+from the fixed quotas and fixed post-holdout frame capacities, so the exact
+commitment bytes reconstruct identically for every later public seed.
+
+The Gate 2 v3 protocol commitment's `committed_at` is a scheduled activation
+time at least 30 minutes in the future. Before that activation, publish the
+exact commitment document as a new public GitHub Gist and verify its initial
+revision:
 
 ```sh
 gh gist create --public /private/tmp/t111-gate2-input-commitment.json

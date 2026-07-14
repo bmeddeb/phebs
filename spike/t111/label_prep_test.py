@@ -340,6 +340,103 @@ func wire(s Server) {
                 manifest, seed, responses.__getitem__
             )
 
+    def test_input_commitment_and_power_ignore_seed_realized_dev_allocation(self) -> None:
+        first = self._power_manifest(population=400, holdout=200)
+        first.update(
+            randomization={
+                "input_committed_at": "2026-07-13T12:00:30Z",
+                "input_binding": "sha256:" + "1" * 64,
+                "selection_seed_digests": {
+                    frame: "sha256:" + "a" * 64 for frame in prep.FRAMES
+                },
+            },
+            attempt_claim={"schema": "attempt"},
+            decision_rule={},
+            burn_ledger={},
+            protocol_coverage={},
+            provenance={},
+        )
+        for frame in prep.FRAMES:
+            detail = first["frames"][frame]
+            detail.update(
+                definition=frame,
+                extractor_independent=frame.endswith("recall"),
+                population_size=sum(
+                    int(row["population_size"]) for row in detail["strata"]
+                ),
+            )
+            for row in detail["strata"]:
+                row["census_inclusion_probability"] = 1
+                row["holdout_inclusion_probability"] = (
+                    int(row["holdout_sample_size"])
+                    / int(row["sample_population_size"])
+                )
+                row["dev_inclusion_probability"] = None
+        first["power_analysis"] = prep.preflight_gate_design(first)
+
+        second = deepcopy(first)
+        second["randomization"]["selection_seed_digests"] = {
+            frame: "sha256:" + "b" * 64 for frame in prep.FRAMES
+        }
+        for index, frame in enumerate(prep.FRAMES, start=1):
+            for row in second["frames"][frame]["strata"]:
+                row["dev_sample_size"] = index
+        second["power_analysis"] = prep.preflight_gate_design(second)
+
+        self.assertEqual(first["power_analysis"], second["power_analysis"])
+        first_document = prep.input_commitment_document(first)
+        self.assertEqual(first_document, prep.input_commitment_document(second))
+        commitment = json.loads(first_document)
+        self.assertEqual(commitment["schema"], prep.INPUT_COMMITMENT_SCHEMA)
+        for frame in prep.FRAMES:
+            for row in commitment["frames"][frame]["strata"]:
+                self.assertEqual(
+                    set(row), set(prep.INPUT_COMMITMENT_STRATUM_FIELDS)
+                )
+                self.assertNotIn("dev_sample_size", row)
+                self.assertNotIn("dev_inclusion_probability", row)
+        invalid_commitment = deepcopy(commitment)
+        invalid_commitment["systems"] = list(prep.SYSTEMS)
+        invalid_commitment["frames"][prep.FRAMES[0]]["strata"][0][
+            "dev_sample_size"
+        ] = 1
+        invalid_document = (
+            json.dumps(invalid_commitment, indent=2, sort_keys=True) + "\n"
+        ).encode()
+        with self.assertRaisesRegex(prep.PrepError, "realized or invalid"):
+            prep.validate_input_commitment_document(invalid_document)
+        api_url = "https://api.github.com/gists/abc123"
+        revision = "c" * 40
+        created_at = "2026-07-13T11:59:00Z"
+        receipt = {
+            "schema": "t111-github-initial-gist-receipt-v1",
+            "api_url": api_url,
+            "revision": revision,
+            "created_at": created_at,
+            "document_sha256": "sha256:"
+            + prep.hashlib.sha256(first_document).hexdigest(),
+        }
+        responses = {
+            api_url: {
+                "url": api_url,
+                "created_at": created_at,
+                "history": [{"version": revision, "committed_at": created_at}],
+            },
+            api_url + "/" + revision: {
+                "files": {
+                    "commitment.json": {
+                        "content": first_document.decode(),
+                        "truncated": False,
+                    }
+                }
+            },
+        }
+        prep.verify_input_commitment_publication(
+            second,
+            {"commitment_github_receipt": receipt},
+            responses.__getitem__,
+        )
+
     def test_commit_set_attempt_rejects_rebinding_tampering_and_symlink(self) -> None:
         commits = {
             system: f"{index + 1:040x}"
@@ -674,6 +771,13 @@ func wire(s Server) {
         self.assertTrue(outcome_independent["attainable"])
         self.assertEqual(outcome_independent, report)
 
+        for index, frame in enumerate(prep.FRAMES, start=1):
+            for row in outcome_independent_manifest["frames"][frame]["strata"]:
+                row["dev_sample_size"] = index * 10_000
+        self.assertEqual(
+            prep.preflight_gate_design(outcome_independent_manifest), report
+        )
+
     def test_blind_fraction_lower_bound_is_seed_independent_and_conservative(self) -> None:
         manifest = self._power_manifest(population=400, holdout=200)
         manifest["holdout"]["unique_census_sites"] = 25
@@ -683,14 +787,14 @@ func wire(s Server) {
         report = prep.preflight_gate_design(manifest)
         best = report["best_case"]
         self.assertEqual(best["holdout_unique_floor"], 200)
-        self.assertEqual(best["dev_unique_ceiling"], 90)
-        self.assertEqual(best["selected_unique_ceiling"], 315)
+        self.assertEqual(best["dev_unique_ceiling"], 180)
+        self.assertEqual(best["selected_unique_ceiling"], 405)
         self.assertAlmostEqual(
-            best["blind_fraction_lower_bound"], 200 / 315, places=15
+            best["blind_fraction_lower_bound"], 200 / 405, places=15
         )
         # Any realized overlap can only reduce the unique dev denominator or
         # increase the unique holdout numerator relative to these bounds.
-        for realized_holdout, realized_dev in ((200, 90), (250, 20), (300, 0)):
+        for realized_holdout, realized_dev in ((200, 180), (250, 20), (300, 0)):
             actual = realized_holdout / (25 + realized_holdout + realized_dev)
             self.assertGreaterEqual(actual, best["blind_fraction_lower_bound"])
 
@@ -1020,6 +1124,7 @@ func wire(s Server) {
         ]
         return {
             "systems": ["fixture"],
+            "sampling_config": prep.gate_sampling_config(),
             "holdout": {"unique_census_sites": 0},
             "frames": {
                 prep.FRAME_CALL_PRECISION: {

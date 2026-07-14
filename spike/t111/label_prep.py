@@ -80,6 +80,18 @@ SEALED_CLAIM_ROOT = BASE / "labeling"
 SYSTEMS = ("online-boutique", "dapr", "temporal", "loki")
 SCHEMA = "t111-gate2-probability-sample-v3"
 SEED_RECORD_SCHEMA = "t111-gate2-audit-seed-v3"
+INPUT_COMMITMENT_SCHEMA = "t111-gate2-input-commitment-v2"
+INPUT_COMMITMENT_STRATUM_FIELDS = (
+    "id",
+    "system",
+    "label",
+    "population_size",
+    "sample_population_size",
+    "census_size",
+    "census_inclusion_probability",
+    "holdout_sample_size",
+    "holdout_inclusion_probability",
+)
 NIST_BEACON_API_ROOT = "https://beacon.nist.gov/beacon/2.0"
 COMMITMENT_ACTIVATION_LEAD = dt.timedelta(minutes=30)
 LEGACY_DIAGNOSTIC_SEED = 111
@@ -788,7 +800,7 @@ def validate_input_commitment_document(document: bytes) -> dict[str, Any]:
     canonical = (json.dumps(value, indent=2, sort_keys=True) + "\n").encode("utf-8")
     if document != canonical:
         raise PrepError("input commitment bytes are not the canonical commit-inputs document")
-    if value.get("schema") != "t111-gate2-input-commitment-v1":
+    if value.get("schema") != INPUT_COMMITMENT_SCHEMA:
         raise PrepError("unsupported Gate-2 input commitment schema")
     binding = value.get("input_binding")
     if not isinstance(binding, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", binding):
@@ -805,6 +817,18 @@ def validate_input_commitment_document(document: bytes) -> dict[str, Any]:
             "definition", "extractor_independent", "population_size", "strata"
         }:
             raise PrepError(f"input commitment frame {frame} has invalid fields")
+        strata = detail["strata"]
+        if not isinstance(strata, list):
+            raise PrepError(f"input commitment frame {frame} strata must be a list")
+        expected_stratum_fields = set(INPUT_COMMITMENT_STRATUM_FIELDS)
+        if any(
+            not isinstance(stratum, dict)
+            or set(stratum) != expected_stratum_fields
+            for stratum in strata
+        ):
+            raise PrepError(
+                f"input commitment frame {frame} contains realized or invalid stratum fields"
+            )
     power = value.get("power_analysis")
     if not isinstance(power, dict) or power.get("attainable") is not True:
         raise PrepError("input commitment design is not statistically attainable")
@@ -2786,11 +2810,11 @@ def preflight_gate_design(
         ):
             reasons.append(f"role cohort lacks the fixed/census {role} holdout quota")
 
-    # These are worst-case unique-site bounds fixed by N/n and the disclosed
-    # census before external entropy exists.  Frame overlap can only increase
-    # the realized blind fraction: the holdout union is at least the largest
-    # frame sample, while the development union is at most the sum of all
-    # frame quotas.
+    # These are worst-case unique-site bounds fixed by N/n, the requested
+    # quotas, and the disclosed census before external entropy exists. Frame
+    # overlap can only increase the realized blind fraction: the holdout union
+    # is at least the largest frame sample, while the development union is at
+    # most the sum of the per-frame quota/capacity ceilings.
     census_total = int(manifest.get("holdout", {}).get("unique_census_sites", 0))
     holdout_unique_floor = max(
         (
@@ -2799,11 +2823,32 @@ def preflight_gate_design(
         ),
         default=0,
     )
-    dev_unique_ceiling = sum(
-        int(row["dev_sample_size"])
-        for frame in FRAMES
-        for row in frames[frame]["strata"]
-    )
+    sampling_config = manifest["sampling_config"]
+    dev_unique_ceiling = 0
+    for frame, quota_name in (
+        (FRAME_CALL_RECALL, "recall_dev_per_system"),
+        (FRAME_CALL_PRECISION, "precision_dev_per_system"),
+        (FRAME_REGISTRATION_RECALL, "registration_recall_dev_per_system"),
+        (FRAME_REGISTRATION_PRECISION, "registration_precision_dev_per_system"),
+    ):
+        quota = int(sampling_config[quota_name])
+        for system in manifest["systems"]:
+            capacity = sum(
+                int(row["sample_population_size"])
+                - int(row["holdout_sample_size"])
+                for row in frames[frame]["strata"]
+                if row["system"] == system
+            )
+            dev_unique_ceiling += min(quota, max(0, capacity))
+    role_quota = int(sampling_config["role_dev_per_role"])
+    for role in CODE_ROLES:
+        capacity = sum(
+            int(row["sample_population_size"])
+            - int(row["holdout_sample_size"])
+            for row in frames[FRAME_ROLE]["strata"]
+            if row["label"] == role
+        )
+        dev_unique_ceiling += min(role_quota, max(0, capacity))
     selected_unique_ceiling = census_total + holdout_unique_floor + dev_unique_ceiling
     blind_fraction_lower_bound = (
         holdout_unique_floor / selected_unique_ceiling
@@ -3637,7 +3682,7 @@ def input_commitment_value(manifest: dict[str, Any]) -> dict[str, Any]:
     """Return only the information an independent seed issuer may inspect."""
 
     return {
-        "schema": "t111-gate2-input-commitment-v1",
+        "schema": INPUT_COMMITMENT_SCHEMA,
         "committed_at": manifest["randomization"]["input_committed_at"],
         "input_binding": manifest["randomization"]["input_binding"],
         "attempt_claim": manifest["attempt_claim"],
@@ -3653,7 +3698,13 @@ def input_commitment_value(manifest: dict[str, Any]) -> dict[str, Any]:
                     "extractor_independent"
                 ],
                 "population_size": manifest["frames"][frame]["population_size"],
-                "strata": manifest["frames"][frame]["strata"],
+                "strata": [
+                    {
+                        name: stratum[name]
+                        for name in INPUT_COMMITMENT_STRATUM_FIELDS
+                    }
+                    for stratum in manifest["frames"][frame]["strata"]
+                ],
             }
             for frame in FRAMES
         },
