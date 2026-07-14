@@ -65,3 +65,21 @@ exact `testing` segment to the fixed test-role taxonomy and makes that rule
 explicit to reviewers. Any validation of the correction requires a genuinely
 new four-commit source lineage and must carry every Attempt-2 disclosure into
 the append-only burn census.
+
+## Attempt 3 — replacement lineage rule
+
+Before inspecting a replacement sample or extractor outcome, the next attempt
+was fixed to every official default-branch commit available at cutoff
+`2026-07-14T19:00:47Z`:
+
+- `online-boutique`: `9a4616e77f0f9cbcbecaf27d711c38890dda1404` (unchanged)
+- `dapr`: `08aebd8b2effa2ed939ad5531e25ff8b21a36ef1`
+- `temporal`: `a5e6d3ed6335256319fff94f38bf74c4b7ba370c`
+- `loki`: `d108ea11a62fbf7be7d25b58d44d396a3ce0c96c`
+- `temporal-helm`: `9f4d328c31c77c323d272d0c5f615cf02bd46dab` (unchanged companion)
+- Source lineage: `sha256:2d7bab803cf20c36e738534dd73018ecca96e9f87922bf96e7d66a1bbe346cbf`
+
+Attempt 3 uses extractor `spike-0.5.1` and the full append-only burn ledger.
+No attempt claim may be created until exact corpus synchronization, gitlink
+review, deterministic fact regeneration, carry-forward resolution, full tests,
+and a write-suppressed attainable-power preflight all pass.

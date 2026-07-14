@@ -8,7 +8,7 @@
   {
     "name": "temporal",
     "git_url": "https://github.com/temporalio/temporal",
-    "commit": "5e2a0eaabbd4807077172bef4beb12d6b0c710c0",
+    "commit": "a5e6d3ed6335256319fff94f38bf74c4b7ba370c",
     "note": "multi-service Go monorepo (frontend/history/matching/worker) with internal gRPC; gomock mocks of clients; helm chart in a separate repo (identity conflicts)",
     "excluded_gitlinks": [
       {
@@ -21,7 +21,7 @@
   {
     "name": "loki",
     "git_url": "https://github.com/grafana/loki",
-    "commit": "aa5e221aa4d54fb5126e121e5f85d918270e1953",
+    "commit": "d108ea11a62fbf7be7d25b58d44d396a3ce0c96c",
     "note": "single binary/image, many workload identities selected by -target; worst-case service/deployable identity scenario",
     "excluded_gitlinks": [
       {
@@ -34,7 +34,7 @@
   {
     "name": "dapr",
     "git_url": "https://github.com/dapr/dapr",
-    "commit": "b557df0b28abb88c1ef1ad95354ebea5c4a18266",
+    "commit": "08aebd8b2effa2ed939ad5531e25ff8b21a36ef1",
     "note": "multiple deployables from one repo (daprd/operator/injector/placement/sentry/scheduler); sidecar identity twist (service.name vs app-id)",
     "go_build_tags": ["unit"]
   },
