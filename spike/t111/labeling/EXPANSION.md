@@ -400,6 +400,27 @@ contains additions to `go.sum` only—no module requirement, version, source,
 corpus, fact, oracle, or ceremony state changed. Those exact sums must be
 reviewed and committed as prospective harness inputs before hydration retries.
 
+The next hydration retry, under checksum-closure commit `8d8d1ee`, passed the
+root harness guard but exposed a second overbreadth defect: `go mod download
+all` changed module files in the disposable online-boutique snapshot while
+resolving modules outside the package closure that either reader consumes. The
+guard rejected the mutation, the pinned corpus stayed clean, and failure
+cleanup resealed the dedicated cache. No fact, typed-oracle result, coordinate,
+claim, commitment, randomness, reviewer artifact, or label followed.
+
+The prospective repair replaces full-graph source hydration with exact
+`go list -deps` closure hydration: the two bound harness targets exclude tests,
+while every corpus module includes its package tests and fixed build tags.
+During offline use, producer and independent oracle each bracket package
+loading with sealed-cache validation and directly h1-check every used external
+module's extracted source and cached `go.mod` against the pinned snapshot's
+committed sums, then repeat those checks after scanning. The bound builds use
+the same actual-dependency verification before and after compilation. Tests
+fix the intended boundary: an unavailable unused requirement cannot block the
+reader closure, but imported source or cached-`go.mod` tampering fails closed.
+This generalized repair must be committed before another hydration or Istio
+run. Candidate 5 remains untouched.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

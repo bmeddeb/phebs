@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,37 +16,88 @@ import (
 
 func TestSemanticInputsVerifyExternalModuleAndDetectTampering(t *testing.T) {
 	root := t.TempDir()
-	external := t.TempDir()
+	moduleCache := filepath.Join(t.TempDir(), "module-cache")
+	external := filepath.Join(moduleCache, "gomodcache", "example.test", "dep@v1.2.3")
+	if err := os.MkdirAll(external, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	source := filepath.Join(external, "dep.go")
 	if err := os.WriteFile(source, []byte("package dep\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	goModContent := []byte("module example.test/dep\n\ngo 1.26\n")
+	if err := os.WriteFile(filepath.Join(external, "go.mod"), goModContent, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	wantSum, err := dirhash.HashDir(external, "example.test/dep@v1.2.3", dirhash.Hash1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "go.sum"), []byte("example.test/dep v1.2.3 "+wantSum+"\n"), 0o644); err != nil {
+	wantModSum, err := dirhash.Hash1([]string{"go.mod"}, func(string) (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(goModContent)), nil
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
+	cachedGoMod := filepath.Join(moduleCache, "gomodcache", "cache", "download", "example.test", "dep", "@v", "v1.2.3.mod")
+	if err := os.MkdirAll(filepath.Dir(cachedGoMod), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cachedGoMod, goModContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "go.sum"), []byte(
+		"example.test/dep v1.2.3 "+wantSum+"\nexample.test/dep v1.2.3/go.mod "+wantModSum+"\n",
+	), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	sealOracleTestCache(t, moduleCache)
 	pkgs := []*packages.Package{{Module: &packages.Module{
-		Path: "example.test/dep", Version: "v1.2.3", Dir: external,
+		Path: "example.test/dep", Version: "v1.2.3", Dir: external, GoMod: cachedGoMod,
 	}}}
-	first, err := verifyPackageSemanticInputs(root, strings.Repeat("a", 40), pkgs)
+	first, err := verifyPackageSemanticInputs(root, strings.Repeat("a", 40), moduleCache, pkgs)
 	if err != nil {
 		t.Fatalf("verified external module rejected: %v", err)
 	}
-	second, err := verifyPackageSemanticInputs(root, strings.Repeat("a", 40), pkgs)
+	second, err := verifyPackageSemanticInputs(root, strings.Repeat("a", 40), moduleCache, pkgs)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if first != second || !validSemanticDigest(first) {
 		t.Fatalf("semantic digest is not deterministic SHA-256: first=%q second=%q", first, second)
 	}
+	if err := os.Chmod(cachedGoMod, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cachedGoMod, append(append([]byte(nil), goModContent...), []byte("// tampered\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(cachedGoMod, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyPackageSemanticInputs(root, strings.Repeat("a", 40), moduleCache, pkgs); err == nil || !strings.Contains(err.Error(), "go.mod content mismatch") {
+		t.Fatalf("tampered cached go.mod was not rejected: %v", err)
+	}
+	if err := os.Chmod(cachedGoMod, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cachedGoMod, goModContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(cachedGoMod, 0o444); err != nil {
+		t.Fatal(err)
+	}
 
+	if err := os.Chmod(source, 0o644); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(source, []byte("package dep\n// tampered\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := verifyPackageSemanticInputs(root, strings.Repeat("a", 40), pkgs); err == nil || !strings.Contains(err.Error(), "content mismatch") {
+	if err := os.Chmod(source, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyPackageSemanticInputs(root, strings.Repeat("a", 40), moduleCache, pkgs); err == nil || !strings.Contains(err.Error(), "content mismatch") {
 		t.Fatalf("tampered external module was not rejected: %v", err)
 	}
 }
@@ -65,13 +117,41 @@ func TestSemanticInputsBindVendoredModule(t *testing.T) {
 		CompiledGoFiles: []string{source},
 		Module:          &packages.Module{Path: "example.test/dep", Version: "v1.2.3"},
 	}
-	digest, err := verifyPackageSemanticInputs(root, strings.Repeat("b", 40), []*packages.Package{pkg})
+	digest, err := verifyPackageSemanticInputs(root, strings.Repeat("b", 40), "", []*packages.Package{pkg})
 	if err != nil {
 		t.Fatalf("vendored module rejected: %v", err)
 	}
 	if !validSemanticDigest(digest) {
 		t.Fatalf("vendored module digest = %q", digest)
 	}
+}
+
+func sealOracleTestCache(t *testing.T, root string) {
+	t.Helper()
+	if err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		mode := os.FileMode(0o444)
+		if entry.IsDir() {
+			mode = 0o555
+		}
+		return os.Chmod(path, mode)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+			if err == nil {
+				if entry.IsDir() {
+					_ = os.Chmod(path, 0o755)
+				} else {
+					_ = os.Chmod(path, 0o644)
+				}
+			}
+			return nil
+		})
+	})
 }
 
 func TestValidateLocalReplacesRejectsCheckoutEscape(t *testing.T) {

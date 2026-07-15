@@ -335,3 +335,23 @@ writable entry or symlink. Review found an additive checksum-only diff: no
 `go.mod`, selected version, source, corpus, fact, oracle, or ceremony state
 changed. The exact checksum closure is committed prospectively before another
 hydration or candidate-4 run.
+
+The retry under checksum-closure commit `8d8d1ee` passed the root harness
+source-state guard, then stopped on online-boutique: the still-broad
+`go mod download all` operation changed module files in its disposable pinned
+snapshot while resolving modules outside the package closure consumed by the
+producer and oracle. The source-state guard rejected that mutation, the
+original pinned corpus remained clean, and the dedicated cache was resealed.
+No fact, typed-oracle, coordinate, claim, commitment, randomness, reviewer, or
+label state was created.
+
+The prospective correction hydrates only `go list -deps` closures for the two
+bound harness binaries and each corpus package/test closure under its fixed
+build tags. Offline producer and oracle reads retain structural sealed-cache
+checks and now directly h1-check both the source tree and cached `go.mod` of
+every external module actually used by their loaded packages, before
+publication and again after scanning. Regressions prove that an unavailable
+unused requirement does not block hydration, while imported-module source or
+`go.mod` tampering fails closed in both independent readers. This correction
+must be committed before hydration or candidate 4 is retried; candidate 5
+remains untouched.

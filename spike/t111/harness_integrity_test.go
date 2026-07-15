@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -366,19 +368,53 @@ func TestLocalReplaceAndVendorMode(t *testing.T) {
 
 func TestSemanticInputsVerifyAndBindExternalModule(t *testing.T) {
 	root := realTempDir(t)
-	external := realTempDir(t)
+	cacheRoot := filepath.Join(realTempDir(t), "module-cache")
+	paths, err := prepareModuleCache(cacheRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	external := filepath.Join(paths.gomodcache, "example.test", "dep@v1.0.0")
+	if err := os.MkdirAll(external, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(external, "dep.go"), []byte("package dep\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	goModContent := []byte("module example.test/dep\n\ngo 1.26\n")
+	if err := os.WriteFile(filepath.Join(external, "go.mod"), goModContent, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	sum, err := dirhash.HashDir(external, "example.test/dep@v1.0.0", dirhash.Hash1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "go.sum"), []byte("example.test/dep v1.0.0 "+sum+"\n"), 0o644); err != nil {
+	modSum, err := dirhash.Hash1([]string{"go.mod"}, func(string) (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(goModContent)), nil
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
+	cachedGoMod := filepath.Join(paths.gomodcache, "cache", "download", "example.test", "dep", "@v", "v1.0.0.mod")
+	if err := os.MkdirAll(filepath.Dir(cachedGoMod), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cachedGoMod, goModContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "go.sum"), []byte(
+		"example.test/dep v1.0.0 "+sum+"\nexample.test/dep v1.0.0/go.mod "+modSum+"\n",
+	), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := sealSharedModuleCache(cacheRoot); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { makeCacheWritable(cacheRoot) })
+	oldCache := harnessModuleCacheRoot
+	harnessModuleCacheRoot = cacheRoot
+	t.Cleanup(func() { harnessModuleCacheRoot = oldCache })
 	pkgs := []*packages.Package{{Module: &packages.Module{
-		Path: "example.test/dep", Version: "v1.0.0", Dir: external,
+		Path: "example.test/dep", Version: "v1.0.0", Dir: external, GoMod: cachedGoMod,
 	}}}
 	digest, err := verifyPackageSemanticInputs(root, "0123456789abcdef", pkgs)
 	if err != nil {
@@ -390,7 +426,35 @@ func TestSemanticInputsVerifyAndBindExternalModule(t *testing.T) {
 	if bound.SemanticInputsDigest != digest || bound.AtomID == fact.AtomID {
 		t.Fatal("semantic input digest was not bound into the evidence atom")
 	}
-	if err := os.WriteFile(filepath.Join(external, "dep.go"), []byte("package dep\n// tampered\n"), 0o644); err != nil {
+	if err := os.Chmod(cachedGoMod, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cachedGoMod, append(append([]byte(nil), goModContent...), []byte("// tampered\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(cachedGoMod, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyPackageSemanticInputs(root, "0123456789abcdef", pkgs); err == nil || !strings.Contains(err.Error(), "go.mod content mismatch") {
+		t.Fatalf("tampered cached go.mod was not rejected: %v", err)
+	}
+	if err := os.Chmod(cachedGoMod, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cachedGoMod, goModContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(cachedGoMod, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	depSource := filepath.Join(external, "dep.go")
+	if err := os.Chmod(depSource, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(depSource, []byte("package dep\n// tampered\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(depSource, 0o444); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := verifyPackageSemanticInputs(root, "0123456789abcdef", pkgs); err == nil || !strings.Contains(err.Error(), "content mismatch") {

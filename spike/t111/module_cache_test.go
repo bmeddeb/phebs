@@ -19,7 +19,7 @@ func TestHydrateThenOfflineExtractionUsesOnlyDedicatedCache(t *testing.T) {
 	t.Setenv("GOMODCACHE", "/poison/modcache")
 	proxy, goSum := localModuleProxy(t)
 	repo := initTestRepository(t)
-	goMod := []byte("module example.test/app\n\ngo 1.26\n\nrequire example.test/dep v1.0.0\n")
+	goMod := []byte("module example.test/app\n\ngo 1.26\n\nrequire (\n\texample.test/dep v1.0.0\n\texample.test/unused v1.0.0\n)\n")
 	source := []byte("package app\n\nimport _ \"example.test/dep\"\n")
 	for name, content := range map[string][]byte{
 		"go.mod": goMod, "go.sum": []byte(goSum), "app.go": source,
@@ -55,6 +55,9 @@ func TestHydrateThenOfflineExtractionUsesOnlyDedicatedCache(t *testing.T) {
 	}
 	if downloaded != 1 || vendored != 0 {
 		t.Fatalf("hydration counts = downloaded %d vendored %d", downloaded, vendored)
+	}
+	if _, err := os.Lstat(filepath.Join(cache, "gomodcache", "example.test", "unused@v1.0.0")); !os.IsNotExist(err) {
+		t.Fatalf("unused required module was unexpectedly hydrated: %v", err)
 	}
 	if err := inspectSharedModuleCache(cache, true); err != nil {
 		t.Fatalf("hydration did not seal the shared cache: %v", err)

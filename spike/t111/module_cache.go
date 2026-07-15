@@ -283,6 +283,14 @@ func isVendoredModule(modDir string) bool {
 	return err == nil && info.Mode().IsRegular()
 }
 
+func validateReaderModuleCache(modDir string) error {
+	if isVendoredModule(modDir) {
+		return nil
+	}
+	paths := dedicatedModuleCache()
+	return inspectSharedModuleCache(paths.root, true)
+}
+
 func findHydrationModules(root string) ([]string, error) {
 	var modules []string
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -400,14 +408,30 @@ func hydrateCorpusModules(entry CorpusEntry, corpusRoot, cacheRoot, proxy, sumdb
 			return 0, 0, err
 		}
 	}
-	downloaded, vendored, err = downloadModulesUnchecked(modules, cacheRoot, proxy, sumdb)
+	targets := make([]moduleClosureTarget, 0, len(modules))
+	for _, module := range modules {
+		targets = append(targets, moduleClosureTarget{
+			dir:          module,
+			patterns:     []string{"./..."},
+			buildTags:    entry.GoBuildTags,
+			includeTests: true,
+		})
+	}
+	downloaded, vendored, err = hydrateTargetClosuresUnchecked(targets, cacheRoot, proxy, sumdb)
 	if err != nil {
 		return downloaded, vendored, err
 	}
 	return downloaded, vendored, nil
 }
 
-func downloadModulesUnchecked(modules []string, cacheRoot, proxy, sumdb string) (downloaded, vendored int, resultErr error) {
+type moduleClosureTarget struct {
+	dir          string
+	patterns     []string
+	buildTags    []string
+	includeTests bool
+}
+
+func hydrateTargetClosuresUnchecked(targets []moduleClosureTarget, cacheRoot, proxy, sumdb string) (downloaded, vendored int, resultErr error) {
 	if err := validateHydrationNetwork(proxy, sumdb); err != nil {
 		return 0, 0, err
 	}
@@ -428,17 +452,30 @@ func downloadModulesUnchecked(modules []string, cacheRoot, proxy, sumdb string) 
 			}
 		}
 	}()
-	for _, module := range modules {
-		if isVendoredModule(module) {
+	for _, target := range targets {
+		if isVendoredModule(target.dir) {
 			vendored++
 			continue
 		}
-		cmd := exec.Command(goExecutable, "mod", "download", "all")
-		cmd.Dir = module
+		args := []string{"list", "-deps", "-json"}
+		if target.includeTests {
+			args = append(args, "-test")
+		}
+		if len(target.buildTags) > 0 {
+			tags := append([]string(nil), target.buildTags...)
+			sort.Strings(tags)
+			args = append(args, "-tags="+strings.Join(tags, ","))
+		}
+		args = append(args, target.patterns...)
+		cmd := exec.Command(goExecutable, args...)
+		cmd.Dir = target.dir
 		cmd.Env = moduleEnv(paths, "readonly", proxy, sumdb)
-		output, err := cmd.CombinedOutput()
+		cmd.Stdout = io.Discard
+		var diagnostics strings.Builder
+		cmd.Stderr = &diagnostics
+		err := cmd.Run()
 		if err != nil {
-			return downloaded, vendored, fmt.Errorf("hydrate module %s: %w: %s", module, err, strings.TrimSpace(string(output)))
+			return downloaded, vendored, fmt.Errorf("hydrate package closure %s %s: %w: %s", target.dir, strings.Join(target.patterns, " "), err, strings.TrimSpace(diagnostics.String()))
 		}
 		downloaded++
 	}
@@ -459,7 +496,10 @@ func hydrateHarnessModule(repoRoot, cacheRoot, proxy, sumdb string) (resultErr e
 			resultErr = errors.Join(resultErr, err)
 		}
 	}()
-	_, _, err = downloadModulesUnchecked([]string{repoRoot}, cacheRoot, proxy, sumdb)
+	_, _, err = hydrateTargetClosuresUnchecked([]moduleClosureTarget{{
+		dir:      repoRoot,
+		patterns: []string{"./spike/t111", "./spike/t111/typedcalloracle"},
+	}}, cacheRoot, proxy, sumdb)
 	if err != nil {
 		return fmt.Errorf("hydrate T11.1 oracle dependencies: %w", err)
 	}
@@ -495,19 +535,16 @@ type listedModule struct {
 	Replace *listedModule `json:"Replace"`
 }
 
-// verifyResolvedModuleGraph directly hashes the extracted source directory of
-// every resolved external module against the checkout's go.sum. It deliberately
-// does not trust download-cache .ziphash metadata. Callers bracket packages.Load
-// with this check so cache content cannot change across type checking.
-func verifyResolvedModuleGraph(snapshotRoot, commit, modDir string) (string, error) {
-	if isVendoredModule(modDir) {
-		state, err := moduleFileState(modDir)
-		if err != nil {
-			return "", err
-		}
-		encoded, _ := json.Marshal(state)
-		return blobDigest(append([]byte("vendor-module-inputs-v1\x00"+commit+"\x00"), encoded...)), nil
-	}
+type listedPackage struct {
+	ImportPath string        `json:"ImportPath"`
+	Standard   bool          `json:"Standard"`
+	Module     *listedModule `json:"Module"`
+}
+
+// verifyHarnessDependencyClosure directly hashes only the external modules
+// used to compile the two bound harness binaries. It intentionally avoids the
+// full module graph: unused historical go.sum entries are not build inputs.
+func verifyHarnessDependencyClosure(snapshotRoot, commit, modDir string, patterns []string) (string, error) {
 	paths := dedicatedModuleCache()
 	if err := inspectSharedModuleCache(paths.root, true); err != nil {
 		return "", fmt.Errorf("validate shared module cache: %w", err)
@@ -517,16 +554,17 @@ func verifyResolvedModuleGraph(snapshotRoot, commit, modDir string) (string, err
 		return "", fmt.Errorf("resolve shared module cache: %w", err)
 	}
 
-	cmd := exec.Command(goExecutable, "list", "-m", "-json", "all")
+	args := append([]string{"list", "-deps", "-json"}, patterns...)
+	cmd := exec.Command(goExecutable, args...)
 	cmd.Dir = modDir
 	cmd.Env = goPackageEnv(modDir)
 	output, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			return "", fmt.Errorf("resolve module graph: %w: %s", err, strings.TrimSpace(string(exitErr.Stderr)))
+			return "", fmt.Errorf("resolve harness dependency closure: %w: %s", err, strings.TrimSpace(string(exitErr.Stderr)))
 		}
-		return "", fmt.Errorf("resolve module graph: %w", err)
+		return "", fmt.Errorf("resolve harness dependency closure: %w", err)
 	}
 	rootReal, err := filepath.EvalSymlinks(snapshotRoot)
 	if err != nil {
@@ -538,27 +576,37 @@ func verifyResolvedModuleGraph(snapshotRoot, commit, modDir string) (string, err
 	}
 	dec := json.NewDecoder(strings.NewReader(string(output)))
 	descriptors := make(map[string]struct{})
+	validated := make(map[string]struct{})
 	for {
-		var module listedModule
-		if err := dec.Decode(&module); errors.Is(err, io.EOF) {
+		var pkg listedPackage
+		if err := dec.Decode(&pkg); errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
-			return "", fmt.Errorf("decode resolved module graph: %w", err)
+			return "", fmt.Errorf("decode harness dependency closure: %w", err)
 		}
+		if pkg.Standard || pkg.Module == nil {
+			continue
+		}
+		module := *pkg.Module
 		effective := &module
 		if module.Replace != nil {
 			effective = module.Replace
 		}
-		dirReal := ""
-		if effective.Dir != "" {
-			dirReal, err = filepath.EvalSymlinks(effective.Dir)
-			if err != nil {
-				return "", fmt.Errorf("resolve module %s@%s: %w", effective.Path, effective.Version, err)
-			}
-			if rel, inside := relativeWithin(rootReal, dirReal); inside {
-				descriptors[strings.Join([]string{"snapshot", module.Path, module.Version, commit, filepath.ToSlash(rel)}, "\x00")] = struct{}{}
-				continue
-			}
+		key := strings.Join([]string{module.Path, module.Version, effective.Path, effective.Version, effective.Dir, effective.GoMod}, "\x00")
+		if _, ok := validated[key]; ok {
+			continue
+		}
+		validated[key] = struct{}{}
+		if effective.Dir == "" {
+			return "", fmt.Errorf("used module %s@%s has no source directory", effective.Path, effective.Version)
+		}
+		dirReal, err := filepath.EvalSymlinks(effective.Dir)
+		if err != nil {
+			return "", fmt.Errorf("resolve module %s@%s: %w", effective.Path, effective.Version, err)
+		}
+		if rel, inside := relativeWithin(rootReal, dirReal); inside {
+			descriptors[strings.Join([]string{"snapshot", module.Path, module.Version, commit, filepath.ToSlash(rel)}, "\x00")] = struct{}{}
+			continue
 		}
 		if module.Main {
 			return "", fmt.Errorf("main module source is outside the pinned checkout: %s", effective.Dir)
@@ -587,10 +635,6 @@ func verifyResolvedModuleGraph(snapshotRoot, commit, modDir string) (string, err
 		if err != nil || actualMod != expectedMod {
 			return "", fmt.Errorf("external module %s@%s go.mod content mismatch: got %s, want %s", effective.Path, effective.Version, actualMod, expectedMod)
 		}
-		if dirReal == "" {
-			descriptors[strings.Join([]string{"module-metadata", module.Path, module.Version, effective.Path, effective.Version, expectedMod}, "\x00")] = struct{}{}
-			continue
-		}
 		expected := sums[effective.Path+"@"+effective.Version]
 		if expected == "" {
 			return "", fmt.Errorf("external module %s@%s has source without a versioned content sum", effective.Path, effective.Version)
@@ -608,7 +652,7 @@ func verifyResolvedModuleGraph(snapshotRoot, commit, modDir string) (string, err
 		descriptors[strings.Join([]string{"module", module.Path, module.Version, effective.Path, effective.Version, expected}, "\x00")] = struct{}{}
 	}
 	if len(descriptors) == 0 {
-		return "", fmt.Errorf("resolved module graph is empty")
+		return "", fmt.Errorf("harness dependency closure is empty")
 	}
 	if err := inspectSharedModuleCache(paths.root, true); err != nil {
 		return "", fmt.Errorf("revalidate shared module cache: %w", err)
@@ -890,7 +934,8 @@ func buildBoundHarnesses(repoRoot, cacheRoot string) error {
 	if err := runOfflineGo(repoRoot, "mod", "verify"); err != nil {
 		return fmt.Errorf("verify hydrated harness dependencies: %w", err)
 	}
-	graphBefore, err := verifyResolvedModuleGraph(repoRoot, head, repoRoot)
+	harnessPatterns := []string{"./spike/t111", "./spike/t111/typedcalloracle"}
+	graphBefore, err := verifyHarnessDependencyClosure(repoRoot, head, repoRoot, harnessPatterns)
 	if err != nil {
 		return fmt.Errorf("directly verify harness module graph: %w", err)
 	}
@@ -910,7 +955,7 @@ func buildBoundHarnesses(repoRoot, cacheRoot string) error {
 			return fmt.Errorf("build bound %s: %w", name, err)
 		}
 	}
-	graphAfter, err := verifyResolvedModuleGraph(repoRoot, head, repoRoot)
+	graphAfter, err := verifyHarnessDependencyClosure(repoRoot, head, repoRoot, harnessPatterns)
 	if err != nil {
 		return fmt.Errorf("reverify harness module graph: %w", err)
 	}

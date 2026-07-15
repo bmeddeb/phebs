@@ -559,9 +559,8 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	if err := validateLocalReplaces(s.checkout.root, module); err != nil {
 		return err
 	}
-	resolvedInputs, err := verifyResolvedModuleGraph(s.checkout.root, s.commit, module, s.moduleCache, s.runRoot)
-	if err != nil {
-		return fmt.Errorf("preverify Go module graph: %w", err)
+	if err := inspectOracleReaderCache(module, s.moduleCache); err != nil {
+		return fmt.Errorf("preverify sealed module cache: %w", err)
 	}
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
@@ -577,12 +576,8 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	if err != nil {
 		return fmt.Errorf("packages.Load: %w", err)
 	}
-	resolvedAgain, err := verifyResolvedModuleGraph(s.checkout.root, s.commit, module, s.moduleCache, s.runRoot)
-	if err != nil {
-		return fmt.Errorf("reverify Go module graph after load: %w", err)
-	}
-	if resolvedAgain != resolvedInputs {
-		return errors.New("Go module graph changed during package loading")
+	if err := inspectOracleReaderCache(module, s.moduleCache); err != nil {
+		return fmt.Errorf("reverify sealed module cache after load: %w", err)
 	}
 	if len(roots) == 0 {
 		semanticInputs, err := s.emptyModuleSemanticInputs(module)
@@ -600,7 +595,7 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	if err := validatePackages(graph); err != nil {
 		return err
 	}
-	semanticInputs, err := verifyPackageSemanticInputs(s.checkout.root, s.commit, graph)
+	semanticInputs, err := verifyPackageSemanticInputs(s.checkout.root, s.commit, s.moduleCache, graph)
 	if err != nil {
 		return fmt.Errorf("verify Go semantic inputs: %w", err)
 	}
@@ -615,19 +610,15 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	if err := s.scanCalls(graph, clients); err != nil {
 		return err
 	}
-	verifiedAgain, err := verifyPackageSemanticInputs(s.checkout.root, s.commit, graph)
+	verifiedAgain, err := verifyPackageSemanticInputs(s.checkout.root, s.commit, s.moduleCache, graph)
 	if err != nil {
 		return fmt.Errorf("reverify Go semantic inputs: %w", err)
 	}
 	if verifiedAgain != semanticInputs {
 		return errors.New("Go semantic inputs changed during oracle scan")
 	}
-	resolvedFinally, err := verifyResolvedModuleGraph(s.checkout.root, s.commit, module, s.moduleCache, s.runRoot)
-	if err != nil {
-		return fmt.Errorf("final Go module graph verification: %w", err)
-	}
-	if resolvedFinally != resolvedInputs {
-		return errors.New("Go module graph changed during oracle scan")
+	if err := inspectOracleReaderCache(module, s.moduleCache); err != nil {
+		return fmt.Errorf("final sealed module cache verification: %w", err)
 	}
 	moduleKey := displayModule(s.checkout.root, module)
 	if previous, ok := s.semantic[moduleKey]; ok && previous != semanticInputs {

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -33,6 +34,7 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 		return "", err
 	}
 	var validationErr error
+	cacheReal := ""
 	packages.Visit(pkgs, nil, func(pkg *packages.Package) {
 		if validationErr != nil || pkg == nil || pkg.Module == nil {
 			return
@@ -88,8 +90,54 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 			return
 		}
 		expectedSum := sums[effective.Path+"@"+effective.Version]
-		if effective.Path == "" || effective.Version == "" || expectedSum == "" {
+		expectedModSum := sums[effective.Path+"@"+effective.Version+"/go.mod"]
+		if effective.Path == "" || effective.Version == "" || expectedSum == "" || expectedModSum == "" {
 			validationErr = fmt.Errorf("external module %s@%s lacks a versioned content sum", effective.Path, effective.Version)
+			return
+		}
+		if cacheReal == "" {
+			paths := dedicatedModuleCache()
+			if cacheErr := inspectSharedModuleCache(paths.root, true); cacheErr != nil {
+				validationErr = fmt.Errorf("validate sealed module cache: %w", cacheErr)
+				return
+			}
+			cacheReal, resolveErr = filepath.EvalSymlinks(paths.gomodcache)
+			if resolveErr != nil {
+				validationErr = fmt.Errorf("resolve sealed module cache: %w", resolveErr)
+				return
+			}
+		}
+		if _, inside := relativeWithin(cacheReal, dirReal); !inside {
+			validationErr = fmt.Errorf("external module %s@%s source is outside the sealed module cache", effective.Path, effective.Version)
+			return
+		}
+		if effective.GoMod == "" {
+			validationErr = fmt.Errorf("external module %s@%s has no resolved go.mod", effective.Path, effective.Version)
+			return
+		}
+		goModReal, resolveErr := filepath.EvalSymlinks(effective.GoMod)
+		if resolveErr != nil {
+			validationErr = fmt.Errorf("resolve external module %s@%s go.mod: %w", effective.Path, effective.Version, resolveErr)
+			return
+		}
+		if _, inside := relativeWithin(cacheReal, goModReal); !inside {
+			validationErr = fmt.Errorf("external module %s@%s go.mod is outside the sealed module cache", effective.Path, effective.Version)
+			return
+		}
+		goModContent, readErr := os.ReadFile(goModReal)
+		if readErr != nil {
+			validationErr = fmt.Errorf("read external module %s@%s go.mod: %w", effective.Path, effective.Version, readErr)
+			return
+		}
+		actualModSum, modHashErr := dirhash.Hash1([]string{"go.mod"}, func(string) (io.ReadCloser, error) {
+			return io.NopCloser(strings.NewReader(string(goModContent))), nil
+		})
+		if modHashErr != nil {
+			validationErr = fmt.Errorf("hash external module %s@%s go.mod: %w", effective.Path, effective.Version, modHashErr)
+			return
+		}
+		if actualModSum != expectedModSum {
+			validationErr = fmt.Errorf("external module %s@%s go.mod content mismatch: got %s, want %s", effective.Path, effective.Version, actualModSum, expectedModSum)
 			return
 		}
 		actual, hashErr := dirhash.HashDir(dirReal, effective.Path+"@"+effective.Version, dirhash.Hash1)
@@ -103,7 +151,7 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 		}
 		descriptors[strings.Join([]string{
 			"module", module.Path, module.Version, replacement,
-			effective.Path, effective.Version, expectedSum,
+			effective.Path, effective.Version, expectedSum, expectedModSum,
 		}, "\x00")] = struct{}{}
 	})
 	if validationErr != nil {
@@ -111,6 +159,11 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 	}
 	if len(descriptors) == 0 {
 		return "", fmt.Errorf("go package graph has no bound module inputs")
+	}
+	if cacheReal != "" {
+		if err := inspectSharedModuleCache(dedicatedModuleCache().root, true); err != nil {
+			return "", fmt.Errorf("revalidate sealed module cache: %w", err)
+		}
 	}
 	ordered := make([]string, 0, len(descriptors))
 	for descriptor := range descriptors {
@@ -198,7 +251,7 @@ func snapshotModuleSums(root string) (map[string]string, error) {
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			fields := strings.Fields(scanner.Text())
-			if len(fields) != 3 || strings.HasSuffix(fields[1], "/go.mod") {
+			if len(fields) != 3 {
 				continue
 			}
 			key := fields[0] + "@" + fields[1]
