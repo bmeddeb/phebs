@@ -1,3 +1,33 @@
+# T11.1 validation rerun — Attempt 4 pre-claim capacity stop
+
+**Date:** 2026-07-14 · **Branch:** `t11.1-gate-revalidation` · **Status:**
+**STOP / NO ATTEMPT ISSUED**
+
+The fresh official-head lineage at cutoff `2026-07-15T03:13:32Z` synchronized
+and verified successfully. Temporal and Loki facts were regenerated twice under
+the exact Go 1.26.5 producer toolchain and were byte-identical; all four fact
+files verify against pinned Git objects, and the full reusable test/vet matrix
+passes.
+
+The required write-suppressed, coordinate-free power preflight is nevertheless
+incapable under the fixed design. Append-only carry-forward places 5,745 unique
+sites in permanent census, while the two advanced commits contribute only four
+fresh unique sites, for 5,749 selected sites. Even exhausting every fresh site
+gives a maximum blind fraction of `4/5749 = 0.0696%`, below the unchanged 30%
+minimum. The preflight
+therefore returned `attainable=false` solely for the blind-fraction rule.
+
+No Attempt 4 claim, public commitment, randomness, sampled-coordinate artifact,
+reviewer kit, or label was created. The four-repository design cannot issue
+another valid attempt from this lineage. Closing Gate 2 now requires a
+prospective decision made without correctness outcomes: expand the benchmark
+with enough genuinely new Go/gRPC fixture population, or adopt a separately
+reviewed estimator that validly incorporates the already frozen Attempt 3
+labels. Silently dropping census burns or lowering the blind floor is not an
+option. Gate 2 remains **NOT ESTABLISHED** and T13.1/T13.3 remain blocked.
+
+---
+
 # T11.1 validation rerun — Attempt 3 sealed result
 
 **Date:** 2026-07-14 · **Branch:** `t11.1-gate-revalidation` · **Status:**

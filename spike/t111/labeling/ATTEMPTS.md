@@ -156,5 +156,30 @@ the new Temporal and Loki commits; no new gitlink exists. Attempt 4 carries the
 entire append-only burn ledger and uses the pre-key exact-toolchain guard added
 after Attempt 3. No attempt claim may be created until exact corpus
 synchronization, deterministic fact regeneration, carry-forward resolution,
-full reusable verification, write-suppressed attainable-power analysis, and
-the standalone key-free toolchain preflight all pass.
+full reusable verification, and write-suppressed attainable-power analysis all
+pass. The standalone key-free scorer preflight is required later, after a
+sealed bundle exists and immediately before scoring.
+
+### Attempt 4 — pre-claim capacity result
+
+The exact corpus synchronized cleanly. Temporal and Loki facts were regenerated
+twice under the producer-bound Go 1.26.5/Git toolchain and were byte-identical;
+all four fact files verify against their pinned Git objects. The 93-test Python
+suite, `go vet ./...`, and the full Go suite passed.
+
+The write-suppressed, coordinate-free power preflight then returned
+`attainable=false` without creating an attempt claim or artifact:
+
+- permanent-census unique sites: 5,745;
+- fresh holdout unique sites: 4;
+- selected unique ceiling: 5,749;
+- seed-independent blind-fraction ceiling: `4/5749 = 0.0696%`; and
+- fixed minimum blind fraction: 30%.
+
+The sole failure reason was the blind-fraction rule. Every fresh call-precision,
+call-recall, registration, and role site was already assigned to holdout, so no
+sampling-quota change can add capacity. No public commitment, entropy, sampled
+coordinate, reviewer kit, or label exists for Attempt 4. Proceeding requires a
+prospective benchmark expansion with enough genuinely new fixture population,
+or a separately reviewed estimator that incorporates the already frozen prior
+labels. Dropping carried census sites or lowering the fixed floor is forbidden.
