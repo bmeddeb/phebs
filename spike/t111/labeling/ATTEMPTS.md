@@ -99,7 +99,7 @@ the locked populations it raises the conservative blind-fraction lower bound to
 44.86%, eliminates precision-sampling uncertainty, and leaves the design
 statistically attainable.
 
-### Attempt 3 — sealed inputs and reviewer cohort
+### Attempt 3 — terminal sealed result
 
 - Input binding: `sha256:9164040c050299408b87903a2befdec976bf1a77a38c3bdfd74c77a3d05e5496`
 - Scheduled activation: `2026-07-14T21:03:19.010209Z`
@@ -112,5 +112,27 @@ statistically attainable.
 - Reviewer assignment SHA-256: `cb767b2381decdef2d840d46c6649193644a43b33b5caf9d87f8cc9673d3ca6f`
 - Burn cohort: 5,743 unique coordinates, ledger digest
   `sha256:82076bd76092e03f9de16f9c3bf44e1d80e89e2c6ac5973abe13c9eeee1bac87`.
-- Disposition: sealed and under independent review; no labels have been frozen
-  or scored.
+- Frozen labels: 5,744; SHA-256
+  `56bc44d41d44b4adecaa1284db8bd24cde1ae4cf034cbac4893c78e81a95e034`.
+- Independent review: 577 overlap sites, 0 disagreements, 0 adjudicated, and
+  0 unresolved.
+- Initial label commitment: [GitHub Gist](https://gist.github.com/bmeddeb/896c13b3e7f6e6d99e207198a2523cc7),
+  revision `1014884987f1e5b8fd8ae40125f0fcee0d2f5caa`.
+- Label commitment document SHA-256:
+  `76ffa1ca8ae366898410198888b9b2aa6e2f51c3a5c1c46050380eb85ae2a1e2`.
+- One-shot score execution receipt SHA-256:
+  `8b686e0201092622a8a057ab29e5ee225e00dd9b12b50b7f7994a168d8544883`.
+- Disposition: **Gate 2 NOT ESTABLISHED** on the one permitted score
+  invocation; no metric was emitted.
+
+The score failed during deterministic frame recomputation because its shell
+resolved Go 1.26.4 from the module toolchain cache while the sealed fact
+producer identity requires the exact Go 1.26.5 binary and digest. The scorer
+had already loaded the hidden key before this check, so Attempt 3 is consumed:
+it must not be rescored, relabeled, reseeded, or reused under the same lineage.
+
+Prospectively, the scorer exposes a key-free `--preflight-toolchain` command and
+performs the same attestation before opening `key.jsonl`. A regression locks
+that ordering. The correction cannot rehabilitate Attempt 3; any replacement
+requires a new official-head lineage and a complete new ceremony carrying the
+append-only burn ledger forward.

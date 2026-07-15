@@ -1,4 +1,47 @@
-# T11.1 validation rerun — sealed Gate 2 result
+# T11.1 validation rerun — Attempt 3 sealed result
+
+**Date:** 2026-07-14 · **Branch:** `t11.1-gate-revalidation` · **Status:**
+**STOP / NOT ESTABLISHED**
+
+Attempt 3 completed its independent source-only review and public label freeze,
+but the single permitted holdout-score execution failed closed before emitting
+any metric. The frozen population contains 5,744 canonical labels
+(`sha256:56bc44d41d44b4adecaa1284db8bd24cde1ae4cf034cbac4893c78e81a95e034`).
+The two reviewers agreed on all 577 overlap sites, neither returned `unsure`,
+and the final adjudication counters are 577 overlap, 0 disagreements,
+0 adjudicated, and 0 unresolved.
+
+The hash-only label commitment was published as a new initial
+[GitHub Gist](https://gist.github.com/bmeddeb/896c13b3e7f6e6d99e207198a2523cc7),
+revision `1014884987f1e5b8fd8ae40125f0fcee0d2f5caa`; the scorer's pre-key
+publication verification passed. The one-shot execution then returned exit 2:
+
+```text
+score: NOT ESTABLISHED: frame recomputation failed: go toolchain differs from
+the fact producer: version='go version go1.26.4 darwin/arm64'
+digest=sha256:e61851b2c0cde9b9ac4ae044fcce6ba9d55cb15f98ded3964793acaa8632242f
+```
+
+The sealed facts require the exact Go 1.26.5 binary recorded by the fact
+producer. The scoring shell resolved `go` from the module toolchain cache at
+1.26.4 instead of the documented Homebrew 1.26.5 path. No confidence bound or
+role result was produced, so Attempt 3 supports no performance claim. Because
+the scorer loaded `key.jsonl` before frame recomputation, the fixed one-score
+rule makes the attempt terminal: it must not be rerun with a corrected PATH.
+The private mode-0600 execution receipt is
+`sha256:8b686e0201092622a8a057ab29e5ee225e00dd9b12b50b7f7994a168d8544883`.
+
+The next-attempt scorer now has a reusable `--preflight-toolchain` command and
+repeats the same exact-binary attestation before opening `key.jsonl`; a
+regression test proves a mismatch cannot call the hidden-key loader. This is a
+prospective protocol correction only. Establishing Gate 2 still requires a new
+official-head lineage, full append-only burn carry-forward, fresh public input
+and label commitments, independent review, and one new score. Epics 13–15
+remain gated; Epic 12 remains dark-only under its existing carve-out.
+
+---
+
+# T11.1 validation rerun — Attempt 2 sealed result
 
 **Date:** 2026-07-14 · **Branch:** `t11.1-gate-revalidation` · **Status:**
 **STOP / NOT ESTABLISHED**
