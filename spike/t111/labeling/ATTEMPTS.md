@@ -202,3 +202,9 @@ blocks for a prospective harness fix on that same candidate. The first prefix
 that passes complete burn projection and write-suppressed power analysis is the
 only permissible Attempt 5 corpus. No attempt claim, commitment, entropy,
 sample, reviewer kit, or label exists at this stage.
+
+The first fixed-cutoff source snapshot established no lineage: GitHub rejected
+the initial request as malformed, and the corrected diagnostic response arrived
+outside the committed boundary and was discarded. With no source checkout or
+attempt state created, the same immutable protocol now fixes the replacement
+snapshot at `2026-07-15T04:30:00Z`; no other rule changed.

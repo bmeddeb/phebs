@@ -42,8 +42,8 @@ labels are unfavorable.
 ## Eligibility and pinning
 
 All candidates use their official repository's default-branch head from one
-GraphQL ref snapshot requested at the prospectively fixed cutoff
-`2026-07-15T04:20:00Z`. No later head may be substituted. A candidate is
+GraphQL ref snapshot requested at the prospectively fixed replacement cutoff
+`2026-07-15T04:30:00Z`. No later head may be substituted. A candidate is
 intrinsically eligible only when all of these immutable source properties hold:
 
 - the pinned tree contains Go plus protobuf/gRPC-relevant source;
@@ -79,6 +79,18 @@ historical coordinate, source and destination systems/commits/paths, blob ID,
 interval, and resolution status. Missing required historical source or changed
 content that cannot be safely represented by those existing rules fails closed.
 This rule is schema- and digest-bound before an expanded attempt can be claimed.
+
+### First snapshot failure
+
+The originally committed `2026-07-15T04:20:00Z` snapshot did not establish a
+lineage. The first request, launched at `2026-07-15T04:20:24Z`, contained
+literal escaped newlines and GitHub rejected it during GraphQL parsing without
+returning repository data. A corrected diagnostic request completed at
+`2026-07-15T04:20:43Z`, outside the fixed boundary; its response is discarded
+and cannot pin a source. Before any checkout, fact enumeration, or artifact,
+the replacement cutoff above was fixed without changing candidate order,
+eligibility, thresholds, or prefix rules. Only its single response may supply
+the expansion pins.
 
 ## Prefix stop rule
 
