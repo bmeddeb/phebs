@@ -25,6 +25,10 @@ import (
 //
 // access kinds: getter_read | field_read | field_write | construct
 func extractFieldRefs(system, commit, root string, declared []Fact, buildTags []string) ([]Fact, error) {
+	return extractFieldRefsWithContext(system, commit, root, declared, runtimeBuildContext(buildTags))
+}
+
+func extractFieldRefsWithContext(system, commit, root string, declared []Fact, context goBuildContext) ([]Fact, error) {
 	if abs, err := filepath.Abs(root); err == nil {
 		root = abs
 	}
@@ -71,7 +75,7 @@ func extractFieldRefs(system, commit, root string, declared []Fact, buildTags []
 	}
 	var facts []Fact
 	for _, mod := range mods {
-		modFacts, merr := fieldRefsForModule(system, commit, root, mod, uniqueDecl, buildTags)
+		modFacts, merr := fieldRefsForModuleWithContext(system, commit, root, mod, uniqueDecl, context)
 		if merr != nil {
 			rel, _ := filepath.Rel(root, mod)
 			rel = filepath.ToSlash(rel)
@@ -110,6 +114,10 @@ func parseProtoTag(tag string) (num, name string, ok bool) {
 }
 
 func fieldRefsForModule(system, commit, root, modDir string, uniqueDecl func(msg, num string) string, buildTags []string) ([]Fact, error) {
+	return fieldRefsForModuleWithContext(system, commit, root, modDir, uniqueDecl, runtimeBuildContext(buildTags))
+}
+
+func fieldRefsForModuleWithContext(system, commit, root, modDir string, uniqueDecl func(msg, num string) string, context goBuildContext) ([]Fact, error) {
 	if err := validateLocalReplaces(root, modDir); err != nil {
 		return nil, err
 	}
@@ -121,9 +129,9 @@ func fieldRefsForModule(system, commit, root, modDir string, uniqueDecl func(msg
 			packages.NeedImports | packages.NeedDeps | packages.NeedTypes |
 			packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedModule,
 		Dir:        modDir,
-		Tests:      true,
-		Env:        goPackageEnv(modDir),
-		BuildFlags: packageBuildFlags(buildTags),
+		Tests:      context.IncludeTests,
+		Env:        goPackageEnvForContext(modDir, context),
+		BuildFlags: packageBuildFlags(context.BuildTags),
 	}
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
@@ -132,7 +140,7 @@ func fieldRefsForModule(system, commit, root, modDir string, uniqueDecl func(msg
 	if err := validateReaderModuleCache(modDir); err != nil {
 		return nil, fmt.Errorf("reverify sealed module cache after load: %w", err)
 	}
-	semanticInputs, err := verifyPackageSemanticInputs(root, commit, pkgs)
+	semanticInputs, err := verifyPackageSemanticInputsForContext(root, commit, pkgs, context)
 	if err != nil {
 		return nil, fmt.Errorf("verify Go semantic inputs: %w", err)
 	}
@@ -325,7 +333,7 @@ func fieldRefsForModule(system, commit, root, modDir string, uniqueDecl func(msg
 			})
 		}
 	}
-	verifiedAgain, err := verifyPackageSemanticInputs(root, commit, pkgs)
+	verifiedAgain, err := verifyPackageSemanticInputsForContext(root, commit, pkgs, context)
 	if err != nil {
 		return nil, fmt.Errorf("reverify Go semantic inputs: %w", err)
 	}

@@ -459,6 +459,36 @@ No Istio fact, typed-oracle result, Attempt 5 claim, commitment, randomness,
 coordinate, reviewer artifact, or label existed at this boundary. Candidate 5
 remains untouched.
 
+### Candidate 4 platform-context blocker
+
+The first bound offline extraction after that lineage again failed closed
+before publication, now with exactly 15 package diagnostics. A read-only
+enumeration tied every diagnostic to Istio's CNI tree: the bound Darwin/arm64,
+CGO-disabled package context selects non-Linux stubs while excluding the
+Linux implementations that define the referenced symbols. No dependency,
+checksum, pinned-tree, or extractor-identity invariant failed, and no Istio
+fact file was created.
+
+The same pinned tree under Linux/arm64 resolves the complete production graph.
+Including Linux test variants then reaches `github.com/howardjohn/unshare-go`,
+a CGO namespace helper that is intentionally unavailable to the hermetic
+CGO-off readers. Excluding test variants yields a clean deterministic load of
+488 roots and 2,535 packages. Error suppression, package-specific filtering,
+and skipping Istio remain forbidden: any error within the declared population
+still fails both readers.
+
+The prospective repair therefore makes `goos`, `goarch`, and `go_tests`
+mandatory corpus-lock inputs and threads them through hydration, producer,
+independent oracle, semantic-input hashing, diagnostics, and Gate-2 input
+bindings. Existing fixtures retain their already-fixed Darwin/arm64,
+test-inclusive populations. Istio is explicitly Linux/arm64 and
+production-only. This discloses one candidate-specific test-variant coverage
+boundary; it does not weaken the overall test-role cohort or any accuracy,
+confidence, blind-fraction, burn, ordering, or stop rule. The policy and its
+regressions must be committed, the bound artifacts rehydrated, and the
+eight-system lineage regenerated before candidate 4 is retried. No typed
+oracle census or ceremony state exists, and candidate 5 remains untouched.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

@@ -23,6 +23,10 @@ import (
 // on every type-derived fact, so a shared module cache is never an unrecorded
 // semantic input.
 func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.Package) (string, error) {
+	return verifyPackageSemanticInputsForContext(snapshotRoot, commit, pkgs, runtimeBuildContext(nil))
+}
+
+func verifyPackageSemanticInputsForContext(snapshotRoot, commit string, pkgs []*packages.Package, context goBuildContext) (string, error) {
 	rootReal, err := filepath.EvalSymlinks(snapshotRoot)
 	if err != nil {
 		return "", fmt.Errorf("resolve snapshot root: %w", err)
@@ -160,6 +164,7 @@ func verifyPackageSemanticInputs(snapshotRoot, commit string, pkgs []*packages.P
 	if len(descriptors) == 0 {
 		return "", fmt.Errorf("go package graph has no bound module inputs")
 	}
+	descriptors[context.descriptor()] = struct{}{}
 	if cacheReal != "" {
 		if err := inspectSharedModuleCache(dedicatedModuleCache().root, true); err != nil {
 			return "", fmt.Errorf("revalidate sealed module cache: %w", err)

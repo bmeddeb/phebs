@@ -20,6 +20,7 @@ from gate34_common import (
     git_blob,
     load_burn_ledger,
     load_burn_ledger_cohorts,
+    load_corpus_lock,
     precommitted_generator_config,
     read_jsonl,
     require_fresh_blind_population,
@@ -29,6 +30,34 @@ from gate34_common import (
 
 
 class Gate34IntegrityTests(unittest.TestCase):
+    def test_corpus_lock_requires_explicit_go_analysis_policy(self) -> None:
+        base = {
+            "name": "fixture",
+            "commit": "1" * 40,
+            "goos": "linux",
+            "goarch": "arm64",
+            "go_tests": "exclude",
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "corpus.lock.json"
+            self._write_json(path, [base])
+            loaded = load_corpus_lock(path)
+            self.assertEqual(loaded["fixture"]["go_tests"], "exclude")
+            for field in ("goos", "goarch", "go_tests"):
+                invalid = dict(base)
+                invalid.pop(field)
+                self._write_json(path, [invalid])
+                with self.assertRaisesRegex(ValidationError, field):
+                    load_corpus_lock(path)
+            invalid = {**base, "go_tests": "auto"}
+            self._write_json(path, [invalid])
+            with self.assertRaisesRegex(ValidationError, "go_tests"):
+                load_corpus_lock(path)
+            invalid = {**base, "go_tests": ["exclude"]}
+            self._write_json(path, [invalid])
+            with self.assertRaisesRegex(ValidationError, "go_tests"):
+                load_corpus_lock(path)
+
     def test_git_blob_resolves_only_safe_commit_backed_file_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

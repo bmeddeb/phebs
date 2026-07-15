@@ -381,3 +381,16 @@ canonical complete receipt with only `source_lineage_binding` omitted, and a
 strict builder/validator plus golden and mutation regressions enforce that
 definition. No Istio fact or Attempt 5 ceremony state existed when fixed;
 candidate 5 remains untouched.
+
+The following bound Istio run failed publication with 15 package errors, and
+created no fact file or downstream state. Exact diagnostic enumeration showed
+that all errors came from loading Linux-oriented CNI code under the fixed
+Darwin/arm64, CGO-off package context. Linux/arm64 makes the production graph
+clean; its test variants alone require a CGO namespace helper. A prospective
+policy repair now requires every corpus entry to bind `goos`, `goarch`, and
+`go_tests`, with Istio fixed to Linux/arm64 and tests excluded. Both readers
+remain fail-closed within that declared population, and the test exclusion is
+recorded as a coverage boundary rather than inferred from errors. The repair,
+new bound binaries, and replacement pre-fact lineage must be committed before
+Istio is retried. Attempt 5, candidate 5, coordinates, commitments, entropy,
+reviewer artifacts, and labels remain untouched.

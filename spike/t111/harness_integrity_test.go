@@ -212,6 +212,7 @@ func TestRecursiveTreeAllowsOnlyExactReviewedGitlink(t *testing.T) {
 func TestCorpusPolicyValidation(t *testing.T) {
 	valid := CorpusEntry{
 		Name: "repo", GitURL: "https://example.test/repo", Commit: strings.Repeat("a", 40),
+		GoOS: "darwin", GoArch: "arm64", GoTests: goTestsInclude,
 		ExcludedGitlinks: []CorpusGitlinkExclusion{{
 			Path: "docs/theme", ObjectID: strings.Repeat("b", 40), Reason: "reviewed non-code tree",
 		}},
@@ -226,9 +227,40 @@ func TestCorpusPolicyValidation(t *testing.T) {
 		t.Fatal("ambiguous Go build tags accepted")
 	}
 	bad = valid
+	bad.GoOS = "unknown"
+	if err := validateCorpusEntry(bad); err == nil {
+		t.Fatal("unknown Go analysis target accepted")
+	}
+	bad = valid
+	bad.GoTests = "sometimes"
+	if err := validateCorpusEntry(bad); err == nil {
+		t.Fatal("ambiguous Go test policy accepted")
+	}
+	bad = valid
 	bad.ExcludedGitlinks[0].Reason = ""
 	if err := validateCorpusEntry(bad); err == nil {
 		t.Fatal("gitlink exclusion without rationale accepted")
+	}
+}
+
+func TestCurrentCorpusGoAnalysisPolicyIsExplicit(t *testing.T) {
+	entries, err := loadCorpus("corpus.lock.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.GoOS == "" || entry.GoArch == "" || entry.GoTests == "" {
+			t.Fatalf("%s has an implicit Go analysis policy", entry.Name)
+		}
+		if entry.Name == "istio" {
+			if entry.GoOS != "linux" || entry.GoArch != "arm64" || entry.GoTests != goTestsExclude {
+				t.Fatalf("Istio analysis policy = %s/%s tests=%s", entry.GoOS, entry.GoArch, entry.GoTests)
+			}
+			continue
+		}
+		if entry.GoOS != "darwin" || entry.GoArch != "arm64" || entry.GoTests != goTestsInclude {
+			t.Fatalf("%s analysis policy = %s/%s tests=%s", entry.Name, entry.GoOS, entry.GoArch, entry.GoTests)
+		}
 	}
 }
 
@@ -419,6 +451,15 @@ func TestSemanticInputsVerifyAndBindExternalModule(t *testing.T) {
 	digest, err := verifyPackageSemanticInputs(root, "0123456789abcdef", pkgs)
 	if err != nil {
 		t.Fatalf("verified module rejected: %v", err)
+	}
+	alternate := runtimeBuildContext(nil)
+	alternate.IncludeTests = false
+	alternateDigest, err := verifyPackageSemanticInputsForContext(root, "0123456789abcdef", pkgs, alternate)
+	if err != nil {
+		t.Fatalf("alternate analysis context rejected: %v", err)
+	}
+	if alternateDigest == digest {
+		t.Fatal("Go analysis context was not bound into the semantic input digest")
 	}
 	fact := newFact("CALLS_OPERATION", "pkg", "/dep.Service/Call", roleProduction, tierExact,
 		"repo", "commit", "call.go", 0, 1, 1, 1, "call-v1", "sha256:blob", "iface=dep.Client")

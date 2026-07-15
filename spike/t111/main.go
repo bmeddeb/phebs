@@ -101,7 +101,11 @@ func main() {
 			fatal("proto: %v", err)
 		}
 		if !*protoOnly {
-			goFacts, err := extractGoGRPC(entry.Name, entry.Commit, root, entry.GoBuildTags)
+			context, err := corpusBuildContext(*entry)
+			if err != nil {
+				fatal("Go analysis policy: %v", err)
+			}
+			goFacts, err := extractGoGRPCWithContext(entry.Name, entry.Commit, root, context)
 			if err != nil {
 				fatal("go: %v", err)
 			}
@@ -166,7 +170,11 @@ func main() {
 				decls = append(decls, f)
 			}
 		}
-		facts, err := extractFieldRefs(entry.Name, entry.Commit, root, decls, entry.GoBuildTags)
+		context, err := corpusBuildContext(*entry)
+		if err != nil {
+			fatal("Go analysis policy: %v", err)
+		}
+		facts, err := extractFieldRefsWithContext(entry.Name, entry.Commit, root, decls, context)
 		if err != nil {
 			fatal("fields: %v", err)
 		}

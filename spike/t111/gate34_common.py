@@ -29,7 +29,21 @@ MANIFEST_SCHEMA_VERSION = "t111-g34-manifest-v1"
 BURN_LEDGER_SCHEMA_VERSION = "t111-burn-ledger-v2"
 LEGACY_BURN_LEDGER_SCHEMA_VERSION = "t111-burn-ledger-v1"
 PRODUCER_SCHEMA_VERSION = "t111-v4"
-PRODUCER_EXTRACTOR_VERSION = "spike-0.5.1"
+PRODUCER_EXTRACTOR_VERSION = "spike-0.5.2"
+KNOWN_GOOS = frozenset(
+    {
+        "aix", "android", "darwin", "dragonfly", "freebsd", "illumos", "ios",
+        "js", "linux", "netbsd", "openbsd", "plan9", "solaris", "wasip1",
+        "windows",
+    }
+)
+KNOWN_GOARCH = frozenset(
+    {
+        "386", "amd64", "arm", "arm64", "loong64", "mips", "mips64",
+        "mips64le", "mipsle", "ppc64", "ppc64le", "riscv64", "s390x", "wasm",
+    }
+)
+GO_TEST_POLICIES = frozenset({"include", "exclude"})
 
 VALID_TIERS = frozenset({"exact", "derived", "heuristic", "unresolved"})
 VALID_ACCESS = frozenset(
@@ -679,6 +693,21 @@ def load_corpus_lock(path: Path) -> dict[str, dict[str, Any]]:
         commit = str(record["commit"])
         if len(commit) != 40 or any(ch not in "0123456789abcdef" for ch in commit):
             raise ValidationError(f"corpus lock has non-full commit: {commit!r}")
+        goos = record.get("goos")
+        goarch = record.get("goarch")
+        go_tests = record.get("go_tests")
+        if not isinstance(goos, str) or goos not in KNOWN_GOOS:
+            raise ValidationError(
+                f"corpus lock {record['name']} has invalid or missing goos"
+            )
+        if not isinstance(goarch, str) or goarch not in KNOWN_GOARCH:
+            raise ValidationError(
+                f"corpus lock {record['name']} has invalid or missing goarch"
+            )
+        if not isinstance(go_tests, str) or go_tests not in GO_TEST_POLICIES:
+            raise ValidationError(
+                f"corpus lock {record['name']} go_tests must be include or exclude"
+            )
         result[str(record["name"])] = dict(record)
     return result
 

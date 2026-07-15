@@ -111,7 +111,13 @@ class Gate2PreparationTests(unittest.TestCase):
             lock.write_text(
                 json.dumps(
                     [
-                        {"name": system, "commit": commits[system]}
+                        {
+                            "name": system,
+                            "commit": commits[system],
+                            "goos": "darwin",
+                            "goarch": "arm64",
+                            "go_tests": "include",
+                        }
                         for system in prep.SYSTEMS
                     ]
                 ),
@@ -232,6 +238,15 @@ class Gate2PreparationTests(unittest.TestCase):
         entries = prep.load_corpus_entries(prep.DEFAULT_LOCK, prep.SYSTEMS)
         self.assertEqual(entries["dapr"]["go_build_tags"], ["unit"])
         self.assertEqual(entries["online-boutique"]["go_build_tags"], [])
+        for system in set(prep.SYSTEMS) - {"istio"}:
+            self.assertEqual(
+                (
+                    entries[system]["goos"],
+                    entries[system]["goarch"],
+                    entries[system]["go_tests"],
+                ),
+                ("darwin", "arm64", "include"),
+            )
         self.assertEqual(
             entries["containerd"]["commit"],
             "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
@@ -242,6 +257,14 @@ class Gate2PreparationTests(unittest.TestCase):
             "25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9",
         )
         self.assertEqual(entries["istio"]["go_build_tags"], [])
+        self.assertEqual(
+            (
+                entries["istio"]["goos"],
+                entries["istio"]["goarch"],
+                entries["istio"]["go_tests"],
+            ),
+            ("linux", "arm64", "exclude"),
+        )
         for system in ("temporal", "loki"):
             exclusions = entries[system]["excluded_gitlinks"]
             self.assertEqual(len(exclusions), 1)
@@ -249,6 +272,39 @@ class Gate2PreparationTests(unittest.TestCase):
                 set(exclusions[0]), {"path", "object_id", "reason"}
             )
             self.assertRegex(exclusions[0]["object_id"], r"^[0-9a-f]{40}$")
+
+    def test_corpus_lock_requires_explicit_go_analysis_policy(self) -> None:
+        base = {
+            "name": "fixture",
+            "commit": "1" * 40,
+            "goos": "linux",
+            "goarch": "arm64",
+            "go_tests": "exclude",
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "corpus.lock.json"
+            path.write_text(json.dumps([base]), encoding="utf-8")
+            entry = prep.load_corpus_entries(path, ("fixture",))["fixture"]
+            self.assertEqual(
+                (entry["goos"], entry["goarch"], entry["go_tests"]),
+                ("linux", "arm64", "exclude"),
+            )
+            for missing in ("goos", "goarch", "go_tests"):
+                invalid = dict(base)
+                invalid.pop(missing)
+                path.write_text(json.dumps([invalid]), encoding="utf-8")
+                with self.assertRaisesRegex(prep.PrepError, missing):
+                    prep.load_corpus_entries(path, ("fixture",))
+            for field, value in (
+                ("goos", "Linux"),
+                ("goarch", "arm64/v8"),
+                ("go_tests", "auto"),
+                ("go_tests", ["exclude"]),
+            ):
+                invalid = {**base, field: value}
+                path.write_text(json.dumps([invalid]), encoding="utf-8")
+                with self.assertRaisesRegex(prep.PrepError, field):
+                    prep.load_corpus_entries(path, ("fixture",))
 
     def test_registration_candidates_are_source_independent_and_masked(self) -> None:
         source = r'''
@@ -988,6 +1044,9 @@ func wire(s Server) {
                     "commit": "3" * 40,
                     "excluded_gitlinks": [],
                     "go_build_tags": [],
+                    "goos": "linux",
+                    "goarch": "arm64",
+                    "go_tests": "exclude",
                 }
             },
             "population_binding": {
@@ -1005,6 +1064,9 @@ func wire(s Server) {
         changed["typed_call_oracle_diagnostics"] = {
             "fixture": {"semantic_inputs_digest": "sha256:" + "6" * 64}
         }
+        self.assertNotEqual(first, prep.seed_input_binding(**changed))
+        changed = deepcopy(base)
+        changed["corpus_inputs"]["fixture"]["go_tests"] = "include"
         self.assertNotEqual(first, prep.seed_input_binding(**changed))
 
     def test_selection_is_reproducible_but_changes_with_audit_entropy(self) -> None:
@@ -1050,6 +1112,9 @@ func wire(s Server) {
             "runtime_version": "go1.26.5",
             "goos": "darwin",
             "goarch": "arm64",
+            "analysis_goos": "linux",
+            "analysis_goarch": "arm64",
+            "include_tests": False,
             "executable_sha256": "sha256:" + "b" * 64,
             "semantic_inputs_digest": "sha256:" + "a" * 64,
             "modules": 1,
@@ -1068,30 +1133,49 @@ func wire(s Server) {
             stdout=(json.dumps(record) + "\n").encode(),
             stderr=(json.dumps(diagnostics) + "\n").encode(),
         )
-        with patch.object(prep.subprocess, "run", return_value=completed):
+        with patch.object(prep.subprocess, "run", return_value=completed) as run:
             with patch.object(prep, "git_blob", return_value=data):
                 rows, actual_diagnostics = prep.scan_typed_call_recall_frame(
-                    "fixture", Path("/corpus"), "1" * 40, [], {"p.go"}
+                    "fixture", Path("/corpus"), "1" * 40, [],
+                    "linux", "arm64", "exclude", {"p.go"}
                 )
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["method"], "Call")
         self.assertEqual(actual_diagnostics, diagnostics)
+        command = run.call_args.args[0]
+        self.assertIn("-goos", command)
+        self.assertEqual(command[command.index("-goos") + 1], "linux")
+        self.assertIn("-goarch", command)
+        self.assertEqual(command[command.index("-goarch") + 1], "arm64")
+        self.assertIn("-include-tests=false", command)
+        wrong_policy = {**diagnostics, "analysis_goos": "darwin"}
+        completed.stderr = (json.dumps(wrong_policy) + "\n").encode()
+        with patch.object(prep.subprocess, "run", return_value=completed):
+            with patch.object(prep, "git_blob", return_value=data):
+                with self.assertRaisesRegex(prep.PrepError, "analysis policy"):
+                    prep.scan_typed_call_recall_frame(
+                        "fixture", Path("/corpus"), "1" * 40, [],
+                        "linux", "arm64", "exclude", {"p.go"}
+                    )
+        completed.stderr = (json.dumps(diagnostics) + "\n").encode()
         bad = {**record, "byte_offset": offset + 1}
         completed.stdout = (json.dumps(bad) + "\n").encode()
         with patch.object(prep.subprocess, "run", return_value=completed):
             with patch.object(prep, "git_blob", return_value=data):
                 with self.assertRaisesRegex(prep.PrepError, "does not point"):
                     prep.scan_typed_call_recall_frame(
-                        "fixture", Path("/corpus"), "1" * 40, [], {"p.go"}
+                        "fixture", Path("/corpus"), "1" * 40, [],
+                        "linux", "arm64", "exclude", {"p.go"}
                     )
         completed.stdout = (json.dumps(record) + "\n").encode()
-        diagnostics["matched_sites"] = 2
-        completed.stderr = (json.dumps(diagnostics) + "\n").encode()
+        mismatched_count = {**diagnostics, "matched_sites": 2}
+        completed.stderr = (json.dumps(mismatched_count) + "\n").encode()
         with patch.object(prep.subprocess, "run", return_value=completed):
             with patch.object(prep, "git_blob", return_value=data):
                 with self.assertRaisesRegex(prep.PrepError, "match count"):
                     prep.scan_typed_call_recall_frame(
-                        "fixture", Path("/corpus"), "1" * 40, [], {"p.go"}
+                        "fixture", Path("/corpus"), "1" * 40, [],
+                        "linux", "arm64", "exclude", {"p.go"}
                     )
 
     def test_source_frame_binding_ignores_extractor_outcomes(self) -> None:

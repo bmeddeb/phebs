@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 
@@ -23,6 +24,12 @@ import (
 // repository-relative directory. Vendored dependencies are bound to their
 // commit-backed vendor roots because go/packages omits Module.Dir for them.
 func verifyPackageSemanticInputs(snapshotRoot, commit, moduleCache string, pkgs []*packages.Package) (string, error) {
+	return verifyPackageSemanticInputsForContext(snapshotRoot, commit, moduleCache, pkgs, analysisContext{
+		goos: runtime.GOOS, goarch: runtime.GOARCH, includeTests: true,
+	})
+}
+
+func verifyPackageSemanticInputsForContext(snapshotRoot, commit, moduleCache string, pkgs []*packages.Package, context analysisContext) (string, error) {
 	rootReal, err := filepath.EvalSymlinks(snapshotRoot)
 	if err != nil {
 		return "", fmt.Errorf("resolve snapshot root: %w", err)
@@ -161,12 +168,21 @@ func verifyPackageSemanticInputs(snapshotRoot, commit, moduleCache string, pkgs 
 	if len(descriptors) == 0 {
 		return "", fmt.Errorf("go package graph has no bound module inputs")
 	}
+	descriptors[analysisContextDescriptor(context)] = struct{}{}
 	if cacheReal != "" {
 		if err := inspectOracleModuleCache(moduleCache); err != nil {
 			return "", fmt.Errorf("revalidate sealed module cache: %w", err)
 		}
 	}
 	return digestSemanticDescriptors(descriptors), nil
+}
+
+func analysisContextDescriptor(context analysisContext) string {
+	return strings.Join([]string{
+		"go-build-context", context.goos, context.goarch,
+		fmt.Sprintf("tests=%t", context.includeTests),
+		"tags=" + strings.Join(context.tags, ","),
+	}, "\x00")
 }
 
 func semanticVendoredModuleRoot(snapshotRoot, modulePath string, pkg *packages.Package) (string, error) {

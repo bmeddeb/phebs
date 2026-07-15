@@ -230,17 +230,21 @@ func processGoState() (home, gopath, gocache, tmp, telemetry string) {
 	return filepath.Join(root, "home"), filepath.Join(root, "gopath"), filepath.Join(root, "build-cache"), filepath.Join(root, "tmp"), filepath.Join(root, "telemetry")
 }
 
-func moduleEnv(paths moduleCachePaths, moduleMode, proxy, sumdb string) []string {
+func moduleEnv(paths moduleCachePaths, moduleMode, proxy, sumdb string, contexts ...goBuildContext) []string {
 	home, gopath, gocache, tmp, telemetry := processGoState()
+	context := runtimeBuildContext(nil)
+	if len(contexts) == 1 {
+		context = contexts[0]
+	}
 	env := map[string]string{
 		"CGO_ENABLED":     "0",
 		"GO111MODULE":     "on",
-		"GOARCH":          runtime.GOARCH,
+		"GOARCH":          context.GOARCH,
 		"GOCACHE":         gocache,
 		"GOENV":           "off",
 		"GOFLAGS":         "-mod=" + moduleMode + " -buildvcs=false",
 		"GOMODCACHE":      paths.gomodcache,
-		"GOOS":            runtime.GOOS,
+		"GOOS":            context.GOOS,
 		"GOPATH":          gopath,
 		"GOPROXY":         proxy,
 		"GOSUMDB":         sumdb,
@@ -270,12 +274,16 @@ func moduleEnv(paths moduleCachePaths, moduleMode, proxy, sumdb string) []string
 // goPackageEnv deliberately has no ambient HOME/GOPATH/GOMODCACHE fallback.
 // Hydration is the only networked phase; extraction is always offline.
 func goPackageEnv(modDir string) []string {
+	return goPackageEnvForContext(modDir, runtimeBuildContext(nil))
+}
+
+func goPackageEnvForContext(modDir string, context goBuildContext) []string {
 	paths := dedicatedModuleCache()
 	moduleMode := "readonly"
 	if isVendoredModule(modDir) {
 		moduleMode = "vendor"
 	}
-	return moduleEnv(paths, moduleMode, "off", "off")
+	return moduleEnv(paths, moduleMode, "off", "off", context)
 }
 
 func isVendoredModule(modDir string) bool {
@@ -408,13 +416,18 @@ func hydrateCorpusModules(entry CorpusEntry, corpusRoot, cacheRoot, proxy, sumdb
 			return 0, 0, err
 		}
 	}
+	context, err := corpusBuildContext(entry)
+	if err != nil {
+		return 0, 0, fmt.Errorf("Go analysis policy: %w", err)
+	}
 	targets := make([]moduleClosureTarget, 0, len(modules))
 	for _, module := range modules {
 		targets = append(targets, moduleClosureTarget{
 			dir:          module,
 			patterns:     []string{"./..."},
-			buildTags:    entry.GoBuildTags,
-			includeTests: true,
+			buildContext: context,
+			buildTags:    context.BuildTags,
+			includeTests: context.IncludeTests,
 		})
 	}
 	downloaded, vendored, err = hydrateTargetClosuresUnchecked(targets, cacheRoot, proxy, sumdb)
@@ -427,6 +440,7 @@ func hydrateCorpusModules(entry CorpusEntry, corpusRoot, cacheRoot, proxy, sumdb
 type moduleClosureTarget struct {
 	dir          string
 	patterns     []string
+	buildContext goBuildContext
 	buildTags    []string
 	includeTests bool
 }
@@ -469,7 +483,11 @@ func hydrateTargetClosuresUnchecked(targets []moduleClosureTarget, cacheRoot, pr
 		args = append(args, target.patterns...)
 		cmd := exec.Command(goExecutable, args...)
 		cmd.Dir = target.dir
-		cmd.Env = moduleEnv(paths, "readonly", proxy, sumdb)
+		context := target.buildContext
+		if context.GOOS == "" || context.GOARCH == "" {
+			context = runtimeBuildContext(target.buildTags)
+		}
+		cmd.Env = moduleEnv(paths, "readonly", proxy, sumdb, context)
 		cmd.Stdout = io.Discard
 		var diagnostics strings.Builder
 		cmd.Stderr = &diagnostics

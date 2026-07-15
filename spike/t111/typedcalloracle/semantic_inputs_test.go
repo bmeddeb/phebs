@@ -241,7 +241,10 @@ func TestExecuteReportsSemanticInputsDigest(t *testing.T) {
 		"app.go": "package oracle\n",
 	})
 	var stdout, stderr bytes.Buffer
-	if err := execute(options{root: root, commit: commit}, &stdout, &stderr); err != nil {
+	includeTests := false
+	if err := execute(options{
+		root: root, commit: commit, goos: "linux", goarch: "arm64", includeTests: &includeTests,
+	}, &stdout, &stderr); err != nil {
 		t.Fatal(err)
 	}
 	var diag diagnostics
@@ -250,6 +253,18 @@ func TestExecuteReportsSemanticInputsDigest(t *testing.T) {
 	}
 	if !validSemanticDigest(diag.SemanticInputsDigest) {
 		t.Fatalf("diagnostics semantic input digest = %q", diag.SemanticInputsDigest)
+	}
+	if diag.AnalysisGOOS != "linux" || diag.AnalysisGOARCH != "arm64" || diag.IncludeTests {
+		t.Fatalf("diagnostics did not bind the requested analysis policy: %+v", diag)
+	}
+}
+
+func TestAnalysisContextRejectsPartialOrUnknownTarget(t *testing.T) {
+	if _, err := analysisContextForOptions(options{goos: "linux"}); err == nil {
+		t.Fatal("partial Go analysis target accepted")
+	}
+	if _, err := analysisContextForOptions(options{goos: "unknown", goarch: "arm64"}); err == nil {
+		t.Fatal("unknown Go analysis target accepted")
 	}
 }
 

@@ -38,6 +38,9 @@ type CorpusEntry struct {
 	Commit           string                   `json:"commit"`
 	Note             string                   `json:"note,omitempty"`
 	ExcludedGitlinks []CorpusGitlinkExclusion `json:"excluded_gitlinks,omitempty"`
+	GoOS             string                   `json:"goos"`
+	GoArch           string                   `json:"goarch"`
+	GoTests          string                   `json:"go_tests"`
 	GoBuildTags      []string                 `json:"go_build_tags,omitempty"`
 }
 
@@ -79,6 +82,9 @@ func validateCorpusEntry(entry CorpusEntry) error {
 	}
 	if !isLowerHexObjectID(entry.Commit) {
 		return fmt.Errorf("commit %q is not a full lowercase SHA-1 object ID", entry.Commit)
+	}
+	if err := validateGoBuildPolicy(entry.GoOS, entry.GoArch, entry.GoTests); err != nil {
+		return err
 	}
 	seenPaths := make(map[string]bool, len(entry.ExcludedGitlinks))
 	for _, exclusion := range entry.ExcludedGitlinks {

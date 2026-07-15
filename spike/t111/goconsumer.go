@@ -27,13 +27,17 @@ import (
 // load a module are emitted as EXTRACTION_FAILURE facts, not swallowed —
 // coverage honesty is gate 1.
 func extractGoGRPC(system, commit, root string, buildTags []string) ([]Fact, error) {
+	return extractGoGRPCWithContext(system, commit, root, runtimeBuildContext(buildTags))
+}
+
+func extractGoGRPCWithContext(system, commit, root string, context goBuildContext) ([]Fact, error) {
 	mods, err := findGoModules(root)
 	if err != nil {
 		return nil, fmt.Errorf("find modules: %w", err)
 	}
 	var facts []Fact
 	for _, mod := range mods {
-		modFacts, merr := extractModule(system, commit, root, mod, buildTags)
+		modFacts, merr := extractModuleWithContext(system, commit, root, mod, context)
 		if merr != nil {
 			rel, _ := filepath.Rel(root, mod)
 			rel = filepath.ToSlash(rel)
@@ -82,6 +86,10 @@ type clientIface struct {
 }
 
 func extractModule(system, commit, root, modDir string, buildTags []string) ([]Fact, error) {
+	return extractModuleWithContext(system, commit, root, modDir, runtimeBuildContext(buildTags))
+}
+
+func extractModuleWithContext(system, commit, root, modDir string, context goBuildContext) ([]Fact, error) {
 	if err := validateLocalReplaces(root, modDir); err != nil {
 		return nil, err
 	}
@@ -93,9 +101,9 @@ func extractModule(system, commit, root, modDir string, buildTags []string) ([]F
 			packages.NeedImports | packages.NeedDeps | packages.NeedTypes |
 			packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedModule,
 		Dir:        modDir,
-		Tests:      true,
-		Env:        goPackageEnv(modDir),
-		BuildFlags: packageBuildFlags(buildTags),
+		Tests:      context.IncludeTests,
+		Env:        goPackageEnvForContext(modDir, context),
+		BuildFlags: packageBuildFlags(context.BuildTags),
 	}
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
@@ -111,7 +119,7 @@ func extractModule(system, commit, root, modDir string, buildTags []string) ([]F
 	if len(pkgs) == 0 {
 		return nil, nil
 	}
-	semanticInputs, err := verifyPackageSemanticInputs(root, commit, pkgs)
+	semanticInputs, err := verifyPackageSemanticInputsForContext(root, commit, pkgs, context)
 	if err != nil {
 		return nil, fmt.Errorf("verify Go semantic inputs: %w", err)
 	}
@@ -294,7 +302,7 @@ func extractModule(system, commit, root, modDir string, buildTags []string) ([]F
 		}
 		facts = append(facts, failure)
 	}
-	verifiedAgain, err := verifyPackageSemanticInputs(root, commit, pkgs)
+	verifiedAgain, err := verifyPackageSemanticInputsForContext(root, commit, pkgs, context)
 	if err != nil {
 		return nil, fmt.Errorf("reverify Go semantic inputs: %w", err)
 	}

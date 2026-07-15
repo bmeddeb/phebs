@@ -16,8 +16,8 @@ import (
 
 const (
 	schemaVersion    = "t111-v4"
-	extractorVersion = "spike-0.5.1"
-	adapterConfig    = "corpus=recursive-ls-tree-cat-file-v2,exact-reviewed-gitlink-exclusions;go=modules,corpus-lock-build-tags,readonly-or-pinned-vendor,offline,workspace-off,toolchain-exact,cgo-off,local-replaces-in-snapshot,external-module-sums-verified-bound;proto=parser-only;identity=static-no-values-no-reach-v3"
+	extractorVersion = "spike-0.5.2"
+	adapterConfig    = "corpus=recursive-ls-tree-cat-file-v2,exact-reviewed-gitlink-exclusions;go=modules,corpus-lock-build-context,readonly-or-pinned-vendor,offline,workspace-off,toolchain-exact,cgo-off,local-replaces-in-snapshot,external-module-sums-verified-bound;proto=parser-only;identity=static-no-values-no-reach-v3"
 )
 
 var (

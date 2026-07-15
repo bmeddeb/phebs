@@ -73,9 +73,13 @@ requires an exact role match.
 | Source role | up to 20 per role | up to 10 per role | every selected role must match exactly |
 
 The manifest binds the exact corpus lock, every fixed Gate 2 commit, declared
-gitlink exclusions, Dapr's `unit` build tag, fact files, extractor
-configuration, burn resolution, typed-call oracle, and sampling design. Any
-undeclared, missing, or changed input fails closed.
+gitlink exclusions, each fixture's explicit Go OS/architecture/test policy,
+Dapr's `unit` build tag, fact files, extractor configuration, burn resolution,
+typed-call oracle, and sampling design. Any undeclared, missing, or changed
+input fails closed. Istio's declared Linux/arm64 population excludes package
+test variants because its Linux tests require CGO while both hermetic readers
+are fixed CGO-off; all other fixtures remain test-inclusive, and the overall
+test-role cohort and thresholds are unchanged.
 
 ## Exact local toolchain
 

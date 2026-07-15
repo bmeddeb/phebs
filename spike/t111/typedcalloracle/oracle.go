@@ -24,7 +24,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const diagnosticsSchema = "t111-typed-call-oracle-diagnostics-v4"
+const diagnosticsSchema = "t111-typed-call-oracle-diagnostics-v5"
 
 var (
 	fullCommitRE    = regexp.MustCompile(`^[0-9a-f]{40}$`)
@@ -33,11 +33,21 @@ var (
 )
 
 type options struct {
-	root        string
-	commit      string
-	tags        []string
-	output      string
-	moduleCache string
+	root         string
+	commit       string
+	tags         []string
+	output       string
+	moduleCache  string
+	goos         string
+	goarch       string
+	includeTests *bool
+}
+
+type analysisContext struct {
+	goos         string
+	goarch       string
+	includeTests bool
+	tags         []string
 }
 
 type record struct {
@@ -57,6 +67,9 @@ type diagnostics struct {
 	RuntimeVersion             string `json:"runtime_version"`
 	GOOS                       string `json:"goos"`
 	GOARCH                     string `json:"goarch"`
+	AnalysisGOOS               string `json:"analysis_goos"`
+	AnalysisGOARCH             string `json:"analysis_goarch"`
+	IncludeTests               bool   `json:"include_tests"`
 	ExecutableSHA256           string `json:"executable_sha256"`
 	SemanticInputsDigest       string `json:"semantic_inputs_digest"`
 	Modules                    int    `json:"modules"`
@@ -118,6 +131,7 @@ type scanState struct {
 	semantic    map[string]string
 	moduleCache string
 	runRoot     string
+	context     analysisContext
 	rawMatches  int
 }
 
@@ -145,7 +159,42 @@ func splitTags(raw string) []string {
 	return result
 }
 
+func analysisContextForOptions(opts options) (analysisContext, error) {
+	goos, goarch := opts.goos, opts.goarch
+	if goos == "" && goarch == "" {
+		goos, goarch = runtime.GOOS, runtime.GOARCH
+	} else if goos == "" || goarch == "" {
+		return analysisContext{}, errors.New("-goos and -goarch must be supplied together")
+	}
+	knownOS := map[string]bool{
+		"aix": true, "android": true, "darwin": true, "dragonfly": true,
+		"freebsd": true, "illumos": true, "ios": true, "js": true,
+		"linux": true, "netbsd": true, "openbsd": true, "plan9": true,
+		"solaris": true, "wasip1": true, "windows": true,
+	}
+	knownArch := map[string]bool{
+		"386": true, "amd64": true, "arm": true, "arm64": true,
+		"loong64": true, "mips": true, "mips64": true, "mips64le": true,
+		"mipsle": true, "ppc64": true, "ppc64le": true, "riscv64": true,
+		"s390x": true, "wasm": true,
+	}
+	if !knownOS[goos] || !knownArch[goarch] {
+		return analysisContext{}, fmt.Errorf("unsupported Go analysis target %s/%s", goos, goarch)
+	}
+	includeTests := true
+	if opts.includeTests != nil {
+		includeTests = *opts.includeTests
+	}
+	tags := append([]string(nil), opts.tags...)
+	sort.Strings(tags)
+	return analysisContext{goos: goos, goarch: goarch, includeTests: includeTests, tags: tags}, nil
+}
+
 func execute(opts options, stdout, stderr io.Writer) error {
+	context, err := analysisContextForOptions(opts)
+	if err != nil {
+		return err
+	}
 	co, err := verifyCheckout(opts)
 	if err != nil {
 		return err
@@ -190,9 +239,10 @@ func execute(opts options, stdout, stderr io.Writer) error {
 		semantic:    make(map[string]string),
 		moduleCache: moduleCache,
 		runRoot:     runRoot,
+		context:     context,
 	}
 	for _, module := range modules {
-		if err := state.scanModule(module, opts.tags); err != nil {
+		if err := state.scanModule(module); err != nil {
 			return fmt.Errorf("module %s: %w", displayModule(co.root, module), err)
 		}
 	}
@@ -235,6 +285,9 @@ func execute(opts options, stdout, stderr io.Writer) error {
 		RuntimeVersion:             runtime.Version(),
 		GOOS:                       runtime.GOOS,
 		GOARCH:                     runtime.GOARCH,
+		AnalysisGOOS:               context.goos,
+		AnalysisGOARCH:             context.goarch,
+		IncludeTests:               context.includeTests,
 		ExecutableSHA256:           executableDigest,
 		SemanticInputsDigest:       semanticInputs,
 		Modules:                    len(modules),
@@ -555,7 +608,7 @@ func findModules(co checkout) ([]string, error) {
 	return modules, nil
 }
 
-func (s *scanState) scanModule(module string, tags []string) error {
+func (s *scanState) scanModule(module string) error {
 	if err := validateLocalReplaces(s.checkout.root, module); err != nil {
 		return err
 	}
@@ -568,9 +621,9 @@ func (s *scanState) scanModule(module string, tags []string) error {
 			packages.NeedSyntax | packages.NeedTypesInfo | packages.NeedModule |
 			packages.NeedForTest,
 		Dir:        module,
-		Tests:      true,
-		Env:        packageEnv(module, s.moduleCache, s.runRoot),
-		BuildFlags: buildFlags(tags),
+		Tests:      s.context.includeTests,
+		Env:        packageEnvForContext(module, s.moduleCache, s.runRoot, s.context),
+		BuildFlags: buildFlags(s.context.tags),
 	}
 	roots, err := packages.Load(cfg, "./...")
 	if err != nil {
@@ -595,7 +648,7 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	if err := validatePackages(graph); err != nil {
 		return err
 	}
-	semanticInputs, err := verifyPackageSemanticInputs(s.checkout.root, s.commit, s.moduleCache, graph)
+	semanticInputs, err := verifyPackageSemanticInputsForContext(s.checkout.root, s.commit, s.moduleCache, graph, s.context)
 	if err != nil {
 		return fmt.Errorf("verify Go semantic inputs: %w", err)
 	}
@@ -610,7 +663,7 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	if err := s.scanCalls(graph, clients); err != nil {
 		return err
 	}
-	verifiedAgain, err := verifyPackageSemanticInputs(s.checkout.root, s.commit, s.moduleCache, graph)
+	verifiedAgain, err := verifyPackageSemanticInputsForContext(s.checkout.root, s.commit, s.moduleCache, graph, s.context)
 	if err != nil {
 		return fmt.Errorf("reverify Go semantic inputs: %w", err)
 	}
@@ -669,10 +722,17 @@ func (s *scanState) emptyModuleSemanticInputs(module string) (string, error) {
 	}
 	return digestSemanticDescriptors(map[string]struct{}{
 		strings.Join([]string{"snapshot-empty-module", s.commit, moduleKey}, "\x00"): {},
+		analysisContextDescriptor(s.context):                                         {},
 	}), nil
 }
 
 func packageEnv(module, moduleCache, runRoot string) []string {
+	return packageEnvForContext(module, moduleCache, runRoot, analysisContext{
+		goos: runtime.GOOS, goarch: runtime.GOARCH, includeTests: true,
+	})
+}
+
+func packageEnvForContext(module, moduleCache, runRoot string, context analysisContext) []string {
 	moduleMode := "readonly"
 	if info, err := os.Lstat(filepath.Join(module, "vendor", "modules.txt")); err == nil && info.Mode().IsRegular() {
 		moduleMode = "vendor"
@@ -683,8 +743,10 @@ func packageEnv(module, moduleCache, runRoot string) []string {
 		"GIT_OPTIONAL_LOCKS":  "0",
 		"GIT_TERMINAL_PROMPT": "0",
 		"GO111MODULE":         "on",
+		"GOARCH":              context.goarch,
 		"GOENV":               "off",
 		"GOFLAGS":             "-mod=" + moduleMode + " -buildvcs=false",
+		"GOOS":                context.goos,
 		"GOMODCACHE":          filepath.Join(moduleCache, "gomodcache"),
 		"GOPATH":              filepath.Join(runRoot, "gopath"),
 		"GOPROXY":             "off",

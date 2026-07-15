@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -31,7 +32,10 @@ func TestHydrateThenOfflineExtractionUsesOnlyDedicatedCache(t *testing.T) {
 	gitTestOutput(t, repo, "add", "go.mod", "go.sum", "app.go")
 	gitTestOutput(t, repo, "commit", "-q", "-m", "module fixture")
 	commit := gitTestOutput(t, repo, "rev-parse", "HEAD")
-	entry := CorpusEntry{Name: "fixture", GitURL: "https://example.invalid/fixture", Commit: commit}
+	entry := CorpusEntry{
+		Name: "fixture", GitURL: "https://example.invalid/fixture", Commit: commit,
+		GoOS: runtime.GOOS, GoArch: runtime.GOARCH, GoTests: goTestsInclude,
+	}
 
 	empty := filepath.Join(t.TempDir(), "empty-cache")
 	if _, err := prepareModuleCache(empty); err != nil {
@@ -128,6 +132,55 @@ func TestHydrateThenOfflineExtractionUsesOnlyDedicatedCache(t *testing.T) {
 	if _, err := extractModule(entry.Name, commit, repo, repo, nil); err == nil ||
 		(!strings.Contains(err.Error(), "go.mod content mismatch") && !strings.Contains(err.Error(), "checksum mismatch")) {
 		t.Fatalf("tampered cached go.mod was not directly h1-rejected: %v", err)
+	}
+}
+
+func TestExplicitGoAnalysisPolicyControlsTargetAndTestPopulation(t *testing.T) {
+	repo := t.TempDir()
+	for name, content := range map[string]string{
+		"go.mod":      "module example.test/policy\n\ngo 1.26\n",
+		"app.go":      "package policy\n",
+		"app_test.go": "package policy\n\nvar _ MissingTestOnlySymbol\n",
+	} {
+		if err := os.WriteFile(filepath.Join(repo, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cache := filepath.Join(t.TempDir(), "cache")
+	if _, err := prepareModuleCache(cache); err != nil {
+		t.Fatal(err)
+	}
+	if err := sealSharedModuleCache(cache); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { makeCacheWritable(cache) })
+	oldCache := harnessModuleCacheRoot
+	harnessModuleCacheRoot = cache
+	t.Cleanup(func() { harnessModuleCacheRoot = oldCache })
+
+	withTests := runtimeBuildContext(nil)
+	facts, err := extractModuleWithContext("fixture", strings.Repeat("a", 40), repo, repo, withTests)
+	if err != nil {
+		t.Fatalf("test-inclusive extraction returned structural error: %v", err)
+	}
+	if !hasLoadDiagnostic(facts) {
+		t.Fatal("test-only type failure was not preserved as a diagnostic")
+	}
+
+	productionOnly := withTests
+	productionOnly.GOOS = "linux"
+	productionOnly.GOARCH = "arm64"
+	productionOnly.IncludeTests = false
+	facts, err = extractModuleWithContext("fixture", strings.Repeat("a", 40), repo, repo, productionOnly)
+	if err != nil {
+		t.Fatalf("explicit production-only target failed: %v", err)
+	}
+	if hasLoadDiagnostic(facts) {
+		t.Fatalf("excluded test variant leaked into production-only analysis: %+v", facts)
+	}
+	env := envMap(goPackageEnvForContext(repo, productionOnly))
+	if env["GOOS"] != "linux" || env["GOARCH"] != "arm64" || env["CGO_ENABLED"] != "0" {
+		t.Fatalf("analysis target did not reach package environment: %#v", env)
 	}
 }
 
@@ -253,7 +306,10 @@ func TestHydrateSkipsVendoredModulesWithoutNetwork(t *testing.T) {
 	gitTestOutput(t, repo, "add", "go.mod", "app.go", "vendor/modules.txt")
 	gitTestOutput(t, repo, "commit", "-q", "-m", "vendor fixture")
 	commit := gitTestOutput(t, repo, "rev-parse", "HEAD")
-	entry := CorpusEntry{Name: "vendor", GitURL: "https://example.invalid/vendor", Commit: commit}
+	entry := CorpusEntry{
+		Name: "vendor", GitURL: "https://example.invalid/vendor", Commit: commit,
+		GoOS: runtime.GOOS, GoArch: runtime.GOARCH, GoTests: goTestsInclude,
+	}
 	downloaded, vendored, err := hydrateCorpusModules(
 		entry, repo, filepath.Join(t.TempDir(), "cache"), "https://127.0.0.1:1", "off",
 	)

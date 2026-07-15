@@ -36,6 +36,9 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator, Sequence
 
 from gate34_common import (
+    GO_TEST_POLICIES,
+    KNOWN_GOARCH,
+    KNOWN_GOOS,
     ValidationError as EvidenceValidationError,
     build_burn_ledger,
     coordinate_burned,
@@ -267,10 +270,24 @@ def load_corpus_entries(path: Path, systems: Sequence[str]) -> dict[str, dict[st
             or len(tags) != len(set(tags))
         ):
             raise PrepError(f"{path}: {name} go_build_tags must be unique safe strings")
+        goos = row.get("goos")
+        goarch = row.get("goarch")
+        go_tests = row.get("go_tests")
+        if not isinstance(goos, str) or goos not in KNOWN_GOOS:
+            raise PrepError(f"{path}: {name} goos must be an explicit lowercase Go target")
+        if not isinstance(goarch, str) or goarch not in KNOWN_GOARCH:
+            raise PrepError(f"{path}: {name} goarch must be an explicit lowercase Go target")
+        if not isinstance(go_tests, str) or go_tests not in GO_TEST_POLICIES:
+            raise PrepError(
+                f"{path}: {name} go_tests must be exactly include or exclude"
+            )
         entries[name] = {
             "commit": commit,
             "excluded_gitlinks": sorted(exclusions, key=lambda item: item["path"]),
             "go_build_tags": sorted(tags),
+            "goos": goos,
+            "goarch": goarch,
+            "go_tests": go_tests,
         }
     missing = set(systems) - set(entries)
     if missing:
@@ -1975,7 +1992,7 @@ TYPED_ORACLE_STRATA = {
     "structural_grpc_client_interface",
     "ambiguous_multiple_generated_clients",
 }
-TYPED_ORACLE_DIAGNOSTICS_SCHEMA = "t111-typed-call-oracle-diagnostics-v4"
+TYPED_ORACLE_DIAGNOSTICS_SCHEMA = "t111-typed-call-oracle-diagnostics-v5"
 TYPED_ORACLE_DIAGNOSTIC_COUNTS = {
     "modules",
     "loaded_packages",
@@ -2605,10 +2622,24 @@ def scan_typed_call_recall_frame(
     root: Path,
     commit: str,
     build_tags: Sequence[str],
+    analysis_goos: str,
+    analysis_goarch: str,
+    go_tests: str,
     tracked_files: set[str],
     toolchain: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Run the fact-blind go/types oracle and validate every coordinate."""
+
+    if (
+        not isinstance(analysis_goos, str)
+        or analysis_goos not in KNOWN_GOOS
+        or not isinstance(analysis_goarch, str)
+        or analysis_goarch not in KNOWN_GOARCH
+        or not isinstance(go_tests, str)
+        or go_tests not in GO_TEST_POLICIES
+    ):
+        raise PrepError(f"{system}: invalid Go analysis policy")
+    include_tests = go_tests == "include"
 
     oracle_binary, oracle_digest = load_bound_typed_oracle(toolchain)
     command = [
@@ -2619,6 +2650,11 @@ def scan_typed_call_recall_frame(
         str(root),
         "-commit",
         commit,
+        "-goos",
+        analysis_goos,
+        "-goarch",
+        analysis_goarch,
+        f"-include-tests={'true' if include_tests else 'false'}",
     ]
     if build_tags:
         command.extend(["-tags", ",".join(sorted(build_tags))])
@@ -2736,6 +2772,9 @@ def scan_typed_call_recall_frame(
         "runtime_version",
         "goos",
         "goarch",
+        "analysis_goos",
+        "analysis_goarch",
+        "include_tests",
         "executable_sha256",
         "semantic_inputs_digest",
         *TYPED_ORACLE_DIAGNOSTIC_COUNTS,
@@ -2749,6 +2788,12 @@ def scan_typed_call_recall_frame(
         for field in ("runtime_version", "goos", "goarch")
     ):
         raise PrepError(f"{system}: typed oracle runtime differs from the bound producer toolchain")
+    if (
+        diagnostics.get("analysis_goos") != analysis_goos
+        or diagnostics.get("analysis_goarch") != analysis_goarch
+        or diagnostics.get("include_tests") is not include_tests
+    ):
+        raise PrepError(f"{system}: typed oracle analysis policy differs from corpus.lock")
     if diagnostics.get("executable_sha256") != oracle_digest:
         raise PrepError(f"{system}: typed oracle executable differs from its bound manifest")
     semantic_digest = diagnostics.get("semantic_inputs_digest")
@@ -3779,6 +3824,9 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
             root,
             commits[system],
             entries[system]["go_build_tags"],
+            entries[system]["goos"],
+            entries[system]["goarch"],
+            entries[system]["go_tests"],
             set(tracked),
             oracle_toolchain,
         )
@@ -3858,6 +3906,9 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
             "commit": commits[system],
             "excluded_gitlinks": entries[system]["excluded_gitlinks"],
             "go_build_tags": entries[system]["go_build_tags"],
+            "goos": entries[system]["goos"],
+            "goarch": entries[system]["goarch"],
+            "go_tests": entries[system]["go_tests"],
         }
         for system in systems
     }
@@ -4657,6 +4708,9 @@ def materialize_context(args: argparse.Namespace) -> None:
             "commit": commits[system],
             "excluded_gitlinks": entries[system]["excluded_gitlinks"],
             "go_build_tags": entries[system]["go_build_tags"],
+            "goos": entries[system]["goos"],
+            "goarch": entries[system]["goarch"],
+            "go_tests": entries[system]["go_tests"],
         }
         for system in systems
     }
