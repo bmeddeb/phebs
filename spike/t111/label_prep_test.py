@@ -41,6 +41,7 @@ class Gate2PreparationTests(unittest.TestCase):
                 "grpc-go",
                 "etcd",
                 "containerd",
+                "istio",
             ),
         )
         entries = prep.load_corpus_entries(prep.DEFAULT_LOCK, prep.SYSTEMS)
@@ -51,6 +52,11 @@ class Gate2PreparationTests(unittest.TestCase):
             "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
         )
         self.assertEqual(entries["containerd"]["go_build_tags"], [])
+        self.assertEqual(
+            entries["istio"]["commit"],
+            "25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9",
+        )
+        self.assertEqual(entries["istio"]["go_build_tags"], [])
         for system in ("temporal", "loki"):
             exclusions = entries[system]["excluded_gitlinks"]
             self.assertEqual(len(exclusions), 1)
