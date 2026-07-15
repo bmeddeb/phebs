@@ -51,6 +51,12 @@
     "note": "Gate 2 strict-expansion candidate 2; independent production distributed system; pinned by expansion-source-snapshot.receipt.json"
   },
   {
+    "name": "containerd",
+    "git_url": "https://github.com/containerd/containerd",
+    "commit": "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
+    "note": "Gate 2 strict-expansion candidate 3; production container runtime; pinned by expansion-source-snapshot.receipt.json"
+  },
+  {
     "name": "temporal-helm",
     "git_url": "https://github.com/temporalio/helm-charts",
     "commit": "9f4d328c31c77c323d272d0c5f615cf02bd46dab",

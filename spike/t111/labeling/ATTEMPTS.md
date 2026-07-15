@@ -258,3 +258,12 @@ in `expansion-capacity-prefix-2.json`. Under the frozen order the prefix must
 therefore expand to candidate 3, `containerd/containerd` at
 `9e70782d9a0e92900f402b2c7a4e2aa30754503c`. No later candidate has been
 inspected, and Attempt 5 still has no claim or ceremony state.
+
+Only then was candidate 3 synchronized. `containerd/containerd` is clean at
+the fixed pin `9e70782d9a0e92900f402b2c7a4e2aa30754503c`, with 5,332 tracked Go
+files, 106 tracked proto files, 41 RPC-bearing proto files, and no gitlink. Its
+three symlinks are safe relative in-tree aliases and contain no Go or proto
+source at their canonical targets. Strict object verification found no missing
+required object. Containerd is therefore intrinsically eligible with no
+exclusion. This source-only decision precedes all containerd fact generation,
+typed-oracle execution, coordinate enumeration, and labeling.

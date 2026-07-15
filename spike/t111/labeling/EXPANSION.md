@@ -137,6 +137,36 @@ needed, and the mandatory two-repository prefix cannot be skipped. These counts
 describe tracked source shape only; no fact population, coordinate, or outcome
 has been enumerated.
 
+### Candidate 3 eligibility
+
+Only after the two-candidate capacity decision was committed, the fixed
+`containerd/containerd` pin was synchronized through the hardened corpus
+reader. Its clean `HEAD` is exactly
+`9e70782d9a0e92900f402b2c7a4e2aa30754503c`; strict object verification found
+no missing required object. Source-only inspection found 6,474 tracked entries,
+including 5,332 Go files, 106 proto files, and 41 proto files containing RPC
+declarations. The tree contains no gitlink.
+
+The tree has three relative, in-tree, non-dangling, non-cyclic symlinks, none
+of which is source-bearing:
+
+- `cluster/gce` (`499fb0a09c7c09ee4c939591243ea3857d32e31a`) targets
+  `../contrib/gce`, a tracked tree with five files recursively and no Go or
+  proto file;
+- `core/runtime/v2/README.md`
+  (`0e6fcf174aae2b14736c756400c45803aac49b8e`) targets the tracked regular
+  Markdown blob `../../../docs/runtime-v2.md`; and
+- `test/e2e` (`0df40b8da276b961d4dd6f378990a26f30c42e9a`) targets
+  `../cluster/gce/cloud-init/`, resolving through the first alias to a tracked
+  tree with two files recursively and no Go or proto file.
+
+Containerd therefore satisfies every intrinsic eligibility rule with no
+exclusion. Its relevant tracked source is available through immutable Git
+objects and can be enumerated without executing repository code, hooks,
+generators, or build scripts. This decision precedes every containerd extractor
+run, fact count, typed-oracle run, coordinate enumeration, or label outcome; no
+attempt or ceremony state exists.
+
 ### Expanded lineage and burn projection
 
 Before fact production, `expansion-lineage.json` fixes the six-system ordered
