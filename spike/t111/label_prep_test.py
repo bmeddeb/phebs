@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -21,6 +22,35 @@ import label_prep as prep  # noqa: E402
 
 
 class Gate2PreparationTests(unittest.TestCase):
+    def test_typed_oracle_environment_ignores_ambient_module_caches(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            tools = root / "tools"
+            cache = root / "build-cache"
+            tools.mkdir()
+            cache.mkdir()
+            with patch.dict(
+                os.environ,
+                {
+                    "HOME": "/poison/home",
+                    "GOPATH": "/poison/gopath",
+                    "GOMODCACHE": "/poison/modcache",
+                    "GOWORK": "/poison/go.work",
+                },
+            ):
+                env = prep.oracle_subprocess_env(
+                    {"goos": "darwin", "goarch": "arm64"}, tools, cache
+                )
+        dedicated = prep.DEFAULT_MODULE_CACHE.absolute()
+        self.assertEqual(env["HOME"], str(root / "home"))
+        self.assertEqual(env["GOPATH"], str(root / "gopath"))
+        self.assertEqual(env["GOMODCACHE"], str(dedicated / "gomodcache"))
+        self.assertEqual(env["GOPROXY"], "off")
+        self.assertEqual(env["GOSUMDB"], "off")
+        self.assertEqual(env["GOWORK"], "off")
+        self.assertEqual(env["GOTOOLCHAIN"], "local")
+        self.assertEqual(env["GOTELEMETRY"], "off")
+
     def test_gate_sampling_config_exhausts_fresh_call_precision(self) -> None:
         config = prep.gate_sampling_config()
         self.assertEqual(config["precision_holdout_per_system"], 1_000_000)
@@ -843,7 +873,12 @@ func wire(s Server) {
             {row["site_id"] for row in second},
         )
 
-    def test_typed_oracle_coordinates_are_strictly_cross_checked(self) -> None:
+    @patch.object(
+        prep,
+        "load_bound_typed_oracle",
+        return_value=(Path("/bound/typedcalloracle"), "sha256:" + "b" * 64),
+    )
+    def test_typed_oracle_coordinates_are_strictly_cross_checked(self, _bound: object) -> None:
         data = b"package p\nfunc f() { client.Call(ctx) }\n"
         offset = data.index(b"Call")
         line, column = prep.byte_coordinate(data, offset)
@@ -860,6 +895,7 @@ func wire(s Server) {
             "runtime_version": "go1.26.5",
             "goos": "darwin",
             "goarch": "arm64",
+            "executable_sha256": "sha256:" + "b" * 64,
             "semantic_inputs_digest": "sha256:" + "a" * 64,
             "modules": 1,
             "loaded_packages": 1,

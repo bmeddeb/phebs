@@ -6,14 +6,17 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 func main() {
 	var opts options
 	var rawTags string
+	opts.moduleCache = filepath.Join("spike", "t111", ".module-cache")
 	flag.StringVar(&opts.root, "root", "", "root of the pinned Git checkout (required)")
 	flag.StringVar(&opts.commit, "commit", "", "exact full commit SHA (required)")
+	flag.StringVar(&opts.moduleCache, "module-cache", opts.moduleCache, "sealed dedicated module cache root")
 	flag.StringVar(&rawTags, "tags", "", "optional comma-separated Go build tags")
 	flag.StringVar(&opts.output, "output", "", "optional JSONL output path (default: stdout)")
 	flag.Parse()

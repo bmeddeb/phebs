@@ -368,6 +368,28 @@ outcome, fact count, typed-oracle result, attempt claim, commitment, randomness,
 sample, coordinate, reviewer artifact, or label existed when this lineage was
 fixed.
 
+### Candidate 4 offline-dependency blocker
+
+The first exact-toolchain offline Istio extraction after that boundary failed
+closed before publication. The root module produced a `LOAD_ERRORS` diagnostic
+covering 102,097 package errors because required versioned modules were absent
+from the offline module cache available to the then-current harness.
+`validateAndPublish` rejected the incomplete result; no Istio fact file was
+created or replaced, and no typed-oracle, coordinate, claim, commitment,
+randomness, reviewer, or label state followed from the run.
+
+This is a harness blocker on the mandatory candidate, not an eligibility
+exclusion. Before retrying Istio, dependency acquisition must be separated from
+the pure-reader run: an explicit prospective hydration phase may use the
+network against the committed module sums, while the producer and independent
+oracle must use only a dedicated, path-validated, sealed module cache with
+per-run Go state and no network. The exact producer and oracle binaries must be
+built and content-bound during hydration so their own dependencies are not
+loaded from mutable cache state at ceremony time. The generalized repair,
+adversarial tests, and a regenerated eight-system lineage must be committed
+before another Istio extractor or typed-oracle run. Candidate 5 remains
+untouched.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

@@ -315,3 +315,14 @@ resolution records retain digest
 `expansion-lineage.json` binds the committed harness, corpus lock, and
 append-only ledger. No Istio fact, claim, commitment, randomness, sample,
 coordinate, reviewer artifact, or label existed at this boundary.
+
+The first subsequent exact-toolchain offline Istio extraction failed closed at
+publication validation: the root module reported a `LOAD_ERRORS` diagnostic
+with 102,097 package errors because its required versioned dependencies were
+not present in the offline cache available to the harness. No Istio facts were
+published and no oracle or ceremony state was created. Under the frozen
+protocol this cannot exclude or skip candidate 4. A prospective generalized
+repair must first commit explicit sum-checked dependency hydration, sealed
+path-validated module-cache reads, isolated per-run Go state, and content-bound
+producer/oracle binaries; the eight-system lineage must then be regenerated
+before the same candidate is retried. Candidate 5 has not been inspected.

@@ -85,6 +85,10 @@ func extractModule(system, commit, root, modDir string, buildTags []string) ([]F
 	if err := validateLocalReplaces(root, modDir); err != nil {
 		return nil, err
 	}
+	resolvedInputs, err := verifyResolvedModuleGraph(root, commit, modDir)
+	if err != nil {
+		return nil, fmt.Errorf("preverify Go module graph: %w", err)
+	}
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
 			packages.NeedImports | packages.NeedDeps | packages.NeedTypes |
@@ -97,6 +101,13 @@ func extractModule(system, commit, root, modDir string, buildTags []string) ([]F
 	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
 		return nil, fmt.Errorf("load: %w", err)
+	}
+	resolvedAgain, err := verifyResolvedModuleGraph(root, commit, modDir)
+	if err != nil {
+		return nil, fmt.Errorf("reverify Go module graph after load: %w", err)
+	}
+	if resolvedAgain != resolvedInputs {
+		return nil, fmt.Errorf("go module graph changed during package loading")
 	}
 	// A valid tooling-only module may contain only a go.mod (Loki's
 	// operator/.bingo). packages.Load returns an empty slice and nil error for
@@ -294,6 +305,13 @@ func extractModule(system, commit, root, modDir string, buildTags []string) ([]F
 	}
 	if verifiedAgain != semanticInputs {
 		return nil, fmt.Errorf("go semantic inputs changed during extraction")
+	}
+	resolvedFinally, err := verifyResolvedModuleGraph(root, commit, modDir)
+	if err != nil {
+		return nil, fmt.Errorf("final Go module graph verification: %w", err)
+	}
+	if resolvedFinally != resolvedInputs {
+		return nil, fmt.Errorf("go module graph changed during extraction")
 	}
 	return bindSemanticInputs(facts, semanticInputs), nil
 }

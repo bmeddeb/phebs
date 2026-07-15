@@ -26,6 +26,7 @@ import os
 import posixpath
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -72,6 +73,7 @@ BASE = Path(__file__).resolve().parent
 REPO_ROOT = BASE.parent.parent
 TYPED_CALL_ORACLE = BASE / "typedcalloracle"
 DEFAULT_CORPUS = BASE / "corpus"
+DEFAULT_MODULE_CACHE = BASE / ".module-cache"
 DEFAULT_FACTS = BASE / "out"
 DEFAULT_ARTIFACTS = BASE / "labeling" / "g2-v4"
 DEFAULT_CONTEXT = BASE / "out" / "gate2-v4-label-context"
@@ -1972,7 +1974,7 @@ TYPED_ORACLE_STRATA = {
     "structural_grpc_client_interface",
     "ambiguous_multiple_generated_clients",
 }
-TYPED_ORACLE_DIAGNOSTICS_SCHEMA = "t111-typed-call-oracle-diagnostics-v3"
+TYPED_ORACLE_DIAGNOSTICS_SCHEMA = "t111-typed-call-oracle-diagnostics-v4"
 TYPED_ORACLE_DIAGNOSTIC_COUNTS = {
     "modules",
     "loaded_packages",
@@ -2046,11 +2048,145 @@ def resolve_oracle_toolchain(expected_identity: str) -> dict[str, str]:
     return resolved
 
 
+BOUND_HARNESS_SCHEMA = "t111-bound-harness-v1"
+
+
+def validate_shared_module_cache() -> Path:
+    module_cache = DEFAULT_MODULE_CACHE.absolute()
+    gomodcache = module_cache / "gomodcache"
+    for path in (module_cache, gomodcache):
+        try:
+            info = path.lstat()
+        except OSError as exc:
+            raise PrepError(f"cannot inspect sealed module cache {path}: {exc}") from exc
+        if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            raise PrepError(f"sealed module cache path is not a real directory: {path}")
+        try:
+            if path.resolve(strict=True) != path:
+                raise PrepError(f"sealed module cache path resolves through a symlink: {path}")
+        except OSError as exc:
+            raise PrepError(f"cannot resolve sealed module cache {path}: {exc}") from exc
+    try:
+        for root, dirs, files in os.walk(gomodcache, topdown=True, followlinks=False):
+            for raw in [Path(root), *(Path(root) / name for name in dirs + files)]:
+                info = raw.lstat()
+                if stat.S_ISLNK(info.st_mode):
+                    raise PrepError(f"sealed module cache contains symlink: {raw}")
+                if not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)):
+                    raise PrepError(f"sealed module cache contains non-regular entry: {raw}")
+                if stat.S_IMODE(info.st_mode) & 0o222:
+                    raise PrepError(f"sealed module cache entry is writable: {raw}")
+                try:
+                    raw.relative_to(gomodcache)
+                except ValueError as exc:
+                    raise PrepError(f"sealed module cache entry escapes root: {raw}") from exc
+    except OSError as exc:
+        raise PrepError(f"cannot traverse sealed module cache: {exc}") from exc
+    return module_cache
+
+
+def bound_harness_sources() -> dict[str, str]:
+    files = [REPO_ROOT / "go.mod", REPO_ROOT / "go.sum"]
+    files.extend(path for path in BASE.glob("*.go") if not path.name.endswith("_test.go"))
+    files.extend(
+        path for path in TYPED_CALL_ORACLE.glob("*.go")
+        if not path.name.endswith("_test.go")
+    )
+    return {
+        path.relative_to(REPO_ROOT).as_posix(): "sha256:" + sha256_file(path)
+        for path in sorted(files)
+    }
+
+
+def load_bound_typed_oracle(
+    toolchain: dict[str, str] | None,
+) -> tuple[Path, str]:
+    module_cache = validate_shared_module_cache()
+    bin_dir = module_cache / "bin"
+    try:
+        info = bin_dir.lstat()
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or stat.S_ISLNK(info.st_mode)
+            or stat.S_IMODE(info.st_mode) & 0o222
+            or bin_dir.resolve(strict=True) != bin_dir
+        ):
+            raise PrepError("bound binary directory is not a sealed real directory")
+        for root, dirs, files in os.walk(bin_dir, topdown=True, followlinks=False):
+            for raw in [Path(root), *(Path(root) / name for name in dirs + files)]:
+                item = raw.lstat()
+                if (
+                    stat.S_ISLNK(item.st_mode)
+                    or not (stat.S_ISDIR(item.st_mode) or stat.S_ISREG(item.st_mode))
+                    or stat.S_IMODE(item.st_mode) & 0o222
+                ):
+                    raise PrepError(f"bound binary tree contains unsafe entry: {raw}")
+    except OSError as exc:
+        raise PrepError(f"cannot validate bound binary directory: {exc}") from exc
+    manifest_path = module_cache / "manifest.json"
+    try:
+        info = manifest_path.lstat()
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or stat.S_ISLNK(info.st_mode)
+            or stat.S_IMODE(info.st_mode) & 0o222
+        ):
+            raise PrepError("bound harness manifest is not a sealed regular file")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot load bound harness manifest: {exc}") from exc
+    required = {
+        "schema", "created_at", "source_head", "source_clean", "go_version",
+        "go_sha256", "goos", "goarch", "sources", "artifacts",
+    }
+    if not isinstance(manifest, dict) or set(manifest) != required:
+        raise PrepError("bound harness manifest has invalid fields")
+    if (
+        manifest["schema"] != BOUND_HARNESS_SCHEMA
+        or manifest["source_clean"] is not True
+        or manifest["sources"] != bound_harness_sources()
+    ):
+        raise PrepError("bound harness manifest does not match current source inputs")
+    if toolchain is not None and (
+        manifest["go_version"] != toolchain["go_version"]
+        or manifest["go_sha256"] != toolchain["go_digest"]
+        or manifest["goos"] != toolchain["goos"]
+        or manifest["goarch"] != toolchain["goarch"]
+    ):
+        raise PrepError("bound typed oracle toolchain differs from the fact producer")
+    artifacts = manifest["artifacts"]
+    if not isinstance(artifacts, dict) or set(artifacts) != {"t111", "typedcalloracle"}:
+        raise PrepError("bound harness manifest has invalid artifacts")
+    artifact = artifacts["typedcalloracle"]
+    if not isinstance(artifact, dict) or set(artifact) != {"path", "sha256"}:
+        raise PrepError("bound typed oracle artifact is invalid")
+    if artifact["path"] != "bin/typedcalloracle" or not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", str(artifact["sha256"])
+    ):
+        raise PrepError("bound typed oracle artifact identity is invalid")
+    binary = module_cache / "bin" / "typedcalloracle"
+    try:
+        info = binary.lstat()
+    except OSError as exc:
+        raise PrepError(f"cannot inspect bound typed oracle: {exc}") from exc
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or stat.S_ISLNK(info.st_mode)
+        or stat.S_IMODE(info.st_mode) & 0o222
+        or "sha256:" + sha256_file(binary) != artifact["sha256"]
+    ):
+        raise PrepError("bound typed oracle binary fails its manifest binding")
+    validate_shared_module_cache()
+    return binary, artifact["sha256"]
+
+
 def oracle_subprocess_env(toolchain: dict[str, str], tool_dir: Path, cache_dir: Path) -> dict[str, str]:
-    home = Path(os.environ.get("HOME", str(Path.home()))).resolve()
-    gopath = Path(os.environ.get("GOPATH", str(home / "go"))).resolve()
-    modcache = Path(os.environ.get("GOMODCACHE", str(gopath / "pkg" / "mod"))).resolve()
-    gocache = Path(os.environ.get("GOCACHE", str(cache_dir))).resolve()
+    module_cache = DEFAULT_MODULE_CACHE.absolute()
+    state = cache_dir.parent
+    home = state / "home"
+    gopath = state / "gopath"
+    modcache = module_cache / "gomodcache"
+    gocache = cache_dir.resolve()
     return {
         "CGO_ENABLED": "0",
         "GIT_CONFIG_NOSYSTEM": "1",
@@ -2066,11 +2202,16 @@ def oracle_subprocess_env(toolchain: dict[str, str], tool_dir: Path, cache_dir: 
         "GOPATH": str(gopath),
         "GOPROXY": "off",
         "GOSUMDB": "off",
+        "GOTELEMETRY": "off",
+        "GOTELEMETRYDIR": str(state / "telemetry"),
         "GOTOOLCHAIN": "local",
         "GOWORK": "off",
         "HOME": str(home),
         "PATH": str(tool_dir),
-        "TMPDIR": str(cache_dir.parent / "tmp"),
+        "GOTMPDIR": str(state / "tmp"),
+        "TMPDIR": str(state / "tmp"),
+        "XDG_CACHE_HOME": str(home / ".cache"),
+        "XDG_CONFIG_HOME": str(home / ".config"),
     }
 
 
@@ -2102,10 +2243,11 @@ def scan_typed_call_recall_frame(
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Run the fact-blind go/types oracle and validate every coordinate."""
 
+    oracle_binary, oracle_digest = load_bound_typed_oracle(toolchain)
     command = [
-        "go",
-        "run",
-        "./spike/t111/typedcalloracle",
+        str(oracle_binary),
+        "-module-cache",
+        str(DEFAULT_MODULE_CACHE.absolute()),
         "-root",
         str(root),
         "-commit",
@@ -2122,7 +2264,8 @@ def scan_typed_call_recall_frame(
                 cache_dir = temporary / "cache"
                 tool_dir.mkdir()
                 cache_dir.mkdir()
-                (temporary / "tmp").mkdir()
+                for name in ("tmp", "home", "gopath", "telemetry"):
+                    (temporary / name).mkdir()
                 os.symlink(toolchain["go_path"], tool_dir / "go")
                 os.symlink(toolchain["git_path"], tool_dir / "git")
                 run_env = oracle_subprocess_env(toolchain, tool_dir, cache_dir)
@@ -2135,6 +2278,9 @@ def scan_typed_call_recall_frame(
                 timeout=20 * 60,
                 env=run_env,
             )
+            verified_binary, verified_digest = load_bound_typed_oracle(toolchain)
+            if verified_binary != oracle_binary or verified_digest != oracle_digest:
+                raise PrepError(f"{system}: bound typed oracle changed during execution")
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise PrepError(f"{system}: typed call oracle failed to run: {exc}") from exc
     if result.returncode:
@@ -2223,6 +2369,7 @@ def scan_typed_call_recall_frame(
         "runtime_version",
         "goos",
         "goarch",
+        "executable_sha256",
         "semantic_inputs_digest",
         *TYPED_ORACLE_DIAGNOSTIC_COUNTS,
     }
@@ -2235,6 +2382,8 @@ def scan_typed_call_recall_frame(
         for field in ("runtime_version", "goos", "goarch")
     ):
         raise PrepError(f"{system}: typed oracle runtime differs from the bound producer toolchain")
+    if diagnostics.get("executable_sha256") != oracle_digest:
+        raise PrepError(f"{system}: typed oracle executable differs from its bound manifest")
     semantic_digest = diagnostics.get("semantic_inputs_digest")
     if not isinstance(semantic_digest, str) or not re.fullmatch(
         r"sha256:[0-9a-f]{64}", semantic_digest

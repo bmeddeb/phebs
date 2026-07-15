@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	pathpkg "path"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -20,10 +19,15 @@ import (
 )
 
 var (
-	gitExecutable      = "git"
-	restrictedToolPath = os.Getenv("PATH")
-	harnessGoCache     string
-	harnessGoTmp       string
+	gitExecutable          = "git"
+	goExecutable           = "go"
+	restrictedToolPath     = os.Getenv("PATH")
+	harnessGoHome          string
+	harnessGoPath          string
+	harnessGoCache         string
+	harnessGoTmp           string
+	harnessTelemetry       string
+	harnessModuleCacheRoot string
 )
 
 // CorpusEntry pins one system to an exact commit. corpus.lock.json is the
@@ -557,25 +561,29 @@ func configureHarnessTools() (func(), error) {
 	if err != nil {
 		return nil, fmt.Errorf("create restricted tool path: %w", err)
 	}
-	goCache, err := os.MkdirTemp("", "t111-gocache-*")
+	goState, err := os.MkdirTemp("", "t111-go-state-*")
 	if err != nil {
 		_ = os.RemoveAll(toolDir)
-		return nil, fmt.Errorf("create isolated Go build cache: %w", err)
+		return nil, fmt.Errorf("create isolated Go state: %w", err)
 	}
-	goTmp, err := os.MkdirTemp("", "t111-gotmp-*")
-	if err != nil {
-		_ = os.RemoveAll(goCache)
-		_ = os.RemoveAll(toolDir)
-		return nil, fmt.Errorf("create isolated Go temp directory: %w", err)
+	for _, name := range []string{"home", "gopath", "build-cache", "tmp", "telemetry"} {
+		if err := os.Mkdir(filepath.Join(goState, name), 0o700); err != nil {
+			_ = os.RemoveAll(goState)
+			_ = os.RemoveAll(toolDir)
+			return nil, fmt.Errorf("create isolated Go %s directory: %w", name, err)
+		}
 	}
 	cleanup := func() {
 		_ = os.Setenv("PATH", originalPath)
-		_ = os.RemoveAll(goTmp)
-		_ = os.RemoveAll(goCache)
+		_ = os.RemoveAll(goState)
 		_ = os.RemoveAll(toolDir)
 		restrictedToolPath = originalPath
+		harnessGoHome = ""
+		harnessGoPath = ""
 		harnessGoCache = ""
 		harnessGoTmp = ""
+		harnessTelemetry = ""
+		harnessModuleCacheRoot = ""
 	}
 	if err := os.Symlink(goPath, filepath.Join(toolDir, "go")); err != nil {
 		cleanup()
@@ -586,9 +594,19 @@ func configureHarnessTools() (func(), error) {
 		return nil, fmt.Errorf("link exact git executable: %w", err)
 	}
 	gitExecutable = gitPath
+	goExecutable = goPath
 	restrictedToolPath = toolDir
-	harnessGoCache = goCache
-	harnessGoTmp = goTmp
+	harnessGoHome = filepath.Join(goState, "home")
+	harnessGoPath = filepath.Join(goState, "gopath")
+	harnessGoCache = filepath.Join(goState, "build-cache")
+	harnessGoTmp = filepath.Join(goState, "tmp")
+	harnessTelemetry = filepath.Join(goState, "telemetry")
+	moduleCacheRoot, err := filepath.Abs(defaultModuleCacheRoot)
+	if err != nil {
+		cleanup()
+		return nil, fmt.Errorf("resolve dedicated module cache: %w", err)
+	}
+	harnessModuleCacheRoot = moduleCacheRoot
 	// Installation paths do not affect extraction semantics. Versions and
 	// executable content do, so those—not machine-local paths—key provenance.
 	identity := fmt.Sprintf("go_version=%q;go_digest=%s;git_version=%q;git_digest=%s",
@@ -664,59 +682,6 @@ func validateLocalReplaces(snapshotRoot, modDir string) error {
 		}
 	}
 	return nil
-}
-
-// goPackageEnv is intentionally much smaller than os.Environ. In particular,
-// it disables workspace discovery, toolchain downloads, module-network access,
-// and go.mod/go.sum edits. Cache locations are explicit and live outside the
-// corpus. Every module directory actually used by packages.Load is content-
-// verified and bound into emitted facts by verifyPackageSemanticInputs.
-func goPackageEnv(modDir string) []string {
-	home, _ := os.UserHomeDir()
-	gopath := ""
-	modCache := ""
-	if home != "" {
-		gopath = filepath.Join(home, "go")
-		modCache = filepath.Join(gopath, "pkg", "mod")
-	}
-	moduleMode := "readonly"
-	if info, err := os.Lstat(filepath.Join(modDir, "vendor", "modules.txt")); err == nil && info.Mode().IsRegular() {
-		moduleMode = "vendor"
-	}
-	env := map[string]string{
-		"CGO_ENABLED": "0",
-		"GO111MODULE": "on",
-		"GOARCH":      runtime.GOARCH,
-		"GOENV":       "off",
-		"GOFLAGS":     "-mod=" + moduleMode + " -buildvcs=false",
-		"GOOS":        runtime.GOOS,
-		"GOPROXY":     "off",
-		"GOSUMDB":     "off",
-		"GOTOOLCHAIN": "local",
-		"GOTMPDIR":    harnessGoTmp,
-		"GOWORK":      "off",
-		"PATH":        restrictedToolPath,
-	}
-	if harnessGoCache != "" {
-		env["GOCACHE"] = harnessGoCache
-	}
-	if gopath != "" {
-		env["GOPATH"] = gopath
-	}
-	if modCache != "" {
-		env["GOMODCACHE"] = modCache
-	}
-
-	keys := make([]string, 0, len(env))
-	for key := range env {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	result := make([]string, 0, len(keys))
-	for _, key := range keys {
-		result = append(result, key+"="+env[key])
-	}
-	return result
 }
 
 func gitOut(dir string, args ...string) (string, error) {

@@ -14,7 +14,7 @@ import (
 
 func main() {
 	if len(os.Args) < 2 {
-		fatal("usage: t111 <sync|extract|identity|fields|verify|stats> [flags]")
+		fatal("usage: t111 <sync|hydrate|extract|identity|fields|verify|stats> [flags]")
 	}
 	toolCleanup, err := configureHarnessTools()
 	if err != nil {
@@ -25,6 +25,15 @@ func main() {
 	lock := filepath.Join(base, "corpus.lock.json")
 	corpusDir := filepath.Join(base, "corpus")
 	outDir := filepath.Join(base, "out")
+	repoRoot, err := filepath.Abs(".")
+	if err != nil {
+		fatal("resolve repository root: %v", err)
+	}
+	if os.Args[1] != "sync" && os.Args[1] != "hydrate" {
+		if err := verifyRunningBoundHarness(repoRoot, harnessModuleCacheRoot); err != nil {
+			fatal("%v", err)
+		}
+	}
 
 	switch os.Args[1] {
 	case "sync":
@@ -35,6 +44,44 @@ func main() {
 		if err := syncCorpus(entries, corpusDir); err != nil {
 			fatal("%v", err)
 		}
+	case "hydrate":
+		fs := flag.NewFlagSet("hydrate", flag.ExitOnError)
+		system := fs.String("system", "", "one corpus system name (default: all)")
+		proxy := fs.String("proxy", "https://proxy.golang.org", "one explicit https:// or file:// Go module proxy")
+		sumdb := fs.String("sumdb", "sum.golang.org", "explicit Go checksum database or off")
+		_ = fs.Parse(os.Args[2:])
+		entries, err := loadCorpus(lock)
+		if err != nil {
+			fatal("%v", err)
+		}
+		selected := entries
+		if *system != "" {
+			selected = nil
+			for _, entry := range entries {
+				if entry.Name == *system {
+					selected = append(selected, entry)
+					break
+				}
+			}
+			if len(selected) == 0 {
+				fatal("unknown system %q", *system)
+			}
+		}
+		if err := hydrateHarnessModule(repoRoot, harnessModuleCacheRoot, *proxy, *sumdb); err != nil {
+			fatal("%v", err)
+		}
+		for _, entry := range selected {
+			root := filepath.Join(corpusDir, entry.Name)
+			downloaded, vendored, err := hydrateCorpusModules(entry, root, harnessModuleCacheRoot, *proxy, *sumdb)
+			if err != nil {
+				fatal("hydrate %s: %v", entry.Name, err)
+			}
+			fmt.Printf("corpus %-18s hydrated %d modules (%d vendored, network-free)\n", entry.Name, downloaded, vendored)
+		}
+		if err := buildBoundHarnesses(repoRoot, harnessModuleCacheRoot); err != nil {
+			fatal("build bound harnesses: %v", err)
+		}
+		fmt.Printf("bound producer and typed oracle → %s\n", filepath.Join(harnessModuleCacheRoot, "bin"))
 	case "extract":
 		fs := flag.NewFlagSet("extract", flag.ExitOnError)
 		system := fs.String("system", "", "corpus system name (required)")

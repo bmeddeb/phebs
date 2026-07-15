@@ -114,7 +114,9 @@ func TestPackageEnvIsHermeticAndModuleAware(t *testing.T) {
 	t.Setenv("GOFLAGS", "-mod=mod")
 	t.Setenv("ORACLE_UNRELATED", "must-not-leak")
 
-	readonly := semanticTestEnvMap(packageEnv(module))
+	cache := filepath.Join(t.TempDir(), "dedicated")
+	runRoot := filepath.Join(t.TempDir(), "run")
+	readonly := semanticTestEnvMap(packageEnv(module, cache, runRoot))
 	want := map[string]string{
 		"CGO_ENABLED": "0",
 		"GO111MODULE": "on",
@@ -125,9 +127,12 @@ func TestPackageEnvIsHermeticAndModuleAware(t *testing.T) {
 		"GOTOOLCHAIN": "local",
 		"GOWORK":      "off",
 		"PATH":        "/test/tool/path",
-		"HOME":        "/test/home",
-		"GOCACHE":     "/test/go-build",
-		"GOMODCACHE":  "/test/go-mod",
+		"HOME":        filepath.Join(runRoot, "home"),
+		"GOCACHE":     filepath.Join(runRoot, "build-cache"),
+		"GOMODCACHE":  filepath.Join(cache, "gomodcache"),
+		"GOPATH":      filepath.Join(runRoot, "gopath"),
+		"GOTMPDIR":    filepath.Join(runRoot, "tmp"),
+		"TMPDIR":      filepath.Join(runRoot, "tmp"),
 	}
 	for key, value := range want {
 		if got := readonly[key]; got != value {
@@ -145,7 +150,7 @@ func TestPackageEnvIsHermeticAndModuleAware(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(vendor, "modules.txt"), []byte("# pinned\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got := semanticTestEnvMap(packageEnv(module))["GOFLAGS"]; got != "-mod=vendor -buildvcs=false" {
+	if got := semanticTestEnvMap(packageEnv(module, cache, runRoot))["GOFLAGS"]; got != "-mod=vendor -buildvcs=false" {
 		t.Fatalf("vendor GOFLAGS = %q", got)
 	}
 }

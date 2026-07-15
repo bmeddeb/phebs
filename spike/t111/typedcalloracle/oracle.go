@@ -24,7 +24,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-const diagnosticsSchema = "t111-typed-call-oracle-diagnostics-v3"
+const diagnosticsSchema = "t111-typed-call-oracle-diagnostics-v4"
 
 var (
 	fullCommitRE    = regexp.MustCompile(`^[0-9a-f]{40}$`)
@@ -33,10 +33,11 @@ var (
 )
 
 type options struct {
-	root   string
-	commit string
-	tags   []string
-	output string
+	root        string
+	commit      string
+	tags        []string
+	output      string
+	moduleCache string
 }
 
 type record struct {
@@ -56,6 +57,7 @@ type diagnostics struct {
 	RuntimeVersion             string `json:"runtime_version"`
 	GOOS                       string `json:"goos"`
 	GOARCH                     string `json:"goarch"`
+	ExecutableSHA256           string `json:"executable_sha256"`
 	SemanticInputsDigest       string `json:"semantic_inputs_digest"`
 	Modules                    int    `json:"modules"`
 	LoadedPackages             int    `json:"loaded_packages"`
@@ -102,19 +104,21 @@ const (
 )
 
 type scanState struct {
-	checkout   checkout
-	commit     string
-	records    map[string]record
-	ambig      map[string]struct{}
-	selectors  map[string]struct{}
-	outcomes   map[string]string
-	rootFiles  map[string]struct{}
-	extFiles   map[string]struct{}
-	packages   map[string]struct{}
-	clients    map[string]struct{}
-	structural map[string]struct{}
-	semantic   map[string]string
-	rawMatches int
+	checkout    checkout
+	commit      string
+	records     map[string]record
+	ambig       map[string]struct{}
+	selectors   map[string]struct{}
+	outcomes    map[string]string
+	rootFiles   map[string]struct{}
+	extFiles    map[string]struct{}
+	packages    map[string]struct{}
+	clients     map[string]struct{}
+	structural  map[string]struct{}
+	semantic    map[string]string
+	moduleCache string
+	runRoot     string
+	rawMatches  int
 }
 
 func splitTags(raw string) []string {
@@ -153,20 +157,39 @@ func execute(opts options, stdout, stderr io.Writer) error {
 	if len(modules) == 0 {
 		return errors.New("no non-vendor go.mod modules found")
 	}
+	moduleCache, cacheCleanup, err := prepareOracleModuleCache(opts.moduleCache)
+	if err != nil {
+		return err
+	}
+	defer cacheCleanup()
+	runRoot, err := os.MkdirTemp("", "t111-typed-oracle-state-*")
+	if err != nil {
+		return fmt.Errorf("create isolated Go state: %w", err)
+	}
+	defer os.RemoveAll(runRoot)
+	if err := createOracleRunState(runRoot); err != nil {
+		return err
+	}
+	executableDigest, err := oracleExecutableDigest()
+	if err != nil {
+		return err
+	}
 
 	state := scanState{
-		checkout:   co,
-		commit:     opts.commit,
-		records:    make(map[string]record),
-		ambig:      make(map[string]struct{}),
-		selectors:  make(map[string]struct{}),
-		outcomes:   make(map[string]string),
-		rootFiles:  make(map[string]struct{}),
-		extFiles:   make(map[string]struct{}),
-		packages:   make(map[string]struct{}),
-		clients:    make(map[string]struct{}),
-		structural: make(map[string]struct{}),
-		semantic:   make(map[string]string),
+		checkout:    co,
+		commit:      opts.commit,
+		records:     make(map[string]record),
+		ambig:       make(map[string]struct{}),
+		selectors:   make(map[string]struct{}),
+		outcomes:    make(map[string]string),
+		rootFiles:   make(map[string]struct{}),
+		extFiles:    make(map[string]struct{}),
+		packages:    make(map[string]struct{}),
+		clients:     make(map[string]struct{}),
+		structural:  make(map[string]struct{}),
+		semantic:    make(map[string]string),
+		moduleCache: moduleCache,
+		runRoot:     runRoot,
 	}
 	for _, module := range modules {
 		if err := state.scanModule(module, opts.tags); err != nil {
@@ -212,6 +235,7 @@ func execute(opts options, stdout, stderr io.Writer) error {
 		RuntimeVersion:             runtime.Version(),
 		GOOS:                       runtime.GOOS,
 		GOARCH:                     runtime.GOARCH,
+		ExecutableSHA256:           executableDigest,
 		SemanticInputsDigest:       semanticInputs,
 		Modules:                    len(modules),
 		LoadedPackages:             len(state.packages),
@@ -535,6 +559,10 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	if err := validateLocalReplaces(s.checkout.root, module); err != nil {
 		return err
 	}
+	resolvedInputs, err := verifyResolvedModuleGraph(s.checkout.root, s.commit, module, s.moduleCache, s.runRoot)
+	if err != nil {
+		return fmt.Errorf("preverify Go module graph: %w", err)
+	}
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
 			packages.NeedImports | packages.NeedDeps | packages.NeedTypes |
@@ -542,12 +570,19 @@ func (s *scanState) scanModule(module string, tags []string) error {
 			packages.NeedForTest,
 		Dir:        module,
 		Tests:      true,
-		Env:        packageEnv(module),
+		Env:        packageEnv(module, s.moduleCache, s.runRoot),
 		BuildFlags: buildFlags(tags),
 	}
 	roots, err := packages.Load(cfg, "./...")
 	if err != nil {
 		return fmt.Errorf("packages.Load: %w", err)
+	}
+	resolvedAgain, err := verifyResolvedModuleGraph(s.checkout.root, s.commit, module, s.moduleCache, s.runRoot)
+	if err != nil {
+		return fmt.Errorf("reverify Go module graph after load: %w", err)
+	}
+	if resolvedAgain != resolvedInputs {
+		return errors.New("Go module graph changed during package loading")
 	}
 	if len(roots) == 0 {
 		semanticInputs, err := s.emptyModuleSemanticInputs(module)
@@ -586,6 +621,13 @@ func (s *scanState) scanModule(module string, tags []string) error {
 	}
 	if verifiedAgain != semanticInputs {
 		return errors.New("Go semantic inputs changed during oracle scan")
+	}
+	resolvedFinally, err := verifyResolvedModuleGraph(s.checkout.root, s.commit, module, s.moduleCache, s.runRoot)
+	if err != nil {
+		return fmt.Errorf("final Go module graph verification: %w", err)
+	}
+	if resolvedFinally != resolvedInputs {
+		return errors.New("Go module graph changed during oracle scan")
 	}
 	moduleKey := displayModule(s.checkout.root, module)
 	if previous, ok := s.semantic[moduleKey]; ok && previous != semanticInputs {
@@ -639,7 +681,7 @@ func (s *scanState) emptyModuleSemanticInputs(module string) (string, error) {
 	}), nil
 }
 
-func packageEnv(module string) []string {
+func packageEnv(module, moduleCache, runRoot string) []string {
 	moduleMode := "readonly"
 	if info, err := os.Lstat(filepath.Join(module, "vendor", "modules.txt")); err == nil && info.Mode().IsRegular() {
 		moduleMode = "vendor"
@@ -652,16 +694,26 @@ func packageEnv(module string) []string {
 		"GO111MODULE":         "on",
 		"GOENV":               "off",
 		"GOFLAGS":             "-mod=" + moduleMode + " -buildvcs=false",
+		"GOMODCACHE":          filepath.Join(moduleCache, "gomodcache"),
+		"GOPATH":              filepath.Join(runRoot, "gopath"),
 		"GOPROXY":             "off",
 		"GOSUMDB":             "off",
+		"GOTELEMETRY":         "off",
+		"GOTELEMETRYDIR":      filepath.Join(runRoot, "telemetry"),
 		"GOTOOLCHAIN":         "local",
+		"GOTMPDIR":            filepath.Join(runRoot, "tmp"),
 		"GOWORK":              "off",
+		"HOME":                filepath.Join(runRoot, "home"),
+		"TMPDIR":              filepath.Join(runRoot, "tmp"),
+		"XDG_CACHE_HOME":      filepath.Join(runRoot, "home", ".cache"),
+		"XDG_CONFIG_HOME":     filepath.Join(runRoot, "home", ".config"),
 	}
-	for _, key := range []string{"PATH", "HOME", "GOCACHE", "GOMODCACHE", "GOPATH", "GOTMPDIR", "TMPDIR"} {
+	for _, key := range []string{"PATH"} {
 		if value := os.Getenv(key); value != "" {
 			env[key] = value
 		}
 	}
+	env["GOCACHE"] = filepath.Join(runRoot, "build-cache")
 	keys := make([]string, 0, len(env))
 	for key := range env {
 		keys = append(keys, key)
