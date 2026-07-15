@@ -208,3 +208,10 @@ the initial request as malformed, and the corrected diagnostic response arrived
 outside the committed boundary and was discarded. With no source checkout or
 attempt state created, the same immutable protocol now fixes the replacement
 snapshot at `2026-07-15T04:30:00Z`; no other rule changed.
+
+No request was launched at that superseded boundary because the manual
+scheduler overshot it. It therefore also established no lineage and returned
+no data. The final cutoff is fixed at `2026-07-15T04:40:00Z`, with the fixed
+tracked `expansion-source-snapshot.graphql` query launched by an automatic
+timer. A failure there stops expansion; there is no further discretionary
+retry.

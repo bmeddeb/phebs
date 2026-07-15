@@ -42,9 +42,11 @@ labels are unfavorable.
 ## Eligibility and pinning
 
 All candidates use their official repository's default-branch head from one
-GraphQL ref snapshot requested at the prospectively fixed replacement cutoff
-`2026-07-15T04:30:00Z`. No later head may be substituted. A candidate is
-intrinsically eligible only when all of these immutable source properties hold:
+GraphQL ref snapshot requested by an automatic timer at the prospectively fixed
+final cutoff `2026-07-15T04:40:00Z`. The exact query is committed as
+`expansion-source-snapshot.graphql`; no later head or query may be substituted.
+A candidate is intrinsically eligible only when all of these immutable source
+properties hold:
 
 - the pinned tree contains Go plus protobuf/gRPC-relevant source;
 - every required tracked-tree Git object is available from the official repo;
@@ -88,9 +90,15 @@ literal escaped newlines and GitHub rejected it during GraphQL parsing without
 returning repository data. A corrected diagnostic request completed at
 `2026-07-15T04:20:43Z`, outside the fixed boundary; its response is discarded
 and cannot pin a source. Before any checkout, fact enumeration, or artifact,
-the replacement cutoff above was fixed without changing candidate order,
-eligibility, thresholds, or prefix rules. Only its single response may supply
-the expansion pins.
+the then-replacement cutoff `2026-07-15T04:30:00Z` was fixed prospectively
+without changing candidate order, eligibility, thresholds, or prefix rules.
+Only a valid response from that cutoff could have supplied expansion pins.
+
+The manual scheduler then missed the superseded `2026-07-15T04:30:00Z`
+boundary; no GraphQL request was launched and no response or repository data
+was received for that cutoff. The final cutoff above and its exact tracked query
+are committed in advance and launched by a timer. If that single request fails,
+expansion stops rather than selecting another time.
 
 ## Prefix stop rule
 

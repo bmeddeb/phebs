@@ -1,0 +1,44 @@
+query T111Gate2ExpansionSourceSnapshot {
+  grpcGo: repository(owner: "grpc", name: "grpc-go") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  etcd: repository(owner: "etcd-io", name: "etcd") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  containerd: repository(owner: "containerd", name: "containerd") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  istio: repository(owner: "istio", name: "istio") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  vitess: repository(owner: "vitessio", name: "vitess") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  mimir: repository(owner: "grafana", name: "mimir") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  cockroach: repository(owner: "cockroachdb", name: "cockroach") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+}
