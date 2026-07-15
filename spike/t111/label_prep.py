@@ -85,6 +85,7 @@ SYSTEMS = (
     "loki",
     "grpc-go",
     "etcd",
+    "containerd",
 )
 SCHEMA = "t111-gate2-probability-sample-v4"
 SEED_RECORD_SCHEMA = "t111-gate2-audit-seed-v4"

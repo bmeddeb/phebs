@@ -31,9 +31,26 @@ class Gate2PreparationTests(unittest.TestCase):
         )
 
     def test_current_lock_binds_build_tags_and_exact_gitlink_exclusions(self) -> None:
+        self.assertEqual(
+            prep.SYSTEMS,
+            (
+                "online-boutique",
+                "dapr",
+                "temporal",
+                "loki",
+                "grpc-go",
+                "etcd",
+                "containerd",
+            ),
+        )
         entries = prep.load_corpus_entries(prep.DEFAULT_LOCK, prep.SYSTEMS)
         self.assertEqual(entries["dapr"]["go_build_tags"], ["unit"])
         self.assertEqual(entries["online-boutique"]["go_build_tags"], [])
+        self.assertEqual(
+            entries["containerd"]["commit"],
+            "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
+        )
+        self.assertEqual(entries["containerd"]["go_build_tags"], [])
         for system in ("temporal", "loki"):
             exclusions = entries[system]["excluded_gitlinks"]
             self.assertEqual(len(exclusions), 1)
