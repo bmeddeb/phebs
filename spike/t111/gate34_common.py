@@ -15,6 +15,7 @@ import heapq
 import json
 import math
 import os
+import posixpath
 import re
 import subprocess
 import tempfile
@@ -790,27 +791,61 @@ def verify_corpus(
 
 
 def git_blob(root: Path, commit: str, relative: str) -> bytes:
+    """Read a regular blob or a safe, commit-backed in-tree file alias."""
+
     _safe_relative(relative)
-    raw = _git(root, ["ls-tree", "-z", commit, "--", relative])
-    assert isinstance(raw, bytes)
-    entries = [entry for entry in raw.split(b"\0") if entry]
-    exact: list[tuple[str, str]] = []
-    for entry in entries:
-        metadata, separator, encoded_path = entry.partition(b"\t")
-        if not separator:
-            continue
-        decoded = encoded_path.decode("utf-8", errors="surrogateescape")
-        fields = metadata.decode("ascii").split()
-        if decoded == relative and len(fields) == 3:
-            exact.append((fields[0], fields[2]))
-    if len(exact) != 1:
-        raise ValidationError(f"expected one pinned Git blob for {relative!r} in {root}")
-    mode, object_id = exact[0]
-    if mode not in {"100644", "100755"}:
-        raise ValidationError(f"refusing non-regular Git object {mode} at {relative!r}")
-    data = _git(root, ["cat-file", "blob", object_id])
-    assert isinstance(data, bytes)
-    return data
+    current = relative
+    seen: set[str] = set()
+    while True:
+        if current in seen:
+            raise ValidationError(f"pinned Git symlink cycle at {relative!r}")
+        seen.add(current)
+        raw = _git(root, ["ls-tree", "-z", commit, "--", current])
+        assert isinstance(raw, bytes)
+        entries = [entry for entry in raw.split(b"\0") if entry]
+        exact: list[tuple[str, str, str]] = []
+        for entry in entries:
+            metadata, separator, encoded_path = entry.partition(b"\t")
+            if not separator:
+                continue
+            decoded = encoded_path.decode("utf-8", errors="surrogateescape")
+            fields = metadata.decode("ascii").split()
+            if decoded == current and len(fields) == 3:
+                exact.append((fields[0], fields[1], fields[2]))
+        if len(exact) != 1:
+            raise ValidationError(
+                f"expected one pinned Git blob for {current!r} in {root}"
+            )
+        mode, kind, object_id = exact[0]
+        if kind != "blob":
+            raise ValidationError(
+                f"refusing non-blob Git object {mode} {kind} at {current!r}"
+            )
+        data = _git(root, ["cat-file", "blob", object_id])
+        assert isinstance(data, bytes)
+        if mode in {"100644", "100755"}:
+            return data
+        if mode != "120000":
+            raise ValidationError(f"refusing non-regular Git object {mode} at {current!r}")
+        try:
+            target = data.decode("utf-8", errors="strict")
+        except UnicodeDecodeError as exc:
+            raise ValidationError(
+                f"pinned Git symlink target is not UTF-8 at {current!r}"
+            ) from exc
+        if not target or "\x00" in target or posixpath.isabs(target):
+            raise ValidationError(
+                f"pinned Git symlink has empty or absolute target at {current!r}"
+            )
+        current = posixpath.normpath(
+            posixpath.join(posixpath.dirname(current), target)
+        )
+        try:
+            _safe_relative(current)
+        except ValidationError as exc:
+            raise ValidationError(
+                f"pinned Git symlink escapes the tree at {relative!r}"
+            ) from exc
 
 
 def source_blobs(

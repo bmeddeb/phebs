@@ -17,6 +17,7 @@ from gate34_common import (
     build_burn_ledger,
     digest_value,
     ensure_writable_targets,
+    git_blob,
     load_burn_ledger,
     load_burn_ledger_cohorts,
     precommitted_generator_config,
@@ -28,6 +29,27 @@ from gate34_common import (
 
 
 class Gate34IntegrityTests(unittest.TestCase):
+    def test_git_blob_resolves_only_safe_commit_backed_file_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            self._git(root, "init", "-q")
+            self._git(root, "config", "user.email", "fixture@example.invalid")
+            self._git(root, "config", "user.name", "Fixture")
+            (root / "target.go").write_text("package fixture\n", encoding="utf-8")
+            (root / "alias.go").symlink_to("target.go")
+            self._git(root, "add", ".")
+            self._git(root, "commit", "-qm", "safe alias")
+            commit = self._git(root, "rev-parse", "HEAD")
+            self.assertEqual(git_blob(root, commit, "alias.go"), b"package fixture\n")
+
+            (root / "alias.go").unlink()
+            (root / "alias.go").symlink_to("../outside.go")
+            self._git(root, "add", "alias.go")
+            self._git(root, "commit", "-qm", "escaping alias")
+            commit = self._git(root, "rev-parse", "HEAD")
+            with self.assertRaisesRegex(ValidationError, "escapes"):
+                git_blob(root, commit, "alias.go")
+
     def test_burn_ledger_v2_canonical_build_load_round_trip(self) -> None:
         cohorts = self._burn_cohorts()
         ledger = build_burn_ledger(list(reversed(cohorts)))

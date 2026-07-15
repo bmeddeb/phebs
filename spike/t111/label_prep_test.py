@@ -1320,6 +1320,55 @@ func wire(s Server) {
             with self.assertRaisesRegex(prep.PrepError, "undeclared gitlink"):
                 prep.pinned_tracked_files(root, commit, absent)
 
+    def test_pinned_source_symlink_is_a_bound_logical_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "fixture"
+            self._init_git_fixture(root)
+            target = root / "targets/source.go"
+            target.parent.mkdir(parents=True)
+            target.write_text("package fixture\n", encoding="utf-8")
+            (root / "alias.go").symlink_to("targets/source.go")
+            subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "-qm", "safe alias"],
+                check=True,
+            )
+            commit = subprocess.check_output(
+                ["git", "-C", str(root), "rev-parse", "HEAD"], text=True
+            ).strip()
+
+            files, special = prep.pinned_tracked_files(root, commit)
+            self.assertEqual(files, ["alias.go", "targets/source.go"])
+            aliases = [row for row in special if row["kind"] == "source_symlink"]
+            self.assertEqual(len(aliases), 1)
+            self.assertEqual(aliases[0]["target"], "targets/source.go")
+            self.assertEqual(aliases[0]["resolved_path"], "targets/source.go")
+            self.assertRegex(aliases[0]["object_id"], r"^[0-9a-f]{40}$")
+            self.assertRegex(aliases[0]["resolved_object_id"], r"^[0-9a-f]{40}$")
+            self.assertEqual(prep.git_blob(root, commit, "alias.go"), b"package fixture\n")
+            self.assertEqual(
+                list(prep.git_blobs(root, commit, ["alias.go", "targets/source.go"])),
+                [
+                    ("alias.go", b"package fixture\n"),
+                    ("targets/source.go", b"package fixture\n"),
+                ],
+            )
+            tree = prep.git_tree_blobs(root, commit)
+            self.assertEqual(tree["alias.go"], tree["targets/source.go"])
+
+            (root / "alias.go").unlink()
+            (root / "alias.go").symlink_to("../outside.go")
+            subprocess.run(["git", "-C", str(root), "add", "alias.go"], check=True)
+            subprocess.run(
+                ["git", "-C", str(root), "commit", "-qm", "escaping alias"],
+                check=True,
+            )
+            escaping_commit = subprocess.check_output(
+                ["git", "-C", str(root), "rev-parse", "HEAD"], text=True
+            ).strip()
+            with self.assertRaisesRegex(prep.PrepError, "escapes"):
+                prep.pinned_tracked_files(root, escaping_commit)
+
     def test_short_registration_service_is_rejected(self) -> None:
         commit = "1" * 40
         row = {

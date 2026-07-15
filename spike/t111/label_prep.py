@@ -23,6 +23,7 @@ import hashlib
 import json
 import math
 import os
+import posixpath
 import re
 import shutil
 import subprocess
@@ -286,12 +287,13 @@ def pinned_tracked_files(
     expected_commit: str,
     excluded_gitlinks: Sequence[dict[str, str]] = (),
 ) -> tuple[list[str], list[dict[str, str]]]:
-    """Verify a clean pin and return regular tracked blobs.
+    """Verify a clean pin and return readable tracked source occurrences.
 
     Gitlinks are accepted only when their exact path, object ID, and reviewed
-    exclusion rationale are locked. A symlinked Go/proto path is rejected;
-    other symlinks are recorded but cannot enter a frame that reads regular Git
-    blobs only.
+    exclusion rationale are locked. An in-tree Go/proto symlink is admitted
+    only when its commit-backed link chain resolves to a regular tracked blob;
+    the alias remains a distinct source occurrence and its complete resolution
+    is bound as special-entry provenance.
     """
 
     if root.is_symlink():
@@ -304,22 +306,12 @@ def pinned_tracked_files(
         first = dirty.decode("utf-8", errors="replace").splitlines()[0]
         raise PrepError(f"{root}: checkout is not clean (tracked and untracked required): {first}")
 
-    raw = git(root, "ls-tree", "-rz", "--full-tree", "HEAD")
+    entries = pinned_tree_entries(root, expected_commit)
     regular: list[str] = []
     special: list[dict[str, str]] = []
     declared = {item["path"]: item for item in excluded_gitlinks}
     observed_exclusions: set[str] = set()
-    for entry in raw.split(b"\0"):
-        if not entry:
-            continue
-        metadata, separator, raw_path = entry.partition(b"\t")
-        if not separator:
-            raise PrepError(f"{root}: malformed git tree entry")
-        fields = metadata.decode("ascii").split()
-        if len(fields) != 3:
-            raise PrepError(f"{root}: malformed git tree metadata")
-        mode, object_type, object_id = fields
-        rel = raw_path.decode("utf-8", errors="strict")
+    for rel, (mode, object_type, object_id) in sorted(entries.items()):
         if mode in ("100644", "100755") and object_type == "blob":
             regular.append(rel)
         elif mode == "160000":
@@ -334,9 +326,40 @@ def pinned_tracked_files(
             observed_exclusions.add(rel)
             special.append({"kind": "gitlink", **exclusion})
         elif mode == "120000":
+            target, target_path = pinned_symlink_target(
+                root, expected_commit, rel, entries
+            )
             if rel.endswith((".go", ".proto")):
-                raise PrepError(f"{root}: symlinked source makes the source frame incomplete: {rel}")
-            special.append({"kind": "symlink", "path": rel, "object_id": object_id})
+                resolved = resolve_pinned_blob_entry(
+                    root, expected_commit, rel, entries
+                )
+                if resolved is None:
+                    raise PrepError(
+                        f"{root}: symlinked source does not resolve to a tracked regular blob: {rel}"
+                    )
+                resolved_path, resolved_object_id = resolved
+                regular.append(rel)
+                special.append(
+                    {
+                        "kind": "source_symlink",
+                        "path": rel,
+                        "object_id": object_id,
+                        "target": target,
+                        "target_path": target_path,
+                        "resolved_path": resolved_path,
+                        "resolved_object_id": resolved_object_id,
+                    }
+                )
+            else:
+                special.append(
+                    {
+                        "kind": "symlink",
+                        "path": rel,
+                        "object_id": object_id,
+                        "target": target,
+                        "target_path": target_path,
+                    }
+                )
         else:
             raise PrepError(f"{root}: unsupported tracked tree entry {mode} {object_type} {rel}")
     missing_exclusions = set(declared) - observed_exclusions
@@ -348,12 +371,125 @@ def pinned_tracked_files(
     return regular, sorted(special, key=lambda item: (item["kind"], item["path"]))
 
 
-def git_blob(root: Path, commit: str, rel: str) -> bytes:
-    """Read a pinned regular blob without consulting the mutable worktree."""
+_PINNED_TREE_CACHE: dict[
+    tuple[str, str], dict[str, tuple[str, str, str]]
+] = {}
 
-    if not rel or rel.startswith("/") or ".." in Path(rel).parts:
+
+def safe_pinned_path(rel: str) -> bool:
+    return bool(
+        rel
+        and "\x00" not in rel
+        and not posixpath.isabs(rel)
+        and posixpath.normpath(rel) == rel
+        and rel != ".."
+        and not rel.startswith("../")
+    )
+
+
+def pinned_tree_entries(
+    root: Path, commit: str
+) -> dict[str, tuple[str, str, str]]:
+    """Return one immutable recursive tree index for a pinned commit."""
+
+    key = (str(root.resolve()), commit)
+    cached = _PINNED_TREE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    raw = git(root, "ls-tree", "-rz", "--full-tree", commit)
+    entries: dict[str, tuple[str, str, str]] = {}
+    for entry in raw.split(b"\0"):
+        if not entry:
+            continue
+        metadata, separator, raw_path = entry.partition(b"\t")
+        fields = metadata.decode("ascii").split()
+        if not separator or len(fields) != 3:
+            raise PrepError(f"{root}: malformed git tree entry")
+        mode, object_type, object_id = fields
+        rel = raw_path.decode("utf-8", errors="strict")
+        if not safe_pinned_path(rel):
+            raise PrepError(f"{root}: unsafe pinned tree path: {rel!r}")
+        if rel in entries:
+            raise PrepError(f"{root}: duplicate pinned tree path: {rel!r}")
+        if not re.fullmatch(r"[0-9a-f]{40}", object_id):
+            raise PrepError(f"{root}: invalid pinned object ID for {rel}")
+        entries[rel] = (mode, object_type, object_id)
+    _PINNED_TREE_CACHE[key] = entries
+    return entries
+
+
+def pinned_symlink_target(
+    root: Path,
+    commit: str,
+    rel: str,
+    entries: dict[str, tuple[str, str, str]] | None = None,
+) -> tuple[str, str]:
+    """Return a symlink's exact text and normalized in-tree target path."""
+
+    tree = entries if entries is not None else pinned_tree_entries(root, commit)
+    entry = tree.get(rel)
+    if entry is None or entry[0] != "120000" or entry[1] != "blob":
+        raise PrepError(f"{root}:{rel}: pinned entry is not a symlink blob")
+    raw = git(root, "cat-file", "blob", entry[2])
+    try:
+        target = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise PrepError(f"{root}:{rel}: symlink target is not valid UTF-8") from exc
+    if not target or "\x00" in target or posixpath.isabs(target):
+        raise PrepError(f"{root}:{rel}: symlink target is empty or absolute: {target!r}")
+    target_path = posixpath.normpath(posixpath.join(posixpath.dirname(rel), target))
+    if (
+        target_path == ".."
+        or target_path.startswith("../")
+        or posixpath.isabs(target_path)
+    ):
+        raise PrepError(f"{root}:{rel}: symlink target escapes the pinned tree: {target!r}")
+    return target, target_path
+
+
+def resolve_pinned_blob_entry(
+    root: Path,
+    commit: str,
+    rel: str,
+    entries: dict[str, tuple[str, str, str]] | None = None,
+) -> tuple[str, str] | None:
+    """Resolve a safe in-tree symlink chain to a regular blob entry.
+
+    ``None`` denotes an in-tree directory/non-leaf target. Unsafe targets,
+    cycles, and unsupported tracked objects fail closed.
+    """
+
+    tree = entries if entries is not None else pinned_tree_entries(root, commit)
+    current = rel
+    seen: set[str] = set()
+    while True:
+        if current in seen:
+            raise PrepError(f"{root}:{rel}: pinned symlink chain contains a cycle")
+        seen.add(current)
+        entry = tree.get(current)
+        if entry is None:
+            return None
+        mode, object_type, object_id = entry
+        if mode in {"100644", "100755"} and object_type == "blob":
+            return current, object_id
+        if mode == "120000" and object_type == "blob":
+            _, current = pinned_symlink_target(root, commit, current, tree)
+            continue
+        raise PrepError(
+            f"{root}:{rel}: symlink chain reaches unsupported {mode} {object_type} at {current}"
+        )
+
+
+def git_blob(root: Path, commit: str, rel: str) -> bytes:
+    """Read pinned source content, resolving only safe in-tree symlink aliases."""
+
+    if not safe_pinned_path(rel):
         raise PrepError(f"unsafe pinned path: {rel!r}")
-    return git(root, "cat-file", "blob", f"{commit}:{rel}")
+    resolved = resolve_pinned_blob_entry(root, commit, rel)
+    if resolved is None:
+        raise PrepError(f"{root}:{rel}: pinned path does not resolve to a regular blob")
+    _, object_id = resolved
+    return git(root, "cat-file", "blob", object_id)
 
 
 def git_blobs(root: Path, commit: str, paths: Sequence[str]) -> Iterator[tuple[str, bytes]]:
@@ -363,8 +499,15 @@ def git_blobs(root: Path, commit: str, paths: Sequence[str]) -> Iterator[tuple[s
     if len(ordered) != len(set(ordered)):
         raise PrepError("duplicate path in pinned blob batch")
     for rel in ordered:
-        if not rel or rel.startswith("/") or ".." in Path(rel).parts or "\x00" in rel:
+        if not safe_pinned_path(rel):
             raise PrepError(f"unsafe pinned path: {rel!r}")
+    tree = pinned_tree_entries(root, commit)
+    requests: list[str] = []
+    for rel in ordered:
+        resolved = resolve_pinned_blob_entry(root, commit, rel, tree)
+        if resolved is None:
+            raise PrepError(f"{root}:{rel}: pinned path does not resolve to a regular blob")
+        requests.append(resolved[1])
 
     def read_header(stream: Any, rel: str) -> bytes:
         header = bytearray()
@@ -416,8 +559,8 @@ def git_blobs(root: Path, commit: str, paths: Sequence[str]) -> Iterator[tuple[s
                 raise PrepError(f"cannot open Git batch pipes for {root}")
 
             try:
-                for rel in ordered:
-                    request = f"{commit}:{rel}".encode("utf-8") + b"\0"
+                for rel, object_id in zip(ordered, requests):
+                    request = object_id.encode("ascii") + b"\0"
                     try:
                         written = process.stdin.write(request)
                         process.stdin.flush()
@@ -1491,19 +1634,15 @@ def scoped_burn_binding(
 
 
 def git_tree_blobs(root: Path, commit: str) -> dict[str, str]:
-    raw = git(root, "ls-tree", "-rz", "--full-tree", commit)
+    entries = pinned_tree_entries(root, commit)
     result: dict[str, str] = {}
-    for entry in raw.split(b"\0"):
-        if not entry:
-            continue
-        metadata, separator, raw_path = entry.partition(b"\t")
-        fields = metadata.decode("ascii").split()
-        if not separator or len(fields) != 3:
-            raise PrepError(f"{root}: malformed Git tree while resolving burns")
-        mode, kind, oid = fields
-        rel = raw_path.decode("utf-8", errors="strict")
+    for rel, (mode, kind, oid) in entries.items():
         if mode in {"100644", "100755"} and kind == "blob":
             result[rel] = oid
+        elif mode == "120000" and kind == "blob":
+            resolved = resolve_pinned_blob_entry(root, commit, rel, entries)
+            if resolved is not None:
+                result[rel] = resolved[1]
     return result
 
 

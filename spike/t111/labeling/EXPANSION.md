@@ -182,6 +182,29 @@ context disagreement for client calls and registrations. Private `g2-v*`
 artifact and staging paths are also ignored before any sealed preparation can
 occur.
 
+### Second capacity-preflight blocker
+
+The next write-suppressed preflight passed the consensus-site check and then
+stopped before an aggregate result because `etcd` contains a tracked Go source
+symlink. It likewise created no attempt claim, randomness, sample, artifact, or
+label. A complete tree audit found 11 Go aliases in `etcd`; every link is
+relative, stays inside the pinned tree, and resolves directly to a distinct
+tracked regular Go blob under `tests/integration/clientv3`. Go 1.26.5 compiles
+the aliases in the client modules as separate package-context occurrences. The
+seven `grpc-go` symlinks are non-source CRL test data and also resolve to
+tracked in-tree regular blobs.
+
+Before another preflight, all source readers were aligned on one fail-closed
+alias policy. A logical alias remains its own source path, while its exact link
+blob, target text, resolved path, and resolved content object are bound. Empty,
+absolute, escaping, dangling, cyclic, non-UTF-8, and unsupported link chains are
+rejected. The typed oracle preserves the logical path and now rejects any
+disagreement when the same logical call site is loaded in multiple package
+contexts. Fact verification and cross-fixture burn projection resolve the same
+commit-backed content. Tests cover source-bearing aliases plus escape and cycle
+rejection; the exact pinned `etcd` aliases contain no typed-call,
+registration-call, or emitted-fact Gate 2 site.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

@@ -447,6 +447,149 @@ func lineColumn(text string, offset int) (int, int) {
 	return line, offset - last
 }
 
+func TestResolveTrackedSourceAcceptsOnlySafePinnedAliases(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "targets", "source.go")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("package target\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(root, "alias.go")
+	if err := os.Symlink("targets/source.go", alias); err != nil {
+		t.Fatal(err)
+	}
+	tracked := map[string]treeEntry{
+		"alias.go":          {mode: "120000", kind: "blob", oid: gitBlobOID([]byte("targets/source.go"))},
+		"targets/source.go": {mode: "100644", kind: "blob", oid: gitBlobOID([]byte("package target\n"))},
+	}
+	resolved, entry, err := resolveTrackedSource(root, tracked, "alias.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resolved != "targets/source.go" || entry.oid != gitBlobOID([]byte("package target\n")) {
+		t.Fatalf("resolved = %q/%q", resolved, entry.oid)
+	}
+
+	if err := os.Remove(alias); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../outside.go", alias); err != nil {
+		t.Fatal(err)
+	}
+	tracked["alias.go"] = treeEntry{mode: "120000", kind: "blob", oid: gitBlobOID([]byte("../outside.go"))}
+	if _, _, err := resolveTrackedSource(root, tracked, "alias.go"); err == nil || !strings.Contains(err.Error(), "escapes") {
+		t.Fatalf("escaping alias was not rejected: %v", err)
+	}
+
+	if err := os.Remove(alias); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("cycle.go", alias); err != nil {
+		t.Fatal(err)
+	}
+	cycle := filepath.Join(root, "cycle.go")
+	if err := os.Symlink("alias.go", cycle); err != nil {
+		t.Fatal(err)
+	}
+	tracked["alias.go"] = treeEntry{mode: "120000", kind: "blob", oid: gitBlobOID([]byte("cycle.go"))}
+	tracked["cycle.go"] = treeEntry{mode: "120000", kind: "blob", oid: gitBlobOID([]byte("alias.go"))}
+	if _, _, err := resolveTrackedSource(root, tracked, "alias.go"); err == nil || !strings.Contains(err.Error(), "cycle") {
+		t.Fatalf("cyclic alias was not rejected: %v", err)
+	}
+}
+
+func TestResolveTrackedSourceVerifiesEveryNonGoChainNode(t *testing.T) {
+	root := t.TempDir()
+	content := []byte("package fixture\n")
+	if err := os.WriteFile(filepath.Join(root, "source.txt"), content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("source.txt", filepath.Join(root, "middle.link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("middle.link", filepath.Join(root, "alias.go")); err != nil {
+		t.Fatal(err)
+	}
+	tracked := map[string]treeEntry{
+		"alias.go":    {mode: "120000", kind: "blob", oid: gitBlobOID([]byte("middle.link"))},
+		"middle.link": {mode: "120000", kind: "blob", oid: gitBlobOID([]byte("source.txt"))},
+		"source.txt":  {mode: "100644", kind: "blob", oid: gitBlobOID(content)},
+	}
+	if _, _, err := resolveTrackedSource(root, tracked, "alias.go"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "source.txt"), []byte("tampered\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := resolveTrackedSource(root, tracked, "alias.go"); err == nil || !strings.Contains(err.Error(), "differs from pinned blob") {
+		t.Fatalf("tampered non-Go terminal was not rejected: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "source.txt"), content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(filepath.Join(root, "middle.link")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("other.txt", filepath.Join(root, "middle.link")); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := resolveTrackedSource(root, tracked, "alias.go"); err == nil || !strings.Contains(err.Error(), "differs from pinned blob") {
+		t.Fatalf("tampered non-Go intermediate was not rejected: %v", err)
+	}
+}
+
+func TestOracleRejectsAssumeUnchangedAliasTargetTamper(t *testing.T) {
+	root, _ := makeFixture(t, clientFixtureFiles("targets/application.txt", applicationSource))
+	app := filepath.Join(root, "app")
+	if err := os.MkdirAll(app, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../targets/application.txt", filepath.Join(app, "application.go")); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "add", "app/application.go")
+	runGit(t, root, "commit", "-q", "-m", "non-Go source target")
+	commit := strings.TrimSpace(runGit(t, root, "rev-parse", "HEAD"))
+	runFixture(t, root, commit)
+
+	target := filepath.Join(root, "targets", "application.txt")
+	if err := os.WriteFile(target, []byte("//go:build ignore\n\n"+applicationSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "update-index", "--assume-unchanged", "targets/application.txt")
+	var stdout, stderr bytes.Buffer
+	err := execute(options{root: root, commit: commit}, &stdout, &stderr)
+	if err == nil || !strings.Contains(err.Error(), "differs from pinned blob") {
+		t.Fatalf("assume-unchanged target tamper was not rejected: %v", err)
+	}
+}
+
+func TestOraclePreservesSafeSourceSymlinkAsDistinctLogicalOccurrence(t *testing.T) {
+	root, _ := makeFixture(t, clientFixtureFiles("app/application.go", applicationSource))
+	mirror := filepath.Join(root, "mirror")
+	if err := os.MkdirAll(mirror, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../app/application.go", filepath.Join(mirror, "application.go")); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, root, "add", "mirror/application.go")
+	runGit(t, root, "commit", "-q", "-m", "source alias")
+	commit := strings.TrimSpace(runGit(t, root, "rev-parse", "HEAD"))
+
+	out, _ := runFixture(t, root, commit)
+	records := decodeRecords(t, out)
+	counts := map[string]int{}
+	for _, record := range records {
+		counts[record.Path]++
+	}
+	if counts["app/application.go"] != 4 || counts["mirror/application.go"] != 4 {
+		t.Fatalf("logical source occurrences = %#v", counts)
+	}
+}
+
 func Example_record() {
 	b, _ := json.Marshal(record{Path: "app/main.go", Line: 12, Column: 9, ByteOffset: 144, Method: "Get", Stratum: stratumGeneratedClient})
 	fmt.Println(string(b))

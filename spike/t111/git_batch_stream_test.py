@@ -83,6 +83,13 @@ def _record(payload: bytes, *, object_type: bytes = b"blob") -> bytes:
     return b"a" * 40 + b" " + object_type + b" " + str(len(payload)).encode() + b"\0" + payload + b"\0"
 
 
+def _regular_tree(paths: list[str]) -> dict[str, tuple[str, str, str]]:
+    return {
+        path: ("100644", "blob", f"{index:040x}")
+        for index, path in enumerate(paths, start=1)
+    }
+
+
 class GitBatchStreamTests(unittest.TestCase):
     def test_rejects_duplicate_and_unsafe_paths_before_starting_git(self) -> None:
         root = Path("/corpus")
@@ -102,17 +109,20 @@ class GitBatchStreamTests(unittest.TestCase):
         paths = ["dir/a file.go", "dir/line\nbreak.go"]
         commit = "2" * 40
 
-        with patch.object(prep.subprocess, "Popen", return_value=process) as popen:
+        tree = _regular_tree(paths)
+        with patch.object(prep, "pinned_tree_entries", return_value=tree), patch.object(
+            prep.subprocess, "Popen", return_value=process
+        ) as popen:
             blobs = prep.git_blobs(Path("/corpus"), commit, paths)
             first = next(blobs)
             self.assertEqual(first, (paths[0], first_payload))
-            self.assertEqual(process.stdin.writes, [f"{commit}:{paths[0]}".encode() + b"\0"])
+            self.assertEqual(process.stdin.writes, [tree[paths[0]][2].encode() + b"\0"])
 
             second = next(blobs)
             self.assertEqual(second, (paths[1], second_payload))
             self.assertEqual(
                 process.stdin.writes,
-                [f"{commit}:{path}".encode() + b"\0" for path in paths],
+                [tree[path][2].encode() + b"\0" for path in paths],
             )
             self.assertIsNotNone(blobs.gi_frame)
             self.assertFalse(
@@ -145,7 +155,9 @@ class GitBatchStreamTests(unittest.TestCase):
         for name, output, message in cases:
             with self.subTest(name=name):
                 process = _FakeProcess([output])
-                with patch.object(prep.subprocess, "Popen", return_value=process):
+                with patch.object(
+                    prep, "pinned_tree_entries", return_value=_regular_tree(["a.go"])
+                ), patch.object(prep.subprocess, "Popen", return_value=process):
                     with self.assertRaisesRegex(prep.PrepError, message):
                         list(prep.git_blobs(Path("/corpus"), "3" * 40, ["a.go"]))
                 self.assertTrue(process.stdin.closed)
@@ -153,13 +165,17 @@ class GitBatchStreamTests(unittest.TestCase):
 
     def test_rejects_trailing_output_and_nonzero_git_exit(self) -> None:
         trailing = _FakeProcess([_record(b"body") + b"unexpected"])
-        with patch.object(prep.subprocess, "Popen", return_value=trailing):
+        with patch.object(
+            prep, "pinned_tree_entries", return_value=_regular_tree(["a.go"])
+        ), patch.object(prep.subprocess, "Popen", return_value=trailing):
             with self.assertRaisesRegex(prep.PrepError, "emitted trailing data"):
                 list(prep.git_blobs(Path("/corpus"), "4" * 40, ["a.go"]))
         self.assertTrue(trailing.killed)
 
         failed = _FakeProcess([_record(b"body")], returncode=7)
-        with patch.object(prep.subprocess, "Popen", return_value=failed):
+        with patch.object(
+            prep, "pinned_tree_entries", return_value=_regular_tree(["a.go"])
+        ), patch.object(prep.subprocess, "Popen", return_value=failed):
             with self.assertRaisesRegex(prep.PrepError, "git cat-file batch failed"):
                 list(prep.git_blobs(Path("/corpus"), "4" * 40, ["a.go"]))
 

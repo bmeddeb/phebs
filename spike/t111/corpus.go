@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"golang.org/x/mod/modfile"
 )
@@ -491,9 +492,55 @@ func verifyPinnedFacts(entry CorpusEntry, root string, facts []Fact) error {
 	if err := verifyCorpus(root, entry.Commit); err != nil {
 		return err
 	}
+	entries, err := recursiveTree(root, entry.Commit, entry.ExcludedGitlinks)
+	if err != nil {
+		return err
+	}
+	byPath := make(map[string]treeEntry, len(entries))
+	for _, treeEntry := range entries {
+		byPath[treeEntry.path] = treeEntry
+	}
 	return validateFacts(entry, facts, func(path string) ([]byte, error) {
-		return gitBytes(root, "cat-file", "blob", entry.Commit+":"+path)
+		return readPinnedSourceBlob(root, path, byPath)
 	})
+}
+
+func readPinnedSourceBlob(root, sourcePath string, entries map[string]treeEntry) ([]byte, error) {
+	current := sourcePath
+	seen := make(map[string]struct{})
+	for {
+		if _, duplicate := seen[current]; duplicate {
+			return nil, fmt.Errorf("pinned source symlink cycle at %s", sourcePath)
+		}
+		seen[current] = struct{}{}
+		entry, ok := entries[current]
+		if !ok {
+			return nil, fmt.Errorf("pinned source %s resolves to absent path %s", sourcePath, current)
+		}
+		if entry.objectType != "blob" {
+			return nil, fmt.Errorf("pinned source %s resolves to non-blob %s", sourcePath, current)
+		}
+		content, err := gitBytes(root, "cat-file", "blob", entry.objectID)
+		if err != nil {
+			return nil, err
+		}
+		switch entry.mode {
+		case "100644", "100755":
+			return content, nil
+		case "120000":
+			if !utf8.Valid(content) {
+				return nil, fmt.Errorf("pinned source symlink %s has a non-UTF-8 target", current)
+			}
+			target := string(content)
+			next := pathpkg.Clean(pathpkg.Join(pathpkg.Dir(current), target))
+			if target == "" || strings.ContainsRune(target, '\x00') || pathpkg.IsAbs(target) || next == "." || next == ".." || strings.HasPrefix(next, "../") {
+				return nil, fmt.Errorf("pinned source symlink %s escapes the tree via %q", current, target)
+			}
+			current = next
+		default:
+			return nil, fmt.Errorf("pinned source %s resolves to unsupported mode %s", sourcePath, entry.mode)
+		}
+	}
 }
 
 func configureHarnessTools() (func(), error) {

@@ -126,6 +126,60 @@ func TestRecursiveTreeRejectsGitlink(t *testing.T) {
 	}
 }
 
+func TestPinnedFactReaderResolvesOnlySafeSourceAliases(t *testing.T) {
+	repo := initTestRepository(t)
+	target := filepath.Join(repo, "targets", "source.go")
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("package fixture\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(repo, "alias.go")
+	if err := os.Symlink("targets/source.go", alias); err != nil {
+		t.Fatal(err)
+	}
+	gitTestOutput(t, repo, "add", "-A")
+	gitTestOutput(t, repo, "commit", "-q", "-m", "safe source alias")
+	commit := gitTestOutput(t, repo, "rev-parse", "HEAD")
+	entries, err := recursiveTree(repo, commit, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byPath := make(map[string]treeEntry, len(entries))
+	for _, entry := range entries {
+		byPath[entry.path] = entry
+	}
+	content, err := readPinnedSourceBlob(repo, "alias.go", byPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "package fixture\n" {
+		t.Fatalf("alias content = %q", content)
+	}
+
+	if err := os.Remove(alias); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("../outside.go", alias); err != nil {
+		t.Fatal(err)
+	}
+	gitTestOutput(t, repo, "add", "alias.go")
+	gitTestOutput(t, repo, "commit", "-q", "-m", "escaping source alias")
+	commit = gitTestOutput(t, repo, "rev-parse", "HEAD")
+	entries, err = recursiveTree(repo, commit, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byPath = make(map[string]treeEntry, len(entries))
+	for _, entry := range entries {
+		byPath[entry.path] = entry
+	}
+	if _, err := readPinnedSourceBlob(repo, "alias.go", byPath); err == nil || !strings.Contains(err.Error(), "escapes") {
+		t.Fatalf("escaping source alias was not rejected: %v", err)
+	}
+}
+
 func TestRecursiveTreeAllowsOnlyExactReviewedGitlink(t *testing.T) {
 	repo := initTestRepository(t)
 	commit := gitTestOutput(t, repo, "rev-parse", "HEAD")

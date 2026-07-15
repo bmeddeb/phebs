@@ -14,6 +14,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	pathpkg "path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -106,6 +107,7 @@ type scanState struct {
 	records    map[string]record
 	ambig      map[string]struct{}
 	selectors  map[string]struct{}
+	outcomes   map[string]string
 	rootFiles  map[string]struct{}
 	extFiles   map[string]struct{}
 	packages   map[string]struct{}
@@ -158,6 +160,7 @@ func execute(opts options, stdout, stderr io.Writer) error {
 		records:    make(map[string]record),
 		ambig:      make(map[string]struct{}),
 		selectors:  make(map[string]struct{}),
+		outcomes:   make(map[string]string),
 		rootFiles:  make(map[string]struct{}),
 		extFiles:   make(map[string]struct{}),
 		packages:   make(map[string]struct{}),
@@ -391,6 +394,11 @@ func verifyWorktreeTree(root string, tracked map[string]treeEntry) error {
 		if got := gitBlobOID(content); got != entry.oid {
 			return fmt.Errorf("worktree content does not match pinned Git blob at %s: got %s, want %s", rel, got, entry.oid)
 		}
+		if entry.mode == "120000" {
+			if _, _, err := resolveTrackedSource(root, tracked, rel); err != nil {
+				return fmt.Errorf("verify tracked semantic-input alias %s: %w", rel, err)
+			}
+		}
 	}
 	return nil
 }
@@ -407,6 +415,70 @@ func gitBlobOID(content []byte) string {
 	_, _ = fmt.Fprintf(h, "blob %d%c", len(content), byte(0))
 	_, _ = h.Write(content)
 	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// resolveTrackedSource accepts a Go source symlink only when the already
+// verified worktree link chain stays inside the pinned tree and terminates at
+// a regular commit-backed blob. The caller keeps the alias path as the source
+// occurrence; the resolved path is provenance, not a replacement coordinate.
+func resolveTrackedSource(root string, tracked map[string]treeEntry, rel string) (string, treeEntry, error) {
+	current := filepath.ToSlash(rel)
+	seen := make(map[string]struct{})
+	traversedLink := false
+	for {
+		if _, duplicate := seen[current]; duplicate {
+			return "", treeEntry{}, fmt.Errorf("tracked source symlink cycle at %s", rel)
+		}
+		seen[current] = struct{}{}
+		entry, ok := tracked[current]
+		if !ok {
+			return "", treeEntry{}, fmt.Errorf("tracked source symlink %s resolves to absent path %s", rel, current)
+		}
+		if entry.kind != "blob" {
+			return "", treeEntry{}, fmt.Errorf("tracked source %s resolves to unsupported %s %s at %s", rel, entry.mode, entry.kind, current)
+		}
+		switch entry.mode {
+		case "100644", "100755":
+			if traversedLink {
+				path := filepath.Join(root, filepath.FromSlash(current))
+				info, err := os.Lstat(path)
+				if err != nil {
+					return "", treeEntry{}, fmt.Errorf("stat tracked source target %s: %w", current, err)
+				}
+				if !info.Mode().IsRegular() {
+					return "", treeEntry{}, fmt.Errorf("tracked source target is not a regular file: %s", current)
+				}
+				content, err := os.ReadFile(path)
+				if err != nil {
+					return "", treeEntry{}, fmt.Errorf("read tracked source target %s: %w", current, err)
+				}
+				if got := gitBlobOID(content); got != entry.oid {
+					return "", treeEntry{}, fmt.Errorf("tracked source target %s differs from pinned blob: got %s, want %s", current, got, entry.oid)
+				}
+			}
+			return current, entry, nil
+		case "120000":
+			target, err := os.Readlink(filepath.Join(root, filepath.FromSlash(current)))
+			if err != nil {
+				return "", treeEntry{}, fmt.Errorf("read tracked source symlink %s: %w", current, err)
+			}
+			target = filepath.ToSlash(target)
+			if got := gitBlobOID([]byte(target)); got != entry.oid {
+				return "", treeEntry{}, fmt.Errorf("tracked source symlink %s differs from pinned blob: got %s, want %s", current, got, entry.oid)
+			}
+			if target == "" || pathpkg.IsAbs(target) {
+				return "", treeEntry{}, fmt.Errorf("tracked source symlink %s has empty or absolute target %q", current, target)
+			}
+			next := pathpkg.Clean(pathpkg.Join(pathpkg.Dir(current), target))
+			if !safeRelative(next) {
+				return "", treeEntry{}, fmt.Errorf("tracked source symlink %s escapes the pinned tree via %q", current, target)
+			}
+			current = next
+			traversedLink = true
+		default:
+			return "", treeEntry{}, fmt.Errorf("tracked source %s resolves to unsupported blob mode %s at %s", rel, entry.mode, current)
+		}
+	}
 }
 
 func findModules(co checkout) ([]string, error) {
@@ -545,8 +617,11 @@ func (s *scanState) emptyModuleSemanticInputs(module string) (string, error) {
 	}
 	sort.Strings(nested)
 	for path, entry := range s.checkout.tracked {
-		if entry.kind != "blob" || entry.mode == "120000" || !strings.HasSuffix(path, ".go") || !strings.HasPrefix(path, prefix) {
+		if entry.kind != "blob" || !strings.HasSuffix(path, ".go") || !strings.HasPrefix(path, prefix) {
 			continue
+		}
+		if _, _, err := resolveTrackedSource(s.checkout.root, s.checkout.tracked, path); err != nil {
+			return "", err
 		}
 		insideNested := false
 		for _, nestedPrefix := range nested {
@@ -777,20 +852,23 @@ func (s *scanState) scanCalls(graph []*packages.Package, clients []clientInterfa
 	for _, p := range graph {
 		for i, file := range p.Syntax {
 			filename := p.CompiledGoFiles[i]
-			rel, inside := relativeWithin(s.checkout.root, filename)
+			rel, inside := lexicalRelativeWithin(s.checkout.root, filename)
 			if !inside {
 				s.extFiles[filepath.Clean(filename)] = struct{}{}
 				continue
 			}
-			entry, ok := s.checkout.tracked[rel]
-			if !ok || entry.kind != "blob" || entry.mode == "120000" {
-				return fmt.Errorf("root source is not a regular commit-backed blob: %s", rel)
+			if _, _, err := resolveTrackedSource(s.checkout.root, s.checkout.tracked, rel); err != nil {
+				return fmt.Errorf("root source is not a safe commit-backed blob alias: %s: %w", rel, err)
 			}
 			if _, err := os.ReadFile(filename); err != nil {
 				return fmt.Errorf("read root source %s: %w", rel, err)
 			}
 			s.rootFiles[rel] = struct{}{}
+			var scanErr error
 			ast.Inspect(file, func(node ast.Node) bool {
+				if scanErr != nil {
+					return false
+				}
 				call, ok := node.(*ast.CallExpr)
 				if !ok {
 					return true
@@ -807,15 +885,21 @@ func (s *scanState) scanCalls(graph []*packages.Package, clients []clientInterfa
 				s.selectors[siteKey] = struct{}{}
 				selection, ok := p.TypesInfo.Selections[sel]
 				if !ok || selection.Kind() != types.MethodVal {
+					scanErr = s.recordCallOutcome(siteKey, "not-method-value")
 					return true
 				}
 				matches := matchingClients(
 					selection.Recv(), sel.Sel.Name, clientsByMethod[sel.Sel.Name],
 				)
 				if len(matches) == 0 {
+					scanErr = s.recordCallOutcome(siteKey, "unmatched")
 					return true
 				}
 				stratum := matches[0].stratum
+				identities := make([]string, 0, len(matches))
+				for _, match := range matches {
+					identities = append(identities, match.identity)
+				}
 				if len(matches) > 1 {
 					// This is still a valid recall candidate: the receiver satisfies
 					// more than one independently discovered generated-client
@@ -823,6 +907,11 @@ func (s *scanState) scanCalls(graph []*packages.Package, clients []clientInterfa
 					// silently biasing the recall frame.
 					s.ambig[siteKey] = struct{}{}
 					stratum = stratumAmbiguousClient
+				}
+				outcome := "matched\x00" + stratum + "\x00" + strings.Join(identities, "\x00")
+				if err := s.recordCallOutcome(siteKey, outcome); err != nil {
+					scanErr = err
+					return false
 				}
 				rec := record{
 					Path:       rel,
@@ -833,11 +922,26 @@ func (s *scanState) scanCalls(graph []*packages.Package, clients []clientInterfa
 					Stratum:    stratum,
 				}
 				s.rawMatches++
+				if prior, exists := s.records[siteKey]; exists && prior != rec {
+					scanErr = fmt.Errorf("package contexts disagree on matched source site %s", siteKey)
+					return false
+				}
 				s.records[siteKey] = rec
 				return true
 			})
+			if scanErr != nil {
+				return scanErr
+			}
 		}
 	}
+	return nil
+}
+
+func (s *scanState) recordCallOutcome(siteKey, outcome string) error {
+	if prior, exists := s.outcomes[siteKey]; exists && prior != outcome {
+		return fmt.Errorf("package contexts disagree on source call site %s", siteKey)
+	}
+	s.outcomes[siteKey] = outcome
 	return nil
 }
 
@@ -916,6 +1020,22 @@ func relativeWithin(root, path string) (string, bool) {
 		return "", false
 	}
 	rel, err := filepath.Rel(root, resolved)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
+		return "", false
+	}
+	rel = filepath.ToSlash(rel)
+	return rel, safeRelative(rel)
+}
+
+// lexicalRelativeWithin preserves an in-tree symlink's logical tracked path.
+// Safety comes from resolveTrackedSource, which verifies the already hash-bound
+// link chain before any source coordinate is admitted.
+func lexicalRelativeWithin(root, candidate string) (string, bool) {
+	abs, err := filepath.Abs(candidate)
+	if err != nil {
+		return "", false
+	}
+	rel, err := filepath.Rel(root, abs)
 	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) || filepath.IsAbs(rel) {
 		return "", false
 	}
