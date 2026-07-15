@@ -221,3 +221,8 @@ The final timed request succeeded once, beginning at
 all seven candidate commits; evaluation now starts with the mandatory
 `grpc/grpc-go`, `etcd-io/etcd` prefix. No candidate has yet been checked out or
 measured, and no attempt claim or sampling state exists.
+
+The mandatory `grpc-go` and `etcd` pins then synchronized cleanly at exact
+`HEAD`. Each contains Go and RPC-bearing proto source, and neither contains a
+gitlink, so both are intrinsically eligible with no declared exclusion. No
+extractor fact or coordinate had been enumerated at that decision point.

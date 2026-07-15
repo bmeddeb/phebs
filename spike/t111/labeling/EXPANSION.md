@@ -120,6 +120,23 @@ The response digest is
 Only these commits may be evaluated, and only the mandatory ordered prefix may
 enter the Gate 2 corpus.
 
+### Mandatory-prefix eligibility
+
+The first two pinned trees synchronized completely and cleanly through the
+hardened corpus reader. Both `HEAD` values equal the receipt pins and neither
+tree contains a gitlink. Source-only inspection, before any extractor run,
+found:
+
+- `grpc-go`: 1,042 tracked Go files, 13 tracked proto files, and eight proto
+  files containing RPC declarations; and
+- `etcd`: 1,106 tracked Go files, 12 tracked proto files, and three proto files
+  containing RPC declarations.
+
+Both therefore satisfy the immutable source eligibility rules. No exclusion is
+needed, and the mandatory two-repository prefix cannot be skipped. These counts
+describe tracked source shape only; no fact population, coordinate, or outcome
+has been enumerated.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required
