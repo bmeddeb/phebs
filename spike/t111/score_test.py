@@ -23,6 +23,78 @@ import score  # noqa: E402
 
 
 class Gate2ScoringTests(unittest.TestCase):
+    def test_toolchain_attestation_precedes_hidden_key_hash(self) -> None:
+        provenance = {"typed_call_oracle_toolchain_identity": "producer"}
+        paths = {"key.jsonl": Path("must-not-be-hashed.jsonl")}
+        with (
+            patch.object(
+                score,
+                "attest_pre_key_toolchain",
+                side_effect=score.ScoreError("wrong Go binary"),
+            ),
+            patch.object(score, "sha256_file") as sha256_file,
+            self.assertRaisesRegex(score.ScoreError, "wrong Go binary"),
+        ):
+            score.validate_payloads_after_toolchain_attestation(
+                paths, {"key.jsonl": "irrelevant"}, provenance
+            )
+        sha256_file.assert_not_called()
+
+    def test_toolchain_attestation_precedes_hidden_key_read(self) -> None:
+        identity = (
+            'go_version="go version go1.26.5 darwin/arm64";'
+            'go_digest=sha256:' + '1' * 64 + ';'
+            'git_version="git version 2.50.1";'
+            'git_digest=sha256:' + '2' * 64
+        )
+        provenance = {"typed_call_oracle_toolchain_identity": identity}
+        paths = {"key.jsonl": Path("must-not-be-opened.jsonl")}
+        with (
+            patch.object(
+                score,
+                "resolve_oracle_toolchain",
+                side_effect=prep.PrepError("wrong Go binary"),
+            ),
+            patch.object(score, "load_jsonl") as load_jsonl,
+            self.assertRaisesRegex(score.ScoreError, "pre-key toolchain attestation"),
+        ):
+            score.load_hidden_key_after_toolchain_attestation(paths, provenance)
+        load_jsonl.assert_not_called()
+
+        with (
+            patch.object(score, "resolve_oracle_toolchain", return_value={}),
+            patch.object(
+                score, "load_jsonl", return_value=[{"site_id": "site"}]
+            ) as load_jsonl,
+        ):
+            key = score.load_hidden_key_after_toolchain_attestation(paths, provenance)
+        load_jsonl.assert_called_once_with(paths["key.jsonl"])
+        self.assertEqual(set(key), {"site"})
+
+    def test_toolchain_preflight_requires_sealed_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            artifact = Path(raw)
+            manifest = {
+                "schema": score.SCHEMA,
+                "provenance": {"typed_call_oracle_toolchain_identity": "producer"},
+            }
+            (artifact / "manifest.json").write_text(
+                json.dumps(manifest), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(score.ScoreError, "sealed Gate-2"):
+                score.preflight_toolchain(artifact)
+
+            manifest["gate_design_fixed"] = True
+            (artifact / "manifest.json").write_text(
+                json.dumps(manifest), encoding="utf-8"
+            )
+            with patch.object(
+                score, "attest_pre_key_toolchain", return_value={"go_version": "ok"}
+            ):
+                self.assertEqual(
+                    score.preflight_toolchain(artifact), {"go_version": "ok"}
+                )
+
     def test_label_publication_is_verified_before_hidden_bundle_loading(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

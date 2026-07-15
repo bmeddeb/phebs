@@ -331,6 +331,22 @@ amend labels after seeing any dev or holdout score.
 
 Only after the second GitHub anchor may the frozen canonical labels be scored:
 
+First rerun the exact fact-producer toolchain attestation in the same shell that
+will perform the score. This command reads only the sealed manifest and the
+local Go/Git executables; it does not open coordinates, labels, facts, or the
+hidden key:
+
+```sh
+/opt/homebrew/bin/python3 spike/t111/score.py \
+  --artifact-dir spike/t111/labeling/g2-v3 \
+  --preflight-toolchain
+```
+
+Do not score unless this preflight passes. The scorer repeats the guard before
+opening `key.jsonl`, so an environment drift cannot disclose hidden outcomes
+before it is rejected. The preflight does not relax the one-score rule: an
+actual holdout-score invocation remains terminal even when it fails closed.
+
 ```sh
 /opt/homebrew/bin/python3 spike/t111/score.py \
   /private/path/t111-frozen-labels/labels.frozen.jsonl holdout \

@@ -57,6 +57,7 @@ from label_prep import (
     load_corpus_entries,
     pinned_tracked_files,
     preflight_gate_design,
+    resolve_oracle_toolchain,
     scoped_burn_binding,
     validate_attempt_claim,
     validate_seed_record,
@@ -199,6 +200,68 @@ def validate_sealed_artifact_set(
         raise ScoreError("sealed artifact directory contains a non-regular entry")
 
 
+def attest_pre_key_toolchain(provenance: dict[str, Any]) -> dict[str, str]:
+    """Verify the exact fact-producer toolchain before hidden-key access."""
+
+    identity = provenance.get("typed_call_oracle_toolchain_identity")
+    if not isinstance(identity, str) or not identity:
+        raise ScoreError("artifact provenance has no fact-producer toolchain identity")
+    try:
+        return resolve_oracle_toolchain(identity)
+    except PrepError as exc:
+        raise ScoreError(f"pre-key toolchain attestation failed: {exc}") from exc
+
+
+def preflight_toolchain(artifact_dir: Path) -> dict[str, str]:
+    """Run the reusable toolchain guard without opening coordinates or key data."""
+
+    manifest_path = artifact_dir / "manifest.json"
+    if (
+        artifact_dir.is_symlink()
+        or manifest_path.is_symlink()
+        or not manifest_path.is_file()
+    ):
+        raise ScoreError("toolchain preflight requires a regular sealed manifest")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ScoreError(f"cannot load toolchain preflight manifest: {exc}") from exc
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("schema") != SCHEMA
+        or manifest.get("gate_design_fixed") is not True
+    ):
+        raise ScoreError("toolchain preflight requires a sealed Gate-2 v3 manifest")
+    provenance = manifest.get("provenance")
+    if not isinstance(provenance, dict):
+        raise ScoreError("artifact manifest has no provenance")
+    return attest_pre_key_toolchain(provenance)
+
+
+def load_hidden_key_after_toolchain_attestation(
+    paths: dict[str, Path], provenance: dict[str, Any]
+) -> dict[str, dict[str, Any]]:
+    """Make the toolchain-before-key ordering explicit and unit-testable."""
+
+    attest_pre_key_toolchain(provenance)
+    return unique_by_id(load_jsonl(paths["key.jsonl"]), "key")
+
+
+def validate_payloads_after_toolchain_attestation(
+    paths: dict[str, Path],
+    expected_hashes: dict[str, Any],
+    provenance: dict[str, Any],
+) -> None:
+    """Reject environment drift before opening any sealed payload, including key."""
+
+    attest_pre_key_toolchain(provenance)
+    for name, path in paths.items():
+        if path.is_symlink() or not path.is_file():
+            raise ScoreError(f"artifact must be a regular non-symlink file: {path}")
+        if expected_hashes.get(name) != sha256_file(path):
+            raise ScoreError(f"artifact digest mismatch: {path}")
+
+
 def load_bundle(
     artifact_dir: Path, corpus_dir: Path, corpus_lock: Path, facts_dir: Path
 ) -> dict[str, Any]:
@@ -299,11 +362,7 @@ def load_bundle(
         raise ScoreError("manifest is missing artifact digests")
     if sealed and set(expected_hashes) != set(paths):
         raise ScoreError("sealed artifact digest set is incomplete or contains extras")
-    for name, path in paths.items():
-        if path.is_symlink() or not path.is_file():
-            raise ScoreError(f"artifact must be a regular non-symlink file: {path}")
-        if expected_hashes.get(name) != sha256_file(path):
-            raise ScoreError(f"artifact digest mismatch: {path}")
+    validate_payloads_after_toolchain_attestation(paths, expected_hashes, provenance)
     if sealed and manifest.get("artifact_set") != sorted(paths):
         raise ScoreError("sealed artifact set is incomplete or contains extras")
     if sealed:
@@ -343,7 +402,7 @@ def load_bundle(
     census = unique_by_id(load_jsonl(paths["sites.census.jsonl"]), "sites.census")
     dev = unique_by_id(load_jsonl(paths["sites.dev.jsonl"]), "sites.dev")
     holdout = unique_by_id(load_jsonl(paths["sites.holdout.jsonl"]), "sites.holdout")
-    key = unique_by_id(load_jsonl(paths["key.jsonl"]), "key")
+    key = load_hidden_key_after_toolchain_attestation(paths, provenance)
     overlap = (set(dev) & set(holdout)) | (set(dev) & set(census)) | (set(holdout) & set(census))
     if overlap:
         raise ScoreError(f"census/dev/holdout ID leakage: {sorted(overlap)[:3]}")
@@ -1270,14 +1329,34 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--precision-threshold", type=float, default=0.98)
     result.add_argument("--recall-threshold", type=float, default=0.90)
     result.add_argument("--fixture-precision-threshold", type=float, default=0.90)
+    result.add_argument(
+        "--preflight-toolchain",
+        action="store_true",
+        help="verify the exact fact-producer Go/Git binaries without opening hidden data",
+    )
     result.add_argument("--self-test", action="store_true")
     return result
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
+    if args.self_test and args.preflight_toolchain:
+        parser().error("--self-test and --preflight-toolchain are mutually exclusive")
     if args.self_test:
         run_self_test()
+        return 0
+    if args.preflight_toolchain:
+        if args.labels is not None:
+            parser().error("labels are forbidden with --preflight-toolchain")
+        try:
+            toolchain = preflight_toolchain(args.artifact_dir)
+        except ScoreError as exc:
+            print(f"score pre-key toolchain: FAIL: {exc}", file=sys.stderr)
+            return 2
+        print(
+            "score pre-key toolchain: PASS: "
+            f"{toolchain['go_version']}; {toolchain['git_version']}"
+        )
         return 0
     if args.labels is None:
         parser().error("labels is required unless --self-test is used")
