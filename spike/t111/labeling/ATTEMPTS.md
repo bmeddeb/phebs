@@ -402,3 +402,10 @@ lock is recovered from its bound Git commit and differs from the current lock
 solely in `goos`, `goarch`, and `go_tests`; commits, all other lock fields, the
 burn ledger, current tree verification, and recomputed burn projection remain
 fixed. No receipt or downstream state was created by the rejected command.
+
+Commit `7edd139` repaired that transition. Its exact-toolchain rebind retained
+producer `dbd779…` and oracle `43f4a0…`, resealed the cache, and produced
+idempotent lineage `86d0a76…` only after recovering the old lock from Git,
+checking the policy-only delta, reverifying every pin, and reproducing all
+6,120 active burns and 9,834 resolutions. No Istio fact, oracle census, or
+Attempt 5 state existed when the receipt was fixed.

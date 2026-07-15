@@ -501,6 +501,21 @@ This transition repair must itself be committed and rebound before lineage
 regeneration; the rejected invocation produced no receipt, fact, coordinate,
 or ceremony state.
 
+After transition commit `7edd139`, exact Go 1.26.5 rechecked the Istio closure,
+rebuilt both bound artifacts, and resealed the 8.1 GiB cache with no writable
+entry or symlink. Manifest
+`sha256:2c6c841c8b3ce7a9613f1fdff14a50b60430f58317fb108f21ea9d1a9e454812`
+binds producer
+`sha256:dbd7792472b69599481c9fa30c0eea7c8c7171cee0ae675acb6f94dba12f8f74`
+and oracle
+`sha256:43f4a0328ac5f5cd8e62236163552871c514d7a60eb1f161db9016575b46c9cc`.
+The hardened builder then accepted the policy-only transition, reverified all
+pins, reproduced 6,120 active coordinates and 9,834 resolutions, and emitted
+byte-idempotent lineage
+`sha256:86d0a76a510ecd99e6be939132bf9efc46c96e0c314583fde2f9e6d72d865e16`.
+No candidate-4 fact or oracle census existed at this boundary. The receipt must
+be committed before the repaired Istio fact run; candidate 5 remains untouched.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required
