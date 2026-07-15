@@ -489,6 +489,18 @@ regressions must be committed, the bound artifacts rehydrated, and the
 eight-system lineage regenerated before candidate 4 is retried. No typed
 oracle census or ceremony state exists, and candidate 5 remains untouched.
 
+The first lineage-builder invocation after the repaired hydration wrote no
+output because v2 required the predecessor and successor corpus-lock digests
+to match. That guard is now narrowed without making the transition
+discretionary: Git bytes at the predecessor's bound harness commit must match
+its recorded lock digest, and old/current canonical locks must be identical
+after removing exactly `goos`, `goarch`, and `go_tests`. The fixed commits,
+unchanged burn-ledger digest, current pin/exclusion verification, and complete
+independent burn recomputation remain mandatory. Any other lock change fails.
+This transition repair must itself be committed and rebound before lineage
+regeneration; the rejected invocation produced no receipt, fact, coordinate,
+or ceremony state.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

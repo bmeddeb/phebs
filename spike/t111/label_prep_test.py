@@ -183,6 +183,123 @@ class Gate2PreparationTests(unittest.TestCase):
                 "sha256:" + prep.sha256_file(Path(prep.__file__)),
             )
 
+            records = json.loads(lock.read_text(encoding="utf-8"))
+            records[-1]["go_tests"] = "exclude"
+            lock.write_text(json.dumps(records), encoding="utf-8")
+            predecessor.write_text(json.dumps(second), encoding="utf-8")
+            with (
+                patch.object(prep, "DEFAULT_LOCK", lock),
+                patch.object(prep, "DEFAULT_BURN_LEDGER", ledger),
+                patch.object(
+                    prep,
+                    "_bound_harness_lineage_inputs",
+                    return_value=harness_inputs,
+                ),
+                patch.object(prep, "pinned_tracked_files", return_value=([], [])),
+                patch.object(
+                    prep,
+                    "scoped_burn_binding",
+                    return_value=(
+                        [],
+                        fixture["burn"],
+                        {
+                            system: [None] * fixture["active_counts"][system]
+                            for system in prep.SYSTEMS
+                        },
+                    ),
+                ),
+                patch.object(
+                    prep,
+                    "_validate_expansion_corpus_policy_transition",
+                ) as policy_transition,
+            ):
+                policy_advanced = prep.build_expansion_lineage_receipt(
+                    predecessor, harness_inputs["harness_source_commit"]
+                )
+            policy_transition.assert_called_once()
+            self.assertNotEqual(
+                policy_advanced["inputs"]["corpus_lock_sha256"],  # type: ignore[index]
+                second["inputs"]["corpus_lock_sha256"],  # type: ignore[index]
+            )
+            self.assertEqual(
+                policy_advanced["burn"], second["burn"]
+            )
+
+            wrong_ledger = deepcopy(second)
+            wrong_ledger["inputs"]["burn_ledger_sha256"] = "sha256:" + "1" * 64  # type: ignore[index]
+            wrong_ledger["source_lineage_binding"] = prep.expansion_lineage_binding(wrong_ledger)
+            with self.assertRaisesRegex(prep.PrepError, "different burn ledger"):
+                prep._validate_expansion_projection(
+                    wrong_ledger,
+                    expected_commits=commits,
+                    corpus_lock_sha256="sha256:" + prep.sha256_file(lock),
+                    burn_ledger_sha256=ledger_digest,
+                )
+
+    def test_expansion_lineage_lock_transition_allows_only_analysis_policy(self) -> None:
+        old = [
+            {
+                "name": "fixture",
+                "commit": "1" * 40,
+                "go_build_tags": ["unit"],
+                "note": "fixed source",
+            }
+        ]
+        new = [
+            {
+                **old[0],
+                "goos": "linux",
+                "goarch": "arm64",
+                "go_tests": "exclude",
+            }
+        ]
+        old_projection = prep._corpus_lock_without_analysis_policy(
+            json.dumps(old).encode(), "old"
+        )
+        new_projection = prep._corpus_lock_without_analysis_policy(
+            json.dumps(new).encode(), "new"
+        )
+        self.assertEqual(old_projection, new_projection)
+        changed = deepcopy(new)
+        changed[0]["go_build_tags"] = []
+        self.assertNotEqual(
+            old_projection,
+            prep._corpus_lock_without_analysis_policy(
+                json.dumps(changed).encode(), "changed"
+            ),
+        )
+
+        old_bytes = (json.dumps(old, sort_keys=True) + "\n").encode()
+        new_bytes = (json.dumps(new, sort_keys=True) + "\n").encode()
+        predecessor = {
+            "inputs": {
+                "corpus_lock_sha256": "sha256:"
+                + prep.hashlib.sha256(old_bytes).hexdigest(),
+                "harness_source_commit": "2" * 40,
+            }
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            lock = root / "corpus.lock.json"
+            lock.write_bytes(new_bytes)
+            current_digest = "sha256:" + prep.sha256_file(lock)
+            with (
+                patch.object(prep, "REPO_ROOT", root),
+                patch.object(prep, "DEFAULT_LOCK", lock),
+                patch.object(prep, "git", return_value=old_bytes),
+            ):
+                prep._validate_expansion_corpus_policy_transition(
+                    predecessor, current_digest
+                )
+                changed[0]["note"] = "different source policy"
+                lock.write_text(json.dumps(changed, sort_keys=True) + "\n")
+                with self.assertRaisesRegex(
+                    prep.PrepError, "outside the Go analysis policy"
+                ):
+                    prep._validate_expansion_corpus_policy_transition(
+                        predecessor, "sha256:" + prep.sha256_file(lock)
+                    )
+
     def test_typed_oracle_environment_ignores_ambient_module_caches(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

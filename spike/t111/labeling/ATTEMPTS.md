@@ -394,3 +394,11 @@ recorded as a coverage boundary rather than inferred from errors. The repair,
 new bound binaries, and replacement pre-fact lineage must be committed before
 Istio is retried. Attempt 5, candidate 5, coordinates, commitments, entropy,
 reviewer artifacts, and labels remain untouched.
+
+The first lineage regeneration after that hydration stopped before writing:
+the v2 upgrader rejected the intentional corpus-policy digest change. Its
+prospective repair admits only a byte-proved transition where the predecessor
+lock is recovered from its bound Git commit and differs from the current lock
+solely in `goos`, `goarch`, and `go_tests`; commits, all other lock fields, the
+burn ledger, current tree verification, and recomputed burn projection remain
+fixed. No receipt or downstream state was created by the rejected command.

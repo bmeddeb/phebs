@@ -2342,11 +2342,12 @@ def _validate_expansion_projection(
         raise PrepError("expansion lineage predecessor must be an object")
     if value.get("schema") == EXPANSION_LINEAGE_SCHEMA:
         value = validate_expansion_lineage_receipt(value)
-        if (
-            value["inputs"]["corpus_lock_sha256"] != corpus_lock_sha256
-            or value["inputs"]["burn_ledger_sha256"] != burn_ledger_sha256
-        ):
-            raise PrepError("v2 expansion predecessor uses different source inputs")
+        if value["inputs"]["burn_ledger_sha256"] != burn_ledger_sha256:
+            raise PrepError("v2 expansion predecessor uses a different burn ledger")
+        # A prospective harness repair may change non-source corpus policy.
+        # The caller separately proves that ONLY the allowed analysis-policy
+        # fields changed, then independently reverifies the current pinned
+        # trees and recomputes the complete burn projection.
     elif value.get("schema") == "t111-gate2-expansion-lineage-v1":
         # V1 is preserved as immutable history. Its hand-authored binding
         # algorithm was never tracked, so only its exact committed structure
@@ -2403,6 +2404,56 @@ def _validate_expansion_projection(
     probe["source_lineage_binding"] = expansion_lineage_binding(probe)
     validate_expansion_lineage_receipt(probe)
     return json.loads(canonical_json(projection))
+
+
+EXPANSION_ANALYSIS_POLICY_FIELDS = frozenset({"goos", "goarch", "go_tests"})
+
+
+def _corpus_lock_without_analysis_policy(content: bytes, source: str) -> Any:
+    try:
+        rows = json.loads(content.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot parse corpus lock from {source}: {exc}") from exc
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise PrepError(f"corpus lock from {source} is not a list of objects")
+    return [
+        {
+            key: value
+            for key, value in row.items()
+            if key not in EXPANSION_ANALYSIS_POLICY_FIELDS
+        }
+        for row in rows
+    ]
+
+
+def _validate_expansion_corpus_policy_transition(
+    predecessor: dict[str, Any], current_lock_sha256: str
+) -> None:
+    previous_lock_sha256 = str(predecessor["inputs"]["corpus_lock_sha256"])
+    if previous_lock_sha256 == current_lock_sha256:
+        return
+    source_commit = str(predecessor["inputs"]["harness_source_commit"])
+    try:
+        lock_rel = DEFAULT_LOCK.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except (OSError, ValueError) as exc:
+        raise PrepError("corpus lock is outside the repository") from exc
+    previous_bytes = git(REPO_ROOT, "show", f"{source_commit}:{lock_rel}")
+    if "sha256:" + hashlib.sha256(previous_bytes).hexdigest() != previous_lock_sha256:
+        raise PrepError("predecessor corpus lock bytes do not match its receipt")
+    try:
+        current_bytes = DEFAULT_LOCK.read_bytes()
+    except OSError as exc:
+        raise PrepError(f"cannot read current corpus lock: {exc}") from exc
+    if "sha256:" + hashlib.sha256(current_bytes).hexdigest() != current_lock_sha256:
+        raise PrepError("current corpus lock changed during lineage validation")
+    if canonical_json(
+        _corpus_lock_without_analysis_policy(previous_bytes, "predecessor commit")
+    ) != canonical_json(
+        _corpus_lock_without_analysis_policy(current_bytes, str(DEFAULT_LOCK))
+    ):
+        raise PrepError(
+            "corpus lock transition changes fields outside the Go analysis policy"
+        )
 
 
 def _bound_harness_lineage_inputs(harness_source_commit: str) -> dict[str, str]:
@@ -2501,6 +2552,8 @@ def build_expansion_lineage_receipt(
         corpus_lock_sha256=corpus_lock_sha256,
         burn_ledger_sha256=burn_ledger_sha256,
     )
+    if prior.get("schema") == EXPANSION_LINEAGE_SCHEMA:
+        _validate_expansion_corpus_policy_transition(prior, corpus_lock_sha256)
     for system in SYSTEMS:
         pinned_tracked_files(
             DEFAULT_CORPUS / system,
