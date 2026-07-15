@@ -1,5 +1,15 @@
 {
   "facts": {
+    "containerd": {
+      "count": 4345,
+      "deterministic_runs_this_expansion": 2,
+      "pinned_git_verification": true,
+      "run_sha256": [
+        "sha256:d8034932e23ab36caa005ee5e773d1df4b4c0d2552295ea534911e9d540a954e",
+        "sha256:d8034932e23ab36caa005ee5e773d1df4b4c0d2552295ea534911e9d540a954e"
+      ],
+      "sha256": "sha256:d8034932e23ab36caa005ee5e773d1df4b4c0d2552295ea534911e9d540a954e"
+    },
     "dapr": {
       "count": 2512,
       "deterministic_runs_this_expansion": 0,
@@ -49,8 +59,8 @@
       "sha256": "sha256:73419de71dd553a9a1cfdb66c596826fba394d1b122fc0664d2e52124e62cff0"
     }
   },
-  "lineage": "sha256:052ab651cf1346d97cf619387a39299e342bef08a2b827923408612b71c0f280",
+  "lineage": "sha256:60845d1e93de8583e146520abd256f8e23940c805d232c47ee0bdeb5d75cdfea",
   "schema": "t111-gate2-expansion-facts-v1",
   "toolchain_identity": "go_version=\"go version go1.26.5 darwin/arm64\";go_digest=sha256:3f947495f00cb7f8088a5cfd694da8dc43869b33f5e7377b048fb18922ffb7e0;git_version=\"git version 2.50.1 (Apple Git-155)\";git_digest=sha256:179301dcb41ea78accc3fa0048a7e6f6710d891945a751a34addd622020c1818",
-  "total_count": 14596
+  "total_count": 18941
 }

@@ -291,6 +291,23 @@ extractor outcome, fact count, typed-oracle result, attempt claim, commitment,
 randomness, sample, coordinate, reviewer artifact, or label existed when this
 lineage was fixed.
 
+### Candidate 3 deterministic facts
+
+Only after the seven-system lineage receipt was committed, containerd fact
+production ran twice with network access disabled under the exact bound Go
+1.26.5/Git 2.50.1 producer identity. Both complete runs produced 4,345 facts
+and identical digest
+`sha256:d8034932e23ab36caa005ee5e773d1df4b4c0d2552295ea534911e9d540a954e`.
+The pinned tree remained clean after both runs.
+
+The shared verifier reconstructed every record and its evidence identity from
+the pinned Git objects for all seven fixtures. The prior six fact digests and
+counts are unchanged; the expanded total is 18,941 facts.
+`expansion-facts.json` binds the seven-system lineage, both containerd run
+digests, every fixture digest/count, and the single exact producer identity.
+No attempt claim, commitment, randomness, sample, coordinate, reviewer
+artifact, or label exists.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

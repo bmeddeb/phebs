@@ -277,3 +277,12 @@ The 9,834 resolution records are bound by
 `expansion-lineage.json` binds the committed harness, corpus lock, and
 append-only ledger. No containerd fact, claim, commitment, randomness, sample,
 coordinate, reviewer artifact, or label existed at this boundary.
+
+Containerd facts were then generated twice offline under the exact producer
+toolchain. Both complete runs produced 4,345 facts with byte-identical digest
+`sha256:d8034932e23ab36caa005ee5e773d1df4b4c0d2552295ea534911e9d540a954e`;
+the pinned tree remained clean. All seven fact files verify against their
+immutable Git objects and share one exact producer identity.
+`expansion-facts.json` now binds 18,941 facts to the seven-system lineage. No
+claim, commitment, randomness, sample, coordinate, reviewer artifact, or label
+exists.
