@@ -1,0 +1,81 @@
+{
+  "candidates": [
+    {
+      "commit": "f8a85fa4d1dec72ace513a97ff27c60252de7c4d",
+      "default_branch": "master",
+      "head_committed_at": "2026-07-14T20:53:22Z",
+      "license_spdx": "Apache-2.0",
+      "name": "grpc/grpc-go",
+      "order": 1,
+      "url": "https://github.com/grpc/grpc-go"
+    },
+    {
+      "commit": "6006f405800929b5e7e839e7a821d608a311579f",
+      "default_branch": "main",
+      "head_committed_at": "2026-07-14T18:13:52Z",
+      "license_spdx": "Apache-2.0",
+      "name": "etcd-io/etcd",
+      "order": 2,
+      "url": "https://github.com/etcd-io/etcd"
+    },
+    {
+      "commit": "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
+      "default_branch": "main",
+      "head_committed_at": "2026-07-14T19:19:18Z",
+      "license_spdx": "Apache-2.0",
+      "name": "containerd/containerd",
+      "order": 3,
+      "url": "https://github.com/containerd/containerd"
+    },
+    {
+      "commit": "25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9",
+      "default_branch": "master",
+      "head_committed_at": "2026-07-14T11:44:31Z",
+      "license_spdx": "Apache-2.0",
+      "name": "istio/istio",
+      "order": 4,
+      "url": "https://github.com/istio/istio"
+    },
+    {
+      "commit": "379c27ed8475d3b42419abc8f767338f64706db7",
+      "default_branch": "main",
+      "head_committed_at": "2026-07-15T03:07:15Z",
+      "license_spdx": "Apache-2.0",
+      "name": "vitessio/vitess",
+      "order": 5,
+      "url": "https://github.com/vitessio/vitess"
+    },
+    {
+      "commit": "596d354150b912a86fbe77e51ff78b6861609c21",
+      "default_branch": "main",
+      "head_committed_at": "2026-07-15T02:41:11Z",
+      "license_spdx": "AGPL-3.0",
+      "name": "grafana/mimir",
+      "order": 6,
+      "url": "https://github.com/grafana/mimir"
+    },
+    {
+      "commit": "462ccb10dcae3e4ccbe27e8362b19ca831f8a3a1",
+      "default_branch": "master",
+      "head_committed_at": "2026-07-14T20:02:22Z",
+      "license_spdx": "NOASSERTION",
+      "name": "cockroachdb/cockroach",
+      "order": 7,
+      "url": "https://github.com/cockroachdb/cockroach"
+    }
+  ],
+  "cutoff": "2026-07-15T04:40:00Z",
+  "exit_code": 0,
+  "query": {
+    "path": "spike/t111/labeling/expansion-source-snapshot.graphql",
+    "sha256": "sha256:02f9cb943615217bbcf3e4cdbfd8bb39d896e51d9af20c937e7ed40f935cb13f"
+  },
+  "request_started_at": "2026-07-15T04:40:00.099108000Z",
+  "response": {
+    "path": "spike/t111/labeling/expansion-source-snapshot.response.json",
+    "sha256": "sha256:d3ac1730d94917b03501792bbfef0c8b6699bc77c035f0f4552b14f883345d51"
+  },
+  "response_received_at": "2026-07-15T04:40:01.241757000Z",
+  "schema": "t111-gate2-expansion-source-snapshot-v1",
+  "source": "GitHub GraphQL API v4"
+}

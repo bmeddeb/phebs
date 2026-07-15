@@ -215,3 +215,9 @@ no data. The final cutoff is fixed at `2026-07-15T04:40:00Z`, with the fixed
 tracked `expansion-source-snapshot.graphql` query launched by an automatic
 timer. A failure there stops expansion; there is no further discretionary
 retry.
+
+The final timed request succeeded once, beginning at
+`2026-07-15T04:40:00.099108000Z`. Its raw response and digest-bound receipt fix
+all seven candidate commits; evaluation now starts with the mandatory
+`grpc/grpc-go`, `etcd-io/etcd` prefix. No candidate has yet been checked out or
+measured, and no attempt claim or sampling state exists.

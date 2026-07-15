@@ -100,6 +100,26 @@ was received for that cutoff. The final cutoff above and its exact tracked query
 are committed in advance and launched by a timer. If that single request fails,
 expansion stops rather than selecting another time.
 
+### Final source snapshot
+
+The timer launched the tracked query once at
+`2026-07-15T04:40:00.099108000Z`; GitHub returned success at
+`2026-07-15T04:40:01.241757000Z`. The raw response and derived receipt are
+committed beside this protocol. In fixed order, the pins are:
+
+1. `grpc/grpc-go` — `f8a85fa4d1dec72ace513a97ff27c60252de7c4d`
+2. `etcd-io/etcd` — `6006f405800929b5e7e839e7a821d608a311579f`
+3. `containerd/containerd` — `9e70782d9a0e92900f402b2c7a4e2aa30754503c`
+4. `istio/istio` — `25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9`
+5. `vitessio/vitess` — `379c27ed8475d3b42419abc8f767338f64706db7`
+6. `grafana/mimir` — `596d354150b912a86fbe77e51ff78b6861609c21`
+7. `cockroachdb/cockroach` — `462ccb10dcae3e4ccbe27e8362b19ca831f8a3a1`
+
+The response digest is
+`sha256:d3ac1730d94917b03501792bbfef0c8b6699bc77c035f0f4552b14f883345d51`.
+Only these commits may be evaluated, and only the mandatory ordered prefix may
+enter the Gate 2 corpus.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required
