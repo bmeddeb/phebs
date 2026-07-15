@@ -183,3 +183,22 @@ coordinate, reviewer kit, or label exists for Attempt 4. Proceeding requires a
 prospective benchmark expansion with enough genuinely new fixture population,
 or a separately reviewed estimator that incorporates the already frozen prior
 labels. Dropping carried census sites or lowering the fixed floor is forbidden.
+
+## Attempt 5 — strict expansion protocol
+
+The selected recovery path is a prospective Gate 2 benchmark expansion, not a
+new estimator over prior labels. Before any candidate checkout, extractor run,
+fact count, or coordinate enumeration, `EXPANSION.md` fixes an ordered public
+repository list, objective eligibility rules, a minimum two-repository prefix,
+and a 35% conservative blind-capacity target while preserving the existing 30%
+floor and every accuracy/confidence requirement.
+
+Historical exposure will carry across fixture names by identical Git blob ID,
+so copied or vendored source cannot manufacture freshness. Eligible candidates
+must be accumulated in the fixed order and cannot be skipped for low capacity
+or unfavorable output. Only a committed immutable-source eligibility failure
+may advance to the next candidate; a fact-production or oracle-coverage failure
+blocks for a prospective harness fix on that same candidate. The first prefix
+that passes complete burn projection and write-suppressed power analysis is the
+only permissible Attempt 5 corpus. No attempt claim, commitment, entropy,
+sample, reviewer kit, or label exists at this stage.
