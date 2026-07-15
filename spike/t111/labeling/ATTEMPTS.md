@@ -326,3 +326,12 @@ repair must first commit explicit sum-checked dependency hydration, sealed
 path-validated module-cache reads, isolated per-run Go state, and content-bound
 producer/oracle binaries; the eight-system lineage must then be regenerated
 before the same candidate is retried. Candidate 5 has not been inspected.
+
+The first committed-repair hydration also stopped before corpus work when
+cmd/go added 492 previously absent checksum lines to the root `go.sum` while
+closing the harness's full resolved module graph. The source-state guard
+rejected that mutation and the failure path resealed the 1.4 GiB cache with no
+writable entry or symlink. Review found an additive checksum-only diff: no
+`go.mod`, selected version, source, corpus, fact, oracle, or ceremony state
+changed. The exact checksum closure is committed prospectively before another
+hydration or candidate-4 run.

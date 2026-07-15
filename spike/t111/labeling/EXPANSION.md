@@ -390,6 +390,16 @@ adversarial tests, and a regenerated eight-system lineage must be committed
 before another Istio extractor or typed-oracle run. Candidate 5 remains
 untouched.
 
+The first real hydration under committed repair `f52a082` then exercised the
+source-state guard. `go mod download all` discovered that the root harness's
+committed `go.sum` did not yet contain the complete checksum closure needed to
+bind every module in its resolved graph and added 492 checksum lines. The guard
+rejected the run instead of accepting mutated harness inputs, and the deferred
+cleanup resealed the 1.4 GiB cache with no writable entry or symlink. The diff
+contains additions to `go.sum` only—no module requirement, version, source,
+corpus, fact, oracle, or ceremony state changed. Those exact sums must be
+reviewed and committed as prospective harness inputs before hydration retries.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required
