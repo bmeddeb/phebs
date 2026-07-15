@@ -226,3 +226,9 @@ The mandatory `grpc-go` and `etcd` pins then synchronized cleanly at exact
 `HEAD`. Each contains Go and RPC-bearing proto source, and neither contains a
 gitlink, so both are intrinsically eligible with no declared exclusion. No
 extractor fact or coordinate had been enumerated at that decision point.
+
+The prospective six-commit lineage and v3 cross-fixture burn projection are
+now frozen in `expansion-lineage.json` before fact production. The projection
+contains 6,109 active intervals; nine `grpc-go` and five `etcd` intervals are
+carried census rather than fresh capacity. No claim, randomness, sample, or
+label exists.

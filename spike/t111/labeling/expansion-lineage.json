@@ -1,0 +1,47 @@
+{
+  "active_counts": {
+    "dapr": 1677,
+    "etcd": 5,
+    "grpc-go": 9,
+    "loki": 398,
+    "online-boutique": 223,
+    "temporal": 3797
+  },
+  "burn": {
+    "active_coordinate_count": 6109,
+    "active_coordinates_sha256": "sha256:1c3bfd7931e729a447aa0cc05eab059812fbb96696457513d51fca491f082d8b",
+    "carry_forward_schema": "t111-burn-carry-forward-census-v3",
+    "resolution_count": 9819,
+    "resolution_dispositions": {
+      "changed_path_census": 70,
+      "identical_blob_relocated": 349,
+      "identical_path": 9073,
+      "unique_line_span_translation": 327
+    },
+    "resolution_sha256": "sha256:55f78eb2f4269d459f71cfbd165f61821dd955fcdfed3d09d0abff4a88de17b9"
+  },
+  "commits": {
+    "dapr": "08aebd8b2effa2ed939ad5531e25ff8b21a36ef1",
+    "etcd": "6006f405800929b5e7e839e7a821d608a311579f",
+    "grpc-go": "f8a85fa4d1dec72ace513a97ff27c60252de7c4d",
+    "loki": "1362d2770ee2abba5e130d67cf30bcc4eefa0da0",
+    "online-boutique": "9a4616e77f0f9cbcbecaf27d711c38890dda1404",
+    "temporal": "8224a5375112079ad905c4ea829420306431462c"
+  },
+  "inputs": {
+    "burn_ledger_sha256": "sha256:4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a",
+    "corpus_lock_sha256": "sha256:bf6a9d32e5bcc0be155ac6735c85678ca680204c9c77df8ea8669e4e4e5d9041",
+    "harness_commit": "ed17dd349c09866bde1b65526aa1418a4fd29eb3",
+    "label_prep_sha256": "sha256:ab1642b83cd4714b0dec1fd6b2d714f0439f01eb286290f4171d182fa2805f63"
+  },
+  "schema": "t111-gate2-expansion-lineage-v1",
+  "source_lineage_binding": "sha256:052ab651cf1346d97cf619387a39299e342bef08a2b827923408612b71c0f280",
+  "systems": [
+    "online-boutique",
+    "dapr",
+    "temporal",
+    "loki",
+    "grpc-go",
+    "etcd"
+  ]
+}

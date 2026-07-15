@@ -137,6 +137,18 @@ needed, and the mandatory two-repository prefix cannot be skipped. These counts
 describe tracked source shape only; no fact population, coordinate, or outcome
 has been enumerated.
 
+### Expanded lineage and burn projection
+
+Before fact production, `expansion-lineage.json` fixes the six-system ordered
+lineage as
+`sha256:052ab651cf1346d97cf619387a39299e342bef08a2b827923408612b71c0f280`
+and binds the committed harness, corpus lock, and append-only burn ledger.
+Cross-fixture carry-forward produces 6,109 active intervals with digest
+`sha256:1c3bfd7931e729a447aa0cc05eab059812fbb96696457513d51fca491f082d8b`.
+Of those, nine occur in `grpc-go` and five in `etcd`; they are census, not
+fresh capacity. The 9,819 deterministic resolution records are bound by
+`sha256:55f78eb2f4269d459f71cfbd165f61821dd955fcdfed3d09d0abff4a88de17b9`.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required
