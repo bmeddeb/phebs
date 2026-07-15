@@ -267,3 +267,13 @@ source at their canonical targets. Strict object verification found no missing
 required object. Containerd is therefore intrinsically eligible with no
 exclusion. This source-only decision precedes all containerd fact generation,
 typed-oracle execution, coordinate enumeration, and labeling.
+
+The seven-system harness was then committed and the complete cross-fixture burn
+projection regenerated before containerd fact production. Lineage
+`sha256:60845d1e93de8583e146520abd256f8e23940c805d232c47ee0bdeb5d75cdfea`
+has 6,120 active intervals; 11 land in containerd and are permanent census.
+The 9,834 resolution records are bound by
+`sha256:55929907e9ee024ae469936ee867c5c9c2c68fc9d9d5032d0d4dc1b76ccac545`.
+`expansion-lineage.json` binds the committed harness, corpus lock, and
+append-only ledger. No containerd fact, claim, commitment, randomness, sample,
+coordinate, reviewer artifact, or label existed at this boundary.

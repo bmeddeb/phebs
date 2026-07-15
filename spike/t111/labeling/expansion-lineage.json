@@ -1,5 +1,6 @@
 {
   "active_counts": {
+    "containerd": 11,
     "dapr": 1677,
     "etcd": 5,
     "grpc-go": 9,
@@ -8,19 +9,20 @@
     "temporal": 3797
   },
   "burn": {
-    "active_coordinate_count": 6109,
-    "active_coordinates_sha256": "sha256:1c3bfd7931e729a447aa0cc05eab059812fbb96696457513d51fca491f082d8b",
+    "active_coordinate_count": 6120,
+    "active_coordinates_sha256": "sha256:12b741a3182db966c260556c8c0fa668c5ca28369f294e2de7735a766b5ee344",
     "carry_forward_schema": "t111-burn-carry-forward-census-v3",
-    "resolution_count": 9819,
+    "resolution_count": 9834,
     "resolution_dispositions": {
       "changed_path_census": 70,
-      "identical_blob_relocated": 349,
+      "identical_blob_relocated": 364,
       "identical_path": 9073,
       "unique_line_span_translation": 327
     },
-    "resolution_sha256": "sha256:55f78eb2f4269d459f71cfbd165f61821dd955fcdfed3d09d0abff4a88de17b9"
+    "resolution_sha256": "sha256:55929907e9ee024ae469936ee867c5c9c2c68fc9d9d5032d0d4dc1b76ccac545"
   },
   "commits": {
+    "containerd": "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
     "dapr": "08aebd8b2effa2ed939ad5531e25ff8b21a36ef1",
     "etcd": "6006f405800929b5e7e839e7a821d608a311579f",
     "grpc-go": "f8a85fa4d1dec72ace513a97ff27c60252de7c4d",
@@ -30,18 +32,19 @@
   },
   "inputs": {
     "burn_ledger_sha256": "sha256:4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a",
-    "corpus_lock_sha256": "sha256:bf6a9d32e5bcc0be155ac6735c85678ca680204c9c77df8ea8669e4e4e5d9041",
-    "harness_commit": "ed17dd349c09866bde1b65526aa1418a4fd29eb3",
-    "label_prep_sha256": "sha256:ab1642b83cd4714b0dec1fd6b2d714f0439f01eb286290f4171d182fa2805f63"
+    "corpus_lock_sha256": "sha256:e393abf1bc3c437094ecd30dd1f929f956fd54e672d40baf63fcad5d835fb3b4",
+    "harness_commit": "ba2c1f40272e63d94eed609981c51ee70fe92845",
+    "label_prep_sha256": "sha256:1c4df1178933eb943605a7b41a6b8ccb7eebcf5acb0cba1e4bd75da9d9d1a388"
   },
   "schema": "t111-gate2-expansion-lineage-v1",
-  "source_lineage_binding": "sha256:052ab651cf1346d97cf619387a39299e342bef08a2b827923408612b71c0f280",
+  "source_lineage_binding": "sha256:60845d1e93de8583e146520abd256f8e23940c805d232c47ee0bdeb5d75cdfea",
   "systems": [
     "online-boutique",
     "dapr",
     "temporal",
     "loki",
     "grpc-go",
-    "etcd"
+    "etcd",
+    "containerd"
   ]
 }

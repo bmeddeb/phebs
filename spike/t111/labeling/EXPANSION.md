@@ -167,7 +167,7 @@ generators, or build scripts. This decision precedes every containerd extractor
 run, fact count, typed-oracle run, coordinate enumeration, or label outcome; no
 attempt or ceremony state exists.
 
-### Expanded lineage and burn projection
+### Mandatory-prefix lineage and burn projection
 
 Before fact production, `expansion-lineage.json` fixes the six-system ordered
 lineage as
@@ -270,6 +270,26 @@ only candidate now permitted for eligibility review is
 `containerd/containerd` at
 `9e70782d9a0e92900f402b2c7a4e2aa30754503c`. No later candidate has been
 inspected.
+
+### Candidate 3 lineage and burn projection
+
+After containerd eligibility and the seven-system harness were separately
+committed, `expansion-lineage.json` was regenerated before any containerd fact
+production. The exact ordered lineage is
+`sha256:60845d1e93de8583e146520abd256f8e23940c805d232c47ee0bdeb5d75cdfea`.
+The v3 source-content carry-forward contains 6,120 active intervals with digest
+`sha256:12b741a3182db966c260556c8c0fa668c5ca28369f294e2de7735a766b5ee344`
+and 9,834 deterministic resolution records with digest
+`sha256:55929907e9ee024ae469936ee867c5c9c2c68fc9d9d5032d0d4dc1b76ccac545`.
+
+Eleven intervals land in containerd and are permanent census rather than fresh
+capacity. The prior six fixture counts are unchanged; the additional
+cross-fixture matches increase `identical_blob_relocated` resolutions from 349
+to 364. The receipt binds harness commit `ba2c1f4`, the exact preparation
+script, the new corpus lock, and the unchanged append-only ledger. No containerd
+extractor outcome, fact count, typed-oracle result, attempt claim, commitment,
+randomness, sample, coordinate, reviewer artifact, or label existed when this
+lineage was fixed.
 
 ## Prefix stop rule
 
