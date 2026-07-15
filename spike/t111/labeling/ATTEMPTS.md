@@ -305,3 +305,13 @@ symlinks. Strict verification found all required objects present. Istio is
 therefore intrinsically eligible with no exclusion. This source-only decision
 precedes all Istio fact generation, typed-oracle execution, coordinate
 enumeration, and labeling.
+
+The eight-system harness was then committed and the complete cross-fixture burn
+projection regenerated before Istio fact production. Lineage
+`sha256:51dbecc478d8a9728dae70739dce783238ce7b54cd2f3302d7469c6ea37970dd`
+still has 6,120 active intervals because none lands in Istio. The 9,834
+resolution records retain digest
+`sha256:55929907e9ee024ae469936ee867c5c9c2c68fc9d9d5032d0d4dc1b76ccac545`.
+`expansion-lineage.json` binds the committed harness, corpus lock, and
+append-only ledger. No Istio fact, claim, commitment, randomness, sample,
+coordinate, reviewer artifact, or label existed at this boundary.

@@ -4,6 +4,7 @@
     "dapr": 1677,
     "etcd": 5,
     "grpc-go": 9,
+    "istio": 0,
     "loki": 398,
     "online-boutique": 223,
     "temporal": 3797
@@ -26,18 +27,19 @@
     "dapr": "08aebd8b2effa2ed939ad5531e25ff8b21a36ef1",
     "etcd": "6006f405800929b5e7e839e7a821d608a311579f",
     "grpc-go": "f8a85fa4d1dec72ace513a97ff27c60252de7c4d",
+    "istio": "25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9",
     "loki": "1362d2770ee2abba5e130d67cf30bcc4eefa0da0",
     "online-boutique": "9a4616e77f0f9cbcbecaf27d711c38890dda1404",
     "temporal": "8224a5375112079ad905c4ea829420306431462c"
   },
   "inputs": {
     "burn_ledger_sha256": "sha256:4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a",
-    "corpus_lock_sha256": "sha256:e393abf1bc3c437094ecd30dd1f929f956fd54e672d40baf63fcad5d835fb3b4",
-    "harness_commit": "ba2c1f40272e63d94eed609981c51ee70fe92845",
-    "label_prep_sha256": "sha256:1c4df1178933eb943605a7b41a6b8ccb7eebcf5acb0cba1e4bd75da9d9d1a388"
+    "corpus_lock_sha256": "sha256:bcdceb35a7a7b47df1f4b88c306fd5d9529cea3a0c8246ed126e12348c5b7769",
+    "harness_commit": "211922a41d0dd2fbb9294e9824644909ab1bfe04",
+    "label_prep_sha256": "sha256:e2bd0685d336cd7a65ca02922ccdd49dda0a6ebd7632da174523c5a3b861b5e0"
   },
   "schema": "t111-gate2-expansion-lineage-v1",
-  "source_lineage_binding": "sha256:60845d1e93de8583e146520abd256f8e23940c805d232c47ee0bdeb5d75cdfea",
+  "source_lineage_binding": "sha256:51dbecc478d8a9728dae70739dce783238ce7b54cd2f3302d7469c6ea37970dd",
   "systems": [
     "online-boutique",
     "dapr",
@@ -45,6 +47,7 @@
     "loki",
     "grpc-go",
     "etcd",
-    "containerd"
+    "containerd",
+    "istio"
   ]
 }

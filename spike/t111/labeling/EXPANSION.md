@@ -350,6 +350,24 @@ objects without executing repository code, hooks, generators, or build scripts.
 This decision precedes every Istio extractor run, fact count, typed-oracle run,
 coordinate enumeration, or label outcome; no attempt or ceremony state exists.
 
+### Candidate 4 lineage and burn projection
+
+After Istio eligibility and the eight-system harness were separately committed,
+`expansion-lineage.json` was regenerated before any Istio fact production. The
+exact ordered lineage is
+`sha256:51dbecc478d8a9728dae70739dce783238ce7b54cd2f3302d7469c6ea37970dd`.
+No historical source interval lands in Istio, so the v3 carry-forward remains
+6,120 active intervals with digest
+`sha256:12b741a3182db966c260556c8c0fa668c5ca28369f294e2de7735a766b5ee344`
+and 9,834 resolution records with digest
+`sha256:55929907e9ee024ae469936ee867c5c9c2c68fc9d9d5032d0d4dc1b76ccac545`.
+
+The receipt binds harness commit `211922a`, the exact preparation script, the
+new corpus lock, and the unchanged append-only ledger. No Istio extractor
+outcome, fact count, typed-oracle result, attempt claim, commitment, randomness,
+sample, coordinate, reviewer artifact, or label existed when this lineage was
+fixed.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required
