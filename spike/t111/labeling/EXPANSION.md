@@ -308,6 +308,32 @@ digests, every fixture digest/count, and the single exact producer identity.
 No attempt claim, commitment, randomness, sample, coordinate, reviewer
 artifact, or label exists.
 
+### Candidate 3 capacity decision
+
+The 101-test Python protocol suite, `go vet ./...`, and the complete Go suite
+passed against the seven-system harness. A claim-disabled, write-suppressed
+preflight then reconstructed the full typed oracle and frames while snapshotting
+the labeling root before and after. It completed with the tree unchanged and
+created no claim, commitment, entropy, sample, artifact, coordinate, reviewer
+kit, or label. `expansion-capacity-prefix-3.json` binds the aggregate result and
+all producer inputs.
+
+The projected population contains 5,760 permanent-census sites. At the
+seed-independent conservative minimizer, at least 1,541 sites enter blind
+holdout and at most 299 development sites enter the denominator, for a
+blind-fraction lower bound of `1541/(5760+1541+299) = 20.2763%`. The suppressed
+realized selection would place 1,824 of 7,584 unique sites in holdout, or
+24.0506%; it is not an attempt and does not alter the conservative decision.
+
+Every call and registration accuracy/confidence requirement is attainable, all
+222 containerd call facts are covered by the independent typed population, and
+no containerd call fact is quarantined. The sole failure remains that the blind
+lower bound is below the unchanged 30% Gate 2 floor (and therefore the 35%
+expansion target). The fixed prefix cannot stop here. The next and only
+candidate permitted for eligibility review is `istio/istio` at
+`25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9`; no later candidate has been
+inspected.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

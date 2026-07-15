@@ -286,3 +286,14 @@ immutable Git objects and share one exact producer identity.
 `expansion-facts.json` now binds 18,941 facts to the seven-system lineage. No
 claim, commitment, randomness, sample, coordinate, reviewer artifact, or label
 exists.
+
+The complete reusable test/vet matrix then passed. The claim-disabled,
+write-suppressed seven-system preflight reconstructed every frame and the typed
+oracle with the labeling tree unchanged. Its conservative blind lower bound is
+`1541/7600 = 20.2763%`, below the unchanged 30% floor and 35% expansion target;
+blind fraction is the only failed rule. Containerd contributes 222 independent
+typed call sites with complete exact-fact coverage and no quarantine.
+`expansion-capacity-prefix-3.json` binds only aggregate data and current input
+digests. No claim or ceremony state exists. The frozen order therefore requires
+candidate 4, `istio/istio@25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9`;
+no later candidate has been inspected.
