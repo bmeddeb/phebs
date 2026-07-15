@@ -409,3 +409,33 @@ idempotent lineage `86d0a76…` only after recovering the old lock from Git,
 checking the policy-only delta, reverifying every pin, and reproducing all
 6,120 active burns and 9,834 resolutions. No Istio fact, oracle census, or
 Attempt 5 state existed when the receipt was fixed.
+
+### Attempt 5 expansion — candidate-4 operator interrupt
+
+**Date:** 2026-07-15 · **Disposition:** **STOP / NO ATTEMPT ISSUED**
+
+Commit `f6818b9` sealed repaired candidate-4 lineage
+`sha256:86d0a76a510ecd99e6be939132bf9efc46c96e0c314583fde2f9e6d72d865e16`.
+The first repaired Istio extraction then completed with 532 facts. The operator
+interrupted expansion before the required second extraction and before the
+prefix-4 typed-oracle/capacity preflight. The single run therefore establishes
+neither fact determinism nor a prefix-4 capacity-population result.
+
+No prefix-4 capacity census or blind-fraction bound was produced. The last
+completed capacity decision remains the unchanged prefix-3 census, with 5,760
+permanent-census sites and a conservative blind lower bound of
+`1541/7600 = 20.2763%`. The append-only burn projection remains unchanged at
+6,120 active intervals and 9,834 resolution records. No Attempt 5 claim,
+commitment, entropy, sample, coordinate, reviewer artifact, or label exists,
+and candidate 5 remains untouched.
+
+The unchanged burn-ledger file is
+`sha256:4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a`;
+its logical ledger digest remains
+`sha256:82076bd76092e03f9de16f9c3bf44e1d80e89e2c6ac5973abe13c9eeee1bac87`.
+
+The interrupt changes no rule: no census site or burn was removed; the 30%
+blind floor, 35% expansion target, fixed candidate order, accuracy thresholds,
+and confidence rules remain in force. A separately named frozen-label
+estimator is now documented prospectively in `ESTIMATOR.md` for human review.
+It does not reopen terminal Attempt 3, issue an attempt, or authorize scoring.

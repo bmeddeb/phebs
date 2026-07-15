@@ -1,3 +1,40 @@
+# T11.1 Gate 2 expansion — candidate-4 operator interrupt
+
+**Date:** 2026-07-15 · **Branch:** `t11.1-gate-revalidation` · **Status:**
+**STOP / NO ATTEMPT ISSUED**
+
+Candidate-4 lineage was sealed at commit `f6818b9`, binding eight-system
+lineage
+`sha256:86d0a76a510ecd99e6be939132bf9efc46c96e0c314583fde2f9e6d72d865e16`.
+One repaired Istio extraction completed with 532 facts. The operator then
+interrupted expansion before the required second extraction, so candidate-4
+fact determinism was not established and no candidate-4 facts receipt was
+sealed.
+
+The prefix-4 typed-oracle/capacity preflight was not run. No prefix-4 capacity
+census or blind-fraction bound exists and none may be inferred from the first
+fact run. The last completed capacity result remains the unchanged prefix-3
+census: 5,760 permanent-census sites and a conservative blind lower bound of
+`1541/7600 = 20.2763%`. The lineage still binds the unchanged append-only
+projection of 6,120 active burns and 9,834 resolution records.
+The underlying burn-ledger bytes remain
+`sha256:4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a`,
+with logical ledger digest
+`sha256:82076bd76092e03f9de16f9c3bf44e1d80e89e2c6ac5973abe13c9eeee1bac87`.
+
+No Attempt 5 claim, public commitment, entropy, sample, coordinate, reviewer
+artifact, or label was created. Candidate 5 remains untouched. No census site
+or burn was removed, and the 30% blind floor, 35% expansion target, candidate
+order, accuracy thresholds, and confidence rules are unchanged. Gate 2 remains
+**NOT ESTABLISHED** and T13.1/T13.3 remain blocked.
+
+The frozen-label estimator described in
+[`labeling/ESTIMATOR.md`](labeling/ESTIMATOR.md) is a prospective alternative
+for human review only. It does not revive Attempt 3, issue a new attempt, or
+authorize scoring.
+
+---
+
 # T11.1 validation rerun — Attempt 4 pre-claim capacity stop
 
 **Date:** 2026-07-14 · **Branch:** `t11.1-gate-revalidation` · **Status:**
