@@ -205,6 +205,42 @@ commit-backed content. Tests cover source-bearing aliases plus escape and cycle
 rejection; the exact pinned `etcd` aliases contain no typed-call,
 registration-call, or emitted-fact Gate 2 site.
 
+### Mandatory-prefix capacity decision
+
+After both harness blockers were corrected and the full reusable verification
+suite passed, a third write-suppressed, coordinate-free preflight completed for
+the mandatory `grpc-go` plus `etcd` prefix. It created no attempt claim,
+commitment, entropy, sample, artifact, coordinate, reviewer kit, or label, and
+the labeling tree was byte-for-byte and mode-for-mode unchanged by the run.
+`expansion-capacity-prefix-2.json` binds the aggregate result and all producer
+inputs.
+
+An independent pre-commit audit rejected the first aggregate serialization's
+name `selected_unique_ceiling`: the value is the denominator at the
+conservative fraction minimizer, not a universal ceiling on the realized
+selected union. The producer contract was renamed
+`blind_fraction_denominator_at_bound`, its power-report schema advanced to v2,
+and the complete write-suppressed preflight was rerun against that committed
+harness. Counts and the bound were unchanged; only the field semantics were
+corrected.
+
+The projected population contains 5,756 permanent-census sites. At the
+seed-independent conservative minimizer, at least 1,322 sites enter blind
+holdout and at most 270 development sites enter the denominator, for a
+blind-fraction lower bound of `1322/(5756+1322+270) = 17.9913%`. All call and
+registration accuracy and power requirements are attainable; the only failure
+is that this lower bound
+is below both the unchanged 30% Gate 2 floor and the prospective 35% expansion
+stop target. The realized suppressed selection (which is not an attempt) would
+have placed 1,495 of 7,251 unique sites in holdout, or 20.6178%, and therefore
+does not alter that conclusion.
+
+The fixed prefix cannot stop here. Under the committed ordering, the next and
+only candidate now permitted for eligibility review is
+`containerd/containerd` at
+`9e70782d9a0e92900f402b2c7a4e2aa30754503c`. No later candidate has been
+inspected.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

@@ -1,0 +1,151 @@
+{
+  "attainable_30_percent_floor": false,
+  "attainable_35_percent_target": false,
+  "decision": {
+    "action": "continue_to_next_fixed_candidate",
+    "next_candidate": "containerd/containerd",
+    "next_candidate_commit": "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
+    "reason": "seed-independent blind holdout lower bound is below the unchanged 30% floor"
+  },
+  "frames": {
+    "precision": {
+      "census_population_size": 5392,
+      "population_size": 6714,
+      "sample_population_size": 1322,
+      "stratum_count": 14
+    },
+    "recall": {
+      "census_population_size": 5472,
+      "population_size": 6798,
+      "sample_population_size": 1326,
+      "stratum_count": 16
+    },
+    "registration_precision": {
+      "census_population_size": 129,
+      "population_size": 259,
+      "sample_population_size": 130,
+      "stratum_count": 15
+    },
+    "registration_recall": {
+      "census_population_size": 284,
+      "population_size": 453,
+      "sample_population_size": 169,
+      "stratum_count": 27
+    },
+    "role": {
+      "census_population_size": 5521,
+      "population_size": 6973,
+      "sample_population_size": 1452,
+      "stratum_count": 5
+    }
+  },
+  "holdout": {
+    "blind": true,
+    "blind_fraction": 0.2061784581437043,
+    "inference": "exact disclosed-site census plus probability-sampled blind holdout; development rows are tuning diagnostics",
+    "minimum_blind_fraction": 0.3,
+    "selection": "audited domain-separated SHA-256 rank within declared strata",
+    "unique_census_sites": 5756,
+    "unique_dev_sites": 0,
+    "unique_holdout_sites": 1495
+  },
+  "independent_typed_call_counts": {
+    "dapr": 1447,
+    "etcd": 428,
+    "grpc-go": 902,
+    "loki": 177,
+    "online-boutique": 19,
+    "temporal": 3825
+  },
+  "power_analysis": {
+    "alpha_each": "1/80",
+    "attainable": false,
+    "best_case": {
+      "blind_fraction_lower_bound": 0.1799129014697877,
+      "census_unique_sites": 5756,
+      "client_call": {
+        "fixture_precision_lower": {
+          "dapr": "1/1",
+          "etcd": "1/1",
+          "grpc-go": "1/1",
+          "loki": "1/1",
+          "online-boutique": "1/1",
+          "temporal": "1/1"
+        },
+        "precision_lower": "1/1",
+        "recall_lower": "6775/6798"
+      },
+      "dev_unique_ceiling": 270,
+      "holdout_unique_floor": 1322,
+      "maximum_recall_label_units": 6329,
+      "registration": {
+        "fixture_precision_lower": {
+          "dapr": "1/1",
+          "etcd": "1/1",
+          "grpc-go": "1/1",
+          "loki": "1/1",
+          "online-boutique": "1/1",
+          "temporal": "1/1"
+        },
+        "precision_lower": "1/1",
+        "recall_lower": "1/1"
+      },
+      "blind_fraction_denominator_at_bound": 7348
+    },
+    "family_size": 4,
+    "reasons": [
+      "seed-independent blind holdout lower bound is below 30%"
+    ],
+    "schema": "t111-gate2-power-v2"
+  },
+  "provenance": {
+    "burn_ledger_sha256": "sha256:4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a",
+    "corpus_lock_sha256": "sha256:bf6a9d32e5bcc0be155ac6735c85678ca680204c9c77df8ea8669e4e4e5d9041",
+    "expansion_facts_sha256": "sha256:743788f328ed6d4b658e01a59c92f675bcd82f3e5c0fdfffed1be46271640b4f",
+    "fact_verifier_sha256": "sha256:8fd1866ec50bd199884025ffa871a723fb25e2db8ccaf2fa29a61fe7c06bed85",
+    "harness_commit": "c0689640e5f3e32a7897fe7ca2895da70c2ede7b",
+    "label_prep_sha256": "sha256:9bd6e9ace29eb7c21d426a49c32352f0afc2f69124a64ed5f180db5f4e1bfe15",
+    "preflight_mode": "write-suppressed commitment-only with attempt-claim creation disabled",
+    "recorded_at": "2026-07-15T15:31:20Z",
+    "typed_call_oracle_sha256": "sha256:216df160bb823e94c0b143e3e28084f67dff06b31a0738a4c49ec4b4bf3b95bb"
+  },
+  "quarantined_call_facts": {
+    "dapr": {
+      "by_tier": {},
+      "count": 0
+    },
+    "etcd": {
+      "by_tier": {},
+      "count": 0
+    },
+    "grpc-go": {
+      "by_tier": {},
+      "count": 0
+    },
+    "loki": {
+      "by_tier": {},
+      "count": 0
+    },
+    "online-boutique": {
+      "by_tier": {},
+      "count": 0
+    },
+    "temporal": {
+      "by_tier": {
+        "heuristic": 55
+      },
+      "count": 55
+    }
+  },
+  "schema": "t111-gate2-expansion-capacity-preflight-v1",
+  "source_lineage_binding": "sha256:052ab651cf1346d97cf619387a39299e342bef08a2b827923408612b71c0f280",
+  "state_unchanged": true,
+  "systems": [
+    "online-boutique",
+    "dapr",
+    "temporal",
+    "loki",
+    "grpc-go",
+    "etcd"
+  ]
+}

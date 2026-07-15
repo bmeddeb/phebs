@@ -237,3 +237,24 @@ The two new operation-fact files were each generated twice under the exact
 producer toolchain and were byte-identical: 1,124 `grpc-go` facts and 1,629
 `etcd` facts. All six Gate 2 fact files verify against the pinned Git objects;
 `expansion-facts.json` binds 14,596 facts. No claim or sampling state exists.
+
+The first two write-suppressed capacity preparations stopped before emitting
+an aggregate result: nested Go modules exposed multiple agreeing provenance
+contexts for single physical sites, and the pinned `etcd` tree contains safe
+in-tree Go source aliases. The prospective harness now collapses only complete
+consensus mappings to the benchmark's unique-source-site unit and binds every
+node in a source-alias chain before and after type loading. Disagreement,
+escape, dangling targets, cycles, or content drift fail closed. Neither stopped
+run created an attempt claim, commitment, randomness, sample, artifact,
+coordinate, reviewer kit, or label.
+
+The corrected coordinate-free preflight then completed for the mandatory
+two-repository prefix with the labeling tree unchanged. Its conservative,
+seed-independent blind lower bound is `1322/7348 = 17.9913%`, below the
+unchanged 30% Gate 2 floor and the prospective 35% expansion stop target. The
+only unattainable power rule is the blind-fraction rule; every accuracy and
+confidence requirement remains attainable. The aggregate-only result is bound
+in `expansion-capacity-prefix-2.json`. Under the frozen order the prefix must
+therefore expand to candidate 3, `containerd/containerd` at
+`9e70782d9a0e92900f402b2c7a4e2aa30754503c`. No later candidate has been
+inspected, and Attempt 5 still has no claim or ceremony state.
