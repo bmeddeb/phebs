@@ -39,6 +39,18 @@
     "go_build_tags": ["unit"]
   },
   {
+    "name": "grpc-go",
+    "git_url": "https://github.com/grpc/grpc-go",
+    "commit": "f8a85fa4d1dec72ace513a97ff27c60252de7c4d",
+    "note": "Gate 2 strict-expansion candidate 1; canonical Go gRPC implementation; pinned by expansion-source-snapshot.receipt.json"
+  },
+  {
+    "name": "etcd",
+    "git_url": "https://github.com/etcd-io/etcd",
+    "commit": "6006f405800929b5e7e839e7a821d608a311579f",
+    "note": "Gate 2 strict-expansion candidate 2; independent production distributed system; pinned by expansion-source-snapshot.receipt.json"
+  },
+  {
     "name": "temporal-helm",
     "git_url": "https://github.com/temporalio/helm-charts",
     "commit": "9f4d328c31c77c323d272d0c5f615cf02bd46dab",
