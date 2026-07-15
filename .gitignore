@@ -12,8 +12,8 @@ spike/t111/out/
 /t111
 
 # T11.1 Gate 2: private one-shot ceremony artifacts, never committed
-spike/t111/labeling/g2-v3/
-spike/t111/labeling/.g2-v3.staging-*/
+spike/t111/labeling/g2-v*/
+spike/t111/labeling/.g2-v*.staging-*/
 spike/t111/labeling/.t111-gate2-source-*.attempt.json
 spike/t111/labeling/.t111-gate2-*.sealed-claim
 spike/t111/labeling/t111-gate2-audit-seed.json

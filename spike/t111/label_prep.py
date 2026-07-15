@@ -2335,8 +2335,7 @@ def build_precision_frame(
 ) -> list[dict[str, Any]]:
     files: dict[str, bytes] = {}
     population: list[dict[str, Any]] = []
-    seen_sites: dict[str, str] = {}
-    seen_facts: set[tuple[Any, ...]] = set()
+    by_site: dict[str, dict[str, Any]] = {}
     for fact in facts:
         rel = relpath_of(str(fact["path"]), system, root)
         if rel not in tracked_files:
@@ -2348,47 +2347,48 @@ def build_precision_frame(
         line, column = byte_coordinate(data, byte_offset)
         method = str(fact["object"]).rsplit("/", 1)[-1]
         sid = site_id(system, commit, rel, byte_offset, method)
-        signature = (
-            system,
-            rel,
-            int(fact["start_byte"]),
-            int(fact["end_byte"]),
-            str(fact["object"]),
-            str(fact["code_role"]),
-            str(fact["tier"]),
-        )
-        if signature in seen_facts:
-            raise PrepError(f"duplicate CALLS_OPERATION fact: {signature}")
-        seen_facts.add(signature)
-        if sid in seen_sites:
-            raise PrepError(
-                f"multiple emitted facts map to one source invocation {sid}: "
-                f"{seen_sites[sid]} and {fact['object']}"
-            )
-        seen_sites[sid] = str(fact["object"])
         role = str(fact["code_role"])
         if role not in CODE_ROLES:
             raise PrepError(
                 f"CALLS_OPERATION has unsupported code_role {role!r}: {system}:{rel}"
             )
-        population.append(
-            {
-                "site_id": sid,
-                "system": system,
-                "path": rel,
-                "line": line,
-                "start_line": int(fact["start_line"]),
-                "end_line": int(fact["end_line"]),
-                "column": column,
-                "byte_offset": byte_offset,
-                "method": method,
-                "stratum": f"{system}|{role}",
-                "role": role,
-                "object": str(fact["object"]),
-                "tier": str(fact["tier"]),
-                "atom_id": fact.get("atom_id"),
-            }
-        )
+        candidate = {
+            "site_id": sid,
+            "system": system,
+            "path": rel,
+            "line": line,
+            "start_line": int(fact["start_line"]),
+            "end_line": int(fact["end_line"]),
+            "column": column,
+            "byte_offset": byte_offset,
+            "method": method,
+            "stratum": f"{system}|{role}",
+            "role": role,
+            "object": str(fact["object"]),
+            "tier": str(fact["tier"]),
+            "atom_id": fact.get("atom_id"),
+        }
+        prior = by_site.get(sid)
+        if prior is not None:
+            # One physical invocation can be proven by several materialized
+            # atoms when nested Go modules load the same in-snapshot package
+            # under different, independently bound semantic-input closures.
+            # The Gate 2 population unit is the unique source site, not the
+            # number of agreeing provenance contexts. Collapse only complete
+            # consensus and retain the lexicographically smallest atom as the
+            # deterministic representative. Any semantic disagreement still
+            # fails closed.
+            if {key: value for key, value in prior.items() if key != "atom_id"} != {
+                key: value for key, value in candidate.items() if key != "atom_id"
+            }:
+                raise PrepError(
+                    f"multiple emitted facts disagree at one source invocation {sid}: "
+                    f"{prior['object']} and {candidate['object']}"
+                )
+            prior["atom_id"] = min(str(prior["atom_id"]), str(candidate["atom_id"]))
+            continue
+        by_site[sid] = candidate
+        population.append(candidate)
     return population
 
 
@@ -2429,7 +2429,7 @@ def build_registration_precision_frame(
 ) -> list[dict[str, Any]]:
     files: dict[str, bytes] = {}
     population: list[dict[str, Any]] = []
-    seen: set[str] = set()
+    by_site: dict[str, dict[str, Any]] = {}
     for fact in facts:
         rel = relpath_of(str(fact["path"]), system, root)
         if rel not in tracked_files:
@@ -2440,32 +2440,40 @@ def build_registration_precision_frame(
         byte_offset, method = registration_position(data, fact)
         line, column = byte_coordinate(data, byte_offset)
         sid = site_id(system, commit, rel, byte_offset, method)
-        if sid in seen:
-            raise PrepError(f"multiple IMPLEMENTS_SERVICE facts map to source site {sid}")
-        seen.add(sid)
         role = str(fact["code_role"])
         if role not in CODE_ROLES:
             raise PrepError(
                 f"IMPLEMENTS_SERVICE has unsupported code_role {role!r}: {system}:{rel}"
             )
-        population.append(
-            {
-                "site_id": sid,
-                "system": system,
-                "path": rel,
-                "line": line,
-                "start_line": int(fact["start_line"]),
-                "end_line": int(fact["end_line"]),
-                "column": column,
-                "byte_offset": byte_offset,
-                "method": method,
-                "stratum": f"{system}|{role}",
-                "role": role,
-                "object": str(fact["object"]),
-                "tier": str(fact["tier"]),
-                "atom_id": fact.get("atom_id"),
-            }
-        )
+        candidate = {
+            "site_id": sid,
+            "system": system,
+            "path": rel,
+            "line": line,
+            "start_line": int(fact["start_line"]),
+            "end_line": int(fact["end_line"]),
+            "column": column,
+            "byte_offset": byte_offset,
+            "method": method,
+            "stratum": f"{system}|{role}",
+            "role": role,
+            "object": str(fact["object"]),
+            "tier": str(fact["tier"]),
+            "atom_id": fact.get("atom_id"),
+        }
+        prior = by_site.get(sid)
+        if prior is not None:
+            if {key: value for key, value in prior.items() if key != "atom_id"} != {
+                key: value for key, value in candidate.items() if key != "atom_id"
+            }:
+                raise PrepError(
+                    f"multiple IMPLEMENTS_SERVICE facts disagree at source site {sid}: "
+                    f"{prior['object']} and {candidate['object']}"
+                )
+            prior["atom_id"] = min(str(prior["atom_id"]), str(candidate["atom_id"]))
+            continue
+        by_site[sid] = candidate
+        population.append(candidate)
     return population
 
 

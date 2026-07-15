@@ -1358,6 +1358,72 @@ func wire(s Server) {
             prep.registration_position(direct, direct_fact), (7, "RegisterService")
         )
 
+    def test_precision_frames_collapse_only_consensus_module_contexts(self) -> None:
+        source = "package p\nfunc wire() { client.Do(ctx); pb.RegisterAlphaServer(s, impl) }\n"
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "fixture"
+            self._init_git_fixture(root)
+            commit = self._commit_fixture(root, "source", {"p.go": source})
+            data = source.encode()
+
+            call_start = data.index(b"client.Do")
+            call_end = data.index(b";", call_start)
+            call = {
+                "path": "p.go",
+                "start_byte": call_start,
+                "end_byte": call_end,
+                "start_line": 2,
+                "end_line": 2,
+                "object": "/pkg.Alpha/Do",
+                "code_role": "production",
+                "tier": "exact",
+                "atom_id": "ea_b",
+            }
+            calls = prep.build_precision_frame(
+                "fixture", root, commit, [call, {**call, "atom_id": "ea_a"}], {"p.go"}
+            )
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(calls[0]["atom_id"], "ea_a")
+            with self.assertRaisesRegex(prep.PrepError, "disagree"):
+                prep.build_precision_frame(
+                    "fixture",
+                    root,
+                    commit,
+                    [call, {**call, "object": "/other.Alpha/Do"}],
+                    {"p.go"},
+                )
+
+            registration_start = data.index(b"pb.RegisterAlphaServer")
+            registration_end = data.index(b" }", registration_start)
+            registration = {
+                "path": "p.go",
+                "start_byte": registration_start,
+                "end_byte": registration_end,
+                "start_line": 2,
+                "end_line": 2,
+                "object": "pkg.Alpha",
+                "code_role": "production",
+                "tier": "exact",
+                "atom_id": "ea_d",
+            }
+            registrations = prep.build_registration_precision_frame(
+                "fixture",
+                root,
+                commit,
+                [registration, {**registration, "atom_id": "ea_c"}],
+                {"p.go"},
+            )
+            self.assertEqual(len(registrations), 1)
+            self.assertEqual(registrations[0]["atom_id"], "ea_c")
+            with self.assertRaisesRegex(prep.PrepError, "disagree"):
+                prep.build_registration_precision_frame(
+                    "fixture",
+                    root,
+                    commit,
+                    [registration, {**registration, "object": "other.Alpha"}],
+                    {"p.go"},
+                )
+
     def test_gate_calls_quarantine_noncanonical_heuristics(self) -> None:
         exact = {
             "tier": "exact",

@@ -161,6 +161,27 @@ fact bytes and counts. The broad verifier also encountered stale Gate 4 field
 outputs and rejected their older provenance; explicit Gate 2 fact verification
 then passed for every fixture. No stale field output enters this Gate 2 receipt.
 
+### First capacity-preflight blocker
+
+The first write-suppressed capacity preflight stopped before producing any
+aggregate result. It created no attempt claim, randomness, sample, artifact, or
+label. The fail-closed precision-frame check found that one physical source
+invocation can have several agreeing materialized facts when nested Go modules
+type-check the same in-snapshot package under different, independently bound
+semantic-input closures. The fixed mandatory prefix contains 30 such client-call
+site groups and seven registration groups in `grpc-go`, and 177 client-call
+groups and 14 registration groups in `etcd`.
+
+Gate 2's population unit is a unique source site, not the number of provenance
+contexts that support it. Before repeating the preflight, the frame builder was
+therefore fixed to collapse only facts whose complete site mapping, operation or
+service, role, and tier agree. The lexicographically smallest materialized atom
+ID is retained as the deterministic representative; any disagreement at one
+site still fails closed. Regression tests cover both consensus collapse and
+context disagreement for client calls and registrations. Private `g2-v*`
+artifact and staging paths are also ignored before any sealed preparation can
+occur.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required
