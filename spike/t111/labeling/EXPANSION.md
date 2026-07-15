@@ -149,6 +149,18 @@ Of those, nine occur in `grpc-go` and five in `etcd`; they are census, not
 fresh capacity. The 9,819 deterministic resolution records are bound by
 `sha256:55f78eb2f4269d459f71cfbd165f61821dd955fcdfed3d09d0abff4a88de17b9`.
 
+### Deterministic facts
+
+`grpc-go` produced 1,124 facts twice with identical digest
+`sha256:8f658c545bf1950bcb6eda286eefc85b5e63707c5b47d0c0fd8590a3ede7c67c`.
+`etcd` produced 1,629 facts twice with identical digest
+`sha256:d63a998c5ec85b43f194799fc9dfefa3e24c223a2ee8a0c81b4998e79058cb92`.
+All six Gate 2 fact files verify against their pinned Git objects and one exact
+Go 1.26.5/Git 2.50.1 producer identity. `expansion-facts.json` binds all 14,596
+fact bytes and counts. The broad verifier also encountered stale Gate 4 field
+outputs and rejected their older provenance; explicit Gate 2 fact verification
+then passed for every fixture. No stale field output enters this Gate 2 receipt.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

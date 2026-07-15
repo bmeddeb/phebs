@@ -232,3 +232,8 @@ now frozen in `expansion-lineage.json` before fact production. The projection
 contains 6,109 active intervals; nine `grpc-go` and five `etcd` intervals are
 carried census rather than fresh capacity. No claim, randomness, sample, or
 label exists.
+
+The two new operation-fact files were each generated twice under the exact
+producer toolchain and were byte-identical: 1,124 `grpc-go` facts and 1,629
+`etcd` facts. All six Gate 2 fact files verify against the pinned Git objects;
+`expansion-facts.json` binds 14,596 facts. No claim or sampling state exists.
