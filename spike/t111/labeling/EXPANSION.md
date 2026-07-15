@@ -334,6 +334,22 @@ candidate permitted for eligibility review is `istio/istio` at
 `25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9`; no later candidate has been
 inspected.
 
+### Candidate 4 eligibility
+
+Only after the three-candidate capacity decision was committed, the fixed
+`istio/istio` pin was synchronized through the hardened corpus reader. Its
+clean `HEAD` is exactly
+`25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9`. Strict object verification found
+all 7,392 reachable objects present. Source-only inspection found 6,507 tracked
+leaf entries, including 1,991 Go files, seven proto files, and one proto file
+containing RPC declarations. The tree contains neither gitlinks nor symlinks.
+
+Istio therefore satisfies every intrinsic eligibility rule with no exclusion.
+Its relevant tracked source can be enumerated directly from immutable Git
+objects without executing repository code, hooks, generators, or build scripts.
+This decision precedes every Istio extractor run, fact count, typed-oracle run,
+coordinate enumeration, or label outcome; no attempt or ceremony state exists.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

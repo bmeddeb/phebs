@@ -297,3 +297,11 @@ typed call sites with complete exact-fact coverage and no quarantine.
 digests. No claim or ceremony state exists. The frozen order therefore requires
 candidate 4, `istio/istio@25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9`;
 no later candidate has been inspected.
+
+Only then was candidate 4 synchronized. `istio/istio` is clean at the fixed
+pin `25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9`, with 1,991 tracked Go files,
+seven tracked proto files, one RPC-bearing proto file, and neither gitlinks nor
+symlinks. Strict verification found all required objects present. Istio is
+therefore intrinsically eligible with no exclusion. This source-only decision
+precedes all Istio fact generation, typed-oracle execution, coordinate
+enumeration, and labeling.
