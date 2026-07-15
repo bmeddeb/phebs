@@ -98,3 +98,19 @@ population and carry-forward capacity counts, never correctness outcomes. With
 the locked populations it raises the conservative blind-fraction lower bound to
 44.86%, eliminates precision-sampling uncertainty, and leaves the design
 statistically attainable.
+
+### Attempt 3 — sealed inputs and reviewer cohort
+
+- Input binding: `sha256:9164040c050299408b87903a2befdec976bf1a77a38c3bdfd74c77a3d05e5496`
+- Scheduled activation: `2026-07-14T21:03:19.010209Z`
+- Initial input commitment: [GitHub Gist](https://gist.github.com/bmeddeb/e7478531360f854005efc0245095c9ac), revision `f46df6a5796fa64aef304b363697157be42c3386`
+- Commitment document SHA-256: `6ee0bc4b4389de71e318b5dbe429cc33ffb7311846003c28dd081d58252a06d4`
+- First eligible public pulse: `https://beacon.nist.gov/beacon/2.0/chain/2/pulse/1859673`, timestamp `2026-07-14T21:04:00.000Z`
+- Sealed artifact manifest SHA-256: `78336c1f04b7055d7d2ecb7d34ba18291aa26443c81c28de38fde36e5615aa6e`
+- Label population: 3,051 permanent-census sites, 0 development sites, and
+  2,693 blind holdout sites; realized blind fraction 46.88%.
+- Reviewer assignment SHA-256: `cb767b2381decdef2d840d46c6649193644a43b33b5caf9d87f8cc9673d3ca6f`
+- Burn cohort: 5,743 unique coordinates, ledger digest
+  `sha256:82076bd76092e03f9de16f9c3bf44e1d80e89e2c6ac5973abe13c9eeee1bac87`.
+- Disposition: sealed and under independent review; no labels have been frozen
+  or scored.
