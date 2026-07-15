@@ -33,13 +33,16 @@
     "temporal": "8224a5375112079ad905c4ea829420306431462c"
   },
   "inputs": {
+    "bound_manifest_sha256": "sha256:1f32cd6330256e868f204cec5cc95d732a82d861918cf16e590b2144bdb9ac23",
     "burn_ledger_sha256": "sha256:4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a",
     "corpus_lock_sha256": "sha256:bcdceb35a7a7b47df1f4b88c306fd5d9529cea3a0c8246ed126e12348c5b7769",
-    "harness_commit": "211922a41d0dd2fbb9294e9824644909ab1bfe04",
-    "label_prep_sha256": "sha256:e2bd0685d336cd7a65ca02922ccdd49dda0a6ebd7632da174523c5a3b861b5e0"
+    "harness_source_commit": "3644fcebb204bbd6cf779353fff059bfa21d1720",
+    "label_prep_sha256": "sha256:2e09095ef35b01acfd67e1dbd7cbc808ab5d64a6a045d820dd1bbd029663599b",
+    "t111_binary_sha256": "sha256:818f073b094e37b5a3b3a7cb1af589a9b57e800a02a447fc2ebbc88e5a3672cb",
+    "typedcalloracle_binary_sha256": "sha256:88aa4fbd7d99bfa5038cd1acd101c10b78a1ec21447f73becc7993471c7c21b3"
   },
-  "schema": "t111-gate2-expansion-lineage-v1",
-  "source_lineage_binding": "sha256:51dbecc478d8a9728dae70739dce783238ce7b54cd2f3302d7469c6ea37970dd",
+  "schema": "t111-gate2-expansion-lineage-v2",
+  "source_lineage_binding": "sha256:a6979c4698394003f844f19b2a488a63f1e7882f6ad7e16a19836f702a250c7f",
   "systems": [
     "online-boutique",
     "dapr",

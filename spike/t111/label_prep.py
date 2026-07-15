@@ -79,6 +79,7 @@ DEFAULT_ARTIFACTS = BASE / "labeling" / "g2-v4"
 DEFAULT_CONTEXT = BASE / "out" / "gate2-v4-label-context"
 DEFAULT_LOCK = BASE / "corpus.lock.json"
 DEFAULT_BURN_LEDGER = BASE / "labeling" / "burn-ledger.json"
+DEFAULT_EXPANSION_LINEAGE = BASE / "labeling" / "expansion-lineage.json"
 SEALED_CLAIM_ROOT = BASE / "labeling"
 SYSTEMS = (
     "online-boutique",
@@ -2049,6 +2050,9 @@ def resolve_oracle_toolchain(expected_identity: str) -> dict[str, str]:
 
 
 BOUND_HARNESS_SCHEMA = "t111-bound-harness-v1"
+EXPANSION_LINEAGE_SCHEMA = "t111-gate2-expansion-lineage-v2"
+EXPANSION_LINEAGE_BINDING_DOMAIN = "t111-gate2-expansion-lineage-binding-v2"
+EXPANSION_GO_VERSION = "go version go1.26.5 darwin/arm64"
 
 
 def validate_shared_module_cache() -> Path:
@@ -2178,6 +2182,369 @@ def load_bound_typed_oracle(
         raise PrepError("bound typed oracle binary fails its manifest binding")
     validate_shared_module_cache()
     return binary, artifact["sha256"]
+
+
+def expansion_lineage_binding(receipt: dict[str, Any]) -> str:
+    """Bind the complete v2 receipt with one explicit canonical algorithm."""
+
+    payload = {
+        key: value
+        for key, value in receipt.items()
+        if key != "source_lineage_binding"
+    }
+    return "sha256:" + digest_parts(EXPANSION_LINEAGE_BINDING_DOMAIN, payload)
+
+
+def validate_expansion_lineage_receipt(value: Any) -> dict[str, Any]:
+    """Strictly validate a v2 expansion receipt and its whole-payload binding."""
+
+    fields = {
+        "active_counts",
+        "burn",
+        "commits",
+        "inputs",
+        "schema",
+        "source_lineage_binding",
+        "systems",
+    }
+    if not isinstance(value, dict) or set(value) != fields:
+        raise PrepError("expansion lineage receipt has invalid fields")
+    if value.get("schema") != EXPANSION_LINEAGE_SCHEMA:
+        raise PrepError("expansion lineage receipt has the wrong schema")
+    if value.get("systems") != list(SYSTEMS):
+        raise PrepError("expansion lineage systems are not the fixed ordered prefix")
+
+    commits = value.get("commits")
+    if (
+        not isinstance(commits, dict)
+        or set(commits) != set(SYSTEMS)
+        or any(
+            not isinstance(commit, str)
+            or re.fullmatch(r"[0-9a-f]{40}", commit) is None
+            for commit in commits.values()
+        )
+    ):
+        raise PrepError("expansion lineage commits are invalid")
+
+    active = value.get("active_counts")
+    if (
+        not isinstance(active, dict)
+        or set(active) != set(SYSTEMS)
+        or any(type(count) is not int or count < 0 for count in active.values())
+    ):
+        raise PrepError("expansion lineage active counts are invalid")
+
+    burn = value.get("burn")
+    burn_fields = {
+        "active_coordinate_count",
+        "active_coordinates_sha256",
+        "carry_forward_schema",
+        "resolution_count",
+        "resolution_dispositions",
+        "resolution_sha256",
+    }
+    if not isinstance(burn, dict) or set(burn) != burn_fields:
+        raise PrepError("expansion lineage burn projection has invalid fields")
+    if (
+        burn.get("carry_forward_schema") != "t111-burn-carry-forward-census-v3"
+        or type(burn.get("active_coordinate_count")) is not int
+        or burn["active_coordinate_count"] < 0
+        or type(burn.get("resolution_count")) is not int
+        or burn["resolution_count"] < 0
+        or re.fullmatch(
+            r"sha256:[0-9a-f]{64}", str(burn.get("active_coordinates_sha256"))
+        )
+        is None
+        or re.fullmatch(
+            r"sha256:[0-9a-f]{64}", str(burn.get("resolution_sha256"))
+        )
+        is None
+    ):
+        raise PrepError("expansion lineage burn projection is invalid")
+    dispositions = burn.get("resolution_dispositions")
+    disposition_fields = {
+        "changed_path_census",
+        "identical_blob_relocated",
+        "identical_path",
+        "unique_line_span_translation",
+    }
+    if (
+        not isinstance(dispositions, dict)
+        or set(dispositions) != disposition_fields
+        or any(
+            not isinstance(name, str)
+            or not name
+            or type(count) is not int
+            or count < 0
+            for name, count in dispositions.items()
+        )
+        or sum(dispositions.values()) != burn["resolution_count"]
+        or sum(active.values()) != burn["active_coordinate_count"]
+    ):
+        raise PrepError("expansion lineage burn counts are inconsistent")
+
+    inputs = value.get("inputs")
+    input_fields = {
+        "bound_manifest_sha256",
+        "burn_ledger_sha256",
+        "corpus_lock_sha256",
+        "harness_source_commit",
+        "label_prep_sha256",
+        "t111_binary_sha256",
+        "typedcalloracle_binary_sha256",
+    }
+    if not isinstance(inputs, dict) or set(inputs) != input_fields:
+        raise PrepError("expansion lineage inputs have invalid fields")
+    if re.fullmatch(
+        r"[0-9a-f]{40}", str(inputs.get("harness_source_commit"))
+    ) is None or any(
+        re.fullmatch(r"sha256:[0-9a-f]{64}", str(inputs.get(field))) is None
+        for field in input_fields - {"harness_source_commit"}
+    ):
+        raise PrepError("expansion lineage input identity is invalid")
+
+    binding = value.get("source_lineage_binding")
+    if (
+        re.fullmatch(r"sha256:[0-9a-f]{64}", str(binding)) is None
+        or binding != expansion_lineage_binding(value)
+    ):
+        raise PrepError("expansion lineage whole-receipt binding is invalid")
+    return json.loads(canonical_json(value))
+
+
+def _validate_expansion_projection(
+    value: Any,
+    *,
+    expected_commits: dict[str, str],
+    corpus_lock_sha256: str,
+    burn_ledger_sha256: str,
+) -> dict[str, Any]:
+    """Load frozen v1 history or a self-validating v2 receipt as projection input."""
+
+    if not isinstance(value, dict):
+        raise PrepError("expansion lineage predecessor must be an object")
+    if value.get("schema") == EXPANSION_LINEAGE_SCHEMA:
+        value = validate_expansion_lineage_receipt(value)
+        if (
+            value["inputs"]["corpus_lock_sha256"] != corpus_lock_sha256
+            or value["inputs"]["burn_ledger_sha256"] != burn_ledger_sha256
+        ):
+            raise PrepError("v2 expansion predecessor uses different source inputs")
+    elif value.get("schema") == "t111-gate2-expansion-lineage-v1":
+        # V1 is preserved as immutable history. Its hand-authored binding
+        # algorithm was never tracked, so only its exact committed structure
+        # and unchanged external inputs may be carried into v2.
+        fields = {
+            "active_counts",
+            "burn",
+            "commits",
+            "inputs",
+            "schema",
+            "source_lineage_binding",
+            "systems",
+        }
+        inputs = value.get("inputs")
+        if (
+            set(value) != fields
+            or not isinstance(inputs, dict)
+            or inputs.get("corpus_lock_sha256") != corpus_lock_sha256
+            or inputs.get("burn_ledger_sha256") != burn_ledger_sha256
+            or re.fullmatch(
+                r"sha256:[0-9a-f]{64}", str(value.get("source_lineage_binding"))
+            )
+            is None
+        ):
+            raise PrepError("frozen v1 expansion lineage predecessor is invalid")
+    else:
+        raise PrepError("unsupported expansion lineage predecessor schema")
+
+    if (
+        value.get("systems") != list(SYSTEMS)
+        or value.get("commits") != dict(sorted(expected_commits.items()))
+    ):
+        raise PrepError("expansion predecessor differs from the fixed source prefix")
+    projection = {
+        "active_counts": value.get("active_counts"),
+        "burn": value.get("burn"),
+        "commits": value.get("commits"),
+        "systems": value.get("systems"),
+    }
+    probe = {
+        **projection,
+        "inputs": {
+            "bound_manifest_sha256": "sha256:" + "0" * 64,
+            "burn_ledger_sha256": burn_ledger_sha256,
+            "corpus_lock_sha256": corpus_lock_sha256,
+            "harness_source_commit": "0" * 40,
+            "label_prep_sha256": "sha256:" + "0" * 64,
+            "t111_binary_sha256": "sha256:" + "0" * 64,
+            "typedcalloracle_binary_sha256": "sha256:" + "0" * 64,
+        },
+        "schema": EXPANSION_LINEAGE_SCHEMA,
+        "source_lineage_binding": "sha256:" + "0" * 64,
+    }
+    probe["source_lineage_binding"] = expansion_lineage_binding(probe)
+    validate_expansion_lineage_receipt(probe)
+    return json.loads(canonical_json(projection))
+
+
+def _bound_harness_lineage_inputs(harness_source_commit: str) -> dict[str, str]:
+    if re.fullmatch(r"[0-9a-f]{40}", harness_source_commit) is None:
+        raise PrepError("harness source commit must be full lowercase 40-hex")
+    git(REPO_ROOT, "cat-file", "-e", f"{harness_source_commit}^{{commit}}")
+    git(REPO_ROOT, "merge-base", "--is-ancestor", harness_source_commit, "HEAD")
+
+    _, oracle_digest = load_bound_typed_oracle(None)
+    manifest_path = DEFAULT_MODULE_CACHE / "manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot reload bound harness manifest: {exc}") from exc
+    if (
+        manifest.get("source_head") != harness_source_commit
+        or manifest.get("go_version") != EXPANSION_GO_VERSION
+        or manifest.get("goos") != "darwin"
+        or manifest.get("goarch") != "arm64"
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", str(manifest.get("go_sha256")))
+        is None
+    ):
+        raise PrepError("bound harness manifest has the wrong source or toolchain")
+    parse_rfc3339("bound harness created_at", manifest.get("created_at"))
+    found_go = shutil.which("go")
+    if found_go is None:
+        raise PrepError("exact Go executable is unavailable for lineage validation")
+    try:
+        go_path = Path(found_go).resolve(strict=True)
+        go_result = subprocess.run(
+            [str(go_path), "version"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={"PATH": str(go_path.parent), "GOENV": "off", "GOTOOLCHAIN": "local"},
+        )
+    except OSError as exc:
+        raise PrepError(f"cannot verify bound harness Go executable: {exc}") from exc
+    if (
+        go_result.returncode
+        or go_result.stdout.decode("utf-8", errors="replace").strip()
+        != manifest["go_version"]
+        or "sha256:" + sha256_file(go_path) != manifest["go_sha256"]
+    ):
+        raise PrepError("installed Go executable differs from the bound manifest")
+
+    artifact = manifest["artifacts"].get("t111")
+    if (
+        not isinstance(artifact, dict)
+        or set(artifact) != {"path", "sha256"}
+        or artifact.get("path") != "bin/t111"
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", str(artifact.get("sha256")))
+        is None
+    ):
+        raise PrepError("bound producer artifact identity is invalid")
+    producer = DEFAULT_MODULE_CACHE / "bin" / "t111"
+    try:
+        info = producer.lstat()
+    except OSError as exc:
+        raise PrepError(f"cannot inspect bound producer: {exc}") from exc
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or stat.S_ISLNK(info.st_mode)
+        or stat.S_IMODE(info.st_mode) & 0o222
+        or "sha256:" + sha256_file(producer) != artifact["sha256"]
+    ):
+        raise PrepError("bound producer binary fails its manifest binding")
+    if manifest["artifacts"]["typedcalloracle"]["sha256"] != oracle_digest:
+        raise PrepError("bound typed oracle digest changed during lineage validation")
+    validate_shared_module_cache()
+    return {
+        "bound_manifest_sha256": "sha256:" + sha256_file(manifest_path),
+        "harness_source_commit": harness_source_commit,
+        "t111_binary_sha256": str(artifact["sha256"]),
+        "typedcalloracle_binary_sha256": oracle_digest,
+    }
+
+
+def build_expansion_lineage_receipt(
+    predecessor: Path,
+    harness_source_commit: str,
+) -> dict[str, Any]:
+    """Build v2 from a frozen projection and current exact byte identities."""
+
+    try:
+        prior = json.loads(predecessor.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot load expansion lineage predecessor: {exc}") from exc
+    corpus_lock_sha256 = "sha256:" + sha256_file(DEFAULT_LOCK)
+    burn_ledger_sha256 = "sha256:" + sha256_file(DEFAULT_BURN_LEDGER)
+    entries = load_corpus_entries(DEFAULT_LOCK, SYSTEMS)
+    commits = {system: str(entries[system]["commit"]) for system in SYSTEMS}
+    projection = _validate_expansion_projection(
+        prior,
+        expected_commits=commits,
+        corpus_lock_sha256=corpus_lock_sha256,
+        burn_ledger_sha256=burn_ledger_sha256,
+    )
+    for system in SYSTEMS:
+        pinned_tracked_files(
+            DEFAULT_CORPUS / system,
+            commits[system],
+            entries[system]["excluded_gitlinks"],
+        )
+    _, burn_binding, active = scoped_burn_binding(
+        DEFAULT_BURN_LEDGER,
+        commits,
+        DEFAULT_CORPUS,
+    )
+    computed_burn = {
+        field: burn_binding[field]
+        for field in (
+            "active_coordinate_count",
+            "active_coordinates_sha256",
+            "carry_forward_schema",
+            "resolution_count",
+            "resolution_dispositions",
+            "resolution_sha256",
+        )
+    }
+    computed_active = {
+        system: len(active[system]) for system in SYSTEMS
+    }
+    if (
+        projection["burn"] != computed_burn
+        or projection["active_counts"] != computed_active
+    ):
+        raise PrepError("expansion predecessor burn projection does not recompute")
+    inputs = {
+        **_bound_harness_lineage_inputs(harness_source_commit),
+        "burn_ledger_sha256": burn_ledger_sha256,
+        "corpus_lock_sha256": corpus_lock_sha256,
+        "label_prep_sha256": "sha256:" + sha256_file(Path(__file__)),
+    }
+    receipt = {
+        **projection,
+        "inputs": inputs,
+        "schema": EXPANSION_LINEAGE_SCHEMA,
+        "source_lineage_binding": "",
+    }
+    receipt["source_lineage_binding"] = expansion_lineage_binding(receipt)
+    return validate_expansion_lineage_receipt(receipt)
+
+
+def write_expansion_lineage_receipt(
+    output: Path,
+    predecessor: Path,
+    harness_source_commit: str,
+) -> dict[str, Any]:
+    receipt = build_expansion_lineage_receipt(predecessor, harness_source_commit)
+    atomic_write(output, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    fsync_directory(output.parent)
+    try:
+        written = json.loads(output.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot re-read expansion lineage receipt: {exc}") from exc
+    if validate_expansion_lineage_receipt(written) != receipt:
+        raise PrepError("written expansion lineage receipt changed during publication")
+    return receipt
 
 
 def oracle_subprocess_env(toolchain: dict[str, str], tool_dir: Path, cache_dir: Path) -> dict[str, str]:
@@ -4801,6 +5168,7 @@ func f(client Client) {
             {
                 "id": "s|risk",
                 "population_size": 10,
+                "census_size": 0,
                 "holdout_sample_size": 1,
                 "dev_sample_size": 1,
             }
@@ -4981,6 +5349,18 @@ def parser() -> argparse.ArgumentParser:
     nist_seed.add_argument("--github-receipt", type=Path, required=True)
     nist_seed.add_argument("--output", type=Path, required=True)
 
+    expansion_lineage = commands.add_parser(
+        "expansion-lineage",
+        help="upgrade and verify the strict-expansion lineage receipt",
+    )
+    expansion_lineage.add_argument(
+        "--predecessor", type=Path, default=DEFAULT_EXPANSION_LINEAGE
+    )
+    expansion_lineage.add_argument(
+        "--output", type=Path, default=DEFAULT_EXPANSION_LINEAGE
+    )
+    expansion_lineage.add_argument("--harness-source-commit", required=True)
+
     commands.add_parser("self-test", help="run deterministic invariant tests")
     return top
 
@@ -5013,6 +5393,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "nist-seed":
             create_nist_seed_command(args)
+            return 0
+        if args.command == "expansion-lineage":
+            receipt = write_expansion_lineage_receipt(
+                args.output,
+                args.predecessor,
+                args.harness_source_commit,
+            )
+            print(
+                "expansion lineage written to "
+                f"{args.output}: {receipt['source_lineage_binding']}"
+            )
             return 0
         manifest, dev, holdout, keys = build_artifacts(args)
         if args.command == "commit-inputs":

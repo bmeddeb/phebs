@@ -421,6 +421,44 @@ reader closure, but imported source or cached-`go.mod` tampering fails closed.
 This generalized repair must be committed before another hydration or Istio
 run. Candidate 5 remains untouched.
 
+### Candidate 4 sealed hydration and v2 lineage
+
+After actual-closure repair commit `3644fce`, exact Go 1.26.5 successfully
+hydrated every package/test closure in all nine locked corpus entries,
+including mandatory candidate 4. Root and corpus module inputs remained
+unchanged, and all nine pinned trees are clean at their exact commits. The
+resulting 8.1 GiB hidden module cache contains no writable entry or symlink.
+Its sealed manifest has digest
+`sha256:1f32cd6330256e868f204cec5cc95d732a82d861918cf16e590b2144bdb9ac23`,
+records clean source commit `3644fce`, exact Go 1.26.5 on darwin/arm64, producer
+`sha256:818f073b094e37b5a3b3a7cb1af589a9b57e800a02a447fc2ebbc88e5a3672cb`,
+and typed oracle
+`sha256:88aa4fbd7d99bfa5038cd1acd101c10b78a1ec21447f73becc7993471c7c21b3`.
+The bound producer independently passed its manifest check. Hydration created
+no extractor, oracle-census, fact, coordinate, claim, commitment, randomness,
+reviewer, or label state.
+
+Before any Istio fact production, the tracked v2 receipt fixes lineage
+`sha256:a6979c4698394003f844f19b2a488a63f1e7882f6ad7e16a19836f702a250c7f`.
+The frozen v1 receipt remains historical evidence; its hand-authored digest
+algorithm was never tracked and is not guessed or retroactively redefined.
+V2 instead defines the binding exactly as `"sha256:" + SHA256(canonical JSON
+of ["t111-gate2-expansion-lineage-binding-v2", complete receipt without
+source_lineage_binding])`. Object keys are sorted, array order is preserved,
+and no other field is omitted. The builder verifies the current corpus lock,
+burn ledger, preparation script bytes, harness source commit, sealed manifest,
+source map, exact toolchain fields, and both artifact hashes before writing;
+it then re-reads and validates the receipt. Golden, mutation, v1-upgrade, and
+idempotence regressions make the algorithm reusable.
+
+The v3 carry-forward remains 6,120 active intervals with digest
+`sha256:12b741a3182db966c260556c8c0fa668c5ca28369f294e2de7735a766b5ee344`
+and 9,834 resolution rows with digest
+`sha256:55929907e9ee024ae469936ee867c5c9c2c68fc9d9d5032d0d4dc1b76ccac545`.
+No Istio fact, typed-oracle result, Attempt 5 claim, commitment, randomness,
+coordinate, reviewer artifact, or label existed at this boundary. Candidate 5
+remains untouched.
+
 ## Prefix stop rule
 
 Eligible candidates accumulate in order. At least two new fixtures are required

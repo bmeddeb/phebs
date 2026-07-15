@@ -355,3 +355,29 @@ unused requirement does not block hydration, while imported-module source or
 `go.mod` tampering fails closed in both independent readers. This correction
 must be committed before hydration or candidate 4 is retried; candidate 5
 remains untouched.
+
+After prospective repair commit `3644fce`, exact Go 1.26.5 completed the
+actual-closure hydration for all nine locked corpus entries, including Istio.
+Every root and corpus module input remained unchanged, and all pinned trees
+remain clean at their exact commits. The resulting 8.1 GiB hidden cache has no
+writable entry or symlink. Its sealed manifest has digest
+`sha256:1f32cd6330256e868f204cec5cc95d732a82d861918cf16e590b2144bdb9ac23`,
+records clean harness source `3644fce`, and binds producer
+`sha256:818f073b094e37b5a3b3a7cb1af589a9b57e800a02a447fc2ebbc88e5a3672cb`
+plus typed oracle
+`sha256:88aa4fbd7d99bfa5038cd1acd101c10b78a1ec21447f73becc7993471c7c21b3`.
+The bound producer independently accepted that manifest. No extraction,
+typed-oracle census, fact, coordinate, claim, commitment, randomness,
+reviewer, or label operation followed from hydration.
+
+Before the first Istio fact run, expansion lineage v2 now fixes
+`sha256:a6979c4698394003f844f19b2a488a63f1e7882f6ad7e16a19836f702a250c7f`.
+It preserves the unchanged 6,120-coordinate/9,834-resolution burn projection
+and binds the exact harness source, current preparation script, corpus lock,
+burn ledger, sealed manifest, producer, and independent oracle. V1 remains
+frozen historical evidence because its hand-authored binding algorithm was
+not tracked. V2 is reproducible: one domain-separated SHA-256 covers the
+canonical complete receipt with only `source_lineage_binding` omitted, and a
+strict builder/validator plus golden and mutation regressions enforce that
+definition. No Istio fact or Attempt 5 ceremony state existed when fixed;
+candidate 5 remains untouched.

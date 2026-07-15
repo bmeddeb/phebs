@@ -22,6 +22,161 @@ import label_prep as prep  # noqa: E402
 
 
 class Gate2PreparationTests(unittest.TestCase):
+    @staticmethod
+    def _expansion_receipt() -> dict[str, object]:
+        active = {
+            system: index + 1 for index, system in enumerate(prep.SYSTEMS)
+        }
+        receipt: dict[str, object] = {
+            "active_counts": active,
+            "burn": {
+                "active_coordinate_count": sum(active.values()),
+                "active_coordinates_sha256": "sha256:" + "1" * 64,
+                "carry_forward_schema": "t111-burn-carry-forward-census-v3",
+                "resolution_count": 10,
+                "resolution_dispositions": {
+                    "changed_path_census": 1,
+                    "identical_blob_relocated": 2,
+                    "identical_path": 6,
+                    "unique_line_span_translation": 1,
+                },
+                "resolution_sha256": "sha256:" + "2" * 64,
+            },
+            "commits": {
+                system: f"{index + 1:040x}"
+                for index, system in enumerate(prep.SYSTEMS)
+            },
+            "inputs": {
+                "bound_manifest_sha256": "sha256:" + "3" * 64,
+                "burn_ledger_sha256": "sha256:" + "4" * 64,
+                "corpus_lock_sha256": "sha256:" + "5" * 64,
+                "harness_source_commit": "6" * 40,
+                "label_prep_sha256": "sha256:" + "7" * 64,
+                "t111_binary_sha256": "sha256:" + "8" * 64,
+                "typedcalloracle_binary_sha256": "sha256:" + "9" * 64,
+            },
+            "schema": prep.EXPANSION_LINEAGE_SCHEMA,
+            "source_lineage_binding": "",
+            "systems": list(prep.SYSTEMS),
+        }
+        receipt["source_lineage_binding"] = prep.expansion_lineage_binding(receipt)
+        return receipt
+
+    def test_expansion_lineage_v2_whole_receipt_golden_and_mutations(self) -> None:
+        receipt = self._expansion_receipt()
+        self.assertEqual(
+            receipt["source_lineage_binding"],
+            "sha256:65919b76b669b50e2fdfaaf898031dc6f46c075a961fa38467115c283d6fd2d8",
+        )
+        self.assertEqual(prep.validate_expansion_lineage_receipt(receipt), receipt)
+
+        mutations: list[dict[str, object]] = []
+        unknown = deepcopy(receipt)
+        unknown["extra"] = True
+        mutations.append(unknown)
+        systems = deepcopy(receipt)
+        systems["systems"] = list(reversed(prep.SYSTEMS))
+        mutations.append(systems)
+        commit = deepcopy(receipt)
+        commit["commits"][prep.SYSTEMS[0]] = "a" * 40  # type: ignore[index]
+        mutations.append(commit)
+        active = deepcopy(receipt)
+        active["active_counts"][prep.SYSTEMS[0]] += 1  # type: ignore[index,operator]
+        mutations.append(active)
+        burn = deepcopy(receipt)
+        burn["burn"]["resolution_sha256"] = "sha256:" + "a" * 64  # type: ignore[index]
+        mutations.append(burn)
+        for field in sorted(receipt["inputs"]):  # type: ignore[arg-type]
+            changed = deepcopy(receipt)
+            if field == "harness_source_commit":
+                changed["inputs"][field] = "b" * 40  # type: ignore[index]
+            else:
+                changed["inputs"][field] = "sha256:" + "b" * 64  # type: ignore[index]
+            mutations.append(changed)
+        for changed in mutations:
+            with self.subTest(fields=sorted(changed)):
+                with self.assertRaises(prep.PrepError):
+                    prep.validate_expansion_lineage_receipt(changed)
+
+    def test_expansion_lineage_builder_upgrades_v1_idempotently(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            lock = root / "corpus.lock.json"
+            ledger = root / "burn-ledger.json"
+            predecessor = root / "expansion-lineage.json"
+            commits = {
+                system: f"{index + 1:040x}"
+                for index, system in enumerate(prep.SYSTEMS)
+            }
+            lock.write_text(
+                json.dumps(
+                    [
+                        {"name": system, "commit": commits[system]}
+                        for system in prep.SYSTEMS
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            ledger.write_text("{}\n", encoding="utf-8")
+            corpus_digest = "sha256:" + prep.sha256_file(lock)
+            ledger_digest = "sha256:" + prep.sha256_file(ledger)
+            fixture = self._expansion_receipt()
+            v1 = {
+                "active_counts": fixture["active_counts"],
+                "burn": fixture["burn"],
+                "commits": commits,
+                "inputs": {
+                    "burn_ledger_sha256": ledger_digest,
+                    "corpus_lock_sha256": corpus_digest,
+                    "harness_commit": "a" * 40,
+                    "label_prep_sha256": "sha256:" + "b" * 64,
+                },
+                "schema": "t111-gate2-expansion-lineage-v1",
+                "source_lineage_binding": "sha256:" + "c" * 64,
+                "systems": list(prep.SYSTEMS),
+            }
+            predecessor.write_text(json.dumps(v1), encoding="utf-8")
+            harness_inputs = {
+                "bound_manifest_sha256": "sha256:" + "d" * 64,
+                "harness_source_commit": "e" * 40,
+                "t111_binary_sha256": "sha256:" + "f" * 64,
+                "typedcalloracle_binary_sha256": "sha256:" + "0" * 64,
+            }
+            with (
+                patch.object(prep, "DEFAULT_LOCK", lock),
+                patch.object(prep, "DEFAULT_BURN_LEDGER", ledger),
+                patch.object(
+                    prep,
+                    "_bound_harness_lineage_inputs",
+                    return_value=harness_inputs,
+                ),
+                patch.object(prep, "pinned_tracked_files", return_value=([], [])),
+                patch.object(
+                    prep,
+                    "scoped_burn_binding",
+                    return_value=(
+                        [],
+                        fixture["burn"],
+                        {
+                            system: [None] * fixture["active_counts"][system]
+                            for system in prep.SYSTEMS
+                        },
+                    ),
+                ),
+            ):
+                first = prep.build_expansion_lineage_receipt(
+                    predecessor, harness_inputs["harness_source_commit"]
+                )
+                predecessor.write_text(json.dumps(first), encoding="utf-8")
+                second = prep.build_expansion_lineage_receipt(
+                    predecessor, harness_inputs["harness_source_commit"]
+                )
+            self.assertEqual(first, second)
+            self.assertEqual(
+                first["inputs"]["label_prep_sha256"],  # type: ignore[index]
+                "sha256:" + prep.sha256_file(Path(prep.__file__)),
+            )
+
     def test_typed_oracle_environment_ignores_ambient_module_caches(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
