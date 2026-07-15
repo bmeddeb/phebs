@@ -136,3 +136,25 @@ performs the same attestation before opening `key.jsonl`. A regression locks
 that ordering. The correction cannot rehabilitate Attempt 3; any replacement
 requires a new official-head lineage and a complete new ceremony carrying the
 append-only burn ledger forward.
+
+## Attempt 4 — replacement lineage rule
+
+Before inspecting any replacement sample or regenerated extractor outcome,
+Attempt 4 was fixed to every official default-branch commit available at
+cutoff `2026-07-15T03:13:32Z`:
+
+- `online-boutique`: `9a4616e77f0f9cbcbecaf27d711c38890dda1404` (unchanged)
+- `dapr`: `08aebd8b2effa2ed939ad5531e25ff8b21a36ef1` (unchanged)
+- `temporal`: `8224a5375112079ad905c4ea829420306431462c`
+- `loki`: `1362d2770ee2abba5e130d67cf30bcc4eefa0da0`
+- `temporal-helm`: `9f4d328c31c77c323d272d0c5f615cf02bd46dab`
+  (unchanged companion)
+- Source lineage: `sha256:504fd6a8f068713d4fb4d1590e9b0ff6d42fbb621afa09215ed81beec3bb85de`
+
+The two declared gitlink exclusions retain their exact paths and object IDs at
+the new Temporal and Loki commits; no new gitlink exists. Attempt 4 carries the
+entire append-only burn ledger and uses the pre-key exact-toolchain guard added
+after Attempt 3. No attempt claim may be created until exact corpus
+synchronization, deterministic fact regeneration, carry-forward resolution,
+full reusable verification, write-suppressed attainable-power analysis, and
+the standalone key-free toolchain preflight all pass.
