@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for Gate 2 v3 scoring and bundle integrity."""
+"""Regression tests for Gate 2 v4 scoring and bundle integrity."""
 
 from __future__ import annotations
 
@@ -495,7 +495,7 @@ class Gate2ScoringTests(unittest.TestCase):
             "burn_ledger": {
                 "coordinate_count": 700,
                 "active_coordinate_count": 700,
-                "carry_forward_schema": "t111-burn-carry-forward-census-v2",
+                "carry_forward_schema": "t111-burn-carry-forward-census-v3",
             },
             "holdout": {"unique_census_sites": 1},
             "protocol_coverage": {
@@ -517,6 +517,18 @@ class Gate2ScoringTests(unittest.TestCase):
         )
         with patch.object(score, "preflight_gate_design", return_value=power):
             self.assertEqual(score.gate_configuration_reasons(bundle, args), [])
+            legacy_four = deepcopy(bundle)
+            legacy_four["manifest"]["systems"] = list(prep.SYSTEMS[:4])
+            reasons = score.gate_configuration_reasons(legacy_four, args)
+            self.assertTrue(
+                any("every fixture" in reason for reason in reasons)
+            )
+            legacy_burn = deepcopy(bundle)
+            legacy_burn["manifest"]["burn_ledger"]["carry_forward_schema"] = (
+                "t111-burn-carry-forward-census-v2"
+            )
+            reasons = score.gate_configuration_reasons(legacy_burn, args)
+            self.assertTrue(any("census stratum" in reason for reason in reasons))
             missing_census = deepcopy(bundle)
             missing_census["manifest"]["holdout"]["unique_census_sites"] = 0
             reasons = score.gate_configuration_reasons(missing_census, args)

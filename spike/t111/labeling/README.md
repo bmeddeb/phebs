@@ -34,7 +34,7 @@ never restores eligibility for blind sampling.
 
 ## What Gate 2 measures
 
-Gate 2 v3 measures two reference families independently:
+Gate 2 v4 measures two reference families independently:
 
 - Client calls: an extractor-independent typed recall frame over Go call
   expressions whose statically resolved receiver implements a discovered gRPC
@@ -72,10 +72,10 @@ requires an exact role match.
 | Registration precision | exhaustive (`pi = 1`) | 0 | exact enumeration |
 | Source role | up to 20 per role | up to 10 per role | every selected role must match exactly |
 
-The manifest binds the exact corpus lock, all four commits, declared gitlink
-exclusions, Dapr's `unit` build tag, fact files, extractor configuration, burn
-resolution, typed-call oracle, and sampling design. Any undeclared, missing, or
-changed input fails closed.
+The manifest binds the exact corpus lock, every fixed Gate 2 commit, declared
+gitlink exclusions, Dapr's `unit` build tag, fact files, extractor
+configuration, burn resolution, typed-call oracle, and sampling design. Any
+undeclared, missing, or changed input fails closed.
 
 ## Exact local toolchain
 
@@ -117,7 +117,7 @@ commit-set attempt claim. Do not request randomness unless
 `power_analysis.attainable` is `true`; that is a design-capacity result, not a
 Gate 2 pass.
 
-The `t111-gate2-input-commitment-v2` frame strata intentionally omit realized
+The `t111-gate2-input-commitment-v3` frame strata intentionally omit realized
 development allocation fields. Its development-site ceiling is derived only
 from the fixed quotas and fixed post-holdout frame capacities, so the exact
 commitment bytes reconstruct identically for every later public seed.
@@ -131,7 +131,7 @@ into the input commitment. Preflight rejects either client-call or registration
 precision if any fresh stratum is not exhaustively held out, so the sentinel
 cannot silently degrade into sampling.
 
-The Gate 2 v3 protocol commitment's `committed_at` is a scheduled activation
+The Gate 2 v4 protocol commitment's `committed_at` is a scheduled activation
 time at least 30 minutes in the future. Before that activation, publish the
 exact commitment document as a new public GitHub Gist and verify its initial
 revision:
@@ -184,7 +184,7 @@ The resulting structure is:
 
 ```json
 {
-  "schema": "t111-gate2-audit-seed-v3",
+  "schema": "t111-gate2-audit-seed-v4",
   "input_binding": "sha256:<digest from commit-inputs>",
   "input_committed_at": "<scheduled activation from commit-inputs>",
   "commitment_reference": "https://api.github.com/gists/<gist-id>",
@@ -237,7 +237,7 @@ Generate the bundle once into a destination that has never existed:
 ```sh
 /opt/homebrew/bin/python3 spike/t111/label_prep.py prepare \
   --audit-seed-file /path/to/audit-seed.json \
-  --output-dir spike/t111/labeling/g2-v3
+  --output-dir spike/t111/labeling/g2-v4
 ```
 
 Gate mode forbids `--force` and post-seed `--dry-run`. Census, dev, holdout,
@@ -255,10 +255,10 @@ either kit:
 
 ```sh
 /opt/homebrew/bin/python3 spike/t111/label_prep.py materialize-context \
-  --artifact-dir spike/t111/labeling/g2-v3
+  --artifact-dir spike/t111/labeling/g2-v4
 
 /opt/homebrew/bin/python3 spike/t111/label_prep.py export-labeler-kits \
-  --artifact-dir spike/t111/labeling/g2-v3 \
+  --artifact-dir spike/t111/labeling/g2-v4 \
   --reviewers reviewer-a,reviewer-b \
   --output-dir /private/path/t111-reviewer-kits
 ```
@@ -315,7 +315,7 @@ Freeze both the canonical labels and their hash-only commitment:
 
 ```sh
 /opt/homebrew/bin/python3 spike/t111/label_prep.py freeze-labels \
-  --artifact-dir spike/t111/labeling/g2-v3 \
+  --artifact-dir spike/t111/labeling/g2-v4 \
   --labels /private/path/t111-adjudicated-labels/adjudicated-labels.jsonl \
   --assignment-manifest /private/path/t111-reviewer-kits/assignment-manifest.json \
   --assignment-digest /private/path/t111-reviewer-kits/assignment-manifest.sha256 \
@@ -338,7 +338,7 @@ hidden key:
 
 ```sh
 /opt/homebrew/bin/python3 spike/t111/score.py \
-  --artifact-dir spike/t111/labeling/g2-v3 \
+  --artifact-dir spike/t111/labeling/g2-v4 \
   --preflight-toolchain
 ```
 
@@ -350,14 +350,14 @@ actual holdout-score invocation remains terminal even when it fails closed.
 ```sh
 /opt/homebrew/bin/python3 spike/t111/score.py \
   /private/path/t111-frozen-labels/labels.frozen.jsonl holdout \
-  --artifact-dir spike/t111/labeling/g2-v3 \
+  --artifact-dir spike/t111/labeling/g2-v4 \
   --label-commitment /private/path/t111-frozen-labels/labels.commitment.json \
   --label-receipt /private/path/t111-label-github-receipt.json \
   --assignment-manifest /private/path/t111-reviewer-kits/assignment-manifest.json
 ```
 
 The scorer re-enumerates every frame from the pinned Git objects and verified
-facts, reconstructs census and random selection from the v3 receipt, and checks
+facts, reconstructs census and random selection from the v4 receipt, and checks
 all artifact and label bindings. Client and registration precision/recall are
 one Bonferroni simultaneous-confidence family. A Gate 2 pass requires, at 95%
 joint confidence:

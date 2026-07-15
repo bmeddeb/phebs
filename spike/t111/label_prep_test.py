@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed regression tests for the Gate 2 v3 benchmark protocol."""
+"""Fail-closed regression tests for the Gate 2 v4 benchmark protocol."""
 
 from __future__ import annotations
 
@@ -107,7 +107,7 @@ func wire(s Server) {
         )
         self.assertGreater(binding["coordinate_count"], 0)
         self.assertEqual(
-            binding["carry_forward_schema"], "t111-burn-carry-forward-census-v2"
+            binding["carry_forward_schema"], "t111-burn-carry-forward-census-v3"
         )
         # Cohort overlap and source translation may collapse multiple historical
         # disclosures onto one active interval. Every historical projection
@@ -120,7 +120,10 @@ func wire(s Server) {
             binding["active_coordinate_count"], binding["resolution_count"]
         )
         self.assertEqual(binding["resolution_count"], sum(binding["resolution_dispositions"].values()))
-        self.assertTrue(all(active[system] for system in prep.SYSTEMS))
+        self.assertEqual(set(active), set(prep.SYSTEMS))
+        self.assertTrue(
+            all(active[system] for system in prep.LEGACY_BURN_COMMITS)
+        )
         self.assertRegex(binding["active_coordinates_sha256"], r"^sha256:[0-9a-f]{64}$")
 
     def test_relocated_old_blob_does_not_hide_modified_original_path(self) -> None:
@@ -200,6 +203,239 @@ func wire(s Server) {
             )
             self.assertEqual(binding["resolution_dispositions"]["identical_blob_relocated"], 1)
             self.assertEqual(binding["resolution_dispositions"]["changed_path_census"], 1)
+
+    def test_cross_fixture_burns_every_identical_blob_occurrence_only(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            corpus_dir = Path(raw) / "corpus"
+            source_root = corpus_dir / "source"
+            target_root = corpus_dir / "target"
+            unmatched_root = corpus_dir / "unmatched"
+            for root in (source_root, target_root, unmatched_root):
+                self._init_git_fixture(root)
+
+            exposed = "package p\nfunc exposed() {\n\tcall()\n}\n"
+            source_commit = self._commit_fixture(
+                source_root, "source", {"original.go": exposed}
+            )
+            target_commit = self._commit_fixture(
+                target_root,
+                "target",
+                {
+                    "copies/first.go": exposed,
+                    "copies/second.go": exposed,
+                    "similar.go": (
+                        "package p\nfunc exposed() {\n\tcall()\n\tother()\n}\n"
+                    ),
+                },
+            )
+            unmatched_commit = self._commit_fixture(
+                unmatched_root,
+                "unmatched",
+                {"different.go": "package p\nfunc different() {}\n"},
+            )
+            burned, base_binding, cohorts = self._burn_stub(
+                "source", source_commit, "original.go", 3, 3
+            )
+            commits = {
+                "source": source_commit,
+                "target": target_commit,
+                "unmatched": unmatched_commit,
+            }
+            with (
+                patch.object(
+                    prep,
+                    "verified_burn_ledger",
+                    return_value=(burned, base_binding, cohorts),
+                ),
+                patch.object(prep, "digest_parts", wraps=prep.digest_parts) as digest,
+            ):
+                _, binding, active = prep.scoped_burn_binding(
+                    Path(raw) / "unused.json", commits, corpus_dir
+                )
+
+            self.assertEqual(
+                binding["carry_forward_schema"],
+                "t111-burn-carry-forward-census-v3",
+            )
+            self.assertEqual(
+                active["source"],
+                [
+                    {
+                        "system": "source",
+                        "path": "original.go",
+                        "start_line": 3,
+                        "end_line": 3,
+                    }
+                ],
+            )
+            self.assertEqual(
+                active["target"],
+                [
+                    {
+                        "system": "target",
+                        "path": "copies/first.go",
+                        "start_line": 3,
+                        "end_line": 3,
+                    },
+                    {
+                        "system": "target",
+                        "path": "copies/second.go",
+                        "start_line": 3,
+                        "end_line": 3,
+                    },
+                ],
+            )
+            self.assertEqual(active["unmatched"], [])
+            self.assertEqual(
+                binding["resolution_dispositions"],
+                {"identical_blob_relocated": 2, "identical_path": 1},
+            )
+
+            resolution_call = next(
+                call
+                for call in digest.call_args_list
+                if call.args[0] == "t111-burn-resolution-v3"
+            )
+            resolutions = resolution_call.args[1]
+            cross_rows = [
+                row for row in resolutions if row["target_system"] == "target"
+            ]
+            self.assertEqual(
+                [row["target_path"] for row in cross_rows],
+                ["copies/first.go", "copies/second.go"],
+            )
+            self.assertTrue(
+                all(
+                    row["source_system"] == "source"
+                    and row["target_system"] == "target"
+                    and row["source_commit"] == source_commit
+                    and row["target_commit"] == target_commit
+                    for row in cross_rows
+                )
+            )
+            self.assertIn(
+                "t111-active-burn-census-v3",
+                [call.args[0] for call in digest.call_args_list],
+            )
+
+            with patch.object(
+                prep,
+                "verified_burn_ledger",
+                return_value=(burned, base_binding, cohorts),
+            ):
+                _, reversed_binding, _ = prep.scoped_burn_binding(
+                    Path(raw) / "unused.json",
+                    dict(reversed(list(commits.items()))),
+                    corpus_dir,
+                )
+            self.assertEqual(
+                reversed_binding["active_coordinates_sha256"],
+                binding["active_coordinates_sha256"],
+            )
+            self.assertEqual(
+                reversed_binding["resolution_sha256"],
+                binding["resolution_sha256"],
+            )
+
+    def test_cross_fixture_match_does_not_relax_same_system_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            corpus_dir = Path(raw) / "corpus"
+            source_root = corpus_dir / "source"
+            target_root = corpus_dir / "target"
+            for root in (source_root, target_root):
+                self._init_git_fixture(root)
+
+            exposed = "package p\nfunc exposed() {\n\tcall()\n}\n"
+            old_commit = self._commit_fixture(
+                source_root, "old", {"original.go": exposed}
+            )
+            source_commit = self._commit_fixture(
+                source_root,
+                "deleted",
+                {"replacement.go": "package p\nfunc replacement() {}\n"},
+                remove=("original.go",),
+            )
+            target_commit = self._commit_fixture(
+                target_root, "copy", {"copy.go": exposed}
+            )
+            burned, base_binding, cohorts = self._burn_stub(
+                "source", old_commit, "original.go", 3, 3
+            )
+            with patch.object(
+                prep,
+                "verified_burn_ledger",
+                return_value=(burned, base_binding, cohorts),
+            ):
+                with self.assertRaisesRegex(
+                    prep.PrepError,
+                    "disclosed source cannot be mapped into the current tree",
+                ):
+                    prep.scoped_burn_binding(
+                        Path(raw) / "unused.json",
+                        {"source": source_commit, "target": target_commit},
+                        corpus_dir,
+                    )
+
+    def test_burn_source_fixture_must_remain_in_current_corpus(self) -> None:
+        burned, base_binding, cohorts = self._burn_stub(
+            "missing", "a" * 40, "old.go", 1, 1
+        )
+        with tempfile.TemporaryDirectory() as raw:
+            with patch.object(
+                prep,
+                "verified_burn_ledger",
+                return_value=(burned, base_binding, cohorts),
+            ):
+                with self.assertRaisesRegex(
+                    prep.PrepError, "burn source fixture is absent"
+                ):
+                    prep.scoped_burn_binding(
+                        Path(raw) / "unused.json", {}, Path(raw) / "corpus"
+                    )
+
+    def test_same_system_unique_span_translation_is_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            corpus_dir = Path(raw) / "corpus"
+            root = corpus_dir / "fixture"
+            self._init_git_fixture(root)
+            old_commit = self._commit_fixture(
+                root,
+                "old",
+                {"p.go": "package p\nfunc f() {\n\tunique()\n}\n"},
+            )
+            current_commit = self._commit_fixture(
+                root,
+                "current",
+                {"p.go": "package p\nfunc f() {\n\t// inserted\n\tunique()\n}\n"},
+            )
+            burned, base_binding, cohorts = self._burn_stub(
+                "fixture", old_commit, "p.go", 3, 3
+            )
+            with patch.object(
+                prep,
+                "verified_burn_ledger",
+                return_value=(burned, base_binding, cohorts),
+            ):
+                _, binding, active = prep.scoped_burn_binding(
+                    Path(raw) / "unused.json",
+                    {"fixture": current_commit},
+                    corpus_dir,
+                )
+            self.assertEqual(
+                active["fixture"],
+                [
+                    {
+                        "system": "fixture",
+                        "path": "p.go",
+                        "start_line": 4,
+                        "end_line": 4,
+                    }
+                ],
+            )
+            self.assertEqual(
+                binding["resolution_dispositions"],
+                {"unique_line_span_translation": 1},
+            )
 
     def test_exposed_sample_is_appended_as_an_idempotent_v2_burn_cohort(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -464,6 +700,10 @@ func wire(s Server) {
             system: f"{index + 1:040x}"
             for index, system in enumerate(prep.SYSTEMS)
         }
+        with self.assertRaisesRegex(prep.PrepError, "every fixed"):
+            prep.commit_set_lineage_binding(
+                {system: commits[system] for system in prep.SYSTEMS[:4]}
+            )
         base = "sha256:" + "a" * 64
         final = "sha256:" + "b" * 64
         with tempfile.TemporaryDirectory() as raw:
@@ -780,6 +1020,20 @@ func wire(s Server) {
         with self.assertRaisesRegex(prep.PrepError, "zero holdout inclusion"):
             prep.preflight_gate_design(unsampled)
 
+        empty_fixture = deepcopy(manifest)
+        empty_fixture["systems"].append("empty-fixture")
+        empty_report = prep.preflight_gate_design(
+            empty_fixture, raise_on_failure=False
+        )
+        self.assertFalse(empty_report["attainable"])
+        self.assertTrue(
+            any(
+                "empty-fixture" in reason
+                and "fixture precision bound is below 90%" in reason
+                for reason in empty_report["reasons"]
+            )
+        )
+
         insufficient_capacity = deepcopy(manifest)
         insufficient_capacity["frames"][prep.FRAME_CALL_RECALL]["strata"][0][
             "holdout_sample_size"
@@ -850,6 +1104,121 @@ func wire(s Server) {
                     prep.publish_artifacts(
                         output, self._sealed_manifest(), [], [], [], force=False
                     )
+
+    def test_diagnostics_cannot_create_or_overwrite_sealed_bundle_roots(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            claim_root = root / "labeling"
+            current = claim_root / "g2-v4"
+            historical = claim_root / "g2-v3"
+            with (
+                patch.object(prep, "SEALED_CLAIM_ROOT", claim_root),
+                patch.object(prep, "DEFAULT_ARTIFACTS", current),
+            ):
+                for output in (
+                    claim_root,
+                    current,
+                    current / "nested",
+                    historical,
+                ):
+                    with self.subTest(output=output):
+                        with self.assertRaisesRegex(
+                            prep.PrepError, "reserved for sealed"
+                        ):
+                            prep.publish_artifacts(
+                                output,
+                                {"gate_design_fixed": False},
+                                [],
+                                [],
+                                [],
+                                force=True,
+                            )
+                with self.assertRaisesRegex(
+                    prep.PrepError, "reserved for sealed"
+                ):
+                    prep.build_artifacts(
+                        SimpleNamespace(
+                            systems=prep.SYSTEMS[0],
+                            commitment_only=False,
+                            dry_run=False,
+                            output_dir=current,
+                        )
+                    )
+
+            external_sealed = root / "external-sealed"
+            external_sealed.mkdir()
+            (external_sealed / "manifest.json").write_text(
+                '{"gate_design_fixed": true}\n', encoding="utf-8"
+            )
+            with self.assertRaisesRegex(prep.PrepError, "sealed/unknown"):
+                prep.publish_artifacts(
+                    external_sealed,
+                    {"gate_design_fixed": False},
+                    [],
+                    [],
+                    [],
+                    force=True,
+                )
+
+            unknown_bundle = root / "unknown-bundle"
+            unknown_bundle.mkdir()
+            (unknown_bundle / "manifest.json").write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(prep.PrepError, "sealed/unknown"):
+                prep.publish_artifacts(
+                    unknown_bundle,
+                    {"gate_design_fixed": False},
+                    [],
+                    [],
+                    [],
+                    force=True,
+                )
+
+            with self.assertRaisesRegex(
+                prep.PrepError, "explicit unsealed manifest"
+            ):
+                prep.publish_artifacts(
+                    root / "new-unknown",
+                    {},
+                    [],
+                    [],
+                    [],
+                    force=True,
+                )
+
+            partial_sealed = root / "partial-sealed"
+            partial_sealed.mkdir()
+            (partial_sealed / "attempt.json").write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(prep.PrepError, "sealed bundle state"):
+                prep.publish_artifacts(
+                    partial_sealed,
+                    {"gate_design_fixed": False},
+                    [],
+                    [],
+                    [],
+                    force=True,
+                )
+
+            diagnostic = root / "diagnostic"
+            prep.publish_artifacts(
+                diagnostic,
+                {"gate_design_fixed": False, "generation": 1},
+                [],
+                [],
+                [],
+                force=False,
+            )
+            prep.publish_artifacts(
+                diagnostic,
+                {"gate_design_fixed": False, "generation": 2},
+                [],
+                [],
+                [],
+                force=True,
+            )
+            self.assertEqual(
+                json.loads((diagnostic / "manifest.json").read_text())["generation"],
+                2,
+            )
 
     def test_staging_failure_leaves_no_bundle_and_claim_blocks_retry(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -1012,6 +1381,91 @@ func wire(s Server) {
             )
 
     @staticmethod
+    def _init_git_fixture(root: Path) -> None:
+        root.mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(root),
+                "config",
+                "user.email",
+                "fixture@example.invalid",
+            ],
+            check=True,
+        )
+        subprocess.run(
+            ["git", "-C", str(root), "config", "user.name", "Fixture"],
+            check=True,
+        )
+
+    @staticmethod
+    def _commit_fixture(
+        root: Path,
+        message: str,
+        files: dict[str, str],
+        *,
+        remove: tuple[str, ...] = (),
+    ) -> str:
+        for rel in remove:
+            (root / rel).unlink()
+        for rel, content in files.items():
+            target = root / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(content, encoding="utf-8")
+        subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+        subprocess.run(
+            ["git", "-C", str(root), "commit", "-qm", message], check=True
+        )
+        return subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "HEAD"], text=True
+        ).strip()
+
+    @staticmethod
+    def _burn_stub(
+        source_system: str,
+        source_commit: str,
+        path: str,
+        start_line: int,
+        end_line: int,
+    ) -> tuple[list[dict[str, object]], dict[str, object], list[dict[str, object]]]:
+        burned: list[dict[str, object]] = [
+            {
+                "system": source_system,
+                "path": path,
+                "start_line": start_line,
+                "end_line": end_line,
+            }
+        ]
+        coordinates_sha256 = "sha256:" + "1" * 64
+        base_binding: dict[str, object] = {
+            "schema": "t111-burn-scope-v2",
+            "ledger_sha256": "0" * 64,
+            "coordinate_count": 1,
+            "coordinates_sha256": coordinates_sha256,
+            "source_identities": {
+                "fixture-cohort": {
+                    source_system: prep.source_identity(
+                        source_system, source_commit
+                    )
+                }
+            },
+        }
+        cohorts: list[dict[str, object]] = [
+            {
+                "cohort_id": "fixture-cohort",
+                "input_binding": None,
+                "source_commits": {source_system: source_commit},
+                "source_artifacts": [],
+                "coordinates": burned,
+                "coordinate_count": 1,
+                "coordinates_sha256": coordinates_sha256,
+            }
+        ]
+        return burned, base_binding, cohorts
+
+    @staticmethod
     def _seed_record(
         binding: str, *, source: str = "external_witness"
     ) -> dict[str, object]:
@@ -1103,7 +1557,7 @@ func wire(s Server) {
         }
         seed_record = Gate2PreparationTests._seed_record(binding)
         attempt_claim = {
-            "schema": "t111-gate2-commit-set-attempt-v1",
+            "schema": "t111-gate2-commit-set-attempt-v2",
             "source_lineage_binding": prep.commit_set_lineage_binding(commits),
             "commits": dict(sorted(commits.items())),
             "base_input_binding": base_binding,

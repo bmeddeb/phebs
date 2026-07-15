@@ -72,15 +72,22 @@ REPO_ROOT = BASE.parent.parent
 TYPED_CALL_ORACLE = BASE / "typedcalloracle"
 DEFAULT_CORPUS = BASE / "corpus"
 DEFAULT_FACTS = BASE / "out"
-DEFAULT_ARTIFACTS = BASE / "labeling" / "g2-v3"
-DEFAULT_CONTEXT = BASE / "out" / "gate2-label-context"
+DEFAULT_ARTIFACTS = BASE / "labeling" / "g2-v4"
+DEFAULT_CONTEXT = BASE / "out" / "gate2-v4-label-context"
 DEFAULT_LOCK = BASE / "corpus.lock.json"
 DEFAULT_BURN_LEDGER = BASE / "labeling" / "burn-ledger.json"
 SEALED_CLAIM_ROOT = BASE / "labeling"
-SYSTEMS = ("online-boutique", "dapr", "temporal", "loki")
-SCHEMA = "t111-gate2-probability-sample-v3"
-SEED_RECORD_SCHEMA = "t111-gate2-audit-seed-v3"
-INPUT_COMMITMENT_SCHEMA = "t111-gate2-input-commitment-v2"
+SYSTEMS = (
+    "online-boutique",
+    "dapr",
+    "temporal",
+    "loki",
+    "grpc-go",
+    "etcd",
+)
+SCHEMA = "t111-gate2-probability-sample-v4"
+SEED_RECORD_SCHEMA = "t111-gate2-audit-seed-v4"
+INPUT_COMMITMENT_SCHEMA = "t111-gate2-input-commitment-v3"
 INPUT_COMMITMENT_STRATUM_FIELDS = (
     "id",
     "system",
@@ -859,7 +866,7 @@ def build_nist_seed_record(
     github_fetcher: Any = github_json_fetcher,
     nist_fetcher: Any = nist_beacon_json_fetcher,
 ) -> dict[str, Any]:
-    """Build seed-v3 from the precommitted first eligible NIST pulse.
+    """Build seed-v4 from the precommitted first eligible NIST pulse.
 
     The time lookup is checked against the immutable canonical pulse endpoint.
     No latest-pulse or next-pulse fallback is attempted.
@@ -1087,9 +1094,9 @@ def commit_set_lineage_binding(commits: dict[str, str]) -> str:
     if set(commits) != set(SYSTEMS) or any(
         not re.fullmatch(r"[0-9a-f]{40}", commit) for commit in commits.values()
     ):
-        raise PrepError("attempt lineage requires all four full fixture commits")
+        raise PrepError("attempt lineage requires every fixed full fixture commit")
     return "sha256:" + digest_parts(
-        "t111-gate2-commit-set-lineage-v1", dict(sorted(commits.items()))
+        "t111-gate2-commit-set-lineage-v2", dict(sorted(commits.items()))
     )
 
 
@@ -1112,7 +1119,7 @@ def validate_attempt_claim(
         raise PrepError("invalid Gate-2 commit-set attempt claim")
     expected_lineage = commit_set_lineage_binding(commits)
     if (
-        value.get("schema") != "t111-gate2-commit-set-attempt-v1"
+        value.get("schema") != "t111-gate2-commit-set-attempt-v2"
         or value.get("source_lineage_binding") != expected_lineage
         or value.get("commits") != dict(sorted(commits.items()))
         or value.get("base_input_binding") != base_input_binding
@@ -1138,7 +1145,7 @@ def locked_attempt_claim(
     create: bool,
     allow_missing: bool = False,
 ) -> dict[str, Any] | None:
-    """Bind a four-commit source population to one Gate-2 attempt forever."""
+    """Bind the complete fixed source population to one Gate-2 attempt forever."""
 
     lineage = commit_set_lineage_binding(commits)
     root = SEALED_CLAIM_ROOT.absolute()
@@ -1150,7 +1157,7 @@ def locked_attempt_claim(
         if input_binding is None or committed_at is None:
             raise PrepError("attempt creation requires final input binding and timestamp")
         record = {
-            "schema": "t111-gate2-commit-set-attempt-v1",
+            "schema": "t111-gate2-commit-set-attempt-v2",
             "source_lineage_binding": lineage,
             "commits": dict(sorted(commits.items())),
             "base_input_binding": base_input_binding,
@@ -1257,151 +1264,187 @@ def scoped_burn_binding(
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, list[dict[str, Any]]]]:
     """Carry every disclosed source site into a deterministic census stratum.
 
-    Commit changes do not restore blindness. Byte-identical blobs keep their
-    exposed intervals (including relocated copies); changed files translate an
-    exact unique line span, otherwise the whole current path is treated as
-    disclosed. An unresolved deleted/renamed-and-modified path fails closed.
+    Commit and fixture changes do not restore blindness. Byte-identical blobs
+    keep their exposed intervals at every occurrence in every current fixture.
+    Within the source fixture, changed files translate an exact unique line
+    span, otherwise the whole current path is treated as disclosed. An
+    unresolved deleted/renamed-and-modified source path fails closed.
     """
 
     burned, binding, cohorts = verified_burn_ledger(path)
-    active: dict[str, list[dict[str, Any]]] = {}
     resolutions: list[dict[str, Any]] = []
     dispositions: Counter[str] = Counter()
-    identical_commits: list[str] = []
-    for system, commit in commits.items():
-        root = corpus_dir / system
-        current_tree = git_tree_blobs(root, commit)
-        current_by_oid: dict[str, list[str]] = defaultdict(list)
-        for rel, oid in current_tree.items():
-            current_by_oid[oid].append(rel)
-        for paths in current_by_oid.values():
-            paths.sort()
+    identical_commits: set[str] = set()
 
-        intervals: dict[str, list[tuple[int, int]]] = defaultdict(list)
-        quarantined_paths: set[str] = set()
-        old_trees: dict[str, dict[str, str]] = {}
-        for cohort in cohorts:
-            cohort_id = str(cohort["cohort_id"])
-            cohort_rows = [
-                row for row in cohort["coordinates"] if row.get("system") == system
-            ]
-            if not cohort_rows:
-                continue
-            old_commit = cohort["source_commits"].get(system)
+    current_trees: dict[str, dict[str, str]] = {}
+    current_by_oid: dict[str, dict[str, list[str]]] = {}
+    intervals: dict[str, dict[str, list[tuple[int, int]]]] = {}
+    quarantined_paths: dict[str, set[str]] = {}
+    for target_system, target_commit in commits.items():
+        target_root = corpus_dir / target_system
+        current_tree = git_tree_blobs(target_root, target_commit)
+        current_trees[target_system] = current_tree
+        paths_by_oid: dict[str, list[str]] = defaultdict(list)
+        for rel, oid in current_tree.items():
+            paths_by_oid[oid].append(rel)
+        for paths in paths_by_oid.values():
+            paths.sort()
+        current_by_oid[target_system] = paths_by_oid
+        intervals[target_system] = defaultdict(list)
+        quarantined_paths[target_system] = set()
+
+    for cohort in cohorts:
+        # Bound memory to one disclosure cohort. Historical trees are reused
+        # within the cohort, then released before the next generation.
+        old_trees: dict[tuple[str, str], dict[str, str]] = {}
+        cohort_id = str(cohort["cohort_id"])
+        for row in cohort["coordinates"]:
+            source_system = str(row["system"])
+            if source_system not in commits:
+                raise PrepError(
+                    "burn source fixture is absent from the current corpus: "
+                    f"{cohort_id}:{source_system}"
+                )
+            old_commit = cohort["source_commits"].get(source_system)
             if not isinstance(old_commit, str):
                 raise PrepError(
-                    f"burn cohort {cohort_id} has no source commit for {system}"
+                    f"burn cohort {cohort_id} has no source commit for "
+                    f"{source_system}"
                 )
-            if old_commit == commit:
-                identical_commits.append(f"{cohort_id}:{system}")
-            if old_commit not in old_trees:
-                old_trees[old_commit] = git_tree_blobs(root, old_commit)
-            old_tree = old_trees[old_commit]
-            for row in cohort_rows:
-                rel = str(row["path"])
-                start, end = int(row["start_line"]), int(row["end_line"])
-                old_oid = old_tree.get(rel)
-                if old_oid is None:
-                    raise PrepError(
-                        "burn source is unavailable at "
-                        f"{cohort_id}:{system}:{old_commit}:{rel}"
-                    )
-                current_oid = current_tree.get(rel)
-                identical_paths = current_by_oid.get(old_oid, [])
-                if identical_paths:
-                    for target in identical_paths:
-                        intervals[target].append((start, end))
-                        resolutions.append(
-                            {
-                                "cohort_id": cohort_id,
-                                "system": system,
-                                "source_commit": old_commit,
-                                "source_path": rel,
-                                "source_oid": old_oid,
-                                "target_path": target,
-                                "target_oid": old_oid,
-                                "source_start_line": start,
-                                "source_end_line": end,
-                                "target_start_line": start,
-                                "target_end_line": end,
-                                "disposition": (
-                                    "identical_path"
-                                    if target == rel
-                                    else "identical_blob_relocated"
-                                ),
-                            }
-                        )
-                        dispositions[resolutions[-1]["disposition"]] += 1
-                    # A relocated byte-identical copy preserves the old
-                    # exposure, but a modified original path must also be
-                    # translated or quarantined.
-                    if current_oid is None or current_oid == old_oid:
-                        continue
+            source_commit = commits[source_system]
+            if old_commit == source_commit:
+                identical_commits.add(f"{cohort_id}:{source_system}")
 
-                if current_oid is None:
-                    raise PrepError(
-                        "disclosed source cannot be mapped into the current tree: "
-                        f"{cohort_id}:{system}:{rel}"
+            source_root = corpus_dir / source_system
+            old_tree_key = (source_system, old_commit)
+            if old_tree_key not in old_trees:
+                old_trees[old_tree_key] = git_tree_blobs(source_root, old_commit)
+            old_tree = old_trees[old_tree_key]
+            rel = str(row["path"])
+            start, end = int(row["start_line"]), int(row["end_line"])
+            old_oid = old_tree.get(rel)
+            if old_oid is None:
+                raise PrepError(
+                    "burn source is unavailable at "
+                    f"{cohort_id}:{source_system}:{old_commit}:{rel}"
+                )
+
+            for target_system, target_commit in commits.items():
+                for target in current_by_oid[target_system].get(old_oid, []):
+                    intervals[target_system][target].append((start, end))
+                    disposition = (
+                        "identical_path"
+                        if target_system == source_system and target == rel
+                        else "identical_blob_relocated"
                     )
-                old_lines = git_blob(root, old_commit, rel).splitlines(keepends=True)
-                current_lines = git_blob(root, commit, rel).splitlines(keepends=True)
-                if start <= 0 or end < start or end > len(old_lines):
-                    raise PrepError(
-                        "burn interval is outside its pinned blob: "
-                        f"{cohort_id}:{system}:{rel}"
-                    )
-                needle = old_lines[start - 1 : end]
-                matches = [
-                    index + 1
-                    for index in range(0, len(current_lines) - len(needle) + 1)
-                    if current_lines[index : index + len(needle)] == needle
-                ]
-                if len(matches) == 1:
-                    translated_start = matches[0]
-                    translated_end = translated_start + len(needle) - 1
-                    intervals[rel].append((translated_start, translated_end))
-                    disposition = "unique_line_span_translation"
                     resolutions.append(
                         {
                             "cohort_id": cohort_id,
-                            "system": system,
+                            "source_system": source_system,
+                            "target_system": target_system,
                             "source_commit": old_commit,
+                            "target_commit": target_commit,
                             "source_path": rel,
                             "source_oid": old_oid,
-                            "target_path": rel,
-                            "target_oid": current_oid,
+                            "target_path": target,
+                            "target_oid": old_oid,
                             "source_start_line": start,
                             "source_end_line": end,
-                            "target_start_line": translated_start,
-                            "target_end_line": translated_end,
-                            "disposition": disposition,
-                        }
-                    )
-                    dispositions[disposition] += 1
-                else:
-                    quarantined_paths.add(rel)
-                    disposition = "changed_path_census"
-                    resolutions.append(
-                        {
-                            "cohort_id": cohort_id,
-                            "system": system,
-                            "source_commit": old_commit,
-                            "source_path": rel,
-                            "source_oid": old_oid,
-                            "target_path": rel,
-                            "target_oid": current_oid,
-                            "source_start_line": start,
-                            "source_end_line": end,
-                            "target_start_line": 1,
-                            "target_end_line": max(1, len(current_lines)),
+                            "target_start_line": start,
+                            "target_end_line": end,
                             "disposition": disposition,
                         }
                     )
                     dispositions[disposition] += 1
 
+            source_tree = current_trees[source_system]
+            current_oid = source_tree.get(rel)
+            identical_source_paths = current_by_oid[source_system].get(old_oid, [])
+            # A relocated byte-identical copy preserves the old exposure, but a
+            # modified original path must also be translated or quarantined.
+            if identical_source_paths and (
+                current_oid is None or current_oid == old_oid
+            ):
+                continue
+            if current_oid is None:
+                raise PrepError(
+                    "disclosed source cannot be mapped into the current tree: "
+                    f"{cohort_id}:{source_system}:{rel}"
+                )
+            old_lines = git_blob(source_root, old_commit, rel).splitlines(
+                keepends=True
+            )
+            current_lines = git_blob(source_root, source_commit, rel).splitlines(
+                keepends=True
+            )
+            if start <= 0 or end < start or end > len(old_lines):
+                raise PrepError(
+                    "burn interval is outside its pinned blob: "
+                    f"{cohort_id}:{source_system}:{rel}"
+                )
+            needle = old_lines[start - 1 : end]
+            matches = [
+                index + 1
+                for index in range(0, len(current_lines) - len(needle) + 1)
+                if current_lines[index : index + len(needle)] == needle
+            ]
+            if len(matches) == 1:
+                translated_start = matches[0]
+                translated_end = translated_start + len(needle) - 1
+                intervals[source_system][rel].append(
+                    (translated_start, translated_end)
+                )
+                disposition = "unique_line_span_translation"
+                resolutions.append(
+                    {
+                        "cohort_id": cohort_id,
+                        "source_system": source_system,
+                        "target_system": source_system,
+                        "source_commit": old_commit,
+                        "target_commit": source_commit,
+                        "source_path": rel,
+                        "source_oid": old_oid,
+                        "target_path": rel,
+                        "target_oid": current_oid,
+                        "source_start_line": start,
+                        "source_end_line": end,
+                        "target_start_line": translated_start,
+                        "target_end_line": translated_end,
+                        "disposition": disposition,
+                    }
+                )
+                dispositions[disposition] += 1
+            else:
+                quarantined_paths[source_system].add(rel)
+                disposition = "changed_path_census"
+                resolutions.append(
+                    {
+                        "cohort_id": cohort_id,
+                        "source_system": source_system,
+                        "target_system": source_system,
+                        "source_commit": old_commit,
+                        "target_commit": source_commit,
+                        "source_path": rel,
+                        "source_oid": old_oid,
+                        "target_path": rel,
+                        "target_oid": current_oid,
+                        "source_start_line": start,
+                        "source_end_line": end,
+                        "target_start_line": 1,
+                        "target_end_line": max(1, len(current_lines)),
+                        "disposition": disposition,
+                    }
+                )
+                dispositions[disposition] += 1
+
+    active: dict[str, list[dict[str, Any]]] = {}
+    for system, commit in commits.items():
+        root = corpus_dir / system
+        system_intervals = intervals[system]
+        system_quarantined_paths = quarantined_paths[system]
         active_rows: list[dict[str, Any]] = []
-        for rel in sorted(set(intervals) | quarantined_paths):
-            if rel in quarantined_paths:
+        for rel in sorted(set(system_intervals) | system_quarantined_paths):
+            if rel in system_quarantined_paths:
                 line_count = len(git_blob(root, commit, rel).splitlines())
                 active_rows.append(
                     {
@@ -1412,7 +1455,7 @@ def scoped_burn_binding(
                     }
                 )
                 continue
-            for start, end in sorted(set(intervals[rel])):
+            for start, end in sorted(set(system_intervals[rel])):
                 active_rows.append(
                     {
                         "system": system,
@@ -1428,7 +1471,7 @@ def scoped_burn_binding(
     )
     binding = {
         **binding,
-        "carry_forward_schema": "t111-burn-carry-forward-census-v2",
+        "carry_forward_schema": "t111-burn-carry-forward-census-v3",
         "active_source_identities": {
             system: source_identity(system, commit)
             for system, commit in sorted(commits.items())
@@ -1436,12 +1479,12 @@ def scoped_burn_binding(
         "identical_source_commit_systems": sorted(identical_commits),
         "active_coordinate_count": len(active_projection),
         "active_coordinates_sha256": "sha256:" + digest_parts(
-            "t111-active-burn-census-v2", active_projection
+            "t111-active-burn-census-v3", active_projection
         ),
         "resolution_count": len(resolutions),
         "resolution_dispositions": dict(sorted(dispositions.items())),
         "resolution_sha256": "sha256:" + digest_parts(
-            "t111-burn-resolution-v2", sorted(resolutions, key=canonical_json)
+            "t111-burn-resolution-v3", sorted(resolutions, key=canonical_json)
         ),
     }
     return burned, binding, active
@@ -2890,6 +2933,81 @@ def preflight_gate_design(
     return report
 
 
+SEALED_BUNDLE_SENTINELS = (
+    "attempt.json",
+    "seed.json",
+    "burn-ledger.input.json",
+)
+
+
+def assert_diagnostic_destination_unprotected(output: Path) -> None:
+    """Keep diagnostics from creating or overwriting any sealed bundle root."""
+
+    output = Path(output)
+    if output.is_symlink():
+        raise PrepError(f"diagnostic artifact destination may not be a symlink: {output}")
+    try:
+        resolved = output.resolve(strict=False)
+        claim_root = SEALED_CLAIM_ROOT.resolve(strict=False)
+        default_sealed = DEFAULT_ARTIFACTS.resolve(strict=False)
+    except OSError as exc:
+        raise PrepError(
+            f"cannot resolve diagnostic artifact destination {output}: {exc}"
+        ) from exc
+    versioned_root = next(
+        (
+            candidate
+            for candidate in (resolved, *resolved.parents)
+            if candidate.parent == claim_root
+            and re.fullmatch(r"g2-v[0-9]+", candidate.name)
+        ),
+        None,
+    )
+    if (
+        resolved == claim_root
+        or resolved == default_sealed
+        or default_sealed in resolved.parents
+        or versioned_root is not None
+    ):
+        raise PrepError(
+            "diagnostic artifact destination is reserved for sealed Gate-2 "
+            f"bundles: {output}"
+        )
+    if output.exists() and not output.is_dir():
+        raise PrepError(f"diagnostic artifact destination is not a directory: {output}")
+    for name in SEALED_BUNDLE_SENTINELS:
+        sentinel = output / name
+        if sentinel.exists() or sentinel.is_symlink():
+            raise PrepError(
+                f"diagnostic artifact destination contains sealed bundle state: {sentinel}"
+            )
+    manifest_path = output / "manifest.json"
+    if manifest_path.is_symlink():
+        raise PrepError(
+            f"diagnostic artifact destination has a symlinked manifest: {manifest_path}"
+        )
+    if manifest_path.exists():
+        if not manifest_path.is_file():
+            raise PrepError(
+                f"diagnostic artifact destination has an invalid manifest: {manifest_path}"
+            )
+        try:
+            existing_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PrepError(
+                "cannot prove existing artifact destination is diagnostic: "
+                f"{manifest_path}: {exc}"
+            ) from exc
+        if (
+            not isinstance(existing_manifest, dict)
+            or existing_manifest.get("gate_design_fixed") is not False
+        ):
+            raise PrepError(
+                "diagnostic artifact destination is an existing sealed/unknown "
+                f"bundle: {output}"
+            )
+
+
 def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     systems = tuple(item.strip() for item in args.systems.split(",") if item.strip())
     if not systems or len(systems) != len(set(systems)):
@@ -2904,8 +3022,17 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
     commitment_only = bool(getattr(args, "commitment_only", False))
     if commitment_only and not gate_candidate:
         raise PrepError(
-            "commit-inputs is fixed to all four fixtures and the precommitted gate design"
+            "commit-inputs is fixed to every Gate-2 fixture and the precommitted gate design"
         )
+    if (
+        not gate_candidate
+        and not commitment_only
+        and not bool(getattr(args, "dry_run", False))
+    ):
+        output_dir = getattr(args, "output_dir", None)
+        if output_dir is None:
+            raise PrepError("diagnostic preparation requires an explicit output directory")
+        assert_diagnostic_destination_unprotected(Path(output_dir))
     if gate_candidate and not getattr(args, "commitment_only", False):
         if getattr(args, "dry_run", False):
             raise PrepError(
@@ -3551,6 +3678,9 @@ def publish_artifacts(
     }
     sealed = manifest.get("gate_design_fixed") is True
     if not sealed:
+        if manifest.get("gate_design_fixed") is not False:
+            raise PrepError("diagnostic publication requires an explicit unsealed manifest")
+        assert_diagnostic_destination_unprotected(output)
         existing = [
             output / name for name in (*rows_by_name, "manifest.json")
             if (output / name).exists()
@@ -4279,7 +4409,7 @@ def create_nist_seed_command(
     github_fetcher: Any = github_json_fetcher,
     nist_fetcher: Any = nist_beacon_json_fetcher,
 ) -> None:
-    """Freeze seed-v3 from the exact first eligible NIST Beacon pulse."""
+    """Freeze seed-v4 from the exact first eligible NIST Beacon pulse."""
 
     for path, description in (
         (args.commitment, "input commitment"),
@@ -4470,7 +4600,7 @@ def parser() -> argparse.ArgumentParser:
     prepare.add_argument(
         "--audit-seed-file",
         type=Path,
-        help="input-bound sealed v3 seed receipt issued after commit-inputs",
+        help="input-bound sealed v4 seed receipt issued after commit-inputs",
     )
     prepare.set_defaults(commitment_only=False)
     prepare.add_argument("--dry-run", action="store_true")
@@ -4535,7 +4665,7 @@ def parser() -> argparse.ArgumentParser:
 
     nist_seed = commands.add_parser(
         "nist-seed",
-        help="freeze seed-v3 from the exact first eligible NIST Beacon pulse",
+        help="freeze seed-v4 from the exact first eligible NIST Beacon pulse",
     )
     nist_seed.add_argument("--commitment", type=Path, required=True)
     nist_seed.add_argument("--github-receipt", type=Path, required=True)

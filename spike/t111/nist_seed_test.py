@@ -22,7 +22,7 @@ class NistSeedCeremonyTest(unittest.TestCase):
         self.input_binding = "sha256:" + "b" * 64
         self.committed_at = "2026-07-14T12:00:30Z"
         claim = {
-            "schema": "t111-gate2-commit-set-attempt-v1",
+            "schema": "t111-gate2-commit-set-attempt-v2",
             "source_lineage_binding": prep.commit_set_lineage_binding(self.commits),
             "commits": dict(sorted(self.commits.items())),
             "base_input_binding": self.base_binding,
