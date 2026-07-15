@@ -1,17 +1,16 @@
 package codenav
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"path"
 	"regexp"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
@@ -51,14 +50,18 @@ func (s *Service) safeRepoDir(repo string) (string, error) {
 	return phebssync.SafeRepoDir(s.dataDir, repo)
 }
 
+// readBlob resolves the pinned revision, then reads the immutable blob
+// through the shared bounded reader (TD.4). The revision-vs-path not-found
+// distinction is preserved by call structure: a failed commit resolve maps
+// to ErrRevisionNotFound, a failed path resolve to errBlobNotFound.
 func (s *Service) readBlob(ctx context.Context, repo, revision, filePath string, limit int64, tooLarge error) ([]byte, error) {
 	dir, err := s.safeRepoDir(repo)
 	if err != nil {
 		return nil, err
 	}
-	commit, err := gitOutput(ctx, dir, "rev-parse", "--verify", revision+"^{commit}")
+	commit, err := gitobj.Output(ctx, dir, 256, "rev-parse", "--verify", revision+"^{commit}")
 	if err != nil {
-		if isMissingGitRevision(err) {
+		if errors.Is(err, store.ErrNotFound) {
 			return nil, fmt.Errorf("revision %s: %w", revision, ErrRevisionNotFound)
 		}
 		return nil, fmt.Errorf("resolve indexed revision: %w", err)
@@ -66,33 +69,17 @@ func (s *Service) readBlob(ctx context.Context, repo, revision, filePath string,
 	if strings.TrimSpace(string(commit)) != revision {
 		return nil, fmt.Errorf("resolved revision differs from requested object ID: %w", ErrInvalidInput)
 	}
-	oid, err := gitOutput(ctx, dir, "rev-parse", "--verify", revision+":"+filePath)
+	oid, size, err := gitobj.ResolveBlob(ctx, dir, revision+":"+filePath)
 	if err != nil {
-		if isMissingGitPath(err) {
+		if errors.Is(err, store.ErrNotFound) {
 			return nil, errBlobNotFound
 		}
 		return nil, err
 	}
-	oidString := strings.TrimSpace(string(oid))
-	typ, err := gitOutput(ctx, dir, "cat-file", "-t", oidString)
-	if err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(string(typ)) != "blob" {
-		return nil, errBlobNotFound
-	}
-	sizeBytes, err := gitOutput(ctx, dir, "cat-file", "-s", oidString)
-	if err != nil {
-		return nil, err
-	}
-	size, err := strconv.ParseInt(strings.TrimSpace(string(sizeBytes)), 10, 64)
-	if err != nil || size < 0 {
-		return nil, fmt.Errorf("invalid git blob size %q", strings.TrimSpace(string(sizeBytes)))
-	}
 	if size > limit {
 		return nil, fmt.Errorf("%s is %d bytes (limit %d): %w", filePath, size, limit, tooLarge)
 	}
-	data, err := gitOutput(ctx, dir, "cat-file", "blob", oidString)
+	data, err := gitobj.ReadBlob(ctx, dir, oid, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -100,62 +87,4 @@ func (s *Service) readBlob(ctx context.Context, repo, revision, filePath string,
 		return nil, fmt.Errorf("git blob size changed while reading %s", filePath)
 	}
 	return data, nil
-}
-
-func gitOutput(ctx context.Context, dir string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Dir = dir
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		return nil, &gitCommandError{operation: args[0], cause: err, stderr: strings.TrimSpace(stderr.String())}
-	}
-	return stdout.Bytes(), nil
-}
-
-type gitCommandError struct {
-	operation string
-	cause     error
-	stderr    string
-}
-
-func (e *gitCommandError) Error() string {
-	if e.stderr == "" {
-		return fmt.Sprintf("git %s: %v", e.operation, e.cause)
-	}
-	return fmt.Sprintf("git %s: %v: %s", e.operation, e.cause, e.stderr)
-}
-
-func (e *gitCommandError) Unwrap() error { return e.cause }
-
-func isMissingGitPath(err error) bool {
-	var commandError *gitCommandError
-	if !errors.As(err, &commandError) {
-		return false
-	}
-	return strings.Contains(commandError.stderr, "does not exist in") ||
-		strings.Contains(commandError.stderr, "exists on disk, but not in") ||
-		strings.Contains(commandError.stderr, "Needed a single revision")
-}
-
-func isMissingGitRevision(err error) bool {
-	var commandError *gitCommandError
-	if !errors.As(err, &commandError) {
-		return false
-	}
-	for _, marker := range []string{
-		"Needed a single revision",
-		"bad object",
-		"not a valid object name",
-		"unknown revision",
-	} {
-		if strings.Contains(commandError.stderr, marker) {
-			return true
-		}
-	}
-	return false
 }

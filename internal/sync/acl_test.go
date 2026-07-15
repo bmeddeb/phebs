@@ -141,8 +141,8 @@ func TestGitLabACLMirroring(t *testing.T) {
 		case "/api/v4/projects/7/members/all":
 			_ = json.NewEncoder(w).Encode([]glMember{
 				{Username: "Dev", State: "active", AccessLevel: 50},
-				{Username: "guest", State: "active", AccessLevel: 10},   // below Reporter
-				{Username: "gone", State: "blocked", AccessLevel: 40},   // not active
+				{Username: "guest", State: "active", AccessLevel: 10}, // below Reporter
+				{Username: "gone", State: "blocked", AccessLevel: 40}, // not active
 			})
 		default:
 			w.WriteHeader(http.StatusNotFound)

@@ -9,12 +9,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/internal/gitobj"
 )
 
 const (
@@ -408,43 +407,14 @@ func resolveCommit(ctx context.Context, dir, ref string) (string, error) {
 		return "", err
 	}
 	oid := strings.TrimSpace(string(out))
-	if !isObjectID(oid) {
+	if !gitobj.IsObjectID(oid) {
 		return "", fmt.Errorf("git returned invalid commit id %q", oid)
 	}
 	return oid, nil
 }
 
 func resolveBlob(ctx context.Context, dir, commit, path string) (string, int64, error) {
-	out, err := runGitRaw(ctx, dir, "rev-parse", "--verify", spec(commit, path))
-	if err != nil {
-		return "", 0, err
-	}
-	oid := strings.TrimSpace(string(out))
-	typeOut, err := runGitRaw(ctx, dir, "cat-file", "-t", oid)
-	if err != nil || strings.TrimSpace(string(typeOut)) != "blob" {
-		return "", 0, fmt.Errorf("%s is not a blob: %w", path, store.ErrNotFound)
-	}
-	sizeOut, err := runGitRaw(ctx, dir, "cat-file", "-s", oid)
-	if err != nil {
-		return "", 0, err
-	}
-	size, err := strconv.ParseInt(strings.TrimSpace(string(sizeOut)), 10, 64)
-	if err != nil {
-		return "", 0, fmt.Errorf("parse blob size: %w", err)
-	}
-	return oid, size, nil
-}
-
-func isObjectID(value string) bool {
-	if len(value) != 40 && len(value) != 64 {
-		return false
-	}
-	for _, r := range value {
-		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
-			return false
-		}
-	}
-	return true
+	return gitobj.ResolveBlob(ctx, dir, spec(commit, path))
 }
 
 type limitedBuffer struct {
@@ -477,11 +447,10 @@ func (w *limitedBuffer) Write(p []byte) (int, error) {
 func runGitLimited(ctx context.Context, dir string, limit int64, args ...string) ([]byte, bool, error) {
 	// --literal-pathspecs prevents a repository path such as ":(exclude)*"
 	// from being interpreted as Git pathspec magic and widening the request.
-	full := append([]string{"-c", "core.quotePath=false", "--literal-pathspecs"}, args...)
+	full := append([]string{"--literal-pathspecs"}, args...)
 	commandCtx, stop := context.WithCancel(ctx)
 	defer stop()
-	cmd := exec.CommandContext(commandCtx, "git", full...)
-	cmd.Dir = dir
+	cmd := gitobj.Command(commandCtx, dir, full...)
 	stdout := &limitedBuffer{limit: limit, onOverflow: stop}
 	stderr := &limitedBuffer{limit: historyStderrLimit}
 	cmd.Stdout, cmd.Stderr = stdout, stderr
@@ -493,7 +462,7 @@ func runGitLimited(ctx context.Context, dir string, limit int64, args ...string)
 		if stdout.truncated {
 			return stdout.buf.Bytes(), true, nil
 		}
-		return nil, false, gitCommandError(ctx, err, args, stderr.buf.String())
+		return nil, false, gitobj.WrapError(ctx, args, err, stderr.buf.String())
 	}
 	return stdout.buf.Bytes(), stdout.truncated, nil
 }
@@ -505,7 +474,7 @@ func parseBlameHeader(value string) []string {
 	if len(fields) != 3 && len(fields) != 4 {
 		return nil
 	}
-	if !isObjectID(fields[0]) {
+	if !gitobj.IsObjectID(fields[0]) {
 		return nil
 	}
 	if _, err := strconv.Atoi(fields[1]); err != nil {

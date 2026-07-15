@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -18,6 +17,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -31,7 +31,6 @@ const (
 
 	maxCorpusPathBytes = 4096
 	maxTreeRecordBytes = maxCorpusPathBytes + 128
-	maxGitErrorBytes   = 64 << 10
 	maxCorpusFiles     = 200_000
 	// Inventory keeps path identities so the extractor can replay the trusted
 	// tree and the worker can prove that every declared candidate was read.
@@ -103,13 +102,13 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 
 	cmdCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	cmd := gitCommand(cmdCtx, dir, "ls-tree", "-r", "-z", "--full-tree", g.commit)
+	args := []string{"ls-tree", "-r", "-z", "--full-tree", g.commit}
+	cmd := gitobj.Command(cmdCtx, dir, args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("walk corpus: stdout: %w", err)
 	}
-	var stderr cappedBuffer
-	stderr.max = maxGitErrorBytes
+	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("walk corpus: start git: %w", err)
@@ -179,7 +178,7 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 		return walkErr
 	}
 	if err := cmd.Wait(); err != nil {
-		return gitRunError(ctx, "ls-tree", err, stderr.String())
+		return gitobj.WrapError(ctx, args, err, stderr.String())
 	}
 	g.mu.Lock()
 	g.oids = oids
@@ -210,9 +209,7 @@ func (g *gitCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error)
 	if !ok {
 		return sdk.Blob{}, fmt.Errorf("read corpus %q: %w", filePath, store.ErrNotFound)
 	}
-	// runGitBounded caps memory at the limit regardless of blob size, and
-	// errors past it, so no separate cat-file -s pre-check is needed.
-	content, err := runGitBounded(ctx, dir, MaxBlobBytes, "cat-file", "blob", oid)
+	content, err := gitobj.ReadBlob(ctx, dir, oid, MaxBlobBytes)
 	if err != nil {
 		return sdk.Blob{}, fmt.Errorf("read corpus %q: content: %w", filePath, err)
 	}
@@ -234,13 +231,8 @@ func (g *gitCorpus) repoDir() (string, error) {
 }
 
 func checkCommit(commit string) error {
-	if len(commit) != 40 && len(commit) != 64 {
-		return fmt.Errorf("corpus commit must be a full object id")
-	}
-	for _, r := range commit {
-		if !strings.ContainsRune("0123456789abcdef", r) {
-			return fmt.Errorf("corpus commit must be lowercase hexadecimal")
-		}
+	if !gitobj.IsObjectID(commit) {
+		return fmt.Errorf("corpus commit must be a full lowercase hexadecimal object id")
 	}
 	return nil
 }
@@ -266,7 +258,7 @@ func checkCorpusPath(filePath string) error {
 }
 
 func ensureCommit(ctx context.Context, dir, commit string) error {
-	out, err := runGitBounded(ctx, dir, 32, "cat-file", "-t", commit)
+	out, err := gitobj.Output(ctx, dir, 32, "cat-file", "-t", commit)
 	if err != nil {
 		return fmt.Errorf("corpus commit %s: %w", commit, err)
 	}
@@ -292,22 +284,10 @@ func parseTreeRecord(record []byte) (treeRecord, error) {
 	if !ok || len(fields) != 3 || len(name) == 0 {
 		return treeRecord{}, fmt.Errorf("walk corpus: malformed ls-tree record")
 	}
-	if err := checkObjectID(fields[2]); err != nil {
-		return treeRecord{}, fmt.Errorf("walk corpus: %w", err)
+	if !gitobj.IsObjectID(fields[2]) {
+		return treeRecord{}, errors.New("walk corpus: invalid Git object id")
 	}
 	return treeRecord{mode: fields[0], objectType: fields[1], oid: fields[2], path: string(name)}, nil
-}
-
-func checkObjectID(oid string) error {
-	if len(oid) != 40 && len(oid) != 64 {
-		return errors.New("invalid Git object id")
-	}
-	for _, r := range oid {
-		if !strings.ContainsRune("0123456789abcdef", r) {
-			return errors.New("invalid Git object id")
-		}
-	}
-	return nil
 }
 
 func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {
@@ -323,81 +303,3 @@ func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {
 	}
 	return record, err
 }
-
-func gitCommand(ctx context.Context, dir string, args ...string) *exec.Cmd {
-	full := append([]string{"--no-replace-objects", "-c", "core.quotePath=false"}, args...)
-	cmd := exec.CommandContext(ctx, "git", full...)
-	cmd.Dir = dir
-	// Never inherit GIT_DIR, GIT_WORK_TREE, alternate object directories,
-	// config injection, or weaker duplicate values for the safe settings.
-	env := make([]string, 0, len(os.Environ())+6)
-	for _, value := range os.Environ() {
-		if !strings.HasPrefix(value, "GIT_") {
-			env = append(env, value)
-		}
-	}
-	cmd.Env = append(env,
-		"GIT_NO_LAZY_FETCH=1",
-		"GIT_TERMINAL_PROMPT=0",
-		"GIT_OPTIONAL_LOCKS=0",
-		"GIT_CONFIG_NOSYSTEM=1",
-		"GIT_CONFIG_GLOBAL="+os.DevNull,
-		"GIT_ATTR_NOSYSTEM=1",
-	)
-	return cmd
-}
-
-func runGitBounded(ctx context.Context, dir string, maxOutput int64, args ...string) ([]byte, error) {
-	cmd := gitCommand(ctx, dir, args...)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	var stderr cappedBuffer
-	stderr.max = maxGitErrorBytes
-	cmd.Stderr = &stderr
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	out, readErr := io.ReadAll(io.LimitReader(stdout, maxOutput+1))
-	if readErr != nil {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-		return nil, readErr
-	}
-	if int64(len(out)) > maxOutput {
-		_ = cmd.Process.Kill()
-		_ = cmd.Wait()
-		return nil, fmt.Errorf("git output exceeds %d-byte limit", maxOutput)
-	}
-	if err := cmd.Wait(); err != nil {
-		return nil, gitRunError(ctx, args[0], err, stderr.String())
-	}
-	return out, nil
-}
-
-func gitRunError(ctx context.Context, operation string, runErr error, stderr string) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	return fmt.Errorf("git %s: %w: %s", operation, runErr, strings.TrimSpace(stderr))
-}
-
-type cappedBuffer struct {
-	buf bytes.Buffer
-	max int
-}
-
-func (b *cappedBuffer) Write(p []byte) (int, error) {
-	n := len(p)
-	remaining := b.max - b.buf.Len()
-	if remaining > 0 {
-		if remaining > len(p) {
-			remaining = len(p)
-		}
-		_, _ = b.buf.Write(p[:remaining])
-	}
-	return n, nil
-}
-
-func (b *cappedBuffer) String() string { return b.buf.String() }

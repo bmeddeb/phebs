@@ -9,11 +9,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -51,40 +51,19 @@ func checkPath(s string) error {
 	return nil
 }
 
+// runGitRaw runs a read-only git command through the shared hardened builder
+// (gitobj.Command: scrubbed env, no replace refs, verbatim UTF-8 paths) with
+// unbounded stdout — used for listings and history streams only; blob reads
+// go through the bounded gitobj primitives.
 func runGitRaw(ctx context.Context, dir string, args ...string) ([]byte, error) {
-	// core.quotePath=false: emit UTF-8 paths verbatim instead of C-quoting
-	// (octal-escaping, double-wrapping) non-ASCII names, which would make
-	// ls-tree output unparseable and the resulting names unopenable.
-	full := append([]string{"-c", "core.quotePath=false"}, args...)
-	cmd := exec.CommandContext(ctx, "git", full...)
-	cmd.Dir = dir
-	var stdout, stderr bytes.Buffer
+	cmd := gitobj.Command(ctx, dir, args...)
+	var stdout bytes.Buffer
+	var stderr gitobj.StderrBuffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, gitCommandError(ctx, err, args, stderr.String())
+		return nil, gitobj.WrapError(ctx, args, err, stderr.String())
 	}
 	return stdout.Bytes(), nil
-}
-
-func gitCommandError(ctx context.Context, runErr error, args []string, stderr string) error {
-	// exec.CommandContext commonly reports "signal: killed" rather than
-	// wrapping the context error. Preserve cancellation/deadline semantics
-	// for callers and HTTP request teardown.
-	if ctxErr := ctx.Err(); ctxErr != nil {
-		return ctxErr
-	}
-	werr := fmt.Errorf("git %s: %w\n%s", strings.Join(args, " "), runErr, stderr)
-	for _, marker := range []string{
-		"does not exist", "invalid object name", "Not a valid object name",
-		"not a valid object", "bad revision", "bad object", "not a tree object",
-		"bad file", "ambiguous argument", "unknown revision", "Needed a single revision",
-		"no such path", "no such file",
-	} {
-		if strings.Contains(stderr, marker) {
-			return fmt.Errorf("%w: %w", store.ErrNotFound, werr)
-		}
-	}
-	return werr
 }
 
 // spec builds the tree-ish for ref (default HEAD) and an optional path.
@@ -109,7 +88,9 @@ var MaxBlobBytes int64 = 10 << 20 // 10 MiB
 var ErrTooLarge = errors.New("file too large")
 
 // CatFile returns the exact blob bytes of path at ref, refusing blobs over
-// MaxBlobBytes (checked cheaply via cat-file -s before reading the content).
+// MaxBlobBytes. The mutable tree-ish is resolved once to an immutable blob
+// OID (gitobj.ResolveBlob), so a concurrent fetch cannot move HEAD between
+// the size check and the bounded content read.
 func CatFile(ctx context.Context, dataDir, repoName, ref, path string) ([]byte, error) {
 	dir, dirErr := SafeRepoDir(dataDir, repoName)
 	if err := errors.Join(dirErr, checkRef(ref), checkPath(path)); err != nil {
@@ -118,25 +99,17 @@ func CatFile(ctx context.Context, dataDir, repoName, ref, path string) ([]byte, 
 	if path == "" {
 		return nil, fmt.Errorf("empty path: %w", ErrBadInput)
 	}
-	// Resolve the mutable tree-ish once. Sizing and reading the immutable blob
-	// OID prevents a concurrent fetch from moving HEAD between the two calls.
-	oidOut, err := runGitRaw(ctx, dir, "rev-parse", "--verify", spec(ref, path))
+	oid, size, err := gitobj.ResolveBlob(ctx, dir, spec(ref, path))
 	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("%w: %v", store.ErrNotFound, err)
 	}
-	oid := strings.TrimSpace(string(oidOut))
-	typeOut, err := runGitRaw(ctx, dir, "cat-file", "-t", oid)
-	if err != nil || strings.TrimSpace(string(typeOut)) != "blob" {
-		return nil, fmt.Errorf("%s is not a blob: %w", path, store.ErrNotFound)
+	if size > MaxBlobBytes {
+		return nil, fmt.Errorf("%s is %d bytes (limit %d): %w", path, size, MaxBlobBytes, ErrTooLarge)
 	}
-	sizeOut, err := runGitRaw(ctx, dir, "cat-file", "-s", oid)
-	if err != nil {
-		return nil, err
-	}
-	if n, perr := strconv.ParseInt(strings.TrimSpace(string(sizeOut)), 10, 64); perr == nil && n > MaxBlobBytes {
-		return nil, fmt.Errorf("%s is %d bytes (limit %d): %w", path, n, MaxBlobBytes, ErrTooLarge)
-	}
-	return runGitRaw(ctx, dir, "cat-file", "blob", oid)
+	return gitobj.ReadBlob(ctx, dir, oid, MaxBlobBytes)
 }
 
 type TreeEntry struct {

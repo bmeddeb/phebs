@@ -64,5 +64,6 @@ verified live from a headless Claude Code session). **Epic 9 done 2026-07-11**
 (users/sessions/API keys, OIDC, SCIP code nav, git history). **Epic 10 done
 2026-07-11** (audit log, zero-telemetry analytics, permission-aware search —
 demoed live: admin vs non-admin over API + stateless MCP; T10.4 multi-branch
-stays gated on demand; TD.4 shared Git reader still open). Remaining per
-BACKLOG: TD.4, T10.4 (on demand), then P5 hardening / P6 fleet.
+stays gated on demand). **TD.4 done 2026-07-15** (`internal/gitobj` shared
+bounded Git reader serves source/history/SCIP/extraction). Remaining per
+BACKLOG: T10.4 (on demand), then P5 hardening / P6 fleet.

@@ -74,39 +74,6 @@ func (f *corpusGitFixture) cloneMirror() string {
 	return mirror
 }
 
-func TestGitCommandScrubsInheritedGitEnvironment(t *testing.T) {
-	for key, value := range map[string]string{
-		"GIT_DIR": "/attacker", "GIT_WORK_TREE": "/attacker/work",
-		"GIT_OBJECT_DIRECTORY": "/attacker/objects", "GIT_ALTERNATE_OBJECT_DIRECTORIES": "/attacker/alt",
-		"GIT_NO_LAZY_FETCH": "0", "GIT_TERMINAL_PROMPT": "1", "GIT_OPTIONAL_LOCKS": "1",
-	} {
-		t.Setenv(key, value)
-	}
-	cmd := gitCommand(context.Background(), "/trusted/repo.git", "version")
-	values := map[string][]string{}
-	for _, entry := range cmd.Env {
-		key, value, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(key, "GIT_") {
-			values[key] = append(values[key], value)
-		}
-	}
-	want := map[string]string{
-		"GIT_NO_LAZY_FETCH": "1", "GIT_TERMINAL_PROMPT": "0", "GIT_OPTIONAL_LOCKS": "0",
-		"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.DevNull, "GIT_ATTR_NOSYSTEM": "1",
-	}
-	if len(values) != len(want) {
-		t.Fatalf("Git environment keys = %v, want only %v", values, want)
-	}
-	for key, expected := range want {
-		if got := values[key]; len(got) != 1 || got[0] != expected {
-			t.Fatalf("%s = %v, want [%q]", key, got, expected)
-		}
-	}
-	if !slices.Contains(cmd.Args, "--no-replace-objects") {
-		t.Fatalf("git args omit --no-replace-objects: %v", cmd.Args)
-	}
-}
-
 func TestCorpusRejectsInvalidPathsAndMutableRefs(t *testing.T) {
 	for _, filePath := range []string{"", "/absolute", "../escape", "a/../b", `a\b.proto`, string([]byte{'a', 0xff})} {
 		if err := checkCorpusPath(filePath); err == nil {
