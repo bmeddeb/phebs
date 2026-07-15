@@ -2919,7 +2919,7 @@ def preflight_gate_design(
         alpha_each = (Fraction(1, 1) - GATE_CONFIDENCE) / family_size
 
     report: dict[str, Any] = {
-        "schema": "t111-gate2-power-v1",
+        "schema": "t111-gate2-power-v2",
         "family_size": family_size,
         "alpha_each": f"{alpha_each.numerator}/{alpha_each.denominator}",
         "best_case": {},
@@ -3052,10 +3052,16 @@ def preflight_gate_design(
             if row["label"] == role
         )
         dev_unique_ceiling += min(role_quota, max(0, capacity))
-    selected_unique_ceiling = census_total + holdout_unique_floor + dev_unique_ceiling
+    # The fraction is minimized at the smallest admissible holdout union and
+    # the largest admissible development union. This sum is therefore the
+    # denominator at that minimizer, not a ceiling on the realized selected
+    # union: a realized holdout union may be larger than its floor.
+    blind_fraction_denominator_at_bound = (
+        census_total + holdout_unique_floor + dev_unique_ceiling
+    )
     blind_fraction_lower_bound = (
-        holdout_unique_floor / selected_unique_ceiling
-        if selected_unique_ceiling
+        holdout_unique_floor / blind_fraction_denominator_at_bound
+        if blind_fraction_denominator_at_bound
         else 0.0
     )
     if blind_fraction_lower_bound < MIN_BLIND_HOLDOUT_FRACTION:
@@ -3070,7 +3076,9 @@ def preflight_gate_design(
     report["best_case"]["census_unique_sites"] = census_total
     report["best_case"]["holdout_unique_floor"] = holdout_unique_floor
     report["best_case"]["dev_unique_ceiling"] = dev_unique_ceiling
-    report["best_case"]["selected_unique_ceiling"] = selected_unique_ceiling
+    report["best_case"]["blind_fraction_denominator_at_bound"] = (
+        blind_fraction_denominator_at_bound
+    )
     report["best_case"]["maximum_recall_label_units"] = maximum_recall_label_units
     report["best_case"]["blind_fraction_lower_bound"] = blind_fraction_lower_bound
     report["attainable"] = not reasons
@@ -3721,7 +3729,11 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
         elif seed_record is not None:
             verify_input_commitment_publication(manifest, seed_record)
     else:
-        manifest["power_analysis"] = {"schema": "t111-gate2-power-v1", "attainable": False, "diagnostic_only": True}
+        manifest["power_analysis"] = {
+            "schema": "t111-gate2-power-v2",
+            "attainable": False,
+            "diagnostic_only": True,
+        }
     return manifest, dev_sites, holdout_sites, keys
 
 

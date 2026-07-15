@@ -979,12 +979,13 @@ func wire(s Server) {
     def test_power_preflight_includes_both_protocol_families(self) -> None:
         manifest = self._power_manifest(population=300, holdout=300)
         report = prep.preflight_gate_design(manifest)
+        self.assertEqual(report["schema"], "t111-gate2-power-v2")
         self.assertTrue(report["attainable"])
         self.assertEqual(report["family_size"], 0)
         self.assertEqual(set(report["best_case"]), {
             "client_call", "registration", "census_unique_sites",
             "holdout_unique_floor", "dev_unique_ceiling",
-            "selected_unique_ceiling", "maximum_recall_label_units",
+            "blind_fraction_denominator_at_bound", "maximum_recall_label_units",
             "blind_fraction_lower_bound",
         })
 
@@ -1071,7 +1072,7 @@ func wire(s Server) {
         best = report["best_case"]
         self.assertEqual(best["holdout_unique_floor"], 400)
         self.assertEqual(best["dev_unique_ceiling"], 120)
-        self.assertEqual(best["selected_unique_ceiling"], 545)
+        self.assertEqual(best["blind_fraction_denominator_at_bound"], 545)
         self.assertAlmostEqual(
             best["blind_fraction_lower_bound"], 400 / 545, places=15
         )
