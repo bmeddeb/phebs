@@ -36,7 +36,6 @@ from label_prep import (
     FRAME_REGISTRATION_PRECISION,
     FRAME_REGISTRATION_RECALL,
     FRAME_ROLE,
-    DEFAULT_ARTIFACTS,
     DEFAULT_BURN_LEDGER,
     DEFAULT_CORPUS,
     DEFAULT_LOCK,
@@ -49,7 +48,6 @@ from label_prep import (
     MIN_POSITIVES,
     MIN_BLIND_HOLDOUT_FRACTION,
     PrepError,
-    SCHEMA,
     SYSTEMS,
     build_artifacts,
     canonical_json,
@@ -82,7 +80,9 @@ from label_adjudication import AdjudicationError, validate_assignment_manifest
 
 
 BASE = Path(__file__).resolve().parent
+DEFAULT_ARTIFACTS = BASE / "labeling" / "g2-v3"
 DEFAULT_FACTS = BASE / "out"
+SCHEMA = "t111-gate2-probability-sample-v3"
 ALLOWED_ROLES = {"production", "test", "mock", "generated", "vendor"}
 LABEL_FIELDS = {
     "site_id",
@@ -231,7 +231,7 @@ def preflight_toolchain(artifact_dir: Path) -> dict[str, str]:
         or manifest.get("schema") != SCHEMA
         or manifest.get("gate_design_fixed") is not True
     ):
-        raise ScoreError("toolchain preflight requires a sealed Gate-2 v4 manifest")
+        raise ScoreError("toolchain preflight requires a sealed Gate-2 v3 manifest")
     provenance = manifest.get("provenance")
     if not isinstance(provenance, dict):
         raise ScoreError("artifact manifest has no provenance")
@@ -942,7 +942,7 @@ def gate_configuration_reasons(
     manifest = bundle["manifest"]
     reasons: list[str] = []
     if manifest.get("systems") != list(SYSTEMS):
-        reasons.append("gate mode requires every fixture in the precommitted order")
+        reasons.append("gate mode requires all four fixtures in the precommitted order")
     if manifest.get("gate_design_fixed") is not True:
         reasons.append("gate mode requires a one-shot sealed design")
     randomization = manifest.get("randomization")
@@ -968,7 +968,7 @@ def gate_configuration_reasons(
         or attempt_claim.get("committed_at")
         != randomization_fields.get("input_committed_at")
     ):
-        reasons.append("gate mode requires the bundled complete-source attempt claim")
+        reasons.append("gate mode requires the bundled four-commit attempt claim")
     if manifest.get("sampling_config") != gate_sampling_config():
         reasons.append("gate mode requires the fixed precommitted sampling configuration")
     if manifest.get("decision_rule") != gate_decision_rule():
@@ -979,7 +979,7 @@ def gate_configuration_reasons(
         or not isinstance(burn_binding.get("coordinate_count"), int)
         or burn_binding.get("coordinate_count", 0) <= 0
         or burn_binding.get("carry_forward_schema")
-        != "t111-burn-carry-forward-census-v3"
+        != "t111-burn-carry-forward-census-v2"
         or not isinstance(burn_binding.get("active_coordinate_count"), int)
         or burn_binding.get("active_coordinate_count", 0) <= 0
         or manifest.get("holdout", {}).get("unique_census_sites", 0) <= 0

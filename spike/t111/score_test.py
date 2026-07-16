@@ -495,7 +495,7 @@ class Gate2ScoringTests(unittest.TestCase):
             "burn_ledger": {
                 "coordinate_count": 700,
                 "active_coordinate_count": 700,
-                "carry_forward_schema": "t111-burn-carry-forward-census-v3",
+                "carry_forward_schema": "t111-burn-carry-forward-census-v2",
             },
             "holdout": {"unique_census_sites": 1},
             "protocol_coverage": {
@@ -521,11 +521,11 @@ class Gate2ScoringTests(unittest.TestCase):
             legacy_four["manifest"]["systems"] = list(prep.SYSTEMS[:4])
             reasons = score.gate_configuration_reasons(legacy_four, args)
             self.assertTrue(
-                any("every fixture" in reason for reason in reasons)
+                any("all four fixtures" in reason for reason in reasons)
             )
             legacy_burn = deepcopy(bundle)
             legacy_burn["manifest"]["burn_ledger"]["carry_forward_schema"] = (
-                "t111-burn-carry-forward-census-v2"
+                "t111-burn-carry-forward-census-v3"
             )
             reasons = score.gate_configuration_reasons(legacy_burn, args)
             self.assertTrue(any("census stratum" in reason for reason in reasons))
