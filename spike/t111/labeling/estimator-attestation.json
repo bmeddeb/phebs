@@ -1,0 +1,27 @@
+{
+  "schema": "t111-estimator-attestation-v1",
+  "attestation_id": "t111-estimator-attestation-1",
+  "date": "2026-07-15",
+  "attestor": "Ben Meddeb <ben@meddeb.me> (operator)",
+  "specification": {
+    "path": "spike/t111/labeling/ESTIMATOR.md",
+    "digest": "sha256:e19b1e4f6abf6cf3603627c1f4753e593fbe56a327ea1810e26dfcd75b1e4fa3",
+    "sealed_commit": "e3fe827"
+  },
+  "attests": [
+    "No unlogged manual join of the frozen Attempt-3 labels to any hidden prediction, key value, or extractor output occurred.",
+    "No derived score, correctness bit, metric, or partial result from the failed Attempt-3 scoring execution existed or informed any subsequent extractor, estimator, selection, or expansion decision.",
+    "Access to the private mode-0600 ceremony files was limited to the logged operations recorded in the sealed receipts."
+  ],
+  "review": {
+    "verdict": "APPROVE",
+    "reviewed_by": "adversarial protocol review, 2026-07-15 (delegated by the operator)",
+    "verified_citations": [
+      "score.receipt.json digest sha256:8b686e0201092622a8a057ab29e5ee225e00dd9b12b50b7f7994a168d8544883",
+      "historical scorer score.py@0df5d1a^ digest sha256:ee5b38b992dfd182063f0054d3343bcbe8a0a35129142dc1c4b85c5d682a3c55",
+      "labels.frozen.jsonl digest sha256:56bc44d41d44b4adecaa1284db8bd24cde1ae4cf034cbac4893c78e81a95e034"
+    ]
+  },
+  "authorizes": "Implementation of the one-score estimator per ESTIMATOR.md's prospective protocol: permitted changes limited to admission ordering, authorization state, and canonical receipts. Execution remains forbidden until a later clean commit binds the specification, the independently diff-reviewed implementation, and the canonical authorization record; the implementer and diff reviewer must be different parties.",
+  "recorded_by": "implementing agent, on the operator's recorded instruction ('attest') of 2026-07-15"
+}
