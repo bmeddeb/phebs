@@ -350,6 +350,19 @@ needs real template evaluation, not shortcuts.
 
 ## Next (Epics 12–15, per the exit decision)
 
+## Frozen-label estimator closure termination
+
+The sealed Loki closure could not be reproduced. Its active source identity is
+`sha256:d520ddccbd10d528d43bb90fde644cb80c86a6137813ee72b1891083794853a0`
+(`d108ea11a62fbf7be7d25b58d44d396a3ce0c96c`), with historical cohort identity
+`sha256:da800af318acaf3dada3aebceb8555bb57cafa5ef9d6e8a0b83966f79c1e9a4d`
+(`aa5e221aa4d54fb5126e121e5f85d918270e1953`). No closure manifest naming the
+historical module closure was available. Two offline runs were byte-identical
+at `sha256:f92312ff5e46a35ef6cd216f4eb6de7ccd30d0bde0c326d4a0d54d883502ec9b`,
+which differs from sealed `sha256:03ededa3c8a532e8ee8be0176d24a569d81373b639d4367929f470373c2f7398`.
+Per `ESTIMATOR.md`, this ends the frozen-label estimator path and sends the
+fresh blind-sample fallback to human review.
+
 1. Epic 12 productizes the evidence schema + proto facts on the phebs job
    chassis; the permission-before-aggregation Gate-1 criterion is exercised
    there (the spike carried the design only).

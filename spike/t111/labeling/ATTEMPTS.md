@@ -439,3 +439,17 @@ blind floor, 35% expansion target, fixed candidate order, accuracy thresholds,
 and confidence rules remain in force. A separately named frozen-label
 estimator is now documented prospectively in `ESTIMATOR.md` for human review.
 It does not reopen terminal Attempt 3, issue an attempt, or authorize scoring.
+
+### Loki frozen-fact closure termination (2026-07-15)
+
+The sealed Attempt-3 commitment declares Loki active source identity
+`sha256:d520ddccbd10d528d43bb90fde644cb80c86a6137813ee72b1891083794853a0`
+for commit `d108ea11a62fbf7be7d25b58d44d396a3ce0c96c`, plus historical cohort
+identity `sha256:da800af318acaf3dada3aebceb8555bb57cafa5ef9d6e8a0b83966f79c1e9a4d`
+for `aa5e221aa4d54fb5126e121e5f85d918270e1953`. No closure manifest naming
+that historical module closure was available. Two offline runs of the pinned
+historical producer were byte-identical at
+`sha256:f92312ff5e46a35ef6cd216f4eb6de7ccd30d0bde0c326d4a0d54d883502ec9b`,
+not sealed `sha256:03ededa3c8a532e8ee8be0176d24a569d81373b639d4367929f470373c2f7398`.
+The frozen-label estimator path terminates honestly; fresh-blind-sample
+fallback returns to human review.
