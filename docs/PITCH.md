@@ -2,6 +2,10 @@
 
 *Prepared by Ben Meddeb · July 2026 · draft for internal circulation*
 
+**Companion documents:** [product vision](./VISION.md) ·
+[pilot charter](./PILOT_CHARTER.md) ·
+[evidence-pack card template](./EVIDENCE_PACK_CARD.md)
+
 ## Executive summary
 
 phebs is a working, self-hosted code-search system and an experimental
@@ -18,8 +22,9 @@ dark until it passes a preregistered external benchmark followed by an
 internal shadow evaluation. I am proposing a bounded pilot to determine
 whether phebs reduces consumer-discovery time and makes the remaining
 uncertainty in migration decisions explicit. The ask: a six-week
-read-only pilot — one VM, a least-privilege identity, two partner roles,
-advisory-only results.
+read-only pilot — one VM, a least-privilege identity, named sponsor,
+migration/build partners, independent reviewers, environment and Security
+capacity, advisory-only results.
 
 ## The problem
 
@@ -64,6 +69,7 @@ therefore distinguishes directly evidenced call sites, potential
 transitive consumers through the build graph, mapped deployables and
 services, recorded owners, and **unresolved or ambiguous mappings, kept
 explicit**.
+
 The pilot compares phebs' direct and transitive consumer candidates with
 runtime-observed consumers supplied independently; runtime observations
 are not represented as phebs-derived facts.
@@ -82,7 +88,7 @@ That is what a migration owner can act on — not a repository count.
 | Status | Capability |
 |---|---|
 | Operational | search, connectors, authentication/OIDC, audit, code navigation, MCP search tools |
-| Implemented but dark | Go/gRPC call-site extraction, evidence storage, atomic fact publication |
+| Implemented but dark | Go/gRPC client-call and server-registration extraction, evidence storage, atomic fact publication |
 | Pilot hypothesis | build-target, deployable, service, and owner attribution; internal evaluation artifacts |
 | Post-gate productization | consumer queries, exportable proof bundles, durable coverage certificates, inventory history (diffable across snapshots) |
 
@@ -91,6 +97,7 @@ an **analysis manifest** recording: the monorepo commit/tree digest;
 included and excluded paths; build targets and build configuration; build
 tags, generated inputs, and dependency locks; the service-catalog and
 ownership snapshots used for attribution; extractor and adapter versions;
+rule and schema versions; phebs source commit, binary, and toolchain digests;
 and the requester's visibility scope.
 
 Per finding, classification is modeled on orthogonal dimensions rather
@@ -142,8 +149,9 @@ remain uncertain. Field-level proto dependency and compatibility analysis
   permission-filtered source evidence that agents can cite. Verified live
   from agent sessions.
 - **Evidence layer (dark):** content-addressed fact storage with atomic
-  publication and a fail-closed Go/gRPC call-site extractor, shipping
-  behind an experimental flag until measured (mechanics in Appendix B).
+  publication and a fail-closed Go/gRPC client-call and server-registration
+  extractor, shipping behind an experimental flag until measured (mechanics
+  in Appendix B).
 
 Cold-index cost, incremental freshness, resource use, and recovery under
 monorepo commit volume are measured during the pilot, not asserted here.
@@ -159,9 +167,9 @@ loss of authorization, mandatory deletion, or legal policy).
 ## The validation discipline
 
 No product claim ships on an unmeasured extractor. **The external
-benchmark validates call-site extraction only** — client-call and
-server-registration facts on four open systems (Temporal, Dapr, Loki,
-Online Boutique). Its protocol: two independent reviewers label assigned
+benchmark validates only two extraction fact families: client calls and
+server registrations** on four open systems (Temporal, Dapr, Loki, Online
+Boutique). Its protocol: two independent reviewers label assigned
 blind samples from source alone, with a preregistered overlap subset used
 to measure agreement; disagreements in the overlap are adjudicated into
 the frozen gold set, whose hash is published before scoring. The
@@ -183,12 +191,15 @@ The external benchmark does **not** validate the mapping from call site to
 internal service and owner. The internal shadow evaluation therefore
 measures separately: call-site precision/recall on internal code
 (wrappers, macros, build tags, generated sources, custom frameworks);
-build-target attribution accuracy and coverage; deployable/service
-attribution accuracy and coverage; and owner-resolution coverage. If the
-product claim is a service-consumer inventory, the internal evaluation
-unit is *(canonical service, gRPC operation, monorepo snapshot, build
-configuration)*. Until that mapping exists and is evaluated, phebs claims
-a **versioned call-site inventory with consumer candidates**, not an
+build-target, deployable, and canonical-service attribution accuracy and
+coverage as separate hops; owner-resolution accuracy and coverage; processing
+completion/failure rates; and direct end-to-end service-operation edge
+precision/recall. The last result is measured against an independently
+constructed service-edge frame rather than inferred by multiplying component
+metrics. If the product claim is a service-consumer inventory, the internal
+evaluation unit is *(canonical service, gRPC operation, monorepo snapshot,
+build configuration)*. Until that mapping exists and is evaluated, phebs
+claims a **versioned call-site inventory with consumer candidates**, not an
 unqualified consumer inventory.
 
 This discipline is not overhead — it is the product. If the external
@@ -199,15 +210,23 @@ be evaluated against a fresh, unseen holdout before reconsideration.
 ## Comparison with the current workflow
 
 The relevant comparison is against how a consumer inventory is built
-today. For a concrete anchor, the pilot would run against **[one active
-Go/gRPC migration — named example and one narrowly selected RPC to be
-inserted before circulation, with a measured baseline reconstructed from
-the manual inventory, owner outreach, build queries, and traffic
-evidence]**:
+today. The proposed anchor is the legacy
+`userdevices.FindRelatedUserDevices` RPC within the active
+**userdevices → uberdevices v2** migration. Before ingestion, the sponsor
+and migration owner confirm that this RPC remains suitable and freeze the
+exact IDL identity and source universe in the
+[pilot charter](./PILOT_CHARTER.md). Changing the anchor after that point
+requires a new preregistered baseline rather than an in-place substitution.
+
+The comparison baseline is reconstructed independently of phebs from the
+existing manual inventory, owner outreach, build queries, and a declared
+window of traffic evidence. Each channel remains separately labeled; the
+runtime observations are not promoted into source facts, and the candidate
+extractor does not define the internal recall-positive population:
 
 | | Current practice | Pilot hypothesis (measured, not promised) |
 |---|---|---|
-| Time to a reviewable candidate inventory | days–weeks; to be baselined from the named migration | target: same-day initial inventory; actual time measured |
+| Time to a reviewable candidate inventory | reconstructed and measured for `userdevices.FindRelatedUserDevices` before phebs output is unsealed | target: same-day initial inventory; actual time measured |
 | Snapshot/target scope recorded | often implicit or manually documented | manifest-bound, every run |
 | Production vs test/tooling classification | manual | orthogonal-dimension classification; accuracy measured |
 | Service/owner attribution | manual, ambiguous | derived from catalog snapshots; coverage measured |
@@ -250,9 +269,8 @@ another; every new relationship type must declare its supported claim,
 coverage semantics, validation bar, and unresolved cases.
 
 The six-week pilot remains focused on one Go/gRPC migration. The broader
-use cases belong to the product vision and staged roadmap (see
-`docs/VISION.md`), where they strengthen the adoption case without
-expanding this ask.
+use cases belong to the [product vision](./VISION.md), where they strengthen
+the adoption case without expanding this ask.
 
 ## Roadmap
 
@@ -282,33 +300,46 @@ remain bound to individual immutable snapshots; the pilot measures change
 between them.
 
 Requirements: an isolated internal deployment, a least-privilege monorepo
-identity, one migration owner, a partner with build-graph and
-service-catalog access (one person may cover both roles), and a
-sanctioned allocation of my time covering the pilot and its
-prerequisites. Contract results remain advisory; no deprecation decision
-will rely solely on phebs.
+identity, an engineering sponsor, one migration owner, a partner with
+build-graph and service-catalog access (one person may cover both roles),
+independent label reviewers, an environment owner, Security/OSS/Legal
+review capacity, and a sanctioned allocation of my time covering the pilot
+and its prerequisites. Contract results remain advisory; no deprecation
+decision will rely solely on phebs.
 
-Shape: a prerequisite phase before ingestion (threat model, reproducible
-build, dependency scan, ACL negative tests — my time plus Security review
-capacity); a week-one checkpoint verifying the monorepo is git-accessible
-to phebs at cloneable scale **before further prerequisite spend**; then
-baseline ingestion, analysis and attribution, and evaluation against the
-preregistered gates. All pilot data and derived artifacts — source
-mirror, indexes, evidence — remain company property, never leave company
-infrastructure, and are destroyed at pilot end unless continuation is
-approved.
+Shape: a prerequisite phase before any retained source copy (threat model,
+reproducible build, dependency scan, ACL negative tests, secrets and egress
+review). A non-source feasibility preflight uses metadata, capacity
+estimates, and authentication/connectivity checks only. After that safety
+gate passes, a week-one authorized clone/index checkpoint verifies the
+monorepo at representative and then declared scale before baseline
+extraction proceeds. The pilot then performs analysis, attribution, and
+evaluation against the preregistered gates.
+
+Company source and source-derived pilot artifacts — mirror, indexes,
+evidence, logs, and manifests — remain on approved company infrastructure
+and are handled under company confidentiality, retention, access, and
+ownership policies. They are destroyed at pilot end unless continuation is
+approved. Ownership or assignment of phebs itself remains subject to the
+Legal/OSS/provenance review described below.
 
 **Before ingestion begins, the sponsor, migration owner, and platform
 partner will agree to preregistered pass, conditional-pass, and stop
 criteria** for accuracy, attribution coverage, authorization isolation,
 freshness, operating cost, and workflow improvement — so the final
 decision is non-political. The evaluation reports against those gates:
-call-site accuracy, build-target and service-attribution coverage,
-unresolved-mapping rate, authorization isolation and revocation behavior,
-cold and incremental processing cost, freshness lag, query latency,
-evidence reproducibility, and workflow time saved. The decision is then to
-stop, continue incubation, sponsor an internal deployment, or evaluate an
-ownership transfer with named maintenance allocation.
+call-site accuracy, attribution accuracy and coverage at each mapping hop,
+direct end-to-end service-edge precision/recall, processing
+completion/failure rates, unresolved-mapping rate, authorization isolation
+and revocation behavior, cold and incremental processing cost, freshness lag,
+query latency, evidence reproducibility, and workflow time saved. The
+decision is then to stop, continue incubation, sponsor an internal deployment,
+or evaluate an ownership transfer with named maintenance allocation.
+
+The [pilot charter](./PILOT_CHARTER.md) defines the proposed source
+universe, roles, week-by-week sequence, independently constructed internal
+baseline, safety gates, evaluation worksheet, teardown requirements, and
+decision rubric. Its gates are frozen before source ingestion.
 
 **One monorepo. One API migration. One pinned baseline. Every authorized
 eligible target.** A representative service slice can seed an initial
@@ -330,8 +361,9 @@ exactly the unknown consumer that matters.
   roadmap, not promises; each gets the same measurement bar.
 - **Ingestion assumes a git-accessible monorepo mirror** at cloneable
   scale; phebs is proven on open-source repository scale, not yet on ours.
-  Both are verified at the week-one checkpoint, before deeper
-  prerequisite and partner time is spent.
+  Non-source feasibility is checked before retained source access; an
+  authorized scale checkpoint follows only after the pre-ingestion safety
+  gate passes.
 
 ## Intellectual property and provenance
 
@@ -345,7 +377,8 @@ subject to Legal, OSS, and Security approval.
 
 ## Appendix A — external validation protocol summary
 
-Preregistered, staged, fail-closed; scope: call-site extraction on the
+Preregistered, staged, fail-closed; scope: Go/gRPC client-call and
+server-registration extraction on the
 four-system open benchmark. Stage 0 (sealed): candidate extractor identity
 pinned by source commit, toolchain digest, and binary digest; every input
 must reproduce byte-identically, twice, from its declared provenance

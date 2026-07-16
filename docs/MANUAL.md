@@ -20,6 +20,8 @@ configuring, and operating phebs. For architecture and design rationale see
 
 ---
 
+
+
 ## 1. Overview
 
 phebs mirrors git repositories to local disk, builds
@@ -30,15 +32,15 @@ API — all from a single process with zero external services.
 The moving parts inside that one process:
 
 - a **supervised SurrealDB child** storing repo state and job queues on local
-  disk (`surrealkv`), started and stopped with phebs;
+disk (`surrealkv`), started and stopped with phebs;
 - a **sync worker** mirroring configured repos into bare git clones;
 - an **index worker** running `zoekt-git-index` (built from the same module
-  version as the server) as an OOM-isolated child per job;
+version as the server) as an OOM-isolated child per job;
 - an **in-process searcher** over the shard directory, streaming results;
 - **DB-backed authentication** with browser sessions, revocable API keys, and
-  optional OpenID Connect;
+optional OpenID Connect;
 - **SCIP code navigation and Git history** read at immutable commit IDs from
-  the same bare mirrors;
+the same bare mirrors;
 - the **web UI** (React + Base Web + CodeMirror), embedded in the binary.
 
 Indexing is **HEAD-only**: the default branch of each repo (or, for watched
@@ -46,16 +48,22 @@ local repos, whatever branch is checked out).
 
 ## 2. Install & first run
 
+
+
 ### Prerequisites
 
-| Requirement | Why | Install |
-|---|---|---|
-| `git` | clone/fetch mirrors, serve file content | usually present |
-| `surreal` (SurrealDB ≥ 3.0) | the state/queue database child | `brew install surrealdb/tap/surreal` or `curl -sSf https://install.surrealdb.com \| sh` |
-| Go ≥ 1.26 | build from source | go.dev/dl |
-| Node ≥ 24 | build the web UI | nodejs.org |
-| `universal-ctags` *(optional)* | symbol search (`sym:`) at index time | `brew install universal-ctags` |
-| language SCIP indexer *(optional)* | precise definitions/references/hover; commit its `index.scip` output | [scip-code.org](https://scip-code.org/) |
+
+| Requirement                        | Why                                                                  | Install                                                                                |
+| ---------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `git`                              | clone/fetch mirrors, serve file content                              | usually present                                                                        |
+| `surreal` (SurrealDB ≥ 3.0)        | the state/queue database child                                       | `brew install surrealdb/tap/surreal` or `curl -sSf https://install.surrealdb.com | sh` |
+| Go ≥ 1.26                          | build from source                                                    | go.dev/dl                                                                              |
+| Node ≥ 24                          | build the web UI                                                     | nodejs.org                                                                             |
+| `universal-ctags` *(optional)*     | symbol search (`sym:`) at index time                                 | `brew install universal-ctags`                                                         |
+| language SCIP indexer *(optional)* | precise definitions/references/hover; commit its `index.scip` output | [scip-code.org](https://scip-code.org/)                                                |
+
+
+
 
 ### Build and run
 
@@ -81,7 +89,7 @@ connections:
 ```
 
 On a fresh data directory, startup prints `first-run setup token: ...`. Open
-<http://localhost:3070>, enter that token with an administrator email and a
+[http://localhost:3070](http://localhost:3070), enter that token with an administrator email and a
 password of at least 12 bytes, and the browser starts a persisted session.
 The token exists only in process memory and stops working as soon as the
 first user is created; treat the startup log as sensitive until then. The
@@ -94,10 +102,14 @@ private listener, and terminate TLS at a trusted reverse proxy.
 
 `phebs serve` flags:
 
-| Flag | Meaning |
-|---|---|
-| `-config path` | config file; omitted = defaults (no connections, data in `~/.phebs`) |
-| `-addr 127.0.0.1:3070` | listen address, overrides `server.addr` |
+
+| Flag                   | Meaning                                                              |
+| ---------------------- | -------------------------------------------------------------------- |
+| `-config path`         | config file; omitted = defaults (no connections, data in `~/.phebs`) |
+| `-addr 127.0.0.1:3070` | listen address, overrides `server.addr`                              |
+
+
+
 
 ## 3. Configuration reference
 
@@ -130,24 +142,28 @@ connections:
     # ... see per-type fields below
 ```
 
-| Key | Default | Notes |
-|---|---|---|
-| `server.addr` | `127.0.0.1:3070` | loopback by default; explicitly configure a private proxy-facing address for deployment |
-| `server.data_dir` | `~/.phebs` | `~` expands; created if missing |
-| `auth.api_key` | *(empty)* | legacy migration key only; its SHA-256 hash is imported into the DB, and omission removes the legacy row; it does not make an empty configuration unauthenticated |
-| `auth.cookie_secure` | `true` | `Secure` session-cookie attribute; set `false` only for intentional plain-HTTP development |
-| `auth.session_lifetime` | `12h` | absolute lifetime, Go duration from `15m` through `720h`; fixed idle timeout is 30 minutes |
-| `auth.trusted_proxies` | `[]` | trusted reverse-proxy hop CIDRs, including the direct peer, allowed in `X-Forwarded-For` resolution for per-client auth throttling; never include client networks |
-| `auth.bootstrap_user` | *(none)* | optional one-time first local administrator; requires `email` and a password of at least 12 bytes |
-| `auth.oidc` | *(none)* | one OIDC provider; requires issuer/client/secret/redirect URL; HTTPS except loopback tests |
-| `sync.cleanup_orphans` | `false` | see [orphans](#orphans-and-cleanup) |
-| `sync.poll_interval` | `15s` | Go duration; job pollers wake with ±50 % jitter around it |
-| `sync.resync_interval` | `1h` | re-sync cadence for remote connections; `"0"` disables |
-| `webhook.secret` | *(empty)* | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars |
-| `audit.retention` | `2160h` | audit events older than this are pruned twice a day; `"0"` keeps them forever |
-| `analytics.retention` | `8760h` | local usage events older than this are pruned twice a day; `"0"` keeps them forever |
-| `experimental.provisional_proto_extraction` | `false` | development-only opt-in for the validation-gated reader described below; not canonical contract lineage |
-| `permissions` | *(none)* | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything |
+
+| Key                                         | Default          | Notes                                                                                                                                                             |
+| ------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server.addr`                               | `127.0.0.1:3070` | loopback by default; explicitly configure a private proxy-facing address for deployment                                                                           |
+| `server.data_dir`                           | `~/.phebs`       | `~` expands; created if missing                                                                                                                                   |
+| `auth.api_key`                              | *(empty)*        | legacy migration key only; its SHA-256 hash is imported into the DB, and omission removes the legacy row; it does not make an empty configuration unauthenticated |
+| `auth.cookie_secure`                        | `true`           | `Secure` session-cookie attribute; set `false` only for intentional plain-HTTP development                                                                        |
+| `auth.session_lifetime`                     | `12h`            | absolute lifetime, Go duration from `15m` through `720h`; fixed idle timeout is 30 minutes                                                                        |
+| `auth.trusted_proxies`                      | `[]`             | trusted reverse-proxy hop CIDRs, including the direct peer, allowed in `X-Forwarded-For` resolution for per-client auth throttling; never include client networks |
+| `auth.bootstrap_user`                       | *(none)*         | optional one-time first local administrator; requires `email` and a password of at least 12 bytes                                                                 |
+| `auth.oidc`                                 | *(none)*         | one OIDC provider; requires issuer/client/secret/redirect URL; HTTPS except loopback tests                                                                        |
+| `sync.cleanup_orphans`                      | `false`          | see [orphans](#orphans-and-cleanup)                                                                                                                               |
+| `sync.poll_interval`                        | `15s`            | Go duration; job pollers wake with ±50 % jitter around it                                                                                                         |
+| `sync.resync_interval`                      | `1h`             | re-sync cadence for remote connections; `"0"` disables                                                                                                            |
+| `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
+| `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
+| `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
+| `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated reader described below; not canonical contract lineage                                                           |
+| `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
+
+
+
 
 ### Authentication
 
@@ -155,24 +171,22 @@ Authentication is always required for the UI, application API, and MCP. A
 fresh installation has three supported enrollment paths:
 
 1. **Interactive setup:** configure neither `bootstrap_user` nor OIDC. Copy
-   the ephemeral setup token from the local startup log into the UI's
+  the ephemeral setup token from the local startup log into the UI's
    first-run form. The first account is an administrator.
 2. **Bootstrap user:** provision the first administrator from config:
-
-   ```yaml
+  ```yaml
    auth:
      bootstrap_user:
        email: admin@example.com
        display_name: Phebs Admin
        password: "${PHEBS_BOOTSTRAP_PASSWORD}"
-   ```
-
+  ```
    The password is used only when the first user is created and is stored as
    an Argon2id hash. Remove the block afterward; changing it does not rotate
    the existing password. If users already exist and the configured email is
    absent, startup fails instead of creating a surprise administrator.
 3. **OIDC:** configure one provider and use **Continue with SSO**. The first
-   verified OIDC identity becomes administrator; later identities are regular
+  verified OIDC identity becomes administrator; later identities are regular
    users. The provider therefore owns enrollment policy for this single-tenant
    deployment.
 
@@ -355,7 +369,11 @@ hardlinks, costing near-zero disk) or a `file://` URL:
   watch: true            # see §4, watch mode
 ```
 
+
+
 ## 4. Connecting repositories
+
+
 
 ### Sync lifecycle
 
@@ -368,11 +386,13 @@ Beyond boot, syncs happen when:
 
 - a **watched** local repo's HEAD moves (see below);
 - the **re-sync cadence** fires (`sync.resync_interval`, default `1h`, `"0"`
-  disables): every remote connection is re-synced, collapsing overlap into
-  one pending successor — local repos are covered by boot and watch instead;
+disables): every remote connection is re-synced, collapsing overlap into
+one pending successor — local repos are covered by boot and watch instead;
 - a **push webhook** arrives (see below);
 - you press **Reindex** in the UI or call `POST /api/reindex` (re-index only);
 - phebs restarts.
+
+
 
 ### Push webhooks
 
@@ -406,8 +426,7 @@ Watched mirrors **follow the branch you have checked out** — switch to
 `feature`, commit, and search reflects `feature`. A detached HEAD (mid-rebase,
 bisect) keeps the last good index until you land somewhere.
 
-End-to-end latency is roughly `watch tick (≤3 s) + poll_interval + index
-time`. With `sync.poll_interval: 1s`, a commit is searchable in ~1–2 s.
+End-to-end latency is roughly `watch tick (≤3 s) + poll_interval + index time`. With `sync.poll_interval: 1s`, a commit is searchable in ~1–2 s.
 
 ### Orphans and cleanup
 
@@ -427,21 +446,23 @@ phebs uses zoekt's native query language. Patterns are regular expressions;
 plain text behaves like substring search. Filters and patterns combine with
 implicit AND; prefix any atom with `-` to negate it.
 
-| Syntax | Meaning |
-|---|---|
-| `foo bar` | files containing `foo` AND `bar` |
-| `"foo bar"` | the exact phrase |
-| `f[ou]+nc.*Parse` | regular expression |
-| `case:yes Foo` | case-sensitive (default: smart case) |
-| `repo:zoekt` | repo name matches regex |
-| `file:\.go$` / `-file:_test` | file path matches / doesn't match |
-| `lang:go` | language filter |
-| `sym:ParseQuery` | symbol definitions (needs ctags at index time) |
-| `content:foo` | match file content only (not paths) |
-| `archived:yes\|no` | filter by repo archived state *(phebs, from repo metadata)* |
-| `fork:yes\|no` | filter by fork state *(phebs)* |
-| `public:yes\|no` | filter by visibility *(phebs)* |
-| `context:backend` | restrict to a named repo set *(phebs, see below)* |
+
+| Syntax                       | Meaning                                                     |
+| ---------------------------- | ----------------------------------------------------------- |
+| `foo bar`                    | files containing `foo` AND `bar`                            |
+| `"foo bar"`                  | the exact phrase                                            |
+| `f[ou]+nc.*Parse`            | regular expression                                          |
+| `case:yes Foo`               | case-sensitive (default: smart case)                        |
+| `repo:zoekt`                 | repo name matches regex                                     |
+| `file:\.go$` / `-file:_test` | file path matches / doesn't match                           |
+| `lang:go`                    | language filter                                             |
+| `sym:ParseQuery`             | symbol definitions (needs ctags at index time)              |
+| `content:foo`                | match file content only (not paths)                         |
+| `archived:yes|no`            | filter by repo archived state *(phebs, from repo metadata)* |
+| `fork:yes|no`                | filter by fork state *(phebs)*                              |
+| `public:yes|no`              | filter by visibility *(phebs)*                              |
+| `context:backend`            | restrict to a named repo set *(phebs, see below)*           |
+
 
 Examples:
 
@@ -452,6 +473,8 @@ sym:ClaimJob fork:no
 case:yes Searcher file:internal/
 ClaimJob context:backend
 ```
+
+
 
 ### Search contexts
 
@@ -523,31 +546,31 @@ Served at `/` from the binary. After setup/login, the main views are
 deep-linkable hash routes:
 
 - **Search** (`#/search?q=…`) — results stream in as shards respond, grouped
-  repo → file, with match counts and highlighted spans. Line numbers link
-  into the viewer.
+repo → file, with match counts and highlighted spans. Line numbers link
+into the viewer.
 - **File viewer** (`#/file?repo=…&path=…&ref=…&L=42`) — read-only CodeMirror with
-  syntax highlighting across ~30 languages (Go, JS/TS, Python, Rust, Java,
-  C/C++, C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …), a file-tree navigation
-  column that auto-expands to the current file, and a highlighted, scrolled-to
-  anchor line. Search links carry their immutable commit; old links without
-  `ref` resolve the repo's recorded indexed commit before loading. Click a
-  source position to open precise SCIP hover/definition/reference results when
-  that revision contains `index.scip`; **Blame** and **History** open the Git
-  views for the same immutable revision.
+syntax highlighting across ~30 languages (Go, JS/TS, Python, Rust, Java,
+C/C++, C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …), a file-tree navigation
+column that auto-expands to the current file, and a highlighted, scrolled-to
+anchor line. Search links carry their immutable commit; old links without
+`ref` resolve the repo's recorded indexed commit before loading. Click a
+source position to open precise SCIP hover/definition/reference results when
+that revision contains `index.scip`; **Blame** and **History** open the Git
+views for the same immutable revision.
 - **History / blame / commit** (`#/history`, `#/blame`, `#/commit`) — follow a
-  file across renames, map lines to commits, and render commit metadata,
-  changed-file statistics, and bounded unified diffs.
+file across renames, map lines to commits, and render commit metadata,
+changed-file statistics, and bounded unified diffs.
 - **Repos** (`#/repos`) — sync/index state per repo (polled every 3 s),
-  orphan flags, indexed commit, and administrator-only **Reindex** controls
-  (a forced rebuild defeats the incremental short-circuit).
+orphan flags, indexed commit, and administrator-only **Reindex** controls
+(a forced rebuild defeats the incremental short-circuit).
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
 - **Audit** (`#/audit`, administrators only) — the recorded action trail:
-  logins (including failures), setup, logout, API-key lifecycle, and every
-  mutating API operation, newest first with actor, target, status, and
-  source IP.
+logins (including failures), setup, logout, API-key lifecycle, and every
+mutating API operation, newest first with actor, target, status, and
+source IP.
 - **Analytics** (`#/analytics`, administrators only) — 30-day search volume,
-  searches per day, average duration, and the repositories appearing most in
-  results — computed entirely from local usage events.
+searches per day, average duration, and the repositories appearing most in
+results — computed entirely from local usage events.
 
 The UI uses its DB-backed session cookie and automatically supplies CSRF
 tokens on mutations. A `401` clears stale authenticated state and returns to
@@ -564,35 +587,37 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 `/api/openapi*`, `/api/docs*`, auth status/enrollment/login/OIDC routes, and
 `/metrics`. `/api/webhook` uses its own HMAC trust boundary.
 
-| Endpoint | Method | Purpose |
-|---|---|---|
-| `/api/health` | GET | liveness `{"status":"ok"}` |
-| `/api/version` | GET | server version |
-| `/api/auth/status` | GET | authentication/setup/OIDC state and current user |
-| `/api/auth/setup`, `/api/auth/login`, `/api/auth/logout` | POST | first administrator, local login, and session logout |
-| `/api/auth/keys` | GET/POST | list or create the browser-session user's API keys |
-| `/api/auth/keys/{id}` | DELETE | revoke one API key (browser session only) |
-| `/api/auth/oidc/start`, `/api/auth/oidc/callback` | GET | OIDC authorization-code flow |
-| `/api/search?q=&max_matches=&context_lines=` | GET | search, JSON in one shot |
-| `/api/stream_search?q=…` | GET | search over SSE (below) |
-| `/api/repos` | GET | repo rows |
-| `/api/repo-status` | GET | repos + connections + orphan flag + last index job |
-| `/api/reindex` | POST | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job |
-| `/api/audit?offset=&limit=` | GET | administrator only: audit events, newest first, `has_more` paging |
-| `/api/analytics?days=` | GET | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
-| `/api/webhook` | POST | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set |
-| `/api/mcp` | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8) |
-| `/api/source?repo=&path=&ref=` | GET | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413 |
-| `/api/folder_contents?repo=&path=&ref=` | GET | one directory level |
-| `/api/tree?repo=&ref=` | GET | all file paths, recursive |
-| `/api/find_definitions?repo=&path=&ref=&line=&character=&encoding=` | GET | precise SCIP definition at a zero-based position |
-| `/api/find_references?repo=&path=&ref=&line=&character=&encoding=` | GET | precise SCIP references (maximum 500) |
-| `/api/hover?repo=&path=&ref=&line=&character=&encoding=` | GET | SCIP signature/documentation at a position |
-| `/api/blame?repo=&path=&ref=` | GET | line-to-commit attribution, rename-aware |
-| `/api/commits?repo=&ref=&path=&limit=&offset=` | GET | commit history; optional path follows renames |
-| `/api/commit?repo=&ref=` | GET | commit metadata, parents, and changed files |
-| `/api/diff?repo=&head=&base=&path=&context_lines=` | GET | bounded unified diff and file statistics; context defaults to 3 and accepts explicit 0 |
-| `/metrics` | GET | Prometheus metrics |
+
+| Endpoint                                                            | Method          | Purpose                                                                                        |
+| ------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `/api/health`                                                       | GET             | liveness `{"status":"ok"}`                                                                     |
+| `/api/version`                                                      | GET             | server version                                                                                 |
+| `/api/auth/status`                                                  | GET             | authentication/setup/OIDC state and current user                                               |
+| `/api/auth/setup`, `/api/auth/login`, `/api/auth/logout`            | POST            | first administrator, local login, and session logout                                           |
+| `/api/auth/keys`                                                    | GET/POST        | list or create the browser-session user's API keys                                             |
+| `/api/auth/keys/{id}`                                               | DELETE          | revoke one API key (browser session only)                                                      |
+| `/api/auth/oidc/start`, `/api/auth/oidc/callback`                   | GET             | OIDC authorization-code flow                                                                   |
+| `/api/search?q=&max_matches=&context_lines=`                        | GET             | search, JSON in one shot                                                                       |
+| `/api/stream_search?q=…`                                            | GET             | search over SSE (below)                                                                        |
+| `/api/repos`                                                        | GET             | repo rows                                                                                      |
+| `/api/repo-status`                                                  | GET             | repos + connections + orphan flag + last index job                                             |
+| `/api/reindex`                                                      | POST            | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job           |
+| `/api/audit?offset=&limit=`                                         | GET             | administrator only: audit events, newest first, `has_more` paging                              |
+| `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
+| `/api/webhook`                                                      | POST            | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set     |
+| `/api/mcp`                                                          | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8)                                               |
+| `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
+| `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
+| `/api/tree?repo=&ref=`                                              | GET             | all file paths, recursive                                                                      |
+| `/api/find_definitions?repo=&path=&ref=&line=&character=&encoding=` | GET             | precise SCIP definition at a zero-based position                                               |
+| `/api/find_references?repo=&path=&ref=&line=&character=&encoding=`  | GET             | precise SCIP references (maximum 500)                                                          |
+| `/api/hover?repo=&path=&ref=&line=&character=&encoding=`            | GET             | SCIP signature/documentation at a position                                                     |
+| `/api/blame?repo=&path=&ref=`                                       | GET             | line-to-commit attribution, rename-aware                                                       |
+| `/api/commits?repo=&ref=&path=&limit=&offset=`                      | GET             | commit history; optional path follows renames                                                  |
+| `/api/commit?repo=&ref=`                                            | GET             | commit metadata, parents, and changed files                                                    |
+| `/api/diff?repo=&head=&base=&path=&context_lines=`                  | GET             | bounded unified diff and file statistics; context defaults to 3 and accepts explicit 0         |
+| `/metrics`                                                          | GET             | Prometheus metrics                                                                             |
+
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch
 (same JSON shape as `/api/search`), then a final `done` event with aggregate
@@ -627,18 +652,20 @@ config key remains accepted only while it is configured.
 
 Ten tools:
 
-| Tool | Purpose |
-|---|---|
-| `search_code` | full query syntax from §5, including `context:` sets; returns files with line-numbered chunks and match ranges |
-| `read_file` | file content at the indexed revision; optional `start_line`/`end_line`; output over 200 KB is truncated (on a line boundary where one fits) with a `truncated` flag inviting a ranged re-read. Blobs over 10 MiB are rejected outright, like `/api/source`. |
-| `list_repos` | every indexed repo with branch/visibility/index-time metadata |
-| `find_definitions` | precise SCIP definition for `{repo,path,line,character,ref?}` |
-| `find_references` | precise SCIP references for the same position; maximum 500 locations with `truncated` |
-| `hover` | SCIP symbol, signature, documentation, and source range |
-| `blame` | rename-aware line attribution for `{repo,path,ref?}`; maximum 50,000 lines |
-| `list_commits` | paged history for `{repo,ref?,path?,limit?,offset?}`; maximum 200 commits per page |
-| `get_commit` | commit metadata, parents, and first-parent file changes |
-| `diff` | structured file statistics plus a unified patch, capped at 2 MiB with `truncated` |
+
+| Tool               | Purpose                                                                                                                                                                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_code`      | full query syntax from §5, including `context:` sets; returns files with line-numbered chunks and match ranges                                                                                                                                              |
+| `read_file`        | file content at the indexed revision; optional `start_line`/`end_line`; output over 200 KB is truncated (on a line boundary where one fits) with a `truncated` flag inviting a ranged re-read. Blobs over 10 MiB are rejected outright, like `/api/source`. |
+| `list_repos`       | every indexed repo with branch/visibility/index-time metadata                                                                                                                                                                                               |
+| `find_definitions` | precise SCIP definition for `{repo,path,line,character,ref?}`                                                                                                                                                                                               |
+| `find_references`  | precise SCIP references for the same position; maximum 500 locations with `truncated`                                                                                                                                                                       |
+| `hover`            | SCIP symbol, signature, documentation, and source range                                                                                                                                                                                                     |
+| `blame`            | rename-aware line attribution for `{repo,path,ref?}`; maximum 50,000 lines                                                                                                                                                                                  |
+| `list_commits`     | paged history for `{repo,ref?,path?,limit?,offset?}`; maximum 200 commits per page                                                                                                                                                                          |
+| `get_commit`       | commit metadata, parents, and first-parent file changes                                                                                                                                                                                                     |
+| `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
+
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
 units. Omitted `ref`/`head` values resolve to the DB's immutable indexed
@@ -675,6 +702,8 @@ held stable while mirror HEAD advances.
 
 ## 9. Operations
 
+
+
 ### Data layout
 
 ```
@@ -694,22 +723,24 @@ well as a reindex; the next start requires first-user enrollment.
 ### Security boundary
 
 - Use HTTPS outside loopback and keep `auth.cookie_secure: true`. When a
-  reverse proxy terminates TLS, restrict direct access to phebs and configure
-  every trusted proxy-hop CIDR in `auth.trusted_proxies` so clients receive
-  separate login buckets. Phebs ignores forwarded-IP headers unless the direct
-  peer is trusted.
+reverse proxy terminates TLS, restrict direct access to phebs and configure
+every trusted proxy-hop CIDR in `auth.trusted_proxies` so clients receive
+separate login buckets. Phebs ignores forwarded-IP headers unless the direct
+peer is trusted.
 - Health, version, OpenAPI/docs, auth status/enrollment/login/OIDC routes, and
-  `/metrics` are public. Search, repository content, code navigation, history,
-  and MCP require a session or API key. Reindexing additionally requires an
-  administrator principal.
+`/metrics` are public. Search, repository content, code navigation, history,
+and MCP require a session or API key. Reindexing additionally requires an
+administrator principal.
 - Browser sessions are ambient credentials, so unsafe requests require CSRF.
-  Bearer clients must not put tokens in URLs, logs, or browser-local storage,
-  and bearer credentials cannot access the API-key management endpoints.
+Bearer clients must not put tokens in URLs, logs, or browser-local storage,
+and bearer credentials cannot access the API-key management endpoints.
 - `/api/webhook` does not accept user auth; it verifies the configured HMAC
-  over the exact request bytes and is absent when no secret is configured.
+over the exact request bytes and is absent when no secret is configured.
 - OIDC authorizes every verified identity admitted by the configured provider.
-  Apply membership/domain policy at that provider; phebs does not add a second
-  allowlist.
+Apply membership/domain policy at that provider; phebs does not add a second
+allowlist.
+
+
 
 ### Permission-aware search
 
@@ -725,7 +756,7 @@ than locking users out; the next successful sync corrects them.
 ```yaml
 permissions:
   users:
-    ben@meddeb.me: ["github.com:bmeddeb", "gitea.example.com:ben"]
+    bmeddeb@asu.edu: ["github.com:bmeddeb", "gitea.example.com:ben"]
   always_visible: ["local/*"]
 ```
 
@@ -782,15 +813,17 @@ that lease and the observed heartbeat. Connection membership snapshots are
 replaced transactionally, so a failed refresh preserves the last complete set.
 
 - **Retries:** failed executions requeue with per-class backoff, up to 3
-  attempts, then land in `failed` with the error recorded (visible in
-  `/api/repo-status` and the UI).
+attempts, then land in `failed` with the error recorded (visible in
+`/api/repo-status` and the UI).
 - **Backoff by failure class:** generic `30s × 2ⁿ`; auth failures `10m × 2ⁿ`
-  (a bad token won't heal in seconds); OOM-killed index children `5m × 2ⁿ`;
-  corrupt shards retry after `1s` (rebuild usually fixes them); extraction
-  failures `2m × 2ⁿ` (usually deterministic parse issues). Capped at 1 h.
+(a bad token won't heal in seconds); OOM-killed index children `5m × 2ⁿ`;
+corrupt shards retry after `1s` (rebuild usually fixes them); extraction
+failures `2m × 2ⁿ` (usually deterministic parse issues). Capped at 1 h.
 - **Crash recovery:** running jobs heartbeat; a reaper requeues jobs whose
-  worker died (stale heartbeat), or fails them once attempts are exhausted.
-  Kill phebs mid-index and the job recovers on next boot.
+worker died (stale heartbeat), or fails them once attempts are exhausted.
+Kill phebs mid-index and the job recovers on next boot.
+
+
 
 ### Experimental contract-intelligence extraction
 
@@ -872,12 +905,14 @@ that single-writer boundary.
 
 ### Metrics
 
-| Metric | Type | Labels |
-|---|---|---|
-| `phebs_jobs_total` | counter | `kind`, `result` (`done`/`failed`/`requeued`/`released`/`reaped`) |
-| `phebs_job_errors_total` | counter | `kind`, `class` (`auth`/`oom`/`corrupt-shard`/`extract`/`generic`) |
-| `phebs_index_duration_seconds` | histogram | — |
-| `phebs_index_shard_bytes` | gauge | — |
+
+| Metric                         | Type      | Labels                                                             |
+| ------------------------------ | --------- | ------------------------------------------------------------------ |
+| `phebs_jobs_total`             | counter   | `kind`, `result` (`done`/`failed`/`requeued`/`released`/`reaped`)  |
+| `phebs_job_errors_total`       | counter   | `kind`, `class` (`auth`/`oom`/`corrupt-shard`/`extract`/`generic`) |
+| `phebs_index_duration_seconds` | histogram | —                                                                  |
+| `phebs_index_shard_bytes`      | gauge     | —                                                                  |
+
 
 Plus standard Go process metrics. Scrape `/metrics`.
 
@@ -889,37 +924,43 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 ## 10. Troubleshooting
 
-| Symptom | Cause | Fix |
-|---|---|---|
-| `start surreal child: exec: "surreal": executable file not found` | SurrealDB not installed | see [prerequisites](#prerequisites) |
-| log: `zoekt-git-index not found — indexing disabled` | binary built without `make build`/`make dev` | `make build`, or set `PHEBS_ZOEKT_GIT_INDEX=/path/to/zoekt-git-index` |
-| `listen tcp 127.0.0.1:3070: bind: address already in use` | another phebs (or process) on the port | stop it, or `-addr 127.0.0.1:3071` |
-| UI shows first-run setup | no users and no OIDC provider | copy the ephemeral setup token from the current process log; restarting generates a new token |
-| login succeeds but the UI immediately asks again | a `Secure` cookie was used over plain non-loopback HTTP | serve HTTPS, or set `auth.cookie_secure: false` only for deliberate local development |
-| API or MCP answers `401` | no valid session/key, or a key was revoked/removed | create a named key in Settings and send `Authorization: Bearer <token>` |
-| startup fails during OIDC discovery | issuer unavailable, wrong URL/private CA, or incomplete provider config | verify HTTPS reachability and discovery metadata; loopback HTTP is test-only |
-| OIDC login says verified email is required | provider omitted `email_verified=true` | configure the provider's email scope/claim mapping; phebs does not accept unverified email identities |
-| code navigation says unavailable | the indexed commit has no root `index.scip` | generate and commit a SCIP index, then sync/reindex that commit |
-| code-navigation/history link returns 404 after a repo update | requested immutable commit is no longer present in the mirror or repo is unindexed/deleting | use the current indexed commit from Repos, or restore/fetch the referenced object |
-| GitHub sync reports a rate-limit wait | host requested a reset delay; phebs waits at most 1 minute and retries once, then uses the job backoff | use a PAT/App or reduce listing frequency |
-| watch mode "doesn't see my edits" | uncommitted changes — indexing is HEAD-only | commit (or amend); the watcher reacts to HEAD moves |
-| a repo temporarily disappears from search during repair | its shard revision did not match committed DB state | wait for the forced index job; serving is intentionally fail-closed |
-| repo tagged `orphaned` | no connection claims it anymore | re-add the connection, or enable `sync.cleanup_orphans` |
-| sync fails with `auth: git …` and retries slowly | credential failure, classified `auth` (10 m backoff) | fix the token; reindex/restart to retry immediately |
-| startup rejects a clone URL containing credentials/query data | URL secrets are no longer persisted | move HTTP credentials to `http_auth`; keep `url` credential-free |
+
+| Symptom                                                           | Cause                                                                                                  | Fix                                                                                                   |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `start surreal child: exec: "surreal": executable file not found` | SurrealDB not installed                                                                                | see [prerequisites](#prerequisites)                                                                   |
+| log: `zoekt-git-index not found — indexing disabled`              | binary built without `make build`/`make dev`                                                           | `make build`, or set `PHEBS_ZOEKT_GIT_INDEX=/path/to/zoekt-git-index`                                 |
+| `listen tcp 127.0.0.1:3070: bind: address already in use`         | another phebs (or process) on the port                                                                 | stop it, or `-addr 127.0.0.1:3071`                                                                    |
+| UI shows first-run setup                                          | no users and no OIDC provider                                                                          | copy the ephemeral setup token from the current process log; restarting generates a new token         |
+| login succeeds but the UI immediately asks again                  | a `Secure` cookie was used over plain non-loopback HTTP                                                | serve HTTPS, or set `auth.cookie_secure: false` only for deliberate local development                 |
+| API or MCP answers `401`                                          | no valid session/key, or a key was revoked/removed                                                     | create a named key in Settings and send `Authorization: Bearer <token>`                               |
+| startup fails during OIDC discovery                               | issuer unavailable, wrong URL/private CA, or incomplete provider config                                | verify HTTPS reachability and discovery metadata; loopback HTTP is test-only                          |
+| OIDC login says verified email is required                        | provider omitted `email_verified=true`                                                                 | configure the provider's email scope/claim mapping; phebs does not accept unverified email identities |
+| code navigation says unavailable                                  | the indexed commit has no root `index.scip`                                                            | generate and commit a SCIP index, then sync/reindex that commit                                       |
+| code-navigation/history link returns 404 after a repo update      | requested immutable commit is no longer present in the mirror or repo is unindexed/deleting            | use the current indexed commit from Repos, or restore/fetch the referenced object                     |
+| GitHub sync reports a rate-limit wait                             | host requested a reset delay; phebs waits at most 1 minute and retries once, then uses the job backoff | use a PAT/App or reduce listing frequency                                                             |
+| watch mode "doesn't see my edits"                                 | uncommitted changes — indexing is HEAD-only                                                            | commit (or amend); the watcher reacts to HEAD moves                                                   |
+| a repo temporarily disappears from search during repair           | its shard revision did not match committed DB state                                                    | wait for the forced index job; serving is intentionally fail-closed                                   |
+| repo tagged `orphaned`                                            | no connection claims it anymore                                                                        | re-add the connection, or enable `sync.cleanup_orphans`                                               |
+| sync fails with `auth: git …` and retries slowly                  | credential failure, classified `auth` (10 m backoff)                                                   | fix the token; reindex/restart to retry immediately                                                   |
+| startup rejects a clone URL containing credentials/query data     | URL secrets are no longer persisted                                                                    | move HTTP credentials to `http_auth`; keep `url` credential-free                                      |
+
+
+
 
 ## 11. Developing phebs
 
-| Target | Does |
-|---|---|
-| `make dev` | build UI + zoekt child, run with embedded UI |
-| `make dev-api` | backend-only loop (placeholder UI page, fast) |
-| `make build` | release binary `./phebs` with embedded UI |
-| `make test` | `go test ./...` — store/sync/indexer tests spawn real surreal children and need the `surreal` binary; zoekt-git-index is auto-built by the test harness |
-| `make ui-test` | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree |
-| `make lint` | golangci-lint |
-| `make ui` | production UI build only |
-| `make db-server` | SurrealDB in server mode via docker compose (testing only) |
+
+| Target           | Does                                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make dev`       | build UI + zoekt child, run with embedded UI                                                                                                            |
+| `make dev-api`   | backend-only loop (placeholder UI page, fast)                                                                                                           |
+| `make build`     | release binary `./phebs` with embedded UI                                                                                                               |
+| `make test`      | `go test ./...` — store/sync/indexer tests spawn real surreal children and need the `surreal` binary; zoekt-git-index is auto-built by the test harness |
+| `make ui-test`   | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
+| `make lint`      | golangci-lint                                                                                                                                           |
+| `make ui`        | production UI build only                                                                                                                                |
+| `make db-server` | SurrealDB in server mode via docker compose (testing only)                                                                                              |
+
 
 Live UI development: run `make dev-api`, then `cd ui && npm run dev` — Vite
 serves on :5173 and proxies `/api` to :3070.

@@ -7,6 +7,9 @@ operational response, platform conformance, and control evidence.*
 pilot proposal lives in [PITCH.md](./PITCH.md), and nothing here expands
 it.*
 
+**Companion documents:** [pilot charter](./PILOT_CHARTER.md) ·
+[evidence-pack card template](./EVIDENCE_PACK_CARD.md)
+
 ## Thesis
 
 phebs is a **versioned, permission-aware census of service-to-contract
@@ -41,6 +44,8 @@ Passing validation for `CALLS_OPERATION` establishes nothing about
 `READS_FLAG` or `PUBLISHES_TOPIC`. Every pack ships with an
 **evidence-pack card**: its supported claim, blind spots, coverage
 semantics, validation result on a named benchmark, and stop criteria.
+The reusable card format lives in
+[EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md).
 "No match" never silently becomes "compliant" — conformance-shaped packs
 return three-valued conclusions: evidenced conforming, evidenced
 nonconforming, unknown (coverage or semantics insufficient).
@@ -49,13 +54,17 @@ nonconforming, unknown (coverage or semantics insufficient).
 phebs owns is not any extractor — it is the measurement machinery: the
 preregistered fail-closed staging, exact power analysis, burn-on-doubt
 disclosure census, one-shot sealed scoring, and enforced
-implementer/reviewer separation. That was built once, at great cost, and
-is generic: a new pack needs a benchmark and a labeling round, not a new
-methodology. Validation throughput — not extraction difficulty — is the
-pack-expansion bottleneck, and the rig amortizing is what makes the
-roadmap plausible rather than aspirational. No incumbent ships *measured*
-facts; that pipeline, not the facts themselves, is the durable
-differentiation.
+implementer/reviewer separation. Those custody, preregistration, sealing,
+disclosure, and release controls are reusable. A new pack still may require
+a different target population, sampling design, labeling method, estimator,
+ground-truth construction, and reviewer expertise — especially for
+interprocedural, control, and lineage claims. Extraction and validation can
+both be bottlenecks; the reusable rig makes neither free, but prevents each
+pack from inventing its governance from scratch. In the products and public
+documentation reviewed as of July 2026, I have not found an incumbent that
+attaches extractor-level measured accuracy and declared coverage to these
+service-level decision artifacts. That pipeline, not the facts themselves,
+is the durable differentiation hypothesis.
 
 ## Expansion opportunities
 
@@ -198,7 +207,9 @@ preserving what remains unknown.**
    and the internal attribution pilot (the entirety of the current ask).
 2. **Productize the contract atlas** — proof bundles, coverage,
    dispositions, ownership reconciliation, **and the query surface**
-   (assertion API, UI, MCP tools, SLOs), which today exists only dark.
+   (assertion API, UI, MCP tools, SLOs). Search UI/MCP are operational
+   today; contract-intelligence queries and their SLOs remain post-gate
+   productization work.
 3. **Add daily change assurance** — the new-consumer ledger first (cheap,
    reuses the event-driven pipeline), then PR impact packets after the
    multi-revision architecture round, reviewer routing, endpoint hygiene.
