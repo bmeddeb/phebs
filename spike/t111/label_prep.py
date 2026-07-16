@@ -23,8 +23,10 @@ import hashlib
 import json
 import math
 import os
+import posixpath
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -34,6 +36,9 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator, Sequence
 
 from gate34_common import (
+    GO_TEST_POLICIES,
+    KNOWN_GOARCH,
+    KNOWN_GOOS,
     ValidationError as EvidenceValidationError,
     build_burn_ledger,
     coordinate_burned,
@@ -71,16 +76,27 @@ BASE = Path(__file__).resolve().parent
 REPO_ROOT = BASE.parent.parent
 TYPED_CALL_ORACLE = BASE / "typedcalloracle"
 DEFAULT_CORPUS = BASE / "corpus"
+DEFAULT_MODULE_CACHE = BASE / ".module-cache"
 DEFAULT_FACTS = BASE / "out"
-DEFAULT_ARTIFACTS = BASE / "labeling" / "g2-v3"
-DEFAULT_CONTEXT = BASE / "out" / "gate2-label-context"
+DEFAULT_ARTIFACTS = BASE / "labeling" / "g2-v4"
+DEFAULT_CONTEXT = BASE / "out" / "gate2-v4-label-context"
 DEFAULT_LOCK = BASE / "corpus.lock.json"
 DEFAULT_BURN_LEDGER = BASE / "labeling" / "burn-ledger.json"
+DEFAULT_EXPANSION_LINEAGE = BASE / "labeling" / "expansion-lineage.json"
 SEALED_CLAIM_ROOT = BASE / "labeling"
-SYSTEMS = ("online-boutique", "dapr", "temporal", "loki")
-SCHEMA = "t111-gate2-probability-sample-v3"
-SEED_RECORD_SCHEMA = "t111-gate2-audit-seed-v3"
-INPUT_COMMITMENT_SCHEMA = "t111-gate2-input-commitment-v2"
+SYSTEMS = (
+    "online-boutique",
+    "dapr",
+    "temporal",
+    "loki",
+    "grpc-go",
+    "etcd",
+    "containerd",
+    "istio",
+)
+SCHEMA = "t111-gate2-probability-sample-v4"
+SEED_RECORD_SCHEMA = "t111-gate2-audit-seed-v4"
+INPUT_COMMITMENT_SCHEMA = "t111-gate2-input-commitment-v3"
 INPUT_COMMITMENT_STRATUM_FIELDS = (
     "id",
     "system",
@@ -254,10 +270,24 @@ def load_corpus_entries(path: Path, systems: Sequence[str]) -> dict[str, dict[st
             or len(tags) != len(set(tags))
         ):
             raise PrepError(f"{path}: {name} go_build_tags must be unique safe strings")
+        goos = row.get("goos")
+        goarch = row.get("goarch")
+        go_tests = row.get("go_tests")
+        if not isinstance(goos, str) or goos not in KNOWN_GOOS:
+            raise PrepError(f"{path}: {name} goos must be an explicit lowercase Go target")
+        if not isinstance(goarch, str) or goarch not in KNOWN_GOARCH:
+            raise PrepError(f"{path}: {name} goarch must be an explicit lowercase Go target")
+        if not isinstance(go_tests, str) or go_tests not in GO_TEST_POLICIES:
+            raise PrepError(
+                f"{path}: {name} go_tests must be exactly include or exclude"
+            )
         entries[name] = {
             "commit": commit,
             "excluded_gitlinks": sorted(exclusions, key=lambda item: item["path"]),
             "go_build_tags": sorted(tags),
+            "goos": goos,
+            "goarch": goarch,
+            "go_tests": go_tests,
         }
     missing = set(systems) - set(entries)
     if missing:
@@ -279,12 +309,13 @@ def pinned_tracked_files(
     expected_commit: str,
     excluded_gitlinks: Sequence[dict[str, str]] = (),
 ) -> tuple[list[str], list[dict[str, str]]]:
-    """Verify a clean pin and return regular tracked blobs.
+    """Verify a clean pin and return readable tracked source occurrences.
 
     Gitlinks are accepted only when their exact path, object ID, and reviewed
-    exclusion rationale are locked. A symlinked Go/proto path is rejected;
-    other symlinks are recorded but cannot enter a frame that reads regular Git
-    blobs only.
+    exclusion rationale are locked. An in-tree Go/proto symlink is admitted
+    only when its commit-backed link chain resolves to a regular tracked blob;
+    the alias remains a distinct source occurrence and its complete resolution
+    is bound as special-entry provenance.
     """
 
     if root.is_symlink():
@@ -297,22 +328,12 @@ def pinned_tracked_files(
         first = dirty.decode("utf-8", errors="replace").splitlines()[0]
         raise PrepError(f"{root}: checkout is not clean (tracked and untracked required): {first}")
 
-    raw = git(root, "ls-tree", "-rz", "--full-tree", "HEAD")
+    entries = pinned_tree_entries(root, expected_commit)
     regular: list[str] = []
     special: list[dict[str, str]] = []
     declared = {item["path"]: item for item in excluded_gitlinks}
     observed_exclusions: set[str] = set()
-    for entry in raw.split(b"\0"):
-        if not entry:
-            continue
-        metadata, separator, raw_path = entry.partition(b"\t")
-        if not separator:
-            raise PrepError(f"{root}: malformed git tree entry")
-        fields = metadata.decode("ascii").split()
-        if len(fields) != 3:
-            raise PrepError(f"{root}: malformed git tree metadata")
-        mode, object_type, object_id = fields
-        rel = raw_path.decode("utf-8", errors="strict")
+    for rel, (mode, object_type, object_id) in sorted(entries.items()):
         if mode in ("100644", "100755") and object_type == "blob":
             regular.append(rel)
         elif mode == "160000":
@@ -327,9 +348,40 @@ def pinned_tracked_files(
             observed_exclusions.add(rel)
             special.append({"kind": "gitlink", **exclusion})
         elif mode == "120000":
+            target, target_path = pinned_symlink_target(
+                root, expected_commit, rel, entries
+            )
             if rel.endswith((".go", ".proto")):
-                raise PrepError(f"{root}: symlinked source makes the source frame incomplete: {rel}")
-            special.append({"kind": "symlink", "path": rel, "object_id": object_id})
+                resolved = resolve_pinned_blob_entry(
+                    root, expected_commit, rel, entries
+                )
+                if resolved is None:
+                    raise PrepError(
+                        f"{root}: symlinked source does not resolve to a tracked regular blob: {rel}"
+                    )
+                resolved_path, resolved_object_id = resolved
+                regular.append(rel)
+                special.append(
+                    {
+                        "kind": "source_symlink",
+                        "path": rel,
+                        "object_id": object_id,
+                        "target": target,
+                        "target_path": target_path,
+                        "resolved_path": resolved_path,
+                        "resolved_object_id": resolved_object_id,
+                    }
+                )
+            else:
+                special.append(
+                    {
+                        "kind": "symlink",
+                        "path": rel,
+                        "object_id": object_id,
+                        "target": target,
+                        "target_path": target_path,
+                    }
+                )
         else:
             raise PrepError(f"{root}: unsupported tracked tree entry {mode} {object_type} {rel}")
     missing_exclusions = set(declared) - observed_exclusions
@@ -341,12 +393,125 @@ def pinned_tracked_files(
     return regular, sorted(special, key=lambda item: (item["kind"], item["path"]))
 
 
-def git_blob(root: Path, commit: str, rel: str) -> bytes:
-    """Read a pinned regular blob without consulting the mutable worktree."""
+_PINNED_TREE_CACHE: dict[
+    tuple[str, str], dict[str, tuple[str, str, str]]
+] = {}
 
-    if not rel or rel.startswith("/") or ".." in Path(rel).parts:
+
+def safe_pinned_path(rel: str) -> bool:
+    return bool(
+        rel
+        and "\x00" not in rel
+        and not posixpath.isabs(rel)
+        and posixpath.normpath(rel) == rel
+        and rel != ".."
+        and not rel.startswith("../")
+    )
+
+
+def pinned_tree_entries(
+    root: Path, commit: str
+) -> dict[str, tuple[str, str, str]]:
+    """Return one immutable recursive tree index for a pinned commit."""
+
+    key = (str(root.resolve()), commit)
+    cached = _PINNED_TREE_CACHE.get(key)
+    if cached is not None:
+        return cached
+    raw = git(root, "ls-tree", "-rz", "--full-tree", commit)
+    entries: dict[str, tuple[str, str, str]] = {}
+    for entry in raw.split(b"\0"):
+        if not entry:
+            continue
+        metadata, separator, raw_path = entry.partition(b"\t")
+        fields = metadata.decode("ascii").split()
+        if not separator or len(fields) != 3:
+            raise PrepError(f"{root}: malformed git tree entry")
+        mode, object_type, object_id = fields
+        rel = raw_path.decode("utf-8", errors="strict")
+        if not safe_pinned_path(rel):
+            raise PrepError(f"{root}: unsafe pinned tree path: {rel!r}")
+        if rel in entries:
+            raise PrepError(f"{root}: duplicate pinned tree path: {rel!r}")
+        if not re.fullmatch(r"[0-9a-f]{40}", object_id):
+            raise PrepError(f"{root}: invalid pinned object ID for {rel}")
+        entries[rel] = (mode, object_type, object_id)
+    _PINNED_TREE_CACHE[key] = entries
+    return entries
+
+
+def pinned_symlink_target(
+    root: Path,
+    commit: str,
+    rel: str,
+    entries: dict[str, tuple[str, str, str]] | None = None,
+) -> tuple[str, str]:
+    """Return a symlink's exact text and normalized in-tree target path."""
+
+    tree = entries if entries is not None else pinned_tree_entries(root, commit)
+    entry = tree.get(rel)
+    if entry is None or entry[0] != "120000" or entry[1] != "blob":
+        raise PrepError(f"{root}:{rel}: pinned entry is not a symlink blob")
+    raw = git(root, "cat-file", "blob", entry[2])
+    try:
+        target = raw.decode("utf-8", errors="strict")
+    except UnicodeDecodeError as exc:
+        raise PrepError(f"{root}:{rel}: symlink target is not valid UTF-8") from exc
+    if not target or "\x00" in target or posixpath.isabs(target):
+        raise PrepError(f"{root}:{rel}: symlink target is empty or absolute: {target!r}")
+    target_path = posixpath.normpath(posixpath.join(posixpath.dirname(rel), target))
+    if (
+        target_path == ".."
+        or target_path.startswith("../")
+        or posixpath.isabs(target_path)
+    ):
+        raise PrepError(f"{root}:{rel}: symlink target escapes the pinned tree: {target!r}")
+    return target, target_path
+
+
+def resolve_pinned_blob_entry(
+    root: Path,
+    commit: str,
+    rel: str,
+    entries: dict[str, tuple[str, str, str]] | None = None,
+) -> tuple[str, str] | None:
+    """Resolve a safe in-tree symlink chain to a regular blob entry.
+
+    ``None`` denotes an in-tree directory/non-leaf target. Unsafe targets,
+    cycles, and unsupported tracked objects fail closed.
+    """
+
+    tree = entries if entries is not None else pinned_tree_entries(root, commit)
+    current = rel
+    seen: set[str] = set()
+    while True:
+        if current in seen:
+            raise PrepError(f"{root}:{rel}: pinned symlink chain contains a cycle")
+        seen.add(current)
+        entry = tree.get(current)
+        if entry is None:
+            return None
+        mode, object_type, object_id = entry
+        if mode in {"100644", "100755"} and object_type == "blob":
+            return current, object_id
+        if mode == "120000" and object_type == "blob":
+            _, current = pinned_symlink_target(root, commit, current, tree)
+            continue
+        raise PrepError(
+            f"{root}:{rel}: symlink chain reaches unsupported {mode} {object_type} at {current}"
+        )
+
+
+def git_blob(root: Path, commit: str, rel: str) -> bytes:
+    """Read pinned source content, resolving only safe in-tree symlink aliases."""
+
+    if not safe_pinned_path(rel):
         raise PrepError(f"unsafe pinned path: {rel!r}")
-    return git(root, "cat-file", "blob", f"{commit}:{rel}")
+    resolved = resolve_pinned_blob_entry(root, commit, rel)
+    if resolved is None:
+        raise PrepError(f"{root}:{rel}: pinned path does not resolve to a regular blob")
+    _, object_id = resolved
+    return git(root, "cat-file", "blob", object_id)
 
 
 def git_blobs(root: Path, commit: str, paths: Sequence[str]) -> Iterator[tuple[str, bytes]]:
@@ -356,8 +521,15 @@ def git_blobs(root: Path, commit: str, paths: Sequence[str]) -> Iterator[tuple[s
     if len(ordered) != len(set(ordered)):
         raise PrepError("duplicate path in pinned blob batch")
     for rel in ordered:
-        if not rel or rel.startswith("/") or ".." in Path(rel).parts or "\x00" in rel:
+        if not safe_pinned_path(rel):
             raise PrepError(f"unsafe pinned path: {rel!r}")
+    tree = pinned_tree_entries(root, commit)
+    requests: list[str] = []
+    for rel in ordered:
+        resolved = resolve_pinned_blob_entry(root, commit, rel, tree)
+        if resolved is None:
+            raise PrepError(f"{root}:{rel}: pinned path does not resolve to a regular blob")
+        requests.append(resolved[1])
 
     def read_header(stream: Any, rel: str) -> bytes:
         header = bytearray()
@@ -409,8 +581,8 @@ def git_blobs(root: Path, commit: str, paths: Sequence[str]) -> Iterator[tuple[s
                 raise PrepError(f"cannot open Git batch pipes for {root}")
 
             try:
-                for rel in ordered:
-                    request = f"{commit}:{rel}".encode("utf-8") + b"\0"
+                for rel, object_id in zip(ordered, requests):
+                    request = object_id.encode("ascii") + b"\0"
                     try:
                         written = process.stdin.write(request)
                         process.stdin.flush()
@@ -859,7 +1031,7 @@ def build_nist_seed_record(
     github_fetcher: Any = github_json_fetcher,
     nist_fetcher: Any = nist_beacon_json_fetcher,
 ) -> dict[str, Any]:
-    """Build seed-v3 from the precommitted first eligible NIST pulse.
+    """Build seed-v4 from the precommitted first eligible NIST pulse.
 
     The time lookup is checked against the immutable canonical pulse endpoint.
     No latest-pulse or next-pulse fallback is attempted.
@@ -1087,9 +1259,9 @@ def commit_set_lineage_binding(commits: dict[str, str]) -> str:
     if set(commits) != set(SYSTEMS) or any(
         not re.fullmatch(r"[0-9a-f]{40}", commit) for commit in commits.values()
     ):
-        raise PrepError("attempt lineage requires all four full fixture commits")
+        raise PrepError("attempt lineage requires every fixed full fixture commit")
     return "sha256:" + digest_parts(
-        "t111-gate2-commit-set-lineage-v1", dict(sorted(commits.items()))
+        "t111-gate2-commit-set-lineage-v2", dict(sorted(commits.items()))
     )
 
 
@@ -1112,7 +1284,7 @@ def validate_attempt_claim(
         raise PrepError("invalid Gate-2 commit-set attempt claim")
     expected_lineage = commit_set_lineage_binding(commits)
     if (
-        value.get("schema") != "t111-gate2-commit-set-attempt-v1"
+        value.get("schema") != "t111-gate2-commit-set-attempt-v2"
         or value.get("source_lineage_binding") != expected_lineage
         or value.get("commits") != dict(sorted(commits.items()))
         or value.get("base_input_binding") != base_input_binding
@@ -1138,7 +1310,7 @@ def locked_attempt_claim(
     create: bool,
     allow_missing: bool = False,
 ) -> dict[str, Any] | None:
-    """Bind a four-commit source population to one Gate-2 attempt forever."""
+    """Bind the complete fixed source population to one Gate-2 attempt forever."""
 
     lineage = commit_set_lineage_binding(commits)
     root = SEALED_CLAIM_ROOT.absolute()
@@ -1150,7 +1322,7 @@ def locked_attempt_claim(
         if input_binding is None or committed_at is None:
             raise PrepError("attempt creation requires final input binding and timestamp")
         record = {
-            "schema": "t111-gate2-commit-set-attempt-v1",
+            "schema": "t111-gate2-commit-set-attempt-v2",
             "source_lineage_binding": lineage,
             "commits": dict(sorted(commits.items())),
             "base_input_binding": base_input_binding,
@@ -1257,151 +1429,187 @@ def scoped_burn_binding(
 ) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, list[dict[str, Any]]]]:
     """Carry every disclosed source site into a deterministic census stratum.
 
-    Commit changes do not restore blindness. Byte-identical blobs keep their
-    exposed intervals (including relocated copies); changed files translate an
-    exact unique line span, otherwise the whole current path is treated as
-    disclosed. An unresolved deleted/renamed-and-modified path fails closed.
+    Commit and fixture changes do not restore blindness. Byte-identical blobs
+    keep their exposed intervals at every occurrence in every current fixture.
+    Within the source fixture, changed files translate an exact unique line
+    span, otherwise the whole current path is treated as disclosed. An
+    unresolved deleted/renamed-and-modified source path fails closed.
     """
 
     burned, binding, cohorts = verified_burn_ledger(path)
-    active: dict[str, list[dict[str, Any]]] = {}
     resolutions: list[dict[str, Any]] = []
     dispositions: Counter[str] = Counter()
-    identical_commits: list[str] = []
-    for system, commit in commits.items():
-        root = corpus_dir / system
-        current_tree = git_tree_blobs(root, commit)
-        current_by_oid: dict[str, list[str]] = defaultdict(list)
-        for rel, oid in current_tree.items():
-            current_by_oid[oid].append(rel)
-        for paths in current_by_oid.values():
-            paths.sort()
+    identical_commits: set[str] = set()
 
-        intervals: dict[str, list[tuple[int, int]]] = defaultdict(list)
-        quarantined_paths: set[str] = set()
-        old_trees: dict[str, dict[str, str]] = {}
-        for cohort in cohorts:
-            cohort_id = str(cohort["cohort_id"])
-            cohort_rows = [
-                row for row in cohort["coordinates"] if row.get("system") == system
-            ]
-            if not cohort_rows:
-                continue
-            old_commit = cohort["source_commits"].get(system)
+    current_trees: dict[str, dict[str, str]] = {}
+    current_by_oid: dict[str, dict[str, list[str]]] = {}
+    intervals: dict[str, dict[str, list[tuple[int, int]]]] = {}
+    quarantined_paths: dict[str, set[str]] = {}
+    for target_system, target_commit in commits.items():
+        target_root = corpus_dir / target_system
+        current_tree = git_tree_blobs(target_root, target_commit)
+        current_trees[target_system] = current_tree
+        paths_by_oid: dict[str, list[str]] = defaultdict(list)
+        for rel, oid in current_tree.items():
+            paths_by_oid[oid].append(rel)
+        for paths in paths_by_oid.values():
+            paths.sort()
+        current_by_oid[target_system] = paths_by_oid
+        intervals[target_system] = defaultdict(list)
+        quarantined_paths[target_system] = set()
+
+    for cohort in cohorts:
+        # Bound memory to one disclosure cohort. Historical trees are reused
+        # within the cohort, then released before the next generation.
+        old_trees: dict[tuple[str, str], dict[str, str]] = {}
+        cohort_id = str(cohort["cohort_id"])
+        for row in cohort["coordinates"]:
+            source_system = str(row["system"])
+            if source_system not in commits:
+                raise PrepError(
+                    "burn source fixture is absent from the current corpus: "
+                    f"{cohort_id}:{source_system}"
+                )
+            old_commit = cohort["source_commits"].get(source_system)
             if not isinstance(old_commit, str):
                 raise PrepError(
-                    f"burn cohort {cohort_id} has no source commit for {system}"
+                    f"burn cohort {cohort_id} has no source commit for "
+                    f"{source_system}"
                 )
-            if old_commit == commit:
-                identical_commits.append(f"{cohort_id}:{system}")
-            if old_commit not in old_trees:
-                old_trees[old_commit] = git_tree_blobs(root, old_commit)
-            old_tree = old_trees[old_commit]
-            for row in cohort_rows:
-                rel = str(row["path"])
-                start, end = int(row["start_line"]), int(row["end_line"])
-                old_oid = old_tree.get(rel)
-                if old_oid is None:
-                    raise PrepError(
-                        "burn source is unavailable at "
-                        f"{cohort_id}:{system}:{old_commit}:{rel}"
-                    )
-                current_oid = current_tree.get(rel)
-                identical_paths = current_by_oid.get(old_oid, [])
-                if identical_paths:
-                    for target in identical_paths:
-                        intervals[target].append((start, end))
-                        resolutions.append(
-                            {
-                                "cohort_id": cohort_id,
-                                "system": system,
-                                "source_commit": old_commit,
-                                "source_path": rel,
-                                "source_oid": old_oid,
-                                "target_path": target,
-                                "target_oid": old_oid,
-                                "source_start_line": start,
-                                "source_end_line": end,
-                                "target_start_line": start,
-                                "target_end_line": end,
-                                "disposition": (
-                                    "identical_path"
-                                    if target == rel
-                                    else "identical_blob_relocated"
-                                ),
-                            }
-                        )
-                        dispositions[resolutions[-1]["disposition"]] += 1
-                    # A relocated byte-identical copy preserves the old
-                    # exposure, but a modified original path must also be
-                    # translated or quarantined.
-                    if current_oid is None or current_oid == old_oid:
-                        continue
+            source_commit = commits[source_system]
+            if old_commit == source_commit:
+                identical_commits.add(f"{cohort_id}:{source_system}")
 
-                if current_oid is None:
-                    raise PrepError(
-                        "disclosed source cannot be mapped into the current tree: "
-                        f"{cohort_id}:{system}:{rel}"
+            source_root = corpus_dir / source_system
+            old_tree_key = (source_system, old_commit)
+            if old_tree_key not in old_trees:
+                old_trees[old_tree_key] = git_tree_blobs(source_root, old_commit)
+            old_tree = old_trees[old_tree_key]
+            rel = str(row["path"])
+            start, end = int(row["start_line"]), int(row["end_line"])
+            old_oid = old_tree.get(rel)
+            if old_oid is None:
+                raise PrepError(
+                    "burn source is unavailable at "
+                    f"{cohort_id}:{source_system}:{old_commit}:{rel}"
+                )
+
+            for target_system, target_commit in commits.items():
+                for target in current_by_oid[target_system].get(old_oid, []):
+                    intervals[target_system][target].append((start, end))
+                    disposition = (
+                        "identical_path"
+                        if target_system == source_system and target == rel
+                        else "identical_blob_relocated"
                     )
-                old_lines = git_blob(root, old_commit, rel).splitlines(keepends=True)
-                current_lines = git_blob(root, commit, rel).splitlines(keepends=True)
-                if start <= 0 or end < start or end > len(old_lines):
-                    raise PrepError(
-                        "burn interval is outside its pinned blob: "
-                        f"{cohort_id}:{system}:{rel}"
-                    )
-                needle = old_lines[start - 1 : end]
-                matches = [
-                    index + 1
-                    for index in range(0, len(current_lines) - len(needle) + 1)
-                    if current_lines[index : index + len(needle)] == needle
-                ]
-                if len(matches) == 1:
-                    translated_start = matches[0]
-                    translated_end = translated_start + len(needle) - 1
-                    intervals[rel].append((translated_start, translated_end))
-                    disposition = "unique_line_span_translation"
                     resolutions.append(
                         {
                             "cohort_id": cohort_id,
-                            "system": system,
+                            "source_system": source_system,
+                            "target_system": target_system,
                             "source_commit": old_commit,
+                            "target_commit": target_commit,
                             "source_path": rel,
                             "source_oid": old_oid,
-                            "target_path": rel,
-                            "target_oid": current_oid,
+                            "target_path": target,
+                            "target_oid": old_oid,
                             "source_start_line": start,
                             "source_end_line": end,
-                            "target_start_line": translated_start,
-                            "target_end_line": translated_end,
-                            "disposition": disposition,
-                        }
-                    )
-                    dispositions[disposition] += 1
-                else:
-                    quarantined_paths.add(rel)
-                    disposition = "changed_path_census"
-                    resolutions.append(
-                        {
-                            "cohort_id": cohort_id,
-                            "system": system,
-                            "source_commit": old_commit,
-                            "source_path": rel,
-                            "source_oid": old_oid,
-                            "target_path": rel,
-                            "target_oid": current_oid,
-                            "source_start_line": start,
-                            "source_end_line": end,
-                            "target_start_line": 1,
-                            "target_end_line": max(1, len(current_lines)),
+                            "target_start_line": start,
+                            "target_end_line": end,
                             "disposition": disposition,
                         }
                     )
                     dispositions[disposition] += 1
 
+            source_tree = current_trees[source_system]
+            current_oid = source_tree.get(rel)
+            identical_source_paths = current_by_oid[source_system].get(old_oid, [])
+            # A relocated byte-identical copy preserves the old exposure, but a
+            # modified original path must also be translated or quarantined.
+            if identical_source_paths and (
+                current_oid is None or current_oid == old_oid
+            ):
+                continue
+            if current_oid is None:
+                raise PrepError(
+                    "disclosed source cannot be mapped into the current tree: "
+                    f"{cohort_id}:{source_system}:{rel}"
+                )
+            old_lines = git_blob(source_root, old_commit, rel).splitlines(
+                keepends=True
+            )
+            current_lines = git_blob(source_root, source_commit, rel).splitlines(
+                keepends=True
+            )
+            if start <= 0 or end < start or end > len(old_lines):
+                raise PrepError(
+                    "burn interval is outside its pinned blob: "
+                    f"{cohort_id}:{source_system}:{rel}"
+                )
+            needle = old_lines[start - 1 : end]
+            matches = [
+                index + 1
+                for index in range(0, len(current_lines) - len(needle) + 1)
+                if current_lines[index : index + len(needle)] == needle
+            ]
+            if len(matches) == 1:
+                translated_start = matches[0]
+                translated_end = translated_start + len(needle) - 1
+                intervals[source_system][rel].append(
+                    (translated_start, translated_end)
+                )
+                disposition = "unique_line_span_translation"
+                resolutions.append(
+                    {
+                        "cohort_id": cohort_id,
+                        "source_system": source_system,
+                        "target_system": source_system,
+                        "source_commit": old_commit,
+                        "target_commit": source_commit,
+                        "source_path": rel,
+                        "source_oid": old_oid,
+                        "target_path": rel,
+                        "target_oid": current_oid,
+                        "source_start_line": start,
+                        "source_end_line": end,
+                        "target_start_line": translated_start,
+                        "target_end_line": translated_end,
+                        "disposition": disposition,
+                    }
+                )
+                dispositions[disposition] += 1
+            else:
+                quarantined_paths[source_system].add(rel)
+                disposition = "changed_path_census"
+                resolutions.append(
+                    {
+                        "cohort_id": cohort_id,
+                        "source_system": source_system,
+                        "target_system": source_system,
+                        "source_commit": old_commit,
+                        "target_commit": source_commit,
+                        "source_path": rel,
+                        "source_oid": old_oid,
+                        "target_path": rel,
+                        "target_oid": current_oid,
+                        "source_start_line": start,
+                        "source_end_line": end,
+                        "target_start_line": 1,
+                        "target_end_line": max(1, len(current_lines)),
+                        "disposition": disposition,
+                    }
+                )
+                dispositions[disposition] += 1
+
+    active: dict[str, list[dict[str, Any]]] = {}
+    for system, commit in commits.items():
+        root = corpus_dir / system
+        system_intervals = intervals[system]
+        system_quarantined_paths = quarantined_paths[system]
         active_rows: list[dict[str, Any]] = []
-        for rel in sorted(set(intervals) | quarantined_paths):
-            if rel in quarantined_paths:
+        for rel in sorted(set(system_intervals) | system_quarantined_paths):
+            if rel in system_quarantined_paths:
                 line_count = len(git_blob(root, commit, rel).splitlines())
                 active_rows.append(
                     {
@@ -1412,7 +1620,7 @@ def scoped_burn_binding(
                     }
                 )
                 continue
-            for start, end in sorted(set(intervals[rel])):
+            for start, end in sorted(set(system_intervals[rel])):
                 active_rows.append(
                     {
                         "system": system,
@@ -1428,7 +1636,7 @@ def scoped_burn_binding(
     )
     binding = {
         **binding,
-        "carry_forward_schema": "t111-burn-carry-forward-census-v2",
+        "carry_forward_schema": "t111-burn-carry-forward-census-v3",
         "active_source_identities": {
             system: source_identity(system, commit)
             for system, commit in sorted(commits.items())
@@ -1436,31 +1644,27 @@ def scoped_burn_binding(
         "identical_source_commit_systems": sorted(identical_commits),
         "active_coordinate_count": len(active_projection),
         "active_coordinates_sha256": "sha256:" + digest_parts(
-            "t111-active-burn-census-v2", active_projection
+            "t111-active-burn-census-v3", active_projection
         ),
         "resolution_count": len(resolutions),
         "resolution_dispositions": dict(sorted(dispositions.items())),
         "resolution_sha256": "sha256:" + digest_parts(
-            "t111-burn-resolution-v2", sorted(resolutions, key=canonical_json)
+            "t111-burn-resolution-v3", sorted(resolutions, key=canonical_json)
         ),
     }
     return burned, binding, active
 
 
 def git_tree_blobs(root: Path, commit: str) -> dict[str, str]:
-    raw = git(root, "ls-tree", "-rz", "--full-tree", commit)
+    entries = pinned_tree_entries(root, commit)
     result: dict[str, str] = {}
-    for entry in raw.split(b"\0"):
-        if not entry:
-            continue
-        metadata, separator, raw_path = entry.partition(b"\t")
-        fields = metadata.decode("ascii").split()
-        if not separator or len(fields) != 3:
-            raise PrepError(f"{root}: malformed Git tree while resolving burns")
-        mode, kind, oid = fields
-        rel = raw_path.decode("utf-8", errors="strict")
+    for rel, (mode, kind, oid) in entries.items():
         if mode in {"100644", "100755"} and kind == "blob":
             result[rel] = oid
+        elif mode == "120000" and kind == "blob":
+            resolved = resolve_pinned_blob_entry(root, commit, rel, entries)
+            if resolved is not None:
+                result[rel] = resolved[1]
     return result
 
 
@@ -1788,7 +1992,7 @@ TYPED_ORACLE_STRATA = {
     "structural_grpc_client_interface",
     "ambiguous_multiple_generated_clients",
 }
-TYPED_ORACLE_DIAGNOSTICS_SCHEMA = "t111-typed-call-oracle-diagnostics-v3"
+TYPED_ORACLE_DIAGNOSTICS_SCHEMA = "t111-typed-call-oracle-diagnostics-v5"
 TYPED_ORACLE_DIAGNOSTIC_COUNTS = {
     "modules",
     "loaded_packages",
@@ -1862,11 +2066,564 @@ def resolve_oracle_toolchain(expected_identity: str) -> dict[str, str]:
     return resolved
 
 
+BOUND_HARNESS_SCHEMA = "t111-bound-harness-v1"
+EXPANSION_LINEAGE_SCHEMA = "t111-gate2-expansion-lineage-v2"
+EXPANSION_LINEAGE_BINDING_DOMAIN = "t111-gate2-expansion-lineage-binding-v2"
+EXPANSION_GO_VERSION = "go version go1.26.5 darwin/arm64"
+
+
+def validate_shared_module_cache() -> Path:
+    module_cache = DEFAULT_MODULE_CACHE.absolute()
+    gomodcache = module_cache / "gomodcache"
+    for path in (module_cache, gomodcache):
+        try:
+            info = path.lstat()
+        except OSError as exc:
+            raise PrepError(f"cannot inspect sealed module cache {path}: {exc}") from exc
+        if not stat.S_ISDIR(info.st_mode) or stat.S_ISLNK(info.st_mode):
+            raise PrepError(f"sealed module cache path is not a real directory: {path}")
+        try:
+            if path.resolve(strict=True) != path:
+                raise PrepError(f"sealed module cache path resolves through a symlink: {path}")
+        except OSError as exc:
+            raise PrepError(f"cannot resolve sealed module cache {path}: {exc}") from exc
+    try:
+        for root, dirs, files in os.walk(gomodcache, topdown=True, followlinks=False):
+            for raw in [Path(root), *(Path(root) / name for name in dirs + files)]:
+                info = raw.lstat()
+                if stat.S_ISLNK(info.st_mode):
+                    raise PrepError(f"sealed module cache contains symlink: {raw}")
+                if not (stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode)):
+                    raise PrepError(f"sealed module cache contains non-regular entry: {raw}")
+                if stat.S_IMODE(info.st_mode) & 0o222:
+                    raise PrepError(f"sealed module cache entry is writable: {raw}")
+                try:
+                    raw.relative_to(gomodcache)
+                except ValueError as exc:
+                    raise PrepError(f"sealed module cache entry escapes root: {raw}") from exc
+    except OSError as exc:
+        raise PrepError(f"cannot traverse sealed module cache: {exc}") from exc
+    return module_cache
+
+
+def bound_harness_sources() -> dict[str, str]:
+    files = [REPO_ROOT / "go.mod", REPO_ROOT / "go.sum"]
+    files.extend(path for path in BASE.glob("*.go") if not path.name.endswith("_test.go"))
+    files.extend(
+        path for path in TYPED_CALL_ORACLE.glob("*.go")
+        if not path.name.endswith("_test.go")
+    )
+    return {
+        path.relative_to(REPO_ROOT).as_posix(): "sha256:" + sha256_file(path)
+        for path in sorted(files)
+    }
+
+
+def load_bound_typed_oracle(
+    toolchain: dict[str, str] | None,
+) -> tuple[Path, str]:
+    module_cache = validate_shared_module_cache()
+    bin_dir = module_cache / "bin"
+    try:
+        info = bin_dir.lstat()
+        if (
+            not stat.S_ISDIR(info.st_mode)
+            or stat.S_ISLNK(info.st_mode)
+            or stat.S_IMODE(info.st_mode) & 0o222
+            or bin_dir.resolve(strict=True) != bin_dir
+        ):
+            raise PrepError("bound binary directory is not a sealed real directory")
+        for root, dirs, files in os.walk(bin_dir, topdown=True, followlinks=False):
+            for raw in [Path(root), *(Path(root) / name for name in dirs + files)]:
+                item = raw.lstat()
+                if (
+                    stat.S_ISLNK(item.st_mode)
+                    or not (stat.S_ISDIR(item.st_mode) or stat.S_ISREG(item.st_mode))
+                    or stat.S_IMODE(item.st_mode) & 0o222
+                ):
+                    raise PrepError(f"bound binary tree contains unsafe entry: {raw}")
+    except OSError as exc:
+        raise PrepError(f"cannot validate bound binary directory: {exc}") from exc
+    manifest_path = module_cache / "manifest.json"
+    try:
+        info = manifest_path.lstat()
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or stat.S_ISLNK(info.st_mode)
+            or stat.S_IMODE(info.st_mode) & 0o222
+        ):
+            raise PrepError("bound harness manifest is not a sealed regular file")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot load bound harness manifest: {exc}") from exc
+    required = {
+        "schema", "created_at", "source_head", "source_clean", "go_version",
+        "go_sha256", "goos", "goarch", "sources", "artifacts",
+    }
+    if not isinstance(manifest, dict) or set(manifest) != required:
+        raise PrepError("bound harness manifest has invalid fields")
+    if (
+        manifest["schema"] != BOUND_HARNESS_SCHEMA
+        or manifest["source_clean"] is not True
+        or manifest["sources"] != bound_harness_sources()
+    ):
+        raise PrepError("bound harness manifest does not match current source inputs")
+    if toolchain is not None and (
+        manifest["go_version"] != toolchain["go_version"]
+        or manifest["go_sha256"] != toolchain["go_digest"]
+        or manifest["goos"] != toolchain["goos"]
+        or manifest["goarch"] != toolchain["goarch"]
+    ):
+        raise PrepError("bound typed oracle toolchain differs from the fact producer")
+    artifacts = manifest["artifacts"]
+    if not isinstance(artifacts, dict) or set(artifacts) != {"t111", "typedcalloracle"}:
+        raise PrepError("bound harness manifest has invalid artifacts")
+    artifact = artifacts["typedcalloracle"]
+    if not isinstance(artifact, dict) or set(artifact) != {"path", "sha256"}:
+        raise PrepError("bound typed oracle artifact is invalid")
+    if artifact["path"] != "bin/typedcalloracle" or not re.fullmatch(
+        r"sha256:[0-9a-f]{64}", str(artifact["sha256"])
+    ):
+        raise PrepError("bound typed oracle artifact identity is invalid")
+    binary = module_cache / "bin" / "typedcalloracle"
+    try:
+        info = binary.lstat()
+    except OSError as exc:
+        raise PrepError(f"cannot inspect bound typed oracle: {exc}") from exc
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or stat.S_ISLNK(info.st_mode)
+        or stat.S_IMODE(info.st_mode) & 0o222
+        or "sha256:" + sha256_file(binary) != artifact["sha256"]
+    ):
+        raise PrepError("bound typed oracle binary fails its manifest binding")
+    validate_shared_module_cache()
+    return binary, artifact["sha256"]
+
+
+def expansion_lineage_binding(receipt: dict[str, Any]) -> str:
+    """Bind the complete v2 receipt with one explicit canonical algorithm."""
+
+    payload = {
+        key: value
+        for key, value in receipt.items()
+        if key != "source_lineage_binding"
+    }
+    return "sha256:" + digest_parts(EXPANSION_LINEAGE_BINDING_DOMAIN, payload)
+
+
+def validate_expansion_lineage_receipt(value: Any) -> dict[str, Any]:
+    """Strictly validate a v2 expansion receipt and its whole-payload binding."""
+
+    fields = {
+        "active_counts",
+        "burn",
+        "commits",
+        "inputs",
+        "schema",
+        "source_lineage_binding",
+        "systems",
+    }
+    if not isinstance(value, dict) or set(value) != fields:
+        raise PrepError("expansion lineage receipt has invalid fields")
+    if value.get("schema") != EXPANSION_LINEAGE_SCHEMA:
+        raise PrepError("expansion lineage receipt has the wrong schema")
+    if value.get("systems") != list(SYSTEMS):
+        raise PrepError("expansion lineage systems are not the fixed ordered prefix")
+
+    commits = value.get("commits")
+    if (
+        not isinstance(commits, dict)
+        or set(commits) != set(SYSTEMS)
+        or any(
+            not isinstance(commit, str)
+            or re.fullmatch(r"[0-9a-f]{40}", commit) is None
+            for commit in commits.values()
+        )
+    ):
+        raise PrepError("expansion lineage commits are invalid")
+
+    active = value.get("active_counts")
+    if (
+        not isinstance(active, dict)
+        or set(active) != set(SYSTEMS)
+        or any(type(count) is not int or count < 0 for count in active.values())
+    ):
+        raise PrepError("expansion lineage active counts are invalid")
+
+    burn = value.get("burn")
+    burn_fields = {
+        "active_coordinate_count",
+        "active_coordinates_sha256",
+        "carry_forward_schema",
+        "resolution_count",
+        "resolution_dispositions",
+        "resolution_sha256",
+    }
+    if not isinstance(burn, dict) or set(burn) != burn_fields:
+        raise PrepError("expansion lineage burn projection has invalid fields")
+    if (
+        burn.get("carry_forward_schema") != "t111-burn-carry-forward-census-v3"
+        or type(burn.get("active_coordinate_count")) is not int
+        or burn["active_coordinate_count"] < 0
+        or type(burn.get("resolution_count")) is not int
+        or burn["resolution_count"] < 0
+        or re.fullmatch(
+            r"sha256:[0-9a-f]{64}", str(burn.get("active_coordinates_sha256"))
+        )
+        is None
+        or re.fullmatch(
+            r"sha256:[0-9a-f]{64}", str(burn.get("resolution_sha256"))
+        )
+        is None
+    ):
+        raise PrepError("expansion lineage burn projection is invalid")
+    dispositions = burn.get("resolution_dispositions")
+    disposition_fields = {
+        "changed_path_census",
+        "identical_blob_relocated",
+        "identical_path",
+        "unique_line_span_translation",
+    }
+    if (
+        not isinstance(dispositions, dict)
+        or set(dispositions) != disposition_fields
+        or any(
+            not isinstance(name, str)
+            or not name
+            or type(count) is not int
+            or count < 0
+            for name, count in dispositions.items()
+        )
+        or sum(dispositions.values()) != burn["resolution_count"]
+        or sum(active.values()) != burn["active_coordinate_count"]
+    ):
+        raise PrepError("expansion lineage burn counts are inconsistent")
+
+    inputs = value.get("inputs")
+    input_fields = {
+        "bound_manifest_sha256",
+        "burn_ledger_sha256",
+        "corpus_lock_sha256",
+        "harness_source_commit",
+        "label_prep_sha256",
+        "t111_binary_sha256",
+        "typedcalloracle_binary_sha256",
+    }
+    if not isinstance(inputs, dict) or set(inputs) != input_fields:
+        raise PrepError("expansion lineage inputs have invalid fields")
+    if re.fullmatch(
+        r"[0-9a-f]{40}", str(inputs.get("harness_source_commit"))
+    ) is None or any(
+        re.fullmatch(r"sha256:[0-9a-f]{64}", str(inputs.get(field))) is None
+        for field in input_fields - {"harness_source_commit"}
+    ):
+        raise PrepError("expansion lineage input identity is invalid")
+
+    binding = value.get("source_lineage_binding")
+    if (
+        re.fullmatch(r"sha256:[0-9a-f]{64}", str(binding)) is None
+        or binding != expansion_lineage_binding(value)
+    ):
+        raise PrepError("expansion lineage whole-receipt binding is invalid")
+    return json.loads(canonical_json(value))
+
+
+def _validate_expansion_projection(
+    value: Any,
+    *,
+    expected_commits: dict[str, str],
+    corpus_lock_sha256: str,
+    burn_ledger_sha256: str,
+) -> dict[str, Any]:
+    """Load frozen v1 history or a self-validating v2 receipt as projection input."""
+
+    if not isinstance(value, dict):
+        raise PrepError("expansion lineage predecessor must be an object")
+    if value.get("schema") == EXPANSION_LINEAGE_SCHEMA:
+        value = validate_expansion_lineage_receipt(value)
+        if value["inputs"]["burn_ledger_sha256"] != burn_ledger_sha256:
+            raise PrepError("v2 expansion predecessor uses a different burn ledger")
+        # A prospective harness repair may change non-source corpus policy.
+        # The caller separately proves that ONLY the allowed analysis-policy
+        # fields changed, then independently reverifies the current pinned
+        # trees and recomputes the complete burn projection.
+    elif value.get("schema") == "t111-gate2-expansion-lineage-v1":
+        # V1 is preserved as immutable history. Its hand-authored binding
+        # algorithm was never tracked, so only its exact committed structure
+        # and unchanged external inputs may be carried into v2.
+        fields = {
+            "active_counts",
+            "burn",
+            "commits",
+            "inputs",
+            "schema",
+            "source_lineage_binding",
+            "systems",
+        }
+        inputs = value.get("inputs")
+        if (
+            set(value) != fields
+            or not isinstance(inputs, dict)
+            or inputs.get("corpus_lock_sha256") != corpus_lock_sha256
+            or inputs.get("burn_ledger_sha256") != burn_ledger_sha256
+            or re.fullmatch(
+                r"sha256:[0-9a-f]{64}", str(value.get("source_lineage_binding"))
+            )
+            is None
+        ):
+            raise PrepError("frozen v1 expansion lineage predecessor is invalid")
+    else:
+        raise PrepError("unsupported expansion lineage predecessor schema")
+
+    if (
+        value.get("systems") != list(SYSTEMS)
+        or value.get("commits") != dict(sorted(expected_commits.items()))
+    ):
+        raise PrepError("expansion predecessor differs from the fixed source prefix")
+    projection = {
+        "active_counts": value.get("active_counts"),
+        "burn": value.get("burn"),
+        "commits": value.get("commits"),
+        "systems": value.get("systems"),
+    }
+    probe = {
+        **projection,
+        "inputs": {
+            "bound_manifest_sha256": "sha256:" + "0" * 64,
+            "burn_ledger_sha256": burn_ledger_sha256,
+            "corpus_lock_sha256": corpus_lock_sha256,
+            "harness_source_commit": "0" * 40,
+            "label_prep_sha256": "sha256:" + "0" * 64,
+            "t111_binary_sha256": "sha256:" + "0" * 64,
+            "typedcalloracle_binary_sha256": "sha256:" + "0" * 64,
+        },
+        "schema": EXPANSION_LINEAGE_SCHEMA,
+        "source_lineage_binding": "sha256:" + "0" * 64,
+    }
+    probe["source_lineage_binding"] = expansion_lineage_binding(probe)
+    validate_expansion_lineage_receipt(probe)
+    return json.loads(canonical_json(projection))
+
+
+EXPANSION_ANALYSIS_POLICY_FIELDS = frozenset({"goos", "goarch", "go_tests"})
+
+
+def _corpus_lock_without_analysis_policy(content: bytes, source: str) -> Any:
+    try:
+        rows = json.loads(content.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot parse corpus lock from {source}: {exc}") from exc
+    if not isinstance(rows, list) or not all(isinstance(row, dict) for row in rows):
+        raise PrepError(f"corpus lock from {source} is not a list of objects")
+    return [
+        {
+            key: value
+            for key, value in row.items()
+            if key not in EXPANSION_ANALYSIS_POLICY_FIELDS
+        }
+        for row in rows
+    ]
+
+
+def _validate_expansion_corpus_policy_transition(
+    predecessor: dict[str, Any], current_lock_sha256: str
+) -> None:
+    previous_lock_sha256 = str(predecessor["inputs"]["corpus_lock_sha256"])
+    if previous_lock_sha256 == current_lock_sha256:
+        return
+    source_commit = str(predecessor["inputs"]["harness_source_commit"])
+    try:
+        lock_rel = DEFAULT_LOCK.resolve().relative_to(REPO_ROOT.resolve()).as_posix()
+    except (OSError, ValueError) as exc:
+        raise PrepError("corpus lock is outside the repository") from exc
+    previous_bytes = git(REPO_ROOT, "show", f"{source_commit}:{lock_rel}")
+    if "sha256:" + hashlib.sha256(previous_bytes).hexdigest() != previous_lock_sha256:
+        raise PrepError("predecessor corpus lock bytes do not match its receipt")
+    try:
+        current_bytes = DEFAULT_LOCK.read_bytes()
+    except OSError as exc:
+        raise PrepError(f"cannot read current corpus lock: {exc}") from exc
+    if "sha256:" + hashlib.sha256(current_bytes).hexdigest() != current_lock_sha256:
+        raise PrepError("current corpus lock changed during lineage validation")
+    if canonical_json(
+        _corpus_lock_without_analysis_policy(previous_bytes, "predecessor commit")
+    ) != canonical_json(
+        _corpus_lock_without_analysis_policy(current_bytes, str(DEFAULT_LOCK))
+    ):
+        raise PrepError(
+            "corpus lock transition changes fields outside the Go analysis policy"
+        )
+
+
+def _bound_harness_lineage_inputs(harness_source_commit: str) -> dict[str, str]:
+    if re.fullmatch(r"[0-9a-f]{40}", harness_source_commit) is None:
+        raise PrepError("harness source commit must be full lowercase 40-hex")
+    git(REPO_ROOT, "cat-file", "-e", f"{harness_source_commit}^{{commit}}")
+    git(REPO_ROOT, "merge-base", "--is-ancestor", harness_source_commit, "HEAD")
+
+    _, oracle_digest = load_bound_typed_oracle(None)
+    manifest_path = DEFAULT_MODULE_CACHE / "manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot reload bound harness manifest: {exc}") from exc
+    if (
+        manifest.get("source_head") != harness_source_commit
+        or manifest.get("go_version") != EXPANSION_GO_VERSION
+        or manifest.get("goos") != "darwin"
+        or manifest.get("goarch") != "arm64"
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", str(manifest.get("go_sha256")))
+        is None
+    ):
+        raise PrepError("bound harness manifest has the wrong source or toolchain")
+    parse_rfc3339("bound harness created_at", manifest.get("created_at"))
+    found_go = shutil.which("go")
+    if found_go is None:
+        raise PrepError("exact Go executable is unavailable for lineage validation")
+    try:
+        go_path = Path(found_go).resolve(strict=True)
+        go_result = subprocess.run(
+            [str(go_path), "version"],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={"PATH": str(go_path.parent), "GOENV": "off", "GOTOOLCHAIN": "local"},
+        )
+    except OSError as exc:
+        raise PrepError(f"cannot verify bound harness Go executable: {exc}") from exc
+    if (
+        go_result.returncode
+        or go_result.stdout.decode("utf-8", errors="replace").strip()
+        != manifest["go_version"]
+        or "sha256:" + sha256_file(go_path) != manifest["go_sha256"]
+    ):
+        raise PrepError("installed Go executable differs from the bound manifest")
+
+    artifact = manifest["artifacts"].get("t111")
+    if (
+        not isinstance(artifact, dict)
+        or set(artifact) != {"path", "sha256"}
+        or artifact.get("path") != "bin/t111"
+        or re.fullmatch(r"sha256:[0-9a-f]{64}", str(artifact.get("sha256")))
+        is None
+    ):
+        raise PrepError("bound producer artifact identity is invalid")
+    producer = DEFAULT_MODULE_CACHE / "bin" / "t111"
+    try:
+        info = producer.lstat()
+    except OSError as exc:
+        raise PrepError(f"cannot inspect bound producer: {exc}") from exc
+    if (
+        not stat.S_ISREG(info.st_mode)
+        or stat.S_ISLNK(info.st_mode)
+        or stat.S_IMODE(info.st_mode) & 0o222
+        or "sha256:" + sha256_file(producer) != artifact["sha256"]
+    ):
+        raise PrepError("bound producer binary fails its manifest binding")
+    if manifest["artifacts"]["typedcalloracle"]["sha256"] != oracle_digest:
+        raise PrepError("bound typed oracle digest changed during lineage validation")
+    validate_shared_module_cache()
+    return {
+        "bound_manifest_sha256": "sha256:" + sha256_file(manifest_path),
+        "harness_source_commit": harness_source_commit,
+        "t111_binary_sha256": str(artifact["sha256"]),
+        "typedcalloracle_binary_sha256": oracle_digest,
+    }
+
+
+def build_expansion_lineage_receipt(
+    predecessor: Path,
+    harness_source_commit: str,
+) -> dict[str, Any]:
+    """Build v2 from a frozen projection and current exact byte identities."""
+
+    try:
+        prior = json.loads(predecessor.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot load expansion lineage predecessor: {exc}") from exc
+    corpus_lock_sha256 = "sha256:" + sha256_file(DEFAULT_LOCK)
+    burn_ledger_sha256 = "sha256:" + sha256_file(DEFAULT_BURN_LEDGER)
+    entries = load_corpus_entries(DEFAULT_LOCK, SYSTEMS)
+    commits = {system: str(entries[system]["commit"]) for system in SYSTEMS}
+    projection = _validate_expansion_projection(
+        prior,
+        expected_commits=commits,
+        corpus_lock_sha256=corpus_lock_sha256,
+        burn_ledger_sha256=burn_ledger_sha256,
+    )
+    if prior.get("schema") == EXPANSION_LINEAGE_SCHEMA:
+        _validate_expansion_corpus_policy_transition(prior, corpus_lock_sha256)
+    for system in SYSTEMS:
+        pinned_tracked_files(
+            DEFAULT_CORPUS / system,
+            commits[system],
+            entries[system]["excluded_gitlinks"],
+        )
+    _, burn_binding, active = scoped_burn_binding(
+        DEFAULT_BURN_LEDGER,
+        commits,
+        DEFAULT_CORPUS,
+    )
+    computed_burn = {
+        field: burn_binding[field]
+        for field in (
+            "active_coordinate_count",
+            "active_coordinates_sha256",
+            "carry_forward_schema",
+            "resolution_count",
+            "resolution_dispositions",
+            "resolution_sha256",
+        )
+    }
+    computed_active = {
+        system: len(active[system]) for system in SYSTEMS
+    }
+    if (
+        projection["burn"] != computed_burn
+        or projection["active_counts"] != computed_active
+    ):
+        raise PrepError("expansion predecessor burn projection does not recompute")
+    inputs = {
+        **_bound_harness_lineage_inputs(harness_source_commit),
+        "burn_ledger_sha256": burn_ledger_sha256,
+        "corpus_lock_sha256": corpus_lock_sha256,
+        "label_prep_sha256": "sha256:" + sha256_file(Path(__file__)),
+    }
+    receipt = {
+        **projection,
+        "inputs": inputs,
+        "schema": EXPANSION_LINEAGE_SCHEMA,
+        "source_lineage_binding": "",
+    }
+    receipt["source_lineage_binding"] = expansion_lineage_binding(receipt)
+    return validate_expansion_lineage_receipt(receipt)
+
+
+def write_expansion_lineage_receipt(
+    output: Path,
+    predecessor: Path,
+    harness_source_commit: str,
+) -> dict[str, Any]:
+    receipt = build_expansion_lineage_receipt(predecessor, harness_source_commit)
+    atomic_write(output, json.dumps(receipt, indent=2, sort_keys=True) + "\n")
+    fsync_directory(output.parent)
+    try:
+        written = json.loads(output.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrepError(f"cannot re-read expansion lineage receipt: {exc}") from exc
+    if validate_expansion_lineage_receipt(written) != receipt:
+        raise PrepError("written expansion lineage receipt changed during publication")
+    return receipt
+
+
 def oracle_subprocess_env(toolchain: dict[str, str], tool_dir: Path, cache_dir: Path) -> dict[str, str]:
-    home = Path(os.environ.get("HOME", str(Path.home()))).resolve()
-    gopath = Path(os.environ.get("GOPATH", str(home / "go"))).resolve()
-    modcache = Path(os.environ.get("GOMODCACHE", str(gopath / "pkg" / "mod"))).resolve()
-    gocache = Path(os.environ.get("GOCACHE", str(cache_dir))).resolve()
+    module_cache = DEFAULT_MODULE_CACHE.absolute()
+    state = cache_dir.parent
+    home = state / "home"
+    gopath = state / "gopath"
+    modcache = module_cache / "gomodcache"
+    gocache = cache_dir.resolve()
     return {
         "CGO_ENABLED": "0",
         "GIT_CONFIG_NOSYSTEM": "1",
@@ -1882,11 +2639,16 @@ def oracle_subprocess_env(toolchain: dict[str, str], tool_dir: Path, cache_dir: 
         "GOPATH": str(gopath),
         "GOPROXY": "off",
         "GOSUMDB": "off",
+        "GOTELEMETRY": "off",
+        "GOTELEMETRYDIR": str(state / "telemetry"),
         "GOTOOLCHAIN": "local",
         "GOWORK": "off",
         "HOME": str(home),
         "PATH": str(tool_dir),
-        "TMPDIR": str(cache_dir.parent / "tmp"),
+        "GOTMPDIR": str(state / "tmp"),
+        "TMPDIR": str(state / "tmp"),
+        "XDG_CACHE_HOME": str(home / ".cache"),
+        "XDG_CONFIG_HOME": str(home / ".config"),
     }
 
 
@@ -1913,19 +2675,39 @@ def scan_typed_call_recall_frame(
     root: Path,
     commit: str,
     build_tags: Sequence[str],
+    analysis_goos: str,
+    analysis_goarch: str,
+    go_tests: str,
     tracked_files: set[str],
     toolchain: dict[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Run the fact-blind go/types oracle and validate every coordinate."""
 
+    if (
+        not isinstance(analysis_goos, str)
+        or analysis_goos not in KNOWN_GOOS
+        or not isinstance(analysis_goarch, str)
+        or analysis_goarch not in KNOWN_GOARCH
+        or not isinstance(go_tests, str)
+        or go_tests not in GO_TEST_POLICIES
+    ):
+        raise PrepError(f"{system}: invalid Go analysis policy")
+    include_tests = go_tests == "include"
+
+    oracle_binary, oracle_digest = load_bound_typed_oracle(toolchain)
     command = [
-        "go",
-        "run",
-        "./spike/t111/typedcalloracle",
+        str(oracle_binary),
+        "-module-cache",
+        str(DEFAULT_MODULE_CACHE.absolute()),
         "-root",
         str(root),
         "-commit",
         commit,
+        "-goos",
+        analysis_goos,
+        "-goarch",
+        analysis_goarch,
+        f"-include-tests={'true' if include_tests else 'false'}",
     ]
     if build_tags:
         command.extend(["-tags", ",".join(sorted(build_tags))])
@@ -1938,7 +2720,8 @@ def scan_typed_call_recall_frame(
                 cache_dir = temporary / "cache"
                 tool_dir.mkdir()
                 cache_dir.mkdir()
-                (temporary / "tmp").mkdir()
+                for name in ("tmp", "home", "gopath", "telemetry"):
+                    (temporary / name).mkdir()
                 os.symlink(toolchain["go_path"], tool_dir / "go")
                 os.symlink(toolchain["git_path"], tool_dir / "git")
                 run_env = oracle_subprocess_env(toolchain, tool_dir, cache_dir)
@@ -1951,6 +2734,9 @@ def scan_typed_call_recall_frame(
                 timeout=20 * 60,
                 env=run_env,
             )
+            verified_binary, verified_digest = load_bound_typed_oracle(toolchain)
+            if verified_binary != oracle_binary or verified_digest != oracle_digest:
+                raise PrepError(f"{system}: bound typed oracle changed during execution")
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise PrepError(f"{system}: typed call oracle failed to run: {exc}") from exc
     if result.returncode:
@@ -2039,6 +2825,10 @@ def scan_typed_call_recall_frame(
         "runtime_version",
         "goos",
         "goarch",
+        "analysis_goos",
+        "analysis_goarch",
+        "include_tests",
+        "executable_sha256",
         "semantic_inputs_digest",
         *TYPED_ORACLE_DIAGNOSTIC_COUNTS,
     }
@@ -2051,6 +2841,14 @@ def scan_typed_call_recall_frame(
         for field in ("runtime_version", "goos", "goarch")
     ):
         raise PrepError(f"{system}: typed oracle runtime differs from the bound producer toolchain")
+    if (
+        diagnostics.get("analysis_goos") != analysis_goos
+        or diagnostics.get("analysis_goarch") != analysis_goarch
+        or diagnostics.get("include_tests") is not include_tests
+    ):
+        raise PrepError(f"{system}: typed oracle analysis policy differs from corpus.lock")
+    if diagnostics.get("executable_sha256") != oracle_digest:
+        raise PrepError(f"{system}: typed oracle executable differs from its bound manifest")
     semantic_digest = diagnostics.get("semantic_inputs_digest")
     if not isinstance(semantic_digest, str) or not re.fullmatch(
         r"sha256:[0-9a-f]{64}", semantic_digest
@@ -2292,8 +3090,7 @@ def build_precision_frame(
 ) -> list[dict[str, Any]]:
     files: dict[str, bytes] = {}
     population: list[dict[str, Any]] = []
-    seen_sites: dict[str, str] = {}
-    seen_facts: set[tuple[Any, ...]] = set()
+    by_site: dict[str, dict[str, Any]] = {}
     for fact in facts:
         rel = relpath_of(str(fact["path"]), system, root)
         if rel not in tracked_files:
@@ -2305,47 +3102,48 @@ def build_precision_frame(
         line, column = byte_coordinate(data, byte_offset)
         method = str(fact["object"]).rsplit("/", 1)[-1]
         sid = site_id(system, commit, rel, byte_offset, method)
-        signature = (
-            system,
-            rel,
-            int(fact["start_byte"]),
-            int(fact["end_byte"]),
-            str(fact["object"]),
-            str(fact["code_role"]),
-            str(fact["tier"]),
-        )
-        if signature in seen_facts:
-            raise PrepError(f"duplicate CALLS_OPERATION fact: {signature}")
-        seen_facts.add(signature)
-        if sid in seen_sites:
-            raise PrepError(
-                f"multiple emitted facts map to one source invocation {sid}: "
-                f"{seen_sites[sid]} and {fact['object']}"
-            )
-        seen_sites[sid] = str(fact["object"])
         role = str(fact["code_role"])
         if role not in CODE_ROLES:
             raise PrepError(
                 f"CALLS_OPERATION has unsupported code_role {role!r}: {system}:{rel}"
             )
-        population.append(
-            {
-                "site_id": sid,
-                "system": system,
-                "path": rel,
-                "line": line,
-                "start_line": int(fact["start_line"]),
-                "end_line": int(fact["end_line"]),
-                "column": column,
-                "byte_offset": byte_offset,
-                "method": method,
-                "stratum": f"{system}|{role}",
-                "role": role,
-                "object": str(fact["object"]),
-                "tier": str(fact["tier"]),
-                "atom_id": fact.get("atom_id"),
-            }
-        )
+        candidate = {
+            "site_id": sid,
+            "system": system,
+            "path": rel,
+            "line": line,
+            "start_line": int(fact["start_line"]),
+            "end_line": int(fact["end_line"]),
+            "column": column,
+            "byte_offset": byte_offset,
+            "method": method,
+            "stratum": f"{system}|{role}",
+            "role": role,
+            "object": str(fact["object"]),
+            "tier": str(fact["tier"]),
+            "atom_id": fact.get("atom_id"),
+        }
+        prior = by_site.get(sid)
+        if prior is not None:
+            # One physical invocation can be proven by several materialized
+            # atoms when nested Go modules load the same in-snapshot package
+            # under different, independently bound semantic-input closures.
+            # The Gate 2 population unit is the unique source site, not the
+            # number of agreeing provenance contexts. Collapse only complete
+            # consensus and retain the lexicographically smallest atom as the
+            # deterministic representative. Any semantic disagreement still
+            # fails closed.
+            if {key: value for key, value in prior.items() if key != "atom_id"} != {
+                key: value for key, value in candidate.items() if key != "atom_id"
+            }:
+                raise PrepError(
+                    f"multiple emitted facts disagree at one source invocation {sid}: "
+                    f"{prior['object']} and {candidate['object']}"
+                )
+            prior["atom_id"] = min(str(prior["atom_id"]), str(candidate["atom_id"]))
+            continue
+        by_site[sid] = candidate
+        population.append(candidate)
     return population
 
 
@@ -2386,7 +3184,7 @@ def build_registration_precision_frame(
 ) -> list[dict[str, Any]]:
     files: dict[str, bytes] = {}
     population: list[dict[str, Any]] = []
-    seen: set[str] = set()
+    by_site: dict[str, dict[str, Any]] = {}
     for fact in facts:
         rel = relpath_of(str(fact["path"]), system, root)
         if rel not in tracked_files:
@@ -2397,32 +3195,40 @@ def build_registration_precision_frame(
         byte_offset, method = registration_position(data, fact)
         line, column = byte_coordinate(data, byte_offset)
         sid = site_id(system, commit, rel, byte_offset, method)
-        if sid in seen:
-            raise PrepError(f"multiple IMPLEMENTS_SERVICE facts map to source site {sid}")
-        seen.add(sid)
         role = str(fact["code_role"])
         if role not in CODE_ROLES:
             raise PrepError(
                 f"IMPLEMENTS_SERVICE has unsupported code_role {role!r}: {system}:{rel}"
             )
-        population.append(
-            {
-                "site_id": sid,
-                "system": system,
-                "path": rel,
-                "line": line,
-                "start_line": int(fact["start_line"]),
-                "end_line": int(fact["end_line"]),
-                "column": column,
-                "byte_offset": byte_offset,
-                "method": method,
-                "stratum": f"{system}|{role}",
-                "role": role,
-                "object": str(fact["object"]),
-                "tier": str(fact["tier"]),
-                "atom_id": fact.get("atom_id"),
-            }
-        )
+        candidate = {
+            "site_id": sid,
+            "system": system,
+            "path": rel,
+            "line": line,
+            "start_line": int(fact["start_line"]),
+            "end_line": int(fact["end_line"]),
+            "column": column,
+            "byte_offset": byte_offset,
+            "method": method,
+            "stratum": f"{system}|{role}",
+            "role": role,
+            "object": str(fact["object"]),
+            "tier": str(fact["tier"]),
+            "atom_id": fact.get("atom_id"),
+        }
+        prior = by_site.get(sid)
+        if prior is not None:
+            if {key: value for key, value in prior.items() if key != "atom_id"} != {
+                key: value for key, value in candidate.items() if key != "atom_id"
+            }:
+                raise PrepError(
+                    f"multiple IMPLEMENTS_SERVICE facts disagree at source site {sid}: "
+                    f"{prior['object']} and {candidate['object']}"
+                )
+            prior["atom_id"] = min(str(prior["atom_id"]), str(candidate["atom_id"]))
+            continue
+        by_site[sid] = candidate
+        population.append(candidate)
     return population
 
 
@@ -2729,7 +3535,7 @@ def preflight_gate_design(
         alpha_each = (Fraction(1, 1) - GATE_CONFIDENCE) / family_size
 
     report: dict[str, Any] = {
-        "schema": "t111-gate2-power-v1",
+        "schema": "t111-gate2-power-v2",
         "family_size": family_size,
         "alpha_each": f"{alpha_each.numerator}/{alpha_each.denominator}",
         "best_case": {},
@@ -2862,10 +3668,16 @@ def preflight_gate_design(
             if row["label"] == role
         )
         dev_unique_ceiling += min(role_quota, max(0, capacity))
-    selected_unique_ceiling = census_total + holdout_unique_floor + dev_unique_ceiling
+    # The fraction is minimized at the smallest admissible holdout union and
+    # the largest admissible development union. This sum is therefore the
+    # denominator at that minimizer, not a ceiling on the realized selected
+    # union: a realized holdout union may be larger than its floor.
+    blind_fraction_denominator_at_bound = (
+        census_total + holdout_unique_floor + dev_unique_ceiling
+    )
     blind_fraction_lower_bound = (
-        holdout_unique_floor / selected_unique_ceiling
-        if selected_unique_ceiling
+        holdout_unique_floor / blind_fraction_denominator_at_bound
+        if blind_fraction_denominator_at_bound
         else 0.0
     )
     if blind_fraction_lower_bound < MIN_BLIND_HOLDOUT_FRACTION:
@@ -2880,7 +3692,9 @@ def preflight_gate_design(
     report["best_case"]["census_unique_sites"] = census_total
     report["best_case"]["holdout_unique_floor"] = holdout_unique_floor
     report["best_case"]["dev_unique_ceiling"] = dev_unique_ceiling
-    report["best_case"]["selected_unique_ceiling"] = selected_unique_ceiling
+    report["best_case"]["blind_fraction_denominator_at_bound"] = (
+        blind_fraction_denominator_at_bound
+    )
     report["best_case"]["maximum_recall_label_units"] = maximum_recall_label_units
     report["best_case"]["blind_fraction_lower_bound"] = blind_fraction_lower_bound
     report["attainable"] = not reasons
@@ -2888,6 +3702,81 @@ def preflight_gate_design(
     if reasons and raise_on_failure:
         raise PrepError("sealed Gate-2 design is statistically incapable: " + "; ".join(reasons))
     return report
+
+
+SEALED_BUNDLE_SENTINELS = (
+    "attempt.json",
+    "seed.json",
+    "burn-ledger.input.json",
+)
+
+
+def assert_diagnostic_destination_unprotected(output: Path) -> None:
+    """Keep diagnostics from creating or overwriting any sealed bundle root."""
+
+    output = Path(output)
+    if output.is_symlink():
+        raise PrepError(f"diagnostic artifact destination may not be a symlink: {output}")
+    try:
+        resolved = output.resolve(strict=False)
+        claim_root = SEALED_CLAIM_ROOT.resolve(strict=False)
+        default_sealed = DEFAULT_ARTIFACTS.resolve(strict=False)
+    except OSError as exc:
+        raise PrepError(
+            f"cannot resolve diagnostic artifact destination {output}: {exc}"
+        ) from exc
+    versioned_root = next(
+        (
+            candidate
+            for candidate in (resolved, *resolved.parents)
+            if candidate.parent == claim_root
+            and re.fullmatch(r"g2-v[0-9]+", candidate.name)
+        ),
+        None,
+    )
+    if (
+        resolved == claim_root
+        or resolved == default_sealed
+        or default_sealed in resolved.parents
+        or versioned_root is not None
+    ):
+        raise PrepError(
+            "diagnostic artifact destination is reserved for sealed Gate-2 "
+            f"bundles: {output}"
+        )
+    if output.exists() and not output.is_dir():
+        raise PrepError(f"diagnostic artifact destination is not a directory: {output}")
+    for name in SEALED_BUNDLE_SENTINELS:
+        sentinel = output / name
+        if sentinel.exists() or sentinel.is_symlink():
+            raise PrepError(
+                f"diagnostic artifact destination contains sealed bundle state: {sentinel}"
+            )
+    manifest_path = output / "manifest.json"
+    if manifest_path.is_symlink():
+        raise PrepError(
+            f"diagnostic artifact destination has a symlinked manifest: {manifest_path}"
+        )
+    if manifest_path.exists():
+        if not manifest_path.is_file():
+            raise PrepError(
+                f"diagnostic artifact destination has an invalid manifest: {manifest_path}"
+            )
+        try:
+            existing_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise PrepError(
+                "cannot prove existing artifact destination is diagnostic: "
+                f"{manifest_path}: {exc}"
+            ) from exc
+        if (
+            not isinstance(existing_manifest, dict)
+            or existing_manifest.get("gate_design_fixed") is not False
+        ):
+            raise PrepError(
+                "diagnostic artifact destination is an existing sealed/unknown "
+                f"bundle: {output}"
+            )
 
 
 def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
@@ -2904,8 +3793,17 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
     commitment_only = bool(getattr(args, "commitment_only", False))
     if commitment_only and not gate_candidate:
         raise PrepError(
-            "commit-inputs is fixed to all four fixtures and the precommitted gate design"
+            "commit-inputs is fixed to every Gate-2 fixture and the precommitted gate design"
         )
+    if (
+        not gate_candidate
+        and not commitment_only
+        and not bool(getattr(args, "dry_run", False))
+    ):
+        output_dir = getattr(args, "output_dir", None)
+        if output_dir is None:
+            raise PrepError("diagnostic preparation requires an explicit output directory")
+        assert_diagnostic_destination_unprotected(Path(output_dir))
     if gate_candidate and not getattr(args, "commitment_only", False):
         if getattr(args, "dry_run", False):
             raise PrepError(
@@ -2979,6 +3877,9 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
             root,
             commits[system],
             entries[system]["go_build_tags"],
+            entries[system]["goos"],
+            entries[system]["goarch"],
+            entries[system]["go_tests"],
             set(tracked),
             oracle_toolchain,
         )
@@ -3058,6 +3959,9 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
             "commit": commits[system],
             "excluded_gitlinks": entries[system]["excluded_gitlinks"],
             "go_build_tags": entries[system]["go_build_tags"],
+            "goos": entries[system]["goos"],
+            "goarch": entries[system]["goarch"],
+            "go_tests": entries[system]["go_tests"],
         }
         for system in systems
     }
@@ -3447,7 +4351,11 @@ def build_artifacts(args: argparse.Namespace) -> tuple[dict[str, Any], list[dict
         elif seed_record is not None:
             verify_input_commitment_publication(manifest, seed_record)
     else:
-        manifest["power_analysis"] = {"schema": "t111-gate2-power-v1", "attainable": False, "diagnostic_only": True}
+        manifest["power_analysis"] = {
+            "schema": "t111-gate2-power-v2",
+            "attainable": False,
+            "diagnostic_only": True,
+        }
     return manifest, dev_sites, holdout_sites, keys
 
 
@@ -3551,6 +4459,9 @@ def publish_artifacts(
     }
     sealed = manifest.get("gate_design_fixed") is True
     if not sealed:
+        if manifest.get("gate_design_fixed") is not False:
+            raise PrepError("diagnostic publication requires an explicit unsealed manifest")
+        assert_diagnostic_destination_unprotected(output)
         existing = [
             output / name for name in (*rows_by_name, "manifest.json")
             if (output / name).exists()
@@ -3850,6 +4761,9 @@ def materialize_context(args: argparse.Namespace) -> None:
             "commit": commits[system],
             "excluded_gitlinks": entries[system]["excluded_gitlinks"],
             "go_build_tags": entries[system]["go_build_tags"],
+            "goos": entries[system]["goos"],
+            "goarch": entries[system]["goarch"],
+            "go_tests": entries[system]["go_tests"],
         }
         for system in systems
     }
@@ -4279,7 +5193,7 @@ def create_nist_seed_command(
     github_fetcher: Any = github_json_fetcher,
     nist_fetcher: Any = nist_beacon_json_fetcher,
 ) -> None:
-    """Freeze seed-v3 from the exact first eligible NIST Beacon pulse."""
+    """Freeze seed-v4 from the exact first eligible NIST Beacon pulse."""
 
     for path, description in (
         (args.commitment, "input commitment"),
@@ -4361,6 +5275,7 @@ func f(client Client) {
             {
                 "id": "s|risk",
                 "population_size": 10,
+                "census_size": 0,
                 "holdout_sample_size": 1,
                 "dev_sample_size": 1,
             }
@@ -4470,7 +5385,7 @@ def parser() -> argparse.ArgumentParser:
     prepare.add_argument(
         "--audit-seed-file",
         type=Path,
-        help="input-bound sealed v3 seed receipt issued after commit-inputs",
+        help="input-bound sealed v4 seed receipt issued after commit-inputs",
     )
     prepare.set_defaults(commitment_only=False)
     prepare.add_argument("--dry-run", action="store_true")
@@ -4535,11 +5450,23 @@ def parser() -> argparse.ArgumentParser:
 
     nist_seed = commands.add_parser(
         "nist-seed",
-        help="freeze seed-v3 from the exact first eligible NIST Beacon pulse",
+        help="freeze seed-v4 from the exact first eligible NIST Beacon pulse",
     )
     nist_seed.add_argument("--commitment", type=Path, required=True)
     nist_seed.add_argument("--github-receipt", type=Path, required=True)
     nist_seed.add_argument("--output", type=Path, required=True)
+
+    expansion_lineage = commands.add_parser(
+        "expansion-lineage",
+        help="upgrade and verify the strict-expansion lineage receipt",
+    )
+    expansion_lineage.add_argument(
+        "--predecessor", type=Path, default=DEFAULT_EXPANSION_LINEAGE
+    )
+    expansion_lineage.add_argument(
+        "--output", type=Path, default=DEFAULT_EXPANSION_LINEAGE
+    )
+    expansion_lineage.add_argument("--harness-source-commit", required=True)
 
     commands.add_parser("self-test", help="run deterministic invariant tests")
     return top
@@ -4573,6 +5500,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "nist-seed":
             create_nist_seed_command(args)
+            return 0
+        if args.command == "expansion-lineage":
+            receipt = write_expansion_lineage_receipt(
+                args.output,
+                args.predecessor,
+                args.harness_source_commit,
+            )
+            print(
+                "expansion lineage written to "
+                f"{args.output}: {receipt['source_lineage_binding']}"
+            )
             return 0
         manifest, dev, holdout, keys = build_artifacts(args)
         if args.command == "commit-inputs":

@@ -3,12 +3,18 @@
     "name": "online-boutique",
     "git_url": "https://github.com/GoogleCloudPlatform/microservices-demo",
     "commit": "9a4616e77f0f9cbcbecaf27d711c38890dda1404",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
     "note": "polyglot 11-service demo; per-service vendored generated proto copies; K8s + Helm + Kustomize; documented architecture diagram = ground-truth seed"
   },
   {
     "name": "temporal",
     "git_url": "https://github.com/temporalio/temporal",
-    "commit": "a5e6d3ed6335256319fff94f38bf74c4b7ba370c",
+    "commit": "8224a5375112079ad905c4ea829420306431462c",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
     "note": "multi-service Go monorepo (frontend/history/matching/worker) with internal gRPC; gomock mocks of clients; helm chart in a separate repo (identity conflicts)",
     "excluded_gitlinks": [
       {
@@ -21,7 +27,10 @@
   {
     "name": "loki",
     "git_url": "https://github.com/grafana/loki",
-    "commit": "d108ea11a62fbf7be7d25b58d44d396a3ce0c96c",
+    "commit": "1362d2770ee2abba5e130d67cf30bcc4eefa0da0",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
     "note": "single binary/image, many workload identities selected by -target; worst-case service/deployable identity scenario",
     "excluded_gitlinks": [
       {
@@ -35,13 +44,55 @@
     "name": "dapr",
     "git_url": "https://github.com/dapr/dapr",
     "commit": "08aebd8b2effa2ed939ad5531e25ff8b21a36ef1",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
     "note": "multiple deployables from one repo (daprd/operator/injector/placement/sentry/scheduler); sidecar identity twist (service.name vs app-id)",
     "go_build_tags": ["unit"]
+  },
+  {
+    "name": "grpc-go",
+    "git_url": "https://github.com/grpc/grpc-go",
+    "commit": "f8a85fa4d1dec72ace513a97ff27c60252de7c4d",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
+    "note": "Gate 2 strict-expansion candidate 1; canonical Go gRPC implementation; pinned by expansion-source-snapshot.receipt.json"
+  },
+  {
+    "name": "etcd",
+    "git_url": "https://github.com/etcd-io/etcd",
+    "commit": "6006f405800929b5e7e839e7a821d608a311579f",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
+    "note": "Gate 2 strict-expansion candidate 2; independent production distributed system; pinned by expansion-source-snapshot.receipt.json"
+  },
+  {
+    "name": "containerd",
+    "git_url": "https://github.com/containerd/containerd",
+    "commit": "9e70782d9a0e92900f402b2c7a4e2aa30754503c",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
+    "note": "Gate 2 strict-expansion candidate 3; production container runtime; pinned by expansion-source-snapshot.receipt.json"
+  },
+  {
+    "name": "istio",
+    "git_url": "https://github.com/istio/istio",
+    "commit": "25f4803ee1e64fc2fcb95d07b1c0e3353594e9a9",
+    "goos": "linux",
+    "goarch": "arm64",
+    "go_tests": "exclude",
+    "note": "Gate 2 strict-expansion candidate 4; production service mesh; pinned by expansion-source-snapshot.receipt.json"
   },
   {
     "name": "temporal-helm",
     "git_url": "https://github.com/temporalio/helm-charts",
     "commit": "9f4d328c31c77c323d272d0c5f615cf02bd46dab",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go_tests": "include",
     "note": "manifest-only companion for temporal: the cross-repo identity case (workload names live here, code lives in temporalio/temporal)"
   }
 ]
