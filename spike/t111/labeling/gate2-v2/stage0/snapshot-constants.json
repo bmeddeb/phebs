@@ -1,0 +1,11 @@
+{
+  "schema": "t111-gate2-v2-snapshot-constants-v1",
+  "query_file": "snapshot-query.graphql",
+  "proposed_cutoff": "2026-07-20T16:00:00Z",
+  "cutoff_note": "Proposed >=96h after Stage-0 sealing per GATE2-V2 §7; if Stage-0 artifact review outlasts it, the cutoff is re-sealed before Stage-1 authorization, never reused stale.",
+  "max_clock_skew_seconds": 120,
+  "clock_rule": "The snapshot runner's UTC system clock is compared against the GraphQL response's Date header and each commit's committedDate envelope; absolute skew beyond max_clock_skew_seconds is a deterministic stop.",
+  "request_rule": "One non-paginated request, fired automatically at the cutoff instant; any transport failure, partial body, schema surprise, moved/renamed repository, or skew violation stops the round; no retry without a newly reviewed cutoff.",
+  "fixtures": ["temporal", "dapr", "loki", "online-boutique"],
+  "not_fired": "Stage 0 seals this package only; the request itself is Stage 1 and requires separate authorization."
+}

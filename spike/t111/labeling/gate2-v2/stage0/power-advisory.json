@@ -1,0 +1,82 @@
+{
+  "alpha_each": "1/80",
+  "assurance": "9/10",
+  "family_partition": [
+    "client_call precision",
+    "client_call recall",
+    "registration precision",
+    "registration recall"
+  ],
+  "frames": {
+    "client_call_precision": {
+      "census": 2690,
+      "design_point": "199/200",
+      "feasible": true,
+      "minimal_sample_size": 267,
+      "population": 5383,
+      "sampled_population": 2693,
+      "threshold": "49/50"
+    },
+    "client_call_recall": {
+      "census": 2770,
+      "design_point": "19/20",
+      "feasible": true,
+      "minimal_sample_size": 116,
+      "population": 5463,
+      "sampled_population": 2693,
+      "threshold": "9/10"
+    },
+    "registration_precision": {
+      "census": 127,
+      "design_point": "199/200",
+      "feasible": true,
+      "minimal_sample_size": 0,
+      "population": 127,
+      "sampled_population": 0,
+      "threshold": "49/50"
+    },
+    "registration_recall": {
+      "census": 281,
+      "design_point": "19/20",
+      "feasible": true,
+      "minimal_sample_size": 0,
+      "population": 281,
+      "sampled_population": 0,
+      "threshold": "9/10"
+    }
+  },
+  "partition_source": "score.py assertion family membership ('client_call'/'registration' x precision/recall); commitment family_size=4",
+  "per_fixture_precision": {
+    "dapr": {
+      "design_point": "97/100",
+      "feasible": true,
+      "minimal_sample_size": 148,
+      "population_proxy": 1447,
+      "threshold": "9/10"
+    },
+    "loki": {
+      "design_point": "97/100",
+      "feasible": true,
+      "minimal_sample_size": 99,
+      "population_proxy": 177,
+      "threshold": "9/10"
+    },
+    "online-boutique": {
+      "design_point": "97/100",
+      "feasible": true,
+      "minimal_sample_size": 19,
+      "note": "full census of the fixture: bound is exact count",
+      "population_proxy": 19,
+      "threshold": "9/10"
+    },
+    "temporal": {
+      "design_point": "97/100",
+      "feasible": true,
+      "minimal_sample_size": 151,
+      "population_proxy": 3825,
+      "threshold": "9/10"
+    }
+  },
+  "schema": "t111-gate2-v2-stage0-power-advisory-v1",
+  "status": "ADVISORY \u2014 Stage-2 exact power against actual post-snapshot cardinalities is the sole authority (GATE2-V2 \u00a75)"
+}

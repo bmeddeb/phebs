@@ -1,0 +1,27 @@
+query T111Gate2V2SourceSnapshot {
+  temporal: repository(owner: "temporalio", name: "temporal") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  dapr: repository(owner: "dapr", name: "dapr") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  loki: repository(owner: "grafana", name: "loki") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  onlineBoutique: repository(owner: "GoogleCloudPlatform", name: "microservices-demo") {
+    nameWithOwner
+    url
+    defaultBranchRef { name target { ... on Commit { oid committedDate } } }
+    licenseInfo { spdxId }
+  }
+  rateLimit { cost remaining }
+}
