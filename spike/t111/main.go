@@ -81,6 +81,11 @@ func main() {
 		if err := buildBoundHarnesses(repoRoot, harnessModuleCacheRoot); err != nil {
 			fatal("build bound harnesses: %v", err)
 		}
+		// The bound build is hydrate's final cache writer: reseal so the
+		// producer's sealed-cache admission holds from the moment hydrate exits.
+		if err := sealSharedModuleCache(harnessModuleCacheRoot); err != nil {
+			fatal("reseal module cache after bound build: %v", err)
+		}
 		fmt.Printf("bound producer and typed oracle → %s\n", filepath.Join(harnessModuleCacheRoot, "bin"))
 	case "extract":
 		fs := flag.NewFlagSet("extract", flag.ExitOnError)
