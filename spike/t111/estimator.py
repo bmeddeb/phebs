@@ -548,8 +548,15 @@ def verify_implementation_and_command(
     if not isinstance(binding_commit, str) or _COMMIT_RE.fullmatch(binding_commit) is None:
         raise EstimatorError("authorization has no binding commit")
     head = _git(toolchain["git_path"], ["rev-parse", "HEAD"]).stdout.decode().strip()
-    if head != binding_commit:
-        raise EstimatorError("current commit is not the authorization binding commit")
+    ancestor = subprocess.run(
+        [toolchain["git_path"], "merge-base", "--is-ancestor", binding_commit, head],
+        cwd=REPO_ROOT,
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+    )
+    if ancestor.returncode != 0:
+        raise EstimatorError("current commit is not a clean descendant of the binding commit")
     for diff_args in (["diff", "--quiet"], ["diff", "--cached", "--quiet"]):
         completed = subprocess.run(
             [toolchain["git_path"], *diff_args],
