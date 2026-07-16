@@ -139,10 +139,12 @@ themselves.
 
 ## 8. Complete artifact manifest
 
-Every Stage-0 artifact by byte digest, recursively (`fixtures/` holds
-the preserved run-1/run-2 fact evidence). `STAGE0.md` itself is
-excluded by rule: the record's own bytes are bound by the sealing git
-commit object, not by a self-referential hash.
+Every Stage-0 artifact by byte digest, recursively. `fixtures/` holds
+the preserved run-1/run-2 fact evidence; `power-advisory.err` is the
+power run's empty stderr record (zero errors) and is retained as
+evidence. `STAGE0.md` itself is excluded by rule: the record's own
+bytes are bound by the sealing git commit object, not by a
+self-referential hash.
 
 | Artifact | sha256 |
 |---|---|
@@ -158,6 +160,7 @@ commit object, not by a self-referential hash.
 | `fixtures/run2/loki.facts.jsonl` | `sha256:d4eb731ef1fb0f99ebbf9b25e7e2553f9edd107891977112fa97919c78879f61` |
 | `fixtures/run2/online-boutique.facts.jsonl` | `sha256:aeb5f9538b639793831c0282b977a247427a327eae70971423d9d2eba7915034` |
 | `fixtures/run2/temporal.facts.jsonl` | `sha256:1dbb603b23bbf16dd4f4a79b67dde900138990a93e98d0d6d7ff90e2668a0ed8` |
+| `power-advisory.err` | `sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
 | `power-advisory.json` | `sha256:1e623533f308b7017dd672c5f3c8b97ea101b01da5a2699128cdf245196a62e1` |
 | `power_advisory.py` | `sha256:8f59dd8e2256419a299fb61992e912b29582a7d946ffc909572ce674ea9d66c2` |
 | `snapshot-constants.json` | `sha256:5908318e1c1b25d59bf0d78f5b4027b50bb52e28d4ff0f529486c75d4380dc76` |
