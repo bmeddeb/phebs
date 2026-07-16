@@ -1318,7 +1318,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         if requested != CANONICAL_AUTHORIZATION_PATH:
             raise EstimatorError("only the tracked canonical authorization path is executable")
         authorization, authorization_digest = load_authorization(args.authorization)
-        if authorization.get("status") != "executable" or authorization.get("review", {}).get("status") != "accepted":
+        if (
+            authorization.get("review", {}).get("status") != "accepted"
+            or authorization.get("binding", {}).get("status") != "executable"
+        ):
             print("estimator: authorization pending independent diff review", file=sys.stderr)
             return 2
         actual_command = list(getattr(sys, "orig_argv", [sys.executable, sys.argv[0], *raw_argv]))
