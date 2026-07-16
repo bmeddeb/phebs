@@ -13,8 +13,8 @@
   },
   "authorization_id": "t111-estimator-auth-1",
   "binding": {
-    "commit": null,
-    "status": "not executable"
+    "commit": "276b50637668e529eb22e69b64655466fd3bbc48",
+    "status": "executable"
   },
   "bound_digests": {
     "artifact_manifest": "sha256:78336c1f04b7055d7d2ecb7d34ba18291aa26443c81c28de38fde36e5615aa6e",
