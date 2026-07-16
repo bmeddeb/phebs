@@ -65,7 +65,12 @@ stops the round with a committed root cause. Nothing is retried in place.
   population proxy, including the online-boutique per-fixture feasibility
   result at `alpha_each = 1/80`. If the proxy population cannot clear the
   thresholds at the design points, the protocol stops **before approval to
-  proceed**.
+  proceed**. Stage-0 proxy results are **advisory only** — they inform the
+  approval decision but authorize nothing; the Stage-2 exact power output
+  is the sole feasibility authority. **Approval of this document
+  authorizes Stage 0 only.** Stage 1 may not begin until the Stage-0
+  artifacts have been independently reviewed and accepted in a dated
+  PLAN.md decision of their own.
 - **Stage 1 — snapshot.** One automated ref snapshot at the sealed cutoff
   (§7). Any failure, partial response, or ineligible fixture stops the
   round; no substitution, no re-cut without a new reviewed cutoff.
@@ -133,14 +138,24 @@ selection time, every *sampled* site is blind by construction.
 Census v2 is append-only and inherits §4 (a cohort that cannot recompute
 its provenance cannot enter). It does **not** start empty:
 
-- **Seed burns.** Every coordinate ever disclosed in any prior cohort
-  (including the legacy and Attempt cohorts of the retired census) is
-  mapped to the Stage-1 heads by the sealed carry-forward mapper: a
-  coordinate burns iff its file path exists at the new head **and** the
-  labeled line-range content is byte-identical after the mapper's committed
-  normalization. Unchanged content is recognizable content; it stays
-  burned. Changed, moved, or deleted content is free. The full mapping
-  (inputs, rules, outputs, digests) is sealed at Stage 2.
+- **Seed burns — conservative correspondence, burn on doubt.** Every
+  coordinate ever disclosed in any prior cohort (including the legacy and
+  Attempt cohorts of the retired census) is mapped to the Stage-1 heads by
+  the sealed carry-forward mapper, which burns a coordinate when **any** of
+  the following holds: (a) its file path exists at the new head and the
+  labeled line-range content is byte-identical after committed
+  normalization; (b) the mapper establishes recognizable semantic
+  correspondence despite edits or moves — same file with an edited but
+  matching declaration, a moved or renamed declaration the mapper can
+  trace, or a rename-tracked file containing the corresponding site; or
+  (c) the mapping is **uncertain** — partial matches, ambiguous
+  candidates, or any case the mapper cannot classify confidently burn by
+  default. Only a coordinate whose site the mapper can positively
+  establish as absent (file deleted with no traced successor, or
+  declaration provably removed) is free. The mapper's correspondence
+  rules, confidence criteria, and full mapping (inputs, rules, outputs,
+  digests) are sealed at Stage 2; the reviewer of Stage-0 artifacts
+  accepts the correspondence rules before any snapshot exists.
 - **Capacity consequence, quantified.** Stage 2 fails closed if the
   unburned population cannot support the power-computed sizes — the
   Attempt-4 failure mode is confronted with sealed arithmetic *before*
@@ -157,7 +172,9 @@ expansion's `expansion-source-snapshot.graphql` pattern); target = each
 fixture repository's default branch ref at response time; single
 non-paginated request for the four fixtures; fired automatically at the
 sealed cutoff instant (RFC3339 UTC, system clock cross-checked against the
-response's server timestamp); no retry — any transport failure, partial
+response's server timestamp with a maximum permitted skew sealed as a
+Stage-0 constant; exceeding it is a deterministic stop); no retry — any
+transport failure, partial
 body, schema surprise, or moved/renamed repository stops the round. Query
 bytes, response bytes, receipt, and digests are sealed as Stage-1
 artifacts.
@@ -179,15 +196,25 @@ artifacts.
   → E3 reviewer kits created (*the* disclosure edge) → E4 labeling → E5
   label freeze + public hash-only commitment (new gist revision) → E6
   authorization binding → E7 Phase A (repeatable) → E8 Phase B (sole
-  consumption). Selection may be regenerated only before E2. After E2, a
+  consumption). Selection may be regenerated only before E1 is sealed.
+  **E1/E2 crash recovery:** a sealed E1 selection artifact whose E2 census
+  append did not durably commit is treated as disclosed-risk — recovery
+  first appends the E1 output to census v2, then the round re-enters
+  Stage 2 with a fresh selection (the rank seed's domain separation
+  includes a round counter, so no randomness is reused). A sealed E1
+  artifact is never discarded silently and never re-used. After E2, a
   restarted round starts at Stage 2 against the enlarged census. After E5,
   labels are immutable.
 
 ## 9. Authorization and one-score machinery
 
 Execution reuses the validated estimator implementation with a **new
-authorization ID, fresh state paths, and no reuse of any Attempt-3 receipt,
-marker path, or ceremony directory**. The concrete gates, enumerated:
+authorization ID and fresh state paths whose disjointness is
+machine-checked**: admission verifies that every state path (marker,
+receipts, ceremony directory) shares no path prefix with any prior
+ceremony directory named in any sealed artifact, refuses symlinked
+components, and fails closed on collision — no reuse of any Attempt-3
+receipt, marker path, or ceremony directory. The concrete gates, enumerated:
 canonical-JSON authorization bytes; nested `review.status = "accepted"` and
 `binding.status = "executable"`; a full-hash binding commit that is an
 ancestor of HEAD; clean tracked and index worktree; exact implementation
