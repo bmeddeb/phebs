@@ -222,6 +222,38 @@ reproducible evidence, declared coverage, and measured extractor
 performance — that artifact, at monorepo service granularity, is the
 hypothesis this pilot tests.
 
+## Beyond migrations
+
+Migrations are the initial proving ground, not the product boundary.
+Across a monorepo containing thousands of independently deployed services,
+many recurring engineering tasks share the same decision shape: which
+deployables have a particular code-level relationship, who owns them, what
+changed, what evidence supports the conclusion, and what could not be
+evaluated?
+
+The same evidence foundation can support pre-change impact analysis,
+new-consumer regression detection, contract-aware PR review, platform-SDK
+adoption campaigns, service-catalog reconciliation, incident blast-radius
+assessment, architecture-policy enforcement, feature-flag cleanup,
+dependency-remediation routing, and audit-evidence preparation. Additional
+measured evidence packs can extend the contract model from Go/gRPC
+operations to event topics and schemas, workflow activities and signals,
+configuration keys, shared-library APIs, security controls, and eventually
+field-level data lineage.
+
+The expansion thesis is not that phebs should analyze everything. It is
+that a deliberately small set of measured relationship types, joined to
+the monorepo build and service-identity graph, can turn recurring
+source-discovery work into versioned, owner-attributed decision artifacts.
+Accuracy established for one evidence pack is never generalized to
+another; every new relationship type must declare its supported claim,
+coverage semantics, validation bar, and unresolved cases.
+
+The six-week pilot remains focused on one Go/gRPC migration. The broader
+use cases belong to the product vision and staged roadmap (see
+`docs/VISION.md`), where they strengthen the adoption case without
+expanding this ask.
+
 ## Roadmap
 
 1. **Now:** external benchmark validation of the Go/gRPC call-site
