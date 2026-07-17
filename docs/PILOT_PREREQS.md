@@ -1,36 +1,57 @@
-# Pilot prerequisites — gate-neutral documentation track
+# Pilot prerequisites — gate-neutral track
 
-*Index v0.1. This work is documentation and test design only. **It grants no
-authority to begin Epic 16**, whose implementation remains blocked until
-GATE2-V2 is `ESTABLISHED` and the pilot decision authorizes continuation.
-It also grants no authority over the sealed validation ceremony.*
+*Index v0.2. **No item here grants authority to begin Epic 16**, whose
+implementation remains blocked until GATE2-V2 is `ESTABLISHED` and the
+pilot decision authorizes continuation. Nothing here touches the sealed
+validation ceremony.*
 
-## Ordered work items
+## Two phases, one authority rule
 
-| # | Item | Owner | Reviewer | Evidence artifact | State | Blocking finding |
-|---|---|---|---|---|---|---|
-| 1 | Threat model and trust boundaries | `<name>` | `<name>` | `THREAT_MODEL.md` | not started | — |
-| 2 | Role/capability checklist | `<name>` | `<name>` | charter §5 completed table | not started | — |
-| 3 | Negative-test matrix (derived from 1 + 2) | `<name>` | Security reviewer per charter | matrix + fixture-06-shaped expected responses | not started | — |
-| 4 | VM sizing and operating assumptions | `<name>` | `<name>` | sizing worksheet with stated assumptions | not started | — |
-| 5 | Backup/restore checklist + witnessed restore acceptance | `<name>` | environment owner | restore transcript, witnessed | not started | — |
+- **Design phase** — documentation and test design only: threat model,
+  role model, negative-test design, sizing assumptions, restore procedure.
+  Requires no environment.
+- **Verification phase** — negative-test execution, capacity checks,
+  witnessed restore. Requires **separate pilot-environment authorization**
+  (charter Gate 1), and still grants no Epic 16 authority.
 
-Rules: items proceed in order (3 depends on 1 and 2); each item is complete
-only when its evidence artifact exists, its reviewer accepted it, and any
-blocking finding is closed; a blank owner or reviewer blocks the item, not
-the recording of it.
+## Item states
+
+`blocked_unassigned · not_started · in_progress · awaiting_review ·
+accepted · blocked`. An item is `accepted` only when its evidence artifact
+exists and its reviewer acceptance record is complete: artifact digest,
+reviewer identity, timestamp, decision, unresolved findings (or `none`).
+
+## Work items and dependencies
+
+| # | Item | Phase | Depends on | Owner | Reviewer | Evidence artifact | State | Findings |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Threat model and trust boundaries | design | none | TBD | TBD | `THREAT_MODEL.md` | blocked_unassigned | not_assessed |
+| 2 | Role/capability model | design | none (parallel with 1) | TBD | TBD | charter §5 completed table | blocked_unassigned | not_assessed |
+| 3 | Negative-test design | design | 1 and 2 | TBD | Security reviewer per charter | matrix + golden fixture-06 expected bytes | blocked_unassigned | not_assessed |
+| 4 | Sizing assumptions | design | 1 + declared workload assumptions | TBD | TBD | sizing worksheet, assumptions stated | blocked_unassigned | not_assessed |
+| 5 | Restore procedure | design | 2 | TBD | TBD | written procedure | blocked_unassigned | not_assessed |
+| 6 | Negative-test execution | verification | 3 + environment authorization | TBD | Security reviewer | two executions per case — unknown identity and unauthorized identity — each compared byte-for-byte against the same golden fixture-06 canonical response | blocked_unassigned | not_assessed |
+| 7 | Capacity checks | verification | 4 + environment authorization | TBD | TBD | measured results vs assumptions | blocked_unassigned | not_assessed |
+| 8 | Witnessed restore | verification | 5, 7, environment authorization | TBD | witness **independent of the restore operator** | restore transcript, witness attestation | blocked_unassigned | not_assessed |
+
+`TBD` carries state `blocked_unassigned` so a mechanical blank-field check
+cannot be bypassed by placeholder text.
 
 ## Ceremony decision records
 
 Every GATE2-V2 stage outcome — beginning with the Stage-1 snapshot — is
-captured as a decision record in PLAN.md with exactly:
+recorded in PLAN.md with **at minimum**:
 
-- the snapshot/artifact digests produced;
-- the gate result;
-- the governing protocol/policy version;
+- `stage` and `stage_result`;
+- `gate_status`: `PENDING | ESTABLISHED | NOT_ESTABLISHED | INVALID |
+  ABORTED` — **a stage success never implies `ESTABLISHED`**; Stage-1
+  admission records `gate_status: PENDING`;
+- artifact digests produced;
+- governing protocol version and digest;
 - timestamp and acting principal;
-- the single authorized next action.
+- one authorized next action, including explicit `none`.
 
-Any result other than an eventual `ESTABLISHED` leaves Epic 16 frozen
-**without interpretation** — no partial result, promising trend, or near
-miss authorizes implementation work.
+Additional fields (signatures, finding references, invalidation reasons)
+are permitted; omission of a minimum field is not. No intermediate result,
+trend, or near miss opens Epic 16 — only `gate_status: ESTABLISHED` plus
+the pilot continuation decision.

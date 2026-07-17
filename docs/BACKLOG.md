@@ -540,7 +540,8 @@ projection on every read; count/existence non-disclosure; opaque ids;
 refusal shape of fixture 06; re-authorization on sharing and transfer.
 AC: negative-test matrix passes incl. fixtures 05/06 shapes; the suite
 executes BOTH an unknown-identity input and an unauthorized-identity input
-and asserts identical canonical response bytes (fixture 06 is the expected
+and asserts identical canonical response bytes, each compared against the
+same golden fixture (fixture 06 is the expected
 shape, not a one-time validation target); cursors void on ownership
 transfer.
 
