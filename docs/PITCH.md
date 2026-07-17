@@ -4,6 +4,7 @@
 
 **Companion documents:** [product vision](./VISION.md) ·
 [pilot charter](./PILOT_CHARTER.md) ·
+[investigations](./INVESTIGATIONS.md) ·
 [evidence-pack card template](./EVIDENCE_PACK_CARD.md)
 
 ## Executive summary

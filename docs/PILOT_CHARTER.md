@@ -4,6 +4,7 @@
 
 **Related documents:** [adoption pitch](./PITCH.md) ·
 [product vision](./VISION.md) ·
+[investigations](./INVESTIGATIONS.md) ·
 [evidence-pack card template](./EVIDENCE_PACK_CARD.md)
 
 ## 1. Decision this charter governs

@@ -13,6 +13,10 @@ CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
   branch names carry ticket IDs (e.g. `t1.3-job-claim-spike`).
 - `docs/MANUAL.md` — the user manual. Behavior changes (config, API, UI,
   operations) update it in the same PR.
+- `docs/README.md` — documentation map; the adoption suite
+  (VISION/INVESTIGATIONS/PITCH/PILOT_CHARTER/EVIDENCE_PACK_CARD) lives in
+  docs/ and must stay mutually consistent: no doc expands the ask of the
+  one above it.
 
 ## Stack
 

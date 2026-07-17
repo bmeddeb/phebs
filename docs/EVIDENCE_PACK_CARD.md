@@ -3,7 +3,7 @@
 *Reusable capability and validation template · version 0.1*
 
 **Related documents:** [product vision](./VISION.md) ·
-[pilot charter](./PILOT_CHARTER.md) · [adoption pitch](./PITCH.md)
+[pilot charter](./PILOT_CHARTER.md) · [adoption pitch](./PITCH.md) · [investigations](./INVESTIGATIONS.md)
 
 ## How to use this card
 
