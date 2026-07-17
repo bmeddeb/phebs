@@ -99,6 +99,41 @@ class Stage1Test(unittest.TestCase):
         sealed = json.loads((self.stage1 / "receipt.json").read_text())
         self.assertEqual(sealed["status"], "REJECTED")
 
+    def test_rejects_malformed_date_header(self):
+        def transport(query_bytes, token):
+            return 200, {"Date": "not a date"}, good_body()
+        receipt = self._run(transport)
+        self.assertEqual(receipt["status"], "REJECTED")
+        self.assertIn("Date header", receipt["failure"])
+
+    def test_transport_exception_seals_rejection(self):
+        def transport(query_bytes, token):
+            raise OSError("connection reset")
+        receipt = self._run(transport)
+        self.assertEqual(receipt["status"], "REJECTED")
+        self.assertIn("unexpected failure", receipt["failure"])
+        sealed = json.loads((self.stage1 / "receipt.json").read_text())
+        self.assertEqual(sealed["status"], "REJECTED")
+        self.assertIsNone(sealed["request_completed"])
+        self.assertIsNone(sealed["response_sha256"])
+
+    def test_non_json_body_rejected_with_response_digest_bound(self):
+        receipt = self._run(transport_for(body=b"<html>gateway</html>"))
+        self.assertEqual(receipt["status"], "REJECTED")
+        self.assertIn("not JSON", receipt["failure"])
+        self.assertEqual(receipt["response_sha256"],
+                         s1.sha256_bytes(b"<html>gateway</html>"))
+        self.assertIsNotNone(receipt["request_completed"])
+
+    def test_token_never_appears_in_sealed_receipt(self):
+        secret = "SECRET-TOKEN-XYZ-9c41"
+        with mock.patch.dict(os.environ, {"GITHUB_TOKEN": secret}):
+            def transport(query_bytes, token):
+                raise OSError(f"refused for bearer someone")
+            self._run(transport)
+        sealed = (self.stage1 / "receipt.json").read_bytes()
+        self.assertNotIn(secret.encode(), sealed)
+
 
 if __name__ == "__main__":
     unittest.main()

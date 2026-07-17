@@ -87,13 +87,21 @@ def validate_response(status: int, headers: dict[str, str], body: bytes,
     server_date = None
     for key, value in headers.items():
         if key.lower() == "date":
-            server_date = parsedate_to_datetime(value)
+            try:
+                server_date = parsedate_to_datetime(value)
+            except (ValueError, TypeError) as exc:
+                raise SnapshotError(f"malformed Date header: {value!r}") from exc
     if server_date is None:
         raise SnapshotError("response has no Date header")
     skew = abs((now - server_date.astimezone(timezone.utc)).total_seconds())
     if skew > constants["max_clock_skew_seconds"]:
         raise SnapshotError(f"clock skew {skew:.1f}s exceeds sealed maximum")
-    document = json.loads(body)
+    try:
+        document = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise SnapshotError(f"response body is not JSON: {exc}") from exc
+    if not isinstance(document, dict):
+        raise SnapshotError("response body is not a JSON object")
     if document.get("errors"):
         raise SnapshotError(f"GraphQL errors: {json.dumps(document['errors'])[:400]}")
     data = document.get("data") or {}
@@ -128,7 +136,9 @@ def run(transport, now_fn, constants: dict, query_bytes: bytes) -> dict:
         "schema": RECEIPT_SCHEMA,
         "cutoff": constants["proposed_cutoff"],
         "request_started": started.isoformat(),
+        "request_completed": None,
         "query_sha256": sha256_bytes(query_bytes),
+        "response_sha256": None,
         "fire_window_seconds": round(window, 3),
     }
     try:
@@ -139,16 +149,21 @@ def run(transport, now_fn, constants: dict, query_bytes: bytes) -> dict:
         if not token:
             raise SnapshotError("GITHUB_TOKEN is not present in the environment")
         status, headers, body = transport(query_bytes, token)
+        # Bind completion time and response digest the moment a response
+        # exists, so even a rejected receipt carries them.
         completed = now_fn()
-        result = validate_response(status, headers, body, constants, completed)
-        receipt.update(result)
         receipt["request_completed"] = completed.isoformat()
         receipt["response_sha256"] = sha256_bytes(body)
+        result = validate_response(status, headers, body, constants, completed)
+        receipt.update(result)
         receipt["status"] = "ADMITTED"
         (STAGE1 / "response.json").write_bytes(body)
     except SnapshotError as exc:
         receipt["status"] = "REJECTED"
-        receipt["failure"] = str(exc)
+        receipt["failure"] = str(exc)[:500]
+    except Exception as exc:  # one-shot executor: every failure seals a receipt
+        receipt["status"] = "REJECTED"
+        receipt["failure"] = f"unexpected failure: {type(exc).__name__}: {exc}"[:500]
     receipt_bytes = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode()
     (STAGE1 / "receipt.json").write_bytes(receipt_bytes)
     return receipt
