@@ -1,25 +1,35 @@
 #!/usr/bin/env python3
 """GATE2-V2 Stage 2 — carry-forward and exact-power preparation glue.
 
-Wires the sealed Stage-0 tools together for the run that happens after the
-Stage-1 heads seal: historical burn-ledger coordinates → carry-forward
-mapper (burn on doubt) → census-v2 seed burns → exact power against actual
-frame cardinalities net of burns. Fails closed at every step.
+Wires the sealed Stage-0 tools together for the run after Stage-1 heads
+seal: burn-ledger coordinates → carry-forward mapper (burn on doubt) →
+census-v2 seed burns → exact power against frame-specific cardinalities
+net of frame-specific burns. Fails closed at every step.
 
-This module is pure glue: it embeds no thresholds, no sampling rules, and
-no population knowledge. It is tested exclusively against synthetic
-fixtures until Stage 1 has sealed; running it against real inputs before
-then would violate the ceremony's disclosure rules and is refused unless
-the Stage-1 admission receipt exists.
+Pure glue: no thresholds, no sampling rules, no population knowledge.
+Tested exclusively against synthetic fixtures until Stage 1 has sealed;
+outside --synthetic it refuses to run unless a Stage-1 receipt exists,
+matches the sealed receipt schema, and binds the sealed cutoff and query
+digest.
 
-Inputs (paths supplied by the caller):
-  --ledger        burn-ledger JSON (cohorts[].coordinates[])
-  --heads         JSON {fixture: {"old_commit":…, "new_commit":…, "repo_dir":…}}
-  --cardinalities JSON {frame: {"population":N, "census":C}} from the sealed
-                  frame-enumeration step (run separately, post-seal)
-  --receipt       Stage-1 receipt (must be status ADMITTED) — omitted only
-                  under --synthetic
-  --out           output directory (created fresh; refuses to overwrite)
+NOTE: this tool postdates the sealed Stage-0 code-path inventory. Before
+any sealed-mode execution it must be reviewed and recorded in a Stage-2
+authorization entry (its own digest bound), per the status review of
+2026-07-17.
+
+Inputs:
+  --ledger           burn-ledger JSON (cohorts[].coordinates[])
+  --heads            JSON {fixture: {"old_commit","new_commit","repo_dir"}}
+  --cardinalities    JSON {frame: {"population": N, "census": C}} from the
+                     sealed frame-enumeration step (run separately)
+  --frame-membership JSON {frame: ["system:path:start:end", ...]} from the
+                     same enumeration step; a burned coordinate absent from
+                     every frame's membership burns against ALL frames
+                     (burn on doubt)
+  --design           JSON {frame: {"p": "num/den", "threshold": "num/den"}}
+  --receipt          Stage-1 receipt (schema/cutoff/query-digest bound);
+                     required unless --synthetic
+  --out              fresh output directory (refuses to overwrite)
 """
 
 from __future__ import annotations
@@ -32,7 +42,10 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "stage0"))
+sys.path.insert(0, str(HERE))
 from carry_forward import classify  # noqa: E402
+
+RECEIPT_SCHEMA = "t111-gate2-v2-stage1-receipt-v1"
 
 
 class Stage2Error(Exception):
@@ -42,6 +55,24 @@ class Stage2Error(Exception):
 def load_json(path: str):
     with open(path, encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def verify_receipt(path: str) -> dict:
+    """Bind the receipt to the sealed Stage-0 constants, not just a status."""
+    import stage1_snapshot as s1
+    query_bytes, constants = s1.load_sealed_inputs()
+    receipt = load_json(path)
+    if receipt.get("schema") != RECEIPT_SCHEMA:
+        raise Stage2Error(f"receipt schema {receipt.get('schema')!r} != {RECEIPT_SCHEMA}")
+    if receipt.get("status") != "ADMITTED":
+        raise Stage2Error("Stage-1 receipt is not ADMITTED")
+    if receipt.get("cutoff") != constants["proposed_cutoff"]:
+        raise Stage2Error("receipt cutoff does not match the sealed cutoff")
+    if receipt.get("query_sha256") != s1.sha256_bytes(query_bytes):
+        raise Stage2Error("receipt query digest does not match the sealed query")
+    if not receipt.get("response_sha256") or not receipt.get("heads"):
+        raise Stage2Error("receipt lacks response digest or sealed heads")
+    return receipt
 
 
 def ledger_coordinates(ledger: dict) -> list[dict]:
@@ -62,8 +93,6 @@ def carry_forward(coords: list[dict], heads: dict) -> list[dict]:
     for c in coords:
         head = heads.get(c["system"])
         if head is None:
-            # A ledger system absent from the sealed heads cannot be mapped;
-            # burn on doubt — its census entry survives unmapped.
             results.append({**c, "decision": "burn", "rule": "system-not-in-snapshot"})
             continue
         d = classify(head["repo_dir"], head["old_commit"], head["new_commit"],
@@ -72,13 +101,35 @@ def carry_forward(coords: list[dict], heads: dict) -> list[dict]:
     return results
 
 
-def power(cardinalities: dict, burns_by_frame: dict[str, int],
-          design: dict) -> dict:
-    sys.path.insert(0, str(HERE / "stage0"))
+def coordinate_key(c: dict) -> str:
+    return f"{c['system']}:{c['path']}:{c['start_line']}:{c['end_line']}"
+
+
+def burns_per_frame(burns: list[dict], membership: dict,
+                    frames: list[str]) -> tuple[dict[str, int], int]:
+    """Frame-specific burn counts. A burned coordinate in no frame's
+    membership burns against every frame (burn on doubt)."""
+    member_keys = {f: set(membership.get(f, [])) for f in frames}
+    counts = {f: 0 for f in frames}
+    unmapped = 0
+    for b in burns:
+        k = coordinate_key(b)
+        hit = [f for f in frames if k in member_keys[f]]
+        if hit:
+            for f in hit:
+                counts[f] += 1
+        else:
+            unmapped += 1
+            for f in frames:
+                counts[f] += 1
+    return counts, unmapped
+
+
+def power(cardinalities: dict, frame_burns: dict[str, int], design: dict) -> dict:
     from power_advisory import minimal_n
     out = {}
     for frame, card in cardinalities.items():
-        pop = card["population"] - burns_by_frame.get(frame, 0)
+        pop = card["population"] - frame_burns.get(frame, 0)
         census = min(card["census"], pop)
         if pop <= 0:
             out[frame] = {"feasible": False, "reason": "population exhausted by burns"}
@@ -86,29 +137,20 @@ def power(cardinalities: dict, burns_by_frame: dict[str, int],
         n = minimal_n(pop, census, Fraction(design[frame]["p"]),
                       Fraction(design[frame]["threshold"]))
         out[frame] = {"population_net": pop, "census": census,
+                      "burns_applied": frame_burns.get(frame, 0),
                       "minimal_sample_size": n, "feasible": n is not None}
     return out
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--ledger", required=True)
-    ap.add_argument("--heads", required=True)
-    ap.add_argument("--cardinalities", required=True)
-    ap.add_argument("--design", required=True)
-    ap.add_argument("--receipt")
-    ap.add_argument("--synthetic", action="store_true",
-                    help="synthetic test mode: no Stage-1 receipt required")
-    ap.add_argument("--out", required=True)
-    a = ap.parse_args()
-
+def run(a) -> int:
     if not a.synthetic:
         if not a.receipt:
             print("stage2: refusing — no Stage-1 receipt and not --synthetic", file=sys.stderr)
             return 2
-        receipt = load_json(a.receipt)
-        if receipt.get("status") != "ADMITTED":
-            print("stage2: refusing — Stage-1 receipt is not ADMITTED", file=sys.stderr)
+        try:
+            verify_receipt(a.receipt)
+        except Stage2Error as exc:
+            print(f"stage2: refusing — {exc}", file=sys.stderr)
             return 2
 
     out = Path(a.out)
@@ -121,18 +163,22 @@ def main() -> int:
     coords = ledger_coordinates(load_json(a.ledger))
     mapped = carry_forward(coords, load_json(a.heads))
     burns = [m for m in mapped if m["decision"] == "burn"]
-    frees = [m for m in mapped if m["decision"] == "free"]
 
     cards = load_json(a.cardinalities)
     design = load_json(a.design)
-    burns_by_frame = {f: len(burns) for f in cards}  # conservative: all burns count against every frame
-    p = power(cards, burns_by_frame, design)
+    membership = load_json(a.frame_membership)
+    frames = sorted(cards)
+    frame_burns, unmapped = burns_per_frame(burns, membership, frames)
+    p = power(cards, frame_burns, design)
 
     result = {
-        "schema": "t111-gate2-v2-stage2-preparation-v1",
+        "schema": "t111-gate2-v2-stage2-preparation-v2",
         "mode": "synthetic" if a.synthetic else "sealed",
         "coordinates_total": len(coords),
-        "burned": len(burns), "freed": len(frees),
+        "burned": len(burns),
+        "freed": len(mapped) - len(burns),
+        "burns_unmapped_to_any_frame": unmapped,
+        "burns_by_frame": frame_burns,
         "burn_rules": sorted({m["rule"] for m in burns}),
         "power": p,
         "all_frames_feasible": all(v.get("feasible") for v in p.values()),
@@ -143,6 +189,19 @@ def main() -> int:
         json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["all_frames_feasible"] else 1
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--ledger", required=True)
+    ap.add_argument("--heads", required=True)
+    ap.add_argument("--cardinalities", required=True)
+    ap.add_argument("--frame-membership", dest="frame_membership", required=True)
+    ap.add_argument("--design", required=True)
+    ap.add_argument("--receipt")
+    ap.add_argument("--synthetic", action="store_true")
+    ap.add_argument("--out", required=True)
+    return run(ap.parse_args())
 
 
 if __name__ == "__main__":

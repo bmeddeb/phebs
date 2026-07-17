@@ -9,7 +9,7 @@ Read in this order for your role; each document states its own authority.
 | [../PLAN.md](../PLAN.md) | architecture + dated ADR decision ledger — **the** authority; every decision lands here in the same PR |
 | [BACKLOG.md](./BACKLOG.md) | epics and PR-sized tickets; work proceeds in ticket order |
 | [MANUAL.md](./MANUAL.md) | user manual; behavior changes update it in the same PR |
-| [PORT_MAP.md](./PORT_MAP.md) | upstream analysis, scope, license posture |
+| PORT_MAP.md *(removed 2026-07-12; historical — see git history)* | upstream analysis, scope, license posture |
 | [config.example.yaml](./config.example.yaml) | annotated configuration reference |
 
 ## Adoption suite (internal circulation)

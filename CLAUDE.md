@@ -8,7 +8,7 @@ CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
 
 - `PLAN.md` — architecture + dated ADR bullets. Every decision lands here as an
   ADR bullet **in the same PR** as the change. No other design docs.
-- `docs/PORT_MAP.md` — upstream analysis, scope, license verdict, EE counter-plan.
+- `docs/PORT_MAP.md` — removed 2026-07-12 (historical; see git history).
 - `docs/BACKLOG.md` — epics + PR-sized tickets. Work proceeds in ticket order;
   branch names carry ticket IDs (e.g. `t1.3-job-claim-spike`).
 - `docs/MANUAL.md` — the user manual. Behavior changes (config, API, UI,
