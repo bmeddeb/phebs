@@ -6,55 +6,6 @@
     "qualification": null,
     "rule_version": "1.0"
   },
-  "analysis_conclusion": null,
-  "coverage": {
-    "attribution": {
-      "build_target": {
-        "ambiguous": 0,
-        "denominator": 0,
-        "not_applicable": 0,
-        "resolved": 0,
-        "unresolved": 0
-      },
-      "deployable": {
-        "ambiguous": 0,
-        "denominator": 0,
-        "not_applicable": 0,
-        "resolved": 0,
-        "unresolved": 0
-      },
-      "owner": {
-        "ambiguous": 0,
-        "denominator": 0,
-        "not_applicable": 0,
-        "resolved": 0,
-        "unresolved": 0
-      },
-      "service": {
-        "ambiguous": 0,
-        "denominator": 0,
-        "not_applicable": 0,
-        "resolved": 0,
-        "unresolved": 0
-      }
-    },
-    "eligible_units": 120,
-    "exclusions_by_reason": {},
-    "outcome_gates": {
-      "reason_codes": [],
-      "rule_id": "syn-gate-1",
-      "rule_version": "1.0",
-      "status": "passed"
-    },
-    "processing": {
-      "analyzed": 120,
-      "excluded": 0,
-      "failed": 0,
-      "partial": 0
-    },
-    "processing_reconciled": true,
-    "visibility": "available"
-  },
   "envelope_version": "1.0",
   "errors": [],
   "freshness": {
@@ -67,12 +18,6 @@
   },
   "generated_at": "2026-08-01T12:00:00Z",
   "outcome": "refused",
-  "payload": {
-    "data": {
-      "facts": []
-    },
-    "kind": "contract_edges"
-  },
   "provenance": {
     "adapter_versions": {
       "source": "0.0.1"

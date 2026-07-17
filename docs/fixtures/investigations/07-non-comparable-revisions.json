@@ -6,17 +6,7 @@
     "qualification": null,
     "rule_version": "1.0"
   },
-  "analysis_conclusion": {
-    "eligible_workflows": [],
-    "evidence_basis": "derived",
-    "input_references": [],
-    "reason_codes": [
-      "NON_COMPARABLE_RUNS"
-    ],
-    "rule_id": "syn-rule-1",
-    "rule_version": "1.0",
-    "value": "unknown"
-  },
+  "analysis_conclusion": null,
   "coverage": {
     "attribution": {
       "build_target": {
@@ -79,6 +69,11 @@
   "outcome": "partial",
   "payload": {
     "data": {
+      "comparability_rule": {
+        "digest": "sha256:synthetic",
+        "id": "syn-comparability-1",
+        "version": "1.0"
+      },
       "comparable": false,
       "comparison_report": {
         "deltas": [],

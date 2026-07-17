@@ -146,11 +146,15 @@
               "state": "resolved"
             },
             "owner": {
-              "reason_codes": [],
+              "reason_codes": [
+                "PHEBS_SYNTHETIC_GRPC.WRAPPER_INDIRECTION"
+              ],
               "state": "unresolved"
             },
             "service": {
-              "reason_codes": [],
+              "reason_codes": [
+                "PHEBS_SYNTHETIC_GRPC.WRAPPER_INDIRECTION"
+              ],
               "state": "unresolved"
             }
           },
