@@ -1,0 +1,153 @@
+{
+  "absence_eligibility": {
+    "applicable": true,
+    "blocker_codes": [],
+    "eligible": true,
+    "qualification": {
+      "authoritative_text": "No supported client call sites were found within visibility scope syn-vis-1, snapshot syn-snap-1, and the declared eligible universe; known exclusions and failures: none.",
+      "parameters": {
+        "analyzed": 120,
+        "snapshot": "syn-snap-1"
+      },
+      "template_id": "syn-q-neg",
+      "template_version": "1.0"
+    },
+    "rule_version": "1.0"
+  },
+  "analysis_conclusion": {
+    "eligible_workflows": [
+      "migration_review"
+    ],
+    "evidence_basis": "evidenced",
+    "input_references": [
+      "syn-cov-1"
+    ],
+    "reason_codes": [],
+    "rule_id": "syn-rule-1",
+    "rule_version": "1.0",
+    "value": "no_supported_facts"
+  },
+  "coverage": {
+    "attribution": {
+      "build_target": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      },
+      "deployable": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      },
+      "owner": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      },
+      "service": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      }
+    },
+    "eligible_units": 120,
+    "exclusions_by_reason": {},
+    "outcome_gates": {
+      "reason_codes": [],
+      "rule_id": "syn-gate-1",
+      "rule_version": "1.0",
+      "status": "passed"
+    },
+    "processing": {
+      "analyzed": 120,
+      "excluded": 0,
+      "failed": 0,
+      "partial": 0
+    },
+    "processing_reconciled": true,
+    "visibility": "available"
+  },
+  "envelope_version": "1.0",
+  "freshness": {
+    "external_inputs": [],
+    "published": "2026-08-01T01:00:00Z",
+    "snapshot_committed": "2026-08-01T00:00:00Z"
+  },
+  "generated_at": "2026-08-01T12:00:00Z",
+  "outcome": "ok",
+  "payload": {
+    "data": {
+      "facts": []
+    },
+    "kind": "contract_edges"
+  },
+  "provenance": {
+    "adapter_versions": {
+      "source": "0.0.1"
+    },
+    "extractor_version": "0.0.1-synthetic",
+    "input_manifest_id": "syn-im",
+    "pack_manifest_id": "syn-pm",
+    "phebs_binary_digest": "sha256:synthetic",
+    "query_digest": "syn-q",
+    "rule_versions": {
+      "extraction": "1.0"
+    }
+  },
+  "request_id": "01SYNTHETIC",
+  "result_window": {
+    "complete": true,
+    "next_page_token": null,
+    "returned": 0,
+    "truncated_reason": null
+  },
+  "scope": {
+    "build_configuration_id": "syn-build-1",
+    "claim": {
+      "claim_family": "contract_relationship",
+      "decision_sought": "enumerate_service_consumer_candidates",
+      "filters": {
+        "target_role": [
+          "production"
+        ]
+      },
+      "object": null,
+      "predicate": "CALLS_OPERATION",
+      "subject": {
+        "id": "syn-op-cartservice-getcart",
+        "kind": "grpc_operation"
+      }
+    },
+    "investigation_id": "01SYNINV",
+    "normalization_assumptions": [],
+    "normalized_question": "Which deployable services contain supported client call sites for acme.checkout.CartService/GetCart?",
+    "revision_id": "syn-rev-1",
+    "run_artifact_id": "syn-run-1",
+    "snapshot_id": "syn-snap-1",
+    "visibility_projection_id": "syn-vis-1"
+  },
+  "tool": {
+    "name": "find_contract_edges",
+    "semantic_version": "1.0"
+  },
+  "validation": {
+    "applicability_blockers": [],
+    "applies": true,
+    "expires_at": "2027-01-01T00:00:00Z",
+    "expiry_trigger": null,
+    "measured_claim_id": "syn-claim-1",
+    "pack_id": "phebs.synthetic.grpc",
+    "pack_status": "shadow",
+    "pack_version": "0.0.1",
+    "validation_reference": "syn-val-1",
+    "workflow_eligibility": "advisory"
+  }
+}
