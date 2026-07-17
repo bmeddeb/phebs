@@ -538,8 +538,11 @@ policy overrides pins; GC refuses while an authorized owner exists.
 **T16.3 · Authorization invariants** *(needs T16.1)* — query-time principal
 projection on every read; count/existence non-disclosure; opaque ids;
 refusal shape of fixture 06; re-authorization on sharing and transfer.
-AC: negative-test matrix passes incl. fixtures 05/06 byte-shapes; unknown
-and unauthorized are indistinguishable; cursors void on ownership transfer.
+AC: negative-test matrix passes incl. fixtures 05/06 shapes; the suite
+executes BOTH an unknown-identity input and an unauthorized-identity input
+and asserts identical canonical response bytes (fixture 06 is the expected
+shape, not a one-time validation target); cursors void on ownership
+transfer.
 
 **T16.4 · Guided creation and async run state** *(needs T16.1–T16.3)* —
 creation API with scope preview, authorization preflight, estimate, cancel,
@@ -554,14 +557,17 @@ state; the eligibility badge has no write path; `make dev` demoable.
 
 **T16.6 · MCP envelope implementation** *(needs T16.3; parallel to T16.5)* —
 envelope v0.2 on the existing MCP tools; generated JSON Schemas checked in.
-AC: all eight fixtures validate against the generated schemas; refusal
+AC: all eight fixtures validate against the generated schemas — incl.
+fixture 08's irreversible-truncation semantics in result views; refusal
 indistinguishability test; server-rendered qualification text only.
 
 **T16.7 · Consumer ledger and comparable diff** *(needs T16.2)* —
 first/last-seen edge ledger (the retention change from VISION architecture
 notes); cause-classified diff per contract §8 with comparison-report
-fallback. AC: prohibited causes never render as removals; fixtures 07/08
-semantics enforced; ledger rows survive run sweep.
+fallback. AC: prohibited causes never render as removals; fixture 07 semantics
+enforced plus a new comparable traced-addition/removal fixture added with
+this ticket (fixture 08 is truncation and belongs to T16.6); ledger rows
+survive run sweep.
 
 **T16.8 · Review projection** *(needs T16.7)* — deterministic ReviewItems,
 queues (new consumers, coverage regression, unresolved attribution),
