@@ -40,6 +40,7 @@ authorization, or validation gates.
 | Pack version | `<semantic version>` |
 | Extractor artifact | `<source commit, binary digest, toolchain digest>` |
 | Schema version | `<fact/evidence schema version>` |
+| Pack manifest digest | `<sha256 of the executable pack manifest bound at release>` |
 | Owner | `<team/person>` |
 | Independent validation owner | `<team/person>` |
 | Last measured | `<date>` |
@@ -244,6 +245,14 @@ Coverage certificates are scoped to the requesting principal's visible
 universe and must not reveal inaccessible repository, path, target, service,
 or remainder existence or counts.
 
+### Absence blocker codes
+
+The pack declares its blocker-code vocabulary (e.g. `UNITS_FAILED`,
+`EXCLUSION_RATE_EXCEEDED`, `ATTRIBUTION_UNRESOLVED`,
+`PACK_VALIDATION_EXPIRED`, `SCOPE_NOT_ENUMERATED`, `STALE_ANALYSIS`).
+Absence eligibility in headers and envelopes is derived from this declared
+set and the pack's decision rules — never from terminal accounting alone.
+
 ## 8. Decision semantics
 
 The following axes are orthogonal and must not be collapsed into one status:
@@ -313,6 +322,23 @@ fact. Each disposition records its rationale, actor, accountable owner,
 timestamp, expiry/review date, applicable policy version, and referenced fact
 and coverage identities. An expired disposition returns to the policy-defined
 default state.
+
+### Diff and comparability semantics
+
+The pack declares what makes two runs comparable (same revision, pack
+version, and coverage class) and how an absent fact is cause-classified:
+source deletion, extractor/pack version change, authorization change,
+catalog change, failed analysis, or narrowed scope. Only comparable runs
+may render an unqualified added/removed; every other cause renders as its
+cause, and failed or inaccessible units never render as "removed."
+
+### Challenge intake and error ledger
+
+Evidence challenges (e.g. a `false attribution` disposition) enter the
+pack's quality review: intake with triage duty and owner, adjudication
+against the frozen evidence, and an append-only error ledger recording
+confirmed errors by class. Challenges never modify facts; confirmed
+errors feed the suspension triggers below.
 
 ## 9. Validation design
 
@@ -427,6 +453,7 @@ Questions this pack must refuse or qualify:
 | Backlog/catch-up `<unit>` |  |  |  |  |  |
 | Query p95 `<unit>` |  |  |  |  |  |
 | Recovery RPO/RTO `<unit>` |  |  |  |  |  |
+| Maximum eligible universe `<units per run>` |  |  |  |  |  |
 
 State whether the pack is eligible for interactive, PR-time, batch, incident,
 or audit workflows. A pack must not be promoted into a latency/availability
@@ -466,14 +493,26 @@ blank operating limit, or release-blocking open risk prevents `released`.
 - validation expiry/review date and automatic suspension owner recorded;
 - exception authority is external to the pack and cannot waive evidence,
   authorization, or validation integrity.
+- the executable pack manifest is machine-validated against this card at
+  release; the bound manifest digest matches the header field, and any
+  divergence blocks release.
 
 ### Automatic suspension triggers
 
 - extractor or dependency version changes outside the measured claim;
+- confirmed-error accumulation in the challenge ledger exceeding the
+  validated bound's allowance for the affected metric;
 - benchmark or internal failures below threshold;
 - authorization or evidence-reproduction failure;
 - unsupported framework/language change invalidates the population claim;
 - `<domain-specific trigger>`.
+
+### Expiry semantics
+
+Expired validation suspends new claims, promotions, and release status; it
+does not delete history. Already-published facts and dossiers remain
+queryable with the expired-validation status surfaced; dossiers
+self-describe via their cited validation identity.
 
 ### Revalidation policy
 

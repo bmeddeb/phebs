@@ -157,8 +157,11 @@ placeholder, or unexplained `N/A` blocks Gate 0.
 | Pilot environment owner | provisions the isolated host and confirms teardown | `<name>` |
 
 The sponsor records the sanctioned allocation of pilot-lead and partner time
-before work begins. Reviewer access and independence rules are documented in
-the internal evaluation manifest.
+before work begins. **Reviewer independence, defined:** label reviewers must
+not have contributed to phebs, the candidate extractor, or the migration's
+existing consumer inventory, and must have no access to unsealed phebs
+predictions during labeling. Reviewer access and custody rules are
+documented in the internal evaluation manifest.
 
 ## 6. Entry gates
 
@@ -171,6 +174,13 @@ All must be complete before the pilot clock begins:
 - IP/OSS/provenance review either approved or explicitly cleared for the
   bounded evaluation;
 - external Go/gRPC benchmark passes its published gate;
+- the pilot extractor artifact (source commit, binary digest, toolchain
+  digest) equals the benchmark-measured artifact, or a versioned bridging
+  statement — what changed and why the claim transfers — is separately
+  approved before the clock starts;
+- a completed evidence-pack card at status `shadow` exists for the Go/gRPC
+  pack; the internal shadow evaluation fills its internal/domain-shift
+  table as a required output;
 - current-workflow baseline protocol and statistical accuracy-gold protocol
   preregistered as separate artifacts;
 - the accuracy protocol defines the independently enumerated target
@@ -192,7 +202,10 @@ analyzed:
 - reproducible binary and dependency/SBOM scan recorded;
 - secrets storage, ingress, approved MCP clients, logging, and egress policy
   approved;
-- result-time authorization and negative-test matrix approved;
+- result-time authorization approved, with a negative-test matrix authored
+  or materially extended by the Security reviewer — not solely by the pilot
+  lead — including persistent-artifact cases (saved results, counts and
+  coverage non-disclosure, revocation after pinning);
 - retention, revocation, legal-hold, teardown, and deletion behavior approved;
 - isolated host and least-privilege identity provisioned;
 - host resource ceiling and stop behavior recorded;
@@ -228,7 +241,9 @@ already created for Gate 2, teardown begins before baseline extraction.
 | 6 — Decide and tear down | compare all gates; document risks and costs; decide stop/conditional/continue; destroy or transfer artifacts under approval | final report, signed decision, teardown or continuation record |
 
 The schedule does not override a gate. A delayed prerequisite shortens or stops
-the evaluation; it does not authorize skipping the control.
+the evaluation; it does not authorize skipping the control. The pilot lead
+sends the sponsor a weekly one-page status — gate progress, spend against
+resource ceilings, and open risks — so no result is first seen in week six.
 
 ## 8. Independent internal baselines
 
@@ -445,6 +460,10 @@ external observation, metadata assertion, and human disposition.
 - At stop or pilot completion, the environment owner destroys all pilot data
   and credentials unless a written continuation decision identifies the new
   owner, retention period, access policy, and production-hardening work.
+- The preserved-versus-destroyed boundary is decided jointly by the
+  environment owner and the Security reviewer against the §10 output list;
+  the teardown attestation enumerates every preserved artifact and its
+  classification rationale.
 - Teardown is verified and recorded; deleting only the source checkout is not
   sufficient.
 
