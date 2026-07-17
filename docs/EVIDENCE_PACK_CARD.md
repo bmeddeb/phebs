@@ -40,7 +40,7 @@ authorization, or validation gates.
 | Pack version | `<semantic version>` |
 | Extractor artifact | `<source commit, binary digest, toolchain digest>` |
 | Schema version | `<fact/evidence schema version>` |
-| Pack manifest digest | `<sha256 of the executable pack manifest bound at release>` |
+| Release binding | `<PackRelease id binding card, manifest, implementation, and validation digests>` |
 | Owner | `<team/person>` |
 | Independent validation owner | `<team/person>` |
 | Last measured | `<date>` |
@@ -494,8 +494,9 @@ blank operating limit, or release-blocking open risk prevents `released`.
 - exception authority is external to the pack and cannot waive evidence,
   authorization, or validation integrity.
 - the executable pack manifest is machine-validated against this card at
-  release; the bound manifest digest matches the header field, and any
-  divergence blocks release.
+  release through the signed PackRelease record binding both digests (plus
+  implementation, binary, and validation digests); any divergence blocks
+  release. Neither card nor manifest embeds the other's digest directly.
 
 ### Automatic suspension triggers
 
