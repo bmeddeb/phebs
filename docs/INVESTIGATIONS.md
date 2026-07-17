@@ -1,184 +1,236 @@
 # phebs Investigations — the persistent object around consequential work
 
-*Product-experience spec, revision 2, July 2026 · post-gate productization
-(VISION.md sequencing step 2). Nothing here expands the pilot ask.*
+*Product-experience spec, rev 3 · July 2026 · post-gate productization
+(VISION.md sequencing step 2 given concrete shape). Nothing here expands the
+pilot ask. Normative product semantics live in
+[INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md); this
+document defines their user experience.*
 
-One noun everywhere: **Investigation** — UI, API (`/api/investigations`),
-MCP (`investigation_id`).
+One noun everywhere: **Investigation** — UI navigation, API resource naming,
+MCP fields (`investigation_id`), and product documentation. Concrete routes and
+persistence architecture remain governed by `PLAN.md`, ADRs, and the generated
+API contract.
 
 ## Thesis
 
-An Investigation is a **productized ceremony**: a frozen engineering
-question, its authorized universe, pinned snapshots, pack versions,
-findings, coverage gaps, attribution, dispositions, and decision history.
-Search stays stateless; users promote consequential questions into
-Investigations. The lifecycle reuses existing machinery: analysis
-manifests (freeze), published runs (immutability), `PinRun`/proof-aware
-retention (persistence), pack-card disposition rules (judgment separate
-from evidence).
+An Investigation is a frozen engineering question plus the durable evidence
+needed to act on it: authorized source universe, immutable Revisions and Run
+artifacts, evidence-pack versions, findings, coverage gaps, attribution chain,
+human records, Decisions, Baselines, and history. Search stays fast and
+stateless; users promote consequential or recurring questions into an
+Investigation.
 
-## Entity model
+The lifecycle productizes machinery phebs already operates or has designed:
 
-| Entity | Meaning |
+| Investigation concept | Foundation |
 |---|---|
-| `Investigation` | stable question and intent |
-| `Revision` | immutable scope, configuration, and pack selection |
-| `Run` | one execution of a revision against one snapshot |
-| `Baseline` | human-accepted organizational comparison point |
-| `ReviewCursor` | what an individual reviewer last saw |
-| `Disposition` | typed human judgment (see below) |
-| `ReviewItem` | deterministic projection of an evidence change |
-| `Watch` | reevaluation policy over runs |
-| `Dossier` | sealed export |
+| Frozen question + scope | analysis manifest and charter Gate-0 freeze |
+| Immutable Revision and RunArtifact | atomic extraction publication plus the domain contract |
+| Snapshot pinning and export | `PinRun`, proof-aware retention, dossiers |
+| Evidence reproduction | `ResolveEvidence` plus authorized occurrence associations |
+| Human records | pack-card decision semantics, kept separate from evidence |
+| Absence eligibility | claim- and principal-specific computation from coverage and pack rules |
+| Regression Watch | publication-event reevaluation feeding Review |
 
-Change rules: a new source snapshot creates a **Run**; changing the
-universe, question, or pack selection requires a new **Revision**; a
-materially different question is a new **Investigation**. Runs never
-mutate; baselines are set only by humans.
+`PinRun` and `ResolveEvidence` are supporting primitives, not the complete
+Investigation persistence layer. Revisions, RunEvents and RunArtifacts,
+authorization projections, Decisions, Baselines, dispositions, Watches,
+ReviewItems, dossiers, audit history, idempotency, and pin ownership complete
+the model.
 
-## Absence eligibility — per claim, per revision
+## Flow
 
-"Terminal accounting" is necessary but not sufficient: `failed`,
-`partial`, and some `excluded` states are terminal too. Absence
-eligibility is computed **per claim and per revision** from: an
-independently enumerated universe; every unit terminal; the analyzed /
-partial+failed / excluded outcome-rate gates of the governing pack's
-decision rules; and required attribution hops resolved for the claim.
-Ineligibility carries **structured blocker codes** (e.g.
-`UNITS_FAILED`, `EXCLUSION_RATE_EXCEEDED`, `ATTRIBUTION_UNRESOLVED`,
-`PACK_VALIDATION_EXPIRED`, `SCOPE_NOT_ENUMERATED`, `STALE_ANALYSIS`) —
-derived, never operator-set, surfaced in the header and the envelope.
+```text
+search or ask
+  → choose a typed question and decision sought
+  → preview and freeze scope
+  → run released evidence packs asynchronously
+  → inspect findings, coverage, and unknowns
+  → resolve attribution and human-record gaps
+  → review comparable changes
+  → record an authorized human Decision
+  → seal/export a Dossier
+  → Watch for material deltas or expiry
+```
 
-## Navigation, header, overview
+## Creation experience
 
-Top level: **Search · Investigations · Review · Watches · Activity ·
-Admin**. Inside: **Overview · Census · Changes · Coverage · Evidence ·
-Dispositions · Activity**. Persistent header: normalized question;
-snapshot + build configuration; authorized universe; pack + extractor
-versions; freshness; owner; state; absence eligibility with blocker
-codes. Overview cards: **evidenced · unknown · changed · needs action**.
+Against a giant monorepo, creation is not synchronous CRUD. Guided creation
+shows the normalized claim, intended decision, principal-visible universe,
+snapshot/build policy, selected pack versions, enumeration method, required
+inputs, authorization preflight, estimated work, and hard resource limits
+before freezing a Revision.
 
-## Empty states are the philosophy
+After submission, the UI exposes queued/enumerating/analyzing/publishing state,
+progress without existence leakage, cancellation, retry status, partial or
+failed diagnostics, and the exact immutable RunArtifact on publication. A
+failed or canceled attempt never appears as a complete result.
 
-Never one "No results." Distinguish (renderings of existing states):
-no supported facts in fully analyzed scope; none among analyzed units but
-units failed; unsupported construct/language; stale analysis; incomplete
-attribution; inaccessible scope; truncated/paginated result.
+## Navigation and persistent header
 
-## Diff comparability
+Top level: **Search · Investigations · Review · Watches · Activity · Admin**.
+Inside an Investigation: **Overview · Census · Changes · Coverage · Evidence ·
+Human Records · Decisions · Activity**.
 
-An edge absent from the newer run is never simply "removed." The diff
-engine classifies cause before rendering: **source deletion** (traced),
-**extractor/pack version change**, **authorization change**, **catalog
-change**, **failed analysis**, **narrowed scope**. Only same-revision,
-comparable-coverage runs may render an unqualified removed/added; all
-other causes render as their cause, and failed or inaccessible consumers
-are blocked from appearing as "removed."
+The header always shows:
 
-## Review — a projection, not task management
+- normalized question, referent, claim family, and decision sought;
+- Revision, source snapshot, build configuration, and current Baseline;
+- the requesting principal's authorized universe projection;
+- evidence-pack, extractor, rule, and schema versions;
+- source and external-input freshness;
+- owner and Investigation lifecycle state; and
+- per-claim absence-decision eligibility, qualification template, and blocker
+  codes computed by the domain contract—never operator-set.
 
-`ReviewItem`s are **generated deterministically from evidence deltas**,
-deduplicated, superseded by newer deltas, acknowledged against a
-`ReviewCursor`, and expired. Queues: new consumers since baseline;
-reintroduced deprecated consumers; changed since my cursor; processing or
-coverage regression; unresolved attribution; ownership conflict;
-exception requested/expiring; pack validation expired; analysis stale or
-failed. Opening an item starts with the delta, then the evidence chain,
-then a disposition. No arbitrary tasks, comments, custom states, or
-due-date workflows.
+The Overview leads with four cards: **what is evidenced · what remains unknown
+· what changed · what needs action**. It separates evidence basis, semantic
+resolution, processing coverage, attribution coverage, human records, and
+Decision conclusion rather than collapsing them into one confidence state.
 
-## Dispositions — five types, not one enum
+## Empty states are safety semantics
 
-| Type | Example | Authority / behavior |
-|---|---|---|
-| Intent | `will migrate` | owner; expires; carried forward across runs |
-| Classification assertion | `not production` | owner; re-verified against pack classification each run |
-| Evidence challenge | `false attribution` | **enters pack quality review; never alters the fact** |
-| Governance request | `exception requested` | external exception authority; expiry mandatory |
-| System condition | `owner unknown` | system-derived; cleared by resolution, not by hand |
+Never one generic “No results.” Render distinct, machine-backed states:
 
-Each type has its own authority, expiry, carry-forward, and review
-behavior; all record actor, rationale, timestamps, and referenced fact and
-coverage identities.
+- no supported facts in complete, eligible scope;
+- no facts among analyzed units, with partial/failed/unreconciled units;
+- exclusions not permitted for the requested conclusion;
+- unsupported or semantically unresolved construct;
+- incomplete deployable/service/owner attribution;
+- stale source, metadata, policy, or pack validation;
+- current visibility scope cannot be reconciled;
+- non-comparable Revision or RunArtifact;
+- truncated/incomplete result; and
+- failed or canceled analysis.
 
-## Authorization of persistent artifacts
+The UI never tells a principal that a creator or another reviewer saw a larger
+inaccessible universe.
 
-Saved objects must not become ACL bypasses. Defined behaviors: sharing is
-principal-scoped re-authorization, never a static snapshot of results;
-ownership transfer re-evaluates visibility; counts and coverage never leak
-inaccessible existence; **revocation applies to pinned runs** (retention
-never overrides authorization loss — the deletion/revocation exception);
-exports are redacted to the recipient's scope at export time; **reopening
-a dossier re-authorizes against current ACLs** before display.
+## Census, derivation, and Changes
 
-## Dossier — the export contract (the Workbench boundary)
+The Census is a dense table first, not a graph first. Rows expand into the
+authorized derivation chain from occurrence → build target → deployable →
+canonical service → recorded owner, preserving ambiguous and unresolved hops.
 
-A Dossier is a sealed, versioned artifact: format version; manifest
-(question, revision, runs, snapshots, pack cards, digests of every
-included artifact); embedded evidence for cited findings and **references
-(digest + locator) for the remainder**; the authorization scope it was
-redacted to; validity statement (what it proves, as of which snapshot,
-under which pack validations); and an offline verification procedure
-(digest chain check without a phebs instance). phebs owns everything up to
-the Dossier; Workbench and other consumers operate on Dossiers — the
-products meet at this boundary, not inside the evidence plane.
+Changes renders ordinary added/removed/reintroduced relationships only when
+the pack proves comparable identity and semantics. Source, scope,
+authorization, analysis-method, build-configuration, external-metadata,
+failure, and attribution changes remain visibly distinct causes. Failed,
+stale, inaccessible, or non-comparable facts never render as removed.
 
-## Agents: governed consumers
+## Review
 
-The MCP envelope **exposes the pack card's orthogonal axes separately** —
-no collapsed tri-state: evidence basis (`evidenced`/`derived`); semantic
-resolution (`resolved`/`ambiguous`/`unresolved`); processing state and
-coverage; attribution state per hop; decision conclusion (pack-specific);
-absence eligibility with blocker codes; freshness, pagination, and
-truncation; pack validation identity; provenance and versions; and the
-permitted-qualification string sourced from the pack card. Bounded tools
-(`find_contract_edges`, `get_contract_evidence`, `explain_attribution`,
-`get_analysis_coverage`, `compare_contract_snapshots`,
-`list_new_consumers`, `verify_proof_reference`,
-`generate_review_checklist`); no prose oracle. Human-reserved verbs are
-enforced **server-side by principal role**.
+Review is a deterministic evidence projection, not work management. Core
+queues include:
 
-## Monorepo-scale creation UX
+- new or positively reintroduced relationships since an accepted Baseline;
+- changed since the principal's ReviewCursor;
+- processing, coverage, freshness, or comparability regression;
+- unresolved deployable/service/owner attribution;
+- catalog/source ownership conflict;
+- evidence challenge awaiting quality adjudication;
+- external exception decision or expiry;
+- pack release/validation expiry; and
+- analysis failure.
 
-Guided creation is asynchronous: scope preview from metadata; authorization
-preflight; estimated work and resource cost; progress with cancellation;
-bounded retries; partial-failure behavior that surfaces failed units in
-the coverage ledger rather than aborting silently; and per-investigation
-resource limits.
+Opening an item starts with the comparable delta or exact system condition,
+then the evidence chain and permitted human record. Human families remain
+separate: action intent (`will_migrate`), classification assertion
+(`not_production`), evidence challenge (`false_attribution`), governance
+request, and imported external governance decision. `owner_unknown` is a
+system-derived attribution condition, not a disposition. No human record
+mutates evidence, coverage, or eligibility.
 
-## Pack manifest, validated against the card
+ReviewItems are never hand-created. They are versioned, deduplicated,
+superseded or expired deterministically, and acknowledged per principal. There
+are no comments, arbitrary assignments, custom states, or due dates.
 
-Packs register an **executable pack manifest** (predicates, workflows,
-facets, census columns, evidence renderer, coverage rules, decision
-gates, review projections, diff semantics, MCP actions, operating
-limits). The manifest is machine-validated against the human-readable
-pack card at release: any divergence between manifest and card blocks
-release. Internal, fixed modules only — no marketplace, no third-party
-SDK.
+## Decisions, Baselines, and dossiers
+
+A Decision is an authorized human conclusion tied to an exact claim, visible
+scope, Revision, published RunArtifact or Baseline, eligibility result, and
+policy identity where applicable. It can be superseded or expire but is never
+edited. A new material delta may reopen a concluded Investigation without
+erasing the earlier Decision.
+
+A Baseline is an organizational designation; a personal ReviewCursor never
+becomes one. A Dossier seals the selected Run artifacts, Baseline, Decision,
+manifest, evidence, coverage, eligibility, validation identities, redaction
+scope, integrity root, and validity statement. Offline verification proves
+integrity/authenticity, not current authorization or freshness.
+
+The Dossier is the product boundary: Workbench and external systems consume
+versioned dossiers and proof references rather than reaching into mutable
+Investigation internals.
+
+## Agents: governed consumers of evidence
+
+Every evidence-sensitive MCP result uses the same versioned envelope with
+separate fields for:
+
+- normalized claim, snapshot, current authorized universe, and filters;
+- evidence basis and semantic resolution;
+- typed facts and authorized proof references;
+- processing coverage and attribution state per required hop;
+- pack-defined decision conclusion;
+- absence eligibility, blocker codes, and qualification-template ID/version;
+- pack release, validation, rule, schema, extractor, and adapter identities;
+- required-input freshness; and
+- result completeness, pagination, truncation, and provenance.
+
+Bounded tools: `find_contract_edges`, `get_contract_evidence`,
+`explain_attribution`, `get_analysis_coverage`,
+`compare_contract_snapshots`, `list_new_consumers`,
+`verify_proof_reference`, `generate_review_checklist`. No `ask_phebs` prose
+oracle. Every tool reauthorizes the principal and shares UI/API semantics.
+
+Human-reserved actions—creating Decisions, approving external exceptions,
+changing ownership, or declaring a migration complete—are enforced
+server-side by permission and authority rules. Omitting a tool from an agent
+menu is not a security boundary.
+
+> phebs does not make an agent authoritative; it makes the agent's claims
+> scoped, inspectable, and reproducible.
+
+## Pack-driven modules (P2, internal only)
+
+An `EvidencePackModule` executable manifest is validated against the complete
+pack card. It registers predicates and constructs, workflows, facets, census
+columns, evidence rendering, coverage/decision/qualification rules,
+comparability and identity semantics, Review projections, MCP actions,
+authorization behavior, validation state, and operating limits. Card and
+manifest share versioned identities; disagreement blocks release. No
+marketplace and no third-party SDK.
 
 ## First slice (dependency-ordered)
 
-1. Entity model (Investigation/Revision/Run) + guided async creation.
-2. Overview, Census, Coverage, Evidence views — empty-state taxonomy
-   first.
-3. Immutable runs across snapshots; baseline designation.
-4. Cause-classified consumer diff (requires the ledger/retention change in
-   VISION architecture notes).
-5. Structured MCP envelope on existing tools.
-6. Minimal Review projection: new consumers, failed coverage, unresolved
-   attribution.
+1. Domain entities, append-only lifecycles, atomic publication, pin ownership,
+   and authorization projections.
+2. Guided creation with scope/authorization preview, idempotent asynchronous
+   execution, progress, cancellation, retry, and failure diagnostics.
+3. Overview, Census, Coverage, and Evidence views—empty-state taxonomy first.
+4. Immutable Revisions, RunArtifacts, eligibility results, Baselines,
+   Decisions, and minimal Dossier export.
+5. Comparable added/removed/changed relationship diff; non-comparable
+   comparison reports remain explicit.
+6. Structured MCP envelope on existing tools.
+7. Minimal Review projection: new relationships, failed coverage, stale input,
+   and unresolved attribution.
 
-The derivation inspector ships only with pilot-validated attribution.
-Watches stay sub-notification (saved queries feeding Review; no
-email/Slack delivery). Dispositions and Dossiers follow the slice once
-runs and baselines exist.
+The derivation inspector ships only with the pilot-validated attribution
+layer. Watches remain sub-notification: versioned saved questions re-evaluated
+on eligible publication events, with quotas/coalescing/expiry, feeding Review
+only—no email or chat delivery.
 
 ## Boundaries
 
 A phebs feature must materially improve population discovery, provenance,
-coverage, attribution, change detection, review, or evidence-backed
-action. Not added: markdown workspaces; PRD/RCA authoring; workflow
-builders; task/deadline tracking; policy authoring; portfolio dashboards;
-generic assistant chat; plugin marketplace; investigation comment
-threads. Decision history is dispositions plus revisions; discussion
-lives elsewhere.
+coverage, attribution, change detection, review, or evidence-backed action. Do
+not add generic markdown workspaces, PRD/RCA authoring, workflow builders,
+task/deadline tracking, policy authoring, portfolio dashboards, generic
+assistant chat, a plugin marketplace, or Investigation comment threads.
+Discussion, remediation execution, and program management live elsewhere.
+
+phebs owns the Investigation through the sealed Dossier and authorized export.
+Workbench owns programs, plans, and cross-Investigation portfolio work. The two
+products meet at the Dossier boundary, not inside the evidence plane.
