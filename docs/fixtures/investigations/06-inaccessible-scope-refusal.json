@@ -1,5 +1,6 @@
 {
   "envelope_version": "1.0",
+  "errors": [],
   "generated_at": "2026-08-01T12:00:00Z",
   "outcome": "refused",
   "refusal": {
@@ -7,12 +8,6 @@
     "code": "NOT_AVAILABLE"
   },
   "request_id": "01SYNTHETIC",
-  "result_window": {
-    "complete": true,
-    "next_page_token": null,
-    "returned": 0,
-    "truncated_reason": null
-  },
   "tool": {
     "name": "find_contract_edges",
     "semantic_version": "1.0"

@@ -3,12 +3,7 @@
     "applicable": false,
     "blocker_codes": [],
     "eligible": false,
-    "qualification": {
-      "authoritative_text": "",
-      "parameters": {},
-      "template_id": "syn-q-1",
-      "template_version": "1.0"
-    },
+    "qualification": null,
     "rule_version": "1.0"
   },
   "analysis_conclusion": {
@@ -73,10 +68,14 @@
     "visibility": "available"
   },
   "envelope_version": "1.0",
+  "errors": [],
   "freshness": {
-    "external_inputs": [],
-    "published": "2026-08-01T01:00:00Z",
-    "snapshot_committed": "2026-08-01T00:00:00Z"
+    "analysis": {
+      "published": "2026-08-01T01:00:00Z",
+      "snapshot_committed": "2026-08-01T00:00:00Z",
+      "status": "current"
+    },
+    "inputs": []
   },
   "generated_at": "2026-08-01T12:00:00Z",
   "outcome": "ok",
@@ -85,65 +84,105 @@
       "facts": [
         {
           "attribution_states": {
-            "build_target": "resolved",
-            "deployable": "resolved",
-            "owner": "resolved",
-            "service": "resolved"
+            "build_target": {
+              "reason_codes": [],
+              "state": "resolved"
+            },
+            "deployable": {
+              "reason_codes": [],
+              "state": "resolved"
+            },
+            "owner": {
+              "reason_codes": [],
+              "state": "resolved"
+            },
+            "service": {
+              "reason_codes": [],
+              "state": "resolved"
+            }
           },
           "evidence_basis": "evidenced",
+          "fact_id": "syn-fact-0",
+          "logical_relationship_id": "syn-rel-syn-occ-frontend",
           "object": {
             "id": "syn-op-cartservice-getcart",
             "kind": "grpc_operation"
           },
           "predicate": "CALLS_OPERATION",
-          "proof_reference": {
-            "occurrence_id": "syn-occ-frontend",
-            "proof_id": "syn-proof-frontend",
-            "snapshot_id": "syn-snap-1",
-            "verification_action": "verify_proof_reference"
-          },
+          "proof_references": [
+            {
+              "occurrence_id": "syn-occ-frontend",
+              "proof_id": "syn-proof-frontend",
+              "snapshot_id": "syn-snap-1",
+              "verification_action": "verify_proof_reference"
+            }
+          ],
           "qualifiers": {
             "behavioral_role": "client_call",
-            "reachability": "direct_target",
-            "source_origin": "first-party",
+            "reachability": "direct",
+            "source_origin": "first_party",
             "target_role": "production"
           },
-          "semantic_resolution": "resolved",
+          "semantic_resolution": {
+            "reason_codes": [],
+            "value": "resolved"
+          },
           "subject": {
             "id": "syn-occ-frontend",
             "kind": "source_occurrence"
-          }
+          },
+          "verification_tool": "verify_proof_reference"
         },
         {
           "attribution_states": {
-            "build_target": "resolved",
-            "deployable": "resolved",
-            "owner": "resolved",
-            "service": "resolved"
+            "build_target": {
+              "reason_codes": [],
+              "state": "resolved"
+            },
+            "deployable": {
+              "reason_codes": [],
+              "state": "resolved"
+            },
+            "owner": {
+              "reason_codes": [],
+              "state": "resolved"
+            },
+            "service": {
+              "reason_codes": [],
+              "state": "resolved"
+            }
           },
           "evidence_basis": "evidenced",
+          "fact_id": "syn-fact-1",
+          "logical_relationship_id": "syn-rel-syn-occ-ledger",
           "object": {
             "id": "syn-op-cartservice-getcart",
             "kind": "grpc_operation"
           },
           "predicate": "CALLS_OPERATION",
-          "proof_reference": {
-            "occurrence_id": "syn-occ-ledger",
-            "proof_id": "syn-proof-ledger",
-            "snapshot_id": "syn-snap-1",
-            "verification_action": "verify_proof_reference"
-          },
+          "proof_references": [
+            {
+              "occurrence_id": "syn-occ-ledger",
+              "proof_id": "syn-proof-ledger",
+              "snapshot_id": "syn-snap-1",
+              "verification_action": "verify_proof_reference"
+            }
+          ],
           "qualifiers": {
             "behavioral_role": "client_call",
-            "reachability": "direct_target",
-            "source_origin": "first-party",
+            "reachability": "direct",
+            "source_origin": "first_party",
             "target_role": "production"
           },
-          "semantic_resolution": "resolved",
+          "semantic_resolution": {
+            "reason_codes": [],
+            "value": "resolved"
+          },
           "subject": {
             "id": "syn-occ-ledger",
             "kind": "source_occurrence"
-          }
+          },
+          "verification_tool": "verify_proof_reference"
         }
       ]
     },
@@ -157,16 +196,25 @@
     "input_manifest_id": "syn-im",
     "pack_manifest_id": "syn-pm",
     "phebs_binary_digest": "sha256:synthetic",
+    "phebs_source_commit": "syn-commit",
     "query_digest": "syn-q",
     "rule_versions": {
+      "attribution": "1.0",
+      "decision": "1.0",
       "extraction": "1.0"
-    }
+    },
+    "schema_version": "1.0",
+    "toolchain_digest": "sha256:synthetic"
   },
+  "refusal": null,
   "request_id": "01SYNTHETIC",
   "result_window": {
-    "complete": true,
     "next_page_token": null,
+    "ordering": "logical_relationship_id",
+    "page_exhausted": true,
+    "result_set_complete": true,
     "returned": 2,
+    "truncated": false,
     "truncated_reason": null
   },
   "scope": {
@@ -205,9 +253,9 @@
     "expiry_trigger": null,
     "measured_claim_id": "syn-claim-1",
     "pack_id": "phebs.synthetic.grpc",
-    "pack_status": "shadow",
+    "pack_status": "released",
     "pack_version": "0.0.1",
     "validation_reference": "syn-val-1",
-    "workflow_eligibility": "advisory"
+    "workflow_eligibility": "eligible"
   }
 }
