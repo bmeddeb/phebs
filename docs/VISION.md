@@ -206,7 +206,8 @@ preserving what remains unknown.**
 1. **Prove the migration foundation** — the external Go/gRPC measurement
    and the internal attribution pilot (the entirety of the current ask).
 2. **Productize the contract atlas** — proof bundles, coverage,
-   dispositions, ownership reconciliation, **and the query surface**
+   dispositions, ownership reconciliation, **and the query surface**,
+   shaped as Investigations (see [INVESTIGATIONS.md](./INVESTIGATIONS.md))
    (assertion API, UI, MCP tools, SLOs). Search UI/MCP are operational
    today; contract-intelligence queries and their SLOs remain post-gate
    productization work.
