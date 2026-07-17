@@ -164,9 +164,44 @@ def run(transport, now_fn, constants: dict, query_bytes: bytes) -> dict:
     except Exception as exc:  # one-shot executor: every failure seals a receipt
         receipt["status"] = "REJECTED"
         receipt["failure"] = f"unexpected failure: {type(exc).__name__}: {exc}"[:500]
-    receipt_bytes = (json.dumps(receipt, sort_keys=True, separators=(",", ":")) + "\n").encode()
-    (STAGE1 / "receipt.json").write_bytes(receipt_bytes)
+    publish_receipt(receipt)
     return receipt
+
+
+def publish_receipt(receipt: dict) -> None:
+    """Durably publish the receipt; never raise.
+
+    Atomic publication: temp file, fsync, rename, directory fsync. If
+    serialization fails, a minimal rejection receipt is published instead.
+    If filesystem publication fails entirely, the failure is recorded on
+    the in-memory receipt ("receipt_publication_failure") so the caller
+    emits it to stdout/stderr as the operator-preserved record.
+    """
+    try:
+        try:
+            payload = (json.dumps(receipt, sort_keys=True,
+                                  separators=(",", ":")) + "\n").encode()
+        except Exception as exc:
+            minimal = {"schema": RECEIPT_SCHEMA, "status": "REJECTED",
+                       "failure": f"receipt serialization failed: {type(exc).__name__}"}
+            payload = (json.dumps(minimal, sort_keys=True,
+                                  separators=(",", ":")) + "\n").encode()
+        tmp = STAGE1 / "receipt.json.tmp"
+        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            os.write(fd, payload)
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.rename(tmp, STAGE1 / "receipt.json")
+        dir_fd = os.open(STAGE1, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
+    except Exception as exc:
+        receipt["receipt_publication_failure"] = (
+            f"{type(exc).__name__}: {exc}"[:300])
 
 
 def main() -> int:
@@ -200,6 +235,12 @@ def main() -> int:
     receipt = run(default_transport, lambda: datetime.now(timezone.utc),
                   constants, query_bytes)
     print(json.dumps(receipt, indent=2, sort_keys=True))
+    if "receipt_publication_failure" in receipt:
+        # The printed copy above is the operator-preserved record.
+        print("stage1: RECEIPT PUBLICATION FAILED — preserve this output",
+              file=sys.stderr)
+        print(json.dumps(receipt, sort_keys=True), file=sys.stderr)
+        return 4
     return 0 if receipt["status"] == "ADMITTED" else 1
 
 

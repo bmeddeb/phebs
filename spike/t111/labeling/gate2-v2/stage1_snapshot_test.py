@@ -125,6 +125,29 @@ class Stage1Test(unittest.TestCase):
                          s1.sha256_bytes(b"<html>gateway</html>"))
         self.assertIsNotNone(receipt["request_completed"])
 
+    def test_receipt_write_failure_never_raises(self):
+        # Admitted response, but the stage1 dir vanishes before publication:
+        # run() must not raise, and must record the publication failure.
+        def hostile_publish_env():
+            import shutil
+            shutil.rmtree(self.stage1)
+        real_transport = transport_for()
+        def transport(query_bytes, token):
+            result = real_transport(query_bytes, token)
+            return result
+        hostile_publish_env()
+        receipt = s1.run(transport, lambda: CUTOFF, CONSTANTS, QUERY)
+        self.assertIn("receipt_publication_failure", receipt)
+        self.stage1.mkdir()  # restore for tearDown
+
+    def test_receipt_serialization_failure_publishes_minimal(self):
+        receipt = {"schema": s1.RECEIPT_SCHEMA, "status": "REJECTED",
+                   "failure": "x", "bad": object()}
+        s1.publish_receipt(receipt)
+        sealed = json.loads((self.stage1 / "receipt.json").read_text())
+        self.assertEqual(sealed["status"], "REJECTED")
+        self.assertIn("serialization failed", sealed["failure"])
+
     def test_token_never_appears_in_sealed_receipt(self):
         secret = "SECRET-TOKEN-XYZ-9c41"
         with mock.patch.dict(os.environ, {"GITHUB_TOKEN": secret}):
