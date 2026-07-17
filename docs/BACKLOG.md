@@ -516,6 +516,63 @@ AC: demoable via `make dev` on the fixture corpus; bounded-proof language
 throughout ("no blockers found within the stated evidence scope"), coverage
 certificate rendered with every conclusion.
 
+## EPIC 16 — Investigations product slice *(post-gate: requires GATE2-V2 ESTABLISHED and pilot continuation decision; all code on a post-gate branch)*
+
+Productizes the contract suite: [domain contract](./INVESTIGATION_DOMAIN_CONTRACT.md)
+v0.2, [experience spec](./INVESTIGATIONS.md) rev 3, [MCP envelope](./MCP_ENVELOPE.md)
+v0.2, [pack manifest](./PACK_MANIFEST.md) v0.2. The synthetic fixtures under
+`docs/fixtures/investigations/` are the conformance bar wherever cited.
+
+**T16.1 · Investigation domain storage** — schema.surql tables and store
+methods for Investigation, Revision, Run, RunEvent, RunArtifact, Decision,
+Disposition, BaselineDesignation, Watch/WatchRevision per contract §2
+mutability rules. AC: table-driven tests prove in-place edits of immutable
+entities fail; run state derives only from RunEvents; creation idempotency
+key returns the existing Run; supersession is the sole correction path.
+
+**T16.2 · Immutable revisions, pins, retention ownership** *(needs T16.1)* —
+Revision freeze; RunArtifact publication binds `PinRun`; pin ownership and
+GC per contract §5. AC: pinned artifacts survive sweep; revocation/legal
+policy overrides pins; GC refuses while an authorized owner exists.
+
+**T16.3 · Authorization invariants** *(needs T16.1)* — query-time principal
+projection on every read; count/existence non-disclosure; opaque ids;
+refusal shape of fixture 06; re-authorization on sharing and transfer.
+AC: negative-test matrix passes incl. fixtures 05/06 byte-shapes; unknown
+and unauthorized are indistinguishable; cursors void on ownership transfer.
+
+**T16.4 · Guided creation and async run state** *(needs T16.1–T16.3)* —
+creation API with scope preview, authorization preflight, estimate, cancel,
+bounded retries; publication lease. AC: failed/canceled attempts can never
+publish (late-worker test); partial failures surface in the coverage
+ledger; creation is idempotent under concurrent submission.
+
+**T16.5 · Core views** *(needs T16.4)* — Overview (four cards, derived
+eligibility badge with blocker codes), Census, Coverage, Evidence;
+empty-state taxonomy first. AC: fixtures 01–05 each render their distinct
+state; the eligibility badge has no write path; `make dev` demoable.
+
+**T16.6 · MCP envelope implementation** *(needs T16.3; parallel to T16.5)* —
+envelope v0.2 on the existing MCP tools; generated JSON Schemas checked in.
+AC: all eight fixtures validate against the generated schemas; refusal
+indistinguishability test; server-rendered qualification text only.
+
+**T16.7 · Consumer ledger and comparable diff** *(needs T16.2)* —
+first/last-seen edge ledger (the retention change from VISION architecture
+notes); cause-classified diff per contract §8 with comparison-report
+fallback. AC: prohibited causes never render as removals; fixtures 07/08
+semantics enforced; ledger rows survive run sweep.
+
+**T16.8 · Review projection** *(needs T16.7)* — deterministic ReviewItems,
+queues (new consumers, coverage regression, unresolved attribution),
+per-principal cursors. AC: identical deltas yield identical item ids; items
+supersede and expire by rule; no hand-creation path exists.
+
+**T16.9 · Dossier export** *(needs T16.2, T16.3, T16.5)* — sealed export per
+contract §8 with offline verification script. AC: digest chain verifies
+offline with no phebs instance; export redacts to recipient scope at export
+time; reopening re-authorizes against current ACLs.
+
 ## Deliberate non-goals *(per PORT_MAP §7/§12)*
 
 SCIM provisioning, multi-org RBAC / seats, and a cloned "Ask" chat app —
