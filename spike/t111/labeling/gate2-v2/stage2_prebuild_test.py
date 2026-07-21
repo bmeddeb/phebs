@@ -19,21 +19,25 @@ def p0(root: Path) -> dict:
     heads = {fixture: f"{index:040x}" for index, fixture in enumerate(prebuild.RECEIPT_FIXTURES, 1)}
     commands = {fixture: {"subcommand": "extract", "system": fixture} for fixture in prebuild.RECEIPT_FIXTURES}
     derived = root / "derived"
-    source_repo = root / "source"
+    source_repo = prebuild.REPO_ROOT
     cache_path = derived / "spike" / "t111" / ".module-cache"
     out_path = derived / "spike" / "t111" / "out"
     facts_root = derived / "spike" / "t111" / "stage2-facts"
     run_paths = {"run1": facts_root / "run1", "run2": facts_root / "run2"}
     run_receipts = {run: run_paths[run] / "fact-run-receipt.json" for run in run_paths}
+    ceremony = root / "ceremony"
     goroot = root / "toolchain" / "goroot"
     git = Path("/tmp/git")
     go = goroot / "bin" / "go"
     go_digest = digest("e")
     git_digest = digest("d")
     variables = {
-        "PATH": prebuild.sealed_path(go, git),
-        "GOROOT": str(goroot),
-        **prebuild.STATIC_ENVIRONMENT,
+        phase: prebuild.sealed_phase_environment(
+            go_executable=go,
+            git_executable=git,
+            scratch_root=ceremony / "scratch" / phase,
+        )
+        for phase in ("hydration", "offline")
     }
     source_t111 = str(source_repo / "spike" / "t111" / ".module-cache" / "bin" / "t111")
     derived_t111 = str(cache_path / "bin" / "t111")
@@ -46,7 +50,9 @@ def p0(root: Path) -> dict:
         "forbid_alternates": True,
         "before_checkout": True,
     }
-    source_commit = "c" * 40
+    # The derived source must be the exact accepted implementation revision,
+    # while the control repository may later advance to commit the P0 record.
+    source_commit = "a" * 40
 
     def publication(run: str) -> dict:
         return {
@@ -93,10 +99,10 @@ def p0(root: Path) -> dict:
         for run in ("run1", "run2")
     }
     state = {
-        "ceremony_directory": str(root / "ceremony"),
-        "consumption_marker": str(root / "ceremony" / "consumed.json"),
-        "terminal_receipt": str(root / "ceremony" / "terminal.json"),
-        "evidence_receipt": str(root / "ceremony" / "evidence.json"),
+        "ceremony_directory": str(ceremony),
+        "consumption_marker": str(ceremony / "consumed.json"),
+        "terminal_receipt": str(ceremony / "terminal.json"),
+        "evidence_receipt": str(ceremony / "evidence.json"),
     }
     projection_runs = {
         run: {
@@ -185,6 +191,12 @@ def p0(root: Path) -> dict:
             "binary_copy_policy": "forbid",
         },
         "inputs": inputs,
+        "prior_authorizations": {
+            "estimator": {
+                "path": prebuild.ESTIMATOR_AUTHORIZATION_REL,
+                "sha256": inputs["estimator_authorization_sha256"],
+            }
+        },
         "toolchain": {
             "python_executable": "/tmp/python3",
             "python_version": "3.9.6",
@@ -201,9 +213,15 @@ def p0(root: Path) -> dict:
             "hydration": {
                 "proxy": "https://proxy.golang.org",
                 "sumdb": "sum.golang.org",
-                "variables": variables,
+                "scratch_root": str(ceremony / "scratch" / "hydration"),
+                "variables": variables["hydration"],
             },
-            "offline": {"proxy": "off", "sumdb": "off", "variables": variables},
+            "offline": {
+                "proxy": "off",
+                "sumdb": "off",
+                "scratch_root": str(ceremony / "scratch" / "offline"),
+                "variables": variables["offline"],
+            },
         },
         "derived_root": {
             "root": str(derived),
@@ -420,6 +438,10 @@ class PrebuildAuthorizationTests(unittest.TestCase):
             with self.assertRaises(prebuild.PrebuildError):
                 prebuild.load_authorization(self.write(root, value))
             value = p0(root)
+            value["operations"]["source_clone"]["source_repo_path"] = str(root / "external-source")
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
             value["state"]["consumption_marker"] = (
                 value["operations"]["hydrate"]["commands"]["temporal"]["capture"]["stdout_path"]
             )
@@ -515,6 +537,15 @@ class PrebuildAuthorizationTests(unittest.TestCase):
     def test_rejects_clone_bundle_and_fresh_cache_drift(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()
+            value = p0(root)
+            value["prior_authorizations"]["estimator"]["sha256"] = digest("0")
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["operations"]["source_clone"]["source_commit"] = "b" * 40
+            value["operations"]["source_clone"]["checkout_argv"][-1] = "b" * 40
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
             value = p0(root)
             value["operations"]["source_clone"]["clone_argv"][3] = "--local"
             with self.assertRaises(prebuild.PrebuildError):
@@ -704,6 +735,26 @@ class PrebuildAuthorizationTests(unittest.TestCase):
             root = Path(temporary).resolve()
             value = p0(root)
             value["operations"]["hydrate"]["commands"] = {}
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+
+    def test_rejects_missing_executor_binding_or_ambient_scratch_environment(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            value = p0(root)
+            del value["implementation"]["prebuild_executor_sha256"]
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["environment"]["hydration"]["variables"]["TMPDIR"] = "/tmp"
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["environment"]["offline"]["scratch_root"] = value["environment"]["hydration"]["scratch_root"]
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["state"]["terminal_receipt"] = str(root / "ceremony" / "nested" / "terminal.json")
             with self.assertRaises(prebuild.PrebuildError):
                 prebuild.load_authorization(self.write(root, value))
             value = p0(root)

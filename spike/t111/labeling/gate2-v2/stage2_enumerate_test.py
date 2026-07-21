@@ -45,6 +45,15 @@ def _digest(character: str) -> str:
     return "sha256:" + character * 64
 
 
+def _review_binding_line(relative: str, digest: str) -> str:
+    return f"- `{relative}`: `{digest}`\n"
+
+
+def _plan_row(marker: str, approval: str, *bindings: tuple[str, str]) -> bytes:
+    joined = ";".join(f"{key}={value}" for key, value in bindings)
+    return f"| 2026-07-21 | {marker} | {approval} | {joined} |\n".encode("utf-8")
+
+
 def _write_fact_runs(root: Path, *, failure_fixture=None, same_run_id=False):
     run1, run2 = root / "run1", root / "run2"
     run1.mkdir(); run2.mkdir()
@@ -106,6 +115,7 @@ def _write_canonical(path: Path, value: dict) -> bytes:
     path.parent.mkdir(parents=True, exist_ok=True)
     raw = (enum.canonical_json(value) + "\n").encode("utf-8")
     path.write_bytes(raw)
+    path.chmod(0o600)
     return raw
 
 
@@ -114,6 +124,7 @@ def _p0_result_chain_fixture(root: Path):
     root = root.resolve()
     execution_root = root / "derived"
     ceremony = root / "p0-ceremony"
+    ceremony.mkdir(mode=0o700)
     state = {
         "ceremony_directory": str(ceremony),
         "consumption_marker": str(ceremony / "consumed.json"),
@@ -163,6 +174,7 @@ def _p0_result_chain_fixture(root: Path):
     }
     implementation = {
         "prebuild_runner_sha256": _digest("8"),
+        "prebuild_executor_sha256": _digest("7"),
         "enumerator_sha256": _digest("9"),
         "enumerator_review_sha256": _digest("a"),
     }
@@ -962,8 +974,6 @@ class Stage2EnumerationTest(unittest.TestCase):
                 }
                 for run in ("run1", "run2")
             }
-            review_bytes = b"# Prebuild review\n\n**Verdict: ACCEPT.**\n"
-            review_digest = enum.sha256_bytes(review_bytes)
             evidence = {
                 "schema": enum.PREBUILD_EVIDENCE_SCHEMA,
                 "status": "COMPLETE",
@@ -991,6 +1001,14 @@ class Stage2EnumerationTest(unittest.TestCase):
                 },
             }
             evidence_raw = (enum.canonical_json(evidence) + "\n").encode("utf-8")
+            review_bytes = (
+                "# Prebuild review\n\n"
+                + _review_binding_line(
+                    "stage2-prebuild-evidence.json", enum.sha256_bytes(evidence_raw)
+                )
+                + "\n**Verdict: ACCEPT.**\n"
+            ).encode("utf-8")
+            review_digest = enum.sha256_bytes(review_bytes)
             evidence_path.write_bytes(evidence_raw)
             review_path.write_bytes(review_bytes)
             authorization = {
@@ -1051,6 +1069,38 @@ class Stage2EnumerationTest(unittest.TestCase):
                     enum.load_prebuild_evidence()
                 evidence_path.write_bytes(evidence_raw)
                 enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                def install_review(candidate: bytes) -> None:
+                    review_path.write_bytes(candidate)
+                    authorization["prebuild_evidence"]["review"]["sha256"] = (
+                        enum.sha256_bytes(candidate)
+                    )
+                    blobs["stage2-prebuild-evidence-review-r1.md"] = candidate
+                    blobs[f"{commit}:stage2-prebuild-evidence-review-r1.md"] = candidate
+
+                evidence_digest = authorization["prebuild_evidence"]["sha256"]
+                for candidate in (
+                    b"# Prebuild review\n\n**Verdict: ACCEPT.**\n",
+                    (
+                        "# Prebuild review\n\n"
+                        + _review_binding_line("wrong-evidence.json", evidence_digest)
+                        + "\n**Verdict: ACCEPT.**\n"
+                    ).encode("utf-8"),
+                    (
+                        "# Prebuild review\n\n"
+                        + _review_binding_line("stage2-prebuild-evidence.json", evidence_digest)
+                        + _review_binding_line("stage2-prebuild-evidence.json", evidence_digest)
+                        + "\n**Verdict: ACCEPT.**\n"
+                    ).encode("utf-8"),
+                    (
+                        "# Prebuild review\n\n"
+                        + _review_binding_line("stage2-prebuild-evidence.json", evidence_digest)
+                        + "\n**Verdict: ACCEPT.**\n**Verdict: REJECT.**\n"
+                    ).encode("utf-8"),
+                ):
+                    install_review(candidate)
+                    with self.assertRaises(enum.EnumerationError):
+                        enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                install_review(review_bytes)
                 authorization["p0_authorization"]["sha256"] = _digest("f")
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_prebuild_evidence(authorization, loaded, raw, args)
@@ -1097,9 +1147,40 @@ class Stage2EnumerationTest(unittest.TestCase):
             p0_path = root / "stage2-prebuild-authorization.json"
             p0_relative = "stage2-prebuild-authorization.json"
             p0 = copy.deepcopy(prebuild_tests.p0(root))
-            p0["implementation"]["prebuild_runner_sha256"] = enum.sha256_file(
-                enum.PREBUILD_RUNNER_PATH
-            )
+            implementation_commit = "a" * 40
+            parser_bytes = enum.PREBUILD_RUNNER_PATH.read_bytes()
+            executor_bytes = b"P0 executor bytes\n"
+            enumerator_bytes = b"enumerator bytes\n"
+            parser_digest = enum.sha256_bytes(parser_bytes)
+            executor_digest = enum.sha256_bytes(executor_bytes)
+            enumerator_digest = enum.sha256_bytes(enumerator_bytes)
+            enumerator_review_bytes = (
+                "# Enumeration review\n\n"
+                + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
+                + "\n**Verdict: ACCEPT.**\n"
+            ).encode("utf-8")
+            enumerator_review_digest = enum.sha256_bytes(enumerator_review_bytes)
+            implementation_review_bytes = (
+                "# P0 executor review\n\n**Verdict: ACCEPT.**\n\n"
+                + _review_binding_line(enum.PREBUILD_RUNNER_REL, parser_digest)
+                + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
+                + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
+                + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+            ).encode("utf-8")
+            p0["implementation"] = {
+                "prebuild_runner_sha256": parser_digest,
+                "prebuild_executor_sha256": executor_digest,
+                "enumerator_sha256": enumerator_digest,
+                "enumerator_review_sha256": enumerator_review_digest,
+            }
+            p0["implementation_review"] = {
+                "status": "accepted",
+                "accepted_commit": implementation_commit,
+                "record_sha256": enum.sha256_bytes(implementation_review_bytes),
+            }
+            p0["implementation_binding"] = {
+                "status": "executable", "commit": implementation_commit,
+            }
             p0_bytes = (enum.canonical_json(p0) + "\n").encode("utf-8")
             p0_path.write_bytes(p0_bytes)
             p0_digest = enum.sha256_bytes(p0_bytes)
@@ -1109,6 +1190,10 @@ class Stage2EnumerationTest(unittest.TestCase):
                 "path": p0_relative,
                 "sha256": p0_digest,
                 "authorization_commit": p0_commit,
+            }
+            authorization_record = {
+                "p0_authorization": binding,
+                "prior_authorizations": copy.deepcopy(p0["prior_authorizations"]),
             }
             inputs = p0["inputs"]
             toolchain = p0["toolchain"]
@@ -1141,16 +1226,32 @@ class Stage2EnumerationTest(unittest.TestCase):
                     for run in ("run1", "run2")
                 },
             }
-            plan = (
-                f"| 2026-07-21 | {enum.PLAN_P0_AUTHORIZATION_MARKER} | "
-                f"**{enum.PLAN_P0_AUTHORIZATION_APPROVAL}.** "
-                f"{p0['authorization_id']} {p0_digest} |\n"
-            ).encode("utf-8")
+            plan = _plan_row(
+                enum.PLAN_P0_AUTHORIZATION_MARKER,
+                enum.PLAN_P0_AUTHORIZATION_APPROVAL,
+                ("authorization_id", p0["authorization_id"]),
+                ("authorization_sha256", p0_digest),
+            )
+            implementation_plan = _plan_row(
+                enum.PLAN_P0_IMPLEMENTATION_MARKER,
+                enum.PLAN_P0_IMPLEMENTATION_APPROVAL,
+                (enum.PREBUILD_RUNNER_REL, parser_digest),
+                (enum.PREBUILD_EXECUTOR_REL, executor_digest),
+                (enum.ENUMERATOR_REL, enumerator_digest),
+                (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+                (enum.PREBUILD_EXECUTOR_REVIEW_REL, p0["implementation_review"]["record_sha256"]),
+            )
             blobs = {
                 f"HEAD:{p0_relative}": p0_bytes,
                 f"{p0_commit}:{p0_relative}": p0_bytes,
                 f"{evidence_commit}:{p0_relative}": p0_bytes,
                 f"{p0_commit}:PLAN.md": plan,
+                f"{implementation_commit}:{enum.PREBUILD_RUNNER_REL}": parser_bytes,
+                f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}": executor_bytes,
+                f"{implementation_commit}:{enum.ENUMERATOR_REL}": enumerator_bytes,
+                f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
+                f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}": implementation_review_bytes,
+                f"{implementation_commit}:PLAN.md": implementation_plan,
             }
 
             def control(*arguments):
@@ -1164,14 +1265,22 @@ class Stage2EnumerationTest(unittest.TestCase):
                 mock.patch.object(enum, "_control_git", side_effect=control),
             ):
                 enum.verify_p0_authorization_binding(
-                    {"p0_authorization": binding},
+                    authorization_record,
                     evidence,
                     evidence_commit,
                 )
                 self.assertFalse((root / "derived").exists())
+                mismatched_prior = copy.deepcopy(authorization_record)
+                mismatched_prior["prior_authorizations"]["estimator"]["sha256"] = _digest("0")
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        mismatched_prior,
+                        evidence,
+                        evidence_commit,
+                    )
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        authorization_record,
                         evidence,
                         p0_commit,
                     )
@@ -1181,14 +1290,17 @@ class Stage2EnumerationTest(unittest.TestCase):
                 fabricated_evidence["p0_authorization"] = dict(fabricated)
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": fabricated},
+                        {
+                            "p0_authorization": fabricated,
+                            "prior_authorizations": authorization_record["prior_authorizations"],
+                        },
                         fabricated_evidence,
                         evidence_commit,
                     )
                 evidence["derived_lock_sha256"] = _digest("0")
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1200,7 +1312,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 evidence["execution_root"] = "/sealed/other-derived-root"
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1209,7 +1321,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 evidence["heads"] = {**inputs["heads"], "temporal": "f" * 40}
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1220,7 +1332,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 }
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1249,7 +1361,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 p0_path.write_bytes((enum.canonical_json(p0) + "\n").encode("utf-8"))
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1258,7 +1370,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 p0_path.write_bytes((enum.canonical_json(p0) + "\n").encode("utf-8"))
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1267,7 +1379,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 p0_path.write_bytes((enum.canonical_json(p0) + "\n").encode("utf-8"))
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1276,7 +1388,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 blobs[f"{p0_commit}:PLAN.md"] = b"| no authorization anchor |\n"
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
-                        {"p0_authorization": binding},
+                        authorization_record,
                         evidence,
                         evidence_commit,
                     )
@@ -1313,6 +1425,31 @@ class Stage2EnumerationTest(unittest.TestCase):
             fixture["evidence"]["fact_runs"]["run2"]["run_id"] = fixture["p0"]["fact_runs"]["run2"]["run_id"]
             fixture["terminal"]["status"] = "ABORTED"
             _write_canonical(fixture["paths"]["terminal_receipt"], fixture["terminal"])
+            with self.assertRaises(enum.EnumerationError):
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
+
+    def test_p0_result_chain_refuses_ceremony_parent_or_direct_record_symlink(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            fixture = _p0_result_chain_fixture(root)
+            ceremony = fixture["paths"]["ceremony_directory"]
+            real_ceremony = root / "real-p0-ceremony"
+            ceremony.rename(real_ceremony)
+            ceremony.symlink_to(real_ceremony, target_is_directory=True)
+            with self.assertRaises(enum.EnumerationError):
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            fixture = _p0_result_chain_fixture(root)
+            marker = fixture["paths"]["consumption_marker"]
+            alternate = root / "marker-outside.json"
+            marker.rename(alternate)
+            marker.symlink_to(alternate)
             with self.assertRaises(enum.EnumerationError):
                 enum.verify_p0_result_chain(
                     fixture["authorization"], fixture["evidence"], fixture["p0"]
@@ -1368,14 +1505,21 @@ class Stage2EnumerationTest(unittest.TestCase):
         commit = "a" * 40
         enum_bytes = b"enumerator bytes\n"
         snapshot_bytes = b"snapshot bytes\n"
-        review_bytes = b"# Review\n\n**Verdict: ACCEPT.**\n"
-        review_digest = enum.sha256_bytes(review_bytes)
-        plan_bytes = (
-            f"| 2026-07-21 | {enum.PLAN_IMPLEMENTATION_MARKER} | "
-            f"**{enum.PLAN_IMPLEMENTATION_APPROVAL}.** {review_digest} |\n"
+        enum_digest = enum.sha256_bytes(enum_bytes)
+        review_bytes = (
+            "# Review\n\n"
+            + _review_binding_line(enum.ENUMERATOR_REL, enum_digest)
+            + "\n**Verdict: ACCEPT.**\n"
         ).encode("utf-8")
+        review_digest = enum.sha256_bytes(review_bytes)
+        plan_bytes = _plan_row(
+            enum.PLAN_IMPLEMENTATION_MARKER,
+            enum.PLAN_IMPLEMENTATION_APPROVAL,
+            (enum.ENUMERATION_REVIEW_REL, review_digest),
+            (enum.ENUMERATOR_REL, enum_digest),
+        )
         authorization = {
-            "enumerator_sha256": enum.sha256_bytes(enum_bytes),
+            "enumerator_sha256": enum_digest,
             "stage1_snapshot_sha256": enum.sha256_bytes(snapshot_bytes),
             "review": {
                 "status": "accepted", "accepted_commit": commit,
@@ -1401,6 +1545,337 @@ class Stage2EnumerationTest(unittest.TestCase):
             with self.assertRaises(enum.EnumerationError):
                 enum.verify_reviewed_binding(authorization)
 
+    def test_review_and_plan_acceptance_are_exact_structural_records(self):
+        enum_digest = _digest("a")
+        review_digest = _digest("b")
+        review = (
+            "# Review\n\n"
+            + _review_binding_line(enum.ENUMERATOR_REL, enum_digest)
+            + "\n**Verdict: ACCEPT.**\n"
+        ).encode("utf-8")
+        enum._enumerator_review_record(review, enum_digest)
+        review_prefix = (
+            "# Review\n\n"
+            + _review_binding_line(enum.ENUMERATOR_REL, enum_digest)
+            + "\n"
+        )
+        for verdict in (
+            "**Verdict: ACCEPTED.**",
+            "**Verdict: NOT ACCEPT.**",
+            "> **Verdict: ACCEPT.**",
+            "**Verdict: ACCEPT.**\n**Verdict: ACCEPT.**",
+            "**Verdict: ACCEPT.**\n**Verdict: REJECT.**",
+        ):
+            with self.subTest(verdict=verdict):
+                rejected = (review_prefix + verdict + "\n").encode("utf-8")
+                with self.assertRaises(enum.EnumerationError):
+                    enum._enumerator_review_record(rejected, enum_digest)
+        prose_binding = (
+            "# Review\n\nThis reviewed `"
+            + enum.ENUMERATOR_REL
+            + "`: `"
+            + enum_digest
+            + "`.\n\n**Verdict: ACCEPT.**\n"
+        ).encode("utf-8")
+        with self.assertRaises(enum.EnumerationError):
+            enum._enumerator_review_record(prose_binding, enum_digest)
+        with self.assertRaises(enum.EnumerationError):
+            enum._enumerator_review_record(
+                review.replace(
+                    b"\n**Verdict: ACCEPT.**\n",
+                    _review_binding_line(enum.ENUMERATOR_REL, enum_digest).encode("utf-8")
+                    + b"\n**Verdict: ACCEPT.**\n",
+                ),
+                enum_digest,
+            )
+
+        valid_plan = _plan_row(
+            enum.PLAN_IMPLEMENTATION_MARKER,
+            enum.PLAN_IMPLEMENTATION_APPROVAL,
+            (enum.ENUMERATION_REVIEW_REL, review_digest),
+            (enum.ENUMERATOR_REL, enum_digest),
+        )
+        enum._accepted_review_anchor(valid_plan, review_digest, enum_digest)
+        historical_row = _plan_row(
+            "GATE2-V2 Stage-2 enumeration verifier, r3",
+            "ACCEPT",
+            ("historical", _digest("0")),
+        )
+        enum._accepted_review_anchor(historical_row + valid_plan, review_digest, enum_digest)
+        for decision in (
+            f"{enum.PLAN_IMPLEMENTATION_APPROVAL}ED",
+            "NOT ACCEPT",
+        ):
+            rejected = _plan_row(
+                enum.PLAN_IMPLEMENTATION_MARKER,
+                decision,
+                (enum.ENUMERATION_REVIEW_REL, review_digest),
+                (enum.ENUMERATOR_REL, enum_digest),
+            )
+            with self.assertRaises(enum.EnumerationError):
+                enum._accepted_review_anchor(rejected, review_digest, enum_digest)
+        quoted = b"> " + valid_plan
+        with self.assertRaises(enum.EnumerationError):
+            enum._accepted_review_anchor(quoted, review_digest, enum_digest)
+        with self.assertRaises(enum.EnumerationError):
+            enum._accepted_review_anchor(
+                valid_plan
+                + f"Narrative: {enum.PLAN_IMPLEMENTATION_MARKER}\n".encode("utf-8"),
+                review_digest,
+                enum_digest,
+            )
+        with self.assertRaises(enum.EnumerationError):
+            enum._accepted_review_anchor(
+                valid_plan.replace(b"\n", b"\r\n"), review_digest, enum_digest,
+            )
+        missing_enum_binding = valid_plan.replace(
+            enum.ENUMERATOR_REL.encode("utf-8"), b"wrong-enumerator.py", 1
+        )
+        with self.assertRaises(enum.EnumerationError):
+            enum._accepted_review_anchor(missing_enum_binding, review_digest, enum_digest)
+
+    def test_p0_implementation_review_and_plan_bind_every_artifact(self):
+        parser_digest = _digest("a")
+        executor_digest = _digest("b")
+        enumerator_digest = _digest("c")
+        enumerator_review_digest = _digest("d")
+        implementation_review_digest = _digest("e")
+        artifact_pairs = (
+            (enum.PREBUILD_RUNNER_REL, parser_digest),
+            (enum.PREBUILD_EXECUTOR_REL, executor_digest),
+            (enum.ENUMERATOR_REL, enumerator_digest),
+            (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+        )
+        review = (
+            "# P0 executor review\n\n**Verdict: ACCEPT.**\n\n"
+            + "".join(_review_binding_line(path, digest) for path, digest in artifact_pairs)
+        ).encode("utf-8")
+        enum._p0_implementation_review_record(
+            review,
+            parser_digest=parser_digest,
+            executor_digest=executor_digest,
+            enumerator_digest=enumerator_digest,
+            enumerator_review_digest=enumerator_review_digest,
+        )
+        plan = _plan_row(
+            enum.PLAN_P0_IMPLEMENTATION_MARKER,
+            enum.PLAN_P0_IMPLEMENTATION_APPROVAL,
+            *artifact_pairs,
+            (enum.PREBUILD_EXECUTOR_REVIEW_REL, implementation_review_digest),
+        )
+        plan_kwargs = {
+            "implementation_review_digest": implementation_review_digest,
+            "parser_digest": parser_digest,
+            "executor_digest": executor_digest,
+            "enumerator_digest": enumerator_digest,
+            "enumerator_review_digest": enumerator_review_digest,
+        }
+        enum._p0_implementation_plan_anchor(plan, **plan_kwargs)
+        for index, token in enumerate(
+            tuple(value for pair in artifact_pairs for value in pair)
+        ):
+            with self.subTest(record_token=token):
+                rejected = review.replace(token.encode("utf-8"), f"wrong-{index}".encode("utf-8"), 1)
+                with self.assertRaises(enum.EnumerationError):
+                    enum._p0_implementation_review_record(rejected, **{
+                        "parser_digest": parser_digest,
+                        "executor_digest": executor_digest,
+                        "enumerator_digest": enumerator_digest,
+                        "enumerator_review_digest": enumerator_review_digest,
+                    })
+        for index, token in enumerate(
+            (enum.PREBUILD_EXECUTOR_REVIEW_REL, implementation_review_digest)
+            + tuple(value for pair in artifact_pairs for value in pair)
+        ):
+            with self.subTest(plan_token=token):
+                rejected = plan.replace(token.encode("utf-8"), f"wrong-{index}".encode("utf-8"), 1)
+                with self.assertRaises(enum.EnumerationError):
+                    enum._p0_implementation_plan_anchor(rejected, **plan_kwargs)
+
+    def test_p0_implementation_binding_requires_committed_transitive_acceptance(self):
+        implementation_commit = "a" * 40
+        p0_commit = "b" * 40
+        parser_bytes = b"P0 parser bytes\n"
+        executor_bytes = b"P0 executor bytes\n"
+        enumerator_bytes = b"enumerator bytes\n"
+        parser_digest = enum.sha256_bytes(parser_bytes)
+        executor_digest = enum.sha256_bytes(executor_bytes)
+        enumerator_digest = enum.sha256_bytes(enumerator_bytes)
+        enumerator_review_bytes = (
+            "# Enumeration review\n\n"
+            + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
+            + "\n**Verdict: ACCEPT.**\n"
+        ).encode("utf-8")
+        enumerator_review_digest = enum.sha256_bytes(enumerator_review_bytes)
+        implementation_review_bytes = (
+            "# P0 executor review\n\n**Verdict: ACCEPT.**\n\n"
+            + _review_binding_line(enum.PREBUILD_RUNNER_REL, parser_digest)
+            + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
+            + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
+            + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+        ).encode("utf-8")
+        implementation = {
+            "prebuild_runner_sha256": parser_digest,
+            "prebuild_executor_sha256": executor_digest,
+            "enumerator_sha256": enumerator_digest,
+            "enumerator_review_sha256": enumerator_review_digest,
+        }
+        review_digest = enum.sha256_bytes(implementation_review_bytes)
+        p0 = {
+            "implementation": implementation,
+            "implementation_review": {
+                "status": "accepted",
+                "accepted_commit": implementation_commit,
+                "record_sha256": review_digest,
+            },
+            "implementation_binding": {
+                "status": "executable",
+                "commit": implementation_commit,
+            },
+        }
+        plan_bytes = _plan_row(
+            enum.PLAN_P0_IMPLEMENTATION_MARKER,
+            enum.PLAN_P0_IMPLEMENTATION_APPROVAL,
+            (enum.PREBUILD_RUNNER_REL, parser_digest),
+            (enum.PREBUILD_EXECUTOR_REL, executor_digest),
+            (enum.ENUMERATOR_REL, enumerator_digest),
+            (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+            (enum.PREBUILD_EXECUTOR_REVIEW_REL, review_digest),
+        )
+        blobs = {
+            f"{implementation_commit}:{enum.PREBUILD_RUNNER_REL}": parser_bytes,
+            f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}": executor_bytes,
+            f"{implementation_commit}:{enum.ENUMERATOR_REL}": enumerator_bytes,
+            f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
+            f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}": implementation_review_bytes,
+            f"{implementation_commit}:PLAN.md": plan_bytes,
+        }
+
+        def control(*args):
+            if args[:2] == ("merge-base", "--is-ancestor"):
+                return b""
+            return blobs[args[1]]
+
+        with mock.patch.object(enum, "_control_git", side_effect=control):
+            enum._verify_p0_implementation_binding(p0, p0_commit)
+
+            blobs[f"{implementation_commit}:{enum.PREBUILD_RUNNER_REL}"] = b"unreviewed parser\n"
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:{enum.PREBUILD_RUNNER_REL}"] = parser_bytes
+
+            blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}"] = b"unreviewed executor\n"
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}"] = executor_bytes
+
+            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = b"wrong enum review\n"
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = enumerator_review_bytes
+
+            nonaccepting_enumerator_review_bytes = (
+                "# Enumeration review\n\n"
+                + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
+                + "\n**Verdict: ACCEPTED.**\n"
+            ).encode("utf-8")
+            p0["implementation"]["enumerator_review_sha256"] = enum.sha256_bytes(
+                nonaccepting_enumerator_review_bytes
+            )
+            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = (
+                nonaccepting_enumerator_review_bytes
+            )
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            p0["implementation"]["enumerator_review_sha256"] = enum.sha256_bytes(
+                enumerator_review_bytes
+            )
+            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = enumerator_review_bytes
+
+            unbound_review_bytes = (
+                "# P0 executor review\n\n**Verdict: ACCEPT.**\n\n"
+                + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
+            ).encode("utf-8")
+            unbound_review_digest = enum.sha256_bytes(unbound_review_bytes)
+            p0["implementation_review"]["record_sha256"] = unbound_review_digest
+            blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}"] = unbound_review_bytes
+            blobs[f"{implementation_commit}:PLAN.md"] = _plan_row(
+                enum.PLAN_P0_IMPLEMENTATION_MARKER,
+                enum.PLAN_P0_IMPLEMENTATION_APPROVAL,
+                (enum.PREBUILD_RUNNER_REL, parser_digest),
+                (enum.PREBUILD_EXECUTOR_REL, executor_digest),
+                (enum.ENUMERATOR_REL, enumerator_digest),
+                (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+                (enum.PREBUILD_EXECUTOR_REVIEW_REL, unbound_review_digest),
+            )
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+
+            nonaccepting_review_bytes = (
+                "# P0 executor review\n\n**Verdict: ACCEPTED.**\n\n"
+                + _review_binding_line(enum.PREBUILD_RUNNER_REL, parser_digest)
+                + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
+                + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
+                + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+            ).encode("utf-8")
+            nonaccepting_review_digest = enum.sha256_bytes(nonaccepting_review_bytes)
+            p0["implementation_review"]["record_sha256"] = nonaccepting_review_digest
+            blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}"] = nonaccepting_review_bytes
+            blobs[f"{implementation_commit}:PLAN.md"] = _plan_row(
+                enum.PLAN_P0_IMPLEMENTATION_MARKER,
+                enum.PLAN_P0_IMPLEMENTATION_APPROVAL,
+                (enum.PREBUILD_RUNNER_REL, parser_digest),
+                (enum.PREBUILD_EXECUTOR_REL, executor_digest),
+                (enum.ENUMERATOR_REL, enumerator_digest),
+                (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+                (enum.PREBUILD_EXECUTOR_REVIEW_REL, nonaccepting_review_digest),
+            )
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            p0["implementation_review"]["record_sha256"] = review_digest
+            blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}"] = implementation_review_bytes
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes
+
+            incomplete_review_bytes = implementation_review_bytes.replace(
+                parser_digest.encode("ascii"), _digest("0").encode("ascii"), 1
+            )
+            incomplete_review_digest = enum.sha256_bytes(incomplete_review_bytes)
+            p0["implementation_review"]["record_sha256"] = incomplete_review_digest
+            blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}"] = incomplete_review_bytes
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes.replace(
+                review_digest.encode("ascii"), incomplete_review_digest.encode("ascii"), 1
+            )
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            p0["implementation_review"]["record_sha256"] = review_digest
+            blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}"] = implementation_review_bytes
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes
+
+            blobs[f"{implementation_commit}:PLAN.md"] = b"| unrelated acceptance |\n"
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes
+
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes.replace(
+                implementation["prebuild_executor_sha256"].encode("ascii"),
+                _digest("0").encode("ascii"),
+                1,
+            )
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes
+
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes.replace(
+                enum.ENUMERATION_REVIEW_REL.encode("utf-8"), b"wrong-review.md", 1
+            )
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes
+
+            p0["implementation_binding"]["commit"] = p0_commit
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+
     def test_environment_is_exactly_bound_before_use(self):
         git = Path("/tools/git")
         go = Path("/tools/go")
@@ -1425,9 +1900,19 @@ class Stage2EnumerationTest(unittest.TestCase):
             ceremony_root.mkdir(); ceremony_root.chmod(0o700)
             prior = ceremony_root / "estimator"
             attempt = ceremony_root / "attempt-3"
+            p0_ceremony = ceremony_root / "p0-completed"
             current = root / "new-ceremony"
-            prior.mkdir(); attempt.mkdir(); current.mkdir()
-            prior.chmod(0o700); attempt.chmod(0o700); current.chmod(0o700)
+            prior.mkdir(); attempt.mkdir(); p0_ceremony.mkdir(); current.mkdir()
+            prior.chmod(0o700); attempt.chmod(0o700); p0_ceremony.chmod(0o700); current.chmod(0o700)
+            completed_p0 = {
+                "authorization_id": "stage2-prebuild-auth-1",
+                "state": {
+                    "ceremony_directory": str(p0_ceremony),
+                    "consumption_marker": str(p0_ceremony / "consumed.json"),
+                    "evidence_receipt": str(p0_ceremony / "evidence.json"),
+                    "terminal_receipt": str(p0_ceremony / "terminal.json"),
+                },
+            }
             prior_value = {
                 "schema": "t111-estimator-authorization-v1",
                 "authorization_id": "t111-estimator-auth-1",
@@ -1460,16 +1945,16 @@ class Stage2EnumerationTest(unittest.TestCase):
                 mock.patch.object(enum, "ESTIMATOR_AUTHORIZATION_REL", "prior-authorization.json"),
                 mock.patch.object(enum, "_head_blob", return_value=prior_raw),
             ):
-                enum.verify_authorized_state_namespaces(authorization)
+                enum.verify_authorized_state_namespaces(authorization, completed_p0)
                 # A deleted prior ceremony remains a reserved canonical
                 # namespace; it must not make a genuinely disjoint new
                 # ceremony fail admission.
                 attempt.rmdir()
-                enum.verify_authorized_state_namespaces(authorization)
+                enum.verify_authorized_state_namespaces(authorization, completed_p0)
                 attempt.mkdir(); attempt.chmod(0o700)
                 authorization["authorization_id"] = "t111-estimator-auth-1"
                 with self.assertRaises(enum.EnumerationError):
-                    enum.verify_authorized_state_namespaces(authorization)
+                    enum.verify_authorized_state_namespaces(authorization, completed_p0)
                 authorization["authorization_id"] = "stage2-enumeration-auth-1"
                 for namespace in (prior, attempt):
                     overlap = namespace / "nested"
@@ -1481,7 +1966,57 @@ class Stage2EnumerationTest(unittest.TestCase):
                         "terminal_receipt": str(overlap / "terminal.json"),
                     }
                     with self.assertRaises(enum.EnumerationError):
-                        enum.verify_authorized_state_namespaces(authorization)
+                        enum.verify_authorized_state_namespaces(authorization, completed_p0)
+
+    def test_completed_p0_reserves_id_and_exact_ancestor_descendant_namespaces(self):
+        for relation in ("exact", "ancestor", "descendant"):
+            with self.subTest(relation=relation), tempfile.TemporaryDirectory() as tmp:
+                root = Path(tmp).resolve()
+                fixture = _p0_result_chain_fixture(root)
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
+                p0_ceremony = fixture["paths"]["ceremony_directory"]
+                if relation == "exact":
+                    ceremony = p0_ceremony
+                elif relation == "ancestor":
+                    ceremony = root
+                else:
+                    ceremony = p0_ceremony / "final-nested"
+                    ceremony.mkdir(mode=0o700)
+                authorization = {
+                    "authorization_id": "stage2-enumeration-auth-1",
+                    "state": {
+                        "ceremony_directory": str(ceremony),
+                        "output_dir": str(ceremony / "output"),
+                        "consumption_marker": str(ceremony / "final-consumed.json"),
+                        "terminal_receipt": str(ceremony / "final-terminal.json"),
+                    },
+                }
+                with mock.patch.object(enum, "_load_prior_ceremony_roots", return_value=(set(), set())):
+                    with self.assertRaises(enum.EnumerationError):
+                        enum.verify_authorized_state_namespaces(authorization, fixture["p0"])
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            fixture = _p0_result_chain_fixture(root)
+            enum.verify_p0_result_chain(
+                fixture["authorization"], fixture["evidence"], fixture["p0"]
+            )
+            ceremony = root / "independent-final-ceremony"
+            ceremony.mkdir(mode=0o700)
+            authorization = {
+                "authorization_id": fixture["p0"]["authorization_id"],
+                "state": {
+                    "ceremony_directory": str(ceremony),
+                    "output_dir": str(ceremony / "output"),
+                    "consumption_marker": str(ceremony / "final-consumed.json"),
+                    "terminal_receipt": str(ceremony / "final-terminal.json"),
+                },
+            }
+            with mock.patch.object(enum, "_load_prior_ceremony_roots", return_value=(set(), set())):
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_authorized_state_namespaces(authorization, fixture["p0"])
 
     def test_state_writes_refuse_when_no_follow_is_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -91,10 +91,17 @@ P0_AUTHORIZATION_REL = P0_AUTHORIZATION_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EVIDENCE_REL = PREBUILD_EVIDENCE_PATH.relative_to(REPO_ROOT).as_posix()
 ENUMERATOR_REL = Path(__file__).resolve().relative_to(REPO_ROOT).as_posix()
 PREBUILD_RUNNER_PATH = HERE / "stage2_prebuild.py"
+PREBUILD_RUNNER_REL = PREBUILD_RUNNER_PATH.relative_to(REPO_ROOT).as_posix()
+PREBUILD_EXECUTOR_PATH = HERE / "stage2_prebuild_execute.py"
+PREBUILD_EXECUTOR_REL = PREBUILD_EXECUTOR_PATH.relative_to(REPO_ROOT).as_posix()
+PREBUILD_EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r1.md"
+PREBUILD_EXECUTOR_REVIEW_REL = PREBUILD_EXECUTOR_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 STAGE1_SNAPSHOT_REL = (HERE / "stage1_snapshot.py").relative_to(REPO_ROOT).as_posix()
 # This implementation revision must be accepted afresh; r1 binds the prior
 # verifier bytes and cannot authorize a later prebuild-admission extension.
-ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r2.md"
+# Every executable path must name the same forthcoming r4 review; older r2/r3
+# records remain historical and cannot bless this revised verifier.
+ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r4.md"
 ENUMERATION_REVIEW_REL = ENUMERATION_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EVIDENCE_REVIEW_PATH = HERE / "stage2-prebuild-evidence-review-r1.md"
 PREBUILD_EVIDENCE_REVIEW_REL = PREBUILD_EVIDENCE_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
@@ -104,7 +111,12 @@ PLAN_AUTHORIZATION_MARKER = "GATE2-V2 Stage-2 enumeration authorization"
 PLAN_AUTHORIZATION_APPROVAL = "AUTHORIZATION: APPROVED"
 PLAN_P0_AUTHORIZATION_MARKER = "GATE2-V2 Stage-2 P0 prebuild authorization"
 PLAN_P0_AUTHORIZATION_APPROVAL = "AUTHORIZATION: APPROVED"
-PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier"
+PLAN_P0_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 P0 executor"
+PLAN_P0_IMPLEMENTATION_APPROVAL = "ACCEPT"
+# Version the exact marker as well as the review filename.  Older accepted
+# rows are retained in PLAN.md as history, so an unversioned substring would
+# make the current executable approval permanently ambiguous.
+PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r4"
 PLAN_IMPLEMENTATION_APPROVAL = "ACCEPT"
 PYTHON_MODE = "isolated-no-site"
 TOOLCHAIN_IDENTITY_RE = re.compile(
@@ -228,6 +240,7 @@ P0_AUTHORIZATION_FIELDS = {
     "implementation",
     "bootstrap",
     "inputs",
+    "prior_authorizations",
     "toolchain",
     "environment",
     "derived_root",
@@ -245,6 +258,16 @@ P0_STATE_FIELDS = {
     "terminal_receipt",
     "evidence_receipt",
 }
+P0_IMPLEMENTATION_FIELDS = {
+    "prebuild_runner_sha256",
+    "prebuild_executor_sha256",
+    "enumerator_sha256",
+    "enumerator_review_sha256",
+}
+P0_IMPLEMENTATION_REVIEW_FIELDS = {"status", "accepted_commit", "record_sha256"}
+P0_IMPLEMENTATION_BINDING_FIELDS = {"status", "commit"}
+P0_PRIOR_AUTHORIZATION_FIELDS = {"estimator"}
+P0_PRIOR_ESTIMATOR_FIELDS = {"path", "sha256"}
 P0_RECORD_PROJECTIONS_FIELDS = {"evidence", "terminal"}
 P0_EVIDENCE_PROJECTION_FIELDS = {
     "schema",
@@ -912,7 +935,7 @@ def load_prebuild_evidence() -> tuple[dict[str, Any], bytes]:
 def verify_prebuild_evidence(
     authorization: dict[str, Any], evidence: dict[str, Any], evidence_bytes: bytes,
     args: argparse.Namespace,
-) -> None:
+) -> dict[str, Any]:
     """Bind a reviewed, committed prebuild to its sealed source/fact inputs.
 
     The P0 evidence is committed before its review.  The final authorization
@@ -943,7 +966,11 @@ def verify_prebuild_evidence(
         raise EnumerationError("accepted prebuild commit does not contain the evidence bytes")
     if review_bytes != _commit_blob(accepted_commit, PREBUILD_EVIDENCE_REVIEW_REL):
         raise EnumerationError("accepted prebuild commit does not contain the review bytes")
-    _accepted_review_record(review_bytes)
+    _review_binds_exact_artifacts(
+        review_bytes,
+        label="prebuild evidence review",
+        artifacts=((PREBUILD_EVIDENCE_REL, binding["sha256"]),),
+    )
     if evidence["p0_authorization"] != authorization["p0_authorization"]:
         raise EnumerationError("prebuild evidence differs on its P0 authorization binding")
     p0 = verify_p0_authorization_binding(authorization, evidence, accepted_commit)
@@ -972,6 +999,10 @@ def verify_prebuild_evidence(
         actual = getattr(args, name, None)
         if not isinstance(actual, str) or actual != expected:
             raise EnumerationError(f"{name.replace('_', '-')} differs from the prebuild evidence")
+    # ``p0`` is a completed, independently verified predecessor at this point.
+    # The final one-shot must reserve its state namespace before it creates its
+    # own irreversible marker.
+    return p0
 
 
 def verify_authorized_toolchain_identity(authorization: dict[str, Any]) -> None:
@@ -1043,32 +1074,127 @@ def _require_ancestor(commit: str, label: str) -> None:
 
 
 def _require_ancestor_of(ancestor: str, descendant: str, label: str) -> None:
-    """Require an already-authorized record to predate a later review commit."""
+    """Require an already-bound record to predate a later bound commit."""
     if not _valid_full_commit(ancestor) or not _valid_full_commit(descendant):
         raise EnumerationError(f"{label} has an invalid commit binding")
     if ancestor == descendant:
-        raise EnumerationError(f"{label} does not strictly predate the accepted evidence review")
+        raise EnumerationError(f"{label} does not strictly predate its later binding")
     try:
         _control_git("merge-base", "--is-ancestor", ancestor, descendant)
     except EnumerationError as exc:
-        raise EnumerationError(f"{label} does not predate the accepted evidence review") from exc
+        raise EnumerationError(f"{label} does not predate its later binding") from exc
 
 
 def _p0_plan_anchor(plan_bytes: bytes, authorization_id: str, authorization_sha256: str) -> None:
     """Require the P0 approval to be durable at its own prebuild commit."""
-    try:
-        text = plan_bytes.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise EnumerationError("P0 authorization PLAN cannot be read") from exc
-    if not any(
-        line.lstrip().startswith("|")
-        and PLAN_P0_AUTHORIZATION_MARKER in line
-        and PLAN_P0_AUTHORIZATION_APPROVAL in line
-        and authorization_id in line
-        and authorization_sha256 in line
-        for line in text.splitlines()
+    _require_plan_acceptance(
+        plan_bytes,
+        marker=PLAN_P0_AUTHORIZATION_MARKER,
+        approval=PLAN_P0_AUTHORIZATION_APPROVAL,
+        bindings=(
+            f"authorization_id={authorization_id}",
+            f"authorization_sha256={authorization_sha256}",
+        ),
+        label="P0 authorization commit",
+    )
+
+
+def _p0_implementation_plan_anchor(
+    plan_bytes: bytes,
+    *,
+    implementation_review_digest: str,
+    parser_digest: str,
+    executor_digest: str,
+    enumerator_digest: str,
+    enumerator_review_digest: str,
+) -> None:
+    """Require the P0 executor acceptance at the implementation commit.
+
+    P0's authorization is necessarily committed later, so its parser can only
+    establish the review's *syntax*.  E1 must instead verify the earlier
+    committed implementation row which binds both the independent review and
+    the executor source it accepted.
+    """
+    _require_plan_acceptance(
+        plan_bytes,
+        marker=PLAN_P0_IMPLEMENTATION_MARKER,
+        approval=PLAN_P0_IMPLEMENTATION_APPROVAL,
+        bindings=(
+            f"{PREBUILD_RUNNER_REL}={parser_digest}",
+            f"{PREBUILD_EXECUTOR_REL}={executor_digest}",
+            f"{ENUMERATOR_REL}={enumerator_digest}",
+            f"{ENUMERATION_REVIEW_REL}={enumerator_review_digest}",
+            f"{PREBUILD_EXECUTOR_REVIEW_REL}={implementation_review_digest}",
+        ),
+        label="P0 implementation commit",
+    )
+
+
+def _verify_p0_implementation_binding(p0: dict[str, Any], p0_commit: str) -> None:
+    """Bind P0's executor provenance before accepting any E1-derived state.
+
+    The P0 parser validates its own authorization envelope but does not read
+    Git history.  Requiring its complete transitive acceptance chain here
+    prevents a syntactically plausible P0 from blessing M0/R0/T0 produced by
+    an unreviewed parser or executor.  All reads are immutable local Git
+    blobs; no derived root or prebuild output is opened on this path.
+    """
+    implementation = p0.get("implementation")
+    review = p0.get("implementation_review")
+    binding = p0.get("implementation_binding")
+    if (
+        not isinstance(implementation, dict)
+        or set(implementation) != P0_IMPLEMENTATION_FIELDS
+        or not isinstance(review, dict)
+        or set(review) != P0_IMPLEMENTATION_REVIEW_FIELDS
+        or review.get("status") != "accepted"
+        or not isinstance(binding, dict)
+        or set(binding) != P0_IMPLEMENTATION_BINDING_FIELDS
+        or binding.get("status") != "executable"
+        or not _valid_full_commit(review.get("accepted_commit"))
+        or binding.get("commit") != review["accepted_commit"]
     ):
-        raise EnumerationError("P0 authorization commit lacks its PLAN approval")
+        raise EnumerationError("P0 authorization lacks an accepted implementation binding")
+    digests = {
+        field: require_sha256(implementation.get(field), f"P0 implementation {field}")
+        for field in P0_IMPLEMENTATION_FIELDS
+    }
+    review_digest = require_sha256(
+        review.get("record_sha256"), "P0 implementation review digest"
+    )
+    accepted_commit = review["accepted_commit"]
+    _require_ancestor(accepted_commit, "P0 implementation review commit")
+    _require_ancestor_of(
+        accepted_commit, p0_commit, "P0 implementation review commit"
+    )
+    for relative, expected, label in (
+        (PREBUILD_RUNNER_REL, digests["prebuild_runner_sha256"], "P0 admission parser"),
+        (PREBUILD_EXECUTOR_REL, digests["prebuild_executor_sha256"], "P0 executor"),
+        (ENUMERATOR_REL, digests["enumerator_sha256"], "enumeration verifier"),
+        (ENUMERATION_REVIEW_REL, digests["enumerator_review_sha256"], "enumeration review"),
+        (PREBUILD_EXECUTOR_REVIEW_REL, review_digest, "P0 implementation review"),
+    ):
+        if sha256_bytes(_commit_blob(accepted_commit, relative)) != expected:
+            raise EnumerationError(f"P0 implementation commit does not contain the accepted {label}")
+    _enumerator_review_record(
+        _commit_blob(accepted_commit, ENUMERATION_REVIEW_REL),
+        digests["enumerator_sha256"],
+    )
+    _p0_implementation_review_record(
+        _commit_blob(accepted_commit, PREBUILD_EXECUTOR_REVIEW_REL),
+        parser_digest=digests["prebuild_runner_sha256"],
+        executor_digest=digests["prebuild_executor_sha256"],
+        enumerator_digest=digests["enumerator_sha256"],
+        enumerator_review_digest=digests["enumerator_review_sha256"],
+    )
+    _p0_implementation_plan_anchor(
+        _commit_blob(accepted_commit, "PLAN.md"),
+        implementation_review_digest=review_digest,
+        parser_digest=digests["prebuild_runner_sha256"],
+        executor_digest=digests["prebuild_executor_sha256"],
+        enumerator_digest=digests["enumerator_sha256"],
+        enumerator_review_digest=digests["enumerator_review_sha256"],
+    )
 
 
 def _verify_p0_admission_parser(p0: dict[str, Any], p0_bytes: bytes) -> None:
@@ -1135,12 +1261,41 @@ def _p0_state_targets(p0: dict[str, Any]) -> dict[str, Path]:
     ):
         raise EnumerationError("P0 authorization reuses result state paths")
     for path in values:
-        try:
-            path.relative_to(ceremony)
-        except ValueError as exc:
-            raise EnumerationError("P0 authorization result state escapes its ceremony") from exc
-        if path == ceremony:
-            raise EnumerationError("P0 authorization result state collides with its ceremony")
+        if path.parent != ceremony:
+            raise EnumerationError("P0 authorization result state is not a direct ceremony leaf")
+    return {"ceremony_directory": ceremony, **targets}
+
+
+def _canonical_p0_state_targets(p0: dict[str, Any]) -> dict[str, Path]:
+    """Open-normalize P0's completed M0/R0/T0 namespace before its records.
+
+    The P0 authorization is lexical.  A completed predecessor is safe to use
+    as a reservation only after its ceremony and each direct record parent are
+    walked with ``O_NOFOLLOW`` under an owner-private directory.  The actual
+    record files are opened separately (also no-follow) before any bytes are
+    read in :func:`verify_p0_result_chain`.
+    """
+    raw = _p0_state_targets(p0)
+    ceremony = _canonical_private_directory(
+        raw["ceremony_directory"], "P0 ceremony directory"
+    )
+    targets = {
+        name: _canonical_state_target(raw[name], f"P0 {label}")
+        for name, label in (
+            ("consumption_marker", "consumption marker"),
+            ("evidence_receipt", "evidence receipt"),
+            ("terminal_receipt", "terminal receipt"),
+        )
+    }
+    values = list(targets.values())
+    if any(
+        _state_paths_overlap(first, second)
+        for index, first in enumerate(values)
+        for second in values[index + 1 :]
+    ):
+        raise EnumerationError("P0 canonical result state paths collide")
+    if any(path.parent != ceremony for path in values):
+        raise EnumerationError("P0 canonical result state escapes its ceremony")
     return {"ceremony_directory": ceremony, **targets}
 
 
@@ -1343,6 +1498,15 @@ def verify_p0_authorization_binding(
         raise EnumerationError("P0 authorization has an invalid signed state")
     if sha256_bytes(p0_bytes) != binding["sha256"]:
         raise EnumerationError("P0 authorization digest does not match enumeration authorization")
+    p0_prior = p0_value.get("prior_authorizations")
+    if (
+        not isinstance(p0_prior, dict)
+        or set(p0_prior) != P0_PRIOR_AUTHORIZATION_FIELDS
+        or not isinstance(p0_prior.get("estimator"), dict)
+        or set(p0_prior["estimator"]) != P0_PRIOR_ESTIMATOR_FIELDS
+        or p0_prior != authorization.get("prior_authorizations")
+    ):
+        raise EnumerationError("P0 authorization does not bind the sealed prior ceremony registry")
     if p0_bytes != _head_blob(P0_AUTHORIZATION_REL):
         raise EnumerationError("P0 authorization is not the committed authorization version")
     p0_commit = binding["authorization_commit"]
@@ -1357,6 +1521,7 @@ def verify_p0_authorization_binding(
         p0_value["authorization_id"],
         binding["sha256"],
     )
+    _verify_p0_implementation_binding(p0_value, p0_commit)
     _verify_p0_admission_parser(p0_value, p0_bytes)
     _verify_p0_evidence_projection(p0_value, evidence)
     return p0_value
@@ -1547,23 +1712,20 @@ def verify_p0_result_chain(
     enumeration marker has been created.
     """
     authorization_sha256 = authorization["p0_authorization"]["sha256"]
-    state_targets = _p0_state_targets(p0)
+    state_targets = _canonical_p0_state_targets(p0)
     execution_root = _p0_execution_root(p0)
     planned_runs = _p0_fact_run_projection(p0, execution_root)
     _p0_record_projections(p0, state_targets, execution_root, planned_runs)
 
-    marker, marker_bytes = load_canonical_json_bytes(
-        state_targets["consumption_marker"], "P0 consumption marker"
-    )
+    records = _open_p0_state_records(state_targets)
+    marker, marker_bytes = records["consumption_marker"]
     marker_sha256 = sha256_bytes(marker_bytes)
     _p0_result_marker(
         marker,
         authorization_id=p0["authorization_id"],
         authorization_sha256=authorization_sha256,
     )
-    result, result_bytes = load_canonical_json_bytes(
-        state_targets["evidence_receipt"], "P0 evidence receipt"
-    )
+    result, result_bytes = records["evidence_receipt"]
     result_sha256 = sha256_bytes(result_bytes)
     _p0_result_evidence(
         result,
@@ -1572,9 +1734,7 @@ def verify_p0_result_chain(
         marker_sha256=marker_sha256,
         evidence=evidence,
     )
-    terminal, terminal_bytes = load_canonical_json_bytes(
-        state_targets["terminal_receipt"], "P0 terminal receipt"
-    )
+    terminal, terminal_bytes = records["terminal_receipt"]
     terminal_sha256 = sha256_bytes(terminal_bytes)
     _p0_result_terminal(
         terminal,
@@ -1590,28 +1750,134 @@ def verify_p0_result_chain(
         raise EnumerationError("prebuild evidence does not bind the completed P0 result chain")
 
 
-def _accepted_review_anchor(plan_bytes: bytes, review_digest: str) -> None:
+def _plan_row_cells(line: str) -> tuple[str, str, str, str] | None:
+    """Parse the shared four-content-cell P0/enum PLAN record.
+
+    The executor and final verifier deliberately share this literal format:
+    ``| YYYY-MM-DD | marker | approval | semicolon-bound-digests |``.  It
+    avoids treating narrative prose, quoted examples, or ``ACCEPTED`` as an
+    executable approval.
+    """
+    parts = line.split("|")
+    if len(parts) != 6 or parts[0] != "" or parts[-1] != "":
+        return None
+    cells: list[str] = []
+    for part in parts[1:-1]:
+        if (
+            len(part) < 2
+            or part[0] != " "
+            or part[-1] != " "
+            or part[1:-1].strip() != part[1:-1]
+        ):
+            return None
+        cells.append(part[1:-1])
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", cells[0]):
+        return None
+    return cells[0], cells[1], cells[2], cells[3]
+
+
+def _require_plan_acceptance(
+    plan_bytes: bytes,
+    *,
+    marker: str,
+    approval: str,
+    bindings: Iterable[str],
+    label: str,
+) -> None:
+    """Require one exact shared-format PLAN row and ordered bindings."""
     try:
         text = plan_bytes.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise EnumerationError("review binding PLAN cannot be read") from exc
-    if not any(
-        line.lstrip().startswith("|")
-        and PLAN_IMPLEMENTATION_MARKER in line
-        and PLAN_IMPLEMENTATION_APPROVAL in line
-        and review_digest in line
-        for line in text.splitlines()
+        raise EnumerationError(f"{label} PLAN cannot be read") from exc
+    if "\r" in text:
+        raise EnumerationError(f"{label} PLAN is not LF-normalized")
+    candidates = [line for line in text.split("\n") if marker in line]
+    if len(candidates) != 1:
+        raise EnumerationError(f"{label} lacks one structurally accepted PLAN row")
+    cells = _plan_row_cells(candidates[0])
+    if cells is None:
+        raise EnumerationError(f"{label} PLAN row is not structurally exact")
+    _date, row_marker, row_approval, row_bindings = cells
+    if (
+        row_marker != marker
+        or row_approval != approval
+        or row_bindings != ";".join(bindings)
     ):
-        raise EnumerationError("binding commit lacks the accepted implementation review")
+        raise EnumerationError(f"{label} lacks its structurally accepted PLAN row")
 
 
-def _accepted_review_record(review_bytes: bytes) -> None:
+def _accepted_review_anchor(
+    plan_bytes: bytes, review_digest: str, enumerator_digest: str,
+) -> None:
+    try:
+        _require_plan_acceptance(
+            plan_bytes,
+            marker=PLAN_IMPLEMENTATION_MARKER,
+            approval=PLAN_IMPLEMENTATION_APPROVAL,
+            bindings=(
+                f"{ENUMERATION_REVIEW_REL}={review_digest}",
+                f"{ENUMERATOR_REL}={enumerator_digest}",
+            ),
+            label="enumeration implementation binding commit",
+        )
+    except EnumerationError as exc:
+        raise EnumerationError("binding commit lacks the accepted implementation review") from exc
+
+
+def _accepted_review_record(review_bytes: bytes) -> str:
     try:
         text = review_bytes.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise EnumerationError("binding review record cannot be read") from exc
-    if "Verdict: ACCEPT" not in text:
+    if "\r" in text:
+        raise EnumerationError("binding review record is not LF-normalized")
+    verdicts = [line for line in text.split("\n") if line.startswith("**Verdict:")]
+    if verdicts != ["**Verdict: ACCEPT.**"]:
         raise EnumerationError("binding review record is not accepted")
+    return text
+
+
+def _review_binds_exact_artifacts(
+    review_bytes: bytes,
+    *,
+    label: str,
+    artifacts: Iterable[tuple[str, str]],
+) -> None:
+    """Require an accepted review to name each exact artifact/digest pair."""
+    text = _accepted_review_record(review_bytes)
+    lines = text.split("\n")
+    for relative, digest in artifacts:
+        if lines.count(f"- `{relative}`: `{digest}`") != 1:
+            raise EnumerationError(f"{label} does not bind the accepted artifact bytes")
+
+
+def _enumerator_review_record(review_bytes: bytes, enumerator_digest: str) -> None:
+    _review_binds_exact_artifacts(
+        review_bytes,
+        label="enumeration review",
+        artifacts=((ENUMERATOR_REL, enumerator_digest),),
+    )
+
+
+def _p0_implementation_review_record(
+    review_bytes: bytes,
+    *,
+    parser_digest: str,
+    executor_digest: str,
+    enumerator_digest: str,
+    enumerator_review_digest: str,
+) -> None:
+    """Require the executor review to bind the complete P0 trust closure."""
+    _review_binds_exact_artifacts(
+        review_bytes,
+        label="P0 implementation review",
+        artifacts=(
+            (PREBUILD_RUNNER_REL, parser_digest),
+            (PREBUILD_EXECUTOR_REL, executor_digest),
+            (ENUMERATOR_REL, enumerator_digest),
+            (ENUMERATION_REVIEW_REL, enumerator_review_digest),
+        ),
+    )
 
 
 def verify_reviewed_binding(authorization: dict[str, Any]) -> None:
@@ -1636,8 +1902,15 @@ def verify_reviewed_binding(authorization: dict[str, Any]) -> None:
     ):
         if sha256_bytes(_commit_blob(binding_commit, relative)) != expected:
             raise EnumerationError(f"binding commit does not contain the accepted {label}")
-    _accepted_review_record(_commit_blob(binding_commit, ENUMERATION_REVIEW_REL))
-    _accepted_review_anchor(_commit_blob(binding_commit, "PLAN.md"), review["record_sha256"])
+    _enumerator_review_record(
+        _commit_blob(binding_commit, ENUMERATION_REVIEW_REL),
+        authorization["enumerator_sha256"],
+    )
+    _accepted_review_anchor(
+        _commit_blob(binding_commit, "PLAN.md"),
+        review["record_sha256"],
+        authorization["enumerator_sha256"],
+    )
 
 
 def _require_clean_tracked_worktree() -> None:
@@ -1723,18 +1996,18 @@ def verify_committed_authorization(
     if review_bytes is None:
         raise EnumerationError("enumeration review cannot be bound")
     try:
-        text = plan_bytes.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise EnumerationError("signed plan cannot be read") from exc
-    if not any(
-        line.lstrip().startswith("|")
-        and PLAN_AUTHORIZATION_MARKER in line
-        and PLAN_AUTHORIZATION_APPROVAL in line
-        and authorization["authorization_id"] in line
-        and authorization_sha256 in line
-        for line in text.splitlines()
-    ):
-        raise EnumerationError("signed plan does not contain the authorization identifier")
+        _require_plan_acceptance(
+            plan_bytes,
+            marker=PLAN_AUTHORIZATION_MARKER,
+            approval=PLAN_AUTHORIZATION_APPROVAL,
+            bindings=(
+                f"authorization_id={authorization['authorization_id']}",
+                f"authorization_sha256={authorization_sha256}",
+            ),
+            label="signed plan",
+        )
+    except EnumerationError as exc:
+        raise EnumerationError("signed plan does not contain the authorization identifier") from exc
     if sha256_bytes(review_bytes) != authorization["review"]["record_sha256"]:
         raise EnumerationError("enumeration review record does not match authorization")
     verify_reviewed_binding(authorization)
@@ -2798,6 +3071,82 @@ def _canonical_state_target(path: Path, label: str) -> Path:
         os.close(descriptor)
 
 
+def _open_private_state_record(path: Path, label: str) -> int:
+    """Open an existing owner-private direct state record without links."""
+    parent_fd = _open_private_state_parent(path, label)
+    try:
+        descriptor = os.open(
+            path.name, os.O_RDONLY | _no_follow_flag(label), dir_fd=parent_fd
+        )
+    except OSError as exc:
+        os.close(parent_fd)
+        raise EnumerationError(f"{label} is unavailable") from exc
+    os.close(parent_fd)
+    try:
+        info = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) & 0o077
+        ):
+            raise EnumerationError(f"{label} is not an owner-private regular file")
+        return descriptor
+    except BaseException:
+        os.close(descriptor)
+        raise
+
+
+def _read_opened_canonical_json(descriptor: int, label: str) -> tuple[Any, bytes]:
+    """Read a no-follow descriptor whose ancestry was already checked."""
+    chunks: list[bytes] = []
+    try:
+        while True:
+            block = os.read(descriptor, 1024 * 1024)
+            if not block:
+                break
+            chunks.append(block)
+    except OSError as exc:
+        raise EnumerationError(f"{label} cannot be read") from exc
+    raw = b"".join(chunks)
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise EnumerationError(f"{label} is not valid JSON") from exc
+    if raw != (canonical_json(value) + "\n").encode("utf-8"):
+        raise EnumerationError(f"{label} is not canonical JSON")
+    return value, raw
+
+
+def _open_p0_state_records(
+    state_targets: dict[str, Path],
+) -> dict[str, tuple[Any, bytes]]:
+    """Open all three P0 records before reading any one of them.
+
+    This holds a descriptor for M0, R0, and T0 only after each has passed the
+    owner-private, no-symlink walk.  It avoids a read-time name swap between
+    separately verified state paths.
+    """
+    labels = {
+        "consumption_marker": "P0 consumption marker",
+        "evidence_receipt": "P0 evidence receipt",
+        "terminal_receipt": "P0 terminal receipt",
+    }
+    descriptors: dict[str, int] = {}
+    try:
+        for name in ("consumption_marker", "evidence_receipt", "terminal_receipt"):
+            descriptors[name] = _open_private_state_record(state_targets[name], labels[name])
+        return {
+            name: _read_opened_canonical_json(descriptors[name], labels[name])
+            for name in ("consumption_marker", "evidence_receipt", "terminal_receipt")
+        }
+    finally:
+        for descriptor in descriptors.values():
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+
+
 def _canonical_reserved_namespace(path: Path, label: str) -> Path:
     """Normalize a sealed historical namespace even if it was later removed.
 
@@ -2908,9 +3257,26 @@ def _load_prior_ceremony_roots(authorization: dict[str, Any]) -> tuple[set[str],
     return {value["authorization_id"]}, namespaces
 
 
-def verify_authorized_state_namespaces(authorization: dict[str, Any]) -> None:
-    """Enforce fresh, private Stage-2 state outside every prior ceremony."""
+def verify_authorized_state_namespaces(
+    authorization: dict[str, Any], completed_p0: dict[str, Any],
+) -> None:
+    """Enforce fresh private state outside estimator and completed-P0 ceremony.
+
+    ``completed_p0`` comes only from :func:`verify_prebuild_evidence`, after
+    its M0/R0/T0 chain has been opened and proven complete.  Treating it as a
+    prior reservation closes the otherwise available exact/ancestor/descendant
+    collision between P0's irreversible state and the final marker.
+    """
     prior_ids, prior_roots = _load_prior_ceremony_roots(authorization)
+    if (
+        not isinstance(completed_p0, dict)
+        or not isinstance(completed_p0.get("authorization_id"), str)
+        or not completed_p0["authorization_id"]
+    ):
+        raise EnumerationError("completed P0 has no usable ceremony reservation")
+    p0_state = _canonical_p0_state_targets(completed_p0)
+    prior_ids = {*prior_ids, completed_p0["authorization_id"]}
+    prior_roots = {*prior_roots, p0_state["ceremony_directory"]}
     if authorization["authorization_id"] in prior_ids:
         raise EnumerationError("enumeration authorization reuses a prior authorization identifier")
     ceremony = _canonical_private_directory(
@@ -3306,13 +3672,15 @@ def run(args: argparse.Namespace) -> int:
     if sha256_file(Path(__file__)) != authorization["enumerator_sha256"]:
         raise EnumerationError("enumerator bytes do not match authorization")
     authorization_sha256 = verify_committed_authorization(authorization, authorization_bytes)
-    verify_prebuild_evidence(authorization, prebuild_evidence, prebuild_evidence_bytes, args)
+    completed_p0 = verify_prebuild_evidence(
+        authorization, prebuild_evidence, prebuild_evidence_bytes, args
+    )
     verify_interpreter(authorization)
     # Verify and install the exact no-network Git/Go environment before any
     # Stage-0 key, receipt, derived lock, cache, corpus, or fact byte is
     # opened or hashed.
     authorized_tools = configure_sealed_execution_environment(authorization)
-    verify_authorized_state_namespaces(authorization)
+    verify_authorized_state_namespaces(authorization, completed_p0)
     inventory, stage0_inventory_sha256 = read_inventory_sealed(STAGE0_INVENTORY)
     if stage0_inventory_sha256 != authorization["stage0_inventory_sha256"]:
         raise EnumerationError("Stage-0 inventory digest does not match authorization")

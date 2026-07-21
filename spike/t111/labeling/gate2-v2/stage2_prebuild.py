@@ -35,6 +35,7 @@ sys.dont_write_bytecode = True
 
 
 HERE = Path(__file__).resolve().parent
+REPO_ROOT = HERE.parents[3]
 AUTHORIZATION_PATH = HERE / "stage2-prebuild-authorization.json"
 
 AUTH_SCHEMA = "t111-gate2-v2-stage2-prebuild-authorization-v1"
@@ -58,6 +59,7 @@ AUTHORIZATION_FIELDS = {
     "implementation",
     "bootstrap",
     "inputs",
+    "prior_authorizations",
     "toolchain",
     "environment",
     "derived_root",
@@ -79,6 +81,7 @@ BOOTSTRAP_FIELDS = {
 }
 IMPLEMENTATION_FIELDS = {
     "prebuild_runner_sha256",
+    "prebuild_executor_sha256",
     "enumerator_sha256",
     "enumerator_review_sha256",
 }
@@ -96,6 +99,9 @@ INPUT_FIELDS = {
     "typedcalloracle_binary_sha256",
     "heads",
 }
+PRIOR_AUTHORIZATION_FIELDS = {"estimator"}
+PRIOR_ESTIMATOR_AUTHORIZATION_FIELDS = {"path", "sha256"}
+ESTIMATOR_AUTHORIZATION_REL = "spike/t111/labeling/estimator-authorization.json"
 TOOLCHAIN_FIELDS = {
     "python_executable",
     "python_version",
@@ -107,7 +113,16 @@ TOOLCHAIN_FIELDS = {
     "producer_toolchain_identity",
 }
 ENVIRONMENT_FIELDS = {"hydration", "offline"}
-PHASE_ENVIRONMENT_FIELDS = {"variables", "proxy", "sumdb"}
+PHASE_ENVIRONMENT_FIELDS = {"variables", "proxy", "sumdb", "scratch_root"}
+PHASE_SCRATCH_VARIABLES = {
+    "TMPDIR",
+    "TMP",
+    "TEMP",
+    "HOME",
+    "XDG_CONFIG_HOME",
+    "XDG_CACHE_HOME",
+    "XDG_DATA_HOME",
+}
 DERIVED_ROOT_FIELDS = {
     "root",
     "lock_path",
@@ -278,6 +293,7 @@ RECORD_PROJECTION_FACT_RUN_FIELDS = {"run_id", "root", "receipt_path"}
 
 STATIC_ENVIRONMENT = {
     "GIT_ASKPASS": "/usr/bin/false",
+    "GIT_ALLOW_PROTOCOL": "file",
     "GIT_CONFIG_COUNT": "3",
     "GIT_CONFIG_GLOBAL": "/dev/null",
     "GIT_CONFIG_KEY_0": "core.hooksPath",
@@ -408,6 +424,72 @@ def sealed_path(go_executable: Path, git_executable: Path) -> str:
         if directory not in directories:
             directories.append(directory)
     return ":".join(directories)
+
+
+def sealed_phase_environment(
+    *,
+    go_executable: Path,
+    git_executable: Path,
+    scratch_root: Path,
+) -> dict[str, str]:
+    """Return P0's complete child environment for one named phase.
+
+    ``t111`` consults ``os.TempDir`` before it assembles any inner child
+    environment.  The P0 envelope therefore owns every temp/home/XDG root;
+    none may quietly inherit from the operator's login environment.
+    """
+    temporary = scratch_root / "tmp"
+    return {
+        "PATH": sealed_path(go_executable, git_executable),
+        "GOROOT": str(go_executable.parent.parent),
+        "TMPDIR": str(temporary),
+        "TMP": str(temporary),
+        "TEMP": str(temporary),
+        "HOME": str(scratch_root / "home"),
+        "XDG_CONFIG_HOME": str(scratch_root / "xdg-config"),
+        "XDG_CACHE_HOME": str(scratch_root / "xdg-cache"),
+        "XDG_DATA_HOME": str(scratch_root / "xdg-data"),
+        **STATIC_ENVIRONMENT,
+    }
+
+
+def _validate_phase_environments(
+    environment: dict[str, Any],
+    *,
+    ceremony: Path,
+    go_executable: Path,
+    git_executable: Path,
+) -> dict[str, Path]:
+    """Require separately-owned scratch namespaces for hydration/offline.
+
+    The roots are deliberately declared in P0 rather than inferred from a
+    platform temporary directory.  This keeps both Go's pre-child tempfile
+    behavior and any Git/XDG lookup inside a private, reviewable namespace.
+    """
+    scratch_roots: dict[str, Path] = {}
+    expected_keys = {"PATH", "GOROOT", *STATIC_ENVIRONMENT, *PHASE_SCRATCH_VARIABLES}
+    for phase in ("hydration", "offline"):
+        phase_environment = environment[phase]
+        scratch = _absolute(phase_environment.get("scratch_root"), f"{phase} scratch root")
+        expected_scratch = ceremony / "scratch" / phase
+        if scratch != expected_scratch:
+            raise PrebuildError(f"prebuild authorization has an invalid {phase} scratch root")
+        variables = phase_environment.get("variables")
+        if (
+            not isinstance(variables, dict)
+            or set(variables) != expected_keys
+            or variables
+            != sealed_phase_environment(
+                go_executable=go_executable,
+                git_executable=git_executable,
+                scratch_root=scratch,
+            )
+        ):
+            raise PrebuildError(f"prebuild authorization has an invalid {phase} variables binding")
+        scratch_roots[phase] = scratch
+    if _paths_overlap(scratch_roots["hydration"], scratch_roots["offline"]):
+        raise PrebuildError("prebuild authorization reuses a phase scratch namespace")
+    return scratch_roots
 
 
 def _canonical_json(path: Path) -> tuple[Any, bytes]:
@@ -590,6 +672,13 @@ def _source_clone_plan(
     if not isinstance(value, dict) or set(value) != SOURCE_CLONE_FIELDS:
         raise PrebuildError("prebuild authorization has an invalid source-clone plan")
     source = _absolute(value.get("source_repo_path"), "source repository path")
+    # The control checkout is the only source P0 may clone.  Allowing an
+    # arbitrary sibling repository would let a later authorization bind a
+    # differently-shaped control history than the committed P0/PLAN chain.
+    # Keep this lexical: admission is deliberately read-only and must not
+    # resolve or probe a future source tree.
+    if source != REPO_ROOT:
+        raise PrebuildError("source repository differs from the canonical control repository")
     source_commit = _oid(value.get("source_commit"), "source commit")
     if _absolute(value.get("destination_path"), "source-clone destination") != root:
         raise PrebuildError("source-clone destination differs from the derived root")
@@ -1073,6 +1162,24 @@ def load_authorization(path: Path | None = None) -> tuple[dict[str, Any], bytes]
     for fixture in RECEIPT_FIXTURES:
         _oid(heads[fixture], f"head {fixture}")
 
+    prior_authorizations = value["prior_authorizations"]
+    if (
+        not isinstance(prior_authorizations, dict)
+        or set(prior_authorizations) != PRIOR_AUTHORIZATION_FIELDS
+        or not isinstance(prior_authorizations["estimator"], dict)
+        or set(prior_authorizations["estimator"])
+        != PRIOR_ESTIMATOR_AUTHORIZATION_FIELDS
+        or prior_authorizations["estimator"].get("path")
+        != ESTIMATOR_AUTHORIZATION_REL
+        or prior_authorizations["estimator"].get("sha256")
+        != inputs["estimator_authorization_sha256"]
+    ):
+        raise PrebuildError("prebuild authorization has an invalid prior ceremony binding")
+    _sha256(
+        prior_authorizations["estimator"].get("sha256"),
+        "prior estimator authorization digest",
+    )
+
     toolchain = value["toolchain"]
     if not isinstance(toolchain, dict) or set(toolchain) != TOOLCHAIN_FIELDS:
         raise PrebuildError("prebuild authorization has an invalid toolchain binding")
@@ -1101,22 +1208,6 @@ def load_authorization(path: Path | None = None) -> tuple[dict[str, Any], bytes]
         phase_environment = environment[phase]
         if not isinstance(phase_environment, dict) or set(phase_environment) != PHASE_ENVIRONMENT_FIELDS:
             raise PrebuildError(f"prebuild authorization has an invalid {phase} environment")
-        variables = phase_environment.get("variables")
-        if not isinstance(variables, dict) or set(variables) != {"PATH", "GOROOT", *STATIC_ENVIRONMENT}:
-            raise PrebuildError(f"prebuild authorization has an invalid {phase} variables binding")
-        if (
-            not isinstance(variables.get("PATH"), str)
-            or variables["PATH"] != sealed_path(
-                executable_paths["go_executable"], executable_paths["git_executable"]
-            )
-            or "\n" in variables["PATH"]
-            or "\r" in variables["PATH"]
-            or any(variables[key] != expected for key, expected in STATIC_ENVIRONMENT.items())
-        ):
-            raise PrebuildError(f"prebuild authorization has an invalid {phase} variables binding")
-        goroot = _absolute(variables.get("GOROOT"), f"{phase} GOROOT")
-        if goroot != _absolute(toolchain["go_executable"], "go executable").parent.parent:
-            raise PrebuildError(f"prebuild authorization has an invalid {phase} GOROOT binding")
     hydration = environment["hydration"]
     if hydration.get("proxy") != "https://proxy.golang.org" or hydration.get("sumdb") != "sum.golang.org":
         raise PrebuildError("hydration environment is not allowlisted")
@@ -1182,6 +1273,26 @@ def load_authorization(path: Path | None = None) -> tuple[dict[str, Any], bytes]
         raise PrebuildError("prebuild authorization has overlapping terminal state paths")
     for field, path in state_targets.items():
         _path_within(path, ceremony, field)
+        if (
+            path.parent != ceremony
+            or not path.name.isascii()
+            or not path.name
+            or any(not (character.isalnum() or character in "._-") for character in path.name)
+        ):
+            raise PrebuildError("prebuild authorization has an unsafe terminal state leaf")
+
+    scratch_roots = _validate_phase_environments(
+        environment,
+        ceremony=ceremony,
+        go_executable=executable_paths["go_executable"],
+        git_executable=executable_paths["git_executable"],
+    )
+    if any(
+        _paths_overlap(scratch_root, state_path)
+        for scratch_root in scratch_roots.values()
+        for state_path in state_targets.values()
+    ):
+        raise PrebuildError("prebuild authorization overlaps phase scratch with terminal state")
 
     _record_projections(
         value["record_projections"],
@@ -1197,7 +1308,7 @@ def load_authorization(path: Path | None = None) -> tuple[dict[str, Any], bytes]
         raise PrebuildError("prebuild authorization has an invalid operation plan")
     if operations.get("order") != OPERATION_ORDER:
         raise PrebuildError("prebuild authorization has an invalid operation order")
-    source_repo, _source_commit = _source_clone_plan(
+    source_repo, source_commit = _source_clone_plan(
         operations["source_clone"],
         root=root,
         ceremony=ceremony,
@@ -1256,6 +1367,8 @@ def load_authorization(path: Path | None = None) -> tuple[dict[str, Any], bytes]
     accepted = _oid(review.get("accepted_commit"), "review accepted commit")
     if binding.get("commit") != accepted:
         raise PrebuildError("implementation binding does not match the accepted review")
+    if source_commit != accepted:
+        raise PrebuildError("source-clone commit does not match the accepted implementation binding")
     _sha256(review.get("record_sha256"), "review record digest")
     return value, raw
 
