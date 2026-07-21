@@ -167,14 +167,23 @@ CORPUS_PLAN_FIELDS = {"order", "fixtures"}
 CORPUS_FIXTURE_FIELDS = {
     "source_repo_path",
     "source_commit",
+    "source_history",
+    "source_ref",
     "destination_path",
     "bundle_path",
     "sequence",
+    "update_ref_argv",
     "bundle_argv",
     "init_argv",
     "normalization",
     "fetch_argv",
     "checkout_argv",
+}
+CORPUS_SOURCE_HISTORY_FIELDS = {
+    "is_shallow_repository",
+    "old_commit",
+    "sealed_commit",
+    "old_commit_is_ancestor",
 }
 LOCK_REWRITE_FIELDS = {
     "base_lock_path",
@@ -325,7 +334,7 @@ DERIVED_FACTS_RELATIVE = Path("spike/t111/stage2-facts")
 DERIVED_T111_RELATIVE = DERIVED_CACHE_RELATIVE / "bin" / "t111"
 PREBUILD_EVIDENCE_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-v1"
 PREBUILD_EVIDENCE_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-receipt-v1"
-PREBUILD_TERMINAL_SCHEMA = "t111-gate2-v2-stage2-prebuild-terminal-receipt-v1"
+PREBUILD_TERMINAL_SCHEMA = "t111-gate2-v2-stage2-prebuild-terminal-receipt-v2"
 OPERATION_ORDER = [
     "source_clone",
     "lock_rewrite",
@@ -336,7 +345,7 @@ OPERATION_ORDER = [
     "extract",
 ]
 SOURCE_CLONE_SEQUENCE = ["clone", "normalize", "checkout"]
-CORPUS_FIXTURE_SEQUENCE = ["bundle", "init", "normalize", "fetch", "checkout"]
+CORPUS_FIXTURE_SEQUENCE = ["ref", "bundle", "init", "normalize", "fetch", "checkout"]
 TOOLCHAIN_IDENTITY_RE = re.compile(
     r'^go_version="([^"]+)";go_digest=(sha256:[0-9a-f]{64});'
     r'git_version="([^"]+)";git_digest=(sha256:[0-9a-f]{64})$'
@@ -838,9 +847,11 @@ def _corpus_plan(
 ) -> set[Path]:
     """Validate local bundle/init/fetch/checkout for all sealed fixture heads.
 
-    The sealed Stage-1 object may not have a retaining local ref.  Building a
-    bundle directly from its full oid makes the object closure explicit and
-    avoids both a hidden network fallback and a shared Git object store.
+    A Git bundle must advertise a ref, not merely carry a raw object id.  P0
+    therefore binds an additive, namespaced source ref at the sealed head,
+    then fetches that ref into a fresh derived repository.  The destination
+    fetch is the sole completeness check: ``git bundle verify`` is neither
+    invoked nor treated as an acceptance oracle.
     """
     if not isinstance(value, dict) or set(value) != CORPUS_PLAN_FIELDS:
         raise PrebuildError("prebuild authorization has an invalid corpus-clone plan")
@@ -863,6 +874,22 @@ def _corpus_plan(
         commit = _oid(plan.get("source_commit"), "corpus source commit")
         if commit != heads[fixture]:
             raise PrebuildError("corpus source commit differs from the sealed Stage-1 head")
+        history = plan.get("source_history")
+        if (
+            not isinstance(history, dict)
+            or set(history) != CORPUS_SOURCE_HISTORY_FIELDS
+            or history.get("is_shallow_repository") is not False
+            or history.get("old_commit") != BASE_LOCK_FIXTURE_COMMITS[fixture]
+            or history.get("sealed_commit") != commit
+            or history.get("old_commit_is_ancestor") is not True
+        ):
+            raise PrebuildError("corpus source history precondition differs from P0")
+        _oid(history["old_commit"], "corpus source old commit")
+        _oid(history["sealed_commit"], "corpus source sealed commit")
+        source_ref = plan.get("source_ref")
+        expected_ref = f"refs/gate2-v2/{fixture}"
+        if source_ref != expected_ref:
+            raise PrebuildError("corpus source ref differs from the fixed namespace")
         destination = _absolute(plan.get("destination_path"), "corpus destination path")
         if destination != root / DERIVED_CORPUS_RELATIVE / fixture:
             raise PrebuildError("corpus destination differs from the fixed derived topology")
@@ -871,21 +898,24 @@ def _corpus_plan(
             raise PrebuildError("corpus bundle path differs from the fixed fixture path")
         bundles.add(bundle)
         if plan.get("sequence") != CORPUS_FIXTURE_SEQUENCE:
-            raise PrebuildError("corpus fixture recipe does not normalize before checkout")
-        if _argv(plan.get("bundle_argv"), "corpus bundle") != [
-            str(git), "-C", str(source), "bundle", "create", str(bundle), commit,
+            raise PrebuildError("corpus fixture recipe does not create a ref before bundling")
+        if _argv(plan.get("update_ref_argv"), "corpus source ref") != [
+            str(git), "-C", str(source), "update-ref", source_ref, commit, "0" * 40,
         ]:
-            raise PrebuildError("corpus bundle argv differs from the sealed local bundle recipe")
+            raise PrebuildError("corpus source ref argv differs from the create-only recipe")
+        if _argv(plan.get("bundle_argv"), "corpus bundle") != [
+            str(git), "-C", str(source), "bundle", "create", str(bundle), source_ref,
+        ]:
+            raise PrebuildError("corpus bundle argv differs from the sealed ref-bearing recipe")
         if _argv(plan.get("init_argv"), "corpus init") != [
             str(git), "init", "--quiet", str(destination),
         ]:
             raise PrebuildError("corpus init argv differs from the sealed local recipe")
         _normalization(plan.get("normalization"), "corpus fixture")
-        ref = f"refs/gate2-v2/{fixture}"
         if _argv(plan.get("fetch_argv"), "corpus fetch") != [
-            str(git), "-C", str(destination), "fetch", "--no-tags", str(bundle), f"{commit}:{ref}",
+            str(git), "-C", str(destination), "fetch", "--no-tags", str(bundle), f"{source_ref}:{source_ref}",
         ]:
-            raise PrebuildError("corpus fetch argv differs from the sealed local bundle recipe")
+            raise PrebuildError("corpus fetch argv differs from the sealed ref-bearing recipe")
         if _argv(plan.get("checkout_argv"), "corpus checkout") != [
             str(git), "-C", str(destination), "checkout", "--detach", commit,
         ]:

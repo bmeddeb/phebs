@@ -69,7 +69,7 @@ PREBUILD_EVIDENCE_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-v1"
 P0_AUTHORIZATION_SCHEMA = "t111-gate2-v2-stage2-prebuild-authorization-v1"
 P0_CONSUMPTION_MARKER_SCHEMA = "t111-gate2-v2-stage2-prebuild-consumption-v1"
 P0_EVIDENCE_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-receipt-v1"
-P0_TERMINAL_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-terminal-receipt-v1"
+P0_TERMINAL_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-terminal-receipt-v2"
 RECEIPT_SCHEMA = "t111-gate2-v2-stage1-receipt-v1"
 FACT_RUN_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-fact-run-receipt-v1"
 CONSUMPTION_MARKER_SCHEMA = "t111-gate2-v2-stage2-enumeration-consumption-v1"
@@ -94,14 +94,14 @@ PREBUILD_RUNNER_PATH = HERE / "stage2_prebuild.py"
 PREBUILD_RUNNER_REL = PREBUILD_RUNNER_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EXECUTOR_PATH = HERE / "stage2_prebuild_execute.py"
 PREBUILD_EXECUTOR_REL = PREBUILD_EXECUTOR_PATH.relative_to(REPO_ROOT).as_posix()
-PREBUILD_EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r2.md"
+PREBUILD_EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r3.md"
 PREBUILD_EXECUTOR_REVIEW_REL = PREBUILD_EXECUTOR_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 STAGE1_SNAPSHOT_REL = (HERE / "stage1_snapshot.py").relative_to(REPO_ROOT).as_posix()
 # This implementation revision must be accepted afresh because its P0
 # implementation-review dependency changed.  Every executable path must name
-# the same r5 review; older r2/r3/r4 records remain historical and cannot
+# the same r6 review; older r2/r3/r4/r5 records remain historical and cannot
 # bless this revised verifier.
-ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r5.md"
+ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r6.md"
 ENUMERATION_REVIEW_REL = ENUMERATION_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EVIDENCE_REVIEW_PATH = HERE / "stage2-prebuild-evidence-review-r1.md"
 PREBUILD_EVIDENCE_REVIEW_REL = PREBUILD_EVIDENCE_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
@@ -116,7 +116,7 @@ PLAN_P0_IMPLEMENTATION_APPROVAL = "ACCEPT"
 # Version the exact marker as well as the review filename.  Older accepted
 # rows are retained in PLAN.md as history, so an unversioned substring would
 # make the current executable approval permanently ambiguous.
-PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r5"
+PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r6"
 PLAN_IMPLEMENTATION_APPROVAL = "ACCEPT"
 PYTHON_MODE = "isolated-no-site"
 TOOLCHAIN_IDENTITY_RE = re.compile(
@@ -332,6 +332,7 @@ P0_RESULT_TERMINAL_FIELDS = {
     "consumption_marker_sha256",
     "exit_code",
     "failure",
+    "failure_diagnostic",
     "evidence_receipt_sha256",
 }
 P0_EXPECTED_SCOPE = {
@@ -1698,6 +1699,7 @@ def _p0_result_terminal(
         or type(terminal.get("exit_code")) is not int
         or terminal.get("exit_code") != 0
         or terminal.get("failure") is not None
+        or terminal.get("failure_diagnostic") is not None
         or terminal.get("authorization_sha256") != authorization_sha256
         or terminal.get("consumption_marker_sha256") != marker_sha256
         or terminal.get("evidence_receipt_sha256") != evidence_sha256

@@ -1,4 +1,4 @@
-"""Synthetic-only tests for the separately reviewed P0 executor.
+"""Synthetic and isolated-real-Git tests for the P0 executor.
 
 The recording backend deliberately has no filesystem or subprocess behavior.
 It verifies the irreversible ordering and the exact M0/R0/T0 handoff without
@@ -12,10 +12,12 @@ import io
 import json
 import os
 import signal
+import subprocess
 import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr
+from dataclasses import replace
 from unittest import mock
 from pathlib import Path
 
@@ -23,6 +25,9 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import stage2_prebuild_execute as executor  # noqa: E402
+
+
+GIT = Path("/usr/bin/git")
 
 
 def digest(character: str) -> str:
@@ -94,6 +99,65 @@ def authorization() -> dict:
 def context() -> executor.P0Context:
     raw = (executor.canonical_json(authorization()) + "\n").encode("utf-8")
     return executor.context_from_authorization(authorization(), raw)
+
+
+def sterile_git_environment(root: Path) -> dict[str, str]:
+    home = root / "home"
+    temporary = root / "tmp"
+    home.mkdir(parents=True, exist_ok=True)
+    temporary.mkdir(parents=True, exist_ok=True)
+    return {
+        "PATH": "/usr/bin:/bin",
+        "HOME": str(home),
+        "TMPDIR": str(temporary),
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_ASKPASS": "/usr/bin/false",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_NO_LAZY_FETCH": "1",
+        "GIT_OPTIONAL_LOCKS": "0",
+        "GIT_ALLOW_PROTOCOL": "file",
+    }
+
+
+def run_git(environment: dict[str, str], *arguments: str, cwd: Path | None = None) -> bytes:
+    result = subprocess.run(
+        [str(GIT), *arguments],
+        cwd=str(cwd) if cwd is not None else None,
+        env=environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if result.returncode:
+        raise AssertionError(f"synthetic Git failed: {result.stderr.decode('utf-8', 'replace')}")
+    return result.stdout
+
+
+def synthetic_history(root: Path, fixture: str, environment: dict[str, str]) -> tuple[Path, str, str]:
+    repo = root / "sources" / fixture
+    repo.parent.mkdir(parents=True, exist_ok=True)
+    run_git(environment, "init", "--quiet", str(repo))
+    payload = repo / "payload.txt"
+    payload.write_text("old\n", encoding="utf-8")
+    run_git(environment, "-C", str(repo), "add", "payload.txt")
+    run_git(
+        environment,
+        "-C", str(repo), "-c", "user.name=P0 Test", "-c", "user.email=p0@example.invalid",
+        "commit", "--quiet", "-m", "old",
+    )
+    old = run_git(environment, "-C", str(repo), "rev-parse", "HEAD").decode("ascii").strip()
+    payload.write_text("new\n", encoding="utf-8")
+    run_git(environment, "-C", str(repo), "add", "payload.txt")
+    run_git(
+        environment,
+        "-C", str(repo), "-c", "user.name=P0 Test", "-c", "user.email=p0@example.invalid",
+        "commit", "--quiet", "-m", "new",
+    )
+    sealed = run_git(environment, "-C", str(repo), "rev-parse", "HEAD").decode("ascii").strip()
+    return repo, old, sealed
 
 
 def controlled_context() -> tuple[executor.P0Context, bytes, bytes, bytes, bytes, bytes, bytes]:
@@ -327,14 +391,24 @@ class ExecutorSyntheticTests(unittest.TestCase):
         value = context()
         value.authorization["operations"]["corpus"] = {
             "fixtures": {
-                fixture: {"bundle_argv": ["synthetic-bundle"]}
-                for fixture in executor.RECEIPT_FIXTURES
+                fixture: {
+                    "source_ref": f"refs/gate2-v2/{fixture}",
+                    "source_commit": f"{index:040x}",
+                    "source_repo_path": "/synthetic/source",
+                    "update_ref_argv": ["synthetic-ref"],
+                    "bundle_argv": ["synthetic-bundle"],
+                }
+                for index, fixture in enumerate(executor.RECEIPT_FIXTURES, 1)
             }
         }
         backend = executor.LiveBackend()
         with (
             mock.patch.object(backend, "_phase_environment", return_value={}) as phase,
-            mock.patch.object(backend, "_run_quiet", return_value=1),
+            mock.patch.object(executor, "_mkdir_private_below"),
+            mock.patch.object(executor, "_git_quiet", return_value=b""),
+            mock.patch.object(
+                backend, "_run_quiet", side_effect=executor.PrebuildExecutionError("refusal")
+            ),
         ):
             with self.assertRaises(executor.PrebuildExecutionError):
                 backend.materialize_corpus(value)
@@ -369,6 +443,321 @@ class ExecutorSyntheticTests(unittest.TestCase):
                 scratch / "xdg-data",
             ],
         )
+
+    @unittest.skipUnless(GIT.is_file(), "requires the bound system Git")
+    def test_real_git_executes_ref_bundle_init_fetch_and_checkout(self):
+        """Exercise every ref-bearing corpus argv class without network access."""
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            environment = sterile_git_environment(root)
+            control = root / "control"
+            control.mkdir()
+            derived = root / "derived"
+            ceremony = root / "ceremony"
+            derived.mkdir()
+            ceremony.mkdir(mode=0o700)
+            fixtures: dict[str, dict[str, object]] = {}
+            source_heads: dict[str, tuple[Path, str, str]] = {}
+            for fixture in executor.RECEIPT_FIXTURES:
+                source, old, sealed = synthetic_history(root, fixture, environment)
+                source_heads[fixture] = (source, old, sealed)
+                source_ref = f"refs/gate2-v2/{fixture}"
+                bundle = ceremony / "bundles" / f"{fixture}.bundle"
+                destination = derived / "spike" / "t111" / "corpus" / fixture
+                fixtures[fixture] = {
+                    "source_repo_path": str(source),
+                    "source_commit": sealed,
+                    "source_ref": source_ref,
+                    "destination_path": str(destination),
+                    "bundle_path": str(bundle),
+                    "update_ref_argv": [
+                        str(GIT), "-C", str(source), "update-ref", source_ref, sealed, "0" * 40,
+                    ],
+                    "bundle_argv": [
+                        str(GIT), "-C", str(source), "bundle", "create", str(bundle), source_ref,
+                    ],
+                    "init_argv": [str(GIT), "init", "--quiet", str(destination)],
+                    "fetch_argv": [
+                        str(GIT), "-C", str(destination), "fetch", "--no-tags", str(bundle),
+                        f"{source_ref}:{source_ref}",
+                    ],
+                    "checkout_argv": [str(GIT), "-C", str(destination), "checkout", "--detach", sealed],
+                }
+                raw_bundle = root / "raw" / f"{fixture}.bundle"
+                raw_bundle.parent.mkdir(exist_ok=True)
+                raw = subprocess.run(
+                    [str(GIT), "-C", str(source), "bundle", "create", str(raw_bundle), sealed],
+                    env=environment,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                self.assertNotEqual(raw.returncode, 0, fixture)
+
+            value = context()
+            value.authorization["operations"]["corpus"] = {
+                "fixtures": fixtures,
+            }
+            context_value = replace(
+                value,
+                root=derived,
+                source_repo=control,
+                ceremony=ceremony,
+                git=GIT,
+            )
+            backend = executor.LiveBackend()
+            with mock.patch.object(backend, "_phase_environment", return_value=environment):
+                backend.materialize_corpus(context_value)
+            for fixture, (source, _old, sealed) in source_heads.items():
+                source_ref = f"refs/gate2-v2/{fixture}"
+                self.assertEqual(
+                    run_git(environment, "-C", str(source), "rev-parse", source_ref).decode("ascii").strip(),
+                    sealed,
+                )
+                destination = Path(fixtures[fixture]["destination_path"])
+                self.assertEqual(
+                    run_git(environment, "-C", str(destination), "rev-parse", "HEAD").decode("ascii").strip(),
+                    sealed,
+                )
+
+    @unittest.skipUnless(GIT.is_file(), "requires the bound system Git")
+    def test_real_git_shallow_mirror_refuses_before_m0_or_ref_creation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            environment = sterile_git_environment(root)
+            control, _control_old, control_head = synthetic_history(root, "control", environment)
+            fixtures: dict[str, dict[str, object]] = {}
+            mirrors = root / "mirrors"
+            for fixture in executor.RECEIPT_FIXTURES:
+                source, old, sealed = synthetic_history(root, fixture, environment)
+                mirror = mirrors / fixture
+                mirror.parent.mkdir(parents=True, exist_ok=True)
+                run_git(environment, "clone", "--quiet", "--depth=1", f"file://{source}", str(mirror))
+                source_ref = f"refs/gate2-v2/{fixture}"
+                fixtures[fixture] = {
+                    "source_repo_path": str(mirror),
+                    "source_commit": sealed,
+                    "source_ref": source_ref,
+                    "source_history": {
+                        "is_shallow_repository": False,
+                        "old_commit": old,
+                        "sealed_commit": sealed,
+                        "old_commit_is_ancestor": True,
+                    },
+                }
+                self.assertEqual(
+                    run_git(environment, "-C", str(mirror), "rev-parse", "--is-shallow-repository"),
+                    b"true\n",
+                )
+
+            value = context()
+            value.authorization["operations"]["source_clone"] = {"source_commit": control_head}
+            value.authorization["operations"]["corpus"] = {"fixtures": fixtures}
+            value.authorization["implementation_binding"] = {
+                "status": "executable", "commit": control_head,
+            }
+            value.authorization["environment"]["offline"] = {
+                "variables": environment,
+                "proxy": "off",
+                "sumdb": "off",
+            }
+            derived = root / "derived"
+            ceremony = root / "ceremony"
+            context_value = replace(
+                value,
+                root=derived,
+                source_repo=control,
+                ceremony=ceremony,
+                git=GIT,
+            )
+            with self.assertRaises(executor.PrebuildExecutionError):
+                executor._verify_source_repositories(context_value)
+            self.assertFalse(derived.exists())
+            self.assertFalse(ceremony.exists())
+            for fixture in executor.RECEIPT_FIXTURES:
+                mirror = Path(fixtures[fixture]["source_repo_path"])
+                self.assertEqual(
+                    run_git(
+                        environment,
+                        "-C", str(mirror), "for-each-ref", "--format=%(objectname)",
+                        f"refs/gate2-v2/{fixture}",
+                    ),
+                    b"",
+                )
+
+    @unittest.skipUnless(GIT.is_file(), "requires the bound system Git")
+    def test_post_m0_git_verification_failure_has_a_bounded_diagnostic(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            environment = sterile_git_environment(root)
+            repository, _old, _sealed = synthetic_history(root, "verify", environment)
+            with self.assertRaises(executor.CommandFailure) as raised:
+                executor._git_quiet(
+                    GIT,
+                    [str(GIT), "-C", str(repository), "rev-parse", "missing-ref"],
+                    cwd=repository,
+                    env=environment,
+                    diagnostic_step="corpus.temporal.checkout.head",
+                )
+            diagnostic = raised.exception.diagnostic
+            self.assertEqual(diagnostic.step, "corpus.temporal.checkout.head")
+            self.assertNotEqual(diagnostic.exit_code, 0)
+            self.assertTrue(diagnostic.stderr_sha256.startswith("sha256:"))
+
+    @unittest.skipUnless(Path("/bin/sh").is_file(), "requires the system shell")
+    def test_post_m0_git_diagnostic_drains_and_bounds_stdout(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            with self.assertRaises(executor.PrebuildExecutionError):
+                executor._git_quiet(
+                    Path("/bin/sh"),
+                    ["/bin/sh", "-c", "dd if=/dev/zero bs=100000 count=1 2>/dev/null"],
+                    cwd=root,
+                    env=sterile_git_environment(root),
+                    diagnostic_step="corpus.temporal.ref.verify",
+                )
+
+    def test_command_failure_terminal_diagnostic_is_bounded_and_sanitized(self):
+        raw = (
+            b"fatal: https://alice:ghp_secret@example.invalid/x?access_token=query-secret\r\n"
+            b"Authorization: Bearer bearer-secret\r\n"
+            b"Authorization=Bearer assignment-secret\r\n"
+            b"access_token=access-secret client_secret: client-secret X-Api-Key: api-secret\r\n"
+            b"{\"access_token\":\"json-secret\"}\r\n"
+            + b"x" * 1024
+        )
+        capture = executor._BoundedStderr(limit=512)
+        capture.add(raw)
+        diagnostic = capture.diagnostic("corpus.temporal.bundle", 128)
+        self.assertEqual(diagnostic.stderr_sha256, executor.sha256_bytes(raw))
+        self.assertTrue(diagnostic.stderr_truncated)
+        self.assertNotIn("alice", diagnostic.stderr_preview)
+        self.assertNotIn("ghp_secret", diagnostic.stderr_preview)
+        for secret in (
+            "query-secret",
+            "bearer-secret",
+            "assignment-secret",
+            "access-secret",
+            "client-secret",
+            "api-secret",
+            "json-secret",
+        ):
+            self.assertNotIn(secret, diagnostic.stderr_preview)
+        terminal = executor._terminal_record(
+            context(),
+            digest("m"),
+            status="ABORTED",
+            exit_code=2,
+            failure="REFUSED",
+            failure_diagnostic=diagnostic,
+            evidence_sha256=None,
+        )
+        self.assertEqual(terminal["schema"], executor.P0_TERMINAL_RECEIPT_SCHEMA)
+        self.assertEqual(terminal["failure_diagnostic"], diagnostic.record())
+        completed = executor._terminal_record(
+            context(),
+            digest("m"),
+            status="COMPLETED",
+            exit_code=0,
+            failure=None,
+            failure_diagnostic=None,
+            evidence_sha256=digest("e"),
+        )
+        self.assertIsNone(completed["failure_diagnostic"])
+
+    def test_diagnostic_redacts_url_userinfo_cut_off_by_the_bound(self):
+        raw = b"fatal https://alice:LEAKMARKER" + b"x" * 1024 + b"@example.invalid\n"
+        capture = executor._BoundedStderr(limit=64)
+        capture.add(raw)
+        preview = capture.diagnostic("corpus.temporal.bundle", 2).stderr_preview
+        self.assertNotIn("alice", preview)
+        self.assertNotIn("LEAKMARKER", preview)
+        self.assertIn("[REDACTED]", preview)
+
+    def test_timeout_keeps_a_sanitized_failing_step_diagnostic(self):
+        class TimedOutProcess:
+            returncode = -signal.SIGTERM
+
+        raw = b"Authorization: Bearer timeout-secret\n"
+
+        def expire(
+            process: TimedOutProcess, _timeout: float, capture: executor._BoundedStderr, **_kwargs,
+        ) -> None:
+            capture.add(raw)
+            raise subprocess.TimeoutExpired("synthetic", 1)
+
+        with self.subTest("quiet"):
+            with mock.patch.object(
+                executor, "_popen_without_signal_handoff_gap", return_value=TimedOutProcess(),
+            ), mock.patch.object(executor, "_wait_with_bounded_stderr", side_effect=expire):
+                with self.assertRaises(executor.CommandFailure) as raised:
+                    executor.LiveBackend()._run_quiet(
+                        ["synthetic"],
+                        cwd=Path("/synthetic"),
+                        environment={},
+                        step="source.clone",
+                    )
+            diagnostic = raised.exception.diagnostic
+            self.assertEqual(diagnostic.step, "source.clone")
+            self.assertEqual(diagnostic.exit_code, -signal.SIGTERM)
+            self.assertEqual(diagnostic.stderr_sha256, executor.sha256_bytes(raw))
+            self.assertNotIn("timeout-secret", diagnostic.stderr_preview)
+
+        with self.subTest("capture-many"):
+            with tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary).resolve()
+                with mock.patch.object(
+                    executor, "_popen_without_signal_handoff_gap", return_value=TimedOutProcess(),
+                ), mock.patch.object(executor, "_wait_with_bounded_stderr", side_effect=expire):
+                    with self.assertRaises(executor.CommandFailure) as raised:
+                        executor.LiveBackend()._run_capture_many(
+                            [["synthetic"]],
+                            steps=["extract.run1.temporal"],
+                            cwd=root,
+                            environment={},
+                            stdout_path=root / "capture" / "stdout",
+                            stderr_path=root / "capture" / "stderr",
+                            private_anchor=root,
+                        )
+                diagnostic = raised.exception.diagnostic
+                self.assertEqual(diagnostic.step, "extract.run1.temporal")
+                self.assertEqual(diagnostic.exit_code, -signal.SIGTERM)
+                self.assertEqual(diagnostic.stderr_sha256, executor.sha256_bytes(raw))
+                self.assertNotIn("timeout-secret", diagnostic.stderr_preview)
+
+    def test_capture_many_diagnostic_is_only_the_failing_command_stderr(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            stdout_path = root / "capture" / "stdout"
+            stderr_path = root / "capture" / "stderr"
+            with self.assertRaises(executor.CommandFailure) as raised:
+                executor.LiveBackend()._run_capture_many(
+                    [
+                        ["/bin/sh", "-c", "printf 'token=prior-noise\\n' >&2"],
+                        ["/bin/sh", "-c", "printf 'fatal token=second-secret\\n' >&2; exit 9"],
+                    ],
+                    steps=["extract.run1.temporal", "extract.run1.loki"],
+                    cwd=root,
+                    environment=sterile_git_environment(root),
+                    stdout_path=stdout_path,
+                    stderr_path=stderr_path,
+                    private_anchor=root,
+                )
+            diagnostic = raised.exception.diagnostic
+            self.assertEqual(diagnostic.step, "extract.run1.loki")
+            self.assertEqual(diagnostic.exit_code, 9)
+            self.assertEqual(
+                diagnostic.stderr_sha256,
+                executor.sha256_bytes(b"fatal token=second-secret\n"),
+            )
+            self.assertNotIn("prior-noise", diagnostic.stderr_preview)
+            self.assertNotIn("second-secret", diagnostic.stderr_preview)
+            self.assertEqual(diagnostic.stderr_preview, "fatal token=[REDACTED]")
+            self.assertEqual(
+                stderr_path.read_bytes(),
+                b"token=prior-noise\nfatal token=second-secret\n",
+            )
 
     def test_control_chain_accepts_only_exact_committed_review_executor_and_both_plan_anchors(self):
         verify_control(*controlled_context())
@@ -784,6 +1173,7 @@ class ExecutorSyntheticTests(unittest.TestCase):
         self.assertEqual(backend.evidence["fact_runs"]["run1"]["run_id"], "prebuild-run1-0001")
         self.assertEqual(backend.terminals[-1]["status"], "COMPLETED")
         self.assertIsNone(backend.terminals[-1]["failure"])
+        self.assertIsNone(backend.terminals[-1]["failure_diagnostic"])
         self.assertEqual(backend.terminals[-1]["evidence_receipt_sha256"], digest("w"))
 
     def test_refusal_after_m0_publishes_only_aborted_terminal(self):
@@ -794,6 +1184,7 @@ class ExecutorSyntheticTests(unittest.TestCase):
         self.assertIsNone(backend.evidence)
         self.assertEqual(backend.terminals[-1]["status"], "ABORTED")
         self.assertEqual(backend.terminals[-1]["failure"], "REFUSED")
+        self.assertIsNone(backend.terminals[-1]["failure_diagnostic"])
         self.assertIsNone(backend.terminals[-1]["evidence_receipt_sha256"])
 
     def test_abort_handoff_masks_a_second_signal_until_terminal_is_durable(self):

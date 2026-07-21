@@ -289,6 +289,7 @@ def _p0_result_chain_fixture(root: Path):
         "consumption_marker_sha256": marker_sha256,
         "exit_code": 0,
         "failure": None,
+        "failure_diagnostic": None,
         "evidence_receipt_sha256": result_sha256,
     }
     terminal_bytes = _write_canonical(Path(state["terminal_receipt"]), terminal)
@@ -1426,6 +1427,23 @@ class Stage2EnumerationTest(unittest.TestCase):
             enum.verify_p0_result_chain(
                 fixture["authorization"], fixture["evidence"], fixture["p0"]
             )
+
+            fixture["terminal"].pop("failure_diagnostic")
+            _write_canonical(fixture["paths"]["terminal_receipt"], fixture["terminal"])
+            with self.assertRaises(enum.EnumerationError):
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
+
+            fixture["terminal"]["failure_diagnostic"] = {"step": "corpus.bundle"}
+            _write_canonical(fixture["paths"]["terminal_receipt"], fixture["terminal"])
+            with self.assertRaises(enum.EnumerationError):
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
+
+            fixture["terminal"]["failure_diagnostic"] = None
+            _write_canonical(fixture["paths"]["terminal_receipt"], fixture["terminal"])
 
             fixture["result"]["hydration"]["loki"]["exit_code"] = 1
             _write_canonical(fixture["paths"]["evidence_receipt"], fixture["result"])

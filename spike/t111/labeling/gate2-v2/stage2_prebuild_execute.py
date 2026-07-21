@@ -37,6 +37,7 @@ import signal
 import stat
 import subprocess
 import sys
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -52,11 +53,11 @@ REPO_ROOT = T111_ROOT.parents[1]
 P0_AUTHORIZATION_PATH = HERE / "stage2-prebuild-authorization.json"
 PARSER_PATH = HERE / "stage2_prebuild.py"
 EXECUTOR_PATH = Path(__file__).resolve()
-EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r2.md"
+EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r3.md"
 ENUMERATOR_PATH = HERE / "stage2_enumerate.py"
-# This revision names the r5 enumeration review.  Do not silently fall back
-# to the superseded r4 review when a P0 control dependency changes.
-ENUMERATOR_REVIEW_PATH = HERE / "stage2-enumerate-review-r5.md"
+# P0 terminal schema v2 changes the enumeration trust closure.  Do not
+# silently fall back to the superseded r5 review when this dependency changes.
+ENUMERATOR_REVIEW_PATH = HERE / "stage2-enumerate-review-r6.md"
 PLAN_PATH = REPO_ROOT / "PLAN.md"
 STAGE0_DIR = HERE / "stage0"
 STAGE0_INVENTORY = STAGE0_DIR / "code-path-inventory.tsv"
@@ -69,10 +70,12 @@ ESTIMATOR_AUTHORIZATION_REL = ESTIMATOR_AUTHORIZATION_PATH.relative_to(REPO_ROOT
 
 P0_CONSUMPTION_MARKER_SCHEMA = "t111-gate2-v2-stage2-prebuild-consumption-v1"
 P0_EVIDENCE_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-receipt-v1"
-P0_TERMINAL_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-terminal-receipt-v1"
+P0_TERMINAL_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-terminal-receipt-v2"
 FACT_RUN_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-fact-run-receipt-v1"
 RECEIPT_FIXTURES = ("temporal", "dapr", "loki", "online-boutique")
 FAILURE_PREDICATES = {"LOAD_ERRORS", "EXTRACTION_FAILURE"}
+FAILURE_STDERR_LIMIT = 4096
+GIT_STDOUT_LIMIT = 8192
 
 P0_AUTHORIZATION_REL = P0_AUTHORIZATION_PATH.relative_to(REPO_ROOT).as_posix()
 PARSER_REL = PARSER_PATH.relative_to(REPO_ROOT).as_posix()
@@ -95,10 +98,60 @@ TOOLCHAIN_IDENTITY_RE = re.compile(
     r'^go_version="([^"]+)";go_digest=(sha256:[0-9a-f]{64});'
     r'git_version="([^"]+)";git_digest=(sha256:[0-9a-f]{64})$'
 )
+COMMAND_STEP_RE = re.compile(r"^[a-z][a-z0-9._-]{0,95}$")
+SENSITIVE_KEY_RE = (
+    r"[A-Za-z0-9_-]*(?:token|secret|password|passwd|authorization|cookie|"
+    r"api[-_]?key|credential|session)[A-Za-z0-9_-]*"
+)
+URL_USERINFO_RE = re.compile(r"(?i)((?:https?|ssh)://)[^/\s@]+@")
+URL_UNTERMINATED_USERINFO_RE = re.compile(
+    r"(?i)((?:https?|ssh)://)[^/\s@]*:[^/\s@]*(?=$|[/?\s])"
+)
+URL_SENSITIVE_QUERY_RE = re.compile(rf"(?i)([?&]{SENSITIVE_KEY_RE}=)[^&#\s]*")
+SECRET_ASSIGNMENT_RE = re.compile(
+    rf"(?i)\b({SENSITIVE_KEY_RE})\b(\s*[:=]\s*)(?:\"[^\"]*\"|'[^']*'|[^\s,;]+)"
+)
+JSON_SECRET_RE = re.compile(
+    rf'(?i)("{SENSITIVE_KEY_RE}"\s*:\s*)(?:"(?:\\.|[^"\\])*"|[^\s,}}\]]+)'
+)
+SECRET_HEADER_RE = re.compile(
+    r"(?im)^(\s*(?:authorization|proxy-authorization|cookie|set-cookie|"
+    r"x[-_]?api[-_]?key|x[-_]?auth[-_]?token)\s*:\s*)[^\n]*"
+)
+CREDENTIAL_SCHEME_RE = re.compile(r"(?i)\b(bearer|basic|token)\s+[A-Za-z0-9._~+/=-]+")
+TOKEN_VALUE_RE = re.compile(r"\b(?:gh[pousr]_|github_pat_|glpat-|glc_|gla_)[A-Za-z0-9_-]+")
 
 
 class PrebuildExecutionError(Exception):
     """Expected fail-closed refusal; it maps to exit 2 after consumption."""
+
+
+@dataclass(frozen=True)
+class FailureDiagnostic:
+    """Fixed-shape, bounded, sanitized stderr for an authorized command."""
+
+    step: str
+    exit_code: int
+    stderr_sha256: str
+    stderr_preview: str
+    stderr_truncated: bool
+
+    def record(self) -> dict[str, Any]:
+        return {
+            "step": self.step,
+            "exit_code": self.exit_code,
+            "stderr_sha256": self.stderr_sha256,
+            "stderr_preview": self.stderr_preview,
+            "stderr_truncated": self.stderr_truncated,
+        }
+
+
+class CommandFailure(PrebuildExecutionError):
+    """An authorized command refused with a durable safe diagnostic."""
+
+    def __init__(self, diagnostic: FailureDiagnostic):
+        super().__init__("authorized command failed")
+        self.diagnostic = diagnostic
 
 
 class MarkerTransitionError(PrebuildExecutionError):
@@ -251,7 +304,7 @@ def _execute_verified_source(name: str, path: Path, source: bytes, label: str) -
     return module
 
 
-def _terminate_process_group(process: subprocess.Popen[Any]) -> None:
+def _terminate_process_group(process: subprocess.Popen[Any], *, drain: bool = True) -> None:
     """Terminate and reap an entire child process group after a timeout.
 
     ``subprocess.run(..., timeout=...)`` kills only its immediate child.  The
@@ -264,7 +317,10 @@ def _terminate_process_group(process: subprocess.Popen[Any]) -> None:
     except (ProcessLookupError, PermissionError, OSError):
         pass
     try:
-        process.communicate(timeout=5)
+        if drain:
+            process.communicate(timeout=5)
+        else:
+            process.wait(timeout=5)
         return
     except subprocess.TimeoutExpired:
         pass
@@ -273,7 +329,10 @@ def _terminate_process_group(process: subprocess.Popen[Any]) -> None:
     except (ProcessLookupError, PermissionError, OSError):
         pass
     try:
-        process.communicate(timeout=5)
+        if drain:
+            process.communicate(timeout=5)
+        else:
+            process.wait(timeout=5)
     except subprocess.TimeoutExpired:
         # There is no safe continuation if a child group cannot be reaped.
         # The caller still receives its original timeout and refuses P0.
@@ -293,6 +352,170 @@ def _communicate_with_group_timeout(
         # parent pivots to its ABORTED terminal receipt.
         _terminate_process_group(process)
         raise
+
+
+class _BoundedStderr:
+    """Drain stderr while retaining only a fixed prefix and a full digest."""
+
+    def __init__(self, limit: int = FAILURE_STDERR_LIMIT) -> None:
+        self._limit = limit
+        self._digest = hashlib.sha256()
+        self._prefix = bytearray()
+        self._total = 0
+        self.error: BaseException | None = None
+
+    def add(self, chunk: bytes) -> None:
+        self._digest.update(chunk)
+        self._total += len(chunk)
+        remaining = self._limit - len(self._prefix)
+        if remaining > 0:
+            self._prefix.extend(chunk[:remaining])
+
+    def diagnostic(self, step: str, exit_code: int) -> FailureDiagnostic:
+        if COMMAND_STEP_RE.fullmatch(step) is None:
+            raise PrebuildExecutionError("authorized command has an invalid diagnostic step")
+        if not isinstance(exit_code, int) or exit_code == 0:
+            raise PrebuildExecutionError("authorized command has an invalid diagnostic exit")
+        return FailureDiagnostic(
+            step=step,
+            exit_code=exit_code,
+            stderr_sha256="sha256:" + self._digest.hexdigest(),
+            stderr_preview=_sanitize_stderr(bytes(self._prefix)),
+            stderr_truncated=self._total > self._limit,
+        )
+
+
+class _BoundedOutput:
+    """Drain an expected-small command stdout stream without unbounded memory."""
+
+    def __init__(self, limit: int) -> None:
+        self._limit = limit
+        self._value = bytearray()
+        self.truncated = False
+        self.error: BaseException | None = None
+
+    def add(self, chunk: bytes) -> None:
+        remaining = self._limit - len(self._value)
+        if remaining > 0:
+            self._value.extend(chunk[:remaining])
+        if len(chunk) > remaining:
+            self.truncated = True
+
+    def value(self) -> bytes:
+        return bytes(self._value)
+
+
+def _sanitize_stderr(raw: bytes) -> str:
+    """Emit printable, credential-safe, newline-normalized bounded text only."""
+    text = raw.decode("utf-8", "replace").replace("\r\n", "\n").replace("\r", "\n")
+    text = "".join(character if character == "\n" or " " <= character <= "~" else "?" for character in text)
+    text = URL_USERINFO_RE.sub(r"\1[REDACTED]@", text)
+    # The bounded prefix can end before an ``@``.  Conservatively redact a
+    # colon-bearing URL authority at its truncated end rather than retaining a
+    # possible user:password fragment.  This also hides a host:port authority,
+    # which is harmless and preferable to a credential escape.
+    text = URL_UNTERMINATED_USERINFO_RE.sub(r"\1[REDACTED]", text)
+    text = URL_SENSITIVE_QUERY_RE.sub(r"\1[REDACTED]", text)
+    text = SECRET_HEADER_RE.sub(r"\1[REDACTED]", text)
+    text = JSON_SECRET_RE.sub(r'\1"[REDACTED]"', text)
+    # Redact a credential scheme before the generic assignment pass.  Were
+    # the assignment pass first, ``Authorization=Bearer value`` would redact
+    # only ``Bearer`` and leave the credential as a separate word.
+    text = CREDENTIAL_SCHEME_RE.sub(lambda match: f"{match.group(1)} [REDACTED]", text)
+    text = SECRET_ASSIGNMENT_RE.sub(
+        lambda match: f"{match.group(1)}{match.group(2)}[REDACTED]", text,
+    )
+    return TOKEN_VALUE_RE.sub("[REDACTED]", text).rstrip("\n")
+
+
+def _timeout_diagnostic(
+    capture: _BoundedStderr, step: str, process: subprocess.Popen[Any],
+) -> FailureDiagnostic:
+    """Use the post-termination signal status for a timed-out command."""
+    exit_code = process.returncode
+    if not isinstance(exit_code, int) or exit_code == 0:
+        exit_code = -getattr(signal, "SIGKILL", 9)
+    return capture.diagnostic(step, exit_code)
+
+
+def _drain_stderr(
+    stream: Any, capture: _BoundedStderr, sink_descriptor: int | None = None,
+) -> None:
+    try:
+        while True:
+            chunk = stream.read(8192)
+            if not chunk:
+                break
+            if not isinstance(chunk, bytes):
+                raise OSError("stderr stream is not bytes")
+            capture.add(chunk)
+            if sink_descriptor is not None:
+                _write_all(sink_descriptor, chunk)
+    except BaseException as exc:
+        capture.error = exc
+    finally:
+        try:
+            stream.close()
+        except OSError:
+            pass
+
+
+def _drain_stdout(stream: Any, capture: _BoundedOutput) -> None:
+    try:
+        while True:
+            chunk = stream.read(8192)
+            if not chunk:
+                break
+            if not isinstance(chunk, bytes):
+                raise OSError("stdout stream is not bytes")
+            capture.add(chunk)
+    except BaseException as exc:
+        capture.error = exc
+    finally:
+        try:
+            stream.close()
+        except OSError:
+            pass
+
+
+def _wait_with_bounded_stderr(
+    process: subprocess.Popen[Any], timeout: float, capture: _BoundedStderr,
+    *, sink_descriptor: int | None = None, stdout_capture: _BoundedOutput | None = None,
+) -> None:
+    if process.stderr is None:
+        raise PrebuildExecutionError("authorized command has no stderr capture")
+    if stdout_capture is not None and process.stdout is None:
+        raise PrebuildExecutionError("authorized command has no stdout capture")
+    reader = threading.Thread(
+        target=_drain_stderr,
+        args=(process.stderr, capture, sink_descriptor),
+        daemon=True,
+    )
+    reader.start()
+    stdout_reader: threading.Thread | None = None
+    if stdout_capture is not None:
+        stdout_reader = threading.Thread(
+            target=_drain_stdout,
+            args=(process.stdout, stdout_capture),
+            daemon=True,
+        )
+        stdout_reader.start()
+    try:
+        process.wait(timeout=timeout)
+    except (subprocess.TimeoutExpired, P0Interrupted):
+        _terminate_process_group(process, drain=False)
+        raise
+    finally:
+        reader.join()
+        if stdout_reader is not None:
+            stdout_reader.join()
+    if capture.error is not None:
+        raise PrebuildExecutionError("authorized command stderr cannot be captured") from capture.error
+    if stdout_capture is not None:
+        if stdout_capture.error is not None:
+            raise PrebuildExecutionError("authorized command stdout cannot be captured") from stdout_capture.error
+        if stdout_capture.truncated:
+            raise PrebuildExecutionError("authorized command stdout exceeds its bound")
 
 
 def _popen_without_signal_handoff_gap(*args: Any, **kwargs: Any) -> subprocess.Popen[Any]:
@@ -891,8 +1114,17 @@ def _safe_local_git_environment(phase: dict[str, Any]) -> dict[str, str]:
     return result
 
 
-def _git_quiet(git: Path, argv: list[str], *, cwd: Path, env: dict[str, str]) -> bytes:
-    """Run the already digest-verified Git binary without inherited state."""
+def _git_quiet(
+    git: Path,
+    argv: list[str],
+    *,
+    cwd: Path,
+    env: dict[str, str],
+    diagnostic_step: str | None = None,
+) -> bytes:
+    """Run the digest-verified Git binary, with diagnostics only post-M0."""
+    capture = _BoundedStderr() if diagnostic_step is not None else None
+    stdout_capture = _BoundedOutput(GIT_STDOUT_LIMIT) if capture is not None else None
     try:
         result = _popen_without_signal_handoff_gap(
             argv,
@@ -900,13 +1132,31 @@ def _git_quiet(git: Path, argv: list[str], *, cwd: Path, env: dict[str, str]) ->
             env=env,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE if capture is not None else subprocess.DEVNULL,
             start_new_session=True,
         )
-        stdout, _stderr = _communicate_with_group_timeout(result, 120)
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except OSError as exc:
+        raise PrebuildExecutionError("authorized Git operation failed") from exc
+    try:
+        if capture is None:
+            stdout, _stderr = _communicate_with_group_timeout(result, 120)
+        else:
+            _wait_with_bounded_stderr(
+                result,
+                120,
+                capture,
+                stdout_capture=stdout_capture,
+            )
+            if stdout_capture is None:
+                raise PrebuildExecutionError("authorized Git operation lacks stdout capture")
+            stdout = stdout_capture.value()
+    except subprocess.TimeoutExpired as exc:
+        if capture is not None and diagnostic_step is not None:
+            raise CommandFailure(_timeout_diagnostic(capture, diagnostic_step, result)) from exc
         raise PrebuildExecutionError("authorized Git operation failed") from exc
     if result.returncode:
+        if capture is not None and diagnostic_step is not None:
+            raise CommandFailure(capture.diagnostic(diagnostic_step, result.returncode))
         raise PrebuildExecutionError("authorized Git operation failed")
     return stdout or b""
 
@@ -934,7 +1184,53 @@ def _verify_source_repositories(context: P0Context) -> None:
         mirror = Path(plan["source_repo_path"])
         _require_real_directory(mirror, "source corpus mirror")
         _verify_git_metadata(mirror, context.root, "source corpus mirror")
-        _git_quiet(context.git, [str(context.git), "-C", str(mirror), "cat-file", "-e", f"{plan['source_commit']}^{{commit}}"], cwd=mirror, env=environment)
+        shallow = _git_quiet(
+            context.git,
+            [str(context.git), "-C", str(mirror), "rev-parse", "--is-shallow-repository"],
+            cwd=mirror,
+            env=environment,
+        )
+        if shallow != b"false\n":
+            raise PrebuildExecutionError("source corpus mirror is shallow")
+        history = plan.get("source_history")
+        if not isinstance(history, dict):
+            raise PrebuildExecutionError("source corpus history is unavailable")
+        old_commit = _require_oid(history.get("old_commit"), "source corpus old commit")
+        sealed_commit = _require_oid(history.get("sealed_commit"), "source corpus sealed commit")
+        if sealed_commit != plan["source_commit"] or history.get("old_commit_is_ancestor") is not True:
+            raise PrebuildExecutionError("source corpus history differs from P0")
+        _git_quiet(
+            context.git,
+            [str(context.git), "-C", str(mirror), "cat-file", "-e", f"{old_commit}^{{commit}}"],
+            cwd=mirror,
+            env=environment,
+        )
+        _git_quiet(
+            context.git,
+            [str(context.git), "-C", str(mirror), "cat-file", "-e", f"{sealed_commit}^{{commit}}"],
+            cwd=mirror,
+            env=environment,
+        )
+        _git_quiet(
+            context.git,
+            [str(context.git), "-C", str(mirror), "merge-base", "--is-ancestor", old_commit, sealed_commit],
+            cwd=mirror,
+            env=environment,
+        )
+        source_ref = plan.get("source_ref")
+        if not isinstance(source_ref, str):
+            raise PrebuildExecutionError("source corpus ref is unavailable")
+        ref_value = _git_quiet(
+            context.git,
+            [
+                str(context.git), "-C", str(mirror), "for-each-ref",
+                "--format=%(objectname)", "--count=2", source_ref,
+            ],
+            cwd=mirror,
+            env=environment,
+        )
+        if ref_value not in (b"", f"{sealed_commit}\n".encode("ascii")):
+            raise PrebuildExecutionError("source corpus ref conflicts with P0")
         for command in (("diff", "--quiet"), ("diff", "--cached", "--quiet")):
             _git_quiet(context.git, [str(context.git), "-C", str(mirror), *command], cwd=mirror, env=environment)
 
@@ -1691,7 +1987,10 @@ class LiveBackend:
         self._phase_environments[key] = dict(environment)
         return environment
 
-    def _run_quiet(self, argv: list[str], *, cwd: Path, environment: dict[str, str]) -> int:
+    def _run_quiet(
+        self, argv: list[str], *, cwd: Path, environment: dict[str, str], step: str,
+    ) -> None:
+        capture = _BoundedStderr()
         try:
             result = _popen_without_signal_handoff_gap(
                 argv,
@@ -1699,24 +1998,31 @@ class LiveBackend:
                 env=environment,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
                 start_new_session=True,
             )
-            _stdout, _stderr = _communicate_with_group_timeout(result, 30 * 60)
-        except (OSError, subprocess.TimeoutExpired) as exc:
+        except OSError as exc:
             raise PrebuildExecutionError("authorized command could not run") from exc
-        return result.returncode
+        try:
+            _wait_with_bounded_stderr(result, 30 * 60, capture)
+        except subprocess.TimeoutExpired as exc:
+            raise CommandFailure(_timeout_diagnostic(capture, step, result)) from exc
+        except OSError as exc:
+            raise PrebuildExecutionError("authorized command could not run") from exc
+        if result.returncode:
+            raise CommandFailure(capture.diagnostic(step, result.returncode))
 
     def _run_capture_many(
         self,
         argv_values: list[list[str]],
         *,
+        steps: list[str],
         cwd: Path,
         environment: dict[str, str],
         stdout_path: Path,
         stderr_path: Path,
         private_anchor: Path,
-    ) -> list[int]:
+    ) -> None:
         try:
             _mkdir_private_below(stdout_path.parent, private_anchor)
             if stdout_path.parent.is_symlink() or stderr_path.parent != stdout_path.parent:
@@ -1725,9 +2031,12 @@ class LiveBackend:
             stderr_fd = os.open(stderr_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | _no_follow_flag(), 0o600)
         except OSError as exc:
             raise PrebuildExecutionError("command capture cannot be created") from exc
-        codes: list[int] = []
+        if len(argv_values) != len(steps):
+            raise PrebuildExecutionError("authorized command capture has an invalid step plan")
+        failure: FailureDiagnostic | None = None
         try:
-            for argv in argv_values:
+            for argv, step in zip(argv_values, steps):
+                capture = _BoundedStderr()
                 try:
                     result = _popen_without_signal_handoff_gap(
                         argv,
@@ -1735,14 +2044,25 @@ class LiveBackend:
                         env=environment,
                         stdin=subprocess.DEVNULL,
                         stdout=stdout_fd,
-                        stderr=stderr_fd,
+                        stderr=subprocess.PIPE,
                         start_new_session=True,
                     )
-                    _stdout, _stderr = _communicate_with_group_timeout(result, 30 * 60)
-                except (OSError, subprocess.TimeoutExpired) as exc:
+                except OSError as exc:
                     raise PrebuildExecutionError("authorized command could not run") from exc
-                codes.append(result.returncode)
+                try:
+                    _wait_with_bounded_stderr(
+                        result,
+                        30 * 60,
+                        capture,
+                        sink_descriptor=stderr_fd,
+                    )
+                except subprocess.TimeoutExpired:
+                    failure = _timeout_diagnostic(capture, step, result)
+                    break
+                except OSError as exc:
+                    raise PrebuildExecutionError("authorized command could not run") from exc
                 if result.returncode:
+                    failure = capture.diagnostic(step, result.returncode)
                     break
             os.fsync(stdout_fd)
             os.fsync(stderr_fd)
@@ -1750,19 +2070,46 @@ class LiveBackend:
             os.close(stdout_fd)
             os.close(stderr_fd)
         _fsync_directory(stdout_path.parent, "command capture")
-        return codes
+        if failure is not None:
+            raise CommandFailure(failure)
 
     def _normalize_repo(self, context: P0Context, repo: Path, _environment: dict[str, str]) -> None:
         _install_inert_git_repository(
             repo, context.root, context.source_repo, "derived repository"
         )
 
-    def _verify_checkout(self, context: P0Context, repo: Path, expected: str, environment: dict[str, str]) -> None:
-        head = _git_quiet(context.git, [str(context.git), "-C", str(repo), "rev-parse", "HEAD"], cwd=repo, env=environment).decode("ascii", "strict").strip()
+    def _verify_checkout(
+        self,
+        context: P0Context,
+        repo: Path,
+        expected: str,
+        environment: dict[str, str],
+        *,
+        diagnostic_step: str,
+    ) -> None:
+        head = _git_quiet(
+            context.git,
+            [str(context.git), "-C", str(repo), "rev-parse", "HEAD"],
+            cwd=repo,
+            env=environment,
+            diagnostic_step=f"{diagnostic_step}.head",
+        ).decode("ascii", "strict").strip()
         if head != expected:
             raise PrebuildExecutionError("derived repository HEAD differs from P0")
-        _git_quiet(context.git, [str(context.git), "-C", str(repo), "diff", "--quiet"], cwd=repo, env=environment)
-        _git_quiet(context.git, [str(context.git), "-C", str(repo), "diff", "--cached", "--quiet"], cwd=repo, env=environment)
+        _git_quiet(
+            context.git,
+            [str(context.git), "-C", str(repo), "diff", "--quiet"],
+            cwd=repo,
+            env=environment,
+            diagnostic_step=f"{diagnostic_step}.worktree",
+        )
+        _git_quiet(
+            context.git,
+            [str(context.git), "-C", str(repo), "diff", "--cached", "--quiet"],
+            cwd=repo,
+            env=environment,
+            diagnostic_step=f"{diagnostic_step}.index",
+        )
         _verify_inert_git_repository(repo, context.source_repo, "derived repository")
 
     def consume(self, context: P0Context, transition: dict[str, Any]) -> str:
@@ -1787,12 +2134,26 @@ class LiveBackend:
     def clone_source(self, context: P0Context) -> None:
         plan = context.authorization["operations"]["source_clone"]
         environment = self._phase_environment(context, "hydration")
-        if self._run_quiet(plan["clone_argv"], cwd=context.source_repo.parent, environment=environment):
-            raise PrebuildExecutionError("authorized source clone failed")
+        self._run_quiet(
+            plan["clone_argv"],
+            cwd=context.source_repo.parent,
+            environment=environment,
+            step="source.clone",
+        )
         self._normalize_repo(context, context.root, environment)
-        if self._run_quiet(plan["checkout_argv"], cwd=context.root, environment=environment):
-            raise PrebuildExecutionError("authorized source checkout failed")
-        self._verify_checkout(context, context.root, plan["source_commit"], environment)
+        self._run_quiet(
+            plan["checkout_argv"],
+            cwd=context.root,
+            environment=environment,
+            step="source.checkout",
+        )
+        self._verify_checkout(
+            context,
+            context.root,
+            plan["source_commit"],
+            environment,
+            diagnostic_step="source.checkout",
+        )
 
     def rewrite_lock(self, context: P0Context) -> None:
         plan = context.authorization["operations"]["lock_rewrite"]
@@ -1840,8 +2201,34 @@ class LiveBackend:
         _mkdir_private_below(bundles, context.ceremony)
         for fixture in RECEIPT_FIXTURES:
             item = plan["fixtures"][fixture]
-            if self._run_quiet(item["bundle_argv"], cwd=context.source_repo, environment=environment):
-                raise PrebuildExecutionError("authorized local bundle creation failed")
+            source_ref = item["source_ref"]
+            expected_head = item["source_commit"]
+            ref_output = _git_quiet(
+                context.git,
+                [
+                    str(context.git), "-C", item["source_repo_path"], "for-each-ref",
+                    "--format=%(objectname)", "--count=2", source_ref,
+                ],
+                cwd=Path(item["source_repo_path"]),
+                env=environment,
+                diagnostic_step=f"corpus.{fixture}.ref.verify",
+            ).decode("ascii", "strict")
+            if ref_output:
+                if ref_output != f"{expected_head}\n":
+                    raise PrebuildExecutionError("source bundle ref differs from P0")
+            else:
+                self._run_quiet(
+                    item["update_ref_argv"],
+                    cwd=context.source_repo,
+                    environment=environment,
+                    step=f"corpus.{fixture}.ref",
+                )
+            self._run_quiet(
+                item["bundle_argv"],
+                cwd=context.source_repo,
+                environment=environment,
+                step=f"corpus.{fixture}.bundle",
+            )
             destination = Path(item["destination_path"])
             _clear_and_mkdir(destination, context.root)
             # init requires the target to be absent; reset created its parent only.
@@ -1849,14 +2236,32 @@ class LiveBackend:
                 destination.rmdir()
             except OSError as exc:
                 raise PrebuildExecutionError("derived corpus destination cannot be reset") from exc
-            if self._run_quiet(item["init_argv"], cwd=context.root, environment=environment):
-                raise PrebuildExecutionError("authorized corpus init failed")
+            self._run_quiet(
+                item["init_argv"],
+                cwd=context.root,
+                environment=environment,
+                step=f"corpus.{fixture}.init",
+            )
             self._normalize_repo(context, destination, environment)
-            if self._run_quiet(item["fetch_argv"], cwd=destination, environment=environment):
-                raise PrebuildExecutionError("authorized local corpus fetch failed")
-            if self._run_quiet(item["checkout_argv"], cwd=destination, environment=environment):
-                raise PrebuildExecutionError("authorized corpus checkout failed")
-            self._verify_checkout(context, destination, item["source_commit"], environment)
+            self._run_quiet(
+                item["fetch_argv"],
+                cwd=destination,
+                environment=environment,
+                step=f"corpus.{fixture}.fetch",
+            )
+            self._run_quiet(
+                item["checkout_argv"],
+                cwd=destination,
+                environment=environment,
+                step=f"corpus.{fixture}.checkout",
+            )
+            self._verify_checkout(
+                context,
+                destination,
+                item["source_commit"],
+                environment,
+                diagnostic_step=f"corpus.{fixture}.checkout",
+            )
 
     def prepare_fresh_cache(self, context: P0Context) -> None:
         cache = Path(context.authorization["derived_root"]["cache_path"])
@@ -1871,16 +2276,15 @@ class LiveBackend:
             _verify_source_t111(context)
             command = plan["commands"][fixture]
             capture = command["capture"]
-            codes = self._run_capture_many(
+            self._run_capture_many(
                 [command["argv"]],
+                steps=[f"hydrate.{fixture}"],
                 cwd=context.root,
                 environment=environment,
                 stdout_path=Path(capture["stdout_path"]),
                 stderr_path=Path(capture["stderr_path"]),
                 private_anchor=context.ceremony,
             )
-            if codes != [0]:
-                raise PrebuildExecutionError("authorized hydration failed")
             _verify_source_t111(context)
             result[fixture] = {
                 "exit_code": 0,
@@ -1944,16 +2348,15 @@ class LiveBackend:
             _clear_and_mkdir(run_root, context.root)
             capture = extract_plan[run]["capture"]
             commands = [extract_plan[run]["argv"][fixture] for fixture in RECEIPT_FIXTURES]
-            codes = self._run_capture_many(
+            self._run_capture_many(
                 commands,
+                steps=[f"extract.{run}.{fixture}" for fixture in RECEIPT_FIXTURES],
                 cwd=context.root,
                 environment=environment,
                 stdout_path=Path(capture["stdout_path"]),
                 stderr_path=Path(capture["stderr_path"]),
                 private_anchor=run_root,
             )
-            if codes != [0, 0, 0, 0]:
-                raise PrebuildExecutionError("authorized offline extraction failed")
             facts: dict[str, str] = {}
             for fixture in RECEIPT_FIXTURES:
                 item = publication["files"][fixture]
@@ -2051,10 +2454,16 @@ def _terminal_record(
     status: str,
     exit_code: int,
     failure: str | None,
+    failure_diagnostic: FailureDiagnostic | None,
     evidence_sha256: str | None,
 ) -> dict[str, Any]:
     if status == "COMPLETED":
-        if exit_code != 0 or failure is not None or evidence_sha256 is None:
+        if (
+            exit_code != 0
+            or failure is not None
+            or failure_diagnostic is not None
+            or evidence_sha256 is None
+        ):
             raise TerminalPersistenceError("invalid completed P0 terminal state")
     elif status == "ABORTED":
         if exit_code not in {2, 4} or failure is None or evidence_sha256 is not None:
@@ -2068,6 +2477,9 @@ def _terminal_record(
         "consumption_marker_sha256": marker_sha256,
         "exit_code": exit_code,
         "failure": failure,
+        "failure_diagnostic": (
+            None if failure_diagnostic is None else failure_diagnostic.record()
+        ),
         "evidence_receipt_sha256": evidence_sha256,
     }
 
@@ -2149,6 +2561,7 @@ def _abort_after_consumption(
             exit_code, failure = 2, "REFUSED"
         else:
             exit_code, failure = 4, "UNEXPECTED"
+        failure_diagnostic = exc.diagnostic if isinstance(exc, CommandFailure) else None
         try:
             _publish_terminal_guarded(
                 backend,
@@ -2159,6 +2572,7 @@ def _abort_after_consumption(
                     status="ABORTED",
                     exit_code=exit_code,
                     failure=failure,
+                    failure_diagnostic=failure_diagnostic,
                     evidence_sha256=None,
                 ),
                 terminal_state,
@@ -2341,6 +2755,7 @@ def execute_context(context: P0Context, backend: ExecutionBackend) -> ExecutionO
                         status="COMPLETED",
                         exit_code=0,
                         failure=None,
+                        failure_diagnostic=None,
                         evidence_sha256=evidence_sha256,
                     ),
                     terminal_state,

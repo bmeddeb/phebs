@@ -261,14 +261,26 @@ def p0(root: Path) -> dict:
                     fixture: {
                         "source_repo_path": str(source_repo / "spike" / "t111" / "corpus" / fixture),
                         "source_commit": heads[fixture],
+                        "source_history": {
+                            "is_shallow_repository": False,
+                            "old_commit": prebuild.BASE_LOCK_FIXTURE_COMMITS[fixture],
+                            "sealed_commit": heads[fixture],
+                            "old_commit_is_ancestor": True,
+                        },
+                        "source_ref": f"refs/gate2-v2/{fixture}",
                         "destination_path": str(derived / "spike" / "t111" / "corpus" / fixture),
                         "bundle_path": str(root / "ceremony" / "bundles" / f"{fixture}.bundle"),
                         "sequence": list(prebuild.CORPUS_FIXTURE_SEQUENCE),
+                        "update_ref_argv": [
+                            str(git),
+                            "-C", str(source_repo / "spike" / "t111" / "corpus" / fixture),
+                            "update-ref", f"refs/gate2-v2/{fixture}", heads[fixture], "0" * 40,
+                        ],
                         "bundle_argv": [
                             str(git),
                             "-C", str(source_repo / "spike" / "t111" / "corpus" / fixture),
                             "bundle", "create", str(root / "ceremony" / "bundles" / f"{fixture}.bundle"),
-                            heads[fixture],
+                            f"refs/gate2-v2/{fixture}",
                         ],
                         "init_argv": [
                             str(git), "init", "--quiet", str(derived / "spike" / "t111" / "corpus" / fixture),
@@ -277,7 +289,7 @@ def p0(root: Path) -> dict:
                         "fetch_argv": [
                             str(git), "-C", str(derived / "spike" / "t111" / "corpus" / fixture),
                             "fetch", "--no-tags", str(root / "ceremony" / "bundles" / f"{fixture}.bundle"),
-                            f"{heads[fixture]}:refs/gate2-v2/{fixture}",
+                            f"refs/gate2-v2/{fixture}:refs/gate2-v2/{fixture}",
                         ],
                         "checkout_argv": [
                             str(git), "-C", str(derived / "spike" / "t111" / "corpus" / fixture),
@@ -575,6 +587,26 @@ class PrebuildAuthorizationTests(unittest.TestCase):
             value["operations"]["corpus"]["fixtures"]["loki"]["sequence"] = [
                 "bundle", "init", "fetch", "checkout", "normalize",
             ]
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["operations"]["corpus"]["fixtures"]["loki"]["source_history"]["is_shallow_repository"] = True
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["operations"]["corpus"]["fixtures"]["loki"]["source_history"]["old_commit"] = "a" * 40
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["operations"]["corpus"]["fixtures"]["loki"]["source_ref"] = "refs/heads/main"
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["operations"]["corpus"]["fixtures"]["loki"]["update_ref_argv"][-1] = "f" * 40
+            with self.assertRaises(prebuild.PrebuildError):
+                prebuild.load_authorization(self.write(root, value))
+            value = p0(root)
+            value["operations"]["corpus"]["fixtures"]["loki"]["bundle_argv"][-1] = value["inputs"]["heads"]["loki"]
             with self.assertRaises(prebuild.PrebuildError):
                 prebuild.load_authorization(self.write(root, value))
             value = p0(root)
