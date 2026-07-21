@@ -4,11 +4,15 @@ ceremony inputs; a synthetic git fixture and invented cardinalities only."""
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import stage2_prepare as s2  # noqa: E402
 
 
 def _git(repo, *args):
@@ -70,6 +74,26 @@ class Stage2Test(unittest.TestCase):
                "--out", str(self.dir / out), *extra]
         return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+    def _sealed_receipt(self):
+        return {
+            "schema": "t111-gate2-v2-stage1-receipt-v1",
+            "status": "ADMITTED",
+            "cutoff": "2026-07-20T16:00:00Z",
+            "query_sha256": "sha256:8e9f76872c955e0bad76dfde432e846fbc7c340dfd23bba7a67fda14a55d897b",
+            "response_sha256": "sha256:synthetic",
+            "heads": {
+                "temporal": {"head_oid": self.new},
+                "dapr": {"head_oid": self.new},
+                "loki": {"head_oid": self.new},
+                "online-boutique": {"head_oid": self.new},
+            },
+        }
+
+    def _sealed_heads(self):
+        return {fixture: {"old_commit": self.old, "new_commit": self.new,
+                          "repo_dir": str(self.dir / "repo")}
+                for fixture in self._sealed_receipt()["heads"]}
+
     def test_synthetic_end_to_end_frame_specific_burns(self):
         r = self._run("--synthetic")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -82,6 +106,7 @@ class Stage2Test(unittest.TestCase):
         self.assertEqual(result["burns_by_frame"], {"precision": 2, "recall": 1})
         self.assertEqual(result["power"]["precision"]["population_net"], 998)
         self.assertEqual(result["power"]["recall"]["population_net"], 1099)
+        self.assertEqual(list((self.dir / "out").glob(".*.tmp")), [])
 
     def test_refuses_without_receipt_outside_synthetic(self):
         r = self._run()
@@ -101,6 +126,65 @@ class Stage2Test(unittest.TestCase):
         (self.dir / "out").mkdir()
         r = self._run("--synthetic")
         self.assertEqual(r.returncode, 3)
+
+    def test_refuses_new_commit_not_matching_admitted_head(self):
+        receipt = self._sealed_receipt()
+        self._w("receipt.json", receipt)
+        heads = self._sealed_heads()
+        heads["temporal"]["new_commit"] = self.old
+        self._w("heads.json", heads)
+        r = self._run("--receipt", str(self.dir / "receipt.json"))
+        self.assertEqual(r.returncode, 2)
+        self.assertIn(b"new_commit does not match", r.stderr)
+        self.assertFalse((self.dir / "out").exists())
+
+    def test_refuses_heads_fixture_set_not_matching_admitted_receipt(self):
+        self._w("receipt.json", self._sealed_receipt())
+        heads = self._sealed_heads()
+        heads["extra"] = {"old_commit": self.old, "new_commit": self.new,
+                          "repo_dir": str(self.dir / "repo")}
+        self._w("heads.json", heads)
+        r = self._run("--receipt", str(self.dir / "receipt.json"))
+        self.assertEqual(r.returncode, 2)
+        self.assertIn(b"fixtures do not exactly match", r.stderr)
+        self.assertFalse((self.dir / "out").exists())
+
+    def test_refuses_missing_fixture_from_admitted_receipt(self):
+        self._w("receipt.json", self._sealed_receipt())
+        heads = self._sealed_heads()
+        del heads["loki"]
+        self._w("heads.json", heads)
+        r = self._run("--receipt", str(self.dir / "receipt.json"))
+        self.assertEqual(r.returncode, 2)
+        self.assertIn(b"fixtures do not exactly match", r.stderr)
+        self.assertFalse((self.dir / "out").exists())
+
+    def test_unexpected_error_has_distinct_exit_and_no_output(self):
+        self._w("cards.json", {
+            "precision": {"population": "not-an-int", "census": 400},
+            "recall": {"population": 1100, "census": 450}})
+        r = self._run("--synthetic")
+        self.assertEqual(r.returncode, 4)
+        self.assertEqual(r.stderr, b"stage2: unexpected failure: TypeError\n")
+        self.assertFalse((self.dir / "out").exists())
+
+    def test_output_pair_is_not_published_if_directory_rename_fails(self):
+        out = self.dir / "out"
+        staging = out.with_name(f".{out.name}.tmp")
+        real_rename = os.rename
+
+        def fail_final_rename(src, dst):
+            if Path(src) == staging and Path(dst) == out:
+                raise OSError("injected final rename failure")
+            return real_rename(src, dst)
+
+        result = {"schema": "synthetic", "all_frames_feasible": True}
+        with mock.patch.object(s2.os, "rename", side_effect=fail_final_rename):
+            with self.assertRaises(OSError):
+                s2.publish_outputs(out, [], result)
+        self.assertFalse(out.exists())
+        self.assertTrue((staging / "census-v2-seed.jsonl").is_file())
+        self.assertTrue((staging / "stage2-preparation.json").is_file())
 
 
 if __name__ == "__main__":

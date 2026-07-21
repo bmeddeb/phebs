@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from fractions import Fraction
 from pathlib import Path
@@ -70,9 +71,36 @@ def verify_receipt(path: str) -> dict:
         raise Stage2Error("receipt cutoff does not match the sealed cutoff")
     if receipt.get("query_sha256") != s1.sha256_bytes(query_bytes):
         raise Stage2Error("receipt query digest does not match the sealed query")
-    if not receipt.get("response_sha256") or not receipt.get("heads"):
+    receipt_heads = receipt.get("heads")
+    if not receipt.get("response_sha256") or not isinstance(receipt_heads, dict):
         raise Stage2Error("receipt lacks response digest or sealed heads")
+    if set(receipt_heads) != set(constants["fixtures"]):
+        raise Stage2Error("receipt heads do not exactly match the sealed fixtures")
+    for fixture, head in receipt_heads.items():
+        oid = head.get("head_oid") if isinstance(head, dict) else None
+        if not isinstance(oid, str) or not s1.OID_RE.fullmatch(oid):
+            raise Stage2Error(f"receipt lacks a full sealed head oid for {fixture!r}")
     return receipt
+
+
+def verify_heads(heads: dict, receipt: dict) -> None:
+    """Bind every mapping target to the exact admitted Stage-1 snapshot.
+
+    The receipt is the authority for the new side of every comparison.  An
+    exact fixture-set match also prevents a stale, omitted, or invented input
+    from changing which coordinates are mapped versus conservatively burned.
+    """
+    receipt_heads = receipt.get("heads")
+    if not isinstance(heads, dict) or not isinstance(receipt_heads, dict):
+        raise Stage2Error("heads input and receipt heads must be JSON objects")
+    if set(heads) != set(receipt_heads):
+        raise Stage2Error("heads fixtures do not exactly match the sealed Stage-1 receipt")
+    for fixture, sealed in receipt_heads.items():
+        if not isinstance(sealed, dict) or not sealed.get("head_oid"):
+            raise Stage2Error(f"receipt lacks a sealed head oid for {fixture!r}")
+        submitted = heads[fixture]
+        if not isinstance(submitted, dict) or submitted.get("new_commit") != sealed["head_oid"]:
+            raise Stage2Error(f"heads {fixture!r} new_commit does not match the sealed Stage-1 head")
 
 
 def ledger_coordinates(ledger: dict) -> list[dict]:
@@ -142,26 +170,70 @@ def power(cardinalities: dict, frame_burns: dict[str, int], design: dict) -> dic
     return out
 
 
-def run(a) -> int:
-    if not a.synthetic:
-        if not a.receipt:
-            print("stage2: refusing — no Stage-1 receipt and not --synthetic", file=sys.stderr)
-            return 2
-        try:
-            verify_receipt(a.receipt)
-        except Stage2Error as exc:
-            print(f"stage2: refusing — {exc}", file=sys.stderr)
-            return 2
-
-    out = Path(a.out)
+def write_durable_temp(path: Path, payload: bytes) -> Path:
+    """Write one complete output to a sibling temp file before publication."""
+    tmp = path.with_name(f".{path.name}.tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
-        out.mkdir(mode=0o700)
-    except FileExistsError:
+        view = memoryview(payload)
+        while view:
+            written = os.write(fd, view)
+            if written <= 0:
+                raise OSError("short write while publishing Stage-2 output")
+            view = view[written:]
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    return tmp
+
+
+def fsync_dir(path: Path) -> None:
+    dir_fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
+def publish_outputs(out: Path, mapped: list[dict], result: dict) -> None:
+    """Atomically publish the complete two-file output directory.
+
+    Both files become visible together only when the fully fsync'd sibling
+    staging directory is renamed into the fresh requested output path.
+    """
+    staging = out.with_name(f".{out.name}.tmp")
+    staging.mkdir(mode=0o700)
+    seed = "".join(json.dumps(m, sort_keys=True) + "\n" for m in mapped).encode()
+    preparation = (json.dumps(result, indent=2, sort_keys=True) + "\n").encode()
+    targets = ((staging / "census-v2-seed.jsonl", seed),
+               (staging / "stage2-preparation.json", preparation))
+    temps = [(write_durable_temp(path, payload), path) for path, payload in targets]
+    for tmp, path in temps:
+        os.rename(tmp, path)
+    fsync_dir(staging)
+    if out.exists():
+        raise FileExistsError(out)
+    os.rename(staging, out)
+    fsync_dir(out.parent)
+
+
+def run(a) -> int:
+    out = Path(a.out)
+    if out.exists():
         print(f"stage2: refusing — output {out} already exists", file=sys.stderr)
         return 3
 
+    receipt = None
+    if not a.synthetic:
+        if not a.receipt:
+            raise Stage2Error("no Stage-1 receipt and not --synthetic")
+        receipt = verify_receipt(a.receipt)
+
     coords = ledger_coordinates(load_json(a.ledger))
-    mapped = carry_forward(coords, load_json(a.heads))
+    heads = load_json(a.heads)
+    if receipt is not None:
+        verify_heads(heads, receipt)
+    mapped = carry_forward(coords, heads)
     burns = [m for m in mapped if m["decision"] == "burn"]
 
     cards = load_json(a.cardinalities)
@@ -183,10 +255,14 @@ def run(a) -> int:
         "power": p,
         "all_frames_feasible": all(v.get("feasible") for v in p.values()),
     }
-    (out / "census-v2-seed.jsonl").write_text(
-        "".join(json.dumps(m, sort_keys=True) + "\n" for m in mapped), encoding="utf-8")
-    (out / "stage2-preparation.json").write_text(
-        json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    # All fallible computation completes before the final output directory
+    # exists. Publication stages the complete pair and renames it atomically.
+    try:
+        publish_outputs(out, mapped, result)
+    except FileExistsError:
+        print(f"stage2: refusing — output {out} already exists", file=sys.stderr)
+        return 3
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["all_frames_feasible"] else 1
 
@@ -201,7 +277,14 @@ def main() -> int:
     ap.add_argument("--receipt")
     ap.add_argument("--synthetic", action="store_true")
     ap.add_argument("--out", required=True)
-    return run(ap.parse_args())
+    try:
+        return run(ap.parse_args())
+    except Stage2Error as exc:
+        print(f"stage2: refusing — {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:
+        print(f"stage2: unexpected failure: {type(exc).__name__}", file=sys.stderr)
+        return 4
 
 
 if __name__ == "__main__":
