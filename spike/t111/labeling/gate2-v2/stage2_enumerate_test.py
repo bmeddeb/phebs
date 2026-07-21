@@ -482,8 +482,10 @@ class Stage2EnumerationTest(unittest.TestCase):
             })()
             with (
                 mock.patch.object(enum, "load_authorization", return_value=(authorization, b"{}\n")),
+                mock.patch.object(enum, "load_prebuild_evidence", return_value=({}, b"{}\n")),
                 mock.patch.object(enum, "verify_authorized_toolchain_identity"),
                 mock.patch.object(enum, "verify_committed_authorization", return_value=digest),
+                mock.patch.object(enum, "verify_prebuild_evidence"),
                 mock.patch.object(enum, "verify_interpreter"),
                 mock.patch.object(enum, "configure_sealed_execution_environment", return_value={}),
                 mock.patch.object(enum, "verify_authorized_state_namespaces"),
@@ -536,8 +538,10 @@ class Stage2EnumerationTest(unittest.TestCase):
 
             with (
                 mock.patch.object(enum, "load_authorization", return_value=(authorization, b"{}\n")),
+                mock.patch.object(enum, "load_prebuild_evidence", return_value=({}, b"{}\n")),
                 mock.patch.object(enum, "verify_authorized_toolchain_identity"),
                 mock.patch.object(enum, "verify_committed_authorization", return_value=digest),
+                mock.patch.object(enum, "verify_prebuild_evidence"),
                 mock.patch.object(enum, "verify_interpreter"),
                 mock.patch.object(enum, "configure_sealed_execution_environment", return_value={}),
                 mock.patch.object(enum, "verify_authorized_state_namespaces"),
@@ -599,9 +603,15 @@ class Stage2EnumerationTest(unittest.TestCase):
                 "schema": enum.AUTH_SCHEMA,
                 "status": "AUTHORIZED",
                 "authorization_id": "stage2-enumeration-auth-1",
+                "p0_authorization": {
+                    "path": enum.P0_AUTHORIZATION_REL,
+                    "sha256": digest,
+                    "authorization_commit": "a" * 40,
+                },
                 "enumerator_sha256": digest,
                 "stage1_snapshot_sha256": digest,
                 "receipt_sha256": digest,
+                "response_sha256": digest,
                 "stage0_inventory_sha256": digest,
                 "base_lock_sha256": digest,
                 "derived_lock_sha256": digest,
@@ -632,6 +642,15 @@ class Stage2EnumerationTest(unittest.TestCase):
                     "path": enum.ESTIMATOR_AUTHORIZATION_REL,
                     "sha256": digest,
                 }},
+                "prebuild_evidence": {
+                    "path": enum.PREBUILD_EVIDENCE_REL,
+                    "sha256": digest,
+                    "accepted_commit": "a" * 40,
+                    "review": {
+                        "path": enum.PREBUILD_EVIDENCE_REVIEW_REL,
+                        "sha256": digest,
+                    },
+                },
                 "heads": {fixture: f"{number:040x}" for number, fixture in enumerate(enum.RECEIPT_FIXTURES, 1)},
                 "fact_runs": {run: {
                     "receipt_sha256": digest,
@@ -654,6 +673,307 @@ class Stage2EnumerationTest(unittest.TestCase):
                 auth_file.write_text(enum.canonical_json(authorization) + "\n")
                 with self.assertRaises(enum.EnumerationError):
                     enum.load_authorization()
+
+    def test_prebuild_evidence_is_canonical_committed_reviewed_and_argument_bound(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            evidence_path = root / "stage2-prebuild-evidence.json"
+            review_path = root / "stage2-prebuild-evidence-review-r1.md"
+            commit = "a" * 40
+            digests = {name: _digest(character) for name, character in (
+                ("receipt_sha256", "b"),
+                ("response_sha256", "c"),
+                ("stage0_inventory_sha256", "d"),
+                ("base_lock_sha256", "e"),
+                ("derived_lock_sha256", "f"),
+                ("stage0_harness_manifest_sha256", "0"),
+                ("derived_harness_manifest_sha256", "1"),
+                ("cache_tree_sha256", "2"),
+                ("t111_binary_sha256", "3"),
+                ("typedcalloracle_binary_sha256", "4"),
+                ("python_sha256", "5"),
+                ("git_sha256", "6"),
+                ("go_sha256", "7"),
+            )}
+            heads = {
+                fixture: f"{number:040x}"
+                for number, fixture in enumerate(enum.RECEIPT_FIXTURES, 1)
+            }
+            variables = {"PATH": "/tools:/usr/bin:/bin", **enum.SEALED_ENVIRONMENT_STATIC}
+            fact_runs = {
+                run: {
+                    "root": f"/sealed/derived/facts/{run}",
+                    "receipt_sha256": _digest("7" if run == "run1" else "8"),
+                    "facts_sha256": {
+                        fixture: _digest("9" if run == "run1" else "a")
+                        for fixture in enum.RECEIPT_FIXTURES
+                    },
+                }
+                for run in ("run1", "run2")
+            }
+            review_bytes = b"# Prebuild review\n\n**Verdict: ACCEPT.**\n"
+            review_digest = enum.sha256_bytes(review_bytes)
+            evidence = {
+                "schema": enum.PREBUILD_EVIDENCE_SCHEMA,
+                "status": "COMPLETE",
+                "prebuild_id": "stage2-prebuild-1",
+                **digests,
+                "p0_authorization": {
+                    "path": enum.P0_AUTHORIZATION_REL,
+                    "sha256": _digest("a"),
+                    "authorization_commit": commit,
+                },
+                "python_executable": "/tools/python3",
+                "python_version": "3.9.6",
+                "python_mode": enum.PYTHON_MODE,
+                "git_executable": "/tools/git",
+                "go_executable": "/tools/go",
+                "producer_toolchain_identity": "exact-tools",
+                "environment": {"network": "disabled", "variables": variables},
+                "heads": heads,
+                "execution_root": "/sealed/derived",
+                "fact_runs": fact_runs,
+                "arguments": {
+                    "receipt": "/sealed/stage1/receipt.json",
+                    "execution_root": "/sealed/derived",
+                    "facts_run1": "/sealed/derived/facts/run1",
+                    "facts_run2": "/sealed/derived/facts/run2",
+                    "out": "/sealed/ceremony/output",
+                },
+            }
+            evidence_raw = (enum.canonical_json(evidence) + "\n").encode("utf-8")
+            evidence_path.write_bytes(evidence_raw)
+            review_path.write_bytes(review_bytes)
+            authorization = {
+                **{field: evidence[field] for field in enum.PREBUILD_EVIDENCE_AUTHORIZATION_FIELDS},
+                "p0_authorization": dict(evidence["p0_authorization"]),
+                "heads": heads,
+                "fact_runs": {
+                    run: {
+                        "receipt_sha256": fact_runs[run]["receipt_sha256"],
+                        "facts_sha256": fact_runs[run]["facts_sha256"],
+                    }
+                    for run in ("run1", "run2")
+                },
+                "prebuild_evidence": {
+                    "path": "stage2-prebuild-evidence.json",
+                    "sha256": enum.sha256_bytes(evidence_raw),
+                    "accepted_commit": commit,
+                    "review": {
+                        "path": "stage2-prebuild-evidence-review-r1.md",
+                        "sha256": review_digest,
+                    },
+                },
+                "state": {"output_dir": "/sealed/ceremony/output"},
+            }
+            args = type("Args", (), {
+                "receipt": "/sealed/stage1/receipt.json",
+                "execution_root": "/sealed/derived",
+                "facts_run1": "/sealed/derived/facts/run1",
+                "facts_run2": "/sealed/derived/facts/run2",
+                "out": "/sealed/ceremony/output",
+            })()
+            blobs = {
+                "stage2-prebuild-evidence.json": evidence_raw,
+                "stage2-prebuild-evidence-review-r1.md": review_bytes,
+                f"{commit}:stage2-prebuild-evidence.json": evidence_raw,
+                f"{commit}:stage2-prebuild-evidence-review-r1.md": review_bytes,
+            }
+            with (
+                mock.patch.object(enum, "PREBUILD_EVIDENCE_PATH", evidence_path),
+                mock.patch.object(enum, "PREBUILD_EVIDENCE_REL", "stage2-prebuild-evidence.json"),
+                mock.patch.object(enum, "PREBUILD_EVIDENCE_REVIEW_PATH", review_path),
+                mock.patch.object(enum, "PREBUILD_EVIDENCE_REVIEW_REL", "stage2-prebuild-evidence-review-r1.md"),
+                mock.patch.object(enum, "_head_blob", side_effect=lambda relative: blobs[relative]),
+                mock.patch.object(
+                    enum, "_commit_blob", side_effect=lambda revision, relative: blobs[f"{revision}:{relative}"]
+                ),
+                mock.patch.object(enum, "_require_ancestor") as require_ancestor,
+                mock.patch.object(enum, "verify_p0_authorization_binding"),
+            ):
+                loaded, raw = enum.load_prebuild_evidence()
+                self.assertEqual(loaded, evidence)
+                enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                authorization["p0_authorization"]["sha256"] = _digest("f")
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                authorization["p0_authorization"] = dict(evidence["p0_authorization"])
+                authorization["response_sha256"] = _digest("e")
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                authorization["response_sha256"] = evidence["response_sha256"]
+                args.facts_run1 = "/sealed/derived/facts/other"
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                args.facts_run1 = "/sealed/derived/facts/run1"
+                require_ancestor.side_effect = enum.EnumerationError("not an ancestor")
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                require_ancestor.side_effect = None
+                blobs["stage2-prebuild-evidence.json"] = b"different committed evidence\n"
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                blobs["stage2-prebuild-evidence.json"] = evidence_raw
+                args.execution_root = "/other-derived-root"
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+
+    def test_prebuild_evidence_refuses_noncanonical_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp).resolve() / "stage2-prebuild-evidence.json"
+            path.write_text('{ "schema": "not canonical" }\n')
+            with mock.patch.object(enum, "PREBUILD_EVIDENCE_PATH", path):
+                with self.assertRaises(enum.EnumerationError):
+                    enum.load_prebuild_evidence()
+
+    def test_p0_authorization_requires_real_committed_plan_approved_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            p0_path = root / "stage2-prebuild-authorization.json"
+            p0_relative = "stage2-prebuild-authorization.json"
+            p0 = {
+                "schema": enum.P0_AUTHORIZATION_SCHEMA,
+                "status": "AUTHORIZED",
+                "authorization_id": "stage2-prebuild-auth-0001",
+                **{
+                    field: {}
+                    for field in enum.P0_AUTHORIZATION_FIELDS
+                    - {"schema", "status", "authorization_id", "scope"}
+                },
+                "scope": dict(enum.P0_EXPECTED_SCOPE),
+            }
+            p0_bytes = (enum.canonical_json(p0) + "\n").encode("utf-8")
+            p0_path.write_bytes(p0_bytes)
+            p0_digest = enum.sha256_bytes(p0_bytes)
+            p0_commit = "b" * 40
+            evidence_commit = "a" * 40
+            binding = {
+                "path": p0_relative,
+                "sha256": p0_digest,
+                "authorization_commit": p0_commit,
+            }
+            plan = (
+                f"| 2026-07-21 | {enum.PLAN_P0_AUTHORIZATION_MARKER} | "
+                f"**{enum.PLAN_P0_AUTHORIZATION_APPROVAL}.** "
+                f"{p0['authorization_id']} {p0_digest} |\n"
+            ).encode("utf-8")
+            blobs = {
+                f"HEAD:{p0_relative}": p0_bytes,
+                f"{p0_commit}:{p0_relative}": p0_bytes,
+                f"{evidence_commit}:{p0_relative}": p0_bytes,
+                f"{p0_commit}:PLAN.md": plan,
+            }
+
+            def control(*arguments):
+                if arguments[:2] == ("merge-base", "--is-ancestor"):
+                    return b""
+                return blobs[arguments[1]]
+
+            with (
+                mock.patch.object(enum, "P0_AUTHORIZATION_PATH", p0_path),
+                mock.patch.object(enum, "P0_AUTHORIZATION_REL", p0_relative),
+                mock.patch.object(enum, "_control_git", side_effect=control),
+            ):
+                enum.verify_p0_authorization_binding(
+                    {"p0_authorization": binding},
+                    {"p0_authorization": dict(binding)},
+                    evidence_commit,
+                )
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        {"p0_authorization": dict(binding)},
+                        p0_commit,
+                    )
+                fabricated = dict(binding)
+                fabricated["sha256"] = _digest("f")
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": fabricated},
+                        {"p0_authorization": dict(fabricated)},
+                        evidence_commit,
+                    )
+                p0["scope"]["enumerate_frames"] = True
+                p0_path.write_bytes((enum.canonical_json(p0) + "\n").encode("utf-8"))
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        {"p0_authorization": dict(binding)},
+                        evidence_commit,
+                    )
+                p0["scope"] = dict(enum.P0_EXPECTED_SCOPE)
+                p0["scope"]["construct_derived_root"] = 1
+                p0_path.write_bytes((enum.canonical_json(p0) + "\n").encode("utf-8"))
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        {"p0_authorization": dict(binding)},
+                        evidence_commit,
+                    )
+                p0["scope"] = dict(enum.P0_EXPECTED_SCOPE)
+                p0["unexpected"] = "field"
+                p0_path.write_bytes((enum.canonical_json(p0) + "\n").encode("utf-8"))
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        {"p0_authorization": dict(binding)},
+                        evidence_commit,
+                    )
+                p0.pop("unexpected")
+                p0_path.write_bytes(p0_bytes)
+                blobs[f"{p0_commit}:PLAN.md"] = b"| no authorization anchor |\n"
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        {"p0_authorization": dict(binding)},
+                        evidence_commit,
+                    )
+
+    def test_receipt_response_digest_must_match_the_prebuild_bound_authorization(self):
+        class FakeSnapshot:
+            OID_RE = type("OID", (), {
+                "fullmatch": staticmethod(lambda value: bool(enum.re.fullmatch(r"[0-9a-f]{40}", value))),
+            })
+
+            @staticmethod
+            def load_sealed_inputs():
+                return b"query", {"proposed_cutoff": "2026-07-20T16:00:00Z", "fixtures": enum.RECEIPT_FIXTURES}
+
+            sha256_bytes = staticmethod(enum.sha256_bytes)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            response_path = root / "response.json"
+            response_path.write_bytes(b"sealed response\n")
+            heads = {
+                fixture: {"head_oid": f"{number:040x}"}
+                for number, fixture in enumerate(enum.RECEIPT_FIXTURES, 1)
+            }
+            receipt = {
+                "schema": enum.RECEIPT_SCHEMA,
+                "status": "ADMITTED",
+                "cutoff": "2026-07-20T16:00:00Z",
+                "query_sha256": enum.sha256_bytes(b"query"),
+                "response_sha256": enum.sha256_file(response_path),
+                "heads": heads,
+            }
+            receipt_path = root / "receipt.json"
+            receipt_path.write_text(json.dumps(receipt))
+            authorization = {
+                "receipt_sha256": enum.sha256_file(receipt_path),
+                "response_sha256": receipt["response_sha256"],
+                "stage1_snapshot_sha256": _digest("a"),
+                "heads": {fixture: heads[fixture]["head_oid"] for fixture in enum.RECEIPT_FIXTURES},
+            }
+            with (
+                mock.patch.object(enum, "STAGE1_RESPONSE_PATH", response_path),
+                mock.patch.object(enum, "_read_verified_source", return_value=b"synthetic snapshot"),
+                mock.patch.object(enum, "_execute_verified_source", return_value=FakeSnapshot),
+            ):
+                enum.verify_receipt(receipt_path, authorization)
+                authorization["response_sha256"] = _digest("b")
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_receipt(receipt_path, authorization)
 
     def test_reviewed_binding_requires_exact_accepted_ancestor_bytes(self):
         commit = "a" * 40
@@ -971,6 +1291,44 @@ class Stage2EnumerationTest(unittest.TestCase):
                 expected_toolchain_identity="different-tools",
                 authorized_tools=self._synthetic_tools(),
             )
+
+    def test_prebuild_evidence_refusal_precedes_consumption_and_derived_root_io(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            digest = _digest("a")
+            authorization = {"enumerator_sha256": digest}
+            args = type("Args", (), {
+                "out": str(root / "out"),
+                "receipt": str(root / "receipt.json"),
+                "execution_root": str(root / "derived-root"),
+                "facts_run1": str(root / "run1"),
+                "facts_run2": str(root / "run2"),
+            })()
+            with (
+                mock.patch.object(enum, "load_authorization", return_value=(authorization, b"{}\n")),
+                mock.patch.object(enum, "load_prebuild_evidence", return_value=({}, b"{}\n")),
+                mock.patch.object(enum, "verify_authorized_toolchain_identity"),
+                mock.patch.object(enum, "sha256_file", return_value=digest),
+                mock.patch.object(enum, "verify_committed_authorization", return_value=digest),
+                mock.patch.object(
+                    enum, "verify_prebuild_evidence",
+                    side_effect=enum.EnumerationError("prebuild evidence missing"),
+                ),
+                mock.patch.object(
+                    enum, "_consume_authorization",
+                    side_effect=AssertionError("marker transition reached"),
+                ),
+                mock.patch.object(
+                    enum, "load_execution_label_prep",
+                    side_effect=AssertionError("derived root reached"),
+                ),
+                mock.patch.object(Path, "lstat", side_effect=AssertionError("derived metadata reached")),
+                mock.patch.object(Path, "resolve", side_effect=AssertionError("derived resolution reached")),
+                mock.patch.object(enum, "within", side_effect=AssertionError("derived containment reached")),
+            ):
+                with self.assertRaises(enum.EnumerationError):
+                    enum.run(args)
+            self.assertFalse((root / "out").exists())
 
     def test_missing_authorization_stops_before_the_derived_root_is_loaded(self):
         with tempfile.TemporaryDirectory() as tmp:

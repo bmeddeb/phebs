@@ -65,6 +65,8 @@ STAGE1_RESPONSE_PATH = HERE / "stage1" / "response.json"
 PROTOCOL_REL = "spike/t111/labeling/GATE2-V2.md"
 
 AUTH_SCHEMA = "t111-gate2-v2-stage2-enumeration-authorization-v1"
+PREBUILD_EVIDENCE_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-v1"
+P0_AUTHORIZATION_SCHEMA = "t111-gate2-v2-stage2-prebuild-authorization-v1"
 RECEIPT_SCHEMA = "t111-gate2-v2-stage1-receipt-v1"
 FACT_RUN_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-fact-run-receipt-v1"
 CONSUMPTION_MARKER_SCHEMA = "t111-gate2-v2-stage2-enumeration-consumption-v1"
@@ -78,16 +80,26 @@ EXTERNAL_FRAMES = (
 )
 FAILURE_PREDICATES = {"LOAD_ERRORS", "EXTRACTION_FAILURE"}
 AUTHORIZATION_PATH = HERE / "stage2-enumeration-authorization.json"
+P0_AUTHORIZATION_PATH = HERE / "stage2-prebuild-authorization.json"
+PREBUILD_EVIDENCE_PATH = HERE / "stage2-prebuild-evidence.json"
 PLAN_PATH = REPO_ROOT / "PLAN.md"
 AUTHORIZATION_REL = AUTHORIZATION_PATH.relative_to(REPO_ROOT).as_posix()
+P0_AUTHORIZATION_REL = P0_AUTHORIZATION_PATH.relative_to(REPO_ROOT).as_posix()
+PREBUILD_EVIDENCE_REL = PREBUILD_EVIDENCE_PATH.relative_to(REPO_ROOT).as_posix()
 ENUMERATOR_REL = Path(__file__).resolve().relative_to(REPO_ROOT).as_posix()
 STAGE1_SNAPSHOT_REL = (HERE / "stage1_snapshot.py").relative_to(REPO_ROOT).as_posix()
-ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r1.md"
+# This implementation revision must be accepted afresh; r1 binds the prior
+# verifier bytes and cannot authorize a later prebuild-admission extension.
+ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r2.md"
 ENUMERATION_REVIEW_REL = ENUMERATION_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
+PREBUILD_EVIDENCE_REVIEW_PATH = HERE / "stage2-prebuild-evidence-review-r1.md"
+PREBUILD_EVIDENCE_REVIEW_REL = PREBUILD_EVIDENCE_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 ESTIMATOR_AUTHORIZATION_PATH = REPO_ROOT / "spike" / "t111" / "labeling" / "estimator-authorization.json"
 ESTIMATOR_AUTHORIZATION_REL = ESTIMATOR_AUTHORIZATION_PATH.relative_to(REPO_ROOT).as_posix()
 PLAN_AUTHORIZATION_MARKER = "GATE2-V2 Stage-2 enumeration authorization"
 PLAN_AUTHORIZATION_APPROVAL = "AUTHORIZATION: APPROVED"
+PLAN_P0_AUTHORIZATION_MARKER = "GATE2-V2 Stage-2 P0 prebuild authorization"
+PLAN_P0_AUTHORIZATION_APPROVAL = "AUTHORIZATION: APPROVED"
 PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier"
 PLAN_IMPLEMENTATION_APPROVAL = "ACCEPT"
 PYTHON_MODE = "isolated-no-site"
@@ -112,9 +124,11 @@ AUTHORIZATION_FIELDS = {
     "schema",
     "status",
     "authorization_id",
+    "p0_authorization",
     "enumerator_sha256",
     "stage1_snapshot_sha256",
     "receipt_sha256",
+    "response_sha256",
     "stage0_inventory_sha256",
     "base_lock_sha256",
     "derived_lock_sha256",
@@ -136,6 +150,7 @@ AUTHORIZATION_FIELDS = {
     "binding",
     "environment",
     "prior_authorizations",
+    "prebuild_evidence",
     "heads",
     "fact_runs",
     "state",
@@ -146,11 +161,83 @@ AUTHORIZATION_REVIEW_FIELDS = {"status", "accepted_commit", "record_sha256"}
 AUTHORIZATION_BINDING_FIELDS = {"status", "commit"}
 AUTHORIZATION_ENVIRONMENT_FIELDS = {"network", "variables"}
 AUTHORIZATION_PRIOR_AUTHORIZATION_FIELDS = {"path", "sha256"}
+AUTHORIZATION_PREBUILD_EVIDENCE_FIELDS = {
+    "path",
+    "sha256",
+    "accepted_commit",
+    "review",
+}
+AUTHORIZATION_PREBUILD_EVIDENCE_REVIEW_FIELDS = {"path", "sha256"}
+P0_AUTHORIZATION_BINDING_FIELDS = {"path", "sha256", "authorization_commit"}
 AUTHORIZATION_STATE_FIELDS = {
     "ceremony_directory",
     "output_dir",
     "consumption_marker",
     "terminal_receipt",
+}
+PREBUILD_EVIDENCE_FIELDS = {
+    "schema",
+    "status",
+    "prebuild_id",
+    "p0_authorization",
+    "receipt_sha256",
+    "response_sha256",
+    "stage0_inventory_sha256",
+    "base_lock_sha256",
+    "derived_lock_sha256",
+    "stage0_harness_manifest_sha256",
+    "derived_harness_manifest_sha256",
+    "cache_tree_sha256",
+    "t111_binary_sha256",
+    "typedcalloracle_binary_sha256",
+    "python_executable",
+    "python_version",
+    "python_mode",
+    "python_sha256",
+    "git_executable",
+    "git_sha256",
+    "go_executable",
+    "go_sha256",
+    "producer_toolchain_identity",
+    "environment",
+    "heads",
+    "execution_root",
+    "fact_runs",
+    "arguments",
+}
+PREBUILD_EVIDENCE_P0_AUTHORIZATION_FIELDS = P0_AUTHORIZATION_BINDING_FIELDS
+PREBUILD_EVIDENCE_FACT_RUN_FIELDS = {"root", "receipt_sha256", "facts_sha256"}
+PREBUILD_EVIDENCE_ARGUMENT_FIELDS = {"receipt", "execution_root", "facts_run1", "facts_run2", "out"}
+# P0 is not a generic approval token.  The enumeration verifier does not
+# import the P0 runner (that would make its fire-time trust closure depend on
+# a second source module), but it still requires the full P0 envelope and the
+# no-enumeration scope that the P0 parser accepts.  The P0 runner separately
+# validates every nested operation and topology before it can do any work.
+P0_AUTHORIZATION_FIELDS = {
+    "schema",
+    "status",
+    "authorization_id",
+    "implementation",
+    "bootstrap",
+    "inputs",
+    "toolchain",
+    "environment",
+    "derived_root",
+    "fact_runs",
+    "operations",
+    "state",
+    "scope",
+    "implementation_review",
+    "implementation_binding",
+}
+P0_EXPECTED_SCOPE = {
+    "construct_derived_root": True,
+    "hydrate_modules": True,
+    "extract_facts": True,
+    "enumerate_frames": False,
+    "prepare_stage2": False,
+    "select_samples": False,
+    "disclose_coordinates": False,
 }
 FACT_RUN_RECEIPT_FIELDS = {
     "schema",
@@ -468,7 +555,8 @@ def load_authorization() -> tuple[dict[str, Any], bytes]:
         "schema", "status", "authorization_id", "heads", "fact_runs",
         "producer_toolchain_identity", "python_executable", "python_version",
         "python_mode", "git_executable", "go_executable", "review", "binding",
-        "environment", "prior_authorizations", "state",
+        "environment", "prior_authorizations", "p0_authorization",
+        "prebuild_evidence", "state",
     }:
         require_sha256(value[key], f"authorization {key}")
     for field, basename in (
@@ -543,6 +631,32 @@ def load_authorization() -> tuple[dict[str, Any], bytes]:
     ):
         raise EnumerationError("enumeration authorization has an invalid prior ceremony binding")
     require_sha256(prior.get("sha256"), "authorization prior ceremony digest")
+    p0 = value["p0_authorization"]
+    if (
+        not isinstance(p0, dict)
+        or set(p0) != P0_AUTHORIZATION_BINDING_FIELDS
+        or p0.get("path") != P0_AUTHORIZATION_REL
+        or not _valid_full_commit(p0.get("authorization_commit"))
+    ):
+        raise EnumerationError("enumeration authorization has an invalid P0 authorization binding")
+    require_sha256(p0.get("sha256"), "authorization P0 authorization digest")
+    prebuild = value["prebuild_evidence"]
+    if (
+        not isinstance(prebuild, dict)
+        or set(prebuild) != AUTHORIZATION_PREBUILD_EVIDENCE_FIELDS
+        or prebuild.get("path") != PREBUILD_EVIDENCE_REL
+        or not _valid_full_commit(prebuild.get("accepted_commit"))
+    ):
+        raise EnumerationError("enumeration authorization has an invalid prebuild evidence binding")
+    require_sha256(prebuild.get("sha256"), "authorization prebuild evidence digest")
+    prebuild_review = prebuild.get("review")
+    if (
+        not isinstance(prebuild_review, dict)
+        or set(prebuild_review) != AUTHORIZATION_PREBUILD_EVIDENCE_REVIEW_FIELDS
+        or prebuild_review.get("path") != PREBUILD_EVIDENCE_REVIEW_REL
+    ):
+        raise EnumerationError("enumeration authorization has an invalid prebuild evidence review binding")
+    require_sha256(prebuild_review.get("sha256"), "authorization prebuild evidence review digest")
     if not isinstance(value["heads"], dict) or set(value["heads"]) != set(RECEIPT_FIXTURES):
         raise EnumerationError("enumeration authorization has an invalid fixture set")
     for fixture, oid in value["heads"].items():
@@ -584,6 +698,197 @@ def load_authorization() -> tuple[dict[str, Any], bytes]:
         if target == ceremony:
             raise EnumerationError("enumeration authorization state path collides with ceremony directory")
     return value, raw
+
+
+PREBUILD_EVIDENCE_DIGEST_FIELDS = {
+    "receipt_sha256",
+    "response_sha256",
+    "stage0_inventory_sha256",
+    "base_lock_sha256",
+    "derived_lock_sha256",
+    "stage0_harness_manifest_sha256",
+    "derived_harness_manifest_sha256",
+    "cache_tree_sha256",
+    "t111_binary_sha256",
+    "typedcalloracle_binary_sha256",
+    "python_sha256",
+    "git_sha256",
+    "go_sha256",
+}
+PREBUILD_EVIDENCE_AUTHORIZATION_FIELDS = {
+    "receipt_sha256",
+    "response_sha256",
+    "stage0_inventory_sha256",
+    "base_lock_sha256",
+    "derived_lock_sha256",
+    "stage0_harness_manifest_sha256",
+    "derived_harness_manifest_sha256",
+    "cache_tree_sha256",
+    "t111_binary_sha256",
+    "typedcalloracle_binary_sha256",
+    "python_executable",
+    "python_version",
+    "python_mode",
+    "python_sha256",
+    "git_executable",
+    "git_sha256",
+    "go_executable",
+    "go_sha256",
+    "producer_toolchain_identity",
+    "environment",
+}
+
+
+def _valid_prebuild_identifier(value: Any) -> bool:
+    return isinstance(value, str) and bool(value) and "\n" not in value and "\r" not in value
+
+
+def _exact_boolean_scope(value: Any, expected: dict[str, bool]) -> bool:
+    """Keep JSON numbers from widening a boolean-only authorization scope."""
+    return (
+        isinstance(value, dict)
+        and set(value) == set(expected)
+        and all(type(value[name]) is bool and value[name] is permitted for name, permitted in expected.items())
+    )
+
+
+def _validate_prebuild_fact_roots(value: dict[str, Any], execution_root: Path) -> None:
+    if not isinstance(value, dict) or set(value) != {"run1", "run2"}:
+        raise EnumerationError("prebuild evidence has invalid fact-run bindings")
+    roots: list[Path] = []
+    for run in ("run1", "run2"):
+        binding = value[run]
+        if not isinstance(binding, dict) or set(binding) != PREBUILD_EVIDENCE_FACT_RUN_FIELDS:
+            raise EnumerationError("prebuild evidence has invalid fact-run bindings")
+        root = binding.get("root")
+        if not _valid_absolute_path_text(root):
+            raise EnumerationError("prebuild evidence has an invalid fact-run root")
+        path = Path(root)
+        try:
+            path.relative_to(execution_root)
+        except ValueError as exc:
+            raise EnumerationError("prebuild evidence fact-run root escapes the execution root") from exc
+        if path == execution_root:
+            raise EnumerationError("prebuild evidence fact-run root collides with the execution root")
+        roots.append(path)
+        require_sha256(binding.get("receipt_sha256"), "prebuild evidence fact-run receipt digest")
+        facts = binding.get("facts_sha256")
+        if not isinstance(facts, dict) or set(facts) != set(RECEIPT_FIXTURES):
+            raise EnumerationError("prebuild evidence has invalid fact digests")
+        for digest in facts.values():
+            require_sha256(digest, "prebuild evidence fact digest")
+    if roots[0] == roots[1]:
+        raise EnumerationError("prebuild evidence reuses a fact-run root")
+
+
+def load_prebuild_evidence() -> tuple[dict[str, Any], bytes]:
+    """Load the future prebuild record without opening its derived inputs.
+
+    This record is deliberately just a canonical committed declaration at
+    this point.  It names the execution root and the two offline fact roots,
+    but it never resolves, stats, or otherwise reads them before the one-shot
+    consumption transition.
+    """
+    value, raw = load_canonical_json_bytes(PREBUILD_EVIDENCE_PATH, "prebuild evidence")
+    if not isinstance(value, dict) or set(value) != PREBUILD_EVIDENCE_FIELDS:
+        raise EnumerationError("prebuild evidence has an invalid schema")
+    if value.get("schema") != PREBUILD_EVIDENCE_SCHEMA or value.get("status") != "COMPLETE":
+        raise EnumerationError("prebuild evidence is not complete")
+    if not _valid_prebuild_identifier(value.get("prebuild_id")):
+        raise EnumerationError("prebuild evidence has no identifier")
+    for field in PREBUILD_EVIDENCE_DIGEST_FIELDS:
+        require_sha256(value.get(field), f"prebuild evidence {field}")
+    p0 = value.get("p0_authorization")
+    if (
+        not isinstance(p0, dict)
+        or set(p0) != PREBUILD_EVIDENCE_P0_AUTHORIZATION_FIELDS
+        or p0.get("path") != P0_AUTHORIZATION_REL
+        or not _valid_full_commit(p0.get("authorization_commit"))
+    ):
+        raise EnumerationError("prebuild evidence has an invalid P0 authorization binding")
+    require_sha256(p0.get("sha256"), "prebuild evidence P0 authorization digest")
+    if not isinstance(value.get("heads"), dict) or set(value["heads"]) != set(RECEIPT_FIXTURES):
+        raise EnumerationError("prebuild evidence has an invalid fixture set")
+    for fixture, oid in value["heads"].items():
+        if not _valid_full_commit(oid):
+            raise EnumerationError(f"prebuild evidence head is invalid for {fixture}")
+    if not _valid_absolute_path_text(value.get("execution_root")):
+        raise EnumerationError("prebuild evidence has an invalid execution root")
+    _validate_prebuild_fact_roots(value.get("fact_runs"), Path(value["execution_root"]))
+    arguments = value.get("arguments")
+    if (
+        not isinstance(arguments, dict)
+        or set(arguments) != PREBUILD_EVIDENCE_ARGUMENT_FIELDS
+        or not all(_valid_absolute_path_text(arguments[name]) for name in arguments)
+        or arguments["execution_root"] != value["execution_root"]
+        or arguments["facts_run1"] != value["fact_runs"]["run1"]["root"]
+        or arguments["facts_run2"] != value["fact_runs"]["run2"]["root"]
+    ):
+        raise EnumerationError("prebuild evidence has invalid execution arguments")
+    return value, raw
+
+
+def _prebuild_argument(args: argparse.Namespace, name: str, expected: str) -> None:
+    actual = getattr(args, name, None)
+    if not isinstance(actual, str) or actual != expected:
+        raise EnumerationError(f"{name.replace('_', '-')} differs from the prebuild evidence")
+
+
+def verify_prebuild_evidence(
+    authorization: dict[str, Any], evidence: dict[str, Any], evidence_bytes: bytes,
+    args: argparse.Namespace,
+) -> None:
+    """Bind a reviewed, committed prebuild to this exact sealed invocation.
+
+    The P0 evidence is committed before its review.  The final authorization
+    binds a later accepted commit which must retain the exact P0 evidence and
+    add the independently reviewed record.  Keeping acceptance out of the
+    evidence avoids a self-referential Git hash.  This all runs before the
+    marker and before any stat/open of the declared derived root or fact
+    directories.
+    """
+    binding = authorization["prebuild_evidence"]
+    if sha256_bytes(evidence_bytes) != binding["sha256"]:
+        raise EnumerationError("prebuild evidence digest does not match authorization")
+    if evidence_bytes != _head_blob(PREBUILD_EVIDENCE_REL):
+        raise EnumerationError("prebuild evidence is not the committed authorization version")
+    review_binding = binding["review"]
+    _regular_file(PREBUILD_EVIDENCE_REVIEW_PATH, "prebuild evidence review")
+    try:
+        review_bytes = PREBUILD_EVIDENCE_REVIEW_PATH.read_bytes()
+    except OSError as exc:
+        raise EnumerationError("prebuild evidence review cannot be read") from exc
+    if sha256_bytes(review_bytes) != review_binding["sha256"]:
+        raise EnumerationError("prebuild evidence review digest does not match authorization")
+    if review_bytes != _head_blob(PREBUILD_EVIDENCE_REVIEW_REL):
+        raise EnumerationError("prebuild evidence review is not the committed authorization version")
+    accepted_commit = binding["accepted_commit"]
+    _require_ancestor(accepted_commit, "prebuild evidence accepted commit")
+    if evidence_bytes != _commit_blob(accepted_commit, PREBUILD_EVIDENCE_REL):
+        raise EnumerationError("accepted prebuild commit does not contain the evidence bytes")
+    if review_bytes != _commit_blob(accepted_commit, PREBUILD_EVIDENCE_REVIEW_REL):
+        raise EnumerationError("accepted prebuild commit does not contain the review bytes")
+    _accepted_review_record(review_bytes)
+    if evidence["p0_authorization"] != authorization["p0_authorization"]:
+        raise EnumerationError("prebuild evidence differs on its P0 authorization binding")
+    verify_p0_authorization_binding(authorization, evidence, accepted_commit)
+    for field in PREBUILD_EVIDENCE_AUTHORIZATION_FIELDS:
+        if evidence[field] != authorization[field]:
+            raise EnumerationError("prebuild evidence differs from enumeration authorization")
+    if evidence["heads"] != authorization["heads"]:
+        raise EnumerationError("prebuild evidence does not bind the authorized Stage-1 heads")
+    for run in ("run1", "run2"):
+        if (
+            evidence["fact_runs"][run]["receipt_sha256"]
+            != authorization["fact_runs"][run]["receipt_sha256"]
+            or evidence["fact_runs"][run]["facts_sha256"]
+            != authorization["fact_runs"][run]["facts_sha256"]
+        ):
+            raise EnumerationError("prebuild evidence fact runs differ from enumeration authorization")
+    if evidence["arguments"]["out"] != authorization["state"]["output_dir"]:
+        raise EnumerationError("prebuild evidence output differs from enumeration authorization")
+    for name, expected in evidence["arguments"].items():
+        _prebuild_argument(args, name, expected)
 
 
 def verify_authorized_toolchain_identity(authorization: dict[str, Any]) -> None:
@@ -652,6 +957,79 @@ def _require_ancestor(commit: str, label: str) -> None:
         _control_git("merge-base", "--is-ancestor", commit, "HEAD")
     except EnumerationError as exc:
         raise EnumerationError(f"{label} is not an ancestor of HEAD") from exc
+
+
+def _require_ancestor_of(ancestor: str, descendant: str, label: str) -> None:
+    """Require an already-authorized record to predate a later review commit."""
+    if not _valid_full_commit(ancestor) or not _valid_full_commit(descendant):
+        raise EnumerationError(f"{label} has an invalid commit binding")
+    if ancestor == descendant:
+        raise EnumerationError(f"{label} does not strictly predate the accepted evidence review")
+    try:
+        _control_git("merge-base", "--is-ancestor", ancestor, descendant)
+    except EnumerationError as exc:
+        raise EnumerationError(f"{label} does not predate the accepted evidence review") from exc
+
+
+def _p0_plan_anchor(plan_bytes: bytes, authorization_id: str, authorization_sha256: str) -> None:
+    """Require the P0 approval to be durable at its own prebuild commit."""
+    try:
+        text = plan_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise EnumerationError("P0 authorization PLAN cannot be read") from exc
+    if not any(
+        line.lstrip().startswith("|")
+        and PLAN_P0_AUTHORIZATION_MARKER in line
+        and PLAN_P0_AUTHORIZATION_APPROVAL in line
+        and authorization_id in line
+        and authorization_sha256 in line
+        for line in text.splitlines()
+    ):
+        raise EnumerationError("P0 authorization commit lacks its PLAN approval")
+
+
+def verify_p0_authorization_binding(
+    authorization: dict[str, Any], evidence: dict[str, Any], evidence_accepted_commit: str,
+) -> None:
+    """Re-verify the actual reviewed P0 authority, not merely its digest.
+
+    P0 is committed and PLAN-approved before it can create the derived root.
+    Its evidence is committed next and independently reviewed later.  The
+    final enumeration authorization ties all three historical records
+    together, avoiding a digest-only claim that a P0 authority existed.
+    """
+    binding = authorization["p0_authorization"]
+    if evidence["p0_authorization"] != binding:
+        raise EnumerationError("prebuild evidence differs on its P0 authorization binding")
+    p0_value, p0_bytes = load_canonical_json_bytes(P0_AUTHORIZATION_PATH, "P0 authorization")
+    if (
+        not isinstance(p0_value, dict)
+        or set(p0_value) != P0_AUTHORIZATION_FIELDS
+        or p0_value.get("schema") != P0_AUTHORIZATION_SCHEMA
+        or p0_value.get("status") != "AUTHORIZED"
+        or not isinstance(p0_value.get("authorization_id"), str)
+        or not p0_value["authorization_id"]
+        or "\n" in p0_value["authorization_id"]
+        or "\r" in p0_value["authorization_id"]
+        or not _exact_boolean_scope(p0_value.get("scope"), P0_EXPECTED_SCOPE)
+    ):
+        raise EnumerationError("P0 authorization has an invalid signed state")
+    if sha256_bytes(p0_bytes) != binding["sha256"]:
+        raise EnumerationError("P0 authorization digest does not match enumeration authorization")
+    if p0_bytes != _head_blob(P0_AUTHORIZATION_REL):
+        raise EnumerationError("P0 authorization is not the committed authorization version")
+    p0_commit = binding["authorization_commit"]
+    _require_ancestor(p0_commit, "P0 authorization commit")
+    _require_ancestor_of(p0_commit, evidence_accepted_commit, "P0 authorization commit")
+    if p0_bytes != _commit_blob(p0_commit, P0_AUTHORIZATION_REL):
+        raise EnumerationError("P0 authorization commit does not contain the bound P0 bytes")
+    if p0_bytes != _commit_blob(evidence_accepted_commit, P0_AUTHORIZATION_REL):
+        raise EnumerationError("accepted prebuild review does not retain the bound P0 bytes")
+    _p0_plan_anchor(
+        _commit_blob(p0_commit, "PLAN.md"),
+        p0_value["authorization_id"],
+        binding["sha256"],
+    )
 
 
 def _accepted_review_anchor(plan_bytes: bytes, review_digest: str) -> None:
@@ -1015,6 +1393,8 @@ def verify_receipt(path: Path, authorization: dict[str, Any]) -> tuple[dict[str,
         if not isinstance(heads, dict):
             raise EnumerationError("Stage-1 receipt lacks sealed response data")
         require_sha256(response_sha256, "Stage-1 receipt response digest")
+        if response_sha256 != authorization["response_sha256"]:
+            raise EnumerationError("Stage-1 response digest does not match authorization")
         _regular_file(STAGE1_RESPONSE_PATH, "Stage-1 response")
         if sha256_file(STAGE1_RESPONSE_PATH) != response_sha256:
             raise EnumerationError("Stage-1 response digest does not match the receipt")
@@ -2361,10 +2741,12 @@ def run(args: argparse.Namespace) -> int:
     # Keep this gate first: without a future signed amendment, do not inspect
     # a derived root, source tree, cache, corpus, or fact file.
     authorization, authorization_bytes = load_authorization()
+    prebuild_evidence, prebuild_evidence_bytes = load_prebuild_evidence()
     verify_authorized_toolchain_identity(authorization)
     if sha256_file(Path(__file__)) != authorization["enumerator_sha256"]:
         raise EnumerationError("enumerator bytes do not match authorization")
     authorization_sha256 = verify_committed_authorization(authorization, authorization_bytes)
+    verify_prebuild_evidence(authorization, prebuild_evidence, prebuild_evidence_bytes, args)
     verify_interpreter(authorization)
     # Verify and install the exact no-network Git/Go environment before any
     # Stage-0 key, receipt, derived lock, cache, corpus, or fact byte is
