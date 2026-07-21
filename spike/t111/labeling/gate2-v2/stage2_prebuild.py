@@ -341,6 +341,7 @@ TOOLCHAIN_IDENTITY_RE = re.compile(
     r'^go_version="([^"]+)";go_digest=(sha256:[0-9a-f]{64});'
     r'git_version="([^"]+)";git_digest=(sha256:[0-9a-f]{64})$'
 )
+PYTHON_EXECUTABLE_RE = re.compile(r"^python3\.[0-9]+$")
 EXPECTED_SCOPE = {
     "construct_derived_root": True,
     "hydrate_modules": True,
@@ -1186,7 +1187,17 @@ def load_authorization(path: Path | None = None) -> tuple[dict[str, Any], bytes]
     executable_paths: dict[str, Path] = {}
     for path_field, basename in (("python_executable", "python3"), ("git_executable", "git"), ("go_executable", "go")):
         executable = _absolute(toolchain.get(path_field), path_field)
-        if executable.name != basename:
+        if path_field == "python_executable":
+            # macOS's Command Line Tools expose the actual regular runtime as
+            # ``python3.<minor>``.  P0 must bind that concrete executable,
+            # rather than a ``python3`` launcher/symlink whose
+            # ``sys.executable`` differs at fire time.  Keep the accepted
+            # spelling deliberately narrow: a Python 3 minor-qualified
+            # executable, never a generic launcher alias.
+            valid_name = PYTHON_EXECUTABLE_RE.fullmatch(executable.name) is not None
+        else:
+            valid_name = executable.name == basename
+        if not valid_name:
             raise PrebuildError(f"prebuild authorization has an invalid {path_field}")
         executable_paths[path_field] = executable
     for field in ("python_sha256", "git_sha256", "go_sha256"):

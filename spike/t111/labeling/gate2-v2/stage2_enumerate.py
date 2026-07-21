@@ -94,14 +94,14 @@ PREBUILD_RUNNER_PATH = HERE / "stage2_prebuild.py"
 PREBUILD_RUNNER_REL = PREBUILD_RUNNER_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EXECUTOR_PATH = HERE / "stage2_prebuild_execute.py"
 PREBUILD_EXECUTOR_REL = PREBUILD_EXECUTOR_PATH.relative_to(REPO_ROOT).as_posix()
-PREBUILD_EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r1.md"
+PREBUILD_EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r2.md"
 PREBUILD_EXECUTOR_REVIEW_REL = PREBUILD_EXECUTOR_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 STAGE1_SNAPSHOT_REL = (HERE / "stage1_snapshot.py").relative_to(REPO_ROOT).as_posix()
-# This implementation revision must be accepted afresh; r1 binds the prior
-# verifier bytes and cannot authorize a later prebuild-admission extension.
-# Every executable path must name the same forthcoming r4 review; older r2/r3
-# records remain historical and cannot bless this revised verifier.
-ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r4.md"
+# This implementation revision must be accepted afresh because its P0
+# implementation-review dependency changed.  Every executable path must name
+# the same r5 review; older r2/r3/r4 records remain historical and cannot
+# bless this revised verifier.
+ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r5.md"
 ENUMERATION_REVIEW_REL = ENUMERATION_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EVIDENCE_REVIEW_PATH = HERE / "stage2-prebuild-evidence-review-r1.md"
 PREBUILD_EVIDENCE_REVIEW_REL = PREBUILD_EVIDENCE_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
@@ -116,13 +116,14 @@ PLAN_P0_IMPLEMENTATION_APPROVAL = "ACCEPT"
 # Version the exact marker as well as the review filename.  Older accepted
 # rows are retained in PLAN.md as history, so an unversioned substring would
 # make the current executable approval permanently ambiguous.
-PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r4"
+PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r5"
 PLAN_IMPLEMENTATION_APPROVAL = "ACCEPT"
 PYTHON_MODE = "isolated-no-site"
 TOOLCHAIN_IDENTITY_RE = re.compile(
     r'^go_version="([^"]+)";go_digest=(sha256:[0-9a-f]{64});'
     r'git_version="([^"]+)";git_digest=(sha256:[0-9a-f]{64})$'
 )
+PYTHON_EXECUTABLE_RE = re.compile(r"^python3\.[0-9]+$")
 GIT_CONFIG_SECTION_RE = re.compile(r"\s*\[\s*([A-Za-z][A-Za-z0-9-]*)\s*\]\s*")
 GIT_CONFIG_ASSIGNMENT_RE = re.compile(
     r"\s*([A-Za-z][A-Za-z0-9-]*)\s*=\s*([A-Za-z0-9]+)\s*"
@@ -662,16 +663,18 @@ def load_authorization() -> tuple[dict[str, Any], bytes]:
         "prebuild_evidence", "state",
     }:
         require_sha256(value[key], f"authorization {key}")
-    for field, basename in (
-        ("python_executable", "python3"),
-        ("git_executable", "git"),
-        ("go_executable", "go"),
-    ):
+    for field, basename in (("python_executable", "python3"), ("git_executable", "git"), ("go_executable", "go")):
         executable = value[field]
+        if field == "python_executable":
+            valid_name = (
+                isinstance(executable, str)
+                and PYTHON_EXECUTABLE_RE.fullmatch(Path(executable).name) is not None
+            )
+        else:
+            valid_name = isinstance(executable, str) and Path(executable).name == basename
         if (
-            not isinstance(executable, str)
+            not valid_name
             or not executable.startswith("/")
-            or Path(executable).name != basename
             or "\n" in executable
             or "\r" in executable
         ):
@@ -2040,9 +2043,10 @@ def verify_interpreter(authorization: dict[str, Any]) -> None:
         authorization, "python_executable", "python_sha256", "authorized Python interpreter"
     )
     actual = Path(sys.executable)
-    _regular_file(actual, "running Python interpreter")
     try:
-        if actual.resolve(strict=True) != expected.resolve(strict=True):
+        resolved_actual = actual.resolve(strict=True)
+        _regular_file(resolved_actual, "running Python interpreter")
+        if resolved_actual != expected.resolve(strict=True):
             raise EnumerationError("running Python interpreter differs from authorization")
     except OSError as exc:
         raise EnumerationError("running Python interpreter cannot be resolved") from exc

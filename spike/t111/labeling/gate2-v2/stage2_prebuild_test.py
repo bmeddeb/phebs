@@ -198,7 +198,7 @@ def p0(root: Path) -> dict:
             }
         },
         "toolchain": {
-            "python_executable": "/tmp/python3",
+            "python_executable": "/tmp/python3.9",
             "python_version": "3.9.6",
             "python_sha256": digest("c"),
             "git_executable": str(git),
@@ -533,6 +533,19 @@ class PrebuildAuthorizationTests(unittest.TestCase):
             value["toolchain"]["python_version"] += "\x7f"
             with self.assertRaises(prebuild.PrebuildError):
                 prebuild.load_authorization(self.write(root, value))
+
+    def test_accepts_minor_qualified_python3_and_rejects_other_spellings(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            value = p0(root)
+            value["toolchain"]["python_executable"] = str(root / "tools" / "python3.9")
+            prebuild.load_authorization(self.write(root, value))
+
+            for invalid in ("python", "python2.7", "python3", "python3.9.6", "python39"):
+                value = p0(root)
+                value["toolchain"]["python_executable"] = str(root / "tools" / invalid)
+                with self.assertRaises(prebuild.PrebuildError):
+                    prebuild.load_authorization(self.write(root, value))
 
     def test_rejects_clone_bundle_and_fresh_cache_drift(self):
         with tempfile.TemporaryDirectory() as temporary:

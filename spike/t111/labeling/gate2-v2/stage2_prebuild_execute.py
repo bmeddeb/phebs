@@ -52,12 +52,11 @@ REPO_ROOT = T111_ROOT.parents[1]
 P0_AUTHORIZATION_PATH = HERE / "stage2-prebuild-authorization.json"
 PARSER_PATH = HERE / "stage2_prebuild.py"
 EXECUTOR_PATH = Path(__file__).resolve()
-EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r1.md"
+EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r2.md"
 ENUMERATOR_PATH = HERE / "stage2_enumerate.py"
-# This revision will receive its own independent r4 review before any P0
-# authorization can name it.  Do not silently fall back to a superseded
-# enumeration review.
-ENUMERATOR_REVIEW_PATH = HERE / "stage2-enumerate-review-r4.md"
+# This revision names the r5 enumeration review.  Do not silently fall back
+# to the superseded r4 review when a P0 control dependency changes.
+ENUMERATOR_REVIEW_PATH = HERE / "stage2-enumerate-review-r5.md"
 PLAN_PATH = REPO_ROOT / "PLAN.md"
 STAGE0_DIR = HERE / "stage0"
 STAGE0_INVENTORY = STAGE0_DIR / "code-path-inventory.tsv"

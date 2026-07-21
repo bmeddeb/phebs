@@ -881,7 +881,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 "cache_tree_sha256": digest,
                 "t111_binary_sha256": digest,
                 "typedcalloracle_binary_sha256": digest,
-                "python_executable": "/tmp/python3",
+                "python_executable": "/tmp/python3.9",
                 "python_version": "3.9.6",
                 "python_mode": enum.PYTHON_MODE,
                 "python_sha256": digest,
@@ -931,10 +931,37 @@ class Stage2EnumerationTest(unittest.TestCase):
                 loaded, raw = enum.load_authorization()
                 self.assertEqual(loaded, authorization)
                 self.assertEqual(raw, auth_file.read_bytes())
+                authorization["python_executable"] = "/tmp/python3"
+                auth_file.write_text(enum.canonical_json(authorization) + "\n")
+                with self.assertRaises(enum.EnumerationError):
+                    enum.load_authorization()
+                authorization["python_executable"] = "/tmp/python3.9"
                 authorization["review"]["status"] = "pending"
                 auth_file.write_text(enum.canonical_json(authorization) + "\n")
                 with self.assertRaises(enum.EnumerationError):
                     enum.load_authorization()
+
+    def test_verify_interpreter_resolves_a_launcher_to_the_bound_regular_runtime(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            runtime = root / "python3.9"
+            runtime.write_bytes(b"synthetic-python-runtime\n")
+            runtime.chmod(0o700)
+            launcher = root / "python3"
+            launcher.symlink_to(runtime.name)
+            authorization = {
+                "python_executable": str(runtime),
+                "python_sha256": enum.sha256_file(runtime),
+                "python_version": ".".join(str(part) for part in sys.version_info[:3]),
+            }
+            with mock.patch.object(enum.sys, "executable", str(launcher)):
+                enum.verify_interpreter(authorization)
+            other = root / "python3.10"
+            other.write_bytes(b"different-synthetic-runtime\n")
+            other.chmod(0o700)
+            with mock.patch.object(enum.sys, "executable", str(other)):
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_interpreter(authorization)
 
     def test_prebuild_evidence_is_canonical_committed_reviewed_and_p0_bound(self):
         with tempfile.TemporaryDirectory() as tmp:
