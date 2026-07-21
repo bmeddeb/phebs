@@ -715,10 +715,33 @@ $DATA/                     # server.data_dir, default ~/.phebs
 
 Mirrors, shards, repo rows, and jobs are rebuildable from config and upstream
 Git. **Authentication state is not derived:** `$DATA/db` now contains users,
-OIDC links, API-key hashes, and sessions. Back up the config and DB directory
-as sensitive state; stop phebs before a plain filesystem copy so SurrealKV is
-quiescent. Deleting the whole data directory is an intentional auth reset as
-well as a reindex; the next start requires first-user enrollment.
+OIDC links, API-key hashes, and sessions (see *Backup & restore*). Deleting
+the whole data directory is an intentional auth reset as well as a reindex;
+the next start requires first-user enrollment.
+
+### Backup & restore
+
+Precious state is `$DATA/db` plus the config file — the users, OIDC links,
+API-key hashes, sessions, permission edges, and audit/analytics history that
+cannot be rebuilt (repo rows and job state ride along but are derivable).
+Everything else under `$DATA` is derived. Cold backup:
+
+1. Stop phebs and wait for exit, so SurrealKV is quiescent — a plain
+   filesystem copy of a live `db/` is not consistent.
+2. Copy the config file and `$DATA/db` to restricted storage; this is
+   credential-bearing state.
+3. Restart.
+
+To restore, place the copied `db/` into a fresh `$DATA`, point phebs at the
+same config, and start. Backfill of derived state is automatic: sync
+re-clones any mirror whose `HEAD` is missing, and the startup reconcile
+audit re-enqueues indexing for every repo whose recorded indexed revision
+has no matching shard. No operator action is needed beyond time and
+bandwidth. Restored API keys and sessions remain live — rotate them if the
+backup's custody was ever in doubt.
+
+There is no online backup yet; `phebs backup` / `phebs restore` subcommands
+are tracked as ticket T-P5.1 in the backlog.
 
 ### Security boundary
 

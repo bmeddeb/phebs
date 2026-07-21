@@ -580,6 +580,21 @@ contract §8 with offline verification script. AC: digest chain verifies
 offline with no phebs instance; export redacts to recipient scope at export
 time; reopening re-authorizes against current ACLs.
 
+## P5 hardening *(unscheduled — pull on demand)*
+
+**T-P5.1 · `phebs backup` / `phebs restore` subcommands** — cold copy works
+today (MANUAL §9 *Backup & restore*) but costs downtime. `phebs backup`:
+exec the supervised pinned `surreal` binary's `export` against the running
+instance into one artifact plus a manifest binding config digest, binary
+digest, and store schema version. `phebs restore`: refuse unless `$DATA` is
+absent or empty, import, then let sync + reconcile backfill mirrors and
+shards. Also supplies the version-pinned export/import commands that
+docs/RESTORE_PROCEDURE.md's acceptance boundary needs named. AC: backup
+succeeds against a live server without stopping writes and its manifest
+digests verify; restore into an empty `$DATA` reaches a serving instance
+that reindexes with no operator action; both refuse existing/partial
+targets; MANUAL §9 updated in the same PR.
+
 ## Deliberate non-goals *(per PORT_MAP §7/§12)*
 
 SCIM provisioning, multi-org RBAC / seats, and a cloned "Ask" chat app —
