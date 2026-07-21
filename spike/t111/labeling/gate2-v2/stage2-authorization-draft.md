@@ -124,3 +124,54 @@ leaves Gate 2 PENDING; ESTABLISHED is decided only at Stage 4).
       with date
 
 Signed: ______________________  Date: ____________
+
+## A1. Mirror pre-flight addendum (2026-07-21)
+
+Read-only inspection plus object-only upstream fetches, performed by the
+session agent (reviewer) with operator approval. This addendum constrains
+`--heads` assembly (§3).
+
+**Initial state (fail).** All four corpus mirrors were shallow; the sealed
+Stage-1 head objects were ABSENT from the temporal, dapr, and loki mirrors
+(online-boutique's HEAD already equaled its sealed head). Lineage ancestry
+was locally unverifiable across the shallow boundary. A sealed run in that
+state would have mapped every temporal/dapr/loki coordinate to git failure
+→ burn-on-doubt, destroying the capacity arithmetic on garbage premises.
+
+**Action.** Per fixture, fetched the canonical upstream (`git_url` in the
+sealed `corpus.lock.json`) with `--shallow-since=2026-07-08` — a window
+covering every ledger lineage commit (oldest: 2026-07-10) with margin:
+`temporalio/temporal` `main`, `dapr/dapr` `master`, `grafana/loki` `main`,
+`GoogleCloudPlatform/microservices-demo` `main`. Object-only change: no HEAD
+movement, no checkout, no ref updates beyond `FETCH_HEAD`; the local
+`phebs.com-t111` origin repos were probed read-only (they lacked the sealed
+heads) and were not mutated.
+
+**Final state (pass).**
+
+| fixture | sealed head object | HEAD == corpus.lock | tree clean | lineage ancestors verified |
+|---|---|---|---|---|
+| temporal | present (`f95c865c…`) | yes (`8224a537…`) | yes | 3/3 |
+| dapr | present (`f4d43112…`) | yes (`08aebd8b…`) | yes | 3/3 |
+| loki | present (`562a762a…`) | yes (`1362d277…`) | yes | 3/3 |
+| online-boutique | present (`9a4616e7…`) | yes (`9a4616e7…`) | yes | 3/3 |
+
+All 12 ledger lineage commits exist and are verified ancestors of their
+sealed Stage-1 heads.
+
+**Consequences for `--heads` assembly.**
+
+- `new_commit` values remain the receipt head oids (machine-enforced by the
+  accepted tool, exit 2 on any drift).
+- `old_commit` choices are derivable from the ledger cohorts'
+  `source_commits` (three per fixture). The single-`old_commit`-per-fixture
+  choice is a **capacity-only** decision: r1/r2 verified that freeing is
+  decided solely by positive absence at the *new* head, so any old-side
+  drift degrades to conservative burning, never to wrongful frees. The
+  derivation must still be recorded at signing (Finding 4).
+- Classification and rename tracing are now bounded by the
+  2026-07-08→sealed-head window; a coordinate whose true history predates
+  the window edge can only burn conservatively.
+- The enumeration operator must re-verify mirror state (sealed head objects
+  present, HEADs pinned at `corpus.lock`, trees clean) at enumeration time;
+  the pinned oids are unaffected by any later upstream movement.
