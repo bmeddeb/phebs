@@ -75,7 +75,7 @@ stdout carries counts, rules, and digests only.
 | `spike/t111/score.py` | `a1a04f51dee7d2044bd3433dadc2ef53f74519135f76e478810b1bc9366dece4` | Stage-0 inventory |
 | `stage1/receipt.json` | `bbea9b7cae0189ed0a94ea58657c1ac229be245be653196711c2e2f73d8040ef` | sealing commit `cf70bb1` |
 | `labeling/burn-ledger.json` (`--ledger`) | `4e6e2382361f1a0223562d4cbac921f39944ceb36c916912fa0ca5c259e3044a` | = estimator authorization's bound `burn_ledger_file`; structure verified 2026-07-21 (3 cohorts, 9,470 coordinates, four fixture systems only) |
-| Glue landing commit | «FILL — commit must carry `stage2_prepare.py` bytes hashing to `6db4eeed…` and test bytes to `500e5a7c…` verbatim, per r2» | r2 condition |
+| Glue landing commit | `105eaeb309edf59fa4c8b494cc15f135005f344b` | r2 condition met — committed bytes verified 2026-07-21 to hash to `6db4eeed…` / `500e5a7c…` verbatim |
 
 ### To bind at signing (digests filled by the operator)
 
