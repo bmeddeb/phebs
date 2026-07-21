@@ -1,0 +1,41 @@
+{
+  "cutoff": "2026-07-20T16:00:00Z",
+  "fire_window_seconds": 54.851,
+  "heads": {
+    "dapr": {
+      "committed_date": "2026-07-20T15:11:17Z",
+      "default_branch": "master",
+      "head_oid": "f4d431123309a2bd11fcc32523661b6b14e8462b",
+      "license": "Apache-2.0",
+      "name_with_owner": "dapr/dapr"
+    },
+    "loki": {
+      "committed_date": "2026-07-20T08:38:33Z",
+      "default_branch": "main",
+      "head_oid": "562a762ab1d07985edc561920d74e792f4a6aab9",
+      "license": "AGPL-3.0",
+      "name_with_owner": "grafana/loki"
+    },
+    "online-boutique": {
+      "committed_date": "2026-07-13T14:40:02Z",
+      "default_branch": "main",
+      "head_oid": "9a4616e77f0f9cbcbecaf27d711c38890dda1404",
+      "license": "Apache-2.0",
+      "name_with_owner": "GoogleCloudPlatform/microservices-demo"
+    },
+    "temporal": {
+      "committed_date": "2026-07-20T15:55:26Z",
+      "default_branch": "main",
+      "head_oid": "f95c865cc08c1ac075a709d525977e17103e6417",
+      "license": "MIT",
+      "name_with_owner": "temporalio/temporal"
+    }
+  },
+  "query_sha256": "sha256:8e9f76872c955e0bad76dfde432e846fbc7c340dfd23bba7a67fda14a55d897b",
+  "request_completed": "2026-07-20T15:59:06.282911+00:00",
+  "request_started": "2026-07-20T15:59:05.148974+00:00",
+  "response_sha256": "sha256:85cb9c6f0589afc6c00468e13eb20e82d45a3430135e0a9ea0fcb334453aa20e",
+  "schema": "t111-gate2-v2-stage1-receipt-v1",
+  "server_date_skew_seconds": 0.283,
+  "status": "ADMITTED"
+}
