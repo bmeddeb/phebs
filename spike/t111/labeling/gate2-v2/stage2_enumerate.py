@@ -67,6 +67,9 @@ PROTOCOL_REL = "spike/t111/labeling/GATE2-V2.md"
 AUTH_SCHEMA = "t111-gate2-v2-stage2-enumeration-authorization-v1"
 PREBUILD_EVIDENCE_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-v1"
 P0_AUTHORIZATION_SCHEMA = "t111-gate2-v2-stage2-prebuild-authorization-v1"
+P0_CONSUMPTION_MARKER_SCHEMA = "t111-gate2-v2-stage2-prebuild-consumption-v1"
+P0_EVIDENCE_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-evidence-receipt-v1"
+P0_TERMINAL_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-prebuild-terminal-receipt-v1"
 RECEIPT_SCHEMA = "t111-gate2-v2-stage1-receipt-v1"
 FACT_RUN_RECEIPT_SCHEMA = "t111-gate2-v2-stage2-fact-run-receipt-v1"
 CONSUMPTION_MARKER_SCHEMA = "t111-gate2-v2-stage2-enumeration-consumption-v1"
@@ -87,6 +90,7 @@ AUTHORIZATION_REL = AUTHORIZATION_PATH.relative_to(REPO_ROOT).as_posix()
 P0_AUTHORIZATION_REL = P0_AUTHORIZATION_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EVIDENCE_REL = PREBUILD_EVIDENCE_PATH.relative_to(REPO_ROOT).as_posix()
 ENUMERATOR_REL = Path(__file__).resolve().relative_to(REPO_ROOT).as_posix()
+PREBUILD_RUNNER_PATH = HERE / "stage2_prebuild.py"
 STAGE1_SNAPSHOT_REL = (HERE / "stage1_snapshot.py").relative_to(REPO_ROOT).as_posix()
 # This implementation revision must be accepted afresh; r1 binds the prior
 # verifier bytes and cannot authorize a later prebuild-admission extension.
@@ -156,7 +160,7 @@ AUTHORIZATION_FIELDS = {
     "state",
 }
 
-FACT_RUN_BINDING_FIELDS = {"receipt_sha256", "facts_sha256"}
+FACT_RUN_BINDING_FIELDS = {"run_id", "receipt_sha256", "facts_sha256"}
 AUTHORIZATION_REVIEW_FIELDS = {"status", "accepted_commit", "record_sha256"}
 AUTHORIZATION_BINDING_FIELDS = {"status", "commit"}
 AUTHORIZATION_ENVIRONMENT_FIELDS = {"network", "variables"}
@@ -203,11 +207,15 @@ PREBUILD_EVIDENCE_FIELDS = {
     "heads",
     "execution_root",
     "fact_runs",
-    "arguments",
+    "p0_result",
 }
 PREBUILD_EVIDENCE_P0_AUTHORIZATION_FIELDS = P0_AUTHORIZATION_BINDING_FIELDS
-PREBUILD_EVIDENCE_FACT_RUN_FIELDS = {"root", "receipt_sha256", "facts_sha256"}
-PREBUILD_EVIDENCE_ARGUMENT_FIELDS = {"receipt", "execution_root", "facts_run1", "facts_run2", "out"}
+PREBUILD_EVIDENCE_FACT_RUN_FIELDS = {"run_id", "root", "receipt_sha256", "facts_sha256"}
+PREBUILD_EVIDENCE_P0_RESULT_FIELDS = {
+    "consumption_marker_sha256",
+    "terminal_receipt_sha256",
+    "evidence_receipt_sha256",
+}
 # P0 is not a generic approval token.  The enumeration verifier does not
 # import the P0 runner (that would make its fire-time trust closure depend on
 # a second source module), but it still requires the full P0 envelope and the
@@ -226,9 +234,81 @@ P0_AUTHORIZATION_FIELDS = {
     "fact_runs",
     "operations",
     "state",
+    "record_projections",
     "scope",
     "implementation_review",
     "implementation_binding",
+}
+P0_STATE_FIELDS = {
+    "ceremony_directory",
+    "consumption_marker",
+    "terminal_receipt",
+    "evidence_receipt",
+}
+P0_RECORD_PROJECTIONS_FIELDS = {"evidence", "terminal"}
+P0_EVIDENCE_PROJECTION_FIELDS = {
+    "schema",
+    "status",
+    "prebuild_id",
+    "authorization_schema",
+    "authorization_id",
+    "record_path",
+    "execution_root",
+    "fact_runs",
+}
+P0_TERMINAL_PROJECTION_FIELDS = {
+    "schema",
+    "prebuild_id",
+    "authorization_schema",
+    "authorization_id",
+    "record_path",
+    "execution_root",
+    "fact_runs",
+}
+P0_RESULT_MARKER_FIELDS = {
+    "schema",
+    "status",
+    "authorization_id",
+    "authorization_sha256",
+}
+P0_RESULT_EVIDENCE_FIELDS = {
+    "schema",
+    "status",
+    "authorization_id",
+    "authorization_sha256",
+    "consumption_marker_sha256",
+    "implementation",
+    "inputs",
+    "toolchain",
+    "environment",
+    "derived",
+    "hydration",
+    "fact_runs",
+}
+P0_RESULT_DERIVED_FIELDS = {
+    "execution_root",
+    "derived_lock_sha256",
+    "derived_harness_manifest_sha256",
+    "cache_tree_sha256",
+    "corpus_heads",
+}
+P0_RESULT_HYDRATION_FIELDS = {"exit_code", "stdout_sha256", "stderr_sha256"}
+P0_RESULT_FACT_RUN_FIELDS = {
+    "run_id",
+    "root",
+    "receipt_sha256",
+    "facts_sha256",
+    "capture",
+}
+P0_RESULT_FACT_CAPTURE_FIELDS = {"stdout_sha256", "stderr_sha256"}
+P0_RESULT_TERMINAL_FIELDS = {
+    "schema",
+    "status",
+    "authorization_sha256",
+    "consumption_marker_sha256",
+    "exit_code",
+    "failure",
+    "evidence_receipt_sha256",
 }
 P0_EXPECTED_SCOPE = {
     "construct_derived_root": True,
@@ -672,12 +752,16 @@ def load_authorization() -> tuple[dict[str, Any], bytes]:
     for run, binding in fact_runs.items():
         if not isinstance(binding, dict) or set(binding) != FACT_RUN_BINDING_FIELDS:
             raise EnumerationError("enumeration authorization has invalid fact-run bindings")
+        if not _valid_run_id(binding.get("run_id")):
+            raise EnumerationError("enumeration authorization has invalid fact-run bindings")
         require_sha256(binding.get("receipt_sha256"), f"authorization {run} receipt digest")
         facts = binding.get("facts_sha256")
         if not isinstance(facts, dict) or set(facts) != set(RECEIPT_FIXTURES):
             raise EnumerationError("enumeration authorization has invalid fact bindings")
         for digest in facts.values():
             require_sha256(digest, "authorization fact digest")
+    if fact_runs["run1"]["run_id"] == fact_runs["run2"]["run_id"]:
+        raise EnumerationError("enumeration authorization reuses a fact-run id")
     state = value["state"]
     if not isinstance(state, dict) or set(state) != AUTHORIZATION_STATE_FIELDS:
         raise EnumerationError("enumeration authorization has invalid state paths")
@@ -760,6 +844,8 @@ def _validate_prebuild_fact_roots(value: dict[str, Any], execution_root: Path) -
         binding = value[run]
         if not isinstance(binding, dict) or set(binding) != PREBUILD_EVIDENCE_FACT_RUN_FIELDS:
             raise EnumerationError("prebuild evidence has invalid fact-run bindings")
+        if not _valid_run_id(binding.get("run_id")):
+            raise EnumerationError("prebuild evidence has invalid fact-run bindings")
         root = binding.get("root")
         if not _valid_absolute_path_text(root):
             raise EnumerationError("prebuild evidence has an invalid fact-run root")
@@ -777,8 +863,8 @@ def _validate_prebuild_fact_roots(value: dict[str, Any], execution_root: Path) -
             raise EnumerationError("prebuild evidence has invalid fact digests")
         for digest in facts.values():
             require_sha256(digest, "prebuild evidence fact digest")
-    if roots[0] == roots[1]:
-        raise EnumerationError("prebuild evidence reuses a fact-run root")
+    if roots[0] == roots[1] or value["run1"]["run_id"] == value["run2"]["run_id"]:
+        raise EnumerationError("prebuild evidence reuses a fact-run root or id")
 
 
 def load_prebuild_evidence() -> tuple[dict[str, Any], bytes]:
@@ -815,30 +901,19 @@ def load_prebuild_evidence() -> tuple[dict[str, Any], bytes]:
     if not _valid_absolute_path_text(value.get("execution_root")):
         raise EnumerationError("prebuild evidence has an invalid execution root")
     _validate_prebuild_fact_roots(value.get("fact_runs"), Path(value["execution_root"]))
-    arguments = value.get("arguments")
-    if (
-        not isinstance(arguments, dict)
-        or set(arguments) != PREBUILD_EVIDENCE_ARGUMENT_FIELDS
-        or not all(_valid_absolute_path_text(arguments[name]) for name in arguments)
-        or arguments["execution_root"] != value["execution_root"]
-        or arguments["facts_run1"] != value["fact_runs"]["run1"]["root"]
-        or arguments["facts_run2"] != value["fact_runs"]["run2"]["root"]
-    ):
-        raise EnumerationError("prebuild evidence has invalid execution arguments")
+    p0_result = value.get("p0_result")
+    if not isinstance(p0_result, dict) or set(p0_result) != PREBUILD_EVIDENCE_P0_RESULT_FIELDS:
+        raise EnumerationError("prebuild evidence has an invalid P0 result binding")
+    for field in PREBUILD_EVIDENCE_P0_RESULT_FIELDS:
+        require_sha256(p0_result.get(field), f"prebuild evidence P0 result {field}")
     return value, raw
-
-
-def _prebuild_argument(args: argparse.Namespace, name: str, expected: str) -> None:
-    actual = getattr(args, name, None)
-    if not isinstance(actual, str) or actual != expected:
-        raise EnumerationError(f"{name.replace('_', '-')} differs from the prebuild evidence")
 
 
 def verify_prebuild_evidence(
     authorization: dict[str, Any], evidence: dict[str, Any], evidence_bytes: bytes,
     args: argparse.Namespace,
 ) -> None:
-    """Bind a reviewed, committed prebuild to this exact sealed invocation.
+    """Bind a reviewed, committed prebuild to its sealed source/fact inputs.
 
     The P0 evidence is committed before its review.  The final authorization
     binds a later accepted commit which must retain the exact P0 evidence and
@@ -871,7 +946,7 @@ def verify_prebuild_evidence(
     _accepted_review_record(review_bytes)
     if evidence["p0_authorization"] != authorization["p0_authorization"]:
         raise EnumerationError("prebuild evidence differs on its P0 authorization binding")
-    verify_p0_authorization_binding(authorization, evidence, accepted_commit)
+    p0 = verify_p0_authorization_binding(authorization, evidence, accepted_commit)
     for field in PREBUILD_EVIDENCE_AUTHORIZATION_FIELDS:
         if evidence[field] != authorization[field]:
             raise EnumerationError("prebuild evidence differs from enumeration authorization")
@@ -879,16 +954,24 @@ def verify_prebuild_evidence(
         raise EnumerationError("prebuild evidence does not bind the authorized Stage-1 heads")
     for run in ("run1", "run2"):
         if (
+            evidence["fact_runs"][run]["run_id"]
+            != authorization["fact_runs"][run]["run_id"]
+            or
             evidence["fact_runs"][run]["receipt_sha256"]
             != authorization["fact_runs"][run]["receipt_sha256"]
             or evidence["fact_runs"][run]["facts_sha256"]
             != authorization["fact_runs"][run]["facts_sha256"]
         ):
             raise EnumerationError("prebuild evidence fact runs differ from enumeration authorization")
-    if evidence["arguments"]["out"] != authorization["state"]["output_dir"]:
-        raise EnumerationError("prebuild evidence output differs from enumeration authorization")
-    for name, expected in evidence["arguments"].items():
-        _prebuild_argument(args, name, expected)
+    verify_p0_result_chain(authorization, evidence, p0)
+    for name, expected in (
+        ("execution_root", evidence["execution_root"]),
+        ("facts_run1", evidence["fact_runs"]["run1"]["root"]),
+        ("facts_run2", evidence["fact_runs"]["run2"]["root"]),
+    ):
+        actual = getattr(args, name, None)
+        if not isinstance(actual, str) or actual != expected:
+            raise EnumerationError(f"{name.replace('_', '-')} differs from the prebuild evidence")
 
 
 def verify_authorized_toolchain_identity(authorization: dict[str, Any]) -> None:
@@ -988,9 +1071,253 @@ def _p0_plan_anchor(plan_bytes: bytes, authorization_id: str, authorization_sha2
         raise EnumerationError("P0 authorization commit lacks its PLAN approval")
 
 
+def _verify_p0_admission_parser(p0: dict[str, Any], p0_bytes: bytes) -> None:
+    """Re-run the exact P0 admission parser from digest-bound source bytes.
+
+    The enumeration verifier deliberately does not duplicate P0's large
+    clone/cache/operation grammar.  It does, however, execute the exact
+    parser source whose digest is sealed in P0, using the already-loaded P0
+    path, and requires that second canonical read to return the same bytes.
+    This remains admission-only: the parser has no subprocess, network, or
+    derived-root access path.
+    """
+    implementation = p0.get("implementation")
+    if not isinstance(implementation, dict):
+        raise EnumerationError("P0 authorization has no prebuild runner binding")
+    runner_sha256 = require_sha256(
+        implementation.get("prebuild_runner_sha256"), "P0 prebuild runner digest"
+    )
+    try:
+        source = _read_verified_source(
+            PREBUILD_RUNNER_PATH, runner_sha256, "P0 prebuild admission parser"
+        )
+        module = _execute_verified_source(
+            "_t111_stage2_prebuild", PREBUILD_RUNNER_PATH, source,
+            "P0 prebuild admission parser",
+        )
+        loader = getattr(module, "load_authorization", None)
+        if not callable(loader):
+            raise EnumerationError("P0 prebuild admission parser lacks its loader")
+        parsed, parsed_bytes = loader(P0_AUTHORIZATION_PATH)
+    except EnumerationError:
+        raise
+    except BaseException as exc:
+        raise EnumerationError("P0 authorization does not pass its bound admission parser") from exc
+    if parsed_bytes != p0_bytes or parsed != p0:
+        raise EnumerationError("P0 admission parser did not retain the bound authorization bytes")
+
+
+def _p0_execution_root(p0: dict[str, Any]) -> Path:
+    derived = p0.get("derived_root")
+    if not isinstance(derived, dict) or not _valid_absolute_path_text(derived.get("root")):
+        raise EnumerationError("P0 authorization has an invalid derived-root projection")
+    return Path(derived["root"])
+
+
+def _p0_state_targets(p0: dict[str, Any]) -> dict[str, Path]:
+    """Return P0's state paths without resolving or opening a derived root."""
+    state = p0.get("state")
+    if not isinstance(state, dict) or set(state) != P0_STATE_FIELDS:
+        raise EnumerationError("P0 authorization has invalid result state paths")
+    if not all(_valid_absolute_path_text(state.get(field)) for field in P0_STATE_FIELDS):
+        raise EnumerationError("P0 authorization has invalid result state paths")
+    ceremony = Path(state["ceremony_directory"])
+    targets = {
+        "consumption_marker": Path(state["consumption_marker"]),
+        "terminal_receipt": Path(state["terminal_receipt"]),
+        "evidence_receipt": Path(state["evidence_receipt"]),
+    }
+    values = list(targets.values())
+    if any(
+        _state_paths_overlap(first, second)
+        for index, first in enumerate(values)
+        for second in values[index + 1 :]
+    ):
+        raise EnumerationError("P0 authorization reuses result state paths")
+    for path in values:
+        try:
+            path.relative_to(ceremony)
+        except ValueError as exc:
+            raise EnumerationError("P0 authorization result state escapes its ceremony") from exc
+        if path == ceremony:
+            raise EnumerationError("P0 authorization result state collides with its ceremony")
+    return {"ceremony_directory": ceremony, **targets}
+
+
+def _p0_fact_run_projection(p0: dict[str, Any], execution_root: Path) -> dict[str, dict[str, Any]]:
+    """Validate the stable P0 run identities and paths used by R0/E1."""
+    value = p0.get("fact_runs")
+    if not isinstance(value, dict) or set(value) != {"run1", "run2"}:
+        raise EnumerationError("P0 authorization has invalid fact-run projections")
+    roots: set[Path] = set()
+    run_ids: set[str] = set()
+    receipts: set[Path] = set()
+    result: dict[str, dict[str, Any]] = {}
+    for run in ("run1", "run2"):
+        planned = value[run]
+        if (
+            not isinstance(planned, dict)
+            or not {"run_id", "path", "receipt_path"} <= set(planned)
+            or not _valid_run_id(planned.get("run_id"))
+            or not _valid_absolute_path_text(planned.get("path"))
+            or not _valid_absolute_path_text(planned.get("receipt_path"))
+        ):
+            raise EnumerationError("P0 authorization has invalid fact-run projections")
+        root = Path(planned["path"])
+        receipt = Path(planned["receipt_path"])
+        try:
+            root.relative_to(execution_root)
+        except ValueError as exc:
+            raise EnumerationError("P0 authorization fact run escapes the derived root") from exc
+        if root == execution_root or receipt != root / "fact-run-receipt.json":
+            raise EnumerationError("P0 authorization has invalid fact-run projections")
+        if root in roots or planned["run_id"] in run_ids or receipt in receipts:
+            raise EnumerationError("P0 authorization reuses a fact-run projection")
+        roots.add(root)
+        run_ids.add(planned["run_id"])
+        receipts.add(receipt)
+        result[run] = {
+            "run_id": planned["run_id"],
+            "root": root,
+            "receipt_path": receipt,
+        }
+    return result
+
+
+def _p0_record_projections(
+    p0: dict[str, Any],
+    state_targets: dict[str, Path],
+    execution_root: Path,
+    fact_runs: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Verify the P0-declared locations and static shape of M0/R0/T0."""
+    value = p0.get("record_projections")
+    if not isinstance(value, dict) or set(value) != P0_RECORD_PROJECTIONS_FIELDS:
+        raise EnumerationError("P0 authorization has invalid result projections")
+    expected_runs = {
+        run: {
+            "run_id": fact_runs[run]["run_id"],
+            "root": str(fact_runs[run]["root"]),
+            "receipt_path": str(fact_runs[run]["receipt_path"]),
+        }
+        for run in ("run1", "run2")
+    }
+    evidence = value.get("evidence")
+    expected_evidence = {
+        "schema": P0_EVIDENCE_RECEIPT_SCHEMA,
+        "status": "COMPLETE",
+        "prebuild_id": p0["authorization_id"],
+        "authorization_schema": P0_AUTHORIZATION_SCHEMA,
+        "authorization_id": p0["authorization_id"],
+        "record_path": str(state_targets["evidence_receipt"]),
+        "execution_root": str(execution_root),
+        "fact_runs": expected_runs,
+    }
+    if (
+        not isinstance(evidence, dict)
+        or set(evidence) != P0_EVIDENCE_PROJECTION_FIELDS
+        or evidence != expected_evidence
+    ):
+        raise EnumerationError("P0 authorization has an invalid evidence receipt projection")
+    terminal = value.get("terminal")
+    expected_terminal = {
+        "schema": P0_TERMINAL_RECEIPT_SCHEMA,
+        "prebuild_id": p0["authorization_id"],
+        "authorization_schema": P0_AUTHORIZATION_SCHEMA,
+        "authorization_id": p0["authorization_id"],
+        "record_path": str(state_targets["terminal_receipt"]),
+        "execution_root": str(execution_root),
+        "fact_runs": expected_runs,
+    }
+    if (
+        not isinstance(terminal, dict)
+        or set(terminal) != P0_TERMINAL_PROJECTION_FIELDS
+        or terminal != expected_terminal
+    ):
+        raise EnumerationError("P0 authorization has an invalid terminal receipt projection")
+    return {"evidence": evidence, "terminal": terminal}
+
+
+def _verify_p0_evidence_projection(p0: dict[str, Any], evidence: dict[str, Any]) -> None:
+    """Require P0 to authorize the exact prebuild whose evidence is offered.
+
+    A reviewed P0 document is necessary but insufficient on its own: its
+    planned root, heads, static inputs, toolchain, and two fact roots must be
+    the very values later asserted by E1.  Otherwise an authority for one
+    derived tree could be reused to bless evidence from another.
+    """
+    inputs = p0.get("inputs")
+    toolchain = p0.get("toolchain")
+    derived = p0.get("derived_root")
+    fact_runs = p0.get("fact_runs")
+    bootstrap = p0.get("bootstrap")
+    if not all(isinstance(value, dict) for value in (inputs, toolchain, derived, fact_runs, bootstrap)):
+        raise EnumerationError("P0 authorization lacks a usable evidence projection")
+    execution_root = _p0_execution_root(p0)
+    planned_runs = _p0_fact_run_projection(p0, execution_root)
+    _p0_record_projections(p0, _p0_state_targets(p0), execution_root, planned_runs)
+    input_map = {
+        "stage1_receipt_sha256": "receipt_sha256",
+        "stage1_response_sha256": "response_sha256",
+        "stage0_inventory_sha256": "stage0_inventory_sha256",
+        "base_lock_sha256": "base_lock_sha256",
+        "derived_lock_sha256": "derived_lock_sha256",
+        "stage0_harness_manifest_sha256": "stage0_harness_manifest_sha256",
+        "t111_binary_sha256": "t111_binary_sha256",
+        "typedcalloracle_binary_sha256": "typedcalloracle_binary_sha256",
+    }
+    if any(inputs.get(p0_name) != evidence.get(evidence_name) for p0_name, evidence_name in input_map.items()):
+        raise EnumerationError("P0 authorization does not bind the prebuild evidence inputs")
+    toolchain_map = {
+        "python_executable": "python_executable",
+        "python_version": "python_version",
+        "python_sha256": "python_sha256",
+        "git_executable": "git_executable",
+        "git_sha256": "git_sha256",
+        "go_executable": "go_executable",
+        "go_sha256": "go_sha256",
+        "producer_toolchain_identity": "producer_toolchain_identity",
+    }
+    if any(toolchain.get(p0_name) != evidence.get(evidence_name) for p0_name, evidence_name in toolchain_map.items()):
+        raise EnumerationError("P0 authorization does not bind the prebuild evidence toolchain")
+    if inputs.get("heads") != evidence.get("heads"):
+        raise EnumerationError("P0 authorization does not bind the prebuild evidence heads")
+    if (
+        bootstrap.get("source_t111_sha256") != evidence.get("t111_binary_sha256")
+        or bootstrap.get("derived_t111_sha256") != evidence.get("t111_binary_sha256")
+    ):
+        raise EnumerationError("P0 bootstrap differs from the prebuild evidence producer")
+    operations = p0.get("operations")
+    lock_rewrite = operations.get("lock_rewrite") if isinstance(operations, dict) else None
+    if (
+        not isinstance(lock_rewrite, dict)
+        or lock_rewrite.get("derived_lock_sha256") != evidence.get("derived_lock_sha256")
+        or lock_rewrite.get("derived_lock_path") != derived.get("lock_path")
+    ):
+        raise EnumerationError("P0 lock rewrite differs from the prebuild evidence root")
+    require_sha256(lock_rewrite.get("derived_lock_sha256"), "P0 lock rewrite digest")
+    if derived.get("root") != evidence.get("execution_root"):
+        raise EnumerationError("P0 authorization root differs from the prebuild evidence root")
+    if evidence.get("prebuild_id") != p0.get("authorization_id"):
+        raise EnumerationError("P0 authorization does not bind the prebuild identifier")
+    evidence_runs = evidence.get("fact_runs")
+    if not isinstance(evidence_runs, dict) or set(evidence_runs) != {"run1", "run2"}:
+        raise EnumerationError("prebuild evidence has invalid fact-run bindings")
+    for run in ("run1", "run2"):
+        produced = evidence_runs[run]
+        planned = planned_runs[run]
+        if not isinstance(produced, dict):
+            raise EnumerationError("P0 authorization lacks a usable fact-run projection")
+        if (
+            produced.get("run_id") != planned["run_id"]
+            or produced.get("root") != str(planned["root"])
+        ):
+            raise EnumerationError("P0 authorization fact run differs from the prebuild evidence")
+
+
 def verify_p0_authorization_binding(
     authorization: dict[str, Any], evidence: dict[str, Any], evidence_accepted_commit: str,
-) -> None:
+) -> dict[str, Any]:
     """Re-verify the actual reviewed P0 authority, not merely its digest.
 
     P0 is committed and PLAN-approved before it can create the derived root.
@@ -1030,6 +1357,237 @@ def verify_p0_authorization_binding(
         p0_value["authorization_id"],
         binding["sha256"],
     )
+    _verify_p0_admission_parser(p0_value, p0_bytes)
+    _verify_p0_evidence_projection(p0_value, evidence)
+    return p0_value
+
+
+def _p0_result_marker(
+    marker: Any, *, authorization_id: str, authorization_sha256: str,
+) -> None:
+    if (
+        not isinstance(marker, dict)
+        or set(marker) != P0_RESULT_MARKER_FIELDS
+        or marker.get("schema") != P0_CONSUMPTION_MARKER_SCHEMA
+        or marker.get("status") != "CONSUMED"
+        or marker.get("authorization_id") != authorization_id
+        or marker.get("authorization_sha256") != authorization_sha256
+    ):
+        raise EnumerationError("P0 consumption marker has an invalid binding")
+
+
+def _p0_result_evidence(
+    receipt: Any,
+    *,
+    p0: dict[str, Any],
+    authorization_sha256: str,
+    marker_sha256: str,
+    evidence: dict[str, Any],
+) -> None:
+    """Verify R0 as the completed, P0-authorized source for E1's projections."""
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != P0_RESULT_EVIDENCE_FIELDS
+        or receipt.get("schema") != P0_EVIDENCE_RECEIPT_SCHEMA
+        or receipt.get("status") != "COMPLETE"
+        or receipt.get("authorization_id") != p0["authorization_id"]
+        or receipt.get("authorization_sha256") != authorization_sha256
+        or receipt.get("consumption_marker_sha256") != marker_sha256
+    ):
+        raise EnumerationError("P0 evidence receipt has an invalid provenance chain")
+    for field in ("implementation", "inputs", "toolchain", "environment"):
+        if receipt.get(field) != p0.get(field):
+            raise EnumerationError("P0 evidence receipt differs from its authorization projection")
+
+    execution_root = _p0_execution_root(p0)
+    derived = receipt.get("derived")
+    inputs = receipt["inputs"]
+    if not isinstance(inputs, dict) or not isinstance(receipt.get("toolchain"), dict):
+        raise EnumerationError("P0 evidence receipt has invalid sealed projections")
+    if (
+        not isinstance(derived, dict)
+        or set(derived) != P0_RESULT_DERIVED_FIELDS
+        or derived.get("execution_root") != str(execution_root)
+        or derived.get("corpus_heads") != inputs.get("heads")
+        or derived.get("derived_lock_sha256") != inputs.get("derived_lock_sha256")
+    ):
+        raise EnumerationError("P0 evidence receipt has an invalid derived-root projection")
+    for field in (
+        "derived_lock_sha256",
+        "derived_harness_manifest_sha256",
+        "cache_tree_sha256",
+    ):
+        require_sha256(derived.get(field), f"P0 evidence receipt {field}")
+    heads = derived["corpus_heads"]
+    if not isinstance(heads, dict) or set(heads) != set(RECEIPT_FIXTURES):
+        raise EnumerationError("P0 evidence receipt has an invalid corpus head set")
+    for head in heads.values():
+        if not _valid_full_commit(head):
+            raise EnumerationError("P0 evidence receipt has an invalid corpus head")
+
+    hydration = receipt.get("hydration")
+    if not isinstance(hydration, dict) or set(hydration) != set(RECEIPT_FIXTURES):
+        raise EnumerationError("P0 evidence receipt has an invalid hydration record")
+    for fixture in RECEIPT_FIXTURES:
+        capture = hydration[fixture]
+        if (
+            not isinstance(capture, dict)
+            or set(capture) != P0_RESULT_HYDRATION_FIELDS
+            or type(capture.get("exit_code")) is not int
+            or capture["exit_code"] != 0
+        ):
+            raise EnumerationError("P0 evidence receipt does not prove hydration")
+        require_sha256(capture.get("stdout_sha256"), "P0 hydration stdout digest")
+        require_sha256(capture.get("stderr_sha256"), "P0 hydration stderr digest")
+
+    planned_runs = _p0_fact_run_projection(p0, execution_root)
+    fact_runs = receipt.get("fact_runs")
+    offered_runs = evidence.get("fact_runs")
+    if (
+        not isinstance(fact_runs, dict)
+        or set(fact_runs) != {"run1", "run2"}
+        or not isinstance(offered_runs, dict)
+        or set(offered_runs) != {"run1", "run2"}
+    ):
+        raise EnumerationError("P0 evidence receipt has invalid fact-run records")
+    all_facts: dict[str, dict[str, str]] = {}
+    for run in ("run1", "run2"):
+        result = fact_runs[run]
+        planned = planned_runs[run]
+        if (
+            not isinstance(result, dict)
+            or set(result) != P0_RESULT_FACT_RUN_FIELDS
+            or result.get("run_id") != planned["run_id"]
+            or result.get("root") != str(planned["root"])
+        ):
+            raise EnumerationError("P0 evidence receipt has an invalid fact-run projection")
+        require_sha256(result.get("receipt_sha256"), "P0 fact-run receipt digest")
+        facts = result.get("facts_sha256")
+        if not isinstance(facts, dict) or set(facts) != set(RECEIPT_FIXTURES):
+            raise EnumerationError("P0 evidence receipt has invalid fact digests")
+        for digest in facts.values():
+            require_sha256(digest, "P0 fact digest")
+        capture = result.get("capture")
+        if not isinstance(capture, dict) or set(capture) != P0_RESULT_FACT_CAPTURE_FIELDS:
+            raise EnumerationError("P0 evidence receipt has invalid extraction captures")
+        require_sha256(capture.get("stdout_sha256"), "P0 extraction stdout digest")
+        require_sha256(capture.get("stderr_sha256"), "P0 extraction stderr digest")
+        all_facts[run] = facts
+        offered = offered_runs[run]
+        if (
+            offered.get("run_id") != result["run_id"]
+            or offered.get("root") != result["root"]
+            or offered.get("receipt_sha256") != result["receipt_sha256"]
+            or offered.get("facts_sha256") != facts
+        ):
+            raise EnumerationError("prebuild evidence differs from the P0 fact-run result")
+    if all_facts["run1"] != all_facts["run2"]:
+        raise EnumerationError("P0 evidence receipt has non-reproducible fact digests")
+
+    input_map = {
+        "stage1_receipt_sha256": "receipt_sha256",
+        "stage1_response_sha256": "response_sha256",
+        "stage0_inventory_sha256": "stage0_inventory_sha256",
+        "base_lock_sha256": "base_lock_sha256",
+        "derived_lock_sha256": "derived_lock_sha256",
+        "stage0_harness_manifest_sha256": "stage0_harness_manifest_sha256",
+        "t111_binary_sha256": "t111_binary_sha256",
+        "typedcalloracle_binary_sha256": "typedcalloracle_binary_sha256",
+    }
+    if any(inputs.get(p0_name) != evidence.get(evidence_name) for p0_name, evidence_name in input_map.items()):
+        raise EnumerationError("P0 evidence receipt differs from the E1 input projection")
+    toolchain = receipt["toolchain"]
+    toolchain_map = {
+        "python_executable": "python_executable",
+        "python_version": "python_version",
+        "python_sha256": "python_sha256",
+        "git_executable": "git_executable",
+        "git_sha256": "git_sha256",
+        "go_executable": "go_executable",
+        "go_sha256": "go_sha256",
+        "producer_toolchain_identity": "producer_toolchain_identity",
+    }
+    if any(toolchain.get(p0_name) != evidence.get(evidence_name) for p0_name, evidence_name in toolchain_map.items()):
+        raise EnumerationError("P0 evidence receipt differs from the E1 toolchain projection")
+    if (
+        derived["corpus_heads"] != evidence.get("heads")
+        or derived["execution_root"] != evidence.get("execution_root")
+        or derived["derived_lock_sha256"] != evidence.get("derived_lock_sha256")
+        or derived["derived_harness_manifest_sha256"] != evidence.get("derived_harness_manifest_sha256")
+        or derived["cache_tree_sha256"] != evidence.get("cache_tree_sha256")
+    ):
+        raise EnumerationError("P0 evidence receipt differs from the E1 derived-root projection")
+
+
+def _p0_result_terminal(
+    terminal: Any, *, authorization_sha256: str, marker_sha256: str, evidence_sha256: str,
+) -> None:
+    if (
+        not isinstance(terminal, dict)
+        or set(terminal) != P0_RESULT_TERMINAL_FIELDS
+        or terminal.get("schema") != P0_TERMINAL_RECEIPT_SCHEMA
+        or terminal.get("status") != "COMPLETED"
+        or type(terminal.get("exit_code")) is not int
+        or terminal.get("exit_code") != 0
+        or terminal.get("failure") is not None
+        or terminal.get("authorization_sha256") != authorization_sha256
+        or terminal.get("consumption_marker_sha256") != marker_sha256
+        or terminal.get("evidence_receipt_sha256") != evidence_sha256
+    ):
+        raise EnumerationError("P0 terminal receipt does not prove a completed prebuild")
+
+
+def verify_p0_result_chain(
+    authorization: dict[str, Any], evidence: dict[str, Any], p0: dict[str, Any],
+) -> None:
+    """Bind E1 to the actual completed P0 one-shot before enum consumption.
+
+    Only P0's three state paths are opened here.  The derived root, cache,
+    corpus, and fact files remain unopened until after the independent
+    enumeration marker has been created.
+    """
+    authorization_sha256 = authorization["p0_authorization"]["sha256"]
+    state_targets = _p0_state_targets(p0)
+    execution_root = _p0_execution_root(p0)
+    planned_runs = _p0_fact_run_projection(p0, execution_root)
+    _p0_record_projections(p0, state_targets, execution_root, planned_runs)
+
+    marker, marker_bytes = load_canonical_json_bytes(
+        state_targets["consumption_marker"], "P0 consumption marker"
+    )
+    marker_sha256 = sha256_bytes(marker_bytes)
+    _p0_result_marker(
+        marker,
+        authorization_id=p0["authorization_id"],
+        authorization_sha256=authorization_sha256,
+    )
+    result, result_bytes = load_canonical_json_bytes(
+        state_targets["evidence_receipt"], "P0 evidence receipt"
+    )
+    result_sha256 = sha256_bytes(result_bytes)
+    _p0_result_evidence(
+        result,
+        p0=p0,
+        authorization_sha256=authorization_sha256,
+        marker_sha256=marker_sha256,
+        evidence=evidence,
+    )
+    terminal, terminal_bytes = load_canonical_json_bytes(
+        state_targets["terminal_receipt"], "P0 terminal receipt"
+    )
+    terminal_sha256 = sha256_bytes(terminal_bytes)
+    _p0_result_terminal(
+        terminal,
+        authorization_sha256=authorization_sha256,
+        marker_sha256=marker_sha256,
+        evidence_sha256=result_sha256,
+    )
+    if evidence["p0_result"] != {
+        "consumption_marker_sha256": marker_sha256,
+        "terminal_receipt_sha256": terminal_sha256,
+        "evidence_receipt_sha256": result_sha256,
+    }:
+        raise EnumerationError("prebuild evidence does not bind the completed P0 result chain")
 
 
 def _accepted_review_anchor(plan_bytes: bytes, review_digest: str) -> None:
@@ -1840,6 +2398,8 @@ def _load_fact_run_receipt(
         raise EnumerationError("fact-run receipt is not complete")
     if value.get("execution_mode") != "offline" or not _valid_run_id(value.get("run_id")):
         raise EnumerationError("fact-run receipt has invalid execution provenance")
+    if value["run_id"] != binding["run_id"]:
+        raise EnumerationError("fact-run receipt does not match the authorized run id")
     _validate_fact_run_commands(value.get("commands"))
     for field in (
         "derived_lock_sha256",

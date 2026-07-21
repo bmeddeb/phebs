@@ -5,6 +5,7 @@ enumerate a real fixture.  They exercise only the glue's fail-closed data
 contracts and a fully in-memory frame-builder double.
 """
 
+import copy
 import importlib._bootstrap_external
 import importlib.util
 import json
@@ -20,6 +21,7 @@ import sys
 
 sys.path.insert(0, str(HERE))
 import stage2_enumerate as enum  # noqa: E402
+import stage2_prebuild_test as prebuild_tests  # noqa: E402
 
 
 def _receipt():
@@ -92,11 +94,258 @@ def _write_fact_runs(root: Path, *, failure_fixture=None, same_run_id=False):
         receipt_path.write_text(enum.canonical_json(receipt) + "\n")
         receipt_path.chmod(0o400)
         auth["fact_runs"][f"run{number}"] = {
+            "run_id": run_id,
             "receipt_sha256": enum.sha256_file(receipt_path),
             "facts_sha256": facts,
         }
     run1.chmod(0o500); run2.chmod(0o500)
     return run1, run2, auth
+
+
+def _write_canonical(path: Path, value: dict) -> bytes:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = (enum.canonical_json(value) + "\n").encode("utf-8")
+    path.write_bytes(raw)
+    return raw
+
+
+def _p0_result_chain_fixture(root: Path):
+    """Build only synthetic P0 state receipts; no derived tree is created."""
+    root = root.resolve()
+    execution_root = root / "derived"
+    ceremony = root / "p0-ceremony"
+    state = {
+        "ceremony_directory": str(ceremony),
+        "consumption_marker": str(ceremony / "consumed.json"),
+        "terminal_receipt": str(ceremony / "terminal.json"),
+        "evidence_receipt": str(ceremony / "evidence.json"),
+    }
+    heads = {
+        fixture: f"{number:040x}"
+        for number, fixture in enumerate(enum.RECEIPT_FIXTURES, 1)
+    }
+    digests = {
+        "receipt": _digest("a"),
+        "response": _digest("b"),
+        "inventory": _digest("c"),
+        "lock": _digest("d"),
+        "manifest": _digest("e"),
+        "t111": _digest("f"),
+        "oracle": _digest("0"),
+        "python": _digest("1"),
+        "git": _digest("2"),
+        "go": _digest("3"),
+        "derived_lock": _digest("4"),
+        "derived_manifest": _digest("5"),
+        "cache": _digest("6"),
+        "marker_auth": _digest("7"),
+    }
+    inputs = {
+        "stage1_receipt_sha256": digests["receipt"],
+        "stage1_response_sha256": digests["response"],
+        "stage0_inventory_sha256": digests["inventory"],
+        "base_lock_sha256": digests["lock"],
+        "derived_lock_sha256": digests["derived_lock"],
+        "stage0_harness_manifest_sha256": digests["manifest"],
+        "t111_binary_sha256": digests["t111"],
+        "typedcalloracle_binary_sha256": digests["oracle"],
+        "heads": heads,
+    }
+    toolchain = {
+        "python_executable": "/tools/python3",
+        "python_version": "3.9.6",
+        "python_sha256": digests["python"],
+        "git_executable": "/tools/git",
+        "git_sha256": digests["git"],
+        "go_executable": "/tools/go",
+        "go_sha256": digests["go"],
+        "producer_toolchain_identity": "exact-tools",
+    }
+    implementation = {
+        "prebuild_runner_sha256": _digest("8"),
+        "enumerator_sha256": _digest("9"),
+        "enumerator_review_sha256": _digest("a"),
+    }
+    fact_runs = {
+        run: {
+            "run_id": f"p0-{run}-0001",
+            "path": str(execution_root / "spike" / "t111" / "stage2-facts" / run),
+            "receipt_path": str(
+                execution_root / "spike" / "t111" / "stage2-facts" / run / "fact-run-receipt.json"
+            ),
+        }
+        for run in ("run1", "run2")
+    }
+    authorization_id = "stage2-prebuild-auth-0001"
+    expected_runs = {
+        run: {
+            "run_id": fact_runs[run]["run_id"],
+            "root": fact_runs[run]["path"],
+            "receipt_path": fact_runs[run]["receipt_path"],
+        }
+        for run in ("run1", "run2")
+    }
+    p0 = {
+        "schema": enum.P0_AUTHORIZATION_SCHEMA,
+        "status": "AUTHORIZED",
+        "authorization_id": authorization_id,
+        "implementation": implementation,
+        "bootstrap": {"t111_sha256": digests["t111"]},
+        "inputs": inputs,
+        "toolchain": toolchain,
+        "environment": {"hydration": {"phase": "hydration"}, "offline": {"phase": "offline"}},
+        "derived_root": {"root": str(execution_root)},
+        "fact_runs": fact_runs,
+        "operations": {},
+        "state": state,
+        "record_projections": {
+            "evidence": {
+                "schema": enum.P0_EVIDENCE_RECEIPT_SCHEMA,
+                "status": "COMPLETE",
+                "prebuild_id": authorization_id,
+                "authorization_schema": enum.P0_AUTHORIZATION_SCHEMA,
+                "authorization_id": authorization_id,
+                "record_path": state["evidence_receipt"],
+                "execution_root": str(execution_root),
+                "fact_runs": expected_runs,
+            },
+            "terminal": {
+                "schema": enum.P0_TERMINAL_RECEIPT_SCHEMA,
+                "prebuild_id": authorization_id,
+                "authorization_schema": enum.P0_AUTHORIZATION_SCHEMA,
+                "authorization_id": authorization_id,
+                "record_path": state["terminal_receipt"],
+                "execution_root": str(execution_root),
+                "fact_runs": expected_runs,
+            },
+        },
+        "scope": dict(enum.P0_EXPECTED_SCOPE),
+        "implementation_review": {},
+        "implementation_binding": {},
+    }
+    facts = {fixture: _digest("b") for fixture in enum.RECEIPT_FIXTURES}
+    marker = {
+        "schema": enum.P0_CONSUMPTION_MARKER_SCHEMA,
+        "status": "CONSUMED",
+        "authorization_id": authorization_id,
+        "authorization_sha256": digests["marker_auth"],
+    }
+    marker_bytes = _write_canonical(Path(state["consumption_marker"]), marker)
+    marker_sha256 = enum.sha256_bytes(marker_bytes)
+    result = {
+        "schema": enum.P0_EVIDENCE_RECEIPT_SCHEMA,
+        "status": "COMPLETE",
+        "authorization_id": authorization_id,
+        "authorization_sha256": digests["marker_auth"],
+        "consumption_marker_sha256": marker_sha256,
+        "implementation": implementation,
+        "inputs": inputs,
+        "toolchain": toolchain,
+        "environment": p0["environment"],
+        "derived": {
+            "execution_root": str(execution_root),
+            "derived_lock_sha256": digests["derived_lock"],
+            "derived_harness_manifest_sha256": digests["derived_manifest"],
+            "cache_tree_sha256": digests["cache"],
+            "corpus_heads": heads,
+        },
+        "hydration": {
+            fixture: {
+                "exit_code": 0,
+                "stdout_sha256": _digest("c"),
+                "stderr_sha256": _digest("d"),
+            }
+            for fixture in enum.RECEIPT_FIXTURES
+        },
+        "fact_runs": {
+            run: {
+                "run_id": fact_runs[run]["run_id"],
+                "root": fact_runs[run]["path"],
+                "receipt_sha256": _digest("e" if run == "run1" else "f"),
+                "facts_sha256": facts,
+                "capture": {"stdout_sha256": _digest("0"), "stderr_sha256": _digest("1")},
+            }
+            for run in ("run1", "run2")
+        },
+    }
+    result_bytes = _write_canonical(Path(state["evidence_receipt"]), result)
+    result_sha256 = enum.sha256_bytes(result_bytes)
+    terminal = {
+        "schema": enum.P0_TERMINAL_RECEIPT_SCHEMA,
+        "status": "COMPLETED",
+        "authorization_sha256": digests["marker_auth"],
+        "consumption_marker_sha256": marker_sha256,
+        "exit_code": 0,
+        "failure": None,
+        "evidence_receipt_sha256": result_sha256,
+    }
+    terminal_bytes = _write_canonical(Path(state["terminal_receipt"]), terminal)
+    evidence = {
+        "schema": enum.PREBUILD_EVIDENCE_SCHEMA,
+        "status": "COMPLETE",
+        "prebuild_id": authorization_id,
+        "p0_authorization": {
+            "path": enum.P0_AUTHORIZATION_REL,
+            "sha256": digests["marker_auth"],
+            "authorization_commit": "a" * 40,
+        },
+        "receipt_sha256": inputs["stage1_receipt_sha256"],
+        "response_sha256": inputs["stage1_response_sha256"],
+        "stage0_inventory_sha256": inputs["stage0_inventory_sha256"],
+        "base_lock_sha256": inputs["base_lock_sha256"],
+        "derived_lock_sha256": result["derived"]["derived_lock_sha256"],
+        "stage0_harness_manifest_sha256": inputs["stage0_harness_manifest_sha256"],
+        "derived_harness_manifest_sha256": result["derived"]["derived_harness_manifest_sha256"],
+        "cache_tree_sha256": result["derived"]["cache_tree_sha256"],
+        "t111_binary_sha256": inputs["t111_binary_sha256"],
+        "typedcalloracle_binary_sha256": inputs["typedcalloracle_binary_sha256"],
+        "python_executable": toolchain["python_executable"],
+        "python_version": toolchain["python_version"],
+        "python_mode": enum.PYTHON_MODE,
+        "python_sha256": toolchain["python_sha256"],
+        "git_executable": toolchain["git_executable"],
+        "git_sha256": toolchain["git_sha256"],
+        "go_executable": toolchain["go_executable"],
+        "go_sha256": toolchain["go_sha256"],
+        "producer_toolchain_identity": toolchain["producer_toolchain_identity"],
+        "environment": {"network": "disabled", "variables": {"PATH": "/tools"}},
+        "heads": heads,
+        "execution_root": str(execution_root),
+        "fact_runs": {
+            run: {
+                "run_id": result["fact_runs"][run]["run_id"],
+                "root": result["fact_runs"][run]["root"],
+                "receipt_sha256": result["fact_runs"][run]["receipt_sha256"],
+                "facts_sha256": result["fact_runs"][run]["facts_sha256"],
+            }
+            for run in ("run1", "run2")
+        },
+        "p0_result": {
+            "consumption_marker_sha256": marker_sha256,
+            "terminal_receipt_sha256": enum.sha256_bytes(terminal_bytes),
+            "evidence_receipt_sha256": result_sha256,
+        },
+    }
+    authorization = {
+        "p0_authorization": dict(evidence["p0_authorization"]),
+        "fact_runs": {
+            run: {
+                "run_id": evidence["fact_runs"][run]["run_id"],
+                "receipt_sha256": evidence["fact_runs"][run]["receipt_sha256"],
+                "facts_sha256": evidence["fact_runs"][run]["facts_sha256"],
+            }
+            for run in ("run1", "run2")
+        },
+    }
+    return {
+        "p0": p0,
+        "authorization": authorization,
+        "evidence": evidence,
+        "marker": marker,
+        "result": result,
+        "terminal": terminal,
+        "paths": {name: Path(path) for name, path in state.items()},
+    }
 
 
 class FakeLabelPrep:
@@ -653,6 +902,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 },
                 "heads": {fixture: f"{number:040x}" for number, fixture in enumerate(enum.RECEIPT_FIXTURES, 1)},
                 "fact_runs": {run: {
+                    "run_id": f"sealed-{run}-0001",
                     "receipt_sha256": digest,
                     "facts_sha256": {fixture: digest for fixture in enum.RECEIPT_FIXTURES},
                 } for run in ("run1", "run2")},
@@ -674,7 +924,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 with self.assertRaises(enum.EnumerationError):
                     enum.load_authorization()
 
-    def test_prebuild_evidence_is_canonical_committed_reviewed_and_argument_bound(self):
+    def test_prebuild_evidence_is_canonical_committed_reviewed_and_p0_bound(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp).resolve()
             evidence_path = root / "stage2-prebuild-evidence.json"
@@ -702,10 +952,11 @@ class Stage2EnumerationTest(unittest.TestCase):
             variables = {"PATH": "/tools:/usr/bin:/bin", **enum.SEALED_ENVIRONMENT_STATIC}
             fact_runs = {
                 run: {
+                    "run_id": f"p0-{run}-0001",
                     "root": f"/sealed/derived/facts/{run}",
                     "receipt_sha256": _digest("7" if run == "run1" else "8"),
                     "facts_sha256": {
-                        fixture: _digest("9" if run == "run1" else "a")
+                        fixture: _digest("9")
                         for fixture in enum.RECEIPT_FIXTURES
                     },
                 }
@@ -733,12 +984,10 @@ class Stage2EnumerationTest(unittest.TestCase):
                 "heads": heads,
                 "execution_root": "/sealed/derived",
                 "fact_runs": fact_runs,
-                "arguments": {
-                    "receipt": "/sealed/stage1/receipt.json",
-                    "execution_root": "/sealed/derived",
-                    "facts_run1": "/sealed/derived/facts/run1",
-                    "facts_run2": "/sealed/derived/facts/run2",
-                    "out": "/sealed/ceremony/output",
+                "p0_result": {
+                    "consumption_marker_sha256": _digest("b"),
+                    "terminal_receipt_sha256": _digest("c"),
+                    "evidence_receipt_sha256": _digest("d"),
                 },
             }
             evidence_raw = (enum.canonical_json(evidence) + "\n").encode("utf-8")
@@ -750,6 +999,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 "heads": heads,
                 "fact_runs": {
                     run: {
+                        "run_id": fact_runs[run]["run_id"],
                         "receipt_sha256": fact_runs[run]["receipt_sha256"],
                         "facts_sha256": fact_runs[run]["facts_sha256"],
                     }
@@ -767,11 +1017,11 @@ class Stage2EnumerationTest(unittest.TestCase):
                 "state": {"output_dir": "/sealed/ceremony/output"},
             }
             args = type("Args", (), {
-                "receipt": "/sealed/stage1/receipt.json",
                 "execution_root": "/sealed/derived",
                 "facts_run1": "/sealed/derived/facts/run1",
                 "facts_run2": "/sealed/derived/facts/run2",
-                "out": "/sealed/ceremony/output",
+                # E1 deliberately does not bind output: final enum auth owns it.
+                "out": "/another-ceremony/output",
             })()
             blobs = {
                 "stage2-prebuild-evidence.json": evidence_raw,
@@ -789,10 +1039,17 @@ class Stage2EnumerationTest(unittest.TestCase):
                     enum, "_commit_blob", side_effect=lambda revision, relative: blobs[f"{revision}:{relative}"]
                 ),
                 mock.patch.object(enum, "_require_ancestor") as require_ancestor,
-                mock.patch.object(enum, "verify_p0_authorization_binding"),
+                mock.patch.object(enum, "verify_p0_authorization_binding", return_value={}),
+                mock.patch.object(enum, "verify_p0_result_chain"),
             ):
                 loaded, raw = enum.load_prebuild_evidence()
                 self.assertEqual(loaded, evidence)
+                with_arguments = copy.deepcopy(evidence)
+                with_arguments["arguments"] = {"out": "/sealed/ceremony/output"}
+                evidence_path.write_bytes((enum.canonical_json(with_arguments) + "\n").encode("utf-8"))
+                with self.assertRaises(enum.EnumerationError):
+                    enum.load_prebuild_evidence()
+                evidence_path.write_bytes(evidence_raw)
                 enum.verify_prebuild_evidence(authorization, loaded, raw, args)
                 authorization["p0_authorization"]["sha256"] = _digest("f")
                 with self.assertRaises(enum.EnumerationError):
@@ -802,10 +1059,18 @@ class Stage2EnumerationTest(unittest.TestCase):
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_prebuild_evidence(authorization, loaded, raw, args)
                 authorization["response_sha256"] = evidence["response_sha256"]
+                authorization["fact_runs"]["run1"]["run_id"] = "wrong-run-id"
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                authorization["fact_runs"]["run1"]["run_id"] = fact_runs["run1"]["run_id"]
                 args.facts_run1 = "/sealed/derived/facts/other"
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_prebuild_evidence(authorization, loaded, raw, args)
                 args.facts_run1 = "/sealed/derived/facts/run1"
+                args.execution_root = "/sealed/other-derived"
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_prebuild_evidence(authorization, loaded, raw, args)
+                args.execution_root = "/sealed/derived"
                 require_ancestor.side_effect = enum.EnumerationError("not an ancestor")
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_prebuild_evidence(authorization, loaded, raw, args)
@@ -814,7 +1079,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_prebuild_evidence(authorization, loaded, raw, args)
                 blobs["stage2-prebuild-evidence.json"] = evidence_raw
-                args.execution_root = "/other-derived-root"
+                authorization["heads"] = {**heads, "temporal": "f" * 40}
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_prebuild_evidence(authorization, loaded, raw, args)
 
@@ -831,17 +1096,10 @@ class Stage2EnumerationTest(unittest.TestCase):
             root = Path(tmp).resolve()
             p0_path = root / "stage2-prebuild-authorization.json"
             p0_relative = "stage2-prebuild-authorization.json"
-            p0 = {
-                "schema": enum.P0_AUTHORIZATION_SCHEMA,
-                "status": "AUTHORIZED",
-                "authorization_id": "stage2-prebuild-auth-0001",
-                **{
-                    field: {}
-                    for field in enum.P0_AUTHORIZATION_FIELDS
-                    - {"schema", "status", "authorization_id", "scope"}
-                },
-                "scope": dict(enum.P0_EXPECTED_SCOPE),
-            }
+            p0 = copy.deepcopy(prebuild_tests.p0(root))
+            p0["implementation"]["prebuild_runner_sha256"] = enum.sha256_file(
+                enum.PREBUILD_RUNNER_PATH
+            )
             p0_bytes = (enum.canonical_json(p0) + "\n").encode("utf-8")
             p0_path.write_bytes(p0_bytes)
             p0_digest = enum.sha256_bytes(p0_bytes)
@@ -851,6 +1109,37 @@ class Stage2EnumerationTest(unittest.TestCase):
                 "path": p0_relative,
                 "sha256": p0_digest,
                 "authorization_commit": p0_commit,
+            }
+            inputs = p0["inputs"]
+            toolchain = p0["toolchain"]
+            evidence = {
+                "prebuild_id": p0["authorization_id"],
+                "p0_authorization": dict(binding),
+                "receipt_sha256": inputs["stage1_receipt_sha256"],
+                "response_sha256": inputs["stage1_response_sha256"],
+                "stage0_inventory_sha256": inputs["stage0_inventory_sha256"],
+                "base_lock_sha256": inputs["base_lock_sha256"],
+                "derived_lock_sha256": p0["operations"]["lock_rewrite"]["derived_lock_sha256"],
+                "stage0_harness_manifest_sha256": inputs["stage0_harness_manifest_sha256"],
+                "t111_binary_sha256": inputs["t111_binary_sha256"],
+                "typedcalloracle_binary_sha256": inputs["typedcalloracle_binary_sha256"],
+                "python_executable": toolchain["python_executable"],
+                "python_version": toolchain["python_version"],
+                "python_sha256": toolchain["python_sha256"],
+                "git_executable": toolchain["git_executable"],
+                "git_sha256": toolchain["git_sha256"],
+                "go_executable": toolchain["go_executable"],
+                "go_sha256": toolchain["go_sha256"],
+                "producer_toolchain_identity": toolchain["producer_toolchain_identity"],
+                "heads": dict(inputs["heads"]),
+                "execution_root": p0["derived_root"]["root"],
+                "fact_runs": {
+                    run: {
+                        "run_id": p0["fact_runs"][run]["run_id"],
+                        "root": p0["fact_runs"][run]["path"],
+                    }
+                    for run in ("run1", "run2")
+                },
             }
             plan = (
                 f"| 2026-07-21 | {enum.PLAN_P0_AUTHORIZATION_MARKER} | "
@@ -876,29 +1165,92 @@ class Stage2EnumerationTest(unittest.TestCase):
             ):
                 enum.verify_p0_authorization_binding(
                     {"p0_authorization": binding},
-                    {"p0_authorization": dict(binding)},
+                    evidence,
                     evidence_commit,
                 )
+                self.assertFalse((root / "derived").exists())
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
                         {"p0_authorization": binding},
-                        {"p0_authorization": dict(binding)},
+                        evidence,
                         p0_commit,
                     )
                 fabricated = dict(binding)
                 fabricated["sha256"] = _digest("f")
+                fabricated_evidence = dict(evidence)
+                fabricated_evidence["p0_authorization"] = dict(fabricated)
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
                         {"p0_authorization": fabricated},
-                        {"p0_authorization": dict(fabricated)},
+                        fabricated_evidence,
                         evidence_commit,
                     )
+                evidence["derived_lock_sha256"] = _digest("0")
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        evidence,
+                        evidence_commit,
+                    )
+                evidence["derived_lock_sha256"] = p0["operations"]["lock_rewrite"]["derived_lock_sha256"]
+                p0["operations"]["lock_rewrite"]["derived_lock_path"] = "/sealed/wrong-lock.json"
+                with self.assertRaises(enum.EnumerationError):
+                    enum._verify_p0_evidence_projection(p0, evidence)
+                p0["operations"]["lock_rewrite"]["derived_lock_path"] = p0["derived_root"]["lock_path"]
+                evidence["execution_root"] = "/sealed/other-derived-root"
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        evidence,
+                        evidence_commit,
+                    )
+
+                evidence["execution_root"] = p0["derived_root"]["root"]
+                evidence["heads"] = {**inputs["heads"], "temporal": "f" * 40}
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        evidence,
+                        evidence_commit,
+                    )
+                evidence["heads"] = dict(inputs["heads"])
+                evidence["fact_runs"] = {
+                    **evidence["fact_runs"],
+                    "run2": {"run_id": "other-run-0001", "root": "/sealed/other-derived-root/run2"},
+                }
+                with self.assertRaises(enum.EnumerationError):
+                    enum.verify_p0_authorization_binding(
+                        {"p0_authorization": binding},
+                        evidence,
+                        evidence_commit,
+                    )
+                evidence["fact_runs"] = {
+                    run: {
+                        "run_id": p0["fact_runs"][run]["run_id"],
+                        "root": p0["fact_runs"][run]["path"],
+                    }
+                    for run in ("run1", "run2")
+                }
+                p0["bootstrap"]["source_t111_sha256"] = _digest("0")
+                with self.assertRaises(enum.EnumerationError):
+                    enum._verify_p0_evidence_projection(p0, evidence)
+                p0["bootstrap"]["source_t111_sha256"] = inputs["t111_binary_sha256"]
+                p0["bootstrap"]["derived_t111_sha256"] = _digest("0")
+                with self.assertRaises(enum.EnumerationError):
+                    enum._verify_p0_evidence_projection(p0, evidence)
+                p0["bootstrap"]["derived_t111_sha256"] = inputs["t111_binary_sha256"]
+                p0["implementation"]["prebuild_runner_sha256"] = _digest("0")
+                with self.assertRaises(enum.EnumerationError):
+                    enum._verify_p0_admission_parser(p0, p0_bytes)
+                p0["implementation"]["prebuild_runner_sha256"] = enum.sha256_file(
+                    enum.PREBUILD_RUNNER_PATH
+                )
                 p0["scope"]["enumerate_frames"] = True
                 p0_path.write_bytes((enum.canonical_json(p0) + "\n").encode("utf-8"))
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
                         {"p0_authorization": binding},
-                        {"p0_authorization": dict(binding)},
+                        evidence,
                         evidence_commit,
                     )
                 p0["scope"] = dict(enum.P0_EXPECTED_SCOPE)
@@ -907,7 +1259,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
                         {"p0_authorization": binding},
-                        {"p0_authorization": dict(binding)},
+                        evidence,
                         evidence_commit,
                     )
                 p0["scope"] = dict(enum.P0_EXPECTED_SCOPE)
@@ -916,7 +1268,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
                         {"p0_authorization": binding},
-                        {"p0_authorization": dict(binding)},
+                        evidence,
                         evidence_commit,
                     )
                 p0.pop("unexpected")
@@ -925,9 +1277,46 @@ class Stage2EnumerationTest(unittest.TestCase):
                 with self.assertRaises(enum.EnumerationError):
                     enum.verify_p0_authorization_binding(
                         {"p0_authorization": binding},
-                        {"p0_authorization": dict(binding)},
+                        evidence,
                         evidence_commit,
                     )
+
+    def test_p0_result_chain_requires_canonical_completed_projected_receipts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fixture = _p0_result_chain_fixture(Path(tmp))
+            enum.verify_p0_result_chain(
+                fixture["authorization"], fixture["evidence"], fixture["p0"]
+            )
+
+            fixture["result"]["hydration"]["loki"]["exit_code"] = 1
+            _write_canonical(fixture["paths"]["evidence_receipt"], fixture["result"])
+            with self.assertRaises(enum.EnumerationError):
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
+
+            fixture["result"]["hydration"]["loki"]["exit_code"] = 0
+            result_bytes = _write_canonical(fixture["paths"]["evidence_receipt"], fixture["result"])
+            fixture["terminal"]["evidence_receipt_sha256"] = enum.sha256_bytes(result_bytes)
+            terminal_bytes = _write_canonical(fixture["paths"]["terminal_receipt"], fixture["terminal"])
+            fixture["evidence"]["p0_result"] = {
+                "consumption_marker_sha256": enum.sha256_file(fixture["paths"]["consumption_marker"]),
+                "terminal_receipt_sha256": enum.sha256_bytes(terminal_bytes),
+                "evidence_receipt_sha256": enum.sha256_bytes(result_bytes),
+            }
+            fixture["evidence"]["fact_runs"]["run2"]["run_id"] = "different-run-0001"
+            with self.assertRaises(enum.EnumerationError):
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
+
+            fixture["evidence"]["fact_runs"]["run2"]["run_id"] = fixture["p0"]["fact_runs"]["run2"]["run_id"]
+            fixture["terminal"]["status"] = "ABORTED"
+            _write_canonical(fixture["paths"]["terminal_receipt"], fixture["terminal"])
+            with self.assertRaises(enum.EnumerationError):
+                enum.verify_p0_result_chain(
+                    fixture["authorization"], fixture["evidence"], fixture["p0"]
+                )
 
     def test_receipt_response_digest_must_match_the_prebuild_bound_authorization(self):
         class FakeSnapshot:
