@@ -14,6 +14,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -24,6 +25,8 @@ const (
 	proofQueryEvidenceLimit  = 20_000
 	proofBuildAttempts       = 3
 	proofCaveat              = "Provisional evidence only; no absence, compatibility, migration-complete, or decommissioning conclusion."
+	compatibilityCaveat      = "Buf WIRE verdict applies only to the committed before/after input digests; consumer evidence is provisional and cannot establish absence, migration completeness, or decommissioning safety."
+	compatibilityBodyLimit   = 72 << 20
 )
 
 var errProofQueryLimit = errors.New("proof query result exceeds its bounded limit")
@@ -39,12 +42,14 @@ type VisibilityContext struct {
 
 // ProofQuery is the canonical question embedded in a proof bundle.
 type ProofQuery struct {
-	Kind        string   `json:"kind"`
-	Operation   string   `json:"operation,omitempty"`
-	Lineage     string   `json:"lineage,omitempty"`
-	Message     string   `json:"message,omitempty"`
-	FieldNumber int      `json:"field_number,omitempty"`
-	Domains     []string `json:"domains"`
+	Kind         string   `json:"kind"`
+	Operation    string   `json:"operation,omitempty"`
+	Lineage      string   `json:"lineage,omitempty"`
+	Message      string   `json:"message,omitempty"`
+	FieldNumber  int      `json:"field_number,omitempty"`
+	BeforeDigest string   `json:"before_digest,omitempty"`
+	AfterDigest  string   `json:"after_digest,omitempty"`
+	Domains      []string `json:"domains"`
 }
 
 // BundleExtractor explicitly binds extractor versions to exact published
@@ -74,6 +79,7 @@ type ProofBundle struct {
 	Coverage          extract.CoverageCertificate `json:"coverage"`
 	ExtractorVersions []BundleExtractor           `json:"extractor_versions"`
 	VisibilityContext VisibilityContext           `json:"visibility_context"`
+	Compatibility     *compat.CompatibilityResult `json:"compatibility,omitempty"`
 	Caveat            string                      `json:"caveat"`
 }
 
@@ -84,6 +90,7 @@ type ProofBundleEnvelope struct {
 }
 
 type assertionFilter struct {
+	Domain    string
 	Predicate string
 	Object    string
 	Lineage   string
@@ -116,7 +123,7 @@ func (s *ProofService) FindOperationConsumers(ctx context.Context, operation str
 	}
 	query := ProofQuery{Kind: "find_operation_consumers", Operation: operation, Domains: []string{"grpc-consumer"}}
 	return createProofBundle(ctx, s.opts, query, assertionFilter{
-		Predicate: "CALLS_OPERATION", Object: operation,
+		Domain: "grpc-consumer", Predicate: "CALLS_OPERATION", Object: operation,
 	})
 }
 
@@ -134,8 +141,8 @@ func (s *ProofService) FindProtoFieldReferences(ctx context.Context, lineage, me
 		Message: message, FieldNumber: fieldNumber, Domains: []string{"scip-proto-field"},
 	}
 	return createProofBundle(ctx, s.opts, query, assertionFilter{
-		Predicate: "REFERENCES_PROTO_FIELD",
-		Object:    message + "#" + strconv.Itoa(fieldNumber), Lineage: lineage,
+		Domain: "scip-proto-field", Predicate: "REFERENCES_PROTO_FIELD",
+		Object: message + "#" + strconv.Itoa(fieldNumber), Lineage: lineage,
 	})
 }
 
@@ -151,6 +158,51 @@ func (s *ProofService) GetExtractionCoverage(ctx context.Context, domains []stri
 	}
 	query := ProofQuery{Kind: "get_extraction_coverage", Domains: domains}
 	return createProofBundle(ctx, s.opts, query, assertionFilter{})
+}
+
+// CompatibilityAvailable reports whether the shared service can expose a
+// genuine compatibility operation. Transports use it to avoid advertising a
+// permanently failing placeholder when the Buf sandbox is unavailable.
+func (s *ProofService) CompatibilityAvailable() bool {
+	return s != nil && s.opts.Compatibility != nil
+}
+
+// CheckContractCompatibility runs the pinned Buf WIRE policy, maps findings
+// to stable field identities, then enriches them with permission-filtered SCIP
+// consumers and exact source evidence in the same immutable proof bundle.
+func (s *ProofService) CheckContractCompatibility(ctx context.Context, request compat.Request) (*ProofBundleEnvelope, error) {
+	if s == nil || s.opts.Compatibility == nil {
+		return nil, huma.Error503ServiceUnavailable("contract compatibility unavailable")
+	}
+	result, err := s.opts.Compatibility.Check(ctx, request)
+	if err != nil {
+		switch {
+		case errors.Is(err, compat.ErrInvalidInput):
+			return nil, huma.Error400BadRequest(err.Error())
+		case errors.Is(err, compat.ErrLimit):
+			return nil, huma.Error422UnprocessableEntity(err.Error())
+		case errors.Is(err, compat.ErrUnavailable):
+			return nil, huma.Error503ServiceUnavailable(err.Error())
+		default:
+			return nil, huma.Error422UnprocessableEntity("compatibility engine could not produce a verdict", err)
+		}
+	}
+	filters := make([]assertionFilter, 0, len(result.AffectedFields))
+	for _, field := range result.AffectedFields {
+		if err := validateFieldIdentity(field.Lineage, field.Message, field.Number); err != nil {
+			return nil, huma.Error500InternalServerError("compatibility engine returned an invalid field identity", err)
+		}
+		filters = append(filters, assertionFilter{
+			Domain: "scip-proto-field", Predicate: "REFERENCES_PROTO_FIELD",
+			Object: field.Message + "#" + strconv.Itoa(field.Number), Lineage: field.Lineage,
+		})
+	}
+	query := ProofQuery{
+		Kind: "check_contract_compatibility", Lineage: request.Lineage,
+		BeforeDigest: result.Before.Digest, AfterDigest: result.After.Digest,
+		Domains: []string{"scip-proto-field"},
+	}
+	return createProofBundleWithCompatibility(ctx, s.opts, query, filters, result)
 }
 
 func registerProofAPI(api huma.API, opts Options) {
@@ -198,6 +250,23 @@ func registerProofAPI(api huma.API, opts Options) {
 		}
 		return &proofOut{Body: *envelope}, nil
 	})
+	if service.CompatibilityAvailable() {
+		type compatibilityIn struct {
+			Body compat.Request
+		}
+		huma.Register(api, huma.Operation{
+			OperationID: "check-contract-compatibility",
+			Method:      "POST", Path: "/api/check_contract_compatibility",
+			Summary:      "Check protobuf wire compatibility and find affected consumers",
+			MaxBodyBytes: compatibilityBodyLimit,
+		}, func(ctx context.Context, in *compatibilityIn) (*proofOut, error) {
+			envelope, err := service.CheckContractCompatibility(ctx, in.Body)
+			if err != nil {
+				return nil, err
+			}
+			return &proofOut{Body: *envelope}, nil
+		})
+	}
 
 	type bundleIn struct {
 		ID string `path:"id" minLength:"67" maxLength:"67"`
@@ -212,6 +281,21 @@ func registerProofAPI(api huma.API, opts Options) {
 }
 
 func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filter assertionFilter) (*ProofBundleEnvelope, error) {
+	filters := []assertionFilter{}
+	if filter.Predicate != "" {
+		filters = append(filters, filter)
+	}
+	return buildProofBundle(ctx, opts, query, filters, nil)
+}
+
+func createProofBundleWithCompatibility(ctx context.Context, opts Options, query ProofQuery, filters []assertionFilter, result *compat.CompatibilityResult) (*ProofBundleEnvelope, error) {
+	if result == nil {
+		return nil, huma.Error500InternalServerError("compatibility result is missing")
+	}
+	return buildProofBundle(ctx, opts, query, filters, result)
+}
+
+func buildProofBundle(ctx context.Context, opts Options, query ProofQuery, filters []assertionFilter, compatibility *compat.CompatibilityResult) (*ProofBundleEnvelope, error) {
 	visible, err := visibleRepositories(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -221,7 +305,7 @@ func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filt
 		if err != nil {
 			return nil, huma.Error500InternalServerError("build extraction coverage", err)
 		}
-		assertions, evidence, err := collectProofEvidence(ctx, opts.Evidence, certificate, filter)
+		assertions, evidence, err := collectProofEvidence(ctx, opts.Evidence, certificate, filters)
 		if err != nil {
 			if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
 				continue
@@ -238,11 +322,16 @@ func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filt
 		if confirmed.Digest != certificate.Digest {
 			continue
 		}
+		caveat := proofCaveat
+		if compatibility != nil {
+			caveat = compatibilityCaveat
+		}
 		bundle := ProofBundle{
 			SchemaVersion: proofBundleSchemaVersion, Query: query,
 			Assertions: assertions, Evidence: evidence, Coverage: *certificate,
 			ExtractorVersions: certificateExtractors(certificate),
-			VisibilityContext: visibilityContext(ctx, opts, certificate), Caveat: proofCaveat,
+			VisibilityContext: visibilityContext(ctx, opts, certificate),
+			Compatibility:     compatibility, Caveat: caveat,
 		}
 		content, err := json.Marshal(bundle)
 		if err != nil {
@@ -264,15 +353,21 @@ func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filt
 	return nil, huma.Error409Conflict("evidence changed while building the proof bundle; retry")
 }
 
-func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate, filter assertionFilter) ([]store.Assertion, []BundleEvidence, error) {
+func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate, filters []assertionFilter) ([]store.Assertion, []BundleEvidence, error) {
 	assertions := make([]store.Assertion, 0)
-	if filter.Predicate != "" {
-		if len(certificate.Domains) != 1 {
-			return nil, nil, errors.New("filtered proof query requires exactly one coverage domain")
+	domains := make(map[string]struct{}, len(certificate.Domains))
+	for _, domain := range certificate.Domains {
+		domains[domain] = struct{}{}
+	}
+	for _, filter := range filters {
+		if filter.Domain == "" || filter.Predicate == "" {
+			return nil, nil, errors.New("proof assertion filter requires a domain and predicate")
 		}
-		domain := certificate.Domains[0]
+		if _, ok := domains[filter.Domain]; !ok {
+			return nil, nil, errors.New("proof assertion filter domain is absent from coverage")
+		}
 		for _, repository := range certificate.Repositories {
-			run, ok := certificateRun(repository, domain)
+			run, ok := certificateRun(repository, filter.Domain)
 			if !ok || run.Status != "published" {
 				continue
 			}

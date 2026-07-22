@@ -16,6 +16,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/sse"
 
 	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -49,6 +50,9 @@ type Options struct {
 	// Evidence so embedding/tests can expose the legacy evidence view without
 	// accidentally enabling the proof API.
 	ProofBundles store.ProofBundleStore
+	// Compatibility supplies the pinned, sandboxed Buf checker. Nil keeps the
+	// HTTP operation and corresponding MCP capability undiscoverable.
+	Compatibility compat.Service
 	// Principal returns the stable authenticated subject recorded in a bundle.
 	// AuthorizationProvider names the visibility policy generation.
 	Principal             func(context.Context) string

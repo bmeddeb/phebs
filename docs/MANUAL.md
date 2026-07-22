@@ -36,6 +36,8 @@ disk (`surrealkv`), started and stopped with phebs;
 - a **sync worker** mirroring configured repos into bare git clones;
 - an **index worker** running `zoekt-git-index` (built from the same module
 version as the server) as an OOM-isolated child per job;
+- an optional **Buf compatibility child**, pinned by the same Go module and
+  sandboxed per request when experimental contract intelligence is enabled;
 - an **in-process searcher** over the shard directory, streaming results;
 - **DB-backed authentication** with browser sessions, revocable API keys, and
 optional OpenID Connect;
@@ -61,6 +63,7 @@ local repos, whatever branch is checked out).
 | Node ≥ 24                          | build the web UI                                                     | nodejs.org                                                                             |
 | `universal-ctags` *(optional)*     | symbol search (`sym:`) at index time                                 | `brew install universal-ctags`                                                         |
 | language SCIP indexer *(optional)* | precise definitions/references/hover; commit its `index.scip` output | [scip-code.org](https://scip-code.org/)                                                |
+| `bubblewrap` *(Linux, optional)*    | network/filesystem namespace for the experimental Buf compatibility child | distribution package `bubblewrap`; macOS uses built-in `sandbox-exec`                 |
 
 
 
@@ -69,7 +72,7 @@ local repos, whatever branch is checked out).
 
 ```bash
 git clone <your-clone-of-phebs> && cd phebs
-make build          # builds the UI, the zoekt-git-index child, and ./phebs
+make build          # builds the UI, zoekt and Buf children, and ./phebs
 ./phebs serve -config phebs.yaml
 ```
 
@@ -609,6 +612,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped operation-consumer proof bundle                                 |
 | `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
 | `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
+| `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected consumers                |
 | `/api/proof_bundles/{id}`                                           | GET             | reauthorized immutable proof-bundle read; an ID is not a bearer credential                     |
 | `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
 | `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
@@ -655,8 +659,10 @@ Create a named key in **Settings** and use it as the bearer token; the legacy
 config key remains accepted only while it is configured.
 
 Ten core tools are always present. Enabling
-`experimental.provisional_proto_extraction` adds three proof-backed annex
-tools, for thirteen total:
+`experimental.provisional_proto_extraction` adds three evidence-query tools.
+It adds a fourth annex tool, for fourteen total, when the pinned Buf binary and
+host sandbox pass their startup probe; otherwise compatibility stays
+undiscoverable and the other three remain available.
 
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
@@ -674,6 +680,7 @@ tools, for thirteen total:
 | `find_operation_consumers` | immutable permission-scoped `proof-bundle-v1` for one canonical `/package.Service/Method`; includes matching assertions, exact source occurrences, coverage, extractor versions, and the provisional-evidence caveat |
 | `find_proto_field_references` | immutable proof bundle for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
 | `get_extraction_coverage` | assertion-free proof bundle over requested extractor domains, or all three provisional domains when omitted |
+| `check_contract_compatibility` | pinned Buf `WIRE` verdict over bounded before/after `.proto` files, enriched with stable affected-field identities, visible SCIP consumers, exact citations, coverage, and invocation provenance |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
@@ -709,9 +716,10 @@ navigation/history tools are covered through real in-memory MCP sessions over
 a committed SCIP fixture and bare Git mirror, including an indexed revision
 held stable while mirror HEAD advances. T14.2's proof tools are covered through
 one stateless Streamable HTTP session using the official SDK: the agent asks
-both operation- and field-consumer questions and receives source citations and
-coverage without hidden-repository access. `check_contract_compatibility` is
-not advertised until T14.3 provides its pinned-Buf implementation.
+operation-, field-, coverage-, and compatibility questions and receives source
+citations and coverage without hidden-repository access. Compatibility is not
+advertised if Buf is missing, has the wrong version, or the host cannot enforce
+the sandbox.
 
 ## 9. Operations
 
@@ -943,7 +951,8 @@ same-commit forced runs and extractor upgrades; killed staged attempts become
 queries, names, or counts a repository the caller cannot see. The query API
 embeds this complete certificate in every proof bundle.
 
-The opt-in registers three read-only query endpoints:
+The opt-in registers four read-only query endpoints when the Buf startup probe
+succeeds (the first three remain available when compatibility is unavailable):
 
 - `GET /api/find_operation_consumers?operation=/fully.qualified.Service/Method`
   returns exact-object `CALLS_OPERATION` assertions from the `grpc-consumer`
@@ -953,6 +962,49 @@ The opt-in registers three read-only query endpoints:
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
   coverage only; omitted domains select `grpc-consumer`, `proto-contract`, and
   `scip-proto-field`.
+- `POST /api/check_contract_compatibility` accepts a canonical `lineage` and
+  `before`/`after` arrays of `{path,content}` `.proto` files. It runs Buf's
+  `WIRE` policy and joins affected field identities to visible
+  `REFERENCES_PROTO_FIELD` evidence.
+
+The compatibility request is deliberately source-set based: it can check a
+proposed contract before that contract exists in an indexed repository. Paths
+must be unique canonical relative slash paths ending in `.proto`; content must
+be UTF-8. Each side is capped at 256 files, each file at 4 MiB, both sides at
+32 MiB total, the JSON request body at 72 MiB, and the evidence join at 256
+distinct affected fields. A larger result fails with `422` rather than
+returning a partial consumer inventory. Results retain sorted path and content
+digests, not source blobs. For example:
+
+```json
+{
+  "lineage": "contract_scip_package_v1_...",
+  "before": [{"path": "shop/cart.proto", "content": "syntax = \"proto3\"; package shop; message Cart { int32 count = 1; }"}],
+  "after": [{"path": "shop/cart.proto", "content": "syntax = \"proto3\"; package shop; message Cart { string count = 1; }"}]
+}
+```
+
+phebs builds Buf v1.72.0 from the go.mod tool pin and refuses a different
+binary. The child can execute only the fixed `buf breaking` operation with
+the `WIRE` policy, JSON findings, symlink traversal disabled, and relative
+paths inside a fresh private temp tree. It never runs `buf generate`, protoc
+plugins, repository scripts, repository binaries, or repository configuration.
+Network access and writes outside the temp tree are denied. Wall time is 15
+seconds (Buf receives 10), CPU time is 10 seconds, output is capped at 4 MiB
+per stream, and memory at 512 MiB. Linux uses bubblewrap namespaces plus a
+virtual-memory rlimit; macOS uses Seatbelt plus a process-group RSS watchdog.
+Failure to enforce or validate these boundaries leaves the endpoint and MCP
+tool unregistered.
+
+The bundle's `compatibility` object contains the WIRE verdict, exact Buf rule,
+message and one-based source span, affected `(lineage,message,field_number)`
+keys, input commitments, and an `extraction_run` record with engine, pinned
+version, exact relative arguments, exit code, and result. That run is local to
+the immutable bundle rather than the repository extraction publication table:
+caller-provided source sets have no indexed repository revision. A breaking
+rule is a spec-level conclusion only for the committed inputs. The affected
+consumer list still has the coverage and provisional-evidence limits stated
+below; an empty list does not prove absence or migration safety.
 
 Every successful response is a self-contained `proof-bundle-v1`: canonical
 question, matching assertions, their resolved atoms and repository
@@ -1068,6 +1120,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | `start surreal child: exec: "surreal": executable file not found` | SurrealDB not installed                                                                                | see [prerequisites](#prerequisites)                                                                   |
 | log: `zoekt-git-index not found — indexing disabled`              | binary built without `make build`/`make dev`                                                           | `make build`, or set `PHEBS_ZOEKT_GIT_INDEX=/path/to/zoekt-git-index`                                 |
+| log: contract compatibility disabled                              | Buf is missing/mismatched, or the OS sandbox cannot be enforced                                        | use `make build` or set `PHEBS_BUF` to the pinned v1.72.0 binary; install `bubblewrap` on Linux        |
 | `listen tcp 127.0.0.1:3070: bind: address already in use`         | another phebs (or process) on the port                                                                 | stop it, or `-addr 127.0.0.1:3071`                                                                    |
 | UI shows first-run setup                                          | no users and no OIDC provider                                                                          | copy the ephemeral setup token from the current process log; restarting generates a new token         |
 | login succeeds but the UI immediately asks again                  | a `Secure` cookie was used over plain non-loopback HTTP                                                | serve HTTPS, or set `auth.cookie_secure: false` only for deliberate local development                 |
@@ -1091,10 +1144,10 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target           | Does                                                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`       | build UI + zoekt child, run with embedded UI                                                                                                            |
-| `make dev-api`   | backend-only loop (placeholder UI page, fast)                                                                                                           |
-| `make build`     | release binary `./phebs` with embedded UI                                                                                                               |
-| `make test`      | `go test ./...` — store/sync/indexer tests spawn real surreal children and need the `surreal` binary; zoekt-git-index is auto-built by the test harness |
+| `make dev`       | build UI + pinned zoekt/Buf children, run with embedded UI                                                                                               |
+| `make dev-api`   | backend-only loop with pinned zoekt/Buf children (placeholder UI page, fast)                                                                             |
+| `make build`     | release binary `./phebs`, `bin/zoekt-git-index`, and `bin/buf`                                                                                          |
+| `make test`      | `go test ./...` — store/sync/indexer tests need `surreal`; child-binary integration tests build pinned zoekt and Buf binaries                            |
 | `make ui-test`   | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
 | `make lint`      | golangci-lint                                                                                                                                           |
 | `make ui`        | production UI build only                                                                                                                                |

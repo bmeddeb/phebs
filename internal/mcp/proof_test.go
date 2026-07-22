@@ -14,6 +14,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -147,6 +148,31 @@ func proofToolAssertion(repo string, run store.ExtractionRun, id, predicate, obj
 	return assertion, resolution
 }
 
+type proofToolCompatibility struct{}
+
+func (proofToolCompatibility) Check(_ context.Context, request compat.Request) (*compat.CompatibilityResult, error) {
+	if request.Lineage == "" || len(request.Before) == 0 || len(request.After) == 0 {
+		return nil, compat.ErrInvalidInput
+	}
+	field := compat.FieldIdentity{Lineage: request.Lineage, Message: "shop.Cart", Number: 1}
+	return &compat.CompatibilityResult{
+		Compatible: false,
+		Before:     compat.InputSnapshot{Digest: "sha256:" + strings.Repeat("1", 64)},
+		After:      compat.InputSnapshot{Digest: "sha256:" + strings.Repeat("2", 64)},
+		Violations: []compat.Violation{{
+			Snapshot: "after", Path: "shop/cart.proto", StartLine: 3, StartColumn: 16,
+			EndLine: 3, EndColumn: 22, Rule: "FIELD_WIRE_COMPATIBLE_TYPE",
+			Message: "field changed wire type", Field: &field,
+		}},
+		AffectedFields: []compat.FieldIdentity{field},
+		Run: compat.Run{
+			Engine: "buf", Version: compat.Version, Policy: compat.Policy,
+			Arguments: []string{"breaking", "../after", "--against", "../before"},
+			ExitCode:  100, Result: "breaking",
+		},
+	}, nil
+}
+
 func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, string) {
 	t.Helper()
 	const (
@@ -181,7 +207,7 @@ func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, strin
 		},
 	}
 	proofs := api.NewProofService(api.Options{
-		Store: st, Evidence: st, ProofBundles: st,
+		Store: st, Evidence: st, ProofBundles: st, Compatibility: proofToolCompatibility{},
 		Visible: func(context.Context) func(store.Repo) bool {
 			return func(repo store.Repo) bool { return repo.Name == visibleRepo }
 		},
@@ -191,7 +217,7 @@ func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, strin
 	if proofs == nil {
 		t.Fatal("proof service unavailable")
 	}
-	return NewServer(Options{Version: "test", Store: st, Proofs: proofs}), st, operation, lineage
+	return NewServer(Options{Version: "test", Store: st, Proofs: proofs, Compatibility: proofs}), st, operation, lineage
 }
 
 // T14.2 AC: one live stateless Streamable HTTP session through the official
@@ -242,12 +268,29 @@ func TestProofToolsProtocolSession(t *testing.T) {
 		t.Fatalf("coverage answer = %+v, error=%v content=%v", coverage, result.IsError, result.Content)
 	}
 
+	compatibility, result := callProofSessionTool(t, session, "check_contract_compatibility", map[string]any{
+		"lineage": lineage,
+		"before":  []map[string]any{{"path": "shop/cart.proto", "content": "syntax = \"proto3\"; package shop; message Cart { int32 count = 1; }"}},
+		"after":   []map[string]any{{"path": "shop/cart.proto", "content": "syntax = \"proto3\"; package shop; message Cart { string count = 1; }"}},
+	})
+	if result.IsError || compatibility.Bundle.Query.Kind != "check_contract_compatibility" ||
+		compatibility.Bundle.Compatibility == nil || compatibility.Bundle.Compatibility.Compatible ||
+		compatibility.Bundle.Compatibility.Violations[0].Rule != "FIELD_WIRE_COMPATIBLE_TYPE" ||
+		len(compatibility.Bundle.Assertions) != 1 || compatibility.Bundle.Assertions[0].Predicate != "REFERENCES_PROTO_FIELD" {
+		t.Fatalf("compatibility answer = %+v, error=%v content=%v", compatibility, result.IsError, result.Content)
+	}
+	if compatibility.Bundle.Evidence[0].Occurrences[0].Path != "client/model.go" ||
+		compatibility.Bundle.Evidence[0].Occurrences[0].StartLine != 7 ||
+		!strings.Contains(compatibility.Bundle.Caveat, "WIRE verdict") {
+		t.Fatalf("compatibility citations/caveat = %+v", compatibility.Bundle)
+	}
+
 	for _, call := range st.calls {
 		if strings.Contains(call, "hidden") || strings.Contains(call, "secret") {
 			t.Fatalf("proof tool touched hidden evidence: %v", st.calls)
 		}
 	}
-	for _, bundle := range []api.ProofBundleEnvelope{operationBundle, fieldBundle, coverage} {
+	for _, bundle := range []api.ProofBundleEnvelope{operationBundle, fieldBundle, coverage, compatibility} {
 		encoded, err := json.Marshal(bundle)
 		if err != nil || strings.Contains(string(encoded), "hidden") || strings.Contains(string(encoded), "secret") {
 			t.Fatalf("proof tool leaked hidden scope: %s, %v", encoded, err)
@@ -301,18 +344,26 @@ func (schemaProofQueries) GetExtractionCoverage(context.Context, []string) (*api
 	return nil, errors.New("not called")
 }
 
+type schemaCompatibilityQueries struct{}
+
+func (schemaCompatibilityQueries) CheckContractCompatibility(context.Context, compat.Request) (*api.ProofBundleEnvelope, error) {
+	return nil, errors.New("not called")
+}
+
 func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 	for _, test := range []struct {
-		name      string
-		proofs    ProofQueries
-		wantCount int
+		name          string
+		proofs        ProofQueries
+		compatibility CompatibilityQueries
+		wantCount     int
 	}{
 		{name: "dark", wantCount: 10},
-		{name: "enabled", proofs: schemaProofQueries{}, wantCount: 13},
+		{name: "proof only", proofs: schemaProofQueries{}, wantCount: 13},
+		{name: "compatibility enabled", proofs: schemaProofQueries{}, compatibility: schemaCompatibilityQueries{}, wantCount: 14},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := t.Context()
-			s := NewServer(Options{Version: "test", Proofs: test.proofs})
+			s := NewServer(Options{Version: "test", Proofs: test.proofs, Compatibility: test.compatibility})
 			serverTransport, clientTransport := sdk.NewInMemoryTransports()
 			go func() { _, _ = s.Connect(ctx, serverTransport, nil) }()
 			client := sdk.NewClient(&sdk.Implementation{Name: "t", Version: "0"}, nil)
@@ -332,8 +383,18 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 			if len(found) != test.wantCount {
 				t.Fatalf("tool count = %d, want %d: %v", len(found), test.wantCount, found)
 			}
-			if _, premature := found["check_contract_compatibility"]; premature {
-				t.Fatal("compatibility tool registered before the T14.3 engine")
+			compatibilityTool, hasCompatibility := found["check_contract_compatibility"]
+			if hasCompatibility != (test.compatibility != nil) {
+				t.Fatalf("compatibility discovery = %v, configured=%v", hasCompatibility, test.compatibility != nil)
+			}
+			if hasCompatibility {
+				input, _ := json.Marshal(compatibilityTool.InputSchema)
+				output, _ := json.Marshal(compatibilityTool.OutputSchema)
+				if !strings.Contains(string(input), `"before"`) || !strings.Contains(string(input), `"after"`) ||
+					!strings.Contains(string(input), `"lineage"`) || !strings.Contains(string(output), `"compatibility"`) ||
+					!strings.Contains(string(output), `"visibility_context"`) {
+					t.Fatalf("compatibility schemas: input=%s output=%s", input, output)
+				}
 			}
 			for _, name := range []string{"find_operation_consumers", "find_proto_field_references", "get_extraction_coverage"} {
 				tool, ok := found[name]
@@ -366,11 +427,12 @@ func TestProofToolInvalidInputIsToolError(t *testing.T) {
 		{name: "operation", args: map[string]any{"operation": "shop.Cart/Get"}},
 		{name: "field", args: map[string]any{"lineage": "x", "message": "shop.Cart", "field_number": 19_000}},
 		{name: "coverage", args: map[string]any{"domains": []string{"grpc-consumer", "grpc-consumer"}}},
+		{name: "compatibility", args: map[string]any{"lineage": "", "before": []any{}, "after": []any{}}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			tool := map[string]string{
 				"operation": "find_operation_consumers", "field": "find_proto_field_references",
-				"coverage": "get_extraction_coverage",
+				"coverage": "get_extraction_coverage", "compatibility": "check_contract_compatibility",
 			}[test.name]
 			_, result := callTool[api.ProofBundleEnvelope](t, s, tool, test.args)
 			if !result.IsError {

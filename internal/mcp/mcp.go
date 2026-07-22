@@ -15,6 +15,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -29,6 +30,12 @@ type ProofQueries interface {
 	GetExtractionCoverage(ctx context.Context, domains []string) (*api.ProofBundleEnvelope, error)
 }
 
+// CompatibilityQueries is separate from the three always-present proof
+// queries so a missing Buf sandbox cannot advertise a placeholder tool.
+type CompatibilityQueries interface {
+	CheckContractCompatibility(ctx context.Context, request compat.Request) (*api.ProofBundleEnvelope, error)
+}
+
 type Options struct {
 	Version string
 	Store   store.Store
@@ -39,6 +46,9 @@ type Options struct {
 	// Proofs enables the three T14.2 proof-backed tools. Nil leaves them
 	// unregistered so the provisional extraction feature stays dark.
 	Proofs ProofQueries
+	// Compatibility enables T14.3 only after the pinned Buf checker and its
+	// host sandbox have initialized successfully.
+	Compatibility CompatibilityQueries
 	// Visible resolves the caller's repo visibility (T10.3); nil disables
 	// permission filtering. search_code is covered inside the searcher; this
 	// hook gates the tools that bypass it (read_file, list_repos, SCIP,
@@ -181,6 +191,20 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		Description: "Return an assertion-free immutable proof bundle describing extraction coverage over the caller's complete visible repository universe.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in coverageIn) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
 		result, err := opts.Proofs.GetExtractionCoverage(ctx, in.Domains)
+		if err != nil {
+			return nil, api.ProofBundleEnvelope{}, err
+		}
+		return nil, *result, nil
+	})
+
+	if opts.Compatibility == nil {
+		return
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "check_contract_compatibility",
+		Description: "Run the pinned Buf WIRE policy over bounded before/after protobuf source sets, then return an immutable permission-scoped proof bundle containing breaking rules, affected stable field identities, evidence-derived consumers, exact source citations, coverage, and invocation provenance.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in compat.Request) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
+		result, err := opts.Compatibility.CheckContractCompatibility(ctx, in)
 		if err != nil {
 			return nil, api.ProofBundleEnvelope{}, err
 		}

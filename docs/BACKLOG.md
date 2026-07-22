@@ -559,7 +559,7 @@ visibility context, and proves zero hidden-repository evidence calls or names.
 T14.3; T14.2 intentionally does not advertise a failing placeholder or freeze
 a speculative schema.
 
-**T14.3 · Contract compatibility via pinned Buf child**
+**T14.3 · Contract compatibility via pinned Buf child** ✅ 2026-07-22
 `check_contract_compatibility`: version-pinned `buf` child built from go.mod
 (zoekt-git-index house pattern), sandboxed per the PLAN ADR — phebs-produced
 descriptor inputs or sanitized temp tree, no network, CPU/memory/time limits,
@@ -569,6 +569,23 @@ verdicts with evidence-derived consumers and registers the corresponding Huma
 endpoint plus MCP tool. AC: a wire-breaking field change
 reports the breaking rule **and** the affected consumers with call-site
 citations.
+Implemented with Buf v1.72.0 as a Go tool and sibling child binary. The only
+operation is fixed-policy `buf breaking` (`WIRE`, structured JSON,
+symlinks disabled) over validated source files copied into a fresh temp tree;
+network and writes outside that tree are denied, with independent input,
+output, wall, CPU, and memory ceilings. A startup version/sandbox probe keeps
+both transports undiscoverable on a missing or mismatched engine. Canonical
+results commit to source digests without retaining blobs and embed a
+bundle-local compatibility extraction-run record (engine/version/exact
+relative args/exit/result); they do not publish into the repository extraction
+table because caller-supplied before/after sets have no indexed repo revision.
+Structured violation spans map to `(lineage,message,field_number)` and feed a
+bounded multi-filter extension of the shared proof builder, so SCIP consumers
+and exact occurrences remain permission-filtered, coverage-confirmed, and
+identical over Huma and MCP. Real-Buf tests pin a wire-type break, exact rule,
+span, stable identity, compatible rename, source/temp-path non-retention, and
+determinism; HTTP and official-SDK MCP acceptance pin affected visible
+consumers/citations and hidden-repository non-interference.
 
 **T14.4 · Proof-bundle retention before pilot exposure**
 Add config-gated proof-bundle expiry before any pilot enables the annex query

@@ -25,6 +25,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
@@ -205,10 +206,20 @@ func serve(args []string) error {
 	var onIndexed func(context.Context, string, string) error
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
+	var compatibility compat.Service
 	if exs := evidenceExtractors(cfg.Experimental.ProvisionalProtoExtraction); len(exs) > 0 {
 		log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
 		evidenceView = st
 		proofBundles = st
+		if bin, err := compat.FindBinary(); err != nil {
+			log.Printf("WARNING: pinned buf not found — contract compatibility disabled (make build provides it; or set PHEBS_BUF): %v", err)
+		} else if checker, err := compat.New(bin); err != nil {
+			log.Printf("WARNING: Buf sandbox unavailable — contract compatibility disabled: %v", err)
+		} else if err := checker.Validate(ctx); err != nil {
+			log.Printf("WARNING: Buf validation failed — contract compatibility disabled: %v", err)
+		} else {
+			compatibility = checker
+		}
 		worker := &extract.Worker{
 			Repos: st, Evidence: st,
 			NewCorpus:  extract.GitCorpus(cfg.Server.DataDir),
@@ -338,7 +349,7 @@ func serve(args []string) error {
 			return ok && principal.IsAdmin
 		},
 		AuditRecord: auditRecord, AuditLog: st, Analytics: st,
-		Evidence: evidenceView, ProofBundles: proofBundles, Visible: visibleFor,
+		Evidence: evidenceView, ProofBundles: proofBundles, Compatibility: compatibility, Visible: visibleFor,
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			if !ok {
@@ -362,13 +373,17 @@ func serve(args []string) error {
 	}
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
+	var mcpCompatibility phebsmcp.CompatibilityQueries
 	if proofService := api.NewProofService(apiOpts); proofService != nil {
 		mcpProofs = proofService
+		if proofService.CompatibilityAvailable() {
+			mcpCompatibility = proofService
+		}
 	}
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
 	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
-		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs,
+		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs, Compatibility: mcpCompatibility,
 	})
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their

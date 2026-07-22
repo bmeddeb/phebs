@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -163,9 +164,14 @@ func proofAssertion(repo, runID, id, predicate, object, lineage, secret string) 
 	return assertion, resolution
 }
 
-func proofHandler(st *proofAPIStore, principal string, visible *map[string]bool) http.Handler {
+func proofHandler(st *proofAPIStore, principal string, visible *map[string]bool, compatibility ...compat.Service) http.Handler {
+	var checker compat.Service
+	if len(compatibility) > 0 {
+		checker = compatibility[0]
+	}
 	return api.New(api.Options{
 		Version: "test", Store: st, Evidence: st, ProofBundles: st,
+		Compatibility: checker,
 		Visible: func(context.Context) func(store.Repo) bool {
 			if visible == nil {
 				return nil
@@ -177,10 +183,46 @@ func proofHandler(st *proofAPIStore, principal string, visible *map[string]bool)
 	})
 }
 
+type fixedCompatibility struct {
+	result  compat.CompatibilityResult
+	err     error
+	request compat.Request
+}
+
+func (c *fixedCompatibility) Check(_ context.Context, request compat.Request) (*compat.CompatibilityResult, error) {
+	c.request = request
+	if c.err != nil {
+		return nil, c.err
+	}
+	result := c.result
+	result.Violations = append([]compat.Violation(nil), c.result.Violations...)
+	result.AffectedFields = append([]compat.FieldIdentity(nil), c.result.AffectedFields...)
+	return &result, nil
+}
+
 func getProof(t *testing.T, handler http.Handler, target string) (int, string, api.ProofBundleEnvelope) {
 	t.Helper()
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, target, nil))
+	var envelope api.ProofBundleEnvelope
+	if recorder.Code == http.StatusOK {
+		if err := json.Unmarshal(recorder.Body.Bytes(), &envelope); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return recorder.Code, recorder.Body.String(), envelope
+}
+
+func postCompatibility(t *testing.T, handler http.Handler, request compat.Request) (int, string, api.ProofBundleEnvelope) {
+	t.Helper()
+	encoded, err := json.Marshal(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	httpRequest := httptest.NewRequest(http.MethodPost, "/api/check_contract_compatibility", strings.NewReader(string(encoded)))
+	httpRequest.Header.Set("Content-Type", "application/json")
+	handler.ServeHTTP(recorder, httpRequest)
 	var envelope api.ProofBundleEnvelope
 	if recorder.Code == http.StatusOK {
 		if err := json.Unmarshal(recorder.Body.Bytes(), &envelope); err != nil {
@@ -270,6 +312,130 @@ func TestProofBundleAdminMemberIsolationAndReadReauthorization(t *testing.T) {
 	memberVisible = map[string]bool{}
 	if code, body, _ := getProof(t, member, "/api/proof_bundles/"+memberBundle.ID); code != http.StatusNotFound || strings.Contains(body, visibleRepo) {
 		t.Fatalf("revoked bundle read = %d %s", code, body)
+	}
+}
+
+func TestContractCompatibilityJoinsOnlyVisibleAffectedConsumers(t *testing.T) {
+	const (
+		visibleRepo = "github.com/allowed/cart-client"
+		hiddenRepo  = "github.com/secret/cart-client"
+		domain      = "scip-proto-field"
+		lineage     = "contract_scip_package_v1_cart"
+		message     = "shop.Cart"
+	)
+	visibleRun, hiddenRun := proofRun(visibleRepo, domain, "run-visible-field"), proofRun(hiddenRepo, domain, "run-hidden-field")
+	visibleAssertion, visibleResolution := proofAssertion(visibleRepo, visibleRun.ID, "visible-field", "REFERENCES_PROTO_FIELD", message+"#1", lineage, "read")
+	hiddenAssertion, hiddenResolution := proofAssertion(hiddenRepo, hiddenRun.ID, "hidden-field", "REFERENCES_PROTO_FIELD", message+"#1", lineage, "secret read")
+	st := &proofAPIStore{
+		repos: []store.Repo{
+			{Name: hiddenRepo, IndexedCommitHash: hiddenRun.Commit},
+			{Name: visibleRepo, IndexedCommitHash: visibleRun.Commit},
+		},
+		runs: map[string]store.ExtractionRun{
+			proofScope(visibleRepo, domain): visibleRun,
+			proofScope(hiddenRepo, domain):  hiddenRun,
+		},
+		assertions: map[string][]store.Assertion{
+			visibleRepo: {visibleAssertion}, hiddenRepo: {hiddenAssertion},
+		},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(visibleRepo, visibleRun.ID, visibleAssertion.Supporting[0]): visibleResolution,
+			proofEvidenceScope(hiddenRepo, hiddenRun.ID, hiddenAssertion.Supporting[0]):    hiddenResolution,
+		},
+	}
+	field := compat.FieldIdentity{Lineage: lineage, Message: message, Number: 1}
+	checker := &fixedCompatibility{result: compat.CompatibilityResult{
+		Compatible: false,
+		Before:     compat.InputSnapshot{Digest: "sha256:" + strings.Repeat("1", 64), Files: []compat.InputFile{{Path: "shop/cart.proto", Digest: "sha256:" + strings.Repeat("2", 64)}}},
+		After:      compat.InputSnapshot{Digest: "sha256:" + strings.Repeat("3", 64), Files: []compat.InputFile{{Path: "shop/cart.proto", Digest: "sha256:" + strings.Repeat("4", 64)}}},
+		Violations: []compat.Violation{{
+			Snapshot: "after", Path: "shop/cart.proto", StartLine: 3, StartColumn: 16,
+			EndLine: 3, EndColumn: 22, Rule: "FIELD_WIRE_COMPATIBLE_TYPE",
+			Message: "field changed wire type", Field: &field,
+		}},
+		AffectedFields: []compat.FieldIdentity{field},
+		Run: compat.Run{
+			Engine: "buf", Version: compat.Version, Policy: compat.Policy,
+			Arguments: []string{"breaking", "../after", "--against", "../before"},
+			ExitCode:  100, Result: "breaking",
+		},
+	}}
+	visible := map[string]bool{visibleRepo: true}
+	handler := proofHandler(st, "user:member", &visible, checker)
+	request := compat.Request{
+		Lineage: lineage,
+		Before:  []compat.File{{Path: "shop/cart.proto", Content: "syntax = \"proto3\"; message Cart { int32 count = 1; }"}},
+		After:   []compat.File{{Path: "shop/cart.proto", Content: "syntax = \"proto3\"; message Cart { string count = 1; }"}},
+	}
+	code, body, envelope := postCompatibility(t, handler, request)
+	if code != http.StatusOK {
+		t.Fatalf("compatibility = %d %s", code, body)
+	}
+	if checker.request.Lineage != lineage || envelope.Bundle.Query.Kind != "check_contract_compatibility" ||
+		envelope.Bundle.Query.BeforeDigest != checker.result.Before.Digest ||
+		envelope.Bundle.Query.AfterDigest != checker.result.After.Digest {
+		t.Fatalf("request/query = %+v / %+v", checker.request, envelope.Bundle.Query)
+	}
+	if envelope.Bundle.Compatibility == nil || envelope.Bundle.Compatibility.Compatible ||
+		len(envelope.Bundle.Compatibility.Violations) != 1 ||
+		envelope.Bundle.Compatibility.Violations[0].Rule != "FIELD_WIRE_COMPATIBLE_TYPE" ||
+		envelope.Bundle.Compatibility.Run.Version != compat.Version {
+		t.Fatalf("compatibility verdict = %+v", envelope.Bundle.Compatibility)
+	}
+	if len(envelope.Bundle.Assertions) != 1 || envelope.Bundle.Assertions[0].Repo != visibleRepo ||
+		len(envelope.Bundle.Evidence) != 1 || len(envelope.Bundle.Evidence[0].Occurrences) != 1 ||
+		envelope.Bundle.Evidence[0].Occurrences[0].Path != "consumer/visible-field.go" ||
+		envelope.Bundle.Evidence[0].Occurrences[0].StartLine != 7 {
+		t.Fatalf("consumer citations = %+v / %+v", envelope.Bundle.Assertions, envelope.Bundle.Evidence)
+	}
+	if strings.Contains(body, hiddenRepo) || strings.Contains(body, "secret") ||
+		strings.Contains(body, "int32 count") || strings.Contains(body, "string count") {
+		t.Fatalf("bundle leaked hidden evidence or source input: %s", body)
+	}
+	for _, call := range st.calls {
+		if strings.Contains(call, hiddenRepo) || strings.Contains(call, hiddenRun.ID) {
+			t.Fatalf("compatibility query touched hidden evidence: %v", st.calls)
+		}
+	}
+	if envelope.Bundle.Caveat == "" || !strings.Contains(envelope.Bundle.Caveat, "WIRE verdict") || len(st.bundles) != 1 {
+		t.Fatalf("bundle caveat/persistence = %q / %d", envelope.Bundle.Caveat, len(st.bundles))
+	}
+
+	// The endpoint is dark when a real checker is absent; the shared proof
+	// service still exposes the three evidence-only T14.2 operations.
+	dark := proofHandler(st, "user:member", &visible)
+	if darkCode, darkBody, _ := postCompatibility(t, dark, request); darkCode != http.StatusNotFound {
+		t.Fatalf("dark compatibility endpoint = %d %s", darkCode, darkBody)
+	}
+}
+
+func TestContractCompatibilityClassifiesBoundedCheckerRefusalsBeforeEvidence(t *testing.T) {
+	request := compat.Request{
+		Lineage: "contract_lineage",
+		Before:  []compat.File{{Path: "x.proto", Content: "syntax = \"proto3\";"}},
+		After:   []compat.File{{Path: "x.proto", Content: "syntax = \"proto3\";"}},
+	}
+	for _, test := range []struct {
+		name string
+		err  error
+		code int
+	}{
+		{name: "invalid input", err: compat.ErrInvalidInput, code: http.StatusBadRequest},
+		{name: "resource limit", err: compat.ErrLimit, code: http.StatusUnprocessableEntity},
+		{name: "sandbox unavailable", err: compat.ErrUnavailable, code: http.StatusServiceUnavailable},
+		{name: "engine refusal", err: compat.ErrCheckFailed, code: http.StatusUnprocessableEntity},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			st := &proofAPIStore{}
+			code, body, _ := postCompatibility(t,
+				proofHandler(st, "user:member", nil, &fixedCompatibility{err: test.err}), request)
+			if code != test.code || body == "" {
+				t.Fatalf("response = %d %s, want %d", code, body, test.code)
+			}
+			if len(st.calls) != 0 || len(st.bundles) != 0 {
+				t.Fatalf("failed checker touched evidence or persisted: calls=%v bundles=%v", st.calls, st.bundles)
+			}
+		})
 	}
 }
 
