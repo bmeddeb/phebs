@@ -46,26 +46,9 @@ func registerEvidence(api huma.API, opts Options) {
 	}
 
 	huma.Get(api, "/api/evidence", func(ctx context.Context, in *evidenceIn) (*evidenceOut, error) {
-		allow := repoFilter(ctx, opts)
-		repos, err := opts.Store.ListRepos(ctx)
+		visible, err := visibleRepositories(ctx, opts)
 		if err != nil {
-			return nil, huma.Error500InternalServerError("list evidence repositories", err)
-		}
-
-		// This is the authorization boundary. Do not move evidence calls, count
-		// construction, or coverage aggregation above it.
-		visible := make([]store.Repo, 0, len(repos))
-		for _, repo := range repos {
-			if repo.Deleting || allow != nil && !allow(repo) {
-				continue
-			}
-			visible = append(visible, repo)
-		}
-		sort.Slice(visible, func(i, j int) bool { return visible[i].Name < visible[j].Name })
-		for i, repo := range visible {
-			if repo.Name == "" || i > 0 && visible[i-1].Name == repo.Name {
-				return nil, huma.Error500InternalServerError("repository visibility set is inconsistent")
-			}
+			return nil, err
 		}
 
 		view := EvidenceView{
@@ -111,6 +94,32 @@ func registerEvidence(api huma.API, opts Options) {
 		}
 		return &evidenceOut{Body: view}, nil
 	})
+	registerProofAPI(api, opts)
+}
+
+// visibleRepositories is the authorization boundary for every evidence and
+// proof response. No evidence lookup, count, or bundle construction may occur
+// before this function has filtered the global repository list.
+func visibleRepositories(ctx context.Context, opts Options) ([]store.Repo, error) {
+	allow := repoFilter(ctx, opts)
+	repos, err := opts.Store.ListRepos(ctx)
+	if err != nil {
+		return nil, huma.Error500InternalServerError("list evidence repositories", err)
+	}
+	visible := make([]store.Repo, 0, len(repos))
+	for _, repo := range repos {
+		if repo.Deleting || allow != nil && !allow(repo) {
+			continue
+		}
+		visible = append(visible, repo)
+	}
+	sort.Slice(visible, func(i, j int) bool { return visible[i].Name < visible[j].Name })
+	for i, repo := range visible {
+		if repo.Name == "" || i > 0 && visible[i-1].Name == repo.Name {
+			return nil, huma.Error500InternalServerError("repository visibility set is inconsistent")
+		}
+	}
+	return visible, nil
 }
 
 func deterministicRun(run store.ExtractionRun) store.ExtractionRun {

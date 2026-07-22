@@ -1002,6 +1002,10 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 		where += " AND object = $object"
 		vars["object"] = q.Object
 	}
+	if q.Lineage != "" {
+		where += " AND lineage = $lineage"
+		vars["lineage"] = q.Lineage
+	}
 	if q.Repo != "" {
 		where += " AND repo = $repo"
 		vars["repo"] = q.Repo

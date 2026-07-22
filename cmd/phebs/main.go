@@ -204,9 +204,11 @@ func serve(args []string) error {
 	// concurrency and its Git/parser resource use at this integration seam.
 	var onIndexed func(context.Context, string, string) error
 	var evidenceView store.EvidenceStore
+	var proofBundles store.ProofBundleStore
 	if exs := evidenceExtractors(cfg.Experimental.ProvisionalProtoExtraction); len(exs) > 0 {
 		log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
 		evidenceView = st
+		proofBundles = st
 		worker := &extract.Worker{
 			Repos: st, Evidence: st,
 			NewCorpus:  extract.GitCorpus(cfg.Server.DataDir),
@@ -335,7 +337,27 @@ func serve(args []string) error {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin
 		},
-		AuditRecord: auditRecord, AuditLog: st, Analytics: st, Evidence: evidenceView, Visible: visibleFor,
+		AuditRecord: auditRecord, AuditLog: st, Analytics: st,
+		Evidence: evidenceView, ProofBundles: proofBundles, Visible: visibleFor,
+		Principal: func(ctx context.Context) string {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok {
+				return ""
+			}
+			if principal.User != nil {
+				return "user:" + principal.User.ID
+			}
+			if principal.APIKeyID != "" {
+				return "api-key:" + principal.APIKeyID
+			}
+			return "authenticated:" + principal.AuthMethod
+		},
+		AuthorizationProvider: func() string {
+			if cfg.Permissions != nil {
+				return "phebs-permissions-v1"
+			}
+			return "unfiltered-v1"
+		}(),
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
 	})
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.

@@ -45,6 +45,14 @@ type Options struct {
 	// nil store leaves the route unregistered so the dark-launch default has
 	// no discoverable read surface.
 	Evidence store.EvidenceStore
+	// ProofBundles persists T14.1 immutable bundles. It is kept separate from
+	// Evidence so embedding/tests can expose the legacy evidence view without
+	// accidentally enabling the proof API.
+	ProofBundles store.ProofBundleStore
+	// Principal returns the stable authenticated subject recorded in a bundle.
+	// AuthorizationProvider names the visibility policy generation.
+	Principal             func(context.Context) string
+	AuthorizationProvider string
 
 	// Visible resolves the caller's repo visibility (T10.3): it returns this
 	// request's predicate, or nil when the caller may see everything. A nil

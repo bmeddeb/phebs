@@ -110,3 +110,8 @@ DEFINE INDEX IF NOT EXISTS extraction_attempt_run ON extraction_attempt FIELDS r
 DEFINE TABLE IF NOT EXISTS evidence_pin SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS evidence_pin_run ON evidence_pin FIELDS run_id;
 DEFINE INDEX IF NOT EXISTS evidence_pin_identity ON evidence_pin FIELDS pin_key UNIQUE;
+
+-- T14.1 immutable proof bundles. Content is canonical opaque JSON; the
+-- content-derived record id prevents mutation, while evidence_pin retains all
+-- extraction runs the bundle names. Reads re-authorize repositories in Go.
+DEFINE TABLE IF NOT EXISTS proof_bundle SCHEMALESS;

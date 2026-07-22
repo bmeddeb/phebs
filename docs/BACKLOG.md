@@ -520,7 +520,7 @@ exposure is T14.1.
 
 ## EPIC 14 — Query, proof bundles & MCP *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
 
-**T14.1 · Query API + proof bundles**
+**T14.1 · Query API + proof bundles** ✅ 2026-07-22
 huma endpoints for `find_operation_consumers`, `find_proto_field_references`,
 `get_extraction_coverage`; immutable self-contained proof bundles embedding
 assertions, coverage certificate, extractor versions, and `visibility_context`
@@ -529,6 +529,19 @@ digest). Bundles re-authorize on read — a bundle ID is not a bearer
 credential; revoked repository access revokes old bundles. AC: admin and
 member asking the same question produce different immutable bundle IDs; the
 member bundle names no invisible repository.
+Implemented as default-dark Huma GET routes over the existing experimental
+reader flag. Permission filtering produces the complete visible repository
+slice before any evidence lookup. A query resolves all cited atoms and
+occurrences, confirms the coverage digest did not move during construction,
+and stores canonical `proof-bundle-v1` bytes under a sha256-derived ID while
+atomically pinning every named published run. The visibility context commits
+to principal, authorization-provider generation, and visible-repository-set
+digest. `GET /api/proof_bundles/{id}` reauthorizes every scoped repository on
+each read and returns indistinguishable not-found responses for missing or
+revoked scope. Tests prove different admin/member IDs, byte-identical repeat
+queries, no hidden repository names or hidden evidence calls, retroactive
+revocation, immutable persistence, and proof-aware retention. MCP exposure is
+deliberately T14.2; compatibility remains T14.3.
 
 **T14.2 · MCP tools**
 The annex tools on the existing stateless `/api/mcp` server:

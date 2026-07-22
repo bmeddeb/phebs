@@ -914,7 +914,7 @@ test > generated > unknown`; `code_role` separately records repository
 placement and SCIP test/generated roles. These are direct field references,
 not claims that a response field was semantically read.
 
-Every future answer over this evidence cites a deterministic coverage
+Every query answer over this evidence cites a deterministic coverage
 certificate (`coverage-certificate-v1`): the caller's visible repositories
 with their indexed revisions, each domain's exact latest published run (run
 id, extractor, commit, freshness, protocols, complete source-scope counters and
@@ -928,7 +928,37 @@ publication query-visible but records the newer attempt as `aborted`, including
 same-commit forced runs and extractor upgrades; killed staged attempts become
 `aborted` when swept. The certificate contains no wall-clock field. It never
 queries, names, or counts a repository the caller cannot see. The query API
-surface for certificates arrives with T14.1.
+embeds this complete certificate in every proof bundle.
+
+The opt-in registers three read-only query endpoints:
+
+- `GET /api/find_operation_consumers?operation=/fully.qualified.Service/Method`
+  returns exact-object `CALLS_OPERATION` assertions from the `grpc-consumer`
+  domain.
+- `GET /api/find_proto_field_references?lineage=<id>&message=<full-name>&field_number=<n>`
+  resolves the canonical field identity in the `scip-proto-field` domain.
+- `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
+  coverage only; omitted domains select `grpc-consumer`, `proto-contract`, and
+  `scip-proto-field`.
+
+Every successful response is a self-contained `proof-bundle-v1`: canonical
+question, matching assertions, their resolved atoms and repository
+occurrences, coverage certificate, extractor/run bindings, visibility context,
+and the provisional-evidence caveat. The `pb_<sha256>` ID commits to the exact
+JSON content. Repeating the same query against the same evidence and effective
+permission state yields the same ID and bytes. Queries fail rather than
+truncate beyond 5,000 assertions or 20,000 distinct evidence references, and
+stored bundle content is limited to 64 MiB.
+
+`GET /api/proof_bundles/{id}` retrieves an immutable bundle, but the ID is not
+a bearer credential. phebs rechecks the current caller's permission to every
+repository in the bundle before returning it; removal, repository deletion, or
+revoked access makes the old bundle unavailable with `404`. The visibility
+context records the stable principal and authorization-provider generation,
+plus sha256 digests for the effective permission snapshot and complete visible
+repository set. Permission filtering occurs before assertions, counts, or
+coverage are computed, so an invisible repository is neither queried nor
+named. Referenced extraction runs are pinned for the bundle's lifetime.
 
 Declaration and T13.1 operation-consumer lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of
@@ -958,8 +988,8 @@ commit/extractor version short-circuits. Like the rest of phebs's
 HEAD-freshness queues, successive index events may coalesce before extraction;
 only the latest indexed revision can pass the publication guard. Opt-in
 startup backfills indexed repositories even when new indexing is unavailable.
-There is not yet a query or MCP surface for these assertions; operational
-state is visible through the database and
+There is no MCP projection yet; T14.2 adds it over these HTTP proof bundles.
+Operational state is also visible through the database and
 `phebs_jobs_total{kind="extraction_job"}`.
 
 Proof-aware retention checks at startup and hourly while idle. Every

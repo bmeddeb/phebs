@@ -296,6 +296,7 @@ type AssertionQuery struct {
 	Predicate string
 	Subject   string
 	Object    string
+	Lineage   string
 	Repo      string
 	RunID     string // empty = any published run for Repo
 	Limit     int    // 0 = default cap
@@ -308,6 +309,24 @@ type AssertionQuery struct {
 type EvidenceResolution struct {
 	Atom        EvidenceAtom       `json:"atom"`
 	Occurrences []SnapshotEvidence `json:"occurrences"`
+}
+
+// ProofBundleRecord is the store's deliberately opaque representation of one
+// immutable, canonical proof bundle. The API owns the JSON schema; the store
+// verifies the content-derived ID, persists the exact bytes, and pins RunIDs.
+type ProofBundleRecord struct {
+	ID           string   `json:"id"`
+	Content      string   `json:"content"`
+	Repositories []string `json:"repositories"`
+	RunIDs       []string `json:"run_ids"`
+}
+
+// ProofBundleStore persists immutable bundles separately from the evidence
+// read/write interface. Retrieval does not authorize: callers must re-check
+// every repository in Repositories before disclosing Content.
+type ProofBundleStore interface {
+	PutProofBundle(ctx context.Context, bundle ProofBundleRecord) error
+	GetProofBundle(ctx context.Context, id string) (*ProofBundleRecord, error)
 }
 
 // EvidenceStore is the T12.1 provenance layer, separate from Store per the
