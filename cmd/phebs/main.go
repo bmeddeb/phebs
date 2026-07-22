@@ -27,6 +27,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -404,7 +405,10 @@ func evidenceExtractors(provisionalProto bool) []extract.Extractor {
 	if !provisionalProto {
 		return nil
 	}
-	return []extract.Extractor{protodecl.New()}
+	// T13.1: the grpcgo consumer extractor ships behind the same
+	// experimental flag and the same dark/provisional posture — syntactic
+	// tiers only, no accuracy claims (2026-07-22 disposition).
+	return []extract.Extractor{protodecl.New(), grpcgo.New()}
 }
 
 func enqueueExtractionAfterIndex(ctx context.Context, st store.Store, repo, commit string) error {

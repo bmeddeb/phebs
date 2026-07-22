@@ -848,6 +848,21 @@ every `.proto` candidate to be read. Extraction runs publish atomically: a
 read, parse, provenance, limit, cancellation, or publication failure leaves
 the prior published facts intact.
 
+The same opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
+2026-07-22 disposition). It indexes the repository's own generated
+`*_grpc.pb.go` stubs, then emits `REGISTERS_GRPC_SERVICE` assertions for
+`Register<Service>Server` call sites (tier `derived` — name-bound to a
+same-repo stub) and `CALLS_OPERATION` assertions for client method calls
+whose name matches exactly one indexed service (tier `heuristic`); ambiguous
+method names are counted as unresolved in coverage rather than guessed.
+Every assertion carries a `code_role`
+(production/test/mock/generated/vendor, vendor > mock > generated > test >
+production precedence) and cites its atom's exact byte and line span.
+Resolution is syntactic — there is no type checking — so these facts carry
+reduced fidelity by design and, like all provisional facts, state no
+measured accuracy and must not drive compatibility, migration, or
+negative-proof conclusions.
+
 Lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of
 guessing descriptor identity. It prevents name-only cross-repository merges,

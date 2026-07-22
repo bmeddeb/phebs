@@ -26,6 +26,14 @@ var extractorImportAllowlist = map[string]bool{
 	"strconv":       true,
 	"strings":       true,
 
+	// In-process stdlib Go parsing for the T13.1 grpcgo extractor. Parsing is
+	// pure computation over the supplied blob: no exec, no filesystem, no
+	// network, no dynamic loading.
+	"go/ast":    true,
+	"go/parser": true,
+	"go/token":  true,
+	"regexp":    true,
+
 	"github.com/bufbuild/protocompile/ast":      true,
 	"github.com/bufbuild/protocompile/parser":   true,
 	"github.com/bufbuild/protocompile/reporter": true,
