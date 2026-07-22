@@ -946,9 +946,10 @@ question, matching assertions, their resolved atoms and repository
 occurrences, coverage certificate, extractor/run bindings, visibility context,
 and the provisional-evidence caveat. The `pb_<sha256>` ID commits to the exact
 JSON content. Repeating the same query against the same evidence and effective
-permission state yields the same ID and bytes. Queries fail rather than
-truncate beyond 5,000 assertions or 20,000 distinct evidence references, and
-stored bundle content is limited to 64 MiB.
+permission state yields the same ID and bytes. Queries return `HTTP 422` with
+an instruction to narrow the question rather than truncate beyond 5,000
+assertions or 20,000 distinct evidence references; stored bundle content is
+limited to 64 MiB.
 
 `GET /api/proof_bundles/{id}` retrieves an immutable bundle, but the ID is not
 a bearer credential. phebs rechecks the current caller's permission to every
@@ -958,7 +959,16 @@ context records the stable principal and authorization-provider generation,
 plus sha256 digests for the effective permission snapshot and complete visible
 repository set. Permission filtering occurs before assertions, counts, or
 coverage are computed, so an invisible repository is neither queried nor
-named. Referenced extraction runs are pinned for the bundle's lifetime.
+named. Bundle scope is the complete visible universe at construction, not only
+repositories with matching assertions. Deletion or rename of any repository in
+that universe therefore makes the bundle unavailable to everyone, including
+its creator; caller-specific loss of access makes it unavailable to that
+caller. This is deliberately fail-closed.
+
+There is currently no automatic bundle expiry: stored bundles and their
+referenced extraction-run pins are retained indefinitely. T14.4 adds an
+operator-configured lifetime with atomic bundle/pin removal and is required
+before pilot exposure.
 
 Declaration and T13.1 operation-consumer lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of

@@ -26,6 +26,8 @@ const (
 	proofCaveat              = "Provisional evidence only; no absence, compatibility, migration-complete, or decommissioning conclusion."
 )
 
+var errProofQueryLimit = errors.New("proof query result exceeds its bounded limit")
+
 // VisibilityContext records the authorization inputs under which the bundle
 // was computed. Digests are deterministic and disclose no hidden repo names.
 type VisibilityContext struct {
@@ -176,6 +178,9 @@ func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filt
 			if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
 				continue
 			}
+			if errors.Is(err, store.ErrResultLimit) || errors.Is(err, errProofQueryLimit) {
+				return nil, huma.Error422UnprocessableEntity("proof query exceeds bounded result limits; narrow the query")
+			}
 			return nil, huma.Error500InternalServerError("build proof evidence", err)
 		}
 		confirmed, err := extract.BuildCoverageCertificate(ctx, opts.Evidence, visible, query.Domains)
@@ -214,6 +219,9 @@ func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filt
 func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate, filter assertionFilter) ([]store.Assertion, []BundleEvidence, error) {
 	assertions := make([]store.Assertion, 0)
 	if filter.Predicate != "" {
+		if len(certificate.Domains) != 1 {
+			return nil, nil, errors.New("filtered proof query requires exactly one coverage domain")
+		}
 		domain := certificate.Domains[0]
 		for _, repository := range certificate.Repositories {
 			run, ok := certificateRun(repository, domain)
@@ -236,7 +244,7 @@ func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certi
 			}
 			assertions = append(assertions, rows...)
 			if len(assertions) > proofQueryAssertionLimit {
-				return nil, nil, fmt.Errorf("proof query exceeds %d assertions", proofQueryAssertionLimit)
+				return nil, nil, fmt.Errorf("%w: more than %d assertions", errProofQueryLimit, proofQueryAssertionLimit)
 			}
 		}
 	}
@@ -248,7 +256,7 @@ func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certi
 		for _, atomID := range append(append([]string(nil), assertion.Supporting...), assertion.Contradicting...) {
 			keys[evidenceKey{repo: assertion.Repo, runID: assertion.RunID, atomID: atomID}] = struct{}{}
 			if len(keys) > proofQueryEvidenceLimit {
-				return nil, nil, fmt.Errorf("proof query exceeds %d evidence references", proofQueryEvidenceLimit)
+				return nil, nil, fmt.Errorf("%w: more than %d evidence references", errProofQueryLimit, proofQueryEvidenceLimit)
 			}
 		}
 	}
@@ -372,13 +380,16 @@ func readProofBundle(ctx context.Context, opts Options, id string) (*ProofBundle
 	if record == nil || record.ID != id || store.ComputeProofBundleID(record.Content) != id {
 		return nil, huma.Error500InternalServerError("stored proof bundle identity is inconsistent")
 	}
-	allow := repoFilter(ctx, opts)
+	visible, err := visibleRepositories(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+	visibleNames := make(map[string]struct{}, len(visible))
+	for _, repo := range visible {
+		visibleNames[repo.Name] = struct{}{}
+	}
 	for _, name := range record.Repositories {
-		repo, err := opts.Store.GetRepo(ctx, name)
-		if err != nil || repo == nil || repo.Deleting || allow != nil && !allow(*repo) {
-			if err != nil && !errors.Is(err, store.ErrNotFound) {
-				return nil, huma.Error500InternalServerError("reauthorize proof bundle", err)
-			}
+		if _, ok := visibleNames[name]; !ok {
 			return nil, huma.Error404NotFound("proof bundle not found")
 		}
 	}

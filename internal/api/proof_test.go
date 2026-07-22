@@ -20,13 +20,14 @@ type proofAPIStore struct {
 	store.EvidenceStore
 	store.ProofBundleStore
 
-	repos       []store.Repo
-	runs        map[string]store.ExtractionRun
-	attempts    map[string]store.ExtractionAttempt
-	assertions  map[string][]store.Assertion
-	resolutions map[string]store.EvidenceResolution
-	bundles     map[string]store.ProofBundleRecord
-	calls       []string
+	repos        []store.Repo
+	runs         map[string]store.ExtractionRun
+	attempts     map[string]store.ExtractionAttempt
+	assertions   map[string][]store.Assertion
+	assertionErr error
+	resolutions  map[string]store.EvidenceResolution
+	bundles      map[string]store.ProofBundleRecord
+	calls        []string
 }
 
 func proofScope(repo, domain string) string { return repo + "\x00" + domain }
@@ -35,6 +36,7 @@ func proofEvidenceScope(repo, runID, atomID string) string {
 }
 
 func (s *proofAPIStore) ListRepos(context.Context) ([]store.Repo, error) {
+	s.calls = append(s.calls, "list-repos")
 	return append([]store.Repo(nil), s.repos...), nil
 }
 
@@ -77,6 +79,9 @@ func (s *proofAPIStore) LatestExtractionAttempt(_ context.Context, repo, domain 
 
 func (s *proofAPIStore) ListAssertions(_ context.Context, query store.AssertionQuery) ([]store.Assertion, error) {
 	s.calls = append(s.calls, "assertions:"+proofScope(query.Repo, query.RunID))
+	if s.assertionErr != nil {
+		return nil, s.assertionErr
+	}
 	var result []store.Assertion
 	for _, assertion := range s.assertions[query.Repo] {
 		if query.RunID != "" && assertion.RunID != query.RunID ||
@@ -252,8 +257,12 @@ func TestProofBundleAdminMemberIsolationAndReadReauthorization(t *testing.T) {
 		t.Fatalf("identical query was not byte-identical: %d %s", repeatCode, repeatBody)
 	}
 
+	st.calls = nil
 	if code, _, got := getProof(t, member, "/api/proof_bundles/"+memberBundle.ID); code != http.StatusOK || got.ID != memberBundle.ID {
 		t.Fatalf("member bundle read = %d %+v", code, got)
+	}
+	if len(st.calls) != 2 || st.calls[0] != "bundle:"+memberBundle.ID || st.calls[1] != "list-repos" {
+		t.Fatalf("bundle read did not use one repository snapshot: %v", st.calls)
 	}
 	if code, body, _ := getProof(t, member, "/api/proof_bundles/"+adminBundle.ID); code != http.StatusNotFound || strings.Contains(body, "hidden") {
 		t.Fatalf("member read of admin bundle = %d %s", code, body)
@@ -262,6 +271,61 @@ func TestProofBundleAdminMemberIsolationAndReadReauthorization(t *testing.T) {
 	if code, body, _ := getProof(t, member, "/api/proof_bundles/"+memberBundle.ID); code != http.StatusNotFound || strings.Contains(body, visibleRepo) {
 		t.Fatalf("revoked bundle read = %d %s", code, body)
 	}
+}
+
+func TestProofQueryLimitsReturnUnprocessableEntity(t *testing.T) {
+	const (
+		repo      = "github.com/allowed/limits"
+		domain    = "grpc-consumer"
+		operation = "/shop.Cart/Get"
+	)
+	run := proofRun(repo, domain, "run-limits")
+	makeStore := func(assertions []store.Assertion) *proofAPIStore {
+		return &proofAPIStore{
+			repos:      []store.Repo{{Name: repo, IndexedCommitHash: run.Commit}},
+			runs:       map[string]store.ExtractionRun{proofScope(repo, domain): run},
+			assertions: map[string][]store.Assertion{repo: assertions},
+		}
+	}
+	rows := make([]store.Assertion, 5001)
+	for i := range rows {
+		rows[i] = store.Assertion{
+			ID: "assertion-" + strconv.Itoa(i), Predicate: "CALLS_OPERATION", Object: operation,
+			Repo: repo, RunID: run.ID,
+		}
+	}
+	evidenceHeavy := store.Assertion{
+		ID: "evidence-heavy", Predicate: "CALLS_OPERATION", Object: operation,
+		Repo: repo, RunID: run.ID, Supporting: make([]string, 20_001),
+	}
+	for i := range evidenceHeavy.Supporting {
+		evidenceHeavy.Supporting[i] = "atom-" + strconv.Itoa(i)
+	}
+	for _, test := range []struct {
+		name       string
+		assertions []store.Assertion
+	}{
+		{name: "assertions", assertions: rows},
+		{name: "evidence references", assertions: []store.Assertion{evidenceHeavy}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			st := makeStore(test.assertions)
+			code, body, _ := getProof(t, proofHandler(st, "user:member", nil),
+				"/api/find_operation_consumers?operation=%2Fshop.Cart%2FGet")
+			if code != http.StatusUnprocessableEntity || !strings.Contains(body, "narrow the query") || len(st.bundles) != 0 {
+				t.Fatalf("limit response = %d %s, bundles=%d", code, body, len(st.bundles))
+			}
+		})
+	}
+	t.Run("store result limit", func(t *testing.T) {
+		st := makeStore(nil)
+		st.assertionErr = store.ErrResultLimit
+		code, body, _ := getProof(t, proofHandler(st, "user:member", nil),
+			"/api/find_operation_consumers?operation=%2Fshop.Cart%2FGet")
+		if code != http.StatusUnprocessableEntity || !strings.Contains(body, "narrow the query") || len(st.bundles) != 0 {
+			t.Fatalf("store limit response = %d %s, bundles=%d", code, body, len(st.bundles))
+		}
+	})
 }
 
 func TestProofFieldLineageCoverageAndValidation(t *testing.T) {

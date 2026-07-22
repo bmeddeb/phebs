@@ -540,8 +540,9 @@ digest. `GET /api/proof_bundles/{id}` reauthorizes every scoped repository on
 each read and returns indistinguishable not-found responses for missing or
 revoked scope. Tests prove different admin/member IDs, byte-identical repeat
 queries, no hidden repository names or hidden evidence calls, retroactive
-revocation, immutable persistence, and proof-aware retention. MCP exposure is
-deliberately T14.2; compatibility remains T14.3.
+revocation, one-snapshot read authorization, `422` bounded-query refusals,
+single-domain filtered-query invariants, immutable persistence, and proof-aware
+retention. MCP exposure is deliberately T14.2; compatibility remains T14.3.
 
 **T14.2 · MCP tools**
 The annex tools on the existing stateless `/api/mcp` server:
@@ -558,6 +559,19 @@ result recorded in the extraction run. phebs enriches Buf's spec-level
 verdicts with evidence-derived consumers. AC: a wire-breaking field change
 reports the breaking rule **and** the affected consumers with call-site
 citations.
+
+**T14.4 · Proof-bundle retention before pilot exposure**
+Add config-gated proof-bundle expiry before any pilot enables the annex query
+surface. Expiration uses store metadata outside canonical bundle content, so
+it never changes content IDs. Deleting an expired bundle and its
+`proof-bundle:<id>` evidence pins is one transaction; it must not remove any
+other bundle/checkpoint pin, and the existing evidence sweeper remains solely
+responsible for reclaiming newly unpinned runs. Default retention is disabled
+until an operator explicitly configures a lifetime. Reads of expired IDs fail
+closed with the same not-found response as missing or unauthorized bundles.
+AC: two bundles pin one superseded run; expiring the first preserves the run,
+expiring the second makes it sweep-eligible, while an unexpired bundle remains
+byte-identical and readable. Must land before Epic 15 pilot exposure.
 
 ## EPIC 15 — Contract impact report *(unblocked 2026-07-22; read-only; the first user-facing annex workflow — independent acceptance gate retained)*
 
