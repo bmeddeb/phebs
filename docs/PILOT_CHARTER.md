@@ -1,11 +1,19 @@
 # phebs — six-week monorepo pilot charter
 
-*Proposed execution charter · July 2026 · version 0.1*
+*Proposed execution charter · July 2026 · version 0.2*
 
 **Related documents:** [adoption pitch](./PITCH.md) ·
 [product vision](./VISION.md) ·
 [investigations](./INVESTIGATIONS.md) ·
 [evidence-pack card template](./EVIDENCE_PACK_CARD.md)
+
+Version 0.2 changes only the disposition of the external Go/gRPC benchmark.
+GATE2-V2 ended before selection or scoring in an independently accepted,
+protocol-defined capacity stop with its method uncompromised. That terminal
+record is not an accuracy pass and transfers no accuracy claim. The pilot's
+sealed internal validation in §8.2 is therefore the sole path to an
+accuracy-bearing decision; every role, authorization, custody, safety, and
+internal measurement requirement below remains unchanged.
 
 ## 1. Decision this charter governs
 
@@ -243,11 +251,18 @@ All must be complete before the pilot clock begins:
 - canonical IDL identity and source universe confirmed;
 - IP/OSS/provenance review either approved or explicitly cleared for the
   bounded evaluation;
-- external Go/gRPC benchmark passes its published gate;
+- the terminal external Go/gRPC benchmark record is independently accepted
+  and satisfies the external-extraction disposition in Section 9;
 - the pilot extractor artifact (source commit, binary digest, toolchain
-  digest) equals the benchmark-measured artifact, or a versioned bridging
-  statement — what changed and why the claim transfers — is separately
-  approved before the clock starts;
+  digest) equals the benchmark-bound candidate artifact, or a versioned
+  bridging statement records exactly what changed and is separately approved
+  before the clock starts. If the external benchmark ended before scoring,
+  the statement transfers only artifact identity, reproducibility, and
+  mechanics — never accuracy;
+- when the external-extraction disposition is conditional, the Gate 0 record
+  states `internal-validation-required`: no accuracy-bearing claim,
+  promotion, or Epic 16 continuation is permitted until an adequately powered
+  §8.2 round records `gate_status: ESTABLISHED`;
 - a completed evidence-pack card at status `shadow` exists for the Go/gRPC
   pack; the internal shadow evaluation fills its internal/domain-shift
   table as a required output;
@@ -373,7 +388,7 @@ at Gate 0; they must not be selected after results are visible.
 
 | Gate | Pass | Conditional pass | Stop |
 |---|---|---|---|
-| External extraction | all published Go/gRPC benchmark gates pass | none | any confirmatory gate fails |
+| External extraction | the independently accepted terminal record is `ESTABLISHED` and all published Go/gRPC benchmark gates pass | the independently accepted terminal record is `NOT_ESTABLISHED` solely because a protocol-defined capacity or feasibility stop occurred before selection, disclosure, or scoring, with method and custody uncompromised; Gate 0 records `internal-validation-required`, and no accuracy claim transfers | any measured threshold miss; integrity, custody, or reproducibility failure; `INVALID` or `ABORTED`; an unreviewed terminal outcome; or any attempt to reinterpret or retry a closed record |
 | Internal call-site quality | meets `T_INTERNAL_PRECISION` and `T_INTERNAL_RECALL` under the frozen, adequately powered design | none; an underpowered or inconclusive round carries no accuracy claim | either bound misses its threshold, the design is underpowered, or a systematic failure invalidates the claim; remediation requires a fresh unseen round |
 | Processing coverage | 100% of independently enumerated eligible units reconcile to a terminal processing state; sampled state accuracy ≥ `T_COVERAGE_STATE_ACCURACY` | none | unreconciled units, inaccurate state assignment, or silent dropping |
 | Usable processing completion | analyzed rate ≥ `T_ANALYZED_RATE_PASS`; partial + failed rate ≤ `T_INCOMPLETE_RATE_PASS`; excluded rate ≤ `T_EXCLUDED_RATE_PASS` | analyzed rate ≥ `T_ANALYZED_RATE_CONDITIONAL`, partial + failed rate ≤ `T_INCOMPLETE_RATE_STOP`, and excluded rate ≤ `T_EXCLUDED_RATE_STOP`, with every miss explained and bounded | analyzed rate below `T_ANALYZED_RATE_CONDITIONAL`, either rate above its stop threshold, or exclusions conceal supported eligible units |
@@ -541,7 +556,10 @@ external observation, metadata assertion, and human disposition.
 
 The pilot stops immediately on any of the following:
 
-- external extractor validation failure;
+- a measured external extractor threshold miss, or an external benchmark
+  integrity, custody, or reproducibility failure; an accepted pre-score
+  capacity disposition under the Section 9 conditional row is not such a
+  failure and transfers no accuracy claim;
 - confirmed authorization or data-egress failure;
 - unresolved IP, OSS, provenance, or policy prohibition;
 - inability to construct an independent internal baseline;
@@ -577,8 +595,8 @@ Changes are never applied retroactively to already unsealed results.
 
 | Approval | Name | Date | Charter version |
 |---|---|---|---|
-| Sponsor |  |  | 0.1 |
-| Migration owner |  |  | 0.1 |
-| Build/catalog partner |  |  | 0.1 |
-| Security |  |  | 0.1 |
-| Pilot lead | Ben Meddeb |  | 0.1 |
+| Sponsor |  |  | 0.2 |
+| Migration owner |  |  | 0.2 |
+| Build/catalog partner |  |  | 0.2 |
+| Security |  |  | 0.2 |
+| Pilot lead | Ben Meddeb |  | 0.2 |

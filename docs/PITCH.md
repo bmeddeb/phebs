@@ -18,11 +18,12 @@ analysis gaps, extractor-version metadata — and, as the pilot's central
 question, the derivation from each source occurrence to build target,
 deployable, canonical service, and owner.
 
-Search and MCP access are operational today. Contract extraction remains
-dark until it passes a preregistered external benchmark followed by an
-internal shadow evaluation. I am proposing a bounded pilot to determine
-whether phebs reduces consumer-discovery time and makes the remaining
-uncertainty in migration decisions explicit. The ask: a six-week
+Search and MCP access are operational today. The preregistered external
+benchmark ended honestly before scoring in an accepted capacity stop, so it
+supplies no accuracy claim. Contract extraction remains dark until it passes
+the preregistered internal shadow evaluation. I am proposing a bounded pilot
+to determine whether phebs reduces consumer-discovery time and makes the
+remaining uncertainty in migration decisions explicit. The ask: a six-week
 read-only pilot — one VM, a least-privilege identity, named sponsor,
 migration/build partners, independent reviewers, environment and Security
 capacity, advisory-only results.
@@ -167,10 +168,11 @@ loss of authorization, mandatory deletion, or legal policy).
 
 ## The validation discipline
 
-No product claim ships on an unmeasured extractor. **The external
-benchmark validates only two extraction fact families: client calls and
-server registrations** on four open systems (Temporal, Dapr, Loki, Online
-Boutique). Its protocol: two independent reviewers label assigned
+No accuracy-bearing product claim or promotion rests on an unmeasured
+extractor. **The closed external benchmark was scoped to only two extraction
+fact families: client calls and server registrations** on four open systems
+(Temporal, Dapr, Loki, Online Boutique). Its protocol specified two independent
+reviewers labeling assigned
 blind samples from source alone, with a preregistered overlap subset used
 to measure agreement; disagreements in the overlap are adjudicated into
 the frozen gold set, whose hash is published before scoring. The
@@ -183,10 +185,10 @@ reproducibility, with implementer/reviewer separation throughout. Bar:
 ≥98% precision and ≥90% recall lower bounds at 95% joint confidence
 across a Bonferroni family of four — client-call precision, client-call
 recall, server-registration precision, server-registration recall — plus
-per-fixture floors and role-classification checks under the sealed
-protocol — claimed for the measured extractor version on that benchmark.
-First result targeted for August 2026; the protocol fails closed rather
-than slipping silently. (Appendix A.)
+per-fixture floors and role-classification checks under the sealed protocol.
+The run reached a protocol-defined capacity stop before selection, disclosure,
+labeling, or scoring. Its method remained uncompromised, but no accuracy result
+exists and none is claimed. (Appendix A.)
 
 The external benchmark does **not** validate the mapping from call site to
 internal service and owner. The internal shadow evaluation therefore
@@ -203,10 +205,13 @@ build configuration)*. Until that mapping exists and is evaluated, phebs
 claims a **versioned call-site inventory with consumer candidates**, not an
 unqualified consumer inventory.
 
-This discipline is not overhead — it is the product. If the external
-measurement fails, the contract-intelligence pilot does not advance: the
-failed round produces a committed diagnosis, and a revised extractor must
-be evaluated against a fresh, unseen holdout before reconsideration.
+This discipline is not overhead — it is the product. A measured external
+threshold miss or an integrity/custody failure still stops the pilot. The
+accepted pre-score capacity stop is different: it permits only an
+`internal-validation-required` pilot entry and transfers no accuracy claim.
+The internal shadow evaluation is now the sole accuracy gate; it must produce
+an adequately powered `ESTABLISHED` record before any accuracy-bearing
+promotion or Epic 16 continuation.
 
 ## Comparison with the current workflow
 
@@ -275,14 +280,15 @@ the adoption case without expanding this ask.
 
 ## Roadmap
 
-1. **Now:** external benchmark validation of the Go/gRPC call-site
-   extractor.
-2. **Pilot:** the attribution chain (build target → deployable → service
-   → owner) as read-only enrichment from build-graph, catalog, deployment,
-   and ownership metadata; internal shadow evaluation of both layers.
-3. **On passing measurements:** consumer-candidate queries, proof bundles,
-   and coverage statements over the analyzed target and deployable
-   universe; inventory history across snapshots.
+1. **Now:** complete the Gate 0 prerequisites and independently review the
+   charter's terminal-benchmark disposition.
+2. **Pilot:** validate the Go/gRPC call-site extractor and attribution chain
+   (build target → deployable → service → owner) as read-only enrichment
+   from build-graph, catalog, deployment, and ownership metadata; internal
+   shadow evaluation of both layers.
+3. **On passing measurements:** promote the existing dark consumer-candidate
+   queries, proof bundles, and coverage statements over the analyzed target
+   and deployable universe; inventory history across snapshots.
 4. **Later:** additional extractors; proto field-level dependency and
    compatibility analysis.
 5. **Production hardening:** enforced CI gates, signed releases, upgrade
@@ -376,33 +382,25 @@ subject to Legal, OSS, and Security approval.
 
 ---
 
-## Appendix A — external validation protocol summary
+## Appendix A — external validation terminal record
 
-Preregistered, staged, fail-closed; scope: Go/gRPC client-call and
-server-registration extraction on the
-four-system open benchmark. Stage 0 (sealed): candidate extractor identity
-pinned by source commit, toolchain digest, and binary digest; every input
-must reproduce byte-identically, twice, from its declared provenance
-before sealing; exact finite-population power analysis sizes the sample
-per frame (~700 sites at the design points). Stage 1: one automated
-snapshot at a sealed cutoff. Stage 2: population enumeration — the
-recall-positive frame is constructed independently of the candidate
-extractor; previously disclosed sites are conservatively excluded ("burn
-on doubt"); exact power is recomputed against actual cardinalities and
-fails closed before any human sees a site. Stage 3: two pinned reviewers
-with independence attestations label assigned blind samples from source
-only; a preregistered overlap subset measures agreement; overlap
-disagreements are adjudicated into the frozen gold set, whose hash is
-published before scoring. Stage 4: one sealed scoring execution; exact
-one-sided hypergeometric lower bounds; Bonferroni family of four
-(client-call precision, client-call recall, server-registration
-precision, server-registration recall) at 95% joint confidence. Role
-classification is additionally checked under the benchmark's sealed
-taxonomy (the orthogonal product taxonomy in the main text is the pilot's
-model; the external benchmark predates it). Any failure stops the round
-with a committed root cause; nothing is retried in place. The internal
-shadow evaluation (attribution layers) is specified separately at pilot
-start with the same preregistration discipline.
+The preregistered, staged, fail-closed protocol covered Go/gRPC client-call
+and server-registration extraction on the four-system open benchmark. Stage 0
+bound the candidate source commit, toolchain digest, binary digest, input
+provenance, two-run byte-level reproducibility, and finite-population power
+design. Stage 1 pinned one automated snapshot at the sealed cutoff. Stage 2
+independently enumerated the recall-positive frame, conservatively burned
+previously disclosed coordinates, and recomputed exact power before any human
+could see a site.
+
+The campaign stopped during Stage 2 because conservative burn accounting made
+all power cells infeasible. No site was selected or disclosed, and the planned
+blind labeling and scoring stages did not run. The independently accepted
+terminal status is `NOT_ESTABLISHED` by valid capacity stop, method
+uncompromised. The record cannot be retried or used for a numeric public-corpus
+claim. The pilot internal shadow evaluation is specified separately with the
+same preregistration, custody, and fail-closed discipline and is the sole
+remaining accuracy gate.
 
 ## Appendix B — evidence-layer mechanics
 

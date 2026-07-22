@@ -28,7 +28,7 @@ protocol.
 | Pilot RPC identity (canonical `/package.Service/Method`) | `<Gate 0>` |
 | Source snapshot `S0` (repository set + commit digests) | `<Gate 0>` |
 | Candidate extractor artifact (phebs source commit, binary digest, toolchain digest) | `<Gate 0>` |
-| Bridging statement (only if artifact ≠ benchmark-measured artifact) | `<Gate 0 or none>` |
+| Bridging statement (only if artifact ≠ benchmark-bound candidate artifact; no accuracy transfer from an unscored benchmark) | `<Gate 0 or none>` |
 | This protocol's digest and the two machinery file digests | `<sealing>` |
 | Public randomness seed (NIST beacon pulse URI + 64-hex output) | `<drawn after universe freeze, before sampling>` |
 

@@ -1,9 +1,9 @@
 # Pilot prerequisites — gate-neutral track
 
 *Index v0.2. **No item here grants authority to begin Epic 16**, whose
-implementation remains blocked until GATE2-V2 is `ESTABLISHED` and the
-pilot decision authorizes continuation. Nothing here touches the sealed
-validation ceremony.*
+implementation remains blocked until the pilot internal-validation record is
+`ESTABLISHED` and the separate pilot decision authorizes continuation. Nothing
+here reopens or reinterprets the sealed GATE2-V2 ceremony.*
 
 ## Two phases, one authority rule
 

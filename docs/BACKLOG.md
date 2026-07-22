@@ -663,7 +663,7 @@ dark posture; UI tests pin
 all three forms, saved reads, caveat/certificate rendering, and immutable source
 links. No code-host writer, diagrams, dossiers, or runtime plane was added.
 
-## EPIC 16 — Investigations product slice *(post-gate: requires GATE2-V2 ESTABLISHED and pilot continuation decision; all code on a post-gate branch)*
+## EPIC 16 — Investigations product slice *(post-gate: requires an ESTABLISHED pilot internal-validation record and a separate pilot continuation decision; all code on a post-gate branch)*
 
 Productizes the contract suite: [domain contract](./INVESTIGATION_DOMAIN_CONTRACT.md)
 v0.2, [experience spec](./INVESTIGATIONS.md) rev 3, [MCP envelope](./MCP_ENVELOPE.md)
