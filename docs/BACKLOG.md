@@ -498,12 +498,20 @@ message full name, field number)`, with ambiguous or incomplete joins
 abstaining instead of guessing. The acceptance fixture renames field 1 across
 two repositories and dependency versions while retaining one lineage/object.
 
-**T13.3 · Coverage manifests**
+**T13.3 · Coverage manifests** ✅ 2026-07-22
 Per-answer coverage certificate: repositories searched (the caller's visible
 universe only), revisions, protocols supported, extractors applied + failures,
 SCIP availability, unresolved candidates, freshness. AC: the certificate
 provably changes when one repo's extraction fails; adversarial test shows no
-invisible-repo leakage through names or counts.
+invisible-repo leakage through names or counts. Implemented as
+`extract.BuildCoverageCertificate` over the narrow `RunSource` read surface:
+deterministic `coverage-certificate-v1` with a sha256 digest over canonical
+JSON, every visible repository present (including evidence-free ones), per-run
+freshness against the indexed commit, and SCIP availability derived from
+published protocols. Failure ACs pass three ways (absent run, stale run,
+recorded partial failures — each moves the digest); the adversarial test
+mutates hidden-repo state and requires byte-identical certificates, no hidden
+names, and zero queries for invisible repositories. API exposure is T14.1.
 
 ## EPIC 14 — Query, proof bundles & MCP *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
 

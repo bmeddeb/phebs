@@ -914,6 +914,15 @@ test > generated > unknown`; `code_role` separately records repository
 placement and SCIP test/generated roles. These are direct field references,
 not claims that a response field was semantically read.
 
+Every future answer over this evidence cites a deterministic coverage
+certificate (`coverage-certificate-v1`): the caller's visible repositories
+with their indexed revisions, each domain's latest published run (extractor,
+commit, freshness, protocols, failures, unresolved counts), and SCIP index
+availability. A repository whose extraction failed keeps its stale or absent
+run entry — the certificate records what the evidence is, not what was
+attempted — and it never names or counts a repository the caller cannot see.
+The query API surface for certificates arrives with T14.1.
+
 Declaration and T13.1 operation-consumer lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of
 guessing descriptor identity. It prevents name-only cross-repository merges,
