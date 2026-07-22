@@ -121,8 +121,10 @@ defined in [DECISION_RECORDS.md](./DECISION_RECORDS.md).
 
 ## 10. Open items that block sealing
 
-1. **Attribution-hop label sheets** — hop-specific sheet formats depend on
-   the partner's catalog shapes and are defined at Gate 0.
+1. **Attribution-hop label sheets** — draft formats exist as
+   [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) (prerequisite
+   item 11); the partner's catalog coordinate shapes are frozen at Gate 0
+   and remain the sealing blocker.
 2. Every `<Gate 0>` placeholder above; any blank blocks release (charter
    Gate 0 rule).
 

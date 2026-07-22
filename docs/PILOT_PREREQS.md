@@ -35,11 +35,13 @@ reviewer identity, timestamp, decision, unresolved findings (or `none`).
 | 8 | Witnessed restore | verification | 5, 7, environment authorization | TBD | witness **independent of the restore operator** | restore transcript, witness attestation | blocked_unassigned | not_assessed |
 | 9 | Statistical accuracy-gold protocol (preregistration) | design | none (sealing requires charter Gate 0) | TBD | Gate 0 signatories per charter | [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) draft + `pilot/validation/` harness tests | blocked_unassigned | not_assessed |
 | 10 | Gate and continuation decision-record templates | design | none | TBD | TBD | [DECISION_RECORDS.md](./DECISION_RECORDS.md) draft | blocked_unassigned | not_assessed |
+| 11 | Attribution-hop label sheet formats (dependency preview) | design | 9; shapes freeze at Gate 0 | TBD | Gate 0 signatories per charter | [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) draft | blocked_unassigned | not_assessed |
+| 12 | Current-workflow baseline protocol (§8.1 preregistration) | design | none | TBD | TBD | draft to be produced | blocked_unassigned | not_assessed |
 
 `TBD` carries state `blocked_unassigned` so a mechanical blank-field check
 cannot be bypassed by placeholder text.
 
-Draft artifacts exist for items 1–5 and 9–10. Items 3–5 are dependency previews: they do
+Draft artifacts exist for items 1–5 and 9–11. Items 3–5 and 11 are dependency previews: they do
 not imply acceptance of items 1 or 2 and must be reconciled against those
 artifacts after their prerequisites are accepted. Drafting does not advance any
 state: every item still requires an explicit owner, an eligible named reviewer,
