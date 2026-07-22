@@ -362,6 +362,22 @@ type evidenceSweepResult struct {
 	err   error
 }
 
+type proofBundleMaintenanceStore struct {
+	cutoffs     chan time.Time
+	results     []evidenceSweepResult
+	resultIndex int
+}
+
+func (s *proofBundleMaintenanceStore) SweepProofBundles(_ context.Context, activeAfter time.Time) (int, error) {
+	s.cutoffs <- activeAfter
+	if s.resultIndex >= len(s.results) {
+		return 0, nil
+	}
+	result := s.results[s.resultIndex]
+	s.resultIndex++
+	return result.count, result.err
+}
+
 func (s *evidenceMaintenanceStore) SweepEvidence(
 	_ context.Context, _ time.Time, staleStagedAfter time.Duration,
 ) (int, error) {
@@ -387,6 +403,39 @@ func TestEvidenceSweepPassStopsWhenDrained(t *testing.T) {
 	}
 	if len(st.calls) != 3 {
 		t.Fatalf("sweep calls = %d, want 3", len(st.calls))
+	}
+}
+
+func TestProofBundleSweepPassUsesConfiguredLifetimeAndStopsWhenDrained(t *testing.T) {
+	lifetime := 7 * 24 * time.Hour
+	st := &proofBundleMaintenanceStore{
+		cutoffs: make(chan time.Time, 3),
+		results: []evidenceSweepResult{{count: 1}, {count: 1}, {count: 0}},
+	}
+	before := time.Now().UTC().Add(-lifetime)
+	deleted, backlog, err := runProofBundleSweepPass(t.Context(), st, lifetime)
+	after := time.Now().UTC().Add(-lifetime)
+	if err != nil || deleted != 2 || backlog {
+		t.Fatalf("runProofBundleSweepPass = (%d, %v, %v), want (2, false, nil)", deleted, backlog, err)
+	}
+	if len(st.cutoffs) != 3 {
+		t.Fatalf("proof bundle sweep calls = %d, want 3", len(st.cutoffs))
+	}
+	for cutoff := range 3 {
+		got := <-st.cutoffs
+		if got.Before(before) || got.After(after) {
+			t.Fatalf("cutoff %d = %s, want within [%s, %s]", cutoff, got, before, after)
+		}
+	}
+}
+
+func TestProofBundleMaintenanceCanceledBeforeBootDoesNoWork(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	st := &proofBundleMaintenanceStore{cutoffs: make(chan time.Time, 1)}
+	runProofBundleMaintenance(ctx, st, 24*time.Hour, time.Hour, time.Second)
+	if len(st.cutoffs) != 0 {
+		t.Fatalf("canceled proof maintenance made %d sweep call(s)", len(st.cutoffs))
 	}
 }
 

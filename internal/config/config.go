@@ -28,6 +28,7 @@ type Config struct {
 	Webhook      Webhook      `yaml:"webhook"`
 	Audit        Audit        `yaml:"audit"`
 	Analytics    Analytics    `yaml:"analytics"`
+	ProofBundles ProofBundles `yaml:"proof_bundles"`
 	Experimental Experimental `yaml:"experimental"`
 	// Permissions enables permission-aware search (T10.3) when the block is
 	// present: non-administrators then see only public repositories, the
@@ -90,6 +91,19 @@ type Analytics struct {
 	// Retention prunes usage events older than this Go duration.
 	// Default "8760h" (365 days); "0" keeps events forever.
 	Retention string `yaml:"retention"`
+}
+
+// ProofBundles configures lifecycle for immutable proof answers. Retention is
+// opt-in because proof extraction itself is validation-gated and default-dark.
+type ProofBundles struct {
+	// Retention expires bundles this long after their most recent successful
+	// materialization. Empty or "0" disables expiry.
+	Retention string `yaml:"retention"`
+}
+
+// RetentionFor returns the parsed proof-bundle retention; 0 means disabled.
+func (p ProofBundles) RetentionFor() time.Duration {
+	return retention(p.Retention, 0)
 }
 
 // RetentionFor returns the parsed usage retention; 0 means keep forever.
@@ -395,6 +409,7 @@ func (c *Config) validate(lines []int) error {
 	}
 	for field, raw := range map[string]string{
 		"audit.retention": c.Audit.Retention, "analytics.retention": c.Analytics.Retention,
+		"proof_bundles.retention": c.ProofBundles.Retention,
 	} {
 		if raw != "" && raw != "0" {
 			if d, err := time.ParseDuration(raw); err != nil || d <= 0 {

@@ -162,6 +162,7 @@ connections:
 | `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
+| `proof_bundles.retention`                   | *(disabled)*     | positive Go duration expires proof bundles after their latest materialization; omission or `"0"` keeps them indefinitely                                         |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 
@@ -1030,10 +1031,27 @@ that universe therefore makes the bundle unavailable to everyone, including
 its creator; caller-specific loss of access makes it unavailable to that
 caller. This is deliberately fail-closed.
 
-There is currently no automatic bundle expiry: stored bundles and their
-referenced extraction-run pins are retained indefinitely. T14.4 adds an
-operator-configured lifetime with atomic bundle/pin removal and is required
-before pilot exposure.
+Proof-bundle expiry is disabled by default. To bound retained answers and
+their extraction-run pins, set a positive Go duration, for example:
+
+```yaml
+proof_bundles:
+  retention: 168h # seven days since the bundle was last materialized
+```
+
+Omission or `"0"` retains bundles indefinitely. Repeating an identical query
+refreshes only the store lifecycle timestamp: the canonical JSON, content ID,
+and returned bytes do not change. Existing bundles created before this option
+was available use their creation time until next materialized, so enabling the
+policy also bounds them. Expired, missing, and unauthorized IDs all return the
+same `404` response.
+
+When enabled, retention checks once at startup and hourly thereafter, draining
+backlogs in bounded batches. Deleting a bundle and only its exact
+`proof-bundle:<id>` pins is one transaction; pins owned by another bundle or a
+release/migration checkpoint remain. Bundle expiry never deletes evidence.
+The independent evidence sweeper decides whether a superseded run made
+newly unpinned by that transaction is eligible for reclamation.
 
 Declaration and T13.1 operation-consumer lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of

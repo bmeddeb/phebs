@@ -101,9 +101,9 @@ func (s *proofToolStore) PutProofBundle(_ context.Context, bundle store.ProofBun
 	return nil
 }
 
-func (s *proofToolStore) GetProofBundle(_ context.Context, id string) (*store.ProofBundleRecord, error) {
+func (s *proofToolStore) GetProofBundle(_ context.Context, id string, activeAfter *time.Time) (*store.ProofBundleRecord, error) {
 	bundle, ok := s.bundles[id]
-	if !ok {
+	if !ok || activeAfter != nil && !bundle.RetainedAt.After(*activeAfter) {
 		return nil, store.ErrNotFound
 	}
 	return &bundle, nil

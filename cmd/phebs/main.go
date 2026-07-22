@@ -46,6 +46,7 @@ const (
 	evidenceSweepBacklogDelay   = 5 * time.Second
 	evidenceSweepMaxRunsPerPass = 8
 	evidenceStagedMaxAge        = 24 * time.Hour
+	proofSweepMaxBundlesPerPass = 8
 )
 
 func main() {
@@ -235,6 +236,13 @@ func serve(args []string) error {
 			return enqueueExtractionAfterIndex(ctx, st, name, commit)
 		}
 	}
+	if lifetime := cfg.ProofBundles.RetentionFor(); lifetime > 0 {
+		runBackground(func() {
+			runProofBundleMaintenance(
+				ctx, st, lifetime, evidenceSweepIdleInterval, evidenceSweepBacklogDelay,
+			)
+		})
+	}
 	runBackground(func() {
 		runEvidenceMaintenance(
 			ctx, st, evidenceSweepIdleInterval, evidenceSweepBacklogDelay, evidenceStagedMaxAge,
@@ -349,7 +357,9 @@ func serve(args []string) error {
 			return ok && principal.IsAdmin
 		},
 		AuditRecord: auditRecord, AuditLog: st, Analytics: st,
-		Evidence: evidenceView, ProofBundles: proofBundles, Compatibility: compatibility, Visible: visibleFor,
+		Evidence: evidenceView, ProofBundles: proofBundles,
+		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
+		Compatibility:        compatibility, Visible: visibleFor,
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			if !ok {
@@ -508,6 +518,78 @@ func runEvidenceSweepPass(
 		deleted++
 	}
 	return deleted, true, nil
+}
+
+// runProofBundleSweepPass releases a bounded burst of bundle-owned pins. It
+// never sweeps the now-unpinned extraction runs; the evidence maintenance path
+// remains the sole owner of evidence reclamation.
+func runProofBundleSweepPass(
+	ctx context.Context, bundles store.ProofBundleRetentionStore, lifetime time.Duration,
+) (deleted int, backlogLikely bool, err error) {
+	if lifetime <= 0 {
+		return 0, false, errors.New("proof-bundle retention lifetime must be positive")
+	}
+	for range proofSweepMaxBundlesPerPass {
+		if err := ctx.Err(); err != nil {
+			return deleted, false, err
+		}
+		n, err := bundles.SweepProofBundles(ctx, time.Now().UTC().Add(-lifetime))
+		if err != nil {
+			return deleted, false, err
+		}
+		if n == 0 {
+			return deleted, false, nil
+		}
+		if n != 1 {
+			return deleted, false, fmt.Errorf("proof-bundle retention: invalid sweep count %d", n)
+		}
+		deleted++
+	}
+	return deleted, true, nil
+}
+
+// runProofBundleMaintenance is started only for an explicitly configured
+// lifetime. It checks at boot, drains bounded bursts with a yield, and then
+// returns to the same low-frequency idle cadence as evidence retention.
+func runProofBundleMaintenance(
+	ctx context.Context, bundles store.ProofBundleRetentionStore, lifetime, idleInterval, backlogDelay time.Duration,
+) {
+	if lifetime <= 0 || idleInterval <= 0 || backlogDelay <= 0 {
+		log.Printf("proof-bundle retention disabled: invalid lifetime/idle/backlog intervals %s/%s/%s", lifetime, idleInterval, backlogDelay)
+		return
+	}
+	if ctx.Err() != nil {
+		return
+	}
+	delay := time.Duration(0)
+	for {
+		if delay > 0 {
+			timer := time.NewTimer(delay)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+		}
+		deleted, backlogLikely, err := runProofBundleSweepPass(ctx, bundles, lifetime)
+		if err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("proof-bundle retention: %v", err)
+			delay = idleInterval
+			continue
+		}
+		if deleted > 0 {
+			log.Printf("proof-bundle retention: swept %d bundle(s)", deleted)
+		}
+		if backlogLikely {
+			delay = backlogDelay
+		} else {
+			delay = idleInterval
+		}
+	}
 }
 
 // runEvidenceMaintenance checks immediately at boot. Empty stores cost one

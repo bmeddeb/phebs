@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
@@ -30,16 +31,27 @@ func ComputeProofBundleID(content string) string {
 func proofBundleID(id string) models.RecordID { return models.NewRecordID("proof_bundle", id) }
 
 type proofBundleRec struct {
-	BundleID     string   `json:"bundle_id"`
-	Content      string   `json:"content"`
-	Repositories []string `json:"repositories"`
-	RunIDs       []string `json:"run_ids"`
+	RecID        *models.RecordID `json:"id"`
+	BundleID     string           `json:"bundle_id"`
+	Content      string           `json:"content"`
+	Repositories []string         `json:"repositories"`
+	RunIDs       []string         `json:"run_ids"`
+	CreatedAt    *time.Time       `json:"created_at"`
+	RetainedAt   *time.Time       `json:"retained_at"`
 }
 
 func (r proofBundleRec) bundle() ProofBundleRecord {
+	retainedAt := r.RetainedAt
+	if retainedAt == nil {
+		retainedAt = r.CreatedAt
+	}
+	var retained time.Time
+	if retainedAt != nil {
+		retained = retainedAt.UTC()
+	}
 	return ProofBundleRecord{
 		ID: r.BundleID, Content: r.Content,
-		Repositories: r.Repositories, RunIDs: r.RunIDs,
+		Repositories: r.Repositories, RunIDs: r.RunIDs, RetainedAt: retained,
 	}
 }
 
@@ -65,6 +77,9 @@ func validateProofBundle(bundle ProofBundleRecord) error {
 	}
 	if err := validateProofScopes("run ids", bundle.RunIDs); err != nil {
 		return err
+	}
+	if bundle.RetainedAt.IsZero() {
+		return errors.New("proof bundle retained-at time is required")
 	}
 	return nil
 }
@@ -103,7 +118,8 @@ LET $ready = array::len($eligible) = array::len($run_ids) AND $immutable;
 LET $saved = IF $ready THEN
 	(UPSERT $rid SET bundle_id = $bundle_id, content = $content,
 		repositories = $repositories, run_ids = $run_ids,
-		created_at = IF created_at = NONE THEN time::now() ELSE created_at END RETURN AFTER)
+		created_at = IF created_at = NONE THEN $retained_at ELSE created_at END,
+		retained_at = $retained_at RETURN AFTER)
 	ELSE [] END;
 FOR $pin IN $pins {
 	IF $ready {
@@ -133,6 +149,7 @@ func (s *Surreal) PutProofBundle(ctx context.Context, bundle ProofBundleRecord) 
 		"rid": proofBundleID(bundle.ID), "bundle_id": bundle.ID,
 		"content": bundle.Content, "repositories": bundle.Repositories,
 		"run_ids": bundle.RunIDs, "pins": pins, "kind": kind,
+		"retained_at":                 bundle.RetainedAt.UTC(),
 		"evidence_format_version":     evidenceFormatVersion,
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
@@ -153,7 +170,7 @@ func (s *Surreal) PutProofBundle(ctx context.Context, bundle ProofBundleRecord) 
 
 // GetProofBundle returns opaque content without authorizing its repository
 // scope. The API must reauthorize Repositories before returning Content.
-func (s *Surreal) GetProofBundle(ctx context.Context, id string) (*ProofBundleRecord, error) {
+func (s *Surreal) GetProofBundle(ctx context.Context, id string, activeAfter *time.Time) (*ProofBundleRecord, error) {
 	if len(id) != len("pb_")+sha256.Size*2 || !strings.HasPrefix(id, "pb_") {
 		return nil, fmt.Errorf("get proof bundle: invalid id: %w", ErrNotFound)
 	}
@@ -161,8 +178,11 @@ func (s *Surreal) GetProofBundle(ctx context.Context, id string) (*ProofBundleRe
 		return nil, fmt.Errorf("get proof bundle: invalid id: %w", ErrNotFound)
 	}
 	results, err := surrealdb.Query[[]proofBundleRec](ctx, s.db,
-		"SELECT bundle_id, content, repositories, run_ids FROM $rid LIMIT 1",
-		map[string]any{"rid": proofBundleID(id)})
+		`SELECT bundle_id, content, repositories, run_ids, created_at, retained_at
+			FROM $rid
+			WHERE $active_after = NONE OR (retained_at ?? created_at) > $active_after
+			LIMIT 1`,
+		map[string]any{"rid": proofBundleID(id), "active_after": activeAfter})
 	if err != nil {
 		return nil, fmt.Errorf("get proof bundle: %w", err)
 	}
@@ -178,4 +198,78 @@ func (s *Surreal) GetProofBundle(ctx context.Context, id string) (*ProofBundleRe
 		return nil, fmt.Errorf("get proof bundle: stored bundle is inconsistent: %w", err)
 	}
 	return &bundle, nil
+}
+
+const sweepProofBundleSQL = `
+BEGIN;
+LET $locked = UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
+	WHERE bundle_id = $bundle_id
+	  AND (retained_at ?? created_at) <= $active_after RETURN AFTER;
+IF array::len($locked) = 1 {
+	DELETE evidence_pin WHERE kind = $kind RETURN NONE
+};
+LET $deleted = IF array::len($locked) = 1 THEN (DELETE $rid RETURN BEFORE) ELSE [] END;
+RETURN [{ deleted: array::len($deleted) }];
+COMMIT;`
+
+type proofBundleSweepResultRec struct {
+	Deleted int `json:"deleted"`
+}
+
+// SweepProofBundles releases exactly one expired bundle and its own pins in
+// one transaction. It never deletes extraction evidence; SweepEvidence makes
+// the independent decision whether a newly unpinned run is reclaimable.
+func (s *Surreal) SweepProofBundles(ctx context.Context, activeAfter time.Time) (int, error) {
+	if activeAfter.IsZero() {
+		return 0, errors.New("sweep proof bundles: active-after cutoff is required")
+	}
+	var rows []proofBundleRec
+	for _, candidateSQL := range []string{
+		`SELECT id, bundle_id, created_at, retained_at FROM proof_bundle
+			WHERE retained_at != NONE AND retained_at <= $active_after
+			ORDER BY retained_at, bundle_id LIMIT 1`,
+		`SELECT id, bundle_id, created_at, retained_at FROM proof_bundle
+			WHERE retained_at = NONE AND created_at <= $active_after
+			ORDER BY created_at, bundle_id LIMIT 1`,
+	} {
+		candidates, err := surrealdb.Query[[]proofBundleRec](ctx, s.db, candidateSQL,
+			map[string]any{"active_after": activeAfter.UTC()})
+		if err != nil {
+			return 0, fmt.Errorf("sweep proof bundles: candidate: %w", err)
+		}
+		rows = firstProofBundleRows(candidates)
+		if len(rows) > 0 {
+			break
+		}
+	}
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	if rows[0].RecID == nil || rows[0].BundleID == "" {
+		return 0, errors.New("sweep proof bundles: candidate identity is inconsistent")
+	}
+	candidate := rows[0]
+	vars := map[string]any{
+		"rid": *candidate.RecID, "bundle_id": candidate.BundleID,
+		"kind": "proof-bundle:" + candidate.BundleID, "active_after": activeAfter.UTC(),
+	}
+	for attempt := 0; ; attempt++ {
+		results, queryErr := surrealdb.Query[[]proofBundleSweepResultRec](ctx, s.db, sweepProofBundleSQL, vars)
+		if queryErr != nil {
+			if isRetryable(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return 0, fmt.Errorf("sweep proof bundles: bundle %s: %w", candidate.BundleID, queryErr)
+		}
+		deleted := 0
+		for _, result := range *results {
+			for _, row := range result.Result {
+				deleted += row.Deleted
+			}
+		}
+		if deleted < 0 || deleted > 1 {
+			return 0, fmt.Errorf("sweep proof bundles: invalid delete count %d", deleted)
+		}
+		return deleted, nil
+	}
 }

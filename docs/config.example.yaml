@@ -98,6 +98,12 @@ audit:
 analytics:
   retention: 8760h
 
+# Immutable proof bundles are unbounded by default. Set a positive Go
+# duration to expire them after their latest successful materialization.
+# Bundle bytes/content IDs never include this lifecycle metadata.
+proof_bundles:
+  retention: "0"
+
 # Validation-gated work. Keep disabled in production. The provisional proto
 # reader has exact source provenance, but T11.1 is STOP/not established and it
 # does not yet have canonical descriptor/module lineage (T12.3).

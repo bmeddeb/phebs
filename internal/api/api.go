@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -50,6 +51,9 @@ type Options struct {
 	// Evidence so embedding/tests can expose the legacy evidence view without
 	// accidentally enabling the proof API.
 	ProofBundles store.ProofBundleStore
+	// ProofBundleRetention is the opt-in lifetime since a bundle was last
+	// materialized. Zero keeps bundles indefinitely.
+	ProofBundleRetention time.Duration
 	// Compatibility supplies the pinned, sandboxed Buf checker. Nil keeps the
 	// HTTP operation and corresponding MCP capability undiscoverable.
 	Compatibility compat.Service

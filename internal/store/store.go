@@ -319,6 +319,10 @@ type ProofBundleRecord struct {
 	Content      string   `json:"content"`
 	Repositories []string `json:"repositories"`
 	RunIDs       []string `json:"run_ids"`
+	// RetainedAt is lifecycle metadata, deliberately outside Content and its
+	// digest. Re-materializing identical content may refresh it without
+	// changing the immutable bundle ID or bytes.
+	RetainedAt time.Time `json:"retained_at"`
 }
 
 // ProofBundleStore persists immutable bundles separately from the evidence
@@ -326,7 +330,18 @@ type ProofBundleRecord struct {
 // every repository in Repositories before disclosing Content.
 type ProofBundleStore interface {
 	PutProofBundle(ctx context.Context, bundle ProofBundleRecord) error
-	GetProofBundle(ctx context.Context, id string) (*ProofBundleRecord, error)
+	// GetProofBundle treats records retained at or before activeAfter as
+	// absent. A nil cutoff disables expiry.
+	GetProofBundle(ctx context.Context, id string, activeAfter *time.Time) (*ProofBundleRecord, error)
+}
+
+// ProofBundleRetentionStore owns only bundle/pin lifecycle. It deliberately
+// cannot delete extraction evidence; SweepEvidence remains the sole evidence
+// reclaimer after pins are released.
+type ProofBundleRetentionStore interface {
+	// SweepProofBundles atomically deletes at most one bundle retained at or
+	// before activeAfter and only that bundle's proof-bundle:<id> pins.
+	SweepProofBundles(ctx context.Context, activeAfter time.Time) (int, error)
 }
 
 // EvidenceStore is the T12.1 provenance layer, separate from Store per the

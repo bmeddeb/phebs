@@ -587,7 +587,7 @@ span, stable identity, compatible rename, source/temp-path non-retention, and
 determinism; HTTP and official-SDK MCP acceptance pin affected visible
 consumers/citations and hidden-repository non-interference.
 
-**T14.4 · Proof-bundle retention before pilot exposure**
+**T14.4 · Proof-bundle retention before pilot exposure** ✅ 2026-07-22
 Add config-gated proof-bundle expiry before any pilot enables the annex query
 surface. Expiration uses store metadata outside canonical bundle content, so
 it never changes content IDs. Deleting an expired bundle and its
@@ -599,6 +599,14 @@ closed with the same not-found response as missing or unauthorized bundles.
 AC: two bundles pin one superseded run; expiring the first preserves the run,
 expiring the second makes it sweep-eligible, while an unexpired bundle remains
 byte-identical and readable. Must land before Epic 15 pilot exposure.
+Implemented with opt-in `proof_bundles.retention`, measured from the latest
+successful materialization in store metadata (legacy rows fall back to
+creation time). Reads and the bounded boot/hourly sweeper share the same
+cutoff. Each bundle deletion transaction rechecks expiry and removes only its
+exact `proof-bundle:<id>` pins; independent bundle/checkpoint pins survive,
+and only the existing evidence sweeper can reclaim a newly unpinned run. The
+AC additionally pins indistinguishable expired/missing/unauthorized 404s,
+default-off config, active-bundle byte identity, and checkpoint isolation.
 
 ## EPIC 15 — Contract impact report *(unblocked 2026-07-22; read-only; the first user-facing annex workflow — independent acceptance gate retained)*
 

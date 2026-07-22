@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -341,6 +342,7 @@ func buildProofBundle(ctx context.Context, opts Options, query ProofQuery, filte
 		record := store.ProofBundleRecord{
 			ID: store.ComputeProofBundleID(string(content)), Content: string(content),
 			Repositories: repositories, RunIDs: runIDs,
+			RetainedAt: time.Now().UTC().Truncate(time.Second),
 		}
 		if err := opts.ProofBundles.PutProofBundle(ctx, record); err != nil {
 			if errors.Is(err, store.ErrConflict) {
@@ -513,7 +515,12 @@ func digestJSON(value any) string {
 }
 
 func readProofBundle(ctx context.Context, opts Options, id string) (*ProofBundleEnvelope, error) {
-	record, err := opts.ProofBundles.GetProofBundle(ctx, id)
+	var activeAfter *time.Time
+	if opts.ProofBundleRetention > 0 {
+		cutoff := time.Now().UTC().Add(-opts.ProofBundleRetention)
+		activeAfter = &cutoff
+	}
+	record, err := opts.ProofBundles.GetProofBundle(ctx, id, activeAfter)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, huma.Error404NotFound("proof bundle not found")
 	}

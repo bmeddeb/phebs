@@ -285,6 +285,21 @@ connections:
 			"",
 		},
 		{
+			"proof bundle retention valid",
+			"proof_bundles:\n  retention: 168h\n",
+			"",
+		},
+		{
+			"proof bundle retention disabled",
+			"proof_bundles:\n  retention: \"0\"\n",
+			"",
+		},
+		{
+			"proof bundle retention invalid",
+			"proof_bundles:\n  retention: someday\n",
+			"proof_bundles.retention \"someday\"",
+		},
+		{
 			"context bad name",
 			"contexts:\n  Bad_Name: [\"h/*\"]\n",
 			"contexts: name \"Bad_Name\" must match",
@@ -380,6 +395,16 @@ func TestDefaults(t *testing.T) {
 	}
 	if !cfg.Auth.SecureCookies() || cfg.Auth.SessionDuration() != 12*time.Hour {
 		t.Errorf("auth defaults: secure=%v lifetime=%v", cfg.Auth.SecureCookies(), cfg.Auth.SessionDuration())
+	}
+	if got := cfg.ProofBundles.RetentionFor(); got != 0 {
+		t.Errorf("proof bundle retention = %v, want disabled", got)
+	}
+	configured, err := Parse([]byte("proof_bundles:\n  retention: 168h\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := configured.ProofBundles.RetentionFor(); got != 7*24*time.Hour {
+		t.Errorf("configured proof bundle retention = %v, want 168h", got)
 	}
 }
 

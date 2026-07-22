@@ -121,10 +121,10 @@ func (s *proofAPIStore) PutProofBundle(_ context.Context, bundle store.ProofBund
 	return nil
 }
 
-func (s *proofAPIStore) GetProofBundle(_ context.Context, id string) (*store.ProofBundleRecord, error) {
+func (s *proofAPIStore) GetProofBundle(_ context.Context, id string, activeAfter *time.Time) (*store.ProofBundleRecord, error) {
 	s.calls = append(s.calls, "bundle:"+id)
 	bundle, ok := s.bundles[id]
-	if !ok {
+	if !ok || activeAfter != nil && !bundle.RetainedAt.After(*activeAfter) {
 		return nil, store.ErrNotFound
 	}
 	bundle.Repositories = append([]string(nil), bundle.Repositories...)
@@ -165,13 +165,17 @@ func proofAssertion(repo, runID, id, predicate, object, lineage, secret string) 
 }
 
 func proofHandler(st *proofAPIStore, principal string, visible *map[string]bool, compatibility ...compat.Service) http.Handler {
+	return proofHandlerWithRetention(st, principal, visible, 0, compatibility...)
+}
+
+func proofHandlerWithRetention(st *proofAPIStore, principal string, visible *map[string]bool, retention time.Duration, compatibility ...compat.Service) http.Handler {
 	var checker compat.Service
 	if len(compatibility) > 0 {
 		checker = compatibility[0]
 	}
 	return api.New(api.Options{
 		Version: "test", Store: st, Evidence: st, ProofBundles: st,
-		Compatibility: checker,
+		ProofBundleRetention: retention, Compatibility: checker,
 		Visible: func(context.Context) func(store.Repo) bool {
 			if visible == nil {
 				return nil
@@ -308,6 +312,18 @@ func TestProofBundleAdminMemberIsolationAndReadReauthorization(t *testing.T) {
 	}
 	if code, body, _ := getProof(t, member, "/api/proof_bundles/"+adminBundle.ID); code != http.StatusNotFound || strings.Contains(body, "hidden") {
 		t.Fatalf("member read of admin bundle = %d %s", code, body)
+	}
+	expiredRecord := st.bundles[memberBundle.ID]
+	expiredRecord.RetainedAt = time.Now().UTC().Add(-2 * time.Hour)
+	st.bundles[memberBundle.ID] = expiredRecord
+	retainedMember := proofHandlerWithRetention(st, "user:member", &memberVisible, time.Hour)
+	expiredCode, expiredBody, _ := getProof(t, retainedMember, "/api/proof_bundles/"+memberBundle.ID)
+	missingCode, missingBody, _ := getProof(t, retainedMember, "/api/proof_bundles/pb_"+strings.Repeat("0", 64))
+	deniedCode, deniedBody, _ := getProof(t, retainedMember, "/api/proof_bundles/"+adminBundle.ID)
+	if expiredCode != http.StatusNotFound || missingCode != http.StatusNotFound || deniedCode != http.StatusNotFound ||
+		expiredBody != missingBody || expiredBody != deniedBody {
+		t.Fatalf("expired/missing/unauthorized responses differ: expired=(%d %s) missing=(%d %s) denied=(%d %s)",
+			expiredCode, expiredBody, missingCode, missingBody, deniedCode, deniedBody)
 	}
 	memberVisible = map[string]bool{}
 	if code, body, _ := getProof(t, member, "/api/proof_bundles/"+memberBundle.ID); code != http.StatusNotFound || strings.Contains(body, visibleRepo) {
