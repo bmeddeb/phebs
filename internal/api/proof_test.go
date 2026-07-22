@@ -154,7 +154,10 @@ func proofAssertion(repo, runID, id, predicate, object, lineage, secret string) 
 	}
 	observed := time.Date(2026, 7, 22, 12, 0, 0, 0, time.UTC)
 	resolution := store.EvidenceResolution{
-		Atom: store.EvidenceAtom{ID: atomID, SchemaVersion: "t14-test", BlobDigest: "sha256:" + strings.Repeat("c", 64)},
+		Atom: store.EvidenceAtom{
+			ID: atomID, SchemaVersion: "t14-test", BlobDigest: "sha256:" + strings.Repeat("c", 64),
+			StartByte: 0, EndByte: 4,
+		},
 		Occurrences: []store.SnapshotEvidence{{
 			ID: "occ_" + id, AtomID: atomID, Repo: repo, Commit: strings.Repeat("a", 40),
 			Path: "consumer/" + id + ".go", StartLine: 7, EndLine: 7,

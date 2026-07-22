@@ -279,6 +279,7 @@ func registerProofAPI(api huma.API, opts Options) {
 		}
 		return &proofOut{Body: *envelope}, nil
 	})
+	registerContractImpactAPI(api, opts, service)
 }
 
 func createProofBundle(ctx context.Context, opts Options, query ProofQuery, filter assertionFilter) (*ProofBundleEnvelope, error) {

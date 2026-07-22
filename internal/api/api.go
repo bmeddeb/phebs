@@ -105,12 +105,14 @@ func New(opts Options) http.Handler {
 
 	type versionOut struct {
 		Body struct {
-			Version string `json:"version" example:"0.1.0-dev"`
+			Version      string   `json:"version" example:"0.1.0-dev"`
+			Capabilities []string `json:"capabilities,omitempty"`
 		}
 	}
 	huma.Get(api, "/api/version", func(context.Context, *struct{}) (*versionOut, error) {
 		out := &versionOut{}
 		out.Body.Version = opts.Version
+		out.Body.Capabilities = proofCapabilities(opts)
 		return out, nil
 	})
 

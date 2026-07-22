@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Spinner } from 'baseui/spinner'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
@@ -7,6 +7,8 @@ import { useMode, usePhebsTokens } from './theme'
 import { LogoutIcon, MoonIcon, SunIcon } from './icons'
 import { BrandLoader, BrandLockup } from './Brand'
 import { useAuth } from './auth'
+import { fetchVersion } from './api'
+import { isAbortError } from './util'
 import LoginPage from './pages/LoginPage'
 
 const SearchPage = lazy(() => import('./pages/SearchPage'))
@@ -18,12 +20,15 @@ const BlamePage = lazy(() => import('./pages/BlamePage'))
 const CommitPage = lazy(() => import('./pages/CommitPage'))
 const AuditPage = lazy(() => import('./pages/AuditPage'))
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
+const ImpactPage = lazy(() => import('./pages/ImpactPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { status, loading, error: authError, logout } = useAuth()
+  const [capabilities, setCapabilities] = useState<string[]>([])
+  const [capabilitiesLoaded, setCapabilitiesLoaded] = useState(false)
 
   // "/" focuses search from anywhere (unless already typing)
   useEffect(() => {
@@ -39,11 +44,34 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  useEffect(() => {
+    if (!status?.authenticated) return
+    const controller = new AbortController()
+    let active = true
+    setCapabilitiesLoaded(false)
+    fetchVersion(controller.signal)
+      .then((info) => {
+        if (active) setCapabilities(info.capabilities ?? [])
+      })
+      .catch((cause) => {
+        if (active && !isAbortError(cause)) setCapabilities([])
+      })
+      .finally(() => {
+        if (active) setCapabilitiesLoaded(true)
+      })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [status?.authenticated])
+
   if (loading) {
     return <div className={css({ minHeight: '100vh', display: 'grid', placeItems: 'center', backgroundColor: tok.pageBg })}><BrandLoader /></div>
   }
   if (!status || (status.auth_required && !status.authenticated)) return <LoginPage />
 
+  const impactAvailable = capabilities.includes('contract-impact-report')
+  const compatibilityAvailable = capabilities.includes('contract-compatibility')
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
   else if (path.startsWith('/history')) page = <HistoryPage params={params} />
@@ -52,6 +80,8 @@ export default function App() {
   else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
+  else if (path.startsWith('/impact') && !capabilitiesLoaded) page = <Spinner $size="small" />
+  else if (path.startsWith('/impact') && impactAvailable) page = <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} />
   else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 
@@ -59,7 +89,7 @@ export default function App() {
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
-      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} onLogout={() => void logout().catch(() => {})} />
+      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} impactAvailable={impactAvailable} onLogout={() => void logout().catch(() => {})} />
       <main
         className={css({
           width: '100%',
@@ -89,7 +119,7 @@ export default function App() {
   )
 }
 
-function Header({ path, email, isAdmin, onLogout }: { path: string; email: string; isAdmin: boolean; onLogout: () => void }) {
+function Header({ path, email, isAdmin, impactAvailable, onLogout }: { path: string; email: string; isAdmin: boolean; impactAvailable: boolean; onLogout: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode, toggle } = useMode()
@@ -98,6 +128,7 @@ function Header({ path, email, isAdmin, onLogout }: { path: string; email: strin
   const isRepos = path.startsWith('/repos')
   const isAudit = path.startsWith('/audit')
   const isAnalytics = path.startsWith('/analytics')
+  const isImpact = path.startsWith('/impact')
   const isSearch = path === '/' || path.startsWith('/search')
 
   return (
@@ -138,6 +169,7 @@ function Header({ path, email, isAdmin, onLogout }: { path: string; email: strin
       })}>
         <NavLink href="#/" label="Search" active={isSearch} />
         <NavLink href="#/repos" label="Repos" active={isRepos} />
+        {impactAvailable && <NavLink href="#/impact" label="Impact" active={isImpact} />}
         {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
         {isAdmin && <NavLink href="#/analytics" label="Analytics" active={isAnalytics} />}
         <NavLink href="#/settings" label="Settings" active={isSettings} />

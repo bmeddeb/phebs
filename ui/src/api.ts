@@ -108,6 +108,156 @@ export interface AnalyticsSummary {
   top_repos: { name: string; count: number }[]
 }
 
+export interface VersionInfo {
+  version: string
+  capabilities?: string[]
+}
+
+export interface ProofQuery {
+  kind: string
+  operation?: string
+  lineage?: string
+  message?: string
+  field_number?: number
+  before_digest?: string
+  after_digest?: string
+  domains: string[]
+}
+
+export interface CoverageAttempt {
+  run_id: string
+  commit: string
+  extractor: string
+  status: string
+  failure?: string
+}
+
+export interface CoverageRun {
+  domain: string
+  status: string
+  run_id?: string
+  extractor?: string
+  commit?: string
+  fresh: boolean
+  protocols?: string[]
+  failures?: string[]
+  corpus_file_count: number
+  candidate_file_count: number
+  read_file_count: number
+  read_bytes: number
+  source_scope_digest?: string
+  unresolved_count: number
+  assertion_count: number
+  atom_count: number
+  latest_attempt?: CoverageAttempt
+}
+
+export interface CoverageRepository {
+  repository: string
+  indexed_commit?: string
+  scip_index: string
+  runs: CoverageRun[]
+}
+
+export interface CoverageCertificate {
+  schema_version: string
+  domains: string[]
+  repository_count: number
+  repositories: CoverageRepository[]
+  digest: string
+}
+
+export interface ImpactEvidenceRow {
+  kind: 'operation_call' | 'field_reference' | 'unresolved_candidate'
+  assertion_id: string
+  evidence_atom_id: string
+  predicate: string
+  object: string
+  lineage?: string
+  repository: string
+  commit: string
+  path: string
+  start_byte: number
+  end_byte: number
+  start_line: number
+  end_line: number
+  tier: string
+  code_role?: string
+  classification: string
+  reason?: string
+  fresh: boolean
+}
+
+export interface ImpactCoverageRow {
+  repository: string
+  domain: string
+  state: string
+  reason?: string
+  indexed_commit?: string
+  evidence_commit?: string
+  run_id?: string
+  extractor?: string
+  protocols?: string[]
+  failures?: string[]
+  assertion_count: number
+  unresolved_count: number
+  candidate_file_count: number
+  read_file_count: number
+  source_scope_digest?: string
+}
+
+export interface CompatibilityFile {
+  path: string
+  content: string
+}
+
+export interface CompatibilityRequest {
+  lineage: string
+  before: CompatibilityFile[]
+  after: CompatibilityFile[]
+}
+
+export interface CompatibilityViolation {
+  snapshot: string
+  path: string
+  start_line: number
+  start_column: number
+  end_line: number
+  end_column: number
+  rule: string
+  message: string
+  affected_field?: { lineage: string; message: string; field_number: number }
+}
+
+export interface CompatibilityResult {
+  compatible: boolean
+  before: { digest: string; files: { path: string; digest: string }[] }
+  after: { digest: string; files: { path: string; digest: string }[] }
+  violations: CompatibilityViolation[]
+  affected_fields: { lineage: string; message: string; field_number: number }[]
+  extraction_run: {
+    engine: string
+    version: string
+    policy: string
+    arguments: string[]
+    exit_code: number
+    result: string
+  }
+}
+
+export interface ContractImpactReport {
+  schema_version: string
+  bundle_id: string
+  query: ProofQuery
+  conclusion: { text: string; coverage_digest: string }
+  known_consumers: ImpactEvidenceRow[]
+  unresolved_candidates: ImpactEvidenceRow[]
+  compatibility?: CompatibilityResult
+  coverage: CoverageCertificate
+  coverage_rows: ImpactCoverageRow[]
+  caveat: string
+}
+
 export interface GitIdentity {
   name: string
   email: string
@@ -281,6 +431,39 @@ export const fetchAudit = (offset: number, limit = 50, signal?: AbortSignal) =>
 
 export const fetchAnalytics = (days = 30, signal?: AbortSignal) =>
   getJSON<AnalyticsSummary>(`/api/analytics?${query({ days })}`, signal)
+
+export const fetchVersion = (signal?: AbortSignal) =>
+  getJSON<VersionInfo>('/api/version', signal)
+
+export const fetchOperationImpact = (operation: string, signal?: AbortSignal) =>
+  getJSON<ContractImpactReport>(
+    `/api/contract_impact_report?${query({ operation })}`,
+    signal,
+  )
+
+export const fetchFieldImpact = (
+  lineage: string,
+  message: string,
+  fieldNumber: number,
+  signal?: AbortSignal,
+) => getJSON<ContractImpactReport>(
+  `/api/contract_impact_report?${query({ lineage, message, field_number: fieldNumber })}`,
+  signal,
+)
+
+export const fetchSavedImpact = (id: string, signal?: AbortSignal) =>
+  getJSON<ContractImpactReport>(`/api/contract_impact_reports/${encodeURIComponent(id)}`, signal)
+
+export async function postChangeImpact(requestBody: CompatibilityRequest, signal?: AbortSignal): Promise<ContractImpactReport> {
+  const res = await request('/api/contract_impact_report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+    body: JSON.stringify(requestBody),
+    signal,
+  })
+  if (!res.ok) throw new Error((await res.text()) || `build impact report failed (${res.status})`)
+  return res.json() as Promise<ContractImpactReport>
+}
 
 export const fetchAPIKeys = (signal?: AbortSignal) =>
   getJSON<{ keys: APIKeySummary[] }>('/api/auth/keys', signal)

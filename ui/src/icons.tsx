@@ -119,3 +119,6 @@ export const AuditIcon = ({ size = 16 }: IconProps) =>
 
 export const ChartIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><path d="M2.5 2.5v11h11" /><path d="M5.5 10.5v-3M8.5 10.5v-6M11.5 10.5v-4.5" /></>)
+
+export const ImpactIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><circle cx="3" cy="8" r="1.5" /><circle cx="12.5" cy="4" r="1.5" /><circle cx="12.5" cy="12" r="1.5" /><path d="m4.5 7.4 6.5-2.8M4.5 8.6l6.5 2.8" /></>)

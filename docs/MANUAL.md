@@ -575,6 +575,12 @@ source IP.
 - **Analytics** (`#/analytics`, administrators only) — 30-day search volume,
 searches per day, average duration, and the repositories appearing most in
 results — computed entirely from local usage events.
+- **Impact** (`#/impact`, experimental) — bounded contract-impact reports for
+canonical gRPC operations, stable protobuf field identities, and proposed
+before/after contract inputs. Known and unresolved consumers cite immutable
+source revisions; every conclusion renders its complete coverage certificate.
+The navigation item appears only when the server advertises the capability,
+and the contract-change tab additionally requires the pinned Buf startup probe.
 
 The UI uses its DB-backed session cookie and automatically supplies CSRF
 tokens on mutations. A `401` clears stale authenticated state and returns to
@@ -615,6 +621,10 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
 | `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected consumers                |
 | `/api/proof_bundles/{id}`                                           | GET             | reauthorized immutable proof-bundle read; an ID is not a bearer credential                     |
+| `/api/contract_impact_report?operation=`                            | GET             | experimental bounded operation-impact report                                                   |
+| `/api/contract_impact_report?lineage=&message=&field_number=`       | GET             | experimental bounded stable-field impact report                                                |
+| `/api/contract_impact_report`                                       | POST            | experimental proposed-change impact report over the compatibility request shape                 |
+| `/api/contract_impact_reports/{id}`                                 | GET             | reauthorized deterministic report projection of one immutable proof bundle                      |
 | `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
 | `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
 | `/api/tree?repo=&ref=`                                              | GET             | all file paths, recursive                                                                      |
@@ -967,6 +977,31 @@ succeeds (the first three remain available when compatibility is unavailable):
   `before`/`after` arrays of `{path,content}` `.proto` files. It runs Buf's
   `WIRE` policy and joins affected field identities to visible
   `REFERENCES_PROTO_FIELD` evidence.
+
+The same opt-in registers the read-only contract-impact report surface and
+advertises `contract-impact-report` in `/api/version`'s `capabilities` array.
+`GET /api/contract_impact_report` accepts either one canonical `operation`, or
+the complete `lineage`, `message`, and `field_number` identity. `POST` accepts
+the compatibility request above and is registered only when the Buf probe
+succeeds; that state also advertises `contract-compatibility`. A successful
+response is `contract-impact-report-v1`: the proof question, known consumer
+source rows, separately labeled unresolved candidates, optional Buf
+classification, every visible repository/domain coverage state, the complete
+canonical coverage certificate, and the existing caveat. The conclusion names
+the exact certificate digest and says only what was found within the stated
+evidence scope. Empty evidence never establishes absence.
+
+Each repository evidence row links to `#/file` with its pinned repository,
+commit, path, and line. Coverage rows describe the limits of the search and
+may have no source evidence to open. Buf violation spans describe the submitted
+source sets, whose contents are digested but deliberately not retained, so the
+report does not manufacture links for them. Proposed-change reports therefore
+compare the bounded before/after source commitments described below and record
+Buf's bundle-local compatibility run; they are not represented as two
+repository extraction publications. `GET /api/contract_impact_reports/{id}`
+reprojects a saved bundle only after the same current-permission check as
+`/api/proof_bundles/{id}`. Expiry, deletion, or access revocation produces the
+same fail-closed `404` behavior.
 
 The compatibility request is deliberately source-set based: it can check a
 proposed contract before that contract exists in an indexed repository. Paths

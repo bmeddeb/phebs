@@ -610,7 +610,7 @@ default-off config, active-bundle byte identity, and checkpoint isolation.
 
 ## EPIC 15 — Contract impact report *(unblocked 2026-07-22; read-only; the first user-facing annex workflow — independent acceptance gate retained)*
 
-**T15.1 · Report API + page**
+**T15.1 · Report API + page** ✅ 2026-07-22
 For a contract, or a contract change between two extraction runs: known
 consumers with exact call sites, field references, compatibility
 classification, unresolved candidates, unsupported repositories/patterns,
@@ -620,6 +620,27 @@ code-host-writer posture change), diagrams, service dossiers, runtime data.
 AC: demoable via `make dev` on the fixture corpus; bounded-proof language
 throughout ("no blockers found within the stated evidence scope"), coverage
 certificate rendered with every conclusion.
+Implemented as a deterministic `contract-impact-report-v1` projection of the
+same immutable, permission-safe proof bundles used by HTTP and MCP; there is
+no second persisted report or authorization path. The default-dark Huma
+surface builds reports for canonical operations, stable protobuf field
+identities, and proposed before/after contract inputs, then reauthorizes saved
+report URLs by bundle ID. Each result separates known exact source occurrences
+from unresolved syntactic candidates and renders every visible repository's
+covered, stale, failed, processing, or unsupported domain state plus the full
+coverage certificate. Conclusions bind to that certificate's digest and use
+bounded-scope language. Repository evidence rows deep-link to their pinned
+commit/path/line; coverage metadata and Buf spans over deliberately unretained
+caller inputs are not misrepresented as repository evidence. Following the
+T14.3 ADR, proposed changes compare bounded before/after source commitments and
+record a bundle-local compatibility run rather than fabricating repository
+publication rows for caller-owned inputs. `/api/version` capability discovery
+keeps both navigation and routes absent by default, and independently gates the
+contract-change tab on the pinned Buf probe. Go acceptance proves deterministic
+readback, exact citations, unresolved and unsupported rows, hidden-repository
+non-interference, revocation, change enrichment, and dark posture; UI tests pin
+all three forms, saved reads, caveat/certificate rendering, and immutable source
+links. No code-host writer, diagrams, dossiers, or runtime plane was added.
 
 ## EPIC 16 — Investigations product slice *(post-gate: requires GATE2-V2 ESTABLISHED and pilot continuation decision; all code on a post-gate branch)*
 
