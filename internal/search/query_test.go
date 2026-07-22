@@ -75,6 +75,18 @@ func TestCompile(t *testing.T) {
 		{name: "grouped context rejected", raw: "(context:pub or repo:x) needle", err: true},
 		{name: "context glued to closing paren rejected", raw: "(needle context:pub)", err: true},
 
+		// T10.4 revisions are also scope atoms. Compile strips the token; the
+		// Searcher resolves it only after principal visibility is known.
+		{name: "revision scope stripped", raw: "rev:release/1 needle", want: `substr:"needle"`},
+		{name: "revision plus context", raw: "rev:v1 context:one needle",
+			want: `(and (reposet h/private-fork) substr:"needle")`},
+		{name: "two revisions rejected", raw: "rev:one rev:two needle", err: true},
+		{name: "revision without terms", raw: "rev:release", err: true},
+		{name: "negated revision", raw: "-rev:release needle", err: true},
+		{name: "grouped revision", raw: "(rev:release or repo:x) needle", err: true},
+		{name: "quoted revision selector rejected", raw: `rev:"release" needle`, err: true},
+		{name: "unsafe revision selector rejected", raw: "rev:../release needle", err: true},
+
 		// Escape-aware tokenizer (Epic 8 review): escaped quotes/whitespace
 		// must not corrupt the residual or misfire context extraction.
 		{name: "quoted phrase with spaces keeps content", raw: `"a b c" context:pub`,

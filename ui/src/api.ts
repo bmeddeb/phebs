@@ -43,12 +43,19 @@ export interface IndexJob {
   finished_at?: string
 }
 
+export interface IndexedRevision {
+  selector: string
+  branch: string
+  commit: string
+}
+
 export interface RepoStatus {
   name: string
   clone_url: string
   default_branch?: string
   indexed_at?: string
   indexed_commit_hash?: string
+  indexed_revisions?: IndexedRevision[]
   latest_indexing_job_status?: string
   orphaned: boolean
   connections?: string[]

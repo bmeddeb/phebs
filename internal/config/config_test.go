@@ -34,6 +34,36 @@ connections:
 			"",
 		},
 		{
+			"revision allowlist valid",
+			"revisions:\n  github.com/acme/api:\n    release-1: refs/heads/release/1\n    v1.4.0: refs/tags/v1.4.0\n",
+			"",
+		},
+		{
+			"revision cap",
+			"revisions:\n  github.com/acme/api: {a: refs/heads/a, b: refs/heads/b, c: refs/heads/c, d: refs/heads/d, e: refs/heads/e, f: refs/heads/f, g: refs/heads/g, h: refs/heads/h}\n",
+			"at most 7 are allowed (8 including HEAD)",
+		},
+		{
+			"revision selector HEAD reserved",
+			"revisions:\n  github.com/acme/api: {HEAD: refs/heads/main}\n",
+			"HEAD is reserved",
+		},
+		{
+			"revision ref must be full",
+			"revisions:\n  github.com/acme/api: {release: release}\n",
+			"must start with refs/heads/ or refs/tags/",
+		},
+		{
+			"revision duplicate ref",
+			"revisions:\n  github.com/acme/api: {one: refs/heads/release, two: refs/heads/release}\n",
+			"name the same ref",
+		},
+		{
+			"revision unsafe repo",
+			"revisions:\n  ../outside: {release: refs/heads/release}\n",
+			"unsafe repository name",
+		},
+		{
 			"auth bootstrap valid",
 			"auth:\n  cookie_secure: false\n  session_lifetime: 8h\n  trusted_proxies: ['127.0.0.1/32', 'fd00::/8']\n  bootstrap_user: {email: admin@example.com, password: 'long-enough-password'}\n",
 			"",

@@ -45,8 +45,9 @@ optional OpenID Connect;
 the same bare mirrors;
 - the **web UI** (React + Base Web + CodeMirror), embedded in the binary.
 
-Indexing is **HEAD-only**: the default branch of each repo (or, for watched
-local repos, whatever branch is checked out).
+Indexing is **HEAD-only by default**: the default branch of each repo (or, for
+watched local repos, whatever branch is checked out). An explicit per-repo
+allowlist can add up to seven branch/tag revisions, selected with `rev:`.
 
 ## 2. Install & first run
 
@@ -143,6 +144,12 @@ connections:
   - name: my-conn         # required; unique; [a-z0-9-]+
     type: github | gitlab | gitea | git
     # ... see per-type fields below
+
+# Optional: seven additional refs per repo; HEAD is implicit.
+revisions:
+  github.com/acme/api:
+    release-1: refs/heads/release/1
+    v1.4.0: refs/tags/v1.4.0
 ```
 
 
@@ -165,6 +172,7 @@ connections:
 | `proof_bundles.retention`                   | *(disabled)*     | positive Go duration expires proof bundles after their latest materialization; omission or `"0"` keeps them indefinitely                                         |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
+| `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 
 
 
@@ -421,10 +429,11 @@ yet supported — the re-sync cadence covers those.
 
 ### Watch mode (local repos)
 
-`watch: true` on a local git connection makes phebs poll the repo's HEAD
-(every ~3 s) and re-sync + re-index whenever it moves. Because indexing is
-HEAD-only, the HEAD hash is the exact change signal: **commits and branch
-switches trigger reindexing; uncommitted working-tree edits do not.**
+`watch: true` on a local git connection makes phebs poll the repo's HEAD and
+each configured allowlisted ref (every ~3 s), then re-sync + re-index whenever
+one moves. **HEAD commits, branch switches, and allowlisted branch/tag moves
+trigger reindexing; uncommitted working-tree edits and non-allowlisted feature
+branches do not.**
 
 Watched mirrors **follow the branch you have checked out** — switch to
 `feature`, commit, and search reflects `feature`. A detached HEAD (mid-rebase,
@@ -466,6 +475,7 @@ implicit AND; prefix any atom with `-` to negate it.
 | `fork:yes|no`                | filter by fork state *(phebs)*                              |
 | `public:yes|no`              | filter by visibility *(phebs)*                              |
 | `context:backend`            | restrict to a named repo set *(phebs, see below)*           |
+| `rev:release-1`              | select one allowlisted branch/tag revision *(phebs)*        |
 
 
 Examples:
@@ -476,7 +486,37 @@ watchModeNeedle repo:my-project
 sym:ClaimJob fork:no
 case:yes Searcher file:internal/
 ClaimJob context:backend
+deprecatedCall rev:release-1 repo:acme/api
 ```
+
+
+### Revision scopes
+
+HEAD remains implicit and is the revision searched when a query has no `rev:`
+atom. Additional revisions are admitted explicitly by full Git ref while the
+left-hand key provides the query-facing selector:
+
+```yaml
+revisions:
+  github.com/acme/api:
+    release-1: refs/heads/release/1
+    v1.4.0: refs/tags/v1.4.0
+```
+
+This indexes `HEAD` plus the two named refs. `deprecatedCall rev:release-1`
+searches the release branch only in visible repositories that published that
+selector; `rev:v1.4.0` selects the tag. Selectors and refs are case-sensitive.
+Exactly one bare, ungrouped, non-negated `rev:` scope is accepted per query.
+An unknown selector returns a bounded query error without naming repositories.
+
+The ceiling is eight revisions per repository including HEAD, so the config
+allows at most seven additions. Wildcards, commit IDs, short/ambiguous refs,
+and duplicate mappings are rejected at startup: values must be canonical
+`refs/heads/*` or `refs/tags/*`. A normal sync, webhook fetch, forced reindex,
+or watched-ref move republishes the whole admitted set atomically. Changing the
+allowlist takes effect on the next sync/index job. File links still use the
+immutable selected commit, while extraction, SCIP defaults, coverage, and
+proof bundles intentionally remain anchored to HEAD.
 
 
 
@@ -506,8 +546,10 @@ Result bounds: `max_matches` (default 50 files, cap 500) and `context_lines`
 (default 0, cap 10) on the API; searches are capped at 10 s of wall time.
 Each result file includes the immutable indexed commit in `ref`. Repositories
 without a committed index state, deleting repositories, and shards without a
-live repo row are excluded from every query. A shard whose embedded revision
-does not equal the row's committed revision is also discarded.
+live repo row are excluded from every query. A shard whose exact embedded
+branch/commit set does not equal the row's atomically committed revision set is
+also discarded. Permission filtering runs before `rev:` resolution, and the
+selected result commit is checked again before serialization.
 
 ### Precise code navigation (SCIP)
 

@@ -163,6 +163,9 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
         <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
           <span className={css({ fontWeight: 500, color: tok.textPrimary })}>{repo.name}</span>
           {repo.orphaned && <Pill text="orphaned" bg={tok.deletedLineBg} fg={tok.statusRed} />}
+          {(repo.indexed_revisions?.length ?? 0) > 1 && (
+            <Pill text={`${repo.indexed_revisions?.length} revs`} bg={tok.fill} fg={tok.textSecondary} />
+          )}
         </div>
       </td>
       <td className={cell}>

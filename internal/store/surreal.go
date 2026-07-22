@@ -712,9 +712,15 @@ func (s *Surreal) SetRepoDeleting(ctx context.Context, name string, deleting boo
 }
 
 func (s *Surreal) SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error {
+	return s.SetRepoIndexedRevisions(ctx, name, commitHash, []IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD", Commit: commitHash,
+	}}, at)
+}
+
+func (s *Surreal) SetRepoIndexedRevisions(ctx context.Context, name, defaultCommit string, revisions []IndexedRevision, at time.Time) error {
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		`UPDATE $rid SET indexed_commit_hash = $hash, indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`,
-		map[string]any{"rid": repoID(name), "hash": commitHash, "at": at})
+		`UPDATE $rid SET indexed_commit_hash = $hash, indexed_revisions = $revisions, indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`,
+		map[string]any{"rid": repoID(name), "hash": defaultCommit, "revisions": revisions, "at": at})
 	if err != nil {
 		return err
 	}
@@ -726,7 +732,7 @@ func (s *Surreal) SetRepoIndexed(ctx context.Context, name, commitHash string, a
 
 func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		"UPDATE $rid SET indexed_commit_hash = NONE, indexed_at = NONE RETURN AFTER",
+		"UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE, indexed_at = NONE RETURN AFTER",
 		map[string]any{"rid": repoID(name)})
 	if err != nil {
 		return err

@@ -271,7 +271,7 @@ func serve(args []string) error {
 	runBackground(func() { fetchRunner.Run(ctx) })
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
 		log.Printf("watch mode: polling %d local repo(s)", len(watched))
-		runBackground(func() { (&phebssync.Watcher{Store: st, Conns: watched}).Run(ctx) })
+		runBackground(func() { (&phebssync.Watcher{Store: st, Conns: watched, Revisions: cfg.Revisions}).Run(ctx) })
 	}
 	// T7.5: periodic freshness for remote connections
 	if every := cfg.Sync.ResyncEvery(); every > 0 {
@@ -331,7 +331,7 @@ func serve(args []string) error {
 	if bin, err := indexer.FindBinary(); err != nil {
 		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make build provides it; or set PHEBS_ZOEKT_GIT_INDEX)")
 	} else {
-		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st, OnIndexed: onIndexed}
+		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st, Revisions: cfg.Revisions, OnIndexed: onIndexed}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
 			Interval: cfg.Sync.Interval()}
 		runBackground(func() { ixRunner.Run(ctx) })

@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -41,7 +42,20 @@ type Config struct {
 	// (T8.1): name → glob patterns matched against full repo names
 	// ("github.com/acme/api-*"; `*` does not cross `/`).
 	Contexts map[string][]string `yaml:"contexts"`
+	// Revisions is an explicit per-repository allowlist of additional Git
+	// branches/tags. HEAD remains implicit; each inner map is the selector
+	// accepted by `rev:<selector>` to a full refs/heads/* or refs/tags/* ref.
+	Revisions RevisionAllowlist `yaml:"revisions"`
 }
+
+// MaxIndexedRevisions is the total per-repository revision ceiling, including
+// the implicit HEAD revision. Keeping the cap here makes config admission and
+// index execution share one resource bound.
+const MaxIndexedRevisions = 8
+
+// RevisionAllowlist maps repository name -> query selector -> full Git ref.
+// A repository not present in the map retains the HEAD-only default.
+type RevisionAllowlist map[string]map[string]string
 
 // Experimental contains opt-in work whose validation gate has not passed.
 // Options here must remain off by default and must not be promoted without a
@@ -511,6 +525,45 @@ func (c *Config) validate(lines []int) error {
 		}
 	}
 
+	revisionRepos := make([]string, 0, len(c.Revisions))
+	for repo := range c.Revisions {
+		revisionRepos = append(revisionRepos, repo)
+	}
+	sort.Strings(revisionRepos)
+	for _, repo := range revisionRepos {
+		refs := c.Revisions[repo]
+		if err := validateRevisionRepoName(repo); err != nil {
+			errs = append(errs, fmt.Errorf("revisions: repository %q: %v", repo, err))
+		}
+		if len(refs) == 0 {
+			errs = append(errs, fmt.Errorf("revisions: repository %q has no additional revisions", repo))
+		}
+		if len(refs)+1 > MaxIndexedRevisions {
+			errs = append(errs, fmt.Errorf("revisions: repository %q has %d additional revisions; at most %d are allowed (%d including HEAD)",
+				repo, len(refs), MaxIndexedRevisions-1, MaxIndexedRevisions))
+		}
+		selectors := make([]string, 0, len(refs))
+		for selector := range refs {
+			selectors = append(selectors, selector)
+		}
+		sort.Strings(selectors)
+		seenRefs := make(map[string]string, len(refs))
+		for _, selector := range selectors {
+			ref := refs[selector]
+			if err := validateRevisionSelector(selector); err != nil {
+				errs = append(errs, fmt.Errorf("revisions[%s]: selector %q: %v", repo, selector, err))
+			}
+			if err := validateRevisionRef(ref); err != nil {
+				errs = append(errs, fmt.Errorf("revisions[%s][%s]: %v", repo, selector, err))
+			}
+			if prior, ok := seenRefs[ref]; ok {
+				errs = append(errs, fmt.Errorf("revisions[%s]: selectors %q and %q name the same ref %q", repo, prior, selector, ref))
+			} else {
+				seenRefs[ref] = selector
+			}
+		}
+	}
+
 	seen := map[string]bool{}
 	for i, conn := range c.Connections {
 		switch {
@@ -633,6 +686,61 @@ func (c *Config) validate(lines []int) error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+var revisionSelectorRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
+
+func validateRevisionSelector(selector string) error {
+	if selector == "HEAD" {
+		return errors.New("HEAD is reserved for the implicit default revision")
+	}
+	if !revisionSelectorRE.MatchString(selector) || strings.HasSuffix(selector, "/") ||
+		strings.Contains(selector, "//") || strings.Contains(selector, "..") {
+		return errors.New("must be a bare rev: token using letters, digits, '.', '_', '-', or '/'")
+	}
+	return nil
+}
+
+func validateRevisionRef(ref string) error {
+	if !strings.HasPrefix(ref, "refs/heads/") && !strings.HasPrefix(ref, "refs/tags/") {
+		return errors.New("ref must start with refs/heads/ or refs/tags/")
+	}
+	if strings.HasSuffix(ref, ".") || strings.Contains(ref, "..") || strings.Contains(ref, "@{") ||
+		strings.ContainsAny(ref, " ~^:?*[\\,") {
+		return errors.New("ref is not a canonical branch/tag ref")
+	}
+	for _, part := range strings.Split(ref, "/") {
+		if part == "" || part == "." || part == ".." || strings.HasPrefix(part, ".") || strings.HasSuffix(part, ".lock") {
+			return errors.New("ref is not a canonical branch/tag ref")
+		}
+		for _, r := range part {
+			if r < 0x20 || r == 0x7f {
+				return errors.New("ref is not a canonical branch/tag ref")
+			}
+		}
+	}
+	return nil
+}
+
+func validateRevisionRepoName(name string) error {
+	if name == "" || filepath.IsAbs(name) || strings.ContainsRune(name, 0) || strings.Contains(name, `\`) {
+		return errors.New("unsafe repository name")
+	}
+	parts := strings.Split(name, "/")
+	for i, part := range parts {
+		if part == "" || part == "." || part == ".." {
+			return errors.New("unsafe repository name")
+		}
+		for _, r := range part {
+			if r < 0x20 || r == 0x7f {
+				return errors.New("unsafe repository name")
+			}
+		}
+		if i < len(parts)-1 && strings.HasSuffix(strings.ToLower(part), ".git") {
+			return errors.New("repository namespace ending in .git is unsupported")
+		}
+	}
+	return nil
 }
 
 // isHTTPBase reports whether s can serve as a code-host API base URL.

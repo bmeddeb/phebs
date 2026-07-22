@@ -366,11 +366,19 @@ without materializing rows; shutdown drains in-flight requests (and their
 audit/usage writes) before the store closes; the audit page dedupes pages
 shifted by live writes. Regression tests pin each.
 
-**T10.4 · Multi-branch / tag indexing (`rev:`)** — *Sourcebot free (up to 64 revs/repo)*
+**T10.4 ✅ · Multi-branch / tag indexing (`rev:`)** — *Sourcebot free (up to 64 revs/repo)*
 **Architectural, not a ticket-sized change** — HEAD-only is a core P1
 assumption (indexer, watch, freshness all lean on it). Gated on real demand;
 sequence last. AC: an explicit per-repo branch allowlist (cap ≈8 per PLAN §1)
 indexes + serves multiple revisions behind `rev:`.
+
+Implemented on `t10.4-multirev-indexing`: the config admits seven aliased full
+branch/tag refs plus implicit HEAD; one child build atomically publishes the
+sorted selector/branch/commit set; startup repair verifies exact shard branch
+metadata; unqualified queries are forced to HEAD and one `rev:` scope is
+resolved only across the principal's visible repositories, with a second
+commit check on serialization. Local watch includes only the admitted refs.
+Extraction/proof semantics remain HEAD-bound by design.
 
 ---
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -229,9 +230,12 @@ func usageEvent(stats Stats, repos *repoCollector) store.UsageEvent {
 // store still considers searchable. Stale/untracked shards can remain on disk
 // after an interrupted cleanup, but they must never leak into search results.
 func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string]string, error) {
-	q, err := Compile(ctx, s.st, s.Contexts, raw)
+	q, revision, err := compileQuery(ctx, s.st, s.Contexts, raw)
 	if err != nil {
 		return nil, nil, err
+	}
+	if revision == "" {
+		revision = "HEAD"
 	}
 	repos, err := s.st.ListRepos(ctx)
 	if err != nil {
@@ -241,8 +245,8 @@ func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string
 	if s.Visible != nil {
 		allow = s.Visible(ctx)
 	}
-	names := make([]string, 0, len(repos))
 	versions := make(map[string]string, len(repos))
+	branchRepos := make(map[string][]string)
 	for _, repo := range repos {
 		if repo.Deleting || repo.IndexedCommitHash == "" {
 			continue
@@ -252,10 +256,69 @@ func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string
 		if allow != nil && !allow(repo) {
 			continue
 		}
-		names = append(names, repo.Name)
-		versions[repo.Name] = repo.IndexedCommitHash
+		indexed, ok := indexedRevision(repo, revision)
+		if !ok {
+			continue
+		}
+		branchRepos[indexed.Branch] = append(branchRepos[indexed.Branch], repo.Name)
+		versions[repo.Name] = indexed.Commit
 	}
-	return query.Simplify(query.NewAnd(query.NewRepoSet(names...), q)), versions, nil
+	if len(branchRepos) == 0 {
+		if revision != "HEAD" {
+			return nil, nil, fmt.Errorf("revision %q is not indexed in any visible repository", revision)
+		}
+		return query.Simplify(query.NewAnd(query.NewRepoSet(), q)), versions, nil
+	}
+	branches := make([]string, 0, len(branchRepos))
+	for branch := range branchRepos {
+		branches = append(branches, branch)
+	}
+	sort.Strings(branches)
+	var scopes []query.Q
+	for _, branch := range branches {
+		names := branchRepos[branch]
+		sort.Strings(names)
+		scopes = append(scopes, query.NewAnd(
+			query.NewRepoSet(names...),
+			&query.Branch{Pattern: branch, Exact: true},
+		))
+	}
+	scope := scopes[0]
+	if len(scopes) > 1 {
+		scope = query.NewOr(scopes...)
+	}
+	return query.Simplify(query.NewAnd(scope, q)), versions, nil
+}
+
+func indexedRevision(repo store.Repo, selector string) (store.IndexedRevision, bool) {
+	if len(repo.IndexedRevisions) == 0 {
+		if selector == "HEAD" && repo.IndexedCommitHash != "" {
+			return store.IndexedRevision{Selector: "HEAD", Branch: "HEAD", Commit: repo.IndexedCommitHash}, true
+		}
+		return store.IndexedRevision{}, false
+	}
+	if len(repo.IndexedRevisions) > 8 {
+		return store.IndexedRevision{}, false
+	}
+	bySelector := make(map[string]store.IndexedRevision, len(repo.IndexedRevisions))
+	branches := make(map[string]bool, len(repo.IndexedRevisions))
+	validDefault := false
+	for _, revision := range repo.IndexedRevisions {
+		if revision.Selector == "" || revision.Branch == "" || revision.Commit == "" ||
+			bySelector[revision.Selector].Selector != "" || branches[revision.Branch] {
+			return store.IndexedRevision{}, false
+		}
+		if revision.Selector == "HEAD" {
+			validDefault = revision.Branch == "HEAD" && revision.Commit == repo.IndexedCommitHash
+		}
+		bySelector[revision.Selector] = revision
+		branches[revision.Branch] = true
+	}
+	if !validDefault {
+		return store.IndexedRevision{}, false
+	}
+	revision, ok := bySelector[selector]
+	return revision, ok
 }
 
 func toResult(res *zoekt.SearchResult, versions map[string]string) *Result {

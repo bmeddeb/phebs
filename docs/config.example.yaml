@@ -131,6 +131,17 @@ contexts:
   backend:
     - "github.com/acme/api-*"
 
+# Optional per-repository non-HEAD revisions (T10.4). HEAD is always indexed
+# and is the default for unqualified searches. Each selector becomes a
+# `rev:<selector>` scope and maps to one full branch/tag ref. At most seven
+# entries are allowed per repo (eight total with HEAD); wildcards and short or
+# ambiguous refs are rejected.
+revisions: {}
+# revisions:
+#   github.com/acme/api:
+#     release-1: refs/heads/release/1
+#     v1.4.0: refs/tags/v1.4.0
+
 # Sources of repos to sync (Epic 2). Names are required, unique, and match
 # [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must
 # omit embedded credentials, query, and fragment. Code-host tokens are optional

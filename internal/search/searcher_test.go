@@ -11,7 +11,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +24,47 @@ import (
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
+
+type revisionStore struct {
+	store.Store
+	repo store.Repo
+}
+
+func (s *revisionStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
+	if name != s.repo.Name {
+		return nil, store.ErrNotFound
+	}
+	repo := s.repo
+	repo.IndexedRevisions = append([]store.IndexedRevision(nil), s.repo.IndexedRevisions...)
+	return &repo, nil
+}
+
+func (s *revisionStore) ListRepos(context.Context) ([]store.Repo, error) {
+	repo := s.repo
+	repo.IndexedRevisions = append([]store.IndexedRevision(nil), s.repo.IndexedRevisions...)
+	return []store.Repo{repo}, nil
+}
+
+func (s *revisionStore) SetRepoIndexedRevisions(_ context.Context, name, commit string, revisions []store.IndexedRevision, at time.Time) error {
+	if name != s.repo.Name {
+		return store.ErrNotFound
+	}
+	s.repo.IndexedCommitHash = commit
+	s.repo.IndexedRevisions = append([]store.IndexedRevision(nil), revisions...)
+	s.repo.IndexedAt = &at
+	s.repo.LatestJobStatus = "done"
+	return nil
+}
+
+func (s *revisionStore) ClearRepoIndexState(_ context.Context, name string) error {
+	if name != s.repo.Name {
+		return store.ErrNotFound
+	}
+	s.repo.IndexedCommitHash = ""
+	s.repo.IndexedRevisions = nil
+	s.repo.IndexedAt = nil
+	return nil
+}
 
 func TestOpenRejectsGlobMetacharacters(t *testing.T) {
 	if _, err := search.Open(filepath.Join(t.TempDir(), "data[*]", "index"), nil); err == nil {
@@ -64,12 +107,14 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func gitc(t *testing.T, dir string, args ...string) {
+func gitc(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-C", dir}, args...)
-	if out, err := exec.Command("git", full...).CombinedOutput(); err != nil {
+	out, err := exec.Command("git", full...).CombinedOutput()
+	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
+	return strings.TrimSpace(string(out))
 }
 
 // corpus builds two indexed repos: "plain" and "forked" (IsFork in the DB).
@@ -199,6 +244,140 @@ func TestSearchGolden(t *testing.T) {
 	}
 }
 
+// T10.4 AC: one repository publishes HEAD, a branch, and a tag atomically;
+// unqualified search remains HEAD-only while rev: selects the exact admitted
+// revision. Moving only the admitted branch forces a rebuild even when HEAD is
+// unchanged.
+func TestSearchMultipleRevisions(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "main.go"), []byte("package main\nvar defaultOnlyNeedle = true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "main")
+	mainCommit := gitc(t, origin, "rev-parse", "HEAD")
+	gitc(t, origin, "checkout", "-b", "release/1")
+	if err := os.WriteFile(filepath.Join(origin, "release.go"), []byte("package main\nvar releaseOnlyNeedle = true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "release")
+	releaseCommit := gitc(t, origin, "rev-parse", "HEAD")
+	gitc(t, origin, "tag", "-a", "v1.0.0", "-m", "annotated release")
+	gitc(t, origin, "checkout", "main")
+
+	dataDir := t.TempDir()
+	repoName := "example.com/acme/multirev"
+	if err := sync.Mirror(ctx, "file://"+origin, sync.RepoDir(dataDir, repoName)); err != nil {
+		t.Fatal(err)
+	}
+	st := &revisionStore{repo: store.Repo{Name: repoName, CloneURL: "file://" + origin, DefaultBranch: "main", IsPublic: true}}
+	bin, err := indexer.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix := &indexer.Indexer{
+		DataDir: dataDir, Bin: bin, Store: st,
+		Revisions: map[string]map[string]string{repoName: {
+			"release": "refs/heads/release/1",
+			"v1":      "refs/tags/v1.0.0",
+		}},
+	}
+	if err := ix.Index(ctx, store.Repo{Name: repoName}, false); err != nil {
+		t.Fatal(err)
+	}
+	repo, err := st.GetRepo(ctx, repoName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantRevisions := []store.IndexedRevision{
+		{Selector: "HEAD", Branch: "HEAD", Commit: mainCommit},
+		{Selector: "release", Branch: "refs/heads/release/1", Commit: releaseCommit},
+		{Selector: "v1", Branch: "refs/tags/v1.0.0^{commit}", Commit: releaseCommit},
+	}
+	if !reflect.DeepEqual(repo.IndexedRevisions, wantRevisions) {
+		t.Fatalf("indexed revisions = %+v, want %+v", repo.IndexedRevisions, wantRevisions)
+	}
+
+	s, err := search.Open(filepath.Join(dataDir, "index"), st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(s.Close)
+	assertRevision := func(query, wantCommit string, wantFiles bool) {
+		t.Helper()
+		result, err := s.Search(ctx, query, search.Options{})
+		if err != nil {
+			t.Fatalf("search %q: %v", query, err)
+		}
+		if wantFiles && len(result.Files) == 0 {
+			t.Fatalf("search %q returned no files", query)
+		}
+		if !wantFiles && len(result.Files) != 0 {
+			t.Fatalf("search %q leaked non-HEAD files: %+v", query, result.Files)
+		}
+		for _, file := range result.Files {
+			if file.Ref != wantCommit {
+				t.Errorf("search %q ref = %s, want %s", query, file.Ref, wantCommit)
+			}
+		}
+	}
+	assertRevision("defaultOnlyNeedle", mainCommit, true)
+	assertRevision("releaseOnlyNeedle", mainCommit, false)
+	assertRevision("releaseOnlyNeedle rev:release", releaseCommit, true)
+	assertRevision("releaseOnlyNeedle rev:v1", releaseCommit, true)
+	if _, err := s.Search(ctx, "releaseOnlyNeedle rev:missing", search.Options{}); err == nil {
+		t.Fatal("unknown visible revision did not return an error")
+	}
+	s.Visible = func(context.Context) func(store.Repo) bool {
+		return func(store.Repo) bool { return false }
+	}
+	if _, err := s.Search(ctx, "releaseOnlyNeedle rev:release", search.Options{}); err == nil || strings.Contains(err.Error(), repoName) {
+		t.Fatalf("hidden-only revision error = %v; want non-identifying refusal", err)
+	}
+	s.Visible = nil
+
+	gitc(t, origin, "checkout", "release/1")
+	if err := os.WriteFile(filepath.Join(origin, "updated.go"), []byte("package main\nvar updatedReleaseNeedle = true\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "move release only")
+	updatedRelease := gitc(t, origin, "rev-parse", "HEAD")
+	gitc(t, origin, "checkout", "main")
+	if err := sync.Mirror(ctx, "file://"+origin, sync.RepoDir(dataDir, repoName)); err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Index(ctx, store.Repo{Name: repoName}, false); err != nil {
+		t.Fatal(err)
+	}
+	repo, err = st.GetRepo(ctx, repoName)
+	if err != nil || repo.IndexedCommitHash != mainCommit || repo.IndexedRevisions[1].Commit != updatedRelease {
+		t.Fatalf("branch-only rebuild state = %+v, %v; want HEAD %s release %s", repo, err, mainCommit, updatedRelease)
+	}
+	assertRevision("updatedReleaseNeedle", mainCommit, false)
+	assertRevision("updatedReleaseNeedle rev:release", updatedRelease, true)
+
+	// Removing the allowlist republishes a HEAD-only shard even though HEAD
+	// itself did not move; the retired selector becomes unreachable.
+	ix.Revisions = nil
+	if err := ix.Index(ctx, store.Repo{Name: repoName}, false); err != nil {
+		t.Fatal(err)
+	}
+	repo, err = st.GetRepo(ctx, repoName)
+	if err != nil || !reflect.DeepEqual(repo.IndexedRevisions, wantRevisions[:1]) {
+		t.Fatalf("HEAD-only rollback state = %+v, %v; want %+v", repo, err, wantRevisions[:1])
+	}
+	if _, err := s.Search(ctx, "releaseOnlyNeedle rev:release", search.Options{}); err == nil {
+		t.Fatal("removed revision selector remained searchable")
+	}
+	assertRevision("releaseOnlyNeedle", mainCommit, false)
+}
+
 // Regression: a NEGATED metadata filter must exclude the matching repos, not
 // collapse the whole query to FALSE. Pre-fix, Compile hoisted the RawConfig
 // atom globally and `-fork:yes` simplified to zero results.
@@ -306,6 +485,16 @@ func TestSearchExcludesShardWithoutRepoRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertHidden("unindexed")
+	if err := st.SetRepoIndexed(ctx, "example.com/forked", indexedHash, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetRepoIndexedRevisions(ctx, "example.com/forked", indexedHash, []store.IndexedRevision{
+		{Selector: "HEAD", Branch: "HEAD", Commit: indexedHash},
+		{Selector: "duplicate", Branch: "HEAD", Commit: indexedHash},
+	}, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	assertHidden("malformed persisted revision set")
 	if err := st.SetRepoIndexed(ctx, "example.com/forked", indexedHash, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}

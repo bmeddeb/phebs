@@ -107,6 +107,10 @@ func (failIndexedStore) SetRepoIndexed(context.Context, string, string, time.Tim
 	return errors.New("injected index state failure")
 }
 
+func (failIndexedStore) SetRepoIndexedRevisions(context.Context, string, string, []store.IndexedRevision, time.Time) error {
+	return errors.New("injected index state failure")
+}
+
 func TestIndexStateFailureRemovesUncommittedShard(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()

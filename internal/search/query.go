@@ -10,6 +10,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/sourcegraph/zoekt/query"
@@ -24,19 +25,34 @@ import (
 // (*Searcher).compile via the Visible hook, intersecting everything Compile
 // produces (context: expansions included).
 func Compile(ctx context.Context, st store.Store, contexts map[string][]string, raw string) (query.Q, error) {
+	q, _, err := compileQuery(ctx, st, contexts, raw)
+	return q, err
+}
+
+// compileQuery additionally returns phebs' rev: scope. Revision resolution is
+// intentionally left to Searcher.compile, after its per-principal visibility
+// predicate has run.
+func compileQuery(ctx context.Context, st store.Store, contexts map[string][]string, raw string) (query.Q, string, error) {
+	revisions, rest, err := extractRevisions(raw)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(revisions) > 1 {
+		return nil, "", fmt.Errorf("parse query: exactly one rev: scope is allowed")
+	}
 	// context: is phebs syntax, not zoekt's — extract it string-level
 	// before query.Parse ever sees it.
-	ctxNames, rest, err := extractContexts(raw)
+	ctxNames, rest, err := extractContexts(rest)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	if len(ctxNames) > 0 && strings.TrimSpace(rest) == "" {
-		return nil, fmt.Errorf("parse query: context: needs search terms alongside it")
+	if (len(ctxNames) > 0 || len(revisions) > 0) && strings.TrimSpace(rest) == "" {
+		return nil, "", fmt.Errorf("parse query: context:/rev: needs search terms alongside it")
 	}
 
 	q, err := query.Parse(rest)
 	if err != nil {
-		return nil, fmt.Errorf("parse query: %w", err)
+		return nil, "", fmt.Errorf("parse query: %w", err)
 	}
 
 	// Rewrite each repo-metadata atom (fork:/archived:/public:) IN PLACE with
@@ -68,7 +84,7 @@ func Compile(ctx context.Context, st store.Store, contexts map[string][]string, 
 		return query.NewRepoSet(names...)
 	})
 	if loadErr != nil {
-		return nil, fmt.Errorf("resolve repo filters: %w", loadErr)
+		return nil, "", fmt.Errorf("resolve repo filters: %w", loadErr)
 	}
 
 	// contexts AND onto the whole query as one RepoSet; multiple context:
@@ -78,13 +94,13 @@ func Compile(ctx context.Context, st store.Store, contexts map[string][]string, 
 		for _, name := range ctxNames {
 			patterns, ok := contexts[name]
 			if !ok {
-				return nil, fmt.Errorf("unknown search context %q", name)
+				return nil, "", fmt.Errorf("unknown search context %q", name)
 			}
 			if !loaded {
 				repos, loadErr = st.ListRepos(ctx)
 				loaded = true
 				if loadErr != nil {
-					return nil, fmt.Errorf("resolve search context: %w", loadErr)
+					return nil, "", fmt.Errorf("resolve search context: %w", loadErr)
 				}
 			}
 			for _, r := range repos {
@@ -102,7 +118,35 @@ func Compile(ctx context.Context, st store.Store, contexts map[string][]string, 
 		}
 		q = query.NewAnd(query.NewRepoSet(names...), q)
 	}
-	return query.Simplify(q), nil
+	revision := ""
+	if len(revisions) == 1 {
+		revision = revisions[0]
+	}
+	return query.Simplify(q), revision, nil
+}
+
+var revisionQuerySelectorRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)
+
+func extractRevisions(raw string) (names []string, rest string, err error) {
+	var kept []string
+	for _, tok := range splitQuery(raw) {
+		switch {
+		case strings.HasPrefix(tok, "rev:"):
+			name := tok[len("rev:"):]
+			if !revisionQuerySelectorRE.MatchString(name) || strings.HasSuffix(name, "/") ||
+				strings.Contains(name, "//") || strings.Contains(name, "..") {
+				return nil, "", fmt.Errorf("parse query: rev: takes one bare revision selector, got %q", tok)
+			}
+			names = append(names, name)
+		case strings.HasPrefix(tok, "-rev:"):
+			return nil, "", fmt.Errorf("parse query: -rev: is not supported (revisions are scopes, not predicates)")
+		case strings.HasPrefix(strings.TrimLeft(tok, "("), "rev:"):
+			return nil, "", fmt.Errorf("parse query: rev: cannot be grouped in parentheses, got %q", tok)
+		default:
+			kept = append(kept, tok)
+		}
+	}
+	return names, strings.Join(kept, " "), nil
 }
 
 // extractContexts strips top-level `context:<name>` atoms from a raw query,

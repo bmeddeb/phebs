@@ -380,7 +380,7 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 			continue
 		}
 		repoVersions, hasShard := versions[repo.Name]
-		mismatch := repo.IndexedCommitHash != "" && complete && indexStateMismatch(repo.IndexedCommitHash, repoVersions, hasShard)
+		mismatch := repo.IndexedCommitHash != "" && complete && indexStateMismatch(repo, repoVersions, hasShard)
 		needsIndex := repo.IndexedCommitHash == "" || mismatch
 		if !needsIndex {
 			continue
@@ -423,7 +423,7 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 				continue
 			}
 			freshSet, freshHasShard := freshVersions[repo.Name]
-			if !freshComplete || !indexStateMismatch(fresh.IndexedCommitHash, freshSet, freshHasShard) {
+			if !freshComplete || !indexStateMismatch(*fresh, freshSet, freshHasShard) {
 				unlock()
 				continue
 			}
@@ -455,7 +455,7 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 	return errors.Join(errs...)
 }
 
-func indexedVersions(ctx context.Context, dataDir string) (map[string]map[string]bool, bool, error) {
+func indexedVersions(ctx context.Context, dataDir string) (map[string]map[string]string, bool, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, false, err
 	}
@@ -463,7 +463,7 @@ func indexedVersions(ctx context.Context, dataDir string) (map[string]map[string
 	if err != nil {
 		return nil, false, err
 	}
-	versions := map[string]map[string]bool{}
+	versions := map[string]map[string]string{}
 	complete := true
 	for _, shard := range paths {
 		if err := ctx.Err(); err != nil {
@@ -479,19 +479,54 @@ func indexedVersions(ctx context.Context, dataDir string) (map[string]map[string
 		for _, indexedRepo := range metadata {
 			set := versions[indexedRepo.Name]
 			if set == nil {
-				set = map[string]bool{}
+				set = map[string]string{}
 				versions[indexedRepo.Name] = set
 			}
 			for _, branch := range indexedRepo.Branches {
-				set[branch.Version] = true
+				if prior, exists := set[branch.Name]; exists && prior != branch.Version {
+					set[branch.Name] = "" // conflicting duplicate shards fail closed
+				} else {
+					set[branch.Name] = branch.Version
+				}
 			}
 		}
 	}
 	return versions, complete, nil
 }
 
-func indexStateMismatch(commitHash string, versions map[string]bool, hasShard bool) bool {
-	return !hasShard || len(versions) != 1 || !versions[commitHash]
+func indexStateMismatch(repo store.Repo, versions map[string]string, hasShard bool) bool {
+	if !hasShard {
+		return true
+	}
+	expected := map[string]string{"HEAD": repo.IndexedCommitHash}
+	if len(repo.IndexedRevisions) > 0 {
+		expected = make(map[string]string, len(repo.IndexedRevisions))
+		selectors := make(map[string]bool, len(repo.IndexedRevisions))
+		validDefault := false
+		for _, revision := range repo.IndexedRevisions {
+			if revision.Selector == "" || revision.Branch == "" || revision.Commit == "" ||
+				selectors[revision.Selector] || expected[revision.Branch] != "" {
+				return true
+			}
+			selectors[revision.Selector] = true
+			expected[revision.Branch] = revision.Commit
+			if revision.Selector == "HEAD" {
+				validDefault = revision.Branch == "HEAD" && revision.Commit == repo.IndexedCommitHash
+			}
+		}
+		if !validDefault {
+			return true
+		}
+	}
+	if len(expected) != len(versions) {
+		return true
+	}
+	for branch, commit := range expected {
+		if versions[branch] != commit {
+			return true
+		}
+	}
+	return false
 }
 
 func scrubRepoCredentials(ctx context.Context, st store.Store, repo store.Repo) (bool, error) {

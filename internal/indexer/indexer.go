@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -49,6 +50,9 @@ type Indexer struct {
 	DataDir string // mirrors under DataDir/repos, shards under DataDir/index
 	Bin     string // zoekt-git-index path (FindBinary)
 	Store   store.Store
+	// Revisions is the validated per-repository selector -> full Git ref
+	// allowlist. HEAD is always implicit and is never present in this map.
+	Revisions map[string]map[string]string
 
 	// OnIndexed, when set, runs once the indexed state is known current — the
 	// index→extract chain hook (T12.2), mirroring how sync chains index. It also
@@ -63,8 +67,9 @@ func (ix *Indexer) Handle(ctx context.Context, job store.Job) error {
 	return ix.Index(ctx, store.Repo{Name: job.Target}, job.Force)
 }
 
-// Index runs the child builder over the repo's bare mirror (HEAD-only, the
-// child's default) and records the indexed commit on success.
+// Index runs the child builder over the repo's bare mirror and records the
+// exact revision set on success. Repositories without an allowlist retain the
+// child's HEAD-only default.
 func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error {
 	target := repo.Name
 	dir, err := sync.SafeRepoDir(ix.DataDir, target)
@@ -96,7 +101,11 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if err != nil {
 		return fmt.Errorf("index %s: resolve HEAD: %w", repo.Name, err)
 	}
-	if !force && head != "" && head == repo.IndexedCommitHash {
+	revisions, err := ix.resolveRevisions(ctx, dir, repo.Name, head)
+	if err != nil {
+		return fmt.Errorf("index %s: resolve revisions: %w", repo.Name, err)
+	}
+	if !force && head != "" && head == repo.IndexedCommitHash && revisionsEqual(revisions, repo.IndexedRevisions, repo.IndexedCommitHash) {
 		return ix.afterIndexed(ctx, repo.Name, head) // T3.2: shards current; repair/confirm the chain
 	}
 
@@ -114,6 +123,13 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	// child a real build is wanted. Leaving zoekt's own incremental skip on
 	// silently no-ops a force job when HEAD and the on-disk shard are unchanged.
 	args := []string{"-index", indexDir, "-incremental=false"}
+	if len(revisions) > 1 {
+		branches := make([]string, 0, len(revisions))
+		for _, revision := range revisions {
+			branches = append(branches, revision.Branch)
+		}
+		args = append(args, "-branches="+strings.Join(branches, ","))
+	}
 	start := time.Now()
 	cmd := exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
 	var out bytes.Buffer
@@ -127,7 +143,7 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	}
 	indexDuration.Observe(time.Since(start).Seconds())
 	shardBytes.Set(dirBytes(indexDir))
-	if err := ix.Store.SetRepoIndexed(ctx, repo.Name, head, time.Now().UTC()); err != nil {
+	if err := ix.Store.SetRepoIndexedRevisions(ctx, repo.Name, head, revisions, time.Now().UTC()); err != nil {
 		// The child has already replaced the shard. If the DB commit fails,
 		// remove both sides of the claimed state so search cannot serve revision
 		// B while MCP defaults to the previously recorded revision A.
@@ -140,6 +156,57 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		)
 	}
 	return ix.afterIndexed(ctx, repo.Name, head)
+}
+
+func (ix *Indexer) resolveRevisions(ctx context.Context, dir, repoName, head string) ([]store.IndexedRevision, error) {
+	resolved := []store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: head}}
+	configured := ix.Revisions[repoName]
+	selectors := make([]string, 0, len(configured))
+	for selector := range configured {
+		selectors = append(selectors, selector)
+	}
+	sort.Strings(selectors)
+	for _, selector := range selectors {
+		ref := configured[selector]
+		commit, err := sync.ResolveCommit(ctx, dir, ref)
+		if err != nil {
+			return nil, fmt.Errorf("%s (%s): %w", selector, ref, err)
+		}
+		branch := ref
+		if strings.HasPrefix(ref, "refs/tags/") {
+			// zoekt's go-git reader otherwise resolves an annotated tag to the
+			// tag object and rejects it as a non-commit. Keep the user-facing
+			// selector stable while storing the exact peeled shard branch name.
+			branch += "^{commit}"
+		}
+		resolved = append(resolved, store.IndexedRevision{Selector: selector, Branch: branch, Commit: commit})
+	}
+	return resolved, nil
+}
+
+// revisionsEqual accepts legacy HEAD-only rows with no indexed_revisions field
+// so an upgrade does not rebuild every shard. Any configured or malformed
+// multi-revision state requires a fresh atomic publication.
+func revisionsEqual(want, got []store.IndexedRevision, legacyHead string) bool {
+	if len(got) == 0 && len(want) == 1 {
+		return want[0] == (store.IndexedRevision{Selector: "HEAD", Branch: "HEAD", Commit: legacyHead})
+	}
+	if len(want) != len(got) {
+		return false
+	}
+	bySelector := make(map[string]store.IndexedRevision, len(got))
+	for _, revision := range got {
+		if revision.Selector == "" || revision.Branch == "" || revision.Commit == "" || bySelector[revision.Selector].Selector != "" {
+			return false
+		}
+		bySelector[revision.Selector] = revision
+	}
+	for _, revision := range want {
+		if bySelector[revision.Selector] != revision {
+			return false
+		}
+	}
+	return true
 }
 
 func (ix *Indexer) afterIndexed(ctx context.Context, repoName, commit string) error {

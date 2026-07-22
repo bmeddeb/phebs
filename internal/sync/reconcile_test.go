@@ -82,6 +82,7 @@ func (s *reconcileStore) EnqueuePending(_ context.Context, kind store.JobKind, t
 func (s *reconcileStore) ClearRepoIndexState(context.Context, string) error {
 	s.cleared++
 	s.repo.IndexedCommitHash = ""
+	s.repo.IndexedRevisions = nil
 	s.repo.IndexedAt = nil
 	return nil
 }
@@ -316,6 +317,35 @@ func TestReconcileClearsCommittedRevisionWithoutShard(t *testing.T) {
 	}
 	if st.repo.IndexedCommitHash != "" {
 		t.Fatalf("indexed hash = %q, want fail-closed empty state", st.repo.IndexedCommitHash)
+	}
+}
+
+func TestIndexStateMismatchMultipleRevisions(t *testing.T) {
+	repo := store.Repo{
+		IndexedCommitHash: "head-commit",
+		IndexedRevisions: []store.IndexedRevision{
+			{Selector: "HEAD", Branch: "HEAD", Commit: "head-commit"},
+			{Selector: "release", Branch: "refs/heads/release", Commit: "release-commit"},
+		},
+	}
+	tests := []struct {
+		name     string
+		versions map[string]string
+		hasShard bool
+		want     bool
+	}{
+		{"exact", map[string]string{"HEAD": "head-commit", "refs/heads/release": "release-commit"}, true, false},
+		{"missing shard", nil, false, true},
+		{"missing branch", map[string]string{"HEAD": "head-commit"}, true, true},
+		{"extra branch", map[string]string{"HEAD": "head-commit", "refs/heads/release": "release-commit", "refs/tags/v1": "tag"}, true, true},
+		{"moved branch", map[string]string{"HEAD": "head-commit", "refs/heads/release": "new"}, true, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := indexStateMismatch(repo, tt.versions, tt.hasShard); got != tt.want {
+				t.Errorf("indexStateMismatch = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 

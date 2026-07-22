@@ -41,23 +41,33 @@ const (
 
 // Repo mirrors the upstream Repo model's P1 fields (PORT_MAP §5).
 type Repo struct {
-	Name              string         `json:"name"` // unique, e.g. "github.com/foo/bar"
-	DisplayName       string         `json:"display_name,omitempty"`
-	CloneURL          string         `json:"clone_url"`
-	WebURL            string         `json:"web_url,omitempty"`
-	DefaultBranch     string         `json:"default_branch,omitempty"`
-	IsFork            bool           `json:"is_fork"`
-	IsArchived        bool           `json:"is_archived"`
-	IsPublic          bool           `json:"is_public"`
-	Metadata          map[string]any `json:"metadata,omitempty"` // schemaless until T2.2 decides typing
-	IndexedAt         *time.Time     `json:"indexed_at,omitempty"`
-	IndexedCommitHash string         `json:"indexed_commit_hash,omitempty"`
-	LatestJobStatus   string         `json:"latest_indexing_job_status,omitempty"`
-	PushedAt          *time.Time     `json:"pushed_at,omitempty"`
-	ExternalID        string         `json:"external_id,omitempty"`
-	ExternalHostType  string         `json:"external_code_host_type,omitempty"`
-	ExternalHostURL   string         `json:"external_code_host_url,omitempty"`
-	Deleting          bool           `json:"deleting,omitempty"`
+	Name              string            `json:"name"` // unique, e.g. "github.com/foo/bar"
+	DisplayName       string            `json:"display_name,omitempty"`
+	CloneURL          string            `json:"clone_url"`
+	WebURL            string            `json:"web_url,omitempty"`
+	DefaultBranch     string            `json:"default_branch,omitempty"`
+	IsFork            bool              `json:"is_fork"`
+	IsArchived        bool              `json:"is_archived"`
+	IsPublic          bool              `json:"is_public"`
+	Metadata          map[string]any    `json:"metadata,omitempty"` // schemaless until T2.2 decides typing
+	IndexedAt         *time.Time        `json:"indexed_at,omitempty"`
+	IndexedCommitHash string            `json:"indexed_commit_hash,omitempty"`
+	IndexedRevisions  []IndexedRevision `json:"indexed_revisions,omitempty"`
+	LatestJobStatus   string            `json:"latest_indexing_job_status,omitempty"`
+	PushedAt          *time.Time        `json:"pushed_at,omitempty"`
+	ExternalID        string            `json:"external_id,omitempty"`
+	ExternalHostType  string            `json:"external_code_host_type,omitempty"`
+	ExternalHostURL   string            `json:"external_code_host_url,omitempty"`
+	Deleting          bool              `json:"deleting,omitempty"`
+}
+
+// IndexedRevision is one atomically published zoekt branch. Selector is the
+// user-facing rev: value, Branch is the exact name stored in shard metadata,
+// and Commit is the immutable version search results must match.
+type IndexedRevision struct {
+	Selector string `json:"selector"`
+	Branch   string `json:"branch"`
+	Commit   string `json:"commit"`
 }
 
 // Job is one row in a job table. Target is the connection name for sync jobs
@@ -433,6 +443,7 @@ type Store interface {
 	// sync-owned fields of the row. ClearRepoIndexState remains available for
 	// repair tooling; normal forced rebuilds travel on Job.Force.
 	SetRepoIndexed(ctx context.Context, name, commitHash string, at time.Time) error
+	SetRepoIndexedRevisions(ctx context.Context, name, defaultCommit string, revisions []IndexedRevision, at time.Time) error
 	ClearRepoIndexState(ctx context.Context, name string) error
 
 	// SetRepoConnections replaces conn's membership set; PruneConnections

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -96,6 +97,27 @@ func TestRepoCRUD(t *testing.T) {
 	if all[1].IndexedCommitHash != "abc123" || all[1].IndexedAt == nil ||
 		all[1].LatestJobStatus != "done" || !all[1].Deleting {
 		t.Errorf("sync upsert erased index/deletion state: %+v", all[1])
+	}
+	if want := []store.IndexedRevision{{Selector: "HEAD", Branch: "HEAD", Commit: "abc123"}}; !reflect.DeepEqual(all[1].IndexedRevisions, want) {
+		t.Errorf("indexed revisions = %+v, want %+v", all[1].IndexedRevisions, want)
+	}
+	revisions := []store.IndexedRevision{
+		{Selector: "HEAD", Branch: "HEAD", Commit: "abc123"},
+		{Selector: "release", Branch: "refs/heads/release", Commit: "def456"},
+	}
+	if err := s.SetRepoIndexedRevisions(ctx, repos[0].Name, "abc123", revisions, now); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.GetRepo(ctx, repos[0].Name)
+	if err != nil || !reflect.DeepEqual(got.IndexedRevisions, revisions) {
+		t.Fatalf("multi-revision state = %+v, %v; want %+v", got, err, revisions)
+	}
+	if err := s.ClearRepoIndexState(ctx, repos[0].Name); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.GetRepo(ctx, repos[0].Name)
+	if err != nil || got.IndexedCommitHash != "" || len(got.IndexedRevisions) != 0 || got.IndexedAt != nil {
+		t.Fatalf("cleared index state = %+v, %v", got, err)
 	}
 
 	if err := s.DeleteRepo(ctx, "example.com/baz"); err != nil {

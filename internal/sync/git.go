@@ -263,3 +263,10 @@ func DefaultBranch(ctx context.Context, dir string) (string, error) {
 func Head(ctx context.Context, dir string) (string, error) {
 	return runGit(ctx, dir, "rev-parse", "HEAD")
 }
+
+// ResolveCommit peels an admitted branch/tag ref to the immutable commit that
+// zoekt will record for it. The `^{commit}` suffix rejects refs that do not
+// ultimately name a commit.
+func ResolveCommit(ctx context.Context, dir, ref string) (string, error) {
+	return runGit(ctx, dir, "rev-parse", ref+"^{commit}")
+}

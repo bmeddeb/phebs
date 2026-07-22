@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	stdsync "sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,38 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
 )
+
+type watchQueueStore struct {
+	store.Store
+	mu      stdsync.Mutex
+	pending bool
+}
+
+func (s *watchQueueStore) EnqueuePending(_ context.Context, kind store.JobKind, target string, force bool) (*store.Job, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.pending = true
+	return &store.Job{Kind: kind, Target: target, Force: force, Status: store.StatusPending}, nil
+}
+
+func (s *watchQueueStore) ListJobs(_ context.Context, kind store.JobKind, status store.JobStatus) ([]store.Job, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.pending || status != store.StatusPending {
+		return nil, nil
+	}
+	return []store.Job{{Kind: kind, Target: "w", Status: store.StatusPending}}, nil
+}
+
+func (s *watchQueueStore) CancelPendingJobs(context.Context, store.JobKind, string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.pending {
+		return 0, nil
+	}
+	s.pending = false
+	return 1, nil
+}
 
 func TestRepoNamePlainPath(t *testing.T) {
 	tests := []struct {
@@ -150,6 +183,61 @@ func TestWatcherEnqueuesOnHeadMove(t *testing.T) {
 	time.Sleep(300 * time.Millisecond) // more ticks; dedupe must hold
 	if n := pendingCount(); n != 1 {
 		t.Errorf("dedupe failed: pending = %d, want 1", n)
+	}
+}
+
+func TestWatcherEnqueuesWhenAllowlistedRefMovesWithoutHEAD(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "a.txt"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "one")
+	gitc(t, origin, "branch", "release")
+	repoName, err := sync.RepoName(origin)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	st := &watchQueueStore{}
+	conn := config.Connection{Name: "w", Type: "git", URL: origin, Watch: true}
+	w := &sync.Watcher{
+		Store: st, Conns: []config.Connection{conn}, Interval: 30 * time.Millisecond,
+		Revisions: config.RevisionAllowlist{repoName: {"release": "refs/heads/release"}},
+	}
+	go w.Run(ctx)
+	pendingCount := func() int {
+		jobs, err := st.ListJobs(ctx, store.JobSync, store.StatusPending)
+		if err != nil {
+			return -1
+		}
+		return len(jobs)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) && pendingCount() == 0 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if n := pendingCount(); n != 1 {
+		t.Fatalf("initial watcher baseline pending = %d, want 1", n)
+	}
+	if _, err := st.CancelPendingJobs(ctx, store.JobSync, conn.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create and install a commit directly on release. The checked-out HEAD
+	// remains main throughout, so only the allowlisted-ref fingerprint moves.
+	tree := gitc(t, origin, "rev-parse", "refs/heads/release^{tree}")
+	commit := gitc(t, origin, "commit-tree", tree, "-p", "refs/heads/release", "-m", "move release")
+	gitc(t, origin, "update-ref", "refs/heads/release", commit)
+	deadline = time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) && pendingCount() == 0 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if n := pendingCount(); n != 1 {
+		t.Fatalf("allowlisted ref move pending = %d, want 1", n)
 	}
 }
 
