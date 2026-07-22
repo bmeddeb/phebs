@@ -95,8 +95,9 @@ Every decision lands as a dated ADR bullet in [PLAN.md](./PLAN.md). Highlights:
 - **zoekt as a library, not a service.** Search runs in-process; the index
   builder is a child compiled from the same go.mod SHA, so reader/writer
   shard skew is structurally impossible.
-- **HEAD-only branch indexing.** The default branch — or, for watched local
-  repos, the branch you have checked out.
+- **HEAD by default, bounded revisions when requested.** HEAD remains the
+  authoritative default; an optional per-repository allowlist adds up to seven
+  branch/tag revisions selected explicitly with `rev:`.
 - **Jittered polling, not LIVE SELECT.** Queue claims poll with jitter; an
   optimistic conditional UPDATE won the claim-semantics spike (zero
   double-claims under concurrency, cheapest lost-race cost).
@@ -106,14 +107,17 @@ Every decision lands as a dated ADR bullet in [PLAN.md](./PLAN.md). Highlights:
 
 ## Status
 
-**P1 complete, Waves 0–3 shipped** — sync (GitHub incl. App auth, GitLab,
-Gitea, any git URL, local), job queue with crash recovery, incremental
-indexing, HMAC push webhooks + periodic re-sync, search API (JSON + SSE)
-with named search contexts, DB-backed login/API keys and OIDC, committed SCIP
-navigation, Git blame/history/diffs, a ten-tool MCP server for agents,
-revision-pinned file serving, fenced queue leases, startup artifact
-reconciliation, web UI with tests, watch mode, and Prometheus metrics. See
-[BACKLOG.md](./docs/BACKLOG.md) for what shipped and Wave 4 enterprise scope.
+**Single-node product complete through Epic 15** — sync (GitHub incl. App auth,
+GitLab, Gitea, any git URL, local), fenced jobs with crash recovery, bounded
+multi-revision indexing, JSON/SSE search, contexts, authentication/OIDC,
+permission-aware API and stateless MCP, audit/analytics, committed SCIP, Git
+history, live backup/restore, and the web UI are shipped. The default-dark
+contract-intelligence annex adds exact consumer/field citations, coverage
+certificates, immutable proof bundles, pinned-Buf compatibility, MCP tools, and
+a read-only impact report. Its validation status remains explicitly bounded:
+GATE2-V2 is `NOT_ESTABLISHED`, and Epic 16 is blocked pending an established
+validation plus a pilot-continuation decision. See
+[BACKLOG.md](./docs/BACKLOG.md) for the ticket record.
 
 ## Lineage & acknowledgements
 

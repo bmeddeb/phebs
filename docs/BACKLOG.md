@@ -1,8 +1,9 @@
-# phebs · P1 backlog
+# phebs · backlog
 
-Epics mirror PORT_MAP.md §10. Tickets are PR-sized and dependency-ordered for a
+Epics 0–10 historically mirrored the removed `PORT_MAP.md`; later epics extend
+the same ticket ledger. Tickets are PR-sized and dependency-ordered for a
 stacked workflow. Acceptance criteria (AC) are the merge bar. Decisions get
-appended to PLAN.md as dated ADR bullets — no new design docs.
+appended to PLAN.md as dated ADR bullets — no new architecture docs.
 
 Conventions: `T<epic>.<n>` · deps listed only where they cross epics or gate.
 
@@ -330,7 +331,7 @@ through the current source helper: its global 10 MiB blob contract conflicts
 with SCIP's independent 64 MiB index and per-source limits. AC: one tested error
 classifier and bounded reader serve all three callers without weakening any cap.
 
-## EPIC 10 — Enterprise surface ✅ 2026-07-11 *(Wave 4 — build-our-own, PORT_MAP §12)* — demoed live via `make dev`: audit trail, analytics dashboard, and admin-vs-non-admin visibility over API + stateless MCP. T10.4 stays gated on real demand per its own ticket text.
+## EPIC 10 — Enterprise surface ✅ 2026-07-11 *(Wave 4 — build-our-own, historical PORT_MAP §12)* — demoed live via `make dev`: audit trail, analytics dashboard, and admin-vs-non-admin visibility over API + stateless MCP. T10.4 was subsequently completed on demand on 2026-07-22.
 
 **T10.1 · Audit log** ✅ 2026-07-11 — *Sourcebot paid/EE — OSS in phebs*
 Append-only `audit_event` table (narrow `AuditStore`), huma middleware
@@ -389,16 +390,16 @@ Extraction/proof semantics remain HEAD-bound by design.
 
 Annex, not pivot: "self-hosted code search in one binary" stays the identity;
 T11.1 is complete by a human-accepted terminal capacity-stop disposition, and
-Epics 12–15 may proceed under the explicit 2026-07-22 governance ADR. That
-sequencing decision does not establish GATE2-V2 or create a numeric accuracy or
+Epics 12–15 are complete under the explicit 2026-07-22 governance disposition.
+Their completion does not establish GATE2-V2 or create a numeric accuracy or
 completion claim. Commodity surfaces (spec-to-spec diffing, runtime topology,
 catalog UX, PR delivery, scorecards) are integrated or deferred, never rebuilt.
 phebs produces immutable, permission-safe proof bundles; workflow layers
 (Workbench) reference bundle IDs and never recompute or weaken phebs's
 conclusions. Public corpora validate mechanics only; an authorized **external**
 design partner is required before broader graph or completion claims — no
-implicit employer-estate exception. Absent a partner by Epic 15 completion, the
-broader platform pivot freezes.
+implicit employer-estate exception. The retained post-Epic-15 platform-pivot
+freeze is in force; Epic 16 remains separately blocked.
 
 ## EPIC 11 — Validation gate *(annex Stage 0)*
 
@@ -750,7 +751,7 @@ an undiscoverable isolated child, and validates the store. The acceptance test
 also deletes all derived state and pins the normal reconcile → sync → index
 startup chain rebuilding the shard without an operator reindex request.
 
-## Deliberate non-goals *(per PORT_MAP §7/§12)*
+## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 
 SCIM provisioning, multi-org RBAC / seats, and a cloned "Ask" chat app —
 phebs stays **MCP-first** (agents bring their own chat) and **single-tenant**.

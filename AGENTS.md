@@ -1,4 +1,4 @@
-# CLAUDE.md — phebs
+# AGENTS.md — phebs
 
 Self-hosted code search in one Go binary. Ground-up, **reference-only** port of
 Sourcebot: zoekt in-process, SurrealDB 3.0, huma OpenAPI, Vite + React +

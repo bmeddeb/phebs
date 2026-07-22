@@ -1,6 +1,6 @@
 # phebs — Port Plan (Sourcebot → Go)
 
-**Shape:** single Go binary · zoekt as a library · embedded SurrealDB · clean-room TypeScript SPA
+**Shape:** single Go binary · zoekt as a library · supervised SurrealDB · clean-room TypeScript SPA
 
 **Version:** v2.3 (2026-07-09).
 **Changelog:** v2.2 (2026-07-07) resolved huma/branch-scope/queue-wakeup at Uber-scale
@@ -115,7 +115,8 @@ fork-written shards stops mattering — reindex at cutover.
 
 N homogeneous replicas of the same binary. Each owns a rendezvous-hashed repo
 subset: indexes it, serves it from local NVMe shards. gRPC scatter-gather across
-replicas for queries; SurrealDB cut over embedded → server mode (export/import);
+replicas for queries; SurrealDB cut over from the supervised local child to an
+external server deployment (export/import);
 owner-scoped job claims; admission control with **separate interactive and agent
 traffic budgets**. Standalone remains the dev/small default; fleet lands last so
 single-node correctness is proved first.
@@ -125,7 +126,8 @@ single-node correctness is proved first.
 - **P0 — Spike. DONE (2026-07-07).** ~200-line Go binary serving `/search` over an
   existing zoekt shard directory via library import. Proved the zoekt-as-library
   thesis.
-- **P1 — Single-node core** *(reconstructed)*. Config, store on embedded Surreal,
+- **P1 — Single-node core** *(reconstructed)*. Config, store on a supervised
+  local SurrealDB child,
   sync (github + generic git → bare repos), index pipeline (same-SHA child
   builder, HEAD-only), search API on huma. ≈ BACKLOG Epics 0–4.
 - **P2 — Queue correctness + liveness** *(reconstructed)*. Claim-transaction
@@ -134,32 +136,36 @@ single-node correctness is proved first.
 - **P3 — Clean-room SPA + SSO. DONE (2026-07-11).** End-to-end React search
   UI plus local/session/API-key auth and `coreos/go-oidc`; zero FSL-derived
   frontend code. ≈ BACKLOG Epics 5 + 9.1–9.2.
-- **P4 — Product layer, MCP-first. CORE DONE (2026-07-11).** Ten-tool MCP
-  server plus committed SCIP definition/reference/hover and Git history;
-  verified core agent flow from Claude Code. Ask-style chat remains optional,
+- **P4 — Product layer, MCP-first. CORE DONE (2026-07-11).** Ten-tool core MCP
+  server plus default-dark proof tools, committed SCIP
+  definition/reference/hover, and Git history; verified core agent flow from a
+  headless client. Ask-style chat remains optional,
   with agents expected to bring their own interface. ≈ BACKLOG 8 + 9.3–9.4.
-- **P5 — Hardening.** Prometheus metrics; `SURREAL EXPORT` backups of precious
-  tables + rebuild-from-config runbook; graceful shutdown releases leases; image
-  with git + ctags; concurrency soak reusing the probe. Ongoing.
+- **P5 — Hardening.** Ongoing, pull-on-demand. Prometheus metrics, graceful
+  shutdown/lease release, and manifest-verified live backup/restore with
+  automatic derived-state rebuild are complete. Image/tool packaging and
+  concurrency soak remain demand-driven.
 - **P6 — Fleet profile.** Rendezvous placement + membership; owner-scoped claims;
-  gRPC scatter-gather searcher; Surreal embedded → server cutover; admission
-  control + per-client quotas (agent traffic modeled explicitly); **capacity
+  gRPC scatter-gather searcher; supervised local SurrealDB child → external
+  server cutover; admission control + per-client quotas (agent traffic modeled
+  explicitly); **capacity
   spike on the real corpus** (index multiplier, RAM working set, monorepo build
   time → delta-build decision); load test with agent-shaped traffic; rerun Elle
   against TiKV-backed Surreal. *Exit:* replica kill → rehash + reindex without
   operator action; p95 held under load. ~3–5 wk.
-- **P7 — Contract-intelligence annex (adopted 2026-07-12, active).** Evidence-backed
+- **P7 — Contract-intelligence annex. COMPLETE / DEFAULT-DARK (2026-07-22).**
+  Evidence-backed
   contract intelligence as a code-search capability, not a repositioning:
   revision-pinned consumer/field evidence for Go/gRPC contracts,
   coverage-bounded answers, immutable permission-safe proof bundles.
-  ≈ BACKLOG Epics 11–15; T11.1 is complete by human-accepted terminal
-  disposition and Epics 12–15 may proceed, while numeric public-corpus accuracy
-  remains unavailable. Broader system-graph work is conditional on an authorized
-  external design partner. Runs alongside P5 (ongoing); P6 unchanged and still
-  last.
-- **Deferred:** remaining connectors, permission syncing (edges reserved), audit
-  logs, billing, review agent. Re-sequencing options post-P1 live in
-  PORT_MAP §12.
+  ≈ BACKLOG Epics 11–15; the implementation and independent acceptance gate are
+  complete, while GATE2-V2 remains `NOT_ESTABLISHED` and numeric public-corpus
+  accuracy remains unavailable. The broader platform pivot is frozen. Epic 16
+  requires an established validation plus explicit pilot continuation. P6 is
+  unchanged and still last.
+- **Deferred:** remaining connectors, billing, review-agent delivery, and the
+  P6 fleet profile. Historical post-P1 sequencing lives in the removed
+  `docs/PORT_MAP.md` (git history).
 
 ## 3. Risk register
 

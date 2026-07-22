@@ -173,12 +173,13 @@ already exists; the packs give it something worth citing.
   first-seen/last-seen edge table. One real change: retention currently
   sweeps superseded runs, so history needs either per-snapshot pins or
   that ledger table — small, well-understood work.
-- **PR impact packets break a load-bearing posture: phebs is HEAD-only by
-  design.** Base-vs-head analysis requires extraction at non-HEAD
-  revisions — ephemeral corpora and runs that must never pollute the
+- **PR impact packets still cross the evidence boundary.** T10.4 can index and
+  search an allowlisted non-HEAD revision, but extraction, coverage, and proof
+  publication deliberately remain HEAD-bound. Base-vs-head analysis therefore
+  still requires ephemeral corpora and runs that must never pollute the
   published census, plus CI-latency expectations. That is an architecture
-  round (the long-gated multi-branch demand), not a feature; sequencing
-  must budget for it or the first estimate will miss by a quarter.
+  round, not a presentation feature; sequencing must budget for it or the first
+  estimate will miss by a quarter.
 - **Ownership reconciliation is politically loaded — design its voice
   now.** When source evidence disagrees with the catalog, the artifact
   **reports conflicts and never arbitrates**: evidenced-consistent,
