@@ -99,6 +99,12 @@ DEFINE INDEX IF NOT EXISTS extraction_run_retention ON extraction_run
 -- Only a published row carries published_key. Its unique index is installed
 -- after Open migrates any pre-slot rows, alongside the pending-job indexes.
 
+-- One durable, non-evidence row per (repository, domain) records the latest
+-- extraction attempt even after aborted run evidence is swept.
+DEFINE TABLE IF NOT EXISTS extraction_attempt SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS extraction_attempt_repo ON extraction_attempt FIELDS repo;
+DEFINE INDEX IF NOT EXISTS extraction_attempt_run ON extraction_attempt FIELDS run_id UNIQUE;
+
 -- Proof-aware retention: a pinned run (and everything it references) is
 -- immune to sweeps regardless of supersession or age.
 DEFINE TABLE IF NOT EXISTS evidence_pin SCHEMALESS;

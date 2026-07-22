@@ -177,10 +177,15 @@ func TestWorkerFailureAbortsClassified(t *testing.T) {
 	if err := w.Handle(ctx, store.Job{Target: repo}); err != nil {
 		t.Fatalf("seed publish: %v", err)
 	}
+	visible := []store.Repo{{Name: repo, IndexedCommitHash: commitA}}
+	baseline, err := extract.BuildCoverageCertificate(ctx, s, visible, []string{"proto-contract"})
+	if err != nil {
+		t.Fatalf("baseline certificate: %v", err)
+	}
 
 	bad := &fakeExtractor{domain: "proto-contract", version: "2", fail: true}
 	w.Extractors = []extract.Extractor{bad}
-	err := w.Handle(ctx, store.Job{Target: repo})
+	err = w.Handle(ctx, store.Job{Target: repo, Force: true})
 	if err == nil {
 		t.Fatal("failing extractor reported success")
 	}
@@ -196,9 +201,23 @@ func TestWorkerFailureAbortsClassified(t *testing.T) {
 	if err != nil || latest.Extractor != "1" {
 		t.Fatalf("latest = %+v, %v", latest, err)
 	}
+	failed, err := extract.BuildCoverageCertificate(ctx, s, visible, []string{"proto-contract"})
+	if err != nil {
+		t.Fatalf("failed certificate: %v", err)
+	}
+	certRun := failed.Repositories[0].Runs[0]
+	if failed.Digest == baseline.Digest || certRun.RunID != latest.ID || !certRun.Fresh ||
+		certRun.LatestAttempt == nil || certRun.LatestAttempt.Status != "aborted" ||
+		certRun.LatestAttempt.Extractor != "2" {
+		t.Fatalf("failed replacement certificate = %+v", certRun)
+	}
 	// The aborted run is sweepable immediately.
 	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), time.Hour); err != nil || n != 1 {
 		t.Fatalf("sweep aborted = %d, %v", n, err)
+	}
+	afterSweep, err := extract.BuildCoverageCertificate(ctx, s, visible, []string{"proto-contract"})
+	if err != nil || afterSweep.Digest != failed.Digest {
+		t.Fatalf("sweep changed durable failure certificate = %+v, %v", afterSweep, err)
 	}
 }
 

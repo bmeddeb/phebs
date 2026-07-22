@@ -276,6 +276,20 @@ type ExtractionRun struct {
 	Coverage    CoverageManifest `json:"coverage"`
 }
 
+// ExtractionAttempt is the durable latest-attempt marker for one repository
+// and domain. Unlike an aborted ExtractionRun, it is not evidence and is not
+// removed by proof-retention sweeps. It lets coverage reporting distinguish a
+// healthy last publication from a newer staged or aborted replacement.
+type ExtractionAttempt struct {
+	RunID     string    `json:"run_id"`
+	Repo      string    `json:"repo"`
+	Commit    string    `json:"commit"`
+	Domain    string    `json:"domain"`
+	Extractor string    `json:"extractor"`
+	Status    string    `json:"status"` // staged | published | aborted
+	StartedAt time.Time `json:"started_at"`
+}
+
 // AssertionQuery filters published assertions. Repo is mandatory; the other
 // empty fields match anything within that caller-authorized repository.
 type AssertionQuery struct {
@@ -317,6 +331,9 @@ type EvidenceStore interface {
 	// LatestPublishedRun returns ErrNotFound when the (repo, domain) pair has
 	// never published.
 	LatestPublishedRun(ctx context.Context, repo, domain string) (*ExtractionRun, error)
+	// LatestExtractionAttempt returns the durable latest attempt marker. It
+	// survives evidence sweeps so a failed replacement remains reportable.
+	LatestExtractionAttempt(ctx context.Context, repo, domain string) (*ExtractionAttempt, error)
 	// ListAssertions reads assertions of published runs only. Repo is required;
 	// callers must authorize that repository before invoking the method. A
 	// result exceeding Limit fails with ErrResultLimit rather than truncating.

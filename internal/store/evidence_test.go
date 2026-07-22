@@ -591,6 +591,9 @@ func TestEvidenceDeleteRetiresRunsAndPreservesPins(t *testing.T) {
 	if _, err := s.LatestPublishedRun(ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("deleted repo latest = %v", err)
 	}
+	if _, err := s.LatestExtractionAttempt(ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("deleted repo attempt = %v", err)
+	}
 	if got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo}); err != nil || len(got) != 0 {
 		t.Fatalf("deleted repo assertions = %+v, %v", got, err)
 	}
@@ -640,6 +643,72 @@ func TestEvidenceAbortAndSweepAreBounded(t *testing.T) {
 	}
 	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 0 {
 		t.Fatalf("empty bounded sweep = %d, %v", n, err)
+	}
+}
+
+func TestExtractionAttemptSurvivesFailedReplacementSweep(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repo, commit, domain := "github.com/attempt/repo", "aaaaaaaa", "proto-contract"
+	seedEvidenceRepo(t, s, repo, commit)
+
+	published, err := s.BeginExtractionRun(ctx, repo, commit, domain, "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if attempt, err := s.LatestExtractionAttempt(ctx, repo, domain); err != nil ||
+		attempt.RunID != published.ID || attempt.Status != "staged" {
+		t.Fatalf("staged attempt = %+v, %v", attempt, err)
+	}
+	if err := s.PublishExtractionRun(ctx, published.ID, testCoverage(0, 0)); err != nil {
+		t.Fatal(err)
+	}
+	if attempt, err := s.LatestExtractionAttempt(ctx, repo, domain); err != nil ||
+		attempt.RunID != published.ID || attempt.Status != "published" {
+		t.Fatalf("published attempt = %+v, %v", attempt, err)
+	}
+
+	failed, err := s.BeginExtractionRun(ctx, repo, commit, domain, "2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AbortExtractionRun(ctx, failed.ID); err != nil {
+		t.Fatal(err)
+	}
+	latest, err := s.LatestPublishedRun(ctx, repo, domain)
+	if err != nil || latest.ID != published.ID {
+		t.Fatalf("failed replacement changed publication = %+v, %v", latest, err)
+	}
+	assertFailedAttempt := func(stage string) {
+		t.Helper()
+		attempt, attemptErr := s.LatestExtractionAttempt(ctx, repo, domain)
+		if attemptErr != nil || attempt.RunID != failed.ID || attempt.Commit != commit ||
+			attempt.Extractor != "2" || attempt.Status != "aborted" {
+			t.Fatalf("%s attempt = %+v, %v", stage, attempt, attemptErr)
+		}
+	}
+	assertFailedAttempt("before sweep")
+	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 1 {
+		t.Fatalf("sweep failed replacement = %d, %v", n, err)
+	}
+	assertFailedAttempt("after sweep")
+}
+
+func TestExtractionAttemptMarksSweptStagedRunAborted(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repo, commit, domain := "github.com/attempt/killed", "aaaaaaaa", "proto-contract"
+	seedEvidenceRepo(t, s, repo, commit)
+	run, err := s.BeginExtractionRun(ctx, repo, commit, domain, "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n, err := s.SweepEvidence(ctx, time.Now().UTC().Add(time.Hour), 0); err != nil || n != 1 {
+		t.Fatalf("sweep killed run = %d, %v", n, err)
+	}
+	attempt, err := s.LatestExtractionAttempt(ctx, repo, domain)
+	if err != nil || attempt.RunID != run.ID || attempt.Status != "aborted" {
+		t.Fatalf("swept attempt = %+v, %v", attempt, err)
 	}
 }
 
@@ -705,6 +774,10 @@ func TestEvidenceSchemaReopenPreservesCurrentPublication(t *testing.T) {
 	latest, err := reopened.LatestPublishedRun(ctx, repo, "proto-contract")
 	if err != nil || latest.ID != run.ID {
 		t.Fatalf("publication changed across reopen: %+v, %v", latest, err)
+	}
+	attempt, err := reopened.LatestExtractionAttempt(ctx, repo, "proto-contract")
+	if err != nil || attempt.RunID != run.ID || attempt.Status != "published" {
+		t.Fatalf("attempt changed across reopen: %+v, %v", attempt, err)
 	}
 	resolved, err := reopened.ResolveEvidence(ctx, repo, run.ID, a[0].ID)
 	if err != nil || resolved.Atom.BlobDigest != a[0].BlobDigest || len(resolved.Occurrences) != 1 {

@@ -12,14 +12,15 @@ import (
 )
 
 type certificateRunSource struct {
-	runs    map[string]store.ExtractionRun
-	queried []string
+	runs     map[string]store.ExtractionRun
+	attempts map[string]store.ExtractionAttempt
+	queried  []string
 }
 
 func certKey(repo, domain string) string { return repo + "\x00" + domain }
 
 func (f *certificateRunSource) LatestPublishedRun(_ context.Context, repo, domain string) (*store.ExtractionRun, error) {
-	f.queried = append(f.queried, certKey(repo, domain))
+	f.queried = append(f.queried, "run\x00"+certKey(repo, domain))
 	run, ok := f.runs[certKey(repo, domain)]
 	if !ok {
 		return nil, store.ErrNotFound
@@ -28,12 +29,28 @@ func (f *certificateRunSource) LatestPublishedRun(_ context.Context, repo, domai
 	return &copied, nil
 }
 
+func (f *certificateRunSource) LatestExtractionAttempt(_ context.Context, repo, domain string) (*store.ExtractionAttempt, error) {
+	f.queried = append(f.queried, "attempt\x00"+certKey(repo, domain))
+	attempt, ok := f.attempts[certKey(repo, domain)]
+	if !ok {
+		return nil, store.ErrNotFound
+	}
+	copied := attempt
+	return &copied, nil
+}
+
 func certRun(repo, domain, commit string, coverage store.CoverageManifest) store.ExtractionRun {
-	published := time.Date(2026, 7, 22, 12, 0, 0, 0, time.UTC)
 	return store.ExtractionRun{
 		ID: "run-" + repo + "-" + domain, Repo: repo, Commit: commit,
 		Domain: domain, Extractor: domain + "@1.0.0", Status: "published",
-		PublishedAt: &published, Coverage: coverage,
+		Coverage: coverage,
+	}
+}
+
+func certAttempt(run store.ExtractionRun, status string) store.ExtractionAttempt {
+	return store.ExtractionAttempt{
+		RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
+		Extractor: run.Extractor, Status: status,
 	}
 }
 
@@ -45,7 +62,8 @@ var (
 func TestCoverageCertificateDeterministicOverVisibleUniverse(t *testing.T) {
 	source := &certificateRunSource{runs: map[string]store.ExtractionRun{
 		certKey("alpha", "proto-contract"): certRun("alpha", "proto-contract", commitA, store.CoverageManifest{
-			Protocols: []string{"protobuf"}, Failures: []string{"bad.proto: parse"},
+			Protocols: []string{"protobuf"}, CorpusFileCount: 9, CandidateFileCount: 4,
+			ReadFileCount: 5, ReadBytes: 1234, SourceScopeDigest: "sha256:scope-alpha",
 			UnresolvedCount: 2, AssertionCount: 5, AtomCount: 7,
 		}),
 		certKey("alpha", "scip-proto-field"): certRun("alpha", "scip-proto-field", commitA, store.CoverageManifest{
@@ -103,81 +121,137 @@ func TestCoverageCertificateDeterministicOverVisibleUniverse(t *testing.T) {
 	}
 	alpha := first.Repositories[0].Runs[0]
 	if alpha.Domain != "proto-contract" || !alpha.Fresh || alpha.UnresolvedCount != 2 ||
-		!reflect.DeepEqual(alpha.Failures, []string{"bad.proto: parse"}) {
+		alpha.RunID == "" || alpha.CorpusFileCount != 9 || alpha.CandidateFileCount != 4 ||
+		alpha.ReadFileCount != 5 || alpha.ReadBytes != 1234 || alpha.SourceScopeDigest != "sha256:scope-alpha" {
 		t.Fatalf("alpha proto-contract run = %+v", alpha)
 	}
 }
 
-// AC (T13.3): the certificate provably changes when one repository's
-// extraction fails. A failed extraction never publishes, so failure surfaces
-// as an absent run, a stale run at the superseded commit, or recorded partial
-// failures — each must move the digest.
-func TestCoverageCertificateChangesWhenExtractionFails(t *testing.T) {
-	visible := []store.Repo{{Name: "alpha", IndexedCommitHash: commitB}}
-	domains := []string{"scip-proto-field"}
-	healthy := map[string]store.ExtractionRun{
-		certKey("alpha", "scip-proto-field"): certRun("alpha", "scip-proto-field", commitB, store.CoverageManifest{
-			Protocols: []string{"scip"}, AssertionCount: 3, AtomCount: 3,
-		}),
+func TestCoverageCertificateExcludesPublicationTime(t *testing.T) {
+	key := certKey("alpha", "proto-contract")
+	run := certRun("alpha", "proto-contract", commitA, store.CoverageManifest{
+		SourceScopeDigest: "sha256:scope",
+	})
+	firstTime := time.Date(2026, 7, 22, 1, 0, 0, 0, time.UTC)
+	secondTime := firstTime.Add(12 * time.Hour)
+	firstRun, secondRun := run, run
+	firstRun.PublishedAt, secondRun.PublishedAt = &firstTime, &secondTime
+	build := func(published store.ExtractionRun) *CoverageCertificate {
+		t.Helper()
+		certificate, err := BuildCoverageCertificate(context.Background(), &certificateRunSource{
+			runs: map[string]store.ExtractionRun{key: published},
+		}, []store.Repo{{Name: "alpha", IndexedCommitHash: commitA}}, []string{"proto-contract"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return certificate
 	}
-	baseline, err := BuildCoverageCertificate(context.Background(), &certificateRunSource{runs: healthy}, visible, domains)
+	first, second := build(firstRun), build(secondRun)
+	if first.Digest != second.Digest || !reflect.DeepEqual(first, second) {
+		t.Fatalf("publication time changed certificate: %s != %s", first.Digest, second.Digest)
+	}
+	data, err := json.Marshal(first)
 	if err != nil {
-		t.Fatalf("baseline: %v", err)
+		t.Fatal(err)
 	}
+	if strings.Contains(string(data), "published_at") {
+		t.Fatalf("certificate contains publication time: %s", data)
+	}
+}
 
+func TestCoverageCertificateBindsExactRunAndSourceScope(t *testing.T) {
+	key := certKey("alpha", "proto-contract")
+	run := certRun("alpha", "proto-contract", commitA, store.CoverageManifest{
+		CorpusFileCount: 8, CandidateFileCount: 3, ReadFileCount: 4, ReadBytes: 512,
+		SourceScopeDigest: "sha256:scope-a", AssertionCount: 2, AtomCount: 2,
+	})
+	build := func(value store.ExtractionRun) string {
+		t.Helper()
+		certificate, err := BuildCoverageCertificate(context.Background(), &certificateRunSource{
+			runs: map[string]store.ExtractionRun{key: value},
+		}, []store.Repo{{Name: "alpha", IndexedCommitHash: commitA}}, []string{"proto-contract"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return certificate.Digest
+	}
+	baseline := build(run)
 	rows := []struct {
-		name  string
-		runs  map[string]store.ExtractionRun
-		check func(t *testing.T, run CertificateRun)
+		name   string
+		mutate func(*store.ExtractionRun)
 	}{
-		{
-			name: "failed run never published",
-			runs: nil,
-			check: func(t *testing.T, run CertificateRun) {
-				if run.Status != "unpublished" {
-					t.Fatalf("status = %q, want unpublished", run.Status)
-				}
-			},
-		},
-		{
-			name: "failed replacement leaves stale run",
-			runs: map[string]store.ExtractionRun{
-				certKey("alpha", "scip-proto-field"): certRun("alpha", "scip-proto-field", commitA, store.CoverageManifest{
-					Protocols: []string{"scip"}, AssertionCount: 3, AtomCount: 3,
-				}),
-			},
-			check: func(t *testing.T, run CertificateRun) {
-				if run.Fresh || run.Commit != commitA {
-					t.Fatalf("run = %+v, want stale at superseded commit", run)
-				}
-			},
-		},
-		{
-			name: "partial failures recorded in published coverage",
-			runs: map[string]store.ExtractionRun{
-				certKey("alpha", "scip-proto-field"): certRun("alpha", "scip-proto-field", commitB, store.CoverageManifest{
-					Protocols: []string{"scip"}, Failures: []string{"consumer/use.go: not UTF-8"},
-					AssertionCount: 3, AtomCount: 3,
-				}),
-			},
-			check: func(t *testing.T, run CertificateRun) {
-				if len(run.Failures) != 1 {
-					t.Fatalf("failures = %v, want the recorded failure", run.Failures)
-				}
-			},
-		},
+		{name: "run id", mutate: func(r *store.ExtractionRun) { r.ID += "-replacement" }},
+		{name: "scope digest", mutate: func(r *store.ExtractionRun) { r.Coverage.SourceScopeDigest = "sha256:scope-b" }},
+		{name: "corpus files", mutate: func(r *store.ExtractionRun) { r.Coverage.CorpusFileCount++ }},
+		{name: "candidate files", mutate: func(r *store.ExtractionRun) { r.Coverage.CandidateFileCount++ }},
+		{name: "read files", mutate: func(r *store.ExtractionRun) { r.Coverage.ReadFileCount++ }},
+		{name: "read bytes", mutate: func(r *store.ExtractionRun) { r.Coverage.ReadBytes++ }},
 	}
 	for _, row := range rows {
 		t.Run(row.name, func(t *testing.T) {
-			failed, err := BuildCoverageCertificate(context.Background(), &certificateRunSource{runs: row.runs}, visible, domains)
-			if err != nil {
-				t.Fatalf("BuildCoverageCertificate: %v", err)
+			changed := run
+			row.mutate(&changed)
+			if got := build(changed); got == baseline {
+				t.Fatalf("%s did not change certificate digest", row.name)
 			}
-			if failed.Digest == baseline.Digest {
-				t.Fatal("failure did not change the certificate digest")
-			}
-			row.check(t, failed.Repositories[0].Runs[0])
 		})
+	}
+}
+
+// AC (T13.3): the certificate provably changes when one repository's
+// extraction fails. This includes a forced same-commit replacement: the old
+// publication remains fresh, but the durable latest-attempt marker moves from
+// the published run to the aborted replacement.
+func TestCoverageCertificateChangesWhenExtractionFails(t *testing.T) {
+	visible := []store.Repo{{Name: "alpha", IndexedCommitHash: commitB}}
+	domains := []string{"scip-proto-field"}
+	key := certKey("alpha", "scip-proto-field")
+	published := certRun("alpha", "scip-proto-field", commitB, store.CoverageManifest{
+		Protocols: []string{"scip"}, AssertionCount: 3, AtomCount: 3,
+		CorpusFileCount: 4, CandidateFileCount: 2, ReadFileCount: 2, ReadBytes: 99,
+		SourceScopeDigest: "sha256:scope",
+	})
+	healthy := &certificateRunSource{
+		runs:     map[string]store.ExtractionRun{key: published},
+		attempts: map[string]store.ExtractionAttempt{key: certAttempt(published, "published")},
+	}
+	baseline, err := BuildCoverageCertificate(context.Background(), healthy, visible, domains)
+	if err != nil {
+		t.Fatalf("baseline: %v", err)
+	}
+	failedAttempt := certAttempt(published, "aborted")
+	failedAttempt.RunID = "run-alpha-scip-proto-field-replacement"
+	failedAttempt.Extractor = "scip-proto-field@2.0.0"
+	failed, err := BuildCoverageCertificate(context.Background(), &certificateRunSource{
+		runs:     map[string]store.ExtractionRun{key: published},
+		attempts: map[string]store.ExtractionAttempt{key: failedAttempt},
+	}, visible, domains)
+	if err != nil {
+		t.Fatalf("failed replacement: %v", err)
+	}
+	if failed.Digest == baseline.Digest {
+		t.Fatal("same-commit failed replacement did not change the certificate digest")
+	}
+	run := failed.Repositories[0].Runs[0]
+	if !run.Fresh || run.RunID != published.ID || run.LatestAttempt == nil ||
+		run.LatestAttempt.Status != "aborted" || run.LatestAttempt.RunID != failedAttempt.RunID ||
+		run.LatestAttempt.Failure == "" {
+		t.Fatalf("failed replacement certificate = %+v", run)
+	}
+}
+
+func TestCoverageCertificateSCIPAvailabilityRequiresCurrentRevision(t *testing.T) {
+	source := &certificateRunSource{runs: map[string]store.ExtractionRun{
+		certKey("alpha", "scip-proto-field"): certRun("alpha", "scip-proto-field", commitA,
+			store.CoverageManifest{Protocols: []string{"scip"}}),
+	}}
+	certificate, err := BuildCoverageCertificate(context.Background(), source,
+		[]store.Repo{{Name: "alpha", IndexedCommitHash: commitB}}, []string{"scip-proto-field"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := certificate.Repositories[0].SCIPIndex; got != "unknown" {
+		t.Fatalf("SCIP availability from stale run = %q, want unknown", got)
 	}
 }
 
@@ -191,8 +265,9 @@ func TestCoverageCertificateNoInvisibleRepoLeakage(t *testing.T) {
 	alphaRun := certRun("alpha", "scip-proto-field", commitA, store.CoverageManifest{Protocols: []string{"scip"}})
 
 	rows := []struct {
-		name string
-		runs map[string]store.ExtractionRun
+		name     string
+		runs     map[string]store.ExtractionRun
+		attempts map[string]store.ExtractionAttempt
 	}{
 		{name: "hidden repo absent", runs: map[string]store.ExtractionRun{
 			certKey("alpha", "scip-proto-field"): alphaRun,
@@ -203,17 +278,19 @@ func TestCoverageCertificateNoInvisibleRepoLeakage(t *testing.T) {
 				Protocols: []string{"scip"}, AssertionCount: 999_999, AtomCount: 999_999,
 			}),
 		}},
-		{name: "hidden repo failing with distinctive failures", runs: map[string]store.ExtractionRun{
+		{name: "hidden repo failing with distinctive failure", runs: map[string]store.ExtractionRun{
 			certKey("alpha", "scip-proto-field"): alphaRun,
-			certKey("omega-secret", "proto-contract"): certRun("omega-secret", "proto-contract", commitB, store.CoverageManifest{
-				Failures: []string{"omega-secret/topsecret.proto: parse"}, UnresolvedCount: 12345,
-			}),
+		}, attempts: map[string]store.ExtractionAttempt{
+			certKey("omega-secret", "proto-contract"): {
+				RunID: "omega-failure", Repo: "omega-secret", Commit: commitB,
+				Domain: "proto-contract", Extractor: "secret@1", Status: "aborted",
+			},
 		}},
 	}
 	var serialized []string
 	for _, row := range rows {
 		t.Run(row.name, func(t *testing.T) {
-			source := &certificateRunSource{runs: row.runs}
+			source := &certificateRunSource{runs: row.runs, attempts: row.attempts}
 			certificate, err := BuildCoverageCertificate(context.Background(), source, visible, domains)
 			if err != nil {
 				t.Fatalf("BuildCoverageCertificate: %v", err)
@@ -229,7 +306,7 @@ func TestCoverageCertificateNoInvisibleRepoLeakage(t *testing.T) {
 				t.Fatalf("repository count = %d, want the visible universe only", certificate.RepositoryCount)
 			}
 			for _, key := range source.queried {
-				if !strings.HasPrefix(key, "alpha\x00") {
+				if !strings.Contains(key, "\x00alpha\x00") {
 					t.Fatalf("builder queried an invisible repository: %q", key)
 				}
 			}
@@ -245,14 +322,21 @@ func TestCoverageCertificateNoInvisibleRepoLeakage(t *testing.T) {
 
 func TestCoverageCertificateRejectsInconsistentInput(t *testing.T) {
 	run := certRun("alpha", "d", commitA, store.CoverageManifest{})
+	manyDomains := make([]string, 65)
+	for i := range manyDomains {
+		manyDomains[i] = "d" + strings.Repeat("x", i)
+	}
 	rows := []struct {
-		name    string
-		visible []store.Repo
-		domains []string
-		runs    map[string]store.ExtractionRun
+		name     string
+		visible  []store.Repo
+		domains  []string
+		runs     map[string]store.ExtractionRun
+		attempts map[string]store.ExtractionAttempt
 	}{
 		{name: "no domains", visible: []store.Repo{{Name: "alpha"}}, domains: nil},
 		{name: "empty domain", visible: []store.Repo{{Name: "alpha"}}, domains: []string{""}},
+		{name: "invalid domain", visible: []store.Repo{{Name: "alpha"}}, domains: []string{"bad/domain"}},
+		{name: "too many domains", visible: []store.Repo{{Name: "alpha"}}, domains: manyDomains},
 		{name: "duplicate domain", visible: []store.Repo{{Name: "alpha"}}, domains: []string{"d", "d"}},
 		{name: "empty repo name", visible: []store.Repo{{Name: ""}}, domains: []string{"d"}},
 		{name: "duplicate repo", visible: []store.Repo{{Name: "alpha"}, {Name: "alpha"}}, domains: []string{"d"}},
@@ -273,10 +357,17 @@ func TestCoverageCertificateRejectsInconsistentInput(t *testing.T) {
 				return bad
 			}()},
 		},
+		{
+			name: "attempt repo mismatch", visible: []store.Repo{{Name: "alpha"}}, domains: []string{"d"},
+			attempts: map[string]store.ExtractionAttempt{certKey("alpha", "d"): {
+				RunID: "attempt", Repo: "other", Commit: commitA, Domain: "d",
+				Extractor: "d@2", Status: "aborted",
+			}},
+		},
 	}
 	for _, row := range rows {
 		t.Run(row.name, func(t *testing.T) {
-			source := &certificateRunSource{runs: row.runs}
+			source := &certificateRunSource{runs: row.runs, attempts: row.attempts}
 			if _, err := BuildCoverageCertificate(context.Background(), source, row.visible, row.domains); err == nil {
 				t.Fatal("inconsistent input built a certificate")
 			}

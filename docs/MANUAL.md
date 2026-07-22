@@ -916,12 +916,19 @@ not claims that a response field was semantically read.
 
 Every future answer over this evidence cites a deterministic coverage
 certificate (`coverage-certificate-v1`): the caller's visible repositories
-with their indexed revisions, each domain's latest published run (extractor,
-commit, freshness, protocols, failures, unresolved counts), and SCIP index
-availability. A repository whose extraction failed keeps its stale or absent
-run entry — the certificate records what the evidence is, not what was
-attempted — and it never names or counts a repository the caller cannot see.
-The query API surface for certificates arrives with T14.1.
+with their indexed revisions, each domain's exact latest published run (run
+id, extractor, commit, freshness, protocols, complete source-scope counters and
+digest, unresolved/assertion/atom counts), its latest extraction attempt (id,
+input revision, extractor, status, and failure), and SCIP index availability.
+The published failure list is retained in the shape for exactness but is empty
+under the atomic publisher, which refuses partial failures. SCIP availability
+is current only when the reporting run matches the indexed revision; stale
+protocol coverage yields `unknown`. A failed replacement keeps the prior
+publication query-visible but records the newer attempt as `aborted`, including
+same-commit forced runs and extractor upgrades; killed staged attempts become
+`aborted` when swept. The certificate contains no wall-clock field. It never
+queries, names, or counts a repository the caller cannot see. The query API
+surface for certificates arrives with T14.1.
 
 Declaration and T13.1 operation-consumer lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of

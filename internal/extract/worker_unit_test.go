@@ -79,6 +79,7 @@ type memoryEvidence struct {
 	nextRun       int
 	runs          map[string]*store.ExtractionRun
 	latest        *store.ExtractionRun
+	latestAttempt *store.ExtractionAttempt
 	batches       []evidenceBatch
 	published     bool
 	publishedWith store.CoverageManifest
@@ -101,6 +102,10 @@ func (m *memoryEvidence) BeginExtractionRun(_ context.Context, repo, commit, dom
 		Domain: domain, Extractor: extractor, Status: "staged",
 	}
 	m.runs[run.ID] = run
+	m.latestAttempt = &store.ExtractionAttempt{
+		RunID: run.ID, Repo: repo, Commit: commit, Domain: domain,
+		Extractor: extractor, Status: "staged",
+	}
 	copyOfRun := *run
 	return &copyOfRun, nil
 }
@@ -131,7 +136,11 @@ func (m *memoryEvidence) PublishExtractionRun(_ context.Context, runID string, c
 	m.publishedWith = coverage
 	if run := m.runs[runID]; run != nil {
 		run.Status = "published"
+		run.Coverage = coverage
 		m.latest = run
+		if m.latestAttempt != nil && m.latestAttempt.RunID == runID {
+			m.latestAttempt.Status = "published"
+		}
 	}
 	return nil
 }
@@ -146,6 +155,9 @@ func (m *memoryEvidence) AbortExtractionRun(ctx context.Context, runID string) e
 	}
 	if run := m.runs[runID]; run != nil && run.Status == "staged" {
 		run.Status = "aborted"
+		if m.latestAttempt != nil && m.latestAttempt.RunID == runID {
+			m.latestAttempt.Status = "aborted"
+		}
 	}
 	return nil
 }
@@ -158,6 +170,16 @@ func (m *memoryEvidence) LatestPublishedRun(context.Context, string, string) (*s
 	}
 	copyOfRun := *m.latest
 	return &copyOfRun, nil
+}
+
+func (m *memoryEvidence) LatestExtractionAttempt(context.Context, string, string) (*store.ExtractionAttempt, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.latestAttempt == nil {
+		return nil, store.ErrNotFound
+	}
+	copyOfAttempt := *m.latestAttempt
+	return &copyOfAttempt, nil
 }
 
 func (*memoryEvidence) ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error) {

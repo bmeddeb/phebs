@@ -104,6 +104,24 @@ func publishedKey(repo, domain string) string {
 	return hashIdentity("published_", repo, domain)
 }
 
+func extractionAttemptID(repo, domain string) models.RecordID {
+	return models.NewRecordID("extraction_attempt", hashIdentity("attempt_", repo, domain))
+}
+
+type extractionAttemptRec struct {
+	RunID     string    `json:"run_id"`
+	Repo      string    `json:"repo"`
+	Commit    string    `json:"commit"`
+	Domain    string    `json:"domain"`
+	Extractor string    `json:"extractor"`
+	Status    string    `json:"status"`
+	StartedAt time.Time `json:"started_at"`
+}
+
+func (r extractionAttemptRec) attempt() ExtractionAttempt {
+	return ExtractionAttempt(r)
+}
+
 type extractionRunRec struct {
 	RecID       *models.RecordID `json:"id"`
 	RunID       string           `json:"run_id"`
@@ -160,16 +178,25 @@ func (s *Surreal) BeginExtractionRun(ctx context.Context, repo, commit, domain, 
 	if err != nil {
 		return nil, err
 	}
+	now := time.Now().UTC()
 	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-		`CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
+		`BEGIN;
+LET $created = CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
             extractor = $extractor, status = 'staged', started_at = $now,
             store_schema_version = $store_schema_version,
 			evidence_format_version = $evidence_format_version,
 			evidence_migration_version = $evidence_migration_version,
-            retention_quarantined = false, staged_revision = 0, retention_revision = 0 RETURN AFTER`,
+            retention_quarantined = false, staged_revision = 0, retention_revision = 0 RETURN AFTER;
+UPSERT $attempt_rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
+            extractor = $extractor, status = 'staged', started_at = $now,
+            store_schema_version = $store_schema_version,
+            evidence_format_version = $evidence_format_version RETURN NONE;
+RETURN $created;
+COMMIT;`,
 		map[string]any{
 			"rid": extractionRunID(id), "run_id": id, "repo": repo, "commit": commit,
-			"domain": domain, "extractor": extractor, "now": time.Now().UTC(),
+			"domain": domain, "extractor": extractor, "now": now,
+			"attempt_rid":                extractionAttemptID(repo, domain),
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_format_version":    evidenceFormatVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
@@ -669,7 +696,10 @@ LET $locked = UPDATE $rid SET staged_revision += 1
 		  AND run_id = record::id(id)
 		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		  AND published_key = NONE
-      AND retention_quarantined = false RETURN AFTER;
+	  AND retention_quarantined = false
+	  AND array::len(SELECT id FROM $attempt_rid
+	      WHERE run_id = $run_id AND status = 'staged'
+	        AND evidence_format_version = $evidence_format_version) = 1 RETURN AFTER;
 LET $assertion_count = array::len(SELECT VALUE assertion_id FROM assertion WHERE run_id = $run_id);
 LET $association_count = array::len(SELECT VALUE occurrence_id FROM snapshot_evidence WHERE run_id = $run_id);
 LET $atom_count = array::len(array::distinct(SELECT VALUE atom_id FROM snapshot_evidence WHERE run_id = $run_id));
@@ -698,13 +728,19 @@ LET $old = IF $ready THEN
 			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
 	          AND retention_quarantined = false RETURN AFTER)
     ELSE [] END;
-RETURN IF $ready THEN
+LET $published = IF $ready THEN
     (UPDATE $rid SET status = 'published', published_key = $published_key,
 			published_at = $now, coverage = $coverage
 			WHERE status = 'staged' AND run_id = record::id(id)
 			  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 			  AND published_key = NONE RETURN AFTER)
     ELSE [] END;
+LET $attempt = IF array::len($published) = 1 THEN
+	(UPDATE $attempt_rid SET status = 'published'
+		WHERE run_id = $run_id AND status = 'staged'
+		  AND evidence_format_version = $evidence_format_version RETURN AFTER)
+	ELSE [] END;
+RETURN IF array::len($attempt) = 1 THEN $published ELSE [] END;
 COMMIT;`
 
 // PublishExtractionRun validates and flips visibility in one transaction.
@@ -744,7 +780,8 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 	}
 	vars := map[string]any{
 		"rid": extractionRunID(runID), "run_id": runID,
-		"repo_rid": repoID(run.Repo), "repo": run.Repo, "commit": run.Commit,
+		"attempt_rid": extractionAttemptID(run.Repo, run.Domain),
+		"repo_rid":    repoID(run.Repo), "repo": run.Repo, "commit": run.Commit,
 		"domain": run.Domain, "published_key": publishedKey(run.Repo, run.Domain),
 		"now": time.Now().UTC(), "coverage": coverage,
 		"want_assertions": coverage.AssertionCount, "want_atoms": coverage.AtomCount,
@@ -780,22 +817,36 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 }
 
 func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
+	run, err := s.getRun(ctx, runID)
+	if err != nil {
+		return fmt.Errorf("abort extraction run %s: %w", runID, err)
+	}
 	for attempt := 0; ; attempt++ {
 		vars := map[string]any{
 			"rid":                     extractionRunID(runID),
+			"attempt_rid":             extractionAttemptID(run.Repo, run.Domain),
+			"run_id":                  runID,
 			"store_schema_version":    evidenceStoreSchemaVersion,
 			"evidence_format_version": evidenceFormatVersion,
 		}
 		addProbeVars(vars, runID)
 		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-			`UPDATE $rid SET status = 'aborted', published_key = NONE
+			`BEGIN;
+LET $aborted = UPDATE $rid SET status = 'aborted', published_key = NONE
 				WHERE status = 'staged'
 				  AND store_schema_version = $store_schema_version
 					  AND evidence_format_version = $evidence_format_version
 					  AND run_id = record::id(id)
 					  AND `+evidenceRunProbeHasNoClaimantSQL+`
 					  AND published_key = NONE
-				  AND retention_quarantined = false RETURN AFTER`, vars)
+				  AND retention_quarantined = false RETURN AFTER;
+LET $attempt = IF array::len($aborted) = 1 THEN
+	(UPDATE $attempt_rid SET status = 'aborted'
+		WHERE run_id = $run_id AND status = 'staged'
+		  AND evidence_format_version = $evidence_format_version RETURN AFTER)
+	ELSE [] END;
+RETURN $aborted;
+COMMIT;`, vars)
 		if err != nil {
 			if isRetryable(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 				continue
@@ -814,6 +865,38 @@ func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 		}
 		return fmt.Errorf("abort extraction run %s: run is %s, not staged: %w", runID, current.Status, ErrConflict)
 	}
+}
+
+// LatestExtractionAttempt returns the durable latest attempt for a
+// (repository, domain) pair. Existing stores created before attempt markers
+// were introduced fall back to the latest publication until a new attempt is
+// started.
+func (s *Surreal) LatestExtractionAttempt(ctx context.Context, repo, domain string) (*ExtractionAttempt, error) {
+	results, err := surrealdb.Query[[]extractionAttemptRec](ctx, s.db,
+		`SELECT * FROM $rid WHERE repo = $repo AND domain = $domain
+			AND evidence_format_version = $evidence_format_version LIMIT 1`,
+		map[string]any{
+			"rid": extractionAttemptID(repo, domain), "repo": repo, "domain": domain,
+			"evidence_format_version": evidenceFormatVersion,
+		})
+	if err != nil {
+		return nil, fmt.Errorf("latest extraction attempt: %w", err)
+	}
+	for _, result := range *results {
+		if len(result.Result) == 0 {
+			continue
+		}
+		attempt := result.Result[0].attempt()
+		return &attempt, nil
+	}
+	run, err := s.LatestPublishedRun(ctx, repo, domain)
+	if err != nil {
+		return nil, err
+	}
+	return &ExtractionAttempt{
+		RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
+		Extractor: run.Extractor, Status: "published", StartedAt: run.StartedAt,
+	}, nil
 }
 
 func (s *Surreal) LatestPublishedRun(ctx context.Context, repo, domain string) (*ExtractionRun, error) {
@@ -1107,6 +1190,11 @@ LET $locked = UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
 		AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		AND published_key = NONE
     AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0 RETURN AFTER;
+LET $attempt = IF array::len($locked) = 1 AND $locked[0].status = 'staged' THEN
+	(UPDATE extraction_attempt SET status = 'aborted'
+		WHERE run_id = $run AND status = 'staged'
+		  AND evidence_format_version = $evidence_format_version RETURN AFTER)
+	ELSE [] END;
 LET $gone = SELECT atom_id FROM snapshot_evidence
     WHERE run_id = $run AND array::len($locked) = 1;
 DELETE snapshot_evidence WHERE run_id = $run AND array::len($locked) = 1 RETURN NONE;

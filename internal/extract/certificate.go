@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -18,9 +17,10 @@ const certificateSchemaVersion = "coverage-certificate-v1"
 
 // RunSource is the narrow read surface the certificate builder consumes. It is
 // deliberately not the full EvidenceStore: the builder can look up published
-// runs and nothing else.
+// evidence and the durable latest-attempt marker, and nothing else.
 type RunSource interface {
 	LatestPublishedRun(ctx context.Context, repo, domain string) (*store.ExtractionRun, error)
+	LatestExtractionAttempt(ctx context.Context, repo, domain string) (*store.ExtractionAttempt, error)
 }
 
 // CoverageCertificate is the per-answer honesty record: the caller's entire
@@ -44,22 +44,38 @@ type CertificateRepository struct {
 	Runs          []CertificateRun `json:"runs"`
 }
 
-// CertificateRun is the latest published evidence state for one
-// (repository, domain) pair. A failed extraction never publishes, so failure
-// surfaces here as an `unpublished` entry or a stale (`fresh: false`) run —
-// the certificate records what the evidence is, not what was attempted.
+// CertificateRun binds one (repository, domain) pair to both its latest
+// published evidence and its latest extraction attempt. Failed replacements
+// remain visible here even though they never replace published evidence.
 type CertificateRun struct {
-	Domain          string     `json:"domain"`
-	Status          string     `json:"status"` // published | unpublished
-	Extractor       string     `json:"extractor,omitempty"`
-	Commit          string     `json:"commit,omitempty"`
-	PublishedAt     *time.Time `json:"published_at,omitempty"`
-	Fresh           bool       `json:"fresh"` // run commit == repository's indexed commit
-	Protocols       []string   `json:"protocols,omitempty"`
-	Failures        []string   `json:"failures,omitempty"`
-	UnresolvedCount int        `json:"unresolved_count"`
-	AssertionCount  int        `json:"assertion_count"`
-	AtomCount       int        `json:"atom_count"`
+	Domain             string              `json:"domain"`
+	Status             string              `json:"status"` // published | unpublished
+	RunID              string              `json:"run_id,omitempty"`
+	Extractor          string              `json:"extractor,omitempty"`
+	Commit             string              `json:"commit,omitempty"`
+	Fresh              bool                `json:"fresh"` // run commit == repository's indexed commit
+	Protocols          []string            `json:"protocols,omitempty"`
+	Failures           []string            `json:"failures,omitempty"`
+	CorpusFileCount    int                 `json:"corpus_file_count"`
+	CandidateFileCount int                 `json:"candidate_file_count"`
+	ReadFileCount      int                 `json:"read_file_count"`
+	ReadBytes          int64               `json:"read_bytes"`
+	SourceScopeDigest  string              `json:"source_scope_digest,omitempty"`
+	UnresolvedCount    int                 `json:"unresolved_count"`
+	AssertionCount     int                 `json:"assertion_count"`
+	AtomCount          int                 `json:"atom_count"`
+	LatestAttempt      *CertificateAttempt `json:"latest_attempt,omitempty"`
+}
+
+// CertificateAttempt is deliberately time-free: identity, input revision,
+// extractor, and state describe the attempt without making an unchanged
+// evidence state differ merely because it was processed later.
+type CertificateAttempt struct {
+	RunID     string `json:"run_id"`
+	Commit    string `json:"commit"`
+	Extractor string `json:"extractor"`
+	Status    string `json:"status"` // staged | published | aborted
+	Failure   string `json:"failure,omitempty"`
 }
 
 // BuildCoverageCertificate compiles the certificate for an already-authorized
@@ -102,40 +118,59 @@ func BuildCoverageCertificate(
 		}
 		for _, domain := range domainList {
 			run, err := source.LatestPublishedRun(ctx, repo.Name, domain)
-			if errors.Is(err, store.ErrNotFound) {
-				entry.Runs = append(entry.Runs, CertificateRun{Domain: domain, Status: "unpublished"})
-				continue
-			}
-			if err != nil {
+			published := err == nil
+			if err != nil && !errors.Is(err, store.ErrNotFound) {
 				return nil, fmt.Errorf("latest published run for %q/%q: %w", repo.Name, domain, err)
 			}
-			if run == nil || run.ID == "" || run.Repo != repo.Name || run.Domain != domain ||
-				run.Status != "published" || run.Commit == "" {
+			if published && (run == nil || run.ID == "" || run.Repo != repo.Name || run.Domain != domain ||
+				run.Status != "published" || run.Commit == "" || run.Extractor == "") {
 				return nil, fmt.Errorf("published run for %q/%q is inconsistent", repo.Name, domain)
+			}
+			attempt, attemptErr := source.LatestExtractionAttempt(ctx, repo.Name, domain)
+			if errors.Is(attemptErr, store.ErrNotFound) {
+				attempt = nil
+			} else if attemptErr != nil {
+				return nil, fmt.Errorf("latest extraction attempt for %q/%q: %w", repo.Name, domain, attemptErr)
+			}
+			if attempt == nil && published {
+				attempt = &store.ExtractionAttempt{
+					RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
+					Extractor: run.Extractor, Status: "published",
+				}
+			}
+			certificateAttempt, err := validateCertificateAttempt(repo.Name, domain, attempt, run, published)
+			if err != nil {
+				return nil, err
+			}
+			if !published {
+				entry.Runs = append(entry.Runs, CertificateRun{
+					Domain: domain, Status: "unpublished", LatestAttempt: certificateAttempt,
+				})
+				continue
 			}
 			protocols := append([]string(nil), run.Coverage.Protocols...)
 			failures := append([]string(nil), run.Coverage.Failures...)
 			sort.Strings(protocols)
 			sort.Strings(failures)
-			var publishedAt *time.Time
-			if run.PublishedAt != nil {
-				utc := run.PublishedAt.UTC()
-				publishedAt = &utc
-			}
+			fresh := run.Commit == repo.IndexedCommitHash
 			entry.Runs = append(entry.Runs, CertificateRun{
-				Domain:          domain,
-				Status:          "published",
-				Extractor:       run.Extractor,
-				Commit:          run.Commit,
-				PublishedAt:     publishedAt,
-				Fresh:           run.Commit == repo.IndexedCommitHash,
-				Protocols:       protocols,
-				Failures:        failures,
-				UnresolvedCount: run.Coverage.UnresolvedCount,
-				AssertionCount:  run.Coverage.AssertionCount,
-				AtomCount:       run.Coverage.AtomCount,
+				Domain: domain, Status: "published", RunID: run.ID,
+				Extractor: run.Extractor, Commit: run.Commit, Fresh: fresh,
+				Protocols: protocols, Failures: failures,
+				CorpusFileCount:    run.Coverage.CorpusFileCount,
+				CandidateFileCount: run.Coverage.CandidateFileCount,
+				ReadFileCount:      run.Coverage.ReadFileCount,
+				ReadBytes:          run.Coverage.ReadBytes,
+				SourceScopeDigest:  run.Coverage.SourceScopeDigest,
+				UnresolvedCount:    run.Coverage.UnresolvedCount,
+				AssertionCount:     run.Coverage.AssertionCount,
+				AtomCount:          run.Coverage.AtomCount,
+				LatestAttempt:      certificateAttempt,
 			})
 			for _, protocol := range protocols {
+				if !fresh {
+					break
+				}
 				switch {
 				case protocol == "scip":
 					entry.SCIPIndex = "present"
@@ -155,14 +190,41 @@ func BuildCoverageCertificate(
 	return certificate, nil
 }
 
+func validateCertificateAttempt(repo, domain string, attempt *store.ExtractionAttempt, publishedRun *store.ExtractionRun, published bool) (*CertificateAttempt, error) {
+	if attempt == nil {
+		return nil, nil
+	}
+	if attempt.RunID == "" || attempt.Repo != repo || attempt.Domain != domain ||
+		attempt.Commit == "" || attempt.Extractor == "" ||
+		attempt.Status != "staged" && attempt.Status != "published" && attempt.Status != "aborted" {
+		return nil, fmt.Errorf("latest extraction attempt for %q/%q is inconsistent", repo, domain)
+	}
+	if attempt.Status == "published" && (!published || publishedRun == nil ||
+		publishedRun.ID != attempt.RunID || publishedRun.Commit != attempt.Commit ||
+		publishedRun.Extractor != attempt.Extractor) {
+		return nil, fmt.Errorf("published attempt for %q/%q does not match published evidence", repo, domain)
+	}
+	result := &CertificateAttempt{
+		RunID: attempt.RunID, Commit: attempt.Commit,
+		Extractor: attempt.Extractor, Status: attempt.Status,
+	}
+	if attempt.Status == "aborted" {
+		result.Failure = "extraction aborted before publication"
+	}
+	return result, nil
+}
+
 func certificateDomains(domains []string) ([]string, error) {
 	if len(domains) == 0 {
 		return nil, errors.New("coverage certificate requires at least one domain")
 	}
+	if len(domains) > 64 {
+		return nil, errors.New("coverage certificate accepts at most 64 domains")
+	}
 	list := append([]string(nil), domains...)
 	sort.Strings(list)
 	for i, domain := range list {
-		if domain == "" || i > 0 && list[i-1] == domain {
+		if !validToken(domain) || i > 0 && list[i-1] == domain {
 			return nil, fmt.Errorf("certificate domain set is inconsistent at %q", domain)
 		}
 	}

@@ -507,11 +507,16 @@ invisible-repo leakage through names or counts. Implemented as
 `extract.BuildCoverageCertificate` over the narrow `RunSource` read surface:
 deterministic `coverage-certificate-v1` with a sha256 digest over canonical
 JSON, every visible repository present (including evidence-free ones), per-run
-freshness against the indexed commit, and SCIP availability derived from
-published protocols. Failure ACs pass three ways (absent run, stale run,
-recorded partial failures — each moves the digest); the adversarial test
-mutates hidden-repo state and requires byte-identical certificates, no hidden
-names, and zero queries for invisible repositories. API exposure is T14.1.
+identity plus complete source-scope counters/digest, freshness against the
+indexed commit, and SCIP availability derived only from a current-revision
+publication. A durable latest-attempt marker makes staged/aborted replacements
+certificate-visible without publishing partial evidence; the same-commit
+forced-failure AC runs through the real worker and keeps the prior fresh run
+while moving the digest. Store tests pin abort and killed-run sweep lifecycle.
+Publication times are excluded from canonical content. The adversarial test
+mutates hidden-repo run and attempt state and requires byte-identical
+certificates, no hidden names, and zero invisible-repository queries. API
+exposure is T14.1.
 
 ## EPIC 14 — Query, proof bundles & MCP *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
 

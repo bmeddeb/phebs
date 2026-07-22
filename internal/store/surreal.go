@@ -100,7 +100,9 @@ var evidenceIndexes = fmt.Sprintf(`
 DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted']
         OR $this.evidence_format_version != '%s';
-DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;`, evidenceFormatVersion)
+DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;
+DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
+    ASSERT $value INSIDE ['staged', 'published', 'aborted'];`, evidenceFormatVersion)
 
 // migrateLegacyJobs runs before the pending-key indexes are installed. Old
 // rows had no lease or pending slot, and may contain an active job plus a
@@ -654,6 +656,7 @@ UPDATE extraction_run SET status = 'superseded', published_key = NONE
     WHERE repo = $name AND status = 'published' RETURN NONE;
 UPDATE extraction_run SET status = 'aborted', published_key = NONE
     WHERE repo = $name AND status = 'staged' RETURN NONE;
+DELETE extraction_attempt WHERE repo = $name RETURN NONE;
 UPDATE extraction_job SET status = 'canceled', error = 'repository deleting',
     finished_at = time::now(), not_before = NONE, pending_key = NONE
     WHERE target = $name AND status = 'pending' RETURN NONE;
