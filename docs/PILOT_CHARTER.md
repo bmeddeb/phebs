@@ -156,6 +156,76 @@ placeholder, or unexplained `N/A` blocks Gate 0.
 | Independent label reviewers | construct blinded internal gold labels and adjudicate under the frozen protocol | `<reviewer A>`, `<reviewer B>` |
 | Pilot environment owner | provisions the isolated host and confirms teardown | `<name>` |
 
+### 5.1 Capability model *(draft prerequisite item 2)*
+
+This matrix narrows the responsibilities above into explicit capabilities.
+It does not assign the remaining named people, authorize an environment, or
+close Gate 0. `A` means authorizes or accepts, `E` executes, `P` provides an
+input, `R` independently reviews or witnesses, and `—` means the role has no
+capability by virtue of that role alone. Access still requires a named
+principal, least-privilege credential, and current source/object
+authorization.
+
+| Capability | Sponsor | Pilot lead | Migration owner | Build/catalog partner | Security reviewer | OSS/Legal | Label reviewers | Environment owner |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Approve bounded pilot resources and final decision | A | P | P | — | R | R | — | P |
+| Confirm the frozen contract and workflow baseline | — | P | A/P | P | — | — | — | — |
+| Approve IP, license, dependency, and provenance posture | — | P | — | — | R | A/R | — | — |
+| Approve threat model, ingress/egress, secrets, logging, retention, and authorization controls | — | P | — | P | A/R | R | — | P |
+| Provision or destroy the isolated pilot environment | — | — | — | — | R | — | — | E/A |
+| Operate phebs and maintain manifests, receipts, and evidence chain | — | E | — | — | R | — | — | P |
+| Authorize the first retained source clone after Gate 1 | A | P | A/P | — | R | R | — | E |
+| Supply source-universe and current-workflow evidence | — | P | A/P | P | — | — | — | — |
+| Supply versioned build, deployable, catalog, and ownership inputs | — | P | R | A/P | — | — | — | — |
+| Author or materially extend authorization negative tests | — | P | — | P | A/R | — | — | P |
+| Enumerate the independent accuracy population and prepare blinded kits | — | P | R | P | R | — | R | — |
+| View unsealed phebs predictions before label freeze | — | E | — | — | — | — | — | — |
+| Label and adjudicate the frozen blind sample | — | — | — | — | — | — | E/R | — |
+| Review usefulness and accept the inventory as reviewable | — | P | A/R | P | — | — | — | — |
+| Decide preserved-versus-destroyed pilot artifacts | P | P | P | — | A/R | R | — | A/E |
+| Sign the final continue/conditional/stop record | A | P | A | P | R | R | — | P |
+
+### 5.2 Machine principals
+
+Human role assignment does not implicitly authorize a process. Each machine
+principal receives a separate identity and the minimum capability below.
+
+| Machine principal | Permitted capability | Explicit prohibition |
+|---|---|---|
+| Phebs service | authenticated request handling, current authorization projection, bounded queue coordination | source-host writes, human Decisions, policy expansion |
+| Source-sync identity | read only the frozen authorized source universe | repository mutation, organization administration, unrelated repository discovery |
+| Metadata-adapter identity | read only approved versioned build/catalog/deployment/ownership inputs | treating metadata as source truth or modifying provider state |
+| OIDC client | authenticate admitted identities | object/evidence authorization decisions |
+| SurrealDB child | loopback state persistence for the isolated server | remote/public listener or independent access grant |
+| Git/zoekt children | bounded mirror/index operation with scrubbed environment | hooks, corpus scripts, credential persistence, policy decisions |
+| Extractor context | pure reads of supplied immutable objects within budgets | network, corpus writes, dynamic loading, generators, plugins, or builds |
+| MCP client credential | invoke approved read-only tools as one principal | credential sharing, server-side human actions, strengthening qualified conclusions |
+| Backup/restore operator identity | create or restore approved encrypted/restricted artifacts under witness | undeclared copies, restore into a connected production environment |
+
+### 5.3 Separation and custody rules
+
+- The Pilot lead cannot serve as an Independent label reviewer or as the sole
+  Security reviewer for controls or negative tests they implemented.
+- Independent label reviewers cannot access unsealed predictions, candidate
+  output, or the migration's existing consumer inventory before label freeze.
+- The reviewer roster, adjudicator, assignment, overlap, disclosure edge, and
+  substitutions are sealed and audited; silent substitution stops the pilot.
+- The Security reviewer authors or materially extends the authorization test
+  matrix and accepts the results; the Pilot lead may execute but cannot
+  self-accept it.
+- Population enumeration and blinded-kit preparation are executed either by a
+  mechanical procedure sealed before any prediction exists or by a
+  prediction-blind principal; the Security reviewer witnesses whichever
+  applies. Viewing unsealed predictions disqualifies a principal from
+  shaping the frame afterward.
+- A witnessed restore uses a witness independent of the restore operator.
+- The Environment owner and Security reviewer jointly decide the
+  preserved-versus-destroyed boundary and attest teardown completeness.
+- Sponsor authority cannot waive a security, validation, provenance,
+  reviewer-custody, or mandatory-deletion stop condition.
+- No pilot role grants production write, enforcement, migration approval,
+  code-host mutation, or authority to broaden the frozen claim.
+
 The sponsor records the sanctioned allocation of pilot-lead and partner time
 before work begins. **Reviewer independence, defined:** label reviewers must
 not have contributed to phebs, the candidate extractor, or the migration's

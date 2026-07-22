@@ -29,6 +29,19 @@ Read top to bottom; each narrows the previous:
 The suite's invariant: nothing downstream expands the ask upstream, and no
 claim outruns its measurement.
 
+## Pilot design artifacts
+
+| Document | Role |
+|---|---|
+| [THREAT_MODEL.md](./THREAT_MODEL.md) | draft threat model and trust-boundary record for pilot prerequisite item 1; grants no environment or implementation authority |
+| [NEGATIVE_TEST_DESIGN.md](./NEGATIVE_TEST_DESIGN.md) | dependency-preview authorization and integrity test matrix for prerequisite item 3; execution remains separately gated |
+| [SIZING_ASSUMPTIONS.md](./SIZING_ASSUMPTIONS.md) | dependency-preview workload and capacity worksheet for prerequisite item 4; contains no environment measurements |
+| [RESTORE_PROCEDURE.md](./RESTORE_PROCEDURE.md) | dependency-preview backup and witnessed-restore design for prerequisite item 5; grants no backup or environment authority |
+
+The role/capability model for prerequisite item 2 lives in
+[PILOT_CHARTER.md §5](./PILOT_CHARTER.md#5-roles-and-authority) so authority
+semantics do not drift into a second document.
+
 ## Validation records (sealed history)
 
 The T11.1/GATE2-V2 validation protocol, attempt records, and stage

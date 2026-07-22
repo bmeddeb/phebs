@@ -25,17 +25,23 @@ reviewer identity, timestamp, decision, unresolved findings (or `none`).
 
 | # | Item | Phase | Depends on | Owner | Reviewer | Evidence artifact | State | Findings |
 |---|---|---|---|---|---|---|---|---|
-| 1 | Threat model and trust boundaries | design | none | TBD | TBD | `THREAT_MODEL.md` | blocked_unassigned | not_assessed |
-| 2 | Role/capability model | design | none (parallel with 1) | TBD | TBD | charter §5 completed table | blocked_unassigned | not_assessed |
-| 3 | Negative-test design | design | 1 and 2 | TBD | Security reviewer per charter | matrix + golden fixture-06 expected bytes | blocked_unassigned | not_assessed |
-| 4 | Sizing assumptions | design | 1 + declared workload assumptions | TBD | TBD | sizing worksheet, assumptions stated | blocked_unassigned | not_assessed |
-| 5 | Restore procedure | design | 2 | TBD | TBD | written procedure | blocked_unassigned | not_assessed |
+| 1 | Threat model and trust boundaries | design | none | TBD | TBD | [THREAT_MODEL.md](./THREAT_MODEL.md) draft | blocked_unassigned | not_assessed |
+| 2 | Role/capability model | design | none (parallel with 1) | TBD | TBD | [charter §5 capability model](./PILOT_CHARTER.md#51-capability-model-draft-prerequisite-item-2) draft | blocked_unassigned | not_assessed |
+| 3 | Negative-test design | design | 1 and 2 | TBD | Security reviewer per charter | [NEGATIVE_TEST_DESIGN.md](./NEGATIVE_TEST_DESIGN.md) draft — matrix + golden fixture-06 expected bytes | blocked_unassigned | not_assessed |
+| 4 | Sizing assumptions | design | 1 + declared workload assumptions | TBD | TBD | [SIZING_ASSUMPTIONS.md](./SIZING_ASSUMPTIONS.md) draft — sizing worksheet, assumptions stated | blocked_unassigned | not_assessed |
+| 5 | Restore procedure | design | 2 | TBD | TBD | [RESTORE_PROCEDURE.md](./RESTORE_PROCEDURE.md) draft | blocked_unassigned | not_assessed |
 | 6 | Negative-test execution | verification | 3 + environment authorization | TBD | Security reviewer | two executions per case — unknown identity and unauthorized identity — each compared byte-for-byte against the same golden fixture-06 canonical response | blocked_unassigned | not_assessed |
 | 7 | Capacity checks | verification | 4 + environment authorization | TBD | TBD | measured results vs assumptions | blocked_unassigned | not_assessed |
 | 8 | Witnessed restore | verification | 5, 7, environment authorization | TBD | witness **independent of the restore operator** | restore transcript, witness attestation | blocked_unassigned | not_assessed |
 
 `TBD` carries state `blocked_unassigned` so a mechanical blank-field check
 cannot be bypassed by placeholder text.
+
+Draft artifacts exist for items 1–5. Items 3–5 are dependency previews: they do
+not imply acceptance of items 1 or 2 and must be reconciled against those
+artifacts after their prerequisites are accepted. Drafting does not advance any
+state: every item still requires an explicit owner, an eligible named reviewer,
+and the acceptance record defined above.
 
 ## Ceremony decision records
 
