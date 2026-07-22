@@ -79,6 +79,13 @@ class CandidateRowsTest(unittest.TestCase):
     def test_unsupported_predicate_fails_closed(self) -> None:
         with self.assertRaises(harness.HarnessError):
             harness.candidate_rows(envelope([assertion(predicate="SOMETHING_ELSE")], [evidence_item()]))
+        with self.assertRaises(harness.HarnessError):
+            harness.candidate_rows(
+                envelope(
+                    [assertion(predicate="REFERENCES_PROTO_FIELD", object="shop.v1.Cart#7")],
+                    [evidence_item()],
+                )
+            )
 
     def test_occurrence_scope_mismatch_fails_closed(self) -> None:
         bad = evidence_item()

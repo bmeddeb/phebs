@@ -38,7 +38,6 @@ protocol.
 |---|---|---|---|
 | Source call-site extraction | `CALLS_OPERATION` assertions | Internal call-site quality (`T_INTERNAL_PRECISION`, `T_INTERNAL_RECALL`) | `invocation` |
 | Service registration | `REGISTERS_GRPC_SERVICE` assertions | Service attribution (with partner-catalog hops) | `registration` |
-| Proto-field reference | `REFERENCES_PROTO_FIELD` assertions | Internal call-site quality analog for field claims | **blocked — see §10** |
 | Attribution hops (build-target, deployable, service, owner) | partner catalogs joined to evidence | Deployable / Service attribution | per-hop sheets, `<Gate 0>` |
 | End-to-end `(canonical service, operation)` edge | joined evidence, scored directly | End-to-end service-operation edge quality | independent frame, §6 |
 | Abstentions | `UNRESOLVED_*` assertions, coverage `UnresolvedCount` | unresolved-rate denominators | not labeled; counted |
@@ -122,15 +121,15 @@ defined in [DECISION_RECORDS.md](./DECISION_RECORDS.md).
 
 ## 10. Open items that block sealing
 
-1. **Field-reference label schema** — the sealed t111 schema has decision
-   fields for `invocation` and `registration` only. A versioned extension
-   (schema name, field semantics, validator) must be reviewed and its
-   digest recorded before any `REFERENCES_PROTO_FIELD` round can seal; the
-   harness refuses to score undefined fields today.
-2. **Attribution-hop label sheets** — hop-specific sheet formats depend on
+1. **Attribution-hop label sheets** — hop-specific sheet formats depend on
    the partner's catalog shapes and are defined at Gate 0.
-3. Every `<Gate 0>` placeholder above; any blank blocks release (charter
+2. Every `<Gate 0>` placeholder above; any blank blocks release (charter
    Gate 0 rule).
+
+Proto field-level lineage is excluded from this protocol by
+`PILOT_CHARTER.md` §3.4. `REFERENCES_PROTO_FIELD` is therefore rejected by the
+harness rather than assigned a pilot label schema; changing that boundary
+requires a separately reviewed charter revision, not a prerequisite edit.
 
 ## 11. What this protocol can and cannot produce
 

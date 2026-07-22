@@ -35,7 +35,6 @@ _CANDIDATE_PREDICATES = frozenset(
     {
         "CALLS_OPERATION",
         "REGISTERS_GRPC_SERVICE",
-        "REFERENCES_PROTO_FIELD",
         "UNRESOLVED_GRPC_CALL",
     }
 )
@@ -192,12 +191,14 @@ def score_claim(
     reported, per the protocol's missing/unlabelable rule. Any missing or
     surplus label invalidates the round instead of degrading it.
 
-    Only the two decision fields of the sealed t111 label schema are
-    scorable today; the field-reference round requires the versioned schema
-    extension named in docs/ACCURACY_GOLD_PROTOCOL.md before it can seal.
+    Only the two decision fields of the sealed t111 label schema are scorable.
+    Proto field-level lineage is outside the pilot charter and is rejected by
+    candidate projection rather than being silently added to the evaluation.
     """
     if field not in ("invocation", "registration"):
-        raise HarnessError("field must be a t111 label decision field: invocation or registration")
+        raise HarnessError(
+            "field must be a t111 label decision field: invocation or registration"
+        )
     validated = protocol.validate_labels(labels, sampled_site_ids)
     by_site = {row["site_id"]: row for row in validated}
     if len(by_site) != len(validated):
