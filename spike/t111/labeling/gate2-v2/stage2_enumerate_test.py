@@ -364,8 +364,10 @@ def _p0_result_chain_fixture(root: Path):
 class FakeLabelPrep:
     """Exact minimal surface used by ``enumerate_raw_frames``; no selectors."""
 
-    def __init__(self, *, unstable=False):
+    def __init__(self, *, unstable=False, same_line_facts=False, duplicate_emitted=False):
         self.unstable = unstable
+        self.same_line_facts = same_line_facts
+        self.duplicate_emitted = duplicate_emitted
         self.typed_calls = 0
 
     def pinned_tracked_files(self, root, commit, excluded):
@@ -375,6 +377,11 @@ class FakeLabelPrep:
         return [{"toolchain_identity": "exact-tools"}]
 
     def operation_facts(self, fixture, facts_dir, commit, corpus):
+        if fixture == "temporal" and (self.same_line_facts or self.duplicate_emitted):
+            return [
+                {"fact_fingerprint": _digest("1")},
+                {"fact_fingerprint": _digest("2")},
+            ], []
         return [], []
 
     def resolve_oracle_toolchain(self, identity):
@@ -404,6 +411,11 @@ class FakeLabelPrep:
             "start_line": line,
             "end_line": line,
         }
+        if fixture == "temporal" and self.same_line_facts:
+            return [
+                {**row, "site_id": f"{fixture}-typed-{line}-a", "column": 4},
+                {**row, "site_id": f"{fixture}-typed-{line}-b", "column": 18},
+            ], {"schema": "test", "matched_sites": 2}
         return [row], {"schema": "test", "matched_sites": 1}
 
     @staticmethod
@@ -414,9 +426,39 @@ class FakeLabelPrep:
     def gate_call_facts(fixture, facts):
         return facts, {"count": 0}
 
-    @staticmethod
-    def build_precision_frame(*args):
-        return []
+    def build_precision_frame(self, fixture, *args):
+        if fixture != "temporal" or not (self.same_line_facts or self.duplicate_emitted):
+            return []
+        row = {
+            "site_id": f"{fixture}-typed-7-a" if self.same_line_facts else f"{fixture}-typed-7",
+            "system": fixture,
+            "path": "client.go",
+            "line": 7,
+            "start_line": 7,
+            "end_line": 7,
+            "column": 4,
+            "byte_offset": 40,
+            "method": "CallA",
+            "stratum": f"{fixture}|production",
+            "object": "/fixture.Service/CallA",
+            "role": "production",
+            "tier": "exact",
+            "atom_id": "ea_a",
+        }
+        if self.duplicate_emitted:
+            return [row, dict(row)]
+        return [
+            row,
+            {
+                **row,
+                "site_id": f"{fixture}-typed-7-b",
+                "column": 18,
+                "byte_offset": 54,
+                "method": "CallB",
+                "object": "/fixture.Service/CallB",
+                "atom_id": "ea_b",
+            },
+        ]
 
     @staticmethod
     def build_registration_precision_frame(*args):
@@ -1195,7 +1237,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 + _review_binding_line(enum.PREBUILD_RUNNER_REL, parser_digest)
                 + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
                 + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
-                + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+                + _review_binding_line(enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest)
                 + _review_binding_line(
                     enum.P0_MODULE_CACHE_REL, enum.sha256_bytes(module_cache_bytes)
                 )
@@ -1275,7 +1317,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 (enum.PREBUILD_RUNNER_REL, parser_digest),
                 (enum.PREBUILD_EXECUTOR_REL, executor_digest),
                 (enum.ENUMERATOR_REL, enumerator_digest),
-                (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+                (enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest),
                 (enum.PREBUILD_EXECUTOR_REVIEW_REL, p0["implementation_review"]["record_sha256"]),
             )
             blobs = {
@@ -1286,7 +1328,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 f"{implementation_commit}:{enum.PREBUILD_RUNNER_REL}": parser_bytes,
                 f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}": executor_bytes,
                 f"{implementation_commit}:{enum.ENUMERATOR_REL}": enumerator_bytes,
-                f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
+                f"{implementation_commit}:{enum.P0_ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
                 f"{implementation_commit}:{enum.P0_MODULE_CACHE_REL}": module_cache_bytes,
                 f"{implementation_commit}:{enum.P0_MODULE_CACHE_TEST_REL}": module_cache_test_bytes,
                 f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}": implementation_review_bytes,
@@ -1702,7 +1744,7 @@ class Stage2EnumerationTest(unittest.TestCase):
             (enum.PREBUILD_RUNNER_REL, parser_digest),
             (enum.PREBUILD_EXECUTOR_REL, executor_digest),
             (enum.ENUMERATOR_REL, enumerator_digest),
-            (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+            (enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest),
         )
         review_artifact_pairs = (
             *plan_artifact_pairs,
@@ -1781,7 +1823,7 @@ class Stage2EnumerationTest(unittest.TestCase):
             + _review_binding_line(enum.PREBUILD_RUNNER_REL, parser_digest)
             + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
             + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
-            + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+            + _review_binding_line(enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest)
             + _review_binding_line(
                 enum.P0_MODULE_CACHE_REL, enum.sha256_bytes(module_cache_bytes)
             )
@@ -1815,14 +1857,14 @@ class Stage2EnumerationTest(unittest.TestCase):
             (enum.PREBUILD_RUNNER_REL, parser_digest),
             (enum.PREBUILD_EXECUTOR_REL, executor_digest),
             (enum.ENUMERATOR_REL, enumerator_digest),
-            (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+            (enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest),
             (enum.PREBUILD_EXECUTOR_REVIEW_REL, review_digest),
         )
         blobs = {
             f"{implementation_commit}:{enum.PREBUILD_RUNNER_REL}": parser_bytes,
             f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}": executor_bytes,
             f"{implementation_commit}:{enum.ENUMERATOR_REL}": enumerator_bytes,
-            f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
+            f"{implementation_commit}:{enum.P0_ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
             f"{implementation_commit}:{enum.P0_MODULE_CACHE_REL}": module_cache_bytes,
             f"{implementation_commit}:{enum.P0_MODULE_CACHE_TEST_REL}": module_cache_test_bytes,
             f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}": implementation_review_bytes,
@@ -1857,10 +1899,10 @@ class Stage2EnumerationTest(unittest.TestCase):
                 enum._verify_p0_implementation_binding(p0, p0_commit)
             blobs[f"{implementation_commit}:{enum.P0_MODULE_CACHE_TEST_REL}"] = module_cache_test_bytes
 
-            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = b"wrong enum review\n"
+            blobs[f"{implementation_commit}:{enum.P0_ENUMERATION_REVIEW_REL}"] = b"wrong enum review\n"
             with self.assertRaises(enum.EnumerationError):
                 enum._verify_p0_implementation_binding(p0, p0_commit)
-            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = enumerator_review_bytes
+            blobs[f"{implementation_commit}:{enum.P0_ENUMERATION_REVIEW_REL}"] = enumerator_review_bytes
 
             nonaccepting_enumerator_review_bytes = (
                 "# Enumeration review\n\n"
@@ -1870,7 +1912,7 @@ class Stage2EnumerationTest(unittest.TestCase):
             p0["implementation"]["enumerator_review_sha256"] = enum.sha256_bytes(
                 nonaccepting_enumerator_review_bytes
             )
-            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = (
+            blobs[f"{implementation_commit}:{enum.P0_ENUMERATION_REVIEW_REL}"] = (
                 nonaccepting_enumerator_review_bytes
             )
             with self.assertRaises(enum.EnumerationError):
@@ -1878,7 +1920,7 @@ class Stage2EnumerationTest(unittest.TestCase):
             p0["implementation"]["enumerator_review_sha256"] = enum.sha256_bytes(
                 enumerator_review_bytes
             )
-            blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = enumerator_review_bytes
+            blobs[f"{implementation_commit}:{enum.P0_ENUMERATION_REVIEW_REL}"] = enumerator_review_bytes
 
             unbound_review_bytes = (
                 "# P0 executor review\n\n**Verdict: ACCEPT.**\n\n"
@@ -1893,7 +1935,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 (enum.PREBUILD_RUNNER_REL, parser_digest),
                 (enum.PREBUILD_EXECUTOR_REL, executor_digest),
                 (enum.ENUMERATOR_REL, enumerator_digest),
-                (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+                (enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest),
                 (enum.PREBUILD_EXECUTOR_REVIEW_REL, unbound_review_digest),
             )
             with self.assertRaises(enum.EnumerationError):
@@ -1904,7 +1946,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 + _review_binding_line(enum.PREBUILD_RUNNER_REL, parser_digest)
                 + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
                 + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
-                + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+                + _review_binding_line(enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest)
             ).encode("utf-8")
             nonaccepting_review_digest = enum.sha256_bytes(nonaccepting_review_bytes)
             p0["implementation_review"]["record_sha256"] = nonaccepting_review_digest
@@ -1915,7 +1957,7 @@ class Stage2EnumerationTest(unittest.TestCase):
                 (enum.PREBUILD_RUNNER_REL, parser_digest),
                 (enum.PREBUILD_EXECUTOR_REL, executor_digest),
                 (enum.ENUMERATOR_REL, enumerator_digest),
-                (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
+                (enum.P0_ENUMERATION_REVIEW_REL, enumerator_review_digest),
                 (enum.PREBUILD_EXECUTOR_REVIEW_REL, nonaccepting_review_digest),
             )
             with self.assertRaises(enum.EnumerationError):
@@ -1954,7 +1996,7 @@ class Stage2EnumerationTest(unittest.TestCase):
             blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes
 
             blobs[f"{implementation_commit}:PLAN.md"] = plan_bytes.replace(
-                enum.ENUMERATION_REVIEW_REL.encode("utf-8"), b"wrong-review.md", 1
+                enum.P0_ENUMERATION_REVIEW_REL.encode("utf-8"), b"wrong-review.md", 1
             )
             with self.assertRaises(enum.EnumerationError):
                 enum._verify_p0_implementation_binding(p0, p0_commit)
@@ -2269,6 +2311,80 @@ class Stage2EnumerationTest(unittest.TestCase):
         self.assertEqual(set(frames), set(enum.EXTERNAL_FRAMES))
         self.assertEqual(len(frames["client_call_recall"]), len(enum.RECEIPT_FIXTURES))
         self.assertEqual(set(proofs), set(enum.RECEIPT_FIXTURES))
+
+    def test_raw_frame_producer_counts_two_facts_on_one_line_as_one_site(self):
+        lp = FakeLabelPrep(same_line_facts=True)
+        entries = {
+            fixture: {
+                "commit": f"{number:040x}",
+                "goos": "darwin",
+                "goarch": "arm64",
+                "go_tests": "include",
+            }
+            for number, fixture in enumerate(enum.RECEIPT_FIXTURES, 1)
+        }
+        facts = {
+            fixture: Path("/synthetic") / f"{fixture}.facts.jsonl"
+            for fixture in enum.RECEIPT_FIXTURES
+        }
+        frames, _proofs = enum.enumerate_raw_frames(
+            lp,
+            entries=entries,
+            corpus_dir=Path("/synthetic/corpus"),
+            facts=facts,
+            expected_toolchain_identity="exact-tools",
+            authorized_tools=self._synthetic_tools(),
+        )
+        precision = frames["client_call_precision"]
+        self.assertEqual(len(precision), 1)
+        self.assertEqual(precision[0]["sampling_site_multiplicity"], 2)
+        self.assertEqual(
+            precision[0]["sampling_site_member_ids"],
+            ["temporal-typed-7-a", "temporal-typed-7-b"],
+        )
+        cardinalities, membership = enum.stage2_inputs(frames)
+        self.assertEqual(
+            cardinalities["client_call_precision"],
+            {"population": 1, "census": 0},
+        )
+        self.assertEqual(
+            membership["client_call_precision"],
+            ["temporal:client.go:7:7"],
+        )
+        self.assertEqual(
+            cardinalities["client_call_recall"],
+            {"population": len(enum.RECEIPT_FIXTURES), "census": 0},
+        )
+
+    def test_raw_frame_producer_preserves_a_duplicate_row_for_refusal(self):
+        lp = FakeLabelPrep(duplicate_emitted=True)
+        entries = {
+            fixture: {
+                "commit": f"{number:040x}",
+                "goos": "darwin",
+                "goarch": "arm64",
+                "go_tests": "include",
+            }
+            for number, fixture in enumerate(enum.RECEIPT_FIXTURES, 1)
+        }
+        facts = {
+            fixture: Path("/synthetic") / f"{fixture}.facts.jsonl"
+            for fixture in enum.RECEIPT_FIXTURES
+        }
+        frames, _proofs = enum.enumerate_raw_frames(
+            lp,
+            entries=entries,
+            corpus_dir=Path("/synthetic/corpus"),
+            facts=facts,
+            expected_toolchain_identity="exact-tools",
+            authorized_tools=self._synthetic_tools(),
+        )
+        self.assertEqual(len(frames["client_call_precision"]), 2)
+        with self.assertRaisesRegex(
+            enum.EnumerationError,
+            "^frame has duplicate sampling-site coordinates$",
+        ):
+            enum.stage2_inputs(frames)
 
     def test_raw_enumeration_refuses_nonreproducible_typed_oracle(self):
         lp = FakeLabelPrep(unstable=True)

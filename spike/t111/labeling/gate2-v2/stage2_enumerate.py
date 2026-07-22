@@ -99,11 +99,15 @@ PREBUILD_EXECUTOR_REVIEW_REL = PREBUILD_EXECUTOR_REVIEW_PATH.relative_to(REPO_RO
 P0_MODULE_CACHE_REL = "spike/t111/module_cache.go"
 P0_MODULE_CACHE_TEST_REL = "spike/t111/module_cache_test.go"
 STAGE1_SNAPSHOT_REL = (HERE / "stage1_snapshot.py").relative_to(REPO_ROOT).as_posix()
-# This implementation revision must be accepted afresh because its P0
-# implementation-review dependency changed.  Every executable path must name
-# the same r7 review; older r2/r3/r4/r5/r6 records remain historical and cannot
-# bless this revised verifier.
-ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r7.md"
+# P0-03 remains bound to the historical r7 verifier review at its accepted
+# implementation commit.  A successor enumeration verifier must not make that
+# completed evidence chain depend on a later review record.
+P0_ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r7.md"
+P0_ENUMERATION_REVIEW_REL = P0_ENUMERATION_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
+# R7 changes the live frame-row producer, so enum-02 requires a fresh r8
+# review.  This path is current authority only; it is never substituted into
+# the historical P0 implementation closure above.
+ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r8.md"
 ENUMERATION_REVIEW_REL = ENUMERATION_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EVIDENCE_REVIEW_PATH = HERE / "stage2-prebuild-evidence-review-r1.md"
 PREBUILD_EVIDENCE_REVIEW_REL = PREBUILD_EVIDENCE_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
@@ -118,7 +122,7 @@ PLAN_P0_IMPLEMENTATION_APPROVAL = "ACCEPT"
 # Version the exact marker as well as the review filename.  Older accepted
 # rows are retained in PLAN.md as history, so an unversioned substring would
 # make the current executable approval permanently ambiguous.
-PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r7"
+PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r8"
 PLAN_IMPLEMENTATION_APPROVAL = "ACCEPT"
 PYTHON_MODE = "isolated-no-site"
 TOOLCHAIN_IDENTITY_RE = re.compile(
@@ -1129,7 +1133,7 @@ def _p0_implementation_plan_anchor(
             f"{PREBUILD_RUNNER_REL}={parser_digest}",
             f"{PREBUILD_EXECUTOR_REL}={executor_digest}",
             f"{ENUMERATOR_REL}={enumerator_digest}",
-            f"{ENUMERATION_REVIEW_REL}={enumerator_review_digest}",
+            f"{P0_ENUMERATION_REVIEW_REL}={enumerator_review_digest}",
             f"{PREBUILD_EXECUTOR_REVIEW_REL}={implementation_review_digest}",
         ),
         label="P0 implementation commit",
@@ -1183,13 +1187,13 @@ def _verify_p0_implementation_binding(p0: dict[str, Any], p0_commit: str) -> Non
         (PREBUILD_RUNNER_REL, digests["prebuild_runner_sha256"], "P0 admission parser"),
         (PREBUILD_EXECUTOR_REL, digests["prebuild_executor_sha256"], "P0 executor"),
         (ENUMERATOR_REL, digests["enumerator_sha256"], "enumeration verifier"),
-        (ENUMERATION_REVIEW_REL, digests["enumerator_review_sha256"], "enumeration review"),
+        (P0_ENUMERATION_REVIEW_REL, digests["enumerator_review_sha256"], "enumeration review"),
         (PREBUILD_EXECUTOR_REVIEW_REL, review_digest, "P0 implementation review"),
     ):
         if sha256_bytes(_commit_blob(accepted_commit, relative)) != expected:
             raise EnumerationError(f"P0 implementation commit does not contain the accepted {label}")
     _enumerator_review_record(
-        _commit_blob(accepted_commit, ENUMERATION_REVIEW_REL),
+        _commit_blob(accepted_commit, P0_ENUMERATION_REVIEW_REL),
         digests["enumerator_sha256"],
     )
     _p0_implementation_review_record(
@@ -1892,7 +1896,7 @@ def _p0_implementation_review_record(
             (PREBUILD_RUNNER_REL, parser_digest),
             (PREBUILD_EXECUTOR_REL, executor_digest),
             (ENUMERATOR_REL, enumerator_digest),
-            (ENUMERATION_REVIEW_REL, enumerator_review_digest),
+            (P0_ENUMERATION_REVIEW_REL, enumerator_review_digest),
             (P0_MODULE_CACHE_REL, module_cache_digest),
             (P0_MODULE_CACHE_TEST_REL, module_cache_test_digest),
         ),
@@ -2777,6 +2781,61 @@ def _typed_digest(rows: list[dict[str, Any]], diagnostics: dict[str, Any]) -> di
     }
 
 
+def aggregate_frame_sampling_sites(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Project distinct producer rows onto the line-granular sampling unit.
+
+    The sealed frame builders intentionally retain invocation/fact identity,
+    while Stage 2 samples one source line.  Distinct producer identities on
+    that line become one deterministic row carrying their multiplicity and a
+    digest of the full members.  A repeated producer identity is not
+    aggregation: preserve those rows so ``stage2_inputs`` remains the final
+    duplicate-site integrity boundary.
+    """
+    grouped: dict[tuple[str, str, int], list[dict[str, Any]]] = {}
+    unprojectable: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            system = row["system"]
+            path = row["path"]
+            raw_line = row["line"]
+            if (
+                not isinstance(system, str)
+                or not isinstance(path, str)
+                or isinstance(raw_line, bool)
+            ):
+                raise TypeError
+            line = int(raw_line)
+        except (KeyError, TypeError, ValueError):
+            # Preserve malformed producer rows for the existing boundary to
+            # reject; projection must never normalize an invalid coordinate.
+            unprojectable.append(row)
+            continue
+        grouped.setdefault((system, path, line), []).append(row)
+
+    projected: list[dict[str, Any]] = []
+    for coordinate in sorted(grouped):
+        members = sorted(grouped[coordinate], key=canonical_json)
+        identities = [row.get("site_id") for row in members]
+        serialized = [canonical_json(row) for row in members]
+        if (
+            any(not isinstance(identity, str) or not identity for identity in identities)
+            or len(set(identities)) != len(identities)
+            or len(set(serialized)) != len(serialized)
+        ):
+            projected.extend(members)
+            continue
+        representative = dict(members[0])
+        representative["sampling_site_multiplicity"] = len(members)
+        representative["sampling_site_member_ids"] = sorted(identities)
+        representative["sampling_site_members_sha256"] = sha256_bytes(
+            canonical_json(members).encode("utf-8")
+        )
+        projected.append(representative)
+    return sorted([*projected, *unprojectable], key=canonical_json)
+
+
 def enumerate_raw_frames(
     lp: ModuleType,
     *,
@@ -2892,7 +2951,10 @@ def enumerate_raw_frames(
         frames["registration_recall"].extend(registration_recall)
         frames["registration_precision"].extend(registration_precision)
         typed_proofs[fixture] = _typed_digest(first, first_diagnostics)
-    return frames, typed_proofs
+    return {
+        frame: aggregate_frame_sampling_sites(frames[frame])
+        for frame in EXTERNAL_FRAMES
+    }, typed_proofs
 
 
 def stage2_inputs(frames: dict[str, list[dict[str, Any]]]) -> tuple[dict[str, dict[str, int]], dict[str, list[str]]]:
