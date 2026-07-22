@@ -544,11 +544,20 @@ revocation, one-snapshot read authorization, `422` bounded-query refusals,
 single-domain filtered-query invariants, immutable persistence, and proof-aware
 retention. MCP exposure is deliberately T14.2; compatibility remains T14.3.
 
-**T14.2 · MCP tools**
-The annex tools on the existing stateless `/api/mcp` server:
-`find_operation_consumers`, `find_proto_field_references`,
-`check_contract_compatibility`, `get_extraction_coverage`. AC: a live agent
-session answers "who consumes this RPC/field?" with citations and coverage.
+**T14.2 · MCP tools** ✅ 2026-07-22
+The proof-backed annex tools on the existing stateless `/api/mcp` server:
+`find_operation_consumers`, `find_proto_field_references`, and
+`get_extraction_coverage`. Implemented as a transport-only projection of the
+same `api.ProofService` used by Huma, returning complete `proof-bundle-v1`
+structured content; no MCP-specific filtering, aggregation, or qualification
+logic exists. The tools are registered only under the existing experimental
+reader opt-in and are otherwise undiscoverable. AC runs one official-SDK
+stateless Streamable HTTP agent session through RPC consumers, field
+references, and coverage, verifies exact source citations and the agent's
+visibility context, and proves zero hidden-repository evidence calls or names.
+`check_contract_compatibility` registers with its real pinned-Buf engine in
+T14.3; T14.2 intentionally does not advertise a failing placeholder or freeze
+a speculative schema.
 
 **T14.3 · Contract compatibility via pinned Buf child**
 `check_contract_compatibility`: version-pinned `buf` child built from go.mod
@@ -556,7 +565,8 @@ session answers "who consumes this RPC/field?" with citations and coverage.
 descriptor inputs or sanitized temp tree, no network, CPU/memory/time limits,
 never `buf generate`/protoc plugins/repository scripts; Buf version, args, and
 result recorded in the extraction run. phebs enriches Buf's spec-level
-verdicts with evidence-derived consumers. AC: a wire-breaking field change
+verdicts with evidence-derived consumers and registers the corresponding Huma
+endpoint plus MCP tool. AC: a wire-breaking field change
 reports the breaking rule **and** the affected consumers with call-site
 citations.
 

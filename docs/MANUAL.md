@@ -606,6 +606,10 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
 | `/api/webhook`                                                      | POST            | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set     |
 | `/api/mcp`                                                          | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8)                                               |
+| `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped operation-consumer proof bundle                                 |
+| `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
+| `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
+| `/api/proof_bundles/{id}`                                           | GET             | reauthorized immutable proof-bundle read; an ID is not a bearer credential                     |
 | `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
 | `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
 | `/api/tree?repo=&ref=`                                              | GET             | all file paths, recursive                                                                      |
@@ -650,7 +654,9 @@ go-sdk), guarded by the same DB-backed authentication as the rest of the API.
 Create a named key in **Settings** and use it as the bearer token; the legacy
 config key remains accepted only while it is configured.
 
-Ten tools:
+Ten core tools are always present. Enabling
+`experimental.provisional_proto_extraction` adds three proof-backed annex
+tools, for thirteen total:
 
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
@@ -665,6 +671,9 @@ Ten tools:
 | `list_commits`     | paged history for `{repo,ref?,path?,limit?,offset?}`; maximum 200 commits per page                                                                                                                                                                          |
 | `get_commit`       | commit metadata, parents, and first-parent file changes                                                                                                                                                                                                     |
 | `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
+| `find_operation_consumers` | immutable permission-scoped `proof-bundle-v1` for one canonical `/package.Service/Method`; includes matching assertions, exact source occurrences, coverage, extractor versions, and the provisional-evidence caveat |
+| `find_proto_field_references` | immutable proof bundle for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
+| `get_extraction_coverage` | assertion-free proof bundle over requested extractor domains, or all three provisional domains when omitted |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
@@ -698,7 +707,11 @@ verified live against Claude Code: a headless session listed repos, ran a
 scoped search, and read the matching file end-to-end (T8.3). Epic 9's seven
 navigation/history tools are covered through real in-memory MCP sessions over
 a committed SCIP fixture and bare Git mirror, including an indexed revision
-held stable while mirror HEAD advances.
+held stable while mirror HEAD advances. T14.2's proof tools are covered through
+one stateless Streamable HTTP session using the official SDK: the agent asks
+both operation- and field-consumer questions and receives source citations and
+coverage without hidden-repository access. `check_contract_compatibility` is
+not advertised until T14.3 provides its pinned-Buf implementation.
 
 ## 9. Operations
 
@@ -998,8 +1011,9 @@ commit/extractor version short-circuits. Like the rest of phebs's
 HEAD-freshness queues, successive index events may coalesce before extraction;
 only the latest indexed revision can pass the publication guard. Opt-in
 startup backfills indexed repositories even when new indexing is unavailable.
-There is no MCP projection yet; T14.2 adds it over these HTTP proof bundles.
-Operational state is also visible through the database and
+The same opt-in exposes these three proof queries as MCP structured content;
+HTTP and MCP call one shared proof service. Operational state is also visible
+through the database and
 `phebs_jobs_total{kind="extraction_job"}`.
 
 Proof-aware retention checks at startup and hourly while idle. Every

@@ -89,8 +89,73 @@ type assertionFilter struct {
 	Lineage   string
 }
 
+// ProofService is the shared T14 query core used by both Huma and MCP. A nil
+// result from NewProofService keeps every proof surface undiscoverable while
+// the provisional extraction feature is disabled.
+type ProofService struct {
+	opts Options
+}
+
+// NewProofService constructs the shared query service only when every store
+// boundary needed to build and persist a proof bundle is available.
+func NewProofService(opts Options) *ProofService {
+	if opts.Store == nil || opts.Evidence == nil || opts.ProofBundles == nil {
+		return nil
+	}
+	return &ProofService{opts: opts}
+}
+
+// FindOperationConsumers builds the same immutable answer returned by the
+// Huma endpoint. Operation is the canonical /service/method identity.
+func (s *ProofService) FindOperationConsumers(ctx context.Context, operation string) (*ProofBundleEnvelope, error) {
+	if s == nil {
+		return nil, huma.Error503ServiceUnavailable("proof queries unavailable")
+	}
+	if err := validateOperation(operation); err != nil {
+		return nil, huma.Error400BadRequest(err.Error())
+	}
+	query := ProofQuery{Kind: "find_operation_consumers", Operation: operation, Domains: []string{"grpc-consumer"}}
+	return createProofBundle(ctx, s.opts, query, assertionFilter{
+		Predicate: "CALLS_OPERATION", Object: operation,
+	})
+}
+
+// FindProtoFieldReferences builds the immutable answer for one canonical
+// (lineage, message, field number) identity.
+func (s *ProofService) FindProtoFieldReferences(ctx context.Context, lineage, message string, fieldNumber int) (*ProofBundleEnvelope, error) {
+	if s == nil {
+		return nil, huma.Error503ServiceUnavailable("proof queries unavailable")
+	}
+	if err := validateFieldIdentity(lineage, message, fieldNumber); err != nil {
+		return nil, huma.Error400BadRequest(err.Error())
+	}
+	query := ProofQuery{
+		Kind: "find_proto_field_references", Lineage: lineage,
+		Message: message, FieldNumber: fieldNumber, Domains: []string{"scip-proto-field"},
+	}
+	return createProofBundle(ctx, s.opts, query, assertionFilter{
+		Predicate: "REFERENCES_PROTO_FIELD",
+		Object:    message + "#" + strconv.Itoa(fieldNumber), Lineage: lineage,
+	})
+}
+
+// GetExtractionCoverage builds an assertion-free proof bundle over the
+// requested domains. An empty slice selects every provisional domain.
+func (s *ProofService) GetExtractionCoverage(ctx context.Context, domains []string) (*ProofBundleEnvelope, error) {
+	if s == nil {
+		return nil, huma.Error503ServiceUnavailable("proof queries unavailable")
+	}
+	domains, err := canonicalProofDomains(domains)
+	if err != nil {
+		return nil, huma.Error400BadRequest(err.Error())
+	}
+	query := ProofQuery{Kind: "get_extraction_coverage", Domains: domains}
+	return createProofBundle(ctx, s.opts, query, assertionFilter{})
+}
+
 func registerProofAPI(api huma.API, opts Options) {
-	if opts.ProofBundles == nil {
+	service := NewProofService(opts)
+	if service == nil {
 		return
 	}
 
@@ -99,13 +164,7 @@ func registerProofAPI(api huma.API, opts Options) {
 	}
 	type proofOut struct{ Body ProofBundleEnvelope }
 	huma.Get(api, "/api/find_operation_consumers", func(ctx context.Context, in *operationIn) (*proofOut, error) {
-		if err := validateOperation(in.Operation); err != nil {
-			return nil, huma.Error400BadRequest(err.Error())
-		}
-		query := ProofQuery{Kind: "find_operation_consumers", Operation: in.Operation, Domains: []string{"grpc-consumer"}}
-		envelope, err := createProofBundle(ctx, opts, query, assertionFilter{
-			Predicate: "CALLS_OPERATION", Object: in.Operation,
-		})
+		envelope, err := service.FindOperationConsumers(ctx, in.Operation)
 		if err != nil {
 			return nil, err
 		}
@@ -118,17 +177,7 @@ func registerProofAPI(api huma.API, opts Options) {
 		FieldNumber int    `query:"field_number" required:"true" minimum:"1" maximum:"536870911" example:"1"`
 	}
 	huma.Get(api, "/api/find_proto_field_references", func(ctx context.Context, in *fieldIn) (*proofOut, error) {
-		if err := validateFieldIdentity(in.Lineage, in.Message, in.FieldNumber); err != nil {
-			return nil, huma.Error400BadRequest(err.Error())
-		}
-		query := ProofQuery{
-			Kind: "find_proto_field_references", Lineage: in.Lineage,
-			Message: in.Message, FieldNumber: in.FieldNumber, Domains: []string{"scip-proto-field"},
-		}
-		envelope, err := createProofBundle(ctx, opts, query, assertionFilter{
-			Predicate: "REFERENCES_PROTO_FIELD",
-			Object:    in.Message + "#" + strconv.Itoa(in.FieldNumber), Lineage: in.Lineage,
-		})
+		envelope, err := service.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
 		if err != nil {
 			return nil, err
 		}
@@ -143,8 +192,7 @@ func registerProofAPI(api huma.API, opts Options) {
 		if err != nil {
 			return nil, huma.Error400BadRequest(err.Error())
 		}
-		query := ProofQuery{Kind: "get_extraction_coverage", Domains: domains}
-		envelope, err := createProofBundle(ctx, opts, query, assertionFilter{})
+		envelope, err := service.GetExtractionCoverage(ctx, domains)
 		if err != nil {
 			return nil, err
 		}
@@ -454,9 +502,16 @@ func validQueryIdentity(value string) bool {
 
 func proofDomains(raw string) ([]string, error) {
 	if raw == "" {
+		return canonicalProofDomains(nil)
+	}
+	return canonicalProofDomains(strings.Split(raw, ","))
+}
+
+func canonicalProofDomains(domains []string) ([]string, error) {
+	if len(domains) == 0 {
 		return []string{"grpc-consumer", "proto-contract", "scip-proto-field"}, nil
 	}
-	parts := strings.Split(raw, ",")
+	parts := append([]string(nil), domains...)
 	if len(parts) == 0 || len(parts) > 64 {
 		return nil, errors.New("domains must contain from 1 through 64 values")
 	}

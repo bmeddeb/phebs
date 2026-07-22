@@ -13,11 +13,21 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
+
+// ProofQueries is the T14.1 query core projected through MCP. The interface
+// keeps the transport adapter unable to recreate evidence or permission
+// semantics independently of the HTTP API.
+type ProofQueries interface {
+	FindOperationConsumers(ctx context.Context, operation string) (*api.ProofBundleEnvelope, error)
+	FindProtoFieldReferences(ctx context.Context, lineage, message string, fieldNumber int) (*api.ProofBundleEnvelope, error)
+	GetExtractionCoverage(ctx context.Context, domains []string) (*api.ProofBundleEnvelope, error)
+}
 
 type Options struct {
 	Version string
@@ -26,6 +36,9 @@ type Options struct {
 	DataDir string                    // bare mirrors for read_file
 	CodeNav *codenav.Service          // nil = SCIP tools report unavailable
 	History *phebssync.HistoryService // nil = construct from DataDir
+	// Proofs enables the three T14.2 proof-backed tools. Nil leaves them
+	// unregistered so the provisional extraction feature stays dark.
+	Proofs ProofQueries
 	// Visible resolves the caller's repo visibility (T10.3); nil disables
 	// permission filtering. search_code is covered inside the searcher; this
 	// hook gates the tools that bypass it (read_file, list_repos, SCIP,
@@ -120,8 +133,59 @@ func NewServer(opts Options) *sdk.Server {
 
 	registerCodeNavigationTools(s, opts)
 	registerHistoryTools(s, opts, history)
+	registerProofTools(s, opts)
 
 	return s
+}
+
+func registerProofTools(s *sdk.Server, opts Options) {
+	if opts.Proofs == nil {
+		return
+	}
+
+	type operationIn struct {
+		Operation string `json:"operation" jsonschema:"canonical fully-qualified gRPC operation /package.Service/Method"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "find_operation_consumers",
+		Description: "Find callers of one canonical gRPC operation. Returns an immutable permission-scoped proof bundle; evidence occurrences are source citations and coverage states what remains unknown. Provisional evidence cannot establish absence or safety.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
+		result, err := opts.Proofs.FindOperationConsumers(ctx, in.Operation)
+		if err != nil {
+			return nil, api.ProofBundleEnvelope{}, err
+		}
+		return nil, *result, nil
+	})
+
+	type fieldIn struct {
+		Lineage     string `json:"lineage" jsonschema:"canonical contract lineage id from extracted protobuf/SCIP evidence"`
+		Message     string `json:"message" jsonschema:"fully-qualified protobuf message name, e.g. shop.Cart"`
+		FieldNumber int    `json:"field_number" jsonschema:"protobuf wire field number, 1 through 536870911 excluding 19000 through 19999"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "find_proto_field_references",
+		Description: "Find source references to one protobuf field identity (lineage, message, field number). Returns an immutable permission-scoped proof bundle with exact source citations and coverage; field names are versioned attributes, not identity.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in fieldIn) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
+		result, err := opts.Proofs.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
+		if err != nil {
+			return nil, api.ProofBundleEnvelope{}, err
+		}
+		return nil, *result, nil
+	})
+
+	type coverageIn struct {
+		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-consumer, proto-contract, and scip-proto-field"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:        "get_extraction_coverage",
+		Description: "Return an assertion-free immutable proof bundle describing extraction coverage over the caller's complete visible repository universe.",
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in coverageIn) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
+		result, err := opts.Proofs.GetExtractionCoverage(ctx, in.Domains)
+		if err != nil {
+			return nil, api.ProofBundleEnvelope{}, err
+		}
+		return nil, *result, nil
+	})
 }
 
 type positionIn struct {

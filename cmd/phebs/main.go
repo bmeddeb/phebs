@@ -329,7 +329,7 @@ func serve(args []string) error {
 			resyncNames = append(resyncNames, c.Name)
 		}
 	}
-	apiHandler := api.New(api.Options{
+	apiOpts := api.Options{
 		Version: version,
 		Store:   st, Search: searcher, DataDir: cfg.Server.DataDir,
 		CodeNav: codeNavigation,
@@ -359,11 +359,16 @@ func serve(args []string) error {
 			return "unfiltered-v1"
 		}(),
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
-	})
+	}
+	apiHandler := api.New(apiOpts)
+	var mcpProofs phebsmcp.ProofQueries
+	if proofService := api.NewProofService(apiOpts); proofService != nil {
+		mcpProofs = proofService
+	}
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
 	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
-		CodeNav: codeNavigation, Visible: visibleFor,
+		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs,
 	})
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their
