@@ -37,6 +37,8 @@ claim outruns its measurement.
 | [NEGATIVE_TEST_DESIGN.md](./NEGATIVE_TEST_DESIGN.md) | dependency-preview authorization and integrity test matrix for prerequisite item 3; execution remains separately gated |
 | [SIZING_ASSUMPTIONS.md](./SIZING_ASSUMPTIONS.md) | dependency-preview workload and capacity worksheet for prerequisite item 4; contains no environment measurements |
 | [RESTORE_PROCEDURE.md](./RESTORE_PROCEDURE.md) | dependency-preview backup and witnessed-restore design for prerequisite item 5; grants no backup or environment authority |
+| [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) | preregistration draft of the pilot internal-validation protocol for prerequisite item 9; reuses the sealed V2 label machinery; grants no pilot, accuracy, or Epic 16 authority |
+| [DECISION_RECORDS.md](./DECISION_RECORDS.md) | fail-closed templates for the validation gate decision and the pilot continuation decision, prerequisite item 10; filling a template creates no decision |
 
 The role/capability model for prerequisite item 2 lives in
 [PILOT_CHARTER.md §5](./PILOT_CHARTER.md#5-roles-and-authority) so authority

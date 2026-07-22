@@ -33,11 +33,13 @@ reviewer identity, timestamp, decision, unresolved findings (or `none`).
 | 6 | Negative-test execution | verification | 3 + environment authorization | TBD | Security reviewer | two executions per case — unknown identity and unauthorized identity — each compared byte-for-byte against the same golden fixture-06 canonical response | blocked_unassigned | not_assessed |
 | 7 | Capacity checks | verification | 4 + environment authorization | TBD | TBD | measured results vs assumptions | blocked_unassigned | not_assessed |
 | 8 | Witnessed restore | verification | 5, 7, environment authorization | TBD | witness **independent of the restore operator** | restore transcript, witness attestation | blocked_unassigned | not_assessed |
+| 9 | Statistical accuracy-gold protocol (preregistration) | design | none (sealing requires charter Gate 0) | TBD | Gate 0 signatories per charter | [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) draft + `pilot/validation/` harness tests | blocked_unassigned | not_assessed |
+| 10 | Gate and continuation decision-record templates | design | none | TBD | TBD | [DECISION_RECORDS.md](./DECISION_RECORDS.md) draft | blocked_unassigned | not_assessed |
 
 `TBD` carries state `blocked_unassigned` so a mechanical blank-field check
 cannot be bypassed by placeholder text.
 
-Draft artifacts exist for items 1–5. Items 3–5 are dependency previews: they do
+Draft artifacts exist for items 1–5 and 9–10. Items 3–5 are dependency previews: they do
 not imply acceptance of items 1 or 2 and must be reconciled against those
 artifacts after their prerequisites are accepted. Drafting does not advance any
 state: every item still requires an explicit owner, an eligible named reviewer,
