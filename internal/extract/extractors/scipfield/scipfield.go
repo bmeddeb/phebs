@@ -21,6 +21,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -691,17 +692,11 @@ func parseProtobufTag(literal string) (uint64, string, bool) {
 	if err != nil {
 		return 0, "", false
 	}
-	const marker = `protobuf:"`
-	start := strings.Index(tag, marker)
-	if start < 0 {
+	value := reflect.StructTag(tag).Get("protobuf")
+	if value == "" {
 		return 0, "", false
 	}
-	value := tag[start+len(marker):]
-	end := strings.IndexByte(value, '"')
-	if end < 0 {
-		return 0, "", false
-	}
-	parts := strings.Split(value[:end], ",")
+	parts := strings.Split(value, ",")
 	if len(parts) < 2 {
 		return 0, "", false
 	}
@@ -792,10 +787,11 @@ func positionByte(content string, starts []int, position scip.Position, encoding
 	line := content[lineStart:lineEnd]
 	switch encoding {
 	case scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart:
-		if int(position.Character) > len(line) {
+		offset := int(position.Character)
+		if offset > len(line) || (offset < len(line) && !utf8.RuneStart(line[offset])) {
 			return 0, false
 		}
-		return lineStart + int(position.Character), true
+		return lineStart + offset, true
 	case scip.PositionEncoding_UTF16CodeUnitOffsetFromLineStart, scip.PositionEncoding_UTF32CodeUnitOffsetFromLineStart:
 		units := int32(0)
 		byteOffset := 0

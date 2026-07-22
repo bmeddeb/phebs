@@ -22,10 +22,13 @@ var extractorImportAllowlist = map[string]bool{
 	"errors":        true,
 	"fmt":           true,
 	"path":          true,
-	"sort":          true,
-	"strconv":       true,
-	"strings":       true,
-	"unicode/utf8":  true,
+	// reflect is allowed only for reflect.StructTag parsing — pure string
+	// computation, no reflection over live values.
+	"reflect":      true,
+	"sort":         true,
+	"strconv":      true,
+	"strings":      true,
+	"unicode/utf8": true,
 
 	// In-process stdlib Go parsing for the T13.1 grpcgo and T13.2 generated
 	// accessor extractors. Parsing is pure computation over the supplied blob:

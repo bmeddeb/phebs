@@ -253,6 +253,12 @@ func TestSCIPPositionEncodingsResolveExactBytes(t *testing.T) {
 	}, scip.PositionEncoding_UTF16CodeUnitOffsetFromLineStart); ok {
 		t.Fatal("UTF-16 range splitting a surrogate pair was accepted")
 	}
+	if _, _, ok := byteSpan(content, starts, scip.Range{
+		Start: scip.Position{Line: 0, Character: 2},
+		End:   scip.Position{Line: 0, Character: 4},
+	}, scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart); ok {
+		t.Fatal("UTF-8 range splitting a rune was accepted")
+	}
 }
 
 func TestDeterministicAndNoAccuracyLanguage(t *testing.T) {
