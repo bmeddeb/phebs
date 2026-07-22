@@ -323,7 +323,7 @@ blame, explicit zero-context diffs, and history pagination request races. Also
 made repository locks cancellable, idempotent, and idle-evicted; unreadable shard
 audits and filesystem reconciliation are now non-destructive and cancellable.
 
-**TD.4 · Shared bounded Git object reader** — *internal consolidation*
+**TD.4 · Shared bounded Git object reader** ✅ 2026-07-15 — *internal consolidation*
 Factor source/history/SCIP Git reads onto one immutable-OID primitive with
 per-call byte limits and shared not-found classification. Do not route SCIP
 through the current source helper: its global 10 MiB blob contract conflicts
@@ -444,8 +444,11 @@ required human reviews and acceptance are recorded complete by the operator.
 T11.1 is therefore complete as a validation process, while GATE2-V2 remains
 `NOT_ESTABLISHED` and supplies no accuracy number. Governance releases
 implementation sequencing for Epics 12–15 under the existing bounded-evidence,
-permission, coverage, and abstention requirements. The remaining acceptance
-criteria in Epics 13–15 stay unsatisfied until implemented and verified.
+permission, coverage, and abstention requirements. At the time of that
+disposition, the remaining acceptance criteria in Epics 13–15 stayed
+unsatisfied until implemented and verified. They are now complete under their
+individual tickets, including Epic 15's separately retained independent
+acceptance gate recorded below.
 
 ## EPIC 12 — Provenance schema & protobuf facts ✅ 2026-07-12 *(implemented dark and hardened; T11.1 sequencing release recorded 2026-07-22; runtime posture unchanged)*
 
@@ -476,7 +479,7 @@ assertion whose evidence atom resolves to the pinned commit and span in the
 file viewer. Promotion to canonical cross-repository `contract_lineage_id`
 remains T13.2 work and provisional facts cannot support product conclusions.
 
-## EPIC 13 — Implementations, consumers, field references *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
+## EPIC 13 — Implementations, consumers, field references ✅ 2026-07-22 *(unblocked by the accepted T11.1 terminal disposition)*
 
 **T13.1 · Implementation & consumer resolution (Go/gRPC) — dark/provisional
 scope per the 2026-07-22 disposition** ✅ 2026-07-22
@@ -526,7 +529,7 @@ mutates hidden-repo run and attempt state and requires byte-identical
 certificates, no hidden names, and zero invisible-repository queries. API
 exposure is T14.1.
 
-## EPIC 14 — Query, proof bundles & MCP *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
+## EPIC 14 — Query, proof bundles & MCP ✅ 2026-07-22 *(unblocked by the accepted T11.1 terminal disposition)*
 
 **T14.1 · Query API + proof bundles** ✅ 2026-07-22
 huma endpoints for `find_operation_consumers`, `find_proto_field_references`,
@@ -616,7 +619,14 @@ and only the existing evidence sweeper can reclaim a newly unpinned run. The
 AC additionally pins indistinguishable expired/missing/unauthorized 404s,
 default-off config, active-bundle byte identity, and checkpoint isolation.
 
-## EPIC 15 — Contract impact report *(unblocked 2026-07-22; read-only; the first user-facing annex workflow — independent acceptance gate retained)*
+## EPIC 15 — Contract impact report ✅ 2026-07-22 *(read-only; independent acceptance gate closed by operator acceptance)*
+
+Independent acceptance was recorded after review of the shared proof-service
+projection, default-dark posture, exact immutable citations, permission
+non-interference, bounded conclusions, and the retained full-suite acceptance
+run. This closes Epic 15 only: GATE2-V2 remains `NOT_ESTABLISHED`, the broader
+platform pivot stays frozen, and Epic 16 still requires both `ESTABLISHED`
+validation and an explicit pilot-continuation decision.
 
 **T15.1 · Report API + page** ✅ 2026-07-22
 For a contract, or a contract change between two extraction runs: known
