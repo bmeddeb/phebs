@@ -13,7 +13,9 @@ protocol-defined capacity stop with its method uncompromised. That terminal
 record is not an accuracy pass and transfers no accuracy claim. The pilot's
 sealed internal validation in §8.2 is therefore the sole path to an
 accuracy-bearing decision; every role, authorization, custody, safety, and
-internal measurement requirement below remains unchanged.
+internal measurement requirement below remains unchanged. Ben accepted this
+revision as operator on 2026-07-22; that acceptance resolves the charter-text
+conflict but does not close Gate 0 or fill any blank role or approval.
 
 ## 1. Decision this charter governs
 
