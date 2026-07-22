@@ -470,13 +470,20 @@ remains T13.2 work and provisional facts cannot support product conclusions.
 
 ## EPIC 13 — Implementations, consumers, field references *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
 
-**T13.1 · Implementation & consumer resolution (Go/gRPC)**
+**T13.1 · Implementation & consumer resolution (Go/gRPC) — dark/provisional
+scope per the 2026-07-22 disposition**
 `RegisterXServer` implementation pinning; typed generated-client call-site
 resolution; `code_role` classification (production/test/mock/generated/
-vendor). AC: the productized extractor independently meets the unchanged
-operation thresholds on a fresh, independently reviewed blind evaluation under
-the T11.1 measurement contract (≥98% precision, ≥90% recall, and ≥90% precision
-in every fixture); every edge cites its atoms.
+vendor). Dark-stage AC (T12.3 precedent): the productized extractor runs
+inside the T12.2 pure-reader pipeline on the fixture corpus; every
+implementation/consumer edge cites evidence atoms resolving to pinned
+commit + span in the file viewer; classification and resolution are
+deterministic across two runs; no output states or implies measured
+accuracy. The original blind-evaluation clause (≥98% precision, ≥90%
+recall, ≥90% per-fixture under the T11.1 measurement contract) is
+**deferred to the pilot's internal validation gate** — it cannot be
+satisfied post-capacity-stop and remains the promotion bar for any
+accuracy-bearing claim.
 
 **T13.2 · SCIP proto-field references**
 `REFERENCES_PROTO_FIELD` assertions from cross-repo SCIP references over
