@@ -16,6 +16,7 @@ retrieved verbatim). Everything else carries the session's substance.
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
+| 2026-07-22 | T11.1 human-accepted terminal disposition and annex sequencing | **CLOSED / HUMAN-ACCEPTED TERMINAL OUTCOME — T11.1 COMPLETE; GATE2-V2 remains `NOT_ESTABLISHED`; Epics 12–15 are UNBLOCKED BY EXPLICIT GOVERNANCE DISPOSITION.** The operator records that all required human reviews and acceptance are complete. The terminal result is bound by `spike/t111/labeling/gate2-v2/stage2-preparation-result-review-r1.md` (`sha256:9406186b8ab7ee5150f9461fb4ad907c661c2113e6dd20a3d55f916e92995022`) and acceptance commit `09abaa26a93f0cf20d0a4f268c47622e0eaed33a`. This decision supersedes only commit `e7b37784177f8e1ae687b0dedff6b061877d6d6f`'s downstream-gating consequence: it does not convert the valid capacity stop into an empirical pass, authorize a retry, selection, disclosure, labeling, or score, or support a numeric public-corpus accuracy/completion claim. Epic 12's already-landed dark implementation is recognized as complete under the 2026-07-13 provisional-lineage ADR and released from the T11.1 sequencing gate; its disabled runtime posture is unchanged, and canonical cross-repository lineage remains T13.2 work. Epics 13–15 may proceed under permission-before-aggregation, explicit coverage, bounded-proof language, and successful-abstention rules. T13.1 must earn the unchanged operation thresholds with its own future productized-extractor evidence, and Epic 15 retains its independent acceptance gate. Epic 16 remains separately blocked on its explicit `ESTABLISHED` plus pilot-continuation prerequisite. |
 | 2026-07-22 | GATE2-V2 campaign closure (operator decision) | **CLOSED — `gate_status` under V2: NOT_ESTABLISHED, by valid capacity stop, method uncompromised.** The operator confirms V2 finished honestly with no legal retry, selection, or disclosure path. No GATE2-V3 is chartered today; chartering one is an explicit future decision justified only if a public-corpus accuracy number becomes decision-critical, and any V3 must treat a later snapshot as supporting evidence only (the online-boutique per-fixture cell is structurally exhausted while that fixture is unchanged). Consequences: Epics 12–15 remain gated on an established validation that does not exist; Epic 16 remains blocked (requires ESTABLISHED plus pilot continuation). The chartered vehicle for a decision-critical accuracy result remains the pilot's internal validation on a design partner's corpus — unburned by construction — reusing the V2 protocol machinery and review discipline. Final V2 record: reproducible two-run evidence, three fail-closed sealed executions, one truthful capacity stop, zero compromised disclosures. |
 | 2026-07-22 | GATE2-V2 Stage-2 preparation result (capacity stop) | **VALID CAPACITY STOP — accepted; gate PENDING; this path exhausted at this snapshot; no retry.** Review: `spike/t111/labeling/gate2-v2/stage2-preparation-result-review-r1.md`. Result `sha256:a32b7445…` (exit 1): 9,470/9,470 prior coordinates burned (`identical`/`uncertain-default` only), 0 freed, 1,932 unmapped burning against all frames; all twelve power cells infeasible with every aggregate population exhausted. Conservatism note: per-coordinate burn counting over-counts vs distinct sites (negative nets) — direction safe, outcome unchanged. Structural: online-boutique old==sealed head, so its per-fixture cell is infeasible by construction while the fixture is unchanged — a later snapshot alone cannot reach twelve feasible cells. Nothing was disclosed. Continuations are governance decisions: new snapshot + protocol revision (fixture set / per-fixture rule / census basis) via full ceremony, or stopping the annex validation. |
 | 2026-07-22 | GATE2-V2 Stage-2 preparation authorization | AUTHORIZATION: APPROVED | authorization_id=t111-gate2-v2-prep-a211ed3-01;authorization_sha256=sha256:c3ccedd495e3cd23dcc35e2b2f074df9fdf14d781eef5dfde1b91080ff1721cf |
@@ -134,13 +135,15 @@ single-node correctness is proved first.
   time → delta-build decision); load test with agent-shaped traffic; rerun Elle
   against TiKV-backed Surreal. *Exit:* replica kill → rehash + reindex without
   operator action; p95 held under load. ~3–5 wk.
-- **P7 — Contract-intelligence annex (adopted 2026-07-12, gated).** Evidence-backed
+- **P7 — Contract-intelligence annex (adopted 2026-07-12, active).** Evidence-backed
   contract intelligence as a code-search capability, not a repositioning:
   revision-pinned consumer/field evidence for Go/gRPC contracts,
   coverage-bounded answers, immutable permission-safe proof bundles.
-  ≈ BACKLOG Epics 11–15; the T11.1 spike gates everything downstream; broader
-  system-graph work is conditional on the gates **and** an authorized external
-  design partner. Runs alongside P5 (ongoing); P6 unchanged and still last.
+  ≈ BACKLOG Epics 11–15; T11.1 is complete by human-accepted terminal
+  disposition and Epics 12–15 may proceed, while numeric public-corpus accuracy
+  remains unavailable. Broader system-graph work is conditional on an authorized
+  external design partner. Runs alongside P5 (ongoing); P6 unchanged and still
+  last.
 - **Deferred:** remaining connectors, permission syncing (edges reserved), audit
   logs, billing, review agent. Re-sequencing options post-P1 live in
   PORT_MAP §12.

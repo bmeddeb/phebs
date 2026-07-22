@@ -827,10 +827,11 @@ Kill phebs mid-index and the job recovers on next boot.
 
 ### Experimental contract-intelligence extraction
 
-This reader is **disabled by default**. T11.1 remains STOP/not established,
-and T12.3 still lacks the trusted protobuf module/root identity needed for
-canonical descriptor lineage. To exercise the reviewed storage and extraction
-mechanics on a development corpus only, opt in explicitly:
+This reader is **disabled by default**. T11.1 is closed by a human-accepted
+capacity stop, while GATE2-V2 remains `NOT_ESTABLISHED`; T12.3 still lacks the
+trusted protobuf module/root identity needed for canonical descriptor lineage.
+To exercise the reviewed storage and extraction mechanics on a development
+corpus only, opt in explicitly:
 
 ```yaml
 experimental:

@@ -1,3 +1,38 @@
+# T11.1 final disposition — human-accepted terminal outcome
+
+**Date:** 2026-07-22 · **Status:** **CLOSED / T11.1 COMPLETE / EPICS 12–15
+RELEASED BY GOVERNANCE**
+
+The operator records that all required human reviews and acceptance are
+complete. The accepted terminal record is
+[`labeling/gate2-v2/stage2-preparation-result-review-r1.md`](labeling/gate2-v2/stage2-preparation-result-review-r1.md)
+(`sha256:9406186b8ab7ee5150f9461fb4ad907c661c2113e6dd20a3d55f916e92995022`),
+landed by acceptance commit
+`09abaa26a93f0cf20d0a4f268c47622e0eaed33a`. The sealed preparation result is
+`sha256:a32b7445ed2ec712a7a6fd8985b8d478d75e491f539dea3bab7be8b24af903a7`.
+
+The protocol result remains a **valid capacity stop**, not an accuracy pass:
+GATE2-V2 is `NOT_ESTABLISHED`. No selection, coordinate disclosure, labeling,
+or score occurred, and the record supports no numeric public-corpus accuracy or
+completion claim. This final governance disposition completes T11.1 as a
+human-reviewed validation process and supersedes the older downstream-blocking
+statements below for sequencing only.
+
+Epic 12's already-landed dark implementation is recognized as complete under
+the 2026-07-13 provisional-lineage ADR; this changes roadmap status, not its
+disabled runtime posture, and canonical cross-repository lineage remains T13.2
+work. Epics 13–15 may proceed under their existing permission-before-aggregation,
+coverage-certificate, bounded-proof, and successful-abstention requirements;
+T13.1 must still meet the unchanged operation thresholds with its own reviewed
+productized-extractor evidence, and Epic 15 retains its independent acceptance
+gate. Epic 16 remains separately blocked on its explicit `ESTABLISHED` plus
+pilot-continuation prerequisite.
+
+This disposition grants no authority to retry GATE2-V2 or begin any selection,
+disclosure, labeling, or scoring ceremony.
+
+---
+
 # T11.1 Gate 2 expansion — candidate-4 operator interrupt
 
 **Date:** 2026-07-15 · **Branch:** `t11.1-gate-revalidation` · **Status:**

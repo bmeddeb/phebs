@@ -380,18 +380,21 @@ indexes + serves multiple revisions behind `rev:`.
 > cites the exact source evidence, and tells you what remains unknown.
 
 Annex, not pivot: "self-hosted code search in one binary" stays the identity;
-Epics 12–15 are gated on T11.1. Commodity surfaces (spec-to-spec diffing,
-runtime topology, catalog UX, PR delivery, scorecards) are integrated or
-deferred, never rebuilt. phebs produces immutable, permission-safe proof
-bundles; workflow layers (Workbench) reference bundle IDs and never recompute
-or weaken phebs's conclusions. Public corpora validate mechanics only; an
-authorized **external** design partner is required before broader graph or
-completion claims — no implicit employer-estate exception. Absent a partner by
-Epic 15 completion, the broader platform pivot freezes.
+T11.1 is complete by a human-accepted terminal capacity-stop disposition, and
+Epics 12–15 may proceed under the explicit 2026-07-22 governance ADR. That
+sequencing decision does not establish GATE2-V2 or create a numeric accuracy or
+completion claim. Commodity surfaces (spec-to-spec diffing, runtime topology,
+catalog UX, PR delivery, scorecards) are integrated or deferred, never rebuilt.
+phebs produces immutable, permission-safe proof bundles; workflow layers
+(Workbench) reference bundle IDs and never recompute or weaken phebs's
+conclusions. Public corpora validate mechanics only; an authorized **external**
+design partner is required before broader graph or completion claims — no
+implicit employer-estate exception. Absent a partner by Epic 15 completion, the
+broader platform pivot freezes.
 
 ## EPIC 11 — Validation gate *(annex Stage 0)*
 
-**T11.1 · SPIKE: Validate revision-pinned Go/gRPC consumer evidence and service identity resolution** 🚧 *validation rerun on `t11.1-validation-redo`; gates Epics 12–15. The 2026-07-12 completion claim is retracted: G1 and G2 are not established, G3 did not pass, and G4 lacks the required recall/lineage proof. See the superseding PLAN ADR and `spike/t111/REPORT.md`.*
+**T11.1 · SPIKE: Validate revision-pinned Go/gRPC consumer evidence and service identity resolution** ✅ 2026-07-22 — *human-accepted terminal outcome; GATE2-V2 remains `NOT_ESTABLISHED`; Epics 12–15 are released by explicit governance disposition, not by an empirical gate pass. See the superseding PLAN ADR and `spike/t111/REPORT.md`.*
 Corpus: ≥4 systems including a multi-service monorepo, shared libraries
 containing gRPC calls, multiple versions/vendored copies of generated protobuf
 code, conflicting image/deployment/Helm/`service.name` identities, and
@@ -427,9 +430,18 @@ Exit: gates 2+3 pass → Epics 12–15 as designed · gate 2 passes, 3 fails →
 wedge ships with consumers grouped by repository/build target · gate 1 or 2
 fails → stop; post-mortem ADR.
 
-## EPIC 12 — Provenance schema & protobuf facts *(gated: T11.1 validation rerun not established)*
+Recorded terminal disposition (2026-07-22): the independently reviewed sealed
+campaign ended in a valid capacity stop before selection or disclosure. All
+required human reviews and acceptance are recorded complete by the operator.
+T11.1 is therefore complete as a validation process, while GATE2-V2 remains
+`NOT_ESTABLISHED` and supplies no accuracy number. Governance releases
+implementation sequencing for Epics 12–15 under the existing bounded-evidence,
+permission, coverage, and abstention requirements. The remaining acceptance
+criteria in Epics 13–15 stay unsatisfied until implemented and verified.
 
-**T12.1 · Evidence & assertion store**
+## EPIC 12 — Provenance schema & protobuf facts ✅ 2026-07-12 *(implemented dark and hardened; T11.1 sequencing release recorded 2026-07-22; runtime posture unchanged)*
+
+**T12.1 · Evidence & assertion store** ✅ 2026-07-12
 Content-addressed `evidence_atom` + `snapshot_evidence` associations, semantic
 assertions (supporting **and contradicting** atoms), identity assertions,
 coverage manifests, extraction runs — per the PLAN evidence-model ADR. Narrow
@@ -439,7 +451,7 @@ associations with independent visibility; atomic staged publish survives a
 mid-publish kill (prior facts intact, no partial set); proof-aware retention
 honored — no deletion of evidence referenced by a retained bundle.
 
-**T12.2 · Extraction job kind**
+**T12.2 · Extraction job kind** ✅ 2026-07-12
 `extraction_job` chained after indexing (as index chains after sync);
 extracted-commit short-circuit (T3.2 pattern); `extract` class in the T3.3
 failure taxonomy; **pure-reader invariant enforced** (no exec, no dynamic
@@ -448,19 +460,23 @@ exactly one extraction per new commit; kill mid-run leaves published facts
 intact; invariant violations are structurally impossible in the runner (no
 exec/network capability in the extractor context), asserted by test.
 
-**T12.3 · Protobuf declared-plane extractor**
+**T12.3 · Protobuf declared-plane extractor (dark/provisional scope per the 2026-07-13 ADR)** ✅ 2026-07-12
 protocompile-based: `.proto` → services, methods, messages, fields with exact
-spans; canonical descriptor-derived IDs including `contract_lineage_id`.
-AC: on the fixture corpus every declared operation/field is an assertion
-whose evidence atom resolves to the pinned commit and span in the file viewer.
+spans and deterministic `provisional_repo_path_v1_<sha256>` lineage IDs. AC for
+this dark stage: on the fixture corpus every declared operation/field is an
+assertion whose evidence atom resolves to the pinned commit and span in the
+file viewer. Promotion to canonical cross-repository `contract_lineage_id`
+remains T13.2 work and provisional facts cannot support product conclusions.
 
-## EPIC 13 — Implementations, consumers, field references *(gated: T11.1)*
+## EPIC 13 — Implementations, consumers, field references *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
 
 **T13.1 · Implementation & consumer resolution (Go/gRPC)**
 `RegisterXServer` implementation pinning; typed generated-client call-site
 resolution; `code_role` classification (production/test/mock/generated/
-vendor). AC: spike-level precision reproduced on the fixture corpus by the
-productized extractor; every edge cites its atoms.
+vendor). AC: the productized extractor independently meets the unchanged
+operation thresholds on a fresh, independently reviewed blind evaluation under
+the T11.1 measurement contract (≥98% precision, ≥90% recall, and ≥90% precision
+in every fixture); every edge cites its atoms.
 
 **T13.2 · SCIP proto-field references**
 `REFERENCES_PROTO_FIELD` assertions from cross-repo SCIP references over
@@ -475,7 +491,7 @@ SCIP availability, unresolved candidates, freshness. AC: the certificate
 provably changes when one repo's extraction fails; adversarial test shows no
 invisible-repo leakage through names or counts.
 
-## EPIC 14 — Query, proof bundles & MCP *(gated: T11.1)*
+## EPIC 14 — Query, proof bundles & MCP *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
 
 **T14.1 · Query API + proof bundles**
 huma endpoints for `find_operation_consumers`, `find_proto_field_references`,
@@ -503,7 +519,7 @@ verdicts with evidence-derived consumers. AC: a wire-breaking field change
 reports the breaking rule **and** the affected consumers with call-site
 citations.
 
-## EPIC 15 — Contract impact report *(read-only; the first user-facing annex workflow — independent acceptance gate)*
+## EPIC 15 — Contract impact report *(unblocked 2026-07-22; read-only; the first user-facing annex workflow — independent acceptance gate retained)*
 
 **T15.1 · Report API + page**
 For a contract, or a contract change between two extraction runs: known
