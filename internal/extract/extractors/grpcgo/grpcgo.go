@@ -30,7 +30,7 @@ import (
 
 const (
 	domain        = "grpc-consumer"
-	version       = "1.0.0"
+	version       = "1.1.0"
 	schemaVersion = "t13-v1"
 
 	// go/parser is in-process and bounded by input size; cap the source so a
@@ -57,18 +57,23 @@ func (grpcGo) Version() string { return version }
 // index and all other Go files are scanned for registrations and call sites.
 func (grpcGo) Candidate(filePath string) bool { return strings.HasSuffix(filePath, ".go") }
 
-// fullMethodRe matches generated full-method literals like
-// "/helloworld.Greeter/SayHello". Anchored: the whole constant must be one
-// full method so arbitrary string constants cannot enter the index.
-var fullMethodRe = regexp.MustCompile(`^/([A-Za-z_][\w.]*\.[A-Za-z_]\w*)/([A-Za-z_]\w*)$`)
+// Generated names may be package-qualified ("helloworld.Greeter") or a
+// single segment ("Greeter") when the protobuf file has no package.
+var (
+	protoFullNameRe = regexp.MustCompile(`^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*$`)
+	// Anchored: the whole literal must be one full method so arbitrary string
+	// constants cannot enter the index.
+	fullMethodRe = regexp.MustCompile(`^/([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)/([A-Za-z_]\w*)$`)
+)
 
 // serviceIndex is the cross-file state retained between the stub pass and the
 // scan pass. It holds only derived names and provenance strings, never blob
 // content, preserving the SDK's one-blob-at-a-time contract.
 type serviceIndex struct {
-	// registerFunc maps a generated RegisterXServer function name to the
-	// service it registers.
-	registerFunc map[string]*serviceEntry
+	// registerFunc maps a generated RegisterXServer function name to every
+	// independently anchored service it could register. Resolution succeeds
+	// only when the set has exactly one entry.
+	registerFunc map[string][]*serviceEntry
 	// methods maps a method name to every service declaring it; call sites
 	// resolve only when exactly one service matches.
 	methods map[string][]*serviceEntry
@@ -92,7 +97,7 @@ func (grpcGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sd
 		"grpc-go", "lineage-provisional-repo-path-v1", "resolution-syntactic-v1",
 	}}
 	index := &serviceIndex{
-		registerFunc: map[string]*serviceEntry{},
+		registerFunc: map[string][]*serviceEntry{},
 		methods:      map[string][]*serviceEntry{},
 	}
 
@@ -107,13 +112,16 @@ func (grpcGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sd
 			return err
 		}
 		if len(blob.Content) > maxGoSourceBytes {
-			coverage.UnresolvedCount++
-			return nil
+			unresolved, err := emitFileGap(relPath, blob, "source_too_large", emit)
+			coverage.UnresolvedCount += unresolved
+			return err
 		}
 		if err := indexStub(corpus.RepoName(), relPath, blob.Content, index); err != nil {
 			// A malformed generated stub is an honest abstention, not a run
 			// failure: its services simply stay unresolvable.
-			coverage.UnresolvedCount++
+			unresolved, emitErr := emitFileGap(relPath, blob, "parse_error", emit)
+			coverage.UnresolvedCount += unresolved
+			return emitErr
 		}
 		return nil
 	})
@@ -131,8 +139,9 @@ func (grpcGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sd
 			return err
 		}
 		if len(blob.Content) > maxGoSourceBytes {
-			coverage.UnresolvedCount++
-			return nil
+			unresolved, err := emitFileGap(relPath, blob, "source_too_large", emit)
+			coverage.UnresolvedCount += unresolved
+			return err
 		}
 		unresolved, err := scanFile(relPath, blob, index, emit)
 		if err != nil {
@@ -157,7 +166,7 @@ func indexStub(repo, relPath, content string, index *serviceIndex) error {
 
 	// Collect service FQNs from ServiceDesc composite literals:
 	// ServiceName: "pkg.Service".
-	byShort := map[string]*serviceEntry{}
+	byShort := map[string][]*serviceEntry{}
 	ast.Inspect(file, func(n ast.Node) bool {
 		kv, ok := n.(*ast.KeyValueExpr)
 		if !ok {
@@ -172,11 +181,12 @@ func indexStub(repo, relPath, content string, index *serviceIndex) error {
 			return true
 		}
 		fqn, err := strconv.Unquote(lit.Value)
-		if err != nil || !strings.Contains(fqn, ".") {
+		if err != nil || !protoFullNameRe.MatchString(fqn) {
 			return true
 		}
 		short := fqn[strings.LastIndex(fqn, ".")+1:]
-		byShort[short] = &serviceEntry{fqn: fqn, stubPath: relPath, lineage: lineageID(repo, relPath)}
+		entry := &serviceEntry{fqn: fqn, stubPath: relPath, lineage: lineageID(repo, relPath)}
+		byShort[short] = appendEntryUnique(byShort[short], entry)
 		return true
 	})
 
@@ -196,16 +206,20 @@ func indexStub(repo, relPath, content string, index *serviceIndex) error {
 			return true
 		}
 		fqn, method := m[1], m[2]
-		entry := byShort[fqn[strings.LastIndex(fqn, ".")+1:]]
-		if entry == nil || entry.fqn != fqn {
-			entry = &serviceEntry{fqn: fqn, stubPath: relPath, lineage: lineageID(repo, relPath)}
-		}
-		for _, existing := range index.methods[method] {
-			if existing.fqn == fqn {
-				return true
+		var entries []*serviceEntry
+		for _, entry := range byShort[fqn[strings.LastIndex(fqn, ".")+1:]] {
+			if entry.fqn == fqn {
+				entries = append(entries, entry)
 			}
 		}
-		index.methods[method] = append(index.methods[method], entry)
+		if len(entries) == 0 {
+			entries = []*serviceEntry{{
+				fqn: fqn, stubPath: relPath, lineage: lineageID(repo, relPath),
+			}}
+		}
+		for _, entry := range entries {
+			index.methods[method] = appendEntryUnique(index.methods[method], entry)
+		}
 		return true
 	})
 
@@ -225,11 +239,51 @@ func indexStub(repo, relPath, content string, index *serviceIndex) error {
 		if !ok || short == "" {
 			continue
 		}
-		if entry := byShort[short]; entry != nil {
-			index.registerFunc[name] = entry
+		for _, entry := range byShort[short] {
+			index.registerFunc[name] = appendEntryUnique(index.registerFunc[name], entry)
 		}
 	}
 	return nil
+}
+
+func appendEntryUnique(entries []*serviceEntry, candidate *serviceEntry) []*serviceEntry {
+	for _, entry := range entries {
+		if entry.fqn == candidate.fqn && entry.stubPath == candidate.stubPath &&
+			entry.lineage == candidate.lineage {
+			return entries
+		}
+	}
+	return append(entries, candidate)
+}
+
+// emitFileGap records a source-backed unresolved assertion so the trusted
+// worker can independently reconcile Coverage.UnresolvedCount. An empty file
+// contains no possible call or registration site, so reading it is complete
+// coverage even though go/parser cannot form a file AST for it.
+func emitFileGap(relPath string, blob sdk.Blob, reason string, emit sdk.Emit) (int, error) {
+	if len(blob.Content) == 0 {
+		return 0, nil
+	}
+	const predicate = "GRPC_EXTRACTION_GAP"
+	endLine := 1 + strings.Count(blob.Content[:len(blob.Content)-1], "\n")
+	err := emit(sdk.Fact{
+		Atom: sdk.AtomInput{
+			SchemaVersion: schemaVersion, BlobDigest: blob.Digest,
+			StartByte: 0, EndByte: len(blob.Content), RuleID: "grpcgo-file-gap-v1",
+			AdapterConfigDigest: adapterConfigDigest,
+			FactFingerprint:     predicate + "|" + reason,
+		},
+		Path: relPath, StartLine: 1, EndLine: endLine,
+		Assertion: sdk.AssertionInput{
+			Predicate: predicate, Subject: relPath, Object: reason,
+			Tier: "unresolved", CodeRole: classifyRole(relPath, blob.Content),
+			Detail: `{"schema":"grpcgo-gap-detail-v1","reason":` + strconv.Quote(reason) + `}`,
+		},
+	})
+	if err != nil {
+		return 0, err
+	}
+	return 1, nil
 }
 
 // scanFile emits registration and call-site facts for one non-stub Go file.
@@ -239,14 +293,14 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, relPath, blob.Content, parser.SkipObjectResolution)
 	if err != nil {
-		return 1, nil
+		return emitFileGap(relPath, blob, "parse_error", emit)
 	}
 	role := classifyRole(relPath, blob.Content)
 	tokenFile := fset.File(file.Pos())
 
-	unresolved := 0
+	unresolved := map[string]struct{}{}
 	var emitErr error
-	emitSpan := func(predicate, object, rule, tier, detail string, node ast.Node) {
+	emitSpan := func(predicate, object, lineage, rule, tier, detail string, node ast.Node) {
 		if emitErr != nil {
 			return
 		}
@@ -268,10 +322,19 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 			EndLine:   fset.Position(node.End()).Line,
 			Assertion: sdk.AssertionInput{
 				Predicate: predicate, Subject: relPath, Object: object,
-				Lineage: lineageFor(index, predicate, object, node),
+				Lineage: lineage,
 				Tier:    tier, CodeRole: role, Detail: detail,
 			},
 		})
+	}
+	emitUnresolved := func(predicate, object, rule, detail string, node ast.Node) {
+		emitSpan(predicate, object, "", rule, "unresolved", detail, node)
+		if emitErr == nil {
+			// Assertion identity also includes subject (relPath) and repository;
+			// both are fixed for this scan. Count distinct unresolved assertions,
+			// matching the worker rather than raw source occurrences.
+			unresolved[predicate+"\x00"+object] = struct{}{}
+		}
 	}
 
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -284,15 +347,27 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 		}
 		switch fun := call.Fun.(type) {
 		case *ast.Ident:
-			if entry := index.registerFunc[fun.Name]; entry != nil {
-				emitSpan("REGISTERS_GRPC_SERVICE", entry.fqn, "grpcgo-register-v1",
-					"derived", registerDetail(fun.Name), call)
+			entries := index.registerFunc[fun.Name]
+			if len(entries) == 1 {
+				entry := entries[0]
+				emitSpan("REGISTERS_GRPC_SERVICE", entry.fqn, entry.lineage,
+					"grpcgo-register-v1", "derived", registerDetail(fun.Name), call)
+			} else if len(entries) > 1 {
+				emitUnresolved("UNRESOLVED_GRPC_REGISTRATION", fun.Name,
+					"grpcgo-register-ambiguous-v1", ambiguousRegisterDetail(fun.Name, len(entries)), call)
 			}
 		case *ast.SelectorExpr:
 			name := fun.Sel.Name
-			if entry := index.registerFunc[name]; entry != nil {
-				emitSpan("REGISTERS_GRPC_SERVICE", entry.fqn, "grpcgo-register-v1",
-					"derived", registerDetail(name), call)
+			registers := index.registerFunc[name]
+			if len(registers) == 1 {
+				entry := registers[0]
+				emitSpan("REGISTERS_GRPC_SERVICE", entry.fqn, entry.lineage,
+					"grpcgo-register-v1", "derived", registerDetail(name), call)
+				return true
+			}
+			if len(registers) > 1 {
+				emitUnresolved("UNRESOLVED_GRPC_REGISTRATION", name,
+					"grpcgo-register-ambiguous-v1", ambiguousRegisterDetail(name, len(registers)), call)
 				return true
 			}
 			services := index.methods[name]
@@ -302,16 +377,17 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 			if len(services) > 1 {
 				// Ambiguous method name across services: syntactic resolution
 				// abstains rather than guesses.
-				unresolved++
+				emitUnresolved("UNRESOLVED_GRPC_CALL", name, "grpcgo-call-ambiguous-v1",
+					ambiguousCallDetail(name, len(services)), call)
 				return true
 			}
 			entry := services[0]
-			emitSpan("CALLS_OPERATION", "/"+entry.fqn+"/"+name, "grpcgo-call-v1",
-				"heuristic", callDetail(name), call)
+			emitSpan("CALLS_OPERATION", "/"+entry.fqn+"/"+name, entry.lineage,
+				"grpcgo-call-v1", "heuristic", callDetail(name), call)
 		}
 		return true
 	})
-	return unresolved, emitErr
+	return len(unresolved), emitErr
 }
 
 func registerDetail(fn string) string {
@@ -322,42 +398,14 @@ func callDetail(method string) string {
 	return `{"schema":"grpcgo-call-detail-v1","method":` + strconv.Quote(method) + `}`
 }
 
-// lineageFor resolves the provisional lineage of the generated stub that
-// anchored the fact's object. Registration nodes carry the register function
-// name; call sites carry the method's unique service entry.
-func lineageFor(index *serviceIndex, predicate, object string, node ast.Node) string {
-	switch predicate {
-	case "REGISTERS_GRPC_SERVICE":
-		if entry := index.registerFunc[ruleSubjectName(node)]; entry != nil {
-			return entry.lineage
-		}
-	case "CALLS_OPERATION":
-		trimmed := strings.TrimPrefix(object, "/")
-		if i := strings.LastIndex(trimmed, "/"); i > 0 {
-			for _, entry := range index.methods[trimmed[i+1:]] {
-				if entry.fqn == trimmed[:i] {
-					return entry.lineage
-				}
-			}
-		}
-	}
-	return ""
+func ambiguousCallDetail(method string, candidates int) string {
+	return `{"schema":"grpcgo-call-ambiguity-v1","method":` + strconv.Quote(method) +
+		`,"candidate_count":` + strconv.Itoa(candidates) + `}`
 }
 
-// ruleSubjectName extracts the called function's identifier from a
-// registration call node for register-index lookups.
-func ruleSubjectName(node ast.Node) string {
-	call, ok := node.(*ast.CallExpr)
-	if !ok {
-		return ""
-	}
-	switch fun := call.Fun.(type) {
-	case *ast.Ident:
-		return fun.Name
-	case *ast.SelectorExpr:
-		return fun.Sel.Name
-	}
-	return ""
+func ambiguousRegisterDetail(fn string, candidates int) string {
+	return `{"schema":"grpcgo-register-ambiguity-v1","register_func":` + strconv.Quote(fn) +
+		`,"candidate_count":` + strconv.Itoa(candidates) + `}`
 }
 
 // ---- code_role classification, ported verbatim from the T11.1 spike ----

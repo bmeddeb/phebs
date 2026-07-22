@@ -471,7 +471,7 @@ remains T13.2 work and provisional facts cannot support product conclusions.
 ## EPIC 13 — Implementations, consumers, field references *(unblocked 2026-07-22 by the accepted T11.1 terminal disposition; pending)*
 
 **T13.1 · Implementation & consumer resolution (Go/gRPC) — dark/provisional
-scope per the 2026-07-22 disposition**
+scope per the 2026-07-22 disposition** ✅ 2026-07-22
 `RegisterXServer` implementation pinning; typed generated-client call-site
 resolution; `code_role` classification (production/test/mock/generated/
 vendor). Dark-stage AC (T12.3 precedent): the productized extractor runs

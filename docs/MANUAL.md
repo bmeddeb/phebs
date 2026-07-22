@@ -876,8 +876,14 @@ The same opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
 `*_grpc.pb.go` stubs, then emits `REGISTERS_GRPC_SERVICE` assertions for
 `Register<Service>Server` call sites (tier `derived` — name-bound to a
 same-repo stub) and `CALLS_OPERATION` assertions for client method calls
-whose name matches exactly one indexed service (tier `heuristic`); ambiguous
-method names are counted as unresolved in coverage rather than guessed.
+whose name matches exactly one indexed service (tier `heuristic`). Package-less
+protobuf service names such as `Greeter` are valid and indexed. Ambiguous
+method names, generated registration-helper collisions, and duplicate service
+FQNs anchored by different repository paths are not guessed: each source
+occurrence emits an exact-span `tier=unresolved` diagnostic assertion, while
+coverage counts the distinct semantic gaps those atoms support. Unparseable or
+over-limit non-empty Go candidates likewise emit source-backed unresolved gaps,
+so successful abstention remains publishable through the trusted worker.
 Every assertion carries a `code_role`
 (production/test/mock/generated/vendor, vendor > mock > generated > test >
 production precedence) and cites its atom's exact byte and line span.
@@ -898,13 +904,14 @@ lineage had been established.
 The run is bounded to 200,000 regular inventory paths and 16 MiB of aggregate
 path text, 10 MiB per source blob, 512 MiB of distinct source reads, 5,000
 emitted facts, and a cooperative 15-minute context deadline. A candidate
-parser input is further limited to 4 MiB, 500,000 lexical tokens, and 128
-structural levels. The in-process protobuf parser cannot be preempted inside
-one parse call, so this is not yet a hard CPU/memory/process isolation
-boundary. A candidate `.proto` symlink, any gitlink (whose subtree coverage is
-unknown), or more than 100 placements of one content atom also prevents
-publication; unrelated symlinks are skipped. A non-candidate file whose name
-cannot be represented safely (control bytes, a backslash, invalid UTF-8, or a
+Go parser input is further limited to 4 MiB; a protobuf parser input is limited
+to 4 MiB, 500,000 lexical tokens, and 128 structural levels. Neither in-process
+parser can be preempted inside one parse call, so this is not yet a hard
+CPU/memory/process isolation boundary. A candidate `.proto` symlink, any
+gitlink (whose subtree coverage is unknown), or more than 100 placements of one
+content atom also prevents publication; unrelated symlinks are skipped. A
+non-candidate file whose name cannot be represented safely (control bytes, a
+backslash, invalid UTF-8, or a
 leading `-`) is included in the published coverage certificate's
 `corpus_file_count` but is never readable by extractors; a candidate with
 such a name fails the run closed. Re-indexing the same
