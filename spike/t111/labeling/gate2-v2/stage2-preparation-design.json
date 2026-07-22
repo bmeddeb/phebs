@@ -1,0 +1,1 @@
+{"client_call_precision":{"p":"995/1000","threshold":"98/100"},"client_call_recall":{"p":"95/100","threshold":"90/100"},"per_fixture_precision":{"p":"97/100","threshold":"90/100"},"registration_precision":{"p":"995/1000","threshold":"98/100"},"registration_recall":{"p":"95/100","threshold":"90/100"}}
