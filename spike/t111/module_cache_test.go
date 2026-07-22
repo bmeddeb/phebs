@@ -3,11 +3,13 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
@@ -132,6 +134,80 @@ func TestHydrateThenOfflineExtractionUsesOnlyDedicatedCache(t *testing.T) {
 	if _, err := extractModule(entry.Name, commit, repo, repo, nil); err == nil ||
 		(!strings.Contains(err.Error(), "go.mod content mismatch") && !strings.Contains(err.Error(), "checksum mismatch")) {
 		t.Fatalf("tampered cached go.mod was not directly h1-rejected: %v", err)
+	}
+}
+
+func TestBoundHarnessBuildVerifiesOnlyHydratedClosure(t *testing.T) {
+	proxy, goSum := localModuleGraphProxy(t)
+	repo := initTestRepository(t)
+	files := map[string][]byte{
+		"go.mod":                             []byte("module example.test/harness\n\ngo 1.26\n\nrequire (\n\texample.test/bridge v1.0.0\n\texample.test/legacy v1.0.0\n)\n\nrequire example.test/dep v1.1.0 // indirect\n"),
+		"go.sum":                             []byte(goSum),
+		"spike/t111/main.go":                 []byte("package main\n\nimport _ \"example.test/bridge\"\n\nfunc main() {}\n"),
+		"spike/t111/typedcalloracle/main.go": []byte("package main\n\nimport _ \"example.test/bridge\"\n\nfunc main() {}\n"),
+	}
+	for name, content := range files {
+		path := filepath.Join(repo, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, content, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	gitTestOutput(t, repo, "add", "go.mod", "go.sum", "spike/t111")
+	gitTestOutput(t, repo, "commit", "-q", "-m", "closure fixture")
+	commit := gitTestOutput(t, repo, "rev-parse", "HEAD")
+
+	cache := filepath.Join(t.TempDir(), "module-cache")
+	t.Cleanup(func() { makeCacheWritable(cache) })
+	if _, err := prepareModuleCache(cache); err != nil {
+		t.Fatal(err)
+	}
+	if err := sealSharedModuleCache(cache); err != nil {
+		t.Fatal(err)
+	}
+	oldCache := harnessModuleCacheRoot
+	harnessModuleCacheRoot = cache
+	t.Cleanup(func() { harnessModuleCacheRoot = oldCache })
+	patterns := harnessClosurePatterns()
+	if _, err := verifyHarnessDependencyClosure(repo, commit, repo, patterns); err == nil {
+		t.Fatal("missing selected closure was not rejected before hydration")
+	}
+
+	if err := hydrateHarnessModule(repo, cache, proxy, "off"); err != nil {
+		t.Fatalf("hydrate selected harness closure: %v", err)
+	}
+	for path, wantPresent := range map[string]bool{
+		filepath.Join(cache, "gomodcache", "example.test", "bridge@v1.0.0"): true,
+		filepath.Join(cache, "gomodcache", "example.test", "dep@v1.1.0"):    true,
+		filepath.Join(cache, "gomodcache", "example.test", "dep@v1.0.0"):    false,
+	} {
+		_, err := os.Lstat(path)
+		if wantPresent && err != nil {
+			t.Fatalf("selected closure path is missing: %s: %v", path, err)
+		}
+		if !wantPresent && !os.IsNotExist(err) {
+			t.Fatalf("non-selected older source was hydrated: %s: %v", path, err)
+		}
+	}
+	if _, err := verifyHarnessDependencyClosure(repo, commit, repo, patterns); err != nil {
+		t.Fatalf("offline h1 verification of selected closure: %v", err)
+	}
+	if err := buildBoundHarnesses(repo, cache); err != nil {
+		t.Fatalf("offline bound build after narrow hydration: %v", err)
+	}
+
+	makeCacheWritable(cache)
+	selected := filepath.Join(cache, "gomodcache", "example.test", "dep@v1.1.0")
+	if err := os.RemoveAll(selected); err != nil {
+		t.Fatal(err)
+	}
+	if err := sealSharedModuleCache(cache); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := verifyHarnessDependencyClosure(repo, commit, repo, patterns); err == nil {
+		t.Fatal("missing selected closure was not rejected after hydration")
 	}
 }
 
@@ -347,35 +423,110 @@ func makeCacheWritable(root string) {
 func localModuleProxy(t *testing.T) (string, string) {
 	t.Helper()
 	root := t.TempDir()
+	moduleSum, modSum := writeLocalProxyModule(t, root, "example.test/dep", "v1.0.0", map[string][]byte{
+		"go.mod": []byte("module example.test/dep\n\ngo 1.26\n"),
+		"dep.go": []byte("package dep\n"),
+	})
 	versionDir := filepath.Join(root, "example.test", "dep", "@v")
-	if err := os.MkdirAll(versionDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	mod := []byte("module example.test/dep\n\ngo 1.26\n")
-	if err := os.WriteFile(filepath.Join(versionDir, "v1.0.0.mod"), mod, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(versionDir, "v1.0.0.info"), []byte("{\"Version\":\"v1.0.0\",\"Time\":\"2020-01-01T00:00:00Z\"}\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
 	if err := os.WriteFile(filepath.Join(versionDir, "list"), []byte("v1.0.0\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	zipPath := filepath.Join(versionDir, "v1.0.0.zip")
+	proxy := (&url.URL{Scheme: "file", Path: filepath.ToSlash(root)}).String()
+	return proxy, "example.test/dep v1.0.0 " + moduleSum + "\n" +
+		"example.test/dep v1.0.0/go.mod " + modSum + "\n"
+}
+
+func localModuleGraphProxy(t *testing.T) (string, string) {
+	t.Helper()
+	root := t.TempDir()
+	type moduleVersion struct {
+		path    string
+		version string
+		files   map[string][]byte
+	}
+	modules := []moduleVersion{
+		{
+			path: "example.test/dep", version: "v1.0.0",
+			files: map[string][]byte{
+				"go.mod": []byte("module example.test/dep\n\ngo 1.26\n"),
+				"dep.go": []byte("package dep\n\nconst Version = \"older\"\n"),
+			},
+		},
+		{
+			path: "example.test/dep", version: "v1.1.0",
+			files: map[string][]byte{
+				"go.mod": []byte("module example.test/dep\n\ngo 1.26\n"),
+				"dep.go": []byte("package dep\n\nconst Version = \"selected\"\n"),
+			},
+		},
+		{
+			path: "example.test/bridge", version: "v1.0.0",
+			files: map[string][]byte{
+				"go.mod":    []byte("module example.test/bridge\n\ngo 1.26\n\nrequire example.test/dep v1.1.0\n"),
+				"bridge.go": []byte("package bridge\n\nimport _ \"example.test/dep\"\n"),
+			},
+		},
+		{
+			path: "example.test/legacy", version: "v1.0.0",
+			files: map[string][]byte{
+				"go.mod":    []byte("module example.test/legacy\n\ngo 1.26\n\nrequire example.test/dep v1.0.0\n"),
+				"legacy.go": []byte("package legacy\n\nimport _ \"example.test/dep\"\n"),
+			},
+		},
+	}
+	var goSum strings.Builder
+	versions := map[string][]string{}
+	for _, module := range modules {
+		moduleSum, modSum := writeLocalProxyModule(t, root, module.path, module.version, module.files)
+		fmt.Fprintf(&goSum, "%s %s %s\n", module.path, module.version, moduleSum)
+		fmt.Fprintf(&goSum, "%s %s/go.mod %s\n", module.path, module.version, modSum)
+		versions[module.path] = append(versions[module.path], module.version)
+	}
+	for module, listed := range versions {
+		sort.Strings(listed)
+		versionDir := filepath.Join(root, filepath.FromSlash(module), "@v")
+		if err := os.WriteFile(filepath.Join(versionDir, "list"), []byte(strings.Join(listed, "\n")+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	proxy := (&url.URL{Scheme: "file", Path: filepath.ToSlash(root)}).String()
+	return proxy, goSum.String()
+}
+
+func writeLocalProxyModule(t *testing.T, root, module, version string, files map[string][]byte) (string, string) {
+	t.Helper()
+	versionDir := filepath.Join(root, filepath.FromSlash(module), "@v")
+	if err := os.MkdirAll(versionDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mod, ok := files["go.mod"]
+	if !ok {
+		t.Fatalf("proxy module %s@%s lacks go.mod", module, version)
+	}
+	if err := os.WriteFile(filepath.Join(versionDir, version+".mod"), mod, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info := []byte("{\"Version\":\"" + version + "\",\"Time\":\"2020-01-01T00:00:00Z\"}\n")
+	if err := os.WriteFile(filepath.Join(versionDir, version+".info"), info, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	zipPath := filepath.Join(versionDir, version+".zip")
 	file, err := os.Create(zipPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	zw := zip.NewWriter(file)
-	for name, content := range map[string][]byte{
-		"example.test/dep@v1.0.0/go.mod": mod,
-		"example.test/dep@v1.0.0/dep.go": []byte("package dep\n"),
-	} {
-		writer, err := zw.Create(name)
+	names := make([]string, 0, len(files))
+	for name := range files {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		writer, err := zw.Create(module + "@" + version + "/" + name)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := writer.Write(content); err != nil {
+		if _, err := writer.Write(files[name]); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -395,7 +546,5 @@ func localModuleProxy(t *testing.T) (string, string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proxy := (&url.URL{Scheme: "file", Path: filepath.ToSlash(root)}).String()
-	return proxy, "example.test/dep v1.0.0 " + moduleSum + "\n" +
-		"example.test/dep v1.0.0/go.mod " + modSum + "\n"
+	return moduleSum, modSum
 }

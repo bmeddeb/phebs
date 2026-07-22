@@ -53,11 +53,14 @@ REPO_ROOT = T111_ROOT.parents[1]
 P0_AUTHORIZATION_PATH = HERE / "stage2-prebuild-authorization.json"
 PARSER_PATH = HERE / "stage2_prebuild.py"
 EXECUTOR_PATH = Path(__file__).resolve()
-EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r3.md"
+EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r4.md"
 ENUMERATOR_PATH = HERE / "stage2_enumerate.py"
-# P0 terminal schema v2 changes the enumeration trust closure.  Do not
-# silently fall back to the superseded r5 review when this dependency changes.
-ENUMERATOR_REVIEW_PATH = HERE / "stage2-enumerate-review-r6.md"
+# R6 adds the hydrated-closure producer sources to the P0 review envelope.
+# The enumeration verifier therefore needs fresh authority too; do not fall
+# back to the accepted r3/r6 records for the terminal P0-02 implementation.
+ENUMERATOR_REVIEW_PATH = HERE / "stage2-enumerate-review-r7.md"
+MODULE_CACHE_PATH = T111_ROOT / "module_cache.go"
+MODULE_CACHE_TEST_PATH = T111_ROOT / "module_cache_test.go"
 PLAN_PATH = REPO_ROOT / "PLAN.md"
 STAGE0_DIR = HERE / "stage0"
 STAGE0_INVENTORY = STAGE0_DIR / "code-path-inventory.tsv"
@@ -83,6 +86,8 @@ EXECUTOR_REL = EXECUTOR_PATH.relative_to(REPO_ROOT).as_posix()
 EXECUTOR_REVIEW_REL = EXECUTOR_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 ENUMERATOR_REL = ENUMERATOR_PATH.relative_to(REPO_ROOT).as_posix()
 ENUMERATOR_REVIEW_REL = ENUMERATOR_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
+MODULE_CACHE_REL = MODULE_CACHE_PATH.relative_to(REPO_ROOT).as_posix()
+MODULE_CACHE_TEST_REL = MODULE_CACHE_TEST_PATH.relative_to(REPO_ROOT).as_posix()
 PLAN_REL = PLAN_PATH.relative_to(REPO_ROOT).as_posix()
 
 PLAN_EXECUTOR_MARKER = "GATE2-V2 Stage-2 P0 executor"
@@ -879,6 +884,8 @@ def verify_implementation_chain(
     review_bytes: bytes,
     enumerator_source: bytes,
     enumerator_review_bytes: bytes,
+    module_cache_source: bytes,
+    module_cache_test_source: bytes,
     plan_bytes: bytes,
     head_blob: Any,
     commit_blob: Any,
@@ -918,6 +925,11 @@ def verify_implementation_chain(
         enumerator_digest,
         enumerator_review_digest,
     )
+    review_bindings = (
+        *implementation_bindings,
+        (MODULE_CACHE_REL, sha256_bytes(module_cache_source)),
+        (MODULE_CACHE_TEST_REL, sha256_bytes(module_cache_test_source)),
+    )
 
     review_digest = _require_sha256(review.get("record_sha256"), "implementation review digest")
     accepted = _require_oid(review.get("accepted_commit"), "implementation review commit")
@@ -937,6 +949,8 @@ def verify_implementation_chain(
         (EXECUTOR_REVIEW_REL, review_bytes, "P0 executor review"),
         (ENUMERATOR_REL, enumerator_source, "enumerator"),
         (ENUMERATOR_REVIEW_REL, enumerator_review_bytes, "enumerator review"),
+        (MODULE_CACHE_REL, module_cache_source, "hydrated-closure producer"),
+        (MODULE_CACHE_TEST_REL, module_cache_test_source, "hydrated-closure regression"),
     ):
         if bytes_now != head_blob(relative):
             raise PrebuildExecutionError(f"{label} is not the committed HEAD version")
@@ -947,7 +961,7 @@ def verify_implementation_chain(
     _require_accepted_review(
         review_bytes,
         label="accepted executor review",
-        bindings=implementation_bindings,
+        bindings=review_bindings,
     )
     _require_accepted_review(
         enumerator_review_bytes,
@@ -998,6 +1012,10 @@ def _verify_committed_implementation(
         review_bytes=_regular_bytes(EXECUTOR_REVIEW_PATH, "P0 executor review"),
         enumerator_source=_regular_bytes(ENUMERATOR_PATH, "enumerator"),
         enumerator_review_bytes=_regular_bytes(ENUMERATOR_REVIEW_PATH, "enumerator review"),
+        module_cache_source=_regular_bytes(MODULE_CACHE_PATH, "hydrated-closure producer"),
+        module_cache_test_source=_regular_bytes(
+            MODULE_CACHE_TEST_PATH, "hydrated-closure regression"
+        ),
         plan_bytes=_regular_bytes(PLAN_PATH, "PLAN"),
         head_blob=lambda relative: _head_blob(relative, git=control_git),
         commit_blob=lambda commit, relative: _commit_blob(

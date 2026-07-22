@@ -160,10 +160,14 @@ def synthetic_history(root: Path, fixture: str, environment: dict[str, str]) -> 
     return repo, old, sealed
 
 
-def controlled_context() -> tuple[executor.P0Context, bytes, bytes, bytes, bytes, bytes, bytes]:
+def controlled_context() -> tuple[
+    executor.P0Context, bytes, bytes, bytes, bytes, bytes, bytes, bytes, bytes,
+]:
     parser_source = b"synthetic-parser-v1\n"
     executor_source = b"synthetic-executor-v1\n"
     enumerator_source = b"synthetic-enumerator-v1\n"
+    module_cache_source = b"synthetic-module-cache-v1\n"
+    module_cache_test_source = b"synthetic-module-cache-test-v1\n"
     value = authorization()
     value["implementation"]["prebuild_runner_sha256"] = executor.sha256_bytes(parser_source)
     value["implementation"]["prebuild_executor_sha256"] = executor.sha256_bytes(executor_source)
@@ -179,11 +183,16 @@ def controlled_context() -> tuple[executor.P0Context, bytes, bytes, bytes, bytes
         value["implementation"]["enumerator_sha256"],
         value["implementation"]["enumerator_review_sha256"],
     )
+    review_bindings = (
+        *implementation_bindings,
+        (executor.MODULE_CACHE_REL, executor.sha256_bytes(module_cache_source)),
+        (executor.MODULE_CACHE_TEST_REL, executor.sha256_bytes(module_cache_test_source)),
+    )
     review = (
         "# review\n\n**Verdict: ACCEPT.**\n\n"
         + "\n".join(
             executor._review_binding_line(relative, artifact_digest)
-            for relative, artifact_digest in implementation_bindings
+            for relative, artifact_digest in review_bindings
         )
         + "\n"
     ).encode("utf-8")
@@ -206,7 +215,17 @@ def controlled_context() -> tuple[executor.P0Context, bytes, bytes, bytes, bytes
         f"{executor.PLAN_P0_AUTHORIZATION_APPROVAL} | authorization_id={value['authorization_id']};"
         f"authorization_sha256={context_value.authorization_sha256} |\n"
     ).encode("utf-8")
-    return context_value, parser_source, executor_source, review, enumerator_source, enumerator_review, plan
+    return (
+        context_value,
+        parser_source,
+        executor_source,
+        review,
+        enumerator_source,
+        enumerator_review,
+        module_cache_source,
+        module_cache_test_source,
+        plan,
+    )
 
 
 def verify_control(
@@ -216,6 +235,8 @@ def verify_control(
     review: bytes,
     enumerator_source: bytes,
     enumerator_review: bytes,
+    module_cache_source: bytes,
+    module_cache_test_source: bytes,
     plan: bytes,
     *,
     head_overrides: dict[str, bytes] | None = None,
@@ -229,6 +250,8 @@ def verify_control(
         executor.EXECUTOR_REVIEW_REL: review,
         executor.ENUMERATOR_REL: enumerator_source,
         executor.ENUMERATOR_REVIEW_REL: enumerator_review,
+        executor.MODULE_CACHE_REL: module_cache_source,
+        executor.MODULE_CACHE_TEST_REL: module_cache_test_source,
         executor.PLAN_REL: plan,
         executor.P0_AUTHORIZATION_REL: context_value.authorization_bytes,
     }
@@ -241,6 +264,8 @@ def verify_control(
         executor.EXECUTOR_REVIEW_REL: review,
         executor.ENUMERATOR_REL: enumerator_source,
         executor.ENUMERATOR_REVIEW_REL: enumerator_review,
+        executor.MODULE_CACHE_REL: module_cache_source,
+        executor.MODULE_CACHE_TEST_REL: module_cache_test_source,
         executor.PLAN_REL: plan,
     }
     if commit_overrides:
@@ -265,6 +290,8 @@ def verify_control(
         review_bytes=review,
         enumerator_source=enumerator_source,
         enumerator_review_bytes=enumerator_review,
+        module_cache_source=module_cache_source,
+        module_cache_test_source=module_cache_test_source,
         plan_bytes=plan,
         head_blob=head_blob,
         commit_blob=commit_blob,
@@ -770,6 +797,8 @@ class ExecutorSyntheticTests(unittest.TestCase):
             review,
             enumerator_source,
             enumerator_review,
+            module_cache_source,
+            module_cache_test_source,
             plan,
         ) = controlled_context()
         cases = (
@@ -779,6 +808,8 @@ class ExecutorSyntheticTests(unittest.TestCase):
             ("review commit blob", {"commit_overrides": {executor.EXECUTOR_REVIEW_REL: b"wrong"}}),
             ("enumerator commit blob", {"commit_overrides": {executor.ENUMERATOR_REL: b"wrong"}}),
             ("enumerator review commit blob", {"commit_overrides": {executor.ENUMERATOR_REVIEW_REL: b"wrong"}}),
+            ("module cache commit blob", {"commit_overrides": {executor.MODULE_CACHE_REL: b"wrong"}}),
+            ("module cache test commit blob", {"commit_overrides": {executor.MODULE_CACHE_TEST_REL: b"wrong"}}),
             ("implementation plan anchor", {"plan": plan.splitlines(keepends=True)[1]}),
             (
                 "accepted implementation plan omission",
@@ -821,6 +852,8 @@ class ExecutorSyntheticTests(unittest.TestCase):
                         changed_review,
                         enumerator_source,
                         enumerator_review,
+                        module_cache_source,
+                        module_cache_test_source,
                         changed_plan,
                         **kwargs,
                     )
@@ -833,6 +866,8 @@ class ExecutorSyntheticTests(unittest.TestCase):
             review,
             enumerator_source,
             enumerator_review,
+            module_cache_source,
+            module_cache_test_source,
             plan,
         ) = controlled_context()
         implementation = context_value.authorization["implementation"]
@@ -841,6 +876,11 @@ class ExecutorSyntheticTests(unittest.TestCase):
             implementation["prebuild_executor_sha256"],
             implementation["enumerator_sha256"],
             implementation["enumerator_review_sha256"],
+        )
+        review_bindings = (
+            *bindings,
+            (executor.MODULE_CACHE_REL, executor.sha256_bytes(module_cache_source)),
+            (executor.MODULE_CACHE_TEST_REL, executor.sha256_bytes(module_cache_test_source)),
         )
         for bad_verdict in (
             b"**Verdict: ACCEPTED.**",
@@ -852,27 +892,27 @@ class ExecutorSyntheticTests(unittest.TestCase):
                     executor._require_accepted_review(
                         review.replace(executor.REVIEW_ACCEPT_VERDICT.encode("utf-8"), bad_verdict),
                         label="synthetic review",
-                        bindings=bindings,
+                        bindings=review_bindings,
                     )
         with self.assertRaises(executor.PrebuildExecutionError):
             executor._require_accepted_review(
                 review + b"\n**Verdict: REJECT.**\n",
                 label="synthetic review",
-                bindings=bindings,
+                bindings=review_bindings,
             )
         review_without_parser = review.replace(
-            executor._review_binding_line(bindings[0][0], bindings[0][1]).encode("utf-8"),
+            executor._review_binding_line(review_bindings[0][0], review_bindings[0][1]).encode("utf-8"),
             b"- `quoted/path`: `sha256:" + b"0" * 64 + b"`",
         )
         with self.assertRaises(executor.PrebuildExecutionError):
             executor._require_accepted_review(
-                review_without_parser, label="synthetic review", bindings=bindings
+                review_without_parser, label="synthetic review", bindings=review_bindings
             )
         with self.assertRaises(executor.PrebuildExecutionError):
             executor._require_accepted_review(
                 review.replace(b"\n", b"\r\n"),
                 label="synthetic review",
-                bindings=bindings,
+                bindings=review_bindings,
             )
         review_digest = context_value.authorization["implementation_review"]["record_sha256"]
         for bad_approval in ("ACCEPTED", "NOT ACCEPT", '"ACCEPT"'):

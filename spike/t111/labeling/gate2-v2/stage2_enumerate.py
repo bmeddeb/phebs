@@ -94,14 +94,16 @@ PREBUILD_RUNNER_PATH = HERE / "stage2_prebuild.py"
 PREBUILD_RUNNER_REL = PREBUILD_RUNNER_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EXECUTOR_PATH = HERE / "stage2_prebuild_execute.py"
 PREBUILD_EXECUTOR_REL = PREBUILD_EXECUTOR_PATH.relative_to(REPO_ROOT).as_posix()
-PREBUILD_EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r3.md"
+PREBUILD_EXECUTOR_REVIEW_PATH = HERE / "stage2-prebuild-execute-review-r4.md"
 PREBUILD_EXECUTOR_REVIEW_REL = PREBUILD_EXECUTOR_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
+P0_MODULE_CACHE_REL = "spike/t111/module_cache.go"
+P0_MODULE_CACHE_TEST_REL = "spike/t111/module_cache_test.go"
 STAGE1_SNAPSHOT_REL = (HERE / "stage1_snapshot.py").relative_to(REPO_ROOT).as_posix()
 # This implementation revision must be accepted afresh because its P0
 # implementation-review dependency changed.  Every executable path must name
-# the same r6 review; older r2/r3/r4/r5 records remain historical and cannot
+# the same r7 review; older r2/r3/r4/r5/r6 records remain historical and cannot
 # bless this revised verifier.
-ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r6.md"
+ENUMERATION_REVIEW_PATH = HERE / "stage2-enumerate-review-r7.md"
 ENUMERATION_REVIEW_REL = ENUMERATION_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
 PREBUILD_EVIDENCE_REVIEW_PATH = HERE / "stage2-prebuild-evidence-review-r1.md"
 PREBUILD_EVIDENCE_REVIEW_REL = PREBUILD_EVIDENCE_REVIEW_PATH.relative_to(REPO_ROOT).as_posix()
@@ -116,7 +118,7 @@ PLAN_P0_IMPLEMENTATION_APPROVAL = "ACCEPT"
 # Version the exact marker as well as the review filename.  Older accepted
 # rows are retained in PLAN.md as history, so an unversioned substring would
 # make the current executable approval permanently ambiguous.
-PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r6"
+PLAN_IMPLEMENTATION_MARKER = "GATE2-V2 Stage-2 enumeration verifier, r7"
 PLAN_IMPLEMENTATION_APPROVAL = "ACCEPT"
 PYTHON_MODE = "isolated-no-site"
 TOOLCHAIN_IDENTITY_RE = re.compile(
@@ -1167,6 +1169,12 @@ def _verify_p0_implementation_binding(p0: dict[str, Any], p0_commit: str) -> Non
         review.get("record_sha256"), "P0 implementation review digest"
     )
     accepted_commit = review["accepted_commit"]
+    module_cache_digest = sha256_bytes(
+        _commit_blob(accepted_commit, P0_MODULE_CACHE_REL)
+    )
+    module_cache_test_digest = sha256_bytes(
+        _commit_blob(accepted_commit, P0_MODULE_CACHE_TEST_REL)
+    )
     _require_ancestor(accepted_commit, "P0 implementation review commit")
     _require_ancestor_of(
         accepted_commit, p0_commit, "P0 implementation review commit"
@@ -1190,6 +1198,8 @@ def _verify_p0_implementation_binding(p0: dict[str, Any], p0_commit: str) -> Non
         executor_digest=digests["prebuild_executor_sha256"],
         enumerator_digest=digests["enumerator_sha256"],
         enumerator_review_digest=digests["enumerator_review_sha256"],
+        module_cache_digest=module_cache_digest,
+        module_cache_test_digest=module_cache_test_digest,
     )
     _p0_implementation_plan_anchor(
         _commit_blob(accepted_commit, "PLAN.md"),
@@ -1871,6 +1881,8 @@ def _p0_implementation_review_record(
     executor_digest: str,
     enumerator_digest: str,
     enumerator_review_digest: str,
+    module_cache_digest: str,
+    module_cache_test_digest: str,
 ) -> None:
     """Require the executor review to bind the complete P0 trust closure."""
     _review_binds_exact_artifacts(
@@ -1881,6 +1893,8 @@ def _p0_implementation_review_record(
             (PREBUILD_EXECUTOR_REL, executor_digest),
             (ENUMERATOR_REL, enumerator_digest),
             (ENUMERATION_REVIEW_REL, enumerator_review_digest),
+            (P0_MODULE_CACHE_REL, module_cache_digest),
+            (P0_MODULE_CACHE_TEST_REL, module_cache_test_digest),
         ),
     )
 

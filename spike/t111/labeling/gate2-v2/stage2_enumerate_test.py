@@ -1179,6 +1179,8 @@ class Stage2EnumerationTest(unittest.TestCase):
             parser_bytes = enum.PREBUILD_RUNNER_PATH.read_bytes()
             executor_bytes = b"P0 executor bytes\n"
             enumerator_bytes = b"enumerator bytes\n"
+            module_cache_bytes = b"P0 module cache bytes\n"
+            module_cache_test_bytes = b"P0 module cache test bytes\n"
             parser_digest = enum.sha256_bytes(parser_bytes)
             executor_digest = enum.sha256_bytes(executor_bytes)
             enumerator_digest = enum.sha256_bytes(enumerator_bytes)
@@ -1194,6 +1196,13 @@ class Stage2EnumerationTest(unittest.TestCase):
                 + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
                 + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
                 + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+                + _review_binding_line(
+                    enum.P0_MODULE_CACHE_REL, enum.sha256_bytes(module_cache_bytes)
+                )
+                + _review_binding_line(
+                    enum.P0_MODULE_CACHE_TEST_REL,
+                    enum.sha256_bytes(module_cache_test_bytes),
+                )
             ).encode("utf-8")
             p0["implementation"] = {
                 "prebuild_runner_sha256": parser_digest,
@@ -1278,6 +1287,8 @@ class Stage2EnumerationTest(unittest.TestCase):
                 f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}": executor_bytes,
                 f"{implementation_commit}:{enum.ENUMERATOR_REL}": enumerator_bytes,
                 f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
+                f"{implementation_commit}:{enum.P0_MODULE_CACHE_REL}": module_cache_bytes,
+                f"{implementation_commit}:{enum.P0_MODULE_CACHE_TEST_REL}": module_cache_test_bytes,
                 f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}": implementation_review_bytes,
                 f"{implementation_commit}:PLAN.md": implementation_plan,
             }
@@ -1684,16 +1695,23 @@ class Stage2EnumerationTest(unittest.TestCase):
         executor_digest = _digest("b")
         enumerator_digest = _digest("c")
         enumerator_review_digest = _digest("d")
+        module_cache_digest = _digest("f")
+        module_cache_test_digest = _digest("0")
         implementation_review_digest = _digest("e")
-        artifact_pairs = (
+        plan_artifact_pairs = (
             (enum.PREBUILD_RUNNER_REL, parser_digest),
             (enum.PREBUILD_EXECUTOR_REL, executor_digest),
             (enum.ENUMERATOR_REL, enumerator_digest),
             (enum.ENUMERATION_REVIEW_REL, enumerator_review_digest),
         )
+        review_artifact_pairs = (
+            *plan_artifact_pairs,
+            (enum.P0_MODULE_CACHE_REL, module_cache_digest),
+            (enum.P0_MODULE_CACHE_TEST_REL, module_cache_test_digest),
+        )
         review = (
             "# P0 executor review\n\n**Verdict: ACCEPT.**\n\n"
-            + "".join(_review_binding_line(path, digest) for path, digest in artifact_pairs)
+            + "".join(_review_binding_line(path, digest) for path, digest in review_artifact_pairs)
         ).encode("utf-8")
         enum._p0_implementation_review_record(
             review,
@@ -1701,11 +1719,13 @@ class Stage2EnumerationTest(unittest.TestCase):
             executor_digest=executor_digest,
             enumerator_digest=enumerator_digest,
             enumerator_review_digest=enumerator_review_digest,
+            module_cache_digest=module_cache_digest,
+            module_cache_test_digest=module_cache_test_digest,
         )
         plan = _plan_row(
             enum.PLAN_P0_IMPLEMENTATION_MARKER,
             enum.PLAN_P0_IMPLEMENTATION_APPROVAL,
-            *artifact_pairs,
+            *plan_artifact_pairs,
             (enum.PREBUILD_EXECUTOR_REVIEW_REL, implementation_review_digest),
         )
         plan_kwargs = {
@@ -1717,7 +1737,7 @@ class Stage2EnumerationTest(unittest.TestCase):
         }
         enum._p0_implementation_plan_anchor(plan, **plan_kwargs)
         for index, token in enumerate(
-            tuple(value for pair in artifact_pairs for value in pair)
+            tuple(value for pair in review_artifact_pairs for value in pair)
         ):
             with self.subTest(record_token=token):
                 rejected = review.replace(token.encode("utf-8"), f"wrong-{index}".encode("utf-8"), 1)
@@ -1727,10 +1747,12 @@ class Stage2EnumerationTest(unittest.TestCase):
                         "executor_digest": executor_digest,
                         "enumerator_digest": enumerator_digest,
                         "enumerator_review_digest": enumerator_review_digest,
+                        "module_cache_digest": module_cache_digest,
+                        "module_cache_test_digest": module_cache_test_digest,
                     })
         for index, token in enumerate(
             (enum.PREBUILD_EXECUTOR_REVIEW_REL, implementation_review_digest)
-            + tuple(value for pair in artifact_pairs for value in pair)
+            + tuple(value for pair in plan_artifact_pairs for value in pair)
         ):
             with self.subTest(plan_token=token):
                 rejected = plan.replace(token.encode("utf-8"), f"wrong-{index}".encode("utf-8"), 1)
@@ -1743,6 +1765,8 @@ class Stage2EnumerationTest(unittest.TestCase):
         parser_bytes = b"P0 parser bytes\n"
         executor_bytes = b"P0 executor bytes\n"
         enumerator_bytes = b"enumerator bytes\n"
+        module_cache_bytes = b"P0 module cache bytes\n"
+        module_cache_test_bytes = b"P0 module cache test bytes\n"
         parser_digest = enum.sha256_bytes(parser_bytes)
         executor_digest = enum.sha256_bytes(executor_bytes)
         enumerator_digest = enum.sha256_bytes(enumerator_bytes)
@@ -1758,6 +1782,13 @@ class Stage2EnumerationTest(unittest.TestCase):
             + _review_binding_line(enum.PREBUILD_EXECUTOR_REL, executor_digest)
             + _review_binding_line(enum.ENUMERATOR_REL, enumerator_digest)
             + _review_binding_line(enum.ENUMERATION_REVIEW_REL, enumerator_review_digest)
+            + _review_binding_line(
+                enum.P0_MODULE_CACHE_REL, enum.sha256_bytes(module_cache_bytes)
+            )
+            + _review_binding_line(
+                enum.P0_MODULE_CACHE_TEST_REL,
+                enum.sha256_bytes(module_cache_test_bytes),
+            )
         ).encode("utf-8")
         implementation = {
             "prebuild_runner_sha256": parser_digest,
@@ -1792,6 +1823,8 @@ class Stage2EnumerationTest(unittest.TestCase):
             f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}": executor_bytes,
             f"{implementation_commit}:{enum.ENUMERATOR_REL}": enumerator_bytes,
             f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}": enumerator_review_bytes,
+            f"{implementation_commit}:{enum.P0_MODULE_CACHE_REL}": module_cache_bytes,
+            f"{implementation_commit}:{enum.P0_MODULE_CACHE_TEST_REL}": module_cache_test_bytes,
             f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REVIEW_REL}": implementation_review_bytes,
             f"{implementation_commit}:PLAN.md": plan_bytes,
         }
@@ -1813,6 +1846,16 @@ class Stage2EnumerationTest(unittest.TestCase):
             with self.assertRaises(enum.EnumerationError):
                 enum._verify_p0_implementation_binding(p0, p0_commit)
             blobs[f"{implementation_commit}:{enum.PREBUILD_EXECUTOR_REL}"] = executor_bytes
+
+            blobs[f"{implementation_commit}:{enum.P0_MODULE_CACHE_REL}"] = b"unreviewed module cache\n"
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:{enum.P0_MODULE_CACHE_REL}"] = module_cache_bytes
+
+            blobs[f"{implementation_commit}:{enum.P0_MODULE_CACHE_TEST_REL}"] = b"unreviewed regression\n"
+            with self.assertRaises(enum.EnumerationError):
+                enum._verify_p0_implementation_binding(p0, p0_commit)
+            blobs[f"{implementation_commit}:{enum.P0_MODULE_CACHE_TEST_REL}"] = module_cache_test_bytes
 
             blobs[f"{implementation_commit}:{enum.ENUMERATION_REVIEW_REL}"] = b"wrong enum review\n"
             with self.assertRaises(enum.EnumerationError):

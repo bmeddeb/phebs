@@ -516,12 +516,16 @@ func hydrateHarnessModule(repoRoot, cacheRoot, proxy, sumdb string) (resultErr e
 	}()
 	_, _, err = hydrateTargetClosuresUnchecked([]moduleClosureTarget{{
 		dir:      repoRoot,
-		patterns: []string{"./spike/t111", "./spike/t111/typedcalloracle"},
+		patterns: harnessClosurePatterns(),
 	}}, cacheRoot, proxy, sumdb)
 	if err != nil {
 		return fmt.Errorf("hydrate T11.1 oracle dependencies: %w", err)
 	}
 	return nil
+}
+
+func harnessClosurePatterns() []string {
+	return []string{"./spike/t111", "./spike/t111/typedcalloracle"}
 }
 
 func rootModuleFileState(root string) (map[string]string, error) {
@@ -935,7 +939,8 @@ func writeBoundManifest(path string, manifest boundHarnessManifest) error {
 
 // buildBoundHarnesses compiles the only binaries permitted to produce facts
 // or the independent typed-call census. The manifest binds them to clean HEAD
-// sources, the exact Go executable, and a directly h1-verified module graph.
+// sources, the exact Go executable, and the directly h1-verified hydrated
+// package closure. Verification deliberately has the same scope as hydration.
 func buildBoundHarnesses(repoRoot, cacheRoot string) error {
 	paths := moduleCacheAt(cacheRoot)
 	if err := inspectSharedModuleCache(paths.root, true); err != nil {
@@ -949,10 +954,7 @@ func buildBoundHarnesses(repoRoot, cacheRoot string) error {
 	if err != nil {
 		return err
 	}
-	if err := runOfflineGo(repoRoot, "mod", "verify"); err != nil {
-		return fmt.Errorf("verify hydrated harness dependencies: %w", err)
-	}
-	harnessPatterns := []string{"./spike/t111", "./spike/t111/typedcalloracle"}
+	harnessPatterns := harnessClosurePatterns()
 	graphBefore, err := verifyHarnessDependencyClosure(repoRoot, head, repoRoot, harnessPatterns)
 	if err != nil {
 		return fmt.Errorf("directly verify harness module graph: %w", err)
