@@ -979,7 +979,10 @@ succeeds (the first three remain available when compatibility is unavailable):
   `REFERENCES_PROTO_FIELD` evidence.
 
 The same opt-in registers the read-only contract-impact report surface and
-advertises `contract-impact-report` in `/api/version`'s `capabilities` array.
+advertises `contract-impact-report` in `/api/version`'s `capabilities` array
+to authenticated callers. `/api/version` remains always-open for deployment
+and client compatibility checks, but its anonymous response omits the entire
+capabilities array so experimental feature and sandbox state are not disclosed.
 `GET /api/contract_impact_report` accepts either one canonical `operation`, or
 the complete `lineage`, `message`, and `field_number` identity. `POST` accepts
 the compatibility request above and is registered only when the Buf probe

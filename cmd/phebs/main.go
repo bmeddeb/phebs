@@ -429,11 +429,16 @@ func serve(args []string) error {
 func newHTTPHandler(authService *auth.Service, apiHandler, mcpHandler, metricsHandler, uiHandler http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	protectedAPI := authService.Require(apiHandler)
+	identifiedAPI := authService.Identify(apiHandler)
 	mux.Handle("/api/auth/", authService.Handler())
 	mux.Handle("/api/mcp", authService.Require(mcpHandler))
 	mux.Handle("/api/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if api.IsAuthenticationExempt(r.URL.Path) {
-			apiHandler.ServeHTTP(w, r)
+			if r.URL.Path == "/api/version" {
+				identifiedAPI.ServeHTTP(w, r)
+			} else {
+				apiHandler.ServeHTTP(w, r)
+			}
 			return
 		}
 		protectedAPI.ServeHTTP(w, r)

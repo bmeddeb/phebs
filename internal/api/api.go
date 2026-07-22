@@ -109,10 +109,12 @@ func New(opts Options) http.Handler {
 			Capabilities []string `json:"capabilities,omitempty"`
 		}
 	}
-	huma.Get(api, "/api/version", func(context.Context, *struct{}) (*versionOut, error) {
+	huma.Get(api, "/api/version", func(ctx context.Context, _ *struct{}) (*versionOut, error) {
 		out := &versionOut{}
 		out.Body.Version = opts.Version
-		out.Body.Capabilities = proofCapabilities(opts)
+		if opts.Principal != nil && strings.TrimSpace(opts.Principal(ctx)) != "" {
+			out.Body.Capabilities = proofCapabilities(opts)
+		}
 		return out, nil
 	})
 

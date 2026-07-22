@@ -132,6 +132,22 @@ func (s *Service) Require(next http.Handler) http.Handler {
 	})
 }
 
+// Identify attaches a principal when the request authenticates successfully,
+// but preserves public access when it does not. It is intentionally narrower
+// than Require: public handlers must still decide which response fields are
+// safe without a principal, and invalid credentials never reveal protected
+// state through a distinguishable response.
+func (s *Service) Identify(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		principal, err := s.Authenticate(r)
+		if err == nil {
+			ctx := context.WithValue(r.Context(), principalContextKey{}, principal)
+			r = r.WithContext(ctx)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Service) validCSRF(r *http.Request) bool {
 	want := s.sessions.GetString(r.Context(), sessionCSRF)
 	got := r.Header.Get("X-CSRF-Token")

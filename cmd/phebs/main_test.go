@@ -107,6 +107,67 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/auth/keys", "", bearerHeaders, http.StatusForbidden, "browser session")
 }
 
+func TestVersionCapabilitiesRequireAuthenticatedPrincipal(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	st, err := store.OpenLocal(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+
+	insecure := false
+	authService, err := auth.New(ctx, auth.Options{Store: st, Config: config.Auth{
+		CookieSecure: &insecure,
+		BootstrapUser: config.BootstrapUser{
+			Email: "admin@example.com", Password: "integration-password",
+		},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	apiHandler := api.New(api.Options{
+		Version: "test", Store: st, Evidence: st, ProofBundles: st,
+		Principal: func(ctx context.Context) string {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok {
+				return ""
+			}
+			if principal.User != nil {
+				return "user:" + principal.User.ID
+			}
+			if principal.APIKeyID != "" {
+				return "api-key:" + principal.APIKeyID
+			}
+			return "authenticated:" + principal.AuthMethod
+		},
+	})
+	notFound := http.NotFoundHandler()
+	server := httptest.NewServer(newHTTPHandler(authService, apiHandler, notFound, notFound, notFound))
+	defer server.Close()
+
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client := &http.Client{Jar: jar}
+	anonymous := assertStatus(t, client, http.MethodGet, server.URL+"/api/version", "", nil, http.StatusOK, `"version":"test"`)
+	if strings.Contains(string(anonymous), "contract-impact-report") {
+		t.Fatalf("anonymous version leaked capabilities: %s", anonymous)
+	}
+	assertStatus(t, client, http.MethodPost, server.URL+"/api/auth/login",
+		`{"email":"admin@example.com","password":"integration-password"}`,
+		http.Header{"Content-Type": []string{"application/json"}}, http.StatusOK, `"authenticated":true`)
+	assertStatus(t, client, http.MethodGet, server.URL+"/api/version", "", nil,
+		http.StatusOK, `"contract-impact-report"`)
+
+	invalid := assertStatus(t, client, http.MethodGet, server.URL+"/api/version", "",
+		http.Header{"Authorization": []string{"Bearer invalid"}}, http.StatusOK, `"version":"test"`)
+	if strings.Contains(string(invalid), "contract-impact-report") {
+		t.Fatalf("invalid credentials leaked capabilities: %s", invalid)
+	}
+}
+
 func TestEvidenceViewUsesAuthenticatedPrincipal(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()

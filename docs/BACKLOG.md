@@ -634,11 +634,13 @@ commit/path/line; coverage metadata and Buf spans over deliberately unretained
 caller inputs are not misrepresented as repository evidence. Following the
 T14.3 ADR, proposed changes compare bounded before/after source commitments and
 record a bundle-local compatibility run rather than fabricating repository
-publication rows for caller-owned inputs. `/api/version` capability discovery
-keeps both navigation and routes absent by default, and independently gates the
-contract-change tab on the pinned Buf probe. Go acceptance proves deterministic
-readback, exact citations, unresolved and unsupported rows, hidden-repository
-non-interference, revocation, change enrichment, and dark posture; UI tests pin
+publication rows for caller-owned inputs. Authenticated `/api/version`
+capability discovery keeps both navigation and routes absent by default and
+independently gates the contract-change tab on the pinned Buf probe; the
+always-open anonymous response reveals no capability names. Go acceptance
+proves deterministic readback, exact citations, unresolved and unsupported
+rows, hidden-repository non-interference, revocation, change enrichment, and
+dark posture; UI tests pin
 all three forms, saved reads, caveat/certificate rendering, and immutable source
 links. No code-host writer, diagrams, dossiers, or runtime plane was added.
 
