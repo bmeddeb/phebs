@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -506,5 +508,30 @@ func TestAppKeyUnsetEnvFailsClosed(t *testing.T) {
 	_, err := Parse([]byte(in))
 	if err == nil || !strings.Contains(err.Error(), "app.private_key") {
 		t.Fatalf("Parse() err = %v, want app.private_key fail-closed error", err)
+	}
+}
+
+func TestLoadForRecoveryValidatesWithoutExpandingSecrets(t *testing.T) {
+	t.Setenv("PHEBS_RECOVERY_MISSING_SECRET", "")
+	raw := []byte("server:\n  data_dir: ./restore-data\nwebhook:\n  secret: '${PHEBS_RECOVERY_MISSING_SECRET}'\n")
+	path := filepath.Join(t.TempDir(), "phebs.yaml")
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Parse(raw); err == nil || !strings.Contains(err.Error(), "unset or empty") {
+		t.Fatalf("normal Parse error = %v, want missing-secret refusal", err)
+	}
+	cfg, gotRaw, err := LoadForRecovery(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(gotRaw) != string(raw) {
+		t.Fatalf("recovery config bytes changed: %q", gotRaw)
+	}
+	if cfg.Webhook.Secret != "${PHEBS_RECOVERY_MISSING_SECRET}" {
+		t.Fatalf("recovery secret = %q, want unexpanded reference", cfg.Webhook.Secret)
+	}
+	if !filepath.IsAbs(cfg.Server.DataDir) {
+		t.Fatalf("recovery data dir = %q, want normalized absolute path", cfg.Server.DataDir)
 	}
 }

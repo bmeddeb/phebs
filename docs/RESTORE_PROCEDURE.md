@@ -119,9 +119,10 @@ Any false or unverifiable precondition is an abort, not a warning.
 
 ## 4. Backup creation design
 
-The accepted version of this procedure must replace bracketed fields with the
-version-pinned commands and expected outputs used by the authorized
-environment. They are intentionally not guessed here.
+T-P5.1 supplies the reviewed command shape below. The backup manifest pins the
+exact phebs and SurrealDB versions and SHA-256 binary digests used by the
+authorized environment; a restore refuses any different executable even when
+its display version is equal.
 
 1. Record exercise ID, operator, witness, authorization digest, binary and
    dependency versions, store-writer generation, evidence-format version, and
@@ -130,9 +131,14 @@ environment. They are intentionally not guessed here.
    to provide the required consistency for the exact deployed version. A plain
    filesystem copy is permitted only with phebs and the supervised database
    child stopped, as required by [MANUAL.md](./MANUAL.md).
-3. Execute `[VERSION-PINNED SURREAL EXPORT COMMAND]` into a private staging
-   directory with restrictive permissions. Capture stdout, stderr, exit status,
-   start/end timestamps, and tool digest without recording secrets.
+3. Execute `phebs backup -config <exact-config> -output <new-private-path>`.
+   Internally, the live runtime-bound SurrealDB executable runs `surreal export
+   --endpoint <live-loopback-endpoint> --namespace phebs --database phebs --log
+   none database.surql`, with its local root credentials injected through the
+   child environment and never printed or placed in the manifest. Record the
+   command exit status and the emitted manifest digest; the completed manifest
+   pins that executable version/digest and records its UTC creation time and
+   sanitized exact command template.
 4. Inventory every staged artifact by relative path, byte length, media type,
    classification, and SHA-256 digest. Reject symlinks, special files, absolute
    paths, path traversal, case aliases, and anything not declared in Section 2.
@@ -168,10 +174,14 @@ final authorization step.
 5. **Restore configuration without active secrets.** Validate its schema and
    bind the restored copy to the manifest. Keep authentication and source
    integrations unable to contact external systems.
-6. **Import precious database state.** Use
-   `[VERSION-PINNED SURREAL IMPORT COMMAND]` with the exact compatible database
-   version and exclusive writer. Capture command identity, output, exit status,
-   timestamps, and post-import database identity without recording credentials.
+6. **Import precious database state.** Execute `phebs restore -config
+   <exact-config> -backup <verified-private-path>` against an absent or empty
+   configured `$DATA`. Internally, the manifest-pinned executable runs `surreal
+   import --endpoint <isolated-loopback-endpoint> --namespace phebs --database
+   phebs --log none database.surql` as the exclusive writer. Capture the phebs
+   command identity, exit status, manifest digest, timestamps, and post-import
+   database identity without recording credentials. A partial target after a
+   failed import is quarantined; the command will not retry over it.
 7. **Check version compatibility before application writes.** Confirm schema,
    migration markers, store-writer generation, and evidence-format version.
    Unknown versions, missing completion markers, mixed writers, an implicit
@@ -253,10 +263,10 @@ mandatory-deletion behavior, and final digest must be recorded.
 ## 8. Acceptance boundary
 
 Item 5 can move to `accepted` only when the owner and independent reviewer have
-resolved the `TBD` fields, reviewed the exact version-pinned backup/import
-mechanism, bound this artifact's digest, and completed the acceptance record in
-[PILOT_PREREQS.md](./PILOT_PREREQS.md). That accepts the procedure, not a
-particular backup or environment.
+resolved the `TBD` fields, reviewed the manifest-version-pinned backup/import
+mechanism above, bound this artifact's digest, and completed the acceptance
+record in [PILOT_PREREQS.md](./PILOT_PREREQS.md). That accepts the procedure,
+not a particular backup or environment.
 
 Item 8 remains separately blocked until items 5 and 7 are accepted, pilot
 environment access is explicitly authorized, the restore operator and

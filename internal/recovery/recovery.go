@@ -1,0 +1,616 @@
+// Package recovery implements the version-bound live backup and fail-closed
+// restore path. It operates only on the precious SurrealDB state; normal phebs
+// startup remains responsible for rebuilding mirrors, indexes, and extraction.
+package recovery
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
+	"time"
+
+	"github.com/bmeddeb/phebs/internal/store"
+)
+
+const (
+	ManifestSchema = "phebs-backup-manifest-v1"
+	ManifestName   = "manifest.json"
+	DatabaseName   = "database.surql"
+
+	maxManifestBytes = 1 << 20
+	maxCommandOutput = 64 << 10
+	maxArtifactBytes = int64(1 << 40)
+)
+
+var derivedExclusions = []string{
+	"index/ (zoekt shards)",
+	"repos/ (bare repository mirrors)",
+	"temporary extraction and build caches",
+}
+
+var exportCommand = []string{
+	"surreal", "export", "--endpoint", "<live-loopback-endpoint>",
+	"--namespace", "phebs", "--database", "phebs", "--log", "none", DatabaseName,
+}
+
+type ToolIdentity struct {
+	Version string `json:"version"`
+	SHA256  string `json:"sha256"`
+}
+
+type DatabaseIdentity struct {
+	Namespace string `json:"namespace"`
+	Database  string `json:"database"`
+}
+
+type Artifact struct {
+	Path           string `json:"path"`
+	Classification string `json:"classification"`
+	MediaType      string `json:"media_type"`
+	Size           int64  `json:"size"`
+	SHA256         string `json:"sha256"`
+}
+
+// Manifest binds one database export to the exact recovery-compatible inputs.
+// ManifestSHA256 digests the canonical JSON with that field empty, avoiding a
+// recursive file hash while still detecting every meaningful manifest change.
+type Manifest struct {
+	Schema            string              `json:"schema"`
+	CreatedAt         time.Time           `json:"created_at"`
+	Database          DatabaseIdentity    `json:"database"`
+	ConfigSHA256      string              `json:"config_sha256"`
+	Phebs             ToolIdentity        `json:"phebs"`
+	Surreal           ToolIdentity        `json:"surreal"`
+	Store             store.StoreIdentity `json:"store"`
+	ExportCommand     []string            `json:"export_command"`
+	Inventory         []Artifact          `json:"inventory"`
+	DerivedExclusions []string            `json:"derived_exclusions"`
+	ManifestSHA256    string              `json:"manifest_sha256"`
+}
+
+type Options struct {
+	DataDir      string
+	Config       []byte
+	PhebsBinary  string
+	PhebsVersion string
+}
+
+type BackupOptions struct {
+	Options
+	Output string
+	Now    func() time.Time
+}
+
+type RestoreOptions struct {
+	Options
+	Backup string
+}
+
+// ConfigDigest is the canonical raw-config identity stored in runtime
+// descriptors and backup manifests. Whitespace is intentionally significant.
+func ConfigDigest(data []byte) string { return digestBytes(data) }
+
+// Create exports a running local instance into an atomically published,
+// private backup directory. Output must not already exist.
+func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
+	if err := ctx.Err(); err != nil {
+		return Manifest{}, err
+	}
+	output, err := absoluteCleanPath("backup output", opts.Output)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if err := requireAbsent(output, "backup output"); err != nil {
+		return Manifest{}, err
+	}
+	dataDir, err := absoluteCleanPath("data directory", opts.DataDir)
+	if err != nil {
+		return Manifest{}, err
+	}
+	runtime, err := store.ReadLocalRuntime(dataDir)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("discover live phebs store: %w", err)
+	}
+	configSHA256 := ConfigDigest(opts.Config)
+	if runtime.ConfigSHA256 == "" || runtime.ConfigSHA256 != configSHA256 {
+		return Manifest{}, errors.New("backup config digest differs from the live server configuration")
+	}
+	actualSurreal, err := store.InspectSurrealBinary(runtime.Surreal.Path)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if actualSurreal != runtime.Surreal {
+		return Manifest{}, errors.New("live SurrealDB identity changed after server startup")
+	}
+	phebs, err := inspectPhebs(opts.PhebsBinary, opts.PhebsVersion)
+	if err != nil {
+		return Manifest{}, err
+	}
+	parent := filepath.Dir(output)
+	if err := os.MkdirAll(parent, 0o700); err != nil {
+		return Manifest{}, fmt.Errorf("create backup parent: %w", err)
+	}
+	stage, err := os.MkdirTemp(parent, ".phebs-backup-")
+	if err != nil {
+		return Manifest{}, fmt.Errorf("create backup staging directory: %w", err)
+	}
+	if err := os.Chmod(stage, 0o700); err != nil {
+		_ = os.RemoveAll(stage)
+		return Manifest{}, fmt.Errorf("protect backup staging directory: %w", err)
+	}
+	published := false
+	defer func() {
+		if !published {
+			_ = os.RemoveAll(stage)
+		}
+	}()
+
+	artifactPath := filepath.Join(stage, DatabaseName)
+	args := []string{
+		"export", "--endpoint", cliEndpoint(runtime.Endpoint),
+		"--namespace", "phebs", "--database", "phebs", "--log", "none",
+		artifactPath,
+	}
+	if err := runSurreal(ctx, actualSurreal.Path, args); err != nil {
+		return Manifest{}, fmt.Errorf("export SurrealDB: %w", err)
+	}
+	if err := os.Chmod(artifactPath, 0o600); err != nil {
+		return Manifest{}, fmt.Errorf("protect database artifact: %w", err)
+	}
+	if err := syncFile(artifactPath); err != nil {
+		return Manifest{}, err
+	}
+	artifact, err := inspectArtifact(artifactPath)
+	if err != nil {
+		return Manifest{}, err
+	}
+	now := time.Now
+	if opts.Now != nil {
+		now = opts.Now
+	}
+	manifest := Manifest{
+		Schema:       ManifestSchema,
+		CreatedAt:    now().UTC(),
+		Database:     DatabaseIdentity{Namespace: "phebs", Database: "phebs"},
+		ConfigSHA256: configSHA256,
+		Phebs:        phebs,
+		Surreal: ToolIdentity{
+			Version: actualSurreal.Version,
+			SHA256:  actualSurreal.SHA256,
+		},
+		Store:             store.CurrentStoreIdentity(),
+		ExportCommand:     slices.Clone(exportCommand),
+		Inventory:         []Artifact{artifact},
+		DerivedExclusions: slices.Clone(derivedExclusions),
+	}
+	manifest.ManifestSHA256, err = manifestDigest(manifest)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if err := writeManifest(filepath.Join(stage, ManifestName), manifest); err != nil {
+		return Manifest{}, err
+	}
+	if err := syncDirectory(stage); err != nil {
+		return Manifest{}, err
+	}
+	// Recheck for a useful error, then use the platform's exclusive atomic
+	// directory rename so a target created in this final window still wins.
+	if err := requireAbsent(output, "backup output"); err != nil {
+		return Manifest{}, err
+	}
+	if err := publishDirectory(stage, output); err != nil {
+		return Manifest{}, fmt.Errorf("publish backup: %w", err)
+	}
+	published = true
+	if err := syncDirectory(parent); err != nil {
+		return Manifest{}, err
+	}
+	return manifest, nil
+}
+
+// Restore verifies the complete backup and all compatibility identities before
+// starting an exclusive import into an absent or empty data directory.
+func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
+	if err := ctx.Err(); err != nil {
+		return Manifest{}, err
+	}
+	target, err := absoluteCleanPath("data directory", opts.DataDir)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if err := requireEmptyOrAbsent(target); err != nil {
+		return Manifest{}, err
+	}
+	backup, err := absoluteCleanPath("backup", opts.Backup)
+	if err != nil {
+		return Manifest{}, err
+	}
+	manifest, err := Verify(backup, opts.Options)
+	if err != nil {
+		return Manifest{}, err
+	}
+	// Close the validation/use race before creating the target. Once import
+	// begins, any failure intentionally leaves a partial target that subsequent
+	// restores refuse until the operator explicitly quarantines or removes it.
+	if err := requireEmptyOrAbsent(target); err != nil {
+		return Manifest{}, err
+	}
+	if err := os.MkdirAll(target, 0o700); err != nil {
+		return Manifest{}, fmt.Errorf("create restore data directory: %w", err)
+	}
+	runtime, stop, err := store.StartLocalImport(ctx, target)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("start restore database: %w", err)
+	}
+	stopped := false
+	defer func() {
+		if !stopped {
+			stop()
+		}
+	}()
+	if runtime.Surreal.Version != manifest.Surreal.Version || runtime.Surreal.SHA256 != manifest.Surreal.SHA256 {
+		return Manifest{}, errors.New("restore SurrealDB identity differs from verified manifest")
+	}
+	args := []string{
+		"import", "--endpoint", cliEndpoint(runtime.Endpoint),
+		"--namespace", manifest.Database.Namespace, "--database", manifest.Database.Database,
+		"--log", "none", filepath.Join(backup, DatabaseName),
+	}
+	if err := runSurreal(ctx, runtime.Surreal.Path, args); err != nil {
+		return Manifest{}, fmt.Errorf("import SurrealDB: %w", err)
+	}
+	stop()
+	stopped = true
+
+	// Opening once applies the supported idempotent schema/migration set and
+	// proves the imported database reaches the same application boundary.
+	st, err := store.OpenLocal(ctx, target)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("validate restored store: %w", err)
+	}
+	if err := st.Close(context.WithoutCancel(ctx)); err != nil {
+		return Manifest{}, fmt.Errorf("close validated restored store: %w", err)
+	}
+	return manifest, nil
+}
+
+// Verify performs offline artifact and compatibility validation without
+// writing to the restore target.
+func Verify(backup string, opts Options) (Manifest, error) {
+	entries, err := os.ReadDir(backup)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("read backup: %w", err)
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() {
+			return Manifest{}, fmt.Errorf("backup entry %q is not a regular file", entry.Name())
+		}
+		names = append(names, entry.Name())
+	}
+	slices.Sort(names)
+	if !slices.Equal(names, []string{DatabaseName, ManifestName}) {
+		return Manifest{}, fmt.Errorf("backup inventory is incomplete or contains undeclared files: %v", names)
+	}
+	manifest, err := readManifest(filepath.Join(backup, ManifestName))
+	if err != nil {
+		return Manifest{}, err
+	}
+	if err := validateManifest(manifest); err != nil {
+		return Manifest{}, err
+	}
+	wantDigest, err := manifestDigest(manifest)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if manifest.ManifestSHA256 != wantDigest {
+		return Manifest{}, errors.New("backup manifest digest mismatch")
+	}
+	if manifest.ConfigSHA256 != ConfigDigest(opts.Config) {
+		return Manifest{}, errors.New("backup config digest differs from the supplied config")
+	}
+	phebs, err := inspectPhebs(opts.PhebsBinary, opts.PhebsVersion)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if manifest.Phebs != phebs {
+		return Manifest{}, errors.New("backup requires a different phebs binary")
+	}
+	surreal, err := store.FindSurrealBinary()
+	if err != nil {
+		return Manifest{}, err
+	}
+	if manifest.Surreal.Version != surreal.Version || manifest.Surreal.SHA256 != surreal.SHA256 {
+		return Manifest{}, errors.New("backup requires a different SurrealDB binary")
+	}
+	if manifest.Store != store.CurrentStoreIdentity() {
+		return Manifest{}, errors.New("backup store identity is incompatible with this phebs binary")
+	}
+	actual, err := inspectArtifact(filepath.Join(backup, DatabaseName))
+	if err != nil {
+		return Manifest{}, err
+	}
+	if actual != manifest.Inventory[0] {
+		return Manifest{}, errors.New("backup database artifact differs from its manifest")
+	}
+	return manifest, nil
+}
+
+func validateManifest(manifest Manifest) error {
+	if manifest.Schema != ManifestSchema || manifest.CreatedAt.IsZero() || manifest.CreatedAt.Location() != time.UTC ||
+		manifest.Database != (DatabaseIdentity{Namespace: "phebs", Database: "phebs"}) ||
+		manifest.ConfigSHA256 == "" || manifest.Phebs.Version == "" || manifest.Phebs.SHA256 == "" ||
+		manifest.Surreal.Version == "" || manifest.Surreal.SHA256 == "" || manifest.ManifestSHA256 == "" {
+		return errors.New("backup manifest identity is incomplete")
+	}
+	if len(manifest.Inventory) != 1 || manifest.Inventory[0].Path != DatabaseName ||
+		manifest.Inventory[0].Classification != "precious" ||
+		manifest.Inventory[0].MediaType != "application/surrealql" || manifest.Inventory[0].Size <= 0 {
+		return errors.New("backup manifest inventory is invalid")
+	}
+	if !slices.Equal(manifest.DerivedExclusions, derivedExclusions) {
+		return errors.New("backup manifest derived-state classification is invalid")
+	}
+	if !slices.Equal(manifest.ExportCommand, exportCommand) {
+		return errors.New("backup manifest export command is invalid")
+	}
+	for _, digest := range []string{
+		manifest.ConfigSHA256, manifest.Phebs.SHA256, manifest.Surreal.SHA256,
+		manifest.Inventory[0].SHA256, manifest.ManifestSHA256,
+	} {
+		if !validSHA256(digest) {
+			return errors.New("backup manifest contains an invalid SHA-256 digest")
+		}
+	}
+	return nil
+}
+
+func inspectArtifact(path string) (Artifact, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return Artifact{}, fmt.Errorf("inspect database artifact: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > maxArtifactBytes {
+		return Artifact{}, errors.New("database artifact is empty, special, or exceeds its limit")
+	}
+	digest, err := digestFile(path, maxArtifactBytes)
+	if err != nil {
+		return Artifact{}, fmt.Errorf("digest database artifact: %w", err)
+	}
+	return Artifact{
+		Path: DatabaseName, Classification: "precious", MediaType: "application/surrealql",
+		Size: info.Size(), SHA256: digest,
+	}, nil
+}
+
+func inspectPhebs(path, version string) (ToolIdentity, error) {
+	if strings.TrimSpace(version) != version || version == "" {
+		return ToolIdentity{}, errors.New("phebs version is empty or padded")
+	}
+	if path == "" {
+		var err error
+		path, err = os.Executable()
+		if err != nil {
+			return ToolIdentity{}, fmt.Errorf("resolve phebs binary: %w", err)
+		}
+	}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return ToolIdentity{}, fmt.Errorf("resolve phebs binary path: %w", err)
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return ToolIdentity{}, fmt.Errorf("resolve phebs binary: %w", err)
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return ToolIdentity{}, fmt.Errorf("inspect phebs binary: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Mode()&0o111 == 0 || info.Size() > 1<<30 {
+		return ToolIdentity{}, errors.New("phebs binary is not a bounded executable regular file")
+	}
+	digest, err := digestFile(resolved, 1<<30)
+	if err != nil {
+		return ToolIdentity{}, fmt.Errorf("digest phebs binary: %w", err)
+	}
+	return ToolIdentity{Version: version, SHA256: digest}, nil
+}
+
+func runSurreal(ctx context.Context, binary string, args []string) error {
+	cmd := exec.CommandContext(ctx, binary, args...)
+	cmd.Env = append(os.Environ(), "SURREAL_USER=root", "SURREAL_PASS=root")
+	output := &boundedOutput{limit: maxCommandOutput}
+	cmd.Stdout, cmd.Stderr = output, output
+	if err := cmd.Run(); err != nil {
+		message := strings.TrimSpace(output.String())
+		if message == "" {
+			return err
+		}
+		return fmt.Errorf("%w: %s", err, message)
+	}
+	return nil
+}
+
+// cliEndpoint translates the SDK's WebSocket endpoint into the HTTP endpoint
+// used by SurrealDB's export/import CLI and its streaming HTTP routes.
+func cliEndpoint(endpoint string) string {
+	return "http://" + strings.TrimPrefix(endpoint, "ws://")
+}
+
+type boundedOutput struct {
+	buffer bytes.Buffer
+	limit  int
+}
+
+func (w *boundedOutput) Write(p []byte) (int, error) {
+	want := len(p)
+	remaining := w.limit - w.buffer.Len()
+	if remaining > 0 {
+		_, _ = w.buffer.Write(p[:min(len(p), remaining)])
+	}
+	return want, nil
+}
+
+func (w *boundedOutput) String() string { return w.buffer.String() }
+
+func readManifest(path string) (Manifest, error) {
+	info, err := os.Lstat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxManifestBytes {
+		return Manifest{}, errors.New("backup manifest is missing, special, or exceeds its limit")
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("open backup manifest: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+	decoder := json.NewDecoder(io.LimitReader(file, maxManifestBytes+1))
+	decoder.DisallowUnknownFields()
+	var manifest Manifest
+	if err := decoder.Decode(&manifest); err != nil {
+		return Manifest{}, fmt.Errorf("decode backup manifest: %w", err)
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return Manifest{}, errors.New("decode backup manifest: trailing content")
+	}
+	return manifest, nil
+}
+
+func writeManifest(path string, manifest Manifest) error {
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		return fmt.Errorf("encode backup manifest: %w", err)
+	}
+	data = append(data, '\n')
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("create backup manifest: %w", err)
+	}
+	if _, err := file.Write(data); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("write backup manifest: %w", err)
+	}
+	if err := file.Sync(); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("sync backup manifest: %w", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close backup manifest: %w", err)
+	}
+	return nil
+}
+
+func manifestDigest(manifest Manifest) (string, error) {
+	manifest.ManifestSHA256 = ""
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		return "", fmt.Errorf("encode manifest digest payload: %w", err)
+	}
+	return digestBytes(data), nil
+}
+
+func digestBytes(data []byte) string {
+	sum := sha256.Sum256(data)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+func validSHA256(value string) bool {
+	if len(value) != len("sha256:")+sha256.Size*2 || !strings.HasPrefix(value, "sha256:") {
+		return false
+	}
+	_, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return err == nil
+}
+
+func digestFile(path string, maxBytes int64) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = file.Close() }()
+	hash := sha256.New()
+	written, err := io.Copy(hash, io.LimitReader(file, maxBytes+1))
+	if err != nil {
+		return "", err
+	}
+	if written > maxBytes {
+		return "", errors.New("file exceeds its digest limit")
+	}
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+func absoluteCleanPath(name, raw string) (string, error) {
+	if strings.TrimSpace(raw) != raw || raw == "" {
+		return "", fmt.Errorf("%s path is empty or padded", name)
+	}
+	abs, err := filepath.Abs(raw)
+	if err != nil {
+		return "", fmt.Errorf("resolve %s: %w", name, err)
+	}
+	return filepath.Clean(abs), nil
+}
+
+func requireAbsent(path, name string) error {
+	_, err := os.Lstat(path)
+	if err == nil {
+		return fmt.Errorf("%s already exists; refusing to overwrite it", name)
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect %s: %w", name, err)
+	}
+	return nil
+}
+
+func requireEmptyOrAbsent(path string) error {
+	info, err := os.Lstat(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("inspect restore data directory: %w", err)
+	}
+	if !info.IsDir() {
+		return errors.New("restore data directory exists and is not a directory")
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("read restore data directory: %w", err)
+	}
+	if len(entries) != 0 {
+		return errors.New("restore data directory is not empty; refusing a partial or existing target")
+	}
+	return nil
+}
+
+func syncDirectory(path string) error {
+	dir, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open directory for sync: %w", err)
+	}
+	defer func() { _ = dir.Close() }()
+	if err := dir.Sync(); err != nil {
+		return fmt.Errorf("sync directory: %w", err)
+	}
+	return nil
+}
+
+func syncFile(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open file for sync: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+	if err := file.Sync(); err != nil {
+		return fmt.Errorf("sync file: %w", err)
+	}
+	return nil
+}

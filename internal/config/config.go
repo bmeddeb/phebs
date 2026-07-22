@@ -323,10 +323,30 @@ func Load(path string) (*Config, error) {
 	return cfg, nil
 }
 
+// LoadForRecovery reads configuration for an offline backup or restore
+// command. It validates the same shape and semantics as Load, but deliberately
+// leaves secret references unexpanded: recovery needs the data-directory
+// location and the bytes' digest, not live provider credentials.
+func LoadForRecovery(path string) (*Config, []byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read config: %w", err)
+	}
+	cfg, err := parse(data, false)
+	if err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return cfg, data, nil
+}
+
 // Parse decodes and validates config bytes. Errors carry YAML line numbers:
 // syntax/type/unknown-field errors from the strict decoder, semantic errors
 // from the node tree.
 func Parse(data []byte) (*Config, error) {
+	return parse(data, true)
+}
+
+func parse(data []byte, expandSecrets bool) (*Config, error) {
 	dec := yaml.NewDecoder(bytes.NewReader(data))
 	dec.KnownFields(true)
 	var cfg Config
@@ -348,7 +368,7 @@ func Parse(data []byte) (*Config, error) {
 	if err := cfg.validate(connectionLines(&doc)); err != nil {
 		return nil, err
 	}
-	if err := cfg.applyDefaults(); err != nil {
+	if err := cfg.applyDefaults(expandSecrets); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
@@ -705,37 +725,39 @@ func validateAuthURL(field, raw string) error {
 	return fmt.Errorf("auth.oidc.%s must use HTTPS (HTTP is allowed only for loopback testing)", field)
 }
 
-func (c *Config) applyDefaults() error {
+func (c *Config) applyDefaults(expandSecrets bool) error {
 	// Secret expansion is strict: a referenced variable that is absent or
 	// empty is a configuration error, even when other literal text would keep
 	// the final value non-empty. This prevents a typo from silently weakening
 	// authentication or changing which private repositories are visible.
 	var err error
-	if c.Auth.APIKey, err = expandSecret("auth.api_key", c.Auth.APIKey); err != nil {
-		return err
-	}
-	if c.Auth.BootstrapUser.Password, err = expandSecret("auth.bootstrap_user.password", c.Auth.BootstrapUser.Password); err != nil {
-		return err
-	}
-	if c.Auth.OIDC.ClientSecret, err = expandSecret("auth.oidc.client_secret", c.Auth.OIDC.ClientSecret); err != nil {
-		return err
-	}
-	if c.Webhook.Secret, err = expandSecret("webhook.secret", c.Webhook.Secret); err != nil {
-		return err
-	}
-	for i := range c.Connections {
-		conn := &c.Connections[i]
-		if conn.Token, err = expandSecret(fmt.Sprintf("connections[%d].token", i), conn.Token); err != nil {
+	if expandSecrets {
+		if c.Auth.APIKey, err = expandSecret("auth.api_key", c.Auth.APIKey); err != nil {
 			return err
 		}
-		if conn.App.PrivateKey, err = expandSecret(fmt.Sprintf("connections[%d].app.private_key", i), conn.App.PrivateKey); err != nil {
+		if c.Auth.BootstrapUser.Password, err = expandSecret("auth.bootstrap_user.password", c.Auth.BootstrapUser.Password); err != nil {
 			return err
 		}
-		if conn.HTTPAuth.Username, err = expandSecret(fmt.Sprintf("connections[%d].http_auth.username", i), conn.HTTPAuth.Username); err != nil {
+		if c.Auth.OIDC.ClientSecret, err = expandSecret("auth.oidc.client_secret", c.Auth.OIDC.ClientSecret); err != nil {
 			return err
 		}
-		if conn.HTTPAuth.Password, err = expandSecret(fmt.Sprintf("connections[%d].http_auth.password", i), conn.HTTPAuth.Password); err != nil {
+		if c.Webhook.Secret, err = expandSecret("webhook.secret", c.Webhook.Secret); err != nil {
 			return err
+		}
+		for i := range c.Connections {
+			conn := &c.Connections[i]
+			if conn.Token, err = expandSecret(fmt.Sprintf("connections[%d].token", i), conn.Token); err != nil {
+				return err
+			}
+			if conn.App.PrivateKey, err = expandSecret(fmt.Sprintf("connections[%d].app.private_key", i), conn.App.PrivateKey); err != nil {
+				return err
+			}
+			if conn.HTTPAuth.Username, err = expandSecret(fmt.Sprintf("connections[%d].http_auth.username", i), conn.HTTPAuth.Username); err != nil {
+				return err
+			}
+			if conn.HTTPAuth.Password, err = expandSecret(fmt.Sprintf("connections[%d].http_auth.password", i), conn.HTTPAuth.Password); err != nil {
+				return err
+			}
 		}
 	}
 	if c.Server.Addr == "" {

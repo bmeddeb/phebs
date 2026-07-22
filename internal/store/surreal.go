@@ -29,16 +29,43 @@ var _ Store = (*Surreal)(nil)
 // OpenLocal starts a supervised surreal child storing under dataDir and
 // connects to it. This is the single-node default (dev and prod).
 func OpenLocal(ctx context.Context, dataDir string) (*Surreal, error) {
-	endpoint, stop, err := startLocal(ctx, dataDir)
+	return openLocal(ctx, dataDir, "")
+}
+
+// OpenLocalWithConfig starts the production local store and binds its runtime
+// descriptor to the exact raw configuration bytes used by the server. Live
+// backup refuses a different config that merely points at the same data dir.
+func OpenLocalWithConfig(ctx context.Context, dataDir, configSHA256 string) (*Surreal, error) {
+	if !validSHA256(configSHA256) {
+		return nil, errors.New("open local store: config digest is invalid")
+	}
+	return openLocal(ctx, dataDir, configSHA256)
+}
+
+func openLocal(ctx context.Context, dataDir, configSHA256 string) (*Surreal, error) {
+	if err := checkLocalRuntimeAvailable(dataDir); err != nil {
+		return nil, err
+	}
+	runtime, stop, err := startLocal(ctx, dataDir)
 	if err != nil {
 		return nil, err
 	}
-	s, err := Open(ctx, endpoint, "root", "root", "phebs", "phebs")
+	runtime.ConfigSHA256 = configSHA256
+	s, err := Open(ctx, runtime.Endpoint, "root", "root", "phebs", "phebs")
 	if err != nil {
 		stop()
 		return nil, err
 	}
-	s.stop = stop
+	removeRuntime, err := PublishLocalRuntime(dataDir, runtime)
+	if err != nil {
+		_ = s.db.Close(context.Background())
+		stop()
+		return nil, err
+	}
+	s.stop = func() {
+		removeRuntime()
+		stop()
+	}
 	return s, nil
 }
 

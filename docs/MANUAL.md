@@ -741,6 +741,7 @@ the sandbox.
 ```
 $DATA/                     # server.data_dir, default ~/.phebs
 ├── db/                    # SurrealDB — users, API keys, sessions, repo/jobs
+├── .surreal-runtime.json  # private, process-owned live-backup rendezvous
 ├── repos/<host>/<path>.git  # bare mirrors
 └── index/*.zoekt          # search shards
 ```
@@ -753,10 +754,59 @@ the next start requires first-user enrollment.
 
 ### Backup & restore
 
-Precious state is `$DATA/db` plus the config file — the users, OIDC links,
-API-key hashes, sessions, permission edges, and audit/analytics history that
-cannot be rebuilt (repo rows and job state ride along but are derivable).
-Everything else under `$DATA` is derived. Cold backup:
+Precious state is `$DATA/db` plus the exact config file — the users, OIDC
+links, API-key hashes, sessions, permission edges, audit/analytics history,
+evidence, and proof pins that cannot be rebuilt (repo rows and job state ride
+along but are derivable). Everything else under `$DATA` is derived.
+
+For an online backup, keep the local phebs server running and use the same
+phebs executable/configuration generation as that server:
+
+```sh
+phebs backup -config /etc/phebs/phebs.yaml -output /restricted/phebs-backup-20260722
+```
+
+The output path must not exist. The command discovers only the supervised
+loopback SurrealDB child through `$DATA/.surreal-runtime.json`, verifies the
+exact child executable and the raw-config digest that started the live server,
+and runs that executable's live `export`. A different config that only points
+at the same `$DATA` is refused. The command publishes a private directory
+containing `database.surql` and `manifest.json`. The manifest binds the export's
+size and SHA-256 digest, the exact raw config
+digest, phebs version/binary digest, SurrealDB version/binary digest, database
+identity, store-writer/evidence/migration versions, and the derived-state
+exclusions. It contains no host binary path or database password. Preserve the
+exact config separately; the backup contains its digest, not its bytes.
+
+The export is unencrypted credential-bearing state. Move or encrypt the whole
+directory only under the approved retention and key-custody procedure. Do not
+edit either file: restore rejects extra, missing, renamed, symlinked, special,
+oversized, or digest-mismatched entries.
+
+Restore uses the manifest-bound phebs, SurrealDB, and config identities and an
+absent or completely empty configured `$DATA`:
+
+```sh
+phebs restore -config /etc/phebs/phebs.yaml -backup /restricted/phebs-backup-20260722
+phebs serve   -config /etc/phebs/phebs.yaml
+```
+
+Recovery config validation deliberately leaves `${SECRET}` references
+unexpanded, so verification/import can happen in an isolated environment
+without live source or OIDC credentials. Restore verifies the complete backup
+and every compatible binary/store identity before it creates `$DATA`, imports
+through an isolated SurrealDB child, and opens the store once to apply and
+validate the supported schema/migrations. If import begins and then fails, the
+partial target is retained and every later restore refuses it; quarantine or
+remove it under the witnessed recovery procedure rather than retrying over it.
+
+The subsequent normal `serve` start automatically rebuilds derived state:
+startup reconciliation clears any indexed revision whose excluded shard is
+missing, boot sync re-clones missing mirrors, and the queued index worker
+rebuilds shards without an operator reindex request. Restored API keys and
+sessions remain live — rotate them if the backup's custody was ever in doubt.
+
+The stop-first cold path remains available:
 
 1. Stop phebs and wait for exit, so SurrealKV is quiescent — a plain
    filesystem copy of a live `db/` is not consistent.
@@ -764,16 +814,8 @@ Everything else under `$DATA` is derived. Cold backup:
    credential-bearing state.
 3. Restart.
 
-To restore, place the copied `db/` into a fresh `$DATA`, point phebs at the
-same config, and start. Backfill of derived state is automatic: sync
-re-clones any mirror whose `HEAD` is missing, and the startup reconcile
-audit re-enqueues indexing for every repo whose recorded indexed revision
-has no matching shard. No operator action is needed beyond time and
-bandwidth. Restored API keys and sessions remain live — rotate them if the
-backup's custody was ever in doubt.
-
-There is no online backup yet; `phebs backup` / `phebs restore` subcommands
-are tracked as ticket T-P5.1 in the backlog.
+For a cold restore, place only the copied `db/` into a fresh `$DATA`, point
+phebs at the same config, and start; the same automatic backfill applies.
 
 ### Security boundary
 

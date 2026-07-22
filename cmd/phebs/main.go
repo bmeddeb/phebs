@@ -33,6 +33,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
+	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -50,13 +51,90 @@ const (
 )
 
 func main() {
-	if len(os.Args) < 2 || os.Args[1] != "serve" {
-		fmt.Fprintln(os.Stderr, "usage: phebs serve [-config phebs.yaml] [-addr 127.0.0.1:3070]")
+	if len(os.Args) < 2 {
+		printUsage()
 		os.Exit(2)
 	}
-	if err := serve(os.Args[2:]); err != nil {
+	var err error
+	switch os.Args[1] {
+	case "serve":
+		err = serve(os.Args[2:])
+	case "backup":
+		err = backup(os.Args[2:])
+	case "restore":
+		err = restore(os.Args[2:])
+	default:
+		printUsage()
+		os.Exit(2)
+	}
+	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+func printUsage() {
+	fmt.Fprintln(os.Stderr, "usage:")
+	fmt.Fprintln(os.Stderr, "  phebs serve [-config phebs.yaml] [-addr 127.0.0.1:3070]")
+	fmt.Fprintln(os.Stderr, "  phebs backup [-config phebs.yaml] -output /path/to/backup")
+	fmt.Fprintln(os.Stderr, "  phebs restore [-config phebs.yaml] -backup /path/to/backup")
+}
+
+func backup(args []string) error {
+	flags := flag.NewFlagSet("backup", flag.ContinueOnError)
+	cfgPath := flags.String("config", "", "path to config file (defaults apply if omitted)")
+	output := flags.String("output", "", "new backup directory (must not exist)")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || *output == "" {
+		return errors.New("backup requires -output and accepts no positional arguments")
+	}
+	cfg, raw, err := loadRecoveryConfig(*cfgPath)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
+		Options: recovery.Options{
+			DataDir: cfg.Server.DataDir, Config: raw, PhebsVersion: version,
+		},
+		Output: *output,
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("backup published: %s (%s)\n", *output, manifest.ManifestSHA256)
+	return nil
+}
+
+func restore(args []string) error {
+	flags := flag.NewFlagSet("restore", flag.ContinueOnError)
+	cfgPath := flags.String("config", "", "path to config file (defaults apply if omitted)")
+	backupPath := flags.String("backup", "", "backup directory to verify and import")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || *backupPath == "" {
+		return errors.New("restore requires -backup and accepts no positional arguments")
+	}
+	cfg, raw, err := loadRecoveryConfig(*cfgPath)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	manifest, err := recovery.Restore(ctx, recovery.RestoreOptions{
+		Options: recovery.Options{
+			DataDir: cfg.Server.DataDir, Config: raw, PhebsVersion: version,
+		},
+		Backup: *backupPath,
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("restore verified and imported: %s\n", manifest.ManifestSHA256)
+	return nil
 }
 
 func serve(args []string) error {
@@ -65,7 +143,7 @@ func serve(args []string) error {
 	addr := flags.String("addr", "", "listen address (overrides config)")
 	_ = flags.Parse(args)
 
-	cfg, err := loadConfig(*cfgPath)
+	cfg, rawConfig, err := loadServerConfig(*cfgPath)
 	if err != nil {
 		return err
 	}
@@ -79,7 +157,7 @@ func serve(args []string) error {
 	if err := os.MkdirAll(cfg.Server.DataDir, 0o755); err != nil {
 		return fmt.Errorf("create data dir: %w", err)
 	}
-	st, err := store.OpenLocal(ctx, cfg.Server.DataDir)
+	st, err := store.OpenLocalWithConfig(ctx, cfg.Server.DataDir, recovery.ConfigDigest(rawConfig))
 	if err != nil {
 		return err
 	}
@@ -448,12 +526,31 @@ func newHTTPHandler(authService *auth.Service, apiHandler, mcpHandler, metricsHa
 	return authService.LoadAndSave(mux)
 }
 
-func loadConfig(path string) (*config.Config, error) {
+func loadServerConfig(path string) (*config.Config, []byte, error) {
 	if path != "" {
-		return config.Load(path)
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("read config: %w", err)
+		}
+		cfg, err := config.Parse(raw)
+		if err != nil {
+			return nil, nil, fmt.Errorf("%s: %w", path, err)
+		}
+		return cfg, raw, nil
 	}
 	log.Print("no -config given; using defaults")
-	return config.Parse([]byte("{}"))
+	raw := []byte("{}")
+	cfg, err := config.Parse(raw)
+	return cfg, raw, err
+}
+
+func loadRecoveryConfig(path string) (*config.Config, []byte, error) {
+	if path != "" {
+		return config.LoadForRecovery(path)
+	}
+	raw := []byte("{}")
+	cfg, err := config.Parse(raw)
+	return cfg, raw, err
 }
 
 // evidenceExtractors is the validation-gated registry. The provisional

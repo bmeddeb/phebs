@@ -710,7 +710,7 @@ time; reopening re-authorizes against current ACLs.
 
 ## P5 hardening *(unscheduled — pull on demand)*
 
-**T-P5.1 · `phebs backup` / `phebs restore` subcommands** — cold copy works
+**T-P5.1 ✅ · `phebs backup` / `phebs restore` subcommands** — cold copy works
 today (MANUAL §9 *Backup & restore*) but costs downtime. `phebs backup`:
 exec the supervised pinned `surreal` binary's `export` against the running
 instance into one artifact plus a manifest binding config digest, binary
@@ -722,6 +722,15 @@ succeeds against a live server without stopping writes and its manifest
 digests verify; restore into an empty `$DATA` reaches a serving instance
 that reindexes with no operator action; both refuse existing/partial
 targets; MANUAL §9 updated in the same PR.
+
+Implemented on `t-p5.1-backup-restore`: a lifecycle-owned private runtime
+descriptor exposes only the healthy local child needed for live export; a
+canonical `phebs-backup-manifest-v1` binds both executable digests, raw config,
+database/store identities, classified inventory, and export bytes. Restore
+verifies every binding before touching an absent/empty target, imports through
+an undiscoverable isolated child, and validates the store. The acceptance test
+also deletes all derived state and pins the normal reconcile → sync → index
+startup chain rebuilding the shard without an operator reindex request.
 
 ## Deliberate non-goals *(per PORT_MAP §7/§12)*
 
