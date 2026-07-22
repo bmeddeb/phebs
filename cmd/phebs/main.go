@@ -29,6 +29,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/search"
@@ -405,10 +406,10 @@ func evidenceExtractors(provisionalProto bool) []extract.Extractor {
 	if !provisionalProto {
 		return nil
 	}
-	// T13.1: the grpcgo consumer extractor ships behind the same
-	// experimental flag and the same dark/provisional posture — syntactic
-	// tiers only, no accuracy claims (2026-07-22 disposition).
-	return []extract.Extractor{protodecl.New(), grpcgo.New()}
+	// T13.1 and T13.2 ship behind the same experimental flag. SCIP field
+	// references have canonical package lineage, while declarations and gRPC
+	// consumer facts retain their documented provisional tiers.
+	return []extract.Extractor{protodecl.New(), grpcgo.New(), scipfield.New()}
 }
 
 func enqueueExtractionAfterIndex(ctx context.Context, st store.Store, repo, commit string) error {

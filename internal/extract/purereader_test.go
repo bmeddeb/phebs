@@ -25,18 +25,20 @@ var extractorImportAllowlist = map[string]bool{
 	"sort":          true,
 	"strconv":       true,
 	"strings":       true,
+	"unicode/utf8":  true,
 
-	// In-process stdlib Go parsing for the T13.1 grpcgo extractor. Parsing is
-	// pure computation over the supplied blob: no exec, no filesystem, no
-	// network, no dynamic loading.
+	// In-process stdlib Go parsing for the T13.1 grpcgo and T13.2 generated
+	// accessor extractors. Parsing is pure computation over the supplied blob:
+	// no exec, no filesystem, no network, no dynamic loading.
 	"go/ast":    true,
 	"go/parser": true,
 	"go/token":  true,
 	"regexp":    true,
 
-	"github.com/bufbuild/protocompile/ast":      true,
-	"github.com/bufbuild/protocompile/parser":   true,
-	"github.com/bufbuild/protocompile/reporter": true,
+	"github.com/bufbuild/protocompile/ast":       true,
+	"github.com/bufbuild/protocompile/parser":    true,
+	"github.com/bufbuild/protocompile/reporter":  true,
+	"github.com/scip-code/scip/bindings/go/scip": true,
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk": true,
 }

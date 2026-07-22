@@ -508,9 +508,10 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 		t.Fatalf("default extractor registry = %d entries, want disabled", len(got))
 	}
 	got := evidenceExtractors(true)
-	// T13.1 (2026-07-22 disposition): grpcgo joins protodecl behind the same
-	// experimental flag; both remain dark/provisional with no accuracy claims.
-	if len(got) != 2 || got[0].Domain() != "proto-contract" || got[1].Domain() != "grpc-consumer" {
+	// T13.1/T13.2: grpcgo and scipfield join protodecl behind the same
+	// experimental flag; default runtime activation remains disabled.
+	if len(got) != 3 || got[0].Domain() != "proto-contract" || got[1].Domain() != "grpc-consumer" ||
+		got[2].Domain() != "scip-proto-field" {
 		t.Fatalf("opt-in extractor registry = %#v", got)
 	}
 }

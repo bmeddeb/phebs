@@ -159,7 +159,7 @@ connections:
 | `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
-| `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated reader described below; not canonical contract lineage                                                           |
+| `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 
 
@@ -892,7 +892,29 @@ reduced fidelity by design and, like all provisional facts, state no
 measured accuracy and must not drive compatibility, migration, or
 negative-proof conclusions.
 
-Lineage is deliberately machine-labeled
+The opt-in also reads a repository-root, committed `index.scip` to emit T13.2
+`REFERENCES_PROTO_FIELD` assertions. phebs never runs or downloads a SCIP
+indexer: the index must describe the same immutable commit. A SCIP symbol is
+eligible only when its exact definition range matches a generated protobuf Go
+struct field or getter, the generated struct tag supplies the field number and
+proto name, and the generated file's `// source:` declaration maps uniquely to
+the committed `.proto` field. Each non-definition reference cites the exact
+identifier span in its source document. Missing indexes produce an empty,
+explicitly unavailable result; local symbols, malformed ranges, missing source
+declarations, and ambiguous symbol/field joins abstain rather than guessing.
+
+Field identity is canonical across consumer dependency versions:
+`(contract_lineage_id, message_full_name, field_number)`. The lineage digest
+uses the global SCIP scheme, package manager, and package name, but excludes
+the dependency version and generated field/getter name. A field rename that
+keeps its protobuf number and message therefore remains one identity, while
+its current name and dependency version remain in assertion detail. The
+classification is derived from SCIP role bits with precedence `write > read >
+test > generated > unknown`; `code_role` separately records repository
+placement and SCIP test/generated roles. These are direct field references,
+not claims that a response field was semantically read.
+
+Declaration and T13.1 operation-consumer lineage is deliberately machine-labeled
 `provisional_repo_path_v1_<sha256>` and separates repository paths instead of
 guessing descriptor identity. It prevents name-only cross-repository merges,
 but a file move fragments lineage and an unrelated contract replacing the
@@ -902,7 +924,8 @@ compatibility, migration, or negative-proof conclusions as though canonical
 lineage had been established.
 
 The run is bounded to 200,000 regular inventory paths and 16 MiB of aggregate
-path text, 10 MiB per source blob, 512 MiB of distinct source reads, 5,000
+path text, 10 MiB per source blob, a separate 64 MiB ceiling for the fixed
+root `index.scip`, 512 MiB of distinct reads, 5,000
 emitted facts, and a cooperative 15-minute context deadline. A candidate
 Go parser input is further limited to 4 MiB; a protobuf parser input is limited
 to 4 MiB, 500,000 lexical tokens, and 128 structural levels. Neither in-process

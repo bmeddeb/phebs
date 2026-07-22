@@ -534,6 +534,25 @@ func callCandidate(candidate func(string) bool, filePath string) (isCandidate bo
 }
 
 func (c *verifiedCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error) {
+	return c.read(ctx, filePath, MaxBlobBytes, c.inner.Read)
+}
+
+func (c *verifiedCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
+	inner, ok := c.inner.(sdk.SCIPCorpus)
+	if !ok {
+		return sdk.Blob{}, errors.New("corpus does not support bounded SCIP index reads")
+	}
+	return c.read(ctx, "index.scip", MaxSCIPIndexBytes, func(ctx context.Context, _ string) (sdk.Blob, error) {
+		return inner.ReadSCIPIndex(ctx)
+	})
+}
+
+func (c *verifiedCorpus) read(
+	ctx context.Context,
+	filePath string,
+	maxBytes int64,
+	read func(context.Context, string) (sdk.Blob, error),
+) (sdk.Blob, error) {
 	c.mu.Lock()
 	if c.closed {
 		c.mu.Unlock()
@@ -554,11 +573,11 @@ func (c *verifiedCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, e
 	c.readCount++
 	c.mu.Unlock()
 
-	blob, err := c.inner.Read(ctx, filePath)
+	blob, err := read(ctx, filePath)
 	if err != nil {
 		return sdk.Blob{}, err
 	}
-	if len(blob.Content) > int(MaxBlobBytes) {
+	if int64(len(blob.Content)) > maxBytes {
 		return sdk.Blob{}, fmt.Errorf("corpus blob %q exceeds byte limit", filePath)
 	}
 	digest := sha256.Sum256([]byte(blob.Content))

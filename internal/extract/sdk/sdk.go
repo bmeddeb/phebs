@@ -22,6 +22,17 @@ type Corpus interface {
 	Read(ctx context.Context, path string) (Blob, error)
 }
 
+// SCIPCorpus is the optional, narrowly bounded capability for reading the
+// repository-root index.scip blob. SCIP indexes have an independent, larger
+// byte limit than source files; keeping this separate prevents an extractor
+// from using that allowance for arbitrary repository content. Implementations
+// must apply the same immutable-commit and digest guarantees as Corpus.Read.
+// The index is parser input only: facts must continue to cite a subsequent
+// source Corpus.Read under the one-blob streaming contract.
+type SCIPCorpus interface {
+	ReadSCIPIndex(ctx context.Context) (Blob, error)
+}
+
 // Blob is one bounded, immutable file. Digest is SHA-256 over Content and is
 // supplied by the trusted corpus harness so extractor output can cite it.
 type Blob struct {

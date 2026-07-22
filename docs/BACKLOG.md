@@ -485,11 +485,18 @@ recall, ≥90% per-fixture under the T11.1 measurement contract) is
 satisfied post-capacity-stop and remains the promotion bar for any
 accuracy-bearing claim.
 
-**T13.2 · SCIP proto-field references**
+**T13.2 · SCIP proto-field references** ✅ 2026-07-22
 `REFERENCES_PROTO_FIELD` assertions from cross-repo SCIP references over
 generated accessors; read/write/test/generated/unknown classification; field
 lineage across consumer dependency versions. AC: a renamed field (same number,
-same lineage) tracks as one identity across two consumer versions.
+same lineage) tracks as one identity across two consumer versions. Implemented
+as a pure reader over the immutable committed `index.scip`: exact definition
+ranges bind generated Go struct fields/getters through protobuf tags and the
+source `.proto` declaration; reference occurrences cite exact source spans.
+Canonical identity is `(SCIP package lineage excluding dependency version,
+message full name, field number)`, with ambiguous or incomplete joins
+abstaining instead of guessing. The acceptance fixture renames field 1 across
+two repositories and dependency versions while retaining one lineage/object.
 
 **T13.3 · Coverage manifests**
 Per-answer coverage certificate: repositories searched (the caller's visible

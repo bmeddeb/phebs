@@ -24,10 +24,13 @@ import (
 )
 
 const (
-	// MaxBlobBytes bounds both the source blob and the parser working set's
-	// input component. Extractors stream facts, so memory does not grow with
-	// repository size or total fact count.
+	// MaxBlobBytes bounds every ordinary source blob and its parser input.
+	// Extractors stream facts, so memory does not grow with repository size or
+	// total fact count. Committed SCIP input has the separate fixed-root cap.
 	MaxBlobBytes = int64(10 << 20)
+	// MaxSCIPIndexBytes preserves the code-navigation reader's independent
+	// committed-index ceiling without raising the source/extraction blob cap.
+	MaxSCIPIndexBytes = int64(64 << 20)
 
 	maxCorpusPathBytes = 4096
 	maxTreeRecordBytes = maxCorpusPathBytes + 128
@@ -192,6 +195,16 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 // never change, so a walked entry cannot be swapped underneath the run, and a
 // path outside the walked tree is simply not found.
 func (g *gitCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error) {
+	return g.read(ctx, filePath, MaxBlobBytes)
+}
+
+// ReadSCIPIndex exposes only the repository-root committed index through the
+// larger SCIP-specific limit. It cannot be used to read arbitrary blobs.
+func (g *gitCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
+	return g.read(ctx, "index.scip", MaxSCIPIndexBytes)
+}
+
+func (g *gitCorpus) read(ctx context.Context, filePath string, maxBytes int64) (sdk.Blob, error) {
 	dir, err := g.repoDir()
 	if err != nil {
 		return sdk.Blob{}, err
@@ -209,7 +222,7 @@ func (g *gitCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error)
 	if !ok {
 		return sdk.Blob{}, fmt.Errorf("read corpus %q: %w", filePath, store.ErrNotFound)
 	}
-	content, err := gitobj.ReadBlob(ctx, dir, oid, MaxBlobBytes)
+	content, err := gitobj.ReadBlob(ctx, dir, oid, maxBytes)
 	if err != nil {
 		return sdk.Blob{}, fmt.Errorf("read corpus %q: content: %w", filePath, err)
 	}

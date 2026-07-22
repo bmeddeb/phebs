@@ -231,6 +231,34 @@ func TestGitCorpusRejectsOversizedBlob(t *testing.T) {
 	}
 }
 
+func TestGitCorpusSCIPIndexUsesIndependentRootOnlyLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("large boundedness fixture")
+	}
+	f := newCorpusGitFixture(t)
+	content := strings.Repeat("i", int(MaxBlobBytes)+1)
+	head := f.commitFile("index.scip", content, "large committed SCIP index")
+	f.cloneMirror()
+	corpus := GitCorpus(f.dataDir).New(f.repoName, head)
+	if err := corpus.WalkFiles(context.Background(), func(string) error { return nil }); err != nil {
+		t.Fatalf("WalkFiles: %v", err)
+	}
+	if _, err := corpus.Read(context.Background(), "index.scip"); err == nil || !strings.Contains(err.Error(), "exceeds") {
+		t.Fatalf("ordinary source read error = %v, want 10 MiB refusal", err)
+	}
+	indexCorpus, ok := corpus.(sdk.SCIPCorpus)
+	if !ok {
+		t.Fatal("production corpus does not expose the bounded SCIP capability")
+	}
+	blob, err := indexCorpus.ReadSCIPIndex(context.Background())
+	if err != nil {
+		t.Fatalf("ReadSCIPIndex: %v", err)
+	}
+	if blob.Content != content {
+		t.Fatalf("SCIP blob length = %d, want %d", len(blob.Content), len(content))
+	}
+}
+
 func TestUnreadableNamesCountedInCoverageButNotEnumerated(t *testing.T) {
 	f := newCorpusGitFixture(t)
 	f.commitFile("api.proto", `syntax = "proto3";`, "proto")
