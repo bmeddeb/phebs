@@ -375,12 +375,31 @@ func snapshotComparisonPayloadSchema() map[string]any {
 			"id": boundedString(65536), "version": boundedString(256), "digest": boundedString(65536),
 		},
 	)
+	delta := objectSchema(
+		[]string{
+			"logical_relationship_id", "change", "cause",
+			"before_fact_id", "after_fact_id",
+		},
+		map[string]any{
+			"logical_relationship_id": boundedString(65536),
+			"change": enumString(
+				"added", "removed", "reintroduced", "modified",
+			),
+			"cause": enumString(
+				"relationship_added_traced",
+				"relationship_removed_traced",
+				"source_modified",
+			),
+			"before_fact_id": nullable(boundedString(65536)),
+			"after_fact_id":  nullable(boundedString(65536)),
+		},
+	)
 	report := objectSchema(
 		[]string{"left_run", "right_run", "per_side_coverage_only", "deltas"},
 		map[string]any{
 			"left_run": boundedString(65536), "right_run": boundedString(65536),
 			"per_side_coverage_only": map[string]any{"type": "boolean"},
-			"deltas":                 arraySchema(map[string]any{"type": "object", "additionalProperties": true}, 5000),
+			"deltas":                 arraySchema(delta, 5000),
 		},
 	)
 	return payloadDocument(

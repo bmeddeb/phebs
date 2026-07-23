@@ -40,7 +40,62 @@
           "properties": {
             "deltas": {
               "items": {
-                "additionalProperties": true,
+                "additionalProperties": false,
+                "properties": {
+                  "after_fact_id": {
+                    "oneOf": [
+                      {
+                        "maxLength": 65536,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "before_fact_id": {
+                    "oneOf": [
+                      {
+                        "maxLength": 65536,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "cause": {
+                    "enum": [
+                      "relationship_added_traced",
+                      "relationship_removed_traced",
+                      "source_modified"
+                    ],
+                    "type": "string"
+                  },
+                  "change": {
+                    "enum": [
+                      "added",
+                      "removed",
+                      "reintroduced",
+                      "modified"
+                    ],
+                    "type": "string"
+                  },
+                  "logical_relationship_id": {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "logical_relationship_id",
+                  "change",
+                  "cause",
+                  "before_fact_id",
+                  "after_fact_id"
+                ],
                 "type": "object"
               },
               "maxItems": 5000,

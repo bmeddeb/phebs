@@ -810,13 +810,26 @@ selected and rendered solely by the server. Stateless proof queries
 deliberately expose pack-defined processing counts as `withheld` and remain
 `partial`; they do not manufacture an eligible universe or negative proof.
 
-**T16.7 · Consumer ledger and comparable diff** *(needs T16.2)* —
+**T16.7 ✅ · Consumer ledger and comparable diff** *(needs T16.2)* —
 first/last-seen edge ledger (the retention change from VISION architecture
 notes); cause-classified diff per contract §8 with comparison-report
 fallback. AC: prohibited causes never render as removals; fixture 07 semantics
 enforced plus a new comparable traced-addition/removal fixture added with
 this ticket (fixture 08 is truncation and belongs to T16.6); ledger rows
 survive run sweep.
+
+Implemented on `codex/t16.7-consumer-ledger`: immutable, principal-scoped
+consumer snapshots freeze the claim/schema/identity, pack/rule/extractor,
+authorized universe/enumeration, build, snapshot/external-input, completeness,
+freshness, and visibility dimensions required by contract §8. Any changed or
+failed dimension produces a sorted comparison report with per-side coverage
+only and structurally no deltas. Fully comparable snapshots emit only
+positively traced relationship additions/removals. A compact first/last-seen
+ledger retains inactive removal tombstones and recognizes later
+reintroductions; it is authorization-projected and stored independently of
+sweepable RunArtifacts. Fixture 07 pins the fallback, fixture 09 pins one
+traced addition and removal, pure tests cover every prohibited cause, and the
+live store AC covers ledger persistence after artifact sweep.
 
 **T16.8 · Review projection** *(needs T16.7)* — deterministic ReviewItems,
 queues (new consumers, coverage regression, unresolved attribution),

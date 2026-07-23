@@ -1,0 +1,173 @@
+{
+  "absence_eligibility": {
+    "applicable": false,
+    "blocker_codes": [],
+    "eligible": false,
+    "qualification": null,
+    "rule_version": "1.0"
+  },
+  "analysis_conclusion": null,
+  "coverage": {
+    "attribution": {
+      "build_target": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      },
+      "deployable": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      },
+      "owner": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      },
+      "service": {
+        "ambiguous": 0,
+        "denominator": 0,
+        "not_applicable": 0,
+        "resolved": 0,
+        "unresolved": 0
+      }
+    },
+    "eligible_units": 2,
+    "exclusions_by_reason": {},
+    "outcome_gates": {
+      "reason_codes": [],
+      "rule_id": "syn-gate-1",
+      "rule_version": "1.0",
+      "status": "passed"
+    },
+    "processing": {
+      "analyzed": 2,
+      "excluded": 0,
+      "failed": 0,
+      "partial": 0
+    },
+    "processing_reconciled": true,
+    "visibility": "available"
+  },
+  "envelope_version": "1.0",
+  "errors": [],
+  "freshness": {
+    "analysis": {
+      "published": "2026-08-02T01:00:00Z",
+      "snapshot_committed": "2026-08-02T00:00:00Z",
+      "status": "current"
+    },
+    "inputs": []
+  },
+  "generated_at": "2026-08-02T12:00:00Z",
+  "outcome": "ok",
+  "payload": {
+    "data": {
+      "comparability_rule": {
+        "digest": "sha256:synthetic-comparable",
+        "id": "syn-comparability-1",
+        "version": "1.0"
+      },
+      "comparable": true,
+      "comparison_report": {
+        "deltas": [
+          {
+            "after_fact_id": "syn-fact-added",
+            "before_fact_id": null,
+            "cause": "relationship_added_traced",
+            "change": "added",
+            "logical_relationship_id": "syn-rel-added"
+          },
+          {
+            "after_fact_id": null,
+            "before_fact_id": "syn-fact-removed",
+            "cause": "relationship_removed_traced",
+            "change": "removed",
+            "logical_relationship_id": "syn-rel-removed"
+          }
+        ],
+        "left_run": "syn-run-before",
+        "per_side_coverage_only": false,
+        "right_run": "syn-run-after"
+      },
+      "non_comparability_reasons": []
+    },
+    "kind": "snapshot_comparison"
+  },
+  "provenance": {
+    "adapter_versions": {
+      "source": "0.0.1"
+    },
+    "extractor_version": "0.0.1-synthetic",
+    "input_manifest_id": "syn-im-comparable",
+    "pack_manifest_id": "syn-pm",
+    "phebs_binary_digest": "sha256:synthetic",
+    "phebs_source_commit": "syn-commit",
+    "query_digest": "syn-q-comparable",
+    "rule_versions": {
+      "attribution": "1.0",
+      "comparison": "1.0",
+      "extraction": "1.0"
+    },
+    "schema_version": "1.0",
+    "toolchain_digest": "sha256:synthetic"
+  },
+  "refusal": null,
+  "request_id": "01SYNTHETIC-COMPARABLE",
+  "result_window": {
+    "next_page_token": null,
+    "ordering": "logical_relationship_id",
+    "page_exhausted": true,
+    "result_set_complete": true,
+    "returned": 2,
+    "truncated": false,
+    "truncated_reason": null
+  },
+  "scope": {
+    "build_configuration_id": "syn-build-1",
+    "claim": {
+      "claim_family": "contract_relationship",
+      "decision_sought": "enumerate_service_consumer_candidates",
+      "filters": {
+        "target_role": [
+          "production"
+        ]
+      },
+      "object": null,
+      "predicate": "CALLS_OPERATION",
+      "subject": {
+        "id": "syn-op-cartservice-getcart",
+        "kind": "grpc_operation"
+      }
+    },
+    "investigation_id": "01SYNINV",
+    "normalization_assumptions": [],
+    "normalized_question": "What changed in the consumer set for acme.checkout.CartService/GetCart?",
+    "revision_id": "syn-rev-1",
+    "run_artifact_id": "syn-run-after",
+    "snapshot_id": "syn-snap-after",
+    "visibility_projection_id": "syn-vis-1"
+  },
+  "tool": {
+    "name": "compare_contract_snapshots",
+    "semantic_version": "1.0"
+  },
+  "validation": {
+    "applicability_blockers": [],
+    "applies": true,
+    "expires_at": "2027-01-01T00:00:00Z",
+    "expiry_trigger": null,
+    "measured_claim_id": "syn-claim-1",
+    "pack_id": "phebs.synthetic.grpc",
+    "pack_status": "released",
+    "pack_version": "0.0.1",
+    "validation_reference": "syn-val-1",
+    "workflow_eligibility": "eligible"
+  }
+}

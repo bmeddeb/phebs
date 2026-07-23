@@ -1,6 +1,6 @@
 # Synthetic Investigation fixtures
 
-Eight canonical-valid envelope instances modeling the states that phebs UI,
+Nine canonical-valid envelope instances modeling the states that phebs UI,
 API, MCP, authorization, and conformance tests must handle. They target the
 [MCP envelope](../MCP_ENVELOPE.md) contract v0.2 with
 `envelope_version: "1.0"` and the Investigation domain contract v0.2.
@@ -24,6 +24,7 @@ rules).
 | `06-inaccessible-scope-refusal.json` | Unknown-or-unauthorized sensitive identity       | minimal `NOT_AVAILABLE` refusal; unknown and unauthorized cases are byte-shape indistinguishable; no scope, counts, result window, pack, validation, or provenance      |
 | `07-non-comparable-revisions.json`   | Comparison without compatible semantics          | `outcome=partial`; no ordinary fact delta; per-side coverage only; no analysis conclusion; explicit comparability rule and reasons                                      |
 | `08-truncated-result.json`           | Irreversible hard truncation                     | complete processing but incomplete result set; `truncated=true`; no continuation token; applicable but ineligible absence; `RESULT_TRUNCATED` and authoritative wording |
+| `09-comparable-traced-delta.json`    | Comparable consumer-set change                  | `comparable=true`; no fallback; one traced addition and one traced removal; no prohibited absence-derived removal                                                     |
 
 
 All files in this directory are intended to be valid examples. Deliberately

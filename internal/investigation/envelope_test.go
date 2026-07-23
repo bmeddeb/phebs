@@ -17,8 +17,8 @@ func TestInvestigationFixturesValidateAgainstGeneratedSchemas(t *testing.T) {
 	if err != nil {
 		t.Fatalf("glob fixtures: %v", err)
 	}
-	if len(files) != 8 {
-		t.Fatalf("fixture count = %d, want 8", len(files))
+	if len(files) != 9 {
+		t.Fatalf("fixture count = %d, want 9", len(files))
 	}
 	envelopeSchema := loadResolvedSchema(t, "../../schemas/mcp-envelope-v1.0.json")
 	payloadSchemas := map[string]*jsonschema.Resolved{
@@ -62,6 +62,98 @@ func TestInvestigationFixturesValidateAgainstGeneratedSchemas(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSnapshotComparisonFixturesEnforceFallbackAndTracedDelta(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                string
+		file                string
+		comparable          bool
+		perSideCoverageOnly bool
+		wantReasons         int
+		wantDeltas          []ComparisonDelta
+	}{
+		{
+			name:                "non-comparable fallback",
+			file:                "07-non-comparable-revisions.json",
+			comparable:          false,
+			perSideCoverageOnly: true,
+			wantReasons:         2,
+			wantDeltas:          []ComparisonDelta{},
+		},
+		{
+			name:                "comparable traced changes",
+			file:                "09-comparable-traced-delta.json",
+			comparable:          true,
+			perSideCoverageOnly: false,
+			wantReasons:         0,
+			wantDeltas: []ComparisonDelta{
+				{
+					LogicalRelationshipID: "syn-rel-added",
+					Change:                "added",
+					Cause:                 "relationship_added_traced",
+					AfterFactID:           stringPointer("syn-fact-added"),
+				},
+				{
+					LogicalRelationshipID: "syn-rel-removed",
+					Change:                "removed",
+					Cause:                 "relationship_removed_traced",
+					BeforeFactID:          stringPointer("syn-fact-removed"),
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			content, err := os.ReadFile(filepath.Join(
+				"../../docs/fixtures/investigations",
+				test.file,
+			))
+			if err != nil {
+				t.Fatal(err)
+			}
+			var envelope Envelope
+			if err := json.Unmarshal(content, &envelope); err != nil {
+				t.Fatal(err)
+			}
+			if err := envelope.ValidateSemantics(); err != nil {
+				t.Fatalf("semantic validation: %v", err)
+			}
+			var comparison SnapshotComparisonData
+			if err := json.Unmarshal(envelope.Payload.Data, &comparison); err != nil {
+				t.Fatal(err)
+			}
+			if comparison.Comparable != test.comparable ||
+				comparison.ComparisonReport.PerSideCoverageOnly != test.perSideCoverageOnly ||
+				len(comparison.NonComparabilityReasons) != test.wantReasons ||
+				!slices.EqualFunc(
+					comparison.ComparisonReport.Deltas,
+					test.wantDeltas,
+					comparisonDeltaEqual,
+				) {
+				t.Fatalf("comparison = %+v", comparison)
+			}
+		})
+	}
+}
+
+func comparisonDeltaEqual(left, right ComparisonDelta) bool {
+	return left.LogicalRelationshipID == right.LogicalRelationshipID &&
+		left.Change == right.Change &&
+		left.Cause == right.Cause &&
+		equalOptionalString(left.BeforeFactID, right.BeforeFactID) &&
+		equalOptionalString(left.AfterFactID, right.AfterFactID)
+}
+
+func equalOptionalString(left, right *string) bool {
+	return left == nil && right == nil ||
+		left != nil && right != nil && *left == *right
+}
+
+func stringPointer(value string) *string {
+	return &value
 }
 
 func TestTruncatedResultIsIrreversibleAndAbsenceBlocking(t *testing.T) {

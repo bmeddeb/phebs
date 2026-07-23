@@ -226,6 +226,25 @@ DEFINE INDEX IF NOT EXISTS investigation_creation_identity ON investigation_crea
 DEFINE INDEX IF NOT EXISTS investigation_creation_scope ON investigation_creation
     FIELDS principal, idempotency_key UNIQUE;
 
+-- T16.7 principal-scoped snapshot comparisons and compact edge history.
+-- Snapshot records are immutable. Ledger rows are a rebuildable projection
+-- that keeps first/last positive observations and traced removal tombstones;
+-- RunArtifact sweeping never deletes either table.
+DEFINE TABLE IF NOT EXISTS investigation_consumer_snapshot SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_consumer_snapshot_identity
+    ON investigation_consumer_snapshot FIELDS snapshot_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_consumer_snapshot_artifact
+    ON investigation_consumer_snapshot FIELDS principal, artifact_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_consumer_snapshot_sequence
+    ON investigation_consumer_snapshot FIELDS investigation_id, principal, sequence UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_consumer_edge_ledger SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_consumer_edge_ledger_identity
+    ON investigation_consumer_edge_ledger FIELDS ledger_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_consumer_edge_ledger_scope
+    ON investigation_consumer_edge_ledger
+    FIELDS investigation_id, principal, continuity_namespace, logical_relationship_id UNIQUE;
+
 DEFINE TABLE IF NOT EXISTS investigation_watch SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_watch_identity ON investigation_watch FIELDS watch_id UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_watch_owner ON investigation_watch FIELDS owner;

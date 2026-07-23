@@ -1388,6 +1388,26 @@ references for evidenced facts, bounded-absence prerequisites,
 non-comparability behavior, minimal `NOT_AVAILABLE` disclosure, and
 irreversible truncation semantics.
 
+T16.7 retains a principal-scoped first/last-seen consumer ledger independently
+of sweepable RunArtifacts. Each published consumer census freezes the
+authorized visibility projection, declared repository/build-target universe,
+enumeration method, claim and fact identities, pack/rule/extractor/adapter
+versions, build and snapshot semantics, and input completeness/freshness.
+Two censuses produce an ordinary delta only when every frozen dimension is
+compatible. A visibility, scope, identity, rule, enumeration, build,
+external-input, failure, or freshness change instead yields a comparison
+report with per-side coverage only; missing facts are never presented as
+removals in that state.
+
+Under fully comparable semantics, additions and removals require a positively
+traced relationship occurrence. Removed relationships remain as inactive
+ledger tombstones with their first/last-seen coordinates, so later compatible
+evidence is classified as a reintroduction. Authorization is checked at every
+snapshot and ledger read, and each principal has an independent projection.
+Sweeping the RunArtifact that originally supplied an edge does not erase its
+ledger history; the retained row is history and identity metadata, not a
+replacement for the artifact's independently governed proof.
+
 ### Metrics
 
 

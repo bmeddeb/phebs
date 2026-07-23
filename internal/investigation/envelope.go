@@ -275,10 +275,18 @@ type ComparabilityRule struct {
 }
 
 type ComparisonReport struct {
-	LeftRun             string           `json:"left_run"`
-	RightRun            string           `json:"right_run"`
-	PerSideCoverageOnly bool             `json:"per_side_coverage_only"`
-	Deltas              []map[string]any `json:"deltas"`
+	LeftRun             string            `json:"left_run"`
+	RightRun            string            `json:"right_run"`
+	PerSideCoverageOnly bool              `json:"per_side_coverage_only"`
+	Deltas              []ComparisonDelta `json:"deltas"`
+}
+
+type ComparisonDelta struct {
+	LogicalRelationshipID string  `json:"logical_relationship_id"`
+	Change                string  `json:"change"`
+	Cause                 string  `json:"cause"`
+	BeforeFactID          *string `json:"before_fact_id"`
+	AfterFactID           *string `json:"after_fact_id"`
 }
 
 type SnapshotComparisonData struct {
@@ -459,6 +467,32 @@ func validatePayload(payload *Payload) (int, error) {
 		}
 		if data.Comparable && len(data.NonComparabilityReasons) != 0 {
 			return 0, errors.New("comparable result carries non-comparability reasons")
+		}
+		if data.Comparable && data.ComparisonReport.PerSideCoverageOnly {
+			return 0, errors.New("comparable result is limited to per-side coverage")
+		}
+		if data.Comparable {
+			for _, delta := range data.ComparisonReport.Deltas {
+				switch delta.Change {
+				case "added", "reintroduced":
+					if delta.Cause != "relationship_added_traced" ||
+						delta.BeforeFactID != nil || delta.AfterFactID == nil {
+						return 0, errors.New("comparison contains an untraced addition")
+					}
+				case "removed":
+					if delta.Cause != "relationship_removed_traced" ||
+						delta.BeforeFactID == nil || delta.AfterFactID != nil {
+						return 0, errors.New("comparison contains an untraced removal")
+					}
+				case "modified":
+					if delta.Cause != "source_modified" ||
+						delta.BeforeFactID == nil || delta.AfterFactID == nil {
+						return 0, errors.New("comparison contains an untraced modification")
+					}
+				default:
+					return 0, fmt.Errorf("comparison contains unknown change %q", delta.Change)
+				}
+			}
 		}
 		return 0, nil
 	default:
