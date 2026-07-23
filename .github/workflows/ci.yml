@@ -122,7 +122,10 @@ jobs:
           tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
             -C "$first" -cf - "$bundle" |
             gzip -n > "dist/release/$bundle.tar.gz"
-          sha256sum "dist/release/$bundle.tar.gz" > "dist/release/$bundle.tar.gz.sha256"
+          (
+            cd dist/release
+            sha256sum "$bundle.tar.gz" > "$bundle.tar.gz.sha256"
+          )
       - name: Retain verified release candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

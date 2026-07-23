@@ -77,12 +77,15 @@ func TestCIContractPinsToolsAndNamedGates(t *testing.T) {
 		"make release VERSION=v0.1.0",
 		"make smoke-release VERSION=v0.1.0",
 		`cmp "$first/$bundle/release-manifest.json" "$second/$bundle/release-manifest.json"`,
-		`sha256sum "dist/release/$bundle.tar.gz"`,
+		`sha256sum "$bundle.tar.gz"`,
 		"if-no-files-found: error",
 	} {
 		if !strings.Contains(workflow, gate) {
 			t.Errorf("workflow is missing gate %q", gate)
 		}
+	}
+	if strings.Contains(workflow, `sha256sum "dist/release/`) {
+		t.Error("release checksum records a CI-internal path instead of the adjacent archive basename")
 	}
 	if count := strings.Count(workflow, `sh scripts/install-surreal-ci.sh "$RUNNER_TEMP"`); count != 3 {
 		t.Errorf("pinned SurrealDB installer calls = %d, want 3", count)
