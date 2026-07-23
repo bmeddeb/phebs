@@ -929,7 +929,7 @@ The focused UI suite pins cold-page zero-search navigation, hidden-repository
 non-disclosure, per-directory request counts and cache reuse, filter
 deduplication, retry and empty states, and the mobile drawer lifecycle.
 
-**T17.2 · Same-file protobuf shape facts (`protodecl` v3)**
+**T17.2 · Same-file protobuf shape facts (`protodecl` v3)** ✅ 2026-07-23
 Enrich the declared plane without pretending to link a protobuf module.
 `protodecl` adds exact-span `DECLARES_SERVICE` and `DECLARES_MESSAGE` facts,
 request/response raw type references and client/server streaming flags to
@@ -956,6 +956,17 @@ shape attributes. Empty services and empty messages are still discoverable
 through declaration facts. Recursive message definitions do not recurse in
 the extractor. Two complete runs are byte-identical, and the registry-pin and
 pure-reader guards pass.
+
+Implemented in `protodecl` 3.0.0 with `t17-v1` atoms and v3 rules. Typed JSON
+details preserve RPC raw request/response names and streaming flags plus field
+type, cardinality, map key/value, and oneof membership. Protobuf lexical lookup
+binds only a unique declaration in the same file; unresolved imports, missing
+declarations, duplicate declarations, and wrong declaration kinds have
+separate reason codes, bounded digest-bound import context, and no external
+classification. The fixture suite pins exact spans, scalar/repeated/map/nested
+message/oneof shape, empty declarations, finite recursive definitions, and
+two-run byte identity. The pure-reader and exact registry-version guards pass;
+the persisted worker test is retained for the live SurrealDB-backed gate.
 
 **T17.3 · Bounded, snapshot-consistent Contract Catalog API**
 Add a read-only `contract-atlas-v1` projection with a paged service/operation

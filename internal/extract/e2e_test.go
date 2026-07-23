@@ -34,10 +34,10 @@ message HelloReply {
 }
 `
 
-// This covers the pinned-span portion of the T12.3 AC: on a real mirror,
-// every declared operation/field becomes an assertion whose evidence atom
-// resolves to the pinned commit and exact span. Canonical descriptor-derived
-// lineage remains intentionally unclaimed by this provisional reader.
+// This covers the persisted pinned-span path for the provisional reader: on a
+// real mirror, each service, message, operation, and field becomes an assertion
+// whose evidence atom resolves to the pinned commit and exact span. Canonical
+// descriptor-derived lineage remains intentionally unclaimed.
 func TestProtoDeclEndToEnd(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
@@ -117,6 +117,14 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 		t.Fatalf("coverage protocols = %q", got)
 	}
 
+	services, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repoName, Predicate: "DECLARES_SERVICE"})
+	if err != nil {
+		t.Fatalf("list services: %v", err)
+	}
+	messages, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repoName, Predicate: "DECLARES_MESSAGE"})
+	if err != nil {
+		t.Fatalf("list messages: %v", err)
+	}
 	ops, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repoName, Predicate: "DECLARES_OPERATION"})
 	if err != nil {
 		t.Fatalf("list ops: %v", err)
@@ -145,6 +153,12 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if len(wantFields) != 0 {
 		t.Fatalf("missing fields: %v", wantFields)
 	}
+	if len(services) != 1 || services[0].Object != "demo.Greeter" {
+		t.Fatalf("service declarations = %+v", services)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("message declarations = %+v", messages)
+	}
 
 	// Resolve every stored support through the published-only store API and
 	// slice the immutable Git blob. This proves the persisted click-through,
@@ -153,7 +167,10 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if err := corpus.WalkFiles(ctx, func(string) error { return nil }); err != nil {
 		t.Fatalf("walk corpus: %v", err)
 	}
-	allAssertions := append(append([]store.Assertion(nil), ops...), fields...)
+	allAssertions := append([]store.Assertion(nil), services...)
+	allAssertions = append(allAssertions, messages...)
+	allAssertions = append(allAssertions, ops...)
+	allAssertions = append(allAssertions, fields...)
 	foundRetries := false
 	foundMultilineRPC := false
 	for _, assertion := range allAssertions {
@@ -193,7 +210,7 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 				if source != "int32 retries = 7;" {
 					t.Fatalf("retries span slices to %q", source)
 				}
-				if assertion.Detail != `{"schema":"proto-field-detail-v1","name":"retries"}` {
+				if assertion.Detail != `{"schema":"proto-field-detail-v2","name":"retries","type":{"raw":"int32","kind":"scalar","resolution":"intrinsic"},"cardinality":"singular"}` {
 					t.Fatalf("retries detail = %q", assertion.Detail)
 				}
 				foundRetries = true
@@ -205,6 +222,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 				if occurrence.StartLine != 6 || occurrence.EndLine != 7 {
 					t.Fatalf("multiline RPC line span = %d-%d, want 6-7",
 						occurrence.StartLine, occurrence.EndLine)
+				}
+				if assertion.Detail != `{"schema":"proto-operation-detail-v1","request":{"raw":"HelloRequest","kind":"message","resolution":"same_file","declaration":"demo.HelloRequest"},"response":{"raw":"HelloReply","kind":"message","resolution":"same_file","declaration":"demo.HelloReply"},"client_streaming":false,"server_streaming":false}` {
+					t.Fatalf("multiline RPC detail = %q", assertion.Detail)
 				}
 				foundMultilineRPC = true
 			}

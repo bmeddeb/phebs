@@ -19,6 +19,7 @@ var extractorImportAllowlist = map[string]bool{
 	"context":       true,
 	"crypto/sha256": true,
 	"encoding/hex":  true,
+	"encoding/json": true,
 	"errors":        true,
 	"fmt":           true,
 	"path":          true,

@@ -997,13 +997,24 @@ experimental:
 
 When enabled, every successful index schedules a bounded read of declared
 protobuf contracts for that repository. The worker binds the read to the
-latest indexed full commit. Each RPC, fully qualified by its service, becomes
-a `DECLARES_OPERATION` assertion and each message field a `DECLARES_FIELD`
-assertion, backed by a content-keyed evidence atom bound to the repository,
-commit, path, digest, byte span, and line span. A trusted inventory requires
-every `.proto` candidate to be read. Extraction runs publish atomically: a
-read, parse, provenance, limit, cancellation, or publication failure leaves
-the prior published facts intact.
+latest indexed full commit. Services, messages, RPCs, and numbered fields
+become `DECLARES_SERVICE`, `DECLARES_MESSAGE`, `DECLARES_OPERATION`, and
+`DECLARES_FIELD` assertions backed by content-keyed evidence atoms bound to
+the repository, commit, path, digest, byte span, and line span. RPC details
+retain raw request/response type names and client/server streaming flags;
+field details retain scalar or named type, cardinality, map key/value shape,
+and oneof membership. Empty services and messages are included.
+
+Type links are intentionally file-local. Protobuf lexical lookup records a
+same-file message or enum only when exactly one declaration proves the link.
+Unlinked import context, missing names, duplicate declarations, and invalid
+declaration kinds remain unresolved under separate reason codes. Import
+context is sorted, digest-bound, and explicitly truncated after 64 paths or
+4 KiB; unresolved names are never labeled external. Recursive declarations
+record links but are not expanded by the extractor. A trusted inventory still
+requires every `.proto` candidate to be read. Extraction runs publish
+atomically: a read, parse, provenance, limit, cancellation, or publication
+failure leaves the prior published facts intact.
 
 The same opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
 2026-07-22 disposition). It indexes the repository's own generated

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"sort"
 	"strings"
@@ -13,6 +14,44 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+type decodedImportContext struct {
+	Count     int      `json:"count"`
+	Digest    string   `json:"digest"`
+	Paths     []string `json:"paths"`
+	Truncated bool     `json:"truncated"`
+}
+
+type decodedTypeReference struct {
+	Raw         string                `json:"raw"`
+	Kind        string                `json:"kind"`
+	Resolution  string                `json:"resolution"`
+	Declaration string                `json:"declaration"`
+	Reason      string                `json:"reason"`
+	Imports     *decodedImportContext `json:"imports"`
+}
+
+type decodedOperationDetail struct {
+	Schema          string               `json:"schema"`
+	Request         decodedTypeReference `json:"request"`
+	Response        decodedTypeReference `json:"response"`
+	ClientStreaming bool                 `json:"client_streaming"`
+	ServerStreaming bool                 `json:"server_streaming"`
+}
+
+type decodedMapShape struct {
+	Key   decodedTypeReference `json:"key"`
+	Value decodedTypeReference `json:"value"`
+}
+
+type decodedFieldDetail struct {
+	Schema      string                `json:"schema"`
+	Name        string                `json:"name"`
+	Type        *decodedTypeReference `json:"type"`
+	Cardinality string                `json:"cardinality"`
+	Map         *decodedMapShape      `json:"map"`
+	Oneof       string                `json:"oneof"`
+}
 
 type memoryCorpus struct {
 	repo, commit string
@@ -76,6 +115,47 @@ func findFact(t *testing.T, facts []sdk.Fact, object string) sdk.Fact {
 	return sdk.Fact{}
 }
 
+func findPredicateFact(t *testing.T, facts []sdk.Fact, predicate, object string) sdk.Fact {
+	t.Helper()
+	for _, fact := range facts {
+		if fact.Assertion.Predicate == predicate && fact.Assertion.Object == object {
+			return fact
+		}
+	}
+	t.Fatalf("%s fact %q not found in %+v", predicate, object, facts)
+	return sdk.Fact{}
+}
+
+func decodeDetail[T any](t *testing.T, fact sdk.Fact) T {
+	t.Helper()
+	var decoded T
+	if err := json.Unmarshal([]byte(fact.Assertion.Detail), &decoded); err != nil {
+		t.Fatalf("decode %s/%s detail %q: %v",
+			fact.Assertion.Predicate, fact.Assertion.Object, fact.Assertion.Detail, err)
+	}
+	return decoded
+}
+
+func assertFactSpan(t *testing.T, content string, fact sdk.Fact, source string) {
+	t.Helper()
+	start, end := fact.Atom.StartByte, fact.Atom.EndByte
+	if start < 0 || end <= start || end > len(content) {
+		t.Fatalf("invalid emitted byte span [%d,%d)", start, end)
+	}
+	if got := content[start:end]; got != source {
+		t.Fatalf("source[%d:%d] = %q, want %q", start, end, got, source)
+	}
+	lineAt := func(offset int) int {
+		return 1 + strings.Count(content[:offset], "\n")
+	}
+	if want := lineAt(start); fact.StartLine != want {
+		t.Fatalf("StartLine = %d, want %d", fact.StartLine, want)
+	}
+	if want := lineAt(end - 1); fact.EndLine != want {
+		t.Fatalf("EndLine = %d, want %d", fact.EndLine, want)
+	}
+}
+
 func atomID(fact sdk.Fact) string {
 	return store.ComputeAtomID(store.EvidenceAtom{
 		SchemaVersion: fact.Atom.SchemaVersion, BlobDigest: fact.Atom.BlobDigest,
@@ -137,6 +217,252 @@ func TestCoverageMarksLineageAsProvisional(t *testing.T) {
 	}
 	if got := strings.Join(coverage.Protocols, ","); got != "protobuf,lineage-provisional-repo-path-v1" {
 		t.Fatalf("coverage protocols = %q", got)
+	}
+}
+
+func TestShapeFactsResolveSameFileTypesWithoutTraversingThem(t *testing.T) {
+	content := `syntax = "proto3";
+package demo;
+
+service Catalog {
+  rpc Get(Request) returns (stream Reply);
+  rpc Put(stream Request) returns (Reply);
+}
+service Empty {}
+
+message Request {
+  string id = 1;
+  repeated Item items = 2;
+  map<string, Item> by_id = 3;
+  oneof selector {
+    string name = 4;
+    Nested nested = 5;
+  }
+  message Nested {
+    Item item = 1;
+  }
+}
+message Item {
+  Request owner = 1;
+}
+message Reply {}
+message EmptyMessage {}
+`
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{"shape.proto": content},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := protodecl.New().Version(), "3.0.0"; got != want {
+		t.Fatalf("extractor version = %q, want %q", got, want)
+	}
+	for _, fact := range facts {
+		if fact.Atom.SchemaVersion != "t17-v1" {
+			t.Fatalf("%s/%s schema version = %q",
+				fact.Assertion.Predicate, fact.Assertion.Object, fact.Atom.SchemaVersion)
+		}
+	}
+
+	get := findPredicateFact(t, facts, "DECLARES_OPERATION", "demo.Catalog/Get")
+	getDetail := decodeDetail[decodedOperationDetail](t, get)
+	if getDetail.Schema != "proto-operation-detail-v1" ||
+		getDetail.Request.Raw != "Request" ||
+		getDetail.Request.Resolution != "same_file" ||
+		getDetail.Request.Declaration != "demo.Request" ||
+		getDetail.Response.Raw != "Reply" ||
+		getDetail.Response.Resolution != "same_file" ||
+		getDetail.Response.Declaration != "demo.Reply" ||
+		getDetail.ClientStreaming || !getDetail.ServerStreaming {
+		t.Fatalf("Get detail = %+v", getDetail)
+	}
+	put := decodeDetail[decodedOperationDetail](
+		t, findPredicateFact(t, facts, "DECLARES_OPERATION", "demo.Catalog/Put"),
+	)
+	if !put.ClientStreaming || put.ServerStreaming {
+		t.Fatalf("Put streaming flags = %+v", put)
+	}
+
+	assertField := func(
+		object, cardinality, raw, resolution, declaration, oneof string,
+	) decodedFieldDetail {
+		t.Helper()
+		detail := decodeDetail[decodedFieldDetail](
+			t, findPredicateFact(t, facts, "DECLARES_FIELD", object),
+		)
+		if detail.Schema != "proto-field-detail-v2" || detail.Cardinality != cardinality ||
+			detail.Type == nil || detail.Type.Raw != raw ||
+			detail.Type.Resolution != resolution ||
+			detail.Type.Declaration != declaration || detail.Oneof != oneof {
+			t.Fatalf("%s detail = %+v", object, detail)
+		}
+		return detail
+	}
+	id := assertField("demo.Request#1", "singular", "string", "intrinsic", "", "")
+	if id.Type.Kind != "scalar" {
+		t.Fatalf("scalar field type = %+v", id.Type)
+	}
+	assertField("demo.Request#2", "repeated", "Item", "same_file", "demo.Item", "")
+	assertField(
+		"demo.Request#5", "singular", "Nested", "same_file",
+		"demo.Request.Nested", "selector",
+	)
+	assertField(
+		"demo.Request.Nested#1", "singular", "Item", "same_file",
+		"demo.Item", "",
+	)
+	assertField("demo.Item#1", "singular", "Request", "same_file", "demo.Request", "")
+
+	mapField := decodeDetail[decodedFieldDetail](
+		t, findPredicateFact(t, facts, "DECLARES_FIELD", "demo.Request#3"),
+	)
+	if mapField.Cardinality != "repeated" || mapField.Type != nil || mapField.Map == nil ||
+		mapField.Map.Key.Raw != "string" || mapField.Map.Key.Kind != "scalar" ||
+		mapField.Map.Key.Resolution != "intrinsic" ||
+		mapField.Map.Value.Raw != "Item" ||
+		mapField.Map.Value.Resolution != "same_file" ||
+		mapField.Map.Value.Declaration != "demo.Item" {
+		t.Fatalf("map field detail = %+v", mapField)
+	}
+
+	for _, declaration := range []struct {
+		predicate, object string
+	}{
+		{"DECLARES_SERVICE", "demo.Catalog"},
+		{"DECLARES_SERVICE", "demo.Empty"},
+		{"DECLARES_MESSAGE", "demo.Request"},
+		{"DECLARES_MESSAGE", "demo.Request.Nested"},
+		{"DECLARES_MESSAGE", "demo.Reply"},
+		{"DECLARES_MESSAGE", "demo.EmptyMessage"},
+	} {
+		findPredicateFact(t, facts, declaration.predicate, declaration.object)
+	}
+	assertFactSpan(t, content, get, "rpc Get(Request) returns (stream Reply);")
+	assertFactSpan(
+		t, content,
+		findPredicateFact(t, facts, "DECLARES_MESSAGE", "demo.EmptyMessage"),
+		"message EmptyMessage {}",
+	)
+	assertFactSpan(
+		t, content,
+		findPredicateFact(t, facts, "DECLARES_FIELD", "demo.Request#3"),
+		"map<string, Item> by_id = 3;",
+	)
+
+	// Request and Item reference each other. The extractor records links only;
+	// it never follows them into recursive shape expansion.
+	if len(facts) != 16 {
+		t.Fatalf("recursive fixture emitted %d facts, want 16", len(facts))
+	}
+}
+
+func TestUnresolvedTypeReasonsAreDistinctAndNeverClaimExternality(t *testing.T) {
+	facts, _, err := extractFacts(t, memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{
+			"external/types.proto": `syntax = "proto3"; package external; message Request {} message Reply {}`,
+			"imported.proto": `syntax = "proto3";
+package demo;
+import "external/types.proto";
+service Imported {
+  rpc Use(.external.Request) returns (.external.Reply);
+}`,
+			"missing.proto": `syntax = "proto3";
+package demo;
+service Missing { rpc Use(Absent) returns (Absent); }`,
+			"ambiguous.proto": `syntax = "proto3";
+package demo;
+message Duplicate {}
+message Duplicate {}
+service Ambiguous { rpc Use(Duplicate) returns (Duplicate); }
+enum NotMessage { UNKNOWN = 0; }
+service WrongKind { rpc Use(NotMessage) returns (NotMessage); }`,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	imported := decodeDetail[decodedOperationDetail](
+		t, findPredicateFact(t, facts, "DECLARES_OPERATION", "demo.Imported/Use"),
+	)
+	for _, reference := range []decodedTypeReference{imported.Request, imported.Response} {
+		if reference.Resolution != "unresolved" ||
+			reference.Reason != "IMPORT_LINKING_UNAVAILABLE" ||
+			reference.Imports == nil || reference.Imports.Count != 1 ||
+			len(reference.Imports.Paths) != 1 ||
+			reference.Imports.Paths[0] != "external/types.proto" ||
+			reference.Imports.Truncated ||
+			!strings.HasPrefix(reference.Imports.Digest, "sha256:") {
+			t.Fatalf("imported reference = %+v", reference)
+		}
+	}
+	if strings.Contains(
+		findPredicateFact(t, facts, "DECLARES_OPERATION", "demo.Imported/Use").Assertion.Detail,
+		`"resolution":"external"`,
+	) {
+		t.Fatal("unlinked import was labeled external")
+	}
+
+	missing := decodeDetail[decodedOperationDetail](
+		t, findPredicateFact(t, facts, "DECLARES_OPERATION", "demo.Missing/Use"),
+	)
+	if missing.Request.Reason != "DECLARATION_NOT_FOUND" ||
+		missing.Response.Reason != "DECLARATION_NOT_FOUND" ||
+		missing.Request.Imports == nil || missing.Request.Imports.Count != 0 {
+		t.Fatalf("missing detail = %+v", missing)
+	}
+
+	ambiguous := decodeDetail[decodedOperationDetail](
+		t, findPredicateFact(t, facts, "DECLARES_OPERATION", "demo.Ambiguous/Use"),
+	)
+	if ambiguous.Request.Reason != "AMBIGUOUS_SAME_FILE_DECLARATION" ||
+		ambiguous.Response.Reason != "AMBIGUOUS_SAME_FILE_DECLARATION" {
+		t.Fatalf("ambiguous detail = %+v", ambiguous)
+	}
+
+	wrongKind := decodeDetail[decodedOperationDetail](
+		t, findPredicateFact(t, facts, "DECLARES_OPERATION", "demo.WrongKind/Use"),
+	)
+	if wrongKind.Request.Reason != "INVALID_DECLARATION_KIND" ||
+		wrongKind.Request.Kind != "enum" ||
+		wrongKind.Request.Declaration != "demo.NotMessage" ||
+		wrongKind.Response.Reason != "INVALID_DECLARATION_KIND" {
+		t.Fatalf("wrong-kind detail = %+v", wrongKind)
+	}
+}
+
+func TestShapeFactRunsAreByteIdentical(t *testing.T) {
+	corpus := memoryCorpus{
+		repo: "r", commit: "c", files: map[string]string{
+			"b.proto": `syntax = "proto3"; package p; message B { A a = 1; } message A { B b = 1; }`,
+			"a.proto": `syntax = "proto3"; package p; import "z.proto"; import "a.proto";
+service S { rpc X(Missing) returns (Missing); }`,
+		},
+	}
+	first, firstCoverage, err := extractFacts(t, corpus)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, secondCoverage, err := extractFacts(t, corpus)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstBytes, err := json.Marshal(struct {
+		Facts    []sdk.Fact
+		Coverage sdk.Coverage
+	}{first, firstCoverage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondBytes, err := json.Marshal(struct {
+		Facts    []sdk.Fact
+		Coverage sdk.Coverage
+	}{second, secondCoverage})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(firstBytes) != string(secondBytes) {
+		t.Fatalf("two complete runs differ:\n%s\n%s", firstBytes, secondBytes)
 	}
 }
 
