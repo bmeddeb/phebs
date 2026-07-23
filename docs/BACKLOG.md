@@ -671,7 +671,7 @@ v0.2, [experience spec](./INVESTIGATIONS.md) rev 3, [MCP envelope](./MCP_ENVELOP
 v0.2, [pack manifest](./PACK_MANIFEST.md) v0.2. The synthetic fixtures under
 `docs/fixtures/investigations/` are the conformance bar wherever cited.
 
-**T16.1 🚧 · Investigation domain storage** — schema.surql tables and store
+**T16.1 ✅ · Investigation domain storage** — schema.surql tables and store
 methods for Investigation, Revision, Run, RunEvent, RunArtifact, Decision,
 Disposition, BaselineDesignation, Watch/WatchRevision per contract §2
 mutability rules. AC: table-driven tests prove in-place edits of immutable
@@ -685,8 +685,9 @@ event-derived Run state, concurrent idempotent Run creation, scoped-content
 RunArtifacts, and explicit correction records. The schema and every embedded
 SurrealQL statement validate; repository-wide compilation/vet and the touched
 store package's lint are clean. The
-SurrealDB-backed AC tests are checked in but remain to be executed outside the
-Codex listener sandbox before this marker becomes ✅.
+SurrealDB-backed AC suite passed locally with `-run '^TestInvestigation'` on
+2026-07-22, including 24-way concurrent Run creation and the full immutable
+entity/supersession table.
 
 **T16.2 · Immutable revisions, pins, retention ownership** *(needs T16.1)* —
 Revision freeze; RunArtifact publication binds `PinRun`; pin ownership and
