@@ -482,7 +482,14 @@ func deriveReviewItems(input reviewProjectionInput) ([]ReviewItem, error) {
 		}
 		items = append(items, item)
 	}
+	sortReviewItemsByID(items)
 	return items, nil
+}
+
+func sortReviewItemsByID(items []ReviewItem) {
+	slices.SortFunc(items, func(left, right ReviewItem) int {
+		return strings.Compare(left.ID, right.ID)
+	})
 }
 
 func normalizeReviewCursor(cursor ReviewCursor) (ReviewCursor, string, error) {
@@ -998,6 +1005,10 @@ func (s *Surreal) listReviewItemsForSnapshot(
 			return nil, fmt.Errorf("list snapshot review items: row %d: %w", i, err)
 		}
 	}
+	// Keep an explicit in-process order as the contract boundary. The query's
+	// ORDER BY is useful for the database plan, but callers must not depend on
+	// a backend preserving that order across an idempotent materialization.
+	sortReviewItemsByID(rows)
 	return rows, nil
 }
 

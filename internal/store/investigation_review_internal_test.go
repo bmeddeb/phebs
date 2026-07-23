@@ -3,6 +3,7 @@ package store
 import (
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -66,6 +67,11 @@ func TestReviewProjectionDeterministicQueuesAndIdentity(t *testing.T) {
 	}
 	if len(first) != 3 || len(second) != 3 {
 		t.Fatalf("items = %d, %d; want three queues", len(first), len(second))
+	}
+	if !slices.IsSortedFunc(first, func(left, right ReviewItem) int {
+		return strings.Compare(left.ID, right.ID)
+	}) {
+		t.Fatalf("review items are not in canonical identity order: %+v", first)
 	}
 	gotQueues := make([]ReviewQueue, len(first))
 	for i := range first {
