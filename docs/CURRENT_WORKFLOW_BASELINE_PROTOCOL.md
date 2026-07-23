@@ -1,11 +1,12 @@
 # Current-workflow baseline protocol — preregistration draft
 
-*Draft artifact for pilot prerequisite item 12 (design phase). This protocol
-grants no pilot, source-access, environment, measurement, Gate 0, or Epic 16
-authority. It becomes binding only when every `<Gate 0>` field is filled, the
-named migration owner and Gate 0 signatories approve it, and its digest is
-recorded before any phebs prediction for the frozen baseline is available to a
-participant in this study.*
+*Design-accepted artifact for pilot prerequisite item 12 (design phase). This
+protocol grants no pilot, source-access, environment, measurement, Gate 0, or
+Epic 16 authority. Design acceptance binds the form at commit `913c765` only;
+the protocol becomes execution-binding only when every `<Gate 0>` field is
+filled, the named migration owner and Gate 0 signatories approve it, and its
+sealing digest is recorded before any phebs prediction for the frozen baseline
+is available to a participant in this study.*
 
 ## 1. Purpose and boundary
 
@@ -28,12 +29,18 @@ team, language, evidence pack, or source estate.
 |---|---|
 | Protocol schema | `current-workflow-baseline-v1-draft` |
 | Prerequisite item | 12 |
-| Owner | `<Gate 0>` |
+| Prerequisite owner | Ben Meddeb |
+| Design-phase reviewer | Claudia |
+| Prerequisite state | `accepted` (design form only; see [PILOT_PREREQS.md](./PILOT_PREREQS.md) acceptance record) |
+| Accepted commit | `913c7654d9efdf37fb45720c9f3d78522960d851` (`913c765`) |
+| Accepted artifact digest (SHA-256) | `c8e631854e177b5e540117d4fe70296c4cc1687f2d9777fd60fd00d985d056bc` |
+| Owner acceptance timestamp | `2026-07-22T17:22:00-07:00` |
+| Reviewer acceptance timestamp | `2026-07-22T17:37:00-07:00` |
+| Gate 0 | locked (design acceptance ≠ unlock) |
 | Migration owner / usefulness authority | `<Gate 0>` |
-| Reviewer | `<Gate 0>` |
-| State | `blocked_unassigned` |
-| Required acceptance evidence | artifact digest, reviewer identity, timestamp, decision, unresolved findings |
-| Measurement authority | none until charter gates authorize the relevant activity |
+| Sealing reviewers | Gate 0 signatories per charter |
+| Owner aim | unlock charter Gate 0 by sealing this form with partner fills |
+| Measurement authority | none until Gate 0 unlocks and later gates authorize the relevant activity |
 
 ## 3. Frozen design inputs
 
@@ -312,7 +319,9 @@ a pass.
 4. A record validator/calculator, if the Gate 0 signatories require automated
    enforcement; its exact bytes and digest must then be frozen before use.
 
-Drafting this protocol completes no item state by itself. Item 12 remains
-`blocked_unassigned` until its owner, eligible reviewer, digest-bound artifact,
-decision, timestamp, and unresolved-findings record satisfy
-[PILOT_PREREQS.md](./PILOT_PREREQS.md).
+Item 12 is design-accepted against the digest-bound form at commit `913c765`
+per [PILOT_PREREQS.md](./PILOT_PREREQS.md). Design acceptance does not seal this
+protocol, fill partner-shaped fields, authorize measurement, or close Gate 0.
+The Owner's aim is to unlock Gate 0: collect the open items above, seal this
+protocol with the §8.2 package, and obtain Gate 0 signatures per
+[GATE0_READINESS.md](./GATE0_READINESS.md).

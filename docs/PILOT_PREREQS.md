@@ -1,6 +1,6 @@
 # Pilot prerequisites — gate-neutral track
 
-*Index v0.3. **No item here grants authority to begin Epic 16**, whose
+*Index v0.4. **No item here grants authority to begin Epic 16**, whose
 implementation remains blocked until the pilot internal-validation record is
 `ESTABLISHED` and the separate pilot decision authorizes continuation. Nothing
 here reopens or reinterprets the sealed GATE2-V2 ceremony.*
@@ -36,16 +36,45 @@ reviewer identity, timestamp, decision, unresolved findings (or `none`).
 | 9 | Statistical accuracy-gold protocol (preregistration) | design | none (sealing requires charter Gate 0) | TBD | Gate 0 signatories per charter | [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) draft + `pilot/validation/` harness tests | blocked_unassigned | not_assessed |
 | 10 | Gate and continuation decision-record templates | design | none | TBD | TBD | [DECISION_RECORDS.md](./DECISION_RECORDS.md) draft | blocked_unassigned | not_assessed |
 | 11 | Attribution-hop label sheet formats (dependency preview) | design | 9; shapes freeze at Gate 0 | TBD | Gate 0 signatories per charter | [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) draft | blocked_unassigned | not_assessed |
-| 12 | Current-workflow baseline protocol (§8.1 preregistration) | design | none | TBD | Gate 0 signatories per charter | [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md) draft | blocked_unassigned | not_assessed |
+| 12 | Current-workflow baseline protocol (§8.1 preregistration) | design | none | Ben Meddeb | Claudia | [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md) @ `913c765` | accepted | Claudia + Owner accept; `<Gate 0>` fills blank; no seal; Gate 0 still locked; no measurement authority |
 
 `TBD` carries state `blocked_unassigned` so a mechanical blank-field check
 cannot be bypassed by placeholder text.
 
-Draft artifacts exist for items 1–5 and 9–12. Items 3–5 and 11 are dependency previews: they do
-not imply acceptance of items 1 or 2 and must be reconciled against those
-artifacts after their prerequisites are accepted. Drafting does not advance any
-state: every item still requires an explicit owner, an eligible named reviewer,
-and the acceptance record defined above.
+Draft artifacts exist for items 1–5 and 9–12. Item 12 is design-accepted per
+the record below; items 1–5 and 9–11 remain unaccepted. Items 3–5 and 11 are
+dependency previews: they do not imply acceptance of items 1 or 2 and must be
+reconciled against those artifacts after their prerequisites are accepted.
+Drafting does not advance any state by itself: every unaccepted item still
+requires an explicit owner, an eligible named reviewer, and the acceptance
+record defined above. Design acceptance of a preregistration form does not
+seal partner-shaped fields, close Gate 0, authorize measurement, or unlock
+Epic 16.
+
+**Owner aim (item 12):** use design acceptance as the first cleared Gate 0
+form and proceed along the unlock path in
+[GATE0_READINESS.md](./GATE0_READINESS.md) — design-accept items 9–11, draft
+the remaining Owner worksheets, solicit partner fills, and assemble the Gate 0
+freeze package for signature. Gate 0 unlocks only when that package is signed.
+
+## Acceptance records
+
+### Item 12 — Current-workflow baseline protocol
+
+| Field | Value |
+|---|---|
+| Decision | `accepted` (design-phase preregistration form only) |
+| Owner | Ben Meddeb |
+| Reviewer | Claudia |
+| Owner acceptance timestamp | `2026-07-22T17:22:00-07:00` (Owner also recorded a dual-hat design accept before the independent reviewer was named) |
+| Reviewer acceptance timestamp | `2026-07-22T17:37:00-07:00` |
+| Accepted commit | `913c7654d9efdf37fb45720c9f3d78522960d851` (`913c765`) |
+| Accepted git blob | `ec8cc751c99323e35b968f4ac01b5f6c54dfc0dc` |
+| Accepted artifact digest (SHA-256) | `c8e631854e177b5e540117d4fe70296c4cc1687f2d9777fd60fd00d985d056bc` |
+| Unresolved findings | every partner-shaped `<Gate 0>` field blank; no sealing digest; Gate 0 still locked; no measurement, source-access, or baseline-execution authority; optional §13.4 validator not required for design acceptance |
+| Explicit non-decisions | not Gate 0 closure / unlock; not protocol sealing; not baseline execution; not Epic 16 |
+| Owner aim | unlock charter Gate 0 |
+| Authorized next action | pursue the Owner path in [GATE0_READINESS.md](./GATE0_READINESS.md): design-accept items 9–11, draft bridge + no-conflict worksheets, solicit partner `<Gate 0>` fills for this form, and bring the sealed §8.1 package to Gate 0 signatories; do not run a baseline until Gate 0 unlocks |
 
 ## Ceremony decision records
 
