@@ -1,7 +1,13 @@
 VERSION ?= 0.1.0-dev
 VERSION_PATTERN := ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$$
+GO_VERSION := $(shell tr -d '[:space:]' < .go-version)
+NODE_VERSION := $(shell tr -d '[:space:]' < .node-version)
+GOLANGCI_LINT_VERSION := $(patsubst v%,%,$(shell tr -d '[:space:]' < .golangci-lint-version))
+SURREALDB_VERSION := $(shell tr -d '[:space:]' < .surrealdb-version)
 
-.PHONY: dev dev-api build validate-version test ui-test lint ui db-server
+.PHONY: dev dev-api build validate-version test ui-test lint ui db-server \
+	verify-go verify-node verify-golangci-lint verify-surreal \
+	ci ci-static ci-go ci-race ci-ui
 
 bin:
 	mkdir -p $@
@@ -42,3 +48,47 @@ ui: ## production UI build into ui/dist
 
 db-server: ## SurrealDB server mode via compose — server-mode testing only (PLAN §1)
 	docker compose up -d
+
+verify-go:
+	@test "$$(go env GOVERSION)" = "go$(GO_VERSION)" || { \
+		printf 'Go %s required; found %s\n' "$(GO_VERSION)" "$$(go env GOVERSION)" >&2; \
+		exit 2; \
+	}
+
+verify-node:
+	@test "$$(node --version)" = "v$(NODE_VERSION)" || { \
+		printf 'Node %s required; found %s\n' "$(NODE_VERSION)" "$$(node --version)" >&2; \
+		exit 2; \
+	}
+
+verify-golangci-lint:
+	@test "$$(golangci-lint version | awk '{print $$4}')" = "$(GOLANGCI_LINT_VERSION)" || { \
+		printf 'golangci-lint %s required\n' "$(GOLANGCI_LINT_VERSION)" >&2; \
+		exit 2; \
+	}
+
+verify-surreal:
+	@test "$$(surreal version | awk '{print $$1}')" = "$(SURREALDB_VERSION)" || { \
+		printf 'SurrealDB %s required; found %s\n' "$(SURREALDB_VERSION)" "$$(surreal version 2>/dev/null | awk '{print $$1}')" >&2; \
+		exit 2; \
+	}
+
+ci-static: verify-go verify-golangci-lint
+	go vet ./...
+	golangci-lint run
+	go test ./... -run '^$$'
+
+ci-go: verify-go verify-surreal
+	go test ./... -count=1 -timeout=25m
+
+ci-race: verify-go verify-surreal
+	go test -race ./internal/store ./internal/sync ./internal/indexer ./internal/search -count=1 -timeout=40m
+
+ci-ui: verify-node verify-go
+	cd ui && npm ci
+	cd ui && npm test
+	cd ui && npm run lint
+	cd ui && npm run build
+	go build -tags ui ./...
+
+ci: ci-static ci-go ci-race ci-ui

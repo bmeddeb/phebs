@@ -66,6 +66,11 @@ allowlist can add up to seven branch/tag revisions, selected with `rev:`.
 | language SCIP indexer *(optional)* | precise definitions/references/hover; commit its `index.scip` output | [scip-code.org](https://scip-code.org/)                                                |
 | `bubblewrap` *(Linux, optional)*    | network/filesystem namespace for the experimental Buf compatibility child | distribution package `bubblewrap`; macOS uses built-in `sandbox-exec`                 |
 
+Release verification uses the exact tool versions recorded in
+`.go-version`, `.node-version`, `.golangci-lint-version`, and
+`.surrealdb-version`. Ordinary development supports the broader prerequisite
+ranges above; the `make ci-*` targets fail early when the release toolchain
+does not match.
 
 
 
@@ -1624,6 +1629,12 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | `make lint`      | golangci-lint                                                                                                                                           |
 | `make ui`        | production UI build only                                                                                                                                |
 | `make db-server` | SurrealDB in server mode via docker compose (testing only)                                                                                              |
+
+The hosted release gate runs four independently visible local-equivalent
+targets: `make ci-static`, `make ci-go`, `make ci-race`, and `make ci-ui`.
+`make ci` runs all four sequentially. The live Go targets require the exact
+pinned `surreal` on `PATH`; hosted CI downloads the exact 3.2.0 Linux archive
+and verifies its committed SHA-256 before any store test starts.
 
 
 Live UI development: run `make dev-api`, then `cd ui && npm run dev` — Vite

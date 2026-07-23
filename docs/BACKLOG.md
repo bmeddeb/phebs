@@ -1121,7 +1121,7 @@ Implemented with a SemVer-validation prerequisite and a post-build execution
 check. The main package exposes a narrow writer-injected version command while
 all existing version consumers retain the same linker-stamped variable.
 
-**T18.2 · Hermetic local/hosted verification**
+**T18.2 · Hermetic local/hosted verification** ✅ 2026-07-23
 Pin the Go linter and SurrealDB installer to reviewed versions, separate fast
 static/build checks from the live SurrealDB suite, add timeouts and explicit
 version assertions, and make the same commands runnable locally. The workflow
@@ -1131,6 +1131,20 @@ AC: workflow review shows no floating tool version; a missing or wrong-major
 SurrealDB fails before tests; Go test, race/static checks, UI test/lint/build,
 and embedded-UI compilation all have named green jobs; local targets execute
 the same command families.
+
+Implemented with repository-owned pins for Go 1.26.5, Node 24.18.0 LTS,
+golangci-lint 2.12.2, and SurrealDB 3.2.0. Full action commit SHAs, annotated
+with their reviewed release tags, replace major-only refs. Static, full Go,
+concurrency race, and UI/embedded
+builds are separate bounded jobs backed by `make ci-*` targets. The SurrealDB
+jobs download the exact Linux release archive, verify its upstream-published
+SHA-256 and reported version before tests, and cannot silently skip a missing
+database. A permanent source test pins every tool, action, named job, and
+download-verification step. The workflow is locally verified; its first hosted
+execution remains T18.4 because this repository still has no remote. The
+sealed `spike/t111` validation subtree remains compiled and tested but is
+excluded from lint because fixing its pre-existing findings would mutate the
+preserved evidence artifact.
 
 **T18.3 · Release bundle and fresh-data smoke**
 Assemble the versioned phebs server, same-module `zoekt-git-index` and Buf

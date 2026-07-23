@@ -2,3 +2,8 @@ version: "2"
 
 linters:
   default: standard
+  exclusions:
+    paths:
+      # Sealed T11.1 validation evidence is retained byte-for-byte. It remains
+      # compiled and tested, but lint remediation would mutate the artifact.
+      - spike/t111/

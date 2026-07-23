@@ -5,42 +5,85 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  go:
+  static:
+    name: Go static and compile
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          go-version-file: go.mod
-      - uses: golangci/golangci-lint-action@v8
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          version: latest
-      - name: Install SurrealDB (store tests spawn a local child)
-        run: |
-          curl -sSf https://install.surrealdb.com | sh
-          echo "$HOME/.surrealdb" >> "$GITHUB_PATH"
-      - run: go test -race ./...
+          go-version-file: .go-version
+          cache-dependency-path: go.sum
+      - name: Install pinned golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version-file: .golangci-lint-version
+          install-only: true
+      - name: Verify exact tools and run static gate
+        run: make ci-static
+
+  go-test:
+    name: Go full test
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .go-version
+          cache-dependency-path: go.sum
+      - name: Install pinned SurrealDB
+        run: sh scripts/install-surreal-ci.sh "$RUNNER_TEMP"
+      - name: Run full Go suite
+        run: make ci-go
+
+  race:
+    name: Go concurrency race
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .go-version
+          cache-dependency-path: go.sum
+      - name: Install pinned SurrealDB
+        run: sh scripts/install-surreal-ci.sh "$RUNNER_TEMP"
+      - name: Run concurrency-sensitive race suite
+        run: make ci-race
 
   ui:
+    name: UI test, lint, and embedded build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ui
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 24
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
           cache: npm
           cache-dependency-path: ui/package-lock.json
-      - run: npm ci
-      - run: npm test
-      - run: npm run lint
-      - run: npm run build
-      - uses: actions/setup-go@v5
+          package-manager-cache: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: go.mod
-      - name: Verify embedded-UI build
-        run: go build -tags ui ./...
-        working-directory: .
+          go-version-file: .go-version
+          cache-dependency-path: go.sum
+      - name: Run UI and embedded-build gate
+        run: make ci-ui
