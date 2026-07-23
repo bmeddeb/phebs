@@ -831,10 +831,27 @@ sweepable RunArtifacts. Fixture 07 pins the fallback, fixture 09 pins one
 traced addition and removal, pure tests cover every prohibited cause, and the
 live store AC covers ledger persistence after artifact sweep.
 
-**T16.8 · Review projection** *(needs T16.7)* — deterministic ReviewItems,
+**T16.8 ✅ · Review projection** *(needs T16.7)* — deterministic ReviewItems,
 queues (new consumers, coverage regression, unresolved attribution),
 per-principal cursors. AC: identical deltas yield identical item ids; items
 supersede and expire by rule; no hand-creation path exists.
+
+Implemented on `codex/t16.8-review-projection`: a versioned pack projection
+derives the three fixed queues only from an authorized immutable consumer
+snapshot, its comparison, its typed coverage ledger, and unresolved hops whose
+fact IDs occur in that snapshot. ReviewItem identities domain-separate the
+principal, Investigation, source comparison, projection version, subject,
+delta/cause, evidence reference, and human-record-state digest while excluding
+evaluation time, so identical semantic inputs reproduce the same IDs.
+Publishing a later source sequence supersedes the prior projection; the
+versioned lifecycle rule computes expiry from immutable publication time.
+Acknowledgement and last-viewed comparison are canonical payloads in the
+existing authorization-epoch-bound per-principal cursor and never mutate an
+item. The store interface exposes materialize/list/cursor operations but no
+ReviewItem create/put method. Pure tests pin deterministic IDs, all three
+queues, supersession/expiry and the missing hand-creation path; the live store
+test pins idempotent materialization, acknowledgement, lifecycle transition,
+and unauthorized non-disclosure.
 
 **T16.9 · Dossier export** *(needs T16.2, T16.3, T16.5)* — sealed export per
 contract §8 with offline verification script. AC: digest chain verifies

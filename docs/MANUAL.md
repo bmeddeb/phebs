@@ -1408,6 +1408,26 @@ Sweeping the RunArtifact that originally supplied an edge does not erase its
 ledger history; the retained row is history and identity metadata, not a
 replacement for the artifact's independently governed proof.
 
+T16.8 derives ReviewItems from those authorized snapshots; there is no
+hand-creation operation. A versioned pack projection can emit only three
+queues: traced new/reintroduced consumers, coverage or comparability
+regressions, and unresolved attribution tied to a fact that exists in the
+source snapshot. The deterministic item identity binds the principal,
+Investigation, comparison, projection version, logical subject, delta and
+cause, evidence reference, and relevant human-record-state digest. Re-running
+the same projection therefore returns the same IDs, independent of when it is
+requested.
+
+A later source sequence supersedes the preceding projection, while the
+projection's lifecycle rule expires items relative to the immutable snapshot
+publication time. The resulting states are only `open`, `superseded`, and
+`expired`. Acknowledgement and the last-viewed comparison live in the existing
+per-principal authorization-epoch cursor; they do not edit ReviewItems, and an
+ownership transfer or grant revocation voids stale cursor state under the same
+rules as every other Investigation read. Review materialization and listing
+remain internal store facilities in this ticket; no production API or UI route
+is enabled.
+
 ### Metrics
 
 

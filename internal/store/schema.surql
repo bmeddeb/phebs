@@ -245,6 +245,26 @@ DEFINE INDEX IF NOT EXISTS investigation_consumer_edge_ledger_scope
     ON investigation_consumer_edge_ledger
     FIELDS investigation_id, principal, continuity_namespace, logical_relationship_id UNIQUE;
 
+-- T16.8 derived Review projection. Projection receipts and ReviewItems are
+-- immutable; superseded_by/superseded_at are the only lifecycle projection
+-- fields. Per-principal acknowledgement reuses investigation_cursor so the
+-- authorization epoch and transfer/revoke behavior remain one invariant.
+DEFINE TABLE IF NOT EXISTS investigation_review_projection SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_review_projection_identity
+    ON investigation_review_projection FIELDS projection_record_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_review_projection_source
+    ON investigation_review_projection
+    FIELDS principal, source_snapshot_id, projection_id, projection_version UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_review_item SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_review_item_identity
+    ON investigation_review_item FIELDS review_item_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_review_item_scope
+    ON investigation_review_item
+    FIELDS investigation_id, principal, projection_id, projection_version, evaluated_at;
+DEFINE INDEX IF NOT EXISTS investigation_review_item_projection_key
+    ON investigation_review_item FIELDS investigation_id, principal, projection_key;
+
 DEFINE TABLE IF NOT EXISTS investigation_watch SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_watch_identity ON investigation_watch FIELDS watch_id UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_watch_owner ON investigation_watch FIELDS owner;
