@@ -168,6 +168,39 @@ func TestVersionCapabilitiesRequireAuthenticatedPrincipal(t *testing.T) {
 	}
 }
 
+func TestPrintVersion(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		want    string
+		wantErr string
+	}{
+		{name: "exact build identity", want: version + "\n"},
+		{name: "reject argument", args: []string{"extra"}, wantErr: "version accepts no arguments"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := printVersion(test.args, &output)
+			if test.wantErr != "" {
+				if err == nil || err.Error() != test.wantErr {
+					t.Fatalf("printVersion error = %v, want %q", err, test.wantErr)
+				}
+				if output.Len() != 0 {
+					t.Fatalf("printVersion output = %q, want empty", output.String())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if output.String() != test.want {
+				t.Fatalf("printVersion output = %q, want %q", output.String(), test.want)
+			}
+		})
+	}
+}
+
 func TestEvidenceViewUsesAuthenticatedPrincipal(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -63,6 +64,8 @@ func main() {
 		err = backup(os.Args[2:])
 	case "restore":
 		err = restore(os.Args[2:])
+	case "version":
+		err = printVersion(os.Args[2:], os.Stdout)
 	default:
 		printUsage()
 		os.Exit(2)
@@ -77,6 +80,17 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  phebs serve [-config phebs.yaml] [-addr 127.0.0.1:3070]")
 	fmt.Fprintln(os.Stderr, "  phebs backup [-config phebs.yaml] -output /path/to/backup")
 	fmt.Fprintln(os.Stderr, "  phebs restore [-config phebs.yaml] -backup /path/to/backup")
+	fmt.Fprintln(os.Stderr, "  phebs version")
+}
+
+func printVersion(args []string, output io.Writer) error {
+	if len(args) != 0 {
+		return errors.New("version accepts no arguments")
+	}
+	if _, err := fmt.Fprintln(output, version); err != nil {
+		return fmt.Errorf("print version: %w", err)
+	}
+	return nil
 }
 
 func backup(args []string) error {

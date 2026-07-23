@@ -74,8 +74,14 @@ allowlist can add up to seven branch/tag revisions, selected with `rev:`.
 ```bash
 git clone <your-clone-of-phebs> && cd phebs
 make build          # builds the UI, zoekt and Buf children, and ./phebs
+./phebs version     # 0.1.0-dev for an ordinary source build
 ./phebs serve -config phebs.yaml
 ```
+
+`make build VERSION=vX.Y.Z` creates a release-identified binary. The same
+exact value is printed by `phebs version`, returned by `/api/version`, written
+to backup manifests, and included in startup logs. Release builds refuse a
+non-SemVer `VERSION`.
 
 Minimal `phebs.yaml`:
 
@@ -1612,7 +1618,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `make dev`       | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas demo fixtures, run with embedded UI                                   |
 | `make dev-api`   | backend-only loop with the same children and explicit demo fixtures (placeholder UI page, fast)                                                          |
-| `make build`     | release binary `./phebs`, `bin/zoekt-git-index`, and `bin/buf`                                                                                          |
+| `make build`     | version-stamped `./phebs` plus same-module `bin/zoekt-git-index` and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                     |
 | `make test`      | `go test ./...` — store/sync/indexer tests need `surreal`; child-binary integration tests build pinned zoekt and Buf binaries                            |
 | `make ui-test`   | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
 | `make lint`      | golangci-lint                                                                                                                                           |

@@ -40,8 +40,12 @@ search you host yourself, without running a constellation of services to get it.
 
 ```bash
 make build                          # UI + zoekt child + ./phebs
+./phebs version                     # 0.1.0-dev (or explicit VERSION)
 ./phebs serve -config phebs.yaml    # open http://localhost:3070
 ```
+
+Release candidates use `make build VERSION=vX.Y.Z`; the build verifies that
+the resulting binary reports that exact SemVer identity.
 
 ```yaml
 # phebs.yaml
@@ -107,7 +111,7 @@ Every decision lands as a dated ADR bullet in [PLAN.md](./PLAN.md). Highlights:
 
 ## Status
 
-**Single-node product complete through Epic 15** — sync (GitHub incl. App auth,
+**Single-node product complete through Epic 17** — sync (GitHub incl. App auth,
 GitLab, Gitea, any git URL, local), fenced jobs with crash recovery, bounded
 multi-revision indexing, JSON/SSE search, contexts, authentication/OIDC,
 permission-aware API and stateless MCP, audit/analytics, committed SCIP, Git
@@ -115,9 +119,10 @@ history, live backup/restore, and the web UI are shipped. The default-dark
 contract-intelligence annex adds exact consumer/field citations, coverage
 certificates, immutable proof bundles, pinned-Buf compatibility, MCP tools, and
 a read-only impact report. Its validation status remains explicitly bounded:
-GATE2-V2 is `NOT_ESTABLISHED`. Epic 16 implementation is proceeding under an
-explicit 2026-07-22 operator bypass that grants no validation result or
-external claim; see PLAN.md. See
+GATE2-V2 is `NOT_ESTABLISHED`. Epic 16 was implemented under an explicit
+2026-07-22 operator bypass that grants no validation result or external claim.
+Epic 17 adds the capability-gated protobuf/gRPC Contract Atlas and a persistent
+permission-filtered repository explorer. See PLAN.md and
 [BACKLOG.md](./docs/BACKLOG.md) for the ticket record.
 
 ## Lineage & acknowledgements

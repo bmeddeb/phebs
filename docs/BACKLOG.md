@@ -1097,6 +1097,66 @@ determinism, coverage-only repository independence, empty/truncated
 qualification, mobile fallback, and that rendering performs no additional
 catalog or evidence request.
 
+## EPIC 18 — First public release *(in progress)*
+
+The first tag is a product boundary, not a Git bookkeeping event. It must bind
+one inspectable version, the server plus its same-module helper binaries,
+the supported SurrealDB line, reproducible checksums, a fresh-data smoke, and a
+green hosted run. Local success alone cannot authorize publication.
+
+**T18.1 · Release identity contract** ✅ 2026-07-23
+Add a dependency-free `phebs version` command and make `make build` accept,
+validate, stamp, and verify an explicit SemVer `VERSION`. The exact value must
+remain shared by CLI output, startup logs, `/api/version`, and backup manifests.
+Ordinary source builds retain a development identity; Git state is never
+silently converted into release authority.
+
+AC: `make build VERSION=v0.1.0` produces a binary whose exact stdout is
+`v0.1.0\n`; invalid or padded versions fail before compilation; `phebs version`
+accepts no arguments and initializes no configuration, database, child
+process, or network listener. Existing API and backup tests continue to bind
+the same process-global value.
+
+Implemented with a SemVer-validation prerequisite and a post-build execution
+check. The main package exposes a narrow writer-injected version command while
+all existing version consumers retain the same linker-stamped variable.
+
+**T18.2 · Hermetic local/hosted verification**
+Pin the Go linter and SurrealDB installer to reviewed versions, separate fast
+static/build checks from the live SurrealDB suite, add timeouts and explicit
+version assertions, and make the same commands runnable locally. The workflow
+must never silently skip store tests because `surreal` is absent.
+
+AC: workflow review shows no floating tool version; a missing or wrong-major
+SurrealDB fails before tests; Go test, race/static checks, UI test/lint/build,
+and embedded-UI compilation all have named green jobs; local targets execute
+the same command families.
+
+**T18.3 · Release bundle and fresh-data smoke**
+Assemble the versioned phebs server, same-module `zoekt-git-index` and Buf
+children, license/readme, and a machine-readable manifest with SHA-256
+digests. Exercise that assembled bundle from an empty temporary data directory:
+bootstrap authentication, sync/index a local fixture repository, search it,
+browse a pinned file, and verify the Contract Atlas stays dark without its
+explicit fixture/evidence binding.
+
+AC: two builds from the same commit/toolchain produce equal file manifests;
+tampering with any bundled executable fails verification; the smoke uses only
+the bundle and declared prerequisites, reaches a healthy authenticated server,
+and proves sync → index → search plus dark experimental posture.
+
+**T18.4 · Public remote, hosted gate, and `v0.1.0`**
+Create or bind the explicitly approved GitHub repository, push `main`, run the
+hosted workflow, then create and push the annotated first tag only from the
+exact green commit. Publish checksums and prerequisite/validation caveats; do
+not claim the `NOT_ESTABLISHED` contract-intelligence accuracy gate passed.
+
+AC: the repository URL and visibility are operator-approved; branch protection
+or the documented equivalent requires the hosted gate; the tag commit equals
+the tested main commit; a clean checkout verifies the release manifest and
+fresh-data smoke; release notes preserve the default-dark and validation
+caveats.
+
 ### On-demand protocol-pack candidates after Epic 17
 
 These are direction, not scheduled T17 tickets, and do not block completion of
