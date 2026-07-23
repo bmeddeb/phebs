@@ -193,6 +193,22 @@ DEFINE INDEX IF NOT EXISTS investigation_baseline_identity ON investigation_base
 DEFINE INDEX IF NOT EXISTS investigation_baseline_scope ON investigation_baseline_designation FIELDS investigation_id, claim_scope, workflow_scope;
 DEFINE INDEX IF NOT EXISTS investigation_baseline_supersedes ON investigation_baseline_designation FIELDS supersedes UNIQUE;
 
+-- T16.3 authorization invariants. Grants are explicit owner-authorized
+-- sharing edges checked at query time on every read; cursors record the
+-- investigation's authz_revision so an ownership transfer voids them without
+-- deleting any principal's stored state.
+DEFINE TABLE IF NOT EXISTS investigation_grant SCHEMALESS;
+DEFINE FIELD OVERWRITE role ON investigation_grant TYPE string
+    ASSERT $value INSIDE ['reader'];
+DEFINE INDEX IF NOT EXISTS investigation_grant_identity ON investigation_grant FIELDS grant_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_grant_scope ON investigation_grant
+    FIELDS investigation_id, principal UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_cursor SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_cursor_identity ON investigation_cursor FIELDS cursor_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_cursor_scope ON investigation_cursor
+    FIELDS investigation_id, principal UNIQUE;
+
 DEFINE TABLE IF NOT EXISTS investigation_watch SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_watch_identity ON investigation_watch FIELDS watch_id UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_watch_owner ON investigation_watch FIELDS owner;

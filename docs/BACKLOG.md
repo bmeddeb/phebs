@@ -706,7 +706,7 @@ SurrealDB-backed `-run '^TestInvestigation'` suite passed on 2026-07-22 in
 42.041 seconds, including every owner, override, atomic-publication, and
 pin-isolation AC plus the retained T16.1 regressions.
 
-**T16.3 · Authorization invariants** *(needs T16.1)* — query-time principal
+**T16.3 ✅ · Authorization invariants** *(needs T16.1)* — query-time principal
 projection on every read; count/existence non-disclosure; opaque ids;
 refusal shape of fixture 06; re-authorization on sharing and transfer.
 AC: negative-test matrix passes incl. fixtures 05/06 shapes; the suite
@@ -715,6 +715,20 @@ and asserts identical canonical response bytes, each compared against the
 same golden fixture (fixture 06 is the expected
 shape, not a one-time validation target); cursors void on ownership
 transfer.
+
+Implementation is present on `t16.3-authorization-invariants`:
+`store.InvestigationAuthzStore` principal-projects every domain read (unknown
+and unauthorized are the identical `ErrNotFound`, and integrity errors surface
+only after authorization); owner-authorized reader grants re-check at query
+time; ownership moves only through the audited transfer path, which bumps the
+investigation's authorization revision and thereby voids per-principal cursors
+without deleting them; Watches stay owner-only. `mcp.NotAvailableRefusal`
+renders the canonical fixture-06 refusal as a pure function with no
+denial-reason input, golden-tested byte-for-byte, and a shape test proves the
+minimal refusal carries none of fixture 05's authorized-only sections. The
+SurrealDB-backed matrix (all ten reads × owner/grantee/stranger/unknown), the
+identical-bytes AC, and the sharing/transfer/cursor lifecycle passed locally
+on 2026-07-22 within the `-run '^TestInvestigation'` suite.
 
 **T16.4 · Guided creation and async run state** *(needs T16.1–T16.3)* —
 creation API with scope preview, authorization preflight, estimate, cancel,

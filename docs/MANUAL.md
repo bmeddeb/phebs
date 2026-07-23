@@ -1283,8 +1283,23 @@ removes only the RunArtifact and pins in its exact namespace, while preserving
 owner/release/override audit rows. It never deletes extraction evidence; the
 existing proof-aware evidence sweep may reclaim a superseded run only after
 its final independent pin is gone. This remains an internal store facility:
-authorization projection, lifecycle wiring, sharing, and public creation/read
-surfaces land in later Epic 16 tickets.
+lifecycle wiring, sharing surfaces, and public creation/read surfaces land in
+later Epic 16 tickets.
+
+Every investigation-domain read has a principal-scoped variant that
+authorizes at query time. An object that does not exist and an object the
+principal is not authorized to read produce the identical not-found result:
+no counts, existence signals, scope, or integrity state are disclosed to an
+unauthorized principal. Owners may grant and revoke `reader` access; grants
+are re-checked on every read, and a grantee cannot delegate. Watches are
+personal and never extend through grants. Ownership changes only through the
+audited transfer operation — a plain update rejects owner edits — and a
+transfer immediately voids each principal's stored continuation cursor for
+that investigation without deleting any other state; re-authorized principals
+simply re-establish their cursors. The canonical `NOT_AVAILABLE` refusal
+envelope (fixture 06) is rendered server-side as a minimal fixed shape whose
+bytes are identical for unknown and unauthorized requests. API and MCP
+surfaces bind to this boundary in later Epic 16 tickets.
 
 ### Metrics
 

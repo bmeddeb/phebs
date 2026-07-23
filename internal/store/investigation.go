@@ -452,10 +452,14 @@ func (s *Surreal) UpdateInvestigation(ctx context.Context, in Investigation) (*I
 		(!in.CreatedAt.IsZero() && !in.CreatedAt.Equal(existing.CreatedAt)) {
 		return nil, fmt.Errorf("update investigation: immutable identity field changed: %w", ErrConflict)
 	}
-	for name, value := range map[string]string{"title": in.Title, "owner": in.Owner} {
-		if err := validateDomainString(name, value, true); err != nil {
-			return nil, fmt.Errorf("update investigation: %w", err)
-		}
+	// Ownership moves only through TransferInvestigationOwnership (T16.3), which
+	// serializes on the current owner and voids per-principal cursors. A plain
+	// update must not be able to bypass that path.
+	if in.Owner != existing.Owner {
+		return nil, fmt.Errorf("update investigation: ownership changes use the transfer path: %w", ErrConflict)
+	}
+	if err := validateDomainString("title", in.Title, true); err != nil {
+		return nil, fmt.Errorf("update investigation: %w", err)
 	}
 	if !validLifecycleTransition(existing.Lifecycle, in.Lifecycle) {
 		return nil, fmt.Errorf("update investigation: invalid lifecycle transition: %w", ErrConflict)
@@ -472,15 +476,17 @@ func (s *Surreal) UpdateInvestigation(ctx context.Context, in Investigation) (*I
 	// a stale read fails closed instead of committing an invalid transition or
 	// clobbering the current-Revision pointer (contract §5).
 	results, err := surrealdb.Query[[]Investigation](ctx, s.db,
-		`UPDATE $rid SET title = $title, owner = $owner, lifecycle = $lifecycle,
+		`UPDATE $rid SET title = $title, lifecycle = $lifecycle,
 			current_revision_id = $current_revision_id, updated_at = $now
 			WHERE referent = $referent AND claim_family = $claim_family
+			  AND owner = $expected_owner
 			  AND lifecycle = $expected_lifecycle
 			  AND (current_revision_id ?? '') = $expected_current_revision_id RETURN AFTER`,
 		map[string]any{
-			"rid": investigationRecordID(in.ID), "title": in.Title, "owner": in.Owner,
+			"rid": investigationRecordID(in.ID), "title": in.Title,
 			"lifecycle": in.Lifecycle, "current_revision_id": in.CurrentRevisionID,
 			"now": now, "referent": existing.Referent, "claim_family": existing.ClaimFamily,
+			"expected_owner":               existing.Owner,
 			"expected_lifecycle":           existing.Lifecycle,
 			"expected_current_revision_id": existing.CurrentRevisionID,
 		})
