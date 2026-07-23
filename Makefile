@@ -1,11 +1,20 @@
 VERSION ?= 0.1.0-dev
-VERSION_PATTERN := ^v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$$
+VERSION_PATTERN_BODY := (0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?
+VERSION_PATTERN := ^v?$(VERSION_PATTERN_BODY)$$
+RELEASE_VERSION_PATTERN := ^v$(VERSION_PATTERN_BODY)$$
 GO_VERSION := $(shell tr -d '[:space:]' < .go-version)
 NODE_VERSION := $(shell tr -d '[:space:]' < .node-version)
 GOLANGCI_LINT_VERSION := $(patsubst v%,%,$(shell tr -d '[:space:]' < .golangci-lint-version))
 SURREALDB_VERSION := $(shell tr -d '[:space:]' < .surrealdb-version)
+TARGET_GOOS ?= $(shell go env GOOS)
+TARGET_GOARCH ?= $(shell go env GOARCH)
+RELEASE_ROOT ?= dist
+RELEASE_COMMIT ?= $(shell git rev-parse HEAD)
+RELEASE_STAGE = $(RELEASE_ROOT)/.build-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
+RELEASE_BUNDLE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
 
-.PHONY: dev dev-api build validate-version test ui-test lint ui db-server \
+.PHONY: dev dev-api build validate-version validate-release-version validate-release-target \
+	release verify-release smoke-release test ui-test lint ui db-server \
 	verify-go verify-node verify-golangci-lint verify-surreal \
 	ci ci-static ci-go ci-race ci-ui
 
@@ -13,10 +22,10 @@ bin:
 	mkdir -p $@
 
 bin/zoekt-git-index: go.mod go.sum | bin ## index builder, same module SHA as the server (PLAN §1.1)
-	go build -o $@ github.com/sourcegraph/zoekt/cmd/zoekt-git-index
+	go build -trimpath -o $@ github.com/sourcegraph/zoekt/cmd/zoekt-git-index
 
 bin/buf: go.mod go.sum | bin ## compatibility child, pinned by the same go.mod as the server (T14.3)
-	CGO_ENABLED=0 go build -o $@ github.com/bufbuild/buf/cmd/buf
+	CGO_ENABLED=0 go build -trimpath -o $@ github.com/bufbuild/buf/cmd/buf
 
 dev: bin/zoekt-git-index bin/buf ui ## boot phebs with embedded UI (ARGS="-config phebs.yaml" for flags)
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) PHEBS_BUF=$(abspath bin/buf) PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) go run -tags ui ./cmd/phebs serve $(ARGS)
@@ -30,9 +39,41 @@ validate-version:
 		exit 2; \
 	}
 
+validate-release-version:
+	@printf '%s\n' "$(VERSION)" | grep -Eq '$(RELEASE_VERSION_PATTERN)' || { \
+		printf 'invalid release VERSION %s (expected v-prefixed SemVer)\n' "$(VERSION)" >&2; \
+		exit 2; \
+	}
+
+validate-release-target:
+	@test "$(TARGET_GOOS)/$(TARGET_GOARCH)" = "$$(go env GOOS)/$$(go env GOARCH)" || { \
+		printf 'release target %s/%s is not executable on this %s/%s smoke host\n' \
+			"$(TARGET_GOOS)" "$(TARGET_GOARCH)" "$$(go env GOOS)" "$$(go env GOARCH)" >&2; \
+		exit 2; \
+	}
+
 build: validate-version bin/zoekt-git-index bin/buf ui ## version-stamped binary with embedded UI
 	go build -trimpath -tags ui -ldflags "-X main.version=$(VERSION)" -o phebs ./cmd/phebs
 	@test "$$(./phebs version)" = "$(VERSION)"
+
+release: validate-release-version validate-release-target verify-go verify-node ui ## deterministic manifest-bound release directory
+	mkdir -p "$(RELEASE_STAGE)/bin"
+	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -tags ui -ldflags "-X main.version=$(VERSION)" -o "$(RELEASE_STAGE)/phebs" ./cmd/phebs
+	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/zoekt-git-index" github.com/sourcegraph/zoekt/cmd/zoekt-git-index
+	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/buf" github.com/bufbuild/buf/cmd/buf
+	@test "$$("$(RELEASE_STAGE)/phebs" version)" = "$(VERSION)"
+	go run ./scripts/release bundle \
+		-output "$(RELEASE_BUNDLE)" -version "$(VERSION)" -commit "$(RELEASE_COMMIT)" \
+		-go-version "$(GO_VERSION)" -goos "$(TARGET_GOOS)" -goarch "$(TARGET_GOARCH)" \
+		-phebs "$(RELEASE_STAGE)/phebs" \
+		-zoekt "$(RELEASE_STAGE)/bin/zoekt-git-index" \
+		-buf "$(RELEASE_STAGE)/bin/buf"
+
+verify-release: ## verify RELEASE_BUNDLE bytes, modes, and canonical manifest
+	go run ./scripts/release verify -bundle "$(RELEASE_BUNDLE)"
+
+smoke-release: verify-release verify-surreal ## empty-data sync/index/search and default-dark smoke
+	go run ./scripts/release-smoke -bundle "$(RELEASE_BUNDLE)" -timeout 2m
 
 test:
 	go test ./...

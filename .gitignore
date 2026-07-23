@@ -2,6 +2,7 @@ node_modules/
 .DS_Store
 /phebs
 /bin/
+/dist/
 /data/
 coverage.out
 *.test

@@ -44,8 +44,13 @@ make build                          # UI + zoekt child + ./phebs
 ./phebs serve -config phebs.yaml    # open http://localhost:3070
 ```
 
-Release candidates use `make build VERSION=vX.Y.Z`; the build verifies that
-the resulting binary reports that exact SemVer identity.
+Release candidates use
+`make release verify-release smoke-release VERSION=vX.Y.Z`. This assembles
+the server, same-module zoekt and Buf children, license, and README under
+`dist/`; a canonical SHA-256 manifest is verified before an empty-data
+authenticated sync → index → search smoke. The smoke also proves experimental
+Contract Atlas routes stay dark unless explicitly enabled. See the manual for
+the exact pinned toolchain and declared `git`/SurrealDB prerequisites.
 
 ```yaml
 # phebs.yaml

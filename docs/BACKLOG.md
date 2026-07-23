@@ -1146,7 +1146,7 @@ sealed `spike/t111` validation subtree remains compiled and tested but is
 excluded from lint because fixing its pre-existing findings would mutate the
 preserved evidence artifact.
 
-**T18.3 · Release bundle and fresh-data smoke**
+**T18.3 · Release bundle and fresh-data smoke** ✅ 2026-07-23
 Assemble the versioned phebs server, same-module `zoekt-git-index` and Buf
 children, license/readme, and a machine-readable manifest with SHA-256
 digests. Exercise that assembled bundle from an empty temporary data directory:
@@ -1158,6 +1158,21 @@ AC: two builds from the same commit/toolchain produce equal file manifests;
 tampering with any bundled executable fails verification; the smoke uses only
 the bundle and declared prerequisites, reaches a healthy authenticated server,
 and proves sync → index → search plus dark experimental posture.
+
+Implemented with a host-native `make release` boundary that refuses
+non-v-prefixed release identities and existing output directories. Its
+canonical `phebs-release-manifest-v1` contains no time or output-path field and
+binds the explicit commit, pinned Go toolchain, target, stable modes, sizes,
+and SHA-256 payload digests. Strict verification rejects manifest schema or
+canonicalization drift, unsafe/duplicate/unsorted paths, missing or extra
+entries, symlinks/non-regular files, and all mode/size/digest changes.
+Permanent tests compare two independently assembled manifests and exercise
+tampering and fail-closed input cases. The standalone smoke runner strips
+development fixture and child overrides, pins the bundled children plus the
+declared SurrealDB prerequisite, and from empty temporary state proves
+authenticated startup, local-repository sync/index, exact-commit search and
+browse, and the absent Contract Atlas capability/404 route. Hosted clean
+checkout execution remains T18.4.
 
 **T18.4 · Public remote, hosted gate, and `v0.1.0`**
 Create or bind the explicitly approved GitHub repository, push `main`, run the

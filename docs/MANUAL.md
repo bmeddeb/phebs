@@ -88,6 +88,30 @@ exact value is printed by `phebs version`, returned by `/api/version`, written
 to backup manifests, and included in startup logs. Release builds refuse a
 non-SemVer `VERSION`.
 
+To assemble and exercise the distributable directory with the exact pinned
+release toolchain:
+
+```bash
+make release verify-release smoke-release VERSION=v0.1.0
+```
+
+The result is `dist/phebs-v0.1.0-<goos>-<goarch>/` containing `phebs`,
+same-module `bin/zoekt-git-index` and `bin/buf` children, `LICENSE`,
+`README.md`, and `release-manifest.json`. The canonical manifest binds the
+version, source commit, target, Go toolchain, stable installed modes, sizes,
+and SHA-256 digest of every payload. `verify-release` rejects missing,
+additional, symlinked, mode-changed, or byte-modified payloads. The manifest
+is an integrity inventory, not a signature or independent proof of who built
+it.
+
+`smoke-release` requires `git` and the exact `.surrealdb-version` binary on
+`PATH`. It verifies the bundle before starting anything, creates an empty
+temporary data directory and local Git fixture, then proves bootstrap login,
+sync → index → search, and immutable source/folder browsing. It also removes
+all development fixture variables and requires the authenticated capability
+list and `/api/contract_atlas` route to retain the default-dark posture. The
+temporary repository and data directory are deleted after shutdown.
+
 Minimal `phebs.yaml`:
 
 ```yaml
@@ -1619,16 +1643,19 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 ## 11. Developing phebs
 
 
-| Target           | Does                                                                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`       | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas demo fixtures, run with embedded UI                                   |
-| `make dev-api`   | backend-only loop with the same children and explicit demo fixtures (placeholder UI page, fast)                                                          |
-| `make build`     | version-stamped `./phebs` plus same-module `bin/zoekt-git-index` and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                     |
-| `make test`      | `go test ./...` — store/sync/indexer tests need `surreal`; child-binary integration tests build pinned zoekt and Buf binaries                            |
-| `make ui-test`   | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
-| `make lint`      | golangci-lint                                                                                                                                           |
-| `make ui`        | production UI build only                                                                                                                                |
-| `make db-server` | SurrealDB in server mode via docker compose (testing only)                                                                                              |
+| Target               | Does                                                                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas demo fixtures, run with embedded UI                                   |
+| `make dev-api`       | backend-only loop with the same children and explicit demo fixtures (placeholder UI page, fast)                                                         |
+| `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index` and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
+| `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
+| `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
+| `make smoke-release` | run the verified bundle from empty state through auth, sync, index, search, pinned browse, and default-dark Contract Atlas checks                       |
+| `make test`          | `go test ./...` — store/sync/indexer tests need `surreal`; child-binary integration tests build pinned zoekt and Buf binaries                           |
+| `make ui-test`       | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
+| `make lint`          | golangci-lint                                                                                                                                           |
+| `make ui`            | production UI build only                                                                                                                                |
+| `make db-server`     | SurrealDB in server mode via docker compose (testing only)                                                                                              |
 
 The hosted release gate runs four independently visible local-equivalent
 targets: `make ci-static`, `make ci-go`, `make ci-race`, and `make ci-ui`.
