@@ -3,8 +3,8 @@
 *Normative MCP product contract, v0.2 · every evidence-sensitive MCP tool
 returns this envelope through a versioned output schema. Semantics derive from
 [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) v0.2;
-on conflict the domain contract wins. Design only—no change to the sealed
-extractor or validation ceremony.*
+on conflict the domain contract wins. T16.6 implements the envelope projection
+without changing the sealed extractor or validation ceremony.*
 
 ## 1. Principles
 
@@ -45,7 +45,7 @@ extractor or validation ceremony.*
   generic `NOT_AVAILABLE` response as an unknown identity and omits sensitive
   scope, pack, and validation fields.
 
-Before implementation, this document produces machine-checked schemas:
+The implementation checks in these machine-validated schemas:
 
 ```text
 schemas/mcp-envelope-v1.0.json

@@ -1,0 +1,279 @@
+{
+  "$id": "https://phebs.local/schemas/mcp-payload-attribution-trace-v1.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "additionalProperties": false,
+      "properties": {
+        "fact": {
+          "additionalProperties": false,
+          "properties": {
+            "attribution_states": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "properties": {
+                  "reason_codes": {
+                    "items": {
+                      "maxLength": 65536,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "maxItems": 1024,
+                    "type": "array"
+                  },
+                  "state": {
+                    "enum": [
+                      "resolved",
+                      "ambiguous",
+                      "unresolved",
+                      "not_applicable"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason_codes"
+                ],
+                "type": "object"
+              },
+              "maxProperties": 64,
+              "type": "object"
+            },
+            "evidence_basis": {
+              "enum": [
+                "evidenced",
+                "derived"
+              ],
+              "type": "string"
+            },
+            "fact_id": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "logical_relationship_id": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "object": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "kind": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "id"
+              ],
+              "type": "object"
+            },
+            "predicate": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            },
+            "proof_references": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "occurrence_id": {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "proof_id": {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "snapshot_id": {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "verification_action": {
+                    "maxLength": 256,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "occurrence_id",
+                  "proof_id",
+                  "snapshot_id",
+                  "verification_action"
+                ],
+                "type": "object"
+              },
+              "maxItems": 4096,
+              "type": "array"
+            },
+            "qualifiers": {
+              "additionalProperties": {
+                "maxLength": 65536,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxProperties": 256,
+              "type": "object"
+            },
+            "semantic_resolution": {
+              "additionalProperties": false,
+              "properties": {
+                "reason_codes": {
+                  "items": {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "maxItems": 1024,
+                  "type": "array"
+                },
+                "value": {
+                  "enum": [
+                    "resolved",
+                    "ambiguous",
+                    "unresolved",
+                    "not_applicable"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "value",
+                "reason_codes"
+              ],
+              "type": "object"
+            },
+            "subject": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "kind": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "id"
+              ],
+              "type": "object"
+            },
+            "verification_tool": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "fact_id",
+            "logical_relationship_id",
+            "predicate",
+            "subject",
+            "object",
+            "qualifiers",
+            "evidence_basis",
+            "semantic_resolution",
+            "attribution_states",
+            "proof_references",
+            "verification_tool"
+          ],
+          "type": "object"
+        },
+        "hops": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "derivation_reference": {
+                "oneOf": [
+                  {
+                    "maxLength": 65536,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "hop": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "identities": {
+                "items": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 1024,
+                "type": "array"
+              },
+              "reason_codes": {
+                "items": {
+                  "maxLength": 65536,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 1024,
+                "type": "array"
+              },
+              "state": {
+                "enum": [
+                  "resolved",
+                  "ambiguous",
+                  "unresolved",
+                  "not_applicable"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "hop",
+              "state",
+              "identities",
+              "reason_codes",
+              "derivation_reference"
+            ],
+            "type": "object"
+          },
+          "maxItems": 64,
+          "type": "array"
+        }
+      },
+      "required": [
+        "fact",
+        "hops"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "attribution_trace",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "data"
+  ],
+  "title": "phebs MCP attribution_trace payload v1.0",
+  "type": "object"
+}

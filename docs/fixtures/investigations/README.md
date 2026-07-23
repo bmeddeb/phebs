@@ -56,15 +56,21 @@ validation status.
 
 ## Validation
 
-Until the generated JSON Schemas and synthetic registry are checked in, the
-portable syntax check is:
+The generated JSON Schemas are checked in under `schemas/`. Regenerate all
+nine documents from their shared Go source with:
 
 ```sh
-for file in docs/fixtures/*.json; do jq -e . "$file" >/dev/null; done
+GOCACHE=/private/tmp/phebs-schema-go-cache go generate ./internal/mcp
 ```
 
-Once the schemas exist, CI must validate every fixture against the declared
-envelope and discriminated payload schema, then run semantic assertions for:
+`TestCheckedInSchemasMatchGenerator` compares deterministic, two-space,
+trailing-newline bytes and fails on drift. MCP registration calls that same
+schema builder for its `outputSchema`, so the checked-in client contract and
+runtime validation cannot be maintained independently.
+
+`TestInvestigationFixturesValidateAgainstGeneratedSchemas` validates every
+fixture against the common envelope and its discriminated payload schema,
+then runs semantic assertions for:
 
 - processing and exclusion reconciliation;
 - per-hop attribution reconciliation;
@@ -75,8 +81,7 @@ envelope and discriminated payload schema, then run semantic assertions for:
 - comparison behavior; and
 - refusal non-disclosure.
 
-The generator is not part of this fixture bundle. Its repository path,
-regeneration command, deterministic ordering rule, and drift check must be
-recorded here before generated-fixture CI becomes authoritative. Until then,
-changes are reviewed as contract fixtures and JSON is kept deterministically
-formatted with two-space indentation and a trailing newline.
+`TestTruncatedResultIsIrreversibleAndAbsenceBlocking` mutates fixture 08 to
+try to restore completeness, add a continuation token, remove its
+`RESULT_TRUNCATED` blocker, or omit the authoritative qualification; every
+mutation must fail.

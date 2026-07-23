@@ -1,0 +1,60 @@
+{
+  "$id": "https://phebs.local/schemas/mcp-payload-review-requirements-v1.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "additionalProperties": false,
+      "properties": {
+        "requirements": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "authority": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "id": {
+                "maxLength": 65536,
+                "minLength": 1,
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "text": {
+                "maxLength": 65536,
+                "minLength": 1,
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "text",
+              "authority",
+              "required"
+            ],
+            "type": "object"
+          },
+          "maxItems": 1024,
+          "type": "array"
+        }
+      },
+      "required": [
+        "requirements"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "review_requirements",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "data"
+  ],
+  "title": "phebs MCP review_requirements payload v1.0",
+  "type": "object"
+}

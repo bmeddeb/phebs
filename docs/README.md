@@ -21,6 +21,7 @@ Read top to bottom; each narrows the previous:
 | [VISION.md](./VISION.md) | the direction: evidence plane, packs, expansion workflows, sequencing |
 | [INVESTIGATIONS.md](./INVESTIGATIONS.md) | the product shape: the Investigation object, UX, envelope, review |
 | [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) | the normative product semantics: identities, lifecycles, authorization, eligibility, diffs, Decisions, Review, and dossiers |
+| [MCP_ENVELOPE.md](./MCP_ENVELOPE.md) | the normative MCP projection of those semantics; generated client schemas live in [`../schemas/`](../schemas/) |
 | [PITCH.md](./PITCH.md) | the ask: bounded six-week monorepo pilot |
 | [PILOT_CHARTER.md](./PILOT_CHARTER.md) | the execution contract: gates, frozen thresholds, teardown |
 | [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) | the per-pack capability/validation contract (template) |

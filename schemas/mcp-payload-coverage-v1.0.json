@@ -1,0 +1,70 @@
+{
+  "$id": "https://phebs.local/schemas/mcp-payload-coverage-v1.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "additionalProperties": false,
+      "properties": {
+        "certificate": {
+          "additionalProperties": false,
+          "properties": {
+            "digest": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "domains": {
+              "items": {
+                "maxLength": 256,
+                "minLength": 1,
+                "type": "string"
+              },
+              "maxItems": 64,
+              "type": "array"
+            },
+            "repositories": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "maxItems": 10000,
+              "type": "array"
+            },
+            "repository_count": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "schema_version": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema_version",
+            "domains",
+            "repository_count",
+            "repositories",
+            "digest"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "certificate"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "coverage",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "data"
+  ],
+  "title": "phebs MCP coverage payload v1.0",
+  "type": "object"
+}

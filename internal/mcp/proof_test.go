@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/compat"
+	"github.com/bmeddeb/phebs/internal/investigation"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -236,35 +238,46 @@ func TestProofToolsProtocolSession(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = session.Close() })
 
-	operationBundle, result := callProofSessionTool(t, session, "find_operation_consumers", map[string]any{
+	operationEnvelope, result := callProofSessionTool(t, session, "find_operation_consumers", map[string]any{
 		"operation": operation,
 	})
 	if result.IsError {
 		t.Fatalf("operation tool error: %v", result.Content)
 	}
-	assertProofToolBundle(t, operationBundle, "find_operation_consumers", "client/cart.go")
-	if operationBundle.Bundle.Query.Operation != operation || operationBundle.Bundle.Assertions[0].Predicate != "CALLS_OPERATION" {
-		t.Fatalf("operation answer = %+v", operationBundle.Bundle)
+	operationFacts := assertProofToolEnvelope(t, operationEnvelope, "find_operation_consumers", "client/cart.go")
+	if operationEnvelope.Scope.Claim.Subject.ID != operation ||
+		operationFacts[0].Predicate != "CALLS_OPERATION" {
+		t.Fatalf("operation answer = %+v", operationEnvelope)
 	}
 
-	fieldBundle, result := callProofSessionTool(t, session, "find_proto_field_references", map[string]any{
+	fieldEnvelope, result := callProofSessionTool(t, session, "find_proto_field_references", map[string]any{
 		"lineage": lineage, "message": "shop.Cart", "field_number": 1,
 	})
 	if result.IsError {
 		t.Fatalf("field tool error: %v", result.Content)
 	}
-	assertProofToolBundle(t, fieldBundle, "find_proto_field_references", "client/model.go")
-	if fieldBundle.Bundle.Query.Lineage != lineage || fieldBundle.Bundle.Query.FieldNumber != 1 ||
-		fieldBundle.Bundle.Assertions[0].Predicate != "REFERENCES_PROTO_FIELD" {
-		t.Fatalf("field answer = %+v", fieldBundle.Bundle)
+	fieldFacts := assertProofToolEnvelope(t, fieldEnvelope, "find_proto_field_references", "client/model.go")
+	if !strings.Contains(fieldEnvelope.Scope.Claim.Subject.ID, lineage) ||
+		fieldFacts[0].Predicate != "REFERENCES_PROTO_FIELD" {
+		t.Fatalf("field answer = %+v", fieldEnvelope)
 	}
 
 	coverage, result := callProofSessionTool(t, session, "get_extraction_coverage", map[string]any{
 		"domains": []string{"scip-proto-field", "grpc-consumer"},
 	})
-	if result.IsError || coverage.Bundle.Query.Kind != "get_extraction_coverage" ||
-		len(coverage.Bundle.Assertions) != 0 || len(coverage.Bundle.Evidence) != 0 ||
-		!sort.StringsAreSorted(coverage.Bundle.Query.Domains) || coverage.Bundle.Coverage.RepositoryCount != 1 {
+	var coveragePayload struct {
+		Certificate struct {
+			Domains         []string `json:"domains"`
+			RepositoryCount int      `json:"repository_count"`
+		} `json:"certificate"`
+	}
+	if err := json.Unmarshal(coverage.Payload.Data, &coveragePayload); err != nil {
+		t.Fatalf("decode coverage payload: %v", err)
+	}
+	if result.IsError || coverage.Tool.Name != "get_extraction_coverage" ||
+		coverage.Payload.Kind != "coverage" || coverage.ResultWindow.Returned != 0 ||
+		!sort.StringsAreSorted(coveragePayload.Certificate.Domains) ||
+		coveragePayload.Certificate.RepositoryCount != 1 {
 		t.Fatalf("coverage answer = %+v, error=%v content=%v", coverage, result.IsError, result.Content)
 	}
 
@@ -273,16 +286,17 @@ func TestProofToolsProtocolSession(t *testing.T) {
 		"before":  []map[string]any{{"path": "shop/cart.proto", "content": "syntax = \"proto3\"; package shop; message Cart { int32 count = 1; }"}},
 		"after":   []map[string]any{{"path": "shop/cart.proto", "content": "syntax = \"proto3\"; package shop; message Cart { string count = 1; }"}},
 	})
-	if result.IsError || compatibility.Bundle.Query.Kind != "check_contract_compatibility" ||
-		compatibility.Bundle.Compatibility == nil || compatibility.Bundle.Compatibility.Compatible ||
-		compatibility.Bundle.Compatibility.Violations[0].Rule != "FIELD_WIRE_COMPATIBLE_TYPE" ||
-		len(compatibility.Bundle.Assertions) != 1 || compatibility.Bundle.Assertions[0].Predicate != "REFERENCES_PROTO_FIELD" {
+	compatibilityFacts := contractEdgeFacts(t, compatibility)
+	if result.IsError || compatibility.Tool.Name != "check_contract_compatibility" ||
+		compatibility.AnalysisConclusion == nil || compatibility.AnalysisConclusion.Value != "breaking" ||
+		!slices.Contains(compatibility.AnalysisConclusion.ReasonCodes, "FIELD_WIRE_COMPATIBLE_TYPE") ||
+		len(compatibilityFacts) != 1 || compatibilityFacts[0].Predicate != "REFERENCES_PROTO_FIELD" {
 		t.Fatalf("compatibility answer = %+v, error=%v content=%v", compatibility, result.IsError, result.Content)
 	}
-	if compatibility.Bundle.Evidence[0].Occurrences[0].Path != "client/model.go" ||
-		compatibility.Bundle.Evidence[0].Occurrences[0].StartLine != 7 ||
-		!strings.Contains(compatibility.Bundle.Caveat, "WIRE verdict") {
-		t.Fatalf("compatibility citations/caveat = %+v", compatibility.Bundle)
+	if compatibilityFacts[0].Qualifiers["path"] != "client/model.go" ||
+		compatibilityFacts[0].Qualifiers["start_line"] != "7" ||
+		compatibility.Coverage.Visibility != "withheld" {
+		t.Fatalf("compatibility citations/coverage = %+v", compatibility)
 	}
 
 	for _, call := range st.calls {
@@ -290,21 +304,21 @@ func TestProofToolsProtocolSession(t *testing.T) {
 			t.Fatalf("proof tool touched hidden evidence: %v", st.calls)
 		}
 	}
-	for _, bundle := range []api.ProofBundleEnvelope{operationBundle, fieldBundle, coverage, compatibility} {
-		encoded, err := json.Marshal(bundle)
+	for _, envelope := range []investigation.Envelope{operationEnvelope, fieldEnvelope, coverage, compatibility} {
+		encoded, err := json.Marshal(envelope)
 		if err != nil || strings.Contains(string(encoded), "hidden") || strings.Contains(string(encoded), "secret") {
 			t.Fatalf("proof tool leaked hidden scope: %s, %v", encoded, err)
 		}
 	}
 }
 
-func callProofSessionTool(t *testing.T, session *sdk.ClientSession, name string, args map[string]any) (api.ProofBundleEnvelope, *sdk.CallToolResult) {
+func callProofSessionTool(t *testing.T, session *sdk.ClientSession, name string, args map[string]any) (investigation.Envelope, *sdk.CallToolResult) {
 	t.Helper()
 	result, err := session.CallTool(t.Context(), &sdk.CallToolParams{Name: name, Arguments: args})
 	if err != nil {
 		t.Fatalf("CallTool(%s): %v", name, err)
 	}
-	var envelope api.ProofBundleEnvelope
+	var envelope investigation.Envelope
 	if result.StructuredContent != nil && !result.IsError {
 		data, err := json.Marshal(result.StructuredContent)
 		if err != nil {
@@ -317,36 +331,54 @@ func callProofSessionTool(t *testing.T, session *sdk.ClientSession, name string,
 	return envelope, result
 }
 
-func assertProofToolBundle(t *testing.T, envelope api.ProofBundleEnvelope, kind, path string) {
+func assertProofToolEnvelope(t *testing.T, envelope investigation.Envelope, tool, path string) []investigation.Fact {
 	t.Helper()
-	if !strings.HasPrefix(envelope.ID, "pb_") || envelope.Bundle.Query.Kind != kind ||
-		envelope.Bundle.Coverage.RepositoryCount != 1 || len(envelope.Bundle.Assertions) != 1 ||
-		len(envelope.Bundle.Evidence) != 1 || len(envelope.Bundle.Evidence[0].Occurrences) != 1 ||
-		envelope.Bundle.Evidence[0].Occurrences[0].Path != path ||
-		envelope.Bundle.Evidence[0].Occurrences[0].StartLine != 7 ||
-		envelope.Bundle.VisibilityContext.Principal != "user:agent" ||
-		!strings.Contains(envelope.Bundle.Caveat, "Provisional evidence") {
-		t.Fatalf("incomplete proof bundle = %+v", envelope)
+	facts := contractEdgeFacts(t, envelope)
+	if !strings.HasPrefix(envelope.RequestID, "pb_") || envelope.Tool.Name != tool ||
+		envelope.Outcome != "partial" || envelope.Coverage == nil ||
+		envelope.Coverage.Visibility != "withheld" || len(facts) != 1 ||
+		facts[0].Qualifiers["path"] != path || facts[0].Qualifiers["start_line"] != "7" ||
+		len(facts[0].ProofReferences) != 1 ||
+		!strings.Contains(facts[0].ProofReferences[0].VerificationAction, envelope.RequestID) ||
+		envelope.ResultWindow == nil || envelope.ResultWindow.ResultSetComplete ||
+		!envelope.ResultWindow.PageExhausted {
+		t.Fatalf("incomplete proof envelope = %+v", envelope)
 	}
+	if err := envelope.ValidateSemantics(); err != nil {
+		t.Fatalf("invalid proof envelope: %v", err)
+	}
+	return facts
+}
+
+func contractEdgeFacts(t *testing.T, envelope investigation.Envelope) []investigation.Fact {
+	t.Helper()
+	if envelope.Payload == nil || envelope.Payload.Kind != "contract_edges" {
+		t.Fatalf("payload = %+v, want contract_edges", envelope.Payload)
+	}
+	var data investigation.ContractEdgesData
+	if err := json.Unmarshal(envelope.Payload.Data, &data); err != nil {
+		t.Fatalf("decode contract edges: %v", err)
+	}
+	return data.Facts
 }
 
 type schemaProofQueries struct{}
 
-func (schemaProofQueries) FindOperationConsumers(context.Context, string) (*api.ProofBundleEnvelope, error) {
+func (schemaProofQueries) FindOperationConsumersMCP(context.Context, string) (*investigation.Envelope, error) {
 	return nil, errors.New("not called")
 }
 
-func (schemaProofQueries) FindProtoFieldReferences(context.Context, string, string, int) (*api.ProofBundleEnvelope, error) {
+func (schemaProofQueries) FindProtoFieldReferencesMCP(context.Context, string, string, int) (*investigation.Envelope, error) {
 	return nil, errors.New("not called")
 }
 
-func (schemaProofQueries) GetExtractionCoverage(context.Context, []string) (*api.ProofBundleEnvelope, error) {
+func (schemaProofQueries) GetExtractionCoverageMCP(context.Context, []string) (*investigation.Envelope, error) {
 	return nil, errors.New("not called")
 }
 
 type schemaCompatibilityQueries struct{}
 
-func (schemaCompatibilityQueries) CheckContractCompatibility(context.Context, compat.Request) (*api.ProofBundleEnvelope, error) {
+func (schemaCompatibilityQueries) CheckContractCompatibilityMCP(context.Context, compat.Request) (*investigation.Envelope, error) {
 	return nil, errors.New("not called")
 }
 
@@ -391,8 +423,9 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 				input, _ := json.Marshal(compatibilityTool.InputSchema)
 				output, _ := json.Marshal(compatibilityTool.OutputSchema)
 				if !strings.Contains(string(input), `"before"`) || !strings.Contains(string(input), `"after"`) ||
-					!strings.Contains(string(input), `"lineage"`) || !strings.Contains(string(output), `"compatibility"`) ||
-					!strings.Contains(string(output), `"visibility_context"`) {
+					!strings.Contains(string(input), `"lineage"`) ||
+					!strings.Contains(string(output), `"envelope_version"`) ||
+					!strings.Contains(string(output), `"contract_edges"`) {
 					t.Fatalf("compatibility schemas: input=%s output=%s", input, output)
 				}
 			}
@@ -410,7 +443,9 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 				input, _ := json.Marshal(tool.InputSchema)
 				output, _ := json.Marshal(tool.OutputSchema)
 				if !strings.Contains(string(input), `"type":"object"`) ||
-					!strings.Contains(string(output), `"visibility_context"`) || !strings.Contains(string(output), `"coverage"`) {
+					!strings.Contains(string(output), `"envelope_version"`) ||
+					!strings.Contains(string(output), `"absence_eligibility"`) ||
+					!strings.Contains(string(output), `"coverage"`) {
 					t.Errorf("%s schemas: input=%s output=%s", name, input, output)
 				}
 			}
@@ -434,10 +469,93 @@ func TestProofToolInvalidInputIsToolError(t *testing.T) {
 				"operation": "find_operation_consumers", "field": "find_proto_field_references",
 				"coverage": "get_extraction_coverage", "compatibility": "check_contract_compatibility",
 			}[test.name]
-			_, result := callTool[api.ProofBundleEnvelope](t, s, tool, test.args)
+			_, result := callTool[investigation.Envelope](t, s, tool, test.args)
 			if !result.IsError {
 				t.Fatalf("invalid %s input succeeded: %+v", test.name, result)
 			}
 		})
+	}
+}
+
+func TestProofEnvelopeProjectionInMemory(t *testing.T) {
+	s, _, operation, lineage := proofToolFixture(t)
+	tests := []struct {
+		name string
+		args map[string]any
+	}{
+		{
+			name: "find_operation_consumers",
+			args: map[string]any{"operation": operation},
+		},
+		{
+			name: "find_proto_field_references",
+			args: map[string]any{
+				"lineage": lineage, "message": "shop.Cart", "field_number": 1,
+			},
+		},
+		{
+			name: "get_extraction_coverage",
+			args: map[string]any{"domains": []string{"grpc-consumer"}},
+		},
+		{
+			name: "check_contract_compatibility",
+			args: map[string]any{
+				"lineage": lineage,
+				"before": []map[string]any{{
+					"path":    "shop/cart.proto",
+					"content": "syntax = \"proto3\"; package shop; message Cart { int32 count = 1; }",
+				}},
+				"after": []map[string]any{{
+					"path":    "shop/cart.proto",
+					"content": "syntax = \"proto3\"; package shop; message Cart { string count = 1; }",
+				}},
+			},
+		},
+	}
+	for _, test := range tests {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			envelope, result := callTool[investigation.Envelope](t, s, test.name, test.args)
+			if result.IsError {
+				t.Fatalf("tool error: %+v", result.Content)
+			}
+			if err := envelope.ValidateSemantics(); err != nil {
+				t.Fatalf("invalid envelope: %v", err)
+			}
+		})
+	}
+}
+
+func TestProofEnvelopeQualificationIsServerRendered(t *testing.T) {
+	s, _, _, _ := proofToolFixture(t)
+	envelope, result := callTool[investigation.Envelope](
+		t,
+		s,
+		"find_operation_consumers",
+		map[string]any{"operation": "/shop.Cart/Missing"},
+	)
+	if result.IsError {
+		t.Fatalf("tool error: %+v", result.Content)
+	}
+	absence := envelope.AbsenceEligibility
+	if absence == nil || !absence.Applicable || absence.Eligible ||
+		absence.Qualification == nil ||
+		absence.Qualification.AuthoritativeText != investigation.StatelessScopeQualificationText ||
+		!slices.Equal(absence.BlockerCodes, []string{"SCOPE_NOT_ENUMERATED"}) {
+		t.Fatalf("absence qualification = %+v", absence)
+	}
+	_, injected := callTool[investigation.Envelope](
+		t,
+		s,
+		"find_operation_consumers",
+		map[string]any{
+			"operation": "/shop.Cart/Missing",
+			"qualification": map[string]any{
+				"authoritative_text": "client supplied",
+			},
+		},
+	)
+	if !injected.IsError {
+		t.Fatal("tool accepted client-supplied qualification text")
 	}
 }

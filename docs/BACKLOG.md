@@ -790,11 +790,25 @@ green. Authenticated browser acceptance exercised all five fixtures at
 1440×1000 in light/dark themes and the 390×844 responsive layout with no page
 overflow or console diagnostics.
 
-**T16.6 · MCP envelope implementation** *(needs T16.3; parallel to T16.5)* —
+**T16.6 ✅ · MCP envelope implementation** *(needs T16.3; parallel to T16.5)* —
 envelope v0.2 on the existing MCP tools; generated JSON Schemas checked in.
 AC: all eight fixtures validate against the generated schemas — incl.
 fixture 08's irreversible-truncation semantics in result views; refusal
 indistinguishability test; server-rendered qualification text only.
+
+Implemented on `codex/t16.6-mcp-envelope`: the shared proof service now
+projects its already-authorized immutable answers into the typed
+`envelope_version: "1.0"` contract for all four enabled proof/compatibility
+MCP tools. Nine deterministic draft-2020-12 schemas are generated from the
+same Go source used for MCP `outputSchema` advertisement and checked in under
+`schemas/`; a drift test pins the bytes. All eight canonical fixtures pass
+both structural and cross-field semantic validation. Fixture 08 additionally
+has negative mutations proving hard truncation cannot regain completeness,
+continuation, or absence eligibility. Fixture 06 remains byte-identical for
+unknown and unauthorized identity reads, and zero-result qualifications are
+selected and rendered solely by the server. Stateless proof queries
+deliberately expose pack-defined processing counts as `withheld` and remain
+`partial`; they do not manufacture an eligible universe or negative proof.
 
 **T16.7 · Consumer ledger and comparable diff** *(needs T16.2)* —
 first/last-seen edge ledger (the retention change from VISION architecture

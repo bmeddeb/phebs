@@ -13,9 +13,9 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
-	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
+	"github.com/bmeddeb/phebs/internal/investigation"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -25,15 +25,15 @@ import (
 // keeps the transport adapter unable to recreate evidence or permission
 // semantics independently of the HTTP API.
 type ProofQueries interface {
-	FindOperationConsumers(ctx context.Context, operation string) (*api.ProofBundleEnvelope, error)
-	FindProtoFieldReferences(ctx context.Context, lineage, message string, fieldNumber int) (*api.ProofBundleEnvelope, error)
-	GetExtractionCoverage(ctx context.Context, domains []string) (*api.ProofBundleEnvelope, error)
+	FindOperationConsumersMCP(ctx context.Context, operation string) (*investigation.Envelope, error)
+	FindProtoFieldReferencesMCP(ctx context.Context, lineage, message string, fieldNumber int) (*investigation.Envelope, error)
+	GetExtractionCoverageMCP(ctx context.Context, domains []string) (*investigation.Envelope, error)
 }
 
 // CompatibilityQueries is separate from the three always-present proof
 // queries so a missing Buf sandbox cannot advertise a placeholder tool.
 type CompatibilityQueries interface {
-	CheckContractCompatibility(ctx context.Context, request compat.Request) (*api.ProofBundleEnvelope, error)
+	CheckContractCompatibilityMCP(ctx context.Context, request compat.Request) (*investigation.Envelope, error)
 }
 
 type Options struct {
@@ -157,12 +157,13 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		Operation string `json:"operation" jsonschema:"canonical fully-qualified gRPC operation /package.Service/Method"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
-		Name:        "find_operation_consumers",
-		Description: "Find callers of one canonical gRPC operation. Returns an immutable permission-scoped proof bundle; evidence occurrences are source citations and coverage states what remains unknown. Provisional evidence cannot establish absence or safety.",
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
-		result, err := opts.Proofs.FindOperationConsumers(ctx, in.Operation)
+		Name:         "find_operation_consumers",
+		Description:  "Find callers of one canonical gRPC operation. Returns envelope v1.0 with permission-scoped facts, exact proof references, separate coverage dimensions, and server-rendered qualifications. Provisional evidence cannot establish absence or safety.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Proofs.FindOperationConsumersMCP(ctx, in.Operation)
 		if err != nil {
-			return nil, api.ProofBundleEnvelope{}, err
+			return nil, investigation.Envelope{}, err
 		}
 		return nil, *result, nil
 	})
@@ -173,12 +174,13 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		FieldNumber int    `json:"field_number" jsonschema:"protobuf wire field number, 1 through 536870911 excluding 19000 through 19999"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
-		Name:        "find_proto_field_references",
-		Description: "Find source references to one protobuf field identity (lineage, message, field number). Returns an immutable permission-scoped proof bundle with exact source citations and coverage; field names are versioned attributes, not identity.",
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in fieldIn) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
-		result, err := opts.Proofs.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
+		Name:         "find_proto_field_references",
+		Description:  "Find source references to one protobuf field identity (lineage, message, field number). Returns envelope v1.0 with permission-scoped facts and separate semantic, attribution, and processing states; field names are versioned attributes, not identity.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in fieldIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Proofs.FindProtoFieldReferencesMCP(ctx, in.Lineage, in.Message, in.FieldNumber)
 		if err != nil {
-			return nil, api.ProofBundleEnvelope{}, err
+			return nil, investigation.Envelope{}, err
 		}
 		return nil, *result, nil
 	})
@@ -187,12 +189,13 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-consumer, proto-contract, and scip-proto-field"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
-		Name:        "get_extraction_coverage",
-		Description: "Return an assertion-free immutable proof bundle describing extraction coverage over the caller's complete visible repository universe.",
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in coverageIn) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
-		result, err := opts.Proofs.GetExtractionCoverage(ctx, in.Domains)
+		Name:         "get_extraction_coverage",
+		Description:  "Return envelope v1.0 containing the immutable extraction coverage certificate for the caller's complete visible repository universe. Pack-defined eligible-unit counts remain withheld when they were not computed.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-coverage-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in coverageIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Proofs.GetExtractionCoverageMCP(ctx, in.Domains)
 		if err != nil {
-			return nil, api.ProofBundleEnvelope{}, err
+			return nil, investigation.Envelope{}, err
 		}
 		return nil, *result, nil
 	})
@@ -201,15 +204,24 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		return
 	}
 	sdk.AddTool(s, &sdk.Tool{
-		Name:        "check_contract_compatibility",
-		Description: "Run the pinned Buf WIRE policy over bounded before/after protobuf source sets, then return an immutable permission-scoped proof bundle containing breaking rules, affected stable field identities, evidence-derived consumers, exact source citations, coverage, and invocation provenance.",
-	}, func(ctx context.Context, _ *sdk.CallToolRequest, in compat.Request) (*sdk.CallToolResult, api.ProofBundleEnvelope, error) {
-		result, err := opts.Compatibility.CheckContractCompatibility(ctx, in)
+		Name:         "check_contract_compatibility",
+		Description:  "Run the pinned Buf WIRE policy over bounded before/after protobuf source sets, then return envelope v1.0 with the derived conclusion, evidence-derived consumers, exact proof references, coverage, and provenance.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in compat.Request) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Compatibility.CheckContractCompatibilityMCP(ctx, in)
 		if err != nil {
-			return nil, api.ProofBundleEnvelope{}, err
+			return nil, investigation.Envelope{}, err
 		}
 		return nil, *result, nil
 	})
+}
+
+func proofEnvelopeSchema(payloadFilename string) map[string]any {
+	schema, err := investigation.EnvelopeOutputSchema(payloadFilename)
+	if err != nil {
+		panic(err)
+	}
+	return schema
 }
 
 type positionIn struct {

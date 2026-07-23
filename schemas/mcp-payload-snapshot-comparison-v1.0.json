@@ -1,0 +1,100 @@
+{
+  "$id": "https://phebs.local/schemas/mcp-payload-snapshot-comparison-v1.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "additionalProperties": false,
+      "properties": {
+        "comparability_rule": {
+          "additionalProperties": false,
+          "properties": {
+            "digest": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "id": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "version": {
+              "maxLength": 256,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "digest"
+          ],
+          "type": "object"
+        },
+        "comparable": {
+          "type": "boolean"
+        },
+        "comparison_report": {
+          "additionalProperties": false,
+          "properties": {
+            "deltas": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "maxItems": 5000,
+              "type": "array"
+            },
+            "left_run": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            },
+            "per_side_coverage_only": {
+              "type": "boolean"
+            },
+            "right_run": {
+              "maxLength": 65536,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "left_run",
+            "right_run",
+            "per_side_coverage_only",
+            "deltas"
+          ],
+          "type": "object"
+        },
+        "non_comparability_reasons": {
+          "items": {
+            "maxLength": 65536,
+            "minLength": 1,
+            "type": "string"
+          },
+          "maxItems": 1024,
+          "type": "array"
+        }
+      },
+      "required": [
+        "comparable",
+        "comparability_rule",
+        "non_comparability_reasons",
+        "comparison_report"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "snapshot_comparison",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "data"
+  ],
+  "title": "phebs MCP snapshot_comparison payload v1.0",
+  "type": "object"
+}

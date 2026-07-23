@@ -1,0 +1,65 @@
+{
+  "$id": "https://phebs.local/schemas/mcp-payload-proof-verification-v1.0.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "data": {
+      "additionalProperties": false,
+      "properties": {
+        "authorized": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "oneOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "integrity": {
+          "enum": [
+            "verified",
+            "failed",
+            "unavailable"
+          ],
+          "type": "string"
+        },
+        "occurrence_id": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        },
+        "proof_id": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        },
+        "snapshot_id": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "proof_id",
+        "authorized",
+        "integrity"
+      ],
+      "type": "object"
+    },
+    "kind": {
+      "const": "proof_verification",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "data"
+  ],
+  "title": "phebs MCP proof_verification payload v1.0",
+  "type": "object"
+}

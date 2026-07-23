@@ -730,16 +730,28 @@ undiscoverable and the other three remain available.
 | `list_commits`     | paged history for `{repo,ref?,path?,limit?,offset?}`; maximum 200 commits per page                                                                                                                                                                          |
 | `get_commit`       | commit metadata, parents, and first-parent file changes                                                                                                                                                                                                     |
 | `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
-| `find_operation_consumers` | immutable permission-scoped `proof-bundle-v1` for one canonical `/package.Service/Method`; includes matching assertions, exact source occurrences, coverage, extractor versions, and the provisional-evidence caveat |
-| `find_proto_field_references` | immutable proof bundle for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
-| `get_extraction_coverage` | assertion-free proof bundle over requested extractor domains, or all three provisional domains when omitted |
-| `check_contract_compatibility` | pinned Buf `WIRE` verdict over bounded before/after `.proto` files, enriched with stable affected-field identities, visible SCIP consumers, exact citations, coverage, and invocation provenance |
+| `find_operation_consumers` | Investigation envelope v1.0 for one canonical `/package.Service/Method`; facts retain exact authorized proof references while processing, semantic resolution, attribution, conclusion, and absence eligibility remain separate |
+| `find_proto_field_references` | Investigation envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
+| `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or all three provisional domains when omitted |
+| `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible SCIP consumers, exact proof references, coverage, and invocation provenance |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
 units. Omitted `ref`/`head` values resolve to the DB's immutable indexed
 commit. NUL-bearing binary blame, unknown repos, deleting repos, and unindexed repos come
 back as tool errors rather than drifting to mutable mirror HEAD.
+
+The four experimental tools return `envelope_version: "1.0"` as MCP
+structured content. Their advertised `outputSchema` is the same generated
+draft-2020-12 schema checked in under `schemas/`. Stateless proof queries do
+not enumerate a released evidence-pack universe, so their pack-defined
+eligible/processing counts are `withheld`, their outcome is `partial`, and a
+zero-result response is blocked by `SCOPE_NOT_ENUMERATED`; it is not evidence
+of absence. Qualification and refusal prose is selected and rendered by the
+server. Clients should display `authoritative_text` verbatim and must not
+upgrade a partial, withheld, refused, or truncated result. A hard-truncated
+result has no continuation token and remains permanently incomplete and
+absence-ineligible.
 
 ### Claude Code
 
@@ -1203,9 +1215,9 @@ commit/extractor version short-circuits. Like the rest of phebs's
 HEAD-freshness queues, successive index events may coalesce before extraction;
 only the latest indexed revision can pass the publication guard. Opt-in
 startup backfills indexed repositories even when new indexing is unavailable.
-The same opt-in exposes these three proof queries as MCP structured content;
-HTTP and MCP call one shared proof service. Operational state is also visible
-through the database and
+The same opt-in exposes these three proof queries as MCP envelope structured
+content; HTTP proof-bundle routes and MCP envelope projection call one shared
+proof service. Operational state is also visible through the database and
 `phebs_jobs_total{kind="extraction_job"}`.
 
 Proof-aware retention checks at startup and hourly while idle. Every
@@ -1366,6 +1378,15 @@ environment variable manually opts into the same development adapter. These
 fixtures exercise presentation and conformance states; they are not published
 evidence, a released pack executor, a valid accuracy gate, or authority for
 external claims.
+
+T16.6 makes this envelope a generated, reusable contract rather than a
+fixture-only UI shape. `internal/investigation` owns typed cross-field
+validation; `go generate ./internal/mcp` regenerates the nine checked-in
+schemas; and MCP advertises those exact schemas. Structural validation is not
+the whole contract: the server also enforces coverage reconciliation, proof
+references for evidenced facts, bounded-absence prerequisites,
+non-comparability behavior, minimal `NOT_AVAILABLE` disclosure, and
+irreversible truncation semantics.
 
 ### Metrics
 

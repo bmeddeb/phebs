@@ -1,12 +1,10 @@
 package api
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -14,6 +12,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/bmeddeb/phebs/internal/investigation"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -69,30 +68,20 @@ func NewInvestigationFixtureViews(dir string) (InvestigationViewSource, error) {
 		if err != nil {
 			return nil, fmt.Errorf("read investigation fixture %s: %w", spec.ID, err)
 		}
-		decoder := json.NewDecoder(bytes.NewReader(raw))
-		var metadata struct {
-			EnvelopeVersion string `json:"envelope_version"`
-			Outcome         string `json:"outcome"`
-			Scope           struct {
-				InvestigationID    string `json:"investigation_id"`
-				NormalizedQuestion string `json:"normalized_question"`
-			} `json:"scope"`
-		}
-		if err := decoder.Decode(&metadata); err != nil {
+		var envelope investigation.Envelope
+		if err := json.Unmarshal(raw, &envelope); err != nil {
 			return nil, fmt.Errorf("decode investigation fixture %s: %w", spec.ID, err)
 		}
-		if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
-			// Keep this separate from the envelope's still-evolving T16.6
-			// schema validation.
-			return nil, fmt.Errorf("decode investigation fixture %s: trailing JSON value", spec.ID)
+		if err := envelope.ValidateSemantics(); err != nil {
+			return nil, fmt.Errorf("validate investigation fixture %s: %w", spec.ID, err)
 		}
-		if metadata.EnvelopeVersion != "1.0" || metadata.Outcome == "" ||
-			metadata.Scope.InvestigationID == "" || metadata.Scope.NormalizedQuestion == "" {
+		if envelope.Scope == nil || envelope.Scope.InvestigationID == nil ||
+			*envelope.Scope.InvestigationID == "" || envelope.Scope.NormalizedQuestion == "" {
 			return nil, fmt.Errorf("investigation fixture %s is missing required envelope metadata", spec.ID)
 		}
 		source.documents = append(source.documents, InvestigationViewDocument{
 			InvestigationViewSummary: InvestigationViewSummary{
-				ID: spec.ID, Title: spec.Title, State: spec.State, Outcome: metadata.Outcome,
+				ID: spec.ID, Title: spec.Title, State: spec.State, Outcome: envelope.Outcome,
 			},
 			Envelope: slices.Clone(raw),
 		})
