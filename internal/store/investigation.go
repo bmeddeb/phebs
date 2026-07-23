@@ -308,11 +308,12 @@ func contentDigest(value any) (string, error) {
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
 
-// SurrealDB persists datetime values at microsecond precision. Normalize
+// The pinned SurrealDB/Go-SDK path round-trips datetime values at second
+// precision. Normalize
 // before any immutable digest is computed so a write/read round trip retains
 // the same canonical bytes.
 func storeTimestamp(value time.Time) time.Time {
-	return value.UTC().Truncate(time.Microsecond)
+	return value.UTC().Truncate(time.Second)
 }
 
 const crockford = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"

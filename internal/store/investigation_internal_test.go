@@ -61,7 +61,7 @@ func TestInvestigationDomainPureRules(t *testing.T) {
 		}
 	})
 
-	t.Run("event digest survives store time precision", func(t *testing.T) {
+	t.Run("event digest survives store second precision", func(t *testing.T) {
 		event := RunEvent{
 			ID: "01JY0000000000000000000000", RunID: "iru_test", Sequence: 1, Attempt: 1,
 			NewState: RunQueued, Actor: "actor", Reason: "created",
