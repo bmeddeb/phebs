@@ -968,7 +968,7 @@ message/oneof shape, empty declarations, finite recursive definitions, and
 two-run byte identity. The pure-reader and exact registry-version guards pass;
 the persisted worker test is retained for the live SurrealDB-backed gate.
 
-**T17.3 · Bounded, snapshot-consistent Contract Catalog API**
+**T17.3 · Bounded, snapshot-consistent Contract Catalog API** ✅ 2026-07-23
 Add a read-only `contract-atlas-v1` projection with a paged service/operation
 listing and a bounded operation-detail read. Declaration identity is
 `(repository, declaration_lineage, service_fqn)`; an operation adds its method.
@@ -1008,6 +1008,25 @@ produce a mixed-revision response. Limit tests pin every boundary and
 truncation shape. Every claim-bearing detail row has a resolvable immutable
 source locator and every response carries the exact coverage digest/state used
 to build it.
+
+Implemented as the authenticated-only `contract-atlas` capability and the
+ephemeral `GET /api/contract_atlas` and
+`GET /api/contract_atlas/operation` projections. Listing scans exact
+certificate-selected `proto-contract` runs in stable assertion order and uses
+an opaque checksum-bound cursor over query, principal, authorization provider,
+permission snapshot, visible-repository digest, coverage digest, repository,
+and assertion position. Detail expands only proven same-file message links and
+keeps registration/caller name matches in their own lineage and tier, labeling
+unproven joins and extractor abstentions separately. Fixed limits cover page
+size, assertion scans, source locators, message depth/nodes/fields, and joined
+relationships; every crossing is explicit and continuable where the underlying
+ordered assertion scan is safe. Both projections rebuild the coverage
+certificate after reading and retry or conflict on publication races. The
+adversarial suite pins dark/anonymous posture, zero evidence calls for
+unknown/hidden/deleting scopes, duplicate-FQN separation, stable pages,
+authorization/coverage cursor invalidation, immutable locators, no bundle
+write, field/depth/node/relationship/scan bounds, and a mid-read publication
+change.
 
 **T17.4 · Contract Atlas UI (protobuf/gRPC)**
 Add the authenticated capability-gated **Contracts** navigation item and

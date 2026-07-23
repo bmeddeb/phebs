@@ -29,6 +29,7 @@ type proofAPIStore struct {
 	resolutions  map[string]store.EvidenceResolution
 	bundles      map[string]store.ProofBundleRecord
 	calls        []string
+	onAssertions func(store.AssertionQuery)
 }
 
 func proofScope(repo, domain string) string { return repo + "\x00" + domain }
@@ -80,6 +81,9 @@ func (s *proofAPIStore) LatestExtractionAttempt(_ context.Context, repo, domain 
 
 func (s *proofAPIStore) ListAssertions(_ context.Context, query store.AssertionQuery) ([]store.Assertion, error) {
 	s.calls = append(s.calls, "assertions:"+proofScope(query.Repo, query.RunID))
+	if s.onAssertions != nil {
+		s.onAssertions(query)
+	}
 	if s.assertionErr != nil {
 		return nil, s.assertionErr
 	}
@@ -87,13 +91,58 @@ func (s *proofAPIStore) ListAssertions(_ context.Context, query store.AssertionQ
 	for _, assertion := range s.assertions[query.Repo] {
 		if query.RunID != "" && assertion.RunID != query.RunID ||
 			query.Predicate != "" && assertion.Predicate != query.Predicate ||
+			query.Subject != "" && assertion.Subject != query.Subject ||
 			query.Object != "" && assertion.Object != query.Object ||
+			query.ObjectPrefix != "" && !strings.HasPrefix(assertion.Object, query.ObjectPrefix) ||
 			query.Lineage != "" && assertion.Lineage != query.Lineage {
 			continue
 		}
 		result = append(result, assertion)
 	}
+	sort.Slice(result, func(i, j int) bool {
+		return compareAssertionTuple(result[i], result[j]) < 0
+	})
+	if query.After != nil {
+		after := store.Assertion{
+			Predicate: query.After.Predicate,
+			Subject:   query.After.Subject,
+			Object:    query.After.Object,
+			ID:        query.After.ID,
+			RunID:     query.After.RunID,
+		}
+		filtered := result[:0]
+		for _, assertion := range result {
+			if compareAssertionTuple(assertion, after) > 0 {
+				filtered = append(filtered, assertion)
+			}
+		}
+		result = filtered
+	}
+	if query.Limit > 0 && len(result) > query.Limit {
+		if query.AllowTruncate {
+			return append([]store.Assertion(nil), result[:query.Limit+1]...), nil
+		}
+		return nil, store.ErrResultLimit
+	}
 	return result, nil
+}
+
+func compareAssertionTuple(left, right store.Assertion) int {
+	for _, pair := range [][2]string{
+		{left.Predicate, right.Predicate},
+		{left.Subject, right.Subject},
+		{left.Object, right.Object},
+		{left.ID, right.ID},
+		{left.RunID, right.RunID},
+	} {
+		if pair[0] < pair[1] {
+			return -1
+		}
+		if pair[0] > pair[1] {
+			return 1
+		}
+	}
+	return 0
 }
 
 func (s *proofAPIStore) ResolveEvidence(_ context.Context, repo, runID, atomID string) (*store.EvidenceResolution, error) {

@@ -116,6 +116,9 @@ func (s *fixtureInvestigationViews) GetInvestigationViewAs(_ context.Context, pr
 
 func apiCapabilities(opts Options) []string {
 	capabilities := proofCapabilities(opts)
+	if NewContractCatalogService(opts) != nil {
+		capabilities = append(capabilities, contractCatalogCapability)
+	}
 	if opts.InvestigationViews != nil {
 		capabilities = append(capabilities, investigationCoreViewsCapability)
 	}

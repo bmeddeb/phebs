@@ -304,16 +304,34 @@ type ExtractionAttempt struct {
 	StartedAt time.Time `json:"started_at"`
 }
 
+// AssertionCursor is the stable tuple used by bounded published-assertion
+// scans. It contains only fields already present in an authorized assertion.
+type AssertionCursor struct {
+	Predicate string `json:"predicate"`
+	Subject   string `json:"subject"`
+	Object    string `json:"object"`
+	ID        string `json:"id"`
+	RunID     string `json:"run_id"`
+}
+
 // AssertionQuery filters published assertions. Repo is mandatory; the other
 // empty fields match anything within that caller-authorized repository.
 type AssertionQuery struct {
 	Predicate string
 	Subject   string
 	Object    string
-	Lineage   string
-	Repo      string
-	RunID     string // empty = any published run for Repo
-	Limit     int    // 0 = default cap
+	// ObjectPrefix is mutually exclusive with Object.
+	ObjectPrefix string
+	Lineage      string
+	Repo         string
+	RunID        string // empty = any published run for Repo
+	Limit        int    // 0 = default cap
+	// After resumes after this exact stable-order tuple.
+	After *AssertionCursor
+	// AllowTruncate returns at most Limit+1 rows instead of ErrResultLimit.
+	// The extra row is a caller-visible continuation signal; callers must not
+	// render it as part of the requested page.
+	AllowTruncate bool
 }
 
 // EvidenceResolution is the click-through from one assertion support id to
@@ -384,7 +402,8 @@ type EvidenceStore interface {
 	LatestExtractionAttempt(ctx context.Context, repo, domain string) (*ExtractionAttempt, error)
 	// ListAssertions reads assertions of published runs only. Repo is required;
 	// callers must authorize that repository before invoking the method. A
-	// result exceeding Limit fails with ErrResultLimit rather than truncating.
+	// result exceeding Limit fails with ErrResultLimit unless AllowTruncate
+	// explicitly requests the bounded Limit+1 continuation shape.
 	ListAssertions(ctx context.Context, q AssertionQuery) ([]Assertion, error)
 	// ResolveEvidence resolves one current or pinned-retained assertion support
 	// id. Repo is a required authorization scope and must match the run and all

@@ -460,6 +460,34 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 		ordered[1].Object != "a" || ordered[2].Object != "b" {
 		t.Fatalf("stable bounded assertions = %+v, %v", ordered, err)
 	}
+	firstPage, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run2.ID, Limit: 1, AllowTruncate: true,
+	})
+	if err != nil || len(firstPage) != 2 || firstPage[0].Object != "a" ||
+		firstPage[1].Object != "b" {
+		t.Fatalf("continuation signal = %+v, %v", firstPage, err)
+	}
+	after := &store.AssertionCursor{
+		Predicate: firstPage[0].Predicate, Subject: firstPage[0].Subject,
+		Object: firstPage[0].Object, ID: firstPage[0].ID, RunID: firstPage[0].RunID,
+	}
+	secondPage, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run2.ID, Limit: 1, After: after,
+	})
+	if err != nil || len(secondPage) != 1 || secondPage[0].ID != firstPage[1].ID {
+		t.Fatalf("continued assertions = %+v, %v", secondPage, err)
+	}
+	prefixed, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run2.ID, ObjectPrefix: "a", Limit: 1,
+	})
+	if err != nil || len(prefixed) != 1 || prefixed[0].Object != "a" {
+		t.Fatalf("object-prefix assertions = %+v, %v", prefixed, err)
+	}
+	if _, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, Object: "a", ObjectPrefix: "a",
+	}); err == nil {
+		t.Fatal("object and object-prefix query was accepted")
+	}
 }
 
 func TestEvidencePublishGuardsRepositoryRevisionAndDeletion(t *testing.T) {

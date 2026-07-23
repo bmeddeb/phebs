@@ -949,11 +949,34 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 	if strings.TrimSpace(q.Repo) == "" {
 		return nil, errors.New("list assertions: repo scope required")
 	}
+	if q.Object != "" && q.ObjectPrefix != "" {
+		return nil, errors.New("list assertions: object and object prefix are mutually exclusive")
+	}
 	if !utf8.ValidString(q.Repo) || len(q.Repo) > maxEvidenceIdentityBytes {
 		return nil, errors.New("list assertions: invalid repo scope")
 	}
 	if q.RunID != "" && (!utf8.ValidString(q.RunID) || len(q.RunID) > maxEvidenceIdentityBytes) {
 		return nil, errors.New("list assertions: invalid run scope")
+	}
+	if q.ObjectPrefix != "" &&
+		(!utf8.ValidString(q.ObjectPrefix) || len(q.ObjectPrefix) > maxEvidenceIdentityBytes) {
+		return nil, errors.New("list assertions: invalid object prefix")
+	}
+	if q.After != nil {
+		if q.After.ID == "" || q.After.RunID == "" {
+			return nil, errors.New("list assertions: continuation requires assertion and run ids")
+		}
+		for name, value := range map[string]string{
+			"predicate": q.After.Predicate,
+			"subject":   q.After.Subject,
+			"object":    q.After.Object,
+			"id":        q.After.ID,
+			"run_id":    q.After.RunID,
+		} {
+			if !utf8.ValidString(value) || len(value) > maxEvidenceIdentityBytes {
+				return nil, fmt.Errorf("list assertions: invalid continuation %s", name)
+			}
+		}
 	}
 	limit := q.Limit
 	if limit <= 0 {
@@ -1002,6 +1025,10 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 		where += " AND object = $object"
 		vars["object"] = q.Object
 	}
+	if q.ObjectPrefix != "" {
+		where += " AND string::starts_with(object, $object_prefix)"
+		vars["object_prefix"] = q.ObjectPrefix
+	}
 	if q.Lineage != "" {
 		where += " AND lineage = $lineage"
 		vars["lineage"] = q.Lineage
@@ -1009,6 +1036,22 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 	if q.Repo != "" {
 		where += " AND repo = $repo"
 		vars["repo"] = q.Repo
+	}
+	if q.After != nil {
+		where += ` AND (
+			predicate > $after_predicate OR
+			(predicate = $after_predicate AND subject > $after_subject) OR
+			(predicate = $after_predicate AND subject = $after_subject AND object > $after_object) OR
+			(predicate = $after_predicate AND subject = $after_subject AND object = $after_object
+				AND assertion_id > $after_id) OR
+			(predicate = $after_predicate AND subject = $after_subject AND object = $after_object
+				AND assertion_id = $after_id AND run_id > $after_run_id)
+		)`
+		vars["after_predicate"] = q.After.Predicate
+		vars["after_subject"] = q.After.Subject
+		vars["after_object"] = q.After.Object
+		vars["after_id"] = q.After.ID
+		vars["after_run_id"] = q.After.RunID
 	}
 	results, err := surrealdb.Query[[]assertionRec](ctx, s.db,
 		"SELECT * FROM assertion WHERE "+where+
@@ -1032,6 +1075,9 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 		}
 	}
 	if len(out) > limit {
+		if q.AllowTruncate {
+			return out, nil
+		}
 		return nil, fmt.Errorf("list assertions: more than %d rows; use a narrower query: %w", limit, ErrResultLimit)
 	}
 	return out, nil

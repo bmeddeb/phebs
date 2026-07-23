@@ -673,6 +673,8 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/contract_impact_report?lineage=&message=&field_number=`       | GET             | experimental bounded stable-field impact report                                                |
 | `/api/contract_impact_report`                                       | POST            | experimental proposed-change impact report over the compatibility request shape                 |
 | `/api/contract_impact_reports/{id}`                                 | GET             | reauthorized deterministic report projection of one immutable proof bundle                      |
+| `/api/contract_atlas?repository=&package=&protocol=&lineage=&page_size=&cursor=` | GET | experimental bounded service/operation catalog over exact published evidence                    |
+| `/api/contract_atlas/operation?repository=&lineage=&operation=`     | GET             | experimental bounded operation, message-shape, implementation, and caller detail                |
 | `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
 | `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
 | `/api/tree?repo=&ref=`                                              | GET             | all file paths, recursive                                                                      |
@@ -1181,6 +1183,47 @@ repositories with matching assertions. Deletion or rename of any repository in
 that universe therefore makes the bundle unavailable to everyone, including
 its creator; caller-specific loss of access makes it unavailable to that
 caller. This is deliberately fail-closed.
+
+The opt-in also registers the authenticated-only `contract-atlas` capability.
+`GET /api/contract_atlas` discovers protobuf service and operation
+declarations without requiring a caller to know the canonical operation name.
+It supports exact repository, package, `protobuf` protocol, and provisional
+declaration-lineage filters plus `page_size` (default 50, maximum 100) and an
+opaque continuation cursor. A row is identified by repository, declaration
+lineage, service FQN, and optional method; equal FQNs in different lineages or
+repositories remain separate.
+
+`GET /api/contract_atlas/operation` requires the exact `repository`,
+declaration `lineage`, and canonical `/fully.qualified.Service/Method`. It
+returns the declaration, RPC request/response names and streaming flags,
+cycle-aware same-file message/field shape, name-matched registrations and
+callers, and separate extractor abstentions. A relationship is called
+`proven` only when its own evidence lineage equals the selected declaration
+lineage. Other name matches remain `unresolved_name_match`; ambiguous
+extractor output remains `extractor_abstention`. SCIP package lineage is not
+used as an operation identity.
+
+Every claim-bearing row carries repository, exact extraction commit, path,
+byte and line spans, assertion id, run id, and atom id. Every response embeds
+the complete `coverage-certificate-v1` and its digest. The server first
+filters the visible, non-deleting repository universe, reads only the exact
+published run ids in that certificate, and confirms the digest after
+projection. A concurrent publication is retried or returns `409`; revisions
+are never mixed. Unknown, hidden, and deleting repository scopes all return
+the same `404` before evidence is read.
+
+Catalog responses are read-only and ephemeral: they create no proof bundle and
+pin no extraction run. Cursors are checksummed and bind the query, stable
+principal, authorization-provider generation, permission snapshot, complete
+visible-repository set, coverage digest, and assertion position; a changed
+binding returns `409`. Fixed limits bound each page, assertion scan, source
+locators, message depth (6), expanded nodes (256), fields per message (100),
+and joined relationships (200). Responses expose `complete`, `truncated`, and
+machine-readable reasons. Ordered list scans include a safe continuation;
+bounded detail trees and relationship sets state truncation without implying
+that omitted or absent rows do not exist. Like all provisional extraction
+surfaces, the Atlas is source evidence, not runtime topology or a completeness,
+compatibility, ownership, or accuracy conclusion.
 
 Proof-bundle expiry is disabled by default. To bound retained answers and
 their extraction-run pins, set a positive Go duration, for example:

@@ -95,6 +95,7 @@ func registerEvidence(api huma.API, opts Options) {
 		return &evidenceOut{Body: view}, nil
 	})
 	registerProofAPI(api, opts)
+	registerContractCatalogAPI(api, opts)
 }
 
 // visibleRepositories is the authorization boundary for every evidence and
