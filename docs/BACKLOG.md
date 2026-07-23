@@ -883,6 +883,173 @@ post-gate implementation only; it does not retroactively satisfy the retained
 validation or continuation evidence gates, release a pack, or enable the dark
 production creation/export surfaces.
 
+## EPIC 17 — Contract Atlas *(planned; T17.1 stable, T17.2–T17.5 experimental-dark)*
+
+Turns the existing contract facts into a discoverable, read-only catalog.
+Users must be able to browse from a visible repository to a declared operation
+without already knowing its canonical identifier, inspect the exact evidence
+and bounded shape that phebs can support, and hand that operation to the
+existing Impact workflow. This is a presentation and query layer over the
+annex evidence model, not a new conclusion engine. It remains orthogonal to
+Epic 16 and to every validation gate: provisional labels, coverage, tiers,
+abstentions, and the ban on accuracy or absence claims all remain in force.
+
+T17.1 uses only established repository-reading boundaries and is always
+available. T17.2–T17.5 are registered only when the existing provisional
+extraction feature is enabled and advertise an authenticated-only
+`contract-atlas` capability; the default and anonymous surfaces remain dark.
+Runtime traffic is explicitly absent. Any future runtime overlay requires its
+own ADR, partner-supplied observations, and strict source/runtime separation
+under the zero-telemetry posture.
+
+**T17.1 · Persistent repository explorer**
+Extract the FilePage's lazy tree into a shared repository-browser component and
+render it as a permanent left rail on Search. The rail lists every repository
+visible to the caller through `/api/repo-status`, loads exactly one directory
+level at a time through `/api/folder_contents`, supports explicit `repo:`
+filter insertion, and opens files without issuing a search. It never calls the
+recursive `/api/tree` route. At mobile widths it becomes a collapsible drawer;
+the search input and results remain independently usable.
+
+AC: a non-admin rail lists exactly the caller-visible repositories; an
+adversarial hidden repository appears in neither rendered state nor the UI's
+folder-request ledger. A file is reachable from a cold Search page with zero
+search requests. Expanding a directory issues one request and re-expansion
+uses the cache. Filter insertion preserves the user's query, avoids duplicate
+repo atoms, and quotes repository names through the existing helper. UI tests
+cover desktop rail, mobile drawer, loading/error/retry, repository changes,
+direct file navigation, and permission-filtered empty state.
+
+**T17.2 · Same-file protobuf shape facts (`protodecl` v3)**
+Enrich the declared plane without pretending to link a protobuf module.
+`protodecl` adds exact-span `DECLARES_SERVICE` and `DECLARES_MESSAGE` facts,
+request/response raw type references and client/server streaming flags to
+`DECLARES_OPERATION`, and field type, cardinality, map, and oneof attributes
+to `DECLARES_FIELD`. Operation and field canonical objects remain stable. Any
+type reference is resolved only when protobuf lexical lookup finds exactly one
+declaration in the same source file and therefore the same provisional
+lineage. Imported or otherwise unresolved references retain their raw spelling
+and import context with an explicit unresolved reason; they are never labeled
+external, because the pure-reader has no trusted module/import-root identity.
+Shape traversal is an API concern and must be cycle-aware and bounded; the
+extractor emits facts, not recursive blobs.
+
+The extractor, evidence schema, and registry pin versions advance together.
+The one-blob streaming invariant, all parser complexity bounds, atomic
+publication, deterministic ordering, and file-scoped provisional lineage stay
+unchanged.
+
+AC: the fixture corpus resolves request and response types declared in the
+same file and cites exact operation/message/field spans; imported, missing,
+and ambiguous references abstain with distinct reason codes and no external
+claim. Scalar, repeated, map, nested-message, and oneof fields preserve their
+shape attributes. Empty services and empty messages are still discoverable
+through declaration facts. Recursive message definitions do not recurse in
+the extractor. Two complete runs are byte-identical, and the registry-pin and
+pure-reader guards pass.
+
+**T17.3 · Bounded, snapshot-consistent Contract Catalog API**
+Add a read-only `contract-atlas-v1` projection with a paged service/operation
+listing and a bounded operation-detail read. Declaration identity is
+`(repository, declaration_lineage, service_fqn)`; an operation adds its method.
+The API may expose `/service.fqn/Method` as the canonical query spelling, but
+name equality never merges declaration lineages. Same-named declarations in
+different files or repositories remain separate. SCIP package lineage is a
+field-dependency identity and is not presented as a canonical
+service/operation lineage.
+
+Visibility filtering happens before every evidence read or count. Each request
+builds a coverage certificate over the already-visible repository universe,
+selects assertions only from the exact run ids named by that certificate, and
+confirms the certificate digest after projection; a changed digest retries or
+returns a conflict rather than mixing revisions. Browse responses are
+ephemeral and create no proof bundle, but every declaration, message, field,
+implementation, caller, and unresolved candidate includes its immutable
+repository, commit, path, byte/line span, assertion id, and run id. Coverage
+metadata is kept distinct from source evidence.
+
+Lists use stable opaque cursors bound to the complete authorization projection
+(principal, provider generation, permission snapshot, and visible-repository
+set) and coverage digest. Server-side constants bound page size, expanded
+message depth/node count, and relationship rows. Crossing a bound returns an
+explicit truncation/completeness state and continuation where safe; it never
+silently drops rows or turns a partial result into an absence statement.
+Caller and registration facts retain their own lineage and tier. If the
+declared-plane relationship cannot be proven, the API labels the name match or
+extractor abstention as unresolved rather than attaching it to one declaration
+by guess.
+
+AC: unknown, unauthorized, and deleting repositories reveal no names, counts,
+cursor differences, or evidence calls. Duplicate service FQNs in two files of
+one repository and in two repositories produce distinct declaration rows.
+Continuation pages are stable and non-overlapping; a cursor is rejected after
+its authorization or coverage binding changes. A publication race cannot
+produce a mixed-revision response. Limit tests pin every boundary and
+truncation shape. Every claim-bearing detail row has a resolvable immutable
+source locator and every response carries the exact coverage digest/state used
+to build it.
+
+**T17.4 · Contract Atlas UI (protobuf/gRPC)**
+Add the authenticated capability-gated **Contracts** navigation item and
+**Contract Atlas** page. The table-first interface supports repository,
+package, protocol, and provisional-lineage filters; a service → operation
+tree; bounded request/response message trees; declaration, implementation,
+caller, and unresolved evidence links; and tier, freshness, completeness, and
+coverage chips. Duplicate declarations and unresolved joins remain visibly
+separate. Every source row opens the pinned file revision.
+
+**Analyze impact** navigates to `#/impact?operation=/service.fqn/Method`,
+pre-populating but not automatically submitting the existing operation form.
+The nav taxonomy decision—Contracts discovers interfaces, Impact answers a
+bounded change question, and Investigations manages a durable workflow—lands
+as the implementation ADR.
+
+AC: `make dev` exposes the Atlas only for its explicit fixture binding. From a
+cold page, a user with no operation identifier can browse to a declaration,
+inspect both bounded shapes and evidence limitations, follow a pinned source
+link, and open the pre-populated Impact form. Disabled and anonymous servers
+advertise no capability, route, OpenAPI operation, or navigation item. UI tests
+cover pagination, truncation, duplicate declarations, unsupported/failed/stale
+coverage, empty states, and desktop/mobile layouts.
+
+**T17.5 · Accessible focused dependency map**
+Render one deterministic one-hop neighborhood for the selected operation from
+the already-authorized T17.3 response: declaration/registration providers,
+name-bound caller evidence, and separately labeled unresolved candidates. No
+global graph and no graph-only data surface exist. The table remains the
+authoritative accessible representation; the diagram has keyboard-readable
+labels and a compact mobile fallback. It performs no additional evidence
+requests and contains no producer/consumer or runtime edges until separately
+released evidence packs provide them.
+
+AC: the graph and table contain the same authorized edge identities and
+labels; hidden repositories cannot affect layout, node/edge counts, or empty
+state. Identical input yields identical layout. A contract with no edges
+renders an honest empty neighborhood naming the exact coverage scope and
+completeness state.
+
+### On-demand protocol-pack candidates after Epic 17
+
+These are direction, not scheduled T17 tickets, and do not block completion of
+the protobuf/gRPC Atlas. Each claim family requires its own evidence-pack card,
+extractor version, coverage semantics, validation plan, ADR, MANUAL update,
+registry pin, dark flag, and PR-sized acceptance criteria.
+
+- **HTTP:** separate OpenAPI declaration parsing from language/framework route
+  registrations and from client-call extraction. `METHOD /normalized/path` is
+  only a shared catalog key after template, mount, gateway, and middleware
+  resolution states have been modeled; ambiguous joins abstain.
+- **Kafka:** separate topic/schema declarations, producer evidence, and
+  consumer evidence. A source literal topic name has no proven
+  cluster/environment identity; consumer groups and dynamic configuration
+  remain unresolved without an authorized deployment or registry connector.
+  The UI is topic-centered—producers → topic/schema → consumers—not an
+  endpoint metaphor.
+- **Thrift:** separate declarations, server registrations, and client calls.
+  `namespace.Service.method` and argument/exception/return shapes enter the
+  Atlas only after a partner names the language/runtime combination and the
+  resulting packs have executable acceptance bars.
+
 ## P5 hardening *(unscheduled — pull on demand)*
 
 **T-P5.1 ✅ · `phebs backup` / `phebs restore` subcommands** — cold copy works
