@@ -224,11 +224,12 @@ exact IDL identity and source universe in the
 [pilot charter](./PILOT_CHARTER.md). Changing the anchor after that point
 requires a new preregistered baseline rather than an in-place substitution.
 
-The comparison baseline is reconstructed independently of phebs from the
-existing manual inventory, owner outreach, build queries, and a declared
-window of traffic evidence. Each channel remains separately labeled; the
-runtime observations are not promoted into source facts, and the candidate
-extractor does not define the internal recall-positive population:
+The [preregistered comparison baseline](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md)
+is reconstructed or observed independently of phebs from the existing manual
+inventory, owner outreach, build queries, and a declared window of traffic
+evidence. Each channel remains separately labeled; the runtime observations
+are not promoted into source facts, and the candidate extractor does not
+define the internal recall-positive population:
 
 | | Current practice | Pilot hypothesis (measured, not promised) |
 |---|---|---|

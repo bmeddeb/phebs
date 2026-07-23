@@ -40,6 +40,7 @@ claim outruns its measurement.
 | [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) | preregistration draft of the pilot internal-validation protocol for prerequisite item 9; reuses the sealed V2 label machinery; grants no pilot, accuracy, or Epic 16 authority |
 | [DECISION_RECORDS.md](./DECISION_RECORDS.md) | fail-closed templates for the validation gate decision and the pilot continuation decision, prerequisite item 10; filling a template creates no decision |
 | [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) | dependency-preview hop label sheet formats for prerequisite item 11; partner catalog shapes freeze at Gate 0; grants nothing |
+| [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md) | preregistration draft for prerequisite item 12; freezes the manual-vs-phebs timing, labor, usefulness, evidence, and custody comparison; grants no measurement authority |
 | [GATE0_READINESS.md](./GATE0_READINESS.md) | descriptive audit of every Gate 0 requirement against current reality, including the accepted v0.2 resolution of the external-benchmark conflict; decides nothing |
 
 The role/capability model for prerequisite item 2 lives in

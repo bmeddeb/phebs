@@ -25,9 +25,9 @@ here are descriptive; only the charter's own signatures close Gate 0.*
 | Terminal external Go/gRPC benchmark record satisfies the §9 disposition | satisfied-conditionally | operator | Ben accepted charter v0.2 after separate review on 2026-07-22. The accepted GATE2-V2 pre-score capacity stop is a conditional entry disposition, never a pass: Gate 0 must record `internal-validation-required`; no accuracy claim transfers; measured and integrity failures remain stops. |
 | Pilot extractor equals the benchmark-bound candidate, or has an approved versioned bridge | approval-blocked | Gate 0 signatories | v0.2 defines an unscored bridge as identity/reproducibility/mechanics only. Gate 0 must bind the actual pilot artifact and approve any changes; no bridge can transfer accuracy. |
 | Evidence-pack card at status `shadow` for the Go/gRPC pack, internal shadow evaluation filling the internal/domain-shift table | approval-blocked | Ben + security reviewer | the card's own ladder (experimental-dark → shadow) requires security approval, frozen validation design, reproducible artifact, and a complete authorization model; the internal shadow evaluation has no protocol document yet |
-| Current-workflow baseline protocol preregistered (§8.1) | draftable now | Ben | prerequisite item 12 (registered, no draft yet); methodology needs no partner data to draft |
+| Current-workflow baseline protocol preregistered (§8.1) | drafted | Gate 0 signatories | [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md) now fixes the modes, timers, labor categories/formulas, evidence separation, usefulness decision, correction ledger, custody, and fail-closed rules; partner-shaped fields remain `<Gate 0>` |
 | Statistical accuracy-gold protocol preregistered (§8.2) | drafted | Gate 0 signatories | [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md), scope-corrected; awaiting owners, reviewers, and `<Gate 0>` fills |
-| Accuracy protocol defines population, frames, unit, strata, missing-label handling, power, custody, and distinct call-site / attribution-hop / end-to-end labels | drafted + draftable now | Ben | call-site and end-to-end are in the protocol; attribution-hop sheet formats now drafted as [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) (item 11), with partner-catalog shapes finalized at Gate 0 |
+| Accuracy protocol defines population, frames, unit, strata, missing-label handling, power, custody, and distinct call-site / attribution-hop / end-to-end labels | drafted | Gate 0 signatories | call-site and end-to-end are in the protocol; [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) supplies the item-11 sheet formats, with partner-catalog shapes finalized at Gate 0 |
 | §9 pass / conditional / stop thresholds filled and signed | partner-blocked + approval-blocked | sponsor + Ben | every `T_*` is `<value>`; filling is a Gate 0 act with the partner's workload |
 | Every role, date, resource limit, `T_*`, and protocol field filled; blanks block release | blocked by all above | Gate 0 signatories | mechanical once the rows above resolve |
 | No conflicting pilot or production dependency | draftable now | Ben | one-page statement at Gate 0; nothing known today |
@@ -42,11 +42,13 @@ today now halts only on ordinary prerequisites:
    [PILOT_PREREQS.md](./PILOT_PREREQS.md) always said.
 2. **Human approvals** — IP/OSS/provenance, security, artifact bridging,
    evidence-pack promotion, and final Gate 0 signatures remain ungranted.
-3. **The last partner-free draft** — item 12, the current-workflow baseline
-   protocol, remains registered but not yet drafted.
 
-Everything phebs-side and partner-free is either done or registered:
-items 9–10 drafted and scope-corrected, item 11 drafted with this audit,
-item 12 registered as the last partner-free draft. Epic 16 remains blocked
+Every partner-free protocol artifact is now drafted: items 9–10 are drafted and
+scope-corrected, item 11 supplies the dependency-preview hop sheets, and item
+12 supplies the workflow-baseline preregistration. Drafting advances no item
+state; owners, partner inputs, eligible reviewers, acceptance records, and
+Gate 0 signatures remain missing. The one-page no-conflicting-dependency
+statement is still produced at Gate 0 against the then-current schedule and
+dependencies; it cannot be truthfully frozen earlier. Epic 16 remains blocked
 on an `ESTABLISHED` pilot internal-validation record plus continuation;
 nothing in this audit moves either.
