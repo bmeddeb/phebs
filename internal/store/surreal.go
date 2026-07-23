@@ -121,7 +121,8 @@ const pendingJobIndexes = `
 DEFINE INDEX IF NOT EXISTS connection_sync_job_pending_key ON connection_sync_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS indexing_job_pending_key ON indexing_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS pending_key UNIQUE;
-DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;`
+DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
 
 var evidenceIndexes = fmt.Sprintf(`
 DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
@@ -136,7 +137,7 @@ DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
 // successor. Keep the oldest pending row, cancel duplicates, then requeue only
 // an unfenced active row that has no successor.
 func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
-	for _, kind := range []JobKind{JobSync, JobIndex, JobFetch, JobExtract} {
+	for _, kind := range []JobKind{JobSync, JobIndex, JobFetch, JobExtract, JobInvestigate} {
 		jobs, err := s.ListJobs(ctx, kind, "")
 		if err != nil {
 			return fmt.Errorf("migrate %s: list: %w", kind, err)

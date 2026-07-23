@@ -26,6 +26,10 @@ const (
 	JobIndex   JobKind = "indexing_job"
 	JobFetch   JobKind = "repo_fetch_job" // webhook-driven single-repo fetch (T7.4)
 	JobExtract JobKind = "extraction_job" // evidence extraction, chained after indexing (T12.2)
+	// JobInvestigate runs one preflighted Investigation Run (T16.4). Its
+	// generic queue lease and the Run's publication lease are independent:
+	// losing either fences the worker.
+	JobInvestigate JobKind = "investigation_run_job"
 )
 
 type JobStatus string

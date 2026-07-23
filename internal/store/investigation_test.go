@@ -51,9 +51,25 @@ func testRunRequest(revisionID string) store.RunRequest {
 	}
 }
 
-func advancePublishedRun(t *testing.T, s *store.Surreal, runID string) *store.Run {
+func completeInvestigationCoverage(t *testing.T, units int) string {
+	t.Helper()
+	coverage, err := store.CanonicalInvestigationCoverageLedger(store.InvestigationCoverageLedger{
+		EligibleUnits: units,
+		Analyzed:      units,
+	})
+	if err != nil {
+		t.Fatalf("canonical investigation coverage: %v", err)
+	}
+	return coverage
+}
+
+func advanceToPublishing(t *testing.T, s *store.Surreal, runID string) store.InvestigationRunLease {
 	t.Helper()
 	ctx := context.Background()
+	lease, err := s.AcquireInvestigationRunLease(ctx, runID, "worker:one")
+	if err != nil {
+		t.Fatalf("acquire run lease: %v", err)
+	}
 	for _, row := range []struct {
 		state  store.RunState
 		reason string
@@ -61,11 +77,8 @@ func advancePublishedRun(t *testing.T, s *store.Surreal, runID string) *store.Ru
 		{store.RunEnumerating, "scope frozen"},
 		{store.RunAnalyzing, "enumeration complete"},
 		{store.RunPublishing, "analysis complete"},
-		{store.RunPublished, "atomic publication complete"},
 	} {
-		if _, err := s.AppendRunEvent(ctx, runID, store.RunEvent{
-			NewState: row.state, Actor: "worker:one", Reason: row.reason,
-		}); err != nil {
+		if _, err := s.AdvanceInvestigationRun(ctx, *lease, row.state, row.reason); err != nil {
 			t.Fatalf("append %s: %v", row.state, err)
 		}
 		got, err := s.GetRun(ctx, runID)
@@ -73,19 +86,16 @@ func advancePublishedRun(t *testing.T, s *store.Surreal, runID string) *store.Ru
 			t.Fatalf("state after %s = %+v, %v", row.state, got, err)
 		}
 	}
-	run, err := s.GetRun(ctx, runID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return run
+	return *lease
 }
 
 func putPublishedArtifact(t *testing.T, s *store.Surreal, runID string) *store.RunArtifact {
 	t.Helper()
-	artifact, err := s.PutRunArtifact(context.Background(), store.RunArtifact{
+	lease := advanceToPublishing(t, s, runID)
+	artifact, err := s.PublishInvestigationRun(context.Background(), lease, store.RunArtifact{
 		Scope: "investigation:test", RunID: runID, TerminalStatus: store.RunPublished,
 		SnapshotManifest: "sha256:snapshot", InputManifest: "sha256:input",
-		CoverageLedger: "coverage-v1", FactReferences: []string{"fact:one"},
+		CoverageLedger: completeInvestigationCoverage(t, 1), FactReferences: []string{"fact:one"},
 		EligibilityResult: "eligible:false:blocker",
 	})
 	if err != nil {
@@ -147,7 +157,7 @@ func TestInvestigationRunStateAndIdempotentCreation(t *testing.T) {
 	}); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("skipped transition error = %v, want ErrConflict", err)
 	}
-	advancePublishedRun(t, s, runID)
+	lease := advanceToPublishing(t, s, runID)
 	if _, err := s.AppendRunEvent(ctx, runID, store.RunEvent{
 		NewState: store.RunFailed, Actor: "worker:late", Reason: "late failure",
 	}); !errors.Is(err, store.ErrConflict) {
@@ -159,7 +169,15 @@ func TestInvestigationRunStateAndIdempotentCreation(t *testing.T) {
 	if _, err := s.CreateRun(ctx, changed); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("idempotency reuse error = %v, want ErrConflict", err)
 	}
-	artifact := putPublishedArtifact(t, s, runID)
+	artifact, err := s.PublishInvestigationRun(ctx, lease, store.RunArtifact{
+		Scope: "investigation:test", RunID: runID,
+		SnapshotManifest: "sha256:snapshot", InputManifest: "sha256:input",
+		CoverageLedger: completeInvestigationCoverage(t, 1), FactReferences: []string{"fact:one"},
+		EligibilityResult: "eligible:false:blocker",
+	})
+	if err != nil {
+		t.Fatalf("publish artifact: %v", err)
+	}
 	again, err := s.PutRunArtifact(ctx, *artifact)
 	if err != nil || again.ID != artifact.ID {
 		t.Fatalf("artifact exact retry = %+v, %v", again, err)
@@ -174,7 +192,6 @@ func TestInvestigationImmutableRecordsAndSupersession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	advancePublishedRun(t, s, run.ID)
 	artifact := putPublishedArtifact(t, s, run.ID)
 
 	decision, err := s.PutDecision(ctx, store.Decision{

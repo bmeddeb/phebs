@@ -741,11 +741,30 @@ promoted-grant consumption, and all four audit action classes.
 The complete SurrealDB-backed Investigation suite passed after remediation on
 2026-07-22 in 63.007 seconds.
 
-**T16.4 · Guided creation and async run state** *(needs T16.1–T16.3)* —
+**T16.4 ✅ · Guided creation and async run state** *(needs T16.1–T16.3)* —
 creation API with scope preview, authorization preflight, estimate, cancel,
 bounded retries; publication lease. AC: failed/canceled attempts can never
 publish (late-worker test); partial failures surface in the coverage
 ledger; creation is idempotent under concurrent submission.
+
+Implementation is present on `codex/t16.4-guided-creation-run-state`: the
+permission-first preview resolves only caller-visible indexed repository
+snapshots, returns deterministic estimates/blockers, and binds submission to a
+digest that is re-preflighted at create time. One transaction freezes the
+active Investigation, Revision, queued Run/event, idempotency mapping, audit
+record, and `investigation_run_job`; concurrent exact submissions cannot mint
+competing objects or queue slots. Attempt leases fence progress, bounded retry
+rollover, owner cancellation, and atomic published/failed artifacts. Terminal
+publication includes the RunEvent, artifact, evidence pins, active-
+Investigation retention owner, and audit row; failure artifacts retain
+reconciled partial/failed coverage but structurally reject facts and pins.
+The adapter remains unregistered in the production binary until an executable
+released pack is available, so the post-gate implementation cannot expose an
+undrainable workflow. Pure/API/compile/vet/lint and SurrealQL validation are
+green. The complete live SurrealDB-backed Investigation suite passed on
+2026-07-22 in 79.323 seconds, including concurrent guided creation, bounded
+retry rollover, cancellation and failure late-worker fences, partial-failure
+coverage publication, and the retained T16.1–T16.3 regressions.
 
 **T16.5 · Core views** *(needs T16.4)* — Overview (four cards, derived
 eligibility badge with blocker codes), Census, Coverage, Evidence;

@@ -65,6 +65,11 @@ DEFINE FIELD OVERWRITE status ON extraction_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS extraction_job_status ON extraction_job FIELDS status;
 
+DEFINE TABLE IF NOT EXISTS investigation_run_job SCHEMALESS;
+DEFINE FIELD OVERWRITE status ON investigation_run_job TYPE string
+    ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS investigation_run_job_status ON investigation_run_job FIELDS status;
+
 -- Contract-intelligence evidence layer (T12.1, PLAN ADRs 2026-07-12).
 -- Atoms are content-keyed and shared across repos/commits; repository
 -- placement (and therefore authorization) lives in snapshot_evidence.
@@ -209,6 +214,17 @@ DEFINE TABLE IF NOT EXISTS investigation_cursor SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_cursor_identity ON investigation_cursor FIELDS cursor_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_cursor_scope ON investigation_cursor
     FIELDS investigation_id, principal UNIQUE;
+
+-- T16.4 guided creation idempotency and lease-fenced asynchronous execution.
+-- The mapping is immutable and keeps a concurrent retry on the same
+-- (principal, idempotency key) attached to one object graph. Run lease fields
+-- remain on investigation_run as mutable attempt fencing data; state remains
+-- derived exclusively from RunEvents.
+DEFINE TABLE IF NOT EXISTS investigation_creation SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_creation_identity ON investigation_creation
+    FIELDS creation_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_creation_scope ON investigation_creation
+    FIELDS principal, idempotency_key UNIQUE;
 
 DEFINE TABLE IF NOT EXISTS investigation_watch SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_watch_identity ON investigation_watch FIELDS watch_id UNIQUE;

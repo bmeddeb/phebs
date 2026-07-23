@@ -31,8 +31,6 @@ type InvestigationStore interface {
 	CreateRun(context.Context, RunRequest) (*Run, error)
 	GetRun(context.Context, string) (*Run, error)
 	ListRunEvents(context.Context, string) ([]RunEvent, error)
-	AppendRunEvent(context.Context, string, RunEvent) (*RunEvent, error)
-	PutRunArtifact(context.Context, RunArtifact) (*RunArtifact, error)
 	GetRunArtifact(context.Context, string) (*RunArtifact, error)
 	PutDecision(context.Context, Decision) (*Decision, error)
 	GetDecision(context.Context, string) (*Decision, error)
@@ -645,6 +643,10 @@ type investigationRunRec struct {
 	CreatedAt               time.Time `json:"created_at"`
 	RequestDigest           string    `json:"request_digest"`
 	EventRevision           int       `json:"event_revision"`
+	LeaseToken              string    `json:"lease_token"`
+	LeaseAttempt            int       `json:"lease_attempt"`
+	LeaseWorker             string    `json:"lease_worker"`
+	LeaseAcquiredAt         time.Time `json:"lease_acquired_at"`
 }
 
 func (r investigationRunRec) run(state RunState) Run {
@@ -697,7 +699,7 @@ func (s *Surreal) getRunRec(ctx context.Context, id string) (*investigationRunRe
 		return nil, ErrNotFound
 	}
 	results, err := surrealdb.Query[[]investigationRunRec](ctx, s.db,
-		"SELECT run_id, revision_id, seq, idempotency_key, resolved_input_identities, requested_snapshot, input_manifest_digest, requested_pack_versions, created_by, created_at, request_digest, event_revision FROM $rid LIMIT 1",
+		"SELECT run_id, revision_id, seq, idempotency_key, resolved_input_identities, requested_snapshot, input_manifest_digest, requested_pack_versions, created_by, created_at, request_digest, event_revision, lease_token, lease_attempt, lease_worker, lease_acquired_at FROM $rid LIMIT 1",
 		map[string]any{"rid": runRecordID(id)})
 	if err != nil {
 		return nil, fmt.Errorf("get run: %w", err)
@@ -866,6 +868,17 @@ func validRunTransition(from, to RunState) bool {
 	}
 }
 
+func validRunEventTransition(previous, current RunEvent) bool {
+	if current.PriorState != previous.NewState {
+		return false
+	}
+	if current.Attempt == previous.Attempt {
+		return validRunTransition(previous.NewState, current.NewState)
+	}
+	return current.Attempt == previous.Attempt+1 &&
+		!terminalRunState(previous.NewState) && current.NewState == RunQueued
+}
+
 func (s *Surreal) ListRunEvents(ctx context.Context, runID string) ([]RunEvent, error) {
 	if !strings.HasPrefix(runID, "iru_") {
 		return nil, ErrNotFound
@@ -904,8 +917,7 @@ func (s *Surreal) ListRunEvents(ctx context.Context, runID string) ([]RunEvent, 
 			if rows[i].PriorState != "" || rows[i].NewState != RunQueued {
 				return nil, errors.New("list run events: invalid initial event")
 			}
-		} else if rows[i].PriorState != rows[i-1].NewState ||
-			!validRunTransition(rows[i].PriorState, rows[i].NewState) {
+		} else if !validRunEventTransition(rows[i-1], rows[i]) {
 			return nil, errors.New("list run events: invalid state transition")
 		}
 	}
@@ -933,7 +945,12 @@ func (s *Surreal) getRunEvent(ctx context.Context, id string) (*RunEvent, error)
 	return &rows[0], nil
 }
 
-func (s *Surreal) AppendRunEvent(ctx context.Context, runID string, event RunEvent) (*RunEvent, error) {
+// AppendRunEvent preserves exact-retry and immutable-edit detection for
+// already stored events. T16.4 deliberately refuses every first append here:
+// new progress, retry, cancellation, failure, and publication events require
+// the attempt-leased workflow so a terminal event cannot separate from its
+// artifact or lease closure.
+func (s *Surreal) AppendRunEvent(ctx context.Context, _ string, event RunEvent) (*RunEvent, error) {
 	if event.ID != "" {
 		if !validULID(event.ID) {
 			return nil, errors.New("append run event: invalid ULID")
@@ -948,96 +965,7 @@ func (s *Surreal) AppendRunEvent(ctx context.Context, runID string, event RunEve
 			return nil, err
 		}
 	}
-	if !validRunState(event.NewState) || event.NewState == RunQueued {
-		return nil, errors.New("append run event: invalid new state")
-	}
-	for name, value := range map[string]string{"actor": event.Actor, "reason": event.Reason} {
-		if err := validateDomainString(name, value, true); err != nil {
-			return nil, fmt.Errorf("append run event: %w", err)
-		}
-	}
-
-	for attempt := 0; ; attempt++ {
-		runRow, err := s.getRunRec(ctx, runID)
-		if err != nil {
-			return nil, err
-		}
-		events, err := s.ListRunEvents(ctx, runID)
-		if err != nil {
-			return nil, err
-		}
-		if len(events) == 0 {
-			return nil, errors.New("append run event: event stream is inconsistent")
-		}
-		if runRow.EventRevision != events[len(events)-1].Sequence {
-			// A concurrent append between the two reads above; re-read rather
-			// than reporting a healthy stream as corrupt.
-			if ctx.Err() == nil && attempt+1 < maxQueueRetries {
-				continue
-			}
-			return nil, errors.New("append run event: event stream is inconsistent")
-		}
-		last := events[len(events)-1]
-		if event.PriorState != "" && event.PriorState != last.NewState {
-			return nil, fmt.Errorf("append run event: prior state mismatch: %w", ErrConflict)
-		}
-		if !validRunTransition(last.NewState, event.NewState) {
-			return nil, fmt.Errorf("append run event: invalid transition %s -> %s: %w", last.NewState, event.NewState, ErrConflict)
-		}
-		if event.Attempt == 0 {
-			event.Attempt = last.Attempt
-		}
-		if event.Attempt != last.Attempt {
-			return nil, fmt.Errorf("append run event: attempt change requires the retry workflow: %w", ErrConflict)
-		}
-		event.RunID = runID
-		event.Sequence = last.Sequence + 1
-		event.PriorState = last.NewState
-		event.Timestamp = storeTimestamp(time.Now())
-		if event.ID == "" {
-			event.ID, err = newULID(event.Timestamp)
-			if err != nil {
-				return nil, err
-			}
-		}
-		event.Digest, err = contentDigest(runEventCore(event))
-		if err != nil {
-			return nil, err
-		}
-		results, queryErr := surrealdb.Query[[]RunEvent](ctx, s.db,
-			`BEGIN;
-LET $locked = UPDATE $run_rid SET event_revision = $next_sequence
-    WHERE event_revision = $expected_sequence RETURN AFTER;
-LET $created = IF array::len($locked) = 1 THEN
-    (CREATE $event_rid SET event_id = $event_id, run_id = $run_id,
-        sequence = $next_sequence, attempt = $attempt, prior_state = $prior_state,
-        new_state = $new_state, actor = $actor, reason = $reason,
-        timestamp = $timestamp, content_digest = $content_digest RETURN AFTER)
-    ELSE [] END;
-RETURN $created;
-COMMIT;`,
-			map[string]any{
-				"run_rid": runRecordID(runID), "expected_sequence": last.Sequence,
-				"next_sequence": event.Sequence, "event_rid": runEventRecordID(event.ID),
-				"event_id": event.ID, "run_id": runID, "attempt": event.Attempt,
-				"prior_state": string(event.PriorState), "new_state": string(event.NewState),
-				"actor": event.Actor, "reason": event.Reason, "timestamp": event.Timestamp,
-				"content_digest": event.Digest,
-			})
-		if queryErr != nil {
-			if isRetryableEnqueue(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
-				continue
-			}
-			return nil, fmt.Errorf("append run event: %w", queryErr)
-		}
-		rows := firstDomainRows(results)
-		if len(rows) == 1 {
-			return &rows[0], nil
-		}
-		if attempt+1 >= maxQueueRetries {
-			return nil, fmt.Errorf("append run event: concurrent transition: %w", ErrConflict)
-		}
-	}
+	return nil, fmt.Errorf("append run event: new events require the T16.4 leased workflow: %w", ErrConflict)
 }
 
 func runArtifactCore(artifact RunArtifact) any {
@@ -1109,52 +1037,26 @@ func normalizeRunArtifact(artifact RunArtifact) (RunArtifact, error) {
 	return artifact, nil
 }
 
+// PutRunArtifact preserves exact-retry compatibility for artifacts already
+// committed through the T16.4 leased terminal workflow. It deliberately
+// refuses first publication so callers cannot separate a terminal event from
+// its artifact, pins, and retention owner.
 func (s *Surreal) PutRunArtifact(ctx context.Context, artifact RunArtifact) (*RunArtifact, error) {
 	artifact, err := normalizeRunArtifact(artifact)
 	if err != nil {
 		return nil, fmt.Errorf("put run artifact: %w", err)
 	}
-	run, err := s.GetRun(ctx, artifact.RunID)
-	if err != nil {
-		return nil, fmt.Errorf("put run artifact: run: %w", err)
-	}
-	if run.State != artifact.TerminalStatus {
-		return nil, fmt.Errorf("put run artifact: terminal status does not match event-derived run state: %w", ErrConflict)
-	}
-	artifact.CreatedAt = storeTimestamp(time.Now())
-	kind := runArtifactPinKind(artifact.ID)
-	pins := make([]map[string]any, len(artifact.PinReferences))
-	for i, runID := range artifact.PinReferences {
-		pins[i] = map[string]any{
-			"rid": evidencePinRecordID(runID, kind), "pin_key": hashIdentity("pin_", runID, kind),
-			"run_id": runID,
+	existing, err := s.GetRunArtifact(ctx, artifact.ID)
+	if err == nil {
+		if existing.RunID == artifact.RunID && existing.ContentDigest == artifact.ContentDigest {
+			return existing, nil
 		}
+		return nil, fmt.Errorf("put run artifact: immutable content conflicts: %w", ErrConflict)
 	}
-	vars := map[string]any{
-		"rid": runArtifactRecordID(artifact.ID), "artifact_id": artifact.ID,
-		"scope": artifact.Scope, "run_id": artifact.RunID,
-		"terminal_status": string(artifact.TerminalStatus), "snapshot_manifest": artifact.SnapshotManifest,
-		"input_manifest": artifact.InputManifest, "coverage_ledger": artifact.CoverageLedger,
-		"fact_references": artifact.FactReferences, "pin_references": artifact.PinReferences,
-		"eligibility_result": artifact.EligibilityResult, "diagnostic_data": artifact.DiagnosticData,
-		"created_at": artifact.CreatedAt, "content_digest": artifact.ContentDigest,
-		"pins": pins, "pin_kind": kind, "evidence_format_version": evidenceFormatVersion,
-		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+	if !errors.Is(err, ErrNotFound) {
+		return nil, err
 	}
-	for attempt := 0; ; attempt++ {
-		results, queryErr := surrealdb.Query[[]RunArtifact](ctx, s.db, putRunArtifactWithPinsSQL, vars)
-		if queryErr != nil {
-			if isRetryable(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
-				continue
-			}
-			return nil, fmt.Errorf("put run artifact: %w", queryErr)
-		}
-		rows := firstDomainRows(results)
-		if len(rows) != 1 {
-			return nil, fmt.Errorf("put run artifact: referenced extraction run is unavailable or immutable content conflicts: %w", ErrConflict)
-		}
-		return &rows[0], nil
-	}
+	return nil, fmt.Errorf("put run artifact: new artifacts require a T16.4 publication lease: %w", ErrConflict)
 }
 
 func (s *Surreal) GetRunArtifact(ctx context.Context, id string) (*RunArtifact, error) {

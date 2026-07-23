@@ -1234,12 +1234,13 @@ rolling writers, or rolling an older writer back onto the same remote
 endpoint, are not supported; the supervised local deployment already provides
 that single-writer boundary.
 
-### Investigation storage foundation
+### Investigation storage and guided execution foundation
 
-Epic 16's first storage slice is internal only: it registers no API, UI route,
-MCP tool, worker, or capability. On startup, the normal idempotent schema pass
+On startup, the normal idempotent schema pass
 creates the Investigation, Revision, Run, RunEvent, RunArtifact, Decision,
 Disposition, BaselineDesignation, Watch, and WatchRevision tables and indexes.
+T16.4 additionally creates the immutable guided-creation idempotency mapping
+and the `investigation_run_job` queue table.
 
 Revisions, Run requests, RunEvents, RunArtifacts, Decisions, Dispositions,
 BaselineDesignations, and WatchRevisions are immutable at the store boundary.
@@ -1252,26 +1253,44 @@ and current-revision pointer, so a concurrent stale writer fails closed with a
 conflict instead of committing an invalid transition or clobbering the
 pointer.
 
-Run rows contain no status field. Creation atomically appends the initial
-`queued` event, and every later state is reconstructed from the contiguous,
-append-only event stream:
+Run rows contain no status field. Guided submission atomically freezes the
+active Investigation and first Revision, appends the initial `queued` event,
+and creates one pending queue slot. Every later state is reconstructed from
+the contiguous, append-only event stream:
 `queued → enumerating → analyzing → publishing → published`, with `failed` or
 `canceled` allowed only before a terminal state. Reusing the same idempotency
 key for the exact same Revision request returns the existing Run; changing any
 request input under that key fails closed. A failed or canceled RunArtifact
 cannot carry published fact references.
 
-RunArtifact publication and its extraction-run evidence pins are one database
-transaction. Every pin uses the artifact-specific
+Before submission, the guided preview lists only the caller's currently
+visible repository snapshots, exact indexed commits, selected pack versions,
+an authorization result, a repository-snapshot work estimate, and the
+1,000-repository platform ceiling. A requested repository that is missing,
+deleting, or unauthorized has the same `SCOPE_REPOSITORY_NOT_AVAILABLE`
+blocker. The preview digest covers the normalized plan and resolved commits;
+submission repeats the preflight and returns a conflict if anything changed.
+
+Worker attempts use an opaque publication lease separate from the generic job
+lease. A retry closes the prior lease and appends a new `queued` attempt; the
+platform permits at most three attempts and a pack may choose fewer. Owners
+may cancel a nonterminal Run. Cancellation closes the worker lease in the same
+transaction as the terminal event and audit row, so a late worker cannot
+publish.
+
+RunArtifact publication, its terminal RunEvent, extraction-run evidence pins,
+active-Investigation retention owner, and audit row are one database
+transaction guarded by the exact attempt lease. Every pin uses the artifact-specific
 `investigation-artifact:<artifact-id>` namespace; if any referenced extraction
 run is missing, quarantined, ambiguous, incompatible, or not published or
 superseded, neither the artifact nor any of its pins is written. The
 publication transaction locks each referenced extraction run, so a concurrent
 evidence sweep can never reclaim a run in the same instant an artifact pins
 it. A Baseline
-designation atomically acquires its corresponding artifact owner. Active
-Investigation and retained Dossier owners use the same internal owner boundary
-when their lifecycle services land.
+designation atomically acquires its corresponding artifact owner. Failed
+attempts may atomically retain a reconciled
+`investigation-coverage-ledger-v1` plus bounded diagnostics, but that path
+rejects facts and evidence pins.
 
 Retention owners are immutable caller-authorized claims. Ending one appends a
 release; it never edits the claim, and that semantic owner key cannot silently
@@ -1306,8 +1325,15 @@ cannot silently restore access after a later transfer. Grant, revoke, transfer,
 and cursor mutation serialize against each other and commit with their audit
 event in one transaction. The canonical `NOT_AVAILABLE` refusal
 envelope (fixture 06) is rendered server-side as a minimal fixed shape whose
-bytes are identical for unknown and unauthorized requests. API and MCP
-surfaces bind to this boundary in later Epic 16 tickets.
+bytes are identical for unknown and unauthorized requests.
+
+The T16.4 HTTP adapter defines preview, create, Run-status, and cancel
+operations, but the production binary does not register them yet. Registration
+requires a non-nil Investigation workflow store, which stays absent until an
+exact released evidence-pack executor can drain the queue. Consequently these
+post-gate implementation routes are absent from the live OpenAPI document and
+return 404 rather than exposing a workflow that cannot complete. T16.5 binds
+the core views after that executable boundary exists.
 
 ### Metrics
 

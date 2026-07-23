@@ -43,11 +43,11 @@ func putPinnedArtifact(t *testing.T, s *store.Surreal, extractionRunID, scope st
 	if err != nil {
 		t.Fatalf("create investigation run: %v", err)
 	}
-	advancePublishedRun(t, s, run.ID)
-	artifact, err := s.PutRunArtifact(ctx, store.RunArtifact{
+	lease := advanceToPublishing(t, s, run.ID)
+	artifact, err := s.PublishInvestigationRun(ctx, lease, store.RunArtifact{
 		Scope: scope, RunID: run.ID, TerminalStatus: store.RunPublished,
 		SnapshotManifest: "sha256:snapshot", InputManifest: "sha256:input",
-		CoverageLedger: "coverage-v1", FactReferences: []string{"fact:one"},
+		CoverageLedger: completeInvestigationCoverage(t, 1), FactReferences: []string{"fact:one"},
 		PinReferences: []string{extractionRunID}, EligibilityResult: "eligible:true",
 	})
 	if err != nil {
@@ -60,7 +60,8 @@ func retainInvestigationArtifact(t *testing.T, s *store.Surreal, artifactID, inv
 	t.Helper()
 	owner, err := s.PutRunArtifactRetentionOwner(context.Background(), store.RunArtifactRetentionOwner{
 		ArtifactID: artifactID, Kind: store.RunArtifactOwnerInvestigation,
-		OwnerID: investigationID, AuthorizedBy: "user:owner", Reason: "active investigation",
+		OwnerID: investigationID, AuthorizedBy: "worker:one",
+		Reason: "active investigation run artifact",
 	})
 	if err != nil {
 		t.Fatalf("retain artifact: %v", err)
@@ -165,19 +166,20 @@ func TestInvestigationRetentionPublicationAndPinsAreAtomic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	advancePublishedRun(t, s, run.ID)
+	lease := advanceToPublishing(t, s, run.ID)
 	candidate := store.RunArtifact{
 		Scope: "investigation:atomic", RunID: run.ID, TerminalStatus: store.RunPublished,
 		SnapshotManifest: "sha256:snapshot", InputManifest: "sha256:input",
-		CoverageLedger: "coverage-v1", PinReferences: []string{"missing-extraction-run"},
+		CoverageLedger: completeInvestigationCoverage(t, 1), PinReferences: []string{"missing-extraction-run"},
 		EligibilityResult: "eligible:false:missing-evidence",
 	}
 	id, err := store.ComputeRunArtifactID(candidate)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.PutRunArtifact(ctx, candidate); !errors.Is(err, store.ErrConflict) {
-		t.Fatalf("unavailable pin publication = %v, want ErrConflict", err)
+	if _, err := s.PublishInvestigationRun(ctx, lease, candidate); !errors.Is(err, store.ErrConflict) &&
+		!errors.Is(err, store.ErrLeaseLost) {
+		t.Fatalf("unavailable pin publication = %v, want ErrConflict or ErrLeaseLost", err)
 	}
 	if _, err := s.GetRunArtifact(ctx, id); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("partially published artifact read = %v, want ErrNotFound", err)
@@ -189,7 +191,11 @@ func TestInvestigationRetentionArtifactSweepReleasesOnlyItsOwnPins(t *testing.T)
 	ctx := context.Background()
 	repo, commit := "github.com/investigation/pin-isolation", "dddddddd"
 	oldRun := seedPublishedExtractionRun(t, s, repo, commit, "proto-contract@1")
-	_, _, artifact := putPinnedArtifact(t, s, oldRun.ID, "investigation:pin-isolation")
+	investigation, _, artifact := putPinnedArtifact(t, s, oldRun.ID, "investigation:pin-isolation")
+	owner := retainInvestigationArtifact(t, s, artifact.ID, investigation.ID)
+	if _, err := s.ReleaseRunArtifactRetentionOwner(ctx, owner.Key, "user:owner", "test collection"); err != nil {
+		t.Fatalf("release investigation owner: %v", err)
+	}
 	if err := s.PinRun(ctx, oldRun.ID, "independent-retention-owner"); err != nil {
 		t.Fatalf("independent pin: %v", err)
 	}

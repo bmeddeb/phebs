@@ -39,7 +39,6 @@ func seedAuthzDomain(t *testing.T, s *store.Surreal) authzDomain {
 	if err != nil {
 		t.Fatalf("create run: %v", err)
 	}
-	advancePublishedRun(t, s, run.ID)
 	artifact := putPublishedArtifact(t, s, run.ID)
 	decision, err := s.PutDecision(ctx, store.Decision{
 		InvestigationID: investigation.ID, ClaimScope: "consumer-census",
@@ -126,6 +125,10 @@ func TestInvestigationAuthzReadProjectionMatrix(t *testing.T) {
 			_, err := s.GetRunArtifactAs(ctx, p, id)
 			return err
 		}, domain.artifact.ID, "ira_deadbeef", true},
+		{"run artifact by run", func(p, id string) error {
+			_, err := s.GetRunArtifactForRunAs(ctx, p, id)
+			return err
+		}, domain.run.ID, "iru_deadbeef", true},
 		{"decision", func(p, id string) error {
 			_, err := s.GetDecisionAs(ctx, p, id)
 			return err

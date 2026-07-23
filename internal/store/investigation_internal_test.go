@@ -40,6 +40,74 @@ func TestInvestigationDomainPureRules(t *testing.T) {
 		}
 	})
 
+	t.Run("attempt rollover is queued and bounded", func(t *testing.T) {
+		previous := RunEvent{Attempt: 1, NewState: RunAnalyzing}
+		retry := RunEvent{Attempt: 2, PriorState: RunAnalyzing, NewState: RunQueued}
+		if !validRunEventTransition(previous, retry) {
+			t.Fatal("valid retry attempt rollover was rejected")
+		}
+		for _, invalid := range []RunEvent{
+			{Attempt: 1, PriorState: RunAnalyzing, NewState: RunQueued},
+			{Attempt: 3, PriorState: RunAnalyzing, NewState: RunQueued},
+			{Attempt: 2, PriorState: RunAnalyzing, NewState: RunAnalyzing},
+		} {
+			if validRunEventTransition(previous, invalid) {
+				t.Fatalf("invalid retry transition accepted: %+v", invalid)
+			}
+		}
+	})
+
+	t.Run("coverage ledger reconciles and canonicalizes failures", func(t *testing.T) {
+		ledger := InvestigationCoverageLedger{
+			EligibleUnits: 4, Analyzed: 2, Partial: 1, Failed: 1,
+			Failures: []InvestigationCoverageFailure{
+				{Unit: "z", Code: "FAILED", Retryable: true},
+				{Unit: "a", Code: "PARTIAL"},
+			},
+		}
+		first, err := CanonicalInvestigationCoverageLedger(ledger)
+		if err != nil {
+			t.Fatal(err)
+		}
+		slices.Reverse(ledger.Failures)
+		second, err := CanonicalInvestigationCoverageLedger(ledger)
+		if err != nil || first != second {
+			t.Fatalf("canonical coverage differs: %q / %q, %v", first, second, err)
+		}
+		empty := InvestigationCoverageLedger{}
+		nilFailures, err := CanonicalInvestigationCoverageLedger(empty)
+		if err != nil {
+			t.Fatal(err)
+		}
+		empty.Failures = []InvestigationCoverageFailure{}
+		emptyFailures, err := CanonicalInvestigationCoverageLedger(empty)
+		if err != nil || nilFailures != emptyFailures {
+			t.Fatalf("nil/empty coverage failures differ: %q / %q, %v", nilFailures, emptyFailures, err)
+		}
+		ledger.Analyzed++
+		if _, err := CanonicalInvestigationCoverageLedger(ledger); err == nil {
+			t.Fatal("unreconciled coverage was accepted")
+		}
+	})
+
+	t.Run("coverage parser is closed and canonical", func(t *testing.T) {
+		input := `{"failures":[],"excluded":0,"failed":0,"partial":0,"analyzed":1,"eligible_units":1,"schema_version":"investigation-coverage-ledger-v1"}`
+		ledger, canonical, err := ParseInvestigationCoverageLedger(input)
+		if err != nil || ledger.Analyzed != 1 ||
+			canonical != `{"schema_version":"investigation-coverage-ledger-v1","eligible_units":1,"analyzed":1,"partial":0,"failed":0,"excluded":0,"failures":[]}` {
+			t.Fatalf("parsed coverage = %+v, %q, %v", ledger, canonical, err)
+		}
+		for _, invalid := range []string{
+			`{"schema_version":"investigation-coverage-ledger-v1","eligible_units":0,"analyzed":0,"partial":0,"failed":0,"excluded":0,"failures":[],"extra":true}`,
+			`{"schema_version":"investigation-coverage-ledger-v1","eligible_units":0,"analyzed":0,"partial":0,"failed":0,"excluded":0,"failures":[]} {}`,
+			`{"schema_version":"investigation-coverage-ledger-v1","eligible_units":1,"analyzed":0,"partial":0,"failed":0,"excluded":0,"failures":[]}`,
+		} {
+			if _, _, err := ParseInvestigationCoverageLedger(invalid); err == nil {
+				t.Fatalf("invalid coverage accepted: %s", invalid)
+			}
+		}
+	})
+
 	t.Run("artifact references canonicalize into identity", func(t *testing.T) {
 		base := RunArtifact{
 			Scope: "scope", RunID: "run", TerminalStatus: RunPublished,

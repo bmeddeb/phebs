@@ -62,6 +62,11 @@ type Options struct {
 	Principal             func(context.Context) string
 	AuthorizationProvider string
 
+	// Investigations enables the T16.4 guided-creation API. Nil leaves every
+	// route unregistered; the production binary keeps it nil until an exact
+	// released pack/executor is bound.
+	Investigations store.InvestigationWorkflowStore
+
 	// Visible resolves the caller's repo visibility (T10.3): it returns this
 	// request's predicate, or nil when the caller may see everything. A nil
 	// field disables permission filtering (tests, permissions block absent).
@@ -322,6 +327,7 @@ func New(opts Options) http.Handler {
 	registerAudit(api, opts)
 	registerAnalytics(api, opts)
 	registerEvidence(api, opts)
+	registerInvestigations(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

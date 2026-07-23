@@ -143,55 +143,6 @@ func normalizeRunArtifactRetentionOwner(owner RunArtifactRetentionOwner) (RunArt
 	return owner, nil
 }
 
-// Eligibility must be a locking UPDATE, not a SELECT: incrementing each
-// pinned run's retention_revision gives this transaction a write conflict
-// with sweepRunSQL (which locks the same row before checking pin absence),
-// exactly as pinRunSQL does. A read-only check would allow snapshot write
-// skew where the sweeper deletes a superseded run while this transaction
-// commits a pin to it.
-const putRunArtifactWithPinsSQL = `
-BEGIN;
-LET $eligible = UPDATE extraction_run SET retention_revision = (retention_revision ?? 0) + 1
-	WHERE run_id IN $pin_references
-	  AND evidence_format_version = $evidence_format_version
-	  AND retention_quarantined = false
-	  AND run_id = record::id(id)
-	  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
-	  AND ((status = 'published' AND published_key != NONE)
-	    OR (status = 'superseded' AND published_key = NONE)) RETURN AFTER;
-LET $existing = SELECT artifact_id, scope, run_id, terminal_status, snapshot_manifest,
-	input_manifest, coverage_ledger, fact_references, pin_references,
-	eligibility_result, diagnostic_data, created_at, content_digest FROM $rid LIMIT 1;
-LET $immutable = array::len($existing) = 0 OR
-	($existing[0].artifact_id = $artifact_id AND $existing[0].scope = $scope
-	 AND $existing[0].run_id = $run_id AND $existing[0].terminal_status = $terminal_status
-	 AND $existing[0].snapshot_manifest = $snapshot_manifest
-	 AND $existing[0].input_manifest = $input_manifest
-	 AND $existing[0].coverage_ledger = $coverage_ledger
-	 AND $existing[0].fact_references = $fact_references
-	 AND $existing[0].pin_references = $pin_references
-	 AND $existing[0].eligibility_result = $eligibility_result
-	 AND $existing[0].diagnostic_data = $diagnostic_data
-	 AND $existing[0].content_digest = $content_digest);
-LET $ready = array::len($eligible) = array::len($pin_references) AND $immutable;
-LET $saved = IF $ready THEN
-	(UPSERT $rid SET artifact_id = $artifact_id, scope = $scope, run_id = $run_id,
-		terminal_status = $terminal_status, snapshot_manifest = $snapshot_manifest,
-		input_manifest = $input_manifest, coverage_ledger = $coverage_ledger,
-		fact_references = $fact_references, pin_references = $pin_references,
-		eligibility_result = $eligibility_result, diagnostic_data = $diagnostic_data,
-		created_at = IF created_at = NONE THEN $created_at ELSE created_at END,
-		content_digest = $content_digest RETURN AFTER)
-	ELSE [] END;
-FOR $pin IN $pins {
-	IF $ready {
-		UPSERT $pin.rid SET pin_key = $pin.pin_key, run_id = $pin.run_id,
-			kind = $pin_kind, created_at = IF created_at = NONE THEN time::now() ELSE created_at END RETURN NONE
-	}
-};
-RETURN $saved;
-COMMIT;`
-
 const putRunArtifactRetentionOwnerSQL = `
 BEGIN;
 LET $locked = UPDATE $artifact_rid SET retention_revision = (retention_revision ?? 0) + 1
