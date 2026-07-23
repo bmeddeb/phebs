@@ -766,10 +766,29 @@ green. The complete live SurrealDB-backed Investigation suite passed on
 retry rollover, cancellation and failure late-worker fences, partial-failure
 coverage publication, and the retained T16.1–T16.3 regressions.
 
-**T16.5 · Core views** *(needs T16.4)* — Overview (four cards, derived
+**T16.5 ✅ · Core views** *(needs T16.4)* — Overview (four cards, derived
 eligibility badge with blocker codes), Census, Coverage, Evidence;
 empty-state taxonomy first. AC: fixtures 01–05 each render their distinct
 state; the eligibility badge has no write path; `make dev` demoable.
+
+Implementation is present on `codex/t16.5-core-views`: one read-only,
+principal-scoped API projection carries the existing Investigation envelope
+into four table-first views without inventing a parallel confidence or
+eligibility model. Overview renders four open summary regions and a derived,
+read-only eligibility result; Census preserves facts while separating
+unresolved service and owner attribution; Coverage surfaces processing and
+hop completeness; Evidence retains proof, snapshot, occurrence, and
+verification-action identifiers. Canonical fixtures 01–05 pin five distinct
+rendered states, including authoritative bounded zero, incomplete processing,
+unresolved attribution, and a refusal that withholds all claim-bearing counts.
+Production stays structurally dark when no source is bound. `make dev`
+explicitly binds only the checked-in synthetic fixture corpus so this
+operator-bypassed slice is demoable without presenting the fixtures as
+published evidence. All 77 UI tests, the focused API and whole-repository
+compile gates, vet, touched-package lint, and the production UI build are
+green. Authenticated browser acceptance exercised all five fixtures at
+1440×1000 in light/dark themes and the 390×844 responsive layout with no page
+overflow or console diagnostics.
 
 **T16.6 · MCP envelope implementation** *(needs T16.3; parallel to T16.5)* —
 envelope v0.2 on the existing MCP tools; generated JSON Schemas checked in.

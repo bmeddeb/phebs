@@ -67,6 +67,12 @@ type Options struct {
 	// released pack/executor is bound.
 	Investigations store.InvestigationWorkflowStore
 
+	// InvestigationViews enables the T16.5 read-only core-view API. The
+	// production binary leaves it nil unless an authorized projection source
+	// is explicitly bound; make dev supplies only the documented synthetic
+	// fixture provider.
+	InvestigationViews InvestigationViewSource
+
 	// Visible resolves the caller's repo visibility (T10.3): it returns this
 	// request's predicate, or nil when the caller may see everything. A nil
 	// field disables permission filtering (tests, permissions block absent).
@@ -118,7 +124,7 @@ func New(opts Options) http.Handler {
 		out := &versionOut{}
 		out.Body.Version = opts.Version
 		if opts.Principal != nil && strings.TrimSpace(opts.Principal(ctx)) != "" {
-			out.Body.Capabilities = proofCapabilities(opts)
+			out.Body.Capabilities = apiCapabilities(opts)
 		}
 		return out, nil
 	})
@@ -328,6 +334,7 @@ func New(opts Options) http.Handler {
 	registerAnalytics(api, opts)
 	registerEvidence(api, opts)
 	registerInvestigations(api, opts)
+	registerInvestigationViews(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

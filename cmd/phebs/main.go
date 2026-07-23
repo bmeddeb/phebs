@@ -459,6 +459,14 @@ func serve(args []string) error {
 		}(),
 		WebhookSecret: cfg.Webhook.Secret, ResyncConnections: resyncNames,
 	}
+	if fixtureDir := strings.TrimSpace(os.Getenv("PHEBS_INVESTIGATION_FIXTURES")); fixtureDir != "" {
+		fixtureViews, err := api.NewInvestigationFixtureViews(fixtureDir)
+		if err != nil {
+			return fmt.Errorf("load synthetic Investigation views: %w", err)
+		}
+		apiOpts.InvestigationViews = fixtureViews
+		log.Printf("WARNING: synthetic Investigation fixture views enabled from %s; not production evidence", fixtureDir)
+	}
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries

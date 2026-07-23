@@ -120,6 +120,155 @@ export interface VersionInfo {
   capabilities?: string[]
 }
 
+export type InvestigationOutcome = 'ok' | 'partial' | 'refused' | 'error'
+export type InvestigationAttributionState = 'resolved' | 'ambiguous' | 'unresolved' | 'not_applicable'
+
+export interface InvestigationViewSummary {
+  id: string
+  title: string
+  state: string
+  outcome: InvestigationOutcome
+}
+
+export interface InvestigationProofReference {
+  occurrence_id: string
+  proof_id: string
+  snapshot_id: string
+  verification_action: string
+}
+
+export interface InvestigationAttributionValue {
+  state: InvestigationAttributionState
+  reason_codes: string[]
+}
+
+export interface InvestigationFact {
+  fact_id: string
+  logical_relationship_id: string
+  predicate: string
+  evidence_basis: string
+  subject: { kind: string; id: string }
+  object: { kind: string; id: string }
+  semantic_resolution: { value: string; reason_codes: string[] }
+  attribution_states: Record<string, InvestigationAttributionValue>
+  proof_references: InvestigationProofReference[]
+  qualifiers: Record<string, string>
+  verification_tool: string
+}
+
+export interface InvestigationCoverageHop {
+  denominator: number
+  resolved: number
+  ambiguous: number
+  unresolved: number
+  not_applicable: number
+}
+
+export interface InvestigationEnvelope {
+  envelope_version: string
+  request_id: string
+  generated_at: string
+  outcome: InvestigationOutcome
+  scope: {
+    normalized_question: string
+    investigation_id: string
+    revision_id: string
+    run_artifact_id: string
+    snapshot_id: string
+    build_configuration_id: string
+    visibility_projection_id: string
+    claim: {
+      claim_family: string
+      predicate: string
+      subject: { kind: string; id: string }
+      object: { kind: string; id: string } | null
+      filters: Record<string, string[]>
+      decision_sought: string
+    }
+  }
+  payload?: {
+    kind: string
+    data: { facts: InvestigationFact[] }
+  }
+  coverage?: {
+    visibility: string
+    eligible_units: number
+    processing: {
+      analyzed: number
+      excluded: number
+      partial: number
+      failed: number
+    }
+    processing_reconciled: boolean
+    exclusions_by_reason: Record<string, number>
+    outcome_gates: {
+      status: string
+      rule_id: string
+      rule_version: string
+      reason_codes: string[]
+    }
+    attribution: Record<string, InvestigationCoverageHop>
+  }
+  analysis_conclusion?: {
+    value: string
+    evidence_basis: string
+    rule_id: string
+    rule_version: string
+    reason_codes: string[]
+    eligible_workflows: string[]
+  }
+  absence_eligibility: {
+    applicable: boolean
+    eligible: boolean
+    rule_version: string
+    blocker_codes: string[]
+    qualification: {
+      template_id: string
+      template_version: string
+      parameters: Record<string, string | number>
+      authoritative_text: string
+    } | null
+  }
+  validation?: {
+    pack_id: string
+    pack_version: string
+    pack_status: string
+    workflow_eligibility: string
+    validation_reference: string
+    applies: boolean
+    applicability_blockers: string[]
+    measured_claim_id: string
+    expires_at: string
+    expiry_trigger: string | null
+  }
+  freshness?: {
+    analysis: {
+      status: string
+      published: string
+      snapshot_committed: string
+    }
+    inputs: unknown[]
+  }
+  result_window?: {
+    result_set_complete: boolean
+    page_exhausted: boolean
+    truncated: boolean
+    truncated_reason: string | null
+    returned: number
+    next_page_token: string | null
+    ordering: string
+  }
+  refusal?: {
+    code: string
+    authoritative_text: string
+  } | null
+  errors: unknown[]
+}
+
+export interface InvestigationViewDocument extends InvestigationViewSummary {
+  envelope: InvestigationEnvelope
+}
+
 export interface ProofQuery {
   kind: string
   operation?: string
@@ -441,6 +590,15 @@ export const fetchAnalytics = (days = 30, signal?: AbortSignal) =>
 
 export const fetchVersion = (signal?: AbortSignal) =>
   getJSON<VersionInfo>('/api/version', signal)
+
+export const fetchInvestigationViews = (signal?: AbortSignal) =>
+  getJSON<InvestigationViewSummary[]>('/api/investigation_views', signal)
+
+export const fetchInvestigationView = (id: string, signal?: AbortSignal) =>
+  getJSON<InvestigationViewDocument>(
+    `/api/investigation_views/${encodeURIComponent(id)}`,
+    signal,
+  )
 
 export const fetchOperationImpact = (operation: string, signal?: AbortSignal) =>
   getJSON<ContractImpactReport>(

@@ -1332,8 +1332,40 @@ operations, but the production binary does not register them yet. Registration
 requires a non-nil Investigation workflow store, which stays absent until an
 exact released evidence-pack executor can drain the queue. Consequently these
 post-gate implementation routes are absent from the live OpenAPI document and
-return 404 rather than exposing a workflow that cannot complete. T16.5 binds
-the core views after that executable boundary exists.
+return 404 rather than exposing a workflow that cannot complete.
+
+T16.5 adds the read-only core-view surface behind a separate, narrow,
+principal-scoped source. When a source is bound, authenticated clients receive
+the `investigation-core-views` capability and may read:
+
+- `GET /api/investigation_views` for authorized view summaries; and
+- `GET /api/investigation_views/{id}` for one already-authorized envelope.
+
+The UI then exposes `#/investigations`. Overview shows four summary regions
+(evidenced, unknown, changed, and action), followed by the server-derived
+bounded-absence eligibility result and blocker codes. The eligibility region
+is deliberately read-only: there is no control or request path that can set
+eligibility. Census preserves supported facts while displaying service and
+owner attribution as separate states. Coverage shows eligible/analyzed/
+failed/partial/excluded units and all attribution hops. Evidence retains proof,
+snapshot, occurrence, and verification-action identifiers.
+
+Empty states are conclusions with different prerequisites, not cosmetic
+variants of “no results.” A complete zero-finding response renders the
+server's authoritative bounded-absence qualification; an incomplete response
+says only that no supported facts were found among analyzed units and lists
+processing gaps; unresolved attribution remains visible beside the supported
+fact; and a pack refusal suppresses Census, Coverage, evidence counts, and all
+other claim-bearing content.
+
+The normal production binary binds no core-view source, so these routes,
+capability, OpenAPI operations, and navigation entry remain absent. For local
+demonstration only, `make dev` sets `PHEBS_INVESTIGATION_FIXTURES` to the five
+canonical synthetic files in `docs/fixtures/investigations/`. Setting that
+environment variable manually opts into the same development adapter. These
+fixtures exercise presentation and conformance states; they are not published
+evidence, a released pack executor, a valid accuracy gate, or authority for
+external claims.
 
 ### Metrics
 

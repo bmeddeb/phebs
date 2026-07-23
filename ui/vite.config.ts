@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    // T16.5: canonical fixture imports are test-only; keep the dev-server
+    // filesystem exception pinned to that public demo corpus.
+    fs: { allow: ['../docs/fixtures/investigations'] },
     // T5.1: live UI dev against a running `make dev-api` backend
     proxy: { '/api': 'http://localhost:3070' },
   },
