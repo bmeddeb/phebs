@@ -1,0 +1,32 @@
+# Isolated local evaluation of the public OpenTelemetry Demo monorepo.
+# This does not share state with the default phebs instance on port 3070.
+server:
+  addr: "127.0.0.1:3071"
+  data_dir: "/Users/ben/.phebs-otel-demo"
+
+auth:
+  # Plain HTTP is deliberate for this loopback-only evaluation.
+  cookie_secure: false
+  session_lifetime: 12h
+
+sync:
+  cleanup_orphans: false
+  poll_interval: 5s
+  resync_interval: 1h
+
+proof_bundles:
+  retention: 168h
+
+experimental:
+  # Development-only: enables the validation-gated protobuf, Go/gRPC,
+  # and SCIP-field extraction readers where the repository has eligible input.
+  provisional_proto_extraction: true
+
+contexts:
+  otel-demo:
+    - "github.com/open-telemetry/opentelemetry-demo"
+
+connections:
+  - name: opentelemetry-demo
+    type: git
+    url: https://github.com/open-telemetry/opentelemetry-demo.git

@@ -1,0 +1,6 @@
+#V2
+DEFINE TABLE t SCHEMALESS;
+DEFINE INDEX t_sup ON t FIELDS supersedes UNIQUE;
+CREATE t:one SET name = 'a', supersedes = NONE;
+CREATE t:two SET name = 'b', supersedes = NONE;
+SELECT * FROM t;

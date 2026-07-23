@@ -39,8 +39,11 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 - PR-sized, stacked changes; one ticket per PR; ACs in BACKLOG.md are the merge bar.
 - `main` is the integration branch. Ticket worktrees and branches are temporary:
-  remove them after a verified fast-forward merge; retain unmerged validation
-  lineages until an explicit archival decision.
+ remove them after a verified fast-forward merge; retain unmerged validation
+ lineages until an explicit archival decision.
+- **Agents never merge into `main` without Ben's explicit request** (2026-07-22).
+ Passing the merge bar authorizes a merge *request*, not the merge itself;
+ completed ticket work stays on its ticket branch until Ben says to integrate.
 - Table-driven tests. Every epic ends demoable via `make dev` — an epic that
   can't be shown end-to-end is not done.
 - golangci-lint clean. `context.Context` first param. Errors wrapped with `%w`,
