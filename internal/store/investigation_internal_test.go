@@ -59,6 +59,20 @@ func TestInvestigationDomainPureRules(t *testing.T) {
 		if err != nil || first != second {
 			t.Fatalf("canonical artifact ids = %q and %q, err %v", first, second, err)
 		}
+		nilReferences := base
+		nilReferences.FactReferences = nil
+		nilReferences.PinReferences = nil
+		emptyReferences := nilReferences
+		emptyReferences.FactReferences = []string{}
+		emptyReferences.PinReferences = []string{}
+		nilID, err := ComputeRunArtifactID(nilReferences)
+		if err != nil {
+			t.Fatal(err)
+		}
+		emptyID, err := ComputeRunArtifactID(emptyReferences)
+		if err != nil || nilID != emptyID {
+			t.Fatalf("nil/empty artifact ids = %q and %q, err %v", nilID, emptyID, err)
+		}
 	})
 
 	t.Run("event digest survives store second precision", func(t *testing.T) {
@@ -75,6 +89,34 @@ func TestInvestigationDomainPureRules(t *testing.T) {
 		after, err := contentDigest(runEventCore(event))
 		if err != nil || before != after {
 			t.Fatalf("event digest changed across store precision: %q != %q, %v", before, after, err)
+		}
+	})
+
+	t.Run("retention owner identity and override policy are closed", func(t *testing.T) {
+		owner, err := normalizeRunArtifactRetentionOwner(RunArtifactRetentionOwner{
+			ArtifactID: "ira_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			Kind:       RunArtifactOwnerInvestigation, OwnerID: "investigation:one",
+			AuthorizedBy: "user:owner", Reason: "active investigation",
+		})
+		if err != nil || owner.Key == "" || owner.ContentDigest == "" {
+			t.Fatalf("normalized owner = %+v, %v", owner, err)
+		}
+		again, err := normalizeRunArtifactRetentionOwner(owner)
+		if err != nil || again.Key != owner.Key || again.ContentDigest != owner.ContentDigest {
+			t.Fatalf("owner identity is not stable: %+v, %v", again, err)
+		}
+		for _, policy := range []RunArtifactOverridePolicy{
+			RunArtifactOverrideRevocation,
+			RunArtifactOverrideMandatoryDeletion,
+			RunArtifactOverrideLegalPolicy,
+			RunArtifactOverrideApprovedRetention,
+		} {
+			if !validRunArtifactOverridePolicy(policy) {
+				t.Errorf("registered override policy %q rejected", policy)
+			}
+		}
+		if validRunArtifactOverridePolicy("operator_preference") {
+			t.Fatal("unregistered override policy accepted")
 		}
 	})
 }

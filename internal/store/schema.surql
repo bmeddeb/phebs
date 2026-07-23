@@ -152,6 +152,31 @@ DEFINE FIELD OVERWRITE terminal_status ON investigation_run_artifact TYPE string
     ASSERT $value INSIDE ['published', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS investigation_run_artifact_identity ON investigation_run_artifact FIELDS artifact_id UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_run_artifact_run ON investigation_run_artifact FIELDS run_id;
+DEFINE INDEX IF NOT EXISTS investigation_run_artifact_retention ON investigation_run_artifact
+    FIELDS created_at, artifact_id;
+
+-- T16.2 append-only artifact owners and releases. Acquiring an owner and
+-- sweeping both serialize through the artifact's retention_revision token;
+-- release and override rows preserve the policy audit after collection.
+DEFINE TABLE IF NOT EXISTS investigation_artifact_owner SCHEMALESS;
+DEFINE FIELD OVERWRITE owner_kind ON investigation_artifact_owner TYPE string
+    ASSERT $value INSIDE ['investigation', 'baseline', 'dossier'];
+DEFINE INDEX IF NOT EXISTS investigation_artifact_owner_identity ON investigation_artifact_owner
+    FIELDS owner_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_artifact_owner_artifact ON investigation_artifact_owner
+    FIELDS artifact_id, owner_key;
+
+DEFINE TABLE IF NOT EXISTS investigation_artifact_owner_release SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_artifact_owner_release_identity ON investigation_artifact_owner_release
+    FIELDS owner_key UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_artifact_retention_override SCHEMALESS;
+DEFINE FIELD OVERWRITE policy ON investigation_artifact_retention_override TYPE string
+    ASSERT $value INSIDE ['revocation', 'mandatory_deletion', 'legal_policy', 'approved_retention'];
+DEFINE INDEX IF NOT EXISTS investigation_artifact_override_identity ON investigation_artifact_retention_override
+    FIELDS override_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_artifact_override_artifact ON investigation_artifact_retention_override
+    FIELDS artifact_id, override_id;
 
 DEFINE TABLE IF NOT EXISTS investigation_decision SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_decision_identity ON investigation_decision FIELDS decision_id UNIQUE;

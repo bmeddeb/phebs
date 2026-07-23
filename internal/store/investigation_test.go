@@ -86,7 +86,7 @@ func putPublishedArtifact(t *testing.T, s *store.Surreal, runID string) *store.R
 		Scope: "investigation:test", RunID: runID, TerminalStatus: store.RunPublished,
 		SnapshotManifest: "sha256:snapshot", InputManifest: "sha256:input",
 		CoverageLedger: "coverage-v1", FactReferences: []string{"fact:one"},
-		PinReferences: []string{"pin:one"}, EligibilityResult: "eligible:false:blocker",
+		EligibilityResult: "eligible:false:blocker",
 	})
 	if err != nil {
 		t.Fatalf("put artifact: %v", err)

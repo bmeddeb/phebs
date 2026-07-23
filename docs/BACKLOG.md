@@ -689,10 +689,22 @@ SurrealDB-backed AC suite passed locally with `-run '^TestInvestigation'` on
 2026-07-22, including 24-way concurrent Run creation and the full immutable
 entity/supersession table.
 
-**T16.2 · Immutable revisions, pins, retention ownership** *(needs T16.1)* —
+**T16.2 ✅ · Immutable revisions, pins, retention ownership** *(needs T16.1)* —
 Revision freeze; RunArtifact publication binds `PinRun`; pin ownership and
 GC per contract §5. AC: pinned artifacts survive sweep; revocation/legal
 policy overrides pins; GC refuses while an authorized owner exists.
+
+Implementation is present on `codex/t16.2-investigation-pins-retention`:
+artifact plus compatible extraction-run pins publish atomically; immutable
+Investigation/Baseline/Dossier owner claims and append-only releases serialize
+against bounded collection; Baseline creation acquires its owner in the same
+transaction; and four explicit policy overrides can supersede active owners.
+Artifact collection releases only its exact evidence-pin namespace and leaves
+evidence deletion to the existing proof-aware sweeper. Schema and embedded
+SurrealQL validate, package compilation/vet and focused lint are clean. The
+SurrealDB-backed `-run '^TestInvestigation'` suite passed on 2026-07-22 in
+42.041 seconds, including every owner, override, atomic-publication, and
+pin-isolation AC plus the retained T16.1 regressions.
 
 **T16.3 · Authorization invariants** *(needs T16.1)* — query-time principal
 projection on every read; count/existence non-disclosure; opaque ids;

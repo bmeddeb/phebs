@@ -288,6 +288,12 @@ func canonicalStrings(name string, values []string) ([]string, error) {
 	if len(values) > 10_000 {
 		return nil, fmt.Errorf("%s list exceeds 10000 entries", name)
 	}
+	if len(values) == 0 {
+		// SurrealDB distinguishes NULL from an empty array. Canonicalize the
+		// semantic empty set before hashing and persistence so array guards and
+		// immutable readback agree for nil and explicitly empty caller input.
+		return []string{}, nil
+	}
 	values = slices.Clone(values)
 	for _, value := range values {
 		if err := validateDomainString(name, value, true); err != nil {
@@ -461,27 +467,31 @@ func (s *Surreal) UpdateInvestigation(ctx context.Context, in Investigation) (*I
 		}
 	}
 	now := storeTimestamp(time.Now())
+	// The lifecycle transition and current-revision checks above were made
+	// against `existing`; compare-and-swap on those fields so a writer holding
+	// a stale read fails closed instead of committing an invalid transition or
+	// clobbering the current-Revision pointer (contract §5).
 	results, err := surrealdb.Query[[]Investigation](ctx, s.db,
 		`UPDATE $rid SET title = $title, owner = $owner, lifecycle = $lifecycle,
 			current_revision_id = $current_revision_id, updated_at = $now
-			WHERE referent = $referent AND claim_family = $claim_family RETURN AFTER`,
+			WHERE referent = $referent AND claim_family = $claim_family
+			  AND lifecycle = $expected_lifecycle
+			  AND (current_revision_id ?? '') = $expected_current_revision_id RETURN AFTER`,
 		map[string]any{
 			"rid": investigationRecordID(in.ID), "title": in.Title, "owner": in.Owner,
-			"lifecycle": in.Lifecycle, "current_revision_id": optionalValue(in.CurrentRevisionID),
+			"lifecycle": in.Lifecycle, "current_revision_id": in.CurrentRevisionID,
 			"now": now, "referent": existing.Referent, "claim_family": existing.ClaimFamily,
+			"expected_lifecycle":           existing.Lifecycle,
+			"expected_current_revision_id": existing.CurrentRevisionID,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("update investigation: %w", err)
 	}
 	rows := firstDomainRows(results)
 	if len(rows) != 1 {
-		return nil, fmt.Errorf("update investigation: concurrent identity change: %w", ErrConflict)
+		return nil, fmt.Errorf("update investigation: concurrent update: %w", ErrConflict)
 	}
 	return &rows[0], nil
-}
-
-func optionalValue(value string) string {
-	return value
 }
 
 func revisionIdentity(investigationID string, seq int) string {
@@ -778,20 +788,36 @@ COMMIT;`,
 	}
 }
 
+// maxRunReadAttempts bounds re-reads when the run row and its event stream
+// are read in two queries and a concurrent append lands between them. That
+// skew is ordinary, not corruption; a mismatch that persists across re-reads
+// is reported as an integrity error.
+const maxRunReadAttempts = 4
+
 func (s *Surreal) GetRun(ctx context.Context, id string) (*Run, error) {
-	row, err := s.getRunRec(ctx, id)
-	if err != nil {
-		return nil, err
+	for attempt := 0; ; attempt++ {
+		row, err := s.getRunRec(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		events, err := s.ListRunEvents(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		// The initial event commits atomically with the run row, so an empty
+		// stream can never be transient.
+		if len(events) == 0 {
+			return nil, errors.New("get run: event stream is inconsistent")
+		}
+		if events[len(events)-1].Sequence != row.EventRevision {
+			if ctx.Err() == nil && attempt+1 < maxRunReadAttempts {
+				continue
+			}
+			return nil, errors.New("get run: event stream is inconsistent")
+		}
+		run := row.run(events[len(events)-1].NewState)
+		return &run, nil
 	}
-	events, err := s.ListRunEvents(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if len(events) == 0 || events[len(events)-1].Sequence != row.EventRevision {
-		return nil, errors.New("get run: event stream is inconsistent")
-	}
-	run := row.run(events[len(events)-1].NewState)
-	return &run, nil
 }
 
 func runEventCore(event RunEvent) any {
@@ -934,7 +960,15 @@ func (s *Surreal) AppendRunEvent(ctx context.Context, runID string, event RunEve
 		if err != nil {
 			return nil, err
 		}
-		if len(events) == 0 || runRow.EventRevision != events[len(events)-1].Sequence {
+		if len(events) == 0 {
+			return nil, errors.New("append run event: event stream is inconsistent")
+		}
+		if runRow.EventRevision != events[len(events)-1].Sequence {
+			// A concurrent append between the two reads above; re-read rather
+			// than reporting a healthy stream as corrupt.
+			if ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
 			return nil, errors.New("append run event: event stream is inconsistent")
 		}
 		last := events[len(events)-1]
@@ -1081,39 +1115,40 @@ func (s *Surreal) PutRunArtifact(ctx context.Context, artifact RunArtifact) (*Ru
 	if run.State != artifact.TerminalStatus {
 		return nil, fmt.Errorf("put run artifact: terminal status does not match event-derived run state: %w", ErrConflict)
 	}
-	if existing, err := s.GetRunArtifact(ctx, artifact.ID); err == nil {
-		return existing, nil
-	} else if !errors.Is(err, ErrNotFound) {
-		return nil, err
-	}
 	artifact.CreatedAt = storeTimestamp(time.Now())
-	results, err := surrealdb.Query[[]RunArtifact](ctx, s.db,
-		`CREATE $rid SET artifact_id = $artifact_id, scope = $scope, run_id = $run_id,
-			terminal_status = $terminal_status, snapshot_manifest = $snapshot_manifest,
-			input_manifest = $input_manifest, coverage_ledger = $coverage_ledger,
-			fact_references = $fact_references, pin_references = $pin_references,
-			eligibility_result = $eligibility_result, diagnostic_data = $diagnostic_data,
-			created_at = $created_at, content_digest = $content_digest RETURN AFTER`,
-		map[string]any{
-			"rid": runArtifactRecordID(artifact.ID), "artifact_id": artifact.ID,
-			"scope": artifact.Scope, "run_id": artifact.RunID,
-			"terminal_status": string(artifact.TerminalStatus), "snapshot_manifest": artifact.SnapshotManifest,
-			"input_manifest": artifact.InputManifest, "coverage_ledger": artifact.CoverageLedger,
-			"fact_references": artifact.FactReferences, "pin_references": artifact.PinReferences,
-			"eligibility_result": artifact.EligibilityResult, "diagnostic_data": artifact.DiagnosticData,
-			"created_at": artifact.CreatedAt, "content_digest": artifact.ContentDigest,
-		})
-	if err != nil {
-		if existing, getErr := s.GetRunArtifact(ctx, artifact.ID); getErr == nil {
-			return existing, nil
+	kind := runArtifactPinKind(artifact.ID)
+	pins := make([]map[string]any, len(artifact.PinReferences))
+	for i, runID := range artifact.PinReferences {
+		pins[i] = map[string]any{
+			"rid": evidencePinRecordID(runID, kind), "pin_key": hashIdentity("pin_", runID, kind),
+			"run_id": runID,
 		}
-		return nil, fmt.Errorf("put run artifact: %w", err)
 	}
-	rows := firstDomainRows(results)
-	if len(rows) != 1 {
-		return nil, errors.New("put run artifact returned no row")
+	vars := map[string]any{
+		"rid": runArtifactRecordID(artifact.ID), "artifact_id": artifact.ID,
+		"scope": artifact.Scope, "run_id": artifact.RunID,
+		"terminal_status": string(artifact.TerminalStatus), "snapshot_manifest": artifact.SnapshotManifest,
+		"input_manifest": artifact.InputManifest, "coverage_ledger": artifact.CoverageLedger,
+		"fact_references": artifact.FactReferences, "pin_references": artifact.PinReferences,
+		"eligibility_result": artifact.EligibilityResult, "diagnostic_data": artifact.DiagnosticData,
+		"created_at": artifact.CreatedAt, "content_digest": artifact.ContentDigest,
+		"pins": pins, "pin_kind": kind, "evidence_format_version": evidenceFormatVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
-	return &rows[0], nil
+	for attempt := 0; ; attempt++ {
+		results, queryErr := surrealdb.Query[[]RunArtifact](ctx, s.db, putRunArtifactWithPinsSQL, vars)
+		if queryErr != nil {
+			if isRetryable(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return nil, fmt.Errorf("put run artifact: %w", queryErr)
+		}
+		rows := firstDomainRows(results)
+		if len(rows) != 1 {
+			return nil, fmt.Errorf("put run artifact: referenced extraction run is unavailable or immutable content conflicts: %w", ErrConflict)
+		}
+		return &rows[0], nil
+	}
 }
 
 func (s *Surreal) GetRunArtifact(ctx context.Context, id string) (*RunArtifact, error) {
@@ -1260,15 +1295,23 @@ func (s *Surreal) PutDecision(ctx context.Context, decision Decision) (*Decision
 			"rid": decisionRecordID(decision.ID), "decision_id": decision.ID,
 			"investigation_id": decision.InvestigationID, "claim_scope": decision.ClaimScope,
 			"conclusion": decision.Conclusion, "revision_id": decision.RevisionID,
-			"run_artifact_id": optionalValue(decision.RunArtifactID), "baseline_id": optionalValue(decision.BaselineID),
+			"run_artifact_id": decision.RunArtifactID, "baseline_id": decision.BaselineID,
 			"eligibility_result": decision.EligibilityResult, "visible_scope": decision.VisibleScope,
 			"authority": decision.Authority, "authority_source": decision.AuthoritySource,
-			"rationale": decision.Rationale, "policy_version": optionalValue(decision.PolicyVersion),
+			"rationale": decision.Rationale, "policy_version": decision.PolicyVersion,
 			"effective_from": decision.EffectiveFrom, "expires_at": decision.ExpiresAt,
-			"supersedes": optionalValue(decision.Supersedes), "created_at": decision.CreatedAt,
+			"supersedes": decision.Supersedes, "created_at": decision.CreatedAt,
 			"content_digest": decision.ContentDigest,
 		})
 	if err != nil {
+		// A concurrent exact create is idempotent; a different row at the same
+		// identity is an immutable conflict. Mirrors PutRevision.
+		if existing, getErr := s.GetDecision(ctx, decision.ID); getErr == nil {
+			if existing.ContentDigest == decision.ContentDigest {
+				return existing, nil
+			}
+			return nil, fmt.Errorf("put decision: immutable content changed: %w", ErrConflict)
+		}
 		return nil, fmt.Errorf("put decision: %w", err)
 	}
 	rows := firstDomainRows(results)
@@ -1403,14 +1446,22 @@ func (s *Surreal) PutDisposition(ctx context.Context, disposition Disposition) (
 			"subject_kind": disposition.SubjectKind, "subject_id": disposition.SubjectID,
 			"actor": disposition.Actor, "authority_basis": disposition.AuthorityBasis,
 			"rationale": disposition.Rationale, "effective_from": disposition.EffectiveFrom,
-			"expires_at": disposition.ExpiresAt, "policy_reference": optionalValue(disposition.PolicyReference),
-			"external_decision_id": optionalValue(disposition.ExternalDecisionID),
-			"referenced_fact_id":   optionalValue(disposition.ReferencedFactID),
-			"referenced_coverage":  optionalValue(disposition.ReferencedCoverage),
-			"supersedes":           optionalValue(disposition.Supersedes), "created_at": disposition.CreatedAt,
+			"expires_at": disposition.ExpiresAt, "policy_reference": disposition.PolicyReference,
+			"external_decision_id": disposition.ExternalDecisionID,
+			"referenced_fact_id":   disposition.ReferencedFactID,
+			"referenced_coverage":  disposition.ReferencedCoverage,
+			"supersedes":           disposition.Supersedes, "created_at": disposition.CreatedAt,
 			"content_digest": disposition.ContentDigest,
 		})
 	if err != nil {
+		// A concurrent exact create is idempotent; a different row at the same
+		// identity is an immutable conflict. Mirrors PutRevision.
+		if existing, getErr := s.GetDisposition(ctx, disposition.ID); getErr == nil {
+			if existing.ContentDigest == disposition.ContentDigest {
+				return existing, nil
+			}
+			return nil, fmt.Errorf("put disposition: immutable content changed: %w", ErrConflict)
+		}
 		return nil, fmt.Errorf("put disposition: %w", err)
 	}
 	rows := firstDomainRows(results)
@@ -1486,14 +1537,6 @@ func (s *Surreal) PutBaselineDesignation(ctx context.Context, baseline BaselineD
 	if err := validateBaseline(&baseline); err != nil {
 		return nil, fmt.Errorf("put baseline: %w", err)
 	}
-	if existing, err := s.GetBaselineDesignation(ctx, baseline.ID); err == nil {
-		if existing.ContentDigest != baseline.ContentDigest {
-			return nil, fmt.Errorf("put baseline: immutable content changed: %w", ErrConflict)
-		}
-		return existing, nil
-	} else if !errors.Is(err, ErrNotFound) {
-		return nil, err
-	}
 	revision, err := s.GetRevision(ctx, baseline.RevisionID)
 	if err != nil || revision.InvestigationID != baseline.InvestigationID {
 		return nil, fmt.Errorf("put baseline: revision is unavailable: %w", ErrConflict)
@@ -1510,29 +1553,39 @@ func (s *Surreal) PutBaselineDesignation(ctx context.Context, baseline BaselineD
 		}
 	}
 	baseline.CreatedAt = now
-	results, err := surrealdb.Query[[]BaselineDesignation](ctx, s.db,
-		`CREATE $rid SET designation_id = $designation_id, investigation_id = $investigation_id,
-			claim_scope = $claim_scope, workflow_scope = $workflow_scope,
-			revision_id = $revision_id, run_artifact_id = $run_artifact_id,
-			authority = $authority, rationale = $rationale,
-			supersedes = IF $supersedes = '' THEN NONE ELSE $supersedes END,
-			created_at = $created_at, content_digest = $content_digest RETURN AFTER`,
-		map[string]any{
-			"rid": baselineRecordID(baseline.ID), "designation_id": baseline.ID,
-			"investigation_id": baseline.InvestigationID, "claim_scope": baseline.ClaimScope,
-			"workflow_scope": baseline.WorkflowScope, "revision_id": baseline.RevisionID,
-			"run_artifact_id": baseline.RunArtifactID, "authority": baseline.Authority,
-			"rationale": baseline.Rationale, "supersedes": optionalValue(baseline.Supersedes),
-			"created_at": baseline.CreatedAt, "content_digest": baseline.ContentDigest,
-		})
+	owner, err := normalizeRunArtifactRetentionOwner(RunArtifactRetentionOwner{
+		ArtifactID: baseline.RunArtifactID, Kind: RunArtifactOwnerBaseline,
+		OwnerID: baseline.ID, AuthorizedBy: baseline.Authority, Reason: baseline.Rationale,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("put baseline: %w", err)
+		return nil, fmt.Errorf("put baseline: retention owner: %w", err)
 	}
-	rows := firstDomainRows(results)
-	if len(rows) != 1 {
-		return nil, errors.New("put baseline returned no row")
+	vars := map[string]any{
+		"rid": baselineRecordID(baseline.ID), "designation_id": baseline.ID,
+		"investigation_id": baseline.InvestigationID, "claim_scope": baseline.ClaimScope,
+		"workflow_scope": baseline.WorkflowScope, "revision_id": baseline.RevisionID,
+		"run_artifact_id": baseline.RunArtifactID, "authority": baseline.Authority,
+		"rationale": baseline.Rationale, "supersedes": baseline.Supersedes,
+		"created_at": baseline.CreatedAt, "content_digest": baseline.ContentDigest,
+		"artifact_rid": runArtifactRecordID(baseline.RunArtifactID),
+		"owner_rid":    retentionOwnerRecordID(owner.Key), "owner_key": owner.Key,
+		"owner_kind": string(owner.Kind), "owner_id": owner.OwnerID,
+		"owner_digest": owner.ContentDigest,
 	}
-	return &rows[0], nil
+	for attempt := 0; ; attempt++ {
+		results, queryErr := surrealdb.Query[[]BaselineDesignation](ctx, s.db, putBaselineWithOwnerSQL, vars)
+		if queryErr != nil {
+			if isRetryable(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return nil, fmt.Errorf("put baseline: %w", queryErr)
+		}
+		rows := firstDomainRows(results)
+		if len(rows) != 1 {
+			return nil, fmt.Errorf("put baseline: artifact is unavailable or immutable content conflicts: %w", ErrConflict)
+		}
+		return &rows[0], nil
+	}
 }
 
 func (s *Surreal) GetBaselineDesignation(ctx context.Context, id string) (*BaselineDesignation, error) {
@@ -1588,7 +1641,7 @@ func (s *Surreal) CreateWatch(ctx context.Context, watch Watch) (*Watch, error) 
 		map[string]any{
 			"rid": watchRecordID(watch.ID), "watch_id": watch.ID, "owner": watch.Owner,
 			"enabled": watch.Enabled, "expires_at": watch.ExpiresAt,
-			"evaluation_cursor": optionalValue(watch.EvaluationCursor), "now": now,
+			"evaluation_cursor": watch.EvaluationCursor, "now": now,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("create watch: %w", err)
@@ -1635,21 +1688,26 @@ func (s *Surreal) UpdateWatch(ctx context.Context, watch Watch) (*Watch, error) 
 		}
 	}
 	now := storeTimestamp(time.Now())
+	// Compare-and-swap on the current-revision pointer read above, mirroring
+	// UpdateInvestigation: a stale writer must not clobber a concurrent
+	// current-WatchRevision transition.
 	results, err := surrealdb.Query[[]Watch](ctx, s.db,
 		`UPDATE $rid SET owner = $owner, enabled = $enabled,
 			current_revision_id = $current_revision_id, expires_at = $expires_at,
-			evaluation_cursor = $evaluation_cursor, updated_at = $now RETURN AFTER`,
+			evaluation_cursor = $evaluation_cursor, updated_at = $now
+			WHERE (current_revision_id ?? '') = $expected_current_revision_id RETURN AFTER`,
 		map[string]any{
 			"rid": watchRecordID(watch.ID), "owner": watch.Owner, "enabled": watch.Enabled,
-			"current_revision_id": optionalValue(watch.CurrentRevisionID), "expires_at": watch.ExpiresAt,
-			"evaluation_cursor": optionalValue(watch.EvaluationCursor), "now": now,
+			"current_revision_id": watch.CurrentRevisionID, "expires_at": watch.ExpiresAt,
+			"evaluation_cursor": watch.EvaluationCursor, "now": now,
+			"expected_current_revision_id": existing.CurrentRevisionID,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("update watch: %w", err)
 	}
 	rows := firstDomainRows(results)
 	if len(rows) != 1 {
-		return nil, ErrNotFound
+		return nil, fmt.Errorf("update watch: concurrent update: %w", ErrConflict)
 	}
 	return &rows[0], nil
 }

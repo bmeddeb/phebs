@@ -1246,7 +1246,11 @@ BaselineDesignations, and WatchRevisions are immutable at the store boundary.
 Correcting one creates a new Revision/WatchRevision or an explicitly
 superseding human record; the original remains readable. Investigation display
 metadata/lifecycle/current-Revision and Watch owner/enablement/current-Revision/
-expiry/cursor are the only checked mutable projections in this slice.
+expiry/cursor are the only checked mutable projections in this slice. Both
+projections update by compare-and-swap against the previously read lifecycle
+and current-revision pointer, so a concurrent stale writer fails closed with a
+conflict instead of committing an invalid transition or clobbering the
+pointer.
 
 Run rows contain no status field. Creation atomically appends the initial
 `queued` event, and every later state is reconstructed from the contiguous,
@@ -1255,9 +1259,32 @@ append-only event stream:
 `canceled` allowed only before a terminal state. Reusing the same idempotency
 key for the exact same Revision request returns the existing Run; changing any
 request input under that key fails closed. A failed or canceled RunArtifact
-cannot carry published fact references. Authorization projection, artifact
-pins and retention ownership, sharing, and public creation/read surfaces land
-in later Epic 16 tickets.
+cannot carry published fact references.
+
+RunArtifact publication and its extraction-run evidence pins are one database
+transaction. Every pin uses the artifact-specific
+`investigation-artifact:<artifact-id>` namespace; if any referenced extraction
+run is missing, quarantined, ambiguous, incompatible, or not published or
+superseded, neither the artifact nor any of its pins is written. The
+publication transaction locks each referenced extraction run, so a concurrent
+evidence sweep can never reclaim a run in the same instant an artifact pins
+it. A Baseline
+designation atomically acquires its corresponding artifact owner. Active
+Investigation and retained Dossier owners use the same internal owner boundary
+when their lifecycle services land.
+
+Retention owners are immutable caller-authorized claims. Ending one appends a
+release; it never edits the claim, and that semantic owner key cannot silently
+reacquire after release. Normal artifact collection locks the artifact and
+rechecks that no unreleased Investigation, Baseline, or Dossier owner exists.
+An audited revocation, mandatory-deletion, legal-policy, or approved-retention
+override may supersede owners and allow immediate collection. Collection
+removes only the RunArtifact and pins in its exact namespace, while preserving
+owner/release/override audit rows. It never deletes extraction evidence; the
+existing proof-aware evidence sweep may reclaim a superseded run only after
+its final independent pin is gone. This remains an internal store facility:
+authorization projection, lifecycle wiring, sharing, and public creation/read
+surfaces land in later Epic 16 tickets.
 
 ### Metrics
 
