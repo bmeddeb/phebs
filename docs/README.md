@@ -41,6 +41,8 @@ claim outruns its measurement.
 | [DECISION_RECORDS.md](./DECISION_RECORDS.md) | fail-closed templates for the validation gate decision and the pilot continuation decision, prerequisite item 10; filling a template creates no decision |
 | [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) | dependency-preview hop label sheet formats for prerequisite item 11; partner catalog shapes freeze at Gate 0; grants nothing |
 | [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md) | design-accepted preregistration form for prerequisite item 12; freezes the manual-vs-phebs timing, labor, usefulness, evidence, and custody comparison; grants no measurement authority and is not Gate 0-sealed |
+| [NO_CONFLICTING_DEPENDENCY_STATEMENT.md](./NO_CONFLICTING_DEPENDENCY_STATEMENT.md) | Gate 0 worksheet for production/pilot non-dependency, resource and schedule conflicts, circularity, conditions, and signatures; currently an unapproved draft |
+| [EXTRACTOR_BRIDGE_WORKSHEET.md](./EXTRACTOR_BRIDGE_WORKSHEET.md) | Gate 0 typed-benchmark-to-pure-reader artifact bridge; binds identity/reproducibility/mechanics only and permanently prohibits accuracy transfer |
 | [GATE0_READINESS.md](./GATE0_READINESS.md) | descriptive audit of every Gate 0 requirement plus the Owner path to unlock the gate; includes the accepted v0.2 resolution of the external-benchmark conflict; decides nothing and cannot substitute for Gate 0 signatures |
 
 The role/capability model for prerequisite item 2 lives in

@@ -53,9 +53,10 @@ Epic 16.
 
 **Owner aim (item 12):** use design acceptance as the first cleared Gate 0
 form and proceed along the unlock path in
-[GATE0_READINESS.md](./GATE0_READINESS.md) — design-accept items 9–11, draft
-the remaining Owner worksheets, solicit partner fills, and assemble the Gate 0
-freeze package for signature. Gate 0 unlocks only when that package is signed.
+[GATE0_READINESS.md](./GATE0_READINESS.md) — design-accept items 9–11, complete
+the drafted no-conflict and extractor-bridge worksheets with partner evidence,
+solicit the remaining fills, and assemble the Gate 0 freeze package for
+signature. Gate 0 unlocks only when that package is signed.
 
 ## Acceptance records
 
