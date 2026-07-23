@@ -851,7 +851,12 @@ func (s *Surreal) ListRunEvents(ctx context.Context, runID string) ([]RunEvent, 
 			return nil, fmt.Errorf("list run events: event %d digest: %w", i+1, digestErr)
 		}
 		if storedDigest != digest {
-			return nil, fmt.Errorf("list run events: event %d immutable digest mismatch", i+1)
+			return nil, fmt.Errorf(
+				"list run events: event %d immutable digest mismatch: stored=%s computed=%s id=%s sequence=%d attempt=%d prior=%q new=%q timestamp=%s actor_bytes=%d reason_bytes=%d",
+				i+1, storedDigest, digest, rows[i].ID, rows[i].Sequence, rows[i].Attempt,
+				rows[i].PriorState, rows[i].NewState, storeTimestamp(rows[i].Timestamp).Format(time.RFC3339Nano),
+				len(rows[i].Actor), len(rows[i].Reason),
+			)
 		}
 		if rows[i].Sequence != i+1 {
 			return nil, fmt.Errorf("list run events: event %d has sequence %d", i+1, rows[i].Sequence)
