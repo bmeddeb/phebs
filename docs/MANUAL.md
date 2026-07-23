@@ -1234,6 +1234,31 @@ rolling writers, or rolling an older writer back onto the same remote
 endpoint, are not supported; the supervised local deployment already provides
 that single-writer boundary.
 
+### Investigation storage foundation
+
+Epic 16's first storage slice is internal only: it registers no API, UI route,
+MCP tool, worker, or capability. On startup, the normal idempotent schema pass
+creates the Investigation, Revision, Run, RunEvent, RunArtifact, Decision,
+Disposition, BaselineDesignation, Watch, and WatchRevision tables and indexes.
+
+Revisions, Run requests, RunEvents, RunArtifacts, Decisions, Dispositions,
+BaselineDesignations, and WatchRevisions are immutable at the store boundary.
+Correcting one creates a new Revision/WatchRevision or an explicitly
+superseding human record; the original remains readable. Investigation display
+metadata/lifecycle/current-Revision and Watch owner/enablement/current-Revision/
+expiry/cursor are the only checked mutable projections in this slice.
+
+Run rows contain no status field. Creation atomically appends the initial
+`queued` event, and every later state is reconstructed from the contiguous,
+append-only event stream:
+`queued → enumerating → analyzing → publishing → published`, with `failed` or
+`canceled` allowed only before a terminal state. Reusing the same idempotency
+key for the exact same Revision request returns the existing Run; changing any
+request input under that key fails closed. A failed or canceled RunArtifact
+cannot carry published fact references. Authorization projection, artifact
+pins and retention ownership, sharing, and public creation/read surfaces land
+in later Epic 16 tickets.
+
 ### Metrics
 
 

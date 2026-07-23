@@ -120,3 +120,58 @@ DEFINE INDEX IF NOT EXISTS proof_bundle_retention ON proof_bundle
     FIELDS retained_at, bundle_id;
 DEFINE INDEX IF NOT EXISTS proof_bundle_legacy_retention ON proof_bundle
     FIELDS created_at, bundle_id;
+
+-- Investigations product domain (T16.1). Semantic rows are create-once in
+-- the Go boundary; only Investigation and Watch projections expose checked
+-- update methods. Run rows never store state: state is reconstructed from the
+-- append-only event stream. event_revision is only a serialization token.
+DEFINE TABLE IF NOT EXISTS investigation SCHEMALESS;
+DEFINE FIELD OVERWRITE lifecycle ON investigation TYPE string
+    ASSERT $value INSIDE ['draft', 'active', 'concluded', 'archived'];
+DEFINE INDEX IF NOT EXISTS investigation_identity ON investigation FIELDS investigation_id UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_revision SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_revision_identity ON investigation_revision
+    FIELDS investigation_id, seq UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_run SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_run_identity ON investigation_run
+    FIELDS revision_id, seq UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_run_idempotency ON investigation_run
+    FIELDS revision_id, idempotency_key UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_run_event SCHEMALESS;
+DEFINE FIELD OVERWRITE new_state ON investigation_run_event TYPE string
+    ASSERT $value INSIDE ['queued', 'enumerating', 'analyzing', 'publishing', 'published', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS investigation_run_event_identity ON investigation_run_event FIELDS event_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_run_event_sequence ON investigation_run_event
+    FIELDS run_id, sequence UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_run_artifact SCHEMALESS;
+DEFINE FIELD OVERWRITE terminal_status ON investigation_run_artifact TYPE string
+    ASSERT $value INSIDE ['published', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS investigation_run_artifact_identity ON investigation_run_artifact FIELDS artifact_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_run_artifact_run ON investigation_run_artifact FIELDS run_id;
+
+DEFINE TABLE IF NOT EXISTS investigation_decision SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_decision_identity ON investigation_decision FIELDS decision_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_decision_scope ON investigation_decision FIELDS investigation_id, claim_scope;
+DEFINE INDEX IF NOT EXISTS investigation_decision_supersedes ON investigation_decision FIELDS supersedes UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_disposition SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_disposition_identity ON investigation_disposition FIELDS disposition_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_disposition_subject ON investigation_disposition FIELDS subject_kind, subject_id;
+DEFINE INDEX IF NOT EXISTS investigation_disposition_supersedes ON investigation_disposition FIELDS supersedes UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_baseline_designation SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_baseline_identity ON investigation_baseline_designation FIELDS designation_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_baseline_scope ON investigation_baseline_designation FIELDS investigation_id, claim_scope, workflow_scope;
+DEFINE INDEX IF NOT EXISTS investigation_baseline_supersedes ON investigation_baseline_designation FIELDS supersedes UNIQUE;
+
+DEFINE TABLE IF NOT EXISTS investigation_watch SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_watch_identity ON investigation_watch FIELDS watch_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_watch_owner ON investigation_watch FIELDS owner;
+
+DEFINE TABLE IF NOT EXISTS investigation_watch_revision SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_watch_revision_identity ON investigation_watch_revision
+    FIELDS watch_id, seq UNIQUE;
