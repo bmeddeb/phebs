@@ -70,8 +70,9 @@ SCIP/history, stateless MCP, and T10.4 bounded `rev:` indexing. TD.4's shared
 bounded Git reader serves source, history, SCIP, and extraction. The read-only,
 default-dark contract-intelligence annex (Epics 11–15) is implemented and its
 independent acceptance gate is closed; GATE2-V2 honestly remains
-`NOT_ESTABLISHED`, so there is no numeric public-corpus accuracy claim and
-Epic 16 remains blocked on both `ESTABLISHED` validation and an explicit
-pilot-continuation decision. T-P5.1 live backup/restore is complete; further P5
+`NOT_ESTABLISHED`, so there is no numeric public-corpus accuracy claim. Epic 16
+implementation is proceeding under Ben's explicit 2026-07-22 operator bypass;
+the bypass is not a valid validation or continuation record and authorizes no
+external claim. T-P5.1 live backup/restore is complete; further P5
 hardening is pull-on-demand and P6 fleet work remains planned. There is still no
 git remote or CI run; the full local Go suite, vet, and lint are the merge bar.

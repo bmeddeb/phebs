@@ -8,6 +8,12 @@ every minimum field present — the fail-closed rule of
 permitted, placeholders block). Epic 16 requires **both** records below,
 each independently complete; neither implies the other.*
 
+**Operator-bypass note (2026-07-22):** Ben Meddeb explicitly authorized Epic
+16 implementation despite these records remaining incomplete. That sequencing
+override is recorded in PLAN.md. It does not complete either template, change
+their fail-closed rules, establish accuracy, close charter Gate 0, or authorize
+pilot or external claims.
+
 ## Template A — validation gate decision
 
 The record for the pilot internal validation's outcome under the sealed

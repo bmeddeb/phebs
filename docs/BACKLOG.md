@@ -626,8 +626,9 @@ Independent acceptance was recorded after review of the shared proof-service
 projection, default-dark posture, exact immutable citations, permission
 non-interference, bounded conclusions, and the retained full-suite acceptance
 run. This closes Epic 15 only: GATE2-V2 remains `NOT_ESTABLISHED`, the broader
-platform pivot stays frozen, and Epic 16 still requires both `ESTABLISHED`
-validation and an explicit pilot-continuation decision.
+platform pivot stays frozen. Epic 16 implementation proceeds under the explicit
+2026-07-22 operator bypass in PLAN.md; the validation and continuation records
+remain incomplete and authorize no claim.
 
 **T15.1 · Report API + page** ✅ 2026-07-22
 For a contract, or a contract change between two extraction runs: known
@@ -663,7 +664,7 @@ dark posture; UI tests pin
 all three forms, saved reads, caveat/certificate rendering, and immutable source
 links. No code-host writer, diagrams, dossiers, or runtime plane was added.
 
-## EPIC 16 — Investigations product slice *(post-gate: requires an ESTABLISHED pilot internal-validation record and a separate pilot continuation decision; all code on a post-gate branch)*
+## EPIC 16 — Investigations product slice *(operator-bypassed for implementation 2026-07-22; validation and continuation gates remain evidentially unsatisfied; all code on a post-gate branch)*
 
 Productizes the contract suite: [domain contract](./INVESTIGATION_DOMAIN_CONTRACT.md)
 v0.2, [experience spec](./INVESTIGATIONS.md) rev 3, [MCP envelope](./MCP_ENVELOPE.md)

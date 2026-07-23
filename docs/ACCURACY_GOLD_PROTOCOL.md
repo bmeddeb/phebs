@@ -8,6 +8,10 @@ placeholder is filled, both reviewers named in
 recorded in the Gate 0 freeze. GATE2-V2 remains `NOT_ESTABLISHED`; nothing
 here reopens, retries, or reinterprets that closed campaign.*
 
+The values in §2 are conspicuously synthetic fixtures added for the
+2026-07-22 Epic 16 implementation bypass. They do not fill or seal Gate 0,
+create a validation round, or establish any score.
+
 ## 1. Purpose and lineage
 
 This is the preregistrable form of the charter §8.2 statistical accuracy
@@ -25,12 +29,12 @@ protocol.
 
 | Input | Value |
 |---|---|
-| Pilot RPC identity (canonical `/package.Service/Method`) | `<Gate 0>` |
-| Source snapshot `S0` (repository set + commit digests) | `<Gate 0>` |
-| Candidate extractor artifact (phebs source commit, binary digest, toolchain digest) | `<Gate 0>` |
-| Bridging statement (only if artifact ≠ benchmark-bound candidate artifact; no accuracy transfer from an unscored benchmark) | `<Gate 0 or none>` |
-| This protocol's digest and the two machinery file digests | `<sealing>` |
-| Public randomness seed (NIST beacon pulse URI + 64-hex output) | `<drawn after universe freeze, before sampling>` |
+| Pilot RPC identity (canonical `/package.Service/Method`) | `/example.payment.v1.PaymentService/Authorize` |
+| Source snapshot `S0` (repository set + commit digests) | `example/consumer@2222222222222222222222222222222222222222`; tree `sha256:3333333333333333333333333333333333333333333333333333333333333333` |
+| Candidate extractor artifact (phebs source commit, binary digest, toolchain digest) | `example/phebs@4444444444444444444444444444444444444444`; binary `sha256:5555555555555555555555555555555555555555555555555555555555555555`; toolchain `go1.26.0/linux-amd64` |
+| Bridging statement (only if artifact ≠ benchmark-bound candidate artifact; no accuracy transfer from an unscored benchmark) | synthetic identity/reproducibility/mechanics-only bridge; no accuracy transfer |
+| This protocol's digest and the two machinery file digests | synthetic fixture `sha256:f7efa36fe9a81ea9c56b31a22969c44f3185ccae6c3486cca75746111d879409`; mandatory machinery digests absent |
+| Public randomness seed (NIST beacon pulse URI + 64-hex output) | `mock-beacon:2026-07-22-round1`; output `6666666666666666666666666666666666666666666666666666666666666666` |
 
 ## 3. Claim families and their charter gates
 

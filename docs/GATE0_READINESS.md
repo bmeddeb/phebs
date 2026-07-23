@@ -6,10 +6,13 @@ and decides nothing: it maps every [PILOT_CHARTER.md](./PILOT_CHARTER.md)
 §6 Gate 0 requirement to its current state, owner, and next action. States
 here are descriptive; only the charter's own signatures close Gate 0.*
 
-**Owner aim:** Ben Meddeb, as pilot lead and item-12 owner, is driving to
-**unlock Gate 0** — meaning complete every charter §6 freeze requirement so
-the pilot clock can start. Unlock requires partner fills and named Gate 0
-signatures; Owner action alone cannot close the gate.
+**Gate 0 status:** `LOCKED`. [GATE0.md](./GATE0.md) is a synthetic fixture,
+not a freeze package; its values came from
+[GATE0_REHEARSAL.md](./GATE0_REHEARSAL.md) and supply no authority or evidence.
+
+**Epic 16 sequencing:** Ben Meddeb explicitly bypassed the Epic's implementation
+gate on 2026-07-22 after the incomplete synthetic decision record was reported.
+The bypass does not alter this audit or authorize a pilot or external claim.
 
 ## Legend
 
@@ -19,64 +22,40 @@ signatures; Owner action alone cannot close the gate.
 - **draftable now** — phebs-side design work, no partner required.
 - **partner-blocked** — requires a named design partner or their people.
 - **approval-blocked** — requires a named human review or sign-off.
+- **simulated-only** — a synthetic fixture has a value, but the real
+  requirement remains unsatisfied.
 - **satisfied-conditionally** — the governing prerequisite is satisfied only
   under an explicit condition that remains binding on later gates.
 
 ## Audit
 
-| Gate 0 requirement (charter §6) | State | Owner | Next action toward unlock |
+| Gate 0 requirement (charter §6) | State | Owner | Next action |
 |---|---|---|---|
-| Sponsor, roles, time allocation, proposed RPC, decision authority named | partner-blocked | sponsor + Ben | Owner solicits named §5 principals from the partner; every role except pilot lead is still `<name>` |
-| Canonical IDL identity and source universe confirmed | partner-blocked | migration owner | Owner requests frozen RPC + repository set from the migration owner |
-| IP/OSS/provenance review approved or cleared for the bounded evaluation | approval-blocked | OSS/Legal reviewers | Owner packages the bounded-evaluation ask and names/requests OSS/Legal reviewers |
-| Terminal external Go/gRPC benchmark record satisfies the §9 disposition | satisfied-conditionally | operator | already accepted under charter v0.2; Gate 0 freeze must still record `internal-validation-required` |
-| Pilot extractor equals the benchmark-bound candidate, or has an approved versioned bridge | drafted + approval-blocked | Gate 0 signatories | [EXTRACTOR_BRIDGE_WORKSHEET.md](./EXTRACTOR_BRIDGE_WORKSHEET.md) records the known typed-to-pure-reader deltas and prohibits accuracy transfer; Owner must bind the eventual clean pilot build, complete its verification package, and obtain separate Gate 0 approval |
-| Evidence-pack card at status `shadow` for the Go/gRPC pack, internal shadow evaluation filling the internal/domain-shift table | approval-blocked | Ben + security reviewer | Owner advances the card ladder inputs; security approval and authorization model still required |
-| Current-workflow baseline protocol preregistered (§8.1) | design-accepted | Ben → Gate 0 signatories | form accepted at `913c765` / `c8e631854e177b5e540117d4fe70296c4cc1687f2d9777fd60fd00d985d056bc` by Owner Ben Meddeb and reviewer Claudia; Gate 0 still locked; Owner next collects partner fills and brings the sealed §8.1 package to Gate 0 |
-| Statistical accuracy-gold protocol preregistered (§8.2) | drafted | Ben → Gate 0 signatories | Owner next: design-accept item 9, then collect `<Gate 0>` fills and seal with item 12 |
-| Accuracy protocol defines population, frames, unit, strata, missing-label handling, power, custody, and distinct call-site / attribution-hop / end-to-end labels | drafted | Ben → Gate 0 signatories | Owner next: design-accept item 11 dependency preview; partner catalog shapes still freeze only at Gate 0 |
-| §9 pass / conditional / stop thresholds filled and signed | partner-blocked + approval-blocked | sponsor + Ben | Owner proposes threshold worksheet against partner workload; sponsor + migration owner must sign at Gate 0 |
-| Every role, date, resource limit, `T_*`, and protocol field filled; blanks block release | blocked by all above | Gate 0 signatories | mechanical once the rows above resolve; Owner maintains the blank-field checklist |
-| No conflicting pilot or production dependency | drafted | Ben → Gate 0 signatories | [NO_CONFLICTING_DEPENDENCY_STATEMENT.md](./NO_CONFLICTING_DEPENDENCY_STATEMENT.md) supplies the non-dependency boundary, resource/schedule inventory, circularity checks, conditions ledger, and decision form; partner evidence and signatures freeze only at Gate 0 |
-
-## Owner path to unlock Gate 0
-
-Ordered Owner work. None of these steps closes Gate 0 by itself; each removes
-a phebs-side or coordination blocker so the gate can be signed.
-
-| Step | Owner action | Unlocks when |
-|---|---|---|
-| 1 | Design-accept remaining partner-free Gate 0 forms: items 9, 10, and 11 | acceptance records exist (forms only; not seals) |
-| 2 | Complete the drafted no-conflicting-dependency statement and unscored extractor bridge with current pilot/partner evidence | both worksheets separately approved at Gate 0; drafts alone grant nothing |
-| 3 | Advance evidence-pack card inputs toward `shadow` with the security reviewer | card status `shadow` + internal/domain-shift table path defined |
-| 4 | Solicit partner naming of §5 roles, frozen RPC/`S0`/universe, catalogs, inventory shape, reviewability checklist, and §9 `T_*` values | every partner-shaped `<Gate 0>` / `<name>` / `<value>` filled |
-| 5 | Assemble the Gate 0 freeze package: sealed §8.1 + §8.2 digests, bridge, evidence-pack card, thresholds, blank-field checklist, `internal-validation-required` disposition | Gate 0 signatories can sign |
-| 6 | Obtain Gate 0 signatures | **Gate 0 unlocks; pilot clock may start** |
-
-Hard stops the Owner cannot waive: unnamed partner roles, blank protocol
-fields, missing OSS/Legal or security approvals, and any attempt to transfer
-accuracy from the unscored external benchmark.
+| Sponsor, roles, time allocation, proposed RPC, decision authority named | simulated-only | sponsor + Ben | obtain real roles and authority |
+| Canonical IDL identity and source universe confirmed | simulated-only | migration owner | obtain real RPC/`S0`/universe |
+| IP/OSS/provenance review approved or cleared for the bounded evaluation | simulated-only | OSS/Legal reviewers | obtain real clearance |
+| Terminal external Go/gRPC benchmark record satisfies the §9 disposition | satisfied-conditionally | operator | `internal-validation-required` recorded in [GATE0.md](./GATE0.md) |
+| Pilot extractor equals the benchmark-bound candidate, or has an approved versioned bridge | simulated-only | Gate 0 signatories | approve a real versioned bridge |
+| Evidence-pack card at status `shadow` for the Go/gRPC pack, internal shadow evaluation filling the internal/domain-shift table | simulated-only | Ben + security reviewer | approve and measure a real card |
+| Current-workflow baseline protocol preregistered (§8.1) | simulated-only | Ben → Gate 0 signatories | seal with real partner fills |
+| Statistical accuracy-gold protocol preregistered (§8.2) | simulated-only | Ben → Gate 0 signatories | seal with real frozen inputs |
+| Accuracy protocol defines population, frames, unit, strata, missing-label handling, power, custody, and distinct call-site / attribution-hop / end-to-end labels | simulated-only | Ben → Gate 0 signatories | freeze real catalog shapes |
+| §9 pass / conditional / stop thresholds filled and signed | simulated-only | sponsor + Ben | obtain real signed thresholds |
+| Every role, date, resource limit, `T_*`, and protocol field filled; blanks block release | simulated-only | Gate 0 signatories | complete the real package |
+| No conflicting pilot or production dependency | simulated-only | Ben → Gate 0 signatories | approve the real statement |
 
 ## What this audit establishes
 
-The accepted charter v0.2 closes the structural conflict. Running the gate
-today now halts only on ordinary prerequisites:
+Gate 0 remains **locked** as of 2026-07-22:
 
-1. **The partner** — roles, RPC, universe, catalogs, thresholds, and both
-   verification-phase environments remain partner-shaped, as
-   [PILOT_PREREQS.md](./PILOT_PREREQS.md) always said.
-2. **Human approvals** — IP/OSS/provenance, security, artifact bridging,
-   evidence-pack promotion, and final Gate 0 signatures remain ungranted.
-3. **Owner unlock track** — item 12 is design-accepted by Owner Ben Meddeb
-   and reviewer Claudia; the Owner's authorized next actions above are aimed
-   at Gate 0 unlock. Design acceptance is not sealing, does not unlock
-   Gate 0, and does not start the pilot clock.
+1. **Synthetic fixture** — [GATE0.md](./GATE0.md) demonstrates the shape but
+   supplies no authority or evidence.
+2. **`internal-validation-required`** — accuracy-bearing claims remain blocked
+   until §8.2 round 1 records `gate_status: ESTABLISHED`.
+3. **Epic 16** — implementation proceeds only under the explicit operator
+   bypass in PLAN.md; [DECISION_RECORDS.md](./DECISION_RECORDS.md) remains unmet.
+4. **External claims** — every synthetic value must be replaced with real
+   partner evidence, digests, and signatures before any external pilot claim.
 
-Every partner-free protocol artifact is now drafted: items 9–10 are drafted and
-scope-corrected, item 11 supplies the dependency-preview hop sheets, and item
-12 is design-accepted as the workflow-baseline preregistration form. The
-Owner's aim is to clear the remaining phebs-side forms (items 9–11), complete
-the now-drafted Gate 0 worksheets with partner evidence, and bring a complete
-freeze package to the signatories. Epic 16 remains blocked on an `ESTABLISHED` pilot
-internal-validation record plus continuation; unlocking Gate 0 is necessary
-but not sufficient for Epic 16.
+No pilot clock or source access is authorized. Epic 16 implementation may
+proceed on a post-gate branch under the explicit operator bypass only.

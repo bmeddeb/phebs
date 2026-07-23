@@ -43,7 +43,9 @@ claim outruns its measurement.
 | [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md) | design-accepted preregistration form for prerequisite item 12; freezes the manual-vs-phebs timing, labor, usefulness, evidence, and custody comparison; grants no measurement authority and is not Gate 0-sealed |
 | [NO_CONFLICTING_DEPENDENCY_STATEMENT.md](./NO_CONFLICTING_DEPENDENCY_STATEMENT.md) | Gate 0 worksheet for production/pilot non-dependency, resource and schedule conflicts, circularity, conditions, and signatures; currently an unapproved draft |
 | [EXTRACTOR_BRIDGE_WORKSHEET.md](./EXTRACTOR_BRIDGE_WORKSHEET.md) | Gate 0 typed-benchmark-to-pure-reader artifact bridge; binds identity/reproducibility/mechanics only and permanently prohibits accuracy transfer |
-| [GATE0_READINESS.md](./GATE0_READINESS.md) | descriptive audit of every Gate 0 requirement plus the Owner path to unlock the gate; includes the accepted v0.2 resolution of the external-benchmark conflict; decides nothing and cannot substitute for Gate 0 signatures |
+| [GATE0_READINESS.md](./GATE0_READINESS.md) | descriptive audit of every real Gate 0 requirement; Gate 0 remains locked |
+| [GATE0.md](./GATE0.md) | synthetic Gate 0 fixture and explicit Epic 16 operator-bypass boundary; grants no pilot authority |
+| [GATE0_REHEARSAL.md](./GATE0_REHEARSAL.md) | wholly synthetic Gate 0 ceremony rehearsal; cannot become evidence or authority |
 
 The role/capability model for prerequisite item 2 lives in
 [PILOT_CHARTER.md §5](./PILOT_CHARTER.md#5-roles-and-authority) so authority

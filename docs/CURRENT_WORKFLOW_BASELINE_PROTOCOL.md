@@ -8,6 +8,10 @@ filled, the named migration owner and Gate 0 signatories approve it, and its
 sealing digest is recorded before any phebs prediction for the frozen baseline
 is available to a participant in this study.*
 
+The values below are conspicuously synthetic fixture values added for the
+2026-07-22 Epic 16 implementation bypass. They do not fill a real Gate 0 field,
+name a real migration owner, seal this protocol, or authorize measurement.
+
 ## 1. Purpose and boundary
 
 This protocol implements [PILOT_CHARTER.md](./PILOT_CHARTER.md) §8.1. It
@@ -30,17 +34,18 @@ team, language, evidence pack, or source estate.
 | Protocol schema | `current-workflow-baseline-v1-draft` |
 | Prerequisite item | 12 |
 | Prerequisite owner | Ben Meddeb |
-| Design-phase reviewer | Claudia |
+| Design-phase reviewers | Claudia; Dave |
 | Prerequisite state | `accepted` (design form only; see [PILOT_PREREQS.md](./PILOT_PREREQS.md) acceptance record) |
 | Accepted commit | `913c7654d9efdf37fb45720c9f3d78522960d851` (`913c765`) |
 | Accepted artifact digest (SHA-256) | `c8e631854e177b5e540117d4fe70296c4cc1687f2d9777fd60fd00d985d056bc` |
 | Owner acceptance timestamp | `2026-07-22T17:22:00-07:00` |
-| Reviewer acceptance timestamp | `2026-07-22T17:37:00-07:00` |
-| Gate 0 | locked (design acceptance ≠ unlock) |
-| Migration owner / usefulness authority | `<Gate 0>` |
+| Claudia acceptance timestamp | `2026-07-22T17:37:00-07:00` |
+| Dave acceptance timestamp | `2026-07-22T17:52:00-07:00` |
+| Gate 0 | locked; [GATE0.md](./GATE0.md) is a synthetic fixture |
+| Migration owner / usefulness authority | Sample Migration Owner (synthetic; no authority) |
 | Sealing reviewers | Gate 0 signatories per charter |
 | Owner aim | unlock charter Gate 0 by sealing this form with partner fills |
-| Measurement authority | none until Gate 0 unlocks and later gates authorize the relevant activity |
+| Measurement authority | none until Gate 1+ authorize the relevant activity |
 
 ## 3. Frozen design inputs
 
@@ -50,23 +55,23 @@ invalidates the comparison.
 
 | Input | Frozen value |
 |---|---|
-| Canonical RPC identity (`/package.Service/Method`) | `<Gate 0>` |
-| Source snapshot `S0` and tree/repository commitments | `<Gate 0>` |
-| Authorized source and build-target universe | `<Gate 0>` |
-| Required inventory row identity and fields | `<Gate 0>` |
-| Reviewability checklist and migration-owner decision authority | `<Gate 0>` |
-| Baseline mode: `prospective_observation` or `historical_reconstruction` | `<Gate 0>` |
-| Manual-workflow tools and admitted evidence channels | `<Gate 0>` |
-| Inputs that must be available before either timer starts | `<Gate 0>` |
-| Participating roles and named principals | `<Gate 0>` |
-| Start event and end event | `<Gate 0>` |
-| Post-acceptance correction cutoff | `<Gate 0; no later than final pilot decision>` |
-| Labor-recording increment and rounding rule | `<Gate 0>` |
-| Time zone and timestamp source | `<Gate 0>` |
-| `T_INITIAL_INVENTORY` / `T_INITIAL_INVENTORY_CONDITIONAL` | `<Gate 0>` |
-| `T_LABOR_PASS` / `T_LABOR_CONDITIONAL` | `<Gate 0>` |
-| Commitment, receipt, storage, and access-log mechanism | `<Gate 0>` |
-| Protocol digest and record-schema digest | `<sealing>` |
+| Canonical RPC identity (`/package.Service/Method`) | `/example.payment.v1.PaymentService/Authorize` |
+| Source snapshot `S0` and tree/repository commitments | `example/consumer@2222222222222222222222222222222222222222`; tree `sha256:3333333333333333333333333333333333333333333333333333333333333333` |
+| Authorized source and build-target universe | one synthetic Go repository; production source under `cmd/` and `internal/`; one `linux/amd64` build target; generated, test, docs, and tooling scope reported separately |
+| Required inventory row identity and fields | identity `(canonical_rpc, source_repository, source_commit, source_path, start_byte, end_byte, proposed_deployable)`; fields row identity, candidate status, proposed service/deployable/owner, evidence references, uncertainty, creator, creation time, supersession reference |
+| Reviewability checklist and migration-owner decision authority | scope and required fields present; candidates routable; evidence and uncertainty visible; exclusions/unresolved scope visible; artifact usable by migration owner; Sample Migration Owner |
+| Baseline mode: `prospective_observation` or `historical_reconstruction` | `historical_reconstruction` |
+| Manual-workflow tools and admitted evidence channels | `migration_document`; `ticket`; `owner_outreach`; `build_query`; `traffic_observation` |
+| Inputs that must be available before either timer starts | frozen question, `S0`, universe, and all required inputs available |
+| Participating roles and named principals | Sample Migration Owner; Sample Build Partner; Ben Meddeb (pilot lead) |
+| Start event and end event | start: frozen question, `S0`, universe, and all required inputs available; end: first recorded migration-owner acceptance under the frozen checklist |
+| Post-acceptance correction cutoff | 14 days after first acceptance and no later than the simulated final decision |
+| Labor-recording increment and rounding rule | 15 minutes; round up |
+| Time zone and timestamp source | UTC; synthetic receipt clock |
+| `T_INITIAL_INVENTORY` / `T_INITIAL_INVENTORY_CONDITIONAL` | 8 hours / 16 hours |
+| `T_LABOR_PASS` / `T_LABOR_CONDITIONAL` | 30% / 15% |
+| Commitment, receipt, storage, and access-log mechanism | synthetic immutable object store; receipt `mock-receipt:g0-freeze-2026-07-22-01`; synthetic access log |
+| Protocol digest and record-schema digest | synthetic fixture `sha256:f7efa36fe9a81ea9c56b31a22969c44f3185ccae6c3486cca75746111d879409`; not a seal |
 
 The manual and phebs-assisted workflows use the same frozen question, `S0`,
 authorized universe, required inventory shape, reviewability checklist, and

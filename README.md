@@ -115,8 +115,9 @@ history, live backup/restore, and the web UI are shipped. The default-dark
 contract-intelligence annex adds exact consumer/field citations, coverage
 certificates, immutable proof bundles, pinned-Buf compatibility, MCP tools, and
 a read-only impact report. Its validation status remains explicitly bounded:
-GATE2-V2 is `NOT_ESTABLISHED`, and Epic 16 is blocked pending an established
-validation plus a pilot-continuation decision. See
+GATE2-V2 is `NOT_ESTABLISHED`. Epic 16 implementation is proceeding under an
+explicit 2026-07-22 operator bypass that grants no validation result or
+external claim; see PLAN.md. See
 [BACKLOG.md](./docs/BACKLOG.md) for the ticket record.
 
 ## Lineage & acknowledgements
