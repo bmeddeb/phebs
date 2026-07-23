@@ -388,7 +388,9 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
     '/demo.Catalog/Get',
     expect.any(AbortSignal),
   )
-  expect(screen.getByText('/demo.Catalog/Get')).toBeTruthy()
+  expect(api.fetchContractOperation).toHaveBeenCalledTimes(1)
+  expect(api.fetchContractCatalog).toHaveBeenCalledTimes(1)
+  expect(screen.getByRole('heading', { name: '/demo.Catalog/Get' })).toBeTruthy()
   expect(screen.getByText('server stream')).toBeTruthy()
   expect(screen.getByText('optional Request · field 1')).toBeTruthy()
   expect(screen.getByText(/cycle · recursive message reference/)).toBeTruthy()
@@ -462,7 +464,7 @@ test('ignores an operation response after a newer selection', async () => {
   await screen.findByText('4 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
   fireEvent.click(screen.getByRole('listitem', { name: /List/ }))
-  await screen.findByText('/demo.Catalog/List')
+  await screen.findByRole('heading', { name: '/demo.Catalog/List' })
   resolveFirst(detail)
-  await waitFor(() => expect(screen.queryByText('/demo.Catalog/Get')).toBeNull())
+  await waitFor(() => expect(screen.queryByRole('heading', { name: '/demo.Catalog/Get' })).toBeNull())
 })

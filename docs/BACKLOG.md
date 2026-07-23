@@ -883,7 +883,7 @@ post-gate implementation only; it does not retroactively satisfy the retained
 validation or continuation evidence gates, release a pack, or enable the dark
 production creation/export surfaces.
 
-## EPIC 17 — Contract Atlas *(planned; T17.1 stable, T17.2–T17.5 experimental-dark)*
+## EPIC 17 — Contract Atlas ✅ 2026-07-23 *(T17.1 stable, T17.2–T17.5 experimental-dark)*
 
 Turns the existing contract facts into a discoverable, read-only catalog.
 Users must be able to browse from a visible repository to a declared operation
@@ -1067,7 +1067,7 @@ provisional evidence. `make dev` explicitly binds the validated synthetic
 indexed repository for a resolvable pinned source link, writes no evidence,
 and labels every response as synthetic.
 
-**T17.5 · Accessible focused dependency map**
+**T17.5 · Accessible focused dependency map** ✅ 2026-07-23
 Render one deterministic one-hop neighborhood for the selected operation from
 the already-authorized T17.3 response: declaration/registration providers,
 name-bound caller evidence, and separately labeled unresolved candidates. No
@@ -1082,6 +1082,20 @@ labels; hidden repositories cannot affect layout, node/edge counts, or empty
 state. Identical input yields identical layout. A contract with no edges
 renders an honest empty neighborhood naming the exact coverage scope and
 completeness state.
+
+Implemented as a pure client projection of the selected operation detail.
+Implementation, caller, and unresolved-candidate claims are flattened by
+immutable source locator into one stable, sorted edge list. The deterministic
+SVG and authoritative accessible table carry the same edge ids and labels;
+every diagram node is a keyboard-focusable pinned-source link. Registration
+providers, name-bound callers, and dashed extractor abstentions remain
+visually and textually distinct. The wide SVG yields to the same table plus a
+compact count on mobile. A zero-edge state includes visible-repository count,
+coverage digest, and relationship completeness while explicitly refusing a
+runtime-absence conclusion. Tests prove graph/table parity, input-order
+determinism, coverage-only repository independence, empty/truncated
+qualification, mobile fallback, and that rendering performs no additional
+catalog or evidence request.
 
 ### On-demand protocol-pack candidates after Epic 17
 

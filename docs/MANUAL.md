@@ -1247,6 +1247,18 @@ real evidence service, the capability, HTTP routes, OpenAPI operations, and
 navigation item do not exist. Anonymous `/api/version` responses never reveal
 the capability even when either source is bound.
 
+Selecting an operation also renders a focused one-hop source-evidence map.
+Registration providers appear on one side of the declared operation;
+name-bound caller evidence and separately dashed extractor abstentions appear
+on the other. Each node is a keyboard-focusable link to its immutable source.
+The table immediately below is authoritative and contains the exact same edge
+ids and labels; on mobile it replaces the wide diagram. This is not a global
+dependency graph: it makes no additional request, adds no hidden data surface,
+and does not infer producers, consumers, runtime traffic, ownership, or
+deployment topology. An empty neighborhood repeats the visible-repository
+count, coverage digest, and relationship completeness state and explicitly
+does not claim runtime absence.
+
 Proof-bundle expiry is disabled by default. To bound retained answers and
 their extraction-run pins, set a positive Go duration, for example:
 

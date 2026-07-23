@@ -13,7 +13,6 @@ import {
   type ContractCatalogList,
   type ContractCatalogMessage,
   type ContractCatalogOperation,
-  type ContractCatalogRelationship,
   type ContractCatalogSource,
   type ContractCatalogTypeReference,
   type CoverageCertificate,
@@ -26,6 +25,7 @@ import {
 import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import ContractDependencyMap from '../components/ContractDependencyMap'
 
 interface CatalogFilters {
   repository: string
@@ -707,22 +707,7 @@ function OperationDetail({ operation }: { operation: ContractCatalogOperation })
           </div>
         </section>
 
-        <RelationshipSection
-          title="Implementations"
-          rows={operation.implementations}
-          empty="No registration evidence was returned within this exact bounded coverage; this does not establish that no implementation exists."
-        />
-        <RelationshipSection
-          title="Callers"
-          rows={operation.callers}
-          empty="No caller evidence was returned within this exact bounded coverage; this does not establish that no caller exists."
-        />
-        <RelationshipSection
-          title="Unresolved candidates"
-          rows={operation.unresolved_candidates}
-          empty="No extractor abstention matched this method name within the exact bounded coverage."
-          unresolved
-        />
+        <ContractDependencyMap operation={operation} />
 
         <CoverageDetails certificate={operation.coverage} />
         <div className={css({
@@ -871,66 +856,6 @@ function EvidenceBlock({ title, claim }: { title: string; claim: ContractCatalog
         </table>
       </div>
       {claim.sources_truncated && <div className={css({ marginTop: '7px' })}><StatusChip tone="amber">source locators truncated</StatusChip></div>}
-    </section>
-  )
-}
-
-function RelationshipSection({
-  title,
-  rows,
-  empty,
-  unresolved = false,
-}: {
-  title: string
-  rows: ContractCatalogRelationship[]
-  empty: string
-  unresolved?: boolean
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <section>
-      <SectionTitle>{title}</SectionTitle>
-      {rows.length === 0 ? (
-        <div className={css({ color: tok.textTertiary, fontSize: '11px', lineHeight: '18px' })}>
-          {empty}
-        </div>
-      ) : (
-        <div className={css({ overflowX: 'auto' })}>
-          <table className={css(tableStyle('720px'))}>
-            <thead>
-              <tr>
-                <HeaderCell>Pinned source evidence</HeaderCell>
-                <HeaderCell>{unresolved ? 'Abstention' : 'Join classification'}</HeaderCell>
-                <HeaderCell>Own lineage</HeaderCell>
-                <HeaderCell>Tier / role</HeaderCell>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.flatMap((row) => row.claim.sources.map((source) => (
-                <tr key={`${row.kind}:${row.claim.assertion_id}:${sourceKey(source)}`} className={css({
-                  borderBottom: `1px solid ${tok.innerSep}`,
-                  ':hover': { backgroundColor: tok.hoverFill },
-                })}>
-                  <Cell><SourceLink source={source} /></Cell>
-                  <Cell>
-                    <StatusChip tone={row.classification === 'proven' ? 'green' : 'amber'}>
-                      {humanize(row.classification)}
-                    </StatusChip>
-                    {row.reason && (
-                      <div className={css({ marginTop: '4px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>
-                        {humanize(row.reason)}
-                      </div>
-                    )}
-                  </Cell>
-                  <Cell mono>{row.claim.lineage ? shortLineage(row.claim.lineage) : 'unresolved'}</Cell>
-                  <Cell>{row.claim.tier}{row.claim.code_role ? ` · ${row.claim.code_role}` : ''}</Cell>
-                </tr>
-              )))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </section>
   )
 }
