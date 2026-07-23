@@ -1174,6 +1174,12 @@ authenticated startup, local-repository sync/index, exact-commit search and
 browse, and the absent Contract Atlas capability/404 route. Hosted clean
 checkout execution remains T18.4.
 
+Acceptance closed with the operator's live invocation against the verified
+`v0.1.0` bundle for commit
+`5a9847ac8d2e33b774d3c27e08eda865ddc53540`; the runner reported
+`sync->index->search, pinned browse, Contract Atlas dark`. This authorizes
+T18.4 to begin but does not authorize a remote, tag, or publication.
+
 **T18.4 · Public remote, hosted gate, and `v0.1.0`**
 Create or bind the explicitly approved GitHub repository, push `main`, run the
 hosted workflow, then create and push the annotated first tag only from the
