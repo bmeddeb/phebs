@@ -60,4 +60,21 @@ func TestInvestigationDomainPureRules(t *testing.T) {
 			t.Fatalf("canonical artifact ids = %q and %q, err %v", first, second, err)
 		}
 	})
+
+	t.Run("event digest survives store time precision", func(t *testing.T) {
+		event := RunEvent{
+			ID: "01JY0000000000000000000000", RunID: "iru_test", Sequence: 1, Attempt: 1,
+			NewState: RunQueued, Actor: "actor", Reason: "created",
+			Timestamp: time.Unix(1_750_000_000, 123_456_789),
+		}
+		before, err := contentDigest(runEventCore(event))
+		if err != nil {
+			t.Fatal(err)
+		}
+		event.Timestamp = storeTimestamp(event.Timestamp)
+		after, err := contentDigest(runEventCore(event))
+		if err != nil || before != after {
+			t.Fatalf("event digest changed across store precision: %q != %q, %v", before, after, err)
+		}
+	})
 }

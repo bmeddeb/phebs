@@ -308,6 +308,13 @@ func contentDigest(value any) (string, error) {
 	return "sha256:" + hex.EncodeToString(sum[:]), nil
 }
 
+// SurrealDB persists datetime values at microsecond precision. Normalize
+// before any immutable digest is computed so a write/read round trip retains
+// the same canonical bytes.
+func storeTimestamp(value time.Time) time.Time {
+	return value.UTC().Truncate(time.Microsecond)
+}
+
 const crockford = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
 func newULID(now time.Time) (string, error) {
@@ -391,7 +398,7 @@ func (s *Surreal) CreateInvestigation(ctx context.Context, in Investigation) (*I
 	if in.CurrentRevisionID != "" {
 		return nil, errors.New("create investigation: current revision is set only after revision creation")
 	}
-	now := time.Now().UTC()
+	now := storeTimestamp(time.Now())
 	in.CreatedAt, in.UpdatedAt = now, now
 	results, err := surrealdb.Query[[]Investigation](ctx, s.db,
 		`CREATE $rid SET investigation_id = $investigation_id, referent = $referent,
@@ -452,7 +459,7 @@ func (s *Surreal) UpdateInvestigation(ctx context.Context, in Investigation) (*I
 			return nil, fmt.Errorf("update investigation: current revision is unavailable: %w", ErrConflict)
 		}
 	}
-	now := time.Now().UTC()
+	now := storeTimestamp(time.Now())
 	results, err := surrealdb.Query[[]Investigation](ctx, s.db,
 		`UPDATE $rid SET title = $title, owner = $owner, lifecycle = $lifecycle,
 			current_revision_id = $current_revision_id, updated_at = $now
@@ -551,7 +558,7 @@ func (s *Surreal) PutRevision(ctx context.Context, revision Revision) (*Revision
 			return nil, fmt.Errorf("put revision: previous sequence is unavailable: %w", ErrConflict)
 		}
 	}
-	revision.CreatedAt = time.Now().UTC()
+	revision.CreatedAt = storeTimestamp(time.Now())
 	results, err := surrealdb.Query[[]Revision](ctx, s.db,
 		`CREATE $rid SET revision_id = $revision_id, investigation_id = $investigation_id,
 			seq = $seq, normalized_question = $normalized_question, decision_sought = $decision_sought,
@@ -704,7 +711,7 @@ func (s *Surreal) CreateRun(ctx context.Context, request RunRequest) (*Run, erro
 	}
 
 	for attempt := 0; ; attempt++ {
-		now := time.Now().UTC()
+		now := storeTimestamp(time.Now())
 		eventID, idErr := newULID(now)
 		if idErr != nil {
 			return nil, idErr
@@ -795,7 +802,7 @@ func runEventCore(event RunEvent) any {
 		Timestamp            time.Time
 	}{
 		event.ID, event.RunID, event.Sequence, event.Attempt,
-		event.PriorState, event.NewState, event.Actor, event.Reason, event.Timestamp.UTC(),
+		event.PriorState, event.NewState, event.Actor, event.Reason, storeTimestamp(event.Timestamp),
 	}
 }
 
@@ -840,9 +847,20 @@ func (s *Surreal) ListRunEvents(ctx context.Context, runID string) ([]RunEvent, 
 	for i := range rows {
 		storedDigest := rows[i].Digest
 		digest, digestErr := contentDigest(runEventCore(rows[i]))
-		if digestErr != nil || storedDigest != digest || rows[i].Sequence != i+1 ||
-			rows[i].RunID != runID || !validRunState(rows[i].NewState) {
-			return nil, errors.New("list run events: stored event stream is inconsistent")
+		if digestErr != nil {
+			return nil, fmt.Errorf("list run events: event %d digest: %w", i+1, digestErr)
+		}
+		if storedDigest != digest {
+			return nil, fmt.Errorf("list run events: event %d immutable digest mismatch", i+1)
+		}
+		if rows[i].Sequence != i+1 {
+			return nil, fmt.Errorf("list run events: event %d has sequence %d", i+1, rows[i].Sequence)
+		}
+		if rows[i].RunID != runID {
+			return nil, fmt.Errorf("list run events: event %d belongs to another run", i+1)
+		}
+		if !validRunState(rows[i].NewState) {
+			return nil, fmt.Errorf("list run events: event %d has invalid state %q", i+1, rows[i].NewState)
 		}
 		if i == 0 {
 			if rows[i].PriorState != "" || rows[i].NewState != RunQueued {
@@ -929,7 +947,7 @@ func (s *Surreal) AppendRunEvent(ctx context.Context, runID string, event RunEve
 		event.RunID = runID
 		event.Sequence = last.Sequence + 1
 		event.PriorState = last.NewState
-		event.Timestamp = time.Now().UTC()
+		event.Timestamp = storeTimestamp(time.Now())
 		if event.ID == "" {
 			event.ID, err = newULID(event.Timestamp)
 			if err != nil {
@@ -1062,7 +1080,7 @@ func (s *Surreal) PutRunArtifact(ctx context.Context, artifact RunArtifact) (*Ru
 	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
-	artifact.CreatedAt = time.Now().UTC()
+	artifact.CreatedAt = storeTimestamp(time.Now())
 	results, err := surrealdb.Query[[]RunArtifact](ctx, s.db,
 		`CREATE $rid SET artifact_id = $artifact_id, scope = $scope, run_id = $run_id,
 			terminal_status = $terminal_status, snapshot_manifest = $snapshot_manifest,
@@ -1143,7 +1161,7 @@ func decisionCore(decision Decision) any {
 		decision.RevisionID, decision.RunArtifactID, decision.BaselineID,
 		decision.EligibilityResult, decision.VisibleScope, decision.Authority,
 		decision.AuthoritySource, decision.Rationale, decision.PolicyVersion,
-		decision.Supersedes, decision.EffectiveFrom.UTC(), utcTimePointer(decision.ExpiresAt),
+		decision.Supersedes, storeTimestamp(decision.EffectiveFrom), utcTimePointer(decision.ExpiresAt),
 	}
 }
 
@@ -1151,7 +1169,7 @@ func utcTimePointer(value *time.Time) *time.Time {
 	if value == nil {
 		return nil
 	}
-	utc := value.UTC()
+	utc := storeTimestamp(*value)
 	return &utc
 }
 
@@ -1170,7 +1188,7 @@ func validateDecision(decision *Decision) error {
 			return err
 		}
 	}
-	decision.EffectiveFrom = decision.EffectiveFrom.UTC()
+	decision.EffectiveFrom = storeTimestamp(decision.EffectiveFrom)
 	decision.ExpiresAt = utcTimePointer(decision.ExpiresAt)
 	digest, err := contentDigest(decisionCore(*decision))
 	if err != nil {
@@ -1184,7 +1202,7 @@ func validateDecision(decision *Decision) error {
 }
 
 func (s *Surreal) PutDecision(ctx context.Context, decision Decision) (*Decision, error) {
-	now := time.Now().UTC()
+	now := storeTimestamp(time.Now())
 	if err := ensureULID(&decision.ID, now); err != nil {
 		return nil, fmt.Errorf("put decision: %w", err)
 	}
@@ -1300,7 +1318,7 @@ func dispositionCore(disposition Disposition) any {
 	}{
 		disposition.ID, disposition.InvestigationID, disposition.Category,
 		disposition.SubjectKind, disposition.SubjectID, disposition.Actor,
-		disposition.AuthorityBasis, disposition.Rationale, disposition.EffectiveFrom.UTC(),
+		disposition.AuthorityBasis, disposition.Rationale, storeTimestamp(disposition.EffectiveFrom),
 		utcTimePointer(disposition.ExpiresAt), disposition.PolicyReference,
 		disposition.ExternalDecisionID, disposition.ReferencedFactID,
 		disposition.ReferencedCoverage, disposition.Supersedes,
@@ -1320,7 +1338,7 @@ func validateDisposition(disposition *Disposition) error {
 			return err
 		}
 	}
-	disposition.EffectiveFrom = disposition.EffectiveFrom.UTC()
+	disposition.EffectiveFrom = storeTimestamp(disposition.EffectiveFrom)
 	disposition.ExpiresAt = utcTimePointer(disposition.ExpiresAt)
 	digest, err := contentDigest(dispositionCore(*disposition))
 	if err != nil {
@@ -1334,7 +1352,7 @@ func validateDisposition(disposition *Disposition) error {
 }
 
 func (s *Surreal) PutDisposition(ctx context.Context, disposition Disposition) (*Disposition, error) {
-	now := time.Now().UTC()
+	now := storeTimestamp(time.Now())
 	if err := ensureULID(&disposition.ID, now); err != nil {
 		return nil, fmt.Errorf("put disposition: %w", err)
 	}
@@ -1455,7 +1473,7 @@ func validateBaseline(baseline *BaselineDesignation) error {
 }
 
 func (s *Surreal) PutBaselineDesignation(ctx context.Context, baseline BaselineDesignation) (*BaselineDesignation, error) {
-	now := time.Now().UTC()
+	now := storeTimestamp(time.Now())
 	if err := ensureULID(&baseline.ID, now); err != nil {
 		return nil, fmt.Errorf("put baseline: %w", err)
 	}
@@ -1546,7 +1564,7 @@ func validateWatch(watch Watch) error {
 }
 
 func (s *Surreal) CreateWatch(ctx context.Context, watch Watch) (*Watch, error) {
-	now := time.Now().UTC()
+	now := storeTimestamp(time.Now())
 	if err := ensureULID(&watch.ID, now); err != nil {
 		return nil, fmt.Errorf("create watch: %w", err)
 	}
@@ -1610,7 +1628,7 @@ func (s *Surreal) UpdateWatch(ctx context.Context, watch Watch) (*Watch, error) 
 			return nil, fmt.Errorf("update watch: current revision is unavailable: %w", ErrConflict)
 		}
 	}
-	now := time.Now().UTC()
+	now := storeTimestamp(time.Now())
 	results, err := surrealdb.Query[[]Watch](ctx, s.db,
 		`UPDATE $rid SET owner = $owner, enabled = $enabled,
 			current_revision_id = $current_revision_id, expires_at = $expires_at,
@@ -1703,7 +1721,7 @@ func (s *Surreal) PutWatchRevision(ctx context.Context, revision WatchRevision) 
 			return nil, fmt.Errorf("put watch revision: previous sequence is unavailable: %w", ErrConflict)
 		}
 	}
-	revision.CreatedAt = time.Now().UTC()
+	revision.CreatedAt = storeTimestamp(time.Now())
 	results, err := surrealdb.Query[[]WatchRevision](ctx, s.db,
 		`CREATE $rid SET watch_revision_id = $watch_revision_id, watch_id = $watch_id,
 			seq = $seq, investigation_id = $investigation_id, revision_id = $revision_id,
