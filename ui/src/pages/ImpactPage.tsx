@@ -28,7 +28,7 @@ export default function ImpactPage({ params, compatibilityAvailable }: { params:
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [mode, setMode] = useState<Mode>('operation')
-  const [operation, setOperation] = useState('')
+  const [operation, setOperation] = useState(params.get('operation') ?? '')
   const [lineage, setLineage] = useState('')
   const [message, setMessage] = useState('')
   const [fieldNumber, setFieldNumber] = useState('')

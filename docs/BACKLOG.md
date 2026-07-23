@@ -1028,7 +1028,7 @@ authorization/coverage cursor invalidation, immutable locators, no bundle
 write, field/depth/node/relationship/scan bounds, and a mid-read publication
 change.
 
-**T17.4 · Contract Atlas UI (protobuf/gRPC)**
+**T17.4 · Contract Atlas UI (protobuf/gRPC)** ✅ 2026-07-23
 Add the authenticated capability-gated **Contracts** navigation item and
 **Contract Atlas** page. The table-first interface supports repository,
 package, protocol, and provisional-lineage filters; a service → operation
@@ -1050,6 +1050,22 @@ link, and open the pre-populated Impact form. Disabled and anonymous servers
 advertise no capability, route, OpenAPI operation, or navigation item. UI tests
 cover pagination, truncation, duplicate declarations, unsupported/failed/stale
 coverage, empty states, and desktop/mobile layouts.
+
+Implemented as the capability-gated `#/contracts` workspace and navigation
+item. Exact filters drive a paged, lineage-preserving service → operation
+index; selecting an operation loads its bounded message trees, source claims,
+separately qualified implementations/callers/abstentions, coverage certificate,
+freshness/tier/completeness chips, and immutable file links. Duplicate FQNs
+remain separate by repository and provisional lineage. Stale responses are
+canceled and generation-guarded. Analyze impact transfers only the canonical
+operation into the existing form and does not submit it. Responsive tests pin
+the desktop split/mobile stack, pagination, truncation, duplicates, all
+coverage states, empty results, exact filters, source links, and stale-request
+suppression. Production still derives the capability only from real
+provisional evidence. `make dev` explicitly binds the validated synthetic
+`docs/fixtures/contracts/contract-atlas.json` adapter, which selects a visible
+indexed repository for a resolvable pinned source link, writes no evidence,
+and labels every response as synthetic.
 
 **T17.5 · Accessible focused dependency map**
 Render one deterministic one-hop neighborhood for the selected operation from

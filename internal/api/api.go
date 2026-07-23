@@ -47,6 +47,10 @@ type Options struct {
 	// nil store leaves the route unregistered so the dark-launch default has
 	// no discoverable read surface.
 	Evidence store.EvidenceStore
+	// ContractCatalogFixture is an explicit development/demo adapter. It
+	// exposes only synthetic catalog rows projected onto a currently visible
+	// indexed repository; production leaves it nil and uses Evidence instead.
+	ContractCatalogFixture *ContractCatalogFixture
 	// ProofBundles persists T14.1 immutable bundles. It is kept separate from
 	// Evidence so embedding/tests can expose the legacy evidence view without
 	// accidentally enabling the proof API.
@@ -333,6 +337,7 @@ func New(opts Options) http.Handler {
 	registerAudit(api, opts)
 	registerAnalytics(api, opts)
 	registerEvidence(api, opts)
+	registerContractCatalogAPI(api, opts)
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)
 

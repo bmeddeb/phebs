@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createAPIKey,
+  fetchContractCatalog,
+  fetchContractOperation,
   fetchDefinition,
   fetchFolderContents,
   fetchHover,
@@ -175,6 +177,37 @@ describe('request helpers', () => {
       `/api/find_definitions?repo=github.com%2Fa%2Frepo&ref=${'a'.repeat(40)}&path=src%2Frocket.go&line=7&character=13&encoding=utf16`,
       `/api/find_references?repo=github.com%2Fa%2Frepo&ref=${'a'.repeat(40)}&path=src%2Frocket.go&line=7&character=13&encoding=utf16`,
       `/api/hover?repo=github.com%2Fa%2Frepo&ref=${'a'.repeat(40)}&path=src%2Frocket.go&line=7&character=13&encoding=utf16`,
+    ])
+  })
+
+  it('binds contract catalog filters, continuation, and operation identity', async () => {
+    const signal = new AbortController().signal
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchContractCatalog({
+      repository: 'github.com/acme/contracts',
+      package: 'demo.v1',
+      protocol: 'protobuf',
+      lineage: 'lineage one',
+    }, 25, 'opaque+/cursor', signal)
+    await fetchContractOperation(
+      'github.com/acme/contracts',
+      'lineage one',
+      '/demo.v1.Catalog/Get',
+      signal,
+    )
+    expect(fetchMock.mock.calls).toEqual([
+      [
+        '/api/contract_atlas?repository=github.com%2Facme%2Fcontracts&package=demo.v1&protocol=protobuf&lineage=lineage+one&page_size=25&cursor=opaque%2B%2Fcursor',
+        { credentials: 'same-origin', signal },
+      ],
+      [
+        '/api/contract_atlas/operation?repository=github.com%2Facme%2Fcontracts&lineage=lineage+one&operation=%2Fdemo.v1.Catalog%2FGet',
+        { credentials: 'same-origin', signal },
+      ],
     ])
   })
 

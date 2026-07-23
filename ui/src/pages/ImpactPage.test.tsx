@@ -202,3 +202,10 @@ test('saved report URLs reauthorize through the report endpoint', async () => {
   await screen.findByText(report.conclusion.text)
   expect(api.fetchSavedImpact).toHaveBeenCalledWith(report.bundle_id, expect.any(AbortSignal))
 })
+
+test('Atlas handoff pre-populates an operation without automatically submitting it', () => {
+  page(new URLSearchParams('operation=%2Fshop.Cart%2FGet'))
+  expect((screen.getByLabelText('Canonical operation') as HTMLInputElement).value)
+    .toBe('/shop.Cart/Get')
+  expect(api.fetchOperationImpact).not.toHaveBeenCalled()
+})

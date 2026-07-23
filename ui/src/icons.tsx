@@ -122,3 +122,6 @@ export const ChartIcon = ({ size = 16 }: IconProps) =>
 
 export const ImpactIcon = ({ size = 16 }: IconProps) =>
   svg(size, <><circle cx="3" cy="8" r="1.5" /><circle cx="12.5" cy="4" r="1.5" /><circle cx="12.5" cy="12" r="1.5" /><path d="m4.5 7.4 6.5-2.8M4.5 8.6l6.5 2.8" /></>)
+
+export const ContractIcon = ({ size = 16 }: IconProps) =>
+  svg(size, <><path d="M5 2.5H3.5A1.5 1.5 0 0 0 2 4v8a1.5 1.5 0 0 0 1.5 1.5H5M11 2.5h1.5A1.5 1.5 0 0 1 14 4v8a1.5 1.5 0 0 1-1.5 1.5H11" /><circle cx="8" cy="5" r="1.25" /><circle cx="8" cy="11" r="1.25" /><path d="M8 6.25v3.5M5 8h6" /></>)

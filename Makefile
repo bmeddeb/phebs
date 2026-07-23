@@ -10,10 +10,10 @@ bin/buf: go.mod go.sum | bin ## compatibility child, pinned by the same go.mod a
 	CGO_ENABLED=0 go build -o $@ github.com/bufbuild/buf/cmd/buf
 
 dev: bin/zoekt-git-index bin/buf ui ## boot phebs with embedded UI (ARGS="-config phebs.yaml" for flags)
-	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) PHEBS_BUF=$(abspath bin/buf) PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) go run -tags ui ./cmd/phebs serve $(ARGS)
+	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) PHEBS_BUF=$(abspath bin/buf) PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) go run -tags ui ./cmd/phebs serve $(ARGS)
 
 dev-api: bin/zoekt-git-index bin/buf ## backend-only loop: no UI build, placeholder page
-	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) PHEBS_BUF=$(abspath bin/buf) PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) go run ./cmd/phebs serve $(ARGS)
+	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) PHEBS_BUF=$(abspath bin/buf) PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) go run ./cmd/phebs serve $(ARGS)
 
 build: bin/zoekt-git-index bin/buf ui ## release binary with embedded UI
 	go build -tags ui -o phebs ./cmd/phebs

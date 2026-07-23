@@ -323,6 +323,152 @@ export interface CoverageCertificate {
   digest: string
 }
 
+export interface ContractCatalogSource {
+  repository: string
+  commit: string
+  path: string
+  start_byte: number
+  end_byte: number
+  start_line: number
+  end_line: number
+  assertion_id: string
+  run_id: string
+  atom_id: string
+}
+
+export interface ContractCatalogClaim {
+  assertion_id: string
+  run_id: string
+  predicate: string
+  object: string
+  lineage?: string
+  tier: string
+  code_role?: string
+  detail?: Record<string, unknown>
+  sources: ContractCatalogSource[]
+  sources_truncated: boolean
+}
+
+export interface ContractCatalogItem {
+  kind: 'service' | 'operation'
+  protocol: string
+  repository: string
+  declaration_lineage: string
+  package?: string
+  service_fqn: string
+  method?: string
+  operation?: string
+  declaration: ContractCatalogClaim
+}
+
+export interface ContractCatalogPagination {
+  complete: boolean
+  truncated: boolean
+  reason?: string
+  next_cursor?: string
+}
+
+export interface ContractCatalogList {
+  schema_version: string
+  query: {
+    repository?: string
+    package?: string
+    protocol?: string
+    lineage?: string
+  }
+  items: ContractCatalogItem[]
+  pagination: ContractCatalogPagination
+  coverage_digest: string
+  coverage: CoverageCertificate
+  caveat: string
+}
+
+export interface ContractCatalogImportContext {
+  count: number
+  digest: string
+  paths?: string[]
+  truncated: boolean
+}
+
+export interface ContractCatalogTypeReference {
+  raw: string
+  kind?: string
+  resolution: string
+  declaration?: string
+  reason?: string
+  imports?: ContractCatalogImportContext
+}
+
+export interface ContractCatalogMapShape {
+  key: ContractCatalogTypeReference
+  value: ContractCatalogTypeReference
+}
+
+export interface ContractCatalogFieldDetail {
+  schema: string
+  name: string
+  type?: ContractCatalogTypeReference
+  cardinality: string
+  map?: ContractCatalogMapShape
+  oneof?: string
+}
+
+export interface ContractCatalogOperationFactDetail {
+  schema: string
+  request: ContractCatalogTypeReference
+  response: ContractCatalogTypeReference
+  client_streaming: boolean
+  server_streaming: boolean
+}
+
+export interface ContractCatalogFieldShape {
+  object: string
+  field_number: number
+  detail: ContractCatalogFieldDetail
+  declaration: ContractCatalogClaim
+  nested?: ContractCatalogMessage
+}
+
+export interface ContractCatalogMessage {
+  raw: string
+  state: 'resolved' | 'unresolved' | 'cycle' | 'depth_limit' | 'node_limit'
+  reason?: string
+  declaration_name?: string
+  declaration?: ContractCatalogClaim
+  fields?: ContractCatalogFieldShape[]
+  truncated: boolean
+  truncation_reasons?: string[]
+}
+
+export interface ContractCatalogRelationship {
+  kind: 'implementation' | 'caller' | 'unresolved_candidate'
+  classification: string
+  reason?: string
+  claim: ContractCatalogClaim
+}
+
+export interface ContractCatalogOperation {
+  schema_version: string
+  repository: string
+  declaration_lineage: string
+  service_fqn: string
+  method: string
+  operation: string
+  declaration: ContractCatalogClaim
+  fact_detail: ContractCatalogOperationFactDetail
+  request: ContractCatalogMessage
+  response: ContractCatalogMessage
+  implementations: ContractCatalogRelationship[]
+  callers: ContractCatalogRelationship[]
+  unresolved_candidates: ContractCatalogRelationship[]
+  relationships_truncated: boolean
+  relationship_limit_reason?: string
+  shape_truncated: boolean
+  coverage_digest: string
+  coverage: CoverageCertificate
+  caveat: string
+}
+
 export interface ImpactEvidenceRow {
   kind: 'operation_call' | 'field_reference' | 'unresolved_candidate'
   assertion_id: string
@@ -590,6 +736,35 @@ export const fetchAnalytics = (days = 30, signal?: AbortSignal) =>
 
 export const fetchVersion = (signal?: AbortSignal) =>
   getJSON<VersionInfo>('/api/version', signal)
+
+export const fetchContractCatalog = (
+  filters: {
+    repository?: string
+    package?: string
+    protocol?: string
+    lineage?: string
+  },
+  pageSize = 50,
+  cursor = '',
+  signal?: AbortSignal,
+) => getJSON<ContractCatalogList>(
+  `/api/contract_atlas?${query({
+    ...filters,
+    page_size: pageSize,
+    cursor,
+  })}`,
+  signal,
+)
+
+export const fetchContractOperation = (
+  repository: string,
+  lineage: string,
+  operation: string,
+  signal?: AbortSignal,
+) => getJSON<ContractCatalogOperation>(
+  `/api/contract_atlas/operation?${query({ repository, lineage, operation })}`,
+  signal,
+)
 
 export const fetchInvestigationViews = (signal?: AbortSignal) =>
   getJSON<InvestigationViewSummary[]>('/api/investigation_views', signal)

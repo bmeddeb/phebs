@@ -467,6 +467,14 @@ func serve(args []string) error {
 		apiOpts.InvestigationViews = fixtureViews
 		log.Printf("WARNING: synthetic Investigation fixture views enabled from %s; not production evidence", fixtureDir)
 	}
+	if fixturePath := strings.TrimSpace(os.Getenv("PHEBS_CONTRACT_ATLAS_FIXTURE")); fixturePath != "" {
+		fixture, err := api.LoadContractCatalogFixture(fixturePath)
+		if err != nil {
+			return fmt.Errorf("load synthetic Contract Atlas fixture: %w", err)
+		}
+		apiOpts.ContractCatalogFixture = fixture
+		log.Printf("WARNING: synthetic Contract Atlas fixture enabled from %s; not production evidence", fixturePath)
+	}
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries

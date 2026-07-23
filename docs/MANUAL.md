@@ -623,6 +623,14 @@ source IP.
 - **Analytics** (`#/analytics`, administrators only) — 30-day search volume,
 searches per day, average duration, and the repositories appearing most in
 results — computed entirely from local usage events.
+- **Contracts** (`#/contracts`, experimental) — browse provisional protobuf
+service declarations without first knowing an operation identifier. Exact
+repository/package/protocol/lineage filters lead to a service → operation
+index, then bounded request/response shapes, independently classified
+implementation/caller/abstention evidence, exact coverage state, and immutable
+source links. Duplicate service names remain separate by repository and
+provisional lineage. **Analyze impact** carries the selected canonical
+operation into the Impact form but does not submit it.
 - **Impact** (`#/impact`, experimental) — bounded contract-impact reports for
 canonical gRPC operations, stable protobuf field identities, and proposed
 before/after contract inputs. Known and unresolved consumers cite immutable
@@ -1225,6 +1233,20 @@ that omitted or absent rows do not exist. Like all provisional extraction
 surfaces, the Atlas is source evidence, not runtime topology or a completeness,
 compatibility, ownership, or accuracy conclusion.
 
+The Contracts navigation item and route appear only for an authenticated
+caller whose server advertises `contract-atlas`. Normal production obtains
+that capability only from the enabled provisional evidence service. For local
+UI demonstration, `make dev` and `make dev-api` explicitly set
+`PHEBS_CONTRACT_ATLAS_FIXTURE` to
+`docs/fixtures/contracts/contract-atlas.json`. That validated adapter projects
+one synthetic service onto the first currently visible indexed repository so
+the `go.mod` source link opens at its exact indexed commit. It does not seed,
+publish, persist, pin, or claim to validate extraction evidence; every
+response says it is synthetic. With neither the environment binding nor the
+real evidence service, the capability, HTTP routes, OpenAPI operations, and
+navigation item do not exist. Anonymous `/api/version` responses never reveal
+the capability even when either source is bound.
+
 Proof-bundle expiry is disabled by default. To bound retained answers and
 their extraction-run pins, set a positive Go duration, for example:
 
@@ -1576,8 +1598,8 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target           | Does                                                                                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`       | build UI + pinned zoekt/Buf children, run with embedded UI                                                                                               |
-| `make dev-api`   | backend-only loop with pinned zoekt/Buf children (placeholder UI page, fast)                                                                             |
+| `make dev`       | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas demo fixtures, run with embedded UI                                   |
+| `make dev-api`   | backend-only loop with the same children and explicit demo fixtures (placeholder UI page, fast)                                                          |
 | `make build`     | release binary `./phebs`, `bin/zoekt-git-index`, and `bin/buf`                                                                                          |
 | `make test`      | `go test ./...` — store/sync/indexer tests need `surreal`; child-binary integration tests build pinned zoekt and Buf binaries                            |
 | `make ui-test`   | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |

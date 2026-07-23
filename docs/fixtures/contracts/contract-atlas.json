@@ -1,0 +1,60 @@
+{
+  "schema_version": "contract-atlas-fixture-v1",
+  "protocol": "protobuf",
+  "package": "demo.search.v1",
+  "service_fqn": "demo.search.v1.CodeSearch",
+  "lineage": "provisional_make_dev_contract_v1",
+  "source_path": "go.mod",
+  "source_line": 1,
+  "operations": [
+    {
+      "method": "Search",
+      "request": {
+        "name": "demo.search.v1.SearchRequest",
+        "fields": [
+          {
+            "name": "query",
+            "number": 1,
+            "type": "string",
+            "cardinality": "singular"
+          },
+          {
+            "name": "max_results",
+            "number": 2,
+            "type": "uint32",
+            "cardinality": "singular"
+          },
+          {
+            "name": "repository",
+            "number": 3,
+            "type": "string",
+            "cardinality": "repeated"
+          }
+        ]
+      },
+      "response": {
+        "name": "demo.search.v1.SearchResponse",
+        "fields": [
+          {
+            "name": "file_count",
+            "number": 1,
+            "type": "uint32",
+            "cardinality": "singular"
+          },
+          {
+            "name": "match_count",
+            "number": 2,
+            "type": "uint32",
+            "cardinality": "singular"
+          },
+          {
+            "name": "truncated",
+            "number": 3,
+            "type": "bool",
+            "cardinality": "singular"
+          }
+        ]
+      }
+    }
+  ]
+}

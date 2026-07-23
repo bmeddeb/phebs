@@ -22,6 +22,7 @@ const AuditPage = lazy(() => import('./pages/AuditPage'))
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
 const ImpactPage = lazy(() => import('./pages/ImpactPage'))
 const InvestigationPage = lazy(() => import('./pages/InvestigationPage'))
+const ContractAtlasPage = lazy(() => import('./pages/ContractAtlasPage'))
 
 export default function App() {
   const [path, params] = useHashRoute()
@@ -72,6 +73,7 @@ export default function App() {
   if (!status || (status.auth_required && !status.authenticated)) return <LoginPage />
 
   const impactAvailable = capabilities.includes('contract-impact-report')
+  const contractsAvailable = capabilities.includes('contract-atlas')
   const compatibilityAvailable = capabilities.includes('contract-compatibility')
   const investigationsAvailable = capabilities.includes('investigation-core-views')
   let page
@@ -82,6 +84,8 @@ export default function App() {
   else if (path.startsWith('/repos')) page = <ReposPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
+  else if (path.startsWith('/contracts') && !capabilitiesLoaded) page = <Spinner $size="small" />
+  else if (path.startsWith('/contracts') && contractsAvailable) page = <ContractAtlasPage params={params} />
   else if (path.startsWith('/impact') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/impact') && impactAvailable) page = <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} />
   else if (path.startsWith('/investigations') && !capabilitiesLoaded) page = <Spinner $size="small" />
@@ -93,7 +97,7 @@ export default function App() {
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
-      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} impactAvailable={impactAvailable} investigationsAvailable={investigationsAvailable} onLogout={() => void logout().catch(() => {})} />
+      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} investigationsAvailable={investigationsAvailable} onLogout={() => void logout().catch(() => {})} />
       <main
         className={css({
           width: '100%',
@@ -123,7 +127,7 @@ export default function App() {
   )
 }
 
-function Header({ path, email, isAdmin, impactAvailable, investigationsAvailable, onLogout }: { path: string; email: string; isAdmin: boolean; impactAvailable: boolean; investigationsAvailable: boolean; onLogout: () => void }) {
+export function Header({ path, email, isAdmin, contractsAvailable, impactAvailable, investigationsAvailable, onLogout }: { path: string; email: string; isAdmin: boolean; contractsAvailable: boolean; impactAvailable: boolean; investigationsAvailable: boolean; onLogout: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode, toggle } = useMode()
@@ -133,6 +137,7 @@ function Header({ path, email, isAdmin, impactAvailable, investigationsAvailable
   const isAudit = path.startsWith('/audit')
   const isAnalytics = path.startsWith('/analytics')
   const isImpact = path.startsWith('/impact')
+  const isContracts = path.startsWith('/contracts')
   const isInvestigations = path.startsWith('/investigations')
   const isSearch = path === '/' || path.startsWith('/search')
 
@@ -174,6 +179,7 @@ function Header({ path, email, isAdmin, impactAvailable, investigationsAvailable
       })}>
         <NavLink href="#/" label="Search" active={isSearch} />
         <NavLink href="#/repos" label="Repos" active={isRepos} />
+        {contractsAvailable && <NavLink href="#/contracts" label="Contracts" active={isContracts} />}
         {impactAvailable && <NavLink href="#/impact" label="Impact" active={isImpact} />}
         {investigationsAvailable && <NavLink href="#/investigations?id=04" label="Investigations" active={isInvestigations} />}
         {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}

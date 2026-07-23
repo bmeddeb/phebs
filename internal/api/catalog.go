@@ -46,7 +46,8 @@ type ContractCatalogService struct {
 }
 
 func NewContractCatalogService(opts Options) *ContractCatalogService {
-	if opts.Store == nil || opts.Evidence == nil || opts.Principal == nil {
+	if opts.Store == nil || opts.Principal == nil ||
+		opts.Evidence == nil && opts.ContractCatalogFixture == nil {
 		return nil
 	}
 	return &ContractCatalogService{opts: opts}
@@ -242,6 +243,9 @@ func (s *ContractCatalogService) List(
 			fmt.Sprintf("page_size must be from 1 through %d", catalogMaxPageSize),
 		)
 	}
+	if s.opts.ContractCatalogFixture != nil {
+		return s.opts.ContractCatalogFixture.list(ctx, s.opts, query, pageSize, cursor)
+	}
 
 	visible, err := visibleRepositories(ctx, s.opts)
 	if err != nil {
@@ -339,6 +343,11 @@ func (s *ContractCatalogService) Operation(
 	}
 	if err := validateOperation(operation); err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
+	}
+	if s.opts.ContractCatalogFixture != nil {
+		return s.opts.ContractCatalogFixture.operation(
+			ctx, s.opts, repository, lineage, operation,
+		)
 	}
 	visible, err := visibleRepositories(ctx, s.opts)
 	if err != nil {
