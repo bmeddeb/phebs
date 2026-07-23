@@ -97,12 +97,12 @@ make release verify-release smoke-release VERSION=v0.1.0
 
 The result is `dist/phebs-v0.1.0-<goos>-<goarch>/` containing `phebs`,
 same-module `bin/zoekt-git-index` and `bin/buf` children, `LICENSE`,
-`README.md`, and `release-manifest.json`. The canonical manifest binds the
-version, source commit, target, Go toolchain, stable installed modes, sizes,
-and SHA-256 digest of every payload. `verify-release` rejects missing,
-additional, symlinked, mode-changed, or byte-modified payloads. The manifest
-is an integrity inventory, not a signature or independent proof of who built
-it.
+`README.md`, the ready-to-run `phebs-otel-demo.yaml`, and
+`release-manifest.json`. The canonical manifest binds the version, source
+commit, target, Go toolchain, stable installed modes, sizes, and SHA-256
+digest of every payload. `verify-release` rejects missing, additional,
+symlinked, mode-changed, or byte-modified payloads. The manifest is an
+integrity inventory, not a signature or independent proof of who built it.
 
 `smoke-release` requires `git` and the exact `.surrealdb-version` binary on
 `PATH`. It verifies the bundle before starting anything, creates an empty
@@ -126,6 +126,27 @@ SHA must match byte-for-byte; tags are never force-moved. Release notes must
 link the run and checksum and state that Contract Atlas and proof features are
 default-dark, provisional, and do not establish the closed
 `NOT_ESTABLISHED` accuracy gate.
+
+#### OpenTelemetry microservices evaluation
+
+The repository and release bundle include `phebs-otel-demo.yaml` as the
+canonical public microservices evaluation. From the release directory:
+
+```bash
+./phebs serve -config phebs-otel-demo.yaml
+```
+
+Open `http://127.0.0.1:3071`, complete first-administrator setup with the
+one-time token printed in the server log, and allow the initial sync and index
+to finish. The configuration clones the public
+`github.com/open-telemetry/opentelemetry-demo` monorepo and keeps its state
+isolated under `~/.phebs-otel-demo`. It deliberately enables
+`experimental.provisional_proto_extraction`, so the authenticated UI can
+expose Contracts / Contract Atlas after eligible evidence publishes. This is
+an evaluation posture: the extracted protobuf/gRPC relationships remain
+provisional, default deployments remain dark, unresolved relationships are
+abstentions rather than guesses, and no empty result establishes runtime
+absence.
 
 Minimal `phebs.yaml`:
 

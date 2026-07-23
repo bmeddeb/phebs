@@ -33,7 +33,7 @@ var (
 	goVersionRE      = regexp.MustCompile(`^1\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`)
 	targetRE         = regexp.MustCompile(`^[a-z0-9]+$`)
 	requiredFiles    = map[string]bool{
-		"LICENSE": false, "README.md": false,
+		"LICENSE": false, "README.md": false, "phebs-otel-demo.yaml": false,
 		"phebs": true, "bin/buf": true, "bin/zoekt-git-index": true,
 	}
 )

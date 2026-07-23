@@ -205,6 +205,7 @@ func testInputs(t *testing.T, root string) []Source {
 		{Path: "bin/buf", SourcePath: write("buf", "compat", 0o755), Executable: true},
 		{Path: "LICENSE", SourcePath: write("license", "license", 0o644)},
 		{Path: "README.md", SourcePath: write("readme", "readme", 0o644)},
+		{Path: "phebs-otel-demo.yaml", SourcePath: write("otel-demo", "connections: []\n", 0o644)},
 	}
 }
 

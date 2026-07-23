@@ -33,7 +33,7 @@ func run(args []string) error {
 func bundle(args []string) error {
 	flags := flag.NewFlagSet("bundle", flag.ContinueOnError)
 	var opts releasebundle.BuildOptions
-	var phebs, zoekt, buf, license, readme string
+	var phebs, zoekt, buf, license, readme, otelDemo string
 	flags.StringVar(&opts.OutputDir, "output", "", "new release directory")
 	flags.StringVar(&opts.Version, "version", "", "release SemVer")
 	flags.StringVar(&opts.Commit, "commit", "", "source commit")
@@ -45,6 +45,7 @@ func bundle(args []string) error {
 	flags.StringVar(&buf, "buf", "bin/buf", "Buf executable")
 	flags.StringVar(&license, "license", "LICENSE", "license file")
 	flags.StringVar(&readme, "readme", "README.md", "readme file")
+	flags.StringVar(&otelDemo, "otel-demo", "phebs-otel-demo.yaml", "OpenTelemetry microservices demo config")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -57,6 +58,7 @@ func bundle(args []string) error {
 		{Path: "bin/buf", SourcePath: buf, Executable: true},
 		{Path: "LICENSE", SourcePath: license},
 		{Path: "README.md", SourcePath: readme},
+		{Path: "phebs-otel-demo.yaml", SourcePath: otelDemo},
 	}
 	manifest, err := releasebundle.Build(opts)
 	if err != nil {

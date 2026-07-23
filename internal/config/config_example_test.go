@@ -46,6 +46,32 @@ func TestConfigExampleDocumentsEveryOption(t *testing.T) {
 	}
 }
 
+func TestOpenTelemetryDemoConfigIsPortableAndEnablesContractAtlas(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "phebs-otel-demo.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "/Users/") {
+		t.Fatal("OpenTelemetry demo config contains a machine-specific home path")
+	}
+
+	cfg, err := Parse(data)
+	if err != nil {
+		t.Fatalf("OpenTelemetry demo config is not loadable: %v", err)
+	}
+	if !cfg.Experimental.ProvisionalProtoExtraction {
+		t.Fatal("OpenTelemetry demo config must explicitly enable provisional contract extraction")
+	}
+	if len(cfg.Connections) != 1 ||
+		cfg.Connections[0].URL != "https://github.com/open-telemetry/opentelemetry-demo.git" {
+		t.Fatalf("OpenTelemetry demo connection = %#v", cfg.Connections)
+	}
+	if !filepath.IsAbs(cfg.Server.DataDir) ||
+		filepath.Base(cfg.Server.DataDir) != ".phebs-otel-demo" {
+		t.Fatalf("OpenTelemetry demo data_dir = %q, want portable user-local path", cfg.Server.DataDir)
+	}
+}
+
 type configExampleEvent struct {
 	line   int
 	indent int

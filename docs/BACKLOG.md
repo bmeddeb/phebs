@@ -1193,13 +1193,16 @@ fresh-data smoke; release notes preserve the default-dark and validation
 caveats.
 
 Implementation candidate: the approved public remote is
-`https://github.com/bmeddeb/phebs`. Its first `main` push run at `98eed01`
-passed the four T18.2 jobs. The candidate adds the fifth clean-checkout release
-job, which builds twice, compares manifests, executes the fresh-data smoke,
-and retains a deterministic Linux/amd64 archive plus SHA-256 file. MANUAL and
-PLAN define the documented single-maintainer hosted-gate equivalent. T18.4
-remains open until this candidate lands, the five-job run passes on that exact
-commit, and the annotated tag/release assets and caveated notes are published.
+`https://github.com/bmeddeb/phebs`. The fifth clean-checkout release job builds
+twice, compares manifests, executes the fresh-data smoke, and retains a
+deterministic Linux/amd64 archive plus SHA-256 file. The release bundle also
+binds the portable `phebs-otel-demo.yaml` used for the product's public
+microservices evaluation: it clones the OpenTelemetry Demo monorepo into
+isolated user-local state and explicitly enables the provisional Contract
+Atlas readers. MANUAL and PLAN define the documented single-maintainer
+hosted-gate equivalent. T18.4 remains open until the final candidate's
+five-job run passes on that exact commit and the annotated tag, release assets,
+and caveated notes are published.
 
 ### On-demand protocol-pack candidates after Epic 17
 

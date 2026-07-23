@@ -2,7 +2,7 @@
 # This does not share state with the default phebs instance on port 3070.
 server:
   addr: "127.0.0.1:3071"
-  data_dir: "/Users/ben/.phebs-otel-demo"
+  data_dir: "~/.phebs-otel-demo"
 
 auth:
   # Plain HTTP is deliberate for this loopback-only evaluation.

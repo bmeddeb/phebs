@@ -48,8 +48,9 @@ make build                          # UI + zoekt child + ./phebs
 
 Release candidates use
 `make release verify-release smoke-release VERSION=vX.Y.Z`. This assembles
-the server, same-module zoekt and Buf children, license, and README under
-`dist/`; a canonical SHA-256 manifest is verified before an empty-data
+the server, same-module zoekt and Buf children, license, README, and a
+ready-to-run OpenTelemetry microservices demo under `dist/`; a canonical
+SHA-256 manifest is verified before an empty-data
 authenticated sync → index → search smoke. The smoke also proves experimental
 Contract Atlas routes stay dark unless explicitly enabled. See the manual for
 the exact pinned toolchain and declared `git`/SurrealDB prerequisites.
@@ -73,6 +74,20 @@ connections:
 On first start, copy the setup token printed in the local log into the browser
 to create the administrator. Keep the default secure cookie setting under
 HTTPS; see the manual for bootstrap-user and OIDC deployment.
+
+To evaluate phebs against a real public microservices monorepo, use the
+included OpenTelemetry Demo configuration:
+
+```bash
+./phebs serve -config phebs-otel-demo.yaml
+# open http://127.0.0.1:3071
+```
+
+It clones
+[open-telemetry/opentelemetry-demo](https://github.com/open-telemetry/opentelemetry-demo)
+into an isolated `~/.phebs-otel-demo` data directory and deliberately enables
+the provisional protobuf/gRPC evidence readers used by Contract Atlas. The
+first sync and index can take several minutes.
 
 **[→ Full user manual](./docs/MANUAL.md)** — authentication/OIDC, repository
 connections, search and SCIP, Git history, HTTP/MCP APIs, operations, and
