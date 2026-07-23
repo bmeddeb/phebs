@@ -4,13 +4,14 @@ import { Input } from 'baseui/input'
 import { Notification, KIND } from 'baseui/notification'
 import type { LanguageSupport } from '@codemirror/language'
 import { fetchRepoStatus, streamSearch } from '../api'
-import type { FileResult, Range, Stats } from '../api'
+import type { FileResult, Range, RepoStatus, Stats } from '../api'
 import { FOCUS_SEARCH, href, navigate } from '../router'
 import { usePhebsTokens, useMode, FONTS } from '../theme'
 import { languageFor, langColor } from '../lang'
 import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
 import { isAbortError, relTime, repoFilter, runeColumnToUTF16Offset, splitQueryTerms } from '../util'
+import RepositoryBrowser from '../RepositoryBrowser'
 
 type Phase = 'idle' | 'streaming' | 'stopped' | 'done' | 'error'
 
@@ -26,7 +27,10 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
   const [input, setInput] = useState(urlQuery)
   const [files, setFiles] = useState<FileResult[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
-  const [indexedAtByRepo, setIndexedAtByRepo] = useState<Map<string, string>>(new Map())
+  const [repositories, setRepositories] = useState<RepoStatus[]>([])
+  const [repositoriesLoading, setRepositoriesLoading] = useState(true)
+  const [repositoriesError, setRepositoriesError] = useState('')
+  const [repositoryGeneration, setRepositoryGeneration] = useState(0)
   const [phase, setPhase] = useState<Phase>('idle')
   const [error, setError] = useState('')
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -46,19 +50,32 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
 
   useEffect(() => {
     const controller = new AbortController()
+    let active = true
+    setRepositoriesLoading(true)
+    setRepositoriesError('')
     fetchRepoStatus(controller.signal)
       .then((repos) => {
-        const indexed = new Map<string, string>()
-        for (const repo of repos) {
-          if (repo.indexed_at) indexed.set(repo.name, repo.indexed_at)
-        }
-        setIndexedAtByRepo(indexed)
+        if (active) setRepositories(repos)
       })
       .catch((cause) => {
-        if (!isAbortError(cause)) setIndexedAtByRepo(new Map())
+        if (active && !isAbortError(cause)) setRepositoriesError(String(cause))
       })
-    return () => controller.abort()
-  }, [])
+      .finally(() => {
+        if (active) setRepositoriesLoading(false)
+      })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [repositoryGeneration])
+
+  const indexedAtByRepo = useMemo(() => {
+    const indexed = new Map<string, string>()
+    for (const repo of repositories) {
+      if (repo.indexed_at) indexed.set(repo.name, repo.indexed_at)
+    }
+    return indexed
+  }, [repositories])
 
   // the hash is the source of truth: searching = navigating
   useEffect(() => {
@@ -283,43 +300,70 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
 
       <div className={css({
         display: 'flex',
-        gap: '28px',
+        gap: '20px',
         marginTop: '14px',
         alignItems: 'flex-start',
         '@media screen and (max-width: 720px)': { flexDirection: 'column', gap: '12px' },
       })}>
-        {files.length > 0 && (
-          <FacetRail files={files} query={urlQuery} />
-        )}
-        <div className={css({ flex: '1 1 0', minWidth: 0, '@media screen and (max-width: 720px)': { width: '100%' } })}>
-          {phase === 'error' && (
-            <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
-              {error}
-            </Notification>
-          )}
-          {phase === 'done' && files.length === 0 && (
-            <div className={css({ padding: '48px 0', textAlign: 'center', color: tok.textTertiary })}>
-              No results for <span className={css({ fontFamily: FONTS.MONO, color: tok.textPrimary })}>{urlQuery}</span>.
+        <RepositoryBrowser
+          repositories={repositories}
+          loading={repositoriesLoading}
+          error={repositoriesError}
+          onRetry={() => setRepositoryGeneration((generation) => generation + 1)}
+          onInsertFilter={(repo) => {
+            const term = repoFilter(repo)
+            if (!splitQueryTerms(input).includes(term)) {
+              setInput(`${input}${input && !input.endsWith(' ') ? ' ' : ''}${term}`)
+            }
+            inputRef.current?.focus()
+          }}
+        />
+        <div className={css({ flex: '1 1 0', minWidth: 0, width: '100%' })}>
+          <div className={css({
+            display: 'flex',
+            gap: '24px',
+            alignItems: 'flex-start',
+            '@media screen and (max-width: 900px)': { flexDirection: 'column', gap: '12px' },
+          })}>
+            {files.length > 0 && (
+              <FacetRail files={files} query={urlQuery} />
+            )}
+            <div className={css({ flex: '1 1 0', minWidth: 0, width: '100%' })}>
+              {phase === 'error' && (
+                <Notification kind={KIND.negative} overrides={{ Body: { style: { width: 'auto', marginTop: 0 } } }}>
+                  {error}
+                </Notification>
+              )}
+              {phase === 'done' && files.length === 0 && (
+                <div className={css({ padding: '48px 0', textAlign: 'center', color: tok.textTertiary })}>
+                  No results for <span className={css({ fontFamily: FONTS.MONO, color: tok.textPrimary })}>{urlQuery}</span>.
+                </div>
+              )}
+              {groups.map(([repo, repoFiles]) => (
+                <RepoGroup
+                  key={repo}
+                  repo={repo}
+                  files={repoFiles}
+                  indexedAt={indexedAtByRepo.get(repo)}
+                  animateCard={entering.repos.has(repo)}
+                  enteringFiles={entering.files}
+                  open={!collapsed.has(repo)}
+                  onToggle={() => toggleGroup(repo)}
+                  selectedKey={selected >= 0 && visible[selected] ? fileKey(visible[selected]) : ''}
+                  registerRef={(k, el) => {
+                    if (el) rowRefs.current.set(k, el)
+                    else rowRefs.current.delete(k)
+                  }}
+                />
+              ))}
+              {phase === 'streaming' && <SkeletonCards />}
+            </div>
+          </div>
+          {phase === 'idle' && repositories.length > 0 && !repositoriesLoading && (
+            <div className={css({ padding: '32px 0 0', color: tok.textTertiary, fontSize: '13px', lineHeight: '20px' })}>
+              Browse a repository or enter a query to search its indexed source.
             </div>
           )}
-          {groups.map(([repo, repoFiles]) => (
-            <RepoGroup
-              key={repo}
-              repo={repo}
-              files={repoFiles}
-              indexedAt={indexedAtByRepo.get(repo)}
-              animateCard={entering.repos.has(repo)}
-              enteringFiles={entering.files}
-              open={!collapsed.has(repo)}
-              onToggle={() => toggleGroup(repo)}
-              selectedKey={selected >= 0 && visible[selected] ? fileKey(visible[selected]) : ''}
-              registerRef={(k, el) => {
-                if (el) rowRefs.current.set(k, el)
-                else rowRefs.current.delete(k)
-              }}
-            />
-          ))}
-          {phase === 'streaming' && <SkeletonCards />}
         </div>
       </div>
     </div>

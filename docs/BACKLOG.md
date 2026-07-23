@@ -902,7 +902,7 @@ Runtime traffic is explicitly absent. Any future runtime overlay requires its
 own ADR, partner-supplied observations, and strict source/runtime separation
 under the zero-telemetry posture.
 
-**T17.1 · Persistent repository explorer**
+**T17.1 · Persistent repository explorer** ✅ 2026-07-23
 Extract the FilePage's lazy tree into a shared repository-browser component and
 render it as a permanent left rail on Search. The rail lists every repository
 visible to the caller through `/api/repo-status`, loads exactly one directory
@@ -919,6 +919,15 @@ uses the cache. Filter insertion preserves the user's query, avoids duplicate
 repo atoms, and quotes repository names through the existing helper. UI tests
 cover desktop rail, mobile drawer, loading/error/retry, repository changes,
 direct file navigation, and permission-filtered empty state.
+
+Implemented by sharing the revision-pinned lazy folder reader between Search
+and FilePage. The Search rail sorts only the permission-filtered status
+projection, changes repositories without speculative folder reads, caches
+expanded paths by repository/revision/path, links directly to immutable file
+routes, and inserts an exact quoted repository atom into the existing query.
+The focused UI suite pins cold-page zero-search navigation, hidden-repository
+non-disclosure, per-directory request counts and cache reuse, filter
+deduplication, retry and empty states, and the mobile drawer lifecycle.
 
 **T17.2 · Same-file protobuf shape facts (`protodecl` v3)**
 Enrich the declared plane without pretending to link a protobuf module.

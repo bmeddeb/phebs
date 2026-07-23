@@ -5,7 +5,7 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import SearchPage from './SearchPage'
 import { runeColumnToUTF16Offset } from '../util'
-import type { Chunk, FileResult, Range, SearchResult, Stats } from '../api'
+import type { Chunk, FileResult, Range, RepoStatus, SearchResult, Stats, TreeEntry } from '../api'
 
 // streamSearch fake: tests drive the captured callbacks to simulate the SSE stream.
 type Callbacks = {
@@ -15,10 +15,37 @@ type Callbacks = {
   onError?: (msg: string) => void
 }
 const stream = vi.hoisted(() => ({} as Callbacks))
+const repositoryAPI = vi.hoisted(() => ({
+  statusCalls: 0,
+  statusFailures: 0,
+  statuses: [] as RepoStatus[],
+  folderCalls: [] as { repo: string; ref: string; path: string; signal: AbortSignal }[],
+  folderFailures: new Map<string, number>(),
+  folders: new Map<string, TreeEntry[]>(),
+}))
+
+const folderFixtureKey = (repo: string, path: string) => `${repo}\0${path}`
 
 vi.mock('../api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api')>()),
-  fetchRepoStatus: async () => [],
+  fetchRepoStatus: async () => {
+    repositoryAPI.statusCalls++
+    if (repositoryAPI.statusFailures > 0) {
+      repositoryAPI.statusFailures--
+      throw new Error('repository status unavailable')
+    }
+    return repositoryAPI.statuses
+  },
+  fetchFolderContents: async (repo: string, ref: string, path: string, signal: AbortSignal) => {
+    repositoryAPI.folderCalls.push({ repo, ref, path, signal })
+    const key = folderFixtureKey(repo, path)
+    const failures = repositoryAPI.folderFailures.get(key) ?? 0
+    if (failures > 0) {
+      repositoryAPI.folderFailures.set(key, failures - 1)
+      throw new Error('folder unavailable')
+    }
+    return { entries: repositoryAPI.folders.get(key) ?? [] }
+  },
   streamSearch: (
     q: string,
     onBatch: Callbacks['onBatch'],
@@ -82,11 +109,11 @@ const batch = (files: FileResult[]): SearchResult => ({
 })
 
 const engine = new Client()
-const renderSearch = () =>
+const renderSearch = (params = 'q=foo') =>
   render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
-        <SearchPage params={new URLSearchParams('q=foo')} />
+        <SearchPage params={new URLSearchParams(params)} />
       </BaseProvider>
     </StyletronProvider>,
   )
@@ -107,8 +134,138 @@ beforeEach(() => {
   delete stream.onDone
   delete stream.onError
   stream.calls = []
+  repositoryAPI.statusCalls = 0
+  repositoryAPI.statusFailures = 0
+  repositoryAPI.statuses = []
+  repositoryAPI.folderCalls = []
+  repositoryAPI.folderFailures = new Map()
+  repositoryAPI.folders = new Map()
 })
 afterEach(cleanup)
+
+const repoStatus = (name: string, commit?: string): RepoStatus => ({
+  name,
+  clone_url: `https://${name}.git`,
+  indexed_commit_hash: commit,
+  orphaned: false,
+})
+
+test('cold Search browses only visible repositories and opens a pinned file without searching', async () => {
+  repositoryAPI.statuses = [
+    repoStatus('github.com/a/visible', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
+    repoStatus('github.com/b/visible', 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'),
+  ]
+  repositoryAPI.folders.set(folderFixtureKey('github.com/a/visible', ''), [
+    { name: 'README.md', type: 'file', size: 12 },
+  ])
+
+  renderSearch('')
+
+  expect(await screen.findByRole('option', { name: 'github.com/a/visible' })).toBeTruthy()
+  expect(screen.getByRole('option', { name: 'github.com/b/visible' })).toBeTruthy()
+  expect(screen.queryByText('github.com/hidden/secret')).toBeNull()
+  const file = await screen.findByRole('link', { name: 'README.md' })
+  expect(file.getAttribute('href')).toBe(
+    '#/file?repo=github.com%2Fa%2Fvisible&path=README.md&ref=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+  )
+  expect(repositoryAPI.folderCalls.map(({ repo, ref, path }) => ({ repo, ref, path }))).toEqual([{
+    repo: 'github.com/a/visible',
+    ref: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    path: '',
+  }])
+  expect(stream.calls).toEqual([])
+})
+
+test('repository selection loads one visible root and never requests an absent repository', async () => {
+  repositoryAPI.statuses = [
+    repoStatus('github.com/a/visible', 'a-ref'),
+    repoStatus('github.com/b/visible', 'b-ref'),
+  ]
+  repositoryAPI.folders.set(folderFixtureKey('github.com/a/visible', ''), [])
+  repositoryAPI.folders.set(folderFixtureKey('github.com/b/visible', ''), [])
+
+  renderSearch('')
+  const picker = await screen.findByRole<HTMLSelectElement>('combobox', { name: 'Repository' })
+  await act(async () => fireEvent.change(picker, { target: { value: 'github.com/b/visible' } }))
+
+  await vi.waitFor(() => expect(repositoryAPI.folderCalls).toHaveLength(2))
+  expect(repositoryAPI.folderCalls.map(({ repo }) => repo)).toEqual([
+    'github.com/a/visible',
+    'github.com/b/visible',
+  ])
+  expect(repositoryAPI.folderCalls.some(({ repo }) => repo === 'github.com/hidden/secret')).toBe(false)
+})
+
+test('directory expansion is one-level lazy and re-expansion uses the cache', async () => {
+  repositoryAPI.statuses = [repoStatus('github.com/a/visible', 'a-ref')]
+  repositoryAPI.folders.set(folderFixtureKey('github.com/a/visible', ''), [
+    { name: 'src', type: 'dir' },
+  ])
+  repositoryAPI.folders.set(folderFixtureKey('github.com/a/visible', 'src'), [
+    { name: 'main.go', type: 'file' },
+  ])
+
+  renderSearch('')
+  const directory = await screen.findByRole('button', { name: 'src' })
+  fireEvent.click(directory)
+  expect(await screen.findByRole('link', { name: 'main.go' })).toBeTruthy()
+  fireEvent.click(directory)
+  fireEvent.click(directory)
+  expect(screen.getByRole('link', { name: 'main.go' })).toBeTruthy()
+  expect(repositoryAPI.folderCalls.map(({ path }) => path)).toEqual(['', 'src'])
+})
+
+test('repository filter insertion preserves the query and never duplicates its atom', async () => {
+  repositoryAPI.statuses = [repoStatus('github.com/a/visible', 'a-ref')]
+  repositoryAPI.folders.set(folderFixtureKey('github.com/a/visible', ''), [])
+
+  renderSearch('q=needle+lang%3Ago')
+  const add = await screen.findByRole('button', { name: 'Add repository filter' })
+  fireEvent.click(add)
+  const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Search code' })
+  expect(input.value).toBe('needle lang:go repo:"^github\\\\.com/a/visible$"')
+  fireEvent.click(add)
+  expect(input.value).toBe('needle lang:go repo:"^github\\\\.com/a/visible$"')
+})
+
+test('repository and folder failures have bounded retry paths', async () => {
+  repositoryAPI.statuses = [repoStatus('github.com/a/visible', 'a-ref')]
+  repositoryAPI.statusFailures = 1
+  repositoryAPI.folderFailures.set(folderFixtureKey('github.com/a/visible', ''), 1)
+  repositoryAPI.folders.set(folderFixtureKey('github.com/a/visible', ''), [
+    { name: 'README.md', type: 'file' },
+  ])
+
+  renderSearch('')
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry repositories' }))
+  expect(await screen.findByRole('option', { name: 'github.com/a/visible' })).toBeTruthy()
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry folder' }))
+  expect(await screen.findByRole('link', { name: 'README.md' })).toBeTruthy()
+  expect(repositoryAPI.statusCalls).toBe(2)
+  expect(repositoryAPI.folderCalls).toHaveLength(2)
+})
+
+test('mobile repository drawer exposes an explicit collapsed lifecycle', async () => {
+  repositoryAPI.statuses = [repoStatus('github.com/a/visible', 'a-ref')]
+  repositoryAPI.folders.set(folderFixtureKey('github.com/a/visible', ''), [])
+
+  renderSearch('')
+  const toggle = document.querySelector<HTMLButtonElement>(
+    'button[aria-controls="search-repository-explorer"]',
+  )
+  expect(toggle).not.toBeNull()
+  if (!toggle) throw new Error('missing mobile repository drawer toggle')
+  expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  fireEvent.click(toggle)
+  expect(toggle.getAttribute('aria-expanded')).toBe('true')
+  expect(document.querySelector('#search-repository-explorer')?.getAttribute('data-mobile-open')).toBe('true')
+})
+
+test('permission-filtered empty repository state is explicit', async () => {
+  renderSearch('')
+  expect(await screen.findByText('No visible repositories.')).toBeTruthy()
+  expect(repositoryAPI.folderCalls).toHaveLength(0)
+})
 
 test('streaming: batches render incrementally while phase stays streaming', async () => {
   renderSearch()

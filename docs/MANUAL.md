@@ -591,9 +591,15 @@ subsequent Git commands run.
 Served at `/` from the binary. After setup/login, the main views are
 deep-linkable hash routes:
 
-- **Search** (`#/search?q=…`) — results stream in as shards respond, grouped
-repo → file, with match counts and highlighted spans. Line numbers link
-into the viewer.
+- **Search** (`#/search?q=…`) — the repository explorer always lists the
+repositories visible to the signed-in user, even before a search returns
+results. Select a repository, expand folders one level at a time, or open a
+file directly at its immutable indexed revision; **Add repository filter**
+preserves the current query and inserts one exact quoted `repo:` atom. Folder
+contents are loaded lazily and cached for that repository/revision/path. On
+mobile the explorer is a collapsed **Browse repositories** drawer. Search
+results still stream in as shards respond, grouped repo → file, with match
+counts and highlighted spans; line numbers link into the viewer.
 - **File viewer** (`#/file?repo=…&path=…&ref=…&L=42`) — read-only CodeMirror with
 syntax highlighting across ~30 languages (Go, JS/TS, Python, Rust, Java,
 C/C++, C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …), a file-tree navigation
