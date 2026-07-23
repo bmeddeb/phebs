@@ -119,4 +119,23 @@ func TestInvestigationDomainPureRules(t *testing.T) {
 			t.Fatal("unregistered override policy accepted")
 		}
 	})
+
+	t.Run("authorization epochs reject transfer and regrant ABA", func(t *testing.T) {
+		base := investigationAuthz{
+			InvestigationID: "01JY0000000000000000000000", Owner: "user:owner",
+			AuthzRevision: 2, AuthorizationGeneration: "grant-generation-1",
+		}
+		if !base.sameAuthorization(&base) {
+			t.Fatal("equal authorization epochs differ")
+		}
+		for name, changed := range map[string]investigationAuthz{
+			"transfer": {InvestigationID: base.InvestigationID, Owner: "user:new-owner", AuthzRevision: 3, AuthorizationGeneration: base.AuthorizationGeneration},
+			"regrant":  {InvestigationID: base.InvestigationID, Owner: base.Owner, AuthzRevision: base.AuthzRevision, AuthorizationGeneration: "grant-generation-2"},
+			"object":   {InvestigationID: "01JY0000000000000000000001", Owner: base.Owner, AuthzRevision: base.AuthzRevision, AuthorizationGeneration: base.AuthorizationGeneration},
+		} {
+			if base.sameAuthorization(&changed) {
+				t.Errorf("%s did not change the authorization epoch", name)
+			}
+		}
+	})
 }

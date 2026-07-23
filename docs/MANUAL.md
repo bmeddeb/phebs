@@ -1296,7 +1296,15 @@ personal and never extend through grants. Ownership changes only through the
 audited transfer operation — a plain update rejects owner edits — and a
 transfer immediately voids each principal's stored continuation cursor for
 that investigation without deleting any other state; re-authorized principals
-simply re-establish their cursors. The canonical `NOT_AVAILABLE` refusal
+simply re-establish their cursors. Each read binds the current ownership
+revision and reader-grant generation, then rechecks that exact epoch after
+integrity reconstruction; a concurrent transfer, revoke, or revoke/regrant
+therefore cannot return stale data or surface a newly unauthorized integrity
+error. Regranting creates a new generation and never resurrects the revoked
+grant's cursor. Promoting a reader to owner consumes the reader grant, so it
+cannot silently restore access after a later transfer. Grant, revoke, transfer,
+and cursor mutation serialize against each other and commit with their audit
+event in one transaction. The canonical `NOT_AVAILABLE` refusal
 envelope (fixture 06) is rendered server-side as a minimal fixed shape whose
 bytes are identical for unknown and unauthorized requests. API and MCP
 surfaces bind to this boundary in later Epic 16 tickets.

@@ -267,6 +267,18 @@ func TestInvestigationAuthzSharingTransferAndCursors(t *testing.T) {
 	if _, err := s.GetInvestigationCursor(ctx, authzReader, investigation.ID); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("post-revoke cursor = %v, want ErrNotFound", err)
 	}
+	// A later grant is a new authorization generation. It must not resurrect
+	// cached continuation state from the revoked grant.
+	if _, err := s.GrantInvestigationAccess(ctx, authzOwner, investigation.ID,
+		authzReader, store.InvestigationRoleReader); err != nil {
+		t.Fatalf("regrant reader: %v", err)
+	}
+	if _, err := s.GetInvestigationCursor(ctx, authzReader, investigation.ID); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("cursor resurrected after regrant = %v, want ErrNotFound", err)
+	}
+	if err := s.RevokeInvestigationAccess(ctx, authzOwner, investigation.ID, authzReader); err != nil {
+		t.Fatalf("second revoke: %v", err)
+	}
 
 	// Ownership changes only through the transfer path.
 	changed := *investigation
@@ -314,5 +326,46 @@ func TestInvestigationAuthzSharingTransferAndCursors(t *testing.T) {
 	}
 	if _, err := s.GetInvestigationCursor(ctx, authzOwner, investigation.ID); err != nil {
 		t.Fatalf("re-established cursor read: %v", err)
+	}
+
+	events, err := s.ListAuditEvents(ctx, 0, 100)
+	if err != nil {
+		t.Fatalf("list authorization audit: %v", err)
+	}
+	wantActions := map[string]bool{
+		"investigation.grant": false, "investigation.revoke": false,
+		"investigation.transfer": false, "investigation.cursor": false,
+	}
+	for _, event := range events {
+		if _, ok := wantActions[event.Action]; ok {
+			wantActions[event.Action] = true
+		}
+	}
+	for action, found := range wantActions {
+		if !found {
+			t.Errorf("authorization audit is missing %q", action)
+		}
+	}
+}
+
+func TestInvestigationAuthzTransferConsumesPromotedGrant(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	investigation, _ := seedInvestigation(t, s)
+	const promoted = "user:promoted"
+	const finalOwner = "user:final-owner"
+
+	if _, err := s.GrantInvestigationAccess(ctx, authzOwner, investigation.ID,
+		promoted, store.InvestigationRoleReader); err != nil {
+		t.Fatalf("grant promoted principal: %v", err)
+	}
+	if _, err := s.TransferInvestigationOwnership(ctx, authzOwner, investigation.ID, promoted); err != nil {
+		t.Fatalf("promote grantee to owner: %v", err)
+	}
+	if _, err := s.TransferInvestigationOwnership(ctx, promoted, investigation.ID, finalOwner); err != nil {
+		t.Fatalf("transfer promoted owner onward: %v", err)
+	}
+	if _, err := s.GetInvestigationAs(ctx, promoted, investigation.ID); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("promoted principal retained stale reader grant: %v", err)
 	}
 }

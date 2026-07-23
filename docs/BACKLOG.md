@@ -730,6 +730,17 @@ SurrealDB-backed matrix (all ten reads × owner/grantee/stranger/unknown), the
 identical-bytes AC, and the sharing/transfer/cursor lifecycle passed locally
 on 2026-07-22 within the `-run '^TestInvestigation'` suite.
 
+Post-merge review hardening on `codex/t16.3-review-fixes` closes the concurrent
+forms of the same AC: projected reads bind and finally recheck an exact
+transfer-revision plus grant-generation epoch; grant/revoke/cursor changes
+serialize with transfer on the Investigation row; revoke/regrant cannot revive
+an old cursor; promoting a grantee consumes that grant; and each grant, revoke,
+transfer, or cursor mutation commits atomically with its audit event. Focused
+regressions cover authorization-epoch ABA, revoke/regrant cursor invalidation,
+promoted-grant consumption, and all four audit action classes.
+The complete SurrealDB-backed Investigation suite passed after remediation on
+2026-07-22 in 63.007 seconds.
+
 **T16.4 · Guided creation and async run state** *(needs T16.1–T16.3)* —
 creation API with scope preview, authorization preflight, estimate, cancel,
 bounded retries; publication lease. AC: failed/canceled attempts can never

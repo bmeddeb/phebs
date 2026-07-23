@@ -194,9 +194,10 @@ DEFINE INDEX IF NOT EXISTS investigation_baseline_scope ON investigation_baselin
 DEFINE INDEX IF NOT EXISTS investigation_baseline_supersedes ON investigation_baseline_designation FIELDS supersedes UNIQUE;
 
 -- T16.3 authorization invariants. Grants are explicit owner-authorized
--- sharing edges checked at query time on every read; cursors record the
--- investigation's authz_revision so an ownership transfer voids them without
--- deleting any principal's stored state.
+-- sharing edges checked at query time on every read. Grant generations and
+-- the Investigation authz_revision form the cursor/read epoch; the internal
+-- authz_write_revision serializes grant, revoke, transfer, and cursor writes.
+-- Those mutations create their audit row in the same transaction.
 DEFINE TABLE IF NOT EXISTS investigation_grant SCHEMALESS;
 DEFINE FIELD OVERWRITE role ON investigation_grant TYPE string
     ASSERT $value INSIDE ['reader'];
