@@ -87,3 +87,49 @@ jobs:
           cache-dependency-path: go.sum
       - name: Run UI and embedded-build gate
         run: make ci-ui
+
+  release:
+    name: Release bundle and fresh-data smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+          package-manager-cache: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: .go-version
+          cache-dependency-path: go.sum
+      - name: Install pinned SurrealDB
+        run: sh scripts/install-surreal-ci.sh "$RUNNER_TEMP"
+      - name: Build twice, compare, smoke, and package
+        run: |
+          set -euo pipefail
+          first="$RUNNER_TEMP/release-a"
+          second="$RUNNER_TEMP/release-b"
+          bundle="phebs-v0.1.0-linux-amd64"
+          make release VERSION=v0.1.0 RELEASE_ROOT="$first"
+          make release VERSION=v0.1.0 RELEASE_ROOT="$second"
+          cmp "$first/$bundle/release-manifest.json" "$second/$bundle/release-manifest.json"
+          make smoke-release VERSION=v0.1.0 RELEASE_BUNDLE="$first/$bundle"
+          mkdir -p dist/release
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+            -C "$first" -cf - "$bundle" |
+            gzip -n > "dist/release/$bundle.tar.gz"
+          sha256sum "dist/release/$bundle.tar.gz" > "dist/release/$bundle.tar.gz.sha256"
+      - name: Retain verified release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: phebs-v0.1.0-linux-amd64
+          path: |
+            dist/release/phebs-v0.1.0-linux-amd64.tar.gz
+            dist/release/phebs-v0.1.0-linux-amd64.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

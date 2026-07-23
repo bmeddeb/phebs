@@ -45,6 +45,7 @@ func TestCIContractPinsToolsAndNamedGates(t *testing.T) {
 		"actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
 		"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
 		"golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a",
+		"actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
 	} {
 		if !strings.Contains(workflow, exact) {
 			t.Errorf("workflow does not pin %q", exact)
@@ -68,17 +69,23 @@ func TestCIContractPinsToolsAndNamedGates(t *testing.T) {
 		"name: Go full test",
 		"name: Go concurrency race",
 		"name: UI test, lint, and embedded build",
+		"name: Release bundle and fresh-data smoke",
 		"run: make ci-static",
 		"run: make ci-go",
 		"run: make ci-race",
 		"run: make ci-ui",
+		"make release VERSION=v0.1.0",
+		"make smoke-release VERSION=v0.1.0",
+		`cmp "$first/$bundle/release-manifest.json" "$second/$bundle/release-manifest.json"`,
+		`sha256sum "dist/release/$bundle.tar.gz"`,
+		"if-no-files-found: error",
 	} {
 		if !strings.Contains(workflow, gate) {
 			t.Errorf("workflow is missing gate %q", gate)
 		}
 	}
-	if count := strings.Count(workflow, `sh scripts/install-surreal-ci.sh "$RUNNER_TEMP"`); count != 2 {
-		t.Errorf("pinned SurrealDB installer calls = %d, want 2", count)
+	if count := strings.Count(workflow, `sh scripts/install-surreal-ci.sh "$RUNNER_TEMP"`); count != 3 {
+		t.Errorf("pinned SurrealDB installer calls = %d, want 3", count)
 	}
 	installerBytes, err := os.ReadFile(filepath.Join(root, "scripts", "install-surreal-ci.sh"))
 	if err != nil {

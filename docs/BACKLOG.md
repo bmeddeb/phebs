@@ -1192,6 +1192,15 @@ the tested main commit; a clean checkout verifies the release manifest and
 fresh-data smoke; release notes preserve the default-dark and validation
 caveats.
 
+Implementation candidate: the approved public remote is
+`https://github.com/bmeddeb/phebs`. Its first `main` push run at `98eed01`
+passed the four T18.2 jobs. The candidate adds the fifth clean-checkout release
+job, which builds twice, compares manifests, executes the fresh-data smoke,
+and retains a deterministic Linux/amd64 archive plus SHA-256 file. MANUAL and
+PLAN define the documented single-maintainer hosted-gate equivalent. T18.4
+remains open until this candidate lands, the five-job run passes on that exact
+commit, and the annotated tag/release assets and caveated notes are published.
+
 ### On-demand protocol-pack candidates after Epic 17
 
 These are direction, not scheduled T17 tickets, and do not block completion of

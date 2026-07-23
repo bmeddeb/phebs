@@ -112,6 +112,21 @@ all development fixture variables and requires the authenticated capability
 list and `/api/contract_atlas` route to retain the default-dark posture. The
 temporary repository and data directory are deleted after shutdown.
 
+For `v0.1.0`, the hosted `Release bundle and fresh-data smoke` job is part of
+the required `ci` workflow. From a clean checkout it performs two independent
+Linux/amd64 builds, compares their manifests, runs the empty-data smoke, then
+retains a deterministic `.tar.gz` and adjacent `.sha256` file. The release
+archive is not accepted from a local workspace.
+
+This single-maintainer repository uses a documented release gate in place of
+branch protection: an annotated release tag may be created only when its exact
+`main` commit has a successful **push** run of all five named jobs in
+`.github/workflows/ci.yml`, including the release job. The tag commit and run
+SHA must match byte-for-byte; tags are never force-moved. Release notes must
+link the run and checksum and state that Contract Atlas and proof features are
+default-dark, provisional, and do not establish the closed
+`NOT_ESTABLISHED` accuracy gate.
+
 Minimal `phebs.yaml`:
 
 ```yaml

@@ -4,6 +4,8 @@
 
 *pronounced **"febz"***
 
+[![ci](https://github.com/bmeddeb/phebs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bmeddeb/phebs/actions/workflows/ci.yml)
+
 </div>
 
 ---
