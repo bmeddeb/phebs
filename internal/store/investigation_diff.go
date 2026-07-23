@@ -18,6 +18,7 @@ const (
 type ConsumerEdgeFact struct {
 	FactID                string `json:"fact_id"`
 	LogicalRelationshipID string `json:"logical_relationship_id"`
+	UnitID                string `json:"unit_id,omitempty"`
 	Predicate             string `json:"predicate"`
 	SubjectKind           string `json:"subject_kind"`
 	SubjectID             string `json:"subject_id"`
@@ -121,13 +122,15 @@ func normalizeConsumerSnapshot(in ConsumerSnapshot) (ConsumerSnapshot, error) {
 		for name, value := range map[string]string{
 			"fact id":                 in.Facts[i].FactID,
 			"logical relationship id": in.Facts[i].LogicalRelationshipID,
+			"unit id":                 in.Facts[i].UnitID,
 			"predicate":               in.Facts[i].Predicate,
 			"subject kind":            in.Facts[i].SubjectKind,
 			"subject id":              in.Facts[i].SubjectID,
 			"object kind":             in.Facts[i].ObjectKind,
 			"object id":               in.Facts[i].ObjectID,
 		} {
-			if err := validateDomainString(name, value, true); err != nil {
+			required := name != "unit id"
+			if err := validateDomainString(name, value, required); err != nil {
 				return ConsumerSnapshot{}, err
 			}
 		}

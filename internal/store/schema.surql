@@ -265,6 +265,16 @@ DEFINE INDEX IF NOT EXISTS investigation_review_item_scope
 DEFINE INDEX IF NOT EXISTS investigation_review_item_projection_key
     ON investigation_review_item FIELDS investigation_id, principal, projection_key;
 
+-- T16.9 immutable, recipient-scoped sealed dossiers. The primary artifact
+-- acquires a Dossier retention owner in the same transaction as this row.
+DEFINE TABLE IF NOT EXISTS investigation_dossier SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_dossier_identity
+    ON investigation_dossier FIELDS dossier_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_dossier_scope
+    ON investigation_dossier FIELDS investigation_id, principal, created_at;
+DEFINE INDEX IF NOT EXISTS investigation_dossier_root
+    ON investigation_dossier FIELDS root_digest UNIQUE;
+
 DEFINE TABLE IF NOT EXISTS investigation_watch SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_watch_identity ON investigation_watch FIELDS watch_id UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_watch_owner ON investigation_watch FIELDS owner;

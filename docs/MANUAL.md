@@ -1428,6 +1428,44 @@ rules as every other Investigation read. Review materialization and listing
 remain internal store facilities in this ticket; no production API or UI route
 is enabled.
 
+T16.9 defines the immutable `phebs-investigation-dossier-v1` export. Each
+object and embedded finding is canonical JSON with its own domain-separated
+SHA-256 digest; the canonical manifest binds those entries, recipient scope,
+authorized locators for source material that is not embedded, supported
+claims, blockers, eligibility, freshness/validation state, review/expiry rule,
+and any predecessor. A second domain-separated digest roots the manifest and
+entry list, and the service signs that root with Ed25519 plus a named
+verification key. Creating the Dossier and its primary-RunArtifact retention
+owner is one store transaction.
+
+Export always calls the current recipient-scope resolver. It intersects the
+principal-scoped consumer snapshot with that result, omits hidden units and
+facts, and also omits legacy facts that lack a unit identity rather than
+guessing their scope. The snapshot and input manifests and eligibility in the
+export are recipient projections, not copied creator-wide claims. The service
+rechecks both the Investigation authorization epoch and the resolved unit
+scope after sealing and persistence before it returns any bytes.
+
+Verify an exported canonical file without a running phebs service:
+
+```sh
+go run ./scripts/verify-dossier.go \
+  -trusted-key-id <key-id> \
+  -trusted-public-key <base64-ed25519-public-key> \
+  dossier.json
+```
+
+The trust flags are optional for digest/signature consistency checks, but use
+an independently distributed key for authenticity. Successful verification
+proves byte integrity and the signer only; it does not prove current
+authorization, freshness, evidence availability, or continuing validity.
+Opening the file through phebs is a separate operation: it verifies the sealed
+bytes, then reauthorizes every included Investigation object, current unit,
+and fact. Revocation therefore blocks reopen without making an already
+exported offline file cryptographically unverifiable. This ticket exposes the
+service/store and offline format only; production API/UI export registration
+still requires an explicit key configuration and route decision.
+
 ### Metrics
 
 

@@ -853,10 +853,35 @@ queues, supersession/expiry and the missing hand-creation path; the live store
 test pins idempotent materialization, acknowledgement, lifecycle transition,
 and unauthorized non-disclosure.
 
-**T16.9 · Dossier export** *(needs T16.2, T16.3, T16.5)* — sealed export per
-contract §8 with offline verification script. AC: digest chain verifies
+**T16.9 ✅ · Dossier export** *(needs T16.2, T16.3, T16.5)* — sealed export per
+contract §10 with offline verification script. AC: digest chain verifies
 offline with no phebs instance; export redacts to recipient scope at export
 time; reopening re-authorizes against current ACLs.
+
+Implemented on `codex/t16.9-dossier-export` against the domain contract's
+Dossier §10: canonical `phebs-investigation-dossier-v1` JSON contains a
+recipient-redacted manifest, separately digested object/finding entries,
+authorized locators for non-embedded source material, a domain-separated
+SHA-256 root, and an Ed25519 signature with key identity. The standalone
+`scripts/verify-dossier.go` checks the complete chain and optional independent
+trust anchor without a phebs process or network access, while always stating
+that offline integrity is not current authorization or validity. Export
+requires a current scope resolver, intersects the principal-scoped snapshot,
+omits facts without a positively authorized unit identity, derives
+recipient-only snapshot/input manifests and eligibility, and rechecks both
+Investigation and repository-scope epochs before returning bytes. Persistence
+and the primary-artifact Dossier retention owner commit atomically. Reopen
+verifies the sealed bytes, reauthorizes the Investigation, Revision,
+RunArtifact, consumer snapshot, optional Baseline/Decision/predecessor, every
+included fact and its current unit scope, then rechecks the authorization
+epoch. Pure and script tests cover deterministic sealing, every tamper layer,
+offline operation, and fail-closed redaction; the live store AC covers
+retention and post-export scope revocation.
+
+**Epic 16 implementation is complete.** The operator bypass authorizes this
+post-gate implementation only; it does not retroactively satisfy the retained
+validation or continuation evidence gates, release a pack, or enable the dark
+production creation/export surfaces.
 
 ## P5 hardening *(unscheduled — pull on demand)*
 
