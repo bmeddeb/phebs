@@ -133,7 +133,10 @@ Every decision lands as a dated ADR bullet in [PLAN.md](./PLAN.md). Highlights:
 
 ## Status
 
-**Single-node product complete through Epic 17** — sync (GitHub incl. App auth,
+**First public release [`v0.1.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.1.0)
+is published; single-node product work is complete through Epic 18.** The
+release provides a verified Linux/amd64 bundle; macOS remains source-build-only
+for this version. Shipped capabilities include sync (GitHub incl. App auth,
 GitLab, Gitea, any git URL, local), fenced jobs with crash recovery, bounded
 multi-revision indexing, JSON/SSE search, contexts, authentication/OIDC,
 permission-aware API and stateless MCP, audit/analytics, committed SCIP, Git

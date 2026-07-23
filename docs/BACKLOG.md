@@ -1097,7 +1097,7 @@ determinism, coverage-only repository independence, empty/truncated
 qualification, mobile fallback, and that rendering performs no additional
 catalog or evidence request.
 
-## EPIC 18 — First public release *(in progress)*
+## EPIC 18 — First public release *(complete 2026-07-23)*
 
 The first tag is a product boundary, not a Git bookkeeping event. It must bind
 one inspectable version, the server plus its same-module helper binaries,
@@ -1180,7 +1180,7 @@ Acceptance closed with the operator's live invocation against the verified
 `sync->index->search, pinned browse, Contract Atlas dark`. This authorizes
 T18.4 to begin but does not authorize a remote, tag, or publication.
 
-**T18.4 · Public remote, hosted gate, and `v0.1.0`**
+**T18.4 · Public remote, hosted gate, and `v0.1.0`** ✅ 2026-07-23
 Create or bind the explicitly approved GitHub repository, push `main`, run the
 hosted workflow, then create and push the annotated first tag only from the
 exact green commit. Publish checksums and prerequisite/validation caveats; do
@@ -1192,17 +1192,18 @@ the tested main commit; a clean checkout verifies the release manifest and
 fresh-data smoke; release notes preserve the default-dark and validation
 caveats.
 
-Implementation candidate: the approved public remote is
-`https://github.com/bmeddeb/phebs`. The fifth clean-checkout release job builds
-twice, compares manifests, executes the fresh-data smoke, and retains a
-deterministic Linux/amd64 archive plus SHA-256 file. The release bundle also
-binds the portable `phebs-otel-demo.yaml` used for the product's public
-microservices evaluation: it clones the OpenTelemetry Demo monorepo into
-isolated user-local state and explicitly enables the provisional Contract
-Atlas readers. MANUAL and PLAN define the documented single-maintainer
-hosted-gate equivalent. T18.4 remains open until the final candidate's
-five-job run passes on that exact commit and the annotated tag, release assets,
-and caveated notes are published.
+Accepted at the approved public remote
+`https://github.com/bmeddeb/phebs`. Push run `30027844408` passed all five
+named jobs at exact commit
+`fe7b692706017fc57916f8b985d380f868dee2a6`; annotated tag and Latest release
+`v0.1.0` resolve to that commit. The published Linux/amd64 archive and adjacent
+checksum verify as
+`63103500a6b86aa3e4533fb1693065009585f6be509e48aab7b26373405daaf6`.
+The canonical manifest binds six payloads, including portable
+`phebs-otel-demo.yaml`. Release notes name the Linux-only binary boundary,
+macOS source-build path, Git and SurrealDB prerequisites, default-dark and
+provisional posture, no-runtime-absence rule, and the still-closed external
+`NOT_ESTABLISHED` validation result.
 
 ### On-demand protocol-pack candidates after Epic 17
 

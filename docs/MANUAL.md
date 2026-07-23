@@ -127,6 +127,14 @@ link the run and checksum and state that Contract Atlas and proof features are
 default-dark, provisional, and do not establish the closed
 `NOT_ESTABLISHED` accuracy gate.
 
+The published
+[`v0.1.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.1.0) binary bundle
+is Linux/amd64 only. Its archive SHA-256 is
+`63103500a6b86aa3e4533fb1693065009585f6be509e48aab7b26373405daaf6`.
+macOS users build the exact tag from source with the pinned Go and Node
+versions; this first release does not provide a signed or notarized macOS
+binary.
+
 #### OpenTelemetry microservices evaluation
 
 The repository and release bundle include `phebs-otel-demo.yaml` as the
