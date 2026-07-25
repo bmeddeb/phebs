@@ -1,0 +1,20 @@
+[
+  {
+    "name": "jaeger-idl",
+    "git_url": "https://github.com/jaegertracing/jaeger-idl",
+    "commit": "0daa7197c60ca879532826035be0fb238d98e713",
+    "note": "declaration corpus: four production .thrift IDLs (agent, jaeger, sampling, zipkincore) plus vendored thrift-gen Go (Thrift Compiler 0.19.0, modern generated-header marker). No namespace go and no namespace * in any IDL - scope falls back to file basename, which matches the generated package names."
+  },
+  {
+    "name": "jaeger-client-go",
+    "git_url": "https://github.com/jaegertracing/jaeger-client-go",
+    "commit": "8d8e8fcfd04de42b8482476abac6a902fca47c18",
+    "note": "consumer corpus: archived repository (HEAD frozen), vendors thrift-gen stubs (Thrift Compiler 0.14.1) and real in-repo call sites (transport_udp.go, utils/udp_client.go, testutils/mock_agent.go). Sole HEAD-stable public repo found with stubs and call sites in one repository, which per-repo extraction requires for CALLS_OPERATION joins."
+  },
+  {
+    "name": "jaeger",
+    "git_url": "https://github.com/jaegertracing/jaeger",
+    "commit": "b5b4f028d271aa13b704735afd3c5fa193202439",
+    "note": "cross-repo abstention showcase: imports jaeger-idl/thrift-gen stubs from another module, vendors none at HEAD, so the per-repo consumer index is empty and honest abstention is the expected outcome. Commit drifts with upstream HEAD; pinned here only for reproducible spike measurement."
+  }
+]

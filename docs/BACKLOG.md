@@ -1205,6 +1205,64 @@ macOS source-build path, Git and SurrealDB prerequisites, default-dark and
 provisional posture, no-runtime-absence rule, and the still-closed external
 `NOT_ESTABLISHED` validation result.
 
+## EPIC 19 — Thrift protocol pack *(adopted 2026-07-25; full protobuf parity)*
+
+The operator named the driving combination (Thrift IDL + Apache Thrift Go
+runtime, jaeger corpus), satisfying the protocol-pack gate below. Scope:
+declarations, Go consumer evidence, catalog/impact/proof/MCP surfaces, UI, and
+a `make dev` demo. Non-goals: Buf-style wire-compatibility checking (no Thrift
+engine), field-consumer proofs (scip-proto-field is protobuf-only), cross-repo
+lineage promotion (shared gRPC-pack limitation, T13.2 direction), and
+`extends` inherited-operation expansion (recorded in service detail only).
+Pack metadata per the preamble: evidence-pack cards land with T19.2/T19.3;
+dark flag `experimental.provisional_thrift_extraction`; extractor versions
+`thrift-contract` 1.0.0 / `thrift-consumer` 1.0.0; validation is the T19.1
+executable rule gates (no public accuracy claim; GATE2-V2 remains
+`NOT_ESTABLISHED`).
+
+**T19.1 ✅ · Thrift validation spike** — `spike/t191/` pins jaeger-idl,
+jaeger-client-go (archived → HEAD-frozen), and jaeger; executable gates prove
+100% corpus parse rate, scope-precedence reproducibility (`namespace go` last
+segment, else file basename), zero false resolutions on the hand-labeled
+consumer sample, live cross-corpus name-match joins, and honest abstention
+without in-repo stubs. Binding decisions D1–D9 in `spike/t191/README.md`.
+
+**T19.2 · `thriftdecl` extractor + dark flag** — thrift-contract 1.0.0 per
+D1/D2/D8: wire-honest `Service.method_args`/`method_result` synthetic
+messages (field 0 success, throws as result fields, oneway ⇒ no result
+struct), thriftrw on the pure-reader allowlist, `.thrift` symlinks fail
+closed, registry pin matrix, evidence-pack card, ADR + MANUAL. AC: T19.1
+construct coverage via synthetic fixtures; byte-identical double run; worker
+staged→published regression; full suite/vet/lint clean.
+
+**T19.3 · `thriftgo` consumer extractor** — thrift-consumer 1.0.0 per
+D3–D6: generated-header gate, processorMap wire-name index,
+unique-match-or-abstain scan; `REGISTERS_THRIFT_SERVICE`, `CALLS_OPERATION`,
+`UNRESOLVED_THRIFT_CALL`/`_REGISTRATION`, `THRIFT_EXTRACTION_GAP`. AC:
+labeled-sample fixtures from the spike corpus; abstention tests; e2e green.
+
+**T19.4 · Protocol registry + catalog generalization** — data-only registry
+map (protocol → domains, detail schemas, relationship triple, field bounds);
+`protocol=thrift` accepted; per-protocol field bounds (thrift 0..32767 —
+field 0 is the result success slot); `Item.Protocol` from run domain;
+protocol-major pagination cursor. AC: thrift operation detail expands through
+unchanged `expandType`; protobuf responses byte-stable modulo cursor shape.
+
+**T19.5 · Proof/impact/envelope/MCP** — protocol-blind entry points query
+both consumer domains; `canonicalProofDomains` → 5; (domain, predicate) →
+envelope identity kind with `rpc_operation` subjects; MCP prose de-gRPC'd
+(tool names wire-frozen). AC: gRPC outputs unchanged except honest no-run
+coverage rows; bundle determinism.
+
+**T19.6 · Contract Atlas UI** — protocol filter option, oneway chip vs
+streaming chips, union/exception badge, thrift relationship labels,
+`.thrift` language entry. AC: Vitest green; protobuf pages unchanged.
+
+**T19.7 · Demo + closure** — `phebs-thrift-demo.yaml` with the three D7
+connections; MANUAL walkthrough; epic closure absorbs the Thrift bullet
+below. AC: end-to-end `make dev` demo incl. ≥1 live name-match join and the
+oneway chip on `agent.Agent/emitBatch`.
+
 ### On-demand protocol-pack candidates after Epic 17
 
 These are direction, not scheduled T17 tickets, and do not block completion of

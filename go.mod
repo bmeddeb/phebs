@@ -13,6 +13,7 @@ require (
 	github.com/scip-code/scip/bindings/go/scip v0.9.0
 	github.com/sourcegraph/zoekt v0.0.0-20260709064101-33f1f18af292
 	github.com/surrealdb/surrealdb.go v1.5.1
+	go.uber.org/thriftrw v1.34.0
 	golang.org/x/crypto v0.54.0
 	golang.org/x/mod v0.38.0
 	golang.org/x/oauth2 v0.36.0

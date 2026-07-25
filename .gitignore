@@ -10,6 +10,7 @@ coverage.out
 # T11.1 spike: corpus clones and extraction output are derived, never committed
 spike/t111/corpus/
 spike/t111/.module-cache/
+spike/t191/corpus/
 # Obsolete pre-hardening location; retained only so an interrupted local
 # hydration does not become an accidental source artifact.
 spike/t111/module-cache/
