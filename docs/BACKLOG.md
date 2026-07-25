@@ -1254,7 +1254,7 @@ envelope identity kind with `rpc_operation` subjects; MCP prose de-gRPC'd
 (tool names wire-frozen). AC: gRPC outputs unchanged except honest no-run
 coverage rows; bundle determinism.
 
-**T19.6 · Contract Atlas UI** — protocol filter option, oneway chip vs
+**T19.6 ✅ · Contract Atlas UI** — protocol filter option, oneway chip vs
 streaming chips, union/exception badge, thrift relationship labels,
 `.thrift` language entry. AC: Vitest green; protobuf pages unchanged.
 

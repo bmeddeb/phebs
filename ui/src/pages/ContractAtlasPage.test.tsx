@@ -350,7 +350,7 @@ test('browses duplicate declarations through stable bounded pages', async () => 
   expect(screen.getByTestId('contract-atlas-workspace').getAttribute('data-responsive-layout'))
     .toBe('desktop-split-mobile-stack')
   expect(api.fetchContractCatalog).toHaveBeenCalledWith(
-    { repository: undefined, package: undefined, protocol: 'protobuf', lineage: undefined },
+    { repository: undefined, package: undefined, protocol: undefined, lineage: undefined },
     50,
     '',
     expect.any(AbortSignal),
@@ -367,7 +367,7 @@ test('browses duplicate declarations through stable bounded pages', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Load next bounded page' }))
   await screen.findByText('5 rows')
   expect(api.fetchContractCatalog).toHaveBeenLastCalledWith(
-    { repository: undefined, package: undefined, protocol: 'protobuf', lineage: undefined },
+    { repository: undefined, package: undefined, protocol: undefined, lineage: undefined },
     50,
     'cursor-next',
     expect.any(AbortSignal),
@@ -437,7 +437,7 @@ test('applies exact server filters and renders an honest bounded empty state', a
     {
       repository: 'github.com/acme/missing',
       package: 'demo.v2',
-      protocol: 'protobuf',
+      protocol: undefined,
       lineage: 'lineage-missing',
     },
     50,
@@ -467,4 +467,73 @@ test('ignores an operation response after a newer selection', async () => {
   await screen.findByRole('heading', { name: '/demo.Catalog/List' })
   resolveFirst(detail)
   await waitFor(() => expect(screen.queryByRole('heading', { name: '/demo.Catalog/Get' })).toBeNull())
+})
+
+test('renders a thrift operation with oneway chip, field 0, and union badge', async () => {
+  const thriftDetail: ContractCatalogOperation = {
+    ...detail,
+    operation: '/agent.Agent/emitBatch',
+    service_fqn: 'agent.Agent',
+    method: 'emitBatch',
+    fact_detail: {
+      schema: 'thrift-operation-detail-v1',
+      request: {
+        raw: 'Agent.emitBatch_args',
+        kind: 'message',
+        resolution: 'same_file',
+        declaration: 'agent.Agent.emitBatch_args',
+      },
+      response: {
+        raw: 'Agent.emitBatch_result',
+        kind: 'message',
+        resolution: 'same_file',
+        declaration: 'agent.Agent.emitBatch_result',
+      },
+      oneway: true,
+    },
+    request: {
+      raw: 'Agent.emitBatch_args',
+      state: 'resolved',
+      declaration_name: 'agent.Agent.emitBatch_args',
+      declaration: {
+        ...claim(
+          'github.com/acme/idl',
+          'args-decl',
+          'DECLARES_MESSAGE',
+          'agent.Agent.emitBatch_args',
+          'lineage-t',
+        ),
+        detail: { schema: 'thrift-message-detail-v1', kind: 'union' },
+      },
+      fields: [{
+        object: 'agent.Agent.emitBatch_result#0',
+        field_number: 0,
+        detail: {
+          schema: 'thrift-field-detail-v1',
+          name: 'success',
+          type: { raw: 'Batch', kind: 'message', resolution: 'same_file', declaration: 'agent.Batch' },
+          cardinality: 'default',
+        },
+        declaration: claim(
+          'github.com/acme/idl',
+          'field-success',
+          'DECLARES_FIELD',
+          'agent.Agent.emitBatch_result#0',
+          'lineage-t',
+        ),
+      }],
+      truncated: false,
+    },
+  }
+  vi.mocked(api.fetchContractOperation).mockResolvedValue(thriftDetail)
+  page()
+  await screen.findByText('3 rows')
+  fireEvent.click(screen.getAllByRole('listitem')[0])
+  await screen.findByTestId('contract-operation-detail')
+  expect(screen.getByText('oneway')).toBeTruthy()
+  expect(screen.queryByText('client stream')).toBeNull()
+  expect(screen.queryByText('single request')).toBeNull()
+  expect(screen.getByText('union')).toBeTruthy()
+  expect(screen.getByText(/field 0/)).toBeTruthy()
+  expect(screen.getByText('success')).toBeTruthy()
 })

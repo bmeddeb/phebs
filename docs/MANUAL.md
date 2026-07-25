@@ -709,8 +709,13 @@ repository/package/protocol/lineage filters lead to a service → operation
 index, then bounded request/response shapes, independently classified
 implementation/caller/abstention evidence, exact coverage state, and immutable
 source links. Duplicate service names remain separate by repository and
-provisional lineage. **Analyze impact** carries the selected canonical
-operation into the Impact form but does not submit it.
+provisional lineage. The protocol filter defaults to all registered protocols
+(protobuf and thrift); each row carries its protocol. Thrift operations show
+a `oneway` chip in place of the gRPC streaming chips, argument/result shapes
+render through the same message tree (result field `0` is the wire success
+slot), and union/exception declarations are badged. **Analyze impact**
+carries the selected canonical operation into the Impact form but does not
+submit it.
 - **Impact** (`#/impact`, experimental) — bounded contract-impact reports for
 canonical RPC operations (gRPC and Thrift consumer evidence), stable protobuf
 field identities, and proposed before/after contract inputs. Known and unresolved consumers cite immutable

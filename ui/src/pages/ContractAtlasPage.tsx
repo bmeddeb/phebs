@@ -47,7 +47,7 @@ interface ContractGroup {
 const emptyFilters: CatalogFilters = {
   repository: '',
   package: '',
-  protocol: 'protobuf',
+  protocol: '',
   lineage: '',
 }
 
@@ -268,7 +268,9 @@ export default function ContractAtlasPage({ params }: { params: URLSearchParams 
               ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
             })}
           >
+            <option value="">All protocols</option>
             <option value="protobuf">Protobuf</option>
+            <option value="thrift">Thrift</option>
           </select>
         </label>
         <FilterInput
@@ -665,12 +667,20 @@ function OperationDetail({ operation }: { operation: ContractCatalogOperation })
           flexWrap: 'wrap',
           marginTop: '11px',
         })}>
-          <StatusChip tone={operation.fact_detail.client_streaming ? 'blue' : 'neutral'}>
-            {operation.fact_detail.client_streaming ? 'client stream' : 'single request'}
-          </StatusChip>
-          <StatusChip tone={operation.fact_detail.server_streaming ? 'blue' : 'neutral'}>
-            {operation.fact_detail.server_streaming ? 'server stream' : 'single response'}
-          </StatusChip>
+          {operation.fact_detail.oneway !== undefined ? (
+            <StatusChip tone={operation.fact_detail.oneway ? 'blue' : 'neutral'}>
+              {operation.fact_detail.oneway ? 'oneway' : 'request / response'}
+            </StatusChip>
+          ) : (
+            <>
+              <StatusChip tone={operation.fact_detail.client_streaming ? 'blue' : 'neutral'}>
+                {operation.fact_detail.client_streaming ? 'client stream' : 'single request'}
+              </StatusChip>
+              <StatusChip tone={operation.fact_detail.server_streaming ? 'blue' : 'neutral'}>
+                {operation.fact_detail.server_streaming ? 'server stream' : 'single response'}
+              </StatusChip>
+            </>
+          )}
           {operation.shape_truncated && <StatusChip tone="amber">shape truncated</StatusChip>}
           {operation.relationships_truncated && <StatusChip tone="amber">relationships truncated</StatusChip>}
         </div>
@@ -735,6 +745,11 @@ function MessagePanel({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  // Thrift message declarations carry a kind (struct | union | exception) in
+  // their claim detail; protobuf declarations have no kind.
+  const messageKind = typeof message.declaration?.detail?.kind === 'string'
+    ? message.declaration.detail.kind
+    : ''
   return (
     <div className={css({ minWidth: 0, border: `1px solid ${tok.cardBorder}` })}>
       <div className={css({
@@ -749,9 +764,14 @@ function MessagePanel({
         <span className={css({ color: tok.textSecondary, fontSize: '11px', fontWeight: 650, textTransform: 'uppercase', letterSpacing: '0.04em' })}>
           {label}
         </span>
-        <StatusChip tone={message.state === 'resolved' ? 'green' : message.state === 'cycle' ? 'blue' : 'amber'}>
-          {humanize(message.state)}
-        </StatusChip>
+        <span className={css({ display: 'inline-flex', gap: '5px' })}>
+          {(messageKind === 'union' || messageKind === 'exception') && (
+            <StatusChip tone="blue">{messageKind}</StatusChip>
+          )}
+          <StatusChip tone={message.state === 'resolved' ? 'green' : message.state === 'cycle' ? 'blue' : 'amber'}>
+            {humanize(message.state)}
+          </StatusChip>
+        </span>
       </div>
       <div className={css({ padding: '11px' })}>
         <div className={css({ color: tok.textPrimary, fontFamily: FONTS.MONO, fontSize: '12px', lineHeight: '18px', overflowWrap: 'anywhere' })}>
@@ -1191,7 +1211,7 @@ function routeFilters(params: URLSearchParams): CatalogFilters {
   return {
     repository: params.get('repository') ?? '',
     package: params.get('package') ?? '',
-    protocol: params.get('protocol') || 'protobuf',
+    protocol: params.get('protocol') ?? '',
     lineage: params.get('lineage') ?? '',
   }
 }
@@ -1199,7 +1219,10 @@ function routeFilters(params: URLSearchParams): CatalogFilters {
 function fieldTypeLabel(detail: ContractCatalogFieldDetail): string {
   if (detail.map) return `map<${detail.map.key.raw}, ${detail.map.value.raw}>`
   const type = detail.type?.raw || 'unresolved'
-  return detail.cardinality === 'singular' ? type : `${detail.cardinality} ${type}`
+  // 'singular' is protobuf's unmarked cardinality; 'default' is Thrift's
+  // unmarked requiredness. Neither adds information next to the type.
+  if (detail.cardinality === 'singular' || detail.cardinality === 'default') return type
+  return `${detail.cardinality} ${type}`
 }
 
 function tierTone(tier: string): 'green' | 'amber' | 'red' | 'blue' | 'neutral' {

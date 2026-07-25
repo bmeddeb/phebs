@@ -132,7 +132,7 @@ const DOT: Record<string, string> = {
   yaml: '#5E5E5E', yml: '#5E5E5E', toml: '#5E5E5E', json: '#A33B04', jsonc: '#A33B04',
   md: '#5E5E5E', markdown: '#5E5E5E',
   sh: '#0E8345', bash: '#0E8345', zsh: '#0E8345',
-  dockerfile: '#175BCC', proto: '#7C3EC3',
+  dockerfile: '#175BCC', proto: '#7C3EC3', thrift: '#7C3EC3',
 }
 
 export function langColor(path: string): string {
@@ -149,7 +149,7 @@ const NAME: Record<string, string> = {
   vue: 'Vue', css: 'CSS', scss: 'SCSS', less: 'Less', xml: 'XML', svg: 'SVG',
   yaml: 'YAML', yml: 'YAML', toml: 'TOML', json: 'JSON', jsonc: 'JSON', md: 'Markdown',
   markdown: 'Markdown', sh: 'Shell', bash: 'Shell', zsh: 'Shell', dockerfile: 'Dockerfile',
-  proto: 'Protobuf',
+  proto: 'Protobuf', thrift: 'Thrift',
 }
 
 export function langName(path: string): string {

@@ -417,8 +417,12 @@ export interface ContractCatalogOperationFactDetail {
   schema: string
   request: ContractCatalogTypeReference
   response: ContractCatalogTypeReference
-  client_streaming: boolean
-  server_streaming: boolean
+  // Protobuf operations carry streaming flags; Thrift operations carry
+  // oneway. The absent family is undefined, which OperationDetail uses to
+  // pick the right chip set.
+  client_streaming?: boolean
+  server_streaming?: boolean
+  oneway?: boolean
 }
 
 export interface ContractCatalogFieldShape {
