@@ -67,12 +67,14 @@ type CertificateRun struct {
 	// InventoryPolicy and the gitlink fields surface the run's submodule
 	// boundaries (T19.8). An empty policy is a legacy run whose boundary
 	// status is unknown — consumers must never read the absent count as
-	// zero. All three are omitempty, so legacy certificates keep their
+	// zero. All five are omitempty, so legacy certificates keep their
 	// exact prior bytes and digests.
-	InventoryPolicy string              `json:"inventory_policy,omitempty"`
-	GitlinkCount    int                 `json:"gitlink_count,omitempty"`
-	GitlinkDigest   string              `json:"gitlink_digest,omitempty"`
-	LatestAttempt   *CertificateAttempt `json:"latest_attempt,omitempty"`
+	InventoryPolicy        string              `json:"inventory_policy,omitempty"`
+	GitlinkCount           int                 `json:"gitlink_count,omitempty"`
+	GitlinkDigest          string              `json:"gitlink_digest,omitempty"`
+	GitlinkSamplePaths     []string            `json:"gitlink_sample_paths,omitempty"`
+	GitlinkSampleTruncated bool                `json:"gitlink_sample_truncated,omitempty"`
+	LatestAttempt          *CertificateAttempt `json:"latest_attempt,omitempty"`
 }
 
 // CertificateAttempt is deliberately time-free: identity, input revision,
@@ -165,18 +167,20 @@ func BuildCoverageCertificate(
 				Domain: domain, Status: "published", RunID: run.ID,
 				Extractor: run.Extractor, Commit: run.Commit, Fresh: fresh,
 				Protocols: protocols, Failures: failures,
-				CorpusFileCount:    run.Coverage.CorpusFileCount,
-				CandidateFileCount: run.Coverage.CandidateFileCount,
-				ReadFileCount:      run.Coverage.ReadFileCount,
-				ReadBytes:          run.Coverage.ReadBytes,
-				SourceScopeDigest:  run.Coverage.SourceScopeDigest,
-				UnresolvedCount:    run.Coverage.UnresolvedCount,
-				AssertionCount:     run.Coverage.AssertionCount,
-				AtomCount:          run.Coverage.AtomCount,
-				InventoryPolicy:    run.Coverage.InventoryPolicy,
-				GitlinkCount:       run.Coverage.GitlinkCount,
-				GitlinkDigest:      run.Coverage.GitlinkDigest,
-				LatestAttempt:      certificateAttempt,
+				CorpusFileCount:        run.Coverage.CorpusFileCount,
+				CandidateFileCount:     run.Coverage.CandidateFileCount,
+				ReadFileCount:          run.Coverage.ReadFileCount,
+				ReadBytes:              run.Coverage.ReadBytes,
+				SourceScopeDigest:      run.Coverage.SourceScopeDigest,
+				UnresolvedCount:        run.Coverage.UnresolvedCount,
+				AssertionCount:         run.Coverage.AssertionCount,
+				AtomCount:              run.Coverage.AtomCount,
+				InventoryPolicy:        run.Coverage.InventoryPolicy,
+				GitlinkCount:           run.Coverage.GitlinkCount,
+				GitlinkDigest:          run.Coverage.GitlinkDigest,
+				GitlinkSamplePaths:     append([]string(nil), run.Coverage.GitlinkSamplePaths...),
+				GitlinkSampleTruncated: run.Coverage.GitlinkSampleTruncated,
+				LatestAttempt:          certificateAttempt,
 			})
 			for _, protocol := range protocols {
 				if !fresh {

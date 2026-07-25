@@ -1242,7 +1242,8 @@ published before boundary accounting carry no `inventory_policy` marker;
 their boundary status is **unknown**, never zero, and the worker replaces
 them on the next extraction job even when commit and extractor version match.
 The Atlas coverage certificate table shows each run's boundary state
-(`N gitlinks` or `unknown`).
+(`N gitlinks` or `unknown`), its bounded path sample, and whether that sample
+was truncated. Unknown inventory-policy versions fail closed as `unknown`.
 The published failure list is retained in the shape for exactness but is empty
 under the atomic publisher, which refuses partial failures. SCIP availability
 is current only when the reporting run matches the indexed revision; stale

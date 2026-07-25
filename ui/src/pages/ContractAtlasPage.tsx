@@ -1030,7 +1030,7 @@ function CoverageDetails({ certificate }: { certificate: CoverageCertificate }) 
                 <Cell mono>{shortID(repository.indexed_commit)} / {shortID(run.commit)}</Cell>
                 <Cell mono>{run.assertion_count}</Cell>
                 <Cell mono>{run.unresolved_count}</Cell>
-                <Cell mono>{boundaryLabel(run)}</Cell>
+                <Cell mono><BoundarySummary run={run} /></Cell>
                 <Cell>{run.latest_attempt ? humanize(run.latest_attempt.status) : 'none'}</Cell>
               </tr>
             )))}
@@ -1278,11 +1278,31 @@ function shortID(value?: string): string {
   return value.length > 18 ? `${value.slice(0, 12)}…${value.slice(-4)}` : value
 }
 
+const GITLINK_BOUNDARY_POLICY = 'gitlink-boundary-v1'
+
+function BoundarySummary({ run }: { run: CoverageRun }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  if (run.inventory_policy !== GITLINK_BOUNDARY_POLICY) return <>unknown</>
+  const paths = run.gitlink_sample_paths ?? []
+  return (
+    <>
+      <div>{boundaryLabel(run)}</div>
+      {paths.length > 0 && (
+        <div className={css({ color: tok.textTertiary })}>{paths.join(', ')}</div>
+      )}
+      {run.gitlink_sample_truncated && (
+        <div className={css({ color: tok.statusAmber })}>sample truncated</div>
+      )}
+    </>
+  )
+}
+
 // boundaryLabel renders a run's gitlink-boundary state. A run without an
-// inventory policy predates boundary accounting: its status is unknown and
-// must never read as zero.
+// understood inventory policy has unknown boundary semantics and must never
+// read as zero.
 function boundaryLabel(run: CoverageRun): string {
-  if (!run.inventory_policy) return 'unknown'
+  if (run.inventory_policy !== GITLINK_BOUNDARY_POLICY) return 'unknown'
   const count = run.gitlink_count ?? 0
   return `${count} gitlink${count === 1 ? '' : 's'}`
 }

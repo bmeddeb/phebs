@@ -310,6 +310,8 @@ export interface CoverageRun {
   inventory_policy?: string
   gitlink_count?: number
   gitlink_digest?: string
+  gitlink_sample_paths?: string[]
+  gitlink_sample_truncated?: boolean
   latest_attempt?: CoverageAttempt
 }
 

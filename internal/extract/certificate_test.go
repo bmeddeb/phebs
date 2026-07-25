@@ -198,6 +198,82 @@ func TestCoverageCertificateBindsExactRunAndSourceScope(t *testing.T) {
 	}
 }
 
+func TestCoverageCertificateBindsGitlinkBoundaryState(t *testing.T) {
+	key := certKey("alpha", "proto-contract")
+	run := certRun("alpha", "proto-contract", commitA, store.CoverageManifest{
+		SourceScopeDigest:      "sha256:scope-a",
+		InventoryPolicy:        corpusInventoryPolicy,
+		GitlinkCount:           3,
+		GitlinkDigest:          "sha256:" + strings.Repeat("a", 64),
+		GitlinkSamplePaths:     []string{"idl", "vendor/idl"},
+		GitlinkSampleTruncated: true,
+	})
+	build := func(value store.ExtractionRun) *CoverageCertificate {
+		t.Helper()
+		certificate, err := BuildCoverageCertificate(context.Background(), &certificateRunSource{
+			runs: map[string]store.ExtractionRun{key: value},
+		}, []store.Repo{{Name: "alpha", IndexedCommitHash: commitA}}, []string{"proto-contract"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return certificate
+	}
+
+	baseline := build(run)
+	got := baseline.Repositories[0].Runs[0]
+	if got.InventoryPolicy != corpusInventoryPolicy || got.GitlinkCount != 3 ||
+		got.GitlinkDigest != run.Coverage.GitlinkDigest ||
+		!reflect.DeepEqual(got.GitlinkSamplePaths, run.Coverage.GitlinkSamplePaths) ||
+		!got.GitlinkSampleTruncated {
+		t.Fatalf("certificate boundary state = %+v", got)
+	}
+	rows := []struct {
+		name   string
+		mutate func(*store.ExtractionRun)
+	}{
+		{name: "policy", mutate: func(r *store.ExtractionRun) { r.Coverage.InventoryPolicy = "gitlink-boundary-v2" }},
+		{name: "count", mutate: func(r *store.ExtractionRun) { r.Coverage.GitlinkCount++ }},
+		{name: "digest", mutate: func(r *store.ExtractionRun) {
+			r.Coverage.GitlinkDigest = "sha256:" + strings.Repeat("b", 64)
+		}},
+		{name: "sample paths", mutate: func(r *store.ExtractionRun) {
+			r.Coverage.GitlinkSamplePaths = []string{"idl", "vendor/other"}
+		}},
+		{name: "sample truncation", mutate: func(r *store.ExtractionRun) {
+			r.Coverage.GitlinkSampleTruncated = false
+		}},
+	}
+	for _, row := range rows {
+		t.Run(row.name, func(t *testing.T) {
+			changed := run
+			changed.Coverage.GitlinkSamplePaths = append([]string(nil), run.Coverage.GitlinkSamplePaths...)
+			row.mutate(&changed)
+			if gotDigest := build(changed).Digest; gotDigest == baseline.Digest {
+				t.Fatalf("%s did not change certificate digest", row.name)
+			}
+		})
+	}
+
+	legacy := run
+	legacy.Coverage.InventoryPolicy = ""
+	legacy.Coverage.GitlinkCount = 0
+	legacy.Coverage.GitlinkDigest = ""
+	legacy.Coverage.GitlinkSamplePaths = nil
+	legacy.Coverage.GitlinkSampleTruncated = false
+	data, err := json.Marshal(build(legacy))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{
+		"inventory_policy", "gitlink_count", "gitlink_digest",
+		"gitlink_sample_paths", "gitlink_sample_truncated",
+	} {
+		if strings.Contains(string(data), field) {
+			t.Fatalf("legacy certificate contains %q: %s", field, data)
+		}
+	}
+}
+
 // AC (T13.3): the certificate provably changes when one repository's
 // extraction fails. This includes a forced same-commit replacement: the old
 // publication remains fresh, but the durable latest-attempt marker moves from

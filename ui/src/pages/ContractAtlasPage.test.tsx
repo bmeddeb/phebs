@@ -120,6 +120,8 @@ const coverage: CoverageCertificate = {
       inventory_policy: 'gitlink-boundary-v1',
       gitlink_count: 2,
       gitlink_digest: 'sha256:' + 'a'.repeat(64),
+      gitlink_sample_paths: ['idl', 'vendor/idl'],
+      gitlink_sample_truncated: true,
     }, {
       domain: 'grpc-consumer',
       status: 'unpublished',
@@ -169,6 +171,9 @@ const coverage: CoverageCertificate = {
       unresolved_count: 1,
       assertion_count: 3,
       atom_count: 3,
+      inventory_policy: 'gitlink-boundary-v2',
+      gitlink_count: 9,
+      gitlink_digest: 'sha256:' + 'b'.repeat(64),
     }],
   }],
   digest: `sha256:${'d'.repeat(64)}`,
@@ -401,9 +406,12 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
   expect(screen.getByText('unresolved name match')).toBeTruthy()
   expect(screen.getByText('extractor abstention')).toBeTruthy()
   // T19.8: the coverage table names each run's gitlink-boundary state, and a
-  // run without an inventory policy reads as unknown — never zero.
+  // run without an understood inventory policy reads as unknown — never zero.
   expect(screen.getByText('2 gitlinks')).toBeTruthy()
+  expect(screen.getByText('idl, vendor/idl')).toBeTruthy()
+  expect(screen.getByText('sample truncated')).toBeTruthy()
   expect(screen.getAllByText('unknown').length).toBeGreaterThan(0)
+  expect(screen.queryByText('9 gitlinks')).toBeNull()
   expect(screen.getAllByText('relationships truncated').length).toBeGreaterThan(0)
   expect(screen.getByText(/Omitted rows are not evidence of absence/)).toBeTruthy()
   expect(screen.getAllByText(detail.caveat).length).toBeGreaterThanOrEqual(1)
