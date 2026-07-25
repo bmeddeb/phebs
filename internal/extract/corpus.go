@@ -142,10 +142,14 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 				walkErr = fmt.Errorf("walk corpus: unsupported %s entry %q", entry.objectType, entry.path)
 			case entry.mode == "120000":
 				// Symlinks are not regular corpus content and are never visited.
-				// A candidate .proto symlink is a declared-plane coverage gap and
-				// therefore fails closed; unrelated repository symlinks are harmless.
+				// A candidate .proto or .thrift symlink is a declared-plane
+				// coverage gap and therefore fails closed; unrelated repository
+				// symlinks are harmless.
 				if strings.HasSuffix(entry.path, ".proto") {
 					walkErr = fmt.Errorf("walk corpus: unsupported proto symlink %q", entry.path)
+				}
+				if strings.HasSuffix(entry.path, ".thrift") {
+					walkErr = fmt.Errorf("walk corpus: unsupported thrift symlink %q", entry.path)
 				}
 			case entry.mode != "100644" && entry.mode != "100755":
 				walkErr = fmt.Errorf("walk corpus: unsupported mode %s for %q", entry.mode, entry.path)

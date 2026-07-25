@@ -188,6 +188,22 @@ func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 		}
 	})
 
+	t.Run("thrift symlink rejected", func(t *testing.T) {
+		f := newCorpusGitFixture(t)
+		f.commitFile("target", "not parsed", "target")
+		if err := os.Symlink("target", filepath.Join(f.source, "linked.thrift")); err != nil {
+			t.Skipf("symlinks unsupported: %v", err)
+		}
+		f.git(f.source, "add", "linked.thrift")
+		f.git(f.source, "commit", "-q", "-m", "thrift symlink")
+		head := f.git(f.source, "rev-parse", "HEAD")
+		f.cloneMirror()
+		err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(context.Background(), func(string) error { return nil })
+		if err == nil || !strings.Contains(err.Error(), "thrift symlink") {
+			t.Fatalf("thrift symlink error = %v", err)
+		}
+	})
+
 	t.Run("gitlink rejected", func(t *testing.T) {
 		f := newCorpusGitFixture(t)
 		parent := f.commitFile("README", "root", "root")

@@ -31,6 +31,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -300,7 +301,10 @@ func serve(args []string) error {
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service
-	if exs := evidenceExtractors(cfg.Experimental.ProvisionalProtoExtraction); len(exs) > 0 {
+	if exs := evidenceExtractors(
+		cfg.Experimental.ProvisionalProtoExtraction,
+		cfg.Experimental.ProvisionalThriftExtraction,
+	); len(exs) > 0 {
 		log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
 		evidenceView = st
 		proofBundles = st
@@ -586,14 +590,20 @@ func loadRecoveryConfig(path string) (*config.Config, []byte, error) {
 // evidenceExtractors is the validation-gated registry. The provisional
 // declared-protobuf reader stays absent unless the operator explicitly opts
 // in; T11.1/T12.3 do not support default production activation.
-func evidenceExtractors(provisionalProto bool) []extract.Extractor {
-	if !provisionalProto {
-		return nil
+func evidenceExtractors(provisionalProto, provisionalThrift bool) []extract.Extractor {
+	var extractors []extract.Extractor
+	if provisionalProto {
+		// T13.1 and T13.2 ship behind the same experimental flag. SCIP field
+		// references have canonical package lineage, while declarations and
+		// gRPC consumer facts retain their documented provisional tiers.
+		extractors = append(extractors, protodecl.New(), grpcgo.New(), scipfield.New())
 	}
-	// T13.1 and T13.2 ship behind the same experimental flag. SCIP field
-	// references have canonical package lineage, while declarations and gRPC
-	// consumer facts retain their documented provisional tiers.
-	return []extract.Extractor{protodecl.New(), grpcgo.New(), scipfield.New()}
+	if provisionalThrift {
+		// T19.2: the Thrift declaration pack rides its own dark flag; rule
+		// validation is the T19.1 spike.
+		extractors = append(extractors, thriftdecl.New())
+	}
+	return extractors
 }
 
 func enqueueExtractionAfterIndex(ctx context.Context, st store.Store, repo, commit string) error {

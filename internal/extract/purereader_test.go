@@ -44,6 +44,11 @@ var extractorImportAllowlist = map[string]bool{
 	"github.com/bufbuild/protocompile/reporter":  true,
 	"github.com/scip-code/scip/bindings/go/scip": true,
 
+	// In-process Thrift IDL parsing for the T19.2 thriftdecl extractor.
+	// Parser-only packages: no codegen, no I/O, no process execution.
+	"go.uber.org/thriftrw/ast": true,
+	"go.uber.org/thriftrw/idl": true,
+
 	"github.com/bmeddeb/phebs/internal/extract/sdk": true,
 }
 

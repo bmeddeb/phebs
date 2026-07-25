@@ -250,6 +250,7 @@ revisions:
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
 | `proof_bundles.retention`                   | *(disabled)*     | positive Go duration expires proof bundles after their latest materialization; omission or `"0"` keeps them indefinitely                                         |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
+| `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration reader described below; same provisional repo/path lineage posture                                         |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 
@@ -1105,7 +1106,28 @@ requires every `.proto` candidate to be read. Extraction runs publish
 atomically: a read, parse, provenance, limit, cancellation, or publication
 failure leaves the prior published facts intact.
 
-The same opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
+A separate `experimental.provisional_thrift_extraction` opt-in enables the
+T19.2 Thrift declaration reader (`thrift-contract` 1.0.0). Every successful
+index then also schedules a bounded read of `.thrift` IDL files. Services,
+functions, and struct/union/exception shapes become the same
+`DECLARES_SERVICE`, `DECLARES_OPERATION`, `DECLARES_MESSAGE`, and
+`DECLARES_FIELD` assertion families under `thrift-*` detail schemas. Operation
+identity is `scope.Service/method`, where scope is the last segment of
+`namespace go` when declared and the file basename otherwise — the one
+identity reproducible from generated Go consumer code. Request and response
+shapes are modeled wire-honestly as the implicit argument and result structs
+Thrift serializes: synthetic same-file messages whose field `0` is the success
+slot and whose `throws` clauses are result fields; `oneway` functions declare
+no result struct. Type links are file-local exactly as for protobuf, with
+same-file typedef chains chased to a bounded depth and include-qualified names
+remaining unresolved with sorted, digest-bound include context. Fields with
+implicit identifiers fail closed as one structured `THRIFT_EXTRACTION_GAP`
+per file — Thrift assigns negative wire identifiers to such fields, and the
+reader never fabricates identity. Locators cite the declaration-start line
+with exact byte spans. Buf-based wire-compatibility checking remains
+protobuf-only; no Thrift compatibility engine exists.
+
+The proto opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
 2026-07-22 disposition). It indexes the repository's own generated
 `*_grpc.pb.go` stubs, then emits `REGISTERS_GRPC_SERVICE` assertions for
 `Register<Service>Server` call sites (tier `derived` — name-bound to a

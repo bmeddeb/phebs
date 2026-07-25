@@ -1227,7 +1227,7 @@ segment, else file basename), zero false resolutions on the hand-labeled
 consumer sample, live cross-corpus name-match joins, and honest abstention
 without in-repo stubs. Binding decisions D1–D9 in `spike/t191/README.md`.
 
-**T19.2 · `thriftdecl` extractor + dark flag** — thrift-contract 1.0.0 per
+**T19.2 ✅ · `thriftdecl` extractor + dark flag** — thrift-contract 1.0.0 per
 D1/D2/D8: wire-honest `Service.method_args`/`method_result` synthetic
 messages (field 0 success, throws as result fields, oneway ⇒ no result
 struct), thriftrw on the pure-reader allowlist, `.thrift` symlinks fail

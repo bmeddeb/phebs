@@ -65,6 +65,11 @@ type Experimental struct {
 	// T11.1 remains STOP/not established and its repo/path lineage is not the
 	// canonical descriptor/module lineage required to complete T12.3.
 	ProvisionalProtoExtraction bool `yaml:"provisional_proto_extraction"`
+	// ProvisionalThriftExtraction enables the T19 Thrift protocol pack
+	// (thrift-contract declarations and thrift-consumer Go evidence). Rule
+	// validation is the T19.1 spike; the same provisional repo/path lineage
+	// limitation applies.
+	ProvisionalThriftExtraction bool `yaml:"provisional_thrift_extraction"`
 }
 
 type Sync struct {
