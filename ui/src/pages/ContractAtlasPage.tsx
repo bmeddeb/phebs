@@ -745,11 +745,9 @@ function MessagePanel({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  // Thrift message declarations carry a kind (struct | union | exception) in
-  // their claim detail; protobuf declarations have no kind.
-  const messageKind = typeof message.declaration?.detail?.kind === 'string'
-    ? message.declaration.detail.kind
-    : ''
+  // The server decodes the pack's versioned message detail into this typed
+  // field; protobuf declarations omit it.
+  const messageKind = message.kind ?? ''
   return (
     <div className={css({ minWidth: 0, border: `1px solid ${tok.cardBorder}` })}>
       <div className={css({

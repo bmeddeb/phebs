@@ -30,6 +30,8 @@ const report: ContractImpactReport = {
   },
   known_consumers: [{
     kind: 'operation_call',
+    domain: 'grpc-consumer',
+    protocol: 'protobuf',
     assertion_id: 'assertion-known',
     evidence_atom_id: 'atom-known',
     predicate: 'CALLS_OPERATION',
@@ -48,6 +50,8 @@ const report: ContractImpactReport = {
   }],
   unresolved_candidates: [{
     kind: 'unresolved_candidate',
+    domain: 'grpc-consumer',
+    protocol: 'protobuf',
     assertion_id: 'assertion-unresolved',
     evidence_atom_id: 'atom-unresolved',
     predicate: 'UNRESOLVED_GRPC_CALL',
@@ -158,6 +162,8 @@ test('operation report renders qualified conclusions, pinned evidence, unresolve
 
   await screen.findByText(report.conclusion.text)
   expect(api.fetchOperationImpact).toHaveBeenCalledWith('/shop.Cart/Get', expect.any(AbortSignal))
+  expect(screen.getAllByText('protobuf').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('grpc-consumer').length).toBeGreaterThan(0)
   expect(screen.getByText('method Get matches 2 generated services')).toBeTruthy()
   expect(screen.getByText('unsupported')).toBeTruthy()
   expect(screen.getByText('no published evidence for this domain')).toBeTruthy()

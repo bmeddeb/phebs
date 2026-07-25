@@ -17,19 +17,26 @@ func corpusDir(t *testing.T, name string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	root := os.Getenv("T191_CORPUS_ROOT")
+	if root == "" {
+		root = "corpus"
+	}
 	for _, entry := range entries {
 		if entry.Name != name {
 			continue
 		}
-		dir := filepath.Join("corpus", name)
+		dir := filepath.Join(root, name)
 		if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
 			if os.Getenv("T191_FETCH") == "" {
 				t.Skipf("corpus %s not fetched; run with T191_FETCH=1", name)
 			}
 		} else if os.Getenv("T191_FETCH") == "" {
-			return dir // present; trust the pin established at fetch time
+			if err := verifyCorpusCheckout(dir, entry); err != nil {
+				t.Fatal(err)
+			}
+			return dir
 		}
-		pinned, err := ensureCorpus("corpus", entry)
+		pinned, err := ensureCorpus(root, entry)
 		if err != nil {
 			t.Fatalf("ensure corpus %s: %v", name, err)
 		}
@@ -102,9 +109,10 @@ func TestDeclarationRulesOnJaegerIDL(t *testing.T) {
 	}
 }
 
-// Gate 2 — the scope rule (namespace go last segment, else file basename) is
-// reproducible from the consumer side: every declared scope names a real
-// generated package directory in the same repository.
+// Gate 2 — the basename scope rule exercised by this corpus (which has no Go
+// or wildcard namespace) is reproducible from the consumer side: every
+// declared scope names a real generated package directory. Explicit-Go and
+// wildcard precedence are synthetic production regressions.
 func TestScopePrecedenceMatchesGeneratedPackages(t *testing.T) {
 	dir := corpusDir(t, "jaeger-idl")
 	paths, err := walkSuffix(dir, ".thrift")

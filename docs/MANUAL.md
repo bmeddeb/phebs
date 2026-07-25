@@ -1145,9 +1145,9 @@ index then also schedules a bounded read of `.thrift` IDL files. Services,
 functions, and struct/union/exception shapes become the same
 `DECLARES_SERVICE`, `DECLARES_OPERATION`, `DECLARES_MESSAGE`, and
 `DECLARES_FIELD` assertion families under `thrift-*` detail schemas. Operation
-identity is `scope.Service/method`, where scope is the last segment of
-`namespace go` when declared and the file basename otherwise — the one
-identity reproducible from generated Go consumer code. Request and response
+identity is `scope.Service/method`, where scope is the last segment of an
+explicit `namespace go`, then `namespace *` (Thrift applies it to every target
+language), then the file basename. Request and response
 shapes are modeled wire-honestly as the implicit argument and result structs
 Thrift serializes: synthetic same-file messages whose field `0` is the success
 slot and whose `throws` clauses are result fields; `oneway` functions declare
@@ -1161,15 +1161,20 @@ with exact byte spans. Buf-based wire-compatibility checking remains
 protobuf-only; no Thrift compatibility engine exists.
 
 The same Thrift opt-in also enables the T19.3 Go consumer reader
-(`thrift-consumer` 1.0.0). It recognizes the repository's own Apache Thrift
+(`thrift-consumer` 1.1.0). It recognizes the repository's own Apache Thrift
 generated Go by compiler header (both the modern and legacy marker forms),
-recovers each service's wire method names from `processorMap` key literals,
-then scans non-generated Go files: `New<Service>Processor` call sites become
+recovers each service's wire method universe from `processorMap` key literals,
+and binds each wire name to the exact generated Go method whose client
+`Call` expression contains that literal. It does not reproduce Apache's
+version- and option-sensitive publicizing rules. It then scans non-generated
+Go files: `New<Service>Processor` call sites become
 `REGISTERS_THRIFT_SERVICE` assertions (tier `derived`), and selector calls
 whose generated method name is unique across the repository's stub index
 become `CALLS_OPERATION` assertions for `/scope.Service/method` (tier
-`heuristic`). Ambiguous names abstain as `UNRESOLVED_THRIFT_CALL` or
-`UNRESOLVED_THRIFT_REGISTRATION`; oversized or unparseable files record
+`heuristic`). Ambiguous call names abstain as one
+`UNRESOLVED_THRIFT_CALL` candidate per canonical `/scope.Service/wire-method`;
+ambiguous constructors use `UNRESOLVED_THRIFT_REGISTRATION`. Oversized or
+unparseable files record
 `THRIFT_EXTRACTION_GAP`. A repository that imports generated stubs from
 another module instead of vendoring them yields no consumer evidence — an
 honest abstention, not an error. Client construction is not evidence, and
@@ -1268,7 +1273,10 @@ source rows, separately labeled unresolved candidates, optional Buf
 classification, every visible repository/domain coverage state, the complete
 canonical coverage certificate, and the existing caveat. The conclusion names
 the exact certificate digest and says only what was found within the stated
-evidence scope. Empty evidence never establishes absence.
+evidence scope. A bare operation query is deliberately a union across
+registered consumer packs; every evidence row therefore carries its exact
+extractor domain and protocol so equal protobuf and Thrift operation spellings
+remain distinguishable. Empty evidence never establishes absence.
 
 Each repository evidence row links to `#/file` with its pinned repository,
 commit, path, and line. Coverage rows describe the limits of the search and
@@ -1360,9 +1368,10 @@ method; equal FQNs in different lineages or repositories remain separate.
 declaration `lineage`, and canonical `/scope.Service/method`; the owning
 protocol pack is resolved by probing declaration domains, so the identity
 needs no protocol parameter. It returns the declaration, request/response
-names with the pack's flags (protobuf streaming, thrift oneway),
-cycle-aware same-file message/field shape, name-matched registrations and
-callers, and separate extractor abstentions. A relationship is called
+names with typed pack flags (protobuf streaming, Thrift `oneway` presence),
+cycle-aware same-file message/field shape including typed
+struct/union/exception kind and synthetic status, name-matched registrations
+and callers, and separate extractor abstentions. A relationship is called
 `proven` only when its own evidence lineage equals the selected declaration
 lineage. Other name matches remain `unresolved_name_match`; ambiguous
 extractor output remains `extractor_abstention`. SCIP package lineage is not
@@ -1376,6 +1385,12 @@ published run ids in that certificate, and confirms the digest after
 projection. A concurrent publication is retried or returns `409`; revisions
 are never mixed. Unknown, hidden, and deleting repository scopes all return
 the same `404` before evidence is read.
+
+The catalog certificate covers every registered declaration and consumer
+domain, even when a query filters to one protocol. Adding a dark pack therefore
+adds honest no-run coverage rows and changes the certificate digest. Protobuf
+fact-detail JSON remains stable because Thrift-only typed fields omit when
+absent; whole-response byte identity is not promised across registry growth.
 
 Catalog responses are read-only and ephemeral: they create no proof bundle and
 pin no extraction run. Cursors are checksummed and bind the query, stable

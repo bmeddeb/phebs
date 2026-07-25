@@ -62,8 +62,8 @@ func TestContractImpactOperationReportCoversThriftConsumers(t *testing.T) {
 	)
 	known.Tier = store.TierHeuristic
 	ambiguous, ambiguousResolution := proofAssertion(
-		repo, run.ID, "thrift-ambiguous", "UNRESOLVED_THRIFT_CALL", "EmitBatch", "",
-		`{"schema":"thriftgo-call-ambiguity-v1","method":"EmitBatch","candidate_count":2}`,
+		repo, run.ID, "thrift-ambiguous", "UNRESOLVED_THRIFT_CALL", operation, "",
+		`{"schema":"thriftgo-call-ambiguity-v1","method":"EmitBatch","candidate_count":2,"candidate_operation":"/agent.Agent/emitBatch"}`,
 	)
 	ambiguous.Tier = store.TierUnresolved
 	st := &proofAPIStore{
@@ -92,13 +92,77 @@ func TestContractImpactOperationReportCoversThriftConsumers(t *testing.T) {
 	}
 	consumer := report.KnownConsumers[0]
 	if consumer.Kind != "operation_call" || consumer.Classification != "operation call" ||
-		consumer.Tier != store.TierHeuristic {
+		consumer.Tier != store.TierHeuristic ||
+		consumer.Domain != domain || consumer.Protocol != "thrift" {
 		t.Fatalf("thrift consumer row = %+v", consumer)
 	}
 	candidate := report.UnresolvedCandidates[0]
 	if candidate.Kind != "unresolved_candidate" ||
+		candidate.Domain != domain || candidate.Protocol != "thrift" ||
 		candidate.Reason != "method EmitBatch matches 2 generated services" {
 		t.Fatalf("thrift candidate row = %+v", candidate)
+	}
+}
+
+func TestContractImpactOperationReportPreservesProtocolIdentityForEqualObjects(t *testing.T) {
+	const (
+		repo      = "github.com/allowed/mixed-client"
+		operation = "/agent.Agent/Get"
+	)
+	grpcRun := proofRun(repo, "grpc-consumer", "run-grpc-equal-object")
+	thriftRun := proofRun(repo, "thrift-consumer", "run-thrift-equal-object")
+	grpc, grpcResolution := proofAssertion(
+		repo, grpcRun.ID, "grpc-equal-object", "CALLS_OPERATION", operation, "grpc-lineage",
+		`{"schema":"grpcgo-call-detail-v1","method":"Get"}`,
+	)
+	thrift, thriftResolution := proofAssertion(
+		repo, thriftRun.ID, "thrift-equal-object", "CALLS_OPERATION", operation, "thrift-lineage",
+		`{"schema":"thriftgo-call-detail-v1","method":"Get","go_method":"Get"}`,
+	)
+	thrift.Tier = store.TierHeuristic
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: grpcRun.Commit}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, grpcRun.Domain):   grpcRun,
+			proofScope(repo, thriftRun.Domain): thriftRun,
+		},
+		assertions: map[string][]store.Assertion{repo: {grpc, thrift}},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(repo, grpcRun.ID, grpc.Supporting[0]):     grpcResolution,
+			proofEvidenceScope(repo, thriftRun.ID, thrift.Supporting[0]): thriftResolution,
+		},
+	}
+	visible := map[string]bool{repo: true}
+
+	code, body, report := getImpactReport(
+		t,
+		proofHandler(st, "user:member", &visible),
+		"/api/contract_impact_report?operation=%2Fagent.Agent%2FGet",
+	)
+	if code != http.StatusOK {
+		t.Fatalf("mixed-protocol operation report = %d %s", code, body)
+	}
+	if len(report.KnownConsumers) != 2 {
+		t.Fatalf("known consumers = %+v", report.KnownConsumers)
+	}
+	got := make(map[string]string, len(report.KnownConsumers))
+	for _, row := range report.KnownConsumers {
+		if row.Object != operation {
+			t.Fatalf("operation object = %q", row.Object)
+		}
+		got[row.Domain] = row.Protocol
+	}
+	want := map[string]string{
+		"grpc-consumer":   "protobuf",
+		"thrift-consumer": "thrift",
+	}
+	if len(got) != len(want) {
+		t.Fatalf("protocol identities = %+v", got)
+	}
+	for domain, protocol := range want {
+		if got[domain] != protocol {
+			t.Fatalf("protocol identity for %s = %q, want %q", domain, got[domain], protocol)
+		}
 	}
 }
 
@@ -154,11 +218,13 @@ func TestContractImpactOperationReportIsPinnedPermissionSafeAndComplete(t *testi
 	if consumer.Repository != visibleRepo || consumer.Path != "consumer/known-impact.go" ||
 		consumer.StartByte != 0 || consumer.EndByte != 4 || consumer.StartLine != 7 ||
 		consumer.Commit != visibleRun.Commit || !consumer.Fresh ||
+		consumer.Domain != domain || consumer.Protocol != "protobuf" ||
 		consumer.Classification != "operation call" || consumer.Tier != store.TierExact {
 		t.Fatalf("known consumer citation = %+v", consumer)
 	}
 	candidate := report.UnresolvedCandidates[0]
 	if candidate.Repository != visibleRepo || candidate.Tier != store.TierUnresolved ||
+		candidate.Domain != domain || candidate.Protocol != "protobuf" ||
 		candidate.Reason != "method Get matches 2 generated services" {
 		t.Fatalf("unresolved candidate = %+v", candidate)
 	}
@@ -229,6 +295,7 @@ func TestContractImpactFieldReportUsesStableIdentityAndExactSpan(t *testing.T) {
 	}
 	consumer := report.KnownConsumers[0]
 	if consumer.Kind != "field_reference" || consumer.Classification != "write" ||
+		consumer.Domain != domain || consumer.Protocol != "protobuf" ||
 		consumer.StartByte != 0 || consumer.EndByte != 4 || consumer.StartLine != 7 || !consumer.Fresh {
 		t.Fatalf("field report evidence = %+v", consumer)
 	}

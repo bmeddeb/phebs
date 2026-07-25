@@ -47,17 +47,18 @@ type protocolPack struct {
 	declarationDomain string
 	consumerDomain    string
 	operationSchema   string
+	messageSchema     string
 	fieldSchema       string
 	// registersPredicate/unresolvedCallPredicate parameterize the
 	// relationship filter triple; CALLS_OPERATION is shared across packs and
 	// scoped by consumerDomain.
 	registersPredicate      string
 	unresolvedCallPredicate string
-	// unresolvedCallUpperFirst marks packs whose abstention objects carry the
-	// generated Go method name (upper-first of the wire name) rather than the
-	// wire method itself. gRPC's wire and Go names coincide; Thrift's differ
-	// by first-letter case.
-	unresolvedCallUpperFirst bool
+	// unresolvedCallCanonicalOperation marks packs whose abstention objects
+	// are canonical /service/wire-method candidates. gRPC retains its original
+	// generated-method object; Thrift uses canonical candidates because Go
+	// publicizing is compiler-version- and option-sensitive.
+	unresolvedCallCanonicalOperation bool
 	// Inclusive declared-field bounds. Protobuf field numbers start at 1;
 	// Thrift result structs use field 0 as the wire success slot and cap at
 	// the positive i16 range.
@@ -68,15 +69,18 @@ var protocolPacks = []protocolPack{
 	{
 		protocol: "protobuf", declarationDomain: "proto-contract",
 		consumerDomain: "grpc-consumer", operationSchema: "proto-operation-detail-v1",
-		fieldSchema: "proto-field-detail-v2", registersPredicate: "REGISTERS_GRPC_SERVICE",
+		messageSchema: "proto-message-detail-v1", fieldSchema: "proto-field-detail-v2",
+		registersPredicate:      "REGISTERS_GRPC_SERVICE",
 		unresolvedCallPredicate: "UNRESOLVED_GRPC_CALL", fieldMin: 1, fieldMax: 536_870_911,
 	},
 	{
 		protocol: "thrift", declarationDomain: "thrift-contract",
 		consumerDomain: "thrift-consumer", operationSchema: "thrift-operation-detail-v1",
-		fieldSchema: "thrift-field-detail-v1", registersPredicate: "REGISTERS_THRIFT_SERVICE",
-		unresolvedCallPredicate: "UNRESOLVED_THRIFT_CALL", unresolvedCallUpperFirst: true,
-		fieldMin: 0, fieldMax: 32_767,
+		messageSchema: "thrift-message-detail-v1", fieldSchema: "thrift-field-detail-v1",
+		registersPredicate:               "REGISTERS_THRIFT_SERVICE",
+		unresolvedCallPredicate:          "UNRESOLVED_THRIFT_CALL",
+		unresolvedCallCanonicalOperation: true,
+		fieldMin:                         0, fieldMax: 32_767,
 	},
 }
 
@@ -91,13 +95,13 @@ func catalogPackDomains() []string {
 	return domains
 }
 
-// packUnresolvedCallObject maps a wire method name to the object form the
+// packUnresolvedCallObject maps a declaration identity to the object form the
 // pack's consumer extractor uses for call abstentions.
-func packUnresolvedCallObject(pack protocolPack, method string) string {
-	if !pack.unresolvedCallUpperFirst || method == "" {
-		return method
+func packUnresolvedCallObject(pack protocolPack, service, method string) string {
+	if pack.unresolvedCallCanonicalOperation {
+		return "/" + service + "/" + method
 	}
-	return strings.ToUpper(method[:1]) + method[1:]
+	return method
 }
 
 func catalogProtocols() []string {
@@ -230,6 +234,10 @@ type ContractCatalogOperationFactDetail struct {
 	Response        ContractCatalogTypeReference `json:"response"`
 	ClientStreaming bool                         `json:"client_streaming"`
 	ServerStreaming bool                         `json:"server_streaming"`
+	// OneWay is nil for protobuf and non-nil for every Thrift operation,
+	// including false, so clients can distinguish the detail families without
+	// an out-of-band protocol table.
+	OneWay *bool `json:"oneway,omitempty"`
 }
 
 type ContractCatalogFieldShape struct {
@@ -245,6 +253,8 @@ type ContractCatalogMessage struct {
 	State             string                      `json:"state"` // resolved | unresolved | cycle | depth_limit | node_limit
 	Reason            string                      `json:"reason,omitempty"`
 	DeclarationName   string                      `json:"declaration_name,omitempty"`
+	Kind              string                      `json:"kind,omitempty"`
+	Synthetic         bool                        `json:"synthetic,omitempty"`
 	Declaration       *ContractCatalogClaim       `json:"declaration,omitempty"`
 	Fields            []ContractCatalogFieldShape `json:"fields,omitempty"`
 	Truncated         bool                        `json:"truncated"`
@@ -796,6 +806,16 @@ func (s *catalogShapeState) expandType(
 	s.locatorBudget -= used
 	result.State = "resolved"
 	result.Declaration = &claim
+	var messageDetail struct {
+		Schema    string `json:"schema"`
+		Kind      string `json:"kind,omitempty"`
+		Synthetic bool   `json:"synthetic,omitempty"`
+	}
+	if err := decodeCatalogDetail(declaration.Detail, s.pack.messageSchema, &messageDetail); err != nil {
+		return ContractCatalogMessage{}, err
+	}
+	result.Kind = messageDetail.Kind
+	result.Synthetic = messageDetail.Synthetic
 
 	fields, err := s.source.ListAssertions(s.ctx, store.AssertionQuery{
 		Repo: s.repository, RunID: s.run.RunID, Predicate: "DECLARES_FIELD",
@@ -892,7 +912,11 @@ func collectCatalogRelationships(
 	}{
 		{pack.registersPredicate, service, "implementation"},
 		{"CALLS_OPERATION", "/" + service + "/" + method, "caller"},
-		{pack.unresolvedCallPredicate, packUnresolvedCallObject(pack, method), "unresolved_candidate"},
+		{
+			pack.unresolvedCallPredicate,
+			packUnresolvedCallObject(pack, service, method),
+			"unresolved_candidate",
+		},
 	}
 	for _, repository := range certificate.Repositories {
 		run, ok := certificateRun(repository, pack.consumerDomain)
@@ -1232,7 +1256,7 @@ func encodeCatalogCursor(
 		Principal: binding.Principal, AuthorizationProvider: binding.AuthorizationProvider,
 		PermissionSnapshot:         binding.PermissionSnapshot,
 		VisibleRepositorySetDigest: binding.VisibleRepositorySetDigest,
-		CoverageDigest: coverageDigest, PackIndex: position.packIndex,
+		CoverageDigest:             coverageDigest, PackIndex: position.packIndex,
 		RepositoryIndex: position.repositoryIndex,
 		After:           cloneAssertionCursor(position.after),
 	}

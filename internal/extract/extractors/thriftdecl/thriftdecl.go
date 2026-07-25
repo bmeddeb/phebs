@@ -256,20 +256,35 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 }
 
 // scopeFor is decision D1: the last dot-segment of `namespace go` when
-// present, otherwise the file basename. Only the generated Go package name is
-// reproducible from consumer evidence; full dotted namespaces and non-Go
-// namespaces are not.
+// present, then `namespace *`, otherwise the file basename. Thrift defines the
+// wildcard namespace as applying to every target language, so treating it as
+// absent would give declarations a different scope from generated Go.
 func scopeFor(program *ast.Program, relPath string) string {
+	wildcard := ""
 	for _, header := range program.Headers {
 		namespace, ok := header.(*ast.Namespace)
-		if !ok || namespace.Scope != "go" {
+		if !ok || namespace.Name == "" {
 			continue
 		}
-		segments := strings.Split(namespace.Name, ".")
-		return segments[len(segments)-1]
+		switch namespace.Scope {
+		case "go":
+			return lastNamespaceSegment(namespace.Name)
+		case "*":
+			if wildcard == "" {
+				wildcard = namespace.Name
+			}
+		}
+	}
+	if wildcard != "" {
+		return lastNamespaceSegment(wildcard)
 	}
 	base := path.Base(relPath)
 	return strings.TrimSuffix(base, ".thrift")
+}
+
+func lastNamespaceSegment(namespace string) string {
+	segments := strings.Split(namespace, ".")
+	return segments[len(segments)-1]
 }
 
 func collectIncludeContext(program *ast.Program) includeContextDetail {

@@ -63,6 +63,8 @@ type ImpactConclusion struct {
 // immutable citation coordinates, not a mutable repository HEAD link.
 type ImpactEvidenceRow struct {
 	Kind           string `json:"kind"` // operation_call | field_reference | unresolved_candidate
+	Domain         string `json:"domain"`
+	Protocol       string `json:"protocol,omitempty"`
 	AssertionID    string `json:"assertion_id"`
 	EvidenceAtomID string `json:"evidence_atom_id"`
 	Predicate      string `json:"predicate"`
@@ -120,13 +122,15 @@ func (s *ProofService) BuildOperationImpactReport(ctx context.Context, operation
 		Domains: []string{"grpc-consumer", "thrift-consumer"},
 	}
 	thriftPack, _ := packForProtocol("thrift")
+	service := strings.TrimPrefix(operation[:strings.LastIndex(operation, "/")], "/")
 	envelope, err := buildProofBundle(ctx, s.opts, query, []assertionFilter{
 		{Domain: "grpc-consumer", Predicate: "CALLS_OPERATION", Object: operation},
 		{Domain: "grpc-consumer", Predicate: "UNRESOLVED_GRPC_CALL", Object: method},
 		{Domain: "thrift-consumer", Predicate: "CALLS_OPERATION", Object: operation},
-		// Thrift call abstentions carry the generated Go method name.
+		// Thrift call abstentions carry canonical candidate operations; the
+		// extractor never asks this layer to reproduce Go publicizing rules.
 		{Domain: "thrift-consumer", Predicate: "UNRESOLVED_THRIFT_CALL",
-			Object: packUnresolvedCallObject(thriftPack, method)},
+			Object: packUnresolvedCallObject(thriftPack, service, method)},
 	}, nil)
 	if err != nil {
 		return nil, err
@@ -284,8 +288,10 @@ type impactEvidenceKey struct {
 }
 
 type impactRunFreshness struct {
-	commit string
-	fresh  bool
+	domain   string
+	protocol string
+	commit   string
+	fresh    bool
 }
 
 func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvidenceRow, error) {
@@ -304,7 +310,10 @@ func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvi
 	for _, repo := range bundle.Coverage.Repositories {
 		for _, run := range repo.Runs {
 			if run.RunID != "" {
-				freshness[repo.Repository+"\x00"+run.RunID] = impactRunFreshness{commit: run.Commit, fresh: run.Fresh}
+				freshness[repo.Repository+"\x00"+run.RunID] = impactRunFreshness{
+					domain: run.Domain, protocol: impactProtocol(run.Domain),
+					commit: run.Commit, fresh: run.Fresh,
+				}
 			}
 		}
 	}
@@ -339,9 +348,13 @@ func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvi
 					continue
 				}
 				seen[dedupe] = struct{}{}
-				run := freshness[assertion.Repo+"\x00"+assertion.RunID]
+				run, ok := freshness[assertion.Repo+"\x00"+assertion.RunID]
+				if !ok || run.domain == "" {
+					return nil, nil, fmt.Errorf("assertion %s run is absent from coverage", assertion.ID)
+				}
 				row := ImpactEvidenceRow{
 					Kind: kind, AssertionID: assertion.ID, EvidenceAtomID: atomID,
+					Domain: run.domain, Protocol: run.protocol,
 					Predicate: assertion.Predicate, Object: assertion.Object, Lineage: assertion.Lineage,
 					Repository: occurrence.Repo, Commit: occurrence.Commit, Path: occurrence.Path,
 					StartByte: item.Atom.StartByte, EndByte: item.Atom.EndByte,
@@ -361,6 +374,18 @@ func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvi
 	sortImpactEvidence(known)
 	sortImpactEvidence(unresolved)
 	return known, unresolved, nil
+}
+
+func impactProtocol(domain string) string {
+	for _, pack := range protocolPacks {
+		if domain == pack.declarationDomain || domain == pack.consumerDomain {
+			return pack.protocol
+		}
+	}
+	if domain == "scip-proto-field" {
+		return "protobuf"
+	}
+	return ""
 }
 
 func impactAssertionKind(predicate, tier string) (string, bool) {
@@ -409,6 +434,9 @@ func sortImpactEvidence(rows []ImpactEvidenceRow) {
 		left, right := rows[i], rows[j]
 		if left.Repository != right.Repository {
 			return left.Repository < right.Repository
+		}
+		if left.Domain != right.Domain {
+			return left.Domain < right.Domain
 		}
 		if left.Path != right.Path {
 			return left.Path < right.Path

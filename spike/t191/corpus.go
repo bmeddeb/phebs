@@ -59,6 +59,9 @@ func ensureCorpus(root string, entry CorpusEntry) (string, error) {
 			return "", err
 		}
 	}
+	if err := verifyCorpusCheckout(dir, entry); err != nil {
+		return "", err
+	}
 	// A corpus checkout without its own go.mod would otherwise join the
 	// parent phebs module and pollute `go mod tidy` (jaeger-client-go
 	// predates Go modules). A stub module fences it off.
@@ -70,6 +73,27 @@ func ensureCorpus(root string, entry CorpusEntry) (string, error) {
 		}
 	}
 	return dir, nil
+}
+
+// verifyCorpusCheckout binds every executable gate to both the locked commit
+// and clean tracked bytes. Untracked files are ignored because ensureCorpus
+// deliberately adds an untracked go.mod fence to pre-module corpora.
+func verifyCorpusCheckout(dir string, entry CorpusEntry) error {
+	head, err := gitOutput(dir, "rev-parse", "HEAD")
+	if err != nil {
+		return err
+	}
+	if head != entry.Commit {
+		return fmt.Errorf("corpus %s HEAD %s does not match locked commit %s", entry.Name, head, entry.Commit)
+	}
+	dirty, err := gitOutput(dir, "status", "--porcelain", "--untracked-files=no")
+	if err != nil {
+		return err
+	}
+	if dirty != "" {
+		return fmt.Errorf("corpus %s has tracked changes; restore the locked checkout before running gates", entry.Name)
+	}
+	return nil
 }
 
 func runGit(dir string, args ...string) error {

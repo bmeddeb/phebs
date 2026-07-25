@@ -18,6 +18,12 @@ func TestThriftGoPublishesThroughWorker(t *testing.T) {
 package agent
 
 type Agent interface{}
+type AgentClient struct{}
+
+func (p *AgentClient) EmitBatch(ctx context.Context, batch *Batch) error {
+	_, err := p.Client_().Call(ctx, "emitBatch", batch, nil)
+	return err
+}
 
 func NewAgentProcessor(handler Agent) *AgentProcessor {
 	self0 := &AgentProcessor{processorMap: make(map[string]thrift.TProcessorFunction)}
@@ -29,6 +35,12 @@ func NewAgentProcessor(handler Agent) *AgentProcessor {
 package mirror
 
 type Mirror interface{}
+type MirrorClient struct{}
+
+func (p *MirrorClient) EmitBatch(ctx context.Context, batch *Batch) error {
+	_, err := p.Client_().Call(ctx, "emitBatch", batch, nil)
+	return err
+}
 
 func NewMirrorProcessor(handler Mirror) *MirrorProcessor {
 	self1 := &MirrorProcessor{processorMap: make(map[string]thrift.TProcessorFunction)}
@@ -61,9 +73,10 @@ func run(c Client, ctx context.Context, s Server) {
 		t.Fatalf("run state: published=%v aborted=%v", evidence.published, evidence.aborted)
 	}
 	coverage := evidence.publishedWith
-	// One registration + one ambiguous-call abstention (two EmitBatch call
-	// sites dedupe to one assertion over two supporting atoms).
-	if coverage.UnresolvedCount != 1 || coverage.AssertionCount != 2 || coverage.AtomCount != 3 ||
+	// One registration + two canonical ambiguous-operation candidates (two
+	// EmitBatch call sites dedupe to two assertions over four supporting
+	// atoms).
+	if coverage.UnresolvedCount != 2 || coverage.AssertionCount != 3 || coverage.AtomCount != 5 ||
 		coverage.CandidateFileCount != 3 || coverage.ReadFileCount != 3 {
 		t.Fatalf("coverage = %+v", coverage)
 	}
@@ -78,13 +91,15 @@ func run(c Client, ctx context.Context, s Server) {
 				}
 			case "UNRESOLVED_THRIFT_CALL":
 				unresolvedCalls++
-				if assertion.Object != "EmitBatch" || assertion.Tier != store.TierUnresolved {
+				if (assertion.Object != "/agent.Agent/emitBatch" &&
+					assertion.Object != "/mirror.Mirror/emitBatch") ||
+					assertion.Tier != store.TierUnresolved {
 					t.Fatalf("unresolved call = %+v", assertion)
 				}
 			}
 		}
 	}
-	if registrations != 1 || unresolvedCalls != 2 {
+	if registrations != 1 || unresolvedCalls != 4 {
 		t.Fatalf("registrations = %d, unresolved call facts = %d", registrations, unresolvedCalls)
 	}
 }

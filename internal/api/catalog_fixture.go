@@ -36,13 +36,16 @@ type ContractCatalogFixture struct {
 
 type contractCatalogFixtureOperation struct {
 	Method   string                        `json:"method"`
+	OneWay   bool                          `json:"oneway,omitempty"`
 	Request  contractCatalogFixtureMessage `json:"request"`
 	Response contractCatalogFixtureMessage `json:"response"`
 }
 
 type contractCatalogFixtureMessage struct {
-	Name   string                        `json:"name"`
-	Fields []contractCatalogFixtureField `json:"fields"`
+	Name      string                        `json:"name"`
+	Kind      string                        `json:"kind,omitempty"`
+	Synthetic bool                          `json:"synthetic,omitempty"`
+	Fields    []contractCatalogFixtureField `json:"fields"`
 }
 
 type contractCatalogFixtureField struct {
@@ -84,7 +87,8 @@ func (f *ContractCatalogFixture) validate() error {
 	if f == nil || f.SchemaVersion != contractCatalogFixtureSchema {
 		return fmt.Errorf("schema_version must be %q", contractCatalogFixtureSchema)
 	}
-	if _, ok := packForProtocol(f.Protocol); !ok {
+	pack, ok := packForProtocol(f.Protocol)
+	if !ok {
 		return fmt.Errorf("protocol must be one of: %s", strings.Join(catalogProtocols(), ", "))
 	}
 	if !validQueryIdentity(f.Package) || !validQueryIdentity(f.ServiceFQN) ||
@@ -104,18 +108,24 @@ func (f *ContractCatalogFixture) validate() error {
 		if !validQueryIdentity(operation.Method) || seenMethods[operation.Method] {
 			return errors.New("operation methods must be unique bounded identities")
 		}
+		if f.Protocol != "thrift" && operation.OneWay {
+			return errors.New("oneway is valid only for thrift fixtures")
+		}
 		seenMethods[operation.Method] = true
 		for _, message := range []contractCatalogFixtureMessage{operation.Request, operation.Response} {
 			if !validQueryIdentity(message.Name) || len(message.Fields) > catalogFieldsPerMessageLimit {
 				return errors.New("message names and field counts must satisfy catalog bounds")
 			}
+			if !fixtureMessageKindValid(f.Protocol, message.Kind) {
+				return errors.New("message kind is invalid for the fixture protocol")
+			}
 			seenFields := make(map[int]bool, len(message.Fields))
 			for _, field := range message.Fields {
 				if !validQueryIdentity(field.Name) || !validQueryIdentity(field.Type) ||
-					field.Number < 1 || field.Number > 536_870_911 ||
-					field.Number >= 19_000 && field.Number <= 19_999 ||
+					field.Number < pack.fieldMin || field.Number > pack.fieldMax ||
+					f.Protocol == "protobuf" && field.Number >= 19_000 && field.Number <= 19_999 ||
 					seenFields[field.Number] ||
-					field.Cardinality != "singular" && field.Cardinality != "repeated" {
+					!fixtureCardinalityValid(f.Protocol, field.Cardinality) {
 					return errors.New("fixture fields must have unique valid numbers, identities, and cardinality")
 				}
 				seenFields[field.Number] = true
@@ -123,6 +133,20 @@ func (f *ContractCatalogFixture) validate() error {
 		}
 	}
 	return nil
+}
+
+func fixtureMessageKindValid(protocol, kind string) bool {
+	if protocol == "protobuf" {
+		return kind == ""
+	}
+	return kind == "" || kind == "struct" || kind == "union" || kind == "exception"
+}
+
+func fixtureCardinalityValid(protocol, cardinality string) bool {
+	if protocol == "protobuf" {
+		return cardinality == "singular" || cardinality == "repeated"
+	}
+	return cardinality == "required" || cardinality == "optional" || cardinality == "default"
 }
 
 func (f *ContractCatalogFixture) list(
@@ -215,16 +239,17 @@ func (f *ContractCatalogFixture) operation(
 	if spec == nil {
 		return nil, huma.Error404NotFound("contract catalog operation not found")
 	}
+	pack, _ := packForProtocol(f.Protocol)
 	certificate := fixtureCatalogCoverage(f, visible, repo, commit, true)
-	runID := fixtureCatalogRunID(repo.Name, "proto-contract")
+	runID := fixtureCatalogRunID(repo.Name, pack.declarationDomain)
 	declaration := f.claim(
 		repo.Name, commit, runID, "operation-"+method,
 		"DECLARES_OPERATION", f.ServiceFQN+"/"+method, f.Lineage, "exact", "",
 	)
-	request := f.message(repo.Name, commit, runID, spec.Request, "request-"+method)
-	response := f.message(repo.Name, commit, runID, spec.Response, "response-"+method)
+	request := f.message(pack, repo.Name, commit, runID, spec.Request, "request-"+method)
+	response := f.message(pack, repo.Name, commit, runID, spec.Response, "response-"+method)
 	fact := ContractCatalogOperationFactDetail{
-		Schema: "proto-operation-detail-v1",
+		Schema: pack.operationSchema,
 		Request: ContractCatalogTypeReference{
 			Raw: spec.Request.Name, Kind: "message", Resolution: "same_file",
 			Declaration: spec.Request.Name,
@@ -234,11 +259,23 @@ func (f *ContractCatalogFixture) operation(
 			Declaration: spec.Response.Name,
 		},
 	}
+	if f.Protocol == "thrift" {
+		fact.OneWay = &spec.OneWay
+		if spec.OneWay {
+			fact.Response = ContractCatalogTypeReference{
+				Raw: "void", Kind: "scalar", Resolution: "intrinsic",
+			}
+			response = ContractCatalogMessage{
+				Raw: "void", State: "unresolved",
+				Reason: "TYPE_NOT_RESOLVED_TO_SAME_FILE_MESSAGE",
+			}
+		}
+	}
 	implementation := ContractCatalogRelationship{
 		Kind: "implementation", Classification: "proven",
 		Claim: f.claim(
-			repo.Name, commit, fixtureCatalogRunID(repo.Name, "grpc-consumer"),
-			"implementation-"+method, "REGISTERS_GRPC_SERVICE", f.ServiceFQN,
+			repo.Name, commit, fixtureCatalogRunID(repo.Name, pack.consumerDomain),
+			"implementation-"+method, pack.registersPredicate, f.ServiceFQN,
 			f.Lineage, "derived", "production",
 		),
 	}
@@ -246,7 +283,7 @@ func (f *ContractCatalogFixture) operation(
 		Kind: "caller", Classification: "unresolved_name_match",
 		Reason: "DECLARATION_LINEAGE_UNPROVEN",
 		Claim: f.claim(
-			repo.Name, commit, fixtureCatalogRunID(repo.Name, "grpc-consumer"),
+			repo.Name, commit, fixtureCatalogRunID(repo.Name, pack.consumerDomain),
 			"caller-"+method, "CALLS_OPERATION", operationName,
 			"provisional_fixture_consumer_v1", "heuristic", "production",
 		),
@@ -255,8 +292,9 @@ func (f *ContractCatalogFixture) operation(
 		Kind: "unresolved_candidate", Classification: "extractor_abstention",
 		Reason: "OPERATION_DECLARATION_UNRESOLVED",
 		Claim: f.claim(
-			repo.Name, commit, fixtureCatalogRunID(repo.Name, "grpc-consumer"),
-			"unresolved-"+method, "UNRESOLVED_GRPC_CALL", method,
+			repo.Name, commit, fixtureCatalogRunID(repo.Name, pack.consumerDomain),
+			"unresolved-"+method, pack.unresolvedCallPredicate,
+			packUnresolvedCallObject(pack, f.ServiceFQN, method),
 			"provisional_fixture_consumer_v1", "unresolved", "production",
 		),
 	}
@@ -285,6 +323,7 @@ func (f *ContractCatalogFixture) matches(query ContractCatalogQuery, repository 
 func (f *ContractCatalogFixture) catalogItem(
 	repository, commit, method, kind string,
 ) ContractCatalogItem {
+	pack, _ := packForProtocol(f.Protocol)
 	predicate, object, suffix := "DECLARES_SERVICE", f.ServiceFQN, "service"
 	if method != "" {
 		predicate, object, suffix = "DECLARES_OPERATION", f.ServiceFQN+"/"+method, "operation-"+method
@@ -294,7 +333,7 @@ func (f *ContractCatalogFixture) catalogItem(
 		Lineage: f.Lineage, Package: f.Package, ServiceFQN: f.ServiceFQN,
 		Method: method,
 		Declaration: f.claim(
-			repository, commit, fixtureCatalogRunID(repository, "proto-contract"),
+			repository, commit, fixtureCatalogRunID(repository, pack.declarationDomain),
 			suffix, predicate, object, f.Lineage, "exact", "",
 		),
 	}
@@ -305,22 +344,36 @@ func (f *ContractCatalogFixture) catalogItem(
 }
 
 func (f *ContractCatalogFixture) message(
+	pack protocolPack,
 	repository, commit, runID string,
 	spec contractCatalogFixtureMessage,
 	id string,
 ) ContractCatalogMessage {
+	messageKind := spec.Kind
+	if pack.protocol == "thrift" && messageKind == "" {
+		messageKind = "struct"
+	}
+	messageDetail, _ := json.Marshal(struct {
+		Schema    string `json:"schema"`
+		Name      string `json:"name"`
+		Kind      string `json:"kind,omitempty"`
+		Synthetic bool   `json:"synthetic,omitempty"`
+	}{
+		Schema: pack.messageSchema, Name: spec.Name,
+		Kind: messageKind, Synthetic: spec.Synthetic,
+	})
 	declaration := f.claim(
 		repository, commit, runID, id, "DECLARES_MESSAGE", spec.Name,
-		f.Lineage, "exact", "",
+		f.Lineage, "exact", "", messageDetail...,
 	)
 	message := ContractCatalogMessage{
 		Raw: spec.Name, State: "resolved", DeclarationName: spec.Name,
-		Declaration: &declaration,
-		Fields:      make([]ContractCatalogFieldShape, 0, len(spec.Fields)),
+		Kind: messageKind, Synthetic: spec.Synthetic, Declaration: &declaration,
+		Fields: make([]ContractCatalogFieldShape, 0, len(spec.Fields)),
 	}
 	for _, field := range spec.Fields {
 		detail := ContractCatalogFieldDetail{
-			Schema: "proto-field-detail-v2", Name: field.Name,
+			Schema: pack.fieldSchema, Name: field.Name,
 			Type: &ContractCatalogTypeReference{
 				Raw: field.Type, Kind: "scalar", Resolution: "intrinsic",
 			},
@@ -396,8 +449,9 @@ func fixtureCatalogCoverage(
 		}
 		for _, domain := range catalogDomains {
 			run := extract.CertificateRun{Domain: domain, Status: "unpublished"}
-			if available && repo.Name == selected.Name {
-				fixturePack, _ := packForProtocol(fixture.Protocol)
+			fixturePack, _ := packForProtocol(fixture.Protocol)
+			if available && repo.Name == selected.Name &&
+				(domain == fixturePack.declarationDomain || domain == fixturePack.consumerDomain) {
 				assertionCount := 3 * len(fixture.Operations)
 				protocols := []string{"grpc"}
 				if fixture.Protocol == "thrift" {
@@ -407,8 +461,12 @@ func fixtureCatalogCoverage(
 					assertionCount = 1
 					protocols = []string{fixture.Protocol, fixture.Protocol + "-shapes"}
 					for _, operation := range fixture.Operations {
-						assertionCount += 3 +
-							len(operation.Request.Fields) + len(operation.Response.Fields)
+						// Operation + request message and fields. A non-oneway
+						// operation also declares its result message and fields.
+						assertionCount += 2 + len(operation.Request.Fields)
+						if !operation.OneWay {
+							assertionCount += 1 + len(operation.Response.Fields)
+						}
 					}
 				}
 				run = extract.CertificateRun{

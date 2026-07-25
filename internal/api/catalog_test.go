@@ -361,12 +361,25 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 	if detail.SchemaVersion != "contract-atlas-v1" ||
 		detail.Declaration.RunID != protoRun.ID ||
 		detail.FactDetail.ServerStreaming != true ||
+		detail.FactDetail.OneWay != nil ||
 		detail.Request.State != "resolved" ||
 		len(detail.Request.Fields) != 1 ||
 		detail.Request.Fields[0].Nested == nil ||
 		detail.Request.Fields[0].Nested.State != "cycle" ||
 		detail.Response.State != "resolved" {
 		t.Fatalf("operation shape = %+v", detail)
+	}
+	factBytes, err := json.Marshal(detail.FactDetail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(factBytes) != operationDetail {
+		t.Fatalf("protobuf fact detail changed: got %s want %s", factBytes, operationDetail)
+	}
+	if !slices.Equal(detail.Coverage.Domains, []string{
+		"grpc-consumer", "proto-contract", "thrift-consumer", "thrift-contract",
+	}) {
+		t.Fatalf("catalog coverage domains = %v", detail.Coverage.Domains)
 	}
 	if len(detail.Implementations) != 1 ||
 		detail.Implementations[0].Classification != "proven" ||
@@ -493,11 +506,11 @@ func TestContractCatalogThriftPack(t *testing.T) {
 	)
 	caller.Tier = store.TierHeuristic
 	putCatalogAssertion(st, caller, callerResolution)
-	// Thrift call abstentions carry the generated Go method name (EmitBatch),
-	// not the wire name; the collector must derive that form to find them.
+	// Thrift call abstentions carry canonical candidate operations so the
+	// collector never reproduces generated Go publicizing rules.
 	ambiguous, ambiguousResolution := catalogAssertion(
 		consumerRepo, consumerRun.ID, "amb", "UNRESOLVED_THRIFT_CALL",
-		"go/other.go", "EmitBatch", "", `{}`,
+		"go/other.go", "/"+service+"/emitBatch", "", `{}`,
 	)
 	ambiguous.Tier = store.TierUnresolved
 	putCatalogAssertion(st, ambiguous, ambiguousResolution)
@@ -533,8 +546,11 @@ func TestContractCatalogThriftPack(t *testing.T) {
 		t.Fatal(err)
 	}
 	if detail.FactDetail.Request.Declaration != "agent.Agent.emitBatch_args" ||
+		detail.FactDetail.OneWay == nil || *detail.FactDetail.OneWay ||
 		detail.Request.State != "resolved" ||
+		detail.Request.Kind != "struct" || !detail.Request.Synthetic ||
 		detail.Response.State != "resolved" ||
+		detail.Response.Kind != "struct" || !detail.Response.Synthetic ||
 		len(detail.Response.Fields) != 1 ||
 		detail.Response.Fields[0].FieldNumber != 0 ||
 		detail.Response.Fields[0].Detail.Name != "success" {
@@ -547,6 +563,56 @@ func TestContractCatalogThriftPack(t *testing.T) {
 		detail.UnresolvedCandidates[0].Classification != "extractor_abstention" {
 		t.Fatalf("thrift relationships = %+v / %+v / %+v",
 			detail.Implementations, detail.Callers, detail.UnresolvedCandidates)
+	}
+}
+
+func TestContractCatalogOperationFactDetailPreservesProtocolFamilies(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		raw        string
+		wantOneWay *bool
+	}{
+		{
+			name: "protobuf omits thrift flag",
+			raw:  `{"schema":"proto-operation-detail-v1","request":{"raw":"R","resolution":"unresolved"},"response":{"raw":"S","resolution":"unresolved"},"client_streaming":false,"server_streaming":true}`,
+		},
+		{
+			name: "thrift false remains present",
+			raw:  `{"schema":"thrift-operation-detail-v1","request":{"raw":"R","resolution":"unresolved"},"response":{"raw":"S","resolution":"unresolved"},"oneway":false}`,
+			wantOneWay: func() *bool {
+				value := false
+				return &value
+			}(),
+		},
+		{
+			name: "thrift true remains present",
+			raw:  `{"schema":"thrift-operation-detail-v1","request":{"raw":"R","resolution":"unresolved"},"response":{"raw":"void","resolution":"intrinsic"},"oneway":true}`,
+			wantOneWay: func() *bool {
+				value := true
+				return &value
+			}(),
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			var detail api.ContractCatalogOperationFactDetail
+			if err := json.Unmarshal([]byte(testCase.raw), &detail); err != nil {
+				t.Fatal(err)
+			}
+			if testCase.wantOneWay == nil {
+				if detail.OneWay != nil {
+					t.Fatalf("oneway = %v, want absent", *detail.OneWay)
+				}
+			} else if detail.OneWay == nil || *detail.OneWay != *testCase.wantOneWay {
+				t.Fatalf("oneway = %v, want %v", detail.OneWay, *testCase.wantOneWay)
+			}
+			encoded, err := json.Marshal(detail)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (testCase.wantOneWay == nil) != !strings.Contains(string(encoded), `"oneway"`) {
+				t.Fatalf("serialized detail = %s", encoded)
+			}
+		})
 	}
 }
 

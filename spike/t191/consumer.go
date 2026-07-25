@@ -59,16 +59,15 @@ func newStubIndex() *stubIndex {
 // indexGeneratedFile applies the pass-1 rules to one generated Go file:
 // service names come from `New<Service>Processor` constructor declarations,
 // wire method names from `processorMap["m"] = ...` key literals in the same
-// constructor body, and the Go method name is derived by upper-casing the
-// wire name's first rune (the Apache Thrift Go generator's transform for the
-// corpus's identifier shapes; underscored IDL names are a known ceiling
-// recorded in the decision table).
+// constructor body, and the exact Go method name from the generated client
+// method whose Call expression carries that wire literal.
 func (index *stubIndex) indexGeneratedFile(pkgName string, content []byte) error {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "generated.go", content, 0)
 	if err != nil {
 		return fmt.Errorf("parse generated file: %w", err)
 	}
+	clientMethods := generatedClientMethods(file)
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if ok && fn.Recv == nil {
@@ -78,7 +77,11 @@ func (index *stubIndex) indexGeneratedFile(pkgName string, content []byte) error
 			}
 			service := index.ensureService(pkgName, match[1])
 			for _, wire := range processorMapKeys(fn) {
-				goName := upperFirst(wire)
+				goNames := clientMethods[service.Name+"\x00"+wire]
+				if len(goNames) != 1 {
+					continue
+				}
+				goName := goNames[0]
 				if _, exists := service.WireMethods[goName]; !exists {
 					service.WireMethods[goName] = wire
 					index.methodOwners[goName] = append(index.methodOwners[goName], service.Name)
@@ -87,6 +90,71 @@ func (index *stubIndex) indexGeneratedFile(pkgName string, content []byte) error
 		}
 	}
 	return nil
+}
+
+func generatedClientMethods(file *ast.File) map[string][]string {
+	methods := make(map[string][]string)
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Recv == nil || fn.Body == nil {
+			continue
+		}
+		receiver := receiverTypeName(fn)
+		if !strings.HasSuffix(receiver, "Client") {
+			continue
+		}
+		service := strings.TrimSuffix(receiver, "Client")
+		for _, wire := range clientCallWires(fn) {
+			key := service + "\x00" + wire
+			methods[key] = appendUniqueString(methods[key], fn.Name.Name)
+		}
+	}
+	return methods
+}
+
+func receiverTypeName(fn *ast.FuncDecl) string {
+	if fn.Recv == nil || len(fn.Recv.List) != 1 {
+		return ""
+	}
+	expression := fn.Recv.List[0].Type
+	if pointer, ok := expression.(*ast.StarExpr); ok {
+		expression = pointer.X
+	}
+	identifier, _ := expression.(*ast.Ident)
+	if identifier == nil {
+		return ""
+	}
+	return identifier.Name
+}
+
+func clientCallWires(fn *ast.FuncDecl) []string {
+	var wires []string
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		selector, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || selector.Sel.Name != "Call" {
+			return true
+		}
+		for _, argument := range call.Args {
+			if wire := stringLiteral(argument); wire != "" {
+				wires = appendUniqueString(wires, wire)
+			}
+		}
+		return true
+	})
+	return wires
+}
+
+func appendUniqueString(values []string, candidate string) []string {
+	for _, value := range values {
+		if value == candidate {
+			return values
+		}
+	}
+	return append(values, candidate)
 }
 
 func (index *stubIndex) ensureService(scope, name string) *stubService {
@@ -207,11 +275,4 @@ func stringLiteral(expr ast.Expr) string {
 		return ""
 	}
 	return strings.Trim(literal.Value, `"`)
-}
-
-func upperFirst(name string) string {
-	if name == "" {
-		return name
-	}
-	return strings.ToUpper(name[:1]) + name[1:]
 }

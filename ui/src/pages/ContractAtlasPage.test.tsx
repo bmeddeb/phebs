@@ -495,6 +495,8 @@ test('renders a thrift operation with oneway chip, field 0, and union badge', as
       raw: 'Agent.emitBatch_args',
       state: 'resolved',
       declaration_name: 'agent.Agent.emitBatch_args',
+      kind: 'union',
+      synthetic: true,
       declaration: {
         ...claim(
           'github.com/acme/idl',

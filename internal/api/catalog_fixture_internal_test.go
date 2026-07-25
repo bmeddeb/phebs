@@ -104,6 +104,77 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 	}
 }
 
+func TestContractCatalogFixtureThriftProjection(t *testing.T) {
+	fixture := &ContractCatalogFixture{
+		SchemaVersion: contractCatalogFixtureSchema,
+		Protocol:      "thrift",
+		Package:       "agent",
+		ServiceFQN:    "agent.Agent",
+		Lineage:       "fixture_thrift_lineage",
+		SourcePath:    "agent.thrift",
+		SourceLine:    1,
+		Operations: []contractCatalogFixtureOperation{{
+			Method: "emitBatch",
+			OneWay: true,
+			Request: contractCatalogFixtureMessage{
+				Name: "agent.Agent.emitBatch_args", Kind: "union", Synthetic: true,
+				Fields: []contractCatalogFixtureField{{
+					Name: "batch", Number: 1, Type: "agent.Batch", Cardinality: "required",
+				}},
+			},
+			Response: contractCatalogFixtureMessage{
+				Name: "void", Kind: "struct", Synthetic: true,
+			},
+		}},
+	}
+	if err := fixture.validate(); err != nil {
+		t.Fatal(err)
+	}
+	const commit = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	repos := &contractFixtureRepoStore{repos: []store.Repo{{
+		Name: "github.com/acme/thrift", IndexedCommitHash: commit,
+	}}}
+	service := NewContractCatalogService(Options{
+		Version: "test", Store: repos, ContractCatalogFixture: fixture,
+		Principal:             func(context.Context) string { return "user:fixture" },
+		AuthorizationProvider: "fixture-test-v1",
+	})
+	list, err := service.List(context.Background(), ContractCatalogQuery{Protocol: "thrift"}, 10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 2 || list.Items[0].Protocol != "thrift" ||
+		list.Items[0].Declaration.RunID != fixtureCatalogRunID(repos.repos[0].Name, "thrift-contract") {
+		t.Fatalf("thrift fixture list = %+v", list.Items)
+	}
+	detail, err := service.Operation(
+		context.Background(), repos.repos[0].Name, fixture.Lineage,
+		"/agent.Agent/emitBatch",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.FactDetail.OneWay == nil || !*detail.FactDetail.OneWay ||
+		detail.FactDetail.Response.Resolution != "intrinsic" ||
+		detail.Request.Kind != "union" || !detail.Request.Synthetic ||
+		detail.Response.Raw != "void" ||
+		detail.Implementations[0].Claim.Predicate != "REGISTERS_THRIFT_SERVICE" ||
+		detail.UnresolvedCandidates[0].Claim.Predicate != "UNRESOLVED_THRIFT_CALL" ||
+		detail.UnresolvedCandidates[0].Claim.Object != "/agent.Agent/emitBatch" {
+		t.Fatalf("thrift fixture detail = %+v", detail)
+	}
+	status := map[string]string{}
+	for _, run := range list.Coverage.Repositories[0].Runs {
+		status[run.Domain] = run.Status
+	}
+	if status["thrift-contract"] != "published" ||
+		status["thrift-consumer"] != "published" ||
+		status["proto-contract"] != "unpublished" ||
+		status["grpc-consumer"] != "unpublished" {
+		t.Fatalf("thrift fixture coverage = %+v", status)
+	}
+}
+
 func TestContractCatalogFixtureFailsClosed(t *testing.T) {
 	t.Run("malformed file", func(t *testing.T) {
 		filename := filepath.Join(t.TempDir(), "fixture.json")

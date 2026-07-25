@@ -1205,7 +1205,7 @@ macOS source-build path, Git and SurrealDB prerequisites, default-dark and
 provisional posture, no-runtime-absence rule, and the still-closed external
 `NOT_ESTABLISHED` validation result.
 
-## EPIC 19 — Thrift protocol pack *(adopted and complete 2026-07-25; full protobuf parity)*
+## EPIC 19 — Thrift protocol pack *(adopted and complete 2026-07-25; scoped Atlas/proof parity)*
 
 The operator named the driving combination (Thrift IDL + Apache Thrift Go
 runtime, jaeger corpus), satisfying the protocol-pack gate below. Scope:
@@ -1216,16 +1216,19 @@ lineage promotion (shared gRPC-pack limitation, T13.2 direction), and
 `extends` inherited-operation expansion (recorded in service detail only).
 Pack metadata per the preamble: evidence-pack cards land with T19.2/T19.3;
 dark flag `experimental.provisional_thrift_extraction`; extractor versions
-`thrift-contract` 1.0.0 / `thrift-consumer` 1.0.0; validation is the T19.1
+`thrift-contract` 1.0.0 / `thrift-consumer` 1.1.0; validation is the T19.1
 executable rule gates (no public accuracy claim; GATE2-V2 remains
 `NOT_ESTABLISHED`).
 
 **T19.1 ✅ · Thrift validation spike** — `spike/t191/` pins jaeger-idl,
 jaeger-client-go (archived → HEAD-frozen), and jaeger; executable gates prove
-100% corpus parse rate, scope-precedence reproducibility (`namespace go` last
-segment, else file basename), zero false resolutions on the hand-labeled
-consumer sample, live cross-corpus name-match joins, and honest abstention
-without in-repo stubs. Binding decisions D1–D9 in `spike/t191/README.md`.
+100% corpus parse rate, scope-precedence reproducibility for the constructs
+present in the corpus, zero false name resolutions plus one measured
+handler-side semantic-noise emission on the hand-labeled sample, live
+cross-corpus name-match joins, and honest abstention without in-repo stubs.
+Every live gate verifies locked HEAD and clean tracked bytes first; wildcard
+namespace and Go-publicizing variants are synthetic regressions. Binding
+decisions D1–D9 in `spike/t191/README.md`.
 
 **T19.2 ✅ · `thriftdecl` extractor + dark flag** — thrift-contract 1.0.0 per
 D1/D2/D8: wire-honest `Service.method_args`/`method_result` synthetic
@@ -1235,24 +1238,30 @@ closed, registry pin matrix, evidence-pack card, ADR + MANUAL. AC: T19.1
 construct coverage via synthetic fixtures; byte-identical double run; worker
 staged→published regression; full suite/vet/lint clean.
 
-**T19.3 ✅ · `thriftgo` consumer extractor** — thrift-consumer 1.0.0 per
-D3–D6: generated-header gate, processorMap wire-name index,
-unique-match-or-abstain scan; `REGISTERS_THRIFT_SERVICE`, `CALLS_OPERATION`,
-`UNRESOLVED_THRIFT_CALL`/`_REGISTRATION`, `THRIFT_EXTRACTION_GAP`. AC:
-labeled-sample fixtures from the spike corpus; abstention tests; e2e green.
+**T19.3 ✅ · `thriftgo` consumer extractor** — thrift-consumer 1.1.0 per
+D3–D6: generated-header gate, processorMap wire-name universe, exact generated
+client-method ↔ wire-literal anchors, unique-match-or-abstain scan;
+`REGISTERS_THRIFT_SERVICE`, `CALLS_OPERATION`,
+`UNRESOLVED_THRIFT_CALL`/`_REGISTRATION`, `THRIFT_EXTRACTION_GAP`. Ambiguous
+calls emit canonical candidate operations. AC: labeled-sample fixtures,
+underscore/initialism regression, abstention tests, e2e green.
 
 **T19.4 ✅ · Protocol registry + catalog generalization** — data-only registry
-map (protocol → domains, detail schemas, relationship triple, field bounds);
+map (protocol → domains, detail schemas, relationship/object triple, field bounds);
 `protocol=thrift` accepted; per-protocol field bounds (thrift 0..32767 —
 field 0 is the result success slot); `Item.Protocol` from run domain;
-protocol-major pagination cursor. AC: thrift operation detail expands through
-unchanged `expandType`; protobuf responses byte-stable modulo cursor shape.
+protocol-major pagination cursor. AC: Thrift operation/message metadata
+survives typed projection; the fixture emits only its selected pack; protobuf
+fact-detail JSON is byte-stable while whole responses honestly gain
+registered-pack coverage rows/digest plus the cursor change.
 
 **T19.5 ✅ · Proof/impact/envelope/MCP** — protocol-blind entry points query
 both consumer domains; `canonicalProofDomains` → 5; (domain, predicate) →
 envelope identity kind with `rpc_operation` subjects; MCP prose de-gRPC'd
-(tool names wire-frozen). AC: gRPC outputs unchanged except honest no-run
-coverage rows; bundle determinism.
+(tool names wire-frozen). Impact evidence rows retain domain and protocol so
+equal cross-protocol operation spellings remain distinguishable. AC: gRPC
+outputs unchanged except honest no-run coverage and explicit row identity;
+bundle determinism.
 
 **T19.6 ✅ · Contract Atlas UI** — protocol filter option, oneway chip vs
 streaming chips, union/exception badge, thrift relationship labels,
@@ -1264,6 +1273,15 @@ walkthrough. The Thrift bullet in the protocol-pack candidates section below
 is absorbed by this epic. AC: `make dev` demo incl. ≥1 live name-match join
 and the oneway chip on `agent.Agent/emitBatch` (operator walkthrough per
 MANUAL §2).
+
+**T19.R · Independent-review remediation** — closes the post-implementation
+review findings across T19.1–T19.6: wildcard namespace precedence, compiler-
+anchored Go method identities, canonical ambiguity candidates, typed
+`oneway`/message metadata, protocol-labeled impact evidence, pack-correct
+synthetic fixtures, honest coverage compatibility wording, clean-corpus gate
+verification, and corrected validation/reader-envelope claims. AC: focused
+extractor/API/UI regressions; full Go suite, vet, golangci-lint, and Vitest
+merge bar.
 
 ### On-demand protocol-pack candidates after Epic 17
 

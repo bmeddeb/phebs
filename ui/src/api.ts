@@ -438,6 +438,8 @@ export interface ContractCatalogMessage {
   state: 'resolved' | 'unresolved' | 'cycle' | 'depth_limit' | 'node_limit'
   reason?: string
   declaration_name?: string
+  kind?: 'struct' | 'union' | 'exception'
+  synthetic?: boolean
   declaration?: ContractCatalogClaim
   fields?: ContractCatalogFieldShape[]
   truncated: boolean
@@ -475,6 +477,8 @@ export interface ContractCatalogOperation {
 
 export interface ImpactEvidenceRow {
   kind: 'operation_call' | 'field_reference' | 'unresolved_candidate'
+  domain: string
+  protocol?: 'protobuf' | 'thrift'
   assertion_id: string
   evidence_atom_id: string
   predicate: string

@@ -663,7 +663,7 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 	thriftOnly := evidenceExtractors(false, true)
 	if len(thriftOnly) != 2 || thriftOnly[0].Domain() != "thrift-contract" ||
 		thriftOnly[0].Version() != "1.0.0" || thriftOnly[1].Domain() != "thrift-consumer" ||
-		thriftOnly[1].Version() != "1.0.0" {
+		thriftOnly[1].Version() != "1.1.0" {
 		t.Fatalf("thrift-only extractor registry = %#v", thriftOnly)
 	}
 	both := evidenceExtractors(true, true)

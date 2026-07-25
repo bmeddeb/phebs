@@ -7,10 +7,10 @@
 // same-repo generated processor constructor) and client call sites are
 // "heuristic" (generated method name unique across the repo's stub index).
 // Apache Thrift generated Go carries no filename convention, so generated
-// files are recognized by their compiler header marker; the wire method name
-// (which the IDL declares) is recovered from processorMap key literals, and
-// the generated Go method name is its upper-first form. No output states or
-// implies measured accuracy.
+// files are recognized by their compiler header marker. The wire method name
+// (which the IDL declares) is recovered from processorMap key literals, while
+// the generated Go identifier is anchored independently by the string literal
+// in that client's Call method. No output states or implies measured accuracy.
 package thriftgo
 
 import (
@@ -22,6 +22,7 @@ import (
 	"go/parser"
 	"go/token"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -30,7 +31,7 @@ import (
 
 const (
 	domain        = "thrift-consumer"
-	version       = "1.0.0"
+	version       = "1.1.0"
 	schemaVersion = "t19-v1"
 
 	// go/parser is in-process and bounded by input size; cap the source so a
@@ -104,7 +105,8 @@ func lineageID(repo, stubPath string) string {
 
 func (thriftGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
 	coverage := sdk.Coverage{Protocols: []string{
-		"lineage-provisional-repo-path-v1", "resolution-syntactic-v1", "thrift-go",
+		"generated-name-anchored-v1", "lineage-provisional-repo-path-v1",
+		"resolution-syntactic-v1", "thrift-go",
 	}}
 	index := &serviceIndex{
 		processorCtor: map[string][]*serviceEntry{},
@@ -178,10 +180,10 @@ func isGeneratedThrift(content string) bool {
 // indexGenerated extracts service identities from one generated file: the
 // package clause supplies the scope, New<Service>Processor constructors
 // anchor services, and processorMap key literals inside those constructor
-// bodies supply the wire method universe (D4). The generated Go method name
-// is the wire name with its first byte upper-cased; underscored IDL names
-// camelize differently and therefore stay out of the index (abstention, not
-// misattribution).
+// bodies supply the wire method universe (D4). A generated client method joins
+// to that universe only when its own Call expression contains the exact wire
+// literal. This reads the compiler's actual identifier instead of trying to
+// reproduce version- and option-sensitive Go publicizing rules.
 func indexGenerated(repo, relPath, content string, index *serviceIndex) error {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, relPath, content, parser.SkipObjectResolution)
@@ -189,6 +191,7 @@ func indexGenerated(repo, relPath, content string, index *serviceIndex) error {
 		return err
 	}
 	scope := file.Name.Name
+	clientMethods := generatedClientMethods(file)
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Recv != nil || fn.Body == nil {
@@ -204,11 +207,92 @@ func indexGenerated(repo, relPath, content string, index *serviceIndex) error {
 		}
 		index.processorCtor[fn.Name.Name] = appendEntryUnique(index.processorCtor[fn.Name.Name], entry)
 		for _, wire := range processorMapKeys(fn) {
-			goName := strings.ToUpper(wire[:1]) + wire[1:]
+			goNames := clientMethods[entry.name+"\x00"+wire]
+			if len(goNames) != 1 {
+				continue
+			}
+			goName := goNames[0]
 			index.methods[goName] = appendMethodUnique(index.methods[goName], methodEntry{entry: entry, wire: wire})
 		}
 	}
 	return nil
+}
+
+// generatedClientMethods maps (service, wire method) to the exact Go method
+// identifier emitted by Apache Thrift. Generated methods are accepted only
+// when their receiver is <Service>Client and a Call expression in that method
+// carries a single matching wire literal.
+func generatedClientMethods(file *ast.File) map[string][]string {
+	methods := make(map[string][]string)
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Recv == nil || fn.Body == nil {
+			continue
+		}
+		receiver := receiverTypeName(fn)
+		if !strings.HasSuffix(receiver, "Client") {
+			continue
+		}
+		service := strings.TrimSuffix(receiver, "Client")
+		if service == "" {
+			continue
+		}
+		for _, wire := range clientCallWires(fn) {
+			key := service + "\x00" + wire
+			methods[key] = appendStringUnique(methods[key], fn.Name.Name)
+		}
+	}
+	return methods
+}
+
+func receiverTypeName(fn *ast.FuncDecl) string {
+	if fn.Recv == nil || len(fn.Recv.List) != 1 {
+		return ""
+	}
+	expression := fn.Recv.List[0].Type
+	if pointer, ok := expression.(*ast.StarExpr); ok {
+		expression = pointer.X
+	}
+	identifier, _ := expression.(*ast.Ident)
+	if identifier == nil {
+		return ""
+	}
+	return identifier.Name
+}
+
+func clientCallWires(fn *ast.FuncDecl) []string {
+	var wires []string
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		selector, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || selector.Sel.Name != "Call" {
+			return true
+		}
+		for _, argument := range call.Args {
+			literal, ok := argument.(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				continue
+			}
+			wire, err := strconv.Unquote(literal.Value)
+			if err == nil && wireMethodRe.MatchString(wire) {
+				wires = appendStringUnique(wires, wire)
+			}
+		}
+		return true
+	})
+	return wires
+}
+
+func appendStringUnique(values []string, candidate string) []string {
+	for _, value := range values {
+		if value == candidate {
+			return values
+		}
+	}
+	return append(values, candidate)
 }
 
 // processorMapKeys collects the string keys of `x.processorMap[...] = ...`
@@ -390,9 +474,24 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 				callDetail(method.wire, callee), call)
 		default:
 			// Ambiguous generated method name across services: syntactic
-			// resolution abstains rather than guesses.
-			emitUnresolved("UNRESOLVED_THRIFT_CALL", callee, "thriftgo-call-ambiguous-v1",
-				ambiguousCallDetail(callee, len(methods)), call)
+			// resolution abstains rather than guesses. Emit one unresolved
+			// candidate edge per canonical operation so downstream queries do
+			// not need to reproduce the compiler's Go-name transformation.
+			candidates := make(map[string]struct{}, len(methods))
+			for _, method := range methods {
+				operation := "/" + method.entry.fqn() + "/" + method.wire
+				candidates[operation] = struct{}{}
+			}
+			operations := make([]string, 0, len(candidates))
+			for operation := range candidates {
+				operations = append(operations, operation)
+			}
+			sort.Strings(operations)
+			for _, operation := range operations {
+				emitUnresolved("UNRESOLVED_THRIFT_CALL", operation,
+					"thriftgo-call-ambiguous-v2",
+					ambiguousCallDetail(callee, len(methods), operation), call)
+			}
 		}
 		return true
 	})
@@ -408,9 +507,10 @@ func callDetail(wire, goName string) string {
 		`,"go_method":` + strconv.Quote(goName) + `}`
 }
 
-func ambiguousCallDetail(goName string, candidates int) string {
+func ambiguousCallDetail(goName string, candidates int, operation string) string {
 	return `{"schema":"thriftgo-call-ambiguity-v1","method":` + strconv.Quote(goName) +
-		`,"candidate_count":` + strconv.Itoa(candidates) + `}`
+		`,"candidate_count":` + strconv.Itoa(candidates) +
+		`,"candidate_operation":` + strconv.Quote(operation) + `}`
 }
 
 func ambiguousRegisterDetail(constructor string, candidates int) string {

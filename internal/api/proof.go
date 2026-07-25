@@ -124,8 +124,9 @@ func (s *ProofService) FindOperationConsumers(ctx context.Context, operation str
 	}
 	// The bare operation string carries no protocol, so every registered
 	// consumer domain is queried (T19.5). Domains without a published run
-	// surface as honest no-run coverage rows, never as errors, and operation
-	// objects cannot falsely collide across protocols.
+	// surface as honest no-run coverage rows, never as errors. Equal operation
+	// spellings may exist across protocols; the certificate/run identity keeps
+	// their assertions distinct and projections retain the domain.
 	query := ProofQuery{
 		Kind: "find_operation_consumers", Operation: operation,
 		Domains: []string{"grpc-consumer", "thrift-consumer"},

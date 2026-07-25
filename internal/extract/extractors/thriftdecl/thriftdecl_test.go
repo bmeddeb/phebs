@@ -357,7 +357,17 @@ func TestScopePrecedence(t *testing.T) {
 		name, header, wantScope string
 	}{
 		{"go namespace last segment", "namespace go acme.billing.v1\n", "v1"},
-		{"wildcard namespace ignored", "namespace * acme.billing\n", "svc"},
+		{"wildcard namespace applies to go", "namespace * acme.billing\n", "billing"},
+		{
+			"go namespace overrides earlier wildcard",
+			"namespace * acme.shared\nnamespace go acme.billing.v1\n",
+			"v1",
+		},
+		{
+			"go namespace overrides later wildcard",
+			"namespace go acme.billing.v1\nnamespace * acme.shared\n",
+			"v1",
+		},
 		{"basename fallback", "", "svc"},
 	}
 	for _, testCase := range cases {
@@ -474,8 +484,8 @@ func TestRunsAreByteIdentical(t *testing.T) {
 	corpus := memoryCorpus{
 		repo: "github.com/acme/idl", commit: "c0ffee",
 		files: map[string]string{
-			"rpc/svc.thrift": demoIDL,
-			"vendor/dep.thrift": "service Dep { void f(1: i32 x) }\n",
+			"rpc/svc.thrift":       demoIDL,
+			"vendor/dep.thrift":    "service Dep { void f(1: i32 x) }\n",
 			"tests/fixture.thrift": "struct F { 1: i32 n }\n",
 		},
 	}

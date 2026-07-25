@@ -305,9 +305,9 @@ function EvidenceSection({ title, rows, empty, unresolved = false }: { title: st
       ) : (
         <div className={css({ overflowX: 'auto' })}>
           <table className={css(tableStyle())}>
-            <thead><tr>{['Pinned evidence', unresolved ? 'Reason unresolved' : 'Classification', 'Tier', 'Code role', 'Freshness'].map((heading) => <HeaderCell key={heading}>{heading}</HeaderCell>)}</tr></thead>
+            <thead><tr>{['Pinned evidence', 'Protocol / domain', unresolved ? 'Reason unresolved' : 'Classification', 'Tier', 'Code role', 'Freshness'].map((heading) => <HeaderCell key={heading}>{heading}</HeaderCell>)}</tr></thead>
             <tbody>
-              {rows.map((row) => <EvidenceRow key={`${row.assertion_id}:${row.evidence_atom_id}:${row.repository}:${row.path}:${row.start_line}`} row={row} unresolved={unresolved} />)}
+              {rows.map((row) => <EvidenceRow key={`${row.domain}:${row.assertion_id}:${row.evidence_atom_id}:${row.repository}:${row.path}:${row.start_line}`} row={row} unresolved={unresolved} />)}
             </tbody>
           </table>
         </div>
@@ -329,6 +329,12 @@ function EvidenceRow({ row, unresolved }: { row: ImpactEvidenceRow; unresolved: 
         </a>
         <div className={css({ marginTop: '3px', fontFamily: FONTS.MONO, fontSize: '10px', color: tok.gutter })}>
           {shortCommit(row.commit)} · bytes {row.start_byte}–{row.end_byte} · {row.evidence_atom_id}
+        </div>
+      </Cell>
+      <Cell>
+        <div>{row.protocol || 'unknown'}</div>
+        <div className={css({ marginTop: '2px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '10px' })}>
+          {row.domain}
         </div>
       </Cell>
       <Cell>{unresolved ? row.reason || row.classification : row.classification}</Cell>
