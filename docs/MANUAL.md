@@ -1127,6 +1127,22 @@ reader never fabricates identity. Locators cite the declaration-start line
 with exact byte spans. Buf-based wire-compatibility checking remains
 protobuf-only; no Thrift compatibility engine exists.
 
+The same Thrift opt-in also enables the T19.3 Go consumer reader
+(`thrift-consumer` 1.0.0). It recognizes the repository's own Apache Thrift
+generated Go by compiler header (both the modern and legacy marker forms),
+recovers each service's wire method names from `processorMap` key literals,
+then scans non-generated Go files: `New<Service>Processor` call sites become
+`REGISTERS_THRIFT_SERVICE` assertions (tier `derived`), and selector calls
+whose generated method name is unique across the repository's stub index
+become `CALLS_OPERATION` assertions for `/scope.Service/method` (tier
+`heuristic`). Ambiguous names abstain as `UNRESOLVED_THRIFT_CALL` or
+`UNRESOLVED_THRIFT_REGISTRATION`; oversized or unparseable files record
+`THRIFT_EXTRACTION_GAP`. A repository that imports generated stubs from
+another module instead of vendoring them yields no consumer evidence — an
+honest abstention, not an error. Client construction is not evidence, and
+consumer lineage remains file-scoped provisional, so joins against
+declarations stay name-bound exactly as for gRPC.
+
 The proto opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
 2026-07-22 disposition). It indexes the repository's own generated
 `*_grpc.pb.go` stubs, then emits `REGISTERS_GRPC_SERVICE` assertions for

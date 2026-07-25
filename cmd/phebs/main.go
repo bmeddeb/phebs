@@ -32,6 +32,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -599,9 +600,9 @@ func evidenceExtractors(provisionalProto, provisionalThrift bool) []extract.Extr
 		extractors = append(extractors, protodecl.New(), grpcgo.New(), scipfield.New())
 	}
 	if provisionalThrift {
-		// T19.2: the Thrift declaration pack rides its own dark flag; rule
+		// T19.2/T19.3: the Thrift packs ride their own dark flag; rule
 		// validation is the T19.1 spike.
-		extractors = append(extractors, thriftdecl.New())
+		extractors = append(extractors, thriftdecl.New(), thriftgo.New())
 	}
 	return extractors
 }

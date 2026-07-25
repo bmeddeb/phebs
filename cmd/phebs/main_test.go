@@ -658,16 +658,17 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 		got[2].Domain() != "scip-proto-field" || got[0].Version() != "3.0.0" {
 		t.Fatalf("proto-only extractor registry = %#v", got)
 	}
-	// T19.2: the Thrift declaration pack rides its own dark flag and composes
-	// with the proto pack without reordering it.
+	// T19.2/T19.3: the Thrift packs ride their own dark flag and compose with
+	// the proto pack without reordering it.
 	thriftOnly := evidenceExtractors(false, true)
-	if len(thriftOnly) != 1 || thriftOnly[0].Domain() != "thrift-contract" ||
-		thriftOnly[0].Version() != "1.0.0" {
+	if len(thriftOnly) != 2 || thriftOnly[0].Domain() != "thrift-contract" ||
+		thriftOnly[0].Version() != "1.0.0" || thriftOnly[1].Domain() != "thrift-consumer" ||
+		thriftOnly[1].Version() != "1.0.0" {
 		t.Fatalf("thrift-only extractor registry = %#v", thriftOnly)
 	}
 	both := evidenceExtractors(true, true)
-	if len(both) != 4 || both[0].Domain() != "proto-contract" ||
-		both[3].Domain() != "thrift-contract" {
+	if len(both) != 5 || both[0].Domain() != "proto-contract" ||
+		both[3].Domain() != "thrift-contract" || both[4].Domain() != "thrift-consumer" {
 		t.Fatalf("combined extractor registry = %#v", both)
 	}
 }

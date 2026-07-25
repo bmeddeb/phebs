@@ -1235,7 +1235,7 @@ closed, registry pin matrix, evidence-pack card, ADR + MANUAL. AC: T19.1
 construct coverage via synthetic fixtures; byte-identical double run; worker
 staged→published regression; full suite/vet/lint clean.
 
-**T19.3 · `thriftgo` consumer extractor** — thrift-consumer 1.0.0 per
+**T19.3 ✅ · `thriftgo` consumer extractor** — thrift-consumer 1.0.0 per
 D3–D6: generated-header gate, processorMap wire-name index,
 unique-match-or-abstain scan; `REGISTERS_THRIFT_SERVICE`, `CALLS_OPERATION`,
 `UNRESOLVED_THRIFT_CALL`/`_REGISTRATION`, `THRIFT_EXTRACTION_GAP`. AC:
