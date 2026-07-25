@@ -1285,6 +1285,27 @@ merge bar. Implementation `11802e1`; the operator ran `go test ./... -count=1`
 successfully on 2026-07-25 after the focused and live-corpus gates, vet,
 golangci-lint, 95/95 Vitest suite, UI lint, and production build were green.
 
+**T19.8 · Gitlink boundaries + per-domain failure isolation** — the corpus
+walker previously aborted every extraction on any submodule pointer, which
+made all three jaeger demo repositories unextractable (one failed replacement
+per repository, zero declarations). Part 1: gitlinks become explicit
+repository boundaries — counted, bound by a domain-separated digest over
+sorted `path`/oid records, sampled within 64 paths/4 KiB with an explicit
+truncation flag, stamped under the `gitlink-boundary-v1` inventory policy,
+validated at publish (shape/bounds/sorted-uniqueness/consistency only —
+recalculation authority stays with the walker), surfaced in the certificate,
+proof bundles, and Atlas coverage panel; legacy runs without the policy
+report **unknown** boundary status, never zero, and are replaced even at an
+unchanged commit and extractor version. Candidate symlinks remain hard
+failures; gitlink descendants are never cloned, traversed, searched, or
+attributed to the parent repository. Part 2: the worker continues past an
+ordinary per-domain failure (`errors.Join` aggregate keeps the job retrying),
+returns immediately on stale-run conflicts, and stops attempting new domains
+once the context is canceled or the extraction deadline expires; on retry,
+published domains short-circuit while aborted domains rerun. AC: corpus,
+worker, store-validation, and e2e regressions incl. a domain-1-fails/2-3-
+publish/retry-skips pin; full merge bar.
+
 ### On-demand protocol-pack candidates after Epic 17
 
 These are direction, not scheduled T17 tickets, and do not block completion of

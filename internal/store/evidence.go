@@ -334,6 +334,61 @@ func validTier(tier string) bool {
 	return tier == TierExact || tier == TierDerived || tier == TierHeuristic || tier == TierUnresolved
 }
 
+// Gitlink-boundary sample bounds mirror the trusted walker's (T19.8).
+const (
+	maxGitlinkSamplePaths = 64
+	maxGitlinkSampleBytes = 4 << 10
+	maxInventoryPolicyLen = 128
+)
+
+// validateGitlinkBoundaries checks canonical digest shape, bounds, sorted
+// uniqueness, and count/sample consistency. The store cannot independently
+// recompute the Git tree; recalculation authority remains the trusted walker.
+// A run without an inventory policy is legacy and must carry no boundary
+// fields — absence of the policy means boundary status is unknown, not zero.
+func validateGitlinkBoundaries(coverage CoverageManifest) error {
+	if coverage.InventoryPolicy == "" {
+		if coverage.GitlinkCount != 0 || coverage.GitlinkDigest != "" ||
+			len(coverage.GitlinkSamplePaths) != 0 || coverage.GitlinkSampleTruncated {
+			return errors.New("gitlink boundary fields require an inventory policy")
+		}
+		return nil
+	}
+	if len(coverage.InventoryPolicy) > maxInventoryPolicyLen ||
+		!utf8.ValidString(coverage.InventoryPolicy) ||
+		strings.TrimSpace(coverage.InventoryPolicy) != coverage.InventoryPolicy {
+		return errors.New("inventory policy is not a bounded token")
+	}
+	if coverage.GitlinkCount < 0 || coverage.GitlinkCount > maxCoverageFileCount {
+		return errors.New("gitlink count is negative or unbounded")
+	}
+	if !validSHA256Digest(coverage.GitlinkDigest) {
+		return errors.New("gitlink digest must be canonical sha256")
+	}
+	if len(coverage.GitlinkSamplePaths) > maxGitlinkSamplePaths ||
+		len(coverage.GitlinkSamplePaths) > coverage.GitlinkCount {
+		return errors.New("gitlink sample exceeds its bounds or its count")
+	}
+	sampleBytes := 0
+	for index, samplePath := range coverage.GitlinkSamplePaths {
+		if samplePath == "" || !utf8.ValidString(samplePath) ||
+			len(samplePath) > maxEvidencePathBytes {
+			return errors.New("gitlink sample path is not valid bounded UTF-8")
+		}
+		if index > 0 && coverage.GitlinkSamplePaths[index-1] >= samplePath {
+			return errors.New("gitlink sample paths must be sorted and unique")
+		}
+		sampleBytes += len(samplePath)
+	}
+	if sampleBytes > maxGitlinkSampleBytes {
+		return errors.New("gitlink sample exceeds its byte bound")
+	}
+	if coverage.GitlinkSampleTruncated && coverage.GitlinkCount <= len(coverage.GitlinkSamplePaths) {
+		return errors.New("gitlink sample truncation is inconsistent with its count")
+	}
+	return nil
+}
+
 func validSHA256Digest(value string) bool {
 	if !strings.HasPrefix(value, "sha256:") || len(value) != len("sha256:")+sha256.Size*2 {
 		return false
@@ -770,6 +825,9 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 		if !utf8.ValidString(value) || len(value) > maxEvidenceIdentityBytes {
 			return errors.New("publish extraction run: coverage entry is not valid bounded UTF-8")
 		}
+	}
+	if err := validateGitlinkBoundaries(coverage); err != nil {
+		return fmt.Errorf("publish extraction run: %w", err)
 	}
 	run, err := s.getRun(ctx, runID)
 	if err != nil {

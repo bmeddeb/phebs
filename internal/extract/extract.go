@@ -119,7 +119,12 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 					return store.WithClass(store.ClassExtract,
 						fmt.Errorf("extract %s: %s: latest run returned nil", repo.Name, ex.domain))
 				}
-				if last.Commit == commit && last.Extractor == ex.version {
+				// A legacy run without the current inventory policy is
+				// replaced even at the same commit and extractor version:
+				// its gitlink boundary status is unknown, and only a fresh
+				// walk can bind it.
+				if last.Commit == commit && last.Extractor == ex.version &&
+					last.Coverage.InventoryPolicy == corpusInventoryPolicy {
 					continue
 				}
 			}
@@ -244,8 +249,15 @@ func (w *Worker) runOne(ctx context.Context, ex registeredExtractor, corpus Corp
 	if err != nil {
 		return fmt.Errorf("%s: corpus coverage: %w", ex.domain, err)
 	}
+	// Boundary inventory comes from the trusted corpus, never the extractor.
+	// A corpus without the capability (in-memory test corpora) has no
+	// gitlinks by construction, which the canonical empty inventory states.
+	boundaries := emptyGitlinkInventory()
+	if boundaryAware, ok := corpus.(boundaryCorpus); ok {
+		boundaries = boundaryAware.gitlinkBoundaries()
+	}
 	manifest, err := coverageManifest(
-		coverage, sink.atomCount, sink.assertionCount, sink.unresolvedCount, stats)
+		coverage, sink.atomCount, sink.assertionCount, sink.unresolvedCount, stats, boundaries)
 	if err != nil {
 		return fmt.Errorf("%s: coverage: %w", ex.domain, err)
 	}
@@ -778,7 +790,13 @@ func validSHA256(value string) bool {
 	return err == nil && len(decoded) == 32 && strings.ToLower(digest) == digest
 }
 
-func coverageManifest(coverage sdk.Coverage, atomCount, assertionCount, unresolvedCount int, stats corpusStats) (store.CoverageManifest, error) {
+// corpusInventoryPolicy is the inventory contract stamped on every manifest
+// this worker publishes: gitlink boundaries are counted and digest-bound
+// (T19.8). Legacy runs without the marker have unknown boundary status and
+// are replaced even when commit and extractor version match.
+const corpusInventoryPolicy = "gitlink-boundary-v1"
+
+func coverageManifest(coverage sdk.Coverage, atomCount, assertionCount, unresolvedCount int, stats corpusStats, boundaries gitlinkInventory) (store.CoverageManifest, error) {
 	if len(coverage.Failures) != 0 {
 		return store.CoverageManifest{}, fmt.Errorf("extractor reported %d failure(s); refusing partial publication", len(coverage.Failures))
 	}
@@ -797,15 +815,26 @@ func coverageManifest(coverage sdk.Coverage, atomCount, assertionCount, unresolv
 			return store.CoverageManifest{}, errors.New("invalid or duplicate coverage protocol")
 		}
 	}
+	if boundaries.count < 0 || boundaries.digest == "" ||
+		len(boundaries.samplePaths) > maxGitlinkSamplePaths ||
+		len(boundaries.samplePaths) > boundaries.count && boundaries.count > 0 ||
+		boundaries.count == 0 && len(boundaries.samplePaths) > 0 {
+		return store.CoverageManifest{}, errors.New("gitlink boundary inventory is inconsistent")
+	}
 	return store.CoverageManifest{
-		Protocols:          protocols,
-		CorpusFileCount:    stats.corpusFileCount,
-		CandidateFileCount: stats.candidateFileCount,
-		ReadFileCount:      stats.readFileCount,
-		ReadBytes:          stats.readBytes,
-		SourceScopeDigest:  stats.sourceScopeDigest,
-		UnresolvedCount:    unresolvedCount,
-		AssertionCount:     assertionCount,
-		AtomCount:          atomCount,
+		Protocols:              protocols,
+		CorpusFileCount:        stats.corpusFileCount,
+		CandidateFileCount:     stats.candidateFileCount,
+		ReadFileCount:          stats.readFileCount,
+		ReadBytes:              stats.readBytes,
+		SourceScopeDigest:      stats.sourceScopeDigest,
+		UnresolvedCount:        unresolvedCount,
+		AssertionCount:         assertionCount,
+		AtomCount:              atomCount,
+		InventoryPolicy:        corpusInventoryPolicy,
+		GitlinkCount:           boundaries.count,
+		GitlinkDigest:          boundaries.digest,
+		GitlinkSamplePaths:     append([]string(nil), boundaries.samplePaths...),
+		GitlinkSampleTruncated: boundaries.sampleTruncated,
 	}, nil
 }

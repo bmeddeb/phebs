@@ -658,3 +658,47 @@ func TestWorkerRejectsUnboundOrForgedSourceProvenance(t *testing.T) {
 		})
 	}
 }
+
+// T19.8: a published run whose manifest predates gitlink-boundary accounting
+// has unknown boundary status, so the worker replaces it even when commit and
+// extractor version match; a policy-current run still short-circuits.
+func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
+	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	extractions := 0
+	extractor := unitExtractor{domain: "unit", version: "1",
+		extract: func(context.Context, sdk.Corpus, sdk.Emit) (sdk.Coverage, error) {
+			extractions++
+			return sdk.Coverage{Protocols: []string{"protobuf"}}, nil
+		}}
+	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: unitFactory(nil), Extractors: []Extractor{extractor}}
+
+	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
+		t.Fatal(err)
+	}
+	if extractions != 1 || evidence.publishedWith.InventoryPolicy != corpusInventoryPolicy ||
+		!strings.HasPrefix(evidence.publishedWith.GitlinkDigest, "sha256:") {
+		t.Fatalf("first publish = %d extractions, manifest %+v", extractions, evidence.publishedWith)
+	}
+
+	// Policy-current run at the same commit and version short-circuits.
+	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
+		t.Fatal(err)
+	}
+	if extractions != 1 {
+		t.Fatalf("policy-current run was re-extracted %d times", extractions)
+	}
+
+	// A legacy manifest (no inventory policy) must be replaced.
+	evidence.mu.Lock()
+	evidence.latest.Coverage.InventoryPolicy = ""
+	evidence.latest.Coverage.GitlinkDigest = ""
+	evidence.mu.Unlock()
+	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
+		t.Fatal(err)
+	}
+	if extractions != 2 || evidence.publishedWith.InventoryPolicy != corpusInventoryPolicy {
+		t.Fatalf("legacy run not replaced: %d extractions, manifest %+v", extractions, evidence.publishedWith)
+	}
+}

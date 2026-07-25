@@ -16,6 +16,7 @@ import {
   type ContractCatalogSource,
   type ContractCatalogTypeReference,
   type CoverageCertificate,
+  type CoverageRun,
 } from '../api'
 import {
   ChevronDown,
@@ -1013,6 +1014,7 @@ function CoverageDetails({ certificate }: { certificate: CoverageCertificate }) 
               <HeaderCell>Indexed / evidence</HeaderCell>
               <HeaderCell>Assertions</HeaderCell>
               <HeaderCell>Unresolved</HeaderCell>
+              <HeaderCell>Boundaries</HeaderCell>
               <HeaderCell>Latest attempt</HeaderCell>
             </tr>
           </thead>
@@ -1028,6 +1030,7 @@ function CoverageDetails({ certificate }: { certificate: CoverageCertificate }) 
                 <Cell mono>{shortID(repository.indexed_commit)} / {shortID(run.commit)}</Cell>
                 <Cell mono>{run.assertion_count}</Cell>
                 <Cell mono>{run.unresolved_count}</Cell>
+                <Cell mono>{boundaryLabel(run)}</Cell>
                 <Cell>{run.latest_attempt ? humanize(run.latest_attempt.status) : 'none'}</Cell>
               </tr>
             )))}
@@ -1273,6 +1276,15 @@ function shortID(value?: string): string {
   if (!value) return '—'
   if (value.startsWith('sha256:')) return `${value.slice(0, 15)}…${value.slice(-6)}`
   return value.length > 18 ? `${value.slice(0, 12)}…${value.slice(-4)}` : value
+}
+
+// boundaryLabel renders a run's gitlink-boundary state. A run without an
+// inventory policy predates boundary accounting: its status is unknown and
+// must never read as zero.
+function boundaryLabel(run: CoverageRun): string {
+  if (!run.inventory_policy) return 'unknown'
+  const count = run.gitlink_count ?? 0
+  return `${count} gitlink${count === 1 ? '' : 's'}`
 }
 
 function shortLineage(value: string): string {

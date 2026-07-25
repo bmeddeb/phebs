@@ -48,23 +48,31 @@ type CertificateRepository struct {
 // published evidence and its latest extraction attempt. Failed replacements
 // remain visible here even though they never replace published evidence.
 type CertificateRun struct {
-	Domain             string              `json:"domain"`
-	Status             string              `json:"status"` // published | unpublished
-	RunID              string              `json:"run_id,omitempty"`
-	Extractor          string              `json:"extractor,omitempty"`
-	Commit             string              `json:"commit,omitempty"`
-	Fresh              bool                `json:"fresh"` // run commit == repository's indexed commit
-	Protocols          []string            `json:"protocols,omitempty"`
-	Failures           []string            `json:"failures,omitempty"`
-	CorpusFileCount    int                 `json:"corpus_file_count"`
-	CandidateFileCount int                 `json:"candidate_file_count"`
-	ReadFileCount      int                 `json:"read_file_count"`
-	ReadBytes          int64               `json:"read_bytes"`
-	SourceScopeDigest  string              `json:"source_scope_digest,omitempty"`
-	UnresolvedCount    int                 `json:"unresolved_count"`
-	AssertionCount     int                 `json:"assertion_count"`
-	AtomCount          int                 `json:"atom_count"`
-	LatestAttempt      *CertificateAttempt `json:"latest_attempt,omitempty"`
+	Domain             string   `json:"domain"`
+	Status             string   `json:"status"` // published | unpublished
+	RunID              string   `json:"run_id,omitempty"`
+	Extractor          string   `json:"extractor,omitempty"`
+	Commit             string   `json:"commit,omitempty"`
+	Fresh              bool     `json:"fresh"` // run commit == repository's indexed commit
+	Protocols          []string `json:"protocols,omitempty"`
+	Failures           []string `json:"failures,omitempty"`
+	CorpusFileCount    int      `json:"corpus_file_count"`
+	CandidateFileCount int      `json:"candidate_file_count"`
+	ReadFileCount      int      `json:"read_file_count"`
+	ReadBytes          int64    `json:"read_bytes"`
+	SourceScopeDigest  string   `json:"source_scope_digest,omitempty"`
+	UnresolvedCount    int      `json:"unresolved_count"`
+	AssertionCount     int      `json:"assertion_count"`
+	AtomCount          int      `json:"atom_count"`
+	// InventoryPolicy and the gitlink fields surface the run's submodule
+	// boundaries (T19.8). An empty policy is a legacy run whose boundary
+	// status is unknown — consumers must never read the absent count as
+	// zero. All three are omitempty, so legacy certificates keep their
+	// exact prior bytes and digests.
+	InventoryPolicy string              `json:"inventory_policy,omitempty"`
+	GitlinkCount    int                 `json:"gitlink_count,omitempty"`
+	GitlinkDigest   string              `json:"gitlink_digest,omitempty"`
+	LatestAttempt   *CertificateAttempt `json:"latest_attempt,omitempty"`
 }
 
 // CertificateAttempt is deliberately time-free: identity, input revision,
@@ -165,6 +173,9 @@ func BuildCoverageCertificate(
 				UnresolvedCount:    run.Coverage.UnresolvedCount,
 				AssertionCount:     run.Coverage.AssertionCount,
 				AtomCount:          run.Coverage.AtomCount,
+				InventoryPolicy:    run.Coverage.InventoryPolicy,
+				GitlinkCount:       run.Coverage.GitlinkCount,
+				GitlinkDigest:      run.Coverage.GitlinkDigest,
 				LatestAttempt:      certificateAttempt,
 			})
 			for _, protocol := range protocols {

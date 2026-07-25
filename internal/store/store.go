@@ -272,6 +272,21 @@ type CoverageManifest struct {
 	UnresolvedCount    int      `json:"unresolved_count"`
 	AssertionCount     int      `json:"assertion_count"`
 	AtomCount          int      `json:"atom_count"`
+	// InventoryPolicy names the corpus-inventory contract this run was
+	// produced under (T19.8). Empty identifies a legacy run that predates
+	// gitlink-boundary accounting: its boundary status is unknown, never
+	// zero, and the worker replaces such runs on the next extraction job.
+	InventoryPolicy string `json:"inventory_policy,omitempty"`
+	// Gitlink boundaries: submodule pointers named by the trusted walker.
+	// CorpusFileCount remains the count of regular blobs; boundaries are a
+	// separate dimension. The digest binds every boundary (sorted
+	// path\x00oid\x00 records, domain-separated); the sample is a bounded
+	// display-safe subset, so GitlinkCount may exceed its length even when
+	// the sample is not truncated.
+	GitlinkCount           int      `json:"gitlink_count,omitempty"`
+	GitlinkDigest          string   `json:"gitlink_digest,omitempty"`
+	GitlinkSamplePaths     []string `json:"gitlink_sample_paths,omitempty"`
+	GitlinkSampleTruncated bool     `json:"gitlink_sample_truncated,omitempty"`
 }
 
 // ExtractionRun is the atomic publication unit: rows written under a staged

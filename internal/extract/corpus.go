@@ -41,6 +41,10 @@ const (
 	// 200,000 individually valid 4 KiB paths would otherwise retain hundreds
 	// of MiB before any source blob was parsed.
 	maxCorpusInventoryPathBytes = 16 << 20
+	// Gitlink boundaries render at most this bounded, display-safe sample;
+	// the domain-separated digest binds every boundary regardless (T19.8).
+	maxGitlinkSamplePaths = 64
+	maxGitlinkSampleBytes = 4 << 10
 )
 
 // CorpusFactory constructs immutable corpora and fences them with the same
@@ -80,6 +84,48 @@ type gitCorpus struct {
 	// is a single immutable cat-file instead of re-resolving commit, tree, and
 	// size per call. Populated by WalkFiles; reads require a completed walk.
 	oids map[string]string
+	// boundaries is the gitlink inventory of the last completed walk (T19.8):
+	// submodule pointers are repository boundaries — named and bound into
+	// coverage, never traversed and never silently dropped.
+	boundaries gitlinkInventory
+}
+
+// gitlinkInventory is the trusted walker's record of submodule boundaries.
+// The digest is authoritative and covers every gitlink, including those whose
+// path bytes are unsafe to render; the sample is a bounded, display-safe
+// subset. Recalculation authority stays with the walker: the store validates
+// shape and consistency but cannot recompute the Git tree.
+type gitlinkInventory struct {
+	count           int
+	digest          string
+	samplePaths     []string
+	sampleTruncated bool
+}
+
+// gitlinkDigestDomain separates the boundary digest from every other sha256
+// use in the evidence plane.
+const gitlinkDigestDomain = "phebs-corpus-gitlink-v1\x00"
+
+// emptyGitlinkInventory is the canonical zero-boundary inventory, identical
+// to what a completed walk over a gitlink-free tree produces.
+func emptyGitlinkInventory() gitlinkInventory {
+	hash := sha256.New()
+	_, _ = hash.Write([]byte(gitlinkDigestDomain))
+	return gitlinkInventory{digest: "sha256:" + hex.EncodeToString(hash.Sum(nil))}
+}
+
+// boundaryCorpus is the optional trusted-side capability a corpus offers when
+// it can enumerate gitlink boundaries. sdk extractors never see it.
+type boundaryCorpus interface {
+	gitlinkBoundaries() gitlinkInventory
+}
+
+func (g *gitCorpus) gitlinkBoundaries() gitlinkInventory {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	boundaries := g.boundaries
+	boundaries.samplePaths = append([]string(nil), g.boundaries.samplePaths...)
+	return boundaries
 }
 
 func (g *gitCorpus) RepoName() string { return g.repo }
@@ -122,6 +168,10 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	previous := ""
 	fileCount := 0
 	oids := make(map[string]string)
+	boundaries := gitlinkInventory{}
+	boundaryHash := sha256.New()
+	_, _ = boundaryHash.Write([]byte(gitlinkDigestDomain))
+	boundarySampleBytes := 0
 	for {
 		record, readErr := readNULRecord(reader, maxTreeRecordBytes)
 		if len(record) > 0 {
@@ -137,7 +187,30 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 			previous = entry.path
 			switch {
 			case entry.objectType == "commit" || entry.mode == "160000":
-				walkErr = fmt.Errorf("walk corpus: unsupported gitlink %q", entry.path)
+				// A gitlink is a pointer to a different repository, not a blob
+				// of this one. It is recorded as an explicit coverage boundary
+				// (count, domain-separated digest over sorted path/oid records,
+				// bounded display-safe sample) and never traversed (T19.8).
+				boundaries.count++
+				if boundaries.count > maxCorpusFiles {
+					walkErr = fmt.Errorf("walk corpus: more than %d gitlink boundaries", maxCorpusFiles)
+					break
+				}
+				_, _ = boundaryHash.Write([]byte(entry.path))
+				_, _ = boundaryHash.Write([]byte{0})
+				_, _ = boundaryHash.Write([]byte(entry.oid))
+				_, _ = boundaryHash.Write([]byte{0})
+				// Unsafe path bytes still bind count and digest; only the
+				// rendered sample omits them.
+				if checkCorpusPath(entry.path) == nil {
+					if len(boundaries.samplePaths) < maxGitlinkSamplePaths &&
+						boundarySampleBytes+len(entry.path) <= maxGitlinkSampleBytes {
+						boundaries.samplePaths = append(boundaries.samplePaths, entry.path)
+						boundarySampleBytes += len(entry.path)
+					} else {
+						boundaries.sampleTruncated = true
+					}
+				}
 			case entry.objectType != "blob":
 				walkErr = fmt.Errorf("walk corpus: unsupported %s entry %q", entry.objectType, entry.path)
 			case entry.mode == "120000":
@@ -187,8 +260,10 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	if err := cmd.Wait(); err != nil {
 		return gitobj.WrapError(ctx, args, err, stderr.String())
 	}
+	boundaries.digest = "sha256:" + hex.EncodeToString(boundaryHash.Sum(nil))
 	g.mu.Lock()
 	g.oids = oids
+	g.boundaries = boundaries
 	g.mu.Unlock()
 	return nil
 }

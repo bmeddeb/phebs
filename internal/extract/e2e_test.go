@@ -341,6 +341,11 @@ func TestThriftPackEndToEnd(t *testing.T) {
 	}
 	git(src, "add", ".")
 	git(src, "commit", "-q", "-m", "add thrift demo")
+	// A submodule pointer, exactly like the jaeger corpus carries: recorded
+	// as a coverage boundary, never traversed, never failing the run (T19.8).
+	firstCommit := git(src, "rev-parse", "HEAD")
+	git(src, "update-index", "--add", "--cacheinfo", "160000,"+firstCommit+",vendored/idl")
+	git(src, "commit", "-q", "-m", "add gitlink boundary")
 	head := git(src, "rev-parse", "HEAD")
 
 	mirror := filepath.Join(dataDir, "repos", filepath.FromSlash(repoName)+".git")
@@ -372,6 +377,14 @@ func TestThriftPackEndToEnd(t *testing.T) {
 	if declRun.Commit != head ||
 		strings.Join(declRun.Coverage.Protocols, ",") != "lineage-provisional-repo-path-v1,thrift" {
 		t.Fatalf("thrift-contract coverage = %+v", declRun.Coverage)
+	}
+	if declRun.Coverage.InventoryPolicy != "gitlink-boundary-v1" ||
+		declRun.Coverage.GitlinkCount != 1 ||
+		!strings.HasPrefix(declRun.Coverage.GitlinkDigest, "sha256:") ||
+		len(declRun.Coverage.GitlinkSamplePaths) != 1 ||
+		declRun.Coverage.GitlinkSamplePaths[0] != "vendored/idl" ||
+		declRun.Coverage.GitlinkSampleTruncated {
+		t.Fatalf("gitlink boundary manifest = %+v", declRun.Coverage)
 	}
 	consumerRun, err := s.LatestPublishedRun(ctx, repoName, "thrift-consumer")
 	if err != nil {

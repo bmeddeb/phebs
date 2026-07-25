@@ -3,6 +3,8 @@ package extract
 import (
 	"bufio"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -204,16 +206,75 @@ func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 		}
 	})
 
-	t.Run("gitlink rejected", func(t *testing.T) {
+	t.Run("gitlink boundaries recorded not traversed", func(t *testing.T) {
 		f := newCorpusGitFixture(t)
 		parent := f.commitFile("README", "root", "root")
 		f.git(f.source, "update-index", "--add", "--cacheinfo", "160000,"+parent+",third_party")
-		f.git(f.source, "commit", "-q", "-m", "gitlink")
+		f.git(f.source, "update-index", "--add", "--cacheinfo", "160000,"+parent+",vendor_src/idl")
+		f.git(f.source, "commit", "-q", "-m", "gitlinks")
 		head := f.git(f.source, "rev-parse", "HEAD")
 		f.cloneMirror()
-		err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(context.Background(), func(string) error { return nil })
-		if err == nil || !strings.Contains(err.Error(), "gitlink") {
-			t.Fatalf("gitlink error = %v", err)
+		corpus := GitCorpus(f.dataDir).New(f.repoName, head)
+		var paths []string
+		if err := corpus.WalkFiles(context.Background(), func(filePath string) error {
+			paths = append(paths, filePath)
+			return nil
+		}); err != nil {
+			t.Fatalf("WalkFiles = %v", err)
+		}
+		// Gitlink descendants are never enumerated or attributed to the
+		// parent repository; only the regular blob is visited.
+		if !slices.Equal(paths, []string{"README"}) {
+			t.Fatalf("visited paths = %v", paths)
+		}
+		boundaryAware, ok := corpus.(boundaryCorpus)
+		if !ok {
+			t.Fatal("git corpus does not expose gitlink boundaries")
+		}
+		boundaries := boundaryAware.gitlinkBoundaries()
+		hash := sha256.New()
+		hash.Write([]byte(gitlinkDigestDomain))
+		for _, record := range []string{"third_party", parent, "vendor_src/idl", parent} {
+			hash.Write([]byte(record))
+			hash.Write([]byte{0})
+		}
+		wantDigest := "sha256:" + hex.EncodeToString(hash.Sum(nil))
+		if boundaries.count != 2 || boundaries.digest != wantDigest ||
+			!slices.Equal(boundaries.samplePaths, []string{"third_party", "vendor_src/idl"}) ||
+			boundaries.sampleTruncated {
+			t.Fatalf("boundaries = %+v, want digest %s", boundaries, wantDigest)
+		}
+	})
+
+	t.Run("gitlink sample bounds and unsafe paths", func(t *testing.T) {
+		f := newCorpusGitFixture(t)
+		parent := f.commitFile("README", "root", "root")
+		// One unsafe path (backslash) plus enough safe gitlinks to overflow
+		// the sample entry bound: count and digest bind everything, the
+		// rendered sample stays bounded, and truncation is explicit.
+		f.git(f.source, "update-index", "--add", "--cacheinfo", "160000,"+parent+`,a\b`)
+		for i := 0; i < maxGitlinkSamplePaths+1; i++ {
+			f.git(f.source, "update-index", "--add", "--cacheinfo",
+				fmt.Sprintf("160000,%s,links/mod%03d", parent, i))
+		}
+		f.git(f.source, "commit", "-q", "-m", "many gitlinks")
+		head := f.git(f.source, "rev-parse", "HEAD")
+		f.cloneMirror()
+		corpus := GitCorpus(f.dataDir).New(f.repoName, head)
+		if err := corpus.WalkFiles(context.Background(), func(string) error { return nil }); err != nil {
+			t.Fatalf("WalkFiles = %v", err)
+		}
+		boundaries := corpus.(boundaryCorpus).gitlinkBoundaries()
+		if boundaries.count != maxGitlinkSamplePaths+2 ||
+			len(boundaries.samplePaths) != maxGitlinkSamplePaths ||
+			!boundaries.sampleTruncated {
+			t.Fatalf("boundaries = count %d, sample %d, truncated %v",
+				boundaries.count, len(boundaries.samplePaths), boundaries.sampleTruncated)
+		}
+		for _, samplePath := range boundaries.samplePaths {
+			if strings.Contains(samplePath, `\`) {
+				t.Fatalf("unsafe path leaked into sample: %q", samplePath)
+			}
 		}
 	})
 }

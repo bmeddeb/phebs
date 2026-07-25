@@ -1228,8 +1228,21 @@ Every query answer over this evidence cites a deterministic coverage
 certificate (`coverage-certificate-v1`): the caller's visible repositories
 with their indexed revisions, each domain's exact latest published run (run
 id, extractor, commit, freshness, protocols, complete source-scope counters and
-digest, unresolved/assertion/atom counts), its latest extraction attempt (id,
-input revision, extractor, status, and failure), and SCIP index availability.
+digest, unresolved/assertion/atom counts, and gitlink boundary state), its
+latest extraction attempt (id, input revision, extractor, status, and
+failure), and SCIP index availability.
+
+Submodule pointers (gitlinks) are repository boundaries, not blobs of the
+containing repository: the trusted corpus walker records each one — a count,
+a domain-separated digest over every sorted `path`/object-id record, and a
+bounded display-safe path sample — into the run's coverage manifest, and
+never clones, traverses, searches, or attributes their content to the parent
+repository. `corpus_file_count` remains the count of regular blobs. Runs
+published before boundary accounting carry no `inventory_policy` marker;
+their boundary status is **unknown**, never zero, and the worker replaces
+them on the next extraction job even when commit and extractor version match.
+The Atlas coverage certificate table shows each run's boundary state
+(`N gitlinks` or `unknown`).
 The published failure list is retained in the shape for exactness but is empty
 under the atomic publisher, which refuses partial failures. SCIP availability
 is current only when the reporting run matches the indexed revision; stale

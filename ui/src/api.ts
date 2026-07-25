@@ -305,6 +305,11 @@ export interface CoverageRun {
   unresolved_count: number
   assertion_count: number
   atom_count: number
+  // Absent inventory_policy identifies a legacy run whose gitlink boundary
+  // status is unknown — never render the absent count as zero.
+  inventory_policy?: string
+  gitlink_count?: number
+  gitlink_digest?: string
   latest_attempt?: CoverageAttempt
 }
 
