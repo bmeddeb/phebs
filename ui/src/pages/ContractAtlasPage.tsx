@@ -254,7 +254,12 @@ export default function ContractAtlasPage({ params }: { params: URLSearchParams 
           <select
             aria-label="Protocol"
             value={draftFilters.protocol}
-            onChange={(event) => setDraftFilters((current) => ({ ...current, protocol: event.currentTarget.value }))}
+            onChange={(event) => {
+              // Read synchronously: currentTarget is nulled once dispatch
+              // ends, but functional updaters run later, on the next render.
+              const protocol = event.currentTarget.value
+              setDraftFilters((current) => ({ ...current, protocol }))
+            }}
             className={css({
               height: '38px',
               boxSizing: 'border-box',

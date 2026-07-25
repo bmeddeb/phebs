@@ -539,3 +539,23 @@ test('renders a thrift operation with oneway chip, field 0, and union badge', as
   expect(screen.getByText(/field 0/)).toBeTruthy()
   expect(screen.getByText('success')).toBeTruthy()
 })
+
+test('changing the protocol filter survives lazy updater evaluation', async () => {
+  page()
+  await screen.findByText('3 rows')
+  // Regression: the protocol select's onChange read event.currentTarget
+  // inside the functional state updater; React nulls currentTarget after
+  // dispatch, so the queued updater crashed the whole tree on the next
+  // render. A single-option select could never fire onChange, which kept
+  // the bug latent until the thrift option existed.
+  fireEvent.change(screen.getByLabelText('Protocol'), { target: { value: 'thrift' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await screen.findByText('2 rows')
+  expect(api.fetchContractCatalog).toHaveBeenLastCalledWith(
+    { repository: undefined, package: undefined, protocol: 'thrift', lineage: undefined },
+    50,
+    '',
+    expect.any(AbortSignal),
+  )
+  expect(screen.getByTestId('contract-atlas-workspace')).toBeTruthy()
+})
