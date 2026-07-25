@@ -493,6 +493,14 @@ func TestContractCatalogThriftPack(t *testing.T) {
 	)
 	caller.Tier = store.TierHeuristic
 	putCatalogAssertion(st, caller, callerResolution)
+	// Thrift call abstentions carry the generated Go method name (EmitBatch),
+	// not the wire name; the collector must derive that form to find them.
+	ambiguous, ambiguousResolution := catalogAssertion(
+		consumerRepo, consumerRun.ID, "amb", "UNRESOLVED_THRIFT_CALL",
+		"go/other.go", "EmitBatch", "", `{}`,
+	)
+	ambiguous.Tier = store.TierUnresolved
+	putCatalogAssertion(st, ambiguous, ambiguousResolution)
 
 	options := catalogOptions(st, "user:member", nil)
 	options.ProofBundles = st
@@ -535,8 +543,10 @@ func TestContractCatalogThriftPack(t *testing.T) {
 	if len(detail.Implementations) != 1 ||
 		detail.Implementations[0].Classification != "unresolved_name_match" ||
 		len(detail.Callers) != 1 ||
-		len(detail.UnresolvedCandidates) != 0 {
-		t.Fatalf("thrift relationships = %+v / %+v", detail.Implementations, detail.Callers)
+		len(detail.UnresolvedCandidates) != 1 ||
+		detail.UnresolvedCandidates[0].Classification != "extractor_abstention" {
+		t.Fatalf("thrift relationships = %+v / %+v / %+v",
+			detail.Implementations, detail.Callers, detail.UnresolvedCandidates)
 	}
 }
 

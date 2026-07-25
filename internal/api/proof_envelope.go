@@ -189,6 +189,17 @@ func proofPayload(source ProofBundleEnvelope) (*investigation.Payload, int, erro
 	for _, evidence := range source.Bundle.Evidence {
 		evidenceByAtom[proofEvidenceKey(evidence.Repository, evidence.RunID, evidence.Atom.ID)] = evidence
 	}
+	// CALLS_OPERATION is shared across protocol packs, so its object kind is
+	// derived from the emitting run's domain via the bundle certificate
+	// (T19.5). Predicate-distinct facts keep their predicate-derived kinds.
+	domainByRun := make(map[string]string)
+	for _, repository := range source.Bundle.Coverage.Repositories {
+		for _, run := range repository.Runs {
+			if run.RunID != "" {
+				domainByRun[run.RunID] = run.Domain
+			}
+		}
+	}
 	for _, assertion := range source.Bundle.Assertions {
 		references := make([]investigation.ProofReference, 0)
 		qualifiers := map[string]string{
@@ -233,6 +244,9 @@ func proofPayload(source ProofBundleEnvelope) (*investigation.Payload, int, erro
 		switch assertion.Predicate {
 		case "CALLS_OPERATION":
 			objectKind = "grpc_operation"
+			if domainByRun[assertion.RunID] == "thrift-consumer" {
+				objectKind = "thrift_operation"
+			}
 		case "REFERENCES_PROTO_FIELD":
 			objectKind = "proto_field"
 			objectID = assertion.Lineage + ":" + assertion.Object
@@ -282,7 +296,10 @@ func proofClaim(query ProofQuery) investigation.Claim {
 	switch query.Kind {
 	case "find_operation_consumers":
 		claim.Predicate = "CALLS_OPERATION"
-		claim.Subject = investigation.Identity{Kind: "grpc_operation", ID: query.Operation}
+		// The bare operation identity carries no protocol, so the query
+		// subject is protocol-neutral; per-fact object kinds stay
+		// domain-derived (T19.5).
+		claim.Subject = investigation.Identity{Kind: "rpc_operation", ID: query.Operation}
 		claim.DecisionSought = "enumerate_operation_consumer_candidates"
 	case "find_proto_field_references":
 		claim.Predicate = "REFERENCES_PROTO_FIELD"

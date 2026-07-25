@@ -53,6 +53,11 @@ type protocolPack struct {
 	// scoped by consumerDomain.
 	registersPredicate      string
 	unresolvedCallPredicate string
+	// unresolvedCallUpperFirst marks packs whose abstention objects carry the
+	// generated Go method name (upper-first of the wire name) rather than the
+	// wire method itself. gRPC's wire and Go names coincide; Thrift's differ
+	// by first-letter case.
+	unresolvedCallUpperFirst bool
 	// Inclusive declared-field bounds. Protobuf field numbers start at 1;
 	// Thrift result structs use field 0 as the wire success slot and cap at
 	// the positive i16 range.
@@ -70,7 +75,8 @@ var protocolPacks = []protocolPack{
 		protocol: "thrift", declarationDomain: "thrift-contract",
 		consumerDomain: "thrift-consumer", operationSchema: "thrift-operation-detail-v1",
 		fieldSchema: "thrift-field-detail-v1", registersPredicate: "REGISTERS_THRIFT_SERVICE",
-		unresolvedCallPredicate: "UNRESOLVED_THRIFT_CALL", fieldMin: 0, fieldMax: 32_767,
+		unresolvedCallPredicate: "UNRESOLVED_THRIFT_CALL", unresolvedCallUpperFirst: true,
+		fieldMin: 0, fieldMax: 32_767,
 	},
 }
 
@@ -83,6 +89,15 @@ func catalogPackDomains() []string {
 	}
 	sort.Strings(domains)
 	return domains
+}
+
+// packUnresolvedCallObject maps a wire method name to the object form the
+// pack's consumer extractor uses for call abstentions.
+func packUnresolvedCallObject(pack protocolPack, method string) string {
+	if !pack.unresolvedCallUpperFirst || method == "" {
+		return method
+	}
+	return strings.ToUpper(method[:1]) + method[1:]
 }
 
 func catalogProtocols() []string {
@@ -877,7 +892,7 @@ func collectCatalogRelationships(
 	}{
 		{pack.registersPredicate, service, "implementation"},
 		{"CALLS_OPERATION", "/" + service + "/" + method, "caller"},
-		{pack.unresolvedCallPredicate, method, "unresolved_candidate"},
+		{pack.unresolvedCallPredicate, packUnresolvedCallObject(pack, method), "unresolved_candidate"},
 	}
 	for _, repository := range certificate.Repositories {
 		run, ok := certificateRun(repository, pack.consumerDomain)

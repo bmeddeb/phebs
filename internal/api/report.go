@@ -112,10 +112,21 @@ func (s *ProofService) BuildOperationImpactReport(ctx context.Context, operation
 		return nil, huma.Error400BadRequest(err.Error())
 	}
 	method := operation[strings.LastIndex(operation, "/")+1:]
-	query := ProofQuery{Kind: "contract_impact_operation", Operation: operation, Domains: []string{"grpc-consumer"}}
+	// Protocol-blind entry point: both registered consumer domains are
+	// queried; a domain without published runs adds only honest no-run
+	// coverage rows (T19.5).
+	query := ProofQuery{
+		Kind: "contract_impact_operation", Operation: operation,
+		Domains: []string{"grpc-consumer", "thrift-consumer"},
+	}
+	thriftPack, _ := packForProtocol("thrift")
 	envelope, err := buildProofBundle(ctx, s.opts, query, []assertionFilter{
 		{Domain: "grpc-consumer", Predicate: "CALLS_OPERATION", Object: operation},
 		{Domain: "grpc-consumer", Predicate: "UNRESOLVED_GRPC_CALL", Object: method},
+		{Domain: "thrift-consumer", Predicate: "CALLS_OPERATION", Object: operation},
+		// Thrift call abstentions carry the generated Go method name.
+		{Domain: "thrift-consumer", Predicate: "UNRESOLVED_THRIFT_CALL",
+			Object: packUnresolvedCallObject(thriftPack, method)},
 	}, nil)
 	if err != nil {
 		return nil, err
@@ -358,7 +369,7 @@ func impactAssertionKind(predicate, tier string) (string, bool) {
 		return "operation_call", false
 	case "REFERENCES_PROTO_FIELD":
 		return "field_reference", false
-	case "UNRESOLVED_GRPC_CALL":
+	case "UNRESOLVED_GRPC_CALL", "UNRESOLVED_THRIFT_CALL":
 		return "unresolved_candidate", true
 	default:
 		if tier == store.TierUnresolved {
@@ -383,7 +394,7 @@ func impactEvidenceLabels(assertion store.Assertion) (classification, reason str
 			detail.Classification = "unknown access"
 		}
 		return detail.Classification, ""
-	case "UNRESOLVED_GRPC_CALL":
+	case "UNRESOLVED_GRPC_CALL", "UNRESOLVED_THRIFT_CALL":
 		if detail.Method != "" && detail.CandidateCount > 0 {
 			return "ambiguous operation call", fmt.Sprintf("method %s matches %d generated services", detail.Method, detail.CandidateCount)
 		}

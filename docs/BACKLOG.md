@@ -1248,7 +1248,7 @@ field 0 is the result success slot); `Item.Protocol` from run domain;
 protocol-major pagination cursor. AC: thrift operation detail expands through
 unchanged `expandType`; protobuf responses byte-stable modulo cursor shape.
 
-**T19.5 · Proof/impact/envelope/MCP** — protocol-blind entry points query
+**T19.5 ✅ · Proof/impact/envelope/MCP** — protocol-blind entry points query
 both consumer domains; `canonicalProofDomains` → 5; (domain, predicate) →
 envelope identity kind with `rpc_operation` subjects; MCP prose de-gRPC'd
 (tool names wire-frozen). AC: gRPC outputs unchanged except honest no-run

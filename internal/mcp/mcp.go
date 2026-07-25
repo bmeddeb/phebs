@@ -154,11 +154,11 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	}
 
 	type operationIn struct {
-		Operation string `json:"operation" jsonschema:"canonical fully-qualified gRPC operation /package.Service/Method"`
+		Operation string `json:"operation" jsonschema:"canonical fully-qualified RPC operation /scope.Service/method (gRPC or Thrift)"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:         "find_operation_consumers",
-		Description:  "Find callers of one canonical gRPC operation. Returns envelope v1.0 with permission-scoped facts, exact proof references, separate coverage dimensions, and server-rendered qualifications. Provisional evidence cannot establish absence or safety.",
+		Description:  "Find callers of one canonical RPC operation across the registered consumer domains (gRPC and Thrift). Returns envelope v1.0 with permission-scoped facts, exact proof references, separate coverage dimensions, and server-rendered qualifications. Provisional evidence cannot establish absence or safety.",
 		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, investigation.Envelope, error) {
 		result, err := opts.Proofs.FindOperationConsumersMCP(ctx, in.Operation)
@@ -186,7 +186,7 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	})
 
 	type coverageIn struct {
-		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-consumer, proto-contract, and scip-proto-field"`
+		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-consumer, proto-contract, scip-proto-field, thrift-consumer, and thrift-contract"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:         "get_extraction_coverage",

@@ -712,8 +712,8 @@ source links. Duplicate service names remain separate by repository and
 provisional lineage. **Analyze impact** carries the selected canonical
 operation into the Impact form but does not submit it.
 - **Impact** (`#/impact`, experimental) — bounded contract-impact reports for
-canonical gRPC operations, stable protobuf field identities, and proposed
-before/after contract inputs. Known and unresolved consumers cite immutable
+canonical RPC operations (gRPC and Thrift consumer evidence), stable protobuf
+field identities, and proposed before/after contract inputs. Known and unresolved consumers cite immutable
 source revisions; every conclusion renders its complete coverage certificate.
 The navigation item appears only when the server advertises the capability,
 and the contract-change tab additionally requires the pinned Buf startup probe.
@@ -1205,14 +1205,17 @@ embeds this complete certificate in every proof bundle.
 The opt-in registers four read-only query endpoints when the Buf startup probe
 succeeds (the first three remain available when compatibility is unavailable):
 
-- `GET /api/find_operation_consumers?operation=/fully.qualified.Service/Method`
-  returns exact-object `CALLS_OPERATION` assertions from the `grpc-consumer`
-  domain.
+- `GET /api/find_operation_consumers?operation=/scope.Service/method`
+  returns exact-object `CALLS_OPERATION` assertions from both registered
+  consumer domains (`grpc-consumer` and `thrift-consumer`); a domain with no
+  published run for a repository contributes an honest no-run coverage row,
+  never an error.
 - `GET /api/find_proto_field_references?lineage=<id>&message=<full-name>&field_number=<n>`
-  resolves the canonical field identity in the `scip-proto-field` domain.
+  resolves the canonical field identity in the `scip-proto-field` domain
+  (protobuf-only; Thrift has no field-reference pack).
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
-  coverage only; omitted domains select `grpc-consumer`, `proto-contract`, and
-  `scip-proto-field`.
+  coverage only; omitted domains select `grpc-consumer`, `proto-contract`,
+  `scip-proto-field`, `thrift-consumer`, and `thrift-contract`.
 - `POST /api/check_contract_compatibility` accepts a canonical `lineage` and
   `before`/`after` arrays of `{path,content}` `.proto` files. It runs Buf's
   `WIRE` policy and joins affected field identities to visible

@@ -122,10 +122,18 @@ func (s *ProofService) FindOperationConsumers(ctx context.Context, operation str
 	if err := validateOperation(operation); err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
 	}
-	query := ProofQuery{Kind: "find_operation_consumers", Operation: operation, Domains: []string{"grpc-consumer"}}
-	return createProofBundle(ctx, s.opts, query, assertionFilter{
-		Domain: "grpc-consumer", Predicate: "CALLS_OPERATION", Object: operation,
-	})
+	// The bare operation string carries no protocol, so every registered
+	// consumer domain is queried (T19.5). Domains without a published run
+	// surface as honest no-run coverage rows, never as errors, and operation
+	// objects cannot falsely collide across protocols.
+	query := ProofQuery{
+		Kind: "find_operation_consumers", Operation: operation,
+		Domains: []string{"grpc-consumer", "thrift-consumer"},
+	}
+	return buildProofBundle(ctx, s.opts, query, []assertionFilter{
+		{Domain: "grpc-consumer", Predicate: "CALLS_OPERATION", Object: operation},
+		{Domain: "thrift-consumer", Predicate: "CALLS_OPERATION", Object: operation},
+	}, nil)
 }
 
 // FindProtoFieldReferences builds the immutable answer for one canonical
@@ -612,7 +620,10 @@ func proofDomains(raw string) ([]string, error) {
 
 func canonicalProofDomains(domains []string) ([]string, error) {
 	if len(domains) == 0 {
-		return []string{"grpc-consumer", "proto-contract", "scip-proto-field"}, nil
+		return []string{
+			"grpc-consumer", "proto-contract", "scip-proto-field",
+			"thrift-consumer", "thrift-contract",
+		}, nil
 	}
 	parts := append([]string(nil), domains...)
 	if len(parts) == 0 || len(parts) > 64 {

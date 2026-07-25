@@ -44,6 +44,64 @@ func postImpactReport(t *testing.T, handler http.Handler, request compat.Request
 	return recorder.Code, recorder.Body.String(), report
 }
 
+// T19.5: thrift consumer evidence flows through the protocol-blind operation
+// impact report with the same kinds and labels grpc evidence receives.
+func TestContractImpactOperationReportCoversThriftConsumers(t *testing.T) {
+	const (
+		repo      = "github.com/allowed/thrift-client"
+		operation = "/agent.Agent/emitBatch"
+		domain    = "thrift-consumer"
+	)
+	run := proofRun(repo, domain, "run-thrift-impact")
+	run.Coverage.UnresolvedCount = 1
+	run.Coverage.AssertionCount = 2
+	run.Coverage.AtomCount = 2
+	known, knownResolution := proofAssertion(
+		repo, run.ID, "thrift-call", "CALLS_OPERATION", operation, "lineage-thrift",
+		`{"schema":"thriftgo-call-detail-v1","method":"emitBatch","go_method":"EmitBatch"}`,
+	)
+	known.Tier = store.TierHeuristic
+	ambiguous, ambiguousResolution := proofAssertion(
+		repo, run.ID, "thrift-ambiguous", "UNRESOLVED_THRIFT_CALL", "EmitBatch", "",
+		`{"schema":"thriftgo-call-ambiguity-v1","method":"EmitBatch","candidate_count":2}`,
+	)
+	ambiguous.Tier = store.TierUnresolved
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: run.Commit}},
+		runs:  map[string]store.ExtractionRun{proofScope(repo, domain): run},
+		assertions: map[string][]store.Assertion{
+			repo: {ambiguous, known},
+		},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(repo, run.ID, known.Supporting[0]):     knownResolution,
+			proofEvidenceScope(repo, run.ID, ambiguous.Supporting[0]): ambiguousResolution,
+		},
+	}
+	visible := map[string]bool{repo: true}
+	handler := proofHandler(st, "user:member", &visible)
+
+	code, body, report := getImpactReport(
+		t, handler, "/api/contract_impact_report?operation=%2Fagent.Agent%2FemitBatch",
+	)
+	if code != http.StatusOK {
+		t.Fatalf("thrift operation report = %d %s", code, body)
+	}
+	if len(report.KnownConsumers) != 1 || len(report.UnresolvedCandidates) != 1 {
+		t.Fatalf("thrift evidence = known=%+v unresolved=%+v",
+			report.KnownConsumers, report.UnresolvedCandidates)
+	}
+	consumer := report.KnownConsumers[0]
+	if consumer.Kind != "operation_call" || consumer.Classification != "operation call" ||
+		consumer.Tier != store.TierHeuristic {
+		t.Fatalf("thrift consumer row = %+v", consumer)
+	}
+	candidate := report.UnresolvedCandidates[0]
+	if candidate.Kind != "unresolved_candidate" ||
+		candidate.Reason != "method EmitBatch matches 2 generated services" {
+		t.Fatalf("thrift candidate row = %+v", candidate)
+	}
+}
+
 func TestContractImpactOperationReportIsPinnedPermissionSafeAndComplete(t *testing.T) {
 	const (
 		visibleRepo = "github.com/allowed/cart-client"
@@ -104,12 +162,19 @@ func TestContractImpactOperationReportIsPinnedPermissionSafeAndComplete(t *testi
 		candidate.Reason != "method Get matches 2 generated services" {
 		t.Fatalf("unresolved candidate = %+v", candidate)
 	}
-	coverageByRepo := make(map[string]api.ImpactCoverageRow, len(report.CoverageRows))
+	// T19.5: the protocol-blind impact query covers both consumer domains.
+	// The dark thrift pack appears only as honest per-repo no-run rows; the
+	// gRPC rows are unchanged.
+	coverageByScope := make(map[string]api.ImpactCoverageRow, len(report.CoverageRows))
 	for _, row := range report.CoverageRows {
-		coverageByRepo[row.Repository] = row
+		coverageByScope[row.Repository+"/"+row.Domain] = row
 	}
-	if len(report.CoverageRows) != 2 || coverageByRepo[unsupported].State != "unsupported" ||
-		coverageByRepo[visibleRepo].State != "covered" || coverageByRepo[visibleRepo].UnresolvedCount != 1 {
+	if len(report.CoverageRows) != 4 ||
+		coverageByScope[unsupported+"/grpc-consumer"].State != "unsupported" ||
+		coverageByScope[visibleRepo+"/grpc-consumer"].State != "covered" ||
+		coverageByScope[visibleRepo+"/grpc-consumer"].UnresolvedCount != 1 ||
+		coverageByScope[visibleRepo+"/thrift-consumer"].State != "unsupported" ||
+		coverageByScope[unsupported+"/thrift-consumer"].State != "unsupported" {
 		t.Fatalf("coverage rows = %+v", report.CoverageRows)
 	}
 	if !strings.Contains(report.Conclusion.Text, "within the stated evidence scope") ||
