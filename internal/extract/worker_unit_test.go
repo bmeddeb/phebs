@@ -76,9 +76,10 @@ type evidenceBatch struct {
 type memoryEvidence struct {
 	mu sync.Mutex
 
-	nextRun       int
-	runs          map[string]*store.ExtractionRun
-	latest        *store.ExtractionRun
+	nextRun        int
+	runs           map[string]*store.ExtractionRun
+	latest         *store.ExtractionRun
+	latestByDomain map[string]*store.ExtractionRun
 	latestAttempt *store.ExtractionAttempt
 	batches       []evidenceBatch
 	published     bool
@@ -90,7 +91,10 @@ type memoryEvidence struct {
 }
 
 func newMemoryEvidence() *memoryEvidence {
-	return &memoryEvidence{runs: make(map[string]*store.ExtractionRun)}
+	return &memoryEvidence{
+		runs:           make(map[string]*store.ExtractionRun),
+		latestByDomain: make(map[string]*store.ExtractionRun),
+	}
 }
 
 func (m *memoryEvidence) BeginExtractionRun(_ context.Context, repo, commit, domain, extractor string) (*store.ExtractionRun, error) {
@@ -138,6 +142,7 @@ func (m *memoryEvidence) PublishExtractionRun(_ context.Context, runID string, c
 		run.Status = "published"
 		run.Coverage = coverage
 		m.latest = run
+		m.latestByDomain[run.Domain] = run
 		if m.latestAttempt != nil && m.latestAttempt.RunID == runID {
 			m.latestAttempt.Status = "published"
 		}
@@ -162,13 +167,14 @@ func (m *memoryEvidence) AbortExtractionRun(ctx context.Context, runID string) e
 	return nil
 }
 
-func (m *memoryEvidence) LatestPublishedRun(context.Context, string, string) (*store.ExtractionRun, error) {
+func (m *memoryEvidence) LatestPublishedRun(_ context.Context, _ string, domain string) (*store.ExtractionRun, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.latest == nil {
+	run := m.latestByDomain[domain]
+	if run == nil {
 		return nil, store.ErrNotFound
 	}
-	copyOfRun := *m.latest
+	copyOfRun := *run
 	return &copyOfRun, nil
 }
 
@@ -700,5 +706,66 @@ func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
 	}
 	if extractions != 2 || evidence.publishedWith.InventoryPolicy != corpusInventoryPolicy {
 		t.Fatalf("legacy run not replaced: %d extractions, manifest %+v", extractions, evidence.publishedWith)
+	}
+}
+
+// T19.8: one domain's failure must not starve the remaining domains. Ordinary
+// per-domain errors are joined into the job error so the runner retries;
+// published domains short-circuit on that retry while the failed domain runs
+// again. Cancellation stops new attempts.
+func TestWorkerIsolatesPerDomainFailures(t *testing.T) {
+	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	attempts := map[string]int{}
+	extractorFor := func(domain string, fail bool) unitExtractor {
+		return unitExtractor{domain: domain, version: "1",
+			extract: func(context.Context, sdk.Corpus, sdk.Emit) (sdk.Coverage, error) {
+				attempts[domain]++
+				if fail {
+					return sdk.Coverage{}, errors.New(domain + " exploded")
+				}
+				return sdk.Coverage{Protocols: []string{"protobuf"}}, nil
+			}}
+	}
+	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: unitFactory(nil), Extractors: []Extractor{
+			extractorFor("d1", true), extractorFor("d2", false), extractorFor("d3", false),
+		}}
+
+	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
+	if err == nil || !strings.Contains(err.Error(), "d1 exploded") {
+		t.Fatalf("aggregate error = %v", err)
+	}
+	if attempts["d1"] != 1 || attempts["d2"] != 1 || attempts["d3"] != 1 {
+		t.Fatalf("first pass attempts = %v", attempts)
+	}
+	statuses := map[string]string{}
+	evidence.mu.Lock()
+	for _, run := range evidence.runs {
+		statuses[run.Domain] = run.Status
+	}
+	evidence.mu.Unlock()
+	if statuses["d1"] != "aborted" || statuses["d2"] != "published" || statuses["d3"] != "published" {
+		t.Fatalf("run statuses = %v", statuses)
+	}
+
+	// Retry: published domains short-circuit, the aborted domain runs again.
+	err = worker.Handle(context.Background(), store.Job{Target: repo.Name})
+	if err == nil || !strings.Contains(err.Error(), "d1 exploded") {
+		t.Fatalf("retry error = %v", err)
+	}
+	if attempts["d1"] != 2 || attempts["d2"] != 1 || attempts["d3"] != 1 {
+		t.Fatalf("retry attempts = %v", attempts)
+	}
+
+	// A canceled context stops new domain attempts.
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	err = worker.Handle(canceled, store.Job{Target: repo.Name})
+	if err == nil || !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled error = %v", err)
+	}
+	if attempts["d1"] != 2 || attempts["d2"] != 1 || attempts["d3"] != 1 {
+		t.Fatalf("canceled attempts = %v", attempts)
 	}
 }

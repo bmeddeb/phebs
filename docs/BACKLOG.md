@@ -1285,7 +1285,7 @@ merge bar. Implementation `11802e1`; the operator ran `go test ./... -count=1`
 successfully on 2026-07-25 after the focused and live-corpus gates, vet,
 golangci-lint, 95/95 Vitest suite, UI lint, and production build were green.
 
-**T19.8 · Gitlink boundaries + per-domain failure isolation** — the corpus
+**T19.8 ✅ · Gitlink boundaries + per-domain failure isolation** — the corpus
 walker previously aborted every extraction on any submodule pointer, which
 made all three jaeger demo repositories unextractable (one failed replacement
 per repository, zero declarations). Part 1: gitlinks become explicit

@@ -108,9 +108,17 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 			fmt.Errorf("extract %s: corpus factory returned mismatched provenance", repo.Name))
 	}
 
+	// Domains publish independently, so one domain's failure must not starve
+	// the rest (T19.8): ordinary per-domain errors are collected and joined,
+	// stale-run conflicts still return immediately, and cancellation or the
+	// extraction deadline stops new attempts. The aggregate error keeps the
+	// job retrying; on retry, published domains short-circuit above while
+	// aborted domains run again.
+	var domainErrs []error
 	for _, ex := range extractors {
 		if err := ctx.Err(); err != nil {
-			return store.WithClass(store.ClassExtract, fmt.Errorf("extract %s: %w", repo.Name, err))
+			domainErrs = append(domainErrs, err)
+			break
 		}
 		if !job.Force {
 			last, latestErr := w.Evidence.LatestPublishedRun(ctx, repo.Name, ex.domain)
@@ -140,9 +148,12 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 				// retrying this obsolete job would only create queue churn.
 				return nil
 			}
-			return store.WithClass(store.ClassExtract,
-				fmt.Errorf("extract %s: %w", repo.Name, err))
+			domainErrs = append(domainErrs, err)
 		}
+	}
+	if len(domainErrs) > 0 {
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("extract %s: %w", repo.Name, errors.Join(domainErrs...)))
 	}
 	return nil
 }
