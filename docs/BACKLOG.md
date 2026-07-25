@@ -1274,14 +1274,16 @@ is absorbed by this epic. AC: `make dev` demo incl. ≥1 live name-match join
 and the oneway chip on `agent.Agent/emitBatch` (operator walkthrough per
 MANUAL §2).
 
-**T19.R · Independent-review remediation** — closes the post-implementation
+**T19.R ✅ · Independent-review remediation** — closes the post-implementation
 review findings across T19.1–T19.6: wildcard namespace precedence, compiler-
 anchored Go method identities, canonical ambiguity candidates, typed
 `oneway`/message metadata, protocol-labeled impact evidence, pack-correct
 synthetic fixtures, honest coverage compatibility wording, clean-corpus gate
 verification, and corrected validation/reader-envelope claims. AC: focused
 extractor/API/UI regressions; full Go suite, vet, golangci-lint, and Vitest
-merge bar.
+merge bar. Implementation `11802e1`; the operator ran `go test ./... -count=1`
+successfully on 2026-07-25 after the focused and live-corpus gates, vet,
+golangci-lint, 95/95 Vitest suite, UI lint, and production build were green.
 
 ### On-demand protocol-pack candidates after Epic 17
 
