@@ -72,6 +72,41 @@ func TestOpenTelemetryDemoConfigIsPortableAndEnablesContractAtlas(t *testing.T) 
 	}
 }
 
+func TestThriftDemoConfigIsPortableAndEnablesBothPacks(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "phebs-thrift-demo.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "/Users/") {
+		t.Fatal("Thrift demo config contains a machine-specific home path")
+	}
+
+	cfg, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Thrift demo config is not loadable: %v", err)
+	}
+	if !cfg.Experimental.ProvisionalThriftExtraction || !cfg.Experimental.ProvisionalProtoExtraction {
+		t.Fatal("Thrift demo config must explicitly enable both provisional packs")
+	}
+	urls := make([]string, 0, len(cfg.Connections))
+	for _, connection := range cfg.Connections {
+		urls = append(urls, connection.URL)
+	}
+	sort.Strings(urls)
+	want := []string{
+		"https://github.com/jaegertracing/jaeger-client-go.git",
+		"https://github.com/jaegertracing/jaeger-idl.git",
+		"https://github.com/jaegertracing/jaeger.git",
+	}
+	if !reflect.DeepEqual(urls, want) {
+		t.Fatalf("Thrift demo connections = %v", urls)
+	}
+	if !filepath.IsAbs(cfg.Server.DataDir) ||
+		filepath.Base(cfg.Server.DataDir) != ".phebs-thrift-demo" {
+		t.Fatalf("Thrift demo data_dir = %q, want portable user-local path", cfg.Server.DataDir)
+	}
+}
+
 type configExampleEvent struct {
 	line   int
 	indent int

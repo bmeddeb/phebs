@@ -1,0 +1,49 @@
+# Isolated local evaluation of the Thrift protocol pack (Epic 19) over the
+# Jaeger corpus. Does not share state with the default phebs instance or the
+# OpenTelemetry demo. Corpus roles (T19.1 decision D7, HEAD-bound extraction):
+#   jaeger-idl        declarations + vendored generated stubs (active upstream)
+#   jaeger-client-go  archived (HEAD frozen): stubs + real in-repo call sites,
+#                     so registration and caller joins fire under per-repo
+#                     extraction
+#   jaeger            imports stubs cross-module and vendors none at HEAD —
+#                     the honest-abstention showcase
+server:
+  addr: "127.0.0.1:3073"
+  data_dir: "~/.phebs-thrift-demo"
+
+auth:
+  # Plain HTTP is deliberate for this loopback-only evaluation.
+  cookie_secure: false
+  session_lifetime: 12h
+
+sync:
+  cleanup_orphans: false
+  poll_interval: 5s
+  resync_interval: 1h
+
+proof_bundles:
+  retention: 168h
+
+experimental:
+  # Development-only: the Thrift declaration and Go consumer packs, plus the
+  # protobuf readers so the multi-protocol Atlas shows both packs side by
+  # side where a repository has eligible input.
+  provisional_proto_extraction: true
+  provisional_thrift_extraction: true
+
+contexts:
+  jaeger-thrift:
+    - "github.com/jaegertracing/jaeger-idl"
+    - "github.com/jaegertracing/jaeger-client-go"
+    - "github.com/jaegertracing/jaeger"
+
+connections:
+  - name: jaeger-idl
+    type: git
+    url: https://github.com/jaegertracing/jaeger-idl.git
+  - name: jaeger-client-go
+    type: git
+    url: https://github.com/jaegertracing/jaeger-client-go.git
+  - name: jaeger
+    type: git
+    url: https://github.com/jaegertracing/jaeger.git

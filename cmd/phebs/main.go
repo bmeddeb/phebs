@@ -306,7 +306,12 @@ func serve(args []string) error {
 		cfg.Experimental.ProvisionalProtoExtraction,
 		cfg.Experimental.ProvisionalThriftExtraction,
 	); len(exs) > 0 {
-		log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
+		if cfg.Experimental.ProvisionalProtoExtraction {
+			log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
+		}
+		if cfg.Experimental.ProvisionalThriftExtraction {
+			log.Print("WARNING: experimental provisional thrift extraction enabled; validation is the T19.1 rule-gate spike only")
+		}
 		evidenceView = st
 		proofBundles = st
 		if bin, err := compat.FindBinary(); err != nil {

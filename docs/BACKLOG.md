@@ -1205,7 +1205,7 @@ macOS source-build path, Git and SurrealDB prerequisites, default-dark and
 provisional posture, no-runtime-absence rule, and the still-closed external
 `NOT_ESTABLISHED` validation result.
 
-## EPIC 19 — Thrift protocol pack *(adopted 2026-07-25; full protobuf parity)*
+## EPIC 19 — Thrift protocol pack *(adopted and complete 2026-07-25; full protobuf parity)*
 
 The operator named the driving combination (Thrift IDL + Apache Thrift Go
 runtime, jaeger corpus), satisfying the protocol-pack gate below. Scope:
@@ -1258,10 +1258,12 @@ coverage rows; bundle determinism.
 streaming chips, union/exception badge, thrift relationship labels,
 `.thrift` language entry. AC: Vitest green; protobuf pages unchanged.
 
-**T19.7 · Demo + closure** — `phebs-thrift-demo.yaml` with the three D7
-connections; MANUAL walkthrough; epic closure absorbs the Thrift bullet
-below. AC: end-to-end `make dev` demo incl. ≥1 live name-match join and the
-oneway chip on `agent.Agent/emitBatch`.
+**T19.7 ✅ · Demo + closure** — `phebs-thrift-demo.yaml` (port 3073, three D7
+connections, both packs enabled) with a config-admission pin; MANUAL
+walkthrough. The Thrift bullet in the protocol-pack candidates section below
+is absorbed by this epic. AC: `make dev` demo incl. ≥1 live name-match join
+and the oneway chip on `agent.Agent/emitBatch` (operator walkthrough per
+MANUAL §2).
 
 ### On-demand protocol-pack candidates after Epic 17
 
@@ -1280,10 +1282,10 @@ registry pin, dark flag, and PR-sized acceptance criteria.
   remain unresolved without an authorized deployment or registry connector.
   The UI is topic-centered—producers → topic/schema → consumers—not an
   endpoint metaphor.
-- **Thrift:** separate declarations, server registrations, and client calls.
-  `namespace.Service.method` and argument/exception/return shapes enter the
-  Atlas only after a partner names the language/runtime combination and the
-  resulting packs have executable acceptance bars.
+- **Thrift:** ✅ absorbed by EPIC 19 (2026-07-25). The operator named the
+  language/runtime combination (Thrift IDL + Apache Thrift Go, jaeger
+  corpus); the packs shipped with the T19.1 executable rule gates,
+  experimental-dark flags, and cards in THRIFT_PACK_CARDS.md.
 
 ## P5 hardening *(unscheduled — pull on demand)*
 

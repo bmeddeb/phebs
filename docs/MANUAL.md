@@ -156,6 +156,34 @@ provisional, default deployments remain dark, unresolved relationships are
 abstentions rather than guesses, and no empty result establishes runtime
 absence.
 
+#### Thrift protocol-pack evaluation
+
+The repository includes `phebs-thrift-demo.yaml` as the Epic 19 Thrift
+evaluation over the public Jaeger corpus. Run it without the synthetic Atlas
+fixture that `make dev` injects (the fixture would override real catalog
+evidence):
+
+```bash
+make ui bin/zoekt-git-index bin/buf
+PHEBS_ZOEKT_GIT_INDEX=bin/zoekt-git-index PHEBS_BUF=bin/buf \
+  go run -tags ui ./cmd/phebs serve -config phebs-thrift-demo.yaml
+```
+
+Open `http://127.0.0.1:3073`, complete first-administrator setup with the
+one-time token printed in the server log, and allow sync, index, and
+extraction to finish. State stays isolated under `~/.phebs-thrift-demo`. The
+three connections exercise the pack's three postures deliberately:
+`jaeger-idl` publishes `thrift-contract` declarations (open
+`agent.Agent/emitBatch` in the Atlas for the `oneway` chip and the
+wire-honest args/result shapes); the archived `jaeger-client-go` vendors
+generated stubs and real call sites in one repository, so
+`thrift-consumer` registrations and `/agent.Agent/emitBatch` caller evidence
+join the declarations by name (never `proven` — provisional lineage);
+and `jaeger` imports its stubs from another module, publishing an honest
+empty consumer run. The protobuf packs are also enabled so the Atlas shows
+both protocols side by side. All Contract Atlas caveats apply unchanged: no
+empty result establishes runtime absence.
+
 Minimal `phebs.yaml`:
 
 ```yaml
