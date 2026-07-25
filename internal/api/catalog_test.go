@@ -399,6 +399,46 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 	}
 }
 
+func TestContractCatalogOperationWithoutRelationshipsKeepsEmptySlices(t *testing.T) {
+	const (
+		contractRepo = "github.com/acme/contracts"
+		lineage      = "contract_lineage_demo"
+		operation    = "demo.Catalog/Get"
+	)
+	protoRun := catalogRun(contractRepo, catalogProtoDomain, "run-proto", 4)
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: contractRepo, IndexedCommitHash: catalogCommit}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(contractRepo, catalogProtoDomain): protoRun,
+		},
+		assertions:  map[string][]store.Assertion{},
+		resolutions: map[string]store.EvidenceResolution{},
+		bundles:     map[string]store.ProofBundleRecord{},
+	}
+	operationDetail := `{"schema":"proto-operation-detail-v1","request":{"raw":"Request","resolution":"unresolved"},"response":{"raw":"Response","resolution":"unresolved"},"client_streaming":false,"server_streaming":false}`
+	assertion, resolution := catalogAssertion(
+		contractRepo, protoRun.ID, "operation", "DECLARES_OPERATION",
+		"proto/catalog.proto", operation, lineage, operationDetail,
+	)
+	putCatalogAssertion(st, assertion, resolution)
+
+	options := catalogOptions(st, "user:member", nil)
+	options.ProofBundles = st
+	serviceAPI := api.NewContractCatalogService(options)
+	detail, err := serviceAPI.Operation(context.Background(), contractRepo, lineage, "/"+operation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// nil slices marshal as JSON null and crash the atlas UI, which spreads them.
+	if detail.Implementations == nil || detail.Callers == nil || detail.UnresolvedCandidates == nil {
+		t.Fatalf("relationship slices must be non-nil: implementations=%v callers=%v unresolved=%v",
+			detail.Implementations == nil, detail.Callers == nil, detail.UnresolvedCandidates == nil)
+	}
+	if len(detail.Implementations)+len(detail.Callers)+len(detail.UnresolvedCandidates) != 0 {
+		t.Fatalf("expected no relationships, got %+v", detail)
+	}
+}
+
 func TestContractCatalogBoundsAndPublicationRace(t *testing.T) {
 	t.Run("input and field bounds", func(t *testing.T) {
 		const (

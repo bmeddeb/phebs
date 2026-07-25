@@ -742,7 +742,10 @@ func collectCatalogRelationships(
 	certificate *extract.CoverageCertificate,
 	declarationLineage, service, method string,
 ) ([]ContractCatalogRelationship, []ContractCatalogRelationship, []ContractCatalogRelationship, bool, error) {
-	var implementations, callers, unresolved []ContractCatalogRelationship
+	// Non-nil so the JSON contract stays "[]", never null (UI spreads these).
+	implementations := []ContractCatalogRelationship{}
+	callers := []ContractCatalogRelationship{}
+	unresolved := []ContractCatalogRelationship{}
 	total := 0
 	locatorBudget := catalogLocatorLimit
 	truncated := false
