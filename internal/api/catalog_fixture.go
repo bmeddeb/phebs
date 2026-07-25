@@ -84,8 +84,8 @@ func (f *ContractCatalogFixture) validate() error {
 	if f == nil || f.SchemaVersion != contractCatalogFixtureSchema {
 		return fmt.Errorf("schema_version must be %q", contractCatalogFixtureSchema)
 	}
-	if f.Protocol != "protobuf" {
-		return errors.New("protocol must be protobuf")
+	if _, ok := packForProtocol(f.Protocol); !ok {
+		return fmt.Errorf("protocol must be one of: %s", strings.Join(catalogProtocols(), ", "))
 	}
 	if !validQueryIdentity(f.Package) || !validQueryIdentity(f.ServiceFQN) ||
 		!validQueryIdentity(f.Lineage) {
@@ -397,11 +397,15 @@ func fixtureCatalogCoverage(
 		for _, domain := range catalogDomains {
 			run := extract.CertificateRun{Domain: domain, Status: "unpublished"}
 			if available && repo.Name == selected.Name {
+				fixturePack, _ := packForProtocol(fixture.Protocol)
 				assertionCount := 3 * len(fixture.Operations)
 				protocols := []string{"grpc"}
-				if domain == "proto-contract" {
+				if fixture.Protocol == "thrift" {
+					protocols = []string{"thrift-go"}
+				}
+				if domain == fixturePack.declarationDomain {
 					assertionCount = 1
-					protocols = []string{"protobuf", "protobuf-shapes"}
+					protocols = []string{fixture.Protocol, fixture.Protocol + "-shapes"}
 					for _, operation := range fixture.Operations {
 						assertionCount += 3 +
 							len(operation.Request.Fields) + len(operation.Response.Fields)

@@ -1310,17 +1310,21 @@ its creator; caller-specific loss of access makes it unavailable to that
 caller. This is deliberately fail-closed.
 
 The opt-in also registers the authenticated-only `contract-atlas` capability.
-`GET /api/contract_atlas` discovers protobuf service and operation
-declarations without requiring a caller to know the canonical operation name.
-It supports exact repository, package, `protobuf` protocol, and provisional
-declaration-lineage filters plus `page_size` (default 50, maximum 100) and an
-opaque continuation cursor. A row is identified by repository, declaration
-lineage, service FQN, and optional method; equal FQNs in different lineages or
-repositories remain separate.
+`GET /api/contract_atlas` discovers declared services and operations without
+requiring a caller to know the canonical operation name. It supports exact
+repository, package, protocol (`protobuf` or `thrift`; unknown values reject
+before any read), and provisional declaration-lineage filters plus
+`page_size` (default 50, maximum 100) and an opaque continuation cursor.
+Listing is protocol-major over the registered packs, then repository-major,
+so pagination order is deterministic; each row carries its protocol. A row is
+identified by repository, declaration lineage, service FQN, and optional
+method; equal FQNs in different lineages or repositories remain separate.
 
 `GET /api/contract_atlas/operation` requires the exact `repository`,
-declaration `lineage`, and canonical `/fully.qualified.Service/Method`. It
-returns the declaration, RPC request/response names and streaming flags,
+declaration `lineage`, and canonical `/scope.Service/method`; the owning
+protocol pack is resolved by probing declaration domains, so the identity
+needs no protocol parameter. It returns the declaration, request/response
+names with the pack's flags (protobuf streaming, thrift oneway),
 cycle-aware same-file message/field shape, name-matched registrations and
 callers, and separate extractor abstentions. A relationship is called
 `proven` only when its own evidence lineage equals the selected declaration

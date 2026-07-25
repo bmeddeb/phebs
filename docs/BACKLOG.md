@@ -1241,7 +1241,7 @@ unique-match-or-abstain scan; `REGISTERS_THRIFT_SERVICE`, `CALLS_OPERATION`,
 `UNRESOLVED_THRIFT_CALL`/`_REGISTRATION`, `THRIFT_EXTRACTION_GAP`. AC:
 labeled-sample fixtures from the spike corpus; abstention tests; e2e green.
 
-**T19.4 · Protocol registry + catalog generalization** — data-only registry
+**T19.4 ✅ · Protocol registry + catalog generalization** — data-only registry
 map (protocol → domains, detail schemas, relationship triple, field bounds);
 `protocol=thrift` accepted; per-protocol field bounds (thrift 0..32767 —
 field 0 is the result success slot); `Item.Protocol` from run domain;

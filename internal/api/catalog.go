@@ -20,7 +20,9 @@ import (
 const (
 	contractCatalogSchemaVersion = "contract-atlas-v1"
 	contractCatalogCapability    = "contract-atlas"
-	contractCatalogCursorVersion = "contract-atlas-cursor-v1"
+	// v2: the cursor gained a protocol-pack index when the catalog became
+	// multi-protocol (T19.4). Stale v1 cursors fail decode as invalid.
+	contractCatalogCursorVersion = "contract-atlas-cursor-v2"
 	contractCatalogCaveat        = "Provisional source evidence only; unresolved joins are not runtime relationships, and no absence or completeness conclusion is implied."
 
 	catalogDefaultPageSize       = 50
@@ -36,7 +38,69 @@ const (
 	catalogCursorBytesLimit      = 16 << 10
 )
 
-var catalogDomains = []string{"grpc-consumer", "proto-contract"}
+// protocolPack is the one generalization seam between the catalog and a
+// contract protocol: pure data, no behavior (T19.4). List iteration, detail
+// schema literals, relationship predicates, and field-number bounds all read
+// from this table; adding a protocol must not add catalog control flow.
+type protocolPack struct {
+	protocol          string
+	declarationDomain string
+	consumerDomain    string
+	operationSchema   string
+	fieldSchema       string
+	// registersPredicate/unresolvedCallPredicate parameterize the
+	// relationship filter triple; CALLS_OPERATION is shared across packs and
+	// scoped by consumerDomain.
+	registersPredicate      string
+	unresolvedCallPredicate string
+	// Inclusive declared-field bounds. Protobuf field numbers start at 1;
+	// Thrift result structs use field 0 as the wire success slot and cap at
+	// the positive i16 range.
+	fieldMin, fieldMax int
+}
+
+var protocolPacks = []protocolPack{
+	{
+		protocol: "protobuf", declarationDomain: "proto-contract",
+		consumerDomain: "grpc-consumer", operationSchema: "proto-operation-detail-v1",
+		fieldSchema: "proto-field-detail-v2", registersPredicate: "REGISTERS_GRPC_SERVICE",
+		unresolvedCallPredicate: "UNRESOLVED_GRPC_CALL", fieldMin: 1, fieldMax: 536_870_911,
+	},
+	{
+		protocol: "thrift", declarationDomain: "thrift-contract",
+		consumerDomain: "thrift-consumer", operationSchema: "thrift-operation-detail-v1",
+		fieldSchema: "thrift-field-detail-v1", registersPredicate: "REGISTERS_THRIFT_SERVICE",
+		unresolvedCallPredicate: "UNRESOLVED_THRIFT_CALL", fieldMin: 0, fieldMax: 32_767,
+	},
+}
+
+var catalogDomains = catalogPackDomains()
+
+func catalogPackDomains() []string {
+	var domains []string
+	for _, pack := range protocolPacks {
+		domains = append(domains, pack.declarationDomain, pack.consumerDomain)
+	}
+	sort.Strings(domains)
+	return domains
+}
+
+func catalogProtocols() []string {
+	protocols := make([]string, len(protocolPacks))
+	for index, pack := range protocolPacks {
+		protocols[index] = pack.protocol
+	}
+	return protocols
+}
+
+func packForProtocol(protocol string) (protocolPack, bool) {
+	for _, pack := range protocolPacks {
+		if pack.protocol == protocol {
+			return pack, true
+		}
+	}
+	return protocolPack{}, false
+}
 
 // ContractCatalogService is the read-only, ephemeral Contract Atlas query
 // engine. It persists no response and is available only when the provisional
@@ -209,12 +273,14 @@ type catalogCursor struct {
 	PermissionSnapshot         string                 `json:"permission_snapshot"`
 	VisibleRepositorySetDigest string                 `json:"visible_repository_set_digest"`
 	CoverageDigest             string                 `json:"coverage_digest"`
+	PackIndex                  int                    `json:"pack_index"`
 	RepositoryIndex            int                    `json:"repository_index"`
 	After                      *store.AssertionCursor `json:"after,omitempty"`
 	Checksum                   string                 `json:"checksum"`
 }
 
 type catalogPosition struct {
+	packIndex       int
 	repositoryIndex int
 	after           *store.AssertionCursor
 	reason          string
@@ -270,7 +336,8 @@ func (s *ContractCatalogService) List(
 			return nil, err
 		}
 		scope := catalogCertificateScope(certificate, query.Repository)
-		if position.repositoryIndex < 0 || position.repositoryIndex > len(scope) {
+		if position.repositoryIndex < 0 || position.repositoryIndex > len(scope) ||
+			position.packIndex < 0 || position.packIndex > len(protocolPacks) {
 			return nil, huma.Error409Conflict("contract catalog cursor is no longer valid")
 		}
 		items, next, collectErr := collectCatalogList(
@@ -412,96 +479,133 @@ func collectCatalogList(
 	items := make([]ContractCatalogItem, 0, pageSize)
 	locatorBudget := catalogLocatorLimit
 	scanned := 0
+	packIndex := start.packIndex
 	repositoryIndex := start.repositoryIndex
 	after := cloneAssertionCursor(start.after)
 
-	if query.Protocol != "" && query.Protocol != "protobuf" {
-		return items, nil, nil
-	}
-
-	for repositoryIndex < len(repositories) {
-		repository := repositories[repositoryIndex]
-		run, ok := certificateRun(repository, "proto-contract")
-		if !ok || run.Status != "published" {
-			repositoryIndex++
+	// Iteration is protocol-major over the registry, then repository-major
+	// within each pack, so pagination order is deterministic and the cursor
+	// binds (pack, repository, assertion) exactly.
+	for packIndex < len(protocolPacks) {
+		pack := protocolPacks[packIndex]
+		if query.Protocol != "" && query.Protocol != pack.protocol {
+			packIndex++
+			repositoryIndex = 0
 			after = nil
 			continue
 		}
-		remainingScan := catalogAssertionScanLimit - scanned
-		if remainingScan <= 0 {
-			return items, &catalogPosition{
-				repositoryIndex: repositoryIndex, after: after,
-				reason: "assertion_scan_limit",
-			}, nil
-		}
-		rows, err := source.ListAssertions(ctx, store.AssertionQuery{
-			Repo: repository.Repository, RunID: run.RunID,
-			Limit: remainingScan, After: after, AllowTruncate: true,
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-		hasMore := len(rows) > remainingScan
-		if hasMore {
-			rows = rows[:remainingScan]
-		}
-		for rowIndex, assertion := range rows {
-			if err := validateCatalogAssertionScope(assertion, repository.Repository, run.RunID); err != nil {
-				return nil, nil, err
-			}
-			scanned++
-			after = catalogAssertionCursor(assertion)
-			if assertion.Predicate != "DECLARES_SERVICE" &&
-				assertion.Predicate != "DECLARES_OPERATION" {
+		for repositoryIndex < len(repositories) {
+			repository := repositories[repositoryIndex]
+			run, ok := certificateRun(repository, pack.declarationDomain)
+			if !ok || run.Status != "published" {
+				repositoryIndex++
+				after = nil
 				continue
 			}
-			item, matches, err := catalogListItem(assertion, query)
-			if err != nil {
-				return nil, nil, err
-			}
-			if !matches {
-				continue
-			}
-			if locatorBudget == 0 {
+			remainingScan := catalogAssertionScanLimit - scanned
+			if remainingScan <= 0 {
 				return items, &catalogPosition{
-					repositoryIndex: repositoryIndex, after: catalogCursorBefore(rows, rowIndex),
-					reason: "source_locator_limit",
+					packIndex: packIndex, repositoryIndex: repositoryIndex, after: after,
+					reason: "assertion_scan_limit",
 				}, nil
 			}
-			claim, used, err := resolveCatalogClaim(
-				ctx, source, assertion, run.Commit,
-				min(catalogLocatorsPerClaimLimit, locatorBudget),
-			)
+			rows, err := source.ListAssertions(ctx, store.AssertionQuery{
+				Repo: repository.Repository, RunID: run.RunID,
+				Limit: remainingScan, After: after, AllowTruncate: true,
+			})
 			if err != nil {
 				return nil, nil, err
 			}
-			locatorBudget -= used
-			item.Declaration = claim
-			items = append(items, item)
-			if len(items) == pageSize {
-				if rowIndex+1 < len(rows) || hasMore {
-					return items, &catalogPosition{
-						repositoryIndex: repositoryIndex, after: after, reason: "page_size",
-					}, nil
-				}
-				if next := nextCatalogRepository(repositories, repositoryIndex+1); next >= 0 {
-					return items, &catalogPosition{
-						repositoryIndex: next, reason: "page_size",
-					}, nil
-				}
-				return items, nil, nil
+			hasMore := len(rows) > remainingScan
+			if hasMore {
+				rows = rows[:remainingScan]
 			}
+			for rowIndex, assertion := range rows {
+				if err := validateCatalogAssertionScope(assertion, repository.Repository, run.RunID); err != nil {
+					return nil, nil, err
+				}
+				scanned++
+				after = catalogAssertionCursor(assertion)
+				if assertion.Predicate != "DECLARES_SERVICE" &&
+					assertion.Predicate != "DECLARES_OPERATION" {
+					continue
+				}
+				item, matches, err := catalogListItem(pack, assertion, query)
+				if err != nil {
+					return nil, nil, err
+				}
+				if !matches {
+					continue
+				}
+				if locatorBudget == 0 {
+					return items, &catalogPosition{
+						packIndex: packIndex, repositoryIndex: repositoryIndex,
+						after:  catalogCursorBefore(rows, rowIndex),
+						reason: "source_locator_limit",
+					}, nil
+				}
+				claim, used, err := resolveCatalogClaim(
+					ctx, source, assertion, run.Commit,
+					min(catalogLocatorsPerClaimLimit, locatorBudget),
+				)
+				if err != nil {
+					return nil, nil, err
+				}
+				locatorBudget -= used
+				item.Declaration = claim
+				items = append(items, item)
+				if len(items) == pageSize {
+					if rowIndex+1 < len(rows) || hasMore {
+						return items, &catalogPosition{
+							packIndex: packIndex, repositoryIndex: repositoryIndex,
+							after: after, reason: "page_size",
+						}, nil
+					}
+					if next := nextCatalogPosition(repositories, query, packIndex, repositoryIndex+1); next != nil {
+						next.reason = "page_size"
+						return items, next, nil
+					}
+					return items, nil, nil
+				}
+			}
+			if hasMore {
+				return items, &catalogPosition{
+					packIndex: packIndex, repositoryIndex: repositoryIndex, after: after,
+					reason: "assertion_scan_limit",
+				}, nil
+			}
+			repositoryIndex++
+			after = nil
 		}
-		if hasMore {
-			return items, &catalogPosition{
-				repositoryIndex: repositoryIndex, after: after,
-				reason: "assertion_scan_limit",
-			}, nil
-		}
-		repositoryIndex++
+		packIndex++
+		repositoryIndex = 0
 		after = nil
 	}
 	return items, nil, nil
+}
+
+// nextCatalogPosition finds the next (pack, repository) pair that can hold
+// declaration rows, so a full page never emits a dead continuation cursor.
+func nextCatalogPosition(
+	repositories []extract.CertificateRepository,
+	query ContractCatalogQuery,
+	packIndex, repositoryStart int,
+) *catalogPosition {
+	for ; packIndex < len(protocolPacks); packIndex++ {
+		pack := protocolPacks[packIndex]
+		if query.Protocol != "" && query.Protocol != pack.protocol {
+			repositoryStart = 0
+			continue
+		}
+		for index := repositoryStart; index < len(repositories); index++ {
+			run, ok := certificateRun(repositories[index], pack.declarationDomain)
+			if ok && run.Status == "published" && run.AssertionCount > 0 {
+				return &catalogPosition{packIndex: packIndex, repositoryIndex: index}
+			}
+		}
+		repositoryStart = 0
+	}
+	return nil
 }
 
 func collectCatalogOperation(
@@ -514,22 +618,37 @@ func collectCatalogOperation(
 	if !ok {
 		return nil, store.ErrNotFound
 	}
-	run, ok := certificateRun(repositoryCoverage, "proto-contract")
-	if !ok || run.Status != "published" {
-		return nil, store.ErrNotFound
-	}
+	// The operation route's identity is (repository, lineage, operation) with
+	// no protocol; the owning pack is found by probing declaration domains in
+	// registry order. Provisional lineage hashes the declaring file path, and
+	// candidate suffixes are disjoint across packs, so at most one domain can
+	// hold the identity.
 	storedOperation := strings.TrimPrefix(operation, "/")
-	assertions, err := source.ListAssertions(ctx, store.AssertionQuery{
-		Repo: repository, RunID: run.RunID, Predicate: "DECLARES_OPERATION",
-		Object: storedOperation, Lineage: lineage, Limit: 1,
-	})
-	if err != nil {
-		return nil, err
+	var pack protocolPack
+	var run extract.CertificateRun
+	var assertion store.Assertion
+	found := false
+	for _, candidate := range protocolPacks {
+		candidateRun, ok := certificateRun(repositoryCoverage, candidate.declarationDomain)
+		if !ok || candidateRun.Status != "published" {
+			continue
+		}
+		assertions, err := source.ListAssertions(ctx, store.AssertionQuery{
+			Repo: repository, RunID: candidateRun.RunID, Predicate: "DECLARES_OPERATION",
+			Object: storedOperation, Lineage: lineage, Limit: 1,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(assertions) != 1 {
+			continue
+		}
+		pack, run, assertion, found = candidate, candidateRun, assertions[0], true
+		break
 	}
-	if len(assertions) != 1 {
+	if !found {
 		return nil, store.ErrNotFound
 	}
-	assertion := assertions[0]
 	if err := validateCatalogAssertionScope(assertion, repository, run.RunID); err != nil {
 		return nil, err
 	}
@@ -540,7 +659,7 @@ func collectCatalogOperation(
 		return nil, err
 	}
 	var factDetail ContractCatalogOperationFactDetail
-	if err := decodeCatalogDetail(assertion.Detail, "proto-operation-detail-v1", &factDetail); err != nil {
+	if err := decodeCatalogDetail(assertion.Detail, pack.operationSchema, &factDetail); err != nil {
 		return nil, err
 	}
 	service, method, ok := strings.Cut(storedOperation, "/")
@@ -549,7 +668,7 @@ func collectCatalogOperation(
 	}
 
 	shapeState := &catalogShapeState{
-		ctx: ctx, source: source, repository: repository, run: run,
+		ctx: ctx, source: source, repository: repository, run: run, pack: pack,
 		lineage: lineage, locatorBudget: catalogLocatorLimit,
 	}
 	request, err := shapeState.expandType(factDetail.Request, 0, map[string]bool{})
@@ -561,7 +680,7 @@ func collectCatalogOperation(
 		return nil, err
 	}
 	implementations, callers, unresolved, relationshipsTruncated, err :=
-		collectCatalogRelationships(ctx, source, certificate, lineage, service, method)
+		collectCatalogRelationships(ctx, source, certificate, pack, lineage, service, method)
 	if err != nil {
 		return nil, err
 	}
@@ -590,6 +709,7 @@ type catalogShapeState struct {
 	source        store.EvidenceStore
 	repository    string
 	run           extract.CertificateRun
+	pack          protocolPack
 	lineage       string
 	nodes         int
 	locatorBudget int
@@ -698,10 +818,10 @@ func (s *catalogShapeState) expandType(
 		}
 		s.nodes++
 		var detail ContractCatalogFieldDetail
-		if err := decodeCatalogDetail(field.Detail, "proto-field-detail-v2", &detail); err != nil {
+		if err := decodeCatalogDetail(field.Detail, s.pack.fieldSchema, &detail); err != nil {
 			return ContractCatalogMessage{}, err
 		}
-		number, err := catalogFieldNumber(field.Object, reference.Declaration)
+		number, err := catalogFieldNumber(field.Object, reference.Declaration, s.pack)
 		if err != nil {
 			return ContractCatalogMessage{}, err
 		}
@@ -740,6 +860,7 @@ func collectCatalogRelationships(
 	ctx context.Context,
 	source store.EvidenceStore,
 	certificate *extract.CoverageCertificate,
+	pack protocolPack,
 	declarationLineage, service, method string,
 ) ([]ContractCatalogRelationship, []ContractCatalogRelationship, []ContractCatalogRelationship, bool, error) {
 	// Non-nil so the JSON contract stays "[]", never null (UI spreads these).
@@ -749,15 +870,17 @@ func collectCatalogRelationships(
 	total := 0
 	locatorBudget := catalogLocatorLimit
 	truncated := false
+	// The declaration's protocol is known here, so only its own pack's
+	// consumer domain and predicate triple are queried.
 	filters := []struct {
 		predicate, object, kind string
 	}{
-		{"REGISTERS_GRPC_SERVICE", service, "implementation"},
+		{pack.registersPredicate, service, "implementation"},
 		{"CALLS_OPERATION", "/" + service + "/" + method, "caller"},
-		{"UNRESOLVED_GRPC_CALL", method, "unresolved_candidate"},
+		{pack.unresolvedCallPredicate, method, "unresolved_candidate"},
 	}
 	for _, repository := range certificate.Repositories {
-		run, ok := certificateRun(repository, "grpc-consumer")
+		run, ok := certificateRun(repository, pack.consumerDomain)
 		if !ok || run.Status != "published" {
 			continue
 		}
@@ -909,6 +1032,7 @@ func resolveCatalogClaim(
 }
 
 func catalogListItem(
+	pack protocolPack,
 	assertion store.Assertion,
 	query ContractCatalogQuery,
 ) (ContractCatalogItem, bool, error) {
@@ -932,7 +1056,7 @@ func catalogListItem(
 		return ContractCatalogItem{}, false, nil
 	}
 	item := ContractCatalogItem{
-		Kind: kind, Protocol: "protobuf", Repository: assertion.Repo,
+		Kind: kind, Protocol: pack.protocol, Repository: assertion.Repo,
 		Lineage: assertion.Lineage, Package: pkg, ServiceFQN: service,
 		Method: method,
 	}
@@ -948,8 +1072,10 @@ func validateCatalogQuery(query ContractCatalogQuery) error {
 			return err
 		}
 	}
-	if query.Protocol != "" && query.Protocol != "protobuf" {
-		return errors.New("protocol must be protobuf")
+	if query.Protocol != "" {
+		if _, ok := packForProtocol(query.Protocol); !ok {
+			return fmt.Errorf("protocol must be one of: %s", strings.Join(catalogProtocols(), ", "))
+		}
 	}
 	for name, value := range map[string]string{
 		"package": query.Package, "lineage": query.Lineage,
@@ -1074,6 +1200,7 @@ func decodeCatalogCursor(
 		return catalogPosition{}, huma.Error409Conflict("contract catalog cursor is no longer valid")
 	}
 	return catalogPosition{
+		packIndex:       cursor.PackIndex,
 		repositoryIndex: cursor.RepositoryIndex,
 		after:           cloneAssertionCursor(cursor.After),
 	}, nil
@@ -1090,8 +1217,9 @@ func encodeCatalogCursor(
 		Principal: binding.Principal, AuthorizationProvider: binding.AuthorizationProvider,
 		PermissionSnapshot:         binding.PermissionSnapshot,
 		VisibleRepositorySetDigest: binding.VisibleRepositorySetDigest,
-		CoverageDigest:             coverageDigest, RepositoryIndex: position.repositoryIndex,
-		After: cloneAssertionCursor(position.after),
+		CoverageDigest: coverageDigest, PackIndex: position.packIndex,
+		RepositoryIndex: position.repositoryIndex,
+		After:           cloneAssertionCursor(position.after),
 	}
 	cursor.Checksum = digestJSON(cursor)
 	raw, err := json.Marshal(cursor)
@@ -1131,19 +1259,6 @@ func cloneAssertionCursor(cursor *store.AssertionCursor) *store.AssertionCursor 
 	return &copyOfCursor
 }
 
-func nextCatalogRepository(
-	repositories []extract.CertificateRepository,
-	start int,
-) int {
-	for index := start; index < len(repositories); index++ {
-		run, ok := certificateRun(repositories[index], "proto-contract")
-		if ok && run.Status == "published" && run.AssertionCount > 0 {
-			return index
-		}
-	}
-	return -1
-}
-
 func decodeCatalogDetail(raw, schema string, target any) error {
 	if !json.Valid([]byte(raw)) {
 		return errors.New("contract catalog fact detail is not JSON")
@@ -1160,13 +1275,13 @@ func decodeCatalogDetail(raw, schema string, target any) error {
 	return nil
 }
 
-func catalogFieldNumber(object, message string) (int, error) {
+func catalogFieldNumber(object, message string, pack protocolPack) (int, error) {
 	prefix := message + "#"
 	if !strings.HasPrefix(object, prefix) {
 		return 0, errors.New("contract field identity is inconsistent")
 	}
 	number, err := strconv.Atoi(strings.TrimPrefix(object, prefix))
-	if err != nil || number < 1 || number > 536_870_911 {
+	if err != nil || number < pack.fieldMin || number > pack.fieldMax {
 		return 0, errors.New("contract field number is inconsistent")
 	}
 	return number, nil

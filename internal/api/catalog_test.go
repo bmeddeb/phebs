@@ -439,6 +439,159 @@ func TestContractCatalogOperationWithoutRelationshipsKeepsEmptySlices(t *testing
 	}
 }
 
+func TestContractCatalogThriftPack(t *testing.T) {
+	const (
+		idlRepo      = "github.com/acme/thrift-idl"
+		consumerRepo = "github.com/acme/thrift-consumer"
+		lineage      = "thrift_lineage_demo"
+		service      = "agent.Agent"
+	)
+	thriftRun := catalogRun(idlRepo, "thrift-contract", "run-thrift", 6)
+	consumerRun := catalogRun(consumerRepo, "thrift-consumer", "run-thrift-go", 2)
+	st := &proofAPIStore{
+		repos: []store.Repo{
+			{Name: consumerRepo, IndexedCommitHash: catalogCommit},
+			{Name: idlRepo, IndexedCommitHash: catalogCommit},
+		},
+		runs: map[string]store.ExtractionRun{
+			proofScope(idlRepo, "thrift-contract"):      thriftRun,
+			proofScope(consumerRepo, "thrift-consumer"): consumerRun,
+		},
+		assertions:  map[string][]store.Assertion{},
+		resolutions: map[string]store.EvidenceResolution{},
+		bundles:     map[string]store.ProofBundleRecord{},
+	}
+	operationDetail := `{"schema":"thrift-operation-detail-v1","request":{"raw":"Agent.emitBatch_args","kind":"message","resolution":"same_file","declaration":"agent.Agent.emitBatch_args"},"response":{"raw":"Agent.emitBatch_result","kind":"message","resolution":"same_file","declaration":"agent.Agent.emitBatch_result"},"oneway":false}`
+	messageDetail := `{"schema":"thrift-message-detail-v1","name":"emitBatch_args","kind":"struct","synthetic":true}`
+	resultDetail := `{"schema":"thrift-message-detail-v1","name":"emitBatch_result","kind":"struct","synthetic":true}`
+	successDetail := `{"schema":"thrift-field-detail-v1","name":"success","type":{"raw":"Batch","kind":"message","resolution":"unresolved","reason":"DECLARATION_NOT_FOUND"},"cardinality":"default"}`
+	for _, row := range []struct {
+		id, predicate, object, detail string
+	}{
+		{"svc", "DECLARES_SERVICE", service, `{"schema":"thrift-service-detail-v1","name":"Agent"}`},
+		{"op", "DECLARES_OPERATION", service + "/emitBatch", operationDetail},
+		{"args", "DECLARES_MESSAGE", "agent.Agent.emitBatch_args", messageDetail},
+		{"result", "DECLARES_MESSAGE", "agent.Agent.emitBatch_result", resultDetail},
+		// Field 0 is the wire success slot: the proto bounds would reject it.
+		{"success", "DECLARES_FIELD", "agent.Agent.emitBatch_result#0", successDetail},
+	} {
+		assertion, resolution := catalogAssertion(
+			idlRepo, thriftRun.ID, row.id, row.predicate, "idl/agent.thrift",
+			row.object, lineage, row.detail,
+		)
+		putCatalogAssertion(st, assertion, resolution)
+	}
+	registration, registrationResolution := catalogAssertion(
+		consumerRepo, consumerRun.ID, "reg", "REGISTERS_THRIFT_SERVICE",
+		"go/server.go", service, "provisional_other", `{}`,
+	)
+	registration.Tier = store.TierDerived
+	putCatalogAssertion(st, registration, registrationResolution)
+	caller, callerResolution := catalogAssertion(
+		consumerRepo, consumerRun.ID, "call", "CALLS_OPERATION",
+		"go/client.go", "/"+service+"/emitBatch", "provisional_other", `{}`,
+	)
+	caller.Tier = store.TierHeuristic
+	putCatalogAssertion(st, caller, callerResolution)
+
+	options := catalogOptions(st, "user:member", nil)
+	options.ProofBundles = st
+	serviceAPI := api.NewContractCatalogService(options)
+
+	list, err := serviceAPI.List(
+		context.Background(), api.ContractCatalogQuery{Protocol: "thrift"}, 50, "",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 2 || list.Items[0].Protocol != "thrift" ||
+		list.Items[1].Protocol != "thrift" {
+		t.Fatalf("thrift list = %+v", list.Items)
+	}
+	protoFiltered, err := serviceAPI.List(
+		context.Background(), api.ContractCatalogQuery{Protocol: "protobuf"}, 50, "",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(protoFiltered.Items) != 0 {
+		t.Fatalf("protobuf filter leaked thrift rows: %+v", protoFiltered.Items)
+	}
+
+	detail, err := serviceAPI.Operation(
+		context.Background(), idlRepo, lineage, "/"+service+"/emitBatch",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.FactDetail.Request.Declaration != "agent.Agent.emitBatch_args" ||
+		detail.Request.State != "resolved" ||
+		detail.Response.State != "resolved" ||
+		len(detail.Response.Fields) != 1 ||
+		detail.Response.Fields[0].FieldNumber != 0 ||
+		detail.Response.Fields[0].Detail.Name != "success" {
+		t.Fatalf("thrift operation shape = %+v", detail)
+	}
+	if len(detail.Implementations) != 1 ||
+		detail.Implementations[0].Classification != "unresolved_name_match" ||
+		len(detail.Callers) != 1 ||
+		len(detail.UnresolvedCandidates) != 0 {
+		t.Fatalf("thrift relationships = %+v / %+v", detail.Implementations, detail.Callers)
+	}
+}
+
+func TestContractCatalogProtocolMajorPagination(t *testing.T) {
+	const (
+		repo          = "github.com/acme/mixed"
+		protoLineage  = "proto_lineage"
+		thriftLineage = "thrift_lineage"
+	)
+	protoRun := catalogRun(repo, catalogProtoDomain, "run-proto", 1)
+	thriftRun := catalogRun(repo, "thrift-contract", "run-thrift", 1)
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: catalogCommit}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, catalogProtoDomain): protoRun,
+			proofScope(repo, "thrift-contract"):  thriftRun,
+		},
+		assertions:  map[string][]store.Assertion{},
+		resolutions: map[string]store.EvidenceResolution{},
+		bundles:     map[string]store.ProofBundleRecord{},
+	}
+	protoService, protoResolution := catalogAssertion(
+		repo, protoRun.ID, "psvc", "DECLARES_SERVICE", "a.proto", "demo.P", protoLineage,
+		`{"schema":"proto-service-detail-v1","name":"P"}`,
+	)
+	putCatalogAssertion(st, protoService, protoResolution)
+	thriftService, thriftResolution := catalogAssertion(
+		repo, thriftRun.ID, "tsvc", "DECLARES_SERVICE", "a.thrift", "agent.T", thriftLineage,
+		`{"schema":"thrift-service-detail-v1","name":"T"}`,
+	)
+	putCatalogAssertion(st, thriftService, thriftResolution)
+
+	serviceAPI := api.NewContractCatalogService(catalogOptions(st, "user:member", nil))
+	first, err := serviceAPI.List(context.Background(), api.ContractCatalogQuery{}, 1, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Items) != 1 || first.Items[0].Protocol != "protobuf" ||
+		first.Pagination.Complete || first.Pagination.NextCursor == "" {
+		t.Fatalf("first page = %+v %+v", first.Items, first.Pagination)
+	}
+	second, err := serviceAPI.List(
+		context.Background(), api.ContractCatalogQuery{}, 1, first.Pagination.NextCursor,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second.Items) != 1 || second.Items[0].Protocol != "thrift" {
+		t.Fatalf("second page crossed the pack boundary wrong: %+v", second.Items)
+	}
+	if !second.Pagination.Complete && second.Pagination.NextCursor == "" {
+		t.Fatalf("second pagination = %+v", second.Pagination)
+	}
+}
+
 func TestContractCatalogBoundsAndPublicationRace(t *testing.T) {
 	t.Run("input and field bounds", func(t *testing.T) {
 		const (
@@ -482,9 +635,11 @@ func TestContractCatalogBoundsAndPublicationRace(t *testing.T) {
 		serviceAPI := api.NewContractCatalogService(catalogOptions(st, "user:member", nil))
 		_, err := serviceAPI.List(context.Background(), api.ContractCatalogQuery{}, 101, "")
 		requireCatalogStatus(t, err, http.StatusBadRequest)
+		// T19.4: thrift is a registered protocol; unregistered ones still
+		// reject before any repository or evidence read.
 		_, err = serviceAPI.List(
 			context.Background(),
-			api.ContractCatalogQuery{Protocol: "thrift"},
+			api.ContractCatalogQuery{Protocol: "smoke-signals"},
 			10,
 			"",
 		)
