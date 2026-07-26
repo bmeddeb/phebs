@@ -224,6 +224,26 @@ the comparison tool. Those tools will be bounded and cursor-driven, will not
 silently broaden `find_operation_consumers`, and will not create a proof
 bundle or Investigation during ordinary browsing.
 
+There is no Change Workbench in the current release. The available pieces are
+separate: a human can browse a declaration in Contracts, carry its operation
+to Impact, inspect cited matching/unresolved evidence and the coverage
+certificate, then use Search, SCIP navigation, and History independently.
+The rich Investigations page is currently a development fixture projection,
+not a production ticket-intake or checklist workflow.
+
+The current Impact labels also need qualification. `Known consumers` means
+matching static `CALLS_OPERATION` or field-reference evidence; it is not a
+declaration-lineage-proven logical-service roster. `Unresolved candidates`
+means source evidence the extractor deliberately could not assign uniquely,
+not a confirmed consumer or a failed run. `Coverage certificate` is the
+deterministic receipt of which visible repository revisions and extractor
+domains were covered, stale, failed, processing, unsupported, or bounded; it
+is not an accuracy or completeness score. Proposed Epic 21 replaces those
+primary presentation labels with mode-correct vocabulary, shows the
+certificate beneath an **Analysis scope & gaps** summary, and adds accessible
+hover/focus/tap help to every qualified section while retaining the exact
+technical receipt.
+
 Minimal `phebs.yaml`:
 
 ```yaml

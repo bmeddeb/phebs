@@ -1755,6 +1755,376 @@ starts from an empty data directory and reaches a cited caller without manual
 canonical-identifier entry. The epic remains experimental-dark and carries
 the external `NOT_ESTABLISHED` accuracy posture.
 
+## EPIC 21 — Change Workbench: Why → What → Where → How *(proposed 2026-07-25; experimental-dark)*
+
+### Product outcome
+
+A developer can turn an add, modify, migrate, or retire ticket into one
+revisioned, evidence-backed Investigation:
+
+1. **Why — Intent and success:** the human records the problem, desired
+   outcome, success criteria, non-goals, and assumptions.
+2. **What — Contract change:** the developer selects exact current and
+   replacement contract identities or supplies a bounded proposed IDL source
+   commitment.
+3. **Where — Impact inventory:** phebs composes source callers, references,
+   implementations, tests, optional consumer-unit attribution, unresolved
+   evidence, and analysis gaps without turning any of them into runtime truth.
+4. **How — Implementation plan:** phebs presents cited implementation
+   entrypoints, related code and history, and an evidence-linked checklist that
+   the human accepts, edits, or rejects.
+
+The Workbench is a guided view over the existing Investigation lifecycle,
+Contract Atlas, proof/compatibility services, Epic 20 Caller Map, code
+navigation, search, and history. It is not a parallel evidence store or a
+second authorization engine. A ticket system is an optional source reference,
+not the product's authority: the first open-source workflow accepts bounded
+user-entered text and never contacts an employer system.
+
+```mermaid
+flowchart LR
+    Y["Why: human intent"] --> W["What: exact contract delta"]
+    W --> R["Where: cited impact inventory"]
+    R --> H["How: evidence-linked checklist"]
+    I["Investigation revision"] --> Y
+    A["Contract Atlas + compatibility"] --> W
+    C["Caller Map + evidence packs"] --> R
+    S["Search + SCIP + history"] --> H
+    Y --> D["Human decision / disposition"]
+    W --> D
+    R --> D
+    H --> D
+```
+
+### Capability inventory at adoption
+
+| Workbench question | Reused capability | Honest starting boundary |
+|---|---|---|
+| Why | Investigation identity, immutable revisions, normalized question, decision sought, decisions, dispositions, watches, audit, retention, and dossier export | the production workflow has no structured success-criteria brief or complete creation/editing UI; the current rich Investigation view is a development fixture adapter |
+| What | Contract Atlas discovery/detail for protobuf and Thrift; exact declaration citations and request/response shapes; pinned Buf WIRE comparison for bounded protobuf before/after source sets | the current Impact form accepts raw identifiers/JSON; compatibility is protobuf wire-only and does not establish application compatibility |
+| Where | proof bundles, operation/field evidence, exact source citations, coverage certificates, extractor abstentions, and Epic 20's planned declaration-proven paged Caller Map with unit attribution | the shipped `known_consumers` field is matching evidence, not a proven service roster; Atlas/proof bounds are not fleet pagination; Kafka, Redis, document-store, and SQL evidence packs do not exist |
+| How | repository explorer, code search, file reads, SCIP definition/reference/hover, blame, commits, and diffs | these are separate tools today; phebs does not yet assemble related implementation evidence or a human-owned checklist |
+
+### Scenario contract
+
+The Workbench changes emphasis by ticket kind rather than forcing every ticket
+through a caller-only report:
+
+- **Add:** no current endpoint is required. What commits to the proposed
+  contract; Where emphasizes analogous declarations, implementations,
+  tests, and explicitly selected resource dependencies; How surfaces reusable
+  patterns. An empty caller set is expected and is not presented as a finding.
+- **Modify:** What compares the selected declaration with the proposal; Where
+  combines compatibility findings, affected stable fields, and caller
+  evidence; How links each affected surface to implementation and tests.
+- **Migrate/replace:** What carries two complete endpoint identities; Where
+  reuses Epic 20's four evidence states
+  (`old_only_evidence`, `both_evidence`, `new_only_evidence`, `unresolved`);
+  How turns reviewed rows into a human-owned migration checklist.
+- **Retire:** What identifies the exact retiring declaration; Where keeps
+  resolved callers, needs-review evidence, unsupported planes, and analysis
+  gaps adjacent. No empty result or completed checklist means safe to
+  decommission.
+
+### User vocabulary
+
+Internal evidence names remain available in technical details, but primary UI
+and agent explanations use:
+
+| User term | Meaning |
+|---|---|
+| **Matching static evidence** | a source occurrence whose extracted object matches the question; it is not necessarily tied to one declaration lineage or logical service |
+| **Resolved caller** | a source occurrence joined through generated-client provenance to the exact selected declaration lineage; introduced only after Epic 20 establishes that join |
+| **Name match needing review** | an occurrence with a matching operation name but no proof of the selected declaration lineage |
+| **Could not resolve** | an extractor-observed relevant construct that the bounded resolver deliberately abstained from assigning |
+| **Analysis scope & gaps** | the human-facing summary of visible repositories, revisions, evidence domains, freshness, failures, unsupported planes, inventory boundaries, and unresolved counts |
+| **Coverage certificate** | the canonical deterministic receipt behind Analysis scope & gaps; it is an advanced audit artifact, not an accuracy/completeness score |
+| **Implementation evidence** | cited source/history that may inform How; it is not an instruction or generated correctness claim |
+| **Success criterion** | a human-authored condition for the ticket; phebs may attach evidence but cannot declare the business outcome true |
+
+Every section heading that uses a bounded or evidence-qualified term has a
+help button. Desktop hover and keyboard focus show a short explanation; click
+or tap opens the same dismissible popover; Escape and outside-click close it.
+The trigger has a specific accessible name and is never a hover-only HTML
+`title`. The first sentence answers “What does this mean here?”; optional
+expanded detail links to the exact evidence, scope, or unsupported capability.
+UI help, API vocabulary, MCP tool descriptions, and MANUAL prose derive from
+one reviewed glossary source or are guarded against semantic drift.
+
+### Functional requirements
+
+1. **Investigation-native lifecycle.** A Workbench has no independent owner,
+   authorization scope, retention policy, cursor authority, or completion
+   state. Its immutable briefs and snapshots are children of one Investigation
+   revision and use Epic 16 sharing, transfer, audit, reauthorization,
+   supersession, artifact retention, and dossier boundaries.
+2. **Human authority over Why.** Phebs may structure user text and detect empty
+   fields; it cannot invent the business reason, success criteria, non-goals,
+   assumptions, rollout decision, or acceptance. Changes create a new immutable
+   revision. Ticket URLs/identifiers are optional bounded strings with no
+   connector or bearer semantics.
+3. **Exact What identity.** Existing endpoints use
+   `(protocol, repository, declaration_lineage, canonical_operation)`.
+   Replace/migrate carries two identities. A proposed endpoint or shape is a
+   bounded path/content commitment evaluated in the existing pure-reader/
+   sandbox posture; it is not silently inserted into repository evidence.
+4. **Evidence planes stay typed.** Where separates source occurrence, exact
+   contract identity, build target, deployable, logical service, owner,
+   message/topic, datastore resource, and runtime observation. These entities
+   never become aliases. Missing or ambiguous attribution cannot remove a
+   source row.
+5. **No fictional infrastructure map.** Contract/code evidence is the initial
+   supported static plane. Kafka, Redis, document-store, SQL, and runtime
+   sections render `unsupported` unless a separately versioned, validated,
+   enabled evidence pack supplies typed relationships. User-added resource
+   notes are labeled human assertions, never extractor evidence.
+6. **Evidence-qualified How.** Related implementation files, definitions,
+   references, tests, mocks, documentation, and historical changes retain
+   immutable citations and the query/rule that selected them. Similarity is
+   not a correctness ranking. Unsupported or broad results remain review
+   queues rather than silently selected edits.
+7. **Human-owned checklist.** Suggested items cite their source evidence and
+   begin unaccepted. Accept, edit, reject, complete, reopen, and waive actions
+   are audited dispositions with actor and rationale. Machine state never
+   upgrades the Investigation to migration-complete or safe-to-retire.
+8. **One vocabulary and explanation contract.** `known_consumers` is not
+   rendered as a primary label. Mode-specific evidence categories use the
+   glossary above. Analysis scope & gaps is always adjacent to Where and to any
+   conclusion. The canonical certificate/digest stays inspectable without
+   leading the experience with storage terminology.
+9. **Authorization and snapshot consistency.** Visibility filtering precedes
+   discovery, evidence reads, related-code selection, aggregation, help term
+   capability state, counts, and cursors. A Workbench view binds its
+   Investigation revision, endpoint/source commitments, authorized repository
+   snapshot, coverage digest, attribution digest, filters, and result
+   positions. Changes invalidate or explicitly refresh the view; revisions are
+   never silently mixed.
+10. **Bounded and resumable.** Every inventory, related-code, history, and
+    checklist list is paged or explicitly bounded with visible truncation.
+    Reloading resumes through the Investigation cursor without accumulating a
+    fleet in the browser or MCP context. Equal authorized state yields equal
+    read projections.
+11. **Read/write separation.** Browsing Why/What/Where/How is read-only.
+    Creating/revising a brief or recording a checklist disposition is an
+    explicit authenticated mutation with preview/expected revision,
+    idempotency, audit, and conflict behavior. Starting a compatibility or
+    other retained analysis run is also an explicit labeled action. Merely
+    viewing evidence never creates a bundle, run, disposition, or completion
+    claim.
+12. **Shared services and MCP parity.** UI, Huma, and MCP call the same
+    Workbench services. MCP returns bounded structured projections and reuses
+    Epic 20's discovery/caller/comparison tools plus core search/navigation/
+    history tools; it cannot recompute evidence or summarize away gaps. Any
+    MCP mutation names its effect, consumes the same preview/revision guard,
+    and is separately schema/count/dark-posture tested.
+
+### Experience requirements
+
+The Workbench header shows ticket kind, Investigation/revision, owner,
+authorized snapshot, endpoint identities or proposal commitment, overall
+evidence freshness, and human workflow state. Four persistent steps—Why,
+What, Where, How—are directly addressable and resumable; the UI never implies
+that moving to the next step approves the previous one.
+
+Why is an editable brief with success criteria, non-goals, assumptions, and
+open questions. What selects from Contract Atlas or accepts bounded proposed
+IDL files and renders the exact delta/compatibility limits. Where defaults to
+source-first evidence categories, unit grouping only when attributable, and a
+prominent Analysis scope & gaps summary. How shows evidence-linked candidate
+entrypoints and checklist items, keeping suggested versus human-accepted state
+visually distinct.
+
+Every section help button uses the shared accessible popover behavior. Short
+help copy is useful without opening documentation; expanded detail shows the
+exact reason code, provenance tier, coverage state, or unsupported-plane
+explanation. Mobile, keyboard-only, reduced-motion, and screen-reader flows are
+acceptance surfaces, not follow-up polish.
+
+### Non-goals and authority boundary
+
+- No Jira, issue tracker, service catalog, build graph, or employer connector
+  in this epic; user-entered references are inert text.
+- No repository code execution, builds, generators, tests, plugins, or
+  dependency downloads.
+- No automatic source edit, code generation, pull request, rollout, or
+  deployment action.
+- No LLM-authored business intent or success criteria in the deterministic
+  core. An agent may propose text, but only an explicit human mutation records
+  it.
+- No runtime traffic, liveness, volume, or production-use inference.
+- No Kafka/Redis/document-store/SQL dependency claim without its own validated
+  evidence pack; a shared rendering seam is not evidence.
+- No “all callers,” “fully migrated,” “complete,” or “safe to retire” verdict.
+- No employer names, schemas, code, hosts, credentials, or infrastructure in
+  fixtures, demos, screenshots, or retained notes.
+
+**T21.1 · Inventory, scenario, and vocabulary contract** — freeze the four
+scenario journeys against a neutral synthetic ticket/corpus and mechanically
+inventory which existing service answers each step. Produce one canonical
+versioned glossary input for user terms, short help, expanded help,
+evidence/authority boundary, and supported capability predicate. This ticket
+adds no production behavior.
+
+AC: add, modify, migrate, and retire stories enumerate every input, shared
+service call, output, mutation, evidence source, bound, unsupported plane, and
+human decision. `known_consumers`, `unresolved_candidates`, and the
+`coverage-certificate-v1`/`coverage` projection are traced from persisted
+evidence through API, UI, and MCP; no story calls a matching object a resolved
+caller. The glossary has
+stable ids, deterministic canonical bytes/digest, unique terms, bounded UTF-8
+content, capability-safe help, and tests that generate/verify all language
+projections without network access. The result either confirms the ticket
+sequence below or revises it before schema work.
+
+**T21.2 · Investigation-bound immutable change brief** *(needs T21.1)* — add a
+versioned canonical Change Brief record bound to one Investigation revision,
+with ticket kind, problem, desired outcome, ordered success criteria,
+non-goals, assumptions, open questions, optional inert external reference, and
+the What selection/proposal descriptor. It is a child record, not a parallel
+owner/lifecycle.
+
+AC: canonical equal briefs yield equal content ids; every mutation creates a
+new Investigation revision and preserves prior bytes; parent authorization is
+resolved before the brief read; sharing, transfer, revocation, deletion,
+retention, audit, and dossier export reuse Epic 16 behavior. Unknown,
+unauthorized, corrupt-under-denial, and deleted records are indistinguishable.
+Bounds, normalization, schema migration, concurrent revision CAS, and old
+Investigation compatibility are table-pinned.
+
+**T21.3 · Previewed Workbench creation and revision service** *(needs T21.2)* —
+add shared preview/create/revise/read services. Preview resolves the visible
+repository snapshot, exact endpoint identities or proposed-source
+commitments, requested evidence capabilities, work estimate, blockers, and
+digest without writing. Create/revise consumes that digest, expected revision,
+and idempotency key and appends one audit event.
+
+AC: the same authorized preview and idempotency key create one Investigation
+revision under concurrency; drifted permissions, repositories, endpoint
+identity, proposal bytes, capability availability, or current revision rejects
+without a partial write. Reads and previews are side-effect free. Huma is a
+thin transport; input limits and unknown/unauthorized refusals are pinned.
+
+**T21.4 · Shared glossary and accessible help system** *(needs T21.1)* —
+generate typed Go/TypeScript projections from the canonical glossary and add a
+reusable section-help trigger/popover. Replace Contract Impact's primary
+presentation labels with mode-correct glossary terms while preserving the
+old wire schema until its owning versioned migration; render Coverage
+certificate as advanced detail beneath Analysis scope & gaps.
+
+AC: every qualified section in Impact, Atlas, Caller Map, and Workbench uses a
+registered glossary id. Hover, keyboard focus, click/tap, Escape,
+outside-click, focus return, screen-reader name/description, viewport
+collision, mobile, reduced-motion, and the MANUAL documentation fallback
+are tested. No primary UI says `Known consumers`; field references are not
+called consumers; help never claims enabled support for a dark/absent pack.
+MCP descriptions and MANUAL terms pass the drift guard.
+
+**T21.5 · What: exact contract target and proposed delta** *(needs T21.3,
+T20.10)* — compose Contract Atlas discovery/detail and the existing bounded
+compatibility engine into the Workbench. Refactor the engine boundary as
+needed so ordinary selection/delta preview is side-effect free while an
+explicit retained compatibility analysis becomes an Investigation run/artifact
+rather than an incidental proof-bundle write. Add/modify/migrate/retire enforce
+their required identity cardinality. Proposed source sets are committed like
+the existing compatibility inputs and remain outside published repository
+evidence.
+
+AC: duplicate operation spellings cannot cross repository, lineage, or
+protocol; proposal digest/path changes invalidate the preview; add requires no
+current endpoint, migrate requires two distinct exact identities, and retire
+requires one. Preview creates no bundle/run; explicit retained analysis is
+idempotent, audited, and revision-bound. Protobuf WIRE results retain their
+exact limits; Thrift or other unsupported compatibility renders unavailable
+rather than compatible. Source links pin declaration commits/spans.
+
+**T21.6 · Where: composable impact inventory** *(needs T21.3, T21.5,
+T20.14)* — compose the snapshot-consistent Caller Map/comparison, field
+reference reads, Atlas declaration/implementation evidence, unit attribution,
+and Analysis scope & gaps into one typed, paged Workbench projection. The
+field-reference read is a shared side-effect-free engine also used by the
+proof-bundle endpoint; Workbench browsing does not mint a proof bundle. Add a
+protocol-neutral resource-plane registry that can render enabled, unsupported,
+failed, stale, and human-asserted states but contributes no relationships
+without a real pack.
+
+AC: the four ticket kinds select the scenario contract above; resolved callers,
+name matches, extractor abstentions, implementations, field references, unit
+ambiguity, and unsupported planes remain separate. Hidden repositories cannot
+affect rows, counts, capability states, gaps, cursors, or bytes. Exhausting
+pages never upgrades an unsupported/stale/failed plane to absence. No adapter
+queries evidence outside the reused shared services.
+
+**T21.7 · How: related implementation evidence** *(needs T21.3, T21.5)* —
+build a bounded shared service that starts from the selected contract and
+explicit user anchors and returns cited declaration/implementation files,
+generated boundaries, definitions/references, tests/mocks/docs by code role,
+and selected historical commits/diffs. Each row records the deterministic
+selection rule or explicit user pin.
+
+AC: source/history reads use immutable indexed commits and existing
+authorization; broad or ambiguous selection returns bounded review candidates,
+not a recommended edit. Generated/vendor/test/mock roles stay visible.
+Unsupported SCIP/history produces a gap, not an inferred path. Equal state
+yields equal ordering/cursors, and no corpus executable or mutable mirror HEAD
+is read.
+
+**T21.8 · Human-owned implementation checklist** *(needs T21.3, T21.6,
+T21.7)* — derive unaccepted checklist suggestions from exact Workbench
+evidence and allow owners to accept, edit, reject, complete, reopen, or waive
+them through audited dispositions. Every suggestion and accepted item retains
+its evidence references and originating Workbench revision.
+
+AC: suggestion regeneration never mutates human state; stale evidence is
+visible and cannot silently retarget an accepted item. Mutations require
+owner authority, expected revision, idempotency, actor, and rationale where
+required. Reader grants cannot mutate. Completing every item does not create a
+migration-complete or safe-to-retire Decision; such a Decision remains an
+explicit separately authorized human record.
+
+**T21.9 · Four-step Change Workbench UI** *(needs T21.4–T21.8)* — add the
+experimental authenticated Workbench route and guided create/resume flow.
+Users may start from a pasted ticket brief or a Contract Atlas operation. The
+four persistent steps render the scenario-specific experience, shared help,
+source links, gaps, paging, suggestion/human state, conflicts, and refresh.
+
+AC: each neutral scenario reaches an evidence-linked checklist from an empty
+data directory; back/forward/deep-link/reload preserve the exact Investigation
+revision and cursor. Dirty edits, preview drift, permission loss, stale
+coverage, unsupported planes, empty evidence, conflict/retry, loading, mobile,
+keyboard, and screen-reader paths are tested. No step transition writes or
+approves implicitly, and the bounded DOM never accumulates fleet pages.
+
+**T21.10 · MCP Workbench parity and explicit mutations** *(needs T21.3,
+T21.6–T21.8)* — register `preview_change_workbench`,
+`create_change_workbench`, `get_change_workbench`, and
+`record_change_disposition` only with the real shared services and dark
+capability enabled. Evidence drill-down reuses Epic 20 and core MCP tools
+rather than duplicating them.
+
+AC: official-SDK sessions execute one read-only preview, one explicit
+preview-bound idempotent creation, paged evidence drill-down, and one
+expected-revision disposition. Exact tool counts/schemas are pinned in dark
+and enabled modes; mutation descriptions state their write effect. HTTP/MCP
+projections match the shared services, hidden repositories do not perturb
+responses or call ledgers, stale previews/revisions fail closed, and no MCP
+adapter reads evidence or invents checklist/conclusion text.
+
+**T21.11 · Scenario, failure, accessibility, and demo closure** *(needs
+T21.1–T21.10)* — exercise add, modify, migrate, and retire against a neutral
+microservices monorepo in `make dev`, with protobuf and Thrift declarations,
+separated `idl/`/`src/`, duplicate names, ambiguous callers, failed/stale
+coverage, missing SCIP/history, unit ambiguity, and unsupported Kafka/Redis/
+document-store planes.
+
+AC: one clean run completes each four-step story through UI and MCP without
+manual canonical-id entry after endpoint discovery. Full Go/UI suites, vet,
+lint, schema/determinism/dark/authz guards, accessibility checks, and a bounded
+browser acceptance pass are green. Help copy is understandable without the
+MANUAL, technical receipts remain inspectable, and no fixture/output claims
+runtime use, complete migration, or retirement safety. The epic remains
+experimental-dark and does not alter the external `NOT_ESTABLISHED` accuracy
+posture.
+
 ## P5 hardening *(unscheduled — pull on demand)*
 
 **T-P5.1 ✅ · `phebs backup` / `phebs restore` subcommands** — cold copy works
