@@ -214,6 +214,16 @@ paged, unit-attributed workflow needed for thousands of services. Until that
 work lands, use the current pages as bounded provisional source evidence—not
 as a complete migration roster.
 
+The current MCP annex has the same pre-Epic-20 limitation:
+`find_operation_consumers` requires a caller-supplied bare canonical operation
+and returns one bounded proof bundle. It does not discover exact declaration
+identities, page a fleet-scale Caller Map, or compare old and replacement
+endpoints. Planned T20.11 adds read-only discovery, exact-detail, and paged
+caller tools over the same authorization-first services as HTTP; T20.13 adds
+the comparison tool. Those tools will be bounded and cursor-driven, will not
+silently broaden `find_operation_consumers`, and will not create a proof
+bundle or Investigation during ordinary browsing.
+
 Minimal `phebs.yaml`:
 
 ```yaml

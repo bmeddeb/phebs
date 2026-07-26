@@ -1449,6 +1449,20 @@ flowchart LR
     resolver abstentions are `extractor_abstention`. T20.10 migrates the
     Contract Atlas, impact report, Caller Map, UI, and MCP prose together; the
     shipped `known_consumers` label does not survive beside the new taxonomy.
+12. **MCP workflow parity through the shared read services.** An agent can
+    discover an endpoint without already knowing its canonical operation,
+    inspect one exact declaration, page its Caller Map, and compare it with a
+    replacement. The read-only tools are `search_contract_operations`,
+    `get_contract_operation`, `list_operation_callers`, and
+    `compare_operation_callers`. They accept and return the same full endpoint
+    identities, filters, coverage/attribution digests, bounds, and opaque
+    cursors as the HTTP API; no MCP adapter may read evidence, aggregate rows,
+    mint a weaker cursor, or summarize away unresolved evidence. Results are
+    bounded pages with continuation, never a whole-fleet context dump.
+    `get_extraction_coverage` remains the one coverage tool, and the shipped
+    `find_operation_consumers` name and bare-operation proof-bundle semantics
+    remain wire-compatible rather than being silently broadened. Ordinary MCP
+    browsing is ephemeral and creates no proof bundle or Investigation.
 
 ### Experience requirements
 
@@ -1643,17 +1657,20 @@ names never cross clients; a typed result wins without being duplicated by the
 fallback; unsupported flows do not become guessed callers; two runs are
 byte-identical.
 
-**T20.10 · Snapshot-consistent Caller Map API and vocabulary migration**
+**T20.10 · Shared snapshot-consistent Caller Map service/API and vocabulary migration**
 *(needs T20.4, T20.7–T20.9)* — add an ephemeral paged read for one complete
 declaration identity, with source and unit-grouped orderings plus filters for
 unit/owner/path/code-role/tier/freshness/resolution. Bind every page to
 authorization, coverage, endpoint, attribution-snapshot digest, filters,
-ordering, and position. In the same ticket, bump the experimental Atlas and
-impact report schemas: declaration-proven rows become `resolved_caller`;
+ordering, and position. Contract discovery, exact operation detail, caller
+pagination, and later comparison are transport-neutral in-process read
+services used by both Huma and MCP; transport adapters cannot query or
+aggregate evidence. In the same ticket, bump the experimental Atlas and impact
+report schemas: declaration-proven rows become `resolved_caller`;
 bare-operation object matches become `matching_call_evidence`; name matches
 against an exact declaration become `unresolved_name_match`; extractor
-abstentions remain `extractor_abstention`. MCP tool names stay wire-frozen,
-but their prose/structured projections adopt the same meanings.
+abstentions remain `extractor_abstention`. Existing MCP tool names stay
+wire-frozen, but their prose/structured projections adopt the same meanings.
 
 AC: equal operation spellings across lineages/protocols never merge; an
 unattributed source occurrence remains returned; pages are stable,
@@ -1663,7 +1680,31 @@ cursor. Hidden repositories cannot affect rows, groups, counts, work shape, or
 serialized bytes. Every source row opens at its exact commit/span. No response
 or UI fixture calls an `unresolved_name_match` a known consumer.
 
-**T20.11 · Caller Map UI with strict paged DOM** *(needs T20.10)* — route a
+**T20.11 · MCP endpoint discovery and paged Caller Map** *(needs T20.10)* —
+register `search_contract_operations`, `get_contract_operation`, and
+`list_operation_callers` only when the same experimental Caller Map services
+and authenticated capability used by HTTP are available. Discovery returns
+full selectable declaration identities; detail returns the endpoint header,
+shapes, immutable declaration citation, and adjacent coverage; caller pages
+retain every source citation, unit-attribution ambiguity, unresolved row,
+digest, filter, and continuation cursor from the shared service. The MCP
+projection is structured content over the same response types, not a second
+query engine or an agent-oriented summary.
+
+AC: an official-SDK stateless MCP session discovers one duplicate-named
+operation, selects the intended protocol/repository/lineage, reads its detail,
+and exhausts more than one caller page without typing a canonical identifier
+before discovery. Its page bytes and cursor behavior match direct shared
+service calls. Exact tool counts and input/output schemas are pinned in dark
+and enabled modes. A hidden repository cannot affect discovery, detail,
+caller rows, counts, cursors, serialized bytes, or the store-call ledger.
+Oversized limits and stale authorization/coverage/attribution cursors fail
+with the shared typed refusal. Calls persist no bundle or Investigation.
+`find_operation_consumers` remains present with its existing bare-operation
+proof-bundle contract, and `get_extraction_coverage` is reused rather than
+duplicated.
+
+**T20.12 · Caller Map UI with strict paged DOM** *(needs T20.10)* — route a
 Contract Atlas operation selection directly to a dedicated Caller Map page.
 Implement the endpoint header, grouped/ungrouped table, nested source
 citations, filters, unresolved queue, progressive exact/lower-bound counts,
@@ -1681,22 +1722,27 @@ unsupported coverage, cursor invalidation, loading/error/retry, keyboard
 navigation, and mobile layouts are tested. Rendering makes no extra evidence
 or diagram request.
 
-**T20.12 · Old-to-replacement endpoint comparison** *(needs T20.10, T20.11)* —
+**T20.13 · Old-to-replacement endpoint comparison** *(needs T20.10–T20.12)* —
 select two full endpoint identities and classify the union of their static
 caller evidence at occurrence and unit level. Render
 `old_only_evidence`/`both_evidence`/`new_only_evidence`/`unresolved` verbatim,
-with both coverage and attribution digests plus citations. Investigation
-handoff may create an explicit user-authorized snapshot; ordinary comparison
-remains ephemeral.
+with both coverage and attribution digests plus citations. Register
+`compare_operation_callers` over the same comparison service, exact identities,
+filters, bounds, and cursor as HTTP; the MCP adapter performs no classification
+or summarization. Investigation handoff may create an explicit user-authorized
+snapshot; ordinary HTTP and MCP comparison remains ephemeral.
 
 AC: duplicate operation names and unit ambiguity cannot cross-contaminate the
 comparison; identical inputs are deterministic; changing either coverage or
 unit-attribution digest invalidates pagination; empty old-only evidence says
 no matching evidence within scope, never complete or safe. If the optional
 Investigation handoff lands, reauthorization and immutable-snapshot tests use
-Epic 16's existing boundaries rather than a new persistence model.
+Epic 16's existing boundaries rather than a new persistence model. An
+official-SDK MCP acceptance test proves byte-equivalent classifications and
+citations from the shared service, dark-mode absence, bounded continuation,
+and hidden-repository non-interference.
 
-**T20.13 · Scale, failure, and end-to-end closure** *(needs T20.1–T20.12)* —
+**T20.14 · Scale, failure, and end-to-end closure** *(needs T20.1–T20.13)* —
 exercise the generated large profile through sync → index → extract → Atlas →
 Caller Map → migration comparison in `make dev`, including one injected domain
 failure, one malformed unit snapshot, a permission change, and cursor
