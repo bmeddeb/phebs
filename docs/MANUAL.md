@@ -244,6 +244,40 @@ certificate beneath an **Analysis scope & gaps** summary, and adds accessible
 hover/focus/tap help to every qualified section while retaining the exact
 technical receipt.
 
+Epic 21 is authorized for specifications, tests, synthetic demonstrations, and
+production-unregistered/default-dark implementation only. Because it stores
+its brief, snapshots, analysis artifacts, and human records under
+Investigations, production Workbench creation, mutation, export, UI, and MCP
+registration inherit Epic 16's still-unsatisfied `ESTABLISHED` validation plus
+explicit pilot-continuation gate. Completing its implementation tickets cannot
+clear that gate or support an external accuracy, migration-complete, or
+safe-to-retire claim.
+
+The planned Workbench checklist does not change T16.8 ReviewItems into tasks.
+ReviewItems remain deterministic machine projections with no hand-creation or
+mutation path. Workbench suggestions remain unaccepted; the human projection
+uses immutable superseding Dispositions in five fixed categories. There is no
+ChecklistItem/Task table, comment, assignment, due date, priority, or custom
+state.
+
+The current API-key model has no read/write capability distinction, so no
+Workbench MCP mutation tool may ship on that model. T21.12 introduces an
+explicit immutable `investigation:write` capability for newly created named
+keys; existing named keys and the migration-only legacy key remain read-only
+for these new mutations and must be replaced deliberately. The capability
+never expands the owning user's authority. A leaked write-capable agent key
+can attempt durable Investigation mutations as that user, so operators should
+create one narrowly capable, individually revocable key per agent. Browser
+session writes remain CSRF protected.
+
+The existing `check_contract_compatibility` HTTP and MCP contracts continue to
+return retained content-addressed proof bundles. Workbench compatibility is an
+additive explicit Investigation analysis path and does not migrate, delete, or
+reidentify those bundles. Proposed protobuf and Thrift preview files inherit
+the production parser preflights: at most 4 MiB, 500,000 tokens, and 128
+structural levels per file, in addition to aggregate/file-count and sandbox
+limits.
+
 Minimal `phebs.yaml`:
 
 ```yaml
