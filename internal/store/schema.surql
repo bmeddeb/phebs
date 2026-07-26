@@ -150,6 +150,17 @@ DEFINE INDEX IF NOT EXISTS investigation_change_brief_revision ON investigation_
 DEFINE INDEX IF NOT EXISTS investigation_change_brief_investigation ON investigation_change_brief
     FIELDS investigation_id, revision_id;
 
+-- T21.3 idempotent Workbench creation/revision receipts. The receipt and its
+-- Investigation/Revision/brief/audit graph commit together; preview rows are
+-- never persisted.
+DEFINE TABLE IF NOT EXISTS investigation_workbench_mutation SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_workbench_mutation_identity
+    ON investigation_workbench_mutation FIELDS mutation_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_workbench_mutation_scope
+    ON investigation_workbench_mutation FIELDS principal, idempotency_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_workbench_mutation_investigation
+    ON investigation_workbench_mutation FIELDS investigation_id, revision_id;
+
 DEFINE TABLE IF NOT EXISTS investigation_run SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_run_identity ON investigation_run
     FIELDS revision_id, seq UNIQUE;

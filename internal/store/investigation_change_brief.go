@@ -357,18 +357,15 @@ func changeBriefContentFromBrief(brief ChangeBrief) changeBriefContent {
 	}
 }
 
-func normalizeChangeBrief(brief ChangeBrief) (ChangeBrief, []byte, error) {
+func normalizeChangeBriefPayload(brief ChangeBrief) (ChangeBrief, error) {
 	if brief.SchemaVersion == "" {
 		brief.SchemaVersion = ChangeBriefSchemaVersion
 	}
 	if brief.SchemaVersion != ChangeBriefSchemaVersion {
-		return ChangeBrief{}, nil, fmt.Errorf("unsupported change brief schema %q", brief.SchemaVersion)
-	}
-	if !validULID(brief.InvestigationID) || !strings.HasPrefix(brief.RevisionID, "ivr_") {
-		return ChangeBrief{}, nil, errors.New("change brief requires an Investigation and Revision identity")
+		return ChangeBrief{}, fmt.Errorf("unsupported change brief schema %q", brief.SchemaVersion)
 	}
 	if !validChangeBriefTicketKind(brief.TicketKind) {
-		return ChangeBrief{}, nil, fmt.Errorf("invalid change brief ticket kind %q", brief.TicketKind)
+		return ChangeBrief{}, fmt.Errorf("invalid change brief ticket kind %q", brief.TicketKind)
 	}
 	var err error
 	brief.Problem, err = normalizeChangeBriefText(
@@ -378,7 +375,7 @@ func normalizeChangeBrief(brief ChangeBrief) (ChangeBrief, []byte, error) {
 		maxChangeBriefProblemBytes,
 	)
 	if err != nil {
-		return ChangeBrief{}, nil, err
+		return ChangeBrief{}, err
 	}
 	brief.DesiredOutcome, err = normalizeChangeBriefText(
 		"change brief desired outcome",
@@ -387,7 +384,7 @@ func normalizeChangeBrief(brief ChangeBrief) (ChangeBrief, []byte, error) {
 		maxChangeBriefOutcomeBytes,
 	)
 	if err != nil {
-		return ChangeBrief{}, nil, err
+		return ChangeBrief{}, err
 	}
 	for name, target := range map[string]*[]string{
 		"success criteria": &brief.SuccessCriteria,
@@ -397,7 +394,7 @@ func normalizeChangeBrief(brief ChangeBrief) (ChangeBrief, []byte, error) {
 	} {
 		*target, err = normalizeChangeBriefTextList(name, *target, name == "success criteria")
 		if err != nil {
-			return ChangeBrief{}, nil, err
+			return ChangeBrief{}, err
 		}
 	}
 	brief.ExternalReference, err = normalizeChangeBriefText(
@@ -407,14 +404,14 @@ func normalizeChangeBrief(brief ChangeBrief) (ChangeBrief, []byte, error) {
 		maxChangeBriefExternalRefBytes,
 	)
 	if err != nil {
-		return ChangeBrief{}, nil, err
+		return ChangeBrief{}, err
 	}
 	brief.What, err = normalizeChangeBriefWhat(brief.What)
 	if err != nil {
-		return ChangeBrief{}, nil, err
+		return ChangeBrief{}, err
 	}
 	if !validInvestigationPrincipal(brief.Creator) {
-		return ChangeBrief{}, nil, errors.New("change brief creator is invalid")
+		return ChangeBrief{}, errors.New("change brief creator is invalid")
 	}
 	totalText := len(brief.Problem) + len(brief.DesiredOutcome) + len(brief.ExternalReference)
 	for _, values := range [][]string{
@@ -425,10 +422,22 @@ func normalizeChangeBrief(brief ChangeBrief) (ChangeBrief, []byte, error) {
 		}
 	}
 	if totalText > maxChangeBriefAggregateTextBytes {
-		return ChangeBrief{}, nil, fmt.Errorf(
+		return ChangeBrief{}, fmt.Errorf(
 			"change brief text exceeds %d aggregate bytes",
 			maxChangeBriefAggregateTextBytes,
 		)
+	}
+	return brief, nil
+}
+
+func normalizeChangeBrief(brief ChangeBrief) (ChangeBrief, []byte, error) {
+	if !validULID(brief.InvestigationID) || !strings.HasPrefix(brief.RevisionID, "ivr_") {
+		return ChangeBrief{}, nil, errors.New("change brief requires an Investigation and Revision identity")
+	}
+	var err error
+	brief, err = normalizeChangeBriefPayload(brief)
+	if err != nil {
+		return ChangeBrief{}, nil, err
 	}
 	content, err := json.Marshal(changeBriefContentFromBrief(brief))
 	if err != nil {

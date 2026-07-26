@@ -89,6 +89,11 @@ type Options struct {
 	// fixture provider.
 	InvestigationViews InvestigationViewSource
 
+	// Workbench enables the T21.3 shared preview/create/revise/read service.
+	// Production leaves it nil until the retained validation and explicit
+	// pilot-continuation gates are satisfied.
+	Workbench store.InvestigationWorkbench
+
 	// Visible resolves the caller's repo visibility (T10.3): it returns this
 	// request's predicate, or nil when the caller may see everything. A nil
 	// field disables permission filtering (tests, permissions block absent).
@@ -354,6 +359,7 @@ func New(opts Options) http.Handler {
 	registerCallerComparisonAPI(api, opts)
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)
+	registerWorkbench(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

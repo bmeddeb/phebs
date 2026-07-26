@@ -128,6 +128,9 @@ func apiCapabilities(opts Options) []string {
 	if opts.InvestigationViews != nil {
 		capabilities = append(capabilities, investigationCoreViewsCapability)
 	}
+	if opts.Workbench != nil {
+		capabilities = append(capabilities, "change-workbench")
+	}
 	slices.Sort(capabilities)
 	return capabilities
 }

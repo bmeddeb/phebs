@@ -467,7 +467,20 @@ contract-selection or proposed-source commitments; changing any of them
 atomically appends a new parent revision and preserves the old brief. It reuses
 Investigation sharing, transfer, revocation, archive, audit, authorization,
 and signed-dossier behavior. This is production-unregistered/default-dark:
-there is still no HTTP, UI, or MCP operation that creates or edits a Workbench.
+the current release still registers no HTTP, UI, or MCP operation that creates
+or edits a Workbench.
+
+The internal T21.3 service can preview, create, revise, and read that brief
+without giving adapters a second evidence or authorization path. A preview
+commits to the current principal authorization, exact repository and
+declaration snapshots, requested evidence capability versions, parent
+revision, and proposed-file hashes, then returns blockers and a transparent
+count/byte estimate without writing. Submission re-runs the preview and uses an
+idempotency key plus expected Revision; any changed permission, commit,
+declaration, proposal, capability, or current Revision refuses the write.
+Proposal source bytes are never returned or retained. A conditional Huma
+projection exists for tests and future registration, but it is absent from the
+current release's routes, OpenAPI, and advertised capabilities.
 
 The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
 contains declaration-proven call rows or stable field-reference rows.

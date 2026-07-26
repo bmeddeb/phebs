@@ -2539,7 +2539,7 @@ retain the revision's brief under the existing signed, reauthorized boundary.
 No API, UI, MCP, or production Workbench registration is added. The uncached
 repository-wide Go suite, `go vet ./...`, and golangci-lint merge bar pass.
 
-**T21.3 · Previewed Workbench creation and revision service** *(needs T21.2)* —
+**T21.3 ✅ 2026-07-26 · Previewed Workbench creation and revision service** *(needs T21.2)* —
 add shared preview/create/revise/read services. Preview resolves the visible
 repository snapshot, exact endpoint identities or proposed-source
 commitments, requested evidence capabilities, work estimate, blockers, and
@@ -2551,6 +2551,24 @@ revision under concurrency; drifted permissions, repositories, endpoint
 identity, proposal bytes, capability availability, or current revision rejects
 without a partial write. Reads and previews are side-effect free. Huma is a
 thin transport; input limits and unknown/unauthorized refusals are pinned.
+
+Implementation is present on `codex/t21.3-workbench-service`: one shared
+service canonicalizes bounded Why/What input, converts proposal bytes to
+path/hash/size commitments, and binds the current principal authorization,
+repository commits, exact endpoint snapshots, requested capability state, and
+work estimate in `change-workbench-preview-v1`. Create and revise re-preview,
+then atomically commit one idempotency receipt, Investigation Revision, Change
+Brief, parent pointer, and audit event; equal concurrent requests converge,
+while permission, repository, declaration, proposal, capability, or current
+Revision drift leaves no partial graph. Read and preview paths are
+side-effect-free, parent authorization remains query-time, and reader grants
+cannot preview a mutation. Huma only forwards the four service operations
+behind an optional adapter with schema/body bounds and byte-identical
+unknown/unauthorized refusals. The production binary supplies neither the
+resolver nor the adapter, so routes, OpenAPI, capability advertisement, UI,
+and MCP remain dark pending their owning tickets and retained gates. The
+uncached repository-wide Go suite, `go vet ./...`, and golangci-lint merge bar
+pass.
 
 **T21.4 · Canonical glossary projections and merge-bar drift guard** *(needs
 T21.1)* — generate typed Go and TypeScript projections plus MANUAL/MCP
