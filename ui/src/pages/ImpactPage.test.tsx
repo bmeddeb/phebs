@@ -5,6 +5,7 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import ImpactPage from './ImpactPage'
 import type { ContractImpactReport } from '../api'
+import { glossaryTerms } from '../glossary.generated'
 
 const api = vi.hoisted(() => ({
   fetchOperationImpact: vi.fn(),
@@ -140,11 +141,19 @@ const report: ContractImpactReport = {
 
 const engine = new Client()
 
-function page(params = new URLSearchParams(), compatibilityAvailable = false) {
+function page(
+  params = new URLSearchParams(),
+  compatibilityAvailable = false,
+  capabilities: readonly string[] = ['contract-impact-report'],
+) {
   return render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
-        <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} />
+        <ImpactPage
+          params={params}
+          compatibilityAvailable={compatibilityAvailable}
+          capabilities={capabilities}
+        />
       </BaseProvider>
     </StyletronProvider>,
   )
@@ -157,7 +166,7 @@ beforeEach(() => {
 
 afterEach(cleanup)
 
-test('operation report renders qualified conclusions, pinned evidence, unresolved candidates, and complete coverage', async () => {
+test('operation report preserves mode-specific vocabulary with accessible glossary help', async () => {
   page()
   fireEvent.change(screen.getByLabelText('Canonical operation'), { target: { value: '/shop.Cart/Get' } })
   fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
@@ -167,10 +176,19 @@ test('operation report renders qualified conclusions, pinned evidence, unresolve
   expect(screen.getByRole('heading', { name: 'Resolved evidence' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Matching call evidence' })).toBeTruthy()
   expect(screen.getByRole('heading', { name: 'Extractor abstentions' })).toBeTruthy()
-  expect(screen.queryByText('Known consumers')).toBeNull()
   expect(screen.getAllByText('protobuf').length).toBeGreaterThan(0)
   expect(screen.getAllByText('grpc-consumer').length).toBeGreaterThan(0)
   expect(screen.getByText('method Get matches 2 generated services')).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Help for Matching static evidence' })).toBeTruthy()
+  expect(screen.getByRole('button', { name: 'Help for Could not resolve' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Analysis scope & gaps' })).toBeTruthy()
+  expect(screen.queryByRole('heading', { name: 'Known consumers' })).toBeNull()
+  expect(screen.queryByRole('heading', { name: 'Unresolved candidates' })).toBeNull()
+  expect(screen.getByText(/They are not an accuracy,/)).toBeTruthy()
+  const certificate = screen.getByTestId('coverage-certificate-detail') as HTMLDetailsElement
+  expect(certificate.open).toBe(false)
+  fireEvent.click(screen.getByText('Coverage certificate'))
+  expect(certificate.open).toBe(true)
   expect(screen.getByText('unsupported')).toBeTruthy()
   expect(screen.getByText('no published evidence for this domain')).toBeTruthy()
   expect(screen.getByText(report.caveat)).toBeTruthy()
@@ -181,6 +199,22 @@ test('operation report renders qualified conclusions, pinned evidence, unresolve
 })
 
 test('field mode sends the stable field identity', async () => {
+  api.fetchFieldImpact.mockResolvedValueOnce({
+    ...report,
+    query: {
+      kind: 'contract_impact_field',
+      lineage: 'lineage-cart',
+      message: 'shop.Cart',
+      field_number: 7,
+      domains: ['protobuf-field'],
+    },
+    resolved_evidence: [{
+      ...report.matching_call_evidence[0],
+      kind: 'field_reference',
+      classification: 'field reference',
+    }],
+    matching_call_evidence: [],
+  })
   page()
   fireEvent.click(screen.getByRole('tab', { name: 'Field' }))
   fireEvent.change(screen.getByLabelText('Contract lineage'), { target: { value: 'lineage-cart' } })
@@ -188,6 +222,29 @@ test('field mode sends the stable field identity', async () => {
   fireEvent.change(screen.getByLabelText('Field number'), { target: { value: '7' } })
   fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
   await waitFor(() => expect(api.fetchFieldImpact).toHaveBeenCalledWith('lineage-cart', 'shop.Cart', 7, expect.any(AbortSignal)))
+  await screen.findByRole('heading', { name: 'Resolved evidence' })
+  expect(screen.queryByRole('heading', { name: /consumer/i })).toBeNull()
+  expect(screen.getByText(report.conclusion.text)).toBeTruthy()
+  expect(screen.getByText(/field reference/)).toBeTruthy()
+})
+
+test('unknown coverage schema does not enable coverage certificate help', async () => {
+  api.fetchOperationImpact.mockResolvedValueOnce({
+    ...report,
+    coverage: {
+      ...report.coverage,
+      schema_version: 'coverage-certificate-future',
+    },
+  })
+  page()
+  fireEvent.change(screen.getByLabelText('Canonical operation'), { target: { value: '/shop.Cart/Get' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+
+  const help = await screen.findByRole('button', { name: 'Help for Coverage certificate' })
+  fireEvent.click(help)
+  const term = glossaryTerms.find((candidate) => candidate.id === 'coverage_certificate')
+  expect((await screen.findByRole('status')).textContent).toBe(term?.availability.unavailableHelp)
+  expect((screen.getByTestId('coverage-certificate-detail') as HTMLDetailsElement).open).toBe(false)
 })
 
 test('change tab follows server capability and submits parsed snapshots', async () => {

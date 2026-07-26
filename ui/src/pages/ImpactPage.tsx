@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Button } from 'baseui/button'
 import { Input } from 'baseui/input'
@@ -16,6 +16,8 @@ import {
   type ImpactEvidenceRow,
 } from '../api'
 import { ImpactIcon, OpenIcon } from '../icons'
+import { SectionHelp } from '../components/SectionHelp'
+import { type GlossaryTermId } from '../glossary.generated'
 import { FONTS, usePhebsTokens } from '../theme'
 import { href, navigate } from '../router'
 import { isAbortError } from '../util'
@@ -24,7 +26,15 @@ type Mode = 'operation' | 'field' | 'change'
 
 const qualification = 'Build a bounded, evidence-backed report of resolved evidence, matching calls, and extractor abstentions for an operation, field, or contract change.'
 
-export default function ImpactPage({ params, compatibilityAvailable }: { params: URLSearchParams; compatibilityAvailable: boolean }) {
+export default function ImpactPage({
+  params,
+  compatibilityAvailable,
+  capabilities,
+}: {
+  params: URLSearchParams
+  compatibilityAvailable: boolean
+  capabilities: readonly string[]
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [mode, setMode] = useState<Mode>('operation')
@@ -176,7 +186,7 @@ export default function ImpactPage({ params, compatibilityAvailable }: { params:
         </Notification>
       )}
       {loading && !report && <Spinner $size="small" />}
-      {report && <ReportView report={report} />}
+      {report && <ReportView report={report} capabilities={capabilities} />}
     </div>
   )
 }
@@ -234,9 +244,22 @@ function FileInput({ label, value, onChange }: { label: string; value: string; o
   )
 }
 
-function ReportView({ report }: { report: ContractImpactReport }) {
+function ReportView({
+  report,
+  capabilities,
+}: {
+  report: ContractImpactReport
+  capabilities: readonly string[]
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const enabledCapabilities = useMemo(() => {
+    const enabled = new Set(capabilities)
+    if (report.coverage.schema_version === 'coverage-certificate-v1') {
+      enabled.add('coverage-certificate')
+    }
+    return enabled
+  }, [capabilities, report.coverage.schema_version])
   const conclusionColor = report.compatibility
     ? report.compatibility.compatible ? tok.statusGreen : tok.statusRed
     : tok.accent
@@ -251,10 +274,28 @@ function ReportView({ report }: { report: ContractImpactReport }) {
       </section>
 
       {report.compatibility && <CompatibilitySection report={report} />}
-      <EvidenceSection title="Resolved evidence" rows={report.resolved_evidence} empty="No declaration-resolved or field-reference evidence was found within the stated evidence scope; this does not establish absence." />
-      <EvidenceSection title="Matching call evidence" rows={report.matching_call_evidence} empty="No operation-name call evidence was found within the stated evidence scope; this does not establish absence." />
-      <EvidenceSection title="Extractor abstentions" rows={report.extractor_abstentions} empty="No extractor abstention evidence was recorded within the stated evidence scope." unresolved />
-      <CoverageSection report={report} />
+      <EvidenceSection
+        title="Resolved evidence"
+        rows={report.resolved_evidence}
+        empty="No declaration-resolved or field-reference evidence was found within the stated evidence scope; this does not establish absence."
+        enabledCapabilities={enabledCapabilities}
+      />
+      <EvidenceSection
+        title="Matching call evidence"
+        termId="matching_static_evidence"
+        rows={report.matching_call_evidence}
+        empty="No operation-name call evidence was found within the stated evidence scope; this does not establish absence."
+        enabledCapabilities={enabledCapabilities}
+      />
+      <EvidenceSection
+        title="Extractor abstentions"
+        termId="could_not_resolve"
+        rows={report.extractor_abstentions}
+        empty="No extractor abstention evidence was recorded within the stated evidence scope."
+        enabledCapabilities={enabledCapabilities}
+        unresolved
+      />
+      <CoverageSection report={report} enabledCapabilities={enabledCapabilities} />
 
       <div className={css({ border: `1px solid ${tok.cardBorder}`, padding: '12px 14px', marginTop: '20px', fontSize: '12px', lineHeight: '18px', color: tok.textSecondary })}>
         {report.caveat}
@@ -295,12 +336,26 @@ function CompatibilitySection({ report }: { report: ContractImpactReport }) {
   )
 }
 
-function EvidenceSection({ title, rows, empty, unresolved = false }: { title: string; rows: ImpactEvidenceRow[]; empty: string; unresolved?: boolean }) {
+function EvidenceSection({
+  title,
+  termId,
+  rows,
+  empty,
+  enabledCapabilities,
+  unresolved = false,
+}: {
+  title: string
+  termId?: GlossaryTermId
+  rows: ImpactEvidenceRow[]
+  empty: string
+  enabledCapabilities: ReadonlySet<string>
+  unresolved?: boolean
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   return (
     <section className={css({ marginBottom: '22px' })}>
-      <SectionHeading>{title}</SectionHeading>
+      <SectionHeading termId={termId} enabledCapabilities={enabledCapabilities}>{title}</SectionHeading>
       {rows.length === 0 ? (
         <div className={css({ fontSize: '13px', lineHeight: '20px', color: tok.textTertiary, padding: '4px 0' })}>{empty}</div>
       ) : (
@@ -346,26 +401,102 @@ function EvidenceRow({ row, unresolved }: { row: ImpactEvidenceRow; unresolved: 
   )
 }
 
-function CoverageSection({ report }: { report: ContractImpactReport }) {
+function CoverageSection({
+  report,
+  enabledCapabilities,
+}: {
+  report: ContractImpactReport
+  enabledCapabilities: ReadonlySet<string>
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const stateCounts = new Map<string, number>()
+  for (const row of report.coverage_rows) {
+    stateCounts.set(row.state, (stateCounts.get(row.state) ?? 0) + 1)
+  }
+  const stateSummary = [...stateCounts.entries()]
+    .map(([state, count]) => `${count} ${stateLabel(state)}`)
+    .join(' · ')
   return (
     <section>
-      <SectionHeading>Coverage certificate</SectionHeading>
-      <div className={css({ fontSize: '12px', lineHeight: '18px', color: tok.textTertiary, margin: '-4px 0 10px', overflowWrap: 'anywhere' })}>
-        {report.coverage.repository_count} visible repositories · {report.coverage.domains.join(', ')} · <span className={css({ fontFamily: FONTS.MONO })}>{report.coverage.digest}</span>
+      <SectionHeading
+        termId="analysis_scope_and_gaps"
+        enabledCapabilities={enabledCapabilities}
+      >
+        Analysis scope &amp; gaps
+      </SectionHeading>
+      <div className={css({
+        fontSize: '12px',
+        lineHeight: '18px',
+        color: tok.textTertiary,
+        margin: '-4px 0 10px',
+      })}>
+        {report.coverage.repository_count} visible repositories · {report.coverage.domains.join(', ')}
+        {stateSummary ? ` · ${stateSummary}` : ''}
       </div>
-      <div className={css({ overflowX: 'auto' })}>
-        <table className={css(tableStyle())}>
-          <thead><tr>{['Repository / domain', 'State', 'Indexed / evidence revision', 'Assertions', 'Unresolved', 'Failure / unsupported reason'].map((heading) => <HeaderCell key={heading}>{heading}</HeaderCell>)}</tr></thead>
-          <tbody>{report.coverage_rows.map((row) => <CoverageRow key={`${row.repository}:${row.domain}`} row={row} />)}</tbody>
-        </table>
+      <div className={css({
+        marginBottom: '12px',
+        color: tok.textSecondary,
+        fontSize: '13px',
+        lineHeight: '20px',
+      })}>
+        These states qualify the adjacent evidence. They are not an accuracy,
+        completeness, runtime-use, or safe-to-change score.
       </div>
-      <details className={css({ marginTop: '10px', color: tok.textTertiary, fontSize: '12px' })}>
-        <summary className={css({ cursor: 'pointer', ':hover': { color: tok.textPrimary } })}>Full canonical coverage certificate</summary>
-        <pre className={css({ margin: '8px 0 0', padding: '12px', overflowX: 'auto', backgroundColor: tok.bandBg, color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', border: `1px solid ${tok.cardBorder}` })}>
-          {JSON.stringify(report.coverage, null, 2)}
-        </pre>
+      <details
+        data-testid="coverage-certificate-detail"
+        className={css({
+          border: `1px solid ${tok.cardBorder}`,
+          color: tok.textTertiary,
+          fontSize: '12px',
+        })}
+      >
+        <summary className={css({
+          minHeight: '40px',
+          boxSizing: 'border-box',
+          padding: '8px 10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          color: tok.textSecondary,
+          ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill },
+          ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' },
+        })}>
+          <span className={css({ fontWeight: 650 })}>Coverage certificate</span>
+          <SectionHelp
+            termId="coverage_certificate"
+            enabledCapabilities={enabledCapabilities}
+          />
+          <span className={css({
+            minWidth: 0,
+            marginLeft: 'auto',
+            overflowWrap: 'anywhere',
+            textAlign: 'right',
+            fontFamily: FONTS.MONO,
+            fontSize: '10px',
+            color: tok.gutter,
+            '@media screen and (max-width: 620px)': {
+              display: 'none',
+            },
+          })}>
+            {report.coverage.digest}
+          </span>
+        </summary>
+        <div className={css({ padding: '10px', borderTop: `1px solid ${tok.cardBorder}` })}>
+          <div className={css({ overflowX: 'auto' })}>
+            <table className={css(tableStyle())}>
+              <thead><tr>{['Repository / domain', 'State', 'Indexed / evidence revision', 'Assertions', 'Unresolved', 'Failure / unsupported reason'].map((heading) => <HeaderCell key={heading}>{heading}</HeaderCell>)}</tr></thead>
+              <tbody>{report.coverage_rows.map((row) => <CoverageRow key={`${row.repository}:${row.domain}`} row={row} />)}</tbody>
+            </table>
+          </div>
+          <details className={css({ marginTop: '10px' })}>
+            <summary className={css({ cursor: 'pointer', ':hover': { color: tok.textPrimary } })}>Canonical certificate JSON</summary>
+            <pre className={css({ margin: '8px 0 0', padding: '12px', overflowX: 'auto', backgroundColor: tok.bandBg, color: tok.textSecondary, fontFamily: FONTS.MONO, fontSize: '11px', lineHeight: '17px', border: `1px solid ${tok.cardBorder}` })}>
+              {JSON.stringify(report.coverage, null, 2)}
+            </pre>
+          </details>
+        </div>
       </details>
     </section>
   )
@@ -389,10 +520,39 @@ function CoverageRow({ row }: { row: ImpactCoverageRow }) {
   )
 }
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function SectionHeading({
+  children,
+  termId,
+  enabledCapabilities,
+}: {
+  children?: React.ReactNode
+  termId?: GlossaryTermId
+  enabledCapabilities?: ReadonlySet<string>
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  return <h2 className={css({ margin: '0 0 10px', color: tok.textPrimary, fontSize: '15px', lineHeight: '22px', fontWeight: 650 })}>{children}</h2>
+  return (
+    <div className={css({
+      minHeight: '22px',
+      margin: '0 0 10px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '7px',
+    })}>
+      <h2 className={css({
+        margin: 0,
+        color: tok.textPrimary,
+        fontSize: '15px',
+        lineHeight: '22px',
+        fontWeight: 650,
+      })}>
+        {children}
+      </h2>
+      {termId && enabledCapabilities ? (
+        <SectionHelp termId={termId} enabledCapabilities={enabledCapabilities} />
+      ) : null}
+    </div>
+  )
 }
 
 function HeaderCell({ children }: { children: React.ReactNode }) {

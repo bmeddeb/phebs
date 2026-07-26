@@ -490,8 +490,20 @@ bare-operation query, not a declaration-proven logical-service roster.
 assign, not confirmed callers or failed runs. `Coverage certificate` is the
 deterministic receipt of which visible repository revisions and extractor
 domains were covered, stale, failed, processing, unsupported, or bounded; it
-is not an accuracy or completeness score. Epic 21 retains these semantics
-while adding its Analysis scope & gaps summary and accessible help.
+is not an accuracy or completeness score. Epic 21 retains these semantics and
+adds the **Analysis scope & gaps** summary. Its generated **Matching static
+evidence** help qualifies the narrower Matching call evidence section, and
+**Could not resolve** qualifies Extractor abstentions; neither changes the
+mode-specific API categories. The deterministic Coverage certificate remains
+available as collapsed advanced detail beneath the scope/gaps summary.
+
+Each qualified heading has a generated help control. Hover or keyboard focus
+shows the short and expanded explanation; click or tap pins it. Escape, its
+close control, or an outside click dismisses it, with focus returned after
+explicit keyboard/button dismissal. The explanation includes the evidence and
+authority boundaries and shows the canonical unavailable message when its
+capability is dark. If the interactive control cannot be used, the generated
+glossary below is the complete documentation fallback.
 
 <!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
 #### Canonical Change Workbench glossary

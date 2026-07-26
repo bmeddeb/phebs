@@ -2598,11 +2598,11 @@ unconsumed, so this ticket adds no UI, route, capability, or tool behavior.
 The uncached repository-wide Go suite, `go vet ./...`, golangci-lint, all UI
 tests, UI lint, and the production UI build pass.
 
-**T21.5 · Accessible section help and current Impact terminology** *(needs
-T21.4)* — add one reusable help trigger/popover and replace Contract Impact's
-primary presentation labels with mode-correct glossary terms while preserving
-the old wire schema until its owning versioned migration. Render Coverage
-certificate as advanced detail beneath Analysis scope & gaps.
+**T21.5 ✅ 2026-07-26 · Accessible section help and current Impact terminology** *(needs
+T21.4)* — add one reusable help trigger/popover to Contract Impact's
+mode-specific T20.10 vocabulary, using the broader canonical glossary terms to
+qualify rather than rename those categories. Render Coverage certificate as
+advanced detail beneath Analysis scope & gaps.
 
 AC: Hover, keyboard focus, click/tap, Escape, outside-click, focus return,
 screen-reader name/description, viewport collision, mobile, reduced-motion,
@@ -2610,6 +2610,25 @@ and the MANUAL documentation fallback are tested. No primary UI says `Known
 consumers`; field references are not called consumers; short help answers what
 the section means and expanded help exposes the evidence boundary. Help never
 claims enabled support for a dark/absent pack.
+
+Implemented as one generated-glossary-driven, portal-based help control shared
+by every qualified Impact section. The primary UI retains **Resolved
+evidence**, **Matching call evidence**, and **Extractor abstentions** from the
+v2 schema; **Matching static evidence** help qualifies the matching-call
+section and **Could not resolve** qualifies abstentions without reviving the
+retired v1 fields. Coverage certificate is a collapsed advanced receipt under
+the **Analysis scope & gaps** summary. Focus and pointer openings, click/tap
+pinning, explicit and outside dismissal, Escape focus return, accessible
+names/descriptions, capability-unavailable copy, narrow-viewport
+clamping/flipping, and reduced motion are pinned by component and report
+tests; the generated MANUAL block remains the non-interactive fallback. No
+evidence, authorization, API, MCP, registration, or retained-gate behavior
+changes.
+Rendered built-bundle QA passes at desktop and `390x844`: help remains within
+the viewport without page overflow, the advanced receipt expands, focus
+returns after Escape, and the console is clean. The uncached repository-wide
+Go suite, `go vet ./...`, golangci-lint, all UI tests, UI lint, the production
+UI build, and glossary drift verification pass.
 
 **T21.6 · What: exact contract target and additive proposed delta** *(needs
 T21.3, T20.10)* — compose Contract Atlas discovery/detail and the bounded

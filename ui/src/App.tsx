@@ -97,7 +97,15 @@ export default function App() {
   else if (path.startsWith('/compare-callers') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/compare-callers') && callerComparisonAvailable) page = <CallerComparisonPage params={params} />
   else if (path.startsWith('/impact') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/impact') && impactAvailable) page = <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} />
+  else if (path.startsWith('/impact') && impactAvailable) {
+    page = (
+      <ImpactPage
+        params={params}
+        compatibilityAvailable={compatibilityAvailable}
+        capabilities={capabilities}
+      />
+    )
+  }
   else if (path.startsWith('/topics') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/topics') && topicsAvailable) page = <KafkaTopicsPage params={params} />
   else if (path.startsWith('/investigations') && !capabilitiesLoaded) page = <Spinner $size="small" />
