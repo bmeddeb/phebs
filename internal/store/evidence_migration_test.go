@@ -39,6 +39,24 @@ func clearEvidenceMigrationMarker(t *testing.T, s *Surreal) {
 	}
 }
 
+// Migration fixtures model preceding, future, and malformed writers after the
+// current store has already opened once. A real foreign writer would install
+// its own generation guard before writing; tests remove the current guard
+// explicitly, create the raw rows, then let applySchema restore it.
+func relaxEvidenceWriterGuards(t *testing.T, s *Surreal) {
+	t.Helper()
+	results, err := surrealdb.Query[any](context.Background(), s.db,
+		`REMOVE FIELD store_schema_version ON extraction_run;`, nil)
+	if err != nil {
+		t.Fatalf("relax evidence writer guards: %v", err)
+	}
+	for i, result := range *results {
+		if result.Error != nil {
+			t.Fatalf("relax evidence writer guard statement %d: %s", i, result.Error.Message)
+		}
+	}
+}
+
 func evidenceMigrationState(t *testing.T, s *Surreal, runID string) evidenceMigrationTestState {
 	t.Helper()
 	results, err := surrealdb.Query[[]evidenceMigrationTestState](context.Background(), s.db,
@@ -82,6 +100,7 @@ func evidenceMigrationMarker(t *testing.T, s *Surreal) evidenceMigrationTestMark
 // application unchanged.
 func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	repo := "github.com/migration/repo"
 	if err := s.UpsertRepo(ctx, Repo{Name: repo, CloneURL: "https://example.com/repo.git"}); err != nil {
@@ -236,8 +255,9 @@ func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 	}
 }
 
-func TestMigrateEvidenceRunsUpgradesV3AndCanonicalizesPins(t *testing.T) {
+func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	repo := "github.com/migration/v3"
 	if err := s.UpsertRepo(ctx, Repo{Name: repo, CloneURL: "https://example.com/v3.git"}); err != nil {
@@ -325,7 +345,7 @@ func TestMigrateEvidenceRunsUpgradesV3AndCanonicalizesPins(t *testing.T) {
 	}
 	clearEvidenceMigrationMarker(t, s)
 	if err := s.applySchema(ctx); err != nil {
-		t.Fatalf("upgrade v3 evidence: %v", err)
+		t.Fatalf("upgrade previous-writer evidence: %v", err)
 	}
 
 	published := evidenceMigrationState(t, s, "v3-published")
@@ -390,6 +410,7 @@ func TestMigrateEvidenceRunsUpgradesV3AndCanonicalizesPins(t *testing.T) {
 
 func TestMigrateEvidenceRunIDCollisionDoesNotStealProof(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	repo := "github.com/migration/collision"
 	now := time.Now().UTC()
@@ -592,6 +613,7 @@ func TestMigrateEvidenceRunIDCollisionDoesNotStealProof(t *testing.T) {
 
 func TestMigrateEvidenceUnsafeRetainedClaimsReserveOwner(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	repo := "github.com/migration/retained-claim"
 	now := time.Now().UTC()
@@ -724,6 +746,7 @@ func TestMigrateEvidenceUnsafeRetainedClaimsReserveOwner(t *testing.T) {
 
 func TestMigrateEvidenceRejectsConflictingAmbiguityMarkers(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	now := time.Now().UTC()
 	if _, err := surrealdb.Query[any](ctx, s.db,
@@ -751,6 +774,7 @@ func TestMigrateEvidenceRejectsConflictingAmbiguityMarkers(t *testing.T) {
 
 func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	repo := "github.com/migration/future"
 	if err := s.UpsertRepo(ctx, Repo{Name: repo, CloneURL: "https://example.com/future.git"}); err != nil {
@@ -913,6 +937,7 @@ func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 
 func TestEvidenceRequiresCanonicalPhysicalRunAndPublicationEnvelope(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	repo := "github.com/migration/envelope"
 	otherRepo := "github.com/migration/forged"
@@ -1120,6 +1145,7 @@ func TestEvidenceRequiresCanonicalPhysicalRunAndPublicationEnvelope(t *testing.T
 
 func TestSweepEvidenceDecodesOnlyCandidateIdentity(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	now := time.Now().UTC()
 	if _, err := surrealdb.Query[any](ctx, s.db,
@@ -1145,6 +1171,7 @@ func TestSweepEvidenceDecodesOnlyCandidateIdentity(t *testing.T) {
 
 func TestMigrateEvidenceRunsClassifiesMalformedSchemaTypes(t *testing.T) {
 	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
 	now := time.Now().UTC()
 	if _, err := surrealdb.Query[any](ctx, s.db,

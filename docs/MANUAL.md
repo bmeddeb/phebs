@@ -232,10 +232,9 @@ time; the trusted worker groups accepted facts into deterministic,
 content-addressed chunks of at most 256 and keeps the complete replacement
 invisible until one guarded publication. Its independent limit is now 12,500
 facts, and the frozen 10,010-call profile fits the 256 MiB worker-memory gate.
-This does **not** yet enable target-size production publication:
-`maxEvidenceRowsPerRun` remains 10,000 until T20.3 advances the store writer
-generation and re-runs the frozen publication checks. Existing smaller run
-rows, coverage certificates, APIs, and serialized evidence are unchanged.
+T20.3 now supplies the corresponding `t12-store-v5` 25,000-row production
+admission and retains the store-derived atomic recount. Coverage certificates,
+APIs, and serialized evidence remain unchanged.
 
 There is no Change Workbench in the current release. The available pieces are
 separate: a human can browse a declaration in Contracts, carry its operation
@@ -1610,8 +1609,10 @@ proof service. Operational state is also visible through the database and
 `phebs_jobs_total{kind="extraction_job"}`.
 
 Proof-aware retention checks at startup and hourly while idle. Every
-compatible-format run is limited to 10,000 stored association/assertion rows
-and 20,000 evidence references. One eligible aborted, superseded, or
+compatible-format run is limited to 25,000 stored association/assertion rows
+and 20,000 evidence references. Individual staging transactions remain capped
+at 10,000 rows of one kind; the extraction worker normally sends no more than
+256 facts per transaction. One eligible aborted, superseded, or
 24-hour-stale staged run is reclaimed per transaction, with at most eight
 transactions in a pass. A full pass yields for five seconds before another
 bounded pass; a drained pass returns to the hourly idle interval. Pinned
@@ -1630,10 +1631,22 @@ retention use the format version. A later compatible writer bump therefore
 cannot strand an existing pinned proof bundle; an unknown format remains
 hidden and untouched.
 
-Evidence migrations assume exclusive startup against the store. Mixed-version
-rolling writers, or rolling an older writer back onto the same remote
-endpoint, are not supported; the supervised local deployment already provides
-that single-writer boundary.
+The current identities are writer `t12-store-v5`, readable evidence
+`t12-evidence-v1`, and migration `t12-evidence-migration-v3`. Startup
+idempotently upgrades the immediately preceding compatible v4 run generation
+in place; readable evidence bytes and content identities do not change.
+Staged-run reads and all mutations require v5. Compatible published
+`t12-evidence-v1` runs, including pinned proof written by a future compatible
+writer, remain readable through the stable format boundary.
+
+Evidence migrations still require exclusive startup against the store.
+Database and transaction guards now make a mixed-version or rollback writer
+fail closed: known retired v1–v4 run writes are rejected, and every current
+begin/stage/publish/abort also requires the active v3 migration marker. If an
+older opener changes that marker, current writes stop too; shut down every
+writer and restart the v5 binary exclusively to restore it. Do not operate
+rolling mixed writers against a remote endpoint. The supervised local
+deployment already provides the intended single-writer lifecycle.
 
 ### Investigation storage and guided execution foundation
 

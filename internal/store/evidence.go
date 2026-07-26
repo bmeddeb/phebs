@@ -22,21 +22,24 @@ const (
 	// Store schema is the exact writer generation. Evidence format is the
 	// stable read/pin contract: a newer writer may keep the same format when
 	// its proof bundle remains backwards-compatible.
-	evidenceStoreSchemaVersion               = "t12-store-v4"
-	evidencePreviousStoreSchemaVersion       = "t12-store-v3"
-	evidenceFormatVersion                    = "t12-evidence-v1"
-	evidenceMigrationVersion                 = "t12-evidence-migration-v2"
-	evidenceMigrationBatchSize               = 128
-	evidenceSweepBatchSize                   = 1
-	maxEvidenceRowsPerRun                    = 10_000
-	maxEvidenceBatchRows                     = maxEvidenceRowsPerRun
-	maxEvidenceRefsPerAssertion              = 4096
-	maxEvidenceReferenceEdges                = 20_000
-	maxEvidenceIdentityBytes                 = 64 << 10
-	maxEvidencePathBytes                     = 4096
-	maxEvidenceOccurrences                   = 100
-	maxCoverageFileCount                     = 10_000_000
-	maxCoverageReadBytes               int64 = 1 << 50
+	evidenceStoreSchemaVersion         = "t12-store-v5"
+	evidencePreviousStoreSchemaVersion = "t12-store-v4"
+	evidenceFormatVersion              = "t12-evidence-v1"
+	evidenceMigrationVersion           = "t12-evidence-migration-v3"
+	evidencePreviousMigrationVersion   = "t12-evidence-migration-v2"
+	evidenceMigrationBatchSize         = 128
+	evidenceSweepBatchSize             = 1
+	maxEvidenceRowsPerRun              = 25_000
+	// T20.3 raises whole-run admission only. Individual worker transactions
+	// remain independently bounded and are currently at most 256 facts.
+	maxEvidenceBatchRows              = 10_000
+	maxEvidenceRefsPerAssertion       = 4096
+	maxEvidenceReferenceEdges         = 20_000
+	maxEvidenceIdentityBytes          = 64 << 10
+	maxEvidencePathBytes              = 4096
+	maxEvidenceOccurrences            = 100
+	maxCoverageFileCount              = 10_000_000
+	maxCoverageReadBytes        int64 = 1 << 50
 )
 
 func hashIdentity(prefix string, fields ...string) string {
@@ -181,22 +184,29 @@ func (s *Surreal) BeginExtractionRun(ctx context.Context, repo, commit, domain, 
 	now := time.Now().UTC()
 	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
 		`BEGIN;
-LET $created = CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
-            extractor = $extractor, status = 'staged', started_at = $now,
-            store_schema_version = $store_schema_version,
-			evidence_format_version = $evidence_format_version,
-			evidence_migration_version = $evidence_migration_version,
-            retention_quarantined = false, staged_revision = 0, retention_revision = 0 RETURN AFTER;
-UPSERT $attempt_rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
-            extractor = $extractor, status = 'staged', started_at = $now,
-            store_schema_version = $store_schema_version,
-            evidence_format_version = $evidence_format_version RETURN NONE;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+LET $created = IF $writer_ok THEN
+	(CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
+		extractor = $extractor, status = 'staged', started_at = $now,
+		store_schema_version = $store_schema_version,
+		evidence_format_version = $evidence_format_version,
+		evidence_migration_version = $evidence_migration_version,
+		retention_quarantined = false, staged_revision = 0, retention_revision = 0 RETURN AFTER)
+	ELSE [] END;
+IF $writer_ok {
+	UPSERT $attempt_rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
+		extractor = $extractor, status = 'staged', started_at = $now,
+		store_schema_version = $store_schema_version,
+		evidence_format_version = $evidence_format_version RETURN NONE
+};
 RETURN $created;
 COMMIT;`,
 		map[string]any{
 			"rid": extractionRunID(id), "run_id": id, "repo": repo, "commit": commit,
 			"domain": domain, "extractor": extractor, "now": now,
 			"attempt_rid":                extractionAttemptID(repo, domain),
+			"migration_rid":              evidenceMigrationStateID(),
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_format_version":    evidenceFormatVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
@@ -206,7 +216,7 @@ COMMIT;`,
 	}
 	rows := firstExtractionRows(results)
 	if len(rows) == 0 {
-		return nil, errors.New("begin extraction run returned no row")
+		return nil, fmt.Errorf("begin extraction run: writer generation is not active: %w", ErrConflict)
 	}
 	run := rows[0].run()
 	return &run, nil
@@ -640,6 +650,8 @@ const addEvidenceSQL = `
 BEGIN;
 LET $locked = UPDATE $run SET staged_revision += 1
     WHERE status = 'staged'
+      AND array::len(SELECT id FROM $migration_rid
+	      WHERE version = $evidence_migration_version LIMIT 1) = 1
       AND store_schema_version = $store_schema_version
 	      AND evidence_format_version = $evidence_format_version
 		  AND run_id = record::id(id)
@@ -716,8 +728,10 @@ func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []Evidenc
 		"run": extractionRunID(runID), "run_id": runID, "atoms": batch.atoms,
 		"assocs": batch.assocs, "asserts": batch.asserts,
 		"max_run_rows": maxEvidenceRowsPerRun, "max_reference_edges": maxEvidenceReferenceEdges,
-		"store_schema_version":    evidenceStoreSchemaVersion,
-		"evidence_format_version": evidenceFormatVersion,
+		"migration_rid":              evidenceMigrationStateID(),
+		"store_schema_version":       evidenceStoreSchemaVersion,
+		"evidence_format_version":    evidenceFormatVersion,
+		"evidence_migration_version": evidenceMigrationVersion,
 	}
 	addProbeVars(vars, runID)
 	for attempt := 0; ; attempt++ {
@@ -751,6 +765,8 @@ const publishExtractionRunSQL = `
 BEGIN;
 LET $locked = UPDATE $rid SET staged_revision += 1
     WHERE status = 'staged'
+      AND array::len(SELECT id FROM $migration_rid
+	      WHERE version = $evidence_migration_version LIMIT 1) = 1
       AND store_schema_version = $store_schema_version
 	      AND evidence_format_version = $evidence_format_version
 		  AND run_id = record::id(id)
@@ -852,8 +868,10 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 		"max_occurrences_per_atom":    maxEvidenceOccurrences,
 		"max_run_rows":                maxEvidenceRowsPerRun,
 		"max_reference_edges":         maxEvidenceReferenceEdges,
+		"migration_rid":               evidenceMigrationStateID(),
 		"store_schema_version":        evidenceStoreSchemaVersion,
 		"evidence_format_version":     evidenceFormatVersion,
+		"evidence_migration_version":  evidenceMigrationVersion,
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	addProbeVars(vars, runID)
@@ -886,17 +904,21 @@ func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 	}
 	for attempt := 0; ; attempt++ {
 		vars := map[string]any{
-			"rid":                     extractionRunID(runID),
-			"attempt_rid":             extractionAttemptID(run.Repo, run.Domain),
-			"run_id":                  runID,
-			"store_schema_version":    evidenceStoreSchemaVersion,
-			"evidence_format_version": evidenceFormatVersion,
+			"rid":                        extractionRunID(runID),
+			"attempt_rid":                extractionAttemptID(run.Repo, run.Domain),
+			"run_id":                     runID,
+			"migration_rid":              evidenceMigrationStateID(),
+			"store_schema_version":       evidenceStoreSchemaVersion,
+			"evidence_format_version":    evidenceFormatVersion,
+			"evidence_migration_version": evidenceMigrationVersion,
 		}
 		addProbeVars(vars, runID)
 		results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
 			`BEGIN;
 LET $aborted = UPDATE $rid SET status = 'aborted', published_key = NONE
 				WHERE status = 'staged'
+				  AND array::len(SELECT id FROM $migration_rid
+					  WHERE version = $evidence_migration_version LIMIT 1) = 1
 				  AND store_schema_version = $store_schema_version
 					  AND evidence_format_version = $evidence_format_version
 					  AND run_id = record::id(id)

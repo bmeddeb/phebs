@@ -128,9 +128,12 @@ var evidenceIndexes = fmt.Sprintf(`
 DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted']
         OR $this.evidence_format_version != '%s';
+DEFINE FIELD OVERWRITE store_schema_version ON extraction_run TYPE string
+	ASSERT $value NOT IN ['t12-store-v1', 't12-store-v2', 't12-store-v3', '%s'];
 DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;
 DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
-    ASSERT $value INSIDE ['staged', 'published', 'aborted'];`, evidenceFormatVersion)
+    ASSERT $value INSIDE ['staged', 'published', 'aborted'];`,
+	evidenceFormatVersion, evidencePreviousStoreSchemaVersion)
 
 // migrateLegacyJobs runs before the pending-key indexes are installed. Old
 // rows had no lease or pending slot, and may contain an active job plus a

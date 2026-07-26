@@ -1629,6 +1629,30 @@ partial successor under failure, cancellation, stale revision, or concurrent
 publish. Old readers hide the new writer generation; migration is idempotent;
 rollback/mixed writers fail closed.
 
+Implementation: the writer is `t12-store-v5`, the unchanged readable format
+is `t12-evidence-v1`, and the idempotent v4→v5 migration marker is
+`t12-evidence-migration-v3`. Whole-run admission is 25,000
+association-plus-assertion rows; the separate 10,000-row per-kind batch,
+4,096-reference-per-assertion, 20,000-reference-edge, and 100-occurrence
+bounds remain unchanged. `PublishExtractionRun` still executes the exact
+store-derived recount/supersession statement that passed T20.1—there is no
+extractor counter or persisted chunk accumulator.
+
+Writer safety is two-layered. The database field guard rejects known retired
+v1–v4 run writes even after an older binary reapplies its schema, while begin,
+stage, publish, and abort each require the active migration-generation marker.
+A mixed/rollback opener therefore stops both generations from mutating until
+exclusive v5 startup restores the marker. Compatible published
+`t12-evidence-v1` proof remains readable/pinnable across unknown future writer
+strings, preserving the T12 format contract; exact staged reads and all
+mutations remain v5-only. The target integration test drives 10,010 facts /
+20,020 rows through production `AddEvidence`, replays a chunk, refuses a
+caller-count lie and cancellation with the predecessor still solely visible,
+then requires one ≤2 s recounted publication and exact stored totals. Existing
+tests retain stale-revision and concurrent-publisher atomicity, migration
+idempotence, forward-compatible reads, and malformed/unknown fail-closed
+classification.
+
 **T20.4 · Composite reverse query and index** *(needs T20.3)* — add the
 EvidenceStore page primitive and composite index shape for exact
 `(run, predicate, object[, lineage])` pagination. The store already has

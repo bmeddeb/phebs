@@ -54,8 +54,13 @@ type t201Metrics struct {
 	QueryPlan                   any    `json:"query_plan"`
 }
 
-func TestT201ProductionEvidenceCeilings(t *testing.T) {
-	if maxEvidenceRowsPerRun != 10_000 ||
+func TestT203ProductionEvidenceCeilings(t *testing.T) {
+	if evidenceStoreSchemaVersion != "t12-store-v5" ||
+		evidencePreviousStoreSchemaVersion != "t12-store-v4" ||
+		evidenceFormatVersion != "t12-evidence-v1" ||
+		evidenceMigrationVersion != "t12-evidence-migration-v3" ||
+		evidencePreviousMigrationVersion != "t12-evidence-migration-v2" ||
+		maxEvidenceRowsPerRun != 25_000 ||
 		maxEvidenceRefsPerAssertion != 4_096 ||
 		maxEvidenceReferenceEdges != 20_000 ||
 		maxEvidenceOccurrences != 100 ||
@@ -65,7 +70,7 @@ func TestT201ProductionEvidenceCeilings(t *testing.T) {
 		maxCoverageFileCount != 10_000_000 ||
 		maxCoverageReadBytes != 1<<50 ||
 		evidenceSweepBatchSize != 1 {
-		t.Fatalf("T20.1 evidence ceilings changed; review and remeasure")
+		t.Fatalf("T20.3 evidence ceilings changed; review and remeasure")
 	}
 }
 
@@ -230,39 +235,46 @@ func stageT201Run(t *testing.T, ctx context.Context, s *Surreal, run *Extraction
 	t.Helper()
 	for offset := 0; offset < t201TargetFacts; offset += t201BatchFacts {
 		end := min(offset+t201BatchFacts, t201TargetFacts)
-		atoms := make([]EvidenceAtom, 0, end-offset)
-		associations := make([]SnapshotEvidence, 0, end-offset)
-		assertions := make([]Assertion, 0, end-offset)
-		for index := offset; index < end; index++ {
-			atom := EvidenceAtom{
-				SchemaVersion: "t20-measurement-v1",
-				BlobDigest:    fmt.Sprintf("sha256:%064x", index),
-				StartByte:     index * 8, EndByte: index*8 + 3,
-				RuleID: "t201-call-v1", ExtractorVersion: "t201-measurement-v1",
-				AdapterConfigDigest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-				FactFingerprint:     fmt.Sprintf("call-%05d", index),
-			}
-			atom.ID = ComputeAtomID(atom)
-			atoms = append(atoms, atom)
-			path := fmt.Sprintf("src/unit_%03d/callers.go", index/100)
-			associations = append(associations, SnapshotEvidence{
-				AtomID: atom.ID, Repo: run.Repo, Commit: run.Commit, Path: path,
-				StartLine: 3 + index%100, EndLine: 3 + index%100,
-				VisibilityScope: "repo:" + run.Repo,
-			})
-			assertions = append(assertions, Assertion{
-				Predicate: "CALLS_OPERATION",
-				Subject:   fmt.Sprintf("%s#L%d", path, 3+index%100),
-				Object:    "/synthetic.orders.v1.Orders/Get",
-				Lineage:   "synthetic.invalid/t201:idl/proto/orders/v1/orders.proto",
-				Tier:      TierDerived, CodeRole: "production", Repo: run.Repo,
-				Supporting: []string{atom.ID},
-			})
-		}
+		atoms, associations, assertions := t201EvidenceBatch(run, offset, end)
 		if err := addT201Evidence(ctx, s, run, atoms, associations, assertions); err != nil {
 			t.Fatalf("stage batch %d: %v", offset/t201BatchFacts, err)
 		}
 	}
+}
+
+func t201EvidenceBatch(run *ExtractionRun, offset, end int) (
+	[]EvidenceAtom, []SnapshotEvidence, []Assertion,
+) {
+	atoms := make([]EvidenceAtom, 0, end-offset)
+	associations := make([]SnapshotEvidence, 0, end-offset)
+	assertions := make([]Assertion, 0, end-offset)
+	for index := offset; index < end; index++ {
+		atom := EvidenceAtom{
+			SchemaVersion: "t20-measurement-v1",
+			BlobDigest:    fmt.Sprintf("sha256:%064x", index),
+			StartByte:     index * 8, EndByte: index*8 + 3,
+			RuleID: "t201-call-v1", ExtractorVersion: "t201-measurement-v1",
+			AdapterConfigDigest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			FactFingerprint:     fmt.Sprintf("call-%05d", index),
+		}
+		atom.ID = ComputeAtomID(atom)
+		atoms = append(atoms, atom)
+		path := fmt.Sprintf("src/unit_%03d/callers.go", index/100)
+		associations = append(associations, SnapshotEvidence{
+			AtomID: atom.ID, Repo: run.Repo, Commit: run.Commit, Path: path,
+			StartLine: 3 + index%100, EndLine: 3 + index%100,
+			VisibilityScope: "repo:" + run.Repo,
+		})
+		assertions = append(assertions, Assertion{
+			Predicate: "CALLS_OPERATION",
+			Subject:   fmt.Sprintf("%s#L%d", path, 3+index%100),
+			Object:    "/synthetic.orders.v1.Orders/Get",
+			Lineage:   "synthetic.invalid/t201:idl/proto/orders/v1/orders.proto",
+			Tier:      TierDerived, CodeRole: "production", Repo: run.Repo,
+			Supporting: []string{atom.ID},
+		})
+	}
+	return atoms, associations, assertions
 }
 
 func addT201Evidence(ctx context.Context, s *Surreal, run *ExtractionRun,
@@ -276,8 +288,10 @@ func addT201Evidence(ctx context.Context, s *Surreal, run *ExtractionRun,
 		"run": extractionRunID(run.ID), "run_id": run.ID, "atoms": batch.atoms,
 		"assocs": batch.assocs, "asserts": batch.asserts,
 		"max_run_rows": t201AdmittedRunRows, "max_reference_edges": t201AdmittedReferenceMax,
-		"store_schema_version":    evidenceStoreSchemaVersion,
-		"evidence_format_version": evidenceFormatVersion,
+		"migration_rid":              evidenceMigrationStateID(),
+		"store_schema_version":       evidenceStoreSchemaVersion,
+		"evidence_format_version":    evidenceFormatVersion,
+		"evidence_migration_version": evidenceMigrationVersion,
 	}
 	addProbeVars(vars, run.ID)
 	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db, addEvidenceSQL, vars)
@@ -308,8 +322,10 @@ func publishT201Run(ctx context.Context, s *Surreal, run *ExtractionRun) (*Extra
 		"max_occurrences_per_atom":    maxEvidenceOccurrences,
 		"max_run_rows":                t201AdmittedRunRows,
 		"max_reference_edges":         t201AdmittedReferenceMax,
+		"migration_rid":               evidenceMigrationStateID(),
 		"store_schema_version":        evidenceStoreSchemaVersion,
 		"evidence_format_version":     evidenceFormatVersion,
+		"evidence_migration_version":  evidenceMigrationVersion,
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	addProbeVars(vars, run.ID)
