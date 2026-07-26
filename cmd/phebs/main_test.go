@@ -452,8 +452,9 @@ type evidenceMaintenanceStore struct {
 }
 
 type evidenceSweepResult struct {
-	count int
-	err   error
+	count    int
+	progress store.EvidenceSweepProgress
+	err      error
 }
 
 type proofBundleMaintenanceStore struct {
@@ -474,14 +475,17 @@ func (s *proofBundleMaintenanceStore) SweepProofBundles(_ context.Context, activ
 
 func (s *evidenceMaintenanceStore) SweepEvidence(
 	_ context.Context, _ time.Time, staleStagedAfter time.Duration,
-) (int, error) {
+) (store.EvidenceSweepProgress, error) {
 	s.calls <- staleStagedAfter
 	if s.resultIndex < len(s.results) {
 		result := s.results[s.resultIndex]
 		s.resultIndex++
-		return result.count, result.err
+		if result.progress.DidWork() {
+			return result.progress, result.err
+		}
+		return store.EvidenceSweepProgress{RunsDeleted: result.count}, result.err
 	}
-	return s.count, s.err
+	return store.EvidenceSweepProgress{RunsDeleted: s.count}, s.err
 }
 
 func TestEvidenceSweepPassStopsWhenDrained(t *testing.T) {
@@ -491,12 +495,37 @@ func TestEvidenceSweepPassStopsWhenDrained(t *testing.T) {
 			{count: 1}, {count: 1}, {count: 0},
 		},
 	}
-	deleted, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
-	if err != nil || deleted != 2 || backlog {
-		t.Fatalf("runEvidenceSweepPass = (%d, %v, %v), want (2, false, nil)", deleted, backlog, err)
+	progress, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
+	if err != nil || progress.RunsDeleted != 2 || backlog {
+		t.Fatalf("runEvidenceSweepPass = (%+v, %v, %v), want (2 runs, false, nil)", progress, backlog, err)
 	}
 	if len(st.calls) != 3 {
 		t.Fatalf("sweep calls = %d, want 3", len(st.calls))
+	}
+}
+
+func TestEvidenceSweepPassSeparatesLogicalAndPhysicalProgress(t *testing.T) {
+	st := &evidenceMaintenanceStore{
+		calls: make(chan time.Duration, 4),
+		results: []evidenceSweepResult{
+			{progress: store.EvidenceSweepProgress{RunsMarkedDeleting: 1}},
+			{progress: store.EvidenceSweepProgress{
+				AssociationRowsDeleted: 512, AtomRowsDeleted: 7,
+			}},
+			{progress: store.EvidenceSweepProgress{
+				AssertionRowsDeleted: 400, RunsDeleted: 1,
+			}},
+			{},
+		},
+	}
+	progress, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
+	if err != nil || backlog {
+		t.Fatalf("runEvidenceSweepPass = (%+v, %v, %v)", progress, backlog, err)
+	}
+	if progress.RunsMarkedDeleting != 1 || progress.RunsDeleted != 1 ||
+		progress.AssociationRowsDeleted != 512 || progress.AssertionRowsDeleted != 400 ||
+		progress.AtomRowsDeleted != 7 || progress.PhysicalRowsDeleted() != 919 {
+		t.Fatalf("aggregated progress = %+v", progress)
 	}
 }
 
@@ -535,15 +564,15 @@ func TestProofBundleMaintenanceCanceledBeforeBootDoesNoWork(t *testing.T) {
 
 func TestEvidenceSweepPassCapsLikelyBacklog(t *testing.T) {
 	st := &evidenceMaintenanceStore{
-		calls: make(chan time.Duration, evidenceSweepMaxRunsPerPass), count: 1,
+		calls: make(chan time.Duration, evidenceSweepMaxStepsPerPass), count: 1,
 	}
-	deleted, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
-	if err != nil || deleted != evidenceSweepMaxRunsPerPass || !backlog {
-		t.Fatalf("runEvidenceSweepPass = (%d, %v, %v), want (%d, true, nil)",
-			deleted, backlog, err, evidenceSweepMaxRunsPerPass)
+	progress, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
+	if err != nil || progress.RunsDeleted != evidenceSweepMaxStepsPerPass || !backlog {
+		t.Fatalf("runEvidenceSweepPass = (%+v, %v, %v), want (%d runs, true, nil)",
+			progress, backlog, err, evidenceSweepMaxStepsPerPass)
 	}
-	if len(st.calls) != evidenceSweepMaxRunsPerPass {
-		t.Fatalf("sweep calls = %d, want %d", len(st.calls), evidenceSweepMaxRunsPerPass)
+	if len(st.calls) != evidenceSweepMaxStepsPerPass {
+		t.Fatalf("sweep calls = %d, want %d", len(st.calls), evidenceSweepMaxStepsPerPass)
 	}
 }
 
@@ -555,9 +584,9 @@ func TestEvidenceSweepPassStopsOnError(t *testing.T) {
 			{count: 1}, {err: want},
 		},
 	}
-	deleted, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
-	if deleted != 1 || backlog || !errors.Is(err, want) {
-		t.Fatalf("runEvidenceSweepPass = (%d, %v, %v), want (1, false, %v)", deleted, backlog, err, want)
+	progress, backlog, err := runEvidenceSweepPass(t.Context(), st, 24*time.Hour)
+	if progress.RunsDeleted != 1 || backlog || !errors.Is(err, want) {
+		t.Fatalf("runEvidenceSweepPass = (%+v, %v, %v), want (1 run, false, %v)", progress, backlog, err, want)
 	}
 	if len(st.calls) != 2 {
 		t.Fatalf("sweep calls = %d, want 2", len(st.calls))
@@ -568,13 +597,13 @@ func TestEvidenceMaintenanceUsesBacklogDelayThenReturnsIdle(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	st := &evidenceMaintenanceStore{
-		calls: make(chan time.Duration, evidenceSweepMaxRunsPerPass+2),
+		calls: make(chan time.Duration, evidenceSweepMaxStepsPerPass+2),
 		results: append(
-			make([]evidenceSweepResult, evidenceSweepMaxRunsPerPass),
+			make([]evidenceSweepResult, evidenceSweepMaxStepsPerPass),
 			evidenceSweepResult{count: 0},
 		),
 	}
-	for i := range evidenceSweepMaxRunsPerPass {
+	for i := range evidenceSweepMaxStepsPerPass {
 		st.results[i].count = 1
 	}
 	done := make(chan struct{})
@@ -583,7 +612,7 @@ func TestEvidenceMaintenanceUsesBacklogDelayThenReturnsIdle(t *testing.T) {
 		runEvidenceMaintenance(ctx, st, time.Hour, 10*time.Millisecond, 24*time.Hour)
 	}()
 
-	for i := 0; i < evidenceSweepMaxRunsPerPass+1; i++ {
+	for i := 0; i < evidenceSweepMaxStepsPerPass+1; i++ {
 		select {
 		case staleAge := <-st.calls:
 			if staleAge != 24*time.Hour {

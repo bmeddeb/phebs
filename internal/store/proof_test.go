@@ -55,7 +55,7 @@ func TestProofBundleImmutablePersistencePinsRuns(t *testing.T) {
 	if err := s.PublishExtractionRun(ctx, replacement.ID, testCoverage(0, 0)); err != nil {
 		t.Fatal(err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 0 {
 		t.Fatalf("proof-pinned superseded run swept = %d, %v", n, err)
 	}
 	if err := s.PinRun(ctx, run.ID, "proof-bundle-check"); err != nil {
@@ -139,7 +139,7 @@ func TestProofBundleExpiryReleasesOnlyOwnedPins(t *testing.T) {
 	if n, err := s.SweepProofBundles(ctx, firstCutoff); err != nil || n != 1 {
 		t.Fatalf("sweep first bundle = %d, %v", n, err)
 	}
-	if n, err := s.SweepEvidence(ctx, base, 0); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, base, 0); err != nil || n != 0 {
 		t.Fatalf("shared run swept while second bundle pins it = %d, %v", n, err)
 	}
 
@@ -147,7 +147,7 @@ func TestProofBundleExpiryReleasesOnlyOwnedPins(t *testing.T) {
 	if n, err := s.SweepProofBundles(ctx, secondCutoff); err != nil || n != 1 {
 		t.Fatalf("sweep second bundle = %d, %v", n, err)
 	}
-	if n, err := s.SweepEvidence(ctx, base, 0); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, base, 0); err != nil || n != 1 {
 		t.Fatalf("newly unpinned superseded run sweep = %d, %v", n, err)
 	}
 	got, err := s.GetProofBundle(ctx, live.ID, &secondCutoff)
@@ -175,7 +175,7 @@ func TestProofBundleExpiryReleasesOnlyOwnedPins(t *testing.T) {
 	if err := s.PublishExtractionRun(ctx, thirdRun.ID, testCoverage(0, 0)); err != nil {
 		t.Fatal(err)
 	}
-	if n, err := s.SweepEvidence(ctx, base.Add(time.Hour), 0); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, base.Add(time.Hour), 0); err != nil || n != 0 {
 		t.Fatalf("checkpoint pin removed with bundle pin = %d, %v", n, err)
 	}
 }

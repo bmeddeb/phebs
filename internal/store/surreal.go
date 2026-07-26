@@ -143,7 +143,8 @@ var evidencePreMigrationSchema = fmt.Sprintf(`
 DEFINE EVENT IF NOT EXISTS %s ON TABLE extraction_run
 	WHEN $event != 'DELETE'
 	  AND $after.store_schema_version IN
-		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4', '%s']
+		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4',
+		 't12-store-v5', '%s']
 	THEN {
 		THROW 'phebs-permanent: retired evidence writer generation'
 	};
@@ -153,11 +154,12 @@ DEFINE INDEX IF NOT EXISTS %s ON TABLE assertion
 
 var evidenceIndexes = fmt.Sprintf(`
 DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
-    ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted']
+    ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted', 'deleting']
         OR $this.evidence_format_version != '%s';
 DEFINE FIELD OVERWRITE store_schema_version ON extraction_run TYPE string
 	ASSERT $value NOT IN
-		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4', '%s'];
+		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4',
+		 't12-store-v5', '%s'];
 DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;
 DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'aborted'];`,
@@ -232,6 +234,7 @@ type evidenceRunMigrationRec struct {
 	Format               any              `json:"evidence_format_version"`
 	AmbiguousRunID       any              `json:"evidence_migration_ambiguous_run_id"`
 	RetentionQuarantined any              `json:"retention_quarantined"`
+	RetentionPhase       any              `json:"retention_phase"`
 }
 
 type evidenceMigrationStateRec struct {
@@ -352,7 +355,8 @@ func isLegacyEvidenceStoreSchema(schema string, present bool) bool {
 }
 
 func validEvidenceRunStatus(status string) bool {
-	return status == "staged" || status == "published" || status == "superseded" || status == "aborted"
+	return status == "staged" || status == "published" || status == "superseded" ||
+		status == "aborted" || status == "deleting"
 }
 
 // migrateEvidenceRuns upgrades only formats this binary understands. Rows
@@ -376,7 +380,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 		results, err := surrealdb.Query[[]evidenceRunMigrationRec](ctx, s.db,
 			`SELECT id, run_id, repo, domain, status, store_schema_version,
 				evidence_format_version, evidence_migration_ambiguous_run_id,
-				retention_quarantined
+				retention_quarantined, retention_phase
 			FROM extraction_run
 			WHERE store_schema_version = NONE
 			   OR NOT (type::is_string(store_schema_version))
@@ -399,7 +403,12 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 						OR retention_quarantined = NONE
 						OR retention_quarantined NOT IN [true, false]
 						OR status = NONE OR NOT (type::is_string(status))
-							OR status NOT IN ['staged', 'published', 'superseded', 'aborted']
+							OR status NOT IN ['staged', 'published', 'superseded', 'aborted', 'deleting']
+							OR (status = 'deleting' AND (
+								retention_phase = NONE
+								OR NOT (type::is_string(retention_phase))
+								OR retention_phase NOT IN ['associations', 'assertions', 'finalize']))
+							OR (status != 'deleting' AND retention_phase != NONE)
 							OR (status = 'published' AND published_key = NONE)
 							OR (status != 'published' AND published_key != NONE)
 							OR (retention_quarantined = true AND published_key != NONE)
@@ -451,6 +460,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			malformedFormat := knownWriter && ((formatPresent && format == "") ||
 				(!formatPresent && row.Format != nil))
 			status, statusPresent := migrationString(row.Status)
+			retentionPhase, retentionPhasePresent := migrationString(row.RetentionPhase)
 			quarantined := legacy || malformedFormat
 			ambiguousMarkerPresent := row.AmbiguousRunID != nil
 			ambiguousRunID, hasAmbiguousRunID := migrationString(row.AmbiguousRunID)
@@ -476,8 +486,16 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				default:
 					status = "aborted"
 				}
-			} else if !statusPresent || !validEvidenceRunStatus(status) {
+			} else if !statusPresent || !validEvidenceRunStatus(status) ||
+				(status == "deleting" && (schema != evidenceStoreSchemaVersion ||
+					!retentionPhasePresent ||
+					(retentionPhase != "associations" && retentionPhase != "assertions" &&
+						retentionPhase != "finalize"))) {
 				status = "aborted"
+				retentionPhase = ""
+				quarantined = true
+			} else if status != "deleting" && row.RetentionPhase != nil {
+				retentionPhase = ""
 				quarantined = true
 			}
 
@@ -584,6 +602,8 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				"has_published_key":          key != "", "published_key": key,
 				"has_ambiguous_run_id": hasAmbiguousRunID,
 				"ambiguous_run_id":     ambiguousRunID,
+				"has_retention_phase":  status == "deleting" && retentionPhase != "",
+				"retention_phase":      retentionPhase,
 			}
 			updated, updateErr := surrealdb.Query[[]evidenceMigrationStateRec](ctx, s.db,
 				`BEGIN;
@@ -594,6 +614,8 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 					retention_quarantined = $retention_quarantined,
 					evidence_migration_ambiguous_run_id = IF $has_ambiguous_run_id
 						THEN $ambiguous_run_id ELSE NONE END,
+					retention_phase = IF $has_retention_phase
+						THEN $retention_phase ELSE NONE END,
 					published_key = IF $has_published_key THEN $published_key ELSE NONE END
 					RETURN AFTER;
 				UPDATE snapshot_evidence SET run_id = $run_id

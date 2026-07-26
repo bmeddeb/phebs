@@ -1663,10 +1663,11 @@ canonicalization and rollback/mixed-writer refusal also passed. This is a
 capacity and integrity result, not an extraction-accuracy claim. The
 25,000-row value is the frozen admission ceiling, not an unbounded raise.
 T20.1's 1.024 s complete-target sweep is a historical v4/pre-guard result;
-the opt-in measurement now re-executes publication and one complete
-20,020-row sweep with the current production statements, guards, and limits
-and emits a distinct `t20-store-measurement-v2` receipt. T20.5 remains
-required before admission can rise beyond 25,000.
+the T20.3/T20.4 opt-in measurement re-executed publication and one complete
+20,020-row sweep with the then-current production statements, guards, and
+limits and emitted a distinct `t20-store-measurement-v2` receipt. T20.5
+advances later output to v3 for chunk/run accounting. Admission remains capped
+at 25,000.
 
 **T20.4 · Composite reverse query and index** ✅ *(2026-07-26; needs T20.3)* — add the
 EvidenceStore page primitive and composite index shape for exact
@@ -1723,7 +1724,7 @@ publication was 154 ms / 248,741,888 B peak Surreal RSS and the complete
 is a one-machine capacity/plan observation, not a universal performance or
 accuracy claim.
 
-**T20.5 · High-cardinality retention** *(needs T20.3)* — reclaim a superseded
+**T20.5 · High-cardinality retention** ✅ *(2026-07-26; needs T20.3)* — reclaim a superseded
 target-size run without one unbounded deletion transaction. Eligibility and
 pin absence are rechecked before a durable non-visible deletion state; physical
 association/assertion cleanup may then proceed in bounded resumable chunks,
@@ -1736,6 +1737,32 @@ without resurrecting evidence or deleting shared atoms; a complete target-size
 sweep meets the T20.1 budget and reports logical runs separately from physical
 rows. The current one-run candidate bound remains explicit rather than being
 mistaken for a row bound.
+
+Implementation: `t12-store-v7` / `t12-evidence-migration-v5` retains readable
+format `t12-evidence-v1` and the v6 reverse index. One guarded transaction
+marks an eligible unpinned run `deleting` with durable phase `associations`;
+subsequent calls delete at most 512 associations or assertions and atomically
+advance through `assertions` and `finalize`. Orphan checks occur in the same
+transaction as association deletion, after the selected rows are removed, so
+shared atoms survive and the last referencing chunk owns cleanup. Finalization
+rechecks zero child rows and zero pins. The API returns logical runs and each
+physical row kind separately, and maintenance yields after 64 steps. The
+generation-named v7 event blocks retired v1–v6 writers. Deterministic tests pin
+the no-pin transition, phase-only crash resumption, one-kind-per-chunk bound,
+no resurrection, shared-atom survival, accounting, migration, and invalid
+phase refusal. The opt-in target gate now emits
+`t20-store-measurement-v3`.
+
+Acceptance receipt (2026-07-26): all focused migration, pin, crash-resumption,
+shared-atom, and rollback guards passed. The target-size run completed in 42
+steps and reported one logical run, 10,010 association rows, 10,010 assertion
+rows, and zero shared atom rows deleted. It took 1,897 ms with 265,093,120 B
+peak Surreal RSS, inside the frozen 2 s / 512 MiB gates. The same run retained
+the exact publication/recount and reverse-plan probes. Receipt:
+`spike/t201/results-current-writer-v7.json`
+(`sha256:f4b7e4e591797c2672049b135a202ffde0ce868ced69a6fdd02ee4a45adb963b`).
+This is a one-machine capacity and integrity result, not an extraction-accuracy
+or universal latency claim.
 
 **T20.6 · Monorepo symbol-index corpus capability** *(needs T20.1)* — retain
 the current dedicated root `index.scip` blob path when it meets the frozen

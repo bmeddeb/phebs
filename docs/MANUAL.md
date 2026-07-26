@@ -249,6 +249,15 @@ frozen 2-second gate. Its retained first-page field is the legacy
 `ListAssertions` comparison probe; T20.4's exact reverse-page gate separately
 returned 100 rows in 8.9935 ms after 1,616 composite-index candidates.
 
+T20.5's separately reviewed v7 receipt is
+`spike/t201/results-current-writer-v7.json`
+(`sha256:f4b7e4e5…`). Resumable retention removed one 20,020-row target run in
+42 fixed-size steps: 10,010 associations, 10,010 assertions, and zero shared
+atoms. It took 1,897 ms with 265,093,120 bytes peak Surreal RSS, inside the
+frozen 2-second / 512 MiB gates. These are reference-machine capacity and
+integrity observations, not extraction-accuracy or universal performance
+claims.
+
 There is no Change Workbench in the current release. The available pieces are
 separate: a human can browse a declaration in Contracts, carry its operation
 to Impact, inspect cited matching/unresolved evidence and the coverage
@@ -1625,11 +1634,16 @@ Proof-aware retention checks at startup and hourly while idle. Every
 compatible-format run is limited to 25,000 stored association/assertion rows
 and 20,000 evidence references. Individual staging transactions remain capped
 at 10,000 rows of one kind; the extraction worker normally sends no more than
-256 facts per transaction. One eligible aborted, superseded, or
-24-hour-stale staged run is reclaimed per transaction, with at most eight
-transactions in a pass. A full pass yields for five seconds before another
-bounded pass; a drained pass returns to the hourly idle interval. Pinned
-proof/checkpoint runs and atoms still shared by another run are retained. Rows
+256 facts per transaction. Retention first locks one eligible aborted,
+superseded, or 24-hour-stale staged run, rechecks that it is unpinned, and
+marks it internally `deleting`. It then resumes from a durable phase while
+deleting at most 512 associations or assertions per transaction. The run is
+physically removed only after both row kinds are empty; an atom is removed
+only after its last association anywhere has disappeared. Maintenance performs
+at most 64 of these fixed-size steps, yields for five seconds when that cap is
+reached, and returns to the hourly idle interval when drained. Logs report
+completed logical runs separately from association, assertion, and atom rows.
+Pinned proof/checkpoint runs and atoms still shared by another run are retained. Rows
 migrated from the retracted, pre-bound evidence schema are hidden and
 quarantined from automatic cleanup; an administrator must inspect and remove
 that legacy data directly if desired. If two run records claim the same
@@ -1644,22 +1658,22 @@ retention use the format version. A later compatible writer bump therefore
 cannot strand an existing pinned proof bundle; an unknown format remains
 hidden and untouched.
 
-The current identities are writer `t12-store-v6`, readable evidence
-`t12-evidence-v1`, and migration `t12-evidence-migration-v4`. Startup
-idempotently upgrades the immediately preceding compatible v5 run generation
+The current identities are writer `t12-store-v7`, readable evidence
+`t12-evidence-v1`, and migration `t12-evidence-migration-v5`. Startup
+idempotently upgrades the immediately preceding compatible v6 run generation
 in place; readable evidence bytes and content identities do not change.
-Staged-run reads and all mutations require v6. Compatible published
+Staged-run reads and all mutations require v7. Compatible published
 `t12-evidence-v1` runs, including pinned proof written by a future compatible
 writer, remain readable through the stable format boundary.
 
 Evidence migrations still require exclusive startup against the store.
 Database and transaction guards now make a mixed-version or rollback writer
-fail closed: known retired v1–v5 run writes are rejected, and every current
-begin/stage/publish/abort also requires the active v4 migration marker. A
-generation-named synchronous database event survives a v5 binary reapplying
+fail closed: known retired v1–v6 run writes are rejected, and every current
+begin/stage/publish/abort/retention step requires the active v5 migration
+marker. A generation-named synchronous database event survives a v6 binary reapplying
 its weaker field definition and cancels its retired-generation transaction.
 If an older opener changes the migration marker, current writes stop too; shut
-down every writer and restart the v6 binary exclusively to restore it. Do not operate
+down every writer and restart the v7 binary exclusively to restore it. Do not operate
 rolling mixed writers against a remote endpoint. The supervised local
 deployment already provides the intended single-writer lifecycle.
 

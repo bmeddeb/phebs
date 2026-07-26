@@ -22,15 +22,16 @@ const (
 	// Store schema is the exact writer generation. Evidence format is the
 	// stable read/pin contract: a newer writer may keep the same format when
 	// its proof bundle remains backwards-compatible.
-	evidenceStoreSchemaVersion         = "t12-store-v6"
-	evidencePreviousStoreSchemaVersion = "t12-store-v5"
+	evidenceStoreSchemaVersion         = "t12-store-v7"
+	evidencePreviousStoreSchemaVersion = "t12-store-v6"
 	evidenceFormatVersion              = "t12-evidence-v1"
-	evidenceMigrationVersion           = "t12-evidence-migration-v4"
-	evidencePreviousMigrationVersion   = "t12-evidence-migration-v3"
-	evidenceWriterGuardEvent           = "extraction_run_writer_v6"
+	evidenceMigrationVersion           = "t12-evidence-migration-v5"
+	evidencePreviousMigrationVersion   = "t12-evidence-migration-v4"
+	evidenceWriterGuardEvent           = "extraction_run_writer_v7"
 	reverseAssertionIndexName          = "assertion_reverse_v6"
 	evidenceMigrationBatchSize         = 128
-	evidenceSweepBatchSize             = 1
+	evidenceSweepCandidateBatchSize    = 1
+	evidenceSweepRowBatchSize          = 512
 	maxEvidenceRowsPerRun              = 25_000
 	// T20.3 raises whole-run admission only. Individual worker transactions
 	// remain independently bounded and are currently at most 256 facts.
@@ -196,7 +197,8 @@ LET $created = IF $writer_ok THEN
 		store_schema_version = $store_schema_version,
 		evidence_format_version = $evidence_format_version,
 		evidence_migration_version = $evidence_migration_version,
-		retention_quarantined = false, staged_revision = 0, retention_revision = 0 RETURN AFTER)
+		retention_quarantined = false, retention_phase = NONE,
+		staged_revision = 0, retention_revision = 0 RETURN AFTER)
 	ELSE [] END;
 IF $writer_ok {
 	UPSERT $attempt_rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
@@ -1524,101 +1526,305 @@ func (s *Surreal) PinRun(ctx context.Context, runID, kind string) error {
 	}
 }
 
-const sweepRunSQL = `
+const markRunDeletingSQL = `
 BEGIN;
-LET $locked = UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
-    WHERE (status IN ['aborted', 'superseded'] OR (status = 'staged' AND started_at <= $cutoff))
-		AND evidence_format_version = $evidence_format_version
-		AND retention_quarantined = false
-		AND run_id = record::id(id)
-		AND ` + evidenceRunProbeHasNoClaimantSQL + `
-		AND published_key = NONE
-    AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0 RETURN AFTER;
-LET $attempt = IF array::len($locked) = 1 AND $locked[0].status = 'staged' THEN
-	(UPDATE extraction_attempt SET status = 'aborted'
-		WHERE run_id = $run AND status = 'staged'
-		  AND evidence_format_version = $evidence_format_version RETURN AFTER)
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+LET $locked = IF $writer_ok THEN
+	(UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1,
+		status = 'deleting', retention_phase = 'associations'
+		WHERE (status IN ['aborted', 'superseded']
+				OR (status = 'staged' AND started_at <= $cutoff))
+		  AND evidence_format_version = $evidence_format_version
+		  AND retention_quarantined = false
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+		  AND published_key = NONE
+		  AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0
+		RETURN AFTER)
 	ELSE [] END;
-LET $gone = SELECT atom_id FROM snapshot_evidence
-    WHERE run_id = $run AND array::len($locked) = 1;
-DELETE snapshot_evidence WHERE run_id = $run AND array::len($locked) = 1 RETURN NONE;
-DELETE assertion WHERE run_id = $run AND array::len($locked) = 1 RETURN NONE;
-FOR $row IN $gone {
-    LET $aid = $row.atom_id;
-    IF ((SELECT count() FROM snapshot_evidence WHERE atom_id = $aid GROUP ALL)[0].count ?? 0) = 0 {
-        DELETE evidence_atom WHERE atom_id = $aid RETURN NONE
-    }
+IF array::len($locked) = 1 AND $prior_status = 'staged' {
+	UPDATE extraction_attempt SET status = 'aborted'
+		WHERE run_id = $run AND status = 'staged'
+		  AND evidence_format_version = $evidence_format_version RETURN NONE
 };
-LET $deleted = IF array::len($locked) = 1 THEN (DELETE $rid RETURN BEFORE) ELSE [] END;
-RETURN [{ deleted: array::len($deleted) }];
+RETURN [{
+	runs_marked_deleting: array::len($locked),
+	runs_deleted: 0,
+	association_rows_deleted: 0,
+	assertion_rows_deleted: 0,
+	atom_rows_deleted: 0,
+	retention_phases_advanced: 0
+}];
+COMMIT;`
+
+const sweepAssociationChunkSQL = `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+LET $locked = IF $writer_ok THEN
+	(UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
+		WHERE status = 'deleting' AND retention_phase = 'associations'
+		  AND evidence_format_version = $evidence_format_version
+		  AND retention_quarantined = false
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+		  AND published_key = NONE
+		  AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0
+		RETURN AFTER)
+	ELSE [] END;
+LET $atom_ids = array::distinct(SELECT VALUE atom_id FROM snapshot_evidence
+	WHERE run_id = $run AND array::len($locked) = 1
+	ORDER BY id LIMIT $row_limit);
+LET $gone = SELECT VALUE id FROM snapshot_evidence
+	WHERE run_id = $run AND array::len($locked) = 1
+	ORDER BY id LIMIT $row_limit;
+LET $atoms_before = SELECT id FROM evidence_atom WHERE atom_id IN $atom_ids;
+FOR $row_id IN $gone {
+	DELETE $row_id RETURN NONE
+};
+FOR $aid IN $atom_ids {
+	IF array::len(SELECT id FROM snapshot_evidence WHERE atom_id = $aid LIMIT 1) = 0 {
+		DELETE evidence_atom WHERE atom_id = $aid RETURN NONE
+	}
+};
+LET $atoms_after = SELECT id FROM evidence_atom WHERE atom_id IN $atom_ids;
+LET $advanced = IF array::len($locked) = 1 AND array::len($gone) < $row_limit THEN
+	(UPDATE $rid SET retention_phase = 'assertions'
+		WHERE status = 'deleting' AND retention_phase = 'associations' RETURN AFTER)
+	ELSE [] END;
+RETURN [{
+	runs_marked_deleting: 0,
+	runs_deleted: 0,
+	association_rows_deleted: array::len($gone),
+	assertion_rows_deleted: 0,
+	atom_rows_deleted: array::len($atoms_before) - array::len($atoms_after),
+	retention_phases_advanced: array::len($advanced)
+}];
+COMMIT;`
+
+const sweepAssertionChunkSQL = `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+LET $locked = IF $writer_ok THEN
+	(UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
+		WHERE status = 'deleting' AND retention_phase = 'assertions'
+		  AND evidence_format_version = $evidence_format_version
+		  AND retention_quarantined = false
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+		  AND published_key = NONE
+		  AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0
+		RETURN AFTER)
+	ELSE [] END;
+LET $gone = SELECT VALUE id FROM assertion
+	WHERE run_id = $run AND array::len($locked) = 1
+	ORDER BY id LIMIT $row_limit;
+FOR $row_id IN $gone {
+	DELETE $row_id RETURN NONE
+};
+LET $advanced = IF array::len($locked) = 1 AND array::len($gone) < $row_limit THEN
+	(UPDATE $rid SET retention_phase = 'finalize'
+		WHERE status = 'deleting' AND retention_phase = 'assertions' RETURN AFTER)
+	ELSE [] END;
+RETURN [{
+	runs_marked_deleting: 0,
+	runs_deleted: 0,
+	association_rows_deleted: 0,
+	assertion_rows_deleted: array::len($gone),
+	atom_rows_deleted: 0,
+	retention_phases_advanced: array::len($advanced)
+}];
+COMMIT;`
+
+const finalizeDeletingRunSQL = `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+LET $locked = IF $writer_ok THEN
+	(UPDATE $rid SET retention_revision = (retention_revision ?? 0) + 1
+		WHERE status = 'deleting' AND retention_phase = 'finalize'
+		  AND evidence_format_version = $evidence_format_version
+		  AND retention_quarantined = false
+		  AND run_id = record::id(id)
+		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+		  AND published_key = NONE
+		  AND array::len(SELECT id FROM evidence_pin WHERE run_id = $run LIMIT 1) = 0
+		  AND array::len(SELECT id FROM snapshot_evidence WHERE run_id = $run LIMIT 1) = 0
+		  AND array::len(SELECT id FROM assertion WHERE run_id = $run LIMIT 1) = 0
+		RETURN AFTER)
+	ELSE [] END;
+LET $deleted = IF array::len($locked) = 1 THEN
+	(DELETE $rid RETURN BEFORE)
+	ELSE [] END;
+RETURN [{
+	runs_marked_deleting: 0,
+	runs_deleted: array::len($deleted),
+	association_rows_deleted: 0,
+	assertion_rows_deleted: 0,
+	atom_rows_deleted: 0,
+	retention_phases_advanced: 0
+}];
 COMMIT;`
 
 type evidenceSweepCandidateRec struct {
-	RecID *models.RecordID `json:"id"`
-	RunID string           `json:"run_id"`
+	RecID  *models.RecordID `json:"id"`
+	RunID  string           `json:"run_id"`
+	Status string           `json:"status"`
+	Phase  string           `json:"retention_phase"`
 }
 
-type evidenceSweepResultRec struct {
-	Deleted int `json:"deleted"`
-}
-
-// SweepEvidence implements proof-aware, bounded retention. Candidate
-// discovery is only an optimization: status/age and absence of a pin are
-// rechecked after locking each run inside the deletion transaction.
-func (s *Surreal) SweepEvidence(ctx context.Context, now time.Time, staleStagedAfter time.Duration) (int, error) {
-	if staleStagedAfter < 0 {
-		return 0, errors.New("sweep evidence: stale duration cannot be negative")
-	}
-	cutoff := now.UTC().Add(-staleStagedAfter)
-	runResults, err := surrealdb.Query[[]evidenceSweepCandidateRec](ctx, s.db,
-		`SELECT id, run_id, started_at OMIT started_at FROM extraction_run
-            WHERE (status IN ['aborted', 'superseded'] OR (status = 'staged' AND started_at <= $cutoff))
-				  AND evidence_format_version = $evidence_format_version
-				  AND retention_quarantined = false
-				  AND run_id = record::id(id)
-				  AND `+evidenceRunHasNoAmbiguousClaimantSQL+`
-				  AND published_key = NONE
-				  AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
-			ORDER BY started_at, run_id LIMIT $limit`,
-		map[string]any{
-			"cutoff": cutoff, "limit": evidenceSweepBatchSize,
-			"evidence_format_version":     evidenceFormatVersion,
-			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
-		})
-	if err != nil {
-		return 0, fmt.Errorf("sweep evidence: candidates: %w", err)
-	}
-	var candidates []evidenceSweepCandidateRec
-	for _, result := range *runResults {
+func firstEvidenceSweepCandidate(
+	results *[]surrealdb.QueryResult[[]evidenceSweepCandidateRec],
+) *evidenceSweepCandidateRec {
+	for _, result := range *results {
 		for _, row := range result.Result {
 			if row.RecID != nil && row.RunID != "" {
-				candidates = append(candidates, row)
+				return &row
 			}
 		}
 	}
-	deleted := 0
-	for _, candidate := range candidates {
+	return nil
+}
+
+func (s *Surreal) nextEvidenceSweepCandidate(
+	ctx context.Context, cutoff time.Time,
+) (*evidenceSweepCandidateRec, error) {
+	baseVars := map[string]any{
+		"cutoff": cutoff, "limit": evidenceSweepCandidateBatchSize,
+		"evidence_format_version":     evidenceFormatVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+	}
+	for _, candidateSQL := range []string{
+		`SELECT id, run_id, status, retention_phase, started_at OMIT started_at
+			FROM extraction_run
+			WHERE status = 'deleting'
+			  AND evidence_format_version = $evidence_format_version
+			  AND retention_quarantined = false
+			  AND run_id = record::id(id)
+			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+			  AND published_key = NONE
+			  AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
+			ORDER BY started_at, run_id LIMIT $limit`,
+		`SELECT id, run_id, status, retention_phase, started_at OMIT started_at
+			FROM extraction_run
+			WHERE (status IN ['aborted', 'superseded']
+					OR (status = 'staged' AND started_at <= $cutoff))
+			  AND evidence_format_version = $evidence_format_version
+			  AND retention_quarantined = false
+			  AND run_id = record::id(id)
+			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+			  AND published_key = NONE
+			  AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
+			ORDER BY started_at, run_id LIMIT $limit`,
+	} {
+		results, err := surrealdb.Query[[]evidenceSweepCandidateRec](ctx, s.db, candidateSQL, baseVars)
+		if err != nil {
+			return nil, err
+		}
+		if row := firstEvidenceSweepCandidate(results); row != nil {
+			return row, nil
+		}
+	}
+	return nil, nil
+}
+
+func evidenceSweepStepSQL(candidate evidenceSweepCandidateRec) (string, error) {
+	switch candidate.Status {
+	case "aborted", "superseded", "staged":
+		if candidate.Phase != "" {
+			return "", errors.New("eligible run has an unexpected retention phase")
+		}
+		return markRunDeletingSQL, nil
+	case "deleting":
+		switch candidate.Phase {
+		case "associations":
+			return sweepAssociationChunkSQL, nil
+		case "assertions":
+			return sweepAssertionChunkSQL, nil
+		case "finalize":
+			return finalizeDeletingRunSQL, nil
+		default:
+			return "", errors.New("deleting run has an invalid retention phase")
+		}
+	default:
+		return "", errors.New("candidate has an invalid retention status")
+	}
+}
+
+// SweepEvidence implements one proof-aware retention step. Candidate
+// discovery is only an optimization: eligibility and pin absence are rechecked
+// while atomically entering the durable non-visible deleting state, and each
+// later transaction deletes at most evidenceSweepRowBatchSize associations or
+// assertions. A process may stop after any successful call and resume from the
+// retained status/phase without replaying deleted evidence.
+func (s *Surreal) SweepEvidence(
+	ctx context.Context, now time.Time, staleStagedAfter time.Duration,
+) (EvidenceSweepProgress, error) {
+	if staleStagedAfter < 0 {
+		return EvidenceSweepProgress{}, errors.New("sweep evidence: stale duration cannot be negative")
+	}
+	active, err := s.evidenceMigrationComplete(ctx)
+	if err != nil {
+		return EvidenceSweepProgress{}, fmt.Errorf("sweep evidence: read writer generation: %w", err)
+	}
+	if !active {
+		return EvidenceSweepProgress{}, fmt.Errorf("sweep evidence: writer generation is not active: %w", ErrConflict)
+	}
+	cutoff := now.UTC().Add(-staleStagedAfter)
+	for selectionAttempt := 0; selectionAttempt < maxQueueRetries; selectionAttempt++ {
+		candidate, err := s.nextEvidenceSweepCandidate(ctx, cutoff)
+		if err != nil {
+			return EvidenceSweepProgress{}, fmt.Errorf("sweep evidence: candidates: %w", err)
+		}
+		if candidate == nil {
+			return EvidenceSweepProgress{}, nil
+		}
+		stepSQL, err := evidenceSweepStepSQL(*candidate)
+		if err != nil {
+			return EvidenceSweepProgress{}, fmt.Errorf("sweep evidence: run %s: %w", candidate.RunID, err)
+		}
 		runID := candidate.RunID
 		vars := map[string]any{
 			"rid": *candidate.RecID, "run": runID, "cutoff": cutoff,
-			"evidence_format_version": evidenceFormatVersion,
+			"prior_status": candidate.Status, "row_limit": evidenceSweepRowBatchSize,
+			"migration_rid":              evidenceMigrationStateID(),
+			"evidence_format_version":    evidenceFormatVersion,
+			"evidence_migration_version": evidenceMigrationVersion,
 		}
 		addProbeVars(vars, runID)
 		for attempt := 0; ; attempt++ {
-			results, queryErr := surrealdb.Query[[]evidenceSweepResultRec](ctx, s.db, sweepRunSQL, vars)
+			results, queryErr := surrealdb.Query[[]EvidenceSweepProgress](ctx, s.db, stepSQL, vars)
 			if queryErr != nil {
 				if isRetryable(queryErr) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
 					continue
 				}
-				return deleted, fmt.Errorf("sweep evidence: run %s: %w", runID, queryErr)
+				return EvidenceSweepProgress{}, fmt.Errorf("sweep evidence: run %s: %w", runID, queryErr)
 			}
 			for _, result := range *results {
 				for _, row := range result.Result {
-					deleted += row.Deleted
+					if row.DidWork() {
+						return row, nil
+					}
 				}
+			}
+			active, markerErr := s.evidenceMigrationComplete(ctx)
+			if markerErr != nil {
+				return EvidenceSweepProgress{}, fmt.Errorf(
+					"sweep evidence: recheck writer generation: %w", markerErr,
+				)
+			}
+			if !active {
+				return EvidenceSweepProgress{}, fmt.Errorf(
+					"sweep evidence: writer generation changed: %w", ErrConflict,
+				)
 			}
 			break
 		}
 	}
-	return deleted, nil
+	// Another retention worker may have consumed each selected step between
+	// discovery and lock acquisition. That is a drained result for this pass;
+	// the successful worker owns the durable progress.
+	return EvidenceSweepProgress{}, nil
 }

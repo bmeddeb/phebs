@@ -212,8 +212,16 @@ func TestWorkerFailureAbortsClassified(t *testing.T) {
 		t.Fatalf("failed replacement certificate = %+v", certRun)
 	}
 	// The aborted run is sweepable immediately.
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), time.Hour); err != nil || n != 1 {
-		t.Fatalf("sweep aborted = %d, %v", n, err)
+	swept := 0
+	for swept == 0 {
+		progress, err := s.SweepEvidence(ctx, time.Now().UTC(), time.Hour)
+		if err != nil {
+			t.Fatalf("sweep aborted: %v", err)
+		}
+		if !progress.DidWork() {
+			t.Fatal("sweep aborted run made no progress")
+		}
+		swept += progress.RunsDeleted
 	}
 	afterSweep, err := extract.BuildCoverageCertificate(ctx, s, visible, []string{"proto-contract"})
 	if err != nil || afterSweep.Digest != failed.Digest {

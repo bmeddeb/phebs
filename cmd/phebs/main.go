@@ -31,9 +31,9 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
-	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/recovery"
@@ -46,11 +46,11 @@ import (
 var version = "0.1.0-dev" // ponytail: ldflags stamping when releases exist
 
 const (
-	evidenceSweepIdleInterval   = time.Hour
-	evidenceSweepBacklogDelay   = 5 * time.Second
-	evidenceSweepMaxRunsPerPass = 8
-	evidenceStagedMaxAge        = 24 * time.Hour
-	proofSweepMaxBundlesPerPass = 8
+	evidenceSweepIdleInterval    = time.Hour
+	evidenceSweepBacklogDelay    = 5 * time.Second
+	evidenceSweepMaxStepsPerPass = 64
+	evidenceStagedMaxAge         = 24 * time.Hour
+	proofSweepMaxBundlesPerPass  = 8
 )
 
 func main() {
@@ -643,29 +643,32 @@ func enqueueExtractionBackfill(ctx context.Context, st store.Store) error {
 	return nil
 }
 
-// runEvidenceSweepPass reclaims a bounded burst of individually bounded runs.
+// runEvidenceSweepPass reclaims a bounded burst of fixed-size durable steps.
 // Hitting the cap is only a backlog signal: the caller yields before starting
-// another pass so retention cannot monopolize the database.
+// another pass so retention cannot monopolize the database. Logical run
+// deletion and physical proof-row deletion remain separately observable.
 func runEvidenceSweepPass(
 	ctx context.Context, evidence store.EvidenceStore, staleStagedAfter time.Duration,
-) (deleted int, backlogLikely bool, err error) {
-	for range evidenceSweepMaxRunsPerPass {
+) (progress store.EvidenceSweepProgress, backlogLikely bool, err error) {
+	for range evidenceSweepMaxStepsPerPass {
 		if err := ctx.Err(); err != nil {
-			return deleted, false, err
+			return progress, false, err
 		}
-		n, err := evidence.SweepEvidence(ctx, time.Now().UTC(), staleStagedAfter)
+		step, err := evidence.SweepEvidence(ctx, time.Now().UTC(), staleStagedAfter)
 		if err != nil {
-			return deleted, false, err
+			return progress, false, err
 		}
-		if n == 0 {
-			return deleted, false, nil
+		if !step.DidWork() {
+			return progress, false, nil
 		}
-		if n != 1 {
-			return deleted, false, fmt.Errorf("evidence retention: invalid sweep count %d", n)
-		}
-		deleted++
+		progress.RunsMarkedDeleting += step.RunsMarkedDeleting
+		progress.RunsDeleted += step.RunsDeleted
+		progress.AssociationRowsDeleted += step.AssociationRowsDeleted
+		progress.AssertionRowsDeleted += step.AssertionRowsDeleted
+		progress.AtomRowsDeleted += step.AtomRowsDeleted
+		progress.RetentionPhasesAdvanced += step.RetentionPhasesAdvanced
 	}
-	return deleted, true, nil
+	return progress, true, nil
 }
 
 // runProofBundleSweepPass releases a bounded burst of bundle-owned pins. It
@@ -743,8 +746,7 @@ func runProofBundleMaintenance(
 // runEvidenceMaintenance checks immediately at boot. Empty stores cost one
 // query per idle interval; a likely backlog is processed in bounded bursts
 // separated by a short yield. Pinned proof/checkpoint runs are excluded by the
-// store, and each individual deletion transaction remains independently
-// bounded by the evidence-store ingestion caps.
+// store, and each individual deletion transaction has its own fixed row cap.
 func runEvidenceMaintenance(
 	ctx context.Context, evidence store.EvidenceStore,
 	idleInterval, backlogDelay, staleStagedAfter time.Duration,
@@ -767,7 +769,7 @@ func runEvidenceMaintenance(
 			case <-timer.C:
 			}
 		}
-		deleted, backlogLikely, err := runEvidenceSweepPass(ctx, evidence, staleStagedAfter)
+		progress, backlogLikely, err := runEvidenceSweepPass(ctx, evidence, staleStagedAfter)
 		if err != nil {
 			if ctx.Err() != nil {
 				return
@@ -776,8 +778,14 @@ func runEvidenceMaintenance(
 			delay = idleInterval
 			continue
 		}
-		if deleted > 0 {
-			log.Printf("evidence retention: swept %d run(s)", deleted)
+		if progress.DidWork() {
+			log.Printf(
+				"evidence retention: completed %d run(s); deleted %d physical row(s) "+
+					"(%d associations, %d assertions, %d atoms)",
+				progress.RunsDeleted, progress.PhysicalRowsDeleted(),
+				progress.AssociationRowsDeleted, progress.AssertionRowsDeleted,
+				progress.AtomRowsDeleted,
+			)
 		}
 		if backlogLikely {
 			delay = backlogDelay

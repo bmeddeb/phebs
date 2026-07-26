@@ -218,8 +218,10 @@ func (*memoryEvidence) ResolveEvidence(context.Context, string, string, string) 
 	return nil, store.ErrNotFound
 }
 func (*memoryEvidence) PinRun(context.Context, string, string) error { return nil }
-func (*memoryEvidence) SweepEvidence(context.Context, time.Time, time.Duration) (int, error) {
-	return 0, nil
+func (*memoryEvidence) SweepEvidence(
+	context.Context, time.Time, time.Duration,
+) (store.EvidenceSweepProgress, error) {
+	return store.EvidenceSweepProgress{}, nil
 }
 
 type unitCorpusFactory struct {

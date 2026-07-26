@@ -19,6 +19,7 @@ type evidenceMigrationTestState struct {
 	Migration    string `json:"evidence_migration_version"`
 	Ambiguous    string `json:"evidence_migration_ambiguous_run_id"`
 	Quarantined  bool   `json:"retention_quarantined"`
+	Phase        string `json:"retention_phase"`
 	PublishedKey any    `json:"published_key"`
 }
 
@@ -66,7 +67,7 @@ func evidenceMigrationState(t *testing.T, s *Surreal, runID string) evidenceMigr
 	results, err := surrealdb.Query[[]evidenceMigrationTestState](context.Background(), s.db,
 		`SELECT run_id, status, store_schema_version, evidence_format_version,
 			evidence_migration_version, evidence_migration_ambiguous_run_id,
-			retention_quarantined, published_key
+			retention_quarantined, retention_phase, published_key
 			FROM $rid`, map[string]any{"rid": extractionRunID(runID)})
 	if err != nil {
 		t.Fatalf("read migration state %s: %v", runID, err)
@@ -211,7 +212,7 @@ func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 	if err != nil || len(after) != 0 {
 		t.Fatalf("legacy assertion remained visible: %+v, %v", after, err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC().Add(48*time.Hour), time.Hour); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC().Add(48*time.Hour), time.Hour); err != nil || n != 0 {
 		t.Fatalf("unbounded legacy run entered automatic sweep: %d, %v", n, err)
 	}
 	if _, err := s.ResolveEvidence(ctx, repo, "legacy-published", "legacy-atom"); !errors.Is(err, ErrNotFound) {
@@ -355,7 +356,8 @@ func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testin
 	published := evidenceMigrationState(t, s, "v3-published")
 	if published.RunID != "v3-published" || published.Status != "published" ||
 		published.StoreSchema != evidenceStoreSchemaVersion || published.Format != evidenceFormatVersion ||
-		published.Quarantined || published.PublishedKey != publishedKey(repo, "proto-contract") {
+		published.Quarantined || published.Phase != "" ||
+		published.PublishedKey != publishedKey(repo, "proto-contract") {
 		t.Fatalf("upgraded v3 publication = %+v", published)
 	}
 	blocked := evidenceMigrationState(t, s, "v3-blocked")
@@ -535,7 +537,7 @@ func TestMigrateEvidenceRunIDCollisionDoesNotStealProof(t *testing.T) {
 	if err := s.AbortExtractionRun(ctx, "collision-owner"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("ambiguous physical owner remained mutable: %v", err)
 	}
-	deleted, err := s.SweepEvidence(ctx, now, time.Hour)
+	deleted, err := sweepEvidenceRun(ctx, s, now, time.Hour)
 	if err != nil || deleted != 0 {
 		t.Fatalf("ambiguous physical owner was swept: deleted=%d err=%v", deleted, err)
 	}
@@ -724,7 +726,7 @@ func TestMigrateEvidenceUnsafeRetainedClaimsReserveOwner(t *testing.T) {
 	if err := s.AbortExtractionRun(ctx, "unsafe-owner"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("owner reserved by retained claim remained mutable: %v", err)
 	}
-	if n, err := s.SweepEvidence(ctx, now, time.Hour); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, now, time.Hour); err != nil || n != 0 {
 		t.Fatalf("owner reserved by retained claim was swept: %d, %v", n, err)
 	}
 	for kind, record := range map[string]any{
@@ -919,11 +921,11 @@ func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 	}
 
 	for range 2 {
-		if n, err := s.SweepEvidence(ctx, now, time.Hour); err != nil || n != 1 {
+		if n, err := sweepEvidenceRun(ctx, s, now, time.Hour); err != nil || n != 1 {
 			t.Fatalf("compatible future retention sweep = %d, %v", n, err)
 		}
 	}
-	if n, err := s.SweepEvidence(ctx, now, time.Hour); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, now, time.Hour); err != nil || n != 0 {
 		t.Fatalf("incompatible future row entered retention sweep: %d, %v", n, err)
 	}
 	for _, runID := range []string{"future-compatible-aborted", "future-compatible-staged"} {
@@ -1122,7 +1124,7 @@ func TestEvidenceRequiresCanonicalPhysicalRunAndPublicationEnvelope(t *testing.T
 	}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("owner with a live logical-id claimant published: %v", err)
 	}
-	if n, err := s.SweepEvidence(ctx, now, time.Hour); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, now, time.Hour); err != nil || n != 0 {
 		t.Fatalf("mismatched or stale-envelope run entered sweep: %d, %v", n, err)
 	}
 	for kind, record := range map[string]any{
@@ -1169,7 +1171,7 @@ func TestSweepEvidenceDecodesOnlyCandidateIdentity(t *testing.T) {
 		}); err != nil {
 		t.Fatal(err)
 	}
-	if n, err := s.SweepEvidence(ctx, now, time.Hour); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, now, time.Hour); err != nil || n != 1 {
 		t.Fatalf("sweep malformed irrelevant fields = %d, %v", n, err)
 	}
 	if exists, err := s.extractionRunExists(ctx, "malformed-sweep"); err != nil || exists {

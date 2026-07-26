@@ -49,6 +49,10 @@ type t201Metrics struct {
 	FirstPageRows               int    `json:"first_page_rows_including_sentinel"`
 	FirstPageWallMilliseconds   int64  `json:"first_page_wall_ms"`
 	SweepDeletedRuns            int    `json:"sweep_deleted_runs"`
+	SweepSteps                  int    `json:"sweep_steps"`
+	SweepAssociationRows        int    `json:"sweep_association_rows"`
+	SweepAssertionRows          int    `json:"sweep_assertion_rows"`
+	SweepAtomRows               int    `json:"sweep_atom_rows"`
 	SweepWallMilliseconds       int64  `json:"sweep_wall_ms"`
 	SweepSurrealPeakRSSBytes    int64  `json:"sweep_surreal_peak_rss_bytes"`
 	SweepSurrealRSSDeltaBytes   int64  `json:"sweep_surreal_rss_delta_bytes"`
@@ -68,21 +72,27 @@ func TestT203ProductionEvidenceCeilings(t *testing.T) {
 		maxEvidencePathBytes != 4_096 ||
 		maxCoverageFileCount != 10_000_000 ||
 		maxCoverageReadBytes != 1<<50 ||
-		evidenceSweepBatchSize != 1 {
+		evidenceSweepCandidateBatchSize != 1 ||
+		evidenceSweepRowBatchSize != 512 {
 		t.Fatalf("T20.3 evidence ceilings changed; review and remeasure")
 	}
 }
 
 func TestT204ReverseEvidenceSchemaIdentities(t *testing.T) {
-	if evidenceStoreSchemaVersion != "t12-store-v6" ||
-		evidencePreviousStoreSchemaVersion != "t12-store-v5" ||
-		evidenceMigrationVersion != "t12-evidence-migration-v4" ||
-		evidencePreviousMigrationVersion != "t12-evidence-migration-v3" ||
-		evidenceWriterGuardEvent != "extraction_run_writer_v6" ||
-		reverseAssertionIndexName != "assertion_reverse_v6" ||
+	if reverseAssertionIndexName != "assertion_reverse_v6" ||
 		defaultReverseAssertionPage != 50 ||
 		maxReverseAssertionPage != 100 {
-		t.Fatal("T20.4 reverse schema identities or page bounds changed; review and remeasure")
+		t.Fatal("T20.4 reverse index identity or page bounds changed; review and remeasure")
+	}
+}
+
+func TestT205RetentionSchemaIdentities(t *testing.T) {
+	if evidenceStoreSchemaVersion != "t12-store-v7" ||
+		evidencePreviousStoreSchemaVersion != "t12-store-v6" ||
+		evidenceMigrationVersion != "t12-evidence-migration-v5" ||
+		evidencePreviousMigrationVersion != "t12-evidence-migration-v4" ||
+		evidenceWriterGuardEvent != "extraction_run_writer_v7" {
+		t.Fatal("T20.5 retention schema identities changed; review and remeasure")
 	}
 }
 
@@ -182,19 +192,37 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 	}
 
 	sweepStart := time.Now()
+	var sweepProgress EvidenceSweepProgress
+	sweepSteps := 0
 	sweepPeak, sweepRSSBefore, sweepRSSAfter, err := measureRSS(localRuntime.PID, func() error {
-		deleted, err := s.SweepEvidence(ctx, time.Now().UTC(), 0)
-		if err != nil {
-			return err
-		}
-		if deleted != 1 {
-			return fmt.Errorf("deleted runs = %d, want 1", deleted)
+		for sweepProgress.RunsDeleted == 0 {
+			step, err := s.SweepEvidence(ctx, time.Now().UTC(), 0)
+			if err != nil {
+				return err
+			}
+			if !step.DidWork() {
+				return errors.New("target sweep drained before deleting its logical run")
+			}
+			addEvidenceSweepProgress(&sweepProgress, step)
+			sweepSteps++
 		}
 		return nil
 	})
 	sweepWall := time.Since(sweepStart)
 	if err != nil {
 		t.Fatalf("sweep target run: %v", err)
+	}
+	if sweepProgress.RunsMarkedDeleting != 1 || sweepProgress.RunsDeleted != 1 ||
+		sweepProgress.AssociationRowsDeleted != t201TargetFacts ||
+		sweepProgress.AssertionRowsDeleted != t201TargetFacts ||
+		sweepProgress.AtomRowsDeleted != 0 {
+		t.Fatalf("target sweep accounting = %+v", sweepProgress)
+	}
+	if sweepWall > 2*time.Second {
+		t.Fatalf("target sweep took %v; frozen ceiling is 2s", sweepWall)
+	}
+	if sweepPeak > 512<<20 {
+		t.Fatalf("target sweep peak RSS = %d; frozen ceiling is %d", sweepPeak, 512<<20)
 	}
 	if _, err := s.getRun(ctx, first.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("swept run still exists: %v", err)
@@ -208,7 +236,7 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 	}
 
 	metrics := t201Metrics{
-		Schema:    "t20-store-measurement-v2",
+		Schema:    "t20-store-measurement-v3",
 		GoVersion: runtime.Version(), GOOS: runtime.GOOS, GOARCH: runtime.GOARCH,
 		GOMAXPROCS:                  runtime.GOMAXPROCS(0),
 		SurrealVersion:              localRuntime.Surreal.Version,
@@ -228,6 +256,10 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 		FirstPageRows:               len(page),
 		FirstPageWallMilliseconds:   pageWall.Milliseconds(),
 		SweepDeletedRuns:            1,
+		SweepSteps:                  sweepSteps,
+		SweepAssociationRows:        sweepProgress.AssociationRowsDeleted,
+		SweepAssertionRows:          sweepProgress.AssertionRowsDeleted,
+		SweepAtomRows:               sweepProgress.AtomRowsDeleted,
 		SweepWallMilliseconds:       sweepWall.Milliseconds(),
 		SweepSurrealPeakRSSBytes:    sweepPeak,
 		SweepSurrealRSSDeltaBytes:   sweepRSSAfter - sweepRSSBefore,

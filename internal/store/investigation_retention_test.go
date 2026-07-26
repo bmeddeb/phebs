@@ -78,7 +78,7 @@ func TestInvestigationRetentionArtifactPinsAndAuthorizedOwnerBlockSweep(t *testi
 	owner := retainInvestigationArtifact(t, s, artifact.ID, investigation.ID)
 
 	supersedeExtractionRun(t, s, repo, commit, "proto-contract@2")
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 0 {
 		t.Fatalf("artifact-pinned evidence sweep = %d, %v; want 0", n, err)
 	}
 	if n, err := s.SweepRunArtifacts(ctx, time.Now().UTC().Add(time.Hour)); err != nil || n != 0 {
@@ -101,7 +101,7 @@ func TestInvestigationRetentionArtifactPinsAndAuthorizedOwnerBlockSweep(t *testi
 	if _, err := s.GetRunArtifact(ctx, artifact.ID); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("collected artifact read = %v, want ErrNotFound", err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 1 {
 		t.Fatalf("newly unpinned evidence sweep = %d, %v; want 1", n, err)
 	}
 }
@@ -206,7 +206,7 @@ func TestInvestigationRetentionArtifactSweepReleasesOnlyItsOwnPins(t *testing.T)
 	if _, err := s.GetRunArtifact(ctx, artifact.ID); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("artifact read after sweep = %v, want ErrNotFound", err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 0 {
 		t.Fatalf("independently pinned evidence sweep = %d, %v; want 0", n, err)
 	}
 }

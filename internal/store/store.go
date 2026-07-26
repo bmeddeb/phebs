@@ -299,10 +299,34 @@ type ExtractionRun struct {
 	Commit      string           `json:"commit"`
 	Domain      string           `json:"domain"` // e.g. "proto-contract"
 	Extractor   string           `json:"extractor"`
-	Status      string           `json:"status"` // staged | published | superseded | aborted
+	Status      string           `json:"status"` // staged | published | superseded | aborted | deleting (internal)
 	StartedAt   time.Time        `json:"started_at"`
 	PublishedAt *time.Time       `json:"published_at,omitempty"`
 	Coverage    CoverageManifest `json:"coverage"`
+}
+
+// EvidenceSweepProgress reports one bounded retention step. Logical run
+// deletion is intentionally separate from physical proof-row deletion: a
+// target-size run takes multiple resumable calls, and a caller must not treat
+// the one-run candidate limit as a row limit.
+type EvidenceSweepProgress struct {
+	RunsMarkedDeleting      int `json:"runs_marked_deleting"`
+	RunsDeleted             int `json:"runs_deleted"`
+	AssociationRowsDeleted  int `json:"association_rows_deleted"`
+	AssertionRowsDeleted    int `json:"assertion_rows_deleted"`
+	AtomRowsDeleted         int `json:"atom_rows_deleted"`
+	RetentionPhasesAdvanced int `json:"retention_phases_advanced"`
+}
+
+// PhysicalRowsDeleted excludes the extraction-run record itself.
+func (p EvidenceSweepProgress) PhysicalRowsDeleted() int {
+	return p.AssociationRowsDeleted + p.AssertionRowsDeleted + p.AtomRowsDeleted
+}
+
+// DidWork distinguishes a drained store from a metadata-only phase advance.
+func (p EvidenceSweepProgress) DidWork() bool {
+	return p.RunsMarkedDeleting+p.RunsDeleted+p.PhysicalRowsDeleted()+
+		p.RetentionPhasesAdvanced > 0
 }
 
 // ExtractionAttempt is the durable latest-attempt marker for one repository
@@ -466,12 +490,11 @@ type EvidenceStore interface {
 	// PinRun idempotently exempts a published or superseded run from sweeps
 	// (proof-bundle / checkpoint retention).
 	PinRun(ctx context.Context, runID, kind string) error
-	// SweepEvidence deletes rows of aborted, stale-staged, and superseded
-	// UNPINNED runs. Shared atoms survive while any association references
-	// them. Each call considers at most one run; ingestion caps each run at
-	// 10,000 association+assertion rows and 20,000 evidence-reference edges,
-	// providing a hard row/payload work bound. Returns 0 or 1.
-	SweepEvidence(ctx context.Context, now time.Time, staleStagedAfter time.Duration) (int, error)
+	// SweepEvidence advances at most one UNPINNED aborted, stale-staged,
+	// superseded, or already-deleting run by one bounded durable step. Shared
+	// atoms survive while any association references them. The returned
+	// logical-run and physical-row counts are deliberately separate.
+	SweepEvidence(ctx context.Context, now time.Time, staleStagedAfter time.Duration) (EvidenceSweepProgress, error)
 }
 
 // AuthStats drives the public auth status and the one-time setup gate.

@@ -73,7 +73,8 @@ global-name abstention, neutral naming, and production hard limits.
 The target-size store measurement is opt-in because it stages two 20,020-row
 runs under the current 25,000-row production admission and completely sweeps
 the superseded one. It invokes the exact production `addEvidenceSQL`,
-`publishExtractionRunSQL`, and `sweepRunSQL` statements and limit variables:
+`publishExtractionRunSQL`, and resumable retention step statements and limit
+variables:
 
 ```sh
 T201_MEASURE_STORE=1 \
@@ -84,8 +85,10 @@ go test ./internal/store \
   -count=1 -timeout=25m -v
 ```
 
-New output uses `t20-store-measurement-v2` and records the active store
-generation, writer-guard event, admission, and reference-edge limit. The
+New output uses `t20-store-measurement-v3` and records the active store
+generation, writer-guard event, admission, reference-edge limit, retention
+step count, one completed logical run, and association/assertion/atom rows
+deleted separately. The
 reviewed `results.json` is deliberately not overwritten: it is the immutable
 T20.1 baseline captured against `t12-store-v4` before the T20.3 publication
 marker/field guards. The go/no-go table labels those publication and sweep
@@ -98,6 +101,14 @@ It binds `t12-store-v6`, `extraction_run_writer_v6`, the 25,000-row admission,
 and the 20,000-reference-edge limit. Publication took 154 ms with 248,741,888
 bytes peak Surreal RSS; a complete 20,020-row sweep took 1,130 ms with
 336,035,840 bytes peak RSS. Both pass the frozen 2 s / 512 MiB gates.
+That v2 receipt remains immutable history. T20.5 requires a separate reviewed
+v3 receipt for `t12-store-v7`; it is committed as
+`results-current-writer-v7.json`
+(`sha256:f4b7e4e591797c2672049b135a202ffde0ce868ced69a6fdd02ee4a45adb963b`).
+The resumable sweep completed in 42 steps and separately accounted for one
+logical run, 10,010 associations, 10,010 assertions, and zero shared atoms.
+It took 1,897 ms with 265,093,120 bytes peak Surreal RSS, inside the frozen
+2 s / 512 MiB gates.
 
 The v2 receipt intentionally retains T20.1's legacy `ListAssertions`
 first-page probe so it remains comparable to the historical receipt. That

@@ -36,17 +36,18 @@ func TestEvidenceWriterGenerationFailsClosed(t *testing.T) {
 	}
 	for _, result := range *oldReader {
 		if len(result.Result) != 0 {
-			t.Fatal("previous-generation exact reader exposed a v5 staged run")
+			t.Fatal("previous-generation exact reader exposed a v7 staged run")
 		}
 	}
 
-	// Model the previous v5 binary reapplying the exact weaker field assertion
-	// it knows. The generation-named v6 event is unknown to that binary and
+	// Model the previous v6 binary reapplying the exact weaker field assertion
+	// it knows. The generation-named v7 event is unknown to that binary and
 	// remains installed, so the old writer still cannot create a run.
 	weakened, err := surrealdb.Query[any](ctx, s.db,
 		`DEFINE FIELD OVERWRITE store_schema_version ON extraction_run TYPE string
 			ASSERT $value NOT IN
-				['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4'];`,
+				['t12-store-v1', 't12-store-v2', 't12-store-v3',
+				 't12-store-v4', 't12-store-v5'];`,
 		nil)
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +78,7 @@ func TestEvidenceWriterGenerationFailsClosed(t *testing.T) {
 		}
 	}
 	if rawErr == nil {
-		t.Fatal("previous writer generation created a run under the retained v6 event")
+		t.Fatal("previous writer generation created a run under the retained v7 event")
 	}
 	if exists, err := s.extractionRunExists(ctx, "old-writer-run"); err != nil || exists {
 		t.Fatalf("old writer row exists = %v, %v", exists, err)
@@ -85,7 +86,7 @@ func TestEvidenceWriterGenerationFailsClosed(t *testing.T) {
 
 	// A concurrent/rollback opener can overwrite the old completion marker.
 	// Every current mutation independently checks it, so neither generation can
-	// continue writing until exclusive startup restores the v5 marker.
+	// continue writing until exclusive startup restores the v7 marker.
 	markerResults, err := surrealdb.Query[any](ctx, s.db,
 		"UPDATE $rid SET version = $version RETURN NONE",
 		map[string]any{

@@ -193,7 +193,7 @@ func TestEvidenceAtomDedupAcrossRepos(t *testing.T) {
 	if err := s.PublishExtractionRun(ctx, run2.ID, testCoverage(0, 0)); err != nil {
 		t.Fatalf("publish replacement: %v", err)
 	}
-	if _, err := s.SweepEvidence(ctx, time.Now().UTC(), time.Hour); err != nil {
+	if _, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), time.Hour); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
 	got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: "github.com/b/two"})
@@ -268,7 +268,7 @@ func TestEvidenceStagedRunsInvisibleAndAtomicPublish(t *testing.T) {
 	}
 
 	// The stale staged run is reaped by the sweep; published facts intact.
-	n, err := s.SweepEvidence(ctx, time.Now().UTC().Add(2*time.Hour), time.Hour)
+	n, err := sweepEvidenceRun(ctx, s, time.Now().UTC().Add(2*time.Hour), time.Hour)
 	if err != nil || n != 1 {
 		t.Fatalf("sweep stale staged = %d, %v", n, err)
 	}
@@ -350,7 +350,7 @@ func TestEvidencePinBlocksSweep(t *testing.T) {
 	if err := s.PublishExtractionRun(ctx, run2.ID, testCoverage(0, 0)); err != nil {
 		t.Fatalf("publish run2: %v", err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), time.Hour); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), time.Hour); err != nil || n != 0 {
 		t.Fatalf("sweep removed %d runs despite pin (err %v)", n, err)
 	}
 	resolved, err := s.ResolveEvidence(ctx, repo, run1.ID, store.ComputeAtomID(a1))
@@ -699,7 +699,7 @@ func TestEvidenceDeleteRetiresRunsAndPreservesPins(t *testing.T) {
 	if err != nil || len(canceled) != 1 {
 		t.Fatalf("canceled extraction jobs = %+v, %v", canceled, err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 0 {
 		t.Fatalf("pinned deleted evidence swept = %d, %v", n, err)
 	}
 	// Retained row is now superseded and can still be pinned idempotently;
@@ -730,16 +730,16 @@ func TestEvidenceAbortAndSweepAreBounded(t *testing.T) {
 	if err := s.AbortExtractionRun(ctx, "missing"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("missing abort = %v", err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 1 {
 		t.Fatalf("first bounded sweep = %d, %v", n, err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 1 {
 		t.Fatalf("second bounded sweep = %d, %v", n, err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 1 {
 		t.Fatalf("third bounded sweep = %d, %v", n, err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 0 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 0 {
 		t.Fatalf("empty bounded sweep = %d, %v", n, err)
 	}
 }
@@ -786,7 +786,7 @@ func TestExtractionAttemptSurvivesFailedReplacementSweep(t *testing.T) {
 		}
 	}
 	assertFailedAttempt("before sweep")
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC(), 0); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), 0); err != nil || n != 1 {
 		t.Fatalf("sweep failed replacement = %d, %v", n, err)
 	}
 	assertFailedAttempt("after sweep")
@@ -801,7 +801,7 @@ func TestExtractionAttemptMarksSweptStagedRunAborted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n, err := s.SweepEvidence(ctx, time.Now().UTC().Add(time.Hour), 0); err != nil || n != 1 {
+	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC().Add(time.Hour), 0); err != nil || n != 1 {
 		t.Fatalf("sweep killed run = %d, %v", n, err)
 	}
 	attempt, err := s.LatestExtractionAttempt(ctx, repo, domain)

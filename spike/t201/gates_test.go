@@ -437,6 +437,67 @@ func TestCurrentStoreWriterMeasurement(t *testing.T) {
 	}
 }
 
+func TestCurrentResumableRetentionMeasurement(t *testing.T) {
+	encoded, err := os.ReadFile("results-current-writer-v7.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(encoded)
+	if got, want := hex.EncodeToString(sum[:]),
+		"f4b7e4e591797c2672049b135a202ffde0ce868ced69a6fdd02ee4a45adb963b"; got != want {
+		t.Fatalf("resumable-retention receipt digest = %s, want %s", got, want)
+	}
+	var result struct {
+		Schema                      string `json:"schema"`
+		StoreSchema                 string `json:"store_schema"`
+		EvidenceFormat              string `json:"evidence_format"`
+		WriterGuardEvent            string `json:"writer_guard_event"`
+		AdmissionRows               int    `json:"admission_rows"`
+		ReferenceEdgeLimit          int    `json:"reference_edge_limit"`
+		TargetFacts                 int    `json:"target_facts"`
+		TargetRows                  int    `json:"target_rows"`
+		ReferenceEdges              int    `json:"reference_edges"`
+		PublishWallMS               int64  `json:"publish_wall_ms"`
+		PublishGoAllocatedBytes     uint64 `json:"publish_go_allocated_bytes"`
+		PublishPeakRSS              int64  `json:"publish_surreal_peak_rss_bytes"`
+		SweepDeletedRuns            int    `json:"sweep_deleted_runs"`
+		SweepSteps                  int    `json:"sweep_steps"`
+		SweepAssociationRows        int    `json:"sweep_association_rows"`
+		SweepAssertionRows          int    `json:"sweep_assertion_rows"`
+		SweepAtomRows               int    `json:"sweep_atom_rows"`
+		SweepWallMS                 int64  `json:"sweep_wall_ms"`
+		SweepPeakRSS                int64  `json:"sweep_surreal_peak_rss_bytes"`
+		AtomicSupersessionVerified  bool   `json:"atomic_supersession_verified"`
+		CompleteTargetSweepVerified bool   `json:"complete_target_sweep_verified"`
+	}
+	if err := json.Unmarshal(encoded, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Schema != "t20-store-measurement-v3" ||
+		result.StoreSchema != "t12-store-v7" ||
+		result.EvidenceFormat != "t12-evidence-v1" ||
+		result.WriterGuardEvent != "extraction_run_writer_v7" ||
+		result.AdmissionRows != 25_000 ||
+		result.ReferenceEdgeLimit != 20_000 ||
+		result.TargetFacts != ScaleTotalCalls ||
+		result.TargetRows != ScaleTotalCalls*2 ||
+		result.ReferenceEdges != ScaleTotalCalls ||
+		result.PublishWallMS != 166 ||
+		result.PublishGoAllocatedBytes != 191_440 ||
+		result.PublishPeakRSS != 239_730_688 ||
+		result.SweepDeletedRuns != 1 ||
+		result.SweepSteps != 42 ||
+		result.SweepAssociationRows != ScaleTotalCalls ||
+		result.SweepAssertionRows != ScaleTotalCalls ||
+		result.SweepAtomRows != 0 ||
+		result.SweepWallMS != 1_897 ||
+		result.SweepPeakRSS != 265_093_120 ||
+		!result.AtomicSupersessionVerified ||
+		!result.CompleteTargetSweepVerified {
+		t.Fatalf("resumable-retention receipt changed: %+v", result)
+	}
+}
+
 func TestCorpusContainsOnlyNeutralOwnedNames(t *testing.T) {
 	for _, name := range []string{SmallProfileName, ScaleProfileName} {
 		profile := mustProfile(t, name)
