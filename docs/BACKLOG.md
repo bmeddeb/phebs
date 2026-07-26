@@ -2689,10 +2689,63 @@ message. The resulting KD1–KD10 table keeps declarations empty, records
 franz-go as a separate future gate, and authorizes T23.2 specification work
 only — no production extractor behavior or accuracy claim.
 
-**T23.2–T23.4 (sketches, revisable by the spike)** — T23.2 extractor + flag
-+ card; T23.3 topic-keyed proof/MCP surface (tool naming decided by the
-spike's spec revision — operation tools are not reused); T23.4
-topic-centered UI + demo + closure. Each carries the standard pack
+**T23.2 · kafkago extractors, both planes** *(needs T23.1 — spec revised
+2026-07-26 from the frozen KD1–KD10 table)* — package
+`internal/extract/extractors/kafkago` at 1.0.0 provides two `sdk.Extractor`
+implementations sharing one frozen recognizer: domain `kafka-producer` and
+domain `kafka-consumer`, both behind the dark flag
+`experimental.provisional_kafka_extraction`, atom schema `t23-v1`.
+Recognition implements KD3–KD6 exactly: qualified-selector shapes only over
+the two sarama import paths (era recorded) and segmentio; `kafka.Message{
+Topic:}` only as a direct `WriteMessages` argument, never `CommitMessages`;
+document eligibility = round-one import present and not `_test.go`;
+dual-sarama-import files abstain `ambiguous-library-import`;
+literal-or-abstain with same-file `const` only, under Kafka's 1–249
+`[a-zA-Z0-9._-]` bounds with `.`/`..` rejected. Evidence rows:
+`PRODUCES_TO_TOPIC` / `CONSUMES_FROM_TOPIC`, object `topic:<literal>`,
+detail `kafka-topic-evidence-detail-v1` {library, import_path, shape,
+binding, tier, group_id (consumer detail only), start_byte, end_byte,
+start_line}. Abstention rows: `UNRESOLVED_KAFKA_PRODUCER` /
+`UNRESOLVED_KAFKA_CONSUMER`, object `unresolved:<shape-class>` from the
+frozen six-class vocabulary, same detail minus topic. Tier per KD9:
+composites `derived`, arity-based `Consume`/`ConsumePartition` `heuristic`.
+Subjects use the per-repo `provisional_repo_path_v1` lineage recipe — call
+sites have no cross-repo package identity, and this pack never joins the
+contract SCIP lineage family. New evidence-pack card file
+docs/KAFKA_PACK_CARDS.md; registry pin matrix extended; ADR + MANUAL same
+PR. AC: table-driven fixtures reproduce every spike synthetic shape and the
+committed hand-label outcomes (exact spans, tiers, six abstention classes);
+byte-identical double run; staged→published worker regression; missing
+import → zero rows; `_test.go` → zero rows; dark by default with the flag
+composing beside the existing packs; full merge bar.
+
+**T23.3 · topic-keyed proof + MCP surface** *(needs T23.2)* — one
+topic-centered query surface, named for what it is: `find_kafka_topic_usage`
+(HTTP + MCP; topic semantics are Kafka-specific, so no neutral fan-out is
+pretended, and no operation tool is reused). Input: one topic spelling
+validated by the KD2 bounds. Output: producer rows and consumer rows
+(group id as detail), each with immutable citations, plus a first-class
+unresolved census — per-plane counts by shape class that are **always
+present, even when zero** — so KD10's honesty requirement is structural,
+not editorial. Envelope gains identity kind `kafka_topic` with coverage and
+the explicit no-completeness posture; proof bundles gain a topic-keyed kind
+with deterministic ordering. The reverse index needs no store change
+(predicate-parameterized since T20.4). AC: illegal topic spellings refused
+at validation; responses deterministic and byte-stable across reruns;
+existing protobuf/Thrift proof and MCP responses byte-untouched; MCP tool
+count/schema pins updated for dark and enabled states; envelope kind
+round-trips; merge bar.
+
+**T23.4 · topic-centered UI, demo, closure** *(needs T23.3)* — a read-only
+topic page in the annex UI: search a topic literal → producers → topic →
+consumers, never an endpoint metaphor; the unresolved census renders as a
+first-class panel ("N producer sites and M consumer sites could not be
+resolved from source — this view is not complete") rather than a footnote.
+`make dev` demo via a neutral synthetic fixture repo exercising literal,
+same-file-const, and environment-driven shapes across both libraries;
+MANUAL walkthrough; Vitest green; protobuf/Thrift pages unchanged; the
+Kafka candidate bullet above is absorbed; epic-closure ADR records what
+shipped dark and what remains gated. Each ticket keeps the standard pack
 discipline: ADR + MANUAL same PR, dark posture, full merge bar.
 
 ## P5 hardening *(unscheduled — pull on demand)*
