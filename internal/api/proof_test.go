@@ -145,6 +145,66 @@ func compareAssertionTuple(left, right store.Assertion) int {
 	return 0
 }
 
+func (s *proofAPIStore) ListReverseAssertions(
+	_ context.Context,
+	query store.ReverseAssertionQuery,
+) (*store.ReverseAssertionPage, error) {
+	s.calls = append(s.calls, "reverse:"+proofScope(query.Repo, query.RunID))
+	var rows []store.Assertion
+	for _, assertion := range s.assertions[query.Repo] {
+		if assertion.Repo != query.Repo || assertion.RunID != query.RunID ||
+			assertion.Predicate != query.Predicate ||
+			assertion.Object != query.Object ||
+			query.Lineage != "" && assertion.Lineage != query.Lineage {
+			continue
+		}
+		if query.After != nil && compareReverseAssertion(
+			assertion, store.Assertion{
+				Lineage: query.After.RowLineage,
+				Subject: query.After.Subject, ID: query.After.AssertionID,
+			},
+		) <= 0 {
+			continue
+		}
+		rows = append(rows, assertion)
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		return compareReverseAssertion(rows[i], rows[j]) < 0
+	})
+	limit := query.Limit
+	if limit == 0 {
+		limit = 50
+	}
+	page := &store.ReverseAssertionPage{Assertions: rows}
+	if len(rows) <= limit {
+		return page, nil
+	}
+	page.Assertions = rows[:limit]
+	last := page.Assertions[len(page.Assertions)-1]
+	page.Next = &store.ReverseAssertionCursor{
+		Repo: query.Repo, RunID: query.RunID, Predicate: query.Predicate,
+		Object: query.Object, QueryLineage: query.Lineage,
+		RowLineage: last.Lineage, Subject: last.Subject, AssertionID: last.ID,
+	}
+	return page, nil
+}
+
+func compareReverseAssertion(left, right store.Assertion) int {
+	for _, pair := range [][2]string{
+		{left.Lineage, right.Lineage},
+		{left.Subject, right.Subject},
+		{left.ID, right.ID},
+	} {
+		if pair[0] < pair[1] {
+			return -1
+		}
+		if pair[0] > pair[1] {
+			return 1
+		}
+	}
+	return 0
+}
+
 func (s *proofAPIStore) ResolveEvidence(_ context.Context, repo, runID, atomID string) (*store.EvidenceResolution, error) {
 	s.calls = append(s.calls, "resolve:"+proofEvidenceScope(repo, runID, atomID))
 	resolution, ok := s.resolutions[proofEvidenceScope(repo, runID, atomID)]
@@ -596,6 +656,19 @@ func TestProofFieldLineageCoverageAndValidation(t *testing.T) {
 	}
 	if coverage.ID == envelope.ID {
 		t.Fatal("different questions produced the same bundle id")
+	}
+	code, _, defaultCoverage := getProof(
+		t, handler, "/api/get_extraction_coverage",
+	)
+	wantDefaultDomains := strings.Join([]string{
+		"grpc-caller", "grpc-consumer", "kafka-consumer", "kafka-producer",
+		"proto-contract", "scip-proto-field", "thrift-caller",
+		"thrift-consumer", "thrift-contract",
+	}, "\x00")
+	if code != http.StatusOK ||
+		strings.Join(defaultCoverage.Bundle.Query.Domains, "\x00") != wantDefaultDomains {
+		t.Fatalf("default coverage domains = %d %+v",
+			code, defaultCoverage.Bundle.Query.Domains)
 	}
 
 	invalidTargets := []string{

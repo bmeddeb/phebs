@@ -271,33 +271,44 @@ multi-valued candidate are `ambiguous`. phebs retains every candidate rather
 than choosing a build target, deployable, service, or owner. The trusted loader
 returns exact repository/commit/path/blob-digest provenance and an attribution
 digest; metadata changes move that digest without changing source assertion
-identity. The later Caller Map cursor binds this digest. No snapshot causes
+identity. The Caller Map cursor binds this digest. No snapshot causes
 phebs to run a build, generator, plugin, binary, or catalog client, and the
 current adapter performs no external lookup.
 
-This support should not be confused with a service-aware migration inventory.
-In the current release, the Atlas operation detail returns at most 200
-relationship rows, the Impact operation form accepts a bare canonical
-operation and builds a proof bundle capped at 5,000 assertions, and call sites
-are not grouped into build targets, deployables, logical services, or owners.
-The Go consumer readers are syntactic; common generated method names can
-produce explicit abstentions. There is also a current vocabulary mismatch:
-Contract Atlas qualifies a unique wire-name call as
-`caller / unresolved_name_match`, while `contract-impact-report-v1` places
-the same `CALLS_OPERATION` evidence under `known_consumers` for its bare
-operation-string question. Neither label proves a caller-to-declaration
-lineage. The default-dark Epic 20 Caller Map in `docs/BACKLOG.md` assigns the
-experimental schema/vocabulary migration to T20.10 and specifies the typed,
-paged, unit-attributed workflow needed for thousands of services. Until that
-work lands, use the current pages as bounded provisional source evidence—not
-as a complete migration roster. T20.1's neutral 10,010-call capacity/index
-gate is complete; it changed no API, MCP, UI, or production extraction
-behavior.
+The default-dark Caller Map read service is now available at
+`GET /api/contract_callers`. It requires the complete declaration identity:
+`protocol`, declaration `repository`, declaration `lineage`, and canonical
+`operation`. Optional `unit`, `owner`, `path_prefix`, `code_role`, `tier`,
+`freshness`, and `resolution` filters narrow the result; `ordering=source`
+(default) or `ordering=unit` chooses the stable ordering. Pages default to 50
+rows and accept at most 100. Every row retains its exact source repository,
+commit, path, byte range, line range, assertion, run, and atom. Unit state is
+independent metadata: unavailable or ambiguous attribution never hides a
+source occurrence.
 
-The current MCP annex has the same pre-Epic-20 limitation:
+Caller Map cursors are opaque and snapshot-bound. They stop with conflict if
+the principal or permission projection, visible repository set, extraction
+publication or coverage certificate, or immutable unit-attribution digest
+changes. Start a new read instead of editing or reusing such a cursor. The
+service scans a bounded candidate population and does not persist a proof
+bundle or Investigation. It is an API/shared-service surface in T20.10; MCP
+discovery/paging and the dedicated UI remain T20.11 and T20.12.
+
+The vocabulary is now explicit. `contract-atlas-v2` calls only a
+declaration-lineage-proven occurrence `resolved_caller`; a legacy name match
+against an exact declaration is `unresolved_name_match`, and parser/resolver
+abstention is `extractor_abstention`. `contract-impact-report-v2`, whose input
+is still a bare operation rather than a declaration identity, separates
+`resolved_evidence`, `matching_call_evidence`, and
+`extractor_abstentions`. It does not present an operation-object match as a
+known-caller roster. The caller readers are 1.2.0 and remain behind their
+existing provisional protocol flags.
+
+The current MCP annex retains one deliberate limitation:
 `find_operation_consumers` requires a caller-supplied bare canonical operation
-and returns one bounded proof bundle. It does not discover exact declaration
-identities, page a fleet-scale Caller Map, or compare old and replacement
+and returns one bounded proof bundle of matching call evidence and extractor
+abstentions. It does not establish declaration identity, discover exact
+declaration identities, page a fleet-scale Caller Map, or compare old and replacement
 endpoints. Planned T20.11 adds read-only discovery, exact-detail, and paged
 caller tools over the same authorization-first services as HTTP; T20.13 adds
 the comparison tool. Those tools will be bounded and cursor-driven, will not
@@ -343,18 +354,16 @@ certificate, then use Search, SCIP navigation, and History independently.
 The rich Investigations page is currently a development fixture projection,
 not a production ticket-intake or checklist workflow.
 
-The current Impact labels also need qualification. `Known consumers` means
-matching static `CALLS_OPERATION` or field-reference evidence; it is not a
-declaration-lineage-proven logical-service roster. `Unresolved candidates`
-means source evidence the extractor deliberately could not assign uniquely,
-not a confirmed consumer or a failed run. `Coverage certificate` is the
+The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
+contains declaration-proven call rows or stable field-reference rows.
+`Matching call evidence` is an exact operation-object match from a
+bare-operation query, not a declaration-proven logical-service roster.
+`Extractor abstentions` are source sites the extractor deliberately could not
+assign, not confirmed callers or failed runs. `Coverage certificate` is the
 deterministic receipt of which visible repository revisions and extractor
 domains were covered, stale, failed, processing, unsupported, or bounded; it
-is not an accuracy or completeness score. Proposed Epic 21 replaces those
-primary presentation labels with mode-correct vocabulary, shows the
-certificate beneath an **Analysis scope & gaps** summary, and adds accessible
-hover/focus/tap help to every qualified section while retaining the exact
-technical receipt.
+is not an accuracy or completeness score. Epic 21 retains these semantics
+while adding its Analysis scope & gaps summary and accessible help.
 
 Epic 21 is authorized for specifications, tests, synthetic demonstrations, and
 production-unregistered/default-dark implementation only. Because it stores
@@ -1017,11 +1026,11 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
 | `/api/webhook`                                                      | POST            | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set     |
 | `/api/mcp`                                                          | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8)                                               |
-| `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped operation-consumer proof bundle                                 |
+| `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped bare-operation matching-call proof bundle                        |
 | `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
 | `/api/find_kafka_topic_usage?topic=`                                | GET             | experimental permission-scoped Kafka topic-usage proof bundle with an always-present unresolved census |
 | `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
-| `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected consumers                |
+| `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected field references         |
 | `/api/proof_bundles/{id}`                                           | GET             | reauthorized immutable proof-bundle read; an ID is not a bearer credential                     |
 | `/api/contract_impact_report?operation=`                            | GET             | experimental bounded operation-impact report                                                   |
 | `/api/contract_impact_report?lineage=&message=&field_number=`       | GET             | experimental bounded stable-field impact report                                                |
@@ -1029,6 +1038,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/contract_impact_reports/{id}`                                 | GET             | reauthorized deterministic report projection of one immutable proof bundle                      |
 | `/api/contract_atlas?repository=&package=&protocol=&lineage=&page_size=&cursor=` | GET | experimental bounded service/operation catalog over exact published evidence                    |
 | `/api/contract_atlas/operation?repository=&lineage=&operation=`     | GET             | experimental bounded operation, message-shape, implementation, and caller detail                |
+| `/api/contract_callers?protocol=&repository=&lineage=&operation=&page_size=&cursor=` | GET | experimental exact-declaration Caller Map with source/unit ordering and snapshot-bound pages |
 | `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
 | `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
 | `/api/tree?repo=&ref=`                                              | GET             | all file paths, recursive                                                                      |
@@ -1092,11 +1102,11 @@ undiscoverable and the other four remain available.
 | `list_commits`     | paged history for `{repo,ref?,path?,limit?,offset?}`; maximum 200 commits per page                                                                                                                                                                          |
 | `get_commit`       | commit metadata, parents, and first-parent file changes                                                                                                                                                                                                     |
 | `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
-| `find_operation_consumers` | Investigation envelope v1.0 for one canonical `/package.Service/Method`; facts retain exact authorized proof references while processing, semantic resolution, attribution, conclusion, and absence eligibility remain separate |
+| `find_operation_consumers` | Investigation envelope v1.0 with matching static call evidence for one bare canonical `/package.Service/Method`; it does not establish declaration identity or a known-caller roster |
 | `find_proto_field_references` | Investigation envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
 | `find_kafka_topic_usage` | Investigation envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
 | `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
-| `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible SCIP consumers, exact proof references, coverage, and invocation provenance |
+| `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
@@ -1417,7 +1427,7 @@ declarations stay name-bound exactly as for gRPC.
 
 A separate `experimental.provisional_kafka_extraction` opt-in enables the
 T23.2 Kafka topic-evidence packs: `kafka-producer` and `kafka-consumer`
-(both 1.0.0), two planes sharing one recognizer validated by the T23.1
+(both 1.1.0), two planes sharing one recognizer validated by the T23.1
 spike. The readers scan non-test Go files that import
 `github.com/Shopify/sarama`, `github.com/IBM/sarama`, or
 `github.com/segmentio/kafka-go` (qualified selectors only — dot-imports
@@ -1470,8 +1480,8 @@ measured accuracy and must not drive compatibility, migration, or
 negative-proof conclusions.
 
 T20.8 adds declaration-proven typed Go caller evidence without changing that
-legacy reader or its proof results. Under the same protocol flags, the
-`grpc-caller` and `thrift-caller` 1.1.0 domains read a committed root
+legacy reader or its proof results. Under the same protocol flags, the current
+`grpc-caller` and `thrift-caller` 1.2.0 domains read a committed root
 `index.scip`; phebs still never creates or downloads that index. Each source
 call must carry the exact SCIP symbol of a checked-in generated client method.
 For gRPC, the generated definition must also agree with one `// source:`
@@ -1484,26 +1494,35 @@ chain emits a tier-`derived` `CALLS_OPERATION` row whose lineage is the
 declaration evidence identity.
 
 Missing or conflicting mappings emit source-granular, operation-keyed
-`UNRESOLVED_CALLER` rows instead of guesses. Malformed or stale SCIP produces a
-bounded `CALLER_EXTRACTION_GAP` in only the affected protocol domain; an absent
-index is reported as unavailable and emits no callers. Each row snapshots the
+`UNRESOLVED_CALLER` rows instead of guesses. Malformed SCIP or a document path
+absent from the repository produces a bounded `CALLER_EXTRACTION_GAP` in only
+the affected protocol domain; an absent or zero-byte index is reported as
+unavailable and emits no typed callers. SCIP documents normally do not embed a
+source-content digest, so a committed same-path index is not proof that its
+ranges describe the current file bytes; regenerate and commit `index.scip`
+whenever source changes. Each row snapshots the
 immutable unit-attribution state and attribution digest used at extraction
 time, including unattributed and ambiguous results, so later pages never
-silently reclassify old evidence. These domains have no direct public route in
-T20.8; T20.10 is their first read surface. They remain provisional and dark,
-and establish neither caller completeness nor measured accuracy.
+silently reclassify old evidence. T20.10's authenticated Caller Map is their
+first read surface. They remain provisional and dark, and establish neither
+caller completeness nor measured accuracy.
 
-When a usable typed occurrence is absent, version 1.1.0 may use the bounded
+When a usable typed occurrence is absent, version 1.2.0 may use the bounded
 package-aware fallback. It requires a valid repository-root `go.mod`, an
 explicit import of one indexed generated package, and one of five local
 provenance shapes: imported client parameter, imported type alias, generated
 constructor assignment, named client field, or embedded client. Such rows use
 `resolution=syntax` and tier `heuristic`. A SCIP occurrence always wins and is
-never duplicated. Dynamic/interface flows, dot imports, or multiple candidate
-clients remain operation-keyed `UNRESOLVED_CALLER` rows; the reader does not
+never duplicated. Dynamic/interface flows, dot imports, shadowing whose new
+value has no admitted client provenance, or multiple candidate clients remain
+operation-keyed `UNRESOLVED_CALLER` rows; the reader does not
 perform general assignment propagation, reflection, type checking, builds, or
 module resolution. The fallback can still operate when SCIP is absent or
 malformed, but that independent coverage gap remains visible.
+Generated and caller Go documents above the reader's 4 MiB per-file bound, or
+with invalid UTF-8, are outside this v1 reader; the coverage manifest still
+binds the trusted corpus/candidate/read scope, but no caller row or per-file
+gap row is claimed for those documents.
 
 The opt-in also reads a repository-root, committed `index.scip` to emit T13.2
 `REFERENCES_PROTO_FIELD` assertions. phebs never runs or downloads a SCIP
@@ -1621,9 +1640,9 @@ succeeds (the first four remain available when compatibility is unavailable):
   remain in the coverage certificate. The endpoint never makes a completeness
   claim.
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
-  coverage only; omitted domains select `grpc-consumer`, `kafka-consumer`,
-  `kafka-producer`, `proto-contract`, `scip-proto-field`, `thrift-consumer`,
-  and `thrift-contract`.
+  coverage only; omitted domains select these nine domains: `grpc-caller`, `grpc-consumer`,
+  `kafka-consumer`, `kafka-producer`, `proto-contract`, `scip-proto-field`,
+  `thrift-caller`, `thrift-consumer`, and `thrift-contract`.
 - `POST /api/check_contract_compatibility` accepts a canonical `lineage` and
   `before`/`after` arrays of `{path,content}` `.proto` files. It runs Buf's
   `WIRE` policy and joins affected field identities to visible
@@ -1638,15 +1657,21 @@ capabilities array so experimental feature and sandbox state are not disclosed.
 the complete `lineage`, `message`, and `field_number` identity. `POST` accepts
 the compatibility request above and is registered only when the Buf probe
 succeeds; that state also advertises `contract-compatibility`. A successful
-response is `contract-impact-report-v1`: the proof question, known consumer
-source rows, separately labeled unresolved candidates, optional Buf
+response is `contract-impact-report-v2`: the proof question,
+`resolved_evidence`, `matching_call_evidence`, and `extractor_abstentions`
+source rows, optional Buf
 classification, every visible repository/domain coverage state, the complete
 canonical coverage certificate, and the existing caveat. The conclusion names
 the exact certificate digest and says only what was found within the stated
-evidence scope. A bare operation query is deliberately a union across
-registered consumer packs; every evidence row therefore carries its exact
-extractor domain and protocol so equal protobuf and Thrift operation spellings
-remain distinguishable. Empty evidence never establishes absence.
+evidence scope. A bare operation query is deliberately a union across the
+declaration-proven caller and legacy name-matching planes for both protocol
+packs; every evidence row therefore carries its exact extractor domain,
+protocol, classification, and lineage so equal protobuf and Thrift operation
+spellings remain distinguishable. Empty evidence never establishes absence.
+
+Authenticated `/api/version` responses advertise `contract-caller-map` when
+the exact Caller Map service and HTTP route are registered; anonymous version
+discovery omits it with every other capability.
 
 Each repository evidence row links to `#/file` with its pinned repository,
 commit, path, and line. Coverage rows describe the limits of the search and

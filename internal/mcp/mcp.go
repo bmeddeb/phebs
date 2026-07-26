@@ -159,7 +159,7 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:         "find_operation_consumers",
-		Description:  "Find callers of one canonical RPC operation across the registered consumer domains (gRPC and Thrift). Returns envelope v1.0 with permission-scoped facts, exact proof references, separate coverage dimensions, and server-rendered qualifications. Provisional evidence cannot establish absence or safety.",
+		Description:  "Find matching static call evidence for one bare canonical RPC operation across the registered consumer domains (gRPC and Thrift). This operation-name query does not establish declaration identity or a known-caller roster. Returns envelope v1.0 with permission-scoped facts, extractor abstentions, exact proof references, separate coverage dimensions, and server-rendered qualifications; it cannot establish absence or safety.",
 		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in operationIn) (*sdk.CallToolResult, investigation.Envelope, error) {
 		result, err := opts.Proofs.FindOperationConsumersMCP(ctx, in.Operation)
@@ -202,7 +202,7 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	})
 
 	type coverageIn struct {
-		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-consumer, kafka-consumer, kafka-producer, proto-contract, scip-proto-field, thrift-consumer, and thrift-contract"`
+		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-caller, grpc-consumer, kafka-consumer, kafka-producer, proto-contract, scip-proto-field, thrift-caller, thrift-consumer, and thrift-contract"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:         "get_extraction_coverage",
@@ -221,7 +221,7 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:         "check_contract_compatibility",
-		Description:  "Run the pinned Buf WIRE policy over bounded before/after protobuf source sets, then return envelope v1.0 with the derived conclusion, evidence-derived consumers, exact proof references, coverage, and provenance.",
+		Description:  "Run the pinned Buf WIRE policy over bounded before/after protobuf source sets, then return envelope v1.0 with the derived conclusion, affected field-reference evidence, exact proof references, coverage, and provenance.",
 		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in compat.Request) (*sdk.CallToolResult, investigation.Envelope, error) {
 		result, err := opts.Compatibility.CheckContractCompatibilityMCP(ctx, in)

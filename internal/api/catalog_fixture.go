@@ -272,7 +272,7 @@ func (f *ContractCatalogFixture) operation(
 		}
 	}
 	implementation := ContractCatalogRelationship{
-		Kind: "implementation", Classification: "proven",
+		Kind: "implementation", Classification: "resolved_implementation",
 		Claim: f.claim(
 			repo.Name, commit, fixtureCatalogRunID(repo.Name, pack.consumerDomain),
 			"implementation-"+method, pack.registersPredicate, f.ServiceFQN,

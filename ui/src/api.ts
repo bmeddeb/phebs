@@ -654,8 +654,9 @@ export interface ContractImpactReport {
   bundle_id: string
   query: ProofQuery
   conclusion: { text: string; coverage_digest: string }
-  known_consumers: ImpactEvidenceRow[]
-  unresolved_candidates: ImpactEvidenceRow[]
+  resolved_evidence: ImpactEvidenceRow[]
+  matching_call_evidence: ImpactEvidenceRow[]
+  extractor_abstentions: ImpactEvidenceRow[]
   compatibility?: CompatibilityResult
   coverage: CoverageCertificate
   coverage_rows: ImpactCoverageRow[]

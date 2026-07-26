@@ -27,7 +27,7 @@ const (
 	proofQueryEvidenceLimit  = 20_000
 	proofBuildAttempts       = 3
 	proofCaveat              = "Provisional evidence only; no absence, compatibility, migration-complete, or decommissioning conclusion."
-	compatibilityCaveat      = "Buf WIRE verdict applies only to the committed before/after input digests; consumer evidence is provisional and cannot establish absence, migration completeness, or decommissioning safety."
+	compatibilityCaveat      = "Buf WIRE verdict applies only to the committed before/after input digests; field-reference evidence is provisional and cannot establish absence, migration completeness, or decommissioning safety."
 	compatibilityBodyLimit   = 72 << 20
 )
 
@@ -351,7 +351,7 @@ func registerProofAPI(api huma.API, opts Options) {
 		huma.Register(api, huma.Operation{
 			OperationID: "check-contract-compatibility",
 			Method:      "POST", Path: "/api/check_contract_compatibility",
-			Summary:      "Check protobuf wire compatibility and find affected consumers",
+			Summary:      "Check protobuf wire compatibility and find affected field references",
 			MaxBodyBytes: compatibilityBodyLimit,
 		}, func(ctx context.Context, in *compatibilityIn) (*proofOut, error) {
 			envelope, err := service.CheckContractCompatibility(ctx, in.Body)
@@ -790,9 +790,9 @@ func proofDomains(raw string) ([]string, error) {
 func canonicalProofDomains(domains []string) ([]string, error) {
 	if len(domains) == 0 {
 		return []string{
-			"grpc-consumer", "kafka-consumer", "kafka-producer",
+			"grpc-caller", "grpc-consumer", "kafka-consumer", "kafka-producer",
 			"proto-contract", "scip-proto-field",
-			"thrift-consumer", "thrift-contract",
+			"thrift-caller", "thrift-consumer", "thrift-contract",
 		}, nil
 	}
 	parts := append([]string(nil), domains...)

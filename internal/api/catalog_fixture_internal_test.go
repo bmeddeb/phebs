@@ -158,6 +158,7 @@ func TestContractCatalogFixtureThriftProjection(t *testing.T) {
 		detail.FactDetail.Response.Resolution != "intrinsic" ||
 		detail.Request.Kind != "union" || !detail.Request.Synthetic ||
 		detail.Response.Raw != "void" ||
+		detail.Implementations[0].Classification != "resolved_implementation" ||
 		detail.Implementations[0].Claim.Predicate != "REGISTERS_THRIFT_SERVICE" ||
 		detail.UnresolvedCandidates[0].Claim.Predicate != "UNRESOLVED_THRIFT_CALL" ||
 		detail.UnresolvedCandidates[0].Claim.Object != "/agent.Agent/emitBatch" {

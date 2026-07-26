@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	contractCatalogSchemaVersion = "contract-atlas-v1"
+	contractCatalogSchemaVersion = "contract-atlas-v2"
 	contractCatalogCapability    = "contract-atlas"
 	// v2: the cursor gained a protocol-pack index when the catalog became
 	// multi-protocol (T19.4). Stale v1 cursors fail decode as invalid.
@@ -46,6 +46,7 @@ type protocolPack struct {
 	protocol          string
 	declarationDomain string
 	consumerDomain    string
+	callerDomain      string
 	operationSchema   string
 	messageSchema     string
 	fieldSchema       string
@@ -69,6 +70,7 @@ var protocolPacks = []protocolPack{
 	{
 		protocol: "protobuf", declarationDomain: "proto-contract",
 		consumerDomain: "grpc-consumer", operationSchema: "proto-operation-detail-v1",
+		callerDomain:  "grpc-caller",
 		messageSchema: "proto-message-detail-v1", fieldSchema: "proto-field-detail-v2",
 		registersPredicate:      "REGISTERS_GRPC_SERVICE",
 		unresolvedCallPredicate: "UNRESOLVED_GRPC_CALL", fieldMin: 1, fieldMax: 536_870_911,
@@ -76,6 +78,7 @@ var protocolPacks = []protocolPack{
 	{
 		protocol: "thrift", declarationDomain: "thrift-contract",
 		consumerDomain: "thrift-consumer", operationSchema: "thrift-operation-detail-v1",
+		callerDomain:  "thrift-caller",
 		messageSchema: "thrift-message-detail-v1", fieldSchema: "thrift-field-detail-v1",
 		registersPredicate:               "REGISTERS_THRIFT_SERVICE",
 		unresolvedCallPredicate:          "UNRESOLVED_THRIFT_CALL",
@@ -89,7 +92,9 @@ var catalogDomains = catalogPackDomains()
 func catalogPackDomains() []string {
 	var domains []string
 	for _, pack := range protocolPacks {
-		domains = append(domains, pack.declarationDomain, pack.consumerDomain)
+		domains = append(
+			domains, pack.declarationDomain, pack.consumerDomain, pack.callerDomain,
+		)
 	}
 	sort.Strings(domains)
 	return domains
@@ -908,22 +913,35 @@ func collectCatalogRelationships(
 	// The declaration's protocol is known here, so only its own pack's
 	// consumer domain and predicate triple are queried.
 	filters := []struct {
-		predicate, object, kind string
+		domain, predicate, object, lineage, kind, classification string
 	}{
-		{pack.registersPredicate, service, "implementation"},
-		{"CALLS_OPERATION", "/" + service + "/" + method, "caller"},
 		{
-			pack.unresolvedCallPredicate,
-			packUnresolvedCallObject(pack, service, method),
-			"unresolved_candidate",
+			pack.consumerDomain, pack.registersPredicate, service, "", "implementation", "",
+		},
+		{
+			pack.callerDomain, "CALLS_OPERATION", "/" + service + "/" + method,
+			declarationLineage, "caller", "resolved_caller",
+		},
+		{
+			pack.consumerDomain, "CALLS_OPERATION", "/" + service + "/" + method,
+			"", "caller", "unresolved_name_match",
+		},
+		{
+			pack.callerDomain, "UNRESOLVED_CALLER", "/" + service + "/" + method,
+			"", "unresolved_candidate", "extractor_abstention",
+		},
+		{
+			pack.consumerDomain, pack.unresolvedCallPredicate,
+			packUnresolvedCallObject(pack, service, method), "",
+			"unresolved_candidate", "extractor_abstention",
 		},
 	}
 	for _, repository := range certificate.Repositories {
-		run, ok := certificateRun(repository, pack.consumerDomain)
-		if !ok || run.Status != "published" {
-			continue
-		}
 		for _, filter := range filters {
+			run, ok := certificateRun(repository, filter.domain)
+			if !ok || run.Status != "published" {
+				continue
+			}
 			remaining := catalogRelationshipLimit - total
 			if remaining <= 0 || locatorBudget <= 0 {
 				truncated = true
@@ -932,7 +950,8 @@ func collectCatalogRelationships(
 			rows, err := source.ListAssertions(ctx, store.AssertionQuery{
 				Repo: repository.Repository, RunID: run.RunID,
 				Predicate: filter.predicate, Object: filter.object,
-				Limit: remaining, AllowTruncate: true,
+				Lineage: filter.lineage,
+				Limit:   remaining, AllowTruncate: true,
 			})
 			if err != nil {
 				return nil, nil, nil, false, err
@@ -959,13 +978,21 @@ func collectCatalogRelationships(
 					Kind: filter.kind, Claim: claim,
 				}
 				switch {
+				case filter.classification != "":
+					relationship.Classification = filter.classification
+					if filter.classification == "extractor_abstention" {
+						relationship.Reason = "OPERATION_DECLARATION_UNRESOLVED"
+					}
+					if filter.classification == "unresolved_name_match" {
+						relationship.Reason = "DECLARATION_LINEAGE_UNPROVEN"
+					}
 				case filter.kind == "unresolved_candidate":
 					relationship.Classification = "extractor_abstention"
 					relationship.Reason = "OPERATION_DECLARATION_UNRESOLVED"
 				case assertion.Lineage == declarationLineage:
-					relationship.Classification = "proven"
+					relationship.Classification = "resolved_implementation"
 				default:
-					relationship.Classification = "unresolved_name_match"
+					relationship.Classification = "matching_registration_evidence"
 					relationship.Reason = "DECLARATION_LINEAGE_UNPROVEN"
 				}
 				switch filter.kind {

@@ -318,7 +318,7 @@ func proofClaim(query ProofQuery) investigation.Claim {
 		// subject is protocol-neutral; per-fact object kinds stay
 		// domain-derived (T19.5).
 		claim.Subject = investigation.Identity{Kind: "rpc_operation", ID: query.Operation}
-		claim.DecisionSought = "enumerate_operation_consumer_candidates"
+		claim.DecisionSought = "enumerate_matching_call_evidence"
 	case "find_proto_field_references":
 		claim.Predicate = "REFERENCES_PROTO_FIELD"
 		claim.Subject = investigation.Identity{
@@ -349,7 +349,8 @@ func proofClaim(query ProofQuery) investigation.Claim {
 func normalizedProofQuestion(query ProofQuery) string {
 	switch query.Kind {
 	case "find_operation_consumers":
-		return "Find evidence-derived callers of " + query.Operation + " in the current visibility projection."
+		return "Find matching static call evidence for " + query.Operation +
+			" in the current visibility projection; this bare-operation query does not establish declaration identity."
 	case "find_proto_field_references":
 		return "Find evidence-derived references to " + query.Lineage + ":" +
 			query.Message + "#" + strconv.Itoa(query.FieldNumber) + " in the current visibility projection."
@@ -357,7 +358,8 @@ func normalizedProofQuestion(query ProofQuery) string {
 		return "Find evidence-derived producers and consumers of topic:" + query.Topic +
 			" in the current visibility projection; unresolved sites are counted in the bundle census and this list is never complete."
 	case "check_contract_compatibility":
-		return "Check Buf WIRE compatibility for " + query.Lineage + " and enumerate evidence-derived affected consumers."
+		return "Check Buf WIRE compatibility for " + query.Lineage +
+			" and enumerate affected field-reference evidence."
 	default:
 		return "Describe extraction coverage for the current visibility projection."
 	}

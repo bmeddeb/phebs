@@ -436,6 +436,10 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 					!strings.Contains(string(output), `"contract_edges"`) {
 					t.Fatalf("compatibility schemas: input=%s output=%s", input, output)
 				}
+				if strings.Contains(strings.ToLower(compatibilityTool.Description), "affected consumers") ||
+					!strings.Contains(strings.ToLower(compatibilityTool.Description), "field-reference evidence") {
+					t.Fatalf("compatibility vocabulary = %q", compatibilityTool.Description)
+				}
 			}
 			for _, name := range []string{"find_operation_consumers", "find_proto_field_references", "find_kafka_topic_usage", "get_extraction_coverage"} {
 				tool, ok := found[name]
@@ -447,6 +451,13 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 				}
 				if !ok {
 					t.Fatalf("enabled server omitted %s", name)
+				}
+				if name == "find_operation_consumers" {
+					description := strings.ToLower(tool.Description)
+					if !strings.Contains(description, "matching static call evidence") ||
+						strings.Contains(description, "known consumer") {
+						t.Fatalf("operation proof vocabulary = %q", tool.Description)
+					}
 				}
 				input, _ := json.Marshal(tool.InputSchema)
 				output, _ := json.Marshal(tool.OutputSchema)

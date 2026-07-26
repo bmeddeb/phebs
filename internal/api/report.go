@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	contractImpactReportSchemaVersion = "contract-impact-report-v1"
+	contractImpactReportSchemaVersion = "contract-impact-report-v2"
 	impactScopePhrase                 = "within the stated evidence scope"
 )
 
@@ -44,8 +44,9 @@ type ContractImpactReport struct {
 	BundleID             string                      `json:"bundle_id"`
 	Query                ProofQuery                  `json:"query"`
 	Conclusion           ImpactConclusion            `json:"conclusion"`
-	KnownConsumers       []ImpactEvidenceRow         `json:"known_consumers"`
-	UnresolvedCandidates []ImpactEvidenceRow         `json:"unresolved_candidates"`
+	ResolvedEvidence     []ImpactEvidenceRow         `json:"resolved_evidence"`
+	MatchingCallEvidence []ImpactEvidenceRow         `json:"matching_call_evidence"`
+	ExtractorAbstentions []ImpactEvidenceRow         `json:"extractor_abstentions"`
 	Compatibility        *compat.CompatibilityResult `json:"compatibility,omitempty"`
 	Coverage             extract.CoverageCertificate `json:"coverage"`
 	CoverageRows         []ImpactCoverageRow         `json:"coverage_rows"`
@@ -119,13 +120,19 @@ func (s *ProofService) BuildOperationImpactReport(ctx context.Context, operation
 	// coverage rows (T19.5).
 	query := ProofQuery{
 		Kind: "contract_impact_operation", Operation: operation,
-		Domains: []string{"grpc-consumer", "thrift-consumer"},
+		Domains: []string{
+			"grpc-caller", "grpc-consumer", "thrift-caller", "thrift-consumer",
+		},
 	}
 	thriftPack, _ := packForProtocol("thrift")
 	service := strings.TrimPrefix(operation[:strings.LastIndex(operation, "/")], "/")
 	envelope, err := buildProofBundle(ctx, s.opts, query, []assertionFilter{
+		{Domain: "grpc-caller", Predicate: "CALLS_OPERATION", Object: operation},
+		{Domain: "grpc-caller", Predicate: "UNRESOLVED_CALLER", Object: operation},
 		{Domain: "grpc-consumer", Predicate: "CALLS_OPERATION", Object: operation},
 		{Domain: "grpc-consumer", Predicate: "UNRESOLVED_GRPC_CALL", Object: method},
+		{Domain: "thrift-caller", Predicate: "CALLS_OPERATION", Object: operation},
+		{Domain: "thrift-caller", Predicate: "UNRESOLVED_CALLER", Object: operation},
 		{Domain: "thrift-consumer", Predicate: "CALLS_OPERATION", Object: operation},
 		// Thrift call abstentions carry canonical candidate operations; the
 		// extractor never asks this layer to reproduce Go publicizing rules.
@@ -161,7 +168,7 @@ func (s *ProofService) BuildFieldImpactReport(ctx context.Context, lineage, mess
 }
 
 // BuildChangeImpactReport reuses the pinned Buf proof engine, then projects
-// its affected-field consumer evidence into the report shape.
+// its affected field-reference evidence into the report shape.
 func (s *ProofService) BuildChangeImpactReport(ctx context.Context, request compat.Request) (*ContractImpactReport, error) {
 	envelope, err := s.CheckContractCompatibility(ctx, request)
 	if err != nil {
@@ -254,18 +261,19 @@ func projectContractImpactReport(envelope *ProofBundleEnvelope) (*ContractImpact
 		return nil, errUnsupportedImpactBundle
 	}
 
-	known, unresolved, err := projectImpactEvidence(envelope.Bundle)
+	resolved, matching, abstentions, err := projectImpactEvidence(envelope.Bundle)
 	if err != nil {
 		return nil, fmt.Errorf("project contract impact report: %w", err)
 	}
-	conclusion := impactConclusion(envelope.Bundle, len(known))
+	conclusion := impactConclusion(envelope.Bundle, len(resolved)+len(matching))
 	return &ContractImpactReport{
 		SchemaVersion: contractImpactReportSchemaVersion, BundleID: envelope.ID,
-		Query:          envelope.Bundle.Query,
-		Conclusion:     ImpactConclusion{Text: conclusion, CoverageDigest: envelope.Bundle.Coverage.Digest},
-		KnownConsumers: known, UnresolvedCandidates: unresolved,
-		Compatibility: envelope.Bundle.Compatibility,
-		Coverage:      envelope.Bundle.Coverage, CoverageRows: impactCoverageRows(envelope.Bundle.Coverage),
+		Query:            envelope.Bundle.Query,
+		Conclusion:       ImpactConclusion{Text: conclusion, CoverageDigest: envelope.Bundle.Coverage.Digest},
+		ResolvedEvidence: resolved, MatchingCallEvidence: matching,
+		ExtractorAbstentions: abstentions,
+		Compatibility:        envelope.Bundle.Compatibility,
+		Coverage:             envelope.Bundle.Coverage, CoverageRows: impactCoverageRows(envelope.Bundle.Coverage),
 		Caveat: envelope.Bundle.Caveat,
 	}, nil
 }
@@ -278,9 +286,13 @@ func impactConclusion(bundle ProofBundle, knownCount int) string {
 		return "Wire-compatibility blockers were found " + impactScopePhrase + "."
 	}
 	if knownCount > 0 {
-		return "Known consumer evidence was found " + impactScopePhrase + "."
+		if bundle.Query.Kind == "contract_impact_field" ||
+			bundle.Query.Kind == "find_proto_field_references" {
+			return "Resolved field-reference evidence was found " + impactScopePhrase + "."
+		}
+		return "Resolved or matching call evidence was found " + impactScopePhrase + "."
 	}
-	return "No matching consumer evidence was found " + impactScopePhrase + "; this does not establish absence."
+	return "No resolved or matching evidence was found " + impactScopePhrase + "; this does not establish absence."
 }
 
 type impactEvidenceKey struct {
@@ -294,15 +306,17 @@ type impactRunFreshness struct {
 	fresh    bool
 }
 
-func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvidenceRow, error) {
+func projectImpactEvidence(
+	bundle ProofBundle,
+) ([]ImpactEvidenceRow, []ImpactEvidenceRow, []ImpactEvidenceRow, error) {
 	evidence := make(map[impactEvidenceKey]BundleEvidence, len(bundle.Evidence))
 	for _, item := range bundle.Evidence {
 		key := impactEvidenceKey{repo: item.Repository, runID: item.RunID, atomID: item.Atom.ID}
 		if key.repo == "" || key.runID == "" || key.atomID == "" {
-			return nil, nil, errors.New("proof evidence identity is incomplete")
+			return nil, nil, nil, errors.New("proof evidence identity is incomplete")
 		}
 		if _, exists := evidence[key]; exists {
-			return nil, nil, errors.New("proof evidence identity is duplicated")
+			return nil, nil, nil, errors.New("proof evidence identity is duplicated")
 		}
 		evidence[key] = item
 	}
@@ -318,30 +332,30 @@ func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvi
 		}
 	}
 
-	known := make([]ImpactEvidenceRow, 0)
-	unresolved := make([]ImpactEvidenceRow, 0)
+	resolved := make([]ImpactEvidenceRow, 0)
+	matching := make([]ImpactEvidenceRow, 0)
+	abstentions := make([]ImpactEvidenceRow, 0)
 	seen := make(map[string]struct{})
 	for _, assertion := range bundle.Assertions {
 		kind, isUnresolved := impactAssertionKind(assertion.Predicate, assertion.Tier)
 		if kind == "" {
 			continue
 		}
-		classification, reason := impactEvidenceLabels(assertion)
 		for _, atomID := range assertion.Supporting {
 			item, ok := evidence[impactEvidenceKey{repo: assertion.Repo, runID: assertion.RunID, atomID: atomID}]
 			if !ok {
-				return nil, nil, fmt.Errorf("assertion %s support %s is missing", assertion.ID, atomID)
+				return nil, nil, nil, fmt.Errorf("assertion %s support %s is missing", assertion.ID, atomID)
 			}
 			if item.Atom.StartByte < 0 || item.Atom.EndByte <= item.Atom.StartByte {
-				return nil, nil, fmt.Errorf("assertion %s support %s atom span is inconsistent", assertion.ID, atomID)
+				return nil, nil, nil, fmt.Errorf("assertion %s support %s atom span is inconsistent", assertion.ID, atomID)
 			}
 			if len(item.Occurrences) == 0 {
-				return nil, nil, fmt.Errorf("assertion %s support %s has no occurrence", assertion.ID, atomID)
+				return nil, nil, nil, fmt.Errorf("assertion %s support %s has no occurrence", assertion.ID, atomID)
 			}
 			for _, occurrence := range item.Occurrences {
 				if occurrence.AtomID != atomID || occurrence.Repo != assertion.Repo || occurrence.RunID != assertion.RunID ||
 					occurrence.Commit == "" || occurrence.Path == "" || occurrence.StartLine <= 0 || occurrence.EndLine < occurrence.StartLine {
-					return nil, nil, fmt.Errorf("assertion %s support %s occurrence is inconsistent", assertion.ID, atomID)
+					return nil, nil, nil, fmt.Errorf("assertion %s support %s occurrence is inconsistent", assertion.ID, atomID)
 				}
 				dedupe := assertion.ID + "\x00" + atomID + "\x00" + occurrence.ID
 				if _, exists := seen[dedupe]; exists {
@@ -350,8 +364,9 @@ func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvi
 				seen[dedupe] = struct{}{}
 				run, ok := freshness[assertion.Repo+"\x00"+assertion.RunID]
 				if !ok || run.domain == "" {
-					return nil, nil, fmt.Errorf("assertion %s run is absent from coverage", assertion.ID)
+					return nil, nil, nil, fmt.Errorf("assertion %s run is absent from coverage", assertion.ID)
 				}
+				classification, reason := impactEvidenceLabels(assertion, run.domain)
 				row := ImpactEvidenceRow{
 					Kind: kind, AssertionID: assertion.ID, EvidenceAtomID: atomID,
 					Domain: run.domain, Protocol: run.protocol,
@@ -363,22 +378,27 @@ func projectImpactEvidence(bundle ProofBundle) ([]ImpactEvidenceRow, []ImpactEvi
 					Classification: classification, Reason: reason,
 					Fresh: run.fresh && run.commit == occurrence.Commit,
 				}
-				if isUnresolved {
-					unresolved = append(unresolved, row)
-				} else {
-					known = append(known, row)
+				switch {
+				case isUnresolved || classification == "extractor_abstention":
+					abstentions = append(abstentions, row)
+				case classification == "matching_call_evidence":
+					matching = append(matching, row)
+				default:
+					resolved = append(resolved, row)
 				}
 			}
 		}
 	}
-	sortImpactEvidence(known)
-	sortImpactEvidence(unresolved)
-	return known, unresolved, nil
+	sortImpactEvidence(resolved)
+	sortImpactEvidence(matching)
+	sortImpactEvidence(abstentions)
+	return resolved, matching, abstentions, nil
 }
 
 func impactProtocol(domain string) string {
 	for _, pack := range protocolPacks {
-		if domain == pack.declarationDomain || domain == pack.consumerDomain {
+		if domain == pack.declarationDomain || domain == pack.consumerDomain ||
+			domain == pack.callerDomain {
 			return pack.protocol
 		}
 	}
@@ -396,6 +416,8 @@ func impactAssertionKind(predicate, tier string) (string, bool) {
 		return "field_reference", false
 	case "UNRESOLVED_GRPC_CALL", "UNRESOLVED_THRIFT_CALL":
 		return "unresolved_candidate", true
+	case "UNRESOLVED_CALLER":
+		return "unresolved_candidate", true
 	default:
 		if tier == store.TierUnresolved {
 			return "unresolved_candidate", true
@@ -404,29 +426,47 @@ func impactAssertionKind(predicate, tier string) (string, bool) {
 	}
 }
 
-func impactEvidenceLabels(assertion store.Assertion) (classification, reason string) {
+func impactEvidenceLabels(assertion store.Assertion, domain string) (classification, reason string) {
 	var detail struct {
 		Classification string `json:"classification"`
 		Method         string `json:"method"`
 		CandidateCount int    `json:"candidate_count"`
+		Unresolved     string `json:"unresolved_reason"`
 	}
 	_ = json.Unmarshal([]byte(assertion.Detail), &detail)
 	switch assertion.Predicate {
 	case "CALLS_OPERATION":
-		return "operation call", ""
+		if impactCallerDomain(domain) && assertion.Lineage != "" {
+			return "resolved_caller", ""
+		}
+		return "matching_call_evidence", "operation object matched without declaration identity"
 	case "REFERENCES_PROTO_FIELD":
 		if detail.Classification == "" {
 			detail.Classification = "unknown access"
 		}
-		return detail.Classification, ""
+		return "resolved_field_reference", detail.Classification
 	case "UNRESOLVED_GRPC_CALL", "UNRESOLVED_THRIFT_CALL":
 		if detail.Method != "" && detail.CandidateCount > 0 {
-			return "ambiguous operation call", fmt.Sprintf("method %s matches %d generated services", detail.Method, detail.CandidateCount)
+			return "extractor_abstention", fmt.Sprintf("method %s matches %d generated services", detail.Method, detail.CandidateCount)
 		}
-		return "ambiguous operation call", "extractor abstained from service resolution"
+		return "extractor_abstention", "extractor abstained from service resolution"
+	case "UNRESOLVED_CALLER":
+		if detail.Unresolved != "" {
+			return "extractor_abstention", detail.Unresolved
+		}
+		return "extractor_abstention", "caller extractor abstained"
 	default:
-		return "unresolved", "extractor abstained"
+		return "extractor_abstention", "extractor abstained"
 	}
+}
+
+func impactCallerDomain(domain string) bool {
+	for _, pack := range protocolPacks {
+		if domain == pack.callerDomain {
+			return true
+		}
+	}
+	return false
 }
 
 func sortImpactEvidence(rows []ImpactEvidenceRow) {

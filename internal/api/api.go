@@ -47,6 +47,10 @@ type Options struct {
 	// nil store leaves the route unregistered so the dark-launch default has
 	// no discoverable read surface.
 	Evidence store.EvidenceStore
+	// CallerMapEnabled records that at least one protocol caller extractor is
+	// configured. Evidence alone is insufficient because Kafka- or field-only
+	// deployments must not advertise an unreachable Caller Map.
+	CallerMapEnabled bool
 	// ContractCatalogFixture is an explicit development/demo adapter. It
 	// exposes only synthetic catalog rows projected onto a currently visible
 	// indexed repository; production leaves it nil and uses Evidence instead.
@@ -338,6 +342,7 @@ func New(opts Options) http.Handler {
 	registerAnalytics(api, opts)
 	registerEvidence(api, opts)
 	registerContractCatalogAPI(api, opts)
+	registerCallerMapAPI(api, opts)
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)
 

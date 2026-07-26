@@ -86,21 +86,73 @@ func TestContractImpactOperationReportCoversThriftConsumers(t *testing.T) {
 	if code != http.StatusOK {
 		t.Fatalf("thrift operation report = %d %s", code, body)
 	}
-	if len(report.KnownConsumers) != 1 || len(report.UnresolvedCandidates) != 1 {
-		t.Fatalf("thrift evidence = known=%+v unresolved=%+v",
-			report.KnownConsumers, report.UnresolvedCandidates)
+	if len(report.MatchingCallEvidence) != 1 || len(report.ExtractorAbstentions) != 1 {
+		t.Fatalf("thrift evidence = matching=%+v abstentions=%+v",
+			report.MatchingCallEvidence, report.ExtractorAbstentions)
 	}
-	consumer := report.KnownConsumers[0]
-	if consumer.Kind != "operation_call" || consumer.Classification != "operation call" ||
+	consumer := report.MatchingCallEvidence[0]
+	if consumer.Kind != "operation_call" || consumer.Classification != "matching_call_evidence" ||
 		consumer.Tier != store.TierHeuristic ||
 		consumer.Domain != domain || consumer.Protocol != "thrift" {
 		t.Fatalf("thrift consumer row = %+v", consumer)
 	}
-	candidate := report.UnresolvedCandidates[0]
+	candidate := report.ExtractorAbstentions[0]
 	if candidate.Kind != "unresolved_candidate" ||
+		candidate.Classification != "extractor_abstention" ||
 		candidate.Domain != domain || candidate.Protocol != "thrift" ||
 		candidate.Reason != "method EmitBatch matches 2 generated services" {
 		t.Fatalf("thrift candidate row = %+v", candidate)
+	}
+}
+
+func TestContractImpactOperationReportSeparatesResolvedCallerAndAbstention(t *testing.T) {
+	const (
+		repo      = "github.com/allowed/typed-client"
+		operation = "/shop.Cart/Get"
+		domain    = "grpc-caller"
+		lineage   = "provisional_repo_path_v1_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	)
+	run := proofRun(repo, domain, "run-typed-impact")
+	run.Coverage.AssertionCount = 2
+	run.Coverage.UnresolvedCount = 1
+	run.Coverage.AtomCount = 2
+	resolved, resolvedEvidence := proofAssertion(
+		repo, run.ID, "typed-impact", "CALLS_OPERATION", operation, lineage,
+		`{"schema":"go-caller-detail-v1","resolution":"syntax","protocol":"grpc","unit_state":"unavailable"}`,
+	)
+	resolved.Tier = store.TierHeuristic
+	abstention, abstentionEvidence := proofAssertion(
+		repo, run.ID, "typed-abstention", "UNRESOLVED_CALLER", operation, "",
+		`{"schema":"go-caller-detail-v1","resolution":"syntax","protocol":"grpc","unit_state":"unavailable","unresolved_reason":"unsupported_receiver_flow"}`,
+	)
+	abstention.Tier = store.TierUnresolved
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: run.Commit}},
+		runs:  map[string]store.ExtractionRun{proofScope(repo, domain): run},
+		assertions: map[string][]store.Assertion{
+			repo: {abstention, resolved},
+		},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(repo, run.ID, resolved.Supporting[0]):   resolvedEvidence,
+			proofEvidenceScope(repo, run.ID, abstention.Supporting[0]): abstentionEvidence,
+		},
+	}
+	code, body, report := getImpactReport(
+		t,
+		proofHandler(st, "user:member", nil),
+		"/api/contract_impact_report?operation=%2Fshop.Cart%2FGet",
+	)
+	if code != http.StatusOK {
+		t.Fatalf("typed caller report = %d %s", code, body)
+	}
+	if len(report.ResolvedEvidence) != 1 ||
+		report.ResolvedEvidence[0].Classification != "resolved_caller" ||
+		report.ResolvedEvidence[0].Lineage != lineage ||
+		len(report.MatchingCallEvidence) != 0 ||
+		len(report.ExtractorAbstentions) != 1 ||
+		report.ExtractorAbstentions[0].Classification != "extractor_abstention" ||
+		report.ExtractorAbstentions[0].Reason != "unsupported_receiver_flow" {
+		t.Fatalf("typed caller vocabulary = %+v", report)
 	}
 }
 
@@ -142,11 +194,11 @@ func TestContractImpactOperationReportPreservesProtocolIdentityForEqualObjects(t
 	if code != http.StatusOK {
 		t.Fatalf("mixed-protocol operation report = %d %s", code, body)
 	}
-	if len(report.KnownConsumers) != 2 {
-		t.Fatalf("known consumers = %+v", report.KnownConsumers)
+	if len(report.MatchingCallEvidence) != 2 {
+		t.Fatalf("matching call evidence = %+v", report.MatchingCallEvidence)
 	}
-	got := make(map[string]string, len(report.KnownConsumers))
-	for _, row := range report.KnownConsumers {
+	got := make(map[string]string, len(report.MatchingCallEvidence))
+	for _, row := range report.MatchingCallEvidence {
 		if row.Object != operation {
 			t.Fatalf("operation object = %q", row.Object)
 		}
@@ -208,43 +260,50 @@ func TestContractImpactOperationReportIsPinnedPermissionSafeAndComplete(t *testi
 	if code != http.StatusOK {
 		t.Fatalf("operation report = %d %s", code, body)
 	}
-	if report.SchemaVersion != "contract-impact-report-v1" || report.BundleID == "" || report.Query.Operation != operation {
+	if report.SchemaVersion != "contract-impact-report-v2" || report.BundleID == "" || report.Query.Operation != operation {
 		t.Fatalf("report identity = %+v", report)
 	}
-	if len(report.KnownConsumers) != 1 || len(report.UnresolvedCandidates) != 1 {
-		t.Fatalf("report evidence = known=%+v unresolved=%+v", report.KnownConsumers, report.UnresolvedCandidates)
+	if len(report.MatchingCallEvidence) != 1 || len(report.ExtractorAbstentions) != 1 {
+		t.Fatalf("report evidence = matching=%+v abstentions=%+v",
+			report.MatchingCallEvidence, report.ExtractorAbstentions)
 	}
-	consumer := report.KnownConsumers[0]
+	consumer := report.MatchingCallEvidence[0]
 	if consumer.Repository != visibleRepo || consumer.Path != "consumer/known-impact.go" ||
 		consumer.StartByte != 0 || consumer.EndByte != 4 || consumer.StartLine != 7 ||
 		consumer.Commit != visibleRun.Commit || !consumer.Fresh ||
 		consumer.Domain != domain || consumer.Protocol != "protobuf" ||
-		consumer.Classification != "operation call" || consumer.Tier != store.TierExact {
-		t.Fatalf("known consumer citation = %+v", consumer)
+		consumer.Classification != "matching_call_evidence" || consumer.Tier != store.TierExact {
+		t.Fatalf("matching call citation = %+v", consumer)
 	}
-	candidate := report.UnresolvedCandidates[0]
+	candidate := report.ExtractorAbstentions[0]
 	if candidate.Repository != visibleRepo || candidate.Tier != store.TierUnresolved ||
 		candidate.Domain != domain || candidate.Protocol != "protobuf" ||
 		candidate.Reason != "method Get matches 2 generated services" {
 		t.Fatalf("unresolved candidate = %+v", candidate)
 	}
-	// T19.5: the protocol-blind impact query covers both consumer domains.
-	// The dark thrift pack appears only as honest per-repo no-run rows; the
-	// gRPC rows are unchanged.
+	// T20.10: the protocol-blind impact query covers both legacy consumer and
+	// declaration-proven caller domains. Dark domains appear only as honest
+	// per-repo no-run rows.
 	coverageByScope := make(map[string]api.ImpactCoverageRow, len(report.CoverageRows))
 	for _, row := range report.CoverageRows {
 		coverageByScope[row.Repository+"/"+row.Domain] = row
 	}
-	if len(report.CoverageRows) != 4 ||
+	if len(report.CoverageRows) != 8 ||
+		coverageByScope[unsupported+"/grpc-caller"].State != "unsupported" ||
 		coverageByScope[unsupported+"/grpc-consumer"].State != "unsupported" ||
+		coverageByScope[visibleRepo+"/grpc-caller"].State != "unsupported" ||
 		coverageByScope[visibleRepo+"/grpc-consumer"].State != "covered" ||
 		coverageByScope[visibleRepo+"/grpc-consumer"].UnresolvedCount != 1 ||
+		coverageByScope[visibleRepo+"/thrift-caller"].State != "unsupported" ||
 		coverageByScope[visibleRepo+"/thrift-consumer"].State != "unsupported" ||
+		coverageByScope[unsupported+"/thrift-caller"].State != "unsupported" ||
 		coverageByScope[unsupported+"/thrift-consumer"].State != "unsupported" {
 		t.Fatalf("coverage rows = %+v", report.CoverageRows)
 	}
 	if !strings.Contains(report.Conclusion.Text, "within the stated evidence scope") ||
 		report.Conclusion.CoverageDigest != report.Coverage.Digest ||
+		strings.Contains(body, `"known_consumers"`) ||
+		strings.Contains(body, `"unresolved_candidates"`) ||
 		strings.Contains(body, hiddenRepo) || strings.Contains(body, "secret detail") {
 		t.Fatalf("report qualification or visibility failed: %s", body)
 	}
@@ -290,11 +349,12 @@ func TestContractImpactFieldReportUsesStableIdentityAndExactSpan(t *testing.T) {
 		t.Fatalf("field report = %d %s", code, body)
 	}
 	if report.Query.Kind != "contract_impact_field" || report.Query.Lineage != lineage ||
-		report.Query.Message != message || report.Query.FieldNumber != fieldNumber || len(report.KnownConsumers) != 1 {
+		report.Query.Message != message || report.Query.FieldNumber != fieldNumber || len(report.ResolvedEvidence) != 1 {
 		t.Fatalf("field report identity = %+v", report)
 	}
-	consumer := report.KnownConsumers[0]
-	if consumer.Kind != "field_reference" || consumer.Classification != "write" ||
+	consumer := report.ResolvedEvidence[0]
+	if consumer.Kind != "field_reference" || consumer.Classification != "resolved_field_reference" ||
+		consumer.Reason != "write" ||
 		consumer.Domain != domain || consumer.Protocol != "protobuf" ||
 		consumer.StartByte != 0 || consumer.EndByte != 4 || consumer.StartLine != 7 || !consumer.Fresh {
 		t.Fatalf("field report evidence = %+v", consumer)
@@ -342,7 +402,9 @@ func TestContractChangeImpactReportUsesCompatibilityProof(t *testing.T) {
 		t.Fatalf("change report = %d %s", code, body)
 	}
 	if report.Compatibility == nil || report.Compatibility.Compatible || len(report.Compatibility.Violations) != 1 ||
-		len(report.KnownConsumers) != 1 || report.KnownConsumers[0].Classification != "read" ||
+		len(report.ResolvedEvidence) != 1 ||
+		report.ResolvedEvidence[0].Classification != "resolved_field_reference" ||
+		report.ResolvedEvidence[0].Reason != "read" ||
 		!strings.Contains(report.Conclusion.Text, "blockers were found within the stated evidence scope") {
 		t.Fatalf("change report = %+v", report)
 	}

@@ -116,19 +116,35 @@ func TestTypedSCIPCallsMatchFrozenSmallOracle(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			var facts []sdk.Fact
-			coverage, err := testCase.extractor.Extract(
-				context.Background(), corpus,
-				func(fact sdk.Fact) error {
-					facts = append(facts, fact)
-					return nil
-				},
-			)
-			if err != nil {
-				t.Fatal(err)
+			run := func() ([]sdk.Fact, sdk.Coverage) {
+				t.Helper()
+				var facts []sdk.Fact
+				coverage, err := testCase.extractor.Extract(
+					context.Background(), corpus,
+					func(fact sdk.Fact) error {
+						facts = append(facts, fact)
+						return nil
+					},
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return facts, coverage
+			}
+			facts, coverage := run()
+			secondFacts, secondCoverage := run()
+			if !reflect.DeepEqual(facts, secondFacts) ||
+				!reflect.DeepEqual(coverage, secondCoverage) {
+				t.Fatal("typed caller extraction is not byte-order deterministic")
 			}
 			if coverage.UnresolvedCount != 0 || len(facts) != testCase.want {
 				t.Fatalf("coverage/facts = %+v / %d: %+v", coverage, len(facts), facts)
+			}
+			if !slicesContain(
+				coverage.Protocols,
+				"attribution-"+strings.Repeat("a", 64),
+			) {
+				t.Fatalf("coverage does not bind attribution: %+v", coverage)
 			}
 			oracleByPath := make(map[string]t201.CallExpectation)
 			for _, call := range profile.Oracle.Calls {
@@ -277,6 +293,25 @@ func TestTypedSCIPMappingAbstentionAndInputFailure(t *testing.T) {
 		t.Fatalf("malformed input = %+v / %+v", coverage, facts)
 	}
 
+	empty := cloneFiles(profile.Files)
+	empty["index.scip"] = nil
+	facts = nil
+	coverage, err = gocaller.NewGRPC().Extract(
+		context.Background(),
+		memoryCorpus{
+			repo: corpus.repo, commit: corpus.commit, files: empty,
+			attribution: frozenAttribution(profile),
+		},
+		func(fact sdk.Fact) error {
+			facts = append(facts, fact)
+			return nil
+		},
+	)
+	if err != nil || coverage.UnresolvedCount != 0 || len(facts) != 0 ||
+		!slicesContain(coverage.Protocols, "scip-index-empty") {
+		t.Fatalf("empty input = %+v / %+v / %v", coverage, facts, err)
+	}
+
 	stale := cloneFiles(profile.Files)
 	delete(stale, callerPath)
 	facts = nil
@@ -317,6 +352,54 @@ func TestTypedSCIPMappingAbstentionAndInputFailure(t *testing.T) {
 			"resolution-syntax-v1", "scip", "scip-index-absent",
 		}) {
 		t.Fatalf("missing index = %+v / %+v / %v", coverage, facts, err)
+	}
+}
+
+func TestTypedSCIPNonCallAbstentionUsesTheIndexedSpan(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := cloneFiles(profile.Files)
+	const callerPath = "src/thrift/caller.go"
+	files["gen/thrift/ledger/ledger.go"] = []byte(strings.Replace(
+		string(files["gen/thrift/ledger/ledger.go"]),
+		`c.Call(ctx, "get", request)`, `c.Call(ctx, "getLong", request)`, 1,
+	))
+	files[callerPath] = []byte("package thriftcaller\nGet")
+	files["index.scip"] = replaceSCIPReferenceRange(
+		t, files["index.scip"], callerPath, t201.ThriftGetSymbol,
+		string(files[callerPath]), "Get", 0,
+	)
+
+	var facts []sdk.Fact
+	coverage, err := gocaller.NewThrift().Extract(
+		context.Background(),
+		memoryCorpus{
+			repo: "synthetic.invalid/mono", commit: strings.Repeat("6", 40),
+			files: files, attribution: frozenAttribution(profile),
+		},
+		func(fact sdk.Fact) error {
+			if fact.Path == callerPath {
+				facts = append(facts, fact)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if coverage.UnresolvedCount != 1 || len(facts) != 1 {
+		t.Fatalf("non-call abstention = %+v / %+v", coverage, facts)
+	}
+	fact := facts[0]
+	if fact.Assertion.Predicate != "UNRESOLVED_CALLER" ||
+		fact.Assertion.Object != "/ledger.Ledger/getLong" ||
+		fact.Atom.StartByte != len(files[callerPath])-3 ||
+		fact.Atom.EndByte != len(files[callerPath]) ||
+		fact.Assertion.Subject != "src/thrift/caller.go:21-24" ||
+		!strings.Contains(fact.Assertion.Detail, "scip_range_not_call_selector") {
+		t.Fatalf("non-call indexed span = %+v", fact)
 	}
 }
 
@@ -442,14 +525,24 @@ func Dot(ctx any, client any) { _, _ = client.Get(ctx, nil) }
 import orders "` + ordersImport + `"
 func Typed(ctx any, client orders.OrdersClient) { _, _ = client.Get(ctx, nil) }
 `,
+		"src/syntax/shadow.go": `package syntax
+import orders "` + ordersImport + `"
+func Shadow(ctx any, client orders.OrdersClient) {
+	{
+		client := new(any)
+		_, _ = client.Get(ctx, nil)
+	}
+}
+`,
 	}
 	for filePath, content := range fixtures {
 		files[filePath] = []byte(content)
 	}
 	files["index.scip"] = appendSCIPDocument(
 		t, files["index.scip"], "src/syntax/typed.go", t201.ProtoGetSymbol,
-		fixtures["src/syntax/typed.go"], "Get(ctx",
+		fixtures["src/syntax/typed.go"], "client.Get(ctx",
 	)
+	files["go.mod"] = []byte("module \"synthetic.invalid/mono\"\n\ngo 1.26\n")
 
 	attribution := frozenAttribution(profile)
 	const collisionGenerated = "gen/proto/collision/v1/common_grpc.pb.go"
@@ -516,9 +609,9 @@ func Typed(ctx any, client orders.OrdersClient) { _, _ = client.Get(ctx, nil) }
 			typed++
 		}
 	}
-	if resolvedSyntax != 5 || unresolvedSyntax != 6 || typed != 1 ||
-		firstCoverage.UnresolvedCount != 6 ||
-		reasons["unsupported_receiver_flow"] != 1 ||
+	if resolvedSyntax != 5 || unresolvedSyntax != 7 || typed != 1 ||
+		firstCoverage.UnresolvedCount != 7 ||
+		reasons["unsupported_receiver_flow"] != 2 ||
 		reasons["ambiguous_method_candidates"] != 2 ||
 		reasons["ambiguous_receiver_provenance"] != 2 ||
 		reasons["dot_import_unsupported"] != 1 {
@@ -552,7 +645,7 @@ func Typed(ctx any, client orders.OrdersClient) { _, _ = client.Get(ctx, nil) }
 			resolvedSyntax++
 		}
 	}
-	if resolvedSyntax != 6 || coverage.UnresolvedCount != 6 ||
+	if resolvedSyntax != 6 || coverage.UnresolvedCount != 7 ||
 		!slicesContain(coverage.Protocols, "scip-index-absent") {
 		t.Fatalf("fallback without SCIP = %d / %+v", resolvedSyntax, coverage)
 	}

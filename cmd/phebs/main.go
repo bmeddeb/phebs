@@ -471,6 +471,8 @@ func serve(args []string) error {
 		},
 		AuditRecord: auditRecord, AuditLog: st, Analytics: st,
 		Evidence: evidenceView, ProofBundles: proofBundles,
+		CallerMapEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
+			cfg.Experimental.ProvisionalThriftExtraction,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
 		Compatibility:        compatibility, Visible: visibleFor,
 		Principal: func(ctx context.Context) string {

@@ -30,7 +30,7 @@ import (
 const (
 	producerDomain = "kafka-producer"
 	consumerDomain = "kafka-consumer"
-	version        = "1.0.0"
+	version        = "1.1.0"
 	schemaVersion  = "t23-v1"
 
 	// A Go source file above this size is a coverage gap, not a parse target.

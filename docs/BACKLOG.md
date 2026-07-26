@@ -1885,11 +1885,13 @@ require a direct immutable mapping because its generated header has no source
 path. Successful end-to-end callers are tier `derived`.
 
 AC: the small oracle proves no cross-client or cross-lineage false join for
-repeated `Get`, `Create`, and `Execute`; generator-relative paths, vendored
-duplicates, two generated copies, and absent/conflicting Thrift mappings
-resolve only with the exact admitted mapping or abstain. Renaming a local
-variable does not alter a typed result. Missing/malformed/stale symbol input
-abstains without failing another extraction domain.
+repeated `Get` spellings across protobuf and Thrift, generator-relative paths,
+vendored duplicates, two generated copies, and absent/conflicting Thrift
+mappings; each resolves only with the exact admitted mapping or abstains.
+`Create` and `Execute` were candidate names in the original sketch but are not
+present in the frozen T20.1 oracle and are not claimed by this ticket. Renaming
+a local variable does not alter a typed result. Missing, malformed, empty, or
+path-stale symbol input remains domain-local.
 
 Implementation/result: two independent dark domains, `grpc-caller` and
 `thrift-caller` (both 1.0.0), stream the admitted root `index.scip` and use
@@ -1909,12 +1911,16 @@ at tier `derived`; missing or conflicting admitted mappings become
 operation-keyed `UNRESOLVED_CALLER` assertions, counted per occurrence rather
 than per file. Immutable unit-attribution state/candidates and the selected
 snapshot digest are copied into deterministic detail for the later paged
-service; they do not alter semantic assertion identity. Missing root input is
-explicitly unavailable, while malformed or stale SCIP input produces one
-bounded source-backed `CALLER_EXTRACTION_GAP` in only that protocol domain.
+service; they do not alter semantic assertion identity. Missing or zero-byte
+root input is explicitly unavailable (with distinct coverage markers), while
+malformed input or an indexed document whose path no longer exists produces
+one bounded source-backed `CALLER_EXTRACTION_GAP` in only that protocol domain.
 The frozen small oracle, exact worker publication, local-variable rename,
-missing/conflicting mapping, repeated occurrence accounting, stale/malformed
-input, and deterministic reader inventory are pinned. Legacy name-only
+missing/conflicting mapping, repeated occurrence accounting,
+path-stale/malformed/empty input, non-call SCIP spans, and deterministic reader
+inventory are pinned. SCIP itself does not bind source-document content by
+default, so a same-path content-stale index is not freshness proof; operators
+must regenerate and commit it with source changes. Legacy name-only
 consumer domains remain unchanged for existing experimental proof surfaces;
 T20.10 reads only the new declaration-proven domains. No type checker, build,
 generator, module download, filesystem, network, or accuracy claim is added.
@@ -1947,7 +1953,8 @@ The bounded reason table is `unsupported_receiver_flow`,
 `dot_import_unsupported`, plus the T20.8 generated-from reasons. Candidate
 abstentions are emitted once per canonical operation; equal method spellings
 from different imported clients never select a winner. SCIP method ranges
-always suppress the same syntactic occurrence, including typed abstentions.
+suppress an overlapping syntactic selector occurrence, including wider
+client-selector ranges, off-by-one producer ranges, and typed abstentions.
 Fallback still operates when the root index is absent or malformed, while the
 SCIP coverage state/gap remains independently visible. A missing or invalid
 module directive makes package fallback unavailable without weakening typed
@@ -1956,10 +1963,13 @@ shapes, every fallback reason, two different `Get` operations, typed
 precedence, absent-SCIP operation, and two-run byte/order determinism. No
 general assignment dataflow, interface propagation, reflection, type checker,
 build, module download, filesystem, network, completeness, or accuracy claim
-is introduced.
+is introduced. Generated/caller Go documents above 4 MiB or containing invalid
+UTF-8 remain an explicit v1 reader boundary: corpus/candidate/read scope stays
+manifest-bound, but those documents yield neither a caller row nor a per-file
+gap row.
 
-**T20.10 · Shared snapshot-consistent Caller Map service/API and vocabulary migration**
-*(needs T20.4, T20.7–T20.9)* — add an ephemeral paged read for one complete
+**T20.10 · Shared snapshot-consistent Caller Map service/API and vocabulary migration** ✅
+*(2026-07-26; needs T20.4, T20.7–T20.9)* — add an ephemeral paged read for one complete
 declaration identity, with source and unit-grouped orderings plus filters for
 unit/owner/path/code-role/tier/freshness/resolution. Bind every page to
 authorization, coverage, endpoint, attribution-snapshot digest, filters,
@@ -1980,6 +1990,62 @@ permission, coverage, or attribution-snapshot digest changes invalidate the
 cursor. Hidden repositories cannot affect rows, groups, counts, work shape, or
 serialized bytes. Every source row opens at its exact commit/span. No response
 or UI fixture calls an `unresolved_name_match` a known consumer.
+
+Implementation/result: authenticated `GET /api/contract_callers` and the
+transport-neutral `CallerMapService` accept the complete
+`(protocol, repository, declaration_lineage, canonical_operation)` identity.
+The service verifies that exact declaration publication before reading only
+the matching `grpc-caller` or `thrift-caller` run. It globally orders the
+authorized projection by source or unit, supports every specified filter, and
+returns bounded 50-row pages (100 maximum) with exact assertion/atom/run and
+repository/commit/path/byte/line citations. Unattributed and ambiguous unit
+states remain rows; operation-keyed `UNRESOLVED_CALLER` evidence remains an
+`extractor_abstention`.
+
+The opaque cursor binds normalized query and page size, stable principal,
+authorization provider and permission snapshot, visible-repository-set,
+coverage certificate, caller-attribution snapshot, and offset. A changed
+publication, coverage counter, permission projection, or attribution digest
+returns conflict. Collection confirms visibility, coverage, and attribution
+after the bounded scan; hidden-repository mutation is pinned byte-identical
+with an identical store-call ledger. The reader scans at most 50,000 candidate
+assertions and resolves source atoms only for the returned page.
+
+`grpc-caller` and `thrift-caller` advance to 1.2.0 solely to expose their
+already-selected attribution digest in the run manifest, so cursors can bind
+it without retaining or rereading snapshot blobs. `contract-atlas-v2` adds
+the exact caller domains and uses `resolved_implementation`,
+`matching_registration_evidence`, `resolved_caller`,
+`unresolved_name_match`, and `extractor_abstention`.
+`contract-impact-report-v2` replaces the ambiguous arrays with
+`resolved_evidence`, `matching_call_evidence`, and
+`extractor_abstentions`; its bare-operation query includes both new caller
+domains and both legacy consumer domains without merging their classifications.
+Existing MCP tool names remain unchanged; their
+descriptions, normalized questions, and decision vocabulary now call a bare
+operation result matching call evidence rather than a known-caller roster.
+Caller Map MCP registration remains T20.11, and the dedicated UI remains
+T20.12. All surfaces stay experimental-dark and make no completeness,
+runtime-use, decommissioning-safety, or accuracy claim.
+
+**T20.R · T20.8–T20.10 adversarial correction** ✅ *(2026-07-26; needs
+T20.8–T20.10)* — reconcile extractor accounting, fallback shadowing, and the
+three read-surface vocabularies before integration. Non-call SCIP abstentions
+use the exact indexed range for both evidence and unresolved identity; a
+zero-byte index is coverage-marked unavailable without inventing a byte span;
+typed/fallback suppression uses range overlap; and an unknown short-declaration
+RHS clears prior client provenance. Fixtures pin the Thrift wire-name/Go-name
+length mismatch at EOF, wide SCIP ranges, lexical shadowing, quoted module
+directives, worker publication, and two-run determinism. Impact, Atlas, Caller
+Map, and the synthetic catalog fixture now use the same
+`resolved_caller`/`resolved_implementation` vocabulary; lineage-proven
+heuristic fallback rows stay resolved callers, while name-only legacy rows
+remain matching evidence. Digest-bearing caller runs from before 1.2.0 return
+typed `409` until republished. Kafka producer/consumer readers advance to
+1.1.0 because T22/T23 integration changed their recognition semantics.
+Coverage defaults are explicitly nine domains. The frozen oracle and
+same-path SCIP freshness limits are stated without expanding the evidence
+claim.
 
 **T20.11 · MCP endpoint discovery and paged Caller Map** *(needs T20.10)* —
 register `search_contract_operations`, `get_contract_operation`, and
@@ -2103,7 +2169,7 @@ flowchart LR
 |---|---|---|
 | Why | Investigation identity, immutable revisions, normalized question, decision sought, decisions, dispositions, watches, audit, retention, and dossier export | the production workflow has no structured success-criteria brief or complete creation/editing UI; the current rich Investigation view is a development fixture adapter |
 | What | Contract Atlas discovery/detail for protobuf and Thrift; exact declaration citations and request/response shapes; pinned Buf WIRE comparison for bounded protobuf before/after source sets | the current Impact form accepts raw identifiers/JSON; compatibility is protobuf wire-only and does not establish application compatibility |
-| Where | proof bundles, operation/field evidence, exact source citations, coverage certificates, extractor abstentions, and Epic 20's planned declaration-proven paged Caller Map with unit attribution | the shipped `known_consumers` field is matching evidence, not a proven service roster; Atlas/proof bounds are not fleet pagination; Kafka, Redis, document-store, and SQL evidence packs do not exist |
+| Where | proof bundles, operation/field evidence, exact source citations, coverage certificates, extractor abstentions, and Epic 20's declaration-proven paged Caller Map service/API with unit attribution | the Caller Map UI/MCP workflow remains T20.11/T20.12; bare-operation `matching_call_evidence` is not a proven service roster; Kafka, Redis, document-store, and SQL evidence packs do not exist |
 | How | repository explorer, code search, file reads, SCIP definition/reference/hover, blame, commits, and diffs | these are separate tools today; phebs does not yet assemble related implementation evidence or a human-owned checklist |
 
 ### Governance and sequencing
@@ -2232,8 +2298,8 @@ one reviewed glossary source or are guarded against semantic drift.
    table, ReviewItem mutation, comment, assignment, due date, priority, or
    custom state exists. Machine state never upgrades the Investigation to
    migration-complete or safe-to-retire.
-8. **One vocabulary and explanation contract.** `known_consumers` is not
-   rendered as a primary label. Mode-specific evidence categories use the
+8. **One vocabulary and explanation contract.** The retired
+   `known_consumers` field is not rendered. Mode-specific evidence categories use the
    glossary above. Analysis scope & gaps is always adjacent to Where and to any
    conclusion. The canonical certificate/digest stays inspectable without
    leading the experience with storage terminology.
@@ -2319,8 +2385,9 @@ adds no production behavior.
 
 AC: add, modify, migrate, and retire stories enumerate every input, shared
 service call, output, mutation, evidence source, bound, unsupported plane, and
-human decision. `known_consumers`, `unresolved_candidates`, and the
-`coverage-certificate-v1`/`coverage` projection are traced from persisted
+human decision. The migration from `known_consumers`/`unresolved_candidates`
+to `resolved_evidence`/`matching_call_evidence`/`extractor_abstentions`, plus
+the `coverage-certificate-v1`/`coverage` projection, is traced from persisted
 evidence through API, UI, and MCP; no story calls a matching object a resolved
 caller. The glossary has
 stable ids, deterministic canonical bytes/digest, unique terms, bounded UTF-8
@@ -2722,7 +2789,8 @@ without wire-level evidence, which static source cannot provide.
 ### Pack metadata
 
 Domains `kafka-producer` / `kafka-consumer` (reserved: `kafka-topic`); dark
-flag `experimental.provisional_kafka_extraction`; extractor `kafkago` 1.0.0;
+flag `experimental.provisional_kafka_extraction`; extractor `kafkago` 1.1.0
+(advanced from the spike's 1.0.0 after the reviewed lexical-constant change);
 own evidence-pack card; own spike.
 
 **T23.1 ✅ · Validation spike** — `spike/t231`; pin two-to-four OSS corpora
@@ -2747,7 +2815,7 @@ only — no production extractor behavior or accuracy claim.
 
 **T23.2 ✅ · kafkago extractors, both planes** *(needs T23.1 — spec revised
 2026-07-26 from the frozen KD1–KD10 table)* — package
-`internal/extract/extractors/kafkago` at 1.0.0 provides two `sdk.Extractor`
+`internal/extract/extractors/kafkago` at 1.1.0 provides two `sdk.Extractor`
 implementations sharing one frozen recognizer: domain `kafka-producer` and
 domain `kafka-consumer`, both behind the dark flag
 `experimental.provisional_kafka_extraction`, atom schema `t23-v1`.

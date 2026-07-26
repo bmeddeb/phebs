@@ -59,7 +59,7 @@ function relationship(
   return {
     kind,
     classification: kind === 'implementation'
-      ? 'proven'
+      ? 'resolved_implementation'
       : kind === 'caller'
         ? 'unresolved_name_match'
         : 'extractor_abstention',
@@ -71,7 +71,7 @@ function relationship(
 function operation(): ContractCatalogOperation {
   const declaration = claim('declaration', [source('declaration')], 'declaration-lineage', 'exact')
   return {
-    schema_version: 'contract-atlas-v1',
+    schema_version: 'contract-atlas-v2',
     repository: 'github.com/acme/contracts',
     declaration_lineage: 'declaration-lineage',
     service_fqn: 'demo.Catalog',

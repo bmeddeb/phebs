@@ -180,7 +180,7 @@ const coverage: CoverageCertificate = {
 }
 
 const firstPage: ContractCatalogList = {
-  schema_version: 'contract-atlas-v1',
+  schema_version: 'contract-atlas-v2',
   query: { protocol: 'protobuf' },
   items: [
     item('github.com/acme/contracts', 'lineage-a', 'service'),
@@ -233,7 +233,7 @@ function relationship(
 }
 
 const detail: ContractCatalogOperation = {
-  schema_version: 'contract-atlas-v1',
+  schema_version: 'contract-atlas-v2',
   repository: 'github.com/acme/contracts',
   declaration_lineage: 'lineage-a',
   service_fqn: 'demo.Catalog',

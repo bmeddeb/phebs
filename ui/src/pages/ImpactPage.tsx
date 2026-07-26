@@ -22,7 +22,7 @@ import { isAbortError } from '../util'
 
 type Mode = 'operation' | 'field' | 'change'
 
-const qualification = 'Build a bounded, evidence-backed report of known and unresolved consumers for an operation, field, or contract change.'
+const qualification = 'Build a bounded, evidence-backed report of resolved evidence, matching calls, and extractor abstentions for an operation, field, or contract change.'
 
 export default function ImpactPage({ params, compatibilityAvailable }: { params: URLSearchParams; compatibilityAvailable: boolean }) {
   const [css] = useStyletron()
@@ -251,8 +251,9 @@ function ReportView({ report }: { report: ContractImpactReport }) {
       </section>
 
       {report.compatibility && <CompatibilitySection report={report} />}
-      <EvidenceSection title="Known consumers" rows={report.known_consumers} empty="No matching consumer evidence was found within the stated evidence scope; this does not establish absence." />
-      <EvidenceSection title="Unresolved candidates" rows={report.unresolved_candidates} empty="No unresolved candidate evidence was recorded within the stated evidence scope." unresolved />
+      <EvidenceSection title="Resolved evidence" rows={report.resolved_evidence} empty="No declaration-resolved or field-reference evidence was found within the stated evidence scope; this does not establish absence." />
+      <EvidenceSection title="Matching call evidence" rows={report.matching_call_evidence} empty="No operation-name call evidence was found within the stated evidence scope; this does not establish absence." />
+      <EvidenceSection title="Extractor abstentions" rows={report.extractor_abstentions} empty="No extractor abstention evidence was recorded within the stated evidence scope." unresolved />
       <CoverageSection report={report} />
 
       <div className={css({ border: `1px solid ${tok.cardBorder}`, padding: '12px 14px', marginTop: '20px', fontSize: '12px', lineHeight: '18px', color: tok.textSecondary })}>
@@ -337,7 +338,7 @@ function EvidenceRow({ row, unresolved }: { row: ImpactEvidenceRow; unresolved: 
           {row.domain}
         </div>
       </Cell>
-      <Cell>{unresolved ? row.reason || row.classification : row.classification}</Cell>
+      <Cell>{unresolved ? row.reason || row.classification : [row.classification, row.reason].filter(Boolean).join(' · ')}</Cell>
       <Cell mono>{row.tier}</Cell>
       <Cell>{row.code_role || '—'}</Cell>
       <Cell><span className={css({ color: row.fresh ? tok.statusGreen : tok.statusAmber })}>{row.fresh ? 'current' : 'stale'}</span></Cell>

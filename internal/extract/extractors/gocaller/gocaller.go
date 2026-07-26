@@ -31,7 +31,7 @@ import (
 const (
 	grpcDomain   = "grpc-caller"
 	thriftDomain = "thrift-caller"
-	version      = "1.1.0"
+	version      = "1.2.0"
 	indexPath    = "index.scip"
 
 	schemaVersion       = "t20-caller-v1"
@@ -157,29 +157,37 @@ func (e extractor) Extract(
 		if err != nil {
 			return coverage, fmt.Errorf("read %s: %w", indexPath, err)
 		}
-		var parseErr error
-		documents, parseErr = parseIndex(ctx, indexBlob.Content)
-		if parseErr != nil {
-			if err := emitGap(indexBlob, "malformed_symbol_input", parseErr.Error(), emit); err != nil {
-				return coverage, err
-			}
-			coverage.UnresolvedCount = 1
-			documents = nil
+		if len(indexBlob.Content) == 0 {
+			// An empty regular blob has no byte that can honestly back a gap
+			// assertion. Treat it like unavailable typed input, record the
+			// distinct state in coverage, and still allow syntax fallback.
+			coverage.Protocols = append(coverage.Protocols, "scip-index-empty")
+			indexBlob = sdk.Blob{}
 		} else {
-			for _, document := range documents {
-				if _, present := paths[document.path]; present {
-					continue
-				}
-				if err := emitGap(indexBlob, "stale_symbol_input", document.path, emit); err != nil {
+			var parseErr error
+			documents, parseErr = parseIndex(ctx, indexBlob.Content)
+			if parseErr != nil {
+				if err := emitGap(indexBlob, "malformed_symbol_input", parseErr.Error(), emit); err != nil {
 					return coverage, err
 				}
 				coverage.UnresolvedCount = 1
 				documents = nil
-				break
+			} else {
+				for _, document := range documents {
+					if _, present := paths[document.path]; present {
+						continue
+					}
+					if err := emitGap(indexBlob, "stale_symbol_input", document.path, emit); err != nil {
+						return coverage, err
+					}
+					coverage.UnresolvedCount = 1
+					documents = nil
+					break
+				}
 			}
+			// The raw index is not retained across subsequent source reads.
+			indexBlob = sdk.Blob{}
 		}
-		// The raw index is not retained across subsequent source reads.
-		indexBlob = sdk.Blob{}
 	}
 
 	var attribution attributionLookup = unavailableAttribution{}
@@ -192,6 +200,13 @@ func (e extractor) Extract(
 		if source != nil {
 			attribution = attributionAdapter{source}
 			attributionDigest = source.Digest()
+			if strings.HasPrefix(attributionDigest, "sha256:") &&
+				len(attributionDigest) == len("sha256:")+64 {
+				coverage.Protocols = append(
+					coverage.Protocols,
+					"attribution-"+strings.TrimPrefix(attributionDigest, "sha256:"),
+				)
+			}
 		}
 	}
 
@@ -580,7 +595,7 @@ func (e extractor) emitReferences(
 			if !present {
 				if err := emitCallerFact(
 					e.protocol, document.path, blob, starts, start,
-					start+max(1, len(methodFromOperation(binding.operation))),
+					end,
 					binding, attributionDigest,
 					attribution.ConsumerUnits(document.path, lineAtByte(starts, start)),
 					"scip", "scip_range_not_call_selector",
@@ -954,13 +969,6 @@ func isDefinition(roles int32) bool {
 }
 
 func isReference(roles int32) bool { return !isDefinition(roles) }
-
-func methodFromOperation(operation string) string {
-	if index := strings.LastIndex(operation, "/"); index >= 0 {
-		return operation[index+1:]
-	}
-	return operation
-}
 
 func firstBytes(content string, limit int) string {
 	if len(content) <= limit {

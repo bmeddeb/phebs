@@ -303,6 +303,7 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 	)
 	protoRun := catalogRun(contractRepo, catalogProtoDomain, "run-proto", 4)
 	grpcRun := catalogRun(consumerRepo, catalogGRPCDomain, "run-grpc", 3)
+	callerRun := catalogRun(consumerRepo, "grpc-caller", "run-grpc-caller", 1)
 	st := &proofAPIStore{
 		repos: []store.Repo{
 			{Name: consumerRepo, IndexedCommitHash: catalogCommit},
@@ -311,6 +312,7 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 		runs: map[string]store.ExtractionRun{
 			proofScope(contractRepo, catalogProtoDomain): protoRun,
 			proofScope(consumerRepo, catalogGRPCDomain):  grpcRun,
+			proofScope(consumerRepo, "grpc-caller"):      callerRun,
 		},
 		assertions:  map[string][]store.Assertion{},
 		resolutions: map[string]store.EvidenceResolution{},
@@ -333,6 +335,13 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 		)
 		putCatalogAssertion(st, assertion, resolution)
 	}
+	exactCaller, exactCallerResolution := catalogAssertion(
+		consumerRepo, callerRun.ID, "exact-caller", "CALLS_OPERATION",
+		"go/exact-caller.go", "/"+service+"/"+method, lineage, `{}`,
+	)
+	exactCaller.Tier = store.TierDerived
+	exactCaller.CodeRole = "production"
+	putCatalogAssertion(st, exactCaller, exactCallerResolution)
 	for _, row := range []struct {
 		id, predicate, object, claimLineage, tier string
 	}{
@@ -358,7 +367,7 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if detail.SchemaVersion != "contract-atlas-v1" ||
+	if detail.SchemaVersion != "contract-atlas-v2" ||
 		detail.Declaration.RunID != protoRun.ID ||
 		detail.FactDetail.ServerStreaming != true ||
 		detail.FactDetail.OneWay != nil ||
@@ -377,14 +386,20 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 		t.Fatalf("protobuf fact detail changed: got %s want %s", factBytes, operationDetail)
 	}
 	if !slices.Equal(detail.Coverage.Domains, []string{
-		"grpc-consumer", "proto-contract", "thrift-consumer", "thrift-contract",
+		"grpc-caller", "grpc-consumer", "proto-contract",
+		"thrift-caller", "thrift-consumer", "thrift-contract",
 	}) {
 		t.Fatalf("catalog coverage domains = %v", detail.Coverage.Domains)
 	}
+	callerClasses := map[string]bool{}
+	for _, caller := range detail.Callers {
+		callerClasses[caller.Classification] = true
+	}
 	if len(detail.Implementations) != 1 ||
-		detail.Implementations[0].Classification != "proven" ||
-		len(detail.Callers) != 1 ||
-		detail.Callers[0].Classification != "unresolved_name_match" ||
+		detail.Implementations[0].Classification != "resolved_implementation" ||
+		len(detail.Callers) != 2 ||
+		!callerClasses["resolved_caller"] ||
+		!callerClasses["unresolved_name_match"] ||
 		len(detail.UnresolvedCandidates) != 1 ||
 		detail.UnresolvedCandidates[0].Classification != "extractor_abstention" {
 		t.Fatalf("relationships = implementations=%+v callers=%+v unresolved=%+v",
@@ -394,7 +409,11 @@ func TestContractCatalogOperationShapesRelationshipsAndNoPersistence(t *testing.
 		append([]api.ContractCatalogRelationship{}, detail.Implementations...),
 		append(detail.Callers, detail.UnresolvedCandidates...)...,
 	) {
-		if relationship.Claim.RunID != grpcRun.ID ||
+		wantRunID := grpcRun.ID
+		if relationship.Classification == "resolved_caller" {
+			wantRunID = callerRun.ID
+		}
+		if relationship.Claim.RunID != wantRunID ||
 			len(relationship.Claim.Sources) != 1 ||
 			relationship.Claim.Sources[0].AssertionID != relationship.Claim.AssertionID {
 			t.Fatalf("relationship lacks immutable locator: %+v", relationship)
@@ -557,8 +576,9 @@ func TestContractCatalogThriftPack(t *testing.T) {
 		t.Fatalf("thrift operation shape = %+v", detail)
 	}
 	if len(detail.Implementations) != 1 ||
-		detail.Implementations[0].Classification != "unresolved_name_match" ||
+		detail.Implementations[0].Classification != "matching_registration_evidence" ||
 		len(detail.Callers) != 1 ||
+		detail.Callers[0].Classification != "unresolved_name_match" ||
 		len(detail.UnresolvedCandidates) != 1 ||
 		detail.UnresolvedCandidates[0].Classification != "extractor_abstention" {
 		t.Fatalf("thrift relationships = %+v / %+v / %+v",

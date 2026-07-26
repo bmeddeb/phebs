@@ -144,10 +144,19 @@ func readModulePath(
 		if len(fields) == 0 || fields[0] != "module" {
 			continue
 		}
-		if len(fields) != 2 || modulePath != "" || !validModulePath(fields[1]) {
+		if len(fields) != 2 || modulePath != "" {
 			return "", errModuleUnavailable
 		}
 		modulePath = fields[1]
+		if strings.HasPrefix(modulePath, `"`) {
+			modulePath, err = strconv.Unquote(modulePath)
+			if err != nil {
+				return "", errModuleUnavailable
+			}
+		}
+		if !validModulePath(modulePath) {
+			return "", errModuleUnavailable
+		}
 	}
 	return modulePath, nil
 }
@@ -504,7 +513,7 @@ func (e extractor) scanSyntaxFile(
 				}
 				methodStart := tokenFile.Offset(selector.Sel.Pos())
 				methodEnd := tokenFile.Offset(selector.Sel.End())
-				if _, present := typed[byteRange{start: methodStart, end: methodEnd}]; present {
+				if overlapsTypedRange(typed, methodStart, methodEnd) {
 					return true
 				}
 				bindings, reason := resolveSyntaxCall(selector, model, index, env)
@@ -713,8 +722,23 @@ func bindAssignment(
 		types := inferExpression(assignment.Rhs[position], model, index, env)
 		if len(types) > 0 {
 			env[identifier.Name] = appendTypeUnique(nil, types...)
+		} else if assignment.Tok == token.DEFINE {
+			// A short declaration creates a new lexical binding. Even though
+			// this bounded reader deliberately has no full scope graph, it
+			// must forget a generated-client provenance that the new value
+			// does not prove; retaining it would turn shadowing into a guess.
+			delete(env, identifier.Name)
 		}
 	}
+}
+
+func overlapsTypedRange(typed map[byteRange]struct{}, start, end int) bool {
+	for candidate := range typed {
+		if candidate.start < end && start < candidate.end {
+			return true
+		}
+	}
+	return false
 }
 
 func inferExpression(

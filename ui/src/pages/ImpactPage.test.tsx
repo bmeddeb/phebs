@@ -17,7 +17,7 @@ vi.mock('../api', () => api)
 
 const commit = '0123456789abcdef0123456789abcdef01234567'
 const report: ContractImpactReport = {
-  schema_version: 'contract-impact-report-v1',
+  schema_version: 'contract-impact-report-v2',
   bundle_id: `pb_${'a'.repeat(64)}`,
   query: {
     kind: 'contract_impact_operation',
@@ -25,10 +25,11 @@ const report: ContractImpactReport = {
     domains: ['grpc-consumer'],
   },
   conclusion: {
-    text: 'Known consumer evidence was found within the stated evidence scope.',
+    text: 'Resolved or matching call evidence was found within the stated evidence scope.',
     coverage_digest: `sha256:${'b'.repeat(64)}`,
   },
-  known_consumers: [{
+  resolved_evidence: [],
+  matching_call_evidence: [{
     kind: 'operation_call',
     domain: 'grpc-consumer',
     protocol: 'protobuf',
@@ -45,10 +46,11 @@ const report: ContractImpactReport = {
     end_line: 27,
     tier: 'heuristic',
     code_role: 'production',
-    classification: 'operation call',
+    classification: 'matching_call_evidence',
+    reason: 'operation object matched without declaration identity',
     fresh: true,
   }],
-  unresolved_candidates: [{
+  extractor_abstentions: [{
     kind: 'unresolved_candidate',
     domain: 'grpc-consumer',
     protocol: 'protobuf',
@@ -65,7 +67,7 @@ const report: ContractImpactReport = {
     end_line: 41,
     tier: 'unresolved',
     code_role: 'test',
-    classification: 'ambiguous operation call',
+    classification: 'extractor_abstention',
     reason: 'method Get matches 2 generated services',
     fresh: false,
   }],
@@ -162,6 +164,10 @@ test('operation report renders qualified conclusions, pinned evidence, unresolve
 
   await screen.findByText(report.conclusion.text)
   expect(api.fetchOperationImpact).toHaveBeenCalledWith('/shop.Cart/Get', expect.any(AbortSignal))
+  expect(screen.getByRole('heading', { name: 'Resolved evidence' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Matching call evidence' })).toBeTruthy()
+  expect(screen.getByRole('heading', { name: 'Extractor abstentions' })).toBeTruthy()
+  expect(screen.queryByText('Known consumers')).toBeNull()
   expect(screen.getAllByText('protobuf').length).toBeGreaterThan(0)
   expect(screen.getAllByText('grpc-consumer').length).toBeGreaterThan(0)
   expect(screen.getByText('method Get matches 2 generated services')).toBeTruthy()
