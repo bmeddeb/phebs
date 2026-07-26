@@ -233,9 +233,10 @@ promotion or Epic 16 continuation.
 ## Comparison with the current workflow
 
 The relevant comparison is against how a consumer inventory is built
-today. The proposed anchor is the legacy
-`userdevices.FindRelatedUserDevices` RPC within the active
-**userdevices → uberdevices v2** migration. Before ingestion, the sponsor
+today. The proposed anchor is a legacy
+device-lookup RPC within an active v1 → v2 service migration (exact IDL
+identity recorded privately and frozen in the pilot record). Before
+ingestion, the sponsor
 and migration owner confirm that this RPC remains suitable and freeze the
 exact IDL identity and source universe in the
 [pilot charter](./PILOT_CHARTER.md). Changing the anchor after that point
@@ -250,7 +251,7 @@ define the internal recall-positive population:
 
 | | Current practice | Pilot hypothesis (measured, not promised) |
 |---|---|---|
-| Time to a reviewable candidate inventory | reconstructed and measured for `userdevices.FindRelatedUserDevices` before phebs output is unsealed | target: same-day initial inventory; actual time measured |
+| Time to a reviewable candidate inventory | reconstructed and measured for the frozen anchor RPC before phebs output is unsealed | target: same-day initial inventory; actual time measured |
 | Snapshot/target scope recorded | often implicit or manually documented | manifest-bound, every run |
 | Production vs test/tooling classification | manual | orthogonal-dimension classification; accuracy measured |
 | Service/owner attribution | manual, ambiguous | derived from catalog snapshots; coverage measured |

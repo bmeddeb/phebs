@@ -38,8 +38,8 @@ it does not convert advisory evidence into a deprecation authority.
 
 | Field | Proposed value |
 |---|---|
-| Migration | `userdevices → uberdevices v2` |
-| Contract | legacy `userdevices.FindRelatedUserDevices` RPC |
+| Migration | an active v1 → v2 device-service migration (exact identity recorded privately; bound here before ingestion) |
+| Contract | one legacy device-lookup RPC (exact IDL identity recorded privately; bound here before ingestion) |
 | Language/protocol | Go/gRPC |
 | Baseline | one pinned monorepo commit/tree digest (`S0`) |
 | Change window | subsequent immutable snapshots processed during the pilot (`S1…Sn`) |
