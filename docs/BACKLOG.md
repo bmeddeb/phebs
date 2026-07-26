@@ -1802,8 +1802,8 @@ closed structurally because no manifest or part capability exists. A future
 sharded mode requires a separately reviewed, versioned ticket. This establishes
 input integrity and capacity only, not extraction accuracy.
 
-**T20.7 · Immutable monorepo layout and consumer-unit snapshot** *(needs
-T20.1)* — introduce digest-bound layout classification and a narrow,
+**T20.7 · Immutable monorepo layout and consumer-unit snapshot** ✅
+*(2026-07-26; needs T20.1)* — introduce digest-bound layout classification and a narrow,
 protocol-neutral unit-source interface. The neutral snapshot models typed
 units and relations for source root, build target, deployable, logical service,
 owner, protobuf generator invocation root/direct mapping, and Thrift direct
@@ -1816,6 +1816,42 @@ roots and malformed/unsafe snapshots fail closed; zero/multiple mappings
 survive as explicit states. Changing only unit metadata changes the attribution
 digest and cursor binding, not source assertion identity. No build or catalog
 executable is invoked.
+
+Implementation/result: three optional regular blobs at fixed repository-root
+paths form one trusted `sdk.AttributionSource`: `layout-snapshot.json`
+(`t20-layout-snapshot-v1`), the T20.1 `unit-snapshot.json`
+(`t20-unit-snapshot-v1`), and the T20.1
+`generated-from-snapshot.json` (`t20-generated-from-v1`). The verified corpus
+reads only present, fully inventoried snapshots through its ordinary 10 MiB
+blob cap and existing 512 MiB aggregate budget. It strictly rejects unknown
+fields/versions/trailing JSON, unsafe or absent referenced files, false
+declared states, duplicate relations, empty/overlapping roots, and inputs over
+128 roots, 25,000 mappings, or 64 values per attribution hop. All three fixed
+paths hard-fail when represented by a symlink.
+
+Layout roots classify `idl`, `generated`, and `source` paths but never filter
+the full regular-file inventory and never produce a generated-from candidate.
+When a layout is present, unit and generated/declaration relations must agree
+with its typed root and protocol. Unit mappings prefer an exact source line
+and otherwise use a path-level entry; zero mappings, multiple candidates,
+multi-valued candidates, and an explicit empty mapping remain respectively
+`unavailable` or `ambiguous`, with every typed value retained. Protobuf accepts
+an explicit direct relation or an explicit generated-root → generator
+invocation-root relation which still requires the T20.8 caller to supply the
+agreeing generator-relative `.proto` path. Thrift accepts direct mappings
+only.
+
+The I/O-free result returns defensive copies, exact
+repository/commit/path/blob-digest provenance, stable candidate IDs, and one
+digest over the selected immutable snapshot set. Metadata-only changes alter
+that digest while assertion detail remains outside semantic assertion identity;
+T20.11 consumes the digest in cursor binding. The SDK provenance union admits
+a future independently verified `external_digest` adapter without granting a
+catalog/network capability; this ticket ships only commit-bound repository
+inputs. The unchanged frozen T20.1 small and scale profiles pass through the
+production validator, including all 10,005 scale mappings. No build, generator,
+plugin, binary, catalog client, filesystem path, or network capability is
+exposed to an extractor.
 
 **T20.8 · Typed Go caller and generated-from resolution** *(needs T20.3,
 T20.6, T20.7)* — join a symbol-index call occurrence to a generated client

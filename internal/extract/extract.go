@@ -421,6 +421,9 @@ type verifiedCorpus struct {
 	enumerated        map[string]struct{}
 	enumeratedOrder   []string
 	candidates        map[string]struct{}
+	attributionOnce   sync.Once
+	attributionSource sdk.AttributionSource
+	attributionErr    error
 }
 
 func newVerifiedCorpus(inner Corpus) *verifiedCorpus {
@@ -543,6 +546,13 @@ func (c *verifiedCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
 	return c.read(ctx, scipIndexPath, MaxSCIPIndexBytes, func(ctx context.Context, _ string) (sdk.Blob, error) {
 		return inner.ReadSCIPIndex(ctx)
 	})
+}
+
+func (c *verifiedCorpus) AttributionSource(ctx context.Context) (sdk.AttributionSource, error) {
+	c.attributionOnce.Do(func() {
+		c.attributionSource, c.attributionErr = loadAttributionSource(ctx, c)
+	})
+	return c.attributionSource, c.attributionErr
 }
 
 func (c *verifiedCorpus) read(

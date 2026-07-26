@@ -197,6 +197,53 @@ references, a repository-root `index.scip` must additionally describe that
 same immutable revision. phebs never runs the repository's build, code
 generator, plugin, or dependency downloader.
 
+Epic 20's dark caller resolver can additionally consume three optional,
+committed JSON snapshots from fixed repository-root paths:
+
+- `layout-snapshot.json` version `t20-layout-snapshot-v1` classifies
+  non-overlapping `idl`, `generated`, and `source` roots. IDL/generated roots
+  name a protocol token; a source root does not.
+- `unit-snapshot.json` version `t20-unit-snapshot-v1` maps one source path and
+  optional exact `start_line` to separate arrays of `build_targets`,
+  `deployables`, `logical_services`, and `owners`. Exact-line entries win over
+  path-level entries.
+- `generated-from-snapshot.json` version `t20-generated-from-v1` provides
+  explicit `generated_path` → `declaration_path` mappings. Protobuf mappings
+  may also bind a `generator_relative_path`, or an `invocations` entry may map
+  a `generated_root` to a `generator_invocation_root`. Thrift requires direct
+  mappings.
+
+For example, the layout remains classification—not proof:
+
+```json
+{
+  "version": "t20-layout-snapshot-v1",
+  "roots": [
+    {"kind": "idl", "path": "idl/proto", "protocol": "grpc"},
+    {"kind": "generated", "path": "gen/proto", "protocol": "grpc"},
+    {"kind": "source", "path": "src"}
+  ]
+}
+```
+
+The snapshots are ordinary repository blobs and inherit the 10 MiB per-file
+and 512 MiB aggregate extraction budgets. Snapshot symlinks, unknown versions
+or fields, unsafe/stale paths, dishonest state labels, and overlapping roots
+fail closed. Referenced source/generated/declaration files must exist in the
+same fully inventoried commit. Files outside every optional root remain in the
+corpus inventory. A layout root alone never establishes generated-from:
+protobuf still needs its agreeing generated markers plus an explicit direct or
+invocation-root relation, and Thrift needs a direct relation.
+
+One mapping is `resolved`; zero is `unavailable`; multiple mappings or a
+multi-valued candidate are `ambiguous`. phebs retains every candidate rather
+than choosing a build target, deployable, service, or owner. The trusted loader
+returns exact repository/commit/path/blob-digest provenance and an attribution
+digest; metadata changes move that digest without changing source assertion
+identity. The later Caller Map cursor binds this digest. No snapshot causes
+phebs to run a build, generator, plugin, binary, or catalog client, and the
+current adapter performs no external lookup.
+
 This support should not be confused with a service-aware migration inventory.
 In the current release, the Atlas operation detail returns at most 200
 relationship rows, the Impact operation form accepts a bare canonical

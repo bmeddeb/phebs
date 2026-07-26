@@ -224,6 +224,12 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 				if entry.path == scipIndexPath {
 					walkErr = fmt.Errorf("walk corpus: unsupported SCIP index symlink %q", entry.path)
 				}
+				for _, snapshotPath := range attributionSnapshotPaths {
+					if entry.path == snapshotPath {
+						walkErr = fmt.Errorf(
+							"walk corpus: unsupported attribution snapshot symlink %q", entry.path)
+					}
+				}
 				if strings.HasSuffix(entry.path, ".proto") {
 					walkErr = fmt.Errorf("walk corpus: unsupported proto symlink %q", entry.path)
 				}

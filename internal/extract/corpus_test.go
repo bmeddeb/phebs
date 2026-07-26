@@ -223,6 +223,25 @@ func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 		}
 	})
 
+	for _, snapshotPath := range attributionSnapshotPaths {
+		t.Run("attribution snapshot symlink "+snapshotPath, func(t *testing.T) {
+			f := newCorpusGitFixture(t)
+			f.commitFile("target", "not parsed", "target")
+			if err := os.Symlink("target", filepath.Join(f.source, snapshotPath)); err != nil {
+				t.Skipf("symlinks unsupported: %v", err)
+			}
+			f.git(f.source, "add", snapshotPath)
+			f.git(f.source, "commit", "-q", "-m", "attribution snapshot symlink")
+			head := f.git(f.source, "rev-parse", "HEAD")
+			f.cloneMirror()
+			err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(
+				context.Background(), func(string) error { return nil })
+			if err == nil || !strings.Contains(err.Error(), "attribution snapshot symlink") {
+				t.Fatalf("attribution snapshot symlink error = %v", err)
+			}
+		})
+	}
+
 	t.Run("gitlink boundaries recorded not traversed", func(t *testing.T) {
 		f := newCorpusGitFixture(t)
 		parent := f.commitFile("README", "root", "root")
