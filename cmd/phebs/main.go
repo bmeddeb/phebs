@@ -29,6 +29,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
@@ -611,15 +612,20 @@ func evidenceExtractors(
 ) []extract.Extractor {
 	var extractors []extract.Extractor
 	if provisionalProto {
-		// T13.1 and T13.2 ship behind the same experimental flag. SCIP field
-		// references have canonical package lineage, while declarations and
-		// gRPC consumer facts retain their documented provisional tiers.
-		extractors = append(extractors, protodecl.New(), grpcgo.New(), scipfield.New())
+		// T13.1/T13.2 and T20.8 ship behind the same experimental flag.
+		// Legacy name-only consumers remain separate from the declaration-
+		// proven typed caller domain.
+		extractors = append(
+			extractors,
+			protodecl.New(), grpcgo.New(), scipfield.New(), gocaller.NewGRPC(),
+		)
 	}
 	if provisionalThrift {
-		// T19.2/T19.3: the Thrift packs ride their own dark flag; rule
-		// validation is the T19.1 spike.
-		extractors = append(extractors, thriftdecl.New(), thriftgo.New())
+		// T19.2/T19.3 and T20.8: the Thrift packs ride their own dark flag;
+		// name-only and declaration-proven caller domains stay separate.
+		extractors = append(
+			extractors, thriftdecl.New(), thriftgo.New(), gocaller.NewThrift(),
+		)
 	}
 	if provisionalThriftField {
 		// T22.2 is independently dark: it consumes a committed SCIP index and

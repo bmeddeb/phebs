@@ -228,6 +228,15 @@ func writeAttributionHash(hash attributionHash, value string) {
 	_, _ = hash.Write([]byte{';'})
 }
 
+// declarationLineageID is the same provisional repository/path identity used
+// by protodecl and thriftdecl. Generated-from provenance must join the
+// declaration evidence key itself; exposing a separate repo:path spelling
+// would make an exact Caller Map impossible even when both sides are proven.
+func declarationLineageID(repository, declarationPath string) string {
+	sum := sha256.Sum256([]byte(repository + "\x00" + declarationPath))
+	return "provisional_repo_path_v1_" + hex.EncodeToString(sum[:])
+}
+
 func decodeAttributionSnapshot(content string, out any) error {
 	decoder := json.NewDecoder(strings.NewReader(content))
 	decoder.DisallowUnknownFields()
@@ -432,7 +441,7 @@ func (s *monorepoAttributionSource) loadGeneratedFrom(
 			Protocol: protocol, GeneratedPath: input.GeneratedPath,
 			GeneratorRelativePath: input.GeneratorRelativePath,
 			DeclarationPath:       input.DeclarationPath,
-			DeclarationLineage:    s.repository + ":" + input.DeclarationPath,
+			DeclarationLineage:    declarationLineageID(s.repository, input.DeclarationPath),
 		}
 		id := attributionCandidateID(
 			"generated-from", protocol, input.GeneratedPath,
@@ -730,7 +739,7 @@ func (s *monorepoAttributionSource) GeneratedFrom(
 			Protocol: protocol, GeneratedPath: generatedPath,
 			GeneratorRelativePath: generatorRelativePath,
 			DeclarationPath:       declarationPath,
-			DeclarationLineage:    s.repository + ":" + declarationPath,
+			DeclarationLineage:    declarationLineageID(s.repository, declarationPath),
 		}
 		id := candidate.DeclarationLineage + "\x00" + candidate.GeneratorRelativePath
 		if _, duplicate := seen[id]; !duplicate {

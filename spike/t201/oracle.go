@@ -1,6 +1,8 @@
 package t201
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 )
@@ -42,16 +44,20 @@ func smallOracle(files map[string][]byte) (Oracle, error) {
 	}
 	oracle.GeneratedFrom = []GeneratedFromExpectation{
 		{
-			GeneratedPath:      "gen/proto/orders/v1/orders_grpc.pb.go",
-			DeclarationPath:    "idl/proto/orders/v1/orders.proto",
-			DeclarationLineage: "synthetic.invalid/mono:idl/proto/orders/v1/orders.proto",
-			Protocol:           "grpc", State: "resolved",
+			GeneratedPath:   "gen/proto/orders/v1/orders_grpc.pb.go",
+			DeclarationPath: "idl/proto/orders/v1/orders.proto",
+			DeclarationLineage: declarationLineage(
+				"synthetic.invalid/mono", "idl/proto/orders/v1/orders.proto",
+			),
+			Protocol: "grpc", State: "resolved",
 		},
 		{
-			GeneratedPath:      "gen/proto-copy/orders/v1/orders_grpc.pb.go",
-			DeclarationPath:    "idl/proto/orders/v1/orders.proto",
-			DeclarationLineage: "synthetic.invalid/mono:idl/proto/orders/v1/orders.proto",
-			Protocol:           "grpc", State: "resolved",
+			GeneratedPath:   "gen/proto-copy/orders/v1/orders_grpc.pb.go",
+			DeclarationPath: "idl/proto/orders/v1/orders.proto",
+			DeclarationLineage: declarationLineage(
+				"synthetic.invalid/mono", "idl/proto/orders/v1/orders.proto",
+			),
+			Protocol: "grpc", State: "resolved",
 		},
 		{
 			GeneratedPath: "gen/proto/collision/v1/common_grpc.pb.go",
@@ -59,10 +65,12 @@ func smallOracle(files map[string][]byte) (Oracle, error) {
 			Reason: "no_snapshot_mapping",
 		},
 		{
-			GeneratedPath:      "gen/thrift/ledger/ledger.go",
-			DeclarationPath:    "idl/thrift/ledger.thrift",
-			DeclarationLineage: "synthetic.invalid/mono:idl/thrift/ledger.thrift",
-			Protocol:           "thrift", State: "resolved",
+			GeneratedPath:   "gen/thrift/ledger/ledger.go",
+			DeclarationPath: "idl/thrift/ledger.thrift",
+			DeclarationLineage: declarationLineage(
+				"synthetic.invalid/mono", "idl/thrift/ledger.thrift",
+			),
+			Protocol: "thrift", State: "resolved",
 		},
 		{
 			GeneratedPath: "gen/thrift/missing/missing.go",
@@ -83,6 +91,11 @@ func smallOracle(files map[string][]byte) (Oracle, error) {
 		{CallID: "thrift-ledger", SourcePath: "src/thrift/caller.go", StartLine: callLine(oracle, "thrift-ledger"), State: "unavailable", Source: "unit-snapshot-v1"},
 	}
 	return oracle, nil
+}
+
+func declarationLineage(repository, declarationPath string) string {
+	sum := sha256.Sum256([]byte(repository + "\x00" + declarationPath))
+	return "provisional_repo_path_v1_" + hex.EncodeToString(sum[:])
 }
 
 func locateCall(id, protocol, operation, path string, content []byte, needle string,

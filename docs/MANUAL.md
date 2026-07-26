@@ -1469,6 +1469,30 @@ reduced fidelity by design and, like all provisional facts, state no
 measured accuracy and must not drive compatibility, migration, or
 negative-proof conclusions.
 
+T20.8 adds declaration-proven typed Go caller evidence without changing that
+legacy reader or its proof results. Under the same protocol flags, the
+`grpc-caller` and `thrift-caller` 1.0.0 domains read a committed root
+`index.scip`; phebs still never creates or downloads that index. Each source
+call must carry the exact SCIP symbol of a checked-in generated client method.
+For gRPC, the generated definition must also agree with one `// source:`
+marker, one full-method literal, and the service descriptor name before the
+generator-relative `.proto` path may select one immutable T20.7
+generated-from mapping. For Apache Thrift, the generated client method must
+carry an admitted compiler header and exactly one client `Call` wire literal,
+then select one direct immutable generated-from mapping. Only that complete
+chain emits a tier-`derived` `CALLS_OPERATION` row whose lineage is the
+declaration evidence identity.
+
+Missing or conflicting mappings emit source-granular, operation-keyed
+`UNRESOLVED_CALLER` rows instead of guesses. Malformed or stale SCIP produces a
+bounded `CALLER_EXTRACTION_GAP` in only the affected protocol domain; an absent
+index is reported as unavailable and emits no callers. Each row snapshots the
+immutable unit-attribution state and attribution digest used at extraction
+time, including unattributed and ambiguous results, so later pages never
+silently reclassify old evidence. These domains have no direct public route in
+T20.8; T20.10 is their first read surface. They remain provisional and dark,
+and establish neither caller completeness nor measured accuracy.
+
 The opt-in also reads a repository-root, committed `index.scip` to emit T13.2
 `REFERENCES_PROTO_FIELD` assertions. phebs never runs or downloads a SCIP
 indexer: the fixed root index must be a regular blob in the same immutable

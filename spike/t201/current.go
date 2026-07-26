@@ -8,6 +8,7 @@ import (
 	"os"
 	"slices"
 
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
@@ -33,8 +34,9 @@ type ExtractionMeasurement struct {
 func MeasureCurrentExtraction(ctx context.Context, profile Profile) ([]ExtractionMeasurement, error) {
 	corpus := profileCorpus{files: profile.Files}
 	extractors := []sdk.Extractor{
-		protodecl.New(), thriftdecl.New(), grpcgo.New(), thriftgo.New(), scipfield.New(),
-		thriftfield.New(),
+		protodecl.New(), thriftdecl.New(), grpcgo.New(), thriftgo.New(),
+		gocaller.NewGRPC(), gocaller.NewThrift(),
+		scipfield.New(), thriftfield.New(),
 		kafkago.NewProducer(), kafkago.NewConsumer(),
 	}
 	out := make([]ExtractionMeasurement, 0, len(extractors))

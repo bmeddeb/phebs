@@ -1875,7 +1875,8 @@ production validator, including all 10,005 scale mappings. No build, generator,
 plugin, binary, catalog client, filesystem path, or network capability is
 exposed to an extractor.
 
-**T20.8 · Typed Go caller and generated-from resolution** *(needs T20.3,
+**T20.8 · Typed Go caller and generated-from resolution** ✅
+*(2026-07-26; needs T20.3,
 T20.6, T20.7)* — join a symbol-index call occurrence to a generated client
 method, its generator-anchored wire operation, and exactly one declaration
 lineage. For protobuf, require agreeing generated source marker/descriptor name
@@ -1889,6 +1890,34 @@ duplicates, two generated copies, and absent/conflicting Thrift mappings
 resolve only with the exact admitted mapping or abstain. Renaming a local
 variable does not alter a typed result. Missing/malformed/stale symbol input
 abstains without failing another extraction domain.
+
+Implementation/result: two independent dark domains, `grpc-caller` and
+`thrift-caller` (both 1.0.0), stream the admitted root `index.scip` and use
+only exact SCIP symbol occurrences. A generated gRPC interface method binds
+only when its SCIP definition range, unique `// source:` marker, full-method
+literal, and `ServiceDesc.ServiceName` agree; the generator-relative path must
+then select exactly one T20.7 direct or invocation-root relation. A generated
+Apache Thrift client method binds only when its SCIP definition range, complete
+compiler header, and unique client `Call` wire literal agree, followed by one
+direct relation. The relation's declaration evidence lineage is the emitted
+assertion lineage, correcting the earlier T20.7 source-side `repo:path`
+projection to the declaration readers' provisional
+`provisional_repo_path_v1_<sha256(repo NUL path)>` identity.
+
+Each resolved occurrence becomes a source-granular `CALLS_OPERATION` assertion
+at tier `derived`; missing or conflicting admitted mappings become
+operation-keyed `UNRESOLVED_CALLER` assertions, counted per occurrence rather
+than per file. Immutable unit-attribution state/candidates and the selected
+snapshot digest are copied into deterministic detail for the later paged
+service; they do not alter semantic assertion identity. Missing root input is
+explicitly unavailable, while malformed or stale SCIP input produces one
+bounded source-backed `CALLER_EXTRACTION_GAP` in only that protocol domain.
+The frozen small oracle, exact worker publication, local-variable rename,
+missing/conflicting mapping, repeated occurrence accounting, stale/malformed
+input, and deterministic reader inventory are pinned. Legacy name-only
+consumer domains remain unchanged for existing experimental proof surfaces;
+T20.10 reads only the new declaration-proven domains. No type checker, build,
+generator, module download, filesystem, network, or accuracy claim is added.
 
 **T20.9 · Package-aware syntactic fallback** *(needs T20.7, T20.8)* — when no
 usable typed occurrence exists, trace bounded import aliases, explicit
