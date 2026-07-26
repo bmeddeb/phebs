@@ -1,0 +1,116 @@
+{
+  "schema": "t20-store-measurement-v1",
+  "go_version": "go1.26.5",
+  "goos": "darwin",
+  "goarch": "arm64",
+  "gomaxprocs": 10,
+  "surreal_version": "3.2.0",
+  "surreal_sha256": "sha256:ee819dfcedd23035a785ac40f2509f86cbb09fc3255726ad74755b161a3ca0a8",
+  "store_schema": "t12-store-v4",
+  "evidence_format": "t12-evidence-v1",
+  "target_facts": 10010,
+  "target_rows": 20020,
+  "reference_edges": 10010,
+  "publish_wall_ms": 156,
+  "publish_go_allocated_bytes": 190048,
+  "publish_surreal_peak_rss_bytes": 236732416,
+  "publish_surreal_rss_delta_bytes": 737280,
+  "first_page_rows_including_sentinel": 101,
+  "first_page_wall_ms": 175,
+  "sweep_deleted_runs": 1,
+  "sweep_wall_ms": 1024,
+  "sweep_surreal_peak_rss_bytes": 332562432,
+  "sweep_surreal_rss_delta_bytes": 92635136,
+  "atomic_supersession_verified": true,
+  "complete_target_sweep_verified": true,
+  "query_plan": [
+    {
+      "status": "OK",
+      "time": "23.113125ms",
+      "result": {
+        "attributes": {
+          "projections": "*"
+        },
+        "children": [
+          {
+            "attributes": {
+              "limit": "101"
+            },
+            "children": [
+              {
+                "attributes": {
+                  "limit": "101",
+                  "sort_keys": "predicate ASC, subject ASC, object ASC, assertion_id ASC, run_id ASC"
+                },
+                "children": [
+                  {
+                    "attributes": {
+                      "predicate": "predicate = 'CALLS_OPERATION' AND object = '/synthetic.orders.v1.Orders/Get' AND repo = 'synthetic.invalid/t201-scale'"
+                    },
+                    "children": [
+                      {
+                        "attributes": {
+                          "access": "= 'cb5a8c2f8f8560ee3fd41e6f242c1faf'",
+                          "direction": "Forward",
+                          "index": "assertion_run"
+                        },
+                        "context": "Db",
+                        "metrics": {
+                          "elapsed_ns": 18746086,
+                          "output_batches": 11,
+                          "output_rows": 10010
+                        },
+                        "operator": "IndexScan"
+                      }
+                    ],
+                    "context": "Db",
+                    "expressions": [
+                      {
+                        "role": "predicate",
+                        "sql": "predicate = 'CALLS_OPERATION' AND object = '/synthetic.orders.v1.Orders/Get' AND repo = 'synthetic.invalid/t201-scale'"
+                      }
+                    ],
+                    "metrics": {
+                      "elapsed_ns": 1737417,
+                      "output_batches": 11,
+                      "output_rows": 10010
+                    },
+                    "operator": "Filter"
+                  }
+                ],
+                "context": "Db",
+                "metrics": {
+                  "elapsed_ns": 2328378,
+                  "output_batches": 1,
+                  "output_rows": 101
+                },
+                "operator": "SortTopKByKey"
+              }
+            ],
+            "context": "Db",
+            "expressions": [
+              {
+                "role": "limit",
+                "sql": "101"
+              }
+            ],
+            "metrics": {
+              "elapsed_ns": 2330251,
+              "output_batches": 1,
+              "output_rows": 101
+            },
+            "operator": "Limit"
+          }
+        ],
+        "context": "Db",
+        "metrics": {
+          "elapsed_ns": 2792,
+          "output_batches": 1,
+          "output_rows": 101
+        },
+        "operator": "SelectProject",
+        "total_rows": 101
+      }
+    }
+  ]
+}

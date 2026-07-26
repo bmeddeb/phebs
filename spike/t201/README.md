@@ -1,6 +1,6 @@
 # T20.1 — Synthetic monorepo contract and validation spike
 
-**Date:** 2026-07-25 · **Status:** MEASUREMENT PENDING · **Scope:** freeze the
+**Date:** 2026-07-25 · **Status:** COMPLETE · **Scope:** freeze the
 neutral correctness and scale populations, current limits, and measured
 publication/query/retention behavior before Epic 20 production work.
 
@@ -39,19 +39,23 @@ file maps and Git trees to be byte-identical.
 
 ## Prepared symbol-index input
 
-`testdata/index.scip` was prepared in the separately reviewable first commit.
-`index.lock.json` pins its SHA-256. Normal generation only embeds, verifies,
-and copies those bytes verbatim. It never invokes `prepare-index` or another
-indexer. The preparation command is retained solely so a future reviewed
-change can explain how replacement bytes were made:
+`testdata/index.scip` and `testdata/scale.index.scip` were prepared in
+separately reviewable commits. `index.lock.json` pins both SHA-256 digests.
+Normal generation only embeds, verifies, and copies the profile's bytes
+verbatim. It never invokes `prepare-index` or another indexer. The preparation
+command is retained solely so a future reviewed change can explain how
+replacement bytes were made:
 
 ```sh
 go run ./spike/t201/cmd/prepare-index
 ```
 
-The frozen current input shape is one repository-root `index.scip` blob under
-the production 64 MiB cap. It contains generated method definitions and five
-typed caller references. It is intentionally not a proposed sharding format.
+The frozen input shape is one repository-root `index.scip` blob under the
+production 64 MiB cap. The small artifact contains 7 documents and 5 typed
+caller references. The scale artifact contains 107 documents and 10,005 typed
+caller references; at 893,956 bytes it is only 1.33% of the 64 MiB cap.
+T20.6 therefore retains the root-only capability for this target and does not
+introduce a shard manifest.
 
 ## Executable gates
 
@@ -79,5 +83,24 @@ go test ./internal/store \
   -run '^TestT201TargetPublicationAndSweepMeasurement$' -count=1 -v
 ```
 
-The reviewed metrics and go/no-go table are recorded in `docs/BACKLOG.md` and
-the T20.1 PLAN ADR after that command completes on the operator's machine.
+The reviewed metrics are committed in `results.json`; the go/no-go table is in
+`docs/BACKLOG.md` and the binding decision is in the T20.1 PLAN ADR.
+
+## Frozen result
+
+The reference run used Go 1.26.5 on darwin/arm64 (10 GOMAXPROCS) and
+SurrealDB 3.2.0. At 10,010 facts / 20,020 rows:
+
+- exact publication recount plus atomic supersession took 156 ms, allocated
+  190,048 Go bytes, and observed 236,732,416 bytes peak Surreal RSS;
+- a 100-row reverse page plus continuation sentinel took 175 ms, but the query
+  plan scanned all 10,010 `assertion_run` rows before filtering and sorting;
+- exact one-run sweep took 1,024 ms and observed 332,562,432 bytes peak Surreal
+  RSS; it removed the superseded run and preserved the current shared rows.
+
+Publication and sweep pass the frozen 2 s / 512 MiB gates. The reverse
+wall-time passes the 250 ms reference budget but its plan fails: T20.4 must
+land the composite reverse index. Current 5,000-fact and 10,000-row admission
+limits fail the target, so T20.2/T20.3 proceed. T20.2's frozen worker ceiling
+is 256 MiB incremental Go heap. The root-only scale SCIP input passes at
+893,956 bytes, so T20.6 adds no shard manifest at this target.

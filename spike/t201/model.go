@@ -72,8 +72,18 @@ type UnitMappingExpectation struct {
 
 // Oracle is checked independently of any extractor output.
 type Oracle struct {
-	Profile       string                     `json:"profile"`
-	Calls         []CallExpectation          `json:"calls"`
-	GeneratedFrom []GeneratedFromExpectation `json:"generated_from"`
-	UnitMappings  []UnitMappingExpectation   `json:"unit_mappings"`
+	Profile       string                       `json:"profile"`
+	Calls         []CallExpectation            `json:"calls"`
+	Fanouts       []OperationFanoutExpectation `json:"operation_fanouts,omitempty"`
+	GeneratedFrom []GeneratedFromExpectation   `json:"generated_from"`
+	UnitMappings  []UnitMappingExpectation     `json:"unit_mappings"`
+}
+
+// OperationFanoutExpectation is the candidate-independent assertion frame:
+// every listed call supports review of one endpoint identity. It intentionally
+// exceeds today's per-assertion storage limit in the scale profile.
+type OperationFanoutExpectation struct {
+	Protocol           string   `json:"protocol"`
+	CanonicalOperation string   `json:"canonical_operation"`
+	SupportingCallIDs  []string `json:"supporting_call_ids"`
 }

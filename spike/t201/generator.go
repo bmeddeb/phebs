@@ -14,15 +14,17 @@ import (
 	"strings"
 )
 
-//go:embed index.lock.json testdata/index.scip
+//go:embed index.lock.json testdata/index.scip testdata/scale.index.scip
 var preparedInputs embed.FS
 
 type indexLock struct {
-	Version  string `json:"version"`
-	Path     string `json:"path"`
-	SHA256   string `json:"sha256"`
-	Preparer string `json:"preparer"`
-	Policy   string `json:"policy"`
+	Version     string `json:"version"`
+	Path        string `json:"path"`
+	SHA256      string `json:"sha256"`
+	ScalePath   string `json:"scale_path"`
+	ScaleSHA256 string `json:"scale_sha256"`
+	Preparer    string `json:"preparer"`
+	Policy      string `json:"policy"`
 }
 
 // Profile is a complete immutable synthetic repository view plus its
@@ -37,7 +39,7 @@ type Profile struct {
 // indexer: the reviewed SCIP bytes are read from the embedded preparation
 // artifact, verified, and copied verbatim.
 func GenerateProfile(name string) (Profile, error) {
-	index, err := pinnedIndex()
+	index, err := pinnedIndex(name)
 	if err != nil {
 		return Profile{}, err
 	}
@@ -57,7 +59,7 @@ func GenerateProfile(name string) (Profile, error) {
 	}
 }
 
-func pinnedIndex() ([]byte, error) {
+func pinnedIndex(profile string) ([]byte, error) {
 	lockBytes, err := preparedInputs.ReadFile("index.lock.json")
 	if err != nil {
 		return nil, fmt.Errorf("read SCIP lock: %w", err)
@@ -68,15 +70,20 @@ func pinnedIndex() ([]byte, error) {
 	}
 	if lock.Version != "t20-scip-input-v1" ||
 		lock.Path != "testdata/index.scip" ||
+		lock.ScalePath != "testdata/scale.index.scip" ||
 		lock.Policy != "prepared-once-reviewed-and-copied-verbatim" {
 		return nil, errors.New("SCIP lock has an unsupported shape")
 	}
-	index, err := preparedInputs.ReadFile(lock.Path)
+	path, wantDigest := lock.Path, lock.SHA256
+	if profile == ScaleProfileName {
+		path, wantDigest = lock.ScalePath, lock.ScaleSHA256
+	}
+	index, err := preparedInputs.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read pinned SCIP input: %w", err)
 	}
 	sum := sha256.Sum256(index)
-	if hex.EncodeToString(sum[:]) != lock.SHA256 {
+	if hex.EncodeToString(sum[:]) != wantDigest {
 		return nil, errors.New("pinned SCIP input digest mismatch")
 	}
 	return index, nil
@@ -91,17 +98,7 @@ func scaleProfile(index []byte) (Profile, error) {
 	}
 	oracle.Profile = ScaleProfileName
 	for fileIndex := range ScaleCallFiles {
-		relPath := fmt.Sprintf("src/unit_%03d/callers.go", fileIndex)
-		var source strings.Builder
-		source.WriteString("package unit\n")
-		source.WriteString("type OrdersClient interface { Get(any, any, ...any) (any, error) }\n")
-		for callIndex := range ScaleCallsPerFile {
-			unit := fileIndex*ScaleCallsPerFile + callIndex
-			fmt.Fprintf(&source,
-				"func Call%05d(ctx any, client OrdersClient) { _, _ = client.Get(ctx, \"unit-%05d\") }\n",
-				unit, unit)
-		}
-		content := []byte(source.String())
+		relPath, content := ScaleCallerFile(fileIndex)
 		files[relPath] = content
 		for callIndex := range ScaleCallsPerFile {
 			unit := fileIndex*ScaleCallsPerFile + callIndex
@@ -124,6 +121,16 @@ func scaleProfile(index []byte) (Profile, error) {
 			})
 		}
 	}
+	fanout := OperationFanoutExpectation{
+		Protocol: "grpc", CanonicalOperation: "/synthetic.orders.v1.Orders/Get",
+	}
+	for _, call := range oracle.Calls {
+		if call.Protocol == fanout.Protocol &&
+			call.CanonicalOperation == fanout.CanonicalOperation {
+			fanout.SupportingCallIDs = append(fanout.SupportingCallIDs, call.ID)
+		}
+	}
+	oracle.Fanouts = []OperationFanoutExpectation{fanout}
 	unitSnapshot, err := json.MarshalIndent(struct {
 		Version  string                   `json:"version"`
 		Mappings []UnitMappingExpectation `json:"mappings"`

@@ -208,11 +208,13 @@ Contract Atlas qualifies a unique wire-name call as
 `caller / unresolved_name_match`, while `contract-impact-report-v1` places
 the same `CALLS_OPERATION` evidence under `known_consumers` for its bare
 operation-string question. Neither label proves a caller-to-declaration
-lineage. The proposed Epic 20 Caller Map in `docs/BACKLOG.md` assigns the
+lineage. The default-dark Epic 20 Caller Map in `docs/BACKLOG.md` assigns the
 experimental schema/vocabulary migration to T20.10 and specifies the typed,
 paged, unit-attributed workflow needed for thousands of services. Until that
 work lands, use the current pages as bounded provisional source evidence—not
-as a complete migration roster.
+as a complete migration roster. T20.1's neutral 10,010-call capacity/index
+gate is complete; it changed no API, MCP, UI, or production extraction
+behavior.
 
 The current MCP annex has the same pre-Epic-20 limitation:
 `find_operation_consumers` requires a caller-supplied bare canonical operation

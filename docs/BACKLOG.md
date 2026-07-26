@@ -1507,7 +1507,7 @@ weaken the Caller Map.
   this repository or its fixtures. Work-machine evaluation yields sanitized
   counts, shapes, failure classes, and workflow notes only.
 
-**T20.1 · Synthetic monorepo contract and validation spike** — generate and
+**T20.1 · Synthetic monorepo contract and validation spike** ✅ *(2026-07-25)* — generate and
 pin a neutral Git corpus with `idl/`, checked-in generated Go, `src/` services,
 shared client wrappers, production/test/mock/generated roles, protobuf and
 Thrift, duplicate operation spellings, common method-name collisions,
@@ -1542,6 +1542,41 @@ current production ceiling prevents a target-cardinality measurement, the
 scale harness must invoke the exact production publish/sweep statements
 through a test-only admitted-limit seam rather than copying or approximating
 the transaction.
+
+Implementation/result: `spike/t201` contains the neutral generator, complete
+candidate-independent oracle, separately prepared/digest-pinned small and
+scale SCIP blobs, current-reader baseline, and the exact-SQL store measurement
+harness. The frozen scale population is 10,010 call occurrences, 10,005 unit
+mappings/distinct unit labels, one 10,004-call operation fanout, 101 placements
+of one content atom, 20,020 association-plus-assertion rows, and 10,010
+reference edges. The committed measurement receipt is
+`spike/t201/results.json` (Go 1.26.5, darwin/arm64, 10 GOMAXPROCS,
+SurrealDB 3.2.0 `sha256:ee819d…`, `t12-store-v4` /
+`t12-evidence-v1`). This is a capacity/rule-validation result, not an accuracy
+claim.
+
+| Gate | Frozen target / ceiling | Current observation | Decision for downstream tickets |
+|---|---|---|---|
+| Worker population and memory | 10,010 calls; incremental Go heap ≤256 MiB over the pre-run baseline | `maxFactsPerRun=5,000` refuses the target before a target-size worker run exists | **GO T20.2:** chunked staging is required; the 256 MiB incremental-heap ceiling is binding |
+| Run rows | 20,020 rows; admission target 25,000 | `maxEvidenceRowsPerRun=10,000`; target measured only by passing 25,000 as the admitted variable to the exact production statements | **GO T20.3:** advance the writer generation and admit at least 25,000 rows; store-derived validation remains authoritative |
+| Same-operation fanout | 10,004 supporting call IDs in the oracle | `maxEvidenceRefsPerAssertion=4,096` | Keep occurrence assertions source-granular; Caller Map pagination composes them. Do not build one giant stored assertion or raise this bound for aggregation |
+| Reference edges | 10,010 | `maxEvidenceReferenceEdges=20,000` | **PASS:** retain the 20,000 edge ceiling for the frozen target |
+| Repeated content placement | 101 repository placements | `maxEvidenceOccurrences=100` makes whole-atom `ResolveEvidence` fail closed above the limit | Keep the legacy whole-atom bound; T20.4 caller pages must page occurrence assertions and never use `ResolveEvidence` as a fleet inventory primitive |
+| Atomic publish/recount | ≤2.0 s wall, ≤512 MiB Surreal peak RSS, ≤16 MiB Go allocation | 156 ms; 236,732,416 B peak RSS (225.8 MiB); 190,048 B Go allocation; atomic successor visible and predecessor superseded | **PASS / GO T20.3:** retain the exact single-transaction store recount and supersession flip; no chunk-counter substitute is justified |
+| One-run sweep | ≤2.0 s wall, ≤512 MiB Surreal peak RSS | 1,024 ms; 332,562,432 B peak RSS (317.2 MiB); one complete 20,020-row superseded run removed, current shared atoms/rows survived | **PASS mechanics / GO T20.5:** the target fits, but one-run candidate is not a row bound; resumable row chunks remain required before raising durable run admission |
+| Exact reverse first page | 100 rows + one continuation sentinel; ≤250 ms on the reference profile; selected plan must not scan the run | 175 ms API wall / 23.1 ms database plan, but `assertion_run` scanned and filtered all 10,010 rows before `SortTopK` | **NO-GO current plan / GO T20.4:** composite `(run,predicate,object[,lineage])` pagination index is mandatory despite the one-machine wall-time pass |
+| Typed-index input | One commit-bound root `index.scip`; ≤64 MiB | 107 documents / 10,005 typed references / 893,956 B (1.33%); byte-identical generation and every indexed path/range validated | **PASS / T20.6 root-only selected:** retain the dedicated root capability; no shard manifest at this target |
+| UI inventory | Default 50, maximum 100 rows per server page; at most 500 rendered group/source rows including bounded expansion state | Atlas detail scans 500 assertions and returns at most 200 relationships; proof queries cap at 5,000 assertions / 20,000 evidence references | **NO-GO current surfaces / GO T20.10–T20.12:** Caller Map gets its own strict pages; Atlas/proof limits are not inventory limits |
+
+Other encountered hard bounds remain explicit: ordinary corpus blob 10 MiB,
+corpus 200,000 files / 16 MiB aggregate path inventory / 4,096-byte path;
+consumer/IDL parser input 4 MiB, proto/Thrift token count 500,000 and nesting
+128, import/include context 64 paths / 4 KiB; SCIP 100,000 documents /
+1,000,000 occurrences / 16 KiB symbol; `maxEvidenceBatchRows=10,000`,
+identity 64 KiB, evidence path 4,096 bytes, coverage 10,000,000 files / 1 TiB
+read; `ListAssertions` 5,000; Atlas page 100, scan 500, locator 500,
+16 locators per claim, relationship 200, message depth 6 / nodes 256 /
+fields 100, cursor 16 KiB; proof 5,000 assertions / 20,000 evidence refs.
 
 **T20.2 · Chunked SDK and worker staging** *(needs T20.1)* — replace the
 in-memory 5,000-fact run collection with deterministic bounded fact chunks

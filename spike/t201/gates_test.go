@@ -49,38 +49,88 @@ func TestGeneratedProfilesAreByteIdentical(t *testing.T) {
 }
 
 func TestPinnedSCIPInputIsCopiedVerbatim(t *testing.T) {
-	profile := mustProfile(t, SmallProfileName)
-	prepared, err := os.ReadFile("testdata/index.scip")
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		profile, path, digest string
+		documents, references int
+	}{
+		{
+			profile: SmallProfileName, path: "testdata/index.scip",
+			digest:    "46d3930208d141e5281a8310800ef5b6a0aeac79c0d89592650f293ffb017b05",
+			documents: 7, references: 5,
+		},
+		{
+			profile: ScaleProfileName, path: "testdata/scale.index.scip",
+			digest:    "164e28d4338e64f558a91c0232f6ce51b3eb9f78b552035448f80b63c27cf71c",
+			documents: 107, references: 10_005,
+		},
 	}
-	if !bytes.Equal(profile.Files["index.scip"], prepared) {
-		t.Fatal("generated corpus did not copy prepared index bytes verbatim")
-	}
-	sum := sha256.Sum256(prepared)
-	if got := hex.EncodeToString(sum[:]); got != "46d3930208d141e5281a8310800ef5b6a0aeac79c0d89592650f293ffb017b05" {
-		t.Fatalf("SCIP digest = %s", got)
-	}
-	var index scip.Index
-	if err := proto.Unmarshal(prepared, &index); err != nil {
-		t.Fatalf("decode prepared SCIP: %v", err)
-	}
-	var paths []string
-	references := 0
-	for _, document := range index.Documents {
-		paths = append(paths, document.RelativePath)
-		for _, occurrence := range document.Occurrences {
-			if occurrence.SymbolRoles&int32(scip.SymbolRole_Definition) == 0 {
-				references++
+	for _, testCase := range tests {
+		t.Run(testCase.profile, func(t *testing.T) {
+			profile := mustProfile(t, testCase.profile)
+			prepared, err := os.ReadFile(testCase.path)
+			if err != nil {
+				t.Fatal(err)
 			}
-		}
+			if !bytes.Equal(profile.Files["index.scip"], prepared) {
+				t.Fatal("generated corpus did not copy prepared index bytes verbatim")
+			}
+			if len(prepared) > 64<<20 {
+				t.Fatalf("prepared SCIP is %d bytes, above the frozen root limit", len(prepared))
+			}
+			sum := sha256.Sum256(prepared)
+			if got := hex.EncodeToString(sum[:]); got != testCase.digest {
+				t.Fatalf("SCIP digest = %s", got)
+			}
+			var index scip.Index
+			if err := proto.Unmarshal(prepared, &index); err != nil {
+				t.Fatalf("decode prepared SCIP: %v", err)
+			}
+			var paths []string
+			references := 0
+			for _, document := range index.Documents {
+				paths = append(paths, document.RelativePath)
+				content, ok := profile.Files[document.RelativePath]
+				if !ok {
+					t.Fatalf("SCIP document %s is absent from generated corpus", document.RelativePath)
+				}
+				for _, occurrence := range document.Occurrences {
+					sourceRange, ok := occurrence.SourceRange()
+					if !ok {
+						t.Fatalf("SCIP occurrence in %s has no range", document.RelativePath)
+					}
+					if got := scipRangeText(t, content, sourceRange); got == "" {
+						t.Fatalf("SCIP occurrence in %s has an empty range", document.RelativePath)
+					}
+					if occurrence.SymbolRoles&int32(scip.SymbolRole_Definition) == 0 {
+						references++
+					}
+				}
+			}
+			if !slices.IsSorted(paths) {
+				t.Fatalf("SCIP documents are not sorted: %v", paths)
+			}
+			if len(index.Documents) != testCase.documents || references != testCase.references {
+				t.Fatalf("SCIP shape = %d documents, %d references; want %d, %d",
+					len(index.Documents), references, testCase.documents, testCase.references)
+			}
+		})
 	}
-	if !slices.IsSorted(paths) {
-		t.Fatalf("SCIP documents are not sorted: %v", paths)
+}
+
+func scipRangeText(t *testing.T, content []byte, sourceRange scip.Range) string {
+	t.Helper()
+	if !sourceRange.IsSingleLine() ||
+		sourceRange.Start.Line < 0 || sourceRange.Start.Character < 0 ||
+		sourceRange.End.Character <= sourceRange.Start.Character {
+		t.Fatalf("unsupported SCIP range %v", sourceRange)
 	}
-	if len(index.Documents) != 7 || references != 5 {
-		t.Fatalf("SCIP shape = %d documents, %d references; want 7, 5", len(index.Documents), references)
+	lines := strings.Split(string(content), "\n")
+	line := int(sourceRange.Start.Line)
+	start, end := int(sourceRange.Start.Character), int(sourceRange.End.Character)
+	if line >= len(lines) || end > len(lines[line]) {
+		t.Fatalf("SCIP range %v is outside source", sourceRange)
 	}
+	return lines[line][start:end]
 }
 
 func TestSmallOraclePinsResolutionAndAttributionCases(t *testing.T) {
@@ -170,6 +220,20 @@ func TestScaleOraclePinsTargetCardinalities(t *testing.T) {
 	if sameOperation < HighFanoutReferences {
 		t.Fatalf("same-operation references = %d, want at least %d", sameOperation, HighFanoutReferences)
 	}
+	if len(profile.Oracle.Fanouts) != 1 ||
+		len(profile.Oracle.Fanouts[0].SupportingCallIDs) != sameOperation {
+		t.Fatalf("operation fanout = %+v, want %d supporting call ids",
+			profile.Oracle.Fanouts, sameOperation)
+	}
+	callIDs := make(map[string]bool, len(profile.Oracle.Calls))
+	for _, call := range profile.Oracle.Calls {
+		callIDs[call.ID] = true
+	}
+	for _, callID := range profile.Oracle.Fanouts[0].SupportingCallIDs {
+		if !callIDs[callID] {
+			t.Fatalf("fanout names absent call %q", callID)
+		}
+	}
 	placementDigests := map[string]int{}
 	for path, content := range profile.Files {
 		if strings.HasPrefix(path, "copies/") {
@@ -256,6 +320,67 @@ func TestCurrentExtractionBaseline(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("current extraction = %#v, want %#v", got, want)
+	}
+}
+
+func TestFrozenStoreMeasurement(t *testing.T) {
+	encoded, err := os.ReadFile("results.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		Schema                      string `json:"schema"`
+		TargetFacts                 int    `json:"target_facts"`
+		TargetRows                  int    `json:"target_rows"`
+		ReferenceEdges              int    `json:"reference_edges"`
+		PublishWallMS               int64  `json:"publish_wall_ms"`
+		PublishPeakRSS              int64  `json:"publish_surreal_peak_rss_bytes"`
+		FirstPageRows               int    `json:"first_page_rows_including_sentinel"`
+		FirstPageWallMS             int64  `json:"first_page_wall_ms"`
+		SweepDeletedRuns            int    `json:"sweep_deleted_runs"`
+		SweepWallMS                 int64  `json:"sweep_wall_ms"`
+		SweepPeakRSS                int64  `json:"sweep_surreal_peak_rss_bytes"`
+		AtomicSupersessionVerified  bool   `json:"atomic_supersession_verified"`
+		CompleteTargetSweepVerified bool   `json:"complete_target_sweep_verified"`
+		QueryPlan                   []struct {
+			Result struct {
+				Children []struct {
+					Children []struct {
+						Children []struct {
+							Children []struct {
+								Attributes map[string]string `json:"attributes"`
+								Metrics    map[string]int64  `json:"metrics"`
+								Operator   string            `json:"operator"`
+							} `json:"children"`
+						} `json:"children"`
+					} `json:"children"`
+				} `json:"children"`
+			} `json:"result"`
+		} `json:"query_plan"`
+	}
+	if err := json.Unmarshal(encoded, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Schema != "t20-store-measurement-v1" ||
+		result.TargetFacts != ScaleTotalCalls ||
+		result.TargetRows != ScaleTotalCalls*2 ||
+		result.ReferenceEdges != ScaleTotalCalls ||
+		result.PublishWallMS != 156 ||
+		result.PublishPeakRSS != 236_732_416 ||
+		result.FirstPageRows != 101 ||
+		result.FirstPageWallMS != 175 ||
+		result.SweepDeletedRuns != 1 ||
+		result.SweepWallMS != 1_024 ||
+		result.SweepPeakRSS != 332_562_432 ||
+		!result.AtomicSupersessionVerified ||
+		!result.CompleteTargetSweepVerified {
+		t.Fatalf("frozen result changed: %+v", result)
+	}
+	scan := result.QueryPlan[0].Result.Children[0].Children[0].Children[0].Children[0]
+	if scan.Operator != "IndexScan" ||
+		scan.Attributes["index"] != "assertion_run" ||
+		scan.Metrics["output_rows"] != int64(ScaleTotalCalls) {
+		t.Fatalf("reverse plan changed: %+v", scan)
 	}
 }
 
