@@ -384,6 +384,59 @@ func TestFrozenStoreMeasurement(t *testing.T) {
 	}
 }
 
+func TestCurrentStoreWriterMeasurement(t *testing.T) {
+	encoded, err := os.ReadFile("results-current-writer-v6.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(encoded)
+	if got, want := hex.EncodeToString(sum[:]),
+		"85b8cc2d03867649fe05bc2d0698c2c2d5fcd29c67b5525d6e084c05e42690a6"; got != want {
+		t.Fatalf("current-writer receipt digest = %s, want %s", got, want)
+	}
+	var result struct {
+		Schema                      string `json:"schema"`
+		StoreSchema                 string `json:"store_schema"`
+		EvidenceFormat              string `json:"evidence_format"`
+		WriterGuardEvent            string `json:"writer_guard_event"`
+		AdmissionRows               int    `json:"admission_rows"`
+		ReferenceEdgeLimit          int    `json:"reference_edge_limit"`
+		TargetFacts                 int    `json:"target_facts"`
+		TargetRows                  int    `json:"target_rows"`
+		ReferenceEdges              int    `json:"reference_edges"`
+		PublishWallMS               int64  `json:"publish_wall_ms"`
+		PublishGoAllocatedBytes     uint64 `json:"publish_go_allocated_bytes"`
+		PublishPeakRSS              int64  `json:"publish_surreal_peak_rss_bytes"`
+		SweepDeletedRuns            int    `json:"sweep_deleted_runs"`
+		SweepWallMS                 int64  `json:"sweep_wall_ms"`
+		SweepPeakRSS                int64  `json:"sweep_surreal_peak_rss_bytes"`
+		AtomicSupersessionVerified  bool   `json:"atomic_supersession_verified"`
+		CompleteTargetSweepVerified bool   `json:"complete_target_sweep_verified"`
+	}
+	if err := json.Unmarshal(encoded, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Schema != "t20-store-measurement-v2" ||
+		result.StoreSchema != "t12-store-v6" ||
+		result.EvidenceFormat != "t12-evidence-v1" ||
+		result.WriterGuardEvent != "extraction_run_writer_v6" ||
+		result.AdmissionRows != 25_000 ||
+		result.ReferenceEdgeLimit != 20_000 ||
+		result.TargetFacts != ScaleTotalCalls ||
+		result.TargetRows != ScaleTotalCalls*2 ||
+		result.ReferenceEdges != ScaleTotalCalls ||
+		result.PublishWallMS != 154 ||
+		result.PublishGoAllocatedBytes != 206_592 ||
+		result.PublishPeakRSS != 248_741_888 ||
+		result.SweepDeletedRuns != 1 ||
+		result.SweepWallMS != 1_130 ||
+		result.SweepPeakRSS != 336_035_840 ||
+		!result.AtomicSupersessionVerified ||
+		!result.CompleteTargetSweepVerified {
+		t.Fatalf("current-writer receipt changed: %+v", result)
+	}
+}
+
 func TestCorpusContainsOnlyNeutralOwnedNames(t *testing.T) {
 	for _, name := range []string{SmallProfileName, ScaleProfileName} {
 		profile := mustProfile(t, name)

@@ -91,6 +91,22 @@ T20.1 baseline captured against `t12-store-v4` before the T20.3 publication
 marker/field guards. The go/no-go table labels those publication and sweep
 numbers as historical; later writer receipts are separate observations.
 
+The reviewed current-writer observation is committed separately as
+`results-current-writer-v6.json`
+(`sha256:85b8cc2d03867649fe05bc2d0698c2c2d5fcd29c67b5525d6e084c05e42690a6`).
+It binds `t12-store-v6`, `extraction_run_writer_v6`, the 25,000-row admission,
+and the 20,000-reference-edge limit. Publication took 154 ms with 248,741,888
+bytes peak Surreal RSS; a complete 20,020-row sweep took 1,130 ms with
+336,035,840 bytes peak RSS. Both pass the frozen 2 s / 512 MiB gates.
+
+The v2 receipt intentionally retains T20.1's legacy `ListAssertions`
+first-page probe so it remains comparable to the historical receipt. That
+probe selected `assertion_reverse_v6` but scanned the full 10,010-row prefix
+because its old sort is not the Caller Map page order. It is not the T20.4
+page acceptance result: the exact `ListReverseAssertions` target gate returned
+100 rows in 8.9935 ms after 1,616 compound-index candidates, with no
+`assertion_run` or assertion-table scan.
+
 ## Frozen historical result
 
 The reference run used Go 1.26.5 on darwin/arm64 (10 GOMAXPROCS) and

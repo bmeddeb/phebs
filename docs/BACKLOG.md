@@ -1668,7 +1668,7 @@ the opt-in measurement now re-executes publication and one complete
 and emits a distinct `t20-store-measurement-v2` receipt. T20.5 remains
 required before admission can rise beyond 25,000.
 
-**T20.4 · Composite reverse query and index** *(needs T20.3)* — add the
+**T20.4 · Composite reverse query and index** ✅ *(2026-07-26; needs T20.3)* — add the
 EvidenceStore page primitive and composite index shape for exact
 `(run, predicate, object[, lineage])` pagination. The store already has
 `assertion_run` and `(predicate, object)` indexes; captured SurrealDB query
@@ -1703,10 +1703,25 @@ migrates. Rollback safety now includes the synchronous, generation-named
 `extraction_run_writer_v6` database event installed before migration. A v5
 binary can overwrite the field assertion it knows, but it cannot remove the
 unknown v6 event, whose transaction-local throw rejects every retired v1–v5
-run mutation. The retained target gate stages 10,010 assertions, requires a
-100-row first page within 250 ms, checks a non-overlapping second page, and
-recursively rejects a plan that selects `assertion_run`, a table scan, or more
-than the 101 requested compound-index rows.
+run mutation. The retained target gate stages 10,010 assertions in
+production-sized 256-fact chunks, requires a 100-row first page within 250 ms,
+checks a non-overlapping second page, and recursively rejects a plan that
+selects `assertion_run`, a table scan, or examines the complete 10,010-row
+population.
+
+Acceptance receipt (2026-07-26): migration and rollback/mixed-writer refusal
+passed; stable/cursor-bound pages passed, including removal refusal and
+idempotent index reinstall. The exact target returned 100 rows in 8.9935 ms
+after 1,616 `assertion_reverse_v6` candidates, with neither `assertion_run`
+nor an assertion-table scan. The separately committed current-writer receipt
+`spike/t201/results-current-writer-v6.json`
+(`sha256:85b8cc2d…`) binds the v6 event and exact production limits:
+publication was 154 ms / 248,741,888 B peak Surreal RSS and the complete
+20,020-row sweep was 1,130 ms / 336,035,840 B peak RSS, inside the frozen
+2 s / 512 MiB gates. Its 144 ms first-page field remains the legacy T20.1
+`ListAssertions` comparison probe, not the 8.9935 ms T20.4 page result. This
+is a one-machine capacity/plan observation, not a universal performance or
+accuracy claim.
 
 **T20.5 · High-cardinality retention** *(needs T20.3)* — reclaim a superseded
 target-size run without one unbounded deletion transaction. Eligibility and

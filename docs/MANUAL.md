@@ -242,7 +242,12 @@ ceiling for this target, not an open-ended admission increase: T20.5 remains
 required before it can rise. `spike/t201/results.json` remains the explicitly
 historical v4/pre-guard baseline. The opt-in T20.1 store harness now measures
 the active writer and a complete 20,020-row target sweep using exact
-production statements and limits, emitting a separate version-2 receipt.
+production statements and limits. Its committed version-2 receipt is
+`spike/t201/results-current-writer-v6.json`: v6 publication took 154 ms and
+the complete target sweep took 1,130 ms on the reference machine, inside the
+frozen 2-second gate. Its retained first-page field is the legacy
+`ListAssertions` comparison probe; T20.4's exact reverse-page gate separately
+returned 100 rows in 8.9935 ms after 1,616 composite-index candidates.
 
 There is no Change Workbench in the current release. The available pieces are
 separate: a human can browse a declaration in Contracts, carry its operation
