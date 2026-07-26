@@ -1,0 +1,11 @@
+
+#!
+phebs-t221-authored-preparer1ä
+.gen/go/shared/shared.gol
+Ü®)ascip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/shared`/WorkflowExecution#GetWorkflowId().0Ù
+.gen/go/health/health.goi
+ç'_scip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/health`/Meta_Health_Result#GetSuccess().k
+ñ*ascip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/health`/Meta_Health_Result#IsSetSuccess().0˝
+$common/types/mapper/thrift/shared.gok
+$$ascip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/shared`/WorkflowExecution#GetWorkflowId().f
+Ò$\scip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/shared`/WorkflowExecution#GetRunId().0

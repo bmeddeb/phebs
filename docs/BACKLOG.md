@@ -2544,8 +2544,8 @@ exactly the commit cadence's gitlink names (digest joins become
 exact-by-construction), and the t191 jaeger pins for the Apache family.
 Authored, digest-pinned SCIP fixtures (t201 prepared-once policy) with a
 hand-labeled needle sample, independently authored adversarial entries, and
-an optional real-indexer comparison gate; the authoring circularity is
-disclosed in the README. Gates G1–G9: ThriftModule presence/shape and
+a recorded deferral of real-indexer symbol-shape comparison to T22.2 fixture
+authoring; the authoring circularity is disclosed in the README. Gates G1–G9: ThriftModule presence/shape and
 SHA1(Raw) integrity; gitlink alignment + FilePath/digest join rate (decides
 exact-tier eligibility); field-ID recovery agreement (wire.Field AST vs Raw
 IDL parse); Apache tag joins + confirmation that no in-file identity exists;

@@ -1,0 +1,28 @@
+[
+  {
+    "name": "cadence",
+    "git_url": "https://github.com/uber/cadence.git",
+    "commit": "98f3d45ec820380dadae38206753777a7417709f",
+    "gitlink_path": "idls",
+    "gitlink_commit": "ee96c0aebffaea083bdeab66b62c7e18291045f3",
+    "note": "thriftrw corpus: .gen/go carries one thriftrw-generated file per package with an embedded thriftreflect.ThriftModule (Name/Package/FilePath/SHA1/Raw), and common/types/mapper/thrift holds real handwritten accessor call sites in the same repository. The idls gitlink names the IDL source commit; clone with --filter=blob:none, the checkout materializes every blob the gates read."
+  },
+  {
+    "name": "cadence-idl",
+    "git_url": "https://github.com/cadence-workflow/cadence-idl.git",
+    "commit": "ee96c0aebffaea083bdeab66b62c7e18291045f3",
+    "note": "IDL boundary corpus: pinned to exactly the commit cadence's idls gitlink names, so the G2 SHA1 digest join between each embedded ThriftModule and thrift/<FilePath> is exact-by-construction rather than a heuristic pairing. Cadence IDLs declare no `namespace go`, so scope falls back to the file basename, matching each module's Name."
+  },
+  {
+    "name": "jaeger-client-go",
+    "git_url": "https://github.com/jaegertracing/jaeger-client-go.git",
+    "commit": "8d8e8fcfd04de42b8482476abac6a902fca47c18",
+    "note": "Apache Thrift corpus (t191 pin reused): archived repository, vendors thrift-gen stubs from Thrift Compiler 0.14.1 with `thrift:\"name,ID[,required]\"` struct tags and real in-repo composite-literal write sites (transport_udp.go builds jaeger.Batch). Predates Go modules; ensureCorpus fences it with a stub go.mod."
+  },
+  {
+    "name": "jaeger-idl",
+    "git_url": "https://github.com/jaegertracing/jaeger-idl.git",
+    "commit": "0daa7197c60ca879532826035be0fb238d98e713",
+    "note": "Apache cross-check corpus (t191 pin reused): thrift/jaeger.thrift declares the Batch/Process/Span structs whose generated tags G4 verifies. The IDL lives outside jaeger-client-go, demonstrating that Apache generated Go has no in-file source identity — the tag-to-IDL join crosses repositories, which is why Apache rows stay derived."
+  }
+]

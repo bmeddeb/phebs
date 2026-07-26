@@ -1,0 +1,19 @@
+{
+  "version": "t221-scip-input-v1",
+  "entries": [
+    {
+      "name": "cadence",
+      "corpus": "cadence",
+      "path": "testdata/cadence.index.scip",
+      "sha256": "e078588da5a95b3ce04dc6742deea8c6c711700d8b8269281e0f4e31cd14c685"
+    },
+    {
+      "name": "jaeger",
+      "corpus": "jaeger-client-go",
+      "path": "testdata/jaeger.index.scip",
+      "sha256": "2378f564f89ba0aff101de43ebde90cdae5dfe3fb87f9d7d3b7d39064385dd7d"
+    }
+  ],
+  "preparer": "T221_CORPUS_ROOT=<clones> go run ./spike/t221/cmd/prepare-index",
+  "policy": "prepared-once-reviewed-and-copied-verbatim"
+}

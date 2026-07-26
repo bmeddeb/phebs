@@ -1,0 +1,76 @@
+{
+  "version": "t221-needles-v1",
+  "note": "Hand-labeled against the pinned corpus bytes before the indexes were authored: field IDs read directly from the IDL sources (cadence-idl thrift/shared.thrift line 398: workflowId = 10; result success slot = 0 by Thrift definition; jaeger-idl thrift/jaeger.thrift line 91: process = 1). The gates must reproduce every 'bound' entry and refuse every 'abstain' entry for exactly the labeled reason.",
+  "entries": [
+    {
+      "name": "thriftrw-read-workflowid",
+      "index": "cadence",
+      "family": "thriftrw",
+      "symbol": "scip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/shared`/WorkflowExecution#GetWorkflowId().",
+      "scope": "shared",
+      "message": "WorkflowExecution",
+      "field_name": "workflowId",
+      "field_id": 10,
+      "definition_path": ".gen/go/shared/shared.go",
+      "expect": "bound",
+      "references": [
+        {
+          "path": "common/types/mapper/thrift/shared.go",
+          "classification": "read"
+        }
+      ]
+    },
+    {
+      "name": "thriftrw-field0-success",
+      "index": "cadence",
+      "family": "thriftrw",
+      "symbol": "scip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/health`/Meta_Health_Result#GetSuccess().",
+      "scope": "health",
+      "message": "Meta_Health_Result",
+      "field_name": "success",
+      "field_id": 0,
+      "definition_path": ".gen/go/health/health.go",
+      "expect": "bound",
+      "references": []
+    },
+    {
+      "name": "apache-write-process",
+      "index": "jaeger",
+      "family": "apache",
+      "symbol": "scip-go gomod github.com/uber/jaeger-client-go 8d8e8fc `thrift-gen/jaeger`/Batch#Process.",
+      "scope": "jaeger",
+      "message": "Batch",
+      "field_name": "process",
+      "field_id": 1,
+      "definition_path": "thrift-gen/jaeger/jaeger.go",
+      "expect": "bound",
+      "references": [
+        {
+          "path": "transport_udp.go",
+          "classification": "write"
+        }
+      ]
+    },
+    {
+      "name": "adversarial-span-shift",
+      "index": "cadence",
+      "symbol": "scip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/health`/Meta_Health_Result#IsSetSuccess().",
+      "expect": "abstain",
+      "reason": "span-mismatch"
+    },
+    {
+      "name": "adversarial-unbound-reference",
+      "index": "cadence",
+      "symbol": "scip-go gomod github.com/uber/cadence 98f3d45 `.gen/go/shared`/WorkflowExecution#GetRunId().",
+      "expect": "abstain",
+      "reason": "unbound-symbol"
+    },
+    {
+      "name": "adversarial-ineligible-document",
+      "index": "jaeger",
+      "symbol": "scip-go gomod github.com/uber/jaeger-client-go 8d8e8fc `thrift-gen/jaeger`/Batch#Spans.",
+      "expect": "abstain",
+      "reason": "ineligible-document"
+    }
+  ]
+}
