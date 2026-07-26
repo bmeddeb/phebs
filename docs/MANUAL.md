@@ -185,6 +185,29 @@ empty consumer run. The protobuf packs are also enabled so the Atlas shows
 both protocols side by side. All Contract Atlas caveats apply unchanged: no
 empty result establishes runtime absence.
 
+#### Evaluating a separated IDL/source monorepo
+
+The current extractor walks the repository's complete regular-blob inventory;
+directories have no built-in semantic meaning. A layout with declarations
+under `idl/` and handwritten Go under `src/` is therefore eligible without
+moving files or making declarations adjacent to callers. Generated Go stubs
+must be committed somewhere in that same pinned repository for the current
+syntactic gRPC/Thrift consumer readers to index them. For protobuf field
+references, a repository-root `index.scip` must additionally describe that
+same immutable revision. phebs never runs the repository's build, code
+generator, plugin, or dependency downloader.
+
+This support should not be confused with a service-aware migration inventory.
+In the current release, the Atlas operation detail returns at most 200
+relationship rows, the Impact operation form accepts a bare canonical
+operation and builds a proof bundle capped at 5,000 assertions, and call sites
+are not grouped into build targets, deployables, logical services, or owners.
+The Go consumer readers are syntactic; common generated method names can
+produce explicit abstentions. The proposed Epic 20 Caller Map in
+`docs/BACKLOG.md` specifies the typed, paged, unit-attributed workflow needed
+for thousands of services. Until that work lands, use the current pages as
+bounded provisional source evidence—not as a complete migration roster.
+
 Minimal `phebs.yaml`:
 
 ```yaml
@@ -1484,9 +1507,11 @@ emitted facts, and a cooperative 15-minute context deadline. A candidate
 Go parser input is further limited to 4 MiB; a protobuf parser input is limited
 to 4 MiB, 500,000 lexical tokens, and 128 structural levels. Neither in-process
 parser can be preempted inside one parse call, so this is not yet a hard
-CPU/memory/process isolation boundary. A candidate `.proto` symlink, any
-gitlink (whose subtree coverage is unknown), or more than 100 placements of one
-content atom also prevents publication; unrelated symlinks are skipped. A
+CPU/memory/process isolation boundary. A candidate `.proto` symlink or more
+than 100 placements of one content atom also prevents publication. Gitlinks
+under
+`gitlink-boundary-v1` are recorded as repository boundaries and are not
+traversed. Unrelated symlinks are skipped. A
 non-candidate file whose name cannot be represented safely (control bytes, a
 backslash, invalid UTF-8, or a
 leading `-`) is included in the published coverage certificate's
