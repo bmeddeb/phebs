@@ -540,7 +540,7 @@ func (c *verifiedCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
 	if !ok {
 		return sdk.Blob{}, errors.New("corpus does not support bounded SCIP index reads")
 	}
-	return c.read(ctx, "index.scip", MaxSCIPIndexBytes, func(ctx context.Context, _ string) (sdk.Blob, error) {
+	return c.read(ctx, scipIndexPath, MaxSCIPIndexBytes, func(ctx context.Context, _ string) (sdk.Blob, error) {
 		return inner.ReadSCIPIndex(ctx)
 	})
 }

@@ -806,6 +806,17 @@ responses stop at 500 locations and set `truncated`, and hover content is
 capped at 64 KiB. The UI uses UTF-16 offsets (matching browser strings), while
 the HTTP API can request UTF-8, UTF-16, or UTF-32 conversion.
 
+The extraction reader uses the same root-only product boundary with its own
+trusted corpus ledger. The root path is fixed—nested indexes and manifests are
+not alternatives—and the blob must have appeared as a regular file in the
+complete walk of the indexed commit. Mutable refs and Git replacement objects
+cannot redirect it; lazy object fetching is disabled. The reader opens only
+the recorded immutable blob, enforces its separate 64 MiB limit, and
+recomputes SHA-256 before parsing. A root `index.scip` symlink is an explicit
+extraction failure, not an “index absent” result. T20.1 selected this mode for
+the frozen monorepo target; phebs has no sharded-index manifest or part-reader
+surface.
+
 ### Git history
 
 History reads the existing bare mirror; it does not enlarge the zoekt index.
@@ -1332,7 +1343,9 @@ negative-proof conclusions.
 
 The opt-in also reads a repository-root, committed `index.scip` to emit T13.2
 `REFERENCES_PROTO_FIELD` assertions. phebs never runs or downloads a SCIP
-indexer: the index must describe the same immutable commit. A SCIP symbol is
+indexer: the fixed root index must be a regular blob in the same immutable
+commit. Nested indexes, symlinks, and shard manifests are not selected inputs.
+A SCIP symbol is
 eligible only when its exact definition range matches a generated protobuf Go
 struct field or getter, the generated struct tag supplies the field number and
 proto name, and the generated file's `// source:` declaration maps uniquely to

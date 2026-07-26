@@ -31,6 +31,7 @@ const (
 	// MaxSCIPIndexBytes preserves the code-navigation reader's independent
 	// committed-index ceiling without raising the source/extraction blob cap.
 	MaxSCIPIndexBytes = int64(64 << 20)
+	scipIndexPath     = "index.scip"
 
 	maxCorpusPathBytes = 4096
 	maxTreeRecordBytes = maxCorpusPathBytes + 128
@@ -216,8 +217,13 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 			case entry.mode == "120000":
 				// Symlinks are not regular corpus content and are never visited.
 				// A candidate .proto or .thrift symlink is a declared-plane
-				// coverage gap and therefore fails closed; unrelated repository
-				// symlinks are harmless.
+				// coverage gap and therefore fails closed. The root SCIP index
+				// is also a selected corpus input (T20.6), so a symlink there
+				// must not degrade into the indistinguishable "index absent"
+				// result. Unrelated repository symlinks are harmless.
+				if entry.path == scipIndexPath {
+					walkErr = fmt.Errorf("walk corpus: unsupported SCIP index symlink %q", entry.path)
+				}
 				if strings.HasSuffix(entry.path, ".proto") {
 					walkErr = fmt.Errorf("walk corpus: unsupported proto symlink %q", entry.path)
 				}
@@ -280,7 +286,7 @@ func (g *gitCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error)
 // ReadSCIPIndex exposes only the repository-root committed index through the
 // larger SCIP-specific limit. It cannot be used to read arbitrary blobs.
 func (g *gitCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
-	return g.read(ctx, "index.scip", MaxSCIPIndexBytes)
+	return g.read(ctx, scipIndexPath, MaxSCIPIndexBytes)
 }
 
 func (g *gitCorpus) read(ctx context.Context, filePath string, maxBytes int64) (sdk.Blob, error) {

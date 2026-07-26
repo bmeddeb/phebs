@@ -206,6 +206,23 @@ func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 		}
 	})
 
+	t.Run("root SCIP index symlink rejected", func(t *testing.T) {
+		f := newCorpusGitFixture(t)
+		f.commitFile("target", "not parsed", "target")
+		if err := os.Symlink("target", filepath.Join(f.source, scipIndexPath)); err != nil {
+			t.Skipf("symlinks unsupported: %v", err)
+		}
+		f.git(f.source, "add", scipIndexPath)
+		f.git(f.source, "commit", "-q", "-m", "SCIP index symlink")
+		head := f.git(f.source, "rev-parse", "HEAD")
+		f.cloneMirror()
+		err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(
+			context.Background(), func(string) error { return nil })
+		if err == nil || !strings.Contains(err.Error(), "SCIP index symlink") {
+			t.Fatalf("SCIP index symlink error = %v", err)
+		}
+	})
+
 	t.Run("gitlink boundaries recorded not traversed", func(t *testing.T) {
 		f := newCorpusGitFixture(t)
 		parent := f.commitFile("README", "root", "root")
@@ -277,6 +294,36 @@ func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestT206SCIPRootCapabilityIsCommitAndPathBound(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	f.commitFile(scipIndexPath, "old root index", "old root")
+	oldCommit := f.commitFile("nested/index.scip", "nested index", "nested")
+	newCommit := f.commitFile(scipIndexPath, "new root index", "new root")
+	mirror := f.cloneMirror()
+	// Mutable replacement refs and a newer repository commit must not redirect
+	// the selected capability away from the exact walked root blob.
+	f.git(mirror, "replace", oldCommit, newCommit)
+
+	corpus := GitCorpus(f.dataDir).New(f.repoName, oldCommit)
+	if err := corpus.WalkFiles(context.Background(), func(string) error { return nil }); err != nil {
+		t.Fatalf("WalkFiles: %v", err)
+	}
+	indexCorpus, ok := corpus.(sdk.SCIPCorpus)
+	if !ok {
+		t.Fatal("production corpus does not expose the bounded SCIP capability")
+	}
+	blob, err := indexCorpus.ReadSCIPIndex(context.Background())
+	if err != nil {
+		t.Fatalf("ReadSCIPIndex: %v", err)
+	}
+	sum := sha256.Sum256([]byte("old root index"))
+	wantDigest := "sha256:" + hex.EncodeToString(sum[:])
+	if blob.Content != "old root index" || blob.Digest != wantDigest {
+		t.Fatalf("root SCIP blob = content %q digest %q, want old root / %s",
+			blob.Content, blob.Digest, wantDigest)
+	}
 }
 
 func TestGitCorpusRejectsExternalAlternates(t *testing.T) {
@@ -382,6 +429,66 @@ func TestVerifiedCorpusRejectsChangingOrIncorrectDigest(t *testing.T) {
 	}
 }
 
+func TestT206VerifiedSCIPCapabilityFailsClosed(t *testing.T) {
+	t.Run("unadmitted root is never read", func(t *testing.T) {
+		inner := &scipCapabilityCorpus{
+			paths: []string{"nested/index.scip"},
+			blob:  trustedCorpusBlob("hidden"),
+		}
+		verified := newVerifiedCorpus(inner)
+		if err := verified.Inventory(context.Background(), func(string) bool { return false }); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := verified.ReadSCIPIndex(context.Background()); err == nil ||
+			!strings.Contains(err.Error(), "was not in corpus inventory") {
+			t.Fatalf("unadmitted read error = %v", err)
+		}
+		if inner.scipReads != 0 {
+			t.Fatalf("unadmitted SCIP capability performed %d inner reads", inner.scipReads)
+		}
+	})
+
+	t.Run("trusted digest mismatch", func(t *testing.T) {
+		inner := &scipCapabilityCorpus{
+			paths: []string{scipIndexPath},
+			blob: sdk.Blob{
+				Content: "index",
+				Digest:  "sha256:" + strings.Repeat("0", 64),
+			},
+		}
+		verified := newVerifiedCorpus(inner)
+		if err := verified.Inventory(context.Background(), func(path string) bool {
+			return path == scipIndexPath
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := verified.ReadSCIPIndex(context.Background()); err == nil ||
+			!strings.Contains(err.Error(), "invalid trusted digest") {
+			t.Fatalf("digest mismatch error = %v", err)
+		}
+	})
+
+	t.Run("dedicated byte ceiling", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("large boundedness fixture")
+		}
+		inner := &scipCapabilityCorpus{
+			paths: []string{scipIndexPath},
+			blob:  sdk.Blob{Content: strings.Repeat("x", int(MaxSCIPIndexBytes)+1)},
+		}
+		verified := newVerifiedCorpus(inner)
+		if err := verified.Inventory(context.Background(), func(path string) bool {
+			return path == scipIndexPath
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := verified.ReadSCIPIndex(context.Background()); err == nil ||
+			!strings.Contains(err.Error(), "exceeds byte limit") {
+			t.Fatalf("oversized SCIP error = %v", err)
+		}
+	})
+}
+
 func TestVerifiedCorpusBoundsAggregateInventoryPathBytes(t *testing.T) {
 	verified := newVerifiedCorpus(pathFloodCorpus{})
 	err := verified.Inventory(context.Background(), func(string) bool { return false })
@@ -418,6 +525,41 @@ func (*changingCorpus) WalkFiles(_ context.Context, visit func(string) error) er
 }
 func (*changingCorpus) Read(context.Context, string) (sdk.Blob, error) {
 	return sdk.Blob{Content: "content", Digest: "sha256:" + strings.Repeat("0", 64)}, nil
+}
+
+type scipCapabilityCorpus struct {
+	paths     []string
+	blob      sdk.Blob
+	scipReads int
+}
+
+func (*scipCapabilityCorpus) RepoName() string { return "synthetic.invalid/t206" }
+func (*scipCapabilityCorpus) Commit() string   { return unitCommit }
+func (c *scipCapabilityCorpus) WalkFiles(ctx context.Context, visit func(string) error) error {
+	for _, filePath := range c.paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := visit(filePath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (*scipCapabilityCorpus) Read(context.Context, string) (sdk.Blob, error) {
+	return sdk.Blob{}, store.ErrNotFound
+}
+func (c *scipCapabilityCorpus) ReadSCIPIndex(context.Context) (sdk.Blob, error) {
+	c.scipReads++
+	return c.blob, nil
+}
+
+func trustedCorpusBlob(content string) sdk.Blob {
+	sum := sha256.Sum256([]byte(content))
+	return sdk.Blob{
+		Content: content,
+		Digest:  "sha256:" + hex.EncodeToString(sum[:]),
+	}
 }
 
 type pathFloodCorpus struct{}

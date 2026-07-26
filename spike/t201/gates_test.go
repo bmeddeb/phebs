@@ -17,6 +17,7 @@ import (
 	"github.com/scip-code/scip/bindings/go/scip"
 	"google.golang.org/protobuf/proto"
 
+	extractruntime "github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
@@ -114,6 +115,81 @@ func TestPinnedSCIPInputIsCopiedVerbatim(t *testing.T) {
 					len(index.Documents), references, testCase.documents, testCase.references)
 			}
 		})
+	}
+}
+
+func TestT206SelectedRootSCIPCorpusPreservesSmallProfile(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	profile := mustProfile(t, SmallProfileName)
+	source := t.TempDir()
+	if err := WriteProfile(source, profile); err != nil {
+		t.Fatalf("write profile: %v", err)
+	}
+	runGit(t, source, "init", "--quiet")
+	runGit(t, source, "add", "--all")
+	runGit(t, source,
+		"-c", "user.name=t20", "-c", "user.email=t20@invalid",
+		"commit", "--quiet", "-m", "T20.6 root SCIP corpus")
+	head := gitOutput(t, source, "rev-parse", "HEAD")
+
+	dataDir := t.TempDir()
+	repoName := "synthetic.invalid/mono"
+	mirror := filepath.Join(dataDir, "repos", filepath.FromSlash(repoName)+".git")
+	if err := os.MkdirAll(filepath.Dir(mirror), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, dataDir, "clone", "--quiet", "--mirror", source, mirror)
+
+	corpus := extractruntime.GitCorpus(dataDir).New(repoName, head)
+	var paths []string
+	if err := corpus.WalkFiles(context.Background(), func(path string) error {
+		paths = append(paths, path)
+		return nil
+	}); err != nil {
+		t.Fatalf("walk selected corpus: %v", err)
+	}
+	if !slices.Contains(paths, "index.scip") {
+		t.Fatal("selected corpus omitted root index.scip")
+	}
+	indexCorpus, ok := corpus.(sdk.SCIPCorpus)
+	if !ok {
+		t.Fatal("selected corpus lacks the root SCIP capability")
+	}
+	first, err := indexCorpus.ReadSCIPIndex(context.Background())
+	if err != nil {
+		t.Fatalf("read selected root index: %v", err)
+	}
+	second, err := indexCorpus.ReadSCIPIndex(context.Background())
+	if err != nil {
+		t.Fatalf("repeat selected root read: %v", err)
+	}
+	want := profile.Files["index.scip"]
+	sum := sha256.Sum256(want)
+	wantDigest := "sha256:" + hex.EncodeToString(sum[:])
+	if !bytes.Equal([]byte(first.Content), want) ||
+		first.Digest != wantDigest ||
+		!reflect.DeepEqual(first, second) {
+		t.Fatalf("selected root bytes/digest/repeat differ: first digest %q second digest %q want %q",
+			first.Digest, second.Digest, wantDigest)
+	}
+
+	var selected scip.Index
+	if err := proto.Unmarshal([]byte(first.Content), &selected); err != nil {
+		t.Fatalf("decode selected root index: %v", err)
+	}
+	references := 0
+	for _, document := range selected.Documents {
+		for _, occurrence := range document.Occurrences {
+			if occurrence.SymbolRoles&int32(scip.SymbolRole_Definition) == 0 {
+				references++
+			}
+		}
+	}
+	if len(selected.Documents) != 7 || references != 5 {
+		t.Fatalf("selected root occurrence shape = %d documents / %d references, want 7 / 5",
+			len(selected.Documents), references)
 	}
 }
 
@@ -548,6 +624,21 @@ func runGit(t *testing.T, root string, args ...string) {
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, output)
 	}
+}
+
+func gitOutput(t *testing.T, root string, args ...string) string {
+	t.Helper()
+	command := exec.Command("git", args...)
+	command.Dir = root
+	command.Env = append(os.Environ(),
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL="+filepath.Join(root, "missing-global-config"),
+	)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, output)
+	}
+	return strings.TrimSpace(string(output))
 }
 
 type memoryCorpus struct {

@@ -1764,17 +1764,43 @@ the exact publication/recount and reverse-plan probes. Receipt:
 This is a one-machine capacity and integrity result, not an extraction-accuracy
 or universal latency claim.
 
-**T20.6 · Monorepo symbol-index corpus capability** *(needs T20.1)* — retain
+**T20.6 · Monorepo symbol-index corpus capability** ✅ *(2026-07-26; needs T20.1)* — retain
 the current dedicated root `index.scip` blob path when it meets the frozen
 gate. If T20.1 selects sharding, add a canonical commit-bound manifest whose
 bounded entries name safe Git paths, blob OIDs/digests, path scopes, and total
 budgets; the shared corpus opens only admitted immutable blobs and never
 discovers or downloads an index.
 
-AC: root and selected sharded inputs yield the same small-profile occurrences;
-unknown versions, overlap, gaps, duplicate paths/scopes, digest/OID mismatch,
-oversized parts/totals, symlinks, and stale commit bindings fail closed.
-Selection is deterministic and hidden/unadmitted blobs are never read.
+AC: the T20.1-selected input preserves the frozen small-profile occurrences.
+If T20.1 selects sharding, root and sharded inputs must agree, while unknown
+versions, overlap, gaps, duplicate paths/scopes, digest/OID mismatch, and
+oversized parts/totals fail closed. In either mode, symlinks and stale commit
+bindings fail closed, selection is deterministic, and hidden/unadmitted blobs
+are never read.
+
+Implementation/result: T20.1 selected the existing root-only mode: its
+893,956-byte scale index is 1.33% of the unchanged 64 MiB dedicated ceiling,
+so T20.6 adds no shard manifest, manifest parser, version negotiation, or
+alternate part path. The production capability has no path parameter. It
+first walks the complete exact-commit tree, retains the root `index.scip`
+blob OID, and reads only that admitted immutable object through the shared
+no-replacement/no-lazy-fetch Git layer. The trusted wrapper separately
+requires the root path in the completed inventory, applies the 64 MiB
+per-index and 512 MiB aggregate-run limits, and recomputes SHA-256 before
+giving bytes to the extractor. A root index symlink now hard-fails instead of
+being reported as absent.
+
+Acceptance sends the frozen small profile through the production Git corpus
+and preserves byte-identical input, digest, seven documents, and five
+non-definition occurrences. Adversarial cases pin an old commit despite a
+newer commit and mutable replace ref, reject a forged trusted digest and
+oversized capability result, reject the root symlink, and require zero inner
+reads for an unadmitted root. T20.1 did not select sharding, so the AC's
+unknown manifest version, overlapping/gapped/duplicate scopes, part
+OID/digest, and aggregate-part cases have no admitted input surface; they fail
+closed structurally because no manifest or part capability exists. A future
+sharded mode requires a separately reviewed, versioned ticket. This establishes
+input integrity and capacity only, not extraction accuracy.
 
 **T20.7 · Immutable monorepo layout and consumer-unit snapshot** *(needs
 T20.1)* — introduce digest-bound layout classification and a narrow,
