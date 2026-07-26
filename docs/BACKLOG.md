@@ -1325,7 +1325,8 @@ registry pin, dark flag, and PR-sized acceptance criteria.
   only a shared catalog key after template, mount, gateway, and middleware
   resolution states have been modeled; ambiguous joins abstain.
 - **Kafka** *(named by the prospective design partner, 2026-07-26 — next
-  pack candidate after Epic 20)*: separate topic/schema declarations,
+  pack candidate after Epic 20; specified as EPIC 23 below, 2026-07-26,
+  spike-gated and not started)*: separate topic/schema declarations,
   producer evidence, and consumer evidence. A source literal topic name has
   no proven cluster/environment identity; consumer groups and dynamic
   configuration remain unresolved without an authorized deployment or
@@ -1335,7 +1336,8 @@ registry pin, dark flag, and PR-sized acceptance criteria.
   validation spike, card, dark flag, and executable acceptance bars before
   any ticket ships.
 - **Thrift field references** *(named by the prospective design partner,
-  2026-07-26 — candidate after Epic 20)*: separate generated-accessor
+  2026-07-26 — adopted as EPIC 22 below, 2026-07-26; this bullet is absorbed
+  at T22.5 closure)*: separate generated-accessor
   recognition from the shipped protobuf pack. `scip-proto-field` recognizes
   only protoc-gen-go accessor symbols, and the proof-service field identity
   enforces protobuf wire bounds (1–536,870,911 excluding 19000–19999), which
@@ -2481,6 +2483,175 @@ safety. This closes default-dark implementation only: production Workbench
 routes/tools/export stay unregistered until the retained `ESTABLISHED` plus
 pilot-continuation gate is satisfied, and the external accuracy posture remains
 `NOT_ESTABLISHED`.
+
+## EPIC 22 — Thrift field references *(proposed 2026-07-26; experimental-dark)*
+
+### Product outcome
+
+A migration owner asks "which source locations read or write field N of
+`scope.Message`?" for Thrift exactly as they do for protobuf today:
+occurrence-scoped, exact-span, classification-labeled evidence rows with
+immutable citations, honest abstention, and no accuracy claim. Named by the
+prospective design partner (2026-07-26); the partner's estate is
+thriftrw-heavy, so the thriftrw generator family ships first and Apache
+Thrift second.
+
+### Functional requirements
+
+- **FR22.1** New domain `scip-thrift-field`, extractor `thriftfield`, atom
+  schema `t22-v1`, dark flag
+  `experimental.provisional_thrift_field_extraction` (own flag; composes in
+  the registry beside the proto and thrift packs).
+- **FR22.2** Predicate `REFERENCES_THRIFT_FIELD`, object `scope.Message#ID`,
+  identifier bounds 0..32,767 — field 0 (the result success slot) is a
+  first-class identity. Detail `thrift-field-reference-detail-v1`
+  {name, classification, dependency_version, generator: apache|thriftrw,
+  source_binding: module_digest|module_path|none}.
+- **FR22.3** Recognition is a per-generator-family three-way join — document
+  eligibility, in-file field-identity confirmation, SCIP definition binding
+  by exact byte-span equality — never a symbol-string regex. thriftrw
+  confirms against the generated package's own embedded `ThriftModule`
+  descriptor (FilePath/SHA1/Raw IDL, parsed with the already-allowlisted
+  thriftrw parser) with `wire.Field{ID:}` AST cross-checks; Apache confirms
+  via `thrift:"name,ID"` struct tags with scope derived from the generated
+  package. Rules are frozen by the T22.1 decision table before extractor
+  code.
+- **FR22.4** Lineage reuses the `contract_scip_package_v1` recipe — no third
+  lineage family; it never joins thriftdecl's `provisional_repo_path_v1`
+  lineage (parity with the protobuf posture).
+- **FR22.5** Tier follows binding strength: `derived` by default; `exact`
+  only where the spike proved digest-verified in-file identity
+  (`source_binding=module_digest`).
+- **FR22.6** Neutral protocol-blind query surface `find_field_references`
+  (HTTP + MCP) fans one (lineage, message, N) identity across every
+  registered field-reference domain whose bounds admit N;
+  `find_proto_field_references` stays wire-frozen and protobuf-only.
+- **FR22.7** Abstention is silent (scipfield posture): index-absent →
+  coverage `scip-index-absent`; malformed index → hard error, zero facts.
+- **FR22.8** No accuracy claims anywhere; GATE2-V2 stays `NOT_ESTABLISHED`;
+  employer references stay genericized.
+
+### Non-goals
+
+Cross-repo lineage promotion; catalog/Atlas listing for the field-reference
+domain (parity with scip-proto-field's deliberate exclusion); Thrift
+wire-compatibility checking; runtime or absence claims; schema-registry or
+deployment identity.
+
+**T22.1 · Validation spike** — `spike/t221` pins uber/cadence (thriftrw
+`.gen/go` + in-repo call sites; the `idls` gitlink recorded), cadence-idl at
+exactly the commit cadence's gitlink names (digest joins become
+exact-by-construction), and the t191 jaeger pins for the Apache family.
+Authored, digest-pinned SCIP fixtures (t201 prepared-once policy) with a
+hand-labeled needle sample, independently authored adversarial entries, and
+an optional real-indexer comparison gate; the authoring circularity is
+disclosed in the README. Gates G1–G9: ThriftModule presence/shape and
+SHA1(Raw) integrity; gitlink alignment + FilePath/digest join rate (decides
+exact-tier eligibility); field-ID recovery agreement (wire.Field AST vs Raw
+IDL parse); Apache tag joins + confirmation that no in-file identity exists;
+per-family document eligibility with zero false-eligible files; exact-span
+SCIP joins with needle reproduction and adversarial abstentions; field-0
+identity and spelling alignment with thriftdecl; lineage
+stability/disjointness; a scale probe against the inherited scipfield bounds
+(observed: cadence's largest generated file is 3,455,648 bytes — 82% of the
+4 MiB ceiling — recorded, never silently raised). AC: offline suite skips
+clean without the corpus; pinned-corpus gates green; decision table D1–D10
+frozen in spike/t221/README.md; no accuracy vocabulary.
+
+**T22.2 · thriftfield extractor, thriftrw family** *(needs T22.1)* —
+`internal/extract/extractors/thriftfield` at 1.0.0 behind the new flag;
+registry composes as a third `evidenceExtractors` parameter with the pin
+matrix extended; evidence-pack card appended to docs/THRIFT_PACK_CARDS.md;
+ADR + MANUAL same PR. AC: exact-span + classification fixtures;
+renamed-field identity stability; duplicate-(message,ID) abstention; field-0
+emission; missing-index stable-empty; malformed-index hard fail; position
+encodings; byte-identical double run; worker staged→published regression;
+full merge bar.
+
+**T22.3 · Apache Thrift family** *(needs T22.2)* — thrift-tag recognition
+per the decision table, version 1.1.0, synthetic fixtures (no public Apache
+corpus commits a SCIP index); tier `derived`, `source_binding=none`. AC:
+tag-parse table tests incl. required/optional and field 0; scope-derivation
+abstention cases; both-generators-in-one-repo co-existence fixture; card
+updated; merge bar.
+
+**T22.4 · Neutral proof/report/envelope/MCP surface** *(needs T22.2;
+coordinate with T20.10 before starting — same internal/api files)* —
+`protocolPacks` gains fieldReferenceDomain/fieldReferencePredicate columns;
+`find_field_references` (HTTP + MCP) fans by bounds admission;
+`canonicalProofDomains` → 6; the impact-report route gains a presence-aware
+`field_number` so field 0 becomes addressable (today it is unreachable at
+three layers: `validateFieldIdentity` min 1, the `FieldNumber > 0` route
+discriminator, and the UI guard); impactProtocol/impactAssertionKind/
+impactEvidenceLabels/impactCoverageState and the envelope gain the thrift
+cases (identity kind `thrift_field`); the report-kind allowlist admits the
+new bundle kind. AC: protobuf responses byte-stable except honestly added
+coverage rows (T19.5 precedent, pinned); field-0 round trip; MCP tool
+count/schema pins updated for dark and enabled states; bundle determinism;
+`find_proto_field_references` byte-untouched.
+
+**T22.5 · UI generalization, demo, closure** *(needs T22.4)* — Impact field
+mode accepts field 0 with a protocol-aware guard; evidence-row kind union
+extended; `make dev` demo via a neutral synthetic fixture repo with a
+committed authored `index.scip` exercising a thriftrw-shaped digest join;
+MANUAL walkthrough; absorb the Thrift-field candidate bullet above. AC:
+Vitest green; protobuf pages unchanged; operator walkthrough per MANUAL.
+
+## EPIC 23 — Kafka topic evidence *(specified 2026-07-26; spike-gated, not started)*
+
+### Product outcome
+
+Topic-centered evidence: producers → topic → consumers. The answerable
+question is "which source locations produce to or consume from topic X",
+with source-literal evidence only, honest abstention for dynamic topics, and
+no cluster, environment, runtime, or completeness claim. Named by the
+prospective design partner (2026-07-26). Round-one client libraries:
+IBM/sarama and segmentio/kafka-go.
+
+### Evidence separation (three planes, never merged)
+
+- **Producer evidence** — sarama `ProducerMessage{Topic: <literal>}` /
+  `SendMessage(s)`; segmentio `kafka.Writer{Topic: <literal>}` /
+  `WriteMessages` with literal-topic messages. Literal-or-abstain: no
+  dataflow and no constant propagation beyond a same-file `const`;
+  non-literal topics emit `UNRESOLVED_KAFKA_PRODUCER`.
+- **Consumer evidence** — sarama `ConsumerGroup.Consume` literal topic
+  slices; segmentio `ReaderConfig{Topic:/GroupTopics:, GroupID:}`. Group ids
+  are detail, never identity. Non-literal topics emit
+  `UNRESOLVED_KAFKA_CONSUMER`.
+- **Declarations plane — decided by the spike, honestly possibly empty in
+  round one.** No in-code topic declaration exists; candidate sources
+  (config files, schema-registry exports) are T23.1 questions. Round one may
+  ship a topic-keyed producer/consumer index with **no catalog/Atlas
+  surface**, and the spec says so plainly.
+
+### Identity boundary and non-goals
+
+A topic is a source spelling — object `topic:<literal>` — and **carries no
+cluster or environment identity claim**. Non-goals: cluster/runtime
+identity; schema-registry connectors in round one; dynamic topic
+resolution; "all producers/consumers" completeness claims; broker or
+configuration inference. Tier policy: heuristic/derived only — no `exact`
+without wire-level evidence, which static source cannot provide.
+
+### Pack metadata
+
+Domains `kafka-producer` / `kafka-consumer` (reserved: `kafka-topic`); dark
+flag `experimental.provisional_kafka_extraction`; extractor `kafkago` 1.0.0;
+own evidence-pack card; own spike.
+
+**T23.1 · Validation spike** — `spike/t231`; pin two-to-four OSS corpora
+exercising sarama and segmentio in production shapes (selection is part of
+the spike); freeze per-library recognition rules, the literal-or-abstain
+boundary, topic spelling, the declarations-plane verdict, tier policy, and
+the UI shape in a decision table with executable gates and a hand-labeled
+sample. Adds no production behavior.
+
+**T23.2–T23.4 (sketches, revisable by the spike)** — T23.2 extractor + flag
++ card; T23.3 topic-keyed proof/MCP surface (tool naming decided by the
+spike's spec revision — operation tools are not reused); T23.4
+topic-centered UI + demo + closure. Each carries the standard pack
+discipline: ADR + MANUAL same PR, dark posture, full merge bar.
 
 ## P5 hardening *(unscheduled — pull on demand)*
 
