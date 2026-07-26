@@ -583,6 +583,10 @@ func TestMigrateEvidenceRunIDCollisionDoesNotStealProof(t *testing.T) {
 			t.Fatalf("ambiguous orphan %s was reassigned", kind)
 		}
 	}
+	// Model a retired v5 writer adding a late claimant after the first v6
+	// migration pass. The current guard must be removed explicitly for the
+	// fixture write, then applySchema must restore it before migrating.
+	relaxEvidenceWriterGuards(t, s)
 	if _, err := surrealdb.Query[any](ctx, s.db,
 		`UPDATE $orphan_a SET evidence_migration_version = 't12-evidence-migration-v1';
 		UPDATE $orphan_b SET evidence_migration_version = 't12-evidence-migration-v1';
