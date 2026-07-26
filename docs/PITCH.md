@@ -10,23 +10,32 @@
 ## Executive summary
 
 phebs is a working, self-hosted code-search system and an experimental
-evidence layer for Go/gRPC migrations. For a pinned monorepo baseline and a
-declared authorized build-target universe, it is designed to produce a
-**versioned consumer-candidate inventory**: classified client-call and
-server-registration facts with reproducible source evidence, explicit
-analysis gaps, extractor-version metadata — and, as the pilot's central
-question, the derivation from each source occurrence to build target,
-deployable, canonical service, and owner.
+evidence layer for contract migrations — Go/gRPC and, as of July 2026,
+Apache Thrift, the two RPC planes that matter in the target monorepo. For a
+pinned monorepo baseline and a declared authorized build-target universe, it
+is designed to produce a **versioned consumer-candidate inventory**:
+classified client-call and server-registration facts with reproducible
+source evidence, explicit analysis gaps, extractor-version metadata — and,
+as the pilot's central question, the derivation from each source occurrence
+to build target, deployable, canonical service, and owner.
 
-Search and MCP access are operational today. The preregistered external
+Search and MCP access are operational today; the multi-protocol contract
+evidence layer (declarations, consumers, proof bundles, coverage
+certificates, wire-compatibility checks, and a browsable Contract Atlas) is
+implemented and dark, with its capacity envelope frozen in committed
+measurement receipts rather than asserted. The preregistered external
 benchmark ended honestly before scoring in an accepted capacity stop, so it
 supplies no accuracy claim. Contract extraction remains dark until it passes
-the preregistered internal shadow evaluation. I am proposing a bounded pilot
-to determine whether phebs reduces consumer-discovery time and makes the
-remaining uncertainty in migration decisions explicit. The ask: a six-week
-read-only pilot — one VM, a least-privilege identity, named sponsor,
-migration/build partners, independent reviewers, environment and Security
-capacity, advisory-only results.
+the preregistered internal shadow evaluation. A separately approved
+single-operator work-machine evaluation (2026-07-26, record held privately)
+precedes this ask: it will replace the synthetic capacity numbers below with
+sanitized measurements from the actual monorepo — counts, shapes, and
+failure classes only — before any pilot decision is made. I am proposing a
+bounded pilot to determine whether phebs reduces consumer-discovery time and
+makes the remaining uncertainty in migration decisions explicit. The ask: a
+six-week read-only pilot — one VM, a least-privilege identity, named
+sponsor, migration/build partners, independent reviewers, environment and
+Security capacity, advisory-only results.
 
 ## The problem
 
@@ -89,10 +98,10 @@ That is what a migration owner can act on — not a repository count.
 
 | Status | Capability |
 |---|---|
-| Operational | search, connectors, authentication/OIDC, audit, code navigation, MCP search tools |
-| Implemented but dark | Go/gRPC client-call and server-registration extraction, evidence storage, atomic fact publication |
+| Operational | search, connectors, authentication/OIDC, audit, code navigation, MCP search/read/navigation/history tools |
+| Implemented but dark | protobuf **and Thrift** declaration extraction; Go/gRPC and Go/Thrift client-call and server-registration extraction; content-addressed evidence storage with atomic chunked publication (25,000-row runs, measured); exportable proof bundles; deterministic coverage certificates; operation/field impact reports; pinned Buf WIRE compatibility (protobuf-only); browsable multi-protocol Contract Atlas; indexed reverse caller pagination and resumable retention (the Epic 20 store layer) |
 | Pilot hypothesis | build-target, deployable, service, and owner attribution; internal evaluation artifacts |
-| Post-gate productization | consumer queries, exportable proof bundles, durable coverage certificates, inventory history (diffable across snapshots) |
+| Post-gate productization | fleet-scale Caller Map and migration comparison UI/MCP workflow (Epic 20, in progress); consumer-candidate inventory history (diffable across snapshots); Change Workbench (Epic 21, specified) |
 
 The target artifact is a versioned consumer-candidate inventory bound to
 an **analysis manifest** recording: the monorepo commit/tree digest;
@@ -135,8 +144,10 @@ negative. The assurances are separable:
 
 Known analysis failures become explicit, while extractor error is measured
 on a named benchmark; residual misses for an individual internal query
-remain uncertain. Field-level proto dependency and compatibility analysis
-("what breaks if this field changes") is roadmap, not current capability.
+remain uncertain. Field-level protobuf reference analysis and pinned Buf
+WIRE compatibility ("what breaks if this field changes") are implemented
+and dark, protobuf-only; the Thrift equivalents are named, spike-gated
+candidates, not capabilities.
 
 ## What exists today
 
@@ -151,9 +162,15 @@ remain uncertain. Field-level proto dependency and compatibility analysis
   permission-filtered source evidence that agents can cite. Verified live
   from agent sessions.
 - **Evidence layer (dark):** content-addressed fact storage with atomic
-  publication and a fail-closed Go/gRPC client-call and server-registration
-  extractor, shipping behind an experimental flag until measured (mechanics
-  in Appendix B).
+  chunked publication and fail-closed declaration and consumer extractors
+  for **both protobuf/gRPC and Apache Thrift**, a multi-protocol Contract
+  Atlas, proof bundles, coverage certificates, impact reports, and
+  protobuf wire-compatibility checks — all behind experimental flags until
+  measured (mechanics in Appendix B). The capacity envelope is not
+  asserted: whole-run admission, publication/sweep wall time and memory,
+  reverse-page latency, and the symbol-index size boundary are frozen in a
+  committed go/no-go table with measurement receipts, each carrying its own
+  remeasure tripwire.
 
 Cold-index cost, incremental freshness, resource use, and recovery under
 monorepo commit volume are measured during the pilot, not asserted here.
@@ -262,10 +279,11 @@ new-consumer regression detection, contract-aware PR review, platform-SDK
 adoption campaigns, service-catalog reconciliation, incident blast-radius
 assessment, architecture-policy enforcement, feature-flag cleanup,
 dependency-remediation routing, and audit-evidence preparation. Additional
-measured evidence packs can extend the contract model from Go/gRPC
-operations to event topics and schemas, workflow activities and signals,
-configuration keys, shared-library APIs, security controls, and eventually
-field-level data lineage.
+measured evidence packs can extend the contract model beyond the shipped
+Go/gRPC and Thrift operations: Kafka topics/schemas and Thrift field
+references are already named candidates with frozen entry criteria, ahead
+of workflow activities and signals, configuration keys, shared-library
+APIs, security controls, and eventually field-level data lineage.
 
 The expansion thesis is not that phebs should analyze everything. It is
 that a deliberately small set of measured relationship types, joined to
@@ -281,18 +299,28 @@ the adoption case without expanding this ask.
 
 ## Roadmap
 
-1. **Now:** complete the Gate 0 prerequisites and independently review the
+1. **Now:** the approved single-operator work-machine evaluation
+   (2026-07-26): measure the actual monorepo against the frozen capacity
+   gates — per-domain fact and row cardinality against the 25,000-row
+   admission, reverse caller-page latency at real run sizes, and the
+   symbol-index document count against the 64 MiB root boundary — returning
+   sanitized counts, shapes, and failure classes only. These numbers land in
+   the committed go/no-go table and replace every synthetic capacity figure
+   in this document's premises before the pilot decision.
+2. **Then:** complete the Gate 0 prerequisites and independently review the
    charter's terminal-benchmark disposition.
-2. **Pilot:** validate the Go/gRPC call-site extractor and attribution chain
-   (build target → deployable → service → owner) as read-only enrichment
-   from build-graph, catalog, deployment, and ownership metadata; internal
-   shadow evaluation of both layers.
-3. **On passing measurements:** promote the existing dark consumer-candidate
+3. **Pilot:** validate the Go/gRPC and Go/Thrift call-site extractors and
+   the attribution chain (build target → deployable → service → owner) as
+   read-only enrichment from build-graph, catalog, deployment, and
+   ownership metadata; internal shadow evaluation of both layers.
+4. **On passing measurements:** promote the existing dark consumer-candidate
    queries, proof bundles, and coverage statements over the analyzed target
    and deployable universe; inventory history across snapshots.
-4. **Later:** additional extractors; proto field-level dependency and
-   compatibility analysis.
-5. **Production hardening:** enforced CI gates, signed releases, upgrade
+5. **Later, in partner-priority order:** Kafka topic/producer/consumer
+   evidence and Thrift field references — both already scoped as named
+   protocol-pack candidates with the same spike-first validation bar; then
+   further extractors.
+6. **Production hardening:** enforced CI gates, signed releases, upgrade
    and rollback procedures, backup/restore automation, operational SLOs,
    incident response, and production topology.
 
@@ -365,8 +393,11 @@ exactly the unknown consumer that matters.
 - **Extractor accuracy is not yet established**, and service attribution
   is a pilot hypothesis with its own separate evaluation. Both stay
   advisory until measured.
-- **Go/gRPC first.** Other languages, protocols, and build systems are
-  roadmap, not promises; each gets the same measurement bar.
+- **Go/gRPC and Go/Thrift first.** Both RPC planes are implemented dark
+  with identical validation posture; neither carries an accuracy claim yet.
+  Kafka and Thrift field references are named, spike-gated candidates;
+  other languages, protocols, and build systems are roadmap, not promises;
+  each gets the same measurement bar.
 - **Ingestion assumes a git-accessible monorepo mirror** at cloneable
   scale; phebs is proven on open-source repository scale, not yet on ours.
   Non-source feasibility is checked before retained source access; an
@@ -407,9 +438,10 @@ remaining accuracy gate.
 
 Content-addressed evidence atoms (identical vendored code deduplicates);
 associations carry snapshot/path/span placement; assertions carry typed
-predicates — CALLS_OPERATION, REGISTERS_GRPC_SERVICE (deliberately
-narrower than "implements": implementing an interface does not establish
-that the service is registered or served). Publication is atomic and
+predicates — CALLS_OPERATION, REGISTERS_GRPC_SERVICE, and the Thrift
+family (REGISTERS_THRIFT_SERVICE and its abstention predicates) —
+deliberately narrower than "implements": implementing an interface does
+not establish that the service is registered or served. Publication is atomic and
 staged: readers see the previous complete fact set until a new one
 commits. Retention is proof-aware — evidence referenced by a retained
 bundle is not aged out — subject to an explicit deletion/revocation
