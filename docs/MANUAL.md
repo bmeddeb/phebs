@@ -1471,7 +1471,7 @@ negative-proof conclusions.
 
 T20.8 adds declaration-proven typed Go caller evidence without changing that
 legacy reader or its proof results. Under the same protocol flags, the
-`grpc-caller` and `thrift-caller` 1.0.0 domains read a committed root
+`grpc-caller` and `thrift-caller` 1.1.0 domains read a committed root
 `index.scip`; phebs still never creates or downloads that index. Each source
 call must carry the exact SCIP symbol of a checked-in generated client method.
 For gRPC, the generated definition must also agree with one `// source:`
@@ -1492,6 +1492,18 @@ time, including unattributed and ambiguous results, so later pages never
 silently reclassify old evidence. These domains have no direct public route in
 T20.8; T20.10 is their first read surface. They remain provisional and dark,
 and establish neither caller completeness nor measured accuracy.
+
+When a usable typed occurrence is absent, version 1.1.0 may use the bounded
+package-aware fallback. It requires a valid repository-root `go.mod`, an
+explicit import of one indexed generated package, and one of five local
+provenance shapes: imported client parameter, imported type alias, generated
+constructor assignment, named client field, or embedded client. Such rows use
+`resolution=syntax` and tier `heuristic`. A SCIP occurrence always wins and is
+never duplicated. Dynamic/interface flows, dot imports, or multiple candidate
+clients remain operation-keyed `UNRESOLVED_CALLER` rows; the reader does not
+perform general assignment propagation, reflection, type checking, builds, or
+module resolution. The fallback can still operate when SCIP is absent or
+malformed, but that independent coverage gap remains visible.
 
 The opt-in also reads a repository-root, committed `index.scip` to emit T13.2
 `REFERENCES_PROTO_FIELD` assertions. phebs never runs or downloads a SCIP

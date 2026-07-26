@@ -314,7 +314,7 @@ func TestTypedSCIPMappingAbstentionAndInputFailure(t *testing.T) {
 	if err != nil || len(facts) != 0 ||
 		!reflect.DeepEqual(coverage.Protocols, []string{
 			"generated-from-snapshot-v1", "grpc", "resolution-scip-v1",
-			"scip", "scip-index-absent",
+			"resolution-syntax-v1", "scip", "scip-index-absent",
 		}) {
 		t.Fatalf("missing index = %+v / %+v / %v", coverage, facts, err)
 	}
@@ -368,6 +368,249 @@ func TestTypedSCIPResultSurvivesLocalVariableRename(t *testing.T) {
 		before.Assertion.Tier != after.Assertion.Tier ||
 		before.Assertion.CodeRole != after.Assertion.CodeRole {
 		t.Fatalf("typed semantics changed after rename:\nbefore=%+v\nafter=%+v", before, after)
+	}
+}
+
+func TestPackageAwareSyntaxFallbackRulesAndDeterminism(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := cloneFiles(profile.Files)
+	files["gen/proto/orders/v1/orders_grpc.pb.go"] = append(
+		files["gen/proto/orders/v1/orders_grpc.pb.go"],
+		[]byte("\nfunc NewOrdersClient(any) OrdersClient { return nil }\n")...,
+	)
+	const ordersImport = "synthetic.invalid/mono/gen/proto/orders/v1"
+	const collisionImport = "synthetic.invalid/mono/gen/proto/collision/v1"
+	fixtures := map[string]string{
+		"src/syntax/parameter.go": `package syntax
+import orders "` + ordersImport + `"
+func Parameter(ctx any, client orders.OrdersClient) { _, _ = client.Get(ctx, nil) }
+`,
+		"src/syntax/constructor.go": `package syntax
+import orders "` + ordersImport + `"
+func Constructor(ctx any) {
+	client := orders.NewOrdersClient(nil)
+	_, _ = client.Get(ctx, nil)
+}
+`,
+		"src/syntax/field.go": `package syntax
+import orders "` + ordersImport + `"
+type FieldRunner struct { client orders.OrdersClient }
+func (r FieldRunner) Run(ctx any) { _, _ = r.client.Get(ctx, nil) }
+`,
+		"src/syntax/embedded.go": `package syntax
+import orders "` + ordersImport + `"
+type EmbeddedRunner struct { orders.OrdersClient }
+func (r EmbeddedRunner) Run(ctx any) { _, _ = r.Get(ctx, nil) }
+`,
+		"src/syntax/alias.go": `package syntax
+import orders "` + ordersImport + `"
+type LocalClient = orders.OrdersClient
+func Alias(ctx any, client LocalClient) { _, _ = client.Get(ctx, nil) }
+`,
+		"src/syntax/dynamic.go": `package syntax
+import orders "` + ordersImport + `"
+func Dynamic(ctx any, client any) { _, _ = client.Get(ctx, nil) }
+`,
+		"src/syntax/ambiguous.go": `package syntax
+import (
+	orders "` + ordersImport + `"
+	collision "` + collisionImport + `"
+)
+var _, _ = orders.OrdersClient(nil), collision.CommonClient(nil)
+func Ambiguous(ctx any, client any) { _, _ = client.Get(ctx, nil) }
+`,
+		"src/syntax/ambiguous_receiver.go": `package syntax
+import (
+	orders "` + ordersImport + `"
+	collision "` + collisionImport + `"
+)
+type AmbiguousRunner struct {
+	orders.OrdersClient
+	collision.CommonClient
+}
+func (r AmbiguousRunner) Run(ctx any) { _, _ = r.Get(ctx, nil) }
+`,
+		"src/syntax/dot.go": `package syntax
+import . "` + ordersImport + `"
+var _ OrdersClient
+func Dot(ctx any, client any) { _, _ = client.Get(ctx, nil) }
+`,
+		"src/syntax/typed.go": `package syntax
+import orders "` + ordersImport + `"
+func Typed(ctx any, client orders.OrdersClient) { _, _ = client.Get(ctx, nil) }
+`,
+	}
+	for filePath, content := range fixtures {
+		files[filePath] = []byte(content)
+	}
+	files["index.scip"] = appendSCIPDocument(
+		t, files["index.scip"], "src/syntax/typed.go", t201.ProtoGetSymbol,
+		fixtures["src/syntax/typed.go"], "Get(ctx",
+	)
+
+	attribution := frozenAttribution(profile)
+	const collisionGenerated = "gen/proto/collision/v1/common_grpc.pb.go"
+	const collisionRelative = "collision/v1/common.proto"
+	attribution.relations["grpc\x00"+collisionGenerated+"\x00"+collisionRelative] = sdk.GeneratedFromAttribution{
+		State: sdk.AttributionStateResolved,
+		Candidates: []sdk.GeneratedFromCandidate{{
+			Protocol: "grpc", GeneratedPath: collisionGenerated,
+			GeneratorRelativePath: collisionRelative,
+			DeclarationPath:       "vendor/contracts/orders.proto",
+			DeclarationLineage:    "provisional_repo_path_v1_" + strings.Repeat("c", 64),
+		}},
+	}
+	corpus := memoryCorpus{
+		repo: "synthetic.invalid/mono", commit: strings.Repeat("4", 40),
+		files: files, attribution: attribution,
+	}
+	run := func() ([]sdk.Fact, sdk.Coverage) {
+		t.Helper()
+		var facts []sdk.Fact
+		coverage, err := gocaller.NewGRPC().Extract(
+			context.Background(), corpus,
+			func(fact sdk.Fact) error {
+				facts = append(facts, fact)
+				return nil
+			},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return facts, coverage
+	}
+	firstFacts, firstCoverage := run()
+	secondFacts, secondCoverage := run()
+	if !reflect.DeepEqual(firstFacts, secondFacts) ||
+		!reflect.DeepEqual(firstCoverage, secondCoverage) {
+		t.Fatal("syntax fallback is not byte-order deterministic")
+	}
+
+	resolvedSyntax, unresolvedSyntax, typed := 0, 0, 0
+	reasons := map[string]int{}
+	for _, fact := range firstFacts {
+		switch {
+		case strings.Contains(fact.Assertion.Detail, `"resolution":"syntax"`) &&
+			fact.Assertion.Predicate == "CALLS_OPERATION":
+			resolvedSyntax++
+			if fact.Assertion.Object != "/synthetic.orders.v1.Orders/Get" ||
+				fact.Assertion.Tier != "heuristic" || fact.Assertion.Lineage == "" {
+				t.Fatalf("resolved fallback = %+v", fact)
+			}
+		case strings.Contains(fact.Assertion.Detail, `"resolution":"syntax"`) &&
+			fact.Assertion.Predicate == "UNRESOLVED_CALLER":
+			unresolvedSyntax++
+			for _, reason := range []string{
+				"unsupported_receiver_flow", "ambiguous_method_candidates",
+				"ambiguous_receiver_provenance", "dot_import_unsupported",
+			} {
+				if strings.Contains(fact.Assertion.Detail, reason) {
+					reasons[reason]++
+				}
+			}
+		case fact.Path == "src/syntax/typed.go" &&
+			strings.Contains(fact.Assertion.Detail, `"resolution":"scip"`):
+			typed++
+		}
+	}
+	if resolvedSyntax != 5 || unresolvedSyntax != 6 || typed != 1 ||
+		firstCoverage.UnresolvedCount != 6 ||
+		reasons["unsupported_receiver_flow"] != 1 ||
+		reasons["ambiguous_method_candidates"] != 2 ||
+		reasons["ambiguous_receiver_provenance"] != 2 ||
+		reasons["dot_import_unsupported"] != 1 {
+		t.Fatalf(
+			"fallback counts resolved=%d unresolved=%d typed=%d coverage=%+v reasons=%v",
+			resolvedSyntax, unresolvedSyntax, typed, firstCoverage, reasons,
+		)
+	}
+
+	withoutIndex := cloneFiles(files)
+	delete(withoutIndex, "index.scip")
+	var fallbackOnly []sdk.Fact
+	coverage, err := gocaller.NewGRPC().Extract(
+		context.Background(),
+		memoryCorpus{
+			repo: corpus.repo, commit: corpus.commit, files: withoutIndex,
+			attribution: attribution,
+		},
+		func(fact sdk.Fact) error {
+			fallbackOnly = append(fallbackOnly, fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolvedSyntax = 0
+	for _, fact := range fallbackOnly {
+		if fact.Assertion.Predicate == "CALLS_OPERATION" &&
+			strings.Contains(fact.Assertion.Detail, `"resolution":"syntax"`) {
+			resolvedSyntax++
+		}
+	}
+	if resolvedSyntax != 6 || coverage.UnresolvedCount != 6 ||
+		!slicesContain(coverage.Protocols, "scip-index-absent") {
+		t.Fatalf("fallback without SCIP = %d / %+v", resolvedSyntax, coverage)
+	}
+}
+
+func TestPackageAwareThriftFallbackUsesDirectMapping(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := cloneFiles(profile.Files)
+	files["gen/thrift/ledger/ledger.go"] = append(
+		files["gen/thrift/ledger/ledger.go"],
+		[]byte("\nfunc NewLedgerClient(any) *LedgerClient { return &LedgerClient{} }\n")...,
+	)
+	files["src/thrift/syntax.go"] = []byte(`package thriftcaller
+import ledger "synthetic.invalid/mono/gen/thrift/ledger"
+func Direct(ctx any, client ledger.LedgerClient) { _, _ = client.Get(ctx, nil) }
+func Constructed(ctx any) {
+	client := ledger.NewLedgerClient(nil)
+	_, _ = client.Get(ctx, nil)
+}
+func Dynamic(ctx any, client any) { _, _ = client.Get(ctx, nil) }
+`)
+	var facts []sdk.Fact
+	coverage, err := gocaller.NewThrift().Extract(
+		context.Background(),
+		memoryCorpus{
+			repo: "synthetic.invalid/mono", commit: strings.Repeat("5", 40),
+			files: files, attribution: frozenAttribution(profile),
+		},
+		func(fact sdk.Fact) error {
+			if fact.Path == "src/thrift/syntax.go" {
+				facts = append(facts, fact)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolved, unresolved := 0, 0
+	for _, fact := range facts {
+		if fact.Assertion.Object != "/ledger.Ledger/get" {
+			t.Fatalf("Thrift fallback object = %+v", fact)
+		}
+		switch fact.Assertion.Predicate {
+		case "CALLS_OPERATION":
+			resolved++
+		case "UNRESOLVED_CALLER":
+			unresolved++
+		}
+	}
+	if resolved != 2 || unresolved != 1 || coverage.UnresolvedCount != 1 {
+		t.Fatalf(
+			"Thrift fallback resolved=%d unresolved=%d coverage=%+v facts=%+v",
+			resolved, unresolved, coverage, facts,
+		)
 	}
 }
 
@@ -433,6 +676,31 @@ func appendSCIPReference(
 	return nil
 }
 
+func appendSCIPDocument(
+	t *testing.T,
+	encoded []byte,
+	documentPath, symbol, content, needle string,
+) []byte {
+	t.Helper()
+	index := decodeSCIPIndex(t, encoded)
+	occurrence := &scip.Occurrence{
+		Symbol: symbol, SymbolRoles: int32(scip.SymbolRole_ReadAccess),
+	}
+	occurrence.SetSourceRange(scip.NewRangeUnchecked(
+		sourceRange(content, needle, 0),
+	))
+	index.Documents = append(index.Documents, &scip.Document{
+		RelativePath:     documentPath,
+		PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+		Occurrences:      []*scip.Occurrence{occurrence},
+	})
+	sort.Slice(index.Documents, func(i, j int) bool {
+		return index.Documents[i].GetRelativePath() <
+			index.Documents[j].GetRelativePath()
+	})
+	return encodeSCIPIndex(t, index)
+}
+
 func replaceSCIPReferenceRange(
 	t *testing.T,
 	encoded []byte,
@@ -491,4 +759,13 @@ func sourceRange(content, needle string, occurrence int) []int32 {
 	lineStart := strings.LastIndex(content[:offset], "\n") + 1
 	character := int32(offset - lineStart)
 	return []int32{line, character, character + int32(len(strings.TrimSuffix(needle, "(ctx")))}
+}
+
+func slicesContain(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

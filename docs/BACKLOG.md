@@ -1919,7 +1919,8 @@ consumer domains remain unchanged for existing experimental proof surfaces;
 T20.10 reads only the new declaration-proven domains. No type checker, build,
 generator, module download, filesystem, network, or accuracy claim is added.
 
-**T20.9 · Package-aware syntactic fallback** *(needs T20.7, T20.8)* — when no
+**T20.9 · Package-aware syntactic fallback** ✅
+*(2026-07-26; needs T20.7, T20.8)* — when no
 usable typed occurrence exists, trace bounded import aliases, explicit
 receiver/type provenance, generated client constructors, and embedded clients
 to one generated wire anchor and one admitted declaration mapping. Dynamic
@@ -1930,6 +1931,32 @@ AC: every supported construct and reason code is table-pinned; common method
 names never cross clients; a typed result wins without being duplicated by the
 fallback; unsupported flows do not become guessed callers; two runs are
 byte-identical.
+
+Implementation/result: `grpc-caller` and `thrift-caller` advance to 1.1.0 and
+add a second, independently identified `resolution=syntax` path. The reader
+derives one generated package import identity from the repository-root
+`go.mod` plus each admitted generated path, then indexes only the same
+generator-anchored methods and T20.7 mappings used by typed resolution.
+Fallback recognizes explicit imported client parameters and aliases, generated
+constructor assignments, named client fields, and embedded clients. Resolved
+rows remain declaration-lineage-proven but are tier `heuristic`, making their
+lower resolution strength visible.
+
+The bounded reason table is `unsupported_receiver_flow`,
+`ambiguous_method_candidates`, `ambiguous_receiver_provenance`, and
+`dot_import_unsupported`, plus the T20.8 generated-from reasons. Candidate
+abstentions are emitted once per canonical operation; equal method spellings
+from different imported clients never select a winner. SCIP method ranges
+always suppress the same syntactic occurrence, including typed abstentions.
+Fallback still operates when the root index is absent or malformed, while the
+SCIP coverage state/gap remains independently visible. A missing or invalid
+module directive makes package fallback unavailable without weakening typed
+publication. The table-driven fixture pins all five supported provenance
+shapes, every fallback reason, two different `Get` operations, typed
+precedence, absent-SCIP operation, and two-run byte/order determinism. No
+general assignment dataflow, interface propagation, reflection, type checker,
+build, module download, filesystem, network, completeness, or accuracy claim
+is introduced.
 
 **T20.10 · Shared snapshot-consistent Caller Map service/API and vocabulary migration**
 *(needs T20.4, T20.7–T20.9)* — add an ephemeral paged read for one complete

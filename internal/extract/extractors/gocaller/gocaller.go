@@ -31,7 +31,7 @@ import (
 const (
 	grpcDomain   = "grpc-caller"
 	thriftDomain = "thrift-caller"
-	version      = "1.0.0"
+	version      = "1.1.0"
 	indexPath    = "index.scip"
 
 	schemaVersion       = "t20-caller-v1"
@@ -57,7 +57,8 @@ type extractor struct {
 func (e extractor) Domain() string  { return e.domain }
 func (e extractor) Version() string { return version }
 func (e extractor) Candidate(filePath string) bool {
-	return filePath == indexPath
+	return filePath == indexPath || filePath == "go.mod" ||
+		strings.HasSuffix(filePath, ".go")
 }
 
 type indexedOccurrence struct {
@@ -134,7 +135,8 @@ func (e extractor) Extract(
 	emit sdk.Emit,
 ) (sdk.Coverage, error) {
 	coverage := sdk.Coverage{Protocols: []string{
-		e.protocol, "generated-from-snapshot-v1", "resolution-scip-v1", "scip",
+		e.protocol, "generated-from-snapshot-v1", "resolution-scip-v1",
+		"resolution-syntax-v1", "scip",
 	}}
 	paths := make(map[string]struct{})
 	if err := corpus.WalkFiles(ctx, func(filePath string) error {
@@ -143,40 +145,42 @@ func (e extractor) Extract(
 	}); err != nil {
 		return coverage, err
 	}
+	var documents []indexedDocument
 	if _, present := paths[indexPath]; !present {
 		coverage.Protocols = append(coverage.Protocols, "scip-index-absent")
-		sort.Strings(coverage.Protocols)
-		return coverage, nil
-	}
-	indexCorpus, ok := corpus.(sdk.SCIPCorpus)
-	if !ok {
-		return coverage, errors.New("corpus does not support bounded SCIP index reads")
-	}
-	indexBlob, err := indexCorpus.ReadSCIPIndex(ctx)
-	if err != nil {
-		return coverage, fmt.Errorf("read %s: %w", indexPath, err)
-	}
-	documents, parseErr := parseIndex(ctx, indexBlob.Content)
-	if parseErr != nil {
-		if err := emitGap(indexBlob, "malformed_symbol_input", parseErr.Error(), emit); err != nil {
-			return coverage, err
+	} else {
+		indexCorpus, ok := corpus.(sdk.SCIPCorpus)
+		if !ok {
+			return coverage, errors.New("corpus does not support bounded SCIP index reads")
 		}
-		coverage.UnresolvedCount = 1
-		sort.Strings(coverage.Protocols)
-		return coverage, nil
-	}
-	for _, document := range documents {
-		if _, present := paths[document.path]; !present {
-			if err := emitGap(indexBlob, "stale_symbol_input", document.path, emit); err != nil {
+		indexBlob, err := indexCorpus.ReadSCIPIndex(ctx)
+		if err != nil {
+			return coverage, fmt.Errorf("read %s: %w", indexPath, err)
+		}
+		var parseErr error
+		documents, parseErr = parseIndex(ctx, indexBlob.Content)
+		if parseErr != nil {
+			if err := emitGap(indexBlob, "malformed_symbol_input", parseErr.Error(), emit); err != nil {
 				return coverage, err
 			}
 			coverage.UnresolvedCount = 1
-			sort.Strings(coverage.Protocols)
-			return coverage, nil
+			documents = nil
+		} else {
+			for _, document := range documents {
+				if _, present := paths[document.path]; present {
+					continue
+				}
+				if err := emitGap(indexBlob, "stale_symbol_input", document.path, emit); err != nil {
+					return coverage, err
+				}
+				coverage.UnresolvedCount = 1
+				documents = nil
+				break
+			}
 		}
+		// The raw index is not retained across subsequent source reads.
+		indexBlob = sdk.Blob{}
 	}
-	// The raw index is not retained across subsequent source reads.
-	indexBlob = sdk.Blob{}
 
 	var attribution attributionLookup = unavailableAttribution{}
 	attributionDigest := ""
@@ -195,10 +199,17 @@ func (e extractor) Extract(
 	if err != nil {
 		return coverage, err
 	}
-	unresolved, err := e.emitReferences(
+	unresolved, typedSpans, err := e.emitReferences(
 		ctx, corpus, documents, bindings, attribution, attributionDigest, emit,
 	)
+	if err != nil {
+		return coverage, err
+	}
 	coverage.UnresolvedCount += unresolved
+	fallbackUnresolved, err := e.emitSyntaxFallback(
+		ctx, corpus, paths, typedSpans, attribution, attributionDigest, emit,
+	)
+	coverage.UnresolvedCount += fallbackUnresolved
 	sort.Strings(coverage.Protocols)
 	return coverage, err
 }
@@ -529,18 +540,19 @@ func (e extractor) emitReferences(
 	attribution attributionLookup,
 	attributionDigest string,
 	emit sdk.Emit,
-) (int, error) {
+) (int, map[string]map[byteRange]struct{}, error) {
 	unresolved := make(map[string]struct{})
+	typedSpans := make(map[string]map[byteRange]struct{})
 	for _, document := range documents {
 		if err := ctx.Err(); err != nil {
-			return len(unresolved), err
+			return len(unresolved), typedSpans, err
 		}
 		if !documentHasReferences(document, bindings) {
 			continue
 		}
 		blob, err := corpus.Read(ctx, document.path)
 		if err != nil {
-			return len(unresolved), fmt.Errorf("read caller document %q: %w", document.path, err)
+			return len(unresolved), typedSpans, fmt.Errorf("read caller document %q: %w", document.path, err)
 		}
 		if len(blob.Content) > maxSourceBytes || !utf8.ValidString(blob.Content) {
 			continue
@@ -560,6 +572,10 @@ func (e extractor) emitReferences(
 			if !ok {
 				continue
 			}
+			if typedSpans[document.path] == nil {
+				typedSpans[document.path] = make(map[byteRange]struct{})
+			}
+			typedSpans[document.path][byteRange{start: start, end: end}] = struct{}{}
 			spanStart, spanEnd, present := typedCallSpan(blob.Content, start, end)
 			if !present {
 				if err := emitCallerFact(
@@ -567,10 +583,10 @@ func (e extractor) emitReferences(
 					start+max(1, len(methodFromOperation(binding.operation))),
 					binding, attributionDigest,
 					attribution.ConsumerUnits(document.path, lineAtByte(starts, start)),
-					"scip_range_not_call_selector",
+					"scip", "scip_range_not_call_selector",
 					classifyRole(document.path, blob.Content), emit,
 				); err != nil {
-					return len(unresolved), err
+					return len(unresolved), typedSpans, err
 				}
 				unresolved[callerIdentity(binding.operation, document.path, start, end)] = struct{}{}
 				continue
@@ -583,10 +599,10 @@ func (e extractor) emitReferences(
 				e.protocol, document.path, blob, starts, spanStart, spanEnd,
 				binding, attributionDigest,
 				attribution.ConsumerUnits(document.path, lineAtByte(starts, spanStart)),
-				reason,
+				"scip", reason,
 				classifyRole(document.path, blob.Content), emit,
 			); err != nil {
-				return len(unresolved), err
+				return len(unresolved), typedSpans, err
 			}
 			if reason != "" {
 				unresolved[callerIdentity(
@@ -595,7 +611,7 @@ func (e extractor) emitReferences(
 			}
 		}
 	}
-	return len(unresolved), nil
+	return len(unresolved), typedSpans, nil
 }
 
 func emitCallerFact(
@@ -606,18 +622,23 @@ func emitCallerFact(
 	binding symbolBinding,
 	attributionDigest string,
 	units sdk.ConsumerUnitAttribution,
-	reason, codeRole string,
+	resolution, reason, codeRole string,
 	emit sdk.Emit,
 ) error {
 	if start < 0 || end <= start || end > len(blob.Content) {
 		return errors.New("caller source span is invalid")
 	}
-	predicate, lineage, tier, rule := "CALLS_OPERATION", binding.lineage, "derived", "go-caller-scip-v1"
+	tier, rule := "derived", "go-caller-scip-v1"
+	if resolution == "syntax" {
+		tier, rule = "heuristic", "go-caller-syntax-v1"
+	}
+	predicate, lineage := "CALLS_OPERATION", binding.lineage
 	if reason != "" {
-		predicate, lineage, tier, rule = "UNRESOLVED_CALLER", "", "unresolved", "go-caller-scip-abstention-v1"
+		predicate, lineage, tier = "UNRESOLVED_CALLER", "", "unresolved"
+		rule = "go-caller-" + resolution + "-abstention-v1"
 	}
 	detail := callerDetail{
-		Schema: "go-caller-detail-v1", Resolution: "scip", Protocol: protocol,
+		Schema: "go-caller-detail-v1", Resolution: resolution, Protocol: protocol,
 		GeneratedSymbol: binding.symbol, GeneratedPath: binding.generatedPath,
 		DeclarationPath:   binding.declarationPath,
 		GeneratorRelative: binding.generatorRelative,
