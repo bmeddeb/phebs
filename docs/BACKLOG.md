@@ -1552,18 +1552,21 @@ of one content atom, 20,020 association-plus-assertion rows, and 10,010
 reference edges. The committed measurement receipt is
 `spike/t201/results.json` (Go 1.26.5, darwin/arm64, 10 GOMAXPROCS,
 SurrealDB 3.2.0 `sha256:ee819d…`, `t12-store-v4` /
-`t12-evidence-v1`). This is a capacity/rule-validation result, not an accuracy
+`t12-evidence-v1`). It is an immutable historical baseline captured before
+T20.3's publication marker and field guards, not a receipt for the current
+writer. Current-writer measurements use the versioned opt-in harness and a
+separate receipt. This is a capacity/rule-validation result, not an accuracy
 claim.
 
 | Gate | Frozen target / ceiling | Current observation | Decision for downstream tickets |
 |---|---|---|---|
 | Worker population and memory | 10,010 calls; incremental Go heap ≤256 MiB over the pre-run baseline | `maxFactsPerRun=5,000` refuses the target before a target-size worker run exists | **GO T20.2:** chunked staging is required; the 256 MiB incremental-heap ceiling is binding |
-| Run rows | 20,020 rows; admission target 25,000 | `maxEvidenceRowsPerRun=10,000`; target measured only by passing 25,000 as the admitted variable to the exact production statements | **GO T20.3:** advance the writer generation and admit at least 25,000 rows; store-derived validation remains authoritative |
+| Run rows | 20,020 rows; admission target 25,000 | Historical v4 baseline: `maxEvidenceRowsPerRun=10,000`; target measured by passing 25,000 as the admitted variable to the exact production statements. T20.3 subsequently made 25,000 the production ceiling | **GO T20.3:** advance the writer generation and admit exactly the frozen 25,000-row ceiling; store-derived validation remains authoritative |
 | Same-operation fanout | 10,004 supporting call IDs in the oracle | `maxEvidenceRefsPerAssertion=4,096` | Keep occurrence assertions source-granular; Caller Map pagination composes them. Do not build one giant stored assertion or raise this bound for aggregation |
 | Reference edges | 10,010 | `maxEvidenceReferenceEdges=20,000` | **PASS:** retain the 20,000 edge ceiling for the frozen target |
 | Repeated content placement | 101 repository placements | `maxEvidenceOccurrences=100` makes whole-atom `ResolveEvidence` fail closed above the limit | Keep the legacy whole-atom bound; T20.4 caller pages must page occurrence assertions and never use `ResolveEvidence` as a fleet inventory primitive |
-| Atomic publish/recount | ≤2.0 s wall, ≤512 MiB Surreal peak RSS, ≤16 MiB Go allocation | 156 ms; 236,732,416 B peak RSS (225.8 MiB); 190,048 B Go allocation; atomic successor visible and predecessor superseded | **PASS / GO T20.3:** retain the exact single-transaction store recount and supersession flip; no chunk-counter substitute is justified |
-| One-run sweep | ≤2.0 s wall, ≤512 MiB Surreal peak RSS | 1,024 ms; 332,562,432 B peak RSS (317.2 MiB); one complete 20,020-row superseded run removed, current shared atoms/rows survived | **PASS mechanics / GO T20.5:** the target fits, but one-run candidate is not a row bound; resumable row chunks remain required before raising durable run admission |
+| Atomic publish/recount | ≤2.0 s wall, ≤512 MiB Surreal peak RSS, ≤16 MiB Go allocation | Historical v4/pre-guard baseline: 156 ms; 236,732,416 B peak RSS (225.8 MiB); 190,048 B Go allocation; atomic successor visible and predecessor superseded. T20.3's retained v5 gate remeasured publication at 145.348583 ms | **PASS / GO T20.3:** retain the exact single-transaction store recount and supersession flip; no chunk-counter substitute is justified |
+| One-run sweep | ≤2.0 s wall, ≤512 MiB Surreal peak RSS | Historical v4/pre-guard baseline: 1,024 ms; 332,562,432 B peak RSS (317.2 MiB); one complete 20,020-row superseded run removed, current shared atoms/rows survived | **PASS for the frozen target / GO T20.5:** this authorizes the 20,020-row workload under the 25,000-row production ceiling. Resumable physical row chunks remain required before raising admission beyond 25,000 because one candidate run is not a row bound |
 | Exact reverse first page | 100 rows + one continuation sentinel; ≤250 ms on the reference profile; selected plan must not scan the run | 175 ms API wall / 23.1 ms database plan, but `assertion_run` scanned and filtered all 10,010 rows before `SortTopK` | **NO-GO current plan / GO T20.4:** composite `(run,predicate,object[,lineage])` pagination index is mandatory despite the one-machine wall-time pass |
 | Typed-index input | One commit-bound root `index.scip`; ≤64 MiB | 107 documents / 10,005 typed references / 893,956 B (1.33%); byte-identical generation and every indexed path/range validated | **PASS / T20.6 root-only selected:** retain the dedicated root capability; no shard manifest at this target |
 | UI inventory | Default 50, maximum 100 rows per server page; at most 500 rendered group/source rows including bounded expansion state | Atlas detail scans 500 assertions and returns at most 200 relationships; proof queries cap at 5,000 assertions / 20,000 evidence references | **NO-GO current surfaces / GO T20.10–T20.12:** Caller Map gets its own strict pages; Atlas/proof limits are not inventory limits |
@@ -1657,7 +1660,13 @@ Acceptance receipt (2026-07-26): the focused production-path gate passed all
 three retained cases. The exact 10,010-fact / 20,020-row successor published
 in 145.348583 ms against the frozen 2 s ceiling; v4→v5 migration/pin
 canonicalization and rollback/mixed-writer refusal also passed. This is a
-capacity and integrity result, not an extraction-accuracy claim.
+capacity and integrity result, not an extraction-accuracy claim. The
+25,000-row value is the frozen admission ceiling, not an unbounded raise.
+T20.1's 1.024 s complete-target sweep is a historical v4/pre-guard result;
+the opt-in measurement now re-executes publication and one complete
+20,020-row sweep with the current production statements, guards, and limits
+and emits a distinct `t20-store-measurement-v2` receipt. T20.5 remains
+required before admission can rise beyond 25,000.
 
 **T20.4 · Composite reverse query and index** *(needs T20.3)* — add the
 EvidenceStore page primitive and composite index shape for exact

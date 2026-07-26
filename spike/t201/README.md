@@ -70,26 +70,32 @@ They pin deterministic generation, the prepared-index digest and shape, all
 correctness cases, scale cardinalities, current extraction output, deliberate
 global-name abstention, neutral naming, and production hard limits.
 
-The target-size store measurement is opt-in because it stages two 20,000-row
-runs and sweeps one of them. It admits only larger limit variables through a
-test-only seam; it invokes the exact production `addEvidenceSQL`,
-`publishExtractionRunSQL`, and `sweepRunSQL` constants:
+The target-size store measurement is opt-in because it stages two 20,020-row
+runs under the current 25,000-row production admission and completely sweeps
+the superseded one. It invokes the exact production `addEvidenceSQL`,
+`publishExtractionRunSQL`, and `sweepRunSQL` statements and limit variables:
 
 ```sh
 T201_MEASURE_STORE=1 \
-T201_RESULTS_PATH=/private/tmp/phebs-t201-results.json \
-GOCACHE=/private/tmp/phebs-t201-go-cache \
+T201_RESULTS_PATH=/private/tmp/phebs-current-store-results.json \
+GOCACHE=/private/tmp/phebs-current-store-go-cache \
 go test ./internal/store \
-  -run '^TestT201TargetPublicationAndSweepMeasurement$' -count=1 -v
+  -run '^TestT201TargetPublicationAndSweepMeasurement$' \
+  -count=1 -timeout=25m -v
 ```
 
-The reviewed metrics are committed in `results.json`; the go/no-go table is in
-`docs/BACKLOG.md` and the binding decision is in the T20.1 PLAN ADR.
+New output uses `t20-store-measurement-v2` and records the active store
+generation, writer-guard event, admission, and reference-edge limit. The
+reviewed `results.json` is deliberately not overwritten: it is the immutable
+T20.1 baseline captured against `t12-store-v4` before the T20.3 publication
+marker/field guards. The go/no-go table labels those publication and sweep
+numbers as historical; later writer receipts are separate observations.
 
-## Frozen result
+## Frozen historical result
 
 The reference run used Go 1.26.5 on darwin/arm64 (10 GOMAXPROCS) and
-SurrealDB 3.2.0. At 10,010 facts / 20,020 rows:
+SurrealDB 3.2.0 with `t12-store-v4`, before the T20.3 writer guards. At
+10,010 facts / 20,020 rows:
 
 - exact publication recount plus atomic supersession took 156 ms, allocated
   190,048 Go bytes, and observed 236,732,416 bytes peak Surreal RSS;
@@ -98,9 +104,12 @@ SurrealDB 3.2.0. At 10,010 facts / 20,020 rows:
 - exact one-run sweep took 1,024 ms and observed 332,562,432 bytes peak Surreal
   RSS; it removed the superseded run and preserved the current shared rows.
 
-Publication and sweep pass the frozen 2 s / 512 MiB gates. The reverse
-wall-time passes the 250 ms reference budget but its plan fails: T20.4 must
-land the composite reverse index. Current 5,000-fact and 10,000-row admission
-limits fail the target, so T20.2/T20.3 proceed. T20.2's frozen worker ceiling
-is 256 MiB incremental Go heap. The root-only scale SCIP input passes at
-893,956 bytes, so T20.6 adds no shard manifest at this target.
+Publication and sweep passed the frozen 2 s / 512 MiB gates for that writer.
+The sweep result authorized admitting this frozen 20,020-row workload under
+the 25,000-row T20.3 ceiling; it did not authorize a higher admission or
+remove T20.5's requirement for resumable physical row chunks. The reverse
+wall-time passed the 250 ms reference budget but its plan failed: T20.4 must
+land the composite reverse index. The then-current 5,000-fact and 10,000-row
+limits justified T20.2/T20.3. T20.2's frozen worker ceiling is 256 MiB
+incremental Go heap. The root-only scale SCIP input passes at 893,956 bytes,
+so T20.6 adds no shard manifest at this target.

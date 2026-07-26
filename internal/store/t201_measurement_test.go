@@ -21,8 +21,8 @@ import (
 
 const (
 	t201TargetFacts          = t201.ScaleTotalCalls
-	t201AdmittedRunRows      = 25_000
-	t201AdmittedReferenceMax = 25_000
+	t201AdmittedRunRows      = maxEvidenceRowsPerRun
+	t201AdmittedReferenceMax = maxEvidenceReferenceEdges
 	t201BatchFacts           = 500
 )
 
@@ -36,6 +36,9 @@ type t201Metrics struct {
 	SurrealSHA256               string `json:"surreal_sha256"`
 	StoreSchema                 string `json:"store_schema"`
 	EvidenceFormat              string `json:"evidence_format"`
+	WriterGuardEvent            string `json:"writer_guard_event"`
+	AdmissionRows               int    `json:"admission_rows"`
+	ReferenceEdgeLimit          int    `json:"reference_edge_limit"`
 	TargetFacts                 int    `json:"target_facts"`
 	TargetRows                  int    `json:"target_rows"`
 	ReferenceEdges              int    `json:"reference_edges"`
@@ -84,14 +87,15 @@ func TestT204ReverseEvidenceSchemaIdentities(t *testing.T) {
 }
 
 // TestT201TargetPublicationAndSweepMeasurement is deliberately opt-in: it
-// stages two 20,000-row evidence runs and measures the current architecture,
-// rather than becoming a multi-minute tax on every package test. The only
-// relaxed values are transaction variables. The statements under measurement
-// are the exact production addEvidenceSQL, publishExtractionRunSQL, and
-// sweepRunSQL constants; no SQL copy or alternate algorithm exists here.
+// stages two 20,020-row evidence runs under the current 25,000-row production
+// admission and completely sweeps the superseded one, rather than becoming a
+// multi-minute tax on every package test. The statements and limit variables
+// under measurement are the exact production addEvidenceSQL,
+// publishExtractionRunSQL, and sweepRunSQL inputs; no SQL copy, relaxed
+// admission seam, or alternate algorithm exists here.
 func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 	if os.Getenv("T201_MEASURE_STORE") != "1" {
-		t.Skip("set T201_MEASURE_STORE=1 to run the frozen T20.1 store measurement")
+		t.Skip("set T201_MEASURE_STORE=1 to measure the current store writer")
 	}
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
@@ -204,13 +208,16 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 	}
 
 	metrics := t201Metrics{
-		Schema:    "t20-store-measurement-v1",
+		Schema:    "t20-store-measurement-v2",
 		GoVersion: runtime.Version(), GOOS: runtime.GOOS, GOARCH: runtime.GOARCH,
 		GOMAXPROCS:                  runtime.GOMAXPROCS(0),
 		SurrealVersion:              localRuntime.Surreal.Version,
 		SurrealSHA256:               localRuntime.Surreal.SHA256,
 		StoreSchema:                 evidenceStoreSchemaVersion,
 		EvidenceFormat:              evidenceFormatVersion,
+		WriterGuardEvent:            evidenceWriterGuardEvent,
+		AdmissionRows:               t201AdmittedRunRows,
+		ReferenceEdgeLimit:          t201AdmittedReferenceMax,
 		TargetFacts:                 t201TargetFacts,
 		TargetRows:                  t201TargetFacts * 2,
 		ReferenceEdges:              t201TargetFacts,
@@ -232,7 +239,7 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("T20.1 frozen measurement:\n%s", encoded)
+	t.Logf("current store-writer measurement:\n%s", encoded)
 	if target := os.Getenv("T201_RESULTS_PATH"); target != "" {
 		if err := os.WriteFile(target, append(encoded, '\n'), 0o600); err != nil {
 			t.Fatalf("write T201_RESULTS_PATH: %v", err)

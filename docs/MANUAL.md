@@ -237,7 +237,12 @@ admission and retains the store-derived atomic recount. Coverage certificates,
 APIs, and serialized evidence remain unchanged. The retained target gate
 published 20,020 stored rows in 145.348583 ms on the reference machine,
 inside the frozen 2-second ceiling; this establishes capacity and atomic
-integrity only, not extraction accuracy.
+integrity only, not extraction accuracy. The 25,000-row value is a frozen
+ceiling for this target, not an open-ended admission increase: T20.5 remains
+required before it can rise. `spike/t201/results.json` remains the explicitly
+historical v4/pre-guard baseline. The opt-in T20.1 store harness now measures
+the active writer and a complete 20,020-row target sweep using exact
+production statements and limits, emitting a separate version-2 receipt.
 
 There is no Change Workbench in the current release. The available pieces are
 separate: a human can browse a declaration in Contracts, carry its operation

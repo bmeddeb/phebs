@@ -66,7 +66,8 @@ are rule-validation gates, not accuracy measurements.
 **Operating envelope.** 4 MiB / 500k tokens / 128 nesting levels per source
 file; 64 include paths / 4 KiB include context; worker bounds are 12,500
 facts in deterministic 256-fact chunks and a 15-minute run. The store's
-10,000-row admission remains the effective production ceiling until T20.3.
+whole-run admission is 25,000 association-plus-assertion rows; each staging
+call remains capped at 10,000 rows of one kind.
 `.thrift` symlinks fail the corpus walk closed.
 
 ---
@@ -129,4 +130,5 @@ rule-validation gates, not accuracy measurements.
 once for indexing. Non-generated Go files are read once during header
 recognition and again during source-backed scanning (within the worker's read
 budget); worker bounds are 12,500 facts in deterministic 256-fact chunks and
-15 minutes. The store's 10,000-row admission remains effective until T20.3.
+15 minutes. The store admits 25,000 association-plus-assertion rows per run;
+each staging call remains capped at 10,000 rows of one kind.
