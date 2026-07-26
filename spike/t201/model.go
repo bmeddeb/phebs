@@ -9,11 +9,15 @@ const (
 	SmallProfileName = "small"
 	ScaleProfileName = "scale-10000"
 
-	ScaleLogicalUnits    = 10_000
-	ScaleCallsPerFile    = 100
-	ScaleCallFiles       = ScaleLogicalUnits / ScaleCallsPerFile
-	HighFanoutReferences = 4_097
-	RepeatedPlacements   = 101
+	ScaleLogicalUnits        = 10_000
+	ScaleCallsPerFile        = 100
+	ScaleCallFiles           = ScaleLogicalUnits / ScaleCallsPerFile
+	ScaleCalibrationCalls    = 10
+	ScaleTotalCalls          = ScaleLogicalUnits + ScaleCalibrationCalls
+	ScaleCalibrationMappings = 5
+	ScaleTotalMappings       = ScaleLogicalUnits + ScaleCalibrationMappings
+	HighFanoutReferences     = 4_097
+	RepeatedPlacements       = 101
 )
 
 // Resolution is an oracle classification, not an extractor conclusion.
