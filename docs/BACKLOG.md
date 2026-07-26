@@ -1324,9 +1324,9 @@ registry pin, dark flag, and PR-sized acceptance criteria.
   registrations and from client-call extraction. `METHOD /normalized/path` is
   only a shared catalog key after template, mount, gateway, and middleware
   resolution states have been modeled; ambiguous joins abstain.
-- **Kafka** *(named by the prospective design partner, 2026-07-26 — next
-  pack candidate after Epic 20; specified as EPIC 23 below, 2026-07-26,
-  spike-gated and not started)*: separate topic/schema declarations,
+- **Kafka:** ✅ absorbed by EPIC 23 (2026-07-26; T23.1–T23.4 complete,
+  experimental-dark). *(Originally: named by the prospective design partner,
+  2026-07-26 — next pack candidate after Epic 20)*: separate topic/schema declarations,
   producer evidence, and consumer evidence. A source literal topic name has
   no proven cluster/environment identity; consumer groups and dynamic
   configuration remain unresolved without an authorized deployment or
@@ -2626,7 +2626,7 @@ committed authored `index.scip` exercising a thriftrw-shaped digest join;
 MANUAL walkthrough; absorb the Thrift-field candidate bullet above. AC:
 Vitest green; protobuf pages unchanged; operator walkthrough per MANUAL.
 
-## EPIC 23 — Kafka topic evidence *(specified 2026-07-26; T23.1 spike complete)*
+## EPIC 23 — Kafka topic evidence *(complete 2026-07-26; experimental-dark)*
 
 ### Product outcome
 
@@ -2745,8 +2745,11 @@ topic page in the annex UI: search a topic literal → producers → topic →
 consumers, never an endpoint metaphor; the unresolved census renders as a
 first-class panel ("N producer sites and M consumer sites could not be
 resolved from source — this view is not complete") rather than a footnote.
-`make dev` demo via a neutral synthetic fixture repo exercising literal,
-same-file-const, and environment-driven shapes across both libraries;
+Demo via `phebs-kafka-demo.yaml` over public corpora (amended at
+implementation from the originally sketched synthetic fixture repo: Kafka
+needs no committed index, so the thrift-demo precedent of public pinned
+connections applies directly — sarama's examples carry qualified literal
+producers and kafka-go's environment-driven examples showcase the census);
 MANUAL walkthrough; Vitest green; protobuf/Thrift pages unchanged; the
 Kafka candidate bullet above is absorbed; epic-closure ADR records what
 shipped dark and what remains gated. Each ticket keeps the standard pack

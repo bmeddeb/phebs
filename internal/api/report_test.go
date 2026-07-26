@@ -364,21 +364,25 @@ func TestContractImpactCapabilityAndRoutesRemainDark(t *testing.T) {
 	}
 	version := httptest.NewRecorder()
 	dark.ServeHTTP(version, httptest.NewRequest(http.MethodGet, "/api/version", nil))
-	if strings.Contains(version.Body.String(), "contract-impact-report") {
-		t.Fatalf("dark version advertised impact capability: %s", version.Body)
+	if strings.Contains(version.Body.String(), "contract-impact-report") ||
+		strings.Contains(version.Body.String(), "kafka-topic-usage") {
+		t.Fatalf("dark version advertised proof capabilities: %s", version.Body)
 	}
 
 	anonymous := proofHandler(st, "", nil)
 	version = httptest.NewRecorder()
 	anonymous.ServeHTTP(version, httptest.NewRequest(http.MethodGet, "/api/version", nil))
-	if strings.Contains(version.Body.String(), "contract-impact-report") {
-		t.Fatalf("anonymous version advertised impact capability: %s", version.Body)
+	if strings.Contains(version.Body.String(), "contract-impact-report") ||
+		strings.Contains(version.Body.String(), "kafka-topic-usage") {
+		t.Fatalf("anonymous version advertised proof capabilities: %s", version.Body)
 	}
 
 	enabled := proofHandler(st, "user:member", nil)
 	version = httptest.NewRecorder()
 	enabled.ServeHTTP(version, httptest.NewRequest(http.MethodGet, "/api/version", nil))
-	if !strings.Contains(version.Body.String(), "contract-impact-report") || strings.Contains(version.Body.String(), "contract-compatibility") {
+	if !strings.Contains(version.Body.String(), "contract-impact-report") ||
+		!strings.Contains(version.Body.String(), "kafka-topic-usage") ||
+		strings.Contains(version.Body.String(), "contract-compatibility") {
 		t.Fatalf("enabled version capabilities = %s", version.Body)
 	}
 }

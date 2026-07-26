@@ -1,0 +1,46 @@
+# Isolated local evaluation of the Kafka topic-evidence packs (Epic 23) over
+# public pinned-by-connection corpora. Does not share state with the default
+# phebs instance or the other demos. Corpus roles (T23.1 decision table):
+#   sarama    library corpus at the IBM import path: examples/http_server
+#             carries qualified literal producers ("important",
+#             "access_log"), so PRODUCES_TO_TOPIC evidence fires and those
+#             topics answer on the Topics page
+#   kafka-go  segmentio corpus: examples are entirely environment-driven, so
+#             every recognized site abstains — the honest census showcase
+# Expect abstention to dominate: production Kafka topics are configuration-
+# driven, and the Topics page presents unresolved counts as the norm, never
+# a completeness claim.
+server:
+  addr: "127.0.0.1:3074"
+  data_dir: "~/.phebs-kafka-demo"
+
+auth:
+  # Plain HTTP is deliberate for this loopback-only evaluation.
+  cookie_secure: false
+  session_lifetime: 12h
+
+sync:
+  cleanup_orphans: false
+  poll_interval: 5s
+  resync_interval: 1h
+
+proof_bundles:
+  retention: 168h
+
+experimental:
+  # Development-only: both Kafka planes ride one dark flag; rule validation
+  # is the T23.1 spike and no accuracy claim exists.
+  provisional_kafka_extraction: true
+
+contexts:
+  kafka-demo:
+    - "github.com/IBM/sarama"
+    - "github.com/segmentio/kafka-go"
+
+connections:
+  - name: sarama
+    type: git
+    url: https://github.com/IBM/sarama.git
+  - name: kafka-go
+    type: git
+    url: https://github.com/segmentio/kafka-go.git

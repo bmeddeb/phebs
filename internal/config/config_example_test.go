@@ -107,6 +107,43 @@ func TestThriftDemoConfigIsPortableAndEnablesBothPacks(t *testing.T) {
 	}
 }
 
+func TestKafkaDemoConfigIsPortableAndEnablesTheKafkaPack(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "phebs-kafka-demo.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "/Users/") {
+		t.Fatal("Kafka demo config contains a machine-specific home path")
+	}
+
+	cfg, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Kafka demo config is not loadable: %v", err)
+	}
+	if !cfg.Experimental.ProvisionalKafkaExtraction {
+		t.Fatal("Kafka demo config must explicitly enable the provisional kafka pack")
+	}
+	if cfg.Experimental.ProvisionalProtoExtraction || cfg.Experimental.ProvisionalThriftExtraction {
+		t.Fatal("Kafka demo config stays focused: the other provisional packs remain off")
+	}
+	urls := make([]string, 0, len(cfg.Connections))
+	for _, connection := range cfg.Connections {
+		urls = append(urls, connection.URL)
+	}
+	sort.Strings(urls)
+	want := []string{
+		"https://github.com/IBM/sarama.git",
+		"https://github.com/segmentio/kafka-go.git",
+	}
+	if !reflect.DeepEqual(urls, want) {
+		t.Fatalf("Kafka demo connections = %v", urls)
+	}
+	if !filepath.IsAbs(cfg.Server.DataDir) ||
+		filepath.Base(cfg.Server.DataDir) != ".phebs-kafka-demo" {
+		t.Fatalf("Kafka demo data_dir = %q, want portable user-local path", cfg.Server.DataDir)
+	}
+}
+
 type configExampleEvent struct {
 	line   int
 	indent int

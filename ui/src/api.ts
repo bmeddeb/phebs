@@ -275,9 +275,82 @@ export interface ProofQuery {
   lineage?: string
   message?: string
   field_number?: number
+  topic?: string
   before_digest?: string
   after_digest?: string
   domains: string[]
+}
+
+export interface BundleAssertion {
+  id: string
+  predicate: string
+  subject: string
+  object: string
+  lineage?: string
+  tier: 'exact' | 'derived' | 'heuristic' | 'unresolved'
+  code_role?: string
+  repo: string
+  supporting: string[]
+  contradicting?: string[]
+  run_id: string
+  detail?: string
+}
+
+export interface BundleEvidenceAtom {
+  atom_id: string
+  schema_version: string
+  blob_digest: string
+  start_byte: number
+  end_byte: number
+  rule_id: string
+  extractor_version: string
+  adapter_config_digest: string
+  fact_fingerprint: string
+  first_seen: string
+}
+
+export interface BundleEvidenceOccurrence {
+  occurrence_id: string
+  atom_id: string
+  repo: string
+  commit: string
+  path: string
+  start_line: number
+  end_line: number
+  visibility_scope: string
+  run_id: string
+  observed_at: string
+}
+
+export interface BundleEvidenceEntry {
+  repository: string
+  run_id: string
+  atom: BundleEvidenceAtom
+  occurrences: BundleEvidenceOccurrence[]
+}
+
+// KafkaTopicCensus always carries every frozen abstention shape class in
+// both planes, zeros included — completeness can never be implied by
+// omission.
+export interface KafkaTopicCensus {
+  schema_version: string
+  producer: Record<string, number>
+  consumer: Record<string, number>
+}
+
+export interface ProofBundle {
+  schema_version: string
+  query: ProofQuery
+  assertions: BundleAssertion[]
+  evidence: BundleEvidenceEntry[]
+  unresolved_census?: KafkaTopicCensus
+  coverage: CoverageCertificate
+  caveat: string
+}
+
+export interface ProofBundleEnvelope {
+  id: string
+  bundle: ProofBundle
 }
 
 export interface CoverageAttempt {
@@ -808,6 +881,9 @@ export const fetchFieldImpact = (
 
 export const fetchSavedImpact = (id: string, signal?: AbortSignal) =>
   getJSON<ContractImpactReport>(`/api/contract_impact_reports/${encodeURIComponent(id)}`, signal)
+
+export const fetchKafkaTopicUsage = (topic: string, signal?: AbortSignal) =>
+  getJSON<ProofBundleEnvelope>(`/api/find_kafka_topic_usage?${query({ topic })}`, signal)
 
 export async function postChangeImpact(requestBody: CompatibilityRequest, signal?: AbortSignal): Promise<ContractImpactReport> {
   const res = await request('/api/contract_impact_report', {

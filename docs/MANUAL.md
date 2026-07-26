@@ -185,6 +185,33 @@ empty consumer run. The protobuf packs are also enabled so the Atlas shows
 both protocols side by side. All Contract Atlas caveats apply unchanged: no
 empty result establishes runtime absence.
 
+#### Kafka topic-evidence evaluation
+
+The repository includes `phebs-kafka-demo.yaml` as the Epic 23 Kafka
+evaluation over two public corpora. Run it the same way (no Atlas fixture —
+the Kafka packs have no catalog surface at all):
+
+```bash
+make ui bin/zoekt-git-index bin/buf
+PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+PHEBS_BUF="$(pwd)/bin/buf" \
+  go run -tags ui ./cmd/phebs serve -config phebs-kafka-demo.yaml
+```
+
+Open `http://127.0.0.1:3074`, complete first-administrator setup, and allow
+sync, index, and extraction to finish (state isolates under
+`~/.phebs-kafka-demo`). Then open **Topics** and query `important` or
+`access_log`: the sarama corpus's `examples/http_server` carries those
+topics as qualified source literals, so `PRODUCES_TO_TOPIC` evidence rows
+appear with exact citations. The unresolved census renders **above** the
+evidence on every answer — the kafka-go corpus's examples are entirely
+environment-driven, so its recognized sites all abstain, and the census
+counts them per shape class with zeros listed explicitly. Query any other
+topic spelling to see the honest empty answer: no rows, the same census,
+and no completeness claim anywhere. Topics have no catalog or Atlas
+surface by design (T23.1 KD8): a topic exists on this page only through
+its producers and consumers.
+
 #### Evaluating a separated IDL/source monorepo
 
 The current extractor walks the repository's complete regular-blob inventory;
