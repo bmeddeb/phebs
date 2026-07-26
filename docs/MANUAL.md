@@ -203,10 +203,16 @@ relationship rows, the Impact operation form accepts a bare canonical
 operation and builds a proof bundle capped at 5,000 assertions, and call sites
 are not grouped into build targets, deployables, logical services, or owners.
 The Go consumer readers are syntactic; common generated method names can
-produce explicit abstentions. The proposed Epic 20 Caller Map in
-`docs/BACKLOG.md` specifies the typed, paged, unit-attributed workflow needed
-for thousands of services. Until that work lands, use the current pages as
-bounded provisional source evidence—not as a complete migration roster.
+produce explicit abstentions. There is also a current vocabulary mismatch:
+Contract Atlas qualifies a unique wire-name call as
+`caller / unresolved_name_match`, while `contract-impact-report-v1` places
+the same `CALLS_OPERATION` evidence under `known_consumers` for its bare
+operation-string question. Neither label proves a caller-to-declaration
+lineage. The proposed Epic 20 Caller Map in `docs/BACKLOG.md` assigns the
+experimental schema/vocabulary migration to T20.10 and specifies the typed,
+paged, unit-attributed workflow needed for thousands of services. Until that
+work lands, use the current pages as bounded provisional source evidence—not
+as a complete migration roster.
 
 Minimal `phebs.yaml`:
 

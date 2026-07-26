@@ -1382,7 +1382,13 @@ flowchart LR
    compatibility query for the existing proof endpoint, not the new page's
    identity. A call is known for that declaration only when generated-code
    provenance carries the join to its declaration lineage; a wire-name-only
-   match remains an unresolved candidate.
+   match remains an unresolved candidate. For protobuf, the generated
+   `// source:` marker and embedded descriptor name must agree and an immutable
+   snapshot must bind their generator-relative name to one repo-relative IDL
+   lineage. Layout-root uniqueness alone is insufficient. Apache Thrift Go
+   headers provide no source identity, so Thrift requires a direct immutable
+   generated-artifact → IDL-lineage mapping. Both successful joins are
+   `derived`, never `exact`.
 2. **Every occurrence remains visible.** Known calls and unresolved candidates
    are paged source rows with repository, commit, path, byte/line span,
    extractor/run/assertion/atom IDs, tier, code role, and resolution reason.
@@ -1392,7 +1398,8 @@ flowchart LR
    method's wire-operation anchor, and a proven generated-from relation to the
    declaration. The existing root `index.scip` is one eligible input, but its
    64 MiB ceiling is not silently raised for a large monorepo; T20.1 decides
-   whether a bounded commit-bound shard manifest is required. With no usable
+   whether the current scipfield reader's dedicated root-blob corpus
+   capability must gain a bounded commit-bound shard manifest. With no usable
    symbol index, a syntactic resolver may use import path, package alias,
    receiver/type provenance, generated anchors, and explicit generated-from
    metadata. More than one remaining candidate is an abstention. Repository-
@@ -1435,6 +1442,13 @@ flowchart LR
     evidence and query state produce equal rows, grouping, cursors, and
     migration classifications. Explicit pinning or Investigation creation is a
     later user action.
+11. **One caller vocabulary.** Every experimental projection uses
+    `resolved_caller` only for a declaration-lineage-proven occurrence.
+    A wire-object match is `matching_call_evidence` for a bare-operation query
+    and `unresolved_name_match` for an exact-declaration query. Parser or
+    resolver abstentions are `extractor_abstention`. T20.10 migrates the
+    Contract Atlas, impact report, Caller Map, UI, and MCP prose together; the
+    shipped `known_consumers` label does not survive beside the new taxonomy.
 
 ### Experience requirements
 
@@ -1487,93 +1501,193 @@ aliases, embedded clients, unresolved dynamic calls, and a separate immutable
 unit snapshot. The scale profile contains at least 10,000 logical units; a
 small labeled profile drives correctness gates. Measure current extraction,
 the 64 MiB root SCIP boundary, publication/retention row ceilings, reverse
-lookup, and UI limits; freeze the target occurrence population,
+lookup, and UI limits. At the frozen target row count, measure the existing
+single-transaction publish recount's wall time and memory, atomic supersession
+flip, and complete sweep of one superseded run (`evidenceSweepBatchSize` is
+currently one run). Freeze the target occurrence population,
 publication/memory ceilings, typed-index input shape, and first-page latency
 before T20.2.
 
 AC: the corpus is generated from repository-owned neutral templates with no
-external or employer bytes; two generations are byte-identical. A checked-in
-oracle enumerates candidate-independently every known/unresolved call and unit
-mapping. The current global-name resolver is shown to abstain on deliberate
-collisions rather than being described as sufficient. The result names every
-hard ceiling encountered, records a go/no-go target table in this backlog, and
-adds no production behavior or accuracy claim.
+external or employer bytes; two generations are byte-identical. Symbol-index
+bytes are generated once in a separately reviewed preparation step, checked
+into `spike/t201`, digest-pinned, and copied verbatim by the corpus generator;
+T20.1 never runs an indexer. A checked-in oracle enumerates
+candidate-independently every known/unresolved call, generated-from relation,
+and unit mapping. It covers generator-relative protobuf paths, vendored
+duplicate IDLs, two generated copies of one IDL, missing/conflicting Thrift
+mapping, a same-operation assertion with more than 4,096 supporting call-site
+references, and one content atom with more than 100 placements. The current
+global-name resolver is shown to abstain on deliberate collisions rather than
+being described as sufficient. The result names `maxFactsPerRun=5,000`,
+`maxEvidenceRowsPerRun=10,000`, `maxEvidenceRefsPerAssertion=4,096`,
+`maxEvidenceReferenceEdges=20,000`, the publish-transaction and sweep results,
+and every other hard ceiling encountered. It records a go/no-go target table
+in this backlog and adds no production behavior or accuracy claim. Where the
+current production ceiling prevents a target-cardinality measurement, the
+scale harness must invoke the exact production publish/sweep statements
+through a test-only admitted-limit seam rather than copying or approximating
+the transaction.
 
-**T20.2 · High-cardinality atomic caller publication and reverse index**
-*(needs T20.1)* — stream bounded fact chunks into one staged extraction run,
-publish the run atomically, and add an indexed reverse query over exact
-`(domain, predicate, object[, lineage])` keys. Failure, cancellation, stale
-lease, or a bad chunk publishes no partial replacement. Coverage records exact
-attempted/published counts and all ceiling failures.
+**T20.2 · Chunked SDK and worker staging** *(needs T20.1)* — replace the
+in-memory 5,000-fact run collection with deterministic bounded fact chunks
+streamed into one staged run. Chunk identity and retry behavior are
+idempotent; extractors still retain derived names and bounded per-file state,
+never the complete corpus or run fact set.
 
-AC: the frozen large profile publishes without retaining the complete corpus
-or fact set in the extractor; kill/failure tests expose no partial run; equal
-input produces equal assertions and coverage; exact-object page reads avoid a
-repository-wide assertion scan and meet the T20.1 resource/latency gates.
+AC: the frozen large profile stages within the T20.1 worker memory ceiling;
+equal inputs produce equal chunk order, IDs, facts, and coverage; duplicate
+delivery changes no row or counter; cancellation, stale lease, malformed
+chunk, or extractor failure leaves the entire run non-visible. Existing small
+runs and pure-reader guards remain byte-compatible.
 
-**T20.3 · Typed and package-aware Go caller resolution** *(needs T20.1,
-T20.2)* — add the SCIP-symbol → generated-client method → wire-operation path,
-then require a unique generated-from join to the selected declaration lineage.
-Add a separately labeled import/package/receiver-aware syntactic fallback.
-Both protobuf/gRPC and Apache Thrift Go use their generator-anchored wire
-method identities. Dynamic/reflection cases, unlinked generated code, and
-remaining ambiguity emit operation-keyed abstentions.
+**T20.3 · High-cardinality publication integrity** *(needs T20.2)* — preserve
+atomic replacement while scaling store validation.
+If the current single-transaction recount passes T20.1 it remains
+authoritative; otherwise each idempotent AddEvidence transaction derives and
+seals its own chunk counters/digest, and final publication verifies the
+complete store-owned chunk set before one supersession flip. Extractor-supplied
+counts never become authority.
 
-AC: the small oracle proves no cross-client false join for repeated `Get`,
-`Create`, and `Execute` methods; aliases and embedded clients resolve only
-when their provenance is unique; renaming a local variable does not alter a
-typed result; missing/malformed/stale SCIP falls back or abstains without
-failing another domain. Every emitted tier and reason is pinned, and two runs
-are byte-identical.
+This is the explicit `t12-store-v5` writer generation under the T12
+store-versioning ADR. Its exclusive one-time migration and writer guards land
+in the same PR. `t12-evidence-v1` remains unchanged unless persisted readable
+evidence bytes change.
 
-**T20.4 · Immutable monorepo layout and consumer-unit snapshot** *(needs
+AC: target-cardinality publish meets the frozen wall/memory budget, recomputes
+or derives exact assertion/atom/unresolved/reference totals, and exposes no
+partial successor under failure, cancellation, stale revision, or concurrent
+publish. Old readers hide the new writer generation; migration is idempotent;
+rollback/mixed writers fail closed.
+
+**T20.4 · Composite reverse query and index** *(needs T20.3)* — add the
+EvidenceStore page primitive and composite index shape for exact
+`(run, predicate, object[, lineage])` pagination. The store already has
+`assertion_run` and `(predicate, object)` indexes; captured SurrealDB query
+plans, not an assumption of no index, determine the new composite. This schema
+change advances the writer generation beyond T20.3 under the T12 ADR while
+retaining `t12-evidence-v1`.
+
+AC: exact reverse pages use the selected index plan, remain stable and
+non-overlapping, and avoid a run-wide assertion scan at the frozen target.
+Limit/cursor predicates cannot skip or duplicate equal semantic keys. The
+migration is idempotent, old writers/readers fail closed as specified by T12,
+and an unsupported index/query plan fails the T20.1 latency gate rather than
+shipping a scan.
+
+**T20.5 · High-cardinality retention** *(needs T20.3)* — reclaim a superseded
+target-size run without one unbounded deletion transaction. Eligibility and
+pin absence are rechecked before a durable non-visible deletion state; physical
+association/assertion cleanup may then proceed in bounded resumable chunks,
+and shared atoms are deleted only after their last reference disappears.
+Any new schema fields or indexes advance the writer generation again under
+the same T12 ADR.
+
+AC: a pinned run never enters deletion; a crash at every chunk boundary resumes
+without resurrecting evidence or deleting shared atoms; a complete target-size
+sweep meets the T20.1 budget and reports logical runs separately from physical
+rows. The current one-run candidate bound remains explicit rather than being
+mistaken for a row bound.
+
+**T20.6 · Monorepo symbol-index corpus capability** *(needs T20.1)* — retain
+the current dedicated root `index.scip` blob path when it meets the frozen
+gate. If T20.1 selects sharding, add a canonical commit-bound manifest whose
+bounded entries name safe Git paths, blob OIDs/digests, path scopes, and total
+budgets; the shared corpus opens only admitted immutable blobs and never
+discovers or downloads an index.
+
+AC: root and selected sharded inputs yield the same small-profile occurrences;
+unknown versions, overlap, gaps, duplicate paths/scopes, digest/OID mismatch,
+oversized parts/totals, symlinks, and stale commit bindings fail closed.
+Selection is deterministic and hidden/unadmitted blobs are never read.
+
+**T20.7 · Immutable monorepo layout and consumer-unit snapshot** *(needs
 T20.1)* — introduce digest-bound layout classification and a narrow,
 protocol-neutral unit-source interface. The neutral snapshot models typed
 units and relations for source root, build target, deployable, logical service,
-owner, and generated-from declaration lineage, with an immutable repository
-revision or external content digest. It is read-only and may return
-zero/one/many unit candidates for a path.
+owner, protobuf generator invocation root/direct mapping, and Thrift direct
+generated-from mapping, with an immutable repository revision or external
+content digest. It is read-only and may return zero/one/many unit candidates.
 
-AC: separated `idl/` and `src/` roots join without path adjacency; unmatched
-files remain inventoried; overlapping roots and malformed/unsafe snapshots
-fail closed; zero/multiple mappings survive the API as explicit states.
-Changing only unit metadata changes the attribution digest and cursor binding,
-not source assertion identity. No build or catalog executable is invoked.
+AC: separated `idl/` and `src/` roots join without path adjacency; roots alone
+never prove generated-from; unmatched files remain inventoried; overlapping
+roots and malformed/unsafe snapshots fail closed; zero/multiple mappings
+survive as explicit states. Changing only unit metadata changes the attribution
+digest and cursor binding, not source assertion identity. No build or catalog
+executable is invoked.
 
-**T20.5 · Snapshot-consistent Caller Map API** *(needs T20.2–T20.4)* — add an
-ephemeral paged read for one complete declaration identity, with source and
-unit-grouped orderings plus filters for unit/owner/path/code-role/tier/
-freshness/resolution. Bind every page to authorization, coverage, endpoint,
-attribution snapshot, filters, ordering, and position. Preserve the existing
-bounded proof service as a separate pinning path.
+**T20.8 · Typed Go caller and generated-from resolution** *(needs T20.3,
+T20.6, T20.7)* — join a symbol-index call occurrence to a generated client
+method, its generator-anchored wire operation, and exactly one declaration
+lineage. For protobuf, require agreeing generated source marker/descriptor name
+plus an immutable invocation-root or direct mapping. For Apache Thrift Go,
+require a direct immutable mapping because its generated header has no source
+path. Successful end-to-end callers are tier `derived`.
+
+AC: the small oracle proves no cross-client or cross-lineage false join for
+repeated `Get`, `Create`, and `Execute`; generator-relative paths, vendored
+duplicates, two generated copies, and absent/conflicting Thrift mappings
+resolve only with the exact admitted mapping or abstain. Renaming a local
+variable does not alter a typed result. Missing/malformed/stale symbol input
+abstains without failing another extraction domain.
+
+**T20.9 · Package-aware syntactic fallback** *(needs T20.7, T20.8)* — when no
+usable typed occurrence exists, trace bounded import aliases, explicit
+receiver/type provenance, generated client constructors, and embedded clients
+to one generated wire anchor and one admitted declaration mapping. Dynamic
+values, reflection, interface flows outside the bounded rules, and every
+remaining ambiguity emit operation-keyed abstentions.
+
+AC: every supported construct and reason code is table-pinned; common method
+names never cross clients; a typed result wins without being duplicated by the
+fallback; unsupported flows do not become guessed callers; two runs are
+byte-identical.
+
+**T20.10 · Snapshot-consistent Caller Map API and vocabulary migration**
+*(needs T20.4, T20.7–T20.9)* — add an ephemeral paged read for one complete
+declaration identity, with source and unit-grouped orderings plus filters for
+unit/owner/path/code-role/tier/freshness/resolution. Bind every page to
+authorization, coverage, endpoint, attribution-snapshot digest, filters,
+ordering, and position. In the same ticket, bump the experimental Atlas and
+impact report schemas: declaration-proven rows become `resolved_caller`;
+bare-operation object matches become `matching_call_evidence`; name matches
+against an exact declaration become `unresolved_name_match`; extractor
+abstentions remain `extractor_abstention`. MCP tool names stay wire-frozen,
+but their prose/structured projections adopt the same meanings.
 
 AC: equal operation spellings across lineages/protocols never merge; an
 unattributed source occurrence remains returned; pages are stable,
-non-overlapping, and explicitly incomplete until exhausted; a publication,
-permission, or attribution change invalidates the cursor. Hidden repositories
-cannot affect rows, groups, counts, timing-work shape, or serialized bytes.
-Every source row opens at its exact commit and span.
+non-overlapping, and explicitly incomplete until exhausted; publication,
+permission, coverage, or attribution-snapshot digest changes invalidate the
+cursor. Hidden repositories cannot affect rows, groups, counts, work shape, or
+serialized bytes. Every source row opens at its exact commit/span. No response
+or UI fixture calls an `unresolved_name_match` a known consumer.
 
-**T20.6 · Caller Map UI** *(needs T20.5)* — route a Contract Atlas operation
-selection directly to a dedicated Caller Map page. Implement the endpoint
-header, grouped/ungrouped table, nested source citations, filters, unresolved
-queue, progressive exact/lower-bound counts, coverage panel, pagination, and
-desktop/mobile states. Do not add a second top-level navigation item: Contracts
-discovers endpoints; Contract Impact owns caller and migration work.
+**T20.11 · Caller Map UI with strict paged DOM** *(needs T20.10)* — route a
+Contract Atlas operation selection directly to a dedicated Caller Map page.
+Implement the endpoint header, grouped/ungrouped table, nested source
+citations, filters, unresolved queue, progressive exact/lower-bound counts,
+coverage panel, pagination, and desktop/mobile states. Use strict server
+pagination and render only the current bounded page plus bounded expansion
+state—no DOM windowing dependency and no accumulation of 10,000 hidden rows.
+Do not add a second top-level navigation item: Contracts discovers endpoints;
+Contract Impact owns caller and migration work.
 
 AC: from a cold Contracts page a user reaches callers without typing an
-operation; a 10,000-unit fixture remains incrementally navigable; source and
-group views preserve the same occurrence identities; ambiguous/no-attribution,
-failed/stale/unsupported coverage, cursor invalidation, loading/error/retry,
-keyboard navigation, and mobile layouts are tested. The UI makes no extra
-evidence or diagram request while rendering a page.
+operation; all pages of a 10,000-unit fixture are incrementally reachable while
+the DOM remains within the declared bound; source/group views preserve the
+same occurrence identities; ambiguity, no-attribution, failed/stale/
+unsupported coverage, cursor invalidation, loading/error/retry, keyboard
+navigation, and mobile layouts are tested. Rendering makes no extra evidence
+or diagram request.
 
-**T20.7 · Old-to-replacement endpoint comparison** *(needs T20.5, T20.6)* —
+**T20.12 · Old-to-replacement endpoint comparison** *(needs T20.10, T20.11)* —
 select two full endpoint identities and classify the union of their static
 caller evidence at occurrence and unit level. Render
 `old_only_evidence`/`both_evidence`/`new_only_evidence`/`unresolved` verbatim,
-with both coverage snapshots and citations. Investigation handoff may create
-an explicit user-authorized snapshot; ordinary comparison remains ephemeral.
+with both coverage and attribution digests plus citations. Investigation
+handoff may create an explicit user-authorized snapshot; ordinary comparison
+remains ephemeral.
 
 AC: duplicate operation names and unit ambiguity cannot cross-contaminate the
 comparison; identical inputs are deterministic; changing either coverage or
@@ -1582,18 +1696,18 @@ no matching evidence within scope, never complete or safe. If the optional
 Investigation handoff lands, reauthorization and immutable-snapshot tests use
 Epic 16's existing boundaries rather than a new persistence model.
 
-**T20.8 · Scale, failure, and end-to-end closure** *(needs T20.1–T20.7)* —
+**T20.13 · Scale, failure, and end-to-end closure** *(needs T20.1–T20.12)* —
 exercise the generated large profile through sync → index → extract → Atlas →
 Caller Map → migration comparison in `make dev`, including one injected domain
 failure, one malformed unit snapshot, a permission change, and cursor
-invalidation. Record the achieved reference-hardware measurements without
-turning them into universal performance claims.
+invalidation. Record achieved reference-hardware publish, query, DOM, and
+sweep measurements without turning them into universal performance claims.
 
 AC: the frozen T20.1 correctness and resource gates pass; full Go/UI suites,
-vet, lint, determinism, and dark-posture guards pass; the demo starts from an
-empty data directory and reaches a cited caller without a canonical identifier.
-The epic remains experimental-dark and carries the external
-`NOT_ESTABLISHED` accuracy posture.
+vet, lint, determinism, schema-migration, and dark-posture guards pass; the demo
+starts from an empty data directory and reaches a cited caller without manual
+canonical-identifier entry. The epic remains experimental-dark and carries
+the external `NOT_ESTABLISHED` accuracy posture.
 
 ## P5 hardening *(unscheduled — pull on demand)*
 
