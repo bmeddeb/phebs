@@ -1324,12 +1324,27 @@ registry pin, dark flag, and PR-sized acceptance criteria.
   registrations and from client-call extraction. `METHOD /normalized/path` is
   only a shared catalog key after template, mount, gateway, and middleware
   resolution states have been modeled; ambiguous joins abstain.
-- **Kafka:** separate topic/schema declarations, producer evidence, and
-  consumer evidence. A source literal topic name has no proven
-  cluster/environment identity; consumer groups and dynamic configuration
-  remain unresolved without an authorized deployment or registry connector.
-  The UI is topic-centered—producers → topic/schema → consumers—not an
-  endpoint metaphor.
+- **Kafka** *(named by the prospective design partner, 2026-07-26 — next
+  pack candidate after Epic 20)*: separate topic/schema declarations,
+  producer evidence, and consumer evidence. A source literal topic name has
+  no proven cluster/environment identity; consumer groups and dynamic
+  configuration remain unresolved without an authorized deployment or
+  registry connector. The UI is topic-centered—producers → topic/schema →
+  consumers—not an endpoint metaphor. Naming the partner interest satisfies
+  the gate's who-wants-it trigger only; the pack still requires its own
+  validation spike, card, dark flag, and executable acceptance bars before
+  any ticket ships.
+- **Thrift field references** *(named by the prospective design partner,
+  2026-07-26 — candidate after Epic 20)*: separate generated-accessor
+  recognition from the shipped protobuf pack. `scip-proto-field` recognizes
+  only protoc-gen-go accessor symbols, and the proof-service field identity
+  enforces protobuf wire bounds (1–536,870,911 excluding 19000–19999), which
+  rejects Thrift's field 0 success slot outright. A Thrift pack needs its own
+  validated recognition rules per generator family (Apache Thrift's exported
+  fields/`IsSet*` predicates and thriftrw's differ), a distinct domain and
+  dark flag, Thrift field-identity bounds (0–32,767), and a neutral-named
+  query tool — `find_proto_field_references` stays wire-frozen and
+  protobuf-only. Same spike-first pack process as every other candidate.
 - **Thrift:** ✅ absorbed by EPIC 19 (2026-07-25). The operator named the
   language/runtime combination (Thrift IDL + Apache Thrift Go, jaeger
   corpus); the packs shipped with the T19.1 executable rule gates,
@@ -1501,11 +1516,16 @@ weaken the Caller Map.
   The first adapter is a neutral immutable snapshot contract and synthetic
   fixture.
 - Repository visibility remains the authorization unit. A monorepo containing
-  path-restricted content is not an eligible deployment until separately
-  designed path/unit authorization exists.
+  path-restricted content is not an eligible **multi-user** deployment until
+  separately designed path/unit authorization exists. A single-operator
+  work-machine evaluation under the operator's own already-granted access
+  rights is authorized (operator decision record, 2026-07-26): one principal,
+  no shared instance, no path-authorization claim made or implied.
 - Employer code, names, hosts, credentials, and infrastructure never enter
-  this repository or its fixtures. Work-machine evaluation yields sanitized
-  counts, shapes, failure classes, and workflow notes only.
+  this repository or its fixtures — evaluation approval does not relax repo
+  hygiene. Work-machine evaluation yields sanitized counts, shapes, failure
+  classes, and workflow notes only; the approval record itself is held
+  privately, outside this public repository.
 
 **T20.1 · Synthetic monorepo contract and validation spike** ✅ *(2026-07-25)* — generate and
 pin a neutral Git corpus with `idl/`, checked-in generated Go, `src/` services,

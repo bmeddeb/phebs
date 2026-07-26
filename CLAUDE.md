@@ -62,8 +62,12 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
   upstream repo under any circumstances. Upstream is FSL-1.1 + proprietary ee/;
   phebs is Apache-2.0 (confirmed, T0.2) and must stay uncontaminated.
 - Depend on upstream `github.com/sourcegraph/zoekt`, not the sourcebot-dev fork.
-- No employer code, credentials, hosts, or infrastructure. Personal project,
-  personal hardware.
+- No employer code, names, credentials, hosts, or infrastructure in this
+  repository or its fixtures. A single-operator work-machine evaluation under
+  the operator's own access rights is authorized (operator decision record,
+  2026-07-26, held privately); only sanitized counts, shapes, failure
+  classes, and workflow notes may return from it. Everything else remains
+  personal project, personal hardware.
 
 ## Current state
 
