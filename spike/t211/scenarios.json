@@ -1,0 +1,367 @@
+{
+  "schema_version": "change-workbench-scenario-contract-v1",
+  "sequence_decision": {
+    "status": "confirmed",
+    "reason": "T21.1-T21.5 remain independent of Epic 20; T21.6 and its T21.8 dependent wait for T20.10 exact target reads, T21.7 waits for T20.13 caller/comparison services, and implementation closure waits for T20.14."
+  },
+  "neutral_fixture": {
+    "ticket_reference": "TICKET-EXAMPLE-42",
+    "repository": "example.invalid/marketplace",
+    "revision": "1111111111111111111111111111111111111111",
+    "current_operation": "/store.v1.Cart/Get",
+    "replacement_operation": "/store.v2.Cart/Get",
+    "proposed_operation": "/store.v1.Cart/ApplyCoupon",
+    "source_paths": [
+      "idl/store/v1/cart.proto",
+      "idl/store/v2/cart.proto",
+      "gen/store/v1/cart_grpc.pb.go",
+      "src/checkout/cart_client.go",
+      "src/checkout/cart_client_test.go"
+    ]
+  },
+  "services": [
+    {
+      "id": "audit_log",
+      "boundary": "Append-only audit provenance for authenticated mutations; read-only browsing does not create an audit event.",
+      "source_anchors": [
+        {"path": "internal/store/store.go", "needle": "type AuditStore interface"},
+        {"path": "internal/api/audit.go", "needle": "func setAuditTarget("}
+      ]
+    },
+    {
+      "id": "code_navigation",
+      "boundary": "Immutable SCIP definition, reference, and hover reads at the indexed repository revision.",
+      "source_anchors": [
+        {"path": "internal/api/codenav.go", "needle": "func registerCodeNavigation"}
+      ]
+    },
+    {
+      "id": "contract_atlas",
+      "boundary": "Permission-scoped declaration discovery and detail over published provisional contract evidence.",
+      "source_anchors": [
+        {"path": "internal/api/catalog.go", "needle": "type ContractCatalogService struct"},
+        {"path": "internal/api/catalog.go", "needle": "func (s *ContractCatalogService) List("}
+      ]
+    },
+    {
+      "id": "contract_compatibility",
+      "boundary": "Pinned Buf WIRE comparison over bounded protobuf before/after source sets; no application-compatibility claim.",
+      "source_anchors": [
+        {"path": "internal/api/proof.go", "needle": "CheckContractCompatibility"},
+        {"path": "internal/mcp/mcp.go", "needle": "check_contract_compatibility"}
+      ]
+    },
+    {
+      "id": "coverage_certificate",
+      "boundary": "Deterministic receipt over the caller's already-authorized visible repository universe and published extraction state.",
+      "source_anchors": [
+        {"path": "internal/extract/certificate.go", "needle": "func BuildCoverageCertificate("},
+        {"path": "internal/mcp/mcp.go", "needle": "get_extraction_coverage"}
+      ]
+    },
+    {
+      "id": "history",
+      "boundary": "Immutable commit, blame, and diff reads within repository authorization.",
+      "source_anchors": [
+        {"path": "internal/api/history.go", "needle": "func registerHistory("}
+      ]
+    },
+    {
+      "id": "investigation_authorization",
+      "boundary": "Owner-or-grant authorization, fail-closed reads, transfer revision, and cursor invalidation.",
+      "source_anchors": [
+        {"path": "internal/store/investigation_authz.go", "needle": "type InvestigationAuthzStore interface"},
+        {"path": "internal/store/investigation_authz.go", "needle": "func (s *Surreal) GetInvestigationAs("}
+      ]
+    },
+    {
+      "id": "investigation_records",
+      "boundary": "Immutable revisions, runs, artifacts, decisions, dispositions, baselines, and watch revisions under one Investigation.",
+      "source_anchors": [
+        {"path": "internal/store/investigation.go", "needle": "type InvestigationStore interface"},
+        {"path": "internal/store/investigation.go", "needle": "func (s *Surreal) PutRevision("},
+        {"path": "internal/store/investigation.go", "needle": "func (s *Surreal) PutDisposition("}
+      ]
+    },
+    {
+      "id": "investigation_retention",
+      "boundary": "Investigation-owned artifact pins, policy precedence, and bounded retention sweeps; a Workbench adds no independent retention authority.",
+      "source_anchors": [
+        {"path": "internal/store/investigation_retention.go", "needle": "type InvestigationRetentionStore interface"}
+      ]
+    },
+    {
+      "id": "proof_and_impact",
+      "boundary": "Permission-scoped proof bundles and deterministic impact projections over published evidence with adjacent coverage.",
+      "source_anchors": [
+        {"path": "internal/api/proof.go", "needle": "type ProofService struct"},
+        {"path": "internal/api/report.go", "needle": "type ContractImpactReport struct"},
+        {"path": "internal/api/report.go", "needle": "func projectContractImpactReport("}
+      ]
+    },
+    {
+      "id": "sealed_dossier",
+      "boundary": "Recipient-scoped, offline-verifiable export whose signature proves bytes and signer, not current validity.",
+      "source_anchors": [
+        {"path": "internal/store/investigation_dossier.go", "needle": "type InvestigationDossierService struct"}
+      ]
+    },
+    {
+      "id": "source_search",
+      "boundary": "Permission-filtered source search over indexed repository revisions.",
+      "source_anchors": [
+        {"path": "internal/search/searcher.go", "needle": "func (s *Searcher) Search("}
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "add",
+      "ticket_goal": "Add /store.v1.Cart/ApplyCoupon without claiming that an empty caller set is meaningful.",
+      "steps": [
+        {
+          "section": "why",
+          "inputs": ["human problem statement", "desired outcome", "ordered success criteria", "non-goals", "assumptions", "open questions", "optional inert ticket reference"],
+          "service_calls": ["audit_log", "investigation_authorization", "investigation_records"],
+          "outputs": ["revision-bound human brief", "explicit missing-field diagnostics"],
+          "mutations": ["planned previewed Change Brief revision plus one audit event; no existing structured brief mutation"],
+          "evidence_sources": ["human-authored input only"],
+          "bounds": ["64 KiB inherited Investigation text-field ceiling; T21.2 must define narrower per-field and collection bounds"],
+          "unsupported_planes": [],
+          "human_decisions": ["approve the problem and each success criterion"]
+        },
+        {
+          "section": "what",
+          "inputs": ["bounded proposed IDL source commitment for /store.v1.Cart/ApplyCoupon", "optional analogous exact declaration selected from Atlas"],
+          "service_calls": ["contract_atlas", "contract_compatibility"],
+          "outputs": ["proposal digest and parse limits", "analogous request/response shapes", "protobuf WIRE findings when a before/after pair exists"],
+          "mutations": ["none during preview; retained compatibility analysis is a later explicit action"],
+          "evidence_sources": ["published declaration evidence", "caller-supplied proposed bytes outside repository evidence"],
+          "bounds": ["4 MiB per IDL file", "500000 tokens", "128 structural levels", "existing aggregate and Buf child limits"],
+          "unsupported_planes": ["Thrift compatibility"],
+          "human_decisions": ["confirm the proposed operation identity and intended shape"]
+        },
+        {
+          "section": "where",
+          "inputs": ["proposal identity", "explicitly selected analogous operation", "requested evidence capabilities", "optional explicit resource notes"],
+          "service_calls": ["contract_atlas", "coverage_certificate", "proof_and_impact"],
+          "outputs": ["expected empty new-operation caller evidence", "analogous declaration, implementation, test, and matching static evidence when selected", "resource notes labeled human assertions", "Analysis scope & gaps"],
+          "mutations": ["none"],
+          "evidence_sources": ["published declaration, implementation, test, and consumer facts", "extraction coverage", "human-authored resource notes that contribute no extracted relationship"],
+          "bounds": ["proof: 5000 assertions and 20000 evidence references", "Atlas relationship detail: 200 rows"],
+          "unsupported_planes": ["Kafka", "Redis", "document store", "SQL", "runtime traffic"],
+          "human_decisions": ["choose which analogous evidence is relevant; do not interpret an empty caller set as a finding"]
+        },
+        {
+          "section": "how",
+          "inputs": ["proposal", "selected analogous declaration and implementation evidence filters"],
+          "service_calls": ["code_navigation", "history", "source_search"],
+          "outputs": ["cited analogous handlers, clients, tests, mocks, docs, and history", "unaccepted implementation suggestions"],
+          "mutations": ["later explicit immutable Dispositions only; no task or ReviewItem mutation"],
+          "evidence_sources": ["source search", "SCIP", "blame", "commits", "diffs"],
+          "bounds": ["each existing search/navigation/history endpoint retains its own page and byte limits"],
+          "unsupported_planes": ["automatic edit", "build", "test execution", "pull request", "deployment"],
+          "human_decisions": ["select reusable patterns and accept, reject, complete, reopen, or waive later suggestions"]
+        }
+      ]
+    },
+    {
+      "id": "modify",
+      "ticket_goal": "Modify /store.v1.Cart/Get while keeping wire findings, field evidence, and callers semantically separate.",
+      "steps": [
+        {
+          "section": "why",
+          "inputs": ["human problem statement", "desired outcome", "ordered success criteria", "non-goals", "assumptions", "open questions", "optional inert ticket reference"],
+          "service_calls": ["audit_log", "investigation_authorization", "investigation_records"],
+          "outputs": ["revision-bound human brief"],
+          "mutations": ["planned previewed Change Brief revision plus one audit event"],
+          "evidence_sources": ["human-authored input only"],
+          "bounds": ["T21.2 bounded fields and ordered collections"],
+          "unsupported_planes": [],
+          "human_decisions": ["approve the desired behavioral outcome and acceptance conditions"]
+        },
+        {
+          "section": "what",
+          "inputs": ["exact current identity /store.v1.Cart/Get", "bounded proposed IDL source commitment"],
+          "service_calls": ["contract_atlas", "contract_compatibility"],
+          "outputs": ["current request/response shapes and immutable declaration citation", "proposal digest", "bounded protobuf WIRE findings"],
+          "mutations": ["none during preview; retained compatibility analysis requires an explicit action"],
+          "evidence_sources": ["published declaration facts", "caller-supplied proposed bytes"],
+          "bounds": ["4 MiB per IDL file", "500000 tokens", "128 structural levels", "existing Buf limits"],
+          "unsupported_planes": ["application compatibility", "Thrift compatibility"],
+          "human_decisions": ["confirm exact target and proposal; interpret each compatibility finding"]
+        },
+        {
+          "section": "where",
+          "inputs": ["exact declaration identity", "changed stable field identities", "authorized repository snapshot", "explicit retained compatibility findings when present"],
+          "service_calls": ["coverage_certificate", "proof_and_impact"],
+          "outputs": ["Matching static evidence for the operation", "field references", "Could not resolve rows", "retained compatibility findings kept distinct from caller and field evidence", "Analysis scope & gaps"],
+          "mutations": ["none"],
+          "evidence_sources": ["CALLS_OPERATION", "REFERENCES_PROTO_FIELD", "extractor abstentions", "coverage manifests", "explicit revision-bound compatibility artifact"],
+          "bounds": ["proof: 5000 assertions and 20000 evidence references", "current Impact report is not fleet pagination"],
+          "unsupported_planes": ["Kafka", "Redis", "document store", "SQL", "runtime traffic"],
+          "human_decisions": ["review source rows and decide which constitute the ticket's blast radius"]
+        },
+        {
+          "section": "how",
+          "inputs": ["affected field and operation citations", "implementation evidence filters"],
+          "service_calls": ["code_navigation", "history", "source_search"],
+          "outputs": ["cited handlers, clients, tests, mocks, docs, and related changes", "unaccepted implementation suggestions"],
+          "mutations": ["later immutable Dispositions only"],
+          "evidence_sources": ["source search", "SCIP", "blame", "commits", "diffs"],
+          "bounds": ["existing search/navigation/history endpoint limits"],
+          "unsupported_planes": ["automatic code changes and correctness ranking"],
+          "human_decisions": ["choose implementation approach and disposition each suggestion"]
+        }
+      ]
+    },
+    {
+      "id": "migrate",
+      "ticket_goal": "Migrate callers from /store.v1.Cart/Get to /store.v2.Cart/Get without declaring services migrated.",
+      "steps": [
+        {
+          "section": "why",
+          "inputs": ["migration reason", "desired outcome", "ordered success criteria", "non-goals", "assumptions", "open questions", "optional inert ticket reference"],
+          "service_calls": ["audit_log", "investigation_authorization", "investigation_records"],
+          "outputs": ["revision-bound migration brief"],
+          "mutations": ["planned previewed Change Brief revision plus one audit event"],
+          "evidence_sources": ["human-authored input only"],
+          "bounds": ["T21.2 bounded fields and ordered collections"],
+          "unsupported_planes": [],
+          "human_decisions": ["define what evidence and external checks are required for migration acceptance"]
+        },
+        {
+          "section": "what",
+          "inputs": ["exact old identity /store.v1.Cart/Get", "exact replacement identity /store.v2.Cart/Get"],
+          "service_calls": ["contract_atlas", "contract_compatibility"],
+          "outputs": ["two immutable declaration citations and shapes", "bounded protobuf WIRE comparison when source sets are supplied"],
+          "mutations": ["none during preview; retained comparison is explicit"],
+          "evidence_sources": ["published declaration facts", "bounded caller-supplied comparison bytes"],
+          "bounds": ["two distinct identities", "4 MiB per IDL file", "500000 tokens", "128 structural levels", "Buf limits"],
+          "unsupported_planes": ["application compatibility", "Thrift compatibility"],
+          "human_decisions": ["confirm old and replacement identities and migration contract"]
+        },
+        {
+          "section": "where",
+          "inputs": ["old identity", "replacement identity", "authorized repository and attribution snapshots"],
+          "service_calls": ["coverage_certificate", "proof_and_impact"],
+          "outputs": ["planned old-only, both, new-only, and unresolved evidence states", "source occurrences preserved when unit attribution is absent", "Analysis scope & gaps"],
+          "mutations": ["none"],
+          "evidence_sources": ["published call evidence", "future Epic 20 declaration-proven caller pages", "optional immutable unit attribution", "coverage manifests"],
+          "bounds": ["current proof and Impact bounds remain non-fleet", "future Caller Map pages default 50 and max 100"],
+          "unsupported_planes": ["Kafka", "Redis", "document store", "SQL", "runtime traffic"],
+          "human_decisions": ["review each source/unit state; never equate new-only evidence with completed migration"]
+        },
+        {
+          "section": "how",
+          "inputs": ["reviewed old/replacement source rows", "related implementation filters"],
+          "service_calls": ["code_navigation", "history", "source_search"],
+          "outputs": ["cited old and replacement clients, handlers, tests, docs, and history", "deterministic unaccepted migration suggestions"],
+          "mutations": ["later immutable Dispositions in accepted, rejected, completed, reopened, or waived categories"],
+          "evidence_sources": ["source search", "SCIP", "blame", "commits", "diffs"],
+          "bounds": ["existing endpoint limits; later checklist pages are independently bounded"],
+          "unsupported_planes": ["automatic migration, rollout, deployment, or completion verdict"],
+          "human_decisions": ["own the migration checklist and separately decide completion"]
+        }
+      ]
+    },
+    {
+      "id": "retire",
+      "ticket_goal": "Retire /store.v1.Cart/Get while keeping absence and decommission safety structurally unavailable.",
+      "steps": [
+        {
+          "section": "why",
+          "inputs": ["retirement reason", "desired outcome", "ordered success criteria", "non-goals", "assumptions", "open questions", "optional inert ticket reference"],
+          "service_calls": ["audit_log", "investigation_authorization", "investigation_records"],
+          "outputs": ["revision-bound retirement brief"],
+          "mutations": ["planned previewed Change Brief revision plus one audit event"],
+          "evidence_sources": ["human-authored input only"],
+          "bounds": ["T21.2 bounded fields and ordered collections"],
+          "unsupported_planes": [],
+          "human_decisions": ["define required external confirmation and decommission authority"]
+        },
+        {
+          "section": "what",
+          "inputs": ["exact retiring identity /store.v1.Cart/Get"],
+          "service_calls": ["contract_atlas"],
+          "outputs": ["immutable declaration citation and request/response shape"],
+          "mutations": ["none"],
+          "evidence_sources": ["published declaration facts"],
+          "bounds": ["exactly one declaration identity"],
+          "unsupported_planes": ["retirement safety verdict"],
+          "human_decisions": ["confirm the declaration being retired"]
+        },
+        {
+          "section": "where",
+          "inputs": ["retiring identity", "authorized repository snapshot", "requested evidence capabilities"],
+          "service_calls": ["coverage_certificate", "proof_and_impact"],
+          "outputs": ["Matching static evidence", "future Resolved callers and Name matches needing review", "Could not resolve rows", "Analysis scope & gaps"],
+          "mutations": ["none"],
+          "evidence_sources": ["published call evidence", "extractor abstentions", "future exact Caller Map joins", "coverage manifests"],
+          "bounds": ["current proof and Impact bounds remain non-fleet", "future Caller Map pages default 50 and max 100"],
+          "unsupported_planes": ["runtime traffic", "Kafka", "Redis", "document store", "SQL", "deployment inventory"],
+          "human_decisions": ["decide whether evidence plus external checks is sufficient; empty results never authorize retirement"]
+        },
+        {
+          "section": "how",
+          "inputs": ["reviewed retirement evidence", "related implementation filters"],
+          "service_calls": ["code_navigation", "history", "source_search"],
+          "outputs": ["cited registrations, handlers, clients, tests, docs, and history", "unaccepted removal suggestions"],
+          "mutations": ["later immutable Dispositions only"],
+          "evidence_sources": ["source search", "SCIP", "blame", "commits", "diffs"],
+          "bounds": ["existing endpoint limits; later checklist pages are independently bounded"],
+          "unsupported_planes": ["automatic deletion", "deployment", "safe-to-retire verdict"],
+          "human_decisions": ["approve each removal and make the separate retirement decision"]
+        }
+      ]
+    }
+  ],
+  "terminology_traces": [
+    {
+      "wire_field": "known_consumers",
+      "persisted_source": "published CALLS_OPERATION or REFERENCES_PROTO_FIELD assertions plus immutable evidence occurrences",
+      "service_projection": "ProofService builds a proof bundle; projectImpactEvidence places non-abstention rows in ContractImpactReport.KnownConsumers",
+      "http_projection": "contract-impact-report-v1.known_consumers",
+      "ui_projection": "ImpactPage currently renders the primary heading Known consumers",
+      "mcp_projection": "find_operation_consumers and find_proto_field_references return the shared proof envelope assertions, not the report field name",
+      "honest_user_term": "matching_static_evidence",
+      "qualification": "Legacy operation matches are not declaration-proven callers; T20.10 must classify exact versus name-only evidence before resolved_caller is available."
+    },
+    {
+      "wire_field": "unresolved_candidates",
+      "persisted_source": "published extractor abstention assertions such as UNRESOLVED_GRPC_CALL",
+      "service_projection": "projectImpactEvidence separates abstention predicates into ContractImpactReport.UnresolvedCandidates",
+      "http_projection": "contract-impact-report-v1.unresolved_candidates",
+      "ui_projection": "ImpactPage currently renders the primary heading Unresolved candidates",
+      "mcp_projection": "proof envelopes retain the abstention assertion, tier, detail reason, exact citation, and coverage",
+      "honest_user_term": "could_not_resolve",
+      "qualification": "An abstention is an observed construct plus refusal reason, not a caller and not a failed extraction run."
+    },
+    {
+      "wire_field": "coverage-certificate-v1 / coverage",
+      "persisted_source": "authorized visible repositories, indexed revisions, and latest published extraction runs with manifests and failures",
+      "service_projection": "extract.BuildCoverageCertificate creates canonical bytes and digest; proof and catalog services embed the result",
+      "http_projection": "proof-bundle-v1.coverage and contract-impact-report-v1.coverage plus coverage_rows",
+      "ui_projection": "ImpactPage currently renders Coverage certificate as a primary section",
+      "mcp_projection": "get_extraction_coverage returns the certificate; every proof envelope also carries question-scoped coverage",
+      "honest_user_term": "analysis_scope_and_gaps",
+      "qualification": "Coverage certificate remains the advanced deterministic audit receipt beneath the human-facing summary."
+    }
+  ],
+  "ticket_gates": [
+    {"ticket": "T21.1", "epic20_dependency": "none", "landing_posture": "docs_tests_only", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.2", "epic20_dependency": "none", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.3", "epic20_dependency": "none", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.4", "epic20_dependency": "none", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.5", "epic20_dependency": "none", "landing_posture": "production_unregistered_dark", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.6", "epic20_dependency": "T20.10", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.7", "epic20_dependency": "T20.13", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.8", "epic20_dependency": "T20.10", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.9", "epic20_dependency": "T20.13", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.10", "epic20_dependency": "T20.10", "landing_posture": "production_unregistered_dark", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.11", "epic20_dependency": "T20.13", "landing_posture": "production_unregistered_dark", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.12", "epic20_dependency": "none", "landing_posture": "production_unregistered", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.13", "epic20_dependency": "T20.13", "landing_posture": "production_unregistered_dark", "registration_requires": ["ESTABLISHED", "pilot_continuation"]},
+    {"ticket": "T21.14", "epic20_dependency": "T20.14", "landing_posture": "implementation_closure_only", "registration_requires": ["ESTABLISHED", "pilot_continuation"]}
+  ]
+}

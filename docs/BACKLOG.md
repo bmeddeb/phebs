@@ -2487,7 +2487,7 @@ acceptance surfaces, not follow-up polish.
 - No employer names, schemas, code, hosts, credentials, or infrastructure in
   fixtures, demos, screenshots, or retained notes.
 
-**T21.1 · Inventory, scenario, and vocabulary contract** — freeze the four
+**T21.1 ✅ 2026-07-26 · Inventory, scenario, and vocabulary contract** — freeze the four
 scenario journeys against a neutral synthetic ticket/corpus and mechanically
 inventory which existing service answers each step. Produce one canonical
 versioned glossary input for user terms, short help, expanded help,

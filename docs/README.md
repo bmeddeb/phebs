@@ -11,6 +11,7 @@ Read in this order for your role; each document states its own authority.
 | [MANUAL.md](./MANUAL.md) | user manual; behavior changes update it in the same PR |
 | PORT_MAP.md *(removed 2026-07-12; historical — see git history)* | upstream analysis, scope, license posture |
 | [config.example.yaml](./config.example.yaml) | annotated configuration reference |
+| [../spike/t211/README.md](../spike/t211/README.md) | T21.1 executable Change Workbench scenario, service-inventory, vocabulary, and gate contract; no production behavior |
 
 ## Adoption suite (internal circulation)
 
