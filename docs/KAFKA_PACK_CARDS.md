@@ -42,7 +42,8 @@ imply "all producers/consumers of topic X".
 round-one library, the pack asserts `PRODUCES_TO_TOPIC` for every
 `sarama.ProducerMessage{Topic:}`, segmentio `Writer`/`WriterConfig`
 composite, and `kafka.Message{Topic:}` passed directly to `WriteMessages`,
-when the topic is a string literal or same-file `const` inside Kafka's
+when the topic is a string literal or an explicitly initialized, lexically
+visible package- or function-local same-file `const` inside Kafka's
 naming bounds. Objects are `topic:<literal>`; tier is `derived` for
 composite shapes; subjects are file paths with `provisional_repo_path_v1`
 lineage; spans are exact bytes of the topic expression.
@@ -51,8 +52,8 @@ lineage; spans are exact bytes of the topic expression.
 topic object is a source spelling, nothing more. No completeness: a
 configuration-driven producer emits only an `UNRESOLVED_KAFKA_PRODUCER`
 abstention with its shape class, and dynamic topics are invisible. No
-dataflow, no cross-file resolution, no constant propagation beyond a
-same-file `const`. No franz-go recognition (recorded deferred family). No
+dataflow, no cross-file resolution, and no propagation through expressions
+or vars. No franz-go recognition (recorded deferred family). No
 accuracy percentage (GATE2-V2 remains `NOT_ESTABLISHED`).
 
 **Incomplete analysis representation.** Non-literal topics emit

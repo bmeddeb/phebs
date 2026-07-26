@@ -15,6 +15,17 @@
     {
       "corpus": "synthetic",
       "path": "testdata/synthetic/sarama_shapes.go",
+      "source": "localTopic",
+      "outcome": "evidence",
+      "plane": "producer",
+      "topic": "orders-local",
+      "binding": "same-file-const",
+      "shape": "ProducerMessage",
+      "tier": "derived"
+    },
+    {
+      "corpus": "synthetic",
+      "path": "testdata/synthetic/sarama_shapes.go",
       "source": "\"clicks\"",
       "outcome": "evidence",
       "plane": "consumer",

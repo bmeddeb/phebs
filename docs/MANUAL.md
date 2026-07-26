@@ -206,11 +206,15 @@ topics as qualified source literals, so `PRODUCES_TO_TOPIC` evidence rows
 appear with exact citations. The unresolved census renders **above** the
 evidence on every answer — the kafka-go corpus's examples are entirely
 environment-driven, so its recognized sites all abstain, and the census
-counts them per shape class with zeros listed explicitly. Query any other
-topic spelling to see the honest empty answer: no rows, the same census,
-and no completeness claim anywhere. Topics have no catalog or Atlas
-surface by design (T23.1 KD8): a topic exists on this page only through
-its producers and consumers.
+counts their supporting source sites per shape class with zeros listed
+explicitly. Producer and consumer publication state is reported separately,
+so a run from one plane never makes zeros in the other plane look measured;
+whole-file extraction gaps stay visible in the coverage certificate rather
+than being folded into the site census. Query any other topic spelling to see
+the honest empty answer: no rows, the same topic-independent census, and no
+completeness claim anywhere. Topics have no catalog or Atlas surface by design
+(T23.1 KD8): a topic exists on this page only through its producers and
+consumers.
 
 #### Evaluating a separated IDL/source monorepo
 
@@ -968,10 +972,12 @@ and the contract-change tab additionally requires the pinned Buf startup probe.
 - **Topics** (`#/topics`, experimental) — topic-centered Kafka evidence:
 query one topic spelling and see producers, consumers (group ids as detail),
 and — rendered first, always — the unresolved census: per-shape-class counts
-of sites that could not be resolved from source, with zeros listed
-explicitly, `≥` marking bounded lower-bound counts, and a distinct
-"no Kafka extraction run has published" state so an empty answer never
-reads as an affirmative zero. The navigation item appears with the
+of supporting source sites that could not be resolved, with zeros listed
+explicitly, `≥` marking bounded lower-bound counts, and distinct per-plane
+published-run states so producer-only or consumer-only extraction never turns
+the other plane's unmeasured zeros into affirmative zeros. Whole-file
+extraction gaps are disclosed separately through the coverage certificate.
+The navigation item appears with the
 `kafka-topic-usage` capability, which the server advertises whenever the
 proof surfaces exist — including deployments where the Kafka packs
 themselves are dark, in which case every answer honestly shows the no-run
@@ -1425,7 +1431,10 @@ receiver-untyped `Consume`/`ConsumePartition` call shapes (tier
 string literal or a same-file `const` satisfying Kafka's own naming bounds
 (1–249 characters of `[a-zA-Z0-9._-]`, excluding `.`/`..`); the object is
 `topic:<literal>` and carries no cluster, environment, runtime, or
-completeness claim. Consumer group ids are recorded as detail, never
+completeness claim. The constant may be package- or function-local, but must
+be an explicit string literal declaration lexically resolved within that
+file; vars, expressions, and cross-file names still abstain. Consumer group
+ids are recorded as detail, never
 identity. Everything else — configuration selectors, function results,
 variables, invalid literals — emits an `UNRESOLVED_KAFKA_PRODUCER` /
 `UNRESOLVED_KAFKA_CONSUMER` assertion whose object names the frozen shape
@@ -1566,11 +1575,15 @@ succeeds (the first four remain available when compatibility is unavailable):
 - `GET /api/find_kafka_topic_usage?topic=<literal>` returns exact-object
   `PRODUCES_TO_TOPIC` and `CONSUMES_FROM_TOPIC` assertions for one topic
   spelling (validated by Kafka's own naming bounds), and the bundle always
-  carries `unresolved_census`: per-plane counts of distinct
-  `UNRESOLVED_KAFKA_*` assertions for every frozen shape class, zeros
-  included. The census is topic-independent by construction — a non-literal
-  topic cannot be matched to any literal — and the endpoint never makes a
-  completeness claim.
+  carries `unresolved_census`: per-plane counts of supporting source sites on
+  `UNRESOLVED_KAFKA_*` assertions for every frozen shape class, zeros included,
+  plus independent producer/consumer published-run counts that say whether
+  those zeros were measured. Counts are gathered through bounded
+  authorization-scoped per-plane queries; clipped planes are explicit lower
+  bounds. The census is topic-independent by construction — a non-literal
+  topic cannot be matched to any literal — while whole-file extraction gaps
+  remain in the coverage certificate. The endpoint never makes a completeness
+  claim.
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
   coverage only; omitted domains select `grpc-consumer`, `kafka-consumer`,
   `kafka-producer`, `proto-contract`, `scip-proto-field`, `thrift-consumer`,

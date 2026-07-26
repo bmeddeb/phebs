@@ -68,8 +68,10 @@ const auditTopic = "audit-v2"
 var mutableTopic = "orders-mutable"
 
 func produce(p sarama.SyncProducer, w conf, cfgTopic string) {
+	const localTopic = "orders-local"
 	p.SendMessage(&sarama.ProducerMessage{Topic: "orders-v1"})
 	p.SendMessage(&sarama.ProducerMessage{Topic: auditTopic})
+	p.SendMessage(&sarama.ProducerMessage{Topic: localTopic})
 	p.SendMessage(&sarama.ProducerMessage{Topic: mutableTopic})
 	p.SendMessage(&sarama.ProducerMessage{Topic: cfgTopic})
 	p.SendMessage(&sarama.ProducerMessage{Topic: os.Getenv("TOPIC")})
@@ -160,6 +162,7 @@ func TestSaramaProducerPlane(t *testing.T) {
 	assertRows(t, "producer", saramaFixture, facts, []wantRow{
 		{"PRODUCES_TO_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"bindings":["literal"]`},
 		{"PRODUCES_TO_TOPIC", "topic:audit-v2", "derived", `auditTopic`, `"bindings":["same-file-const"]`},
+		{"PRODUCES_TO_TOPIC", "topic:orders-local", "derived", `localTopic`, `"bindings":["same-file-const"]`},
 		{"UNRESOLVED_KAFKA_PRODUCER", "unresolved:unresolved-ident", "unresolved", `mutableTopic`, `"shape":"unresolved-ident"`},
 		{"UNRESOLVED_KAFKA_PRODUCER", "unresolved:unresolved-ident", "unresolved", `cfgTopic`, ""},
 		{"UNRESOLVED_KAFKA_PRODUCER", "unresolved:call-expr", "unresolved", `os.Getenv("TOPIC")`, ""},

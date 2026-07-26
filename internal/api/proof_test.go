@@ -618,6 +618,10 @@ func TestFindKafkaTopicUsage(t *testing.T) {
 	otherTopic, otherResolution := proofAssertion(repo, producerRun.ID, "other-topic", "PRODUCES_TO_TOPIC", "topic:other", "provisional_repo_path_v1_"+strings.Repeat("b", 64), "other")
 	consumes, consumesResolution := proofAssertion(repo, consumerRun.ID, "consumes", "CONSUMES_FROM_TOPIC", "topic:orders-v1", "provisional_repo_path_v1_"+strings.Repeat("c", 64), "reader")
 	unresolvedRow, unresolvedResolution := proofAssertion(repo, producerRun.ID, "abstains", "UNRESOLVED_KAFKA_PRODUCER", "unresolved:call-expr", "", "env")
+	// One unresolved assertion can merge several exact source sites. The
+	// census counts supporting sites, not assertion/file-shape groups.
+	unresolvedRow.Supporting = append(unresolvedRow.Supporting, "atom-second-site")
+	var assertionQueries []store.AssertionQuery
 	st := &proofAPIStore{
 		repos: []store.Repo{{Name: repo, IndexedCommitHash: producerRun.Commit}},
 		runs: map[string]store.ExtractionRun{
@@ -630,6 +634,9 @@ func TestFindKafkaTopicUsage(t *testing.T) {
 			proofEvidenceScope(repo, producerRun.ID, otherTopic.Supporting[0]):    otherResolution,
 			proofEvidenceScope(repo, consumerRun.ID, consumes.Supporting[0]):      consumesResolution,
 			proofEvidenceScope(repo, producerRun.ID, unresolvedRow.Supporting[0]): unresolvedResolution,
+		},
+		onAssertions: func(query store.AssertionQuery) {
+			assertionQueries = append(assertionQueries, query)
 		},
 	}
 	handler := proofHandler(st, "user:member", nil)
@@ -647,8 +654,26 @@ func TestFindKafkaTopicUsage(t *testing.T) {
 	// Both kafka runs are published, no class hit the bounded row limit —
 	// the census must say so explicitly so "nothing ran" and "nothing was
 	// unresolved" can never be conflated.
-	if census.PublishedRuns != 2 || len(census.Truncated) != 0 {
+	if census.PublishedRuns != 2 || census.ProducerPublishedRuns != 1 ||
+		census.ConsumerPublishedRuns != 1 || len(census.Truncated) != 0 {
 		t.Fatalf("census run/truncation state = %+v", census)
+	}
+	// The topic query performs two exact evidence reads plus one prefix-batched
+	// census read per published plane/run — never six class reads per plane.
+	if len(assertionQueries) != 4 {
+		t.Fatalf("topic assertion query count = %d, want 4: %+v", len(assertionQueries), assertionQueries)
+	}
+	censusQueries := 0
+	for _, query := range assertionQueries {
+		if query.ObjectPrefix == "unresolved:" {
+			censusQueries++
+			if query.Object != "" || !query.AllowTruncate {
+				t.Fatalf("unbounded census query = %+v", query)
+			}
+		}
+	}
+	if censusQueries != 2 {
+		t.Fatalf("census query count = %d, want 2", censusQueries)
 	}
 	// Every frozen shape class is present in both planes even at zero; the
 	// one abstention row is counted; the abstention rows never appear as
@@ -659,7 +684,7 @@ func TestFindKafkaTopicUsage(t *testing.T) {
 	for class, count := range census.Producer {
 		want := 0
 		if class == "call-expr" {
-			want = 1
+			want = 2
 		}
 		if count != want {
 			t.Fatalf("producer census[%s] = %d, want %d", class, count, want)
@@ -679,8 +704,18 @@ func TestFindKafkaTopicUsage(t *testing.T) {
 	// A second identical question rebuilds an identical census.
 	code, _, second := getProof(t, handler, "/api/find_kafka_topic_usage?topic=orders-v1")
 	if code != http.StatusOK || second.Bundle.UnresolvedCensus == nil ||
-		second.Bundle.UnresolvedCensus.Producer["call-expr"] != 1 {
+		second.Bundle.UnresolvedCensus.Producer["call-expr"] != 2 {
 		t.Fatalf("second topic query = %d %+v", code, second.Bundle.UnresolvedCensus)
+	}
+
+	// Per-domain publication is intentionally isolated. A producer-only
+	// replacement must not make consumer zeros look measured.
+	delete(st.runs, proofScope(repo, "kafka-consumer"))
+	code, _, producerOnly := getProof(t, handler, "/api/find_kafka_topic_usage?topic=orders-v1")
+	partial := producerOnly.Bundle.UnresolvedCensus
+	if code != http.StatusOK || partial == nil || partial.PublishedRuns != 1 ||
+		partial.ProducerPublishedRuns != 1 || partial.ConsumerPublishedRuns != 0 {
+		t.Fatalf("producer-only census = %d %+v", code, partial)
 	}
 
 	// KD2 identity bounds refuse illegal spellings; existing surfaces stay

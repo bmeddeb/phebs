@@ -339,6 +339,8 @@ export interface KafkaTopicCensus {
   producer: Record<string, number>
   consumer: Record<string, number>
   published_runs: number
+  producer_published_runs: number
+  consumer_published_runs: number
   truncated?: string[]
 }
 

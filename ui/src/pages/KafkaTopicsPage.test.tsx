@@ -79,6 +79,8 @@ const envelope: ProofBundleEnvelope = {
       producer: { ...zeroCensus, 'call-expr': 3 },
       consumer: { ...zeroCensus },
       published_runs: 2,
+      producer_published_runs: 1,
+      consumer_published_runs: 1,
       truncated: ['producer:call-expr'],
     },
     coverage: { schema_version: 'coverage-certificate-v1', domains: [], repository_count: 1, repositories: [], digest: 'sha256:z' },
@@ -110,8 +112,10 @@ test('deep-linked topic renders census first with every citation', async () => {
   expect(api.fetchKafkaTopicUsage).toHaveBeenCalledWith('orders-v1', expect.anything())
 
   const census = await screen.findByTestId('unresolved-census')
-  expect(census.textContent).toContain('3 producer files and 0 consumer files could not be resolved from source')
-  expect(census.textContent).toContain('this view is not complete')
+  expect(census.textContent).toContain('At least 3 producer source sites could not be resolved across 1 published run')
+  expect(census.textContent).toContain('0 consumer source sites could not be resolved across 1 published run')
+  expect(census.textContent).toContain('This view is not complete')
+  expect(census.textContent).toContain('Whole-file extraction gaps are reported separately')
   // Every frozen shape class is listed even at zero, and the truncated
   // class renders as a lower bound.
   for (const shapeClass of Object.keys(zeroCensus)) {
@@ -143,6 +147,8 @@ test('zero published runs renders the no-run explanation, never affirmative zero
         producer: { ...zeroCensus },
         consumer: { ...zeroCensus },
         published_runs: 0,
+        producer_published_runs: 0,
+        consumer_published_runs: 0,
       },
     },
   })
@@ -152,6 +158,27 @@ test('zero published runs renders the no-run explanation, never affirmative zero
   expect(census.textContent).not.toContain('could not be resolved from source')
   expect(screen.getByText('No producer with a source-literal spelling of this topic is visible.')).toBeTruthy()
   expect(screen.getByText('No consumer with a source-literal spelling of this topic is visible.')).toBeTruthy()
+})
+
+test('a producer-only publication leaves consumer zeros explicitly unmeasured', async () => {
+  api.fetchKafkaTopicUsage.mockResolvedValue({
+    ...envelope,
+    bundle: {
+      ...envelope.bundle,
+      unresolved_census: {
+        schema_version: 'kafka-topic-census-v1',
+        producer: { ...zeroCensus, 'selector-expr': 2 },
+        consumer: { ...zeroCensus },
+        published_runs: 1,
+        producer_published_runs: 1,
+        consumer_published_runs: 0,
+      },
+    },
+  })
+  page('#/topics?topic=orders-v1')
+  const census = await screen.findByTestId('unresolved-census')
+  expect(census.textContent).toContain('2 producer source sites could not be resolved across 1 published run')
+  expect(census.textContent).toContain('No consumer extraction run has published; consumer zeros are not meaningful')
 })
 
 test('query failures clear any previous result and same-topic resubmit retries', async () => {

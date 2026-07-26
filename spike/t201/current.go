@@ -13,6 +13,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 )
@@ -33,6 +34,7 @@ func MeasureCurrentExtraction(ctx context.Context, profile Profile) ([]Extractio
 	corpus := profileCorpus{files: profile.Files}
 	extractors := []sdk.Extractor{
 		protodecl.New(), thriftdecl.New(), grpcgo.New(), thriftgo.New(), scipfield.New(),
+		thriftfield.New(),
 		kafkago.NewProducer(), kafkago.NewConsumer(),
 	}
 	out := make([]ExtractionMeasurement, 0, len(extractors))

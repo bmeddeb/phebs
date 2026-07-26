@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -87,25 +88,27 @@ type ProofBundle struct {
 }
 
 // KafkaTopicCensus is the first-class abstention census a topic-usage bundle
-// always carries (KD10): per-plane counts of distinct UNRESOLVED_KAFKA_*
-// assertions by frozen shape class, with every class present even at zero,
-// so completeness can never be implied by omission. Counts are
-// topic-independent by construction — a non-literal topic cannot be matched
-// to any literal — which is exactly the honesty the census communicates.
+// always carries (KD10): per-plane counts of supporting source sites on
+// UNRESOLVED_KAFKA_* assertions by frozen shape class, with every class
+// present even at zero, so completeness can never be implied by omission.
+// Counts are topic-independent by construction — a non-literal topic cannot
+// be matched to any literal — which is exactly the honesty the census
+// communicates.
 type KafkaTopicCensus struct {
 	SchemaVersion string         `json:"schema_version"`
 	Producer      map[string]int `json:"producer"`
 	Consumer      map[string]int `json:"consumer"`
-	// PublishedRuns counts the (repository, kafka domain) published runs
-	// the census was computed over. Zero means Kafka extraction has never
-	// published in the visible universe — the zeros above then mean
-	// "nothing ran", never "nothing was unresolved", and surfaces must
-	// render that difference.
-	PublishedRuns int `json:"published_runs"`
+	// PublishedRuns is the total number of (repository, Kafka domain) runs.
+	// The per-plane fields prevent a producer-only publication from making
+	// consumer zeros appear measured (and vice versa).
+	PublishedRuns         int `json:"published_runs"`
+	ProducerPublishedRuns int `json:"producer_published_runs"`
+	ConsumerPublishedRuns int `json:"consumer_published_runs"`
 	// Truncated lists "plane:class" entries whose counts are lower bounds:
-	// one repository exceeded the bounded per-query row limit for that
-	// class. The census never fails the whole surface on abstention
-	// volume, and it never presents a clipped count as exact.
+	// one repository exceeded the bounded per-plane query limit. All classes
+	// in that plane are then marked conservatively. The census never fails
+	// the whole surface on abstention volume, and it never presents a clipped
+	// count as exact.
 	Truncated []string `json:"truncated,omitempty"`
 }
 
@@ -550,12 +553,12 @@ func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certi
 	return assertions, evidence, nil
 }
 
-// collectKafkaTopicCensus counts distinct unresolved assertions per plane
-// and frozen shape class over every visible repository's published run,
-// inside the same coverage-digest sandwich as the evidence collection.
-// Every class key is present even at zero. The count discipline mirrors
-// collectProofEvidence: exact-object queries, published runs only, hard
-// error on any inconsistent row, fail closed past the assertion limit.
+// collectKafkaTopicCensus counts supporting source sites per plane and frozen
+// shape class over every visible repository's published run, inside the same
+// coverage-digest sandwich as the evidence collection. Every class key is
+// present even at zero. One bounded prefix query per published plane/run
+// replaces the former six exact-object round trips; returned rows remain
+// authorization-scoped by the certificate's exact repository and run.
 func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate) (*KafkaTopicCensus, error) {
 	census := &KafkaTopicCensus{
 		SchemaVersion: "kafka-topic-census-v1",
@@ -567,47 +570,48 @@ func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, ce
 		domain    string
 		predicate string
 		counts    map[string]int
+		published *int
 	}{
-		{"producer", "kafka-producer", "UNRESOLVED_KAFKA_PRODUCER", census.Producer},
-		{"consumer", "kafka-consumer", "UNRESOLVED_KAFKA_CONSUMER", census.Consumer},
+		{"producer", "kafka-producer", "UNRESOLVED_KAFKA_PRODUCER", census.Producer, &census.ProducerPublishedRuns},
+		{"consumer", "kafka-consumer", "UNRESOLVED_KAFKA_CONSUMER", census.Consumer, &census.ConsumerPublishedRuns},
 	}
 	for _, plane := range planes {
-		for _, repository := range certificate.Repositories {
-			if run, ok := certificateRun(repository, plane.domain); ok && run.Status == "published" {
-				census.PublishedRuns++
-			}
-		}
 		for _, class := range kafkaAbstentionClasses {
 			plane.counts[class] = 0
-			object := "unresolved:" + class
-			truncated := false
-			for _, repository := range certificate.Repositories {
-				run, ok := certificateRun(repository, plane.domain)
-				if !ok || run.Status != "published" {
-					continue
+		}
+		for _, repository := range certificate.Repositories {
+			run, ok := certificateRun(repository, plane.domain)
+			if !ok || run.Status != "published" {
+				continue
+			}
+			(*plane.published)++
+			census.PublishedRuns++
+			rows, err := source.ListAssertions(ctx, store.AssertionQuery{
+				Predicate: plane.predicate, ObjectPrefix: "unresolved:",
+				Repo: repository.Repository, RunID: run.RunID,
+				Limit: proofQueryAssertionLimit, AllowTruncate: true,
+			})
+			if err != nil {
+				return nil, err
+			}
+			truncated := len(rows) > proofQueryAssertionLimit
+			if truncated {
+				rows = rows[:proofQueryAssertionLimit]
+			}
+			for _, assertion := range rows {
+				class, found := strings.CutPrefix(assertion.Object, "unresolved:")
+				if assertion.Repo != repository.Repository || assertion.RunID != run.RunID ||
+					assertion.Predicate != plane.predicate || !found ||
+					!slices.Contains(kafkaAbstentionClasses, class) ||
+					len(assertion.Supporting) == 0 || len(assertion.Contradicting) != 0 {
+					return nil, errors.New("census query returned an inconsistent assertion")
 				}
-				rows, err := source.ListAssertions(ctx, store.AssertionQuery{
-					Predicate: plane.predicate, Object: object,
-					Repo: repository.Repository, RunID: run.RunID,
-					Limit: proofQueryAssertionLimit, AllowTruncate: true,
-				})
-				if err != nil {
-					return nil, err
-				}
-				for _, assertion := range rows {
-					if assertion.Repo != repository.Repository || assertion.RunID != run.RunID ||
-						assertion.Predicate != plane.predicate || assertion.Object != object {
-						return nil, errors.New("census query returned an inconsistent assertion")
-					}
-				}
-				if len(rows) > proofQueryAssertionLimit {
-					rows = rows[:proofQueryAssertionLimit]
-					truncated = true
-				}
-				plane.counts[class] += len(rows)
+				plane.counts[class] += len(assertion.Supporting)
 			}
 			if truncated {
-				census.Truncated = append(census.Truncated, plane.name+":"+class)
+				for _, class := range kafkaAbstentionClasses {
+					census.Truncated = append(census.Truncated, plane.name+":"+class)
+				}
 			}
 		}
 	}

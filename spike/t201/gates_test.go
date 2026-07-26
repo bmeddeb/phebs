@@ -393,6 +393,7 @@ func TestCurrentExtractionBaseline(t *testing.T) {
 			"DECLARES_FIELD": 4, "DECLARES_MESSAGE": 4, "DECLARES_OPERATION": 3, "DECLARES_SERVICE": 2,
 		}},
 		{Domain: "scip-proto-field", Version: "1.0.0", Predicates: map[string]int{}},
+		{Domain: "scip-thrift-field", Version: "1.1.0", Predicates: map[string]int{}},
 		{Domain: "thrift-consumer", Version: "1.1.0", Facts: 25, UnresolvedCount: 25, Predicates: map[string]int{
 			"THRIFT_EXTRACTION_GAP": 1, "UNRESOLVED_THRIFT_CALL": 24,
 		}},

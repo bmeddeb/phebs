@@ -85,7 +85,10 @@ func TopicObject(topic string) string {
 // libraries yield nothing: the import gate is the document-eligibility rule.
 func ScanFile(path, rel string) ([]TopicEvidence, []TopicAbstention, error) {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+	// Keep in-file object resolution so the frozen same-file-const rule covers
+	// lexically visible package and function-local constants, never vars or
+	// cross-file/dataflow propagation.
+	file, err := parser.ParseFile(fset, path, nil, 0)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse %s: %w", rel, err)
 	}
@@ -93,7 +96,7 @@ func ScanFile(path, rel string) ([]TopicEvidence, []TopicAbstention, error) {
 	if len(aliases) == 0 {
 		return nil, nil, nil
 	}
-	scan := &fileScan{file: file, fset: fset, rel: rel, aliases: aliases}
+	scan := &fileScan{fset: fset, rel: rel, aliases: aliases}
 	ast.Inspect(file, scan.visit)
 	return scan.evidence, scan.abstentions, nil
 }
@@ -146,7 +149,6 @@ func defaultAlias(path string) string {
 }
 
 type fileScan struct {
-	file        *ast.File
 	fset        *token.FileSet
 	rel         string
 	aliases     map[string]libraryImport
@@ -398,7 +400,8 @@ func tierForShape(shape string) string {
 	}
 }
 
-// stringConstant evaluates a string literal or a same-file const identifier.
+// stringConstant evaluates a string literal or a lexically resolved same-file
+// const identifier.
 func (s *fileScan) stringConstant(expr ast.Expr) (string, string, bool) {
 	switch typed := expr.(type) {
 	case *ast.BasicLit:
@@ -411,28 +414,23 @@ func (s *fileScan) stringConstant(expr ast.Expr) (string, string, bool) {
 		}
 		return value, "literal", true
 	case *ast.Ident:
-		for _, decl := range s.file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.CONST {
+		if typed.Obj == nil || typed.Obj.Kind != ast.Con {
+			return "", "", false
+		}
+		value, ok := typed.Obj.Decl.(*ast.ValueSpec)
+		if !ok {
+			return "", "", false
+		}
+		for i, name := range value.Names {
+			if name.Name != typed.Name || i >= len(value.Values) {
 				continue
 			}
-			for _, spec := range gen.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok {
-					continue
-				}
-				for i, name := range value.Names {
-					if name.Name != typed.Name || i >= len(value.Values) {
-						continue
-					}
-					if lit, ok := value.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-						if resolved, err := strconv.Unquote(lit.Value); err == nil {
-							return resolved, "same-file-const", true
-						}
-					}
-					return "", "", false
+			if lit, ok := value.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if resolved, err := strconv.Unquote(lit.Value); err == nil {
+					return resolved, "same-file-const", true
 				}
 			}
+			return "", "", false
 		}
 		return "", "", false
 	default:

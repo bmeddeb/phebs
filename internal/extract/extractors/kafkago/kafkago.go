@@ -97,7 +97,10 @@ func (k kafkaGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 			return k.emitGap(emit, relPath, blob, "source_too_large", unresolved)
 		}
 		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, relPath, blob.Content, parser.SkipObjectResolution)
+		// Keep the parser's in-file object resolution: KD6 admits lexically
+		// visible same-file constants, including function-local consts, while
+		// still refusing vars, cross-file names, and expression propagation.
+		file, err := parser.ParseFile(fset, relPath, blob.Content, 0)
 		if err != nil {
 			return k.emitGap(emit, relPath, blob, "parse_error", unresolved)
 		}
@@ -105,7 +108,7 @@ func (k kafkaGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 		if len(aliases) == 0 {
 			return nil
 		}
-		scan := &fileScan{file: file, fset: fset, aliases: aliases}
+		scan := &fileScan{fset: fset, aliases: aliases}
 		ast.Inspect(file, scan.visit)
 		if err := k.emitEvidenceGroups(emit, repo, relPath, blob, scan.evidence); err != nil {
 			return err
@@ -419,7 +422,6 @@ func defaultAlias(path string) string {
 }
 
 type fileScan struct {
-	file        *ast.File
 	fset        *token.FileSet
 	aliases     map[string]libraryImport
 	evidence    []topicEvidence
@@ -670,7 +672,9 @@ func tierForShape(shape string) string {
 	}
 }
 
-// stringConstant evaluates a string literal or a same-file const identifier.
+// stringConstant evaluates a string literal or a lexically resolved same-file
+// const identifier. parser object resolution binds both package-level and
+// function-local declarations without dataflow or cross-file lookup.
 func (s *fileScan) stringConstant(expr ast.Expr) (string, string, bool) {
 	switch typed := expr.(type) {
 	case *ast.BasicLit:
@@ -683,28 +687,23 @@ func (s *fileScan) stringConstant(expr ast.Expr) (string, string, bool) {
 		}
 		return value, "literal", true
 	case *ast.Ident:
-		for _, decl := range s.file.Decls {
-			gen, ok := decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.CONST {
+		if typed.Obj == nil || typed.Obj.Kind != ast.Con {
+			return "", "", false
+		}
+		value, ok := typed.Obj.Decl.(*ast.ValueSpec)
+		if !ok {
+			return "", "", false
+		}
+		for i, name := range value.Names {
+			if name.Name != typed.Name || i >= len(value.Values) {
 				continue
 			}
-			for _, spec := range gen.Specs {
-				value, ok := spec.(*ast.ValueSpec)
-				if !ok {
-					continue
-				}
-				for i, name := range value.Names {
-					if name.Name != typed.Name || i >= len(value.Values) {
-						continue
-					}
-					if lit, ok := value.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
-						if resolved, err := strconv.Unquote(lit.Value); err == nil {
-							return resolved, "same-file-const", true
-						}
-					}
-					return "", "", false
+			if lit, ok := value.Values[i].(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				if resolved, err := strconv.Unquote(lit.Value); err == nil {
+					return resolved, "same-file-const", true
 				}
 			}
+			return "", "", false
 		}
 		return "", "", false
 	default:

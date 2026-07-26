@@ -185,6 +185,7 @@ func TestSyntheticRecognition(t *testing.T) {
 	wantSarama := []TopicEvidence{
 		{Topic: "orders-v1", Plane: "producer", Binding: "literal", Shape: "ProducerMessage", Tier: "derived"},
 		{Topic: "audit-v2", Plane: "producer", Binding: "same-file-const", Shape: "ProducerMessage", Tier: "derived"},
+		{Topic: "orders-local", Plane: "producer", Binding: "same-file-const", Shape: "ProducerMessage", Tier: "derived"},
 		{Topic: "orders-v1", Plane: "consumer", Binding: "literal", Shape: "Consume-slice", Tier: "heuristic"},
 		{Topic: "payments", Plane: "consumer", Binding: "literal", Shape: "Consume-slice", Tier: "heuristic"},
 		{Topic: "clicks", Plane: "consumer", Binding: "literal", Shape: "ConsumePartition", Tier: "heuristic"},

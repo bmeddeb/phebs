@@ -163,13 +163,13 @@ export default function KafkaTopicsPage({ params }: { params: URLSearchParams })
 }
 
 // CensusPanel is deliberately rendered before any evidence: the unresolved
-// counts are the first-class honesty of this page, not a footnote. When no
-// Kafka run has ever published, the zeros mean "nothing ran" — never
-// "nothing was unresolved" — and the panel says so instead of the counts.
+// counts are the first-class honesty of this page, not a footnote. Per-plane
+// publication counts keep a producer-only replacement from making consumer
+// zeros look measured (and vice versa).
 function CensusPanel({ census }: { census: KafkaTopicCensus }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  if (census.published_runs === 0) {
+  if (census.producer_published_runs === 0 && census.consumer_published_runs === 0) {
     return (
       <section
         data-testid="unresolved-census"
@@ -188,6 +188,8 @@ function CensusPanel({ census }: { census: KafkaTopicCensus }) {
   const producerTotal = censusTotal(census.producer)
   const consumerTotal = censusTotal(census.consumer)
   const truncated = new Set(census.truncated ?? [])
+  const producerTruncated = Array.from(truncated).some((entry) => entry.startsWith('producer:'))
+  const consumerTruncated = Array.from(truncated).some((entry) => entry.startsWith('consumer:'))
   const classes = Array.from(new Set([...Object.keys(census.producer), ...Object.keys(census.consumer)])).sort()
   const count = (plane: string, counts: Record<string, number>, shapeClass: string) =>
     `${truncated.has(`${plane}:${shapeClass}`) ? '≥' : ''}${counts[shapeClass] ?? 0}`
@@ -200,9 +202,15 @@ function CensusPanel({ census }: { census: KafkaTopicCensus }) {
         Unresolved sites
       </h2>
       <p className={css({ margin: '6px 0 12px', fontSize: '13px', lineHeight: '20px', color: tok.textSecondary })}>
-        {producerTotal} producer {producerTotal === 1 ? 'file' : 'files'} and {consumerTotal} consumer{' '}
-        {consumerTotal === 1 ? 'file' : 'files'} could not be resolved from source — this view is not complete.
-        Unresolved counts are topic-independent: a configuration-driven topic cannot be matched to any literal.
+        {census.producer_published_runs === 0
+          ? 'No producer extraction run has published; producer zeros are not meaningful.'
+          : `${producerTruncated ? 'At least ' : ''}${producerTotal} producer source ${producerTotal === 1 ? 'site' : 'sites'} could not be resolved across ${census.producer_published_runs} published ${census.producer_published_runs === 1 ? 'run' : 'runs'}.`}
+        {' '}
+        {census.consumer_published_runs === 0
+          ? 'No consumer extraction run has published; consumer zeros are not meaningful.'
+          : `${consumerTruncated ? 'At least ' : ''}${consumerTotal} consumer source ${consumerTotal === 1 ? 'site' : 'sites'} could not be resolved across ${census.consumer_published_runs} published ${census.consumer_published_runs === 1 ? 'run' : 'runs'}.`}
+        {' '}This view is not complete. Counts are topic-independent: a configuration-driven topic cannot be
+        matched to any literal. Whole-file extraction gaps are reported separately in the coverage certificate.
       </p>
       <table className={css({ borderCollapse: 'collapse', fontSize: '12px', fontFamily: FONTS.MONO })}>
         <thead>
@@ -224,7 +232,7 @@ function CensusPanel({ census }: { census: KafkaTopicCensus }) {
       </table>
       {truncated.size > 0 && (
         <p className={css({ margin: '10px 0 0', fontSize: '12px', color: tok.textTertiary })}>
-          ≥ marks lower bounds: at least one repository exceeded the bounded census query limit for that class.
+          ≥ marks lower bounds: at least one repository exceeded the bounded per-plane census query limit.
         </p>
       )}
     </section>

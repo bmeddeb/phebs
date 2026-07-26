@@ -15,12 +15,17 @@ const auditTopic = "audit-v2"
 var mutableTopic = "orders-mutable"
 
 func produce(producer sarama.SyncProducer, cfgTopic string) error {
+	const localTopic = "orders-local"
 	// literal → evidence
 	if _, _, err := producer.SendMessage(&sarama.ProducerMessage{Topic: "orders-v1"}); err != nil {
 		return err
 	}
 	// same-file const → evidence with const binding
 	if _, _, err := producer.SendMessage(&sarama.ProducerMessage{Topic: auditTopic}); err != nil {
+		return err
+	}
+	// function-local same-file const → evidence with const binding
+	if _, _, err := producer.SendMessage(&sarama.ProducerMessage{Topic: localTopic}); err != nil {
 		return err
 	}
 	// same-file var → abstain (mutable state is not a declaration spelling)

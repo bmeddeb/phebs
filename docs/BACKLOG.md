@@ -2700,7 +2700,8 @@ the two sarama import paths (era recorded) and segmentio; `kafka.Message{
 Topic:}` only as a direct `WriteMessages` argument, never `CommitMessages`;
 document eligibility = round-one import present and not `_test.go`;
 dual-sarama-import files abstain `ambiguous-library-import`;
-literal-or-abstain with same-file `const` only, under Kafka's 1–249
+literal-or-abstain with an explicitly initialized, lexically visible
+package- or function-local same-file `const` only, under Kafka's 1–249
 `[a-zA-Z0-9._-]` bounds with `.`/`..` rejected. Evidence rows:
 `PRODUCES_TO_TOPIC` / `CONSUMES_FROM_TOPIC`, object `topic:<literal>`,
 detail `kafka-topic-evidence-detail-v1` {libraries, import_paths, shapes,
@@ -2734,7 +2735,13 @@ validated by the KD2 bounds. Output: producer rows and consumer rows
 (group id as detail), each with immutable citations, plus a first-class
 unresolved census — per-plane counts by shape class that are **always
 present, even when zero** — so KD10's honesty requirement is structural,
-not editorial. Envelope gains identity kind `kafka_topic` with coverage and
+not editorial. Counts are supporting source sites (atoms), not collapsed
+assertions, and producer/consumer published-run counts independently state
+whether each plane's zeros were measured. Collection is one bounded
+authorization-scoped prefix query per published repository/plane; a clipped
+plane marks every class in that plane as a lower bound. Whole-file extraction
+gaps remain separately visible in the coverage certificate. Envelope gains
+identity kind `kafka_topic` with coverage and
 the explicit no-completeness posture; proof bundles gain a topic-keyed kind
 with deterministic ordering. The reverse index needs no store change
 (predicate-parameterized since T20.4). AC: illegal topic spellings refused
@@ -2746,8 +2753,11 @@ round-trips; merge bar.
 **T23.4 ✅ · topic-centered UI, demo, closure** *(needs T23.3)* — a read-only
 topic page in the annex UI: search a topic literal → producers → topic →
 consumers, never an endpoint metaphor; the unresolved census renders as a
-first-class panel ("N producer sites and M consumer sites could not be
-resolved from source — this view is not complete") rather than a footnote.
+first-class panel ("N producer source sites and M consumer source sites could
+not be resolved from source — this view is not complete") rather than a
+footnote. Per-plane no-run states keep an independently published producer or
+consumer run from making the other plane's zeros look measured, and the panel
+points to the coverage certificate for whole-file extraction gaps.
 Demo via `phebs-kafka-demo.yaml` over public corpora (amended at
 implementation from the originally sketched synthetic fixture repo: Kafka
 needs no committed index, so the thrift-demo precedent of public pinned
