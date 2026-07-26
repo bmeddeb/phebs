@@ -411,7 +411,12 @@ func canonicalAtomRefs(refs []string) ([]string, error) {
 }
 
 func mergeAtomRefs(a, b []string) []string {
-	merged := append(append([]string(nil), a...), b...)
+	// Keep the canonical empty set non-nil. The SurrealDB SDK serializes a
+	// nil slice as NULL, which is not a valid array::union operand. This path
+	// is exercised when two source atoms support one semantic assertion.
+	merged := make([]string, 0, len(a)+len(b))
+	merged = append(merged, a...)
+	merged = append(merged, b...)
 	slices.Sort(merged)
 	return slices.Compact(merged)
 }
@@ -676,8 +681,8 @@ FOR $x IN $safe_asserts {
         attribute_key = $x.attribute_key,
         predicate = $x.predicate, subject = $x.subject, object = $x.object,
         lineage = $x.lineage, tier = $x.tier, code_role = $x.code_role, repo = $x.repo,
-        supporting = array::union(supporting ?? [], $x.supporting),
-        contradicting = array::union(contradicting ?? [], $x.contradicting),
+        supporting = array::union(supporting ?? [], $x.supporting ?? []),
+        contradicting = array::union(contradicting ?? [], $x.contradicting ?? []),
         run_id = $x.run_id, detail = $x.detail RETURN NONE
 };
 LET $run_rows = array::len(SELECT VALUE id FROM snapshot_evidence WHERE run_id = $run_id) +

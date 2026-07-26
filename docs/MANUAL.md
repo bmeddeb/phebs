@@ -165,7 +165,8 @@ evidence):
 
 ```bash
 make ui bin/zoekt-git-index bin/buf
-PHEBS_ZOEKT_GIT_INDEX=bin/zoekt-git-index PHEBS_BUF=bin/buf \
+PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+PHEBS_BUF="$(pwd)/bin/buf" \
   go run -tags ui ./cmd/phebs serve -config phebs-thrift-demo.yaml
 ```
 

@@ -49,6 +49,76 @@ func testEvidenceBatch(repo, commit, object string) ([]store.EvidenceAtom, []sto
 	return []store.EvidenceAtom{atom}, []store.SnapshotEvidence{assoc}, []store.Assertion{assertion}
 }
 
+func TestEvidenceMergesMultipleAtomsForOneSemanticAssertion(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	cases := []struct {
+		name          string
+		contradicting []string
+	}{
+		{name: "nil contradicting refs"},
+		{name: "explicit empty contradicting refs", contradicting: []string{}},
+	}
+	for i, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			repo := fmt.Sprintf("github.com/merge/%d", i)
+			const commit = "c0ffee"
+			seedEvidenceRepo(t, s, repo, commit)
+			run, err := s.BeginExtractionRun(ctx, repo, commit, "thrift-consumer", "1")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			first := testAtom("sha256:shared", "thrift-call-v1", "call|first")
+			first.ID = store.ComputeAtomID(first)
+			second := testAtom("sha256:shared", "thrift-call-v1", "call|second")
+			second.ID = store.ComputeAtomID(second)
+			atoms := []store.EvidenceAtom{first, second}
+			assocs := []store.SnapshotEvidence{
+				{
+					AtomID: first.ID, Repo: repo, Commit: commit,
+					Path: "gen/sampling.pb.go", StartLine: 538, EndLine: 538,
+					VisibilityScope: "repo:" + repo,
+				},
+				{
+					AtomID: second.ID, Repo: repo, Commit: commit,
+					Path: "gen/sampling.pb.go", StartLine: 545, EndLine: 545,
+					VisibilityScope: "repo:" + repo,
+				},
+			}
+			assertion := store.Assertion{
+				Predicate: "CALLS_OPERATION", Subject: "gen/sampling.pb.go",
+				Object: "/sampling.SamplingManager/getSamplingStrategy",
+				Tier:   store.TierHeuristic, Repo: repo, Supporting: []string{first.ID},
+			}
+			duplicate := assertion
+			duplicate.Supporting = []string{second.ID}
+			duplicate.Contradicting = testCase.contradicting
+
+			if err := s.AddEvidence(ctx, run.ID, atoms, assocs, []store.Assertion{assertion, duplicate}); err != nil {
+				t.Fatalf("merge evidence: %v", err)
+			}
+			if err := s.PublishExtractionRun(ctx, run.ID, testCoverage(1, 2)); err != nil {
+				t.Fatalf("publish merged evidence: %v", err)
+			}
+			got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, RunID: run.ID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != 1 || len(got[0].Supporting) != 2 || len(got[0].Contradicting) != 0 {
+				t.Fatalf("merged assertion = %+v", got)
+			}
+			seen := map[string]bool{}
+			for _, atomID := range got[0].Supporting {
+				seen[atomID] = true
+			}
+			if !seen[first.ID] || !seen[second.ID] {
+				t.Fatalf("merged supports = %v, want %s and %s", got[0].Supporting, first.ID, second.ID)
+			}
+		})
+	}
+}
+
 func seedEvidenceRepo(t *testing.T, s *store.Surreal, repo, commit string) {
 	t.Helper()
 	ctx := context.Background()

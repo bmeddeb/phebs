@@ -30,7 +30,7 @@ import (
 // ./bin beside the executable (the `make build` layout), then PATH.
 func FindBinary() (string, error) {
 	if p := os.Getenv("PHEBS_ZOEKT_GIT_INDEX"); p != "" {
-		return p, nil
+		return executablePath(p)
 	}
 	if exe, err := os.Executable(); err == nil {
 		dir := filepath.Dir(exe)
@@ -38,12 +38,38 @@ func FindBinary() (string, error) {
 			filepath.Join(dir, "zoekt-git-index"),
 			filepath.Join(dir, "bin", "zoekt-git-index"),
 		} {
-			if _, err := os.Stat(p); err == nil {
-				return p, nil
+			if resolved, err := executablePath(p); err == nil {
+				return resolved, nil
 			}
 		}
 	}
-	return exec.LookPath("zoekt-git-index")
+	p, err := exec.LookPath("zoekt-git-index")
+	if err != nil {
+		return "", err
+	}
+	return executablePath(p)
+}
+
+// The index child changes its working directory to the bare mirror. Resolve
+// configured relative paths before that chdir, and reject paths that cannot
+// be executed, so successful startup proves later index jobs can launch.
+func executablePath(candidate string) (string, error) {
+	absolute, err := filepath.Abs(candidate)
+	if err != nil {
+		return "", fmt.Errorf("resolve zoekt-git-index path: %w", err)
+	}
+	resolved, err := filepath.EvalSymlinks(absolute)
+	if err != nil {
+		return "", fmt.Errorf("resolve zoekt-git-index binary: %w", err)
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return "", fmt.Errorf("inspect zoekt-git-index binary: %w", err)
+	}
+	if !info.Mode().IsRegular() || info.Mode()&0o111 == 0 {
+		return "", fmt.Errorf("zoekt-git-index binary is not an executable regular file")
+	}
+	return resolved, nil
 }
 
 type Indexer struct {

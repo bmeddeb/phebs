@@ -1304,7 +1304,14 @@ returns immediately on stale-run conflicts, and stops attempting new domains
 once the context is canceled or the extraction deadline expires; on retry,
 published domains short-circuit while aborted domains rerun. AC: corpus,
 worker, store-validation, and e2e regressions incl. a domain-1-fails/2-3-
-publish/retry-skips pin; full merge bar.
+publish/retry-skips pin; full merge bar. Live Jaeger follow-up: two distinct
+source atoms supporting one `thrift-consumer` assertion exposed a nullable
+empty contradiction set at the SurrealDB `array::union` boundary. The merge
+now preserves canonical non-null arrays, the SQL independently coalesces both
+operands, and a persisted-store regression pins nil and explicit-empty inputs.
+Indexer discovery also resolves and validates the configured child to an
+absolute executable path before asynchronous jobs can change working
+directory; the demo command uses absolute overrides.
 
 ### On-demand protocol-pack candidates after Epic 17
 
