@@ -185,9 +185,11 @@ func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, strin
 	lineage := "contract_scip_package_v1_" + strings.Repeat("d", 64)
 	grpcRun := proofToolRun(visibleRepo, "grpc-consumer")
 	fieldRun := proofToolRun(visibleRepo, "scip-proto-field")
+	kafkaRun := proofToolRun(visibleRepo, "kafka-producer")
 	hiddenRun := proofToolRun(hiddenRepo, "grpc-consumer")
 	grpcAssertion, grpcResolution := proofToolAssertion(visibleRepo, grpcRun, "grpc", "CALLS_OPERATION", operation, "", "client/cart.go")
 	fieldAssertion, fieldResolution := proofToolAssertion(visibleRepo, fieldRun, "field", "REFERENCES_PROTO_FIELD", "shop.Cart#1", lineage, "client/model.go")
+	kafkaAssertion, kafkaResolution := proofToolAssertion(visibleRepo, kafkaRun, "kafka", "PRODUCES_TO_TOPIC", "topic:orders-v1", "provisional_repo_path_v1_"+strings.Repeat("e", 64), "client/producer.go")
 	hiddenAssertion, hiddenResolution := proofToolAssertion(hiddenRepo, hiddenRun, "secret", "CALLS_OPERATION", operation, "", "secret/client.go")
 	st := &proofToolStore{
 		repos: []store.Repo{
@@ -197,14 +199,16 @@ func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, strin
 		runs: map[string]store.ExtractionRun{
 			proofToolScope(visibleRepo, grpcRun.Domain):  grpcRun,
 			proofToolScope(visibleRepo, fieldRun.Domain): fieldRun,
+			proofToolScope(visibleRepo, kafkaRun.Domain): kafkaRun,
 			proofToolScope(hiddenRepo, hiddenRun.Domain): hiddenRun,
 		},
 		assertions: map[string][]store.Assertion{
-			visibleRepo: {grpcAssertion, fieldAssertion}, hiddenRepo: {hiddenAssertion},
+			visibleRepo: {grpcAssertion, fieldAssertion, kafkaAssertion}, hiddenRepo: {hiddenAssertion},
 		},
 		resolutions: map[string]store.EvidenceResolution{
 			proofToolEvidenceScope(visibleRepo, grpcRun.ID, grpcAssertion.Supporting[0]):    grpcResolution,
 			proofToolEvidenceScope(visibleRepo, fieldRun.ID, fieldAssertion.Supporting[0]):  fieldResolution,
+			proofToolEvidenceScope(visibleRepo, kafkaRun.ID, kafkaAssertion.Supporting[0]):  kafkaResolution,
 			proofToolEvidenceScope(hiddenRepo, hiddenRun.ID, hiddenAssertion.Supporting[0]): hiddenResolution,
 		},
 	}
@@ -498,6 +502,10 @@ func TestProofEnvelopeProjectionInMemory(t *testing.T) {
 			},
 		},
 		{
+			name: "find_kafka_topic_usage",
+			args: map[string]any{"topic": "orders-v1"},
+		},
+		{
 			name: "get_extraction_coverage",
 			args: map[string]any{"domains": []string{"grpc-consumer"}},
 		},
@@ -527,6 +535,31 @@ func TestProofEnvelopeProjectionInMemory(t *testing.T) {
 				t.Fatalf("invalid envelope: %v", err)
 			}
 		})
+	}
+}
+
+// T23.R: the kafka envelope arms (claim, normalized question, fact object
+// kind) were previously untested despite being a written T23.3 AC.
+func TestKafkaTopicEnvelopeProjection(t *testing.T) {
+	s, _, _, _ := proofToolFixture(t)
+	envelope, result := callTool[investigation.Envelope](t, s, "find_kafka_topic_usage", map[string]any{"topic": "orders-v1"})
+	if result.IsError {
+		t.Fatalf("tool error: %+v", result.Content)
+	}
+	if err := envelope.ValidateSemantics(); err != nil {
+		t.Fatalf("invalid envelope: %v", err)
+	}
+	claim := envelope.Scope.Claim
+	if claim.Predicate != "USES_KAFKA_TOPIC" || claim.Subject.Kind != "kafka_topic" || claim.Subject.ID != "topic:orders-v1" {
+		t.Fatalf("kafka claim = %+v", claim)
+	}
+	if !strings.Contains(envelope.Scope.NormalizedQuestion, "never complete") {
+		t.Fatalf("normalized question drops the no-completeness posture: %q", envelope.Scope.NormalizedQuestion)
+	}
+	facts := contractEdgeFacts(t, envelope)
+	if len(facts) != 1 || facts[0].Predicate != "PRODUCES_TO_TOPIC" ||
+		facts[0].Object.Kind != "kafka_topic" || facts[0].Object.ID != "topic:orders-v1" {
+		t.Fatalf("kafka facts = %+v", facts)
 	}
 }
 

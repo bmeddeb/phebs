@@ -965,6 +965,17 @@ field identities, and proposed before/after contract inputs. Known and unresolve
 source revisions; every conclusion renders its complete coverage certificate.
 The navigation item appears only when the server advertises the capability,
 and the contract-change tab additionally requires the pinned Buf startup probe.
+- **Topics** (`#/topics`, experimental) — topic-centered Kafka evidence:
+query one topic spelling and see producers, consumers (group ids as detail),
+and — rendered first, always — the unresolved census: per-shape-class counts
+of sites that could not be resolved from source, with zeros listed
+explicitly, `≥` marking bounded lower-bound counts, and a distinct
+"no Kafka extraction run has published" state so an empty answer never
+reads as an affirmative zero. The navigation item appears with the
+`kafka-topic-usage` capability, which the server advertises whenever the
+proof surfaces exist — including deployments where the Kafka packs
+themselves are dark, in which case every answer honestly shows the no-run
+state. Nothing on this page is a completeness claim.
 
 The UI uses its DB-backed session cookie and automatically supplies CSRF
 tokens on mutations. A `401` clears stale authenticated state and returns to
@@ -1060,7 +1071,7 @@ Ten core tools are always present. Enabling any provisional extraction pack
 adds four evidence-query tools.
 It adds a fifth annex tool, for fifteen total, when the pinned Buf binary and
 host sandbox pass their startup probe; otherwise compatibility stays
-undiscoverable and the other three remain available.
+undiscoverable and the other four remain available.
 
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
@@ -1419,8 +1430,8 @@ identity. Everything else — configuration selectors, function results,
 variables, invalid literals — emits an `UNRESOLVED_KAFKA_PRODUCER` /
 `UNRESOLVED_KAFKA_CONSUMER` assertion whose object names the frozen shape
 class. **Expect abstention to dominate**: production Kafka topics are
-overwhelmingly configuration-driven (2 literal evidence rows vs 17
-abstentions across the spike's pinned production corpora), and the pack
+overwhelmingly configuration-driven (2 literal evidence rows vs 19
+abstentions across the spike's pinned corpora), and the pack
 presents that volume as the honest norm rather than a defect. `_test.go`
 fixture literals are excluded from recognition entirely. Oversized or
 unparseable files record `KAFKA_EXTRACTION_GAP`. There is no topic

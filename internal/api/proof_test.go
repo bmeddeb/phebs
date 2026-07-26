@@ -644,6 +644,12 @@ func TestFindKafkaTopicUsage(t *testing.T) {
 	if census == nil || census.SchemaVersion != "kafka-topic-census-v1" {
 		t.Fatalf("census = %+v", census)
 	}
+	// Both kafka runs are published, no class hit the bounded row limit —
+	// the census must say so explicitly so "nothing ran" and "nothing was
+	// unresolved" can never be conflated.
+	if census.PublishedRuns != 2 || len(census.Truncated) != 0 {
+		t.Fatalf("census run/truncation state = %+v", census)
+	}
 	// Every frozen shape class is present in both planes even at zero; the
 	// one abstention row is counted; the abstention rows never appear as
 	// bundle assertions.

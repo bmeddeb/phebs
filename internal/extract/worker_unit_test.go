@@ -86,16 +86,19 @@ type memoryEvidence struct {
 	latestByDomain map[string]*store.ExtractionRun
 	latestAttempt  *store.ExtractionAttempt
 	batches        []evidenceBatch
-	published      bool
-	publishedWith  store.CoverageManifest
-	aborted        bool
-	abortCanceled  bool
-	abortDeadline  time.Duration
-	retainBatches  bool
-	batchCount     int
-	stagedFacts    int
-	publishHook    func() error
-	addHook        func() error
+	// assertionAttributes mirrors the store's per-semantic-ID attribute
+	// consistency guard so worker tests fail where SurrealDB would THROW.
+	assertionAttributes map[string][3]string
+	published           bool
+	publishedWith       store.CoverageManifest
+	aborted             bool
+	abortCanceled       bool
+	abortDeadline       time.Duration
+	retainBatches       bool
+	batchCount          int
+	stagedFacts         int
+	publishHook         func() error
+	addHook             func() error
 }
 
 func newMemoryEvidence() *memoryEvidence {
@@ -130,6 +133,21 @@ func (m *memoryEvidence) AddEvidence(_ context.Context, _ string, atoms []store.
 		if err := m.addHook(); err != nil {
 			return err
 		}
+	}
+	// Mirror the real store's attribute-consistency contract (T23.R): a
+	// duplicate semantic assertion ID whose (tier, code_role, detail)
+	// differs is a permanent store rejection, and the in-memory harness
+	// must not let extractors pass what SurrealDB would refuse.
+	if m.assertionAttributes == nil {
+		m.assertionAttributes = make(map[string][3]string)
+	}
+	for _, assertion := range asserts {
+		id := store.ComputeAssertionID(assertion)
+		attributes := [3]string{assertion.Tier, assertion.CodeRole, assertion.Detail}
+		if previous, ok := m.assertionAttributes[id]; ok && previous != attributes {
+			return fmt.Errorf("duplicate semantic assertion has conflicting attributes: %s", id)
+		}
+		m.assertionAttributes[id] = attributes
 	}
 	m.batchCount++
 	m.stagedFacts += len(atoms)

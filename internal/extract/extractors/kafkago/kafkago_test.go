@@ -158,8 +158,8 @@ func TestSaramaProducerPlane(t *testing.T) {
 	files := map[string]string{"svc/kafka.go": saramaFixture}
 	facts, coverage := runExtractor(t, NewProducer(), files)
 	assertRows(t, "producer", saramaFixture, facts, []wantRow{
-		{"PRODUCES_TO_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"binding":"literal"`},
-		{"PRODUCES_TO_TOPIC", "topic:audit-v2", "derived", `auditTopic`, `"binding":"same-file-const"`},
+		{"PRODUCES_TO_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"bindings":["literal"]`},
+		{"PRODUCES_TO_TOPIC", "topic:audit-v2", "derived", `auditTopic`, `"bindings":["same-file-const"]`},
 		{"UNRESOLVED_KAFKA_PRODUCER", "unresolved:unresolved-ident", "unresolved", `mutableTopic`, `"shape":"unresolved-ident"`},
 		{"UNRESOLVED_KAFKA_PRODUCER", "unresolved:unresolved-ident", "unresolved", `cfgTopic`, ""},
 		{"UNRESOLVED_KAFKA_PRODUCER", "unresolved:call-expr", "unresolved", `os.Getenv("TOPIC")`, ""},
@@ -176,9 +176,9 @@ func TestSaramaConsumerPlane(t *testing.T) {
 	files := map[string]string{"svc/kafka.go": saramaFixture}
 	facts, coverage := runExtractor(t, NewConsumer(), files)
 	assertRows(t, "consumer", saramaFixture, facts, []wantRow{
-		{"CONSUMES_FROM_TOPIC", "topic:orders-v1", "heuristic", `"orders-v1"`, `"shape":"Consume-slice"`},
+		{"CONSUMES_FROM_TOPIC", "topic:orders-v1", "heuristic", `"orders-v1"`, `"shapes":["Consume-slice"]`},
 		{"CONSUMES_FROM_TOPIC", "topic:payments", "heuristic", `"payments"`, ""},
-		{"CONSUMES_FROM_TOPIC", "topic:clicks", "heuristic", `"clicks"`, `"shape":"ConsumePartition"`},
+		{"CONSUMES_FROM_TOPIC", "topic:clicks", "heuristic", `"clicks"`, `"shapes":["ConsumePartition"]`},
 		{"UNRESOLVED_KAFKA_CONSUMER", "unresolved:call-expr", "unresolved", `strings.Split(topics, ",")`, ""},
 		{"UNRESOLVED_KAFKA_CONSUMER", "unresolved:invalid-topic-literal", "unresolved", `"bad topic!"`, ""},
 	})
@@ -191,16 +191,16 @@ func TestSegmentioBothPlanes(t *testing.T) {
 	files := map[string]string{"svc/kafka.go": segmentioFixture}
 	producerFacts, _ := runExtractor(t, NewProducer(), files)
 	assertRows(t, "segmentio producer", segmentioFixture, producerFacts, []wantRow{
-		{"PRODUCES_TO_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"shape":"Writer"`},
-		{"PRODUCES_TO_TOPIC", "topic:audit-log", "derived", `"audit-log"`, `"shape":"WriterConfig"`},
-		{"PRODUCES_TO_TOPIC", "topic:per-message", "derived", `"per-message"`, `"shape":"Message"`},
-		{"PRODUCES_TO_TOPIC", "topic:per-message-const", "derived", `messageTopic`, `"binding":"same-file-const"`},
+		{"PRODUCES_TO_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"shapes":["Writer"]`},
+		{"PRODUCES_TO_TOPIC", "topic:audit-log", "derived", `"audit-log"`, `"shapes":["WriterConfig"]`},
+		{"PRODUCES_TO_TOPIC", "topic:per-message", "derived", `"per-message"`, `"shapes":["Message"]`},
+		{"PRODUCES_TO_TOPIC", "topic:per-message-const", "derived", `messageTopic`, `"bindings":["same-file-const"]`},
 		{"UNRESOLVED_KAFKA_PRODUCER", "unresolved:call-expr", "unresolved", `os.Getenv("TOPIC")`, ""},
 	})
 	consumerFacts, _ := runExtractor(t, NewConsumer(), files)
 	assertRows(t, "segmentio consumer", segmentioFixture, consumerFacts, []wantRow{
-		{"CONSUMES_FROM_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"group_id":"billing"`},
-		{"CONSUMES_FROM_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"shape":"ReaderConfig.GroupTopics"`},
+		{"CONSUMES_FROM_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"group_ids":["billing"]`},
+		{"CONSUMES_FROM_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"shapes":["ReaderConfig.GroupTopics","ReaderConfig.Topic"]`},
 		{"CONSUMES_FROM_TOPIC", "topic:refunds", "derived", `"refunds"`, ""},
 		{"UNRESOLVED_KAFKA_CONSUMER", "unresolved:non-literal-expr", "unresolved", `topics`, ""},
 	})
@@ -274,6 +274,103 @@ func TestDeterministicDoubleRun(t *testing.T) {
 		if !reflect.DeepEqual(first, second) || !reflect.DeepEqual(firstCoverage, secondCoverage) {
 			t.Fatalf("%s: non-deterministic extraction", extractor.Domain())
 		}
+	}
+}
+
+// T23.R B1 regression: same-file same-plane same-topic sites must share one
+// identical assertion attribute tuple (the store rejects duplicate semantic
+// IDs with conflicting tier/code_role/detail), and mixed-tier merges take
+// the strongest binding while the shapes list keeps both members visible.
+func TestSameTopicSitesShareOneAttributeTuple(t *testing.T) {
+	fixture := `package svc
+
+import (
+	"context"
+
+	"github.com/IBM/sarama"
+	kafka "github.com/segmentio/kafka-go"
+)
+
+func consume(ctx context.Context, c sarama.Consumer) {
+	_, _ = c.ConsumePartition("clicks", 0, sarama.OffsetNewest)
+	_, _ = c.ConsumePartition("clicks", 1, sarama.OffsetNewest)
+	_ = kafka.NewReader(kafka.ReaderConfig{GroupID: "billing", Topic: "clicks"})
+}
+`
+	files := map[string]string{"svc/kafka.go": fixture}
+	facts, coverage := runExtractor(t, NewConsumer(), files)
+	if len(facts) != 3 || coverage.UnresolvedCount != 0 {
+		t.Fatalf("facts = %d, unresolved = %d: %+v", len(facts), coverage.UnresolvedCount, facts)
+	}
+	first := facts[0].Assertion
+	for i, fact := range facts {
+		a := fact.Assertion
+		if a.Predicate != first.Predicate || a.Subject != first.Subject || a.Object != "topic:clicks" ||
+			a.Lineage != first.Lineage || a.Tier != first.Tier || a.CodeRole != first.CodeRole || a.Detail != first.Detail {
+			t.Fatalf("site %d attribute tuple diverges: %+v vs %+v", i, a, first)
+		}
+	}
+	// One derived site (ReaderConfig.Topic) lifts the merged claim to
+	// derived; both libraries and all shapes stay visible in the detail.
+	if first.Tier != "derived" {
+		t.Fatalf("merged tier = %q, want derived", first.Tier)
+	}
+	for _, want := range []string{
+		`"libraries":["sarama","segmentio"]`,
+		`"shapes":["ConsumePartition","ReaderConfig.Topic"]`,
+		`"bindings":["literal"]`,
+		`"group_ids":["billing"]`,
+	} {
+		if !strings.Contains(first.Detail, want) {
+			t.Fatalf("merged detail %q missing %q", first.Detail, want)
+		}
+	}
+	// Atoms stay per-site: three distinct spans.
+	spans := map[[2]int]bool{}
+	for _, fact := range facts {
+		spans[[2]int{fact.Atom.StartByte, fact.Atom.EndByte}] = true
+	}
+	if len(spans) != 3 {
+		t.Fatalf("expected 3 distinct atom spans, got %v", spans)
+	}
+}
+
+// T23.R B2 regression: abstentions anchored on multi-line nodes must carry
+// the real end line — the worker validates the fact line span against the
+// trusted byte span and aborts the run on mismatch.
+func TestMultiLineAbstentionLineSpans(t *testing.T) {
+	fixture := `package svc
+
+import (
+	"context"
+	"strings"
+
+	"github.com/IBM/sarama"
+)
+
+func consume(ctx context.Context, g sarama.ConsumerGroup, h sarama.ConsumerGroupHandler, topics string) {
+	g.Consume(ctx, strings.Split(
+		topics,
+		",",
+	), h)
+}
+`
+	files := map[string]string{"svc/kafka.go": fixture}
+	facts, _ := runExtractor(t, NewConsumer(), files)
+	if len(facts) != 1 || facts[0].Assertion.Object != "unresolved:call-expr" {
+		t.Fatalf("facts = %+v", facts)
+	}
+	fact := facts[0]
+	if fact.EndLine <= fact.StartLine {
+		t.Fatalf("multi-line abstention EndLine = %d, StartLine = %d", fact.EndLine, fact.StartLine)
+	}
+	// The line span must agree with the byte span exactly as the worker
+	// checks it: EndLine is the line containing EndByte-1.
+	content := fixture
+	wantStart := 1 + strings.Count(content[:fact.Atom.StartByte], "\n")
+	wantEnd := 1 + strings.Count(content[:fact.Atom.EndByte-1], "\n")
+	if fact.StartLine != wantStart || fact.EndLine != wantEnd {
+		t.Fatalf("line span (%d,%d), trusted span wants (%d,%d)", fact.StartLine, fact.EndLine, wantStart, wantEnd)
 	}
 }
 

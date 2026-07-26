@@ -27,7 +27,15 @@ const auditTopic = "audit-v2"
 func produce(p sarama.SyncProducer) {
 	p.SendMessage(&sarama.ProducerMessage{Topic: "orders-v1"})
 	p.SendMessage(&sarama.ProducerMessage{Topic: auditTopic})
-	p.SendMessage(&sarama.ProducerMessage{Topic: os.Getenv("TOPIC")})
+	// T23.R B1: a second site for the same topic must merge into one
+	// assertion identity (the memoryEvidence harness now rejects
+	// conflicting attribute tuples exactly like the store).
+	p.SendMessage(&sarama.ProducerMessage{Topic: "orders-v1"})
+	// T23.R B2: a multi-line abstention node must survive the worker's
+	// trusted line-span validation.
+	p.SendMessage(&sarama.ProducerMessage{Topic: os.Getenv(
+		"TOPIC",
+	)})
 }
 `
 
@@ -78,10 +86,11 @@ func TestKafkaProducerPublishesThroughWorker(t *testing.T) {
 		t.Fatalf("run state: published=%v aborted=%v", evidence.published, evidence.aborted)
 	}
 	coverage := evidence.publishedWith
-	// Two literal/const bindings plus one distinct call-expr abstention; the
+	// Two topics (orders-v1 twice, merged; audit-v2 once) plus one distinct
+	// multi-line call-expr abstention: three assertions over four atoms; the
 	// test fixture's topic never appears; all three Go files are candidates
 	// and are read.
-	if coverage.UnresolvedCount != 1 || coverage.AssertionCount != 3 || coverage.AtomCount != 3 ||
+	if coverage.UnresolvedCount != 1 || coverage.AssertionCount != 3 || coverage.AtomCount != 4 ||
 		coverage.CandidateFileCount != 3 || coverage.ReadFileCount != 3 {
 		t.Fatalf("producer coverage = %+v", coverage)
 	}

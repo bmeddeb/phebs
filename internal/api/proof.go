@@ -96,6 +96,17 @@ type KafkaTopicCensus struct {
 	SchemaVersion string         `json:"schema_version"`
 	Producer      map[string]int `json:"producer"`
 	Consumer      map[string]int `json:"consumer"`
+	// PublishedRuns counts the (repository, kafka domain) published runs
+	// the census was computed over. Zero means Kafka extraction has never
+	// published in the visible universe — the zeros above then mean
+	// "nothing ran", never "nothing was unresolved", and surfaces must
+	// render that difference.
+	PublishedRuns int `json:"published_runs"`
+	// Truncated lists "plane:class" entries whose counts are lower bounds:
+	// one repository exceeded the bounded per-query row limit for that
+	// class. The census never fails the whole surface on abstention
+	// volume, and it never presents a clipped count as exact.
+	Truncated []string `json:"truncated,omitempty"`
 }
 
 // kafkaAbstentionClasses is the T23.1-frozen shape-class vocabulary (KD6).
@@ -552,17 +563,24 @@ func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, ce
 		Consumer:      make(map[string]int, len(kafkaAbstentionClasses)),
 	}
 	planes := []struct {
+		name      string
 		domain    string
 		predicate string
 		counts    map[string]int
 	}{
-		{"kafka-producer", "UNRESOLVED_KAFKA_PRODUCER", census.Producer},
-		{"kafka-consumer", "UNRESOLVED_KAFKA_CONSUMER", census.Consumer},
+		{"producer", "kafka-producer", "UNRESOLVED_KAFKA_PRODUCER", census.Producer},
+		{"consumer", "kafka-consumer", "UNRESOLVED_KAFKA_CONSUMER", census.Consumer},
 	}
 	for _, plane := range planes {
+		for _, repository := range certificate.Repositories {
+			if run, ok := certificateRun(repository, plane.domain); ok && run.Status == "published" {
+				census.PublishedRuns++
+			}
+		}
 		for _, class := range kafkaAbstentionClasses {
 			plane.counts[class] = 0
 			object := "unresolved:" + class
+			truncated := false
 			for _, repository := range certificate.Repositories {
 				run, ok := certificateRun(repository, plane.domain)
 				if !ok || run.Status != "published" {
@@ -570,7 +588,8 @@ func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, ce
 				}
 				rows, err := source.ListAssertions(ctx, store.AssertionQuery{
 					Predicate: plane.predicate, Object: object,
-					Repo: repository.Repository, RunID: run.RunID, Limit: proofQueryAssertionLimit,
+					Repo: repository.Repository, RunID: run.RunID,
+					Limit: proofQueryAssertionLimit, AllowTruncate: true,
 				})
 				if err != nil {
 					return nil, err
@@ -581,10 +600,18 @@ func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, ce
 						return nil, errors.New("census query returned an inconsistent assertion")
 					}
 				}
+				if len(rows) > proofQueryAssertionLimit {
+					rows = rows[:proofQueryAssertionLimit]
+					truncated = true
+				}
 				plane.counts[class] += len(rows)
+			}
+			if truncated {
+				census.Truncated = append(census.Truncated, plane.name+":"+class)
 			}
 		}
 	}
+	sort.Strings(census.Truncated)
 	return census, nil
 }
 

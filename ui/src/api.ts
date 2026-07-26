@@ -331,11 +331,22 @@ export interface BundleEvidenceEntry {
 
 // KafkaTopicCensus always carries every frozen abstention shape class in
 // both planes, zeros included — completeness can never be implied by
-// omission.
+// omission. published_runs distinguishes "nothing ran" from "nothing was
+// unresolved"; truncated lists "plane:class" entries whose counts are
+// lower bounds.
 export interface KafkaTopicCensus {
   schema_version: string
   producer: Record<string, number>
   consumer: Record<string, number>
+  published_runs: number
+  truncated?: string[]
+}
+
+export interface BundleExtractor {
+  repository: string
+  domain: string
+  run_id: string
+  extractor: string
 }
 
 export interface ProofBundle {
@@ -345,6 +356,7 @@ export interface ProofBundle {
   evidence: BundleEvidenceEntry[]
   unresolved_census?: KafkaTopicCensus
   coverage: CoverageCertificate
+  extractor_versions: BundleExtractor[]
   caveat: string
 }
 

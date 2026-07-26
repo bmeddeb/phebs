@@ -2689,7 +2689,7 @@ message. The resulting KD1–KD10 table keeps declarations empty, records
 franz-go as a separate future gate, and authorizes T23.2 specification work
 only — no production extractor behavior or accuracy claim.
 
-**T23.2 · kafkago extractors, both planes** *(needs T23.1 — spec revised
+**T23.2 ✅ · kafkago extractors, both planes** *(needs T23.1 — spec revised
 2026-07-26 from the frozen KD1–KD10 table)* — package
 `internal/extract/extractors/kafkago` at 1.0.0 provides two `sdk.Extractor`
 implementations sharing one frozen recognizer: domain `kafka-producer` and
@@ -2703,9 +2703,12 @@ dual-sarama-import files abstain `ambiguous-library-import`;
 literal-or-abstain with same-file `const` only, under Kafka's 1–249
 `[a-zA-Z0-9._-]` bounds with `.`/`..` rejected. Evidence rows:
 `PRODUCES_TO_TOPIC` / `CONSUMES_FROM_TOPIC`, object `topic:<literal>`,
-detail `kafka-topic-evidence-detail-v1` {library, import_path, shape,
-binding, tier, group_id (consumer detail only), start_byte, end_byte,
-start_line}. Abstention rows: `UNRESOLVED_KAFKA_PRODUCER` /
+detail `kafka-topic-evidence-detail-v1` {libraries, import_paths, shapes,
+bindings, group_ids (consumer detail only)} — a canonical sorted aggregate
+over the claim's sites, because same-file same-topic sites share one
+assertion identity and the store rejects conflicting attribute tuples
+(T23.R); per-site spans live on the atoms, tier is the assertion field
+(strongest site binding), and no span enters the detail. Abstention rows: `UNRESOLVED_KAFKA_PRODUCER` /
 `UNRESOLVED_KAFKA_CONSUMER`, object `unresolved:<shape-class>` from the
 frozen six-class vocabulary, detail `kafka-topic-unresolved-detail-v1`
 {schema, shape} — a pure function of the assertion identity, because
@@ -2723,7 +2726,7 @@ byte-identical double run; staged→published worker regression; missing
 import → zero rows; `_test.go` → zero rows; dark by default with the flag
 composing beside the existing packs; full merge bar.
 
-**T23.3 · topic-keyed proof + MCP surface** *(needs T23.2)* — one
+**T23.3 ✅ · topic-keyed proof + MCP surface** *(needs T23.2)* — one
 topic-centered query surface, named for what it is: `find_kafka_topic_usage`
 (HTTP + MCP; topic semantics are Kafka-specific, so no neutral fan-out is
 pretended, and no operation tool is reused). Input: one topic spelling
@@ -2740,7 +2743,7 @@ existing protobuf/Thrift proof and MCP responses byte-untouched; MCP tool
 count/schema pins updated for dark and enabled states; envelope kind
 round-trips; merge bar.
 
-**T23.4 · topic-centered UI, demo, closure** *(needs T23.3)* — a read-only
+**T23.4 ✅ · topic-centered UI, demo, closure** *(needs T23.3)* — a read-only
 topic page in the annex UI: search a topic literal → producers → topic →
 consumers, never an endpoint metaphor; the unresolved census renders as a
 first-class panel ("N producer sites and M consumer sites could not be

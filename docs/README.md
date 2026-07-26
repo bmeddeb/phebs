@@ -26,6 +26,7 @@ Read top to bottom; each narrows the previous:
 | [PILOT_CHARTER.md](./PILOT_CHARTER.md) | the execution contract: gates, frozen thresholds, teardown |
 | [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) | the per-pack capability/validation contract (template) |
 | [THRIFT_PACK_CARDS.md](./THRIFT_PACK_CARDS.md) | completed card instances for the Epic 19 and Epic 22 Thrift packs (experimental-dark) |
+| [KAFKA_PACK_CARDS.md](./KAFKA_PACK_CARDS.md) | completed card instances for the Epic 23 Kafka packs (experimental-dark) |
 | [PILOT_PREREQS.md](./PILOT_PREREQS.md) | gate-neutral prerequisite index: owners, reviewers, evidence, decision-record rules |
 
 The suite's invariant: nothing downstream expands the ask upstream, and no

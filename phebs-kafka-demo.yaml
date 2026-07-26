@@ -10,6 +10,9 @@
 # Expect abstention to dominate: production Kafka topics are configuration-
 # driven, and the Topics page presents unresolved counts as the norm, never
 # a completeness claim.
+# HEAD-bound extraction: connections track upstream HEAD (no pin mechanism
+# exists), so the walkthrough's named topics were verified at the spike pin
+# and may drift with upstream; the honesty posture does not depend on them.
 server:
   addr: "127.0.0.1:3074"
   data_dir: "~/.phebs-kafka-demo"

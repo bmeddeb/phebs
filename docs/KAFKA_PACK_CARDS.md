@@ -10,8 +10,10 @@ explicitly rather than simulating it.
 
 Both packs share one T23.1-validated recognizer and one honesty posture:
 **abstention dominates by design.** Production Kafka topics are
-overwhelmingly configuration-driven — the spike's pinned production corpora
-yielded 2 literal evidence rows against 17 abstentions — and every surface
+overwhelmingly configuration-driven — across the spike's pinned corpora the
+sweep yielded 2 literal evidence rows (both from the sarama library corpus;
+the production corpora yielded none) against 19 abstentions — and every
+surface
 built on these packs must present `UNRESOLVED_*` volume as the norm, never
 imply "all producers/consumers of topic X".
 

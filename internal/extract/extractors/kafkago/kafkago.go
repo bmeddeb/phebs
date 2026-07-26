@@ -20,6 +20,7 @@ import (
 	"go/parser"
 	"go/token"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -106,13 +107,8 @@ func (k kafkaGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 		}
 		scan := &fileScan{file: file, fset: fset, aliases: aliases}
 		ast.Inspect(file, scan.visit)
-		for _, row := range scan.evidence {
-			if row.plane != k.plane {
-				continue
-			}
-			if err := k.emitEvidence(emit, repo, relPath, blob, row); err != nil {
-				return err
-			}
+		if err := k.emitEvidenceGroups(emit, repo, relPath, blob, scan.evidence); err != nil {
+			return err
 		}
 		for _, row := range scan.abstentions {
 			if row.plane != k.plane {
@@ -145,46 +141,108 @@ func (k kafkaGo) unresolvedPredicate() string {
 	return predicateUnresolvedConsumer
 }
 
-func (k kafkaGo) emitEvidence(emit sdk.Emit, repo, relPath string, blob sdk.Blob, row topicEvidence) error {
-	if err := validSpan(row.startByte, row.endByte, len(blob.Content)); err != nil {
-		return fmt.Errorf("evidence span in %s: %w", relPath, err)
-	}
+// emitEvidenceGroups emits all of one file's evidence for this plane,
+// grouped by topic. ComputeAssertionID hashes (predicate, subject, object,
+// lineage, repo) and the store rejects duplicate IDs whose (tier, code_role,
+// detail) differ, so every site sharing one claim identity must share one
+// assertion attribute tuple exactly: the detail is a canonical aggregate
+// over the group's sites (sorted, deduplicated), per-site spans live only
+// on the atoms, and the store merges the supporting atom set. The group's
+// tier is the strongest site binding — the claim asserts the relationship
+// exists, and its strength is the best independent evidence for it; the
+// shapes list keeps the heuristic members visible.
+func (k kafkaGo) emitEvidenceGroups(emit sdk.Emit, repo, relPath string, blob sdk.Blob, rows []topicEvidence) error {
 	predicate := k.evidencePredicate()
-	object := "topic:" + row.topic
-	detail := `{"schema":"kafka-topic-evidence-detail-v1"` +
-		`,"library":` + strconv.Quote(row.library) +
-		`,"import_path":` + strconv.Quote(row.importPath) +
-		`,"shape":` + strconv.Quote(row.shape) +
-		`,"binding":` + strconv.Quote(row.binding)
-	if row.groupID != "" {
-		detail += `,"group_id":` + strconv.Quote(row.groupID)
+	role := classifyRole(relPath, blob.Content)
+	groups := make(map[string][]topicEvidence)
+	order := make([]string, 0)
+	for _, row := range rows {
+		if row.plane != k.plane {
+			continue
+		}
+		if _, seen := groups[row.topic]; !seen {
+			order = append(order, row.topic)
+		}
+		groups[row.topic] = append(groups[row.topic], row)
 	}
-	detail += `,"start_byte":` + strconv.Itoa(row.startByte) +
-		`,"end_byte":` + strconv.Itoa(row.endByte) +
-		`,"start_line":` + strconv.Itoa(row.startLine) + `}`
-	return emit(sdk.Fact{
-		Atom: sdk.AtomInput{
-			SchemaVersion:       schemaVersion,
-			BlobDigest:          blob.Digest,
-			StartByte:           row.startByte,
-			EndByte:             row.endByte,
-			RuleID:              "kafkago-topic-v1",
-			AdapterConfigDigest: adapterConfigDigest,
-			FactFingerprint:     predicate + "|" + object,
-		},
-		Assertion: sdk.AssertionInput{
-			Predicate: predicate,
-			Subject:   relPath,
-			Object:    object,
-			Lineage:   lineageID(repo, relPath),
-			Tier:      row.tier,
-			CodeRole:  classifyRole(relPath, blob.Content),
-			Detail:    detail,
-		},
-		Path:      relPath,
-		StartLine: row.startLine,
-		EndLine:   row.startLine,
-	})
+	for _, topic := range order {
+		sites := groups[topic]
+		object := "topic:" + topic
+		tier := "heuristic"
+		var libraries, importPaths, shapes, bindings, groupIDs []string
+		for _, site := range sites {
+			if site.tier == "derived" {
+				tier = "derived"
+			}
+			libraries = append(libraries, site.library)
+			importPaths = append(importPaths, site.importPath)
+			shapes = append(shapes, site.shape)
+			bindings = append(bindings, site.binding)
+			if site.groupID != "" {
+				groupIDs = append(groupIDs, site.groupID)
+			}
+		}
+		detail := `{"schema":"kafka-topic-evidence-detail-v1"` +
+			`,"libraries":` + quotedList(libraries) +
+			`,"import_paths":` + quotedList(importPaths) +
+			`,"shapes":` + quotedList(shapes) +
+			`,"bindings":` + quotedList(bindings)
+		if len(groupIDs) > 0 {
+			detail += `,"group_ids":` + quotedList(groupIDs)
+		}
+		detail += `}`
+		for _, site := range sites {
+			if err := validSpan(site.startByte, site.endByte, len(blob.Content)); err != nil {
+				return fmt.Errorf("evidence span in %s: %w", relPath, err)
+			}
+			if err := emit(sdk.Fact{
+				Atom: sdk.AtomInput{
+					SchemaVersion:       schemaVersion,
+					BlobDigest:          blob.Digest,
+					StartByte:           site.startByte,
+					EndByte:             site.endByte,
+					RuleID:              "kafkago-topic-v1",
+					AdapterConfigDigest: adapterConfigDigest,
+					FactFingerprint:     predicate + "|" + object,
+				},
+				Assertion: sdk.AssertionInput{
+					Predicate: predicate,
+					Subject:   relPath,
+					Object:    object,
+					Lineage:   lineageID(repo, relPath),
+					Tier:      tier,
+					CodeRole:  role,
+					Detail:    detail,
+				},
+				Path:      relPath,
+				StartLine: site.startLine,
+				EndLine:   site.endLine,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// quotedList renders a sorted, deduplicated JSON string array — the detail
+// must be byte-identical however the sites were ordered.
+func quotedList(values []string) string {
+	unique := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		if _, duplicate := seen[value]; duplicate {
+			continue
+		}
+		seen[value] = struct{}{}
+		unique = append(unique, value)
+	}
+	sort.Strings(unique)
+	parts := make([]string, len(unique))
+	for i, value := range unique {
+		parts[i] = strconv.Quote(value)
+	}
+	return "[" + strings.Join(parts, ",") + "]"
 }
 
 // emitUnresolved emits one UNRESOLVED_KAFKA_* row. The detail is a pure
@@ -221,7 +279,7 @@ func (k kafkaGo) emitUnresolved(emit sdk.Emit, relPath string, blob sdk.Blob, ro
 		},
 		Path:      relPath,
 		StartLine: row.startLine,
-		EndLine:   row.startLine,
+		EndLine:   row.endLine,
 	})
 }
 
@@ -298,6 +356,7 @@ type topicEvidence struct {
 	startByte  int
 	endByte    int
 	startLine  int
+	endLine    int
 }
 
 type topicAbstention struct {
@@ -309,6 +368,7 @@ type topicAbstention struct {
 	startByte  int
 	endByte    int
 	startLine  int
+	endLine    int
 }
 
 type libraryImport struct {
@@ -584,7 +644,7 @@ func (s *fileScan) resolveTopic(expr ast.Expr, imported libraryImport, plane, sh
 	if plane != "consumer" {
 		group = ""
 	}
-	start, end, line := s.sourceSite(expr)
+	start, end, line, endLine := s.sourceSite(expr)
 	s.evidence = append(s.evidence, topicEvidence{
 		library:    imported.library,
 		plane:      plane,
@@ -597,6 +657,7 @@ func (s *fileScan) resolveTopic(expr ast.Expr, imported libraryImport, plane, sh
 		startByte:  start,
 		endByte:    end,
 		startLine:  line,
+		endLine:    endLine,
 	})
 }
 
@@ -665,7 +726,7 @@ func shapeClass(expr ast.Expr) string {
 }
 
 func (s *fileScan) abstain(imported libraryImport, plane, shape, tier string, node ast.Node) {
-	start, end, line := s.sourceSite(node)
+	start, end, line, endLine := s.sourceSite(node)
 	s.abstentions = append(s.abstentions, topicAbstention{
 		library:    imported.library,
 		plane:      plane,
@@ -675,13 +736,14 @@ func (s *fileScan) abstain(imported libraryImport, plane, shape, tier string, no
 		startByte:  start,
 		endByte:    end,
 		startLine:  line,
+		endLine:    endLine,
 	})
 }
 
-func (s *fileScan) sourceSite(node ast.Node) (int, int, int) {
+func (s *fileScan) sourceSite(node ast.Node) (int, int, int, int) {
 	start := s.fset.PositionFor(node.Pos(), false)
 	end := s.fset.PositionFor(node.End(), false)
-	return start.Offset, end.Offset, start.Line
+	return start.Offset, end.Offset, start.Line, s.fset.PositionFor(node.End()-1, false).Line
 }
 
 // ---- code_role classification, ported verbatim from grpcgo/T11.1 ----
