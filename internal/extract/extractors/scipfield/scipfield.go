@@ -145,10 +145,11 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) {
 	byPath := make(map[string]*indexedDocument)
 	metadataSeen := false
+	metadataEncoding := scip.PositionEncoding_UnspecifiedPositionEncoding
 	documentCount := 0
 	occurrenceCount := 0
 	visitor := scip.IndexVisitor{
-		VisitMetadata: func(ctx context.Context, _ *scip.Metadata) error {
+		VisitMetadata: func(ctx context.Context, metadata *scip.Metadata) error {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
@@ -156,6 +157,18 @@ func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) 
 				return errors.New("metadata appears more than once")
 			}
 			metadataSeen = true
+			switch metadata.GetTextDocumentEncoding() {
+			case scip.TextEncoding_UnspecifiedTextEncoding:
+			case scip.TextEncoding_UTF8:
+				metadataEncoding = scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart
+			case scip.TextEncoding_UTF16:
+				metadataEncoding = scip.PositionEncoding_UTF16CodeUnitOffsetFromLineStart
+			default:
+				return fmt.Errorf(
+					"metadata has unsupported text document encoding %s",
+					metadata.GetTextDocumentEncoding(),
+				)
+			}
 			return nil
 		},
 		VisitDocument: func(ctx context.Context, doc *scip.Document) error {
@@ -172,14 +185,18 @@ func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) 
 			if err := validPath(doc.GetRelativePath()); err != nil {
 				return fmt.Errorf("document path: %w", err)
 			}
-			if !validEncoding(doc.GetPositionEncoding()) {
+			encoding := doc.GetPositionEncoding()
+			if encoding == scip.PositionEncoding_UnspecifiedPositionEncoding {
+				encoding = metadataEncoding
+			}
+			if !validEncoding(encoding) {
 				return fmt.Errorf("document %q has unspecified position encoding", doc.GetRelativePath())
 			}
 			stored := byPath[doc.GetRelativePath()]
 			if stored == nil {
-				stored = &indexedDocument{path: doc.GetRelativePath(), encoding: doc.GetPositionEncoding()}
+				stored = &indexedDocument{path: doc.GetRelativePath(), encoding: encoding}
 				byPath[stored.path] = stored
-			} else if stored.encoding != doc.GetPositionEncoding() {
+			} else if stored.encoding != encoding {
 				return fmt.Errorf("document %q has conflicting position encodings", stored.path)
 			}
 			if len(doc.GetOccurrences()) > maxOccurrences-occurrenceCount {

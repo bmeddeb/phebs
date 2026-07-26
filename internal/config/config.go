@@ -70,6 +70,11 @@ type Experimental struct {
 	// validation is the T19.1 spike; the same provisional repo/path lineage
 	// limitation applies.
 	ProvisionalThriftExtraction bool `yaml:"provisional_thrift_extraction"`
+	// ProvisionalThriftFieldExtraction enables the T22 thriftrw field-reference
+	// reader. It is a separate dark capability because committed SCIP input and
+	// canonical package lineage have different coverage and identity semantics
+	// from the T19 declaration/consumer pack.
+	ProvisionalThriftFieldExtraction bool `yaml:"provisional_thrift_field_extraction"`
 }
 
 type Sync struct {

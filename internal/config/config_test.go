@@ -394,6 +394,24 @@ func TestProvisionalProtoExtractionIsExplicitOptIn(t *testing.T) {
 	}
 }
 
+func TestProvisionalThriftFieldExtractionIsExplicitOptIn(t *testing.T) {
+	cfg, err := Parse([]byte("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Experimental.ProvisionalThriftFieldExtraction {
+		t.Fatal("provisional Thrift field extraction enabled by default")
+	}
+
+	cfg, err = Parse([]byte("experimental:\n  provisional_thrift_field_extraction: true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Experimental.ProvisionalThriftFieldExtraction {
+		t.Fatal("explicit provisional Thrift field extraction opt-in was ignored")
+	}
+}
+
 func TestURLCredentialErrorsDoNotLeak(t *testing.T) {
 	tests := []struct {
 		url, secret string

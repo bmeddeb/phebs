@@ -33,6 +33,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
@@ -305,12 +306,16 @@ func serve(args []string) error {
 	if exs := evidenceExtractors(
 		cfg.Experimental.ProvisionalProtoExtraction,
 		cfg.Experimental.ProvisionalThriftExtraction,
+		cfg.Experimental.ProvisionalThriftFieldExtraction,
 	); len(exs) > 0 {
 		if cfg.Experimental.ProvisionalProtoExtraction {
 			log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
 		}
 		if cfg.Experimental.ProvisionalThriftExtraction {
 			log.Print("WARNING: experimental provisional thrift extraction enabled; validation is the T19.1 rule-gate spike only")
+		}
+		if cfg.Experimental.ProvisionalThriftFieldExtraction {
+			log.Print("WARNING: experimental provisional thriftrw field extraction enabled; validation is the T22.1 rule-gate spike only")
 		}
 		evidenceView = st
 		proofBundles = st
@@ -596,7 +601,9 @@ func loadRecoveryConfig(path string) (*config.Config, []byte, error) {
 // evidenceExtractors is the validation-gated registry. The provisional
 // declared-protobuf reader stays absent unless the operator explicitly opts
 // in; T11.1/T12.3 do not support default production activation.
-func evidenceExtractors(provisionalProto, provisionalThrift bool) []extract.Extractor {
+func evidenceExtractors(
+	provisionalProto, provisionalThrift, provisionalThriftField bool,
+) []extract.Extractor {
 	var extractors []extract.Extractor
 	if provisionalProto {
 		// T13.1 and T13.2 ship behind the same experimental flag. SCIP field
@@ -608,6 +615,11 @@ func evidenceExtractors(provisionalProto, provisionalThrift bool) []extract.Extr
 		// T19.2/T19.3: the Thrift packs ride their own dark flag; rule
 		// validation is the T19.1 spike.
 		extractors = append(extractors, thriftdecl.New(), thriftgo.New())
+	}
+	if provisionalThriftField {
+		// T22.2 is independently dark: it consumes a committed SCIP index and
+		// emits only thriftrw module-digest field references.
+		extractors = append(extractors, thriftfield.New())
 	}
 	return extractors
 }

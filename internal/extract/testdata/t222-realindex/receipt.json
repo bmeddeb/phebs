@@ -1,0 +1,25 @@
+{
+  "schema": "t22.2-real-index-fixture-v1",
+  "indexer": "scip-go",
+  "indexer_version": "0.2.7",
+  "command": [
+    "scip-go",
+    "index",
+    "--module-root=/private/tmp/phebs-t222-realindex",
+    "--repository-remote=example.invalid/t222-realindex",
+    "--module-path=example.invalid/t222-realindex",
+    "--module-version=v0.0.0",
+    "--skip-tests",
+    "--output=/private/tmp/phebs-t222-realindex/index.scip",
+    "./..."
+  ],
+  "project_root": "file:///private/tmp/phebs-t222-realindex",
+  "index_sha256": "sha256:9413f4f325903a1df183d572b2f373492f2f7b72d505dd9a63117d50df4ce38c",
+  "index_bytes": 8180,
+  "position_encoding": "UTF8",
+  "documents": 2,
+  "occurrences": 69,
+  "definitions": 17,
+  "references": 52,
+  "observation": "scip-go v0.2.7 classifies the direct WorkflowId assignment occurrence as read-access; synthetic extractor tests independently pin write-over-read precedence."
+}

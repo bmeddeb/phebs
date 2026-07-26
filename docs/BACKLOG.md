@@ -2563,7 +2563,7 @@ AC: offline suite skips clean without the corpus while running the rule
 adversaries; pinned-corpus gates green; decision table D1–D10 frozen in
 spike/t221/README.md; no accuracy vocabulary.
 
-**T22.2 · thriftfield extractor, thriftrw family** *(needs T22.1)* —
+**T22.2 ✅ · thriftfield extractor, thriftrw family** *(2026-07-26; needs T22.1)* —
 `internal/extract/extractors/thriftfield` at 1.0.0 behind the new flag;
 registry composes as a third `evidenceExtractors` parameter with the pin
 matrix extended; evidence-pack card appended to docs/THRIFT_PACK_CARDS.md;
@@ -2572,6 +2572,19 @@ renamed-field identity stability; duplicate-(message,ID) abstention; field-0
 emission; missing-index stable-empty; malformed-index hard fail; position
 encodings; byte-identical double run; worker staged→published regression;
 full merge bar.
+
+Implementation note: official `scip-go` v0.2.7 generated the committed
+two-document fixture; its receipt binds command, tool metadata, neutral
+project root, index digest/size, and 69-occurrence census. The fixture forced
+metadata-level encoding fallback in both field readers (real documents omit
+their override) and
+records scip-go's read-access classification for a direct assignment rather
+than manufacturing a write role. Synthetic gates retain the full precedence
+matrix. Unmeasured inherited protobuf limits were narrowed to 32 MiB index /
+50,000 documents / 500,000 occurrences / 8 KiB symbols while retaining the
+T22.1-measured 4 MiB generated-file ceiling. This ticket adds only independent
+dark ingestion; Apache support and the neutral public surface remain T22.3
+and T22.4.
 
 **T22.3 · Apache Thrift family** *(needs T22.2)* — thrift-tag recognition
 per the decision table, version 1.1.0, synthetic fixtures (no public Apache

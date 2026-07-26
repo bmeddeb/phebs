@@ -202,6 +202,61 @@ func TestMalformedIndexFailsWithoutPartialFacts(t *testing.T) {
 	}
 }
 
+func TestSCIPMetadataEncodingAppliesWhenDocumentOverrideIsAbsent(t *testing.T) {
+	rows := []struct {
+		name     string
+		metadata scip.TextEncoding
+		document scip.PositionEncoding
+		want     scip.PositionEncoding
+		wantErr  bool
+	}{
+		{
+			name:     "metadata UTF-8",
+			metadata: scip.TextEncoding_UTF8,
+			want:     scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+		},
+		{
+			name:     "metadata UTF-16",
+			metadata: scip.TextEncoding_UTF16,
+			want:     scip.PositionEncoding_UTF16CodeUnitOffsetFromLineStart,
+		},
+		{
+			name:     "document override",
+			metadata: scip.TextEncoding_UTF8,
+			document: scip.PositionEncoding_UTF32CodeUnitOffsetFromLineStart,
+			want:     scip.PositionEncoding_UTF32CodeUnitOffsetFromLineStart,
+		},
+		{name: "neither level", wantErr: true},
+	}
+	for _, row := range rows {
+		t.Run(row.name, func(t *testing.T) {
+			index := &scip.Index{
+				Metadata: &scip.Metadata{TextDocumentEncoding: row.metadata},
+				Documents: []*scip.Document{{
+					RelativePath: "consumer/use.go", PositionEncoding: row.document,
+				}},
+			}
+			data, err := proto.Marshal(index)
+			if err != nil {
+				t.Fatal(err)
+			}
+			documents, err := parseIndex(context.Background(), string(data))
+			if row.wantErr {
+				if err == nil {
+					t.Fatal("missing metadata/document encoding succeeded")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("parseIndex: %v", err)
+			}
+			if len(documents) != 1 || documents[0].encoding != row.want {
+				t.Fatalf("documents = %+v, want encoding %s", documents, row.want)
+			}
+		})
+	}
+}
+
 func TestMalformedReferenceRangeAbstainsWithoutDiscardingIndex(t *testing.T) {
 	corpus := fixtureCorpus(t, "example.com/consumer", "v1.0.0", "old_name", "OldName")
 	index := &scip.Index{}

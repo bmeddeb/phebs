@@ -17,6 +17,7 @@ import (
 var extractorImportAllowlist = map[string]bool{
 	"bytes":         true,
 	"context":       true,
+	"crypto/sha1":   true,
 	"crypto/sha256": true,
 	"encoding/hex":  true,
 	"encoding/json": true,
@@ -29,6 +30,7 @@ var extractorImportAllowlist = map[string]bool{
 	"sort":         true,
 	"strconv":      true,
 	"strings":      true,
+	"unicode":      true,
 	"unicode/utf8": true,
 
 	// In-process stdlib Go parsing for the T13.1 grpcgo and T13.2 generated
