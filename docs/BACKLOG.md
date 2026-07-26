@@ -2707,7 +2707,11 @@ detail `kafka-topic-evidence-detail-v1` {library, import_path, shape,
 binding, tier, group_id (consumer detail only), start_byte, end_byte,
 start_line}. Abstention rows: `UNRESOLVED_KAFKA_PRODUCER` /
 `UNRESOLVED_KAFKA_CONSUMER`, object `unresolved:<shape-class>` from the
-frozen six-class vocabulary, same detail minus topic. Tier per KD9:
+frozen six-class vocabulary, detail `kafka-topic-unresolved-detail-v1`
+{schema, shape} — a pure function of the assertion identity, because
+`ComputeAssertionID` excludes detail and a file abstaining through two
+libraries under one shape class must not carry ambiguous per-library
+detail; per-site spans stay on the atoms. Tier per KD9:
 composites `derived`, arity-based `Consume`/`ConsumePartition` `heuristic`.
 Subjects use the per-repo `provisional_repo_path_v1` lineage recipe — call
 sites have no cross-repo package identity, and this pack never joins the

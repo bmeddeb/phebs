@@ -75,6 +75,11 @@ type Experimental struct {
 	// committed SCIP input and canonical package lineage have different
 	// coverage and identity semantics from the T19 declaration/consumer pack.
 	ProvisionalThriftFieldExtraction bool `yaml:"provisional_thrift_field_extraction"`
+	// ProvisionalKafkaExtraction enables the T23 Kafka topic-evidence pack
+	// (kafka-producer and kafka-consumer planes). Rule validation is the
+	// T23.1 spike; the pack is abstention-dominant by design and the same
+	// provisional repo/path lineage limitation applies.
+	ProvisionalKafkaExtraction bool `yaml:"provisional_kafka_extraction"`
 }
 
 type Sync struct {

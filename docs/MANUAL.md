@@ -455,6 +455,7 @@ revisions:
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; no public query until T22.4   |
+| `experimental.provisional_kafka_extraction` | `false`          | development-only opt-in for the T23 Kafka topic-evidence packs described below; abstention-dominant by design, same provisional repo/path lineage posture         |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 
@@ -1367,6 +1368,36 @@ another module instead of vendoring them yields no consumer evidence — an
 honest abstention, not an error. Client construction is not evidence, and
 consumer lineage remains file-scoped provisional, so joins against
 declarations stay name-bound exactly as for gRPC.
+
+A separate `experimental.provisional_kafka_extraction` opt-in enables the
+T23.2 Kafka topic-evidence packs: `kafka-producer` and `kafka-consumer`
+(both 1.0.0), two planes sharing one recognizer validated by the T23.1
+spike. The readers scan non-test Go files that import
+`github.com/Shopify/sarama`, `github.com/IBM/sarama`, or
+`github.com/segmentio/kafka-go` (qualified selectors only — dot-imports
+carry no in-file library proof and are refused; a file importing both
+sarama eras abstains rather than guessing). Recognized shapes:
+`sarama.ProducerMessage{Topic:}`, segmentio `Writer`/`WriterConfig`
+composites, `kafka.Message{Topic:}` passed directly to `WriteMessages`
+(never `CommitMessages`), `ReaderConfig` `Topic`/`GroupTopics`, and the
+receiver-untyped `Consume`/`ConsumePartition` call shapes (tier
+`heuristic`; composites are `derived`). A topic binds only when it is a
+string literal or a same-file `const` satisfying Kafka's own naming bounds
+(1–249 characters of `[a-zA-Z0-9._-]`, excluding `.`/`..`); the object is
+`topic:<literal>` and carries no cluster, environment, runtime, or
+completeness claim. Consumer group ids are recorded as detail, never
+identity. Everything else — configuration selectors, function results,
+variables, invalid literals — emits an `UNRESOLVED_KAFKA_PRODUCER` /
+`UNRESOLVED_KAFKA_CONSUMER` assertion whose object names the frozen shape
+class. **Expect abstention to dominate**: production Kafka topics are
+overwhelmingly configuration-driven (2 literal evidence rows vs 17
+abstentions across the spike's pinned production corpora), and the pack
+presents that volume as the honest norm rather than a defect. `_test.go`
+fixture literals are excluded from recognition entirely. Oversized or
+unparseable files record `KAFKA_EXTRACTION_GAP`. There is no topic
+declarations plane in round one — no in-code topic declaration exists —
+so topics appear only through their producers and consumers, with no
+catalog or Atlas surface.
 
 The proto opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
 2026-07-22 disposition). It indexes the repository's own generated

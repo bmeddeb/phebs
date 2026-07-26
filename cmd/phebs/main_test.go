@@ -676,10 +676,10 @@ func TestEvidenceMaintenanceCanceledBeforeBootDoesNoWork(t *testing.T) {
 }
 
 func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
-	if got := evidenceExtractors(false, false, false); len(got) != 0 {
+	if got := evidenceExtractors(false, false, false, false); len(got) != 0 {
 		t.Fatalf("default extractor registry = %d entries, want disabled", len(got))
 	}
-	got := evidenceExtractors(true, false, false)
+	got := evidenceExtractors(true, false, false, false)
 	// T17.2: the registry pins the shape-aware protodecl v3 alongside the
 	// T13.1/T13.2 readers behind the proto experimental flag; default runtime
 	// activation remains disabled.
@@ -689,22 +689,40 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 	}
 	// T19.2/T19.3: the Thrift packs ride their own dark flag and compose with
 	// the proto pack without reordering it.
-	thriftOnly := evidenceExtractors(false, true, false)
+	thriftOnly := evidenceExtractors(false, true, false, false)
 	if len(thriftOnly) != 2 || thriftOnly[0].Domain() != "thrift-contract" ||
 		thriftOnly[0].Version() != "1.0.0" || thriftOnly[1].Domain() != "thrift-consumer" ||
 		thriftOnly[1].Version() != "1.1.0" {
 		t.Fatalf("thrift-only extractor registry = %#v", thriftOnly)
 	}
-	thriftFieldOnly := evidenceExtractors(false, false, true)
+	thriftFieldOnly := evidenceExtractors(false, false, true, false)
 	if len(thriftFieldOnly) != 1 ||
 		thriftFieldOnly[0].Domain() != "scip-thrift-field" ||
 		thriftFieldOnly[0].Version() != "1.1.0" {
 		t.Fatalf("thrift-field-only extractor registry = %#v", thriftFieldOnly)
 	}
-	both := evidenceExtractors(true, true, true)
-	if len(both) != 6 || both[0].Domain() != "proto-contract" ||
-		both[3].Domain() != "thrift-contract" || both[4].Domain() != "thrift-consumer" ||
-		both[5].Domain() != "scip-thrift-field" {
-		t.Fatalf("combined extractor registry = %#v", both)
+	// T23.2: both Kafka planes ride one dark flag at 1.0.0 and compose after
+	// the existing packs without reordering them.
+	kafkaOnly := evidenceExtractors(false, false, false, true)
+	if len(kafkaOnly) != 2 || kafkaOnly[0].Domain() != "kafka-producer" ||
+		kafkaOnly[0].Version() != "1.0.0" || kafkaOnly[1].Domain() != "kafka-consumer" ||
+		kafkaOnly[1].Version() != "1.0.0" {
+		t.Fatalf("kafka-only extractor registry = %#v", kafkaOnly)
+	}
+	withoutKafka := evidenceExtractors(true, true, true, false)
+	if len(withoutKafka) != 6 || withoutKafka[0].Domain() != "proto-contract" ||
+		withoutKafka[3].Domain() != "thrift-contract" || withoutKafka[4].Domain() != "thrift-consumer" ||
+		withoutKafka[5].Domain() != "scip-thrift-field" {
+		t.Fatalf("combined extractor registry = %#v", withoutKafka)
+	}
+	withoutThriftField := evidenceExtractors(true, true, false, true)
+	if len(withoutThriftField) != 7 || withoutThriftField[5].Domain() != "kafka-producer" ||
+		withoutThriftField[6].Domain() != "kafka-consumer" {
+		t.Fatalf("combined extractor registry without Thrift fields = %#v", withoutThriftField)
+	}
+	all := evidenceExtractors(true, true, true, true)
+	if len(all) != 8 || all[5].Domain() != "scip-thrift-field" ||
+		all[6].Domain() != "kafka-producer" || all[7].Domain() != "kafka-consumer" {
+		t.Fatalf("all-flags extractor registry = %#v", all)
 	}
 }

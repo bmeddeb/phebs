@@ -383,6 +383,12 @@ func TestCurrentExtractionBaseline(t *testing.T) {
 		{Domain: "grpc-consumer", Version: "1.1.0", Facts: 9, UnresolvedCount: 9, Predicates: map[string]int{
 			"GRPC_EXTRACTION_GAP": 1, "UNRESOLVED_GRPC_CALL": 8,
 		}},
+		{Domain: "kafka-consumer", Version: "1.0.0", Facts: 1, UnresolvedCount: 1, Predicates: map[string]int{
+			"KAFKA_EXTRACTION_GAP": 1,
+		}},
+		{Domain: "kafka-producer", Version: "1.0.0", Facts: 1, UnresolvedCount: 1, Predicates: map[string]int{
+			"KAFKA_EXTRACTION_GAP": 1,
+		}},
 		{Domain: "proto-contract", Version: "3.0.0", Facts: 13, Predicates: map[string]int{
 			"DECLARES_FIELD": 4, "DECLARES_MESSAGE": 4, "DECLARES_OPERATION": 3, "DECLARES_SERVICE": 2,
 		}},

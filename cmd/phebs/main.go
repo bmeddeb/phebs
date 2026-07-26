@@ -30,6 +30,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/kafkago"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/protodecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/scipfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
@@ -307,6 +308,7 @@ func serve(args []string) error {
 		cfg.Experimental.ProvisionalProtoExtraction,
 		cfg.Experimental.ProvisionalThriftExtraction,
 		cfg.Experimental.ProvisionalThriftFieldExtraction,
+		cfg.Experimental.ProvisionalKafkaExtraction,
 	); len(exs) > 0 {
 		if cfg.Experimental.ProvisionalProtoExtraction {
 			log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
@@ -316,6 +318,9 @@ func serve(args []string) error {
 		}
 		if cfg.Experimental.ProvisionalThriftFieldExtraction {
 			log.Print("WARNING: experimental provisional Thrift field extraction enabled; validation is the T22.1 rule-gate spike only")
+		}
+		if cfg.Experimental.ProvisionalKafkaExtraction {
+			log.Print("WARNING: experimental provisional kafka extraction enabled; validation is the T23.1 rule-gate spike only and topic evidence is abstention-dominant by design")
 		}
 		evidenceView = st
 		proofBundles = st
@@ -602,7 +607,7 @@ func loadRecoveryConfig(path string) (*config.Config, []byte, error) {
 // declared-protobuf reader stays absent unless the operator explicitly opts
 // in; T11.1/T12.3 do not support default production activation.
 func evidenceExtractors(
-	provisionalProto, provisionalThrift, provisionalThriftField bool,
+	provisionalProto, provisionalThrift, provisionalThriftField, provisionalKafka bool,
 ) []extract.Extractor {
 	var extractors []extract.Extractor
 	if provisionalProto {
@@ -620,6 +625,11 @@ func evidenceExtractors(
 		// T22.2 is independently dark: it consumes a committed SCIP index and
 		// T22.3 adds Apache tag-bound rows without changing that posture.
 		extractors = append(extractors, thriftfield.New())
+	}
+	if provisionalKafka {
+		// T23.2: both Kafka planes ride one dark flag; rule validation is
+		// the T23.1 spike and the pack is abstention-dominant by design.
+		extractors = append(extractors, kafkago.NewProducer(), kafkago.NewConsumer())
 	}
 	return extractors
 }
