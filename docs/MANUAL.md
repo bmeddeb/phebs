@@ -1900,7 +1900,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
 | `make smoke-release` | run the verified bundle from empty state through auth, sync, index, search, pinned browse, and default-dark Contract Atlas checks                       |
-| `make test`          | `go test ./...` — store/sync/indexer tests need `surreal`; child-binary integration tests build pinned zoekt and Buf binaries                           |
+| `make test`          | `go test ./... -timeout=25m` — store/sync/indexer tests need `surreal`; the timeout matches CI's integration-suite allowance; child-binary tests build pinned zoekt and Buf binaries |
 | `make ui-test`       | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
 | `make lint`          | golangci-lint                                                                                                                                           |
 | `make ui`            | production UI build only                                                                                                                                |

@@ -76,7 +76,7 @@ smoke-release: verify-release verify-surreal ## empty-data sync/index/search and
 	go run ./scripts/release-smoke -bundle "$(RELEASE_BUNDLE)" -timeout 2m
 
 test:
-	go test ./...
+	go test ./... -timeout=25m
 
 ui-test: ## Vitest UI tests (T6.4); npm install is incremental (~1s when current)
 	cd ui && npm install --no-audit --no-fund && npm test
