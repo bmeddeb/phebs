@@ -1674,6 +1674,28 @@ migration is idempotent, old writers/readers fail closed as specified by T12,
 and an unsupported index/query plan fails the T20.1 latency gate rather than
 shipping a scan.
 
+Implementation: `t12-store-v6` / `t12-evidence-migration-v4` adds the
+generation-named `assertion_reverse_v6` index over
+`(run_id, predicate, object, repo, lineage, subject, assertion_id)` and the
+strict `EvidenceStore.ListReverseAssertions` page primitive. Bare-operation
+and lineage-exact queries use the same fixed SQL/index; `WITH INDEX` makes an
+absent or unsupported index an error instead of a fallback scan. Publication
+eligibility and assertion selection stay in one statement. Pages default to
+50, cap at 100, return only renderable rows, and carry an explicit next key
+bound to the complete repository/run/predicate/object/query-lineage scope plus
+the last `(row lineage, subject, assertion id)` tuple. Cross-scope, malformed,
+and oversized continuations fail before the store query.
+
+The readable format remains `t12-evidence-v1`; only compatible v5 run metadata
+migrates. Rollback safety now includes the synchronous, generation-named
+`extraction_run_writer_v6` database event installed before migration. A v5
+binary can overwrite the field assertion it knows, but it cannot remove the
+unknown v6 event, whose transaction-local throw rejects every retired v1–v5
+run mutation. The retained target gate stages 10,010 assertions, requires a
+100-row first page within 250 ms, checks a non-overlapping second page, and
+recursively rejects a plan that selects `assertion_run`, a table scan, or more
+than the 101 requested compound-index rows.
+
 **T20.5 · High-cardinality retention** *(needs T20.3)* — reclaim a superseded
 target-size run without one unbounded deletion transaction. Eligibility and
 pin absence are rechecked before a durable non-visible deletion state; physical

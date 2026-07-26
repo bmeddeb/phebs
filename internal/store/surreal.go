@@ -99,6 +99,15 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 			return fmt.Errorf("statement %d: %s", i, r.Error.Message)
 		}
 	}
+	results, err = surrealdb.Query[any](ctx, s.db, evidencePreMigrationSchema, nil)
+	if err != nil {
+		return err
+	}
+	for i, r := range *results {
+		if r.Error != nil {
+			return fmt.Errorf("evidence pre-migration statement %d: %s", i, r.Error.Message)
+		}
+	}
 	if err := s.migrateLegacyJobs(ctx); err != nil {
 		return err
 	}
@@ -124,12 +133,31 @@ DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS p
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
 
+// This generation-specific event is intentionally installed before migration
+// and never overwritten by later generations. Unlike a field assertion, an
+// older binary does not know its name and therefore cannot weaken it while
+// reapplying its own schema. The synchronous THROW rolls the attempted retired
+// writer mutation back in the same transaction. The compound index is likewise
+// generation-named so IF NOT EXISTS is an idempotent one-time build.
+var evidencePreMigrationSchema = fmt.Sprintf(`
+DEFINE EVENT IF NOT EXISTS %s ON TABLE extraction_run
+	WHEN $event != 'DELETE'
+	  AND $after.store_schema_version IN
+		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4', '%s']
+	THEN {
+		THROW 'phebs-permanent: retired evidence writer generation'
+	};
+DEFINE INDEX IF NOT EXISTS %s ON TABLE assertion
+	FIELDS run_id, predicate, object, repo, lineage, subject, assertion_id;`,
+	evidenceWriterGuardEvent, evidencePreviousStoreSchemaVersion, reverseAssertionIndexName)
+
 var evidenceIndexes = fmt.Sprintf(`
 DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted']
         OR $this.evidence_format_version != '%s';
 DEFINE FIELD OVERWRITE store_schema_version ON extraction_run TYPE string
-	ASSERT $value NOT IN ['t12-store-v1', 't12-store-v2', 't12-store-v3', '%s'];
+	ASSERT $value NOT IN
+		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4', '%s'];
 DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;
 DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'aborted'];`,

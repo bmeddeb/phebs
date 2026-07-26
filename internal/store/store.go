@@ -349,6 +349,40 @@ type AssertionQuery struct {
 	AllowTruncate bool
 }
 
+// ReverseAssertionCursor is the complete stable key for an exact reverse
+// assertion page. The query scope fields prevent a continuation from being
+// reused against another repository, run, predicate, or operation.
+type ReverseAssertionCursor struct {
+	Repo         string `json:"repo"`
+	RunID        string `json:"run_id"`
+	Predicate    string `json:"predicate"`
+	Object       string `json:"object"`
+	QueryLineage string `json:"query_lineage,omitempty"`
+	RowLineage   string `json:"row_lineage,omitempty"`
+	Subject      string `json:"subject"`
+	AssertionID  string `json:"assertion_id"`
+}
+
+// ReverseAssertionQuery pages one exact predicate/object within one published
+// run. Lineage is optional: an empty lineage returns every wire-object match;
+// a non-empty lineage narrows the page to one declaration identity.
+type ReverseAssertionQuery struct {
+	Repo      string
+	RunID     string
+	Predicate string
+	Object    string
+	Lineage   string
+	Limit     int // 0 = 50; maximum 100
+	After     *ReverseAssertionCursor
+}
+
+// ReverseAssertionPage contains only renderable rows. Next is the stable key
+// of the final returned row when another row exists.
+type ReverseAssertionPage struct {
+	Assertions []Assertion             `json:"assertions"`
+	Next       *ReverseAssertionCursor `json:"next,omitempty"`
+}
+
 // EvidenceResolution is the click-through from one assertion support id to
 // its immutable content span and repository occurrence. Callers authorize the
 // repository before invoking ResolveEvidence; the store also binds repo, run,
@@ -420,6 +454,11 @@ type EvidenceStore interface {
 	// result exceeding Limit fails with ErrResultLimit unless AllowTruncate
 	// explicitly requests the bounded Limit+1 continuation shape.
 	ListAssertions(ctx context.Context, q AssertionQuery) ([]Assertion, error)
+	// ListReverseAssertions is the strict fleet-pagination primitive. It
+	// requires an exact published run, predicate, and object; uses the
+	// generation-bound compound index; and returns at most 100 rows plus an
+	// explicit continuation key.
+	ListReverseAssertions(ctx context.Context, q ReverseAssertionQuery) (*ReverseAssertionPage, error)
 	// ResolveEvidence resolves one current or pinned-retained assertion support
 	// id. Repo is a required authorization scope and must match the run and all
 	// returned occurrences.

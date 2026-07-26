@@ -40,8 +40,22 @@ func TestEvidenceWriterGenerationFailsClosed(t *testing.T) {
 		}
 	}
 
-	// The database guard survives an older binary's schema application because
-	// previous generations never defined or overwrote this field assertion.
+	// Model the previous v5 binary reapplying the exact weaker field assertion
+	// it knows. The generation-named v6 event is unknown to that binary and
+	// remains installed, so the old writer still cannot create a run.
+	weakened, err := surrealdb.Query[any](ctx, s.db,
+		`DEFINE FIELD OVERWRITE store_schema_version ON extraction_run TYPE string
+			ASSERT $value NOT IN
+				['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4'];`,
+		nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, result := range *weakened {
+		if result.Error != nil {
+			t.Fatalf("weaken writer field guard statement %d: %s", i, result.Error.Message)
+		}
+	}
 	results, rawErr := surrealdb.Query[any](ctx, s.db,
 		`CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit,
 			domain = 'old-writer', extractor = 'old', status = 'staged',
@@ -63,7 +77,7 @@ func TestEvidenceWriterGenerationFailsClosed(t *testing.T) {
 		}
 	}
 	if rawErr == nil {
-		t.Fatal("previous writer generation created a run under the v5 guard")
+		t.Fatal("previous writer generation created a run under the retained v6 event")
 	}
 	if exists, err := s.extractionRunExists(ctx, "old-writer-run"); err != nil || exists {
 		t.Fatalf("old writer row exists = %v, %v", exists, err)

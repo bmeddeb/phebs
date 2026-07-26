@@ -46,7 +46,11 @@ func clearEvidenceMigrationMarker(t *testing.T, s *Surreal) {
 func relaxEvidenceWriterGuards(t *testing.T, s *Surreal) {
 	t.Helper()
 	results, err := surrealdb.Query[any](context.Background(), s.db,
-		`REMOVE FIELD store_schema_version ON extraction_run;`, nil)
+		fmt.Sprintf(
+			`REMOVE FIELD store_schema_version ON extraction_run;
+			REMOVE EVENT IF EXISTS %s ON TABLE extraction_run;`,
+			evidenceWriterGuardEvent,
+		), nil)
 	if err != nil {
 		t.Fatalf("relax evidence writer guards: %v", err)
 	}

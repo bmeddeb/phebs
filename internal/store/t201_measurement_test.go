@@ -55,11 +55,7 @@ type t201Metrics struct {
 }
 
 func TestT203ProductionEvidenceCeilings(t *testing.T) {
-	if evidenceStoreSchemaVersion != "t12-store-v5" ||
-		evidencePreviousStoreSchemaVersion != "t12-store-v4" ||
-		evidenceFormatVersion != "t12-evidence-v1" ||
-		evidenceMigrationVersion != "t12-evidence-migration-v3" ||
-		evidencePreviousMigrationVersion != "t12-evidence-migration-v2" ||
+	if evidenceFormatVersion != "t12-evidence-v1" ||
 		maxEvidenceRowsPerRun != 25_000 ||
 		maxEvidenceRefsPerAssertion != 4_096 ||
 		maxEvidenceReferenceEdges != 20_000 ||
@@ -71,6 +67,19 @@ func TestT203ProductionEvidenceCeilings(t *testing.T) {
 		maxCoverageReadBytes != 1<<50 ||
 		evidenceSweepBatchSize != 1 {
 		t.Fatalf("T20.3 evidence ceilings changed; review and remeasure")
+	}
+}
+
+func TestT204ReverseEvidenceSchemaIdentities(t *testing.T) {
+	if evidenceStoreSchemaVersion != "t12-store-v6" ||
+		evidencePreviousStoreSchemaVersion != "t12-store-v5" ||
+		evidenceMigrationVersion != "t12-evidence-migration-v4" ||
+		evidencePreviousMigrationVersion != "t12-evidence-migration-v3" ||
+		evidenceWriterGuardEvent != "extraction_run_writer_v6" ||
+		reverseAssertionIndexName != "assertion_reverse_v6" ||
+		defaultReverseAssertionPage != 50 ||
+		maxReverseAssertionPage != 100 {
+		t.Fatal("T20.4 reverse schema identities or page bounds changed; review and remeasure")
 	}
 }
 

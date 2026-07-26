@@ -22,11 +22,13 @@ const (
 	// Store schema is the exact writer generation. Evidence format is the
 	// stable read/pin contract: a newer writer may keep the same format when
 	// its proof bundle remains backwards-compatible.
-	evidenceStoreSchemaVersion         = "t12-store-v5"
-	evidencePreviousStoreSchemaVersion = "t12-store-v4"
+	evidenceStoreSchemaVersion         = "t12-store-v6"
+	evidencePreviousStoreSchemaVersion = "t12-store-v5"
 	evidenceFormatVersion              = "t12-evidence-v1"
-	evidenceMigrationVersion           = "t12-evidence-migration-v3"
-	evidencePreviousMigrationVersion   = "t12-evidence-migration-v2"
+	evidenceMigrationVersion           = "t12-evidence-migration-v4"
+	evidencePreviousMigrationVersion   = "t12-evidence-migration-v3"
+	evidenceWriterGuardEvent           = "extraction_run_writer_v6"
+	reverseAssertionIndexName          = "assertion_reverse_v6"
 	evidenceMigrationBatchSize         = 128
 	evidenceSweepBatchSize             = 1
 	maxEvidenceRowsPerRun              = 25_000
@@ -40,6 +42,8 @@ const (
 	maxEvidenceOccurrences            = 100
 	maxCoverageFileCount              = 10_000_000
 	maxCoverageReadBytes        int64 = 1 << 50
+	defaultReverseAssertionPage       = 50
+	maxReverseAssertionPage           = 100
 )
 
 func hashIdentity(prefix string, fields ...string) string {
@@ -1027,6 +1031,19 @@ type assertionRec struct {
 	Detail        string           `json:"detail"`
 }
 
+func (row assertionRec) assertion() Assertion {
+	id := row.AssertionID
+	if id == "" && row.RecID != nil {
+		id, _ = row.RecID.ID.(string)
+	}
+	return Assertion{
+		ID: id, Predicate: row.Predicate, Subject: row.Subject,
+		Object: row.Object, Lineage: row.Lineage, Tier: row.Tier, CodeRole: row.CodeRole,
+		Repo: row.Repo, Supporting: row.Supporting,
+		Contradicting: row.Contradicting, RunID: row.RunID, Detail: row.Detail,
+	}
+}
+
 // ListAssertions performs publication filtering in the same database
 // statement as assertion selection. A two-query Go-side join could return a
 // run that was superseded between queries. Stable ordering precedes LIMIT.
@@ -1147,16 +1164,7 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 	var out []Assertion
 	for _, result := range *results {
 		for _, row := range result.Result {
-			id := row.AssertionID
-			if id == "" && row.RecID != nil {
-				id, _ = row.RecID.ID.(string)
-			}
-			out = append(out, Assertion{
-				ID: id, Predicate: row.Predicate, Subject: row.Subject,
-				Object: row.Object, Lineage: row.Lineage, Tier: row.Tier, CodeRole: row.CodeRole,
-				Repo: row.Repo, Supporting: row.Supporting,
-				Contradicting: row.Contradicting, RunID: row.RunID, Detail: row.Detail,
-			})
+			out = append(out, row.assertion())
 		}
 	}
 	if len(out) > limit {
@@ -1166,6 +1174,178 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 		return nil, fmt.Errorf("list assertions: more than %d rows; use a narrower query: %w", limit, ErrResultLimit)
 	}
 	return out, nil
+}
+
+func validateReverseAssertionValue(name, value string, required bool) error {
+	if required && value == "" {
+		return fmt.Errorf("list reverse assertions: %s is required", name)
+	}
+	if !utf8.ValidString(value) || len(value) > maxEvidenceIdentityBytes {
+		return fmt.Errorf("list reverse assertions: %s is not valid bounded UTF-8", name)
+	}
+	return nil
+}
+
+func normalizeReverseAssertionQuery(q ReverseAssertionQuery) (ReverseAssertionQuery, int, error) {
+	for _, field := range []struct {
+		name     string
+		value    string
+		required bool
+	}{
+		{name: "repo", value: q.Repo, required: true},
+		{name: "run id", value: q.RunID, required: true},
+		{name: "predicate", value: q.Predicate, required: true},
+		{name: "object", value: q.Object, required: true},
+		{name: "lineage", value: q.Lineage},
+	} {
+		if err := validateReverseAssertionValue(field.name, field.value, field.required); err != nil {
+			return ReverseAssertionQuery{}, 0, err
+		}
+	}
+	limit := q.Limit
+	if limit == 0 {
+		limit = defaultReverseAssertionPage
+	}
+	if limit < 1 || limit > maxReverseAssertionPage {
+		return ReverseAssertionQuery{}, 0, fmt.Errorf(
+			"list reverse assertions: limit must be between 1 and %d: %w",
+			maxReverseAssertionPage, ErrResultLimit,
+		)
+	}
+	if q.After == nil {
+		return q, limit, nil
+	}
+	for _, field := range []struct {
+		name     string
+		value    string
+		required bool
+	}{
+		{name: "cursor repo", value: q.After.Repo, required: true},
+		{name: "cursor run id", value: q.After.RunID, required: true},
+		{name: "cursor predicate", value: q.After.Predicate, required: true},
+		{name: "cursor object", value: q.After.Object, required: true},
+		{name: "cursor query lineage", value: q.After.QueryLineage},
+		{name: "cursor row lineage", value: q.After.RowLineage},
+		{name: "cursor subject", value: q.After.Subject, required: true},
+		{name: "cursor assertion id", value: q.After.AssertionID, required: true},
+	} {
+		if err := validateReverseAssertionValue(field.name, field.value, field.required); err != nil {
+			return ReverseAssertionQuery{}, 0, err
+		}
+	}
+	if q.After.Repo != q.Repo || q.After.RunID != q.RunID ||
+		q.After.Predicate != q.Predicate || q.After.Object != q.Object ||
+		q.After.QueryLineage != q.Lineage {
+		return ReverseAssertionQuery{}, 0, errors.New(
+			"list reverse assertions: continuation does not match query scope",
+		)
+	}
+	if q.Lineage != "" && q.After.RowLineage != q.Lineage {
+		return ReverseAssertionQuery{}, 0, errors.New(
+			"list reverse assertions: continuation row does not match lineage scope",
+		)
+	}
+	return q, limit, nil
+}
+
+func reverseAssertionQuerySQL(hasLineage, hasAfter, explain bool) string {
+	query := `SELECT * FROM assertion WITH INDEX ` + reverseAssertionIndexName + `
+		WHERE run_id = $run_id
+		  AND predicate = $predicate
+		  AND object = $object
+		  AND repo = $repo
+		  AND run_id IN (SELECT VALUE run_id FROM $run_rid
+			WHERE run_id = $run_id
+			  AND status = 'published'
+			  AND repo = $repo
+			  AND evidence_format_version = $evidence_format_version
+			  AND retention_quarantined = false
+			  AND run_id = record::id(id)
+			  AND ` + evidenceRunProbeHasNoClaimantSQL + `
+			  AND published_key != NONE LIMIT 1)`
+	if hasLineage {
+		query += `
+		  AND lineage = $lineage`
+	}
+	if hasAfter {
+		query += `
+		  AND (
+			lineage > $after_lineage OR
+			(lineage = $after_lineage AND subject > $after_subject) OR
+			(lineage = $after_lineage AND subject = $after_subject
+				AND assertion_id > $after_assertion_id)
+		  )`
+	}
+	query += `
+		ORDER BY lineage, subject, assertion_id
+		LIMIT $limit`
+	if explain {
+		query += " EXPLAIN FULL"
+	}
+	return query
+}
+
+func reverseAssertionQueryVars(q ReverseAssertionQuery, limit int) map[string]any {
+	vars := map[string]any{
+		"repo": q.Repo, "run_id": q.RunID, "run_rid": extractionRunID(q.RunID),
+		"predicate": q.Predicate, "object": q.Object, "lineage": q.Lineage,
+		"limit": limit + 1, "evidence_format_version": evidenceFormatVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+	}
+	addProbeVars(vars, q.RunID)
+	if q.After != nil {
+		vars["after_lineage"] = q.After.RowLineage
+		vars["after_subject"] = q.After.Subject
+		vars["after_assertion_id"] = q.After.AssertionID
+	}
+	return vars
+}
+
+// ListReverseAssertions is the strict source-row paging primitive used by the
+// Caller Map service. Publication authorization and assertion selection share
+// one statement, while WITH INDEX makes a missing/unsupported generation fail
+// instead of silently falling back to a run scan.
+func (s *Surreal) ListReverseAssertions(
+	ctx context.Context, input ReverseAssertionQuery,
+) (*ReverseAssertionPage, error) {
+	q, limit, err := normalizeReverseAssertionQuery(input)
+	if err != nil {
+		return nil, err
+	}
+	results, err := surrealdb.Query[[]assertionRec](
+		ctx,
+		s.db,
+		reverseAssertionQuerySQL(q.Lineage != "", q.After != nil, false),
+		reverseAssertionQueryVars(q, limit),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list reverse assertions: %w", err)
+	}
+	rows := make([]Assertion, 0, limit+1)
+	for statement, result := range *results {
+		if result.Error != nil {
+			return nil, fmt.Errorf(
+				"list reverse assertions: statement %d: %s",
+				statement,
+				result.Error.Message,
+			)
+		}
+		for _, row := range result.Result {
+			rows = append(rows, row.assertion())
+		}
+	}
+	page := &ReverseAssertionPage{Assertions: rows}
+	if len(rows) <= limit {
+		return page, nil
+	}
+	page.Assertions = rows[:limit]
+	last := page.Assertions[len(page.Assertions)-1]
+	page.Next = &ReverseAssertionCursor{
+		Repo: q.Repo, RunID: q.RunID, Predicate: q.Predicate, Object: q.Object,
+		QueryLineage: q.Lineage, RowLineage: last.Lineage,
+		Subject: last.Subject, AssertionID: last.ID,
+	}
+	return page, nil
 }
 
 type evidenceResolutionRec struct {

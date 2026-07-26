@@ -1634,22 +1634,32 @@ retention use the format version. A later compatible writer bump therefore
 cannot strand an existing pinned proof bundle; an unknown format remains
 hidden and untouched.
 
-The current identities are writer `t12-store-v5`, readable evidence
-`t12-evidence-v1`, and migration `t12-evidence-migration-v3`. Startup
-idempotently upgrades the immediately preceding compatible v4 run generation
+The current identities are writer `t12-store-v6`, readable evidence
+`t12-evidence-v1`, and migration `t12-evidence-migration-v4`. Startup
+idempotently upgrades the immediately preceding compatible v5 run generation
 in place; readable evidence bytes and content identities do not change.
-Staged-run reads and all mutations require v5. Compatible published
+Staged-run reads and all mutations require v6. Compatible published
 `t12-evidence-v1` runs, including pinned proof written by a future compatible
 writer, remain readable through the stable format boundary.
 
 Evidence migrations still require exclusive startup against the store.
 Database and transaction guards now make a mixed-version or rollback writer
-fail closed: known retired v1–v4 run writes are rejected, and every current
-begin/stage/publish/abort also requires the active v3 migration marker. If an
-older opener changes that marker, current writes stop too; shut down every
-writer and restart the v5 binary exclusively to restore it. Do not operate
+fail closed: known retired v1–v5 run writes are rejected, and every current
+begin/stage/publish/abort also requires the active v4 migration marker. A
+generation-named synchronous database event survives a v5 binary reapplying
+its weaker field definition and cancels its retired-generation transaction.
+If an older opener changes the migration marker, current writes stop too; shut
+down every writer and restart the v6 binary exclusively to restore it. Do not operate
 rolling mixed writers against a remote endpoint. The supervised local
 deployment already provides the intended single-writer lifecycle.
+
+The v6 store also has an internal, exact reverse-evidence page used by the
+planned Caller Map. It requires one authorized repository, published run,
+predicate, and operation object; optionally fixes declaration lineage; returns
+50 rows by default and at most 100; and uses an explicit continuation rather
+than placing a hidden sentinel in the rendered rows. The query is bound to the
+generation-specific compound index and fails if that index is unavailable.
+No HTTP, MCP, or UI Caller Map surface is registered by T20.4.
 
 ### Investigation storage and guided execution foundation
 

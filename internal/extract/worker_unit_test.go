@@ -209,6 +209,11 @@ func (m *memoryEvidence) LatestExtractionAttempt(context.Context, string, string
 func (*memoryEvidence) ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error) {
 	return nil, nil
 }
+func (*memoryEvidence) ListReverseAssertions(
+	context.Context, store.ReverseAssertionQuery,
+) (*store.ReverseAssertionPage, error) {
+	return &store.ReverseAssertionPage{}, nil
+}
 func (*memoryEvidence) ResolveEvidence(context.Context, string, string, string) (*store.EvidenceResolution, error) {
 	return nil, store.ErrNotFound
 }
