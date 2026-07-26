@@ -1,0 +1,21 @@
+
+!
+phebs-t20-neutral-preparer1Ý
+%gen/proto/orders/v1/orders_grpc.pb.goW
+Ngo gomod synthetic.invalid/mono v0.0.0 gen/proto/orders/v1/OrdersClient#Get().Y
+Pgo gomod synthetic.invalid/mono v0.0.0 gen/proto/orders/v1/OrdersClient#Watch().0v
+gen/thrift/ledger/ledger.goU
+Lgo gomod synthetic.invalid/mono v0.0.0 gen/thrift/ledger/LedgerClient#Get().0p
+src/alias/caller.goW
+
+Ngo gomod synthetic.invalid/mono v0.0.0 gen/proto/orders/v1/OrdersClient#Get().0s
+src/checkout/caller.goW
+Ngo gomod synthetic.invalid/mono v0.0.0 gen/proto/orders/v1/OrdersClient#Get().0s
+src/embedded/caller.goW
+
+Ngo gomod synthetic.invalid/mono v0.0.0 gen/proto/orders/v1/OrdersClient#Get().0o
+src/thrift/caller.goU
+Lgo gomod synthetic.invalid/mono v0.0.0 gen/thrift/ledger/LedgerClient#Get().0r
+src/wrapper/client.goW
+
+Ngo gomod synthetic.invalid/mono v0.0.0 gen/proto/orders/v1/OrdersClient#Get().0
