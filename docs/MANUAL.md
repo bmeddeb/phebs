@@ -234,7 +234,10 @@ invisible until one guarded publication. Its independent limit is now 12,500
 facts, and the frozen 10,010-call profile fits the 256 MiB worker-memory gate.
 T20.3 now supplies the corresponding `t12-store-v5` 25,000-row production
 admission and retains the store-derived atomic recount. Coverage certificates,
-APIs, and serialized evidence remain unchanged.
+APIs, and serialized evidence remain unchanged. The retained target gate
+published 20,020 stored rows in 145.348583 ms on the reference machine,
+inside the frozen 2-second ceiling; this establishes capacity and atomic
+integrity only, not extraction accuracy.
 
 There is no Change Workbench in the current release. The available pieces are
 separate: a human can browse a declaration in Contracts, carry its operation

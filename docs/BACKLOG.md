@@ -1610,7 +1610,7 @@ over-limit abort. No persisted evidence byte, publication algorithm, API,
 MCP, or UI schema changed; `maxEvidenceRowsPerRun=10,000` still prevents
 production target publication until T20.3.
 
-**T20.3 · High-cardinality publication integrity** *(needs T20.2)* — preserve
+**T20.3 · High-cardinality publication integrity** ✅ — preserve
 atomic replacement while scaling store validation.
 If the current single-transaction recount passes T20.1 it remains
 authoritative; otherwise each idempotent AddEvidence transaction derives and
@@ -1652,6 +1652,12 @@ then requires one ≤2 s recounted publication and exact stored totals. Existing
 tests retain stale-revision and concurrent-publisher atomicity, migration
 idempotence, forward-compatible reads, and malformed/unknown fail-closed
 classification.
+
+Acceptance receipt (2026-07-26): the focused production-path gate passed all
+three retained cases. The exact 10,010-fact / 20,020-row successor published
+in 145.348583 ms against the frozen 2 s ceiling; v4→v5 migration/pin
+canonicalization and rollback/mixed-writer refusal also passed. This is a
+capacity and integrity result, not an extraction-accuracy claim.
 
 **T20.4 · Composite reverse query and index** *(needs T20.3)* — add the
 EvidenceStore page primitive and composite index shape for exact
