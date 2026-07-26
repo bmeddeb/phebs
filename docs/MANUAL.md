@@ -493,6 +493,125 @@ domains were covered, stale, failed, processing, unsupported, or bounded; it
 is not an accuracy or completeness score. Epic 21 retains these semantics
 while adding its Analysis scope & gaps summary and accessible help.
 
+<!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
+#### Canonical Change Workbench glossary
+
+The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274`.
+
+##### Analysis scope & gaps
+
+Shows what phebs examined, what evidence was available, and what remained unsupported or unresolved.
+
+This summary binds visible repositories and revisions to evidence domains, freshness, failures, inventory boundaries, unresolved counts, and unsupported planes. It qualifies the adjacent result and is not a completeness score.
+
+- Evidence boundary: It summarizes recorded processing and inventory state; it does not prove that unobserved callers, resources, or runtime uses do not exist.
+- Authority boundary: Only the requesting principal's authorized repository universe contributes rows, counts, or capability state.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `contract-atlas`, `contract-impact-report`, `coverage-certificate`
+- When unavailable: Analysis scope & gaps is unavailable because no supporting contract or coverage capability is enabled.
+
+##### Could not resolve
+
+A relevant source construct was observed, but the bounded resolver deliberately did not assign it to one identity.
+
+This is an extractor abstention, not a confirmed caller and not a processing failure. The reason and cited source remain available for review when the evidence pack recorded them.
+
+- Evidence boundary: The row proves an observed construct and a refusal reason only; it makes no claim about the construct's runtime target.
+- Authority boundary: The label is derived from authorized published evidence and cannot be upgraded by presentation code.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `caller-map-exact-identity`, `contract-impact-report`
+- When unavailable: Resolver abstentions are unavailable because no supporting caller or impact capability is enabled.
+
+##### Coverage certificate
+
+The deterministic audit receipt behind Analysis scope & gaps.
+
+The certificate records the authorized repository universe, indexed revisions, published extraction runs, freshness, failures, counts, protocols, and inventory boundaries under one content digest.
+
+- Evidence boundary: It proves change detection over recorded extraction state, not extraction correctness, business completeness, or runtime absence.
+- Authority boundary: Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `atlas`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): `coverage-certificate`
+- Required capabilities (any): none
+- When unavailable: The coverage certificate is unavailable because extraction coverage is not enabled for this surface.
+
+##### Implementation evidence
+
+Cited source or history that may inform how the change is implemented.
+
+Search matches, definitions, references, tests, mocks, documentation, blame, commits, and diffs retain immutable repository, revision, path, and span provenance plus the rule that selected them.
+
+- Evidence boundary: Similarity or proximity is not a correctness ranking and does not authorize an edit.
+- Authority boundary: The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `code-navigation`, `history`, `source-search`
+- When unavailable: Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.
+
+##### Matching static evidence
+
+A source occurrence whose extracted object matches the question.
+
+The occurrence keeps its immutable citation and extraction tier. A matching operation object may not be joined to one declaration lineage, generated client, logical service, deployable, or runtime use.
+
+- Evidence boundary: This is source-level matching evidence, not a proven service roster or a resolved caller for one exact declaration.
+- Authority boundary: Presentation code may qualify or group the row but cannot promote its evidence tier or lineage.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `atlas`, `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `contract-atlas`, `contract-impact-report`
+- When unavailable: Matching static evidence is unavailable because contract evidence is not enabled.
+
+##### Name match needing review
+
+An operation-name match that is not proven to belong to the selected declaration.
+
+The source citation and candidate operation remain reviewable, but missing or ambiguous generated-client and declaration provenance prevents exact caller attribution.
+
+- Evidence boundary: A shared method name is not contract identity and cannot establish blast radius for one declaration.
+- Authority boundary: Only a validated exact-identity join may promote the row to Resolved caller.
+- Applies to modes: `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): `caller-map-exact-identity`
+- Required capabilities (any): none
+- When unavailable: Name-match review is unavailable until the exact-identity Caller Map capability is enabled.
+
+##### Resolved caller
+
+A source call occurrence joined through generated-client provenance to the exact selected declaration lineage.
+
+The row retains the call-site citation, generated symbol, wire operation, declaration lineage, and any separate unit attribution. Missing or ambiguous attribution never removes the source occurrence.
+
+- Evidence boundary: Static resolution does not prove runtime execution, traffic, ownership, or migration completion.
+- Authority boundary: Only the exact-identity Caller Map service may emit this label; legacy matching evidence cannot be renamed into it.
+- Applies to modes: `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): `caller-map-exact-identity`
+- Required capabilities (any): none
+- When unavailable: Resolved callers are unavailable until declaration-proven caller identity is enabled; matching static evidence remains separate.
+
+##### Success criterion
+
+A human-authored condition used to judge whether the ticket achieved its intended outcome.
+
+Phebs may attach cited evidence and analysis gaps to the criterion, but it cannot invent the business condition or declare it satisfied.
+
+- Evidence boundary: Code and contract evidence can inform review but cannot establish a business outcome by itself.
+- Authority boundary: Only an explicit authorized human revision records or changes a success criterion.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `manual`, `mcp`, `workbench`
+- Required capabilities (all): `change-workbench`
+- Required capabilities (any): none
+- When unavailable: Structured success criteria are unavailable until Change Workbench is enabled.
+
+<!-- END GENERATED CHANGE WORKBENCH GLOSSARY -->
+
 Epic 21 is authorized for specifications, tests, synthetic demonstrations, and
 production-unregistered/default-dark implementation only. Because it stores
 its brief, snapshots, analysis artifacts, and human records under
@@ -2373,18 +2492,27 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
 | `make smoke-release` | run the verified bundle from empty state through auth, sync, index, search, pinned browse, and default-dark Contract Atlas checks                       |
-| `make test`          | `go test ./... -timeout=25m` — store/sync/indexer tests need `surreal`; the timeout matches CI's integration-suite allowance; child-binary tests build pinned zoekt and Buf binaries |
+| `make test`          | verify generated glossary projections, then `go test ./... -timeout=25m`; store/sync/indexer tests need `surreal`, the timeout matches CI's integration-suite allowance, and child tests build pinned zoekt and Buf binaries |
 | `make t20-closure`   | run the opt-in Epic 20 empty-data scale/failure journey and write its reference-machine receipt to `/private/tmp` by default                       |
 | `make ui-test`       | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
-| `make lint`          | golangci-lint                                                                                                                                           |
+| `make lint`          | verify generated glossary projections, then run golangci-lint                                                                                          |
 | `make ui`            | production UI build only                                                                                                                                |
 | `make db-server`     | SurrealDB in server mode via docker compose (testing only)                                                                                              |
+| `make verify-glossary` | regenerate the canonical Go, TypeScript, schema, MCP, and MANUAL glossary bytes in memory and reject checked-in drift                                |
 
 The hosted release gate runs four independently visible local-equivalent
 targets: `make ci-static`, `make ci-go`, `make ci-race`, and `make ci-ui`.
 `make ci` runs all four sequentially. The live Go targets require the exact
 pinned `surreal` on `PATH`; hosted CI downloads the exact 3.2.0 Linux archive
 and verifies its committed SHA-256 before any store test starts.
+
+The canonical Change Workbench vocabulary is
+`internal/glossary/glossary.json`. Run `go generate ./internal/glossary` after
+an approved source change; do not edit its generated Go, TypeScript, schema,
+MCP, or marked MANUAL projection directly. `make verify-glossary` is
+network-free and is also part of the ordinary test, lint, and static CI gates.
+The generated TypeScript and MCP description inputs are contracts for later
+tickets; T21.4 does not render help or register tools.
 
 
 Live UI development: run `make dev-api`, then `cd ui && npm run dev` — Vite

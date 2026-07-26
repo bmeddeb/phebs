@@ -1,0 +1,205 @@
+{
+  "schema_version": "change-workbench-mcp-glossary-v1",
+  "glossary_digest": "sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274",
+  "terms": [
+    {
+      "id": "analysis_scope_and_gaps",
+      "label": "Analysis scope \u0026 gaps",
+      "description": "Shows what phebs examined, what evidence was available, and what remained unsupported or unresolved. This summary binds visible repositories and revisions to evidence domains, freshness, failures, inventory boundaries, unresolved counts, and unsupported planes. It qualifies the adjacent result and is not a completeness score. Evidence boundary: It summarizes recorded processing and inventory state; it does not prove that unobserved callers, resources, or runtime uses do not exist. Authority boundary: Only the requesting principal's authorized repository universe contributes rows, counts, or capability state.",
+      "modes": [
+        "add",
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "caller_map",
+        "impact",
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [],
+        "requires_any": [
+          "contract-atlas",
+          "contract-impact-report",
+          "coverage-certificate"
+        ],
+        "unavailable_help": "Analysis scope \u0026 gaps is unavailable because no supporting contract or coverage capability is enabled."
+      }
+    },
+    {
+      "id": "could_not_resolve",
+      "label": "Could not resolve",
+      "description": "A relevant source construct was observed, but the bounded resolver deliberately did not assign it to one identity. This is an extractor abstention, not a confirmed caller and not a processing failure. The reason and cited source remain available for review when the evidence pack recorded them. Evidence boundary: The row proves an observed construct and a refusal reason only; it makes no claim about the construct's runtime target. Authority boundary: The label is derived from authorized published evidence and cannot be upgraded by presentation code.",
+      "modes": [
+        "add",
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "caller_map",
+        "impact",
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [],
+        "requires_any": [
+          "caller-map-exact-identity",
+          "contract-impact-report"
+        ],
+        "unavailable_help": "Resolver abstentions are unavailable because no supporting caller or impact capability is enabled."
+      }
+    },
+    {
+      "id": "coverage_certificate",
+      "label": "Coverage certificate",
+      "description": "The deterministic audit receipt behind Analysis scope \u0026 gaps. The certificate records the authorized repository universe, indexed revisions, published extraction runs, freshness, failures, counts, protocols, and inventory boundaries under one content digest. Evidence boundary: It proves change detection over recorded extraction state, not extraction correctness, business completeness, or runtime absence. Authority boundary: Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.",
+      "modes": [
+        "add",
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "atlas",
+        "impact",
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [
+          "coverage-certificate"
+        ],
+        "requires_any": [],
+        "unavailable_help": "The coverage certificate is unavailable because extraction coverage is not enabled for this surface."
+      }
+    },
+    {
+      "id": "implementation_evidence",
+      "label": "Implementation evidence",
+      "description": "Cited source or history that may inform how the change is implemented. Search matches, definitions, references, tests, mocks, documentation, blame, commits, and diffs retain immutable repository, revision, path, and span provenance plus the rule that selected them. Evidence boundary: Similarity or proximity is not a correctness ranking and does not authorize an edit. Authority boundary: The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.",
+      "modes": [
+        "add",
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [],
+        "requires_any": [
+          "code-navigation",
+          "history",
+          "source-search"
+        ],
+        "unavailable_help": "Implementation evidence is unavailable because search, code navigation, and history capabilities are not available."
+      }
+    },
+    {
+      "id": "matching_static_evidence",
+      "label": "Matching static evidence",
+      "description": "A source occurrence whose extracted object matches the question. The occurrence keeps its immutable citation and extraction tier. A matching operation object may not be joined to one declaration lineage, generated client, logical service, deployable, or runtime use. Evidence boundary: This is source-level matching evidence, not a proven service roster or a resolved caller for one exact declaration. Authority boundary: Presentation code may qualify or group the row but cannot promote its evidence tier or lineage.",
+      "modes": [
+        "add",
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "atlas",
+        "caller_map",
+        "impact",
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [],
+        "requires_any": [
+          "contract-atlas",
+          "contract-impact-report"
+        ],
+        "unavailable_help": "Matching static evidence is unavailable because contract evidence is not enabled."
+      }
+    },
+    {
+      "id": "name_match_needing_review",
+      "label": "Name match needing review",
+      "description": "An operation-name match that is not proven to belong to the selected declaration. The source citation and candidate operation remain reviewable, but missing or ambiguous generated-client and declaration provenance prevents exact caller attribution. Evidence boundary: A shared method name is not contract identity and cannot establish blast radius for one declaration. Authority boundary: Only a validated exact-identity join may promote the row to Resolved caller.",
+      "modes": [
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "caller_map",
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [
+          "caller-map-exact-identity"
+        ],
+        "requires_any": [],
+        "unavailable_help": "Name-match review is unavailable until the exact-identity Caller Map capability is enabled."
+      }
+    },
+    {
+      "id": "resolved_caller",
+      "label": "Resolved caller",
+      "description": "A source call occurrence joined through generated-client provenance to the exact selected declaration lineage. The row retains the call-site citation, generated symbol, wire operation, declaration lineage, and any separate unit attribution. Missing or ambiguous attribution never removes the source occurrence. Evidence boundary: Static resolution does not prove runtime execution, traffic, ownership, or migration completion. Authority boundary: Only the exact-identity Caller Map service may emit this label; legacy matching evidence cannot be renamed into it.",
+      "modes": [
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "caller_map",
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [
+          "caller-map-exact-identity"
+        ],
+        "requires_any": [],
+        "unavailable_help": "Resolved callers are unavailable until declaration-proven caller identity is enabled; matching static evidence remains separate."
+      }
+    },
+    {
+      "id": "success_criterion",
+      "label": "Success criterion",
+      "description": "A human-authored condition used to judge whether the ticket achieved its intended outcome. Phebs may attach cited evidence and analysis gaps to the criterion, but it cannot invent the business condition or declare it satisfied. Evidence boundary: Code and contract evidence can inform review but cannot establish a business outcome by itself. Authority boundary: Only an explicit authorized human revision records or changes a success criterion.",
+      "modes": [
+        "add",
+        "migrate",
+        "modify",
+        "retire"
+      ],
+      "surfaces": [
+        "manual",
+        "mcp",
+        "workbench"
+      ],
+      "availability": {
+        "requires_all": [
+          "change-workbench"
+        ],
+        "requires_any": [],
+        "unavailable_help": "Structured success criteria are unavailable until Change Workbench is enabled."
+      }
+    }
+  ]
+}

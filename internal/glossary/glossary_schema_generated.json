@@ -1,0 +1,212 @@
+{
+  "$defs": {
+    "capability_predicate": {
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "requires_all": {
+              "minItems": 1
+            }
+          }
+        },
+        {
+          "properties": {
+            "requires_any": {
+              "minItems": 1
+            }
+          }
+        }
+      ],
+      "properties": {
+        "requires_all": {
+          "items": {
+            "enum": [
+              "caller-map-exact-identity",
+              "change-workbench",
+              "code-navigation",
+              "contract-atlas",
+              "contract-impact-report",
+              "coverage-certificate",
+              "history",
+              "source-search"
+            ]
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "requires_any": {
+          "items": {
+            "enum": [
+              "caller-map-exact-identity",
+              "change-workbench",
+              "code-navigation",
+              "contract-atlas",
+              "contract-impact-report",
+              "coverage-certificate",
+              "history",
+              "source-search"
+            ]
+          },
+          "maxItems": 64,
+          "minItems": 0,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "unavailable_help": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "requires_all",
+        "requires_any",
+        "unavailable_help"
+      ],
+      "type": "object"
+    },
+    "term": {
+      "additionalProperties": false,
+      "properties": {
+        "authority_boundary": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        "availability": {
+          "$ref": "#/$defs/capability_predicate"
+        },
+        "evidence_boundary": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        "expanded_help": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        "id": {
+          "enum": [
+            "analysis_scope_and_gaps",
+            "could_not_resolve",
+            "coverage_certificate",
+            "implementation_evidence",
+            "matching_static_evidence",
+            "name_match_needing_review",
+            "resolved_caller",
+            "success_criterion"
+          ]
+        },
+        "label": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "modes": {
+          "items": {
+            "enum": [
+              "add",
+              "migrate",
+              "modify",
+              "retire"
+            ]
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "short_help": {
+          "maxLength": 4096,
+          "minLength": 1,
+          "type": "string"
+        },
+        "surfaces": {
+          "items": {
+            "enum": [
+              "atlas",
+              "caller_map",
+              "impact",
+              "manual",
+              "mcp",
+              "workbench"
+            ]
+          },
+          "maxItems": 6,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "wire_aliases": {
+          "items": {
+            "maxLength": 128,
+            "minLength": 1,
+            "pattern": "^[a-z][a-z0-9_-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 64,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "short_help",
+        "expanded_help",
+        "evidence_boundary",
+        "authority_boundary",
+        "modes",
+        "surfaces",
+        "wire_aliases",
+        "availability"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "urn:phebs:schema:change-workbench-glossary-v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capabilities": {
+      "items": {
+        "enum": [
+          "caller-map-exact-identity",
+          "change-workbench",
+          "code-navigation",
+          "contract-atlas",
+          "contract-impact-report",
+          "coverage-certificate",
+          "history",
+          "source-search"
+        ]
+      },
+      "maxItems": 8,
+      "minItems": 8,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {
+      "const": "change-workbench-glossary-v1"
+    },
+    "terms": {
+      "items": {
+        "$ref": "#/$defs/term"
+      },
+      "maxItems": 8,
+      "minItems": 8,
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "capabilities",
+    "terms"
+  ],
+  "title": "phebs Change Workbench glossary v1",
+  "type": "object"
+}

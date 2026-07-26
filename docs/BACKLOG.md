@@ -2570,7 +2570,7 @@ and MCP remain dark pending their owning tickets and retained gates. The
 uncached repository-wide Go suite, `go vet ./...`, and golangci-lint merge bar
 pass.
 
-**T21.4 · Canonical glossary projections and merge-bar drift guard** *(needs
+**T21.4 ✅ 2026-07-26 · Canonical glossary projections and merge-bar drift guard** *(needs
 T21.1)* — generate typed Go and TypeScript projections plus MANUAL/MCP
 verification inputs from the canonical glossary. Each term carries short and
 expanded help, evidence/authority boundaries, applicable modes, and capability
@@ -2583,6 +2583,20 @@ Impact, Atlas, planned Caller Map/Workbench, MCP descriptions, and the MANUAL
 is registered. The drift verifier runs in the ordinary repository merge bar,
 not only when a developer invokes the generator, and fails on hand-edited Go,
 TypeScript, schema, MCP, or required MANUAL projection text.
+
+Implementation is present on `codex/t21.4-glossary-projections`: the exact
+T21.1 glossary moved into `internal/glossary` with its frozen digest unchanged.
+A strict closed validator rejects unknown fields, duplicate or stale
+term/capability ids, unsafe or oversized help, invalid registrations and
+predicates, and ambiguous aliases. One offline generator produces typed Go
+and TypeScript terms, a draft-2020-12 source schema, MCP description inputs,
+and the marked MANUAL fallback. Equal canonical input produces byte-equal
+outputs. The repository verifier regenerates in memory and refuses drift in
+all five targets; it runs from the ordinary Go suite and the `make test`,
+`make lint`, and `ci-static` paths. Generated TypeScript and MCP inputs remain
+unconsumed, so this ticket adds no UI, route, capability, or tool behavior.
+The uncached repository-wide Go suite, `go vet ./...`, golangci-lint, all UI
+tests, UI lint, and the production UI build pass.
 
 **T21.5 · Accessible section help and current Impact terminology** *(needs
 T21.4)* — add one reusable help trigger/popover and replace Contract Impact's

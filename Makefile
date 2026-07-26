@@ -16,7 +16,7 @@ T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 
 .PHONY: dev dev-api build validate-version validate-release-version validate-release-target \
 	release verify-release smoke-release test ui-test lint ui db-server \
-	verify-go verify-node verify-golangci-lint verify-surreal t20-closure \
+	verify-go verify-node verify-golangci-lint verify-surreal verify-glossary t20-closure \
 	ci ci-static ci-go ci-race ci-ui
 
 bin:
@@ -76,7 +76,7 @@ verify-release: ## verify RELEASE_BUNDLE bytes, modes, and canonical manifest
 smoke-release: verify-release verify-surreal ## empty-data sync/index/search and default-dark smoke
 	go run ./scripts/release-smoke -bundle "$(RELEASE_BUNDLE)" -timeout 2m
 
-test:
+test: verify-glossary
 	go test ./... -timeout=25m
 
 t20-closure: bin/zoekt-git-index verify-surreal ## T20.14 empty-data scale/failure journey; receipt defaults to /private/tmp
@@ -88,7 +88,7 @@ t20-closure: bin/zoekt-git-index verify-surreal ## T20.14 empty-data scale/failu
 ui-test: ## Vitest UI tests (T6.4); npm install is incremental (~1s when current)
 	cd ui && npm install --no-audit --no-fund && npm test
 
-lint:
+lint: verify-glossary
 	golangci-lint run
 
 ui: ## production UI build into ui/dist
@@ -121,7 +121,10 @@ verify-surreal:
 		exit 2; \
 	}
 
-ci-static: verify-go verify-golangci-lint
+verify-glossary:
+	go run ./internal/glossary/cmd/glossary-gen -verify -root .
+
+ci-static: verify-go verify-golangci-lint verify-glossary
 	go vet ./...
 	golangci-lint run
 	go test ./... -run '^$$'

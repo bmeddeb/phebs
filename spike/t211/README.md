@@ -25,13 +25,14 @@ The sequence is confirmed:
 
 | Input | Canonical digest |
 |---|---|
-| `glossary.json` | `sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274` |
+| `../../internal/glossary/glossary.json` | `sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274` |
 | `scenarios.json` | `sha256:922034e9f9a3cb40ff0d602b27a0245795a45949b2e012c6f8d7f75f145120f4` |
 
-`glossary.json` is the canonical versioned input for eight initial user terms.
-It records stable ids, short and expanded help, evidence and authority
-boundaries, applicable modes and surfaces, wire aliases, and capability
-predicates. The binding terminology trace is:
+T21.4 promoted `glossary.json` without changing its canonical bytes or digest;
+it now lives under `internal/glossary` as the canonical versioned input for
+eight initial user terms. It records stable ids, short and expanded help,
+evidence and authority boundaries, applicable modes and surfaces, wire
+aliases, and capability predicates. The binding terminology trace is:
 
 - `known_consumers` → **Matching static evidence**
 - `unresolved_candidates` → **Could not resolve**
@@ -40,9 +41,10 @@ predicates. The binding terminology trace is:
 
 `contract.go` rejects unknown fields, unsafe or oversized UTF-8, duplicate
 identities and sets, invalid capabilities, incomplete scenario rows, unknown
-service calls, and weakened registration gates. `projection.go` generates
-deterministic non-production Go, TypeScript, MANUAL, and MCP previews. T21.4
-will productionize those projections and add the repository-wide drift guard.
+service calls, and weakened registration gates. `projection.go` retains the
+original deterministic non-production previews. `internal/glossary` now owns
+the production Go, TypeScript, schema, MANUAL, and MCP projections plus the
+repository-wide drift guard.
 
 Run the offline gates with:
 
