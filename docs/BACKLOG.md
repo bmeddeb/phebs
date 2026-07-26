@@ -2550,13 +2550,18 @@ SHA1(Raw) integrity; gitlink alignment + FilePath/digest join rate (decides
 exact-tier eligibility); field-ID recovery agreement (wire.Field AST vs Raw
 IDL parse); Apache tag joins + confirmation that no in-file identity exists;
 per-family document eligibility with zero false-eligible files; exact-span
-SCIP joins with needle reproduction and adversarial abstentions; field-0
-identity and spelling alignment with thriftdecl; lineage
-stability/disjointness; a scale probe against the inherited scipfield bounds
-(observed: cadence's largest generated file is 3,455,648 bytes — 82% of the
-4 MiB ceiling — recorded, never silently raised). AC: offline suite skips
-clean without the corpus; pinned-corpus gates green; decision table D1–D10
-frozen in spike/t221/README.md; no accuracy vocabulary.
+SCIP joins that independently derive and compare scope/message/name/ID,
+validate definition and reference ranges under the declared position
+encoding, preserve unknown roles, and abstain on duplicate definitions;
+field-0 identity and spelling alignment with thriftdecl; lineage
+stability/disjointness; and a bounded generated-file probe (observed:
+cadence's largest generated file is 3,455,648 bytes — 82% of the 4 MiB
+ceiling — recorded, never silently raised). The authored needle indexes do
+not validate the inherited 64 MiB / 100k-document / 1M-occurrence scale
+bounds; T22.2's real-indexer fixture must measure or narrow those limits.
+AC: offline suite skips clean without the corpus while running the rule
+adversaries; pinned-corpus gates green; decision table D1–D10 frozen in
+spike/t221/README.md; no accuracy vocabulary.
 
 **T22.2 · thriftfield extractor, thriftrw family** *(needs T22.1)* —
 `internal/extract/extractors/thriftfield` at 1.0.0 behind the new flag;

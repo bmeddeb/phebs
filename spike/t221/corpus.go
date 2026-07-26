@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -74,25 +75,34 @@ func EnsureCorpus(root string, entry CorpusEntry) (string, error) {
 			return "", err
 		}
 	}
-	if err := VerifyCorpusCheckout(dir, entry); err != nil {
-		return "", err
-	}
 	// A corpus checkout without its own go.mod would otherwise join the
 	// parent phebs module and pollute `go mod tidy` (jaeger-client-go
-	// predates Go modules). A stub module fences it off.
-	stub := filepath.Join(dir, "go.mod")
-	if _, err := os.Stat(stub); err != nil {
-		content := "module corpus.invalid/" + entry.Name + "\n\ngo 1.21\n"
-		if err := os.WriteFile(stub, []byte(content), 0o644); err != nil {
+	// predates Go modules). The exact stub is the only admitted untracked
+	// corpus byte; VerifyCorpusCheckout rejects every other untracked or
+	// ignored file because gates walk the filesystem.
+	trackedModule, err := gitPathTracked(dir, "go.mod")
+	if err != nil {
+		return "", err
+	}
+	if !trackedModule {
+		stub := filepath.Join(dir, "go.mod")
+		if _, err := os.Stat(stub); os.IsNotExist(err) {
+			if err := os.WriteFile(stub, []byte(corpusFenceContent(entry)), 0o644); err != nil {
+				return "", fmt.Errorf("fence corpus module: %w", err)
+			}
+		} else if err != nil {
 			return "", fmt.Errorf("fence corpus module: %w", err)
 		}
+	}
+	if err := VerifyCorpusCheckout(dir, entry); err != nil {
+		return "", err
 	}
 	return dir, nil
 }
 
 // VerifyCorpusCheckout binds every executable gate to both the locked commit
-// and clean tracked bytes. Untracked files are ignored because EnsureCorpus
-// deliberately adds an untracked go.mod fence to pre-module corpora.
+// and the exact filesystem population. The sole exception is EnsureCorpus's
+// content-checked go.mod fence for a commit that has no tracked go.mod.
 func VerifyCorpusCheckout(dir string, entry CorpusEntry) error {
 	head, err := gitOutput(dir, "rev-parse", "HEAD")
 	if err != nil {
@@ -108,7 +118,78 @@ func VerifyCorpusCheckout(dir string, entry CorpusEntry) error {
 	if dirty != "" {
 		return fmt.Errorf("corpus %s has tracked changes; restore the locked checkout before running gates", entry.Name)
 	}
+	trackedModule, err := gitPathTracked(dir, "go.mod")
+	if err != nil {
+		return err
+	}
+	allowed := map[string]bool{}
+	if !trackedModule {
+		raw, readErr := os.ReadFile(filepath.Join(dir, "go.mod"))
+		switch {
+		case readErr == nil && string(raw) != corpusFenceContent(entry):
+			return fmt.Errorf("corpus %s has a modified go.mod fence", entry.Name)
+		case readErr == nil:
+			allowed["go.mod"] = true
+		case !os.IsNotExist(readErr):
+			return fmt.Errorf("corpus %s cannot read its go.mod fence: %w", entry.Name, readErr)
+		}
+	}
+	others, err := corpusOtherPaths(dir)
+	if err != nil {
+		return err
+	}
+	for _, path := range others {
+		if !allowed[path] {
+			return fmt.Errorf("corpus %s has untracked or ignored path %q; remove it before running gates", entry.Name, path)
+		}
+		delete(allowed, path)
+	}
+	for path := range allowed {
+		return fmt.Errorf("corpus %s expected untracked fence %q was not reported by git", entry.Name, path)
+	}
 	return nil
+}
+
+func corpusFenceContent(entry CorpusEntry) string {
+	return "module corpus.invalid/" + entry.Name + "\n\ngo 1.21\n"
+}
+
+func gitPathTracked(dir, path string) (bool, error) {
+	cmd := exec.Command("git", "ls-files", "--error-unmatch", "--", path)
+	cmd.Dir = dir
+	if err := cmd.Run(); err == nil {
+		return true, nil
+	} else if exit, ok := err.(*exec.ExitError); ok && exit.ExitCode() == 1 {
+		return false, nil
+	} else {
+		return false, fmt.Errorf("git ls-files %s: %w", path, err)
+	}
+}
+
+func corpusOtherPaths(dir string) ([]string, error) {
+	seen := make(map[string]bool)
+	for _, args := range [][]string{
+		{"ls-files", "--others", "--exclude-standard", "-z"},
+		{"ls-files", "--others", "--ignored", "--exclude-standard", "-z"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		raw, err := cmd.Output()
+		if err != nil {
+			return nil, fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
+		}
+		for _, value := range strings.Split(string(raw), "\x00") {
+			if value != "" {
+				seen[filepath.ToSlash(value)] = true
+			}
+		}
+	}
+	paths := make([]string, 0, len(seen))
+	for path := range seen {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	return paths, nil
 }
 
 // GitlinkCommit reads the commit a gitlink entry names at HEAD, or an error

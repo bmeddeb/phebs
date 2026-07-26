@@ -237,35 +237,20 @@ func TestG4ApacheTagJoin(t *testing.T) {
 	t.Logf("G4: %d tagged structs, zero embedded modules, IDL agreement for Batch/Process/Span", len(byStruct))
 }
 
-// familyFor is the spike's D5 document-eligibility rule.
-func familyFor(corpusDir string) func(rel string) (string, bool) {
-	return func(rel string) (string, bool) {
-		full := filepath.Join(corpusDir, filepath.FromSlash(rel))
-		if _, found, err := ParseThriftModuleFile(full); err == nil && found {
-			return "thriftrw", true
-		}
-		marker, err := HasApacheGeneratedMarker(full)
-		if err != nil || !marker {
-			return "", false
-		}
-		tags, err := ParseThriftTags(full)
-		if err != nil || len(tags) == 0 {
-			return "", false
-		}
-		return "apache", true
-	}
-}
-
 // G5 — eligibility sweeps: every eligible file lives in a generated root,
 // and the adversarial handwritten directories yield zero eligible files.
 func TestG5DocumentEligibility(t *testing.T) {
 	dirs := corpusDirs(t)
-	cadenceFamily := familyFor(dirs["cadence"])
+	cadenceFamily := CorpusDocumentResolver(dirs["cadence"])
 	eligible := 0
 	walkGoFiles(t, dirs["cadence"], ".gen/go", func(rel string) {
-		if family, ok := cadenceFamily(rel); ok {
-			if family != "thriftrw" {
-				t.Fatalf("%s classified %s, want thriftrw", rel, family)
+		model, ok, err := cadenceFamily(rel)
+		if err != nil {
+			t.Fatalf("%s: %v", rel, err)
+		}
+		if ok {
+			if model.Family != "thriftrw" {
+				t.Fatalf("%s classified %s, want thriftrw", rel, model.Family)
 			}
 			eligible++
 		}
@@ -276,16 +261,24 @@ func TestG5DocumentEligibility(t *testing.T) {
 	// The mapper directory is the adversarial-est handwritten code: it is
 	// full of thrift type names yet must produce zero eligible documents.
 	walkGoFiles(t, dirs["cadence"], "common/types/mapper/thrift", func(rel string) {
-		if family, ok := cadenceFamily(rel); ok {
-			t.Fatalf("handwritten %s wrongly eligible as %s", rel, family)
+		model, ok, err := cadenceFamily(rel)
+		if err != nil {
+			t.Fatalf("%s: %v", rel, err)
+		}
+		if ok {
+			t.Fatalf("handwritten %s wrongly eligible as %s", rel, model.Family)
 		}
 	})
-	jaegerFamily := familyFor(dirs["jaeger-client-go"])
+	jaegerFamily := CorpusDocumentResolver(dirs["jaeger-client-go"])
 	apacheEligible := 0
 	walkGoFiles(t, dirs["jaeger-client-go"], "thrift-gen", func(rel string) {
-		if family, ok := jaegerFamily(rel); ok {
-			if family != "apache" {
-				t.Fatalf("%s classified %s, want apache", rel, family)
+		model, ok, err := jaegerFamily(rel)
+		if err != nil {
+			t.Fatalf("%s: %v", rel, err)
+		}
+		if ok {
+			if model.Family != "apache" {
+				t.Fatalf("%s classified %s, want apache", rel, model.Family)
 			}
 			apacheEligible++
 		}
@@ -293,8 +286,10 @@ func TestG5DocumentEligibility(t *testing.T) {
 	if apacheEligible == 0 {
 		t.Fatal("no eligible apache files found")
 	}
-	if family, ok := jaegerFamily("transport_udp.go"); ok {
-		t.Fatalf("handwritten transport_udp.go wrongly eligible as %s", family)
+	if model, ok, err := jaegerFamily("transport_udp.go"); err != nil {
+		t.Fatal(err)
+	} else if ok {
+		t.Fatalf("handwritten transport_udp.go wrongly eligible as %s", model.Family)
 	}
 	t.Logf("G5: %d thriftrw + %d apache eligible files; adversarial directories clean", eligible, apacheEligible)
 }
@@ -367,9 +362,9 @@ type needleFile struct {
 }
 
 // G6 — the authored indexes join against real corpus bytes: every
-// hand-labeled needle binds with its expected references and
-// classifications, and every adversarial entry abstains for exactly the
-// labeled reason.
+// hand-labeled needle's scope/message/name/ID is independently derived,
+// binds with its expected validated references and classifications, and
+// every adversarial entry abstains for exactly the labeled reason.
 func TestG6ScipExactSpanJoin(t *testing.T) {
 	dirs := corpusDirs(t)
 	lock := loadIndexLock(t)
@@ -389,7 +384,7 @@ func TestG6ScipExactSpanJoin(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bindings, abstentions, err := JoinFieldReferences(index, corpusDir, familyFor(corpusDir))
+		bindings, abstentions, err := JoinFieldReferences(index, corpusDir, CorpusDocumentResolver(corpusDir))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -410,6 +405,30 @@ func TestG6ScipExactSpanJoin(t *testing.T) {
 			}
 			if binding.Family != needle.Family || binding.DocPath != needle.DefinitionPath {
 				t.Fatalf("needle %s: bound as %s@%s, labeled %s@%s", needle.Name, binding.Family, binding.DocPath, needle.Family, needle.DefinitionPath)
+			}
+			if binding.Scope != needle.Scope || binding.Message != needle.Message ||
+				binding.FieldName != needle.FieldName || binding.FieldID != needle.FieldID {
+				t.Fatalf(
+					"needle %s: derived identity %s.%s.%s#%d, labeled %s.%s.%s#%d",
+					needle.Name,
+					binding.Scope,
+					binding.Message,
+					binding.FieldName,
+					binding.FieldID,
+					needle.Scope,
+					needle.Message,
+					needle.FieldName,
+					needle.FieldID,
+				)
+			}
+			if binding.Object != FieldIdentity(needle.Scope, needle.Message, needle.FieldID) {
+				t.Fatalf("needle %s: object %q", needle.Name, binding.Object)
+			}
+			if binding.Family == "thriftrw" && binding.SourceBinding != "module_digest" {
+				t.Fatalf("needle %s: source binding %q, want module_digest", needle.Name, binding.SourceBinding)
+			}
+			if binding.Family == "apache" && binding.SourceBinding != "none" {
+				t.Fatalf("needle %s: source binding %q, want none", needle.Name, binding.SourceBinding)
 			}
 			if !ValidThriftFieldID(needle.FieldID) {
 				t.Fatalf("needle %s: labeled field ID %d out of bounds", needle.Name, needle.FieldID)
@@ -504,9 +523,9 @@ func TestG8LineageStabilityAndDisjointness(t *testing.T) {
 	t.Log("G8: lineage stable, package-distinct, disjoint from provisional_repo_path_v1")
 }
 
-// G9 — scale probe against the scipfield bounds the production extractor
-// would inherit: per-file parse ceiling 4 MiB, symbol length 16 KiB, index
-// size 64 MiB. Exceedance is a recorded decision, never a silent raise.
+// G9 — bounded file probe against the 4 MiB generated-file ceiling. The
+// authored needle indexes still enforce hard input bounds, but are explicitly
+// too small to validate production index/document/occurrence scale.
 func TestG9ScaleProbe(t *testing.T) {
 	dirs := corpusDirs(t)
 	const (
@@ -549,7 +568,7 @@ func TestG9ScaleProbe(t *testing.T) {
 			}
 		}
 	}
-	t.Logf("G9: largest generated file %s = %d bytes (%.0f%% of the 4 MiB ceiling); all indexes within bounds", largestPath, largest, 100*float64(largest)/float64(maxGeneratedBytes))
+	t.Logf("G9: largest generated file %s = %d bytes (%.0f%% of the 4 MiB ceiling); authored needle indexes obey hard bounds but do not measure production index scale", largestPath, largest, 100*float64(largest)/float64(maxGeneratedBytes))
 }
 
 // Offline: the committed index bytes must match index.lock.json exactly.
@@ -569,8 +588,16 @@ func TestIndexLockDigests(t *testing.T) {
 func TestVocabularyDiscipline(t *testing.T) {
 	banned := []string{"precision", "recall", "f1 score"}
 	err := fs.WalkDir(os.DirFS("."), ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
 			return err
+		}
+		if d.IsDir() {
+			// The discipline governs spike prose, not fetched third-party
+			// corpus bytes (gitignored, full of ordinary English).
+			if path == "corpus" {
+				return fs.SkipDir
+			}
+			return nil
 		}
 		if !strings.HasSuffix(path, ".go") && !strings.HasSuffix(path, ".md") && !strings.HasSuffix(path, ".json") {
 			return nil

@@ -28,6 +28,8 @@ type TaggedField struct {
 	ThriftName string
 	ID         int
 	Required   bool
+	StartByte  int
+	EndByte    int
 }
 
 // ParseThriftTags returns every thrift-tagged struct field in the Go file,
@@ -68,6 +70,8 @@ func ParseThriftTags(path string) ([]TaggedField, error) {
 				}
 				tagged.Struct = typeSpec.Name.Name
 				tagged.GoName = field.Names[0].Name
+				tagged.StartByte = fset.PositionFor(field.Names[0].Pos(), false).Offset
+				tagged.EndByte = fset.PositionFor(field.Names[0].End(), false).Offset
 				out = append(out, tagged)
 			}
 		}
@@ -115,7 +119,9 @@ func HasThriftModuleIdent(path string) (bool, error) {
 }
 
 // HasApacheGeneratedMarker reports whether one of the known Apache Thrift
-// generator headers appears in the file's first bytes.
+// generator headers appears as a complete comment line in the first bytes.
+// A string literal or a longer comment that merely contains the marker is
+// not generator evidence.
 func HasApacheGeneratedMarker(path string) (bool, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -125,9 +131,14 @@ func HasApacheGeneratedMarker(path string) (bool, error) {
 	if len(head) > 4096 {
 		head = head[:4096]
 	}
-	for _, marker := range apacheGeneratedMarkers {
-		if strings.Contains(head, marker) {
-			return true, nil
+	for _, line := range strings.Split(head, "\n") {
+		line = strings.TrimSuffix(line, "\r")
+		for _, marker := range apacheGeneratedMarkers {
+			// Line-anchored prefix, not equality: the generator appends
+			// its version ("... Thrift Compiler (0.14.1). DO NOT EDIT.").
+			if strings.HasPrefix(strings.TrimSpace(line), marker) {
+				return true, nil
+			}
 		}
 	}
 	return false, nil

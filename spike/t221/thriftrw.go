@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -87,6 +88,9 @@ func ParseThriftModuleFile(path string) (ThriftModuleDecl, bool, error) {
 	}
 	lit := findThriftModuleLiteral(file)
 	if lit == nil {
+		if thriftReflectImportAlias(file) != "" && hasThriftModuleDeclaration(file) {
+			return ThriftModuleDecl{}, false, fmt.Errorf("thrift module declaration has unsupported shape")
+		}
 		return ThriftModuleDecl{}, false, nil
 	}
 	module := ThriftModuleDecl{}
@@ -126,6 +130,10 @@ func ParseThriftModuleFile(path string) (ThriftModuleDecl, bool, error) {
 }
 
 func findThriftModuleLiteral(file *ast.File) *ast.CompositeLit {
+	alias := thriftReflectImportAlias(file)
+	if alias == "" {
+		return nil
+	}
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
 		if !ok || gen.Tok != token.VAR {
@@ -148,10 +156,56 @@ func findThriftModuleLiteral(file *ast.File) *ast.CompositeLit {
 			if !ok || selector.Sel.Name != "ThriftModule" {
 				continue
 			}
+			pkg, ok := selector.X.(*ast.Ident)
+			if !ok || pkg.Name != alias {
+				continue
+			}
 			return lit
 		}
 	}
 	return nil
+}
+
+func hasThriftModuleDeclaration(file *ast.File) bool {
+	for _, decl := range file.Decls {
+		general, ok := decl.(*ast.GenDecl)
+		if !ok || general.Tok != token.VAR {
+			continue
+		}
+		for _, specification := range general.Specs {
+			value, ok := specification.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for _, name := range value.Names {
+				if name.Name == "ThriftModule" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func thriftReflectImportAlias(file *ast.File) string {
+	return importAliasFor(file, "go.uber.org/thriftrw/thriftreflect")
+}
+
+func importAliasFor(file *ast.File, importPath string) string {
+	for _, spec := range file.Imports {
+		value, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || value != importPath {
+			continue
+		}
+		if spec.Name == nil {
+			return path.Base(importPath)
+		}
+		if spec.Name.Name == "." || spec.Name.Name == "_" {
+			return ""
+		}
+		return spec.Name.Name
+	}
+	return ""
 }
 
 // resolveStringExpr evaluates a string literal, or a same-file identifier
@@ -239,6 +293,10 @@ func WireFieldIDsByStruct(path string) (map[string]map[int]bool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
+	wireAlias := importAliasFor(file, "go.uber.org/thriftrw/wire")
+	if wireAlias == "" {
+		return map[string]map[int]bool{}, nil
+	}
 	out := make(map[string]map[int]bool)
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
@@ -260,7 +318,7 @@ func WireFieldIDsByStruct(path string) (map[string]map[int]bool, error) {
 				return true
 			}
 			pkg, ok := selector.X.(*ast.Ident)
-			if !ok || pkg.Name != "wire" {
+			if !ok || pkg.Name != wireAlias {
 				return true
 			}
 			for _, element := range lit.Elts {
