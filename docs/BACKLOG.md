@@ -1688,12 +1688,15 @@ generation-named `assertion_reverse_v6` index over
 `(run_id, predicate, object, repo, lineage, subject, assertion_id)` and the
 strict `EvidenceStore.ListReverseAssertions` page primitive. Bare-operation
 and lineage-exact queries use the same fixed SQL/index; `WITH INDEX` makes an
-absent or unsupported index an error instead of a fallback scan. Publication
-eligibility and assertion selection stay in one statement. Pages default to
-50, cap at 100, return only renderable rows, and carry an explicit next key
-bound to the complete repository/run/predicate/object/query-lineage scope plus
-the last `(row lineage, subject, assertion id)` tuple. Cross-scope, malformed,
-and oversized continuations fail before the store query.
+unsupported plan fail the captured-plan gate instead of shipping a fallback.
+Because SurrealDB does not itself error when that named index has been removed,
+each page first verifies the exact generation in the database catalog; absence
+fails before the data query. Publication eligibility and assertion selection
+stay in one statement. Pages default to 50, cap at 100, return only renderable
+rows, and carry an explicit next key bound to the complete
+repository/run/predicate/object/query-lineage scope plus the last
+`(row lineage, subject, assertion id)` tuple. Cross-scope, malformed, and
+oversized continuations fail before the store query.
 
 The readable format remains `t12-evidence-v1`; only compatible v5 run metadata
 migrates. Rollback safety now includes the synchronous, generation-named

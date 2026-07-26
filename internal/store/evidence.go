@@ -1301,16 +1301,45 @@ func reverseAssertionQueryVars(q ReverseAssertionQuery, limit int) map[string]an
 	return vars
 }
 
+func (s *Surreal) requireReverseAssertionIndex(ctx context.Context) error {
+	results, err := surrealdb.Query[any](
+		ctx,
+		s.db,
+		"INFO FOR INDEX "+reverseAssertionIndexName+" ON TABLE assertion",
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("inspect required reverse assertion index: %w", err)
+	}
+	if results == nil || len(*results) != 1 {
+		return errors.New("inspect required reverse assertion index: incomplete catalog response")
+	}
+	for statement, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"inspect required reverse assertion index: statement %d: %s",
+				statement,
+				result.Error.Message,
+			)
+		}
+	}
+	return nil
+}
+
 // ListReverseAssertions is the strict source-row paging primitive used by the
 // Caller Map service. Publication authorization and assertion selection share
-// one statement, while WITH INDEX makes a missing/unsupported generation fail
-// instead of silently falling back to a run scan.
+// one statement. The catalog preflight makes a missing generation fail before
+// data access; WITH INDEX restricts the subsequent planner to that generation,
+// whose selected plan is pinned by the target-scale acceptance gate.
 func (s *Surreal) ListReverseAssertions(
 	ctx context.Context, input ReverseAssertionQuery,
 ) (*ReverseAssertionPage, error) {
 	q, limit, err := normalizeReverseAssertionQuery(input)
 	if err != nil {
 		return nil, err
+	}
+	if err := s.requireReverseAssertionIndex(ctx); err != nil {
+		return nil, fmt.Errorf("list reverse assertions: %w", err)
 	}
 	results, err := surrealdb.Query[[]assertionRec](
 		ctx,

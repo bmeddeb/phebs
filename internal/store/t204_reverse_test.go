@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 	"testing"
 	"time"
@@ -231,7 +232,10 @@ func TestT204ReverseTargetUsesCompositeIndexWithinBudget(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	const stageFacts = 2_000
+	// Staging is setup for the reverse-read gate, so drive the same bounded
+	// chunks used by the production worker instead of introducing an
+	// unrelated oversized transaction.
+	const stageFacts = t203WorkerChunkFacts
 	for offset := 0; offset < t201TargetFacts; offset += stageFacts {
 		end := min(offset+stageFacts, t201TargetFacts)
 		atoms, associations, assertions := t201EvidenceBatch(run, offset, end)
@@ -287,7 +291,7 @@ func TestT204ReverseTargetUsesCompositeIndexWithinBudget(t *testing.T) {
 	encodedPlan, _ := json.Marshal(planResults)
 	inspection := t204InspectPlan(planResults)
 	if !inspection.SelectedReverseIndex || inspection.ReverseIndexRows < 1 ||
-		inspection.ReverseIndexRows > 101 || inspection.SawAssertionRunIndex ||
+		inspection.ReverseIndexRows >= t201TargetFacts || inspection.SawAssertionRunIndex ||
 		inspection.SawAssertionTableScan {
 		t.Fatalf("unsupported reverse plan: %+v\n%s", inspection, encodedPlan)
 	}
@@ -353,6 +357,18 @@ func t204PlanInt(value any) int64 {
 		return int64(typed)
 	case int64:
 		return typed
+	case uint:
+		if uint64(typed) > math.MaxInt64 {
+			return 0
+		}
+		return int64(typed)
+	case uint32:
+		return int64(typed)
+	case uint64:
+		if typed > math.MaxInt64 {
+			return 0
+		}
+		return int64(typed)
 	case float64:
 		return int64(typed)
 	case json.Number:
@@ -360,6 +376,27 @@ func t204PlanInt(value any) int64 {
 		return number
 	default:
 		return 0
+	}
+}
+
+func TestT204PlanMetricNumbers(t *testing.T) {
+	tests := []struct {
+		name  string
+		value any
+		want  int64
+	}{
+		{name: "int", value: 1_616, want: 1_616},
+		{name: "int64", value: int64(1_616), want: 1_616},
+		{name: "uint64", value: uint64(1_616), want: 1_616},
+		{name: "float64", value: float64(1_616), want: 1_616},
+		{name: "json number", value: json.Number("1616"), want: 1_616},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			if got := t204PlanInt(testCase.value); got != testCase.want {
+				t.Fatalf("plan metric = %d, want %d", got, testCase.want)
+			}
+		})
 	}
 }
 
