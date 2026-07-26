@@ -975,6 +975,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/mcp`                                                          | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8)                                               |
 | `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped operation-consumer proof bundle                                 |
 | `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
+| `/api/find_kafka_topic_usage?topic=`                                | GET             | experimental permission-scoped Kafka topic-usage proof bundle with an always-present unresolved census |
 | `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
 | `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected consumers                |
 | `/api/proof_bundles/{id}`                                           | GET             | reauthorized immutable proof-bundle read; an ID is not a bearer credential                     |
@@ -1028,9 +1029,9 @@ go-sdk), guarded by the same DB-backed authentication as the rest of the API.
 Create a named key in **Settings** and use it as the bearer token; the legacy
 config key remains accepted only while it is configured.
 
-Ten core tools are always present. Enabling
-`experimental.provisional_proto_extraction` adds three evidence-query tools.
-It adds a fourth annex tool, for fourteen total, when the pinned Buf binary and
+Ten core tools are always present. Enabling any provisional extraction pack
+adds four evidence-query tools.
+It adds a fifth annex tool, for fifteen total, when the pinned Buf binary and
 host sandbox pass their startup probe; otherwise compatibility stays
 undiscoverable and the other three remain available.
 
@@ -1049,7 +1050,8 @@ undiscoverable and the other three remain available.
 | `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
 | `find_operation_consumers` | Investigation envelope v1.0 for one canonical `/package.Service/Method`; facts retain exact authorized proof references while processing, semantic resolution, attribution, conclusion, and absence eligibility remain separate |
 | `find_proto_field_references` | Investigation envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
-| `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or all three provisional domains when omitted |
+| `find_kafka_topic_usage` | Investigation envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
+| `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible SCIP consumers, exact proof references, coverage, and invocation provenance |
 
 
@@ -1058,7 +1060,7 @@ units. Omitted `ref`/`head` values resolve to the DB's immutable indexed
 commit. NUL-bearing binary blame, unknown repos, deleting repos, and unindexed repos come
 back as tool errors rather than drifting to mutable mirror HEAD.
 
-The four experimental tools return `envelope_version: "1.0"` as MCP
+The five experimental tools return `envelope_version: "1.0"` as MCP
 structured content. Their advertised `outputSchema` is the same generated
 draft-2020-12 schema checked in under `schemas/`. Stateless proof queries do
 not enumerate a released evidence-pack universe, so their pack-defined
@@ -1511,8 +1513,8 @@ same-commit forced runs and extractor upgrades; killed staged attempts become
 queries, names, or counts a repository the caller cannot see. The query API
 embeds this complete certificate in every proof bundle.
 
-The opt-in registers four read-only query endpoints when the Buf startup probe
-succeeds (the first three remain available when compatibility is unavailable):
+The opt-in registers five read-only query endpoints when the Buf startup probe
+succeeds (the first four remain available when compatibility is unavailable):
 
 - `GET /api/find_operation_consumers?operation=/scope.Service/method`
   returns exact-object `CALLS_OPERATION` assertions from both registered
@@ -1523,9 +1525,18 @@ succeeds (the first three remain available when compatibility is unavailable):
   resolves the canonical field identity in the `scip-proto-field` domain
   (protobuf-only; the dark Thrift field-reference pack has no public query
   surface until T22.4).
+- `GET /api/find_kafka_topic_usage?topic=<literal>` returns exact-object
+  `PRODUCES_TO_TOPIC` and `CONSUMES_FROM_TOPIC` assertions for one topic
+  spelling (validated by Kafka's own naming bounds), and the bundle always
+  carries `unresolved_census`: per-plane counts of distinct
+  `UNRESOLVED_KAFKA_*` assertions for every frozen shape class, zeros
+  included. The census is topic-independent by construction — a non-literal
+  topic cannot be matched to any literal — and the endpoint never makes a
+  completeness claim.
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
-  coverage only; omitted domains select `grpc-consumer`, `proto-contract`,
-  `scip-proto-field`, `thrift-consumer`, and `thrift-contract`.
+  coverage only; omitted domains select `grpc-consumer`, `kafka-consumer`,
+  `kafka-producer`, `proto-contract`, `scip-proto-field`, `thrift-consumer`,
+  and `thrift-contract`.
 - `POST /api/check_contract_compatibility` accepts a canonical `lineage` and
   `before`/`after` arrays of `{path,content}` `.proto` files. It runs Buf's
   `WIRE` policy and joins affected field identities to visible

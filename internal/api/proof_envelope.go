@@ -45,6 +45,19 @@ func (s *ProofService) FindProtoFieldReferencesMCP(
 	return proofEnvelope("find_proto_field_references", bundle)
 }
 
+// FindKafkaTopicUsageMCP projects the shared topic-usage proof. The
+// envelope's facts are the producer/consumer evidence rows; the persisted
+// bundle (by envelope provenance ID) additionally carries the
+// always-present unresolved census, and the claim text keeps the
+// no-completeness posture explicit.
+func (s *ProofService) FindKafkaTopicUsageMCP(ctx context.Context, topic string) (*investigation.Envelope, error) {
+	bundle, err := s.FindKafkaTopicUsage(ctx, topic)
+	if err != nil {
+		return nil, err
+	}
+	return proofEnvelope("find_kafka_topic_usage", bundle)
+}
+
 // GetExtractionCoverageMCP projects the shared permission-scoped certificate.
 func (s *ProofService) GetExtractionCoverageMCP(ctx context.Context, domains []string) (*investigation.Envelope, error) {
 	bundle, err := s.GetExtractionCoverage(ctx, domains)
@@ -250,6 +263,11 @@ func proofPayload(source ProofBundleEnvelope) (*investigation.Payload, int, erro
 		case "REFERENCES_PROTO_FIELD":
 			objectKind = "proto_field"
 			objectID = assertion.Lineage + ":" + assertion.Object
+		case "PRODUCES_TO_TOPIC", "CONSUMES_FROM_TOPIC":
+			// A topic object is a source spelling with no cluster or
+			// environment identity; lineage is per-file provisional and is
+			// deliberately not part of the topic identity.
+			objectKind = "kafka_topic"
 		}
 		attribution := make(map[string]investigation.AttributionState, 4)
 		for _, hop := range []string{"build_target", "deployable", "owner", "service"} {
@@ -308,6 +326,10 @@ func proofClaim(query ProofQuery) investigation.Claim {
 			ID:   query.Lineage + ":" + query.Message + "#" + strconv.Itoa(query.FieldNumber),
 		}
 		claim.DecisionSought = "enumerate_proto_field_reference_candidates"
+	case "find_kafka_topic_usage":
+		claim.Predicate = "USES_KAFKA_TOPIC"
+		claim.Subject = investigation.Identity{Kind: "kafka_topic", ID: "topic:" + query.Topic}
+		claim.DecisionSought = "enumerate_kafka_topic_usage_candidates"
 	case "check_contract_compatibility":
 		claim.ClaimFamily = "contract_compatibility"
 		claim.Predicate = "WIRE_COMPATIBILITY"
@@ -331,6 +353,9 @@ func normalizedProofQuestion(query ProofQuery) string {
 	case "find_proto_field_references":
 		return "Find evidence-derived references to " + query.Lineage + ":" +
 			query.Message + "#" + strconv.Itoa(query.FieldNumber) + " in the current visibility projection."
+	case "find_kafka_topic_usage":
+		return "Find evidence-derived producers and consumers of topic:" + query.Topic +
+			" in the current visibility projection; unresolved sites are counted in the bundle census and this list is never complete."
 	case "check_contract_compatibility":
 		return "Check Buf WIRE compatibility for " + query.Lineage + " and enumerate evidence-derived affected consumers."
 	default:

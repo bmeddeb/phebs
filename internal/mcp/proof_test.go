@@ -372,6 +372,10 @@ func (schemaProofQueries) FindProtoFieldReferencesMCP(context.Context, string, s
 	return nil, errors.New("not called")
 }
 
+func (schemaProofQueries) FindKafkaTopicUsageMCP(context.Context, string) (*investigation.Envelope, error) {
+	return nil, errors.New("not called")
+}
+
 func (schemaProofQueries) GetExtractionCoverageMCP(context.Context, []string) (*investigation.Envelope, error) {
 	return nil, errors.New("not called")
 }
@@ -390,8 +394,8 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 		wantCount     int
 	}{
 		{name: "dark", wantCount: 10},
-		{name: "proof only", proofs: schemaProofQueries{}, wantCount: 13},
-		{name: "compatibility enabled", proofs: schemaProofQueries{}, compatibility: schemaCompatibilityQueries{}, wantCount: 14},
+		{name: "proof only", proofs: schemaProofQueries{}, wantCount: 14},
+		{name: "compatibility enabled", proofs: schemaProofQueries{}, compatibility: schemaCompatibilityQueries{}, wantCount: 15},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := t.Context()
@@ -429,7 +433,7 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 					t.Fatalf("compatibility schemas: input=%s output=%s", input, output)
 				}
 			}
-			for _, name := range []string{"find_operation_consumers", "find_proto_field_references", "get_extraction_coverage"} {
+			for _, name := range []string{"find_operation_consumers", "find_proto_field_references", "find_kafka_topic_usage", "get_extraction_coverage"} {
 				tool, ok := found[name]
 				if test.proofs == nil {
 					if ok {

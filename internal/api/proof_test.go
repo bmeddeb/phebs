@@ -610,12 +610,98 @@ func TestProofFieldLineageCoverageAndValidation(t *testing.T) {
 	}
 }
 
+func TestFindKafkaTopicUsage(t *testing.T) {
+	const repo = "github.com/allowed/kafka"
+	producerRun := proofRun(repo, "kafka-producer", "run-kafka-producer")
+	consumerRun := proofRun(repo, "kafka-consumer", "run-kafka-consumer")
+	produces, producesResolution := proofAssertion(repo, producerRun.ID, "produces", "PRODUCES_TO_TOPIC", "topic:orders-v1", "provisional_repo_path_v1_"+strings.Repeat("a", 64), "orders")
+	otherTopic, otherResolution := proofAssertion(repo, producerRun.ID, "other-topic", "PRODUCES_TO_TOPIC", "topic:other", "provisional_repo_path_v1_"+strings.Repeat("b", 64), "other")
+	consumes, consumesResolution := proofAssertion(repo, consumerRun.ID, "consumes", "CONSUMES_FROM_TOPIC", "topic:orders-v1", "provisional_repo_path_v1_"+strings.Repeat("c", 64), "reader")
+	unresolvedRow, unresolvedResolution := proofAssertion(repo, producerRun.ID, "abstains", "UNRESOLVED_KAFKA_PRODUCER", "unresolved:call-expr", "", "env")
+	st := &proofAPIStore{
+		repos: []store.Repo{{Name: repo, IndexedCommitHash: producerRun.Commit}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, "kafka-producer"): producerRun,
+			proofScope(repo, "kafka-consumer"): consumerRun,
+		},
+		assertions: map[string][]store.Assertion{repo: {produces, otherTopic, consumes, unresolvedRow}},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(repo, producerRun.ID, produces.Supporting[0]):      producesResolution,
+			proofEvidenceScope(repo, producerRun.ID, otherTopic.Supporting[0]):    otherResolution,
+			proofEvidenceScope(repo, consumerRun.ID, consumes.Supporting[0]):      consumesResolution,
+			proofEvidenceScope(repo, producerRun.ID, unresolvedRow.Supporting[0]): unresolvedResolution,
+		},
+	}
+	handler := proofHandler(st, "user:member", nil)
+	code, body, envelope := getProof(t, handler, "/api/find_kafka_topic_usage?topic=orders-v1")
+	if code != http.StatusOK || len(envelope.Bundle.Assertions) != 2 || strings.Contains(body, `"other-topic"`) {
+		t.Fatalf("topic query = %d %s", code, body)
+	}
+	if envelope.Bundle.Query.Kind != "find_kafka_topic_usage" || envelope.Bundle.Query.Topic != "orders-v1" {
+		t.Fatalf("topic bundle query = %+v", envelope.Bundle.Query)
+	}
+	census := envelope.Bundle.UnresolvedCensus
+	if census == nil || census.SchemaVersion != "kafka-topic-census-v1" {
+		t.Fatalf("census = %+v", census)
+	}
+	// Every frozen shape class is present in both planes even at zero; the
+	// one abstention row is counted; the abstention rows never appear as
+	// bundle assertions.
+	if len(census.Producer) != 6 || len(census.Consumer) != 6 {
+		t.Fatalf("census classes = %+v", census)
+	}
+	for class, count := range census.Producer {
+		want := 0
+		if class == "call-expr" {
+			want = 1
+		}
+		if count != want {
+			t.Fatalf("producer census[%s] = %d, want %d", class, count, want)
+		}
+	}
+	for class, count := range census.Consumer {
+		if count != 0 {
+			t.Fatalf("consumer census[%s] = %d, want 0", class, count)
+		}
+	}
+	for _, assertion := range envelope.Bundle.Assertions {
+		if strings.HasPrefix(assertion.Object, "unresolved:") {
+			t.Fatalf("census row leaked into bundle assertions: %+v", assertion)
+		}
+	}
+
+	// A second identical question rebuilds an identical census.
+	code, _, second := getProof(t, handler, "/api/find_kafka_topic_usage?topic=orders-v1")
+	if code != http.StatusOK || second.Bundle.UnresolvedCensus == nil ||
+		second.Bundle.UnresolvedCensus.Producer["call-expr"] != 1 {
+		t.Fatalf("second topic query = %d %+v", code, second.Bundle.UnresolvedCensus)
+	}
+
+	// KD2 identity bounds refuse illegal spellings; existing surfaces stay
+	// untouched by the census (their bundles omit the field entirely).
+	invalidTargets := []string{
+		"/api/find_kafka_topic_usage?topic=bad%20topic%21",
+		"/api/find_kafka_topic_usage?topic=.",
+		"/api/find_kafka_topic_usage?topic=" + strings.Repeat("x", 250),
+	}
+	for _, invalid := range invalidTargets {
+		if code, _, _ := getProof(t, handler, invalid); code != http.StatusBadRequest && code != http.StatusUnprocessableEntity {
+			t.Fatalf("invalid topic query %q = %d", invalid, code)
+		}
+	}
+	code, body, _ = getProof(t, handler, "/api/get_extraction_coverage?domains=kafka-producer,kafka-consumer")
+	if code != http.StatusOK || strings.Contains(body, "unresolved_census") {
+		t.Fatalf("coverage query carries a census: %d %s", code, body)
+	}
+}
+
 func TestProofAPIDarkWithoutBundleStore(t *testing.T) {
 	st := &proofAPIStore{}
 	handler := api.New(api.Options{Version: "test", Store: st, Evidence: st})
 	paths := []string{
 		"/api/find_operation_consumers?operation=%2Fshop.Cart%2FGet",
 		"/api/find_proto_field_references?lineage=x&message=shop.Cart&field_number=1",
+		"/api/find_kafka_topic_usage?topic=orders-v1",
 		"/api/get_extraction_coverage",
 		"/api/proof_bundles/pb_" + strings.Repeat("0", 64),
 	}

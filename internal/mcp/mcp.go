@@ -27,6 +27,7 @@ import (
 type ProofQueries interface {
 	FindOperationConsumersMCP(ctx context.Context, operation string) (*investigation.Envelope, error)
 	FindProtoFieldReferencesMCP(ctx context.Context, lineage, message string, fieldNumber int) (*investigation.Envelope, error)
+	FindKafkaTopicUsageMCP(ctx context.Context, topic string) (*investigation.Envelope, error)
 	GetExtractionCoverageMCP(ctx context.Context, domains []string) (*investigation.Envelope, error)
 }
 
@@ -185,8 +186,23 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		return nil, *result, nil
 	})
 
+	type topicIn struct {
+		Topic string `json:"topic" jsonschema:"one Kafka topic spelling, 1 through 249 characters of [a-zA-Z0-9._-]"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:         "find_kafka_topic_usage",
+		Description:  "Find evidence-derived producers and consumers of one Kafka topic spelling. Returns envelope v1.0 with permission-scoped facts and exact proof references. The topic is a source spelling with no cluster or environment identity; production Kafka topics are overwhelmingly configuration-driven, so unresolved sites dominate by design — they are counted per shape class in the persisted bundle's census, and this list is never a completeness claim.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in topicIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		result, err := opts.Proofs.FindKafkaTopicUsageMCP(ctx, in.Topic)
+		if err != nil {
+			return nil, investigation.Envelope{}, err
+		}
+		return nil, *result, nil
+	})
+
 	type coverageIn struct {
-		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-consumer, proto-contract, scip-proto-field, thrift-consumer, and thrift-contract"`
+		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-consumer, kafka-consumer, kafka-producer, proto-contract, scip-proto-field, thrift-consumer, and thrift-contract"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:         "get_extraction_coverage",

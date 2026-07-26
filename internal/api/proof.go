@@ -48,6 +48,7 @@ type ProofQuery struct {
 	Lineage      string   `json:"lineage,omitempty"`
 	Message      string   `json:"message,omitempty"`
 	FieldNumber  int      `json:"field_number,omitempty"`
+	Topic        string   `json:"topic,omitempty"`
 	BeforeDigest string   `json:"before_digest,omitempty"`
 	AfterDigest  string   `json:"after_digest,omitempty"`
 	Domains      []string `json:"domains"`
@@ -77,11 +78,30 @@ type ProofBundle struct {
 	Query             ProofQuery                  `json:"query"`
 	Assertions        []store.Assertion           `json:"assertions"`
 	Evidence          []BundleEvidence            `json:"evidence"`
+	UnresolvedCensus  *KafkaTopicCensus           `json:"unresolved_census,omitempty"`
 	Coverage          extract.CoverageCertificate `json:"coverage"`
 	ExtractorVersions []BundleExtractor           `json:"extractor_versions"`
 	VisibilityContext VisibilityContext           `json:"visibility_context"`
 	Compatibility     *compat.CompatibilityResult `json:"compatibility,omitempty"`
 	Caveat            string                      `json:"caveat"`
+}
+
+// KafkaTopicCensus is the first-class abstention census a topic-usage bundle
+// always carries (KD10): per-plane counts of distinct UNRESOLVED_KAFKA_*
+// assertions by frozen shape class, with every class present even at zero,
+// so completeness can never be implied by omission. Counts are
+// topic-independent by construction — a non-literal topic cannot be matched
+// to any literal — which is exactly the honesty the census communicates.
+type KafkaTopicCensus struct {
+	SchemaVersion string         `json:"schema_version"`
+	Producer      map[string]int `json:"producer"`
+	Consumer      map[string]int `json:"consumer"`
+}
+
+// kafkaAbstentionClasses is the T23.1-frozen shape-class vocabulary (KD6).
+var kafkaAbstentionClasses = []string{
+	"ambiguous-library-import", "call-expr", "invalid-topic-literal",
+	"non-literal-expr", "selector-expr", "unresolved-ident",
 }
 
 // ProofBundleEnvelope is returned by both query creation and immutable reads.
@@ -154,6 +174,45 @@ func (s *ProofService) FindProtoFieldReferences(ctx context.Context, lineage, me
 		Domain: "scip-proto-field", Predicate: "REFERENCES_PROTO_FIELD",
 		Object: message + "#" + strconv.Itoa(fieldNumber), Lineage: lineage,
 	})
+}
+
+// FindKafkaTopicUsage builds the immutable topic-centered answer for one
+// Kafka topic spelling: producer and consumer evidence rows plus the
+// always-present unresolved census. The topic is a source spelling — the
+// answer carries no cluster, environment, runtime, or completeness claim,
+// and abstention volume is presented as the honest norm (KD10).
+func (s *ProofService) FindKafkaTopicUsage(ctx context.Context, topic string) (*ProofBundleEnvelope, error) {
+	if s == nil {
+		return nil, huma.Error503ServiceUnavailable("proof queries unavailable")
+	}
+	if err := validateKafkaTopic(topic); err != nil {
+		return nil, huma.Error400BadRequest(err.Error())
+	}
+	query := ProofQuery{
+		Kind: "find_kafka_topic_usage", Topic: topic,
+		Domains: []string{"kafka-consumer", "kafka-producer"},
+	}
+	return buildProofBundleWithCensus(ctx, s.opts, query, []assertionFilter{
+		{Domain: "kafka-producer", Predicate: "PRODUCES_TO_TOPIC", Object: "topic:" + topic},
+		{Domain: "kafka-consumer", Predicate: "CONSUMES_FROM_TOPIC", Object: "topic:" + topic},
+	}, nil, true)
+}
+
+// validateKafkaTopic applies the KD2 identity bounds — Kafka's own topic
+// naming rules: 1..249 characters of [a-zA-Z0-9._-], excluding the
+// reserved "." and "..".
+func validateKafkaTopic(topic string) error {
+	if len(topic) == 0 || len(topic) > 249 || topic == "." || topic == ".." {
+		return errors.New("topic must be 1-249 characters and not a reserved name")
+	}
+	for _, r := range topic {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '.', r == '_', r == '-':
+		default:
+			return errors.New("topic must contain only [a-zA-Z0-9._-]")
+		}
+	}
+	return nil
 }
 
 // GetExtractionCoverage builds an assertion-free proof bundle over the
@@ -246,6 +305,17 @@ func registerProofAPI(api huma.API, opts Options) {
 		return &proofOut{Body: *envelope}, nil
 	})
 
+	type topicIn struct {
+		Topic string `query:"topic" required:"true" minLength:"1" maxLength:"249" example:"orders-v1" doc:"one Kafka topic spelling; the answer is source evidence only and never a completeness claim"`
+	}
+	huma.Get(api, "/api/find_kafka_topic_usage", func(ctx context.Context, in *topicIn) (*proofOut, error) {
+		envelope, err := service.FindKafkaTopicUsage(ctx, in.Topic)
+		if err != nil {
+			return nil, err
+		}
+		return &proofOut{Body: *envelope}, nil
+	})
+
 	type coverageIn struct {
 		Domains string `query:"domains" doc:"comma-separated extractor domains; defaults to all provisional domains" example:"grpc-consumer,scip-proto-field"`
 	}
@@ -307,6 +377,10 @@ func createProofBundleWithCompatibility(ctx context.Context, opts Options, query
 }
 
 func buildProofBundle(ctx context.Context, opts Options, query ProofQuery, filters []assertionFilter, compatibility *compat.CompatibilityResult) (*ProofBundleEnvelope, error) {
+	return buildProofBundleWithCensus(ctx, opts, query, filters, compatibility, false)
+}
+
+func buildProofBundleWithCensus(ctx context.Context, opts Options, query ProofQuery, filters []assertionFilter, compatibility *compat.CompatibilityResult, withCensus bool) (*ProofBundleEnvelope, error) {
 	visible, err := visibleRepositories(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -326,6 +400,19 @@ func buildProofBundle(ctx context.Context, opts Options, query ProofQuery, filte
 			}
 			return nil, huma.Error500InternalServerError("build proof evidence", err)
 		}
+		var census *KafkaTopicCensus
+		if withCensus {
+			census, err = collectKafkaTopicCensus(ctx, opts.Evidence, certificate)
+			if err != nil {
+				if errors.Is(err, store.ErrConflict) || errors.Is(err, store.ErrNotFound) {
+					continue
+				}
+				if errors.Is(err, store.ErrResultLimit) {
+					return nil, huma.Error422UnprocessableEntity("unresolved census exceeds bounded result limits")
+				}
+				return nil, huma.Error500InternalServerError("build unresolved census", err)
+			}
+		}
 		confirmed, err := extract.BuildCoverageCertificate(ctx, opts.Evidence, visible, query.Domains)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("confirm extraction coverage", err)
@@ -339,7 +426,8 @@ func buildProofBundle(ctx context.Context, opts Options, query ProofQuery, filte
 		}
 		bundle := ProofBundle{
 			SchemaVersion: proofBundleSchemaVersion, Query: query,
-			Assertions: assertions, Evidence: evidence, Coverage: *certificate,
+			Assertions: assertions, Evidence: evidence, UnresolvedCensus: census,
+			Coverage:          *certificate,
 			ExtractorVersions: certificateExtractors(certificate),
 			VisibilityContext: visibilityContext(ctx, opts, certificate),
 			Compatibility:     compatibility, Caveat: caveat,
@@ -449,6 +537,55 @@ func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certi
 		})
 	}
 	return assertions, evidence, nil
+}
+
+// collectKafkaTopicCensus counts distinct unresolved assertions per plane
+// and frozen shape class over every visible repository's published run,
+// inside the same coverage-digest sandwich as the evidence collection.
+// Every class key is present even at zero. The count discipline mirrors
+// collectProofEvidence: exact-object queries, published runs only, hard
+// error on any inconsistent row, fail closed past the assertion limit.
+func collectKafkaTopicCensus(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate) (*KafkaTopicCensus, error) {
+	census := &KafkaTopicCensus{
+		SchemaVersion: "kafka-topic-census-v1",
+		Producer:      make(map[string]int, len(kafkaAbstentionClasses)),
+		Consumer:      make(map[string]int, len(kafkaAbstentionClasses)),
+	}
+	planes := []struct {
+		domain    string
+		predicate string
+		counts    map[string]int
+	}{
+		{"kafka-producer", "UNRESOLVED_KAFKA_PRODUCER", census.Producer},
+		{"kafka-consumer", "UNRESOLVED_KAFKA_CONSUMER", census.Consumer},
+	}
+	for _, plane := range planes {
+		for _, class := range kafkaAbstentionClasses {
+			plane.counts[class] = 0
+			object := "unresolved:" + class
+			for _, repository := range certificate.Repositories {
+				run, ok := certificateRun(repository, plane.domain)
+				if !ok || run.Status != "published" {
+					continue
+				}
+				rows, err := source.ListAssertions(ctx, store.AssertionQuery{
+					Predicate: plane.predicate, Object: object,
+					Repo: repository.Repository, RunID: run.RunID, Limit: proofQueryAssertionLimit,
+				})
+				if err != nil {
+					return nil, err
+				}
+				for _, assertion := range rows {
+					if assertion.Repo != repository.Repository || assertion.RunID != run.RunID ||
+						assertion.Predicate != plane.predicate || assertion.Object != object {
+						return nil, errors.New("census query returned an inconsistent assertion")
+					}
+				}
+				plane.counts[class] += len(rows)
+			}
+		}
+	}
+	return census, nil
 }
 
 func certificateRun(repository extract.CertificateRepository, domain string) (extract.CertificateRun, bool) {
@@ -622,7 +759,8 @@ func proofDomains(raw string) ([]string, error) {
 func canonicalProofDomains(domains []string) ([]string, error) {
 	if len(domains) == 0 {
 		return []string{
-			"grpc-consumer", "proto-contract", "scip-proto-field",
+			"grpc-consumer", "kafka-consumer", "kafka-producer",
+			"proto-contract", "scip-proto-field",
 			"thrift-consumer", "thrift-contract",
 		}, nil
 	}
