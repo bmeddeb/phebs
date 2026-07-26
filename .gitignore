@@ -12,6 +12,7 @@ spike/t111/corpus/
 spike/t111/.module-cache/
 spike/t191/corpus/
 spike/t221/corpus/
+spike/t231/corpus/
 # Obsolete pre-hardening location; retained only so an interrupted local
 # hydration does not become an accidental source artifact.
 spike/t111/module-cache/

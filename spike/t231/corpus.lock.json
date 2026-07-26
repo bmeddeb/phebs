@@ -1,0 +1,20 @@
+[
+  {
+    "name": "jaeger-v1",
+    "git_url": "https://github.com/jaegertracing/jaeger.git",
+    "commit": "55e991a29725468164b11be5fc4e260dc09598d6",
+    "note": "production sarama corpus (v1.57.0 tag): plugin/storage/kafka producer and cmd/ingester consumer group in real deployment shape. Topics flow from CLI/viper configuration, not source literals - the corpus that proves the literal-or-abstain boundary abstains on production configuration-driven code and records the abstention shape classes. The jaeger v2 line (t191's pin) has since moved its kafka components to franz-go, which is recorded as a deferred family, not round-one scope."
+  },
+  {
+    "name": "sarama",
+    "git_url": "https://github.com/IBM/sarama.git",
+    "commit": "b49108d365df44159e55dc9848258223ab0890dd",
+    "note": "sarama library corpus at the IBM import path: examples and functional tests carry the canonical ProducerMessage/Consume/ConsumePartition shapes, including literal topic positives the production corpus lacks. Library-example provenance is disclosed - these are recognition-rule witnesses, not production-shape claims."
+  },
+  {
+    "name": "kafka-go",
+    "git_url": "https://github.com/segmentio/kafka-go.git",
+    "commit": "2e0b3968aa51b16beb4e221876499a6ff816cd91",
+    "note": "segmentio corpus: the library's own Writer/WriterConfig/ReaderConfig shapes, examples, and tests, including GroupTopics and GroupID consumer configuration. Same library-example disclosure as sarama; also surveyed for TopicConfig/CreateTopics declaration-plane candidates (K8)."
+  }
+]
