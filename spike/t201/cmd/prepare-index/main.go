@@ -26,7 +26,7 @@ func main() {
 		root = filepath.Clean(os.Args[1])
 	}
 	files := t201.SmallSourceFiles()
-	documents := []*scip.Document{
+	smallDocuments := []*scip.Document{
 		document(files, "gen/proto/orders/v1/orders_grpc.pb.go", []indexedOccurrence{
 			{needle: "Get(ctx", symbol: t201.ProtoGetSymbol, roles: scip.SymbolRole_Definition | scip.SymbolRole_Generated},
 			{needle: "Watch(ctx", symbol: t201.ProtoWatchSymbol, roles: scip.SymbolRole_Definition | scip.SymbolRole_Generated},
@@ -50,9 +50,30 @@ func main() {
 			{needle: "Get(ctx", symbol: t201.ThriftGetSymbol, roles: scip.SymbolRole_ReadAccess},
 		}),
 	}
-	slices.SortFunc(documents, func(a, b *scip.Document) int {
+	slices.SortFunc(smallDocuments, func(a, b *scip.Document) int {
 		return strings.Compare(a.RelativePath, b.RelativePath)
 	})
+	writeIndex(root, "testdata/index.scip", smallDocuments)
+
+	scaleDocuments := append([]*scip.Document(nil), smallDocuments...)
+	for fileIndex := range t201.ScaleCallFiles {
+		relPath, content := t201.ScaleCallerFile(fileIndex)
+		occurrences := make([]indexedOccurrence, 0, t201.ScaleCallsPerFile)
+		for callIndex := range t201.ScaleCallsPerFile {
+			occurrences = append(occurrences, indexedOccurrence{
+				needle: "client.Get", occurrence: callIndex,
+				symbol: t201.ProtoGetSymbol, roles: scip.SymbolRole_ReadAccess,
+			})
+		}
+		scaleDocuments = append(scaleDocuments, documentContent(relPath, content, occurrences))
+	}
+	slices.SortFunc(scaleDocuments, func(a, b *scip.Document) int {
+		return strings.Compare(a.RelativePath, b.RelativePath)
+	})
+	writeIndex(root, "testdata/scale.index.scip", scaleDocuments)
+}
+
+func writeIndex(root, name string, documents []*scip.Document) {
 	index := &scip.Index{
 		Metadata: &scip.Metadata{
 			ToolInfo: &scip.ToolInfo{Name: "phebs-t20-neutral-preparer", Version: "1"},
@@ -63,7 +84,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	target := filepath.Join(root, "testdata", "index.scip")
+	target := filepath.Join(root, filepath.FromSlash(name))
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		panic(err)
 	}
@@ -86,6 +107,10 @@ func document(files map[string][]byte, path string, occurrences []indexedOccurre
 	if !ok {
 		panic("missing template " + path)
 	}
+	return documentContent(path, content, occurrences)
+}
+
+func documentContent(path string, content []byte, occurrences []indexedOccurrence) *scip.Document {
 	out := &scip.Document{
 		RelativePath:     path,
 		PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,

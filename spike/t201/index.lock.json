@@ -2,6 +2,8 @@
   "version": "t20-scip-input-v1",
   "path": "testdata/index.scip",
   "sha256": "46d3930208d141e5281a8310800ef5b6a0aeac79c0d89592650f293ffb017b05",
+  "scale_path": "testdata/scale.index.scip",
+  "scale_sha256": "164e28d4338e64f558a91c0232f6ce51b3eb9f78b552035448f80b63c27cf71c",
   "preparer": "go run ./spike/t201/cmd/prepare-index",
   "policy": "prepared-once-reviewed-and-copied-verbatim"
 }

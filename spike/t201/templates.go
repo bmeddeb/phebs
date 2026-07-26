@@ -1,6 +1,9 @@
 package t201
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	ProtoGetSymbol   = "go gomod synthetic.invalid/mono v0.0.0 gen/proto/orders/v1/OrdersClient#Get()."
@@ -193,4 +196,24 @@ func Exercise(client interface{ Get(any, any, ...any) (any, error) }) {
 		out[name] = []byte(strings.TrimPrefix(contents, "\n"))
 	}
 	return out
+}
+
+// ScaleCallerFile returns one of the 100 deterministic scale-profile source
+// files. It is shared by the separately reviewed SCIP preparer and normal
+// corpus generation so indexed ranges cannot drift from the copied corpus.
+func ScaleCallerFile(fileIndex int) (string, []byte) {
+	if fileIndex < 0 || fileIndex >= ScaleCallFiles {
+		panic(fmt.Sprintf("scale caller file index %d is outside [0,%d)", fileIndex, ScaleCallFiles))
+	}
+	relPath := fmt.Sprintf("src/unit_%03d/callers.go", fileIndex)
+	var source strings.Builder
+	source.WriteString("package unit\n")
+	source.WriteString("type OrdersClient interface { Get(any, any, ...any) (any, error) }\n")
+	for callIndex := range ScaleCallsPerFile {
+		unit := fileIndex*ScaleCallsPerFile + callIndex
+		fmt.Fprintf(&source,
+			"func Call%05d(ctx any, client OrdersClient) { _, _ = client.Get(ctx, \"unit-%05d\") }\n",
+			unit, unit)
+	}
+	return relPath, []byte(source.String())
 }
