@@ -27,31 +27,40 @@ const (
 // with a source-literal (or same-file-const) topic spelling. It carries no
 // cluster, environment, runtime, or completeness claim.
 type TopicEvidence struct {
-	File    string
-	Library string // "sarama" | "segmentio"
-	Plane   string // "producer" | "consumer"
-	Topic   string
-	Binding string // "literal" | "same-file-const"
-	Shape   string // "ProducerMessage" | "Writer" | "WriterConfig" | "ReaderConfig.Topic" | "ReaderConfig.GroupTopics" | "Consume-slice" | "ConsumePartition"
-	GroupID string // consumer detail only, never identity; empty when non-literal or absent
-	Import  string // the matched import path (records the Shopify/IBM era split)
+	File      string
+	Library   string // "sarama" | "segmentio"
+	Plane     string // "producer" | "consumer"
+	Topic     string
+	Binding   string // "literal" | "same-file-const"
+	Shape     string // "ProducerMessage" | "Message" | "Writer" | "WriterConfig" | "ReaderConfig.Topic" | "ReaderConfig.GroupTopics" | "Consume-slice" | "ConsumePartition"
+	Tier      string // "derived" | "heuristic"
+	GroupID   string // consumer detail only, never identity; empty when non-literal or absent
+	Import    string // the matched import path (records the Shopify/IBM era split)
+	StartByte int    // exact source-expression span, zero-based and end-exclusive
+	EndByte   int
+	StartLine int // one-based
 }
 
 // TopicAbstention is one recognized producer/consumer site whose topic is
 // not a source literal. Production code is expected to dominate here; the
 // shape class is the sanitized census the census gate records.
 type TopicAbstention struct {
-	File    string
-	Library string
-	Plane   string
-	Shape   string // "selector-expr" | "call-expr" | "same-file-var" | "unresolved-ident" | "non-literal-expr" | "invalid-topic-literal"
+	File      string
+	Library   string
+	Plane     string
+	Shape     string // "selector-expr" | "call-expr" | "unresolved-ident" | "non-literal-expr" | "invalid-topic-literal" | "ambiguous-library-import"
+	Tier      string
+	Import    string // empty only for an ambiguous Sarama-import abstention
+	StartByte int
+	EndByte   int
+	StartLine int
 }
 
 // ValidTopicLiteral applies Kafka's own topic-name constraints: 1..249
 // characters from [a-zA-Z0-9._-]. A literal failing these is authored
 // noise, not identity, and abstains.
 func ValidTopicLiteral(topic string) bool {
-	if len(topic) == 0 || len(topic) > 249 {
+	if len(topic) == 0 || len(topic) > 249 || topic == "." || topic == ".." {
 		return false
 	}
 	for _, r := range topic {
@@ -84,7 +93,7 @@ func ScanFile(path, rel string) ([]TopicEvidence, []TopicAbstention, error) {
 	if len(aliases) == 0 {
 		return nil, nil, nil
 	}
-	scan := &fileScan{file: file, rel: rel, aliases: aliases}
+	scan := &fileScan{file: file, fset: fset, rel: rel, aliases: aliases}
 	ast.Inspect(file, scan.visit)
 	return scan.evidence, scan.abstentions, nil
 }
@@ -138,6 +147,7 @@ func defaultAlias(path string) string {
 
 type fileScan struct {
 	file        *ast.File
+	fset        *token.FileSet
 	rel         string
 	aliases     map[string]libraryImport
 	evidence    []TopicEvidence
@@ -220,7 +230,7 @@ func (s *fileScan) groupTopics(lit *ast.CompositeLit, imported libraryImport, gr
 		}
 		slice, ok := kv.Value.(*ast.CompositeLit)
 		if !ok {
-			s.abstain(imported, "consumer", "non-literal-expr")
+			s.abstain(imported, "consumer", "non-literal-expr", "derived", kv.Value)
 			continue
 		}
 		for _, topicExpr := range slice.Elts {
@@ -251,8 +261,11 @@ func (s *fileScan) visitCall(call *ast.CallExpr) {
 	if !ok {
 		return
 	}
-	sarama, hasSarama := s.saramaImport()
-	if !hasSarama {
+	if selector.Sel.Name == "WriteMessages" {
+		s.writeMessages(call)
+	}
+	sarama, saramaImports := s.saramaImport()
+	if saramaImports == 0 {
 		return
 	}
 	switch selector.Sel.Name {
@@ -264,37 +277,76 @@ func (s *fileScan) visitCall(call *ast.CallExpr) {
 		if len(call.Args) != 3 {
 			return
 		}
+		if saramaImports > 1 {
+			s.abstain(libraryImport{library: "sarama"}, "consumer", "ambiguous-library-import", "heuristic", call)
+			return
+		}
 		s.consumeSlice(call.Args[1], sarama)
 	case "ConsumePartition":
 		if len(call.Args) != 3 {
+			return
+		}
+		if saramaImports > 1 {
+			s.abstain(libraryImport{library: "sarama"}, "consumer", "ambiguous-library-import", "heuristic", call)
 			return
 		}
 		s.resolveTopic(call.Args[0], sarama, "consumer", "ConsumePartition", "")
 	}
 }
 
-func (s *fileScan) saramaImport() (libraryImport, bool) {
+// writeMessages recognizes only qualified kafka.Message composite literals
+// passed directly to WriteMessages. A standalone Message may instead be a
+// consumer offset passed to CommitMessages, so classifying every Message
+// composite as a producer would be unsound. Following a local variable or
+// slice into the call would also cross the frozen no-dataflow boundary.
+func (s *fileScan) writeMessages(call *ast.CallExpr) {
+	if len(call.Args) < 2 {
+		return
+	}
+	for _, arg := range call.Args[1:] {
+		lit, ok := arg.(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		imported, typeName, ok := s.qualifiedType(lit)
+		if !ok || imported.library != "segmentio" || typeName != "Message" {
+			continue
+		}
+		s.topicKey(lit, imported, "producer", "Message", "")
+	}
+}
+
+// saramaImport returns the sole Sarama import when one exists. The count is
+// deliberately separate: a migration file may import both historical paths,
+// and a receiver-untyped method shape cannot truthfully choose either era.
+func (s *fileScan) saramaImport() (libraryImport, int) {
+	var found libraryImport
+	count := 0
 	for _, imported := range s.aliases {
 		if imported.library == "sarama" {
-			return imported, true
+			found = imported
+			count++
 		}
 	}
-	return libraryImport{}, false
+	if count != 1 {
+		return libraryImport{}, count
+	}
+	return found, count
 }
 
 func (s *fileScan) consumeSlice(arg ast.Expr, imported libraryImport) {
 	slice, ok := arg.(*ast.CompositeLit)
 	if !ok {
-		s.abstain(imported, "consumer", shapeClass(arg))
+		s.abstain(imported, "consumer", shapeClass(arg), "heuristic", arg)
 		return
 	}
 	arrayType, ok := slice.Type.(*ast.ArrayType)
 	if !ok {
-		s.abstain(imported, "consumer", "non-literal-expr")
+		s.abstain(imported, "consumer", "non-literal-expr", "heuristic", arg)
 		return
 	}
 	if ident, ok := arrayType.Elt.(*ast.Ident); !ok || ident.Name != "string" {
-		s.abstain(imported, "consumer", "non-literal-expr")
+		s.abstain(imported, "consumer", "non-literal-expr", "heuristic", arg)
 		return
 	}
 	for _, element := range slice.Elts {
@@ -307,28 +359,43 @@ func (s *fileScan) consumeSlice(arg ast.Expr, imported libraryImport) {
 // There is no dataflow, no cross-file resolution, and no var admission —
 // a var is mutable state, not a declaration-strength spelling.
 func (s *fileScan) resolveTopic(expr ast.Expr, imported libraryImport, plane, shape, group string) {
+	tier := tierForShape(shape)
 	value, binding, ok := s.stringConstant(expr)
 	if !ok {
-		s.abstain(imported, plane, shapeClass(expr))
+		s.abstain(imported, plane, shapeClass(expr), tier, expr)
 		return
 	}
 	if !ValidTopicLiteral(value) {
-		s.abstain(imported, plane, "invalid-topic-literal")
+		s.abstain(imported, plane, "invalid-topic-literal", tier, expr)
 		return
 	}
 	if plane != "consumer" {
 		group = ""
 	}
+	start, end, line := s.sourceSite(expr)
 	s.evidence = append(s.evidence, TopicEvidence{
-		File:    s.rel,
-		Library: imported.library,
-		Plane:   plane,
-		Topic:   value,
-		Binding: binding,
-		Shape:   shape,
-		GroupID: group,
-		Import:  imported.importPath,
+		File:      s.rel,
+		Library:   imported.library,
+		Plane:     plane,
+		Topic:     value,
+		Binding:   binding,
+		Shape:     shape,
+		Tier:      tier,
+		GroupID:   group,
+		Import:    imported.importPath,
+		StartByte: start,
+		EndByte:   end,
+		StartLine: line,
 	})
+}
+
+func tierForShape(shape string) string {
+	switch shape {
+	case "Consume-slice", "ConsumePartition":
+		return "heuristic"
+	default:
+		return "derived"
+	}
 }
 
 // stringConstant evaluates a string literal or a same-file const identifier.
@@ -387,23 +454,46 @@ func shapeClass(expr ast.Expr) string {
 	}
 }
 
-func (s *fileScan) abstain(imported libraryImport, plane, shape string) {
+func (s *fileScan) abstain(imported libraryImport, plane, shape, tier string, node ast.Node) {
+	start, end, line := s.sourceSite(node)
 	s.abstentions = append(s.abstentions, TopicAbstention{
-		File:    s.rel,
-		Library: imported.library,
-		Plane:   plane,
-		Shape:   shape,
+		File:      s.rel,
+		Library:   imported.library,
+		Plane:     plane,
+		Shape:     shape,
+		Tier:      tier,
+		Import:    imported.importPath,
+		StartByte: start,
+		EndByte:   end,
+		StartLine: line,
 	})
 }
 
+func (s *fileScan) sourceSite(node ast.Node) (int, int, int) {
+	start := s.fset.PositionFor(node.Pos(), false)
+	end := s.fset.PositionFor(node.End(), false)
+	return start.Offset, end.Offset, start.Line
+}
+
 func walkGo(root, subdir string, visit func(rel, full string) error) error {
+	return walkGoPopulation(root, subdir, false, visit)
+}
+
+// walkAllGo is the corpus-census variant: it includes testdata so a claimed
+// whole-checkout absence cannot be manufactured by the production scanner's
+// fixture-directory exclusion.
+func walkAllGo(root, subdir string, visit func(rel, full string) error) error {
+	return walkGoPopulation(root, subdir, true, visit)
+}
+
+func walkGoPopulation(root, subdir string, includeTestdata bool, visit func(rel, full string) error) error {
 	base := filepath.Join(root, filepath.FromSlash(subdir))
 	return fs.WalkDir(os.DirFS(base), ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			if d.Name() == ".git" || d.Name() == "testdata" {
+			if d.Name() == ".git" || (!includeTestdata && d.Name() == "testdata") {
 				return fs.SkipDir
 			}
 			return nil
@@ -446,8 +536,16 @@ func ScanTree(root, subdir string) ([]TopicEvidence, []TopicAbstention, int, err
 		if evidence[i].File != evidence[j].File {
 			return evidence[i].File < evidence[j].File
 		}
+		if evidence[i].StartByte != evidence[j].StartByte {
+			return evidence[i].StartByte < evidence[j].StartByte
+		}
 		return evidence[i].Topic < evidence[j].Topic
 	})
-	sort.Slice(abstentions, func(i, j int) bool { return abstentions[i].File < abstentions[j].File })
+	sort.Slice(abstentions, func(i, j int) bool {
+		if abstentions[i].File != abstentions[j].File {
+			return abstentions[i].File < abstentions[j].File
+		}
+		return abstentions[i].StartByte < abstentions[j].StartByte
+	})
 	return evidence, abstentions, scanned, nil
 }

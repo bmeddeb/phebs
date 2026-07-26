@@ -3,10 +3,13 @@
 package synthetic
 
 import (
+	"context"
 	"os"
 
 	kafka "github.com/segmentio/kafka-go"
 )
+
+const messageTopic = "per-message-const"
 
 func writers(addr kafka.Addr) []any {
 	return []any{
@@ -17,6 +20,24 @@ func writers(addr kafka.Addr) []any {
 		// environment-driven → abstain call-expr
 		&kafka.Writer{Addr: addr, Topic: os.Getenv("TOPIC")},
 	}
+}
+
+func perMessage(writer *kafka.Writer, ctx context.Context) error {
+	// A topic-less Writer may carry the destination per message. Only
+	// qualified Message literals passed directly to WriteMessages qualify:
+	// following a local message variable would cross the no-dataflow bound.
+	return writer.WriteMessages(
+		ctx,
+		kafka.Message{Topic: "per-message"},
+		kafka.Message{Topic: messageTopic},
+		kafka.Message{Topic: os.Getenv("MESSAGE_TOPIC")},
+	)
+}
+
+func commitOffset(reader *kafka.Reader, ctx context.Context) error {
+	// A Message passed to CommitMessages is consumer bookkeeping, not a
+	// producer. The recognizer must not classify this topic as production.
+	return reader.CommitMessages(ctx, kafka.Message{Topic: "offset-only"})
 }
 
 func readers(broker string) []*kafka.Reader {

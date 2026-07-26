@@ -16,5 +16,11 @@
     "git_url": "https://github.com/segmentio/kafka-go.git",
     "commit": "2e0b3968aa51b16beb4e221876499a6ff816cd91",
     "note": "segmentio corpus: the library's own Writer/WriterConfig/ReaderConfig shapes, examples, and tests, including GroupTopics and GroupID consumer configuration. Same library-example disclosure as sarama; also surveyed for TopicConfig/CreateTopics declaration-plane candidates (K8)."
+  },
+  {
+    "name": "go-queue",
+    "git_url": "https://github.com/zeromicro/go-queue.git",
+    "commit": "afd6f3b6673eb64d94967a090bbda5b4ecf7974f",
+    "note": "production Segmentio shape witness: the maintained queue implementation configures producer Writer.Topic and consumer ReaderConfig.Topic from runtime configuration. Both sites must abstain with exact spans; unlike kafka-go's examples, this corpus represents library implementation used by applications rather than documentation examples."
   }
 ]

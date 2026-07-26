@@ -1,0 +1,114 @@
+{
+  "schema": "t23-kafka-hand-labels-v1",
+  "labels": [
+    {
+      "corpus": "synthetic",
+      "path": "testdata/synthetic/sarama_shapes.go",
+      "source": "\"orders-v1\"",
+      "outcome": "evidence",
+      "plane": "producer",
+      "topic": "orders-v1",
+      "binding": "literal",
+      "shape": "ProducerMessage",
+      "tier": "derived"
+    },
+    {
+      "corpus": "synthetic",
+      "path": "testdata/synthetic/sarama_shapes.go",
+      "source": "\"clicks\"",
+      "outcome": "evidence",
+      "plane": "consumer",
+      "topic": "clicks",
+      "binding": "literal",
+      "shape": "ConsumePartition",
+      "tier": "heuristic"
+    },
+    {
+      "corpus": "synthetic",
+      "path": "testdata/synthetic/segmentio_shapes.go",
+      "source": "messageTopic",
+      "outcome": "evidence",
+      "plane": "producer",
+      "topic": "per-message-const",
+      "binding": "same-file-const",
+      "shape": "Message",
+      "tier": "derived"
+    },
+    {
+      "corpus": "synthetic",
+      "path": "testdata/synthetic/segmentio_shapes.go",
+      "source": "os.Getenv(\"MESSAGE_TOPIC\")",
+      "outcome": "abstention",
+      "plane": "producer",
+      "reason": "call-expr",
+      "tier": "derived"
+    },
+    {
+      "corpus": "synthetic",
+      "path": "testdata/synthetic/sarama_ambiguous.go",
+      "source": "group.Consume(ctx, []string{\"orders-v1\"}, handler)",
+      "outcome": "abstention",
+      "plane": "consumer",
+      "reason": "ambiguous-library-import",
+      "tier": "heuristic"
+    },
+    {
+      "corpus": "sarama",
+      "path": "examples/http_server/http_server.go",
+      "source": "\"important\"",
+      "outcome": "evidence",
+      "plane": "producer",
+      "topic": "important",
+      "binding": "literal",
+      "shape": "ProducerMessage",
+      "tier": "derived"
+    },
+    {
+      "corpus": "sarama",
+      "path": "examples/http_server/http_server.go",
+      "source": "\"access_log\"",
+      "outcome": "evidence",
+      "plane": "producer",
+      "topic": "access_log",
+      "binding": "literal",
+      "shape": "ProducerMessage",
+      "tier": "derived"
+    },
+    {
+      "corpus": "sarama",
+      "path": "examples/consumergroup/main.go",
+      "source": "strings.Split(topics, \",\")",
+      "outcome": "abstention",
+      "plane": "consumer",
+      "reason": "call-expr",
+      "tier": "heuristic"
+    },
+    {
+      "corpus": "jaeger-v1",
+      "path": "plugin/storage/kafka/writer.go",
+      "source": "w.topic",
+      "outcome": "abstention",
+      "plane": "producer",
+      "reason": "selector-expr",
+      "tier": "derived"
+    },
+    {
+      "corpus": "go-queue",
+      "path": "kq/pusher.go",
+      "source": "topic",
+      "outcome": "abstention",
+      "plane": "producer",
+      "reason": "unresolved-ident",
+      "tier": "derived"
+    },
+    {
+      "corpus": "go-queue",
+      "path": "kq/queue.go",
+      "source": "c.Topic",
+      "outcome": "abstention",
+      "plane": "consumer",
+      "reason": "selector-expr",
+      "tier": "derived"
+    }
+  ]
+}

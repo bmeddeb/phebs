@@ -2626,7 +2626,7 @@ committed authored `index.scip` exercising a thriftrw-shaped digest join;
 MANUAL walkthrough; absorb the Thrift-field candidate bullet above. AC:
 Vitest green; protobuf pages unchanged; operator walkthrough per MANUAL.
 
-## EPIC 23 — Kafka topic evidence *(specified 2026-07-26; spike-gated, not started)*
+## EPIC 23 — Kafka topic evidence *(specified 2026-07-26; T23.1 spike complete)*
 
 ### Product outcome
 
@@ -2669,12 +2669,25 @@ Domains `kafka-producer` / `kafka-consumer` (reserved: `kafka-topic`); dark
 flag `experimental.provisional_kafka_extraction`; extractor `kafkago` 1.0.0;
 own evidence-pack card; own spike.
 
-**T23.1 · Validation spike** — `spike/t231`; pin two-to-four OSS corpora
+**T23.1 ✅ · Validation spike** — `spike/t231`; pin two-to-four OSS corpora
 exercising sarama and segmentio in production shapes (selection is part of
 the spike); freeze per-library recognition rules, the literal-or-abstain
 boundary, topic spelling, the declarations-plane verdict, tier policy, and
 the UI shape in a decision table with executable gates and a hand-labeled
 sample. Adds no production behavior.
+
+Implemented on `codex/t23.1-kafka-spike`: four exact public pins include
+production witnesses for both families (jaeger v1 sarama and
+zeromicro/go-queue Segmentio) plus the two library rule corpora. Exact-span
+hand labels pin literal and abstention outcomes, tiers, dual-Sarama-import
+refusal, direct-only `WriteMessages(..., kafka.Message{Topic: ...})`
+recognition, and the distinction from consumer `CommitMessages`. Kafka's
+reserved `.`/`..` names fail closed. K5 surveys the full locked Go
+populations before explicit exclusions; K6 pins the scoped
+files/evidence/abstentions/excluded-test tuple so drift cannot pass as a log
+message. The resulting KD1–KD10 table keeps declarations empty, records
+franz-go as a separate future gate, and authorizes T23.2 specification work
+only — no production extractor behavior or accuracy claim.
 
 **T23.2–T23.4 (sketches, revisable by the spike)** — T23.2 extractor + flag
 + card; T23.3 topic-keyed proof/MCP surface (tool naming decided by the
