@@ -64,8 +64,10 @@ operation-object joins and byte-identical double extraction are pinned. These
 are rule-validation gates, not accuracy measurements.
 
 **Operating envelope.** 4 MiB / 500k tokens / 128 nesting levels per source
-file; 64 include paths / 4 KiB include context; worker bounds unchanged
-(5,000 facts, 15-minute run). `.thrift` symlinks fail the corpus walk closed.
+file; 64 include paths / 4 KiB include context; worker bounds are 12,500
+facts in deterministic 256-fact chunks and a 15-minute run. The store's
+10,000-row admission remains the effective production ceiling until T20.3.
+`.thrift` symlinks fail the corpus walk closed.
 
 ---
 
@@ -126,4 +128,5 @@ rule-validation gates, not accuracy measurements.
 **Operating envelope.** 4 MiB per Go source file; generated files are read
 once for indexing. Non-generated Go files are read once during header
 recognition and again during source-backed scanning (within the worker's read
-budget); worker bounds unchanged (5,000 facts, 15-minute run).
+budget); worker bounds are 12,500 facts in deterministic 256-fact chunks and
+15 minutes. The store's 10,000-row admission remains effective until T20.3.

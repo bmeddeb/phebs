@@ -1578,7 +1578,7 @@ read; `ListAssertions` 5,000; Atlas page 100, scan 500, locator 500,
 16 locators per claim, relationship 200, message depth 6 / nodes 256 /
 fields 100, cursor 16 KiB; proof 5,000 assertions / 20,000 evidence refs.
 
-**T20.2 · Chunked SDK and worker staging** *(needs T20.1)* — replace the
+**T20.2 · Chunked SDK and worker staging** ✅ *(2026-07-26; needs T20.1)* — replace the
 in-memory 5,000-fact run collection with deterministic bounded fact chunks
 streamed into one staged run. Chunk identity and retry behavior are
 idempotent; extractors still retain derived names and bounded per-file state,
@@ -1589,6 +1589,26 @@ equal inputs produce equal chunk order, IDs, facts, and coverage; duplicate
 delivery changes no row or counter; cancellation, stale lease, malformed
 chunk, or extractor failure leaves the entire run non-visible. Existing small
 runs and pure-reader guards remain byte-compatible.
+
+Implementation/result: `Emit` remains the extractor-facing one-fact API and
+the trusted worker now forms ordered 256-fact `t20-fact-chunk-v1` transports.
+Each chunk ID binds its schema, sequence, exact fact order, provenance,
+assertion fields, and citation; exact replay is a no-op before either
+`AddEvidence` or worker counters, while the unchanged content-keyed store
+transaction independently makes ambiguous transaction retry safe. Only the
+active chunk, exact derived atom/assertion identity sets, and at most 49 chunk
+IDs are retained; no run-wide fact or blob collection exists. The independent
+worker ceiling is now 12,500 facts, aligned with half of T20.3's frozen
+25,000-row admission target.
+
+The exact frozen 10,010-fact T20.1 corpus/oracle profile staged as 40 chunks
+with 21,420,792 bytes measured incremental Go heap on the reference run,
+below the 256 MiB ceiling. Tests pin
+equal chunk order/IDs/rows/counts, reordered identity, duplicate replay,
+malformed shapes, cancellation, staging conflict, late extractor failure, and
+over-limit abort. No persisted evidence byte, publication algorithm, API,
+MCP, or UI schema changed; `maxEvidenceRowsPerRun=10,000` still prevents
+production target publication until T20.3.
 
 **T20.3 · High-cardinality publication integrity** *(needs T20.2)* — preserve
 atomic replacement while scaling store validation.

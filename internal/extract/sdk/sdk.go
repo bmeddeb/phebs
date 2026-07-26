@@ -77,6 +77,18 @@ type Fact struct {
 	EndLine   int
 }
 
+// FactChunk is the trusted worker transport for a bounded, ordered slice of
+// validated facts. Extractors never construct chunks: they continue to stream
+// one Fact at a time through Emit so the current source blob can be verified.
+// The worker assigns the sequence and content-derived ID after validation and
+// before staging the chunk under one invisible run.
+type FactChunk struct {
+	Schema   string
+	Sequence uint64
+	ID       string
+	Facts    []Fact
+}
+
 // Coverage records successful scope and honest abstentions. Failures are
 // retained for future extractor APIs, but the worker refuses to publish any
 // result that reports one: an incomplete replacement set is never visible.
@@ -88,7 +100,9 @@ type Coverage struct {
 
 // Emit streams one fact to the trusted worker harness. The fact must cite the
 // most recent successful Corpus.Read; emit all of that blob's facts before the
-// next read.
+// next read. Accepted facts enter a bounded, deterministic worker-owned chunk;
+// Emit does not transfer chunk construction or publication authority to the
+// extractor.
 type Emit func(Fact) error
 
 // Extractor is one evidence domain. Extract must be a pure function of the

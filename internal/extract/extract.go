@@ -21,11 +21,16 @@ import (
 )
 
 const (
-	evidenceBatchSize = 256
-	abortTimeout      = 5 * time.Second
-	extractionTimeout = 15 * time.Minute
-	maxFactTextBytes  = 64 << 10
-	maxFactsPerRun    = 5_000
+	evidenceChunkSize   = 256
+	evidenceChunkSchema = "t20-fact-chunk-v1"
+	abortTimeout        = 5 * time.Second
+	extractionTimeout   = 15 * time.Minute
+	maxFactTextBytes    = 64 << 10
+	// The T20.1 target has 10,010 source-granular call facts / 20,020 rows.
+	// T20.3's frozen admission target is 25,000 rows, so the worker's
+	// independent fact ceiling is half that row budget: one occurrence and one
+	// assertion per emitted fact.
+	maxFactsPerRun    = 12_500
 	maxCorpusRunBytes = int64(512 << 20)
 	lineIndexBlock    = 4 << 10
 )
@@ -321,10 +326,11 @@ type runSink struct {
 	mu              sync.Mutex
 	closed          bool
 	err             error
-	atoms           []store.EvidenceAtom
-	assocs          []store.SnapshotEvidence
-	asserts         []store.Assertion
+	facts           []sdk.Fact
 	factCount       int
+	chunkSequence   uint64
+	stagedChunkIDs  []string
+	stagedChunks    map[string]struct{}
 	atomIDs         map[string]struct{}
 	assertionIDs    map[string]struct{}
 	atomCount       int
@@ -335,10 +341,11 @@ type runSink struct {
 func newRunSink(ctx context.Context, evidence store.EvidenceStore, runID, repo, commit, version string, corpus *verifiedCorpus) *runSink {
 	return &runSink{
 		ctx: ctx, evidence: evidence, runID: runID, repo: repo, commit: commit, version: version, corpus: corpus,
-		atoms:   make([]store.EvidenceAtom, 0, evidenceBatchSize),
-		assocs:  make([]store.SnapshotEvidence, 0, evidenceBatchSize),
-		asserts: make([]store.Assertion, 0, evidenceBatchSize),
-		atomIDs: make(map[string]struct{}), assertionIDs: make(map[string]struct{}),
+		facts:          make([]sdk.Fact, 0, evidenceChunkSize),
+		stagedChunks:   make(map[string]struct{}),
+		atomIDs:        make(map[string]struct{}),
+		assertionIDs:   make(map[string]struct{}),
+		stagedChunkIDs: make([]string, 0, (maxFactsPerRun+evidenceChunkSize-1)/evidenceChunkSize),
 	}
 }
 
@@ -379,41 +386,9 @@ func (s *runSink) Emit(fact sdk.Fact) error {
 		return s.err
 	}
 
-	atom := store.EvidenceAtom{
-		SchemaVersion: fact.Atom.SchemaVersion, BlobDigest: fact.Atom.BlobDigest,
-		StartByte: fact.Atom.StartByte, EndByte: fact.Atom.EndByte,
-		RuleID: fact.Atom.RuleID, ExtractorVersion: s.version,
-		AdapterConfigDigest: fact.Atom.AdapterConfigDigest,
-		FactFingerprint:     fact.Atom.FactFingerprint,
-	}
-	atom.ID = store.ComputeAtomID(atom)
-	s.atoms = append(s.atoms, atom)
-	s.assocs = append(s.assocs, store.SnapshotEvidence{
-		AtomID: atom.ID, Repo: s.repo, Commit: s.commit, Path: fact.Path,
-		StartLine: fact.StartLine, EndLine: fact.EndLine,
-		VisibilityScope: "repo:" + s.repo,
-	})
-	assertion := store.Assertion{
-		Predicate: fact.Assertion.Predicate, Subject: fact.Assertion.Subject,
-		Object: fact.Assertion.Object, Lineage: fact.Assertion.Lineage,
-		Tier: fact.Assertion.Tier, CodeRole: fact.Assertion.CodeRole,
-		Repo: s.repo, Supporting: []string{atom.ID}, Detail: fact.Assertion.Detail,
-	}
-	s.asserts = append(s.asserts, assertion)
+	s.facts = append(s.facts, fact)
 	s.factCount++
-	if _, exists := s.atomIDs[atom.ID]; !exists {
-		s.atomIDs[atom.ID] = struct{}{}
-		s.atomCount++
-	}
-	assertionID := store.ComputeAssertionID(assertion)
-	if _, exists := s.assertionIDs[assertionID]; !exists {
-		s.assertionIDs[assertionID] = struct{}{}
-		s.assertionCount++
-		if assertion.Tier == store.TierUnresolved {
-			s.unresolvedCount++
-		}
-	}
-	if len(s.atoms) == evidenceBatchSize {
+	if len(s.facts) == evidenceChunkSize {
 		s.err = s.flushLocked()
 	}
 	return s.err
@@ -733,15 +708,133 @@ func (s *runSink) Finish() error {
 }
 
 func (s *runSink) flushLocked() error {
-	if len(s.atoms) == 0 {
+	if len(s.facts) == 0 {
 		return nil
 	}
-	if err := s.evidence.AddEvidence(s.ctx, s.runID, s.atoms, s.assocs, s.asserts); err != nil {
+	chunk := buildFactChunk(s.chunkSequence, s.facts)
+	if err := s.stageChunkLocked(chunk); err != nil {
 		return err
 	}
-	s.atoms = s.atoms[:0]
-	s.assocs = s.assocs[:0]
-	s.asserts = s.asserts[:0]
+	s.facts = s.facts[:0]
+	return nil
+}
+
+// buildFactChunk assigns a content-derived identity to one exact ordered
+// transport unit. The sequence is part of the identity, so equal extractor
+// inputs produce the same ordered IDs while a reordered stream cannot alias.
+func buildFactChunk(sequence uint64, facts []sdk.Fact) sdk.FactChunk {
+	chunk := sdk.FactChunk{
+		Schema: evidenceChunkSchema, Sequence: sequence,
+		Facts: append([]sdk.Fact(nil), facts...),
+	}
+	chunk.ID = computeFactChunkID(chunk)
+	return chunk
+}
+
+func computeFactChunkID(chunk sdk.FactChunk) string {
+	hash := sha256.New()
+	writeChunkField(hash, chunk.Schema)
+	_, _ = fmt.Fprintf(hash, "%d;%d;", chunk.Sequence, len(chunk.Facts))
+	for _, fact := range chunk.Facts {
+		for _, value := range []string{
+			fact.Atom.SchemaVersion, fact.Atom.BlobDigest, fact.Atom.RuleID,
+			fact.Atom.AdapterConfigDigest, fact.Atom.FactFingerprint,
+			fact.Assertion.Predicate, fact.Assertion.Subject, fact.Assertion.Object,
+			fact.Assertion.Lineage, fact.Assertion.Tier, fact.Assertion.CodeRole,
+			fact.Assertion.Detail, fact.Path,
+		} {
+			writeChunkField(hash, value)
+		}
+		_, _ = fmt.Fprintf(hash, "%d;%d;%d;%d;",
+			fact.Atom.StartByte, fact.Atom.EndByte, fact.StartLine, fact.EndLine)
+	}
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
+}
+
+type chunkHashWriter interface {
+	Write([]byte) (int, error)
+}
+
+func writeChunkField(hash chunkHashWriter, value string) {
+	_, _ = fmt.Fprintf(hash, "%d:", len(value))
+	_, _ = hash.Write([]byte(value))
+	_, _ = hash.Write([]byte{';'})
+}
+
+// stageChunkLocked validates and stages one self-contained chunk. An exact
+// replay is a no-op before it reaches the store or worker counters; the store's
+// content-keyed rows independently make a transaction retry idempotent.
+func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
+	if chunk.Schema != evidenceChunkSchema {
+		return errors.New("fact chunk has unsupported schema")
+	}
+	if len(chunk.Facts) == 0 || len(chunk.Facts) > evidenceChunkSize {
+		return fmt.Errorf("fact chunk has invalid size %d", len(chunk.Facts))
+	}
+	if chunk.ID != computeFactChunkID(chunk) {
+		return errors.New("fact chunk has invalid content identity")
+	}
+	if _, staged := s.stagedChunks[chunk.ID]; staged {
+		return nil
+	}
+	if chunk.Sequence != s.chunkSequence {
+		return fmt.Errorf("fact chunk sequence %d does not follow %d", chunk.Sequence, s.chunkSequence)
+	}
+	if err := s.ctx.Err(); err != nil {
+		return err
+	}
+	for _, fact := range chunk.Facts {
+		if err := validateFact(fact); err != nil {
+			return fmt.Errorf("fact chunk contains invalid fact: %w", err)
+		}
+	}
+
+	atoms := make([]store.EvidenceAtom, 0, len(chunk.Facts))
+	assocs := make([]store.SnapshotEvidence, 0, len(chunk.Facts))
+	asserts := make([]store.Assertion, 0, len(chunk.Facts))
+	for _, fact := range chunk.Facts {
+		atom := store.EvidenceAtom{
+			SchemaVersion: fact.Atom.SchemaVersion, BlobDigest: fact.Atom.BlobDigest,
+			StartByte: fact.Atom.StartByte, EndByte: fact.Atom.EndByte,
+			RuleID: fact.Atom.RuleID, ExtractorVersion: s.version,
+			AdapterConfigDigest: fact.Atom.AdapterConfigDigest,
+			FactFingerprint:     fact.Atom.FactFingerprint,
+		}
+		atom.ID = store.ComputeAtomID(atom)
+		atoms = append(atoms, atom)
+		assocs = append(assocs, store.SnapshotEvidence{
+			AtomID: atom.ID, Repo: s.repo, Commit: s.commit, Path: fact.Path,
+			StartLine: fact.StartLine, EndLine: fact.EndLine,
+			VisibilityScope: "repo:" + s.repo,
+		})
+		asserts = append(asserts, store.Assertion{
+			Predicate: fact.Assertion.Predicate, Subject: fact.Assertion.Subject,
+			Object: fact.Assertion.Object, Lineage: fact.Assertion.Lineage,
+			Tier: fact.Assertion.Tier, CodeRole: fact.Assertion.CodeRole,
+			Repo: s.repo, Supporting: []string{atom.ID}, Detail: fact.Assertion.Detail,
+		})
+	}
+	if err := s.evidence.AddEvidence(s.ctx, s.runID, atoms, assocs, asserts); err != nil {
+		return err
+	}
+
+	for i, atom := range atoms {
+		if _, exists := s.atomIDs[atom.ID]; !exists {
+			s.atomIDs[atom.ID] = struct{}{}
+			s.atomCount++
+		}
+		assertionID := store.ComputeAssertionID(asserts[i])
+		if _, exists := s.assertionIDs[assertionID]; !exists {
+			s.assertionIDs[assertionID] = struct{}{}
+			s.assertionCount++
+			if asserts[i].Tier == store.TierUnresolved {
+				s.unresolvedCount++
+			}
+		}
+	}
+	s.stagedChunks[chunk.ID] = struct{}{}
+	s.stagedChunkIDs = append(s.stagedChunkIDs, chunk.ID)
+	s.chunkSequence++
 	return nil
 }
 

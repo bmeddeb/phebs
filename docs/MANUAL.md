@@ -226,6 +226,17 @@ the comparison tool. Those tools will be bounded and cursor-driven, will not
 silently broaden `find_operation_consumers`, and will not create a proof
 bundle or Investigation during ordinary browsing.
 
+T20.2 has removed the extraction worker's 5,000-fact bottleneck behind these
+planned surfaces. The pure-reader SDK still emits one source-bound fact at a
+time; the trusted worker groups accepted facts into deterministic,
+content-addressed chunks of at most 256 and keeps the complete replacement
+invisible until one guarded publication. Its independent limit is now 12,500
+facts, and the frozen 10,010-call profile fits the 256 MiB worker-memory gate.
+This does **not** yet enable target-size production publication:
+`maxEvidenceRowsPerRun` remains 10,000 until T20.3 advances the store writer
+generation and re-runs the frozen publication checks. Existing smaller run
+rows, coverage certificates, APIs, and serialized evidence are unchanged.
+
 There is no Change Workbench in the current release. The available pieces are
 separate: a human can browse a declaration in Contracts, carry its operation
 to Impact, inspect cited matching/unresolved evidence and the coverage

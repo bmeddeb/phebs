@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"reflect"
+	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +16,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/bmeddeb/phebs/spike/t201"
 )
 
 const unitCommit = "cccccccccccccccccccccccccccccccccccccccc"
@@ -80,20 +84,25 @@ type memoryEvidence struct {
 	runs           map[string]*store.ExtractionRun
 	latest         *store.ExtractionRun
 	latestByDomain map[string]*store.ExtractionRun
-	latestAttempt *store.ExtractionAttempt
-	batches       []evidenceBatch
-	published     bool
-	publishedWith store.CoverageManifest
-	aborted       bool
-	abortCanceled bool
-	abortDeadline time.Duration
-	publishHook   func() error
+	latestAttempt  *store.ExtractionAttempt
+	batches        []evidenceBatch
+	published      bool
+	publishedWith  store.CoverageManifest
+	aborted        bool
+	abortCanceled  bool
+	abortDeadline  time.Duration
+	retainBatches  bool
+	batchCount     int
+	stagedFacts    int
+	publishHook    func() error
+	addHook        func() error
 }
 
 func newMemoryEvidence() *memoryEvidence {
 	return &memoryEvidence{
 		runs:           make(map[string]*store.ExtractionRun),
 		latestByDomain: make(map[string]*store.ExtractionRun),
+		retainBatches:  true,
 	}
 }
 
@@ -117,11 +126,20 @@ func (m *memoryEvidence) BeginExtractionRun(_ context.Context, repo, commit, dom
 func (m *memoryEvidence) AddEvidence(_ context.Context, _ string, atoms []store.EvidenceAtom, assocs []store.SnapshotEvidence, asserts []store.Assertion) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.batches = append(m.batches, evidenceBatch{
-		atoms:   append([]store.EvidenceAtom(nil), atoms...),
-		assocs:  append([]store.SnapshotEvidence(nil), assocs...),
-		asserts: append([]store.Assertion(nil), asserts...),
-	})
+	if m.addHook != nil {
+		if err := m.addHook(); err != nil {
+			return err
+		}
+	}
+	m.batchCount++
+	m.stagedFacts += len(atoms)
+	if m.retainBatches {
+		m.batches = append(m.batches, evidenceBatch{
+			atoms:   append([]store.EvidenceAtom(nil), atoms...),
+			assocs:  append([]store.SnapshotEvidence(nil), assocs...),
+			asserts: append([]store.Assertion(nil), asserts...),
+		})
+	}
 	return nil
 }
 
@@ -218,6 +236,51 @@ func unitFactory(lock func(context.Context, string) (func(), error)) CorpusFacto
 	return unitCorpusFactory{lock: lock}
 }
 
+type t202ProfileCorpus struct {
+	repo, commit string
+	files        map[string][]byte
+}
+
+func (c t202ProfileCorpus) RepoName() string { return c.repo }
+func (c t202ProfileCorpus) Commit() string   { return c.commit }
+func (c t202ProfileCorpus) WalkFiles(ctx context.Context, visit func(string) error) error {
+	paths := make([]string, 0, len(c.files))
+	for filePath := range c.files {
+		paths = append(paths, filePath)
+	}
+	sort.Strings(paths)
+	for _, filePath := range paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := visit(filePath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (c t202ProfileCorpus) Read(_ context.Context, filePath string) (sdk.Blob, error) {
+	content, ok := c.files[filePath]
+	if !ok {
+		return sdk.Blob{}, fmt.Errorf("profile path %q is absent", filePath)
+	}
+	digest := sha256.Sum256(content)
+	return sdk.Blob{
+		Content: string(content), Digest: "sha256:" + hex.EncodeToString(digest[:]),
+	}, nil
+}
+
+type t202ProfileFactory struct {
+	files map[string][]byte
+}
+
+func (t202ProfileFactory) Lock(context.Context, string) (func(), error) {
+	return func() {}, nil
+}
+func (f t202ProfileFactory) New(repo, commit string) sdk.Corpus {
+	return t202ProfileCorpus{repo: repo, commit: commit, files: f.files}
+}
+
 func unitFact(filePath, object string) sdk.Fact {
 	digest := sha256.Sum256([]byte("same blob"))
 	return sdk.Fact{
@@ -291,7 +354,7 @@ func TestWorkerStreamsBoundedBatchesAndCountsDistinctRows(t *testing.T) {
 		t.Fatalf("batch count = %d, want 3", got)
 	}
 	for i, batch := range evidence.batches {
-		if len(batch.atoms) > evidenceBatchSize || len(batch.assocs) != len(batch.atoms) ||
+		if len(batch.atoms) > evidenceChunkSize || len(batch.assocs) != len(batch.atoms) ||
 			len(batch.asserts) != len(batch.atoms) {
 			t.Fatalf("batch %d is not self-contained/bounded: %d/%d/%d", i,
 				len(batch.atoms), len(batch.assocs), len(batch.asserts))
@@ -308,9 +371,159 @@ func TestWorkerStreamsBoundedBatchesAndCountsDistinctRows(t *testing.T) {
 	}
 }
 
-func TestWorkerRejectsFactBeyondRunLimit(t *testing.T) {
+func stageDeterministicUnitChunks(t *testing.T, count int) (*runSink, *memoryEvidence, store.CoverageManifest) {
+	t.Helper()
+	corpus := newVerifiedCorpus(unitCorpus{repo: "host/repo", commit: unitCommit})
+	if err := corpus.Inventory(context.Background(), func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := corpus.Read(context.Background(), "same.proto"); err != nil {
+		t.Fatal(err)
+	}
+	evidence := newMemoryEvidence()
+	sink := newRunSink(context.Background(), evidence, "run-1",
+		"host/repo", unitCommit, "1", corpus)
+	for i := range count {
+		fact := unitFact("same.proto", fmt.Sprintf("object-%04d", i))
+		if err := sink.Emit(fact); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := sink.Finish(); err != nil {
+		t.Fatal(err)
+	}
+	stats, err := corpus.Stats()
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := coverageManifest(sdk.Coverage{Protocols: []string{"protobuf"}},
+		sink.atomCount, sink.assertionCount, sink.unresolvedCount, stats, emptyGitlinkInventory())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sink, evidence, manifest
+}
+
+func TestFactChunksAreDeterministicBoundedAndContentAddressed(t *testing.T) {
+	firstSink, firstEvidence, firstCoverage := stageDeterministicUnitChunks(t, 600)
+	secondSink, secondEvidence, secondCoverage := stageDeterministicUnitChunks(t, 600)
+
+	if !reflect.DeepEqual(firstSink.stagedChunkIDs, secondSink.stagedChunkIDs) {
+		t.Fatalf("chunk ids differ:\n%v\n%v", firstSink.stagedChunkIDs, secondSink.stagedChunkIDs)
+	}
+	if !reflect.DeepEqual(firstEvidence.batches, secondEvidence.batches) {
+		t.Fatal("equal fact streams produced different staged rows")
+	}
+	if !reflect.DeepEqual(firstCoverage, secondCoverage) {
+		t.Fatalf("equal fact streams produced different coverage:\n%+v\n%+v",
+			firstCoverage, secondCoverage)
+	}
+	if firstSink.atomCount != secondSink.atomCount ||
+		firstSink.assertionCount != secondSink.assertionCount ||
+		firstSink.unresolvedCount != secondSink.unresolvedCount {
+		t.Fatalf("coverage counters differ: %d/%d/%d vs %d/%d/%d",
+			firstSink.atomCount, firstSink.assertionCount, firstSink.unresolvedCount,
+			secondSink.atomCount, secondSink.assertionCount, secondSink.unresolvedCount)
+	}
+	if len(firstSink.stagedChunkIDs) != 3 {
+		t.Fatalf("chunk count = %d, want 3", len(firstSink.stagedChunkIDs))
+	}
+	seen := map[string]bool{}
+	for _, id := range firstSink.stagedChunkIDs {
+		if !validSHA256(id) || seen[id] {
+			t.Fatalf("invalid or duplicate chunk id %q", id)
+		}
+		seen[id] = true
+	}
+
+	reordered := []sdk.Fact{
+		unitFact("same.proto", "object-0001"),
+		unitFact("same.proto", "object-0000"),
+	}
+	if buildFactChunk(0, reordered).ID ==
+		buildFactChunk(0, []sdk.Fact{reordered[1], reordered[0]}).ID {
+		t.Fatal("reordered facts produced the same chunk identity")
+	}
+}
+
+func TestFactChunkReplayChangesNoRowsOrCounters(t *testing.T) {
+	corpus := newVerifiedCorpus(unitCorpus{repo: "host/repo", commit: unitCommit})
+	if err := corpus.Inventory(context.Background(), func(string) bool { return false }); err != nil {
+		t.Fatal(err)
+	}
+	evidence := newMemoryEvidence()
+	sink := newRunSink(context.Background(), evidence, "run-1",
+		"host/repo", unitCommit, "1", corpus)
+	chunk := buildFactChunk(0, []sdk.Fact{unitFact("same.proto", "object")})
+
+	if err := sink.stageChunkLocked(chunk); err != nil {
+		t.Fatal(err)
+	}
+	if err := sink.stageChunkLocked(chunk); err != nil {
+		t.Fatal(err)
+	}
+	if evidence.batchCount != 1 || evidence.stagedFacts != 1 ||
+		sink.atomCount != 1 || sink.assertionCount != 1 ||
+		sink.chunkSequence != 1 || len(sink.stagedChunkIDs) != 1 {
+		t.Fatalf("replay state: batches=%d facts=%d atoms=%d assertions=%d sequence=%d chunks=%v",
+			evidence.batchCount, evidence.stagedFacts, sink.atomCount, sink.assertionCount,
+			sink.chunkSequence, sink.stagedChunkIDs)
+	}
+}
+
+func TestFactChunkMalformedShapesFailBeforeStaging(t *testing.T) {
+	valid := buildFactChunk(0, []sdk.Fact{unitFact("same.proto", "object")})
+	tests := []struct {
+		name   string
+		mutate func(*sdk.FactChunk)
+	}{
+		{"schema", func(chunk *sdk.FactChunk) { chunk.Schema = "future" }},
+		{"empty", func(chunk *sdk.FactChunk) {
+			chunk.Facts = nil
+			chunk.ID = computeFactChunkID(*chunk)
+		}},
+		{"oversized", func(chunk *sdk.FactChunk) {
+			chunk.Facts = make([]sdk.Fact, evidenceChunkSize+1)
+			for i := range chunk.Facts {
+				chunk.Facts[i] = unitFact("same.proto", fmt.Sprintf("object-%d", i))
+			}
+			chunk.ID = computeFactChunkID(*chunk)
+		}},
+		{"identity", func(chunk *sdk.FactChunk) {
+			chunk.ID = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		}},
+		{"sequence", func(chunk *sdk.FactChunk) {
+			chunk.Sequence = 1
+			chunk.ID = computeFactChunkID(*chunk)
+		}},
+		{"fact", func(chunk *sdk.FactChunk) {
+			chunk.Facts[0].Assertion.Predicate = ""
+			chunk.ID = computeFactChunkID(*chunk)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			chunk := valid
+			chunk.Facts = append([]sdk.Fact(nil), valid.Facts...)
+			test.mutate(&chunk)
+			evidence := newMemoryEvidence()
+			sink := newRunSink(context.Background(), evidence, "run-1",
+				"host/repo", unitCommit, "1", nil)
+			if err := sink.stageChunkLocked(chunk); err == nil {
+				t.Fatal("malformed chunk staged")
+			}
+			if evidence.batchCount != 0 || sink.atomCount != 0 ||
+				sink.assertionCount != 0 || sink.chunkSequence != 0 {
+				t.Fatalf("malformed chunk changed state: evidence=%+v sink=%+v", evidence, sink)
+			}
+		})
+	}
+}
+
+func TestWorkerRejectsFactBeyondChunkedRunLimit(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()
+	evidence.retainBatches = false
 	extractor := unitExtractor{domain: "unit", version: "1",
 		candidate: func(filePath string) bool { return filePath == "same.proto" },
 		extract: func(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
@@ -331,6 +544,112 @@ func TestWorkerRejectsFactBeyondRunLimit(t *testing.T) {
 	if evidence.published || !evidence.aborted {
 		t.Fatalf("over-limit state: published=%v aborted=%v", evidence.published, evidence.aborted)
 	}
+}
+
+func TestWorkerStagesFrozenLargeProfileWithinMemoryCeiling(t *testing.T) {
+	const (
+		heapCeiling = uint64(256 << 20)
+	)
+	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	evidence.retainBatches = false
+	profile, err := t201.GenerateProfile(t201.ScaleProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidatePaths := make(map[string]bool)
+	unresolved := 0
+	for _, call := range profile.Oracle.Calls {
+		candidatePaths[call.Path] = true
+		if call.Resolution == t201.ResolutionUnresolved {
+			unresolved++
+		}
+	}
+
+	runtime.GC()
+	var baseline runtime.MemStats
+	runtime.ReadMemStats(&baseline)
+	peak := baseline.HeapAlloc
+	extractor := unitExtractor{domain: "unit", version: "1",
+		candidate: func(filePath string) bool { return candidatePaths[filePath] },
+		extract: func(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
+			currentPath := ""
+			for i, call := range profile.Oracle.Calls {
+				if call.Path != currentPath {
+					if _, err := corpus.Read(ctx, call.Path); err != nil {
+						return sdk.Coverage{}, err
+					}
+					currentPath = call.Path
+				}
+				content := profile.Files[call.Path]
+				digest := sha256.Sum256(content)
+				object := call.CanonicalOperation
+				tier := store.TierExact
+				if call.Resolution == t201.ResolutionUnresolved {
+					object = "unresolved:" + call.ID
+					tier = store.TierUnresolved
+				}
+				fact := sdk.Fact{
+					Atom: sdk.AtomInput{
+						SchemaVersion: "t20-v1",
+						BlobDigest:    "sha256:" + hex.EncodeToString(digest[:]),
+						StartByte:     call.StartByte, EndByte: call.EndByte,
+						RuleID: "t202-scale-worker",
+						AdapterConfigDigest: "sha256:" +
+							"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+						FactFingerprint: "CALLS_OPERATION|" + call.ID,
+					},
+					Assertion: sdk.AssertionInput{
+						Predicate: "CALLS_OPERATION", Subject: call.ID, Object: object,
+						Tier: tier, CodeRole: call.CodeRole,
+					},
+					Path: call.Path, StartLine: call.StartLine, EndLine: call.EndLine,
+				}
+				if err := emit(fact); err != nil {
+					return sdk.Coverage{}, err
+				}
+				if i%evidenceChunkSize == 0 {
+					var current runtime.MemStats
+					runtime.ReadMemStats(&current)
+					if current.HeapAlloc > peak {
+						peak = current.HeapAlloc
+					}
+				}
+			}
+			return sdk.Coverage{
+				Protocols:       []string{"grpc", "thrift", "unknown"},
+				UnresolvedCount: unresolved,
+			}, nil
+		}}
+	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: t202ProfileFactory{files: profile.Files}, Extractors: []Extractor{extractor}}
+	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
+		t.Fatal(err)
+	}
+	var final runtime.MemStats
+	runtime.ReadMemStats(&final)
+	if final.HeapAlloc > peak {
+		peak = final.HeapAlloc
+	}
+	incremental := uint64(0)
+	if peak > baseline.HeapAlloc {
+		incremental = peak - baseline.HeapAlloc
+	}
+	if incremental > heapCeiling {
+		t.Fatalf("incremental heap = %d bytes, ceiling %d", incremental, heapCeiling)
+	}
+	targetFacts := len(profile.Oracle.Calls)
+	wantChunks := (targetFacts + evidenceChunkSize - 1) / evidenceChunkSize
+	if !evidence.published || evidence.batchCount != wantChunks ||
+		evidence.stagedFacts != targetFacts ||
+		evidence.publishedWith.AtomCount != targetFacts ||
+		evidence.publishedWith.AssertionCount != targetFacts ||
+		evidence.publishedWith.UnresolvedCount != unresolved {
+		t.Fatalf("large staging: published=%v chunks=%d facts=%d coverage=%+v",
+			evidence.published, evidence.batchCount, evidence.stagedFacts, evidence.publishedWith)
+	}
+	t.Logf("T20.2 frozen profile: %d facts, %d chunks, %d incremental heap bytes",
+		targetFacts, wantChunks, incremental)
 }
 
 func TestWorkerCountsSameRunDuplicateFactOnce(t *testing.T) {
@@ -358,7 +677,7 @@ func TestWorkerFailureAfterFlushAbortsWithoutPublish(t *testing.T) {
 	evidence := newMemoryEvidence()
 	want := errors.New("late parse failure")
 	extractor := unitExtractor{domain: "unit", version: "1", extract: func(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
-		for i := range evidenceBatchSize + 20 {
+		for i := range evidenceChunkSize + 20 {
 			if err := emitUnit(ctx, corpus, emit, unitFact(fmt.Sprintf("f%03d.proto", i), fmt.Sprintf("object-%03d", i))); err != nil {
 				return sdk.Coverage{}, err
 			}
@@ -374,6 +693,32 @@ func TestWorkerFailureAfterFlushAbortsWithoutPublish(t *testing.T) {
 	if len(evidence.batches) != 1 || evidence.published || !evidence.aborted {
 		t.Fatalf("failed run state: batches=%d published=%v aborted=%v",
 			len(evidence.batches), evidence.published, evidence.aborted)
+	}
+}
+
+func TestWorkerStagingConflictLeavesRunInvisible(t *testing.T) {
+	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	evidence.addHook = func() error { return store.ErrConflict }
+	extractor := unitExtractor{domain: "unit", version: "1",
+		extract: func(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
+			for i := range evidenceChunkSize {
+				if err := emitUnit(ctx, corpus, emit,
+					unitFact(fmt.Sprintf("f%03d.proto", i), fmt.Sprintf("object-%03d", i))); err != nil {
+					return sdk.Coverage{}, err
+				}
+			}
+			return sdk.Coverage{}, nil
+		}}
+	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: unitFactory(nil), Extractors: []Extractor{extractor}}
+	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
+	if !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("Handle error = %v", err)
+	}
+	if evidence.published || !evidence.aborted || evidence.batchCount != 0 {
+		t.Fatalf("staging conflict state: published=%v aborted=%v batches=%d",
+			evidence.published, evidence.aborted, evidence.batchCount)
 	}
 }
 
