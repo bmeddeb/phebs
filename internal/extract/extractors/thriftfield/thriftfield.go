@@ -1,12 +1,14 @@
-// Package thriftfield extracts thriftrw field references from a repository's
-// committed SCIP index. It performs no indexing, module resolution, process
-// execution, filesystem access, or network access.
+// Package thriftfield extracts Thrift field references from a repository's
+// committed SCIP index. It recognizes digest-bound thriftrw output and
+// tag-bound Apache Thrift Go output. It performs no indexing, module
+// resolution, process execution, filesystem access, or network access.
 //
-// A symbol becomes eligible only when an exact SCIP definition occurrence can
-// be joined to a field or accessor in a thriftrw-generated Go file. That file
-// must carry a digest-valid embedded ThriftModule, and the Raw IDL field
-// identity must agree with the generated struct-field order and the
-// wire.Field{ID:} literals in its ToWire method. References retain exact SCIP
+// A thriftrw symbol becomes eligible only when its exact SCIP definition can
+// be joined to a field or accessor in a file with a digest-valid embedded
+// ThriftModule; the Raw IDL identity must agree with generated field order and
+// wire.Field{ID:} literals. An Apache symbol must instead join an exact tagged
+// field in a compiler-header-marked file. Those rows remain derived because
+// Apache output carries no embedded IDL identity. References retain exact SCIP
 // source spans; uncertain or duplicate joins abstain.
 package thriftfield
 
@@ -21,6 +23,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -36,7 +39,7 @@ import (
 
 const (
 	domain        = "scip-thrift-field"
-	version       = "1.0.0"
+	version       = "1.1.0"
 	schemaVersion = "t22-v1"
 	indexPath     = "index.scip"
 
@@ -93,6 +96,15 @@ type expectedField struct {
 	id     int
 }
 
+type apacheTaggedField struct {
+	message    string
+	identifier string
+	thriftName string
+	id         int
+	start      int
+	end        int
+}
+
 type generatedField struct {
 	name  string
 	start int
@@ -106,7 +118,9 @@ type fieldDefinition struct {
 	message       string
 	fieldName     string
 	fieldID       int
+	generator     string
 	sourceBinding string
+	tier          string
 }
 
 type generatedDefinition struct {
@@ -124,6 +138,7 @@ type fieldBinding struct {
 	dependencyVersion string
 	generator         string
 	sourceBinding     string
+	tier              string
 }
 
 func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
@@ -161,6 +176,7 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 		return sdk.Coverage{}, err
 	}
 	return sdk.Coverage{Protocols: []string{
+		"apache-thrift-tag-v1",
 		"scip",
 		"scip-package-lineage-v1",
 		"thriftrw-module-digest-v1",
@@ -320,8 +336,9 @@ func bindGeneratedFields(
 				lineage:           lineage,
 				name:              definition.field.fieldName,
 				dependencyVersion: dependencyVersion,
-				generator:         "thriftrw",
+				generator:         definition.field.generator,
 				sourceBinding:     definition.field.sourceBinding,
+				tier:              definition.field.tier,
 			})
 		}
 	}
@@ -342,7 +359,9 @@ func generatedDefinitions(
 	doc indexedDocument,
 	content string,
 ) ([]generatedDefinition, bool, error) {
-	if !looksLikeThriftRWModule(content) {
+	thriftRWCandidate := looksLikeThriftRWModule(content)
+	apacheCandidate := hasApacheGeneratedMarker(content)
+	if !thriftRWCandidate && !apacheCandidate {
 		return nil, false, nil
 	}
 	if len(content) > maxGeneratedBytes {
@@ -356,28 +375,46 @@ func generatedDefinitions(
 	if err != nil {
 		return nil, false, fmt.Errorf("parse Go: %w", err)
 	}
-	module, found, err := parseModule(file)
-	if err != nil {
-		return nil, false, err
+	var model map[string]fieldDefinition
+	if thriftRWCandidate {
+		module, found, err := parseModule(file)
+		if err != nil {
+			return nil, false, err
+		}
+		if found {
+			sum := sha1.Sum([]byte(module.raw)) //nolint:gosec // descriptor integrity, not security.
+			if got := hex.EncodeToString(sum[:]); got != module.sha1 {
+				return nil, false, fmt.Errorf(
+					"ThriftModule sha1(Raw) %s does not match %s",
+					got, module.sha1,
+				)
+			}
+			scope, err := moduleScope(module)
+			if err != nil {
+				return nil, false, err
+			}
+			expected, err := expectedFields(module.raw)
+			if err != nil {
+				return nil, false, err
+			}
+			model, err = documentDefinitions(fset, file, expected, scope)
+			if err != nil {
+				return nil, false, err
+			}
+		}
 	}
-	if !found {
+	if model == nil && apacheCandidate {
+		var found bool
+		model, found, err = apacheDocumentDefinitions(fset, file)
+		if err != nil {
+			return nil, false, err
+		}
+		if !found {
+			return nil, false, nil
+		}
+	}
+	if model == nil {
 		return nil, false, nil
-	}
-	sum := sha1.Sum([]byte(module.raw)) //nolint:gosec // descriptor integrity, not security.
-	if got := hex.EncodeToString(sum[:]); got != module.sha1 {
-		return nil, false, fmt.Errorf("ThriftModule sha1(Raw) %s does not match %s", got, module.sha1)
-	}
-	scope, err := moduleScope(module)
-	if err != nil {
-		return nil, false, err
-	}
-	expected, err := expectedFields(module.raw)
-	if err != nil {
-		return nil, false, err
-	}
-	model, err := documentDefinitions(fset, file, expected, scope)
-	if err != nil {
-		return nil, false, err
 	}
 
 	definitionsBySpan := make(map[string][]indexedOccurrence)
@@ -476,7 +513,9 @@ func documentDefinitions(
 			message:       message,
 			fieldName:     want.name,
 			fieldID:       field.id,
+			generator:     "thriftrw",
 			sourceBinding: "module_digest",
+			tier:          "exact",
 		}
 		return nil
 	}
@@ -511,6 +550,117 @@ func documentDefinitions(
 		}
 	}
 	return definitions, nil
+}
+
+func apacheDocumentDefinitions(
+	fset *token.FileSet,
+	file *ast.File,
+) (map[string]fieldDefinition, bool, error) {
+	if file.Name == nil || file.Name.Name == "" || file.Name.Name == "_" {
+		return nil, false, errors.New("apache generated Go has no usable package scope")
+	}
+	var tagged []apacheTaggedField
+	for _, declaration := range file.Decls {
+		general, ok := declaration.(*ast.GenDecl)
+		if !ok || general.Tok != token.TYPE {
+			continue
+		}
+		for _, specification := range general.Specs {
+			typeSpec, ok := specification.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+			structure, ok := typeSpec.Type.(*ast.StructType)
+			if !ok {
+				continue
+			}
+			for _, field := range structure.Fields.List {
+				if field.Tag == nil {
+					continue
+				}
+				thriftName, id, _, found, err := parseApacheThriftTag(field.Tag.Value)
+				if err != nil {
+					return nil, false, fmt.Errorf(
+						"apache field %s: %w", typeSpec.Name.Name, err,
+					)
+				}
+				if !found || len(field.Names) != 1 {
+					continue
+				}
+				identifier := field.Names[0]
+				start, end := nodeSpan(fset, identifier)
+				tagged = append(tagged, apacheTaggedField{
+					message: typeSpec.Name.Name, identifier: identifier.Name,
+					thriftName: thriftName, id: id, start: start, end: end,
+				})
+			}
+		}
+	}
+	if len(tagged) == 0 {
+		return nil, false, nil
+	}
+
+	identityCounts := make(map[string]int, len(tagged))
+	for _, field := range tagged {
+		identityCounts[field.message+"\x00"+strconv.Itoa(field.id)]++
+	}
+	definitions := make(map[string]fieldDefinition, len(tagged))
+	for _, field := range tagged {
+		if identityCounts[field.message+"\x00"+strconv.Itoa(field.id)] != 1 {
+			// Two Go fields claiming the same wire identity cannot both be
+			// true. Omit the identity instead of selecting by declaration order.
+			continue
+		}
+		key := spanKey(field.start, field.end)
+		if _, duplicate := definitions[key]; duplicate {
+			return nil, false, fmt.Errorf("duplicate Apache field span %s", key)
+		}
+		definitions[key] = fieldDefinition{
+			identifier: field.identifier,
+			scope:      file.Name.Name,
+			message:    field.message,
+			fieldName:  field.thriftName,
+			fieldID:    field.id,
+			generator:  "apache",
+			// Apache generated Go carries no embedded IDL bytes or source
+			// identity. The generated tag is useful but cannot earn exact tier.
+			sourceBinding: "none",
+			tier:          "derived",
+		}
+	}
+	return definitions, true, nil
+}
+
+func parseApacheThriftTag(
+	literal string,
+) (thriftName string, id int, requiredness string, found bool, err error) {
+	tag, err := strconv.Unquote(literal)
+	if err != nil {
+		return "", 0, "", false, fmt.Errorf("unquote struct tag: %w", err)
+	}
+	value, found := reflect.StructTag(tag).Lookup("thrift")
+	if !found {
+		if strings.Contains(tag, "thrift:") {
+			return "", 0, "", false, errors.New("malformed thrift struct tag")
+		}
+		return "", 0, "", false, nil
+	}
+	parts := strings.Split(value, ",")
+	if len(parts) < 2 || parts[0] == "" {
+		return "", 0, "", false, fmt.Errorf("thrift tag %q has no field name or ID", value)
+	}
+	id, err = strconv.Atoi(parts[1])
+	if err != nil || !validFieldID(id) {
+		return "", 0, "", false, fmt.Errorf("thrift tag %q has invalid field ID", value)
+	}
+	requiredness = "default"
+	for _, flag := range parts[2:] {
+		switch flag {
+		case "required", "optional":
+			requiredness = flag
+		}
+	}
+	return parts[0], id, requiredness, true, nil
 }
 
 func parseModule(file *ast.File) (moduleDeclaration, bool, error) {
@@ -913,7 +1063,7 @@ func emitReferences(
 					Subject:   doc.path + ":" + strconv.Itoa(start) + "-" + strconv.Itoa(end),
 					Object:    binding.object,
 					Lineage:   binding.lineage,
-					Tier:      "exact",
+					Tier:      binding.tier,
 					CodeRole:  codeRole(doc.path, occurrence.roles),
 					Detail:    detail,
 				},
@@ -937,6 +1087,20 @@ func hasDefinitions(doc indexedDocument) bool {
 func looksLikeThriftRWModule(content string) bool {
 	return strings.Contains(content, `"go.uber.org/thriftrw/thriftreflect"`) &&
 		strings.Contains(content, "ThriftModule")
+}
+
+func hasApacheGeneratedMarker(content string) bool {
+	if len(content) > 4096 {
+		content = content[:4096]
+	}
+	for _, rawLine := range strings.Split(content, "\n") {
+		line := strings.TrimSpace(strings.TrimSuffix(rawLine, "\r"))
+		if strings.HasPrefix(line, "// Code generated by Thrift Compiler") ||
+			strings.HasPrefix(line, "// Autogenerated by Thrift Compiler") {
+			return true
+		}
+	}
+	return false
 }
 
 func importAliasFor(file *ast.File, importPath string) string {

@@ -315,7 +315,7 @@ func serve(args []string) error {
 			log.Print("WARNING: experimental provisional thrift extraction enabled; validation is the T19.1 rule-gate spike only")
 		}
 		if cfg.Experimental.ProvisionalThriftFieldExtraction {
-			log.Print("WARNING: experimental provisional thriftrw field extraction enabled; validation is the T22.1 rule-gate spike only")
+			log.Print("WARNING: experimental provisional Thrift field extraction enabled; validation is the T22.1 rule-gate spike only")
 		}
 		evidenceView = st
 		proofBundles = st
@@ -618,7 +618,7 @@ func evidenceExtractors(
 	}
 	if provisionalThriftField {
 		// T22.2 is independently dark: it consumes a committed SCIP index and
-		// emits only thriftrw module-digest field references.
+		// T22.3 adds Apache tag-bound rows without changing that posture.
 		extractors = append(extractors, thriftfield.New())
 	}
 	return extractors

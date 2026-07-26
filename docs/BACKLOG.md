@@ -2586,12 +2586,23 @@ T22.1-measured 4 MiB generated-file ceiling. This ticket adds only independent
 dark ingestion; Apache support and the neutral public surface remain T22.3
 and T22.4.
 
-**T22.3 · Apache Thrift family** *(needs T22.2)* — thrift-tag recognition
+**T22.3 ✅ · Apache Thrift family** *(2026-07-26; needs T22.2)* — thrift-tag recognition
 per the decision table, version 1.1.0, synthetic fixtures (no public Apache
 corpus commits a SCIP index); tier `derived`, `source_binding=none`. AC:
 tag-parse table tests incl. required/optional and field 0; scope-derivation
 abstention cases; both-generators-in-one-repo co-existence fixture; card
 updated; merge bar.
+
+Implementation note: the same `scip-thrift-field` reader now recognizes the
+modern and legacy Apache generator-header lines only as anchored comment
+prefixes, then requires at least one valid `thrift:"name,ID[,flags]"` tagged
+field. The generated Go package supplies scope; exact SCIP definition span,
+identifier, and enclosing type must agree. Duplicate wire identities abstain,
+malformed candidates fail the staged run, and Apache rows are always
+`derived`/`source_binding=none`. Synthetic gates cover default, required,
+optional and field-0 tags, wrong owner and untagged definitions, marker
+lookalikes, invalid scope, and one repository containing both exact thriftrw
+and derived Apache evidence. No query surface or accuracy claim is added.
 
 **T22.4 · Neutral proof/report/envelope/MCP surface** *(needs T22.2;
 coordinate with T20.10 before starting — same internal/api files)* —

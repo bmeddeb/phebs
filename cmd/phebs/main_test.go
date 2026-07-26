@@ -698,7 +698,7 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 	thriftFieldOnly := evidenceExtractors(false, false, true)
 	if len(thriftFieldOnly) != 1 ||
 		thriftFieldOnly[0].Domain() != "scip-thrift-field" ||
-		thriftFieldOnly[0].Version() != "1.0.0" {
+		thriftFieldOnly[0].Version() != "1.1.0" {
 		t.Fatalf("thrift-field-only extractor registry = %#v", thriftFieldOnly)
 	}
 	both := evidenceExtractors(true, true, true)

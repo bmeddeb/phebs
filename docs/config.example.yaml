@@ -112,8 +112,8 @@ experimental:
   # T19 Thrift declaration reader (thrift-contract). Same provisional
   # repo/path lineage posture; rule validation is the T19.1 spike.
   provisional_thrift_extraction: false
-  # T22 thriftrw field-reference reader over a committed root index.scip.
-  # Independent dark flag; Apache-generator support lands separately.
+  # T22 thriftrw + Apache Thrift field-reference reader over a committed root
+  # index.scip. Independent dark flag; each generator keeps its honest tier.
   provisional_thrift_field_extraction: false
 
 # Permission-aware search (T10.3). PRESENCE of this block turns enforcement
