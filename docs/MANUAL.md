@@ -460,6 +460,15 @@ certificate, then use Search, SCIP navigation, and History independently.
 The rich Investigations page is currently a development fixture projection,
 not a production ticket-intake or checklist workflow.
 
+The internal T21.2 storage boundary now supports an immutable, canonical
+Change Brief as a child of one Investigation revision. It stores the ticket
+kind, human-authored Why fields, an inert external reference, and exact
+contract-selection or proposed-source commitments; changing any of them
+atomically appends a new parent revision and preserves the old brief. It reuses
+Investigation sharing, transfer, revocation, archive, audit, authorization,
+and signed-dossier behavior. This is production-unregistered/default-dark:
+there is still no HTTP, UI, or MCP operation that creates or edits a Workbench.
+
 The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
 contains declaration-proven call rows or stable field-reference rows.
 `Matching call evidence` is an exact operation-object match from a

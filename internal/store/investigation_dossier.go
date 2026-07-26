@@ -389,6 +389,16 @@ func (service InvestigationDossierService) Export(
 		snapshot.Snapshot.InvestigationID != investigation.ID {
 		return nil, errors.New("export dossier: source object graph is inconsistent")
 	}
+	changeBrief, err := service.Store.GetChangeBriefForRevisionAs(
+		ctx,
+		request.Principal,
+		revision.ID,
+	)
+	if errors.Is(err, ErrNotFound) {
+		changeBrief = nil
+	} else if err != nil {
+		return nil, err
+	}
 
 	scope, err := service.ResolveScope(
 		ctx,
@@ -546,6 +556,19 @@ func (service InvestigationDossierService) Export(
 		artifactEntry,
 		snapshotEntry,
 	}
+	var changeBriefReference *dossier.ObjectReference
+	if changeBrief != nil {
+		entry, err := newDossierEntry(
+			"objects/change-brief.json",
+			changeBriefContentFromBrief(*changeBrief),
+		)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+		reference := dossierObjectReference("change_brief", changeBrief.ID, entry)
+		changeBriefReference = &reference
+	}
 	var baselineReference *dossier.ObjectReference
 	if baseline != nil {
 		redactedBaseline := *baseline
@@ -610,7 +633,8 @@ func (service InvestigationDossierService) Export(
 				snapshot.ID,
 				snapshotEntry,
 			),
-			Baseline: baselineReference, Decision: decisionReference,
+			ChangeBrief: changeBriefReference,
+			Baseline:    baselineReference, Decision: decisionReference,
 			SnapshotManifests:  []string{recipientSnapshotManifest},
 			InputManifests:     []string{recipientInputManifest},
 			PackCardIdentities: packCards, Evidence: evidence,
@@ -840,6 +864,19 @@ func (service InvestigationDossierService) Reopen(
 	if err != nil || revision.InvestigationID != investigationID {
 		return nil, ErrNotFound
 	}
+	var changeBrief *ChangeBrief
+	if sealed.Manifest.ChangeBrief != nil {
+		changeBrief, err = service.Store.GetChangeBriefAs(
+			ctx,
+			principal,
+			sealed.Manifest.ChangeBrief.ID,
+		)
+		if err != nil ||
+			changeBrief.InvestigationID != investigationID ||
+			changeBrief.RevisionID != revision.ID {
+			return nil, ErrNotFound
+		}
+	}
 	artifact, err := service.Store.GetRunArtifactAs(ctx, principal, record.ArtifactID)
 	if err != nil || artifact.TerminalStatus != RunPublished {
 		return nil, ErrNotFound
@@ -916,6 +953,18 @@ func (service InvestigationDossierService) Reopen(
 	entryContent := make(map[string][]byte, len(sealed.Entries))
 	for _, entry := range sealed.Entries {
 		entryContent[entry.Path] = entry.Content
+	}
+	if changeBrief != nil {
+		expected, err := newDossierEntry(
+			sealed.Manifest.ChangeBrief.EntryPath,
+			changeBriefContentFromBrief(*changeBrief),
+		)
+		if err != nil || !bytes.Equal(
+			expected.Content,
+			entryContent[sealed.Manifest.ChangeBrief.EntryPath],
+		) {
+			return nil, ErrNotFound
+		}
 	}
 	for _, evidence := range sealed.Manifest.Evidence {
 		fact, ok := facts[evidence.FactID]

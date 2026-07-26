@@ -139,6 +139,17 @@ DEFINE TABLE IF NOT EXISTS investigation_revision SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_revision_identity ON investigation_revision
     FIELDS investigation_id, seq UNIQUE;
 
+-- T21.2 immutable canonical Change Briefs. The Go boundary exposes no
+-- standalone write: one brief and one parent Revision are appended atomically,
+-- and old Investigation revisions legitimately have no brief row.
+DEFINE TABLE IF NOT EXISTS investigation_change_brief SCHEMALESS;
+DEFINE INDEX IF NOT EXISTS investigation_change_brief_identity ON investigation_change_brief
+    FIELDS brief_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_change_brief_revision ON investigation_change_brief
+    FIELDS revision_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_change_brief_investigation ON investigation_change_brief
+    FIELDS investigation_id, revision_id;
+
 DEFINE TABLE IF NOT EXISTS investigation_run SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_run_identity ON investigation_run
     FIELDS revision_id, seq UNIQUE;

@@ -2509,7 +2509,7 @@ ticket's Epic 20 dependency, whether it may land production-unregistered, and
 the retained `ESTABLISHED`/pilot-continuation condition for production
 registration and use.
 
-**T21.2 · Investigation-bound immutable change brief** *(needs T21.1)* — add a
+**T21.2 ✅ 2026-07-26 · Investigation-bound immutable change brief** *(needs T21.1)* — add a
 versioned canonical Change Brief record bound to one Investigation revision,
 with ticket kind, problem, desired outcome, ordered success criteria,
 non-goals, assumptions, open questions, optional inert external reference, and
@@ -2523,6 +2523,21 @@ retention, audit, and dossier export reuse Epic 16 behavior. Unknown,
 unauthorized, corrupt-under-denial, and deleted records are indistinguishable.
 Bounds, normalization, schema migration, concurrent revision CAS, and old
 Investigation compatibility are table-pinned.
+
+Implementation is present on `codex/t21.2-change-brief`: canonical
+`change-brief-v1` content ids bind bounded Why fields and exact What
+selection/proposal commitments to one immutable Investigation Revision. The
+only write atomically appends the Revision and brief, advances the parent
+pointer under expected-revision/owner/lifecycle CAS, and records audit
+provenance; old bytes have no update path. Principal-projected reads authorize
+and recheck the parent before decoding. Sharing, revocation, ownership
+transfer, terminal archive behavior, corruption/deletion non-disclosure, old
+Revision compatibility after store reopen, and two-writer CAS are covered
+against live SurrealDB. Dossier v1 carries an optional canonical brief entry,
+so legacy dossiers and old Investigations remain compatible while new exports
+retain the revision's brief under the existing signed, reauthorized boundary.
+No API, UI, MCP, or production Workbench registration is added. The uncached
+repository-wide Go suite, `go vet ./...`, and golangci-lint merge bar pass.
 
 **T21.3 · Previewed Workbench creation and revision service** *(needs T21.2)* —
 add shared preview/create/revise/read services. Preview resolves the visible

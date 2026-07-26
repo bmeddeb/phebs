@@ -27,6 +27,8 @@ type InvestigationAuthzStore interface {
 	GetInvestigationCursor(ctx context.Context, principal, investigationID string) (*InvestigationCursor, error)
 	GetInvestigationAs(ctx context.Context, principal, id string) (*Investigation, error)
 	GetRevisionAs(ctx context.Context, principal, id string) (*Revision, error)
+	GetChangeBriefAs(ctx context.Context, principal, id string) (*ChangeBrief, error)
+	GetChangeBriefForRevisionAs(ctx context.Context, principal, revisionID string) (*ChangeBrief, error)
 	GetRunAs(ctx context.Context, principal, id string) (*Run, error)
 	ListRunEventsAs(ctx context.Context, principal, runID string) ([]RunEvent, error)
 	GetRunArtifactAs(ctx context.Context, principal, id string) (*RunArtifact, error)

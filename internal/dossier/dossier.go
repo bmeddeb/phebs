@@ -71,6 +71,7 @@ type Manifest struct {
 	Revision           ObjectReference     `json:"revision"`
 	PrimaryArtifact    ObjectReference     `json:"primary_artifact"`
 	ConsumerSnapshot   ObjectReference     `json:"consumer_snapshot"`
+	ChangeBrief        *ObjectReference    `json:"change_brief,omitempty"`
 	Baseline           *ObjectReference    `json:"baseline,omitempty"`
 	Decision           *ObjectReference    `json:"decision,omitempty"`
 	SnapshotManifests  []string            `json:"snapshot_manifests"`
@@ -215,8 +216,9 @@ func normalizeManifest(manifest Manifest) (Manifest, error) {
 		}
 	}
 	for name, reference := range map[string]*ObjectReference{
-		"baseline": manifest.Baseline,
-		"decision": manifest.Decision,
+		"change brief": manifest.ChangeBrief,
+		"baseline":     manifest.Baseline,
+		"decision":     manifest.Decision,
 	} {
 		if reference != nil && (reference.Kind == "" || reference.ID == "" ||
 			reference.ContentDigest == "" || reference.EntryPath == "") {
@@ -417,7 +419,11 @@ func validateEntryReferences(manifest Manifest, entries []Entry) error {
 			return fmt.Errorf("referenced entry %q digest is inconsistent", reference.EntryPath)
 		}
 	}
-	for _, reference := range []*ObjectReference{manifest.Baseline, manifest.Decision} {
+	for _, reference := range []*ObjectReference{
+		manifest.ChangeBrief,
+		manifest.Baseline,
+		manifest.Decision,
+	} {
 		if reference != nil &&
 			entryByPath[reference.EntryPath].Digest != reference.ContentDigest {
 			return fmt.Errorf("referenced entry %q digest is inconsistent", reference.EntryPath)
