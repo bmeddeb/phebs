@@ -67,7 +67,7 @@ connections:
     url: https://github.com/sourcegraph/zoekt.git
   - name: my-project
     type: git
-    url: /Users/you/src/my-project
+    url: "~/src/my-project"          # portable across user home directories
     watch: true                     # commits searchable in seconds
 ```
 

@@ -127,6 +127,36 @@ connections:
 			"line 2: connections[0]: git connection requires url",
 		},
 		{
+			"home-relative local git with watch",
+			"connections:\n  - {name: g, type: git, url: '~/src/project', watch: true}\n",
+			"",
+		},
+		{
+			"bare home is not a repository",
+			"connections:\n  - {name: g, type: git, url: '~'}\n",
+			"home-relative path must start with ~/",
+		},
+		{
+			"named user home is not expanded",
+			"connections:\n  - {name: g, type: git, url: '~other/src/project'}\n",
+			"home-relative path must start with ~/",
+		},
+		{
+			"home-relative traversal rejected",
+			"connections:\n  - {name: g, type: git, url: '~/../outside'}\n",
+			"must not contain empty, '.', or '..' components",
+		},
+		{
+			"home-relative glob rejected",
+			"connections:\n  - {name: g, type: git, url: '~/src/*/project'}\n",
+			"must not contain glob metacharacters",
+		},
+		{
+			"file url does not expand home",
+			"connections:\n  - {name: g, type: git, url: 'file://~/src/project'}\n",
+			"file:// does not expand '~'",
+		},
+		{
 			"git with github fields",
 			"connections:\n  - {name: g, type: git, url: u, orgs: [x]}\n",
 			"only valid for code-host types",
@@ -373,6 +403,67 @@ connections:
 				t.Fatalf("Parse() error = %q, want substring %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestResolveHomeRelativePath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	absolute, relative, err := ResolveHomeRelativePath("~/Uber/go-code")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if absolute != filepath.Join(home, "Uber", "go-code") {
+		t.Errorf("absolute = %q, want path beneath %q", absolute, home)
+	}
+	if relative != "Uber/go-code" {
+		t.Errorf("relative = %q, want stable slash-relative identity", relative)
+	}
+
+	cfg, err := Parse([]byte("connections:\n  - {name: local, type: git, url: '~/Uber/go-code', watch: true}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Connections[0].URL != "~/Uber/go-code" {
+		t.Fatalf("configured url = %q, want portable spelling retained", cfg.Connections[0].URL)
+	}
+
+	for _, raw := range []string{
+		"~",
+		"~other/repo",
+		"~/",
+		"~/../repo",
+		"~/a//repo",
+		"~/a/./repo",
+		"~/a/*/repo",
+		"~/a/repo\\other",
+		"~/a/\x7frepo",
+	} {
+		t.Run(raw, func(t *testing.T) {
+			if _, _, err := ResolveHomeRelativePath(raw); err == nil {
+				t.Fatalf("ResolveHomeRelativePath(%q) succeeded", raw)
+			}
+		})
+	}
+}
+
+func TestIsLocalURL(t *testing.T) {
+	tests := []struct {
+		raw  string
+		want bool
+	}{
+		{"/Users/ben/src/project", true},
+		{"~/src/project", true},
+		{"file:///tmp/project", true},
+		{"https://github.com/acme/project.git", false},
+		{"git@github.com:acme/project.git", false},
+		{"relative/project", false},
+	}
+	for _, tt := range tests {
+		if got := IsLocalURL(tt.raw); got != tt.want {
+			t.Errorf("IsLocalURL(%q) = %v, want %v", tt.raw, got, tt.want)
+		}
 	}
 }
 

@@ -29,6 +29,8 @@ func TestRepoName(t *testing.T) {
 		{"git@github.com:foo/bar.git", "github.com/foo/bar", false},
 		{"ssh://git@github.com/foo/bar.git", "github.com/foo/bar", false}, // userinfo never lands in the name
 		{"file:///tmp/origin", "local/tmp/origin", false},
+		{"~/Uber/go-code", "local/Uber/go-code", false},
+		{"~/Uber/go-code.git", "local/Uber/go-code", false},
 		{"https://example.com/", "", true},
 		{"not a url at all", "", true},
 		// path traversal must be rejected: a .. segment would let RepoDir
@@ -139,6 +141,98 @@ func TestSyncGenericEndToEnd(t *testing.T) {
 	}
 	if head, origHead := gitc(t, dir, "rev-parse", "HEAD"), gitc(t, origin, "rev-parse", "HEAD"); head != origHead {
 		t.Errorf("after resync, mirror HEAD %s != origin HEAD %s", head, origHead)
+	}
+}
+
+func TestSyncHomeRelativeEndToEnd(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	origin := filepath.Join(home, "Uber", "go-code")
+	if err := os.MkdirAll(origin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "a.go"), []byte("package example\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "initial")
+
+	dataDir := t.TempDir()
+	st, err := store.OpenLocal(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close(context.Background()) })
+
+	conn := config.Connection{
+		Name: "portable", Type: "git", URL: "~/Uber/go-code", Watch: true,
+	}
+	names, err := sync.SyncConnection(ctx, st, dataDir, conn, nil)
+	if err != nil {
+		t.Fatalf("sync home-relative repository: %v", err)
+	}
+	if len(names) != 1 || names[0] != "local/Uber/go-code" {
+		t.Fatalf("synced names = %v, want stable home-relative identity", names)
+	}
+	if sync.IsRemote(conn) {
+		t.Fatal("home-relative connection classified as remote")
+	}
+
+	repo, err := st.GetRepo(ctx, names[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.CloneURL != origin {
+		t.Fatalf("persisted clone url = %q, want resolved absolute path %q", repo.CloneURL, origin)
+	}
+	if strings.Contains(repo.Name, filepath.Base(home)) || strings.Contains(repo.Name, "~") {
+		t.Fatalf("repository identity leaked machine home: %q", repo.Name)
+	}
+	mirror := sync.RepoDir(dataDir, names[0])
+	if got, want := gitc(t, mirror, "rev-parse", "HEAD"), gitc(t, origin, "rev-parse", "HEAD"); got != want {
+		t.Fatalf("mirror HEAD = %s, want %s", got, want)
+	}
+
+	gitc(t, origin, "checkout", "-b", "feature")
+	if err := os.WriteFile(filepath.Join(origin, "feature.go"), []byte("package example\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "feature")
+	if _, err := sync.SyncConnection(ctx, st, dataDir, conn, nil); err != nil {
+		t.Fatalf("resync home-relative repository: %v", err)
+	}
+	repo, err = st.GetRepo(ctx, names[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.DefaultBranch != "feature" {
+		t.Fatalf("default branch after source switch = %q, want feature", repo.DefaultBranch)
+	}
+	if got, want := gitc(t, mirror, "rev-parse", "HEAD"), gitc(t, origin, "rev-parse", "HEAD"); got != want {
+		t.Fatalf("mirror HEAD after source switch = %s, want %s", got, want)
+	}
+}
+
+func TestRepoNameHomeRelativeIsHomeIndependent(t *testing.T) {
+	var names []string
+	for _, home := range []string{t.TempDir(), t.TempDir()} {
+		t.Setenv("HOME", home)
+		name, err := sync.RepoName("~/Uber/go-code")
+		if err != nil {
+			t.Fatal(err)
+		}
+		names = append(names, name)
+	}
+	if names[0] != "local/Uber/go-code" || names[1] != names[0] {
+		t.Fatalf("home-relative identities = %v, want one stable identity", names)
 	}
 }
 

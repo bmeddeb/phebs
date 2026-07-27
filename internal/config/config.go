@@ -283,9 +283,9 @@ type Connection struct {
 	// PAT (higher rate limits, per-install scoping).
 	App GitHubApp `yaml:"app"`
 
-	// git: clone URL of a single repository (plain absolute paths and
-	// file:// URLs point at local repos). gitlab: optional http(s) base URL
-	// of a self-hosted instance (default https://gitlab.com). gitea:
+	// git: clone URL of a single repository (plain absolute paths, ~/ paths,
+	// and file:// URLs point at local repos). gitlab: optional http(s) base
+	// URL of a self-hosted instance (default https://gitlab.com). gitea:
 	// required http(s) base URL.
 	URL string `yaml:"url"`
 	// HTTPAuth supplies Basic authentication for an HTTP(S) generic-git
@@ -308,9 +308,57 @@ type HTTPAuth struct {
 func (a HTTPAuth) IsZero() bool { return a == HTTPAuth{} }
 
 // IsLocalURL reports whether a git connection URL points at a repo on this
-// machine (plain absolute path or file://).
-func IsLocalURL(url string) bool {
-	return strings.HasPrefix(url, "/") || strings.HasPrefix(url, "file://")
+// machine (plain absolute path, an exact ~/ path, or file://).
+func IsLocalURL(raw string) bool {
+	return filepath.IsAbs(raw) || strings.HasPrefix(raw, "~/") ||
+		strings.HasPrefix(strings.ToLower(raw), "file://")
+}
+
+// ResolveHomeRelativePath resolves one portable ~/ repository path without
+// invoking a shell or admitting glob/discovery semantics. The returned
+// relative path is slash-normalized and is stable across users; callers use it
+// for the repository identity while Git receives the absolute path.
+func ResolveHomeRelativePath(raw string) (absolute, relative string, err error) {
+	if !strings.HasPrefix(raw, "~/") {
+		return "", "", errors.New("home-relative path must start with ~/")
+	}
+	relative = strings.TrimPrefix(raw, "~/")
+	if relative == "" {
+		return "", "", errors.New("home-relative path must name a repository below ~/")
+	}
+	if strings.ContainsAny(relative, `*?[\`) {
+		return "", "", errors.New("home-relative path must not contain glob metacharacters (*, ?, [, or \\)")
+	}
+	for _, r := range relative {
+		if r < 0x20 || r == 0x7f {
+			return "", "", errors.New("home-relative path contains a control character")
+		}
+	}
+	for _, component := range strings.Split(relative, "/") {
+		if component == "" || component == "." || component == ".." {
+			return "", "", errors.New("home-relative path must not contain empty, '.', or '..' components")
+		}
+	}
+
+	relativePath := filepath.Clean(filepath.FromSlash(relative))
+	if relativePath == "." || filepath.IsAbs(relativePath) {
+		return "", "", errors.New("home-relative path must name a repository below ~/")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", "", fmt.Errorf("resolve user home: %w", err)
+	}
+	home, err = filepath.Abs(home)
+	if err != nil {
+		return "", "", fmt.Errorf("resolve user home: %w", err)
+	}
+	absolute = filepath.Join(home, relativePath)
+	withinHome, err := filepath.Rel(home, absolute)
+	if err != nil || withinHome == ".." ||
+		strings.HasPrefix(withinHome, ".."+string(filepath.Separator)) {
+		return "", "", errors.New("home-relative path escapes the user home")
+	}
+	return absolute, filepath.ToSlash(relativePath), nil
 }
 
 // GitHubApp authenticates a github connection as an App installation.
@@ -674,6 +722,14 @@ func (c *Config) validate(lines []int) error {
 			if conn.URL == "" {
 				fail(i, "git connection requires url")
 			}
+			if strings.HasPrefix(conn.URL, "~") {
+				if _, _, err := ResolveHomeRelativePath(conn.URL); err != nil {
+					fail(i, "invalid home-relative git url: %v", err)
+				}
+			}
+			if strings.HasPrefix(strings.ToLower(conn.URL), "file://~") {
+				fail(i, "file:// does not expand '~'; use a quoted ~/ path instead")
+			}
 			if looksHTTPURL(conn.URL) && !isHTTPURL(conn.URL) {
 				fail(i, "git HTTP(S) url is invalid")
 			}
@@ -692,7 +748,7 @@ func (c *Config) validate(lines []int) error {
 				fail(i, "orgs/groups/users/repos/token/exclude/app are only valid for code-host types")
 			}
 			if conn.Watch && !IsLocalURL(conn.URL) {
-				fail(i, "watch requires a local url (absolute path or file://)")
+				fail(i, "watch requires a local url (absolute path, quoted ~/ path, or file://)")
 			}
 		case "":
 			fail(i, "type is required (github, gitlab, gitea, or git)")

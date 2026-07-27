@@ -603,6 +603,7 @@ revisions:
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; no public query until T22.4   |
 | `experimental.provisional_kafka_extraction` | `false`          | development-only opt-in for the T23 Kafka topic-evidence packs described below; abstention-dominant by design, same provisional repo/path lineage posture         |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
+| `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 
 
@@ -802,15 +803,28 @@ query parameters, and fragments are rejected; migrate any
 `https://user:password@host/repo.git` configuration to `http_auth`. SSH URLs
 may retain a username such as `ssh://git@host/repo.git`, but not a password.
 
-Local repositories use a plain absolute path (preferred — git clones with
-hardlinks, costing near-zero disk) or a `file://` URL:
+Local repositories use a quoted home-relative path, a plain absolute path, or
+a `file://` URL. A home-relative path is portable across workstations:
 
 ```yaml
 - name: my-project
   type: git
-  url: /Users/ben/src/my-project
+  url: "~/src/my-project"
   watch: true            # see §4, watch mode
 ```
+
+Phebs resolves that path through the account running the server and gives it
+the stable repository identity `local/src/my-project`; Git and persisted clone
+metadata receive the absolute path. Only exact `~/...` paths are supported.
+There is no shell expansion or filesystem discovery: `~other/repo`,
+`file://~/repo`, `~/../repo`, and paths containing `*`, `?`, `[`, or `\` fail
+configuration admission. Use one connection per exact local repository.
+
+Existing absolute and `file://` paths retain their historical full-path
+identities, such as `local/Users/ben/src/my-project`. Changing an existing
+connection from an absolute path to `~/src/my-project` intentionally creates
+the portable identity; the previous row then follows the normal orphan and
+`sync.cleanup_orphans` policy.
 
 
 
@@ -860,11 +874,12 @@ yet supported — the re-sync cadence covers those.
 
 ### Watch mode (local repos)
 
-`watch: true` on a local git connection makes phebs poll the repo's HEAD and
-each configured allowlisted ref (every ~3 s), then re-sync + re-index whenever
-one moves. **HEAD commits, branch switches, and allowlisted branch/tag moves
-trigger reindexing; uncommitted working-tree edits and non-allowlisted feature
-branches do not.**
+`watch: true` on a local git connection—absolute, `file://`, or quoted
+`~/...`—makes phebs poll the resolved repo's HEAD and each configured
+allowlisted ref (every ~3 s), then re-sync + re-index whenever one moves.
+**HEAD commits, branch switches, and allowlisted branch/tag moves trigger
+reindexing; uncommitted working-tree edits and non-allowlisted feature branches
+do not.**
 
 Watched mirrors **follow the branch you have checked out** — switch to
 `feature`, commit, and search reflects `feature`. A detached HEAD (mid-rebase,

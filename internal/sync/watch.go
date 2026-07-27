@@ -57,11 +57,14 @@ func (w *Watcher) Run(ctx context.Context) {
 		case <-ticker.C:
 		}
 		for _, conn := range w.Conns {
-			repoName, err := RepoName(conn.URL)
+			source, err := resolveGenericGitSource(conn.URL)
 			if err != nil {
 				continue
 			}
-			fingerprint, err := watchFingerprint(ctx, LocalPath(conn.URL), w.Revisions[repoName])
+			if source.localPath == "" {
+				continue
+			}
+			fingerprint, err := watchFingerprint(ctx, source.localPath, w.Revisions[source.repoName])
 			if err != nil {
 				continue // repo busy or gone; next tick retries
 			}

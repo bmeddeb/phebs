@@ -3027,6 +3027,23 @@ an undiscoverable isolated child, and validates the store. The acceptance test
 also deletes all derived state and pins the normal reconcile → sync → index
 startup chain rebuilding the shard without an operator reindex request.
 
+**T-P5.2 ✅ · Portable home-relative local repository paths** — allow one
+distributable config to point at the same checkout location beneath each
+operator's home without exposing a username or asking the operator to edit an
+absolute path. `connections[].url: "~/src/project"` remains one exact generic
+Git repository: config resolves it without a shell, Git/watch receive the
+absolute path, and repository identity is the stable `local/src/project`.
+Absolute and `file://` paths retain their existing identity semantics.
+
+AC: config accepts a quoted `~/...` path with watch mode; two different homes
+derive the same repository name; the persisted clone URL is absolute; initial
+sync, checked-out-branch following, and watch polling use the resolved path;
+named-user expansion, traversal, controls, glob metacharacters, and
+`file://~/...` fail closed. There is no local wildcard discovery. Config,
+sync, watch, example/manual, and compatibility tests land together;
+`store/child.go` remains unchanged because it owns only the Phebs data
+directory child.
+
 ## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 
 SCIM provisioning, multi-org RBAC / seats, and a cloned "Ask" chat app —

@@ -233,9 +233,11 @@ connections:
 
   # A local working repo with watch mode: commits (and branch switches)
   # become searchable within seconds. The index follows whatever branch is
-  # checked out. watch is valid only for generic Git with an absolute local or
-  # file:// URL. Pair with sync.poll_interval for snappier turnaround.
+  # checked out. A quoted ~/ path is portable across users and is named from
+  # its home-relative suffix ("local/src/my-project"); no shell or wildcard
+  # expansion occurs. Absolute and file:// paths retain their full-path names.
+  # Pair with sync.poll_interval for snappier turnaround.
   - name: my-project
     type: git
-    url: /Users/ben/src/my-project
+    url: "~/src/my-project"
     watch: true

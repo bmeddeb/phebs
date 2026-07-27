@@ -186,6 +186,70 @@ func TestWatcherEnqueuesOnHeadMove(t *testing.T) {
 	}
 }
 
+func TestWatcherResolvesHomeRelativePath(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	origin := filepath.Join(home, "Uber", "go-code")
+	if err := os.MkdirAll(origin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "a.go"), []byte("package example\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "one")
+
+	st := &watchQueueStore{}
+	conn := config.Connection{Name: "w", Type: "git", URL: "~/Uber/go-code", Watch: true}
+	w := &sync.Watcher{
+		Store: st, Conns: []config.Connection{conn}, Interval: 30 * time.Millisecond,
+	}
+	done := make(chan struct{})
+	go func() {
+		w.Run(ctx)
+		close(done)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		<-done
+	})
+
+	pendingCount := func() int {
+		jobs, err := st.ListJobs(ctx, store.JobSync, store.StatusPending)
+		if err != nil {
+			return -1
+		}
+		return len(jobs)
+	}
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) && pendingCount() == 0 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if n := pendingCount(); n != 1 {
+		t.Fatalf("home-relative watcher baseline pending = %d, want 1", n)
+	}
+	if _, err := st.CancelPendingJobs(ctx, store.JobSync, conn.Name); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(origin, "b.go"), []byte("package example\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "two")
+	deadline = time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) && pendingCount() == 0 {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if n := pendingCount(); n != 1 {
+		t.Fatalf("home-relative watcher move pending = %d, want 1", n)
+	}
+}
+
 func TestWatcherEnqueuesWhenAllowlistedRefMovesWithoutHEAD(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -249,6 +313,7 @@ func TestWatchConfigValidation(t *testing.T) {
 	}{
 		{"local path ok", "connections:\n  - {name: a, type: git, url: /tmp/x, watch: true}\n", ""},
 		{"file url ok", "connections:\n  - {name: a, type: git, url: file:///tmp/x, watch: true}\n", ""},
+		{"home-relative path ok", "connections:\n  - {name: a, type: git, url: '~/tmp/x', watch: true}\n", ""},
 		{"remote url rejected", "connections:\n  - {name: a, type: git, url: https://github.com/a/b.git, watch: true}\n", "watch requires a local url"},
 		{"github rejected", "connections:\n  - {name: a, type: github, users: [u], watch: true}\n", "watch is only valid for local git"},
 		{"bad poll interval", "sync:\n  poll_interval: fast\n", "not a positive Go duration"},

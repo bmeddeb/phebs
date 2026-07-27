@@ -22,8 +22,20 @@ import (
 )
 
 // RepoName derives the canonical repo name (host/path, no .git) from a clone
-// URL. file:// URLs and plain absolute paths land under "local/".
+// URL. file:// URLs and plain absolute paths land under "local/". A portable
+// ~/ path deliberately omits the machine-specific home prefix.
 func RepoName(cloneURL string) (string, error) {
+	if strings.HasPrefix(cloneURL, "~/") {
+		_, relative, err := config.ResolveHomeRelativePath(cloneURL)
+		if err != nil {
+			return "", fmt.Errorf("resolve clone path %q: %w", cloneURL, err)
+		}
+		relative = strings.TrimSuffix(relative, ".git")
+		if relative == "" {
+			return "", fmt.Errorf("clone path %q has no repo path", cloneURL)
+		}
+		return safeName("local/"+relative, cloneURL)
+	}
 	safeURL, err := SanitizeURL(cloneURL)
 	if err != nil {
 		return "", errors.New("invalid clone URL")
@@ -218,14 +230,11 @@ func SyncConnection(ctx context.Context, st store.Store, dataDir string, conn co
 // syncGeneric mirrors the single repo a generic-git connection points at.
 // Mirror first, upsert after: a failed clone must not leave a phantom row.
 func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn config.Connection) ([]string, error) {
-	cloneURL, err := SanitizeURL(conn.URL)
+	source, err := resolveGenericGitSource(conn.URL)
 	if err != nil {
 		return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
 	}
-	name, err := RepoName(cloneURL)
-	if err != nil {
-		return nil, fmt.Errorf("connection %s: %w", conn.Name, err)
-	}
+	cloneURL, name := source.cloneURL, source.repoName
 	dir, err := SafeRepoDir(dataDir, name)
 	if err != nil {
 		return nil, fmt.Errorf("connection %s: mirror path: %w", conn.Name, err)
@@ -242,8 +251,8 @@ func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn confi
 	if err := mirrorLocked(ctx, cloneURL, dir, gitCfg...); err != nil {
 		return nil, fmt.Errorf("connection %s: mirror %s: %w", conn.Name, name, err)
 	}
-	if config.IsLocalURL(conn.URL) {
-		followSourceHead(ctx, LocalPath(conn.URL), dir)
+	if source.localPath != "" {
+		followSourceHead(ctx, source.localPath, dir)
 	}
 	branch, err := DefaultBranch(ctx, dir)
 	if err != nil {
@@ -262,6 +271,52 @@ func syncGeneric(ctx context.Context, st store.Store, dataDir string, conn confi
 		return nil, fmt.Errorf("connection %s: reactivate %s: %w", conn.Name, name, err)
 	}
 	return []string{name}, nil
+}
+
+type genericGitSource struct {
+	cloneURL  string
+	repoName  string
+	localPath string
+}
+
+// resolveGenericGitSource keeps the configured ~/ spelling as the logical
+// identity while returning an absolute operational path to Git and the
+// watcher. No shell or filepath glob expansion occurs.
+func resolveGenericGitSource(raw string) (genericGitSource, error) {
+	cloneInput := raw
+	localPath := ""
+	homeRelative := strings.HasPrefix(raw, "~/")
+	if homeRelative {
+		absolute, _, err := config.ResolveHomeRelativePath(raw)
+		if err != nil {
+			return genericGitSource{}, err
+		}
+		cloneInput = absolute
+		localPath = absolute
+	} else if strings.HasPrefix(strings.ToLower(raw), "file://~") {
+		return genericGitSource{}, errors.New("file:// does not expand '~'; use a quoted ~/ path instead")
+	}
+
+	cloneURL, err := SanitizeURL(cloneInput)
+	if err != nil {
+		return genericGitSource{}, err
+	}
+	nameInput := cloneURL
+	if homeRelative {
+		nameInput = raw
+	}
+	name, err := RepoName(nameInput)
+	if err != nil {
+		return genericGitSource{}, err
+	}
+	if localPath == "" && config.IsLocalURL(raw) {
+		localPath = LocalPath(cloneURL)
+	}
+	return genericGitSource{
+		cloneURL:  cloneURL,
+		repoName:  name,
+		localPath: localPath,
+	}, nil
 }
 
 // mirrorAndUpsert serializes the runtime identity check, mirror mutation, and
@@ -369,7 +424,12 @@ func rejectCaseFoldDiskAlias(root, target string) error {
 }
 
 // LocalPath strips the file:// scheme from a local clone URL.
-func LocalPath(url string) string { return strings.TrimPrefix(url, "file://") }
+func LocalPath(url string) string {
+	if len(url) >= len("file://") && strings.EqualFold(url[:len("file://")], "file://") {
+		return url[len("file://"):]
+	}
+	return url
+}
 
 // followSourceHead points the mirror's HEAD at the branch the source repo
 // has checked out — a watched working repo should be searched on the branch
