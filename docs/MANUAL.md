@@ -267,11 +267,14 @@ protobuf still needs its agreeing generated markers plus an explicit direct or
 invocation-root relation, and Thrift needs a direct relation.
 
 One mapping is `resolved`; zero is `unavailable`; multiple mappings or a
-multi-valued candidate are `ambiguous`. phebs retains every candidate rather
-than choosing a build target, deployable, service, or owner. The trusted loader
-returns exact repository/commit/path/blob-digest provenance and an attribution
-digest; metadata changes move that digest without changing source assertion
-identity. The Caller Map cursor binds this digest. No snapshot causes
+multi-valued candidate are `ambiguous`. phebs never chooses a build target,
+deployable, service, or owner. Evidence retains the complete candidate set;
+each Caller Map row serializes at most 64 candidates plus the exact
+pre-truncation `candidate_total`, so omitted display candidates remain explicit
+rather than silently disappearing. The trusted loader returns exact
+repository/commit/path/blob-digest provenance and an attribution digest;
+metadata changes move that digest without changing source assertion identity.
+The Caller Map cursor binds this digest. No snapshot causes
 phebs to run a build, generator, plugin, binary, or catalog client, and the
 current adapter performs no external lookup.
 
@@ -307,17 +310,18 @@ ordering. Source view places abstentions in **Needs review**; unit view groups
 the same current-page occurrence identities without another request. Each row
 retains its immutable source link and expandable assertion/run/atom byte
 identity. Resolved singleton attribution is inline; only one ambiguous
-candidate list is mounted at once. Previous pages retain only opaque cursors,
-not hidden rows, and a changed authorization, coverage, publication, or
-attribution snapshot requires **Restart from first page**.
+candidate list of at most 64 candidates is mounted at once, and its
+pre-truncation total names any omitted remainder. Previous pages retain only
+opaque cursors, not hidden rows, and a changed authorization, coverage,
+publication, or attribution snapshot requires **Restart from first page**.
 
 The progress line is exact only when the response says the snapshot is
 exhausted; otherwise it states the traversed lower bound. The coverage panel
 shows every requested repository/domain row, stale publications, failed
-replacement attempts, unsupported or unpublished domains, counts, and the
-certificate digest. Empty results mean no matching static evidence within
-that displayed scope—not absence, completeness, runtime behavior, or migration
-safety.
+replacement attempts, failures recorded on a published coverage row,
+unsupported or unpublished domains, counts, and the certificate digest. Empty
+results mean no matching static evidence within that displayed scope—not
+absence, completeness, runtime behavior, or migration safety.
 
 Choose **Compare replacement** from an exact Caller Map header to open the
 default-dark `#/compare-callers` workflow. The route first uses the bounded

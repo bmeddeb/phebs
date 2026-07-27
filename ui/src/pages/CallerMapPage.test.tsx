@@ -253,8 +253,8 @@ function callerPage(
   }
 }
 
-function renderPage(params = route(), comparisonAvailable = false) {
-  return render(
+function pageElement(params = route(), comparisonAvailable = false) {
+  return (
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
         <CallerMapPage
@@ -262,8 +262,12 @@ function renderPage(params = route(), comparisonAvailable = false) {
           comparisonAvailable={comparisonAvailable}
         />
       </BaseProvider>
-    </StyletronProvider>,
+    </StyletronProvider>
   )
+}
+
+function renderPage(params = route(), comparisonAvailable = false) {
+  return render(pageElement(params, comparisonAvailable))
 }
 
 beforeEach(() => {
@@ -355,8 +359,10 @@ test('keeps comparison undiscoverable without its authenticated capability', asy
 })
 
 test('mounts at most one bounded ambiguous-candidate expansion', async () => {
+  const truncated = callerRow(1, { state: 'ambiguous', candidates: 64 })
+  truncated.unit.candidate_total = 70
   api.fetchContractCallers.mockResolvedValue(callerPage([
-    callerRow(1, { state: 'ambiguous', candidates: 64 }),
+    truncated,
     callerRow(2, { state: 'ambiguous', candidates: 64 }),
   ]))
   renderPage()
@@ -366,8 +372,10 @@ test('mounts at most one bounded ambiguous-candidate expansion', async () => {
   const expand = screen.getAllByRole('button', { name: 'Show 64 candidates' })
   fireEvent.click(expand[0])
   expect(screen.getAllByTestId('caller-map-unit-candidate')).toHaveLength(64)
+  expect(screen.getByText('Candidate list is bounded; 6 more not shown.')).toBeTruthy()
   fireEvent.click(expand[1])
   expect(screen.getAllByTestId('caller-map-unit-candidate')).toHaveLength(64)
+  expect(screen.queryByText('Candidate list is bounded; 6 more not shown.')).toBeNull()
   expect(screen.getAllByRole('button', { name: 'Hide 64 candidates' })).toHaveLength(1)
 })
 
@@ -452,6 +460,27 @@ test('renders retry and restarts a stale snapshot cursor', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Restart from first page' }))
   await screen.findByText('Rows 1–1 of 2')
   expect(api.fetchContractCallers.mock.calls[2][3]).toBe('')
+})
+
+test('changes endpoints without carrying the preceding endpoint cursor', async () => {
+  api.fetchContractCallers.mockReset()
+    .mockResolvedValueOnce(callerPage([callerRow(0)], 2, 'cursor-next'))
+    .mockResolvedValueOnce(callerPage([callerRow(1)], 2))
+    .mockResolvedValue(callerPage([callerRow(2)]))
+  const rendered = renderPage()
+  await screen.findByText('Rows 1–1 of 2')
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  await screen.findByText('Page 2')
+  api.fetchContractCallers.mockClear()
+
+  const changed = route()
+  changed.set('operation', '/demo.orders.v1.Orders/List')
+  rendered.rerender(pageElement(changed))
+
+  await waitFor(() => expect(api.fetchContractCallers).toHaveBeenCalledTimes(1))
+  expect(api.fetchContractCallers.mock.calls[0][0].operation)
+    .toBe('/demo.orders.v1.Orders/List')
+  expect(api.fetchContractCallers.mock.calls[0][3]).toBe('')
 })
 
 test('retries an ordinary loading failure without changing the endpoint', async () => {

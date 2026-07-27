@@ -136,6 +136,9 @@ function ReplacementPicker({ oldEndpoint }: { oldEndpoint: CallerMapEndpoint }) 
   const reset = () => {
     setCursors([''])
     setPageIndex(0)
+    // A stale first page already has the empty cursor and page zero. Move an
+    // explicit generation as well so "Restart" always performs a new read.
+    setReload((generation) => generation + 1)
   }
   return (
     <div className={css({ maxWidth: '1120px', margin: '0 auto' })}>
@@ -296,15 +299,21 @@ function ComparisonResults({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const request = useRef<AbortController | null>(null)
-  const cursor = cursors[pageIndex] ?? ''
   const endpointKey = [
     ...Object.values(oldEndpoint),
     ...Object.values(replacementEndpoint),
   ].join('\u0000')
+  const [paginationEndpointKey, setPaginationEndpointKey] = useState(endpointKey)
+  // Reset the effective cursor during the first render of a changed endpoint
+  // pair, before effects can issue a request with the preceding pair's cursor.
+  const cursor = paginationEndpointKey === endpointKey
+    ? cursors[pageIndex] ?? ''
+    : ''
 
   useEffect(() => {
     setCursors([''])
     setPageIndex(0)
+    setPaginationEndpointKey(endpointKey)
   }, [endpointKey])
 
   useEffect(() => {
@@ -351,6 +360,9 @@ function ComparisonResults({
   const reset = () => {
     setCursors([''])
     setPageIndex(0)
+    // A stale first page already has the empty cursor and page zero. Move an
+    // explicit generation as well so "Restart" always performs a new read.
+    setReload((generation) => generation + 1)
   }
   const stale = error.startsWith('409:')
   return (

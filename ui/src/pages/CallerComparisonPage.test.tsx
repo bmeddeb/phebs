@@ -216,14 +216,18 @@ function catalog(items: ContractCatalogItem[] = [catalogItem()]): ContractCatalo
   }
 }
 
-function renderPage(params = route()) {
-  return render(
+function pageElement(params = route()) {
+  return (
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
         <CallerComparisonPage params={params} />
       </BaseProvider>
-    </StyletronProvider>,
+    </StyletronProvider>
   )
+}
+
+function renderPage(params = route()) {
+  return render(pageElement(params))
 }
 
 beforeEach(() => {
@@ -366,6 +370,43 @@ test('keeps only one bounded page mounted and restarts a stale cursor', async ()
   await screen.findByText('Rows 1–100 of 101')
   expect(api.fetchCallerComparison.mock.calls[2][4]).toBe('')
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
+})
+
+test('restarts a stale first page even though its cursor and page index are already zero', async () => {
+  api.fetchCallerComparison.mockReset()
+    .mockRejectedValueOnce(new Error('409: comparison snapshot changed'))
+    .mockResolvedValueOnce(comparisonPage([comparisonRow(1, 'both_evidence')]))
+  renderPage()
+  await screen.findByText('Comparison snapshot changed.')
+  fireEvent.click(screen.getByRole('button', { name: 'Restart from first page' }))
+  await screen.findByText('Rows 1–1 of 1')
+  expect(api.fetchCallerComparison).toHaveBeenCalledTimes(2)
+  expect(api.fetchCallerComparison.mock.calls[1][4]).toBe('')
+})
+
+test('changes endpoint pairs without carrying the preceding pair cursor', async () => {
+  api.fetchCallerComparison.mockReset()
+    .mockResolvedValueOnce(comparisonPage(
+      [comparisonRow(1, 'both_evidence')],
+      2,
+      'cursor-next',
+    ))
+    .mockResolvedValueOnce(comparisonPage([comparisonRow(2, 'both_evidence')], 2))
+    .mockResolvedValue(comparisonPage([comparisonRow(3, 'both_evidence')]))
+  const rendered = renderPage()
+  await screen.findByText('Rows 1–1 of 2')
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  await screen.findByText('Page 2')
+  api.fetchCallerComparison.mockClear()
+
+  const changed = route()
+  changed.set('replacement_operation', '/demo.orders.v2.Orders/list')
+  rendered.rerender(pageElement(changed))
+
+  await waitFor(() => expect(api.fetchCallerComparison).toHaveBeenCalledTimes(1))
+  expect(api.fetchCallerComparison.mock.calls[0][1].operation)
+    .toBe('/demo.orders.v2.Orders/list')
+  expect(api.fetchCallerComparison.mock.calls[0][4]).toBe('')
 })
 
 test('announces loading and renders the empty scope without an absence claim', async () => {

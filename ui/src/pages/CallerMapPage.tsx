@@ -70,17 +70,24 @@ export default function CallerMapPage({
   const [page, setPage] = useState<CallerMapResponse | null>(null)
   const [pageIndex, setPageIndex] = useState(0)
   const [cursors, setCursors] = useState<string[]>([''])
+  const [paginationEndpointKey, setPaginationEndpointKey] = useState(endpointKey)
   const [reload, setReload] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [view, setView] = useState<'source' | 'group'>('source')
   const request = useRef<AbortController | null>(null)
-  const cursor = cursors[pageIndex] ?? ''
+  // On an endpoint prop change, derive the first-page cursor immediately.
+  // The reset effect below then commits that state without issuing a
+  // transient request for the new endpoint with the old endpoint's cursor.
+  const cursor = paginationEndpointKey === endpointKey
+    ? cursors[pageIndex] ?? ''
+    : ''
 
   useEffect(() => {
     setCursors([''])
     setPageIndex(0)
     setPage(null)
+    setPaginationEndpointKey(endpointKey)
   }, [endpointKey])
 
   useEffect(() => {
