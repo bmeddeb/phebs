@@ -59,6 +59,9 @@ type Options struct {
 	ContractCatalog  *ContractCatalogService
 	CallerMap        *CallerMapService
 	CallerComparison *CallerComparisonService
+	// FieldReferences is the side-effect-free stable-field read shared by the
+	// proof endpoint and Workbench. It never persists a proof bundle itself.
+	FieldReferences *FieldReferenceService
 	// ContractCatalogFixture is an explicit development/demo adapter. It
 	// exposes only synthetic catalog rows projected onto a currently visible
 	// indexed repository; production leaves it nil and uses Evidence instead.
@@ -93,6 +96,10 @@ type Options struct {
 	// Production leaves it nil until the retained validation and explicit
 	// pilot-continuation gates are satisfied.
 	Workbench store.InvestigationWorkbench
+	// ResourcePlanes is the protocol-neutral Workbench registry. Nil selects
+	// the built-in unsupported inventory; production registration remains
+	// blocked independently of this internal projection.
+	ResourcePlanes *ResourcePlaneRegistry
 
 	// Visible resolves the caller's repo visibility (T10.3): it returns this
 	// request's predicate, or nil when the caller may see everything. A nil

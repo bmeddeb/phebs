@@ -135,7 +135,8 @@ type assertionFilter struct {
 // result from NewProofService keeps every proof surface undiscoverable while
 // the provisional extraction feature is disabled.
 type ProofService struct {
-	opts Options
+	opts            Options
+	fieldReferences *FieldReferenceService
 }
 
 // NewProofService constructs the shared query service only when every store
@@ -144,7 +145,14 @@ func NewProofService(opts Options) *ProofService {
 	if opts.Store == nil || opts.Evidence == nil || opts.ProofBundles == nil {
 		return nil
 	}
-	return &ProofService{opts: opts}
+	fieldReferences := opts.FieldReferences
+	if fieldReferences == nil {
+		fieldReferences = NewFieldReferenceService(opts)
+	}
+	return &ProofService{
+		opts:            opts,
+		fieldReferences: fieldReferences,
+	}
 }
 
 // FindOperationConsumers builds the same immutable answer returned by the
@@ -177,17 +185,18 @@ func (s *ProofService) FindProtoFieldReferences(ctx context.Context, lineage, me
 	if s == nil {
 		return nil, huma.Error503ServiceUnavailable("proof queries unavailable")
 	}
-	if err := validateFieldIdentity(lineage, message, fieldNumber); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
+	bundle, err := s.fieldReferences.buildProofBundle(
+		ctx,
+		compat.FieldIdentity{
+			Lineage: lineage,
+			Message: message,
+			Number:  fieldNumber,
+		},
+	)
+	if err != nil {
+		return nil, err
 	}
-	query := ProofQuery{
-		Kind: "find_proto_field_references", Lineage: lineage,
-		Message: message, FieldNumber: fieldNumber, Domains: []string{"scip-proto-field"},
-	}
-	return createProofBundle(ctx, s.opts, query, assertionFilter{
-		Domain: "scip-proto-field", Predicate: "REFERENCES_PROTO_FIELD",
-		Object: message + "#" + strconv.Itoa(fieldNumber), Lineage: lineage,
-	})
+	return persistProofBundle(ctx, s.opts, *bundle)
 }
 
 // FindKafkaTopicUsage builds the immutable topic-centered answer for one
@@ -395,6 +404,32 @@ func buildProofBundle(ctx context.Context, opts Options, query ProofQuery, filte
 }
 
 func buildProofBundleWithCensus(ctx context.Context, opts Options, query ProofQuery, filters []assertionFilter, compatibility *compat.CompatibilityResult, withCensus bool) (*ProofBundleEnvelope, error) {
+	bundle, err := buildProofBundleValue(
+		ctx,
+		opts,
+		query,
+		filters,
+		compatibility,
+		withCensus,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return persistProofBundle(ctx, opts, *bundle)
+}
+
+// buildProofBundleValue is the side-effect-free proof evaluation engine.
+// Persistence is deliberately outside this function so read-only projections
+// such as the Workbench field inventory can reuse the exact authorization,
+// coverage, and evidence joins without minting an immutable proof bundle.
+func buildProofBundleValue(
+	ctx context.Context,
+	opts Options,
+	query ProofQuery,
+	filters []assertionFilter,
+	compatibility *compat.CompatibilityResult,
+	withCensus bool,
+) (*ProofBundle, error) {
 	visible, err := visibleRepositories(ctx, opts)
 	if err != nil {
 		return nil, err
@@ -446,25 +481,46 @@ func buildProofBundleWithCensus(ctx context.Context, opts Options, query ProofQu
 			VisibilityContext: visibilityContext(ctx, opts, certificate),
 			Compatibility:     compatibility, Caveat: caveat,
 		}
-		content, err := json.Marshal(bundle)
-		if err != nil {
-			return nil, huma.Error500InternalServerError("canonicalize proof bundle", err)
-		}
-		repositories, runIDs := certificateScopes(certificate)
-		record := store.ProofBundleRecord{
-			ID: store.ComputeProofBundleID(string(content)), Content: string(content),
-			Repositories: repositories, RunIDs: runIDs,
-			RetainedAt: time.Now().UTC().Truncate(time.Second),
-		}
+		return &bundle, nil
+	}
+	return nil, huma.Error409Conflict("evidence changed while building the proof bundle; retry")
+}
+
+func persistProofBundle(
+	ctx context.Context,
+	opts Options,
+	bundle ProofBundle,
+) (*ProofBundleEnvelope, error) {
+	content, err := json.Marshal(bundle)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"canonicalize proof bundle",
+			err,
+		)
+	}
+	repositories, runIDs := certificateScopes(&bundle.Coverage)
+	record := store.ProofBundleRecord{
+		ID:           store.ComputeProofBundleID(string(content)),
+		Content:      string(content),
+		Repositories: repositories,
+		RunIDs:       runIDs,
+		RetainedAt:   time.Now().UTC().Truncate(time.Second),
+	}
+	for attempt := 0; attempt < proofBuildAttempts; attempt++ {
 		if err := opts.ProofBundles.PutProofBundle(ctx, record); err != nil {
 			if errors.Is(err, store.ErrConflict) {
 				continue
 			}
-			return nil, huma.Error500InternalServerError("persist proof bundle", err)
+			return nil, huma.Error500InternalServerError(
+				"persist proof bundle",
+				err,
+			)
 		}
 		return &ProofBundleEnvelope{ID: record.ID, Bundle: bundle}, nil
 	}
-	return nil, huma.Error409Conflict("evidence changed while building the proof bundle; retry")
+	return nil, huma.Error409Conflict(
+		"evidence changed while building the proof bundle; retry",
+	)
 }
 
 func collectProofEvidence(ctx context.Context, source store.EvidenceStore, certificate *extract.CoverageCertificate, filters []assertionFilter) ([]store.Assertion, []BundleEvidence, error) {

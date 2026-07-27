@@ -2710,7 +2710,7 @@ rejects markup syntax, and Atlas protocol remains internal-only JSON state.
 Production registration and the retained validation/pilot gates remain
 unchanged.
 
-**T21.7 · Where: composable impact inventory** *(needs T21.3, T21.6, T21.R,
+**T21.7 ✅ 2026-07-26 · Where: composable impact inventory** *(needs T21.3, T21.6, T21.R,
 T20.13)* — compose the snapshot-consistent Caller Map/comparison, field
 reference reads, Atlas declaration/implementation evidence, unit attribution,
 and Analysis scope & gaps into one typed, paged Workbench projection. The
@@ -2727,6 +2727,34 @@ affect rows, counts, capability states, gaps, cursors, or bytes. Exhausting
 pages never upgrades an unsupported/stale/failed plane to absence. No adapter
 queries evidence outside the reused shared services. T20.14 remains required
 by T21.14 before Workbench implementation closure.
+
+Implemented on `codex/t21.7-composable-impact-inventory`. The internal
+`workbench-impact-inventory-v1` reader selects one scenario-specific
+composition from the current authorized Revision: add reads analogous Atlas
+declarations and implementations without treating an empty caller set as a
+finding; modify combines the current exact Caller Map, one exact retained
+compatibility artifact, and its affected stable-field reads; migrate uses the
+single shared old-to-replacement comparison; retire keeps exact callers,
+name-match review, abstentions, unsupported planes, and gaps adjacent. Atlas
+implementations, unproven name matches, extractor abstentions, resolved caller
+rows, unit ambiguity, comparison classes, and field references remain distinct
+typed collections.
+
+One opaque composite cursor binds the principal, Revision/brief, filters, page
+size, Atlas details, retained compatibility artifact, resource states, and
+each underlying service snapshot/cursor. All streams advance together;
+finished streams are re-read only for snapshot verification, and unsupported,
+failed, stale, or human-asserted planes repeat unchanged until the whole
+projection completes. A new shared field-reference reader applies the proof
+engine's existing visibility, coverage-certificate sandwich, assertion join,
+and evidence resolution without persistence; the existing proof endpoint alone
+persists its returned value under the unchanged proof-bundle contract. The
+Workbench compositor has no evidence-store dependency. Registry entries
+without a real pack cannot return relationships; Kafka, Redis, document-store,
+SQL, and runtime start explicitly unsupported. Selected hidden endpoints fail
+closed and unrelated hidden repositories remain outside lower-service bytes.
+No route, OpenAPI operation, advertised capability, UI, MCP tool, proof bundle,
+or Investigation mutation is added. T20.14 remains required by T21.14.
 
 **T21.8 · How: related implementation evidence** *(needs T21.3, T21.6)* —
 build a bounded shared service that starts from the selected contract and

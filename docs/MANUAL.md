@@ -705,6 +705,48 @@ bytes, and is owned by Investigation retention. It is not a proof bundle and
 does not change proof-bundle reauthorization, expiry, deletion, bytes, or
 identity.
 
+The internal T21.7 Where reader now composes those exact Workbench identities
+with the existing Contract Atlas, Caller Map, caller comparison, and stable
+field-reference services. It remains production-unregistered and has no
+current HTTP, UI, or MCP entry. Add shows analogous declarations and
+implementations and deliberately has no caller stream. Modify shows the
+current exact caller page plus an explicitly selected retained compatibility
+artifact and references to its affected stable fields. Migrate uses the one
+snapshot-consistent old-to-replacement comparison; it never zips two
+independently timed caller pages. Retire keeps callers, name matches,
+extractor abstentions, unsupported planes, and gaps adjacent and never derives
+a safe-to-decommission result.
+
+The typed inventory keeps Atlas implementations, name matches needing review,
+extractor abstentions, resolved callers, unit-attribution ambiguity, migration
+comparison classes, and field references in separate collections. Its opaque
+cursor binds the current Revision and brief, principal, filters, page size,
+Atlas and compatibility content, resource-plane state, and each reused
+service's snapshot and cursor. Streams advance together. A stream that
+finishes early is re-read only to verify that its snapshot has not changed;
+unsupported, failed, stale, and human-asserted planes remain visible on every
+page and are never converted into absence when pagination completes.
+
+Field-reference browsing is side-effect-free. It reuses the proof engine's
+authorization-filtered visible repository set, coverage-certificate
+double-check, stable `(lineage, message, field number)` join, and exact source
+evidence resolution, but it does not write a proof bundle. The existing
+`find_proto_field_references` proof operation uses that same reader and remains
+the only path that persists the content-addressed bundle. Likewise, the
+Workbench compositor has no direct evidence-store access: all evidence comes
+from the shared Atlas, Caller Map/comparison, and field services.
+
+The protocol-neutral resource registry can display `enabled`, `unsupported`,
+`failed`, `stale`, and `human_asserted`. Only an explicitly registered real
+pack may contribute relationships, and only while its state is `enabled`.
+State-only or human-authored entries contribute no relationships. The built-in
+Kafka, Redis, document-store, SQL, and runtime Workbench planes currently
+remain unsupported; Kafka's separate topic-proof surface is not silently
+promoted into a selected-ticket dependency graph. Hidden exact targets fail
+closed, and repositories outside the requesting principal's visibility cannot
+affect evidence rows, totals, capability/gap state, cursors, or serialized
+bytes. None of these states is runtime truth or a completeness score.
+
 Minimal `phebs.yaml`:
 
 ```yaml

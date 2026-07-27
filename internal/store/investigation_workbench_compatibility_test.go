@@ -393,6 +393,38 @@ func TestWorkbenchRetainedCompatibilityIsAdditiveIdempotentAndRevisionBound(
 		checker.callCount() != 1 {
 		t.Fatalf("retained analyses = %+v / %+v; calls=%d", first, second, checker.callCount())
 	}
+	read, err := service.ReadCompatibility(
+		ctx,
+		workbenchOwner,
+		created.Investigation.ID,
+		created.Revision.ID,
+		first.Run.ID,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if read.Run.ID != first.Run.ID ||
+		read.Artifact.ID != first.Artifact.ID ||
+		read.Compatibility == nil ||
+		read.Compatibility.After.Digest !=
+			first.Compatibility.After.Digest ||
+		checker.callCount() != 1 {
+		t.Fatalf(
+			"read retained analysis = %+v; original=%+v calls=%d",
+			read,
+			first,
+			checker.callCount(),
+		)
+	}
+	if _, err := service.ReadCompatibility(
+		ctx,
+		workbenchOwner,
+		created.Investigation.ID,
+		"ivr_wrong",
+		first.Run.ID,
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("wrong compatibility revision = %v, want ErrNotFound", err)
+	}
 
 	tampered := request
 	tampered.IdempotencyKey = "retain-compatibility-tampered"

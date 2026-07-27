@@ -43,6 +43,22 @@ type WorkbenchCompatibilityAnalysis struct {
 	Failure         string                      `json:"failure,omitempty"`
 }
 
+// InvestigationWorkbenchCompatibilityReader is the read-only retained-analysis
+// boundary used by the composable Workbench inventory. The caller supplies an
+// exact run identity; no "latest" lookup can silently change the selected
+// compatibility result.
+type InvestigationWorkbenchCompatibilityReader interface {
+	ReadCompatibility(
+		context.Context,
+		string,
+		string,
+		string,
+		string,
+	) (*WorkbenchCompatibilityAnalysis, error)
+}
+
+var _ InvestigationWorkbenchCompatibilityReader = InvestigationWorkbenchService{}
+
 type workbenchCompatibilitySnapshotManifest struct {
 	SchemaVersion       string                        `json:"schema_version"`
 	InvestigationID     string                        `json:"investigation_id"`
@@ -443,6 +459,55 @@ func (service InvestigationWorkbenchService) RetainCompatibility(
 		investigation.ID,
 		revision.ID,
 		*publishedRun,
+		*artifact,
+	)
+}
+
+// ReadCompatibility reauthorizes and decodes one exact retained Workbench
+// compatibility run. It performs no analysis and writes no artifact.
+func (service InvestigationWorkbenchService) ReadCompatibility(
+	ctx context.Context,
+	principal, investigationID, revisionID, runID string,
+) (*WorkbenchCompatibilityAnalysis, error) {
+	if service.Store == nil ||
+		!validInvestigationPrincipal(principal) ||
+		!validULID(investigationID) ||
+		!strings.HasPrefix(revisionID, "ivr_") ||
+		runID == "" {
+		return nil, ErrNotFound
+	}
+	investigation, err := service.Store.GetInvestigationAs(
+		ctx,
+		principal,
+		investigationID,
+	)
+	if err != nil || investigation.CurrentRevisionID != revisionID {
+		return nil, ErrNotFound
+	}
+	revision, err := service.Store.GetRevisionAs(
+		ctx,
+		principal,
+		revisionID,
+	)
+	if err != nil || revision.InvestigationID != investigationID {
+		return nil, ErrNotFound
+	}
+	run, err := service.Store.GetRunAs(ctx, principal, runID)
+	if err != nil || run.RevisionID != revisionID {
+		return nil, ErrNotFound
+	}
+	artifact, err := service.Store.GetRunArtifactForRunAs(
+		ctx,
+		principal,
+		runID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return decodeWorkbenchCompatibilityAnalysis(
+		investigationID,
+		revisionID,
+		*run,
 		*artifact,
 	)
 }
