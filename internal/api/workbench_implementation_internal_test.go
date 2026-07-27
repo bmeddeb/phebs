@@ -803,3 +803,22 @@ func assertWorkbenchImplementationStatus(
 		t.Fatalf("error = %v, want HTTP %d", err, want)
 	}
 }
+
+// T21.8-review regression: the production constructor must preserve the
+// nilness of the typed Search/CodeNav pointers. Boxing a nil pointer into
+// the interface fields makes the unsupported-capability gates unreachable
+// and the first seeded Read panics inside the lower reader.
+func TestNewWorkbenchImplementationServicePreservesReaderNilness(
+	t *testing.T,
+) {
+	searchReader, codeNavReader := workbenchImplementationReaders(nil, nil)
+	if searchReader != nil || codeNavReader != nil {
+		t.Fatal("typed-nil readers leaked into non-nil interfaces; the unsupported gates would never fire and seeded reads would panic")
+	}
+	enabledSearch, enabledNav := workbenchImplementationReaders(
+		&search.Searcher{}, &codenav.Service{},
+	)
+	if enabledSearch == nil || enabledNav == nil {
+		t.Fatal("enabled readers were dropped by the nil-preserving conversion")
+	}
+}

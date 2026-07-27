@@ -126,15 +126,40 @@ func NewWorkbenchImplementationService(opts Options) *WorkbenchImplementationSer
 	if catalog == nil {
 		return nil
 	}
-	return &WorkbenchImplementationService{
+	service := &WorkbenchImplementationService{
 		opts:      opts,
 		workbench: opts.Workbench,
 		catalog:   catalog,
 		source:    workbenchGitSource{dataDir: opts.DataDir},
-		search:    opts.Search,
-		codeNav:   opts.CodeNav,
 		history:   phebssync.NewHistoryService(opts.DataDir),
 	}
+	service.search, service.codeNav = workbenchImplementationReaders(
+		opts.Search, opts.CodeNav,
+	)
+	return service
+}
+
+// workbenchImplementationReaders converts the typed optional reader pointers
+// into the service interfaces, preserving nilness. Options documents nil
+// Search/CodeNav as the disabled state; assigning the typed pointers
+// unconditionally would box a nil pointer into a non-nil interface, the
+// unsupported-capability gates would never fire, and the first seeded Read
+// would panic inside the lower reader — the same typed-nil class the T20.R
+// review flagged. Nil in, nil interface out: disabled readers stay typed
+// `unsupported` gaps.
+func workbenchImplementationReaders(
+	searcher *search.Searcher,
+	nav *codenav.Service,
+) (workbenchImplementationSearch, workbenchImplementationCodeNav) {
+	var searchReader workbenchImplementationSearch
+	var codeNavReader workbenchImplementationCodeNav
+	if searcher != nil {
+		searchReader = searcher
+	}
+	if nav != nil {
+		codeNavReader = nav
+	}
+	return searchReader, codeNavReader
 }
 
 type WorkbenchImplementationAnchor struct {
@@ -737,6 +762,19 @@ func (build *workbenchImplementationBuild) addSeed(
 	}
 	seed.source.ContentDigest = workbenchImplementationBytesDigest(content)
 	seed.source.SizeBytes = len(content)
+	if seed.query.Repo != "" {
+		// Caller-supplied anchor positions are validated against the bytes
+		// actually read: a "selected" row must not cite a line the cited
+		// file does not contain. Character offsets stay SCIP-validated —
+		// an off-line anchor is caller error, an off-column one is a gap.
+		lineCount := int32(strings.Count(string(content), "\n")) + 1
+		if seed.query.Line >= lineCount {
+			return seed, huma.Error400BadRequest(fmt.Sprintf(
+				"anchor line %d is beyond the cited file's %d lines",
+				seed.query.Line, lineCount,
+			))
+		}
+	}
 	if seed.query.Repo == "" {
 		line, character, ok := workbenchImplementationPosition(
 			content,
@@ -895,13 +933,18 @@ func (build *workbenchImplementationBuild) searchRelated(
 				if !visible {
 					continue
 				}
+				// Rows from other visible repositories are discarded like
+				// hidden ones — only the queried repository's staleness is
+				// this composition's conflict to report.
+				if file.Repo != repositoryName {
+					continue
+				}
 				if file.Ref != repository.IndexedCommitHash {
 					return huma.Error409Conflict(
 						"indexed search revision changed while reading related implementation evidence; retry",
 					)
 				}
-				if file.Repo != repositoryName ||
-					!gitobj.IsObjectID(file.Ref) ||
+				if !gitobj.IsObjectID(file.Ref) ||
 					!validWorkbenchImplementationPath(file.Path) {
 					continue
 				}
@@ -928,7 +971,13 @@ func (build *workbenchImplementationBuild) searchRelated(
 				})
 				rowCount++
 				if rowCount == workbenchImplementationMaxSearchRows {
-					break
+					build.addGap(
+						"source_search",
+						"",
+						"truncated",
+						"candidate_limit",
+					)
+					return nil
 				}
 			}
 		}
@@ -1014,6 +1063,15 @@ func (build *workbenchImplementationBuild) navigate(
 			continue
 		}
 		if !references.Available {
+			// The reference index can vanish between the definition and
+			// reference lookups; silence here would be an affirmative
+			// zero. Mirror the definition path's typed gap.
+			build.addGap(
+				"scip",
+				workbenchImplementationFileKey(seed.source),
+				"unsupported",
+				"index_unavailable",
+			)
 			continue
 		}
 		locations := slices.Clone(references.Locations)
@@ -1168,6 +1226,9 @@ func (build *workbenchImplementationBuild) readHistory(
 			}
 			build.setCapability("history", "failed", "history diff failed")
 			build.addGap("history", target, "failed", "diff_failed")
+			if commits.HasMore {
+				build.addGap("history", target, "truncated", "commit_limit")
+			}
 			continue
 		}
 		if diff.Head != selectedCommit.ID ||
