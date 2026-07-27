@@ -3136,20 +3136,31 @@ optional and field-0 tags, wrong owner and untagged definitions, marker
 lookalikes, invalid scope, and one repository containing both exact thriftrw
 and derived Apache evidence. No query surface or accuracy claim is added.
 
-**T22.4 · Neutral proof/report/envelope/MCP surface** *(needs T22.2;
-coordinate with T20.10 before starting — same internal/api files)* —
+**T22.4 ✅ · Neutral proof/report/envelope/MCP surface** *(2026-07-27;
+needs T22.2; coordinated after T20.10 integration)* —
 `protocolPacks` gains fieldReferenceDomain/fieldReferencePredicate columns;
 `find_field_references` (HTTP + MCP) fans by bounds admission;
-`canonicalProofDomains` → 6; the impact-report route gains a presence-aware
-`field_number` so field 0 becomes addressable (today it is unreachable at
-three layers: `validateFieldIdentity` min 1, the `FieldNumber > 0` route
-discriminator, and the UI guard); impactProtocol/impactAssertionKind/
+the current nine-domain `canonicalProofDomains` → 10; the impact-report route
+gains a presence-aware `field_number` so field 0 becomes addressable at every
+non-UI layer; impactProtocol/impactAssertionKind/
 impactEvidenceLabels/impactCoverageState and the envelope gain the thrift
 cases (identity kind `thrift_field`); the report-kind allowlist admits the
 new bundle kind. AC: protobuf responses byte-stable except honestly added
 coverage rows (T19.5 precedent, pinned); field-0 round trip; MCP tool
 count/schema pins updated for dark and enabled states; bundle determinism;
 `find_proto_field_references` byte-untouched.
+
+Implementation note: `protocolPacks` now owns each field-reference
+domain/predicate and number admission, including protobuf's reserved interval.
+The neutral shared proof service selects all admitted packs; the legacy
+protobuf method and compatibility reader retain their single protobuf filter.
+Typed query presence survives explicit zero through Huma, canonical bundle
+JSON, saved reports, and MCP. Current repository pins are ten default proof
+domains, 15/16 proof-only MCP tools, and 19/20 tools with the complete Caller
+Map annex, not the stale pre-Kafka counts in the proposed ticket. Regressions
+cover mixed exact citations, field 0, hidden repositories, authorization,
+deterministic bytes, malformed identities and bounds, dark discovery, schema
+digests, and the unchanged protobuf-only response.
 
 **T22.5 · UI generalization, demo, closure** *(needs T22.4)* — Impact field
 mode accepts field 0 with a protocol-aware guard; evidence-row kind union

@@ -103,13 +103,13 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 			name:      "caller pack without compatibility",
 			catalog:   schemaContractCatalogQueries{},
 			callerMap: schemaCallerMapQueries{}, proofs: schemaProofQueries{},
-			comparison: schemaCallerComparisonQueries{}, wantCount: 18,
+			comparison: schemaCallerComparisonQueries{}, wantCount: 19,
 		},
 		{
 			name: "all experimental tools", catalog: schemaContractCatalogQueries{},
 			callerMap: schemaCallerMapQueries{}, proofs: schemaProofQueries{},
 			comparison:    schemaCallerComparisonQueries{},
-			compatibility: schemaCompatibilityQueries{}, wantCount: 19,
+			compatibility: schemaCompatibilityQueries{}, wantCount: 20,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {

@@ -64,6 +64,12 @@ type protocolPack struct {
 	// Thrift result structs use field 0 as the wire success slot and cap at
 	// the positive i16 range.
 	fieldMin, fieldMax int
+	// Field-reference packs are independent from declaration and consumer
+	// domains. The optional excluded interval models protobuf's reserved wire
+	// range without teaching the neutral proof service about protocols.
+	fieldReferenceDomain, fieldReferencePredicate        string
+	fieldReferenceMin, fieldReferenceMax                 int
+	fieldReferenceExcludedMin, fieldReferenceExcludedMax int
 }
 
 var protocolPacks = []protocolPack{
@@ -74,6 +80,9 @@ var protocolPacks = []protocolPack{
 		messageSchema: "proto-message-detail-v1", fieldSchema: "proto-field-detail-v2",
 		registersPredicate:      "REGISTERS_GRPC_SERVICE",
 		unresolvedCallPredicate: "UNRESOLVED_GRPC_CALL", fieldMin: 1, fieldMax: 536_870_911,
+		fieldReferenceDomain: "scip-proto-field", fieldReferencePredicate: "REFERENCES_PROTO_FIELD",
+		fieldReferenceMin: 1, fieldReferenceMax: 536_870_911,
+		fieldReferenceExcludedMin: 19_000, fieldReferenceExcludedMax: 19_999,
 	},
 	{
 		protocol: "thrift", declarationDomain: "thrift-contract",
@@ -84,6 +93,10 @@ var protocolPacks = []protocolPack{
 		unresolvedCallPredicate:          "UNRESOLVED_THRIFT_CALL",
 		unresolvedCallCanonicalOperation: true,
 		fieldMin:                         0, fieldMax: 32_767,
+		fieldReferenceDomain:    "scip-thrift-field",
+		fieldReferencePredicate: "REFERENCES_THRIFT_FIELD",
+		fieldReferenceMin:       0,
+		fieldReferenceMax:       32_767,
 	},
 }
 
@@ -124,6 +137,26 @@ func packForProtocol(protocol string) (protocolPack, bool) {
 		}
 	}
 	return protocolPack{}, false
+}
+
+func (pack protocolPack) admitsFieldReferenceNumber(number int) bool {
+	if pack.fieldReferenceDomain == "" || pack.fieldReferencePredicate == "" ||
+		number < pack.fieldReferenceMin || number > pack.fieldReferenceMax {
+		return false
+	}
+	return pack.fieldReferenceExcludedMin == 0 && pack.fieldReferenceExcludedMax == 0 ||
+		number < pack.fieldReferenceExcludedMin ||
+		number > pack.fieldReferenceExcludedMax
+}
+
+func fieldReferencePacks(number int) []protocolPack {
+	packs := make([]protocolPack, 0, len(protocolPacks))
+	for _, pack := range protocolPacks {
+		if pack.admitsFieldReferenceNumber(number) {
+			packs = append(packs, pack)
+		}
+	}
+	return packs
 }
 
 // ContractCatalogService is the read-only, ephemeral Contract Atlas query

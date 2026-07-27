@@ -45,6 +45,19 @@ func (s *ProofService) FindProtoFieldReferencesMCP(
 	return proofEnvelope("find_proto_field_references", bundle)
 }
 
+// FindFieldReferencesMCP projects the shared protocol-neutral field proof.
+func (s *ProofService) FindFieldReferencesMCP(
+	ctx context.Context,
+	lineage, message string,
+	fieldNumber int,
+) (*investigation.Envelope, error) {
+	bundle, err := s.FindFieldReferences(ctx, lineage, message, fieldNumber)
+	if err != nil {
+		return nil, err
+	}
+	return proofEnvelope("find_field_references", bundle)
+}
+
 // FindKafkaTopicUsageMCP projects the shared topic-usage proof. The
 // envelope's facts are the producer/consumer evidence rows; the persisted
 // bundle (by envelope provenance ID) additionally carries the
@@ -83,6 +96,15 @@ func (s *ProofService) CheckContractCompatibilityMCP(
 func proofEnvelope(toolName string, source *ProofBundleEnvelope) (*investigation.Envelope, error) {
 	if source == nil {
 		return nil, fmt.Errorf("project MCP envelope: proof bundle is nil")
+	}
+	switch source.Bundle.Query.Kind {
+	case "find_proto_field_references", "find_field_references",
+		"contract_impact_field":
+		if source.Bundle.Query.FieldNumber == nil {
+			return nil, fmt.Errorf(
+				"project MCP envelope: field number is missing",
+			)
+		}
 	}
 	payload, facts, err := proofPayload(*source)
 	if err != nil {
@@ -263,6 +285,9 @@ func proofPayload(source ProofBundleEnvelope) (*investigation.Payload, int, erro
 		case "REFERENCES_PROTO_FIELD":
 			objectKind = "proto_field"
 			objectID = assertion.Lineage + ":" + assertion.Object
+		case "REFERENCES_THRIFT_FIELD":
+			objectKind = "thrift_field"
+			objectID = assertion.Lineage + ":" + assertion.Object
 		case "PRODUCES_TO_TOPIC", "CONSUMES_FROM_TOPIC":
 			// A topic object is a source spelling with no cluster or
 			// environment identity; lineage is per-file provisional and is
@@ -323,9 +348,16 @@ func proofClaim(query ProofQuery) investigation.Claim {
 		claim.Predicate = "REFERENCES_PROTO_FIELD"
 		claim.Subject = investigation.Identity{
 			Kind: "proto_field",
-			ID:   query.Lineage + ":" + query.Message + "#" + strconv.Itoa(query.FieldNumber),
+			ID:   query.Lineage + ":" + query.Message + "#" + strconv.Itoa(*query.FieldNumber),
 		}
 		claim.DecisionSought = "enumerate_proto_field_reference_candidates"
+	case "find_field_references":
+		claim.Predicate = "REFERENCES_FIELD"
+		claim.Subject = investigation.Identity{
+			Kind: "contract_field",
+			ID:   query.Lineage + ":" + query.Message + "#" + strconv.Itoa(*query.FieldNumber),
+		}
+		claim.DecisionSought = "enumerate_field_reference_candidates"
 	case "find_kafka_topic_usage":
 		claim.Predicate = "USES_KAFKA_TOPIC"
 		claim.Subject = investigation.Identity{Kind: "kafka_topic", ID: "topic:" + query.Topic}
@@ -353,7 +385,12 @@ func normalizedProofQuestion(query ProofQuery) string {
 			" in the current visibility projection; this bare-operation query does not establish declaration identity."
 	case "find_proto_field_references":
 		return "Find evidence-derived references to " + query.Lineage + ":" +
-			query.Message + "#" + strconv.Itoa(query.FieldNumber) + " in the current visibility projection."
+			query.Message + "#" + strconv.Itoa(*query.FieldNumber) + " in the current visibility projection."
+	case "find_field_references":
+		return "Find evidence-derived protocol-qualified references to " +
+			query.Lineage + ":" + query.Message + "#" +
+			strconv.Itoa(*query.FieldNumber) +
+			" in the current visibility projection."
 	case "find_kafka_topic_usage":
 		return "Find evidence-derived producers and consumers of topic:" + query.Topic +
 			" in the current visibility projection; unresolved sites are counted in the bundle census and this list is never complete."

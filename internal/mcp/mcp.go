@@ -27,6 +27,7 @@ import (
 type ProofQueries interface {
 	FindOperationConsumersMCP(ctx context.Context, operation string) (*investigation.Envelope, error)
 	FindProtoFieldReferencesMCP(ctx context.Context, lineage, message string, fieldNumber int) (*investigation.Envelope, error)
+	FindFieldReferencesMCP(ctx context.Context, lineage, message string, fieldNumber int) (*investigation.Envelope, error)
 	FindKafkaTopicUsageMCP(ctx context.Context, topic string) (*investigation.Envelope, error)
 	GetExtractionCoverageMCP(ctx context.Context, domains []string) (*investigation.Envelope, error)
 }
@@ -44,7 +45,7 @@ type Options struct {
 	DataDir string                    // bare mirrors for read_file
 	CodeNav *codenav.Service          // nil = SCIP tools report unavailable
 	History *phebssync.HistoryService // nil = construct from DataDir
-	// Proofs enables the three T14.2 proof-backed tools. Nil leaves them
+	// Proofs enables the proof-backed evidence tools. Nil leaves them
 	// unregistered so the provisional extraction feature stays dark.
 	Proofs ProofQueries
 	// Compatibility enables T14.3 only after the pinned Buf checker and its
@@ -195,6 +196,33 @@ func registerProofTools(s *sdk.Server, opts Options) {
 		return nil, *result, nil
 	})
 
+	type neutralFieldIn struct {
+		Lineage     string `json:"lineage" jsonschema:"canonical contract SCIP package lineage id from extracted protobuf or Thrift field evidence"`
+		Message     string `json:"message" jsonschema:"protocol-qualified message name, e.g. shop.Cart"`
+		FieldNumber *int   `json:"field_number" jsonschema:"wire field number admitted by at least one registered field-reference pack; Thrift field 0 is valid"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name:         "find_field_references",
+		Description:  "Find protocol-qualified source references to one neutral field identity (lineage, message, field number) across every registered field-reference pack whose number bounds admit it. Returns envelope v1.0 with exact citations and separate semantic, attribution, and processing states; it makes no completeness or accuracy claim.",
+		OutputSchema: proofEnvelopeSchema("mcp-payload-contract-edges-v1.0.json"),
+	}, func(ctx context.Context, _ *sdk.CallToolRequest, in neutralFieldIn) (*sdk.CallToolResult, investigation.Envelope, error) {
+		if in.FieldNumber == nil {
+			return nil, investigation.Envelope{}, errors.New(
+				"field_number is required",
+			)
+		}
+		result, err := opts.Proofs.FindFieldReferencesMCP(
+			ctx,
+			in.Lineage,
+			in.Message,
+			*in.FieldNumber,
+		)
+		if err != nil {
+			return nil, investigation.Envelope{}, err
+		}
+		return nil, *result, nil
+	})
+
 	type topicIn struct {
 		Topic string `json:"topic" jsonschema:"one Kafka topic spelling, 1 through 249 characters of [a-zA-Z0-9._-]"`
 	}
@@ -211,7 +239,7 @@ func registerProofTools(s *sdk.Server, opts Options) {
 	})
 
 	type coverageIn struct {
-		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-caller, grpc-consumer, kafka-consumer, kafka-producer, proto-contract, scip-proto-field, thrift-caller, thrift-consumer, and thrift-contract"`
+		Domains []string `json:"domains,omitempty" jsonschema:"extractor domains; omit for grpc-caller, grpc-consumer, kafka-consumer, kafka-producer, proto-contract, scip-proto-field, scip-thrift-field, thrift-caller, thrift-consumer, and thrift-contract"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:         "get_extraction_coverage",

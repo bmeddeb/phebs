@@ -106,7 +106,7 @@ func (service *FieldReferenceService) List(
 		Query    FieldReferenceQuery `json:"query"`
 		PageSize int                 `json:"page_size"`
 	}{Query: query, PageSize: pageSize})
-	bundle, err := service.build(
+	bundle, err := service.buildProto(
 		ctx,
 		query,
 		ProofQuery{
@@ -167,7 +167,7 @@ func (service *FieldReferenceService) List(
 	}, nil
 }
 
-func (service *FieldReferenceService) buildProofBundle(
+func (service *FieldReferenceService) buildProtoProofBundle(
 	ctx context.Context,
 	field compat.FieldIdentity,
 ) (*ProofBundle, error) {
@@ -183,20 +183,65 @@ func (service *FieldReferenceService) buildProofBundle(
 		return nil, huma.Error400BadRequest(err.Error())
 	}
 	field = fields[0]
-	return service.build(
+	number := field.Number
+	return service.buildProto(
 		ctx,
 		FieldReferenceQuery{Fields: fields},
 		ProofQuery{
 			Kind:        "find_proto_field_references",
 			Lineage:     field.Lineage,
 			Message:     field.Message,
-			FieldNumber: field.Number,
+			FieldNumber: &number,
 			Domains:     []string{"scip-proto-field"},
 		},
 	)
 }
 
-func (service *FieldReferenceService) build(
+func (service *FieldReferenceService) buildNeutralProofBundle(
+	ctx context.Context,
+	field compat.FieldIdentity,
+	kind string,
+) (*ProofBundle, error) {
+	if service == nil {
+		return nil, huma.Error503ServiceUnavailable(
+			"field references unavailable",
+		)
+	}
+	if err := validateNeutralFieldIdentity(
+		field.Lineage,
+		field.Message,
+		field.Number,
+	); err != nil {
+		return nil, huma.Error400BadRequest(err.Error())
+	}
+	packs := fieldReferencePacks(field.Number)
+	domains := make([]string, 0, len(packs))
+	filters := make([]assertionFilter, 0, len(packs))
+	for _, pack := range packs {
+		domains = append(domains, pack.fieldReferenceDomain)
+		filters = append(filters, assertionFilter{
+			Domain:    pack.fieldReferenceDomain,
+			Predicate: pack.fieldReferencePredicate,
+			Object:    field.Message + "#" + strconv.Itoa(field.Number),
+			Lineage:   field.Lineage,
+		})
+	}
+	sort.Strings(domains)
+	number := field.Number
+	return buildProofBundleValue(
+		ctx,
+		service.opts,
+		ProofQuery{
+			Kind: kind, Lineage: field.Lineage, Message: field.Message,
+			FieldNumber: &number, Domains: domains,
+		},
+		filters,
+		nil,
+		false,
+	)
+}
+
+func (service *FieldReferenceService) buildProto(
 	ctx context.Context,
 	query FieldReferenceQuery,
 	proofQuery ProofQuery,

@@ -717,7 +717,10 @@ func TestProofFieldLineageCoverageAndValidation(t *testing.T) {
 	if code != http.StatusOK || len(envelope.Bundle.Assertions) != 1 || envelope.Bundle.Assertions[0].ID != "matching" || strings.Contains(body, `"other"`) {
 		t.Fatalf("field query = %d %s", code, body)
 	}
-	if envelope.Bundle.Query.FieldNumber != 1 || envelope.Bundle.Query.Lineage != lineage || len(envelope.Bundle.Evidence) != 1 {
+	if envelope.Bundle.Query.FieldNumber == nil ||
+		*envelope.Bundle.Query.FieldNumber != 1 ||
+		envelope.Bundle.Query.Lineage != lineage ||
+		len(envelope.Bundle.Evidence) != 1 {
 		t.Fatalf("field bundle = %+v", envelope.Bundle)
 	}
 
@@ -733,7 +736,7 @@ func TestProofFieldLineageCoverageAndValidation(t *testing.T) {
 	)
 	wantDefaultDomains := strings.Join([]string{
 		"grpc-caller", "grpc-consumer", "kafka-consumer", "kafka-producer",
-		"proto-contract", "scip-proto-field", "thrift-caller",
+		"proto-contract", "scip-proto-field", "scip-thrift-field", "thrift-caller",
 		"thrift-consumer", "thrift-contract",
 	}, "\x00")
 	if code != http.StatusOK ||
@@ -751,6 +754,317 @@ func TestProofFieldLineageCoverageAndValidation(t *testing.T) {
 		if code, _, _ := getProof(t, handler, invalid); code != http.StatusBadRequest && code != http.StatusUnprocessableEntity {
 			t.Fatalf("invalid query %q = %d", invalid, code)
 		}
+	}
+}
+
+func TestFindFieldReferencesFansAcrossAdmittedDomainsAndHidesRepositories(
+	t *testing.T,
+) {
+	const (
+		visibleRepo = "github.com/allowed/mixed-field"
+		hiddenRepo  = "github.com/hidden/thrift-field"
+		message     = "shop.Cart"
+	)
+	lineage := "contract_scip_package_v1_" + strings.Repeat("f", 64)
+	protoRun := proofRun(
+		visibleRepo,
+		"scip-proto-field",
+		"run-visible-proto-field",
+	)
+	protoRun.Coverage.Protocols = []string{"scip", "protobuf"}
+	thriftRun := proofRun(
+		visibleRepo,
+		"scip-thrift-field",
+		"run-visible-thrift-field",
+	)
+	thriftRun.Coverage.Protocols = []string{"scip", "thrift"}
+	hiddenRun := proofRun(
+		hiddenRepo,
+		"scip-thrift-field",
+		"run-hidden-thrift-field",
+	)
+	proto, protoResolution := proofAssertion(
+		visibleRepo,
+		protoRun.ID,
+		"mixed-proto-field",
+		"REFERENCES_PROTO_FIELD",
+		message+"#1",
+		lineage,
+		`{"schema":"proto-field-reference-detail-v1","classification":"read"}`,
+	)
+	thrift, thriftResolution := proofAssertion(
+		visibleRepo,
+		thriftRun.ID,
+		"mixed-thrift-field",
+		"REFERENCES_THRIFT_FIELD",
+		message+"#1",
+		lineage,
+		`{"schema":"thrift-field-reference-detail-v1","classification":"write","generator":"thriftrw","source_binding":"module_digest"}`,
+	)
+	hidden, hiddenResolution := proofAssertion(
+		hiddenRepo,
+		hiddenRun.ID,
+		"hidden-thrift-field",
+		"REFERENCES_THRIFT_FIELD",
+		message+"#1",
+		lineage,
+		`{"schema":"thrift-field-reference-detail-v1","classification":"read","name":"secret"}`,
+	)
+	st := &proofAPIStore{
+		repos: []store.Repo{
+			{Name: hiddenRepo, IndexedCommitHash: hiddenRun.Commit},
+			{Name: visibleRepo, IndexedCommitHash: protoRun.Commit},
+		},
+		runs: map[string]store.ExtractionRun{
+			proofScope(visibleRepo, protoRun.Domain):  protoRun,
+			proofScope(visibleRepo, thriftRun.Domain): thriftRun,
+			proofScope(hiddenRepo, hiddenRun.Domain):  hiddenRun,
+		},
+		assertions: map[string][]store.Assertion{
+			visibleRepo: {thrift, proto},
+			hiddenRepo:  {hidden},
+		},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(visibleRepo, protoRun.ID, proto.Supporting[0]):   protoResolution,
+			proofEvidenceScope(visibleRepo, thriftRun.ID, thrift.Supporting[0]): thriftResolution,
+			proofEvidenceScope(hiddenRepo, hiddenRun.ID, hidden.Supporting[0]):  hiddenResolution,
+		},
+	}
+	visible := map[string]bool{visibleRepo: true}
+	handler := proofHandler(st, "user:mixed-field", &visible)
+	target := "/api/find_field_references?lineage=" + lineage +
+		"&message=" + message + "&field_number=1"
+	code, body, envelope := getProof(t, handler, target)
+	if code != http.StatusOK {
+		t.Fatalf("neutral field query = %d %s", code, body)
+	}
+	if envelope.Bundle.Query.Kind != "find_field_references" ||
+		envelope.Bundle.Query.FieldNumber == nil ||
+		*envelope.Bundle.Query.FieldNumber != 1 ||
+		strings.Join(envelope.Bundle.Query.Domains, ",") !=
+			"scip-proto-field,scip-thrift-field" ||
+		len(envelope.Bundle.Assertions) != 2 ||
+		len(envelope.Bundle.Evidence) != 2 {
+		t.Fatalf("neutral field bundle = %+v", envelope.Bundle)
+	}
+	gotPredicates := []string{
+		envelope.Bundle.Assertions[0].Predicate,
+		envelope.Bundle.Assertions[1].Predicate,
+	}
+	sort.Strings(gotPredicates)
+	if strings.Join(gotPredicates, ",") !=
+		"REFERENCES_PROTO_FIELD,REFERENCES_THRIFT_FIELD" ||
+		!strings.Contains(body, "consumer/mixed-proto-field.go") ||
+		!strings.Contains(body, "consumer/mixed-thrift-field.go") ||
+		strings.Contains(body, hiddenRepo) ||
+		strings.Contains(body, "secret") {
+		t.Fatalf("neutral field citations or visibility = %s", body)
+	}
+	for _, call := range st.calls {
+		if strings.Contains(call, hiddenRepo) ||
+			strings.Contains(call, hiddenRun.ID) {
+			t.Fatalf("neutral field query touched hidden evidence: %v", st.calls)
+		}
+	}
+	repeatCode, repeatBody, repeat := getProof(t, handler, target)
+	if repeatCode != http.StatusOK || repeatBody != body ||
+		repeat.ID != envelope.ID || len(st.bundles) != 1 {
+		t.Fatalf(
+			"neutral bundle is not deterministic: first=%s repeat=%d %s bundles=%d",
+			envelope.ID,
+			repeatCode,
+			repeat.ID,
+			len(st.bundles),
+		)
+	}
+
+	// Protobuf's reserved interval is nevertheless a valid Thrift i16 field
+	// identity, so bounds admission selects only the Thrift pack.
+	reservedCode, _, reserved := getProof(
+		t,
+		handler,
+		"/api/find_field_references?lineage="+lineage+
+			"&message="+message+"&field_number=19000",
+	)
+	if reservedCode != http.StatusOK ||
+		strings.Join(reserved.Bundle.Query.Domains, ",") !=
+			"scip-thrift-field" {
+		t.Fatalf(
+			"protocol-specific bounds admission = %d %+v",
+			reservedCode,
+			reserved.Bundle.Query.Domains,
+		)
+	}
+}
+
+func TestFindFieldReferencesFieldZeroRoundTripsServiceHTTPAndBundle(
+	t *testing.T,
+) {
+	const (
+		repo    = "github.com/allowed/thrift-zero"
+		domain  = "scip-thrift-field"
+		message = "agent.Result"
+	)
+	lineage := "contract_scip_package_v1_" + strings.Repeat("0", 64)
+	run := proofRun(repo, domain, "run-thrift-field-zero")
+	run.Coverage.Protocols = []string{"scip", "thrift"}
+	field, resolution := proofAssertion(
+		repo,
+		run.ID,
+		"thrift-field-zero",
+		"REFERENCES_THRIFT_FIELD",
+		message+"#0",
+		lineage,
+		`{"schema":"thrift-field-reference-detail-v1","name":"success","classification":"read","generator":"thriftrw","source_binding":"module_digest"}`,
+	)
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name: repo, IndexedCommitHash: run.Commit,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, domain): run,
+		},
+		assertions: map[string][]store.Assertion{repo: {field}},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(repo, run.ID, field.Supporting[0]): resolution,
+		},
+	}
+	proofs := api.NewProofService(api.Options{
+		Store: st, Evidence: st, ProofBundles: st,
+		Principal: func(context.Context) string {
+			return "user:thrift-zero"
+		},
+		AuthorizationProvider: "test-permissions-v1",
+	})
+	serviceEnvelope, err := proofs.FindFieldReferences(
+		t.Context(),
+		lineage,
+		message,
+		0,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if serviceEnvelope.Bundle.Query.FieldNumber == nil ||
+		*serviceEnvelope.Bundle.Query.FieldNumber != 0 ||
+		strings.Join(serviceEnvelope.Bundle.Query.Domains, ",") !=
+			domain ||
+		len(serviceEnvelope.Bundle.Assertions) != 1 {
+		t.Fatalf("field-zero service result = %+v", serviceEnvelope.Bundle)
+	}
+	record := st.bundles[serviceEnvelope.ID]
+	if !strings.Contains(record.Content, `"field_number":0`) ||
+		!strings.Contains(record.Content, `"REFERENCES_THRIFT_FIELD"`) {
+		t.Fatalf("field-zero bundle content = %s", record.Content)
+	}
+
+	handler := proofHandler(st, "user:thrift-zero", nil)
+	target := "/api/find_field_references?lineage=" + lineage +
+		"&message=" + message + "&field_number=0"
+	code, body, httpEnvelope := getProof(t, handler, target)
+	if code != http.StatusOK || httpEnvelope.ID != serviceEnvelope.ID ||
+		!strings.Contains(body, `"field_number":0`) ||
+		!strings.Contains(body, "consumer/thrift-field-zero.go") {
+		t.Fatalf("field-zero HTTP result = %d %s", code, body)
+	}
+	for _, invalid := range []string{
+		"/api/find_field_references?lineage=" + lineage +
+			"&message=" + message,
+		"/api/find_field_references?lineage=bad%2Flineage&message=" +
+			message + "&field_number=0",
+		"/api/find_field_references?lineage=" + lineage +
+			"&message=" + message + "&field_number=536870912",
+	} {
+		code, _, _ := getProof(t, handler, invalid)
+		if code != http.StatusBadRequest &&
+			code != http.StatusUnprocessableEntity {
+			t.Fatalf("invalid neutral field query %q = %d", invalid, code)
+		}
+	}
+}
+
+func TestFindProtoFieldReferencesIgnoresThriftEvidenceByteForByte(
+	t *testing.T,
+) {
+	const (
+		repo    = "github.com/allowed/legacy-proto-field"
+		message = "shop.Cart"
+	)
+	lineage := "contract_scip_package_v1_" + strings.Repeat("1", 64)
+	protoRun := proofRun(repo, "scip-proto-field", "run-legacy-proto")
+	thriftRun := proofRun(repo, "scip-thrift-field", "run-unrelated-thrift")
+	proto, protoResolution := proofAssertion(
+		repo,
+		protoRun.ID,
+		"legacy-proto",
+		"REFERENCES_PROTO_FIELD",
+		message+"#1",
+		lineage,
+		`{"schema":"proto-field-reference-detail-v1","classification":"read"}`,
+	)
+	thrift, thriftResolution := proofAssertion(
+		repo,
+		thriftRun.ID,
+		"unrelated-thrift",
+		"REFERENCES_THRIFT_FIELD",
+		message+"#1",
+		lineage,
+		`{"schema":"thrift-field-reference-detail-v1","classification":"write"}`,
+	)
+	makeStore := func(withThrift bool) *proofAPIStore {
+		st := &proofAPIStore{
+			repos: []store.Repo{{
+				Name: repo, IndexedCommitHash: protoRun.Commit,
+			}},
+			runs: map[string]store.ExtractionRun{
+				proofScope(repo, protoRun.Domain): protoRun,
+			},
+			assertions: map[string][]store.Assertion{repo: {proto}},
+			resolutions: map[string]store.EvidenceResolution{
+				proofEvidenceScope(
+					repo,
+					protoRun.ID,
+					proto.Supporting[0],
+				): protoResolution,
+			},
+		}
+		if withThrift {
+			st.runs[proofScope(repo, thriftRun.Domain)] = thriftRun
+			st.assertions[repo] = append(st.assertions[repo], thrift)
+			st.resolutions[proofEvidenceScope(
+				repo,
+				thriftRun.ID,
+				thrift.Supporting[0],
+			)] = thriftResolution
+		}
+		return st
+	}
+	target := "/api/find_proto_field_references?lineage=" + lineage +
+		"&message=" + message + "&field_number=1"
+	baselineCode, baselineBody, baseline := getProof(
+		t,
+		proofHandler(makeStore(false), "user:legacy-proto", nil),
+		target,
+	)
+	mixedCode, mixedBody, mixed := getProof(
+		t,
+		proofHandler(makeStore(true), "user:legacy-proto", nil),
+		target,
+	)
+	if baselineCode != http.StatusOK || mixedCode != http.StatusOK ||
+		baselineBody != mixedBody || baseline.ID != mixed.ID ||
+		strings.Join(mixed.Bundle.Query.Domains, ",") !=
+			"scip-proto-field" ||
+		len(mixed.Bundle.Assertions) != 1 ||
+		mixed.Bundle.Assertions[0].Predicate !=
+			"REFERENCES_PROTO_FIELD" {
+		t.Fatalf(
+			"legacy protobuf wire drift: baseline=%d %s mixed=%d %s",
+			baselineCode,
+			baselineBody,
+			mixedCode,
+			mixedBody,
+		)
 	}
 }
 
@@ -886,6 +1200,7 @@ func TestProofAPIDarkWithoutBundleStore(t *testing.T) {
 	paths := []string{
 		"/api/find_operation_consumers?operation=%2Fshop.Cart%2FGet",
 		"/api/find_proto_field_references?lineage=x&message=shop.Cart&field_number=1",
+		"/api/find_field_references?lineage=x&message=shop.Cart&field_number=0",
 		"/api/find_kafka_topic_usage?topic=orders-v1",
 		"/api/get_extraction_coverage",
 		"/api/proof_bundles/pb_" + strings.Repeat("0", 64),

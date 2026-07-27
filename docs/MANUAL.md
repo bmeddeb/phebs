@@ -1018,7 +1018,7 @@ revisions:
 | `proof_bundles.retention`                   | *(disabled)*     | positive Go duration expires proof bundles after their latest materialization; omission or `"0"` keeps them indefinitely                                         |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
-| `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; no public query until T22.4   |
+| `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP surfaces remain experimental-dark |
 | `experimental.provisional_kafka_extraction` | `false`          | development-only opt-in for the T23 Kafka topic-evidence packs described below; abstention-dominant by design, same provisional repo/path lineage posture         |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 | `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
@@ -1597,6 +1597,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/mcp`                                                          | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see §8)                                               |
 | `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped bare-operation matching-call proof bundle                        |
 | `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
+| `/api/find_field_references?lineage=&message=&field_number=`        | GET             | experimental permission-scoped protocol-neutral field-reference proof bundle                    |
 | `/api/find_kafka_topic_usage?topic=`                                | GET             | experimental permission-scoped Kafka topic-usage proof bundle with an always-present unresolved census |
 | `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
 | `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected field references         |
@@ -1661,11 +1662,11 @@ credentials remain unable to mutate. T21.12 itself changes no MCP discovery,
 schema, or tool count.
 
 Ten core tools are always present. Enabling any provisional extraction pack
-adds four evidence-query tools. Enabling a protobuf or Thrift caller pack also
-adds the three-tool Caller Map annex and the comparison tool, for eighteen
-tools. A pinned Buf binary and successful host-sandbox startup probe adds
-compatibility as the final tool, for nineteen total; otherwise compatibility
-stays undiscoverable.
+adds five evidence-query tools, for fifteen. Enabling a protobuf or Thrift
+caller pack also adds the three-tool Caller Map annex and the comparison tool,
+for nineteen tools. A pinned Buf binary and successful host-sandbox startup
+probe adds compatibility as the final tool, for twenty total; otherwise
+compatibility stays undiscoverable.
 
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
@@ -1682,6 +1683,7 @@ stays undiscoverable.
 | `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
 | `find_operation_consumers` | Investigation envelope v1.0 with matching static call evidence for one bare canonical `/package.Service/Method`; it does not establish declaration identity or a known-caller roster |
 | `find_proto_field_references` | Investigation envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
+| `find_field_references` | Investigation envelope v1.0 for one protocol-neutral `(lineage, message, field_number)`; facts retain `proto_field` or `thrift_field` identity and exact citations, and field 0 is valid |
 | `find_kafka_topic_usage` | Investigation envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
 | `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
@@ -1696,7 +1698,7 @@ units. Omitted `ref`/`head` values resolve to the DB's immutable indexed
 commit. NUL-bearing binary blame, unknown repos, deleting repos, and unindexed repos come
 back as tool errors rather than drifting to mutable mirror HEAD.
 
-The five proof/compatibility tools return `envelope_version: "1.0"` as MCP
+The six proof/compatibility tools return `envelope_version: "1.0"` as MCP
 structured content. Their advertised `outputSchema` is the same generated
 draft-2020-12 schema checked in under `schemas/`. Stateless proof queries do
 not enumerate a released evidence-pack universe, so their pack-defined
@@ -2177,10 +2179,11 @@ index-scale limits, so this pack deliberately admits at most a 32 MiB root
 index, 50,000 documents, 500,000 occurrences, 8 KiB symbols, and 4 MiB per
 generated candidate. It reads only committed repository blobs and never runs
 or downloads an indexer. The pack is experimental-dark and carries no
-accuracy, completeness, runtime-use, or absence claim. T22.2/T22.3 add
-ingestion only: the existing `find_proto_field_references` route remains
-protobuf-only, and the neutral Thrift-capable query/report/MCP surface is
-deferred to T22.4.
+accuracy, completeness, runtime-use, or absence claim. The existing
+`find_proto_field_references` route remains protobuf-only and byte-stable.
+The separate `find_field_references` route, impact report, and MCP tool fan
+out across the registered field-reference domains whose number rules admit
+the requested identity; UI support remains deferred to T22.5.
 
 Every query answer over this evidence cites a deterministic coverage
 certificate (`coverage-certificate-v1`): the caller's visible repositories
@@ -2212,8 +2215,8 @@ same-commit forced runs and extractor upgrades; killed staged attempts become
 queries, names, or counts a repository the caller cannot see. The query API
 embeds this complete certificate in every proof bundle.
 
-The opt-in registers five read-only query endpoints when the Buf startup probe
-succeeds (the first four remain available when compatibility is unavailable):
+The opt-in registers six read-only query endpoints when the Buf startup probe
+succeeds (the first five remain available when compatibility is unavailable):
 
 - `GET /api/find_operation_consumers?operation=/scope.Service/method`
   returns exact-object `CALLS_OPERATION` assertions from both registered
@@ -2222,8 +2225,12 @@ succeeds (the first four remain available when compatibility is unavailable):
   never an error.
 - `GET /api/find_proto_field_references?lineage=<id>&message=<full-name>&field_number=<n>`
   resolves the canonical field identity in the `scip-proto-field` domain
-  (protobuf-only; the dark Thrift field-reference pack has no public query
-  surface until T22.4).
+  and remains protobuf-only.
+- `GET /api/find_field_references?lineage=<id>&message=<full-name>&field_number=<n>`
+  resolves the same stable identity across every registered field-reference
+  domain whose protocol admits `n`. Field `0` selects Thrift; a common
+  positive field can return separate protobuf and Thrift rows, each retaining
+  its exact predicate, domain, run, and citation.
 - `GET /api/find_kafka_topic_usage?topic=<literal>` returns exact-object
   `PRODUCES_TO_TOPIC` and `CONSUMES_FROM_TOPIC` assertions for one topic
   spelling (validated by Kafka's own naming bounds), and the bundle always
@@ -2237,9 +2244,10 @@ succeeds (the first four remain available when compatibility is unavailable):
   remain in the coverage certificate. The endpoint never makes a completeness
   claim.
 - `GET /api/get_extraction_coverage?domains=<comma-separated-domains>` returns
-  coverage only; omitted domains select these nine domains: `grpc-caller`, `grpc-consumer`,
+  coverage only; omitted domains select these ten domains: `grpc-caller`, `grpc-consumer`,
   `kafka-consumer`, `kafka-producer`, `proto-contract`, `scip-proto-field`,
-  `thrift-caller`, `thrift-consumer`, and `thrift-contract`.
+  `scip-thrift-field`, `thrift-caller`, `thrift-consumer`, and
+  `thrift-contract`.
 - `POST /api/check_contract_compatibility` accepts a canonical `lineage` and
   `before`/`after` arrays of `{path,content}` `.proto` files. It runs Buf's
   `WIRE` policy and joins affected field identities to visible
@@ -2251,7 +2259,9 @@ to authenticated callers. `/api/version` remains always-open for deployment
 and client compatibility checks, but its anonymous response omits the entire
 capabilities array so experimental feature and sandbox state are not disclosed.
 `GET /api/contract_impact_report` accepts either one canonical `operation`, or
-the complete `lineage`, `message`, and `field_number` identity. `POST` accepts
+the complete `lineage`, `message`, and explicitly present `field_number`
+identity. An explicit `0` is a Thrift field; omission is not treated as zero.
+Field reports use the same per-pack fan-out as `find_field_references`. `POST` accepts
 the compatibility request above and is registered only when the Buf probe
 succeeds; that state also advertises `contract-compatibility`. A successful
 response is `contract-impact-report-v2`: the proof question,

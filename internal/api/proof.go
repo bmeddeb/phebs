@@ -48,7 +48,7 @@ type ProofQuery struct {
 	Operation    string   `json:"operation,omitempty"`
 	Lineage      string   `json:"lineage,omitempty"`
 	Message      string   `json:"message,omitempty"`
-	FieldNumber  int      `json:"field_number,omitempty"`
+	FieldNumber  *int     `json:"field_number,omitempty"`
 	Topic        string   `json:"topic,omitempty"`
 	BeforeDigest string   `json:"before_digest,omitempty"`
 	AfterDigest  string   `json:"after_digest,omitempty"`
@@ -194,7 +194,32 @@ func (s *ProofService) FindProtoFieldReferences(ctx context.Context, lineage, me
 		ctx,
 		s.opts,
 		func() (*ProofBundle, error) {
-			return s.fieldReferences.buildProofBundle(ctx, field)
+			return s.fieldReferences.buildProtoProofBundle(ctx, field)
+		},
+	)
+}
+
+// FindFieldReferences builds one protocol-neutral field-reference proof. The
+// shared field service fans the stable identity across every registered
+// field-reference pack whose number rules admit it.
+func (s *ProofService) FindFieldReferences(ctx context.Context, lineage, message string, fieldNumber int) (*ProofBundleEnvelope, error) {
+	if s == nil {
+		return nil, huma.Error503ServiceUnavailable("proof queries unavailable")
+	}
+	field := compat.FieldIdentity{
+		Lineage: lineage,
+		Message: message,
+		Number:  fieldNumber,
+	}
+	return buildAndPersistProofBundle(
+		ctx,
+		s.opts,
+		func() (*ProofBundle, error) {
+			return s.fieldReferences.buildNeutralProofBundle(
+				ctx,
+				field,
+				"find_field_references",
+			)
 		},
 	)
 }
@@ -322,6 +347,29 @@ func registerProofAPI(api huma.API, opts Options) {
 	}
 	huma.Get(api, "/api/find_proto_field_references", func(ctx context.Context, in *fieldIn) (*proofOut, error) {
 		envelope, err := service.FindProtoFieldReferences(ctx, in.Lineage, in.Message, in.FieldNumber)
+		if err != nil {
+			return nil, err
+		}
+		return &proofOut{Body: *envelope}, nil
+	})
+
+	type neutralFieldIn struct {
+		Lineage     string           `query:"lineage" required:"true" minLength:"1" maxLength:"1024"`
+		Message     string           `query:"message" required:"true" minLength:"1" maxLength:"1024" example:"shop.Cart"`
+		FieldNumber optionalIntParam `query:"field_number" required:"true" minimum:"0" maximum:"536870911" example:"0"`
+	}
+	huma.Get(api, "/api/find_field_references", func(ctx context.Context, in *neutralFieldIn) (*proofOut, error) {
+		if !in.FieldNumber.IsSet {
+			return nil, huma.Error400BadRequest(
+				"field identity requires an explicitly present field_number",
+			)
+		}
+		envelope, err := service.FindFieldReferences(
+			ctx,
+			in.Lineage,
+			in.Message,
+			in.FieldNumber.Value,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -848,6 +896,16 @@ func validateFieldIdentity(lineage, message string, number int) error {
 	return nil
 }
 
+func validateNeutralFieldIdentity(lineage, message string, number int) error {
+	if !validQueryIdentity(lineage) || !validQueryIdentity(message) ||
+		len(fieldReferencePacks(number)) == 0 {
+		return errors.New(
+			"field identity requires bounded lineage, message, and a field number admitted by a registered protocol pack",
+		)
+	}
+	return nil
+}
+
 func validQueryIdentity(value string) bool {
 	if value == "" || len(value) > 1024 || !utf8.ValidString(value) || strings.TrimSpace(value) != value {
 		return false
@@ -871,7 +929,7 @@ func canonicalProofDomains(domains []string) ([]string, error) {
 	if len(domains) == 0 {
 		return []string{
 			"grpc-caller", "grpc-consumer", "kafka-consumer", "kafka-producer",
-			"proto-contract", "scip-proto-field",
+			"proto-contract", "scip-proto-field", "scip-thrift-field",
 			"thrift-caller", "thrift-consumer", "thrift-contract",
 		}, nil
 	}

@@ -349,7 +349,9 @@ func TestContractImpactFieldReportUsesStableIdentityAndExactSpan(t *testing.T) {
 		t.Fatalf("field report = %d %s", code, body)
 	}
 	if report.Query.Kind != "contract_impact_field" || report.Query.Lineage != lineage ||
-		report.Query.Message != message || report.Query.FieldNumber != fieldNumber || len(report.ResolvedEvidence) != 1 {
+		report.Query.Message != message || report.Query.FieldNumber == nil ||
+		*report.Query.FieldNumber != fieldNumber ||
+		len(report.ResolvedEvidence) != 1 {
 		t.Fatalf("field report identity = %+v", report)
 	}
 	consumer := report.ResolvedEvidence[0]
@@ -358,6 +360,98 @@ func TestContractImpactFieldReportUsesStableIdentityAndExactSpan(t *testing.T) {
 		consumer.Domain != domain || consumer.Protocol != "protobuf" ||
 		consumer.StartByte != 0 || consumer.EndByte != 4 || consumer.StartLine != 7 || !consumer.Fresh {
 		t.Fatalf("field report evidence = %+v", consumer)
+	}
+}
+
+func TestContractImpactThriftFieldZeroReportAndNeutralBundleProjection(
+	t *testing.T,
+) {
+	const (
+		repo    = "github.com/allowed/thrift-zero-report"
+		domain  = "scip-thrift-field"
+		message = "agent.Result"
+	)
+	lineage := "contract_scip_package_v1_" + strings.Repeat("f", 64)
+	run := proofRun(repo, domain, "run-thrift-zero-report")
+	run.Coverage.Protocols = []string{"scip", "thrift"}
+	field, resolution := proofAssertion(
+		repo,
+		run.ID,
+		"thrift-zero-report",
+		"REFERENCES_THRIFT_FIELD",
+		message+"#0",
+		lineage,
+		`{"schema":"thrift-field-reference-detail-v1","name":"success","classification":"read","generator":"thriftrw","source_binding":"module_digest"}`,
+	)
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name: repo, IndexedCommitHash: run.Commit,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repo, domain): run,
+		},
+		assertions: map[string][]store.Assertion{repo: {field}},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(repo, run.ID, field.Supporting[0]): resolution,
+		},
+	}
+	handler := proofHandler(st, "user:thrift-zero-report", nil)
+	target := "/api/contract_impact_report?lineage=" + lineage +
+		"&message=" + message + "&field_number=0"
+	code, body, report := getImpactReport(t, handler, target)
+	if code != http.StatusOK {
+		t.Fatalf("Thrift field-zero report = %d %s", code, body)
+	}
+	if report.Query.Kind != "contract_impact_field" ||
+		report.Query.FieldNumber == nil ||
+		*report.Query.FieldNumber != 0 ||
+		strings.Join(report.Query.Domains, ",") != domain ||
+		len(report.ResolvedEvidence) != 1 {
+		t.Fatalf("Thrift field-zero report identity = %+v", report)
+	}
+	row := report.ResolvedEvidence[0]
+	if row.Kind != "field_reference" ||
+		row.Protocol != "thrift" ||
+		row.Domain != domain ||
+		row.Predicate != "REFERENCES_THRIFT_FIELD" ||
+		row.Classification != "resolved_field_reference" ||
+		row.Reason != "read" ||
+		row.Path != "consumer/thrift-zero-report.go" ||
+		row.StartLine != 7 {
+		t.Fatalf("Thrift field-zero report row = %+v", row)
+	}
+	repeatCode, repeatBody, _ := getImpactReport(t, handler, target)
+	if repeatCode != http.StatusOK || repeatBody != body {
+		t.Fatalf(
+			"Thrift field-zero report is not deterministic: %d %s",
+			repeatCode,
+			repeatBody,
+		)
+	}
+
+	proofCode, _, proof := getProof(
+		t,
+		handler,
+		"/api/find_field_references?lineage="+lineage+
+			"&message="+message+"&field_number=0",
+	)
+	if proofCode != http.StatusOK {
+		t.Fatalf("neutral field-zero proof = %d", proofCode)
+	}
+	savedCode, _, saved := getImpactReport(
+		t,
+		handler,
+		"/api/contract_impact_reports/"+proof.ID,
+	)
+	if savedCode != http.StatusOK ||
+		saved.Query.Kind != "find_field_references" ||
+		len(saved.ResolvedEvidence) != 1 ||
+		saved.ResolvedEvidence[0].Protocol != "thrift" {
+		t.Fatalf(
+			"neutral bundle report projection = %d %+v",
+			savedCode,
+			saved,
+		)
 	}
 }
 

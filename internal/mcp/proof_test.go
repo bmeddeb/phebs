@@ -2,6 +2,8 @@ package mcp
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -113,7 +115,7 @@ func (s *proofToolStore) GetProofBundle(_ context.Context, id string, activeAfte
 
 func proofToolRun(repo, domain string) store.ExtractionRun {
 	protocol := "grpc"
-	if domain == "scip-proto-field" {
+	if domain == "scip-proto-field" || domain == "scip-thrift-field" {
 		protocol = "scip"
 	}
 	return store.ExtractionRun{
@@ -202,10 +204,20 @@ func proofToolFixtureWithCompatibility(
 	lineage := "contract_scip_package_v1_" + strings.Repeat("d", 64)
 	grpcRun := proofToolRun(visibleRepo, "grpc-consumer")
 	fieldRun := proofToolRun(visibleRepo, "scip-proto-field")
+	thriftFieldRun := proofToolRun(visibleRepo, "scip-thrift-field")
 	kafkaRun := proofToolRun(visibleRepo, "kafka-producer")
 	hiddenRun := proofToolRun(hiddenRepo, "grpc-consumer")
 	grpcAssertion, grpcResolution := proofToolAssertion(visibleRepo, grpcRun, "grpc", "CALLS_OPERATION", operation, "", "client/cart.go")
 	fieldAssertion, fieldResolution := proofToolAssertion(visibleRepo, fieldRun, "field", "REFERENCES_PROTO_FIELD", "shop.Cart#1", lineage, "client/model.go")
+	thriftFieldAssertion, thriftFieldResolution := proofToolAssertion(
+		visibleRepo,
+		thriftFieldRun,
+		"thrift-field-zero",
+		"REFERENCES_THRIFT_FIELD",
+		"shop.Cart#0",
+		lineage,
+		"client/thrift-model.go",
+	)
 	kafkaAssertion, kafkaResolution := proofToolAssertion(visibleRepo, kafkaRun, "kafka", "PRODUCES_TO_TOPIC", "topic:orders-v1", "provisional_repo_path_v1_"+strings.Repeat("e", 64), "client/producer.go")
 	hiddenAssertion, hiddenResolution := proofToolAssertion(hiddenRepo, hiddenRun, "secret", "CALLS_OPERATION", operation, "", "secret/client.go")
 	st := &proofToolStore{
@@ -216,15 +228,30 @@ func proofToolFixtureWithCompatibility(
 		runs: map[string]store.ExtractionRun{
 			proofToolScope(visibleRepo, grpcRun.Domain):  grpcRun,
 			proofToolScope(visibleRepo, fieldRun.Domain): fieldRun,
+			proofToolScope(
+				visibleRepo,
+				thriftFieldRun.Domain,
+			): thriftFieldRun,
 			proofToolScope(visibleRepo, kafkaRun.Domain): kafkaRun,
 			proofToolScope(hiddenRepo, hiddenRun.Domain): hiddenRun,
 		},
 		assertions: map[string][]store.Assertion{
-			visibleRepo: {grpcAssertion, fieldAssertion, kafkaAssertion}, hiddenRepo: {hiddenAssertion},
+			visibleRepo: {
+				grpcAssertion,
+				fieldAssertion,
+				thriftFieldAssertion,
+				kafkaAssertion,
+			},
+			hiddenRepo: {hiddenAssertion},
 		},
 		resolutions: map[string]store.EvidenceResolution{
-			proofToolEvidenceScope(visibleRepo, grpcRun.ID, grpcAssertion.Supporting[0]):    grpcResolution,
-			proofToolEvidenceScope(visibleRepo, fieldRun.ID, fieldAssertion.Supporting[0]):  fieldResolution,
+			proofToolEvidenceScope(visibleRepo, grpcRun.ID, grpcAssertion.Supporting[0]):   grpcResolution,
+			proofToolEvidenceScope(visibleRepo, fieldRun.ID, fieldAssertion.Supporting[0]): fieldResolution,
+			proofToolEvidenceScope(
+				visibleRepo,
+				thriftFieldRun.ID,
+				thriftFieldAssertion.Supporting[0],
+			): thriftFieldResolution,
 			proofToolEvidenceScope(visibleRepo, kafkaRun.ID, kafkaAssertion.Supporting[0]):  kafkaResolution,
 			proofToolEvidenceScope(hiddenRepo, hiddenRun.ID, hiddenAssertion.Supporting[0]): hiddenResolution,
 		},
@@ -319,6 +346,38 @@ func TestProofToolsProtocolSession(t *testing.T) {
 		t.Fatalf("field answer = %+v", fieldEnvelope)
 	}
 
+	neutralFieldEnvelope, result := callProofSessionTool(
+		t,
+		session,
+		"find_field_references",
+		map[string]any{
+			"lineage": lineage, "message": "shop.Cart", "field_number": 0,
+		},
+	)
+	if result.IsError {
+		t.Fatalf("neutral field tool error: %v", result.Content)
+	}
+	neutralFieldFacts := assertProofToolEnvelope(
+		t,
+		neutralFieldEnvelope,
+		"find_field_references",
+		"client/thrift-model.go",
+	)
+	if neutralFieldEnvelope.Scope.Claim.Predicate != "REFERENCES_FIELD" ||
+		neutralFieldEnvelope.Scope.Claim.Subject.Kind != "contract_field" ||
+		!strings.HasSuffix(
+			neutralFieldEnvelope.Scope.Claim.Subject.ID,
+			"shop.Cart#0",
+		) ||
+		neutralFieldFacts[0].Predicate != "REFERENCES_THRIFT_FIELD" ||
+		neutralFieldFacts[0].Object.Kind != "thrift_field" ||
+		!strings.HasSuffix(
+			neutralFieldFacts[0].Object.ID,
+			"shop.Cart#0",
+		) {
+		t.Fatalf("neutral field-zero answer = %+v", neutralFieldEnvelope)
+	}
+
 	coverage, result := callProofSessionTool(t, session, "get_extraction_coverage", map[string]any{
 		"domains": []string{"scip-proto-field", "grpc-consumer"},
 	})
@@ -361,7 +420,13 @@ func TestProofToolsProtocolSession(t *testing.T) {
 			t.Fatalf("proof tool touched hidden evidence: %v", st.calls)
 		}
 	}
-	for _, envelope := range []investigation.Envelope{operationEnvelope, fieldEnvelope, coverage, compatibility} {
+	for _, envelope := range []investigation.Envelope{
+		operationEnvelope,
+		fieldEnvelope,
+		neutralFieldEnvelope,
+		coverage,
+		compatibility,
+	} {
 		encoded, err := json.Marshal(envelope)
 		if err != nil || strings.Contains(string(encoded), "hidden") || strings.Contains(string(encoded), "secret") {
 			t.Fatalf("proof tool leaked hidden scope: %s, %v", encoded, err)
@@ -429,6 +494,10 @@ func (schemaProofQueries) FindProtoFieldReferencesMCP(context.Context, string, s
 	return nil, errors.New("not called")
 }
 
+func (schemaProofQueries) FindFieldReferencesMCP(context.Context, string, string, int) (*investigation.Envelope, error) {
+	return nil, errors.New("not called")
+}
+
 func (schemaProofQueries) FindKafkaTopicUsageMCP(context.Context, string) (*investigation.Envelope, error) {
 	return nil, errors.New("not called")
 }
@@ -444,6 +513,13 @@ func (schemaCompatibilityQueries) CheckContractCompatibilityMCP(context.Context,
 }
 
 func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
+	schemaDigests := map[string]string{
+		"find_operation_consumers":    "sha256:d42cb729a5f27df95502fac4377d0d6e514db62d408f058478653a61df0b8ea4",
+		"find_proto_field_references": "sha256:66a06a48a3b1bc098e858e478d1ff4ab8a1e25c7f91493696436ddd091a682af",
+		"find_field_references":       "sha256:9d54939affd857303cc1de0485caa4b06da89ffb85a290154338241b874454c3",
+		"find_kafka_topic_usage":      "sha256:2d6ee61ad0d34e72550c55cd1f8f7a854bac68c1f68f9b9e8b05446c4c30f3d6",
+		"get_extraction_coverage":     "sha256:4694e451327616e9215bf9d4b7315ec1ce8052c1da559e260a1d847bf78a1e17",
+	}
 	for _, test := range []struct {
 		name          string
 		proofs        ProofQueries
@@ -451,8 +527,8 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 		wantCount     int
 	}{
 		{name: "dark", wantCount: 10},
-		{name: "proof only", proofs: schemaProofQueries{}, wantCount: 14},
-		{name: "compatibility enabled", proofs: schemaProofQueries{}, compatibility: schemaCompatibilityQueries{}, wantCount: 15},
+		{name: "proof only", proofs: schemaProofQueries{}, wantCount: 15},
+		{name: "compatibility enabled", proofs: schemaProofQueries{}, compatibility: schemaCompatibilityQueries{}, wantCount: 16},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := t.Context()
@@ -494,7 +570,7 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 					t.Fatalf("compatibility vocabulary = %q", compatibilityTool.Description)
 				}
 			}
-			for _, name := range []string{"find_operation_consumers", "find_proto_field_references", "find_kafka_topic_usage", "get_extraction_coverage"} {
+			for _, name := range []string{"find_operation_consumers", "find_proto_field_references", "find_field_references", "find_kafka_topic_usage", "get_extraction_coverage"} {
 				tool, ok := found[name]
 				if test.proofs == nil {
 					if ok {
@@ -514,6 +590,17 @@ func TestProofToolSchemasAndDarkRegistration(t *testing.T) {
 				}
 				input, _ := json.Marshal(tool.InputSchema)
 				output, _ := json.Marshal(tool.OutputSchema)
+				schemaBytes := append(append(input, '\n'), output...)
+				digest := sha256.Sum256(schemaBytes)
+				gotDigest := "sha256:" + hex.EncodeToString(digest[:])
+				if wantDigest := schemaDigests[name]; gotDigest != wantDigest {
+					t.Fatalf(
+						"%s input/output schema digest = %s, want %s",
+						name,
+						gotDigest,
+						wantDigest,
+					)
+				}
 				if !strings.Contains(string(input), `"type":"object"`) ||
 					!strings.Contains(string(output), `"envelope_version"`) ||
 					!strings.Contains(string(output), `"absence_eligibility"`) ||
@@ -533,13 +620,17 @@ func TestProofToolInvalidInputIsToolError(t *testing.T) {
 	}{
 		{name: "operation", args: map[string]any{"operation": "shop.Cart/Get"}},
 		{name: "field", args: map[string]any{"lineage": "x", "message": "shop.Cart", "field_number": 19_000}},
+		{name: "neutral field missing", args: map[string]any{"lineage": "x", "message": "shop.Cart"}},
+		{name: "neutral field identity", args: map[string]any{"lineage": "bad/lineage", "message": "shop.Cart", "field_number": 0}},
 		{name: "coverage", args: map[string]any{"domains": []string{"grpc-consumer", "grpc-consumer"}}},
 		{name: "compatibility", args: map[string]any{"lineage": "", "before": []any{}, "after": []any{}}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			tool := map[string]string{
 				"operation": "find_operation_consumers", "field": "find_proto_field_references",
-				"coverage": "get_extraction_coverage", "compatibility": "check_contract_compatibility",
+				"neutral field missing":  "find_field_references",
+				"neutral field identity": "find_field_references",
+				"coverage":               "get_extraction_coverage", "compatibility": "check_contract_compatibility",
 			}[test.name]
 			_, result := callTool[investigation.Envelope](t, s, tool, test.args)
 			if !result.IsError {
@@ -563,6 +654,12 @@ func TestProofEnvelopeProjectionInMemory(t *testing.T) {
 			name: "find_proto_field_references",
 			args: map[string]any{
 				"lineage": lineage, "message": "shop.Cart", "field_number": 1,
+			},
+		},
+		{
+			name: "find_field_references",
+			args: map[string]any{
+				"lineage": lineage, "message": "shop.Cart", "field_number": 0,
 			},
 		},
 		{

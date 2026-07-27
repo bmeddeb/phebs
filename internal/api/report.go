@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -150,17 +149,21 @@ func (s *ProofService) BuildFieldImpactReport(ctx context.Context, lineage, mess
 	if s == nil {
 		return nil, huma.Error503ServiceUnavailable("contract impact reports unavailable")
 	}
-	if err := validateFieldIdentity(lineage, message, fieldNumber); err != nil {
-		return nil, huma.Error400BadRequest(err.Error())
-	}
-	query := ProofQuery{
-		Kind: "contract_impact_field", Lineage: lineage, Message: message,
-		FieldNumber: fieldNumber, Domains: []string{"scip-proto-field"},
-	}
-	envelope, err := createProofBundle(ctx, s.opts, query, assertionFilter{
-		Domain: "scip-proto-field", Predicate: "REFERENCES_PROTO_FIELD",
-		Object: message + "#" + strconv.Itoa(fieldNumber), Lineage: lineage,
-	})
+	envelope, err := buildAndPersistProofBundle(
+		ctx,
+		s.opts,
+		func() (*ProofBundle, error) {
+			return s.fieldReferences.buildNeutralProofBundle(
+				ctx,
+				compat.FieldIdentity{
+					Lineage: lineage,
+					Message: message,
+					Number:  fieldNumber,
+				},
+				"contract_impact_field",
+			)
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -201,19 +204,19 @@ func registerContractImpactAPI(api huma.API, opts Options, service *ProofService
 	}
 	type reportOut struct{ Body ContractImpactReport }
 	type reportIn struct {
-		Operation   string `query:"operation" maxLength:"1024" example:"/shop.Cart/Get"`
-		Lineage     string `query:"lineage" maxLength:"1024"`
-		Message     string `query:"message" maxLength:"1024" example:"shop.Cart"`
-		FieldNumber int    `query:"field_number" minimum:"0" maximum:"536870911"`
+		Operation   string           `query:"operation" maxLength:"1024" example:"/shop.Cart/Get"`
+		Lineage     string           `query:"lineage" maxLength:"1024"`
+		Message     string           `query:"message" maxLength:"1024" example:"shop.Cart"`
+		FieldNumber optionalIntParam `query:"field_number" minimum:"0" maximum:"536870911"`
 	}
 	huma.Get(api, "/api/contract_impact_report", func(ctx context.Context, in *reportIn) (*reportOut, error) {
 		var report *ContractImpactReport
 		var err error
 		switch {
-		case in.Operation != "" && in.Lineage == "" && in.Message == "" && in.FieldNumber == 0:
+		case in.Operation != "" && in.Lineage == "" && in.Message == "" && !in.FieldNumber.IsSet:
 			report, err = service.BuildOperationImpactReport(ctx, in.Operation)
-		case in.Operation == "" && in.Lineage != "" && in.Message != "" && in.FieldNumber > 0:
-			report, err = service.BuildFieldImpactReport(ctx, in.Lineage, in.Message, in.FieldNumber)
+		case in.Operation == "" && in.Lineage != "" && in.Message != "" && in.FieldNumber.IsSet:
+			report, err = service.BuildFieldImpactReport(ctx, in.Lineage, in.Message, in.FieldNumber.Value)
 		default:
 			return nil, huma.Error400BadRequest("provide exactly one operation or one complete lineage/message/field_number identity")
 		}
@@ -256,7 +259,7 @@ func projectContractImpactReport(envelope *ProofBundleEnvelope) (*ContractImpact
 		return nil, errors.New("project contract impact report: proof bundle is inconsistent")
 	}
 	switch envelope.Bundle.Query.Kind {
-	case "contract_impact_operation", "contract_impact_field", "find_operation_consumers", "find_proto_field_references", "check_contract_compatibility":
+	case "contract_impact_operation", "contract_impact_field", "find_operation_consumers", "find_proto_field_references", "find_field_references", "check_contract_compatibility":
 	default:
 		return nil, errUnsupportedImpactBundle
 	}
@@ -287,7 +290,8 @@ func impactConclusion(bundle ProofBundle, knownCount int) string {
 	}
 	if knownCount > 0 {
 		if bundle.Query.Kind == "contract_impact_field" ||
-			bundle.Query.Kind == "find_proto_field_references" {
+			bundle.Query.Kind == "find_proto_field_references" ||
+			bundle.Query.Kind == "find_field_references" {
 			return "Resolved field-reference evidence was found " + impactScopePhrase + "."
 		}
 		return "Resolved or matching call evidence was found " + impactScopePhrase + "."
@@ -398,12 +402,9 @@ func projectImpactEvidence(
 func impactProtocol(domain string) string {
 	for _, pack := range protocolPacks {
 		if domain == pack.declarationDomain || domain == pack.consumerDomain ||
-			domain == pack.callerDomain {
+			domain == pack.callerDomain || domain == pack.fieldReferenceDomain {
 			return pack.protocol
 		}
-	}
-	if domain == "scip-proto-field" {
-		return "protobuf"
 	}
 	return ""
 }
@@ -412,7 +413,7 @@ func impactAssertionKind(predicate, tier string) (string, bool) {
 	switch predicate {
 	case "CALLS_OPERATION":
 		return "operation_call", false
-	case "REFERENCES_PROTO_FIELD":
+	case "REFERENCES_PROTO_FIELD", "REFERENCES_THRIFT_FIELD":
 		return "field_reference", false
 	case "UNRESOLVED_GRPC_CALL", "UNRESOLVED_THRIFT_CALL":
 		return "unresolved_candidate", true
@@ -440,7 +441,7 @@ func impactEvidenceLabels(assertion store.Assertion, domain string) (classificat
 			return "resolved_caller", ""
 		}
 		return "matching_call_evidence", "operation object matched without declaration identity"
-	case "REFERENCES_PROTO_FIELD":
+	case "REFERENCES_PROTO_FIELD", "REFERENCES_THRIFT_FIELD":
 		if detail.Classification == "" {
 			detail.Classification = "unknown access"
 		}
@@ -525,7 +526,9 @@ func impactCoverageState(repo extract.CertificateRepository, run extract.Certifi
 	if !run.Fresh {
 		return "stale", "evidence commit does not match the indexed revision"
 	}
-	if run.Domain == "scip-proto-field" && repo.SCIPIndex == "absent" {
+	if (run.Domain == "scip-proto-field" ||
+		run.Domain == "scip-thrift-field") &&
+		repo.SCIPIndex == "absent" {
 		return "unsupported", "repository has no committed index.scip"
 	}
 	if len(run.Failures) > 0 {
