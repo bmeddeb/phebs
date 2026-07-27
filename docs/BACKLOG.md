@@ -2861,7 +2861,7 @@ proof bundle, Huma/OpenAPI route, advertised capability, UI, or MCP tool.
 Dispositioning every current entry changes no migration-complete,
 safe-to-retire, pilot, accuracy, or production-enablement state.
 
-**T21.10 · Workbench shell and Why/What UI** *(needs T21.3, T21.5, T21.6)* —
+**T21.10 ✅ 2026-07-27 · Workbench shell and Why/What UI** *(needs T21.3, T21.5, T21.6)* —
 add the production-unregistered experimental Workbench shell, guided
 create/resume flow, persistent four-step navigation, editable Why brief, and
 What selection/proposal/compatibility views. Users may start from bounded
@@ -2874,6 +2874,24 @@ compatibility-unavailable, conflict/retry, loading, mobile, keyboard, and
 screen-reader paths are tested. No navigation or preview writes implicitly.
 Only the synthetic `make dev` adapter can register this route before the
 retained enablement gate is satisfied.
+
+Implemented on `codex/t21.10-workbench-shell`: the capability-gated Workbench
+shell starts from bounded ticket text, resumes an authorized current
+Investigation into an exact revision URL, or carries one complete
+protocol/repository/lineage/operation identity from Contract Atlas. Its
+persistent Why/What/Where/How rail preserves Investigation and Revision IDs;
+T21.10 renders editable Why and mode-correct What controls while the latter
+two steps state their T21.11 deferral without reading or writing. Preview and
+create/append are separate explicit controls; editing after preview visibly
+expires its digest, and retained proposals render only their path/hash/size
+commitment because source bytes are not stored. Exact-revision mismatch,
+permission loss, source bounds, compatibility unavailability, conflict,
+loading, responsive, keyboard, and assistive semantics have UI coverage.
+Ordinary `serve` keeps `Options.Workbench` nil. Only `make dev` and
+`make dev-api` set the exact synthetic flag, and registration fails closed
+unless both documented Investigation and Contract Atlas fixture adapters are
+also bound. This completion is a synthetic demonstration, not production
+enablement or validation.
 
 **T21.11 · Where/How and checklist UI** *(needs T21.7–T21.10)* — render the
 paged source-first impact inventory, unit ambiguity, unsupported planes,

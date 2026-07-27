@@ -12,6 +12,7 @@ function header(
   topicsAvailable = false,
   path = '/',
   impactAvailable = false,
+  workbenchAvailable = false,
 ) {
   return render(
     <StyletronProvider value={engine}>
@@ -24,6 +25,7 @@ function header(
           impactAvailable={impactAvailable}
           topicsAvailable={topicsAvailable}
           investigationsAvailable={false}
+          workbenchAvailable={workbenchAvailable}
           onLogout={() => {}}
         />
       </BaseProvider>
@@ -69,4 +71,15 @@ test('Caller comparison remains an Impact sub-route without a second nav item', 
   expect(screen.getByRole('link', { name: 'Contracts' }).getAttribute('aria-current'))
     .toBeNull()
   expect(screen.queryByRole('link', { name: 'Compare callers' })).toBeNull()
+})
+
+test('Workbench navigation is capability-gated and marks its route current', () => {
+  const dark = header(false)
+  expect(screen.queryByRole('link', { name: 'Workbench' })).toBeNull()
+  dark.unmount()
+
+  header(false, false, '/workbench', false, true)
+  const link = screen.getByRole('link', { name: 'Workbench' })
+  expect(link.getAttribute('href')).toBe('#/workbench')
+  expect(link.getAttribute('aria-current')).toBe('page')
 })

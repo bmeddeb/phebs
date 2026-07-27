@@ -515,6 +515,25 @@ func serve(args []string) error {
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
+	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
+	var syntheticWorkbench store.InvestigationWorkbench
+	if syntheticWorkbenchSetting != "" {
+		if resolver := api.NewWorkbenchTargetResolver(apiOpts); resolver != nil {
+			syntheticWorkbench = store.InvestigationWorkbenchService{
+				Store: st, Resolver: resolver, Compatibility: compatibility,
+			}
+		}
+	}
+	if err := bindSyntheticWorkbench(
+		&apiOpts,
+		syntheticWorkbenchSetting,
+		syntheticWorkbench,
+	); err != nil {
+		return err
+	}
+	if apiOpts.Workbench != nil {
+		log.Printf("WARNING: synthetic Change Workbench enabled for make dev; not a production or continuation surface")
+	}
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
@@ -564,6 +583,37 @@ func serve(args []string) error {
 	// in-flight handlers (and their audit/usage writes) finish before the
 	// deferred store/searcher Closes run.
 	<-shutdownDone
+	return nil
+}
+
+// bindSyntheticWorkbench is the only pre-enablement registration path. It is
+// deliberately coupled to both synthetic fixture providers and the exact flag
+// set by make dev; ordinary serve startup leaves the Huma route and capability
+// absent.
+func bindSyntheticWorkbench(
+	opts *api.Options,
+	setting string,
+	workbench store.InvestigationWorkbench,
+) error {
+	if opts == nil {
+		return errors.New("synthetic Workbench options are required")
+	}
+	switch setting {
+	case "":
+		return nil
+	case "1":
+	default:
+		return errors.New("PHEBS_SYNTHETIC_WORKBENCH must be empty or 1")
+	}
+	if opts.InvestigationViews == nil || opts.ContractCatalogFixture == nil {
+		return errors.New(
+			"synthetic Workbench requires Investigation and Contract Atlas fixtures",
+		)
+	}
+	if workbench == nil {
+		return errors.New("synthetic Workbench service is unavailable")
+	}
+	opts.Workbench = workbench
 	return nil
 }
 

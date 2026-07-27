@@ -57,9 +57,11 @@ const pageQualification = 'Browse provisional source declarations, bounded messa
 export default function ContractAtlasPage({
   params,
   callerMapAvailable = false,
+  workbenchAvailable = false,
 }: {
   params: URLSearchParams
   callerMapAvailable?: boolean
+  workbenchAvailable?: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -439,6 +441,7 @@ export default function ContractAtlasPage({
               operation={operation}
               selected={selectedItem}
               callerMapAvailable={callerMapAvailable}
+              workbenchAvailable={workbenchAvailable}
             />
           )}
         </section>
@@ -616,10 +619,12 @@ function OperationDetail({
   operation,
   selected,
   callerMapAvailable,
+  workbenchAvailable,
 }: {
   operation: ContractCatalogOperation
   selected: ContractCatalogItem
   callerMapAvailable: boolean
+  workbenchAvailable: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -669,6 +674,21 @@ function OperationDetail({
             </div>
           </div>
           <div className={css({ display: 'flex', gap: '8px', flexWrap: 'wrap' })}>
+            {workbenchAvailable && (
+              <a
+                href={href('/workbench', {
+                  source: 'atlas',
+                  step: 'why',
+                  protocol: selected.protocol,
+                  repository: selected.repository,
+                  lineage: selected.declaration_lineage,
+                  operation: selected.operation ?? operation.operation,
+                })}
+                className={css(operationLinkStyle(tok))}
+              >
+                Start Workbench
+              </a>
+            )}
             {callerMapAvailable && (
               <a
                 href={href('/callers', {

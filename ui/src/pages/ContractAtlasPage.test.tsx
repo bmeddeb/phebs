@@ -336,6 +336,7 @@ const engine = new Client()
 function page(
   params = new URLSearchParams(),
   callerMapAvailable = false,
+  workbenchAvailable = false,
 ) {
   return render(
     <StyletronProvider value={engine}>
@@ -343,6 +344,7 @@ function page(
         <ContractAtlasPage
           params={params}
           callerMapAvailable={callerMapAvailable}
+          workbenchAvailable={workbenchAvailable}
         />
       </BaseProvider>
     </StyletronProvider>,
@@ -391,7 +393,7 @@ test('browses duplicate declarations through stable bounded pages', async () => 
 })
 
 test('renders bounded shapes, qualified relationships, and pinned source links', async () => {
-  page(new URLSearchParams(), true)
+  page(new URLSearchParams(), true, true)
   await screen.findByText('3 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
   await screen.findByTestId('contract-operation-detail')
@@ -434,6 +436,18 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
     .toBe(
       '#/callers?protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage-a&operation=%2Fdemo.Catalog%2FGet',
     )
+  expect(screen.getByRole('link', { name: 'Start Workbench' }).getAttribute('href'))
+    .toBe(
+      '#/workbench?source=atlas&step=why&protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage-a&operation=%2Fdemo.Catalog%2FGet',
+    )
+})
+
+test('keeps the Workbench launch undiscoverable without its capability', async () => {
+  page()
+  await screen.findByText('3 rows')
+  fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
+  await screen.findByTestId('contract-operation-detail')
+  expect(screen.queryByRole('link', { name: 'Start Workbench' })).toBeNull()
 })
 
 test('applies exact server filters and renders an honest bounded empty state', async () => {

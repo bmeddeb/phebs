@@ -168,6 +168,72 @@ func TestVersionCapabilitiesRequireAuthenticatedPrincipal(t *testing.T) {
 	}
 }
 
+func TestBindSyntheticWorkbenchIsExplicitAndFixtureCoupled(t *testing.T) {
+	fixtureViews, err := api.NewInvestigationFixtureViews(
+		"../../docs/fixtures/investigations",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtures := func() api.Options {
+		return api.Options{
+			InvestigationViews:     fixtureViews,
+			ContractCatalogFixture: &api.ContractCatalogFixture{},
+		}
+	}
+	workbench := store.InvestigationWorkbenchService{}
+
+	t.Run("ordinary serve remains dark", func(t *testing.T) {
+		opts := fixtures()
+		if err := bindSyntheticWorkbench(&opts, "", workbench); err != nil {
+			t.Fatal(err)
+		}
+		if opts.Workbench != nil {
+			t.Fatal("empty synthetic setting registered the Workbench")
+		}
+	})
+
+	t.Run("exact setting and both fixtures register", func(t *testing.T) {
+		opts := fixtures()
+		if err := bindSyntheticWorkbench(&opts, "1", workbench); err != nil {
+			t.Fatal(err)
+		}
+		if opts.Workbench == nil {
+			t.Fatal("synthetic adapter did not register the Workbench")
+		}
+	})
+
+	t.Run("missing fixtures fail closed", func(t *testing.T) {
+		opts := api.Options{}
+		err := bindSyntheticWorkbench(&opts, "1", workbench)
+		if err == nil || !strings.Contains(err.Error(), "requires Investigation") {
+			t.Fatalf("missing fixture error = %v", err)
+		}
+		if opts.Workbench != nil {
+			t.Fatal("fixture refusal registered the Workbench")
+		}
+	})
+
+	t.Run("invalid setting and unavailable service fail closed", func(t *testing.T) {
+		opts := fixtures()
+		for _, setting := range []string{"true", " 1 "} {
+			if err := bindSyntheticWorkbench(
+				&opts,
+				setting,
+				workbench,
+			); err == nil {
+				t.Fatalf("invalid synthetic setting %q was accepted", setting)
+			}
+		}
+		if err := bindSyntheticWorkbench(&opts, "1", nil); err == nil {
+			t.Fatal("nil synthetic service was accepted")
+		}
+		if opts.Workbench != nil {
+			t.Fatal("failed registration changed Workbench options")
+		}
+	})
+}
+
 func TestPrintVersion(t *testing.T) {
 	tests := []struct {
 		name    string

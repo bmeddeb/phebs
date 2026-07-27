@@ -120,6 +120,208 @@ export interface VersionInfo {
   capabilities?: string[]
 }
 
+export type WorkbenchTicketKind = 'add' | 'modify' | 'migrate' | 'retire'
+export type WorkbenchSelectionRole = 'current' | 'replacement' | 'analogous'
+
+export interface WorkbenchContractSelection {
+  role: WorkbenchSelectionRole
+  protocol: string
+  repository: string
+  declaration_lineage: string
+  canonical_operation: string
+}
+
+export interface WorkbenchProposalSource {
+  path: string
+  content: string
+}
+
+export interface WorkbenchPlan {
+  investigation_id?: string
+  expected_revision_id?: string
+  referent: string
+  claim_family: string
+  title: string
+  revision: {
+    normalized_question: string
+    decision_sought: string
+    snapshot_policy: string
+    build_configuration: string
+    enumeration_method: string
+  }
+  brief: {
+    ticket_kind: WorkbenchTicketKind
+    problem: string
+    desired_outcome: string
+    success_criteria: string[]
+    non_goals: string[]
+    assumptions: string[]
+    open_questions: string[]
+    external_reference?: string
+    what: {
+      selections: WorkbenchContractSelection[]
+      proposal_protocol?: string
+      proposal_sources?: WorkbenchProposalSource[]
+    }
+  }
+  repositories: string[]
+  capabilities: string[]
+}
+
+export interface WorkbenchProposalCommitment {
+  protocol: string
+  files: {
+    path: string
+    content_hash: string
+    size_bytes: number
+  }[]
+  source_set_digest: string
+}
+
+export interface WorkbenchBriefWhat {
+  selections: WorkbenchContractSelection[]
+  proposal?: WorkbenchProposalCommitment
+}
+
+export interface WorkbenchView {
+  investigation: {
+    investigation_id: string
+    referent: string
+    claim_family: string
+    title: string
+    owner: string
+    lifecycle: string
+    current_revision_id?: string
+    created_at: string
+    updated_at: string
+  }
+  revision: {
+    revision_id: string
+    investigation_id: string
+    seq: number
+    normalized_question: string
+    decision_sought: string
+    declared_universe: string
+    snapshot_policy: string
+    build_configuration: string
+    pack_selection: string
+    enumeration_method: string
+    creator: string
+    created_at: string
+    content_digest: string
+  }
+  brief: {
+    brief_id: string
+    schema_version: string
+    investigation_id: string
+    revision_id: string
+    ticket_kind: WorkbenchTicketKind
+    problem: string
+    desired_outcome: string
+    success_criteria: string[]
+    non_goals: string[]
+    assumptions: string[]
+    open_questions: string[]
+    external_reference?: string
+    what: WorkbenchBriefWhat
+    creator: string
+    created_at: string
+    content_digest: string
+  }
+}
+
+export interface WorkbenchPreview {
+  schema_version: string
+  operation: 'create' | 'revise'
+  ready: boolean
+  preview_digest?: string
+  investigation_id?: string
+  expected_revision_id?: string
+  next_revision_sequence: number
+  referent: string
+  claim_family: string
+  title: string
+  revision: {
+    normalized_question: string
+    decision_sought: string
+    declared_universe: string
+    snapshot_policy: string
+    build_configuration: string
+    pack_selection: string
+    enumeration_method: string
+  }
+  brief: {
+    schema_version: string
+    ticket_kind: WorkbenchTicketKind
+    problem: string
+    desired_outcome: string
+    success_criteria: string[]
+    non_goals: string[]
+    assumptions: string[]
+    open_questions: string[]
+    external_reference?: string
+    what: WorkbenchBriefWhat
+    creator: string
+  }
+  authorization_digest?: string
+  repositories: { name: string; commit: string }[]
+  endpoints: {
+    selection: WorkbenchContractSelection
+    declaration_commit: string
+    declaration_digest: string
+    declaration_sources: {
+      repository: string
+      commit: string
+      path: string
+      start_byte: number
+      end_byte: number
+      start_line: number
+      end_line: number
+      assertion_id: string
+      run_id: string
+      atom_id: string
+    }[]
+    sources_truncated: boolean
+  }[]
+  capabilities: {
+    id: string
+    available: boolean
+    version?: string
+    content_digest?: string
+  }[]
+  compatibility: {
+    status: 'available' | 'unavailable'
+    protocol?: string
+    reason?: string
+    limits?: Record<string, string | number>
+  }
+  estimate: {
+    repository_count: number
+    endpoint_count: number
+    proposal_files: number
+    proposal_bytes: number
+    capability_count: number
+    analysis_units: number
+  }
+  blockers: { code: string; input?: string }[]
+}
+
+export interface WorkbenchMutationRequest {
+  plan: WorkbenchPlan
+  preview_digest: string
+  idempotency_key: string
+}
+
+export class WorkbenchAPIError extends Error {
+  readonly status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'WorkbenchAPIError'
+    this.status = status
+  }
+}
+
 export type InvestigationOutcome = 'ok' | 'partial' | 'refused' | 'error'
 export type InvestigationAttributionState = 'resolved' | 'ambiguous' | 'unresolved' | 'not_applicable'
 
@@ -978,6 +1180,74 @@ export const fetchAnalytics = (days = 30, signal?: AbortSignal) =>
 
 export const fetchVersion = (signal?: AbortSignal) =>
   getJSON<VersionInfo>('/api/version', signal)
+
+async function workbenchJSON<T>(
+  url: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const response = await request(url, init)
+  if (!response.ok) {
+    const body = await response.text()
+    let message = body
+    if (body) {
+      try {
+        const problem = JSON.parse(body) as { detail?: unknown }
+        if (typeof problem.detail === 'string' && problem.detail.trim()) {
+          message = problem.detail
+        }
+      } catch {
+        // Preserve a non-JSON boundary response verbatim.
+      }
+    }
+    throw new WorkbenchAPIError(
+      response.status,
+      message || `Workbench request failed (${response.status})`,
+    )
+  }
+  return response.json() as Promise<T>
+}
+
+export const previewWorkbench = (
+  plan: WorkbenchPlan,
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchPreview>('/api/workbench_previews', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+  body: JSON.stringify(plan),
+  signal,
+})
+
+export const fetchWorkbench = (
+  investigationID: string,
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchView>(
+  `/api/workbenches/${encodeURIComponent(investigationID)}`,
+  { signal },
+)
+
+export const createWorkbench = (
+  mutation: WorkbenchMutationRequest,
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchView>('/api/workbenches', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+  body: JSON.stringify(mutation),
+  signal,
+})
+
+export const reviseWorkbench = (
+  investigationID: string,
+  mutation: WorkbenchMutationRequest,
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchView>(
+  `/api/workbenches/${encodeURIComponent(investigationID)}/revisions`,
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+    body: JSON.stringify(mutation),
+    signal,
+  },
+)
 
 export const fetchContractCatalog = (
   filters: {

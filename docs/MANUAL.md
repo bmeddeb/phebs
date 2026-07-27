@@ -453,12 +453,13 @@ reference-machine observation, not a universal performance promise. Passing
 the closure changes neither the experimental-dark registration nor the
 external `NOT_ESTABLISHED` accuracy posture.
 
-There is no Change Workbench in the current release. The available pieces are
-separate: a human can browse a declaration in Contracts, carry its operation
-to Impact, inspect cited matching/unresolved evidence and the coverage
-certificate, then use Search, SCIP navigation, and History independently.
-The rich Investigations page is currently a development fixture projection,
-not a production ticket-intake or checklist workflow.
+There is no production Change Workbench in the current release. The available
+production pieces are separate: a human can browse a declaration in Contracts,
+carry its operation to Impact, inspect cited matching/unresolved evidence and
+the coverage certificate, then use Search, SCIP navigation, and History
+independently. The rich Investigations page and the T21.10 Workbench shell
+described below are development fixture projections, not a production
+ticket-intake or checklist workflow.
 
 The internal T21.2 storage boundary now supports an immutable, canonical
 Change Brief as a child of one Investigation revision. It stores the ticket
@@ -487,7 +488,62 @@ one bounded cancellation-independent receipt lookup so retrying that key can
 recover the committed result.
 Proposal source bytes are never returned or retained. A conditional Huma
 projection exists for tests and future registration, but it is absent from the
-current release's routes, OpenAPI, and advertised capabilities.
+normal production server's routes, OpenAPI, and advertised capabilities.
+
+### Synthetic Change Workbench shell
+
+`make dev` and `make dev-api` explicitly set
+`PHEBS_SYNTHETIC_WORKBENCH=1` alongside the documented synthetic Investigation
+and Contract Atlas fixtures. Only that exact value is accepted, and startup
+fails closed unless both fixture adapters and the Workbench service are
+available. The resulting authenticated `change-workbench` capability exposes
+the experimental `#/workbench` route and its conditional HTTP operations.
+Setting ordinary production configuration never enables it; this adapter does
+not satisfy the retained validation or pilot-continuation gate.
+
+The Workbench home offers two read/write-safe entry paths:
+
+- paste up to 16 KiB of ticket context, choose add, modify, migrate, or retire,
+  and shape an editable Why draft; or
+- open one exact Contract Atlas operation and choose **Start Workbench** to
+  seed its complete protocol, repository, declaration-lineage, and canonical
+  operation identity.
+
+An existing Investigation may be resumed by ID. Resume first performs an
+authorized read of its current revision and then places both the Investigation
+ID and exact Revision ID in the URL. Reload, deep links, and the persistent
+Why → What → Where → How rail preserve those IDs. If that link is no longer
+current, the shell refuses to retarget it silently and offers a separate link
+to the newly authorized current revision. Unknown and newly unauthorized IDs
+share the same non-disclosing unavailable view.
+
+Why keeps human-authored problem, desired outcome, success criteria,
+non-goals, assumptions, open questions, inert external reference, and the
+bounded analysis-contract fields editable. What keeps ticket mode, visible
+repository universe, exact endpoint roles and identities, and optional
+proposal source explicit. Add and modify accept proposed protobuf or Thrift
+source; migrate and retire do not. The browser checks the reviewed 256-file,
+4 MiB-per-file, and 32 MiB aggregate source ceilings before sending a preview.
+After a saved Workbench is reopened, only the retained proposal
+path/hash/size commitment is shown; source bytes must be supplied again for a
+new revision.
+
+Opening a step and editing fields perform no preview or mutation. **Preview
+revision** is an explicit read-only operation. Only a ready preview with the
+same current draft digest enables **Create Workbench** or **Append revision**;
+any later edit marks the preview expired and requires **Refresh preview**.
+Compatibility `unavailable` remains visibly distinct from a compatible
+result. Permission loss, source refusal, stale revision or preview conflicts,
+and retry paths remain explicit; structured server problem responses render
+their bounded detail rather than raw JSON. Unsaved edits install the browser's
+ordinary leave warning. The responsive rail becomes a horizontal step strip on
+narrow screens, while native labels, headings, navigation landmarks,
+current-step state, live status regions, visible focus, and native
+buttons/links preserve keyboard and screen-reader operation.
+
+Where and How are honest navigation placeholders in T21.10. They invoke no
+evidence readers, preview, or mutation; T21.11 owns their impact,
+implementation-evidence, suggestion, and Disposition views.
 
 The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
 contains declaration-proven call rows or stable field-reference rows.
@@ -645,7 +701,8 @@ safe-to-retire claim.
 
 The internal T21.9 checklist now composes the current authorized T21.7 Where
 and T21.8 How projections. It remains production-unregistered/default-dark:
-there is no current HTTP, UI, or MCP entry. Each machine suggestion binds its
+the synthetic T21.10 shell does not expose a checklist HTTP, UI, or MCP entry.
+Each machine suggestion binds its
 originating Workbench Revision, normalized evidence inputs, complete evidence
 snapshot, deterministic selection rule, and exact evidence references.
 Suggestions are never persisted or accepted automatically. When evidence
@@ -2651,8 +2708,8 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas demo fixtures, run with embedded UI                                   |
-| `make dev-api`       | backend-only loop with the same children and explicit demo fixtures (placeholder UI page, fast)                                                         |
+| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas fixtures and the fixture-coupled Change Workbench, run with embedded UI |
+| `make dev-api`       | backend-only loop with the same children and explicit fixtures/Workbench adapter (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index` and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |

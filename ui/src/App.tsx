@@ -22,6 +22,7 @@ const AuditPage = lazy(() => import('./pages/AuditPage'))
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
 const ImpactPage = lazy(() => import('./pages/ImpactPage'))
 const InvestigationPage = lazy(() => import('./pages/InvestigationPage'))
+const WorkbenchPage = lazy(() => import('./pages/WorkbenchPage'))
 const ContractAtlasPage = lazy(() => import('./pages/ContractAtlasPage'))
 const CallerMapPage = lazy(() => import('./pages/CallerMapPage'))
 const CallerComparisonPage = lazy(() => import('./pages/CallerComparisonPage'))
@@ -81,6 +82,7 @@ export default function App() {
   const callerComparisonAvailable = capabilities.includes('contract-caller-comparison')
   const compatibilityAvailable = capabilities.includes('contract-compatibility')
   const investigationsAvailable = capabilities.includes('investigation-core-views')
+  const workbenchAvailable = capabilities.includes('change-workbench')
   const topicsAvailable = capabilities.includes('kafka-topic-usage')
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
@@ -91,7 +93,7 @@ export default function App() {
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/contracts') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/contracts') && contractsAvailable) page = <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} />
+  else if (path.startsWith('/contracts') && contractsAvailable) page = <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} workbenchAvailable={workbenchAvailable} />
   else if (path.startsWith('/callers') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/callers') && callerMapAvailable) page = <CallerMapPage params={params} comparisonAvailable={callerComparisonAvailable} />
   else if (path.startsWith('/compare-callers') && !capabilitiesLoaded) page = <Spinner $size="small" />
@@ -110,6 +112,8 @@ export default function App() {
   else if (path.startsWith('/topics') && topicsAvailable) page = <KafkaTopicsPage params={params} />
   else if (path.startsWith('/investigations') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/investigations') && investigationsAvailable) page = <InvestigationPage params={params} />
+  else if (path.startsWith('/workbench') && !capabilitiesLoaded) page = <Spinner $size="small" />
+  else if (path.startsWith('/workbench') && workbenchAvailable) page = <WorkbenchPage params={params} />
   else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 
@@ -117,7 +121,7 @@ export default function App() {
 
   return (
     <div className={css({ minHeight: '100vh', backgroundColor: tok.pageBg })}>
-      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} investigationsAvailable={investigationsAvailable} onLogout={() => void logout().catch(() => {})} />
+      <Header path={path} email={status.user?.email ?? ''} isAdmin={status.user?.is_admin === true} contractsAvailable={contractsAvailable} impactAvailable={impactAvailable} topicsAvailable={topicsAvailable} investigationsAvailable={investigationsAvailable} workbenchAvailable={workbenchAvailable} onLogout={() => void logout().catch(() => {})} />
       <main
         className={css({
           width: '100%',
@@ -147,7 +151,7 @@ export default function App() {
   )
 }
 
-export function Header({ path, email, isAdmin, contractsAvailable, impactAvailable, topicsAvailable, investigationsAvailable, onLogout }: { path: string; email: string; isAdmin: boolean; contractsAvailable: boolean; impactAvailable: boolean; topicsAvailable: boolean; investigationsAvailable: boolean; onLogout: () => void }) {
+export function Header({ path, email, isAdmin, contractsAvailable, impactAvailable, topicsAvailable, investigationsAvailable, workbenchAvailable, onLogout }: { path: string; email: string; isAdmin: boolean; contractsAvailable: boolean; impactAvailable: boolean; topicsAvailable: boolean; investigationsAvailable: boolean; workbenchAvailable: boolean; onLogout: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const { mode, toggle } = useMode()
@@ -161,6 +165,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
   const isTopics = path.startsWith('/topics')
   const isContracts = path.startsWith('/contracts')
   const isInvestigations = path.startsWith('/investigations')
+  const isWorkbench = path.startsWith('/workbench')
   const isSearch = path === '/' || path.startsWith('/search')
 
   return (
@@ -205,6 +210,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
         {impactAvailable && <NavLink href="#/impact" label="Impact" active={isImpact} />}
         {topicsAvailable && <NavLink href="#/topics" label="Topics" active={isTopics} />}
         {investigationsAvailable && <NavLink href="#/investigations?id=04" label="Investigations" active={isInvestigations} />}
+        {workbenchAvailable && <NavLink href="#/workbench" label="Workbench" active={isWorkbench} />}
         {isAdmin && <NavLink href="#/audit" label="Audit" active={isAudit} />}
         {isAdmin && <NavLink href="#/analytics" label="Analytics" active={isAnalytics} />}
         <NavLink href="#/settings" label="Settings" active={isSettings} />

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  createWorkbench,
   createAPIKey,
   fetchCallerComparison,
   fetchContractCallers,
@@ -11,8 +12,13 @@ import {
   fetchReferences,
   fetchRepoStatus,
   fetchSource,
+  fetchWorkbench,
+  previewWorkbench,
   revokeAPIKey,
+  reviseWorkbench,
   streamSearch,
+  WorkbenchAPIError,
+  type WorkbenchPlan,
 } from './api'
 import { setCSRFToken } from './authSession'
 
@@ -278,5 +284,112 @@ describe('request helpers', () => {
         headers: { 'X-CSRF-Token': 'csrf-settings' },
       },
     ])
+  })
+
+  it('binds Workbench reads and explicit digest-backed mutations', async () => {
+    setCSRFToken('csrf-workbench')
+    const plan: WorkbenchPlan = {
+      referent: 'ticket:T21.10',
+      claim_family: 'change-workbench',
+      title: 'Retire old operation',
+      revision: {
+        normalized_question: 'What changes?',
+        decision_sought: 'Approve retirement.',
+        snapshot_policy: 'exact indexed commits',
+        build_configuration: 'repository default',
+        enumeration_method: 'exact selection',
+      },
+      brief: {
+        ticket_kind: 'retire',
+        problem: 'The operation is obsolete.',
+        desired_outcome: 'The operation is retired.',
+        success_criteria: ['The exact operation is selected.'],
+        non_goals: [],
+        assumptions: [],
+        open_questions: [],
+        what: { selections: [] },
+      },
+      repositories: ['github.com/acme/contracts'],
+      capabilities: ['contract-atlas'],
+    }
+    const mutation = {
+      plan,
+      preview_digest: `sha256:${'a'.repeat(64)}`,
+      idempotency_key: 'workbench-ui-test',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await previewWorkbench(plan)
+    await fetchWorkbench('01J A/B')
+    await createWorkbench(mutation)
+    await reviseWorkbench('01J A/B', mutation)
+
+    expect(fetchMock.mock.calls).toEqual([
+      [
+        '/api/workbench_previews',
+        {
+          credentials: 'same-origin',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': 'csrf-workbench',
+          },
+          body: JSON.stringify(plan),
+          signal: undefined,
+        },
+      ],
+      [
+        '/api/workbenches/01J%20A%2FB',
+        { credentials: 'same-origin', signal: undefined },
+      ],
+      [
+        '/api/workbenches',
+        {
+          credentials: 'same-origin',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': 'csrf-workbench',
+          },
+          body: JSON.stringify(mutation),
+          signal: undefined,
+        },
+      ],
+      [
+        '/api/workbenches/01J%20A%2FB/revisions',
+        {
+          credentials: 'same-origin',
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': 'csrf-workbench',
+          },
+          body: JSON.stringify(mutation),
+          signal: undefined,
+        },
+      ],
+    ])
+  })
+
+  it('preserves Workbench HTTP status for permission and conflict handling', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      text: async () => JSON.stringify({
+        title: 'Conflict',
+        status: 409,
+        detail: 'preview digest changed',
+      }),
+    }))
+    const failure = await fetchWorkbench('01J').catch((cause) => cause)
+    expect(failure).toBeInstanceOf(WorkbenchAPIError)
+    expect(failure).toMatchObject({
+      status: 409,
+      message: 'preview digest changed',
+    })
   })
 })
