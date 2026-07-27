@@ -336,6 +336,9 @@ func validateText(name, value string, limit int) error {
 		strings.TrimSpace(value) != value {
 		return fmt.Errorf("%s is empty, oversized, non-UTF-8, or not trimmed", name)
 	}
+	if strings.ContainsAny(value, "*_`[]<>#|\\") {
+		return fmt.Errorf("%s contains markup syntax", name)
+	}
 	for _, character := range value {
 		if unicode.IsControl(character) {
 			return fmt.Errorf("%s contains a control character", name)

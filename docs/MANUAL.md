@@ -478,6 +478,13 @@ revision, and proposed-file hashes, then returns blockers and a transparent
 count/byte estimate without writing. Submission re-runs the preview and uses an
 idempotency key plus expected Revision; any changed permission, commit,
 declaration, proposal, capability, or current Revision refuses the write.
+If the serialized authorized repository universe exceeds the Revision's
+64 KiB field ceiling, preview returns
+`DECLARED_UNIVERSE_TOO_LARGE`, never `Ready`. Nil and empty contract-selection
+sets canonicalize to one brief identity. Mutation receipts revalidate their
+principal and key on every read; after a write-side timeout, the service makes
+one bounded cancellation-independent receipt lookup so retrying that key can
+recover the committed result.
 Proposal source bytes are never returned or retained. A conditional Huma
 projection exists for tests and future registration, but it is absent from the
 current release's routes, OpenAPI, and advertised capabilities.
@@ -500,9 +507,12 @@ available as collapsed advanced detail beneath the scope/gaps summary.
 Each qualified heading has a generated help control. Hover or keyboard focus
 shows the short and expanded explanation; click or tap pins it. Escape, its
 close control, or an outside click dismisses it, with focus returned after
-explicit keyboard/button dismissal. The explanation includes the evidence and
-authority boundaries and shows the canonical unavailable message when its
-capability is dark. If the interactive control cannot be used, the generated
+explicit keyboard/button dismissal. A short hover bridge keeps the portaled
+dialog open while the pointer crosses the visual gap so its text and scroll
+area remain operable. The explanation includes the evidence and authority
+boundaries and shows the canonical unavailable message when its capability is
+dark. Canonical glossary text rejects Markdown/HTML control syntax before any
+MANUAL projection. If the interactive control cannot be used, the generated
 glossary below is the complete documentation fallback.
 
 <!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
@@ -679,9 +689,17 @@ parsing preview support but no compatibility engine, so it renders
 Retaining a protobuf modify analysis is a separate explicit mutation. It
 rechecks the owner, current Workbench Revision, proposal path/hash/size,
 authorization snapshot, exact Atlas endpoint and commit-pinned declaration
-spans, and pinned compatibility policy. One idempotency key yields one audited
+spans, and pinned compatibility policy. Caller-supplied `before` bytes are not
+baseline authority: every submitted path is re-read through the bounded Git
+layer from the currently authorized selected repository at its exact committed
+revision; path and bytes must match, and every declaration-source path must be
+present, before a run is created. One idempotency key yields one audited
 Investigation run/artifact; an exact retry returns that same terminal result,
-including a bounded failed artifact when the checker refuses. The artifact
+including a bounded failed artifact when the checker refuses. A run abandoned
+by a crashed worker can be requeued only after its lease is at least five
+minutes old, under the exact observed lease tuple, and within a three-attempt
+ceiling; live workers remain fenced. Failed artifacts retain only a stable
+failure classification, never Buf stderr or proposal symbols. The artifact
 contains input commitments and the compatibility result, not submitted source
 bytes, and is owned by Investigation retention. It is not a proof bundle and
 does not change proof-bundle reauthorization, expiry, deletion, bytes, or

@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/compat"
@@ -18,6 +19,8 @@ import (
 const (
 	WorkbenchCompatibilityAnalysisSchemaVersion = "workbench-compatibility-analysis-v1"
 	workbenchCompatibilityArtifactScope         = "workbench-compatibility-v1"
+	workbenchCompatibilityLeaseTTL              = 5 * time.Minute
+	workbenchCompatibilityMaxAttempts           = 3
 )
 
 type WorkbenchCompatibilityAnalysisRequest struct {
@@ -155,7 +158,7 @@ func (service InvestigationWorkbenchService) RetainCompatibility(
 		))
 	}
 
-	prepared, err := compat.Prepare(ctx, compat.Request{
+	submitted, err := compat.Prepare(ctx, compat.Request{
 		Lineage: current.DeclarationLineage,
 		Before:  request.Before,
 		After:   request.After,
@@ -202,6 +205,30 @@ func (service InvestigationWorkbenchService) RetainCompatibility(
 	)
 	if err != nil {
 		return nil, err
+	}
+	baseline, err := service.resolveWorkbenchCompatibilityBaseline(
+		ctx,
+		principal,
+		snapshot.Endpoints[0],
+		request.Before,
+	)
+	if err != nil {
+		return nil, err
+	}
+	prepared, err := compat.Prepare(ctx, compat.Request{
+		Lineage: current.DeclarationLineage,
+		Before:  baseline,
+		After:   request.After,
+	})
+	if err != nil {
+		return nil, invalidWorkbench(err)
+	}
+	if !reflect.DeepEqual(prepared.Before, submitted.Before) ||
+		!reflect.DeepEqual(prepared.After, submitted.After) {
+		return nil, fmt.Errorf(
+			"workbench compatibility source commitment changed: %w",
+			ErrConflict,
+		)
 	}
 	input := workbenchCompatibilityInputManifest{
 		SchemaVersion: WorkbenchCompatibilityAnalysisSchemaVersion,
@@ -267,19 +294,46 @@ func (service InvestigationWorkbenchService) RetainCompatibility(
 			*artifact,
 		)
 	}
-	if run.State != RunQueued {
-		return nil, fmt.Errorf(
-			"workbench compatibility analysis is already running: %w",
-			ErrConflict,
-		)
-	}
 	lease, err := service.Store.AcquireInvestigationRunLease(
 		ctx,
 		run.ID,
 		principal,
 	)
 	if err != nil {
-		return nil, err
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if run.State == RunQueued && !errors.Is(err, ErrLeaseLost) {
+			return nil, err
+		}
+		if _, recoveryErr := service.Store.RequeueStaleInvestigationRun(
+			ctx,
+			run.ID,
+			principal,
+			time.Now().Add(-workbenchCompatibilityLeaseTTL),
+			"abandoned compatibility attempt recovered",
+			workbenchCompatibilityMaxAttempts,
+		); recoveryErr != nil {
+			return nil, fmt.Errorf(
+				"workbench compatibility analysis is already running: %w",
+				ErrConflict,
+			)
+		}
+		run, err = service.Store.GetRunAs(ctx, principal, run.ID)
+		if err != nil || run.State != RunQueued {
+			return nil, fmt.Errorf(
+				"workbench compatibility recovery is inconsistent: %w",
+				ErrConflict,
+			)
+		}
+		lease, err = service.Store.AcquireInvestigationRunLease(
+			ctx,
+			run.ID,
+			principal,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if _, err := service.Store.AdvanceInvestigationRun(
 		ctx,
@@ -299,7 +353,7 @@ func (service InvestigationWorkbenchService) RetainCompatibility(
 	}
 	result, checkErr := service.Compatibility.Check(ctx, compat.Request{
 		Lineage: current.DeclarationLineage,
-		Before:  request.Before,
+		Before:  baseline,
 		After:   request.After,
 	})
 	if checkErr != nil {
@@ -391,6 +445,85 @@ func (service InvestigationWorkbenchService) RetainCompatibility(
 		*publishedRun,
 		*artifact,
 	)
+}
+
+func (service InvestigationWorkbenchService) resolveWorkbenchCompatibilityBaseline(
+	ctx context.Context,
+	principal string,
+	endpoint WorkbenchEndpointSnapshot,
+	submitted []compat.File,
+) ([]compat.File, error) {
+	resolver, ok := service.Resolver.(WorkbenchBaselineResolver)
+	if !ok {
+		return nil, invalidWorkbench(errors.New(
+			"workbench compatibility baseline resolver is unavailable",
+		))
+	}
+	if endpoint.SourcesTruncated {
+		return nil, fmt.Errorf(
+			"workbench compatibility declaration sources are truncated: %w",
+			ErrConflict,
+		)
+	}
+	canonicalSubmitted := slices.Clone(submitted)
+	slices.SortFunc(canonicalSubmitted, func(left, right compat.File) int {
+		return strings.Compare(left.Path, right.Path)
+	})
+	paths := make([]string, len(canonicalSubmitted))
+	for index, file := range canonicalSubmitted {
+		if index > 0 && file.Path == canonicalSubmitted[index-1].Path {
+			return nil, invalidWorkbench(fmt.Errorf(
+				"workbench compatibility repeats baseline path %q",
+				file.Path,
+			))
+		}
+		paths[index] = file.Path
+	}
+	resolved, err := resolver.ResolveWorkbenchBaseline(
+		ctx,
+		principal,
+		WorkbenchBaselineRequest{
+			Repository: endpoint.Selection.Repository,
+			Commit:     endpoint.DeclarationCommit,
+			Paths:      paths,
+		},
+	)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf(
+			"resolve workbench compatibility baseline: %w",
+			err,
+		)
+	}
+	baseline := make([]compat.File, len(resolved))
+	for index, file := range resolved {
+		baseline[index] = compat.File{Path: file.Path, Content: file.Content}
+	}
+	slices.SortFunc(baseline, func(left, right compat.File) int {
+		return strings.Compare(left.Path, right.Path)
+	})
+	if !reflect.DeepEqual(baseline, canonicalSubmitted) {
+		return nil, fmt.Errorf(
+			"workbench compatibility baseline differs from the exact repository source: %w",
+			ErrConflict,
+		)
+	}
+	baselinePaths := make(map[string]bool, len(baseline))
+	for _, file := range baseline {
+		baselinePaths[file.Path] = true
+	}
+	for _, source := range endpoint.DeclarationSources {
+		if !baselinePaths[source.Path] {
+			return nil, fmt.Errorf(
+				"workbench compatibility baseline omits declaration source %q: %w",
+				source.Path,
+				ErrConflict,
+			)
+		}
+	}
+	return baseline, nil
 }
 
 func (service InvestigationWorkbenchService) failWorkbenchCompatibility(
@@ -564,14 +697,22 @@ func workbenchCapabilityVersion(
 }
 
 func boundedCompatibilityFailure(err error) string {
-	value := strings.TrimSpace(err.Error())
-	if len(value) > 4_096 {
-		value = value[:4_096]
-	}
-	if value == "" || !utf8.ValidString(value) {
+	switch {
+	case errors.Is(err, context.Canceled):
+		return "compatibility analysis canceled"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "compatibility analysis deadline exceeded"
+	case errors.Is(err, compat.ErrUnavailable):
+		return "compatibility engine unavailable"
+	case errors.Is(err, compat.ErrCheckFailed):
+		return "compatibility engine could not produce a verdict"
+	case errors.Is(err, compat.ErrLimit):
+		return "compatibility input exceeded a bounded limit"
+	case errors.Is(err, compat.ErrInvalidInput):
+		return "compatibility input is invalid"
+	default:
 		return "compatibility analysis failed"
 	}
-	return value
 }
 
 func decodeWorkbenchCompatibilityAnalysis(

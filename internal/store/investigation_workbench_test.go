@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -24,6 +25,30 @@ type fixtureWorkbenchResolver struct {
 	capabilityAvailable bool
 	omitRepository      bool
 	omitEndpoint        bool
+}
+
+func (resolver *fixtureWorkbenchResolver) ResolveWorkbenchBaseline(
+	_ context.Context,
+	_ string,
+	request WorkbenchBaselineRequest,
+) ([]WorkbenchSourceFile, error) {
+	resolver.mu.Lock()
+	defer resolver.mu.Unlock()
+	if request.Repository != "example/contracts" ||
+		request.Commit != resolver.endpointCommit {
+		return nil, ErrNotFound
+	}
+	result := make([]WorkbenchSourceFile, len(request.Paths))
+	for index, sourcePath := range request.Paths {
+		if sourcePath != "proto/shop.proto" {
+			return nil, ErrNotFound
+		}
+		result[index] = WorkbenchSourceFile{
+			Path:    sourcePath,
+			Content: "syntax = \"proto3\";\nservice Checkout {}\n",
+		}
+	}
+	return result, nil
 }
 
 func newFixtureWorkbenchResolver() *fixtureWorkbenchResolver {
@@ -266,6 +291,76 @@ func TestWorkbenchPreviewIsCanonicalBoundedAndSideEffectFree(t *testing.T) {
 	}
 }
 
+func TestWorkbenchPreviewRefusesUncommittableUniverseAndCanonicalizesEmptySelections(
+	t *testing.T,
+) {
+	s := newRunnerStore(t)
+	resolver := newFixtureWorkbenchResolver()
+	service := InvestigationWorkbenchService{Store: s, Resolver: resolver}
+
+	oversized := workbenchPlanFixture()
+	for index := 0; index < maxWorkbenchRepositories-1; index++ {
+		oversized.Repositories = append(
+			oversized.Repositories,
+			fmt.Sprintf(
+				"example/%04d-%s",
+				index,
+				strings.Repeat("repository", 8),
+			),
+		)
+	}
+	preview, err := service.Preview(
+		context.Background(),
+		workbenchOwner,
+		oversized,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.Ready || preview.PreviewDigest != "" ||
+		len(preview.Revision.DeclaredUniverse) <= maxInvestigationFieldBytes ||
+		!slices.ContainsFunc(
+			preview.Blockers,
+			func(blocker WorkbenchBlocker) bool {
+				return blocker.Code == "DECLARED_UNIVERSE_TOO_LARGE"
+			},
+		) {
+		t.Fatalf("oversized universe preview = %+v", preview)
+	}
+	for _, table := range []string{
+		"investigation",
+		"investigation_revision",
+		"investigation_change_brief",
+		"investigation_workbench_mutation",
+	} {
+		if count := workbenchTableCount(t, s, table); count != 0 {
+			t.Fatalf("oversized preview wrote %d rows to %s", count, table)
+		}
+	}
+
+	empty := workbenchPlanFixture()
+	empty.Brief.TicketKind = ChangeBriefAdd
+	empty.Brief.What.Selections = nil
+	withNil, err := service.Preview(context.Background(), workbenchOwner, empty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	empty.Brief.What.Selections = []ChangeBriefContractSelection{}
+	withEmpty, err := service.Preview(context.Background(), workbenchOwner, empty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withNil.PreviewDigest != withEmpty.PreviewDigest ||
+		withNil.Brief.What.Selections == nil ||
+		withEmpty.Brief.What.Selections == nil {
+		t.Fatalf(
+			"nil/empty selections changed canonical preview: %#v / %#v",
+			withNil.Brief.What.Selections,
+			withEmpty.Brief.What.Selections,
+		)
+	}
+}
+
 func TestWorkbenchCreateIsAtomicConcurrentAndIdempotent(t *testing.T) {
 	s := newRunnerStore(t)
 	resolver := newFixtureWorkbenchResolver()
@@ -373,6 +468,41 @@ func TestWorkbenchCreateIsAtomicConcurrentAndIdempotent(t *testing.T) {
 		request,
 	); !errors.Is(err, ErrConflict) {
 		t.Fatalf("reused idempotency key = %v, want ErrConflict", err)
+	}
+}
+
+func TestWorkbenchMutationReceiptRevalidatesPrincipalAndKey(t *testing.T) {
+	s := newRunnerStore(t)
+	service := InvestigationWorkbenchService{
+		Store: s, Resolver: newFixtureWorkbenchResolver(),
+	}
+	created, _ := createWorkbenchFixture(t, service)
+	record, err := s.getWorkbenchMutationRecord(
+		context.Background(),
+		workbenchOwner,
+		"fixture-create",
+	)
+	if err != nil || record.InvestigationID != created.Investigation.ID {
+		t.Fatalf("fixture receipt = %+v, %v", record, err)
+	}
+	if _, err := surrealdb.Query[[]struct{}](
+		context.Background(),
+		s.db,
+		"UPDATE $rid SET principal = $principal RETURN NONE",
+		map[string]any{
+			"rid":       workbenchMutationRecordID(workbenchOwner, "fixture-create"),
+			"principal": "user:other",
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.getWorkbenchMutationRecord(
+		context.Background(),
+		workbenchOwner,
+		"fixture-create",
+	); err == nil ||
+		!strings.Contains(err.Error(), "stored receipt binding is inconsistent") {
+		t.Fatalf("corrupted receipt read = %v", err)
 	}
 }
 

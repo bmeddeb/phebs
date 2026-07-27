@@ -21,6 +21,7 @@ const termById = new Map<GlossaryTermId, GlossaryTerm>(
 const viewportGutter = 12
 const popoverGap = 8
 const popoverWidth = 360
+const hoverBridgeMilliseconds = 120
 
 export interface SectionHelpProps {
   termId: GlossaryTermId
@@ -42,6 +43,7 @@ export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
   const [position, setPosition] = useState<Position | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const hoverCloseTimer = useRef<number | null>(null)
   const suppressFocusOpen = useRef(false)
   const reactId = useId()
   const id = `section-help-${reactId.replaceAll(':', '')}`
@@ -51,7 +53,29 @@ export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
   const isOpen = Boolean(term) && !dismissed && (hovered || focused || pinned)
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
 
+  const cancelHoverClose = () => {
+    if (hoverCloseTimer.current !== null) {
+      window.clearTimeout(hoverCloseTimer.current)
+      hoverCloseTimer.current = null
+    }
+  }
+
+  const openFromHover = () => {
+    cancelHoverClose()
+    setHovered(true)
+    setDismissed(false)
+  }
+
+  const scheduleHoverClose = () => {
+    cancelHoverClose()
+    hoverCloseTimer.current = window.setTimeout(() => {
+      hoverCloseTimer.current = null
+      setHovered(false)
+    }, hoverBridgeMilliseconds)
+  }
+
   const dismiss = (returnFocus: boolean) => {
+    cancelHoverClose()
     setHovered(false)
     setFocused(false)
     setPinned(false)
@@ -90,6 +114,10 @@ export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
     }
     updatePosition()
   }, [isOpen])
+
+  useEffect(() => {
+    return () => cancelHoverClose()
+  }, [])
 
   useEffect(() => {
     if (!isOpen) return
@@ -131,6 +159,8 @@ export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
       role="dialog"
       aria-label={`${term.label} help`}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
+      onMouseEnter={openFromHover}
+      onMouseLeave={scheduleHoverClose}
       className={css({
         position: 'fixed',
         boxSizing: 'border-box',
@@ -245,11 +275,8 @@ export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
           setFocused(true)
           setDismissed(false)
         }}
-        onMouseEnter={() => {
-          setHovered(true)
-          setDismissed(false)
-        }}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={openFromHover}
+        onMouseLeave={scheduleHoverClose}
         className={css({
           width: '22px',
           height: '22px',

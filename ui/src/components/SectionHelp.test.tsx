@@ -72,6 +72,21 @@ test('hover and keyboard focus expose generated short and expanded help', async 
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 })
 
+test('hover remains open while the pointer crosses into the portaled dialog', async () => {
+  help()
+  const trigger = screen.getByRole('button', { name: 'Help for Matching static evidence' })
+  fireEvent.mouseEnter(trigger)
+  const dialog = await screen.findByRole('dialog')
+
+  fireEvent.mouseLeave(trigger)
+  fireEvent.mouseEnter(dialog)
+  await new Promise((resolve) => window.setTimeout(resolve, 180))
+  expect(screen.getByRole('dialog')).toBeTruthy()
+
+  fireEvent.mouseLeave(dialog)
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+})
+
 test('click pins help and Escape closes it with focus returned', async () => {
   help()
   const trigger = screen.getByRole('button', { name: 'Help for Matching static evidence' })

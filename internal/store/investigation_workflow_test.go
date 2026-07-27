@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -147,6 +148,73 @@ func TestInvestigationRunLeaseRetriesCancellationAndLateWorkerFence(t *testing.T
 	}
 	if _, err := s.GetRunArtifactForRunAs(ctx, authzOwner, runID); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("canceled run artifact = %v, want ErrNotFound", err)
+	}
+}
+
+func TestInvestigationRunStaleLeaseRecoveryIsTimeAndAttemptFenced(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	created, err := s.CreateGuidedInvestigation(
+		ctx,
+		guidedRequest("guided-stale-recovery"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := s.AcquireInvestigationRunLease(
+		ctx,
+		created.Run.ID,
+		"worker:first",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.AdvanceInvestigationRun(
+		ctx,
+		*first,
+		store.RunEnumerating,
+		"scope frozen",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.RequeueStaleInvestigationRun(
+		ctx,
+		created.Run.ID,
+		"worker:recovery",
+		first.AcquiredAt.Add(-time.Second),
+		"not stale",
+		3,
+	); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("live lease recovery = %v, want ErrConflict", err)
+	}
+	requeued, err := s.RequeueStaleInvestigationRun(
+		ctx,
+		created.Run.ID,
+		"worker:recovery",
+		first.AcquiredAt.Add(time.Second),
+		"worker disappeared",
+		3,
+	)
+	if err != nil || requeued.Attempt != 2 ||
+		requeued.PriorState != store.RunEnumerating ||
+		requeued.NewState != store.RunQueued {
+		t.Fatalf("stale recovery = %+v, %v", requeued, err)
+	}
+	if _, err := s.AdvanceInvestigationRun(
+		ctx,
+		*first,
+		store.RunAnalyzing,
+		"late first worker",
+	); !errors.Is(err, store.ErrLeaseLost) {
+		t.Fatalf("recovered worker retained lease: %v", err)
+	}
+	second, err := s.AcquireInvestigationRunLease(
+		ctx,
+		created.Run.ID,
+		"worker:second",
+	)
+	if err != nil || second.Attempt != 2 {
+		t.Fatalf("second lease = %+v, %v", second, err)
 	}
 }
 

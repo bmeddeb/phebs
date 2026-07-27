@@ -305,6 +305,16 @@ type fixedCompatibility struct {
 	request compat.Request
 }
 
+type preflightCompatibility struct{}
+
+func (preflightCompatibility) Check(
+	ctx context.Context,
+	request compat.Request,
+) (*compat.CompatibilityResult, error) {
+	_, err := compat.Prepare(ctx, request)
+	return nil, err
+}
+
 func (c *fixedCompatibility) Check(_ context.Context, request compat.Request) (*compat.CompatibilityResult, error) {
 	c.request = request
 	if c.err != nil {
@@ -577,6 +587,45 @@ func TestContractCompatibilityClassifiesBoundedCheckerRefusalsBeforeEvidence(t *
 				t.Fatalf("failed checker touched evidence or persisted: calls=%v bundles=%v", st.calls, st.bundles)
 			}
 		})
+	}
+}
+
+func TestContractCompatibilityHTTPKeepsFrozenTokenRefusalBytes(t *testing.T) {
+	st := &proofAPIStore{}
+	request := compat.Request{
+		Lineage: "contract_lineage",
+		Before: []compat.File{{
+			Path:    "x.proto",
+			Content: strings.Repeat("x ", 500_001),
+		}},
+		After: []compat.File{{
+			Path:    "x.proto",
+			Content: "syntax = \"proto3\";",
+		}},
+	}
+	code, body, _ := postCompatibility(
+		t,
+		proofHandler(
+			st,
+			"user:member",
+			nil,
+			preflightCompatibility{},
+		),
+		request,
+	)
+	const want = "{\"$schema\":\"https://example.com/schemas/ErrorModel.json\"," +
+		"\"title\":\"Bad Request\",\"status\":400," +
+		"\"detail\":\"invalid compatibility input: parse field identities: " +
+		"before/x.proto: source exceeds 500000-token parser limit\"}\n"
+	if code != http.StatusBadRequest || body != want {
+		t.Fatalf("compatibility rejection bytes = %d %s", code, body)
+	}
+	if len(st.calls) != 0 || len(st.bundles) != 0 {
+		t.Fatalf(
+			"preflight rejection touched evidence: calls=%v bundles=%v",
+			st.calls,
+			st.bundles,
+		)
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/store"
+	reposync "github.com/bmeddeb/phebs/internal/sync"
 )
 
 type workbenchContractCatalog interface {
@@ -41,6 +42,7 @@ func NewWorkbenchTargetResolver(opts Options) *WorkbenchTargetResolver {
 }
 
 var _ store.WorkbenchResolver = (*WorkbenchTargetResolver)(nil)
+var _ store.WorkbenchBaselineResolver = (*WorkbenchTargetResolver)(nil)
 
 func (resolver *WorkbenchTargetResolver) ResolveWorkbench(
 	ctx context.Context,
@@ -193,6 +195,61 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbench(
 			}
 		}
 		result.Capabilities = append(result.Capabilities, snapshot)
+	}
+	return result, nil
+}
+
+func (resolver *WorkbenchTargetResolver) ResolveWorkbenchBaseline(
+	ctx context.Context,
+	principal string,
+	request store.WorkbenchBaselineRequest,
+) ([]store.WorkbenchSourceFile, error) {
+	if resolver == nil || resolver.opts.Store == nil ||
+		resolver.opts.Principal == nil ||
+		strings.TrimSpace(resolver.opts.Principal(ctx)) != principal ||
+		principal == "" ||
+		!validCatalogFilter(request.Repository) ||
+		(len(request.Commit) != 40 && len(request.Commit) != 64) ||
+		len(request.Paths) == 0 ||
+		len(request.Paths) > compat.WireLimits().MaxFilesPerSnapshot {
+		return nil, store.ErrNotFound
+	}
+	visible, err := visibleRepositories(ctx, resolver.opts)
+	if err != nil {
+		return nil, err
+	}
+	authorized := false
+	for _, repository := range visible {
+		if repository.Name == request.Repository &&
+			repository.IndexedCommitHash == request.Commit {
+			authorized = true
+			break
+		}
+	}
+	if !authorized {
+		return nil, store.ErrNotFound
+	}
+	result := make([]store.WorkbenchSourceFile, len(request.Paths))
+	previous := ""
+	for index, sourcePath := range request.Paths {
+		if sourcePath <= previous ||
+			!strings.HasSuffix(sourcePath, ".proto") {
+			return nil, store.ErrNotFound
+		}
+		content, readErr := reposync.CatFile(
+			ctx,
+			resolver.opts.DataDir,
+			request.Repository,
+			request.Commit,
+			sourcePath,
+		)
+		if readErr != nil || len(content) > compat.WireLimits().MaxFileBytes {
+			return nil, store.ErrNotFound
+		}
+		result[index] = store.WorkbenchSourceFile{
+			Path: sourcePath, Content: string(content),
+		}
+		previous = sourcePath
 	}
 	return result, nil
 }

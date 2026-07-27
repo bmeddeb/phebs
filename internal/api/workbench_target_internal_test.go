@@ -3,10 +3,15 @@ package api
 import (
 	"context"
 	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
 type workbenchTargetCatalog struct{}
@@ -155,5 +160,102 @@ func TestWorkbenchTargetResolverKeepsExactProtocolRepositoryAndLineage(t *testin
 		store.WorkbenchResolutionRequest{},
 	); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("principal mismatch = %v, want not found", err)
+	}
+}
+
+func TestWorkbenchTargetResolverReadsBaselineAtAuthorizedExactCommit(t *testing.T) {
+	origin := t.TempDir()
+	run := func(args ...string) string {
+		full := append(
+			[]string{
+				"-c", "user.name=Workbench Test",
+				"-c", "user.email=workbench@example.invalid",
+				"-C", origin,
+			},
+			args...,
+		)
+		output, err := exec.Command("git", full...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, output)
+		}
+		return strings.TrimSpace(string(output))
+	}
+	run("init", "-b", "main")
+	const source = "syntax = \"proto3\";\nservice Checkout {}\n"
+	if err := os.MkdirAll(filepath.Join(origin, "proto"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(origin, "proto", "shop.proto"),
+		[]byte(source),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	run("add", ".")
+	run("commit", "-m", "baseline")
+	commit := run("rev-parse", "HEAD")
+	dataDir := t.TempDir()
+	const repository = "example/contracts"
+	if err := phebssync.Mirror(
+		context.Background(),
+		"file://"+origin,
+		phebssync.RepoDir(dataDir, repository),
+	); err != nil {
+		t.Fatal(err)
+	}
+	repositories := &contractFixtureRepoStore{repos: []store.Repo{{
+		Name: repository, IndexedCommitHash: commit,
+	}}}
+	resolver := &WorkbenchTargetResolver{opts: Options{
+		Store: repositories, DataDir: dataDir,
+		Principal: func(context.Context) string {
+			return "user:workbench"
+		},
+	}}
+	files, err := resolver.ResolveWorkbenchBaseline(
+		context.Background(),
+		"user:workbench",
+		store.WorkbenchBaselineRequest{
+			Repository: repository,
+			Commit:     commit,
+			Paths:      []string{"proto/shop.proto"},
+		},
+	)
+	if err != nil || len(files) != 1 ||
+		files[0].Path != "proto/shop.proto" ||
+		files[0].Content != source {
+		t.Fatalf("exact baseline = %+v, %v", files, err)
+	}
+	for _, request := range []store.WorkbenchBaselineRequest{
+		{
+			Repository: repository,
+			Commit:     strings.Repeat("b", 40),
+			Paths:      []string{"proto/shop.proto"},
+		},
+		{
+			Repository: repository,
+			Commit:     commit,
+			Paths:      []string{"proto/missing.proto"},
+		},
+	} {
+		if _, err := resolver.ResolveWorkbenchBaseline(
+			context.Background(),
+			"user:workbench",
+			request,
+		); !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("unbound baseline request = %v, want not found", err)
+		}
+	}
+	if _, err := resolver.ResolveWorkbenchBaseline(
+		context.Background(),
+		"user:other",
+		store.WorkbenchBaselineRequest{
+			Repository: repository,
+			Commit:     commit,
+			Paths:      []string{"proto/shop.proto"},
+		},
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("unauthorized baseline = %v, want not found", err)
 	}
 }

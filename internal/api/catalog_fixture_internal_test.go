@@ -155,19 +155,22 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 	if err != nil || exact.Protocol != second.Items[0].Protocol {
 		t.Fatalf("exact fixture operation = %+v, %v", exact, err)
 	}
+	encodedDetail, err := json.Marshal(detail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encodedDetail), `"protocol"`) {
+		t.Fatalf(
+			"internal exact-target protocol changed the public v2 detail schema: %s",
+			encodedDetail,
+		)
+	}
 	if _, err := service.OperationForProtocol(
 		context.Background(), "thrift",
 		second.Items[0].Repository, second.Items[0].Lineage,
 		second.Items[0].Operation,
 	); err == nil {
 		t.Fatal("equal operation spelling crossed the fixture protocol")
-	}
-	publicJSON, err := json.Marshal(detail)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(publicJSON), `"protocol"`) {
-		t.Fatalf("legacy Atlas v2 detail schema changed: %s", publicJSON)
 	}
 	for _, claim := range []ContractCatalogClaim{
 		detail.Declaration,

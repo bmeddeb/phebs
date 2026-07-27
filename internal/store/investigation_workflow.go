@@ -24,6 +24,14 @@ type InvestigationWorkflowStore interface {
 	GetRunAs(context.Context, string, string) (*Run, error)
 	ListRunEventsAs(context.Context, string, string) ([]RunEvent, error)
 	AcquireInvestigationRunLease(context.Context, string, string) (*InvestigationRunLease, error)
+	RequeueStaleInvestigationRun(
+		context.Context,
+		string,
+		string,
+		time.Time,
+		string,
+		int,
+	) (*RunEvent, error)
 	AdvanceInvestigationRun(context.Context, InvestigationRunLease, RunState, string) (*RunEvent, error)
 	RetryInvestigationRun(context.Context, InvestigationRunLease, string, int) (*RunEvent, error)
 	FailInvestigationRun(context.Context, InvestigationRunLease, RunArtifact, string) (*RunArtifact, error)
@@ -501,6 +509,141 @@ func (s *Surreal) AcquireInvestigationRunLease(ctx context.Context, runID, worke
 		RunID: runID, Attempt: rows[0].Attempt, Worker: worker,
 		AcquiredAt: rows[0].AcquiredAt, Token: token,
 	}, nil
+}
+
+const requeueStaleInvestigationRunSQL = `
+BEGIN;
+LET $locked = UPDATE $run_rid SET event_revision = $next_sequence,
+	lease_token = NONE, lease_attempt = NONE, lease_worker = NONE,
+	lease_acquired_at = NONE
+	WHERE run_id = $run_id AND event_revision = $expected_sequence
+	  AND lease_token = $observed_token
+	  AND lease_attempt = $prior_attempt
+	  AND lease_worker = $observed_worker
+	  AND lease_acquired_at != NONE
+	  AND lease_acquired_at <= $stale_before RETURN AFTER;
+LET $saved = IF array::len($locked) = 1 THEN
+	(CREATE $event_rid SET event_id = $event_id, run_id = $run_id,
+		sequence = $next_sequence, attempt = $next_attempt,
+		prior_state = $prior_state, new_state = 'queued', actor = $worker,
+		reason = $reason, timestamp = $now, content_digest = $event_digest
+		RETURN AFTER)
+	ELSE [] END;
+RETURN $saved;
+COMMIT;`
+
+// RequeueStaleInvestigationRun fences an abandoned attempt by its exact
+// observed lease tuple and acquisition time, then appends the next queued
+// attempt atomically. It is intentionally explicit: ordinary contenders may
+// not steal a live lease, and the caller supplies the pack-specific age and
+// attempt ceiling.
+func (s *Surreal) RequeueStaleInvestigationRun(
+	ctx context.Context,
+	runID, worker string,
+	staleBefore time.Time,
+	reason string,
+	maxAttempts int,
+) (*RunEvent, error) {
+	if err := validateDomainString("worker", worker, true); err != nil {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: %w",
+			err,
+		)
+	}
+	if err := validateDomainString("reason", reason, true); err != nil {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: %w",
+			err,
+		)
+	}
+	if maxAttempts < 2 || maxAttempts > MaxInvestigationRunAttempts {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: max attempts must be within 2..%d",
+			MaxInvestigationRunAttempts,
+		)
+	}
+	run, err := s.getRunRec(ctx, runID)
+	if err != nil {
+		return nil, err
+	}
+	events, err := s.ListRunEvents(ctx, runID)
+	if err != nil {
+		return nil, err
+	}
+	if len(events) == 0 ||
+		run.EventRevision != events[len(events)-1].Sequence {
+		return nil, errors.New(
+			"requeue stale investigation run: event stream is inconsistent",
+		)
+	}
+	last := events[len(events)-1]
+	if terminalRunState(last.NewState) {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: terminal run: %w",
+			ErrConflict,
+		)
+	}
+	if last.Attempt >= maxAttempts {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: attempts exhausted: %w",
+			ErrConflict,
+		)
+	}
+	if run.LeaseToken == "" || run.LeaseAttempt != last.Attempt ||
+		run.LeaseWorker == "" || run.LeaseAcquiredAt.IsZero() {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: no recoverable lease: %w",
+			ErrConflict,
+		)
+	}
+	now := storeTimestamp(time.Now())
+	eventID, err := newULID(now)
+	if err != nil {
+		return nil, err
+	}
+	event := RunEvent{
+		ID: eventID, RunID: runID, Sequence: last.Sequence + 1,
+		Attempt: last.Attempt + 1, PriorState: last.NewState,
+		NewState: RunQueued, Actor: worker, Reason: reason, Timestamp: now,
+	}
+	event.Digest, _ = contentDigest(runEventCore(event))
+	results, queryErr := surrealdb.Query[[]RunEvent](
+		ctx,
+		s.db,
+		requeueStaleInvestigationRunSQL,
+		map[string]any{
+			"run_rid":           runRecordID(runID),
+			"run_id":            runID,
+			"expected_sequence": last.Sequence,
+			"next_sequence":     event.Sequence,
+			"observed_token":    run.LeaseToken,
+			"observed_worker":   run.LeaseWorker,
+			"prior_attempt":     last.Attempt,
+			"next_attempt":      event.Attempt,
+			"prior_state":       string(last.NewState),
+			"worker":            worker,
+			"reason":            reason,
+			"stale_before":      storeTimestamp(staleBefore),
+			"now":               now,
+			"event_rid":         runEventRecordID(event.ID),
+			"event_id":          event.ID,
+			"event_digest":      event.Digest,
+		},
+	)
+	if queryErr != nil {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: %w",
+			queryErr,
+		)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) != 1 {
+		return nil, fmt.Errorf(
+			"requeue stale investigation run: lease is live or changed: %w",
+			ErrConflict,
+		)
+	}
+	return &rows[0], nil
 }
 
 func validInvestigationRunLease(lease InvestigationRunLease) bool {

@@ -189,6 +189,13 @@ func TestGlossaryRejectsUnsafeAmbiguousOrStaleInput(t *testing.T) {
 			},
 		},
 		{
+			name: "manual markup",
+			mutate: func(value glossary.Document) []byte {
+				value.Terms[0].ExpandedHelp = "unsafe [link](target)"
+				return mustJSON(t, value)
+			},
+		},
+		{
 			name: "untrimmed text",
 			mutate: func(value glossary.Document) []byte {
 				value.Terms[0].ExpandedHelp += " "

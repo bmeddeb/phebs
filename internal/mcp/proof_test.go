@@ -175,7 +175,24 @@ func (proofToolCompatibility) Check(_ context.Context, request compat.Request) (
 	}, nil
 }
 
+type proofToolPreflightCompatibility struct{}
+
+func (proofToolPreflightCompatibility) Check(
+	ctx context.Context,
+	request compat.Request,
+) (*compat.CompatibilityResult, error) {
+	_, err := compat.Prepare(ctx, request)
+	return nil, err
+}
+
 func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, string) {
+	return proofToolFixtureWithCompatibility(t, proofToolCompatibility{})
+}
+
+func proofToolFixtureWithCompatibility(
+	t *testing.T,
+	compatibility compat.Service,
+) (*sdk.Server, *proofToolStore, string, string) {
 	t.Helper()
 	const (
 		visibleRepo = "example.com/visible/client"
@@ -213,7 +230,7 @@ func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, strin
 		},
 	}
 	proofs := api.NewProofService(api.Options{
-		Store: st, Evidence: st, ProofBundles: st, Compatibility: proofToolCompatibility{},
+		Store: st, Evidence: st, ProofBundles: st, Compatibility: compatibility,
 		Visible: func(context.Context) func(store.Repo) bool {
 			return func(repo store.Repo) bool { return repo.Name == visibleRepo }
 		},
@@ -224,6 +241,42 @@ func proofToolFixture(t *testing.T) (*sdk.Server, *proofToolStore, string, strin
 		t.Fatal("proof service unavailable")
 	}
 	return NewServer(Options{Version: "test", Store: st, Proofs: proofs, Compatibility: proofs}), st, operation, lineage
+}
+
+func TestContractCompatibilityMCPKeepsFrozenTokenRefusalBytes(t *testing.T) {
+	server, store, _, lineage := proofToolFixtureWithCompatibility(
+		t,
+		proofToolPreflightCompatibility{},
+	)
+	_, result := callTool[investigation.Envelope](
+		t,
+		server,
+		"check_contract_compatibility",
+		map[string]any{
+			"lineage": lineage,
+			"before": []map[string]any{{
+				"path":    "shop/cart.proto",
+				"content": strings.Repeat("x ", 500_001),
+			}},
+			"after": []map[string]any{{
+				"path":    "shop/cart.proto",
+				"content": "syntax = \"proto3\";",
+			}},
+		},
+	)
+	refusal := textContent(t, result)
+	const want = "invalid compatibility input: parse field identities: " +
+		"before/shop/cart.proto: source exceeds 500000-token parser limit"
+	if !result.IsError || refusal != want {
+		t.Fatalf("compatibility MCP rejection = %+v / %q", result, refusal)
+	}
+	if len(store.calls) != 0 || len(store.bundles) != 0 {
+		t.Fatalf(
+			"preflight MCP rejection touched evidence: calls=%v bundles=%v",
+			store.calls,
+			store.bundles,
+		)
+	}
 }
 
 // T14.2 AC: one live stateless Streamable HTTP session through the official

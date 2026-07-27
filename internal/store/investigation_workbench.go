@@ -25,6 +25,7 @@ const (
 	maxWorkbenchRepositories = 1_000
 	maxWorkbenchCapabilities = 64
 	maxWorkbenchIDBytes      = 256
+	workbenchReceiptRecovery = 5 * time.Second
 )
 
 var ErrInvalidWorkbench = errors.New("invalid workbench input")
@@ -128,6 +129,17 @@ type WorkbenchResolution struct {
 	Capabilities        []WorkbenchCapabilitySnapshot `json:"capabilities"`
 }
 
+type WorkbenchBaselineRequest struct {
+	Repository string   `json:"repository"`
+	Commit     string   `json:"commit"`
+	Paths      []string `json:"paths"`
+}
+
+type WorkbenchSourceFile struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+}
+
 // WorkbenchResolver projects only the principal's currently authorized
 // repository, endpoint, and capability state. Missing and unauthorized inputs
 // must both be represented by omission; the service emits one refusal shape.
@@ -137,6 +149,18 @@ type WorkbenchResolver interface {
 		string,
 		WorkbenchResolutionRequest,
 	) (WorkbenchResolution, error)
+}
+
+// WorkbenchBaselineResolver is the source-binding extension required by
+// retained compatibility. The implementation must reauthorize Repository and
+// read every requested path from exactly Commit; caller-supplied source bytes
+// are never authority for the retained baseline.
+type WorkbenchBaselineResolver interface {
+	ResolveWorkbenchBaseline(
+		context.Context,
+		string,
+		WorkbenchBaselineRequest,
+	) ([]WorkbenchSourceFile, error)
 }
 
 type WorkbenchBlocker struct {
@@ -819,6 +843,12 @@ func (service InvestigationWorkbenchService) preview(
 	if err != nil {
 		return nil, err
 	}
+	if len(declaredUniverseBytes) > maxInvestigationFieldBytes {
+		preview.Blockers = append(preview.Blockers, workbenchBlocker(
+			"DECLARED_UNIVERSE_TOO_LARGE",
+			"",
+		))
+	}
 	preview.Revision = WorkbenchRevisionCommitment{
 		NormalizedQuestion: plan.Revision.NormalizedQuestion,
 		DecisionSought:     plan.Revision.DecisionSought,
@@ -917,6 +947,18 @@ func workbenchCompatibilityPreview(
 		result.Reason = "current_endpoint_required"
 		return result
 	}
+	currentProtocol := ""
+	currentCount := 0
+	for _, selection := range brief.What.Selections {
+		if selection.Role == ChangeBriefCurrent {
+			currentCount++
+			currentProtocol = selection.Protocol
+		}
+	}
+	if currentCount != 1 || currentProtocol != "protobuf" {
+		result.Reason = "current_endpoint_protocol_unsupported"
+		return result
+	}
 	capabilityAvailable := false
 	for _, capability := range capabilities {
 		if capability.ID == "contract-compatibility" &&
@@ -964,8 +1006,7 @@ func (service InvestigationWorkbenchService) commit(
 		principal,
 		request.IdempotencyKey,
 	); getErr == nil &&
-		existing.Operation == operation &&
-		existing.InvestigationID == request.Plan.InvestigationID {
+		workbenchMutationMatchesPlan(existing, operation, request.Plan) {
 		committedRevisionID = existing.RevisionID
 	} else if getErr != nil && !errors.Is(getErr, ErrNotFound) {
 		return nil, getErr
@@ -986,8 +1027,7 @@ func (service InvestigationWorkbenchService) commit(
 			principal,
 			request.IdempotencyKey,
 		); getErr == nil &&
-			existing.Operation == operation &&
-			existing.InvestigationID == request.Plan.InvestigationID {
+			workbenchMutationMatchesPlan(existing, operation, request.Plan) {
 			committedRevisionID = existing.RevisionID
 			preview, err = service.preview(
 				ctx,
@@ -1022,6 +1062,20 @@ func (service InvestigationWorkbenchService) commit(
 		Revision:             preview.Revision,
 		Brief:                preview.Brief,
 	})
+}
+
+func workbenchMutationMatchesPlan(
+	record *workbenchMutationRecord,
+	operation string,
+	plan WorkbenchPlan,
+) bool {
+	if record == nil || record.Operation != operation {
+		return false
+	}
+	if operation == "create" {
+		return plan.InvestigationID == "" && plan.ExpectedRevisionID == ""
+	}
+	return record.InvestigationID == plan.InvestigationID
 }
 
 func (service InvestigationWorkbenchService) Create(
@@ -1165,6 +1219,14 @@ func (s *Surreal) getWorkbenchMutationRecord(
 	rows := firstDomainRows(results)
 	if len(rows) != 1 {
 		return nil, ErrNotFound
+	}
+	if rows[0].Principal != principal ||
+		rows[0].IdempotencyKey != idempotencyKey ||
+		rows[0].MutationKey !=
+			hashIdentity("iwm_", principal, idempotencyKey) {
+		return nil, errors.New(
+			"get workbench mutation: stored receipt binding is inconsistent",
+		)
 	}
 	return &rows[0], nil
 }
@@ -1426,6 +1488,27 @@ func (s *Surreal) commitWorkbenchMutation(
 					return s.readWorkbenchMutation(ctx, existing)
 				}
 				continue
+			}
+			recoveryContext, cancelRecovery := context.WithTimeout(
+				context.WithoutCancel(ctx),
+				workbenchReceiptRecovery,
+			)
+			defer cancelRecovery()
+			if existing, getErr := s.getWorkbenchMutationRecord(
+				recoveryContext,
+				request.Principal,
+				request.IdempotencyKey,
+			); getErr == nil {
+				if existing.RequestDigest != requestDigest {
+					return nil, fmt.Errorf(
+						"commit workbench mutation: idempotency key reused: %w",
+						ErrConflict,
+					)
+				}
+				return s.readWorkbenchMutation(
+					recoveryContext,
+					existing,
+				)
 			}
 			return nil, fmt.Errorf("commit workbench mutation: %w", queryErr)
 		}

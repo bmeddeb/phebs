@@ -126,12 +126,12 @@ func validateProtobuf(ctx context.Context, source string) error {
 			if !closed {
 				return errors.New("unterminated proto string literal")
 			}
-		case isWordByte(current):
+		case isProtoWordByte(current):
 			if err := addToken(); err != nil {
 				return err
 			}
 			index++
-			for index < len(source) && isWordByte(source[index]) {
+			for index < len(source) && isProtoWordByte(source[index]) {
 				index++
 			}
 		default:
@@ -270,11 +270,11 @@ func validateThrift(ctx context.Context, source string) error {
 				depth--
 			}
 			index++
-		case isWordByte(current):
+		case isThriftWordByte(current):
 			if err := addToken(); err != nil {
 				return err
 			}
-			for index < len(source) && isWordByte(source[index]) {
+			for index < len(source) && isThriftWordByte(source[index]) {
 				index++
 			}
 		default:
@@ -292,7 +292,15 @@ func isProtoSpace(value byte) bool {
 		value == '\n' || value == '\f'
 }
 
-func isWordByte(value byte) bool {
+func isProtoWordByte(value byte) bool {
 	return value == '_' || value >= 'a' && value <= 'z' ||
 		value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
+}
+
+// Thrift qualified identifiers are one lexical word for the production
+// extractor's frozen token accounting. Keeping this distinct from protobuf
+// prevents a shared preflight refactor from silently tightening either
+// protocol's admission boundary.
+func isThriftWordByte(value byte) bool {
+	return value == '.' || isProtoWordByte(value)
 }

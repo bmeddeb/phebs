@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -118,7 +119,8 @@ func TestWorkbenchRetainedCompatibilityFailureIsTerminalAndIdempotent(
 	if first.Status != "failed" ||
 		first.Run.State != RunFailed ||
 		first.Artifact.TerminalStatus != RunFailed ||
-		first.Failure == "" ||
+		first.Failure != "compatibility engine unavailable" ||
+		strings.Contains(first.Failure, "fixture refusal") ||
 		first.Run.ID != second.Run.ID ||
 		first.Artifact.ID != second.Artifact.ID ||
 		checker.callCount() != 1 ||
@@ -215,6 +217,22 @@ func TestWorkbenchTicketCardinalityAndCompatibilityAvailability(t *testing.T) {
 			},
 			status: "unavailable",
 			reason: "compatibility_protocol_unsupported",
+		},
+		{
+			name: "thrift current with protobuf proposal",
+			mutate: func(plan *WorkbenchPlan) {
+				plan.Brief.What.Selections[0].Protocol = "thrift"
+				plan.Brief.What.Selections[0].DeclarationLineage =
+					"thrift/shop.thrift:Checkout"
+				plan.Brief.What.Selections[0].CanonicalOperation =
+					"/Checkout/Submit"
+				plan.Capabilities = append(
+					plan.Capabilities,
+					"contract-compatibility",
+				)
+			},
+			status: "unavailable",
+			reason: "current_endpoint_protocol_unsupported",
 		},
 	}
 	for _, test := range valid {
@@ -336,9 +354,8 @@ func TestWorkbenchRetainedCompatibilityIsAdditiveIdempotentAndRevisionBound(
 		t.Fatal(err)
 	}
 	before := []compat.File{{
-		Path: "proto/shop.proto",
-		Content: "syntax = \"proto3\";\n" +
-			"service Checkout {}\n// baseline\n",
+		Path:    "proto/shop.proto",
+		Content: "syntax = \"proto3\";\nservice Checkout {}\n",
 	}}
 	after := []compat.File{{
 		Path:    plan.Brief.What.ProposalSources[0].Path,
@@ -375,6 +392,22 @@ func TestWorkbenchRetainedCompatibilityIsAdditiveIdempotentAndRevisionBound(
 		first.Run.RevisionID != created.Revision.ID ||
 		checker.callCount() != 1 {
 		t.Fatalf("retained analyses = %+v / %+v; calls=%d", first, second, checker.callCount())
+	}
+
+	tampered := request
+	tampered.IdempotencyKey = "retain-compatibility-tampered"
+	tampered.Before = slices.Clone(request.Before)
+	tampered.Before[0].Content =
+		"syntax = \"proto3\";\nservice Checkout { rpc Hidden(Empty) returns (Empty); }\n"
+	if _, err := service.RetainCompatibility(
+		ctx,
+		workbenchOwner,
+		tampered,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("fabricated baseline = %v, want ErrConflict", err)
+	}
+	if checker.callCount() != 1 {
+		t.Fatalf("fabricated baseline reached checker; calls=%d", checker.callCount())
 	}
 	if len(first.Endpoints) != 1 ||
 		len(first.Endpoints[0].DeclarationSources) != 1 ||

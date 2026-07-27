@@ -320,6 +320,11 @@ func normalizeChangeBriefWhat(value ChangeBriefWhat) (ChangeBriefWhat, error) {
 		return ChangeBriefWhat{}, fmt.Errorf("contract selections exceed %d entries", maxChangeBriefSelections)
 	}
 	value.Selections = slices.Clone(value.Selections)
+	if len(value.Selections) == 0 {
+		// nil and [] describe the same absent selection set. Canonicalize both
+		// to one JSON shape so they cannot mint different brief identities.
+		value.Selections = []ChangeBriefContractSelection{}
+	}
 	seenRoles := make(map[ChangeBriefSelectionRole]bool, len(value.Selections))
 	for index := range value.Selections {
 		normalized, err := normalizeChangeBriefSelection(value.Selections[index])

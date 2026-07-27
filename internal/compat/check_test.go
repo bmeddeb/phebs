@@ -12,6 +12,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/idlpreflight"
 )
 
 var (
@@ -108,6 +110,49 @@ func TestCheckerReportsWireBreakWithStableFieldIdentity(t *testing.T) {
 	if strings.Contains(string(encoded), "int32 count") || strings.Contains(string(encoded), "string count") ||
 		strings.Contains(string(encoded), "phebs-buf-") {
 		t.Fatalf("result retained source or host temp path: %s", encoded)
+	}
+}
+
+func TestCompatibilityPreflightKeepsFrozenRejectionBytes(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{
+			name:   "token limit",
+			source: strings.Repeat("x ", idlpreflight.MaxTokens+1),
+			want: fmt.Sprintf(
+				"source exceeds %d-token parser limit",
+				idlpreflight.MaxTokens,
+			),
+		},
+		{
+			name:   "structural depth",
+			source: strings.Repeat("{", idlpreflight.MaxStructuralDepth+1),
+			want: fmt.Sprintf(
+				"source exceeds %d-level structural-depth limit",
+				idlpreflight.MaxStructuralDepth,
+			),
+		},
+		{
+			name:   "block comment",
+			source: "/*",
+			want:   "unterminated block comment",
+		},
+		{
+			name:   "string",
+			source: `"`,
+			want:   "unterminated string literal",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateProtoComplexity(context.Background(), test.source)
+			if err == nil || err.Error() != test.want {
+				t.Fatalf("validateProtoComplexity() = %v, want %q", err, test.want)
+			}
+		})
 	}
 }
 

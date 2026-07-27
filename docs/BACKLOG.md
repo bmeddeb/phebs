@@ -2679,7 +2679,38 @@ schema, reauthorization, and retention suites. No Workbench adapter or
 production registration is added. The uncached repository-wide Go suite,
 `go vet ./...`, golangci-lint, and diff hygiene merge bars pass.
 
-**T21.7 · Where: composable impact inventory** *(needs T21.3, T21.6,
+**T21.R ✅ 2026-07-26 · Pre-integration review correction** *(needs T21.6;
+blocks T21.7+)* — close the five independently verified acceptance gaps before
+later Workbench projections consume T21.6 artifacts, and fold in the adjacent
+bounded consistency corrections.
+
+AC: compatibility HTTP/MCP lexical refusals keep their shipped bytes; Thrift
+dotted identifiers keep their shipped token accounting; an oversized visible
+repository universe cannot preview `Ready`; retained compatibility accepts
+only baseline bytes re-read from the authorized selected commit; hover help
+remains operable while the pointer crosses into its portaled dialog. Nil and
+empty selections have one identity, compatibility availability agrees with
+the action, mutation receipts reverify their principal/key and recover a
+committed write after client cancellation, abandoned analysis leases recover
+only after an age/attempt fence, retained failures cannot persist proposal
+symbols, glossary text cannot inject MANUAL markup, and internal protocol
+qualification does not silently revise the public Atlas v2 detail schema.
+
+Implemented on `codex/t21.r-review-fixes`. The pure-reader preflight preserves
+both legacy surfaces with protocol-specific lexing and exact HTTP/MCP refusal
+guards. Preview shares persistence's 64 KiB declared-universe ceiling and
+returns `DECLARED_UNIVERSE_TOO_LARGE` without a digest or write. Compatibility
+re-authorizes the repository at the selected commit and reads every baseline
+path from the bounded Git layer; submitted and repository bytes must match and
+all declaration-source paths must be present before a run exists. A
+five-minute stale lease may be atomically fenced and requeued through at most
+three attempts; live leases cannot be stolen. Receipts and diagnostics fail
+closed, the help portal has a tested hover bridge, generated glossary input
+rejects markup syntax, and Atlas protocol remains internal-only JSON state.
+Production registration and the retained validation/pilot gates remain
+unchanged.
+
+**T21.7 · Where: composable impact inventory** *(needs T21.3, T21.6, T21.R,
 T20.13)* — compose the snapshot-consistent Caller Map/comparison, field
 reference reads, Atlas declaration/implementation evidence, unit attribution,
 and Analysis scope & gaps into one typed, paged Workbench projection. The

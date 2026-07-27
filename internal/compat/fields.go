@@ -196,5 +196,36 @@ func positionLess(left, right sourcePosition) bool {
 }
 
 func validateProtoComplexity(ctx context.Context, source string) error {
-	return idlpreflight.Validate(ctx, idlpreflight.Protobuf, source)
+	err := idlpreflight.Validate(ctx, idlpreflight.Protobuf, source)
+	if err == nil {
+		return nil
+	}
+	// /api/check_contract_compatibility and its MCP twin shipped these
+	// rejection bytes before protobuf and Thrift shared one preflight package.
+	// Preserve that public boundary while extraction keeps its protocol-named
+	// diagnostics.
+	switch err.Error() {
+	case fmt.Sprintf(
+		"source exceeds %d-token proto parser limit",
+		idlpreflight.MaxTokens,
+	):
+		return fmt.Errorf(
+			"source exceeds %d-token parser limit",
+			idlpreflight.MaxTokens,
+		)
+	case fmt.Sprintf(
+		"source exceeds %d-level proto structural-depth limit",
+		idlpreflight.MaxStructuralDepth,
+	):
+		return fmt.Errorf(
+			"source exceeds %d-level structural-depth limit",
+			idlpreflight.MaxStructuralDepth,
+		)
+	case "unterminated proto block comment":
+		return errors.New("unterminated block comment")
+	case "unterminated proto string literal":
+		return errors.New("unterminated string literal")
+	default:
+		return err
+	}
 }
