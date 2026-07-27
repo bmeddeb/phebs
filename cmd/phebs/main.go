@@ -166,6 +166,15 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
+	if fixture := os.Getenv("PHEBS_THRIFT_FIELD_DEMO_REPO"); fixture != "" {
+		if err := bindSyntheticThriftFieldDemo(cfg, fixture); err != nil {
+			return err
+		}
+		log.Printf(
+			"WARNING: synthetic Thrift field-zero repository enabled from %s; not production evidence",
+			fixture,
+		)
+	}
 	if *addr != "" {
 		cfg.Server.Addr = *addr
 	}
@@ -706,6 +715,57 @@ func loadRecoveryConfig(path string) (*config.Config, []byte, error) {
 	raw := []byte("{}")
 	cfg, err := config.Parse(raw)
 	return cfg, raw, err
+}
+
+// bindSyntheticThriftFieldDemo is the make-dev-only bridge from the committed
+// cloneable fixture into the ordinary sync, index, and extraction pipeline.
+// The environment value must name an explicit absolute bundle; production
+// config and ordinary serve startup remain unchanged and default-dark.
+func bindSyntheticThriftFieldDemo(cfg *config.Config, fixture string) error {
+	if fixture == "" {
+		return nil
+	}
+	if cfg == nil {
+		return errors.New("synthetic Thrift field demo requires server configuration")
+	}
+	if strings.TrimSpace(fixture) != fixture ||
+		!filepath.IsAbs(fixture) ||
+		filepath.Clean(fixture) != fixture ||
+		filepath.Base(fixture) != "t225-thrift-field-demo.bundle" {
+		return errors.New(
+			"synthetic Thrift field demo must name the absolute clean t225-thrift-field-demo.bundle path",
+		)
+	}
+	info, err := os.Stat(fixture)
+	if err != nil {
+		return fmt.Errorf("inspect synthetic Thrift field demo: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("synthetic Thrift field demo must be a regular bundle file")
+	}
+
+	const connectionName = "t22-thrift-field-demo"
+	alreadyConnected := false
+	for _, connection := range cfg.Connections {
+		if connection.Name == connectionName && connection.URL != fixture {
+			return fmt.Errorf(
+				"synthetic Thrift field demo connection %q already names another source",
+				connectionName,
+			)
+		}
+		if connection.URL == fixture {
+			alreadyConnected = true
+		}
+	}
+	if !alreadyConnected {
+		cfg.Connections = append(cfg.Connections, config.Connection{
+			Name: connectionName,
+			Type: "git",
+			URL:  fixture,
+		})
+	}
+	cfg.Experimental.ProvisionalThriftFieldExtraction = true
+	return nil
 }
 
 // evidenceExtractors is the validation-gated registry. The provisional

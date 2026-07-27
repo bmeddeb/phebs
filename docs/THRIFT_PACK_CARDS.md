@@ -175,7 +175,9 @@ thriftrw package promotes it.
 file-scoped provisional lineage. A direct reference does not prove semantic
 use or runtime traffic. The pack makes no completeness, absence, or
 measured-accuracy claim. T22.4 adds only the shared experimental-dark neutral
-HTTP, MCP, proof, and report projections; UI support remains T22.5 work.
+HTTP, MCP, proof, and report projections. T22.5 adds the protocol-aware
+neutral Impact UI and a development-only authored field-zero repository
+fixture; neither changes this pack's claim boundary.
 
 **Incomplete analysis representation.** Header lookalikes, files without a
 valid tag, definition spans on untagged fields, wrong enclosing SCIP types,
@@ -242,7 +244,9 @@ file-scoped `thrift-contract` declaration lineage. A direct reference is not
 proof that a returned field was semantically read, nor evidence of runtime
 traffic. The pack makes no completeness, absence, or measured-accuracy claim.
 T22.4 adds only the shared experimental-dark neutral HTTP, MCP, proof, and
-report projections; UI support remains T22.5 work.
+report projections. T22.5 adds the protocol-aware neutral Impact UI and a
+development-only authored field-zero repository fixture; neither changes
+this pack's claim boundary.
 
 **Incomplete analysis representation.** A missing root `index.scip` publishes
 stable `scip-index-absent` coverage with no facts. Local symbols, empty or

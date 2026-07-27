@@ -7,6 +7,7 @@ import {
   fetchContractCatalog,
   fetchContractOperation,
   fetchDefinition,
+  fetchFieldImpact,
   fetchFolderContents,
   fetchHover,
   fetchReferences,
@@ -176,6 +177,20 @@ describe('request helpers', () => {
       '/api/folder_contents?repo=github.com%2Fa%2Frepo&ref=abc123&path=src',
       { credentials: 'same-origin', signal },
     ])
+  })
+
+  it('keeps an explicit field zero in the neutral impact-report query', async () => {
+    const signal = new AbortController().signal
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchFieldImpact('contract_scip_package_v1_demo', 'health.Meta_Health_Result', 0, signal)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/contract_impact_report?lineage=contract_scip_package_v1_demo&message=health.Meta_Health_Result&field_number=0',
+      { credentials: 'same-origin', signal },
+    )
   })
 
   it('uses zero-based UTF-16 source positions for precise navigation', async () => {

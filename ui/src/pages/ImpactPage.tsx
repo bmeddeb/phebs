@@ -23,8 +23,11 @@ import { href, navigate } from '../router'
 import { isAbortError } from '../util'
 
 type Mode = 'operation' | 'field' | 'change'
+type FieldProtocol = 'protobuf' | 'thrift'
 
 const qualification = 'Build a bounded, evidence-backed report of resolved evidence, matching calls, and extractor abstentions for an operation, field, or contract change.'
+const protobufMaxFieldNumber = 536_870_911
+const thriftMaxFieldNumber = 32_767
 
 export default function ImpactPage({
   params,
@@ -42,6 +45,7 @@ export default function ImpactPage({
   const [lineage, setLineage] = useState('')
   const [message, setMessage] = useState('')
   const [fieldNumber, setFieldNumber] = useState('')
+  const [fieldProtocol, setFieldProtocol] = useState<FieldProtocol>('protobuf')
   const [before, setBefore] = useState('[]')
   const [after, setAfter] = useState('[]')
   const [report, setReport] = useState<ContractImpactReport | null>(null)
@@ -95,9 +99,9 @@ export default function ImpactPage({
         result = await fetchOperationImpact(operation.trim(), controller.signal)
       } else if (mode === 'field') {
         const number = Number(fieldNumber)
-        if (!lineage.trim() || !message.trim() || !Number.isInteger(number) || number <= 0) {
-          throw new Error('Enter a lineage, message, and positive field number.')
-        }
+        if (!lineage.trim() || !message.trim()) throw new Error('Enter a lineage and message.')
+        const fieldError = validateFieldNumber(fieldProtocol, fieldNumber, number)
+        if (fieldError) throw new Error(fieldError)
         result = await fetchFieldImpact(lineage.trim(), message.trim(), number, controller.signal)
       } else {
         if (!compatibilityAvailable) throw new Error('Contract compatibility is unavailable on this server.')
@@ -156,12 +160,47 @@ export default function ImpactPage({
           )}
           {mode === 'field' && (
             <>
-              <div className={css({ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr) 150px', gap: '10px', '@media screen and (max-width: 720px)': { gridTemplateColumns: '1fr' } })}>
+              <div className={css({ display: 'grid', gridTemplateColumns: '130px minmax(0, 1fr) minmax(0, 1fr) 150px', gap: '10px', '@media screen and (max-width: 820px)': { gridTemplateColumns: '1fr' } })}>
+                <label className={css({ display: 'grid', gap: '5px', color: tok.textSecondary, fontSize: '10px', fontWeight: 650 })}>
+                  Field protocol
+                  <select
+                    aria-label="Field protocol"
+                    value={fieldProtocol}
+                    onChange={(event) => setFieldProtocol(event.currentTarget.value as FieldProtocol)}
+                    className={css({
+                      height: '48px',
+                      boxSizing: 'border-box',
+                      padding: '0 28px 0 12px',
+                      border: `1px solid ${tok.cardBorder}`,
+                      borderRadius: 0,
+                      backgroundColor: tok.pageBg,
+                      color: tok.textPrimary,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' },
+                    })}
+                  >
+                    <option value="protobuf">Protobuf</option>
+                    <option value="thrift">Thrift</option>
+                  </select>
+                </label>
                 <Input value={lineage} onChange={(event) => setLineage(event.currentTarget.value)} aria-label="Contract lineage" placeholder="Contract lineage" />
                 <Input value={message} onChange={(event) => setMessage(event.currentTarget.value)} aria-label="Message full name" placeholder="package.Message" />
-                <Input value={fieldNumber} onChange={(event) => setFieldNumber(event.currentTarget.value)} aria-label="Field number" placeholder="Field number" type="number" />
+                <Input
+                  value={fieldNumber}
+                  onChange={(event) => setFieldNumber(event.currentTarget.value)}
+                  aria-label="Field number"
+                  placeholder="Field number"
+                  type="number"
+                  step={1}
+                />
               </div>
-              <div><Button type="submit" isLoading={loading}>Build report</Button></div>
+              <div className={css({ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' })}>
+                <Button type="submit" isLoading={loading}>Build report</Button>
+                <span className={css({ color: tok.textTertiary, fontSize: '12px', lineHeight: '18px' })}>
+                  Protocol validates the field-number range. The report remains neutral and may include every admitted field-reference domain.
+                </span>
+              </div>
             </>
           )}
           {mode === 'change' && compatibilityAvailable && (
@@ -189,6 +228,24 @@ export default function ImpactPage({
       {report && <ReportView report={report} capabilities={capabilities} />}
     </div>
   )
+}
+
+function validateFieldNumber(protocol: FieldProtocol, raw: string, number: number) {
+  if (raw.trim() === '' || !Number.isInteger(number)) {
+    return 'Enter a whole field number.'
+  }
+  if (protocol === 'thrift') {
+    return number < 0 || number > thriftMaxFieldNumber
+      ? `Thrift field numbers must be between 0 and ${thriftMaxFieldNumber}.`
+      : ''
+  }
+  if (number < 1 || number > protobufMaxFieldNumber) {
+    return `Protobuf field numbers must be between 1 and ${protobufMaxFieldNumber}.`
+  }
+  if (number >= 19_000 && number <= 19_999) {
+    return 'Protobuf field numbers 19000 through 19999 are reserved.'
+  }
+  return ''
 }
 
 function parseFiles(value: string, label: string): CompatibilityFile[] {

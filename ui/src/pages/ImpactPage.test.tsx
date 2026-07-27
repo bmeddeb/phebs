@@ -228,6 +228,79 @@ test('field mode sends the stable field identity', async () => {
   expect(screen.getByText(/field reference/)).toBeTruthy()
 })
 
+test('field mode admits Thrift field zero and renders its exact domain and citation', async () => {
+  const thriftReport: ContractImpactReport = {
+    ...report,
+    query: {
+      kind: 'contract_impact_field',
+      lineage: `contract_scip_package_v1_${'c'.repeat(64)}`,
+      message: 'health.Meta_Health_Result',
+      field_number: 0,
+      domains: ['scip-thrift-field'],
+    },
+    resolved_evidence: [{
+      ...report.matching_call_evidence[0],
+      kind: 'field_reference',
+      domain: 'scip-thrift-field',
+      protocol: 'thrift',
+      predicate: 'REFERENCES_THRIFT_FIELD',
+      object: 'health.Meta_Health_Result#0',
+      path: 'consumer/use.go',
+      start_line: 6,
+      end_line: 6,
+      classification: 'resolved_field_reference',
+      reason: 'exact field identity matched',
+    }],
+    matching_call_evidence: [],
+  }
+  api.fetchFieldImpact.mockResolvedValueOnce(thriftReport)
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: 'Field' }))
+  fireEvent.change(screen.getByLabelText('Field protocol'), { target: { value: 'thrift' } })
+  fireEvent.change(screen.getByLabelText('Contract lineage'), { target: { value: thriftReport.query.lineage } })
+  fireEvent.change(screen.getByLabelText('Message full name'), { target: { value: 'health.Meta_Health_Result' } })
+  fireEvent.change(screen.getByLabelText('Field number'), { target: { value: '0' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+
+  await waitFor(() => expect(api.fetchFieldImpact).toHaveBeenCalledWith(
+    thriftReport.query.lineage,
+    'health.Meta_Health_Result',
+    0,
+    expect.any(AbortSignal),
+  ))
+  expect(await screen.findByText('scip-thrift-field')).toBeTruthy()
+  expect(screen.getAllByText('thrift').length).toBeGreaterThan(0)
+  expect(screen.getByRole('link', { name: /consumer\/use.go:6/ })).toBeTruthy()
+})
+
+test('field mode keeps protocol-specific field bounds without weakening protobuf', async () => {
+  page()
+  fireEvent.click(screen.getByRole('tab', { name: 'Field' }))
+  fireEvent.change(screen.getByLabelText('Contract lineage'), { target: { value: 'lineage-cart' } })
+  fireEvent.change(screen.getByLabelText('Message full name'), { target: { value: 'shop.Cart' } })
+
+  fireEvent.change(screen.getByLabelText('Field number'), { target: { value: '0' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+  expect(await screen.findByText('Protobuf field numbers must be between 1 and 536870911.')).toBeTruthy()
+  expect(api.fetchFieldImpact).not.toHaveBeenCalled()
+
+  fireEvent.change(screen.getByLabelText('Field number'), { target: { value: '19000' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+  expect(await screen.findByText('Protobuf field numbers 19000 through 19999 are reserved.')).toBeTruthy()
+  expect(api.fetchFieldImpact).not.toHaveBeenCalled()
+
+  fireEvent.change(screen.getByLabelText('Field protocol'), { target: { value: 'thrift' } })
+  fireEvent.change(screen.getByLabelText('Field number'), { target: { value: '' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+  expect(await screen.findByText('Enter a whole field number.')).toBeTruthy()
+  expect(api.fetchFieldImpact).not.toHaveBeenCalled()
+
+  fireEvent.change(screen.getByLabelText('Field number'), { target: { value: '32768' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Build report' }))
+  expect(await screen.findByText('Thrift field numbers must be between 0 and 32767.')).toBeTruthy()
+  expect(api.fetchFieldImpact).not.toHaveBeenCalled()
+})
+
 test('unknown coverage schema does not enable coverage certificate help', async () => {
   api.fetchOperationImpact.mockResolvedValueOnce({
     ...report,

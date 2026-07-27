@@ -29,10 +29,22 @@ bin/buf: go.mod go.sum | bin ## compatibility child, pinned by the same go.mod a
 	CGO_ENABLED=0 go build -trimpath -o $@ github.com/bufbuild/buf/cmd/buf
 
 dev: bin/zoekt-git-index bin/buf ui ## boot phebs with embedded UI (ARGS="-config phebs.yaml" for flags)
-	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) PHEBS_BUF=$(abspath bin/buf) PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) PHEBS_SYNTHETIC_WORKBENCH=1 go run -tags ui ./cmd/phebs serve $(ARGS)
+	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
+		PHEBS_BUF=$(abspath bin/buf) \
+		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
+		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
+		PHEBS_THRIFT_FIELD_DEMO_REPO=$(abspath docs/fixtures/thrift-field/t225-thrift-field-demo.bundle) \
+		PHEBS_SYNTHETIC_WORKBENCH=1 \
+		go run -tags ui ./cmd/phebs serve $(ARGS)
 
 dev-api: bin/zoekt-git-index bin/buf ## backend-only loop: no UI build, placeholder page
-	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) PHEBS_BUF=$(abspath bin/buf) PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) PHEBS_SYNTHETIC_WORKBENCH=1 go run ./cmd/phebs serve $(ARGS)
+	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
+		PHEBS_BUF=$(abspath bin/buf) \
+		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
+		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
+		PHEBS_THRIFT_FIELD_DEMO_REPO=$(abspath docs/fixtures/thrift-field/t225-thrift-field-demo.bundle) \
+		PHEBS_SYNTHETIC_WORKBENCH=1 \
+		go run ./cmd/phebs serve $(ARGS)
 
 validate-version:
 	@printf '%s\n' "$(VERSION)" | grep -Eq '$(VERSION_PATTERN)' || { \

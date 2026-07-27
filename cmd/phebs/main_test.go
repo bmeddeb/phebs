@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -647,6 +649,82 @@ func TestBindSyntheticWorkbenchIsExplicitAndFixtureCoupled(t *testing.T) {
 		}
 		if opts.Workbench != nil {
 			t.Fatal("failed registration changed Workbench options")
+		}
+	})
+}
+
+func TestBindSyntheticThriftFieldDemoIsExplicitAndPipelineBacked(t *testing.T) {
+	fixture, err := filepath.Abs(filepath.Join(
+		"..", "..", "docs", "fixtures", "thrift-field", "t225-thrift-field-demo.bundle",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("ordinary serve remains dark", func(t *testing.T) {
+		cfg := &config.Config{}
+		if err := bindSyntheticThriftFieldDemo(cfg, ""); err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Experimental.ProvisionalThriftFieldExtraction || len(cfg.Connections) != 0 {
+			t.Fatalf("empty setting changed config: %+v", cfg)
+		}
+	})
+
+	t.Run("exact bundle registers ordinary pipeline input", func(t *testing.T) {
+		cfg := &config.Config{}
+		if err := bindSyntheticThriftFieldDemo(cfg, fixture); err != nil {
+			t.Fatal(err)
+		}
+		if !cfg.Experimental.ProvisionalThriftFieldExtraction ||
+			len(cfg.Connections) != 1 ||
+			cfg.Connections[0].Name != "t22-thrift-field-demo" ||
+			cfg.Connections[0].Type != "git" ||
+			cfg.Connections[0].URL != fixture {
+			t.Fatalf("synthetic fixture config = %+v", cfg)
+		}
+	})
+
+	t.Run("existing exact source is not duplicated", func(t *testing.T) {
+		cfg := &config.Config{Connections: []config.Connection{{
+			Name: "already-present", Type: "git", URL: fixture,
+		}}}
+		if err := bindSyntheticThriftFieldDemo(cfg, fixture); err != nil {
+			t.Fatal(err)
+		}
+		if !cfg.Experimental.ProvisionalThriftFieldExtraction || len(cfg.Connections) != 1 {
+			t.Fatalf("existing fixture source changed unexpectedly: %+v", cfg)
+		}
+	})
+
+	t.Run("invalid or colliding settings fail before mutation", func(t *testing.T) {
+		rows := []struct {
+			name    string
+			fixture string
+			cfg     *config.Config
+		}{
+			{name: "relative", fixture: "docs/fixtures/thrift-field/t225-thrift-field-demo.bundle", cfg: &config.Config{}},
+			{name: "surrounding space", fixture: fixture + " ", cfg: &config.Config{}},
+			{name: "wrong basename", fixture: filepath.Join(filepath.Dir(fixture), "other.bundle"), cfg: &config.Config{}},
+			{name: "missing", fixture: filepath.Join(t.TempDir(), "t225-thrift-field-demo.bundle"), cfg: &config.Config{}},
+			{
+				name: "connection collision", fixture: fixture,
+				cfg: &config.Config{Connections: []config.Connection{{
+					Name: "t22-thrift-field-demo", Type: "git", URL: "/different/source",
+				}}},
+			},
+		}
+		for _, row := range rows {
+			t.Run(row.name, func(t *testing.T) {
+				before := *row.cfg
+				before.Connections = append([]config.Connection(nil), row.cfg.Connections...)
+				if err := bindSyntheticThriftFieldDemo(row.cfg, row.fixture); err == nil {
+					t.Fatalf("invalid fixture setting %q succeeded", row.fixture)
+				}
+				if !reflect.DeepEqual(*row.cfg, before) {
+					t.Fatalf("failed binding changed config: before=%+v after=%+v", before, *row.cfg)
+				}
+			})
 		}
 	})
 }

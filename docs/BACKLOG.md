@@ -1335,18 +1335,10 @@ registry pin, dark flag, and PR-sized acceptance criteria.
   the gate's who-wants-it trigger only; the pack still requires its own
   validation spike, card, dark flag, and executable acceptance bars before
   any ticket ships.
-- **Thrift field references** *(named by the prospective design partner,
-  2026-07-26 — adopted as EPIC 22 below, 2026-07-26; this bullet is absorbed
-  at T22.5 closure)*: separate generated-accessor
-  recognition from the shipped protobuf pack. `scip-proto-field` recognizes
-  only protoc-gen-go accessor symbols, and the proof-service field identity
-  enforces protobuf wire bounds (1–536,870,911 excluding 19000–19999), which
-  rejects Thrift's field 0 success slot outright. A Thrift pack needs its own
-  validated recognition rules per generator family (Apache Thrift's exported
-  fields/`IsSet*` predicates and thriftrw's differ), a distinct domain and
-  dark flag, Thrift field-identity bounds (0–32,767), and a neutral-named
-  query tool — `find_proto_field_references` stays wire-frozen and
-  protobuf-only. Same spike-first pack process as every other candidate.
+- **Thrift field references:** ✅ absorbed by EPIC 22 (2026-07-27;
+  experimental-dark). The separate generator rules, field-0 identity,
+  neutral query/report/MCP/UI path, committed synthetic demo, and legacy
+  protobuf stability are closed by T22.1–T22.5; no accuracy claim was added.
 - **Thrift:** ✅ absorbed by EPIC 19 (2026-07-25). The operator named the
   language/runtime combination (Thrift IDL + Apache Thrift Go, jaeger
   corpus); the packs shipped with the T19.1 executable rule gates,
@@ -3044,7 +3036,7 @@ routes/tools/export stay unregistered until the retained `ESTABLISHED` plus
 pilot-continuation gate is satisfied, and the external accuracy posture remains
 `NOT_ESTABLISHED`.
 
-## EPIC 22 — Thrift field references *(proposed 2026-07-26; experimental-dark)*
+## EPIC 22 — Thrift field references *(complete 2026-07-27; experimental-dark)*
 
 ### Product outcome
 
@@ -3190,12 +3182,28 @@ cover mixed exact citations, field 0, hidden repositories, authorization,
 deterministic bytes, malformed identities and bounds, dark discovery, schema
 digests, and the unchanged protobuf-only response.
 
-**T22.5 · UI generalization, demo, closure** *(needs T22.4)* — Impact field
+**T22.5 ✅ · UI generalization, demo, closure** *(2026-07-27; needs T22.4)* — Impact field
 mode accepts field 0 with a protocol-aware guard; evidence-row kind union
 extended; `make dev` demo via a neutral synthetic fixture repo with a
 committed authored `index.scip` exercising a thriftrw-shaped digest join;
 MANUAL walkthrough; absorb the Thrift-field candidate bullet above. AC:
 Vitest green; protobuf pages unchanged; operator walkthrough per MANUAL.
+
+Implementation note: Impact field mode defaults to protobuf and preserves its
+positive bounds and reserved interval, while the explicit Thrift choice admits
+0..32,767. The selector is only an input-rule guard; the submitted report
+remains protocol-neutral and can render every admitted domain. The existing
+generic `field_reference` row already carries the extended protobuf/Thrift
+protocol union and now proves a Thrift field-zero citation in Vitest.
+`make dev` and `make dev-api` bind a committed synthetic Git bundle through
+the real sync/index/extraction path and enable only the independent dark
+Thrift-field reader. Its receipt pins a one-commit repository, authored
+two-document `index.scip`, digest-valid embedded thriftrw IDL, field-zero
+wire identity, canonical lineage, and `consumer/use.go:6` occurrence. The
+authored needle is not real-indexer output or an accuracy/completeness claim;
+T22.2 remains the separate real-indexer comparison. Ordinary serve remains
+default-dark. Epic 22 is closed without changing the protobuf-only legacy
+route or GATE2-V2's `NOT_ESTABLISHED` result.
 
 ## EPIC 23 — Kafka topic evidence *(complete 2026-07-26; experimental-dark)*
 

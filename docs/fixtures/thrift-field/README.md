@@ -1,0 +1,20 @@
+# T22.5 neutral Thrift field demo
+
+This development-only fixture is a small synthetic Git repository containing
+a committed root `index.scip`. It exercises the production
+`scip-thrift-field` three-way join for the Thrift result success slot:
+
+- the embedded `ThriftModule` satisfies `sha1(Raw) == SHA1`;
+- Raw IDL, `Meta_Health_Result.Success`, and `wire.Field{ID: 0}` agree;
+- the authored SCIP definition and read occurrence cover the exact
+  `GetSuccess` identifier spans.
+
+The index is an authored needle, not a completeness or accuracy measurement
+and not output from a real indexer. Its symbol follows the production shape
+independently checked by the T22.2 `scip-go` fixture. The authoring command is
+retained at `cmd/author`; normal tests and `make dev` only verify and consume
+the committed bytes.
+
+`t225-thrift-field-demo.bundle` is the cloneable, single-commit form used by
+`make dev`. `receipt.json` pins the repository commit, bundle and index bytes,
+question identity, and exact citation.

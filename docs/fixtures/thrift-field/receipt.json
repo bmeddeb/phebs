@@ -1,0 +1,26 @@
+{
+  "schema": "t22.5-thrift-field-demo-v1",
+  "repository": "example.invalid/t225-thrift-field-demo",
+  "commit": "050c2c5204b24c1968f887310774eee57c46be57",
+  "bundle_sha256": "sha256:c7bcffb9406c284322c384b33246455bee9de04e26364851818ce73efbe60b3f",
+  "bundle_bytes": 1435,
+  "index_author": "phebs-t225-authored-preparer",
+  "index_author_version": "1",
+  "authoring_command": [
+    "go",
+    "run",
+    "./docs/fixtures/thrift-field/cmd/author"
+  ],
+  "index_sha256": "sha256:322268110b5e57eff0e7ff88859655fc0466bc83152f160c00118e13205b9a44",
+  "index_bytes": 342,
+  "documents": 2,
+  "occurrences": 2,
+  "definitions": 1,
+  "references": 1,
+  "lineage": "contract_scip_package_v1_5e8be5dc2df626800c5990885b6313c96246c7d7822864bb44be094edc1d7783",
+  "message": "health.Meta_Health_Result",
+  "field_number": 0,
+  "object": "health.Meta_Health_Result#0",
+  "citation": "consumer/use.go:6",
+  "observation": "Authored field-zero needle exercising a digest-bound thriftrw-shaped join; not a real-indexer output, completeness result, or accuracy measurement."
+}

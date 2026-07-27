@@ -1030,7 +1030,7 @@ revisions:
 | `proof_bundles.retention`                   | *(disabled)*     | positive Go duration expires proof bundles after their latest materialization; omission or `"0"` keeps them indefinitely                                         |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
-| `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP surfaces remain experimental-dark |
+| `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
 | `experimental.provisional_kafka_extraction` | `false`          | development-only opt-in for the T23 Kafka topic-evidence packs described below; abstention-dominant by design, same provisional repo/path lineage posture         |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 | `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
@@ -1555,8 +1555,12 @@ carries the selected canonical operation into the Impact form but does not
 submit it.
 - **Impact** (`#/impact`, experimental) — bounded contract-impact reports for
 canonical RPC operations (gRPC and Thrift consumer evidence), stable protobuf
-field identities, and proposed before/after contract inputs. Known and unresolved consumers cite immutable
-source revisions; every conclusion renders its complete coverage certificate.
+and Thrift field identities, and proposed before/after contract inputs. Field
+mode defaults to protobuf's 1..536,870,911 rules (including refusal of reserved
+19000..19999) and offers Thrift's 0..32,767 rules explicitly. That choice
+validates the input; the report remains neutral and may render every registered
+field-reference domain that admits the number. Known and unresolved consumers
+cite immutable source revisions; every conclusion renders its complete coverage certificate.
 The navigation item appears only when the server advertises the capability,
 and the contract-change tab additionally requires the pinned Buf startup probe.
 - **Topics** (`#/topics`, experimental) — topic-centered Kafka evidence:
@@ -2229,7 +2233,43 @@ accuracy, completeness, runtime-use, or absence claim. The existing
 `find_proto_field_references` route remains protobuf-only and byte-stable.
 The separate `find_field_references` route, impact report, and MCP tool fan
 out across the registered field-reference domains whose number rules admit
-the requested identity; UI support remains deferred to T22.5.
+the requested identity. Impact field mode uses the same neutral report:
+selecting a protocol applies only that protocol's field-number validation and
+does not filter an otherwise admitted domain from the answer.
+
+### Thrift field-zero development walkthrough
+
+`make dev` and `make dev-api` explicitly set
+`PHEBS_THRIFT_FIELD_DEMO_REPO` to the committed
+`docs/fixtures/thrift-field/t225-thrift-field-demo.bundle`. The server accepts
+only that clean absolute bundle name, adds it as a generic Git source, and
+enables `provisional_thrift_field_extraction` for that process. The bundle then
+uses the ordinary sync → zoekt index → extraction path; it is not an HTTP or
+UI proof-logic adapter. Ordinary `phebs serve`, operator configuration, and
+release defaults remain unchanged and dark.
+
+To exercise the path:
+
+1. Run `make dev`, use the logged first-run setup token if necessary, and wait
+   for the `t225-thrift-field-demo.bundle` repository to show an indexed
+   revision on **Repos**.
+2. Open **Impact**, select **Field**, choose **Thrift**, and enter:
+   `contract_scip_package_v1_5e8be5dc2df626800c5990885b6313c96246c7d7822864bb44be094edc1d7783`,
+   `health.Meta_Health_Result`, and field number `0`.
+3. Build the report. The resolved row is protocol `thrift`, domain
+   `scip-thrift-field`, exact tier, and links to `consumer/use.go:6` at
+   fixture commit `050c2c5204b24c1968f887310774eee57c46be57`.
+   Analysis scope & gaps includes the complete visible
+   `scip-thrift-field` coverage row; field 0 admits no other registered field
+   domain.
+
+The fixture's `receipt.json` pins its repository commit, bundle and index
+digests, two-document/two-occurrence census, canonical identity, and citation.
+Its `index.scip` is an authored rule needle whose asserted symbol shape is
+separately checked against the T22.2 real-indexer fixture. This walkthrough
+demonstrates routing, exact citation, and the digest-bound thriftrw join only;
+it is not evidence of completeness, runtime use, compatibility, or extraction
+accuracy.
 
 Every query answer over this evidence cites a deterministic coverage
 certificate (`coverage-certificate-v1`): the caller's visible repositories
@@ -2863,8 +2903,8 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas fixtures and the fixture-coupled Change Workbench, run with embedded UI |
-| `make dev-api`       | backend-only loop with the same children and explicit fixtures/Workbench adapter (placeholder UI page, fast)                                           |
+| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas fixtures, the fixture-coupled Change Workbench, and the committed Thrift field-zero repo through normal sync/index/extraction; run with embedded UI |
+| `make dev-api`       | backend-only loop with the same children, explicit UI/Workbench fixtures, and Thrift field-zero repository (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index` and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
