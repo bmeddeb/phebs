@@ -2980,7 +2980,7 @@ are regression-tested. No MCP discovery/schema/tool
 count, Workbench production registration, accuracy posture, or pilot gate
 changes.
 
-**T21.13 · MCP Workbench parity and explicit mutations** *(needs T21.7–T21.9,
+**T21.13 ✅ 2026-07-27 · MCP Workbench parity and explicit mutations** *(needs T21.7–T21.9,
 T21.12)* — expose `preview_change_workbench`, `create_change_workbench`,
 `get_change_workbench`, and `record_change_disposition` only over the real
 shared services and synthetic/dark capability. Evidence drill-down reuses
@@ -2997,6 +2997,34 @@ descriptions state the durable write effect. HTTP/MCP projections match shared
 services, hidden repositories do not perturb responses or call ledgers, stale
 previews/revisions fail closed, and no adapter reads evidence or invents
 checklist/conclusion text.
+
+Implemented on `codex/t21.13-mcp-workbench-parity` over the reviewed combined
+T21.12/T22.4 base. The all-or-none synthetic/default-dark annex binds only the
+existing Workbench and checklist shared services plus the same authenticated
+principal projection used by Huma. Its read registry exposes
+`preview_change_workbench` and `get_change_workbench`; preview writes nothing
+but rechecks `investigation:write` because its digest can authorize a later
+creation. A second immutable registry is selected only for a freshly
+authenticated named key carrying that capability and additionally advertises
+the durably described `create_change_workbench` and
+`record_change_disposition`. Browser sessions, read-only named keys, the
+migration-only legacy key, and revoked credentials cannot discover or invoke
+those two writes, and every preview/write handler rechecks the capability
+before forwarding.
+
+Create passes the complete plan, preview digest, and idempotency key to T21.3;
+Disposition passes the expected Revision, exact evidence-bound suggestion,
+fixed category/rationale/supersession, and idempotency key to T21.9. Neither
+adapter can read evidence or synthesize a suggestion. Agents drill down through
+the unchanged Contract Atlas, Caller Map/comparison, proof, search, SCIP, and
+history tools. Official-SDK acceptance executes preview, create, read,
+multi-page Caller Map traversal, and Disposition while matching direct
+shared-service bytes; hidden repository changes leave responses and call
+ledgers unchanged. Schema digests, strict unknown-field refusal, non-disclosing
+unknown/unauthorized reads, stale preview/Revision conflicts, dark and partial
+registration, and exact 10/12/14 plus 20/22/24 count states are pinned. There
+is no revise, compatibility-action, checklist-read, production Workbench,
+accuracy, pilot, or continuation surface.
 
 **T21.14 · Scenario, failure, accessibility, and implementation closure**
 *(needs T21.1–T21.13 and T20.14)* — exercise add, modify, migrate, and retire

@@ -489,6 +489,9 @@ recover the committed result.
 Proposal source bytes are never returned or retained. A conditional Huma
 projection exists for tests and future registration, but it is absent from the
 normal production server's routes, OpenAPI, and advertised capabilities.
+The synthetic adapter also supplies the T21.13 MCP projection described in
+§8. It calls this same service and the shared checklist mutation boundary;
+ordinary production startup still supplies neither service to MCP.
 
 ### Synthetic Change Workbench shell
 
@@ -753,7 +756,10 @@ safe-to-retire claim.
 The T21.9 checklist composes the current authorized T21.7 Where and T21.8 How
 projections. It remains production-unregistered/default-dark: T21.11 exposes
 its HTTP and UI projections only through the fixture-coupled synthetic
-Workbench, and there is still no MCP entry. Each machine suggestion binds its
+Workbench. T21.13 adds no separate checklist-read tool; its explicit
+`record_change_disposition` mutation forwards an already evidence-bound
+suggestion to this same service for current-projection validation. Each machine
+suggestion binds its
 originating Workbench Revision, normalized evidence inputs, complete evidence
 snapshot, deterministic selection rule, and exact evidence references.
 Suggestions are never persisted or accepted automatically. When evidence
@@ -793,8 +799,13 @@ Investigation access or ownership, or principal authority. A capable key still
 passes the same owner, current-Revision, preview, snapshot, and idempotency
 checks. Browser-session writes use the existing session authorization and CSRF
 check and do not carry or emulate a bearer-key capability. The Workbench
-remains production-unregistered/default-dark, and T21.12 registers no MCP
-mutation tools.
+remains production-unregistered/default-dark. T21.13 uses this capability only
+for its fixture-coupled MCP preview binding and two explicit durable mutation
+tools. The stateless request is authenticated again before tool discovery or
+invocation, so revocation, expiry, or disabling the owning user removes access
+before the Workbench adapter runs. Capability possession still does not grant
+repository visibility, reader/owner access, or authority over another
+principal's Investigation.
 
 The existing `check_contract_compatibility` HTTP and MCP contracts continue to
 return retained content-addressed proof bundles. Workbench compatibility is an
@@ -844,7 +855,8 @@ identity.
 The T21.7 Where reader composes those exact Workbench identities
 with the existing Contract Atlas, Caller Map, caller comparison, and stable
 field-reference services. It remains production-unregistered; its conditional
-T21.11 HTTP/UI projection is fixture-coupled and there is no MCP entry. Add
+T21.11 HTTP/UI projection is fixture-coupled. T21.13 deliberately adds no
+parallel MCP impact reader: agents use the existing Epic 20 and core tools. Add
 shows analogous declarations and
 implementations and deliberately has no caller stream. Modify shows the
 current exact caller page plus an explicitly selected retained compatibility
@@ -1654,19 +1666,43 @@ go-sdk), guarded by the same DB-backed authentication as the rest of the API.
 Create a named key in **Settings** and use it as the bearer token; the legacy
 config key remains accepted only while it is configured.
 
-The current MCP tool set is read-only with respect to Investigations, so
-ordinary named keys need no capability. Any later Workbench mutation tool must
-be discovered and invoked only through a named key carrying
-`investigation:write`; read-only, legacy, revoked, expired, and disabled-user
-credentials remain unable to mutate. T21.12 itself changes no MCP discovery,
-schema, or tool count.
+The production MCP tool set is read-only with respect to Investigations, so
+ordinary named keys need no capability. When and only when the documented
+synthetic Change Workbench adapter is enabled, MCP adds a default-dark
+Workbench annex over the same shared services as Huma. Read-capable
+credentials discover `preview_change_workbench` and `get_change_workbench`.
+Preview writes nothing, but invocation requires a named key carrying
+`investigation:write` because its digest can bind a later mutation.
+
+Only a currently valid named key carrying `investigation:write` discovers
+`create_change_workbench` and `record_change_disposition`. Browser sessions,
+ordinary/read-only named keys, the migration-only legacy key, revoked or
+expired keys, and keys owned by a disabled user cannot invoke those durable
+tools. Discovery is selected from the freshly authenticated stateless request,
+and each mutation handler rechecks the capability before calling the shared
+service. The capability is only the credential gate: repository visibility,
+Investigation ownership, current revision, preview and evidence snapshots,
+suggestion identity, supersession, and idempotency checks remain authoritative.
 
 Ten core tools are always present. Enabling any provisional extraction pack
 adds five evidence-query tools, for fifteen. Enabling a protobuf or Thrift
 caller pack also adds the three-tool Caller Map annex and the comparison tool,
 for nineteen tools. A pinned Buf binary and successful host-sandbox startup
 probe adds compatibility as the final tool, for twenty total; otherwise
-compatibility stays undiscoverable.
+compatibility stays undiscoverable. A complete synthetic Workbench adds two
+read tools for otherwise authenticated credentials and two additional durable
+mutation tools only for a write-capable named key. The maximum synthetic counts
+alongside every existing annex are therefore twenty-two and twenty-four.
+
+The agent workflow is explicit: discover an endpoint with
+`search_contract_operations`, preview a complete Workbench plan, submit that
+unchanged plan with its preview digest and idempotency key, read the resulting
+exact Investigation revision, and drill down through the existing Caller Map,
+comparison, proof, search, SCIP, and history tools. Recording a Disposition
+submits the exact evidence-bound suggestion, expected revision, category,
+rationale when required, optional predecessor, and its own idempotency key to
+the shared checklist service. There is no MCP revise or retained-compatibility
+action in T21.13, and the adapter does not synthesize suggestions or conclusions.
 
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
@@ -1691,6 +1727,10 @@ compatibility stays undiscoverable.
 | `get_contract_operation` | one protocol-qualified exact operation with request/response shapes, immutable declaration citation, related evidence, and coverage |
 | `list_operation_callers` | exact-declaration Caller Map page with shared filters, source and unit-attribution states, unresolved rows, coverage/attribution digests, citations, and snapshot-bound cursor |
 | `compare_operation_callers` | occurrence- or unit-level union of two exact endpoint caller populations with evidence-qualified classifications, both attribution digests, shared coverage, bounded citations, and snapshot-bound cursor |
+| `preview_change_workbench` | side-effect-free shared-service preview of one plan; requires a named key with `investigation:write` because the returned digest can bind a later mutation |
+| `create_change_workbench` | explicit durable creation of one preview-bound Investigation and initial immutable revision; advertised only to a write-capable named key |
+| `get_change_workbench` | authorized read of one current Workbench revision and its human-authored brief; creates no evidence or durable state |
+| `record_change_disposition` | explicit durable append of one immutable fixed-category Disposition over an exact current suggestion; advertised only to a write-capable named key |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
@@ -1749,7 +1789,13 @@ remain absent unless a protocol caller pack makes the Caller Map service
 available. T20.13's companion session supplies two returned identities to
 `compare_operation_callers`, exhausts bounded continuation, and matches direct
 shared-service classifications and citations; the tool remains absent with
-the comparison capability unavailable.
+the comparison capability unavailable. T21.13's official-SDK session performs
+one side-effect-free preview, one preview-bound idempotent creation, an
+authorized Workbench read, paged drill-down through the existing Caller Map,
+and one expected-revision Disposition. It also pins strict schemas and tool
+counts for dark, partial, session, read-only, legacy, write-capable, revoked,
+and stale states. The Workbench adapter has no evidence-reader dependency and
+does not generate checklist or conclusion text.
 
 ## 9. Operations
 

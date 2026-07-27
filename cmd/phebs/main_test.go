@@ -17,13 +17,18 @@ import (
 	"testing"
 	"time"
 
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/config"
+	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 type authenticationWorkbenchFake struct{}
+
+type authenticationWorkbenchChecklistFake struct{}
 
 func (authenticationWorkbenchFake) Preview(
 	context.Context,
@@ -62,6 +67,14 @@ func (authenticationWorkbenchFake) Read(
 	return &store.WorkbenchView{}, nil
 }
 
+func (authenticationWorkbenchChecklistFake) RecordDisposition(
+	context.Context,
+	string,
+	api.WorkbenchDispositionMutation,
+) (*store.WorkbenchDisposition, error) {
+	return &store.WorkbenchDisposition{}, nil
+}
+
 func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -73,7 +86,7 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 
 	insecure := false
 	authService, err := auth.New(ctx, auth.Options{Store: st, Config: config.Auth{
-		CookieSecure: &insecure,
+		APIKey: "legacy-integration-token", CookieSecure: &insecure,
 		BootstrapUser: config.BootstrapUser{
 			Email: "admin@example.com", Password: "integration-password",
 		},
@@ -89,10 +102,16 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 		},
 		Principal: func(ctx context.Context) string {
 			principal, ok := auth.PrincipalFromContext(ctx)
-			if !ok || principal.User == nil {
+			if !ok {
 				return ""
 			}
-			return "user:" + principal.User.ID
+			if principal.User != nil {
+				return "user:" + principal.User.ID
+			}
+			if principal.APIKeyID != "" {
+				return "api-key:" + principal.APIKeyID
+			}
+			return ""
 		},
 		InvestigationMutation: func(ctx context.Context) bool {
 			principal, ok := auth.PrincipalFromContext(ctx)
@@ -108,7 +127,42 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 		},
 		Workbench: authenticationWorkbenchFake{},
 	})
-	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	mcpOpts := phebsmcp.Options{
+		Version: "test", Workbench: authenticationWorkbenchFake{},
+		WorkbenchChecklist: authenticationWorkbenchChecklistFake{},
+		Principal: func(ctx context.Context) string {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok || principal.User == nil {
+				return ""
+			}
+			return "user:" + principal.User.ID
+		},
+		InvestigationMutation: mcpInvestigationMutation,
+	}
+	mcpReadServer := phebsmcp.NewServer(mcpOpts)
+	mcpOpts.AdvertiseWorkbenchMutations = true
+	mcpWriteServer := phebsmcp.NewServer(mcpOpts)
+	streamableMCPHandler := mcpsdk.NewStreamableHTTPHandler(
+		func(request *http.Request) *mcpsdk.Server {
+			if mcpInvestigationMutation(request.Context()) {
+				return mcpWriteServer
+			}
+			return mcpReadServer
+		},
+		&mcpsdk.StreamableHTTPOptions{Stateless: true},
+	)
+	mcpHandler := http.HandlerFunc(func(
+		writer http.ResponseWriter,
+		request *http.Request,
+	) {
+		// Preserve the narrow routing smoke assertion below; official SDK
+		// request/response coverage uses POST and disables standalone SSE.
+		if request.Method == http.MethodGet {
+			writer.WriteHeader(http.StatusNoContent)
+			return
+		}
+		streamableMCPHandler.ServeHTTP(writer, request)
+	})
 	metricsHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "metrics") })
 	uiHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "ui") })
 	server := httptest.NewServer(newHTTPHandler(authService, apiHandler, mcpHandler, metricsHandler, uiHandler))
@@ -125,6 +179,22 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	assertStatus(t, client, http.MethodGet, server.URL+"/", "", nil, http.StatusOK, "ui")
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/repos", "", nil, http.StatusUnauthorized, "authentication required")
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/mcp", "", nil, http.StatusUnauthorized, "authentication required")
+	legacyTools, err := mcpToolNamesWithBearer(
+		t,
+		server.URL+"/api/mcp",
+		"legacy-integration-token",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{
+		"create_change_workbench",
+		"record_change_disposition",
+	} {
+		if legacyTools[name] {
+			t.Fatalf("legacy key discovered %s: %v", name, legacyTools)
+		}
+	}
 
 	// The provider HMAC, not user auth, is the webhook trust boundary.
 	assertStatus(t, client, http.MethodPost, server.URL+"/api/webhook", `{}`, nil, http.StatusUnauthorized, "bad signature")
@@ -140,6 +210,23 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	}
 	if err := json.Unmarshal(login, &loginResult); err != nil || loginResult.CSRFToken == "" {
 		t.Fatalf("login response = %s, err %v", login, err)
+	}
+	sessionTools, err := mcpToolNamesWithBrowserSession(
+		t,
+		server.URL+"/api/mcp",
+		jar,
+		loginResult.CSRFToken,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{
+		"create_change_workbench",
+		"record_change_disposition",
+	} {
+		if sessionTools[name] {
+			t.Fatalf("browser session discovered %s: %v", name, sessionTools)
+		}
 	}
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/repos", "", nil, http.StatusOK, "[]")
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/evidence?domain=proto-contract", "", nil,
@@ -190,6 +277,30 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	bearerClient := &http.Client{}
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/repos", "", bearerHeaders, http.StatusOK, "[]")
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/mcp", "", bearerHeaders, http.StatusNoContent, "")
+	readTools, err := mcpToolNamesWithBearer(
+		t,
+		server.URL+"/api/mcp",
+		keyResult.Token,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{
+		"preview_change_workbench",
+		"get_change_workbench",
+	} {
+		if !readTools[name] {
+			t.Fatalf("read-only named key omitted %s: %v", name, readTools)
+		}
+	}
+	for _, name := range []string{
+		"create_change_workbench",
+		"record_change_disposition",
+	} {
+		if readTools[name] {
+			t.Fatalf("read-only named key discovered %s: %v", name, readTools)
+		}
+	}
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/auth/keys", "", bearerHeaders, http.StatusForbidden, "browser session")
 	assertStatus(
 		t,
@@ -229,6 +340,24 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 		"Authorization": []string{"Bearer " + writeKeyResult.Token},
 		"Content-Type":  []string{"application/json"},
 	}
+	writeTools, err := mcpToolNamesWithBearer(
+		t,
+		server.URL+"/api/mcp",
+		writeKeyResult.Token,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{
+		"preview_change_workbench",
+		"create_change_workbench",
+		"get_change_workbench",
+		"record_change_disposition",
+	} {
+		if !writeTools[name] {
+			t.Fatalf("write-capable named key omitted %s: %v", name, writeTools)
+		}
+	}
 	assertStatus(
 		t,
 		bearerClient,
@@ -259,6 +388,108 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 		http.StatusUnauthorized,
 		"authentication required",
 	)
+	if _, err := mcpToolNamesWithBearer(
+		t,
+		server.URL+"/api/mcp",
+		writeKeyResult.Token,
+	); err == nil {
+		t.Fatal("revoked named key discovered MCP tools")
+	}
+}
+
+type mcpBearerTransport struct {
+	token string
+	csrf  string
+}
+
+func (transport mcpBearerTransport) RoundTrip(
+	request *http.Request,
+) (*http.Response, error) {
+	request = request.Clone(request.Context())
+	request.Header = request.Header.Clone()
+	if transport.token != "" {
+		request.Header.Set("Authorization", "Bearer "+transport.token)
+	}
+	if transport.csrf != "" {
+		request.Header.Set("X-CSRF-Token", transport.csrf)
+	}
+	return http.DefaultTransport.RoundTrip(request)
+}
+
+func mcpToolNamesWithBearer(
+	t *testing.T,
+	endpoint string,
+	token string,
+) (map[string]bool, error) {
+	t.Helper()
+	client := mcpsdk.NewClient(
+		&mcpsdk.Implementation{Name: "t21.13-auth-test", Version: "1"},
+		nil,
+	)
+	session, err := client.Connect(
+		t.Context(),
+		&mcpsdk.StreamableClientTransport{
+			Endpoint: endpoint,
+			HTTPClient: &http.Client{
+				Transport: mcpBearerTransport{token: token},
+			},
+			MaxRetries:           -1,
+			DisableStandaloneSSE: true,
+		},
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = session.Close() }()
+	listed, err := session.ListTools(t.Context(), nil)
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[string]bool, len(listed.Tools))
+	for _, tool := range listed.Tools {
+		names[tool.Name] = true
+	}
+	return names, nil
+}
+
+func mcpToolNamesWithBrowserSession(
+	t *testing.T,
+	endpoint string,
+	jar http.CookieJar,
+	csrf string,
+) (map[string]bool, error) {
+	t.Helper()
+	client := mcpsdk.NewClient(
+		&mcpsdk.Implementation{Name: "t21.13-session-test", Version: "1"},
+		nil,
+	)
+	session, err := client.Connect(
+		t.Context(),
+		&mcpsdk.StreamableClientTransport{
+			Endpoint: endpoint,
+			HTTPClient: &http.Client{
+				Jar:       jar,
+				Transport: mcpBearerTransport{csrf: csrf},
+			},
+			MaxRetries:           -1,
+			DisableStandaloneSSE: true,
+		},
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = session.Close() }()
+	listed, err := session.ListTools(t.Context(), nil)
+	if err != nil {
+		return nil, err
+	}
+	names := make(map[string]bool, len(listed.Tools))
+	for _, tool := range listed.Tools {
+		names[tool.Name] = true
+	}
+	return names, nil
 }
 
 func authenticationWorkbenchPlan() store.WorkbenchPlan {

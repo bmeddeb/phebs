@@ -571,22 +571,40 @@ func serve(args []string) error {
 		apiOpts.ContractCatalog, apiOpts.CallerMap, apiOpts.CallerComparison,
 	)
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
-	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
+	// T21.13 builds two immutable registries over the same services. Stateless
+	// request authentication selects the write registry only for a current
+	// named key carrying investigation:write; handlers recheck that predicate
+	// before every preview-bound or durable mutation call.
+	mcpOpts := phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
 		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs,
-		Compatibility:    mcpCompatibility,
-		ContractCatalog:  catalogQueries,
-		CallerMap:        callerMapQueries,
-		CallerComparison: comparisonQueries,
-	})
+		Compatibility:         mcpCompatibility,
+		ContractCatalog:       catalogQueries,
+		CallerMap:             callerMapQueries,
+		CallerComparison:      comparisonQueries,
+		Workbench:             apiOpts.Workbench,
+		WorkbenchChecklist:    apiOpts.WorkbenchChecklist,
+		Principal:             apiOpts.Principal,
+		InvestigationMutation: mcpInvestigationMutation,
+	}
+	mcpReadServer := phebsmcp.NewServer(mcpOpts)
+	mcpOpts.AdvertiseWorkbenchMutations = true
+	mcpWriteServer := phebsmcp.NewServer(mcpOpts)
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their
 	// permissions onto whoever posts to it (the SDK's hijack guard is inert
 	// without its own auth package). Stateless makes each POST carry its own
 	// authenticated principal; phebs tools are plain request/response, so
 	// nothing is lost.
-	mcpHandler := mcpsdk.NewStreamableHTTPHandler(func(*http.Request) *mcpsdk.Server { return mcpServer },
-		&mcpsdk.StreamableHTTPOptions{Stateless: true})
+	mcpHandler := mcpsdk.NewStreamableHTTPHandler(
+		func(request *http.Request) *mcpsdk.Server {
+			if mcpInvestigationMutation(request.Context()) {
+				return mcpWriteServer
+			}
+			return mcpReadServer
+		},
+		&mcpsdk.StreamableHTTPOptions{Stateless: true},
+	)
 	handler := newHTTPHandler(authService, apiHandler, mcpHandler, promhttp.Handler(), http.FileServerFS(dist))
 
 	srv := &http.Server{Addr: cfg.Server.Addr, Handler: handler, ReadHeaderTimeout: 10 * time.Second}
@@ -717,6 +735,18 @@ func mcpCallerMapServices(
 		comparisonQueries = comparison
 	}
 	return catalogQueries, callerMapQueries, comparisonQueries
+}
+
+// mcpInvestigationMutation is deliberately narrower than the browser/Huma
+// mutation predicate: MCP writes require a named API key, never a browser
+// session or the migration-only legacy key. Authenticate has already checked
+// expiry, revocation, user existence, and disabled state before this context
+// exists.
+func mcpInvestigationMutation(ctx context.Context) bool {
+	principal, ok := auth.PrincipalFromContext(ctx)
+	return ok && principal.HasAPIKeyCapability(
+		store.APIKeyCapabilityInvestigationWrite,
+	)
 }
 
 func evidenceExtractors(

@@ -58,6 +58,20 @@ type Options struct {
 	ContractCatalog  ContractCatalogQueries
 	CallerMap        CallerMapQueries
 	CallerComparison CallerComparisonQueries
+	// Workbench and WorkbenchChecklist enable T21.13's synthetic/dark MCP
+	// annex only when both real shared services are present. Principal is the
+	// same authenticated identity projection used by Huma.
+	Workbench          store.InvestigationWorkbench
+	WorkbenchChecklist WorkbenchChecklistQueries
+	Principal          func(context.Context) string
+	// InvestigationMutation rechecks that the current MCP request carries a
+	// valid named API key with investigation:write. It never replaces the
+	// shared services' owner, revision, preview, snapshot, or idempotency
+	// checks. AdvertiseWorkbenchMutations is selected per authenticated
+	// stateless HTTP request so credentials that cannot invoke durable writes
+	// do not discover them.
+	InvestigationMutation       func(context.Context) bool
+	AdvertiseWorkbenchMutations bool
 	// Visible resolves the caller's repo visibility (T10.3); nil disables
 	// permission filtering. search_code is covered inside the searcher; this
 	// hook gates the tools that bypass it (read_file, list_repos, SCIP,
@@ -155,6 +169,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerProofTools(s, opts)
 	registerCallerMapTools(s, opts)
 	registerCallerComparisonTool(s, opts)
+	registerWorkbenchTools(s, opts)
 
 	return s
 }
