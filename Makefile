@@ -12,10 +12,11 @@ RELEASE_ROOT ?= dist
 RELEASE_COMMIT ?= $(shell git rev-parse HEAD)
 RELEASE_STAGE = $(RELEASE_ROOT)/.build-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
 RELEASE_BUNDLE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
+T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 
 .PHONY: dev dev-api build validate-version validate-release-version validate-release-target \
 	release verify-release smoke-release test ui-test lint ui db-server \
-	verify-go verify-node verify-golangci-lint verify-surreal \
+	verify-go verify-node verify-golangci-lint verify-surreal t20-closure \
 	ci ci-static ci-go ci-race ci-ui
 
 bin:
@@ -77,6 +78,12 @@ smoke-release: verify-release verify-surreal ## empty-data sync/index/search and
 
 test:
 	go test ./... -timeout=25m
+
+t20-closure: bin/zoekt-git-index verify-surreal ## T20.14 empty-data scale/failure journey; receipt defaults to /private/tmp
+	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
+		T2014_RUN=1 T2014_RESULTS_PATH=$(T2014_RESULTS_PATH) \
+		go test ./internal/api -run '^TestT2014ScaleFailureAndEndToEndClosure$$' \
+		-count=1 -timeout=25m -v
 
 ui-test: ## Vitest UI tests (T6.4); npm install is incremental (~1s when current)
 	cd ui && npm install --no-audit --no-fund && npm test

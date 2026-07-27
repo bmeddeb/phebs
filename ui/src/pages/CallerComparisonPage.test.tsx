@@ -372,6 +372,36 @@ test('keeps only one bounded page mounted and restarts a stale cursor', async ()
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
 })
 
+test('pages the 10,000-row closure profile without retaining prior DOM rows', async () => {
+  api.fetchCallerComparison.mockReset()
+    .mockResolvedValueOnce(comparisonPage(
+      Array.from({ length: 100 }, (_, index) => comparisonRow(index, 'both_evidence')),
+      10_000,
+      'cursor-next',
+    ))
+    .mockResolvedValueOnce(comparisonPage(
+      Array.from({ length: 100 }, (_, index) => comparisonRow(index + 100, 'both_evidence')),
+      10_000,
+      'cursor-after-second',
+    ))
+  renderPage()
+  await screen.findByText('Rows 1–100 of 10000')
+  expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
+  expect(document.querySelectorAll('[data-testid="caller-comparison-row"]').length)
+    .toBe(100)
+  expect(screen.getAllByRole('link', { name: /src\/caller_0\.go:1/ }).length)
+    .toBeGreaterThan(0)
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  await screen.findByText('Rows 101–200 of 10000')
+  expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
+  expect(document.querySelectorAll('[data-testid="caller-comparison-row"]').length)
+    .toBe(100)
+  expect(screen.queryAllByRole('link', { name: /src\/caller_0\.go:1/ })).toHaveLength(0)
+  expect(screen.getAllByRole('link', { name: /src\/caller_100\.go:101/ }).length)
+    .toBeGreaterThan(0)
+})
+
 test('restarts a stale first page even though its cursor and page index are already zero', async () => {
   api.fetchCallerComparison.mockReset()
     .mockRejectedValueOnce(new Error('409: comparison snapshot changed'))

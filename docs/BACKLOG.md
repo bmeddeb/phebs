@@ -1352,7 +1352,7 @@ registry pin, dark flag, and PR-sized acceptance criteria.
   corpus); the packs shipped with the T19.1 executable rule gates,
   experimental-dark flags, and cards in THRIFT_PACK_CARDS.md.
 
-## EPIC 20 — Static Caller Map and migration inventory *(proposed 2026-07-25; experimental-dark)*
+## EPIC 20 — Static Caller Map and migration inventory *(complete 2026-07-27; experimental-dark)*
 
 ### Product outcome
 
@@ -2202,7 +2202,7 @@ coverage/attribution cursor invalidation, empty-scope language, and fail-closed
 validation. The optional Investigation handoff did not land; ordinary reads
 remain ephemeral.
 
-**T20.14 · Scale, failure, and end-to-end closure** *(needs T20.1–T20.13)* —
+**T20.14 · Scale, failure, and end-to-end closure** ✅ *(2026-07-27; needs T20.1–T20.13)* —
 exercise the generated large profile through sync → index → extract → Atlas →
 Caller Map → migration comparison in `make dev`, including one injected domain
 failure, one malformed unit snapshot, a permission change, and cursor
@@ -2214,6 +2214,24 @@ vet, lint, determinism, schema-migration, and dark-posture guards pass; the demo
 starts from an empty data directory and reaches a cited caller without manual
 canonical-identifier entry. The epic remains experimental-dark and carries
 the external `NOT_ESTABLISHED` accuracy posture.
+
+Implemented as the retained `make t20-closure` acceptance target plus the
+embedded-UI Vitest scale profiles. Keeping failure injection test-only avoids
+adding production failure switches to `make dev`; both paths use the same
+shared services and UI components. The exact committed receipt is
+`spike/t201/results-t20.14.json`
+(`sha256:bad98140f0974a5f929355390d4b9bbb538d8f503d62421ca20fa2888046e1f2`).
+On the recorded macOS/arm64 reference machine, the frozen 10,010-call /
+10,005-mapping corpus produced 10,004 caller and comparison identities:
+sync 205 ms, index 199 ms, extraction 227,416 ms, Atlas 12 ms, Caller Map
+17,983 ms, and comparison 18,098 ms. Both service pages returned 100 rows with
+continuation; both UI profiles mounted only 100 current-page rows. The gate
+also proved independent publication after an injected domain failure,
+fail-closed malformed attribution without healthy-run displacement, cursor
+invalidation, visibility revocation, and one exact caller citation discovered
+through Atlas. The receipt incorporates the separately reviewed v7 store
+publication/sweep evidence. These values are one-machine observations, not an
+SLA, completeness, safety, runtime-use, or accuracy claim.
 
 ## EPIC 21 — Change Workbench: Why → What → Where → How *(proposed 2026-07-25; implementation-authorized dark, production enablement blocked)*
 

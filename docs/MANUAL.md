@@ -422,6 +422,37 @@ frozen 2-second / 512 MiB gates. These are reference-machine capacity and
 integrity observations, not extraction-accuracy or universal performance
 claims.
 
+Epic 20's retained closure gate is `make t20-closure`. It starts from a new
+temporary data directory, materializes the frozen neutral `scale-10000`
+profile as a local Git repository, and drives the same sync, zoekt index,
+pure-reader extraction, Contract Atlas, Caller Map, and comparison package
+seams used by `make dev`. Atlas discovery supplies the old and replacement
+endpoint identities; the gate does not embed or require a canonical operation.
+After reaching a commit-pinned caller citation it injects one independent
+domain failure, advances the repository to a malformed unit-attribution
+snapshot, requires that failed replacement to remain invisible, verifies that
+the earlier cursor is rejected, and revokes repository visibility. The output
+receipt defaults to `/private/tmp/phebs-t20.14-results.json`; override
+`T2014_RESULTS_PATH` to retain it elsewhere. The target requires the pinned
+`surreal` and the same-module `bin/zoekt-git-index`, binds loopback ports, and
+may take several minutes.
+
+The accepted closure receipt is committed as
+`spike/t201/results-t20.14.json`
+(`sha256:bad98140f0974a5f929355390d4b9bbb538d8f503d62421ca20fa2888046e1f2`).
+On its macOS/arm64 reference machine, 10,010 calls and 10,005 unit mappings
+produced 10,004 caller and comparison identities. The observed stages were
+205 ms sync, 199 ms index, 227,416 ms extraction, 12 ms Atlas, 17,983 ms
+Caller Map, and 18,098 ms comparison. Both service reads returned a bounded
+100-row page with continuation; the two UI profiles mounted only the current
+100 rows. The receipt also binds the separately versioned current-writer v7
+publication/sweep receipt. Failure injection lives only in this acceptance
+harness rather than in production configuration; the normal embedded-UI
+journey is pinned by Vitest against the same components. Every duration is a
+reference-machine observation, not a universal performance promise. Passing
+the closure changes neither the experimental-dark registration nor the
+external `NOT_ESTABLISHED` accuracy posture.
+
 There is no Change Workbench in the current release. The available pieces are
 separate: a human can browse a declaration in Contracts, carry its operation
 to Impact, inspect cited matching/unresolved evidence and the coverage
@@ -2306,6 +2337,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
 | `make smoke-release` | run the verified bundle from empty state through auth, sync, index, search, pinned browse, and default-dark Contract Atlas checks                       |
 | `make test`          | `go test ./... -timeout=25m` — store/sync/indexer tests need `surreal`; the timeout matches CI's integration-suite allowance; child-binary tests build pinned zoekt and Buf binaries |
+| `make t20-closure`   | run the opt-in Epic 20 empty-data scale/failure journey and write its reference-machine receipt to `/private/tmp` by default                       |
 | `make ui-test`       | Vitest UI tests (`cd ui && npm test`) — streaming, keyboard nav, facets, file tree                                                                      |
 | `make lint`          | golangci-lint                                                                                                                                           |
 | `make ui`            | production UI build only                                                                                                                                |

@@ -1,0 +1,58 @@
+{
+  "schema": "t20-closure-measurement-v1",
+  "go_version": "go1.26.5",
+  "goos": "darwin",
+  "goarch": "arm64",
+  "gomaxprocs": 10,
+  "profile": "scale-10000",
+  "manifest_digest": "sha256:f95953373ed1dd77be9291ca76e2daa20147f3fc0b36a8fd3b70d033902404de",
+  "profile_files": 225,
+  "calls": 10010,
+  "unit_mappings": 10005,
+  "sync_wall_ms": 205,
+  "index_wall_ms": 199,
+  "extract_wall_ms": 227416,
+  "atlas_wall_ms": 12,
+  "caller_map_wall_ms": 17983,
+  "comparison_wall_ms": 18098,
+  "caller_map_rows": 100,
+  "caller_map_total_rows": 10004,
+  "comparison_rows": 100,
+  "comparison_total_rows": 10004,
+  "discovered_operations": [
+    "/synthetic.orders.v1.Orders/Get",
+    "/synthetic.orders.v1.Orders/Watch"
+  ],
+  "cited_caller": {
+    "repository": "\u003cgenerated-local-profile\u003e",
+    "commit": "9ddb6cf55a6d6082a5984c7fe33495cd56a24f57",
+    "path": "src/alias/caller.go",
+    "start_byte": 94,
+    "end_byte": 99,
+    "start_line": 3,
+    "end_line": 3
+  },
+  "injected_domain_failure": true,
+  "malformed_unit_snapshot_refused": true,
+  "cursor_invalidated": true,
+  "permission_revocation_refused": true,
+  "store_receipt": {
+    "path": "spike/t201/results-current-writer-v7.json",
+    "sha256": "sha256:f4b7e4e591797c2672049b135a202ffde0ce868ced69a6fdd02ee4a45adb963b",
+    "schema": "t20-store-measurement-v3",
+    "publish_wall_ms": 166,
+    "sweep_wall_ms": 1897,
+    "sweep_steps": 42,
+    "target_rows": 20020,
+    "complete_sweep_verified": true,
+    "atomic_publication_verified": true
+  },
+  "dom": {
+    "source": "CallerMapPage and CallerComparisonPage Vitest profiles",
+    "server_page_rows": 100,
+    "mounted_caller_rows": 100,
+    "mounted_comparison_rows": 100,
+    "caller_profile_total_rows": 10000,
+    "accumulated_prior_page_rows": 0
+  }
+}
