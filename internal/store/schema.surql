@@ -161,6 +161,24 @@ DEFINE INDEX IF NOT EXISTS investigation_workbench_mutation_scope
 DEFINE INDEX IF NOT EXISTS investigation_workbench_mutation_investigation
     ON investigation_workbench_mutation FIELDS investigation_id, revision_id;
 
+-- T21.9 immutable, owner-authored Workbench Dispositions. These are not
+-- ReviewItems or tasks: deterministic suggestions are embedded snapshots,
+-- corrections append one uniquely superseding row, and the record itself is
+-- the principal-scoped idempotency receipt.
+DEFINE TABLE IF NOT EXISTS investigation_workbench_disposition SCHEMALESS;
+DEFINE FIELD OVERWRITE category ON investigation_workbench_disposition TYPE string
+    ASSERT $value INSIDE ['accepted', 'rejected', 'completed', 'reopened', 'waived'];
+DEFINE INDEX IF NOT EXISTS investigation_workbench_disposition_identity
+    ON investigation_workbench_disposition FIELDS disposition_id UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_workbench_disposition_receipt
+    ON investigation_workbench_disposition FIELDS principal, idempotency_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_workbench_disposition_scope
+    ON investigation_workbench_disposition FIELDS investigation_id, revision_id, created_at;
+DEFINE INDEX IF NOT EXISTS investigation_workbench_disposition_suggestion
+    ON investigation_workbench_disposition FIELDS investigation_id, suggestion_id, sequence UNIQUE;
+DEFINE INDEX IF NOT EXISTS investigation_workbench_disposition_supersedes
+    ON investigation_workbench_disposition FIELDS supersedes UNIQUE;
+
 DEFINE TABLE IF NOT EXISTS investigation_run SCHEMALESS;
 DEFINE INDEX IF NOT EXISTS investigation_run_identity ON investigation_run
     FIELDS revision_id, seq UNIQUE;

@@ -2811,7 +2811,7 @@ bytes. No Huma route, OpenAPI operation, advertised capability, UI, MCP tool,
 proof bundle, corpus executable, code mutation, or Investigation mutation is
 added; production remains unregistered/default-dark.
 
-**T21.9 · Disposition-backed implementation checklist** *(needs T21.3,
+**T21.9 ✅ 2026-07-27 · Disposition-backed implementation checklist** *(needs T21.3,
 T21.7, T21.8)* — derive deterministic unaccepted suggestions from exact
 Workbench evidence and project a human-owned checklist solely from those
 suggestions plus immutable, superseding Dispositions in the five fixed
@@ -2826,6 +2826,40 @@ reader grants cannot mutate. Text correction/reopen appends a superseding
 Disposition. Schema and API guards reject comments, assignment/assignee, due
 date, priority, and unknown/custom state fields. Completing every displayed
 entry does not create a migration-complete or safe-to-retire Decision.
+
+Implemented on `codex/t21.9-disposition-checklist` as the internal,
+production-unregistered `workbench-checklist-v1` shared service. It reads only
+the current authorized T21.7 impact and T21.8 implementation projections and
+derives content-addressed suggestions from the originating Investigation
+Revision, the complete normalized evidence-input/snapshot digest, the
+deterministic selection rule, and canonical exact evidence references.
+Suggestions are never persisted. Evidence regeneration therefore produces new
+unaccepted suggestion identities while immutable disposition histories over
+the prior snapshot remain visible as `stale`; neither read nor regeneration
+can retarget a human record.
+
+The additive `investigation_workbench_disposition` table stores only immutable
+`workbench-disposition-v1` rows embedding the exact suggestion. Its vocabulary
+is closed to `accepted`, `rejected`, `completed`, `reopened`, and `waived`;
+rejected, reopened, and waived require a rationale. Owner-only appends recheck
+the expected current Revision, derive the actor from the principal, enforce an
+exact principal-scoped idempotency receipt, append corrections/reopens through
+one unique predecessor, and write the audit event in the same transaction.
+Reader grants can list the history but cannot append. Strict mutation decoding
+rejects unknown fields, including comments, assignment/assignee, due date,
+priority, and custom state. Store validation independently closes categories,
+revision/evidence identity, content/request digests, rationale, and chain
+order.
+
+Composition reads at most five 100-row pages from each evidence service and
+caps 1,000 suggestions, 32 references per suggestion, 100 checklist entries
+per page, 1,000 retained Dispositions, and 64 supersessions. Evidence-page and
+suggestion ceilings create explicit review entries. Opaque cursors bind the
+principal, Revision/brief, evidence input, and complete projected snapshot.
+There is no ChecklistItem/Task table, ReviewItem mutation, Decision dependency,
+proof bundle, Huma/OpenAPI route, advertised capability, UI, or MCP tool.
+Dispositioning every current entry changes no migration-complete,
+safe-to-retire, pilot, accuracy, or production-enablement state.
 
 **T21.10 · Workbench shell and Why/What UI** *(needs T21.3, T21.5, T21.6)* —
 add the production-unregistered experimental Workbench shell, guided

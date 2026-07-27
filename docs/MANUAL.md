@@ -643,12 +643,32 @@ explicit pilot-continuation gate. Completing its implementation tickets cannot
 clear that gate or support an external accuracy, migration-complete, or
 safe-to-retire claim.
 
-The planned Workbench checklist does not change T16.8 ReviewItems into tasks.
-ReviewItems remain deterministic machine projections with no hand-creation or
-mutation path. Workbench suggestions remain unaccepted; the human projection
-uses immutable superseding Dispositions in five fixed categories. There is no
-ChecklistItem/Task table, comment, assignment, due date, priority, or custom
-state.
+The internal T21.9 checklist now composes the current authorized T21.7 Where
+and T21.8 How projections. It remains production-unregistered/default-dark:
+there is no current HTTP, UI, or MCP entry. Each machine suggestion binds its
+originating Workbench Revision, normalized evidence inputs, complete evidence
+snapshot, deterministic selection rule, and exact evidence references.
+Suggestions are never persisted or accepted automatically. When evidence
+changes, the service emits new unaccepted suggestion identities and continues
+to display dispositions over the prior evidence as `stale`; it never silently
+retargets the human record.
+
+The human projection consists only of immutable Dispositions in the fixed
+categories `accepted`, `rejected`, `completed`, `reopened`, and `waived`.
+Rejected, reopened, and waived records require a rationale. A correction or
+reopen appends a successor that names the exact active predecessor, preserving
+the old text and category. Each append requires the Investigation owner,
+expected current Revision, an exact idempotency key, and the authenticated
+actor, and is audited in the same transaction. Reader grants may inspect the
+history but cannot mutate it.
+
+This does not change T16.8 ReviewItems into tasks. ReviewItems remain
+deterministic machine projections with no hand-creation or mutation path.
+There is no ChecklistItem/Task table, comment, assignment/assignee, due date,
+priority, custom state, or checklist-owned Decision. Dispositioning every
+displayed entry does not establish completeness, correctness, runtime use,
+migration completion, or retirement safety, and it creates no Investigation
+Decision.
 
 The current API-key model has no read/write capability distinction, so no
 Workbench MCP mutation tool may ship on that model. T21.12 introduces an
