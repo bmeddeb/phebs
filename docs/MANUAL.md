@@ -536,7 +536,14 @@ Compatibility `unavailable` remains visibly distinct from a compatible
 result. Permission loss, source refusal, stale revision or preview conflicts,
 and retry paths remain explicit; structured server problem responses render
 their bounded detail rather than raw JSON. Unsaved edits install the browser's
-ordinary leave warning. The responsive rail becomes a horizontal step strip on
+ordinary tab/unload warning; a same-app navigation link that leaves the
+Workbench or drops an exact revision identity also asks for confirmation,
+while movement among its four steps remains uninterrupted. A failed
+create/append invalidates its preview so retry requires fresh evidence.
+General schema validation stays distinct from source-limit refusal, endpoint
+growth stops at three selections, and oversized UTF-8 ticket or proposal
+pastes remain visible with an explicit refusal instead of being silently
+truncated. The responsive rail becomes a horizontal step strip on
 narrow screens, while native labels, headings, navigation landmarks,
 current-step state, live status regions, visible focus, and native
 buttons/links preserve keyboard and screen-reader operation.

@@ -177,11 +177,18 @@ function preview(
   }
 }
 
-function wrapped(params: URLSearchParams) {
+function wrapped(
+  params: URLSearchParams,
+  outsideNavigation: 'search' | 'workbench-home' | null = null,
+) {
   return (
     <StyletronProvider value={engine}>
       <ModeContext value={{ mode: 'light', toggle: () => {} }}>
         <BaseProvider theme={lightTheme}>
+          {outsideNavigation === 'search' && <a href="#/search">Search</a>}
+          {outsideNavigation === 'workbench-home' && (
+            <a href="#/workbench">Workbench home</a>
+          )}
           <WorkbenchPage params={params} />
         </BaseProvider>
       </ModeContext>
@@ -201,7 +208,10 @@ beforeEach(() => {
   window.location.hash = '#/workbench'
 })
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 test('starts from bounded ticket text with a persistent accessible four-step rail', () => {
   page()
@@ -248,6 +258,57 @@ test('bounds ticket intake by the persisted UTF-8 problem byte ceiling', () => {
   expect(screen.getByText('18,000 / 16,384 bytes')).toBeTruthy()
   expect(screen.getByRole('button', { name: 'Shape the Why' })
     .hasAttribute('disabled')).toBe(true)
+  expect(screen.getByRole('alert').textContent).toContain(
+    'Ticket text exceeds the 16 KiB UTF-8 limit',
+  )
+  expect(screen.getByLabelText('Ticket text').getAttribute('maxlength')).toBeNull()
+})
+
+test('confirms before a dirty draft follows an in-app link outside Workbench', () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  render(wrapped(new URLSearchParams(), 'search'))
+  fireEvent.change(screen.getByLabelText('Workbench title'), {
+    target: { value: 'Keep this draft' },
+  })
+  fireEvent.change(screen.getByLabelText('Ticket text'), {
+    target: { value: 'Unsaved proposal context.' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Shape the Why' }))
+
+  fireEvent.click(screen.getByRole('link', { name: 'Search' }))
+
+  expect(confirm).toHaveBeenCalledWith(
+    'Leave the Workbench and discard unsaved Why or What edits?',
+  )
+  expect(window.location.hash).toBe('#/workbench?source=ticket&step=why')
+  expect(screen.getByRole('heading', { name: 'Why this change?' })).toBeTruthy()
+})
+
+test('confirms before a dirty exact revision drops its identity for Workbench home', async () => {
+  api.fetchWorkbench.mockResolvedValue(view('retire'))
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  window.location.hash =
+    `#/workbench?investigation_id=${investigationID}` +
+    `&revision_id=${revisionID}&step=why`
+  render(wrapped(new URLSearchParams(
+    `investigation_id=${investigationID}&revision_id=${revisionID}&step=why`,
+  ), 'workbench-home'))
+  await screen.findByRole('heading', { name: 'Why this change?' })
+  fireEvent.change(screen.getByLabelText('Problem'), {
+    target: { value: 'Keep this exact revision edit.' },
+  })
+
+  fireEvent.click(screen.getByRole('link', { name: 'Workbench home' }))
+
+  expect(confirm).toHaveBeenCalledWith(
+    'Leave the Workbench and discard unsaved Why or What edits?',
+  )
+  expect(window.location.hash).toBe(
+    `#/workbench?investigation_id=${investigationID}` +
+    `&revision_id=${revisionID}&step=why`,
+  )
+  expect(screen.getByText('Unsaved edits')).toBeTruthy()
+  expect(screen.getByText(revisionID)).toBeTruthy()
 })
 
 test('starts from an exact Contract Atlas operation without implicit reads or writes', () => {
@@ -422,7 +483,44 @@ test('a ready preview is the only path to create or revise, and conflicts remain
       idempotency_key: `workbench-ui-${preview().preview_digest}`,
     }),
   )
+  expect(screen.queryByText('Ready')).toBeNull()
+  expect(append.hasAttribute('disabled')).toBe(true)
   expect(screen.getByRole('button', { name: 'Preview revision' })).toBeTruthy()
+})
+
+test('renders general 422 validation guidance without calling it a source limit', async () => {
+  api.previewWorkbench.mockRejectedValue(
+    new WorkbenchAPIError(
+      422,
+      'workbench plan: repositories must contain at least one entry',
+    ),
+  )
+  page(
+    'source=atlas&step=what&protocol=protobuf&repository=' +
+    'github.com%2Facme%2Fcontracts&lineage=lineage-v1&operation=' +
+    '%2Fdemo.v1.Catalog%2FGet',
+  )
+  fireEvent.click(screen.getByRole('button', { name: 'Preview revision' }))
+  expect(await screen.findByText('Workbench input rejected.', {
+    exact: false,
+  })).toBeTruthy()
+  expect(screen.getByText(/repositories must contain at least one entry/))
+    .toBeTruthy()
+  expect(screen.queryByText('Source limit refusal.', { exact: false })).toBeNull()
+})
+
+test('disables endpoint growth at the persisted three-selection ceiling', () => {
+  page(
+    'source=atlas&step=what&protocol=protobuf&repository=' +
+    'github.com%2Facme%2Fcontracts&lineage=lineage-v1&operation=' +
+    '%2Fdemo.v1.Catalog%2FGet',
+  )
+  const add = screen.getByRole('button', { name: 'Add endpoint' })
+  fireEvent.click(add)
+  fireEvent.click(add)
+  expect(screen.getByLabelText('Selection 3 repository')).toBeTruthy()
+  expect(add.hasAttribute('disabled')).toBe(true)
+  expect(screen.queryByLabelText('Selection 4 repository')).toBeNull()
 })
 
 test('client-side proposal limits refuse before preview or mutation', () => {
@@ -450,8 +548,14 @@ test('client-side proposal limits refuse before preview or mutation', () => {
     target: { value: 'proto/catalog.proto' },
   })
   fireEvent.change(screen.getByLabelText('Proposal file 1 source'), {
-    target: { value: 'x'.repeat((4 << 20) + 1) },
+    target: { value: 'x'.repeat((4 << 20) + 2) },
   })
+  expect(
+    (screen.getByLabelText('Proposal file 1 source') as HTMLTextAreaElement)
+      .value.length,
+  ).toBe((4 << 20) + 2)
+  expect(screen.getByLabelText('Proposal file 1 source').getAttribute('maxlength'))
+    .toBeNull()
   fireEvent.click(screen.getByRole('button', { name: 'Preview revision' }))
   expect(screen.getByText('Source limit refusal.', { exact: false })).toBeTruthy()
   expect(screen.getByText(/Nothing was sent or written/)).toBeTruthy()

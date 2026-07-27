@@ -23,6 +23,7 @@ import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 
 const ticketTextLimit = 16 << 10
+const selectionLimit = 3
 const proposalFileLimit = 256
 const proposalFileBytes = 4 << 20
 const proposalAggregateBytes = 32 << 20
@@ -168,9 +169,48 @@ export default function WorkbenchPage({
       event.preventDefault()
       event.returnValue = ''
     }
+    const confirmInAppLeave = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 ||
+        event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+      const target = event.target instanceof Element
+        ? event.target.closest<HTMLAnchorElement>('a[href]')
+        : null
+      if (!target || target.target === '_blank') return
+      const destination = new URL(target.href, window.location.href)
+      const current = window.location
+      if (destination.origin !== current.origin ||
+        destination.pathname !== current.pathname ||
+        destination.search !== current.search ||
+        !destination.hash.startsWith('#/')) return
+      const destinationPath = destination.hash
+        .slice(1)
+        .split('?', 1)[0]
+      if (destinationPath === '/workbench') {
+        const queryIndex = destination.hash.indexOf('?')
+        const destinationParams = new URLSearchParams(
+          queryIndex === -1 ? '' : destination.hash.slice(queryIndex + 1),
+        )
+        const preservesExactRevision = !investigationID ||
+          (
+            destinationParams.get('investigation_id') === investigationID &&
+            destinationParams.get('revision_id') === revisionID
+          )
+        if (preservesExactRevision) return
+      }
+      if (!window.confirm(
+        'Leave the Workbench and discard unsaved Why or What edits?',
+      )) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
     window.addEventListener('beforeunload', preventLoss)
-    return () => window.removeEventListener('beforeunload', preventLoss)
-  }, [dirty])
+    document.addEventListener('click', confirmInAppLeave, true)
+    return () => {
+      window.removeEventListener('beforeunload', preventLoss)
+      document.removeEventListener('click', confirmInAppLeave, true)
+    }
+  }, [dirty, investigationID, revisionID])
 
   const previewPlan = async () => {
     if (!plan) return
@@ -226,6 +266,8 @@ export default function WorkbenchPage({
       })
     } catch (cause) {
       if (!isAbortError(cause)) {
+        setPreview(null)
+        setPreviewFingerprint('')
         setActionFailure(workbenchFailure(cause, 'commit'))
       }
     } finally {
@@ -474,8 +516,8 @@ function WorkbenchStart({
               Ticket text
               <textarea
                 aria-label="Ticket text"
+                aria-invalid={ticketBytes > ticketTextLimit}
                 value={ticketText}
-                maxLength={ticketTextLimit}
                 rows={12}
                 placeholder="Paste the problem, desired outcome, constraints, and known contract identity. Phebs does not infer completion from this text."
                 onChange={(event) => setTicketText(event.currentTarget.value)}
@@ -484,6 +526,16 @@ function WorkbenchStart({
               <span className={css(fieldHintStyle(tok))}>
                 {ticketBytes.toLocaleString()} / {ticketTextLimit.toLocaleString()} bytes
               </span>
+              {ticketBytes > ticketTextLimit && (
+                <span role="alert" className={css({
+                  color: tok.statusRed,
+                  fontSize: '11px',
+                  lineHeight: '17px',
+                })}>
+                  Ticket text exceeds the 16 KiB UTF-8 limit. Nothing was
+                  shaped; shorten it to continue.
+                </span>
+              )}
             </label>
             <Button
               type="submit"
@@ -929,6 +981,9 @@ function WhatEditor({
               type="button"
               size={BUTTON_SIZE.mini}
               kind={BUTTON_KIND.secondary}
+              disabled={
+                plan.brief.what.selections.length >= selectionLimit
+              }
               onClick={() => {
                 const index = plan.brief.what.selections.length
                 updateWhat({
@@ -1191,6 +1246,7 @@ function ProposalSourceEditor({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const sourceBytes = new TextEncoder().encode(source.content).length
   return (
     <fieldset className={css({
       display: 'grid',
@@ -1236,9 +1292,9 @@ function ProposalSourceEditor({
         Source
         <textarea
           aria-label={`Proposal file ${index + 1} source`}
+          aria-invalid={sourceBytes > proposalFileBytes}
           value={source.content}
           rows={10}
-          maxLength={proposalFileBytes + 1}
           spellCheck={false}
           onChange={(event) =>
             onChange({ ...source, content: event.currentTarget.value })}
@@ -1249,8 +1305,18 @@ function ProposalSourceEditor({
           })}
         />
         <span className={css(fieldHintStyle(tok))}>
-          {new TextEncoder().encode(source.content).length.toLocaleString()} / {proposalFileBytes.toLocaleString()} bytes
+          {sourceBytes.toLocaleString()} / {proposalFileBytes.toLocaleString()} bytes
         </span>
+        {sourceBytes > proposalFileBytes && (
+          <span role="alert" className={css({
+            color: tok.statusRed,
+            fontSize: '11px',
+            lineHeight: '17px',
+          })}>
+            This file exceeds the 4 MiB UTF-8 limit. It will be refused before
+            preview; nothing has been sent or written.
+          </span>
+        )}
       </label>
     </fieldset>
   )
@@ -1992,10 +2058,17 @@ function workbenchFailure(cause: unknown, action: string): PageFailure {
         status: cause.status,
       }
     }
-    if (cause.status === 413 || cause.status === 422) {
+    if (cause.status === 413) {
       return {
         title: 'Source limit refusal',
         detail: 'The server refused the bounded input. Reduce the proposal source set and preview again; nothing was written.',
+        status: cause.status,
+      }
+    }
+    if (cause.status === 422) {
+      return {
+        title: 'Workbench input rejected',
+        detail: cause.message,
         status: cause.status,
       }
     }

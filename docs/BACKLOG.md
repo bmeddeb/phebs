@@ -2905,6 +2905,9 @@ stale/failed coverage, unsupported planes, cursor invalidation, pagination,
 conflict/retry, mobile, keyboard, screen-reader, and bounded-DOM behavior are
 tested. The UI has no comments, assignment, due date, priority, custom state,
 or implicit completion path.
+Interaction coverage must exercise real hash navigation and a real mobile
+viewport/state transition; a responsive data attribute or keydown event whose
+claimed destination never renders does not satisfy this ticket.
 
 **T21.12 · API-key capability for Investigation mutations** *(needs T21.3)* —
 extend named API keys with immutable reviewed capabilities and define
