@@ -656,7 +656,13 @@ retargets the human record.
 The human projection consists only of immutable Dispositions in the fixed
 categories `accepted`, `rejected`, `completed`, `reopened`, and `waived`.
 Rejected, reopened, and waived records require a rationale. A correction or
-reopen appends a successor that names the exact active predecessor, preserving
+reopen appends a successor that names the exact active predecessor — and is
+possible only while the disposition's originating Workbench revision is still
+current: once the revision advances, prior dispositions remain visible,
+immutable history but can no longer be corrected or reopened. Each
+Investigation's disposition history is bounded at 1,000 records; the append
+boundary refuses further dispositions at the bound rather than writing a
+record the reader could no longer list. Successors preserve
 the old text and category. Each append requires the Investigation owner,
 expected current Revision, an exact idempotency key, and the authenticated
 actor, and is audited in the same transaction. Reader grants may inspect the

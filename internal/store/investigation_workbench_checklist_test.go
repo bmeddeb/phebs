@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -287,4 +288,114 @@ func TestWorkbenchDispositionExpectedRevisionAndRationaleGuards(
 			}
 		})
 	}
+}
+
+// T21.9-review regression: reusing an idempotency key in a DIFFERENT
+// investigation is the caller's conflict (409-class), never an internal
+// inconsistency (500-class).
+func TestWorkbenchDispositionKeyReuseAcrossInvestigationsConflicts(
+	t *testing.T,
+) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	first, firstRevision := seedInvestigation(t, s)
+	second, secondRevision := seedInvestigation(t, s)
+	if _, err := s.AppendWorkbenchDisposition(ctx, authzOwner,
+		store.WorkbenchDispositionRequest{
+			ExpectedRevisionID: firstRevision.ID,
+			IdempotencyKey:     "t21.9-shared-key",
+			Suggestion:         checklistStoreSuggestion(t, first.ID, firstRevision.ID),
+			Category:           "accepted",
+		}); err != nil {
+		t.Fatalf("first append: %v", err)
+	}
+	_, err := s.GetWorkbenchDispositionMutationAs(
+		ctx, authzOwner, second.ID, secondRevision.ID, "t21.9-shared-key",
+	)
+	if !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("cross-investigation receipt read = %v, want conflict", err)
+	}
+}
+
+// T21.9-review regression: the disposition-history cap must be a refusal
+// at the append boundary, never an accepted write that makes the history
+// unreadable — rows are immutable and unpruned, and the list boundary
+// fails closed past the cap.
+func TestWorkbenchDispositionHistoryCapRefusesAppend(t *testing.T) {
+	if testing.Short() {
+		t.Skip("cap regression appends 1000 live rows")
+	}
+	s := newTestStore(t)
+	ctx := context.Background()
+	investigation, revision := seedInvestigation(t, s)
+	for index := 0; index < 1_000; index++ {
+		suggestion := checklistStoreSuggestionAt(
+			t, investigation.ID, revision.ID, index,
+		)
+		if _, err := s.AppendWorkbenchDisposition(ctx, authzOwner,
+			store.WorkbenchDispositionRequest{
+				ExpectedRevisionID: revision.ID,
+				IdempotencyKey:     fmt.Sprintf("t21.9-cap-%04d", index),
+				Suggestion:         suggestion,
+				Category:           "accepted",
+			}); err != nil {
+			t.Fatalf("append %d: %v", index, err)
+		}
+	}
+	_, err := s.AppendWorkbenchDisposition(ctx, authzOwner,
+		store.WorkbenchDispositionRequest{
+			ExpectedRevisionID: revision.ID,
+			IdempotencyKey:     "t21.9-cap-overflow",
+			Suggestion: checklistStoreSuggestionAt(
+				t, investigation.ID, revision.ID, 1_000,
+			),
+			Category: "accepted",
+		})
+	if !errors.Is(err, store.ErrResultLimit) {
+		t.Fatalf("append past the cap = %v, want typed history-bound refusal", err)
+	}
+	// The refusal preserved readability: the full history still lists.
+	values, err := s.ListWorkbenchDispositionsAs(
+		ctx, authzOwner, investigation.ID,
+	)
+	if err != nil || len(values) != 1_000 {
+		t.Fatalf("history after refusal = %d rows, %v", len(values), err)
+	}
+}
+
+func checklistStoreSuggestionAt(
+	t *testing.T,
+	investigationID, revisionID string,
+	index int,
+) store.WorkbenchSuggestion {
+	t.Helper()
+	value, err := store.CanonicalWorkbenchSuggestion(
+		store.WorkbenchSuggestion{
+			InvestigationID: investigationID,
+			RevisionID:      revisionID,
+			Kind:            "review_related_source",
+			Summary: fmt.Sprintf(
+				"Review production implementation %04d at github.com/acme/cart.",
+				index,
+			),
+			SelectionRule: "t21.9:store-cap-test",
+			EvidenceSnapshotDigest: "sha256:" +
+				strings.Repeat("a", 64),
+			Evidence: []store.WorkbenchSuggestionEvidence{{
+				Plane:      "implementation",
+				Kind:       "implementation",
+				ID:         fmt.Sprintf("wri_cap_%04d", index),
+				Digest:     "sha256:" + strings.Repeat("b", 64),
+				Repository: "github.com/acme/cart",
+				Commit:     strings.Repeat("c", 40),
+				Path:       "internal/cart/handler.go",
+				StartLine:  2,
+				EndLine:    2,
+			}},
+		},
+	)
+	if err != nil {
+		t.Fatalf("canonical suggestion %d: %v", index, err)
+	}
+	return value
 }

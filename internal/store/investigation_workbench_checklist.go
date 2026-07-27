@@ -164,19 +164,19 @@ func workbenchSuggestionEvidenceKey(
 		evidence.Commit,
 		evidence.Path,
 		fmt.Sprintf(
-			"%010d|%010d|%010d|%010d",
+			"%010d\x00%010d\x00%010d\x00%010d",
 			evidence.StartByte,
 			evidence.EndByte,
 			evidence.StartLine,
 			evidence.EndLine,
 		),
-	}, "|")
+	}, "\x00")
 }
 
 func workbenchSuggestionEvidenceIdentity(
 	evidence WorkbenchSuggestionEvidence,
 ) string {
-	return evidence.Plane + "|" + evidence.Kind + "|" + evidence.ID
+	return evidence.Plane + "\x00" + evidence.Kind + "\x00" + evidence.ID
 }
 
 func validWorkbenchObjectID(value string) bool {
@@ -700,11 +700,16 @@ func (s *Surreal) GetWorkbenchDispositionMutationAs(
 		return nil, err
 	}
 	if record.Principal != principal ||
-		record.IdempotencyKey != idempotencyKey ||
-		record.InvestigationID != investigationID ||
-		record.RevisionID != expectedRevisionID {
+		record.IdempotencyKey != idempotencyKey {
 		return nil, errors.New(
 			"stored workbench disposition receipt is inconsistent",
+		)
+	}
+	if record.InvestigationID != investigationID ||
+		record.RevisionID != expectedRevisionID {
+		return nil, fmt.Errorf(
+			"workbench disposition idempotency key was used for a different investigation or revision: %w",
+			ErrConflict,
 		)
 	}
 	disposition, err := decodeWorkbenchDispositionRecord(*record)
@@ -836,8 +841,11 @@ LET $prior_valid = IF $supersedes = '' THEN
 			FROM investigation_workbench_disposition
 			WHERE supersedes = $supersedes LIMIT 1) = 0
 		LIMIT 1) = 1 END;
+LET $within_cap = array::len(SELECT VALUE disposition_id
+	FROM investigation_workbench_disposition
+	WHERE investigation_id = $investigation_id) < $record_limit;
 LET $created = IF array::len($authorized) = 1
-	AND array::len($existing) = 0 AND $prior_valid THEN
+	AND array::len($existing) = 0 AND $prior_valid AND $within_cap THEN
 	(CREATE $disposition_rid SET schema_version = $schema_version,
 		disposition_id = $disposition_id, principal = $principal,
 		idempotency_key = $idempotency_key, request_digest = $request_digest,
@@ -875,6 +883,30 @@ func (s *Surreal) AppendWorkbenchDisposition(
 		request.ExpectedRevisionID,
 	); err != nil {
 		return nil, err
+	}
+	countResults, countErr := surrealdb.Query[[]int](
+		ctx,
+		s.db,
+		`RETURN [array::len(SELECT VALUE disposition_id
+			FROM investigation_workbench_disposition
+			WHERE investigation_id = $investigation_id)];`,
+		map[string]any{
+			"investigation_id": request.Suggestion.InvestigationID,
+		},
+	)
+	if countErr != nil {
+		return nil, fmt.Errorf(
+			"count workbench dispositions: %w",
+			countErr,
+		)
+	}
+	if counts := firstDomainRows(countResults); len(counts) == 1 &&
+		counts[0] >= maxWorkbenchDispositionRecords {
+		return nil, fmt.Errorf(
+			"workbench disposition history is at its %d-record bound; no further dispositions can be recorded: %w",
+			maxWorkbenchDispositionRecords,
+			ErrResultLimit,
+		)
 	}
 	dispositionID := workbenchDispositionMutationID(
 		principal,
@@ -972,6 +1004,7 @@ func (s *Surreal) AppendWorkbenchDisposition(
 		supersedesRecordID = disposition.ID
 	}
 	vars := map[string]any{
+		"record_limit": maxWorkbenchDispositionRecords,
 		"investigation_rid": investigationRecordID(
 			disposition.InvestigationID,
 		),
@@ -1138,7 +1171,7 @@ func (s *Surreal) ListWorkbenchDispositionsAs(
 		values = append(values, value)
 	}
 	sort.Slice(values, func(left, right int) bool {
-		if values[left].CreatedAt != values[right].CreatedAt {
+		if !values[left].CreatedAt.Equal(values[right].CreatedAt) {
 			return values[left].CreatedAt.Before(
 				values[right].CreatedAt,
 			)

@@ -746,7 +746,7 @@ func (service *WorkbenchChecklistService) collectImpact(
 				RevisionID:       revisionID,
 				CompatibilityRun: evidence.CompatibilityRun,
 				Filters:          evidence.ImpactFilters,
-				PageSize:         workbenchImplementationMaxPage,
+				PageSize:         callerMapMaxPage,
 				Cursor:           cursor,
 			},
 		)
