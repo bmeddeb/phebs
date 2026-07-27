@@ -185,18 +185,18 @@ func (s *ProofService) FindProtoFieldReferences(ctx context.Context, lineage, me
 	if s == nil {
 		return nil, huma.Error503ServiceUnavailable("proof queries unavailable")
 	}
-	bundle, err := s.fieldReferences.buildProofBundle(
+	field := compat.FieldIdentity{
+		Lineage: lineage,
+		Message: message,
+		Number:  fieldNumber,
+	}
+	return buildAndPersistProofBundle(
 		ctx,
-		compat.FieldIdentity{
-			Lineage: lineage,
-			Message: message,
-			Number:  fieldNumber,
+		s.opts,
+		func() (*ProofBundle, error) {
+			return s.fieldReferences.buildProofBundle(ctx, field)
 		},
 	)
-	if err != nil {
-		return nil, err
-	}
-	return persistProofBundle(ctx, s.opts, *bundle)
 }
 
 // FindKafkaTopicUsage builds the immutable topic-centered answer for one
@@ -404,18 +404,20 @@ func buildProofBundle(ctx context.Context, opts Options, query ProofQuery, filte
 }
 
 func buildProofBundleWithCensus(ctx context.Context, opts Options, query ProofQuery, filters []assertionFilter, compatibility *compat.CompatibilityResult, withCensus bool) (*ProofBundleEnvelope, error) {
-	bundle, err := buildProofBundleValue(
+	return buildAndPersistProofBundle(
 		ctx,
 		opts,
-		query,
-		filters,
-		compatibility,
-		withCensus,
+		func() (*ProofBundle, error) {
+			return buildProofBundleValue(
+				ctx,
+				opts,
+				query,
+				filters,
+				compatibility,
+				withCensus,
+			)
+		},
 	)
-	if err != nil {
-		return nil, err
-	}
-	return persistProofBundle(ctx, opts, *bundle)
 }
 
 // buildProofBundleValue is the side-effect-free proof evaluation engine.
@@ -506,17 +508,39 @@ func persistProofBundle(
 		RunIDs:       runIDs,
 		RetainedAt:   time.Now().UTC().Truncate(time.Second),
 	}
-	for attempt := 0; attempt < proofBuildAttempts; attempt++ {
-		if err := opts.ProofBundles.PutProofBundle(ctx, record); err != nil {
-			if errors.Is(err, store.ErrConflict) {
-				continue
-			}
-			return nil, huma.Error500InternalServerError(
-				"persist proof bundle",
-				err,
-			)
+	if err := opts.ProofBundles.PutProofBundle(ctx, record); err != nil {
+		if errors.Is(err, store.ErrConflict) {
+			return nil, err
 		}
-		return &ProofBundleEnvelope{ID: record.ID, Bundle: bundle}, nil
+		return nil, huma.Error500InternalServerError(
+			"persist proof bundle",
+			err,
+		)
+	}
+	return &ProofBundleEnvelope{ID: record.ID, Bundle: bundle}, nil
+}
+
+// buildAndPersistProofBundle keeps the publication race inside the same
+// bounded retry as proof evaluation. A persistence conflict means at least one
+// referenced run is no longer pinnable; retrying the same immutable record
+// cannot recover, so the next attempt must rebuild coverage and evidence.
+func buildAndPersistProofBundle(
+	ctx context.Context,
+	opts Options,
+	build func() (*ProofBundle, error),
+) (*ProofBundleEnvelope, error) {
+	for attempt := 0; attempt < proofBuildAttempts; attempt++ {
+		bundle, err := build()
+		if err != nil {
+			return nil, err
+		}
+		envelope, err := persistProofBundle(ctx, opts, *bundle)
+		if err == nil {
+			return envelope, nil
+		}
+		if !errors.Is(err, store.ErrConflict) {
+			return nil, err
+		}
 	}
 	return nil, huma.Error409Conflict(
 		"evidence changed while building the proof bundle; retry",

@@ -742,10 +742,14 @@ pack may contribute relationships, and only while its state is `enabled`.
 State-only or human-authored entries contribute no relationships. The built-in
 Kafka, Redis, document-store, SQL, and runtime Workbench planes currently
 remain unsupported; Kafka's separate topic-proof surface is not silently
-promoted into a selected-ticket dependency graph. Hidden exact targets fail
-closed, and repositories outside the requesting principal's visibility cannot
-affect evidence rows, totals, capability/gap state, cursors, or serialized
-bytes. None of these states is runtime truth or a completeness score.
+promoted into a selected-ticket dependency graph. An enabled pack is bounded
+to 200 relationships with at most 16 canonical source citations per relationship.
+Malformed or oversized output fails closed; hidden citations are removed
+before serialization, and cancellation is not converted into a pack failure.
+Hidden exact targets fail closed, and repositories outside the requesting
+principal's visibility cannot affect evidence rows, totals, capability/gap
+state, cursors, or serialized bytes. None of these states is runtime truth or
+a completeness score.
 
 Minimal `phebs.yaml`:
 

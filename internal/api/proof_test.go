@@ -21,15 +21,17 @@ type proofAPIStore struct {
 	store.EvidenceStore
 	store.ProofBundleStore
 
-	repos        []store.Repo
-	runs         map[string]store.ExtractionRun
-	attempts     map[string]store.ExtractionAttempt
-	assertions   map[string][]store.Assertion
-	assertionErr error
-	resolutions  map[string]store.EvidenceResolution
-	bundles      map[string]store.ProofBundleRecord
-	calls        []string
-	onAssertions func(store.AssertionQuery)
+	repos         []store.Repo
+	runs          map[string]store.ExtractionRun
+	attempts      map[string]store.ExtractionAttempt
+	assertions    map[string][]store.Assertion
+	assertionErr  error
+	resolutions   map[string]store.EvidenceResolution
+	bundles       map[string]store.ProofBundleRecord
+	calls         []string
+	onAssertions  func(store.AssertionQuery)
+	putConflicts  int
+	onPutConflict func()
 }
 
 func proofScope(repo, domain string) string { return repo + "\x00" + domain }
@@ -218,6 +220,13 @@ func (s *proofAPIStore) ResolveEvidence(_ context.Context, repo, runID, atomID s
 
 func (s *proofAPIStore) PutProofBundle(_ context.Context, bundle store.ProofBundleRecord) error {
 	s.calls = append(s.calls, "put:"+bundle.ID)
+	if s.putConflicts > 0 {
+		s.putConflicts--
+		if s.onPutConflict != nil {
+			s.onPutConflict()
+		}
+		return store.ErrConflict
+	}
 	if s.bundles == nil {
 		s.bundles = make(map[string]store.ProofBundleRecord)
 	}

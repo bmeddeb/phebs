@@ -2753,6 +2753,12 @@ Workbench compositor has no evidence-store dependency. Registry entries
 without a real pack cannot return relationships; Kafka, Redis, document-store,
 SQL, and runtime start explicitly unsupported. Selected hidden endpoints fail
 closed and unrelated hidden repositories remain outside lower-service bytes.
+Enabled pack output is bounded to 200 relationships and 16 canonical
+citations per relationship; hidden citations are filtered before
+serialization, malformed or oversized output fails closed, and cancellation
+propagates. If a proof run becomes unpinnable after evaluation, the proof
+endpoint rebuilds the authorization/coverage/evidence value before retrying
+rather than repeating an immutable stale record.
 No route, OpenAPI operation, advertised capability, UI, MCP tool, proof bundle,
 or Investigation mutation is added. T20.14 remains required by T21.14.
 

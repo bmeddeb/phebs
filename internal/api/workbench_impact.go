@@ -416,7 +416,23 @@ func (service *WorkbenchImpactService) Read(
 			view.Brief.What.Selections,
 		),
 	}
-	page.ResourcePlanes = service.resources.Snapshot(ctx, resourceContext)
+	var resourceVisible func(string) bool
+	if service.opts.Visible != nil {
+		allow := service.opts.Visible(ctx)
+		if allow != nil {
+			resourceVisible = func(repository string) bool {
+				return allow(store.Repo{Name: repository})
+			}
+		}
+	}
+	page.ResourcePlanes, err = service.resources.Snapshot(
+		ctx,
+		resourceContext,
+		resourceVisible,
+	)
+	if err != nil {
+		return nil, err
+	}
 	resourceDigest := digestJSON(page.ResourcePlanes)
 	if err := bindWorkbenchImpactDigest(
 		"resource planes",

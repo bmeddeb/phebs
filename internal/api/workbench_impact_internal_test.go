@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -299,8 +300,10 @@ func (fake *impactFieldFake) List(
 }
 
 type impactResourcePack struct {
-	state ResourcePlaneState
-	calls int
+	state         ResourcePlaneState
+	calls         int
+	relationships []ResourcePlaneRelationship
+	err           error
 }
 
 func (pack *impactResourcePack) ReadResourcePlane(
@@ -308,15 +311,41 @@ func (pack *impactResourcePack) ReadResourcePlane(
 	_ ResourcePlaneContext,
 ) (ResourcePlanePackSnapshot, error) {
 	pack.calls++
-	return ResourcePlanePackSnapshot{
-		State:  pack.state,
-		Reason: "fixture",
-		Relationships: []ResourcePlaneRelationship{{
+	if pack.err != nil {
+		return ResourcePlanePackSnapshot{}, pack.err
+	}
+	relationships := pack.relationships
+	if relationships == nil {
+		relationships = []ResourcePlaneRelationship{{
 			Kind: "uses", Subject: "service:a", Object: "resource:a",
 			Classification: "resolved",
-			Sources:        []ContractCatalogSource{},
-		}},
+			Sources: []ContractCatalogSource{
+				impactResourceSource("github.com/acme/contracts", "resource"),
+			},
+		}}
+	}
+	return ResourcePlanePackSnapshot{
+		State:         pack.state,
+		Reason:        "fixture",
+		Relationships: relationships,
 	}, nil
+}
+
+func impactResourceSource(
+	repository, suffix string,
+) ContractCatalogSource {
+	return ContractCatalogSource{
+		Repository:  repository,
+		Commit:      impactCommit,
+		Path:        "src/" + suffix + ".go",
+		StartByte:   1,
+		EndByte:     2,
+		StartLine:   1,
+		EndLine:     1,
+		AssertionID: "assertion-" + suffix,
+		RunID:       "run-" + suffix,
+		AtomID:      "atom-" + suffix,
+	}
 }
 
 func impactCoverage(
@@ -793,6 +822,115 @@ func TestWorkbenchImpactFailsClosedForHiddenSelectedRepository(
 			page,
 			err,
 			callers.calls,
+		)
+	}
+}
+
+func TestWorkbenchImpactResourcePlanesAreBoundedAndVisibilityScoped(
+	t *testing.T,
+) {
+	visibleRelationship := ResourcePlaneRelationship{
+		Kind: "uses", Subject: "service:visible", Object: "topic:orders",
+		Classification: "resolved",
+		Sources: []ContractCatalogSource{
+			impactResourceSource("github.com/acme/visible", "visible"),
+		},
+	}
+	hiddenRelationship := ResourcePlaneRelationship{
+		Kind: "uses", Subject: "service:hidden", Object: "topic:secret",
+		Classification: "resolved",
+		Sources: []ContractCatalogSource{
+			impactResourceSource("github.com/acme/hidden", "hidden"),
+		},
+	}
+	pack := &impactResourcePack{
+		state: ResourcePlaneEnabled,
+		relationships: []ResourcePlaneRelationship{
+			visibleRelationship,
+			hiddenRelationship,
+		},
+	}
+	registry, err := NewResourcePlaneRegistry(
+		[]ResourcePlaneRegistration{{
+			ID: "bounded", Label: "Bounded",
+			State: ResourcePlaneEnabled, Pack: pack,
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, _, _, _, _ := impactService(
+		impactView(
+			store.ChangeBriefAdd,
+			[]store.ChangeBriefContractSelection{
+				impactSelection(store.ChangeBriefAnalogous, "analogous"),
+			},
+		),
+		nil,
+		registry,
+	)
+	service.opts.Visible = func(context.Context) func(store.Repo) bool {
+		return func(repository store.Repo) bool {
+			return repository.Name != "github.com/acme/hidden"
+		}
+	}
+	read := func() (*WorkbenchImpactPage, []byte) {
+		t.Helper()
+		page, err := service.Read(
+			context.Background(),
+			"user:t217",
+			WorkbenchImpactRequest{
+				InvestigationID: impactInvestigationID,
+				RevisionID:      impactRevisionID,
+				PageSize:        10,
+			},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := json.Marshal(page)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return page, encoded
+	}
+	withHidden, hiddenBytes := read()
+	if len(withHidden.ResourcePlanes) != 1 ||
+		len(withHidden.ResourcePlanes[0].Relationships) != 1 ||
+		withHidden.ResourcePlanes[0].Relationships[0].Subject !=
+			visibleRelationship.Subject {
+		t.Fatalf(
+			"hidden relationship was not filtered: %+v",
+			withHidden.ResourcePlanes,
+		)
+	}
+	pack.relationships = []ResourcePlaneRelationship{visibleRelationship}
+	_, baselineBytes := read()
+	if string(hiddenBytes) != string(baselineBytes) {
+		t.Fatalf(
+			"hidden resource relationship changed page bytes:\nwith=%s\nwithout=%s",
+			hiddenBytes,
+			baselineBytes,
+		)
+	}
+
+	tooMany := make(
+		[]ResourcePlaneRelationship,
+		resourcePlaneMaxRelationships+1,
+	)
+	for index := range tooMany {
+		tooMany[index] = visibleRelationship
+		tooMany[index].Subject = fmt.Sprintf("service:%03d", index)
+	}
+	pack.relationships = tooMany
+	bounded, _ := read()
+	if bounded.ResourcePlanes[0].State != ResourcePlaneFailed ||
+		bounded.ResourcePlanes[0].Reason !=
+			"resource_plane_relationships_invalid" ||
+		len(bounded.ResourcePlanes[0].Relationships) != 0 {
+		t.Fatalf(
+			"oversized resource plane was not failed closed: %+v",
+			bounded.ResourcePlanes[0],
 		)
 	}
 }

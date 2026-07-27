@@ -2,13 +2,22 @@ package api
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"path"
 	"slices"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/store"
+)
+
+const (
+	resourcePlaneMaxRelationships = 200
+	resourcePlaneMaxSources       = 16
+	resourcePlaneMaxPathBytes     = 4 << 10
 )
 
 type ResourcePlaneState string
@@ -142,9 +151,10 @@ func DefaultWorkbenchResourcePlanes() *ResourcePlaneRegistry {
 func (registry *ResourcePlaneRegistry) Snapshot(
 	ctx context.Context,
 	input ResourcePlaneContext,
-) []ResourcePlaneSnapshot {
+	visible func(string) bool,
+) ([]ResourcePlaneSnapshot, error) {
 	if registry == nil {
-		return []ResourcePlaneSnapshot{}
+		return []ResourcePlaneSnapshot{}, nil
 	}
 	result := make(
 		[]ResourcePlaneSnapshot,
@@ -162,6 +172,9 @@ func (registry *ResourcePlaneRegistry) Snapshot(
 		if registration.Pack != nil {
 			value, err := registration.Pack.ReadResourcePlane(ctx, input)
 			if err != nil {
+				if ctx.Err() != nil {
+					return nil, ctx.Err()
+				}
 				snapshot.State = ResourcePlaneFailed
 				snapshot.Reason = "resource_plane_read_failed"
 			} else if validResourcePlanePackState(value.State) {
@@ -171,6 +184,7 @@ func (registry *ResourcePlaneRegistry) Snapshot(
 					relationships, relationErr :=
 						canonicalResourcePlaneRelationships(
 							value.Relationships,
+							visible,
 						)
 					if relationErr != nil {
 						snapshot.State = ResourcePlaneFailed
@@ -187,7 +201,7 @@ func (registry *ResourcePlaneRegistry) Snapshot(
 		}
 		result = append(result, snapshot)
 	}
-	return result
+	return result, nil
 }
 
 func validResourcePlaneState(state ResourcePlaneState) bool {
@@ -206,31 +220,69 @@ func validResourcePlanePackState(state ResourcePlaneState) bool {
 
 func canonicalResourcePlaneRelationships(
 	relationships []ResourcePlaneRelationship,
+	visible func(string) bool,
 ) ([]ResourcePlaneRelationship, error) {
-	result := make(
-		[]ResourcePlaneRelationship,
-		len(relationships),
-	)
-	for index, relationship := range relationships {
+	if len(relationships) > resourcePlaneMaxRelationships {
+		return nil, fmt.Errorf(
+			"resource plane relationships exceed %d",
+			resourcePlaneMaxRelationships,
+		)
+	}
+	result := make([]ResourcePlaneRelationship, 0, len(relationships))
+	for _, relationship := range relationships {
+		if len(relationship.Sources) == 0 ||
+			len(relationship.Sources) > resourcePlaneMaxSources {
+			return nil, fmt.Errorf(
+				"resource plane relationship sources must contain 1 through %d citations",
+				resourcePlaneMaxSources,
+			)
+		}
+		sources := make(
+			[]ContractCatalogSource,
+			0,
+			len(relationship.Sources),
+		)
+		for _, source := range relationship.Sources {
+			if visible != nil && !visible(source.Repository) {
+				continue
+			}
+			if err := validateResourcePlaneSource(source); err != nil {
+				return nil, err
+			}
+			sources = append(sources, source)
+		}
+		if len(relationship.Sources) > 0 && len(sources) == 0 {
+			// A relationship supported only by repositories outside the
+			// current principal's scope is structurally invisible.
+			continue
+		}
 		for _, value := range []string{
 			relationship.Kind,
 			relationship.Subject,
 			relationship.Object,
 			relationship.Classification,
 		} {
-			if value == "" || strings.TrimSpace(value) != value {
+			if !validCatalogFilter(value) {
 				return nil, errors.New(
 					"resource plane relationship identity is invalid",
 				)
 			}
 		}
-		result[index] = relationship
-		result[index].Sources = slices.Clone(relationship.Sources)
-		sort.Slice(result[index].Sources, func(left, right int) bool {
+		relationship.Sources = sources
+		sort.Slice(relationship.Sources, func(left, right int) bool {
 			return resourcePlaneSourceKey(
-				result[index].Sources[left],
-			) < resourcePlaneSourceKey(result[index].Sources[right])
+				relationship.Sources[left],
+			) < resourcePlaneSourceKey(relationship.Sources[right])
 		})
+		for index := 1; index < len(relationship.Sources); index++ {
+			if resourcePlaneSourceKey(relationship.Sources[index-1]) ==
+				resourcePlaneSourceKey(relationship.Sources[index]) {
+				return nil, errors.New(
+					"resource plane relationship sources contain a duplicate",
+				)
+			}
+		}
+		result = append(result, relationship)
 	}
 	sort.Slice(result, func(left, right int) bool {
 		return resourcePlaneRelationshipKey(result[left]) <
@@ -245,6 +297,48 @@ func canonicalResourcePlaneRelationships(
 		}
 	}
 	return result, nil
+}
+
+func validateResourcePlaneSource(source ContractCatalogSource) error {
+	if err := validateCatalogRepository(source.Repository); err != nil {
+		return errors.New("resource plane source repository is invalid")
+	}
+	if (len(source.Commit) != 40 && len(source.Commit) != 64) ||
+		source.Commit != strings.ToLower(source.Commit) {
+		return errors.New("resource plane source commit is invalid")
+	}
+	if _, err := hex.DecodeString(source.Commit); err != nil {
+		return errors.New("resource plane source commit is invalid")
+	}
+	if source.Path == "" ||
+		len(source.Path) > resourcePlaneMaxPathBytes ||
+		!utf8.ValidString(source.Path) ||
+		strings.HasPrefix(source.Path, "/") ||
+		strings.HasPrefix(source.Path, "-") ||
+		strings.Contains(source.Path, `\`) ||
+		path.Clean(source.Path) != source.Path {
+		return errors.New("resource plane source path is invalid")
+	}
+	for _, component := range strings.Split(source.Path, "/") {
+		if component == "" || component == "." || component == ".." {
+			return errors.New("resource plane source path is invalid")
+		}
+	}
+	for _, character := range source.Path {
+		if character < 0x20 || character == 0x7f {
+			return errors.New("resource plane source path is invalid")
+		}
+	}
+	if source.StartByte < 0 ||
+		source.EndByte <= source.StartByte ||
+		source.StartLine < 1 ||
+		source.EndLine < source.StartLine ||
+		!validQueryIdentity(source.AssertionID) ||
+		!validQueryIdentity(source.RunID) ||
+		!validQueryIdentity(source.AtomID) {
+		return errors.New("resource plane source citation is invalid")
+	}
+	return nil
 }
 
 func resourcePlaneRelationshipKey(
