@@ -51,10 +51,22 @@ var extractorImportAllowlist = map[string]bool{
 	"go.uber.org/thriftrw/ast": true,
 	"go.uber.org/thriftrw/idl": true,
 
-	"github.com/bmeddeb/phebs/internal/extract/sdk": true,
+	"github.com/bmeddeb/phebs/internal/extract/sdk":  true,
+	"github.com/bmeddeb/phebs/internal/idlpreflight": true,
 }
 
 var sdkImportAllowlist = map[string]bool{"context": true}
+
+var idlPreflightImportAllowlist = map[string]bool{
+	"context": true,
+	"errors":  true,
+	"fmt":     true,
+}
+
+type pureSourceTarget struct {
+	dir     string
+	allowed map[string]bool
+}
 
 // TestPureReaderImports is allowlist-based: an extractor cannot bypass a
 // direct os/exec/net ban by importing an internal helper or a new third-party
@@ -64,6 +76,25 @@ func TestPureReaderImports(t *testing.T) {
 	violations, err := scanPureSources(os.DirFS("."), ".")
 	if err != nil {
 		t.Fatalf("scan pure-reader sources: %v", err)
+	}
+	for _, violation := range violations {
+		t.Error(violation)
+	}
+}
+
+// The one shared internal helper admitted above is itself recursively
+// allowlisted, so moving the lexical preflight does not create a transitive
+// filesystem, network, process, or asynchronous-work escape hatch.
+func TestIDLPreflightImports(t *testing.T) {
+	violations, err := scanPureTargets(
+		os.DirFS(".."),
+		[]pureSourceTarget{{
+			dir:     "idlpreflight",
+			allowed: idlPreflightImportAllowlist,
+		}},
+	)
+	if err != nil {
+		t.Fatalf("scan IDL preflight sources: %v", err)
 	}
 	for _, violation := range violations {
 		t.Error(violation)
@@ -130,14 +161,24 @@ func bad(ctx context.Context) {
 }
 
 func scanPureSources(fsys fs.FS, root string) ([]string, error) {
+	return scanPureTargets(fsys, []pureSourceTarget{
+		{
+			dir:     path.Join(root, "extractors"),
+			allowed: extractorImportAllowlist,
+		},
+		{
+			dir:     path.Join(root, "sdk"),
+			allowed: sdkImportAllowlist,
+		},
+	})
+}
+
+func scanPureTargets(
+	fsys fs.FS,
+	targets []pureSourceTarget,
+) ([]string, error) {
 	var violations []string
-	for _, target := range []struct {
-		dir     string
-		allowed map[string]bool
-	}{
-		{dir: path.Join(root, "extractors"), allowed: extractorImportAllowlist},
-		{dir: path.Join(root, "sdk"), allowed: sdkImportAllowlist},
-	} {
+	for _, target := range targets {
 		if _, err := fs.Stat(fsys, target.dir); err != nil {
 			return nil, fmt.Errorf("%s missing: %w", target.dir, err)
 		}

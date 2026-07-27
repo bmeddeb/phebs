@@ -653,10 +653,39 @@ session writes remain CSRF protected.
 The existing `check_contract_compatibility` HTTP and MCP contracts continue to
 return retained content-addressed proof bundles. Workbench compatibility is an
 additive explicit Investigation analysis path and does not migrate, delete, or
-reidentify those bundles. Proposed protobuf and Thrift preview files inherit
-the production parser preflights: at most 4 MiB, 500,000 tokens, and 128
-structural levels per file, in addition to aggregate/file-count and sandbox
-limits.
+reidentify those bundles. This internal T21.6 path remains
+production-unregistered/default-dark with the rest of the Workbench.
+
+What identifies an existing endpoint by the complete `(protocol, repository,
+declaration lineage, canonical operation)` tuple. Equal operation spellings in
+another protocol, repository, or lineage cannot satisfy that selection.
+Declaration links carry the selected repository HEAD commit plus exact path
+and byte/line spans. Add requires a proposal and no current/replacement
+endpoint; modify requires one current endpoint and a proposal; migrate
+requires distinct current and replacement identities and no proposal; retire
+requires one current endpoint and no proposal. Optional analogous selections
+remain context, not substitutes for required roles.
+
+Proposed protobuf and Thrift preview files inherit the production parser
+preflights: at most 256 files, 4 MiB per file, 32 MiB aggregate, 500,000 tokens
+per file, and 128 structural levels per file. Byte/count limits and lexical
+preflight run before the in-process parser. Preview returns only sorted
+path/hash/size commitments, never source bytes; viewing or previewing creates
+no proof bundle, Investigation run, or repository evidence. Protobuf previews
+show the pinned Buf `WIRE` engine/policy and all relevant ceilings. Thrift has
+parsing preview support but no compatibility engine, so it renders
+`unavailable` rather than a compatible verdict.
+
+Retaining a protobuf modify analysis is a separate explicit mutation. It
+rechecks the owner, current Workbench Revision, proposal path/hash/size,
+authorization snapshot, exact Atlas endpoint and commit-pinned declaration
+spans, and pinned compatibility policy. One idempotency key yields one audited
+Investigation run/artifact; an exact retry returns that same terminal result,
+including a bounded failed artifact when the checker refuses. The artifact
+contains input commitments and the compatibility result, not submitted source
+bytes, and is owned by Investigation retention. It is not a proof bundle and
+does not change proof-bundle reauthorization, expiry, deletion, bytes, or
+identity.
 
 Minimal `phebs.yaml`:
 

@@ -63,6 +63,18 @@ func (resolver *fixtureWorkbenchResolver) ResolveWorkbench(
 				Selection:         selection,
 				DeclarationCommit: resolver.endpointCommit,
 				DeclarationDigest: resolver.endpointDigest,
+				DeclarationSources: []WorkbenchDeclarationSource{{
+					Repository:  selection.Repository,
+					Commit:      resolver.endpointCommit,
+					Path:        "proto/shop.proto",
+					StartByte:   10,
+					EndByte:     20,
+					StartLine:   2,
+					EndLine:     2,
+					AssertionID: "assertion-declaration",
+					RunID:       "run-declaration",
+					AtomID:      "atom-declaration",
+				}},
 			})
 		}
 	}
@@ -203,6 +215,9 @@ func TestWorkbenchPreviewIsCanonicalBoundedAndSideEffectFree(t *testing.T) {
 		"investigation_revision",
 		"investigation_change_brief",
 		"investigation_workbench_mutation",
+		"investigation_run",
+		"investigation_run_artifact",
+		"proof_bundle",
 		"audit_event",
 	} {
 		if count := workbenchTableCount(t, s, table); count != 0 {
@@ -406,6 +421,14 @@ func TestWorkbenchCreateRejectsPreviewDriftWithoutPartialWrite(t *testing.T) {
 			name: "proposal bytes",
 			mutate: func(value *WorkbenchPlan) {
 				value.Brief.What.ProposalSources[0].Content += "// drift\n"
+			},
+			drift: func() {},
+			reset: func() {},
+		},
+		{
+			name: "proposal path",
+			mutate: func(value *WorkbenchPlan) {
+				value.Brief.What.ProposalSources[0].Path = "proto/moved.proto"
 			},
 			drift: func() {},
 			reset: func() {},

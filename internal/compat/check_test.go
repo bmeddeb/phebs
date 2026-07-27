@@ -53,6 +53,10 @@ func TestCheckerReportsWireBreakWithStableFieldIdentity(t *testing.T) {
 		Before:  []File{{Path: "shop/cart.proto", Content: "syntax = \"proto3\";\npackage shop;\nmessage Cart { int32 count = 1; }\n"}},
 		After:   []File{{Path: "shop/cart.proto", Content: "syntax = \"proto3\";\npackage shop;\nmessage Cart { string count = 1; }\n"}},
 	}
+	prepared, err := Prepare(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
 	first, err := checker.Check(context.Background(), request)
 	if err != nil {
 		t.Fatal(err)
@@ -63,6 +67,19 @@ func TestCheckerReportsWireBreakWithStableFieldIdentity(t *testing.T) {
 	}
 	if !reflect.DeepEqual(first, second) {
 		t.Fatalf("identical input changed result:\nfirst=%+v\nsecond=%+v", first, second)
+	}
+	if !reflect.DeepEqual(first.Before, prepared.Before) ||
+		!reflect.DeepEqual(first.After, prepared.After) {
+		t.Fatalf(
+			"pure preparation changed Check commitments: prepared=%+v result=%+v",
+			prepared,
+			first,
+		)
+	}
+	if WireLimits().Policy != Policy ||
+		WirePolicyDigest() !=
+			"sha256:2dd268728078121506483957b90ae93f147a926f255d0ce8db36b95c16412816" {
+		t.Fatal("WIRE policy contract is unstable")
 	}
 	if first.Compatible || first.Run.Engine != "buf" || first.Run.Version != Version ||
 		first.Run.Policy != Policy || first.Run.ExitCode != 100 || first.Run.Result != "breaking" {

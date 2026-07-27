@@ -528,6 +528,19 @@ func TestContractCompatibilityJoinsOnlyVisibleAffectedConsumers(t *testing.T) {
 	if envelope.Bundle.Caveat == "" || !strings.Contains(envelope.Bundle.Caveat, "WIRE verdict") || len(st.bundles) != 1 {
 		t.Fatalf("bundle caveat/persistence = %q / %d", envelope.Bundle.Caveat, len(st.bundles))
 	}
+	retryCode, retryBody, retry := postCompatibility(t, handler, request)
+	if retryCode != http.StatusOK ||
+		retry.ID != envelope.ID ||
+		retryBody != body ||
+		len(st.bundles) != 1 {
+		t.Fatalf(
+			"compatibility exact retry changed wire bytes/id: %d %s / %s bundles=%d",
+			retryCode,
+			retry.ID,
+			envelope.ID,
+			len(st.bundles),
+		)
+	}
 
 	// The endpoint is dark when a real checker is absent; the shared proof
 	// service still exposes the three evidence-only T14.2 operations.

@@ -14,6 +14,9 @@ import (
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
+
+	"github.com/bmeddeb/phebs/internal/compat"
+	"github.com/bmeddeb/phebs/internal/idlpreview"
 )
 
 const (
@@ -82,9 +85,27 @@ type WorkbenchRepositorySnapshot struct {
 }
 
 type WorkbenchEndpointSnapshot struct {
-	Selection         ChangeBriefContractSelection `json:"selection"`
-	DeclarationCommit string                       `json:"declaration_commit"`
-	DeclarationDigest string                       `json:"declaration_digest"`
+	Selection          ChangeBriefContractSelection `json:"selection"`
+	DeclarationCommit  string                       `json:"declaration_commit"`
+	DeclarationDigest  string                       `json:"declaration_digest"`
+	DeclarationSources []WorkbenchDeclarationSource `json:"declaration_sources"`
+	SourcesTruncated   bool                         `json:"sources_truncated"`
+}
+
+// WorkbenchDeclarationSource is an immutable Atlas declaration citation.
+// The commit and byte span, not a mutable branch or line-only URL, bind the
+// link rendered by later Workbench adapters.
+type WorkbenchDeclarationSource struct {
+	Repository  string `json:"repository"`
+	Commit      string `json:"commit"`
+	Path        string `json:"path"`
+	StartByte   int    `json:"start_byte"`
+	EndByte     int    `json:"end_byte"`
+	StartLine   int    `json:"start_line"`
+	EndLine     int    `json:"end_line"`
+	AssertionID string `json:"assertion_id"`
+	RunID       string `json:"run_id"`
+	AtomID      string `json:"atom_id"`
 }
 
 type WorkbenchCapabilitySnapshot struct {
@@ -173,8 +194,16 @@ type WorkbenchPreview struct {
 	Repositories         []WorkbenchRepositorySnapshot `json:"repositories"`
 	Endpoints            []WorkbenchEndpointSnapshot   `json:"endpoints"`
 	Capabilities         []WorkbenchCapabilitySnapshot `json:"capabilities"`
+	Compatibility        WorkbenchCompatibilityPreview `json:"compatibility"`
 	Estimate             WorkbenchEstimate             `json:"estimate"`
 	Blockers             []WorkbenchBlocker            `json:"blockers"`
+}
+
+type WorkbenchCompatibilityPreview struct {
+	Status   string         `json:"status"` // available | unavailable
+	Protocol string         `json:"protocol,omitempty"`
+	Reason   string         `json:"reason,omitempty"`
+	Limits   *compat.Limits `json:"limits,omitempty"`
 }
 
 type WorkbenchMutationRequest struct {
@@ -199,8 +228,9 @@ type InvestigationWorkbench interface {
 // InvestigationWorkbenchService is the shared T21.3 boundary. HTTP, UI, and
 // MCP adapters may project it but cannot resolve evidence or write around it.
 type InvestigationWorkbenchService struct {
-	Store    *Surreal
-	Resolver WorkbenchResolver
+	Store         *Surreal
+	Resolver      WorkbenchResolver
+	Compatibility compat.Service
 }
 
 var _ InvestigationWorkbench = InvestigationWorkbenchService{}
@@ -252,6 +282,7 @@ func validWorkbenchCommit(value string) bool {
 }
 
 func changeBriefFromWorkbenchDraft(
+	ctx context.Context,
 	principal string,
 	draft WorkbenchChangeBriefDraft,
 ) (ChangeBrief, WorkbenchEstimate, error) {
@@ -321,10 +352,99 @@ func changeBriefFromWorkbenchDraft(
 	if err != nil {
 		return ChangeBrief{}, WorkbenchEstimate{}, err
 	}
+	if brief.What.Proposal != nil {
+		sources := make(
+			[]idlpreview.Source,
+			len(draft.What.ProposalSources),
+		)
+		for index, source := range draft.What.ProposalSources {
+			sources[index] = idlpreview.Source{
+				Path: source.Path, Content: source.Content,
+			}
+		}
+		if err := idlpreview.Validate(
+			ctx,
+			brief.What.Proposal.Protocol,
+			sources,
+		); err != nil {
+			return ChangeBrief{}, WorkbenchEstimate{}, fmt.Errorf(
+				"proposal preview: %w",
+				err,
+			)
+		}
+	}
+	if err := validateWorkbenchWhatCardinality(
+		brief.TicketKind,
+		brief.What,
+	); err != nil {
+		return ChangeBrief{}, WorkbenchEstimate{}, err
+	}
 	return brief, WorkbenchEstimate{
 		ProposalFiles: len(draft.What.ProposalSources),
 		ProposalBytes: proposalBytes,
 	}, nil
+}
+
+func workbenchExactIdentityKey(
+	value ChangeBriefContractSelection,
+) string {
+	return strings.Join([]string{
+		value.Protocol,
+		value.Repository,
+		value.DeclarationLineage,
+		value.CanonicalOperation,
+	}, "\x00")
+}
+
+func validateWorkbenchWhatCardinality(
+	kind ChangeBriefTicketKind,
+	what ChangeBriefWhat,
+) error {
+	byRole := make(map[ChangeBriefSelectionRole]int)
+	exactIdentities := make(map[string]ChangeBriefSelectionRole)
+	for _, selection := range what.Selections {
+		byRole[selection.Role]++
+		key := workbenchExactIdentityKey(selection)
+		if previous, duplicate := exactIdentities[key]; duplicate {
+			return fmt.Errorf(
+				"exact contract identity repeats roles %q and %q",
+				previous,
+				selection.Role,
+			)
+		}
+		exactIdentities[key] = selection.Role
+	}
+	current := byRole[ChangeBriefCurrent]
+	replacement := byRole[ChangeBriefReplacement]
+	switch kind {
+	case ChangeBriefAdd:
+		if current != 0 || replacement != 0 || what.Proposal == nil {
+			return errors.New(
+				"add requires a proposal and no current or replacement endpoint",
+			)
+		}
+	case ChangeBriefModify:
+		if current != 1 || replacement != 0 || what.Proposal == nil {
+			return errors.New(
+				"modify requires one current endpoint and one proposal",
+			)
+		}
+	case ChangeBriefMigrate:
+		if current != 1 || replacement != 1 || what.Proposal != nil {
+			return errors.New(
+				"migrate requires distinct current and replacement endpoints and no proposal",
+			)
+		}
+	case ChangeBriefRetire:
+		if current != 1 || replacement != 0 || what.Proposal != nil {
+			return errors.New(
+				"retire requires one current endpoint and no replacement or proposal",
+			)
+		}
+	default:
+		return fmt.Errorf("invalid change brief ticket kind %q", kind)
+	}
+	return nil
 }
 
 func workbenchBriefCommitment(brief ChangeBrief) WorkbenchBriefCommitment {
@@ -499,7 +619,11 @@ func (service InvestigationWorkbenchService) preview(
 			))
 		}
 	}
-	brief, estimate, err := changeBriefFromWorkbenchDraft(principal, plan.Brief)
+	brief, estimate, err := changeBriefFromWorkbenchDraft(
+		ctx,
+		principal,
+		plan.Brief,
+	)
 	if err != nil {
 		return nil, invalidWorkbench(fmt.Errorf("workbench brief: %w", err))
 	}
@@ -606,6 +730,12 @@ func (service InvestigationWorkbenchService) preview(
 			return nil, errors.New("resolve workbench preview: invalid endpoint snapshot")
 		}
 		endpoint.Selection = normalized
+		if err := validateWorkbenchDeclarationSources(endpoint); err != nil {
+			return nil, fmt.Errorf(
+				"resolve workbench preview: %w",
+				err,
+			)
+		}
 		key := workbenchSelectionKey(normalized)
 		if _, requested := requestedSelections[key]; !requested {
 			return nil, errors.New("resolve workbench preview: unexpected endpoint snapshot")
@@ -677,6 +807,11 @@ func (service InvestigationWorkbenchService) preview(
 		}
 		preview.Capabilities = append(preview.Capabilities, capability)
 	}
+	preview.Compatibility = workbenchCompatibilityPreview(
+		brief,
+		preview.Capabilities,
+		service.Compatibility != nil,
+	)
 
 	declaredUniverseBytes, err := json.Marshal(struct {
 		Repositories []WorkbenchRepositorySnapshot `json:"repositories"`
@@ -718,6 +853,84 @@ func (service InvestigationWorkbenchService) preview(
 		return nil, err
 	}
 	return preview, nil
+}
+
+func validateWorkbenchDeclarationSources(
+	endpoint WorkbenchEndpointSnapshot,
+) error {
+	if len(endpoint.DeclarationSources) == 0 ||
+		len(endpoint.DeclarationSources) > 16 {
+		return errors.New("endpoint snapshot has invalid declaration sources")
+	}
+	previous := ""
+	for _, source := range endpoint.DeclarationSources {
+		if source.Repository != endpoint.Selection.Repository ||
+			source.Commit != endpoint.DeclarationCommit ||
+			source.Path == "" || len(source.Path) > 4_096 ||
+			strings.TrimSpace(source.Path) != source.Path ||
+			strings.Contains(source.Path, "\\") ||
+			source.StartByte < 0 || source.EndByte <= source.StartByte ||
+			source.StartLine < 1 || source.EndLine < source.StartLine ||
+			source.AssertionID == "" || source.RunID == "" ||
+			source.AtomID == "" {
+			return errors.New("endpoint snapshot has invalid declaration source")
+		}
+		key := strings.Join([]string{
+			source.Repository,
+			source.Commit,
+			source.Path,
+			fmt.Sprintf("%010d", source.StartByte),
+			fmt.Sprintf("%010d", source.EndByte),
+			source.AtomID,
+		}, "\x00")
+		if previous != "" && key <= previous {
+			return errors.New(
+				"endpoint declaration sources are not unique and sorted",
+			)
+		}
+		previous = key
+	}
+	return nil
+}
+
+func workbenchCompatibilityPreview(
+	brief ChangeBrief,
+	capabilities []WorkbenchCapabilitySnapshot,
+	checkerAvailable bool,
+) WorkbenchCompatibilityPreview {
+	proposal := brief.What.Proposal
+	if proposal == nil {
+		return WorkbenchCompatibilityPreview{
+			Status: "unavailable", Reason: "proposal_required",
+		}
+	}
+	result := WorkbenchCompatibilityPreview{
+		Status: "unavailable", Protocol: proposal.Protocol,
+	}
+	if proposal.Protocol != "protobuf" {
+		result.Reason = "compatibility_protocol_unsupported"
+		return result
+	}
+	limits := compat.WireLimits()
+	result.Limits = &limits
+	if brief.TicketKind != ChangeBriefModify {
+		result.Reason = "current_endpoint_required"
+		return result
+	}
+	capabilityAvailable := false
+	for _, capability := range capabilities {
+		if capability.ID == "contract-compatibility" &&
+			capability.Available {
+			capabilityAvailable = true
+			break
+		}
+	}
+	if !checkerAvailable || !capabilityAvailable {
+		result.Reason = "compatibility_capability_unavailable"
+		return result
+	}
+	result.Status = "available"
+	return result
 }
 
 func validateWorkbenchMutationRequest(request WorkbenchMutationRequest) error {

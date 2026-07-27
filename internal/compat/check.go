@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/bmeddeb/phebs/internal/idlpreflight"
 )
 
 const (
@@ -32,7 +34,7 @@ const (
 	Policy = "WIRE"
 
 	maxFilesPerSnapshot = 256
-	maxFileBytes        = 4 << 20
+	maxFileBytes        = idlpreflight.MaxFileBytes
 	maxInputBytes       = 32 << 20
 	maxViolations       = 5_000
 	maxAffectedFields   = 256
@@ -118,6 +120,109 @@ type CompatibilityResult struct {
 	Violations     []Violation     `json:"violations"`
 	AffectedFields []FieldIdentity `json:"affected_fields"`
 	Run            Run             `json:"extraction_run"`
+}
+
+// Limits is the public, deterministic compatibility/preflight contract shown
+// beside Workbench proposal previews.
+type Limits struct {
+	Engine                string `json:"engine"`
+	Version               string `json:"version"`
+	Policy                string `json:"policy"`
+	MaxFilesPerSnapshot   int    `json:"max_files_per_snapshot"`
+	MaxFileBytes          int    `json:"max_file_bytes"`
+	MaxInputBytes         int    `json:"max_input_bytes"`
+	MaxTokensPerFile      int    `json:"max_tokens_per_file"`
+	MaxStructuralDepth    int    `json:"max_structural_depth"`
+	MaxViolations         int    `json:"max_violations"`
+	MaxAffectedFieldCount int    `json:"max_affected_field_count"`
+}
+
+// WireLimits returns the frozen Buf WIRE and parser ceilings without probing
+// or executing the child binary.
+func WireLimits() Limits {
+	return Limits{
+		Engine: "buf", Version: Version, Policy: Policy,
+		MaxFilesPerSnapshot:   maxFilesPerSnapshot,
+		MaxFileBytes:          maxFileBytes,
+		MaxInputBytes:         maxInputBytes,
+		MaxTokensPerFile:      idlpreflight.MaxTokens,
+		MaxStructuralDepth:    idlpreflight.MaxStructuralDepth,
+		MaxViolations:         maxViolations,
+		MaxAffectedFieldCount: maxAffectedFields,
+	}
+}
+
+// WirePolicyDigest binds the exact pinned engine, policy configuration, and
+// visible limits used by both proof-bundle and Workbench callers.
+func WirePolicyDigest() string {
+	encoded, _ := json.Marshal(struct {
+		Config string `json:"config"`
+		Limits Limits `json:"limits"`
+	}{fixedConfig, WireLimits()})
+	sum := sha256.Sum256(encoded)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// PreparedRequest is a pure, source-free commitment produced before Buf is
+// invoked. The canonical request and parser metadata remain private so callers
+// cannot bypass Check's execution boundary.
+type PreparedRequest struct {
+	Before InputSnapshot `json:"before"`
+	After  InputSnapshot `json:"after"`
+
+	request      Request
+	declarations []fieldDeclaration
+}
+
+// Prepare applies the exact canonicalization, aggregate bounds, lexical
+// preflight, and in-process parser work used by Check without executing Buf.
+func Prepare(ctx context.Context, request Request) (*PreparedRequest, error) {
+	if !validLineage(request.Lineage) {
+		return nil, fmt.Errorf(
+			"%w: lineage must be a bounded canonical identity",
+			ErrInvalidInput,
+		)
+	}
+	before, err := canonicalFiles(request.Before)
+	if err != nil {
+		return nil, fmt.Errorf("%w: before: %v", ErrInvalidInput, err)
+	}
+	after, err := canonicalFiles(request.After)
+	if err != nil {
+		return nil, fmt.Errorf("%w: after: %v", ErrInvalidInput, err)
+	}
+	if len(before)+len(after) == 0 {
+		return nil, fmt.Errorf(
+			"%w: at least one .proto file is required",
+			ErrInvalidInput,
+		)
+	}
+	total := totalBytes(before) + totalBytes(after)
+	if total > maxInputBytes {
+		return nil, fmt.Errorf(
+			"%w: inputs exceed %d bytes",
+			ErrLimit,
+			maxInputBytes,
+		)
+	}
+	declarations, err := fieldDeclarations(ctx, before, after)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"%w: parse field identities: %v",
+			ErrInvalidInput,
+			err,
+		)
+	}
+	return &PreparedRequest{
+		Before: snapshotCommitment(before),
+		After:  snapshotCommitment(after),
+		request: Request{
+			Lineage: request.Lineage,
+			Before:  before,
+			After:   after,
+		},
+		declarations: declarations,
+	}, nil
 }
 
 // Service is the narrow boundary used by the shared HTTP/MCP proof service.
@@ -212,27 +317,14 @@ func (c *Checker) Check(ctx context.Context, request Request) (*CompatibilityRes
 	if c == nil || c.bin == "" {
 		return nil, fmt.Errorf("%w: no configured checker", ErrUnavailable)
 	}
-	if !validLineage(request.Lineage) {
-		return nil, fmt.Errorf("%w: lineage must be a bounded canonical identity", ErrInvalidInput)
-	}
 	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
 
-	before, err := canonicalFiles(request.Before)
+	prepared, err := Prepare(ctx, request)
 	if err != nil {
-		return nil, fmt.Errorf("%w: before: %v", ErrInvalidInput, err)
+		return nil, err
 	}
-	after, err := canonicalFiles(request.After)
-	if err != nil {
-		return nil, fmt.Errorf("%w: after: %v", ErrInvalidInput, err)
-	}
-	if len(before)+len(after) == 0 {
-		return nil, fmt.Errorf("%w: at least one .proto file is required", ErrInvalidInput)
-	}
-	total := totalBytes(before) + totalBytes(after)
-	if total > maxInputBytes {
-		return nil, fmt.Errorf("%w: inputs exceed %d bytes", ErrLimit, maxInputBytes)
-	}
+	before, after := prepared.request.Before, prepared.request.After
 
 	root, cleanup, err := c.sanitizedRoot()
 	if err != nil {
@@ -246,10 +338,6 @@ func (c *Checker) Check(ctx context.Context, request Request) (*CompatibilityRes
 		return nil, fmt.Errorf("%w: stage after input: %v", ErrInvalidInput, err)
 	}
 
-	declarations, err := fieldDeclarations(ctx, before, after)
-	if err != nil {
-		return nil, fmt.Errorf("%w: parse field identities: %v", ErrInvalidInput, err)
-	}
 	version, err := c.version(ctx, root)
 	if err != nil {
 		return nil, err
@@ -277,7 +365,13 @@ func (c *Checker) Check(ctx context.Context, request Request) (*CompatibilityRes
 		}
 		return nil, fmt.Errorf("%w: %s (exit %d)", ErrCheckFailed, detail, output.exitCode)
 	}
-	violations, err := parseViolations(output.stdout, declarations, request.Lineage, before, after)
+	violations, err := parseViolations(
+		output.stdout,
+		prepared.declarations,
+		prepared.request.Lineage,
+		before,
+		after,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +388,7 @@ func (c *Checker) Check(ctx context.Context, request Request) (*CompatibilityRes
 	}
 	return &CompatibilityResult{
 		Compatible: output.exitCode == 0,
-		Before:     snapshotCommitment(before), After: snapshotCommitment(after),
+		Before:     prepared.Before, After: prepared.After,
 		Violations: violations, AffectedFields: fields,
 		Run: Run{
 			Engine: "buf", Version: version, Policy: Policy,

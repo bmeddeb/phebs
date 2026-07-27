@@ -9,11 +9,8 @@ import (
 	"github.com/bufbuild/protocompile/ast"
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"
-)
 
-const (
-	maxProtoTokens          = 500_000
-	maxProtoStructuralDepth = 128
+	"github.com/bmeddeb/phebs/internal/idlpreflight"
 )
 
 type sourcePosition struct {
@@ -199,112 +196,5 @@ func positionLess(left, right sourcePosition) bool {
 }
 
 func validateProtoComplexity(ctx context.Context, source string) error {
-	depth, tokens := 0, 0
-	var expectedClosers [maxProtoStructuralDepth]byte
-	addToken := func() error {
-		tokens++
-		if tokens > maxProtoTokens {
-			return fmt.Errorf("source exceeds %d-token parser limit", maxProtoTokens)
-		}
-		return nil
-	}
-	for i := 0; i < len(source); {
-		if i&4095 == 0 {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-		}
-		current := source[i]
-		switch {
-		case isProtoSpace(current):
-			i++
-		case current == '/' && i+1 < len(source) && source[i+1] == '/':
-			i += 2
-			for i < len(source) && source[i] != '\n' {
-				i++
-			}
-		case current == '/' && i+1 < len(source) && source[i+1] == '*':
-			i += 2
-			closed := false
-			for i+1 < len(source) {
-				if source[i] == '*' && source[i+1] == '/' {
-					i += 2
-					closed = true
-					break
-				}
-				i++
-			}
-			if !closed {
-				return errors.New("unterminated block comment")
-			}
-		case current == '\'' || current == '"':
-			if err := addToken(); err != nil {
-				return err
-			}
-			quote := current
-			i++
-			closed := false
-			for i < len(source) {
-				switch source[i] {
-				case '\\':
-					i += 2
-				case quote:
-					i++
-					closed = true
-				default:
-					i++
-				}
-				if closed {
-					break
-				}
-			}
-			if !closed {
-				return errors.New("unterminated string literal")
-			}
-		case isProtoWordByte(current):
-			if err := addToken(); err != nil {
-				return err
-			}
-			i++
-			for i < len(source) && isProtoWordByte(source[i]) {
-				i++
-			}
-		default:
-			if err := addToken(); err != nil {
-				return err
-			}
-			switch current {
-			case '{', '[', '(', '<':
-				if depth >= maxProtoStructuralDepth {
-					return fmt.Errorf("source exceeds %d-level structural-depth limit", maxProtoStructuralDepth)
-				}
-				switch current {
-				case '{':
-					expectedClosers[depth] = '}'
-				case '[':
-					expectedClosers[depth] = ']'
-				case '(':
-					expectedClosers[depth] = ')'
-				case '<':
-					expectedClosers[depth] = '>'
-				}
-				depth++
-			case '}', ']', ')', '>':
-				if depth > 0 && expectedClosers[depth-1] == current {
-					depth--
-				}
-			}
-			i++
-		}
-	}
-	return nil
-}
-
-func isProtoSpace(value byte) bool {
-	return value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == '\f'
-}
-
-func isProtoWordByte(value byte) bool {
-	return value == '_' || value >= 'a' && value <= 'z' ||
-		value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
+	return idlpreflight.Validate(ctx, idlpreflight.Protobuf, source)
 }

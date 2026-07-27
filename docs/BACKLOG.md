@@ -2630,7 +2630,7 @@ returns after Escape, and the console is clean. The uncached repository-wide
 Go suite, `go vet ./...`, golangci-lint, all UI tests, UI lint, the production
 UI build, and glossary drift verification pass.
 
-**T21.6 · What: exact contract target and additive proposed delta** *(needs
+**T21.6 ✅ 2026-07-26 · What: exact contract target and additive proposed delta** *(needs
 T21.3, T20.10)* — compose Contract Atlas discovery/detail and the bounded
 compatibility engine into the Workbench. Refactor a shared pure evaluation
 boundary as needed, but keep the shipped HTTP
@@ -2653,6 +2653,31 @@ Existing compatibility HTTP/MCP schemas, proof-bundle ids/bytes, reauthorization
 and retention semantics have byte/regression guards. Protobuf WIRE limits stay
 visible; Thrift or other unsupported compatibility renders unavailable rather
 than compatible. Source links pin declaration commits/spans.
+
+Implemented on `codex/t21.6-exact-contract-target`: Workbench What now
+enforces ticket-kind cardinality over the complete protocol/repository/
+lineage/operation identity, and a production-grade resolver composes current
+repository visibility with protocol-qualified Contract Atlas detail. It
+omits hidden and missing targets identically, rejects stale or mismatched
+declarations, and returns only commit- and span-pinned source citations.
+Proposal preview runs shared protobuf/Thrift byte, token, and structural-depth
+preflights before the in-process parsers while retaining the independent
+aggregate and file-count ceilings. It exposes pinned protobuf Buf `WIRE`
+limits and reports Thrift compatibility as unavailable, never compatible;
+preview remains side-effect-free and proposed bytes remain outside persisted
+briefs and repository evidence.
+
+An explicit protobuf-modify action recomputes source commitments, exact target,
+authorization, capability policy, and current Workbench Revision before
+creating one idempotent audited Investigation run/artifact. Successful and
+bounded failed attempts are terminal and retry-stable. The artifact is
+additive and source-free; the implementation never calls the proof-bundle
+store. The compatibility checker's pure preparation boundary is shared with
+the unchanged checker execution path, while regression tests pin the existing
+HTTP response bytes/content-addressed bundle identity and the existing MCP
+schema, reauthorization, and retention suites. No Workbench adapter or
+production registration is added. The uncached repository-wide Go suite,
+`go vet ./...`, golangci-lint, and diff hygiene merge bars pass.
 
 **T21.7 · Where: composable impact inventory** *(needs T21.3, T21.6,
 T20.13)* — compose the snapshot-consistent Caller Map/comparison, field

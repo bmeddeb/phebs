@@ -19,6 +19,7 @@ import (
 	"github.com/bufbuild/protocompile/reporter"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/idlpreflight"
 )
 
 const (
@@ -30,11 +31,9 @@ const (
 	// source with conservative size, token, and structural-depth ceilings so a
 	// single candidate cannot hand it an unbounded working set or recursive
 	// grammar shape. The worker deadline remains a cooperative outer deadline.
-	maxProtoSourceBytes     = 4 << 20
-	maxProtoTokens          = 500_000
-	maxProtoStructuralDepth = 128
-	maxImportContextPaths   = 64
-	maxImportContextBytes   = 4 << 10
+	maxProtoSourceBytes   = idlpreflight.MaxFileBytes
+	maxImportContextPaths = 64
+	maxImportContextBytes = 4 << 10
 
 	// SHA-256 of the empty adapter configuration. A real digest, rather than a
 	// sentinel word, keeps atom provenance machine-verifiable.
@@ -665,128 +664,7 @@ func fileFacts(ctx context.Context, corpus sdk.Corpus, relPath string, blob sdk.
 }
 
 func validateProtoComplexity(ctx context.Context, source string) error {
-	if len(source) > maxProtoSourceBytes {
-		return fmt.Errorf("source exceeds %d-byte proto parser limit", maxProtoSourceBytes)
-	}
-	depth := 0
-	var expectedClosers [maxProtoStructuralDepth]byte
-	tokens := 0
-	addToken := func() error {
-		tokens++
-		if tokens > maxProtoTokens {
-			return fmt.Errorf("source exceeds %d-token proto parser limit", maxProtoTokens)
-		}
-		return nil
-	}
-	for i := 0; i < len(source); {
-		if i&4095 == 0 {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-		}
-		current := source[i]
-		switch {
-		case isProtoSpace(current):
-			i++
-		case current == '/' && i+1 < len(source) && source[i+1] == '/':
-			i += 2
-			for i < len(source) && source[i] != '\n' {
-				i++
-			}
-		case current == '/' && i+1 < len(source) && source[i+1] == '*':
-			i += 2
-			closed := false
-			for i+1 < len(source) {
-				if i&4095 == 0 {
-					if err := ctx.Err(); err != nil {
-						return err
-					}
-				}
-				if source[i] == '*' && source[i+1] == '/' {
-					i += 2
-					closed = true
-					break
-				}
-				i++
-			}
-			if !closed {
-				return errors.New("unterminated proto block comment")
-			}
-		case current == '\'' || current == '"':
-			if err := addToken(); err != nil {
-				return err
-			}
-			quote := current
-			i++
-			closed := false
-			for i < len(source) {
-				if i&4095 == 0 {
-					if err := ctx.Err(); err != nil {
-						return err
-					}
-				}
-				switch source[i] {
-				case '\\':
-					i += 2
-				case quote:
-					i++
-					closed = true
-				default:
-					i++
-				}
-				if closed {
-					break
-				}
-			}
-			if !closed {
-				return errors.New("unterminated proto string literal")
-			}
-		case isProtoWordByte(current):
-			if err := addToken(); err != nil {
-				return err
-			}
-			i++
-			for i < len(source) && isProtoWordByte(source[i]) {
-				i++
-			}
-		default:
-			if err := addToken(); err != nil {
-				return err
-			}
-			switch current {
-			case '{', '[', '(', '<':
-				if depth >= maxProtoStructuralDepth {
-					return fmt.Errorf("source exceeds %d-level proto structural-depth limit", maxProtoStructuralDepth)
-				}
-				switch current {
-				case '{':
-					expectedClosers[depth] = '}'
-				case '[':
-					expectedClosers[depth] = ']'
-				case '(':
-					expectedClosers[depth] = ')'
-				case '<':
-					expectedClosers[depth] = '>'
-				}
-				depth++
-			case '}', ']', ')', '>':
-				if depth > 0 && expectedClosers[depth-1] == current {
-					depth--
-				}
-			}
-			i++
-		}
-	}
-	return nil
-}
-
-func isProtoSpace(value byte) bool {
-	return value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == '\f'
-}
-
-func isProtoWordByte(value byte) bool {
-	return value == '_' || value >= 'a' && value <= 'z' ||
-		value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
+	return idlpreflight.Validate(ctx, idlpreflight.Protobuf, source)
 }
 
 // roleFor is the T11.1 classifier reduced to source-proto paths.

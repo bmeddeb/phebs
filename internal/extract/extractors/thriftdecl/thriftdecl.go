@@ -23,6 +23,7 @@ import (
 	"go.uber.org/thriftrw/idl"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/idlpreflight"
 )
 
 const (
@@ -33,11 +34,9 @@ const (
 	// idl.Parse is in-process and does not accept a context. Preflight the
 	// source with conservative size, token, and structural-depth ceilings so
 	// a single candidate cannot hand it an unbounded working set.
-	maxThriftSourceBytes     = 4 << 20
-	maxThriftTokens          = 500_000
-	maxThriftStructuralDepth = 128
-	maxIncludeContextPaths   = 64
-	maxIncludeContextBytes   = 4 << 10
+	maxThriftSourceBytes   = idlpreflight.MaxFileBytes
+	maxIncludeContextPaths = 64
+	maxIncludeContextBytes = 4 << 10
 	// Same-file typedef chains resolve through at most this many hops before
 	// abstaining; cycles abstain immediately.
 	maxTypedefChase = 16
@@ -717,121 +716,7 @@ func referenceByName(state *fileState, name string, typedefDepth int) typeRefere
 // comments and string literals. Thrift adds '#' line comments and
 // single-quoted strings to the protobuf lexical shape.
 func validateThriftComplexity(ctx context.Context, source string) error {
-	if len(source) > maxThriftSourceBytes {
-		return fmt.Errorf("source exceeds %d-byte thrift parser limit", maxThriftSourceBytes)
-	}
-	depth, tokens := 0, 0
-	addToken := func() error {
-		tokens++
-		if tokens > maxThriftTokens {
-			return fmt.Errorf("source exceeds %d-token thrift parser limit", maxThriftTokens)
-		}
-		return nil
-	}
-	for i := 0; i < len(source); {
-		if i&4095 == 0 {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-		}
-		current := source[i]
-		switch {
-		case current == ' ' || current == '\t' || current == '\r' || current == '\n':
-			i++
-		case current == '#':
-			for i < len(source) && source[i] != '\n' {
-				i++
-			}
-		case current == '/' && i+1 < len(source) && source[i+1] == '/':
-			i += 2
-			for i < len(source) && source[i] != '\n' {
-				i++
-			}
-		case current == '/' && i+1 < len(source) && source[i+1] == '*':
-			i += 2
-			closed := false
-			for i+1 < len(source) {
-				if i&4095 == 0 {
-					if err := ctx.Err(); err != nil {
-						return err
-					}
-				}
-				if source[i] == '*' && source[i+1] == '/' {
-					i += 2
-					closed = true
-					break
-				}
-				i++
-			}
-			if !closed {
-				return errors.New("unterminated thrift block comment")
-			}
-		case current == '\'' || current == '"':
-			if err := addToken(); err != nil {
-				return err
-			}
-			quote := current
-			i++
-			closed := false
-			for i < len(source) {
-				if i&4095 == 0 {
-					if err := ctx.Err(); err != nil {
-						return err
-					}
-				}
-				switch source[i] {
-				case '\\':
-					i += 2
-				case quote:
-					i++
-					closed = true
-				default:
-					i++
-				}
-				if closed {
-					break
-				}
-			}
-			if !closed {
-				return errors.New("unterminated thrift string literal")
-			}
-		case current == '{' || current == '<':
-			if err := addToken(); err != nil {
-				return err
-			}
-			depth++
-			if depth > maxThriftStructuralDepth {
-				return fmt.Errorf("source exceeds %d-level thrift nesting limit", maxThriftStructuralDepth)
-			}
-			i++
-		case current == '}' || current == '>':
-			if err := addToken(); err != nil {
-				return err
-			}
-			if depth > 0 {
-				depth--
-			}
-			i++
-		case isThriftWordByte(current):
-			if err := addToken(); err != nil {
-				return err
-			}
-			for i < len(source) && isThriftWordByte(source[i]) {
-				i++
-			}
-		default:
-			if err := addToken(); err != nil {
-				return err
-			}
-			i++
-		}
-	}
-	return nil
-}
-
-func isThriftWordByte(b byte) bool {
-	return b == '_' || b == '.' ||
-		(b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
+	return idlpreflight.Validate(ctx, idlpreflight.Thrift, source)
 }
 
 func lineStarts(content string) []int {
