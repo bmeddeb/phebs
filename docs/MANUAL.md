@@ -736,6 +736,36 @@ the only path that persists the content-addressed bundle. Likewise, the
 Workbench compositor has no direct evidence-store access: all evidence comes
 from the shared Atlas, Caller Map/comparison, and field services.
 
+The internal T21.8 How reader remains production-unregistered with the rest of
+the Workbench. It starts from the current authorized Revision's exact selected
+contracts plus up to 32 explicit user pins. A pin is an exact visible
+repository, immutable indexed commit, safe path, and source position. Selected
+Atlas declaration and implementation files are accepted only at that same
+authorized indexed commit and are re-read through the bounded Git object layer
+to attach a content digest. There is no implicit ref and no mirror-`HEAD`
+fallback.
+
+Related operation-name search is limited to cited repositories. Search
+matches, SCIP definitions and references, and selected path-history
+commits/diffs are always review candidates, not proposed or recommended edits.
+Only the Atlas declaration/implementation inputs and explicit user pins are
+marked selected. Each row displays the deterministic rule or explicit-pin rule
+that admitted it. Production, test, mock, generated, vendor, and documentation
+roles remain separate; generated and vendor boundaries stay visible instead
+of being hidden as implementation detail.
+
+If indexed search, SCIP, a usable source position, or Git history is
+unavailable or fails, the response records a typed gap and does not guess a
+path. The composition is capped at 32 pins, 64 selected sources, 32 MiB of
+source reads, 32 indexed searches and 500 search candidates, 32 SCIP anchors,
+16 history files with two commits each, 2,000 total rows, and 100 rows per
+page. Diff text is excerpted to 16 KiB. Its opaque cursor binds the principal,
+current Revision and brief, normalized pins, visible indexed commits, relevant
+Atlas state, and the complete composed snapshot; authorization and indexed
+commits are rechecked after the read. This reader runs no repository code,
+generator, build, test, plugin, or mutable checkout and creates no proof bundle
+or Investigation mutation.
+
 The protocol-neutral resource registry can display `enabled`, `unsupported`,
 `failed`, `stale`, and `human_asserted`. Only an explicitly registered real
 pack may contribute relationships, and only while its state is `enabled`.

@@ -2762,7 +2762,7 @@ rather than repeating an immutable stale record.
 No route, OpenAPI operation, advertised capability, UI, MCP tool, proof bundle,
 or Investigation mutation is added. T20.14 remains required by T21.14.
 
-**T21.8 · How: related implementation evidence** *(needs T21.3, T21.6)* —
+**T21.8 ✅ 2026-07-27 · How: related implementation evidence** *(needs T21.3, T21.6)* —
 build a bounded shared service that starts from the selected contract and
 explicit user anchors and returns cited declaration/implementation files,
 generated boundaries, definitions/references, tests/mocks/docs by code role,
@@ -2775,6 +2775,37 @@ not a recommended edit. Generated/vendor/test/mock roles stay visible.
 Unsupported SCIP/history produces a gap, not an inferred path. Equal state
 yields equal ordering/cursors, and no corpus executable or mutable mirror HEAD
 is read.
+
+Implemented on `codex/t21.8-related-implementation-evidence` as the internal
+`workbench-related-implementation-v1` shared reader. It reauthorizes the
+current Workbench Revision and visible indexed repository set, resolves each
+selected protocol-qualified Atlas operation, and reads its declaration and
+implementation citations only at the exact indexed commit. Up to 32 explicit
+user anchors may add exact repository/commit/path/position pins. Every selected
+source is re-read through the bounded Git object layer and carries a content
+digest; no omitted ref can fall through to mirror `HEAD`.
+
+Bounded operation identifiers scope indexed search to cited repositories.
+Search matches, SCIP definitions/references, and the two most recent
+path-history commits plus one exact selected diff are typed
+`review_candidate`, never recommended edits. Declaration, implementation, and
+explicit-anchor rows alone are `selected`, and every row names its
+deterministic selection rule or explicit-pin rule. Production, test, mock,
+generated, vendor, and documentation roles remain visible; generated and
+vendor boundaries remain explicit. Missing or failed search, SCIP, source
+position, or history capabilities produce sorted gaps instead of inferred
+paths.
+
+The service caps anchors, source seeds and aggregate source bytes, search
+queries/candidates, SCIP anchors/references, history files/commits, diff
+excerpts/files, total rows, pages, and cursor bytes. Canonical rows and gaps
+feed an opaque cursor bound to principal, Revision/brief, normalized anchors,
+visible repository commits, relevant Atlas bytes, and the complete composed
+snapshot. Authorization and indexed commits are checked again after
+composition; hidden lower-reader rows are discarded before they can affect
+bytes. No Huma route, OpenAPI operation, advertised capability, UI, MCP tool,
+proof bundle, corpus executable, code mutation, or Investigation mutation is
+added; production remains unregistered/default-dark.
 
 **T21.9 · Disposition-backed implementation checklist** *(needs T21.3,
 T21.7, T21.8)* — derive deterministic unaccepted suggestions from exact
