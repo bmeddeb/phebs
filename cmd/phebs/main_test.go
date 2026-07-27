@@ -23,6 +23,45 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
+type authenticationWorkbenchFake struct{}
+
+func (authenticationWorkbenchFake) Preview(
+	context.Context,
+	string,
+	store.WorkbenchPlan,
+) (*store.WorkbenchPreview, error) {
+	return &store.WorkbenchPreview{
+		SchemaVersion: store.WorkbenchPreviewSchemaVersion,
+		Operation:     "create",
+		Ready:         true,
+		PreviewDigest: "sha256:" + strings.Repeat("a", 64),
+	}, nil
+}
+
+func (authenticationWorkbenchFake) Create(
+	context.Context,
+	string,
+	store.WorkbenchMutationRequest,
+) (*store.WorkbenchView, error) {
+	return &store.WorkbenchView{}, nil
+}
+
+func (authenticationWorkbenchFake) Revise(
+	context.Context,
+	string,
+	store.WorkbenchMutationRequest,
+) (*store.WorkbenchView, error) {
+	return &store.WorkbenchView{}, nil
+}
+
+func (authenticationWorkbenchFake) Read(
+	context.Context,
+	string,
+	string,
+) (*store.WorkbenchView, error) {
+	return &store.WorkbenchView{}, nil
+}
+
 func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
@@ -48,6 +87,26 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin
 		},
+		Principal: func(ctx context.Context) string {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok || principal.User == nil {
+				return ""
+			}
+			return "user:" + principal.User.ID
+		},
+		InvestigationMutation: func(ctx context.Context) bool {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok {
+				return false
+			}
+			if principal.AuthMethod == "session" {
+				return true
+			}
+			return principal.HasAPIKeyCapability(
+				store.APIKeyCapabilityInvestigationWrite,
+			)
+		},
+		Workbench: authenticationWorkbenchFake{},
 	})
 	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	metricsHandler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "metrics") })
@@ -90,6 +149,33 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	assertStatus(t, client, http.MethodPost, server.URL+"/api/reindex", `{"repo":"github.com/no/repo"}`,
 		http.Header{"Content-Type": []string{"application/json"}, "X-Csrf-Token": []string{loginResult.CSRFToken}},
 		http.StatusNotFound, "unknown repo")
+	workbenchPlan, err := json.Marshal(authenticationWorkbenchPlan())
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStatus(
+		t,
+		client,
+		http.MethodPost,
+		server.URL+"/api/workbench_previews",
+		string(workbenchPlan),
+		http.Header{"Content-Type": []string{"application/json"}},
+		http.StatusForbidden,
+		"CSRF",
+	)
+	assertStatus(
+		t,
+		client,
+		http.MethodPost,
+		server.URL+"/api/workbench_previews",
+		string(workbenchPlan),
+		http.Header{
+			"Content-Type": []string{"application/json"},
+			"X-Csrf-Token": []string{loginResult.CSRFToken},
+		},
+		http.StatusOK,
+		`"ready":true`,
+	)
 
 	keyHeaders := http.Header{"Content-Type": []string{"application/json"}, "X-Csrf-Token": []string{loginResult.CSRFToken}}
 	created := assertStatus(t, client, http.MethodPost, server.URL+"/api/auth/keys", `{"name":"integration"}`,
@@ -105,6 +191,106 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/repos", "", bearerHeaders, http.StatusOK, "[]")
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/mcp", "", bearerHeaders, http.StatusNoContent, "")
 	assertStatus(t, bearerClient, http.MethodGet, server.URL+"/api/auth/keys", "", bearerHeaders, http.StatusForbidden, "browser session")
+	assertStatus(
+		t,
+		bearerClient,
+		http.MethodPost,
+		server.URL+"/api/workbench_previews",
+		string(workbenchPlan),
+		http.Header{
+			"Authorization": []string{"Bearer " + keyResult.Token},
+			"Content-Type":  []string{"application/json"},
+		},
+		http.StatusNotFound,
+		"workbench resource not found",
+	)
+
+	writeCreated := assertStatus(
+		t,
+		client,
+		http.MethodPost,
+		server.URL+"/api/auth/keys",
+		`{"name":"investigation agent","capabilities":["investigation:write"]}`,
+		keyHeaders,
+		http.StatusCreated,
+		`"capabilities":["investigation:write"]`,
+	)
+	var writeKeyResult struct {
+		Key struct {
+			ID string `json:"id"`
+		} `json:"key"`
+		Token string `json:"token"`
+	}
+	if err := json.Unmarshal(writeCreated, &writeKeyResult); err != nil ||
+		writeKeyResult.Key.ID == "" || writeKeyResult.Token == "" {
+		t.Fatalf("write key response = %s, err %v", writeCreated, err)
+	}
+	writeBearerHeaders := http.Header{
+		"Authorization": []string{"Bearer " + writeKeyResult.Token},
+		"Content-Type":  []string{"application/json"},
+	}
+	assertStatus(
+		t,
+		bearerClient,
+		http.MethodPost,
+		server.URL+"/api/workbench_previews",
+		string(workbenchPlan),
+		writeBearerHeaders,
+		http.StatusOK,
+		`"ready":true`,
+	)
+	assertStatus(
+		t,
+		client,
+		http.MethodDelete,
+		server.URL+"/api/auth/keys/"+writeKeyResult.Key.ID,
+		"",
+		keyHeaders,
+		http.StatusNoContent,
+		"",
+	)
+	assertStatus(
+		t,
+		bearerClient,
+		http.MethodPost,
+		server.URL+"/api/workbench_previews",
+		string(workbenchPlan),
+		writeBearerHeaders,
+		http.StatusUnauthorized,
+		"authentication required",
+	)
+}
+
+func authenticationWorkbenchPlan() store.WorkbenchPlan {
+	return store.WorkbenchPlan{
+		Referent:    "grpc:/shop.v1.Checkout/Submit",
+		ClaimFamily: "change-workbench",
+		Title:       "Checkout change",
+		Revision: store.WorkbenchRevisionDraft{
+			NormalizedQuestion: "what changes?",
+			DecisionSought:     "approve change",
+			SnapshotPolicy:     "exact commit",
+			BuildConfiguration: "linux/arm64",
+			EnumerationMethod:  "exact selection",
+		},
+		Brief: store.WorkbenchChangeBriefDraft{
+			TicketKind:      store.ChangeBriefModify,
+			Problem:         "Receipt identifiers are unstable.",
+			DesiredOutcome:  "Receipt identifiers are stable.",
+			SuccessCriteria: []string{"The identifier is stable."},
+			What: store.WorkbenchWhatDraft{
+				Selections: []store.ChangeBriefContractSelection{{
+					Role:               store.ChangeBriefCurrent,
+					Protocol:           "protobuf",
+					Repository:         "example/contracts",
+					DeclarationLineage: "proto/shop.proto:shop.Checkout",
+					CanonicalOperation: "/shop.Checkout/Submit",
+				}},
+			},
+		},
+		Repositories: []string{"example/contracts"},
+		Capabilities: []string{"contract-atlas"},
+	}
 }
 
 func TestVersionCapabilitiesRequireAuthenticatedPrincipal(t *testing.T) {

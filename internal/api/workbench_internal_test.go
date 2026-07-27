@@ -19,6 +19,9 @@ type workbenchAPIFake struct {
 	createRequest    store.WorkbenchMutationRequest
 	reviseRequest    store.WorkbenchMutationRequest
 	readID           string
+	previewErr       error
+	createErr        error
+	reviseErr        error
 	readErr          error
 }
 
@@ -29,6 +32,9 @@ func (fake *workbenchAPIFake) Preview(
 ) (*store.WorkbenchPreview, error) {
 	fake.previewPrincipal = principal
 	fake.previewPlan = plan
+	if fake.previewErr != nil {
+		return nil, fake.previewErr
+	}
 	return &store.WorkbenchPreview{
 		SchemaVersion: store.WorkbenchPreviewSchemaVersion,
 		Operation:     "create",
@@ -44,6 +50,9 @@ func (fake *workbenchAPIFake) Create(
 ) (*store.WorkbenchView, error) {
 	fake.createPrincipal = principal
 	fake.createRequest = request
+	if fake.createErr != nil {
+		return nil, fake.createErr
+	}
 	return workbenchAPIView(request.Plan), nil
 }
 
@@ -54,6 +63,9 @@ func (fake *workbenchAPIFake) Revise(
 ) (*store.WorkbenchView, error) {
 	fake.revisePrincipal = principal
 	fake.reviseRequest = request
+	if fake.reviseErr != nil {
+		return nil, fake.reviseErr
+	}
 	return workbenchAPIView(request.Plan), nil
 }
 
@@ -137,7 +149,8 @@ func TestWorkbenchHumaIsThinBoundedAndDefaultDark(t *testing.T) {
 		Principal: func(context.Context) string {
 			return "user:workbench-api"
 		},
-		Workbench: fake,
+		InvestigationMutation: func(context.Context) bool { return true },
+		Workbench:             fake,
 	})
 	plan := workbenchAPIPlan()
 	preview := postInvestigationJSON(
@@ -246,6 +259,88 @@ func TestWorkbenchHumaIsThinBoundedAndDefaultDark(t *testing.T) {
 	dark.ServeHTTP(darkVersion, versionRequest)
 	if strings.Contains(darkVersion.Body.String(), `"change-workbench"`) {
 		t.Fatal("dark version exposed Workbench capability")
+	}
+}
+
+func TestWorkbenchMutationCredentialGateIsAdditiveAndNonDisclosing(t *testing.T) {
+	allowed := false
+	fake := &workbenchAPIFake{}
+	handler := New(Options{
+		Version: "test",
+		Store:   &investigationRepoStore{},
+		Principal: func(context.Context) string {
+			return "user:workbench-owner"
+		},
+		InvestigationMutation: func(context.Context) bool {
+			return allowed
+		},
+		Workbench: fake,
+	})
+	plan := workbenchAPIPlan()
+	createRequest := store.WorkbenchMutationRequest{
+		Plan:           plan,
+		PreviewDigest:  "sha256:" + strings.Repeat("a", 64),
+		IdempotencyKey: "read-only-owner",
+	}
+	reviseRequest := createRequest
+	reviseRequest.Plan.InvestigationID = "01J00000000000000000000000"
+	reviseRequest.Plan.ExpectedRevisionID = "ivr_fixture"
+	for _, test := range []struct {
+		path string
+		body any
+	}{
+		{"/api/workbench_previews", plan},
+		{"/api/workbenches", createRequest},
+		{"/api/workbenches/01J00000000000000000000000/revisions", reviseRequest},
+	} {
+		response := postInvestigationJSON(t, handler, test.path, test.body)
+		if response.Code != http.StatusNotFound ||
+			!strings.Contains(response.Body.String(), "workbench resource not found") {
+			t.Fatalf(
+				"insufficient capability %s = %d %s",
+				test.path,
+				response.Code,
+				response.Body,
+			)
+		}
+	}
+	if fake.previewPrincipal != "" || fake.createPrincipal != "" ||
+		fake.revisePrincipal != "" {
+		t.Fatalf("read-only key reached mutation service: %+v", fake)
+	}
+
+	allowed = true
+	fake.previewErr = store.ErrNotFound
+	nonOwner := postInvestigationJSON(
+		t,
+		handler,
+		"/api/workbench_previews",
+		plan,
+	)
+	if nonOwner.Code != http.StatusNotFound ||
+		!strings.Contains(nonOwner.Body.String(), "workbench resource not found") {
+		t.Fatalf("non-owner preview = %d %s", nonOwner.Code, nonOwner.Body)
+	}
+	fake.previewErr = nil
+	reached := postInvestigationJSON(
+		t,
+		handler,
+		"/api/workbench_previews",
+		plan,
+	)
+	if reached.Code != http.StatusOK ||
+		fake.previewPrincipal != "user:workbench-owner" {
+		t.Fatalf("write-capable owner did not reach preview: %d %s; %+v", reached.Code, reached.Body, fake)
+	}
+	fake.createErr = store.ErrConflict
+	stale := postInvestigationJSON(
+		t,
+		handler,
+		"/api/workbenches",
+		createRequest,
+	)
+	if stale.Code != http.StatusConflict {
+		t.Fatalf("write-capable stale preview = %d %s", stale.Code, stale.Body)
 	}
 }
 

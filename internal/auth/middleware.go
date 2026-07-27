@@ -105,7 +105,14 @@ func (s *Service) authenticateBearer(ctx context.Context, token string) (Princip
 	if user.Disabled {
 		return Principal{}, ErrUnauthenticated
 	}
-	return Principal{User: user, APIKeyID: key.ID, AuthMethod: "api_key", IsAdmin: user.IsAdmin}, nil
+	return Principal{
+		User: user, APIKeyID: key.ID,
+		APIKeyCapabilities: append(
+			[]store.APIKeyCapability(nil),
+			key.Capabilities...,
+		),
+		AuthMethod: "api_key", IsAdmin: user.IsAdmin,
+	}, nil
 }
 
 // Require establishes a Principal and enforces CSRF on unsafe browser-session

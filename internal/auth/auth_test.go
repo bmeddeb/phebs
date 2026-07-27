@@ -7,7 +7,9 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -179,6 +181,11 @@ func (m *memoryAuthStore) CreateAPIKey(_ context.Context, key store.APIKey) (*st
 	if _, exists := m.keys[key.ID]; exists {
 		return nil, store.ErrConflict
 	}
+	capabilities, err := store.CanonicalAPIKeyCapabilities(key.Capabilities)
+	if err != nil {
+		return nil, err
+	}
+	key.Capabilities = capabilities
 	m.keys[key.ID] = key
 	copy := key
 	return &copy, nil
@@ -191,6 +198,10 @@ func (m *memoryAuthStore) GetAPIKey(_ context.Context, id string) (*store.APIKey
 	if !ok {
 		return nil, store.ErrNotFound
 	}
+	key.Capabilities = append(
+		[]store.APIKeyCapability(nil),
+		key.Capabilities...,
+	)
 	return &key, nil
 }
 
@@ -200,6 +211,10 @@ func (m *memoryAuthStore) ListAPIKeys(_ context.Context, userID string) ([]store
 	var keys []store.APIKey
 	for _, key := range m.keys {
 		if key.UserID == userID && key.RevokedAt == nil {
+			key.Capabilities = append(
+				[]store.APIKeyCapability(nil),
+				key.Capabilities...,
+			)
 			keys = append(keys, key)
 		}
 	}
@@ -237,7 +252,10 @@ func (m *memoryAuthStore) SetLegacyAPIKey(_ context.Context, hash string, at tim
 		delete(m.keys, legacyKeyID)
 		return nil
 	}
-	m.keys[legacyKeyID] = store.APIKey{ID: legacyKeyID, Name: "Legacy config key", Prefix: "legacy", Hash: hash, CreatedAt: at}
+	m.keys[legacyKeyID] = store.APIKey{
+		ID: legacyKeyID, Name: "Legacy config key", Prefix: "legacy",
+		Hash: hash, Capabilities: []store.APIKeyCapability{}, CreatedAt: at,
+	}
 	return nil
 }
 
@@ -345,11 +363,107 @@ func TestSetupLoginSessionAPIKeyAndCSRF(t *testing.T) {
 	if !strings.HasPrefix(created.Token, "phebs_") || created.Key.ID == "" {
 		t.Fatalf("created key response = %+v", created)
 	}
+	if created.Key.Capabilities == nil || len(created.Key.Capabilities) != 0 {
+		t.Fatalf("omitted capability selection = %#v, want explicit read-only metadata", created.Key.Capabilities)
+	}
 	st.mu.Lock()
 	storedKey := st.keys[created.Key.ID]
 	st.mu.Unlock()
 	if storedKey.Hash == created.Token || storedKey.Hash != bearerHash(created.Token) {
 		t.Fatalf("API key was not hashed: %+v", storedKey)
+	}
+	readPrincipal, err := service.authenticateBearer(ctx, created.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if readPrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
+		t.Fatal("default key gained Investigation write authority")
+	}
+
+	for _, invalid := range []struct {
+		name string
+		body string
+	}{
+		{"unknown", `{"name":"unknown","capabilities":["repository:admin"]}`},
+		{"future", `{"name":"future","capabilities":["investigation:write:v2"]}`},
+		{"duplicate", `{"name":"duplicate","capabilities":["investigation:write","investigation:write"]}`},
+		{"malformed_member", `{"name":"malformed","capabilities":[1]}`},
+		{"malformed_shape", `{"name":"malformed","capabilities":{}}`},
+		{"null", `{"name":"null","capabilities":null}`},
+		{"unknown_field", `{"name":"unknown field","capabilities":[],"authority":"write"}`},
+		{"trailing_json", `{"name":"trailing","capabilities":[]} {}`},
+	} {
+		t.Run("reject_capability_"+invalid.name, func(t *testing.T) {
+			invalidResponse := request(
+				t,
+				client,
+				http.MethodPost,
+				server.URL+"/api/auth/keys",
+				invalid.body,
+				loggedIn.CSRFToken,
+				"",
+			)
+			if invalidResponse.StatusCode != http.StatusBadRequest {
+				t.Fatalf(
+					"invalid capability request = %d: %s",
+					invalidResponse.StatusCode,
+					readBody(invalidResponse),
+				)
+			}
+			_ = invalidResponse.Body.Close()
+		})
+	}
+	st.mu.Lock()
+	keyCountAfterRefusals := len(st.keys)
+	st.mu.Unlock()
+	if keyCountAfterRefusals != 1 {
+		t.Fatalf("invalid capability requests created %d keys, want 1", keyCountAfterRefusals)
+	}
+
+	response = request(
+		t,
+		client,
+		http.MethodPost,
+		server.URL+"/api/auth/keys",
+		`{"name":"Investigation agent","capabilities":["investigation:write"]}`,
+		loggedIn.CSRFToken,
+		"",
+	)
+	if response.StatusCode != http.StatusCreated {
+		t.Fatalf("create write-capable key = %d: %s", response.StatusCode, readBody(response))
+	}
+	var writeCreated struct {
+		Key   keyResponse `json:"key"`
+		Token string      `json:"token"`
+	}
+	decodeResponse(t, response, &writeCreated)
+	if len(writeCreated.Key.Capabilities) != 1 ||
+		writeCreated.Key.Capabilities[0] != store.APIKeyCapabilityInvestigationWrite {
+		t.Fatalf("explicit capability response = %+v", writeCreated)
+	}
+	writePrincipal, err := service.authenticateBearer(ctx, writeCreated.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !writePrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
+		t.Fatal("explicit write capability was not bound to the authenticated principal")
+	}
+	response = request(t, client, http.MethodGet, server.URL+"/api/auth/keys", "", "", "")
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("list keys = %d: %s", response.StatusCode, readBody(response))
+	}
+	listBody, err := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(listBody), created.Token) ||
+		strings.Contains(string(listBody), writeCreated.Token) ||
+		strings.Contains(string(listBody), storedKey.Hash) ||
+		strings.Contains(string(listBody), `"hash"`) ||
+		!strings.Contains(string(listBody), `"capabilities":["investigation:write"]`) ||
+		!strings.Contains(string(listBody), `"capabilities":[]`) {
+		t.Fatalf("unsafe or incomplete key list metadata: %s", listBody)
 	}
 
 	for _, attempt := range []struct {
@@ -461,6 +575,94 @@ func TestLegacyBearerImportedAsHash(t *testing.T) {
 	principal, err := service.Authenticate(serviceRequestContext(t, service, req))
 	if err != nil || !principal.IsAdmin || principal.User != nil {
 		t.Fatalf("legacy principal = %+v, %v", principal, err)
+	}
+	if principal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) ||
+		legacy.Capabilities == nil || len(legacy.Capabilities) != 0 {
+		t.Fatalf("legacy key gained capabilities: key=%+v principal=%+v", legacy, principal)
+	}
+}
+
+func TestNamedBearerCapabilitiesPreserveDisabledRevokedAndExpiryChecks(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 27, 12, 0, 0, 0, time.UTC)
+	st := newMemoryAuthStore()
+	service, err := New(ctx, Options{
+		Store: st,
+		Config: config.Auth{
+			CookieSecure: insecureCookieConfig(),
+		},
+		Now: func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.mu.Lock()
+	st.users["owner"] = store.User{
+		ID: "owner", Email: "owner@example.com",
+		NormalizedEmail: "owner@example.com",
+	}
+	st.users["disabled"] = store.User{
+		ID: "disabled", Email: "disabled@example.com",
+		NormalizedEmail: "disabled@example.com", Disabled: true,
+	}
+	revokedAt := now.Add(-time.Minute)
+	expiredAt := now.Add(-time.Second)
+	for _, fixture := range []struct {
+		id, userID, token string
+		capabilities      []store.APIKeyCapability
+		revokedAt         *time.Time
+		expiresAt         *time.Time
+	}{
+		{"read", "owner", "phebs_read.secret", nil, nil, nil},
+		{"write", "owner", "phebs_write.secret", []store.APIKeyCapability{
+			store.APIKeyCapabilityInvestigationWrite,
+		}, nil, nil},
+		{"revoked", "owner", "phebs_revoked.secret", []store.APIKeyCapability{
+			store.APIKeyCapabilityInvestigationWrite,
+		}, &revokedAt, nil},
+		{"expired", "owner", "phebs_expired.secret", []store.APIKeyCapability{
+			store.APIKeyCapabilityInvestigationWrite,
+		}, nil, &expiredAt},
+		{"disabled-key", "disabled", "phebs_disabled-key.secret", []store.APIKeyCapability{
+			store.APIKeyCapabilityInvestigationWrite,
+		}, nil, nil},
+	} {
+		st.keys[fixture.id] = store.APIKey{
+			ID: fixture.id, UserID: fixture.userID, Name: fixture.id,
+			Prefix: fixture.id, Hash: bearerHash(fixture.token),
+			Capabilities: fixture.capabilities,
+			CreatedAt:    now.Add(-time.Hour),
+			RevokedAt:    fixture.revokedAt,
+			ExpiresAt:    fixture.expiresAt,
+		}
+	}
+	st.mu.Unlock()
+
+	readPrincipal, err := service.authenticateBearer(ctx, "phebs_read.secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if readPrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
+		t.Fatal("read-only key gained write authority")
+	}
+	writePrincipal, err := service.authenticateBearer(ctx, "phebs_write.secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !writePrincipal.HasAPIKeyCapability(store.APIKeyCapabilityInvestigationWrite) {
+		t.Fatal("write-capable key lost reviewed authority")
+	}
+	for _, token := range []string{
+		"phebs_revoked.secret",
+		"phebs_expired.secret",
+		"phebs_disabled-key.secret",
+	} {
+		if _, authErr := service.authenticateBearer(ctx, token); !errors.Is(
+			authErr,
+			ErrUnauthenticated,
+		) {
+			t.Errorf("%s authentication error = %v, want unauthenticated", token, authErr)
+		}
 	}
 }
 

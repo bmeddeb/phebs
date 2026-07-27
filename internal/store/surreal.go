@@ -99,6 +99,27 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 			return fmt.Errorf("statement %d: %s", i, r.Error.Message)
 		}
 	}
+	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilityPreMigrationSchema, nil)
+	if err != nil {
+		return err
+	}
+	for i, r := range *results {
+		if r.Error != nil {
+			return fmt.Errorf("API key capability pre-migration statement %d: %s", i, r.Error.Message)
+		}
+	}
+	if err := s.migrateAPIKeyCapabilities(ctx); err != nil {
+		return err
+	}
+	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilitySchema, nil)
+	if err != nil {
+		return err
+	}
+	for i, r := range *results {
+		if r.Error != nil {
+			return fmt.Errorf("API key capability schema statement %d: %s", i, r.Error.Message)
+		}
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, evidencePreMigrationSchema, nil)
 	if err != nil {
 		return err
@@ -121,6 +142,51 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	for i, r := range *results {
 		if r.Error != nil {
 			return fmt.Errorf("pending index statement %d: %s", i, r.Error.Message)
+		}
+	}
+	return nil
+}
+
+const apiKeyCapabilityMigrationVersion = "t21.12-api-key-capabilities-v1"
+
+const apiKeyCapabilityPreMigrationSchema = `
+DEFINE FIELD IF NOT EXISTS capabilities ON api_key TYPE option<array<string>>;`
+
+const apiKeyCapabilitySchema = `
+DEFINE FIELD OVERWRITE capabilities ON api_key TYPE array<string> DEFAULT []
+	ASSERT $value = [] OR $value = ['investigation:write'];
+DEFINE EVENT IF NOT EXISTS api_key_capabilities_immutable ON TABLE api_key
+	WHEN $event = 'UPDATE'
+	  AND $before.capabilities != NONE
+	  AND $before.capabilities != $after.capabilities
+	THEN {
+		THROW 'phebs-permanent: API key capabilities are immutable'
+	};`
+
+// migrateAPIKeyCapabilities gives every pre-T21.12 row the explicit empty
+// capability set. The transaction is safe to repeat after an interrupted
+// open, and the marker records the completed additive generation.
+func (s *Surreal) migrateAPIKeyCapabilities(ctx context.Context) error {
+	results, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+UPDATE api_key SET capabilities = [] WHERE capabilities = NONE RETURN NONE;
+UPSERT $marker SET version = $version,
+	completed_at = IF completed_at = NONE THEN time::now() ELSE completed_at END
+	RETURN NONE;
+COMMIT;`, map[string]any{
+		"marker":  models.NewRecordID("store_migration", "api_key_capabilities"),
+		"version": apiKeyCapabilityMigrationVersion,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate API key capabilities: %w", err)
+	}
+	for i, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"migrate API key capabilities statement %d: %s",
+				i,
+				result.Error.Message,
+			)
 		}
 	}
 	return nil

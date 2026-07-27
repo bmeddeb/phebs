@@ -250,48 +250,65 @@ func (s *Surreal) MarkUserLogin(ctx context.Context, id string, at time.Time) er
 }
 
 type apiKeyRec struct {
-	RecID      *models.RecordID `json:"id"`
-	UserID     string           `json:"user_id"`
-	Name       string           `json:"name"`
-	Prefix     string           `json:"prefix"`
-	Hash       string           `json:"hash"`
-	CreatedAt  time.Time        `json:"created_at"`
-	LastUsedAt *time.Time       `json:"last_used_at"`
-	ExpiresAt  *time.Time       `json:"expires_at"`
-	RevokedAt  *time.Time       `json:"revoked_at"`
+	RecID        *models.RecordID   `json:"id"`
+	UserID       string             `json:"user_id"`
+	Name         string             `json:"name"`
+	Prefix       string             `json:"prefix"`
+	Hash         string             `json:"hash"`
+	Capabilities []APIKeyCapability `json:"capabilities"`
+	CreatedAt    time.Time          `json:"created_at"`
+	LastUsedAt   *time.Time         `json:"last_used_at"`
+	ExpiresAt    *time.Time         `json:"expires_at"`
+	RevokedAt    *time.Time         `json:"revoked_at"`
 }
 
-func (r apiKeyRec) key() APIKey {
+func (r apiKeyRec) key() (APIKey, error) {
 	id := ""
 	if r.RecID != nil {
 		id = r.RecID.ID.(string)
 	}
+	capabilities, err := CanonicalAPIKeyCapabilities(r.Capabilities)
+	if err != nil {
+		return APIKey{}, fmt.Errorf("API key %q capabilities: %w", id, err)
+	}
 	return APIKey{ID: id, UserID: r.UserID, Name: r.Name, Prefix: r.Prefix,
-		Hash: r.Hash, CreatedAt: r.CreatedAt, LastUsedAt: r.LastUsedAt,
-		ExpiresAt: r.ExpiresAt, RevokedAt: r.RevokedAt}
+		Hash: r.Hash, Capabilities: capabilities, CreatedAt: r.CreatedAt,
+		LastUsedAt: r.LastUsedAt, ExpiresAt: r.ExpiresAt,
+		RevokedAt: r.RevokedAt}, nil
 }
 
-func firstAPIKey(results *[]surrealdb.QueryResult[[]apiKeyRec]) *APIKey {
+func firstAPIKey(results *[]surrealdb.QueryResult[[]apiKeyRec]) (*APIKey, error) {
 	for _, result := range *results {
 		if len(result.Result) > 0 {
-			key := result.Result[0].key()
-			return &key
+			key, err := result.Result[0].key()
+			if err != nil {
+				return nil, err
+			}
+			return &key, nil
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 func (s *Surreal) CreateAPIKey(ctx context.Context, key APIKey) (*APIKey, error) {
+	capabilities, err := CanonicalAPIKeyCapabilities(key.Capabilities)
+	if err != nil {
+		return nil, fmt.Errorf("create API key: %w", err)
+	}
 	results, err := surrealdb.Query[[]apiKeyRec](ctx, s.db,
 		`CREATE $rid SET user_id = $user_id, name = $name, prefix = $prefix,
-            hash = $hash, created_at = $created_at, expires_at = $expires_at RETURN AFTER`,
+            hash = $hash, capabilities = $capabilities,
+            created_at = $created_at, expires_at = $expires_at RETURN AFTER`,
 		map[string]any{"rid": apiKeyID(key.ID), "user_id": key.UserID, "name": key.Name,
 			"prefix": key.Prefix, "hash": key.Hash, "created_at": key.CreatedAt,
-			"expires_at": key.ExpiresAt})
+			"expires_at": key.ExpiresAt, "capabilities": capabilities})
 	if err != nil {
 		return nil, wrapAuthConflict(err)
 	}
-	created := firstAPIKey(results)
+	created, err := firstAPIKey(results)
+	if err != nil {
+		return nil, err
+	}
 	if created == nil {
 		return nil, errors.New("create API key returned no row")
 	}
@@ -304,7 +321,10 @@ func (s *Surreal) GetAPIKey(ctx context.Context, id string) (*APIKey, error) {
 	if err != nil {
 		return nil, err
 	}
-	key := firstAPIKey(results)
+	key, err := firstAPIKey(results)
+	if err != nil {
+		return nil, err
+	}
 	if key == nil {
 		return nil, fmt.Errorf("API key %q: %w", id, ErrNotFound)
 	}
@@ -321,7 +341,11 @@ func (s *Surreal) ListAPIKeys(ctx context.Context, userID string) ([]APIKey, err
 	var keys []APIKey
 	for _, result := range *results {
 		for _, row := range result.Result {
-			keys = append(keys, row.key())
+			key, keyErr := row.key()
+			if keyErr != nil {
+				return nil, keyErr
+			}
+			keys = append(keys, key)
 		}
 	}
 	return keys, nil
@@ -334,7 +358,11 @@ func (s *Surreal) RevokeAPIKey(ctx context.Context, id, userID string, at time.T
 	if err != nil {
 		return err
 	}
-	if firstAPIKey(results) == nil {
+	updated, parseErr := firstAPIKey(results)
+	if parseErr != nil {
+		return parseErr
+	}
+	if updated == nil {
 		return fmt.Errorf("API key %q: %w", id, ErrNotFound)
 	}
 	return nil
@@ -356,7 +384,8 @@ func (s *Surreal) SetLegacyAPIKey(ctx context.Context, hash string, at time.Time
 	}
 	_, err := surrealdb.Query[any](ctx, s.db,
 		`UPSERT $rid SET user_id = '', name = 'Legacy config key', prefix = 'legacy',
-            hash = $hash, created_at = IF created_at = NONE THEN $at ELSE created_at END,
+            hash = $hash, capabilities = [],
+            created_at = IF created_at = NONE THEN $at ELSE created_at END,
             revoked_at = NONE`,
 		map[string]any{"rid": apiKeyID(legacyAPIKeyID), "hash": hash, "at": at})
 	return err

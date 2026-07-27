@@ -68,6 +68,9 @@ func registerWorkbench(api huma.API, opts Options) {
 		ctx context.Context,
 		input *workbenchPreviewInput,
 	) (*workbenchPreviewOutput, error) {
+		if err := requireInvestigationMutationCredential(ctx, opts); err != nil {
+			return nil, err
+		}
 		principal, err := investigationPrincipal(ctx, opts)
 		if err != nil {
 			return nil, err
@@ -90,6 +93,9 @@ func registerWorkbench(api huma.API, opts Options) {
 		ctx context.Context,
 		input *workbenchMutationInput,
 	) (*workbenchMutationOutput, error) {
+		if err := requireInvestigationMutationCredential(ctx, opts); err != nil {
+			return nil, err
+		}
 		principal, err := investigationPrincipal(ctx, opts)
 		if err != nil {
 			return nil, err
@@ -111,6 +117,9 @@ func registerWorkbench(api huma.API, opts Options) {
 		ctx context.Context,
 		input *workbenchRevisionInput,
 	) (*workbenchMutationOutput, error) {
+		if err := requireInvestigationMutationCredential(ctx, opts); err != nil {
+			return nil, err
+		}
 		principal, err := investigationPrincipal(ctx, opts)
 		if err != nil {
 			return nil, err

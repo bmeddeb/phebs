@@ -269,18 +269,44 @@ describe('request helpers', () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ key: { id: 'key1' }, token: 'phebs_token' }),
+        json: async () => ({ key: { id: 'key1', capabilities: [] }, token: 'phebs_token' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          key: { id: 'key2', capabilities: ['investigation:write'] },
+          token: 'phebs_write_token',
+        }),
       })
       .mockResolvedValueOnce({ ok: true })
     vi.stubGlobal('fetch', fetchMock)
     await createAPIKey('CI')
+    await createAPIKey('Investigation agent', ['investigation:write'])
     await revokeAPIKey('key1')
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({
-      credentials: 'same-origin',
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-settings' },
-    })
-    expect(fetchMock.mock.calls[1]).toEqual([
+    expect(fetchMock.mock.calls.slice(0, 2)).toEqual([
+      [
+        '/api/auth/keys',
+        {
+          credentials: 'same-origin',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-settings' },
+          body: JSON.stringify({ name: 'CI', capabilities: [] }),
+        },
+      ],
+      [
+        '/api/auth/keys',
+        {
+          credentials: 'same-origin',
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': 'csrf-settings' },
+          body: JSON.stringify({
+            name: 'Investigation agent',
+            capabilities: ['investigation:write'],
+          }),
+        },
+      ],
+    ])
+    expect(fetchMock.mock.calls[2]).toEqual([
       '/api/auth/keys/key1',
       {
         credentials: 'same-origin',

@@ -283,6 +283,9 @@ func registerWorkbenchEvidence(api huma.API, opts Options) {
 		ctx context.Context,
 		input *workbenchDispositionInput,
 	) (*workbenchDispositionOutput, error) {
+		if err := requireInvestigationMutationCredential(ctx, opts); err != nil {
+			return nil, err
+		}
 		principal, err := investigationPrincipal(ctx, opts)
 		if err != nil {
 			return nil, err

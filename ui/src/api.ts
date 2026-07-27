@@ -74,10 +74,13 @@ export interface TreeEntry {
   size?: number
 }
 
+export type APIKeyCapability = 'investigation:write'
+
 export interface APIKeySummary {
   id: string
   name: string
   prefix: string
+  capabilities: APIKeyCapability[]
   created_at: string
   last_used_at?: string
   expires_at?: string
@@ -1778,11 +1781,14 @@ export async function postChangeImpact(requestBody: CompatibilityRequest, signal
 export const fetchAPIKeys = (signal?: AbortSignal) =>
   getJSON<{ keys: APIKeySummary[] }>('/api/auth/keys', signal)
 
-export async function createAPIKey(name: string): Promise<CreatedAPIKey> {
+export async function createAPIKey(
+  name: string,
+  capabilities: APIKeyCapability[] = [],
+): Promise<CreatedAPIKey> {
   const res = await request('/api/auth/keys', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, capabilities }),
   })
   if (!res.ok) throw new Error((await res.text()) || `create key failed (${res.status})`)
   return res.json() as Promise<CreatedAPIKey>

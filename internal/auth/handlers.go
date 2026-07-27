@@ -33,12 +33,31 @@ type statusResponse struct {
 }
 
 type keyResponse struct {
-	ID         string     `json:"id"`
-	Name       string     `json:"name"`
-	Prefix     string     `json:"prefix"`
-	CreatedAt  time.Time  `json:"created_at"`
-	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
-	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
+	ID           string                   `json:"id"`
+	Name         string                   `json:"name"`
+	Prefix       string                   `json:"prefix"`
+	Capabilities []store.APIKeyCapability `json:"capabilities"`
+	CreatedAt    time.Time                `json:"created_at"`
+	LastUsedAt   *time.Time               `json:"last_used_at,omitempty"`
+	ExpiresAt    *time.Time               `json:"expires_at,omitempty"`
+}
+
+type capabilitySelection []store.APIKeyCapability
+
+func (selection *capabilitySelection) UnmarshalJSON(data []byte) error {
+	if strings.TrimSpace(string(data)) == "null" {
+		return errors.New("capabilities must be an array")
+	}
+	var values []store.APIKeyCapability
+	if err := json.Unmarshal(data, &values); err != nil {
+		return fmt.Errorf("capabilities must be an array of names: %w", err)
+	}
+	canonical, err := store.CanonicalAPIKeyCapabilities(values)
+	if err != nil {
+		return err
+	}
+	*selection = canonical
+	return nil
 }
 
 // Handler exposes the complete Epic 9 auth route set. It must be mounted
@@ -271,7 +290,8 @@ func (s *Service) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input struct {
-		Name string `json:"name"`
+		Name         string              `json:"name"`
+		Capabilities capabilitySelection `json:"capabilities,omitempty"`
 	}
 	if err := decodeJSON(w, r, &input); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -291,6 +311,13 @@ func (s *Service) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusConflict, "API key limit reached")
 		return
 	}
+	capabilities, err := store.CanonicalAPIKeyCapabilities(
+		[]store.APIKeyCapability(input.Capabilities),
+	)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	for range 3 {
 		id, idErr := randomToken(12)
 		secret, secretErr := randomToken(32)
@@ -301,10 +328,18 @@ func (s *Service) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 		token := "phebs_" + id + "." + secret
 		key, createErr := s.store.CreateAPIKey(r.Context(), store.APIKey{
 			ID: id, UserID: user.ID, Name: name, Prefix: "phebs_" + id[:8],
-			Hash: bearerHash(token), CreatedAt: s.now(),
+			Hash: bearerHash(token), Capabilities: capabilities,
+			CreatedAt: s.now(),
 		})
 		if createErr == nil {
 			s.audit(r, user, "auth.key.create", key.ID, http.StatusCreated)
+			s.audit(
+				r,
+				user,
+				"auth.key.capability_selection",
+				capabilitySelectionAuditTarget(key.ID, key.Capabilities),
+				http.StatusCreated,
+			)
 			w.Header().Set("Cache-Control", "no-store")
 			writeJSON(w, http.StatusCreated, map[string]any{"key": publicKey(key), "token": token})
 			return
@@ -353,8 +388,22 @@ func publicUser(user *store.User) *userResponse {
 }
 
 func publicKey(key *store.APIKey) keyResponse {
-	return keyResponse{ID: key.ID, Name: key.Name, Prefix: key.Prefix, CreatedAt: key.CreatedAt,
+	capabilities := make([]store.APIKeyCapability, len(key.Capabilities))
+	copy(capabilities, key.Capabilities)
+	return keyResponse{ID: key.ID, Name: key.Name, Prefix: key.Prefix,
+		Capabilities: capabilities, CreatedAt: key.CreatedAt,
 		LastUsedAt: key.LastUsedAt, ExpiresAt: key.ExpiresAt}
+}
+
+func capabilitySelectionAuditTarget(
+	keyID string,
+	capabilities []store.APIKeyCapability,
+) string {
+	names := make([]string, len(capabilities))
+	for index, capability := range capabilities {
+		names[index] = string(capability)
+	}
+	return keyID + " capabilities=[" + strings.Join(names, ",") + "]"
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) error {

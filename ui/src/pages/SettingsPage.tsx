@@ -4,7 +4,7 @@ import { Button, KIND as BUTTON_KIND, SIZE } from 'baseui/button'
 import { Input } from 'baseui/input'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { createAPIKey, fetchAPIKeys, revokeAPIKey } from '../api'
-import type { APIKeySummary } from '../api'
+import type { APIKeyCapability, APIKeySummary } from '../api'
 import { CheckIcon, CopyIcon, KeyIcon, TrashIcon } from '../icons'
 import { usePhebsTokens, FONTS } from '../theme'
 import { isAbortError } from '../util'
@@ -14,7 +14,9 @@ export default function SettingsPage() {
   const tok = usePhebsTokens()
   const [keys, setKeys] = useState<APIKeySummary[]>([])
   const [name, setName] = useState('')
+  const [investigationWrite, setInvestigationWrite] = useState(false)
   const [createdToken, setCreatedToken] = useState('')
+  const [createdCapabilities, setCreatedCapabilities] = useState<APIKeyCapability[]>([])
   const [copied, setCopied] = useState(false)
   const [pendingRevoke, setPendingRevoke] = useState('')
   const [busy, setBusy] = useState(false)
@@ -37,10 +39,15 @@ export default function SettingsPage() {
     setBusy(true)
     setError('')
     try {
-      const result = await createAPIKey(trimmed)
+      const capabilities: APIKeyCapability[] = investigationWrite
+        ? ['investigation:write']
+        : []
+      const result = await createAPIKey(trimmed, capabilities)
       setKeys((current) => [result.key, ...current])
       setCreatedToken(result.token)
+      setCreatedCapabilities(result.key.capabilities)
       setName('')
+      setInvestigationWrite(false)
       setCopied(false)
     } catch (cause) {
       setError(String(cause))
@@ -83,6 +90,11 @@ export default function SettingsPage() {
           <div className={css({ fontSize: '12px', fontWeight: 600, color: tok.textSecondary, marginBottom: '8px' })}>
             New key
           </div>
+          <div className={css({ fontSize: '12px', color: tok.textTertiary, marginBottom: '8px' })}>
+            {createdCapabilities.length > 0
+              ? 'Capability: investigation:write. This key can attempt durable Investigation mutations within your existing authority.'
+              : 'Read-only key. It cannot bind or perform Investigation mutations.'}
+          </div>
           <div className={css({ display: 'flex', alignItems: 'center', gap: '8px' })}>
             <code className={css({ flex: 1, minWidth: 0, fontFamily: FONTS.MONO, fontSize: '12px', overflowWrap: 'anywhere', color: tok.textPrimary })}>
               {createdToken}
@@ -103,11 +115,40 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <form onSubmit={create} className={css({ display: 'flex', gap: '8px', marginBottom: '28px', '@media screen and (max-width: 560px)': { flexDirection: 'column' } })}>
-        <div className={css({ flex: 1 })}>
-          <Input value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder="Key name" aria-label="Key name" />
+      <form onSubmit={create} className={css({ marginBottom: '28px' })}>
+        <div className={css({ display: 'flex', gap: '8px', '@media screen and (max-width: 560px)': { flexDirection: 'column' } })}>
+          <div className={css({ flex: 1 })}>
+            <Input value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder="Key name" aria-label="Key name" />
+          </div>
+          <Button type="submit" isLoading={busy}>Create key</Button>
         </div>
-        <Button type="submit" isLoading={busy}>Create key</Button>
+        <label className={css({
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '10px',
+          marginTop: '14px',
+          padding: '12px',
+          border: `1px solid ${tok.cardBorder}`,
+          borderRadius: '8px',
+          color: tok.textSecondary,
+          cursor: 'pointer',
+        })}>
+          <input
+            type="checkbox"
+            checked={investigationWrite}
+            onChange={(event) => setInvestigationWrite(event.currentTarget.checked)}
+            className={css({ marginTop: '3px' })}
+          />
+          <span>
+            <span className={css({ display: 'block', color: tok.textPrimary, fontSize: '13px', fontWeight: 600 })}>
+              Allow Investigation writes
+            </span>
+            <span className={css({ display: 'block', marginTop: '3px', fontSize: '12px', lineHeight: '18px' })}>
+              Adds the immutable <code className={css({ fontFamily: FONTS.MONO })}>investigation:write</code> capability.
+              It does not expand repository access or ownership. Replace the key to change this authority.
+            </span>
+          </span>
+        </label>
       </form>
 
       <div className={css({ borderTop: `1px solid ${tok.cardBorder}` })}>
@@ -122,6 +163,10 @@ export default function SettingsPage() {
                 <span className={css({ fontFamily: FONTS.MONO })}>{key.prefix}</span>
                 {' · '}created {formatDate(key.created_at)}
                 {key.last_used_at ? ` · used ${formatDate(key.last_used_at)}` : ''}
+                {' · '}
+                {key.capabilities.length > 0
+                  ? key.capabilities.join(', ')
+                  : 'read only'}
               </div>
             </div>
             {pendingRevoke === key.id ? (

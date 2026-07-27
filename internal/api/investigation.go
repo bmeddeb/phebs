@@ -288,6 +288,21 @@ func investigationPrincipal(ctx context.Context, opts Options) (string, error) {
 	return principal, nil
 }
 
+// requireInvestigationMutationCredential is the transport-level credential
+// gate shared by every Workbench write adapter. A denial uses the Workbench's
+// existing non-disclosing not-found boundary; principal/owner authorization is
+// still resolved separately by the shared service.
+func requireInvestigationMutationCredential(
+	ctx context.Context,
+	opts Options,
+) error {
+	if opts.InvestigationMutation == nil ||
+		!opts.InvestigationMutation(ctx) {
+		return huma.Error404NotFound("workbench resource not found")
+	}
+	return nil
+}
+
 func investigationStoreError(action string, err error) error {
 	switch {
 	case errors.Is(err, store.ErrNotFound):

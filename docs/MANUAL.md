@@ -784,15 +784,17 @@ displayed entry does not establish completeness, correctness, runtime use,
 migration completion, or retirement safety, and it creates no Investigation
 Decision.
 
-The current API-key model has no read/write capability distinction, so no
-Workbench MCP mutation tool may ship on that model. T21.12 introduces an
-explicit immutable `investigation:write` capability for newly created named
-keys; existing named keys and the migration-only legacy key remain read-only
-for these new mutations and must be replaced deliberately. The capability
-never expands the owning user's authority. A leaked write-capable agent key
-can attempt durable Investigation mutations as that user, so operators should
-create one narrowly capable, individually revocable key per agent. Browser
-session writes remain CSRF protected.
+Named API keys are read-only for Investigation mutations unless their creator
+explicitly selected the immutable `investigation:write` capability. Existing
+named keys and the migration-only legacy key retain an empty capability set
+and must be replaced deliberately to change authority. The capability is only
+an additional credential gate: it never expands repository visibility,
+Investigation access or ownership, or principal authority. A capable key still
+passes the same owner, current-Revision, preview, snapshot, and idempotency
+checks. Browser-session writes use the existing session authorization and CSRF
+check and do not carry or emulate a bearer-key capability. The Workbench
+remains production-unregistered/default-dark, and T21.12 registers no MCP
+mutation tools.
 
 The existing `check_contract_compatibility` HTTP and MCP contracts continue to
 return retained content-addressed proof bundles. Workbench compatibility is an
@@ -1071,11 +1073,35 @@ individually revocable and their last-use time is recorded. Key listing,
 creation, and revocation require a CSRF-protected browser session; bearer keys
 cannot mint replacements or revoke sibling credentials.
 
+Named keys have an immutable, closed capability set. Omitting
+`capabilities`, sending `[]`, or leaving **Allow Investigation writes**
+unchecked creates a read-only key. The only reviewed value is
+`investigation:write`; unknown, duplicate, malformed, and future values are
+rejected. Selecting it explicitly allows the key to attempt Workbench
+preview-binding, create/revise, retained compatibility actions when a future
+adapter exposes them, and Disposition writes. It does not grant repository
+visibility, Investigation access, ownership, administrator status, or a way
+around current-Revision, preview, snapshot, or idempotency checks. Capability
+names appear in Settings and `GET /api/auth/keys`; token secrets and hashes
+never do.
+
+Capabilities cannot be edited after creation. To change authority, create a
+replacement, deploy it, and revoke the old key. Treat
+`investigation:write` as increased authority: use least privilege, issue one
+narrowly capable key per agent so it can be revoked independently, and revoke
+it immediately if leakage is suspected. A leaked capable key can attempt
+durable Investigation mutations as its owning user until it is revoked,
+expires, or the user is disabled. Browser sessions remain governed by their
+CSRF-protected session boundary and need no capability selection.
+
 Existing `auth.api_key` deployments continue to work during migration. At
 startup phebs imports only that key's hash as `Legacy config key`. Create a
 named key for each client, deploy those tokens, then remove `auth.api_key`;
 the next startup deletes the legacy key row. The legacy principal has no user
-identity and cannot manage named keys itself.
+identity, has an empty capability set, and cannot manage named keys or perform
+Investigation mutations itself. Existing named keys likewise migrate with an
+empty set; their tokens, hashes, identity, expiry, revocation, and existing
+read behavior do not change.
 
 #### OpenID Connect
 
@@ -1489,6 +1515,9 @@ changed-file statistics, and bounded unified diffs.
 orphan flags, indexed commit, and administrator-only **Reindex** controls
 (a forced rebuild defeats the incremental short-circuit).
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
+Named keys are read-only for Investigation mutations by default; the creation
+form can explicitly add the immutable `investigation:write` capability and
+listed metadata shows the reviewed capability name.
 - **Audit** (`#/audit`, administrators only) — the recorded action trail:
 logins (including failures), setup, logout, API-key lifecycle, and every
 mutating API operation, newest first with actor, target, status, and
@@ -1551,7 +1580,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/version`                                                      | GET             | server version                                                                                 |
 | `/api/auth/status`                                                  | GET             | authentication/setup/OIDC state and current user                                               |
 | `/api/auth/setup`, `/api/auth/login`, `/api/auth/logout`            | POST            | first administrator, local login, and session logout                                           |
-| `/api/auth/keys`                                                    | GET/POST        | list or create the browser-session user's API keys                                             |
+| `/api/auth/keys`                                                    | GET/POST        | list or create the browser-session user's keys; creation accepts a closed `capabilities` array |
 | `/api/auth/keys/{id}`                                               | DELETE          | revoke one API key (browser session only)                                                      |
 | `/api/auth/oidc/start`, `/api/auth/oidc/callback`                   | GET             | OIDC authorization-code flow                                                                   |
 | `/api/search?q=&max_matches=&context_lines=`                        | GET             | search, JSON in one shot                                                                       |
@@ -1620,6 +1649,13 @@ index the UI uses. The endpoint is `/api/mcp` (Streamable HTTP, official MCP
 go-sdk), guarded by the same DB-backed authentication as the rest of the API.
 Create a named key in **Settings** and use it as the bearer token; the legacy
 config key remains accepted only while it is configured.
+
+The current MCP tool set is read-only with respect to Investigations, so
+ordinary named keys need no capability. Any later Workbench mutation tool must
+be discovered and invoked only through a named key carrying
+`investigation:write`; read-only, legacy, revoked, expired, and disabled-user
+credentials remain unable to mutate. T21.12 itself changes no MCP discovery,
+schema, or tool count.
 
 Ten core tools are always present. Enabling any provisional extraction pack
 adds four evidence-query tools. Enabling a protobuf or Thrift caller pack also
@@ -1809,6 +1845,12 @@ administrator principal.
 - Browser sessions are ambient credentials, so unsafe requests require CSRF.
 Bearer clients must not put tokens in URLs, logs, or browser-local storage,
 and bearer credentials cannot access the API-key management endpoints.
+- Named bearer keys are read-only for Investigation mutations by default.
+`investigation:write` is an immutable, explicitly selected credential gate,
+not an authorization grant: all repository visibility, ownership, principal,
+Revision, preview, snapshot, and idempotency checks still apply. Use one
+least-privilege capable key per agent, replace rather than edit capabilities,
+and revoke immediately on suspected leakage.
 - `/api/webhook` does not accept user auth; it verifies the configured HMAC
 over the exact request bytes and is absent when no secret is configured.
 - OIDC authorizes every verified identity admitted by the configured provider.
@@ -1852,7 +1894,8 @@ request is evaluated as its own authenticated caller.
 
 Every mutating action is appended to an audit trail in the local database
 (T10.1): local and OIDC logins (including failed local attempts), first-run
-setup, logout, API-key creation and revocation, and each mutating API
+setup, logout, API-key creation and its reviewed capability selection,
+revocation, and each mutating API
 operation (recorded by operation ID, e.g. `post-api-reindex` with the repo as
 target). Events carry the actor (user, or API key for bearer calls), the
 resolved client IP (trusted-proxy aware on the auth surface), and the

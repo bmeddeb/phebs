@@ -84,6 +84,7 @@ type workbenchChecklistAPIFake struct {
 	writePrincipal string
 	writeMutation  WorkbenchDispositionMutation
 	dispositionID  string
+	writeErr       error
 }
 
 func (fake *workbenchChecklistAPIFake) Read(
@@ -113,6 +114,9 @@ func (fake *workbenchChecklistAPIFake) RecordDisposition(
 ) (*store.WorkbenchDisposition, error) {
 	fake.writePrincipal = principal
 	fake.writeMutation = mutation
+	if fake.writeErr != nil {
+		return nil, fake.writeErr
+	}
 	return &store.WorkbenchDisposition{
 		SchemaVersion:   store.WorkbenchDispositionSchemaVersion,
 		ID:              fake.dispositionID,
@@ -138,6 +142,7 @@ func TestWorkbenchEvidenceHumaIsThinExactAndDefaultDark(t *testing.T) {
 		Principal: func(context.Context) string {
 			return "user:workbench-evidence-api"
 		},
+		InvestigationMutation:   func(context.Context) bool { return true },
 		Workbench:               &workbenchAPIFake{},
 		WorkbenchImpact:         impact,
 		WorkbenchImplementation: implementation,
@@ -344,5 +349,85 @@ func TestWorkbenchEvidenceHumaIsThinExactAndDefaultDark(t *testing.T) {
 		`"change-workbench-evidence"`,
 	) {
 		t.Fatal("dark version exposed Workbench evidence capability")
+	}
+}
+
+func TestWorkbenchDispositionCredentialGateIsAdditionalAndNonDisclosing(
+	t *testing.T,
+) {
+	allowed := false
+	checklist := &workbenchChecklistAPIFake{
+		dispositionID: "iwd_capability",
+	}
+	handler := New(Options{
+		Version: "test",
+		Store:   &investigationRepoStore{},
+		Principal: func(context.Context) string {
+			return "user:workbench-owner"
+		},
+		InvestigationMutation: func(context.Context) bool {
+			return allowed
+		},
+		Workbench:               &workbenchAPIFake{},
+		WorkbenchImpact:         &workbenchImpactAPIFake{},
+		WorkbenchImplementation: &workbenchImplementationAPIFake{},
+		WorkbenchChecklist:      checklist,
+	})
+	base := "/api/workbenches/" + workbenchEvidenceInvestigationID +
+		"/revisions/" + workbenchEvidenceRevisionID + "/dispositions"
+	mutation := WorkbenchDispositionMutation{
+		InvestigationID:    workbenchEvidenceInvestigationID,
+		ExpectedRevisionID: workbenchEvidenceRevisionID,
+		IdempotencyKey:     "capability-gate",
+		Evidence: WorkbenchChecklistEvidenceInput{
+			ImpactFilters: WorkbenchImpactFilters{},
+			Anchors:       []WorkbenchImplementationAnchor{},
+		},
+		Suggestion: store.WorkbenchSuggestion{
+			SchemaVersion:          store.WorkbenchSuggestionSchemaVersion,
+			ID:                     "iws_capability",
+			InvestigationID:        workbenchEvidenceInvestigationID,
+			RevisionID:             workbenchEvidenceRevisionID,
+			Kind:                   "resolve_analysis_gap",
+			Summary:                "Resolve the explicit gap.",
+			SelectionRule:          "one gap yields one suggestion",
+			EvidenceSnapshotDigest: "sha256:" + strings.Repeat("b", 64),
+			ContentDigest:          "sha256:" + strings.Repeat("c", 64),
+		},
+		Category: "accepted",
+	}
+	denied := postInvestigationJSON(t, handler, base, mutation)
+	if denied.Code != http.StatusNotFound ||
+		!strings.Contains(denied.Body.String(), "workbench resource not found") ||
+		checklist.writePrincipal != "" {
+		t.Fatalf(
+			"read-only owner disposition = %d %s; fake=%+v",
+			denied.Code,
+			denied.Body,
+			checklist,
+		)
+	}
+
+	allowed = true
+	checklist.writeErr = store.ErrNotFound
+	nonOwner := postInvestigationJSON(t, handler, base, mutation)
+	if nonOwner.Code != http.StatusNotFound ||
+		!strings.Contains(nonOwner.Body.String(), "workbench resource not found") {
+		t.Fatalf(
+			"non-owner disposition = %d %s",
+			nonOwner.Code,
+			nonOwner.Body,
+		)
+	}
+	checklist.writeErr = nil
+	reached := postInvestigationJSON(t, handler, base, mutation)
+	if reached.Code != http.StatusOK ||
+		checklist.writePrincipal != "user:workbench-owner" {
+		t.Fatalf(
+			"write-capable owner disposition = %d %s; fake=%+v",
+			reached.Code,
+			reached.Body,
+			checklist,
+		)
 	}
 }

@@ -189,8 +189,49 @@ func TestAuthAPIKeysAndSessions(t *testing.T) {
 	if key.Hash != "digest-not-plaintext" {
 		t.Fatalf("stored key hash = %q", key.Hash)
 	}
+	if key.Capabilities == nil || len(key.Capabilities) != 0 {
+		t.Fatalf("default key capabilities = %#v, want explicit empty set", key.Capabilities)
+	}
+	writeKey, err := s.CreateAPIKey(ctx, store.APIKey{
+		ID: "key2", UserID: "user1", Name: "Investigation agent",
+		Prefix: "phebs_key2", Hash: "second-digest",
+		Capabilities: []store.APIKeyCapability{
+			store.APIKeyCapabilityInvestigationWrite,
+		},
+		CreatedAt: now.Add(time.Second),
+	})
+	if err != nil {
+		t.Fatalf("CreateAPIKey(write): %v", err)
+	}
+	if got := writeKey.Capabilities; len(got) != 1 ||
+		got[0] != store.APIKeyCapabilityInvestigationWrite {
+		t.Fatalf("write key capabilities = %#v", got)
+	}
+	for _, test := range []struct {
+		name         string
+		capabilities []store.APIKeyCapability
+	}{
+		{"unknown", []store.APIKeyCapability{"repository:admin"}},
+		{"future", []store.APIKeyCapability{"investigation:write:v2"}},
+		{"malformed", []store.APIKeyCapability{" investigation:write"}},
+		{"duplicate", []store.APIKeyCapability{
+			store.APIKeyCapabilityInvestigationWrite,
+			store.APIKeyCapabilityInvestigationWrite,
+		}},
+	} {
+		t.Run("capability_"+test.name, func(t *testing.T) {
+			_, createErr := s.CreateAPIKey(ctx, store.APIKey{
+				ID: "invalid-" + test.name, UserID: "user1", Name: test.name,
+				Prefix: "invalid", Hash: "invalid",
+				Capabilities: test.capabilities, CreatedAt: now,
+			})
+			if createErr == nil {
+				t.Fatal("invalid capability set was persisted")
+			}
+		})
+	}
 	keys, err := s.ListAPIKeys(ctx, "user1")
-	if err != nil || len(keys) != 1 {
+	if err != nil || len(keys) != 2 {
 		t.Fatalf("ListAPIKeys = %+v, %v", keys, err)
 	}
 	if err := s.TouchAPIKey(ctx, "key1", now.Add(time.Minute)); err != nil {
@@ -200,6 +241,9 @@ func TestAuthAPIKeysAndSessions(t *testing.T) {
 		t.Fatalf("cross-user revoke err = %v, want ErrNotFound", err)
 	}
 	if err := s.RevokeAPIKey(ctx, "key1", "user1", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RevokeAPIKey(ctx, "key2", "user1", now); err != nil {
 		t.Fatal(err)
 	}
 	if keys, err := s.ListAPIKeys(ctx, "user1"); err != nil || len(keys) != 0 {

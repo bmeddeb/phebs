@@ -67,13 +67,30 @@ type Service struct {
 // Principal is attached to authenticated request contexts. User is nil only
 // for the migration-only auth.api_key principal.
 type Principal struct {
-	User       *store.User
-	APIKeyID   string
-	AuthMethod string
-	IsAdmin    bool
+	User               *store.User
+	APIKeyID           string
+	APIKeyCapabilities []store.APIKeyCapability
+	AuthMethod         string
+	IsAdmin            bool
 }
 
 type principalContextKey struct{}
+
+// HasAPIKeyCapability reports authority carried by the authenticated named
+// bearer key. Browser sessions and the migration-only legacy key never emulate
+// a bearer capability.
+func (principal Principal) HasAPIKeyCapability(capability store.APIKeyCapability) bool {
+	if principal.AuthMethod != "api_key" || principal.APIKeyID == "" ||
+		principal.APIKeyID == legacyKeyID {
+		return false
+	}
+	for _, current := range principal.APIKeyCapabilities {
+		if current == capability {
+			return true
+		}
+	}
+	return false
+}
 
 // PrincipalFromContext returns the identity established by Require.
 func PrincipalFromContext(ctx context.Context) (Principal, bool) {

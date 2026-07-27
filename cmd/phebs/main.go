@@ -488,6 +488,18 @@ func serve(args []string) error {
 			}
 			return "authenticated:" + principal.AuthMethod
 		},
+		InvestigationMutation: func(ctx context.Context) bool {
+			principal, ok := auth.PrincipalFromContext(ctx)
+			if !ok {
+				return false
+			}
+			if principal.AuthMethod == "session" {
+				return true
+			}
+			return principal.HasAPIKeyCapability(
+				store.APIKeyCapabilityInvestigationWrite,
+			)
+		},
 		AuthorizationProvider: func() string {
 			if cfg.Permissions != nil {
 				return "phebs-permissions-v1"

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -61,14 +62,26 @@ func TestAuditEventsOnAuthSurface(t *testing.T) {
 	}
 	decodeResponse(t, response, &loggedIn)
 
-	response = request(t, client, http.MethodPost, server.URL+"/api/auth/keys", `{"name":"CI"}`, loggedIn.CSRFToken, "")
+	response = request(
+		t,
+		client,
+		http.MethodPost,
+		server.URL+"/api/auth/keys",
+		`{"name":"Investigation agent","capabilities":["investigation:write"]}`,
+		loggedIn.CSRFToken,
+		"",
+	)
 	if response.StatusCode != http.StatusCreated {
 		t.Fatalf("create key = %d: %s", response.StatusCode, readBody(response))
 	}
 	var created struct {
-		Key keyResponse `json:"key"`
+		Key   keyResponse `json:"key"`
+		Token string      `json:"token"`
 	}
 	decodeResponse(t, response, &created)
+	st.mu.Lock()
+	keyHash := st.keys[created.Key.ID].Hash
+	st.mu.Unlock()
 
 	response = request(t, client, http.MethodDelete, server.URL+"/api/auth/keys/"+created.Key.ID, "", loggedIn.CSRFToken, "")
 	if response.StatusCode != http.StatusNoContent {
@@ -93,6 +106,7 @@ func TestAuditEventsOnAuthSurface(t *testing.T) {
 		{"auth.login", http.StatusUnauthorized, false},
 		{"auth.login", http.StatusOK, true},
 		{"auth.key.create", http.StatusCreated, true},
+		{"auth.key.capability_selection", http.StatusCreated, true},
 		{"auth.key.revoke", http.StatusNoContent, true},
 		{"auth.logout", http.StatusNoContent, true},
 	}
@@ -117,7 +131,21 @@ func TestAuditEventsOnAuthSurface(t *testing.T) {
 	if events[1].Target != "admin@example.com" {
 		t.Errorf("failed login target = %q, want attempted email", events[1].Target)
 	}
-	if events[3].Target != created.Key.ID || events[4].Target != created.Key.ID {
-		t.Errorf("key lifecycle targets = %q/%q, want %q", events[3].Target, events[4].Target, created.Key.ID)
+	if events[3].Target != created.Key.ID ||
+		events[4].Target != created.Key.ID+" capabilities=[investigation:write]" ||
+		events[5].Target != created.Key.ID {
+		t.Errorf(
+			"key lifecycle targets = %q/%q/%q, want id/capability/id for %q",
+			events[3].Target,
+			events[4].Target,
+			events[5].Target,
+			created.Key.ID,
+		)
+	}
+	for index, event := range events {
+		if strings.Contains(event.Target, created.Token) ||
+			strings.Contains(event.Target, keyHash) {
+			t.Errorf("event[%d] exposed key secret material: %+v", index, event)
+		}
 	}
 }

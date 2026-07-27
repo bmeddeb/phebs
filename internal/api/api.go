@@ -80,6 +80,12 @@ type Options struct {
 	// AuthorizationProvider names the visibility policy generation.
 	Principal             func(context.Context) string
 	AuthorizationProvider string
+	// InvestigationMutation authorizes only the credential class for durable
+	// Workbench mutation boundaries. Serve permits CSRF-validated browser
+	// sessions or named keys carrying investigation:write. The shared service
+	// still independently enforces principal ownership, revision, preview,
+	// snapshot, and idempotency.
+	InvestigationMutation func(context.Context) bool
 
 	// Investigations enables the T16.4 guided-creation API. Nil leaves every
 	// route unregistered; the production binary keeps it nil until an exact

@@ -8,6 +8,7 @@ package store
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 )
 
@@ -119,18 +120,46 @@ type User struct {
 	LastLoginAt     *time.Time `json:"last_login_at,omitempty"`
 }
 
+// APIKeyCapability is one reviewed immutable authority attached to a named
+// bearer key at creation time. The registry is deliberately closed.
+type APIKeyCapability string
+
+const APIKeyCapabilityInvestigationWrite APIKeyCapability = "investigation:write"
+
+// CanonicalAPIKeyCapabilities validates the closed registry, rejects duplicate
+// authority, and returns a deterministic non-nil list for persistence and
+// public metadata.
+func CanonicalAPIKeyCapabilities(values []APIKeyCapability) ([]APIKeyCapability, error) {
+	canonical := make([]APIKeyCapability, 0, len(values))
+	seen := make(map[APIKeyCapability]struct{}, len(values))
+	for _, value := range values {
+		if value != APIKeyCapabilityInvestigationWrite {
+			return nil, errors.New("unsupported API key capability")
+		}
+		if _, exists := seen[value]; exists {
+			return nil, errors.New("duplicate API key capability")
+		}
+		seen[value] = struct{}{}
+		canonical = append(canonical, value)
+	}
+	slices.Sort(canonical)
+	return canonical, nil
+}
+
 // APIKey stores only a SHA-256 digest of a generated high-entropy bearer key.
-// ID and Prefix are safe for management UIs; Hash is never serialized.
+// ID, Prefix, and reviewed capability names are safe for management UIs; Hash
+// is never serialized. Capabilities have no store update path after creation.
 type APIKey struct {
-	ID         string     `json:"id"`
-	UserID     string     `json:"user_id,omitempty"`
-	Name       string     `json:"name"`
-	Prefix     string     `json:"prefix"`
-	Hash       string     `json:"-"`
-	CreatedAt  time.Time  `json:"created_at"`
-	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
-	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
-	RevokedAt  *time.Time `json:"revoked_at,omitempty"`
+	ID           string             `json:"id"`
+	UserID       string             `json:"user_id,omitempty"`
+	Name         string             `json:"name"`
+	Prefix       string             `json:"prefix"`
+	Hash         string             `json:"-"`
+	Capabilities []APIKeyCapability `json:"capabilities"`
+	CreatedAt    time.Time          `json:"created_at"`
+	LastUsedAt   *time.Time         `json:"last_used_at,omitempty"`
+	ExpiresAt    *time.Time         `json:"expires_at,omitempty"`
+	RevokedAt    *time.Time         `json:"revoked_at,omitempty"`
 }
 
 // AuditEvent is one append-only record of an admin or user action (T10.1).

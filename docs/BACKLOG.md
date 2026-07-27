@@ -2938,7 +2938,7 @@ restarts the exact checklist projection, and the retry binds the refreshed
 active record. Tests pin the new identity rather than mocking an unchanged
 second mutation as successful.
 
-**T21.12 · API-key capability for Investigation mutations** *(needs T21.3)* —
+**T21.12 ✅ 2026-07-27 · API-key capability for Investigation mutations** *(needs T21.3)* —
 extend named API keys with immutable reviewed capabilities and define
 `investigation:write` as the additional gate for Workbench MCP mutations.
 Principal/owner authorization remains mandatory and cannot be expanded by the
@@ -2956,6 +2956,26 @@ or record a Disposition even when their principal owns the Investigation.
 Write-capable keys still fail for non-owners, stale previews/revisions, disabled
 users, or revoked/expired keys. The MANUAL threat model names the increased
 authority and recommends one narrowly capable key per agent.
+
+Implemented on `codex/t21.12-api-key-investigation-write`: named-key records
+carry one immutable closed capability set, while an additive idempotent
+migration assigns explicit empty sets to every existing and legacy row without
+changing key identity, hash, expiry, revocation, or read behavior. The
+CSRF-protected creation API/UI defaults to read-only and accepts only an
+explicit `investigation:write`; deterministic list metadata and separate
+capability-selection audit events expose no secret material. Authentication
+binds reviewed capability names only after the existing named-key, user,
+expiry, and revocation checks. The Workbench transport applies that additional
+credential gate before preview binding, create/revise, and Disposition writes,
+then leaves repository visibility, owner/principal, Revision, preview,
+snapshot, and idempotency checks unchanged. Browser-session writes retain the
+existing CSRF/session path. The retained compatibility action still has no
+production adapter; any later adapter must cross the same gate. Migration
+reopen/idempotency, immutability, strict decoding, non-disclosure, owner/stale
+and credential-state matrices, default-dark posture, UI behavior, and rendered
+session/CSRF behavior are regression-tested. No MCP discovery/schema/tool
+count, Workbench production registration, accuracy posture, or pilot gate
+changes.
 
 **T21.13 · MCP Workbench parity and explicit mutations** *(needs T21.7–T21.9,
 T21.12)* — expose `preview_change_workbench`, `create_change_workbench`,
