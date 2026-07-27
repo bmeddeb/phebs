@@ -524,14 +524,17 @@ func serve(args []string) error {
 			mcpCompatibility = proofService
 		}
 	}
+	catalogQueries, callerMapQueries, comparisonQueries := mcpCallerMapServices(
+		apiOpts.ContractCatalog, apiOpts.CallerMap, apiOpts.CallerComparison,
+	)
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
 	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
 		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs,
 		Compatibility:    mcpCompatibility,
-		ContractCatalog:  apiOpts.ContractCatalog,
-		CallerMap:        apiOpts.CallerMap,
-		CallerComparison: apiOpts.CallerComparison,
+		ContractCatalog:  catalogQueries,
+		CallerMap:        callerMapQueries,
+		CallerComparison: comparisonQueries,
 	})
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their
@@ -616,6 +619,32 @@ func loadRecoveryConfig(path string) (*config.Config, []byte, error) {
 // evidenceExtractors is the validation-gated registry. The provisional
 // declared-protobuf reader stays absent unless the operator explicitly opts
 // in; T11.1/T12.3 do not support default production activation.
+// mcpCallerMapServices converts the typed Caller Map service pointers into
+// the MCP option interfaces, preserving nilness. Assigning a nil typed
+// pointer directly into an interface field produces a NON-nil interface, so
+// the annex's all-or-none dark gate would never fire and every dark or
+// partial deployment would advertise the Caller Map tools (T20.11-review
+// blocker). Nil in, nil interface out — the same discipline as mcpProofs.
+func mcpCallerMapServices(
+	catalog *api.ContractCatalogService,
+	callerMap *api.CallerMapService,
+	comparison *api.CallerComparisonService,
+) (phebsmcp.ContractCatalogQueries, phebsmcp.CallerMapQueries, phebsmcp.CallerComparisonQueries) {
+	var catalogQueries phebsmcp.ContractCatalogQueries
+	var callerMapQueries phebsmcp.CallerMapQueries
+	var comparisonQueries phebsmcp.CallerComparisonQueries
+	if catalog != nil {
+		catalogQueries = catalog
+	}
+	if callerMap != nil {
+		callerMapQueries = callerMap
+	}
+	if comparison != nil {
+		comparisonQueries = comparison
+	}
+	return catalogQueries, callerMapQueries, comparisonQueries
+}
+
 func evidenceExtractors(
 	provisionalProto, provisionalThrift, provisionalThriftField, provisionalKafka bool,
 ) []extract.Extractor {

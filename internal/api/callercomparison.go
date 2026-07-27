@@ -196,13 +196,16 @@ func (s *CallerComparisonService) Compare(
 			return nil, err
 		}
 
+		// One scan budget spans both sides: the documented bound is a
+		// combined 50,000-row scan, not 50,000 per endpoint.
+		scanned := 0
 		oldDeclaration, oldRows, oldErr := collectCallerMap(
 			ctx, s.opts.Evidence, certificate, oldPack,
-			comparisonCallerQuery(query, query.Old),
+			comparisonCallerQuery(query, query.Old), &scanned,
 		)
 		replacementDeclaration, replacementRows, replacementErr := collectCallerMap(
 			ctx, s.opts.Evidence, certificate, replacementPack,
-			comparisonCallerQuery(query, query.Replacement),
+			comparisonCallerQuery(query, query.Replacement), &scanned,
 		)
 
 		confirmedVisible, err := visibleRepositories(ctx, s.opts)
@@ -258,11 +261,6 @@ func (s *CallerComparisonService) Compare(
 					"build caller comparison", collectErr,
 				)
 			}
-		}
-		if len(oldRows)+len(replacementRows) > callerMapScanLimit {
-			return nil, huma.Error422UnprocessableEntity(
-				"caller comparison exceeded its bounded row scan; narrow the filters",
-			)
 		}
 		entries, err := buildCallerComparisonEntries(query, oldRows, replacementRows)
 		if err != nil {
@@ -395,6 +393,21 @@ func buildCallerComparisonEntries(
 			key, exposed, sourceSort, unitSort, unit, unresolved :=
 				callerComparisonIdentity(query.Level, row)
 			entry := entries[key]
+			if entry != nil && entry.unit != nil && unit != nil &&
+				digestJSON(entry.unit) != digestJSON(unit) {
+				// The same repository-namespaced unit carries divergent
+				// candidate metadata across the two caller domains — a
+				// legitimate state when the domains were extracted against
+				// different unit-inventory snapshots. A unit bucket admits
+				// rows only under one consistent candidate, so the
+				// divergent row is demoted to its unique unresolved
+				// occurrence key instead of contaminating the unit or
+				// failing the whole read. Collection order is
+				// deterministic, so the demotion is too.
+				key, exposed, sourceSort, unitSort, unit, unresolved =
+					callerComparisonUnresolvedIdentity(row)
+				entry = entries[key]
+			}
 			if entry == nil {
 				entry = &callerComparisonEntry{
 					key: exposed, sourceSort: sourceSort, unitSort: unitSort,
@@ -408,10 +421,6 @@ func buildCallerComparisonEntries(
 				}
 				if unitSort < entry.unitSort {
 					entry.unitSort = unitSort
-				}
-				if entry.unit != nil && unit != nil &&
-					digestJSON(entry.unit) != digestJSON(unit) {
-					return errors.New("unit attribution identity is inconsistent")
 				}
 			}
 			if replacement {
@@ -458,9 +467,26 @@ func callerComparisonIdentity(
 		len(row.detail.UnitCandidates) == 1 {
 		candidate := row.detail.UnitCandidates[0]
 		exposed := row.assertion.Repo + ":" + candidate.ID
-		return "unit\x00" + exposed, exposed, occurrence, exposed,
-			&candidate, false
+		// The internal key separates repository and unit id with NUL:
+		// repository names may legally contain ':' (port-bearing hosts),
+		// so the display form alone cannot namespace units safely.
+		return "unit\x00" + row.assertion.Repo + "\x00" + candidate.ID,
+			exposed, occurrence, exposed, &candidate, false
 	}
+	return callerComparisonUnresolvedIdentity(row)
+}
+
+// callerComparisonUnresolvedIdentity keys a row by its unique unresolved
+// occurrence identity — the bucket for everything a unit cannot admit.
+func callerComparisonUnresolvedIdentity(row callerMapProjection) (
+	internalKey, exposedKey, sourceSort, unitSort string,
+	unit *CallerMapUnitCandidate,
+	unresolved bool,
+) {
+	occurrence := fmt.Sprintf(
+		"%s@%s:%s:%d-%d",
+		row.assertion.Repo, row.commit, row.path, row.start, row.end,
+	)
 	exposed := "unresolved:" + occurrence
 	return "unresolved\x00" + occurrence, exposed, occurrence, exposed,
 		nil, true

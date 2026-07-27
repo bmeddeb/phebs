@@ -303,6 +303,11 @@ function ComparisonResults({
   ].join('\u0000')
 
   useEffect(() => {
+    setCursors([''])
+    setPageIndex(0)
+  }, [endpointKey])
+
+  useEffect(() => {
     request.current?.abort()
     const controller = new AbortController()
     request.current = controller
@@ -479,6 +484,18 @@ function ComparisonResults({
             </summary>
             <div className={css({ padding: '10px 12px', color: tok.textTertiary, fontSize: '10px', lineHeight: '16px' })}>
               Domains: {page.coverage.domains.join(', ')}. The same union certificate binds both endpoint classifications.
+              <div className={css({ marginTop: '6px', display: 'grid', gap: '2px' })} data-testid="comparison-coverage-states">
+                {page.coverage.repositories.flatMap((repository) =>
+                  repository.runs.map((run) => (
+                    <span key={`${repository.repository}:${run.domain}`}>
+                      {repository.repository} · {run.domain} ·{' '}
+                      {run.status !== 'published'
+                        ? 'not published / unsupported — evidence for this side is absent, not empty'
+                        : `${run.fresh ? 'fresh' : 'stale'}${run.failures?.length ? ` · ${run.failures.length} recorded failure${run.failures.length === 1 ? '' : 's'}` : ''}`}
+                    </span>
+                  )),
+                )}
+              </div>
             </div>
           </details>
           <div className={css({

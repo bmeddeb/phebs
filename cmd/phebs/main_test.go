@@ -675,6 +675,43 @@ func TestEvidenceMaintenanceCanceledBeforeBootDoesNoWork(t *testing.T) {
 	}
 }
 
+// T20.11-review blocker regression: the serve path assigns typed service
+// pointers into MCP interface options, and a nil typed pointer stored in an
+// interface is non-nil — which silently registered the "all-or-none" Caller
+// Map annex on every dark deployment. The conversion is now a function, and
+// this test drives it with exactly the serve-path expressions in a dark
+// configuration: nil services must yield nil interfaces, so the annex's
+// registration gate actually fires.
+func TestMCPCallerMapServicesPreserveNilness(t *testing.T) {
+	var apiOpts api.Options
+	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
+	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
+	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
+	if apiOpts.ContractCatalog != nil || apiOpts.CallerMap != nil || apiOpts.CallerComparison != nil {
+		t.Fatalf("dark constructors returned non-nil services: %+v", apiOpts)
+	}
+	catalog, callerMap, comparison := mcpCallerMapServices(
+		apiOpts.ContractCatalog, apiOpts.CallerMap, apiOpts.CallerComparison,
+	)
+	if catalog != nil || callerMap != nil || comparison != nil {
+		t.Fatal("typed-nil services leaked into non-nil MCP interfaces; the dark annex gate would never fire")
+	}
+	// Partial availability must stay partial: a catalog without a Caller
+	// Map keeps the annex dark (its gate requires both), and the interface
+	// nilness is what that gate reads.
+	fixture := &api.ContractCatalogFixture{}
+	partial := api.Options{ContractCatalogFixture: fixture, Store: &extractionBackfillStore{}, Principal: func(context.Context) string { return "user:test" }}
+	partial.ContractCatalog = api.NewContractCatalogService(partial)
+	partial.CallerMap = api.NewCallerMapService(partial)
+	if partial.ContractCatalog == nil {
+		t.Fatal("fixture-backed catalog service unexpectedly nil")
+	}
+	gotCatalog, gotCallerMap, _ := mcpCallerMapServices(partial.ContractCatalog, partial.CallerMap, nil)
+	if gotCatalog == nil || gotCallerMap != nil {
+		t.Fatalf("partial conversion wrong: catalog=%v callerMap=%v", gotCatalog, gotCallerMap)
+	}
+}
+
 func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 	if got := evidenceExtractors(false, false, false, false); len(got) != 0 {
 		t.Fatalf("default extractor registry = %d entries, want disabled", len(got))

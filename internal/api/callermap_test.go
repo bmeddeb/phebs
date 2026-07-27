@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -531,5 +532,55 @@ func putCallerMapAssertionFor(
 			Path: path, StartLine: start/10 + 1, EndLine: start/10 + 1,
 			VisibilityScope: "repo:" + repo, RunID: runID,
 		}},
+	}
+}
+
+// T20.11-13 review: the one-open-list expansion bound is enforced, not a
+// fixture coincidence — one ambiguous row cannot serialize more than 64
+// candidates, and truncation is explicit via the pre-truncation total.
+func TestCallerMapUnitCandidateBound(t *testing.T) {
+	st := callerMapStore(t)
+	for index := range st.assertions[callerMapSourceRepo] {
+		assertion := &st.assertions[callerMapSourceRepo][index]
+		if assertion.ID != "caller-b" {
+			continue
+		}
+		var detail map[string]any
+		if err := json.Unmarshal([]byte(assertion.Detail), &detail); err != nil {
+			t.Fatal(err)
+		}
+		candidates := make([]map[string]any, 0, 70)
+		for candidate := 0; candidate < 70; candidate++ {
+			candidates = append(candidates, map[string]any{
+				"id":     fmt.Sprintf("unit-%03d", candidate),
+				"owners": []string{"team-platform"},
+			})
+		}
+		detail["unit_candidates"] = candidates
+		encoded, err := json.Marshal(detail)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertion.Detail = string(encoded)
+	}
+	handler := api.New(callerMapOptions(st, "user:member", nil))
+	var page api.CallerMapPage
+	code, body := catalogHTTP(t, handler, callerMapTarget(""), &page)
+	if code != http.StatusOK {
+		t.Fatalf("caller map = %d %s", code, body)
+	}
+	found := false
+	for _, row := range page.Rows {
+		if row.Source.AssertionID != "caller-b" {
+			continue
+		}
+		found = true
+		if len(row.Unit.Candidates) != 64 || row.Unit.CandidateTotal != 70 {
+			t.Fatalf("candidate bound not enforced: %d shown of %d",
+				len(row.Unit.Candidates), row.Unit.CandidateTotal)
+		}
+	}
+	if !found {
+		t.Fatalf("ambiguous row missing: %+v", page.Rows)
 	}
 }

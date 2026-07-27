@@ -600,6 +600,9 @@ export interface CallerMapUnitAttribution {
   state: string
   reason?: string
   candidates?: CallerMapUnitCandidate[]
+  // Pre-truncation count: the server serializes at most 64 candidates per
+  // row so one ambiguous unit cannot breach the frozen DOM bound.
+  candidate_total?: number
 }
 
 export interface CallerMapSource {

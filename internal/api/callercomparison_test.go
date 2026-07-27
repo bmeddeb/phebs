@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -381,4 +382,224 @@ func equalStringIntMap(left, right map[string]int) bool {
 		}
 	}
 	return true
+}
+
+const (
+	thriftCallerLineage = "provisional_repo_path_v1_cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+	thriftCallerAttr    = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+)
+
+// putThriftCallerAssertion mirrors putCallerMapAssertionFor for the
+// thrift-caller domain with its own attribution digest.
+func putThriftCallerAssertion(
+	t *testing.T,
+	st *proofAPIStore,
+	repo, id, path string,
+	start, end int,
+	operation, lineage, unitID, owner string,
+) {
+	t.Helper()
+	runID := st.runs[proofScope(repo, "thrift-caller")].ID
+	atomID := "ea_" + id
+	detail := map[string]any{
+		"schema": "go-caller-detail-v1", "resolution": "scip",
+		"protocol": "thrift", "attribution_digest": "sha256:" + thriftCallerAttr,
+		"unit_state": "resolved",
+		"unit_candidates": []map[string]any{{
+			"id": unitID, "logical_services": []string{"orders"},
+			"owners": []string{owner},
+		}},
+	}
+	encoded, err := json.Marshal(detail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertion := store.Assertion{
+		ID: id, Predicate: "CALLS_OPERATION",
+		Subject: path + ":" + strconv.Itoa(start) + "-" + strconv.Itoa(end),
+		Object:  operation, Lineage: lineage, Tier: store.TierDerived,
+		CodeRole: "production", Repo: repo, RunID: runID,
+		Supporting: []string{atomID}, Detail: string(encoded),
+	}
+	st.assertions[repo] = append(st.assertions[repo], assertion)
+	st.resolutions[proofEvidenceScope(repo, runID, atomID)] = store.EvidenceResolution{
+		Atom: store.EvidenceAtom{
+			ID: atomID, SchemaVersion: "t20-test",
+			BlobDigest: "sha256:" + strings.Repeat("e", 64),
+			StartByte:  start, EndByte: end,
+		},
+		Occurrences: []store.SnapshotEvidence{{
+			ID: "occ_" + id, AtomID: atomID, Repo: repo, Commit: catalogCommit,
+			Path: path, StartLine: start/10 + 1, EndLine: start/10 + 1,
+			VisibilityScope: "repo:" + repo, RunID: runID,
+		}},
+	}
+}
+
+// T20.11-13 review: every prior Go test compared protobuf against protobuf,
+// so the two attribution digests were always byte-identical and the
+// cross-domain paths were unexercised. This test proves the four-domain
+// union certificate, distinct per-side digests, single-side digest cursor
+// invalidation, and the divergent-unit-metadata demotion (an unresolved
+// occurrence row, never a contaminated unit and never a 500).
+func TestCallerComparisonCrossProtocolDigestsAndDemotion(t *testing.T) {
+	st := callerComparisonStore(t)
+	thriftDeclarationRun := catalogRun(
+		callerMapContractRepo, "thrift-contract", "run-thrift-decl", 7,
+	)
+	st.runs[proofScope(callerMapContractRepo, "thrift-contract")] = thriftDeclarationRun
+	declaration, resolution := catalogAssertion(
+		callerMapContractRepo, thriftDeclarationRun.ID, "decl-thrift",
+		"DECLARES_OPERATION", "idl/orders.thrift",
+		strings.TrimPrefix(callerMapOperation, "/"), thriftCallerLineage,
+		`{"schema":"thrift-operation-detail-v1","request":{"raw":"R","resolution":"unresolved"},"response":{"raw":"S","resolution":"unresolved"},"oneway":false}`,
+	)
+	putCatalogAssertion(st, declaration, resolution)
+	thriftCallerRun := catalogRun(
+		callerMapSourceRepo, "thrift-caller", "run-source-thrift", 8,
+	)
+	thriftCallerRun.Extractor = "1.2.0"
+	thriftCallerRun.Coverage.Protocols = []string{
+		"attribution-" + thriftCallerAttr, "resolution-scip-v1", "thrift",
+	}
+	st.runs[proofScope(callerMapSourceRepo, "thrift-caller")] = thriftCallerRun
+	// Same repository-namespaced unit id as the protobuf side's
+	// "unit-shared" caller, with divergent owner metadata.
+	putThriftCallerAssertion(
+		t, st, callerMapSourceRepo, "thrift-shared", "src/t.go", 210, 220,
+		callerMapOperation, thriftCallerLineage, "unit-shared", "team-thrift",
+	)
+
+	visible := map[string]bool{
+		callerMapContractRepo: true,
+		callerMapSourceRepo:   true,
+	}
+	handler := api.New(callerMapOptions(st, "user:member", &visible))
+	values := url.Values{}
+	values.Set("old_protocol", "protobuf")
+	values.Set("old_repository", callerMapContractRepo)
+	values.Set("old_lineage", callerMapLineage)
+	values.Set("old_operation", callerMapOperation)
+	values.Set("replacement_protocol", "thrift")
+	values.Set("replacement_repository", callerMapContractRepo)
+	values.Set("replacement_lineage", thriftCallerLineage)
+	values.Set("replacement_operation", callerMapOperation)
+	values.Set("level", "unit")
+	target := "/api/compare_operation_callers?" + values.Encode()
+
+	var page api.CallerComparisonPage
+	code, body := catalogHTTP(t, handler, target, &page)
+	if code != http.StatusOK {
+		t.Fatalf("cross-protocol comparison = %d %s", code, body)
+	}
+	wantDomains := []string{
+		"grpc-caller", "proto-contract", "thrift-caller", "thrift-contract",
+	}
+	if !slices.Equal(page.Coverage.Domains, wantDomains) {
+		t.Fatalf("union domains = %v, want %v", page.Coverage.Domains, wantDomains)
+	}
+	if page.Old.AttributionDigest == page.Replacement.AttributionDigest {
+		t.Fatalf("per-side attribution digests are not distinct: %s", page.Old.AttributionDigest)
+	}
+	var sharedUnit, demoted *api.CallerComparisonRow
+	for index := range page.Rows {
+		row := &page.Rows[index]
+		if row.Key == callerMapSourceRepo+":unit-shared" {
+			sharedUnit = row
+		}
+		if strings.HasPrefix(row.Key, "unresolved:") &&
+			row.Replacement.OccurrenceCount == 1 {
+			demoted = row
+		}
+	}
+	if sharedUnit == nil || sharedUnit.Classification != "old_only_evidence" {
+		t.Fatalf("shared unit row = %+v", sharedUnit)
+	}
+	if demoted == nil || demoted.Classification != "unresolved" || demoted.Old.OccurrenceCount != 0 {
+		t.Fatalf("divergent thrift row was not demoted to unresolved: %+v", demoted)
+	}
+
+	// Single-side digest invalidation: page with a cursor, then move only
+	// the thrift side's attribution snapshot — the cursor must 409.
+	var paged api.CallerComparisonPage
+	code, body = catalogHTTP(t, handler, target+"&page_size=1", &paged)
+	if code != http.StatusOK || paged.Pagination.NextCursor == "" {
+		t.Fatalf("paged comparison = %d %s / %+v", code, body, paged)
+	}
+	mutated := st.runs[proofScope(callerMapSourceRepo, "thrift-caller")]
+	mutated.Coverage.Protocols = []string{
+		"attribution-" + strings.Repeat("9", 64), "resolution-scip-v1", "thrift",
+	}
+	st.runs[proofScope(callerMapSourceRepo, "thrift-caller")] = mutated
+	var stale api.CallerComparisonPage
+	code, body = catalogHTTP(
+		t, handler,
+		target+"&page_size=1&cursor="+url.QueryEscape(paged.Pagination.NextCursor),
+		&stale,
+	)
+	if code != http.StatusConflict {
+		t.Fatalf("single-side attribution drift = %d %s, want 409", code, body)
+	}
+}
+
+// T20.11-13 review: "combined 50,000-row scan" now means combined. Each
+// side stays under the limit alone (26,000 rows), filters retain almost
+// nothing, yet the shared budget across both collections trips the typed
+// 422 — under the old per-side counters this request succeeded after
+// 52,000 scans.
+func TestCallerComparisonSharedScanBudget(t *testing.T) {
+	st := callerComparisonStore(t)
+	const replacementOperation = "/acme.orders.v2.Orders/Get"
+	replacementRun := st.runs[proofScope(callerMapContractRepo, "proto-contract")]
+	declaration, resolution := catalogAssertion(
+		callerMapContractRepo, replacementRun.ID, "decl-replacement-v2op",
+		"DECLARES_OPERATION", "idl/orders_v2.proto",
+		strings.TrimPrefix(replacementOperation, "/"), replacementLineage,
+		`{"schema":"proto-operation-detail-v1","request":{"raw":"GetRequestV2","resolution":"unresolved"},"response":{"raw":"GetResponseV2","resolution":"unresolved"},"client_streaming":false,"server_streaming":false}`,
+	)
+	putCatalogAssertion(st, declaration, resolution)
+	for side, operation := range map[string]string{
+		"old": callerMapOperation, "new": replacementOperation,
+	} {
+		lineage := callerMapLineage
+		if side == "new" {
+			lineage = replacementLineage
+		}
+		for row := 0; row < 26_000; row++ {
+			putCallerMapAssertionFor(
+				t, st, callerMapSourceRepo,
+				fmt.Sprintf("bulk-%s-%05d", side, row),
+				fmt.Sprintf("src/bulk_%s_%05d.go", side, row),
+				row*10+1, row*10+5,
+				"CALLS_OPERATION", operation, lineage,
+				store.TierHeuristic, "syntax", "resolved",
+				"unit-bulk", "team-bulk",
+			)
+		}
+	}
+	visible := map[string]bool{
+		callerMapContractRepo: true,
+		callerMapSourceRepo:   true,
+	}
+	handler := api.New(callerMapOptions(st, "user:member", &visible))
+	values := url.Values{}
+	values.Set("old_protocol", "protobuf")
+	values.Set("old_repository", callerMapContractRepo)
+	values.Set("old_lineage", callerMapLineage)
+	values.Set("old_operation", callerMapOperation)
+	values.Set("replacement_protocol", "protobuf")
+	values.Set("replacement_repository", callerMapContractRepo)
+	values.Set("replacement_lineage", replacementLineage)
+	values.Set("replacement_operation", replacementOperation)
+	values.Set("level", "occurrence")
+	// The tier filter retains almost nothing; only the scan volume trips.
+	values.Set("tier", "derived")
+	var page api.CallerComparisonPage
+	code, body := catalogHTTP(
+		t, handler, "/api/compare_operation_callers?"+values.Encode(), &page,
+	)
+	if code != http.StatusUnprocessableEntity ||
+		!strings.Contains(body, "bounded row scan") {
+		t.Fatalf("combined scan budget = %d %s, want 422 bounded-row-scan", code, body)
+	}
 }

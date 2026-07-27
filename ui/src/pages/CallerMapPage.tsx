@@ -78,6 +78,12 @@ export default function CallerMapPage({
   const cursor = cursors[pageIndex] ?? ''
 
   useEffect(() => {
+    setCursors([''])
+    setPageIndex(0)
+    setPage(null)
+  }, [endpointKey])
+
+  useEffect(() => {
     if (!endpoint) return
     request.current?.abort()
     const controller = new AbortController()
@@ -119,6 +125,9 @@ export default function CallerMapPage({
   const resetPagination = () => {
     setCursors([''])
     setPageIndex(0)
+    // A first-page 409 leaves cursor === '' unchanged, so no effect dep
+    // moves; the reload counter guarantees restart always refetches.
+    setReload((generation) => generation + 1)
   }
   const applyFilters = (event: React.FormEvent) => {
     event.preventDefault()
@@ -299,7 +308,7 @@ function EndpointHeader({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const declaration = page?.declaration.sources[0]
+  const declarationSources = page?.declaration.sources ?? []
   return (
     <header className={css({
       display: 'flex',
@@ -365,13 +374,19 @@ function EndpointHeader({
         })}>
           Back to Contracts
         </a>
-        {declaration && (
+        {declarationSources.map((source, index) => (
           <a
+            key={`${source.path}:${source.start_line}:${index}`}
             className={css(linkButtonStyle(tok))}
-            href={sourceHref(declaration)}
+            href={sourceHref(source)}
           >
-            Declaration <OpenIcon size={12} />
+            Declaration{declarationSources.length > 1 ? ` ${index + 1}` : ''} <OpenIcon size={12} />
           </a>
+        ))}
+        {page?.declaration.sources_truncated && (
+          <span className={css({ fontSize: '12px', color: tok.textTertiary })}>
+            declaration citations truncated
+          </span>
         )}
       </div>
     </header>
@@ -955,6 +970,11 @@ function CallerRow({
                 {candidates.map((candidate) => (
                   <UnitCandidate key={candidate.id} candidate={candidate} />
                 ))}
+                {(row.unit.candidate_total ?? candidates.length) > candidates.length && (
+                  <span className={css({ fontSize: '12px' })}>
+                    Candidate list is bounded; {(row.unit.candidate_total ?? 0) - candidates.length} more not shown.
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -1149,19 +1169,25 @@ function sourceHref(source: {
 }
 
 function coverageState(run: CoverageRun) {
+  // A published run that recorded extraction failures is not a clean green
+  // row: the failure classes are part of the coverage claim.
+  const failureSuffix = run.failures?.length
+    ? ` · ${run.failures.length} recorded failure${run.failures.length === 1 ? '' : 's'}`
+    : ''
   if (run.latest_attempt?.failure && run.status === 'published') {
-    return `${run.fresh ? 'fresh' : 'stale'} · failed replacement`
+    return `${run.fresh ? 'fresh' : 'stale'} · failed replacement${failureSuffix}`
   }
   if (run.status !== 'published') {
     if (run.latest_attempt?.failure) return 'failed replacement'
     return 'not published / unsupported'
   }
-  return run.fresh ? 'fresh' : 'stale'
+  return `${run.fresh ? 'fresh' : 'stale'}${failureSuffix}`
 }
 
 function coverageTone(run: CoverageRun): 'green' | 'amber' | 'red' | 'neutral' {
   if (run.latest_attempt?.failure) return 'red'
   if (run.status !== 'published' || !run.fresh) return 'amber'
+  if (run.failures?.length) return 'amber'
   return 'green'
 }
 

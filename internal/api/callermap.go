@@ -74,7 +74,16 @@ type CallerMapUnitAttribution struct {
 	State      string                   `json:"state"`
 	Reason     string                   `json:"reason,omitempty"`
 	Candidates []CallerMapUnitCandidate `json:"candidates,omitempty"`
+	// CandidateTotal is the pre-truncation candidate count. The response
+	// carries at most callerMapUnitCandidateLimit candidates so one
+	// ambiguous row cannot blow the UI's frozen 500-node inventory bound;
+	// a larger total makes the truncation explicit, never silent.
+	CandidateTotal int `json:"candidate_total,omitempty"`
 }
+
+// callerMapUnitCandidateLimit bounds the candidates serialized per row —
+// the T20.12 one-open-list expansion bound the BACKLOG froze at 64.
+const callerMapUnitCandidateLimit = 64
 
 type CallerMapSource struct {
 	Repository  string `json:"repository"`
@@ -225,8 +234,9 @@ func (s *CallerMapService) List(
 		if err != nil {
 			return nil, err
 		}
+		scanned := 0
 		declaration, projections, collectErr := collectCallerMap(
-			ctx, s.opts.Evidence, certificate, pack, query,
+			ctx, s.opts.Evidence, certificate, pack, query, &scanned,
 		)
 
 		confirmedVisible, visibleErr := visibleRepositories(ctx, s.opts)
@@ -374,12 +384,16 @@ func validateCallerMapQuery(query CallerMapQuery) (protocolPack, error) {
 	return pack, nil
 }
 
+// collectCallerMap accumulates scanned-row counts into *scanned so callers
+// composing multiple collections (the T20.13 comparison) share one bounded
+// budget: "combined 50,000" means combined, not per side.
 func collectCallerMap(
 	ctx context.Context,
 	source store.EvidenceStore,
 	certificate *extract.CoverageCertificate,
 	pack protocolPack,
 	query CallerMapQuery,
+	scanned *int,
 ) (ContractCatalogClaim, []callerMapProjection, error) {
 	repository, ok := catalogCertificateRepository(
 		certificate, query.Endpoint.Repository,
@@ -412,7 +426,6 @@ func collectCallerMap(
 	}
 
 	projections := make([]callerMapProjection, 0)
-	scanned := 0
 	for _, coveredRepository := range certificate.Repositories {
 		run, ok := certificateRun(coveredRepository, pack.callerDomain)
 		if !ok || run.Status != "published" {
@@ -437,8 +450,8 @@ func collectCallerMap(
 					return ContractCatalogClaim{}, nil, err
 				}
 				for _, assertion := range page.Assertions {
-					scanned++
-					if scanned > callerMapScanLimit {
+					*scanned++
+					if *scanned > callerMapScanLimit {
 						return ContractCatalogClaim{}, nil, store.ErrResultLimit
 					}
 					projection, include, err := projectCallerMapAssertion(
@@ -661,14 +674,11 @@ func resolveCallerMapProjection(
 				Tier:               projection.assertion.Tier,
 				CodeRole:           projection.assertion.CodeRole,
 				Fresh:              projection.fresh, UnitGroup: projection.group,
-				Unit: CallerMapUnitAttribution{
-					State:  projection.detail.UnitState,
-					Reason: projection.detail.UnitReason,
-					Candidates: append(
-						[]CallerMapUnitCandidate(nil),
-						projection.detail.UnitCandidates...,
-					),
-				},
+				Unit: boundedUnitAttribution(
+					projection.detail.UnitState,
+					projection.detail.UnitReason,
+					projection.detail.UnitCandidates,
+				),
 				Source: CallerMapSource{
 					Repository: projection.assertion.Repo,
 					Commit:     projection.commit, Path: projection.path,
@@ -682,6 +692,19 @@ func resolveCallerMapProjection(
 		}
 	}
 	return CallerMapRow{}, errors.New("caller assertion has no exact source locator")
+}
+
+func boundedUnitAttribution(state, reason string, candidates []CallerMapUnitCandidate) CallerMapUnitAttribution {
+	attribution := CallerMapUnitAttribution{
+		State:          state,
+		Reason:         reason,
+		CandidateTotal: len(candidates),
+		Candidates:     append([]CallerMapUnitCandidate(nil), candidates...),
+	}
+	if len(attribution.Candidates) > callerMapUnitCandidateLimit {
+		attribution.Candidates = attribution.Candidates[:callerMapUnitCandidateLimit]
+	}
+	return attribution
 }
 
 func callerMapGroups(rows []CallerMapRow, ordering string) []CallerMapGroup {
