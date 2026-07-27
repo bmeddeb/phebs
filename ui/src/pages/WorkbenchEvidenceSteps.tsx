@@ -535,20 +535,12 @@ function AnalysisScope({
 function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const rowCount = page.atlas.length +
-    page.callers.reduce(
-      (total, caller) =>
-        total + caller.resolved_callers.length +
-        caller.extractor_abstentions.length,
-      0,
-    ) +
-    (page.comparison?.rows.length ?? 0) +
-    (page.compatibility?.violations.length ?? 0) +
-    (page.field_references?.rows.length ?? 0) +
-    page.resource_planes.reduce(
-      (total, plane) => total + plane.relationships.length,
-      0,
-    )
+  const groupCount = page.atlas.length +
+    page.callers.length +
+    (page.comparison ? 1 : 0) +
+    (page.compatibility ? 1 : 0) +
+    (page.field_references ? 1 : 0) +
+    (page.resource_planes.length > 0 ? 1 : 0)
   return (
     <section aria-labelledby="impact-inventory-heading" className={css(panelStyle(tok))}>
       <div className={css(panelHeaderStyle(tok))}>
@@ -560,7 +552,9 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
             Source-first impact inventory
           </h3>
         </span>
-        <EvidenceBadge tone="neutral">{rowCount} visible rows</EvidenceBadge>
+        <EvidenceBadge tone="neutral">
+          {groupCount} evidence groups
+        </EvidenceBadge>
       </div>
       {page.scenario_emphasis.length > 0 && (
         <div className={css({
@@ -575,10 +569,11 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
           ))}
         </div>
       )}
-      {rowCount === 0 && (
+      {groupCount === 0 && (
         <EvidenceEmpty>
-          No evidence rows are visible on this exact bounded page. This is not
-          an absence or completeness result; inspect scope, gaps, and paging.
+          No evidence groups are visible on this exact bounded page. This is
+          not an absence or completeness result; inspect scope, gaps, and
+          paging.
         </EvidenceEmpty>
       )}
       {page.atlas.map((atlas, index) => (
@@ -653,20 +648,48 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
           state={`${page.comparison.total_rows} rows`}
         >
           {page.comparison.rows.map((row) => (
-            <div key={row.key} className={css(evidenceRowStyle(tok))}>
-              <EvidenceBadge tone={row.classification === 'unresolved'
-                ? 'amber'
-                : 'blue'}
-              >
-                {humanize(row.classification)}
-              </EvidenceBadge>
-              <div className={css({ minWidth: 0 })}>
-                <div className={css(rowTitleStyle(tok))}>{row.key}</div>
-                <div className={css(rowDetailStyle(tok))}>
-                  {row.old.occurrence_count} current ·{' '}
-                  {row.replacement.occurrence_count} replacement occurrences
+            <div key={row.key}>
+              <div className={css(evidenceRowStyle(tok))}>
+                <EvidenceBadge tone={row.classification === 'unresolved'
+                  ? 'amber'
+                  : 'blue'}
+                >
+                  {humanize(row.classification)}
+                </EvidenceBadge>
+                <div className={css({ minWidth: 0 })}>
+                  <div className={css(rowTitleStyle(tok))}>{row.key}</div>
+                  <div className={css(rowDetailStyle(tok))}>
+                    {row.old.occurrence_count} current ·{' '}
+                    {row.replacement.occurrence_count} replacement occurrences
+                  </div>
                 </div>
               </div>
+              {row.old.rows.map((source, index) => (
+                <CallerEvidenceRow
+                  key={`current:${source.source.assertion_id}:${index}`}
+                  row={source}
+                  label="current endpoint caller"
+                />
+              ))}
+              {row.old.rows_truncated && (
+                <EvidenceNotice>
+                  Current endpoint citations are truncated for this comparison
+                  row.
+                </EvidenceNotice>
+              )}
+              {row.replacement.rows.map((source, index) => (
+                <CallerEvidenceRow
+                  key={`replacement:${source.source.assertion_id}:${index}`}
+                  row={source}
+                  label="replacement endpoint caller"
+                />
+              ))}
+              {row.replacement.rows_truncated && (
+                <EvidenceNotice>
+                  Replacement endpoint citations are truncated for this
+                  comparison row.
+                </EvidenceNotice>
+              )}
             </div>
           ))}
         </EvidenceGroup>
@@ -703,16 +726,40 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
           state={`${page.field_references.total_rows} rows`}
         >
           {page.field_references.rows.map((row) => (
-            <div key={row.assertion.id} className={css(evidenceRowStyle(tok))}>
-              <EvidenceBadge tone="blue">
-                field {row.field.field_number}
-              </EvidenceBadge>
-              <div className={css({ minWidth: 0 })}>
-                <div className={css(rowTitleStyle(tok))}>{row.field.message}</div>
-                <div className={css(rowDetailStyle(tok))}>
-                  {row.assertion.repo} · {row.assertion.predicate}
+            <div key={row.assertion.id}>
+              <div className={css(evidenceRowStyle(tok))}>
+                <EvidenceBadge tone="blue">
+                  field {row.field.field_number}
+                </EvidenceBadge>
+                <div className={css({ minWidth: 0 })}>
+                  <div className={css(rowTitleStyle(tok))}>
+                    {row.field.message}
+                  </div>
+                  <div className={css(rowDetailStyle(tok))}>
+                    {row.assertion.repo} · {row.assertion.predicate}
+                  </div>
                 </div>
               </div>
+              {row.evidence.flatMap((entry) =>
+                entry.occurrences.map((occurrence) => (
+                  <SourceEvidenceRow
+                    key={occurrence.occurrence_id}
+                    source={{
+                      repository: occurrence.repo,
+                      commit: occurrence.commit,
+                      path: occurrence.path,
+                      start_line: occurrence.start_line,
+                      end_line: occurrence.end_line,
+                    }}
+                    classification="field reference"
+                    detail={`${row.field.message}#${row.field.field_number}`}
+                  />
+                )))}
+              {row.evidence.every((entry) => entry.occurrences.length === 0) && (
+                <EvidenceNotice>
+                  Field-reference evidence has no visible occurrence citation.
+                </EvidenceNotice>
+              )}
             </div>
           ))}
         </EvidenceGroup>
@@ -925,6 +972,15 @@ function ChecklistEntry({
     category === 'waived'
   const action = entry.disposition ? 'Record correction' : 'Record disposition'
 
+  useEffect(() => {
+    setFailure(null)
+    setRecorded('')
+  }, [
+    entry.disposition?.disposition_id,
+    entry.evidence_state,
+    entry.suggestion.content_digest,
+  ])
+
   const record = async () => {
     if (rationaleRequired && !rationale.trim()) return
     const supersedes = entry.disposition?.disposition_id
@@ -1101,7 +1157,13 @@ function ChecklistEntry({
             A stale suggestion cannot receive a new root disposition.
           </div>
         )}
-        {failure && <EvidenceError failure={failure} compact />}
+        {failure && (
+          <EvidenceError
+            failure={failure}
+            onRetry={failure.status === 409 ? onRecorded : undefined}
+            compact
+          />
+        )}
         {recorded && (
           <div role="status" aria-live="polite" className={css({
             color: tok.statusGreen,
@@ -1261,23 +1323,57 @@ function ResourcePlanes({
   return (
     <EvidenceGroup title="Resource planes" state={`${planes.length} declared`}>
       {planes.map((plane) => (
-        <div key={plane.id} className={css(evidenceRowStyle(tok))}>
-          <EvidenceBadge tone={
-            plane.state === 'enabled'
-              ? 'green'
-              : plane.state === 'failed' || plane.state === 'stale'
-                ? 'amber'
-                : 'neutral'
-          }>
-            {humanize(plane.state)}
-          </EvidenceBadge>
-          <div className={css({ minWidth: 0 })}>
-            <div className={css(rowTitleStyle(tok))}>{plane.label}</div>
-            <div className={css(rowDetailStyle(tok))}>
-              {plane.reason ||
-                `${plane.relationships.length} cited relationships`}
+        <div key={plane.id}>
+          <div className={css(evidenceRowStyle(tok))}>
+            <EvidenceBadge tone={
+              plane.state === 'enabled'
+                ? 'green'
+                : plane.state === 'failed' || plane.state === 'stale'
+                  ? 'amber'
+                  : 'neutral'
+            }>
+              {humanize(plane.state)}
+            </EvidenceBadge>
+            <div className={css({ minWidth: 0 })}>
+              <div className={css(rowTitleStyle(tok))}>{plane.label}</div>
+              <div className={css(rowDetailStyle(tok))}>
+                {plane.reason ||
+                  `${plane.relationships.length} cited relationships`}
+              </div>
             </div>
           </div>
+          {plane.relationships.map((relationship, relationshipIndex) => (
+            <div
+              key={`${relationship.kind}:${relationship.subject}:${relationship.object}:${relationshipIndex}`}
+            >
+              <div className={css(evidenceRowStyle(tok))}>
+                <EvidenceBadge tone="blue">
+                  {humanize(relationship.classification)}
+                </EvidenceBadge>
+                <div className={css({ minWidth: 0 })}>
+                  <div className={css(rowTitleStyle(tok))}>
+                    {relationship.subject} → {relationship.object}
+                  </div>
+                  <div className={css(rowDetailStyle(tok))}>
+                    {humanize(relationship.kind)}
+                  </div>
+                </div>
+              </div>
+              {relationship.sources.map((source) => (
+                <SourceEvidenceRow
+                  key={`${source.repository}:${source.commit}:${source.path}:${source.start_byte}`}
+                  source={source}
+                  classification={relationship.classification}
+                  detail={`${relationship.subject} → ${relationship.object}`}
+                />
+              ))}
+              {relationship.sources.length === 0 && (
+                <EvidenceNotice>
+                  This relationship has no visible source citation.
+                </EvidenceNotice>
+              )}
+            </div>
+          ))}
         </div>
       ))}
     </EvidenceGroup>

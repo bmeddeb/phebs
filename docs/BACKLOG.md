@@ -2929,6 +2929,15 @@ and a 390 px Where-to-How state transition are regression-tested. There is no
 comment, assignment, due date, priority, custom state, task, implicit write,
 implicit completion, proof-bundle write, or production enablement.
 
+Review correction: migration comparison sides, affected-field occurrences,
+and enabled resource-plane relationships now expose the exact source
+citations already carried by their shared-service rows. The heterogeneous
+header count is explicitly an evidence-group count. A disposition conflict
+cannot succeed by replaying its stale `supersedes` identity: the user first
+restarts the exact checklist projection, and the retry binds the refreshed
+active record. Tests pin the new identity rather than mocking an unchanged
+second mutation as successful.
+
 **T21.12 · API-key capability for Investigation mutations** *(needs T21.3)* —
 extend named API keys with immutable reviewed capabilities and define
 `investigation:write` as the additional gate for Workbench MCP mutations.

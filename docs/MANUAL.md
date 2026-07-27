@@ -560,12 +560,17 @@ implementations, name matches, extractor abstentions, exact callers,
 unit-attribution ambiguity, migration comparison classes, retained
 compatibility findings, affected-field references, and resource planes keep
 their service-defined classifications. Source links name the exact repository,
-commit, path, and line span and navigate to that immutable commit. Optional
-unit, owner, path, freshness, resolution, ordering, comparison-level, and
-compatibility-run inputs are explicit server filters. **Next page** replaces
-the mounted rows with the opaque-cursor page; **Previous page** returns through
-the retained cursor path. An empty page says that it does not establish
-absence or completeness, and stale cursors restart from the first exact page.
+commit, path, and line span and navigate to that immutable commit. Migration
+comparison sides retain their bounded old/replacement caller links;
+affected-field rows retain every visible evidence occurrence; and an enabled
+resource-plane relationship retains its subject, object, classification, and
+cited sources. The header counts evidence groups rather than mixing unlike row
+types into a false exact total. Optional unit, owner, path, freshness,
+resolution, ordering, comparison-level, and compatibility-run inputs are
+explicit server filters. **Next page** replaces the mounted rows with the
+opaque-cursor page; **Previous page** returns through the retained cursor path.
+An empty page says that it does not establish absence or completeness, and
+stale cursors restart from the first exact page.
 
 How reads related implementation/history evidence and the deterministic
 checklist in parallel. Up to 32 optional source anchors may be supplied as
@@ -583,10 +588,13 @@ fixed categories `accepted`, `rejected`, `completed`, `reopened`, and
 `waived`; rejected, reopened, and waived require rationale. Correcting an
 existing record explicitly supersedes that record. A stale suggestion with no
 prior Disposition is disabled rather than silently retargeted. Snapshot or
-active-record conflict leaves the same explicit control retryable, while
-permission loss uses the same non-disclosing unavailable state. There is no
-comment, assignment, due date, priority, custom state, task, or implicit
-completion action.
+active-record conflict offers **Restart exact evidence** before another
+mutation is allowed to rely on the projection. The refreshed checklist
+supplies the current active Disposition, so a correction retry derives a new
+`supersedes` identity instead of replaying the stale request. Permission loss
+uses the same non-disclosing unavailable state. There is no comment,
+assignment, due date, priority, custom state, task, or implicit completion
+action.
 
 The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
 contains declaration-proven call rows or stable field-reference rows.

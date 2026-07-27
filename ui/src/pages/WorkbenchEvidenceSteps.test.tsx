@@ -378,6 +378,156 @@ test('Where keeps gaps adjacent, cites exact source, and replaces pages', async 
   )
 })
 
+test('Where preserves comparison, field, and resource-plane source citations', async () => {
+  const page = impactPage('src/callers/current.ts', true)
+  const callerImpact = page.callers[0]
+  const currentCaller = callerImpact.resolved_callers[0]
+  const currentEndpoint = {
+    protocol: 'protobuf',
+    repository,
+    declaration_lineage: 'catalog-v1',
+    operation: '/demo.v1.Catalog/Get',
+  }
+  page.callers = []
+  page.comparison = {
+    schema_version: 'caller-comparison-v1',
+    query: {
+      old: currentEndpoint,
+      replacement: {
+        ...currentEndpoint,
+        operation: '/demo.v2.Catalog/Get',
+      },
+      freshness: 'any',
+      resolution: 'any',
+      ordering: 'source',
+      level: 'unit',
+    },
+    old: {
+      endpoint: currentEndpoint,
+      declaration: callerImpact.declaration,
+      coverage_digest: `sha256:${'1'.repeat(64)}`,
+      attribution_digest: `sha256:${'2'.repeat(64)}`,
+    },
+    replacement: {
+      endpoint: {
+        ...currentEndpoint,
+        operation: '/demo.v2.Catalog/Get',
+      },
+      declaration: callerImpact.declaration,
+      coverage_digest: `sha256:${'3'.repeat(64)}`,
+      attribution_digest: `sha256:${'4'.repeat(64)}`,
+    },
+    rows: [{
+      level: 'unit',
+      key: `${repository}://src/catalog`,
+      classification: 'old_only_evidence',
+      unit: { id: '//src/catalog' },
+      old: {
+        occurrence_count: 1,
+        rows: [currentCaller],
+        rows_truncated: false,
+      },
+      replacement: {
+        occurrence_count: 0,
+        rows: [],
+        rows_truncated: false,
+      },
+    }],
+    total_rows: 1,
+    pagination: { complete: true },
+    coverage: {} as never,
+    caveat: 'Comparison evidence is bounded.',
+  }
+  page.field_references = {
+    schema_version: 'field-reference-read-v1',
+    rows: [{
+      field: {
+        lineage: 'catalog-v1',
+        message: 'demo.v1.Catalog',
+        field_number: 7,
+      },
+      assertion: {
+        id: 'field-assertion-1',
+        predicate: 'REFERENCES_PROTO_FIELD',
+        subject: 'src/models/catalog.go:200-207',
+        object: 'demo.v1.Catalog#7',
+        lineage: 'catalog-v1',
+        tier: 'exact',
+        repo: repository,
+        run_id: 'field-run-1',
+      },
+      evidence: [{
+        repository,
+        run_id: 'field-run-1',
+        atom: {
+          atom_id: 'field-atom-1',
+          schema_version: 'field-reference-v1',
+          blob_digest: `sha256:${'d'.repeat(64)}`,
+          start_byte: 200,
+          end_byte: 207,
+          rule_id: 'field-reference',
+          extractor_version: '1.0.0',
+          adapter_config_digest: `sha256:${'e'.repeat(64)}`,
+          fact_fingerprint: `sha256:${'f'.repeat(64)}`,
+          first_seen: '2026-07-27T12:00:00Z',
+        },
+        occurrences: [{
+          occurrence_id: 'field-occurrence-1',
+          atom_id: 'field-atom-1',
+          repo: repository,
+          commit,
+          path: 'src/models/catalog.go',
+          start_line: 55,
+          end_line: 55,
+          visibility_scope: 'visible',
+          run_id: 'field-run-1',
+          observed_at: '2026-07-27T12:00:00Z',
+        }],
+      }],
+    }],
+    total_rows: 1,
+    pagination: { complete: true },
+    coverage_digest: `sha256:${'5'.repeat(64)}`,
+    caveat: 'Field-reference evidence is bounded.',
+  }
+  page.resource_planes = [{
+    id: 'deployment',
+    label: 'Deployment inventory',
+    state: 'enabled',
+    relationships: [{
+      kind: 'deploys',
+      subject: 'catalog-api',
+      object: 'catalog-v1',
+      classification: 'declared deployment',
+      sources: [{
+        repository,
+        commit,
+        path: 'deploy/catalog.yaml',
+        start_byte: 80,
+        end_byte: 104,
+        start_line: 12,
+        end_line: 13,
+        assertion_id: 'deployment-assertion-1',
+        run_id: 'deployment-run-1',
+        atom_id: 'deployment-atom-1',
+      }],
+    }],
+  }]
+  api.fetchWorkbenchImpact.mockResolvedValue(page)
+
+  render(<EvidenceHarness step="where" />)
+
+  expect(await screen.findByText('3 evidence groups')).toBeTruthy()
+  for (const expected of [
+    /src\/callers\/current\.ts:42–44/,
+    /src\/models\/catalog\.go:55/,
+    /deploy\/catalog\.yaml:12–13/,
+  ]) {
+    expect(screen.getByRole('link', { name: expected })).toBeTruthy()
+  }
+  expect(screen.getAllByText('catalog-api → catalog-v1')).toHaveLength(2)
+})
+
 test('Where exposes honest empty and cursor invalidation states with restart', async () => {
   api.fetchWorkbenchImpact
     .mockResolvedValueOnce(emptyImpactPage())
@@ -388,16 +538,16 @@ test('Where exposes honest empty and cursor invalidation states with restart', a
     })
   render(<EvidenceHarness step="where" />)
 
-  expect(await screen.findByText(/No evidence rows are visible/)).toBeTruthy()
+  expect(await screen.findByText(/No evidence groups are visible/)).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
   expect(await screen.findByText('Evidence snapshot changed.', {
     exact: false,
   })).toBeTruthy()
-  expect(screen.queryByText(/No evidence rows are visible/)).toBeNull()
+  expect(screen.queryByText(/No evidence groups are visible/)).toBeNull()
   fireEvent.click(screen.getByRole('button', {
     name: 'Restart exact evidence',
   }))
-  expect(await screen.findByText(/No evidence rows are visible/)).toBeTruthy()
+  expect(await screen.findByText(/No evidence groups are visible/)).toBeTruthy()
   expect(api.fetchWorkbenchImpact).toHaveBeenCalledTimes(3)
 })
 
@@ -418,15 +568,32 @@ test('Where preserves non-disclosure when exact evidence becomes unavailable', a
 
 test('How separates deterministic suggestions from retryable human state', async () => {
   api.fetchWorkbenchImplementation.mockResolvedValue(implementationPage())
-  api.fetchWorkbenchChecklist.mockResolvedValue(checklistPage())
+  const refreshedDisposition = {
+    ...disposition(),
+    disposition_id: 'disposition-2',
+    sequence: 2,
+    supersedes: 'disposition-1',
+  }
+  const refreshedChecklist = checklistPage()
+  refreshedChecklist.entries[0] = {
+    ...refreshedChecklist.entries[0],
+    disposition: refreshedDisposition,
+    disposition_history: [
+      disposition(),
+      refreshedDisposition,
+    ],
+  }
+  api.fetchWorkbenchChecklist
+    .mockResolvedValueOnce(checklistPage())
+    .mockResolvedValue(refreshedChecklist)
   api.recordWorkbenchDisposition
     .mockRejectedValueOnce(new WorkbenchAPIError(409, 'active state changed'))
     .mockResolvedValueOnce({
       ...disposition('rejected'),
-      disposition_id: 'disposition-2',
+      disposition_id: 'disposition-3',
       rationale: 'Outside the bounded change.',
-      sequence: 2,
-      supersedes: 'disposition-1',
+      sequence: 3,
+      supersedes: 'disposition-2',
     })
   render(<EvidenceHarness step="how" />)
 
@@ -462,8 +629,21 @@ test('How separates deterministic suggestions from retryable human state', async
   expect(await screen.findByText('Evidence snapshot changed.', {
     exact: false,
   })).toBeTruthy()
-  fireEvent.click(correction)
-  expect(await screen.findByText('Rejected recorded as sequence 2.'))
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Restart exact evidence',
+  }))
+  expect(await screen.findByText('Human-recorded accepted · sequence 2'))
+    .toBeTruthy()
+  fireEvent.change(screen.getByLabelText(
+    'Disposition for Review the cited catalog implementation',
+  ), { target: { value: 'rejected' } })
+  fireEvent.change(screen.getByLabelText(
+    'Rationale for Review the cited catalog implementation',
+  ), {
+    target: { value: 'Outside the bounded change.' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'Record correction' }))
+  expect(await screen.findByText('Rejected recorded as sequence 3.'))
     .toBeTruthy()
 
   expect(api.recordWorkbenchDisposition).toHaveBeenLastCalledWith(
@@ -474,7 +654,7 @@ test('How separates deterministic suggestions from retryable human state', async
       expected_revision_id: revisionID,
       category: 'rejected',
       rationale: 'Outside the bounded change.',
-      supersedes: 'disposition-1',
+      supersedes: 'disposition-2',
       evidence: {
         impact_filters: {
           freshness: 'any',
