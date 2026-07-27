@@ -50,6 +50,11 @@ type Options struct {
 	// Compatibility enables T14.3 only after the pinned Buf checker and its
 	// host sandbox have initialized successfully.
 	Compatibility CompatibilityQueries
+	// ContractCatalog and CallerMap enable T20.11's three read-only discovery
+	// tools only as one complete annex. They are the same shared service
+	// instances used by Huma; nil keeps every Caller Map tool undiscoverable.
+	ContractCatalog ContractCatalogQueries
+	CallerMap       CallerMapQueries
 	// Visible resolves the caller's repo visibility (T10.3); nil disables
 	// permission filtering. search_code is covered inside the searcher; this
 	// hook gates the tools that bypass it (read_file, list_repos, SCIP,
@@ -145,6 +150,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerCodeNavigationTools(s, opts)
 	registerHistoryTools(s, opts, history)
 	registerProofTools(s, opts)
+	registerCallerMapTools(s, opts)
 
 	return s
 }

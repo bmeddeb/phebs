@@ -291,8 +291,8 @@ the principal or permission projection, visible repository set, extraction
 publication or coverage certificate, or immutable unit-attribution digest
 changes. Start a new read instead of editing or reusing such a cursor. The
 service scans a bounded candidate population and does not persist a proof
-bundle or Investigation. It is an API/shared-service surface in T20.10; MCP
-discovery/paging and the dedicated UI remain T20.11 and T20.12.
+bundle or Investigation. T20.11 exposes that same shared service through MCP;
+the dedicated UI remains T20.12.
 
 The vocabulary is now explicit. `contract-atlas-v2` calls only a
 declaration-lineage-proven occurrence `resolved_caller`; a legacy name match
@@ -304,16 +304,25 @@ is still a bare operation rather than a declaration identity, separates
 known-caller roster. The caller readers are 1.2.0 and remain behind their
 existing provisional protocol flags.
 
-The current MCP annex retains one deliberate limitation:
-`find_operation_consumers` requires a caller-supplied bare canonical operation
-and returns one bounded proof bundle of matching call evidence and extractor
-abstentions. It does not establish declaration identity, discover exact
-declaration identities, page a fleet-scale Caller Map, or compare old and replacement
-endpoints. Planned T20.11 adds read-only discovery, exact-detail, and paged
-caller tools over the same authorization-first services as HTTP; T20.13 adds
-the comparison tool. Those tools will be bounded and cursor-driven, will not
-silently broaden `find_operation_consumers`, and will not create a proof
-bundle or Investigation during ordinary browsing.
+The MCP Caller Map annex now supplies the missing exact-identity workflow.
+`search_contract_operations` returns selectable protocol, repository,
+declaration-lineage, and canonical-operation identities from the same bounded
+Contract Atlas service as HTTP. `get_contract_operation` accepts exactly that
+identity and returns its endpoint header, request/response shapes, immutable
+declaration citation, related evidence, and coverage.
+`list_operation_callers` pages the same exact Caller Map service and accepts
+its unit, owner, path, code-role, tier, freshness, resolution, ordering,
+page-size, and cursor controls. Its rows, ambiguity, abstentions, digests,
+citations, and cursor are not reinterpreted by the MCP adapter.
+
+The older `find_operation_consumers` remains deliberately different: it
+requires a caller-supplied bare canonical operation and persists one bounded
+proof bundle of matching call evidence and extractor abstentions. It does not
+establish declaration identity or become a known-caller roster. Ordinary
+Caller Map discovery, detail, and paging persist no proof bundle or
+Investigation. T20.13 still owns old-to-replacement comparison. Every Caller
+Map tool is bounded and cursor-driven, and a stale authorization, coverage, or
+attribution snapshot must be restarted rather than bypassed.
 
 T20.2 has removed the extraction worker's 5,000-fact bottleneck behind these
 planned surfaces. The pure-reader SDK still emits one source-bound fact at a
@@ -1084,10 +1093,10 @@ Create a named key in **Settings** and use it as the bearer token; the legacy
 config key remains accepted only while it is configured.
 
 Ten core tools are always present. Enabling any provisional extraction pack
-adds four evidence-query tools.
-It adds a fifth annex tool, for fifteen total, when the pinned Buf binary and
-host sandbox pass their startup probe; otherwise compatibility stays
-undiscoverable and the other four remain available.
+adds four evidence-query tools. Enabling a protobuf or Thrift caller pack also
+adds the three-tool Caller Map annex, for seventeen tools. A pinned Buf binary
+and successful host-sandbox startup probe adds compatibility as the final
+tool, for eighteen total; otherwise compatibility stays undiscoverable.
 
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
@@ -1107,6 +1116,9 @@ undiscoverable and the other four remain available.
 | `find_kafka_topic_usage` | Investigation envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
 | `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
+| `search_contract_operations` | bounded Contract Atlas discovery page with complete selectable protocol/repository/declaration-lineage/operation identities, coverage, and continuation cursor |
+| `get_contract_operation` | one protocol-qualified exact operation with request/response shapes, immutable declaration citation, related evidence, and coverage |
+| `list_operation_callers` | exact-declaration Caller Map page with shared filters, source and unit-attribution states, unresolved rows, coverage/attribution digests, citations, and snapshot-bound cursor |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
@@ -1114,7 +1126,7 @@ units. Omitted `ref`/`head` values resolve to the DB's immutable indexed
 commit. NUL-bearing binary blame, unknown repos, deleting repos, and unindexed repos come
 back as tool errors rather than drifting to mutable mirror HEAD.
 
-The five experimental tools return `envelope_version: "1.0"` as MCP
+The five proof/compatibility tools return `envelope_version: "1.0"` as MCP
 structured content. Their advertised `outputSchema` is the same generated
 draft-2020-12 schema checked in under `schemas/`. Stateless proof queries do
 not enumerate a released evidence-pack universe, so their pack-defined
@@ -1157,7 +1169,12 @@ one stateless Streamable HTTP session using the official SDK: the agent asks
 operation-, field-, coverage-, and compatibility questions and receives source
 citations and coverage without hidden-repository access. Compatibility is not
 advertised if Buf is missing, has the wrong version, or the host cannot enforce
-the sandbox.
+the sandbox. T20.11 adds an official-SDK stateless session that discovers one
+of two duplicate-named operations without a pretyped identifier, resolves its
+exact detail, and exhausts multiple Caller Map pages with the same shared
+service content and cursor refusals. The three tools register all-or-none and
+remain absent unless a protocol caller pack makes the Caller Map service
+available.
 
 ## 9. Operations
 

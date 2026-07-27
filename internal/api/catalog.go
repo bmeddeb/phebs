@@ -275,6 +275,7 @@ type ContractCatalogRelationship struct {
 
 type ContractCatalogOperation struct {
 	SchemaVersion           string                             `json:"schema_version"`
+	Protocol                string                             `json:"-"`
 	Repository              string                             `json:"repository"`
 	DeclarationLineage      string                             `json:"declaration_lineage"`
 	ServiceFQN              string                             `json:"service_fqn"`
@@ -426,6 +427,24 @@ func (s *ContractCatalogService) Operation(
 	ctx context.Context,
 	repository, lineage, operation string,
 ) (*ContractCatalogOperation, error) {
+	return s.operation(ctx, "", repository, lineage, operation)
+}
+
+// OperationForProtocol resolves a complete endpoint identity for shared
+// callers such as MCP. The legacy HTTP detail route does not accept a protocol
+// component, so Protocol remains internal state and does not revise its v2
+// response schema.
+func (s *ContractCatalogService) OperationForProtocol(
+	ctx context.Context,
+	protocol, repository, lineage, operation string,
+) (*ContractCatalogOperation, error) {
+	return s.operation(ctx, protocol, repository, lineage, operation)
+}
+
+func (s *ContractCatalogService) operation(
+	ctx context.Context,
+	protocol, repository, lineage, operation string,
+) (*ContractCatalogOperation, error) {
 	if s == nil {
 		return nil, huma.Error503ServiceUnavailable("contract catalog unavailable")
 	}
@@ -441,7 +460,20 @@ func (s *ContractCatalogService) Operation(
 	if err := validateOperation(operation); err != nil {
 		return nil, huma.Error400BadRequest(err.Error())
 	}
+	if protocol != "" {
+		if _, ok := packForProtocol(protocol); !ok {
+			return nil, huma.Error400BadRequest(
+				"protocol must name a supported contract pack",
+			)
+		}
+	}
 	if s.opts.ContractCatalogFixture != nil {
+		if protocol != "" &&
+			protocol != s.opts.ContractCatalogFixture.Protocol {
+			return nil, huma.Error404NotFound(
+				"contract catalog operation not found",
+			)
+		}
 		return s.opts.ContractCatalogFixture.operation(
 			ctx, s.opts, repository, lineage, operation,
 		)
@@ -461,7 +493,8 @@ func (s *ContractCatalogService) Operation(
 		}
 		binding := visibilityContext(ctx, s.opts, certificate)
 		detail, collectErr := collectCatalogOperation(
-			ctx, s.opts.Evidence, certificate, repository, lineage, operation,
+			ctx, s.opts.Evidence, certificate, protocol,
+			repository, lineage, operation,
 		)
 		confirmedVisible, visibleErr := visibleRepositories(ctx, s.opts)
 		if visibleErr != nil {
@@ -642,7 +675,7 @@ func collectCatalogOperation(
 	ctx context.Context,
 	source store.EvidenceStore,
 	certificate *extract.CoverageCertificate,
-	repository, lineage, operation string,
+	protocol, repository, lineage, operation string,
 ) (*ContractCatalogOperation, error) {
 	repositoryCoverage, ok := catalogCertificateRepository(certificate, repository)
 	if !ok {
@@ -659,6 +692,9 @@ func collectCatalogOperation(
 	var assertion store.Assertion
 	found := false
 	for _, candidate := range protocolPacks {
+		if protocol != "" && candidate.protocol != protocol {
+			continue
+		}
 		candidateRun, ok := certificateRun(repositoryCoverage, candidate.declarationDomain)
 		if !ok || candidateRun.Status != "published" {
 			continue
@@ -716,6 +752,7 @@ func collectCatalogOperation(
 	}
 	return &ContractCatalogOperation{
 		SchemaVersion: contractCatalogSchemaVersion,
+		Protocol:      pack.protocol,
 		Repository:    repository, DeclarationLineage: lineage,
 		ServiceFQN: service, Method: method, Operation: operation,
 		Declaration: declaration, FactDetail: factDetail,
@@ -1075,7 +1112,11 @@ func resolveCatalogClaim(
 				occurrence.StartLine < 1 || occurrence.EndLine < occurrence.StartLine {
 				return ContractCatalogClaim{}, 0, errors.New("catalog evidence occurrence scope is inconsistent")
 			}
-			if occurrence.Path != assertion.Subject {
+			if !catalogSubjectMatchesEvidence(
+				assertion,
+				resolution.Atom,
+				occurrence.Path,
+			) {
 				continue
 			}
 			if len(claim.Sources) >= limit {
@@ -1095,6 +1136,23 @@ func resolveCatalogClaim(
 		return ContractCatalogClaim{}, 0, errors.New("catalog assertion has no subject-matching source locator")
 	}
 	return claim, len(claim.Sources), nil
+}
+
+func catalogSubjectMatchesEvidence(
+	assertion store.Assertion,
+	atom store.EvidenceAtom,
+	path string,
+) bool {
+	if assertion.Subject == path {
+		return true
+	}
+	if assertion.Predicate != "CALLS_OPERATION" &&
+		assertion.Predicate != "UNRESOLVED_CALLER" {
+		return false
+	}
+	subjectPath, start, end, err := parseCallerSubject(assertion.Subject)
+	return err == nil && subjectPath == path &&
+		start == atom.StartByte && end == atom.EndByte
 }
 
 func catalogListItem(
@@ -1400,7 +1458,10 @@ func sortCatalogRelationships(rows []ContractCatalogRelationship) {
 }
 
 func registerContractCatalogAPI(api huma.API, opts Options) {
-	service := NewContractCatalogService(opts)
+	service := opts.ContractCatalog
+	if service == nil {
+		service = NewContractCatalogService(opts)
+	}
 	if service == nil {
 		return
 	}

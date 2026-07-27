@@ -51,6 +51,12 @@ type Options struct {
 	// configured. Evidence alone is insufficient because Kafka- or field-only
 	// deployments must not advertise an unreachable Caller Map.
 	CallerMapEnabled bool
+	// ContractCatalog and CallerMap optionally bind preconstructed shared read
+	// services. Serve supplies the same instances to Huma and MCP so neither
+	// transport can recreate authorization, cursor, or evidence semantics.
+	// Nil preserves the ordinary constructor path used by tests and embedders.
+	ContractCatalog *ContractCatalogService
+	CallerMap       *CallerMapService
 	// ContractCatalogFixture is an explicit development/demo adapter. It
 	// exposes only synthetic catalog rows projected onto a currently visible
 	// indexed repository; production leaves it nil and uses Evidence instead.

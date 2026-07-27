@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -17,6 +18,74 @@ type contractFixtureRepoStore struct {
 	store.Store
 	repos []store.Repo
 	calls int
+}
+
+func TestCatalogSubjectMatchesEvidence(t *testing.T) {
+	atom := store.EvidenceAtom{StartByte: 10, EndByte: 20}
+	for _, test := range []struct {
+		name      string
+		assertion store.Assertion
+		path      string
+		want      bool
+	}{
+		{
+			name: "declaration path",
+			assertion: store.Assertion{
+				Predicate: "DECLARES_OPERATION",
+				Subject:   "idl/orders.proto",
+			},
+			path: "idl/orders.proto",
+			want: true,
+		},
+		{
+			name: "caller exact path and atom span",
+			assertion: store.Assertion{
+				Predicate: "CALLS_OPERATION",
+				Subject:   "src/client.go:10-20",
+			},
+			path: "src/client.go",
+			want: true,
+		},
+		{
+			name: "unresolved caller exact path and atom span",
+			assertion: store.Assertion{
+				Predicate: "UNRESOLVED_CALLER",
+				Subject:   "src/client.go:10-20",
+			},
+			path: "src/client.go",
+			want: true,
+		},
+		{
+			name: "caller span mismatch",
+			assertion: store.Assertion{
+				Predicate: "CALLS_OPERATION",
+				Subject:   "src/client.go:10-21",
+			},
+			path: "src/client.go",
+		},
+		{
+			name: "non-caller cannot use span subject",
+			assertion: store.Assertion{
+				Predicate: "DECLARES_OPERATION",
+				Subject:   "idl/orders.proto:10-20",
+			},
+			path: "idl/orders.proto",
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := catalogSubjectMatchesEvidence(
+				test.assertion,
+				atom,
+				test.path,
+			); got != test.want {
+				t.Fatalf(
+					"catalogSubjectMatchesEvidence() = %t, want %t",
+					got,
+					test.want,
+				)
+			}
+		})
+	}
 }
 
 func (s *contractFixtureRepoStore) ListRepos(context.Context) ([]store.Repo, error) {
@@ -72,10 +141,33 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 		t.Fatalf("fixture operation: %v", err)
 	}
 	if detail.Request.State != "resolved" || detail.Response.State != "resolved" ||
+		detail.Protocol != "protobuf" ||
 		len(detail.Request.Fields) != 3 || len(detail.Response.Fields) != 3 ||
 		len(detail.Implementations) != 1 || len(detail.Callers) != 1 ||
 		len(detail.UnresolvedCandidates) != 1 {
 		t.Fatalf("fixture detail shape = %+v", detail)
+	}
+	exact, err := service.OperationForProtocol(
+		context.Background(), second.Items[0].Protocol,
+		second.Items[0].Repository, second.Items[0].Lineage,
+		second.Items[0].Operation,
+	)
+	if err != nil || exact.Protocol != second.Items[0].Protocol {
+		t.Fatalf("exact fixture operation = %+v, %v", exact, err)
+	}
+	if _, err := service.OperationForProtocol(
+		context.Background(), "thrift",
+		second.Items[0].Repository, second.Items[0].Lineage,
+		second.Items[0].Operation,
+	); err == nil {
+		t.Fatal("equal operation spelling crossed the fixture protocol")
+	}
+	publicJSON, err := json.Marshal(detail)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(publicJSON), `"protocol"`) {
+		t.Fatalf("legacy Atlas v2 detail schema changed: %s", publicJSON)
 	}
 	for _, claim := range []ContractCatalogClaim{
 		detail.Declaration,

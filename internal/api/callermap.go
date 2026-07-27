@@ -828,7 +828,10 @@ func stringIn(value string, options ...string) bool {
 }
 
 func registerCallerMapAPI(api huma.API, opts Options) {
-	service := NewCallerMapService(opts)
+	service := opts.CallerMap
+	if service == nil {
+		service = NewCallerMapService(opts)
+	}
 	if service == nil {
 		return
 	}

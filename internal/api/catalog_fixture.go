@@ -300,6 +300,7 @@ func (f *ContractCatalogFixture) operation(
 	}
 	return &ContractCatalogOperation{
 		SchemaVersion: contractCatalogSchemaVersion,
+		Protocol:      f.Protocol,
 		Repository:    repo.Name, DeclarationLineage: f.Lineage,
 		ServiceFQN: f.ServiceFQN, Method: method, Operation: operationName,
 		Declaration: declaration, FactDetail: fact,

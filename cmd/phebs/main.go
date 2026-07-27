@@ -512,6 +512,8 @@ func serve(args []string) error {
 		apiOpts.ContractCatalogFixture = fixture
 		log.Printf("WARNING: synthetic Contract Atlas fixture enabled from %s; not production evidence", fixturePath)
 	}
+	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
+	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
@@ -524,7 +526,9 @@ func serve(args []string) error {
 	// T8.2/T9.1: MCP accepts the same DB-backed API keys as the HTTP API.
 	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
-		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs, Compatibility: mcpCompatibility,
+		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs,
+		Compatibility:   mcpCompatibility,
+		ContractCatalog: apiOpts.ContractCatalog, CallerMap: apiOpts.CallerMap,
 	})
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their
