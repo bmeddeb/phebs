@@ -2785,7 +2785,9 @@ user anchors may add exact repository/commit/path/position pins. Every selected
 source is re-read through the bounded Git object layer and carries a content
 digest; no omitted ref can fall through to mirror `HEAD`.
 
-Bounded operation identifiers scope indexed search to cited repositories.
+Bounded operation identifiers scope indexed search to cited repositories. Each
+query overreads one 51st file so the retained 50-file ceiling emits an explicit
+truncation gap instead of making an omitted tail look complete.
 Search matches, SCIP definitions/references, and the two most recent
 path-history commits plus one exact selected diff are typed
 `review_candidate`, never recommended edits. Declaration, implementation, and
@@ -2796,8 +2798,10 @@ vendor boundaries remain explicit. Missing or failed search, SCIP, source
 position, or history capabilities produce sorted gaps instead of inferred
 paths.
 
-The service caps anchors, source seeds and aggregate source bytes, search
-queries/candidates, SCIP anchors/references, history files/commits, diff
+Explicit anchor line and UTF-8/16/32 character boundaries are validated against
+the immutable source bytes before the pin becomes selected. The service caps
+anchors, source seeds and aggregate source bytes, search queries/candidates,
+SCIP anchors/references, history files/commits, diff
 excerpts/files, total rows, pages, and cursor bytes. Canonical rows and gaps
 feed an opaque cursor bound to principal, Revision/brief, normalized anchors,
 visible repository commits, relevant Atlas bytes, and the complete composed

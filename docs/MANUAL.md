@@ -739,7 +739,9 @@ from the shared Atlas, Caller Map/comparison, and field services.
 The internal T21.8 How reader remains production-unregistered with the rest of
 the Workbench. It starts from the current authorized Revision's exact selected
 contracts plus up to 32 explicit user pins. A pin is an exact visible
-repository, immutable indexed commit, safe path, and source position. Selected
+repository, immutable indexed commit, safe path, and source position; its line
+and UTF-8/16/32 character boundary are checked against the immutable bytes
+before it becomes selected. Selected
 Atlas declaration and implementation files are accepted only at that same
 authorized indexed commit and are re-read through the bounded Git object layer
 to attach a content digest. There is no implicit ref and no mirror-`HEAD`
@@ -757,9 +759,11 @@ of being hidden as implementation detail.
 If indexed search, SCIP, a usable source position, or Git history is
 unavailable or fails, the response records a typed gap and does not guess a
 path. The composition is capped at 32 pins, 64 selected sources, 32 MiB of
-source reads, 32 indexed searches and 500 search candidates, 32 SCIP anchors,
-16 history files with two commits each, 2,000 total rows, and 100 rows per
-page. Diff text is excerpted to 16 KiB. Its opaque cursor binds the principal,
+source reads, 32 indexed searches, 50 candidates per search, and 500 search
+candidates in aggregate. Each search overreads one sentinel so a truncated
+candidate tail is recorded as a gap. It also caps 32 SCIP anchors, 16 history
+files with two commits each, 2,000 total rows, and 100 rows per page. Diff text
+is excerpted to 16 KiB. Its opaque cursor binds the principal,
 current Revision and brief, normalized pins, visible indexed commits, relevant
 Atlas state, and the complete composed snapshot; authorization and indexed
 commits are rechecked after the read. This reader runs no repository code,

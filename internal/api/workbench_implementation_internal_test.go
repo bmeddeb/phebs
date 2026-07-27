@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -118,14 +119,16 @@ type implementationSearchFake struct {
 	files []search.FileResult
 	flip  bool
 	calls []string
+	opts  []search.Options
 }
 
 func (fake *implementationSearchFake) Search(
 	_ context.Context,
 	raw string,
-	_ search.Options,
+	opts search.Options,
 ) (*search.Result, error) {
 	fake.calls = append(fake.calls, raw)
+	fake.opts = append(fake.opts, opts)
 	files := slices.Clone(fake.files)
 	if fake.flip {
 		slices.Reverse(files)
@@ -609,6 +612,135 @@ func TestWorkbenchImplementationServiceExplicitAnchorIsSelectedAndCited(
 		}
 	}
 	t.Fatal("explicit anchor row missing")
+}
+
+func TestWorkbenchImplementationServiceSearchLimitIsVisible(
+	t *testing.T,
+) {
+	service, _, searcher, _, _ := implementationService(t)
+	searcher.files = make([]search.FileResult, 0, workbenchImplementationSearchLimit+1)
+	for index := range workbenchImplementationSearchLimit + 1 {
+		searcher.files = append(searcher.files, search.FileResult{
+			Repo: implementationRepository,
+			Ref:  implementationCommit,
+			Path: fmt.Sprintf("internal/cart/candidate_%03d.go", index),
+		})
+	}
+	page, err := service.Read(
+		context.Background(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			PageSize:        workbenchImplementationMaxPage,
+		},
+	)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	for _, opts := range searcher.opts {
+		if opts.MaxMatches != workbenchImplementationSearchLimit+1 {
+			t.Fatalf("search MaxMatches = %d, want sentinel limit %d",
+				opts.MaxMatches, workbenchImplementationSearchLimit+1)
+		}
+	}
+	truncated := false
+	for _, gap := range page.Gaps {
+		if gap.Capability == "source_search" &&
+			gap.State == "truncated" &&
+			gap.Code == "candidate_limit" {
+			truncated = true
+			break
+		}
+	}
+	if !truncated {
+		t.Fatalf("per-query search limit was silent: %+v", page.Gaps)
+	}
+	exactService, _, exactSearcher, _, _ := implementationService(t)
+	exactSearcher.files = slices.Clone(
+		searcher.files[:workbenchImplementationSearchLimit],
+	)
+	exactPage, err := exactService.Read(
+		context.Background(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			PageSize:        workbenchImplementationMaxPage,
+		},
+	)
+	if err != nil {
+		t.Fatalf("exact-limit Read: %v", err)
+	}
+	for _, gap := range exactPage.Gaps {
+		if gap.Capability == "source_search" &&
+			gap.State == "truncated" &&
+			gap.Code == "candidate_limit" {
+			t.Fatalf("exactly %d candidates were falsely truncated: %+v",
+				workbenchImplementationSearchLimit, exactPage.Gaps)
+		}
+	}
+}
+
+func TestWorkbenchImplementationExplicitPositionValidation(
+	t *testing.T,
+) {
+	tests := []struct {
+		name      string
+		content   string
+		line      int32
+		character int32
+		encoding  codenav.PositionEncoding
+		want      bool
+	}{
+		{name: "utf8 boundary", content: "éx\n", character: 2, encoding: codenav.EncodingUTF8, want: true},
+		{name: "utf8 split", content: "éx\n", character: 1, encoding: codenav.EncodingUTF8},
+		{name: "utf16 boundary", content: "💡x\n", character: 2, encoding: codenav.EncodingUTF16, want: true},
+		{name: "utf16 surrogate split", content: "💡x\n", character: 1, encoding: codenav.EncodingUTF16},
+		{name: "utf32 boundary", content: "💡x\n", character: 1, encoding: codenav.EncodingUTF32, want: true},
+		{name: "character beyond line", content: "abc\n", character: 4, encoding: codenav.EncodingUTF8},
+		{name: "line beyond file", content: "abc\n", line: 2, encoding: codenav.EncodingUTF8},
+		{name: "trailing empty line", content: "abc\n", line: 1, encoding: codenav.EncodingUTF8, want: true},
+		{name: "invalid utf8", content: string([]byte{0xff}), encoding: codenav.EncodingUTF8},
+		{name: "invalid encoding", content: "abc", encoding: codenav.PositionEncoding("bytes")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := validWorkbenchImplementationPosition(
+				[]byte(test.content),
+				test.line,
+				test.character,
+				test.encoding,
+			); got != test.want {
+				t.Fatalf("valid position = %t, want %t", got, test.want)
+			}
+		})
+	}
+}
+
+func TestWorkbenchImplementationRejectsInvalidAnchorWithoutSCIP(
+	t *testing.T,
+) {
+	service, _, _, _, _ := implementationService(t)
+	service.codeNav = nil
+	_, err := service.Read(
+		context.Background(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			Anchors: []WorkbenchImplementationAnchor{{
+				Repository: implementationRepository,
+				Commit:     implementationCommit,
+				Path:       "docs/cart.md",
+				Line:       2,
+				Character:  99,
+				Encoding:   codenav.EncodingUTF8,
+			}},
+			PageSize: workbenchImplementationMaxPage,
+		},
+	)
+	assertWorkbenchImplementationStatus(t, err, http.StatusBadRequest)
 }
 
 func implementationService(

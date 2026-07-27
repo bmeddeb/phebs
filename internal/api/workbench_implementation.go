@@ -762,18 +762,22 @@ func (build *workbenchImplementationBuild) addSeed(
 	}
 	seed.source.ContentDigest = workbenchImplementationBytesDigest(content)
 	seed.source.SizeBytes = len(content)
-	if seed.query.Repo != "" {
-		// Caller-supplied anchor positions are validated against the bytes
-		// actually read: a "selected" row must not cite a line the cited
-		// file does not contain. Character offsets stay SCIP-validated —
-		// an off-line anchor is caller error, an off-column one is a gap.
-		lineCount := int32(strings.Count(string(content), "\n")) + 1
-		if seed.query.Line >= lineCount {
-			return seed, huma.Error400BadRequest(fmt.Sprintf(
-				"anchor line %d is beyond the cited file's %d lines",
-				seed.query.Line, lineCount,
-			))
-		}
+	if seed.query.Repo != "" &&
+		!validWorkbenchImplementationPosition(
+			content,
+			seed.query.Line,
+			seed.query.Character,
+			seed.query.Encoding,
+		) {
+		// Explicit pins are caller authority, so invalid positions are
+		// rejected before the row can become selected. SCIP may be disabled
+		// and cannot be the validator of an input it never receives.
+		return seed, huma.Error400BadRequest(fmt.Sprintf(
+			"anchor position %d:%d is outside the cited file or splits a %s code point",
+			seed.query.Line,
+			seed.query.Character,
+			seed.query.Encoding,
+		))
 	}
 	if seed.query.Repo == "" {
 		line, character, ok := workbenchImplementationPosition(
@@ -892,7 +896,9 @@ func (build *workbenchImplementationBuild) searchRelated(
 				build.ctx,
 				raw,
 				search.Options{
-					MaxMatches:   workbenchImplementationSearchLimit,
+					// One sentinel distinguishes an exact 50-file result
+					// from a bounded result with an omitted tail.
+					MaxMatches:   workbenchImplementationSearchLimit + 1,
 					ContextLines: 0,
 				},
 			)
@@ -928,6 +934,7 @@ func (build *workbenchImplementationBuild) searchRelated(
 				return workbenchImplementationSearchFileKey(files[i]) <
 					workbenchImplementationSearchFileKey(files[j])
 			})
+			queryFiles := make([]search.FileResult, 0, len(files))
 			for _, file := range files {
 				repository, visible := build.visible[file.Repo]
 				if !visible {
@@ -948,6 +955,13 @@ func (build *workbenchImplementationBuild) searchRelated(
 					!validWorkbenchImplementationPath(file.Path) {
 					continue
 				}
+				queryFiles = append(queryFiles, file)
+			}
+			queryTruncated := len(queryFiles) > workbenchImplementationSearchLimit
+			if queryTruncated {
+				queryFiles = queryFiles[:workbenchImplementationSearchLimit]
+			}
+			for _, file := range queryFiles {
 				source := WorkbenchImplementationSourceCitation{
 					Repository: file.Repo,
 					Commit:     file.Ref,
@@ -979,6 +993,14 @@ func (build *workbenchImplementationBuild) searchRelated(
 					)
 					return nil
 				}
+			}
+			if queryTruncated {
+				build.addGap(
+					"source_search",
+					repositoryName+"|"+term,
+					"truncated",
+					"candidate_limit",
+				)
 			}
 		}
 	}
@@ -1538,6 +1560,83 @@ func workbenchImplementationPosition(
 		}
 	}
 	return line, character, true
+}
+
+func validWorkbenchImplementationPosition(
+	content []byte,
+	line, character int32,
+	encoding codenav.PositionEncoding,
+) bool {
+	if line < 0 || character < 0 {
+		return false
+	}
+	var currentLine int32
+	lineStart := 0
+	for index, value := range content {
+		if value != '\n' {
+			continue
+		}
+		if currentLine == line {
+			return validWorkbenchImplementationCharacter(
+				content[lineStart:index],
+				character,
+				encoding,
+			)
+		}
+		currentLine++
+		lineStart = index + 1
+	}
+	if currentLine != line {
+		return false
+	}
+	return validWorkbenchImplementationCharacter(
+		content[lineStart:],
+		character,
+		encoding,
+	)
+}
+
+func validWorkbenchImplementationCharacter(
+	line []byte,
+	character int32,
+	encoding codenav.PositionEncoding,
+) bool {
+	if character < 0 || !utf8.Valid(line) {
+		return false
+	}
+	switch encoding {
+	case codenav.EncodingUTF8, codenav.EncodingUTF16, codenav.EncodingUTF32:
+	default:
+		return false
+	}
+	var units int32
+	if character == 0 {
+		return true
+	}
+	for len(line) > 0 {
+		r, size := utf8.DecodeRune(line)
+		switch encoding {
+		case codenav.EncodingUTF8:
+			units += int32(size)
+		case codenav.EncodingUTF16:
+			units++
+			if r > 0xffff {
+				units++
+			}
+		case codenav.EncodingUTF32:
+			units++
+		default:
+			return false
+		}
+		if units == character {
+			return true
+		}
+		if units > character {
+			return false
+		}
+		line = line[size:]
+	}
+	return units == character
 }
 
 func workbenchImplementationCommit(
