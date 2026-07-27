@@ -3090,7 +3090,7 @@ domain (parity with scip-proto-field's deliberate exclusion); Thrift
 wire-compatibility checking; runtime or absence claims; schema-registry or
 deployment identity.
 
-**T22.1 · Validation spike** — `spike/t221` pins uber/cadence (thriftrw
+**T22.1 ✅ · Validation spike** *(2026-07-26)* — `spike/t221` pins uber/cadence (thriftrw
 `.gen/go` + in-repo call sites; the `idls` gitlink recorded), cadence-idl at
 exactly the commit cadence's gitlink names (digest joins become
 exact-by-construction), and the t191 jaeger pins for the Apache family.
