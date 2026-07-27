@@ -333,11 +333,17 @@ const detail: ContractCatalogOperation = {
 
 const engine = new Client()
 
-function page(params = new URLSearchParams()) {
+function page(
+  params = new URLSearchParams(),
+  callerMapAvailable = false,
+) {
   return render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
-        <ContractAtlasPage params={params} />
+        <ContractAtlasPage
+          params={params}
+          callerMapAvailable={callerMapAvailable}
+        />
       </BaseProvider>
     </StyletronProvider>,
   )
@@ -385,7 +391,7 @@ test('browses duplicate declarations through stable bounded pages', async () => 
 })
 
 test('renders bounded shapes, qualified relationships, and pinned source links', async () => {
-  page()
+  page(new URLSearchParams(), true)
   await screen.findByText('3 rows')
   fireEvent.click(screen.getByRole('listitem', { name: /Get/ }))
   await screen.findByTestId('contract-operation-detail')
@@ -424,6 +430,10 @@ test('renders bounded shapes, qualified relationships, and pinned source links',
   )
   expect(screen.getByRole('link', { name: 'Analyze impact' }).getAttribute('href'))
     .toBe('#/impact?operation=%2Fdemo.Catalog%2FGet')
+  expect(screen.getByRole('link', { name: 'View callers' }).getAttribute('href'))
+    .toBe(
+      '#/callers?protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage-a&operation=%2Fdemo.Catalog%2FGet',
+    )
 })
 
 test('applies exact server filters and renders an honest bounded empty state', async () => {

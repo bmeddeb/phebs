@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createAPIKey,
+  fetchContractCallers,
   fetchContractCatalog,
   fetchContractOperation,
   fetchDefinition,
@@ -199,6 +200,17 @@ describe('request helpers', () => {
       '/demo.v1.Catalog/Get',
       signal,
     )
+    await fetchContractCallers({
+      protocol: 'protobuf',
+      repository: 'github.com/acme/contracts',
+      declaration_lineage: 'lineage one',
+      operation: '/demo.v1.Catalog/Get',
+    }, {
+      owner: 'team one',
+      freshness: 'fresh',
+      resolution: 'scip',
+      ordering: 'unit',
+    }, 100, 'caller+/cursor', signal)
     expect(fetchMock.mock.calls).toEqual([
       [
         '/api/contract_atlas?repository=github.com%2Facme%2Fcontracts&package=demo.v1&protocol=protobuf&lineage=lineage+one&page_size=25&cursor=opaque%2B%2Fcursor',
@@ -206,6 +218,10 @@ describe('request helpers', () => {
       ],
       [
         '/api/contract_atlas/operation?repository=github.com%2Facme%2Fcontracts&lineage=lineage+one&operation=%2Fdemo.v1.Catalog%2FGet',
+        { credentials: 'same-origin', signal },
+      ],
+      [
+        '/api/contract_callers?protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage+one&operation=%2Fdemo.v1.Catalog%2FGet&owner=team+one&freshness=fresh&resolution=scip&ordering=unit&page_size=100&cursor=caller%2B%2Fcursor',
         { credentials: 'same-origin', signal },
       ],
     ])

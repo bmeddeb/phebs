@@ -7,16 +7,21 @@ import { Header } from './App'
 
 const engine = new Client()
 
-function header(contractsAvailable: boolean, topicsAvailable = false) {
+function header(
+  contractsAvailable: boolean,
+  topicsAvailable = false,
+  path = '/',
+  impactAvailable = false,
+) {
   return render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
         <Header
-          path="/"
+          path={path}
           email="user@example.com"
           isAdmin={false}
           contractsAvailable={contractsAvailable}
-          impactAvailable={false}
+          impactAvailable={impactAvailable}
           topicsAvailable={topicsAvailable}
           investigationsAvailable={false}
           onLogout={() => {}}
@@ -46,4 +51,13 @@ test('Topics navigation is present only with the kafka-topic-usage capability', 
   header(false, true)
   expect(screen.getByRole('link', { name: 'Topics' }).getAttribute('href'))
     .toBe('#/topics')
+})
+
+test('Caller Map remains an Impact sub-route without a second nav item', () => {
+  header(true, false, '/callers', true)
+  expect(screen.getByRole('link', { name: 'Impact' }).getAttribute('aria-current'))
+    .toBe('page')
+  expect(screen.getByRole('link', { name: 'Contracts' }).getAttribute('aria-current'))
+    .toBeNull()
+  expect(screen.queryByRole('link', { name: 'Callers' })).toBeNull()
 })

@@ -54,7 +54,13 @@ const emptyFilters: CatalogFilters = {
 
 const pageQualification = 'Browse provisional source declarations, bounded message shape, and separately classified implementation and caller evidence.'
 
-export default function ContractAtlasPage({ params }: { params: URLSearchParams }) {
+export default function ContractAtlasPage({
+  params,
+  callerMapAvailable = false,
+}: {
+  params: URLSearchParams
+  callerMapAvailable?: boolean
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const initialFilters = routeFilters(params)
@@ -62,6 +68,7 @@ export default function ContractAtlasPage({ params }: { params: URLSearchParams 
   const [appliedFilters, setAppliedFilters] = useState<CatalogFilters>(initialFilters)
   const [catalog, setCatalog] = useState<ContractCatalogList | null>(null)
   const [selectedID, setSelectedID] = useState('')
+  const [selectedItem, setSelectedItem] = useState<ContractCatalogItem | null>(null)
   const [operation, setOperation] = useState<ContractCatalogOperation | null>(null)
   const [listLoading, setListLoading] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -120,6 +127,7 @@ export default function ContractAtlasPage({ params }: { params: URLSearchParams 
     const generation = ++detailGeneration.current
     detailRequest.current = controller
     setSelectedID(catalogItemID(item))
+    setSelectedItem(item)
     setOperation(null)
     setDetailLoading(true)
     setDetailError('')
@@ -179,6 +187,7 @@ export default function ContractAtlasPage({ params }: { params: URLSearchParams 
     setAppliedFilters(next)
     setCatalog(null)
     setSelectedID('')
+    setSelectedItem(null)
     setOperation(null)
     setDetailError('')
     loadCatalog(next)
@@ -189,6 +198,7 @@ export default function ContractAtlasPage({ params }: { params: URLSearchParams 
     setAppliedFilters(emptyFilters)
     setCatalog(null)
     setSelectedID('')
+    setSelectedItem(null)
     setOperation(null)
     setDetailError('')
     loadCatalog(emptyFilters)
@@ -424,7 +434,13 @@ export default function ContractAtlasPage({ params }: { params: URLSearchParams 
               </p>
             </div>
           )}
-          {!detailLoading && operation && <OperationDetail operation={operation} />}
+          {!detailLoading && operation && selectedItem && (
+            <OperationDetail
+              operation={operation}
+              selected={selectedItem}
+              callerMapAvailable={callerMapAvailable}
+            />
+          )}
         </section>
       </div>
 
@@ -596,7 +612,15 @@ function ContractGroupRow({
   )
 }
 
-function OperationDetail({ operation }: { operation: ContractCatalogOperation }) {
+function OperationDetail({
+  operation,
+  selected,
+  callerMapAvailable,
+}: {
+  operation: ContractCatalogOperation
+  selected: ContractCatalogItem
+  callerMapAvailable: boolean
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const run = operation.coverage.repositories
@@ -644,28 +668,27 @@ function OperationDetail({ operation }: { operation: ContractCatalogOperation })
               {operation.repository} · lineage {shortLineage(operation.declaration_lineage)}
             </div>
           </div>
-          <a
-            href={href('/impact', { operation: operation.operation })}
-            className={css({
-              minHeight: '36px',
-              boxSizing: 'border-box',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 13px',
-              border: `1px solid ${tok.accent}`,
-              color: tok.accent,
-              backgroundColor: tok.pageBg,
-              fontSize: '12px',
-              fontWeight: 600,
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              ':hover': { backgroundColor: tok.selectedLineBg },
-              ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' },
-            })}
-          >
-            Analyze impact
-          </a>
+          <div className={css({ display: 'flex', gap: '8px', flexWrap: 'wrap' })}>
+            {callerMapAvailable && (
+              <a
+                href={href('/callers', {
+                  protocol: selected.protocol,
+                  repository: selected.repository,
+                  lineage: selected.declaration_lineage,
+                  operation: selected.operation ?? operation.operation,
+                })}
+                className={css(operationLinkStyle(tok))}
+              >
+                View callers
+              </a>
+            )}
+            <a
+              href={href('/impact', { operation: operation.operation })}
+              className={css(operationLinkStyle(tok))}
+            >
+              Analyze impact
+            </a>
+          </div>
         </div>
         <div className={css({
           display: 'flex',
@@ -1237,6 +1260,26 @@ function tierTone(tier: string): 'green' | 'amber' | 'red' | 'blue' | 'neutral' 
   if (tier === 'heuristic') return 'amber'
   if (tier === 'unresolved') return 'red'
   return 'neutral'
+}
+
+function operationLinkStyle(tok: ReturnType<typeof usePhebsTokens>) {
+  return {
+    minHeight: '36px',
+    boxSizing: 'border-box',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 13px',
+    border: `1px solid ${tok.accent}`,
+    color: tok.accent,
+    backgroundColor: tok.pageBg,
+    fontSize: '12px',
+    fontWeight: 600,
+    textDecoration: 'none',
+    whiteSpace: 'nowrap',
+    ':hover': { backgroundColor: tok.selectedLineBg },
+    ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' },
+  } as const
 }
 
 function tableStyle(minWidth: string) {

@@ -569,6 +569,90 @@ export interface ContractCatalogOperation {
   caveat: string
 }
 
+export interface CallerMapEndpoint {
+  protocol: string
+  repository: string
+  declaration_lineage: string
+  operation: string
+}
+
+export interface CallerMapQuery {
+  endpoint: CallerMapEndpoint
+  unit?: string
+  owner?: string
+  path_prefix?: string
+  code_role?: string
+  tier?: string
+  freshness: 'any' | 'fresh' | 'stale'
+  resolution: 'any' | 'scip' | 'syntax' | 'unresolved'
+  ordering: 'source' | 'unit'
+}
+
+export interface CallerMapUnitCandidate {
+  id: string
+  build_targets?: string[]
+  deployables?: string[]
+  logical_services?: string[]
+  owners?: string[]
+}
+
+export interface CallerMapUnitAttribution {
+  state: string
+  reason?: string
+  candidates?: CallerMapUnitCandidate[]
+}
+
+export interface CallerMapSource {
+  repository: string
+  commit: string
+  path: string
+  start_byte: number
+  end_byte: number
+  start_line: number
+  end_line: number
+  assertion_id: string
+  run_id: string
+  atom_id: string
+}
+
+export interface CallerMapRow {
+  classification: 'resolved_caller' | 'extractor_abstention'
+  resolution: string
+  protocol: string
+  operation: string
+  declaration_lineage?: string
+  tier: string
+  code_role?: string
+  fresh: boolean
+  unit_group: string
+  unit: CallerMapUnitAttribution
+  source: CallerMapSource
+  unresolved_reason?: string
+}
+
+export interface CallerMapGroup {
+  key: string
+  state: string
+  count: number
+}
+
+export interface CallerMapPage {
+  schema_version: string
+  query: CallerMapQuery
+  declaration: ContractCatalogClaim
+  rows: CallerMapRow[]
+  groups?: CallerMapGroup[]
+  total_matching_rows: number
+  pagination: {
+    complete: boolean
+    next_cursor?: string
+  }
+  coverage_digest: string
+  attribution_digest: string
+  coverage: CoverageCertificate
+  caveat: string
+}
+
 export interface ImpactEvidenceRow {
   kind: 'operation_call' | 'field_reference' | 'unresolved_candidate'
   domain: string
@@ -866,6 +950,34 @@ export const fetchContractOperation = (
   signal?: AbortSignal,
 ) => getJSON<ContractCatalogOperation>(
   `/api/contract_atlas/operation?${query({ repository, lineage, operation })}`,
+  signal,
+)
+
+export const fetchContractCallers = (
+  endpoint: CallerMapEndpoint,
+  filters: {
+    unit?: string
+    owner?: string
+    path_prefix?: string
+    code_role?: string
+    tier?: string
+    freshness?: 'any' | 'fresh' | 'stale'
+    resolution?: 'any' | 'scip' | 'syntax' | 'unresolved'
+    ordering?: 'source' | 'unit'
+  },
+  pageSize = 50,
+  cursor = '',
+  signal?: AbortSignal,
+) => getJSON<CallerMapPage>(
+  `/api/contract_callers?${query({
+    protocol: endpoint.protocol,
+    repository: endpoint.repository,
+    lineage: endpoint.declaration_lineage,
+    operation: endpoint.operation,
+    ...filters,
+    page_size: pageSize,
+    cursor,
+  })}`,
   signal,
 )
 

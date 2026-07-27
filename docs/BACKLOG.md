@@ -2024,8 +2024,8 @@ domains and both legacy consumer domains without merging their classifications.
 Existing MCP tool names remain unchanged; their
 descriptions, normalized questions, and decision vocabulary now call a bare
 operation result matching call evidence rather than a known-caller roster.
-Caller Map MCP registration lands separately in T20.11, and the dedicated UI
-remains T20.12. All surfaces stay experimental-dark and make no completeness,
+Caller Map MCP registration and the dedicated UI land separately in completed
+T20.11 and T20.12. All surfaces stay experimental-dark and make no completeness,
 runtime-use, decommissioning-safety, or accuracy claim.
 
 **T20.R · T20.8–T20.10 adversarial correction** ✅ *(2026-07-26; needs
@@ -2100,7 +2100,7 @@ Declarations retain strict path matching. The annex remains authenticated,
 experimental-dark, bounded, and makes no runtime-use, completeness, safety, or
 accuracy claim.
 
-**T20.12 · Caller Map UI with strict paged DOM** *(needs T20.10)* — route a
+**T20.12 · Caller Map UI with strict paged DOM** ✅ *(2026-07-26; needs T20.10)* — route a
 Contract Atlas operation selection directly to a dedicated Caller Map page.
 Implement the endpoint header, grouped/ungrouped table, nested source
 citations, filters, unresolved queue, progressive exact/lower-bound counts,
@@ -2117,6 +2117,34 @@ same occurrence identities; ambiguity, no-attribution, failed/stale/
 unsupported coverage, cursor invalidation, loading/error/retry, keyboard
 navigation, and mobile layouts are tested. Rendering makes no extra evidence
 or diagram request.
+
+Implementation/result: Contract Atlas operation detail now offers `View
+callers` only when the authenticated `contract-caller-map` capability is
+present. The link carries the selected protocol, declaration repository,
+lineage, and canonical operation into the dedicated `#/callers` route; the
+route reuses the existing Impact navigation state and adds no Callers item.
+Missing identity fails locally before any request.
+
+The page calls only the shared `GET /api/contract_callers` read. It exposes
+unit, owner, path-prefix, code-role, tier, freshness, resolution, and server
+ordering controls; exact declaration/source links; attribution candidates and
+ambiguity/unavailability; an unresolved review shortcut; exact or lower-bound
+progress; full coverage rows including stale and failed replacements; and
+typed retry/restart behavior for invalid snapshot cursors. Source and unit
+presentation are local views of the same current-page occurrence IDs and make
+no additional request.
+
+Pages are fixed at the server maximum of 100 rows and previous navigation
+retains only bounded cursor strings. Prior pages are never mounted. Resolved
+singleton attribution is inline and only one ambiguous candidate list can be
+mounted at once, keeping rows plus bounded expansion below the frozen 500-node
+inventory bound without a windowing dependency. The UI gate exhausts all 100
+pages of a 10,000-occurrence/10,000-unit fixture while asserting no more than
+100 occurrence rows in the DOM, and separately pins the one-list/64-candidate
+expansion bound. Loading, empty, generic error/retry, stale-cursor restart,
+keyboard focus, responsive layout, every filter, exact citations, coverage
+states, and capability routing pass. Rendering issues no evidence or diagram
+request and creates no proof bundle or Investigation.
 
 **T20.13 · Old-to-replacement endpoint comparison** *(needs T20.10–T20.12)* —
 select two full endpoint identities and classify the union of their static
@@ -2198,7 +2226,7 @@ flowchart LR
 |---|---|---|
 | Why | Investigation identity, immutable revisions, normalized question, decision sought, decisions, dispositions, watches, audit, retention, and dossier export | the production workflow has no structured success-criteria brief or complete creation/editing UI; the current rich Investigation view is a development fixture adapter |
 | What | Contract Atlas discovery/detail for protobuf and Thrift; exact declaration citations and request/response shapes; pinned Buf WIRE comparison for bounded protobuf before/after source sets | the current Impact form accepts raw identifiers/JSON; compatibility is protobuf wire-only and does not establish application compatibility |
-| Where | proof bundles, operation/field evidence, exact source citations, coverage certificates, extractor abstentions, and Epic 20's declaration-proven paged Caller Map service/API and MCP workflow with unit attribution | the Caller Map UI remains T20.12; bare-operation `matching_call_evidence` is not a proven service roster; Kafka, Redis, document-store, and SQL evidence packs do not exist |
+| Where | proof bundles, operation/field evidence, exact source citations, coverage certificates, extractor abstentions, and Epic 20's declaration-proven paged Caller Map service/API, UI, and MCP workflow with unit attribution | old-to-replacement comparison remains T20.13; bare-operation `matching_call_evidence` is not a proven service roster; Kafka, Redis, document-store, and SQL evidence packs do not exist |
 | How | repository explorer, code search, file reads, SCIP definition/reference/hover, blame, commits, and diffs | these are separate tools today; phebs does not yet assemble related implementation evidence or a human-owned checklist |
 
 ### Governance and sequencing

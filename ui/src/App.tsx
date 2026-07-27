@@ -23,6 +23,7 @@ const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
 const ImpactPage = lazy(() => import('./pages/ImpactPage'))
 const InvestigationPage = lazy(() => import('./pages/InvestigationPage'))
 const ContractAtlasPage = lazy(() => import('./pages/ContractAtlasPage'))
+const CallerMapPage = lazy(() => import('./pages/CallerMapPage'))
 const KafkaTopicsPage = lazy(() => import('./pages/KafkaTopicsPage'))
 
 export default function App() {
@@ -75,6 +76,7 @@ export default function App() {
 
   const impactAvailable = capabilities.includes('contract-impact-report')
   const contractsAvailable = capabilities.includes('contract-atlas')
+  const callerMapAvailable = capabilities.includes('contract-caller-map')
   const compatibilityAvailable = capabilities.includes('contract-compatibility')
   const investigationsAvailable = capabilities.includes('investigation-core-views')
   const topicsAvailable = capabilities.includes('kafka-topic-usage')
@@ -87,7 +89,9 @@ export default function App() {
   else if (path.startsWith('/audit')) page = <AuditPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/analytics')) page = <AnalyticsPage isAdmin={status.user?.is_admin === true} />
   else if (path.startsWith('/contracts') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/contracts') && contractsAvailable) page = <ContractAtlasPage params={params} />
+  else if (path.startsWith('/contracts') && contractsAvailable) page = <ContractAtlasPage params={params} callerMapAvailable={callerMapAvailable} />
+  else if (path.startsWith('/callers') && !capabilitiesLoaded) page = <Spinner $size="small" />
+  else if (path.startsWith('/callers') && callerMapAvailable) page = <CallerMapPage params={params} />
   else if (path.startsWith('/impact') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/impact') && impactAvailable) page = <ImpactPage params={params} compatibilityAvailable={compatibilityAvailable} />
   else if (path.startsWith('/topics') && !capabilitiesLoaded) page = <Spinner $size="small" />
@@ -140,7 +144,7 @@ export function Header({ path, email, isAdmin, contractsAvailable, impactAvailab
   const isRepos = path.startsWith('/repos')
   const isAudit = path.startsWith('/audit')
   const isAnalytics = path.startsWith('/analytics')
-  const isImpact = path.startsWith('/impact')
+  const isImpact = path.startsWith('/impact') || path.startsWith('/callers')
   const isTopics = path.startsWith('/topics')
   const isContracts = path.startsWith('/contracts')
   const isInvestigations = path.startsWith('/investigations')
@@ -251,6 +255,7 @@ function NavLink({ href, label, active }: { href: string; label: string; active:
   return (
     <a
       href={href}
+      aria-current={active ? 'page' : undefined}
       className={css({
         height: '100%',
         display: 'flex',

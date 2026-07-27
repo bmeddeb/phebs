@@ -291,8 +291,33 @@ the principal or permission projection, visible repository set, extraction
 publication or coverage certificate, or immutable unit-attribution digest
 changes. Start a new read instead of editing or reusing such a cursor. The
 service scans a bounded candidate population and does not persist a proof
-bundle or Investigation. T20.11 exposes that same shared service through MCP;
-the dedicated UI remains T20.12.
+bundle or Investigation. T20.11 exposes that same shared service through MCP,
+and T20.12 exposes it as the dedicated Caller Map UI described below.
+
+Select an operation in Contract Atlas and choose **View callers** to open
+`#/callers` with its protocol, declaration repository, lineage, and canonical
+operation already fixed. The link and route exist only when the authenticated
+`contract-caller-map` capability is enabled. Caller Map is part of the
+Contract Impact workflow, so the existing **Impact** navigation item stays
+active and no separate Callers item is added.
+
+The page shows at most one 100-row server page. Filters cover unit, owner, path
+prefix, code role, tier, freshness, resolution, and source/unit server
+ordering. Source view places abstentions in **Needs review**; unit view groups
+the same current-page occurrence identities without another request. Each row
+retains its immutable source link and expandable assertion/run/atom byte
+identity. Resolved singleton attribution is inline; only one ambiguous
+candidate list is mounted at once. Previous pages retain only opaque cursors,
+not hidden rows, and a changed authorization, coverage, publication, or
+attribution snapshot requires **Restart from first page**.
+
+The progress line is exact only when the response says the snapshot is
+exhausted; otherwise it states the traversed lower bound. The coverage panel
+shows every requested repository/domain row, stale publications, failed
+replacement attempts, unsupported or unpublished domains, counts, and the
+certificate digest. Empty results mean no matching static evidence within
+that displayed scope—not absence, completeness, runtime behavior, or migration
+safety.
 
 The vocabulary is now explicit. `contract-atlas-v2` calls only a
 declaration-lineage-proven occurrence `resolved_caller`; a legacy name match
