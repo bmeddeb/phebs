@@ -2082,9 +2082,10 @@ structured content without adapter-side querying, grouping, filtering, or
 summarization. The existing four proof tools, optional compatibility tool, and
 their persistence behavior are untouched.
 
-Schema tests pin 10 dark, the isolated 13-tool annex gate, the 17-tool
-caller-pack posture without Buf, and 18 fully experimental tools plus every
-new input/output field. The acceptance harness uses the
+Schema tests pin 10 dark, the isolated 13-tool Caller Map annex, the
+T20.13-complete 14-tool comparison annex, the 18-tool caller-pack posture
+without Buf, and 19 fully experimental tools plus every new input/output
+field. The acceptance harness uses the
 official SDK's stateless Streamable HTTP transport, discovers two
 same-spelling operations, selects one complete returned identity, resolves its
 detail, and exhausts multiple caller pages against direct shared-service
@@ -2146,7 +2147,8 @@ keyboard focus, responsive layout, every filter, exact citations, coverage
 states, and capability routing pass. Rendering issues no evidence or diagram
 request and creates no proof bundle or Investigation.
 
-**T20.13 · Old-to-replacement endpoint comparison** *(needs T20.10–T20.12)* —
+**T20.13 · Old-to-replacement endpoint comparison** ✅
+*(2026-07-26; needs T20.10–T20.12)* —
 select two full endpoint identities and classify the union of their static
 caller evidence at occurrence and unit level. Render
 `old_only_evidence`/`both_evidence`/`new_only_evidence`/`unresolved` verbatim,
@@ -2165,6 +2167,40 @@ Epic 16's existing boundaries rather than a new persistence model. An
 official-SDK MCP acceptance test proves byte-equivalent classifications and
 citations from the shared service, dark-mode absence, bounded continuation,
 and hidden-repository non-interference.
+
+Implementation/result: authenticated `GET /api/compare_operation_callers`,
+the `compare_operation_callers` MCP tool, and `#/compare-callers` project one
+shared `CallerComparisonService`. Both complete endpoint identities are
+resolved under one authorization projection, one sorted union coverage
+certificate, and the two endpoint-specific attribution digests. The result is
+therefore one comparison snapshot rather than two independently timed Caller
+Map reads. Its opaque cursor binds the normalized query and page size,
+principal/provider/permission snapshot, visible repository set, union
+coverage digest, both attribution digests, and offset.
+
+Occurrence comparison keys are immutable `repo@commit:path:start-end`
+citations. Unit grouping is admitted only for a resolved call occurrence with
+exactly one consistent attribution candidate, and its identity is namespaced
+by repository; ambiguous, unavailable, and extractor-abstention rows retain
+unique unresolved occurrence keys instead of contaminating a unit. The four
+machine classes are rendered verbatim. Each side returns an exact occurrence
+count and at most four source citations with an explicit truncation flag. The
+combined scan stops at 50,000 rows, pages stop at 100, and only the current UI
+page is mounted.
+
+The UI begins from **Compare replacement** on an exact Caller Map header. Its
+replacement picker reuses bounded Contract Atlas discovery, then exposes the
+shared unit/owner/path/code-role/tier/freshness/resolution/ordering filters,
+occurrence or unit level, classification filter, both endpoint identities and
+digests, exact citations, shared coverage, stale-cursor restart, and the
+canonical caveat under the existing Impact navigation item. The official SDK
+MCP harness pins dark registration, schema count, bounded continuation, and
+byte-equivalent shared-service content; an in-memory twin covers restricted
+test environments. Direct service tests pin duplicate-name isolation, unit
+ambiguity, deterministic bytes and work, hidden-repository non-interference,
+coverage/attribution cursor invalidation, empty-scope language, and fail-closed
+validation. The optional Investigation handoff did not land; ordinary reads
+remain ephemeral.
 
 **T20.14 · Scale, failure, and end-to-end closure** *(needs T20.1–T20.13)* —
 exercise the generated large profile through sync → index → extract → Atlas →
@@ -2226,7 +2262,7 @@ flowchart LR
 |---|---|---|
 | Why | Investigation identity, immutable revisions, normalized question, decision sought, decisions, dispositions, watches, audit, retention, and dossier export | the production workflow has no structured success-criteria brief or complete creation/editing UI; the current rich Investigation view is a development fixture adapter |
 | What | Contract Atlas discovery/detail for protobuf and Thrift; exact declaration citations and request/response shapes; pinned Buf WIRE comparison for bounded protobuf before/after source sets | the current Impact form accepts raw identifiers/JSON; compatibility is protobuf wire-only and does not establish application compatibility |
-| Where | proof bundles, operation/field evidence, exact source citations, coverage certificates, extractor abstentions, and Epic 20's declaration-proven paged Caller Map service/API, UI, and MCP workflow with unit attribution | old-to-replacement comparison remains T20.13; bare-operation `matching_call_evidence` is not a proven service roster; Kafka, Redis, document-store, and SQL evidence packs do not exist |
+| Where | proof bundles, operation/field evidence, exact source citations, coverage certificates, extractor abstentions, and Epic 20's declaration-proven paged Caller Map plus old-to-replacement comparison across shared service/API, UI, and MCP workflows with unit attribution | bare-operation `matching_call_evidence` is not a proven service roster; Kafka exists as a separate topic-evidence plane, while Redis, document-store, and SQL evidence packs do not exist |
 | How | repository explorer, code search, file reads, SCIP definition/reference/hover, blame, commits, and diffs | these are separate tools today; phebs does not yet assemble related implementation evidence or a human-owned checklist |
 
 ### Governance and sequencing
@@ -2248,9 +2284,9 @@ T21.1–T21.5 do not depend on Epic 20. They freeze the inventory/glossary,
 reuse existing Investigation machinery behind its dark boundary, and improve
 the already-experimental Impact explanation surface. T21.6 begins after
 T20.10 supplies shared exact-identity reads. T21.7 deliberately depends on
-T20.13, not T20.14: the Workbench can integrate the completed dark
-Caller Map/comparison service before Epic 20's scale-closure ticket, but its
-own T21.14 closure and any enablement still require T20.14.
+T20.13, not T20.14: the completed dark Caller Map/comparison service now
+unblocks T21.7 integration before Epic 20's scale-closure ticket, but the
+Workbench's own T21.14 closure and any enablement still require T20.14.
 
 T16.8 remains authoritative and is not superseded. ReviewItems are
 machine-derived, reproducible inbox projections with only

@@ -478,6 +478,19 @@ func putCallerMapAssertion(
 	start, end int,
 	predicate, lineage, tier, resolution, unitState, owner string,
 ) {
+	putCallerMapAssertionFor(
+		t, st, repo, id, path, start, end, predicate, callerMapOperation,
+		lineage, tier, resolution, unitState, "unit-"+id, owner,
+	)
+}
+
+func putCallerMapAssertionFor(
+	t *testing.T,
+	st *proofAPIStore,
+	repo, id, path string,
+	start, end int,
+	predicate, operation, lineage, tier, resolution, unitState, unitID, owner string,
+) {
 	t.Helper()
 	runID := st.runs[proofScope(repo, "grpc-caller")].ID
 	atomID := "ea_" + id
@@ -491,7 +504,7 @@ func putCallerMapAssertion(
 	}
 	if owner != "" {
 		detail["unit_candidates"] = []map[string]any{{
-			"id": "unit-" + id, "logical_services": []string{"orders"},
+			"id": unitID, "logical_services": []string{"orders"},
 			"owners": []string{owner},
 		}}
 	}
@@ -502,7 +515,7 @@ func putCallerMapAssertion(
 	assertion := store.Assertion{
 		ID: id, Predicate: predicate,
 		Subject: path + ":" + strconv.Itoa(start) + "-" + strconv.Itoa(end),
-		Object:  callerMapOperation, Lineage: lineage, Tier: tier,
+		Object:  operation, Lineage: lineage, Tier: tier,
 		CodeRole: "production", Repo: repo, RunID: runID,
 		Supporting: []string{atomID}, Detail: string(encoded),
 	}

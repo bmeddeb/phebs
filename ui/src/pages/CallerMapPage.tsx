@@ -47,7 +47,13 @@ const emptyFilters: CallerFilters = {
   ordering: 'source',
 }
 
-export default function CallerMapPage({ params }: { params: URLSearchParams }) {
+export default function CallerMapPage({
+  params,
+  comparisonAvailable = false,
+}: {
+  params: URLSearchParams
+  comparisonAvailable?: boolean
+}) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const endpoint = endpointFromParams(params)
@@ -174,7 +180,11 @@ export default function CallerMapPage({ params }: { params: URLSearchParams }) {
       data-responsive-layout="desktop-table-mobile-cards"
       className={css({ maxWidth: '1320px', margin: '0 auto' })}
     >
-      <EndpointHeader endpoint={endpoint} page={page} />
+      <EndpointHeader
+        endpoint={endpoint}
+        page={page}
+        comparisonAvailable={comparisonAvailable}
+      />
 
       <CallerFilterPanel
         draft={draftFilters}
@@ -281,9 +291,11 @@ function endpointFromParams(params: URLSearchParams): CallerMapEndpoint | null {
 function EndpointHeader({
   endpoint,
   page,
+  comparisonAvailable,
 }: {
   endpoint: CallerMapEndpoint
   page: CallerMapResponse | null
+  comparisonAvailable: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -336,6 +348,16 @@ function EndpointHeader({
         </div>
       </div>
       <div className={css({ display: 'flex', gap: '8px', flexWrap: 'wrap' })}>
+        {comparisonAvailable && (
+          <a className={css(linkButtonStyle(tok))} href={href('/compare-callers', {
+            old_protocol: endpoint.protocol,
+            old_repository: endpoint.repository,
+            old_lineage: endpoint.declaration_lineage,
+            old_operation: endpoint.operation,
+          })}>
+            Compare replacement
+          </a>
+        )}
         <a className={css(linkButtonStyle(tok))} href={href('/contracts', {
           repository: endpoint.repository,
           protocol: endpoint.protocol,

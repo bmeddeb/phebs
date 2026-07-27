@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createAPIKey,
+  fetchCallerComparison,
   fetchContractCallers,
   fetchContractCatalog,
   fetchContractOperation,
@@ -211,6 +212,28 @@ describe('request helpers', () => {
       resolution: 'scip',
       ordering: 'unit',
     }, 100, 'caller+/cursor', signal)
+    await fetchCallerComparison({
+      protocol: 'protobuf',
+      repository: 'github.com/acme/contracts',
+      declaration_lineage: 'lineage old',
+      operation: '/demo.v1.Catalog/Get',
+    }, {
+      protocol: 'thrift',
+      repository: 'github.com/acme/replacement',
+      declaration_lineage: 'lineage replacement',
+      operation: '/demo.v2.Catalog/get',
+    }, {
+      unit: '//src/catalog',
+      owner: 'team one',
+      path_prefix: 'src/catalog/',
+      code_role: 'production',
+      tier: 'exact',
+      freshness: 'stale',
+      resolution: 'syntax',
+      ordering: 'unit',
+      level: 'unit',
+      classification: 'old_only_evidence',
+    }, 100, 'compare+/cursor', signal)
     expect(fetchMock.mock.calls).toEqual([
       [
         '/api/contract_atlas?repository=github.com%2Facme%2Fcontracts&package=demo.v1&protocol=protobuf&lineage=lineage+one&page_size=25&cursor=opaque%2B%2Fcursor',
@@ -222,6 +245,10 @@ describe('request helpers', () => {
       ],
       [
         '/api/contract_callers?protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage+one&operation=%2Fdemo.v1.Catalog%2FGet&owner=team+one&freshness=fresh&resolution=scip&ordering=unit&page_size=100&cursor=caller%2B%2Fcursor',
+        { credentials: 'same-origin', signal },
+      ],
+      [
+        '/api/compare_operation_callers?old_protocol=protobuf&old_repository=github.com%2Facme%2Fcontracts&old_lineage=lineage+old&old_operation=%2Fdemo.v1.Catalog%2FGet&replacement_protocol=thrift&replacement_repository=github.com%2Facme%2Freplacement&replacement_lineage=lineage+replacement&replacement_operation=%2Fdemo.v2.Catalog%2Fget&unit=%2F%2Fsrc%2Fcatalog&owner=team+one&path_prefix=src%2Fcatalog%2F&code_role=production&tier=exact&freshness=stale&resolution=syntax&ordering=unit&level=unit&classification=old_only_evidence&page_size=100&cursor=compare%2B%2Fcursor',
         { credentials: 'same-origin', signal },
       ],
     ])

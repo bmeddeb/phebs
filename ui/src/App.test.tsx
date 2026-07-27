@@ -61,3 +61,12 @@ test('Caller Map remains an Impact sub-route without a second nav item', () => {
     .toBeNull()
   expect(screen.queryByRole('link', { name: 'Callers' })).toBeNull()
 })
+
+test('Caller comparison remains an Impact sub-route without a second nav item', () => {
+  header(true, false, '/compare-callers', true)
+  expect(screen.getByRole('link', { name: 'Impact' }).getAttribute('aria-current'))
+    .toBe('page')
+  expect(screen.getByRole('link', { name: 'Contracts' }).getAttribute('aria-current'))
+    .toBeNull()
+  expect(screen.queryByRole('link', { name: 'Compare callers' })).toBeNull()
+})

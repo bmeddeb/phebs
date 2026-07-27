@@ -253,11 +253,14 @@ function callerPage(
   }
 }
 
-function renderPage(params = route()) {
+function renderPage(params = route(), comparisonAvailable = false) {
   return render(
     <StyletronProvider value={engine}>
       <BaseProvider theme={LightTheme}>
-        <CallerMapPage params={params} />
+        <CallerMapPage
+          params={params}
+          comparisonAvailable={comparisonAvailable}
+        />
       </BaseProvider>
     </StyletronProvider>,
   )
@@ -295,7 +298,7 @@ test('announces loading and renders the scoped empty state honestly', async () =
 })
 
 test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile-safe controls', async () => {
-  renderPage()
+  renderPage(route(), true)
   await screen.findByText('Rows 1–3 of 3')
   expect(screen.getByTestId('caller-map-page').getAttribute('data-responsive-layout'))
     .toBe('desktop-table-mobile-cards')
@@ -309,6 +312,9 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   expect(screen.getByText('stale · failed replacement')).toBeTruthy()
   expect(screen.getAllByText('failed replacement').length).toBeGreaterThan(0)
   expect(screen.getAllByText('not published / unsupported').length).toBeGreaterThan(0)
+  expect(screen.getByRole('link', { name: 'Compare replacement' }).getAttribute('href')).toBe(
+    `#/compare-callers?old_protocol=protobuf&old_repository=${encodeURIComponent(contractRepo)}&old_lineage=${lineage}&old_operation=${encodeURIComponent(operation)}`,
+  )
 
   const declarationLink = screen.getByRole('link', { name: /Declaration/ })
   expect(declarationLink.getAttribute('href')).toBe(
@@ -340,6 +346,12 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   expect(api.fetchContractCallers.mock.calls[1][1]).toMatchObject({
     resolution: 'unresolved',
   })
+})
+
+test('keeps comparison undiscoverable without its authenticated capability', async () => {
+  renderPage()
+  await screen.findByText('Rows 1–3 of 3')
+  expect(screen.queryByRole('link', { name: 'Compare replacement' })).toBeNull()
 })
 
 test('mounts at most one bounded ambiguous-candidate expansion', async () => {

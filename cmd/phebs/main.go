@@ -514,6 +514,7 @@ func serve(args []string) error {
 	}
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
+	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
 	var mcpCompatibility phebsmcp.CompatibilityQueries
@@ -527,8 +528,10 @@ func serve(args []string) error {
 	mcpServer := phebsmcp.NewServer(phebsmcp.Options{
 		Version: version, Store: st, Search: searcher, DataDir: cfg.Server.DataDir,
 		CodeNav: codeNavigation, Visible: visibleFor, Proofs: mcpProofs,
-		Compatibility:   mcpCompatibility,
-		ContractCatalog: apiOpts.ContractCatalog, CallerMap: apiOpts.CallerMap,
+		Compatibility:    mcpCompatibility,
+		ContractCatalog:  apiOpts.ContractCatalog,
+		CallerMap:        apiOpts.CallerMap,
+		CallerComparison: apiOpts.CallerComparison,
 	})
 	// Stateless (T10.3): in stateful mode every tool call runs with the
 	// session INITIATOR's context, so one user's session smears their

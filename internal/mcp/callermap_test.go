@@ -53,16 +53,29 @@ func (schemaCallerMapQueries) List(
 	return nil, errors.New("not called")
 }
 
+type schemaCallerComparisonQueries struct{}
+
+func (schemaCallerComparisonQueries) Compare(
+	context.Context,
+	api.CallerComparisonQuery,
+	int,
+	string,
+) (*api.CallerComparisonPage, error) {
+	return nil, errors.New("not called")
+}
+
 func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 	schemaDigests := map[string]string{
 		"search_contract_operations": "sha256:e2b2b80c7ebb5eeece8c6179b0e21a1b5676dee1ec3a481487f1984c93fbefc2",
 		"get_contract_operation":     "sha256:3a8bfc0a42ac27ffbfbd3e546892924a6cd8ec4ef6ab1fe7bb44a95ae4881af9",
 		"list_operation_callers":     "sha256:ea91fc93492c15723db645b08c38d9e28f191ebc3e7669b481e04730c5963098",
+		"compare_operation_callers":  "sha256:6c63e9f1e84092df0cbc343f3449be3e4df3a848fc3cdf265e4d4e2d1a850678",
 	}
 	for _, test := range []struct {
 		name          string
 		catalog       ContractCatalogQueries
 		callerMap     CallerMapQueries
+		comparison    CallerComparisonQueries
 		proofs        ProofQueries
 		compatibility CompatibilityQueries
 		wantCount     int
@@ -81,22 +94,30 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 			callerMap: schemaCallerMapQueries{}, wantCount: 13,
 		},
 		{
+			name:       "comparison requires the complete annex",
+			catalog:    schemaContractCatalogQueries{},
+			callerMap:  schemaCallerMapQueries{},
+			comparison: schemaCallerComparisonQueries{}, wantCount: 14,
+		},
+		{
 			name:      "caller pack without compatibility",
 			catalog:   schemaContractCatalogQueries{},
 			callerMap: schemaCallerMapQueries{}, proofs: schemaProofQueries{},
-			wantCount: 17,
+			comparison: schemaCallerComparisonQueries{}, wantCount: 18,
 		},
 		{
 			name: "all experimental tools", catalog: schemaContractCatalogQueries{},
 			callerMap: schemaCallerMapQueries{}, proofs: schemaProofQueries{},
-			compatibility: schemaCompatibilityQueries{}, wantCount: 18,
+			comparison:    schemaCallerComparisonQueries{},
+			compatibility: schemaCompatibilityQueries{}, wantCount: 19,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			server := NewServer(Options{
 				Version: "test", ContractCatalog: test.catalog,
 				CallerMap: test.callerMap, Proofs: test.proofs,
-				Compatibility: test.compatibility,
+				CallerComparison: test.comparison,
+				Compatibility:    test.compatibility,
 			})
 			serverTransport, clientTransport := sdk.NewInMemoryTransports()
 			go func() {
@@ -132,10 +153,15 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 				"search_contract_operations",
 				"get_contract_operation",
 				"list_operation_callers",
+				"compare_operation_callers",
 			} {
 				tool, ok := found[name]
-				if ok != enabled {
-					t.Fatalf("%s discovery = %v, enabled=%v", name, ok, enabled)
+				wantEnabled := enabled
+				if name == "compare_operation_callers" {
+					wantEnabled = enabled && test.comparison != nil
+				}
+				if ok != wantEnabled {
+					t.Fatalf("%s discovery = %v, enabled=%v", name, ok, wantEnabled)
 				}
 				if !ok {
 					continue
@@ -188,6 +214,27 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 					for _, field := range []string{
 						`"rows"`, `"pagination"`, `"coverage_digest"`,
 						`"attribution_digest"`, `"caveat"`,
+					} {
+						if !strings.Contains(string(output), field) {
+							t.Fatalf("%s output omitted %s: %s", name, field, output)
+						}
+					}
+				case "compare_operation_callers":
+					for _, field := range []string{
+						`"old_protocol"`, `"old_repository"`,
+						`"old_declaration_lineage"`, `"old_operation"`,
+						`"replacement_protocol"`, `"replacement_repository"`,
+						`"replacement_declaration_lineage"`,
+						`"replacement_operation"`, `"classification"`,
+						`"level"`, `"page_size"`, `"cursor"`,
+					} {
+						if !strings.Contains(string(input), field) {
+							t.Fatalf("%s input omitted %s: %s", name, field, input)
+						}
+					}
+					for _, field := range []string{
+						`"old"`, `"replacement"`, `"rows"`, `"pagination"`,
+						`"coverage"`, `"caveat"`,
 					} {
 						if !strings.Contains(string(output), field) {
 							t.Fatalf("%s output omitted %s: %s", name, field, output)
@@ -478,7 +525,12 @@ func callerToolRun(
 
 func callerToolFixture(
 	t *testing.T,
-) (*api.ContractCatalogService, *api.CallerMapService, *callerToolStore) {
+) (
+	*api.ContractCatalogService,
+	*api.CallerMapService,
+	*api.CallerComparisonService,
+	*callerToolStore,
+) {
 	t.Helper()
 	st := &callerToolStore{
 		repos: []store.Repo{
@@ -570,6 +622,21 @@ func callerToolFixture(
 		"CALLS_OPERATION", callerToolLineageA, "scip", "resolved",
 		"team-secret",
 	)
+	callerToolPutCaller(
+		t, st, callerToolSource, "replacement-both", "src/caller_0.go", 100,
+		"CALLS_OPERATION", callerToolLineageB, "scip", "resolved",
+		"team-orders",
+	)
+	callerToolPutCaller(
+		t, st, callerToolSource, "replacement-new", "src/replacement.go", 400,
+		"CALLS_OPERATION", callerToolLineageB, "scip", "resolved",
+		"team-replacement",
+	)
+	sourceRunKey := callerToolScope(callerToolSource, "grpc-caller")
+	sourceRun := st.runs[sourceRunKey]
+	sourceRun.Coverage.AssertionCount = 6
+	sourceRun.Coverage.AtomCount = 6
+	st.runs[sourceRunKey] = sourceRun
 	opts := api.Options{
 		Store: st, Evidence: st, CallerMapEnabled: true,
 		Principal: func(context.Context) string { return "user:agent" },
@@ -582,10 +649,11 @@ func callerToolFixture(
 	}
 	catalog := api.NewContractCatalogService(opts)
 	callerMap := api.NewCallerMapService(opts)
-	if catalog == nil || callerMap == nil {
+	comparison := api.NewCallerComparisonService(opts)
+	if catalog == nil || callerMap == nil || comparison == nil {
 		t.Fatal("T20.11 services unavailable")
 	}
-	return catalog, callerMap, st
+	return catalog, callerMap, comparison, st
 }
 
 func callerToolPutCaller(
@@ -672,7 +740,7 @@ func callerToolPutAssertion(
 // detail, and exhausts a multi-page Caller Map with byte-equivalent shared
 // service responses. Hidden state cannot affect bytes or work shape.
 func TestCallerMapToolsProtocolSession(t *testing.T) {
-	catalog, callerMap, st := callerToolFixture(t)
+	catalog, callerMap, _, st := callerToolFixture(t)
 	server := NewServer(Options{
 		Version: "test", Store: st,
 		ContractCatalog: catalog, CallerMap: callerMap,
@@ -700,7 +768,7 @@ func TestCallerMapToolsProtocolSession(t *testing.T) {
 }
 
 func TestCallerMapToolsInMemoryParity(t *testing.T) {
-	catalog, callerMap, st := callerToolFixture(t)
+	catalog, callerMap, _, st := callerToolFixture(t)
 	server := NewServer(Options{
 		Version: "test", Store: st,
 		ContractCatalog: catalog, CallerMap: callerMap,
@@ -721,8 +789,60 @@ func TestCallerMapToolsInMemoryParity(t *testing.T) {
 	assertCallerMapToolsSession(t, session, catalog, callerMap, st)
 }
 
+func TestCallerComparisonToolProtocolSession(t *testing.T) {
+	catalog, callerMap, comparison, st := callerToolFixture(t)
+	server := NewServer(Options{
+		Version: "test", Store: st,
+		ContractCatalog: catalog, CallerMap: callerMap,
+		CallerComparison: comparison,
+	})
+	handler := sdk.NewStreamableHTTPHandler(
+		func(*http.Request) *sdk.Server { return server },
+		&sdk.StreamableHTTPOptions{Stateless: true},
+	)
+	httpServer := httptest.NewServer(handler)
+	t.Cleanup(httpServer.Close)
+	client := sdk.NewClient(
+		&sdk.Implementation{Name: "t20.13-agent", Version: "1"},
+		nil,
+	)
+	session, err := client.Connect(
+		t.Context(),
+		&sdk.StreamableClientTransport{Endpoint: httpServer.URL},
+		nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close() })
+	assertCallerComparisonToolSession(t, session, comparison, st)
+}
+
+func TestCallerComparisonToolInMemoryParity(t *testing.T) {
+	catalog, callerMap, comparison, st := callerToolFixture(t)
+	server := NewServer(Options{
+		Version: "test", Store: st,
+		ContractCatalog: catalog, CallerMap: callerMap,
+		CallerComparison: comparison,
+	})
+	serverTransport, clientTransport := sdk.NewInMemoryTransports()
+	go func() {
+		_, _ = server.Connect(t.Context(), serverTransport, nil)
+	}()
+	client := sdk.NewClient(
+		&sdk.Implementation{Name: "t20.13-in-memory", Version: "1"},
+		nil,
+	)
+	session, err := client.Connect(t.Context(), clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close() })
+	assertCallerComparisonToolSession(t, session, comparison, st)
+}
+
 func TestCallerMapToolsPreserveSharedRefusals(t *testing.T) {
-	catalog, callerMap, st := callerToolFixture(t)
+	catalog, callerMap, _, st := callerToolFixture(t)
 	server := NewServer(Options{
 		Version: "test", Store: st,
 		ContractCatalog: catalog, CallerMap: callerMap,
@@ -812,6 +932,92 @@ func TestCallerMapToolsPreserveSharedRefusals(t *testing.T) {
 	}
 	if st.writes != 0 {
 		t.Fatalf("refusal paths performed %d evidence writes", st.writes)
+	}
+}
+
+func assertCallerComparisonToolSession(
+	t *testing.T,
+	session *sdk.ClientSession,
+	comparison *api.CallerComparisonService,
+	st *callerToolStore,
+) {
+	t.Helper()
+	args := map[string]any{
+		"old_protocol": "protobuf", "old_repository": callerToolContractA,
+		"old_declaration_lineage":         callerToolLineageA,
+		"old_operation":                   callerToolOperation,
+		"replacement_protocol":            "protobuf",
+		"replacement_repository":          callerToolContractB,
+		"replacement_declaration_lineage": callerToolLineageB,
+		"replacement_operation":           callerToolOperation,
+		"level":                           "occurrence", "ordering": "source", "page_size": 1,
+	}
+	query := api.CallerComparisonQuery{
+		Old: api.CallerMapEndpoint{
+			Protocol: "protobuf", Repository: callerToolContractA,
+			Lineage: callerToolLineageA, Operation: callerToolOperation,
+		},
+		Replacement: api.CallerMapEndpoint{
+			Protocol: "protobuf", Repository: callerToolContractB,
+			Lineage: callerToolLineageB, Operation: callerToolOperation,
+		},
+		Freshness: "any", Resolution: "any", Ordering: "source",
+		Level: "occurrence",
+	}
+	cursor := ""
+	total := 0
+	classes := make(map[string]int)
+	for pageNumber := 0; ; pageNumber++ {
+		args["cursor"] = cursor
+		page, result := callToolSession[api.CallerComparisonPage](
+			t, session, "compare_operation_callers", args,
+		)
+		if result.IsError {
+			t.Fatalf(
+				"comparison page %d error: %s",
+				pageNumber,
+				textContent(t, result),
+			)
+		}
+		direct, err := comparison.Compare(t.Context(), query, 1, cursor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertSameJSON(t, page, *direct)
+		for _, row := range page.Rows {
+			classes[row.Classification]++
+			for _, side := range []api.CallerComparisonSide{
+				row.Old, row.Replacement,
+			} {
+				for _, evidence := range side.Rows {
+					if evidence.Source.Repository == callerToolHidden ||
+						evidence.Source.Path == "src/secret.go" {
+						t.Fatalf("hidden comparison citation leaked: %+v", evidence)
+					}
+				}
+			}
+		}
+		total += len(page.Rows)
+		if page.Pagination.Complete {
+			if pageNumber == 0 {
+				t.Fatal("comparison did not exercise continuation")
+			}
+			break
+		}
+		if page.Pagination.NextCursor == "" ||
+			page.Pagination.NextCursor == cursor {
+			t.Fatalf("invalid comparison continuation: %+v", page.Pagination)
+		}
+		cursor = page.Pagination.NextCursor
+	}
+	if total != 5 || classes["both_evidence"] != 1 ||
+		classes["old_only_evidence"] != 2 ||
+		classes["new_only_evidence"] != 1 ||
+		classes["unresolved"] != 1 {
+		t.Fatalf("comparison total/classes = %d / %v", total, classes)
+	}
+	if st.writes != 0 {
+		t.Fatalf("comparison tool performed %d evidence writes", st.writes)
 	}
 }
 

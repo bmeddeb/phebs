@@ -319,6 +319,39 @@ certificate digest. Empty results mean no matching static evidence within
 that displayed scope—not absence, completeness, runtime behavior, or migration
 safety.
 
+Choose **Compare replacement** from an exact Caller Map header to open the
+default-dark `#/compare-callers` workflow. The route first uses the bounded
+Contract Atlas catalog to select a second complete endpoint identity; it does
+not ask for a typed operation string. The comparison is available only with
+the authenticated `contract-caller-comparison` capability and remains under
+the existing **Impact** navigation item.
+
+The UI and `GET /api/compare_operation_callers` classify the union of both
+endpoint populations at `level=occurrence` (default) or `level=unit`.
+`old_only_evidence`, `both_evidence`, `new_only_evidence`, and `unresolved`
+are literal evidence states, not migration verdicts. Occurrence keys are
+immutable `repo@commit:path:start-end` sites. A unit key is used only when a
+resolved source occurrence has exactly one consistent unit candidate;
+ambiguous, unavailable, and extractor-abstention sites remain distinct
+unresolved occurrences.
+
+The comparison accepts the same `unit`, `owner`, `path_prefix`, `code_role`,
+`tier`, `freshness`, `resolution`, and `ordering` filters as Caller Map, plus
+`classification`. Pages default to 50 rows and accept at most 100. Each side
+of one classified row exposes its exact occurrence count and at most four
+source citations, with an explicit truncation flag when more exist. One shared
+coverage certificate and both endpoint-specific attribution digests bind the
+opaque cursor; changes to authorization, visibility, publication, coverage, or
+either attribution snapshot require a restart. The combined scan is bounded
+at 50,000 source rows. The page mounts only its current server page and retains
+only bounded cursor history.
+
+This is one shared comparison read, not two independently timed Caller Map
+requests. Empty results mean no matching evidence within the selected scope,
+and old-only evidence does not establish that migration is incomplete. The
+read creates no proof bundle or Investigation and establishes no runtime use,
+completeness, migration completion, or decommissioning safety.
+
 The vocabulary is now explicit. `contract-atlas-v2` calls only a
 declaration-lineage-proven occurrence `resolved_caller`; a legacy name match
 against an exact declaration is `unresolved_name_match`, and parser/resolver
@@ -345,9 +378,13 @@ requires a caller-supplied bare canonical operation and persists one bounded
 proof bundle of matching call evidence and extractor abstentions. It does not
 establish declaration identity or become a known-caller roster. Ordinary
 Caller Map discovery, detail, and paging persist no proof bundle or
-Investigation. T20.13 still owns old-to-replacement comparison. Every Caller
-Map tool is bounded and cursor-driven, and a stale authorization, coverage, or
-attribution snapshot must be restarted rather than bypassed.
+Investigation. `compare_operation_callers` projects the same shared comparison
+service as HTTP, accepts both complete endpoint identities and the shared
+filters, and returns bounded occurrence- or unit-level classifications with
+both digests, citations, shared coverage, and one opaque cursor. It performs
+no adapter-side classification or summarization. Every Caller Map tool is
+bounded and cursor-driven, and a stale authorization, coverage, or attribution
+snapshot must be restarted rather than bypassed.
 
 T20.2 has removed the extraction worker's 5,000-fact bottleneck behind these
 planned surfaces. The pure-reader SDK still emits one source-bound fact at a
@@ -1073,6 +1110,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/contract_atlas?repository=&package=&protocol=&lineage=&page_size=&cursor=` | GET | experimental bounded service/operation catalog over exact published evidence                    |
 | `/api/contract_atlas/operation?repository=&lineage=&operation=`     | GET             | experimental bounded operation, message-shape, implementation, and caller detail                |
 | `/api/contract_callers?protocol=&repository=&lineage=&operation=&page_size=&cursor=` | GET | experimental exact-declaration Caller Map with source/unit ordering and snapshot-bound pages |
+| `/api/compare_operation_callers?old_protocol=&old_repository=&old_lineage=&old_operation=&replacement_protocol=&replacement_repository=&replacement_lineage=&replacement_operation=&level=&page_size=&cursor=` | GET | experimental old-to-replacement static caller-evidence comparison over one shared snapshot |
 | `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
 | `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
 | `/api/tree?repo=&ref=`                                              | GET             | all file paths, recursive                                                                      |
@@ -1119,9 +1157,10 @@ config key remains accepted only while it is configured.
 
 Ten core tools are always present. Enabling any provisional extraction pack
 adds four evidence-query tools. Enabling a protobuf or Thrift caller pack also
-adds the three-tool Caller Map annex, for seventeen tools. A pinned Buf binary
-and successful host-sandbox startup probe adds compatibility as the final
-tool, for eighteen total; otherwise compatibility stays undiscoverable.
+adds the three-tool Caller Map annex and the comparison tool, for eighteen
+tools. A pinned Buf binary and successful host-sandbox startup probe adds
+compatibility as the final tool, for nineteen total; otherwise compatibility
+stays undiscoverable.
 
 
 | Tool               | Purpose                                                                                                                                                                                                                                                     |
@@ -1144,6 +1183,7 @@ tool, for eighteen total; otherwise compatibility stays undiscoverable.
 | `search_contract_operations` | bounded Contract Atlas discovery page with complete selectable protocol/repository/declaration-lineage/operation identities, coverage, and continuation cursor |
 | `get_contract_operation` | one protocol-qualified exact operation with request/response shapes, immutable declaration citation, related evidence, and coverage |
 | `list_operation_callers` | exact-declaration Caller Map page with shared filters, source and unit-attribution states, unresolved rows, coverage/attribution digests, citations, and snapshot-bound cursor |
+| `compare_operation_callers` | occurrence- or unit-level union of two exact endpoint caller populations with evidence-qualified classifications, both attribution digests, shared coverage, bounded citations, and snapshot-bound cursor |
 
 
 Code-navigation tool positions and returned ranges are zero-based UTF-16 code
@@ -1199,7 +1239,10 @@ of two duplicate-named operations without a pretyped identifier, resolves its
 exact detail, and exhausts multiple Caller Map pages with the same shared
 service content and cursor refusals. The three tools register all-or-none and
 remain absent unless a protocol caller pack makes the Caller Map service
-available.
+available. T20.13's companion session supplies two returned identities to
+`compare_operation_callers`, exhausts bounded continuation, and matches direct
+shared-service classifications and citations; the tool remains absent with
+the comparison capability unavailable.
 
 ## 9. Operations
 
@@ -1713,7 +1756,9 @@ spellings remain distinguishable. Empty evidence never establishes absence.
 
 Authenticated `/api/version` responses advertise `contract-caller-map` when
 the exact Caller Map service and HTTP route are registered; anonymous version
-discovery omits it with every other capability.
+discovery omits it with every other capability. The same authenticated
+response advertises `contract-caller-comparison` when the shared comparison
+service, HTTP route, UI sub-route, and MCP tool are available.
 
 Each repository evidence row links to `#/file` with its pinned repository,
 commit, path, and line. Coverage rows describe the limits of the search and

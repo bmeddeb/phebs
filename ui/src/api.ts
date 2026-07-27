@@ -653,6 +653,58 @@ export interface CallerMapPage {
   caveat: string
 }
 
+export interface CallerComparisonQuery {
+  old: CallerMapEndpoint
+  replacement: CallerMapEndpoint
+  unit?: string
+  owner?: string
+  path_prefix?: string
+  code_role?: string
+  tier?: string
+  freshness: 'any' | 'fresh' | 'stale'
+  resolution: 'any' | 'scip' | 'syntax' | 'unresolved'
+  ordering: 'source' | 'unit'
+  level: 'occurrence' | 'unit'
+  classification?: 'old_only_evidence' | 'both_evidence' | 'new_only_evidence' | 'unresolved'
+}
+
+export interface CallerComparisonSnapshot {
+  endpoint: CallerMapEndpoint
+  declaration: ContractCatalogClaim
+  coverage_digest: string
+  attribution_digest: string
+}
+
+export interface CallerComparisonSide {
+  occurrence_count: number
+  rows: CallerMapRow[]
+  rows_truncated: boolean
+}
+
+export interface CallerComparisonRow {
+  level: 'occurrence' | 'unit'
+  key: string
+  classification: 'old_only_evidence' | 'both_evidence' | 'new_only_evidence' | 'unresolved'
+  unit?: CallerMapUnitCandidate
+  old: CallerComparisonSide
+  replacement: CallerComparisonSide
+}
+
+export interface CallerComparisonPage {
+  schema_version: string
+  query: CallerComparisonQuery
+  old: CallerComparisonSnapshot
+  replacement: CallerComparisonSnapshot
+  rows: CallerComparisonRow[]
+  total_rows: number
+  pagination: {
+    complete: boolean
+    next_cursor?: string
+  }
+  coverage: CoverageCertificate
+  caveat: string
+}
+
 export interface ImpactEvidenceRow {
   kind: 'operation_call' | 'field_reference' | 'unresolved_candidate'
   domain: string
@@ -974,6 +1026,41 @@ export const fetchContractCallers = (
     repository: endpoint.repository,
     lineage: endpoint.declaration_lineage,
     operation: endpoint.operation,
+    ...filters,
+    page_size: pageSize,
+    cursor,
+  })}`,
+  signal,
+)
+
+export const fetchCallerComparison = (
+  oldEndpoint: CallerMapEndpoint,
+  replacementEndpoint: CallerMapEndpoint,
+  filters: {
+    unit?: string
+    owner?: string
+    path_prefix?: string
+    code_role?: string
+    tier?: string
+    freshness?: 'any' | 'fresh' | 'stale'
+    resolution?: 'any' | 'scip' | 'syntax' | 'unresolved'
+    ordering?: 'source' | 'unit'
+    level?: 'occurrence' | 'unit'
+    classification?: 'old_only_evidence' | 'both_evidence' | 'new_only_evidence' | 'unresolved'
+  },
+  pageSize = 50,
+  cursor = '',
+  signal?: AbortSignal,
+) => getJSON<CallerComparisonPage>(
+  `/api/compare_operation_callers?${query({
+    old_protocol: oldEndpoint.protocol,
+    old_repository: oldEndpoint.repository,
+    old_lineage: oldEndpoint.declaration_lineage,
+    old_operation: oldEndpoint.operation,
+    replacement_protocol: replacementEndpoint.protocol,
+    replacement_repository: replacementEndpoint.repository,
+    replacement_lineage: replacementEndpoint.declaration_lineage,
+    replacement_operation: replacementEndpoint.operation,
     ...filters,
     page_size: pageSize,
     cursor,
