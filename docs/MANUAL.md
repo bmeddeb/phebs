@@ -548,9 +548,45 @@ narrow screens, while native labels, headings, navigation landmarks,
 current-step state, live status regions, visible focus, and native
 buttons/links preserve keyboard and screen-reader operation.
 
-Where and How are honest navigation placeholders in T21.10. They invoke no
-evidence readers, preview, or mutation; T21.11 owns their impact,
-implementation-evidence, suggestion, and Disposition views.
+The separate authenticated `change-workbench-evidence` capability lights up
+only when the synthetic adapter has bound the shared impact, implementation,
+and checklist services together. Without that capability, Where and How show
+an explicit unavailable state and issue no fallback evidence request.
+
+Where reads one current bounded impact page. Its **Analysis scope & gaps**
+panel stays adjacent to the source-first inventory and shows capability,
+coverage, and typed gap state before the rows. Atlas declarations,
+implementations, name matches, extractor abstentions, exact callers,
+unit-attribution ambiguity, migration comparison classes, retained
+compatibility findings, affected-field references, and resource planes keep
+their service-defined classifications. Source links name the exact repository,
+commit, path, and line span and navigate to that immutable commit. Optional
+unit, owner, path, freshness, resolution, ordering, comparison-level, and
+compatibility-run inputs are explicit server filters. **Next page** replaces
+the mounted rows with the opaque-cursor page; **Previous page** returns through
+the retained cursor path. An empty page says that it does not establish
+absence or completeness, and stale cursors restart from the first exact page.
+
+How reads related implementation/history evidence and the deterministic
+checklist in parallel. Up to 32 optional source anchors may be supplied as
+exact repository, commit, path, line, character, and UTF encoding identities.
+Related rows preserve selected versus review-candidate state, code role,
+selection rule, immutable source span, and bounded commit/diff detail.
+Capability failures and gaps stay visible rather than becoming guessed file
+recommendations. Only the current implementation page and current checklist
+page are mounted.
+
+Checklist suggestions are deterministic and never persisted. Their current or
+stale evidence state and immutable citations remain separate from the
+**Human-recorded** Disposition panel. A current suggestion accepts only the
+fixed categories `accepted`, `rejected`, `completed`, `reopened`, and
+`waived`; rejected, reopened, and waived require rationale. Correcting an
+existing record explicitly supersedes that record. A stale suggestion with no
+prior Disposition is disabled rather than silently retargeted. Snapshot or
+active-record conflict leaves the same explicit control retryable, while
+permission loss uses the same non-disclosing unavailable state. There is no
+comment, assignment, due date, priority, custom state, task, or implicit
+completion action.
 
 The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
 contains declaration-proven call rows or stable field-reference rows.
@@ -706,10 +742,10 @@ explicit pilot-continuation gate. Completing its implementation tickets cannot
 clear that gate or support an external accuracy, migration-complete, or
 safe-to-retire claim.
 
-The internal T21.9 checklist now composes the current authorized T21.7 Where
-and T21.8 How projections. It remains production-unregistered/default-dark:
-the synthetic T21.10 shell does not expose a checklist HTTP, UI, or MCP entry.
-Each machine suggestion binds its
+The T21.9 checklist composes the current authorized T21.7 Where and T21.8 How
+projections. It remains production-unregistered/default-dark: T21.11 exposes
+its HTTP and UI projections only through the fixture-coupled synthetic
+Workbench, and there is still no MCP entry. Each machine suggestion binds its
 originating Workbench Revision, normalized evidence inputs, complete evidence
 snapshot, deterministic selection rule, and exact evidence references.
 Suggestions are never persisted or accepted automatically. When evidence
@@ -795,10 +831,11 @@ bytes, and is owned by Investigation retention. It is not a proof bundle and
 does not change proof-bundle reauthorization, expiry, deletion, bytes, or
 identity.
 
-The internal T21.7 Where reader now composes those exact Workbench identities
+The T21.7 Where reader composes those exact Workbench identities
 with the existing Contract Atlas, Caller Map, caller comparison, and stable
-field-reference services. It remains production-unregistered and has no
-current HTTP, UI, or MCP entry. Add shows analogous declarations and
+field-reference services. It remains production-unregistered; its conditional
+T21.11 HTTP/UI projection is fixture-coupled and there is no MCP entry. Add
+shows analogous declarations and
 implementations and deliberately has no caller stream. Modify shows the
 current exact caller page plus an explicitly selected retained compatibility
 artifact and references to its affected stable fields. Migrate uses the one
@@ -826,9 +863,10 @@ the only path that persists the content-addressed bundle. Likewise, the
 Workbench compositor has no direct evidence-store access: all evidence comes
 from the shared Atlas, Caller Map/comparison, and field services.
 
-The internal T21.8 How reader remains production-unregistered with the rest of
-the Workbench. It starts from the current authorized Revision's exact selected
-contracts plus up to 32 explicit user pins. A pin is an exact visible
+The T21.8 How reader remains production-unregistered with the rest of the
+Workbench; its conditional T21.11 HTTP/UI projection is fixture-coupled. It
+starts from the current authorized Revision's exact selected contracts plus up
+to 32 explicit user pins. A pin is an exact visible
 repository, immutable indexed commit, safe path, and source position; its line
 and UTF-8/16/32 character boundary are checked against the immutable bytes
 before it becomes selected. Selected

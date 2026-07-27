@@ -12,8 +12,12 @@ import {
   fetchReferences,
   fetchRepoStatus,
   fetchSource,
+  fetchWorkbenchChecklist,
+  fetchWorkbenchImpact,
+  fetchWorkbenchImplementation,
   fetchWorkbench,
   previewWorkbench,
+  recordWorkbenchDisposition,
   revokeAPIKey,
   reviseWorkbench,
   streamSearch,
@@ -391,5 +395,115 @@ describe('request helpers', () => {
       status: 409,
       message: 'preview digest changed',
     })
+  })
+
+  it('binds exact Workbench evidence queries and CSRF-backed dispositions', async () => {
+    setCSRFToken('csrf-evidence')
+    const signal = new AbortController().signal
+    const evidence = {
+      compatibility_run_id: 'run +/one',
+      impact_filters: {
+        freshness: 'stale',
+        path_prefix: 'src/space here',
+      },
+      anchors: [{
+        repository: 'github.com/acme/contracts',
+        commit: 'a'.repeat(40),
+        path: 'src/catalog.ts',
+        line: 42,
+        character: 7,
+        encoding: 'utf-16' as const,
+      }],
+    }
+    const suggestion = {
+      schema_version: 'workbench-suggestion-v1',
+      suggestion_id: 'suggestion-1',
+      investigation_id: '01J A/B',
+      revision_id: 'rev one',
+      kind: 'review_implementation',
+      summary: 'Review the cited implementation.',
+      selection_rule: 'exact anchor',
+      evidence_snapshot_digest: `sha256:${'b'.repeat(64)}`,
+      evidence: [],
+      content_digest: `sha256:${'c'.repeat(64)}`,
+    }
+    const mutation = {
+      investigation_id: '01J A/B',
+      expected_revision_id: 'rev one',
+      idempotency_key: 'workbench-ui-evidence',
+      evidence,
+      suggestion,
+      category: 'rejected' as const,
+      rationale: 'Not in this change.',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchWorkbenchImpact('01J A/B', 'rev one', {
+      compatibilityRun: 'run +/one',
+      filters: evidence.impact_filters,
+      pageSize: 25,
+      cursor: 'impact +/cursor',
+    }, signal)
+    await fetchWorkbenchImplementation('01J A/B', 'rev one', {
+      anchors: evidence.anchors,
+      pageSize: 25,
+      cursor: 'implementation +/cursor',
+    }, signal)
+    await fetchWorkbenchChecklist('01J A/B', 'rev one', {
+      evidence,
+      pageSize: 25,
+      cursor: 'checklist +/cursor',
+    }, signal)
+    await recordWorkbenchDisposition(
+      '01J A/B',
+      'rev one',
+      mutation,
+      signal,
+    )
+
+    const calls = fetchMock.mock.calls
+    const impactURL = new URL(calls[0][0], 'https://phebs.test')
+    expect(impactURL.pathname).toBe(
+      '/api/workbenches/01J%20A%2FB/revisions/rev%20one/impact',
+    )
+    expect(impactURL.searchParams.get('compatibility_run_id')).toBe('run +/one')
+    expect(JSON.parse(impactURL.searchParams.get('filters') ?? '{}'))
+      .toEqual(evidence.impact_filters)
+    expect(impactURL.searchParams.get('page_size')).toBe('25')
+    expect(impactURL.searchParams.get('cursor')).toBe('impact +/cursor')
+
+    const implementationURL = new URL(calls[1][0], 'https://phebs.test')
+    expect(JSON.parse(implementationURL.searchParams.get('anchors') ?? '[]'))
+      .toEqual(evidence.anchors)
+    expect(implementationURL.searchParams.get('cursor'))
+      .toBe('implementation +/cursor')
+
+    const checklistURL = new URL(calls[2][0], 'https://phebs.test')
+    expect(JSON.parse(checklistURL.searchParams.get('evidence') ?? '{}'))
+      .toEqual(evidence)
+    expect(checklistURL.searchParams.get('cursor')).toBe('checklist +/cursor')
+    expect(calls.slice(0, 3).map((call) => call[1])).toEqual([
+      { credentials: 'same-origin', signal },
+      { credentials: 'same-origin', signal },
+      { credentials: 'same-origin', signal },
+    ])
+
+    expect(calls[3]).toEqual([
+      '/api/workbenches/01J%20A%2FB/revisions/rev%20one/dispositions',
+      {
+        credentials: 'same-origin',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': 'csrf-evidence',
+        },
+        body: JSON.stringify(mutation),
+        signal,
+      },
+    ])
   })
 })

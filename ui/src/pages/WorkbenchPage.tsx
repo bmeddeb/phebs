@@ -21,6 +21,14 @@ import {
 import { href, navigate } from '../router'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import {
+  WorkbenchHowStep,
+  WorkbenchWhereStep,
+} from './WorkbenchEvidenceSteps'
+import {
+  defaultWorkbenchEvidenceInput,
+  type WorkbenchEvidenceInput,
+} from './workbenchEvidenceState'
 
 const ticketTextLimit = 16 << 10
 const selectionLimit = 3
@@ -45,8 +53,10 @@ interface PageFailure {
 
 export default function WorkbenchPage({
   params,
+  evidenceAvailable = false,
 }: {
   params: URLSearchParams
+  evidenceAvailable?: boolean
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
@@ -76,7 +86,14 @@ export default function WorkbenchPage({
   const [previewing, setPreviewing] = useState(false)
   const [committing, setCommitting] = useState(false)
   const [actionFailure, setActionFailure] = useState<PageFailure | null>(null)
+  const [evidence, setEvidence] = useState<WorkbenchEvidenceInput>(
+    defaultWorkbenchEvidenceInput,
+  )
   const previousRouteKey = useRef(routeKey)
+
+  useEffect(() => {
+    setEvidence(defaultWorkbenchEvidenceInput())
+  }, [routeKey])
 
   useEffect(() => {
     if (!investigationID && atlasSeed) {
@@ -370,20 +387,37 @@ export default function WorkbenchPage({
               onChange={setPlan}
             />
           )}
-          {(step === 'where' || step === 'how') && (
-            <FutureStep step={step} />
+          {step === 'where' && (
+            <WorkbenchWhereStep
+              available={evidenceAvailable}
+              investigationID={investigationID}
+              revisionID={revisionID}
+              evidence={evidence}
+              onEvidenceChange={setEvidence}
+            />
+          )}
+          {step === 'how' && (
+            <WorkbenchHowStep
+              available={evidenceAvailable}
+              investigationID={investigationID}
+              revisionID={revisionID}
+              evidence={evidence}
+              onEvidenceChange={setEvidence}
+            />
           )}
 
-          <PreviewDock
-            plan={plan}
-            preview={preview}
-            previewDrifted={previewDrifted}
-            previewing={previewing}
-            committing={committing}
-            failure={actionFailure}
-            onPreview={() => void previewPlan()}
-            onCommit={() => void commitPlan()}
-          />
+          {(step === 'why' || step === 'what') && (
+            <PreviewDock
+              plan={plan}
+              preview={preview}
+              previewDrifted={previewDrifted}
+              previewing={previewing}
+              committing={committing}
+              failure={actionFailure}
+              onPreview={() => void previewPlan()}
+              onCommit={() => void commitPlan()}
+            />
+          )}
         </main>
       </div>
     </div>
@@ -697,6 +731,10 @@ function StepRail({
           overflowX: 'auto',
           borderBottom: `1px solid ${tok.cardBorder}`,
         },
+        '@media screen and (max-width: 480px)': {
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          overflowX: 'visible',
+        },
       })}
     >
       {steps.map((item) => {
@@ -729,6 +767,12 @@ function StepRail({
               '@media screen and (max-width: 820px)': {
                 borderLeft: 0,
                 borderBottom: current ? `3px solid ${tok.accent}` : '3px solid transparent',
+              },
+              '@media screen and (max-width: 480px)': {
+                gridTemplateColumns: '18px minmax(0, 1fr)',
+                gap: '4px',
+                paddingLeft: '5px',
+                paddingRight: '5px',
               },
             })}
           >
@@ -1362,35 +1406,6 @@ function StoredProposal({
         </div>
       ))}
     </div>
-  )
-}
-
-function FutureStep({ step }: { step: 'where' | 'how' }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <section aria-labelledby={`workbench-${step}-heading`}>
-      <SectionHeader
-        eyebrow="Reserved evidence step"
-        title={step === 'where' ? 'Where is impact visible?' : 'How might implementation proceed?'}
-        detail="T21.10 establishes revision-safe navigation only. T21.11 will render the paged evidence and disposition checklist here without changing this route identity."
-      />
-      <div className={css({
-        minHeight: '220px',
-        display: 'grid',
-        placeItems: 'center',
-        padding: '28px',
-        border: `1px dashed ${tok.cardBorder}`,
-        backgroundColor: tok.bandBg,
-        color: tok.textTertiary,
-        textAlign: 'center',
-        fontSize: '12px',
-        lineHeight: '19px',
-      })}>
-        Navigation is read-only. No evidence is inferred and no preview,
-        Investigation revision, or human state is created by opening this step.
-      </div>
-    </section>
   )
 }
 

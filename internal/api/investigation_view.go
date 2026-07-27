@@ -131,6 +131,15 @@ func apiCapabilities(opts Options) []string {
 	if opts.Workbench != nil {
 		capabilities = append(capabilities, "change-workbench")
 	}
+	if opts.Workbench != nil &&
+		opts.WorkbenchImpact != nil &&
+		opts.WorkbenchImplementation != nil &&
+		opts.WorkbenchChecklist != nil {
+		capabilities = append(
+			capabilities,
+			"change-workbench-evidence",
+		)
+	}
 	slices.Sort(capabilities)
 	return capabilities
 }

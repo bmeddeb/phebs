@@ -2893,7 +2893,7 @@ unless both documented Investigation and Contract Atlas fixture adapters are
 also bound. This completion is a synthetic demonstration, not production
 enablement or validation.
 
-**T21.11 · Where/How and checklist UI** *(needs T21.7–T21.10)* — render the
+**T21.11 ✅ 2026-07-27 · Where/How and checklist UI** *(needs T21.7–T21.10)* — render the
 paged source-first impact inventory, unit ambiguity, unsupported planes,
 Analysis scope & gaps, related implementation/history evidence, deterministic
 suggestions, and fixed-category Disposition projection.
@@ -2908,6 +2908,26 @@ or implicit completion path.
 Interaction coverage must exercise real hash navigation and a real mobile
 viewport/state transition; a responsive data attribute or keydown event whose
 claimed destination never renders does not satisfy this ticket.
+
+Implemented on `codex/t21.11-where-how-checklist`: one all-or-none conditional
+HTTP projection exposes the shared T21.7 impact, T21.8 implementation, and
+T21.9 checklist readers plus the existing fixed-category Disposition append
+only when the synthetic Workbench and all three evidence services are bound.
+Ordinary serve keeps the routes, OpenAPI operations, capability, and UI dark.
+Where renders the current bounded page of source-first rows, exact
+commit/line-span links, unit ambiguity, unsupported/failed/stale resource
+state, and adjacent Analysis scope & gaps; filters and opaque cursors remain
+server inputs. How renders the current bounded implementation/history page,
+up to 32 explicit immutable anchors, and the deterministic checklist. Machine
+suggestions remain visually separate from immutable human records; stale root
+suggestions cannot be dispositioned, corrections explicitly supersede the
+active record, and rejected/reopened/waived require rationale. Pagination
+replaces rather than accumulates rows. Empty evidence, non-disclosing
+permission loss, stale snapshots/cursors, conflict retry, source links,
+unsupported planes, honest zero states, keyboard focus, real hash navigation,
+and a 390 px Where-to-How state transition are regression-tested. There is no
+comment, assignment, due date, priority, custom state, task, implicit write,
+implicit completion, proof-bundle write, or production enablement.
 
 **T21.12 · API-key capability for Investigation mutations** *(needs T21.3)* —
 extend named API keys with immutable reviewed capabilities and define

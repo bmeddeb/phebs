@@ -96,6 +96,13 @@ type Options struct {
 	// Production leaves it nil until the retained validation and explicit
 	// pilot-continuation gates are satisfied.
 	Workbench store.InvestigationWorkbench
+	// WorkbenchImpact, WorkbenchImplementation, and WorkbenchChecklist expose
+	// the shared T21.7-T21.9 projections only when an explicit adapter binds
+	// all three. Production leaves them nil; make dev supplies the synthetic
+	// fixture-coupled projection after binding Workbench.
+	WorkbenchImpact         WorkbenchImpactReader
+	WorkbenchImplementation WorkbenchImplementationReader
+	WorkbenchChecklist      WorkbenchChecklistReader
 	// ResourcePlanes is the protocol-neutral Workbench registry. Nil selects
 	// the built-in unsupported inventory; production registration remains
 	// blocked independently of this internal projection.
@@ -367,6 +374,7 @@ func New(opts Options) http.Handler {
 	registerInvestigations(api, opts)
 	registerInvestigationViews(api, opts)
 	registerWorkbench(api, opts)
+	registerWorkbenchEvidence(api, opts)
 
 	// raw handler, not huma: HMAC over the exact body bytes is the auth
 	if opts.WebhookSecret != "" {

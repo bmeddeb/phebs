@@ -83,6 +83,8 @@ export default function App() {
   const compatibilityAvailable = capabilities.includes('contract-compatibility')
   const investigationsAvailable = capabilities.includes('investigation-core-views')
   const workbenchAvailable = capabilities.includes('change-workbench')
+  const workbenchEvidenceAvailable =
+    capabilities.includes('change-workbench-evidence')
   const topicsAvailable = capabilities.includes('kafka-topic-usage')
   let page
   if (path.startsWith('/file')) page = <FilePage params={params} />
@@ -113,7 +115,14 @@ export default function App() {
   else if (path.startsWith('/investigations') && !capabilitiesLoaded) page = <Spinner $size="small" />
   else if (path.startsWith('/investigations') && investigationsAvailable) page = <InvestigationPage params={params} />
   else if (path.startsWith('/workbench') && !capabilitiesLoaded) page = <Spinner $size="small" />
-  else if (path.startsWith('/workbench') && workbenchAvailable) page = <WorkbenchPage params={params} />
+  else if (path.startsWith('/workbench') && workbenchAvailable) {
+    page = (
+      <WorkbenchPage
+        params={params}
+        evidenceAvailable={workbenchEvidenceAvailable}
+      />
+    )
+  }
   else if (path.startsWith('/settings')) page = <SettingsPage />
   else page = <SearchPage params={params} />
 

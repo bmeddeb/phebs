@@ -12,17 +12,25 @@ import { BaseProvider } from 'baseui'
 import WorkbenchPage from './WorkbenchPage'
 import {
   WorkbenchAPIError,
+  type WorkbenchChecklistPage,
+  type WorkbenchImpactPage,
+  type WorkbenchImplementationPage,
   type WorkbenchPreview,
   type WorkbenchTicketKind,
   type WorkbenchView,
 } from '../api'
 import { lightTheme, ModeContext } from '../theme'
+import { useHashRoute } from '../router'
 
 const api = vi.hoisted(() => ({
   fetchWorkbench: vi.fn(),
   previewWorkbench: vi.fn(),
   createWorkbench: vi.fn(),
   reviseWorkbench: vi.fn(),
+  fetchWorkbenchImpact: vi.fn(),
+  fetchWorkbenchImplementation: vi.fn(),
+  fetchWorkbenchChecklist: vi.fn(),
+  recordWorkbenchDisposition: vi.fn(),
 }))
 
 vi.mock('../api', async (importOriginal) => ({
@@ -196,6 +204,24 @@ function wrapped(
   )
 }
 
+function RoutedWorkbench() {
+  const [path, params] = useHashRoute()
+  if (path !== '/workbench') return <div>Outside Workbench</div>
+  return <WorkbenchPage params={params} evidenceAvailable />
+}
+
+function wrappedRouted() {
+  return (
+    <StyletronProvider value={engine}>
+      <ModeContext value={{ mode: 'light', toggle: () => {} }}>
+        <BaseProvider theme={lightTheme}>
+          <RoutedWorkbench />
+        </BaseProvider>
+      </ModeContext>
+    </StyletronProvider>
+  )
+}
+
 function page(query = '') {
   return render(wrapped(new URLSearchParams(query)))
 }
@@ -205,6 +231,10 @@ beforeEach(() => {
   api.previewWorkbench.mockReset()
   api.createWorkbench.mockReset()
   api.reviseWorkbench.mockReset()
+  api.fetchWorkbenchImpact.mockReset()
+  api.fetchWorkbenchImplementation.mockReset()
+  api.fetchWorkbenchChecklist.mockReset()
+  api.recordWorkbenchDisposition.mockReset()
   window.location.hash = '#/workbench'
 })
 
@@ -369,7 +399,9 @@ test('back, forward, and step deep links retain the exact revision without refet
   result.rerender(wrapped(new URLSearchParams(
     `investigation_id=${investigationID}&revision_id=${revisionID}&step=where`,
   )))
-  expect(screen.getByRole('heading', { name: 'Where is impact visible?' }))
+  expect(screen.getByRole('heading', {
+    name: 'Where evidence is not registered',
+  }))
     .toBeTruthy()
   result.rerender(wrapped(new URLSearchParams(
     `investigation_id=${investigationID}&revision_id=${revisionID}&step=what`,
@@ -378,6 +410,82 @@ test('back, forward, and step deep links retain the exact revision without refet
   expect(api.fetchWorkbench).toHaveBeenCalledTimes(1)
   expect(api.previewWorkbench).not.toHaveBeenCalled()
   expect(api.reviseWorkbench).not.toHaveBeenCalled()
+})
+
+test('real hash navigation reaches How at a mobile viewport', async () => {
+  Object.defineProperty(window, 'innerWidth', {
+    configurable: true,
+    value: 390,
+  })
+  window.dispatchEvent(new Event('resize'))
+  api.fetchWorkbench.mockResolvedValue(view('migrate'))
+  api.fetchWorkbenchImpact.mockResolvedValue({
+    schema_version: 'workbench-impact-v1',
+    investigation_id: investigationID,
+    revision_id: revisionID,
+    ticket_kind: 'migrate',
+    scenario_emphasis: [],
+    atlas: [],
+    callers: [],
+    resource_planes: [],
+    analysis_scope: { coverage: [], capabilities: [], gaps: [] },
+    pagination: { complete: true },
+    caveat: 'Bounded empty impact.',
+  } satisfies WorkbenchImpactPage)
+  api.fetchWorkbenchImplementation.mockResolvedValue({
+    schema_version: 'workbench-implementation-v1',
+    investigation_id: investigationID,
+    revision_id: revisionID,
+    ticket_kind: 'migrate',
+    rows: [],
+    capabilities: [],
+    gaps: [],
+    pagination: { total_rows: 0, complete: true },
+    snapshot_digest: `sha256:${'2'.repeat(64)}`,
+    caveat: 'Bounded empty implementation.',
+  } satisfies WorkbenchImplementationPage)
+  api.fetchWorkbenchChecklist.mockResolvedValue({
+    schema_version: 'workbench-checklist-v1',
+    investigation_id: investigationID,
+    revision_id: revisionID,
+    ticket_kind: 'migrate',
+    evidence_snapshot: {
+      impact_digest: `sha256:${'3'.repeat(64)}`,
+      implementation_digest: `sha256:${'4'.repeat(64)}`,
+      combined_digest: `sha256:${'5'.repeat(64)}`,
+      impact_truncated: false,
+      implementation_truncated: false,
+    },
+    entries: [],
+    pagination: { total_entries: 0, complete: true },
+    snapshot_digest: `sha256:${'6'.repeat(64)}`,
+    caveat: 'Nothing is implicitly completed.',
+  } satisfies WorkbenchChecklistPage)
+  window.location.hash =
+    `#/workbench?step=where&investigation_id=${investigationID}` +
+    `&revision_id=${revisionID}`
+  render(wrappedRouted())
+
+  expect(await screen.findByRole('heading', {
+    name: 'Where is impact visible?',
+  })).toBeTruthy()
+  const how = screen.getByRole('link', { name: /How/ })
+  how.focus()
+  expect(document.activeElement).toBe(how)
+  fireEvent.click(how)
+
+  expect(await screen.findByRole('heading', {
+    name: 'How might implementation proceed?',
+  })).toBeTruthy()
+  expect(window.innerWidth).toBe(390)
+  expect(window.location.hash).toBe(
+    `#/workbench?step=how&investigation_id=${investigationID}` +
+    `&revision_id=${revisionID}`,
+  )
+  expect(screen.getAllByText(/Nothing is implicitly completed/).length)
+    .toBeGreaterThan(0)
+  expect(api.fetchWorkbenchImplementation).toHaveBeenCalledTimes(1)
+  expect(api.fetchWorkbenchChecklist).toHaveBeenCalledTimes(1)
 })
 
 test('leaving an exact revision clears it from the unpinned Workbench home', async () => {

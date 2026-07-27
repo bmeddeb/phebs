@@ -312,6 +312,309 @@ export interface WorkbenchMutationRequest {
   idempotency_key: string
 }
 
+export interface WorkbenchImpactFilters {
+  unit?: string
+  owner?: string
+  path_prefix?: string
+  code_role?: string
+  tier?: string
+  freshness?: string
+  resolution?: string
+  ordering?: string
+  level?: string
+}
+
+export interface WorkbenchResourcePlaneRelationship {
+  kind: string
+  subject: string
+  object: string
+  classification: string
+  sources: ContractCatalogSource[]
+}
+
+export interface WorkbenchResourcePlane {
+  id: string
+  label: string
+  state: 'enabled' | 'unsupported' | 'failed' | 'stale' | 'human_asserted'
+  reason?: string
+  relationships: WorkbenchResourcePlaneRelationship[]
+}
+
+export interface WorkbenchImpactPage {
+  schema_version: string
+  investigation_id: string
+  revision_id: string
+  ticket_kind: WorkbenchTicketKind
+  scenario_emphasis: string[]
+  atlas: {
+    selection: WorkbenchContractSelection
+    declaration: ContractCatalogClaim
+    fact_detail: ContractCatalogOperationFactDetail
+    request: ContractCatalogMessage
+    response: ContractCatalogMessage
+    implementations: ContractCatalogRelationship[]
+    name_matches: ContractCatalogRelationship[]
+    extractor_abstentions: ContractCatalogRelationship[]
+    relationships_truncated: boolean
+    shape_truncated: boolean
+    coverage_digest: string
+  }[]
+  callers: {
+    selection: WorkbenchContractSelection
+    query: CallerMapQuery
+    declaration: ContractCatalogClaim
+    resolved_callers: CallerMapRow[]
+    extractor_abstentions: CallerMapRow[]
+    groups?: CallerMapGroup[]
+    total_matching_rows: number
+    pagination: CallerMapPage['pagination']
+    coverage_digest: string
+    attribution_digest: string
+    caveat: string
+  }[]
+  comparison?: CallerComparisonPage
+  compatibility?: {
+    status: string
+    run_id?: string
+    compatible?: boolean
+    violations: CompatibilityViolation[]
+    affected_fields: {
+      lineage: string
+      message: string
+      field_number: number
+    }[]
+    failure?: string
+    content_digest?: string
+  }
+  field_references?: {
+    schema_version: string
+    rows: {
+      field: {
+        lineage: string
+        message: string
+        field_number: number
+      }
+      assertion: {
+        id: string
+        predicate: string
+        subject: string
+        object: string
+        lineage?: string
+        tier: string
+        code_role?: string
+        repo: string
+        run_id: string
+        detail?: string
+      }
+      evidence: BundleEvidenceEntry[]
+    }[]
+    total_rows: number
+    pagination: CallerMapPage['pagination']
+    coverage_digest: string
+    caveat: string
+  }
+  resource_planes: WorkbenchResourcePlane[]
+  analysis_scope: {
+    coverage: {
+      capability: string
+      target: string
+      digest: string
+      certificate: CoverageCertificate
+    }[]
+    capabilities: {
+      id: string
+      state: string
+      reason?: string
+    }[]
+    gaps: {
+      capability: string
+      target?: string
+      state: string
+      code: string
+    }[]
+  }
+  pagination: {
+    complete: boolean
+    next_cursor?: string
+  }
+  caveat: string
+}
+
+export interface WorkbenchImplementationAnchor {
+  repository: string
+  commit: string
+  path: string
+  line: number
+  character: number
+  encoding?: 'utf-8' | 'utf-16' | 'utf-32'
+}
+
+export interface WorkbenchImplementationPage {
+  schema_version: string
+  investigation_id: string
+  revision_id: string
+  ticket_kind: WorkbenchTicketKind
+  rows: {
+    id: string
+    kind: string
+    code_role: string
+    boundary?: string
+    review_state: string
+    selection_rule: string
+    selection_input: string
+    symbol?: string
+    source: {
+      repository: string
+      commit: string
+      path: string
+      start_byte?: number
+      end_byte?: number
+      start_line?: number
+      start_column?: number
+      end_line?: number
+      end_column?: number
+      content_digest?: string
+      size_bytes?: number
+    }
+    commit?: {
+      id: string
+      parent_ids: string[]
+      subject: string
+      subject_truncated?: boolean
+      author_name?: string
+      author_time?: string
+    }
+    diff?: {
+      base?: string
+      head: string
+      digest: string
+      patch_excerpt: string
+      patch_truncated: boolean
+      files: {
+        status: string
+        path: string
+        old_path?: string
+        similarity?: number
+        additions?: number
+        deletions?: number
+        binary?: boolean
+      }[]
+      files_truncated?: boolean
+    }
+  }[]
+  capabilities: {
+    id: string
+    state: string
+    reason?: string
+  }[]
+  gaps: {
+    capability: string
+    target?: string
+    state: string
+    code: string
+  }[]
+  pagination: {
+    total_rows: number
+    complete: boolean
+    next_cursor?: string
+  }
+  snapshot_digest: string
+  caveat: string
+}
+
+export interface WorkbenchChecklistEvidenceInput {
+  compatibility_run_id?: string
+  impact_filters: WorkbenchImpactFilters
+  anchors: WorkbenchImplementationAnchor[]
+}
+
+export interface WorkbenchSuggestionEvidence {
+  plane: string
+  kind: string
+  id: string
+  digest: string
+  repository?: string
+  commit?: string
+  path?: string
+  start_byte?: number
+  end_byte?: number
+  start_line?: number
+  end_line?: number
+}
+
+export interface WorkbenchSuggestion {
+  schema_version: string
+  suggestion_id: string
+  investigation_id: string
+  revision_id: string
+  kind: string
+  summary: string
+  selection_rule: string
+  evidence_snapshot_digest: string
+  evidence: WorkbenchSuggestionEvidence[]
+  content_digest: string
+}
+
+export type WorkbenchDispositionCategory =
+  'accepted' | 'rejected' | 'completed' | 'reopened' | 'waived'
+
+export interface WorkbenchDisposition {
+  schema_version: string
+  disposition_id: string
+  investigation_id: string
+  revision_id: string
+  suggestion: WorkbenchSuggestion
+  category: WorkbenchDispositionCategory
+  actor: string
+  authority: string
+  rationale?: string
+  sequence: number
+  supersedes?: string
+  created_at: string
+  content_digest: string
+}
+
+export interface WorkbenchChecklistEntry {
+  suggestion: WorkbenchSuggestion
+  evidence_state: 'current' | 'stale'
+  state: 'unaccepted' | WorkbenchDispositionCategory
+  disposition?: WorkbenchDisposition
+  disposition_history: WorkbenchDisposition[]
+}
+
+export interface WorkbenchChecklistPage {
+  schema_version: string
+  investigation_id: string
+  revision_id: string
+  ticket_kind: WorkbenchTicketKind
+  evidence_snapshot: {
+    impact_digest: string
+    implementation_digest: string
+    combined_digest: string
+    impact_truncated: boolean
+    implementation_truncated: boolean
+  }
+  entries: WorkbenchChecklistEntry[]
+  pagination: {
+    total_entries: number
+    complete: boolean
+    next_cursor?: string
+  }
+  snapshot_digest: string
+  caveat: string
+}
+
+export interface WorkbenchDispositionMutation {
+  investigation_id: string
+  expected_revision_id: string
+  idempotency_key: string
+  evidence: WorkbenchChecklistEvidenceInput
+  suggestion: WorkbenchSuggestion
+  category: WorkbenchDispositionCategory
+  rationale?: string
+  supersedes?: string
+}
+
 export class WorkbenchAPIError extends Error {
   readonly status: number
 
@@ -1241,6 +1544,95 @@ export const reviseWorkbench = (
   signal?: AbortSignal,
 ) => workbenchJSON<WorkbenchView>(
   `/api/workbenches/${encodeURIComponent(investigationID)}/revisions`,
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+    body: JSON.stringify(mutation),
+    signal,
+  },
+)
+
+function workbenchEvidenceURL(
+  investigationID: string,
+  revisionID: string,
+  surface: 'impact' | 'implementation' | 'checklist',
+  query: Record<string, string | number | undefined>,
+) {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== '') {
+      params.set(key, String(value))
+    }
+  }
+  const suffix = params.size > 0 ? `?${params.toString()}` : ''
+  return `/api/workbenches/${encodeURIComponent(investigationID)}` +
+    `/revisions/${encodeURIComponent(revisionID)}/${surface}${suffix}`
+}
+
+export const fetchWorkbenchImpact = (
+  investigationID: string,
+  revisionID: string,
+  options: {
+    compatibilityRun?: string
+    filters: WorkbenchImpactFilters
+    pageSize?: number
+    cursor?: string
+  },
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchImpactPage>(
+  workbenchEvidenceURL(investigationID, revisionID, 'impact', {
+    compatibility_run_id: options.compatibilityRun,
+    filters: JSON.stringify(options.filters),
+    page_size: options.pageSize,
+    cursor: options.cursor,
+  }),
+  { signal },
+)
+
+export const fetchWorkbenchImplementation = (
+  investigationID: string,
+  revisionID: string,
+  options: {
+    anchors: WorkbenchImplementationAnchor[]
+    pageSize?: number
+    cursor?: string
+  },
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchImplementationPage>(
+  workbenchEvidenceURL(investigationID, revisionID, 'implementation', {
+    anchors: JSON.stringify(options.anchors),
+    page_size: options.pageSize,
+    cursor: options.cursor,
+  }),
+  { signal },
+)
+
+export const fetchWorkbenchChecklist = (
+  investigationID: string,
+  revisionID: string,
+  options: {
+    evidence: WorkbenchChecklistEvidenceInput
+    pageSize?: number
+    cursor?: string
+  },
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchChecklistPage>(
+  workbenchEvidenceURL(investigationID, revisionID, 'checklist', {
+    evidence: JSON.stringify(options.evidence),
+    page_size: options.pageSize,
+    cursor: options.cursor,
+  }),
+  { signal },
+)
+
+export const recordWorkbenchDisposition = (
+  investigationID: string,
+  revisionID: string,
+  mutation: WorkbenchDispositionMutation,
+  signal?: AbortSignal,
+) => workbenchJSON<WorkbenchDisposition>(
+  `/api/workbenches/${encodeURIComponent(investigationID)}` +
+    `/revisions/${encodeURIComponent(revisionID)}/dispositions`,
   {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...csrfHeaders() },

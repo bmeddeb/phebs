@@ -532,6 +532,18 @@ func serve(args []string) error {
 		return err
 	}
 	if apiOpts.Workbench != nil {
+		apiOpts.WorkbenchImpact = api.NewWorkbenchImpactService(apiOpts)
+		apiOpts.WorkbenchImplementation =
+			api.NewWorkbenchImplementationService(apiOpts)
+		apiOpts.WorkbenchChecklist =
+			api.NewWorkbenchChecklistService(apiOpts)
+		if apiOpts.WorkbenchImpact == nil ||
+			apiOpts.WorkbenchImplementation == nil ||
+			apiOpts.WorkbenchChecklist == nil {
+			return errors.New(
+				"synthetic Workbench evidence services are unavailable",
+			)
+		}
 		log.Printf("WARNING: synthetic Change Workbench enabled for make dev; not a production or continuation surface")
 	}
 	apiHandler := api.New(apiOpts)
