@@ -1102,6 +1102,9 @@ identity, has an empty capability set, and cannot manage named keys or perform
 Investigation mutations itself. Existing named keys likewise migrate with an
 empty set; their tokens, hashes, identity, expiry, revocation, and existing
 read behavior do not change.
+The startup migration records its exact generation and skips the key-table
+backfill after completion. An older binary that encounters a later or unknown
+capability-migration generation fails closed without overwriting that marker.
 
 #### OpenID Connect
 

@@ -149,6 +149,14 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 
 const apiKeyCapabilityMigrationVersion = "t21.12-api-key-capabilities-v1"
 
+type apiKeyCapabilityMigrationStateRec struct {
+	Version string `json:"version"`
+}
+
+func apiKeyCapabilityMigrationStateID() models.RecordID {
+	return models.NewRecordID("store_migration", "api_key_capabilities")
+}
+
 const apiKeyCapabilityPreMigrationSchema = `
 DEFINE FIELD IF NOT EXISTS capabilities ON api_key TYPE option<array<string>>;`
 
@@ -164,17 +172,30 @@ DEFINE EVENT IF NOT EXISTS api_key_capabilities_immutable ON TABLE api_key
 	};`
 
 // migrateAPIKeyCapabilities gives every pre-T21.12 row the explicit empty
-// capability set. The transaction is safe to repeat after an interrupted
-// open, and the marker records the completed additive generation.
+// capability set. The completion marker keeps steady-state Open off the key
+// table. Its version is checked again inside the transaction so a concurrent
+// later binary cannot have its marker overwritten by this generation.
 func (s *Surreal) migrateAPIKeyCapabilities(ctx context.Context) error {
+	complete, err := s.apiKeyCapabilityMigrationComplete(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate API key capabilities: %w", err)
+	}
+	if complete {
+		return nil
+	}
+
 	results, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
-UPDATE api_key SET capabilities = [] WHERE capabilities = NONE RETURN NONE;
-UPSERT $marker SET version = $version,
-	completed_at = IF completed_at = NONE THEN time::now() ELSE completed_at END
+LET $marker_version = (SELECT version FROM $marker LIMIT 1)[0].version;
+UPDATE api_key SET capabilities = []
+	WHERE $marker_version = NONE AND capabilities = NONE RETURN NONE;
+UPSERT $marker SET
+	version = IF $marker_version = NONE THEN $version ELSE $marker_version END,
+	completed_at = IF $marker_version = NONE
+		THEN time::now() ELSE completed_at END
 	RETURN NONE;
 COMMIT;`, map[string]any{
-		"marker":  models.NewRecordID("store_migration", "api_key_capabilities"),
+		"marker":  apiKeyCapabilityMigrationStateID(),
 		"version": apiKeyCapabilityMigrationVersion,
 	})
 	if err != nil {
@@ -189,7 +210,47 @@ COMMIT;`, map[string]any{
 			)
 		}
 	}
+	complete, err = s.apiKeyCapabilityMigrationComplete(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate API key capabilities: %w", err)
+	}
+	if !complete {
+		return errors.New("migrate API key capabilities: completion marker missing")
+	}
 	return nil
+}
+
+func (s *Surreal) apiKeyCapabilityMigrationComplete(
+	ctx context.Context,
+) (bool, error) {
+	results, err := surrealdb.Query[[]apiKeyCapabilityMigrationStateRec](
+		ctx,
+		s.db,
+		"SELECT version FROM $rid",
+		map[string]any{"rid": apiKeyCapabilityMigrationStateID()},
+	)
+	if err != nil {
+		return false, err
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return false, fmt.Errorf(
+				"read completion marker statement %d: %s",
+				index,
+				result.Error.Message,
+			)
+		}
+		for _, row := range result.Result {
+			if row.Version == apiKeyCapabilityMigrationVersion {
+				return true, nil
+			}
+			return false, fmt.Errorf(
+				"unsupported completion marker version %q",
+				row.Version,
+			)
+		}
+	}
+	return false, nil
 }
 
 const pendingJobIndexes = `

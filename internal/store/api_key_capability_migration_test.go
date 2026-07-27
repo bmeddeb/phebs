@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -148,6 +149,92 @@ CREATE $legacy SET user_id = '', name = 'Legacy config key',
 	assertAPIKeyCapabilityUpdateRejected(t, s, writeKey.ID, []APIKeyCapability{})
 	if err := s.TouchAPIKey(ctx, writeKey.ID, time.Now().UTC()); err != nil {
 		t.Fatalf("ordinary immutable-key metadata update: %v", err)
+	}
+}
+
+func TestAPIKeyCapabilityMigrationMarkerSkipsAndRefusesFutureVersion(
+	t *testing.T,
+) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx := context.Background()
+	s, err := OpenLocal(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close(context.Background()) })
+
+	marker := readAPIKeyCapabilityMigrationMarker(t, s)
+	if marker.Version != apiKeyCapabilityMigrationVersion {
+		t.Fatalf("initial migration marker = %+v", marker)
+	}
+	results, err := surrealdb.Query[any](ctx, s.db, `
+REMOVE EVENT IF EXISTS api_key_capabilities_immutable ON TABLE api_key;
+REMOVE FIELD capabilities ON api_key;
+CREATE $probe SET user_id = 'migration-user', name = 'Scan probe',
+	prefix = 'phebs_probe', hash = 'probe-hash',
+	created_at = time::now();
+DEFINE EVENT api_key_capability_migration_scan_trap ON TABLE api_key
+	WHEN $event = 'UPDATE'
+	THEN {
+		THROW 'steady-state migration scanned API keys'
+	};`, map[string]any{
+		"probe": apiKeyID("steady-state-scan-probe"),
+	})
+	if err != nil {
+		t.Fatalf("install steady-state scan trap: %v", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			t.Fatalf(
+				"install steady-state scan trap statement %d: %s",
+				index,
+				result.Error.Message,
+			)
+		}
+	}
+	if err := s.migrateAPIKeyCapabilities(ctx); err != nil {
+		t.Fatalf("completed migration touched API keys: %v", err)
+	}
+
+	const futureVersion = "t21.12-api-key-capabilities-v2"
+	results, err = surrealdb.Query[any](
+		ctx,
+		s.db,
+		"UPDATE $marker SET version = $version RETURN NONE",
+		map[string]any{
+			"marker":  apiKeyCapabilityMigrationStateID(),
+			"version": futureVersion,
+		},
+	)
+	if err != nil {
+		t.Fatalf("install future migration marker: %v", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			t.Fatalf(
+				"install future migration marker statement %d: %s",
+				index,
+				result.Error.Message,
+			)
+		}
+	}
+	err = s.migrateAPIKeyCapabilities(ctx)
+	if err == nil || !strings.Contains(
+		err.Error(),
+		`unsupported completion marker version "`+futureVersion+`"`,
+	) {
+		t.Fatalf("future migration marker error = %v", err)
+	}
+	future := readAPIKeyCapabilityMigrationMarker(t, s)
+	if future.Version != futureVersion ||
+		!future.CompletedAt.Equal(marker.CompletedAt) {
+		t.Fatalf(
+			"future marker was overwritten: before=%+v after=%+v",
+			marker,
+			future,
+		)
 	}
 }
 
