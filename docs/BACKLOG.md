@@ -65,7 +65,7 @@ all historical ADR rows byte-untouched. AC: BACKLOG contains only active or
 unscheduled work plus archive links; PLAN retains its decision history; old
 ticket and ADR anchors remain discoverable.
 
-**T24.5 · Product and adoption consolidation** *(needs T24.4)* — remove repeated
+**T24.5 ✅ · Product and adoption consolidation** *(2026-07-27; needs T24.4)* — remove repeated
 product explanations across VISION, INVESTIGATIONS, PITCH, and pilot material by
 assigning one concept to one authority and replacing copies with links.
 Normative domain, envelope, pack, and pilot contracts remain separate. AC: no

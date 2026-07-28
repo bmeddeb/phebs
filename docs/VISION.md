@@ -1,244 +1,138 @@
-# phebs — evidence-backed service and contract intelligence for the monorepo
+# phebs product vision
 
-*Starting with Go/gRPC migrations; expanding to change assurance,
-operational response, platform conformance, and control evidence.*
+phebs is an evidence plane for consequential changes in large codebases.
+Migrations are the first workflow, not the product boundary.
 
-*Vision document, July 2026. This is a direction, not an ask — the bounded
-pilot proposal lives in [PITCH.md](./PITCH.md), and nothing here expands
-it.*
-
-**Companion documents:** [pilot charter](./PILOT_CHARTER.md) ·
-[evidence-pack card template](./EVIDENCE_PACK_CARD.md)
+This document owns long-term direction. It is not a description of current
+behavior and does not expand the bounded [pilot ask](./PITCH.md). Use the
+[roadmap](./ROADMAP.md) for current sequencing, the [README](../README.md) for
+shipped posture, and the [evidence-pack card](./EVIDENCE_PACK_CARD.md) for
+claim and validation rules.
 
 ## Thesis
 
-phebs is a **versioned, permission-aware census of service-to-contract
-relationships**. It answers: which deployables have relationship R, who
-owns them, what changed, what evidence supports the answer, and what could
-not be determined.
+Teams repeatedly ask the same population question in different forms:
 
-Migration is the first workflow over that census — not the product
-boundary. The expansion is not "migrations plus more searches"; it is a
-reusable **evidence plane for population questions** across the monorepo.
-Every workflow below decomposes into the same five-part decision shape,
-which is why this is one product and not a feature list.
+> Which deployables have relationship R, who owns them, what changed, what
+> evidence supports the answer, and what could not be determined?
 
-## What "contract" means
+Code search finds occurrences, build systems find possible dependencies,
+catalogs declare identity and ownership, and telemetry records recent
+execution. phebs joins those inputs into a versioned, permission-aware decision
+artifact while preserving uncertainty and source provenance.
 
-Any named interface that creates coupling between independently owned
-software:
+## What counts as a contract?
 
-- RPC operations and message fields
-- Event topics and schemas
-- Workflow engines' workflows, activities, signals, and queries
-- Shared libraries and platform SDKs
-- Feature flags and configuration keys
-- Database tables, entities, and fields
-- Error codes and policy decisions
-- IAM entitlements and required controls
+A contract is any named interface that couples independently owned software:
 
-## The evidence-pack model
+- RPC operations and message fields;
+- event topics, schemas, workflows, activities, signals, and queries;
+- shared libraries, platform SDKs, feature flags, and configuration keys;
+- database entities and fields;
+- error codes, policies, entitlements, and required controls.
 
-Each relationship type ships as a **separately measured evidence pack**.
-Passing validation for `CALLS_OPERATION` establishes nothing about
-`READS_FLAG` or `PUBLISHES_TOPIC`. Every pack ships with an
-**evidence-pack card**: its supported claim, blind spots, coverage
-semantics, validation result on a named benchmark, and stop criteria.
-The reusable card format lives in
-[EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md).
-"No match" never silently becomes "compliant" — conformance-shaped packs
-return three-valued conclusions: evidenced conforming, evidenced
-nonconforming, unknown (coverage or semantics insufficient).
+phebs should support only relationships for which it can define a bounded
+claim, evidence identity, coverage denominator, unresolved state, and
+validation method.
 
-**The validation rig is itself the moat.** The most expensive artifact
-phebs owns is not any extractor — it is the measurement machinery: the
-preregistered fail-closed staging, exact power analysis, burn-on-doubt
-disclosure census, one-shot sealed scoring, and enforced
-implementer/reviewer separation. Those custody, preregistration, sealing,
-disclosure, and release controls are reusable. A new pack still may require
-a different target population, sampling design, labeling method, estimator,
-ground-truth construction, and reviewer expertise — especially for
-interprocedural, control, and lineage claims. Extraction and validation can
-both be bottlenecks; the reusable rig makes neither free, but prevents each
-pack from inventing its governance from scratch. In the products and public
-documentation reviewed as of July 2026, I have not found an incumbent that
-attaches extractor-level measured accuracy and declared coverage to these
-service-level decision artifacts. That pipeline, not the facts themselves,
-is the durable differentiation hypothesis.
+## Evidence packs are the unit of trust
 
-## Expansion opportunities
+Each relationship family is governed as a separate evidence pack and must be
+measured independently before its claims are promoted. Passing validation for
+one predicate establishes nothing about another. A pack declares:
 
-| Priority | Workflow and artifact | Benefit measured by | Distance |
-|---|---|---|---|
-| 1 | New-consumer and dependency-drift ledger: first/last-seen service-operation edges; deprecated/restricted API regressions | detection latency; net-new deprecated consumers escaping review; spreadsheet hours | Near (cheapest: see architecture notes) |
-| 2 | PR/change-impact packet: typed base-vs-head edge changes, affected deployables, owners, reviewers, unresolved impact | time to identify affected owners; reviewer-routing precision; post-merge breakage discovery | Near (requires multi-revision architecture round) |
-| 3 | Living contract atlas and ownership reconciliation: providers, consumers, build paths, catalog identity, owner conflicts | time to an accepted owner; bounced requests; unmapped rates | Near |
-| 4 | Incident impact roster: direct/transitive candidates at deployed revisions, owners, gaps, separate runtime overlay | time from clue to reviewable blast radius; unnecessary pages | Near–medium |
-| 5 | Deployment regression packet: contract-edge changes between last-known-good and suspect deployments | time to narrow hypotheses; rollback-decision time | Near–medium |
-| 6 | Endpoint disposition queue: registered operations with static candidates, telemetry status, gaps, owner disposition | investigation hours per endpoint; stale surface removed | Near |
-| 7 | Platform-adoption campaign: actual use of approved factories, SDKs, interceptors, retry libraries, legacy frameworks | reliable campaign denominator; outreach hours saved | Adjacent |
-| 8 | Architecture-conformance ledger: new cross-domain calls, gateway bypasses, forbidden dependencies, expiring waivers | violations caught pre-merge; waiver age and closure | Adjacent |
-| 9 | Feature-flag/configuration lifecycle dossier: readers, owners, dynamic unresolved uses, new readers after freeze | flag lifetime; cleanup investigation time; post-freeze escapes | Adjacent |
-| 10 | Event/workflow contract atlas: producers, consumers, workflow starters, activity registrations, signals, owners | schema-change prep time; unknown-consumer rate | New extractor |
-| 11 | Dependency/security remediation roster: affected-symbol use, deployable candidates, owners | time to owner-routed list; narrowing vs SBOM presence | New evidence inputs |
-| 12 | Control and lineage evidence: deadline/retry/auth configuration, entitlements, field use, privacy/deletion candidates | audit-prep time; known/unknown control rate | Later / deeper semantics |
+- the exact claim and unit of analysis;
+- supported constructs and explicit non-claims;
+- stable identities and evidence provenance;
+- coverage, exclusion, failure, and unresolved semantics;
+- validation result and operating envelope;
+- release, suspension, expiry, and retirement rules.
 
-### The strongest day-to-day workflows
+Conformance-shaped packs return three states: evidenced conforming, evidenced
+nonconforming, or unknown. “No match” never silently becomes “compliant.”
 
-**Contract-aware PR review.** A PR changes a shared client, operation,
-generated type, or common library. The impact packet lists
-added/removed/modified typed relationships, direct vs transitive affected
-targets, deployable/owner attribution, suggested reviewers, base/head
-evidence, and unsupported impact. Search returns references; the build
-graph returns thousands of dependents; phebs filters that population to
-semantically evidenced users attributed to services and owners. The best
-route from occasional migration use to daily use.
+The durable differentiation hypothesis is not a particular extractor. It is
+the reusable custody and measurement system around extractors: preregistration,
+independent review, sealed scoring, explicit disclosure, fail-closed release,
+and reproducible evidence. New packs still require their own population,
+labels, estimator, expertise, and result.
 
-**New-consumer regression detection.** "A deprecated RPC had 15 consumers
-yesterday — did a new one appear today?" A contract ledger with
-first/last-seen snapshots, new/removed service-operation edges, lifecycle
-status, owner, evidence, coverage, and approved exceptions with expiry.
-Prevents migration targets from silently moving; also covers restricted
-APIs, capacity-sensitive operations, and architectural boundaries.
+## Product directions
 
-**Platform and framework adoption.** Which services actually instantiate
-the legacy client or bypass the approved factory — not merely carry its
-package transitively? A defensible campaign denominator: platform teams
-stop ticketing every build-dependent service and focus on evidenced users.
+| Direction | Decision artifact | Value to measure |
+|---|---|---|
+| Contract atlas and ownership reconciliation | providers, callers, implementations, shapes, owner conflicts, and gaps | time to an accepted owner; unmapped rate |
+| Migration and dependency ledger | first/last-seen relationships, replacement comparison, and dispositions | discovery latency; spreadsheet/outreach time |
+| Change-impact review | base-versus-head relationship changes, affected deployables, owners, and unresolved impact | reviewer-routing precision; breakage discovery |
+| Incident scoping | direct, transitive, and unresolved candidates at deployed revisions with a separate runtime overlay | time to a reviewable blast radius |
+| Platform adoption | evidenced use or bypass of approved factories, SDKs, interceptors, and libraries | reliable denominator; outreach avoided |
+| Architecture conformance | new forbidden relationships, applicable external policy, and expiring exceptions | violations caught; waiver age |
+| Configuration lifecycle | declarations, readers, defaults, dynamic keys, owners, and post-freeze changes | cleanup time; escaped readers |
+| Async contracts | topic producers/consumers and workflow registrations/starters | change-preparation time; unknown-consumer rate |
+| Security and dependency response | affected-symbol use, build/deployable attribution, and ownership | time to an owner-routed remediation list |
+| Control and lineage research | retry/auth/deadline behavior, sensitive-field use, and retention/deletion candidates | known/unknown rate; review effort |
 
-**Incident blast radius and regression archaeology.** Candidate services
-ranked direct/transitive/unresolved at their deployed revisions, exact
-code evidence, on-call routes, typed diffs between good and suspect
-revisions, with runtime-observed callers as a separately sourced overlay.
-Output says "could be affected," never "is affected."
-
-**Architecture governance.** Did this PR introduce a gateway bypass or a
-forbidden cross-domain dependency? The conformance artifact carries the
-evidenced edge, the applicable policy, the introducing snapshot/PR, the
-owner, any waiver with expiry, and coverage — turning an architecture
-decision record from prose into an observable, reviewable control.
-
-**Flag and configuration lifecycle.** `DECLARES_FLAG`, `READS_FLAG`,
-`READS_CONFIG`, `USES_DEFAULT`, `CONSTRUCTS_DYNAMIC_KEY`. Distinguishes
-declarations, tests, production reads, wrappers, dynamic unresolved keys,
-deployables, owners. The cleanest adjacent pack: it reuses the entire
-attribution, snapshot, and coverage pipeline.
-
-**Async contract intelligence.** `PUBLISHES_TOPIC`, `CONSUMES_TOPIC`,
-`STARTS_WORKFLOW`, `REGISTERS_WORKFLOW`, `REGISTERS_ACTIVITY`,
-`SIGNALS_WORKFLOW` — event-schema impact, workflow change scoping,
-activity retirement. Dynamic topic names and runtime registrations remain
-explicit gaps; a source-derived candidate is not proof of message flow.
-
-**Error and policy behavior (research tier).** Which callers map error
-class X to retry, fail open, fail closed, suppress, propagate?
-(`HANDLES_ERROR_CODE`, `MAPS_ERROR_ACTION`, `RETRIES_ON_ERROR`, …).
-Requires interprocedural control-flow analysis — and, critically, **a
-different validation game**: interprocedural claims cannot be labeled by
-two reviewers reading a call site, so ground truth itself becomes
-contested. Presented as research until that protocol exists.
-
-**Privacy and retention evidence (research tier).** Which service
-candidates write classified identifier F, and which show evidence of a
-deletion handler, TTL, or explicit disposition? (`READS_FIELD`,
-`WRITES_FIELD`, `PERSISTS_FIELD`, `REGISTERS_DELETION_HANDLER`,
-`DECLARES_TTL`). The output is an owner-routed review inventory, never a
-compliance certificate: static presence of a handler does not prove
-complete or successful deletion.
+The last category is research until its ground truth and interprocedural
+validation protocol exist. Static evidence may produce candidates; it must not
+be presented as a compliance certificate.
 
 ## Reusable primitives
 
-| Primitive | Workflows unlocked |
+| Primitive | What it unlocks |
 |---|---|
-| Typed facts + service attribution | contract atlas, ownership routing, migration inventories |
-| Snapshot diff | PR impact, new-consumer detection, regression archaeology |
-| **Query surface** (API, UI, MCP tools, with SLOs) | every daily workflow above — the hidden step between census and product |
-| Policy + exceptions + dispositions | architecture controls, adoption campaigns, lifecycle governance |
-| Deployment and runtime overlays | incident scoping, rollout planning, endpoint disposition |
-| New narrow evidence packs | flags, events, workflows, SDKs, security primitives |
-| Field-sensitive/dataflow analysis | proto compatibility, error behavior, privacy and retention |
+| Typed facts and immutable citations | reproducible contract and dependency inventories |
+| Source-to-unit/service/owner attribution | routing and reconciliation |
+| Snapshot comparison | migration ledgers, change impact, and regression archaeology |
+| Coverage and unresolved semantics | honest population and negative-result questions |
+| Human dispositions kept separate from evidence | review without mutating facts |
+| Dossiers and proof references | portable, independently inspectable decisions |
+| Permission-aware API, UI, and MCP projections | human and agent consumers sharing one engine |
+| Runtime/deployment overlays with distinct provenance | incident and rollout context without rewriting source facts |
 
-**Every artifact has an agent-consumer twin.** The PR packet's likeliest
-daily consumer is a review agent citing proof bundles in comments, not a
-human on a dashboard. The evidence plane is also the grounding layer for
-the organization's agentic workflows: permission-filtered facts an agent
-can cite and a human can independently reproduce. phebs' MCP surface
-already exists; the packs give it something worth citing.
-
-## Architecture notes (from the implementation)
-
-- **The new-consumer ledger is the cheapest near-term pack.** Extraction
-  already re-runs per index event and publications supersede atomically
-  per repo/domain; the ledger is a diff plus a compact
-  first-seen/last-seen edge table. One real change: retention currently
-  sweeps superseded runs, so history needs either per-snapshot pins or
-  that ledger table — small, well-understood work.
-- **PR impact packets still cross the evidence boundary.** T10.4 can index and
-  search an allowlisted non-HEAD revision, but extraction, coverage, and proof
-  publication deliberately remain HEAD-bound. Base-vs-head analysis therefore
-  still requires ephemeral corpora and runs that must never pollute the
-  published census, plus CI-latency expectations. That is an architecture
-  round, not a presentation feature; sequencing must budget for it or the first
-  estimate will miss by a quarter.
-- **Ownership reconciliation is politically loaded — design its voice
-  now.** When source evidence disagrees with the catalog, the artifact
-  **reports conflicts and never arbitrates**: evidenced-consistent,
-  evidenced-conflicting, unknown. That principle is the difference between
-  adoption by platform teams and resentment from them.
+Every human-facing artifact should have an agent-consumer twin. Agents receive
+the same scoped facts, gaps, and citations; phebs does not make the agent
+authoritative.
 
 ## Durable differentiation
 
-| Existing system | What it establishes | What phebs adds |
+| Existing system | Establishes | phebs adds |
 |---|---|---|
-| Code search | exact source occurrences | typed relationships, coverage, service attribution, history |
-| Build graph | what may compile or depend | semantic filtering to the operation or primitive actually used |
-| Service catalog | declared identity and ownership | source-derived evidence and explicit reconciliation failures |
-| Runtime telemetry | what executed during an observed interval | dormant/conditional candidates and immutable source context |
-| SAST/SBOM | findings or component presence | build paths, deployable/owner attribution, campaign state, proof bundle |
-| LLM agent | synthesis and interaction | permission-filtered facts that can be reproduced and independently reviewed |
+| Code search | source occurrences | typed relationships, history, coverage, and attribution |
+| Build graph | possible dependency | evidence of the specific operation or primitive used |
+| Service catalog | declared identity and ownership | source-derived evidence and explicit conflicts |
+| Runtime telemetry | observed execution in a window | dormant/conditional candidates and immutable source context |
+| SAST or SBOM | finding or component presence | deployable/owner routing and reviewable proof |
+| LLM agent | synthesis and interaction | permission-filtered facts a human can reproduce |
 
-Search finds occurrences; build systems compute dependencies; catalogs
-declare ownership; telemetry records recent execution. **phebs joins those
-views into a versioned, owner-attributed decision artifact while
-preserving what remains unknown.**
+## Directional sequence
 
-## Sequencing
+1. Keep the shipped search, browsing, code-intelligence, security, and
+   operational foundation dependable.
+2. Establish each evidence pack independently before promoting its claims.
+3. Productize recurring questions as
+   [Investigations](./INVESTIGATIONS.md), proof material, and comparable
+   snapshots.
+4. Add daily change-assurance and ownership-routing workflows.
+5. Add deployment/runtime overlays without merging their provenance into
+   static evidence.
+6. Add new contract families only when a narrow pack and validation design
+   exist.
+7. Pursue deep control-flow and data-lineage semantics only after their ground
+   truth is defensible.
 
-1. **Prove the migration foundation** — the external Go/gRPC measurement
-   and the internal attribution pilot (the entirety of the current ask).
-2. **Productize the contract atlas** — proof bundles, coverage,
-   dispositions, ownership reconciliation, **and the query surface**,
-   shaped as Investigations (see [INVESTIGATIONS.md](./INVESTIGATIONS.md))
-   (assertion API, UI, MCP tools, SLOs). Search UI/MCP are operational
-   today; contract-intelligence queries and their SLOs remain post-gate
-   productization work.
-3. **Add daily change assurance** — the new-consumer ledger first (cheap,
-   reuses the event-driven pipeline), then PR impact packets after the
-   multi-revision architecture round, reviewer routing, endpoint hygiene.
-4. **Add adoption and policy campaigns** — factories, SDKs, interceptors,
-   architecture boundaries, flags/configuration.
-5. **Add operational overlays** — deployment revisions, runtime
-   observations, dependency/SBOM inputs, incident packets.
-6. **Add new contract families** — events/topics, workflow engines, HTTP,
-   data stores.
-7. **Only then pursue deep semantics** — proto-field lineage, error
-   handling, privacy and retention — each behind its own,
-   yet-to-be-designed validation protocol.
+Current order and gates live only in [ROADMAP.md](./ROADMAP.md).
 
-Accuracy established for one pack is never generalized to another; every
-pack independently declares its supported claim, blind spots, validation
-result, and stop criteria on its pack card.
+## Boundaries
 
-## What phebs must not become
+phebs must not become:
 
 - generic semantic search or generic agent chat;
-- a replacement for observability;
-- a universal compiler, call graph, or static analyzer;
-- a project-management or GRC system;
-- an autonomous mass-refactoring engine;
-- a policy-authoring system — phebs evaluates evidence against policies
-  owned elsewhere; it never becomes the place where policy is written.
+- a replacement for observability, build systems, or service catalogs;
+- a universal compiler, call graph, or autonomous refactoring engine;
+- a project-management, policy-authoring, portfolio, or GRC system;
+- a source of runtime, compatibility, completeness, or compliance claims that
+  its evidence cannot establish.
 
-Specialized analyzers can supply versioned facts *to* phebs; phebs' role
-is to attribute, reconcile, scope, diff, and package those facts into
-decision artifacts.
+Specialized analyzers may publish versioned facts into the evidence plane.
+phebs owns attribution, reconciliation, scoping, comparison, and proof—not
+every analysis technique or the external policy being evaluated.

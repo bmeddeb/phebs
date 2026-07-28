@@ -159,7 +159,7 @@ and hidden repositories are not serialized into proof material.
   troubleshooting.
 - [Documentation map](./docs/README.md) — every contract, pilot artifact,
   fixture, and retained record.
-- [Product vision](./docs/VISION.md) — direction and sequencing.
+- [Product vision](./docs/VISION.md) — long-term direction and boundaries.
 - [Roadmap](./docs/ROADMAP.md) — current posture and next decisions.
 - [Backlog](./docs/BACKLOG.md) — active work and ticket acceptance criteria.
 - [Architecture decisions](./PLAN.md) — append-only ADR ledger.
