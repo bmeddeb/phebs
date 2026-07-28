@@ -10,7 +10,7 @@ when two pages appear to overlap.
 |---|---|
 | Understand the product | [Project README](../README.md), then [VISION.md](./VISION.md) |
 | Install, configure, or operate phebs | [MANUAL.md](./MANUAL.md), then its task guide |
-| Plan or implement a change | [BACKLOG.md](./BACKLOG.md), then [PLAN.md](../PLAN.md) |
+| Plan or implement a change | [ROADMAP.md](./ROADMAP.md), then [BACKLOG.md](./BACKLOG.md) and [PLAN.md](../PLAN.md) |
 | Evaluate a pilot | [PITCH.md](./PITCH.md), then [PILOT_CHARTER.md](./PILOT_CHARTER.md) |
 | Review an evidence pack | [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) and [PACK_MANIFEST.md](./PACK_MANIFEST.md) |
 
@@ -21,7 +21,9 @@ when two pages appear to overlap.
 | Public overview and first successful run | [Project README](../README.md) | Keep short; link to detail instead of repeating it |
 | User-visible behavior, workflows, and operations | [MANUAL.md](./MANUAL.md) and its task guides | Update the owning guide with every behavior change |
 | Annotated configuration | [config.example.yaml](./config.example.yaml) | Canonical option names, defaults, and examples |
-| Active and proposed work | [BACKLOG.md](./BACKLOG.md) | Tickets are the merge bar; completed history will move only through a reviewed archive ticket |
+| Current sequencing | [ROADMAP.md](./ROADMAP.md) | Summarize current posture and next decisions |
+| Active and proposed work | [BACKLOG.md](./BACKLOG.md) | Tickets and acceptance criteria are the merge bar |
+| Completed ticket history | [BACKLOG_COMPLETED.md](./BACKLOG_COMPLETED.md) | Append through a reviewed archive move; do not rewrite completed narratives |
 | Architecture and decisions | [PLAN.md](../PLAN.md) | Append dated ADR rows; do not rewrite historical decisions |
 | Product direction | [VISION.md](./VISION.md) | Describe direction, not current behavior or setup |
 | Pilot authority and claims | [PILOT_CHARTER.md](./PILOT_CHARTER.md) | Downstream documents cannot broaden its authority |

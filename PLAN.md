@@ -11,12 +11,37 @@ config row), naming, and the BACKLOG.md epic mapping.
 session; P1/P2 phase text re-derived from the §8 decision log (originals not
 retrieved verbatim). Everything else carries the session's substance.
 
+## Current architecture and status
+
+- **Deployment:** one self-hosted Go application with an embedded React UI,
+  in-process zoekt serving, a supervised local SurrealDB child, and bounded
+  index-builder/Buf children. Standalone is the supported development and
+  small-deployment profile.
+- **Source boundary:** repositories are read at immutable commits; mirrors and
+  shards are derived and rebuildable, while database state and configuration
+  are precious.
+- **Shipped core:** repository sync, search and browsing, SCIP, Git history,
+  authentication, permissions, audit, OpenAPI, MCP, and backup/restore.
+- **Experimental annex:** Contract Atlas, Caller Map, Impact, Change Workbench,
+  Thrift fields, and Kafka evidence are implemented but remain default-dark or
+  fixture-bound. The retained external validation result is
+  `NOT_ESTABLISHED`.
+- **Current work:** documentation consolidation is active; production evidence
+  registration remains gated; the P6 fleet profile is demand-driven.
+
+Use [docs/ROADMAP.md](./docs/ROADMAP.md) for current sequencing,
+[docs/BACKLOG.md](./docs/BACKLOG.md) for active acceptance criteria, and
+[docs/BACKLOG_COMPLETED.md](./docs/BACKLOG_COMPLETED.md) for completed ticket
+history. The decision table below is append-only. The later phase narrative
+records the design's evolution and is not the active roadmap.
+
 ---
 
 ## 1. Decisions locked
 
 | Area | Decision | Escape hatch |
 |---|---|---|
+| 2026-07-27 | T24.4 active roadmap and immutable ticket archive | **Current sequencing is intentionally small and completed implementation history is retained separately.** `docs/ROADMAP.md` now summarizes shipped core behavior, the default-dark evidence boundary, remaining documentation work, production gates, and the demand-driven P6 fleet profile. `docs/BACKLOG.md` contains only the active Epic 24 tickets, deliberate non-goals, and standing rules; completed Epics 0–23 and P5 hardening moved to `docs/BACKLOG_COMPLETED.md` in the same directory so their relative links and ticket prose remain intact. The archive has a pinned content digest and future changes require a reviewed digest update. PLAN now begins with a concise current architecture/status block and routes readers to the three owning planning documents; its phase/open-question sections are labeled historical, while every existing ADR and decision-log row remains byte-untouched. This reorganization changes no product priority by itself and no runtime, release, capability, evidence, validation, or production-gate behavior. |
 | 2026-07-27 | T24.3 task-oriented user guide | **User behavior is owned by four task guides rather than one 3,000-line page.** `docs/MANUAL.md` is now a short durable entry point and product boundary; `guides/GETTING_STARTED.md` owns prerequisites and first run, `guides/CONFIGURATION.md` owns configuration and repository connections, `guides/WORKFLOWS.md` owns search/UI/API/MCP and experimental demonstrations, and `guides/OPERATIONS.md` owns storage, security, extraction operations, troubleshooting, and development. Existing behavioral prose moved without deletion, configuration continues to defer to the exhaustive `config.example.yaml`, and cross-section references now resolve to their owning guide. The generated Change Workbench glossary moved intact with the workflow content, and the canonical generator/verification path moved with it rather than creating a second projection. `docs/README.md` reaches every guide and the tracked-document guard enforces that routing. No command, option, API, capability, evidence classification, validation result, or runtime behavior changes. |
 | 2026-07-27 | T24.2 concise public landing page | **The root README is a route into the product, not a second manual, roadmap, or decision ledger.** It now explains the migration problem, separates shipped search/code-intelligence behavior from experimental/default-dark evidence surfaces, defines resolved callers, name matches, unresolved candidates, and coverage certificates, provides one verified local start and two bounded evaluation paths, retains the architecture image and evidence caveats, and links to the owning documents for configuration, operations, planning, and governance. Detailed Thrift/Kafka commands, release chronology, exhaustive feature lists, configuration commentary, and ticket history remain in MANUAL, BACKLOG, PLAN, or pack cards rather than being copied into the landing page. This edit changes no runtime behavior, capability state, evidence classification, validation result, or release identity. |
 | 2026-07-27 | T24.1 documentation ownership and sealed-history boundary | **Documentation has one named authority per kind of information.** The root README is the public landing page; `docs/README.md` is the complete routing and ownership index; MANUAL owns user-visible behavior and operations; `config.example.yaml` owns configuration examples; BACKLOG owns active work; PLAN remains the append-only dated decision ledger; VISION owns direction rather than current behavior. Normative Investigation, MCP, pack, and pilot contracts stay separate because combining them would blur authority. The T11.1 tree under `spike/t111/` is sealed evidence and may not be rewritten, relocated, deleted, or summarized as a new result during documentation cleanup. A tracked-document test now requires every local Markdown/HTML link to resolve, every tracked document under `docs/` to be reachable from the map, and the complete tracked T11.1 tree to match its pre-cleanup digest. Later T24 tickets may split the manual and archive completed backlog prose only through reviewed, link-preserving moves; historical PLAN rows remain byte-untouched. This information-architecture change modifies no runtime behavior, capability registration, evidence tier, validation result, or production gate. |
@@ -235,7 +260,7 @@ owner-scoped job claims; admission control with **separate interactive and agent
 traffic budgets**. Standalone remains the dev/small default; fleet lands last so
 single-node correctness is proved first.
 
-## 2. Phases
+## 2. Historical phase sequence
 
 - **P0 — Spike. DONE (2026-07-07).** ~200-line Go binary serving `/search` over an
   existing zoekt shard directory via library import. Proved the zoekt-as-library
@@ -318,7 +343,11 @@ single-node correctness is proved first.
 | A source path does not prove a deployable service or owner | Model source occurrence → build target → deployable → logical service → owner as typed, provenance-bearing candidate relations; preserve zero/many mappings |
 | One monorepo contains path-restricted code | Treat repository visibility as the current minimum authorization unit; do not enable the caller map where that is insufficient until a path/unit authorization ADR lands |
 
-## 4. Open questions
+## 4. Historical open questions
+
+These questions are retained as design history. Resolved outcomes live in the
+decision ledgers and completed backlog; the remaining P6 choices are summarized
+in [docs/ROADMAP.md](./docs/ROADMAP.md).
 
 1. **P6 gate:** measured index-size and RAM multipliers on the real corpus — no
    hardware commitments before the capacity spike.

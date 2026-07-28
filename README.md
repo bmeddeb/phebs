@@ -160,6 +160,7 @@ and hidden repositories are not serialized into proof material.
 - [Documentation map](./docs/README.md) — every contract, pilot artifact,
   fixture, and retained record.
 - [Product vision](./docs/VISION.md) — direction and sequencing.
+- [Roadmap](./docs/ROADMAP.md) — current posture and next decisions.
 - [Backlog](./docs/BACKLOG.md) — active work and ticket acceptance criteria.
 - [Architecture decisions](./PLAN.md) — append-only ADR ledger.
 

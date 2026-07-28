@@ -95,7 +95,7 @@ test: verify-glossary
 
 docs-check: ## resolve tracked docs, enforce map coverage, and verify sealed T11.1 bytes
 	go test ./scripts \
-		-run '^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest)$$' \
+		-run '^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest|CompletedBacklogArchiveDigest)$$' \
 		-count=1
 
 t20-closure: bin/zoekt-git-index verify-surreal ## T20.14 empty-data scale/failure journey; receipt defaults to /private/tmp

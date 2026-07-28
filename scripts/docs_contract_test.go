@@ -117,6 +117,20 @@ func TestSealedT111TreeDigest(t *testing.T) {
 	}
 }
 
+func TestCompletedBacklogArchiveDigest(t *testing.T) {
+	root := repositoryRoot(t)
+	data, err := os.ReadFile(filepath.Join(root, "docs", "BACKLOG_COMPLETED.md"))
+	if err != nil {
+		t.Fatalf("read completed backlog archive: %v", err)
+	}
+	digest := sha256.Sum256(data)
+	got := "sha256:" + hex.EncodeToString(digest[:])
+	const want = "sha256:d00133c3acfc805d4d86fcd75dc6ab102744845569740a28d30748cac80364d0"
+	if got != want {
+		t.Fatalf("completed backlog archive changed: got %s, want %s", got, want)
+	}
+}
+
 func repositoryRoot(t *testing.T) string {
 	t.Helper()
 	root, err := filepath.Abs("..")

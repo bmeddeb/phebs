@@ -11,6 +11,8 @@ CodeMirror 6 UI embedded via `go:embed`. Pronounced "febz".
 - `docs/PORT_MAP.md` — removed 2026-07-12 (historical; see git history).
 - `docs/BACKLOG.md` — epics + PR-sized tickets. Work proceeds in ticket order;
   branch names carry ticket IDs (e.g. `t1.3-job-claim-spike`).
+- `docs/ROADMAP.md` — current posture and sequencing; completed tickets live in
+  `docs/BACKLOG_COMPLETED.md`.
 - `docs/MANUAL.md` — the user-guide index. Behavior changes update the owning
   task guide under `docs/guides/` in the same PR.
 - `docs/README.md` — documentation map; the adoption suite
