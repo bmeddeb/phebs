@@ -31,7 +31,8 @@ instructions, and retained-record classification are all in place.
 
 No implementation ticket is currently scheduled. New work requires an
 explicit decision to pursue the gated evidence/pilot path or the demand-driven
-P6 fleet profile below.
+P6 fleet profile below. Epic 25 (an embedded documentation browser) is
+drafted in the [backlog](./BACKLOG.md) as an unscheduled nice-to-have.
 
 ## Gated product work
 

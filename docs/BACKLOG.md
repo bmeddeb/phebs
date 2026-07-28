@@ -13,7 +13,38 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 The two identified next paths—production evidence/pilot gating and the P6 fleet
 profile—remain explicitly gated or demand-driven in the roadmap. Neither is an
-implicit next ticket.
+implicit next ticket. Epic 25 below is drafted but starts only on an explicit
+scheduling decision.
+
+## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
+
+Serve the repository's markdown documentation, rendered, from the phebs binary
+itself. The tracked `docs/` tree stays the single source of truth: plain
+markdown, still rendered identically by GitHub, with no external docs
+toolchain, static-site generator, or content fork.
+
+### Boundary
+
+- One new pure-Go dependency (`goldmark` plus its GFM extension); no new
+  runtime children and no build-pipeline stage.
+- Served behind the existing session/API-key authentication like the UI; no
+  anonymous surface and no new capability.
+- `docs/fixtures/` and `docs/design_handoff_phebs_brand_and_ui/` are excluded
+  from the embedded set; retained records remain repository-only.
+- No docs versioning, search, or navigation chrome: `docs/README.md` and
+  `docs/MANUAL.md` are the navigation, exactly as on GitHub.
+
+**T25.1 · Rendered docs at their markdown URLs** — embed the tracked docs
+markdown, docs SVGs, and `config.example.yaml`, plus root `README.md` and
+`PLAN.md`, via `go:embed` (same build-tag pattern as `ui/`); render GFM to
+HTML with goldmark once at startup; serve each page inside one branded HTML
+shell at its repo-relative path under an authenticated docs route, so every
+tracked relative link works unrewritten (`.md` URLs return HTML, SVG and YAML
+pass through). AC: every local link the T24.1 contract test validates also
+resolves in the served site; excluded fixture and design-handoff bytes are
+absent from the binary; the route requires authentication; `make dev` demo —
+open the served `docs/README.md`, follow a link into a task guide and the
+architecture SVG; dated PLAN ADR bullet in the same PR; full merge bar.
 
 ## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 
