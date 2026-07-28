@@ -35,5 +35,7 @@ migration completion, migration safety, retirement safety, or extraction
 accuracy. External accuracy remains `NOT_ESTABLISHED`.
 
 `cmd/author` deterministically creates the two-commit bundle from the reviewed
-`repo/` tree. Normal tests and `make dev` verify and consume the committed
-bundle; they do not re-author it.
+`repo/` tree. The bundle advertises both `HEAD` and `refs/heads/main`, so bare
+mirrors resolve the same default branch across supported Apple and Linux Git
+versions. Normal tests and `make dev` verify and consume the committed bundle;
+they do not re-author it.

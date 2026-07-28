@@ -91,6 +91,7 @@ func TestT225CommittedBundleExercisesThriftFieldZero(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertT225BundleHeads(t, absoluteBundle, receipt.Commit)
 	if err := phebssync.Mirror(ctx, absoluteBundle, mirror); err != nil {
 		t.Fatalf("mirror fixture bundle: %v", err)
 	}
@@ -134,6 +135,19 @@ func TestT225CommittedBundleExercisesThriftFieldZero(t *testing.T) {
 	}
 	if got := blob.Content[fact.Atom.StartByte:fact.Atom.EndByte]; got != "GetSuccess" {
 		t.Fatalf("citation bytes = %q, want GetSuccess", got)
+	}
+}
+
+func assertT225BundleHeads(t *testing.T, bundle, commit string) {
+	t.Helper()
+	output, err := exec.Command("git", "bundle", "list-heads", bundle).CombinedOutput()
+	if err != nil {
+		t.Fatalf("list fixture bundle heads: %v\n%s", err, output)
+	}
+	for _, ref := range []string{"HEAD", "refs/heads/main"} {
+		if !strings.Contains(string(output), commit+" "+ref+"\n") {
+			t.Fatalf("fixture bundle heads = %q, missing %s %s", output, commit, ref)
+		}
 	}
 }
 

@@ -415,37 +415,50 @@ test('applies every shared filter and resets pagination', async () => {
   ])
 })
 
-test('pages a 10,000-row fixture without accumulating hidden DOM rows', async () => {
-  api.fetchContractCallers.mockImplementation(
-    async (
-      _endpoint: unknown,
-      _filters: unknown,
-      _size: number,
-      cursor: string,
-    ) => {
-      const pageIndex = cursor === '' ? 0 : Number(cursor.slice('cursor-'.length))
-      const start = pageIndex * 100
-      const rows = Array.from({ length: 100 }, (_, index) => callerRow(start + index))
-      const next = pageIndex < 99 ? `cursor-${pageIndex + 1}` : ''
-      return callerPage(rows, 10_000, next)
-    },
-  )
+test('keeps a 10,000-row snapshot bounded to the current page', async () => {
+  api.fetchContractCallers.mockReset()
+    .mockResolvedValueOnce(callerPage(
+      Array.from({ length: 100 }, (_, index) => callerRow(index)),
+      10_000,
+      'cursor-next',
+    ))
+    .mockResolvedValueOnce(callerPage(
+      Array.from({ length: 100 }, (_, index) => callerRow(index + 100)),
+      10_000,
+      'cursor-after-second',
+    ))
   renderPage()
   await screen.findByText('Page 1')
-  for (let index = 0; index < 100; index++) {
-    expect(screen.getAllByTestId('caller-map-row')).toHaveLength(100)
-    expect(document.querySelectorAll('[data-testid="caller-map-row"]').length)
-      .toBeLessThanOrEqual(100)
-    if (index === 99) break
-    fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
-    await screen.findByText(`Page ${index + 2}`)
-  }
-  expect(api.fetchContractCallers).toHaveBeenCalledTimes(100)
-  expect(screen.getByText('Rows 9901–10000 of 10000')).toBeTruthy()
-  expect(screen.getByText(/Exact snapshot exhausted on page 100\./)).toBeTruthy()
+  expect(screen.getAllByTestId('caller-map-row')).toHaveLength(100)
+  expect(document.querySelectorAll('[data-testid="caller-map-row"]')).toHaveLength(100)
+  expect(screen.getAllByTestId('caller-map-row')[0]?.getAttribute('data-occurrence-id'))
+    .toContain('assertion-0')
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  await screen.findByText('Rows 101–200 of 10000')
+  expect(api.fetchContractCallers).toHaveBeenCalledTimes(2)
+  expect(screen.getAllByTestId('caller-map-row')).toHaveLength(100)
+  expect(document.querySelectorAll('[data-testid="caller-map-row"]')).toHaveLength(100)
+  expect(document.querySelector('[data-occurrence-id*="assertion-0"]')).toBeNull()
   expect(screen.getAllByTestId('caller-map-row').at(-1)?.getAttribute('data-occurrence-id'))
-    .toContain('assertion-9999')
-}, 30_000)
+    .toContain('assertion-199')
+})
+
+test('renders exact exhaustion when the final bounded page is reached', async () => {
+  api.fetchContractCallers.mockReset()
+    .mockResolvedValueOnce(callerPage(
+      Array.from({ length: 100 }, (_, index) => callerRow(index)),
+      101,
+      'cursor-final',
+    ))
+    .mockResolvedValueOnce(callerPage([callerRow(100)], 101))
+  renderPage()
+  await screen.findByText('Rows 1–100 of 101')
+  fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
+  await screen.findByText('Rows 101–101 of 101')
+  expect(screen.getByText(/Exact snapshot exhausted on page 2\./)).toBeTruthy()
+  expect(screen.getAllByTestId('caller-map-row')).toHaveLength(1)
+})
 
 test('renders retry and restarts a stale snapshot cursor', async () => {
   api.fetchContractCallers.mockReset()

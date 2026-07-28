@@ -109,8 +109,10 @@ func TestT2114ScenarioFailureAccessibilityAndImplementationClosure(
 	if err != nil {
 		t.Fatalf("list bundle heads: %v", err)
 	}
-	if !strings.Contains(string(heads), receipt.Commit+" refs/heads/main") {
-		t.Fatalf("bundle head = %q, want commit %s", heads, receipt.Commit)
+	for _, ref := range []string{"HEAD", "refs/heads/main"} {
+		if !strings.Contains(string(heads), receipt.Commit+" "+ref+"\n") {
+			t.Fatalf("bundle heads = %q, missing %s %s", heads, receipt.Commit, ref)
+		}
 	}
 
 	requiredFiles := map[string][]string{

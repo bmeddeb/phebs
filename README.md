@@ -370,7 +370,7 @@ See the [manual](./docs/MANUAL.md),
 
 ## Project status
 
-`v0.2.0` is the current release line. It adds the completed local
+`v0.2.1` is the current patch-release line. It adds the completed local
 implementation stacks for:
 
 - Epic 19 — Thrift contract intelligence;

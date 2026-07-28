@@ -2,8 +2,8 @@
   "schema": "t22.5-thrift-field-demo-v1",
   "repository": "example.invalid/t225-thrift-field-demo",
   "commit": "050c2c5204b24c1968f887310774eee57c46be57",
-  "bundle_sha256": "sha256:c7bcffb9406c284322c384b33246455bee9de04e26364851818ce73efbe60b3f",
-  "bundle_bytes": 1435,
+  "bundle_sha256": "sha256:6adaf2e8223d59a08e5c624d838cc9e9f20c15bf8c0c9861ca0ba3dfeff82500",
+  "bundle_bytes": 1481,
   "index_author": "phebs-t225-authored-preparer",
   "index_author_version": "1",
   "authoring_command": [

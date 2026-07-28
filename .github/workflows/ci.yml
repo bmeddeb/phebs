@@ -113,11 +113,11 @@ jobs:
           set -euo pipefail
           first="$RUNNER_TEMP/release-a"
           second="$RUNNER_TEMP/release-b"
-          bundle="phebs-v0.2.0-linux-amd64"
-          make release VERSION=v0.2.0 RELEASE_ROOT="$first"
-          make release VERSION=v0.2.0 RELEASE_ROOT="$second"
+          bundle="phebs-v0.2.1-linux-amd64"
+          make release VERSION=v0.2.1 RELEASE_ROOT="$first"
+          make release VERSION=v0.2.1 RELEASE_ROOT="$second"
           cmp "$first/$bundle/release-manifest.json" "$second/$bundle/release-manifest.json"
-          make smoke-release VERSION=v0.2.0 RELEASE_BUNDLE="$first/$bundle"
+          make smoke-release VERSION=v0.2.1 RELEASE_BUNDLE="$first/$bundle"
           mkdir -p dist/release
           tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
             -C "$first" -cf - "$bundle" |
@@ -129,10 +129,10 @@ jobs:
       - name: Retain verified release candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: phebs-v0.2.0-linux-amd64
+          name: phebs-v0.2.1-linux-amd64
           path: |
-            dist/release/phebs-v0.2.0-linux-amd64.tar.gz
-            dist/release/phebs-v0.2.0-linux-amd64.tar.gz.sha256
+            dist/release/phebs-v0.2.1-linux-amd64.tar.gz
+            dist/release/phebs-v0.2.1-linux-amd64.tar.gz.sha256
           if-no-files-found: error
           retention-days: 7
           compression-level: 0

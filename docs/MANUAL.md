@@ -79,7 +79,7 @@ does not match.
 ```bash
 git clone <your-clone-of-phebs> && cd phebs
 make build          # builds the UI, zoekt and Buf children, and ./phebs
-./phebs version     # 0.2.0-dev for an ordinary source build
+./phebs version     # 0.2.1-dev for an ordinary source build
 ./phebs serve -config phebs.yaml
 ```
 
@@ -92,10 +92,10 @@ To assemble and exercise the distributable directory with the exact pinned
 release toolchain:
 
 ```bash
-make release verify-release smoke-release VERSION=v0.2.0
+make release verify-release smoke-release VERSION=v0.2.1
 ```
 
-The result is `dist/phebs-v0.2.0-<goos>-<goarch>/` containing `phebs`,
+The result is `dist/phebs-v0.2.1-<goos>-<goarch>/` containing `phebs`,
 same-module `bin/zoekt-git-index` and `bin/buf` children, `LICENSE`,
 `README.md`, the ready-to-run `phebs-otel-demo.yaml`, and
 `release-manifest.json`. The canonical manifest binds the version, source
@@ -112,7 +112,7 @@ all development fixture variables and requires the authenticated capability
 list and `/api/contract_atlas` route to retain the default-dark posture. The
 temporary repository and data directory are deleted after shutdown.
 
-For `v0.2.0`, the hosted `Release bundle and fresh-data smoke` job is part of
+For `v0.2.1`, the hosted `Release bundle and fresh-data smoke` job is part of
 the required `ci` workflow. From a clean checkout it performs two independent
 Linux/amd64 builds, compares their manifests, runs the empty-data smoke, then
 retains a deterministic `.tar.gz` and adjacent `.sha256` file. The release
@@ -126,6 +126,11 @@ SHA must match byte-for-byte; tags are never force-moved. Release notes must
 link the run and checksum and state that Contract Atlas and proof features are
 default-dark, provisional, and do not establish the closed
 `NOT_ESTABLISHED` accuracy gate.
+
+The published `v0.2.0` tag remains an immutable historical tag but is not a
+verified release candidate: its exact push run failed the Linux fixture-bundle
+HEAD portability checks and the Caller Map UI scale harness. `v0.2.1` carries
+those corrections; the earlier tag is not deleted or moved.
 
 The published
 [`v0.1.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.1.0) binary bundle

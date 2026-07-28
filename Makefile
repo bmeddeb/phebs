@@ -1,4 +1,4 @@
-VERSION ?= 0.2.0-dev
+VERSION ?= 0.2.1-dev
 VERSION_PATTERN_BODY := (0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?
 VERSION_PATTERN := ^v?$(VERSION_PATTERN_BODY)$$
 RELEASE_VERSION_PATTERN := ^v$(VERSION_PATTERN_BODY)$$

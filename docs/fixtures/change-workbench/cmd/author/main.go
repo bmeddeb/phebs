@@ -53,7 +53,10 @@ const operation = "/demo.search.v1.CodeSearch/LegacySearch"
 
 	target := filepath.Join(root, "t2114-workbench-closure.bundle")
 	must(os.RemoveAll(target))
-	run(repository, nil, "git", "bundle", "create", target, "main")
+	// Carry both the symbolic checkout target and its branch. A bundle that
+	// advertises only refs/heads/main lets some Git versions infer HEAD while
+	// newer versions leave a mirror at an unborn default branch.
+	run(repository, nil, "git", "bundle", "create", target, "HEAD", "main")
 	commitHash := string(run(repository, nil, "git", "rev-parse", "HEAD"))
 	bundle, err := os.ReadFile(target)
 	must(err)

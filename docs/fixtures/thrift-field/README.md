@@ -16,5 +16,7 @@ retained at `cmd/author`; normal tests and `make dev` only verify and consume
 the committed bytes.
 
 `t225-thrift-field-demo.bundle` is the cloneable, single-commit form used by
-`make dev`. `receipt.json` pins the repository commit, bundle and index bytes,
-question identity, and exact citation.
+`make dev`. The retained author command recreates both the deterministic index
+and a bundle advertising `HEAD` plus `refs/heads/main`, avoiding host-Git
+default-branch inference. `receipt.json` pins the repository commit, bundle
+and index bytes, question identity, and exact citation.
