@@ -1,11 +1,11 @@
 package migration
 
-const searchV2Operation = "/demo.search.v1.CodeSearch/SearchV2"
+import searchv1 "example.invalid/workbench-closure/gen/proto/searchv1"
 
-type ExactClient interface {
-	Invoke(operation string, request any) (any, error)
-}
-
-func SearchReplacement(client ExactClient, request any) (any, error) {
-	return client.Invoke(searchV2Operation, request)
+func SearchReplacement(
+	ctx any,
+	client searchv1.CodeSearchClient,
+	request any,
+) (any, error) {
+	return client.SearchV2(ctx, request)
 }

@@ -26,16 +26,6 @@ import type { WorkbenchEvidenceInput } from './workbenchEvidenceState'
 
 const evidencePageSize = 25
 const anchorLimit = 32
-const workbenchHelpCapabilities = new Set([
-  'caller-map-exact-identity',
-  'code-navigation',
-  'contract-atlas',
-  'contract-impact-report',
-  'coverage-certificate',
-  'history',
-  'source-search',
-])
-
 interface EvidenceStepProps {
   available: boolean
   investigationID: string
@@ -479,6 +469,19 @@ function AnalysisScope({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const enabledCapabilities = useMemo(() => {
+    const capabilities = new Set(
+      scope.capabilities
+        .filter((capability) =>
+          capability.state === 'enabled' ||
+          capability.state === 'available')
+        .map((capability) => capability.id),
+    )
+    if (scope.coverage.length > 0) {
+      capabilities.add('coverage-certificate')
+    }
+    return capabilities
+  }, [scope.capabilities, scope.coverage.length])
   return (
     <section aria-labelledby="analysis-scope-heading" className={css(panelStyle(tok))}>
       <div className={css(panelHeaderStyle(tok))}>
@@ -494,7 +497,7 @@ function AnalysisScope({
             </h3>
             <SectionHelp
               termId="analysis_scope_and_gaps"
-              enabledCapabilities={workbenchHelpCapabilities}
+              enabledCapabilities={enabledCapabilities}
             />
           </span>
         </span>

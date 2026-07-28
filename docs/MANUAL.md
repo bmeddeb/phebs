@@ -540,8 +540,10 @@ Each endpoint row in What has **Discover**. It opens one bounded Contract
 Atlas page and explains that an operation name is not an identity. **Use
 endpoint** copies the complete protocol, repository, declaration lineage, and
 canonical operation together; it does not run a preview or promote name-only
-evidence. Migrate/replace uses Discover once for the current row and once for
-the replacement row. **Next endpoints** replaces the current result rows;
+evidence. When operation spellings repeat, the accessible action name also
+includes protocol, repository, and lineage so keyboard and screen-reader users
+can distinguish the choices. Migrate/replace uses Discover once for the
+current row and once for the replacement row. **Next endpoints** replaces the current result rows;
 prior result pages are not retained in the DOM. Escape or the explicit close
 button dismisses and returns focus to Discover; an outside click dismisses
 without moving focus unexpectedly. The existing identity fields remain
@@ -591,6 +593,9 @@ explicit server filters. **Next page** replaces the mounted rows with the
 opaque-cursor page; **Previous page** returns through the retained cursor path.
 An empty page says that it does not establish absence or completeness, and
 stale cursors restart from the first exact page.
+The panel's help availability is derived from the capability and coverage rows
+returned for that exact projection; the UI does not assume that dark readers
+are enabled.
 
 How reads related implementation/history evidence and the deterministic
 checklist in parallel. Up to 32 optional source anchors may be supplied as
@@ -658,6 +663,14 @@ external `NOT_ESTABLISHED` posture. `closure-states.json` contains acceptance
 inputs, not observed production facts. Neither artifact establishes runtime
 use, completeness, migration completion or safety, retirement safety, or
 extraction accuracy.
+
+The retained repository also contains minimal generated gRPC and Thrift
+artifacts and `generated-from-snapshot.json`. Focused acceptance mirrors the
+committed bundle and requires the normal pure-reader declaration, consumer,
+and caller extractors to reproduce the protobuf and Thrift lineage joins and
+registration facts. The failed/stale coverage and unsupported-plane examples
+remain explicit `closure-states.json` composition inputs; they are not
+misrepresented as extractor observations.
 
 The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
 contains declaration-proven call rows or stable field-reference rows.
@@ -2561,8 +2574,11 @@ that capability only from the enabled provisional evidence service. For local
 UI demonstration, `make dev` and `make dev-api` explicitly set
 `PHEBS_CONTRACT_ATLAS_FIXTURE` to
 `docs/fixtures/contracts/contract-atlas.json`. That validated adapter projects
-one synthetic service onto the first currently visible indexed repository so
-the `go.mod` source link opens at its exact indexed commit. It does not seed,
+one synthetic service only onto the unique currently visible repository whose
+indexed commit equals the reviewed `repository_commit` in the fixture. Missing
+or duplicate matches return no rows, so store order cannot attach a synthetic
+claim to unrelated content. Its IDL source link opens at that exact indexed
+commit. It does not seed,
 publish, persist, pin, or claim to validate extraction evidence; every
 response says it is synthetic. With neither the environment binding nor the
 real evidence service, the capability, HTTP routes, OpenAPI operations, and

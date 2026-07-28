@@ -1536,7 +1536,11 @@ function EndpointDiscovery({
                 type="button"
                 size={BUTTON_SIZE.mini}
                 kind={BUTTON_KIND.secondary}
-                aria-label={`Use endpoint ${item.operation}`}
+                aria-label={[
+                  `Use endpoint ${item.operation}`,
+                  `from ${item.repository}`,
+                  `(${item.protocol}; lineage ${item.declaration_lineage})`,
+                ].join(' ')}
                 onClick={() => {
                   onSelect(item)
                   window.setTimeout(() => triggerRef.current?.focus(), 0)

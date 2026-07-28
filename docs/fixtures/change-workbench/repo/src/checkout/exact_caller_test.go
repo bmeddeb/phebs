@@ -2,10 +2,18 @@ package checkout
 
 type fakeClient struct{}
 
-func (fakeClient) Invoke(_ string, request any) (any, error) {
+func (fakeClient) Search(_ any, request any) (any, error) {
+	return request, nil
+}
+
+func (fakeClient) SearchV2(_ any, request any) (any, error) {
+	return request, nil
+}
+
+func (fakeClient) LegacySearch(_ any, request any) (any, error) {
 	return request, nil
 }
 
 func ExampleSearch() {
-	_, _ = Search(fakeClient{}, "query")
+	_, _ = Search(nil, fakeClient{}, "query")
 }

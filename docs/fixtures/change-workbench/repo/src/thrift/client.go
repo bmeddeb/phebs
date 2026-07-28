@@ -1,7 +1,15 @@
 package thrift
 
-type CodeSearchClient struct{}
+import searchthrift "example.invalid/workbench-closure/gen/thrift/search"
 
-func (CodeSearchClient) Search(request any) (any, error) {
-	return request, nil
+func Search(
+	ctx any,
+	client *searchthrift.CodeSearchClient,
+	request any,
+) (any, error) {
+	return client.Search(ctx, request)
+}
+
+func Register(handler searchthrift.CodeSearch) *searchthrift.CodeSearchProcessor {
+	return searchthrift.NewCodeSearchProcessor(handler)
 }

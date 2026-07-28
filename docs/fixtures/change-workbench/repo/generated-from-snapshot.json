@@ -1,0 +1,14 @@
+{
+  "version": "t20-generated-from-v1",
+  "mappings": [
+    {
+      "generated_path": "gen/proto/searchv1/search_grpc.pb.go",
+      "generator_relative_path": "idl/proto/search.proto",
+      "declaration_path": "idl/proto/search.proto"
+    },
+    {
+      "generated_path": "gen/thrift/search/search.go",
+      "declaration_path": "idl/thrift/search.thrift"
+    }
+  ]
+}

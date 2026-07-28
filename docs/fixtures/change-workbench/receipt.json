@@ -1,9 +1,9 @@
 {
   "schema_version": "t21.14-workbench-closure-receipt-v1",
   "repository": "example.invalid/workbench-closure",
-  "commit": "046ee251b916a5a86a3c41d8d561106f0e5b541c",
-  "bundle_sha256": "sha256:3611e1f613c9ac02ccf46e1e876fa1b097b340014eae16d5701794429dc54696",
-  "bundle_bytes": 3631,
+  "commit": "0111e3d6c3c8bf2e468dbdcabfdbf4337f63b666",
+  "bundle_sha256": "sha256:b949f785d840e37f46b6db5ba319d82ab15661b8d135706eb4461e52a08e0cf8",
+  "bundle_bytes": 4862,
   "history_commits": 2,
   "index_scip": "absent",
   "author": "phebs-t2114-fixture-author",

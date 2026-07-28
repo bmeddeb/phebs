@@ -1,11 +1,12 @@
 {
-  "schema_version": "contract-atlas-fixture-v1",
+  "schema_version": "contract-atlas-fixture-v2",
+  "repository_commit": "0111e3d6c3c8bf2e468dbdcabfdbf4337f63b666",
   "protocol": "protobuf",
   "package": "demo.search.v1",
   "service_fqn": "demo.search.v1.CodeSearch",
   "lineage": "provisional_make_dev_contract_v1",
-  "source_path": "go.mod",
-  "source_line": 1,
+  "source_path": "idl/proto/search.proto",
+  "source_line": 6,
   "operations": [
     {
       "method": "Search",
@@ -19,14 +20,8 @@
             "cardinality": "singular"
           },
           {
-            "name": "max_results",
+            "name": "repositories",
             "number": 2,
-            "type": "uint32",
-            "cardinality": "singular"
-          },
-          {
-            "name": "repository",
-            "number": 3,
             "type": "string",
             "cardinality": "repeated"
           }
@@ -36,20 +31,14 @@
         "name": "demo.search.v1.SearchResponse",
         "fields": [
           {
-            "name": "file_count",
+            "name": "paths",
             "number": 1,
-            "type": "uint32",
-            "cardinality": "singular"
-          },
-          {
-            "name": "match_count",
-            "number": 2,
-            "type": "uint32",
-            "cardinality": "singular"
+            "type": "string",
+            "cardinality": "repeated"
           },
           {
             "name": "truncated",
-            "number": 3,
+            "number": 2,
             "type": "bool",
             "cardinality": "singular"
           }
@@ -68,7 +57,7 @@
             "cardinality": "singular"
           },
           {
-            "name": "repository",
+            "name": "repositories",
             "number": 2,
             "type": "string",
             "cardinality": "repeated"
@@ -79,7 +68,7 @@
         "name": "demo.search.v1.SearchResponse",
         "fields": [
           {
-            "name": "path",
+            "name": "paths",
             "number": 1,
             "type": "string",
             "cardinality": "repeated"
@@ -103,6 +92,12 @@
             "number": 1,
             "type": "string",
             "cardinality": "singular"
+          },
+          {
+            "name": "repositories",
+            "number": 2,
+            "type": "string",
+            "cardinality": "repeated"
           }
         ]
       },
@@ -110,10 +105,16 @@
         "name": "demo.search.v1.SearchResponse",
         "fields": [
           {
-            "name": "path",
+            "name": "paths",
             "number": 1,
             "type": "string",
             "cardinality": "repeated"
+          },
+          {
+            "name": "truncated",
+            "number": 2,
+            "type": "bool",
+            "cardinality": "singular"
           }
         ]
       }

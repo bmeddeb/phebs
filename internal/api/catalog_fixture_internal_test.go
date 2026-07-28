@@ -100,10 +100,16 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 	if err != nil {
 		t.Fatalf("load fixture: %v", err)
 	}
-	const commit = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	repos := &contractFixtureRepoStore{repos: []store.Repo{{
-		Name: "github.com/sourcegraph/zoekt", IndexedCommitHash: commit,
-	}}}
+	commit := fixture.RepositoryCommit
+	repos := &contractFixtureRepoStore{repos: []store.Repo{
+		{
+			Name:              "aaa.invalid/unrelated",
+			IndexedCommitHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		},
+		{
+			Name: "local/workbench-closure", IndexedCommitHash: commit,
+		},
+	}}
 	opts := Options{
 		Version: "test", Store: repos, ContractCatalogFixture: fixture,
 		Principal:             func(context.Context) string { return "user:fixture" },
@@ -160,6 +166,21 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 		!fourth.Pagination.Complete {
 		t.Fatalf("final fixture page = %+v", fourth)
 	}
+	legacyDetail, err := service.Operation(
+		context.Background(), fourth.Items[0].Repository,
+		fourth.Items[0].Lineage, fourth.Items[0].Operation,
+	)
+	if err != nil {
+		t.Fatalf("legacy fixture operation: %v", err)
+	}
+	if len(legacyDetail.Request.Fields) != 2 ||
+		legacyDetail.Request.Fields[0].Detail.Name != "query" ||
+		legacyDetail.Request.Fields[1].Detail.Name != "repositories" ||
+		len(legacyDetail.Response.Fields) != 2 ||
+		legacyDetail.Response.Fields[0].Detail.Name != "paths" ||
+		legacyDetail.Response.Fields[1].Detail.Name != "truncated" {
+		t.Fatalf("legacy fixture fields diverged from retained IDL = %+v", legacyDetail)
+	}
 
 	detail, err := service.Operation(
 		context.Background(), second.Items[0].Repository,
@@ -170,7 +191,7 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 	}
 	if detail.Request.State != "resolved" || detail.Response.State != "resolved" ||
 		detail.Protocol != "protobuf" ||
-		len(detail.Request.Fields) != 3 || len(detail.Response.Fields) != 3 ||
+		len(detail.Request.Fields) != 2 || len(detail.Response.Fields) != 2 ||
 		len(detail.Implementations) != 1 || len(detail.Callers) != 1 ||
 		len(detail.UnresolvedCandidates) != 1 {
 		t.Fatalf("fixture detail shape = %+v", detail)
@@ -208,10 +229,14 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 		detail.Callers[0].Claim,
 		detail.UnresolvedCandidates[0].Claim,
 	} {
-		if len(claim.Sources) != 1 || claim.Sources[0].Repository != repos.repos[0].Name ||
-			claim.Sources[0].Commit != commit || claim.Sources[0].Path != "go.mod" {
+		if len(claim.Sources) != 1 || claim.Sources[0].Repository != repos.repos[1].Name ||
+			claim.Sources[0].Commit != commit ||
+			claim.Sources[0].Path != "idl/proto/search.proto" {
 			t.Fatalf("claim did not bind a visible pinned source: %+v", claim)
 		}
+	}
+	if second.Items[0].Repository != "local/workbench-closure" {
+		t.Fatalf("fixture selected unrelated repository: %+v", second.Items[0])
 	}
 
 	handler := New(opts)
@@ -229,13 +254,14 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 
 func TestContractCatalogFixtureThriftProjection(t *testing.T) {
 	fixture := &ContractCatalogFixture{
-		SchemaVersion: contractCatalogFixtureSchema,
-		Protocol:      "thrift",
-		Package:       "agent",
-		ServiceFQN:    "agent.Agent",
-		Lineage:       "fixture_thrift_lineage",
-		SourcePath:    "agent.thrift",
-		SourceLine:    1,
+		SchemaVersion:    contractCatalogFixtureSchema,
+		RepositoryCommit: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+		Protocol:         "thrift",
+		Package:          "agent",
+		ServiceFQN:       "agent.Agent",
+		Lineage:          "fixture_thrift_lineage",
+		SourcePath:       "agent.thrift",
+		SourceLine:       1,
 		Operations: []contractCatalogFixtureOperation{{
 			Method: "emitBatch",
 			OneWay: true,
@@ -329,6 +355,30 @@ func TestContractCatalogFixtureFailsClosed(t *testing.T) {
 		if !errors.As(err, &statusError) || statusError.GetStatus() != http.StatusNotFound ||
 			repos.calls != 0 {
 			t.Fatalf("anonymous fixture = %v, repo calls=%d", err, repos.calls)
+		}
+	})
+
+	t.Run("duplicate commit binding is ambiguous", func(t *testing.T) {
+		fixture, err := LoadContractCatalogFixture(filepath.Join(
+			"..", "..", "docs", "fixtures", "contracts", "contract-atlas.json",
+		))
+		if err != nil {
+			t.Fatal(err)
+		}
+		repos := &contractFixtureRepoStore{repos: []store.Repo{
+			{Name: "local/first", IndexedCommitHash: fixture.RepositoryCommit},
+			{Name: "local/second", IndexedCommitHash: fixture.RepositoryCommit},
+		}}
+		service := NewContractCatalogService(Options{
+			Store: repos, ContractCatalogFixture: fixture,
+			Principal: func(context.Context) string { return "user:fixture" },
+		})
+		page, err := service.List(context.Background(), ContractCatalogQuery{}, 10, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Items) != 0 {
+			t.Fatalf("ambiguous fixture binding returned items: %+v", page.Items)
 		}
 	})
 }

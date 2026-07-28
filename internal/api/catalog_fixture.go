@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -18,20 +19,26 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-const contractCatalogFixtureSchema = "contract-atlas-fixture-v1"
+const contractCatalogFixtureSchema = "contract-atlas-fixture-v2"
+
+var contractCatalogFixtureCommit = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // ContractCatalogFixture is a development-only synthetic catalog definition.
 // It is deliberately not an EvidenceStore: make dev can demonstrate the
 // browser without seeding, publishing, or impersonating production evidence.
 type ContractCatalogFixture struct {
-	SchemaVersion string                            `json:"schema_version"`
-	Protocol      string                            `json:"protocol"`
-	Package       string                            `json:"package"`
-	ServiceFQN    string                            `json:"service_fqn"`
-	Lineage       string                            `json:"lineage"`
-	SourcePath    string                            `json:"source_path"`
-	SourceLine    int                               `json:"source_line"`
-	Operations    []contractCatalogFixtureOperation `json:"operations"`
+	SchemaVersion string `json:"schema_version"`
+	// RepositoryCommit binds the synthetic projection to one reviewed
+	// repository revision. Repository names for local bundle connections are
+	// machine-specific, so the immutable commit is the portable identity.
+	RepositoryCommit string                            `json:"repository_commit"`
+	Protocol         string                            `json:"protocol"`
+	Package          string                            `json:"package"`
+	ServiceFQN       string                            `json:"service_fqn"`
+	Lineage          string                            `json:"lineage"`
+	SourcePath       string                            `json:"source_path"`
+	SourceLine       int                               `json:"source_line"`
+	Operations       []contractCatalogFixtureOperation `json:"operations"`
 }
 
 type contractCatalogFixtureOperation struct {
@@ -86,6 +93,9 @@ func LoadContractCatalogFixture(filename string) (*ContractCatalogFixture, error
 func (f *ContractCatalogFixture) validate() error {
 	if f == nil || f.SchemaVersion != contractCatalogFixtureSchema {
 		return fmt.Errorf("schema_version must be %q", contractCatalogFixtureSchema)
+	}
+	if !contractCatalogFixtureCommit.MatchString(f.RepositoryCommit) {
+		return errors.New("repository_commit must be a lowercase 40-hex commit")
 	}
 	pack, ok := packForProtocol(f.Protocol)
 	if !ok {
@@ -163,7 +173,7 @@ func (f *ContractCatalogFixture) list(
 	if query.Repository != "" && !catalogRepositoryVisible(visible, query.Repository) {
 		return nil, huma.Error404NotFound("contract catalog scope not found")
 	}
-	repo, commit, available := fixtureCatalogRepository(visible)
+	repo, commit, available := fixtureCatalogRepository(visible, f.RepositoryCommit)
 	certificate := fixtureCatalogCoverage(f, visible, repo, commit, available)
 	binding := digestJSON(struct {
 		Query      ContractCatalogQuery `json:"query"`
@@ -223,7 +233,7 @@ func (f *ContractCatalogFixture) operation(
 	if err != nil {
 		return nil, err
 	}
-	repo, commit, available := fixtureCatalogRepository(visible)
+	repo, commit, available := fixtureCatalogRepository(visible, f.RepositoryCommit)
 	if !available || repo.Name != repository || f.Lineage != lineage {
 		return nil, huma.Error404NotFound("contract catalog operation not found")
 	}
@@ -412,17 +422,28 @@ func (f *ContractCatalogFixture) claim(
 	}
 }
 
-func fixtureCatalogRepository(repositories []store.Repo) (store.Repo, string, bool) {
+func fixtureCatalogRepository(
+	repositories []store.Repo,
+	expectedCommit string,
+) (store.Repo, string, bool) {
+	var selected store.Repo
+	matches := 0
 	for _, repo := range repositories {
 		commit := repo.IndexedCommitHash
 		if commit == "" && len(repo.IndexedRevisions) > 0 {
 			commit = repo.IndexedRevisions[0].Commit
 		}
-		if commit != "" {
-			return repo, commit, true
+		if commit == expectedCommit {
+			selected = repo
+			matches++
 		}
 	}
-	return store.Repo{}, "", false
+	if matches != 1 {
+		// A missing commit is unavailable; duplicate visible bindings are
+		// ambiguous. Both fail closed instead of selecting by store order.
+		return store.Repo{}, "", false
+	}
+	return selected, expectedCommit, true
 }
 
 func fixtureCatalogCoverage(

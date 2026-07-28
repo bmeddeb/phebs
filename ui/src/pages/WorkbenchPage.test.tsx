@@ -188,6 +188,59 @@ function preview(
   }
 }
 
+function emptyImpact(kind: WorkbenchTicketKind): WorkbenchImpactPage {
+  return {
+    schema_version: 'workbench-impact-v1',
+    investigation_id: investigationID,
+    revision_id: revisionID,
+    ticket_kind: kind,
+    scenario_emphasis: [],
+    atlas: [],
+    callers: [],
+    resource_planes: [],
+    analysis_scope: { coverage: [], capabilities: [], gaps: [] },
+    pagination: { complete: true },
+    caveat: 'Bounded empty impact; absence is not established.',
+  }
+}
+
+function emptyImplementation(
+  kind: WorkbenchTicketKind,
+): WorkbenchImplementationPage {
+  return {
+    schema_version: 'workbench-implementation-v1',
+    investigation_id: investigationID,
+    revision_id: revisionID,
+    ticket_kind: kind,
+    rows: [],
+    capabilities: [],
+    gaps: [],
+    pagination: { total_rows: 0, complete: true },
+    snapshot_digest: `sha256:${'2'.repeat(64)}`,
+    caveat: 'Bounded empty implementation; absence is not established.',
+  }
+}
+
+function emptyChecklist(kind: WorkbenchTicketKind): WorkbenchChecklistPage {
+  return {
+    schema_version: 'workbench-checklist-v1',
+    investigation_id: investigationID,
+    revision_id: revisionID,
+    ticket_kind: kind,
+    evidence_snapshot: {
+      impact_digest: `sha256:${'3'.repeat(64)}`,
+      implementation_digest: `sha256:${'4'.repeat(64)}`,
+      combined_digest: `sha256:${'5'.repeat(64)}`,
+      impact_truncated: false,
+      implementation_truncated: false,
+    },
+    entries: [],
+    pagination: { total_entries: 0, complete: true },
+    snapshot_digest: `sha256:${'6'.repeat(64)}`,
+    caveat: 'Nothing is implicitly completed.',
+  }
+}
+
 function wrapped(
   params: URLSearchParams,
   outsideNavigation: 'search' | 'workbench-home' | null = null,
@@ -415,14 +468,22 @@ function discoveredCatalog(): ContractCatalogList {
 }
 
 test.each<WorkbenchTicketKind>(['add', 'modify', 'migrate', 'retire'])(
-  '%s can bind complete endpoint identities from bounded discovery without canonical-id typing',
+  '%s completes the retained Why, discovered What, bounded Where, and disposition-aware How journey',
   async (kind) => {
     api.fetchContractCatalog.mockResolvedValue(discoveredCatalog())
-    page(
-      'source=atlas&step=what&protocol=protobuf&repository=' +
-      `${encodeURIComponent(repository)}&lineage=lineage-v1&operation=` +
-      '%2Fdemo.search.v1.CodeSearch%2FSearch',
+    api.previewWorkbench.mockResolvedValue(preview())
+    api.createWorkbench.mockResolvedValue(view(kind))
+    api.fetchWorkbench.mockResolvedValue(view(kind))
+    api.fetchWorkbenchImpact.mockResolvedValue(emptyImpact(kind))
+    api.fetchWorkbenchImplementation.mockResolvedValue(
+      emptyImplementation(kind),
     )
+    api.fetchWorkbenchChecklist.mockResolvedValue(emptyChecklist(kind))
+    window.location.hash =
+      '#/workbench?source=atlas&step=what&protocol=protobuf&repository=' +
+      `${encodeURIComponent(repository)}&lineage=lineage-v1&operation=` +
+      '%2Fdemo.search.v1.CodeSearch%2FSearch'
+    render(wrappedRouted())
     fireEvent.change(screen.getByLabelText('Workbench change mode'), {
       target: { value: kind },
     })
@@ -467,8 +528,30 @@ test.each<WorkbenchTicketKind>(['add', 'modify', 'migrate', 'retire'])(
     }
 
     expect(api.fetchContractCatalog).toHaveBeenCalled()
-    expect(api.previewWorkbench).not.toHaveBeenCalled()
-    expect(api.createWorkbench).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Preview revision' }))
+    expect(await screen.findByText('Ready')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Create Workbench' }))
+    expect(await screen.findByRole('heading', { name: 'What changes?' }))
+      .toBeTruthy()
+    expect(api.previewWorkbench).toHaveBeenCalledTimes(1)
+    expect(api.createWorkbench).toHaveBeenCalledTimes(1)
+
+    fireEvent.click(screen.getByRole('link', { name: /Why/ }))
+    expect(await screen.findByRole('heading', { name: 'Why this change?' }))
+      .toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: /Where/ }))
+    expect(await screen.findByRole('heading', {
+      name: 'Where is impact visible?',
+    })).toBeTruthy()
+    fireEvent.click(screen.getByRole('link', { name: /How/ }))
+    expect(await screen.findByRole('heading', {
+      name: 'How might implementation proceed?',
+    })).toBeTruthy()
+    expect(screen.getAllByText(/Nothing is implicitly completed/).length)
+      .toBeGreaterThan(0)
+    expect(api.fetchWorkbenchImpact).toHaveBeenCalled()
+    expect(api.fetchWorkbenchImplementation).toHaveBeenCalled()
+    expect(api.fetchWorkbenchChecklist).toHaveBeenCalled()
   },
 )
 
@@ -495,6 +578,57 @@ test('endpoint discovery has named controls, Escape focus return, and outside-cl
   await screen.findByRole('dialog')
   fireEvent.pointerDown(document.body)
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+})
+
+test('duplicate operation names expose repository and lineage in every accessible action', async () => {
+  const catalog = discoveredCatalog()
+  const duplicate = {
+    ...catalog.items[0],
+    repository: 'github.com/acme/other-contracts',
+    declaration_lineage: 'lineage-other',
+    declaration: {
+      ...catalog.items[0].declaration,
+      lineage: 'lineage-other',
+    },
+  }
+  api.fetchContractCatalog.mockResolvedValue({
+    ...catalog,
+    items: [catalog.items[0], duplicate],
+  })
+  page(
+    'source=atlas&step=what&protocol=protobuf&repository=' +
+    `${encodeURIComponent(repository)}&lineage=lineage-v1&operation=` +
+    '%2Fdemo.search.v1.CodeSearch%2FSearch',
+  )
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Discover endpoint for selection 1',
+  }))
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Choose discovered endpoint for selection 1',
+  })
+  const first = within(dialog).getByRole('button', {
+    name:
+      'Use endpoint /demo.search.v1.CodeSearch/Search ' +
+      `from ${repository} (protobuf; lineage lineage-v1)`,
+  })
+  const second = within(dialog).getByRole('button', {
+    name:
+      'Use endpoint /demo.search.v1.CodeSearch/Search ' +
+      'from github.com/acme/other-contracts ' +
+      '(protobuf; lineage lineage-other)',
+  })
+  expect(first).not.toBe(second)
+  fireEvent.click(second)
+  expect(
+    (screen.getByLabelText(
+      'Selection 1 repository',
+    ) as HTMLInputElement).value,
+  ).toBe('github.com/acme/other-contracts')
+  expect(
+    (screen.getByLabelText(
+      'Selection 1 declaration lineage',
+    ) as HTMLInputElement).value,
+  ).toBe('lineage-other')
 })
 
 test.each<WorkbenchTicketKind>(['add', 'modify', 'migrate', 'retire'])(
@@ -551,48 +685,11 @@ test('real hash navigation reaches How at a mobile viewport', async () => {
   })
   window.dispatchEvent(new Event('resize'))
   api.fetchWorkbench.mockResolvedValue(view('migrate'))
-  api.fetchWorkbenchImpact.mockResolvedValue({
-    schema_version: 'workbench-impact-v1',
-    investigation_id: investigationID,
-    revision_id: revisionID,
-    ticket_kind: 'migrate',
-    scenario_emphasis: [],
-    atlas: [],
-    callers: [],
-    resource_planes: [],
-    analysis_scope: { coverage: [], capabilities: [], gaps: [] },
-    pagination: { complete: true },
-    caveat: 'Bounded empty impact.',
-  } satisfies WorkbenchImpactPage)
-  api.fetchWorkbenchImplementation.mockResolvedValue({
-    schema_version: 'workbench-implementation-v1',
-    investigation_id: investigationID,
-    revision_id: revisionID,
-    ticket_kind: 'migrate',
-    rows: [],
-    capabilities: [],
-    gaps: [],
-    pagination: { total_rows: 0, complete: true },
-    snapshot_digest: `sha256:${'2'.repeat(64)}`,
-    caveat: 'Bounded empty implementation.',
-  } satisfies WorkbenchImplementationPage)
-  api.fetchWorkbenchChecklist.mockResolvedValue({
-    schema_version: 'workbench-checklist-v1',
-    investigation_id: investigationID,
-    revision_id: revisionID,
-    ticket_kind: 'migrate',
-    evidence_snapshot: {
-      impact_digest: `sha256:${'3'.repeat(64)}`,
-      implementation_digest: `sha256:${'4'.repeat(64)}`,
-      combined_digest: `sha256:${'5'.repeat(64)}`,
-      impact_truncated: false,
-      implementation_truncated: false,
-    },
-    entries: [],
-    pagination: { total_entries: 0, complete: true },
-    snapshot_digest: `sha256:${'6'.repeat(64)}`,
-    caveat: 'Nothing is implicitly completed.',
-  } satisfies WorkbenchChecklistPage)
+  api.fetchWorkbenchImpact.mockResolvedValue(emptyImpact('migrate'))
+  api.fetchWorkbenchImplementation.mockResolvedValue(
+    emptyImplementation('migrate'),
+  )
+  api.fetchWorkbenchChecklist.mockResolvedValue(emptyChecklist('migrate'))
   window.location.hash =
     `#/workbench?step=where&investigation_id=${investigationID}` +
     `&revision_id=${revisionID}`

@@ -1,11 +1,7 @@
 package checkout
 
-const searchOperation = "/demo.search.v1.CodeSearch/Search"
+import searchv1 "example.invalid/workbench-closure/gen/proto/searchv1"
 
-type ExactClient interface {
-	Invoke(operation string, request any) (any, error)
-}
-
-func Search(client ExactClient, request any) (any, error) {
-	return client.Invoke(searchOperation, request)
+func Search(ctx any, client searchv1.CodeSearchClient, request any) (any, error) {
+	return client.Search(ctx, request)
 }

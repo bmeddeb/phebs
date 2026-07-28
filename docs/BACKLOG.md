@@ -3041,10 +3041,14 @@ Implemented with the retained
 digest-pinned two-commit neutral repository routed through ordinary
 sync/index/extraction only by `make dev`/`make dev-api`. Its separated
 protobuf/Thrift `idl/` and `src/` tree contains current, replacement,
-proposed, and retired examples, repeated operation names, exact and name-only
-callers, ambiguous unit attribution, removed legacy history, no `index.scip`,
-and explicit failed/stale/missing/unsupported test inputs. The retained
-receipt pins the bundle and repository commit and repeats
+proposed, and retired examples, repeated operation names, generated gRPC and
+Thrift client/server shapes, a reviewed generated-from snapshot,
+declaration-lineage-resolved and name-only callers, ambiguous unit
+attribution, removed legacy history, no `index.scip`, and explicit
+failed/stale/missing/unsupported test inputs. A retained pure-reader test
+mirrors the bundle and requires both protocol declarations, generated
+registrations, and caller lineages to be produced by the normal extractors.
+The retained receipt pins the bundle and repository commit and repeats
 `NOT_ESTABLISHED`; neither fixture nor output claims runtime use,
 completeness, migration safety, retirement safety, or extraction accuracy.
 
@@ -3053,15 +3057,19 @@ Contract Atlas chooser for every selection. Choosing a row copies its complete
 protocol, repository, declaration lineage, and canonical operation; migrate
 chooses current and replacement independently. Escape and explicit close
 return focus, outside click dismisses, every control has an accessible name,
-and endpoint pages replace prior rows. Where reuses the generated Analysis
-scope & gaps help control; How retains its always-visible evidence/checklist
-explanation. Both use the existing bounded impact/implementation/checklist
-services. Official-SDK MCP acceptance discovers the same exact identities
-through `search_contract_operations` before previewing all four story shapes;
-the existing parity journey retains create/read, paged caller evidence, and
-Disposition coverage.
+and duplicate operation actions name their protocol, repository, and lineage;
+endpoint pages replace prior rows. The fixture adapter binds only the unique
+visible repository at its reviewed commit, never the first indexed repository.
+Where reuses the generated Analysis scope & gaps help control and derives its
+availability from returned capability/coverage state; How retains its
+always-visible evidence/checklist explanation. Both use the existing bounded
+impact/implementation/checklist services. Official-SDK MCP acceptance runs
+discovery, preview, create, read, caller evidence, and Disposition for each of
+the four stories. UI acceptance runs discovery, preview, create, and the full
+Why/What/Where/How traversal for each story.
 
-Focused closure acceptance proves the four shared Impact compositions,
+Focused closure acceptance separately proves the real retained corpus
+extraction and the four shared Impact compositions,
 separate resolved/name-only/abstention classes, ambiguous units,
 failed/stale/unsupported gaps, missing search/SCIP/history, unsupported
 Kafka/Redis/document-store/SQL/runtime planes, hidden-scope non-disclosure,

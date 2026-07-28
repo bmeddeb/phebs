@@ -442,6 +442,7 @@ func TestT2114WorkbenchMCPStoriesStartFromDiscoveredExactIdentities(
 		InvestigationMutation: func(context.Context) bool {
 			return true
 		},
+		AdvertiseWorkbenchMutations: true,
 	})
 	session := connectWorkbenchToolSession(t, server)
 	discovery, result := callToolSession[api.ContractCatalogList](
@@ -511,7 +512,7 @@ func TestT2114WorkbenchMCPStoriesStartFromDiscoveredExactIdentities(
 			plan.Brief.What.ProposalProtocol = ""
 			plan.Brief.What.ProposalSources = nil
 		}
-		_, result := callToolSession[store.WorkbenchPreview](
+		preview, result := callToolSession[store.WorkbenchPreview](
 			t,
 			session,
 			"preview_change_workbench",
@@ -520,6 +521,77 @@ func TestT2114WorkbenchMCPStoriesStartFromDiscoveredExactIdentities(
 		if result.IsError {
 			t.Fatalf(
 				"%s preview failed: %s",
+				story.kind,
+				textContent(t, result),
+			)
+		}
+		_, result = callToolSession[store.WorkbenchView](
+			t,
+			session,
+			"create_change_workbench",
+			workbenchToolArguments(t, store.WorkbenchMutationRequest{
+				Plan:           plan,
+				PreviewDigest:  preview.PreviewDigest,
+				IdempotencyKey: "t2114-create-" + string(story.kind),
+			}),
+		)
+		if result.IsError {
+			t.Fatalf(
+				"%s create failed: %s",
+				story.kind,
+				textContent(t, result),
+			)
+		}
+		_, result = callToolSession[store.WorkbenchView](
+			t,
+			session,
+			"get_change_workbench",
+			map[string]any{
+				"investigation_id": workbench.view.Investigation.ID,
+			},
+		)
+		if result.IsError {
+			t.Fatalf(
+				"%s read failed: %s",
+				story.kind,
+				textContent(t, result),
+			)
+		}
+		selected := story.selections[0]
+		callers, result := callToolSession[api.CallerMapPage](
+			t,
+			session,
+			"list_operation_callers",
+			map[string]any{
+				"protocol":            selected.Protocol,
+				"repository":          selected.Repository,
+				"declaration_lineage": selected.DeclarationLineage,
+				"operation":           selected.CanonicalOperation,
+				"ordering":            "source",
+				"page_size":           2,
+			},
+		)
+		if result.IsError || len(callers.Rows) == 0 {
+			t.Fatalf(
+				"%s caller evidence failed: %s / %+v",
+				story.kind,
+				textContent(t, result),
+				callers,
+			)
+		}
+		mutation := workbenchToolDispositionMutation(
+			checklist.disposition.Suggestion,
+		)
+		mutation.IdempotencyKey = "t2114-disposition-" + string(story.kind)
+		_, result = callToolSession[store.WorkbenchDisposition](
+			t,
+			session,
+			"record_change_disposition",
+			workbenchToolArguments(t, mutation),
+		)
+		if result.IsError {
+			t.Fatalf(
+				"%s disposition failed: %s",
 				story.kind,
 				textContent(t, result),
 			)
@@ -554,8 +626,23 @@ func TestT2114WorkbenchMCPStoriesStartFromDiscoveredExactIdentities(
 			}
 		}
 	}
+	if len(workbench.calls) != 3*len(stories) {
+		t.Fatalf(
+			"four-step Workbench calls = %v, want preview/create/read per story",
+			workbench.calls,
+		)
+	}
+	if len(checklist.calls) != len(stories) {
+		t.Fatalf(
+			"four-step disposition calls = %v, want one per story",
+			checklist.calls,
+		)
+	}
 	if evidenceStore.writes != 0 {
-		t.Fatalf("discovery/preview wrote %d evidence records", evidenceStore.writes)
+		t.Fatalf(
+			"Workbench mutations changed evidence store by %d records",
+			evidenceStore.writes,
+		)
 	}
 }
 

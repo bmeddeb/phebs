@@ -128,6 +128,9 @@ function impactPage(
       capabilities: [{
         id: 'contract-callers',
         state: 'available',
+      }, {
+        id: 'contract-atlas',
+        state: 'enabled',
       }],
       gaps: [{
         capability: 'runtime-traffic',

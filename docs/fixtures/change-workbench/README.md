@@ -11,18 +11,24 @@ The corpus contains:
 - current, replacement, proposed, and retired contract examples for the add,
   modify, migrate/replace, and retire Workbench stories;
 - protobuf and Thrift declarations with deliberately repeated operation names;
-- one declaration-shaped exact caller, one name-only ambiguous caller, and an
-  ambiguous unit-attribution mapping;
+- minimal generated gRPC and Thrift client/server shapes plus a reviewed
+  generated-from snapshot, allowing the normal pure readers to reproduce
+  declaration-lineage-resolved caller and registration facts;
+- one separate name-only ambiguous caller and an ambiguous unit-attribution
+  mapping;
 - a removed legacy implementation in Git history;
 - no `index.scip`, plus a declared missing-history input;
 - retained failed and stale coverage inputs used by the T21.14 acceptance
   harness; and
 - explicit unsupported Kafka, Redis, document-store, SQL, and runtime planes.
 
-`closure-states.json` describes test inputs, not observed production facts.
-The acceptance harness projects those inputs through the existing shared
-Workbench services. It does not install a production failure switch or a
-second evidence engine.
+Focused acceptance mirrors the committed bundle and runs the normal
+declaration, consumer, and caller pure readers, requiring the protobuf and
+Thrift caller lineages to join their retained IDL declarations.
+`closure-states.json` separately describes composition-test inputs, not
+observed extraction facts. The Workbench acceptance harness projects those
+failed/stale/unsupported inputs through the existing shared services. It does
+not install a production failure switch or a second evidence engine.
 
 The fixture and its output make no claim about runtime use, completeness,
 migration completion, migration safety, retirement safety, or extraction
