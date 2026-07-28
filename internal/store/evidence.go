@@ -25,8 +25,8 @@ const (
 	evidenceStoreSchemaVersion         = "t12-store-v7"
 	evidencePreviousStoreSchemaVersion = "t12-store-v6"
 	evidenceFormatVersion              = "t12-evidence-v1"
-	evidenceMigrationVersion           = "t12-evidence-migration-v5"
-	evidencePreviousMigrationVersion   = "t12-evidence-migration-v4"
+	evidenceMigrationVersion           = "t12-evidence-migration-v6"
+	evidencePreviousMigrationVersion   = "t12-evidence-migration-v5"
 	evidenceWriterGuardEvent           = "extraction_run_writer_v7"
 	reverseAssertionIndexName          = "assertion_reverse_v6"
 	evidenceMigrationBatchSize         = 128

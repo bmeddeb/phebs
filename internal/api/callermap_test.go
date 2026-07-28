@@ -436,7 +436,7 @@ func callerMapStore(t *testing.T) *proofAPIStore {
 
 	for _, repo := range []string{callerMapSourceRepo, callerMapHiddenRepo} {
 		run := catalogRun(repo, "grpc-caller", "run-"+strings.TrimPrefix(repo, "github.com/acme/"), 3)
-		run.Extractor = "1.2.0"
+		run.Extractor = "1.3.0"
 		run.Coverage.Protocols = []string{
 			"attribution-" + callerMapAttr, "grpc", "resolution-scip-v1",
 		}

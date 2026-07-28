@@ -56,7 +56,11 @@ phebs recognizers without incorporating module code or metadata; script key
 lists and ACL patterns retain deliberately narrower semantics. The spike pins
 public Asynq and CloudWeGo go-redis/v9 corpora plus Redis ACL fixtures before
 execution, and drafts a neutral keyspace manifest only if the measured
-declaration gap justifies it. None of these drafts is an implicit next ticket.
+declaration gap justifies it. Epic 29 binds the existing Change Workbench to
+the store-derived Contract Atlas behind one development-only flag so a pilot
+can exercise workbenches over real published evidence; it changes no
+production registration, which stays behind the gates below. None of these
+drafts is an implicit next ticket.
 
 ## Gated product work
 

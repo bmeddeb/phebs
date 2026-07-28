@@ -280,7 +280,10 @@ missing or conflicting mappings emit operation-keyed `UNRESOLVED_CALLER` rows,
 and malformed SCIP produces bounded extraction gaps in the affected protocol
 domain only. When a usable typed occurrence is absent, a bounded package-aware
 fallback may emit `resolution=syntax`, tier-`heuristic` rows; dynamic flows
-and ambiguous clients still abstain. Each row snapshots the unit-attribution
+and ambiguous clients still abstain. Module identity comes from every
+committed `go.mod`, root or nested, so a polyglot monorepo whose Go modules
+live in subdirectories resolves callers against the nearest enclosing module;
+files outside any module are still read for coverage but yield no facts. Each row snapshots the unit-attribution
 state used at extraction time. These rows remain provisional and dark and
 establish neither caller completeness nor measured accuracy.
 
@@ -662,7 +665,11 @@ explicit administrator resolution.
 
 The store separates its exact writer generation from the stable published
 evidence format, so a compatible writer upgrade cannot strand a pinned proof
-bundle, and mixed-version or rollback writers fail closed. Evidence migrations
+bundle, and mixed-version or rollback writers fail closed. A reopen that
+skipped intermediate writer generations retires their rows instead of
+upgrading them in place: a skipped-generation published run becomes a
+quarantined superseded row, freeing its publication slot so the next
+extraction can replace it. Evidence migrations
 require exclusive startup: never operate rolling mixed-version writers against
 a remote endpoint — the supervised local deployment already provides the
 intended single-writer lifecycle.

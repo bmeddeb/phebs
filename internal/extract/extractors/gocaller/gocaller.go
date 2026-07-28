@@ -31,7 +31,7 @@ import (
 const (
 	grpcDomain   = "grpc-caller"
 	thriftDomain = "thrift-caller"
-	version      = "1.2.0"
+	version      = "1.3.0"
 	indexPath    = "index.scip"
 
 	schemaVersion       = "t20-caller-v1"
@@ -58,6 +58,7 @@ func (e extractor) Domain() string  { return e.domain }
 func (e extractor) Version() string { return version }
 func (e extractor) Candidate(filePath string) bool {
 	return filePath == indexPath || filePath == "go.mod" ||
+		strings.HasSuffix(filePath, "/go.mod") ||
 		strings.HasSuffix(filePath, ".go")
 }
 

@@ -1395,7 +1395,7 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 	if len(got) != 4 || got[0].Domain() != "proto-contract" ||
 		got[1].Domain() != "grpc-consumer" ||
 		got[2].Domain() != "scip-proto-field" ||
-		got[3].Domain() != "grpc-caller" || got[3].Version() != "1.2.0" ||
+		got[3].Domain() != "grpc-caller" || got[3].Version() != "1.3.0" ||
 		got[0].Version() != "3.0.0" {
 		t.Fatalf("proto-only extractor registry = %#v", got)
 	}
@@ -1406,7 +1406,7 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 		thriftOnly[0].Version() != "1.0.0" || thriftOnly[1].Domain() != "thrift-consumer" ||
 		thriftOnly[1].Version() != "1.1.0" ||
 		thriftOnly[2].Domain() != "thrift-caller" ||
-		thriftOnly[2].Version() != "1.2.0" {
+		thriftOnly[2].Version() != "1.3.0" {
 		t.Fatalf("thrift-only extractor registry = %#v", thriftOnly)
 	}
 	thriftFieldOnly := evidenceExtractors(false, false, true, false)

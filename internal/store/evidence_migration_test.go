@@ -260,6 +260,73 @@ func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 	}
 }
 
+// A deployment can skip writer generations entirely (a v4-era store reopened
+// by the v7 binary), leaving published rows whose per-generation upgrade pass
+// never ran. Such a row is invisible to the legacy and previous-writer
+// branches, yet still holds its unique published_key, so every replacement
+// publication for its (repo, domain) slot aborts on the
+// extraction_run_published_key index. Reopen must retire it — even on a store
+// whose completion marker says an older migration already finished — and a
+// replacement publication for the freed slot must then succeed.
+func TestMigrateEvidenceRunsRetiresSkippedGenerationPublications(t *testing.T) {
+	s := newRunnerStore(t)
+	relaxEvidenceWriterGuards(t, s)
+	ctx := context.Background()
+	repo := "github.com/migration/skipped"
+	if err := s.UpsertRepo(ctx, Repo{Name: repo, CloneURL: "https://example.com/skipped.git"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoIndexed(ctx, repo, "current", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		`CREATE $stranded CONTENT {
+			run_id: 'v4-published', repo: $repo, commit: 'old', domain: 'proto-contract',
+			extractor: 'v4', status: 'published', started_at: $now, published_at: $now,
+			store_schema_version: 't12-store-v4', evidence_format_version: $format,
+			retention_quarantined: false, published_key: $slot
+		};`, map[string]any{
+			"stranded": extractionRunID("v4-published"),
+			"repo":     repo, "now": now,
+			"format": evidenceFormatVersion,
+			"slot":   publishedKey(repo, "proto-contract"),
+		}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		"UPSERT $rid SET version = $version, completed_at = time::now() RETURN NONE",
+		map[string]any{
+			"rid": evidenceMigrationStateID(), "version": evidencePreviousMigrationVersion,
+		}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.applySchema(ctx); err != nil {
+		t.Fatalf("migrate skipped-generation evidence: %v", err)
+	}
+	stranded := evidenceMigrationState(t, s, "v4-published")
+	if stranded.Status != "superseded" || !stranded.Quarantined ||
+		stranded.StoreSchema != evidenceStoreSchemaVersion ||
+		stranded.Migration != evidenceMigrationVersion || stranded.PublishedKey != nil {
+		t.Fatalf("skipped-generation run = %+v", stranded)
+	}
+
+	replacement, err := s.BeginExtractionRun(ctx, repo, "current", "proto-contract", "2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PublishExtractionRun(ctx, replacement.ID, CoverageManifest{
+		SourceScopeDigest: "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+	}); err != nil {
+		t.Fatalf("replacement publication still blocked: %v", err)
+	}
+	latest, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	if err != nil || latest.ID != replacement.ID {
+		t.Fatalf("replacement publication not visible: %+v, %v", latest, err)
+	}
+}
+
 func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testing.T) {
 	s := newRunnerStore(t)
 	relaxEvidenceWriterGuards(t, s)

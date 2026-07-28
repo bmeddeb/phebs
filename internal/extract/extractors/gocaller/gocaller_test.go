@@ -67,6 +67,16 @@ func (c memoryCorpus) AttributionSource(context.Context) (sdk.AttributionSource,
 	return c.attribution, nil
 }
 
+type readTrackingCorpus struct {
+	memoryCorpus
+	reads map[string]bool
+}
+
+func (c readTrackingCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error) {
+	c.reads[filePath] = true
+	return c.memoryCorpus.Read(ctx, filePath)
+}
+
 type fixtureAttribution struct {
 	repo      string
 	relations map[string]sdk.GeneratedFromAttribution
@@ -648,6 +658,112 @@ func Shadow(ctx any, client orders.OrdersClient) {
 	if resolvedSyntax != 6 || coverage.UnresolvedCount != 7 ||
 		!slicesContain(coverage.Protocols, "scip-index-absent") {
 		t.Fatalf("fallback without SCIP = %d / %+v", resolvedSyntax, coverage)
+	}
+}
+
+// A polyglot monorepo keeps its Go modules in subdirectories and has no root
+// go.mod (the OpenTelemetry demo layout). The fallback must resolve callers
+// against the nested module's import paths, and — because Candidate() claims
+// every .go file — must read every claimed candidate even when no module or
+// generated method exists, or the verified corpus aborts the whole run.
+func TestSyntaxFallbackHandlesNestedModulesAndReadsAllCandidates(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const generated = "src/checkout/gen/proto/orders/v1/orders_grpc.pb.go"
+	const generatorRelative = "orders/v1/orders.proto"
+	files := map[string][]byte{
+		"src/checkout/go.mod": []byte("module synthetic.invalid/mono/src/checkout\n\ngo 1.26\n"),
+		generated:             profile.Files["gen/proto/orders/v1/orders_grpc.pb.go"],
+		"src/checkout/caller.go": []byte(`package checkout
+import orders "synthetic.invalid/mono/src/checkout/gen/proto/orders/v1"
+func Place(ctx any, client orders.OrdersClient) { _, _ = client.Get(ctx, nil) }
+`),
+		"tools/main.go": []byte("package main\nfunc main() {}\n"),
+	}
+	attribution := frozenAttribution(profile)
+	rootKey := "grpc\x00gen/proto/orders/v1/orders_grpc.pb.go\x00" + generatorRelative
+	original, ok := attribution.relations[rootKey]
+	if !ok || len(original.Candidates) != 1 {
+		t.Fatalf("frozen attribution lost the orders relation: %+v", attribution.relations)
+	}
+	relocated := original.Candidates[0]
+	relocated.GeneratedPath = generated
+	attribution.relations["grpc\x00"+generated+"\x00"+generatorRelative] = sdk.GeneratedFromAttribution{
+		State:      sdk.AttributionStateResolved,
+		Candidates: []sdk.GeneratedFromCandidate{relocated},
+	}
+	extractor := gocaller.NewGRPC()
+	corpus := readTrackingCorpus{
+		memoryCorpus: memoryCorpus{
+			repo: "synthetic.invalid/mono", commit: strings.Repeat("6", 40),
+			files: files, attribution: attribution,
+		},
+		reads: make(map[string]bool),
+	}
+	var facts []sdk.Fact
+	coverage, err := extractor.Extract(
+		context.Background(), corpus,
+		func(fact sdk.Fact) error {
+			facts = append(facts, fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolved := 0
+	for _, fact := range facts {
+		if fact.Assertion.Predicate == "CALLS_OPERATION" &&
+			strings.Contains(fact.Assertion.Detail, `"resolution":"syntax"`) {
+			resolved++
+			if fact.Path != "src/checkout/caller.go" ||
+				fact.Assertion.Object != "/synthetic.orders.v1.Orders/Get" {
+				t.Fatalf("nested-module caller = %+v", fact)
+			}
+		}
+	}
+	if resolved != 1 || coverage.UnresolvedCount != 0 ||
+		!slicesContain(coverage.Protocols, "scip-index-absent") {
+		t.Fatalf("nested-module fallback resolved=%d coverage=%+v", resolved, coverage)
+	}
+	for filePath := range files {
+		if extractor.Candidate(filePath) && !corpus.reads[filePath] {
+			t.Fatalf("claimed candidate %q was never read", filePath)
+		}
+	}
+
+	// No module identity anywhere: nothing can resolve, but every claimed
+	// candidate must still be read so the run stays publishable.
+	bare := readTrackingCorpus{
+		memoryCorpus: memoryCorpus{
+			repo: "synthetic.invalid/mono", commit: strings.Repeat("7", 40),
+			files: map[string][]byte{
+				"tools/main.go": []byte("package main\nfunc main() {}\n"),
+				"pkg/helper.go": []byte("package pkg\nfunc Helper() {}\n"),
+			},
+			attribution: attribution,
+		},
+		reads: make(map[string]bool),
+	}
+	coverage, err = extractor.Extract(
+		context.Background(), bare,
+		func(fact sdk.Fact) error {
+			t.Fatalf("module-less corpus emitted fact %+v", fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if coverage.UnresolvedCount != 0 {
+		t.Fatalf("module-less coverage = %+v", coverage)
+	}
+	for filePath := range bare.files {
+		if extractor.Candidate(filePath) && !bare.reads[filePath] {
+			t.Fatalf("claimed candidate %q was never read without a module", filePath)
+		}
 	}
 }
 

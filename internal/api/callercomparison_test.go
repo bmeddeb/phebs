@@ -458,7 +458,7 @@ func TestCallerComparisonCrossProtocolDigestsAndDemotion(t *testing.T) {
 	thriftCallerRun := catalogRun(
 		callerMapSourceRepo, "thrift-caller", "run-source-thrift", 8,
 	)
-	thriftCallerRun.Extractor = "1.2.0"
+	thriftCallerRun.Extractor = "1.3.0"
 	thriftCallerRun.Coverage.Protocols = []string{
 		"attribution-" + thriftCallerAttr, "resolution-scip-v1", "thrift",
 	}

@@ -89,8 +89,8 @@ func TestT204ReverseEvidenceSchemaIdentities(t *testing.T) {
 func TestT205RetentionSchemaIdentities(t *testing.T) {
 	if evidenceStoreSchemaVersion != "t12-store-v7" ||
 		evidencePreviousStoreSchemaVersion != "t12-store-v6" ||
-		evidenceMigrationVersion != "t12-evidence-migration-v5" ||
-		evidencePreviousMigrationVersion != "t12-evidence-migration-v4" ||
+		evidenceMigrationVersion != "t12-evidence-migration-v6" ||
+		evidencePreviousMigrationVersion != "t12-evidence-migration-v5" ||
 		evidenceWriterGuardEvent != "extraction_run_writer_v7" {
 		t.Fatal("T20.5 retention schema identities changed; review and remeasure")
 	}

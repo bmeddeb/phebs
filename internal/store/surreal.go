@@ -478,7 +478,8 @@ func evidenceMigrationPhysicalID(row evidenceRunMigrationRec) (models.RecordID, 
 }
 
 func isLegacyEvidenceStoreSchema(schema string, present bool) bool {
-	return !present || schema == "" || schema == "t12-store-v1" || schema == "t12-store-v2"
+	return !present || schema == "" || schema == "t12-store-v1" || schema == "t12-store-v2" ||
+		schema == "t12-store-v3" || schema == "t12-store-v4" || schema == "t12-store-v5"
 }
 
 func validEvidenceRunStatus(status string) bool {
@@ -487,9 +488,13 @@ func validEvidenceRunStatus(status string) bool {
 }
 
 // migrateEvidenceRuns upgrades only formats this binary understands. Rows
-// from the retracted implementation are retired and quarantined, while the
-// immediately preceding compatible writer is upgraded in place. Unknown
-// future writer/format pairs are deliberately neither decoded nor mutated.
+// from the retracted implementation and from skipped intermediate writer
+// generations (v3–v5, whose per-generation upgrade passes never ran on this
+// store) are retired and quarantined — a stranded published row would
+// otherwise hold its unique published_key forever and block every replacement
+// publication. The immediately preceding compatible writer is upgraded in
+// place. Unknown future writer/format pairs are deliberately neither decoded
+// nor mutated.
 //
 // The physical record id is authoritative. Per-row migration markers make a
 // crash resume monotonically; the global marker is written only after the
@@ -547,8 +552,10 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			ORDER BY id LIMIT $limit`, map[string]any{
 				"limit": evidenceMigrationBatchSize, "schema": evidenceStoreSchemaVersion,
 				"previous_schema": evidencePreviousStoreSchemaVersion,
-				"legacy_schemas":  []string{"t12-store-v1", "t12-store-v2"},
-				"format":          evidenceFormatVersion, "migration": evidenceMigrationVersion,
+				"legacy_schemas": []string{"t12-store-v1", "t12-store-v2", "t12-store-v3",
+					"t12-store-v4", "t12-store-v5"},
+				"format":    evidenceFormatVersion,
+				"migration": evidenceMigrationVersion,
 			})
 		if err != nil {
 			return fmt.Errorf("migrate evidence runs: list: %w", err)

@@ -26,7 +26,7 @@ const (
 	callerMapScanLimit        = 50_000
 	callerMapCursorLimit      = 16 << 10
 	callerMapBuildAttempts    = 3
-	callerMapExtractorVersion = "1.2.0"
+	callerMapExtractorVersion = "1.3.0"
 )
 
 // CallerMapService is the shared, transport-neutral exact-caller read engine.

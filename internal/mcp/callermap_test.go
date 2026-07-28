@@ -588,7 +588,7 @@ func callerToolFixture(
 			repository,
 			"grpc-caller",
 			"run-caller-"+strings.ReplaceAll(repository, "/", "-"),
-			"1.2.0",
+			"1.3.0",
 			[]string{
 				"attribution-" + callerToolAttribution,
 				"grpc",

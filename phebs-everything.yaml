@@ -1,0 +1,68 @@
+# Isolated local evaluation with every provisional evidence pack enabled
+# over public corpora. Does not share state with the default phebs instance
+# or the per-epic demos. Corpus roles:
+#   opentelemetry-demo  the "everything in one place" monorepo: committed
+#                       protobuf contracts, generated Go gRPC stubs with real
+#                       caller/consumer sites (src/checkout), and an
+#                       IBM/sarama Kafka producer (src/checkout/kafka) —
+#                       everything except Thrift. Its Kafka topic is
+#                       environment-driven, so expect honest abstention there.
+#   sarama              library corpus whose examples carry qualified literal
+#                       topics ("important", "access_log"), so
+#                       PRODUCES_TO_TOPIC evidence fires and the Topics page
+#                       has named rows
+#   jaeger-client-go    archived Thrift corpus: vendored generated stubs plus
+#                       real in-repo call sites, so Thrift registration and
+#                       caller joins fire
+#   jaeger-idl          Thrift declarations + vendored generated stubs
+# HEAD-bound extraction: connections track upstream HEAD, so named topics and
+# call sites may drift with upstream; the honesty posture does not depend on
+# them.
+server:
+  addr: "127.0.0.1:3075"
+  data_dir: "~/.phebs-everything"
+
+auth:
+  # Plain HTTP is deliberate for this loopback-only evaluation.
+  cookie_secure: false
+  session_lifetime: 12h
+
+sync:
+  cleanup_orphans: false
+  poll_interval: 5s
+  resync_interval: 1h
+
+proof_bundles:
+  retention: 168h
+
+experimental:
+  # Development-only: all provisional packs ride their dark flags; no
+  # accuracy claim exists for any of them.
+  provisional_proto_extraction: true
+  provisional_thrift_extraction: true
+  provisional_thrift_field_extraction: true
+  provisional_kafka_extraction: true
+
+contexts:
+  everything:
+    - "github.com/open-telemetry/opentelemetry-demo"
+  kafka:
+    - "github.com/open-telemetry/opentelemetry-demo"
+    - "github.com/IBM/sarama"
+  thrift:
+    - "github.com/jaegertracing/jaeger-client-go"
+    - "github.com/jaegertracing/jaeger-idl"
+
+connections:
+  - name: opentelemetry-demo
+    type: git
+    url: https://github.com/open-telemetry/opentelemetry-demo.git
+  - name: sarama
+    type: git
+    url: https://github.com/IBM/sarama.git
+  - name: jaeger-client-go
+    type: git
+    url: https://github.com/jaegertracing/jaeger-client-go.git
+  - name: jaeger-idl
+    type: git
+    url: https://github.com/jaegertracing/jaeger-idl.git

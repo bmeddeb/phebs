@@ -55,8 +55,6 @@ type sourceFileModel struct {
 	globalBindings map[string][]sourceType
 }
 
-var errModuleUnavailable = errors.New("module identity unavailable")
-
 func (e extractor) emitSyntaxFallback(
 	ctx context.Context,
 	corpus sdk.Corpus,
@@ -66,26 +64,15 @@ func (e extractor) emitSyntaxFallback(
 	attributionDigest string,
 	emit sdk.Emit,
 ) (int, error) {
-	modulePath, err := readModulePath(ctx, corpus, paths)
-	if errors.Is(err, errModuleUnavailable) {
-		// A missing or malformed module identity makes package-aware fallback
-		// unavailable. Typed SCIP facts remain independently publishable.
-		return 0, nil
-	}
+	modules, err := readModulePaths(ctx, corpus, paths)
 	if err != nil {
 		return 0, fmt.Errorf("read module identity: %w", err)
 	}
-	if modulePath == "" {
-		return 0, nil
-	}
 	index, err := e.buildGeneratedSyntaxIndex(
-		ctx, corpus, paths, modulePath, attribution,
+		ctx, corpus, paths, modules, attribution,
 	)
 	if err != nil {
 		return 0, err
-	}
-	if len(index.methods) == 0 {
-		return 0, nil
 	}
 
 	filePaths := make([]string, 0, len(paths))
@@ -100,11 +87,17 @@ func (e extractor) emitSyntaxFallback(
 		if err := ctx.Err(); err != nil {
 			return len(unresolved), err
 		}
+		// Read even when no generated methods were indexed: Candidate() claims
+		// every .go file, and the verified corpus rejects the whole run if a
+		// claimed candidate was never read.
 		blob, err := corpus.Read(ctx, filePath)
 		if err != nil {
 			return len(unresolved), fmt.Errorf(
 				"read syntax-fallback document %q: %w", filePath, err,
 			)
+		}
+		if len(index.methods) == 0 {
+			continue
 		}
 		if len(blob.Content) > maxSourceBytes || !utf8.ValidString(blob.Content) {
 			continue
@@ -123,42 +116,77 @@ func (e extractor) emitSyntaxFallback(
 	return len(unresolved), nil
 }
 
-func readModulePath(
+// readModulePaths maps each module root directory ("." for the repo root) to
+// its declared module path, supporting monorepos whose Go modules live in
+// subdirectories. A missing, oversized, or malformed go.mod leaves its
+// subtree without a module identity; extraction proceeds without it.
+func readModulePaths(
 	ctx context.Context,
 	corpus sdk.Corpus,
 	paths map[string]struct{},
-) (string, error) {
-	if _, present := paths["go.mod"]; !present {
-		return "", nil
+) (map[string]string, error) {
+	modFiles := make([]string, 0, 1)
+	for filePath := range paths {
+		if filePath == "go.mod" || strings.HasSuffix(filePath, "/go.mod") {
+			modFiles = append(modFiles, filePath)
+		}
 	}
-	blob, err := corpus.Read(ctx, "go.mod")
-	if err != nil {
-		return "", err
+	sort.Strings(modFiles)
+	modules := make(map[string]string, len(modFiles))
+	for _, filePath := range modFiles {
+		blob, err := corpus.Read(ctx, filePath)
+		if err != nil {
+			return nil, err
+		}
+		modulePath, ok := parseModulePath(blob.Content)
+		if !ok {
+			continue
+		}
+		modules[path.Dir(filePath)] = modulePath
 	}
-	if len(blob.Content) > maxSourceBytes || !utf8.ValidString(blob.Content) {
-		return "", errModuleUnavailable
+	return modules, nil
+}
+
+func parseModulePath(content string) (string, bool) {
+	if len(content) > maxSourceBytes || !utf8.ValidString(content) {
+		return "", false
 	}
 	modulePath := ""
-	for _, line := range strings.Split(blob.Content, "\n") {
+	for _, line := range strings.Split(content, "\n") {
 		fields := strings.Fields(strings.TrimSpace(strings.SplitN(line, "//", 2)[0]))
 		if len(fields) == 0 || fields[0] != "module" {
 			continue
 		}
 		if len(fields) != 2 || modulePath != "" {
-			return "", errModuleUnavailable
+			return "", false
 		}
 		modulePath = fields[1]
 		if strings.HasPrefix(modulePath, `"`) {
-			modulePath, err = strconv.Unquote(modulePath)
+			unquoted, err := strconv.Unquote(modulePath)
 			if err != nil {
-				return "", errModuleUnavailable
+				return "", false
 			}
+			modulePath = unquoted
 		}
 		if !validModulePath(modulePath) {
-			return "", errModuleUnavailable
+			return "", false
 		}
 	}
-	return modulePath, nil
+	return modulePath, modulePath != ""
+}
+
+// moduleFor resolves the deepest module root enclosing filePath.
+func moduleFor(modules map[string]string, filePath string) (string, string, bool) {
+	directory := path.Dir(filePath)
+	for {
+		if modulePath, ok := modules[directory]; ok {
+			return directory, modulePath, true
+		}
+		if directory == "." {
+			return "", "", false
+		}
+		directory = path.Dir(directory)
+	}
 }
 
 func validModulePath(value string) bool {
@@ -179,7 +207,7 @@ func (e extractor) buildGeneratedSyntaxIndex(
 	ctx context.Context,
 	corpus sdk.Corpus,
 	paths map[string]struct{},
-	modulePath string,
+	modules map[string]string,
 	attribution generatedFromLookup,
 ) (generatedSyntaxIndex, error) {
 	index := generatedSyntaxIndex{
@@ -205,7 +233,7 @@ func (e extractor) buildGeneratedSyntaxIndex(
 		if len(blob.Content) > maxGeneratedBytes || !utf8.ValidString(blob.Content) {
 			continue
 		}
-		importPath := generatedImportPath(modulePath, filePath)
+		importPath := generatedImportPath(modules, filePath)
 		if importPath == "" {
 			continue
 		}
@@ -244,7 +272,7 @@ func (e extractor) buildGeneratedSyntaxIndex(
 	return index, nil
 }
 
-func generatedImportPath(modulePath, filePath string) string {
+func generatedImportPath(modules map[string]string, filePath string) string {
 	if marker := strings.LastIndex(filePath, "/vendor/"); marker >= 0 {
 		return path.Dir(strings.TrimPrefix(
 			filePath[marker+len("/vendor/"):], "/",
@@ -253,11 +281,18 @@ func generatedImportPath(modulePath, filePath string) string {
 	if strings.HasPrefix(filePath, "vendor/") {
 		return strings.TrimPrefix(path.Dir(filePath), "vendor/")
 	}
+	moduleDir, modulePath, ok := moduleFor(modules, filePath)
+	if !ok {
+		return ""
+	}
 	directory := path.Dir(filePath)
-	if directory == "." {
+	if directory == moduleDir {
 		return modulePath
 	}
-	return modulePath + "/" + directory
+	if moduleDir == "." {
+		return modulePath + "/" + directory
+	}
+	return modulePath + "/" + strings.TrimPrefix(directory, moduleDir+"/")
 }
 
 func grpcSyntaxMethods(

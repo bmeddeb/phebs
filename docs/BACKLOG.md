@@ -13,7 +13,7 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 The two identified next paths—production evidence/pilot gating and the P6 fleet
 profile—remain explicitly gated or demand-driven in the roadmap. Neither is an
-implicit next ticket. Epics 25–28 below are drafted but start only on an
+implicit next ticket. Epics 25–29 below are drafted but start only on an
 explicit scheduling decision.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
@@ -483,6 +483,51 @@ receipts, labels, decision table, and measurements committed under
 byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
+
+## Epic 29 · Workbench over real published evidence *(drafted 2026-07-28 · unscheduled)*
+
+Bind the existing Change Workbench services to the store-derived Contract
+Atlas so a workbench can target real published extraction evidence instead of
+the synthetic fixture cohort. The T21 implementation is already
+catalog-agnostic — the target resolver composes whatever Contract Atlas
+service the instance serves — but the only binding path today is the
+`PHEBS_SYNTHETIC_WORKBENCH` demo guard, which requires the Investigation and
+Contract Atlas fixtures, and the atlas fixture replaces store-derived
+contract evidence wholesale. This epic removes that constraint without
+touching production registration: the roadmap's gate (retained validation
+plus an explicit pilot-continuation decision) is unchanged, and a pilot needs
+exactly this binding to exercise the workbench on real evidence.
+
+### Boundary
+
+- One new development-only flag, `experimental.provisional_workbench`; no new
+  environment variables, no routes beyond the existing workbench surfaces,
+  and no new capability. The flag is a dark provisional gate like the
+  extraction flags — it is not production registration, which remains
+  governed by the roadmap's validation and pilot-continuation gates.
+- The synthetic fixture cohort (`PHEBS_SYNTHETIC_WORKBENCH` plus the
+  Investigation, Contract Atlas, and closure-bundle fixtures) keeps working
+  unchanged; `make dev` remains its demo path. Setting the flag and the
+  synthetic cohort together fails startup with a typed error — two catalog
+  authorities for one workbench is ambiguous and refuses closed.
+- Workbench rows over provisional evidence inherit that evidence's posture:
+  no accuracy, completeness, compatibility, or migration-safety claim is
+  created or implied.
+- No UI change: the existing Workbench pages bind to whichever catalog the
+  instance serves.
+
+**T29.1 · Provisional workbench binding over the store-derived catalog** —
+construct the workbench service, target resolver, and the
+impact/implementation/checklist evidence services when
+`experimental.provisional_workbench` is set, with no fixture requirement; the
+boot warning names the provisional posture like the extraction flags. AC:
+with only the flag set, the workbench routes bind and a workbench resolves
+targets against the instance's own published operations; with the fixtures
+set and the flag unset, behavior is byte-identical to today; setting both
+fails startup with the typed refusal; an all-flags demo config reaches a
+workbench over real published evidence end-to-end while the `make dev`
+synthetic demo is unchanged; dated PLAN ADR bullet in the same PR; full merge
+bar.
 
 ## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 
