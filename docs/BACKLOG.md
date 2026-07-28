@@ -501,33 +501,95 @@ exactly this binding to exercise the workbench on real evidence.
 ### Boundary
 
 - One new development-only flag, `experimental.provisional_workbench`; no new
-  environment variables, no routes beyond the existing workbench surfaces,
-  and no new capability. The flag is a dark provisional gate like the
-  extraction flags — it is not production registration, which remains
-  governed by the roadmap's validation and pilot-continuation gates.
+  environment variables, routes, or capability identifiers. The flag
+  conditionally registers the existing `change-workbench` and
+  `change-workbench-evidence` surfaces. It is an overlay on an already-enabled
+  provisional protobuf or Thrift extraction lane, not an independent
+  authority to expose the evidence store: setting it without
+  `experimental.provisional_proto_extraction` or
+  `experimental.provisional_thrift_extraction` refuses startup as
+  `workbench-evidence-prerequisite`.
 - The synthetic fixture cohort (`PHEBS_SYNTHETIC_WORKBENCH` plus the
   Investigation, Contract Atlas, and closure-bundle fixtures) keeps working
-  unchanged; `make dev` remains its demo path. Setting the flag and the
-  synthetic cohort together fails startup with a typed error — two catalog
-  authorities for one workbench is ambiguous and refuses closed.
+  unchanged; `make dev` remains its demo path. The conflicting authorities are
+  exact: setting the flag with `PHEBS_SYNTHETIC_WORKBENCH=1` or any non-empty
+  `PHEBS_CONTRACT_ATLAS_FIXTURE` refuses startup as
+  `workbench-authority-conflict`. Investigation fixtures and the closure
+  repository are not catalog authorities and may coexist with the provisional
+  binding; the latter still enters through ordinary sync, indexing, and
+  extraction. Existing invalid-value and missing-fixture refusals for the
+  synthetic adapter retain their current precedence when the provisional flag
+  is unset.
 - Workbench rows over provisional evidence inherit that evidence's posture:
-  no accuracy, completeness, compatibility, or migration-safety claim is
-  created or implied.
+  no runtime-use, completeness, compatibility, migration-completion,
+  decommission-safety, or extraction-accuracy claim is created or implied.
 - No UI change: the existing Workbench pages bind to whichever catalog the
   instance serves.
+
+### Registration matrix
+
+The matrix is evaluated after strict parsing of
+`PHEBS_SYNTHETIC_WORKBENCH` (`""` or `"1"` only). “Declaration lane” means at
+least one of provisional protobuf or provisional Thrift extraction is enabled.
+Investigation fixtures and `PHEBS_WORKBENCH_CLOSURE_REPO` do not change the
+result.
+
+| `provisional_workbench` | Declaration lane | `PHEBS_SYNTHETIC_WORKBENCH` | Contract Atlas fixture | Result |
+|---|---|---|---|---|
+| `false` | any | empty | any | Existing non-Workbench behavior; no Workbench registration |
+| `false` | any | `1` | present, with Investigation fixtures | Existing synthetic Workbench, byte-identical |
+| `false` | any | `1` | absent, or Investigation fixtures absent | Existing synthetic missing-fixture refusal |
+| `true` | present | empty | absent | Register the existing Workbench surfaces over store-derived published evidence |
+| `true` | absent | empty | absent | Refuse `workbench-evidence-prerequisite` |
+| `true` | any | `1` | any | Refuse `workbench-authority-conflict` |
+| `true` | any | empty | present | Refuse `workbench-authority-conflict` |
+
+### Documentation updates
+
+T29.1 updates the owning documentation in the same PR as the implementation:
+
+- `docs/config.example.yaml` adds
+  `experimental.provisional_workbench: false`, its protobuf/Thrift extraction
+  prerequisite, and its conflicts with the synthetic Workbench and Contract
+  Atlas fixture authorities.
+- `docs/guides/CONFIGURATION.md` documents the default-dark flag, the two typed
+  startup refusals, and the complete registration matrix.
+- `docs/guides/WORKFLOWS.md` distinguishes the existing fixture-backed
+  `make dev` Workbench from the provisional Workbench over store-derived
+  published evidence and retains the canonical evidence caveats.
+- `docs/guides/OPERATIONS.md` documents startup diagnostics and a bounded
+  operator smoke using `phebs-everything.yaml`; remote-HEAD results are a
+  manual observation, never a deterministic merge-bar input or retained
+  accuracy claim.
+- `phebs-everything.yaml` opts into the Workbench flag and remains an isolated
+  local evaluation configuration; `make dev` and `make dev-api` remain
+  byte-identical fixture-backed demonstrations.
+- The dated PLAN completion ADR records the implemented authority checks,
+  service binding, validation result, and unchanged production gate.
 
 **T29.1 · Provisional workbench binding over the store-derived catalog** —
 construct the workbench service, target resolver, and the
 impact/implementation/checklist evidence services when
-`experimental.provisional_workbench` is set, with no fixture requirement; the
-boot warning names the provisional posture like the extraction flags. AC:
-with only the flag set, the workbench routes bind and a workbench resolves
-targets against the instance's own published operations; with the fixtures
-set and the flag unset, behavior is byte-identical to today; setting both
-fails startup with the typed refusal; an all-flags demo config reaches a
-workbench over real published evidence end-to-end while the `make dev`
-synthetic demo is unchanged; dated PLAN ADR bullet in the same PR; full merge
-bar.
+`experimental.provisional_workbench` and at least one provisional protobuf or
+Thrift extraction lane are set, with no fixture requirement; the flag does not
+independently bind `Options.Evidence`, and the boot warning names the
+provisional posture like the extraction flags. Prefer the already-constructed
+Contract Atlas service when building the target resolver so the Workbench and
+the instance cannot select different catalog authorities. AC: every row in
+the registration matrix is pinned, including the two typed refusal classes;
+with the flag, a declaration lane, and no conflicting authority, the existing
+Workbench routes and capability identifiers bind and a Workbench resolves
+targets against the instance's own published operations; with the flag alone,
+startup refuses rather than exposing persisted evidence through a new path;
+with the fixtures set and the flag unset, behavior is byte-identical to today.
+A deterministic local acceptance publishes evidence through the ordinary
+worker/store path and exercises Workbench target resolution without a Contract
+Atlas fixture; a separately documented manual smoke using
+`phebs-everything.yaml` reaches a Workbench over public real published evidence
+after sync/index/extraction, while the `make dev` synthetic demo remains
+unchanged. Complete every item in **Documentation updates**; retain the
+canonical no-runtime-use/no-completeness/no-migration-completion/
+no-decommission-safety/no-extraction-accuracy posture; full merge bar.
 
 ## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 
