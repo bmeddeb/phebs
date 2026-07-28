@@ -350,6 +350,15 @@ test('Where keeps gaps adjacent, cites exact source, and replaces pages', async 
   expect(await screen.findByRole('heading', {
     name: 'Analysis scope & gaps',
   })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Help for Analysis scope & gaps',
+  }))
+  expect(screen.getByRole('dialog', {
+    name: 'Analysis scope & gaps help',
+  }).textContent).toContain(
+    'what phebs examined, what evidence was available, and what remained unsupported or unresolved',
+  )
+  fireEvent.keyDown(document, { key: 'Escape' })
   expect(screen.getByText('reader_not_bound')).toBeTruthy()
   expect(screen.getByText('No runtime telemetry reader is bound.')).toBeTruthy()
   expect(screen.getByText('The bounded inventory read failed.')).toBeTruthy()

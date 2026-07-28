@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
@@ -12,6 +13,7 @@ import { BaseProvider } from 'baseui'
 import WorkbenchPage from './WorkbenchPage'
 import {
   WorkbenchAPIError,
+  type ContractCatalogList,
   type WorkbenchChecklistPage,
   type WorkbenchImpactPage,
   type WorkbenchImplementationPage,
@@ -23,6 +25,7 @@ import { lightTheme, ModeContext } from '../theme'
 import { useHashRoute } from '../router'
 
 const api = vi.hoisted(() => ({
+  fetchContractCatalog: vi.fn(),
   fetchWorkbench: vi.fn(),
   previewWorkbench: vi.fn(),
   createWorkbench: vi.fn(),
@@ -227,6 +230,7 @@ function page(query = '') {
 }
 
 beforeEach(() => {
+  api.fetchContractCatalog.mockReset()
   api.fetchWorkbench.mockReset()
   api.previewWorkbench.mockReset()
   api.createWorkbench.mockReset()
@@ -363,6 +367,134 @@ test('starts from an exact Contract Atlas operation without implicit reads or wr
   expect(api.fetchWorkbench).not.toHaveBeenCalled()
   expect(api.previewWorkbench).not.toHaveBeenCalled()
   expect(api.createWorkbench).not.toHaveBeenCalled()
+})
+
+function discoveredCatalog(): ContractCatalogList {
+  const item = (
+    method: string,
+    operation: string,
+  ): ContractCatalogList['items'][number] => ({
+    kind: 'operation',
+    protocol: 'protobuf',
+    repository,
+    declaration_lineage: 'lineage-v1',
+    package: 'demo.search.v1',
+    service_fqn: 'demo.search.v1.CodeSearch',
+    method,
+    operation,
+    declaration: {
+      assertion_id: `assertion-${method}`,
+      run_id: 'run-catalog',
+      predicate: 'DECLARES_OPERATION',
+      object: operation.slice(1),
+      lineage: 'lineage-v1',
+      tier: 'exact',
+      sources: [],
+      sources_truncated: false,
+    },
+  })
+  return {
+    schema_version: 'contract-catalog-v2',
+    query: {},
+    items: [
+      item('Search', '/demo.search.v1.CodeSearch/Search'),
+      item('SearchV2', '/demo.search.v1.CodeSearch/SearchV2'),
+      item('LegacySearch', '/demo.search.v1.CodeSearch/LegacySearch'),
+    ],
+    pagination: { complete: true, truncated: false },
+    coverage_digest: `sha256:${'9'.repeat(64)}`,
+    coverage: {
+      schema_version: 'coverage-certificate-v1',
+      domains: [],
+      repository_count: 0,
+      repositories: [],
+      digest: `sha256:${'9'.repeat(64)}`,
+    },
+    caveat: 'Synthetic discovery; no completeness or runtime-use claim.',
+  }
+}
+
+test.each<WorkbenchTicketKind>(['add', 'modify', 'migrate', 'retire'])(
+  '%s can bind complete endpoint identities from bounded discovery without canonical-id typing',
+  async (kind) => {
+    api.fetchContractCatalog.mockResolvedValue(discoveredCatalog())
+    page(
+      'source=atlas&step=what&protocol=protobuf&repository=' +
+      `${encodeURIComponent(repository)}&lineage=lineage-v1&operation=` +
+      '%2Fdemo.search.v1.CodeSearch%2FSearch',
+    )
+    fireEvent.change(screen.getByLabelText('Workbench change mode'), {
+      target: { value: kind },
+    })
+    if (kind === 'migrate') {
+      fireEvent.click(screen.getByRole('button', { name: 'Add endpoint' }))
+    }
+
+    const triggers = screen.getAllByRole('button', {
+      name: /Discover endpoint for selection/,
+    })
+    fireEvent.click(triggers[0])
+    let dialog = await screen.findByRole('dialog', {
+      name: 'Choose discovered endpoint for selection 1',
+    })
+    const firstOperation = kind === 'retire'
+      ? '/demo.search.v1.CodeSearch/LegacySearch'
+      : '/demo.search.v1.CodeSearch/Search'
+    fireEvent.click(within(dialog).getAllByRole('button', {
+      name: /Use endpoint/,
+    })[kind === 'retire' ? 2 : 0])
+    expect(
+      (screen.getByLabelText(
+        'Selection 1 canonical operation',
+      ) as HTMLInputElement).value,
+    ).toBe(firstOperation)
+
+    if (kind === 'migrate') {
+      fireEvent.click(screen.getAllByRole('button', {
+        name: /Discover endpoint for selection/,
+      })[1])
+      dialog = await screen.findByRole('dialog', {
+        name: 'Choose discovered endpoint for selection 2',
+      })
+      fireEvent.click(within(dialog).getAllByRole('button', {
+        name: /Use endpoint/,
+      })[1])
+      expect(
+        (screen.getByLabelText(
+          'Selection 2 canonical operation',
+        ) as HTMLInputElement).value,
+      ).toBe('/demo.search.v1.CodeSearch/SearchV2')
+    }
+
+    expect(api.fetchContractCatalog).toHaveBeenCalled()
+    expect(api.previewWorkbench).not.toHaveBeenCalled()
+    expect(api.createWorkbench).not.toHaveBeenCalled()
+  },
+)
+
+test('endpoint discovery has named controls, Escape focus return, and outside-click dismissal', async () => {
+  api.fetchContractCatalog.mockResolvedValue(discoveredCatalog())
+  page(
+    'source=atlas&step=what&protocol=protobuf&repository=' +
+    `${encodeURIComponent(repository)}&lineage=lineage-v1&operation=` +
+    '%2Fdemo.search.v1.CodeSearch%2FSearch',
+  )
+  const trigger = screen.getByRole('button', {
+    name: 'Discover endpoint for selection 1',
+  })
+  fireEvent.click(trigger)
+  const dialog = await screen.findByRole('dialog', {
+    name: 'Choose discovered endpoint for selection 1',
+  })
+  expect(within(dialog).getByText(/copies its complete protocol/)).toBeTruthy()
+  fireEvent.keyDown(document, { key: 'Escape' })
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  await waitFor(() => expect(document.activeElement).toBe(trigger))
+
+  fireEvent.click(trigger)
+  await screen.findByRole('dialog')
+  fireEvent.pointerDown(document.body)
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
 })
 
 test.each<WorkbenchTicketKind>(['add', 'modify', 'migrate', 'retire'])(

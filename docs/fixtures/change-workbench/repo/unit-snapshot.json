@@ -1,0 +1,19 @@
+{
+  "version": "t20-unit-snapshot-v1",
+  "mappings": [
+    {
+      "source_path": "src/checkout/exact_caller.go",
+      "build_targets": ["//src/checkout:client", "//src/shared:search_client"],
+      "deployables": ["checkout-api", "search-worker"],
+      "logical_services": ["checkout", "search"],
+      "owners": ["team-checkout", "team-search"]
+    },
+    {
+      "source_path": "src/migration/replacement_caller.go",
+      "build_targets": ["//src/migration:client"],
+      "deployables": ["migration-worker"],
+      "logical_services": ["migration"],
+      "owners": ["team-migration"]
+    }
+  ]
+}

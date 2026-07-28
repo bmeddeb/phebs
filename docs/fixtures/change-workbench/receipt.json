@@ -1,0 +1,34 @@
+{
+  "schema_version": "t21.14-workbench-closure-receipt-v1",
+  "repository": "example.invalid/workbench-closure",
+  "commit": "046ee251b916a5a86a3c41d8d561106f0e5b541c",
+  "bundle_sha256": "sha256:3611e1f613c9ac02ccf46e1e876fa1b097b340014eae16d5701794429dc54696",
+  "bundle_bytes": 3631,
+  "history_commits": 2,
+  "index_scip": "absent",
+  "author": "phebs-t2114-fixture-author",
+  "authoring_command": [
+    "go",
+    "run",
+    "./docs/fixtures/change-workbench/cmd/author"
+  ],
+  "scenarios": [
+    "add",
+    "modify",
+    "migrate",
+    "retire"
+  ],
+  "protocols": [
+    "protobuf",
+    "thrift"
+  ],
+  "unsupported_planes": [
+    "document-store",
+    "kafka",
+    "redis",
+    "runtime",
+    "sql"
+  ],
+  "observation": "Retained synthetic workflow and failure inputs only; not a runtime-use, completeness, migration-safety, retirement-safety, or extraction-accuracy claim.",
+  "external_accuracy": "NOT_ESTABLISHED"
+}

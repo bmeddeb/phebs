@@ -497,12 +497,17 @@ ordinary production startup still supplies neither service to MCP.
 
 `make dev` and `make dev-api` explicitly set
 `PHEBS_SYNTHETIC_WORKBENCH=1` alongside the documented synthetic Investigation
-and Contract Atlas fixtures. Only that exact value is accepted, and startup
-fails closed unless both fixture adapters and the Workbench service are
-available. The resulting authenticated `change-workbench` capability exposes
-the experimental `#/workbench` route and its conditional HTTP operations.
-Setting ordinary production configuration never enables it; this adapter does
-not satisfy the retained validation or pilot-continuation gate.
+and Contract Atlas fixtures. They also bind the retained
+`docs/fixtures/change-workbench/t2114-workbench-closure.bundle` through the
+ordinary sync, zoekt index, and provisional protobuf/Thrift extraction
+pipeline. The bundle has no `index.scip`; Kafka, Redis, document-store, SQL,
+and runtime readers are not enabled. Only the exact synthetic setting is
+accepted, and startup fails closed unless both fixture adapters and the
+Workbench service are available. The resulting authenticated
+`change-workbench` capability exposes the experimental `#/workbench` route and
+its conditional HTTP operations. Setting ordinary production configuration
+never enables it; this adapter does not satisfy the retained validation or
+pilot-continuation gate.
 
 The Workbench home offers two read/write-safe entry paths:
 
@@ -530,6 +535,18 @@ source; migrate and retire do not. The browser checks the reviewed 256-file,
 After a saved Workbench is reopened, only the retained proposal
 path/hash/size commitment is shown; source bytes must be supplied again for a
 new revision.
+
+Each endpoint row in What has **Discover**. It opens one bounded Contract
+Atlas page and explains that an operation name is not an identity. **Use
+endpoint** copies the complete protocol, repository, declaration lineage, and
+canonical operation together; it does not run a preview or promote name-only
+evidence. Migrate/replace uses Discover once for the current row and once for
+the replacement row. **Next endpoints** replaces the current result rows;
+prior result pages are not retained in the DOM. Escape or the explicit close
+button dismisses and returns focus to Discover; an outside click dismisses
+without moving focus unexpectedly. The existing identity fields remain
+visible for deliberate correction and inspection, but the synthetic
+walkthrough requires no canonical-identifier typing after Atlas discovery.
 
 Opening a step and editing fields perform no preview or mutation. **Preview
 revision** is an explicit read-only operation. Only a ready preview with the
@@ -598,6 +615,49 @@ supplies the current active Disposition, so a correction retry derives a new
 uses the same non-disclosing unavailable state. There is no comment,
 assignment, due date, priority, custom state, task, or implicit completion
 action.
+
+### Retained four-story closure walkthrough
+
+Start `make dev` with a fresh data directory, sign in, open
+**Change Workbench**, and use the committed synthetic repository selected by
+Contract Atlas. The fixture source separates `idl/proto`, `idl/thrift`, and
+`src`; its protobuf and Thrift services deliberately share a Search operation
+name.
+
+For each story, complete Why with human-owned intent, then use What as follows:
+
+- **Add:** keep the discovered Search endpoint as `analogous`, author the
+  bounded proposed `Index` IDL, and preview explicitly.
+- **Modify:** discover Search as `current`, supply bounded replacement IDL,
+  and preview explicitly.
+- **Migrate:** discover Search as `current`, add a second selection, discover
+  SearchV2 as `replacement`, and preview explicitly.
+- **Retire:** discover LegacySearch as `current` and preview explicitly.
+
+After the explicit create/append action, Where keeps declaration,
+implementation, exact caller, name-only match, extractor abstention,
+unit-attribution ambiguity, failed/stale coverage, and unsupported resource
+planes separate. The adjacent **Analysis scope & gaps** help explains those
+states without requiring this manual. How keeps source/history evidence,
+missing SCIP/history gaps, deterministic unaccepted suggestions, citations,
+and immutable human Dispositions separate. Empty or exhausted pages do not
+mean that migration is complete or that retirement is safe.
+
+For MCP, call `search_contract_operations` first and carry the returned
+protocol, repository, declaration lineage, and operation fields unchanged
+into `preview_change_workbench`. Use the existing Contract Atlas, Caller Map
+and comparison, search, SCIP, history, and proof tools for evidence drill-down;
+there is no second Workbench evidence tool. A write-capable named key may then
+use the existing explicit create/Disposition tools under the capability and
+owner checks described in §8.
+
+The retained receipt is
+`docs/fixtures/change-workbench/receipt.json`. It pins the two-commit bundle,
+the four scenario names, the protobuf/Thrift corpus, unsupported planes, and
+external `NOT_ESTABLISHED` posture. `closure-states.json` contains acceptance
+inputs, not observed production facts. Neither artifact establishes runtime
+use, completeness, migration completion or safety, retirement safety, or
+extraction accuracy.
 
 The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
 contains declaration-proven call rows or stable field-reference rows.
@@ -2903,7 +2963,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas fixtures, the fixture-coupled Change Workbench, and the committed Thrift field-zero repo through normal sync/index/extraction; run with embedded UI |
+| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas fixtures, the retained neutral Change Workbench closure repo, the fixture-coupled Workbench, and the committed Thrift field-zero repo through normal sync/index/extraction; run with embedded UI |
 | `make dev-api`       | backend-only loop with the same children, explicit UI/Workbench fixtures, and Thrift field-zero repository (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index` and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |

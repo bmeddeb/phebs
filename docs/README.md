@@ -12,6 +12,7 @@ Read in this order for your role; each document states its own authority.
 | PORT_MAP.md *(removed 2026-07-12; historical — see git history)* | upstream analysis, scope, license posture |
 | [config.example.yaml](./config.example.yaml) | annotated configuration reference |
 | [../spike/t211/README.md](../spike/t211/README.md) | T21.1 executable Change Workbench scenario, service-inventory, vocabulary, and gate contract; no production behavior |
+| [fixtures/change-workbench/README.md](./fixtures/change-workbench/README.md) | T21.14 retained neutral Workbench monorepo, deterministic bundle author, failure-state inputs, and closure receipt; synthetic/default-dark only |
 
 ## Adoption suite (internal circulation)
 

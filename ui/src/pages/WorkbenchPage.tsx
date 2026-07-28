@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useStyletron } from 'baseui'
 import { Button, KIND as BUTTON_KIND, SIZE as BUTTON_SIZE } from 'baseui/button'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import {
   createWorkbench,
+  fetchContractCatalog,
   fetchWorkbench,
   previewWorkbench,
   reviseWorkbench,
   WorkbenchAPIError,
+  type ContractCatalogItem,
   type WorkbenchContractSelection,
   type WorkbenchPlan,
   type WorkbenchPreview,
@@ -1189,91 +1191,406 @@ function SelectionEditor({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const [discoveryOpen, setDiscoveryOpen] = useState(false)
+  const discoveryTrigger = useRef<HTMLButtonElement>(null)
   const update = (
     field: keyof WorkbenchContractSelection,
     value: string,
   ) => onChange({ ...selection, [field]: value })
   return (
-    <fieldset className={css({
-      display: 'grid',
-      gridTemplateColumns: '130px 130px minmax(180px, 0.8fr) minmax(220px, 1fr) minmax(220px, 1fr) auto',
-      gap: '10px',
-      alignItems: 'end',
-      margin: 0,
-      padding: '15px 18px',
-      border: 0,
-      borderBottom: `1px solid ${tok.innerSep}`,
-      '@media screen and (max-width: 1160px)': {
-        gridTemplateColumns: '1fr 1fr',
-      },
-      '@media screen and (max-width: 560px)': {
-        gridTemplateColumns: '1fr',
-      },
-    })}>
-      <legend className={css({
-        position: 'absolute',
-        width: '1px',
-        height: '1px',
-        overflow: 'hidden',
-        clip: 'rect(0 0 0 0)',
+    <>
+      <fieldset className={css({
+        display: 'grid',
+        gridTemplateColumns: '130px 130px minmax(180px, 0.8fr) minmax(220px, 1fr) minmax(220px, 1fr) auto',
+        gap: '10px',
+        alignItems: 'end',
+        margin: 0,
+        padding: '15px 18px',
+        border: 0,
+        borderBottom: `1px solid ${tok.innerSep}`,
+        '@media screen and (max-width: 1160px)': {
+          gridTemplateColumns: '1fr 1fr',
+        },
+        '@media screen and (max-width: 560px)': {
+          gridTemplateColumns: '1fr',
+        },
       })}>
-        Contract selection {index + 1}
-      </legend>
-      <label className={css(fieldLabelStyle(tok))}>
-        Role
-        <select
-          aria-label={`Selection ${index + 1} role`}
-          value={selection.role}
-          onChange={(event) => update('role', event.currentTarget.value)}
-          className={css(controlStyle(tok))}
+        <legend className={css({
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden',
+          clip: 'rect(0 0 0 0)',
+        })}>
+          Contract selection {index + 1}
+        </legend>
+        <label className={css(fieldLabelStyle(tok))}>
+          Role
+          <select
+            aria-label={`Selection ${index + 1} role`}
+            value={selection.role}
+            onChange={(event) => update('role', event.currentTarget.value)}
+            className={css(controlStyle(tok))}
+          >
+            <option value="current">Current</option>
+            <option value="replacement">Replacement</option>
+            <option value="analogous">Analogous</option>
+          </select>
+        </label>
+        <label className={css(fieldLabelStyle(tok))}>
+          Protocol
+          <select
+            aria-label={`Selection ${index + 1} protocol`}
+            value={selection.protocol}
+            onChange={(event) => update('protocol', event.currentTarget.value)}
+            className={css(controlStyle(tok))}
+          >
+            <option value="protobuf">Protobuf</option>
+            <option value="thrift">Thrift</option>
+          </select>
+        </label>
+        <TextField
+          label="Repository"
+          ariaLabel={`Selection ${index + 1} repository`}
+          value={selection.repository}
+          mono
+          onChange={(value) => update('repository', value)}
+        />
+        <TextField
+          label="Declaration lineage"
+          ariaLabel={`Selection ${index + 1} declaration lineage`}
+          value={selection.declaration_lineage}
+          mono
+          onChange={(value) => update('declaration_lineage', value)}
+        />
+        <TextField
+          label="Canonical operation"
+          ariaLabel={`Selection ${index + 1} canonical operation`}
+          value={selection.canonical_operation}
+          mono
+          onChange={(value) => update('canonical_operation', value)}
+        />
+        <div className={css({
+          display: 'grid',
+          gap: '7px',
+          justifyItems: 'stretch',
+        })}>
+          <Button
+            type="button"
+            size={BUTTON_SIZE.mini}
+            kind={BUTTON_KIND.secondary}
+            aria-haspopup="dialog"
+            aria-expanded={discoveryOpen}
+            aria-controls={`selection-${index + 1}-endpoint-discovery`}
+            aria-label={`Discover endpoint for selection ${index + 1}`}
+            ref={discoveryTrigger}
+            onClick={() => setDiscoveryOpen((value) => !value)}
+          >
+            Discover
+          </Button>
+          <Button
+            type="button"
+            size={BUTTON_SIZE.mini}
+            kind={BUTTON_KIND.tertiary}
+            onClick={onRemove}
+          >
+            Remove
+          </Button>
+        </div>
+      </fieldset>
+      {discoveryOpen && (
+        <EndpointDiscovery
+          id={`selection-${index + 1}-endpoint-discovery`}
+          selectionNumber={index + 1}
+          triggerRef={discoveryTrigger}
+          onClose={() => setDiscoveryOpen(false)}
+          onSelect={(item) => {
+            onChange({
+              ...selection,
+              protocol: item.protocol,
+              repository: item.repository,
+              declaration_lineage: item.declaration_lineage,
+              canonical_operation: item.operation ?? '',
+            })
+            setDiscoveryOpen(false)
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+function EndpointDiscovery({
+  id,
+  selectionNumber,
+  triggerRef,
+  onClose,
+  onSelect,
+}: {
+  id: string
+  selectionNumber: number
+  triggerRef: React.RefObject<HTMLButtonElement | null>
+  onClose: () => void
+  onSelect: (item: ContractCatalogItem) => void
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const panelRef = useRef<HTMLDivElement>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const [items, setItems] = useState<ContractCatalogItem[]>([])
+  const [cursors, setCursors] = useState([''])
+  const [pageIndex, setPageIndex] = useState(0)
+  const [nextCursor, setNextCursor] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [failure, setFailure] = useState('')
+  const cursor = cursors[pageIndex] ?? ''
+
+  const close = useCallback((returnFocus: boolean) => {
+    onClose()
+    if (returnFocus) {
+      window.setTimeout(() => triggerRef.current?.focus(), 0)
+    }
+  }, [onClose, triggerRef])
+
+  useEffect(() => {
+    headingRef.current?.focus()
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node) ||
+        panelRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)) return
+      close(false)
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      close(true)
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [close, triggerRef])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let active = true
+    setLoading(true)
+    setFailure('')
+    fetchContractCatalog({}, 10, cursor, controller.signal)
+      .then((page) => {
+        if (!active) return
+        setItems(page.items.filter(
+          (item) => item.kind === 'operation' && Boolean(item.operation),
+        ))
+        setNextCursor(page.pagination.next_cursor ?? '')
+      })
+      .catch((cause) => {
+        if (!active || isAbortError(cause)) return
+        setItems([])
+        setNextCursor('')
+        setFailure(cause instanceof Error ? cause.message : String(cause))
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [cursor])
+
+  return (
+    <div
+      id={id}
+      ref={panelRef}
+      role="dialog"
+      aria-modal="false"
+      aria-labelledby={`${id}-heading`}
+      aria-describedby={`${id}-help`}
+      className={css({
+        display: 'grid',
+        gap: '12px',
+        margin: '0 18px 16px',
+        padding: '16px',
+        border: `1px solid ${tok.cardBorder}`,
+        borderTop: 0,
+        borderRadius: '0 0 10px 10px',
+        backgroundColor: tok.bandBg,
+        minWidth: 0,
+      })}
+    >
+      <div className={css({
+        display: 'grid',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        gap: '12px',
+        alignItems: 'start',
+      })}>
+        <div>
+          <div className={css(eyebrowStyle(tok))}>Contract Atlas · read only</div>
+          <h4
+            id={`${id}-heading`}
+            ref={headingRef}
+            tabIndex={-1}
+            className={css({ margin: '4px 0 0', fontSize: '15px' })}
+          >
+            Choose discovered endpoint for selection {selectionNumber}
+          </h4>
+        </div>
+        <Button
+          type="button"
+          size={BUTTON_SIZE.mini}
+          kind={BUTTON_KIND.tertiary}
+          onClick={() => close(true)}
         >
-          <option value="current">Current</option>
-          <option value="replacement">Replacement</option>
-          <option value="analogous">Analogous</option>
-        </select>
-      </label>
-      <label className={css(fieldLabelStyle(tok))}>
-        Protocol
-        <select
-          aria-label={`Selection ${index + 1} protocol`}
-          value={selection.protocol}
-          onChange={(event) => update('protocol', event.currentTarget.value)}
-          className={css(controlStyle(tok))}
-        >
-          <option value="protobuf">Protobuf</option>
-          <option value="thrift">Thrift</option>
-        </select>
-      </label>
-      <TextField
-        label="Repository"
-        ariaLabel={`Selection ${index + 1} repository`}
-        value={selection.repository}
-        mono
-        onChange={(value) => update('repository', value)}
-      />
-      <TextField
-        label="Declaration lineage"
-        ariaLabel={`Selection ${index + 1} declaration lineage`}
-        value={selection.declaration_lineage}
-        mono
-        onChange={(value) => update('declaration_lineage', value)}
-      />
-      <TextField
-        label="Canonical operation"
-        ariaLabel={`Selection ${index + 1} canonical operation`}
-        value={selection.canonical_operation}
-        mono
-        onChange={(value) => update('canonical_operation', value)}
-      />
-      <Button
-        type="button"
-        size={BUTTON_SIZE.mini}
-        kind={BUTTON_KIND.tertiary}
-        onClick={onRemove}
-      >
-        Remove
-      </Button>
-    </fieldset>
+          Close endpoint discovery
+        </Button>
+      </div>
+      <p id={`${id}-help`} className={css({
+        margin: 0,
+        color: tok.textTertiary,
+        fontSize: '11px',
+        lineHeight: '17px',
+      })}>
+        Selecting a row copies its complete protocol, repository, declaration
+        lineage, and canonical operation identity. Shared names stay separate;
+        choosing a name never upgrades name-only evidence to a resolved caller.
+      </p>
+      {loading && (
+        <div role="status" aria-live="polite" className={css({
+          display: 'flex',
+          alignItems: 'center',
+          gap: '9px',
+          color: tok.textSecondary,
+          fontSize: '12px',
+        })}>
+          <Spinner $size="small" />
+          Loading one bounded Atlas page…
+        </div>
+      )}
+      {failure && (
+        <Notification kind={NOTIFICATION_KIND.negative} closeable={false}>
+          Endpoint discovery failed. No identity was changed. {failure}
+        </Notification>
+      )}
+      {!loading && !failure && items.length === 0 && (
+        <HonestEmpty>
+          This Atlas page contains no operation rows. That does not establish
+          that no endpoints exist; use the bounded page controls.
+        </HonestEmpty>
+      )}
+      {!loading && !failure && items.length > 0 && (
+        <ul className={css({
+          display: 'grid',
+          gap: '8px',
+          margin: 0,
+          padding: 0,
+          listStyle: 'none',
+          minWidth: 0,
+        })}>
+          {items.map((item) => (
+            <li
+              key={[
+                item.protocol,
+                item.repository,
+                item.declaration_lineage,
+                item.operation,
+              ].join('\u0000')}
+              className={css({
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                gap: '12px',
+                alignItems: 'center',
+                padding: '10px 11px',
+                border: `1px solid ${tok.innerSep}`,
+                borderRadius: '7px',
+                minWidth: 0,
+                '@media screen and (max-width: 560px)': {
+                  gridTemplateColumns: '1fr',
+                },
+              })}
+            >
+              <span className={css({ minWidth: 0 })}>
+                <strong className={css({
+                  display: 'block',
+                  overflowWrap: 'anywhere',
+                  fontFamily: FONTS.MONO,
+                  fontSize: '11px',
+                })}>
+                  {item.operation}
+                </strong>
+                <span className={css({
+                  display: 'block',
+                  marginTop: '3px',
+                  color: tok.textTertiary,
+                  overflowWrap: 'anywhere',
+                  fontSize: '10px',
+                  lineHeight: '15px',
+                })}>
+                  {item.protocol} · {item.repository} · {item.declaration_lineage}
+                </span>
+              </span>
+              <Button
+                type="button"
+                size={BUTTON_SIZE.mini}
+                kind={BUTTON_KIND.secondary}
+                aria-label={`Use endpoint ${item.operation}`}
+                onClick={() => {
+                  onSelect(item)
+                  window.setTimeout(() => triggerRef.current?.focus(), 0)
+                }}
+              >
+                Use endpoint
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className={css({
+        display: 'flex',
+        gap: '8px',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+      })}>
+        <span className={css({
+          color: tok.textTertiary,
+          fontFamily: FONTS.MONO,
+          fontSize: '10px',
+        })}>
+          Atlas page {pageIndex + 1}; prior result rows are not retained.
+        </span>
+        <span className={css({ display: 'flex', gap: '8px' })}>
+          <Button
+            type="button"
+            size={BUTTON_SIZE.mini}
+            kind={BUTTON_KIND.tertiary}
+            disabled={loading || pageIndex === 0}
+            onClick={() => setPageIndex((value) => Math.max(0, value - 1))}
+          >
+            Previous endpoints
+          </Button>
+          <Button
+            type="button"
+            size={BUTTON_SIZE.mini}
+            kind={BUTTON_KIND.tertiary}
+            disabled={loading || !nextCursor}
+            onClick={() => {
+              if (!nextCursor) return
+              setCursors((current) => [
+                ...current.slice(0, pageIndex + 1),
+                nextCursor,
+              ])
+              setPageIndex((value) => value + 1)
+            }}
+          >
+            Next endpoints
+          </Button>
+        </span>
+      </div>
+    </div>
   )
 }
 

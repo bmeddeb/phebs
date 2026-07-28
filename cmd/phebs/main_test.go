@@ -729,6 +729,117 @@ func TestBindSyntheticThriftFieldDemoIsExplicitAndPipelineBacked(t *testing.T) {
 	})
 }
 
+func TestBindSyntheticWorkbenchClosureDemoIsExplicitAndPipelineBacked(
+	t *testing.T,
+) {
+	fixture, err := filepath.Abs(filepath.Join(
+		"..", "..", "docs", "fixtures", "change-workbench",
+		"t2114-workbench-closure.bundle",
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("ordinary serve remains dark", func(t *testing.T) {
+		cfg := &config.Config{}
+		if err := bindSyntheticWorkbenchClosureDemo(cfg, ""); err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Experimental.ProvisionalProtoExtraction ||
+			cfg.Experimental.ProvisionalThriftExtraction ||
+			cfg.Experimental.ProvisionalKafkaExtraction ||
+			len(cfg.Connections) != 0 {
+			t.Fatalf("empty setting changed config: %+v", cfg)
+		}
+	})
+
+	t.Run("exact bundle registers only reviewed pipeline inputs", func(t *testing.T) {
+		cfg := &config.Config{}
+		if err := bindSyntheticWorkbenchClosureDemo(cfg, fixture); err != nil {
+			t.Fatal(err)
+		}
+		if !cfg.Experimental.ProvisionalProtoExtraction ||
+			!cfg.Experimental.ProvisionalThriftExtraction ||
+			cfg.Experimental.ProvisionalThriftFieldExtraction ||
+			cfg.Experimental.ProvisionalKafkaExtraction ||
+			len(cfg.Connections) != 1 ||
+			cfg.Connections[0].Name != "t21-workbench-closure" ||
+			cfg.Connections[0].Type != "git" ||
+			cfg.Connections[0].URL != fixture {
+			t.Fatalf("synthetic fixture config = %+v", cfg)
+		}
+	})
+
+	t.Run("existing exact source is not duplicated", func(t *testing.T) {
+		cfg := &config.Config{Connections: []config.Connection{{
+			Name: "already-present", Type: "git", URL: fixture,
+		}}}
+		if err := bindSyntheticWorkbenchClosureDemo(cfg, fixture); err != nil {
+			t.Fatal(err)
+		}
+		if len(cfg.Connections) != 1 ||
+			!cfg.Experimental.ProvisionalProtoExtraction ||
+			!cfg.Experimental.ProvisionalThriftExtraction {
+			t.Fatalf("existing fixture source changed unexpectedly: %+v", cfg)
+		}
+	})
+
+	t.Run("invalid or colliding settings fail before mutation", func(t *testing.T) {
+		rows := []struct {
+			name    string
+			fixture string
+			cfg     *config.Config
+		}{
+			{
+				name: "relative",
+				fixture: "docs/fixtures/change-workbench/" +
+					"t2114-workbench-closure.bundle",
+				cfg: &config.Config{},
+			},
+			{name: "surrounding space", fixture: fixture + " ", cfg: &config.Config{}},
+			{
+				name:    "wrong basename",
+				fixture: filepath.Join(filepath.Dir(fixture), "other.bundle"),
+				cfg:     &config.Config{},
+			},
+			{
+				name:    "missing",
+				fixture: filepath.Join(t.TempDir(), "t2114-workbench-closure.bundle"),
+				cfg:     &config.Config{},
+			},
+			{
+				name: "connection collision", fixture: fixture,
+				cfg: &config.Config{Connections: []config.Connection{{
+					Name: "t21-workbench-closure", Type: "git",
+					URL: "/different/source",
+				}}},
+			},
+		}
+		for _, row := range rows {
+			t.Run(row.name, func(t *testing.T) {
+				before := *row.cfg
+				before.Connections = append(
+					[]config.Connection(nil),
+					row.cfg.Connections...,
+				)
+				if err := bindSyntheticWorkbenchClosureDemo(
+					row.cfg,
+					row.fixture,
+				); err == nil {
+					t.Fatalf("invalid fixture setting %q succeeded", row.fixture)
+				}
+				if !reflect.DeepEqual(*row.cfg, before) {
+					t.Fatalf(
+						"failed binding changed config: before=%+v after=%+v",
+						before,
+						*row.cfg,
+					)
+				}
+			})
+		}
+	})
+}
+
 func TestPrintVersion(t *testing.T) {
 	tests := []struct {
 		name    string

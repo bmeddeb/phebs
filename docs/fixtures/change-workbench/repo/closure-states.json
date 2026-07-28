@@ -1,0 +1,44 @@
+{
+  "schema_version": "t21.14-workbench-closure-input-v1",
+  "scenarios": {
+    "add": {
+      "discovered_analogous_operation": "/demo.search.v1.CodeSearch/Search",
+      "proposed_operation": "/demo.search.v1.CodeSearch/Index"
+    },
+    "modify": {
+      "current_operation": "/demo.search.v1.CodeSearch/Search"
+    },
+    "migrate": {
+      "current_operation": "/demo.search.v1.CodeSearch/Search",
+      "replacement_operation": "/demo.search.v1.CodeSearch/SearchV2"
+    },
+    "retire": {
+      "current_operation": "/demo.search.v1.CodeSearch/LegacySearch"
+    }
+  },
+  "coverage_inputs": [
+    {
+      "domain": "grpc-caller",
+      "state": "failed",
+      "reason": "retained synthetic failure"
+    },
+    {
+      "domain": "thrift-consumer",
+      "state": "stale",
+      "reason": "retained synthetic stale publication"
+    }
+  ],
+  "missing_inputs": {
+    "scip": "index.scip",
+    "history": "src/no-history/runtime_snapshot.txt"
+  },
+  "ambiguous_unit_path": "src/checkout/exact_caller.go",
+  "unsupported_planes": [
+    "document-store",
+    "kafka",
+    "redis",
+    "runtime",
+    "sql"
+  ],
+  "caveat": "Synthetic retained test inputs only; no runtime-use, completeness, migration-safety, retirement-safety, or extraction-accuracy claim."
+}

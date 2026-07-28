@@ -166,6 +166,15 @@ func serve(args []string) error {
 	if err != nil {
 		return err
 	}
+	if fixture := os.Getenv("PHEBS_WORKBENCH_CLOSURE_REPO"); fixture != "" {
+		if err := bindSyntheticWorkbenchClosureDemo(cfg, fixture); err != nil {
+			return err
+		}
+		log.Printf(
+			"WARNING: synthetic Workbench closure repository enabled from %s; not production evidence",
+			fixture,
+		)
+	}
 	if fixture := os.Getenv("PHEBS_THRIFT_FIELD_DEMO_REPO"); fixture != "" {
 		if err := bindSyntheticThriftFieldDemo(cfg, fixture); err != nil {
 			return err
@@ -765,6 +774,59 @@ func bindSyntheticThriftFieldDemo(cfg *config.Config, fixture string) error {
 		})
 	}
 	cfg.Experimental.ProvisionalThriftFieldExtraction = true
+	return nil
+}
+
+// bindSyntheticWorkbenchClosureDemo is the make-dev-only bridge from the
+// retained neutral monorepo into the ordinary sync, index, and extraction
+// pipeline. The repository deliberately has no SCIP index, and only the
+// reviewed provisional protobuf and Thrift packs are enabled. Resource and
+// runtime planes remain unsupported.
+func bindSyntheticWorkbenchClosureDemo(cfg *config.Config, fixture string) error {
+	if fixture == "" {
+		return nil
+	}
+	if cfg == nil {
+		return errors.New("synthetic Workbench closure demo requires server configuration")
+	}
+	if strings.TrimSpace(fixture) != fixture ||
+		!filepath.IsAbs(fixture) ||
+		filepath.Clean(fixture) != fixture ||
+		filepath.Base(fixture) != "t2114-workbench-closure.bundle" {
+		return errors.New(
+			"synthetic Workbench closure demo must name the absolute clean t2114-workbench-closure.bundle path",
+		)
+	}
+	info, err := os.Stat(fixture)
+	if err != nil {
+		return fmt.Errorf("inspect synthetic Workbench closure demo: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("synthetic Workbench closure demo must be a regular bundle file")
+	}
+
+	const connectionName = "t21-workbench-closure"
+	alreadyConnected := false
+	for _, connection := range cfg.Connections {
+		if connection.Name == connectionName && connection.URL != fixture {
+			return fmt.Errorf(
+				"synthetic Workbench closure demo connection %q already names another source",
+				connectionName,
+			)
+		}
+		if connection.URL == fixture {
+			alreadyConnected = true
+		}
+	}
+	if !alreadyConnected {
+		cfg.Connections = append(cfg.Connections, config.Connection{
+			Name: connectionName,
+			Type: "git",
+			URL:  fixture,
+		})
+	}
+	cfg.Experimental.ProvisionalProtoExtraction = true
+	cfg.Experimental.ProvisionalThriftExtraction = true
 	return nil
 }
 

@@ -129,8 +129,36 @@ func TestContractCatalogFixtureExplicitBindingAndPinnedProjection(t *testing.T) 
 		t.Fatalf("second fixture page: %v", err)
 	}
 	if len(second.Items) != 1 || second.Items[0].Operation != "/demo.search.v1.CodeSearch/Search" ||
-		!second.Pagination.Complete {
+		second.Pagination.Complete || second.Pagination.NextCursor == "" {
 		t.Fatalf("second fixture page = %+v", second)
+	}
+	third, err := service.List(
+		context.Background(),
+		ContractCatalogQuery{},
+		1,
+		second.Pagination.NextCursor,
+	)
+	if err != nil {
+		t.Fatalf("remaining fixture page: %v", err)
+	}
+	if len(third.Items) != 1 ||
+		third.Items[0].Operation != "/demo.search.v1.CodeSearch/SearchV2" ||
+		third.Pagination.Complete || third.Pagination.NextCursor == "" {
+		t.Fatalf("remaining fixture page = %+v", third)
+	}
+	fourth, err := service.List(
+		context.Background(),
+		ContractCatalogQuery{},
+		1,
+		third.Pagination.NextCursor,
+	)
+	if err != nil {
+		t.Fatalf("final fixture page: %v", err)
+	}
+	if len(fourth.Items) != 1 ||
+		fourth.Items[0].Operation != "/demo.search.v1.CodeSearch/LegacySearch" ||
+		!fourth.Pagination.Complete {
+		t.Fatalf("final fixture page = %+v", fourth)
 	}
 
 	detail, err := service.Operation(

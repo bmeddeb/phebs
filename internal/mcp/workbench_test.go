@@ -27,6 +27,7 @@ type workbenchToolService struct {
 	createErr  error
 	readErr    error
 	calls      []string
+	plans      []store.WorkbenchPlan
 }
 
 func (service *workbenchToolService) Preview(
@@ -38,6 +39,7 @@ func (service *workbenchToolService) Preview(
 		service.calls,
 		"preview:"+principal+":"+plan.Title,
 	)
+	service.plans = append(service.plans, plan)
 	if service.previewErr != nil {
 		return nil, service.previewErr
 	}
@@ -422,6 +424,138 @@ func TestWorkbenchToolsOfficialSDKParityAndEvidenceReuse(t *testing.T) {
 		"disposition:user:workbench-owner:record-once",
 	}; !slices.Equal(checklist.calls, want) {
 		t.Fatalf("checklist shared-service ledger = %v, want %v", checklist.calls, want)
+	}
+}
+
+func TestT2114WorkbenchMCPStoriesStartFromDiscoveredExactIdentities(
+	t *testing.T,
+) {
+	catalog, callerMap, _, evidenceStore := callerToolFixture(t)
+	workbench, checklist := workbenchToolFixture()
+	server := NewServer(Options{
+		Version: "test", Store: evidenceStore,
+		ContractCatalog: catalog, CallerMap: callerMap,
+		Workbench: workbench, WorkbenchChecklist: checklist,
+		Principal: func(context.Context) string {
+			return "user:workbench-owner"
+		},
+		InvestigationMutation: func(context.Context) bool {
+			return true
+		},
+	})
+	session := connectWorkbenchToolSession(t, server)
+	discovery, result := callToolSession[api.ContractCatalogList](
+		t,
+		session,
+		"search_contract_operations",
+		map[string]any{"protocol": "protobuf", "page_size": 100},
+	)
+	if result.IsError {
+		t.Fatalf("endpoint discovery failed: %s", textContent(t, result))
+	}
+	operations := make([]api.ContractCatalogItem, 0, 2)
+	for _, item := range discovery.Items {
+		if item.Kind == "operation" && item.Operation == callerToolOperation {
+			operations = append(operations, item)
+		}
+	}
+	if len(operations) != 2 {
+		t.Fatalf("discovered operations = %+v", operations)
+	}
+	toSelection := func(
+		item api.ContractCatalogItem,
+		role store.ChangeBriefSelectionRole,
+	) store.ChangeBriefContractSelection {
+		return store.ChangeBriefContractSelection{
+			Role: role, Protocol: item.Protocol,
+			Repository:         item.Repository,
+			DeclarationLineage: item.Lineage,
+			CanonicalOperation: item.Operation,
+		}
+	}
+	current := toSelection(operations[0], store.ChangeBriefCurrent)
+	replacement := toSelection(
+		operations[1],
+		store.ChangeBriefReplacement,
+	)
+	analogous := toSelection(operations[0], store.ChangeBriefAnalogous)
+	stories := []struct {
+		kind       store.ChangeBriefTicketKind
+		selections []store.ChangeBriefContractSelection
+		proposal   bool
+	}{
+		{store.ChangeBriefAdd, []store.ChangeBriefContractSelection{analogous}, true},
+		{store.ChangeBriefModify, []store.ChangeBriefContractSelection{current}, true},
+		{
+			store.ChangeBriefMigrate,
+			[]store.ChangeBriefContractSelection{current, replacement},
+			false,
+		},
+		{store.ChangeBriefRetire, []store.ChangeBriefContractSelection{current}, false},
+	}
+	for _, story := range stories {
+		plan := workbenchToolPlan()
+		plan.Title = "T21.14 " + string(story.kind)
+		plan.Brief.TicketKind = story.kind
+		plan.Brief.What.Selections = slices.Clone(story.selections)
+		plan.Repositories = nil
+		for _, selection := range story.selections {
+			if !slices.Contains(plan.Repositories, selection.Repository) {
+				plan.Repositories = append(
+					plan.Repositories,
+					selection.Repository,
+				)
+			}
+		}
+		if !story.proposal {
+			plan.Brief.What.ProposalProtocol = ""
+			plan.Brief.What.ProposalSources = nil
+		}
+		_, result := callToolSession[store.WorkbenchPreview](
+			t,
+			session,
+			"preview_change_workbench",
+			workbenchToolArguments(t, plan),
+		)
+		if result.IsError {
+			t.Fatalf(
+				"%s preview failed: %s",
+				story.kind,
+				textContent(t, result),
+			)
+		}
+	}
+	if len(workbench.plans) != len(stories) {
+		t.Fatalf("previewed plans = %d, want %d", len(workbench.plans), len(stories))
+	}
+	discovered := make(map[string]bool)
+	for _, item := range operations {
+		discovered[strings.Join([]string{
+			item.Protocol,
+			item.Repository,
+			item.Lineage,
+			item.Operation,
+		}, "\x00")] = true
+	}
+	for _, plan := range workbench.plans {
+		for _, selection := range plan.Brief.What.Selections {
+			key := strings.Join([]string{
+				selection.Protocol,
+				selection.Repository,
+				selection.DeclarationLineage,
+				selection.CanonicalOperation,
+			}, "\x00")
+			if !discovered[key] {
+				t.Fatalf(
+					"%s used a non-discovered canonical identity: %+v",
+					plan.Brief.TicketKind,
+					selection,
+				)
+			}
+		}
+	}
+	if evidenceStore.writes != 0 {
+		t.Fatalf("discovery/preview wrote %d evidence records", evidenceStore.writes)
 	}
 }
 

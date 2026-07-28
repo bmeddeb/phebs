@@ -18,6 +18,7 @@ import {
   type WorkbenchImplementationAnchor,
   type WorkbenchImplementationPage,
 } from '../api'
+import { SectionHelp } from '../components/SectionHelp'
 import { href } from '../router'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
@@ -25,6 +26,15 @@ import type { WorkbenchEvidenceInput } from './workbenchEvidenceState'
 
 const evidencePageSize = 25
 const anchorLimit = 32
+const workbenchHelpCapabilities = new Set([
+  'caller-map-exact-identity',
+  'code-navigation',
+  'contract-atlas',
+  'contract-impact-report',
+  'coverage-certificate',
+  'history',
+  'source-search',
+])
 
 interface EvidenceStepProps {
   available: boolean
@@ -474,9 +484,19 @@ function AnalysisScope({
       <div className={css(panelHeaderStyle(tok))}>
         <span>
           <span className={css(eyebrowStyle(tok))}>Authority before rows</span>
-          <h3 id="analysis-scope-heading" className={css(panelTitleStyle())}>
-            Analysis scope &amp; gaps
-          </h3>
+          <span className={css({
+            display: 'flex',
+            gap: '7px',
+            alignItems: 'center',
+          })}>
+            <h3 id="analysis-scope-heading" className={css(panelTitleStyle())}>
+              Analysis scope &amp; gaps
+            </h3>
+            <SectionHelp
+              termId="analysis_scope_and_gaps"
+              enabledCapabilities={workbenchHelpCapabilities}
+            />
+          </span>
         </span>
         <EvidenceBadge tone={scope.gaps.length ? 'amber' : 'neutral'}>
           {scope.gaps.length} gaps
@@ -781,7 +801,10 @@ function ImplementationEvidence({
       <div className={css(panelHeaderStyle(tok))}>
         <span>
           <span className={css(eyebrowStyle(tok))}>Immutable source &amp; history</span>
-          <h3 id="implementation-evidence-heading" className={css(panelTitleStyle())}>
+          <h3
+            id="implementation-evidence-heading"
+            className={css(panelTitleStyle())}
+          >
             Related implementation evidence
           </h3>
         </span>

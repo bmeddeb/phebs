@@ -33,6 +33,7 @@ dev: bin/zoekt-git-index bin/buf ui ## boot phebs with embedded UI (ARGS="-confi
 		PHEBS_BUF=$(abspath bin/buf) \
 		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
 		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
+		PHEBS_WORKBENCH_CLOSURE_REPO=$(abspath docs/fixtures/change-workbench/t2114-workbench-closure.bundle) \
 		PHEBS_THRIFT_FIELD_DEMO_REPO=$(abspath docs/fixtures/thrift-field/t225-thrift-field-demo.bundle) \
 		PHEBS_SYNTHETIC_WORKBENCH=1 \
 		go run -tags ui ./cmd/phebs serve $(ARGS)
@@ -42,6 +43,7 @@ dev-api: bin/zoekt-git-index bin/buf ## backend-only loop: no UI build, placehol
 		PHEBS_BUF=$(abspath bin/buf) \
 		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
 		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
+		PHEBS_WORKBENCH_CLOSURE_REPO=$(abspath docs/fixtures/change-workbench/t2114-workbench-closure.bundle) \
 		PHEBS_THRIFT_FIELD_DEMO_REPO=$(abspath docs/fixtures/thrift-field/t225-thrift-field-demo.bundle) \
 		PHEBS_SYNTHETIC_WORKBENCH=1 \
 		go run ./cmd/phebs serve $(ARGS)

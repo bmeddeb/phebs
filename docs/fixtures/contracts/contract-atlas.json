@@ -55,6 +55,68 @@
           }
         ]
       }
+    },
+    {
+      "method": "SearchV2",
+      "request": {
+        "name": "demo.search.v1.SearchRequest",
+        "fields": [
+          {
+            "name": "query",
+            "number": 1,
+            "type": "string",
+            "cardinality": "singular"
+          },
+          {
+            "name": "repository",
+            "number": 2,
+            "type": "string",
+            "cardinality": "repeated"
+          }
+        ]
+      },
+      "response": {
+        "name": "demo.search.v1.SearchResponse",
+        "fields": [
+          {
+            "name": "path",
+            "number": 1,
+            "type": "string",
+            "cardinality": "repeated"
+          },
+          {
+            "name": "truncated",
+            "number": 2,
+            "type": "bool",
+            "cardinality": "singular"
+          }
+        ]
+      }
+    },
+    {
+      "method": "LegacySearch",
+      "request": {
+        "name": "demo.search.v1.SearchRequest",
+        "fields": [
+          {
+            "name": "query",
+            "number": 1,
+            "type": "string",
+            "cardinality": "singular"
+          }
+        ]
+      },
+      "response": {
+        "name": "demo.search.v1.SearchResponse",
+        "fields": [
+          {
+            "name": "path",
+            "number": 1,
+            "type": "string",
+            "cardinality": "repeated"
+          }
+        ]
+      }
     }
   ]
 }

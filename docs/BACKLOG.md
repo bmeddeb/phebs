@@ -2225,7 +2225,7 @@ through Atlas. The receipt incorporates the separately reviewed v7 store
 publication/sweep evidence. These values are one-machine observations, not an
 SLA, completeness, safety, runtime-use, or accuracy claim.
 
-## EPIC 21 — Change Workbench: Why → What → Where → How *(proposed 2026-07-25; implementation-authorized dark, production enablement blocked)*
+## EPIC 21 — Change Workbench: Why → What → Where → How *(implementation complete 2026-07-27; production-unregistered/default-dark)*
 
 ### Product outcome
 
@@ -3018,8 +3018,8 @@ registration, and exact 10/12/14 plus 20/22/24 count states are pinned. There
 is no revise, compatibility-action, checklist-read, production Workbench,
 accuracy, pilot, or continuation surface.
 
-**T21.14 · Scenario, failure, accessibility, and implementation closure**
-*(needs T21.1–T21.13 and T20.14)* — exercise add, modify, migrate, and retire
+**T21.14 · Scenario, failure, accessibility, and implementation closure** ✅
+*(2026-07-27; needs T21.1–T21.13 and T20.14)* — exercise add, modify, migrate, and retire
 against a neutral microservices monorepo in the synthetic `make dev` adapter,
 with protobuf and Thrift declarations, separated `idl/`/`src/`, duplicate
 names, ambiguous callers, failed/stale coverage, missing SCIP/history, unit
@@ -3035,6 +3035,46 @@ safety. This closes default-dark implementation only: production Workbench
 routes/tools/export stay unregistered until the retained `ESTABLISHED` plus
 pilot-continuation gate is satisfied, and the external accuracy posture remains
 `NOT_ESTABLISHED`.
+
+Implemented with the retained
+`docs/fixtures/change-workbench/t2114-workbench-closure.bundle`: a
+digest-pinned two-commit neutral repository routed through ordinary
+sync/index/extraction only by `make dev`/`make dev-api`. Its separated
+protobuf/Thrift `idl/` and `src/` tree contains current, replacement,
+proposed, and retired examples, repeated operation names, exact and name-only
+callers, ambiguous unit attribution, removed legacy history, no `index.scip`,
+and explicit failed/stale/missing/unsupported test inputs. The retained
+receipt pins the bundle and repository commit and repeats
+`NOT_ESTABLISHED`; neither fixture nor output claims runtime use,
+completeness, migration safety, retirement safety, or extraction accuracy.
+
+The quiet evidence-desk What step includes a bounded, keyboard-operable
+Contract Atlas chooser for every selection. Choosing a row copies its complete
+protocol, repository, declaration lineage, and canonical operation; migrate
+chooses current and replacement independently. Escape and explicit close
+return focus, outside click dismisses, every control has an accessible name,
+and endpoint pages replace prior rows. Where reuses the generated Analysis
+scope & gaps help control; How retains its always-visible evidence/checklist
+explanation. Both use the existing bounded impact/implementation/checklist
+services. Official-SDK MCP acceptance discovers the same exact identities
+through `search_contract_operations` before previewing all four story shapes;
+the existing parity journey retains create/read, paged caller evidence, and
+Disposition coverage.
+
+Focused closure acceptance proves the four shared Impact compositions,
+separate resolved/name-only/abstention classes, ambiguous units,
+failed/stale/unsupported gaps, missing search/SCIP/history, unsupported
+Kafka/Redis/document-store/SQL/runtime planes, hidden-scope non-disclosure,
+deterministic receipts, dark/partial registration, and accessibility/browser
+behavior at desktop and 390 px. No HTTP/MCP adapter gained evidence logic,
+production registration, or implicit checklist completion.
+
+**Epic 21 implementation closure:** T21.1–T21.14 are complete as retained
+specifications, tests, synthetic demonstrations, and
+production-unregistered/default-dark code. This is not pilot continuation or
+production enablement. Workbench creation, mutation, export, UI, and MCP
+registration remain blocked until both retained `ESTABLISHED` validation and
+an explicit pilot-continuation Decision exist.
 
 ## EPIC 22 — Thrift field references *(complete 2026-07-27; experimental-dark)*
 

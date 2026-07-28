@@ -1,0 +1,413 @@
+package api
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
+)
+
+type t2114Receipt struct {
+	SchemaVersion     string   `json:"schema_version"`
+	Repository        string   `json:"repository"`
+	Commit            string   `json:"commit"`
+	BundleSHA256      string   `json:"bundle_sha256"`
+	BundleBytes       int      `json:"bundle_bytes"`
+	HistoryCommits    int      `json:"history_commits"`
+	IndexSCIP         string   `json:"index_scip"`
+	Author            string   `json:"author"`
+	AuthoringCommand  []string `json:"authoring_command"`
+	Scenarios         []string `json:"scenarios"`
+	Protocols         []string `json:"protocols"`
+	UnsupportedPlanes []string `json:"unsupported_planes"`
+	Observation       string   `json:"observation"`
+	ExternalAccuracy  string   `json:"external_accuracy"`
+}
+
+type t2114ClosureInputs struct {
+	SchemaVersion string `json:"schema_version"`
+	Scenarios     map[string]struct {
+		DiscoveredAnalogousOperation string `json:"discovered_analogous_operation"`
+		ProposedOperation            string `json:"proposed_operation"`
+		CurrentOperation             string `json:"current_operation"`
+		ReplacementOperation         string `json:"replacement_operation"`
+	} `json:"scenarios"`
+	CoverageInputs []struct {
+		Domain string `json:"domain"`
+		State  string `json:"state"`
+		Reason string `json:"reason"`
+	} `json:"coverage_inputs"`
+	MissingInputs struct {
+		SCIP    string `json:"scip"`
+		History string `json:"history"`
+	} `json:"missing_inputs"`
+	AmbiguousUnitPath string   `json:"ambiguous_unit_path"`
+	UnsupportedPlanes []string `json:"unsupported_planes"`
+	Caveat            string   `json:"caveat"`
+}
+
+type t2114MissingHistory struct{}
+
+func (t2114MissingHistory) Commits(
+	_ context.Context,
+	request phebssync.CommitListRequest,
+) (phebssync.CommitListResult, error) {
+	return phebssync.CommitListResult{
+		Revision: request.Ref,
+		Commits:  []phebssync.GitCommit{},
+	}, nil
+}
+
+func (t2114MissingHistory) Diff(
+	context.Context,
+	phebssync.DiffRequest,
+) (phebssync.DiffResult, error) {
+	return phebssync.DiffResult{}, store.ErrNotFound
+}
+
+func TestT2114ScenarioFailureAccessibilityAndImplementationClosure(
+	t *testing.T,
+) {
+	root := filepath.Join("..", "..", "docs", "fixtures", "change-workbench")
+	receipt := readT2114JSON[t2114Receipt](
+		t,
+		filepath.Join(root, "receipt.json"),
+	)
+	inputs := readT2114JSON[t2114ClosureInputs](
+		t,
+		filepath.Join(root, "repo", "closure-states.json"),
+	)
+	bundlePath := filepath.Join(root, "t2114-workbench-closure.bundle")
+	bundle, err := os.ReadFile(bundlePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundleDigest := sha256.Sum256(bundle)
+	if receipt.SchemaVersion != "t21.14-workbench-closure-receipt-v1" ||
+		receipt.Repository != "example.invalid/workbench-closure" ||
+		receipt.BundleBytes != len(bundle) ||
+		receipt.BundleSHA256 !=
+			"sha256:"+hex.EncodeToString(bundleDigest[:]) ||
+		receipt.HistoryCommits != 2 ||
+		receipt.IndexSCIP != "absent" ||
+		receipt.ExternalAccuracy != "NOT_ESTABLISHED" {
+		t.Fatalf("closure receipt does not match retained bytes: %+v", receipt)
+	}
+	listHeads := exec.Command("git", "bundle", "list-heads", bundlePath)
+	listHeads.Dir = "."
+	heads, err := listHeads.Output()
+	if err != nil {
+		t.Fatalf("list bundle heads: %v", err)
+	}
+	if !strings.Contains(string(heads), receipt.Commit+" refs/heads/main") {
+		t.Fatalf("bundle head = %q, want commit %s", heads, receipt.Commit)
+	}
+
+	requiredFiles := map[string][]string{
+		"idl/proto/search.proto": {
+			"service CodeSearch",
+			"rpc Search(",
+		},
+		"idl/thrift/search.thrift": {
+			"service CodeSearch",
+			"SearchResponse search(",
+		},
+		"src/checkout/exact_caller.go": {
+			`"/demo.search.v1.CodeSearch/Search"`,
+		},
+		"src/ambiguous/name_only_caller.go": {
+			"deliberately lacks declaration lineage",
+		},
+		"unit-snapshot.json": {
+			"//src/checkout:client",
+			"//src/shared:search_client",
+		},
+	}
+	for name, needles := range requiredFiles {
+		raw, err := os.ReadFile(filepath.Join(root, "repo", name))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		for _, needle := range needles {
+			if !strings.Contains(string(raw), needle) {
+				t.Errorf("%s is missing %q", name, needle)
+			}
+		}
+	}
+	if _, err := os.Stat(filepath.Join(root, "repo", "index.scip")); !os.IsNotExist(err) {
+		t.Fatalf("fixture unexpectedly contains index.scip: %v", err)
+	}
+	if inputs.MissingInputs.SCIP != "index.scip" ||
+		inputs.MissingInputs.History == "" ||
+		inputs.AmbiguousUnitPath != "src/checkout/exact_caller.go" ||
+		!slices.Equal(
+			receipt.Scenarios,
+			[]string{"add", "modify", "migrate", "retire"},
+		) ||
+		!slices.Equal(
+			sortedT2114Keys(inputs.Scenarios),
+			[]string{"add", "migrate", "modify", "retire"},
+		) ||
+		!slices.Equal(
+			receipt.Protocols,
+			[]string{"protobuf", "thrift"},
+		) ||
+		!slices.Equal(
+			inputs.UnsupportedPlanes,
+			[]string{"document-store", "kafka", "redis", "runtime", "sql"},
+		) {
+		t.Fatalf("closure inputs are incomplete: %+v", inputs)
+	}
+	coverageStates := make(map[string]string, len(inputs.CoverageInputs))
+	for _, input := range inputs.CoverageInputs {
+		coverageStates[input.Domain] = input.State
+	}
+	if coverageStates["grpc-caller"] != "failed" ||
+		coverageStates["thrift-consumer"] != "stale" {
+		t.Fatalf("failure/stale coverage inputs = %+v", inputs.CoverageInputs)
+	}
+
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	replacement := impactSelection(
+		store.ChangeBriefReplacement,
+		"replacement",
+	)
+	analogous := impactSelection(store.ChangeBriefAnalogous, "analogous")
+	stories := []struct {
+		kind       store.ChangeBriefTicketKind
+		selections []store.ChangeBriefContractSelection
+	}{
+		{store.ChangeBriefAdd, []store.ChangeBriefContractSelection{analogous}},
+		{store.ChangeBriefModify, []store.ChangeBriefContractSelection{current}},
+		{
+			store.ChangeBriefMigrate,
+			[]store.ChangeBriefContractSelection{current, replacement},
+		},
+		{store.ChangeBriefRetire, []store.ChangeBriefContractSelection{current}},
+	}
+	for _, story := range stories {
+		t.Run(string(story.kind), func(t *testing.T) {
+			service, catalog, _, _, _ := impactService(
+				impactView(story.kind, story.selections),
+				nil,
+				nil,
+			)
+			catalog.coverageMutator = func(
+				certificate *extract.CoverageCertificate,
+			) {
+				run := &certificate.Repositories[0].Runs[0]
+				run.Fresh = false
+				run.LatestAttempt = &extract.CertificateAttempt{
+					RunID: "run-retained-failure", Commit: impactCommit,
+					Extractor: "synthetic-closure@1", Status: "aborted",
+					Failure: "retained synthetic failure",
+				}
+			}
+			page, err := service.Read(
+				t.Context(),
+				"user:t217",
+				WorkbenchImpactRequest{
+					InvestigationID: impactInvestigationID,
+					RevisionID:      impactRevisionID,
+					PageSize:        10,
+				},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(page.ScenarioEmphasis) == 0 ||
+				!strings.Contains(page.Caveat, "not establish") {
+				t.Fatalf("%s honesty output = %+v", story.kind, page)
+			}
+			assertT2114Gaps(t, page.AnalysisScope.Gaps)
+			assertT2114UnsupportedPlanes(t, page.ResourcePlanes)
+			if story.kind == store.ChangeBriefModify ||
+				story.kind == store.ChangeBriefRetire {
+				caller := page.Callers[0]
+				if len(caller.ResolvedCallers) != 1 ||
+					len(caller.ExtractorAbstentions) != 1 ||
+					caller.ResolvedCallers[0].Unit.State != "ambiguous" {
+					t.Fatalf(
+						"%s caller classes or unit ambiguity collapsed: %+v",
+						story.kind,
+						caller,
+					)
+				}
+			}
+		})
+	}
+
+	implementation, _, _, _, _ := implementationService(t)
+	implementation.search = nil
+	implementation.codeNav = nil
+	implementation.history = nil
+	implementationPage, err := implementation.Read(
+		t.Context(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			PageSize:        workbenchImplementationMaxPage,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, capability := range []string{"source_search", "scip", "history"} {
+		if !hasT2114ImplementationGap(
+			implementationPage.Gaps,
+			capability,
+			"unsupported",
+		) {
+			t.Errorf(
+				"missing explicit %s implementation gap: %+v",
+				capability,
+				implementationPage.Gaps,
+			)
+		}
+	}
+
+	missingInputs, _, _, _, _ := implementationService(t)
+	missingInputs.codeNav = &implementationNavFake{available: false}
+	missingInputs.history = t2114MissingHistory{}
+	missingPage, err := missingInputs.Read(
+		t.Context(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			PageSize:        workbenchImplementationMaxPage,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasT2114ImplementationGapReason(
+		missingPage.Gaps,
+		"scip",
+		"unsupported",
+		"index_unavailable",
+	) || !hasT2114ImplementationGapReason(
+		missingPage.Gaps,
+		"history",
+		"unsupported",
+		"no_file_history",
+	) {
+		t.Fatalf(
+			"missing SCIP/history became an affirmative empty result: %+v",
+			missingPage.Gaps,
+		)
+	}
+
+	for _, forbidden := range []string{
+		"runtime use established",
+		"migration complete",
+		"safe to retire",
+		"accuracy established",
+	} {
+		if strings.Contains(
+			strings.ToLower(receipt.Observation+"\n"+inputs.Caveat),
+			forbidden,
+		) {
+			t.Errorf("fixture text contains forbidden claim %q", forbidden)
+		}
+	}
+}
+
+func hasT2114ImplementationGapReason(
+	gaps []WorkbenchImplementationGap,
+	capability, state, reason string,
+) bool {
+	for _, gap := range gaps {
+		if gap.Capability == capability &&
+			gap.State == state &&
+			gap.Code == reason {
+			return true
+		}
+	}
+	return false
+}
+
+func readT2114JSON[T any](t *testing.T, filename string) T {
+	t.Helper()
+	raw, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var value T
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&value); err != nil {
+		t.Fatalf("%s: %v", filename, err)
+	}
+	return value
+}
+
+func sortedT2114Keys[T any](values map[string]T) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
+}
+
+func assertT2114Gaps(t *testing.T, gaps []WorkbenchImpactGap) {
+	t.Helper()
+	states := make(map[string]bool)
+	for _, gap := range gaps {
+		states[gap.State] = true
+	}
+	for _, state := range []string{"failed", "stale", "unsupported"} {
+		if !states[state] {
+			t.Errorf("missing %s scope gap: %+v", state, gaps)
+		}
+	}
+}
+
+func assertT2114UnsupportedPlanes(
+	t *testing.T,
+	planes []ResourcePlaneSnapshot,
+) {
+	t.Helper()
+	got := make([]string, 0, len(planes))
+	for _, plane := range planes {
+		if plane.State != ResourcePlaneUnsupported ||
+			len(plane.Relationships) != 0 {
+			t.Fatalf("resource plane inferred evidence: %+v", plane)
+		}
+		got = append(got, plane.ID)
+	}
+	slices.Sort(got)
+	if want := []string{
+		"document-store",
+		"kafka",
+		"redis",
+		"runtime",
+		"sql",
+	}; !slices.Equal(got, want) {
+		t.Fatalf("resource planes = %v, want %v", got, want)
+	}
+}
+
+func hasT2114ImplementationGap(
+	gaps []WorkbenchImplementationGap,
+	capability, state string,
+) bool {
+	for _, gap := range gaps {
+		if gap.Capability == capability && gap.State == state {
+			return true
+		}
+	}
+	return false
+}

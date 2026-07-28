@@ -53,8 +53,9 @@ func (fake *impactWorkbenchFake) ReadCompatibility(
 }
 
 type impactCatalogFake struct {
-	calls  []store.ChangeBriefContractSelection
-	hidden map[string]bool
+	calls           []store.ChangeBriefContractSelection
+	hidden          map[string]bool
+	coverageMutator func(*extract.CoverageCertificate)
 }
 
 func (fake *impactCatalogFake) OperationForProtocol(
@@ -73,6 +74,10 @@ func (fake *impactCatalogFake) OperationForProtocol(
 		"atlas:"+repository,
 		[]string{"proto-contract", "grpc-consumer"},
 	)
+	if fake.coverageMutator != nil {
+		fake.coverageMutator(&coverage)
+		coverage.Digest = digestJSON(coverage)
+	}
 	return &ContractCatalogOperation{
 		SchemaVersion:      contractCatalogSchemaVersion,
 		Protocol:           protocol,

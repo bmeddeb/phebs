@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package demo.search.v1;
+option go_package = "example.invalid/workbench-closure/gen/searchv1;searchv1";
+
+service CodeSearch {
+  rpc Search(SearchRequest) returns (SearchResponse);
+  rpc SearchV2(SearchRequest) returns (SearchResponse);
+  rpc LegacySearch(SearchRequest) returns (SearchResponse);
+}
+
+message SearchRequest {
+  string query = 1;
+  repeated string repositories = 2;
+}
+
+message SearchResponse {
+  repeated string paths = 1;
+  bool truncated = 2;
+}
