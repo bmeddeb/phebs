@@ -46,7 +46,7 @@ import (
 	"github.com/bmeddeb/phebs/ui"
 )
 
-var version = "0.1.0-dev" // ponytail: ldflags stamping when releases exist
+var version = "0.2.0-dev" // ponytail: ldflags stamping when releases exist
 
 const (
 	evidenceSweepIdleInterval    = time.Hour

@@ -157,7 +157,7 @@ func New(opts Options) http.Handler {
 
 	type versionOut struct {
 		Body struct {
-			Version      string   `json:"version" example:"0.1.0-dev"`
+			Version      string   `json:"version" example:"0.2.0-dev"`
 			Capabilities []string `json:"capabilities,omitempty"`
 		}
 	}
