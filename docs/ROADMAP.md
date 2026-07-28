@@ -46,8 +46,17 @@ request-schema-export state, while raw private dialects and client-code usage
 remain outside phebs. T27.1's contract is implementation-ready but
 unscheduled: synthetic fixtures cover the full neutral vocabulary, while one
 pinned Apache-licensed Cassandra schema must be hand-derived as an independent
-reference without adding a CQL parser or Cassandra pack. None of these drafts
-is an implicit next ticket.
+reference without adding a CQL parser or Cassandra pack. Epic 28 revises the
+Redis verdict: a universal keyspace model stays out of scope, while a
+two-lane spike measures deterministic declaration islands (index, time-series,
+stream-group, and ACL declarations) and provable key usage bound through
+the exact BSD-licensed Redis 7.2.15 command-metadata pin. Its named
+`FT.CREATE`/`TS.*` subset is parsed by bounded, documentation-derived
+phebs recognizers without incorporating module code or metadata; script key
+lists and ACL patterns retain deliberately narrower semantics. The spike pins
+public Asynq and CloudWeGo go-redis/v9 corpora plus Redis ACL fixtures before
+execution, and drafts a neutral keyspace manifest only if the measured
+declaration gap justifies it. None of these drafts is an implicit next ticket.
 
 ## Gated product work
 

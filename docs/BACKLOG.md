@@ -13,7 +13,7 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 The two identified next paths—production evidence/pilot gating and the P6 fleet
 profile—remain explicitly gated or demand-driven in the roadmap. Neither is an
-implicit next ticket. Epics 25–27 below are drafted but start only on an
+implicit next ticket. Epics 25–28 below are drafted but start only on an
 explicit scheduling decision.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
@@ -101,8 +101,9 @@ together without inference.
 - Column references get their own eventual surface
   (`find_sql_column_references` over `(schema lineage, relation, column)`);
   the existing numeric wire-field surface stays byte-stable and untouched.
-- Out of scope, stated as decisions: Redis (no declaration plane — usage-only
-  key patterns, deferred indefinitely); raw document-store dialects (Epic 27
+- Out of scope, stated as decisions: Redis (Epic 28 scopes deterministic
+  declaration islands and provable key usage; a universal keyspace model
+  stays out); raw document-store dialects (Epic 27
   instead proposes one employer-neutral normalized manifest); Cassandra/CQL
   and explicit-only ORM packs (separate later spikes with their own decision
   tables); any ER visualization (rendering is commodity once facts exist);
@@ -340,6 +341,148 @@ either snapshot live or current; the retained README demonstrates the
 locate-table → inspect-key/field → copy-citation ticket workflow and the
 missing-artifact checklist; no private dialect, adapter, CQL parser,
 production code path, pack registration, or runtime claim is added.
+
+## Epic 28 · Redis keyspace evidence *(drafted 2026-07-27 · unscheduled — spike first)*
+
+A general Redis keyspace model is out of scope; deterministic Redis
+declaration islands and provable key usage are in scope. Redis repositories
+divide by the artifacts they commit, so round one is two spike lanes —
+native declaration islands and key-specification-driven usage binding — and
+the neutral keyspace manifest is explicitly deferred behind the spike's gap
+measurement: it is drafted only if native declarations leave the expected
+gap, entering as the same request-artifact workflow as the SQL dump and the
+document-schema manifest.
+
+### Boundary
+
+- Pure reader over committed blobs at the indexed commit. No server
+  connection, no `TYPE`/`SCAN` probing, no RDB/AOF inputs, no runtime state,
+  and no claim that any cluster, database, or key exists.
+- Lane one, native declaration islands: committed ACL key-pattern files and
+  recognizable literal command vectors that declare indexes (`FT.CREATE`),
+  time series (`TS.CREATE`, `TS.CREATERULE`), and stream groups
+  (`XGROUP CREATE`). Core-command semantics come from the pinned command
+  metadata; the named module subset uses bounded phebs-authored recognizers
+  derived from public command documentation, not copied module source or
+  metadata. An index schema is only the indexed projection over declared key
+  prefixes, never a complete value model; a series or group declaration names
+  a resource, not its entry fields. Most such declarations execute from
+  application startup code, so this lane shares the command-vector machinery
+  and its recognizer limits — the spike's headline number is what fraction of
+  these declarations exist as recognizable committed literals at all.
+- Redis object-mapping model classes are the strongest committed declaration
+  artifact but sit across a language frontier; round one measures feasibility
+  only and commits to no model-class reader.
+- Lane two, usage binding over the Redis 7.2.15 command key specifications
+  pinned below. Only provable command vectors bind: literal raw commands or
+  arrays; one `github.com/redis/go-redis/v9` major-version adapter whose
+  method-to-command table is validated against each pinned corpus's exact
+  dependency version; literal or same-file-constant key arguments; and
+  bounded format expressions whose segment structure is statically known.
+  Other client majors and unproved wrapper mappings abstain.
+- Explicit `FCALL`/`EVAL` key lists can emit
+  `PASSES_REDIS_KEY_TO_SCRIPT`: they prove only which keys the caller supplies
+  under the command contract. They never inherit the script's read, write, or
+  expected-value-kind semantics, and round one does not analyze function or
+  script bodies.
+- Access modes adopt the key-specification vocabulary verbatim — `RO`, `RW`,
+  `OW`, `RM` with access/update/insert/delete detail — never flattened to
+  read/write. `variable_flags` are resolved only when the admitted argument
+  vector proves the applicable branch; otherwise access mode abstains as
+  `variable-access-mode`. An incomplete specification may support a fact only
+  when the exact key position and applicable flags are fixed for that admitted
+  vector; every omitted or unknown position remains an
+  `incomplete-key-specification` gap.
+- Expected value kind is not present in the key specifications. It comes from
+  a separate, frozen command-family table hand-labeled from public command
+  documentation. A table entry may assert only what the code expects — for
+  example, a hash command expects a hash — never runtime existence or type.
+  Missing or argument-dependent entries yield
+  `unknown-expected-value-kind` without discarding separately provable
+  key/access evidence.
+- ACL key patterns are a separate authorization-intent evidence class; they
+  never declare key existence or value structure and are never merged with
+  declaration or usage rows. An ACL fact may identify the exact username token
+  as its authorization principal, but it proves neither authentication nor
+  deployment. Only username-token and `%R~`/`%W~`/`%RW~`/`~` pattern-token
+  spans may be emitted or cited. Cleartext-password tokens, password-hash
+  tokens, command grants, and line-context snippets are neither retained nor
+  rendered; diagnostics name only structural refusal classes.
+- Frozen unresolved vocabulary: `dynamic-concatenation`, `opaque-helper`,
+  `runtime-namespace`, `unknown-client-adapter`,
+  `unsupported-core-command-after-pin`, `unsupported-module-command`,
+  `incomplete-key-specification`, `variable-access-mode`,
+  `unknown-expected-value-kind`, and `ambiguous-key-family`.
+- The deferred `phebs-redis-keyspace-v1` manifest, if the gap measurement
+  justifies it, declares key families as ordered structured binary-safe
+  segments (literal, parameter, hash-tag grouping — typed segments, never
+  format strings), with intended value kind, optional field intent, expiry
+  intent, associated index/group/series resources, and authored/captured
+  source class. Hash-tag validation uses the exact documented byte semantics
+  without claiming a cluster exists. A concrete key or statically known
+  format binds only when exactly one declared family matches; overlaps
+  refuse as `ambiguous-key-family`, never precedence guessing.
+- Out of scope as decisions: universal keyspace modeling; runtime
+  introspection; RDB/AOF or any data-bearing input; the Workbench Redis
+  resource plane (stays `unsupported`).
+- Same posture as every pack: experimental-dark, provisional lineage, honest
+  abstention, no accuracy/completeness/runtime claim; production
+  registration sits behind the documented validation and pilot-continuation
+  gate.
+
+### Safety boundary
+
+- Spike artifacts live under `spike/t281/` as retained records; production
+  packages must not import spike packages.
+- The only admitted upstream command-metadata bytes are Redis 7.2.15 commit
+  `316753259b4db132cf494292a1b3a702d9e9ddb2`: BSD-3-Clause `COPYING` blob
+  `a381681a1c2524ed586c6a87dfeb9ccdf1e86ded` and the 392 JSON files under
+  `src/commands/` tree `59da020b9c7d8847fa0f7012b1fa2b3a09f47297`.
+  T28.1 records per-file SHA-256 digests and a license receipt before use.
+  Core commands added after that pin are unsupported.
+- The named declaration subset (`FT.CREATE`, `TS.CREATE`,
+  `TS.CREATERULE`) uses bounded phebs-authored recognizers derived from public
+  command documentation. No Redis module implementation or metadata bytes
+  enter the repository; every other module command is
+  `unsupported-module-command`. Phebs parses committed source artifacts and
+  neither links, embeds, starts, nor connects to Redis.
+- ACL readers are token-streaming and output-safe by construction. Retained
+  fixtures and test snapshots must prove that credentials adjacent to a
+  pattern cannot enter facts, citations, diagnostics, logs, or rendered
+  context.
+- Public corpus only; no employer names, code, schemas, credentials, hosts, or
+  infrastructure.
+
+**T28.1 · Two-lane Redis evidence spike** — preregister these immutable public
+inputs and their exact file scopes before the first recognizer run:
+MIT-licensed `hibiken/asynq` commit
+`d135f1439bee74e989b7f9b41ecd542cc87f024a` with
+`github.com/redis/go-redis/v9` v9.14.1 for the broad usage census;
+Apache-2.0 `cloudwego/eino-examples` commit
+`6dc0d214c0eb392babf2d001e9be85f57ac10952` with go-redis v9.17.2 for
+literal/constant raw-command and `FT.CREATE` declaration shapes; and the
+Redis 7.2.15 pin above for command metadata plus the public ACL safety
+fixtures. Record the hand-label sampling rule, source/license receipts, and
+all denominators before execution. Measure separately, with no blended
+percentage: declaration coverage (index/series/group sites with exactly
+bindable identities versus dynamic construction — the manifest go/no-go
+number); ACL username/pattern pairs parsed and credential-token non-retention;
+recognized command sites versus unresolved by frozen shape class; resolved
+key arguments; resolved access modes; expected-kind coverage; script-key
+pass-through rows; and uniquely bound key spellings or families. Freeze a
+decision table covering command-vector recognition and declaration
+partial-fact atomicity; the go-redis method-to-command rule at both exact
+versions with no cross-major claim; format-expression bounds;
+incomplete-specification and `variable_flags` handling; exact access
+vocabulary; the separately sourced expected-kind table;
+`PASSES_REDIS_KEY_TO_SCRIPT`; ACL token-only citations; hash-tag byte
+semantics; the clean-room named-module boundary; the object-mapping
+feasibility verdict; and the explicit manifest go/no-go criterion. AC: pins,
+receipts, labels, decision table, and measurements committed under
+`spike/t281/`; double-run facts, citations, censuses, and retained outputs are
+byte-identical; every refusal lands in the frozen vocabulary; an output scan
+proves ACL credential tokens absent; no production code path changed and no
+pack registered.
 
 ## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 
