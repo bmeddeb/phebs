@@ -30,9 +30,24 @@ planning/history separation, product/adoption ownership, contributor
 instructions, and retained-record classification are all in place.
 
 No implementation ticket is currently scheduled. New work requires an
-explicit decision to pursue the gated evidence/pilot path or the demand-driven
-P6 fleet profile below. Epic 25 (an embedded documentation browser) is
-drafted in the [backlog](./BACKLOG.md) as an unscheduled nice-to-have.
+explicit decision to pursue the gated evidence/pilot path, the demand-driven
+P6 fleet profile below, or one of the unscheduled drafts in the
+[backlog](./BACKLOG.md). Epic 25 is an embedded documentation-browser
+nice-to-have. Epic 26 is a spike-first SQL schema-set evidence proposal:
+committed PostgreSQL or MySQL schema-only dumps can independently supply
+citable, dialect-separated catalogs; schema and authored-query inputs may
+join only through committed sqlc manifests; and migration events remain a
+separate history plane with no current-shape claim. A missing schema artifact
+is an explicit request-dump workflow state, not permission to infer a model.
+Epic 27 applies the same declaration-first posture to schema-on-write document
+stores through a strict, employer-neutral committed JSON manifest: it can
+produce a citable table/key/nested-field catalog or an explicit
+request-schema-export state, while raw private dialects and client-code usage
+remain outside phebs. T27.1's contract is implementation-ready but
+unscheduled: synthetic fixtures cover the full neutral vocabulary, while one
+pinned Apache-licensed Cassandra schema must be hand-derived as an independent
+reference without adding a CQL parser or Cassandra pack. None of these drafts
+is an implicit next ticket.
 
 ## Gated product work
 
