@@ -17,7 +17,7 @@ T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 .PHONY: dev dev-api build validate-version validate-release-version validate-release-target \
 	release verify-release smoke-release test ui-test lint ui db-server \
 	verify-go verify-node verify-golangci-lint verify-surreal verify-glossary t20-closure \
-	ci ci-static ci-go ci-race ci-ui
+	docs-check ci ci-static ci-go ci-race ci-ui
 
 bin:
 	mkdir -p $@
@@ -92,6 +92,11 @@ smoke-release: verify-release verify-surreal ## empty-data sync/index/search and
 
 test: verify-glossary
 	go test ./... -timeout=25m
+
+docs-check: ## resolve tracked docs, enforce map coverage, and verify sealed T11.1 bytes
+	go test ./scripts \
+		-run '^Test(TrackedMarkdownLinksResolve|DocumentationMapReachesTrackedDocs|SealedT111TreeDigest)$$' \
+		-count=1
 
 t20-closure: bin/zoekt-git-index verify-surreal ## T20.14 empty-data scale/failure journey; receipt defaults to /private/tmp
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \

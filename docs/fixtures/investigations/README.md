@@ -2,7 +2,7 @@
 
 Nine canonical-valid envelope instances modeling the states that phebs UI,
 API, MCP, authorization, and conformance tests must handle. They target the
-[MCP envelope](../MCP_ENVELOPE.md) contract v0.2 with
+[MCP envelope](../../MCP_ENVELOPE.md) contract v0.2 with
 `envelope_version: "1.0"` and the Investigation domain contract v0.2.
 
 These fixtures are **entirely synthetic**. The `acme` domain, pack, source

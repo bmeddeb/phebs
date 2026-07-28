@@ -1,64 +1,109 @@
-# phebs documentation map
+# phebs documentation
 
-Read in this order for your role; each document states its own authority.
+This page is the documentation index. Pick the shortest path that matches what
+you are trying to do; the ownership table below identifies which document wins
+when two pages appear to overlap.
 
-## Engineering (source of truth)
+## Start here
 
-| Document | Role |
+| Goal | Read |
 |---|---|
-| [../PLAN.md](../PLAN.md) | architecture + dated ADR decision ledger — **the** authority; every decision lands here in the same PR |
-| [BACKLOG.md](./BACKLOG.md) | epics and PR-sized tickets; work proceeds in ticket order |
-| [MANUAL.md](./MANUAL.md) | user manual; behavior changes update it in the same PR |
-| PORT_MAP.md *(removed 2026-07-12; historical — see git history)* | upstream analysis, scope, license posture |
-| [config.example.yaml](./config.example.yaml) | annotated configuration reference |
-| [../spike/t211/README.md](../spike/t211/README.md) | T21.1 executable Change Workbench scenario, service-inventory, vocabulary, and gate contract; no production behavior |
-| [fixtures/change-workbench/README.md](./fixtures/change-workbench/README.md) | T21.14 retained neutral Workbench monorepo, deterministic bundle author, failure-state inputs, and closure receipt; synthetic/default-dark only |
+| Understand the product | [Project README](../README.md), then [VISION.md](./VISION.md) |
+| Install, configure, or operate phebs | [MANUAL.md](./MANUAL.md) and the annotated [config.example.yaml](./config.example.yaml) |
+| Plan or implement a change | [BACKLOG.md](./BACKLOG.md), then [PLAN.md](../PLAN.md) |
+| Evaluate a pilot | [PITCH.md](./PITCH.md), then [PILOT_CHARTER.md](./PILOT_CHARTER.md) |
+| Review an evidence pack | [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) and [PACK_MANIFEST.md](./PACK_MANIFEST.md) |
 
-## Adoption suite (internal circulation)
+## Content ownership
 
-Read top to bottom; each narrows the previous:
+| Information | Authority | Maintenance rule |
+|---|---|---|
+| Public overview and first successful run | [Project README](../README.md) | Keep short; link to detail instead of repeating it |
+| User-visible behavior, workflows, and operations | [MANUAL.md](./MANUAL.md) | Update with every behavior change |
+| Annotated configuration | [config.example.yaml](./config.example.yaml) | Canonical option names, defaults, and examples |
+| Active and proposed work | [BACKLOG.md](./BACKLOG.md) | Tickets are the merge bar; completed history will move only through a reviewed archive ticket |
+| Architecture and decisions | [PLAN.md](../PLAN.md) | Append dated ADR rows; do not rewrite historical decisions |
+| Product direction | [VISION.md](./VISION.md) | Describe direction, not current behavior or setup |
+| Pilot authority and claims | [PILOT_CHARTER.md](./PILOT_CHARTER.md) | Downstream documents cannot broaden its authority |
+| Validation records | [`spike/t111/`](../spike/t111/) | Sealed evidence: never rewrite, relocate, or summarize as a new result |
 
-| Document | Role |
-|---|---|
-| [VISION.md](./VISION.md) | the direction: evidence plane, packs, expansion workflows, sequencing |
-| [INVESTIGATIONS.md](./INVESTIGATIONS.md) | the product shape: the Investigation object, UX, envelope, review |
-| [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) | the normative product semantics: identities, lifecycles, authorization, eligibility, diffs, Decisions, Review, and dossiers |
-| [MCP_ENVELOPE.md](./MCP_ENVELOPE.md) | the normative MCP projection of those semantics; generated client schemas live in [`../schemas/`](../schemas/) |
-| [PITCH.md](./PITCH.md) | the ask: bounded six-week monorepo pilot |
-| [PILOT_CHARTER.md](./PILOT_CHARTER.md) | the execution contract: gates, frozen thresholds, teardown |
-| [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) | the per-pack capability/validation contract (template) |
-| [THRIFT_PACK_CARDS.md](./THRIFT_PACK_CARDS.md) | completed card instances for the Epic 19 and Epic 22 Thrift packs (experimental-dark) |
-| [KAFKA_PACK_CARDS.md](./KAFKA_PACK_CARDS.md) | completed card instances for the Epic 23 Kafka packs (experimental-dark) |
-| [PILOT_PREREQS.md](./PILOT_PREREQS.md) | gate-neutral prerequisite index: owners, reviewers, evidence, decision-record rules |
+## Product and interface contracts
 
-The suite's invariant: nothing downstream expands the ask upstream, and no
-claim outruns its measurement.
+These documents specify product concepts and transport shapes. They do not
+replace the user manual.
 
-## Pilot design artifacts
+- [VISION.md](./VISION.md) — product direction and sequencing.
+- [INVESTIGATIONS.md](./INVESTIGATIONS.md) — Investigation product shape and UX.
+- [INVESTIGATION_DOMAIN_CONTRACT.md](./INVESTIGATION_DOMAIN_CONTRACT.md) —
+  normative Investigation identities, lifecycle, authorization, and review
+  semantics.
+- [MCP_ENVELOPE.md](./MCP_ENVELOPE.md) — normative MCP projection of the
+  Investigation contract; generated schemas live in [`../schemas/`](../schemas/).
+- [PITCH.md](./PITCH.md) — bounded pilot proposal.
 
-| Document | Role |
-|---|---|
-| [THREAT_MODEL.md](./THREAT_MODEL.md) | draft threat model and trust-boundary record for pilot prerequisite item 1; grants no environment or implementation authority |
-| [NEGATIVE_TEST_DESIGN.md](./NEGATIVE_TEST_DESIGN.md) | dependency-preview authorization and integrity test matrix for prerequisite item 3; execution remains separately gated |
-| [SIZING_ASSUMPTIONS.md](./SIZING_ASSUMPTIONS.md) | dependency-preview workload and capacity worksheet for prerequisite item 4; contains no environment measurements |
-| [RESTORE_PROCEDURE.md](./RESTORE_PROCEDURE.md) | dependency-preview backup and witnessed-restore design for prerequisite item 5; grants no backup or environment authority |
-| [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) | preregistration draft of the pilot internal-validation protocol for prerequisite item 9; reuses the sealed V2 label machinery; grants no pilot, accuracy, or Epic 16 authority |
-| [DECISION_RECORDS.md](./DECISION_RECORDS.md) | fail-closed templates for the validation gate decision and the pilot continuation decision, prerequisite item 10; filling a template creates no decision |
-| [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) | dependency-preview hop label sheet formats for prerequisite item 11; partner catalog shapes freeze at Gate 0; grants nothing |
-| [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md) | design-accepted preregistration form for prerequisite item 12; freezes the manual-vs-phebs timing, labor, usefulness, evidence, and custody comparison; grants no measurement authority and is not Gate 0-sealed |
-| [NO_CONFLICTING_DEPENDENCY_STATEMENT.md](./NO_CONFLICTING_DEPENDENCY_STATEMENT.md) | Gate 0 worksheet for production/pilot non-dependency, resource and schedule conflicts, circularity, conditions, and signatures; currently an unapproved draft |
-| [EXTRACTOR_BRIDGE_WORKSHEET.md](./EXTRACTOR_BRIDGE_WORKSHEET.md) | Gate 0 typed-benchmark-to-pure-reader artifact bridge; binds identity/reproducibility/mechanics only and permanently prohibits accuracy transfer |
-| [GATE0_READINESS.md](./GATE0_READINESS.md) | descriptive audit of every real Gate 0 requirement; Gate 0 remains locked |
-| [GATE0.md](./GATE0.md) | synthetic Gate 0 fixture and explicit Epic 16 operator-bypass boundary; grants no pilot authority |
-| [GATE0_REHEARSAL.md](./GATE0_REHEARSAL.md) | wholly synthetic Gate 0 ceremony rehearsal; cannot become evidence or authority |
+## Evidence-pack contracts
 
-The role/capability model for prerequisite item 2 lives in
-[PILOT_CHARTER.md §5](./PILOT_CHARTER.md#5-roles-and-authority) so authority
-semantics do not drift into a second document.
+- [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) — capability and validation
+  template.
+- [PACK_MANIFEST.md](./PACK_MANIFEST.md) — manifest schema and lifecycle.
+- [THRIFT_PACK_CARDS.md](./THRIFT_PACK_CARDS.md) — Thrift declaration,
+  consumer, and field-reference pack cards.
+- [KAFKA_PACK_CARDS.md](./KAFKA_PACK_CARDS.md) — Kafka producer and consumer
+  pack cards.
 
-## Validation records (sealed history)
+These packs remain experimental-dark unless the manual and capability response
+explicitly say otherwise. Their retained validation result is not an accuracy
+or completeness claim.
 
-The T11.1/GATE2-V2 validation protocol, attempt records, and stage
-artifacts live under `spike/t111/` (`labeling/GATE2-V2.md`, `REPORT.md`,
-`labeling/ATTEMPTS.md`, `labeling/gate2-v2/`). These are sealed records:
-amended by dated append, never rewritten.
+## Pilot governance and preparation
+
+Read [PILOT_CHARTER.md](./PILOT_CHARTER.md) first. The remaining documents
+prepare or record narrower parts of that process and grant no authority by
+themselves.
+
+- [PILOT_PREREQS.md](./PILOT_PREREQS.md) — prerequisite ownership and status.
+- [THREAT_MODEL.md](./THREAT_MODEL.md) — trust boundaries.
+- [NEGATIVE_TEST_DESIGN.md](./NEGATIVE_TEST_DESIGN.md) — authorization and
+  integrity test matrix.
+- [SIZING_ASSUMPTIONS.md](./SIZING_ASSUMPTIONS.md) — capacity worksheet.
+- [RESTORE_PROCEDURE.md](./RESTORE_PROCEDURE.md) — backup and restore
+  acceptance design.
+- [ACCURACY_GOLD_PROTOCOL.md](./ACCURACY_GOLD_PROTOCOL.md) — preregistered
+  internal-validation protocol.
+- [DECISION_RECORDS.md](./DECISION_RECORDS.md) — validation and continuation
+  decision templates.
+- [ATTRIBUTION_HOP_SHEETS.md](./ATTRIBUTION_HOP_SHEETS.md) — attribution label
+  sheets.
+- [CURRENT_WORKFLOW_BASELINE_PROTOCOL.md](./CURRENT_WORKFLOW_BASELINE_PROTOCOL.md)
+  — manual-versus-phebs workflow comparison.
+- [NO_CONFLICTING_DEPENDENCY_STATEMENT.md](./NO_CONFLICTING_DEPENDENCY_STATEMENT.md)
+  — Gate 0 dependency worksheet.
+- [EXTRACTOR_BRIDGE_WORKSHEET.md](./EXTRACTOR_BRIDGE_WORKSHEET.md) — typed
+  benchmark to pure-reader identity bridge.
+- [GATE0_READINESS.md](./GATE0_READINESS.md) — descriptive readiness audit.
+- [GATE0.md](./GATE0.md) — synthetic Gate 0 fixture and bypass boundary.
+- [GATE0_REHEARSAL.md](./GATE0_REHEARSAL.md) — synthetic ceremony rehearsal.
+
+## Retained fixtures and design references
+
+- [Change Workbench fixture](./fixtures/change-workbench/README.md)
+- [Investigation envelope fixtures](./fixtures/investigations/README.md)
+- [Thrift field-reference fixture](./fixtures/thrift-field/README.md)
+- [Brand and UI handoff](./design_handoff_phebs_brand_and_ui/README.md), including
+  its [token notes](./design_handoff_phebs_brand_and_ui/notes/tokens.md)
+
+Fixtures are deterministic test inputs, not public-corpus validation or product
+claims.
+
+## Validation and measurement records
+
+- [T11.1 / GATE2-V2 report](../spike/t111/REPORT.md) and
+  [sealed record index](../spike/t111/labeling/README.md)
+- [T19.1 Thrift validation spike](../spike/t191/README.md)
+- [T20.1 store and scale spike](../spike/t201/README.md)
+- [T21.1 Workbench inventory and glossary](../spike/t211/README.md)
+- [T22.1 Thrift field-reference spike](../spike/t221/README.md)
+- [T23.1 Kafka evidence spike](../spike/t231/README.md)
+
+The T11.1 tree is sealed history. Later spike reports are retained engineering
+records and remain distinct from current user documentation.
