@@ -3425,7 +3425,7 @@ boundary in PLAN. AC: every tracked document under `docs/` is reachable from
 the map; every tracked local Markdown/HTML link resolves; the sealed-tree
 digest matches the pre-cleanup baseline; focused Go test green.
 
-**T24.2 · Concise public README** *(needs T24.1)* — reduce the root README to a
+**T24.2 ✅ · Concise public README** *(2026-07-27; needs T24.1)* — reduce the root README to a
 product-first landing page: problem, shipped capabilities, clearly separated
 experimental/default-dark capabilities, architecture image, five-minute local
 start, and links to authoritative detail. Remove deep operational and planning
