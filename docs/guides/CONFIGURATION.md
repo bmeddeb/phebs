@@ -1,0 +1,390 @@
+# Configuration and repository connections
+
+[← User guide](../MANUAL.md)
+
+This guide owns accepted configuration, authentication, connector, sync,
+webhook, watch, and orphan-cleanup behavior. The exhaustive commented schema is
+[config.example.yaml](../config.example.yaml).
+
+## Configuration reference
+
+Config is a single YAML file, validated strictly at startup: unknown fields,
+type mismatches, and semantic errors **fail fast with line numbers**. The
+annotated example lives at [config.example.yaml](../config.example.yaml).
+`server.data_dir` must be a literal path without glob metacharacters.
+Every referenced environment variable in a secret field must exist and be
+non-empty; this applies to legacy API/webhook secrets, bootstrap passwords,
+OIDC client secrets, PATs, inline App keys, and Git HTTP credentials. A
+missing variable stops startup rather than silently weakening authentication.
+
+```yaml
+server:
+  addr: "127.0.0.1:3070" # loopback listen address (default)
+  data_dir: "~/.phebs"   # all state lives here (default)
+
+auth:
+  cookie_secure: true       # default; set false only for plain-HTTP local use
+  session_lifetime: 12h     # absolute lifetime; sessions idle out after 30m
+  # api_key: "${PHEBS_LEGACY_API_KEY}"  # migration only
+
+sync:
+  cleanup_orphans: false  # delete repos no connection claims (default off)
+  poll_interval: 15s      # job-runner cadence; lower for snappier watch mode
+
+connections:
+  - name: my-conn         # required; unique; [a-z0-9-]+
+    type: github | gitlab | gitea | git
+    # ... see per-type fields below
+
+# Optional: seven additional refs per repo; HEAD is implicit.
+revisions:
+  github.com/acme/api:
+    release-1: refs/heads/release/1
+    v1.4.0: refs/tags/v1.4.0
+```
+
+
+| Key                                         | Default          | Notes                                                                                                                                                             |
+| ------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server.addr`                               | `127.0.0.1:3070` | loopback by default; explicitly configure a private proxy-facing address for deployment                                                                           |
+| `server.data_dir`                           | `~/.phebs`       | `~` expands; created if missing                                                                                                                                   |
+| `auth.api_key`                              | *(empty)*        | legacy migration key only; its SHA-256 hash is imported into the DB, and omission removes the legacy row; it does not make an empty configuration unauthenticated |
+| `auth.cookie_secure`                        | `true`           | `Secure` session-cookie attribute; set `false` only for intentional plain-HTTP development                                                                        |
+| `auth.session_lifetime`                     | `12h`            | absolute lifetime, Go duration from `15m` through `720h`; fixed idle timeout is 30 minutes                                                                        |
+| `auth.trusted_proxies`                      | `[]`             | trusted reverse-proxy hop CIDRs, including the direct peer, allowed in `X-Forwarded-For` resolution for per-client auth throttling; never include client networks |
+| `auth.bootstrap_user`                       | *(none)*         | optional one-time first local administrator; requires `email` and a password of at least 12 bytes                                                                 |
+| `auth.oidc`                                 | *(none)*         | one OIDC provider; requires issuer/client/secret/redirect URL; HTTPS except loopback tests                                                                        |
+| `sync.cleanup_orphans`                      | `false`          | see [orphans](#orphans-and-cleanup)                                                                                                                               |
+| `sync.poll_interval`                        | `15s`            | Go duration; job pollers wake with ±50 % jitter around it                                                                                                         |
+| `sync.resync_interval`                      | `1h`             | re-sync cadence for remote connections; `"0"` disables                                                                                                            |
+| `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
+| `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
+| `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
+| `proof_bundles.retention`                   | *(disabled)*     | positive Go duration expires proof bundles after their latest materialization; omission or `"0"` keeps them indefinitely                                         |
+| `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
+| `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
+| `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
+| `experimental.provisional_kafka_extraction` | `false`          | development-only opt-in for the T23 Kafka topic-evidence packs described below; abstention-dominant by design, same provisional repo/path lineage posture         |
+| `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](./OPERATIONS.md#permission-aware-search)); omit to keep every authenticated user seeing everything       |
+| `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
+| `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
+
+
+
+
+### Authentication
+
+Authentication is always required for the UI, application API, and MCP. A
+fresh installation has three supported enrollment paths:
+
+1. **Interactive setup:** configure neither `bootstrap_user` nor OIDC. Copy
+  the ephemeral setup token from the local startup log into the UI's
+   first-run form. The first account is an administrator.
+2. **Bootstrap user:** provision the first administrator from config:
+  ```yaml
+   auth:
+     bootstrap_user:
+       email: admin@example.com
+       display_name: Phebs Admin
+       password: "${PHEBS_BOOTSTRAP_PASSWORD}"
+  ```
+   The password is used only when the first user is created and is stored as
+   an Argon2id hash. Remove the block afterward; changing it does not rotate
+   the existing password. If users already exist and the configured email is
+   absent, startup fails instead of creating a surprise administrator.
+3. **OIDC:** configure one provider and use **Continue with SSO**. The first
+  verified OIDC identity becomes administrator; later identities are regular
+   users. The provider therefore owns enrollment policy for this single-tenant
+   deployment.
+
+Browser sessions live in SurrealDB and survive process restarts. The cookie is
+`HttpOnly`, `SameSite=Lax`, `Secure` by default, and stores only a random
+token whose SHA-256 hash is persisted. Unsafe cookie-authenticated requests
+also require the per-session `X-CSRF-Token`; the UI supplies it. Login/setup
+attempts reserve a per-client slot before password work (8 credential failures
+per 5 minutes), and Argon2id work is globally capped at four concurrent hashes;
+overload fails with `429` instead of growing memory without bound. By default
+the client is the direct peer. Behind a reverse proxy, list every trusted proxy
+hop CIDR, including the direct peer, under `auth.trusted_proxies`; forwarded
+headers from all other peers are ignored, and trusted chains are walked from
+the nearest proxy outward.
+
+#### API keys and legacy migration
+
+After signing in, open **Settings**, name a key, and copy the returned
+`phebs_<id>.<secret>` token immediately; the secret is shown once and only its
+SHA-256 hash is stored. Send it as `Authorization: Bearer <token>`. Keys are
+individually revocable and their last-use time is recorded. Key listing,
+creation, and revocation require a CSRF-protected browser session; bearer keys
+cannot mint replacements or revoke sibling credentials.
+
+Named keys have an immutable, closed capability set. Omitting
+`capabilities`, sending `[]`, or leaving **Allow Investigation writes**
+unchecked creates a read-only key. The only reviewed value is
+`investigation:write`; unknown, duplicate, malformed, and future values are
+rejected. Selecting it explicitly allows the key to attempt Workbench
+preview-binding, create/revise, retained compatibility actions when a future
+adapter exposes them, and Disposition writes. It does not grant repository
+visibility, Investigation access, ownership, administrator status, or a way
+around current-Revision, preview, snapshot, or idempotency checks. Capability
+names appear in Settings and `GET /api/auth/keys`; token secrets and hashes
+never do.
+
+Capabilities cannot be edited after creation. To change authority, create a
+replacement, deploy it, and revoke the old key. Treat
+`investigation:write` as increased authority: use least privilege, issue one
+narrowly capable key per agent so it can be revoked independently, and revoke
+it immediately if leakage is suspected. A leaked capable key can attempt
+durable Investigation mutations as its owning user until it is revoked,
+expires, or the user is disabled. Browser sessions remain governed by their
+CSRF-protected session boundary and need no capability selection.
+
+Existing `auth.api_key` deployments continue to work during migration. At
+startup phebs imports only that key's hash as `Legacy config key`. Create a
+named key for each client, deploy those tokens, then remove `auth.api_key`;
+the next startup deletes the legacy key row. The legacy principal has no user
+identity, has an empty capability set, and cannot manage named keys or perform
+Investigation mutations itself. Existing named keys likewise migrate with an
+empty set; their tokens, hashes, identity, expiry, revocation, and existing
+read behavior do not change.
+The startup migration records its exact generation and skips the key-table
+backfill after completion. An older binary that encounters a later or unknown
+capability-migration generation fails closed without overwriting that marker.
+
+#### OpenID Connect
+
+```yaml
+auth:
+  oidc:
+    issuer_url: https://idp.example.com
+    client_id: phebs
+    client_secret: "${PHEBS_OIDC_CLIENT_SECRET}"
+    redirect_url: https://phebs.example.com/api/auth/oidc/callback
+    scopes: [groups]  # optional extras; openid/profile/email are automatic
+```
+
+Register the redirect URL exactly at the provider. Discovery happens during
+startup and failure stops the server. The authorization-code flow uses PKCE,
+state, and nonce, verifies the ID token and access-token hash when present,
+and requires `email_verified=true`. Identities bind only to issuer + subject;
+email equality never links an OIDC identity to an existing local or OIDC
+account, and collisions fail closed. Anonymous authorization-flow
+sessions expire after 10 minutes, starts are rate limited, and starting a new
+flow never clears an already authenticated browser session.
+
+### `type: github` connections
+
+```yaml
+- name: github-personal
+  type: github
+  token: "${GITHUB_TOKEN}"   # PAT; omit for public repos only
+  orgs:  [my-org]            # all repos of each org
+  users: [bmeddeb]           # all repos owned by each user
+  repos: [owner/name]        # explicit repos
+  exclude:
+    archived: true
+    forks: true
+    repos: ["*/*-mirror"]    # glob on owner/name
+```
+
+At least one of `orgs`/`users`/`repos` is required. The token is sent as a
+bearer to api.github.com and injected into git fetches per-invocation — it is
+never written into mirror config or the database. Rate limits are honored
+automatically (the sync waits out `Retry-After` / `X-RateLimit-Reset`).
+
+A `users:` entry naming the token's own account includes that account's
+private repos: GitHub's public user listing omits them, so phebs additionally
+lists the token owner via the authenticated endpoint and unions the two (a
+fine-grained PAT restricted to select repositories still gets all public
+repos). Other users list public repos only; private repos elsewhere are
+reachable via `orgs:` or explicit `repos:` entries.
+
+#### GitHub App auth
+
+Instead of a PAT, a github connection can authenticate as an App
+installation (higher rate limits, per-install scoping):
+
+```yaml
+- name: gh-app
+  type: github
+  app:
+    id: 12345                  # the App's ID
+    installation_id: 67890     # the installation on your org/account
+    private_key_path: /etc/phebs/app.pem   # or private_key: "${APP_KEY_PEM}"
+  orgs: [my-org]               # optional — omit selectors to sync every
+                               # repo the installation was granted
+```
+
+`app` and `token` are mutually exclusive. Each sync run exchanges the App's
+key for a fresh ~1-hour installation token (RS256 JWT, no cached state), so
+tokens never go stale. Installation tokens have no user identity: `users:`
+entries list public repos only under App auth. Without any selectors the
+connection syncs exactly the installation's granted repositories.
+
+### `type: gitlab` connections
+
+```yaml
+- name: gitlab-work
+  type: gitlab
+  url: https://git.example.com  # self-hosted base URL; omit for gitlab.com
+  token: "${GITLAB_TOKEN}"      # PAT; omit for public projects only
+  groups: [team/platform]       # all projects of each group, subgroups included
+  users:  [dev]                 # all projects owned by each user
+  repos:  [solo/tool]           # explicit projects by full path
+  exclude:
+    archived: true
+    forks: true
+    repos: ["*/*/sandbox-*"]    # glob on the full project path
+```
+
+At least one of `groups`/`users`/`repos` is required. Unlike GitHub, GitLab's
+user listing is requester-scoped, so a token's own private projects appear
+without special-casing. The token authenticates the API (bearer) and git
+fetches (HTTP basic as the `oauth2` pseudo-user, injected per-invocation) —
+it is never written into mirror config or the database. Rate limits are
+honored automatically (429 `Retry-After`). Repos are named
+`<host>/<full/project/path>`.
+
+### `type: gitea` connections
+
+```yaml
+- name: gitea-forge
+  type: gitea
+  url: https://gitea.example.com  # required: base URL of the instance
+  token: "${GITEA_TOKEN}"         # PAT; omit for public repos only
+  orgs:  [acme]                   # all repos of each org
+  users: [dev]                    # all repos owned by each user
+  repos: [owner/name]             # explicit repos
+  exclude:
+    archived: true
+    forks: true
+    repos: ["*/*-mirror"]
+```
+
+`url` is required (there is no canonical hosted Gitea); at least one of
+`orgs`/`users`/`repos` too. Listings are requester-scoped, so a token sees
+its accessible private repos. The token authenticates the API
+(`Authorization: token …`) and git fetches (HTTP basic, token as username,
+injected per-invocation) — never persisted. Repos are named
+`<host>/<owner>/<name>`.
+
+### `type: git` connections
+
+```yaml
+- name: any-git
+  type: git
+  url: https://example.com/repo.git    # any clone URL: https, ssh, scp-like
+```
+
+Private HTTP(S) remotes use transient Basic auth:
+
+```yaml
+- name: private-git
+  type: git
+  url: https://git.example.com/team/repo.git
+  http_auth:
+    username: "${GIT_HTTP_USERNAME}"
+    password: "${GIT_HTTP_PASSWORD}"
+```
+
+Both fields are required. Credentials are passed to each Git process and are
+never written to the repo row, API, logs, or mirror config. HTTP URL userinfo,
+query parameters, and fragments are rejected; migrate any
+`https://user:password@host/repo.git` configuration to `http_auth`. SSH URLs
+may retain a username such as `ssh://git@host/repo.git`, but not a password.
+
+Local repositories use a quoted home-relative path, a plain absolute path, or
+a `file://` URL. A home-relative path is portable across workstations:
+
+```yaml
+- name: my-project
+  type: git
+  url: "~/src/my-project"
+  watch: true            # see [Connecting repositories](#connecting-repositories), watch mode
+```
+
+Phebs resolves that path through the account running the server and gives it
+the stable repository identity `local/src/my-project`; Git and persisted clone
+metadata receive the absolute path. Only exact `~/...` paths are supported.
+There is no shell expansion or filesystem discovery: `~other/repo`,
+`file://~/repo`, `~/../repo`, and paths containing `*`, `?`, `[`, or `\` fail
+configuration admission. Use one connection per exact local repository.
+
+Existing absolute and `file://` paths retain their historical full-path
+identities, such as `local/Users/ben/src/my-project`. Changing an existing
+connection from an absolute path to `~/src/my-project` intentionally creates
+the portable identity; the previous row then follows the normal orphan and
+`sync.cleanup_orphans` policy.
+
+
+
+## Connecting repositories
+
+
+
+### Sync lifecycle
+
+At boot, phebs ensures one pending sync job per configured connection. A sync
+resolves the connection to repo rows, mirrors each
+repo into `$DATA/repos/<host>/<path>.git`, and chains an indexing job per
+synced repo. Re-syncs are incremental (`git fetch --prune`).
+
+Beyond boot, syncs happen when:
+
+- a **watched** local repo's HEAD moves (see below);
+- the **re-sync cadence** fires (`sync.resync_interval`, default `1h`, `"0"`
+disables): every remote connection is re-synced, collapsing overlap into
+one pending successor — local repos are covered by boot and watch instead;
+- a **push webhook** arrives (see below);
+- you press **Reindex** in the UI or call `POST /api/reindex` (re-index only);
+- phebs restarts.
+
+
+
+### Push webhooks
+
+`POST /api/webhook` turns code-host push events into targeted fetches — the
+changed repo is fetched and reindexed without waiting for a poll, and without
+re-listing the host:
+
+```yaml
+webhook:
+  secret: "${WEBHOOK_SECRET}"   # required to enable the endpoint
+```
+
+Point a GitHub (or Gitea — it sends GitHub-compatible headers, verified live)
+webhook at `https://your-phebs/api/webhook` with content type
+`application/json` and the same secret. Payload signatures
+(`X-Hub-Signature-256`) are verified in constant time; the endpoint does not
+exist unless a secret is configured, and it ignores pushes for repos phebs
+doesn't know. `repository` and `installation_repositories` events (repo
+created/deleted/renamed, App grants changed) re-sync the remote connections
+so membership catches up. GitLab webhooks use a different scheme and are not
+yet supported — the re-sync cadence covers those.
+
+### Watch mode (local repos)
+
+`watch: true` on a local git connection—absolute, `file://`, or quoted
+`~/...`—makes phebs poll the resolved repo's HEAD and each configured
+allowlisted ref (every ~3 s), then re-sync + re-index whenever one moves.
+**HEAD commits, branch switches, and allowlisted branch/tag moves trigger
+reindexing; uncommitted working-tree edits and non-allowlisted feature branches
+do not.**
+
+Watched mirrors **follow the branch you have checked out** — switch to
+`feature`, commit, and search reflects `feature`. A detached HEAD (mid-rebase,
+bisect) keeps the last good index until you land somewhere.
+
+End-to-end latency is roughly `watch tick (≤3 s) + poll_interval + index time`. With `sync.poll_interval: 1s`, a commit is searchable in ~1–2 s.
+
+### Orphans and cleanup
+
+A repo no connection claims (you removed the connection or narrowed its
+filters) is flagged **orphaned** on the Repos page and in `/api/repo-status`.
+By default orphans are kept; set `sync.cleanup_orphans: true` to delete their
+rows, mirrors, and index shards after each sync. Every startup audits repo
+rows, mirror configs, and shard metadata even when deletion is disabled. It
+scrubs legacy URL credentials, hides invalid/unsafe legacy rows, and repairs
+DB/shard revision mismatches by forcing a new index. Any audit, quarantine, or
+repair failure stops startup so unverified state is never served. Destructive cleanup remains gated by `cleanup_orphans` and only
+touches validated, non-symlinked paths under the data directory.

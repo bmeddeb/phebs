@@ -3432,7 +3432,7 @@ start, and links to authoritative detail. Remove deep operational and planning
 duplication. AC: a new reader can identify what phebs is, what is safe to claim,
 and how to start without reading PLAN or BACKLOG; README links pass T24.1.
 
-**T24.3 · Task-oriented user guide** *(needs T24.2)* — split the large manual
+**T24.3 ✅ · Task-oriented user guide** *(2026-07-27; needs T24.2)* — split the large manual
 into a short navigation page plus task-oriented install, configuration,
 workflows, and operations guides while preserving the generated glossary
 boundary and updating code references atomically. AC: no user workflow is lost;
@@ -3464,7 +3464,8 @@ retained records are reachable; no sealed T11.1 byte changes; full merge bar.
 ## P5 hardening *(unscheduled — pull on demand)*
 
 **T-P5.1 ✅ · `phebs backup` / `phebs restore` subcommands** — cold copy works
-today (MANUAL §9 *Backup & restore*) but costs downtime. `phebs backup`:
+today (see [Backup & restore](./guides/OPERATIONS.md#backup--restore)) but costs
+downtime. `phebs backup`:
 exec the supervised pinned `surreal` binary's `export` against the running
 instance into one artifact plus a manifest binding config digest, binary
 digest, and store schema version. `phebs restore`: refuse unless `$DATA` is
@@ -3474,7 +3475,7 @@ docs/RESTORE_PROCEDURE.md's acceptance boundary needs named. AC: backup
 succeeds against a live server without stopping writes and its manifest
 digests verify; restore into an empty `$DATA` reaches a serving instance
 that reindexes with no operator action; both refuse existing/partial
-targets; MANUAL §9 updated in the same PR.
+targets; the operations guide was updated in the same PR.
 
 Implemented on `t-p5.1-backup-restore`: a lifecycle-owned private runtime
 descriptor exposes only the healthy local child needed for live export; a

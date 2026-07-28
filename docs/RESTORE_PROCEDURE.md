@@ -130,7 +130,8 @@ its display version is equal.
 2. Stop application writes or use a reviewed SurrealDB export mechanism proven
    to provide the required consistency for the exact deployed version. A plain
    filesystem copy is permitted only with phebs and the supervised database
-   child stopped, as required by [MANUAL.md](./MANUAL.md).
+   child stopped, as required by the
+   [operations guide](./guides/OPERATIONS.md#shutdown).
 3. Execute `phebs backup -config <exact-config> -output <new-private-path>`.
    Internally, the live runtime-bound SurrealDB executable runs `surreal export
    --endpoint <live-loopback-endpoint> --namespace phebs --database phebs --log

@@ -108,7 +108,7 @@ The OpenTelemetry demo is the quickest public-corpus evaluation:
 ```
 
 Open <http://127.0.0.1:3071>. The
-[manual walkthrough](./docs/MANUAL.md#opentelemetry-microservices-evaluation) also covers the
+[workflow guide](./docs/guides/WORKFLOWS.md#opentelemetry-microservices-evaluation) also covers the
 Jaeger/Thrift and Kafka demo configurations.
 
 For the retained synthetic Contract Atlas, Caller Map, field-reference, and

@@ -9,7 +9,7 @@ when two pages appear to overlap.
 | Goal | Read |
 |---|---|
 | Understand the product | [Project README](../README.md), then [VISION.md](./VISION.md) |
-| Install, configure, or operate phebs | [MANUAL.md](./MANUAL.md) and the annotated [config.example.yaml](./config.example.yaml) |
+| Install, configure, or operate phebs | [MANUAL.md](./MANUAL.md), then its task guide |
 | Plan or implement a change | [BACKLOG.md](./BACKLOG.md), then [PLAN.md](../PLAN.md) |
 | Evaluate a pilot | [PITCH.md](./PITCH.md), then [PILOT_CHARTER.md](./PILOT_CHARTER.md) |
 | Review an evidence pack | [EVIDENCE_PACK_CARD.md](./EVIDENCE_PACK_CARD.md) and [PACK_MANIFEST.md](./PACK_MANIFEST.md) |
@@ -19,13 +19,27 @@ when two pages appear to overlap.
 | Information | Authority | Maintenance rule |
 |---|---|---|
 | Public overview and first successful run | [Project README](../README.md) | Keep short; link to detail instead of repeating it |
-| User-visible behavior, workflows, and operations | [MANUAL.md](./MANUAL.md) | Update with every behavior change |
+| User-visible behavior, workflows, and operations | [MANUAL.md](./MANUAL.md) and its task guides | Update the owning guide with every behavior change |
 | Annotated configuration | [config.example.yaml](./config.example.yaml) | Canonical option names, defaults, and examples |
 | Active and proposed work | [BACKLOG.md](./BACKLOG.md) | Tickets are the merge bar; completed history will move only through a reviewed archive ticket |
 | Architecture and decisions | [PLAN.md](../PLAN.md) | Append dated ADR rows; do not rewrite historical decisions |
 | Product direction | [VISION.md](./VISION.md) | Describe direction, not current behavior or setup |
 | Pilot authority and claims | [PILOT_CHARTER.md](./PILOT_CHARTER.md) | Downstream documents cannot broaden its authority |
 | Validation records | [`spike/t111/`](../spike/t111/) | Sealed evidence: never rewrite, relocate, or summarize as a new result |
+
+## User guides
+
+- [Getting started](./guides/GETTING_STARTED.md) — prerequisites, build, first
+  run, and administrator setup.
+- [Configuration and connections](./guides/CONFIGURATION.md) — authentication,
+  connectors, synchronization, webhooks, watch mode, and cleanup.
+- [Product workflows](./guides/WORKFLOWS.md) — demos, Workbench, search, UI,
+  SCIP/history, HTTP, and MCP.
+- [Operations and development](./guides/OPERATIONS.md) — storage, backup,
+  security, extraction operations, metrics, troubleshooting, and contributor
+  commands.
+- [Annotated configuration](./config.example.yaml) — exhaustive accepted
+  options and defaults.
 
 ## Product and interface contracts
 

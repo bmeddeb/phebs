@@ -1,0 +1,1364 @@
+# Product workflows
+
+[← User guide](../MANUAL.md)
+
+This guide covers public-corpus evaluations, the retained synthetic Workbench,
+search, repository browsing, SCIP and Git history, HTTP, and MCP. Experimental
+evidence remains subject to the explicit coverage and validation caveats in
+each workflow.
+
+## OpenTelemetry microservices evaluation
+
+The repository and release bundle include `phebs-otel-demo.yaml` as the
+canonical public microservices evaluation. From the release directory:
+
+```bash
+./phebs serve -config phebs-otel-demo.yaml
+```
+
+Open `http://127.0.0.1:3071`, complete first-administrator setup with the
+one-time token printed in the server log, and allow the initial sync and index
+to finish. The configuration clones the public
+`github.com/open-telemetry/opentelemetry-demo` monorepo and keeps its state
+isolated under `~/.phebs-otel-demo`. It deliberately enables
+`experimental.provisional_proto_extraction`, so the authenticated UI can
+expose Contracts / Contract Atlas after eligible evidence publishes. This is
+an evaluation posture: the extracted protobuf/gRPC relationships remain
+provisional, default deployments remain dark, unresolved relationships are
+abstentions rather than guesses, and no empty result establishes runtime
+absence.
+
+## Thrift protocol-pack evaluation
+
+The repository includes `phebs-thrift-demo.yaml` as the Epic 19 Thrift
+evaluation over the public Jaeger corpus. Run it without the synthetic Atlas
+fixture that `make dev` injects (the fixture would override real catalog
+evidence):
+
+```bash
+make ui bin/zoekt-git-index bin/buf
+PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+PHEBS_BUF="$(pwd)/bin/buf" \
+  go run -tags ui ./cmd/phebs serve -config phebs-thrift-demo.yaml
+```
+
+Open `http://127.0.0.1:3073`, complete first-administrator setup with the
+one-time token printed in the server log, and allow sync, index, and
+extraction to finish. State stays isolated under `~/.phebs-thrift-demo`. The
+three connections exercise the pack's three postures deliberately:
+`jaeger-idl` publishes `thrift-contract` declarations (open
+`agent.Agent/emitBatch` in the Atlas for the `oneway` chip and the
+wire-honest args/result shapes); the archived `jaeger-client-go` vendors
+generated stubs and real call sites in one repository, so
+`thrift-consumer` registrations and `/agent.Agent/emitBatch` caller evidence
+join the declarations by name (never `proven` — provisional lineage);
+and `jaeger` imports its stubs from another module, publishing an honest
+empty consumer run. The protobuf packs are also enabled so the Atlas shows
+both protocols side by side. All Contract Atlas caveats apply unchanged: no
+empty result establishes runtime absence.
+
+## Kafka topic-evidence evaluation
+
+The repository includes `phebs-kafka-demo.yaml` as the Epic 23 Kafka
+evaluation over two public corpora. Run it the same way (no Atlas fixture —
+the Kafka packs have no catalog surface at all):
+
+```bash
+make ui bin/zoekt-git-index bin/buf
+PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+PHEBS_BUF="$(pwd)/bin/buf" \
+  go run -tags ui ./cmd/phebs serve -config phebs-kafka-demo.yaml
+```
+
+Open `http://127.0.0.1:3074`, complete first-administrator setup, and allow
+sync, index, and extraction to finish (state isolates under
+`~/.phebs-kafka-demo`). Then open **Topics** and query `important` or
+`access_log`: the sarama corpus's `examples/http_server` carries those
+topics as qualified source literals, so `PRODUCES_TO_TOPIC` evidence rows
+appear with exact citations. The unresolved census renders **above** the
+evidence on every answer — the kafka-go corpus's examples are entirely
+environment-driven, so its recognized sites all abstain, and the census
+counts their supporting source sites per shape class with zeros listed
+explicitly. Producer and consumer publication state is reported separately,
+so a run from one plane never makes zeros in the other plane look measured;
+whole-file extraction gaps stay visible in the coverage certificate rather
+than being folded into the site census. Query any other topic spelling to see
+the honest empty answer: no rows, the same topic-independent census, and no
+completeness claim anywhere. Topics have no catalog or Atlas surface by design
+(T23.1 KD8): a topic exists on this page only through its producers and
+consumers.
+
+## Evaluating a separated IDL/source monorepo
+
+The current extractor walks the repository's complete regular-blob inventory;
+directories have no built-in semantic meaning. A layout with declarations
+under `idl/` and handwritten Go under `src/` is therefore eligible without
+moving files or making declarations adjacent to callers. Generated Go stubs
+must be committed somewhere in that same pinned repository for the current
+syntactic gRPC/Thrift consumer readers to index them. For protobuf field
+references, a repository-root `index.scip` must additionally describe that
+same immutable revision. phebs never runs the repository's build, code
+generator, plugin, or dependency downloader.
+
+Epic 20's dark caller resolver can additionally consume three optional,
+committed JSON snapshots from fixed repository-root paths:
+
+- `layout-snapshot.json` version `t20-layout-snapshot-v1` classifies
+  non-overlapping `idl`, `generated`, and `source` roots. IDL/generated roots
+  name a protocol token; a source root does not.
+- `unit-snapshot.json` version `t20-unit-snapshot-v1` maps one source path and
+  optional exact `start_line` to separate arrays of `build_targets`,
+  `deployables`, `logical_services`, and `owners`. Exact-line entries win over
+  path-level entries.
+- `generated-from-snapshot.json` version `t20-generated-from-v1` provides
+  explicit `generated_path` → `declaration_path` mappings. Protobuf mappings
+  may also bind a `generator_relative_path`, or an `invocations` entry may map
+  a `generated_root` to a `generator_invocation_root`. Thrift requires direct
+  mappings.
+
+For example, the layout remains classification—not proof:
+
+```json
+{
+  "version": "t20-layout-snapshot-v1",
+  "roots": [
+    {"kind": "idl", "path": "idl/proto", "protocol": "grpc"},
+    {"kind": "generated", "path": "gen/proto", "protocol": "grpc"},
+    {"kind": "source", "path": "src"}
+  ]
+}
+```
+
+The snapshots are ordinary repository blobs and inherit the 10 MiB per-file
+and 512 MiB aggregate extraction budgets. Snapshot symlinks, unknown versions
+or fields, unsafe/stale paths, dishonest state labels, and overlapping roots
+fail closed. Referenced source/generated/declaration files must exist in the
+same fully inventoried commit. Files outside every optional root remain in the
+corpus inventory. A layout root alone never establishes generated-from:
+protobuf still needs its agreeing generated markers plus an explicit direct or
+invocation-root relation, and Thrift needs a direct relation.
+
+One mapping is `resolved`; zero is `unavailable`; multiple mappings or a
+multi-valued candidate are `ambiguous`. phebs never chooses a build target,
+deployable, service, or owner. Evidence retains the complete candidate set;
+each Caller Map row serializes at most 64 candidates plus the exact
+pre-truncation `candidate_total`, so omitted display candidates remain explicit
+rather than silently disappearing. The trusted loader returns exact
+repository/commit/path/blob-digest provenance and an attribution digest;
+metadata changes move that digest without changing source assertion identity.
+The Caller Map cursor binds this digest. No snapshot causes
+phebs to run a build, generator, plugin, binary, or catalog client, and the
+current adapter performs no external lookup.
+
+The default-dark Caller Map read service is now available at
+`GET /api/contract_callers`. It requires the complete declaration identity:
+`protocol`, declaration `repository`, declaration `lineage`, and canonical
+`operation`. Optional `unit`, `owner`, `path_prefix`, `code_role`, `tier`,
+`freshness`, and `resolution` filters narrow the result; `ordering=source`
+(default) or `ordering=unit` chooses the stable ordering. Pages default to 50
+rows and accept at most 100. Every row retains its exact source repository,
+commit, path, byte range, line range, assertion, run, and atom. Unit state is
+independent metadata: unavailable or ambiguous attribution never hides a
+source occurrence.
+
+Caller Map cursors are opaque and snapshot-bound. They stop with conflict if
+the principal or permission projection, visible repository set, extraction
+publication or coverage certificate, or immutable unit-attribution digest
+changes. Start a new read instead of editing or reusing such a cursor. The
+service scans a bounded candidate population and does not persist a proof
+bundle or Investigation. T20.11 exposes that same shared service through MCP,
+and T20.12 exposes it as the dedicated Caller Map UI described below.
+
+Select an operation in Contract Atlas and choose **View callers** to open
+`#/callers` with its protocol, declaration repository, lineage, and canonical
+operation already fixed. The link and route exist only when the authenticated
+`contract-caller-map` capability is enabled. Caller Map is part of the
+Contract Impact workflow, so the existing **Impact** navigation item stays
+active and no separate Callers item is added.
+
+The page shows at most one 100-row server page. Filters cover unit, owner, path
+prefix, code role, tier, freshness, resolution, and source/unit server
+ordering. Source view places abstentions in **Needs review**; unit view groups
+the same current-page occurrence identities without another request. Each row
+retains its immutable source link and expandable assertion/run/atom byte
+identity. Resolved singleton attribution is inline; only one ambiguous
+candidate list of at most 64 candidates is mounted at once, and its
+pre-truncation total names any omitted remainder. Previous pages retain only
+opaque cursors, not hidden rows, and a changed authorization, coverage,
+publication, or attribution snapshot requires **Restart from first page**.
+
+The progress line is exact only when the response says the snapshot is
+exhausted; otherwise it states the traversed lower bound. The coverage panel
+shows every requested repository/domain row, stale publications, failed
+replacement attempts, failures recorded on a published coverage row,
+unsupported or unpublished domains, counts, and the certificate digest. Empty
+results mean no matching static evidence within that displayed scope—not
+absence, completeness, runtime behavior, or migration safety.
+
+Choose **Compare replacement** from an exact Caller Map header to open the
+default-dark `#/compare-callers` workflow. The route first uses the bounded
+Contract Atlas catalog to select a second complete endpoint identity; it does
+not ask for a typed operation string. The comparison is available only with
+the authenticated `contract-caller-comparison` capability and remains under
+the existing **Impact** navigation item.
+
+The UI and `GET /api/compare_operation_callers` classify the union of both
+endpoint populations at `level=occurrence` (default) or `level=unit`.
+`old_only_evidence`, `both_evidence`, `new_only_evidence`, and `unresolved`
+are literal evidence states, not migration verdicts. Occurrence keys are
+immutable `repo@commit:path:start-end` sites. A unit key is used only when a
+resolved source occurrence has exactly one consistent unit candidate;
+ambiguous, unavailable, and extractor-abstention sites remain distinct
+unresolved occurrences.
+
+The comparison accepts the same `unit`, `owner`, `path_prefix`, `code_role`,
+`tier`, `freshness`, `resolution`, and `ordering` filters as Caller Map, plus
+`classification`. Pages default to 50 rows and accept at most 100. Each side
+of one classified row exposes its exact occurrence count and at most four
+source citations, with an explicit truncation flag when more exist. One shared
+coverage certificate and both endpoint-specific attribution digests bind the
+opaque cursor; changes to authorization, visibility, publication, coverage, or
+either attribution snapshot require a restart. The combined scan is bounded
+at 50,000 source rows. The page mounts only its current server page and retains
+only bounded cursor history.
+
+This is one shared comparison read, not two independently timed Caller Map
+requests. Empty results mean no matching evidence within the selected scope,
+and old-only evidence does not establish that migration is incomplete. The
+read creates no proof bundle or Investigation and establishes no runtime use,
+completeness, migration completion, or decommissioning safety.
+
+The vocabulary is now explicit. `contract-atlas-v2` calls only a
+declaration-lineage-proven occurrence `resolved_caller`; a legacy name match
+against an exact declaration is `unresolved_name_match`, and parser/resolver
+abstention is `extractor_abstention`. `contract-impact-report-v2`, whose input
+is still a bare operation rather than a declaration identity, separates
+`resolved_evidence`, `matching_call_evidence`, and
+`extractor_abstentions`. It does not present an operation-object match as a
+known-caller roster. The caller readers are 1.2.0 and remain behind their
+existing provisional protocol flags.
+
+The MCP Caller Map annex now supplies the missing exact-identity workflow.
+`search_contract_operations` returns selectable protocol, repository,
+declaration-lineage, and canonical-operation identities from the same bounded
+Contract Atlas service as HTTP. `get_contract_operation` accepts exactly that
+identity and returns its endpoint header, request/response shapes, immutable
+declaration citation, related evidence, and coverage.
+`list_operation_callers` pages the same exact Caller Map service and accepts
+its unit, owner, path, code-role, tier, freshness, resolution, ordering,
+page-size, and cursor controls. Its rows, ambiguity, abstentions, digests,
+citations, and cursor are not reinterpreted by the MCP adapter.
+
+The older `find_operation_consumers` remains deliberately different: it
+requires a caller-supplied bare canonical operation and persists one bounded
+proof bundle of matching call evidence and extractor abstentions. It does not
+establish declaration identity or become a known-caller roster. Ordinary
+Caller Map discovery, detail, and paging persist no proof bundle or
+Investigation. `compare_operation_callers` projects the same shared comparison
+service as HTTP, accepts both complete endpoint identities and the shared
+filters, and returns bounded occurrence- or unit-level classifications with
+both digests, citations, shared coverage, and one opaque cursor. It performs
+no adapter-side classification or summarization. Every Caller Map tool is
+bounded and cursor-driven, and a stale authorization, coverage, or attribution
+snapshot must be restarted rather than bypassed.
+
+T20.2 has removed the extraction worker's 5,000-fact bottleneck behind these
+planned surfaces. The pure-reader SDK still emits one source-bound fact at a
+time; the trusted worker groups accepted facts into deterministic,
+content-addressed chunks of at most 256 and keeps the complete replacement
+invisible until one guarded publication. Its independent limit is now 12,500
+facts, and the frozen 10,010-call profile fits the 256 MiB worker-memory gate.
+T20.3 now supplies the corresponding `t12-store-v5` 25,000-row production
+admission and retains the store-derived atomic recount. Coverage certificates,
+APIs, and serialized evidence remain unchanged. The retained target gate
+published 20,020 stored rows in 145.348583 ms on the reference machine,
+inside the frozen 2-second ceiling; this establishes capacity and atomic
+integrity only, not extraction accuracy. The 25,000-row value is a frozen
+ceiling for this target, not an open-ended admission increase: T20.5 remains
+required before it can rise. `spike/t201/results.json` remains the explicitly
+historical v4/pre-guard baseline. The opt-in T20.1 store harness now measures
+the active writer and a complete 20,020-row target sweep using exact
+production statements and limits. Its committed version-2 receipt is
+`spike/t201/results-current-writer-v6.json`: v6 publication took 154 ms and
+the complete target sweep took 1,130 ms on the reference machine, inside the
+frozen 2-second gate. Its retained first-page field is the legacy
+`ListAssertions` comparison probe; T20.4's exact reverse-page gate separately
+returned 100 rows in 8.9935 ms after 1,616 composite-index candidates.
+
+T20.5's separately reviewed v7 receipt is
+`spike/t201/results-current-writer-v7.json`
+(`sha256:f4b7e4e5…`). Resumable retention removed one 20,020-row target run in
+42 fixed-size steps: 10,010 associations, 10,010 assertions, and zero shared
+atoms. It took 1,897 ms with 265,093,120 bytes peak Surreal RSS, inside the
+frozen 2-second / 512 MiB gates. These are reference-machine capacity and
+integrity observations, not extraction-accuracy or universal performance
+claims.
+
+Epic 20's retained closure gate is `make t20-closure`. It starts from a new
+temporary data directory, materializes the frozen neutral `scale-10000`
+profile as a local Git repository, and drives the same sync, zoekt index,
+pure-reader extraction, Contract Atlas, Caller Map, and comparison package
+seams used by `make dev`. Atlas discovery supplies the old and replacement
+endpoint identities; the gate does not embed or require a canonical operation.
+After reaching a commit-pinned caller citation it injects one independent
+domain failure, advances the repository to a malformed unit-attribution
+snapshot, requires that failed replacement to remain invisible, verifies that
+the earlier cursor is rejected, and revokes repository visibility. The output
+receipt defaults to `/private/tmp/phebs-t20.14-results.json`; override
+`T2014_RESULTS_PATH` to retain it elsewhere. The target requires the pinned
+`surreal` and the same-module `bin/zoekt-git-index`, binds loopback ports, and
+may take several minutes.
+
+The accepted closure receipt is committed as
+`spike/t201/results-t20.14.json`
+(`sha256:bad98140f0974a5f929355390d4b9bbb538d8f503d62421ca20fa2888046e1f2`).
+On its macOS/arm64 reference machine, 10,010 calls and 10,005 unit mappings
+produced 10,004 caller and comparison identities. The observed stages were
+205 ms sync, 199 ms index, 227,416 ms extraction, 12 ms Atlas, 17,983 ms
+Caller Map, and 18,098 ms comparison. Both service reads returned a bounded
+100-row page with continuation; the two UI profiles mounted only the current
+100 rows. The receipt also binds the separately versioned current-writer v7
+publication/sweep receipt. Failure injection lives only in this acceptance
+harness rather than in production configuration; the normal embedded-UI
+journey is pinned by Vitest against the same components. Every duration is a
+reference-machine observation, not a universal performance promise. Passing
+the closure changes neither the experimental-dark registration nor the
+external `NOT_ESTABLISHED` accuracy posture.
+
+There is no production Change Workbench in the current release. The available
+production pieces are separate: a human can browse a declaration in Contracts,
+carry its operation to Impact, inspect cited matching/unresolved evidence and
+the coverage certificate, then use Search, SCIP navigation, and History
+independently. The rich Investigations page and the T21.10 Workbench shell
+described below are development fixture projections, not a production
+ticket-intake or checklist workflow.
+
+The internal T21.2 storage boundary now supports an immutable, canonical
+Change Brief as a child of one Investigation revision. It stores the ticket
+kind, human-authored Why fields, an inert external reference, and exact
+contract-selection or proposed-source commitments; changing any of them
+atomically appends a new parent revision and preserves the old brief. It reuses
+Investigation sharing, transfer, revocation, archive, audit, authorization,
+and signed-dossier behavior. This is production-unregistered/default-dark:
+the current release still registers no HTTP, UI, or MCP operation that creates
+or edits a Workbench.
+
+The internal T21.3 service can preview, create, revise, and read that brief
+without giving adapters a second evidence or authorization path. A preview
+commits to the current principal authorization, exact repository and
+declaration snapshots, requested evidence capability versions, parent
+revision, and proposed-file hashes, then returns blockers and a transparent
+count/byte estimate without writing. Submission re-runs the preview and uses an
+idempotency key plus expected Revision; any changed permission, commit,
+declaration, proposal, capability, or current Revision refuses the write.
+If the serialized authorized repository universe exceeds the Revision's
+64 KiB field ceiling, preview returns
+`DECLARED_UNIVERSE_TOO_LARGE`, never `Ready`. Nil and empty contract-selection
+sets canonicalize to one brief identity. Mutation receipts revalidate their
+principal and key on every read; after a write-side timeout, the service makes
+one bounded cancellation-independent receipt lookup so retrying that key can
+recover the committed result.
+Proposal source bytes are never returned or retained. A conditional Huma
+projection exists for tests and future registration, but it is absent from the
+normal production server's routes, OpenAPI, and advertised capabilities.
+The synthetic adapter also supplies the T21.13 MCP projection described in
+[Agents (MCP)](#agents-mcp). It calls this same service and the shared checklist mutation boundary;
+ordinary production startup still supplies neither service to MCP.
+
+## Synthetic Change Workbench shell
+
+`make dev` and `make dev-api` explicitly set
+`PHEBS_SYNTHETIC_WORKBENCH=1` alongside the documented synthetic Investigation
+and Contract Atlas fixtures. They also bind the retained
+`docs/fixtures/change-workbench/t2114-workbench-closure.bundle` through the
+ordinary sync, zoekt index, and provisional protobuf/Thrift extraction
+pipeline. The bundle has no `index.scip`; Kafka, Redis, document-store, SQL,
+and runtime readers are not enabled. Only the exact synthetic setting is
+accepted, and startup fails closed unless both fixture adapters and the
+Workbench service are available. The resulting authenticated
+`change-workbench` capability exposes the experimental `#/workbench` route and
+its conditional HTTP operations. Setting ordinary production configuration
+never enables it; this adapter does not satisfy the retained validation or
+pilot-continuation gate.
+
+The Workbench home offers two read/write-safe entry paths:
+
+- paste up to 16 KiB of ticket context, choose add, modify, migrate, or retire,
+  and shape an editable Why draft; or
+- open one exact Contract Atlas operation and choose **Start Workbench** to
+  seed its complete protocol, repository, declaration-lineage, and canonical
+  operation identity.
+
+An existing Investigation may be resumed by ID. Resume first performs an
+authorized read of its current revision and then places both the Investigation
+ID and exact Revision ID in the URL. Reload, deep links, and the persistent
+Why → What → Where → How rail preserve those IDs. If that link is no longer
+current, the shell refuses to retarget it silently and offers a separate link
+to the newly authorized current revision. Unknown and newly unauthorized IDs
+share the same non-disclosing unavailable view.
+
+Why keeps human-authored problem, desired outcome, success criteria,
+non-goals, assumptions, open questions, inert external reference, and the
+bounded analysis-contract fields editable. What keeps ticket mode, visible
+repository universe, exact endpoint roles and identities, and optional
+proposal source explicit. Add and modify accept proposed protobuf or Thrift
+source; migrate and retire do not. The browser checks the reviewed 256-file,
+4 MiB-per-file, and 32 MiB aggregate source ceilings before sending a preview.
+After a saved Workbench is reopened, only the retained proposal
+path/hash/size commitment is shown; source bytes must be supplied again for a
+new revision.
+
+Each endpoint row in What has **Discover**. It opens one bounded Contract
+Atlas page and explains that an operation name is not an identity. **Use
+endpoint** copies the complete protocol, repository, declaration lineage, and
+canonical operation together; it does not run a preview or promote name-only
+evidence. When operation spellings repeat, the accessible action name also
+includes protocol, repository, and lineage so keyboard and screen-reader users
+can distinguish the choices. Migrate/replace uses Discover once for the
+current row and once for the replacement row. **Next endpoints** replaces the current result rows;
+prior result pages are not retained in the DOM. Escape or the explicit close
+button dismisses and returns focus to Discover; an outside click dismisses
+without moving focus unexpectedly. The existing identity fields remain
+visible for deliberate correction and inspection, but the synthetic
+walkthrough requires no canonical-identifier typing after Atlas discovery.
+
+Opening a step and editing fields perform no preview or mutation. **Preview
+revision** is an explicit read-only operation. Only a ready preview with the
+same current draft digest enables **Create Workbench** or **Append revision**;
+any later edit marks the preview expired and requires **Refresh preview**.
+Compatibility `unavailable` remains visibly distinct from a compatible
+result. Permission loss, source refusal, stale revision or preview conflicts,
+and retry paths remain explicit; structured server problem responses render
+their bounded detail rather than raw JSON. Unsaved edits install the browser's
+ordinary tab/unload warning; a same-app navigation link that leaves the
+Workbench or drops an exact revision identity also asks for confirmation,
+while movement among its four steps remains uninterrupted. A failed
+create/append invalidates its preview so retry requires fresh evidence.
+General schema validation stays distinct from source-limit refusal, endpoint
+growth stops at three selections, and oversized UTF-8 ticket or proposal
+pastes remain visible with an explicit refusal instead of being silently
+truncated. The responsive rail becomes a horizontal step strip on
+narrow screens, while native labels, headings, navigation landmarks,
+current-step state, live status regions, visible focus, and native
+buttons/links preserve keyboard and screen-reader operation.
+
+The separate authenticated `change-workbench-evidence` capability lights up
+only when the synthetic adapter has bound the shared impact, implementation,
+and checklist services together. Without that capability, Where and How show
+an explicit unavailable state and issue no fallback evidence request.
+
+Where reads one current bounded impact page. Its **Analysis scope & gaps**
+panel stays adjacent to the source-first inventory and shows capability,
+coverage, and typed gap state before the rows. Atlas declarations,
+implementations, name matches, extractor abstentions, exact callers,
+unit-attribution ambiguity, migration comparison classes, retained
+compatibility findings, affected-field references, and resource planes keep
+their service-defined classifications. Source links name the exact repository,
+commit, path, and line span and navigate to that immutable commit. Migration
+comparison sides retain their bounded old/replacement caller links;
+affected-field rows retain every visible evidence occurrence; and an enabled
+resource-plane relationship retains its subject, object, classification, and
+cited sources. The header counts evidence groups rather than mixing unlike row
+types into a false exact total. Optional unit, owner, path, freshness,
+resolution, ordering, comparison-level, and compatibility-run inputs are
+explicit server filters. **Next page** replaces the mounted rows with the
+opaque-cursor page; **Previous page** returns through the retained cursor path.
+An empty page says that it does not establish absence or completeness, and
+stale cursors restart from the first exact page.
+The panel's help availability is derived from the capability and coverage rows
+returned for that exact projection; the UI does not assume that dark readers
+are enabled.
+
+How reads related implementation/history evidence and the deterministic
+checklist in parallel. Up to 32 optional source anchors may be supplied as
+exact repository, commit, path, line, character, and UTF encoding identities.
+Related rows preserve selected versus review-candidate state, code role,
+selection rule, immutable source span, and bounded commit/diff detail.
+Capability failures and gaps stay visible rather than becoming guessed file
+recommendations. Only the current implementation page and current checklist
+page are mounted.
+
+Checklist suggestions are deterministic and never persisted. Their current or
+stale evidence state and immutable citations remain separate from the
+**Human-recorded** Disposition panel. A current suggestion accepts only the
+fixed categories `accepted`, `rejected`, `completed`, `reopened`, and
+`waived`; rejected, reopened, and waived require rationale. Correcting an
+existing record explicitly supersedes that record. A stale suggestion with no
+prior Disposition is disabled rather than silently retargeted. Snapshot or
+active-record conflict offers **Restart exact evidence** before another
+mutation is allowed to rely on the projection. The refreshed checklist
+supplies the current active Disposition, so a correction retry derives a new
+`supersedes` identity instead of replaying the stale request. Permission loss
+uses the same non-disclosing unavailable state. There is no comment,
+assignment, due date, priority, custom state, task, or implicit completion
+action.
+
+## Retained four-story closure walkthrough
+
+Start `make dev` with a fresh data directory, sign in, open
+**Change Workbench**, and use the committed synthetic repository selected by
+Contract Atlas. The fixture source separates `idl/proto`, `idl/thrift`, and
+`src`; its protobuf and Thrift services deliberately share a Search operation
+name.
+
+For each story, complete Why with human-owned intent, then use What as follows:
+
+- **Add:** keep the discovered Search endpoint as `analogous`, author the
+  bounded proposed `Index` IDL, and preview explicitly.
+- **Modify:** discover Search as `current`, supply bounded replacement IDL,
+  and preview explicitly.
+- **Migrate:** discover Search as `current`, add a second selection, discover
+  SearchV2 as `replacement`, and preview explicitly.
+- **Retire:** discover LegacySearch as `current` and preview explicitly.
+
+After the explicit create/append action, Where keeps declaration,
+implementation, exact caller, name-only match, extractor abstention,
+unit-attribution ambiguity, failed/stale coverage, and unsupported resource
+planes separate. The adjacent **Analysis scope & gaps** help explains those
+states without requiring this manual. How keeps source/history evidence,
+missing SCIP/history gaps, deterministic unaccepted suggestions, citations,
+and immutable human Dispositions separate. Empty or exhausted pages do not
+mean that migration is complete or that retirement is safe.
+
+For MCP, call `search_contract_operations` first and carry the returned
+protocol, repository, declaration lineage, and operation fields unchanged
+into `preview_change_workbench`. Use the existing Contract Atlas, Caller Map
+and comparison, search, SCIP, history, and proof tools for evidence drill-down;
+there is no second Workbench evidence tool. A write-capable named key may then
+use the existing explicit create/Disposition tools under the capability and
+owner checks described in [Agents (MCP)](#agents-mcp).
+
+The retained receipt is
+`docs/fixtures/change-workbench/receipt.json`. It pins the two-commit bundle,
+the four scenario names, the protobuf/Thrift corpus, unsupported planes, and
+external `NOT_ESTABLISHED` posture. `closure-states.json` contains acceptance
+inputs, not observed production facts. Neither artifact establishes runtime
+use, completeness, migration completion or safety, retirement safety, or
+extraction accuracy.
+
+The retained repository also contains minimal generated gRPC and Thrift
+artifacts and `generated-from-snapshot.json`. Focused acceptance mirrors the
+committed bundle and requires the normal pure-reader declaration, consumer,
+and caller extractors to reproduce the protobuf and Thrift lineage joins and
+registration facts. The failed/stale coverage and unsupported-plane examples
+remain explicit `closure-states.json` composition inputs; they are not
+misrepresented as extractor observations.
+
+The Impact page uses the same mode-correct vocabulary. `Resolved evidence`
+contains declaration-proven call rows or stable field-reference rows.
+`Matching call evidence` is an exact operation-object match from a
+bare-operation query, not a declaration-proven logical-service roster.
+`Extractor abstentions` are source sites the extractor deliberately could not
+assign, not confirmed callers or failed runs. `Coverage certificate` is the
+deterministic receipt of which visible repository revisions and extractor
+domains were covered, stale, failed, processing, unsupported, or bounded; it
+is not an accuracy or completeness score. Epic 21 retains these semantics and
+adds the **Analysis scope & gaps** summary. Its generated **Matching static
+evidence** help qualifies the narrower Matching call evidence section, and
+**Could not resolve** qualifies Extractor abstentions; neither changes the
+mode-specific API categories. The deterministic Coverage certificate remains
+available as collapsed advanced detail beneath the scope/gaps summary.
+
+Each qualified heading has a generated help control. Hover or keyboard focus
+shows the short and expanded explanation; click or tap pins it. Escape, its
+close control, or an outside click dismisses it, with focus returned after
+explicit keyboard/button dismissal. A short hover bridge keeps the portaled
+dialog open while the pointer crosses the visual gap so its text and scroll
+area remain operable. The explanation includes the evidence and authority
+boundaries and shows the canonical unavailable message when its capability is
+dark. Canonical glossary text rejects Markdown/HTML control syntax before any
+MANUAL projection. If the interactive control cannot be used, the generated
+glossary below is the complete documentation fallback.
+
+<!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
+#### Canonical Change Workbench glossary
+
+The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274`.
+
+##### Analysis scope & gaps
+
+Shows what phebs examined, what evidence was available, and what remained unsupported or unresolved.
+
+This summary binds visible repositories and revisions to evidence domains, freshness, failures, inventory boundaries, unresolved counts, and unsupported planes. It qualifies the adjacent result and is not a completeness score.
+
+- Evidence boundary: It summarizes recorded processing and inventory state; it does not prove that unobserved callers, resources, or runtime uses do not exist.
+- Authority boundary: Only the requesting principal's authorized repository universe contributes rows, counts, or capability state.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `contract-atlas`, `contract-impact-report`, `coverage-certificate`
+- When unavailable: Analysis scope & gaps is unavailable because no supporting contract or coverage capability is enabled.
+
+##### Could not resolve
+
+A relevant source construct was observed, but the bounded resolver deliberately did not assign it to one identity.
+
+This is an extractor abstention, not a confirmed caller and not a processing failure. The reason and cited source remain available for review when the evidence pack recorded them.
+
+- Evidence boundary: The row proves an observed construct and a refusal reason only; it makes no claim about the construct's runtime target.
+- Authority boundary: The label is derived from authorized published evidence and cannot be upgraded by presentation code.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `caller-map-exact-identity`, `contract-impact-report`
+- When unavailable: Resolver abstentions are unavailable because no supporting caller or impact capability is enabled.
+
+##### Coverage certificate
+
+The deterministic audit receipt behind Analysis scope & gaps.
+
+The certificate records the authorized repository universe, indexed revisions, published extraction runs, freshness, failures, counts, protocols, and inventory boundaries under one content digest.
+
+- Evidence boundary: It proves change detection over recorded extraction state, not extraction correctness, business completeness, or runtime absence.
+- Authority boundary: Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `atlas`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): `coverage-certificate`
+- Required capabilities (any): none
+- When unavailable: The coverage certificate is unavailable because extraction coverage is not enabled for this surface.
+
+##### Implementation evidence
+
+Cited source or history that may inform how the change is implemented.
+
+Search matches, definitions, references, tests, mocks, documentation, blame, commits, and diffs retain immutable repository, revision, path, and span provenance plus the rule that selected them.
+
+- Evidence boundary: Similarity or proximity is not a correctness ranking and does not authorize an edit.
+- Authority boundary: The developer reviews and decides whether evidence is relevant; phebs does not turn it into an instruction.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `code-navigation`, `history`, `source-search`
+- When unavailable: Implementation evidence is unavailable because search, code navigation, and history capabilities are not available.
+
+##### Matching static evidence
+
+A source occurrence whose extracted object matches the question.
+
+The occurrence keeps its immutable citation and extraction tier. A matching operation object may not be joined to one declaration lineage, generated client, logical service, deployable, or runtime use.
+
+- Evidence boundary: This is source-level matching evidence, not a proven service roster or a resolved caller for one exact declaration.
+- Authority boundary: Presentation code may qualify or group the row but cannot promote its evidence tier or lineage.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `atlas`, `caller_map`, `impact`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): none
+- Required capabilities (any): `contract-atlas`, `contract-impact-report`
+- When unavailable: Matching static evidence is unavailable because contract evidence is not enabled.
+
+##### Name match needing review
+
+An operation-name match that is not proven to belong to the selected declaration.
+
+The source citation and candidate operation remain reviewable, but missing or ambiguous generated-client and declaration provenance prevents exact caller attribution.
+
+- Evidence boundary: A shared method name is not contract identity and cannot establish blast radius for one declaration.
+- Authority boundary: Only a validated exact-identity join may promote the row to Resolved caller.
+- Applies to modes: `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): `caller-map-exact-identity`
+- Required capabilities (any): none
+- When unavailable: Name-match review is unavailable until the exact-identity Caller Map capability is enabled.
+
+##### Resolved caller
+
+A source call occurrence joined through generated-client provenance to the exact selected declaration lineage.
+
+The row retains the call-site citation, generated symbol, wire operation, declaration lineage, and any separate unit attribution. Missing or ambiguous attribution never removes the source occurrence.
+
+- Evidence boundary: Static resolution does not prove runtime execution, traffic, ownership, or migration completion.
+- Authority boundary: Only the exact-identity Caller Map service may emit this label; legacy matching evidence cannot be renamed into it.
+- Applies to modes: `migrate`, `modify`, `retire`
+- Registered surfaces: `caller_map`, `manual`, `mcp`, `workbench`
+- Required capabilities (all): `caller-map-exact-identity`
+- Required capabilities (any): none
+- When unavailable: Resolved callers are unavailable until declaration-proven caller identity is enabled; matching static evidence remains separate.
+
+##### Success criterion
+
+A human-authored condition used to judge whether the ticket achieved its intended outcome.
+
+Phebs may attach cited evidence and analysis gaps to the criterion, but it cannot invent the business condition or declare it satisfied.
+
+- Evidence boundary: Code and contract evidence can inform review but cannot establish a business outcome by itself.
+- Authority boundary: Only an explicit authorized human revision records or changes a success criterion.
+- Applies to modes: `add`, `migrate`, `modify`, `retire`
+- Registered surfaces: `manual`, `mcp`, `workbench`
+- Required capabilities (all): `change-workbench`
+- Required capabilities (any): none
+- When unavailable: Structured success criteria are unavailable until Change Workbench is enabled.
+
+<!-- END GENERATED CHANGE WORKBENCH GLOSSARY -->
+
+Epic 21 is authorized for specifications, tests, synthetic demonstrations, and
+production-unregistered/default-dark implementation only. Because it stores
+its brief, snapshots, analysis artifacts, and human records under
+Investigations, production Workbench creation, mutation, export, UI, and MCP
+registration inherit Epic 16's still-unsatisfied `ESTABLISHED` validation plus
+explicit pilot-continuation gate. Completing its implementation tickets cannot
+clear that gate or support an external accuracy, migration-complete, or
+safe-to-retire claim.
+
+The T21.9 checklist composes the current authorized T21.7 Where and T21.8 How
+projections. It remains production-unregistered/default-dark: T21.11 exposes
+its HTTP and UI projections only through the fixture-coupled synthetic
+Workbench. T21.13 adds no separate checklist-read tool; its explicit
+`record_change_disposition` mutation forwards an already evidence-bound
+suggestion to this same service for current-projection validation. Each machine
+suggestion binds its
+originating Workbench Revision, normalized evidence inputs, complete evidence
+snapshot, deterministic selection rule, and exact evidence references.
+Suggestions are never persisted or accepted automatically. When evidence
+changes, the service emits new unaccepted suggestion identities and continues
+to display dispositions over the prior evidence as `stale`; it never silently
+retargets the human record.
+
+The human projection consists only of immutable Dispositions in the fixed
+categories `accepted`, `rejected`, `completed`, `reopened`, and `waived`.
+Rejected, reopened, and waived records require a rationale. A correction or
+reopen appends a successor that names the exact active predecessor — and is
+possible only while the disposition's originating Workbench revision is still
+current: once the revision advances, prior dispositions remain visible,
+immutable history but can no longer be corrected or reopened. Each
+Investigation's disposition history is bounded at 1,000 records; the append
+boundary refuses further dispositions at the bound rather than writing a
+record the reader could no longer list. Successors preserve
+the old text and category. Each append requires the Investigation owner,
+expected current Revision, an exact idempotency key, and the authenticated
+actor, and is audited in the same transaction. Reader grants may inspect the
+history but cannot mutate it.
+
+This does not change T16.8 ReviewItems into tasks. ReviewItems remain
+deterministic machine projections with no hand-creation or mutation path.
+There is no ChecklistItem/Task table, comment, assignment/assignee, due date,
+priority, custom state, or checklist-owned Decision. Dispositioning every
+displayed entry does not establish completeness, correctness, runtime use,
+migration completion, or retirement safety, and it creates no Investigation
+Decision.
+
+Named API keys are read-only for Investigation mutations unless their creator
+explicitly selected the immutable `investigation:write` capability. Existing
+named keys and the migration-only legacy key retain an empty capability set
+and must be replaced deliberately to change authority. The capability is only
+an additional credential gate: it never expands repository visibility,
+Investigation access or ownership, or principal authority. A capable key still
+passes the same owner, current-Revision, preview, snapshot, and idempotency
+checks. Browser-session writes use the existing session authorization and CSRF
+check and do not carry or emulate a bearer-key capability. The Workbench
+remains production-unregistered/default-dark. T21.13 uses this capability only
+for its fixture-coupled MCP preview binding and two explicit durable mutation
+tools. The stateless request is authenticated again before tool discovery or
+invocation, so revocation, expiry, or disabling the owning user removes access
+before the Workbench adapter runs. Capability possession still does not grant
+repository visibility, reader/owner access, or authority over another
+principal's Investigation.
+
+The existing `check_contract_compatibility` HTTP and MCP contracts continue to
+return retained content-addressed proof bundles. Workbench compatibility is an
+additive explicit Investigation analysis path and does not migrate, delete, or
+reidentify those bundles. This internal T21.6 path remains
+production-unregistered/default-dark with the rest of the Workbench.
+
+What identifies an existing endpoint by the complete `(protocol, repository,
+declaration lineage, canonical operation)` tuple. Equal operation spellings in
+another protocol, repository, or lineage cannot satisfy that selection.
+Declaration links carry the selected repository HEAD commit plus exact path
+and byte/line spans. Add requires a proposal and no current/replacement
+endpoint; modify requires one current endpoint and a proposal; migrate
+requires distinct current and replacement identities and no proposal; retire
+requires one current endpoint and no proposal. Optional analogous selections
+remain context, not substitutes for required roles.
+
+Proposed protobuf and Thrift preview files inherit the production parser
+preflights: at most 256 files, 4 MiB per file, 32 MiB aggregate, 500,000 tokens
+per file, and 128 structural levels per file. Byte/count limits and lexical
+preflight run before the in-process parser. Preview returns only sorted
+path/hash/size commitments, never source bytes; viewing or previewing creates
+no proof bundle, Investigation run, or repository evidence. Protobuf previews
+show the pinned Buf `WIRE` engine/policy and all relevant ceilings. Thrift has
+parsing preview support but no compatibility engine, so it renders
+`unavailable` rather than a compatible verdict.
+
+Retaining a protobuf modify analysis is a separate explicit mutation. It
+rechecks the owner, current Workbench Revision, proposal path/hash/size,
+authorization snapshot, exact Atlas endpoint and commit-pinned declaration
+spans, and pinned compatibility policy. Caller-supplied `before` bytes are not
+baseline authority: every submitted path is re-read through the bounded Git
+layer from the currently authorized selected repository at its exact committed
+revision; path and bytes must match, and every declaration-source path must be
+present, before a run is created. One idempotency key yields one audited
+Investigation run/artifact; an exact retry returns that same terminal result,
+including a bounded failed artifact when the checker refuses. A run abandoned
+by a crashed worker can be requeued only after its lease is at least five
+minutes old, under the exact observed lease tuple, and within a three-attempt
+ceiling; live workers remain fenced. Failed artifacts retain only a stable
+failure classification, never Buf stderr or proposal symbols. The artifact
+contains input commitments and the compatibility result, not submitted source
+bytes, and is owned by Investigation retention. It is not a proof bundle and
+does not change proof-bundle reauthorization, expiry, deletion, bytes, or
+identity.
+
+The T21.7 Where reader composes those exact Workbench identities
+with the existing Contract Atlas, Caller Map, caller comparison, and stable
+field-reference services. It remains production-unregistered; its conditional
+T21.11 HTTP/UI projection is fixture-coupled. T21.13 deliberately adds no
+parallel MCP impact reader: agents use the existing Epic 20 and core tools. Add
+shows analogous declarations and
+implementations and deliberately has no caller stream. Modify shows the
+current exact caller page plus an explicitly selected retained compatibility
+artifact and references to its affected stable fields. Migrate uses the one
+snapshot-consistent old-to-replacement comparison; it never zips two
+independently timed caller pages. Retire keeps callers, name matches,
+extractor abstentions, unsupported planes, and gaps adjacent and never derives
+a safe-to-decommission result.
+
+The typed inventory keeps Atlas implementations, name matches needing review,
+extractor abstentions, resolved callers, unit-attribution ambiguity, migration
+comparison classes, and field references in separate collections. Its opaque
+cursor binds the current Revision and brief, principal, filters, page size,
+Atlas and compatibility content, resource-plane state, and each reused
+service's snapshot and cursor. Streams advance together. A stream that
+finishes early is re-read only to verify that its snapshot has not changed;
+unsupported, failed, stale, and human-asserted planes remain visible on every
+page and are never converted into absence when pagination completes.
+
+Field-reference browsing is side-effect-free. It reuses the proof engine's
+authorization-filtered visible repository set, coverage-certificate
+double-check, stable `(lineage, message, field number)` join, and exact source
+evidence resolution, but it does not write a proof bundle. The existing
+`find_proto_field_references` proof operation uses that same reader and remains
+the only path that persists the content-addressed bundle. Likewise, the
+Workbench compositor has no direct evidence-store access: all evidence comes
+from the shared Atlas, Caller Map/comparison, and field services.
+
+The T21.8 How reader remains production-unregistered with the rest of the
+Workbench; its conditional T21.11 HTTP/UI projection is fixture-coupled. It
+starts from the current authorized Revision's exact selected contracts plus up
+to 32 explicit user pins. A pin is an exact visible
+repository, immutable indexed commit, safe path, and source position; its line
+and UTF-8/16/32 character boundary are checked against the immutable bytes
+before it becomes selected. Selected
+Atlas declaration and implementation files are accepted only at that same
+authorized indexed commit and are re-read through the bounded Git object layer
+to attach a content digest. There is no implicit ref and no mirror-`HEAD`
+fallback.
+
+Related operation-name search is limited to cited repositories. Search
+matches, SCIP definitions and references, and selected path-history
+commits/diffs are always review candidates, not proposed or recommended edits.
+Only the Atlas declaration/implementation inputs and explicit user pins are
+marked selected. Each row displays the deterministic rule or explicit-pin rule
+that admitted it. Production, test, mock, generated, vendor, and documentation
+roles remain separate; generated and vendor boundaries stay visible instead
+of being hidden as implementation detail.
+
+If indexed search, SCIP, a usable source position, or Git history is
+unavailable or fails, the response records a typed gap and does not guess a
+path. The composition is capped at 32 pins, 64 selected sources, 32 MiB of
+source reads, 32 indexed searches, 50 candidates per search, and 500 search
+candidates in aggregate. Each search overreads one sentinel so a truncated
+candidate tail is recorded as a gap. It also caps 32 SCIP anchors, 16 history
+files with two commits each, 2,000 total rows, and 100 rows per page. Diff text
+is excerpted to 16 KiB. Its opaque cursor binds the principal,
+current Revision and brief, normalized pins, visible indexed commits, relevant
+Atlas state, and the complete composed snapshot; authorization and indexed
+commits are rechecked after the read. This reader runs no repository code,
+generator, build, test, plugin, or mutable checkout and creates no proof bundle
+or Investigation mutation.
+
+The protocol-neutral resource registry can display `enabled`, `unsupported`,
+`failed`, `stale`, and `human_asserted`. Only an explicitly registered real
+pack may contribute relationships, and only while its state is `enabled`.
+State-only or human-authored entries contribute no relationships. The built-in
+Kafka, Redis, document-store, SQL, and runtime Workbench planes currently
+remain unsupported; Kafka's separate topic-proof surface is not silently
+promoted into a selected-ticket dependency graph. An enabled pack is bounded
+to 200 relationships with at most 16 canonical source citations per relationship.
+Malformed or oversized output fails closed; hidden citations are removed
+before serialization, and cancellation is not converted into a pack failure.
+Hidden exact targets fail closed, and repositories outside the requesting
+principal's visibility cannot affect evidence rows, totals, capability/gap
+state, cursors, or serialized bytes. None of these states is runtime truth or
+a completeness score.
+
+Minimal `phebs.yaml`:
+
+```yaml
+server:
+  addr: "127.0.0.1:3070"  # local quick start
+
+auth:
+  cookie_secure: false  # plain-HTTP localhost only; keep the default true under HTTPS
+
+connections:
+  - name: zoekt
+    type: git
+    url: https://github.com/sourcegraph/zoekt.git
+```
+
+On a fresh data directory, startup prints `first-run setup token: ...`. Open
+[http://localhost:3070](http://localhost:3070), enter that token with an administrator email and a
+password of at least 12 bytes, and the browser starts a persisted session.
+The token exists only in process memory and stops working as soon as the
+first user is created; treat the startup log as sensitive until then. The
+repo syncs and indexes within one poll cycle
+(≤ ~20 s by default); watch progress on the **Repos** page.
+
+For unattended provisioning, configure `auth.bootstrap_user` instead. For
+HTTPS deployments, omit `cookie_secure` (the secure default), keep phebs on a
+private listener, and terminate TLS at a trusted reverse proxy.
+
+`phebs serve` flags:
+
+
+| Flag                   | Meaning                                                              |
+| ---------------------- | -------------------------------------------------------------------- |
+| `-config path`         | config file; omitted = defaults (no connections, data in `~/.phebs`) |
+| `-addr 127.0.0.1:3070` | listen address, overrides `server.addr`                              |
+
+
+
+
+## Searching
+
+phebs uses zoekt's native query language. Patterns are regular expressions;
+plain text behaves like substring search. Filters and patterns combine with
+implicit AND; prefix any atom with `-` to negate it.
+
+
+| Syntax                       | Meaning                                                     |
+| ---------------------------- | ----------------------------------------------------------- |
+| `foo bar`                    | files containing `foo` AND `bar`                            |
+| `"foo bar"`                  | the exact phrase                                            |
+| `f[ou]+nc.*Parse`            | regular expression                                          |
+| `case:yes Foo`               | case-sensitive (default: smart case)                        |
+| `repo:zoekt`                 | repo name matches regex                                     |
+| `file:\.go$` / `-file:_test` | file path matches / doesn't match                           |
+| `lang:go`                    | language filter                                             |
+| `sym:ParseQuery`             | symbol definitions (needs ctags at index time)              |
+| `content:foo`                | match file content only (not paths)                         |
+| `archived:yes|no`            | filter by repo archived state *(phebs, from repo metadata)* |
+| `fork:yes|no`                | filter by fork state *(phebs)*                              |
+| `public:yes|no`              | filter by visibility *(phebs)*                              |
+| `context:backend`            | restrict to a named repo set *(phebs, see below)*           |
+| `rev:release-1`              | select one allowlisted branch/tag revision *(phebs)*        |
+
+
+Examples:
+
+```
+watchModeNeedle repo:my-project
+"TODO(ben)" -file:vendor/ lang:go
+sym:ClaimJob fork:no
+case:yes Searcher file:internal/
+ClaimJob context:backend
+deprecatedCall rev:release-1 repo:acme/api
+```
+
+
+### Revision scopes
+
+HEAD remains implicit and is the revision searched when a query has no `rev:`
+atom. Additional revisions are admitted explicitly by full Git ref while the
+left-hand key provides the query-facing selector:
+
+```yaml
+revisions:
+  github.com/acme/api:
+    release-1: refs/heads/release/1
+    v1.4.0: refs/tags/v1.4.0
+```
+
+This indexes `HEAD` plus the two named refs. `deprecatedCall rev:release-1`
+searches the release branch only in visible repositories that published that
+selector; `rev:v1.4.0` selects the tag. Selectors and refs are case-sensitive.
+Exactly one bare, ungrouped, non-negated `rev:` scope is accepted per query.
+An unknown selector returns a bounded query error without naming repositories.
+
+The ceiling is eight revisions per repository including HEAD, so the config
+allows at most seven additions. Wildcards, commit IDs, short/ambiguous refs,
+and duplicate mappings are rejected at startup: values must be canonical
+`refs/heads/*` or `refs/tags/*`. A normal sync, webhook fetch, forced reindex,
+or watched-ref move republishes the whole admitted set atomically. Changing the
+allowlist takes effect on the next sync/index job. File links still use the
+immutable selected commit, while extraction, SCIP defaults, coverage, and
+proof bundles intentionally remain anchored to HEAD.
+
+
+
+### Search contexts
+
+Contexts are named repo sets defined in config — shorthand for scoping
+queries to a slice of the index:
+
+```yaml
+contexts:
+  backend:
+    - "github.com/acme/api-*"
+    - "gitlab.example.com/team/platform/*"
+  docs:
+    - "github.com/acme/handbook"
+```
+
+`context:backend needle` searches only repos whose full name matches one of
+the set's glob patterns (`*` does not cross `/`; a pattern without wildcards
+is an exact name). Multiple `context:` atoms union their sets. A context is
+a scope, not a predicate: it applies to the whole query and can't be
+negated or grouped in parentheses — both forms, and an unknown name, are
+rejected with an error. Inside a double-quoted string `context:` is plain
+content, not a filter.
+
+Result bounds: `max_matches` (default 50 files, cap 500) and `context_lines`
+(default 0, cap 10) on the API; searches are capped at 10 s of wall time.
+Each result file includes the immutable indexed commit in `ref`. Repositories
+without a committed index state, deleting repositories, and shards without a
+live repo row are excluded from every query. A shard whose exact embedded
+branch/commit set does not equal the row's atomically committed revision set is
+also discarded. Permission filtering runs before `rev:` resolution, and the
+selected result commit is checked again before serialization.
+
+### Precise code navigation (SCIP)
+
+`sym:` search uses ctags. Precise go-to-definition, references, and hover use
+a committed [SCIP](https://scip-code.org/) index instead. Run the appropriate
+SCIP indexer for the repository's language, write its binary protobuf as
+`index.scip` at the repository root, commit it with the source it describes,
+and let phebs sync/reindex that commit. No separate upload or side database is
+required.
+
+The first lookup lazily reads `index.scip` from the exact indexed commit. An
+absent index is a normal `available: false` result. Index blobs over 64 MiB,
+source files over 10 MiB, more than 32 MiB of aggregate source conversion in
+one lookup, malformed or semantically oversized indexes, symbolic/short
+revisions, and unsafe paths fail explicitly. The LRU snapshot cache has a 512
+MiB accounted budget. Results are deterministically selected; reference
+responses stop at 500 locations and set `truncated`, and hover content is
+capped at 64 KiB. The UI uses UTF-16 offsets (matching browser strings), while
+the HTTP API can request UTF-8, UTF-16, or UTF-32 conversion.
+
+The extraction reader uses the same root-only product boundary with its own
+trusted corpus ledger. The root path is fixed—nested indexes and manifests are
+not alternatives—and the blob must have appeared as a regular file in the
+complete walk of the indexed commit. Mutable refs and Git replacement objects
+cannot redirect it; lazy object fetching is disabled. The reader opens only
+the recorded immutable blob, enforces its separate 64 MiB limit, and
+recomputes SHA-256 before parsing. A root `index.scip` symlink is an explicit
+extraction failure, not an “index absent” result. T20.1 selected this mode for
+the frozen monorepo target; phebs has no sharded-index manifest or part-reader
+surface.
+
+### Git history
+
+History reads the existing bare mirror; it does not enlarge the zoekt index.
+From a file, choose **Blame** for line attribution or **History** for the
+rename-following commit list, then open a commit to inspect parents, changed
+files, binary markers, and its first-parent diff. Root commits compare against
+the empty tree. Blame is capped at 50,000 lines and 10 MiB source blobs, commit
+pages at 200 rows, aggregate metadata at 64 MiB, and patch text at 2 MiB with
+an explicit `truncated` flag. Git producers are canceled when a hard output
+limit is reached. NUL-bearing blobs are rejected as binary; other non-UTF-8
+line content is returned with invalid byte sequences replaced for JSON display.
+Diff context defaults to three lines when omitted, while an explicit
+`context_lines=0` returns zero-context hunks. Every request validates the
+repository/path and pins supplied branch names to immutable object IDs before
+subsequent Git commands run.
+
+## Web UI
+
+Served at `/` from the binary. After setup/login, the main views are
+deep-linkable hash routes:
+
+- **Search** (`#/search?q=…`) — the repository explorer always lists the
+repositories visible to the signed-in user, even before a search returns
+results. Select a repository, expand folders one level at a time, or open a
+file directly at its immutable indexed revision; **Add repository filter**
+preserves the current query and inserts one exact quoted `repo:` atom. Folder
+contents are loaded lazily and cached for that repository/revision/path. On
+mobile the explorer is a collapsed **Browse repositories** drawer. Search
+results still stream in as shards respond, grouped repo → file, with match
+counts and highlighted spans; line numbers link into the viewer.
+- **File viewer** (`#/file?repo=…&path=…&ref=…&L=42`) — read-only CodeMirror with
+syntax highlighting across ~30 languages (Go, JS/TS, Python, Rust, Java,
+C/C++, C#, Ruby, PHP, SQL, HTML/CSS, YAML, shell, …), a file-tree navigation
+column that auto-expands to the current file, and a highlighted, scrolled-to
+anchor line. Search links carry their immutable commit; old links without
+`ref` resolve the repo's recorded indexed commit before loading. Click a
+source position to open precise SCIP hover/definition/reference results when
+that revision contains `index.scip`; **Blame** and **History** open the Git
+views for the same immutable revision.
+- **History / blame / commit** (`#/history`, `#/blame`, `#/commit`) — follow a
+file across renames, map lines to commits, and render commit metadata,
+changed-file statistics, and bounded unified diffs.
+- **Repos** (`#/repos`) — sync/index state per repo (polled every 3 s),
+orphan flags, indexed commit, and administrator-only **Reindex** controls
+(a forced rebuild defeats the incremental short-circuit).
+- **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
+Named keys are read-only for Investigation mutations by default; the creation
+form can explicitly add the immutable `investigation:write` capability and
+listed metadata shows the reviewed capability name.
+- **Audit** (`#/audit`, administrators only) — the recorded action trail:
+logins (including failures), setup, logout, API-key lifecycle, and every
+mutating API operation, newest first with actor, target, status, and
+source IP.
+- **Analytics** (`#/analytics`, administrators only) — 30-day search volume,
+searches per day, average duration, and the repositories appearing most in
+results — computed entirely from local usage events.
+- **Contracts** (`#/contracts`, experimental) — browse provisional protobuf
+service declarations without first knowing an operation identifier. Exact
+repository/package/protocol/lineage filters lead to a service → operation
+index, then bounded request/response shapes, independently classified
+implementation/caller/abstention evidence, exact coverage state, and immutable
+source links. Duplicate service names remain separate by repository and
+provisional lineage. The protocol filter defaults to all registered protocols
+(protobuf and thrift); each row carries its protocol. Thrift operations show
+a `oneway` chip in place of the gRPC streaming chips, argument/result shapes
+render through the same message tree (result field `0` is the wire success
+slot), and union/exception declarations are badged. **Analyze impact**
+carries the selected canonical operation into the Impact form but does not
+submit it.
+- **Impact** (`#/impact`, experimental) — bounded contract-impact reports for
+canonical RPC operations (gRPC and Thrift consumer evidence), stable protobuf
+and Thrift field identities, and proposed before/after contract inputs. Field
+mode defaults to protobuf's 1..536,870,911 rules (including refusal of reserved
+19000..19999) and offers Thrift's 0..32,767 rules explicitly. That choice
+validates the input; the report remains neutral and may render every registered
+field-reference domain that admits the number. Known and unresolved consumers
+cite immutable source revisions; every conclusion renders its complete coverage certificate.
+The navigation item appears only when the server advertises the capability,
+and the contract-change tab additionally requires the pinned Buf startup probe.
+- **Topics** (`#/topics`, experimental) — topic-centered Kafka evidence:
+query one topic spelling and see producers, consumers (group ids as detail),
+and — rendered first, always — the unresolved census: per-shape-class counts
+of supporting source sites that could not be resolved, with zeros listed
+explicitly, `≥` marking bounded lower-bound counts, and distinct per-plane
+published-run states so producer-only or consumer-only extraction never turns
+the other plane's unmeasured zeros into affirmative zeros. Whole-file
+extraction gaps are disclosed separately through the coverage certificate.
+The navigation item appears with the
+`kafka-topic-usage` capability, which the server advertises whenever the
+proof surfaces exist — including deployments where the Kafka packs
+themselves are dark, in which case every answer honestly shows the no-run
+state. Nothing on this page is a completeness claim.
+
+The UI uses its DB-backed session cookie and automatically supplies CSRF
+tokens on mutations. A `401` clears stale authenticated state and returns to
+the login view.
+
+## HTTP API
+
+The API is OpenAPI-described by itself: fetch `/api/openapi.json` or browse
+the interactive docs at `/api/docs`.
+
+**Auth:** application endpoints accept either the browser session cookie or
+`Authorization: Bearer <named-or-legacy-key>`. Authentication is not disabled
+by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
+`/api/openapi*`, `/api/docs*`, auth status/enrollment/login/OIDC routes, and
+`/metrics`. `/api/webhook` uses its own HMAC trust boundary.
+
+
+| Endpoint                                                            | Method          | Purpose                                                                                        |
+| ------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------- |
+| `/api/health`                                                       | GET             | liveness `{"status":"ok"}`                                                                     |
+| `/api/version`                                                      | GET             | server version                                                                                 |
+| `/api/auth/status`                                                  | GET             | authentication/setup/OIDC state and current user                                               |
+| `/api/auth/setup`, `/api/auth/login`, `/api/auth/logout`            | POST            | first administrator, local login, and session logout                                           |
+| `/api/auth/keys`                                                    | GET/POST        | list or create the browser-session user's keys; creation accepts a closed `capabilities` array |
+| `/api/auth/keys/{id}`                                               | DELETE          | revoke one API key (browser session only)                                                      |
+| `/api/auth/oidc/start`, `/api/auth/oidc/callback`                   | GET             | OIDC authorization-code flow                                                                   |
+| `/api/search?q=&max_matches=&context_lines=`                        | GET             | search, JSON in one shot                                                                       |
+| `/api/stream_search?q=…`                                            | GET             | search over SSE (below)                                                                        |
+| `/api/repos`                                                        | GET             | repo rows                                                                                      |
+| `/api/repo-status`                                                  | GET             | repos + connections + orphan flag + last index job                                             |
+| `/api/reindex`                                                      | POST            | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job           |
+| `/api/audit?offset=&limit=`                                         | GET             | administrator only: audit events, newest first, `has_more` paging                              |
+| `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
+| `/api/webhook`                                                      | POST            | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set     |
+| `/api/mcp`                                                          | POST/GET/DELETE | MCP over Streamable HTTP; bearer-authed (see [Agents (MCP)](#agents-mcp))                                               |
+| `/api/find_operation_consumers?operation=`                          | GET             | experimental permission-scoped bare-operation matching-call proof bundle                        |
+| `/api/find_proto_field_references?lineage=&message=&field_number=`  | GET             | experimental permission-scoped protobuf-field-reference proof bundle                           |
+| `/api/find_field_references?lineage=&message=&field_number=`        | GET             | experimental permission-scoped protocol-neutral field-reference proof bundle                    |
+| `/api/find_kafka_topic_usage?topic=`                                | GET             | experimental permission-scoped Kafka topic-usage proof bundle with an always-present unresolved census |
+| `/api/get_extraction_coverage?domains=`                             | GET             | experimental assertion-free extraction-coverage proof bundle                                   |
+| `/api/check_contract_compatibility`                                 | POST            | experimental Buf WIRE verdict enriched with permission-scoped affected field references         |
+| `/api/proof_bundles/{id}`                                           | GET             | reauthorized immutable proof-bundle read; an ID is not a bearer credential                     |
+| `/api/contract_impact_report?operation=`                            | GET             | experimental bounded operation-impact report                                                   |
+| `/api/contract_impact_report?lineage=&message=&field_number=`       | GET             | experimental bounded stable-field impact report                                                |
+| `/api/contract_impact_report`                                       | POST            | experimental proposed-change impact report over the compatibility request shape                 |
+| `/api/contract_impact_reports/{id}`                                 | GET             | reauthorized deterministic report projection of one immutable proof bundle                      |
+| `/api/contract_atlas?repository=&package=&protocol=&lineage=&page_size=&cursor=` | GET | experimental bounded service/operation catalog over exact published evidence                    |
+| `/api/contract_atlas/operation?repository=&lineage=&operation=`     | GET             | experimental bounded operation, message-shape, implementation, and caller detail                |
+| `/api/contract_callers?protocol=&repository=&lineage=&operation=&page_size=&cursor=` | GET | experimental exact-declaration Caller Map with source/unit ordering and snapshot-bound pages |
+| `/api/compare_operation_callers?old_protocol=&old_repository=&old_lineage=&old_operation=&replacement_protocol=&replacement_repository=&replacement_lineage=&replacement_operation=&level=&page_size=&cursor=` | GET | experimental old-to-replacement static caller-evidence comparison over one shared snapshot |
+| `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
+| `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
+| `/api/tree?repo=&ref=`                                              | GET             | all file paths, recursive                                                                      |
+| `/api/find_definitions?repo=&path=&ref=&line=&character=&encoding=` | GET             | precise SCIP definition at a zero-based position                                               |
+| `/api/find_references?repo=&path=&ref=&line=&character=&encoding=`  | GET             | precise SCIP references (maximum 500)                                                          |
+| `/api/hover?repo=&path=&ref=&line=&character=&encoding=`            | GET             | SCIP signature/documentation at a position                                                     |
+| `/api/blame?repo=&path=&ref=`                                       | GET             | line-to-commit attribution, rename-aware                                                       |
+| `/api/commits?repo=&ref=&path=&limit=&offset=`                      | GET             | commit history; optional path follows renames                                                  |
+| `/api/commit?repo=&ref=`                                            | GET             | commit metadata, parents, and changed files                                                    |
+| `/api/diff?repo=&head=&base=&path=&context_lines=`                  | GET             | bounded unified diff and file statistics; context defaults to 3 and accepts explicit 0         |
+| `/metrics`                                                          | GET             | Prometheus metrics                                                                             |
+
+
+`stream_search` emits Server-Sent Events: one `results` event per shard batch
+(same JSON shape as `/api/search`), then a final `done` event with aggregate
+stats; errors arrive as an `error` event. Disconnecting cancels the search.
+
+```bash
+export PHEBS_TOKEN='phebs_...'
+curl -H "Authorization: Bearer $PHEBS_TOKEN" \
+  'localhost:3070/api/search?q=ClaimJob+lang:go' | jq .files[0]
+curl -N -H "Authorization: Bearer $PHEBS_TOKEN" \
+  'localhost:3070/api/stream_search?q=needle'
+curl -X POST localhost:3070/api/reindex \
+  -H "Authorization: Bearer $PHEBS_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"repo":"github.com/foo/bar","force":true}'
+```
+
+Code-navigation refs must be full 40- or 64-hex commit IDs; omission resolves
+the repository's recorded indexed commit. `line` and `character` are
+zero-based; `encoding` defaults to `utf16` and also accepts `utf8`/`utf32`.
+History endpoints similarly default omitted refs/heads to the indexed commit,
+then resolve mutable commit-ish values once before reading. Unindexed or
+deleting repositories fail closed.
+
+## Agents (MCP)
+
+phebs is an MCP server: agents search and read your code through the same
+index the UI uses. The endpoint is `/api/mcp` (Streamable HTTP, official MCP
+go-sdk), guarded by the same DB-backed authentication as the rest of the API.
+Create a named key in **Settings** and use it as the bearer token; the legacy
+config key remains accepted only while it is configured.
+
+The production MCP tool set is read-only with respect to Investigations, so
+ordinary named keys need no capability. When and only when the documented
+synthetic Change Workbench adapter is enabled, MCP adds a default-dark
+Workbench annex over the same shared services as Huma. Read-capable
+credentials discover `preview_change_workbench` and `get_change_workbench`.
+Preview writes nothing, but invocation requires a named key carrying
+`investigation:write` because its digest can bind a later mutation.
+
+Only a currently valid named key carrying `investigation:write` discovers
+`create_change_workbench` and `record_change_disposition`. Browser sessions,
+ordinary/read-only named keys, the migration-only legacy key, revoked or
+expired keys, and keys owned by a disabled user cannot invoke those durable
+tools. Discovery is selected from the freshly authenticated stateless request,
+and each mutation handler rechecks the capability before calling the shared
+service. The capability is only the credential gate: repository visibility,
+Investigation ownership, current revision, preview and evidence snapshots,
+suggestion identity, supersession, and idempotency checks remain authoritative.
+
+Ten core tools are always present. Enabling any provisional extraction pack
+adds five evidence-query tools, for fifteen. Enabling a protobuf or Thrift
+caller pack also adds the three-tool Caller Map annex and the comparison tool,
+for nineteen tools. A pinned Buf binary and successful host-sandbox startup
+probe adds compatibility as the final tool, for twenty total; otherwise
+compatibility stays undiscoverable. A complete synthetic Workbench adds two
+read tools for otherwise authenticated credentials and two additional durable
+mutation tools only for a write-capable named key. The maximum synthetic counts
+alongside every existing annex are therefore twenty-two and twenty-four.
+
+The agent workflow is explicit: discover an endpoint with
+`search_contract_operations`, preview a complete Workbench plan, submit that
+unchanged plan with its preview digest and idempotency key, read the resulting
+exact Investigation revision, and drill down through the existing Caller Map,
+comparison, proof, search, SCIP, and history tools. Recording a Disposition
+submits the exact evidence-bound suggestion, expected revision, category,
+rationale when required, optional predecessor, and its own idempotency key to
+the shared checklist service. There is no MCP revise or retained-compatibility
+action in T21.13, and the adapter does not synthesize suggestions or conclusions.
+
+
+| Tool               | Purpose                                                                                                                                                                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_code`      | full query syntax from [Searching](#searching), including `context:` sets; returns files with line-numbered chunks and match ranges                                                                                                                                              |
+| `read_file`        | file content at the indexed revision; optional `start_line`/`end_line`; output over 200 KB is truncated (on a line boundary where one fits) with a `truncated` flag inviting a ranged re-read. Blobs over 10 MiB are rejected outright, like `/api/source`. |
+| `list_repos`       | every indexed repo with branch/visibility/index-time metadata                                                                                                                                                                                               |
+| `find_definitions` | precise SCIP definition for `{repo,path,line,character,ref?}`                                                                                                                                                                                               |
+| `find_references`  | precise SCIP references for the same position; maximum 500 locations with `truncated`                                                                                                                                                                       |
+| `hover`            | SCIP symbol, signature, documentation, and source range                                                                                                                                                                                                     |
+| `blame`            | rename-aware line attribution for `{repo,path,ref?}`; maximum 50,000 lines                                                                                                                                                                                  |
+| `list_commits`     | paged history for `{repo,ref?,path?,limit?,offset?}`; maximum 200 commits per page                                                                                                                                                                          |
+| `get_commit`       | commit metadata, parents, and first-parent file changes                                                                                                                                                                                                     |
+| `diff`             | structured file statistics plus a unified patch, capped at 2 MiB with `truncated`                                                                                                                                                                           |
+| `find_operation_consumers` | Investigation envelope v1.0 with matching static call evidence for one bare canonical `/package.Service/Method`; it does not establish declaration identity or a known-caller roster |
+| `find_proto_field_references` | Investigation envelope v1.0 for `(lineage, message, field_number)`; field names remain versioned attributes rather than identity |
+| `find_field_references` | Investigation envelope v1.0 for one protocol-neutral `(lineage, message, field_number)`; facts retain `proto_field` or `thrift_field` identity and exact citations, and field 0 is valid |
+| `find_kafka_topic_usage` | Investigation envelope v1.0 for one Kafka topic spelling; facts are producer/consumer evidence rows, the persisted bundle carries the per-shape-class unresolved census, and the answer is never a completeness claim |
+| `get_extraction_coverage` | envelope containing the assertion-free coverage certificate over requested extractor domains, or every provisional domain when omitted |
+| `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
+| `search_contract_operations` | bounded Contract Atlas discovery page with complete selectable protocol/repository/declaration-lineage/operation identities, coverage, and continuation cursor |
+| `get_contract_operation` | one protocol-qualified exact operation with request/response shapes, immutable declaration citation, related evidence, and coverage |
+| `list_operation_callers` | exact-declaration Caller Map page with shared filters, source and unit-attribution states, unresolved rows, coverage/attribution digests, citations, and snapshot-bound cursor |
+| `compare_operation_callers` | occurrence- or unit-level union of two exact endpoint caller populations with evidence-qualified classifications, both attribution digests, shared coverage, bounded citations, and snapshot-bound cursor |
+| `preview_change_workbench` | side-effect-free shared-service preview of one plan; requires a named key with `investigation:write` because the returned digest can bind a later mutation |
+| `create_change_workbench` | explicit durable creation of one preview-bound Investigation and initial immutable revision; advertised only to a write-capable named key |
+| `get_change_workbench` | authorized read of one current Workbench revision and its human-authored brief; creates no evidence or durable state |
+| `record_change_disposition` | explicit durable append of one immutable fixed-category Disposition over an exact current suggestion; advertised only to a write-capable named key |
+
+
+Code-navigation tool positions and returned ranges are zero-based UTF-16 code
+units. Omitted `ref`/`head` values resolve to the DB's immutable indexed
+commit. NUL-bearing binary blame, unknown repos, deleting repos, and unindexed repos come
+back as tool errors rather than drifting to mutable mirror HEAD.
+
+The six proof/compatibility tools return `envelope_version: "1.0"` as MCP
+structured content. Their advertised `outputSchema` is the same generated
+draft-2020-12 schema checked in under `schemas/`. Stateless proof queries do
+not enumerate a released evidence-pack universe, so their pack-defined
+eligible/processing counts are `withheld`, their outcome is `partial`, and a
+zero-result response is blocked by `SCOPE_NOT_ENUMERATED`; it is not evidence
+of absence. Qualification and refusal prose is selected and rendered by the
+server. Clients should display `authoritative_text` verbatim and must not
+upgrade a partial, withheld, refused, or truncated result. A hard-truncated
+result has no continuation token and remains permanently incomplete and
+absence-ineligible.
+
+### Claude Code
+
+```bash
+claude mcp add --transport http phebs http://localhost:3070/api/mcp \
+  --header "Authorization: Bearer YOUR_API_KEY"
+```
+
+or the equivalent `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "phebs": {
+      "type": "http",
+      "url": "http://localhost:3070/api/mcp",
+      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
+    }
+  }
+}
+```
+
+Any MCP client speaking Streamable HTTP works the same way. The core flow was
+verified live against Claude Code: a headless session listed repos, ran a
+scoped search, and read the matching file end-to-end (T8.3). Epic 9's seven
+navigation/history tools are covered through real in-memory MCP sessions over
+a committed SCIP fixture and bare Git mirror, including an indexed revision
+held stable while mirror HEAD advances. T14.2's proof tools are covered through
+one stateless Streamable HTTP session using the official SDK: the agent asks
+operation-, field-, coverage-, and compatibility questions and receives source
+citations and coverage without hidden-repository access. Compatibility is not
+advertised if Buf is missing, has the wrong version, or the host cannot enforce
+the sandbox. T20.11 adds an official-SDK stateless session that discovers one
+of two duplicate-named operations without a pretyped identifier, resolves its
+exact detail, and exhausts multiple Caller Map pages with the same shared
+service content and cursor refusals. The three tools register all-or-none and
+remain absent unless a protocol caller pack makes the Caller Map service
+available. T20.13's companion session supplies two returned identities to
+`compare_operation_callers`, exhausts bounded continuation, and matches direct
+shared-service classifications and citations; the tool remains absent with
+the comparison capability unavailable. T21.13's official-SDK session performs
+one side-effect-free preview, one preview-bound idempotent creation, an
+authorized Workbench read, paged drill-down through the existing Caller Map,
+and one expected-revision Disposition. It also pins strict schemas and tool
+counts for dark, partial, session, read-only, legacy, write-capable, revoked,
+and stale states. The Workbench adapter has no evidence-reader dependency and
+does not generate checklist or conclusion text.

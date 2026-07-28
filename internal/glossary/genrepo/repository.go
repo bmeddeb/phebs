@@ -18,7 +18,7 @@ const (
 	TypeScriptPath = "ui/src/glossary.generated.ts"
 	SchemaPath     = "internal/glossary/glossary_schema_generated.json"
 	MCPPath        = "internal/mcp/glossary_descriptions_generated.json"
-	ManualPath     = "docs/MANUAL.md"
+	ManualPath     = "docs/guides/WORKFLOWS.md"
 )
 
 // ProjectionPaths returns the standalone generated files in stable order.
