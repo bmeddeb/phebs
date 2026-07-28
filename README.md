@@ -310,28 +310,7 @@ phebs is one Go application with an embedded web UI. It supervises local
 children for SurrealDB, index construction, and optional Buf compatibility;
 Redis and hosted control-plane services are not required.
 
-```mermaid
-flowchart LR
-    User["Browser, HTTP client, or MCP agent"] --> API["phebs Go binary"]
-
-    API --> UI["Embedded React UI"]
-    API --> Search["In-process zoekt search"]
-    API --> Evidence["Static evidence and proof services"]
-    API --> Auth["Authentication and authorization"]
-
-    Sync["Repository syncer"] --> Git[("Git hosts and local repositories")]
-    Sync --> Indexer["zoekt-git-index child"]
-    Indexer --> Shards[("zoekt shards")]
-    Search --> Shards
-
-    Evidence --> Objects["Bounded immutable Git reader"]
-    Evidence --> SCIP["Committed SCIP indexes"]
-    Evidence --> Store[("SurrealDB state, jobs, evidence, and audit")]
-
-    API <--> Store
-    Sync <--> Store
-    Buf["Pinned sandboxed Buf child"] -. compatibility preview .-> Evidence
-```
+![phebs architecture: clients, the single Go binary, supervised child processes, repositories, and derived indexes](./docs/phebs-architecture.svg)
 
 Key design choices are recorded as dated ADR rows in [PLAN.md](./PLAN.md).
 
