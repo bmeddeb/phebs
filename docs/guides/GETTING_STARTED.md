@@ -64,31 +64,3 @@ sync → index → search, and immutable source/folder browsing. It also removes
 all development fixture variables and requires the authenticated capability
 list and `/api/contract_atlas` route to retain the default-dark posture. The
 temporary repository and data directory are deleted after shutdown.
-
-For `v0.2.1`, the hosted `Release bundle and fresh-data smoke` job is part of
-the required `ci` workflow. From a clean checkout it performs two independent
-Linux/amd64 builds, compares their manifests, runs the empty-data smoke, then
-retains a deterministic `.tar.gz` and adjacent `.sha256` file. The release
-archive is not accepted from a local workspace.
-
-This single-maintainer repository uses a documented release gate in place of
-branch protection: an annotated release tag may be created only when its exact
-`main` commit has a successful **push** run of all five named jobs in
-`.github/workflows/ci.yml`, including the release job. The tag commit and run
-SHA must match byte-for-byte; tags are never force-moved. Release notes must
-link the run and checksum and state that Contract Atlas and proof features are
-default-dark, provisional, and do not establish the closed
-`NOT_ESTABLISHED` accuracy gate.
-
-The published `v0.2.0` tag remains an immutable historical tag but is not a
-verified release candidate: its exact push run failed the Linux fixture-bundle
-HEAD portability checks and the Caller Map UI scale harness. `v0.2.1` carries
-those corrections; the earlier tag is not deleted or moved.
-
-The published
-[`v0.1.0`](https://github.com/bmeddeb/phebs/releases/tag/v0.1.0) binary bundle
-is Linux/amd64 only. Its archive SHA-256 is
-`63103500a6b86aa3e4533fb1693065009585f6be509e48aab7b26373405daaf6`.
-macOS users build the exact tag from source with the pinned Go and Node
-versions; this first release does not provide a signed or notarized macOS
-binary.

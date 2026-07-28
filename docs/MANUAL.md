@@ -26,21 +26,10 @@ phebs mirrors git repositories to local disk, builds
 serves fast regex-capable code search through a web UI and an OpenAPI HTTP
 API — all from a single process with zero external services.
 
-The moving parts inside that one process:
-
-- a **supervised SurrealDB child** storing repo state and job queues on local
-disk (`surrealkv`), started and stopped with phebs;
-- a **sync worker** mirroring configured repos into bare git clones;
-- an **index worker** running `zoekt-git-index` (built from the same module
-version as the server) as an OOM-isolated child per job;
-- an optional **Buf compatibility child**, pinned by the same Go module and
-  sandboxed per request when experimental contract intelligence is enabled;
-- an **in-process searcher** over the shard directory, streaming results;
-- **DB-backed authentication** with browser sessions, revocable API keys, and
-optional OpenID Connect;
-- **SCIP code navigation and Git history** read at immutable commit IDs from
-the same bare mirrors;
-- the **web UI** (React + Base Web + CodeMirror), embedded in the binary.
+One process supervises a SurrealDB state/queue child, sync and index workers,
+an optional Buf compatibility child, and an in-process searcher over the shard
+directory; the [project README](../README.md#architecture) and
+[PLAN.md](../PLAN.md) own the architecture and its decisions.
 
 Indexing is **HEAD-only by default**: the default branch of each repo (or, for
 watched local repos, whatever branch is checked out). An explicit per-repo

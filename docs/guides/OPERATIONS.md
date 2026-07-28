@@ -216,231 +216,98 @@ experimental:
   provisional_proto_extraction: true
 ```
 
-When enabled, every successful index schedules a bounded read of declared
-protobuf contracts for that repository. The worker binds the read to the
-latest indexed full commit. Services, messages, RPCs, and numbered fields
-become `DECLARES_SERVICE`, `DECLARES_MESSAGE`, `DECLARES_OPERATION`, and
-`DECLARES_FIELD` assertions backed by content-keyed evidence atoms bound to
-the repository, commit, path, digest, byte span, and line span. RPC details
-retain raw request/response type names and client/server streaming flags;
-field details retain scalar or named type, cardinality, map key/value shape,
-and oneof membership. Empty services and messages are included.
-
-Type links are intentionally file-local. Protobuf lexical lookup records a
-same-file message or enum only when exactly one declaration proves the link.
-Unlinked import context, missing names, duplicate declarations, and invalid
-declaration kinds remain unresolved under separate reason codes. Import
-context is sorted, digest-bound, and explicitly truncated after 64 paths or
-4 KiB; unresolved names are never labeled external. Recursive declarations
-record links but are not expanded by the extractor. A trusted inventory still
-requires every `.proto` candidate to be read. Extraction runs publish
-atomically: a read, parse, provenance, limit, cancellation, or publication
-failure leaves the prior published facts intact.
+When enabled, every successful index schedules a bounded read of the
+repository's committed `.proto` contracts at the latest indexed full commit.
+Services, messages, RPCs, and numbered fields become `DECLARES_*` assertions
+backed by content-keyed evidence atoms bound to the repository, commit, path,
+digest, byte span, and line span. Type links are intentionally file-local and
+recorded only when exactly one same-file declaration proves them; unresolved
+names keep separate reason codes and are never labeled external. Extraction
+runs publish atomically: a read, parse, provenance, limit, cancellation, or
+publication failure leaves the prior published facts intact.
 
 A separate `experimental.provisional_thrift_extraction` opt-in enables the
-T19.2 Thrift declaration reader (`thrift-contract` 1.0.0). Every successful
-index then also schedules a bounded read of `.thrift` IDL files. Services,
-functions, and struct/union/exception shapes become the same
-`DECLARES_SERVICE`, `DECLARES_OPERATION`, `DECLARES_MESSAGE`, and
-`DECLARES_FIELD` assertion families under `thrift-*` detail schemas. Operation
-identity is `scope.Service/method`, where scope is the last segment of an
-explicit `namespace go`, then `namespace *` (Thrift applies it to every target
-language), then the file basename. Request and response
-shapes are modeled wire-honestly as the implicit argument and result structs
-Thrift serializes: synthetic same-file messages whose field `0` is the success
-slot and whose `throws` clauses are result fields; `oneway` functions declare
-no result struct. Type links are file-local exactly as for protobuf, with
-same-file typedef chains chased to a bounded depth and include-qualified names
-remaining unresolved with sorted, digest-bound include context. Fields with
-implicit identifiers fail closed as one structured `THRIFT_EXTRACTION_GAP`
-per file — Thrift assigns negative wire identifiers to such fields, and the
-reader never fabricates identity. Locators cite the declaration-start line
-with exact byte spans. Buf-based wire-compatibility checking remains
-protobuf-only; no Thrift compatibility engine exists.
+Thrift declaration reader over committed `.thrift` IDL. Operation identity is
+`scope.Service/method`, where scope is the last segment of an explicit
+`namespace go`, then `namespace *`, then the file basename. Request and
+response shapes are modeled wire-honestly as the implicit argument and result
+structs Thrift serializes: field `0` is the success slot, `throws` clauses are
+result fields, and `oneway` functions declare no result struct. Type links are
+file-local exactly as for protobuf, and fields with implicit identifiers fail
+closed rather than fabricating identity. Buf-based wire-compatibility checking
+remains protobuf-only; no Thrift compatibility engine exists.
 
-The same Thrift opt-in also enables the T19.3 Go consumer reader
-(`thrift-consumer` 1.1.0). It recognizes the repository's own Apache Thrift
-generated Go by compiler header (both the modern and legacy marker forms),
-recovers each service's wire method universe from `processorMap` key literals,
-and binds each wire name to the exact generated Go method whose client
-`Call` expression contains that literal. It does not reproduce Apache's
-version- and option-sensitive publicizing rules. It then scans non-generated
-Go files: `New<Service>Processor` call sites become
-`REGISTERS_THRIFT_SERVICE` assertions (tier `derived`), and selector calls
-whose generated method name is unique across the repository's stub index
-become `CALLS_OPERATION` assertions for `/scope.Service/method` (tier
-`heuristic`). Ambiguous call names abstain as one
-`UNRESOLVED_THRIFT_CALL` candidate per canonical `/scope.Service/wire-method`;
-ambiguous constructors use `UNRESOLVED_THRIFT_REGISTRATION`. Oversized or
-unparseable files record
-`THRIFT_EXTRACTION_GAP`. A repository that imports generated stubs from
-another module instead of vendoring them yields no consumer evidence — an
-honest abstention, not an error. Client construction is not evidence, and
-consumer lineage remains file-scoped provisional, so joins against
-declarations stay name-bound exactly as for gRPC.
+The same Thrift opt-in also enables the Go consumer reader. It recognizes the
+repository's own committed Apache Thrift generated Go, binds wire method names
+to their generated client methods, and emits registration (tier `derived`) and
+call (tier `heuristic`) assertions only for unambiguous names; ambiguous call
+names and constructors abstain as unresolved candidates. A repository that
+imports its generated stubs from another module yields no consumer evidence —
+an honest abstention, not an error — and consumer joins against declarations
+stay name-bound exactly as for gRPC.
 
 A separate `experimental.provisional_kafka_extraction` opt-in enables the
-T23.2 Kafka topic-evidence packs: `kafka-producer` and `kafka-consumer`
-(both 1.1.0), two planes sharing one recognizer validated by the T23.1
-spike. The readers scan non-test Go files that import
-`github.com/Shopify/sarama`, `github.com/IBM/sarama`, or
-`github.com/segmentio/kafka-go` (qualified selectors only — dot-imports
-carry no in-file library proof and are refused; a file importing both
-sarama eras abstains rather than guessing). Recognized shapes:
-`sarama.ProducerMessage{Topic:}`, segmentio `Writer`/`WriterConfig`
-composites, `kafka.Message{Topic:}` passed directly to `WriteMessages`
-(never `CommitMessages`), `ReaderConfig` `Topic`/`GroupTopics`, and the
-receiver-untyped `Consume`/`ConsumePartition` call shapes (tier
-`heuristic`; composites are `derived`). A topic binds only when it is a
-string literal or a same-file `const` satisfying Kafka's own naming bounds
-(1–249 characters of `[a-zA-Z0-9._-]`, excluding `.`/`..`); the object is
-`topic:<literal>` and carries no cluster, environment, runtime, or
-completeness claim. The constant may be package- or function-local, but must
-be an explicit string literal declaration lexically resolved within that
-file; vars, expressions, and cross-file names still abstain. Consumer group
-ids are recorded as detail, never
-identity. Everything else — configuration selectors, function results,
-variables, invalid literals — emits an `UNRESOLVED_KAFKA_PRODUCER` /
-`UNRESOLVED_KAFKA_CONSUMER` assertion whose object names the frozen shape
-class. **Expect abstention to dominate**: production Kafka topics are
-overwhelmingly configuration-driven (2 literal evidence rows vs 19
-abstentions across the spike's pinned corpora), and the pack
-presents that volume as the honest norm rather than a defect. `_test.go`
-fixture literals are excluded from recognition entirely. Oversized or
-unparseable files record `KAFKA_EXTRACTION_GAP`. There is no topic
-declarations plane in round one — no in-code topic declaration exists —
-so topics appear only through their producers and consumers, with no
-catalog or Atlas surface.
+Kafka topic-evidence packs (`kafka-producer` and `kafka-consumer`) over
+non-test Go files that import sarama (Shopify or IBM) or segmentio/kafka-go.
+A topic binds only when it is a string literal or a same-file `const`
+satisfying Kafka's own naming bounds; the object is `topic:<literal>` and
+carries no cluster, environment, runtime, or completeness claim. Consumer
+group ids are recorded as detail, never identity. Configuration selectors,
+function results, variables, and cross-file names emit `UNRESOLVED_KAFKA_*`
+assertions naming the frozen shape class. **Expect abstention to dominate**:
+production Kafka topics are overwhelmingly configuration-driven, and the pack
+presents that volume as the honest norm rather than a defect. There is no
+topic declarations plane: topics appear only through their producers and
+consumers, with no catalog or Atlas surface.
 
-The proto opt-in also enables the T13.1 Go/gRPC consumer reader (dark scope,
-2026-07-22 disposition). It indexes the repository's own generated
-`*_grpc.pb.go` stubs, then emits `REGISTERS_GRPC_SERVICE` assertions for
-`Register<Service>Server` call sites (tier `derived` — name-bound to a
-same-repo stub) and `CALLS_OPERATION` assertions for client method calls
-whose name matches exactly one indexed service (tier `heuristic`). Package-less
-protobuf service names such as `Greeter` are valid and indexed. Ambiguous
-method names, generated registration-helper collisions, and duplicate service
-FQNs anchored by different repository paths are not guessed: each source
-occurrence emits an exact-span `tier=unresolved` diagnostic assertion, while
-coverage counts the distinct semantic gaps those atoms support. Unparseable or
-over-limit non-empty Go candidates likewise emit source-backed unresolved gaps,
-so successful abstention remains publishable through the trusted worker.
-Every assertion carries a `code_role`
-(production/test/mock/generated/vendor, vendor > mock > generated > test >
-production precedence) and cites its atom's exact byte and line span.
-Resolution is syntactic — there is no type checking — so these facts carry
-reduced fidelity by design and, like all provisional facts, state no
-measured accuracy and must not drive compatibility, migration, or
-negative-proof conclusions.
+The proto opt-in also enables the Go/gRPC consumer reader. It indexes the
+repository's own generated `*_grpc.pb.go` stubs, then emits registration
+(tier `derived`) and client-call (tier `heuristic`) assertions only when a
+name matches exactly one indexed service; ambiguous names, helper collisions,
+and duplicate service FQNs emit exact-span unresolved diagnostics instead of
+guesses, so successful abstention remains publishable. Every assertion carries
+a `code_role` and cites its atom's exact byte and line span. Resolution is
+syntactic — there is no type checking — so these facts carry reduced fidelity
+by design and must not drive compatibility, migration, or negative-proof
+conclusions.
 
-T20.8 adds declaration-proven typed Go caller evidence without changing that
-legacy reader or its proof results. Under the same protocol flags, the current
-`grpc-caller` and `thrift-caller` 1.2.0 domains read a committed root
-`index.scip`; phebs still never creates or downloads that index. Each source
-call must carry the exact SCIP symbol of a checked-in generated client method.
-For gRPC, the generated definition must also agree with one `// source:`
-marker, one full-method literal, and the service descriptor name before the
-generator-relative `.proto` path may select one immutable T20.7
-generated-from mapping. For Apache Thrift, the generated client method must
-carry an admitted compiler header and exactly one client `Call` wire literal,
-then select one direct immutable generated-from mapping. Only that complete
-chain emits a tier-`derived` `CALLS_OPERATION` row whose lineage is the
-declaration evidence identity.
+Under the same protocol flags, the `grpc-caller` and `thrift-caller` domains
+add declaration-proven typed caller evidence from a committed repository-root
+`index.scip`. phebs never creates or downloads that index — regenerate and
+commit it whenever source changes. A tier-`derived` `CALLS_OPERATION` row is
+emitted only when the complete generated-client provenance chain agrees;
+missing or conflicting mappings emit operation-keyed `UNRESOLVED_CALLER` rows,
+and malformed SCIP produces bounded extraction gaps in the affected protocol
+domain only. When a usable typed occurrence is absent, a bounded package-aware
+fallback may emit `resolution=syntax`, tier-`heuristic` rows; dynamic flows
+and ambiguous clients still abstain. Each row snapshots the unit-attribution
+state used at extraction time. These rows remain provisional and dark and
+establish neither caller completeness nor measured accuracy.
 
-Missing or conflicting mappings emit source-granular, operation-keyed
-`UNRESOLVED_CALLER` rows instead of guesses. Malformed SCIP or a document path
-absent from the repository produces a bounded `CALLER_EXTRACTION_GAP` in only
-the affected protocol domain; an absent or zero-byte index is reported as
-unavailable and emits no typed callers. SCIP documents normally do not embed a
-source-content digest, so a committed same-path index is not proof that its
-ranges describe the current file bytes; regenerate and commit `index.scip`
-whenever source changes. Each row snapshots the
-immutable unit-attribution state and attribution digest used at extraction
-time, including unattributed and ambiguous results, so later pages never
-silently reclassify old evidence. T20.10's authenticated Caller Map is their
-first read surface. They remain provisional and dark, and establish neither
-caller completeness nor measured accuracy.
-
-When a usable typed occurrence is absent, version 1.2.0 may use the bounded
-package-aware fallback. It requires a valid repository-root `go.mod`, an
-explicit import of one indexed generated package, and one of five local
-provenance shapes: imported client parameter, imported type alias, generated
-constructor assignment, named client field, or embedded client. Such rows use
-`resolution=syntax` and tier `heuristic`. A SCIP occurrence always wins and is
-never duplicated. Dynamic/interface flows, dot imports, shadowing whose new
-value has no admitted client provenance, or multiple candidate clients remain
-operation-keyed `UNRESOLVED_CALLER` rows; the reader does not
-perform general assignment propagation, reflection, type checking, builds, or
-module resolution. The fallback can still operate when SCIP is absent or
-malformed, but that independent coverage gap remains visible.
-Generated and caller Go documents above the reader's 4 MiB per-file bound, or
-with invalid UTF-8, are outside this v1 reader; the coverage manifest still
-binds the trusted corpus/candidate/read scope, but no caller row or per-file
-gap row is claimed for those documents.
-
-The opt-in also reads a repository-root, committed `index.scip` to emit T13.2
-`REFERENCES_PROTO_FIELD` assertions. phebs never runs or downloads a SCIP
-indexer: the fixed root index must be a regular blob in the same immutable
-commit. Nested indexes, symlinks, and shard manifests are not selected inputs.
-A SCIP symbol is
-eligible only when its exact definition range matches a generated protobuf Go
-struct field or getter, the generated struct tag supplies the field number and
-proto name, and the generated file's `// source:` declaration maps uniquely to
-the committed `.proto` field. Each non-definition reference cites the exact
-identifier span in its source document. Positions use a document's declared
-encoding when present and otherwise the index metadata's UTF-8/UTF-16
-encoding; neither declared fails closed. Missing indexes produce an empty,
-explicitly unavailable result; local symbols, malformed ranges, missing source
-declarations, and ambiguous symbol/field joins abstain rather than guessing.
-
-Field identity is canonical across consumer dependency versions:
-`(contract_lineage_id, message_full_name, field_number)`. The lineage digest
-uses the global SCIP scheme, package manager, and package name, but excludes
-the dependency version and generated field/getter name. A field rename that
-keeps its protobuf number and message therefore remains one identity, while
-its current name and dependency version remain in assertion detail. The
-classification is derived from SCIP role bits with precedence `write > read >
-test > generated > unknown`; `code_role` separately records repository
-placement and SCIP test/generated roles. These are direct field references,
-not claims that a response field was semantically read.
+The opt-in also reads that same committed root `index.scip` to emit
+`REFERENCES_PROTO_FIELD` assertions. A symbol is eligible only when its exact
+definition provably maps to a generated protobuf Go field and its committed
+`.proto` declaration; local symbols, malformed ranges, and ambiguous joins
+abstain, and a missing index is an explicit unavailable result. Field identity
+is canonical across consumer dependency versions —
+`(contract_lineage_id, message_full_name, field_number)` — so a field rename
+that keeps its number and message remains one identity. These are direct
+field references, not claims that a response field was semantically read.
 
 The independent `experimental.provisional_thrift_field_extraction` opt-in
-registers the T22 `scip-thrift-field` reader. For thriftrw, an eligible
-generated file must embed a
-`thriftreflect.ThriftModule` whose `SHA1` matches its `Raw` IDL bytes; the Raw
-IDL field identity, generated struct-field order, and `wire.Field{ID: ...}`
-literals must agree before an exact SCIP definition can bind references.
-These rows carry tier `exact` and `source_binding=module_digest`.
-
-Apache Thrift compiler output is eligible only when the file starts with one
-of the validated complete generator-header comment forms and contains a valid
-`thrift:"name,ID[,flags]"` struct tag. Scope is the generated Go package,
-message is the enclosing generated struct, and the exact tagged identifier
-must be the SCIP definition under that same enclosing type. Because Apache
-output embeds no IDL bytes, digest, or source path, these rows remain tier
-`derived` with `source_binding=none`; phebs does not promote them by consulting
-another repository.
-
-Both families use objects `scope.Message#field-number`, including field `0`,
-and the same package-based `contract_scip_package_v1` lineage family as
-protobuf without claiming equality to the declaration pack's provisional
-lineage. Duplicate definitions or duplicate `(message, field ID)` identities
-abstain. Malformed generator candidates abort the staged run.
-A missing root index publishes explicit `scip-index-absent` coverage; a
-malformed index aborts the staged run.
-
-T22.1 measured the generated-file ceiling but not the inherited protobuf
-index-scale limits, so this pack deliberately admits at most a 32 MiB root
-index, 50,000 documents, 500,000 occurrences, 8 KiB symbols, and 4 MiB per
-generated candidate. It reads only committed repository blobs and never runs
-or downloads an indexer. The pack is experimental-dark and carries no
-accuracy, completeness, runtime-use, or absence claim. The existing
-`find_proto_field_references` route remains protobuf-only and byte-stable.
-The separate `find_field_references` route, impact report, and MCP tool fan
-out across the registered field-reference domains whose number rules admit
-the requested identity. Impact field mode uses the same neutral report:
-selecting a protocol applies only that protocol's field-number validation and
-does not filter an otherwise admitted domain from the answer.
+registers the `scip-thrift-field` reader. thriftrw output whose embedded IDL
+module digest, generated struct-field order, and wire-ID literals agree binds
+tier-`exact` rows; Apache Thrift compiler output, which embeds no IDL bytes,
+remains tier `derived`. Both families use objects `scope.Message#field-number`
+(including field `0`) under the same package-based lineage family as protobuf.
+Duplicate identities abstain, malformed generator candidates abort the staged
+run, and a missing root index publishes explicit `scip-index-absent` coverage.
+The pack admits bounded index, document, occurrence, and candidate sizes only,
+reads only committed repository blobs, and carries no accuracy, completeness,
+runtime-use, or absence claim. `find_proto_field_references` remains
+protobuf-only and byte-stable; the protocol-neutral `find_field_references`
+route, impact report, and MCP tool fan out across every registered
+field-reference domain whose number rules admit the requested identity.
 
 ### Thrift field-zero development walkthrough
 
@@ -786,262 +653,38 @@ content; HTTP proof-bundle routes and MCP envelope projection call one shared
 proof service. Operational state is also visible through the database and
 `phebs_jobs_total{kind="extraction_job"}`.
 
-Proof-aware retention checks at startup and hourly while idle. Every
-compatible-format run is limited to 25,000 stored association/assertion rows
-and 20,000 evidence references. Individual staging transactions remain capped
-at 10,000 rows of one kind; the extraction worker normally sends no more than
-256 facts per transaction. Retention first locks one eligible aborted,
-superseded, or 24-hour-stale staged run, rechecks that it is unpinned, and
-marks it internally `deleting`. It then resumes from a durable phase while
-deleting at most 512 associations or assertions per transaction. The run is
-physically removed only after both row kinds are empty; an atom is removed
-only after its last association anywhere has disappeared. Maintenance performs
-at most 64 of these fixed-size steps, yields for five seconds when that cap is
-reached, and returns to the hourly idle interval when drained. Logs report
-completed logical runs separately from association, assertion, and atom rows.
-Pinned proof/checkpoint runs and atoms still shared by another run are retained. Rows
-migrated from the retracted, pre-bound evidence schema are hidden and
-quarantined from automatic cleanup; an administrator must inspect and remove
-that legacy data directly if desired. If two run records claim the same
-logical run identity, all proof under that identity is likewise hidden,
-unwritable, unpinnable, and exempt from automatic retention until an
-administrator resolves the ambiguity.
+Proof-aware retention checks at startup and hourly while idle, deleting
+aborted, superseded, or stale unpinned staged runs in bounded transactional
+steps; pinned proof/checkpoint runs and atoms still shared by another run are
+retained. Rows migrated from the retracted pre-bound evidence schema, and any
+ambiguous duplicate run identity, are quarantined from automatic cleanup for
+explicit administrator resolution.
 
-The exact store-writer generation is separate from the stable evidence-format
-version. Staged evidence writes and publication require the exact writer
-generation, while compatible published reads, proof resolution, pinning, and
-retention use the format version. A later compatible writer bump therefore
-cannot strand an existing pinned proof bundle; an unknown format remains
-hidden and untouched.
-
-The current identities are writer `t12-store-v7`, readable evidence
-`t12-evidence-v1`, and migration `t12-evidence-migration-v5`. Startup
-idempotently upgrades the immediately preceding compatible v6 run generation
-in place; readable evidence bytes and content identities do not change.
-Staged-run reads and all mutations require v7. Compatible published
-`t12-evidence-v1` runs, including pinned proof written by a future compatible
-writer, remain readable through the stable format boundary.
-
-Evidence migrations still require exclusive startup against the store.
-Database and transaction guards now make a mixed-version or rollback writer
-fail closed: known retired v1–v6 run writes are rejected, and every current
-begin/stage/publish/abort/retention step requires the active v5 migration
-marker. A generation-named synchronous database event survives a v6 binary reapplying
-its weaker field definition and cancels its retired-generation transaction.
-If an older opener changes the migration marker, current writes stop too; shut
-down every writer and restart the v7 binary exclusively to restore it. Do not operate
-rolling mixed writers against a remote endpoint. The supervised local
-deployment already provides the intended single-writer lifecycle.
-
-The v6 store also has an internal, exact reverse-evidence page used by the
-planned Caller Map. It requires one authorized repository, published run,
-predicate, and operation object; optionally fixes declaration lineage; returns
-50 rows by default and at most 100; and uses an explicit continuation rather
-than placing a hidden sentinel in the rendered rows. The query is bound to the
-generation-specific compound index and fails if that index is unavailable.
-No HTTP, MCP, or UI Caller Map surface is registered by T20.4.
+The store separates its exact writer generation from the stable published
+evidence format, so a compatible writer upgrade cannot strand a pinned proof
+bundle, and mixed-version or rollback writers fail closed. Evidence migrations
+require exclusive startup: never operate rolling mixed-version writers against
+a remote endpoint — the supervised local deployment already provides the
+intended single-writer lifecycle.
 
 ### Investigation storage and guided execution foundation
 
-On startup, the normal idempotent schema pass
-creates the Investigation, Revision, Run, RunEvent, RunArtifact, Decision,
-Disposition, BaselineDesignation, Watch, and WatchRevision tables and indexes.
-T16.4 additionally creates the immutable guided-creation idempotency mapping
-and the `investigation_run_job` queue table.
+The Investigation, Revision, Run, Disposition, and Dossier storage plus the
+guided-execution, consumer-ledger, ReviewItem, and export services are
+implemented but production-unregistered: the normal binary registers no
+Investigation workflow, core-view, or export route, and those surfaces return
+404. Their immutability, authorization, and lifecycle guarantees live in
+[PLAN.md](../../PLAN.md) and the Epic 16 tickets in
+[BACKLOG_COMPLETED.md](../BACKLOG_COMPLETED.md).
 
-Revisions, Run requests, RunEvents, RunArtifacts, Decisions, Dispositions,
-BaselineDesignations, and WatchRevisions are immutable at the store boundary.
-Correcting one creates a new Revision/WatchRevision or an explicitly
-superseding human record; the original remains readable. Investigation display
-metadata/lifecycle/current-Revision and Watch owner/enablement/current-Revision/
-expiry/cursor are the only checked mutable projections in this slice. Both
-projections update by compare-and-swap against the previously read lifecycle
-and current-revision pointer, so a concurrent stale writer fails closed with a
-conflict instead of committing an invalid transition or clobbering the
-pointer.
+For local demonstration only, `make dev` sets `PHEBS_INVESTIGATION_FIXTURES`
+to the five canonical synthetic files in `docs/fixtures/investigations/`,
+which binds the read-only `investigation-core-views` capability and the
+`#/investigations` page. These fixtures exercise presentation and conformance
+states; they are not published evidence, a released pack executor, a valid
+accuracy gate, or authority for external claims.
 
-Run rows contain no status field. Guided submission atomically freezes the
-active Investigation and first Revision, appends the initial `queued` event,
-and creates one pending queue slot. Every later state is reconstructed from
-the contiguous, append-only event stream:
-`queued → enumerating → analyzing → publishing → published`, with `failed` or
-`canceled` allowed only before a terminal state. Reusing the same idempotency
-key for the exact same Revision request returns the existing Run; changing any
-request input under that key fails closed. A failed or canceled RunArtifact
-cannot carry published fact references.
-
-Before submission, the guided preview lists only the caller's currently
-visible repository snapshots, exact indexed commits, selected pack versions,
-an authorization result, a repository-snapshot work estimate, and the
-1,000-repository platform ceiling. A requested repository that is missing,
-deleting, or unauthorized has the same `SCOPE_REPOSITORY_NOT_AVAILABLE`
-blocker. The preview digest covers the normalized plan and resolved commits;
-submission repeats the preflight and returns a conflict if anything changed.
-
-Worker attempts use an opaque publication lease separate from the generic job
-lease. A retry closes the prior lease and appends a new `queued` attempt; the
-platform permits at most three attempts and a pack may choose fewer. Owners
-may cancel a nonterminal Run. Cancellation closes the worker lease in the same
-transaction as the terminal event and audit row, so a late worker cannot
-publish.
-
-RunArtifact publication, its terminal RunEvent, extraction-run evidence pins,
-active-Investigation retention owner, and audit row are one database
-transaction guarded by the exact attempt lease. Every pin uses the artifact-specific
-`investigation-artifact:<artifact-id>` namespace; if any referenced extraction
-run is missing, quarantined, ambiguous, incompatible, or not published or
-superseded, neither the artifact nor any of its pins is written. The
-publication transaction locks each referenced extraction run, so a concurrent
-evidence sweep can never reclaim a run in the same instant an artifact pins
-it. A Baseline
-designation atomically acquires its corresponding artifact owner. Failed
-attempts may atomically retain a reconciled
-`investigation-coverage-ledger-v1` plus bounded diagnostics, but that path
-rejects facts and evidence pins.
-
-Retention owners are immutable caller-authorized claims. Ending one appends a
-release; it never edits the claim, and that semantic owner key cannot silently
-reacquire after release. Normal artifact collection locks the artifact and
-rechecks that no unreleased Investigation, Baseline, or Dossier owner exists.
-An audited revocation, mandatory-deletion, legal-policy, or approved-retention
-override may supersede owners and allow immediate collection. Collection
-removes only the RunArtifact and pins in its exact namespace, while preserving
-owner/release/override audit rows. It never deletes extraction evidence; the
-existing proof-aware evidence sweep may reclaim a superseded run only after
-its final independent pin is gone. This remains an internal store facility:
-lifecycle wiring, sharing surfaces, and public creation/read surfaces land in
-later Epic 16 tickets.
-
-Every investigation-domain read has a principal-scoped variant that
-authorizes at query time. An object that does not exist and an object the
-principal is not authorized to read produce the identical not-found result:
-no counts, existence signals, scope, or integrity state are disclosed to an
-unauthorized principal. Owners may grant and revoke `reader` access; grants
-are re-checked on every read, and a grantee cannot delegate. Watches are
-personal and never extend through grants. Ownership changes only through the
-audited transfer operation — a plain update rejects owner edits — and a
-transfer immediately voids each principal's stored continuation cursor for
-that investigation without deleting any other state; re-authorized principals
-simply re-establish their cursors. Each read binds the current ownership
-revision and reader-grant generation, then rechecks that exact epoch after
-integrity reconstruction; a concurrent transfer, revoke, or revoke/regrant
-therefore cannot return stale data or surface a newly unauthorized integrity
-error. Regranting creates a new generation and never resurrects the revoked
-grant's cursor. Promoting a reader to owner consumes the reader grant, so it
-cannot silently restore access after a later transfer. Grant, revoke, transfer,
-and cursor mutation serialize against each other and commit with their audit
-event in one transaction. The canonical `NOT_AVAILABLE` refusal
-envelope (fixture 06) is rendered server-side as a minimal fixed shape whose
-bytes are identical for unknown and unauthorized requests.
-
-The T16.4 HTTP adapter defines preview, create, Run-status, and cancel
-operations, but the production binary does not register them yet. Registration
-requires a non-nil Investigation workflow store, which stays absent until an
-exact released evidence-pack executor can drain the queue. Consequently these
-post-gate implementation routes are absent from the live OpenAPI document and
-return 404 rather than exposing a workflow that cannot complete.
-
-T16.5 adds the read-only core-view surface behind a separate, narrow,
-principal-scoped source. When a source is bound, authenticated clients receive
-the `investigation-core-views` capability and may read:
-
-- `GET /api/investigation_views` for authorized view summaries; and
-- `GET /api/investigation_views/{id}` for one already-authorized envelope.
-
-The UI then exposes `#/investigations`. Overview shows four summary regions
-(evidenced, unknown, changed, and action), followed by the server-derived
-bounded-absence eligibility result and blocker codes. The eligibility region
-is deliberately read-only: there is no control or request path that can set
-eligibility. Census preserves supported facts while displaying service and
-owner attribution as separate states. Coverage shows eligible/analyzed/
-failed/partial/excluded units and all attribution hops. Evidence retains proof,
-snapshot, occurrence, and verification-action identifiers.
-
-Empty states are conclusions with different prerequisites, not cosmetic
-variants of “no results.” A complete zero-finding response renders the
-server's authoritative bounded-absence qualification; an incomplete response
-says only that no supported facts were found among analyzed units and lists
-processing gaps; unresolved attribution remains visible beside the supported
-fact; and a pack refusal suppresses Census, Coverage, evidence counts, and all
-other claim-bearing content.
-
-The normal production binary binds no core-view source, so these routes,
-capability, OpenAPI operations, and navigation entry remain absent. For local
-demonstration only, `make dev` sets `PHEBS_INVESTIGATION_FIXTURES` to the five
-canonical synthetic files in `docs/fixtures/investigations/`. Setting that
-environment variable manually opts into the same development adapter. These
-fixtures exercise presentation and conformance states; they are not published
-evidence, a released pack executor, a valid accuracy gate, or authority for
-external claims.
-
-T16.6 makes this envelope a generated, reusable contract rather than a
-fixture-only UI shape. `internal/investigation` owns typed cross-field
-validation; `go generate ./internal/mcp` regenerates the nine checked-in
-schemas; and MCP advertises those exact schemas. Structural validation is not
-the whole contract: the server also enforces coverage reconciliation, proof
-references for evidenced facts, bounded-absence prerequisites,
-non-comparability behavior, minimal `NOT_AVAILABLE` disclosure, and
-irreversible truncation semantics.
-
-T16.7 retains a principal-scoped first/last-seen consumer ledger independently
-of sweepable RunArtifacts. Each published consumer census freezes the
-authorized visibility projection, declared repository/build-target universe,
-enumeration method, claim and fact identities, pack/rule/extractor/adapter
-versions, build and snapshot semantics, and input completeness/freshness.
-Two censuses produce an ordinary delta only when every frozen dimension is
-compatible. A visibility, scope, identity, rule, enumeration, build,
-external-input, failure, or freshness change instead yields a comparison
-report with per-side coverage only; missing facts are never presented as
-removals in that state.
-
-Under fully comparable semantics, additions and removals require a positively
-traced relationship occurrence. Removed relationships remain as inactive
-ledger tombstones with their first/last-seen coordinates, so later compatible
-evidence is classified as a reintroduction. Authorization is checked at every
-snapshot and ledger read, and each principal has an independent projection.
-Sweeping the RunArtifact that originally supplied an edge does not erase its
-ledger history; the retained row is history and identity metadata, not a
-replacement for the artifact's independently governed proof.
-
-T16.8 derives ReviewItems from those authorized snapshots; there is no
-hand-creation operation. A versioned pack projection can emit only three
-queues: traced new/reintroduced consumers, coverage or comparability
-regressions, and unresolved attribution tied to a fact that exists in the
-source snapshot. The deterministic item identity binds the principal,
-Investigation, comparison, projection version, logical subject, delta and
-cause, evidence reference, and relevant human-record-state digest. Re-running
-the same projection therefore returns the same IDs, independent of when it is
-requested.
-
-A later source sequence supersedes the preceding projection, while the
-projection's lifecycle rule expires items relative to the immutable snapshot
-publication time. The resulting states are only `open`, `superseded`, and
-`expired`. Acknowledgement and the last-viewed comparison live in the existing
-per-principal authorization-epoch cursor; they do not edit ReviewItems, and an
-ownership transfer or grant revocation voids stale cursor state under the same
-rules as every other Investigation read. Review materialization and listing
-remain internal store facilities in this ticket; no production API or UI route
-is enabled.
-
-T16.9 defines the immutable `phebs-investigation-dossier-v1` export. Each
-object and embedded finding is canonical JSON with its own domain-separated
-SHA-256 digest; the canonical manifest binds those entries, recipient scope,
-authorized locators for source material that is not embedded, supported
-claims, blockers, eligibility, freshness/validation state, review/expiry rule,
-and any predecessor. A second domain-separated digest roots the manifest and
-entry list, and the service signs that root with Ed25519 plus a named
-verification key. Creating the Dossier and its primary-RunArtifact retention
-owner is one store transaction.
-
-Export always calls the current recipient-scope resolver. It intersects the
-principal-scoped consumer snapshot with that result, omits hidden units and
-facts, and also omits legacy facts that lack a unit identity rather than
-guessing their scope. The snapshot and input manifests and eligibility in the
-export are recipient projections, not copied creator-wide claims. The service
-rechecks both the Investigation authorization epoch and the resolved unit
-scope after sealing and persistence before it returns any bytes.
-
-Verify an exported canonical file without a running phebs service:
+Verify an exported canonical dossier file without a running phebs service:
 
 ```sh
 go run ./scripts/verify-dossier.go \
@@ -1054,12 +697,6 @@ The trust flags are optional for digest/signature consistency checks, but use
 an independently distributed key for authenticity. Successful verification
 proves byte integrity and the signer only; it does not prove current
 authorization, freshness, evidence availability, or continuing validity.
-Opening the file through phebs is a separate operation: it verifies the sealed
-bytes, then reauthorizes every included Investigation object, current unit,
-and fact. Revocation therefore blocks reopen without making an already
-exported offline file cryptographically unverifiable. This ticket exposes the
-service/store and offline format only; production API/UI export registration
-still requires an explicit key configuration and route decision.
 
 ### Metrics
 
@@ -1131,6 +768,14 @@ targets: `make ci-static`, `make ci-go`, `make ci-race`, and `make ci-ui`.
 pinned `surreal` on `PATH`; hosted CI downloads the exact 3.2.0 Linux archive
 and verifies its committed SHA-256 before any store test starts.
 
+An annotated release tag may be created only when its exact `main` commit has
+a successful **push** run of all five named jobs in
+`.github/workflows/ci.yml`, including the release job; the tag commit and run
+SHA must match byte-for-byte, and tags are never force-moved. Release notes
+must link the run and checksum and state that Contract Atlas and proof
+features are default-dark, provisional, and do not establish the closed
+`NOT_ESTABLISHED` accuracy gate.
+
 The canonical Change Workbench vocabulary is
 `internal/glossary/glossary.json`. Run `go generate ./internal/glossary` after
 an approved source change; do not edit its generated Go, TypeScript, schema,
@@ -1142,7 +787,3 @@ tickets; T21.4 does not render help or register tools.
 
 Live UI development: run `make dev-api`, then `cd ui && npm run dev` — Vite
 serves on :5173 and proxies `/api` to :3070.
-
-phebs is an independent, reference-only reimplementation inspired by
-[Sourcebot](https://github.com/sourcebot-dev/sourcebot) — no upstream code is
-used. phebs is licensed Apache-2.0.

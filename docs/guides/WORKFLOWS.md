@@ -262,68 +262,14 @@ no adapter-side classification or summarization. Every Caller Map tool is
 bounded and cursor-driven, and a stale authorization, coverage, or attribution
 snapshot must be restarted rather than bypassed.
 
-T20.2 has removed the extraction worker's 5,000-fact bottleneck behind these
-planned surfaces. The pure-reader SDK still emits one source-bound fact at a
-time; the trusted worker groups accepted facts into deterministic,
-content-addressed chunks of at most 256 and keeps the complete replacement
-invisible until one guarded publication. Its independent limit is now 12,500
-facts, and the frozen 10,010-call profile fits the 256 MiB worker-memory gate.
-T20.3 now supplies the corresponding `t12-store-v5` 25,000-row production
-admission and retains the store-derived atomic recount. Coverage certificates,
-APIs, and serialized evidence remain unchanged. The retained target gate
-published 20,020 stored rows in 145.348583 ms on the reference machine,
-inside the frozen 2-second ceiling; this establishes capacity and atomic
-integrity only, not extraction accuracy. The 25,000-row value is a frozen
-ceiling for this target, not an open-ended admission increase: T20.5 remains
-required before it can rise. `spike/t201/results.json` remains the explicitly
-historical v4/pre-guard baseline. The opt-in T20.1 store harness now measures
-the active writer and a complete 20,020-row target sweep using exact
-production statements and limits. Its committed version-2 receipt is
-`spike/t201/results-current-writer-v6.json`: v6 publication took 154 ms and
-the complete target sweep took 1,130 ms on the reference machine, inside the
-frozen 2-second gate. Its retained first-page field is the legacy
-`ListAssertions` comparison probe; T20.4's exact reverse-page gate separately
-returned 100 rows in 8.9935 ms after 1,616 composite-index candidates.
-
-T20.5's separately reviewed v7 receipt is
-`spike/t201/results-current-writer-v7.json`
-(`sha256:f4b7e4e5…`). Resumable retention removed one 20,020-row target run in
-42 fixed-size steps: 10,010 associations, 10,010 assertions, and zero shared
-atoms. It took 1,897 ms with 265,093,120 bytes peak Surreal RSS, inside the
-frozen 2-second / 512 MiB gates. These are reference-machine capacity and
-integrity observations, not extraction-accuracy or universal performance
-claims.
-
-Epic 20's retained closure gate is `make t20-closure`. It starts from a new
-temporary data directory, materializes the frozen neutral `scale-10000`
-profile as a local Git repository, and drives the same sync, zoekt index,
-pure-reader extraction, Contract Atlas, Caller Map, and comparison package
-seams used by `make dev`. Atlas discovery supplies the old and replacement
-endpoint identities; the gate does not embed or require a canonical operation.
-After reaching a commit-pinned caller citation it injects one independent
-domain failure, advances the repository to a malformed unit-attribution
-snapshot, requires that failed replacement to remain invisible, verifies that
-the earlier cursor is rejected, and revokes repository visibility. The output
-receipt defaults to `/private/tmp/phebs-t20.14-results.json`; override
-`T2014_RESULTS_PATH` to retain it elsewhere. The target requires the pinned
-`surreal` and the same-module `bin/zoekt-git-index`, binds loopback ports, and
-may take several minutes.
-
-The accepted closure receipt is committed as
-`spike/t201/results-t20.14.json`
-(`sha256:bad98140f0974a5f929355390d4b9bbb538d8f503d62421ca20fa2888046e1f2`).
-On its macOS/arm64 reference machine, 10,010 calls and 10,005 unit mappings
-produced 10,004 caller and comparison identities. The observed stages were
-205 ms sync, 199 ms index, 227,416 ms extraction, 12 ms Atlas, 17,983 ms
-Caller Map, and 18,098 ms comparison. Both service reads returned a bounded
-100-row page with continuation; the two UI profiles mounted only the current
-100 rows. The receipt also binds the separately versioned current-writer v7
-publication/sweep receipt. Failure injection lives only in this acceptance
-harness rather than in production configuration; the normal embedded-UI
-journey is pinned by Vitest against the same components. Every duration is a
-reference-machine observation, not a universal performance promise. Passing
-the closure changes neither the experimental-dark registration nor the
-external `NOT_ESTABLISHED` accuracy posture.
+Epic 20's capacity, publication, paging, and closure gates are retained
+engineering records rather than workflow instructions. Their receipts and
+digests live under [`spike/t201/`](../../spike/t201/README.md) and are indexed
+by [RETAINED_RECORDS.md](../RETAINED_RECORDS.md); the opt-in
+`make t20-closure` acceptance journey is listed with the contributor targets
+in [OPERATIONS.md](./OPERATIONS.md#developing-phebs). Passing those gates
+changed neither the experimental-dark registration nor the external
+`NOT_ESTABLISHED` accuracy posture.
 
 There is no production Change Workbench in the current release. The available
 production pieces are separate: a human can browse a declaration in Contracts,
@@ -689,74 +635,12 @@ Phebs may attach cited evidence and analysis gaps to the criterion, but it canno
 
 <!-- END GENERATED CHANGE WORKBENCH GLOSSARY -->
 
-Epic 21 is authorized for specifications, tests, synthetic demonstrations, and
-production-unregistered/default-dark implementation only. Because it stores
-its brief, snapshots, analysis artifacts, and human records under
-Investigations, production Workbench creation, mutation, export, UI, and MCP
-registration inherit Epic 16's still-unsatisfied `ESTABLISHED` validation plus
-explicit pilot-continuation gate. Completing its implementation tickets cannot
-clear that gate or support an external accuracy, migration-complete, or
-safe-to-retire claim.
-
-The T21.9 checklist composes the current authorized T21.7 Where and T21.8 How
-projections. It remains production-unregistered/default-dark: T21.11 exposes
-its HTTP and UI projections only through the fixture-coupled synthetic
-Workbench. T21.13 adds no separate checklist-read tool; its explicit
-`record_change_disposition` mutation forwards an already evidence-bound
-suggestion to this same service for current-projection validation. Each machine
-suggestion binds its
-originating Workbench Revision, normalized evidence inputs, complete evidence
-snapshot, deterministic selection rule, and exact evidence references.
-Suggestions are never persisted or accepted automatically. When evidence
-changes, the service emits new unaccepted suggestion identities and continues
-to display dispositions over the prior evidence as `stale`; it never silently
-retargets the human record.
-
-The human projection consists only of immutable Dispositions in the fixed
-categories `accepted`, `rejected`, `completed`, `reopened`, and `waived`.
-Rejected, reopened, and waived records require a rationale. A correction or
-reopen appends a successor that names the exact active predecessor — and is
-possible only while the disposition's originating Workbench revision is still
-current: once the revision advances, prior dispositions remain visible,
-immutable history but can no longer be corrected or reopened. Each
-Investigation's disposition history is bounded at 1,000 records; the append
-boundary refuses further dispositions at the bound rather than writing a
-record the reader could no longer list. Successors preserve
-the old text and category. Each append requires the Investigation owner,
-expected current Revision, an exact idempotency key, and the authenticated
-actor, and is audited in the same transaction. Reader grants may inspect the
-history but cannot mutate it.
-
-This does not change T16.8 ReviewItems into tasks. ReviewItems remain
-deterministic machine projections with no hand-creation or mutation path.
-There is no ChecklistItem/Task table, comment, assignment/assignee, due date,
-priority, custom state, or checklist-owned Decision. Dispositioning every
-displayed entry does not establish completeness, correctness, runtime use,
-migration completion, or retirement safety, and it creates no Investigation
-Decision.
-
-Named API keys are read-only for Investigation mutations unless their creator
-explicitly selected the immutable `investigation:write` capability. Existing
-named keys and the migration-only legacy key retain an empty capability set
-and must be replaced deliberately to change authority. The capability is only
-an additional credential gate: it never expands repository visibility,
-Investigation access or ownership, or principal authority. A capable key still
-passes the same owner, current-Revision, preview, snapshot, and idempotency
-checks. Browser-session writes use the existing session authorization and CSRF
-check and do not carry or emulate a bearer-key capability. The Workbench
-remains production-unregistered/default-dark. T21.13 uses this capability only
-for its fixture-coupled MCP preview binding and two explicit durable mutation
-tools. The stateless request is authenticated again before tool discovery or
-invocation, so revocation, expiry, or disabling the owning user removes access
-before the Workbench adapter runs. Capability possession still does not grant
-repository visibility, reader/owner access, or authority over another
-principal's Investigation.
-
-The existing `check_contract_compatibility` HTTP and MCP contracts continue to
-return retained content-addressed proof bundles. Workbench compatibility is an
-additive explicit Investigation analysis path and does not migrate, delete, or
-reidentify those bundles. This internal T21.6 path remains
-production-unregistered/default-dark with the rest of the Workbench.
+Epic 21 remains authorized for specifications, tests, synthetic
+demonstrations, and production-unregistered/default-dark implementation only;
+production registration inherits the still-unsatisfied validation and
+pilot-continuation gate in [ROADMAP.md](../ROADMAP.md). The storage, service,
+checklist, and reader design lives in [PLAN.md](../../PLAN.md) and the Epic 21
+tickets in [BACKLOG_COMPLETED.md](../BACKLOG_COMPLETED.md).
 
 What identifies an existing endpoint by the complete `(protocol, repository,
 declaration lineage, canonical operation)` tuple. Equal operation spellings in
@@ -770,153 +654,44 @@ remain context, not substitutes for required roles.
 
 Proposed protobuf and Thrift preview files inherit the production parser
 preflights: at most 256 files, 4 MiB per file, 32 MiB aggregate, 500,000 tokens
-per file, and 128 structural levels per file. Byte/count limits and lexical
-preflight run before the in-process parser. Preview returns only sorted
+per file, and 128 structural levels per file. Preview returns only sorted
 path/hash/size commitments, never source bytes; viewing or previewing creates
 no proof bundle, Investigation run, or repository evidence. Protobuf previews
 show the pinned Buf `WIRE` engine/policy and all relevant ceilings. Thrift has
 parsing preview support but no compatibility engine, so it renders
 `unavailable` rather than a compatible verdict.
 
-Retaining a protobuf modify analysis is a separate explicit mutation. It
-rechecks the owner, current Workbench Revision, proposal path/hash/size,
-authorization snapshot, exact Atlas endpoint and commit-pinned declaration
-spans, and pinned compatibility policy. Caller-supplied `before` bytes are not
-baseline authority: every submitted path is re-read through the bounded Git
-layer from the currently authorized selected repository at its exact committed
-revision; path and bytes must match, and every declaration-source path must be
-present, before a run is created. One idempotency key yields one audited
-Investigation run/artifact; an exact retry returns that same terminal result,
-including a bounded failed artifact when the checker refuses. A run abandoned
-by a crashed worker can be requeued only after its lease is at least five
-minutes old, under the exact observed lease tuple, and within a three-attempt
-ceiling; live workers remain fenced. Failed artifacts retain only a stable
-failure classification, never Buf stderr or proposal symbols. The artifact
-contains input commitments and the compatibility result, not submitted source
-bytes, and is owned by Investigation retention. It is not a proof bundle and
-does not change proof-bundle reauthorization, expiry, deletion, bytes, or
-identity.
+Retaining a protobuf modify analysis is a separate explicit mutation. Baseline
+bytes are re-read through the bounded Git layer from the currently authorized
+selected repository at its exact committed revision — caller-supplied `before`
+bytes are not baseline authority. One idempotency key yields one audited
+Investigation run/artifact containing input commitments and the compatibility
+result, never submitted source bytes or Buf stderr.
 
-The T21.7 Where reader composes those exact Workbench identities
-with the existing Contract Atlas, Caller Map, caller comparison, and stable
-field-reference services. It remains production-unregistered; its conditional
-T21.11 HTTP/UI projection is fixture-coupled. T21.13 deliberately adds no
-parallel MCP impact reader: agents use the existing Epic 20 and core tools. Add
-shows analogous declarations and
-implementations and deliberately has no caller stream. Modify shows the
-current exact caller page plus an explicitly selected retained compatibility
-artifact and references to its affected stable fields. Migrate uses the one
-snapshot-consistent old-to-replacement comparison; it never zips two
+Where composes the exact Workbench identities with the existing Contract
+Atlas, Caller Map, comparison, and field-reference services. Add shows
+analogous declarations and implementations and deliberately has no caller
+stream. Modify shows the current exact caller page plus an explicitly selected
+retained compatibility artifact and its affected stable fields. Migrate uses
+the one snapshot-consistent old-to-replacement comparison; it never zips two
 independently timed caller pages. Retire keeps callers, name matches,
 extractor abstentions, unsupported planes, and gaps adjacent and never derives
 a safe-to-decommission result.
 
-The typed inventory keeps Atlas implementations, name matches needing review,
-extractor abstentions, resolved callers, unit-attribution ambiguity, migration
-comparison classes, and field references in separate collections. Its opaque
-cursor binds the current Revision and brief, principal, filters, page size,
-Atlas and compatibility content, resource-plane state, and each reused
-service's snapshot and cursor. Streams advance together. A stream that
-finishes early is re-read only to verify that its snapshot has not changed;
-unsupported, failed, stale, and human-asserted planes remain visible on every
-page and are never converted into absence when pagination completes.
+How starts from the current Revision's exact selected contracts plus up to 32
+explicit user pins — each an exact visible repository, immutable indexed
+commit, safe path, and source position checked against the immutable bytes.
+Search matches, SCIP definitions and references, and selected history commits
+are always review candidates, not proposed or recommended edits; production,
+test, mock, generated, vendor, and documentation roles remain separate. An
+unavailable search, SCIP, or history capability is recorded as a typed gap,
+never a guessed path, and the whole composition is bounded.
 
-Field-reference browsing is side-effect-free. It reuses the proof engine's
-authorization-filtered visible repository set, coverage-certificate
-double-check, stable `(lineage, message, field number)` join, and exact source
-evidence resolution, but it does not write a proof bundle. The existing
-`find_proto_field_references` proof operation uses that same reader and remains
-the only path that persists the content-addressed bundle. Likewise, the
-Workbench compositor has no direct evidence-store access: all evidence comes
-from the shared Atlas, Caller Map/comparison, and field services.
-
-The T21.8 How reader remains production-unregistered with the rest of the
-Workbench; its conditional T21.11 HTTP/UI projection is fixture-coupled. It
-starts from the current authorized Revision's exact selected contracts plus up
-to 32 explicit user pins. A pin is an exact visible
-repository, immutable indexed commit, safe path, and source position; its line
-and UTF-8/16/32 character boundary are checked against the immutable bytes
-before it becomes selected. Selected
-Atlas declaration and implementation files are accepted only at that same
-authorized indexed commit and are re-read through the bounded Git object layer
-to attach a content digest. There is no implicit ref and no mirror-`HEAD`
-fallback.
-
-Related operation-name search is limited to cited repositories. Search
-matches, SCIP definitions and references, and selected path-history
-commits/diffs are always review candidates, not proposed or recommended edits.
-Only the Atlas declaration/implementation inputs and explicit user pins are
-marked selected. Each row displays the deterministic rule or explicit-pin rule
-that admitted it. Production, test, mock, generated, vendor, and documentation
-roles remain separate; generated and vendor boundaries stay visible instead
-of being hidden as implementation detail.
-
-If indexed search, SCIP, a usable source position, or Git history is
-unavailable or fails, the response records a typed gap and does not guess a
-path. The composition is capped at 32 pins, 64 selected sources, 32 MiB of
-source reads, 32 indexed searches, 50 candidates per search, and 500 search
-candidates in aggregate. Each search overreads one sentinel so a truncated
-candidate tail is recorded as a gap. It also caps 32 SCIP anchors, 16 history
-files with two commits each, 2,000 total rows, and 100 rows per page. Diff text
-is excerpted to 16 KiB. Its opaque cursor binds the principal,
-current Revision and brief, normalized pins, visible indexed commits, relevant
-Atlas state, and the complete composed snapshot; authorization and indexed
-commits are rechecked after the read. This reader runs no repository code,
-generator, build, test, plugin, or mutable checkout and creates no proof bundle
-or Investigation mutation.
-
-The protocol-neutral resource registry can display `enabled`, `unsupported`,
-`failed`, `stale`, and `human_asserted`. Only an explicitly registered real
-pack may contribute relationships, and only while its state is `enabled`.
-State-only or human-authored entries contribute no relationships. The built-in
-Kafka, Redis, document-store, SQL, and runtime Workbench planes currently
-remain unsupported; Kafka's separate topic-proof surface is not silently
-promoted into a selected-ticket dependency graph. An enabled pack is bounded
-to 200 relationships with at most 16 canonical source citations per relationship.
-Malformed or oversized output fails closed; hidden citations are removed
-before serialization, and cancellation is not converted into a pack failure.
-Hidden exact targets fail closed, and repositories outside the requesting
-principal's visibility cannot affect evidence rows, totals, capability/gap
-state, cursors, or serialized bytes. None of these states is runtime truth or
-a completeness score.
-
-Minimal `phebs.yaml`:
-
-```yaml
-server:
-  addr: "127.0.0.1:3070"  # local quick start
-
-auth:
-  cookie_secure: false  # plain-HTTP localhost only; keep the default true under HTTPS
-
-connections:
-  - name: zoekt
-    type: git
-    url: https://github.com/sourcegraph/zoekt.git
-```
-
-On a fresh data directory, startup prints `first-run setup token: ...`. Open
-[http://localhost:3070](http://localhost:3070), enter that token with an administrator email and a
-password of at least 12 bytes, and the browser starts a persisted session.
-The token exists only in process memory and stops working as soon as the
-first user is created; treat the startup log as sensitive until then. The
-repo syncs and indexes within one poll cycle
-(≤ ~20 s by default); watch progress on the **Repos** page.
-
-For unattended provisioning, configure `auth.bootstrap_user` instead. For
-HTTPS deployments, omit `cookie_secure` (the secure default), keep phebs on a
-private listener, and terminate TLS at a trusted reverse proxy.
-
-`phebs serve` flags:
-
-
-| Flag                   | Meaning                                                              |
-| ---------------------- | -------------------------------------------------------------------- |
-| `-config path`         | config file; omitted = defaults (no connections, data in `~/.phebs`) |
-| `-addr 127.0.0.1:3070` | listen address, overrides `server.addr`                              |
-
-
-
+The protocol-neutral resource registry displays `enabled`, `unsupported`,
+`failed`, `stale`, and `human_asserted` planes. The built-in Kafka, Redis,
+document-store, SQL, and runtime Workbench planes currently remain
+unsupported, enabled packs are bounded and fail closed on malformed output,
+and none of these states is runtime truth or a completeness score.
 
 ## Searching
 
@@ -1337,28 +1112,4 @@ or the equivalent `.mcp.json`:
 }
 ```
 
-Any MCP client speaking Streamable HTTP works the same way. The core flow was
-verified live against Claude Code: a headless session listed repos, ran a
-scoped search, and read the matching file end-to-end (T8.3). Epic 9's seven
-navigation/history tools are covered through real in-memory MCP sessions over
-a committed SCIP fixture and bare Git mirror, including an indexed revision
-held stable while mirror HEAD advances. T14.2's proof tools are covered through
-one stateless Streamable HTTP session using the official SDK: the agent asks
-operation-, field-, coverage-, and compatibility questions and receives source
-citations and coverage without hidden-repository access. Compatibility is not
-advertised if Buf is missing, has the wrong version, or the host cannot enforce
-the sandbox. T20.11 adds an official-SDK stateless session that discovers one
-of two duplicate-named operations without a pretyped identifier, resolves its
-exact detail, and exhausts multiple Caller Map pages with the same shared
-service content and cursor refusals. The three tools register all-or-none and
-remain absent unless a protocol caller pack makes the Caller Map service
-available. T20.13's companion session supplies two returned identities to
-`compare_operation_callers`, exhausts bounded continuation, and matches direct
-shared-service classifications and citations; the tool remains absent with
-the comparison capability unavailable. T21.13's official-SDK session performs
-one side-effect-free preview, one preview-bound idempotent creation, an
-authorized Workbench read, paged drill-down through the existing Caller Map,
-and one expected-revision Disposition. It also pins strict schemas and tool
-counts for dark, partial, session, read-only, legacy, write-capable, revoked,
-and stale states. The Workbench adapter has no evidence-reader dependency and
-does not generate checklist or conclusion text.
+Any MCP client speaking Streamable HTTP works the same way.
