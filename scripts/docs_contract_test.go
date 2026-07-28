@@ -125,7 +125,7 @@ func TestCompletedBacklogArchiveDigest(t *testing.T) {
 	}
 	digest := sha256.Sum256(data)
 	got := "sha256:" + hex.EncodeToString(digest[:])
-	const want = "sha256:d00133c3acfc805d4d86fcd75dc6ab102744845569740a28d30748cac80364d0"
+	const want = "sha256:b493f6c5be3aae54291b70e72f55e9e652deb9a5676f8bce9b41be6d2b44c971"
 	if got != want {
 		t.Fatalf("completed backlog archive changed: got %s, want %s", got, want)
 	}

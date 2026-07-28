@@ -1,5 +1,9 @@
 # T21.1 — Change Workbench inventory and vocabulary contract
 
+> **Retained engineering record.** This documents a completed executable design
+> contract, not current user behavior or production authorization. See
+> [`docs/RETAINED_RECORDS.md`](../../docs/RETAINED_RECORDS.md).
+
 **Date:** 2026-07-26 · **Status:** COMPLETE · **Scope:** executable design
 contract only; this package adds no production behavior and production packages
 must not import it.

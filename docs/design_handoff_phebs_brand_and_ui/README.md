@@ -1,5 +1,10 @@
 # Handoff: phebs — Context Port brand + Refined rail UI
 
+> **Retained design record.** These prototypes explain the origin of the current
+> visual language; they are not an active product specification. Current UI
+> behavior belongs in the [user guides](../MANUAL.md) and tests. See the
+> [retained-record index](../RETAINED_RECORDS.md).
+
 ## Overview
 Two coordinated changes to the phebs web UI (`ui/` in the phebs repo — React 19 + TypeScript + Vite + Base Web/styletron, hash routing):
 

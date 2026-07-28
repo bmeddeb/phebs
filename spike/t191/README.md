@@ -1,5 +1,9 @@
 # T19.1 — Thrift protocol-pack validation spike
 
+> **Retained engineering record.** This documents a completed validation spike,
+> not current user behavior or an accuracy/completeness claim. See
+> [`docs/RETAINED_RECORDS.md`](../../docs/RETAINED_RECORDS.md).
+
 **Date:** 2026-07-25 · **Status:** COMPLETE · **Charter:** validate the
 extraction rules for the future `thriftdecl` (thrift-contract) and `thriftgo`
 (thrift-consumer) extractors against pinned real corpora before

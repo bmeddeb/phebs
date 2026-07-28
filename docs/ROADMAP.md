@@ -25,14 +25,13 @@ accuracy.
 
 ## Now
 
-**Epic 24 — documentation information architecture**
+Epic 24’s documentation reset is complete: public entry points, task guides,
+planning/history separation, product/adoption ownership, contributor
+instructions, and retained-record classification are all in place.
 
-- T24.1–T24.4: ownership guard, concise README, task-oriented user guides, and
-  active/history separation are complete.
-- T24.5: consolidate product and adoption explanations while preserving the
-  normative Investigation, MCP, pack, and pilot contracts.
-- T24.6: consolidate contributor instructions and classify retained
-  engineering records.
+No implementation ticket is currently scheduled. New work requires an
+explicit decision to pursue the gated evidence/pilot path or the demand-driven
+P6 fleet profile below.
 
 ## Gated product work
 

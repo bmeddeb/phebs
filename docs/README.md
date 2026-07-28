@@ -100,26 +100,9 @@ themselves.
 - [GATE0.md](./GATE0.md) — synthetic Gate 0 fixture and bypass boundary.
 - [GATE0_REHEARSAL.md](./GATE0_REHEARSAL.md) — synthetic ceremony rehearsal.
 
-## Retained fixtures and design references
+## Retained engineering records
 
-- [Change Workbench fixture](./fixtures/change-workbench/README.md)
-- [Investigation envelope fixtures](./fixtures/investigations/README.md)
-- [Thrift field-reference fixture](./fixtures/thrift-field/README.md)
-- [Brand and UI handoff](./design_handoff_phebs_brand_and_ui/README.md), including
-  its [token notes](./design_handoff_phebs_brand_and_ui/notes/tokens.md)
-
-Fixtures are deterministic test inputs, not public-corpus validation or product
-claims.
-
-## Validation and measurement records
-
-- [T11.1 / GATE2-V2 report](../spike/t111/REPORT.md) and
-  [sealed record index](../spike/t111/labeling/README.md)
-- [T19.1 Thrift validation spike](../spike/t191/README.md)
-- [T20.1 store and scale spike](../spike/t201/README.md)
-- [T21.1 Workbench inventory and glossary](../spike/t211/README.md)
-- [T22.1 Thrift field-reference spike](../spike/t221/README.md)
-- [T23.1 Kafka evidence spike](../spike/t231/README.md)
-
-The T11.1 tree is sealed history. Later spike reports are retained engineering
-records and remain distinct from current user documentation.
+[RETAINED_RECORDS.md](./RETAINED_RECORDS.md) classifies and indexes sealed
+validation evidence, non-sealed spikes, deterministic fixtures, the design
+handoff, and planning history. Retained records explain decisions or preserve
+test inputs; they are not current user instructions or product claims.

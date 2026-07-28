@@ -1,5 +1,9 @@
 # T23.1 — Kafka topic-evidence validation spike
 
+> **Retained engineering record.** This documents a completed validation spike,
+> not current user behavior or an accuracy/completeness claim. See
+> [`docs/RETAINED_RECORDS.md`](../../docs/RETAINED_RECORDS.md).
+
 Charter: freeze the recognition, literal-or-abstain, identity, tier, and
 declarations-plane rules the Epic 23 `kafkago` extractor must implement, by
 proving or refuting each candidate rule against pinned real corpora with

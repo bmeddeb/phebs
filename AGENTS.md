@@ -69,15 +69,17 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 ## Current state
 
-**Single-node product complete through Epic 15 (2026-07-22).** Epics 0–10 are
-shipped and demoed, including authentication, permissions, audit/analytics,
-SCIP/history, stateless MCP, and T10.4 bounded `rev:` indexing. TD.4's shared
-bounded Git reader serves source, history, SCIP, and extraction. The read-only,
-default-dark contract-intelligence annex (Epics 11–15) is implemented and its
-independent acceptance gate is closed; GATE2-V2 honestly remains
-`NOT_ESTABLISHED`, so there is no numeric public-corpus accuracy claim. Epic 16
-implementation is proceeding under Ben's explicit 2026-07-22 operator bypass;
-the bypass is not a valid validation or continuation record and authorizes no
-external claim. T-P5.1 live backup/restore is complete; further P5
-hardening is pull-on-demand and P6 fleet work remains planned. There is still no
-git remote or CI run; the full local Go suite, vet, and lint are the merge bar.
+**Single-node implementation complete through Epic 23; documentation Epic 24
+complete (2026-07-27).** Search, repository browsing, authentication,
+permissions, audit/analytics, SCIP/history, stateless MCP, bounded `rev:`
+indexing, and backup/restore are shipped core behavior. Contract Atlas, Caller
+Map, Impact, Investigations/Workbench, Thrift-field, and Kafka evidence are
+implemented but remain experimental/default-dark or fixture-bound.
+GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
+completeness, migration-completion, or decommission-safety claim exists.
+
+The public remote and hosted CI exist. `v0.2.0` is an immutable but unverified
+historical tag; `v0.2.1-dev` is the current source line and may be tagged only
+after its exact main commit passes the required hosted gate. P6 fleet work
+remains demand-driven. Active sequencing lives in `docs/ROADMAP.md`; completed
+tickets live in `docs/BACKLOG_COMPLETED.md`.

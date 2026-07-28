@@ -1,5 +1,9 @@
 # T22.1 — Thrift field-reference validation spike
 
+> **Retained engineering record.** This documents a completed validation spike,
+> not current user behavior or an accuracy/completeness claim. See
+> [`docs/RETAINED_RECORDS.md`](../../docs/RETAINED_RECORDS.md).
+
 Charter: freeze the recognition, identity, tier, lineage, and abstention
 rules the Epic 22 `thriftfield` extractor must implement, by proving or
 refuting each candidate rule against pinned real corpora with executable

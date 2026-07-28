@@ -1,5 +1,9 @@
 # T20.1 — Synthetic monorepo contract and validation spike
 
+> **Retained engineering record.** This documents a completed synthetic
+> correctness/scale spike, not current user behavior or a deployment SLA. See
+> [`docs/RETAINED_RECORDS.md`](../../docs/RETAINED_RECORDS.md).
+
 **Date:** 2026-07-25 · **Status:** COMPLETE · **Scope:** freeze the
 neutral correctness and scale populations, current limits, and measured
 publication/query/retention behavior before Epic 20 production work.
