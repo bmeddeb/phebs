@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
@@ -848,6 +849,9 @@ func (s *Surreal) GetRepo(ctx context.Context, name string) (*Repo, error) {
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("repo %q: %w", name, ErrNotFound)
 	}
+	if err := validateRepoAnalysisUnit(&rows[0]); err != nil {
+		return nil, err
+	}
 	return &rows[0], nil
 }
 
@@ -856,7 +860,26 @@ func (s *Surreal) ListRepos(ctx context.Context) ([]Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return (*results)[0].Result, nil
+	repositories := (*results)[0].Result
+	for index := range repositories {
+		if err := validateRepoAnalysisUnit(&repositories[index]); err != nil {
+			return nil, err
+		}
+	}
+	return repositories, nil
+}
+
+func validateRepoAnalysisUnit(repository *Repo) error {
+	if repository == nil {
+		return errors.New("repository row is nil")
+	}
+	if err := repository.IndexedAnalysisUnit.Validate(repository.Name); err != nil {
+		return fmt.Errorf(
+			"repo %q: invalid committed analysis unit: %w",
+			repository.Name, err,
+		)
+	}
+	return nil
 }
 
 func (s *Surreal) DeleteRepo(ctx context.Context, name string) error {
@@ -906,9 +929,35 @@ func (s *Surreal) SetRepoIndexed(ctx context.Context, name, commitHash string, a
 }
 
 func (s *Surreal) SetRepoIndexedRevisions(ctx context.Context, name, defaultCommit string, revisions []IndexedRevision, at time.Time) error {
+	return s.SetRepoIndexedState(ctx, name, defaultCommit, revisions, nil, at)
+}
+
+func (s *Surreal) SetRepoIndexedState(
+	ctx context.Context,
+	name,
+	defaultCommit string,
+	revisions []IndexedRevision,
+	unit *analysisunit.State,
+	at time.Time,
+) error {
+	if err := unit.Validate(name); err != nil {
+		return fmt.Errorf("repo %q: analysis unit: %w", name, err)
+	}
+	statement := `UPDATE $rid SET indexed_commit_hash = $hash,
+		indexed_revisions = $revisions, indexed_analysis_unit = NONE,
+		indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`
+	vars := map[string]any{
+		"rid": repoID(name), "hash": defaultCommit,
+		"revisions": revisions, "at": at,
+	}
+	if unit != nil {
+		statement = `UPDATE $rid SET indexed_commit_hash = $hash,
+			indexed_revisions = $revisions, indexed_analysis_unit = $unit,
+			indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`
+		vars["unit"] = analysisunit.CloneState(unit)
+	}
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		`UPDATE $rid SET indexed_commit_hash = $hash, indexed_revisions = $revisions, indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`,
-		map[string]any{"rid": repoID(name), "hash": defaultCommit, "revisions": revisions, "at": at})
+		statement, vars)
 	if err != nil {
 		return err
 	}
@@ -920,7 +969,8 @@ func (s *Surreal) SetRepoIndexedRevisions(ctx context.Context, name, defaultComm
 
 func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		"UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE, indexed_at = NONE RETURN AFTER",
+		`UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
+			indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER`,
 		map[string]any{"rid": repoID(name)})
 	if err != nil {
 		return err
@@ -1003,6 +1053,7 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 			Connections:  conns[r.Name],
 			Orphaned:     len(conns[r.Name]) == 0,
 			LastIndexJob: latest[r.Name],
+			AnalysisUnit: analysisunit.CloneState(r.IndexedAnalysisUnit),
 		}
 	}
 	return statuses, nil

@@ -1,8 +1,9 @@
 # phebs · active backlog
 
 Epic 30 is in progress for service-scoped analysis of very large
-monorepositories; T30.1 recorded a GO result and T30.2 is the next ticket.
-Completed Epics 0–24, Epic 29, T30.1, and P5 hardening are retained in the
+monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
+configuration/state boundary, and T30.3 is the next ticket. Completed Epics
+0–24, Epic 29, T30.1–T30.2, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -12,9 +13,9 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.2 · Analysis-unit config and committed state** is next. T30.1's retained
-focused-index and shard-set spike recorded GO without changing production
-behavior.
+**T30.3 · Focused zoekt child and shard integrity** is next. T30.2 established
+strict analysis-unit identity and revision-bound committed state while
+deliberately retaining whole-repository physical indexing.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -488,7 +489,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.2 next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.3 next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -698,18 +699,13 @@ GO)* — completed and retained in the
 and [executable spike record](../spike/t301/README.md). It changed no
 production config, store, queue, API, or UI behavior.
 
-**T30.2 · Analysis-unit config and committed state** *(T30.1 GO recorded · next)* —
-add the strict repository-keyed config, canonical digest, one-active-unit
-validation, and store state that binds indexed revisions to the unit digest.
-Changing only scope bytes queues a rebuild. Repo status and operator
-diagnostics expose the unit name, digest, selected paths/counts, and exact
-typed-index posture without leaking source content. Absent configuration is
-byte-compatible whole-repository behavior. AC: strict YAML/schema/example
-coverage, upgrade/reopen tests, scope-change job tests, path safety and
-non-disclosure tests, PLAN and Configuration/Operations updates; full merge
-bar.
+**T30.2 ✅ · Analysis-unit config and committed state** *(2026-07-28)* —
+completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t302--analysis-unit-config-and-committed-state).
+It introduced no focused physical indexing; configured and unconfigured
+repositories still use the existing whole-repository child.
 
-**T30.3 · Focused zoekt child and shard integrity** *(needs T30.2)* —
+**T30.3 · Focused zoekt child and shard integrity** *(T30.2 complete · next)* —
 ship the T30.1-proven child in development and release builds, invoke it for a
 configured unit, retain `zoekt-git-index` for whole repositories, and commit
 index state only after every scoped shard is durable. Search startup,
@@ -733,7 +729,7 @@ binary parity; and size-driven shard splits preserve identical
 unit/revision/generation metadata plus exact expected membership; full merge
 bar.
 
-**T30.4 · Reusable candidate-partition manifest** *(needs T30.2)* — replace
+**T30.4 · Reusable candidate-partition manifest** *(T30.2 complete)* — replace
 per-domain complete-tree retention with one streamed commit census that
 produces a content-addressed manifest: repository/unit candidates for focused
 domains and deterministic repository-global caller partitions. The trusted

@@ -44,6 +44,13 @@ revisions:
   github.com/acme/api:
     release-1: refs/heads/release/1
     v1.4.0: refs/tags/v1.4.0
+
+# Optional: one exact service scope per repository.
+analysis_units:
+  github.com/acme/monorepo:
+    name: payments
+    primary: [services/payments/src]
+    supporting: [contracts/payment.proto, services/payments/go.mod]
 ```
 
 
@@ -73,7 +80,59 @@ revisions:
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](./OPERATIONS.md#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 | `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
+| `analysis_units`                            | `{}`             | repo name → one strict service scope; omitted repositories keep whole-repository behavior; restart after changing it                                           |
 
+
+### Analysis units
+
+`analysis_units` names at most one service scope for an exact repository. It
+does not discover services, run a build, follow dependencies, or widen the
+scope automatically:
+
+```yaml
+analysis_units:
+  github.com/acme/monorepo:
+    name: payments
+    primary:
+      - services/payments/src
+    supporting:
+      - contracts/payment.proto
+      - services/payments/go.mod
+```
+
+`primary` requires at least one exact file or directory. `supporting` may be
+empty and is reserved for explicit declarations, generated sources,
+module/workspace metadata, attribution inputs, and typed-index artifacts. Both
+lists use complete repository-relative Git paths. They are sorted
+independently for identity, so YAML order does not change the digest.
+
+Names are non-empty tokens of at most 128 bytes using letters, digits, `.`,
+`_`, and `-`. A scope admits at most 128 combined path entries and 64 KiB of
+combined path bytes. Repository keys are at most 1,024 bytes and must be valid
+mirror names. Paths must be non-empty, clean UTF-8, slash-separated, relative,
+and free of control characters. Empty or `.` paths, absolute paths, `..`,
+backslashes, duplicates, and ancestor/descendant overlaps across either list
+fail startup. A directory selection includes its descendants only when the
+focused builder is introduced; no unlisted sibling is implied.
+
+The stable `analysis-unit-v1` digest is SHA-256 over a domain separator plus
+canonical JSON containing the schema, repository, unit name, sorted primary
+paths, and sorted supporting paths. Source commits and revision selectors do
+not enter that stable unit digest. On a successful index, phebs atomically
+stores the unit state beside the exact indexed HEAD and allowlisted revision
+set. A name or path change therefore queues a replacement even when HEAD is
+unchanged; removing the entry queues a replacement that returns the repository
+to unscoped state.
+
+T30.2 is the state boundary, not focused physical indexing. The existing
+`zoekt-git-index` child still receives the whole repository, and status reports
+`search_index_posture: whole-repository`. Existing repository-root
+`index.scip` input is not relabeled as scoped; status reports
+`typed_index_posture: repository-root-unbound`. T30.3 owns the focused search
+child, selected-path existence/type checks at every indexed revision, shard
+metadata, and complete publication manifest. Repositories absent from
+`analysis_units` retain the prior whole-repository index and extraction
+behavior and response shape.
 
 
 ### Provisional Change Workbench

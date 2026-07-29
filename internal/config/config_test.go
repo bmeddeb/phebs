@@ -66,6 +66,36 @@ connections:
 			"unsafe repository name",
 		},
 		{
+			"analysis unit valid",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/payments/src]\n    supporting: [contracts/payment.proto, services/payments/go.mod]\n",
+			"",
+		},
+		{
+			"analysis unit unknown field",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/payments/src]\n    infer: true\n",
+			"field infer not found",
+		},
+		{
+			"analysis unit unsafe repository",
+			"analysis_units:\n  ../outside:\n    name: payments\n    primary: [services/payments/src]\n",
+			"unsafe repository name",
+		},
+		{
+			"analysis unit missing primary",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n",
+			"at least one path is required",
+		},
+		{
+			"analysis unit overlapping paths",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/payments]\n    supporting: [services/payments/go.mod]\n",
+			"overlapping paths",
+		},
+		{
+			"analysis unit path traversal",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/../outside]\n",
+			"unsafe repository-relative Git path",
+		},
+		{
 			"auth bootstrap valid",
 			"auth:\n  cookie_secure: false\n  session_lifetime: 8h\n  trusted_proxies: ['127.0.0.1/32', 'fd00::/8']\n  bootstrap_user: {email: admin@example.com, password: 'long-enough-password'}\n",
 			"",
@@ -406,6 +436,29 @@ connections:
 				t.Fatalf("Parse() error = %q, want substring %q", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestAnalysisUnitScopesReturnsDefensiveCopy(t *testing.T) {
+	cfg, err := Parse([]byte(`analysis_units:
+  github.com/acme/api:
+    name: payments
+    primary: [services/payments/src]
+    supporting: [contracts/payment.proto]
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	scopes := cfg.AnalysisUnitScopes()
+	scope := scopes["github.com/acme/api"]
+	scope.Primary[0] = "mutated"
+	scope.Supporting[0] = "mutated"
+	scopes["github.com/acme/api"] = scope
+
+	fresh := cfg.AnalysisUnitScopes()["github.com/acme/api"]
+	if fresh.Primary[0] != "services/payments/src" ||
+		fresh.Supporting[0] != "contracts/payment.proto" {
+		t.Fatalf("AnalysisUnitScopes aliased config: %+v", fresh)
 	}
 }
 

@@ -222,6 +222,48 @@ child output is discarded. Verbose mode does not change the indexed corpus,
 timeouts, retries, process isolation, or shard publication. Disable it again
 after diagnosis when indexing a noisy large repository.
 
+#### Analysis-unit state and rebuilds
+
+At startup, each configured `analysis_units` entry produces one
+repository-prefixed diagnostic containing the unit name, stable digest,
+primary/supporting path lists, and the exact search and typed-index postures.
+These are operator metadata only; no source, blob bytes, line excerpts, or
+credentials are logged. The configuration guide owns the
+[strict schema and limits](./CONFIGURATION.md#analysis-units).
+
+The committed projection is available on authenticated
+`GET /api/repo-status` as `analysis_unit`. It contains:
+
+- `schema`, `name`, and the canonical `digest`;
+- sorted `primary_paths` and `supporting_paths`, with entry counts; and
+- `search_index_posture` and `typed_index_posture`.
+
+The general `GET /api/repos` shape remains unchanged and never exposes the
+internal committed field. Repository visibility continues to authorize both
+the status row and its path metadata; an analysis unit grants no additional
+repository access.
+
+Startup compares desired configuration with the unit state atomically stored
+beside the indexed HEAD and complete revision list. A name/path change or
+removal queues one index job even when commits are unchanged. An already
+indexed repository uses a forced replacement so the child cannot take its
+incremental short-circuit. The prior complete state remains authoritative
+until the replacement child succeeds and the new revision/unit state commits
+in one database update. A failed or canceled job therefore leaves the previous
+state visible; retry and recovery use the normal index-job rules. If the
+builder binary is unavailable, the pending job and previous state remain
+visible for diagnosis rather than claiming completion.
+
+Legacy rows reopen with no unit state and are not rewritten or rebuilt when
+`analysis_units` is absent. At T30.2, configured repositories also continue to
+use the existing whole-repository child: `search_index_posture` is
+`whole-repository`, and a repository-root `index.scip` remains
+`repository-root-unbound`. The database backup includes the committed unit
+state, while current shard backup/restore behavior is otherwise unchanged.
+T30.3 owns focused shard publication, exact manifest/member-byte restore
+validation, and separate semantic-equality treatment for fresh rebuilds whose
+builder timestamp/ID can differ.
+
 
 
 ### Experimental contract-intelligence extraction

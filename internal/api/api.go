@@ -417,6 +417,9 @@ func repoFilter(ctx context.Context, opts Options) func(store.Repo) bool {
 }
 
 func sanitizeRepo(repo store.Repo) store.Repo {
+	// Internal committed state is projected deliberately on /api/repo-status;
+	// /api/repos retains its historical shape.
+	repo.IndexedAnalysisUnit = nil
 	safe, err := phebssync.SanitizeURL(repo.CloneURL)
 	if err != nil {
 		// A legacy malformed URL may contain credentials but cannot be parsed

@@ -905,7 +905,11 @@ file across renames, map lines to commits, and render commit metadata,
 changed-file statistics, and bounded unified diffs.
 - **Repos** (`#/repos`) — sync/index state per repo (polled every 3 s),
 orphan flags, indexed commit, and administrator-only **Reindex** controls
-(a forced rebuild defeats the incremental short-circuit).
+(a forced rebuild defeats the incremental short-circuit). The backing
+`/api/repo-status` response also reports any committed analysis-unit name,
+digest, exact selected paths/counts, and search/typed-index postures. T30.2
+reports `whole-repository` and `repository-root-unbound`: it establishes the
+scope/state boundary but does not yet claim focused search or scoped SCIP.
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
 Named keys are read-only for Investigation mutations by default; the creation
 form can explicitly add the immutable `investigation:write` capability and
@@ -982,7 +986,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/search?q=&max_matches=&context_lines=`                        | GET             | search, JSON in one shot                                                                       |
 | `/api/stream_search?q=…`                                            | GET             | search over SSE (below)                                                                        |
 | `/api/repos`                                                        | GET             | repo rows                                                                                      |
-| `/api/repo-status`                                                  | GET             | repos + connections + orphan flag + last index job                                             |
+| `/api/repo-status`                                                  | GET             | repos + connections + orphan flag + last index job + committed analysis-unit diagnostics       |
 | `/api/reindex`                                                      | POST            | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job           |
 | `/api/audit?offset=&limit=`                                         | GET             | administrator only: audit events, newest first, `has_more` paging                              |
 | `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |

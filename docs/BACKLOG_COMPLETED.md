@@ -3632,3 +3632,34 @@ store, queue, API, UI, or indexing behavior changed. GO releases T30.2
 configuration and state work but does not authorize T30.3 production focused
 indexing or establish runtime-use, completeness, extraction-accuracy,
 migration-completion, or decommission-safety claims.
+
+### T30.2 · Analysis-unit config and committed state
+
+**T30.2 ✅ · Analysis-unit config and committed state** *(2026-07-28)* — added
+strict repository-keyed `analysis_units` configuration with one active unit
+per repository, bounded canonical primary/supporting paths, and the stable
+T30.1 `analysis-unit-v1` digest. Unsafe repository identities, invalid unit
+tokens, empty/absolute/traversing/backslash/control paths, duplicates,
+ancestor overlaps, and count/byte-limit excess fail startup.
+
+The canonical unit state is now atomically committed beside the exact indexed
+HEAD and allowlisted revision set. Startup compares desired and committed
+state and queues one forced replacement for name/path-only changes or unit
+removal, while retaining the prior complete state until success. Existing
+rows reopen without eager mutation, and absent configuration preserves the
+previous whole-repository index, extraction, and API response behavior.
+
+Authenticated repo status projects the committed unit name, digest, sorted
+paths/counts, and exact `whole-repository` /
+`repository-root-unbound` postures without source content; the general repo
+listing and its OpenAPI model expose no internal unit field. Startup logging
+reports the same bounded operator metadata. Configuration and Operations own
+the strict schema, reconciliation, and recovery behavior.
+
+AC met: strict YAML and annotated-example tests, the T30.1 digest fixture,
+path/refusal and defensive-copy tests, atomic tamper refusal, legacy
+upgrade/reopen coverage, same-HEAD scope-change and removal rebuild tests,
+repo-status non-disclosure/OpenAPI tests, dated PLAN decision, and the full
+merge bar. T30.3 remains responsible for the production focused child,
+trusted-reader out-of-unit counters, complete shard-set validation, and
+byte-exact backup/restore distinct from semantic rebuild equality.

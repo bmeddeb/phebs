@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/search"
@@ -36,6 +37,27 @@ type urlStore struct {
 type historyStore struct {
 	fakeStore
 	hash string
+}
+
+type analysisUnitAPIStore struct {
+	fakeStore
+	unit *analysisunit.State
+}
+
+func (s *analysisUnitAPIStore) ListRepos(context.Context) ([]store.Repo, error) {
+	return []store.Repo{{
+		Name: "github.com/foo/bar", IndexedAnalysisUnit: analysisunit.CloneState(s.unit),
+	}}, nil
+}
+
+func (s *analysisUnitAPIStore) RepoStatuses(context.Context) ([]store.RepoStatus, error) {
+	return []store.RepoStatus{{
+		Repo: store.Repo{
+			Name:                "github.com/foo/bar",
+			IndexedAnalysisUnit: analysisunit.CloneState(s.unit),
+		},
+		AnalysisUnit: analysisunit.CloneState(s.unit),
+	}}, nil
 }
 
 func (s *historyStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
@@ -84,6 +106,68 @@ func TestRepoResponsesStripURLCredentials(t *testing.T) {
 				t.Errorf("%s leaked URL credentials: %s", path, rec.Body.String())
 			}
 		}
+	}
+}
+
+func TestAnalysisUnitAppearsOnlyInRepoStatusWithoutSourceContent(t *testing.T) {
+	unit, err := (analysisunit.Scope{
+		Repository: "github.com/foo/bar",
+		Name:       "payments",
+		Primary:    []string{"services/payments/src"},
+		Supporting: []string{"contracts/payment.proto"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := api.New(api.Options{
+		Version: "t", Store: &analysisUnitAPIStore{unit: unit},
+	})
+	repos := httptest.NewRecorder()
+	handler.ServeHTTP(
+		repos,
+		httptest.NewRequest(http.MethodGet, "/api/repos", nil),
+	)
+	if repos.Code != http.StatusOK ||
+		strings.Contains(repos.Body.String(), "analysis_unit") ||
+		strings.Contains(repos.Body.String(), "services/payments") {
+		t.Fatalf("/api/repos leaked analysis-unit state: %d %s", repos.Code, repos.Body)
+	}
+
+	status := httptest.NewRecorder()
+	handler.ServeHTTP(
+		status,
+		httptest.NewRequest(http.MethodGet, "/api/repo-status", nil),
+	)
+	body := status.Body.String()
+	for _, expected := range []string{
+		`"name":"payments"`,
+		`"primary_paths":["services/payments/src"]`,
+		`"primary_path_count":1`,
+		`"supporting_path_count":1`,
+		`"search_index_posture":"whole-repository"`,
+		`"typed_index_posture":"repository-root-unbound"`,
+	} {
+		if status.Code != http.StatusOK || !strings.Contains(body, expected) {
+			t.Fatalf("/api/repo-status = %d %s; missing %s", status.Code, body, expected)
+		}
+	}
+	for _, forbidden := range []string{
+		"package payments",
+		"source_content",
+		"blob_content",
+	} {
+		if strings.Contains(body, forbidden) {
+			t.Fatalf("/api/repo-status leaked source content marker %q: %s", forbidden, body)
+		}
+	}
+	openapi := httptest.NewRecorder()
+	handler.ServeHTTP(
+		openapi,
+		httptest.NewRequest(http.MethodGet, "/api/openapi.json", nil),
+	)
+	if strings.Contains(openapi.Body.String(), "indexed_analysis_unit") ||
+		!strings.Contains(openapi.Body.String(), "analysis_unit") {
+		t.Fatalf("OpenAPI exposed internal state or omitted status projection: %s", openapi.Body)
 	}
 }
 

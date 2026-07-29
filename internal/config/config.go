@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,6 +48,10 @@ type Config struct {
 	// branches/tags. HEAD remains implicit; each inner map is the selector
 	// accepted by `rev:<selector>` to a full refs/heads/* or refs/tags/* ref.
 	Revisions RevisionAllowlist `yaml:"revisions"`
+	// AnalysisUnits names at most one exact semantic service scope per
+	// repository. T30.2 commits its identity with index state; T30.3 makes the
+	// physical zoekt corpus honor the selected paths.
+	AnalysisUnits map[string]analysisunit.Config `yaml:"analysis_units"`
 }
 
 // MaxIndexedRevisions is the total per-repository revision ceiling, including
@@ -640,6 +645,18 @@ func (c *Config) validate(lines []int) error {
 		}
 	}
 
+	analysisUnitRepos := make([]string, 0, len(c.AnalysisUnits))
+	for repo := range c.AnalysisUnits {
+		analysisUnitRepos = append(analysisUnitRepos, repo)
+	}
+	sort.Strings(analysisUnitRepos)
+	for _, repo := range analysisUnitRepos {
+		scope := c.AnalysisUnits[repo].Scope(repo)
+		if _, err := scope.Canonical(); err != nil {
+			errs = append(errs, fmt.Errorf("analysis_units[%s]: %v", repo, err))
+		}
+	}
+
 	seen := map[string]bool{}
 	for i, conn := range c.Connections {
 		switch {
@@ -770,6 +787,19 @@ func (c *Config) validate(lines []int) error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// AnalysisUnitScopes returns a defensive, repository-keyed copy of the
+// validated semantic scopes.
+func (c *Config) AnalysisUnitScopes() map[string]analysisunit.Scope {
+	if len(c.AnalysisUnits) == 0 {
+		return nil
+	}
+	scopes := make(map[string]analysisunit.Scope, len(c.AnalysisUnits))
+	for repository, unit := range c.AnalysisUnits {
+		scopes[repository] = unit.Scope(repository)
+	}
+	return scopes
 }
 
 var revisionSelectorRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._/-]*$`)

@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -113,6 +114,10 @@ func (failIndexedStore) SetRepoIndexedRevisions(context.Context, string, string,
 	return errors.New("injected index state failure")
 }
 
+func (failIndexedStore) SetRepoIndexedState(context.Context, string, string, []store.IndexedRevision, *analysisunit.State, time.Time) error {
+	return errors.New("injected index state failure")
+}
+
 type indexLogStore struct {
 	store.Store
 	repo store.Repo
@@ -127,11 +132,25 @@ func (s *indexLogStore) GetRepo(_ context.Context, name string) (*store.Repo, er
 }
 
 func (s *indexLogStore) SetRepoIndexedRevisions(_ context.Context, name, defaultCommit string, revisions []store.IndexedRevision, at time.Time) error {
+	return s.SetRepoIndexedState(
+		context.Background(), name, defaultCommit, revisions, nil, at,
+	)
+}
+
+func (s *indexLogStore) SetRepoIndexedState(
+	_ context.Context,
+	name,
+	defaultCommit string,
+	revisions []store.IndexedRevision,
+	unit *analysisunit.State,
+	at time.Time,
+) error {
 	if name != s.repo.Name {
 		return store.ErrNotFound
 	}
 	s.repo.IndexedCommitHash = defaultCommit
 	s.repo.IndexedRevisions = append([]store.IndexedRevision(nil), revisions...)
+	s.repo.IndexedAnalysisUnit = analysisunit.CloneState(unit)
 	s.repo.IndexedAt = &at
 	return nil
 }
@@ -347,6 +366,135 @@ func TestShortCircuitAndForce(t *testing.T) {
 	}
 	if !rebuilt {
 		t.Error("force did not rebuild any shard")
+	}
+}
+
+func TestAnalysisUnitScopeChangeRebuildsSameHead(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+	firstScope := analysisunit.Scope{
+		Repository: name,
+		Name:       "service",
+		Primary:    []string{"src"},
+	}
+	ix.AnalysisUnits = map[string]analysisunit.Scope{name: firstScope}
+	repo, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Index(ctx, *repo, false); err != nil {
+		t.Fatal(err)
+	}
+	first, err := st.GetRepo(ctx, name)
+	if err != nil || first.IndexedAnalysisUnit == nil {
+		t.Fatalf("first unit state = %+v, %v", first, err)
+	}
+	firstDigest := first.IndexedAnalysisUnit.Digest
+	before := shardStamps(t, dataDir)
+
+	time.Sleep(1100 * time.Millisecond)
+	changedScope := firstScope
+	changedScope.Primary = []string{"service/src"}
+	ix.AnalysisUnits[name] = changedScope
+	if err := ix.Index(ctx, *first, false); err != nil {
+		t.Fatal(err)
+	}
+	changed, err := st.GetRepo(ctx, name)
+	if err != nil || changed.IndexedAnalysisUnit == nil ||
+		changed.IndexedAnalysisUnit.Digest == firstDigest {
+		t.Fatalf("changed unit state = %+v, %v", changed, err)
+	}
+	rebuilt := false
+	for shard, modified := range shardStamps(t, dataDir) {
+		if !modified.Equal(before[shard]) {
+			rebuilt = true
+		}
+	}
+	if !rebuilt {
+		t.Fatal("scope-only change did not rebuild the index")
+	}
+
+	delete(ix.AnalysisUnits, name)
+	if err := ix.Index(ctx, *changed, false); err != nil {
+		t.Fatal(err)
+	}
+	whole, err := st.GetRepo(ctx, name)
+	if err != nil || whole.IndexedAnalysisUnit != nil {
+		t.Fatalf("removed unit state = %+v, %v", whole, err)
+	}
+}
+
+type analysisUnitReconcileStore struct {
+	store.Store
+	repositories []store.Repo
+	enqueued     []store.Job
+}
+
+func (s *analysisUnitReconcileStore) ListRepos(context.Context) ([]store.Repo, error) {
+	return append([]store.Repo(nil), s.repositories...), nil
+}
+
+func (s *analysisUnitReconcileStore) EnqueuePending(
+	_ context.Context,
+	kind store.JobKind,
+	target string,
+	force bool,
+) (*store.Job, error) {
+	job := store.Job{Kind: kind, Target: target, Force: force}
+	s.enqueued = append(s.enqueued, job)
+	return &job, nil
+}
+
+func TestReconcileAnalysisUnitsQueuesOnlyStateChanges(t *testing.T) {
+	scope := analysisunit.Scope{
+		Repository: "example.com/repo",
+		Name:       "service",
+		Primary:    []string{"service/src"},
+	}
+	matching, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale := analysisunit.CloneState(matching)
+	stale.Name = "old"
+	stale.Digest = "sha256:" + strings.Repeat("0", 64)
+	testStore := &analysisUnitReconcileStore{repositories: []store.Repo{
+		{Name: "example.com/whole", IndexedCommitHash: "a"},
+		{Name: "example.com/repo", IndexedCommitHash: "b", IndexedAnalysisUnit: stale},
+		{Name: "example.com/matching", IndexedCommitHash: "c",
+			IndexedAnalysisUnit: analysisunit.CloneState(matching)},
+		{Name: "example.com/removed", IndexedCommitHash: "d",
+			IndexedAnalysisUnit: analysisunit.CloneState(matching)},
+		{Name: "example.com/deleting", IndexedCommitHash: "e",
+			IndexedAnalysisUnit: stale, Deleting: true},
+	}}
+	matchingScope := scope
+	matchingScope.Repository = "example.com/matching"
+	matchingState, err := matchingScope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testStore.repositories[2].IndexedAnalysisUnit = matchingState
+
+	count, err := indexer.ReconcileAnalysisUnits(
+		t.Context(), testStore, map[string]analysisunit.Scope{
+			scope.Repository:         scope,
+			matchingScope.Repository: matchingScope,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 || len(testStore.enqueued) != 2 {
+		t.Fatalf("enqueued = %+v, count=%d", testStore.enqueued, count)
+	}
+	if testStore.enqueued[0].Target != "example.com/repo" ||
+		!testStore.enqueued[0].Force ||
+		testStore.enqueued[1].Target != "example.com/removed" ||
+		!testStore.enqueued[1].Force {
+		t.Fatalf("unexpected rebuild jobs: %+v", testStore.enqueued)
 	}
 }
 

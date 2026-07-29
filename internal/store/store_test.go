@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -112,11 +113,55 @@ func TestRepoCRUD(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(got.IndexedRevisions, revisions) {
 		t.Fatalf("multi-revision state = %+v, %v; want %+v", got, err, revisions)
 	}
+	unit, err := (analysisunit.Scope{
+		Repository: repos[0].Name,
+		Name:       "payments",
+		Primary:    []string{"services/payments/src"},
+		Supporting: []string{"services/payments/go.mod"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoIndexedState(
+		ctx, repos[0].Name, "abc123", revisions, unit, now,
+	); err != nil {
+		t.Fatal(err)
+	}
+	got, err = s.GetRepo(ctx, repos[0].Name)
+	if err != nil || !analysisunit.EqualState(got.IndexedAnalysisUnit, unit) {
+		t.Fatalf("analysis-unit state = %+v, %v; want %+v", got, err, unit)
+	}
+	invalidUnit := analysisunit.CloneState(unit)
+	invalidUnit.Digest = "sha256:tampered"
+	if err := s.SetRepoIndexedState(
+		ctx, repos[0].Name, "changed", revisions, invalidUnit, now,
+	); !errors.Is(err, analysisunit.ErrInvalidScope) {
+		t.Fatalf("invalid analysis-unit state error = %v, want ErrInvalidScope", err)
+	}
+	got, err = s.GetRepo(ctx, repos[0].Name)
+	if err != nil || got.IndexedCommitHash != "abc123" ||
+		!analysisunit.EqualState(got.IndexedAnalysisUnit, unit) {
+		t.Fatalf("invalid state mutated committed row: %+v, %v", got, err)
+	}
+	statuses, err := s.RepoStatuses(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var unitStatus *analysisunit.State
+	for _, status := range statuses {
+		if status.Name == repos[0].Name {
+			unitStatus = status.AnalysisUnit
+		}
+	}
+	if !analysisunit.EqualState(unitStatus, unit) {
+		t.Fatalf("repo status analysis unit = %+v, want %+v", unitStatus, unit)
+	}
 	if err := s.ClearRepoIndexState(ctx, repos[0].Name); err != nil {
 		t.Fatal(err)
 	}
 	got, err = s.GetRepo(ctx, repos[0].Name)
-	if err != nil || got.IndexedCommitHash != "" || len(got.IndexedRevisions) != 0 || got.IndexedAt != nil {
+	if err != nil || got.IndexedCommitHash != "" || len(got.IndexedRevisions) != 0 ||
+		got.IndexedAnalysisUnit != nil || got.IndexedAt != nil {
 		t.Fatalf("cleared index state = %+v, %v", got, err)
 	}
 
@@ -125,6 +170,72 @@ func TestRepoCRUD(t *testing.T) {
 	}
 	if _, err := s.GetRepo(ctx, "example.com/baz"); !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("after delete, err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestAnalysisUnitStateSurvivesUpgradeReopen(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	directory := t.TempDir()
+	repository := "example.com/reopen/unit"
+	commit := "0123456789012345678901234567890123456789"
+
+	current, err := store.OpenLocal(ctx, directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := current.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://example.com/reopen/unit.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := current.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := current.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	upgraded, err := store.OpenLocal(ctx, directory)
+	if err != nil {
+		t.Fatalf("reopen legacy row: %v", err)
+	}
+	legacy, err := upgraded.GetRepo(ctx, repository)
+	if err != nil || legacy.IndexedAnalysisUnit != nil {
+		t.Fatalf("legacy row changed on upgrade: %+v, %v", legacy, err)
+	}
+	unit, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service/src"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := upgraded.SetRepoIndexedState(
+		ctx, repository, commit, legacy.IndexedRevisions, unit, time.Now().UTC(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := upgraded.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	reopened, err := store.OpenLocal(ctx, directory)
+	if err != nil {
+		t.Fatalf("reopen analysis-unit row: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := reopened.Close(context.Background()); err != nil {
+			t.Errorf("close reopened store: %v", err)
+		}
+	})
+	got, err := reopened.GetRepo(ctx, repository)
+	if err != nil || !analysisunit.EqualState(got.IndexedAnalysisUnit, unit) {
+		t.Fatalf("reopened state = %+v, %v; want %+v", got, err, unit)
 	}
 }
 

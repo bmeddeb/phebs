@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -46,11 +47,25 @@ func (s *revisionStore) ListRepos(context.Context) ([]store.Repo, error) {
 }
 
 func (s *revisionStore) SetRepoIndexedRevisions(_ context.Context, name, commit string, revisions []store.IndexedRevision, at time.Time) error {
+	return s.SetRepoIndexedState(
+		context.Background(), name, commit, revisions, nil, at,
+	)
+}
+
+func (s *revisionStore) SetRepoIndexedState(
+	_ context.Context,
+	name,
+	commit string,
+	revisions []store.IndexedRevision,
+	unit *analysisunit.State,
+	at time.Time,
+) error {
 	if name != s.repo.Name {
 		return store.ErrNotFound
 	}
 	s.repo.IndexedCommitHash = commit
 	s.repo.IndexedRevisions = append([]store.IndexedRevision(nil), revisions...)
+	s.repo.IndexedAnalysisUnit = analysisunit.CloneState(unit)
 	s.repo.IndexedAt = &at
 	s.repo.LatestJobStatus = "done"
 	return nil

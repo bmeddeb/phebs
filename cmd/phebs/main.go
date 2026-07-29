@@ -14,6 +14,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -297,6 +298,29 @@ func serve(args []string) error {
 			report.OrphanRepos, report.UntrackedShards, report.UntrackedMirrors, report.CredentialsFixed,
 			report.InvalidRepos, report.RevisionRepairs, report.Deleted)
 	}
+	analysisUnits := cfg.AnalysisUnitScopes()
+	unitRepositories := make([]string, 0, len(analysisUnits))
+	for repository := range analysisUnits {
+		unitRepositories = append(unitRepositories, repository)
+	}
+	sort.Strings(unitRepositories)
+	for _, repository := range unitRepositories {
+		state, stateErr := analysisUnits[repository].State()
+		if stateErr != nil {
+			return fmt.Errorf("analysis unit %s: %w", repository, stateErr)
+		}
+		log.Printf(
+			"analysis unit: repository=%q name=%q digest=%s primary=%q supporting=%q search_index=%s typed_index=%s",
+			repository, state.Name, state.Digest, state.PrimaryPaths,
+			state.SupportingPaths, state.SearchIndexPosture,
+			state.TypedIndexPosture,
+		)
+	}
+	if queued, err := indexer.ReconcileAnalysisUnits(ctx, st, analysisUnits); err != nil {
+		return fmt.Errorf("reconcile analysis units: %w", err)
+	} else if queued > 0 {
+		log.Printf("analysis unit reconciliation: queued %d index rebuild(s)", queued)
+	}
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
 	}
@@ -388,12 +412,13 @@ func serve(args []string) error {
 		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make build provides it; or set PHEBS_ZOEKT_GIT_INDEX)")
 	} else {
 		ix := &indexer.Indexer{
-			DataDir:   cfg.Server.DataDir,
-			Bin:       bin,
-			Store:     st,
-			Verbose:   cfg.Indexing.Verbose,
-			Revisions: cfg.Revisions,
-			OnIndexed: onIndexed,
+			DataDir:       cfg.Server.DataDir,
+			Bin:           bin,
+			Store:         st,
+			Verbose:       cfg.Indexing.Verbose,
+			Revisions:     cfg.Revisions,
+			AnalysisUnits: analysisUnits,
+			OnIndexed:     onIndexed,
 		}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
 			Interval: cfg.Sync.Interval()}

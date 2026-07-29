@@ -21,6 +21,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
@@ -85,6 +86,9 @@ type Indexer struct {
 	// Revisions is the validated per-repository selector -> full Git ref
 	// allowlist. HEAD is always implicit and is never present in this map.
 	Revisions map[string]map[string]string
+	// AnalysisUnits is the validated repository-keyed semantic scope. T30.2
+	// binds it to committed index state; T30.3 changes physical index input.
+	AnalysisUnits map[string]analysisunit.Scope
 
 	// OnIndexed, when set, runs once the indexed state is known current — the
 	// index→extract chain hook (T12.2), mirroring how sync chains index. It also
@@ -137,7 +141,13 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if err != nil {
 		return fmt.Errorf("index %s: resolve revisions: %w", repo.Name, err)
 	}
-	if !force && head != "" && head == repo.IndexedCommitHash && revisionsEqual(revisions, repo.IndexedRevisions, repo.IndexedCommitHash) {
+	unit, err := ix.desiredAnalysisUnit(repo.Name)
+	if err != nil {
+		return fmt.Errorf("index %s: analysis unit: %w", repo.Name, err)
+	}
+	if !force && head != "" && head == repo.IndexedCommitHash &&
+		revisionsEqual(revisions, repo.IndexedRevisions, repo.IndexedCommitHash) &&
+		analysisunit.EqualState(unit, repo.IndexedAnalysisUnit) {
 		ix.verbosef("index %s: already current at %s; skipping child", repo.Name, head)
 		return ix.afterIndexed(ctx, repo.Name, head) // T3.2: shards current; repair/confirm the chain
 	}
@@ -189,7 +199,9 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		"index %s: zoekt-git-index complete duration=%s total_shard_bytes=%.0f",
 		repo.Name, duration.Round(time.Millisecond), totalShardBytes,
 	)
-	if err := ix.Store.SetRepoIndexedRevisions(ctx, repo.Name, head, revisions, time.Now().UTC()); err != nil {
+	if err := ix.Store.SetRepoIndexedState(
+		ctx, repo.Name, head, revisions, unit, time.Now().UTC(),
+	); err != nil {
 		// The child has already replaced the shard. If the DB commit fails,
 		// remove both sides of the claimed state so search cannot serve revision
 		// B while MCP defaults to the previously recorded revision A.
@@ -203,6 +215,71 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	}
 	ix.verbosef("index %s: committed index state at %s", repo.Name, head)
 	return ix.afterIndexed(ctx, repo.Name, head)
+}
+
+func (ix *Indexer) desiredAnalysisUnit(repository string) (*analysisunit.State, error) {
+	scope, configured := ix.AnalysisUnits[repository]
+	if !configured {
+		return nil, nil
+	}
+	if scope.Repository != repository {
+		return nil, errors.New("repository key does not match scope identity")
+	}
+	return scope.State()
+}
+
+// ReconcileAnalysisUnits queues a rebuild when configuration and the last
+// atomically committed index state disagree. It never clears the old state:
+// the previous complete publication remains authoritative until the index job
+// commits its replacement.
+func ReconcileAnalysisUnits(
+	ctx context.Context,
+	st store.Store,
+	scopes map[string]analysisunit.Scope,
+) (int, error) {
+	repositories, err := st.ListRepos(ctx)
+	if err != nil {
+		return 0, err
+	}
+	enqueued := 0
+	for _, repository := range repositories {
+		if err := ctx.Err(); err != nil {
+			return enqueued, err
+		}
+		if repository.Deleting {
+			continue
+		}
+		var desired *analysisunit.State
+		if scope, configured := scopes[repository.Name]; configured {
+			if scope.Repository != repository.Name {
+				return enqueued, fmt.Errorf(
+					"repository %q analysis-unit key mismatch",
+					repository.Name,
+				)
+			}
+			desired, err = scope.State()
+			if err != nil {
+				return enqueued, fmt.Errorf(
+					"repository %q analysis unit: %w",
+					repository.Name, err,
+				)
+			}
+		}
+		if analysisunit.EqualState(desired, repository.IndexedAnalysisUnit) {
+			continue
+		}
+		if _, err := st.EnqueuePending(
+			ctx, store.JobIndex, repository.Name,
+			repository.IndexedCommitHash != "",
+		); err != nil {
+			return enqueued, fmt.Errorf(
+				"enqueue analysis-unit rebuild for %s: %w",
+				repository.Name, err,
+			)
+		}
+		enqueued++
+	}
+	return enqueued, nil
 }
 
 func (ix *Indexer) logger() *log.Logger {
