@@ -3,6 +3,7 @@ package codenav
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,18 +12,20 @@ import (
 )
 
 type snapshot struct {
-	documents         map[string]*document
-	definitions       map[string][]indexedLocation
-	references        map[string][]indexedLocation
-	symbols           map[string]*symbolInfo
-	referenceTargets  map[string]map[string]struct{}
-	referenceSources  map[string]map[string]struct{}
-	validSymbols      map[string]bool
-	occurrenceCount   int
-	documentCount     int
-	symbolCount       int
-	relationshipCount int
-	estimatedBytes    int64
+	documents            map[string]*document
+	definitions          map[string][]indexedLocation
+	references           map[string][]indexedLocation
+	symbols              map[string]*symbolInfo
+	referenceTargets     map[string]map[string]struct{}
+	referenceSources     map[string]map[string]struct{}
+	validSymbols         map[string]bool
+	occurrenceCount      int
+	retainedOccurrences  int
+	documentCount        int
+	symbolCount          int
+	relationshipCount    int
+	unsupportedDocuments int
+	estimatedBytes       int64
 }
 
 type parseLimits struct {
@@ -108,7 +111,19 @@ func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snaps
 			if result.documentCount > limits.documents {
 				return semanticLimit("documents", result.documentCount, limits.documents)
 			}
-			return result.addDocument(doc, limits)
+			if err := result.addDocument(doc, limits); err != nil {
+				if errors.Is(err, ErrUnsupportedEncoding) {
+					// Position encoding is document-local. One ambiguous
+					// document must not poison every valid document in the
+					// immutable index, but its semantic payload still consumes
+					// the configured limits so malformed input cannot bypass
+					// admission by selecting an unsupported encoding.
+					result.unsupportedDocuments++
+					return result.accountUnsupportedDocument(doc, limits)
+				}
+				return err
+			}
+			return nil
 		},
 		VisitExternalSymbol: func(ctx context.Context, info *scip.SymbolInformation) error {
 			if err := ctx.Err(); err != nil {
@@ -139,6 +154,150 @@ func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snaps
 		int64(result.symbolCount)*512 +
 		int64(result.relationshipCount)*192
 	return result, nil
+}
+
+func (s *snapshot) accountUnsupportedDocument(input *scip.Document, limits parseLimits) error {
+	if len(input.GetOccurrences()) > limits.occurrences-s.occurrenceCount {
+		return semanticLimit(
+			"occurrences",
+			s.occurrenceCount+len(input.GetOccurrences()),
+			limits.occurrences,
+		)
+	}
+	s.occurrenceCount += len(input.GetOccurrences())
+	for _, occurrence := range input.GetOccurrences() {
+		if occurrence.GetSymbol() == "" {
+			continue
+		}
+		if len(occurrence.GetSymbol()) > limits.symbolBytes {
+			return fmt.Errorf(
+				"discarded document %q occurrence symbol is %d bytes (limit %d): %w",
+				input.GetRelativePath(),
+				len(occurrence.GetSymbol()),
+				limits.symbolBytes,
+				ErrSemanticLimit,
+			)
+		}
+		if err := s.validateSymbol(occurrence.GetSymbol()); err != nil {
+			return fmt.Errorf(
+				"discarded document %q occurrence: %w",
+				input.GetRelativePath(),
+				err,
+			)
+		}
+		if err := validateHoverContent(
+			occurrence.GetOverrideDocumentation(),
+			"",
+			"",
+			limits,
+		); err != nil {
+			return fmt.Errorf(
+				"discarded document %q occurrence: %w",
+				input.GetRelativePath(),
+				err,
+			)
+		}
+	}
+	hoverBySymbol := make(map[string]*symbolInfo)
+	for _, info := range input.GetSymbols() {
+		if info.GetSymbol() == "" {
+			continue
+		}
+		s.symbolCount++
+		if s.symbolCount > limits.symbols {
+			return semanticLimit("symbols", s.symbolCount, limits.symbols)
+		}
+		if len(info.GetSymbol()) > limits.symbolBytes {
+			return fmt.Errorf(
+				"discarded document %q symbol is %d bytes (limit %d): %w",
+				input.GetRelativePath(),
+				len(info.GetSymbol()),
+				limits.symbolBytes,
+				ErrSemanticLimit,
+			)
+		}
+		if err := s.validateSymbol(info.GetSymbol()); err != nil {
+			return fmt.Errorf(
+				"discarded document %q symbol: %w",
+				input.GetRelativePath(),
+				err,
+			)
+		}
+		signature, language := "", ""
+		if value := info.GetSignatureDocumentation(); value != nil {
+			signature, language = value.GetText(), value.GetLanguage()
+		}
+		if err := validateHoverContent(
+			info.GetDocumentation(),
+			signature,
+			language,
+			limits,
+		); err != nil {
+			return fmt.Errorf(
+				"discarded document %q symbol %q: %w",
+				input.GetRelativePath(),
+				info.GetSymbol(),
+				err,
+			)
+		}
+		hover := hoverBySymbol[info.GetSymbol()]
+		if hover == nil {
+			hover = &symbolInfo{}
+			hoverBySymbol[info.GetSymbol()] = hover
+		}
+		if hover.displayName == "" {
+			hover.displayName = info.GetDisplayName()
+		}
+		if hover.signature == "" {
+			hover.signature = signature
+		}
+		if hover.language == "" {
+			hover.language = language
+		}
+		hover.documentation = appendUnique(
+			hover.documentation,
+			info.GetDocumentation()...,
+		)
+		if err := validateMergedHoverContent(hover, limits); err != nil {
+			return fmt.Errorf(
+				"discarded document %q symbol %q: %w",
+				input.GetRelativePath(),
+				info.GetSymbol(),
+				err,
+			)
+		}
+		for _, relationship := range info.GetRelationships() {
+			if relationship.GetSymbol() == "" {
+				continue
+			}
+			s.relationshipCount++
+			if s.relationshipCount > limits.relationships {
+				return semanticLimit(
+					"relationships",
+					s.relationshipCount,
+					limits.relationships,
+				)
+			}
+			if len(relationship.GetSymbol()) > limits.symbolBytes {
+				return fmt.Errorf(
+					"discarded document %q relationship symbol is %d bytes (limit %d): %w",
+					input.GetRelativePath(),
+					len(relationship.GetSymbol()),
+					limits.symbolBytes,
+					ErrSemanticLimit,
+				)
+			}
+			if err := s.validateSymbol(relationship.GetSymbol()); err != nil {
+				return fmt.Errorf(
+					"discarded document %q relationship from %q: %w",
+					input.GetRelativePath(),
+					info.GetSymbol(),
+					err,
+				)
+			}
+		}
+	}
+	return nil
 }
 
 func (s *snapshot) addDocument(input *scip.Document, limits parseLimits) error {
@@ -189,6 +348,7 @@ func (s *snapshot) addDocument(input *scip.Document, limits parseLimits) error {
 		}
 		storedOccurrence.SetSourceRange(r)
 		doc.occurrences = append(doc.occurrences, storedOccurrence)
+		s.retainedOccurrences++
 		location := indexedLocation{path: docPath, codeRange: fromSCIPRange(r), encoding: encoding}
 		key := symbolKey(docPath, occurrence.GetSymbol())
 		if scip.SymbolRole_Definition.Matches(occurrence) {

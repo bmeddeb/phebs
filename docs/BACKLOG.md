@@ -1,7 +1,8 @@
 # phebs · active backlog
 
-No implementation ticket is currently scheduled. Completed Epics 0–24 and P5
-hardening are retained in the [completed backlog](./BACKLOG_COMPLETED.md).
+Epic 30 is scheduled for service-scoped analysis of very large
+monorepositories; T30.1 is the next ticket. Completed Epics 0–24, Epic 29, and
+P5 hardening are retained in the [completed backlog](./BACKLOG_COMPLETED.md).
 Current posture and decision points are summarized in
 [ROADMAP.md](./ROADMAP.md).
 
@@ -9,12 +10,15 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## No scheduled tickets
+## Scheduled ticket
 
-The two identified next paths—production evidence/pilot gating and the P6 fleet
-profile—remain explicitly gated or demand-driven in the roadmap. Neither is an
-implicit next ticket. Epics 25–29 below are drafted but start only on an
-explicit scheduling decision.
+**T30.1 · Service-scope contract and focused-index spike** is next. It changes
+no production behavior; its merge bar is the retained scale/provenance result
+and go/no-go decision defined under Epic 30.
+
+Production evidence/pilot gating and the distributed P6 fleet profile remain
+explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
+drafted and unscheduled.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
@@ -484,112 +488,308 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 29 · Workbench over real published evidence *(drafted 2026-07-28 · unscheduled)*
+## Epic 30 · Service-scoped monorepo analysis *(scheduled 2026-07-28 · T30.1 next)*
 
-Bind the existing Change Workbench services to the store-derived Contract
-Atlas so a workbench can target real published extraction evidence instead of
-the synthetic fixture cohort. The T21 implementation is already
-catalog-agnostic — the target resolver composes whatever Contract Atlas
-service the instance serves — but the only binding path today is the
-`PHEBS_SYNTHETIC_WORKBENCH` demo guard, which requires the Investigation and
-Contract Atlas fixtures, and the atlas fixture replaces store-derived
-contract evidence wholesale. This epic removes that constraint without
-touching production registration: the roadmap's gate (retained validation
-plus an explicit pilot-continuation decision) is unchanged, and a pilot needs
-exactly this binding to exercise the workbench on real evidence.
+Make one service inside a very large monorepository a first-class analysis
+unit without pretending that a path-filtered query makes a whole-repository
+index cheap. Contracts, Topics, source search, related implementation, and the
+Workbench operate on the focused unit. Caller Map and caller-backed Impact
+retain a bird's-eye repository view through a separate target-bound,
+partitioned relationship overlay over the same immutable commit.
 
-### Boundary
+This is a single-node scale program. It precedes and does not authorize the P6
+distributed fleet profile.
 
-- One new development-only flag, `experimental.provisional_workbench`; no new
-  environment variables, routes, or capability identifiers. The flag
-  conditionally registers the existing `change-workbench` and
-  `change-workbench-evidence` surfaces. It is an overlay on an already-enabled
-  provisional protobuf or Thrift extraction lane, not an independent
-  authority to expose the evidence store: setting it without
-  `experimental.provisional_proto_extraction` or
-  `experimental.provisional_thrift_extraction` refuses startup as
-  `workbench-evidence-prerequisite`.
-- The synthetic fixture cohort (`PHEBS_SYNTHETIC_WORKBENCH` plus the
-  Investigation, Contract Atlas, and closure-bundle fixtures) keeps working
-  unchanged; `make dev` remains its demo path. The conflicting authorities are
-  exact: setting the flag with `PHEBS_SYNTHETIC_WORKBENCH=1` or any non-empty
-  `PHEBS_CONTRACT_ATLAS_FIXTURE` refuses startup as
-  `workbench-authority-conflict`. Investigation fixtures and the closure
-  repository are not catalog authorities and may coexist with the provisional
-  binding; the latter still enters through ordinary sync, indexing, and
-  extraction. Existing invalid-value and missing-fixture refusals for the
-  synthetic adapter retain their current precedence when the provisional flag
-  is unset.
-- Workbench rows over provisional evidence inherit that evidence's posture:
-  no runtime-use, completeness, compatibility, migration-completion,
-  decommission-safety, or extraction-accuracy claim is created or implied.
-- No UI change: the existing Workbench pages bind to whichever catalog the
-  instance serves.
+### Analysis-unit contract
 
-### Registration matrix
+- `analysis-unit-v1` has one stable configuration identity: repository,
+  operator-chosen unit name, and a unit digest over canonical scope bytes.
+  Source commits are generation inputs, not part of that stable digest. An
+  indexed generation adds the complete ordered revision set; HEAD-bound
+  extraction and relationship generations add the authoritative HEAD commit.
+  The scope contains exact **primary roots** and exact **supporting files or
+  roots**. Supporting inputs cover only explicitly selected declaration,
+  generated-source, module/workspace metadata, attribution, and typed-index
+  artifacts; phebs does not execute a build, dependency query, generator, or
+  service-discovery command to infer them.
+- Paths are clean UTF-8 repository-relative Git paths. A directory admits its
+  descendants while preserving their complete original repository-relative
+  names. Empty, absolute, parent-traversing, backslash, duplicate, and
+  canonically overlapping entries fail startup. A selected path that is
+  absent or not a regular blob/directory at the indexed commit fails the unit
+  build rather than silently shrinking it.
+- The first version admits at most one active unit per repository per
+  instance. This keeps the canonical repository name, avoids duplicate
+  overlapping shards, and makes every unqualified search deterministic.
+  Changing unit name or scope bytes is an index/extraction generation change,
+  even when HEAD is unchanged. Multiple simultaneous units require a later
+  reviewed storage/query identity design.
+- Repositories without an analysis unit retain today's whole-repository
+  indexing and extraction behavior. A configured unit is never widened
+  automatically to make an extractor succeed.
+- The unit digest is part of committed index state and is stamped in zoekt
+  repository metadata. Search, startup reconciliation, cleanup, source,
+  coverage, evidence, Workbench snapshots, and opaque cursors fail closed on
+  a missing or mismatched digest. Repository visibility remains the
+  authorization boundary in v1; a unit grants no visibility beyond its
+  repository.
 
-The matrix is evaluated after strict parsing of
-`PHEBS_SYNTHETIC_WORKBENCH` (`""` or `"1"` only). “Declaration lane” means at
-least one of provisional protobuf or provisional Thrift extraction is enabled.
-Investigation fixtures and `PHEBS_WORKBENCH_CLOSURE_REPO` do not change the
-result.
+### Revision-set matrix
 
-| `provisional_workbench` | Declaration lane | `PHEBS_SYNTHETIC_WORKBENCH` | Contract Atlas fixture | Result |
-|---|---|---|---|---|
-| `false` | any | empty | any | Existing non-Workbench behavior; no Workbench registration |
-| `false` | any | `1` | present, with Investigation fixtures | Existing synthetic Workbench, byte-identical |
-| `false` | any | `1` | absent, or Investigation fixtures absent | Existing synthetic missing-fixture refusal |
-| `true` | present | empty | absent | Register the existing Workbench surfaces over store-derived published evidence |
-| `true` | absent | empty | absent | Refuse `workbench-evidence-prerequisite` |
-| `true` | any | `1` | any | Refuse `workbench-authority-conflict` |
-| `true` | any | empty | present | Refuse `workbench-authority-conflict` |
+The same canonical scope is evaluated independently at every revision admitted
+by the existing T10.4 repository allowlist. Scope never follows a rename or
+widens to compensate for historical layout:
 
-### Documentation updates
+| Revision lane | Scope evaluation | Missing selected path | Product behavior |
+|---|---|---|---|
+| Implicit `HEAD` | Resolve every exact file/root at the indexed HEAD commit | Refuse the complete index generation | Authoritative unqualified search plus all extraction/evidence |
+| Explicit branch/tag selector | Resolve the identical exact file/root set at that selector's peeled commit | Refuse the complete index generation; never publish a silently smaller historical scope | Search-only `rev:` lane; no extraction, coverage, proof, or Workbench evidence |
+| Same directory, different contents | Admit the regular descendants present under that selected directory at each commit | Not missing when the directory itself exists | Search reflects that revision's immutable contents under the same unit scope |
+| Scope bytes change | Re-evaluate every admitted revision even when all commits are unchanged | Any refusal leaves the previous complete generation visible | New unit digest and new index generation |
+| Revision set or peeled commit changes | Keep the unit digest; recompute the ordered revision-generation identity | Any refusal leaves the previous complete generation visible | New index generation; HEAD evidence changes only when HEAD changes |
 
-T29.1 updates the owning documentation in the same PR as the implementation:
+The index-generation digest is domain-separated over repository, unit digest,
+the ordered `(selector, shard branch, peeled commit)` set, and the focused
+builder policy generation. Extraction continues to bind `(repository, HEAD
+commit, unit digest, extractor generation)` and never inherits an explicit
+search revision.
 
-- `docs/config.example.yaml` adds
-  `experimental.provisional_workbench: false`, its protobuf/Thrift extraction
-  prerequisite, and its conflicts with the synthetic Workbench and Contract
-  Atlas fixture authorities.
-- `docs/guides/CONFIGURATION.md` documents the default-dark flag, the two typed
-  startup refusals, and the complete registration matrix.
-- `docs/guides/WORKFLOWS.md` distinguishes the existing fixture-backed
-  `make dev` Workbench from the provisional Workbench over store-derived
-  published evidence and retains the canonical evidence caveats.
-- `docs/guides/OPERATIONS.md` documents startup diagnostics and a bounded
-  operator smoke using `phebs-everything.yaml`; remote-HEAD results are a
-  manual observation, never a deterministic merge-bar input or retained
-  accuracy claim.
-- `phebs-everything.yaml` opts into the Workbench flag and remains an isolated
-  local evaluation configuration; `make dev` and `make dev-api` remain
-  byte-identical fixture-backed demonstrations.
-- The dated PLAN completion ADR records the implemented authority checks,
-  service binding, validation result, and unchanged production gate.
+### Three partition layers
 
-**T29.1 · Provisional workbench binding over the store-derived catalog** —
-construct the workbench service, target resolver, and the
-impact/implementation/checklist evidence services when
-`experimental.provisional_workbench` and at least one provisional protobuf or
-Thrift extraction lane are set, with no fixture requirement; the flag does not
-independently bind `Options.Evidence`, and the boot warning names the
-provisional posture like the extraction flags. Prefer the already-constructed
-Contract Atlas service when building the target resolver so the Workbench and
-the instance cannot select different catalog authorities. AC: every row in
-the registration matrix is pinned, including the two typed refusal classes;
-with the flag, a declaration lane, and no conflicting authority, the existing
-Workbench routes and capability identifiers bind and a Workbench resolves
-targets against the instance's own published operations; with the flag alone,
-startup refuses rather than exposing persisted evidence through a new path;
-with the fixtures set and the flag unset, behavior is byte-identical to today.
-A deterministic local acceptance publishes evidence through the ordinary
-worker/store path and exercises Workbench target resolution without a Contract
-Atlas fixture; a separately documented manual smoke using
-`phebs-everything.yaml` reaches a Workbench over public real published evidence
-after sync/index/extraction, while the `make dev` synthetic demo remains
-unchanged. Complete every item in **Documentation updates**; retain the
-canonical no-runtime-use/no-completeness/no-migration-completion/
-no-decommission-safety/no-extraction-accuracy posture; full merge bar.
+- The **semantic service unit** is the operator's primary and supporting path
+  set. It is the only partition that defines focused product scope and keeps
+  one stable unit digest even if implementation details change.
+- **Physical zoekt shards** are size-driven outputs of the pinned
+  `index.Builder`, not service partitions. One unit may produce one or many
+  shards. Every shard carries the same repository name, original revision
+  set, unit digest, and index-generation digest plus a stable member ordinal
+  and expected member count. A separately checksummed shard-set manifest
+  commits the ordered `(ordinal, shard digest, shard metadata digest)` set.
+  Shards stage outside the visible set; the manifest becomes visible only
+  after every member is durable. The search wrapper validates the manifest,
+  exact membership, every content/metadata digest, and the absence of an
+  unexpected member before constructing a searcher. Per-shard metadata
+  agreement alone is insufficient: a missing member leaves the generation
+  unavailable rather than serving a valid-looking subset.
+- **Repository-overlay caller partitions** are bounded work units over
+  repository-wide caller candidates for one focused declaration set. They are
+  neither searchable shards nor independently visible evidence. A caller
+  partition may cite source outside the semantic unit without admitting that
+  source into focused search, Contracts, Topics, or local implementation
+  evidence.
+
+### Focused index and local evidence plane
+
+- `zoekt-git-index` has no service-root include contract, so passing a path
+  atom only narrows query results after the expensive whole repository has
+  already been indexed.
+- The selected implementation candidate is a phebs-owned child built from the
+  same module as the server. It streams the exact source commit's tree,
+  rejects paths outside the unit before blob content is opened, and adds only
+  admitted documents to the pinned upstream `index.Builder`. Shard repository
+  name, document paths, and branch versions remain the canonical repository,
+  original full paths, and original commits. The child retains the current OOM
+  isolation, bounded output, atomic replacement, and same-SHA reader/writer
+  requirements.
+- A projected Git tree/commit is explicitly not the default fallback: its
+  synthetic commit would become the shard version and force provenance
+  rewriting across search, source, SCIP, history, evidence, and Workbench
+  readers. If the builder spike fails, implementation stops for a new ADR.
+- Focused extraction reads one reusable commit/unit candidate manifest rather
+  than independently retaining the complete repository inventory for every
+  domain. Contract declaration, field, topic, local consumer, attribution,
+  and Workbench implementation evidence publish under the unit digest.
+  Source reads still use original blob IDs from the canonical bare mirror.
+- A scoped typed-index input must declare and validate its own unit binding.
+  The current repository-root `index.scip` contract is not silently treated as
+  service-scoped merely because the search index is smaller.
+
+### Repository-wide relationship overlay
+
+- Caller Map does not require a whole-repository search shard. It requires a
+  trustworthy repository-wide source census and callers that resolve to the
+  focused declaration set.
+- One streamed tree census per source commit records total regular-file and
+  boundary counts/digests while writing only bounded candidate records into a
+  deterministic partition manifest. It never retains all repository paths in
+  memory and never weakens a refusal into partial coverage. Candidate policy,
+  partition count/ranges, source commit, blob IDs, extractor versions, and
+  manifest digest are immutable generation inputs.
+- Candidate assignment is exact. For normalized repository-relative path
+  `p`, compute
+  `H = SHA-256("phebs-caller-path-v1\0" || UTF8(p))`. Blob OID and declared
+  size are manifest identity inputs but do not affect `H`, so content changes
+  do not arbitrarily move an unchanged path between work partitions.
+  Planning begins at one initial hash-prefix bit depth frozen by T30.4.
+  Any bucket exceeding either the measured candidate-count limit or summed
+  declared-blob-byte limit splits by the next hash bit, recursively. A single
+  candidate exceeding the byte limit, or a bucket that cannot split at 256
+  bits, refuses the generation rather than weakening a bound.
+- Materialized non-empty leaf prefixes are prefix-free and disjoint, and are
+  numbered by ascending numeric hash-range lower bound. Candidate records
+  within a leaf are ordered by `(H, path UTF-8 bytes, blob OID)`. The initial
+  depth, both limits, domain separator, split rule, and record ordering are
+  manifest-policy fields; changing any of them creates a new policy
+  generation. Every admitted caller candidate belongs to exactly one leaf.
+- After the candidate manifest is durable, one bounded immutable
+  module/workspace/generated-resolution catalog is built for the same commit
+  and focused declaration-set digest. Partition source scans start only after
+  that catalog publishes, and every scan consumes its digest; partitions do
+  not independently rediscover module or generated-client identity.
+- A relationship request is bound to the focused declaration-set digest.
+  Partition jobs may read repository-wide caller candidates and the bounded
+  module/generated-resolution catalog needed for those declarations, but
+  emit only resolved edges, exact name matches, and extractor abstentions
+  relevant to that target set. This avoids materializing an unrelated
+  repository-global call graph.
+- Partition runs remain invisible until one generation transaction proves
+  every declared partition terminal at the same repository commit, unit
+  digest, declaration-set digest, candidate-manifest digest, and extractor
+  generation, plus the same resolver-catalog digest. Failure, cancellation,
+  stale HEAD, changed scope, or a missing partition leaves the previous
+  complete generation visible.
+- Caller Map pages merge the complete generation under the existing strict
+  paging and authorization rules. Citations outside the focused search index
+  open from the immutable Git mirror and are labeled as
+  `repository-overlay`; their presence does not imply that unrelated source
+  was indexed for search or local implementation analysis.
+- Topics remain focused-unit evidence in Epic 30. A future repository-global
+  topic inventory would need its own target and partition contract; the
+  Caller Map exception is not a generic authorization for every extractor to
+  scan globally.
+
+### Scale and trust boundary
+
+- Do not raise the current 200,000-file, 16 MiB retained-path, 512 MiB
+  distinct-read, 12,500-fact, or 15-minute single-run limits as the solution.
+  New manifests and partitions have separately measured hard bounds; every
+  page and coverage certificate discloses unit roots, global-overlay status,
+  candidate counts, partition completion, refusals, and stale state.
+- Deterministic tests use generated neutral repositories. Production and
+  manual evaluation consume ordinary synced commits and store-published
+  evidence; no Contract Atlas or Workbench fixture is required.
+- No employer repository name, path, code, schema, build metadata,
+  credential, host, measurement, or infrastructure enters source, tests,
+  retained records, logs, or documentation. Optional local evaluation is
+  operator-only and is never a merge-bar artifact.
+- No runtime-use, completeness, extraction-accuracy, migration-completion, or
+  decommission-safety claim follows from a complete unit or relationship
+  generation.
+
+**T30.1 · Service-scope contract and focused-index spike** — freeze
+`analysis-unit-v1`, canonical path rules, one-active-unit semantics,
+the distinction between semantic units, physical shards, and caller
+partitions, unit/shard provenance, typed-index posture, and the
+repository-overlay vocabulary before production code. Build a generated
+neutral Git corpus that
+exceeds both current corpus inventory limits, with two disjoint service roots,
+central declarations, generated sources, nested modules, irrelevant bulk, and
+cross-service callers. The corpus generator—not its expanded files—is
+retained. In an OOM-isolated test child, feed only one unit's exact regular
+blobs to the pinned upstream `index.Builder`; instrument object reads to prove
+that out-of-unit blob content is never opened; preserve canonical repository
+name, full paths, and original branch/commit versions; stamp and re-read the
+unit and index-generation digests from every shard; commit and re-read the
+expected shard-set manifest; search the focused content; delete one valid
+member and prove the remaining agreeing subset cannot serve; and prove stale,
+mixed, extra-member, overlapping, symlink, gitlink, replacement-object,
+lazy-fetch, child failure, and interrupted-publication paths fail closed. Run
+the revision-set matrix with HEAD plus a branch and tag, including a missing
+selected path that refuses the complete generation. Measure generated
+tree size, admitted files/bytes, opened blobs/bytes, shard count/bytes, peak
+RSS, build wall time, and search wall time under preregistered local gates.
+Document the exact upstream internal API surface used and pin compile-time and
+shard-metadata compatibility tests because `index.Builder` is not a promised
+public API. AC: retained spike artifacts and decision table committed under
+`spike/t301/`; two runs produce identical scope/corpus digests and equivalent
+search results; original `zoekt-git-index` whole-repository tests remain
+unchanged; no production config, store, queue, API, or UI behavior changes; a
+GO result releases T30.2, while NO-GO stops the epic for a new PLAN decision.
+
+**T30.2 · Analysis-unit config and committed state** *(needs T30.1 GO)* —
+add the strict repository-keyed config, canonical digest, one-active-unit
+validation, and store state that binds indexed revisions to the unit digest.
+Changing only scope bytes queues a rebuild. Repo status and operator
+diagnostics expose the unit name, digest, selected paths/counts, and exact
+typed-index posture without leaking source content. Absent configuration is
+byte-compatible whole-repository behavior. AC: strict YAML/schema/example
+coverage, upgrade/reopen tests, scope-change job tests, path safety and
+non-disclosure tests, PLAN and Configuration/Operations updates; full merge
+bar.
+
+**T30.3 · Focused zoekt child and shard integrity** *(needs T30.2)* —
+ship the T30.1-proven child in development and release builds, invoke it for a
+configured unit, retain `zoekt-git-index` for whole repositories, and commit
+index state only after every scoped shard is durable. Search startup,
+directory watching, reconciliation, force rebuild, revision allowlists,
+backup/restore, orphan cleanup, and failed state commits validate both exact
+branch/commit metadata, unit digest, index-generation digest, and the complete
+shard-set manifest. AC: an out-of-scope needle is absent from the physical
+shard, an admitted needle searches under the original commit/path, scope-only
+changes replace shards, stale/mixed/missing/extra-member sets never serve, the
+revision-set matrix is pinned, child OOM/error classification remains intact,
+packaged binary parity, and size-driven shard splits preserve identical
+unit/revision/generation metadata plus exact expected membership; full merge
+bar.
+
+**T30.4 · Reusable candidate-partition manifest** *(needs T30.2)* — replace
+per-domain complete-tree retention with one streamed commit census that
+produces a content-addressed manifest: repository/unit candidates for focused
+domains and deterministic repository-global caller partitions. The trusted
+walker records blob IDs, total regular-file and gitlink digests, candidate
+policy versions, per-domain counts/digests, and bounded partition files/rows
+without retaining the full path set. Manifest publication, reuse, stale
+replacement, retention, crash cleanup, and queue fan-out are atomic and
+resumable. Implement the domain-separated path-hash prefix algorithm above;
+freeze its initial bit depth and per-leaf candidate/declared-byte limits from
+the spike measurements. AC: the T30.1 over-limit corpus plans successfully
+inside frozen memory/disk/wall gates; every candidate is assigned exactly
+once; leaf prefixes are prefix-free, disjoint, canonically ordered, and
+deterministic across repeated runs; content-only changes preserve assignment
+while changing manifest identity; an oversized singleton and an unsplittable
+collision fail closed; noncandidate paths affect corpus coverage but consume
+no retained path row; malformed, partial, duplicate, or stale manifests
+cannot start extraction; full merge bar.
+
+**T30.5 · Focused evidence publication** *(needs T30.3, T30.4)* — key
+extraction attempts/runs and published evidence by repository, source commit,
+unit digest, and domain; execute provisional contract, field, topic, local
+consumer, attribution, and Workbench implementation readers only over the
+unit manifest. Add a commit/unit-bound typed-index input contract instead of
+relabeling a repository-root SCIP file. Store migrations preserve readable
+legacy whole-repository evidence while preventing a scoped run from
+superseding or satisfying a different unit. Contract Atlas, Topics, coverage,
+source links, and provisional Workbench target/implementation views consume
+real store-published focused evidence without fixture authority. AC:
+scope/stale/rollback/mixed-writer tests, exact coverage disclosure,
+deterministic ordinary-worker acceptance, full merge bar.
+
+**T30.6 · Target-bound repository Caller Map generation** *(needs T30.4,
+T30.5)* — build the bounded module/generated-resolution catalog for one
+focused declaration set before any source-partition scan, execute
+repository-global gRPC/Thrift caller partitions against that immutable
+catalog, and atomically publish a complete generation. Extend reverse
+lookup and Caller Map/comparison services to page across that generation
+without weakening exact declaration identity, repository authorization,
+cursor snapshots, or unresolved vocabulary. Focused and overlay evidence
+remain visibly distinct; a missing/failed partition is a coverage gap, never
+zero callers. AC: neutral cross-service callers outside the focused shard
+appear with immutable citations, unrelated operation calls do not enter the
+target generation, partial/stale generations remain invisible, 10,000+ caller
+pages preserve existing bounds, Workbench Impact composes the overlay, full
+merge bar.
+
+**T30.7 · Scope-aware UI, operations, and epic demo** *(needs T30.3–T30.6)* —
+show the active service unit and exact primary/supporting scope in Search,
+Contracts, Topics, Caller Map, Impact, and Workbench; distinguish focused
+search/local evidence from repository-overlay callers; render partition
+progress, stale state, refusals, and typed-index gaps adjacent to results.
+Reindex controls name the unit they replace. Add a neutral `make dev` cohort
+that indexes one service unit, excludes an irrelevant bulk needle, publishes
+real focused declarations/topics, and displays a caller from outside the
+focused shard through the complete overlay—without Contract Atlas or
+Workbench fixtures. AC: responsive/accessibility/bounded-DOM tests, API/MCP
+schema parity, Operations/Workflows updates, end-to-end demo, full merge bar.
 
 ## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 

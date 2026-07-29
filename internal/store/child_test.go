@@ -8,6 +8,60 @@ import (
 	"testing"
 )
 
+func TestValidateSurrealVersionTokenAcceptsStable3xAndBuildMetadata(t *testing.T) {
+	for _, token := range []string{
+		"3.0",
+		"3.0.0",
+		"3.2.3",
+		"3.2.3+20260721.40522d1",
+		"3.2+local-build",
+	} {
+		t.Run(token, func(t *testing.T) {
+			if err := validateSurrealVersionToken(token); err != nil {
+				t.Fatalf("validateSurrealVersionToken(%q): %v", token, err)
+			}
+		})
+	}
+}
+
+func TestValidateSurrealVersionTokenRejectsUnsupportedOrInvalid(t *testing.T) {
+	for _, token := range []string{
+		"",
+		" 3.2.3",
+		"3",
+		"2.9.9",
+		"4.0.0",
+		"3.2.beta",
+		"3.2.3.4",
+		"3.2.3-alpha.1",
+		"3.2.3+",
+		"3.2.3+bad_meta",
+	} {
+		t.Run(token, func(t *testing.T) {
+			if err := validateSurrealVersionToken(token); err == nil {
+				t.Fatalf("validateSurrealVersionToken(%q) succeeded", token)
+			}
+		})
+	}
+}
+
+func TestInspectSurrealBinaryAcceptsBuildMetadataVersion(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "surreal")
+	if err := os.WriteFile(path, []byte("#!/bin/sh\nprintf '%s\\n' '3.2.3+20260721.40522d1 for macos on aarch64'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	identity, err := InspectSurrealBinary(path)
+	if err != nil {
+		t.Fatalf("InspectSurrealBinary: %v", err)
+	}
+	if identity.Version != "3.2.3+20260721.40522d1" {
+		t.Fatalf("version = %q", identity.Version)
+	}
+	if identity.Path == "" || !validSHA256(identity.SHA256) {
+		t.Fatalf("identity = %+v", identity)
+	}
+}
+
 func TestLocalRuntimeDescriptorOwnershipAndCleanup(t *testing.T) {
 	dataDir := t.TempDir()
 	runtime := LocalRuntime{

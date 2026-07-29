@@ -23,6 +23,8 @@ func TestParse(t *testing.T) {
   data_dir: /tmp/phebs
 auth:
   api_key: secret
+indexing:
+  verbose: true
 connections:
   - name: gh-me
     type: github
@@ -109,6 +111,7 @@ connections:
 			"must be one non-empty token",
 		},
 		{"unknown field", "server:\n  adress: \":8080\"\n", "line 2: field adress not found"},
+		{"unknown indexing field", "indexing:\n  progress: true\n", "line 2: field progress not found"},
 		{"bad type value", "server:\n  addr: [1, 2]\n", "line 2"},
 		{"glob data dir", "server:\n  data_dir: '/tmp/phebs[*]'\n", "data_dir must not contain glob metacharacters"},
 		{
@@ -500,6 +503,42 @@ func TestProvisionalThriftFieldExtractionIsExplicitOptIn(t *testing.T) {
 	}
 	if !cfg.Experimental.ProvisionalThriftFieldExtraction {
 		t.Fatal("explicit provisional Thrift field extraction opt-in was ignored")
+	}
+}
+
+func TestProvisionalWorkbenchIsExplicitOptIn(t *testing.T) {
+	cfg, err := Parse([]byte("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Experimental.ProvisionalWorkbench {
+		t.Fatal("provisional Workbench enabled by default")
+	}
+
+	cfg, err = Parse([]byte("experimental:\n  provisional_workbench: true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Experimental.ProvisionalWorkbench {
+		t.Fatal("explicit provisional Workbench opt-in was ignored")
+	}
+}
+
+func TestIndexingVerboseIsExplicitOptIn(t *testing.T) {
+	cfg, err := Parse([]byte("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Indexing.Verbose {
+		t.Fatal("verbose indexing enabled by default")
+	}
+
+	cfg, err = Parse([]byte("indexing:\n  verbose: true\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Indexing.Verbose {
+		t.Fatal("explicit verbose indexing opt-in was ignored")
 	}
 }
 

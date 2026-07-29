@@ -3511,3 +3511,76 @@ pointer, replace the generic UI README with repository-specific instructions,
 and classify non-sealed spikes and design handoff material as retained
 engineering records. AC: contributor instructions have one authority; all
 retained records are reachable; no sealed T11.1 byte changes; full merge bar.
+
+---
+
+## EPIC 29 — Workbench over real published evidence *(complete 2026-07-28; development-only/default-dark)*
+
+Bind the existing Change Workbench services to the store-derived Contract
+Atlas so a workbench can target real published extraction evidence instead of
+the synthetic fixture cohort. The T21 implementation is catalog-agnostic, but
+its original binding path was the `PHEBS_SYNTHETIC_WORKBENCH` demo guard, which
+requires Investigation and Contract Atlas fixtures and replaces store-derived
+catalog evidence. Epic 29 removes that constraint without touching production
+registration: retained validation plus an explicit pilot-continuation decision
+remain required.
+
+### Boundary
+
+- One development-only flag, `experimental.provisional_workbench`; no new
+  environment variables, routes, or capability identifiers. The flag binds the
+  existing `change-workbench` and `change-workbench-evidence` surfaces only
+  over an already-enabled provisional protobuf or Thrift declaration lane.
+  Without one it refuses `workbench-evidence-prerequisite`.
+- The synthetic fixture cohort remains unchanged. Exact conflicting catalog
+  authorities are `PHEBS_SYNTHETIC_WORKBENCH=1` and any non-empty
+  `PHEBS_CONTRACT_ATLAS_FIXTURE`; either refuses
+  `workbench-authority-conflict`. Investigation fixtures and the closure
+  repository may coexist because they do not replace catalog authority.
+- Workbench rows retain the provisional evidence posture: no runtime-use,
+  completeness, compatibility, migration-completion, decommission-safety, or
+  extraction-accuracy claim is created or implied.
+- No UI change: the existing Workbench pages bind to the instance catalog.
+
+### Registration matrix
+
+The matrix is evaluated after strict parsing of
+`PHEBS_SYNTHETIC_WORKBENCH` (`""` or `"1"` only). “Declaration lane” means at
+least one of provisional protobuf or provisional Thrift extraction is enabled.
+Investigation fixtures and `PHEBS_WORKBENCH_CLOSURE_REPO` do not change the
+result.
+
+| `provisional_workbench` | Declaration lane | `PHEBS_SYNTHETIC_WORKBENCH` | Contract Atlas fixture | Result |
+|---|---|---|---|---|
+| `false` | any | empty | any | Existing non-Workbench behavior; no Workbench registration |
+| `false` | any | `1` | present, with Investigation fixtures | Existing synthetic Workbench, byte-identical |
+| `false` | any | `1` | absent, or Investigation fixtures absent | Existing synthetic missing-fixture refusal |
+| `true` | present | empty | absent | Register existing Workbench surfaces over store-derived published evidence |
+| `true` | absent | empty | absent | Refuse `workbench-evidence-prerequisite` |
+| `true` | any | `1` | any | Refuse `workbench-authority-conflict` |
+| `true` | any | empty | present | Refuse `workbench-authority-conflict` |
+
+### Documentation updates
+
+- `docs/config.example.yaml` owns the default-dark flag, prerequisite, and
+  authority conflicts.
+- `docs/guides/CONFIGURATION.md` owns the typed refusals and complete matrix.
+- `docs/guides/WORKFLOWS.md` distinguishes fixture-backed and store-derived
+  Workbench paths and retains the canonical evidence caveats.
+- `docs/guides/OPERATIONS.md` owns startup diagnostics and the bounded manual
+  `phebs-everything.yaml` smoke; remote-HEAD observations are never merge-bar
+  fixtures or retained accuracy claims.
+- `phebs-everything.yaml` opts in while `make dev` and `make dev-api` retain
+  their fixture-backed behavior.
+
+**T29.1 ✅ · Provisional Workbench binding over the store-derived catalog**
+*(2026-07-28)* — the server constructs the existing Workbench,
+impact/implementation/checklist, and target resolver when the flag and a
+declaration lane are enabled. The resolver reuses the instance's
+already-constructed Contract Atlas service. Strict environment parsing retains
+precedence and both refusal classes are typed for `errors.Is`. A deterministic
+acceptance opens the real store, publishes protobuf evidence through the
+ordinary extraction worker, discovers the operation through store-derived
+Contract Atlas, and resolves it through the Workbench without a fixture
+catalog. All owning docs and the isolated manual evaluation config are updated.
+Production registration and every evidence/accuracy gate remain unchanged.

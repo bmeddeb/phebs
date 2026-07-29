@@ -113,6 +113,9 @@ type Extractor interface {
 	// Candidate declares whether a regular corpus path is in this extractor's
 	// mandatory input population. The trusted worker inventories this predicate
 	// before extraction and refuses publication unless every candidate was read.
+	// The trusted Git walker may also evaluate it on symlink paths solely to
+	// decide whether that alias requires same-commit validation; extractors still
+	// enumerate and read only final regular paths.
 	Candidate(path string) bool
 	Extract(ctx context.Context, corpus Corpus, emit Emit) (Coverage, error)
 }

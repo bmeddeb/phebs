@@ -59,10 +59,11 @@ func use(x *contract.Item) { _ = x.GetOldName() }
 		t.Fatal(err)
 	}
 	files := map[string]string{
-		"index.scip":          string(indexBytes),
-		"api/item.proto":      "syntax = \"proto3\"; package acme.v1; message Item { string old_name = 1; }\n",
-		"contract/item.pb.go": generated,
-		"consumer/use.go":     consumer,
+		"index.scip":               string(indexBytes),
+		"idl/proto/buf.yaml":       "version: v1\n",
+		"idl/proto/api/item.proto": "syntax = \"proto3\"; package acme.v1; message Item { string old_name = 1; }\n",
+		"contract/item.pb.go":      generated,
+		"consumer/use.go":          consumer,
 	}
 	repo := &store.Repo{Name: "example.com/consumer", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()

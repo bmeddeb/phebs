@@ -77,6 +77,65 @@ func TestDefinitionReferencesAndHover(t *testing.T) {
 	}
 }
 
+func TestUnsupportedSCIPDocumentDoesNotPoisonNavigation(t *testing.T) {
+	fixture := newFixture(t, true)
+	index := readFixtureIndex(t)
+	validOccurrences := 0
+	for _, doc := range index.GetDocuments() {
+		validOccurrences += len(doc.GetOccurrences())
+	}
+	index.Documents = append([]*scip.Document{{
+		RelativePath:     "bad/unknown.go",
+		PositionEncoding: scip.PositionEncoding_UnspecifiedPositionEncoding,
+		Occurrences: []*scip.Occurrence{{
+			Range:  []int32{0, 0, 1},
+			Symbol: index.GetDocuments()[0].GetOccurrences()[0].GetSymbol(),
+		}},
+	}}, index.Documents...)
+	if err := os.MkdirAll(filepath.Join(fixture.origin, "bad"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(fixture.origin, "bad", "unknown.go"), []byte("x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	writeIndex(t, fixture.origin, index)
+	revision := fixture.commit(t, "unsupported SCIP document encoding")
+	fixture.fetch(t)
+
+	service := New(Options{DataDir: fixture.dataDir})
+	availability, err := service.Ingest(context.Background(), fixtureRepo, revision)
+	if err != nil || !availability.Available {
+		t.Fatalf("Ingest = %#v, %v", availability, err)
+	}
+	if availability.Documents != len(index.GetDocuments())-1 ||
+		availability.Occurrences != validOccurrences {
+		t.Fatalf("availability = %#v", availability)
+	}
+
+	definition, err := service.Definition(context.Background(), Query{
+		Repo: fixtureRepo, Revision: revision, Path: "use/use.go",
+		Line: 1, Character: 29,
+	})
+	if err != nil || definition.Location == nil ||
+		definition.Location.Path != "lib/rocket.go" {
+		t.Fatalf("Definition = %#v, %v", definition, err)
+	}
+	hover, err := service.Hover(context.Background(), Query{
+		Repo: fixtureRepo, Revision: revision, Path: "use/use.go",
+		Line: 1, Character: 29,
+	})
+	if err != nil || hover.Hover == nil || hover.Hover.DisplayName != "Rocket" {
+		t.Fatalf("Hover = %#v, %v", hover, err)
+	}
+	skipped, err := service.Definition(context.Background(), Query{
+		Repo: fixtureRepo, Revision: revision, Path: "bad/unknown.go",
+		Line: 0, Character: 0,
+	})
+	if err != nil || !skipped.Available || skipped.Location != nil {
+		t.Fatalf("skipped document Definition = %#v, %v", skipped, err)
+	}
+}
+
 func TestAbsentIndexIsGraceful(t *testing.T) {
 	fixture := newFixture(t, false)
 	service := New(Options{DataDir: fixture.dataDir})

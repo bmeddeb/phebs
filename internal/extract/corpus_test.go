@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -50,6 +51,39 @@ func (f *corpusGitFixture) git(dir string, args ...string) string {
 		f.t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 	return strings.TrimSpace(string(out))
+}
+
+func (f *corpusGitFixture) gitInput(dir, input string, args ...string) string {
+	f.t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Stdin = strings.NewReader(input)
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_AUTHOR_DATE=2026-01-01T00:00:00Z",
+		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t", "GIT_COMMITTER_DATE=2026-01-01T00:00:00Z")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		f.t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func (f *corpusGitFixture) addSymlink(name, target string) {
+	f.t.Helper()
+	fullPath := filepath.Join(f.source, filepath.FromSlash(name))
+	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+		f.t.Fatal(err)
+	}
+	if err := os.Symlink(target, fullPath); err != nil {
+		f.t.Skipf("symlinks unsupported: %v", err)
+	}
+	f.git(f.source, "add", "--", name)
+}
+
+func (f *corpusGitFixture) stageBlob(mode, name, content string) {
+	f.t.Helper()
+	oid := f.gitInput(f.source, content, "hash-object", "-w", "--stdin")
+	f.git(f.source, "update-index", "--add", "--cacheinfo", mode+","+oid+","+name)
 }
 
 func (f *corpusGitFixture) commitFile(name, content, message string) string {
@@ -153,6 +187,58 @@ func TestReadNULRecordRejectsTruncatedRecord(t *testing.T) {
 	}
 }
 
+func TestStopTreeCommandKillsBlockedWriter(t *testing.T) {
+	if testing.Short() {
+		t.Skip("process cleanup regression")
+	}
+	cmd := exec.Command("sh", "-c", `while :; do printf 'tree-output-tree-output-tree-output\n'; done`)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	// Prove the child reached its writer before abandoning the pipe.
+	buffer := make([]byte, 32)
+	if _, err := io.ReadFull(stdout, buffer); err != nil {
+		t.Fatalf("read child output: %v", err)
+	}
+
+	done := make(chan struct{})
+	go func() {
+		stopTreeCommand(cmd, stdout)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		_ = cmd.Process.Kill()
+		t.Fatal("blocked tree writer was not killed and reaped")
+	}
+	if cmd.ProcessState == nil {
+		t.Fatal("tree writer was not reaped")
+	}
+}
+
+func TestGitCorpusWalkPreservesContextCancellation(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	head := f.commitFile("api.proto", "content", "content")
+	f.cloneMirror()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(
+		ctx,
+		func(string) error {
+			cancel()
+			return nil
+		},
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("WalkFiles error = %v, want context.Canceled", err)
+	}
+}
+
 func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 	t.Run("unrelated symlink skipped", func(t *testing.T) {
 		f := newCorpusGitFixture(t)
@@ -174,35 +260,21 @@ func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 		}
 	})
 
-	t.Run("proto symlink rejected", func(t *testing.T) {
+	t.Run("candidate-shaped symlink skipped by generic walk", func(t *testing.T) {
 		f := newCorpusGitFixture(t)
-		f.commitFile("target", "not parsed", "target")
-		if err := os.Symlink("target", filepath.Join(f.source, "linked.proto")); err != nil {
-			t.Skipf("symlinks unsupported: %v", err)
-		}
-		f.git(f.source, "add", "linked.proto")
-		f.git(f.source, "commit", "-q", "-m", "proto symlink")
+		f.commitFile("target.proto", "regular", "target")
+		f.addSymlink("linked.proto", "target.proto")
+		f.git(f.source, "commit", "-q", "-m", "candidate-shaped symlink")
 		head := f.git(f.source, "rev-parse", "HEAD")
 		f.cloneMirror()
-		err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(context.Background(), func(string) error { return nil })
-		if err == nil || !strings.Contains(err.Error(), "proto symlink") {
-			t.Fatalf("proto symlink error = %v", err)
-		}
-	})
-
-	t.Run("thrift symlink rejected", func(t *testing.T) {
-		f := newCorpusGitFixture(t)
-		f.commitFile("target", "not parsed", "target")
-		if err := os.Symlink("target", filepath.Join(f.source, "linked.thrift")); err != nil {
-			t.Skipf("symlinks unsupported: %v", err)
-		}
-		f.git(f.source, "add", "linked.thrift")
-		f.git(f.source, "commit", "-q", "-m", "thrift symlink")
-		head := f.git(f.source, "rev-parse", "HEAD")
-		f.cloneMirror()
-		err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(context.Background(), func(string) error { return nil })
-		if err == nil || !strings.Contains(err.Error(), "thrift symlink") {
-			t.Fatalf("thrift symlink error = %v", err)
+		var paths []string
+		err := GitCorpus(f.dataDir).New(f.repoName, head).WalkFiles(
+			context.Background(), func(filePath string) error {
+				paths = append(paths, filePath)
+				return nil
+			})
+		if err != nil || !slices.Equal(paths, []string{"target.proto"}) {
+			t.Fatalf("WalkFiles = %v, %v", paths, err)
 		}
 	})
 
@@ -311,6 +383,211 @@ func TestGitCorpusSymlinkAndGitlinkPolicy(t *testing.T) {
 			if strings.Contains(samplePath, `\`) {
 				t.Fatalf("unsafe path leaked into sample: %q", samplePath)
 			}
+		}
+	})
+}
+
+func TestGitCorpusCandidateSymlinkPolicy(t *testing.T) {
+	t.Run("safe relative chain extracts final path once", func(t *testing.T) {
+		f := newCorpusGitFixture(t)
+		f.commitFile("shared/real.thrift", "service Real {}", "regular target")
+		f.commitFile("svc/main.go", "package svc", "unrelated Go source")
+		f.addSymlink("shared/intermediate", "real.thrift")
+		f.addSymlink("api/service.thrift", "../shared/intermediate")
+		f.git(f.source, "commit", "-q", "-m", "safe alias chain")
+		head := f.git(f.source, "rev-parse", "HEAD")
+		f.cloneMirror()
+
+		verified := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, head))
+		if err := verified.Inventory(
+			context.Background(),
+			func(filePath string) bool { return strings.HasSuffix(filePath, ".thrift") },
+		); err != nil {
+			t.Fatalf("Inventory: %v", err)
+		}
+		var paths []string
+		if err := verified.WalkFiles(context.Background(), func(filePath string) error {
+			paths = append(paths, filePath)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(paths, []string{"shared/real.thrift", "svc/main.go"}) {
+			t.Fatalf("enumerated paths = %v", paths)
+		}
+		blob, err := verified.Read(context.Background(), "shared/real.thrift")
+		if err != nil || blob.Content != "service Real {}" {
+			t.Fatalf("final target read = %q, %v", blob.Content, err)
+		}
+		if _, err := verified.Read(context.Background(), "api/service.thrift"); err == nil {
+			t.Fatal("logical symlink alias became readable")
+		}
+		stats, err := verified.Stats()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if stats.corpusFileCount != 2 || stats.candidateFileCount != 1 ||
+			stats.readFileCount != 1 {
+			t.Fatalf("stats = %+v", stats)
+		}
+
+		goCorpus := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, head))
+		if err := goCorpus.Inventory(
+			context.Background(),
+			func(filePath string) bool { return strings.HasSuffix(filePath, ".go") },
+		); err != nil {
+			t.Fatalf("Go inventory was aborted by safe Thrift alias: %v", err)
+		}
+		if len(goCorpus.candidates) != 1 {
+			t.Fatalf("Go candidates = %v", goCorpus.candidates)
+		}
+	})
+
+	t.Run("noncandidate unsafe symlink does not abort unrelated domain", func(t *testing.T) {
+		f := newCorpusGitFixture(t)
+		f.commitFile("svc/main.go", "package svc", "go source")
+		f.addSymlink("idl/service.thrift", "/outside/service.thrift")
+		f.git(f.source, "commit", "-q", "-m", "absolute thrift alias")
+		head := f.git(f.source, "rev-parse", "HEAD")
+		f.cloneMirror()
+
+		goCorpus := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, head))
+		if err := goCorpus.Inventory(
+			context.Background(),
+			func(filePath string) bool { return strings.HasSuffix(filePath, ".go") },
+		); err != nil {
+			t.Fatalf("Go inventory was aborted by unrelated Thrift symlink: %v", err)
+		}
+		if _, ok := goCorpus.candidates["svc/main.go"]; !ok || len(goCorpus.candidates) != 1 {
+			t.Fatalf("Go candidates = %v", goCorpus.candidates)
+		}
+
+		thriftCorpus := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, head))
+		err := thriftCorpus.Inventory(
+			context.Background(),
+			func(filePath string) bool { return strings.HasSuffix(filePath, ".thrift") },
+		)
+		if err == nil || !strings.Contains(err.Error(), "absolute target") {
+			t.Fatalf("Thrift inventory error = %v", err)
+		}
+	})
+
+	tests := []struct {
+		name    string
+		want    string
+		prepare func(*corpusGitFixture)
+	}{
+		{
+			name: "repository escape",
+			want: "escapes repository root",
+			prepare: func(f *corpusGitFixture) {
+				f.addSymlink("idl/service.thrift", "../../outside.thrift")
+			},
+		},
+		{
+			name: "cycle",
+			want: "cycle",
+			prepare: func(f *corpusGitFixture) {
+				f.addSymlink("service.thrift", "next")
+				f.addSymlink("next", "service.thrift")
+			},
+		},
+		{
+			name: "missing target",
+			want: "is missing",
+			prepare: func(f *corpusGitFixture) {
+				f.addSymlink("service.thrift", "missing.thrift")
+			},
+		},
+		{
+			name: "directory target",
+			want: "targets directory",
+			prepare: func(f *corpusGitFixture) {
+				f.commitFile("defs/real.thrift", "service Real {}", "directory content")
+				f.addSymlink("service.thrift", "defs")
+			},
+		},
+		{
+			name: "gitlink target",
+			want: "targets gitlink",
+			prepare: func(f *corpusGitFixture) {
+				parent := f.commitFile("README", "root", "root")
+				f.git(f.source, "update-index", "--add", "--cacheinfo", "160000,"+parent+",third_party")
+				f.addSymlink("service.thrift", "third_party")
+			},
+		},
+		{
+			name: "final noncandidate target",
+			want: "is not an extractor candidate",
+			prepare: func(f *corpusGitFixture) {
+				f.commitFile("target.txt", "not thrift", "regular noncandidate")
+				f.addSymlink("service.thrift", "target.txt")
+			},
+		},
+		{
+			name: "excessive depth",
+			want: "depth limit",
+			prepare: func(f *corpusGitFixture) {
+				f.commitFile("final.thrift", "service Final {}", "final")
+				f.addSymlink("service.thrift", "chain01")
+				for i := 1; i <= maxCorpusSymlinkDepth; i++ {
+					target := "final.thrift"
+					if i < maxCorpusSymlinkDepth {
+						target = fmt.Sprintf("chain%02d", i+1)
+					}
+					f.addSymlink(fmt.Sprintf("chain%02d", i), target)
+				}
+			},
+		},
+		{
+			name: "oversized target",
+			want: "target exceeds",
+			prepare: func(f *corpusGitFixture) {
+				f.stageBlob("120000", "service.thrift", strings.Repeat("x", maxCorpusPathBytes+1))
+			},
+		},
+		{
+			name: "unsafe target bytes",
+			want: "unsafe target bytes",
+			prepare: func(f *corpusGitFixture) {
+				f.stageBlob("120000", "service.thrift", `defs\real.thrift`)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f := newCorpusGitFixture(t)
+			test.prepare(f)
+			f.git(f.source, "commit", "-q", "-m", test.name)
+			head := f.git(f.source, "rev-parse", "HEAD")
+			f.cloneMirror()
+			verified := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, head))
+			err := verified.Inventory(
+				context.Background(),
+				func(filePath string) bool { return strings.HasSuffix(filePath, ".thrift") },
+			)
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("Inventory error = %v, want %q", err, test.want)
+			}
+		})
+	}
+
+	t.Run("candidate panic on symlink is contained", func(t *testing.T) {
+		f := newCorpusGitFixture(t)
+		f.commitFile("target.thrift", "service Target {}", "target")
+		f.addSymlink("service.thrift", "target.thrift")
+		f.git(f.source, "commit", "-q", "-m", "panic alias")
+		head := f.git(f.source, "rev-parse", "HEAD")
+		f.cloneMirror()
+		verified := newVerifiedCorpus(GitCorpus(f.dataDir).New(f.repoName, head))
+		err := verified.Inventory(context.Background(), func(filePath string) bool {
+			if filePath == "service.thrift" {
+				panic("boom")
+			}
+			return strings.HasSuffix(filePath, ".thrift")
+		})
+		if err == nil || !strings.Contains(err.Error(), "candidate predicate panic") {
+			t.Fatalf("Inventory panic error = %v", err)
 		}
 	})
 }

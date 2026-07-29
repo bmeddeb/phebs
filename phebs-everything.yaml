@@ -42,6 +42,7 @@ experimental:
   provisional_thrift_extraction: true
   provisional_thrift_field_extraction: true
   provisional_kafka_extraction: true
+  provisional_workbench: true
 
 contexts:
   everything:

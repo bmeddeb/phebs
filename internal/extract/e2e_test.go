@@ -378,7 +378,7 @@ func TestThriftPackEndToEnd(t *testing.T) {
 		strings.Join(declRun.Coverage.Protocols, ",") != "lineage-provisional-repo-path-v1,thrift" {
 		t.Fatalf("thrift-contract coverage = %+v", declRun.Coverage)
 	}
-	if declRun.Coverage.InventoryPolicy != "gitlink-boundary-v1" ||
+	if declRun.Coverage.InventoryPolicy != "gitlink-boundary-v2" ||
 		declRun.Coverage.GitlinkCount != 1 ||
 		!strings.HasPrefix(declRun.Coverage.GitlinkDigest, "sha256:") ||
 		len(declRun.Coverage.GitlinkSamplePaths) != 1 ||

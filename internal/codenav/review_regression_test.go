@@ -35,6 +35,43 @@ func TestMalformedOccurrenceDoesNotRejectSnapshot(t *testing.T) {
 	}
 }
 
+func TestUnsupportedDocumentEncodingDoesNotRejectSnapshot(t *testing.T) {
+	index := readFixtureIndex(t)
+	validOccurrenceCount := 0
+	for _, doc := range index.GetDocuments() {
+		validOccurrenceCount += len(doc.GetOccurrences())
+	}
+	index.Documents = append([]*scip.Document{{
+		RelativePath:     "bad/unknown.go",
+		PositionEncoding: scip.PositionEncoding_UnspecifiedPositionEncoding,
+		Occurrences: []*scip.Occurrence{{
+			Range:  []int32{0, 0, 1},
+			Symbol: index.GetDocuments()[0].GetOccurrences()[0].GetSymbol(),
+		}},
+	}}, index.Documents...)
+
+	snapshot, err := parseSnapshot(
+		context.Background(),
+		marshalFixtureIndex(t, index),
+		newParseLimits(Options{}),
+	)
+	if err != nil {
+		t.Fatalf("parseSnapshot: %v", err)
+	}
+	if snapshot.unsupportedDocuments != 1 {
+		t.Fatalf("unsupported documents = %d, want 1", snapshot.unsupportedDocuments)
+	}
+	if _, retained := snapshot.documents["bad/unknown.go"]; retained {
+		t.Fatal("unsupported document entered the navigation snapshot")
+	}
+	if len(snapshot.documents) != len(index.GetDocuments())-1 {
+		t.Fatalf("retained documents = %d, want %d", len(snapshot.documents), len(index.GetDocuments())-1)
+	}
+	if snapshot.occurrenceCount != validOccurrenceCount+1 {
+		t.Fatalf("budgeted occurrences = %d, want %d", snapshot.occurrenceCount, validOccurrenceCount+1)
+	}
+}
+
 func TestQueriesSkipInvalidResultRanges(t *testing.T) {
 	fixture := newFixture(t, true)
 	index := readFixtureIndex(t)

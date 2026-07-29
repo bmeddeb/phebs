@@ -70,11 +70,14 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 ## Current state
 
 **Single-node implementation complete through Epic 23; documentation Epic 24
-complete (2026-07-27).** Search, repository browsing, authentication,
+and provisional Workbench binding Epic 29 are complete (2026-07-28).** Search,
+repository browsing, authentication,
 permissions, audit/analytics, SCIP/history, stateless MCP, bounded `rev:`
 indexing, and backup/restore are shipped core behavior. Contract Atlas, Caller
 Map, Impact, Investigations/Workbench, Thrift-field, and Kafka evidence are
-implemented but remain experimental/default-dark or fixture-bound.
+implemented but remain experimental/default-dark; the Workbench's provisional
+store-derived binding creates no production registration. Epic 30 service-scope
+work is scheduled with T30.1 next.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
 completeness, migration-completion, or decommission-safety claim exists.
 

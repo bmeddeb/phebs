@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"sync"
@@ -132,10 +133,10 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 					return store.WithClass(store.ClassExtract,
 						fmt.Errorf("extract %s: %s: latest run returned nil", repo.Name, ex.domain))
 				}
-				// A legacy run without the current inventory policy is
-				// replaced even at the same commit and extractor version:
-				// its gitlink boundary status is unknown, and only a fresh
-				// walk can bind it.
+				// A run without the current inventory policy is replaced even
+				// at the same commit and extractor version: older generations
+				// do not prove the current gitlink and symlink semantics, and
+				// only a fresh walk can bind them.
 				if last.Commit == commit && last.Extractor == ex.version &&
 					last.Coverage.InventoryPolicy == corpusInventoryPolicy {
 					continue
@@ -241,20 +242,32 @@ func (w *Worker) runOne(ctx context.Context, ex registeredExtractor, corpus Corp
 		if abortErr := w.Evidence.AbortExtractionRun(abortCtx, run.ID); abortErr != nil {
 			err = errors.Join(err, fmt.Errorf("%s: abort: %w", ex.domain, abortErr))
 		}
+		log.Printf("extract %s: %s aborted: %v", corpus.RepoName(), ex.domain, err)
 	}()
 
 	verifiedCorpus := newVerifiedCorpus(corpus)
+	log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
 	if err := verifiedCorpus.Inventory(ctx, ex.extractor.Candidate); err != nil {
 		verifiedCorpus.Close()
 		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
 	}
+	log.Printf(
+		"extract %s: %s inventory complete: files=%d candidates=%d",
+		corpus.RepoName(), ex.domain,
+		verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
+	)
 	sink := newRunSink(ctx, w.Evidence, run.ID, corpus.RepoName(), corpus.Commit(), ex.version, verifiedCorpus)
+	log.Printf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
 	coverage, extractErr := callExtractor(ctx, ex.extractor, verifiedCorpus, sink.Emit)
 	sink.Close()
 	verifiedCorpus.Close()
 	if extractErr != nil {
 		return fmt.Errorf("%s: extract: %w", ex.domain, extractErr)
 	}
+	log.Printf(
+		"extract %s: %s extractor complete: facts=%d",
+		corpus.RepoName(), ex.domain, sink.factCount,
+	)
 	if err := sink.Finish(); err != nil {
 		return fmt.Errorf("%s: stage: %w", ex.domain, err)
 	}
@@ -289,6 +302,7 @@ func (w *Worker) runOne(ctx context.Context, ex registeredExtractor, corpus Corp
 		}
 		return fmt.Errorf("%s: publish: %w", ex.domain, err)
 	}
+	log.Printf("extract %s: %s published", corpus.RepoName(), ex.domain)
 	return nil
 }
 
@@ -472,7 +486,7 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	candidates := make(map[string]struct{})
 	pathBytes := 0
 	unreadable := 0
-	err := c.inner.WalkFiles(ctx, func(filePath string) error {
+	visit := func(filePath string, isCandidate bool) error {
 		if len(paths)+unreadable >= maxCorpusFiles {
 			return fmt.Errorf("corpus inventory exceeds %d-file limit", maxCorpusFiles)
 		}
@@ -485,10 +499,6 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 			// to the published corpus file count but is never enumerated:
 			// extractors cannot see or Read it. Only a candidate with such a
 			// name is a coverage gap, and that fails closed.
-			isCandidate, candErr := callCandidate(candidate, filePath)
-			if candErr != nil {
-				return candErr
-			}
 			if isCandidate {
 				return fmt.Errorf("candidate path is not readable: %w", pathErr)
 			}
@@ -498,17 +508,31 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 		if _, duplicate := enumerated[filePath]; duplicate {
 			return fmt.Errorf("corpus inventory repeats path %q", filePath)
 		}
-		isCandidate, err := callCandidate(candidate, filePath)
-		if err != nil {
-			return err
-		}
 		enumerated[filePath] = struct{}{}
 		paths = append(paths, filePath)
 		if isCandidate {
 			candidates[filePath] = struct{}{}
 		}
 		return nil
-	})
+	}
+	var err error
+	if trusted, ok := c.inner.(inventoryCorpus); ok {
+		err = trusted.WalkInventory(
+			ctx,
+			func(filePath string) (bool, error) {
+				return callCandidate(candidate, filePath)
+			},
+			visit,
+		)
+	} else {
+		err = c.inner.WalkFiles(ctx, func(filePath string) error {
+			isCandidate, candErr := callCandidate(candidate, filePath)
+			if candErr != nil {
+				return candErr
+			}
+			return visit(filePath, isCandidate)
+		})
+	}
 	if err != nil {
 		return err
 	}
@@ -906,9 +930,11 @@ func validSHA256(value string) bool {
 
 // corpusInventoryPolicy is the inventory contract stamped on every manifest
 // this worker publishes: gitlink boundaries are counted and digest-bound
-// (T19.8). Legacy runs without the marker have unknown boundary status and
-// are replaced even when commit and extractor version match.
-const corpusInventoryPolicy = "gitlink-boundary-v1"
+// (T19.8), and candidate symlinks are extractor-gated aliases to same-commit
+// final regular candidates. Legacy runs without this generation have unknown
+// symlink policy and are replaced even when commit and extractor version
+// match.
+const corpusInventoryPolicy = "gitlink-boundary-v2"
 
 func coverageManifest(coverage sdk.Coverage, atomCount, assertionCount, unresolvedCount int, stats corpusStats, boundaries gitlinkInventory) (store.CoverageManifest, error) {
 	if len(coverage.Failures) != 0 {

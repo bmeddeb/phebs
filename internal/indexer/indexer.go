@@ -6,10 +6,10 @@
 package indexer
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -76,6 +76,12 @@ type Indexer struct {
 	DataDir string // mirrors under DataDir/repos, shards under DataDir/index
 	Bin     string // zoekt-git-index path (FindBinary)
 	Store   store.Store
+	// Verbose forwards the child indexer's line-oriented stdout/stderr and
+	// parent phase transitions to Logger. Failure diagnostics retain only a
+	// bounded tail regardless of this setting.
+	Verbose bool
+	// Logger receives verbose indexing output. Nil uses log.Default().
+	Logger *log.Logger
 	// Revisions is the validated per-repository selector -> full Git ref
 	// allowlist. HEAD is always implicit and is never present in this map.
 	Revisions map[string]map[string]string
@@ -132,6 +138,7 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		return fmt.Errorf("index %s: resolve revisions: %w", repo.Name, err)
 	}
 	if !force && head != "" && head == repo.IndexedCommitHash && revisionsEqual(revisions, repo.IndexedRevisions, repo.IndexedCommitHash) {
+		ix.verbosef("index %s: already current at %s; skipping child", repo.Name, head)
 		return ix.afterIndexed(ctx, repo.Name, head) // T3.2: shards current; repair/confirm the chain
 	}
 
@@ -156,19 +163,32 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		}
 		args = append(args, "-branches="+strings.Join(branches, ","))
 	}
+	ix.verbosef(
+		"index %s: starting zoekt-git-index revisions=%d force=%t",
+		repo.Name, len(revisions), force,
+	)
 	start := time.Now()
 	cmd := exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
-	var out bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &out, &out
-	if err := cmd.Run(); err != nil {
+	out := newChildOutput(ix.logger(), fmt.Sprintf("index %s: zoekt: ", repo.Name), ix.Verbose)
+	cmd.Stdout, cmd.Stderr = out, out
+	runErr := cmd.Run()
+	out.Flush()
+	if runErr != nil {
+		err := runErr
 		wrapped := fmt.Errorf("index %s: zoekt-git-index: %w\n%s", repo.Name, err, out.String())
 		if ctx.Err() != nil {
 			return fmt.Errorf("%v: %w", wrapped, ctx.Err())
 		}
 		return classifyChild(wrapped, err, out.String())
 	}
-	indexDuration.Observe(time.Since(start).Seconds())
-	shardBytes.Set(dirBytes(indexDir))
+	duration := time.Since(start)
+	indexDuration.Observe(duration.Seconds())
+	totalShardBytes := dirBytes(indexDir)
+	shardBytes.Set(totalShardBytes)
+	ix.verbosef(
+		"index %s: zoekt-git-index complete duration=%s total_shard_bytes=%.0f",
+		repo.Name, duration.Round(time.Millisecond), totalShardBytes,
+	)
 	if err := ix.Store.SetRepoIndexedRevisions(ctx, repo.Name, head, revisions, time.Now().UTC()); err != nil {
 		// The child has already replaced the shard. If the DB commit fails,
 		// remove both sides of the claimed state so search cannot serve revision
@@ -181,7 +201,21 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 			wrapIfError("remove uncommitted shards", removeErr),
 		)
 	}
+	ix.verbosef("index %s: committed index state at %s", repo.Name, head)
 	return ix.afterIndexed(ctx, repo.Name, head)
+}
+
+func (ix *Indexer) logger() *log.Logger {
+	if ix.Logger != nil {
+		return ix.Logger
+	}
+	return log.Default()
+}
+
+func (ix *Indexer) verbosef(format string, args ...any) {
+	if ix.Verbose {
+		ix.logger().Printf(format, args...)
+	}
 }
 
 func (ix *Indexer) resolveRevisions(ctx context.Context, dir, repoName, head string) ([]store.IndexedRevision, error) {

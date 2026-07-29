@@ -109,7 +109,13 @@ func TestMain(m *testing.M) {
 
 func gitc(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-C", dir}, args...)
+	full := append([]string{
+		"-c", "user.name=t",
+		"-c", "user.email=t@t",
+		"-c", "commit.gpgSign=false",
+		"-c", "tag.gpgSign=false",
+		"-C", dir,
+	}, args...)
 	out, err := exec.Command("git", full...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)

@@ -37,7 +37,7 @@ import (
 
 const (
 	domain        = "scip-proto-field"
-	version       = "1.0.0"
+	version       = "1.1.0"
 	schemaVersion = "t13-v1"
 	indexPath     = "index.scip"
 
@@ -255,6 +255,7 @@ func bindGeneratedFields(
 ) (map[string]fieldBinding, error) {
 	protoCache := make(map[string]map[string]protoField)
 	candidates := make(map[string][]fieldBinding)
+	protoSources := generatedProtoSourceIndex(paths)
 	for _, doc := range documents {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -269,16 +270,17 @@ func bindGeneratedFields(
 		if err != nil {
 			return nil, fmt.Errorf("read generated document %q: %w", doc.path, err)
 		}
-		protoPath, definitions, err := generatedDefinitions(ctx, doc, blob.Content)
+		generatorRelativePath, definitions, err := generatedDefinitions(ctx, doc, blob.Content)
 		if err != nil {
 			return nil, fmt.Errorf("generated document %q: %w", doc.path, err)
 		}
 		// generatedDefinitions returns names, spans, and symbols only.
 		blob = sdk.Blob{}
-		if protoPath == "" {
+		if generatorRelativePath == "" {
 			continue
 		}
-		if _, exists := paths[protoPath]; !exists {
+		protoPath := protoSources[generatorRelativePath]
+		if protoPath == "" {
 			continue
 		}
 		fields := protoCache[protoPath]
@@ -749,6 +751,48 @@ func generatedSourcePath(content string) string {
 		return ""
 	}
 	return ""
+}
+
+// generatedProtoSourceIndex maps protoc-gen-go's generator-relative source
+// marker to one immutable repository path. A regular committed buf.yaml marks
+// its directory as a Buf module root; the repository root remains the legacy
+// invocation root. Duplicate relative paths across roots are deliberately
+// omitted instead of guessing which module produced the generated file.
+func generatedProtoSourceIndex(paths map[string]struct{}) map[string]string {
+	moduleRoots := map[string]struct{}{".": {}}
+	for filePath := range paths {
+		if path.Base(filePath) == "buf.yaml" && validPath(filePath) == nil {
+			moduleRoots[path.Dir(filePath)] = struct{}{}
+		}
+	}
+
+	resolved := make(map[string]string)
+	ambiguous := make(map[string]struct{})
+	for filePath := range paths {
+		if !strings.HasSuffix(filePath, ".proto") || validPath(filePath) != nil {
+			continue
+		}
+		for root := path.Dir(filePath); ; root = path.Dir(root) {
+			if _, ok := moduleRoots[root]; ok {
+				relative := filePath
+				if root != "." {
+					relative = strings.TrimPrefix(filePath, root+"/")
+				}
+				if previous, exists := resolved[relative]; !exists {
+					resolved[relative] = filePath
+				} else if previous != filePath {
+					ambiguous[relative] = struct{}{}
+				}
+			}
+			if root == "." {
+				break
+			}
+		}
+	}
+	for relative := range ambiguous {
+		delete(resolved, relative)
+	}
+	return resolved
 }
 
 func receiverName(list *ast.FieldList) string {

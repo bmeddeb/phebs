@@ -62,6 +62,17 @@ func (workbenchTargetCompatibility) Check(
 	return nil, errors.New("not called")
 }
 
+func TestNewWorkbenchTargetResolverPrefersSharedCatalog(t *testing.T) {
+	shared := &ContractCatalogService{}
+	resolver := NewWorkbenchTargetResolver(Options{ContractCatalog: shared})
+	if resolver == nil {
+		t.Fatal("resolver = nil")
+	}
+	if resolver.catalog != shared {
+		t.Fatal("resolver reconstructed Contract Catalog instead of reusing shared service")
+	}
+}
+
 func TestWorkbenchTargetResolverKeepsExactProtocolRepositoryAndLineage(t *testing.T) {
 	repositories := &contractFixtureRepoStore{repos: []store.Repo{
 		{

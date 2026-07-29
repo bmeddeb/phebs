@@ -439,6 +439,36 @@ uses the same non-disclosing unavailable state. There is no comment,
 assignment, due date, priority, custom state, task, or implicit completion
 action.
 
+## Provisional Change Workbench over published evidence
+
+`experimental.provisional_workbench: true` is a separate development path from
+the synthetic shell above. It requires provisional protobuf or Thrift
+declaration extraction and reuses the instance's already-constructed
+store-derived Contract Atlas service. It does not load a Contract Atlas
+fixture, invent a second catalog authority, or independently expose the
+evidence store.
+
+After ordinary sync, indexing, and extraction publish a declaration run, open
+Contract Atlas, choose one exact protobuf or Thrift operation, and select
+**Start Workbench**. The existing Workbench resolver snapshots that operation
+at the visible indexed HEAD commit and preserves its protocol, repository,
+declaration lineage, and canonical operation identity. Impact,
+implementation, and checklist projections continue to use the same shared
+services and authorization checks as the fixture-backed shell.
+
+The two paths are deliberately distinct:
+
+| Path | Catalog authority | Evidence source | Intended use |
+|---|---|---|---|
+| `make dev` / `make dev-api` | Synthetic Contract Atlas fixture | Retained synthetic fixtures plus the normal closure-repository pipeline | Deterministic UI and workflow demonstration |
+| `provisional_workbench` | Instance store-derived Contract Atlas | Ordinary repository sync/index/extraction publications | Bounded manual evaluation against real published evidence |
+
+Neither path satisfies production registration or the retained validation
+gate. A Workbench result does not prove runtime use, completeness,
+compatibility, migration completion, decommission safety, or extraction
+accuracy. Remote-HEAD observations from the provisional path are manual and
+must not become deterministic merge-bar fixtures or retained accuracy claims.
+
 ## Retained four-story closure walkthrough
 
 Start `make dev` with a fresh data directory, sign in, open
@@ -809,6 +839,16 @@ MiB accounted budget. Results are deterministically selected; reference
 responses stop at 500 locations and set `truncated`, and hover content is
 capped at 64 KiB. The UI uses UTF-16 offsets (matching browser strings), while
 the HTTP API can request UTF-8, UTF-16, or UTF-32 conversion.
+
+Position encoding is document-local. A document that leaves it unspecified or
+uses an unknown encoding is omitted from the navigation snapshot instead of
+making every valid document in the committed index unavailable. Its document,
+occurrence, symbol, and relationship payload still consumes the configured
+semantic limits, and queries into that omitted path return an available empty
+result. phebs does not substitute the metadata text encoding, because that
+field describes source-file bytes rather than SCIP range units. Other
+index-wide structural and boundedness failures remain hard errors and are
+negative-cached by immutable revision.
 
 The extraction reader uses the same root-only product boundary with its own
 trusted corpus ledger. The root path is fixed—nested indexes and manifests are

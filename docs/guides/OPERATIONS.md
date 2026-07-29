@@ -201,6 +201,27 @@ failures `2m × 2ⁿ` (usually deterministic parse issues). Capped at 1 h.
 worker died (stale heartbeat), or fails them once attempts are exhausted.
 Kill phebs mid-index and the job recovers on next boot.
 
+#### Verbose index diagnostics
+
+Indexing is intentionally quiet by default. To expose parent phase transitions
+and the OOM-isolated builder's stdout/stderr, enable the startup-bound switch
+and restart phebs:
+
+```yaml
+indexing:
+  verbose: true
+```
+
+Each forwarded child line is prefixed with the repository. Parent messages
+cover child start, successful completion with duration and total shard bytes,
+state commit, and already-current skips. Child lines longer than 64 KiB are
+split into bounded continued records and invalid UTF-8 is replaced before
+logging. Independent of this switch, a failed child carries only its newest
+1 MiB of output into failure classification and the job error; successful
+child output is discarded. Verbose mode does not change the indexed corpus,
+timeouts, retries, process isolation, or shard publication. Disable it again
+after diagnosis when indexing a noisy large repository.
+
 
 
 ### Experimental contract-intelligence extraction
@@ -291,8 +312,14 @@ The opt-in also reads that same committed root `index.scip` to emit
 `REFERENCES_PROTO_FIELD` assertions. A symbol is eligible only when its exact
 definition provably maps to a generated protobuf Go field and its committed
 `.proto` declaration; local symbols, malformed ranges, and ambiguous joins
-abstain, and a missing index is an explicit unavailable result. Field identity
-is canonical across consumer dependency versions —
+abstain, and a missing index is an explicit unavailable result. The generated
+Go `// source: ...` marker is generator-relative: `scip-proto-field` 1.1.0
+resolves it against the repository root and directories marked by committed
+regular `buf.yaml` files. Exactly one matching `.proto` path is required;
+duplicate module-relative matches abstain. phebs does not execute Buf or parse
+generation configuration, and the resolved repository path remains the only
+source declaration read and cited. Field identity is canonical across consumer
+dependency versions —
 `(contract_lineage_id, message_full_name, field_number)` — so a field rename
 that keeps its number and message remains one identity. These are direct
 field references, not claims that a response field was semantically read.
@@ -311,6 +338,46 @@ runtime-use, or absence claim. `find_proto_field_references` remains
 protobuf-only and byte-stable; the protocol-neutral `find_field_references`
 route, impact report, and MCP tool fan out across every registered
 field-reference domain whose number rules admit the requested identity.
+
+#### Provisional Workbench startup and smoke
+
+The Change Workbench remains default-dark. To bind it to the same
+store-derived Contract Atlas used by the instance, enable it alongside at
+least one declaration lane:
+
+```yaml
+experimental:
+  provisional_proto_extraction: true
+  provisional_workbench: true
+```
+
+Startup refuses before serving when the declaration lane or shared evidence
+services are missing (`workbench-evidence-prerequisite`), or when a synthetic
+Workbench or Contract Atlas fixture would create a second catalog authority
+(`workbench-authority-conflict`). `PHEBS_SYNTHETIC_WORKBENCH` accepts only an
+empty value or exact `1`; malformed values retain that strict parsing error
+instead of being classified as an authority conflict. Successful startup logs
+one warning naming the provisional, non-production posture.
+
+For a bounded operator smoke over public, remote-HEAD evidence:
+
+1. Use the isolated `phebs-everything.yaml` configuration and a fresh or
+   disposable `~/.phebs-everything` data directory.
+2. Run `make build`, then `./phebs serve -config phebs-everything.yaml`.
+3. Wait for one configured public repository to finish sync, index, and
+   protobuf or Thrift declaration extraction. Confirm a published declaration
+   run in the extraction logs or Contract Atlas coverage.
+4. Sign in, open **Contract Atlas**, select one exact published operation, and
+   choose **Start Workbench**. Confirm the resulting Workbench retains the
+   repository, indexed HEAD commit, declaration lineage, and operation shown
+   by Contract Atlas.
+5. Stop the instance and remove the disposable data directory if the
+   observation does not need to be retained locally.
+
+This is a manual availability check only. Upstream HEADs and the resulting
+rows may drift; do not commit outputs, turn observations into an accuracy
+number, or use them as deterministic merge-bar input. `make dev` and
+`make dev-api` remain the fixture-backed deterministic demonstrations.
 
 ### Thrift field-zero development walkthrough
 
@@ -632,16 +699,31 @@ lineage had been established.
 
 The run is bounded to 200,000 regular inventory paths and 16 MiB of aggregate
 path text, 10 MiB per source blob, a separate 64 MiB ceiling for the fixed
-root `index.scip`, 512 MiB of distinct reads, 5,000
-emitted facts, and a cooperative 15-minute context deadline. A candidate
+root `index.scip`, 512 MiB of distinct reads, 12,500
+emitted facts, and a cooperative 15-minute context deadline. The Git tree
+producer is nevertheless terminated synchronously when inventory refuses a
+repository or that deadline cancels the walk, so a child blocked writing to
+the abandoned inventory pipe cannot leave the extraction job running
+indefinitely. A candidate
 Go parser input is further limited to 4 MiB; a protobuf parser input is limited
 to 4 MiB, 500,000 lexical tokens, and 128 structural levels. Neither in-process
 parser can be preempted inside one parse call, so this is not yet a hard
-CPU/memory/process isolation boundary. A candidate `.proto` symlink or more
-than 100 placements of one content atom also prevents publication. Gitlinks
-under
-`gitlink-boundary-v1` are recorded as repository boundaries and are not
-traversed. Unrelated symlinks are skipped. A
+CPU/memory/process isolation boundary. More than 100 placements of one content
+atom also prevents publication. Symlinks are now gated per extractor under
+`gitlink-boundary-v2`: a symlink that does not satisfy the current extractor's
+candidate predicate is skipped and cannot abort that domain. Candidate alias
+paths have independent 200,000-entry and 16 MiB aggregate path bounds. A
+candidate symlink is resolved only from Git tree/blob objects at the pinned
+commit, never through the host filesystem. Its relative chain is limited to
+16 links and must end at a regular path that is also a candidate; only that
+final path is enumerated, read, counted, and cited.
+Absolute or root-escaping targets, unsafe target bytes or paths, missing
+targets, directories, gitlinks, cycles, oversized targets, and unsupported
+modes fail that extractor's run closed. Root `index.scip` and attribution
+snapshot symlinks remain unconditional failures. Runs stamped with the prior
+`gitlink-boundary-v1` policy are replaced on the next extraction so their
+symlink semantics are never treated as current. Gitlinks are still recorded
+as repository boundaries and are not traversed. A
 non-candidate file whose name cannot be represented safely (control bytes, a
 backslash, invalid UTF-8, or a
 leading `-`) is included in the published coverage certificate's
@@ -655,6 +737,17 @@ The same opt-in exposes these three proof queries as MCP envelope structured
 content; HTTP proof-bundle routes and MCP envelope projection call one shared
 proof service. Operational state is also visible through the database and
 `phebs_jobs_total{kind="extraction_job"}`.
+
+Each domain logs `inventory started`, inventory file/candidate counts,
+`extractor started`, emitted fact count, and either `published` or `aborted`
+with the refusal. Contract Atlas, Impact, Topics, and Workbench surfaces remain
+empty until their required domains have a published run; enabling their flags
+does not bypass extraction admission. A repository beyond an inventory,
+candidate-read, aggregate-byte, fact, or parser bound is unsupported as one
+extraction unit: the job retries and then fails with that bound recorded rather
+than publishing a partial result. Split or otherwise narrow that Git evidence
+unit, or schedule a separately reviewed extraction-scope/scale change; Epics
+25–27 do not remove these bounds.
 
 Proof-aware retention checks at startup and hourly while idle, deleting
 aborted, superseded, or stale unpinned staged runs in bounded transactional

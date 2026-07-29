@@ -34,7 +34,10 @@ type WorkbenchTargetResolver struct {
 }
 
 func NewWorkbenchTargetResolver(opts Options) *WorkbenchTargetResolver {
-	catalog := NewContractCatalogService(opts)
+	catalog := opts.ContractCatalog
+	if catalog == nil {
+		catalog = NewContractCatalogService(opts)
+	}
 	if catalog == nil {
 		return nil
 	}

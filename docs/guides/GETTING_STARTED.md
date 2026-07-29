@@ -12,7 +12,7 @@ the [configuration guide](./CONFIGURATION.md).
 | Requirement                        | Why                                                                  | Install                                                                                |
 | ---------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `git`                              | clone/fetch mirrors, serve file content                              | usually present                                                                        |
-| `surreal` (SurrealDB ≥ 3.0)        | the state/queue database child                                       | `brew install surrealdb/tap/surreal` or `curl -sSf https://install.surrealdb.com | sh` |
+| `surreal` (stable SurrealDB 3.x)   | the state/queue database child                                       | `brew install surrealdb/tap/surreal` or `curl -sSf https://install.surrealdb.com | sh` |
 | Go ≥ 1.26                          | build from source                                                    | go.dev/dl                                                                              |
 | Node ≥ 24                          | build the web UI                                                     | nodejs.org                                                                             |
 | `universal-ctags` *(optional)*     | symbol search (`sym:`) at index time                                 | `brew install universal-ctags`                                                         |
@@ -22,8 +22,17 @@ the [configuration guide](./CONFIGURATION.md).
 Release verification uses the exact tool versions recorded in
 `.go-version`, `.node-version`, `.golangci-lint-version`, and
 `.surrealdb-version`. Ordinary development supports the broader prerequisite
-ranges above; the `make ci-*` targets fail early when the release toolchain
-does not match.
+ranges above, including package-manager builds that append SemVer build
+metadata such as `3.2.3+20260721.40522d1`; the runtime still records the exact
+reported SurrealDB version string and executable SHA-256 for backup/restore
+identity. The `make ci-*` targets fail early when the release toolchain does
+not match.
+
+Experimental evidence features are opt-in under `experimental:`. Enabling
+`provisional_workbench` exposes the Change Workbench over the same
+store-derived Contract Atlas evidence as the instance and therefore also
+requires either `provisional_proto_extraction` or
+`provisional_thrift_extraction`.
 
 
 

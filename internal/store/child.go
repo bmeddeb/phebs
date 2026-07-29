@@ -139,14 +139,8 @@ func inspectSurrealBinary(candidate string, useCache bool) (SurrealIdentity, err
 	if len(fields) == 0 {
 		return SurrealIdentity{}, errors.New("run surreal version: empty output")
 	}
-	parts := strings.Split(fields[0], ".")
-	if len(parts) < 2 || parts[0] != "3" {
-		return SurrealIdentity{}, fmt.Errorf("unsupported surreal version %q: require 3.x", fields[0])
-	}
-	for _, part := range parts {
-		if _, err := strconv.Atoi(part); err != nil {
-			return SurrealIdentity{}, fmt.Errorf("invalid surreal version %q", fields[0])
-		}
+	if err := validateSurrealVersionToken(fields[0]); err != nil {
+		return SurrealIdentity{}, err
 	}
 	identity := SurrealIdentity{Path: resolved, Version: fields[0], SHA256: digest}
 	if useCache {
@@ -155,6 +149,50 @@ func inspectSurrealBinary(candidate string, useCache bool) (SurrealIdentity, err
 		surrealIdentityCache.Unlock()
 	}
 	return identity, nil
+}
+
+func validateSurrealVersionToken(token string) error {
+	if strings.TrimSpace(token) != token || token == "" {
+		return fmt.Errorf("invalid surreal version %q", token)
+	}
+	core, build, hasBuild := strings.Cut(token, "+")
+	if strings.Contains(core, "-") || (hasBuild && !validSemverBuildMetadata(build)) {
+		return fmt.Errorf("invalid surreal version %q", token)
+	}
+	parts := strings.Split(core, ".")
+	if len(parts) < 2 || len(parts) > 3 || parts[0] != "3" {
+		return fmt.Errorf("unsupported surreal version %q: require 3.x", token)
+	}
+	for _, part := range parts {
+		if part == "" {
+			return fmt.Errorf("invalid surreal version %q", token)
+		}
+		if _, err := strconv.Atoi(part); err != nil {
+			return fmt.Errorf("invalid surreal version %q", token)
+		}
+	}
+	return nil
+}
+
+func validSemverBuildMetadata(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, segment := range strings.Split(value, ".") {
+		if segment == "" {
+			return false
+		}
+		for _, char := range segment {
+			if (char >= '0' && char <= '9') ||
+				(char >= 'A' && char <= 'Z') ||
+				(char >= 'a' && char <= 'z') ||
+				char == '-' {
+				continue
+			}
+			return false
+		}
+	}
+	return true
 }
 
 // startLocal launches a supervised `surreal` child with surrealkv storage

@@ -1,9 +1,11 @@
 package indexer_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -111,6 +113,29 @@ func (failIndexedStore) SetRepoIndexedRevisions(context.Context, string, string,
 	return errors.New("injected index state failure")
 }
 
+type indexLogStore struct {
+	store.Store
+	repo store.Repo
+}
+
+func (s *indexLogStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
+	if name != s.repo.Name {
+		return nil, store.ErrNotFound
+	}
+	repo := s.repo
+	return &repo, nil
+}
+
+func (s *indexLogStore) SetRepoIndexedRevisions(_ context.Context, name, defaultCommit string, revisions []store.IndexedRevision, at time.Time) error {
+	if name != s.repo.Name {
+		return store.ErrNotFound
+	}
+	s.repo.IndexedCommitHash = defaultCommit
+	s.repo.IndexedRevisions = append([]store.IndexedRevision(nil), revisions...)
+	s.repo.IndexedAt = &at
+	return nil
+}
+
 func TestIndexStateFailureRemovesUncommittedShard(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -131,6 +156,57 @@ func TestIndexStateFailureRemovesUncommittedShard(t *testing.T) {
 	}
 	if repo.IndexedCommitHash != "" {
 		t.Fatalf("indexed hash after failed state commit = %q, want empty", repo.IndexedCommitHash)
+	}
+}
+
+func TestIndexVerboseForwardsChildOutputOnlyWhenEnabled(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(filepath.Join(origin, "main.go"), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "one")
+
+	name, err := sync.RepoName("file://" + origin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dataDir := t.TempDir()
+	if err := sync.Mirror(ctx, "file://"+origin, sync.RepoDir(dataDir, name)); err != nil {
+		t.Fatal(err)
+	}
+	bin := filepath.Join(t.TempDir(), "verbose-indexer")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf 'wrapper-child-marker\\n'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, verbose := range []bool{false, true} {
+		t.Run(fmt.Sprintf("verbose=%t", verbose), func(t *testing.T) {
+			var logs bytes.Buffer
+			st := &indexLogStore{repo: store.Repo{Name: name}}
+			ix := &indexer.Indexer{
+				DataDir: dataDir,
+				Bin:     bin,
+				Store:   st,
+				Verbose: verbose,
+				Logger:  log.New(&logs, "", 0),
+			}
+			if err := ix.Index(ctx, st.repo, true); err != nil {
+				t.Fatal(err)
+			}
+			hasMarker := strings.Contains(logs.String(), "wrapper-child-marker")
+			if hasMarker != verbose {
+				t.Fatalf("child marker present = %t, want %t; logs=%q", hasMarker, verbose, logs.String())
+			}
+			hasParentPhase := strings.Contains(logs.String(), "starting zoekt-git-index")
+			if hasParentPhase != verbose {
+				t.Fatalf("parent phase present = %t, want %t; logs=%q", hasParentPhase, verbose, logs.String())
+			}
+		})
 	}
 }
 

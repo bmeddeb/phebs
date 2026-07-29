@@ -1341,7 +1341,7 @@ function shortID(value?: string): string {
   return value.length > 18 ? `${value.slice(0, 12)}…${value.slice(-4)}` : value
 }
 
-const GITLINK_BOUNDARY_POLICY = 'gitlink-boundary-v1'
+const GITLINK_BOUNDARY_POLICY = 'gitlink-boundary-v2'
 
 function BoundarySummary({ run }: { run: CoverageRun }) {
   const [css] = useStyletron()

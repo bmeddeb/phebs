@@ -17,23 +17,54 @@ phebs ships as a self-hosted, single-node Go application with:
   restore, and deterministic release tooling.
 
 The contract-intelligence, Caller Map, Change Workbench, Thrift-field, and
-Kafka evidence stacks are implemented but remain experimental/default-dark or
-fixture-bound. Their retained external validation result is
+Kafka evidence stacks are implemented but remain experimental/default-dark.
+The Workbench can bind provisionally to real store-derived protobuf or Thrift
+evidence for development and pilot evaluation, while the synthetic demo cohort
+remains fixture-backed. Their retained external validation result is
 `NOT_ESTABLISHED`; they do not establish runtime use, completeness,
 compatibility, migration completion, decommission safety, or extraction
 accuracy.
 
 ## Now
 
-Epic 24’s documentation reset is complete: public entry points, task guides,
-planning/history separation, product/adoption ownership, contributor
-instructions, and retained-record classification are all in place.
+Epic 30 is scheduled to add service-scoped analysis for very large
+monorepositories. T30.1 is next: freeze the commit-bound analysis-unit
+contract and prove a focused zoekt child over a neutral generated corpus
+before any production config, store, queue, API, or UI change.
 
-No implementation ticket is currently scheduled. New work requires an
-explicit decision to pursue the gated evidence/pilot path, the demand-driven
-P6 fleet profile below, or one of the unscheduled drafts in the
-[backlog](./BACKLOG.md). Epic 25 is an embedded documentation-browser
-nice-to-have. Epic 26 is a spike-first SQL schema-set evidence proposal:
+The selected direction is dual-plane. Search, Contracts, Topics, source
+browsing, related implementation, and the Workbench use one physically
+focused service unit with explicit declaration/generated/module/typed-index
+supporting paths. Caller Map and caller-backed Impact use a separate
+target-bound, partitioned repository overlay over the same immutable commit.
+The focused shard therefore does not need to contain the whole monorepository
+to retain a bird's-eye caller view. Merely increasing current extraction
+limits or applying a logical path query to a whole-repository shard is not the
+scale plan. This is single-node scope work; the distributed P6 fleet profile
+remains demand-driven.
+
+The word "partition" has three precise meanings here. The semantic service
+unit is the configured product scope. The zoekt builder may split that unit
+into size-driven physical shards, but every shard retains one unit digest and
+the original revision metadata. A second index-generation digest binds the
+complete ordered HEAD-plus-allowlisted revision set. A checksummed visibility
+manifest names every expected physical shard by ordinal and content/metadata
+digest, so agreeing shards cannot serve when another member is missing. The
+same exact configured paths are evaluated at every admitted revision; a
+missing selected path refuses the complete replacement, while extraction and
+evidence remain HEAD-bound. Repository-wide Caller Map work is split again,
+independently, by domain-separated SHA-256 prefixes of normalized candidate
+paths. Over-limit hash buckets recursively split by the next bit under frozen
+candidate-count and declared-byte bounds; blob identity changes the manifest,
+not path assignment. A bounded resolver catalog publishes before those
+target-bound source partitions run, and no caller generation becomes visible
+until every declared partition publishes against the same complete set of
+commit, unit, declaration, manifest, catalog, and extractor digests.
+
+Production evidence/pilot gating remains unchanged. Epics 25–28 are still
+unscheduled drafts in the [backlog](./BACKLOG.md). Epic 25 is an embedded
+documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
+evidence proposal:
 committed PostgreSQL or MySQL schema-only dumps can independently supply
 citable, dialect-separated catalogs; schema and authored-query inputs may
 join only through committed sqlc manifests; and migration events remain a
@@ -56,14 +87,15 @@ phebs recognizers without incorporating module code or metadata; script key
 lists and ACL patterns retain deliberately narrower semantics. The spike pins
 public Asynq and CloudWeGo go-redis/v9 corpora plus Redis ACL fixtures before
 execution, and drafts a neutral keyspace manifest only if the measured
-declaration gap justifies it. Epic 29 conditionally binds the existing Change
-Workbench to the store-derived Contract Atlas behind one development-only flag
-alongside an already-enabled provisional protobuf or Thrift extraction lane.
-The flag does not independently expose the evidence store, add a route or
-capability identifier, or permit a simultaneous synthetic/fixture catalog
-authority. It lets a pilot exercise Workbenches over real published evidence
-but changes no production registration, which stays behind the gates below.
-None of these drafts is an implicit next ticket.
+declaration gap justifies it. Completed Epic 29 now conditionally binds the
+existing Change Workbench to the store-derived Contract Atlas behind one
+development-only flag alongside an already-enabled provisional protobuf or
+Thrift extraction lane. The flag does not independently expose the evidence
+store, add a route or capability identifier, or permit a simultaneous
+synthetic/fixture catalog authority. It lets a pilot exercise Workbenches over
+real published evidence but changes no production registration, which stays
+behind the gates below. None of the remaining drafts is an implicit next
+ticket.
 
 ## Gated product work
 
@@ -78,8 +110,9 @@ completeness or demo quality.
 
 ## On demand
 
-The next scale boundary is the P6 fleet profile. It is intentionally not
-scheduled until a real deployment requires it:
+After Epic 30's single-node service-scope boundary, the next scale boundary is
+the P6 fleet profile. It is intentionally not scheduled until a real
+deployment requires it:
 
 - measure index size, memory, full-monorepo build time, and freshness on the
   target corpus;

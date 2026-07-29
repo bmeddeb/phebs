@@ -302,9 +302,10 @@ type CoverageManifest struct {
 	AssertionCount     int      `json:"assertion_count"`
 	AtomCount          int      `json:"atom_count"`
 	// InventoryPolicy names the corpus-inventory contract this run was
-	// produced under (T19.8). Empty identifies a legacy run that predates
-	// gitlink-boundary accounting: its boundary status is unknown, never
-	// zero, and the worker replaces such runs on the next extraction job.
+	// produced under. Empty identifies a legacy run that predates gitlink
+	// boundary accounting; older nonempty generations may also have superseded
+	// symlink semantics. The worker replaces any noncurrent generation on the
+	// next extraction job.
 	InventoryPolicy string `json:"inventory_policy,omitempty"`
 	// Gitlink boundaries: submodule pointers named by the trusted walker.
 	// CorpusFileCount remains the count of regular blobs; boundaries are a

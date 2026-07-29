@@ -1035,9 +1035,10 @@ func TestWorkerRejectsUnboundOrForgedSourceProvenance(t *testing.T) {
 	}
 }
 
-// T19.8: a published run whose manifest predates gitlink-boundary accounting
-// has unknown boundary status, so the worker replaces it even when commit and
-// extractor version match; a policy-current run still short-circuits.
+// A published run whose manifest predates the current inventory generation
+// has unknown boundary/symlink semantics, so the worker replaces it even when
+// commit and extractor version match; a policy-current run still
+// short-circuits.
 func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()
@@ -1066,7 +1067,19 @@ func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
 		t.Fatalf("policy-current run was re-extracted %d times", extractions)
 	}
 
-	// A legacy manifest (no inventory policy) must be replaced.
+	// The prior nonempty generation must be replaced because it predates the
+	// extractor-gated symlink contract.
+	evidence.mu.Lock()
+	evidence.latest.Coverage.InventoryPolicy = "gitlink-boundary-v1"
+	evidence.mu.Unlock()
+	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
+		t.Fatal(err)
+	}
+	if extractions != 2 || evidence.publishedWith.InventoryPolicy != corpusInventoryPolicy {
+		t.Fatalf("prior policy run not replaced: %d extractions, manifest %+v", extractions, evidence.publishedWith)
+	}
+
+	// A markerless legacy manifest must also be replaced.
 	evidence.mu.Lock()
 	evidence.latest.Coverage.InventoryPolicy = ""
 	evidence.latest.Coverage.GitlinkDigest = ""
@@ -1074,7 +1087,7 @@ func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
 	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
 		t.Fatal(err)
 	}
-	if extractions != 2 || evidence.publishedWith.InventoryPolicy != corpusInventoryPolicy {
+	if extractions != 3 || evidence.publishedWith.InventoryPolicy != corpusInventoryPolicy {
 		t.Fatalf("legacy run not replaced: %d extractions, manifest %+v", extractions, evidence.publishedWith)
 	}
 }

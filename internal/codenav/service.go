@@ -132,7 +132,7 @@ func (s *Service) ingestLocked(ctx context.Context, repo, revision string) (Avai
 	}
 	availability.Available = true
 	availability.Documents = len(index.documents)
-	availability.Occurrences = index.occurrenceCount
+	availability.Occurrences = index.retainedOccurrences
 	return availability, nil
 }
 

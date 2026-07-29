@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -46,6 +47,10 @@ const (
 	// the domain-separated digest binds every boundary regardless (T19.8).
 	maxGitlinkSamplePaths = 64
 	maxGitlinkSampleBytes = 4 << 10
+	// Candidate symlinks are resolved only inside the immutable Git tree. A
+	// short chain bound prevents a malicious alias graph from turning one
+	// candidate into unbounded object lookups.
+	maxCorpusSymlinkDepth = 16
 )
 
 // CorpusFactory constructs immutable corpora and fences them with the same
@@ -121,6 +126,20 @@ type boundaryCorpus interface {
 	gitlinkBoundaries() gitlinkInventory
 }
 
+// inventoryCorpus is the trusted production-only inventory capability. The
+// extractor predicate is evaluated by the walker for both regular entries and
+// symlinks, but only regular entries are exposed to the extractor. The bool
+// passed to visit is the already-evaluated predicate result, which keeps one
+// predicate call per tree entry and lets symlink admission remain
+// extractor-specific without expanding the public SDK corpus.
+type inventoryCorpus interface {
+	WalkInventory(
+		context.Context,
+		func(string) (bool, error),
+		func(string, bool) error,
+	) error
+}
+
 func (g *gitCorpus) gitlinkBoundaries() gitlinkInventory {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -132,13 +151,48 @@ func (g *gitCorpus) gitlinkBoundaries() gitlinkInventory {
 func (g *gitCorpus) RepoName() string { return g.repo }
 func (g *gitCorpus) Commit() string   { return g.commit }
 
-// WalkFiles streams the exact tree without buffering its path list. Special
-// entries are rejected instead of silently shrinking coverage: symlinks and
-// gitlinks are not immutable regular-file content available to the parser.
+// WalkFiles streams regular files from the exact tree. Generic SDK callers
+// have no extractor predicate, so symlinks are skipped except for fixed-root
+// product inputs, which remain fail-closed. Production extraction uses
+// WalkInventory below to apply the current extractor's symlink policy.
 func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) error {
 	if visit == nil {
 		return errors.New("walk corpus: nil visitor")
 	}
+	return g.walkTree(ctx, nil, func(filePath string, _ bool) error {
+		return visit(filePath)
+	})
+}
+
+// WalkInventory gates symlink handling with one extractor's Candidate
+// predicate. A candidate symlink is validated as an alias to a same-commit
+// final regular path that is also a candidate. The alias itself is never
+// enumerated or made readable, preserving source citations at the final
+// regular Git path.
+func (g *gitCorpus) WalkInventory(
+	ctx context.Context,
+	candidate func(string) (bool, error),
+	visit func(string, bool) error,
+) error {
+	if candidate == nil {
+		return errors.New("walk corpus inventory: nil candidate predicate")
+	}
+	if visit == nil {
+		return errors.New("walk corpus inventory: nil visitor")
+	}
+	return g.walkTree(ctx, candidate, visit)
+}
+
+type candidateSymlink struct {
+	path string
+	oid  string
+}
+
+func (g *gitCorpus) walkTree(
+	ctx context.Context,
+	candidate func(string) (bool, error),
+	visit func(string, bool) error,
+) error {
 	dir, err := g.repoDir()
 	if err != nil {
 		return err
@@ -158,6 +212,16 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	if err != nil {
 		return fmt.Errorf("walk corpus: stdout: %w", err)
 	}
+	// StdoutPipe leaves pipe ownership with the caller, so CommandContext
+	// cannot close it when cancellation races a child blocked in write(2).
+	// Close the read side before killing the process: SIGPIPE plus the explicit
+	// kill make both deadline cancellation and local inventory refusals hard
+	// stops instead of allowing cmd.Wait to strand the extraction lease.
+	cmd.Cancel = func() error {
+		_ = stdout.Close()
+		return cmd.Process.Kill()
+	}
+	cmd.WaitDelay = abortTimeout
 	var stderr gitobj.StderrBuffer
 	cmd.Stderr = &stderr
 	if err := cmd.Start(); err != nil {
@@ -169,11 +233,18 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	previous := ""
 	fileCount := 0
 	oids := make(map[string]string)
+	candidateRegulars := make(map[string]struct{})
+	candidateSymlinks := make([]candidateSymlink, 0)
+	candidateSymlinkPathBytes := 0
 	boundaries := gitlinkInventory{}
 	boundaryHash := sha256.New()
 	_, _ = boundaryHash.Write([]byte(gitlinkDigestDomain))
 	boundarySampleBytes := 0
 	for {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			walkErr = ctxErr
+			break
+		}
 		record, readErr := readNULRecord(reader, maxTreeRecordBytes)
 		if len(record) > 0 {
 			entry, parseErr := parseTreeRecord(record)
@@ -215,27 +286,45 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 			case entry.objectType != "blob":
 				walkErr = fmt.Errorf("walk corpus: unsupported %s entry %q", entry.objectType, entry.path)
 			case entry.mode == "120000":
-				// Symlinks are not regular corpus content and are never visited.
-				// A candidate .proto or .thrift symlink is a declared-plane
-				// coverage gap and therefore fails closed. The root SCIP index
-				// is also a selected corpus input (T20.6), so a symlink there
-				// must not degrade into the indistinguishable "index absent"
-				// result. Unrelated repository symlinks are harmless.
-				if entry.path == scipIndexPath {
-					walkErr = fmt.Errorf("walk corpus: unsupported SCIP index symlink %q", entry.path)
+				// Fixed-root product inputs have separate provenance contracts
+				// and remain fail-closed regardless of the extractor.
+				if fixedErr := fixedRootSymlinkError(entry.path); fixedErr != nil {
+					walkErr = fixedErr
+					break
 				}
-				for _, snapshotPath := range attributionSnapshotPaths {
-					if entry.path == snapshotPath {
-						walkErr = fmt.Errorf(
-							"walk corpus: unsupported attribution snapshot symlink %q", entry.path)
-					}
+				// Generic SDK walks have no extractor policy and simply skip
+				// non-regular entries.
+				if candidate == nil {
+					break
 				}
-				if strings.HasSuffix(entry.path, ".proto") {
-					walkErr = fmt.Errorf("walk corpus: unsupported proto symlink %q", entry.path)
+				isCandidate, candErr := candidate(entry.path)
+				if candErr != nil {
+					walkErr = candErr
+					break
 				}
-				if strings.HasSuffix(entry.path, ".thrift") {
-					walkErr = fmt.Errorf("walk corpus: unsupported thrift symlink %q", entry.path)
+				if !isCandidate {
+					break
 				}
+				if pathErr := checkCorpusPath(entry.path); pathErr != nil {
+					walkErr = fmt.Errorf("candidate symlink path is not readable: %w", pathErr)
+					break
+				}
+				if len(candidateSymlinks) >= maxCorpusFiles {
+					walkErr = fmt.Errorf(
+						"corpus inventory exceeds %d candidate-symlink limit", maxCorpusFiles)
+					break
+				}
+				if len(entry.path) > maxCorpusInventoryPathBytes-candidateSymlinkPathBytes {
+					walkErr = fmt.Errorf(
+						"corpus inventory exceeds %d-byte candidate-symlink path limit",
+						maxCorpusInventoryPathBytes)
+					break
+				}
+				candidateSymlinkPathBytes += len(entry.path)
+				candidateSymlinks = append(candidateSymlinks, candidateSymlink{
+					path: entry.path,
+					oid:  entry.oid,
+				})
 			case entry.mode != "100644" && entry.mode != "100755":
 				walkErr = fmt.Errorf("walk corpus: unsupported mode %s for %q", entry.mode, entry.path)
 			default:
@@ -248,10 +337,20 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 				// harness includes them in the published corpus file count; they
 				// are never recorded as readable. The harness fails closed when
 				// such an entry is an extraction candidate.
+				isCandidate := false
+				if candidate != nil {
+					isCandidate, walkErr = candidate(entry.path)
+					if walkErr != nil {
+						break
+					}
+				}
 				if checkCorpusPath(entry.path) == nil {
 					oids[entry.path] = entry.oid
+					if isCandidate {
+						candidateRegulars[entry.path] = struct{}{}
+					}
 				}
-				walkErr = visit(entry.path)
+				walkErr = visit(entry.path, isCandidate)
 			}
 			if walkErr != nil {
 				break
@@ -266,11 +365,37 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	}
 	if walkErr != nil {
 		cancel()
-		_ = cmd.Wait()
+		stopTreeCommand(cmd, stdout)
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return fmt.Errorf("walk corpus: %w", ctxErr)
+		}
 		return walkErr
 	}
 	if err := cmd.Wait(); err != nil {
 		return gitobj.WrapError(ctx, args, err, stderr.String())
+	}
+	if len(candidateSymlinks) > 0 {
+		entryCache := make(map[string]treeRecord, len(candidateSymlinks))
+		for _, alias := range candidateSymlinks {
+			entryCache[alias.path] = treeRecord{
+				mode: "120000", objectType: "blob", oid: alias.oid, path: alias.path,
+			}
+		}
+		targetCache := make(map[string]string)
+		for _, alias := range candidateSymlinks {
+			if err := resolveCandidateSymlink(
+				ctx,
+				dir,
+				g.commit,
+				entryCache[alias.path],
+				oids,
+				candidateRegulars,
+				entryCache,
+				targetCache,
+			); err != nil {
+				return err
+			}
+		}
 	}
 	boundaries.digest = "sha256:" + hex.EncodeToString(boundaryHash.Sum(nil))
 	g.mu.Lock()
@@ -278,6 +403,177 @@ func (g *gitCorpus) WalkFiles(ctx context.Context, visit func(string) error) err
 	g.boundaries = boundaries
 	g.mu.Unlock()
 	return nil
+}
+
+func fixedRootSymlinkError(filePath string) error {
+	if filePath == scipIndexPath {
+		return fmt.Errorf("walk corpus: unsupported SCIP index symlink %q", filePath)
+	}
+	for _, snapshotPath := range attributionSnapshotPaths {
+		if filePath == snapshotPath {
+			return fmt.Errorf(
+				"walk corpus: unsupported attribution snapshot symlink %q", filePath)
+		}
+	}
+	return nil
+}
+
+func resolveCandidateSymlink(
+	ctx context.Context,
+	dir string,
+	commit string,
+	alias treeRecord,
+	regularOIDs map[string]string,
+	regularCandidates map[string]struct{},
+	entryCache map[string]treeRecord,
+	targetCache map[string]string,
+) error {
+	current := alias
+	visited := make(map[string]struct{}, maxCorpusSymlinkDepth)
+	for depth := 0; depth < maxCorpusSymlinkDepth; depth++ {
+		if _, duplicate := visited[current.path]; duplicate {
+			return fmt.Errorf("walk corpus: candidate symlink %q has a cycle at %q", alias.path, current.path)
+		}
+		visited[current.path] = struct{}{}
+
+		target, ok := targetCache[current.oid]
+		if !ok {
+			content, err := gitobj.ReadBlob(ctx, dir, current.oid, maxCorpusPathBytes)
+			if err != nil {
+				if errors.Is(err, gitobj.ErrTooLarge) {
+					return fmt.Errorf(
+						"walk corpus: symlink %q target exceeds %d-byte limit: %w",
+						current.path, maxCorpusPathBytes, err)
+				}
+				return fmt.Errorf("walk corpus: read symlink %q target: %w", current.path, err)
+			}
+			target = string(content)
+			targetCache[current.oid] = target
+		}
+		resolved, err := resolveCorpusSymlinkTarget(current.path, target)
+		if err != nil {
+			return fmt.Errorf("walk corpus: candidate symlink %q: %w", alias.path, err)
+		}
+		if _, regular := regularOIDs[resolved]; regular {
+			if _, admitted := regularCandidates[resolved]; !admitted {
+				return fmt.Errorf(
+					"walk corpus: candidate symlink %q final target %q is not an extractor candidate",
+					alias.path, resolved)
+			}
+			return nil
+		}
+
+		next, ok := entryCache[resolved]
+		if !ok {
+			next, err = lookupTreeEntry(ctx, dir, commit, resolved)
+			if err != nil {
+				if errors.Is(err, store.ErrNotFound) {
+					return fmt.Errorf(
+						"walk corpus: candidate symlink %q target %q is missing: %w",
+						alias.path, resolved, err)
+				}
+				return fmt.Errorf(
+					"walk corpus: candidate symlink %q inspect target %q: %w",
+					alias.path, resolved, err)
+			}
+			entryCache[resolved] = next
+		}
+		switch {
+		case next.objectType == "commit" || next.mode == "160000":
+			return fmt.Errorf(
+				"walk corpus: candidate symlink %q targets gitlink %q", alias.path, resolved)
+		case next.objectType == "tree":
+			return fmt.Errorf(
+				"walk corpus: candidate symlink %q targets directory %q", alias.path, resolved)
+		case next.objectType != "blob":
+			return fmt.Errorf(
+				"walk corpus: candidate symlink %q targets unsupported %s entry %q",
+				alias.path, next.objectType, resolved)
+		case next.mode == "120000":
+			if depth+1 == maxCorpusSymlinkDepth {
+				return fmt.Errorf(
+					"walk corpus: candidate symlink %q exceeds %d-link depth limit",
+					alias.path, maxCorpusSymlinkDepth)
+			}
+			current = next
+		case next.mode == "100644" || next.mode == "100755":
+			// Every safe regular entry from the completed tree is in
+			// regularOIDs. Reaching one only through a second lookup means the
+			// streamed inventory and exact lookup disagree.
+			return fmt.Errorf(
+				"walk corpus: candidate symlink %q target %q was not in regular inventory",
+				alias.path, resolved)
+		default:
+			return fmt.Errorf(
+				"walk corpus: candidate symlink %q targets unsupported mode %s at %q",
+				alias.path, next.mode, resolved)
+		}
+	}
+	return fmt.Errorf(
+		"walk corpus: candidate symlink %q exceeds %d-link depth limit",
+		alias.path, maxCorpusSymlinkDepth)
+}
+
+func resolveCorpusSymlinkTarget(linkPath, target string) (string, error) {
+	if target == "" {
+		return "", fmt.Errorf("symlink %q has an empty target", linkPath)
+	}
+	if path.IsAbs(target) {
+		return "", fmt.Errorf("symlink %q has absolute target %q", linkPath, target)
+	}
+	if strings.Contains(target, `\`) || !utf8.ValidString(target) {
+		return "", fmt.Errorf("symlink %q has unsafe target bytes", linkPath)
+	}
+	for _, r := range target {
+		if r < 0x20 || r == 0x7f {
+			return "", fmt.Errorf("symlink %q has unsafe target bytes", linkPath)
+		}
+	}
+	resolved := path.Clean(path.Join(path.Dir(linkPath), target))
+	if resolved == ".." || strings.HasPrefix(resolved, "../") {
+		return "", fmt.Errorf("symlink %q target %q escapes repository root", linkPath, target)
+	}
+	if err := checkCorpusPath(resolved); err != nil {
+		return "", fmt.Errorf("symlink %q target %q is unsafe: %w", linkPath, target, err)
+	}
+	return resolved, nil
+}
+
+func lookupTreeEntry(ctx context.Context, dir, commit, filePath string) (treeRecord, error) {
+	out, err := gitobj.Output(
+		ctx,
+		dir,
+		int64(maxTreeRecordBytes+2),
+		"ls-tree",
+		"-z",
+		"--full-tree",
+		commit,
+		"--",
+		":(literal)"+filePath,
+	)
+	if err != nil {
+		return treeRecord{}, err
+	}
+	if len(out) == 0 {
+		return treeRecord{}, store.ErrNotFound
+	}
+	if out[len(out)-1] != 0 {
+		return treeRecord{}, errors.New("walk corpus: exact tree lookup returned a truncated record")
+	}
+	records := bytes.Split(out[:len(out)-1], []byte{0})
+	if len(records) != 1 {
+		return treeRecord{}, fmt.Errorf(
+			"walk corpus: exact tree lookup for %q returned %d records", filePath, len(records))
+	}
+	entry, err := parseTreeRecord(records[0])
+	if err != nil {
+		return treeRecord{}, err
+	}
+	if entry.path != filePath {
+		return treeRecord{}, fmt.Errorf(
+			"walk corpus: exact tree lookup for %q returned %q", filePath, entry.path)
+	}
+	return entry, nil
 }
 
 // Read serves blob content by the object id recorded during WalkFiles: one
@@ -406,4 +702,15 @@ func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {
 		record = record[:len(record)-1]
 	}
 	return record, err
+}
+
+// stopTreeCommand synchronously closes, kills, and reaps a tree walk whose
+// output is no longer being consumed. Closing first prevents a writer from
+// remaining blocked on a full pipe while Process.Kill and Wait race.
+func stopTreeCommand(cmd *exec.Cmd, stdout io.Closer) {
+	_ = stdout.Close()
+	if cmd.Process != nil {
+		_ = cmd.Process.Kill()
+	}
+	_ = cmd.Wait()
 }

@@ -86,6 +86,104 @@ func TestParseSemanticLimits(t *testing.T) {
 	}
 }
 
+func TestUnsupportedEncodingDocumentStillConsumesSemanticLimits(t *testing.T) {
+	index := &scip.Index{
+		Metadata: &scip.Metadata{},
+		Documents: []*scip.Document{{
+			RelativePath:     "bad.go",
+			PositionEncoding: scip.PositionEncoding_UnspecifiedPositionEncoding,
+			Occurrences: []*scip.Occurrence{
+				{Range: []int32{0, 0, 1}, Symbol: "local 1"},
+				{Range: []int32{0, 1, 2}, Symbol: "local 2"},
+			},
+		}},
+	}
+	_, err := parseSnapshot(
+		context.Background(),
+		marshalFixtureIndex(t, index),
+		newParseLimits(Options{MaxOccurrences: 1}),
+	)
+	if !errors.Is(err, ErrSemanticLimit) {
+		t.Fatalf("parse error = %v, want ErrSemanticLimit", err)
+	}
+}
+
+func TestUnsupportedEncodingDocumentStillValidatesBoundedPayloads(t *testing.T) {
+	tests := []struct {
+		name    string
+		options Options
+		mutate  func(*scip.Document)
+		want    error
+	}{
+		{
+			name:    "occurrence symbol bytes",
+			options: Options{MaxSymbolBytes: 16},
+			mutate: func(doc *scip.Document) {
+				doc.Occurrences = []*scip.Occurrence{{
+					Symbol: "local " + strings.Repeat("x", 32),
+				}}
+			},
+			want: ErrSemanticLimit,
+		},
+		{
+			name:    "occurrence hover bytes",
+			options: Options{MaxHoverBytes: 16},
+			mutate: func(doc *scip.Document) {
+				doc.Occurrences = []*scip.Occurrence{{
+					Symbol:                "local 1",
+					OverrideDocumentation: []string{strings.Repeat("x", 32)},
+				}}
+			},
+			want: ErrHoverTooLarge,
+		},
+		{
+			name:    "symbol hover bytes",
+			options: Options{MaxHoverBytes: 16},
+			mutate: func(doc *scip.Document) {
+				doc.Symbols = []*scip.SymbolInformation{{
+					Symbol:        "local 1",
+					Documentation: []string{strings.Repeat("x", 32)},
+				}}
+			},
+			want: ErrHoverTooLarge,
+		},
+		{
+			name:    "relationship symbol bytes",
+			options: Options{MaxSymbolBytes: 16},
+			mutate: func(doc *scip.Document) {
+				doc.Symbols = []*scip.SymbolInformation{{
+					Symbol: "local 1",
+					Relationships: []*scip.Relationship{{
+						Symbol: "local " + strings.Repeat("x", 32),
+					}},
+				}}
+			},
+			want: ErrSemanticLimit,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			doc := &scip.Document{
+				RelativePath:     "bad.go",
+				PositionEncoding: scip.PositionEncoding_UnspecifiedPositionEncoding,
+			}
+			test.mutate(doc)
+			index := &scip.Index{
+				Metadata:  &scip.Metadata{},
+				Documents: []*scip.Document{doc},
+			}
+			_, err := parseSnapshot(
+				context.Background(),
+				marshalFixtureIndex(t, index),
+				newParseLimits(test.options),
+			)
+			if !errors.Is(err, test.want) {
+				t.Fatalf("parse error = %v, want %v", err, test.want)
+			}
+		})
+	}
+}
+
 func TestParseRejectsHoverAmplificationAndOversizedSymbols(t *testing.T) {
 	t.Run("merged duplicate documentation", func(t *testing.T) {
 		index := readFixtureIndex(t)

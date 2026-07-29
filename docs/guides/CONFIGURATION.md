@@ -31,6 +31,9 @@ sync:
   cleanup_orphans: false  # delete repos no connection claims (default off)
   poll_interval: 15s      # job-runner cadence; lower for snappier watch mode
 
+indexing:
+  verbose: false          # opt-in parent/child index progress logs
+
 connections:
   - name: my-conn         # required; unique; [a-z0-9-]+
     type: github | gitlab | gitea | git
@@ -57,6 +60,7 @@ revisions:
 | `sync.cleanup_orphans`                      | `false`          | see [orphans](#orphans-and-cleanup)                                                                                                                               |
 | `sync.poll_interval`                        | `15s`            | Go duration; job pollers wake with ±50 % jitter around it                                                                                                         |
 | `sync.resync_interval`                      | `1h`             | re-sync cadence for remote connections; `"0"` disables                                                                                                            |
+| `indexing.verbose`                          | `false`          | restart-bound opt-in for repository-prefixed index phases and `zoekt-git-index` stdout/stderr; child lines are split after 64 KiB and failure diagnostics retain only the newest 1 MiB |
 | `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
@@ -65,11 +69,49 @@ revisions:
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
 | `experimental.provisional_kafka_extraction` | `false`          | development-only opt-in for the T23 Kafka topic-evidence packs described below; abstention-dominant by design, same provisional repo/path lineage posture         |
+| `experimental.provisional_workbench`       | `false`          | development-only binding of the existing Change Workbench to store-derived Contract Atlas evidence; requires protobuf or Thrift declaration extraction and conflicts with synthetic catalog authorities |
 | `permissions`                               | *(none)*         | presence enables permission-aware search (see [Permission-aware search](./OPERATIONS.md#permission-aware-search)); omit to keep every authenticated user seeing everything       |
 | `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 
 
+
+### Provisional Change Workbench
+
+`experimental.provisional_workbench` is default-dark and does not independently
+enable evidence. It binds the existing Change Workbench HTTP, UI, and MCP
+surfaces only when `experimental.provisional_proto_extraction` or
+`experimental.provisional_thrift_extraction` already supplies the instance's
+store-derived Contract Atlas. It adds no route or capability identifier and
+does not change the production-registration gate.
+
+`PHEBS_SYNTHETIC_WORKBENCH` is parsed strictly before the registration matrix:
+only an empty value or exact `1` is accepted. The two stable typed startup
+refusal classes are:
+
+- `workbench-evidence-prerequisite`: the flag lacks a protobuf/Thrift
+  declaration lane or one of the shared evidence/catalog/workbench services is
+  unavailable.
+- `workbench-authority-conflict`: provisional binding is combined with
+  `PHEBS_SYNTHETIC_WORKBENCH=1` or a non-empty
+  `PHEBS_CONTRACT_ATLAS_FIXTURE`.
+
+Investigation fixtures and `PHEBS_WORKBENCH_CLOSURE_REPO` do not replace
+catalog authority and may coexist with the provisional binding.
+
+| `provisional_workbench` | Protobuf/Thrift declaration lane | Synthetic Workbench | Contract Atlas fixture | Result |
+|---|---|---|---|---|
+| `false` | any | empty | any | No Workbench registration |
+| `false` | any | `1` | present, with Investigation fixtures | Existing fixture-backed synthetic Workbench |
+| `false` | any | `1` | absent, or Investigation fixtures absent | Existing synthetic missing-fixture refusal |
+| `true` | present | empty | absent | Existing Workbench surfaces over store-derived published evidence |
+| `true` | absent | empty | absent | `workbench-evidence-prerequisite` |
+| `true` | any | `1` | any | `workbench-authority-conflict` |
+| `true` | any | empty | present | `workbench-authority-conflict` |
+
+Workbench rows inherit the provisional evidence posture. They establish no
+runtime use, completeness, compatibility, migration completion,
+decommission safety, or extraction accuracy.
 
 
 ### Authentication

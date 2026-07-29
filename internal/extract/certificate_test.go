@@ -231,7 +231,7 @@ func TestCoverageCertificateBindsGitlinkBoundaryState(t *testing.T) {
 		name   string
 		mutate func(*store.ExtractionRun)
 	}{
-		{name: "policy", mutate: func(r *store.ExtractionRun) { r.Coverage.InventoryPolicy = "gitlink-boundary-v2" }},
+		{name: "policy", mutate: func(r *store.ExtractionRun) { r.Coverage.InventoryPolicy = "gitlink-boundary-v3" }},
 		{name: "count", mutate: func(r *store.ExtractionRun) { r.Coverage.GitlinkCount++ }},
 		{name: "digest", mutate: func(r *store.ExtractionRun) {
 			r.Coverage.GitlinkDigest = "sha256:" + strings.Repeat("b", 64)

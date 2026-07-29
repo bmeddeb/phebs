@@ -82,6 +82,13 @@ sync:
   # Re-sync cadence for remote connections (T7.5). Default 1h; "0" disables.
   resync_interval: 1h
 
+# Index-builder diagnostics. Disabled by default because a large repository
+# may produce substantial child output. When enabled, parent phases and the
+# zoekt-git-index child's stdout/stderr are written to the phebs log with
+# repository prefixes and bounded line chunks. Restart to apply.
+indexing:
+  verbose: false
+
 # Push webhooks (T7.4). Empty leaves POST /api/webhook disabled.
 webhook:
   # Verifies X-Hub-Signature-256 payload signatures (GitHub and Gitea).
@@ -119,6 +126,10 @@ experimental:
   # provisional repo/path lineage posture; rule validation is the T23.1
   # spike, and the packs are abstention-dominant by design.
   provisional_kafka_extraction: false
+  # T21 Change Workbench over store-derived Contract Atlas evidence. Requires
+  # provisional_proto_extraction or provisional_thrift_extraction; conflicts
+  # with PHEBS_SYNTHETIC_WORKBENCH and synthetic Contract Atlas fixtures.
+  provisional_workbench: false
 
 # Permission-aware search (T10.3). PRESENCE of this block turns enforcement
 # on: non-administrators then see only public repos, repos their mapped

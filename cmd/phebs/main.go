@@ -341,6 +341,9 @@ func serve(args []string) error {
 		if cfg.Experimental.ProvisionalKafkaExtraction {
 			log.Print("WARNING: experimental provisional kafka extraction enabled; validation is the T23.1 rule-gate spike only and topic evidence is abstention-dominant by design")
 		}
+		if cfg.Experimental.ProvisionalWorkbench {
+			log.Print("WARNING: experimental provisional Change Workbench enabled; no runtime-use, completeness, migration-completion, decommission-safety, or extraction-accuracy claim is established")
+		}
 		evidenceView = st
 		proofBundles = st
 		if bin, err := compat.FindBinary(); err != nil {
@@ -384,7 +387,14 @@ func serve(args []string) error {
 	if bin, err := indexer.FindBinary(); err != nil {
 		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make build provides it; or set PHEBS_ZOEKT_GIT_INDEX)")
 	} else {
-		ix := &indexer.Indexer{DataDir: cfg.Server.DataDir, Bin: bin, Store: st, Revisions: cfg.Revisions, OnIndexed: onIndexed}
+		ix := &indexer.Indexer{
+			DataDir:   cfg.Server.DataDir,
+			Bin:       bin,
+			Store:     st,
+			Verbose:   cfg.Indexing.Verbose,
+			Revisions: cfg.Revisions,
+			OnIndexed: onIndexed,
+		}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
 			Interval: cfg.Sync.Interval()}
 		runBackground(func() { ixRunner.Run(ctx) })
@@ -546,20 +556,45 @@ func serve(args []string) error {
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
 	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
-	var syntheticWorkbench store.InvestigationWorkbench
-	if syntheticWorkbenchSetting != "" {
-		if resolver := api.NewWorkbenchTargetResolver(apiOpts); resolver != nil {
-			syntheticWorkbench = store.InvestigationWorkbenchService{
-				Store: st, Resolver: resolver, Compatibility: compatibility,
+	workbenchMode := ""
+	if cfg.Experimental.ProvisionalWorkbench {
+		var provisionalWorkbench store.InvestigationWorkbench
+		if syntheticWorkbenchSetting == "" && apiOpts.ContractCatalogFixture == nil {
+			if resolver := api.NewWorkbenchTargetResolver(apiOpts); resolver != nil {
+				provisionalWorkbench = store.InvestigationWorkbenchService{
+					Store: st, Resolver: resolver, Compatibility: compatibility,
+				}
 			}
 		}
-	}
-	if err := bindSyntheticWorkbench(
-		&apiOpts,
-		syntheticWorkbenchSetting,
-		syntheticWorkbench,
-	); err != nil {
-		return err
+		if err := bindProvisionalWorkbench(
+			&apiOpts,
+			cfg.Experimental.ProvisionalProtoExtraction ||
+				cfg.Experimental.ProvisionalThriftExtraction,
+			syntheticWorkbenchSetting,
+			provisionalWorkbench,
+		); err != nil {
+			return err
+		}
+		workbenchMode = "provisional"
+	} else {
+		var syntheticWorkbench store.InvestigationWorkbench
+		if syntheticWorkbenchSetting != "" {
+			if resolver := api.NewWorkbenchTargetResolver(apiOpts); resolver != nil {
+				syntheticWorkbench = store.InvestigationWorkbenchService{
+					Store: st, Resolver: resolver, Compatibility: compatibility,
+				}
+			}
+		}
+		if err := bindSyntheticWorkbench(
+			&apiOpts,
+			syntheticWorkbenchSetting,
+			syntheticWorkbench,
+		); err != nil {
+			return err
+		}
+		if apiOpts.Workbench != nil {
+			workbenchMode = "synthetic"
+		}
 	}
 	if apiOpts.Workbench != nil {
 		apiOpts.WorkbenchImpact = api.NewWorkbenchImpactService(apiOpts)
@@ -570,11 +605,17 @@ func serve(args []string) error {
 		if apiOpts.WorkbenchImpact == nil ||
 			apiOpts.WorkbenchImplementation == nil ||
 			apiOpts.WorkbenchChecklist == nil {
-			return errors.New(
-				"synthetic Workbench evidence services are unavailable",
+			return fmt.Errorf(
+				"%s Workbench evidence services are unavailable",
+				workbenchMode,
 			)
 		}
-		log.Printf("WARNING: synthetic Change Workbench enabled for make dev; not a production or continuation surface")
+		switch workbenchMode {
+		case "provisional":
+			log.Printf("WARNING: provisional Change Workbench enabled over store-derived Contract Atlas evidence; not a production or continuation surface")
+		case "synthetic":
+			log.Printf("WARNING: synthetic Change Workbench enabled for make dev; not a production or continuation surface")
+		}
 	}
 	apiHandler := api.New(apiOpts)
 	var mcpProofs phebsmcp.ProofQueries
@@ -646,6 +687,59 @@ func serve(args []string) error {
 	return nil
 }
 
+func bindProvisionalWorkbench(
+	opts *api.Options,
+	hasProtocolEvidence bool,
+	syntheticSetting string,
+	workbench store.InvestigationWorkbench,
+) error {
+	if err := validateSyntheticWorkbenchSetting(syntheticSetting); err != nil {
+		return err
+	}
+	if opts == nil {
+		return errors.New("provisional Workbench options are required")
+	}
+	if syntheticSetting == "1" || opts.ContractCatalogFixture != nil {
+		return fmt.Errorf(
+			"%w: provisional Workbench cannot be combined with synthetic Workbench or Contract Atlas fixtures",
+			errWorkbenchAuthorityConflict,
+		)
+	}
+	if !hasProtocolEvidence || opts.Evidence == nil || opts.ContractCatalog == nil {
+		return fmt.Errorf(
+			"%w: provisional Workbench requires provisional protobuf or Thrift extraction",
+			errWorkbenchEvidencePrerequisite,
+		)
+	}
+	if workbench == nil {
+		return fmt.Errorf(
+			"%w: provisional Workbench service is unavailable",
+			errWorkbenchEvidencePrerequisite,
+		)
+	}
+	opts.Workbench = workbench
+	return nil
+}
+
+var (
+	errWorkbenchAuthorityConflict    = errors.New("workbench-authority-conflict")
+	errWorkbenchEvidencePrerequisite = errors.New(
+		"workbench-evidence-prerequisite",
+	)
+	errSyntheticWorkbenchSetting = errors.New(
+		"PHEBS_SYNTHETIC_WORKBENCH must be empty or 1",
+	)
+)
+
+func validateSyntheticWorkbenchSetting(setting string) error {
+	switch setting {
+	case "", "1":
+		return nil
+	default:
+		return errSyntheticWorkbenchSetting
+	}
+}
+
 // bindSyntheticWorkbench is the only pre-enablement registration path. It is
 // deliberately coupled to both synthetic fixture providers and the exact flag
 // set by make dev; ordinary serve startup leaves the Huma route and capability
@@ -655,6 +749,9 @@ func bindSyntheticWorkbench(
 	setting string,
 	workbench store.InvestigationWorkbench,
 ) error {
+	if err := validateSyntheticWorkbenchSetting(setting); err != nil {
+		return err
+	}
 	if opts == nil {
 		return errors.New("synthetic Workbench options are required")
 	}
@@ -662,8 +759,6 @@ func bindSyntheticWorkbench(
 	case "":
 		return nil
 	case "1":
-	default:
-		return errors.New("PHEBS_SYNTHETIC_WORKBENCH must be empty or 1")
 	}
 	if opts.InvestigationViews == nil || opts.ContractCatalogFixture == nil {
 		return errors.New(

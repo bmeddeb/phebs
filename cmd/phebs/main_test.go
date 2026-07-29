@@ -653,6 +653,99 @@ func TestBindSyntheticWorkbenchIsExplicitAndFixtureCoupled(t *testing.T) {
 	})
 }
 
+type provisionalWorkbenchEvidence struct {
+	store.EvidenceStore
+}
+
+func TestBindProvisionalWorkbenchRequiresRealEvidenceAuthority(t *testing.T) {
+	ready := func() api.Options {
+		return api.Options{
+			Evidence:        &provisionalWorkbenchEvidence{},
+			ContractCatalog: &api.ContractCatalogService{},
+		}
+	}
+	workbench := store.InvestigationWorkbenchService{}
+
+	t.Run("protocol evidence and store catalog register", func(t *testing.T) {
+		opts := ready()
+		if err := bindProvisionalWorkbench(&opts, true, "", workbench); err != nil {
+			t.Fatal(err)
+		}
+		if opts.Workbench == nil {
+			t.Fatal("provisional Workbench was not registered")
+		}
+	})
+
+	t.Run("flag alone fails prerequisite", func(t *testing.T) {
+		opts := ready()
+		err := bindProvisionalWorkbench(&opts, false, "", workbench)
+		if !errors.Is(err, errWorkbenchEvidencePrerequisite) {
+			t.Fatalf("missing evidence error = %v", err)
+		}
+		if opts.Workbench != nil {
+			t.Fatal("prerequisite refusal registered the Workbench")
+		}
+	})
+
+	t.Run("synthetic authorities conflict", func(t *testing.T) {
+		for _, row := range []struct {
+			name    string
+			setting string
+			fixture *api.ContractCatalogFixture
+		}{
+			{name: "synthetic setting", setting: "1"},
+			{name: "catalog fixture", fixture: &api.ContractCatalogFixture{}},
+		} {
+			t.Run(row.name, func(t *testing.T) {
+				opts := ready()
+				opts.ContractCatalogFixture = row.fixture
+				err := bindProvisionalWorkbench(
+					&opts,
+					true,
+					row.setting,
+					workbench,
+				)
+				if !errors.Is(err, errWorkbenchAuthorityConflict) {
+					t.Fatalf("authority conflict error = %v", err)
+				}
+				if opts.Workbench != nil {
+					t.Fatal("authority refusal registered the Workbench")
+				}
+			})
+		}
+	})
+
+	t.Run("invalid synthetic setting retains strict parsing precedence", func(t *testing.T) {
+		opts := ready()
+		err := bindProvisionalWorkbench(&opts, true, "0", workbench)
+		if !errors.Is(err, errSyntheticWorkbenchSetting) {
+			t.Fatalf("invalid setting error = %v", err)
+		}
+		if errors.Is(err, errWorkbenchAuthorityConflict) {
+			t.Fatalf("invalid setting was misclassified as authority conflict: %v", err)
+		}
+		if opts.Workbench != nil {
+			t.Fatal("invalid setting registered the Workbench")
+		}
+	})
+
+	t.Run("missing services fail prerequisite", func(t *testing.T) {
+		for _, opts := range []api.Options{
+			{},
+			{Evidence: &provisionalWorkbenchEvidence{}},
+			{ContractCatalog: &api.ContractCatalogService{}},
+		} {
+			err := bindProvisionalWorkbench(&opts, true, "", workbench)
+			if !errors.Is(err, errWorkbenchEvidencePrerequisite) {
+				t.Fatalf("missing service error = %v", err)
+			}
+			if opts.Workbench != nil {
+				t.Fatal("service refusal registered the Workbench")
+			}
+		}
+	})
+}
+
 func TestBindSyntheticThriftFieldDemoIsExplicitAndPipelineBacked(t *testing.T) {
 	fixture, err := filepath.Abs(filepath.Join(
 		"..", "..", "docs", "fixtures", "thrift-field", "t225-thrift-field-demo.bundle",
@@ -1394,7 +1487,7 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 	// activation remains disabled.
 	if len(got) != 4 || got[0].Domain() != "proto-contract" ||
 		got[1].Domain() != "grpc-consumer" ||
-		got[2].Domain() != "scip-proto-field" ||
+		got[2].Domain() != "scip-proto-field" || got[2].Version() != "1.1.0" ||
 		got[3].Domain() != "grpc-caller" || got[3].Version() != "1.3.0" ||
 		got[0].Version() != "3.0.0" {
 		t.Fatalf("proto-only extractor registry = %#v", got)

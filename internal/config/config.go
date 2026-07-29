@@ -26,6 +26,7 @@ type Config struct {
 	Server       Server       `yaml:"server"`
 	Auth         Auth         `yaml:"auth"`
 	Sync         Sync         `yaml:"sync"`
+	Indexing     Indexing     `yaml:"indexing"`
 	Webhook      Webhook      `yaml:"webhook"`
 	Audit        Audit        `yaml:"audit"`
 	Analytics    Analytics    `yaml:"analytics"`
@@ -80,6 +81,11 @@ type Experimental struct {
 	// T23.1 spike; the pack is abstention-dominant by design and the same
 	// provisional repo/path lineage limitation applies.
 	ProvisionalKafkaExtraction bool `yaml:"provisional_kafka_extraction"`
+	// ProvisionalWorkbench binds the T21 Change Workbench to the same
+	// provisional protobuf/Thrift evidence lane as Contract Atlas. It is an
+	// overlay only: startup refuses the flag unless protobuf or Thrift
+	// extraction is also enabled.
+	ProvisionalWorkbench bool `yaml:"provisional_workbench"`
 }
 
 type Sync struct {
@@ -92,6 +98,13 @@ type Sync struct {
 	// ResyncInterval re-syncs remote connections on a cadence (T7.5).
 	// Go duration, default "1h"; "0" disables.
 	ResyncInterval string `yaml:"resync_interval"`
+}
+
+// Indexing controls operator diagnostics for the OOM-isolated zoekt builder.
+type Indexing struct {
+	// Verbose forwards child stdout/stderr and parent phase transitions to the
+	// phebs log. It is disabled by default because large builds can be noisy.
+	Verbose bool `yaml:"verbose"`
 }
 
 // Webhook configures POST /api/webhook (T7.4).

@@ -119,6 +119,39 @@ func TestRenamedFieldAcrossConsumerVersionsKeepsCanonicalIdentity(t *testing.T) 
 	}
 }
 
+func TestGeneratedSourceResolvesAgainstBufModuleRoot(t *testing.T) {
+	corpus := fixtureCorpus(t, "example.com/consumer", "v1.0.0", "old_name", "OldName")
+	source := corpus.files["api/item.proto"]
+	delete(corpus.files, "api/item.proto")
+	corpus.files["idl/proto/buf.yaml"] = "version: v1\n"
+	corpus.files["idl/proto/api/item.proto"] = source
+
+	facts, _ := extractFacts(t, corpus)
+	if len(facts) != 2 {
+		t.Fatalf("facts = %d, want module-root field references", len(facts))
+	}
+	for _, fact := range facts {
+		if fact.Assertion.Object != "acme.v1.Item#1" {
+			t.Fatalf("module-root field binding = %+v", fact.Assertion)
+		}
+	}
+}
+
+func TestGeneratedSourceAmbiguousAcrossBufModulesAbstains(t *testing.T) {
+	corpus := fixtureCorpus(t, "example.com/consumer", "v1.0.0", "old_name", "OldName")
+	source := corpus.files["api/item.proto"]
+	delete(corpus.files, "api/item.proto")
+	for _, root := range []string{"idl/one", "idl/two"} {
+		corpus.files[root+"/buf.yaml"] = "version: v1\n"
+		corpus.files[root+"/api/item.proto"] = source
+	}
+
+	facts, _ := extractFacts(t, corpus)
+	if len(facts) != 0 {
+		t.Fatalf("facts = %+v, want ambiguous module-relative source to abstain", facts)
+	}
+}
+
 func TestClassificationPrecedenceAndCodeRoles(t *testing.T) {
 	rows := []struct {
 		name  string
