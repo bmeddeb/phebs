@@ -163,7 +163,7 @@ revisions: {}
 #     release-1: refs/heads/release/1
 #     v1.4.0: refs/tags/v1.4.0
 
-# Optional service scope for a very large monorepository (T30.2). The map key
+# Optional service scope for a very large monorepository (T30.3). The map key
 # is the exact repository name and admits at most one active unit. Primary
 # paths are required; supporting paths are optional exact declaration,
 # generated-source, module/workspace, attribution, or typed-index inputs.
@@ -172,9 +172,11 @@ revisions: {}
 # fail startup. A unit has at most 128 combined entries and 64 KiB of combined
 # path bytes; its name is a 128-byte token using letters, digits, . _ or -.
 #
-# T30.2 records the canonical unit identity with the indexed revision state
-# but still builds the whole repository. `index.scip` remains explicitly
-# repository-root-unbound until a later scoped typed-index contract.
+# Configured repositories physically index only these paths at HEAD and every
+# allowlisted revision. A selected path missing or special in any lane refuses
+# the complete replacement; phebs never falls back to whole-repository input.
+# `index.scip` remains explicitly repository-root-unbound until the later
+# scoped typed-index contract.
 analysis_units: {}
 # analysis_units:
 #   github.com/acme/monorepo:

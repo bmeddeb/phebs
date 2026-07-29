@@ -3663,3 +3663,62 @@ repo-status non-disclosure/OpenAPI tests, dated PLAN decision, and the full
 merge bar. T30.3 remains responsible for the production focused child,
 trusted-reader out-of-unit counters, complete shard-set validation, and
 byte-exact backup/restore distinct from semantic rebuild equality.
+
+### T30.3 · Focused zoekt child and shard integrity
+
+**T30.3 ✅ · Focused zoekt child and shard integrity** *(2026-07-28)* — shipped
+the T30.1-proven `phebs-focused-index` child in development and release builds.
+Configured analysis units now resolve every selected file/root independently
+at HEAD and each allowlisted branch/tag commit, refuse missing or special
+entries in any lane, and feed only the admitted immutable blobs to the exact
+pinned zoekt builder. Repositories without a configured unit retain the
+existing `zoekt-git-index` path.
+
+The production Git-object reader is the trusted enforcement and measurement
+boundary: every path/blob pair is checked against the selected tree census
+before `git cat-file`, and successful opened-blob count/bytes plus refused
+out-of-unit attempts are returned to the parent and exported as metrics. A
+nonzero out-of-unit count fails the child. Original repository-relative paths
+and exact commits remain in the resulting multi-revision search hits.
+
+Every size-split shard repeats repository, unit, ordered branch/commit,
+builder-policy, and index-generation metadata. Per-member sidecars bind
+ordinal/count plus shard-content and decoded-metadata digests; one canonical
+manifest commits the complete set. Both focused and whole-repository builders
+write to private same-filesystem staging directories. Publication syncs the
+stage, creates a stable repository marker, removes the prior generation, moves
+members/sidecars, and renames the focused manifest last. The marker remains
+until the matching revision/unit state commits.
+
+Search admits a focused repository only when no publication marker exists and
+the committed state, exact revision matrix, unit/generation digests,
+manifest/member/sidecar bytes, shard metadata, and absence of extra
+repository-owned shards all agree. Missing, extra, mixed, stale, trailing,
+partial, and state-uncommitted generations fail closed to an empty RepoSet.
+Startup reconciliation rechecks the same contract under the repository lock,
+clears invalid claims, and queues a forced replacement. Orphan cleanup and
+failed state commits remove focused manifests, sidecars, markers, and shards.
+
+Backup manifest v2 adds `focused-index.tar`. A crash-safe cross-process lock
+excludes publication/state mutation across the database export and focused
+snapshot. Online backup revalidates each self-contained scope/generation
+manifest before and after copying; offline
+verify extracts into a private directory and revalidates the exact inventory.
+Restore installs shard and sidecar bytes before manifests, preserving every
+focused publication byte-for-byte. Whole-repository shards remain excluded
+derived state. A separate independent-rebuild test asserts identical
+unit/generation/search semantics without comparing publication digests,
+because upstream builder identity/time may legitimately change bytes.
+
+AC met: production reader-boundary counters prove zero out-of-unit reads; a
+physical out-of-scope needle is absent while an admitted needle searches at
+its original path and commit; scope-only replacement removes prior members;
+HEAD/branch/tag scope and missing-revision refusal are pinned; size-forced
+splits retain exact metadata and membership; missing/extra/stale/sidecar/
+trailing-JSON and publication-marker cases never serve; child failure/OOM
+classification remains process-bound; failed state publication cleans both
+claims and bytes; focused backup/restore is byte-exact and semantic rebuild is
+separate; release manifests and smoke environments require the child; dated
+PLAN decision and owning Configuration, Operations, Workflows, Manual,
+roadmap, and backlog documents updated; full merge bar passed. Search status
+is now `focused`; typed input remains `repository-root-unbound` for T30.5.

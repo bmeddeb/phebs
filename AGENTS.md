@@ -79,7 +79,8 @@ implemented but remain experimental/default-dark; the Workbench's provisional
 store-derived binding creates no production registration. Epic 30 service-scope
 work is in progress: T30.1 recorded a focused-index spike GO without production
 behavior changes; T30.2 added strict analysis-unit configuration and committed
-state while retaining whole-repository physical indexing; T30.3 is next.
+state; T30.3 shipped manifest-bound focused physical indexing and exact focused
+backup/restore; T30.4 is next.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
 completeness, migration-completion, or decommission-safety claim exists.
 

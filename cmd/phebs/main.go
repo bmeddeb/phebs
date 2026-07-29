@@ -38,6 +38,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftdecl"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftfield"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/thriftgo"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/recovery"
@@ -411,9 +412,15 @@ func serve(args []string) error {
 	if bin, err := indexer.FindBinary(); err != nil {
 		log.Print("WARNING: zoekt-git-index not found — indexing disabled (make build provides it; or set PHEBS_ZOEKT_GIT_INDEX)")
 	} else {
+		focusedBin, focusedErr := focusedindex.FindBinary()
+		if focusedErr != nil && len(analysisUnits) > 0 {
+			log.Print("WARNING: phebs-focused-index not found — indexing disabled for configured analysis units (make build provides it; or set PHEBS_FOCUSED_INDEX)")
+			focusedBin = ""
+		}
 		ix := &indexer.Indexer{
 			DataDir:       cfg.Server.DataDir,
 			Bin:           bin,
+			FocusedBin:    focusedBin,
 			Store:         st,
 			Verbose:       cfg.Indexing.Verbose,
 			Revisions:     cfg.Revisions,

@@ -33,7 +33,7 @@ func run(args []string) error {
 func bundle(args []string) error {
 	flags := flag.NewFlagSet("bundle", flag.ContinueOnError)
 	var opts releasebundle.BuildOptions
-	var phebs, zoekt, buf, license, readme, otelDemo string
+	var phebs, zoekt, focused, buf, license, readme, otelDemo string
 	flags.StringVar(&opts.OutputDir, "output", "", "new release directory")
 	flags.StringVar(&opts.Version, "version", "", "release SemVer")
 	flags.StringVar(&opts.Commit, "commit", "", "source commit")
@@ -42,6 +42,7 @@ func bundle(args []string) error {
 	flags.StringVar(&opts.GOARCH, "goarch", "", "target GOARCH")
 	flags.StringVar(&phebs, "phebs", "phebs", "phebs executable")
 	flags.StringVar(&zoekt, "zoekt", "bin/zoekt-git-index", "zoekt-git-index executable")
+	flags.StringVar(&focused, "focused", "bin/phebs-focused-index", "focused-index executable")
 	flags.StringVar(&buf, "buf", "bin/buf", "Buf executable")
 	flags.StringVar(&license, "license", "LICENSE", "license file")
 	flags.StringVar(&readme, "readme", "README.md", "readme file")
@@ -55,6 +56,7 @@ func bundle(args []string) error {
 	opts.Sources = []releasebundle.Source{
 		{Path: "phebs", SourcePath: phebs, Executable: true},
 		{Path: "bin/zoekt-git-index", SourcePath: zoekt, Executable: true},
+		{Path: "bin/phebs-focused-index", SourcePath: focused, Executable: true},
 		{Path: "bin/buf", SourcePath: buf, Executable: true},
 		{Path: "LICENSE", SourcePath: license},
 		{Path: "README.md", SourcePath: readme},

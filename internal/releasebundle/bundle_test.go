@@ -202,6 +202,7 @@ func testInputs(t *testing.T, root string) []Source {
 	return []Source{
 		{Path: "phebs", SourcePath: write("phebs", "server", 0o755), Executable: true},
 		{Path: "bin/zoekt-git-index", SourcePath: write("zoekt", "indexer", 0o755), Executable: true},
+		{Path: "bin/phebs-focused-index", SourcePath: write("focused", "focused-indexer", 0o755), Executable: true},
 		{Path: "bin/buf", SourcePath: write("buf", "compat", 0o755), Executable: true},
 		{Path: "LICENSE", SourcePath: write("license", "license", 0o644)},
 		{Path: "README.md", SourcePath: write("readme", "readme", 0o644)},

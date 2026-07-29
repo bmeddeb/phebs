@@ -14,6 +14,8 @@ import (
 
 	"github.com/sourcegraph/zoekt/index"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -43,6 +45,13 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 	if err := ctx.Err(); err != nil {
 		return report, err
 	}
+	releaseMutation, err := focusedindex.AcquireMutationLock(
+		ctx, filepath.Join(dataDir, "index"),
+	)
+	if err != nil {
+		return report, fmt.Errorf("acquire index reconciliation lock: %w", err)
+	}
+	defer releaseMutation()
 
 	repos, err := st.ListRepos(ctx)
 	if err != nil {
@@ -128,6 +137,9 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 	if err := reconcileUntrackedShards(ctx, dataDir, live, cleanupEnabled, &report); err != nil {
 		errs = append(errs, err)
 	}
+	if err := reconcileFocusedArtifacts(ctx, dataDir, live, cleanupEnabled, &report); err != nil {
+		errs = append(errs, err)
+	}
 	if err := reconcileUntrackedMirrors(ctx, dataDir, liveMirrors, cleanupEnabled, &report); err != nil {
 		errs = append(errs, err)
 	}
@@ -135,6 +147,60 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 		errs = append(errs, err)
 	}
 	return report, errors.Join(errs...)
+}
+
+func reconcileFocusedArtifacts(
+	ctx context.Context,
+	dataDir string,
+	live map[string]bool,
+	remove bool,
+	report *ReconcileReport,
+) error {
+	indexDir := filepath.Join(dataDir, "index")
+	entries, err := os.ReadDir(indexDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	liveBases := make([]string, 0, len(live))
+	for repository := range live {
+		liveBases = append(liveBases, focusedindex.ArtifactBase(repository))
+	}
+	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasPrefix(name, "phebs-focus-") {
+			continue
+		}
+		if strings.HasSuffix(name, ".zoekt") {
+			if _, _, readErr := index.ReadMetadataPath(filepath.Join(indexDir, name)); readErr == nil {
+				continue // reconcileUntrackedShards owns readable shards
+			}
+		}
+		owned := false
+		for _, base := range liveBases {
+			if strings.HasPrefix(name, base) {
+				owned = true
+				break
+			}
+		}
+		if owned {
+			continue
+		}
+		report.UntrackedShards++
+		if remove {
+			if err := os.Remove(filepath.Join(indexDir, name)); err != nil &&
+				!errors.Is(err, os.ErrNotExist) {
+				return err
+			}
+			report.Deleted++
+		}
+	}
+	return nil
 }
 
 func legacyLayoutCollisions(repos []store.Repo) map[string]bool {
@@ -228,6 +294,9 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 		return false, nil // a concurrent sync reactivated this repository
 	}
 	if err := removeRepoShardsByMetadata(ctx, dataDir, name); err != nil {
+		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
+	}
+	if err := focusedindex.RemoveRepository(ctx, filepath.Join(dataDir, "index"), name); err != nil {
 		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
 	}
 	if err := ctx.Err(); err != nil {
@@ -380,7 +449,8 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 			continue
 		}
 		repoVersions, hasShard := versions[repo.Name]
-		mismatch := repo.IndexedCommitHash != "" && complete && indexStateMismatch(repo, repoVersions, hasShard)
+		mismatch := repo.IndexedCommitHash != "" &&
+			committedIndexMismatch(dataDir, repo, repoVersions, hasShard, complete)
 		needsIndex := repo.IndexedCommitHash == "" || mismatch
 		if !needsIndex {
 			continue
@@ -414,7 +484,7 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 			continue
 		}
 
-		force := hasShard
+		force := hasShard || focusedindex.IsPublishing(filepath.Join(dataDir, "index"), repo.Name)
 		if fresh.IndexedCommitHash != "" {
 			freshVersions, freshComplete, auditErr := indexedVersions(ctx, dataDir)
 			if auditErr != nil {
@@ -423,7 +493,9 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 				continue
 			}
 			freshSet, freshHasShard := freshVersions[repo.Name]
-			if !freshComplete || !indexStateMismatch(*fresh, freshSet, freshHasShard) {
+			if !committedIndexMismatch(
+				dataDir, *fresh, freshSet, freshHasShard, freshComplete,
+			) {
 				unlock()
 				continue
 			}
@@ -453,6 +525,23 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 		unlock()
 	}
 	return errors.Join(errs...)
+}
+
+func committedIndexMismatch(
+	dataDir string,
+	repo store.Repo,
+	versions map[string]string,
+	hasShard, complete bool,
+) bool {
+	if repo.IndexedAnalysisUnit != nil &&
+		repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused {
+		_, err := focusedindex.ValidatePublished(
+			filepath.Join(dataDir, "index"), repo.Name,
+			repo.IndexedAnalysisUnit, repo.IndexedRevisions,
+		)
+		return err != nil
+	}
+	return complete && indexStateMismatch(repo, versions, hasShard)
 }
 
 func indexedVersions(ctx context.Context, dataDir string) (map[string]map[string]string, bool, error) {

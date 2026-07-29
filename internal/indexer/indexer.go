@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/internal/sync"
@@ -76,7 +77,10 @@ func executablePath(candidate string) (string, error) {
 type Indexer struct {
 	DataDir string // mirrors under DataDir/repos, shards under DataDir/index
 	Bin     string // zoekt-git-index path (FindBinary)
-	Store   store.Store
+	// FocusedBin is the same-module phebs-focused-index child. It is required
+	// only for repositories with a configured analysis unit.
+	FocusedBin string
+	Store      store.Store
 	// Verbose forwards the child indexer's line-oriented stdout/stderr and
 	// parent phase transitions to Logger. Failure diagnostics retain only a
 	// bounded tail regardless of this setting.
@@ -86,8 +90,8 @@ type Indexer struct {
 	// Revisions is the validated per-repository selector -> full Git ref
 	// allowlist. HEAD is always implicit and is never present in this map.
 	Revisions map[string]map[string]string
-	// AnalysisUnits is the validated repository-keyed semantic scope. T30.2
-	// binds it to committed index state; T30.3 changes physical index input.
+	// AnalysisUnits is the validated repository-keyed semantic scope. Its
+	// presence selects the focused child and manifest-bound publication.
 	AnalysisUnits map[string]analysisunit.Scope
 
 	// OnIndexed, when set, runs once the indexed state is known current — the
@@ -147,7 +151,8 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	}
 	if !force && head != "" && head == repo.IndexedCommitHash &&
 		revisionsEqual(revisions, repo.IndexedRevisions, repo.IndexedCommitHash) &&
-		analysisunit.EqualState(unit, repo.IndexedAnalysisUnit) {
+		analysisunit.EqualState(unit, repo.IndexedAnalysisUnit) &&
+		!focusedindex.IsPublishing(filepath.Join(ix.DataDir, "index"), repo.Name) {
 		ix.verbosef("index %s: already current at %s; skipping child", repo.Name, head)
 		return ix.afterIndexed(ctx, repo.Name, head) // T3.2: shards current; repair/confirm the chain
 	}
@@ -156,6 +161,11 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	if err := os.MkdirAll(indexDir, 0o755); err != nil {
 		return fmt.Errorf("index %s: %w", repo.Name, err)
 	}
+	workspace, stageDir, err := focusedindex.NewBuildWorkspace(indexDir)
+	if err != nil {
+		return fmt.Errorf("index %s: create staging workspace: %w", repo.Name, err)
+	}
+	defer func() { _ = os.RemoveAll(workspace) }()
 	// zoekt.name makes shard repo names equal store names, which the T4.1
 	// RepoSet pre-pass depends on; the child reads it from the repo config
 	if _, err := sync.GitConfig(ctx, dir, "zoekt.name", repo.Name); err != nil {
@@ -165,27 +175,51 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	// == HEAD) already skips redundant runs, so by the time we invoke the
 	// child a real build is wanted. Leaving zoekt's own incremental skip on
 	// silently no-ops a force job when HEAD and the on-disk shard are unchanged.
-	args := []string{"-index", indexDir, "-incremental=false"}
-	if len(revisions) > 1 {
-		branches := make([]string, 0, len(revisions))
-		for _, revision := range revisions {
-			branches = append(branches, revision.Branch)
+	childName := "zoekt-git-index"
+	var cmd *exec.Cmd
+	resultPath := filepath.Join(workspace, "result.json")
+	if unit != nil {
+		if ix.FocusedBin == "" {
+			return fmt.Errorf("index %s: focused-index child is unavailable", repo.Name)
 		}
-		args = append(args, "-branches="+strings.Join(branches, ","))
+		scope := ix.AnalysisUnits[repo.Name]
+		requestPath := filepath.Join(workspace, "request.json")
+		if err := focusedindex.WriteControlFile(requestPath, focusedindex.Request{
+			Schema:    focusedindex.RequestSchema,
+			RepoDir:   dir,
+			OutputDir: stageDir,
+			Scope:     scope,
+			Revisions: revisions,
+		}); err != nil {
+			return fmt.Errorf("index %s: write focused request: %w", repo.Name, err)
+		}
+		childName = "phebs-focused-index"
+		cmd = exec.CommandContext(
+			ctx, ix.FocusedBin, "-request", requestPath, "-result", resultPath,
+		)
+	} else {
+		args := []string{"-index", stageDir, "-incremental=false"}
+		if len(revisions) > 1 {
+			branches := make([]string, 0, len(revisions))
+			for _, revision := range revisions {
+				branches = append(branches, revision.Branch)
+			}
+			args = append(args, "-branches="+strings.Join(branches, ","))
+		}
+		cmd = exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
 	}
 	ix.verbosef(
-		"index %s: starting zoekt-git-index revisions=%d force=%t",
-		repo.Name, len(revisions), force,
+		"index %s: starting %s revisions=%d force=%t",
+		repo.Name, childName, len(revisions), force,
 	)
 	start := time.Now()
-	cmd := exec.CommandContext(ctx, ix.Bin, append(args, dir)...)
-	out := newChildOutput(ix.logger(), fmt.Sprintf("index %s: zoekt: ", repo.Name), ix.Verbose)
+	out := newChildOutput(ix.logger(), fmt.Sprintf("index %s: %s: ", repo.Name, childName), ix.Verbose)
 	cmd.Stdout, cmd.Stderr = out, out
 	runErr := cmd.Run()
 	out.Flush()
 	if runErr != nil {
 		err := runErr
-		wrapped := fmt.Errorf("index %s: zoekt-git-index: %w\n%s", repo.Name, err, out.String())
+		wrapped := fmt.Errorf("index %s: %s: %w\n%s", repo.Name, childName, err, out.String())
 		if ctx.Err() != nil {
 			return fmt.Errorf("%v: %w", wrapped, ctx.Err())
 		}
@@ -193,11 +227,76 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 	}
 	duration := time.Since(start)
 	indexDuration.Observe(duration.Seconds())
+	releaseMutation, err := focusedindex.AcquireMutationLock(ctx, indexDir)
+	if err != nil {
+		return fmt.Errorf("index %s: acquire publication lock: %w", repo.Name, err)
+	}
+	defer releaseMutation()
+	if unit != nil {
+		result, err := focusedindex.ReadResult(resultPath)
+		if err != nil {
+			return fmt.Errorf("index %s: validate focused result: %w", repo.Name, err)
+		}
+		generation, generationErr := focusedindex.GenerationDigest(ix.AnalysisUnits[repo.Name], revisions)
+		if generationErr != nil {
+			return fmt.Errorf("index %s: focused generation: %w", repo.Name, generationErr)
+		}
+		if result.Repository != repo.Name || result.UnitDigest != unit.Digest ||
+			result.GenerationDigest != generation || result.OutOfUnitBlobReads != 0 {
+			return fmt.Errorf("index %s: focused child result identity mismatch", repo.Name)
+		}
+		stagedManifest, err := focusedindex.ValidateStage(
+			stageDir, repo.Name, unit, revisions,
+		)
+		if err != nil {
+			return fmt.Errorf("index %s: validate focused stage: %w", repo.Name, err)
+		}
+		if result.ManifestDigest != stagedManifest.Digest ||
+			result.ShardCount != len(stagedManifest.Members) {
+			return fmt.Errorf("index %s: focused result disagrees with staged manifest", repo.Name)
+		}
+		var stagedShardBytes int64
+		for _, member := range stagedManifest.Members {
+			info, statErr := os.Lstat(filepath.Join(stageDir, member.Name))
+			if statErr != nil {
+				return fmt.Errorf(
+					"index %s: inspect staged focused member %q: %w",
+					repo.Name, member.Name, statErr,
+				)
+			}
+			if !info.Mode().IsRegular() {
+				return fmt.Errorf(
+					"index %s: staged focused member %q is not regular",
+					repo.Name, member.Name,
+				)
+			}
+			stagedShardBytes += info.Size()
+		}
+		if result.ShardBytes != stagedShardBytes {
+			return fmt.Errorf("index %s: focused byte count disagrees with staged manifest", repo.Name)
+		}
+		focusedBlobReads.Observe(float64(result.OpenedBlobCount))
+		focusedBlobBytes.Observe(float64(result.OpenedBlobBytes))
+		ix.verbosef(
+			"index %s: focused reader blobs=%d bytes=%d out_of_unit=%d shards=%d",
+			repo.Name, result.OpenedBlobCount, result.OpenedBlobBytes,
+			result.OutOfUnitBlobReads, result.ShardCount,
+		)
+		if err := focusedindex.PublishFocused(
+			ctx, indexDir, stageDir, repo.Name, unit, revisions,
+		); err != nil {
+			return ix.failPublication(ctx, repo.Name, indexDir, err)
+		}
+	} else if err := focusedindex.PublishWhole(
+		ctx, indexDir, stageDir, repo.Name, revisions,
+	); err != nil {
+		return ix.failPublication(ctx, repo.Name, indexDir, err)
+	}
 	totalShardBytes := dirBytes(indexDir)
 	shardBytes.Set(totalShardBytes)
 	ix.verbosef(
-		"index %s: zoekt-git-index complete duration=%s total_shard_bytes=%.0f",
-		repo.Name, duration.Round(time.Millisecond), totalShardBytes,
+		"index %s: %s complete duration=%s total_shard_bytes=%.0f",
+		repo.Name, childName, duration.Round(time.Millisecond), totalShardBytes,
 	)
 	if err := ix.Store.SetRepoIndexedState(
 		ctx, repo.Name, head, revisions, unit, time.Now().UTC(),
@@ -206,15 +305,35 @@ func (ix *Indexer) Index(ctx context.Context, repo store.Repo, force bool) error
 		// remove both sides of the claimed state so search cannot serve revision
 		// B while MCP defaults to the previously recorded revision A.
 		clearErr := ix.Store.ClearRepoIndexState(ctx, repo.Name)
-		removeErr := sync.RemoveShards(ix.DataDir, repo.Name)
+		removeErr := focusedindex.RemoveRepository(ctx, indexDir, repo.Name)
 		return errors.Join(
 			fmt.Errorf("index %s: record state: %w", repo.Name, err),
 			wrapIfError("clear index state", clearErr),
 			wrapIfError("remove uncommitted shards", removeErr),
 		)
 	}
+	if err := focusedindex.FinishPublication(indexDir, repo.Name); err != nil {
+		return fmt.Errorf("index %s: expose committed publication: %w", repo.Name, err)
+	}
 	ix.verbosef("index %s: committed index state at %s", repo.Name, head)
 	return ix.afterIndexed(ctx, repo.Name, head)
+}
+
+func (ix *Indexer) failPublication(
+	ctx context.Context,
+	repository, indexDir string,
+	cause error,
+) error {
+	if !focusedindex.IsPublishing(indexDir, repository) {
+		return fmt.Errorf("index %s: publish: %w", repository, cause)
+	}
+	clearErr := ix.Store.ClearRepoIndexState(ctx, repository)
+	removeErr := focusedindex.RemoveRepository(ctx, indexDir, repository)
+	return errors.Join(
+		fmt.Errorf("index %s: publish: %w", repository, cause),
+		wrapIfError("clear interrupted index state", clearErr),
+		wrapIfError("remove interrupted publication", removeErr),
+	)
 }
 
 func (ix *Indexer) desiredAnalysisUnit(repository string) (*analysisunit.State, error) {
@@ -403,5 +522,15 @@ var (
 	shardBytes = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "phebs_index_shard_bytes",
 		Help: "Total bytes of shard files under $DATA/index.",
+	})
+	focusedBlobReads = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "phebs_focused_index_opened_blobs",
+		Help:    "Git blobs opened at the trusted focused-index reader boundary.",
+		Buckets: prometheus.ExponentialBuckets(1, 2, 20),
+	})
+	focusedBlobBytes = promauto.NewHistogram(prometheus.HistogramOpts{
+		Name:    "phebs_focused_index_opened_blob_bytes",
+		Help:    "Git blob bytes opened at the trusted focused-index reader boundary.",
+		Buckets: prometheus.ExponentialBuckets(1024, 2, 24),
 	})
 )

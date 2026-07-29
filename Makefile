@@ -25,11 +25,15 @@ bin:
 bin/zoekt-git-index: go.mod go.sum | bin ## index builder, same module SHA as the server (PLAN §1.1)
 	go build -trimpath -o $@ github.com/sourcegraph/zoekt/cmd/zoekt-git-index
 
+bin/phebs-focused-index: go.mod go.sum $(shell find cmd/phebs-focused-index internal -type f -name '*.go') | bin ## scoped index builder, same source line as the server (T30.3)
+	go build -trimpath -o $@ ./cmd/phebs-focused-index
+
 bin/buf: go.mod go.sum | bin ## compatibility child, pinned by the same go.mod as the server (T14.3)
 	CGO_ENABLED=0 go build -trimpath -o $@ github.com/bufbuild/buf/cmd/buf
 
-dev: bin/zoekt-git-index bin/buf ui ## boot phebs with embedded UI (ARGS="-config phebs.yaml" for flags)
+dev: bin/zoekt-git-index bin/phebs-focused-index bin/buf ui ## boot phebs with embedded UI (ARGS="-config phebs.yaml" for flags)
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
+		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
 		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
 		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
@@ -38,8 +42,9 @@ dev: bin/zoekt-git-index bin/buf ui ## boot phebs with embedded UI (ARGS="-confi
 		PHEBS_SYNTHETIC_WORKBENCH=1 \
 		go run -tags ui ./cmd/phebs serve $(ARGS)
 
-dev-api: bin/zoekt-git-index bin/buf ## backend-only loop: no UI build, placeholder page
+dev-api: bin/zoekt-git-index bin/phebs-focused-index bin/buf ## backend-only loop: no UI build, placeholder page
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
+		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
 		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
 		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
@@ -67,7 +72,7 @@ validate-release-target:
 		exit 2; \
 	}
 
-build: validate-version bin/zoekt-git-index bin/buf ui ## version-stamped binary with embedded UI
+build: validate-version bin/zoekt-git-index bin/phebs-focused-index bin/buf ui ## version-stamped binary with embedded UI
 	go build -trimpath -tags ui -ldflags "-X main.version=$(VERSION)" -o phebs ./cmd/phebs
 	@test "$$(./phebs version)" = "$(VERSION)"
 
@@ -75,6 +80,7 @@ release: validate-release-version validate-release-target verify-go verify-node 
 	mkdir -p "$(RELEASE_STAGE)/bin"
 	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -tags ui -ldflags "-X main.version=$(VERSION)" -o "$(RELEASE_STAGE)/phebs" ./cmd/phebs
 	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/zoekt-git-index" github.com/sourcegraph/zoekt/cmd/zoekt-git-index
+	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/phebs-focused-index" ./cmd/phebs-focused-index
 	CGO_ENABLED=0 GOOS="$(TARGET_GOOS)" GOARCH="$(TARGET_GOARCH)" go build -trimpath -o "$(RELEASE_STAGE)/bin/buf" github.com/bufbuild/buf/cmd/buf
 	@test "$$("$(RELEASE_STAGE)/phebs" version)" = "$(VERSION)"
 	go run ./scripts/release bundle \
@@ -82,6 +88,7 @@ release: validate-release-version validate-release-target verify-go verify-node 
 		-go-version "$(GO_VERSION)" -goos "$(TARGET_GOOS)" -goarch "$(TARGET_GOARCH)" \
 		-phebs "$(RELEASE_STAGE)/phebs" \
 		-zoekt "$(RELEASE_STAGE)/bin/zoekt-git-index" \
+		-focused "$(RELEASE_STAGE)/bin/phebs-focused-index" \
 		-buf "$(RELEASE_STAGE)/bin/buf"
 
 verify-release: ## verify RELEASE_BUNDLE bytes, modes, and canonical manifest

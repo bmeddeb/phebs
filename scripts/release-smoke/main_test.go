@@ -28,6 +28,7 @@ func TestExactServerEnvRemovesFixtureAndChildOverrides(t *testing.T) {
 	environ := []string{
 		"PATH=/usr/bin",
 		"PHEBS_ZOEKT_GIT_INDEX=/workspace/indexer",
+		"PHEBS_FOCUSED_INDEX=/workspace/focused",
 		"PHEBS_BUF=/workspace/buf",
 		"PHEBS_SURREAL=/workspace/surreal",
 		"PHEBS_INVESTIGATION_FIXTURES=/workspace/investigations",
@@ -39,6 +40,7 @@ func TestExactServerEnvRemovesFixtureAndChildOverrides(t *testing.T) {
 		"PATH=/usr/bin",
 		"SAFE=value",
 		"PHEBS_ZOEKT_GIT_INDEX=/bundle/bin/zoekt-git-index",
+		"PHEBS_FOCUSED_INDEX=/bundle/bin/phebs-focused-index",
 		"PHEBS_BUF=/bundle/bin/buf",
 		"PHEBS_SURREAL=/prereq/surreal",
 	}

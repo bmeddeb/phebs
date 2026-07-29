@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -22,6 +23,45 @@ type reconcileStore struct {
 	cleared       int
 	deleted       bool
 	canceledKinds []store.JobKind
+}
+
+func TestReconcileFocusedArtifactsRemovesOnlyOrphanOwnership(t *testing.T) {
+	dataDir := t.TempDir()
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	live := "example.com/live"
+	orphan := "example.com/orphan"
+	liveArtifact := focusedindex.ArtifactBase(live) + ".manifest.json"
+	orphanArtifacts := []string{
+		focusedindex.ArtifactBase(orphan) + ".manifest.json",
+		focusedindex.ArtifactBase(orphan) + ".publishing",
+		focusedindex.ArtifactBase(orphan) + "-old.zoekt" + focusedindex.MemberSuffix,
+	}
+	for _, name := range append([]string{liveArtifact}, orphanArtifacts...) {
+		if err := os.WriteFile(filepath.Join(indexDir, name), []byte("artifact"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report := ReconcileReport{}
+	if err := reconcileFocusedArtifacts(
+		t.Context(), dataDir, map[string]bool{live: true}, true, &report,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if report.UntrackedShards != len(orphanArtifacts) ||
+		report.Deleted != len(orphanArtifacts) {
+		t.Fatalf("focused cleanup report = %+v", report)
+	}
+	if _, err := os.Stat(filepath.Join(indexDir, liveArtifact)); err != nil {
+		t.Fatalf("live focused artifact removed: %v", err)
+	}
+	for _, name := range orphanArtifacts {
+		if _, err := os.Stat(filepath.Join(indexDir, name)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("orphan focused artifact %q survived: %v", name, err)
+		}
+	}
 }
 
 func (s *reconcileStore) ListRepos(context.Context) ([]store.Repo, error) {

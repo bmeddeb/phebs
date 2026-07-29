@@ -34,6 +34,11 @@ directory; the [project README](../README.md#architecture) and
 Indexing is **HEAD-only by default**: the default branch of each repo (or, for
 watched local repos, whatever branch is checked out). An explicit per-repo
 allowlist can add up to seven branch/tag revisions, selected with `rev:`.
+For a repository with an `analysis_units` entry, search shards contain only
+the configured primary and supporting paths at each admitted revision; status
+reports `focused`. Repositories without an entry retain whole-repository
+search. SCIP remains repository-root-unbound until the later scoped typed
+index contract.
 
 ## Evidence boundary
 

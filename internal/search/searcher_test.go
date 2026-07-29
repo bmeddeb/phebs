@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -119,7 +120,115 @@ func TestMain(m *testing.M) {
 		}
 		_ = os.Setenv("PHEBS_ZOEKT_GIT_INDEX", bin)
 	}
+	if _, err := focusedindex.FindBinary(); err != nil {
+		dir, err := os.MkdirTemp("", "phebs-focused-index")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer func() { _ = os.RemoveAll(dir) }()
+		bin := filepath.Join(dir, "phebs-focused-index")
+		out, err := exec.Command("go", "build", "-o", bin,
+			"github.com/bmeddeb/phebs/cmd/phebs-focused-index").CombinedOutput()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "build phebs-focused-index: %v\n%s", err, out)
+			os.Exit(1)
+		}
+		_ = os.Setenv("PHEBS_FOCUSED_INDEX", bin)
+	}
 	os.Exit(m.Run())
+}
+
+func TestFocusedManifestAndPublicationMarkerFailClosed(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.MkdirAll(filepath.Join(origin, "service"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(origin, "service", "main.go"),
+		[]byte("package service\nconst FocusedSearchNeedle = true\n"), 0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(origin, "outside.go"),
+		[]byte("package outside\nconst OutsideSearchNeedle = true\n"), 0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "fixture")
+
+	dataDir := t.TempDir()
+	repository := "example.com/acme/focused"
+	if err := sync.Mirror(ctx, "file://"+origin, sync.RepoDir(dataDir, repository)); err != nil {
+		t.Fatal(err)
+	}
+	st := &revisionStore{repo: store.Repo{
+		Name: repository, CloneURL: "file://" + origin, DefaultBranch: "main", IsPublic: true,
+	}}
+	whole, err := indexer.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	focused, err := focusedindex.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := analysisunit.Scope{
+		Repository: repository, Name: "service", Primary: []string{"service"},
+	}
+	ix := &indexer.Indexer{
+		DataDir: dataDir, Bin: whole, FocusedBin: focused, Store: st,
+		AnalysisUnits: map[string]analysisunit.Scope{repository: scope},
+	}
+	if err := ix.Index(ctx, store.Repo{Name: repository}, false); err != nil {
+		t.Fatal(err)
+	}
+	searcher, err := search.Open(filepath.Join(dataDir, "index"), st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+	assertFiles := func(expression string, want int) {
+		t.Helper()
+		result, err := searcher.Search(ctx, expression, search.Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(result.Files) != want {
+			t.Fatalf("search %q files = %+v, want %d", expression, result.Files, want)
+		}
+	}
+	assertFiles("FocusedSearchNeedle", 1)
+	assertFiles("OutsideSearchNeedle", 0)
+
+	manifestPath := filepath.Join(
+		dataDir, "index", focusedindex.ManifestName(repository),
+	)
+	manifestBytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		manifestPath, append(manifestBytes, []byte("{}\n")...), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	assertFiles("FocusedSearchNeedle", 0)
+	if err := os.WriteFile(manifestPath, manifestBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(dataDir, "index", focusedindex.PublishingName(repository)),
+		[]byte(repository+"\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	assertFiles("FocusedSearchNeedle", 0)
 }
 
 func gitc(t *testing.T, dir string, args ...string) string {

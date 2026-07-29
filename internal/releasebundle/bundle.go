@@ -35,6 +35,7 @@ var (
 	requiredFiles    = map[string]bool{
 		"LICENSE": false, "README.md": false, "phebs-otel-demo.yaml": false,
 		"phebs": true, "bin/buf": true, "bin/zoekt-git-index": true,
+		"bin/phebs-focused-index": true,
 	}
 )
 

@@ -40,7 +40,7 @@ requires either `provisional_proto_extraction` or
 
 ```bash
 git clone <your-clone-of-phebs> && cd phebs
-make build          # builds the UI, zoekt and Buf children, and ./phebs
+make build          # builds the UI, whole/focused zoekt and Buf children, and ./phebs
 ./phebs version     # 0.2.1-dev for an ordinary source build
 ./phebs serve -config phebs.yaml
 ```
@@ -58,9 +58,10 @@ make release verify-release smoke-release VERSION=v0.2.1
 ```
 
 The result is `dist/phebs-v0.2.1-<goos>-<goarch>/` containing `phebs`,
-same-module `bin/zoekt-git-index` and `bin/buf` children, `LICENSE`,
-`README.md`, the ready-to-run `phebs-otel-demo.yaml`, and
-`release-manifest.json`. The canonical manifest binds the version, source
+same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`
+children, `LICENSE`, `README.md`, the ready-to-run
+`phebs-otel-demo.yaml`, and `release-manifest.json`. The canonical manifest
+binds the version, source
 commit, target, Go toolchain, stable installed modes, sizes, and SHA-256
 digest of every payload. `verify-release` rejects missing, additional,
 symlinked, mode-changed, or byte-modified payloads. The manifest is an

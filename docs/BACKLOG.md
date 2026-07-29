@@ -2,8 +2,9 @@
 
 Epic 30 is in progress for service-scoped analysis of very large
 monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
-configuration/state boundary, and T30.3 is the next ticket. Completed Epics
-0–24, Epic 29, T30.1–T30.2, and P5 hardening are retained in the
+configuration/state boundary, T30.3 shipped focused shard integrity, and
+T30.4 is the next ticket. Completed Epics 0–24, Epic 29, T30.1–T30.3, and P5
+hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -13,9 +14,10 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.3 · Focused zoekt child and shard integrity** is next. T30.2 established
-strict analysis-unit identity and revision-bound committed state while
-deliberately retaining whole-repository physical indexing.
+**T30.4 · Reusable candidate-partition manifest** is next. T30.3 now gives
+configured repositories a physical focused-search publication; T30.4 creates
+the reusable streamed census and bounded partitions needed by focused
+extraction and the separate repository-wide caller overlay.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -489,7 +491,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.3 next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.4 next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -705,31 +707,14 @@ completed and retained in the
 It introduced no focused physical indexing; configured and unconfigured
 repositories still use the existing whole-repository child.
 
-**T30.3 · Focused zoekt child and shard integrity** *(T30.2 complete · next)* —
-ship the T30.1-proven child in development and release builds, invoke it for a
-configured unit, retain `zoekt-git-index` for whole repositories, and commit
-index state only after every scoped shard is durable. Search startup,
-directory watching, reconciliation, force rebuild, revision allowlists,
-backup/restore, orphan cleanup, and failed state commits validate both exact
-branch/commit metadata, unit digest, index-generation digest, and the complete
-shard-set manifest. Instrument the production Git-object reader itself so
-opened-blob count/bytes and zero out-of-unit reads are measured at the trusted
-read boundary rather than inferred from admitted paths or search results.
-Backup/restore preserves and revalidates the exact published manifest,
-sidecars, and shard bytes; an independent rebuild with the same semantic unit
-and generation may have different publication digests because the pinned
-builder embeds build identity and time, and is not byte-equal restoration. AC:
-the reader-boundary counter proves zero out-of-unit blob reads and an
-out-of-scope needle is absent from the physical shard; an admitted needle
-searches under the original commit/path; scope-only changes replace shards;
-stale/mixed/missing/extra-member sets never serve; the revision-set matrix is
-pinned; backup/restore is byte-exact while equivalent rebuild semantics are
-tested separately; child OOM/error classification remains intact; packaged
-binary parity; and size-driven shard splits preserve identical
-unit/revision/generation metadata plus exact expected membership; full merge
-bar.
+**T30.3 ✅ · Focused zoekt child and shard integrity** *(2026-07-28)* —
+completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t303--focused-zoekt-child-and-shard-integrity).
+Configured repositories now publish only their selected paths through the
+manifest-bound focused child; absent configuration retains whole-repository
+indexing. Typed-index input remains repository-root-unbound.
 
-**T30.4 · Reusable candidate-partition manifest** *(T30.2 complete)* — replace
+**T30.4 · Reusable candidate-partition manifest** *(T30.3 complete · next)* — replace
 per-domain complete-tree retention with one streamed commit census that
 produces a content-addressed manifest: repository/unit candidates for focused
 domains and deterministic repository-global caller partitions. The trusted

@@ -12,6 +12,8 @@ import (
 	"github.com/sourcegraph/zoekt/query"
 	zoektsearch "github.com/sourcegraph/zoekt/search"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -21,8 +23,9 @@ import (
 // searcher watches the directory and picks up new shards as the indexer
 // writes them.
 type Searcher struct {
-	z  zoekt.Streamer
-	st store.Store
+	z        zoekt.Streamer
+	st       store.Store
+	indexDir string
 	// Contexts backs `context:<name>` filters (T8.1); assigned once at
 	// startup from config.
 	Contexts map[string][]string
@@ -70,7 +73,7 @@ func Open(indexDir string, st store.Store) (*Searcher, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open shard dir %s: %w", indexDir, err)
 	}
-	return &Searcher{z: z, st: st}, nil
+	return &Searcher{z: z, st: st, indexDir: indexDir}, nil
 }
 
 func (s *Searcher) Close() { s.z.Close() }
@@ -250,6 +253,17 @@ func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string
 	for _, repo := range repos {
 		if repo.Deleting || repo.IndexedCommitHash == "" {
 			continue
+		}
+		if focusedindex.IsPublishing(s.indexDir, repo.Name) {
+			continue
+		}
+		if repo.IndexedAnalysisUnit != nil &&
+			repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused {
+			if _, err := focusedindex.ValidatePublished(
+				s.indexDir, repo.Name, repo.IndexedAnalysisUnit, repo.IndexedRevisions,
+			); err != nil {
+				continue
+			}
 		}
 		// T10.3: filtering versions too makes toResult's revision check a
 		// second fail-closed gate over the permission boundary.

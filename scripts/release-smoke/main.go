@@ -306,6 +306,7 @@ func writeConfig(path, dataDir, addr, fixture string) error {
 func exactServerEnv(environ []string, bundle, surreal string) []string {
 	denied := map[string]bool{
 		"PHEBS_ZOEKT_GIT_INDEX":        true,
+		"PHEBS_FOCUSED_INDEX":          true,
 		"PHEBS_BUF":                    true,
 		"PHEBS_SURREAL":                true,
 		"PHEBS_INVESTIGATION_FIXTURES": true,
@@ -320,6 +321,7 @@ func exactServerEnv(environ []string, bundle, surreal string) []string {
 	}
 	return append(filtered,
 		"PHEBS_ZOEKT_GIT_INDEX="+filepath.Join(bundle, "bin", "zoekt-git-index"),
+		"PHEBS_FOCUSED_INDEX="+filepath.Join(bundle, "bin", "phebs-focused-index"),
 		"PHEBS_BUF="+filepath.Join(bundle, "bin", "buf"),
 		"PHEBS_SURREAL="+surreal,
 	)

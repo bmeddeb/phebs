@@ -1,6 +1,7 @@
 package recovery_test
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,7 +14,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -162,6 +165,100 @@ connections:
 	}
 }
 
+func TestFocusedBackupRestorePreservesPublicationBytes(t *testing.T) {
+	if _, err := exec.LookPath("surreal"); err != nil {
+		t.Skip("surreal binary not installed")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Minute)
+	defer cancel()
+	root := t.TempDir()
+	dataDir := filepath.Join(root, "data")
+	backupDir := filepath.Join(root, "backup")
+	origin := makeOrigin(t, root)
+	repository, err := phebssync.RepoName("file://" + origin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	configBytes := []byte(fmt.Sprintf(`server:
+  data_dir: %s
+analysis_units:
+  %q:
+    name: recovery-service
+    primary: [main.go]
+`, dataDir, repository))
+	if err := os.MkdirAll(dataDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	st, err := store.OpenLocalWithConfig(ctx, dataDir, recovery.ConfigDigest(configBytes))
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := false
+	t.Cleanup(func() {
+		if !closed {
+			_ = st.Close(context.Background())
+		}
+	})
+	connection := config.Connection{Name: "focused-recovery", Type: "git", URL: "file://" + origin}
+	names, err := phebssync.SyncConnection(ctx, st, dataDir, connection, nil)
+	if err != nil || len(names) != 1 || names[0] != repository {
+		t.Fatalf("sync = %v, %v", names, err)
+	}
+	scope := analysisunit.Scope{
+		Repository: repository, Name: "recovery-service", Primary: []string{"main.go"},
+	}
+	index := &indexer.Indexer{
+		DataDir: dataDir,
+		Bin:     zoektBinary(t), FocusedBin: focusedBinary(t),
+		Store: st, AnalysisUnits: map[string]analysisunit.Scope{repository: scope},
+	}
+	if err := index.Index(ctx, store.Repo{Name: repository}, false); err != nil {
+		t.Fatal(err)
+	}
+	before := focusedPublicationBytes(t, filepath.Join(dataDir, "index"), repository)
+	if _, err := recovery.Create(ctx, recovery.BackupOptions{
+		Options: recovery.Options{
+			DataDir: dataDir, Config: configBytes, PhebsVersion: "test-version",
+		},
+		Output: backupDir,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Close(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	closed = true
+	if err := os.RemoveAll(dataDir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := recovery.Restore(ctx, recovery.RestoreOptions{
+		Options: recovery.Options{
+			DataDir: dataDir, Config: configBytes, PhebsVersion: "test-version",
+		},
+		Backup: backupDir,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	after := focusedPublicationBytes(t, filepath.Join(dataDir, "index"), repository)
+	if len(before) != len(after) {
+		t.Fatalf("focused restore inventory = %d, want %d", len(after), len(before))
+	}
+	for name, want := range before {
+		if !bytes.Equal(after[name], want) {
+			t.Fatalf("focused restore changed %q", name)
+		}
+	}
+	restored, err := store.OpenLocal(ctx, dataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = restored.Close(context.Background()) }()
+	report, err := phebssync.ReconcileArtifacts(ctx, restored, dataDir, false)
+	if err != nil || report.RevisionRepairs != 0 {
+		t.Fatalf("focused startup reconcile = %+v, %v", report, err)
+	}
+}
+
 func TestRecoveryRefusalsPrecedeExternalWork(t *testing.T) {
 	root := t.TempDir()
 	existingBackup := filepath.Join(root, "backup")
@@ -233,6 +330,14 @@ func assertManifestDigests(t *testing.T, backupDir string, manifest recovery.Man
 	if got := "sha256:" + hex.EncodeToString(artifactSum[:]); got != manifest.Inventory[0].SHA256 {
 		t.Fatalf("artifact digest = %s, want %s", got, manifest.Inventory[0].SHA256)
 	}
+	focusedArtifact, err := os.ReadFile(filepath.Join(backupDir, recovery.FocusedIndexName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	focusedSum := sha256.Sum256(focusedArtifact)
+	if got := "sha256:" + hex.EncodeToString(focusedSum[:]); got != manifest.Inventory[1].SHA256 {
+		t.Fatalf("focused artifact digest = %s, want %s", got, manifest.Inventory[1].SHA256)
+	}
 	digestManifest := manifest
 	digestManifest.ManifestSHA256 = ""
 	canonical, err := json.Marshal(digestManifest)
@@ -290,6 +395,47 @@ func zoektBinary(t *testing.T) string {
 		t.Fatalf("build zoekt-git-index: %v\n%s", err, output)
 	}
 	return bin
+}
+
+func focusedBinary(t *testing.T) string {
+	t.Helper()
+	if bin, err := focusedindex.FindBinary(); err == nil {
+		return bin
+	}
+	bin := filepath.Join(t.TempDir(), "phebs-focused-index")
+	command := exec.CommandContext(
+		t.Context(), "go", "build", "-o", bin,
+		"github.com/bmeddeb/phebs/cmd/phebs-focused-index",
+	)
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("build phebs-focused-index: %v\n%s", err, output)
+	}
+	return bin
+}
+
+func focusedPublicationBytes(
+	t *testing.T,
+	indexDir, repository string,
+) map[string][]byte {
+	t.Helper()
+	manifest, err := focusedindex.ValidateSelfContained(indexDir, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := []string{focusedindex.ManifestName(repository)}
+	for _, member := range manifest.Members {
+		names = append(names, member.Name, member.Name+focusedindex.MemberSuffix)
+	}
+	result := make(map[string][]byte, len(names))
+	for _, name := range names {
+		raw, err := os.ReadFile(filepath.Join(indexDir, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		result[name] = raw
+	}
+	return result
 }
 
 func TestVerifyRejectsUndeclaredEntry(t *testing.T) {

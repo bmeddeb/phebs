@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -564,7 +565,9 @@ func RemoveShards(dataDir, name string) error {
 			return err
 		}
 	}
-	return nil
+	return focusedindex.RemoveRepository(
+		context.Background(), filepath.Join(dataDir, "index"), name,
+	)
 }
 
 func shardPaths(dataDir string) ([]string, error) {

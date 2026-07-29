@@ -9,11 +9,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -38,6 +40,22 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 		_ = os.Setenv("PHEBS_ZOEKT_GIT_INDEX", bin)
+	}
+	if _, err := focusedindex.FindBinary(); err != nil {
+		dir, err := os.MkdirTemp("", "phebs-focused-index")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer func() { _ = os.RemoveAll(dir) }()
+		bin := filepath.Join(dir, "phebs-focused-index")
+		out, err := exec.Command("go", "build", "-o", bin,
+			"github.com/bmeddeb/phebs/cmd/phebs-focused-index").CombinedOutput()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "build phebs-focused-index: %v\n%s", err, out)
+			os.Exit(1)
+		}
+		_ = os.Setenv("PHEBS_FOCUSED_INDEX", bin)
 	}
 	os.Exit(m.Run())
 }
@@ -92,7 +110,13 @@ func newIndexer(t *testing.T, ctx context.Context) (*indexer.Indexer, store.Stor
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &indexer.Indexer{DataDir: dataDir, Bin: bin, Store: st}, st, dataDir
+	focusedBin, err := focusedindex.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &indexer.Indexer{
+		DataDir: dataDir, Bin: bin, FocusedBin: focusedBin, Store: st,
+	}, st, dataDir
 }
 
 func shardCount(t *testing.T, dataDir string) int {
@@ -178,6 +202,67 @@ func TestIndexStateFailureRemovesUncommittedShard(t *testing.T) {
 	}
 }
 
+func TestFocusedChildFailurePreservesOldPublicationAndStateFailureCleansNew(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	ix, st, dataDir := newIndexer(t, ctx)
+	name, _ := fixture(t, ctx, st, dataDir)
+	scope := analysisunit.Scope{
+		Repository: name, Name: "service", Primary: []string{"main.go"},
+	}
+	ix.AnalysisUnits = map[string]analysisunit.Scope{name: scope}
+	repo, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Index(ctx, *repo, false); err != nil {
+		t.Fatal(err)
+	}
+	committed, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := shardStamps(t, dataDir)
+	t.Setenv("PHEBS_FOCUSED_INJECT_FAILURE", "1")
+	if err := ix.Index(ctx, *committed, true); err == nil {
+		t.Fatal("injected focused child failure succeeded")
+	}
+	afterFailure, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !analysisunit.EqualState(
+		afterFailure.IndexedAnalysisUnit, committed.IndexedAnalysisUnit,
+	) || !reflect.DeepEqual(shardStamps(t, dataDir), before) {
+		t.Fatal("focused child failure changed committed state or old publication")
+	}
+
+	t.Setenv("PHEBS_FOCUSED_INJECT_FAILURE", "")
+	changed := scope
+	changed.Name = "replacement"
+	ix.AnalysisUnits[name] = changed
+	ix.Store = failIndexedStore{Store: st}
+	if err := ix.Index(ctx, *afterFailure, false); err == nil ||
+		!strings.Contains(err.Error(), "injected index state failure") {
+		t.Fatalf("focused state failure = %v", err)
+	}
+	if got := shardCount(t, dataDir); got != 0 {
+		t.Fatalf("focused shards after failed state commit = %d, want 0", got)
+	}
+	if _, err := os.Lstat(filepath.Join(
+		dataDir, "index", focusedindex.ManifestName(name),
+	)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("focused manifest survived failed state commit: %v", err)
+	}
+	cleared, err := st.GetRepo(ctx, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cleared.IndexedCommitHash != "" || cleared.IndexedAnalysisUnit != nil {
+		t.Fatalf("focused state survived failed commit: %+v", cleared)
+	}
+}
+
 func TestIndexVerboseForwardsChildOutputOnlyWhenEnabled(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -199,7 +284,12 @@ func TestIndexVerboseForwardsChildOutputOnlyWhenEnabled(t *testing.T) {
 		t.Fatal(err)
 	}
 	bin := filepath.Join(t.TempDir(), "verbose-indexer")
-	if err := os.WriteFile(bin, []byte("#!/bin/sh\nprintf 'wrapper-child-marker\\n'\n"), 0o755); err != nil {
+	realBin, err := indexer.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrapper := "#!/bin/sh\nprintf 'wrapper-child-marker\\n'\nexec " + realBin + " \"$@\"\n"
+	if err := os.WriteFile(bin, []byte(wrapper), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -377,7 +467,7 @@ func TestAnalysisUnitScopeChangeRebuildsSameHead(t *testing.T) {
 	firstScope := analysisunit.Scope{
 		Repository: name,
 		Name:       "service",
-		Primary:    []string{"src"},
+		Primary:    []string{"main.go"},
 	}
 	ix.AnalysisUnits = map[string]analysisunit.Scope{name: firstScope}
 	repo, err := st.GetRepo(ctx, name)
@@ -396,7 +486,7 @@ func TestAnalysisUnitScopeChangeRebuildsSameHead(t *testing.T) {
 
 	time.Sleep(1100 * time.Millisecond)
 	changedScope := firstScope
-	changedScope.Primary = []string{"service/src"}
+	changedScope.Name = "renamed-service"
 	ix.AnalysisUnits[name] = changedScope
 	if err := ix.Index(ctx, *first, false); err != nil {
 		t.Fatal(err)

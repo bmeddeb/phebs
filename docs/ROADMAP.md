@@ -32,11 +32,13 @@ monorepositories. T30.1 froze the commit-bound analysis-unit contract and
 recorded GO after proving a focused zoekt child and exact shard-set validation
 over a neutral generated corpus. T30.2 now supplies strict repository-keyed
 analysis-unit configuration, canonical identity, revision-bound committed
-state, same-HEAD rebuild reconciliation, and bounded operator status.
-T30.3 is next: replace the whole-repository child for configured units with
-the proven focused child and complete shard-set publication. Until then,
-configured status says `whole-repository` and `repository-root-unbound`;
-T30.2 does not claim focused physical indexing or scoped SCIP.
+state, same-HEAD rebuild reconciliation, and bounded operator status. T30.3
+now ships the focused child, exact shard-set publication, fail-closed search
+admission, trusted-reader counters, byte-exact focused backup/restore, and
+packaged-binary parity. Configured status says `focused` and
+`repository-root-unbound`: source search is physically scoped, while root
+SCIP is still not treated as unit-bound. T30.4 is next: produce the reusable
+streamed candidate census and bounded partition manifest.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
 browsing, related implementation, and the Workbench use one physically

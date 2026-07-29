@@ -1,5 +1,5 @@
 // Package analysisunit defines the stable service-scope identity introduced by
-// T30.2. It contains no indexing behavior; T30.3 consumes the committed state.
+// T30.2 and consumed by T30.3 focused indexing.
 package analysisunit
 
 import (
@@ -21,9 +21,11 @@ const (
 	// TypedIndexRepositoryRootUnbound means the existing repository-root
 	// index.scip input has no reviewed binding to this service scope.
 	TypedIndexRepositoryRootUnbound = "repository-root-unbound"
-	// SearchIndexWholeRepository makes T30.2's preparatory boundary explicit:
-	// focused physical indexing begins only in T30.3.
+	// SearchIndexWholeRepository remains readable for T30.2 committed rows.
 	SearchIndexWholeRepository = "whole-repository"
+	// SearchIndexFocused means zoekt input is restricted to the canonical
+	// primary and supporting paths in this state.
+	SearchIndexFocused = "focused"
 
 	MaxSelectedPaths     = 128
 	MaxSelectedPathBytes = 64 << 10
@@ -175,7 +177,7 @@ func (scope Scope) State() (*State, error) {
 		SupportingPaths:     supporting,
 		PrimaryPathCount:    len(primary),
 		SupportingPathCount: len(supporting),
-		SearchIndexPosture:  SearchIndexWholeRepository,
+		SearchIndexPosture:  SearchIndexFocused,
 		TypedIndexPosture:   TypedIndexRepositoryRootUnbound,
 	}, nil
 }
@@ -194,11 +196,12 @@ func (state *State) Validate(repository string) error {
 	if err != nil {
 		return err
 	}
+	legacyWholeRepository := state.SearchIndexPosture == SearchIndexWholeRepository
 	if state.Schema != expected.Schema ||
 		state.Digest != expected.Digest ||
 		state.PrimaryPathCount != expected.PrimaryPathCount ||
 		state.SupportingPathCount != expected.SupportingPathCount ||
-		state.SearchIndexPosture != expected.SearchIndexPosture ||
+		(state.SearchIndexPosture != expected.SearchIndexPosture && !legacyWholeRepository) ||
 		state.TypedIndexPosture != expected.TypedIndexPosture ||
 		!slices.Equal(state.PrimaryPaths, expected.PrimaryPaths) ||
 		!slices.Equal(state.SupportingPaths, expected.SupportingPaths) {

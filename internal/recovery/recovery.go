@@ -19,13 +19,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 const (
-	ManifestSchema = "phebs-backup-manifest-v1"
-	ManifestName   = "manifest.json"
-	DatabaseName   = "database.surql"
+	ManifestSchema   = "phebs-backup-manifest-v2"
+	ManifestName     = "manifest.json"
+	DatabaseName     = "database.surql"
+	FocusedIndexName = "focused-index.tar"
 
 	maxManifestBytes = 1 << 20
 	maxCommandOutput = 64 << 10
@@ -33,7 +35,7 @@ const (
 )
 
 var derivedExclusions = []string{
-	"index/ (zoekt shards)",
+	"index/ whole-repository zoekt shards (focused publications are preserved byte-exactly)",
 	"repos/ (bare repository mirrors)",
 	"temporary extraction and build caches",
 }
@@ -154,6 +156,13 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 			_ = os.RemoveAll(stage)
 		}
 	}()
+	releaseBackup, err := focusedindex.AcquireBackupLock(
+		ctx, filepath.Join(dataDir, "index"),
+	)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("acquire consistent index backup lock: %w", err)
+	}
+	defer releaseBackup()
 
 	artifactPath := filepath.Join(stage, DatabaseName)
 	args := []string{
@@ -170,7 +179,25 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err := syncFile(artifactPath); err != nil {
 		return Manifest{}, err
 	}
-	artifact, err := inspectArtifact(artifactPath)
+	artifact, err := inspectArtifact(
+		artifactPath, DatabaseName, "precious", "application/surrealql",
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
+	focusedPath := filepath.Join(stage, FocusedIndexName)
+	if err := focusedindex.CreateArchive(filepath.Join(dataDir, "index"), focusedPath); err != nil {
+		return Manifest{}, fmt.Errorf("archive focused index publications: %w", err)
+	}
+	if err := os.Chmod(focusedPath, 0o600); err != nil {
+		return Manifest{}, fmt.Errorf("protect focused-index artifact: %w", err)
+	}
+	if err := syncFile(focusedPath); err != nil {
+		return Manifest{}, err
+	}
+	focusedArtifact, err := inspectArtifact(
+		focusedPath, FocusedIndexName, "derived-byte-exact", "application/x-tar",
+	)
 	if err != nil {
 		return Manifest{}, err
 	}
@@ -190,7 +217,7 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		},
 		Store:             store.CurrentStoreIdentity(),
 		ExportCommand:     slices.Clone(exportCommand),
-		Inventory:         []Artifact{artifact},
+		Inventory:         []Artifact{artifact, focusedArtifact},
 		DerivedExclusions: slices.Clone(derivedExclusions),
 	}
 	manifest.ManifestSHA256, err = manifestDigest(manifest)
@@ -272,6 +299,12 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	stop()
 	stopped = true
 
+	if err := focusedindex.RestoreArchive(
+		filepath.Join(backup, FocusedIndexName), filepath.Join(target, "index"),
+	); err != nil {
+		return Manifest{}, fmt.Errorf("restore focused index publications: %w", err)
+	}
+
 	// Opening once applies the supported idempotent schema/migration set and
 	// proves the imported database reaches the same application boundary.
 	st, err := store.OpenLocal(ctx, target)
@@ -299,7 +332,7 @@ func Verify(backup string, opts Options) (Manifest, error) {
 		names = append(names, entry.Name())
 	}
 	slices.Sort(names)
-	if !slices.Equal(names, []string{DatabaseName, ManifestName}) {
+	if !slices.Equal(names, []string{DatabaseName, FocusedIndexName, ManifestName}) {
 		return Manifest{}, fmt.Errorf("backup inventory is incomplete or contains undeclared files: %v", names)
 	}
 	manifest, err := readManifest(filepath.Join(backup, ManifestName))
@@ -336,12 +369,28 @@ func Verify(backup string, opts Options) (Manifest, error) {
 	if manifest.Store != store.CurrentStoreIdentity() {
 		return Manifest{}, errors.New("backup store identity is incompatible with this phebs binary")
 	}
-	actual, err := inspectArtifact(filepath.Join(backup, DatabaseName))
+	actual, err := inspectArtifact(
+		filepath.Join(backup, DatabaseName),
+		DatabaseName, "precious", "application/surrealql",
+	)
 	if err != nil {
 		return Manifest{}, err
 	}
 	if actual != manifest.Inventory[0] {
 		return Manifest{}, errors.New("backup database artifact differs from its manifest")
+	}
+	focused, err := inspectArtifact(
+		filepath.Join(backup, FocusedIndexName),
+		FocusedIndexName, "derived-byte-exact", "application/x-tar",
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if focused != manifest.Inventory[1] {
+		return Manifest{}, errors.New("backup focused-index artifact differs from its manifest")
+	}
+	if err := focusedindex.VerifyArchive(filepath.Join(backup, FocusedIndexName)); err != nil {
+		return Manifest{}, fmt.Errorf("verify focused-index artifact: %w", err)
 	}
 	return manifest, nil
 }
@@ -353,10 +402,16 @@ func validateManifest(manifest Manifest) error {
 		manifest.Surreal.Version == "" || manifest.Surreal.SHA256 == "" || manifest.ManifestSHA256 == "" {
 		return errors.New("backup manifest identity is incomplete")
 	}
-	if len(manifest.Inventory) != 1 || manifest.Inventory[0].Path != DatabaseName ||
+	if len(manifest.Inventory) != 2 || manifest.Inventory[0].Path != DatabaseName ||
 		manifest.Inventory[0].Classification != "precious" ||
 		manifest.Inventory[0].MediaType != "application/surrealql" || manifest.Inventory[0].Size <= 0 {
 		return errors.New("backup manifest inventory is invalid")
+	}
+	if manifest.Inventory[1].Path != FocusedIndexName ||
+		manifest.Inventory[1].Classification != "derived-byte-exact" ||
+		manifest.Inventory[1].MediaType != "application/x-tar" ||
+		manifest.Inventory[1].Size <= 0 {
+		return errors.New("backup focused-index inventory is invalid")
 	}
 	if !slices.Equal(manifest.DerivedExclusions, derivedExclusions) {
 		return errors.New("backup manifest derived-state classification is invalid")
@@ -366,7 +421,8 @@ func validateManifest(manifest Manifest) error {
 	}
 	for _, digest := range []string{
 		manifest.ConfigSHA256, manifest.Phebs.SHA256, manifest.Surreal.SHA256,
-		manifest.Inventory[0].SHA256, manifest.ManifestSHA256,
+		manifest.Inventory[0].SHA256, manifest.Inventory[1].SHA256,
+		manifest.ManifestSHA256,
 	} {
 		if !validSHA256(digest) {
 			return errors.New("backup manifest contains an invalid SHA-256 digest")
@@ -375,20 +431,22 @@ func validateManifest(manifest Manifest) error {
 	return nil
 }
 
-func inspectArtifact(path string) (Artifact, error) {
+func inspectArtifact(
+	path, name, classification, mediaType string,
+) (Artifact, error) {
 	info, err := os.Lstat(path)
 	if err != nil {
-		return Artifact{}, fmt.Errorf("inspect database artifact: %w", err)
+		return Artifact{}, fmt.Errorf("inspect %s artifact: %w", name, err)
 	}
 	if !info.Mode().IsRegular() || info.Size() <= 0 || info.Size() > maxArtifactBytes {
-		return Artifact{}, errors.New("database artifact is empty, special, or exceeds its limit")
+		return Artifact{}, fmt.Errorf("%s artifact is empty, special, or exceeds its limit", name)
 	}
 	digest, err := digestFile(path, maxArtifactBytes)
 	if err != nil {
-		return Artifact{}, fmt.Errorf("digest database artifact: %w", err)
+		return Artifact{}, fmt.Errorf("digest %s artifact: %w", name, err)
 	}
 	return Artifact{
-		Path: DatabaseName, Classification: "precious", MediaType: "application/surrealql",
+		Path: name, Classification: classification, MediaType: mediaType,
 		Size: info.Size(), SHA256: digest,
 	}, nil
 }

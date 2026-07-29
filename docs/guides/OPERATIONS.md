@@ -17,7 +17,7 @@ $DATA/                     # server.data_dir, default ~/.phebs
 ├── db/                    # SurrealDB — users, API keys, sessions, repo/jobs
 ├── .surreal-runtime.json  # private, process-owned live-backup rendezvous
 ├── repos/<host>/<path>.git  # bare mirrors
-└── index/*.zoekt          # search shards
+└── index/                 # whole/focused zoekt shards; focused manifests and sidecars
 ```
 
 Mirrors, shards, repo rows, and jobs are rebuildable from config and upstream
@@ -31,7 +31,10 @@ the next start requires first-user enrollment.
 Precious state is `$DATA/db` plus the exact config file — the users, OIDC
 links, API-key hashes, sessions, permission edges, audit/analytics history,
 evidence, and proof pins that cannot be rebuilt (repo rows and job state ride
-along but are derivable). Everything else under `$DATA` is derived.
+along but are derivable). Mirrors and whole-repository shards are derived.
+Focused shards are also derived semantically, but online backup preserves
+their currently published bytes exactly because builder timestamps/identity
+make rebuild output an unsuitable restore-equality test.
 
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
@@ -43,10 +46,14 @@ phebs backup -config /etc/phebs/phebs.yaml -output /restricted/phebs-backup-2026
 The output path must not exist. The command discovers only the supervised
 loopback SurrealDB child through `$DATA/.surreal-runtime.json`, verifies the
 exact child executable and the raw-config digest that started the live server,
-and runs that executable's live `export`. A different config that only points
-at the same `$DATA` is refused. The command publishes a private directory
-containing `database.surql` and `manifest.json`. The manifest binds the export's
-size and SHA-256 digest, the exact raw config
+acquires a crash-released cross-process snapshot lock that lets in-flight
+publication/state commits finish and pauses new ones, and runs that
+executable's live `export`. A different config that only points at the same
+`$DATA` is refused. The command publishes a private directory
+containing `database.surql`, `focused-index.tar`, and `manifest.json`. The
+focused archive contains only complete, revalidated focused manifests,
+sidecars, and shard members; it never includes whole-repository shards. The
+manifest binds both artifacts' sizes and SHA-256 digests, the exact raw config
 digest, phebs version/binary digest, SurrealDB version/binary digest, database
 identity, store-writer/evidence/migration versions, and the derived-state
 exclusions. It contains no host binary path or database password. Preserve the
@@ -54,8 +61,9 @@ exact config separately; the backup contains its digest, not its bytes.
 
 The export is unencrypted credential-bearing state. Move or encrypt the whole
 directory only under the approved retention and key-custody procedure. Do not
-edit either file: restore rejects extra, missing, renamed, symlinked, special,
-oversized, or digest-mismatched entries.
+edit any file: restore rejects extra, missing, renamed, symlinked, special,
+oversized, digest-mismatched, malformed, partial, stale, or undeclared focused
+entries.
 
 Restore uses the manifest-bound phebs, SurrealDB, and config identities and an
 absent or completely empty configured `$DATA`:
@@ -69,16 +77,17 @@ Recovery config validation deliberately leaves `${SECRET}` references
 unexpanded, so verification/import can happen in an isolated environment
 without live source or OIDC credentials. Restore verifies the complete backup
 and every compatible binary/store identity before it creates `$DATA`, imports
-through an isolated SurrealDB child, and opens the store once to apply and
-validate the supported schema/migrations. If import begins and then fails, the
-partial target is retained and every later restore refuses it; quarantine or
-remove it under the witnessed recovery procedure rather than retrying over it.
+through an isolated SurrealDB child, restores focused shard/sidecar bytes
+before their manifests, and opens the store once to apply and validate the
+supported schema/migrations. If import begins and then fails, the partial
+target is retained and every later restore refuses it; quarantine or remove it
+under the witnessed recovery procedure rather than retrying over it.
 
-The subsequent normal `serve` start automatically rebuilds derived state:
-startup reconciliation clears any indexed revision whose excluded shard is
-missing, boot sync re-clones missing mirrors, and the queued index worker
-rebuilds shards without an operator reindex request. Restored API keys and
-sessions remain live — rotate them if the backup's custody was ever in doubt.
+The subsequent normal `serve` start revalidates restored focused publications
+against committed unit/revision state. It keeps exact valid focused bytes,
+clears and requeues any invalid claim, rebuilds excluded whole-repository
+shards, and boot sync re-clones missing mirrors. Restored API keys and sessions
+remain live — rotate them if the backup's custody was ever in doubt.
 
 The stop-first cold path remains available:
 
@@ -250,19 +259,29 @@ indexed repository uses a forced replacement so the child cannot take its
 incremental short-circuit. The prior complete state remains authoritative
 until the replacement child succeeds and the new revision/unit state commits
 in one database update. A failed or canceled job therefore leaves the previous
-state visible; retry and recovery use the normal index-job rules. If the
-builder binary is unavailable, the pending job and previous state remain
-visible for diagnosis rather than claiming completion.
+state available while the child builds. Publication then creates a stable
+marker that removes the repository from search, replaces the old shards from a
+synced private stage, renames the complete manifest last, commits the matching
+database state, and removes the marker. A child failure occurs before this
+swap and leaves the prior publication available. An interrupted publication
+or failed state commit fails closed and is cleared/requeued rather than
+serving mismatched bytes.
 
 Legacy rows reopen with no unit state and are not rewritten or rebuilt when
-`analysis_units` is absent. At T30.2, configured repositories also continue to
-use the existing whole-repository child: `search_index_posture` is
-`whole-repository`, and a repository-root `index.scip` remains
-`repository-root-unbound`. The database backup includes the committed unit
-state, while current shard backup/restore behavior is otherwise unchanged.
-T30.3 owns focused shard publication, exact manifest/member-byte restore
-validation, and separate semantic-equality treatment for fresh rebuilds whose
-builder timestamp/ID can differ.
+`analysis_units` is absent. Configured repositories use the focused child and
+report `search_index_posture: focused`; unconfigured repositories retain the
+whole-repository child. A repository-root `index.scip` remains
+`repository-root-unbound`.
+
+Every focused shard carries the exact ordered revision set, unit digest,
+builder policy, and generation digest. Member sidecars bind ordinal/count plus
+content and decoded-metadata digests; one stable manifest declares the exact
+set. Search and reconciliation reject a publication marker, missing/extra
+member, mixed/stale digest, sidecar disagreement, branch/commit mismatch, or
+undeclared shard. `phebs_focused_index_opened_blobs` and
+`phebs_focused_index_opened_blob_bytes` measure successful Git reads at the
+trusted scope-checking boundary; any attempted out-of-unit read fails the
+child and is never published.
 
 
 
@@ -849,6 +868,8 @@ authorization, freshness, evidence availability, or continuing validity.
 | `phebs_job_errors_total`       | counter   | `kind`, `class` (`auth`/`oom`/`corrupt-shard`/`extract`/`generic`) |
 | `phebs_index_duration_seconds` | histogram | —                                                                  |
 | `phebs_index_shard_bytes`      | gauge     | —                                                                  |
+| `phebs_focused_index_opened_blobs` | histogram | —                                                               |
+| `phebs_focused_index_opened_blob_bytes` | histogram | —                                                          |
 
 
 Plus standard Go process metrics. Scrape `/metrics`.
@@ -866,6 +887,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
 | `start surreal child: exec: "surreal": executable file not found` | SurrealDB not installed                                                                                | see [prerequisites](./GETTING_STARTED.md#prerequisites)                                                                   |
 | log: `zoekt-git-index not found — indexing disabled`              | binary built without `make build`/`make dev`                                                           | `make build`, or set `PHEBS_ZOEKT_GIT_INDEX=/path/to/zoekt-git-index`                                 |
+| log: `phebs-focused-index not found`                               | configured analysis units but focused child is absent                                                  | `make build`, or set `PHEBS_FOCUSED_INDEX=/path/to/phebs-focused-index`                               |
 | log: contract compatibility disabled                              | Buf is missing/mismatched, or the OS sandbox cannot be enforced                                        | use `make build` or set `PHEBS_BUF` to the pinned v1.72.0 binary; install `bubblewrap` on Linux        |
 | `listen tcp 127.0.0.1:3070: bind: address already in use`         | another phebs (or process) on the port                                                                 | stop it, or `-addr 127.0.0.1:3071`                                                                    |
 | UI shows first-run setup                                          | no users and no OIDC provider                                                                          | copy the ephemeral setup token from the current process log; restarting generates a new token         |
@@ -890,9 +912,9 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned zoekt/Buf children, bind synthetic Investigation/Contract Atlas fixtures, the retained neutral Change Workbench closure repo, the fixture-coupled Workbench, and the committed Thrift field-zero repo through normal sync/index/extraction; run with embedded UI |
+| `make dev`           | build UI + pinned whole/focused zoekt and Buf children, bind synthetic Investigation/Contract Atlas fixtures, the retained neutral Change Workbench closure repo, the fixture-coupled Workbench, and the committed Thrift field-zero repo through normal sync/index/extraction; run with embedded UI |
 | `make dev-api`       | backend-only loop with the same children, explicit UI/Workbench fixtures, and Thrift field-zero repository (placeholder UI page, fast)                                           |
-| `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index` and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
+| `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
 | `make smoke-release` | run the verified bundle from empty state through auth, sync, index, search, pinned browse, and default-dark Contract Atlas checks                       |

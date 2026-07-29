@@ -144,7 +144,7 @@ func TestAnalysisUnitAppearsOnlyInRepoStatusWithoutSourceContent(t *testing.T) {
 		`"primary_paths":["services/payments/src"]`,
 		`"primary_path_count":1`,
 		`"supporting_path_count":1`,
-		`"search_index_posture":"whole-repository"`,
+		`"search_index_posture":"focused"`,
 		`"typed_index_posture":"repository-root-unbound"`,
 	} {
 		if status.Code != http.StatusOK || !strings.Contains(body, expected) {

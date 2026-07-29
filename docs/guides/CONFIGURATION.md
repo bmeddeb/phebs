@@ -112,8 +112,10 @@ combined path bytes. Repository keys are at most 1,024 bytes and must be valid
 mirror names. Paths must be non-empty, clean UTF-8, slash-separated, relative,
 and free of control characters. Empty or `.` paths, absolute paths, `..`,
 backslashes, duplicates, and ancestor/descendant overlaps across either list
-fail startup. A directory selection includes its descendants only when the
-focused builder is introduced; no unlisted sibling is implied.
+fail startup. A directory selection includes its regular-file descendants at
+every indexed revision; no unlisted sibling is implied. A selected path that
+is missing or resolves to a symlink, gitlink, or other special entry in HEAD
+or any allowlisted revision refuses the complete replacement.
 
 The stable `analysis-unit-v1` digest is SHA-256 over a domain separator plus
 canonical JSON containing the schema, repository, unit name, sorted primary
@@ -124,15 +126,17 @@ set. A name or path change therefore queues a replacement even when HEAD is
 unchanged; removing the entry queues a replacement that returns the repository
 to unscoped state.
 
-T30.2 is the state boundary, not focused physical indexing. The existing
-`zoekt-git-index` child still receives the whole repository, and status reports
-`search_index_posture: whole-repository`. Existing repository-root
-`index.scip` input is not relabeled as scoped; status reports
-`typed_index_posture: repository-root-unbound`. T30.3 owns the focused search
-child, selected-path existence/type checks at every indexed revision, shard
-metadata, and complete publication manifest. Repositories absent from
-`analysis_units` retain the prior whole-repository index and extraction
-behavior and response shape.
+For a configured repository, `phebs-focused-index` receives only these
+selected immutable blobs and status reports
+`search_index_posture: focused`. The same exact scope must exist at HEAD and
+every configured `rev:` lane; the unit digest remains stable while the
+generation digest changes with the ordered revision set. Phebs never falls
+back to whole-repository input when a focused build refuses.
+
+Existing repository-root `index.scip` input is not relabeled as scoped; status
+continues to report `typed_index_posture: repository-root-unbound`.
+Repositories absent from `analysis_units` retain the prior
+whole-repository `zoekt-git-index`, extraction behavior, and response shape.
 
 
 ### Provisional Change Workbench

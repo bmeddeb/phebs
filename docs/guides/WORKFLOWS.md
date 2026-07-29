@@ -36,8 +36,9 @@ fixture that `make dev` injects (the fixture would override real catalog
 evidence):
 
 ```bash
-make ui bin/zoekt-git-index bin/buf
+make ui bin/zoekt-git-index bin/phebs-focused-index bin/buf
 PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+PHEBS_FOCUSED_INDEX="$(pwd)/bin/phebs-focused-index" \
 PHEBS_BUF="$(pwd)/bin/buf" \
   go run -tags ui ./cmd/phebs serve -config phebs-thrift-demo.yaml
 ```
@@ -64,8 +65,9 @@ evaluation over two public corpora. Run it the same way (no Atlas fixture —
 the Kafka packs have no catalog surface at all):
 
 ```bash
-make ui bin/zoekt-git-index bin/buf
+make ui bin/zoekt-git-index bin/phebs-focused-index bin/buf
 PHEBS_ZOEKT_GIT_INDEX="$(pwd)/bin/zoekt-git-index" \
+PHEBS_FOCUSED_INDEX="$(pwd)/bin/phebs-focused-index" \
 PHEBS_BUF="$(pwd)/bin/buf" \
   go run -tags ui ./cmd/phebs serve -config phebs-kafka-demo.yaml
 ```
@@ -907,9 +909,12 @@ changed-file statistics, and bounded unified diffs.
 orphan flags, indexed commit, and administrator-only **Reindex** controls
 (a forced rebuild defeats the incremental short-circuit). The backing
 `/api/repo-status` response also reports any committed analysis-unit name,
-digest, exact selected paths/counts, and search/typed-index postures. T30.2
-reports `whole-repository` and `repository-root-unbound`: it establishes the
-scope/state boundary but does not yet claim focused search or scoped SCIP.
+digest, exact selected paths/counts, and search/typed-index postures.
+Configured repositories report `focused` and
+`repository-root-unbound`: search is physically limited to the selected
+primary/supporting paths at every indexed revision, while root `index.scip`
+still has no reviewed unit binding. Unconfigured repositories remain
+whole-repository.
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
 Named keys are read-only for Investigation mutations by default; the creation
 form can explicitly add the immutable `investigation:write` capability and

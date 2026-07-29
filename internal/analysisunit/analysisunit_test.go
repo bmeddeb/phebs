@@ -34,7 +34,7 @@ func TestScopeIdentityAndState(t *testing.T) {
 		t.Fatal(err)
 	}
 	if state.PrimaryPathCount != 1 || state.SupportingPathCount != 3 ||
-		state.SearchIndexPosture != SearchIndexWholeRepository ||
+		state.SearchIndexPosture != SearchIndexFocused ||
 		state.TypedIndexPosture != TypedIndexRepositoryRootUnbound ||
 		!slices.IsSorted(state.SupportingPaths) {
 		t.Fatalf("state = %+v", state)
@@ -150,7 +150,7 @@ func TestStateRejectsNonCanonicalOrMismatchedValues(t *testing.T) {
 		{"digest", func(state *State) { state.Digest = "sha256:wrong" }},
 		{"schema", func(state *State) { state.Schema = "future" }},
 		{"count", func(state *State) { state.PrimaryPathCount++ }},
-		{"search posture", func(state *State) { state.SearchIndexPosture = "focused" }},
+		{"search posture", func(state *State) { state.SearchIndexPosture = "unknown" }},
 		{"posture", func(state *State) { state.TypedIndexPosture = "unit-bound" }},
 		{"path order", func(state *State) {
 			state.PrimaryPaths = []string{"z", "a"}
@@ -169,5 +169,25 @@ func TestStateRejectsNonCanonicalOrMismatchedValues(t *testing.T) {
 				t.Fatalf("error = %v, want ErrInvalidScope", err)
 			}
 		})
+	}
+}
+
+func TestT302WholeRepositoryStateRemainsReadableButIsNotDesired(t *testing.T) {
+	scope := Scope{
+		Repository: "example.com/repo",
+		Name:       "service",
+		Primary:    []string{"service/src"},
+	}
+	desired, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := CloneState(desired)
+	legacy.SearchIndexPosture = SearchIndexWholeRepository
+	if err := legacy.Validate(scope.Repository); err != nil {
+		t.Fatalf("legacy T30.2 state must reopen: %v", err)
+	}
+	if EqualState(desired, legacy) {
+		t.Fatal("legacy whole-repository state must enqueue focused replacement")
 	}
 }
