@@ -1,0 +1,114 @@
+{
+  "schema": "t301-focused-index-spike-v1",
+  "decision": "GO",
+  "reason": "The pinned builder accepted exact Git blobs without projected commits; focused search, original path/revision provenance, physical splitting, and manifest refusal gates passed.",
+  "go_version": "go1.26.5",
+  "goos": "darwin",
+  "goarch": "arm64",
+  "zoekt_module": "v0.0.0-20260709064101-33f1f18af292",
+  "corpus": {
+    "schema": "t301-focused-index-spike-v1",
+    "repository": "example.com/neutral/monorepo",
+    "head": "47a57a0202fed1a994f134126c9ae3b3f1de64e6",
+    "branch": "373be3d66a2f9dae783281feffec6bb40b590a7b",
+    "tag": "659232e6772f52c1989dd47783409597fa27f828",
+    "missing_scope_commit": "6e2411dfd9ce5dd8752ff8e6926dd579b152115f",
+    "symlink_commit": "20736bec50fdeac347b0fcea96c5164e6005df0f",
+    "gitlink_commit": "6b9ce8c13043915b313a68172111d2c2fa5d7ea0",
+    "revisions": [
+      {
+        "selector": "HEAD",
+        "branch": "HEAD",
+        "commit": "47a57a0202fed1a994f134126c9ae3b3f1de64e6"
+      },
+      {
+        "selector": "release",
+        "branch": "refs/heads/release",
+        "commit": "373be3d66a2f9dae783281feffec6bb40b590a7b"
+      },
+      {
+        "selector": "v1",
+        "branch": "refs/tags/v1",
+        "commit": "659232e6772f52c1989dd47783409597fa27f828"
+      }
+    ],
+    "regular_files": 200008,
+    "inventory_path_bytes": 21000305,
+    "git_object_bytes": 588006,
+    "digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2"
+  },
+  "scope": {
+    "repository": "example.com/neutral/monorepo",
+    "name": "payments",
+    "primary": [
+      "services/payments/src"
+    ],
+    "supporting": [
+      "contracts/payment.proto",
+      "services/payments/generated",
+      "services/payments/go.mod"
+    ]
+  },
+  "run1": {
+    "schema": "t301-focused-index-spike-v1",
+    "repository": "example.com/neutral/monorepo",
+    "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
+    "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
+    "generation_digest": "sha256:4fce4f8f379831e0d8dd46aad4441298298057343afd220aa875bc3116b0f73c",
+    "manifest_digest": "sha256:f1db12e3359aa1a6cdfbb7501aa525ab7d31fb8ea05428a180a943289ee3df1b",
+    "opened_paths": [
+      "contracts/payment.proto",
+      "services/payments/generated/client.go",
+      "services/payments/go.mod",
+      "services/payments/src/handler.go",
+      "services/payments/src/main.go",
+      "services/payments/src/main.go",
+      "services/payments/src/main.go"
+    ],
+    "opened_blob_bytes": 528,
+    "admitted_documents": 7,
+    "admitted_source_bytes": 528,
+    "shard_count": 3,
+    "shard_bytes": 13129,
+    "build_wall_nanos": 227492917
+  },
+  "run2": {
+    "schema": "t301-focused-index-spike-v1",
+    "repository": "example.com/neutral/monorepo",
+    "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
+    "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
+    "generation_digest": "sha256:4fce4f8f379831e0d8dd46aad4441298298057343afd220aa875bc3116b0f73c",
+    "manifest_digest": "sha256:dea093e397ac0937298a99d012594c391f31c37cbc2e2d9b347e460c5ee2c089",
+    "opened_paths": [
+      "contracts/payment.proto",
+      "services/payments/generated/client.go",
+      "services/payments/go.mod",
+      "services/payments/src/handler.go",
+      "services/payments/src/main.go",
+      "services/payments/src/main.go",
+      "services/payments/src/main.go"
+    ],
+    "opened_blob_bytes": 528,
+    "admitted_documents": 7,
+    "admitted_source_bytes": 528,
+    "shard_count": 3,
+    "shard_bytes": 13129,
+    "build_wall_nanos": 222560792
+  },
+  "equivalent_search": true,
+  "missing_member_refused": true,
+  "extra_member_refused": true,
+  "mixed_member_refused": true,
+  "stale_member_refused": true,
+  "trailing_json_refused": true,
+  "interrupted_refused": true,
+  "missing_revision_refused": true,
+  "symlink_refused": true,
+  "gitlink_refused": true,
+  "replacement_ignored": true,
+  "lazy_fetch_refused": true,
+  "out_of_unit_blob_reads": 0,
+  "generation_wall_nanos": 4547384417,
+  "peak_rss_bytes": 99336192,
+  "search_wall_nanos": 1394125
+}

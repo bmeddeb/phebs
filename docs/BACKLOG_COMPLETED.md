@@ -3584,3 +3584,48 @@ ordinary extraction worker, discovers the operation through store-derived
 Contract Atlas, and resolves it through the Workbench without a fixture
 catalog. All owning docs and the isolated manual evaluation config are updated.
 Production registration and every evidence/accuracy gate remain unchanged.
+
+---
+
+## EPIC 30 — Service-scoped monorepo analysis *(in progress; completed tickets)*
+
+Epic 30 makes one service inside a very large monorepository a first-class
+analysis unit while preserving a separate, target-bound repository overlay for
+caller evidence. Its production work remains active in the
+[backlog](./BACKLOG.md#epic-30--service-scoped-monorepo-analysis).
+
+### T30.1 · Service-scope contract and focused-index spike
+
+**T30.1 ✅ · Service-scope contract and focused-index spike** *(2026-07-28;
+GO)* — froze `analysis-unit-v1`, canonical path rules, one-active-unit
+semantics, the distinction between semantic units, physical shards, and caller
+partitions, unit/shard provenance, typed-index posture, and the
+repository-overlay vocabulary before production code. The retained generated
+neutral bare-Git corpus exceeds the current file-count and path-byte inventory
+limits and includes two disjoint service roots, central declarations,
+generated sources, nested modules, irrelevant bulk, and a cross-service
+caller.
+
+An OOM-isolated test child feeds only one unit's exact regular blobs to the
+pinned upstream `index.Builder`, preserves the canonical repository name, full
+paths, and original HEAD/branch/tag commits, and records zero out-of-unit blob
+reads. The retained run admitted seven documents totaling 528 bytes and
+produced three manifest-bound shards totaling 13,129 bytes. Two isolated builds
+retained identical corpus, unit, and generation digests with equivalent
+focused search results.
+
+The spike re-reads unit and index-generation metadata from every shard and
+validates an exact, checksummed shard-set manifest before opening a searcher.
+Missing, extra, mixed, stale, interrupted, trailing-JSON, selected-missing,
+symlink, gitlink, replacement-object, lazy-fetch, and child-failure cases fail
+closed. Retained maximums were 4.547 seconds corpus generation, 0.228 seconds
+child build, 1.394 milliseconds search, and 99,336,192 bytes peak child RSS,
+all within the preregistered gates.
+
+AC met: executable artifacts, results, and the decision table are retained
+under [`spike/t301/`](../spike/t301/README.md); the original
+`zoekt-git-index` whole-repository path is unchanged; no production config,
+store, queue, API, UI, or indexing behavior changed. GO releases T30.2
+configuration and state work but does not authorize T30.3 production focused
+indexing or establish runtime-use, completeness, extraction-accuracy,
+migration-completion, or decommission-safety claims.

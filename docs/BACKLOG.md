@@ -1,10 +1,10 @@
 # phebs · active backlog
 
-Epic 30 is scheduled for service-scoped analysis of very large
-monorepositories; T30.1 is the next ticket. Completed Epics 0–24, Epic 29, and
-P5 hardening are retained in the [completed backlog](./BACKLOG_COMPLETED.md).
-Current posture and decision points are summarized in
-[ROADMAP.md](./ROADMAP.md).
+Epic 30 is in progress for service-scoped analysis of very large
+monorepositories; T30.1 recorded a GO result and T30.2 is the next ticket.
+Completed Epics 0–24, Epic 29, T30.1, and P5 hardening are retained in the
+[completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
+points are summarized in [ROADMAP.md](./ROADMAP.md).
 
 New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
@@ -12,9 +12,9 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.1 · Service-scope contract and focused-index spike** is next. It changes
-no production behavior; its merge bar is the retained scale/provenance result
-and go/no-go decision defined under Epic 30.
+**T30.2 · Analysis-unit config and committed state** is next. T30.1's retained
+focused-index and shard-set spike recorded GO without changing production
+behavior.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -488,7 +488,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(scheduled 2026-07-28 · T30.1 next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.2 next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -676,37 +676,29 @@ search revision.
   decommission-safety claim follows from a complete unit or relationship
   generation.
 
-**T30.1 · Service-scope contract and focused-index spike** — freeze
-`analysis-unit-v1`, canonical path rules, one-active-unit semantics,
-the distinction between semantic units, physical shards, and caller
-partitions, unit/shard provenance, typed-index posture, and the
-repository-overlay vocabulary before production code. Build a generated
-neutral Git corpus that
-exceeds both current corpus inventory limits, with two disjoint service roots,
-central declarations, generated sources, nested modules, irrelevant bulk, and
-cross-service callers. The corpus generator—not its expanded files—is
-retained. In an OOM-isolated test child, feed only one unit's exact regular
-blobs to the pinned upstream `index.Builder`; instrument object reads to prove
-that out-of-unit blob content is never opened; preserve canonical repository
-name, full paths, and original branch/commit versions; stamp and re-read the
-unit and index-generation digests from every shard; commit and re-read the
-expected shard-set manifest; search the focused content; delete one valid
-member and prove the remaining agreeing subset cannot serve; and prove stale,
-mixed, extra-member, overlapping, symlink, gitlink, replacement-object,
-lazy-fetch, child failure, and interrupted-publication paths fail closed. Run
-the revision-set matrix with HEAD plus a branch and tag, including a missing
-selected path that refuses the complete generation. Measure generated
-tree size, admitted files/bytes, opened blobs/bytes, shard count/bytes, peak
-RSS, build wall time, and search wall time under preregistered local gates.
-Document the exact upstream internal API surface used and pin compile-time and
-shard-metadata compatibility tests because `index.Builder` is not a promised
-public API. AC: retained spike artifacts and decision table committed under
-`spike/t301/`; two runs produce identical scope/corpus digests and equivalent
-search results; original `zoekt-git-index` whole-repository tests remain
-unchanged; no production config, store, queue, API, or UI behavior changes; a
-GO result releases T30.2, while NO-GO stops the epic for a new PLAN decision.
+### Documentation updates
 
-**T30.2 · Analysis-unit config and committed state** *(needs T30.1 GO)* —
+- `PLAN.md` records each production identity, publication, partition, and
+  compatibility decision in the same ticket that implements it.
+- `docs/guides/CONFIGURATION.md` owns the strict analysis-unit schema,
+  path/revision semantics, defaults, limits, and typed-index posture.
+- `docs/guides/OPERATIONS.md` owns build/publication diagnostics, reconciliation,
+  cleanup, backup/restore, failure recovery, and bounded operator verification.
+- `docs/guides/WORKFLOWS.md` owns the user-visible distinction between focused
+  search/local evidence and repository-overlay callers, including evidence
+  caveats and the end-to-end demo.
+- `docs/MANUAL.md`, `docs/README.md`, the roadmap, and the active/completed
+  backlog update when their routing, posture, sequencing, or ticket state
+  changes. Spike records under `spike/` retain decisions and measurements; they
+  never substitute for behavior documentation.
+
+**T30.1 ✅ · Service-scope contract and focused-index spike** *(2026-07-28;
+GO)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t301--service-scope-contract-and-focused-index-spike)
+and [executable spike record](../spike/t301/README.md). It changed no
+production config, store, queue, API, or UI behavior.
+
+**T30.2 · Analysis-unit config and committed state** *(T30.1 GO recorded · next)* —
 add the strict repository-keyed config, canonical digest, one-active-unit
 validation, and store state that binds indexed revisions to the unit digest.
 Changing only scope bytes queues a rebuild. Repo status and operator

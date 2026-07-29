@@ -23,6 +23,7 @@ evidence.
 - [T21.1 Workbench inventory and vocabulary contract](../spike/t211/README.md)
 - [T22.1 Thrift field-reference spike](../spike/t221/README.md)
 - [T23.1 Kafka topic-evidence spike](../spike/t231/README.md)
+- [T30.1 focused-index and shard-set spike](../spike/t301/README.md)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be

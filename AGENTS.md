@@ -77,7 +77,8 @@ indexing, and backup/restore are shipped core behavior. Contract Atlas, Caller
 Map, Impact, Investigations/Workbench, Thrift-field, and Kafka evidence are
 implemented but remain experimental/default-dark; the Workbench's provisional
 store-derived binding creates no production registration. Epic 30 service-scope
-work is scheduled with T30.1 next.
+work is in progress: T30.1 recorded a focused-index spike GO without production
+behavior changes, and T30.2 is next.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
 completeness, migration-completion, or decommission-safety claim exists.
 

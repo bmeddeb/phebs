@@ -27,10 +27,12 @@ accuracy.
 
 ## Now
 
-Epic 30 is scheduled to add service-scoped analysis for very large
-monorepositories. T30.1 is next: freeze the commit-bound analysis-unit
-contract and prove a focused zoekt child over a neutral generated corpus
-before any production config, store, queue, API, or UI change.
+Epic 30 is in progress to add service-scoped analysis for very large
+monorepositories. T30.1 froze the commit-bound analysis-unit contract and
+recorded GO after proving a focused zoekt child and exact shard-set validation
+over a neutral generated corpus. T30.2 is next: add strict analysis-unit
+configuration and committed state. No production config, store, queue, API,
+UI, or indexing behavior changed in T30.1.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
 browsing, related implementation, and the Workbench use one physically
