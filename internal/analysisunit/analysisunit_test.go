@@ -77,6 +77,52 @@ func TestEmptySupportingPathsHaveOneIdentity(t *testing.T) {
 	}
 }
 
+func TestTypedIndexIsUnitBoundWithoutChangingStableScopeDigest(t *testing.T) {
+	base := Scope{
+		Repository: "example.com/repo",
+		Name:       "service",
+		Primary:    []string{"service/src"},
+		Supporting: []string{"service/a.scip", "service/b.scip"},
+	}
+	first := base
+	first.TypedIndex = &TypedIndex{
+		Kind: TypedIndexKindSCIP, Path: "service/a.scip",
+	}
+	second := base
+	second.TypedIndex = &TypedIndex{
+		Kind: TypedIndexKindSCIP, Path: "service/b.scip",
+	}
+	firstDigest, err := first.Digest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondDigest, err := second.Digest()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstDigest != secondDigest {
+		t.Fatalf(
+			"typed designation changed stable scope digest: %q != %q",
+			firstDigest, secondDigest,
+		)
+	}
+	state, err := first.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.TypedIndexPosture != TypedIndexUnitBound ||
+		state.TypedIndex == nil ||
+		*state.TypedIndex != *first.TypedIndex {
+		t.Fatalf("typed state = %+v", state)
+	}
+	clone := CloneState(state)
+	clone.TypedIndex.Path = "service/b.scip"
+	if state.TypedIndex.Path != "service/a.scip" ||
+		EqualState(state, clone) {
+		t.Fatal("typed state clone aliased input")
+	}
+}
+
 func TestScopeRefusals(t *testing.T) {
 	base := Scope{
 		Repository: "example.com/repo",
@@ -107,6 +153,24 @@ func TestScopeRefusals(t *testing.T) {
 		{"traversal", func(scope *Scope) { scope.Primary = []string{"service/../other"} }},
 		{"backslash", func(scope *Scope) { scope.Primary = []string{`service\\src`} }},
 		{"control", func(scope *Scope) { scope.Primary = []string{"service/\nsource"} }},
+		{"typed unsupported kind", func(scope *Scope) {
+			scope.Supporting = []string{"service/index.scip"}
+			scope.TypedIndex = &TypedIndex{
+				Kind: "other", Path: "service/index.scip",
+			}
+		}},
+		{"typed path not exact supporting", func(scope *Scope) {
+			scope.Supporting = []string{"service"}
+			scope.TypedIndex = &TypedIndex{
+				Kind: TypedIndexKindSCIP, Path: "service/index.scip",
+			}
+		}},
+		{"typed unsafe path", func(scope *Scope) {
+			scope.Supporting = []string{"service/index.scip"}
+			scope.TypedIndex = &TypedIndex{
+				Kind: TypedIndexKindSCIP, Path: "../index.scip",
+			}
+		}},
 		{"duplicate", func(scope *Scope) {
 			scope.Supporting = []string{"service/src"}
 		}},
@@ -195,5 +259,29 @@ func TestT302WholeRepositoryStateRemainsReadableButIsNotDesired(t *testing.T) {
 	}
 	if EqualState(desired, legacy) {
 		t.Fatal("legacy whole-repository state must enqueue focused replacement")
+	}
+}
+
+func TestWholeRepositoryStateRefusesTypedIndexDesignation(t *testing.T) {
+	scope := Scope{
+		Repository: "example.com/repo",
+		Name:       "service",
+		Primary:    []string{"service/src"},
+		Supporting: []string{"service/index.scip"},
+		TypedIndex: &TypedIndex{
+			Kind: TypedIndexKindSCIP,
+			Path: "service/index.scip",
+		},
+	}
+	state, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.SearchIndexPosture = SearchIndexWholeRepository
+	if err := state.Validate(scope.Repository); !errors.Is(err, ErrInvalidScope) {
+		t.Fatalf(
+			"whole-repository typed state validation = %v, want ErrInvalidScope",
+			err,
+		)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/scipsource"
 )
@@ -14,9 +15,9 @@ const (
 	grpcConsumerEnumeration   = "grpc-consumer-paths-v1"
 	thriftContractEnumeration = "thrift-contract-paths-v1"
 	thriftConsumerEnumeration = "thrift-consumer-paths-v1"
-	scipProtoEnumeration      = "scip-proto-field-paths-v1"
-	scipThriftEnumeration     = "scip-thrift-field-paths-v1"
-	goCallerEnumeration       = "go-caller-paths-v1"
+	scipProtoEnumeration      = "scip-proto-field-paths-v2"
+	scipThriftEnumeration     = "scip-thrift-field-paths-v2"
+	goCallerEnumeration       = "go-caller-paths-v2"
 	kafkaGoEnumeration        = "kafka-go-paths-v1"
 	fixedRootSymlinkPolicy    = "fixed-root-regular-v1"
 )
@@ -67,20 +68,21 @@ func CandidatePolicies(extractors []Extractor) ([]candidate.Policy, error) {
 			policy.Enumerate = hasSuffix(".go")
 		case "scip-proto-field":
 			policy.EnumerationPolicy = scipProtoEnumeration
+			policy.TypedInputs = []string{analysisunit.TypedIndexKindSCIP}
 			policy.Enumerate = func(filePath string) bool {
-				return filePath == scipIndexPath ||
-					scipsource.Eligible(scipsource.ProtoField, filePath) ||
+				return scipsource.Eligible(scipsource.ProtoField, filePath) ||
 					path.Base(filePath) == "buf.yaml"
 			}
 		case "scip-thrift-field":
 			policy.EnumerationPolicy = scipThriftEnumeration
+			policy.TypedInputs = []string{analysisunit.TypedIndexKindSCIP}
 			policy.Enumerate = func(filePath string) bool {
-				return filePath == scipIndexPath ||
-					scipsource.Eligible(scipsource.Go, filePath)
+				return scipsource.Eligible(scipsource.Go, filePath)
 			}
 		case "grpc-caller", "thrift-caller":
 			policy.EnumerationPolicy = goCallerEnumeration
 			policy.Plane = candidate.PlaneCaller
+			policy.TypedInputs = []string{analysisunit.TypedIndexKindSCIP}
 			policy.Enumerate = callerCandidatePath
 		case "kafka-producer", "kafka-consumer":
 			policy.EnumerationPolicy = kafkaGoEnumeration
@@ -104,7 +106,7 @@ func hasSuffix(suffix string) func(string) bool {
 }
 
 func callerCandidatePath(filePath string) bool {
-	if filePath == scipIndexPath || filePath == "go.mod" ||
+	if filePath == "go.mod" ||
 		strings.HasSuffix(filePath, "/go.mod") ||
 		scipsource.Eligible(scipsource.Go, filePath) {
 		return true
@@ -118,9 +120,6 @@ func callerCandidatePath(filePath string) bool {
 }
 
 func fixedRootCandidateSymlink(filePath string) bool {
-	if filePath == scipIndexPath {
-		return true
-	}
 	for _, snapshotPath := range attributionSnapshotPaths {
 		if filePath == snapshotPath {
 			return true

@@ -102,7 +102,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 		t.Fatalf("handle: %v", err)
 	}
 
-	run, err := s.LatestPublishedRun(ctx, repoName, "proto-contract")
+	run, err := s.LatestPublishedRun(ctx, store.ExtractionScope{
+		Repository: repoName, Commit: head, Domain: "proto-contract",
+	})
 	if err != nil {
 		t.Fatalf("latest run: %v", err)
 	}
@@ -119,19 +121,27 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 		t.Fatalf("coverage protocols = %q", got)
 	}
 
-	services, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repoName, Predicate: "DECLARES_SERVICE"})
+	services, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repoName, RunID: run.ID, Predicate: "DECLARES_SERVICE",
+	})
 	if err != nil {
 		t.Fatalf("list services: %v", err)
 	}
-	messages, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repoName, Predicate: "DECLARES_MESSAGE"})
+	messages, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repoName, RunID: run.ID, Predicate: "DECLARES_MESSAGE",
+	})
 	if err != nil {
 		t.Fatalf("list messages: %v", err)
 	}
-	ops, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repoName, Predicate: "DECLARES_OPERATION"})
+	ops, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repoName, RunID: run.ID, Predicate: "DECLARES_OPERATION",
+	})
 	if err != nil {
 		t.Fatalf("list ops: %v", err)
 	}
-	fields, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repoName, Predicate: "DECLARES_FIELD"})
+	fields, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repoName, RunID: run.ID, Predicate: "DECLARES_FIELD",
+	})
 	if err != nil {
 		t.Fatalf("list fields: %v", err)
 	}
@@ -247,7 +257,9 @@ func TestProtoDeclEndToEnd(t *testing.T) {
 	if err := w.Handle(ctx, store.Job{Target: repoName}); err != nil {
 		t.Fatalf("second handle: %v", err)
 	}
-	run2, _ := s.LatestPublishedRun(ctx, repoName, "proto-contract")
+	run2, _ := s.LatestPublishedRun(ctx, store.ExtractionScope{
+		Repository: repoName, Commit: head, Domain: "proto-contract",
+	})
 	if run2.ID != run.ID {
 		t.Fatalf("short-circuit failed: new run %s", run2.ID)
 	}
@@ -370,7 +382,9 @@ func TestThriftPackEndToEnd(t *testing.T) {
 		t.Fatalf("handle: %v", err)
 	}
 
-	declRun, err := s.LatestPublishedRun(ctx, repoName, "thrift-contract")
+	declRun, err := s.LatestPublishedRun(ctx, store.ExtractionScope{
+		Repository: repoName, Commit: head, Domain: "thrift-contract",
+	})
 	if err != nil {
 		t.Fatalf("thrift-contract run: %v", err)
 	}
@@ -386,7 +400,9 @@ func TestThriftPackEndToEnd(t *testing.T) {
 		declRun.Coverage.GitlinkSampleTruncated {
 		t.Fatalf("gitlink boundary manifest = %+v", declRun.Coverage)
 	}
-	consumerRun, err := s.LatestPublishedRun(ctx, repoName, "thrift-consumer")
+	consumerRun, err := s.LatestPublishedRun(ctx, store.ExtractionScope{
+		Repository: repoName, Commit: head, Domain: "thrift-consumer",
+	})
 	if err != nil {
 		t.Fatalf("thrift-consumer run: %v", err)
 	}

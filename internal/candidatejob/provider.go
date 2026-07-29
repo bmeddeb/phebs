@@ -138,7 +138,7 @@ func (provider *Provider) resolve(
 		return candidate.State{}, candidate.Expected{}, err
 	}
 	generation, err := candidate.GenerationDigest(
-		request.Repository, request.Commit, unitDigest,
+		request.Repository, request.Commit, request.AnalysisUnit,
 		provider.policies.identities,
 	)
 	if err != nil {
@@ -215,6 +215,80 @@ func (manifest *manifestAdapter) GitlinkBoundaries() extract.CandidateManifestGi
 		Count: corpus.GitlinkCount, Digest: corpus.GitlinkDigest,
 		SampleTruncated: corpus.GitlinkCount > 0,
 	}
+}
+
+func (manifest *manifestAdapter) DomainScope(
+	domain, version string,
+) (extract.CandidateManifestScope, error) {
+	if manifest == nil || manifest.publication == nil {
+		return extract.CandidateManifestScope{},
+			errors.New("candidate manifest scope is invalid")
+	}
+	if _, ok := manifest.allowed[domainKey(domain, version)]; !ok {
+		return extract.CandidateManifestScope{},
+			fmt.Errorf("candidate domain %s/%s is outside the request", domain, version)
+	}
+	view, err := manifest.publication.Domain(domain, version)
+	if err != nil {
+		return extract.CandidateManifestScope{}, err
+	}
+	scope := view.Scope()
+	domainSummary := scope.Domain
+	candidateCount := domainSummary.RepositoryCandidateCount
+	requiredCount := domainSummary.RepositoryRequiredCount
+	declaredBytes := domainSummary.RepositoryDeclaredBytes
+	digest := domainSummary.RepositoryDigest
+	if domainSummary.Plane == candidate.PlaneLocal && scope.UnitDigest != "" {
+		candidateCount = domainSummary.UnitCandidateCount
+		requiredCount = domainSummary.UnitRequiredCount
+		declaredBytes = domainSummary.UnitDeclaredBytes
+		digest = domainSummary.UnitDigest
+	}
+	return extract.CandidateManifestScope{
+		ManifestDigest:         scope.ManifestDigest,
+		UnitDigest:             scope.UnitDigest,
+		Plane:                  domainSummary.Plane,
+		CorpusFileCount:        scope.Corpus.RegularCount,
+		CorpusDeclaredBytes:    scope.Corpus.RegularDeclaredBytes,
+		CorpusDigest:           scope.Corpus.RegularDigest,
+		CandidateFileCount:     candidateCount,
+		RequiredFileCount:      requiredCount,
+		CandidateDeclaredBytes: declaredBytes,
+		CandidateDigest:        digest,
+	}, nil
+}
+
+func (manifest *manifestAdapter) TypedInput(
+	domain, version, kind string,
+) (extract.CandidateManifestTypedInput, error) {
+	if manifest == nil || manifest.publication == nil {
+		return extract.CandidateManifestTypedInput{},
+			errors.New("candidate manifest typed input is invalid")
+	}
+	if _, ok := manifest.allowed[domainKey(domain, version)]; !ok {
+		return extract.CandidateManifestTypedInput{},
+			fmt.Errorf("candidate domain %s/%s is outside the request", domain, version)
+	}
+	view, err := manifest.publication.Domain(domain, version)
+	if err != nil {
+		return extract.CandidateManifestTypedInput{}, err
+	}
+	input, err := view.TypedInput(kind)
+	if err != nil {
+		return extract.CandidateManifestTypedInput{}, err
+	}
+	if input == nil {
+		return extract.CandidateManifestTypedInput{}, nil
+	}
+	return extract.CandidateManifestTypedInput{
+		Kind: input.Kind, Path: input.Path, ObjectID: input.OID,
+		DeclaredBytes: input.DeclaredBytes, Present: input.Present,
+	}, nil
+}
+
+func (manifest *manifestAdapter) PathInScope(filePath string) bool {
+	return manifest != nil && manifest.publication != nil &&
+		manifest.publication.PathInScope(filePath)
 }
 
 func (manifest *manifestAdapter) ForEachRepositoryFile(

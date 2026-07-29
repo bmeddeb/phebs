@@ -540,7 +540,34 @@ func serve(args []string) error {
 		}
 	}
 	searcher.Visible = visibleFor // T10.3: the per-user RepoSet pre-pass
-	codeNavigation := codenav.New(codenav.Options{DataDir: cfg.Server.DataDir})
+	codeNavigation := codenav.New(codenav.Options{
+		DataDir: cfg.Server.DataDir,
+		BindingResolver: codenav.TypedIndexResolveFunc(
+			func(ctx context.Context, repository, revision string) (codenav.TypedIndexBinding, error) {
+				repo, err := st.GetRepo(ctx, repository)
+				if err != nil {
+					return codenav.TypedIndexBinding{},
+						codeNavigationRepositoryError(repository, err)
+				}
+				if repo == nil || repo.Deleting || repo.IndexedCommitHash == "" {
+					return codenav.TypedIndexBinding{}, fmt.Errorf(
+						"repository %q has no current indexed revision: %w",
+						repository, codenav.ErrRevisionNotFound,
+					)
+				}
+				if repo.IndexedAnalysisUnit != nil &&
+					!codeNavigationRevisionAdmitted(*repo, revision) {
+					return codenav.TypedIndexBinding{}, fmt.Errorf(
+						"revision %q is outside the committed focused generation: %w",
+						revision, codenav.ErrRevisionNotFound,
+					)
+				}
+				return codenav.BindingFromAnalysisUnit(
+					repository, revision, repo.IndexedAnalysisUnit,
+				)
+			},
+		),
+	})
 
 	// repository-membership webhook events re-sync every remote connection
 	var resyncNames []string
@@ -1240,4 +1267,27 @@ func runEvidenceMaintenance(
 			delay = idleInterval
 		}
 	}
+}
+
+func codeNavigationRevisionAdmitted(repo store.Repo, revision string) bool {
+	if repo.IndexedCommitHash == revision {
+		return true
+	}
+	for _, indexed := range repo.IndexedRevisions {
+		if indexed.Commit == revision {
+			return true
+		}
+	}
+	return false
+}
+
+func codeNavigationRepositoryError(repository string, err error) error {
+	if errors.Is(err, store.ErrNotFound) {
+		return fmt.Errorf(
+			"repository %q is unavailable: %w",
+			repository,
+			codenav.ErrRevisionNotFound,
+		)
+	}
+	return err
 }

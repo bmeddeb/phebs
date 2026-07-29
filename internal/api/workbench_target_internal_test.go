@@ -9,12 +9,56 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
 type workbenchTargetCatalog struct{}
+
+type workbenchChangingRepoStore struct {
+	store.Store
+	snapshots [][]store.Repo
+	calls     int
+}
+
+func (s *workbenchChangingRepoStore) ListRepos(
+	context.Context,
+) ([]store.Repo, error) {
+	index := s.calls
+	s.calls++
+	if index >= len(s.snapshots) {
+		index = len(s.snapshots) - 1
+	}
+	return append([]store.Repo(nil), s.snapshots[index]...), nil
+}
+
+func TestWorkbenchScopeRefusesWholeRepositoryTypedState(t *testing.T) {
+	state, err := (analysisunit.Scope{
+		Repository: "example.com/repo",
+		Name:       "service",
+		Primary:    []string{"service/src"},
+		Supporting: []string{"service/index.scip"},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "service/index.scip",
+		},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.SearchIndexPosture = analysisunit.SearchIndexWholeRepository
+	if _, err := workbenchScopeForRepository(store.Repo{
+		Name:                "example.com/repo",
+		IndexedAnalysisUnit: state,
+	}); !errors.Is(err, analysisunit.ErrInvalidScope) {
+		t.Fatalf(
+			"whole-repository typed Workbench scope = %v, want ErrInvalidScope",
+			err,
+		)
+	}
+}
 
 func (workbenchTargetCatalog) OperationForProtocol(
 	_ context.Context,
@@ -74,10 +118,19 @@ func TestNewWorkbenchTargetResolverPrefersSharedCatalog(t *testing.T) {
 }
 
 func TestWorkbenchTargetResolverKeepsExactProtocolRepositoryAndLineage(t *testing.T) {
+	focusedState, err := (analysisunit.Scope{
+		Repository: "example/contracts",
+		Name:       "contracts",
+		Primary:    []string{"contracts"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
 	repositories := &contractFixtureRepoStore{repos: []store.Repo{
 		{
-			Name:              "example/contracts",
-			IndexedCommitHash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			Name:                "example/contracts",
+			IndexedCommitHash:   "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			IndexedAnalysisUnit: focusedState,
 		},
 		{
 			Name:              "example/hidden",
@@ -143,6 +196,9 @@ func TestWorkbenchTargetResolverKeepsExactProtocolRepositoryAndLineage(t *testin
 	}
 	if len(resolution.Repositories) != 1 ||
 		resolution.Repositories[0].Name != "example/contracts" ||
+		resolution.Repositories[0].ScopePosture !=
+			analysisunit.SearchIndexFocused ||
+		resolution.Repositories[0].UnitDigest != focusedState.Digest ||
 		len(resolution.Endpoints) != 2 ||
 		resolution.Endpoints[0].Selection.Protocol != "protobuf" ||
 		resolution.Endpoints[0].Selection.DeclarationLineage != "proto-lineage" ||
@@ -155,7 +211,9 @@ func TestWorkbenchTargetResolverKeepsExactProtocolRepositoryAndLineage(t *testin
 	for _, endpoint := range resolution.Endpoints {
 		if len(endpoint.DeclarationSources) != 1 ||
 			endpoint.DeclarationSources[0].Commit !=
-				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" {
+				"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" ||
+			endpoint.ScopePosture != analysisunit.SearchIndexFocused ||
+			endpoint.UnitDigest != focusedState.Digest {
 			t.Fatalf("declaration source = %+v", endpoint)
 		}
 	}
@@ -171,6 +229,107 @@ func TestWorkbenchTargetResolverKeepsExactProtocolRepositoryAndLineage(t *testin
 		store.WorkbenchResolutionRequest{},
 	); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("principal mismatch = %v, want not found", err)
+	}
+}
+
+func TestWorkbenchTargetResolverOmitsOutOfUnitCatalogEvidence(t *testing.T) {
+	state, err := (analysisunit.Scope{
+		Repository: "example/contracts",
+		Name:       "checkout",
+		Primary:    []string{"services/checkout"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolver := &WorkbenchTargetResolver{
+		opts: Options{
+			Store: &contractFixtureRepoStore{repos: []store.Repo{{
+				Name:                "example/contracts",
+				IndexedCommitHash:   strings.Repeat("a", 40),
+				IndexedAnalysisUnit: state,
+			}}},
+			Principal: func(context.Context) string {
+				return "user:workbench"
+			},
+		},
+		catalog: workbenchTargetCatalog{},
+	}
+	resolution, err := resolver.ResolveWorkbench(
+		context.Background(),
+		"user:workbench",
+		store.WorkbenchResolutionRequest{
+			Repositories: []string{"example/contracts"},
+			Selections: []store.ChangeBriefContractSelection{{
+				Role:               store.ChangeBriefCurrent,
+				Protocol:           "protobuf",
+				Repository:         "example/contracts",
+				DeclarationLineage: "proto-lineage",
+				CanonicalOperation: "/shared.Service/Get",
+			}},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolution.Repositories) != 1 ||
+		len(resolution.Endpoints) != 0 {
+		t.Fatalf("out-of-unit catalog resolution = %+v", resolution)
+	}
+}
+
+func TestWorkbenchTargetResolverRefusesSameHEADScopeChange(t *testing.T) {
+	const repository = "example/contracts"
+	first, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "contracts",
+		Primary:    []string{"contracts"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "other",
+		Primary:    []string{"other"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	commit := strings.Repeat("a", 40)
+	repositories := &workbenchChangingRepoStore{snapshots: [][]store.Repo{
+		{{
+			Name: repository, IndexedCommitHash: commit,
+			IndexedAnalysisUnit: first,
+		}},
+		{{
+			Name: repository, IndexedCommitHash: commit,
+			IndexedAnalysisUnit: second,
+		}},
+	}}
+	resolver := &WorkbenchTargetResolver{
+		opts: Options{
+			Store: repositories,
+			Principal: func(context.Context) string {
+				return "user:workbench"
+			},
+		},
+		catalog: workbenchTargetCatalog{},
+	}
+	if _, err := resolver.ResolveWorkbench(
+		context.Background(),
+		"user:workbench",
+		store.WorkbenchResolutionRequest{
+			Repositories: []string{repository},
+			Selections: []store.ChangeBriefContractSelection{{
+				Role:               store.ChangeBriefCurrent,
+				Protocol:           "protobuf",
+				Repository:         repository,
+				DeclarationLineage: "proto-lineage",
+				CanonicalOperation: "/shared.Service/Get",
+			}},
+		},
+	); err == nil || !strings.Contains(err.Error(), "analysis unit changed") {
+		t.Fatalf("same-HEAD target scope change = %v, want conflict", err)
 	}
 }
 
@@ -238,6 +397,78 @@ func TestWorkbenchTargetResolverReadsBaselineAtAuthorizedExactCommit(t *testing.
 		files[0].Content != source {
 		t.Fatalf("exact baseline = %+v, %v", files, err)
 	}
+	focusedState, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "contracts",
+		Primary:    []string{"proto"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	repositories.repos[0].IndexedAnalysisUnit = focusedState
+	if _, err := resolver.ResolveWorkbenchBaseline(
+		context.Background(),
+		"user:workbench",
+		store.WorkbenchBaselineRequest{
+			Repository: repository,
+			Commit:     commit,
+			Paths:      []string{"proto/shop.proto"},
+		},
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("legacy scope identity satisfied focused baseline: %v", err)
+	}
+	files, err = resolver.ResolveWorkbenchBaseline(
+		context.Background(),
+		"user:workbench",
+		store.WorkbenchBaselineRequest{
+			Repository:   repository,
+			Commit:       commit,
+			ScopePosture: analysisunit.SearchIndexFocused,
+			UnitDigest:   focusedState.Digest,
+			Paths:        []string{"proto/shop.proto"},
+		},
+	)
+	if err != nil || len(files) != 1 || files[0].Content != source {
+		t.Fatalf("focused exact baseline = %+v, %v", files, err)
+	}
+	narrowedState, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "other",
+		Primary:    []string{"other"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	changing := &workbenchChangingRepoStore{snapshots: [][]store.Repo{
+		{{
+			Name: repository, IndexedCommitHash: commit,
+			IndexedAnalysisUnit: focusedState,
+		}},
+		{{
+			Name: repository, IndexedCommitHash: commit,
+			IndexedAnalysisUnit: narrowedState,
+		}},
+	}}
+	changingResolver := &WorkbenchTargetResolver{opts: Options{
+		Store: changing, DataDir: dataDir,
+		Principal: func(context.Context) string {
+			return "user:workbench"
+		},
+	}}
+	if _, err := changingResolver.ResolveWorkbenchBaseline(
+		context.Background(),
+		"user:workbench",
+		store.WorkbenchBaselineRequest{
+			Repository:   repository,
+			Commit:       commit,
+			ScopePosture: analysisunit.SearchIndexFocused,
+			UnitDigest:   focusedState.Digest,
+			Paths:        []string{"proto/shop.proto"},
+		},
+	); err == nil || !strings.Contains(err.Error(), "analysis unit changed") {
+		t.Fatalf("same-HEAD baseline scope change = %v, want conflict", err)
+	}
+	repositories.repos[0].IndexedAnalysisUnit = nil
 	for _, request := range []store.WorkbenchBaselineRequest{
 		{
 			Repository: repository,

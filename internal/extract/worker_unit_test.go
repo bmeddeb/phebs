@@ -80,12 +80,13 @@ type evidenceBatch struct {
 type memoryEvidence struct {
 	mu sync.Mutex
 
-	nextRun        int
-	runs           map[string]*store.ExtractionRun
-	latest         *store.ExtractionRun
-	latestByDomain map[string]*store.ExtractionRun
-	latestAttempt  *store.ExtractionAttempt
-	batches        []evidenceBatch
+	nextRun       int
+	runs          map[string]*store.ExtractionRun
+	latest        *store.ExtractionRun
+	latestByScope map[string]*store.ExtractionRun
+	latestErr     error
+	latestAttempt *store.ExtractionAttempt
+	batches       []evidenceBatch
 	// assertionAttributes mirrors the store's per-semantic-ID attribute
 	// consistency guard so worker tests fail where SurrealDB would THROW.
 	assertionAttributes map[string][3]string
@@ -103,23 +104,30 @@ type memoryEvidence struct {
 
 func newMemoryEvidence() *memoryEvidence {
 	return &memoryEvidence{
-		runs:           make(map[string]*store.ExtractionRun),
-		latestByDomain: make(map[string]*store.ExtractionRun),
-		retainBatches:  true,
+		runs:          make(map[string]*store.ExtractionRun),
+		latestByScope: make(map[string]*store.ExtractionRun),
+		retainBatches: true,
 	}
 }
 
-func (m *memoryEvidence) BeginExtractionRun(_ context.Context, repo, commit, domain, extractor string) (*store.ExtractionRun, error) {
+func (m *memoryEvidence) BeginExtractionRun(
+	_ context.Context,
+	scope store.ExtractionScope,
+	extractor string,
+) (*store.ExtractionRun, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.nextRun++
 	run := &store.ExtractionRun{
-		ID: fmt.Sprintf("run-%d", m.nextRun), Repo: repo, Commit: commit,
-		Domain: domain, Extractor: extractor, Status: "staged",
+		ID:   fmt.Sprintf("run-%d", m.nextRun),
+		Repo: scope.Repository, Commit: scope.Commit,
+		UnitDigest: scope.UnitDigest, Domain: scope.Domain,
+		Extractor: extractor, Status: "staged",
 	}
 	m.runs[run.ID] = run
 	m.latestAttempt = &store.ExtractionAttempt{
-		RunID: run.ID, Repo: repo, Commit: commit, Domain: domain,
+		RunID: run.ID, Repo: scope.Repository, Commit: scope.Commit,
+		UnitDigest: scope.UnitDigest, Domain: scope.Domain,
 		Extractor: extractor, Status: "staged",
 	}
 	copyOfRun := *run
@@ -178,7 +186,10 @@ func (m *memoryEvidence) PublishExtractionRun(_ context.Context, runID string, c
 		run.Status = "published"
 		run.Coverage = coverage
 		m.latest = run
-		m.latestByDomain[run.Domain] = run
+		m.latestByScope[memoryScopeKey(store.ExtractionScope{
+			Repository: run.Repo, Commit: run.Commit,
+			UnitDigest: run.UnitDigest, Domain: run.Domain,
+		})] = run
 		if m.latestAttempt != nil && m.latestAttempt.RunID == runID {
 			m.latestAttempt.Status = "published"
 		}
@@ -203,10 +214,16 @@ func (m *memoryEvidence) AbortExtractionRun(ctx context.Context, runID string) e
 	return nil
 }
 
-func (m *memoryEvidence) LatestPublishedRun(_ context.Context, _ string, domain string) (*store.ExtractionRun, error) {
+func (m *memoryEvidence) LatestPublishedRun(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionRun, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	run := m.latestByDomain[domain]
+	if m.latestErr != nil {
+		return nil, m.latestErr
+	}
+	run := m.latestByScope[memoryScopeKey(scope)]
 	if run == nil {
 		return nil, store.ErrNotFound
 	}
@@ -214,7 +231,10 @@ func (m *memoryEvidence) LatestPublishedRun(_ context.Context, _ string, domain 
 	return &copyOfRun, nil
 }
 
-func (m *memoryEvidence) LatestExtractionAttempt(context.Context, string, string) (*store.ExtractionAttempt, error) {
+func (m *memoryEvidence) LatestExtractionAttempt(
+	context.Context,
+	store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.latestAttempt == nil {
@@ -222,6 +242,11 @@ func (m *memoryEvidence) LatestExtractionAttempt(context.Context, string, string
 	}
 	copyOfAttempt := *m.latestAttempt
 	return &copyOfAttempt, nil
+}
+
+func memoryScopeKey(scope store.ExtractionScope) string {
+	return scope.Repository + "\x00" + scope.Commit + "\x00" +
+		scope.UnitDigest + "\x00" + scope.Domain
 }
 
 func (*memoryEvidence) ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error) {

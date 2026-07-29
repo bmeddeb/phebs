@@ -38,9 +38,9 @@ import (
 
 const (
 	domain        = "scip-proto-field"
-	version       = "1.1.0"
+	version       = "1.2.0"
 	schemaVersion = "t13-v1"
-	indexPath     = "index.scip"
+	indexPath     = "index.scip" // legacy whole-repository test fixture path
 
 	maxDocuments      = 100_000
 	maxOccurrences    = 1_000_000
@@ -56,11 +56,9 @@ func New() sdk.Extractor { return extractor{} }
 
 type extractor struct{}
 
-func (extractor) Domain() string  { return domain }
-func (extractor) Version() string { return version }
-func (extractor) Candidate(filePath string) bool {
-	return filePath == indexPath
-}
+func (extractor) Domain() string        { return domain }
+func (extractor) Version() string       { return version }
+func (extractor) Candidate(string) bool { return false }
 
 type indexedOccurrence struct {
 	rangeValue scip.Range
@@ -110,24 +108,24 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 	}); err != nil {
 		return sdk.Coverage{}, err
 	}
-	if _, ok := paths[indexPath]; !ok {
-		return sdk.Coverage{Protocols: []string{"scip-index-absent"}}, nil
-	}
 	indexCorpus, ok := corpus.(sdk.SCIPCorpus)
 	if !ok {
 		return sdk.Coverage{}, errors.New("corpus does not support bounded SCIP index reads")
 	}
-	indexBlob, err := indexCorpus.ReadSCIPIndex(ctx)
+	input, err := indexCorpus.ReadSCIPIndex(ctx)
 	if err != nil {
-		return sdk.Coverage{}, fmt.Errorf("read %s: %w", indexPath, err)
+		return sdk.Coverage{}, fmt.Errorf("read SCIP input: %w", err)
 	}
-	documents, err := parseIndex(ctx, indexBlob.Content)
+	if !input.Present {
+		return sdk.Coverage{Protocols: []string{"scip-index-absent"}}, nil
+	}
+	documents, err := parseIndexScoped(ctx, input.Content, corpus)
 	if err != nil {
-		return sdk.Coverage{}, fmt.Errorf("parse %s: %w", indexPath, err)
+		return sdk.Coverage{}, fmt.Errorf("parse %s: %w", input.Path, err)
 	}
 	// Retain only the derived document/occurrence index before the next corpus
 	// read; raw index bytes remain owned only by the trusted current-read slot.
-	indexBlob = sdk.Blob{}
+	input = sdk.SCIPInput{}
 
 	bindings, err := bindGeneratedFields(ctx, corpus, paths, documents)
 	if err != nil {
@@ -144,6 +142,14 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 }
 
 func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) {
+	return parseIndexScoped(ctx, content, nil)
+}
+
+func parseIndexScoped(
+	ctx context.Context,
+	content string,
+	corpus sdk.Corpus,
+) ([]indexedDocument, error) {
 	byPath := make(map[string]*indexedDocument)
 	metadataSeen := false
 	metadataEncoding := scip.PositionEncoding_UnspecifiedPositionEncoding
@@ -185,6 +191,13 @@ func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) 
 			}
 			if err := validPath(doc.GetRelativePath()); err != nil {
 				return fmt.Errorf("document path: %w", err)
+			}
+			if scope, ok := corpus.(sdk.SCIPDocumentScope); ok &&
+				!scope.SCIPDocumentInScope(doc.GetRelativePath()) {
+				return fmt.Errorf(
+					"document %q is outside the committed analysis unit",
+					doc.GetRelativePath(),
+				)
 			}
 			encoding := doc.GetPositionEncoding()
 			if encoding == scip.PositionEncoding_UnspecifiedPositionEncoding {

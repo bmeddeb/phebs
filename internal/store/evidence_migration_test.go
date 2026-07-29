@@ -13,6 +13,7 @@ import (
 
 type evidenceMigrationTestState struct {
 	RunID        string `json:"run_id"`
+	UnitDigest   string `json:"unit_digest"`
 	Status       string `json:"status"`
 	StoreSchema  string `json:"store_schema_version"`
 	Format       string `json:"evidence_format_version"`
@@ -65,7 +66,7 @@ func relaxEvidenceWriterGuards(t *testing.T, s *Surreal) {
 func evidenceMigrationState(t *testing.T, s *Surreal, runID string) evidenceMigrationTestState {
 	t.Helper()
 	results, err := surrealdb.Query[[]evidenceMigrationTestState](context.Background(), s.db,
-		`SELECT run_id, status, store_schema_version, evidence_format_version,
+		`SELECT run_id, unit_digest, status, store_schema_version, evidence_format_version,
 			evidence_migration_version, evidence_migration_ambiguous_run_id,
 			retention_quarantined, retention_phase, published_key
 			FROM $rid`, map[string]any{"rid": extractionRunID(runID)})
@@ -186,7 +187,9 @@ func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 		t.Fatal(err)
 	}
 	clearEvidenceMigrationMarker(t, s)
-	before, err := s.ListAssertions(ctx, AssertionQuery{Repo: repo})
+	before, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: repo, RunID: "legacy-published",
+	})
 	if err != nil || len(before) != 0 {
 		t.Fatalf("unversioned legacy assertion was visible before migration: %+v, %v", before, err)
 	}
@@ -208,7 +211,9 @@ func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 	if invalid.RunID != "legacy-invalid" || invalid.Status != "aborted" || !invalid.Quarantined {
 		t.Fatalf("malformed legacy run = %+v", invalid)
 	}
-	after, err := s.ListAssertions(ctx, AssertionQuery{Repo: repo})
+	after, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: repo, RunID: "legacy-published",
+	})
 	if err != nil || len(after) != 0 {
 		t.Fatalf("legacy assertion remained visible: %+v, %v", after, err)
 	}
@@ -242,7 +247,7 @@ func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 		}
 	}
 
-	current, err := s.BeginExtractionRun(ctx, repo, "current", "proto-contract", "2")
+	current, err := beginExtractionRun(s, ctx, repo, "current", "proto-contract", "2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +259,7 @@ func TestMigrateEvidenceRunsRetiresLegacyAndPreservesCurrent(t *testing.T) {
 	if err := s.applySchema(ctx); err != nil {
 		t.Fatalf("steady-state schema reapply: %v", err)
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	latest, err := latestPublishedRun(s, ctx, repo, "proto-contract")
 	if err != nil || latest.ID != current.ID {
 		t.Fatalf("current publication changed on reopen: %+v, %v", latest, err)
 	}
@@ -290,7 +295,7 @@ func TestMigrateEvidenceRunsRetiresSkippedGenerationPublications(t *testing.T) {
 			"stranded": extractionRunID("v4-published"),
 			"repo":     repo, "now": now,
 			"format": evidenceFormatVersion,
-			"slot":   publishedKey(repo, "proto-contract"),
+			"slot":   legacyPublishedKey(repo, "proto-contract"),
 		}); err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +317,7 @@ func TestMigrateEvidenceRunsRetiresSkippedGenerationPublications(t *testing.T) {
 		t.Fatalf("skipped-generation run = %+v", stranded)
 	}
 
-	replacement, err := s.BeginExtractionRun(ctx, repo, "current", "proto-contract", "2")
+	replacement, err := beginExtractionRun(s, ctx, repo, "current", "proto-contract", "2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +326,7 @@ func TestMigrateEvidenceRunsRetiresSkippedGenerationPublications(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("replacement publication still blocked: %v", err)
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	latest, err := latestPublishedRun(s, ctx, repo, "proto-contract")
 	if err != nil || latest.ID != replacement.ID {
 		t.Fatalf("replacement publication not visible: %+v, %v", latest, err)
 	}
@@ -410,8 +415,12 @@ func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testin
 			"pin":  evidencePinRecordID("v3-old-id", "proof-bundle"),
 			"repo": repo, "visibility": "repo:" + repo, "now": now,
 			"v3": evidencePreviousStoreSchemaVersion, "format": evidenceFormatVersion,
-			"blocked_key": publishedKey(repo, "blocked"),
-			"extra_pins":  extraPins,
+			"blocked_key": publishedKey(ExtractionScope{
+				Repository: repo,
+				Commit:     "v3-commit",
+				Domain:     "blocked",
+			}),
+			"extra_pins": extraPins,
 		}); err != nil {
 		t.Fatal(err)
 	}
@@ -424,7 +433,11 @@ func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testin
 	if published.RunID != "v3-published" || published.Status != "published" ||
 		published.StoreSchema != evidenceStoreSchemaVersion || published.Format != evidenceFormatVersion ||
 		published.Quarantined || published.Phase != "" ||
-		published.PublishedKey != publishedKey(repo, "proto-contract") {
+		published.PublishedKey != publishedKey(ExtractionScope{
+			Repository: repo,
+			Commit:     "v3-commit",
+			Domain:     "proto-contract",
+		}) {
 		t.Fatalf("upgraded v3 publication = %+v", published)
 	}
 	blocked := evidenceMigrationState(t, s, "v3-blocked")
@@ -580,10 +593,12 @@ func TestMigrateEvidenceRunIDCollisionDoesNotStealProof(t *testing.T) {
 	if _, err := s.getRun(ctx, "collision-owner"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("ambiguous physical owner remained directly visible: %v", err)
 	}
-	if _, err := s.LatestPublishedRun(ctx, repo, "owner"); !errors.Is(err, ErrNotFound) {
+	if _, err := latestPublishedRun(s, ctx, repo, "owner"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("ambiguous physical owner remained latest: %v", err)
 	}
-	assertions, err := s.ListAssertions(ctx, AssertionQuery{Repo: repo})
+	assertions, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: repo, RunID: "collision-owner",
+	})
 	if err != nil || len(assertions) != 0 {
 		t.Fatalf("ambiguous collider assertion leaked through owner: %+v, %v", assertions, err)
 	}
@@ -755,7 +770,11 @@ func TestMigrateEvidenceUnsafeRetainedClaimsReserveOwner(t *testing.T) {
 			"now": now, "old": now.Add(-72 * time.Hour),
 			"schema": evidenceStoreSchemaVersion, "v3": evidencePreviousStoreSchemaVersion,
 			"format": evidenceFormatVersion, "migration": evidenceMigrationVersion,
-			"published_key": publishedKey(repo, "contracts"),
+			"published_key": publishedKey(ExtractionScope{
+				Repository: repo,
+				Commit:     "owner",
+				Domain:     "contracts",
+			}),
 		}); err != nil {
 		t.Fatal(err)
 	}
@@ -771,10 +790,12 @@ func TestMigrateEvidenceUnsafeRetainedClaimsReserveOwner(t *testing.T) {
 			t.Fatalf("unsafe retained claimant %s lost its reservation: %+v", runID, state)
 		}
 	}
-	if _, err := s.LatestPublishedRun(ctx, repo, "contracts"); !errors.Is(err, ErrNotFound) {
+	if _, err := latestPublishedRun(s, ctx, repo, "contracts"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("owner reserved by retained claim remained latest: %v", err)
 	}
-	if assertions, err := s.ListAssertions(ctx, AssertionQuery{Repo: repo}); err != nil || len(assertions) != 0 {
+	if assertions, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: repo, RunID: "unsafe-owner",
+	}); err != nil || len(assertions) != 0 {
 		t.Fatalf("retained claimant assertion leaked through owner: %+v, %v", assertions, err)
 	}
 	if _, err := s.ResolveEvidence(ctx, repo, "unsafe-owner", "unsafe-atom"); !errors.Is(err, ErrNotFound) {
@@ -857,6 +878,9 @@ func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 	if err := s.UpsertRepo(ctx, Repo{Name: repo, CloneURL: "https://example.com/future.git"}); err != nil {
 		t.Fatal(err)
 	}
+	if err := s.SetRepoIndexed(ctx, repo, "future", time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
 	now := time.Now().UTC()
 	old := now.Add(-72 * time.Hour)
 	if _, err := surrealdb.Query[any](ctx, s.db,
@@ -866,6 +890,7 @@ func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 	if _, err := surrealdb.Query[any](ctx, s.db,
 		`CREATE $compatible CONTENT {
 			run_id: 'future-compatible', repo: $repo, commit: 'future', domain: 'compatible',
+			unit_digest: '',
 			extractor: 'future', status: 'published', started_at: $now, published_at: $now,
 			store_schema_version: 't12-store-v999', evidence_format_version: $format,
 			retention_quarantined: false, published_key: $compatible_key
@@ -905,6 +930,12 @@ func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 			start_line: 1, end_line: 1, visibility_scope: $visibility,
 			run_id: 'future-compatible', observed_at: $now
 		};
+		CREATE $compatible_assertion CONTENT {
+			assertion_id: 'future-compatible-assertion', predicate: 'Future',
+			subject: 'compatible.proto', object: 'VisibleByRunOnly',
+			tier: 'exact', repo: $repo, run_id: 'future-compatible',
+			supporting: ['future-compatible-atom'], contradicting: []
+		};
 		CREATE $incompatible_atom CONTENT {
 			atom_id: 'future-incompatible-atom', schema_version: 'future', blob_digest: 'future',
 			start_byte: 0, end_byte: 1, rule_id: 'future', extractor_version: 'future',
@@ -933,14 +964,21 @@ func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 			"compatible_occurrence": snapshotEvidenceRecordID(
 				"future-compatible", "future-compatible-occurrence",
 			),
+			"compatible_assertion": assertionRecordID(
+				"future-compatible", "future-compatible-assertion",
+			),
 			"incompatible_atom": evidenceAtomRecordID("future-incompatible-atom"),
 			"incompatible_occurrence": snapshotEvidenceRecordID(
 				"future-incompatible", "future-incompatible-occurrence",
 			),
 			"incompatible_pin": evidencePinRecordID("future-incompatible", "future-proof"),
 			"repo":             repo, "visibility": "repo:" + repo, "now": now, "old": old,
-			"format":         evidenceFormatVersion,
-			"compatible_key": publishedKey(repo, "compatible"),
+			"format": evidenceFormatVersion,
+			"compatible_key": publishedKey(ExtractionScope{
+				Repository: repo,
+				Commit:     "future",
+				Domain:     "compatible",
+			}),
 		}); err != nil {
 		t.Fatal(err)
 	}
@@ -954,9 +992,38 @@ func TestEvidenceFutureWriterCompatibilityIsForwardSafe(t *testing.T) {
 		compatible.Quarantined || compatible.Migration != "" {
 		t.Fatalf("compatible future writer was mutated: %+v", compatible)
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, "compatible")
-	if err != nil || latest.ID != "future-compatible" {
-		t.Fatalf("compatible future publication hidden: %+v, %v", latest, err)
+	if _, err := latestPublishedRun(
+		s, ctx, repo, "compatible",
+	); !errors.Is(err, ErrNotFound) {
+		t.Fatalf(
+			"future writer publication entered the current read set: %v",
+			err,
+		)
+	}
+	runProof, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: repo, RunID: "future-compatible",
+	})
+	if err != nil || len(runProof) != 1 {
+		t.Fatalf(
+			"compatible future proof by run = %+v, %v",
+			runProof,
+			err,
+		)
+	}
+	currentScope, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: repo,
+		Scope: &ExtractionScope{
+			Repository: repo,
+			Commit:     "future",
+			Domain:     "compatible",
+		},
+	})
+	if err != nil || len(currentScope) != 0 {
+		t.Fatalf(
+			"future writer entered v8 scope discovery = %+v, %v",
+			currentScope,
+			err,
+		)
 	}
 	if err := s.PinRun(ctx, "future-compatible", "current-proof"); err != nil {
 		t.Fatalf("compatible future run could not be pinned: %v", err)
@@ -1119,14 +1186,18 @@ func TestEvidenceRequiresCanonicalPhysicalRunAndPublicationEnvelope(t *testing.T
 			"stale_pin": evidencePinRecordID("future-stale-key", "proof"),
 			"repo":      repo, "other_repo": otherRepo, "visibility": "repo:" + repo,
 			"now": now, "old": now.Add(-72 * time.Hour), "future": now.Add(time.Hour),
-			"format": evidenceFormatVersion, "owner_key": publishedKey(repo, "contracts"),
+			"format": evidenceFormatVersion, "owner_key": publishedKey(ExtractionScope{
+				Repository: repo,
+				Commit:     "owner",
+				Domain:     "contracts",
+			}),
 			"current_schema": evidenceStoreSchemaVersion, "migration": evidenceMigrationVersion,
 			"unbounded_run_id": strings.Repeat("é", maxEvidenceIdentityBytes/2+1),
 		}); err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := s.LatestPublishedRun(ctx, repo, "contracts"); !errors.Is(err, ErrNotFound) {
+	if _, err := latestPublishedRun(s, ctx, repo, "contracts"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("owner with a live logical-id claimant remained latest: %v", err)
 	}
 	if err := s.PinRun(ctx, "future-rogue", "proof"); !errors.Is(err, ErrConflict) {
@@ -1138,16 +1209,20 @@ func TestEvidenceRequiresCanonicalPhysicalRunAndPublicationEnvelope(t *testing.T
 	if _, err := s.ResolveEvidence(ctx, repo, "future-owner", "envelope-atom"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("same-commit rogue occurrence leaked through physical owner: %v", err)
 	}
-	assertions, err := s.ListAssertions(ctx, AssertionQuery{Repo: repo})
+	assertions, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: repo, RunID: "future-owner",
+	})
 	if err != nil || len(assertions) != 0 {
 		t.Fatalf("same-repo rogue assertion leaked through physical owner: %+v, %v", assertions, err)
 	}
-	forged, err := s.ListAssertions(ctx, AssertionQuery{Repo: otherRepo})
+	forged, err := s.ListAssertions(ctx, AssertionQuery{
+		Repo: otherRepo, RunID: "future-owner",
+	})
 	if err != nil || len(forged) != 0 {
 		t.Fatalf("cross-repo assertion borrowed a publication: %+v, %v", forged, err)
 	}
 
-	if _, err := s.LatestPublishedRun(ctx, repo, "missing"); !errors.Is(err, ErrNotFound) {
+	if _, err := latestPublishedRun(s, ctx, repo, "missing"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing publication key appeared latest: %v", err)
 	}
 	if err := s.PinRun(ctx, "future-missing-key", "proof"); !errors.Is(err, ErrConflict) {

@@ -163,7 +163,7 @@ revisions: {}
 #     release-1: refs/heads/release/1
 #     v1.4.0: refs/tags/v1.4.0
 
-# Optional service scope for a very large monorepository (T30.3). The map key
+# Optional service scope for a very large monorepository (Epic 30). The map key
 # is the exact repository name and admits at most one active unit. Primary
 # paths are required; supporting paths are optional exact declaration,
 # generated-source, module/workspace, attribution, or typed-index inputs.
@@ -175,8 +175,11 @@ revisions: {}
 # Configured repositories physically index only these paths at HEAD and every
 # allowlisted revision. A selected path missing or special in any lane refuses
 # the complete replacement; phebs never falls back to whole-repository input.
-# `index.scip` remains explicitly repository-root-unbound until the later
-# scoped typed-index contract.
+# A focused typed index is never inferred from repository-root `index.scip`.
+# Designate one exact supporting file with kind `scip`; changing only this
+# designation preserves the semantic unit digest but replaces the candidate
+# generation and all dependent extraction. Without it, typed posture remains
+# repository-root-unbound and focused code navigation/extractors report a gap.
 analysis_units: {}
 # analysis_units:
 #   github.com/acme/monorepo:
@@ -186,6 +189,10 @@ analysis_units: {}
 #     supporting:
 #       - contracts/payment.proto
 #       - services/payments/go.mod
+#       - services/payments/index.scip
+#     typed_index:
+#       kind: scip
+#       path: services/payments/index.scip
 
 # Sources of repos to sync (Epic 2). Names are required, unique, and match
 # [a-z0-9-]+. Type is exactly github, gitlab, gitea, or git. HTTP(S) URLs must

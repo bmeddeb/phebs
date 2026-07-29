@@ -172,7 +172,7 @@ function preview(
       creator: 'user:test',
     },
     authorization_digest: `sha256:${'1'.repeat(64)}`,
-    repositories: [{ name: repository, commit }],
+    repositories: [{ name: repository, commit, scope_posture: 'whole-repository' }],
     endpoints: [],
     capabilities: [],
     compatibility,

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -23,22 +24,36 @@ type evidenceViewStore struct {
 	assertions      map[string][]store.Assertion
 	latestErrors    map[string]error
 	assertionErrors map[string]error
+	onAssertions    func(store.AssertionQuery)
+	onListRepos     func()
+	onLatestRun     func(store.ExtractionScope)
 	calls           []string
 }
 
 func (s *evidenceViewStore) ListRepos(context.Context) ([]store.Repo, error) {
+	if s.onListRepos != nil {
+		s.onListRepos()
+	}
 	return append([]store.Repo(nil), s.repos...), nil
 }
 
 func (s *evidenceViewStore) LatestPublishedRun(
-	_ context.Context, repo, domain string,
+	_ context.Context,
+	scope store.ExtractionScope,
 ) (*store.ExtractionRun, error) {
-	s.calls = append(s.calls, "latest:"+repo+":"+domain)
-	if err := s.latestErrors[repo]; err != nil {
+	s.calls = append(
+		s.calls,
+		"latest:"+scope.Repository+":"+scope.Domain,
+	)
+	if s.onLatestRun != nil {
+		s.onLatestRun(scope)
+	}
+	if err := s.latestErrors[scope.Repository]; err != nil {
 		return nil, err
 	}
-	run, ok := s.runs[repo]
-	if !ok {
+	run, ok := s.runs[scope.Repository]
+	if !ok || run.Commit != scope.Commit ||
+		run.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	copy := run
@@ -49,6 +64,9 @@ func (s *evidenceViewStore) ListAssertions(
 	_ context.Context, query store.AssertionQuery,
 ) ([]store.Assertion, error) {
 	s.calls = append(s.calls, "assertions:"+query.Repo+":"+query.RunID)
+	if s.onAssertions != nil {
+		s.onAssertions(query)
+	}
 	if err := s.assertionErrors[query.Repo]; err != nil {
 		return nil, err
 	}
@@ -82,8 +100,11 @@ func TestEvidenceViewFiltersBeforeStorageAndAggregatesVisibleRowsOnly(t *testing
 	)
 	st := &evidenceViewStore{
 		repos: []store.Repo{
-			{Name: hidden}, {Name: visibleB}, {Name: deleting, Deleting: true},
-			{Name: noRun}, {Name: visibleA},
+			{Name: hidden, IndexedCommitHash: "commit-run-hidden"},
+			{Name: visibleB, IndexedCommitHash: "commit-run-b"},
+			{Name: deleting, IndexedCommitHash: "commit-run-deleting", Deleting: true},
+			{Name: noRun, IndexedCommitHash: "commit-no-run"},
+			{Name: visibleA, IndexedCommitHash: "commit-run-a"},
 		},
 		runs: map[string]store.ExtractionRun{
 			visibleA: publishedEvidenceRun(visibleA, "run-a", 2),
@@ -129,6 +150,9 @@ func TestEvidenceViewFiltersBeforeStorageAndAggregatesVisibleRowsOnly(t *testing
 		"latest:" + visibleA + ":proto-contract", "assertions:" + visibleA + ":run-a",
 		"latest:" + visibleB + ":proto-contract", "assertions:" + visibleB + ":run-b",
 		"latest:" + noRun + ":proto-contract",
+		"latest:" + visibleA + ":proto-contract",
+		"latest:" + visibleB + ":proto-contract",
+		"latest:" + noRun + ":proto-contract",
 	}
 	if !slices.Equal(st.calls, wantCalls) {
 		t.Fatalf("evidence call order/scopes = %v, want %v", st.calls, wantCalls)
@@ -152,6 +176,190 @@ func TestEvidenceViewFiltersBeforeStorageAndAggregatesVisibleRowsOnly(t *testing
 	}
 	if got := view.Repositories[0].Run.Coverage.Protocols; !slices.Equal(got, []string{"a-protocol", "z-protocol"}) {
 		t.Fatalf("protocol order = %v", got)
+	}
+}
+
+func TestEvidenceViewRejectsSameHEADScopeNarrowingDuringRead(t *testing.T) {
+	const repository = "github.com/allowed/scope-race"
+	wide, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	narrow, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service/narrow"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := publishedEvidenceRun(repository, "scope-run", 1)
+	run.UnitDigest = wide.Digest
+	st := &evidenceViewStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: run.Commit,
+			IndexedAnalysisUnit: wide,
+		}},
+		runs: map[string]store.ExtractionRun{repository: run},
+		assertions: map[string][]store.Assertion{repository: {{
+			ID: "stale", Predicate: "DECLARES_OPERATION",
+			Subject: "service/api.proto", Object: "secret-stale-operation",
+			Repo: repository, RunID: run.ID,
+		}}},
+	}
+	st.onAssertions = func(store.AssertionQuery) {
+		st.onAssertions = nil
+		st.repos[0].IndexedAnalysisUnit = narrow
+	}
+	handler := api.New(api.Options{
+		Version: "test", Store: st, Evidence: st,
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(
+		recorder,
+		httptest.NewRequest(
+			http.MethodGet,
+			"/api/evidence?domain=proto-contract",
+			nil,
+		),
+	)
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("same-HEAD scope narrowing = %d %s", recorder.Code, recorder.Body)
+	}
+	if strings.Contains(recorder.Body.String(), "secret-stale-operation") ||
+		strings.Contains(recorder.Body.String(), run.ID) {
+		t.Fatalf("scope-race response leaked stale evidence: %s", recorder.Body)
+	}
+}
+
+func TestEvidenceViewRejectsCandidatePublicationTransitionDuringRead(t *testing.T) {
+	const repository = "github.com/allowed/candidate-race"
+	digest := func(fill string) string {
+		return "sha256:" + strings.Repeat(fill, 64)
+	}
+	initial := publishedEvidenceRun(repository, "candidate-run-a", 1)
+	initial.Coverage.CandidateManifestDigest = digest("a")
+	initial.Coverage.ScopePosture = "focused-local"
+	replacement := publishedEvidenceRun(repository, "candidate-run-b", 1)
+	replacement.Commit = initial.Commit
+	replacement.Coverage.CandidateManifestDigest = digest("b")
+	replacement.Coverage.ScopePosture = "focused-local"
+	st := &evidenceViewStore{
+		repos: []store.Repo{{
+			Name:              repository,
+			IndexedCommitHash: initial.Commit,
+		}},
+		runs: map[string]store.ExtractionRun{repository: initial},
+		assertions: map[string][]store.Assertion{repository: {{
+			ID:        "retired-candidate-assertion",
+			Predicate: "DECLARES_OPERATION",
+			Subject:   "service/api.proto",
+			Object:    "retired-candidate-operation",
+			Repo:      repository,
+			RunID:     initial.ID,
+		}}},
+	}
+	latestCalls := 0
+	st.onLatestRun = func(store.ExtractionScope) {
+		latestCalls++
+		if latestCalls == 2 {
+			st.runs[repository] = replacement
+		}
+	}
+	handler := api.New(api.Options{
+		Version: "test", Store: st, Evidence: st,
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(
+		recorder,
+		httptest.NewRequest(
+			http.MethodGet,
+			"/api/evidence?domain=proto-contract",
+			nil,
+		),
+	)
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf(
+			"candidate publication transition = %d %s",
+			recorder.Code,
+			recorder.Body,
+		)
+	}
+	if strings.Contains(recorder.Body.String(), initial.ID) ||
+		strings.Contains(
+			recorder.Body.String(),
+			"retired-candidate-operation",
+		) {
+		t.Fatalf(
+			"candidate transition response leaked retired evidence: %s",
+			recorder.Body,
+		)
+	}
+}
+
+func TestEvidenceViewRejectsEvidenceRevisionABADuringPublicationConfirmation(
+	t *testing.T,
+) {
+	const repository = "github.com/allowed/evidence-revision-race"
+	run := publishedEvidenceRun(repository, "evidence-revision-run", 1)
+	st := &evidenceViewStore{
+		repos: []store.Repo{{
+			Name:              repository,
+			IndexedCommitHash: run.Commit,
+			EvidenceRevision:  11,
+		}},
+		runs: map[string]store.ExtractionRun{repository: run},
+		assertions: map[string][]store.Assertion{repository: {{
+			ID:        "revision-race-assertion",
+			Predicate: "DECLARES_OPERATION",
+			Subject:   "service/api.proto",
+			Object:    "revision-race-operation",
+			Repo:      repository,
+			RunID:     run.ID,
+		}}},
+	}
+	latestCalls := 0
+	st.onLatestRun = func(store.ExtractionScope) {
+		latestCalls++
+		if latestCalls == 2 {
+			// Model A -> unavailable -> A entirely during the publication
+			// confirmation. The run receipt is identical; only the monotonic
+			// repository fence reveals the transition.
+			st.repos[0].EvidenceRevision += 2
+		}
+	}
+	handler := api.New(api.Options{
+		Version: "test", Store: st, Evidence: st,
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(
+		recorder,
+		httptest.NewRequest(
+			http.MethodGet,
+			"/api/evidence?domain=proto-contract",
+			nil,
+		),
+	)
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf(
+			"publication-confirmation evidence-revision ABA = %d %s",
+			recorder.Code,
+			recorder.Body,
+		)
+	}
+	if strings.Contains(recorder.Body.String(), run.ID) ||
+		strings.Contains(
+			recorder.Body.String(),
+			"revision-race-operation",
+		) {
+		t.Fatalf(
+			"evidence-revision ABA response leaked stale evidence: %s",
+			recorder.Body,
+		)
 	}
 }
 
@@ -207,7 +415,10 @@ func TestEvidenceViewFailsWholeAndDarkDefaultHasNoRoute(t *testing.T) {
 	t.Run("read error returns no partial rows", func(t *testing.T) {
 		const first, second = "github.com/visible/a", "github.com/visible/z"
 		st := &evidenceViewStore{
-			repos: []store.Repo{{Name: second}, {Name: first}},
+			repos: []store.Repo{
+				{Name: second, IndexedCommitHash: "commit-run-second"},
+				{Name: first, IndexedCommitHash: "commit-run-first"},
+			},
 			runs: map[string]store.ExtractionRun{
 				first: publishedEvidenceRun(first, "run-first", 1),
 			},

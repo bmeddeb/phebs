@@ -548,9 +548,11 @@ func (service InvestigationWorkbenchService) resolveWorkbenchCompatibilityBaseli
 		ctx,
 		principal,
 		WorkbenchBaselineRequest{
-			Repository: endpoint.Selection.Repository,
-			Commit:     endpoint.DeclarationCommit,
-			Paths:      paths,
+			Repository:   endpoint.Selection.Repository,
+			Commit:       endpoint.DeclarationCommit,
+			ScopePosture: endpoint.ScopePosture,
+			UnitDigest:   endpoint.UnitDigest,
+			Paths:        paths,
 		},
 	)
 	if err != nil {

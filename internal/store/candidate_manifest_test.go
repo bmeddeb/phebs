@@ -161,7 +161,7 @@ func TestCandidateManifestGuardedPublicationAndIdempotentFanout(t *testing.T) {
 	}
 }
 
-func TestCandidateManifestInvalidationTracksOnlyHeadAndCommittedUnit(t *testing.T) {
+func TestCandidateManifestInvalidationTracksHeadUnitAndTypedDesignation(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()
 	repository := "github.com/acme/scoped"
@@ -175,10 +175,26 @@ func TestCandidateManifestInvalidationTracksOnlyHeadAndCommittedUnit(t *testing.
 	firstUnit, err := (analysisunit.Scope{
 		Repository: repository,
 		Name:       "payments",
-		Primary:    []string{"services/payments"},
+		Primary:    []string{"services/payments/main.go"},
+		Supporting: []string{
+			"services/payments/a.scip",
+			"services/payments/b.scip",
+		},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "services/payments/a.scip",
+		},
 	}).State()
 	if err != nil {
 		t.Fatal(err)
+	}
+	alternateTypedUnit := analysisunit.CloneState(firstUnit)
+	alternateTypedUnit.TypedIndex.Path = "services/payments/b.scip"
+	if err := alternateTypedUnit.Validate(repository); err != nil {
+		t.Fatal(err)
+	}
+	if alternateTypedUnit.Digest != firstUnit.Digest {
+		t.Fatal("typed-index designation changed the semantic unit digest")
 	}
 	secondUnit, err := (analysisunit.Scope{
 		Repository: repository,
@@ -203,6 +219,31 @@ func TestCandidateManifestInvalidationTracksOnlyHeadAndCommittedUnit(t *testing.
 	)
 	if _, err := s.GetCandidateManifestPublication(ctx, repository); err != nil {
 		t.Fatalf("search-only revision invalidated pointer: %v", err)
+	}
+
+	setCandidateIndexedState(
+		t, ctx, s, repository, firstCommit, alternateTypedUnit, searchOnly,
+	)
+	if _, err := s.GetCandidateManifestPublication(
+		ctx, repository,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("typed-index change pointer = %v, want ErrNotFound", err)
+	}
+	typedReplacement := first
+	typedReplacement.ManifestDigest = candidateDigest('d')
+	typedReplacement.GenerationDigest = candidateDigest('e')
+	if err := s.PublishCandidateManifest(ctx, typedReplacement); err != nil {
+		t.Fatalf("typed-index generation replacement: %v", err)
+	}
+	setCandidateIndexedState(
+		t, ctx, s, repository, firstCommit, alternateTypedUnit, nil,
+	)
+	if published, err := s.GetCandidateManifestPublication(ctx, repository); err != nil ||
+		published.GenerationDigest != typedReplacement.GenerationDigest {
+		t.Fatalf(
+			"unchanged typed-index pointer = %+v, %v; want generation %q",
+			published, err, typedReplacement.GenerationDigest,
+		)
 	}
 
 	setCandidateIndexedState(t, ctx, s, repository, secondCommit, firstUnit, nil)
@@ -271,11 +312,40 @@ func TestCandidateManifestClearDeleteAndList(t *testing.T) {
 		t.Fatalf("listed repositories = %v, want %v", gotRepositories, want)
 	}
 
+	beforeClear, err := s.GetRepo(ctx, repositories[0])
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := s.ClearCandidateManifestPublication(ctx, repositories[0]); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := s.GetCandidateManifestPublication(ctx, repositories[0]); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("explicit clear = %v, want ErrNotFound", err)
+	}
+	afterClear, err := s.GetRepo(ctx, repositories[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterClear.EvidenceRevision != beforeClear.EvidenceRevision+1 {
+		t.Fatalf(
+			"clear evidence revision = %d, want %d",
+			afterClear.EvidenceRevision,
+			beforeClear.EvidenceRevision+1,
+		)
+	}
+	if err := s.ClearCandidateManifestPublication(ctx, repositories[0]); err != nil {
+		t.Fatal(err)
+	}
+	afterNoopClear, err := s.GetRepo(ctx, repositories[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if afterNoopClear.EvidenceRevision != afterClear.EvidenceRevision {
+		t.Fatalf(
+			"no-op clear evidence revision = %d, want %d",
+			afterNoopClear.EvidenceRevision,
+			afterClear.EvidenceRevision,
+		)
 	}
 	if _, err := s.EnqueuePending(ctx, store.JobCandidate, repositories[1], false); err != nil {
 		t.Fatal(err)

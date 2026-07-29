@@ -45,15 +45,23 @@ unrelated repositories, bounds JSON fan-out/top-K retention, retires unused
 focused mmaps, gates same-HEAD whole-to-focused results, lets precious-state
 backup omit invalid rebuildable publications, rejects sparse restore input,
 and pins invalid-claim forced reconciliation. Publication content remains
-recovery content rather than semantic identity. Configured status says `focused` and
-`repository-root-unbound`: source search is physically scoped, while root
-SCIP is still not treated as unit-bound. T30.4 now inserts one durable
+recovery content rather than semantic identity. Configured status says
+`focused`; typed input remains `repository-root-unbound` unless configuration
+explicitly designates one supporting SCIP artifact. T30.4 now inserts one durable
 candidate-planning stage between indexing and extraction: a streamed HEAD
 census produces a strict content-addressed repository/unit manifest and
 bounded caller leaves, and no extraction run begins without its current
-publication. It precomputes unit membership but deliberately preserves the
-existing repository-wide evidence view. T30.5 is next: publish local evidence
-under the unit digest and add a reviewed unit-bound typed-index contract.
+publication. T30.5 now consumes the unit projection for local contract, field,
+topic, consumer, attribution, and Workbench implementation evidence; binds a
+designated typed index to its real supporting path; and keys attempts, runs,
+coverage, and consumers by exact repository, indexed HEAD, unit digest, and
+domain. Legacy whole-repository evidence remains readable only in its empty-unit
+scope, and same-HEAD unit changes cannot reuse it. Exact historical
+commit/unit/domain publications are intentionally retained outside the current
+sweep, so Epic 30 still needs a reviewed bounded-unpinned retention decision
+(or an explicit decision to keep that unbounded posture). T30.6 is next:
+replace the temporary repository caller view with one target-bound, completely
+published partition generation.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
 browsing, related implementation, and the Workbench use one physically

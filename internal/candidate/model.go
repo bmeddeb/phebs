@@ -21,11 +21,11 @@ import (
 )
 
 const (
-	ManifestSchema = "phebs-candidate-manifest-v1"
+	ManifestSchema = "phebs-candidate-manifest-v2"
 	RecordSchema   = "phebs-candidate-record-v1"
-	StateSchema    = "phebs-candidate-state-v1"
+	StateSchema    = "phebs-candidate-state-v2"
 
-	EnumerationPolicyVersion          = "phebs-candidate-enumeration-v1"
+	EnumerationPolicyVersion          = "phebs-candidate-enumeration-v2"
 	CallerHashPolicy                  = "phebs-caller-path-v1"
 	InitialCallerPrefixBits           = 2
 	MaxPolicies                       = 64
@@ -68,15 +68,43 @@ type Policy struct {
 	Enumerate         func(string) bool
 	Required          func(string) bool
 	RejectSymlink     func(string) bool
+	// TypedInputs names parser inputs consumed outside the ordinary source
+	// replay. T30.5 supports only "scip"; the selected path is supplied by
+	// the analysis-unit state (or the whole-repository legacy default).
+	TypedInputs []string
 }
 
 // PolicyIdentity is the serializable, content-addressed policy contract.
 type PolicyIdentity struct {
-	Domain            string `json:"domain"`
-	Version           string `json:"version"`
-	EnumerationPolicy string `json:"enumeration_policy"`
-	SymlinkPolicy     string `json:"symlink_policy"`
-	Plane             Plane  `json:"plane"`
+	Domain            string   `json:"domain"`
+	Version           string   `json:"version"`
+	EnumerationPolicy string   `json:"enumeration_policy"`
+	SymlinkPolicy     string   `json:"symlink_policy"`
+	Plane             Plane    `json:"plane"`
+	TypedInputs       []string `json:"typed_inputs,omitempty"`
+}
+
+// TypedIndexSelection is the generation-bound designation of one typed input.
+// It is separate from the stable analysis-unit digest: switching which
+// already-supported file is the typed index must still create a new candidate
+// generation.
+type TypedIndexSelection struct {
+	Kind string `json:"kind"`
+	Path string `json:"path"`
+}
+
+// TypedInput is the strictly validated Git-blob envelope supplied to the
+// domains that declare the matching Kind. It is intentionally not a fake
+// ordinary source record and always preserves the actual committed path.
+type TypedInput struct {
+	Kind          string   `json:"kind"`
+	Path          string   `json:"path"`
+	OID           string   `json:"oid,omitempty"`
+	DeclaredBytes int64    `json:"declared_bytes"`
+	Domains       []string `json:"domains"`
+	Present       bool     `json:"present"`
+	InUnit        bool     `json:"in_unit"`
+	Shared        bool     `json:"shared"`
 }
 
 // PartitionPolicy freezes every caller assignment and artifact bound.
@@ -145,6 +173,16 @@ type DomainSummary struct {
 	UnitDigest               string `json:"unit_digest"`
 }
 
+// ScopeSummary is the exact manifest-bound corpus and candidate projection a
+// domain receives. Local domains use the unit projection when one is active;
+// caller/repository planes retain the repository view until T30.6.
+type ScopeSummary struct {
+	ManifestDigest string
+	UnitDigest     string
+	Corpus         CorpusSummary
+	Domain         DomainSummary
+}
+
 type Artifact struct {
 	Name          string `json:"name"`
 	Ordinal       int    `json:"ordinal"`
@@ -162,19 +200,22 @@ type CallerLeaf struct {
 
 // Manifest is the sole visibility authority for one candidate generation.
 type Manifest struct {
-	Schema            string           `json:"schema"`
-	Repository        string           `json:"repository"`
-	Commit            string           `json:"commit"`
-	UnitDigest        string           `json:"unit_digest"`
-	PolicyDigest      string           `json:"policy_digest"`
-	GenerationDigest  string           `json:"generation_digest"`
-	PartitionPolicy   PartitionPolicy  `json:"partition_policy"`
-	Policies          []PolicyIdentity `json:"policies"`
-	Corpus            CorpusSummary    `json:"corpus"`
-	Domains           []DomainSummary  `json:"domains"`
-	RepositoryMembers []Artifact       `json:"repository_members"`
-	CallerLeaves      []CallerLeaf     `json:"caller_leaves"`
-	Digest            string           `json:"digest"`
+	Schema            string               `json:"schema"`
+	Repository        string               `json:"repository"`
+	Commit            string               `json:"commit"`
+	UnitDigest        string               `json:"unit_digest"`
+	PolicyDigest      string               `json:"policy_digest"`
+	GenerationDigest  string               `json:"generation_digest"`
+	TypedIndex        *TypedIndexSelection `json:"typed_index,omitempty"`
+	PartitionPolicy   PartitionPolicy      `json:"partition_policy"`
+	Policies          []PolicyIdentity     `json:"policies"`
+	Corpus            CorpusSummary        `json:"corpus"`
+	UnitCorpus        CorpusSummary        `json:"unit_corpus"`
+	Domains           []DomainSummary      `json:"domains"`
+	TypedInputs       []TypedInput         `json:"typed_inputs"`
+	RepositoryMembers []Artifact           `json:"repository_members"`
+	CallerLeaves      []CallerLeaf         `json:"caller_leaves"`
+	Digest            string               `json:"digest"`
 }
 
 // State is the primitive persisted publication pointer. Manifest is a stable
@@ -208,6 +249,7 @@ func PolicyIdentities(policies []Policy) ([]PolicyIdentity, error) {
 			Domain: policy.Domain, Version: policy.Version,
 			EnumerationPolicy: policy.EnumerationPolicy,
 			SymlinkPolicy:     policy.SymlinkPolicy, Plane: policy.Plane,
+			TypedInputs: slices.Clone(policy.TypedInputs),
 		}
 		if identity.SymlinkPolicy == "" && policy.RejectSymlink == nil {
 			identity.SymlinkPolicy = "none"
@@ -234,7 +276,7 @@ func PolicyIdentities(policies []Policy) ([]PolicyIdentity, error) {
 }
 
 func PolicyDigest(identities []PolicyIdentity) (string, error) {
-	canonical := slices.Clone(identities)
+	canonical := clonePolicyIdentities(identities)
 	if err := canonicalizePolicyIdentities(canonical); err != nil {
 		return "", err
 	}
@@ -251,27 +293,77 @@ func PolicyDigest(identities []PolicyIdentity) (string, error) {
 	return digest("phebs-candidate-policy-v1\x00", payload), nil
 }
 
+func clonePolicyIdentities(input []PolicyIdentity) []PolicyIdentity {
+	result := slices.Clone(input)
+	for index := range result {
+		result[index].TypedInputs = slices.Clone(input[index].TypedInputs)
+	}
+	return result
+}
+
+// EqualPolicyIdentities compares the complete serializable policy contract.
+func EqualPolicyIdentities(left, right []PolicyIdentity) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index].Domain != right[index].Domain ||
+			left[index].Version != right[index].Version ||
+			left[index].EnumerationPolicy != right[index].EnumerationPolicy ||
+			left[index].SymlinkPolicy != right[index].SymlinkPolicy ||
+			left[index].Plane != right[index].Plane ||
+			!slices.Equal(left[index].TypedInputs, right[index].TypedInputs) {
+			return false
+		}
+	}
+	return true
+}
+
 func GenerationDigest(
+	repository, commit string,
+	unit *analysisunit.State,
+	identities []PolicyIdentity,
+) (string, error) {
+	unitDigest, err := validateUnit(repository, unit)
+	if err != nil {
+		return "", err
+	}
+	selection, err := typedIndexSelection(unit, identities)
+	if err != nil {
+		return "", err
+	}
+	return generationDigest(
+		repository, commit, unitDigest, selection, identities,
+	)
+}
+
+func generationDigest(
 	repository, commit, unitDigest string,
+	selection *TypedIndexSelection,
 	identities []PolicyIdentity,
 ) (string, error) {
 	if !safeRepository(repository) || !gitobj.IsObjectID(commit) ||
 		(unitDigest != "" && !validDigest(unitDigest)) {
 		return "", errors.New("invalid candidate generation identity")
 	}
+	if err := validateTypedIndexSelection(selection); err != nil {
+		return "", err
+	}
 	policyDigest, err := PolicyDigest(identities)
 	if err != nil {
 		return "", err
 	}
 	payload, err := json.Marshal(struct {
-		Schema       string `json:"schema"`
-		Repository   string `json:"repository"`
-		Commit       string `json:"commit"`
-		UnitDigest   string `json:"unit_digest"`
-		PolicyDigest string `json:"policy_digest"`
+		Schema       string               `json:"schema"`
+		Repository   string               `json:"repository"`
+		Commit       string               `json:"commit"`
+		UnitDigest   string               `json:"unit_digest"`
+		PolicyDigest string               `json:"policy_digest"`
+		TypedIndex   *TypedIndexSelection `json:"typed_index,omitempty"`
 	}{
 		Schema: ManifestSchema, Repository: repository, Commit: commit,
 		UnitDigest: unitDigest, PolicyDigest: policyDigest,
+		TypedIndex: cloneTypedIndexSelection(selection),
 	})
 	if err != nil {
 		return "", err
@@ -333,6 +425,8 @@ func canonicalizePolicyIdentities(identities []PolicyIdentity) error {
 		return strings.Compare(a.SymlinkPolicy, b.SymlinkPolicy)
 	})
 	for index, identity := range identities {
+		slices.Sort(identity.TypedInputs)
+		identities[index].TypedInputs = slices.Clone(identity.TypedInputs)
 		if err := validatePolicyIdentity(identity); err != nil {
 			return err
 		}
@@ -352,7 +446,77 @@ func validatePolicyIdentity(identity PolicyIdentity) error {
 		(identity.Plane != PlaneLocal && identity.Plane != PlaneRepository && identity.Plane != PlaneCaller) {
 		return fmt.Errorf("%w: malformed identity", ErrInvalidPolicy)
 	}
+	if !sortedUniqueStrings(identity.TypedInputs) {
+		return fmt.Errorf("%w: malformed typed-input identity", ErrInvalidPolicy)
+	}
+	for _, kind := range identity.TypedInputs {
+		if kind != analysisunit.TypedIndexKindSCIP {
+			return fmt.Errorf("%w: unsupported typed input %q", ErrInvalidPolicy, kind)
+		}
+	}
 	return nil
+}
+
+func typedIndexSelection(
+	unit *analysisunit.State,
+	identities []PolicyIdentity,
+) (*TypedIndexSelection, error) {
+	if unit != nil && unit.TypedIndex != nil {
+		selection := &TypedIndexSelection{
+			Kind: unit.TypedIndex.Kind,
+			Path: unit.TypedIndex.Path,
+		}
+		if err := validateTypedIndexSelection(selection); err != nil {
+			return nil, err
+		}
+		return selection, nil
+	}
+	consumesSCIP := false
+	for _, identity := range identities {
+		if slices.Contains(identity.TypedInputs, analysisunit.TypedIndexKindSCIP) {
+			consumesSCIP = true
+			break
+		}
+	}
+	if !consumesSCIP {
+		return nil, nil
+	}
+	if unit == nil {
+		return &TypedIndexSelection{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "index.scip",
+		}, nil
+	}
+	return nil, nil
+}
+
+func validateTypedIndexSelection(selection *TypedIndexSelection) error {
+	if selection == nil {
+		return nil
+	}
+	if selection.Kind != analysisunit.TypedIndexKindSCIP ||
+		!safePath(selection.Path) {
+		return errors.New("invalid candidate typed-index selection")
+	}
+	return nil
+}
+
+func cloneTypedIndexSelection(input *TypedIndexSelection) *TypedIndexSelection {
+	if input == nil {
+		return nil
+	}
+	cloned := *input
+	return &cloned
+}
+
+func sortedUniqueStrings(values []string) bool {
+	for index, value := range values {
+		if !validToken(value, 128) ||
+			index > 0 && values[index-1] >= value {
+			return false
+		}
+	}
+	return true
 }
 
 func validateUnit(repository string, unit *analysisunit.State) (string, error) {

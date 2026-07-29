@@ -87,12 +87,12 @@ func TestT204ReverseEvidenceSchemaIdentities(t *testing.T) {
 }
 
 func TestT205RetentionSchemaIdentities(t *testing.T) {
-	if evidenceStoreSchemaVersion != "t12-store-v7" ||
-		evidencePreviousStoreSchemaVersion != "t12-store-v6" ||
-		evidenceMigrationVersion != "t12-evidence-migration-v6" ||
-		evidencePreviousMigrationVersion != "t12-evidence-migration-v5" ||
-		evidenceWriterGuardEvent != "extraction_run_writer_v7" {
-		t.Fatal("T20.5 retention schema identities changed; review and remeasure")
+	if evidenceStoreSchemaVersion != "t12-store-v8" ||
+		evidencePreviousStoreSchemaVersion != "t12-store-v7" ||
+		evidenceMigrationVersion != "t12-evidence-migration-v7" ||
+		evidencePreviousMigrationVersion != "t12-evidence-migration-v6" ||
+		evidenceWriterGuardEvent != "extraction_run_writer_v8" {
+		t.Fatal("evidence scope schema identities changed; review and remeasure")
 	}
 }
 
@@ -136,7 +136,7 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	first, err := s.BeginExtractionRun(ctx, repo, commit, domain, extractor)
+	first, err := beginExtractionRun(s, ctx, repo, commit, domain, extractor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 		t.Fatalf("publish first target run: %v", err)
 	}
 
-	second, err := s.BeginExtractionRun(ctx, repo, commit, domain, extractor)
+	second, err := beginExtractionRun(s, ctx, repo, commit, domain, extractor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestT201TargetPublicationAndSweepMeasurement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("publish second target run: %v", err)
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, domain)
+	latest, err := latestPublishedRun(s, ctx, repo, domain)
 	if err != nil || latest.ID != second.ID {
 		t.Fatalf("latest run = %+v, %v; want %s", latest, err, second.ID)
 	}
@@ -359,12 +359,14 @@ func publishT201Run(ctx context.Context, s *Surreal, run *ExtractionRun) (*Extra
 		ReadBytes: 1, SourceScopeDigest: "sha256:" + strings.Repeat("0", 64),
 		AssertionCount: t201TargetFacts, AtomCount: t201TargetFacts,
 	}
+	scope := scopeForRun(run)
 	vars := map[string]any{
 		"rid": extractionRunID(run.ID), "run_id": run.ID,
-		"attempt_rid": extractionAttemptID(run.Repo, run.Domain),
+		"attempt_rid": extractionAttemptID(scope),
 		"repo_rid":    repoID(run.Repo), "repo": run.Repo, "commit": run.Commit,
-		"domain": run.Domain, "published_key": publishedKey(run.Repo, run.Domain),
-		"now": time.Now().UTC(), "coverage": coverage,
+		"unit_digest": run.UnitDigest, "domain": run.Domain,
+		"published_key": publishedKey(scope),
+		"now":           time.Now().UTC(), "coverage": coverage,
 		"want_assertions": coverage.AssertionCount, "want_atoms": coverage.AtomCount,
 		"want_unresolved":             coverage.UnresolvedCount,
 		"max_occurrences_per_atom":    maxEvidenceOccurrences,

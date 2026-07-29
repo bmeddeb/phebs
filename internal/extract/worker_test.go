@@ -131,7 +131,12 @@ func TestWorkerShortCircuitPerCommit(t *testing.T) {
 	if ex.calls != 1 {
 		t.Fatalf("extractor ran %d times for one commit", ex.calls)
 	}
-	got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	scopeA := store.ExtractionScope{
+		Repository: repo, Commit: commitA, Domain: "proto-contract",
+	}
+	got, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, Scope: &scopeA,
+	})
 	if err != nil || len(got) != 1 || got[0].Object != "o@"+commitA {
 		t.Fatalf("assertions after short-circuit: %v %v", got, err)
 	}
@@ -146,7 +151,12 @@ func TestWorkerShortCircuitPerCommit(t *testing.T) {
 	if ex.calls != 2 {
 		t.Fatalf("extractor ran %d times across two commits", ex.calls)
 	}
-	got, _ = s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	scopeB := store.ExtractionScope{
+		Repository: repo, Commit: commitB, Domain: "proto-contract",
+	}
+	got, _ = s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, Scope: &scopeB,
+	})
 	if len(got) != 1 || got[0].Object != "o@"+commitB {
 		t.Fatalf("supersession after reindex: %v", got)
 	}
@@ -193,11 +203,18 @@ func TestWorkerFailureAbortsClassified(t *testing.T) {
 		t.Fatalf("class = %s, want extract", store.Classify(err))
 	}
 	// Old published facts intact; failed run left nothing visible.
-	got, _ := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	scope := store.ExtractionScope{
+		Repository: repo, Commit: commitA, Domain: "proto-contract",
+	}
+	got, _ := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, Scope: &scope,
+	})
 	if len(got) != 1 || got[0].Object != "o@"+commitA {
 		t.Fatalf("failure disturbed published facts: %v", got)
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	latest, err := s.LatestPublishedRun(ctx, store.ExtractionScope{
+		Repository: repo, Commit: commitA, Domain: "proto-contract",
+	})
 	if err != nil || latest.Extractor != "1" {
 		t.Fatalf("latest = %+v, %v", latest, err)
 	}

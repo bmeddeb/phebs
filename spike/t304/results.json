@@ -40,10 +40,13 @@
   "policies": [
     {
       "domain": "grpc-caller",
-      "version": "1.3.0",
-      "enumeration_policy": "go-caller-paths-v1",
+      "version": "1.4.0",
+      "enumeration_policy": "go-caller-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
-      "plane": "caller"
+      "plane": "caller",
+      "typed_inputs": [
+        "scip"
+      ]
     },
     {
       "domain": "grpc-consumer",
@@ -75,24 +78,33 @@
     },
     {
       "domain": "scip-proto-field",
-      "version": "1.1.0",
-      "enumeration_policy": "scip-proto-field-paths-v1",
+      "version": "1.2.0",
+      "enumeration_policy": "scip-proto-field-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
-      "plane": "local"
+      "plane": "local",
+      "typed_inputs": [
+        "scip"
+      ]
     },
     {
       "domain": "scip-thrift-field",
-      "version": "1.1.0",
-      "enumeration_policy": "scip-thrift-field-paths-v1",
+      "version": "1.2.0",
+      "enumeration_policy": "scip-thrift-field-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
-      "plane": "local"
+      "plane": "local",
+      "typed_inputs": [
+        "scip"
+      ]
     },
     {
       "domain": "thrift-caller",
-      "version": "1.3.0",
-      "enumeration_policy": "go-caller-paths-v1",
+      "version": "1.4.0",
+      "enumeration_policy": "go-caller-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
-      "plane": "caller"
+      "plane": "caller",
+      "typed_inputs": [
+        "scip"
+      ]
     },
     {
       "domain": "thrift-consumer",
@@ -110,7 +122,7 @@
     }
   ],
   "partition_policy": {
-    "enumeration_policy": "phebs-candidate-enumeration-v1",
+    "enumeration_policy": "phebs-candidate-enumeration-v2",
     "caller_hash_policy": "phebs-caller-path-v1",
     "initial_prefix_bits": 2,
     "max_records": 4096,
@@ -126,9 +138,9 @@
   "run1": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:8e29086fefcac6741e39ae66df82bf31b8983bbec9077250aca3d45a1033ff05",
-    "generation_digest": "sha256:726362f9fa59fcb5e18c9dd0d7e83b4f5970658ec0699c12b43d003bdbacd871",
-    "manifest_digest": "sha256:a52a02522c918e1bcf6878842207f0cf3e7816dcf74bb235f68e1f0c05db6826",
+    "policy_digest": "sha256:82dfb887249f1a9c1c914d87a32f065c3aad46a35c8f2993bf1a9e3938f80667",
+    "generation_digest": "sha256:bd2e9212ccb47535827822dc4cffe2dda477a25d95459d99ae4d6a77a5fb368b",
+    "manifest_digest": "sha256:030563f0e0c3f2b070623f9d04886c95fd4552beb64f6df7e9df14b4c7053753",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -166,20 +178,20 @@
       }
     ],
     "staged_artifact_count": 5,
-    "staged_artifact_bytes": 13049,
+    "staged_artifact_bytes": 13589,
     "planner_scratch_upper_bound_bytes": 4134,
     "validation_scratch_upper_bound_bytes": 3514,
-    "peak_candidate_disk_bytes": 17183,
-    "canonical_output_digest": "sha256:1f37b8d8b9306354328d18fddf48130bf1fb457859ecb6de8b1375a8b79e8403",
-    "planner_wall_nanos": 3547291917,
-    "peak_rss_bytes": 61145088
+    "peak_candidate_disk_bytes": 17723,
+    "canonical_output_digest": "sha256:2ed610f823dbfb2146cfd27d54fd4f80afdf920a59cfcd5323c177b3683c549e",
+    "planner_wall_nanos": 3276544709,
+    "peak_rss_bytes": 62013440
   },
   "run2": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:8e29086fefcac6741e39ae66df82bf31b8983bbec9077250aca3d45a1033ff05",
-    "generation_digest": "sha256:726362f9fa59fcb5e18c9dd0d7e83b4f5970658ec0699c12b43d003bdbacd871",
-    "manifest_digest": "sha256:a52a02522c918e1bcf6878842207f0cf3e7816dcf74bb235f68e1f0c05db6826",
+    "policy_digest": "sha256:82dfb887249f1a9c1c914d87a32f065c3aad46a35c8f2993bf1a9e3938f80667",
+    "generation_digest": "sha256:bd2e9212ccb47535827822dc4cffe2dda477a25d95459d99ae4d6a77a5fb368b",
+    "manifest_digest": "sha256:030563f0e0c3f2b070623f9d04886c95fd4552beb64f6df7e9df14b4c7053753",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -217,13 +229,13 @@
       }
     ],
     "staged_artifact_count": 5,
-    "staged_artifact_bytes": 13049,
+    "staged_artifact_bytes": 13589,
     "planner_scratch_upper_bound_bytes": 4134,
     "validation_scratch_upper_bound_bytes": 3514,
-    "peak_candidate_disk_bytes": 17183,
-    "canonical_output_digest": "sha256:1f37b8d8b9306354328d18fddf48130bf1fb457859ecb6de8b1375a8b79e8403",
-    "planner_wall_nanos": 3430892792,
-    "peak_rss_bytes": 60801024
+    "peak_candidate_disk_bytes": 17723,
+    "canonical_output_digest": "sha256:2ed610f823dbfb2146cfd27d54fd4f80afdf920a59cfcd5323c177b3683c549e",
+    "planner_wall_nanos": 3300075292,
+    "peak_rss_bytes": 61440000
   },
   "canonical_bytes_equal": true
 }

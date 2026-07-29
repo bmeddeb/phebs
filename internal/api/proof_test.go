@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -30,6 +31,9 @@ type proofAPIStore struct {
 	bundles       map[string]store.ProofBundleRecord
 	calls         []string
 	onAssertions  func(store.AssertionQuery)
+	onListRepos   func()
+	onLatestRun   func(store.ExtractionScope)
+	onPut         func(store.ProofBundleRecord)
 	putConflicts  int
 	onPutConflict func()
 }
@@ -41,6 +45,9 @@ func proofEvidenceScope(repo, runID, atomID string) string {
 
 func (s *proofAPIStore) ListRepos(context.Context) ([]store.Repo, error) {
 	s.calls = append(s.calls, "list-repos")
+	if s.onListRepos != nil {
+		s.onListRepos()
+	}
 	return append([]store.Repo(nil), s.repos...), nil
 }
 
@@ -55,9 +62,22 @@ func (s *proofAPIStore) GetRepo(_ context.Context, name string) (*store.Repo, er
 	return nil, store.ErrNotFound
 }
 
-func (s *proofAPIStore) LatestPublishedRun(_ context.Context, repo, domain string) (*store.ExtractionRun, error) {
-	s.calls = append(s.calls, "run:"+proofScope(repo, domain))
-	run, ok := s.runs[proofScope(repo, domain)]
+func (s *proofAPIStore) LatestPublishedRun(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionRun, error) {
+	s.calls = append(
+		s.calls,
+		"run:"+proofScope(scope.Repository, scope.Domain),
+	)
+	if s.onLatestRun != nil {
+		s.onLatestRun(scope)
+	}
+	run, ok := s.runs[proofScope(scope.Repository, scope.Domain)]
+	if ok && (run.Commit != scope.Commit ||
+		run.UnitDigest != scope.UnitDigest) {
+		ok = false
+	}
 	if !ok {
 		return nil, store.ErrNotFound
 	}
@@ -65,19 +85,30 @@ func (s *proofAPIStore) LatestPublishedRun(_ context.Context, repo, domain strin
 	return &copyOfRun, nil
 }
 
-func (s *proofAPIStore) LatestExtractionAttempt(_ context.Context, repo, domain string) (*store.ExtractionAttempt, error) {
-	s.calls = append(s.calls, "attempt:"+proofScope(repo, domain))
-	if attempt, ok := s.attempts[proofScope(repo, domain)]; ok {
+func (s *proofAPIStore) LatestExtractionAttempt(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
+	s.calls = append(
+		s.calls,
+		"attempt:"+proofScope(scope.Repository, scope.Domain),
+	)
+	if attempt, ok := s.attempts[proofScope(
+		scope.Repository,
+		scope.Domain,
+	)]; ok && attempt.Commit == scope.Commit &&
+		attempt.UnitDigest == scope.UnitDigest {
 		copyOfAttempt := attempt
 		return &copyOfAttempt, nil
 	}
-	run, ok := s.runs[proofScope(repo, domain)]
-	if !ok {
+	run, ok := s.runs[proofScope(scope.Repository, scope.Domain)]
+	if !ok || run.Commit != scope.Commit ||
+		run.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	return &store.ExtractionAttempt{
 		RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
-		Extractor: run.Extractor, Status: "published",
+		UnitDigest: run.UnitDigest, Extractor: run.Extractor, Status: "published",
 	}, nil
 }
 
@@ -236,6 +267,9 @@ func (s *proofAPIStore) PutProofBundle(_ context.Context, bundle store.ProofBund
 	bundle.Repositories = append([]string(nil), bundle.Repositories...)
 	bundle.RunIDs = append([]string(nil), bundle.RunIDs...)
 	s.bundles[bundle.ID] = bundle
+	if s.onPut != nil {
+		s.onPut(bundle)
+	}
 	return nil
 }
 
@@ -459,6 +493,186 @@ func TestProofBundleAdminMemberIsolationAndReadReauthorization(t *testing.T) {
 	memberVisible = map[string]bool{}
 	if code, body, _ := getProof(t, member, "/api/proof_bundles/"+memberBundle.ID); code != http.StatusNotFound || strings.Contains(body, visibleRepo) {
 		t.Fatalf("revoked bundle read = %d %s", code, body)
+	}
+}
+
+func TestProofBundleRejectsSameHEADTypedDesignationDrift(t *testing.T) {
+	const (
+		repository = "github.com/allowed/proof-scope-race"
+		domain     = "grpc-consumer"
+	)
+	scope := analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service/api.go"},
+		Supporting: []string{"service/a.scip", "service/b.scip"},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "service/a.scip",
+		},
+	}
+	unitA, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope.TypedIndex.Path = "service/b.scip"
+	unitB, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unitA.Digest != unitB.Digest ||
+		analysisunit.EqualState(unitA, unitB) {
+		t.Fatal("typed designation did not preserve semantic identity and change committed state")
+	}
+	run := proofRun(repository, domain, "proof-scope-run")
+	run.UnitDigest = unitA.Digest
+	listCalls := 0
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: run.Commit,
+			IndexedAnalysisUnit: unitA,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repository, domain): run,
+		},
+	}
+	st.onListRepos = func() {
+		listCalls++
+		if listCalls == 2 {
+			st.repos[0].IndexedAnalysisUnit = unitB
+		}
+	}
+	handler := proofHandler(st, "user:member", nil)
+	code, body, _ := getProof(
+		t,
+		handler,
+		"/api/get_extraction_coverage?domains="+domain,
+	)
+	if code != http.StatusConflict {
+		t.Fatalf("same-HEAD typed drift = %d %s", code, body)
+	}
+	if len(st.bundles) != 0 ||
+		strings.Contains(body, run.ID) ||
+		strings.Contains(body, repository) {
+		t.Fatalf(
+			"typed-drift response persisted or leaked stale proof: %s bundles=%v",
+			body,
+			st.bundles,
+		)
+	}
+}
+
+func TestProofBundleRejectsCandidateTransitionDuringPersistence(t *testing.T) {
+	const (
+		repository = "github.com/allowed/proof-persistence-race"
+		domain     = "grpc-consumer"
+	)
+	digest := func(fill string) string {
+		return "sha256:" + strings.Repeat(fill, 64)
+	}
+	initial := proofRun(repository, domain, "proof-persisted-run-a")
+	initial.Coverage.CandidateManifestDigest = digest("a")
+	initial.Coverage.ScopePosture = "focused-local"
+	replacement := proofRun(repository, domain, "proof-persisted-run-b")
+	replacement.Commit = initial.Commit
+	replacement.Coverage.CandidateManifestDigest = digest("b")
+	replacement.Coverage.ScopePosture = "focused-local"
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name:              repository,
+			IndexedCommitHash: initial.Commit,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repository, domain): initial,
+		},
+	}
+	st.onPut = func(store.ProofBundleRecord) {
+		st.onPut = nil
+		st.runs[proofScope(repository, domain)] = replacement
+	}
+	handler := proofHandler(st, "user:member", nil)
+	code, body, _ := getProof(
+		t,
+		handler,
+		"/api/get_extraction_coverage?domains="+domain,
+	)
+	if code != http.StatusConflict {
+		t.Fatalf("persistence transition = %d %s", code, body)
+	}
+	if strings.Contains(body, repository) ||
+		strings.Contains(body, initial.ID) ||
+		strings.Contains(body, replacement.ID) {
+		t.Fatalf("persistence transition leaked scoped proof: %s", body)
+	}
+	if len(st.bundles) != 1 {
+		t.Fatalf(
+			"persisted historical proof count = %d, want 1",
+			len(st.bundles),
+		)
+	}
+	for _, record := range st.bundles {
+		if !strings.Contains(record.Content, initial.ID) ||
+			strings.Contains(record.Content, replacement.ID) {
+			t.Fatalf(
+				"persisted historical proof did not preserve pre-transition scope: %s",
+				record.Content,
+			)
+		}
+	}
+}
+
+func TestProofBundleRejectsEvidenceRevisionABADuringPersistence(t *testing.T) {
+	const (
+		repository = "github.com/allowed/proof-revision-race"
+		domain     = "grpc-consumer"
+	)
+	run := proofRun(repository, domain, "proof-revision-run")
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name:              repository,
+			IndexedCommitHash: run.Commit,
+			EvidenceRevision:  7,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repository, domain): run,
+		},
+	}
+	st.onPut = func(store.ProofBundleRecord) {
+		st.onPut = nil
+		st.onLatestRun = func(store.ExtractionScope) {
+			st.onLatestRun = nil
+			// Model an A -> unavailable -> A transition during the
+			// post-persistence coverage read: endpoint state and coverage
+			// return to identical values while the monotonic fence moves.
+			st.repos[0].EvidenceRevision += 2
+		}
+	}
+	handler := proofHandler(st, "user:member", nil)
+	code, body, _ := getProof(
+		t,
+		handler,
+		"/api/get_extraction_coverage?domains="+domain,
+	)
+	if code != http.StatusConflict {
+		t.Fatalf("persistence evidence-revision ABA = %d %s", code, body)
+	}
+	if strings.Contains(body, repository) ||
+		strings.Contains(body, run.ID) {
+		t.Fatalf("persistence evidence-revision ABA leaked scoped proof: %s", body)
+	}
+	if len(st.bundles) != 1 {
+		t.Fatalf(
+			"persisted historical proof count = %d, want 1",
+			len(st.bundles),
+		)
+	}
+	for _, record := range st.bundles {
+		if !strings.Contains(record.Content, run.ID) {
+			t.Fatalf(
+				"persisted historical proof lost pre-transition scope: %s",
+				record.Content,
+			)
+		}
 	}
 }
 

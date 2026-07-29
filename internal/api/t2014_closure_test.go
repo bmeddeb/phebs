@@ -136,7 +136,11 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 	}
 	measurements.InjectedDomainFailure = true
 	for _, domain := range []string{"proto-contract", "grpc-caller"} {
-		run, err := st.LatestPublishedRun(ctx, repository, domain)
+		run, err := st.LatestPublishedRun(ctx, store.ExtractionScope{
+			Repository: repository,
+			Commit:     healthyCommit,
+			Domain:     domain,
+		})
 		if err != nil || run.Commit != healthyCommit || run.Status != "published" {
 			t.Fatalf("%s did not publish after an earlier domain failure: %+v, %v",
 				domain, run, err)
@@ -256,12 +260,20 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 	if malformedErr == nil || !strings.Contains(malformedErr.Error(), "unit-snapshot.json") {
 		t.Fatalf("malformed attribution snapshot did not fail closed: %v", malformedErr)
 	}
-	callerRun, err := st.LatestPublishedRun(ctx, repository, "grpc-caller")
+	callerRun, err := st.LatestPublishedRun(ctx, store.ExtractionScope{
+		Repository: repository,
+		Commit:     healthyCommit,
+		Domain:     "grpc-caller",
+	})
 	if err != nil || callerRun.Commit != healthyCommit {
 		t.Fatalf("malformed replacement displaced healthy caller run: %+v, %v",
 			callerRun, err)
 	}
-	attempt, err := st.LatestExtractionAttempt(ctx, repository, "grpc-caller")
+	attempt, err := st.LatestExtractionAttempt(ctx, store.ExtractionScope{
+		Repository: repository,
+		Commit:     malformedCommit,
+		Domain:     "grpc-caller",
+	})
 	if err != nil || attempt.Commit != malformedCommit || attempt.Status != "aborted" {
 		t.Fatalf("malformed caller attempt = %+v, %v", attempt, err)
 	}

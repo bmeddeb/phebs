@@ -69,7 +69,7 @@ func seedT205Run(
 	t *testing.T, s *Surreal, repo, commit, domain string, facts int,
 ) *ExtractionRun {
 	t.Helper()
-	run, err := s.BeginExtractionRun(t.Context(), repo, commit, domain, "t205-retention-v1")
+	run, err := beginExtractionRun(s, t.Context(), repo, commit, domain, "t205-retention-v1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestT205PinnedRunNeverEntersDeleting(t *testing.T) {
 	if !found || state.Status != "superseded" || state.Phase != "" {
 		t.Fatalf("pinned run entered retention state: %+v, found=%v", state, found)
 	}
-	latest, err := s.LatestPublishedRun(t.Context(), repo, domain)
+	latest, err := latestPublishedRun(s, t.Context(), repo, domain)
 	if err != nil || latest.ID != current.ID {
 		t.Fatalf("current publication = %+v, %v", latest, err)
 	}
@@ -163,7 +163,7 @@ func TestT205ChunkBoundariesResumeAndPreserveSharedAtoms(t *testing.T) {
 			}
 		}
 
-		latest, latestErr := s.LatestPublishedRun(t.Context(), repo, domain)
+		latest, latestErr := latestPublishedRun(s, t.Context(), repo, domain)
 		if latestErr != nil || latest.ID != current.ID {
 			t.Fatalf("step %d resurrected old evidence: %+v, %v", stepCount, latest, latestErr)
 		}

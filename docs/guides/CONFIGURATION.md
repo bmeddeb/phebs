@@ -98,6 +98,10 @@ analysis_units:
     supporting:
       - contracts/payment.proto
       - services/payments/go.mod
+      - services/payments/index.scip
+    typed_index:
+      kind: scip
+      path: services/payments/index.scip
 ```
 
 `primary` requires at least one exact file or directory. `supporting` may be
@@ -134,17 +138,36 @@ generation digest changes with the ordered revision set. Phebs never falls
 back to whole-repository input when a focused build refuses.
 
 Existing repository-root `index.scip` input is not relabeled as scoped; status
-continues to report `typed_index_posture: repository-root-unbound`.
-Repositories absent from `analysis_units` retain the prior
-whole-repository `zoekt-git-index`, extraction behavior, and response shape.
+continues to report `typed_index_posture: repository-root-unbound` unless
+`typed_index` explicitly names it. The only supported kind is `scip`, and its
+path must be an exact `supporting` entry; selecting a parent directory does not
+implicitly designate a typed index. The designation does not change the stable
+unit digest because the artifact path is already part of semantic scope, but
+it does change candidate-generation identity. A missing, special, stale, or
+out-of-unit designated artifact refuses the focused typed-input publication.
+Every SCIP document must also resolve inside the unit; phebs never falls back
+to a repository-root `index.scip` for a focused repository.
 
-Candidate planning now records the committed unit membership of every planned
-repository/local input and refuses stale or mismatched scope before extraction
-starts. That is preparation, not an evidence migration: through T30.4,
-configured repositories still run the enabled extractors over the manifest's
-repository view and publish the existing repository/commit identities. T30.5
-owns the later switch to unit-only local evidence and a unit-bound typed-index
-contract; phebs does not infer either from this configuration today.
+Changing or removing `typed_index` keeps the semantic unit digest stable but
+invalidates the previous candidate pointer and any current evidence carrying
+the old candidate receipt. Code navigation and typed evidence remain
+unavailable until the index → candidate → extraction chain publishes the new
+designation; phebs never serves the old typed artifact during that interval.
+
+Candidate planning records the committed unit membership of every planned
+input and refuses stale or mismatched scope before extraction starts. Local
+contract, field, topic, consumer, attribution, and Workbench implementation
+readers replay only unit records and publish under the exact repository,
+indexed HEAD commit, unit digest, and evidence domain. Changing the unit at the
+same commit therefore cannot reuse or supersede evidence from the prior unit.
+Repository-overlay caller candidates remain separately labeled planning input
+for T30.6; they do not widen focused search or local evidence.
+
+Repositories absent from `analysis_units` retain whole-repository indexing and
+extraction. Their exact evidence scope has an empty unit digest, and their
+legacy root `index.scip` behavior remains available. Migrated historical
+whole-repository publications remain readable by their original commit and
+empty-unit identity, but never satisfy a focused lookup.
 
 
 ### Provisional Change Workbench

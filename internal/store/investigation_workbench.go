@@ -15,6 +15,7 @@ import (
 	surrealdb "github.com/surrealdb/surrealdb.go"
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/idlpreview"
 )
@@ -81,14 +82,18 @@ type WorkbenchPlan struct {
 }
 
 type WorkbenchRepositorySnapshot struct {
-	Name   string `json:"name"`
-	Commit string `json:"commit"`
+	Name         string `json:"name"`
+	Commit       string `json:"commit"`
+	ScopePosture string `json:"scope_posture"`
+	UnitDigest   string `json:"unit_digest,omitempty"`
 }
 
 type WorkbenchEndpointSnapshot struct {
 	Selection          ChangeBriefContractSelection `json:"selection"`
 	DeclarationCommit  string                       `json:"declaration_commit"`
 	DeclarationDigest  string                       `json:"declaration_digest"`
+	ScopePosture       string                       `json:"scope_posture"`
+	UnitDigest         string                       `json:"unit_digest,omitempty"`
 	DeclarationSources []WorkbenchDeclarationSource `json:"declaration_sources"`
 	SourcesTruncated   bool                         `json:"sources_truncated"`
 }
@@ -130,9 +135,11 @@ type WorkbenchResolution struct {
 }
 
 type WorkbenchBaselineRequest struct {
-	Repository string   `json:"repository"`
-	Commit     string   `json:"commit"`
-	Paths      []string `json:"paths"`
+	Repository   string   `json:"repository"`
+	Commit       string   `json:"commit"`
+	ScopePosture string   `json:"scope_posture"`
+	UnitDigest   string   `json:"unit_digest,omitempty"`
+	Paths        []string `json:"paths"`
 }
 
 type WorkbenchSourceFile struct {
@@ -720,6 +727,16 @@ func (service InvestigationWorkbenchService) preview(
 
 	resolvedRepositories := make(map[string]WorkbenchRepositorySnapshot)
 	for _, repository := range resolution.Repositories {
+		repository.ScopePosture, repository.UnitDigest, err =
+			normalizeWorkbenchScopeIdentity(
+				repository.ScopePosture,
+				repository.UnitDigest,
+			)
+		if err != nil {
+			return nil, errors.New(
+				"resolve workbench preview: invalid repository scope identity",
+			)
+		}
 		if _, requested := repositorySet[repository.Name]; !requested ||
 			!validWorkbenchCommit(repository.Commit) {
 			return nil, errors.New("resolve workbench preview: invalid repository snapshot")
@@ -747,6 +764,16 @@ func (service InvestigationWorkbenchService) preview(
 	}
 	resolvedEndpoints := make(map[string]WorkbenchEndpointSnapshot)
 	for _, endpoint := range resolution.Endpoints {
+		endpoint.ScopePosture, endpoint.UnitDigest, err =
+			normalizeWorkbenchScopeIdentity(
+				endpoint.ScopePosture,
+				endpoint.UnitDigest,
+			)
+		if err != nil {
+			return nil, errors.New(
+				"resolve workbench preview: invalid endpoint scope identity",
+			)
+		}
 		normalized, normalizeErr := normalizeChangeBriefSelection(endpoint.Selection)
 		if normalizeErr != nil ||
 			!validWorkbenchCommit(endpoint.DeclarationCommit) ||
@@ -765,7 +792,10 @@ func (service InvestigationWorkbenchService) preview(
 			return nil, errors.New("resolve workbench preview: unexpected endpoint snapshot")
 		}
 		repository, available := resolvedRepositories[normalized.Repository]
-		if !available || endpoint.DeclarationCommit != repository.Commit {
+		if !available ||
+			endpoint.DeclarationCommit != repository.Commit ||
+			endpoint.ScopePosture != repository.ScopePosture ||
+			endpoint.UnitDigest != repository.UnitDigest {
 			return nil, errors.New(
 				"resolve workbench preview: endpoint snapshot is outside the repository snapshot",
 			)
@@ -883,6 +913,35 @@ func (service InvestigationWorkbenchService) preview(
 		return nil, err
 	}
 	return preview, nil
+}
+
+func normalizeWorkbenchScopeIdentity(
+	posture, digest string,
+) (string, string, error) {
+	// Rows created before T30.5 had neither field and represented the only
+	// available repository-wide posture. Canonicalize that readable legacy
+	// shape without allowing it to stand in for a focused unit.
+	if posture == "" && digest == "" {
+		return analysisunit.SearchIndexWholeRepository, "", nil
+	}
+	switch posture {
+	case analysisunit.SearchIndexWholeRepository:
+		if digest != "" {
+			return "", "", errors.New(
+				"whole-repository scope carries a unit digest",
+			)
+		}
+		return posture, "", nil
+	case analysisunit.SearchIndexFocused:
+		if !validSHA256Digest(digest) {
+			return "", "", errors.New(
+				"focused scope has an invalid unit digest",
+			)
+		}
+		return posture, digest, nil
+	default:
+		return "", "", errors.New("unknown workbench scope posture")
+	}
 }
 
 func validateWorkbenchDeclarationSources(

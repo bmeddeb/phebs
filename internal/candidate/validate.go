@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 
 	"github.com/bmeddeb/phebs/internal/gitobj"
 )
@@ -181,17 +180,21 @@ func validateManifestIdentity(manifest Manifest, expected Expected, state *State
 		!validDigest(manifest.Digest) || manifest.PartitionPolicy != frozenPartitionPolicy() {
 		return fmt.Errorf("%w: malformed envelope", ErrInvalidManifest)
 	}
-	canonicalPolicies := slices.Clone(manifest.Policies)
+	if err := validateTypedIndexSelection(manifest.TypedIndex); err != nil {
+		return fmt.Errorf("%w: typed-index selection: %v", ErrInvalidManifest, err)
+	}
+	canonicalPolicies := clonePolicyIdentities(manifest.Policies)
 	if err := canonicalizePolicyIdentities(canonicalPolicies); err != nil ||
-		!slices.Equal(canonicalPolicies, manifest.Policies) {
+		!EqualPolicyIdentities(canonicalPolicies, manifest.Policies) {
 		return fmt.Errorf("%w: policies are not canonical", ErrInvalidManifest)
 	}
 	policyDigest, err := PolicyDigest(manifest.Policies)
 	if err != nil || policyDigest != manifest.PolicyDigest {
 		return fmt.Errorf("%w: policy digest mismatch", ErrInvalidManifest)
 	}
-	generationDigest, err := GenerationDigest(
-		manifest.Repository, manifest.Commit, manifest.UnitDigest, manifest.Policies,
+	generationDigest, err := generationDigest(
+		manifest.Repository, manifest.Commit, manifest.UnitDigest,
+		manifest.TypedIndex, manifest.Policies,
 	)
 	if err != nil || generationDigest != manifest.GenerationDigest {
 		return fmt.Errorf("%w: generation digest mismatch", ErrInvalidManifest)
@@ -219,16 +222,27 @@ func validateManifestIdentity(manifest Manifest, expected Expected, state *State
 	}
 	if expected.Unit != nil {
 		unitDigest, unitErr := validateUnit(expected.Repository, expected.Unit)
-		if unitErr != nil || manifest.UnitDigest != unitDigest {
+		expectedTypedIndex, typedErr := typedIndexSelection(
+			expected.Unit, manifest.Policies,
+		)
+		if unitErr != nil || typedErr != nil ||
+			manifest.UnitDigest != unitDigest ||
+			!equalTypedIndexSelection(manifest.TypedIndex, expectedTypedIndex) {
 			return fmt.Errorf("%w: unit mismatch", ErrInvalidManifest)
 		}
 	} else if expected.Repository != "" && manifest.UnitDigest != "" {
 		return fmt.Errorf("%w: unexpected analysis unit", ErrInvalidManifest)
+	} else if expected.Repository != "" {
+		expectedTypedIndex, typedErr := typedIndexSelection(nil, manifest.Policies)
+		if typedErr != nil ||
+			!equalTypedIndexSelection(manifest.TypedIndex, expectedTypedIndex) {
+			return fmt.Errorf("%w: whole-repository typed input mismatch", ErrInvalidManifest)
+		}
 	}
 	if len(expected.Policies) > 0 {
-		canonicalExpected := slices.Clone(expected.Policies)
+		canonicalExpected := clonePolicyIdentities(expected.Policies)
 		if err := canonicalizePolicyIdentities(canonicalExpected); err != nil ||
-			!slices.Equal(canonicalExpected, manifest.Policies) {
+			!EqualPolicyIdentities(canonicalExpected, manifest.Policies) {
 			return fmt.Errorf("%w: policy set mismatch", ErrInvalidManifest)
 		}
 	}
@@ -242,6 +256,13 @@ func validateManifestIdentity(manifest Manifest, expected Expected, state *State
 		}
 	}
 	return nil
+}
+
+func equalTypedIndexSelection(left, right *TypedIndexSelection) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	return *left == *right
 }
 
 // validateArtifacts is completed in reader.go; the signature lives here so

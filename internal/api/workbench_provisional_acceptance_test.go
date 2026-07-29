@@ -196,8 +196,11 @@ message GetResponse {}
 	}
 	published, err := st.LatestPublishedRun(
 		ctx,
-		provisionalWorkbenchRepo,
-		"proto-contract",
+		store.ExtractionScope{
+			Repository: provisionalWorkbenchRepo,
+			Commit:     provisionalWorkbenchCommit,
+			Domain:     "proto-contract",
+		},
 	)
 	if err != nil {
 		t.Fatalf("read published run: %v", err)

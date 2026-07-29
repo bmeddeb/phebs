@@ -8,12 +8,15 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/scip-code/scip/bindings/go/scip"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
 
@@ -161,6 +164,316 @@ func TestAbsentIndexIsGraceful(t *testing.T) {
 	}
 	if hover.Available || hover.Hover != nil {
 		t.Fatalf("Hover without index = %#v", hover)
+	}
+}
+
+func TestFocusedTypedIndexBindingChangesAtSameCommit(t *testing.T) {
+	fixture := newFixture(t, false)
+	if err := os.MkdirAll(filepath.Join(fixture.origin, "scip"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	firstIndex := readFixtureIndex(t)
+	writeIndexAt(t, fixture.origin, "scip/unit-a.scip", firstIndex)
+	secondIndex := proto.Clone(firstIndex).(*scip.Index)
+	for _, document := range secondIndex.GetDocuments() {
+		for _, info := range document.GetSymbols() {
+			if info.GetDisplayName() == "Rocket" {
+				info.DisplayName = "Launch"
+				info.Documentation = []string{
+					"Launch is loaded from the replacement unit binding.",
+				}
+			}
+		}
+	}
+	writeIndexAt(t, fixture.origin, "scip/unit-b.scip", secondIndex)
+	revision := fixture.commit(t, "two immutable focused SCIP bindings")
+	fixture.fetch(t)
+
+	binding := TypedIndexBinding{
+		Focused:      true,
+		Path:         "scip/unit-a.scip",
+		Commit:       revision,
+		UnitDigest:   "sha256:" + strings.Repeat("a", 64),
+		PrimaryPaths: []string{"lib", "use"},
+		SupportingPaths: []string{
+			"scip/unit-a.scip",
+			"scip/unit-b.scip",
+		},
+	}
+	service := New(Options{
+		DataDir: fixture.dataDir,
+		BindingResolver: TypedIndexResolveFunc(
+			func(context.Context, string, string) (TypedIndexBinding, error) {
+				return binding, nil
+			},
+		),
+	})
+	query := Query{
+		Repo: fixtureRepo, Revision: revision, Path: "use/use.go",
+		Line: 1, Character: 29,
+	}
+	first, err := service.Hover(context.Background(), query)
+	if err != nil || first.Hover == nil ||
+		first.Hover.DisplayName != "Rocket" {
+		t.Fatalf("first focused Hover = %#v, err %v", first, err)
+	}
+
+	binding.Path = "scip/unit-b.scip"
+	second, err := service.Hover(context.Background(), query)
+	if err != nil || second.Hover == nil ||
+		second.Hover.DisplayName != "Launch" {
+		t.Fatalf("replacement focused Hover = %#v, err %v", second, err)
+	}
+}
+
+func TestFocusedResultsRefuseSameCommitBindingChange(t *testing.T) {
+	fixture := newFixture(t, true)
+	first := TypedIndexBinding{
+		Focused:         true,
+		Path:            "index.scip",
+		Commit:          fixture.revision,
+		UnitDigest:      "sha256:" + strings.Repeat("a", 64),
+		PrimaryPaths:    []string{"lib", "use"},
+		SupportingPaths: []string{"index.scip"},
+	}
+	replacement := TypedIndexBinding{
+		Focused:         true,
+		Path:            "index.scip",
+		Commit:          fixture.revision,
+		UnitDigest:      "sha256:" + strings.Repeat("b", 64),
+		PrimaryPaths:    []string{"lib"},
+		SupportingPaths: []string{"index.scip"},
+	}
+	tests := []struct {
+		name  string
+		query Query
+		run   func(context.Context, *Service, Query) error
+	}{
+		{
+			name: "definition",
+			query: Query{
+				Repo: fixtureRepo, Revision: fixture.revision,
+				Path: "use/use.go", Line: 1, Character: 29,
+			},
+			run: func(ctx context.Context, service *Service, query Query) error {
+				_, err := service.Definition(ctx, query)
+				return err
+			},
+		},
+		{
+			name: "references",
+			query: Query{
+				Repo: fixtureRepo, Revision: fixture.revision,
+				Path: "lib/rocket.go", Line: 1, Character: 6,
+			},
+			run: func(ctx context.Context, service *Service, query Query) error {
+				_, err := service.References(ctx, query)
+				return err
+			},
+		},
+		{
+			name: "hover",
+			query: Query{
+				Repo: fixtureRepo, Revision: fixture.revision,
+				Path: "use/use.go", Line: 1, Character: 29,
+			},
+			run: func(ctx context.Context, service *Service, query Query) error {
+				_, err := service.Hover(ctx, query)
+				return err
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var (
+				mu      sync.Mutex
+				current = first
+				calls   int
+			)
+			recheckStarted := make(chan struct{})
+			releaseRecheck := make(chan struct{})
+			service := New(Options{
+				DataDir: fixture.dataDir,
+				BindingResolver: TypedIndexResolveFunc(
+					func(
+						context.Context,
+						string,
+						string,
+					) (TypedIndexBinding, error) {
+						mu.Lock()
+						calls++
+						call := calls
+						mu.Unlock()
+						if call == 2 {
+							close(recheckStarted)
+							<-releaseRecheck
+						}
+						mu.Lock()
+						binding := current
+						mu.Unlock()
+						return binding, nil
+					},
+				),
+			})
+			result := make(chan error, 1)
+			go func() {
+				result <- test.run(
+					context.Background(),
+					service,
+					test.query,
+				)
+			}()
+
+			select {
+			case <-recheckStarted:
+			case err := <-result:
+				t.Fatalf(
+					"query returned before result-time binding check: %v",
+					err,
+				)
+			case <-time.After(5 * time.Second):
+				t.Fatal("query did not reach result-time binding check")
+			}
+			mu.Lock()
+			current = replacement
+			mu.Unlock()
+			close(releaseRecheck)
+
+			select {
+			case err := <-result:
+				if !errors.Is(err, ErrBindingChanged) {
+					t.Fatalf(
+						"same-commit binding race error = %v, want ErrBindingChanged",
+						err,
+					)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("query did not finish after releasing binding check")
+			}
+		})
+	}
+}
+
+func TestFocusedTypedIndexRefusesOutOfUnitDocumentsAndRootFallback(t *testing.T) {
+	fixture := newFixture(t, true)
+	if err := os.MkdirAll(filepath.Join(fixture.origin, "scip"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	index := readFixtureIndex(t)
+	index.Documents = append(index.Documents, &scip.Document{
+		RelativePath:     "outside/secret.go",
+		PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+	})
+	writeIndexAt(t, fixture.origin, "scip/focused.scip", index)
+	revision := fixture.commit(t, "focused SCIP with an out-of-unit document")
+	fixture.fetch(t)
+
+	binding := TypedIndexBinding{
+		Focused:         true,
+		Path:            "scip/focused.scip",
+		Commit:          revision,
+		UnitDigest:      "sha256:" + strings.Repeat("c", 64),
+		PrimaryPaths:    []string{"lib", "use"},
+		SupportingPaths: []string{"scip/focused.scip"},
+	}
+	service := New(Options{
+		DataDir: fixture.dataDir,
+		BindingResolver: TypedIndexResolveFunc(
+			func(context.Context, string, string) (TypedIndexBinding, error) {
+				return binding, nil
+			},
+		),
+	})
+	if _, err := service.Ingest(
+		context.Background(),
+		fixtureRepo,
+		revision,
+	); !errors.Is(err, ErrDocumentOutsideUnit) {
+		t.Fatalf("Ingest error = %v, want ErrDocumentOutsideUnit", err)
+	}
+	entry, ok := service.loadEntry(fixtureRepo, revision)
+	if !ok || entry.index != nil || entry.loadErr == nil {
+		t.Fatalf("out-of-unit cache entry = %#v, found %t", entry, ok)
+	}
+
+	binding.Path = ""
+	binding.UnitDigest = "sha256:" + strings.Repeat("d", 64)
+	binding.SupportingPaths = nil
+	result, err := service.Definition(context.Background(), Query{
+		Repo: fixtureRepo, Revision: revision, Path: "lib/rocket.go",
+		Line: 1, Character: 6,
+	})
+	if err != nil {
+		t.Fatalf("Definition with focused typed-index gap: %v", err)
+	}
+	if result.Available || result.Location != nil {
+		t.Fatalf(
+			"focused typed-index gap fell back to root index.scip: %#v",
+			result,
+		)
+	}
+}
+
+func TestBindingFromAnalysisUnitPreservesFocusedTypedGapAndExactPath(
+	t *testing.T,
+) {
+	scope := analysisunit.Scope{
+		Repository: fixtureRepo,
+		Name:       "fixture",
+		Primary:    []string{"lib", "use"},
+		Supporting: []string{"scip/fixture.scip"},
+	}
+	unbound, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	gap, err := BindingFromAnalysisUnit(
+		fixtureRepo,
+		strings.Repeat("a", 40),
+		unbound,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !gap.Focused || gap.Path != "" ||
+		gap.UnitDigest != unbound.Digest {
+		t.Fatalf("unbound focused binding = %+v", gap)
+	}
+
+	scope.TypedIndex = &analysisunit.TypedIndex{
+		Kind: analysisunit.TypedIndexKindSCIP,
+		Path: "scip/fixture.scip",
+	}
+	bound, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding, err := BindingFromAnalysisUnit(
+		fixtureRepo,
+		strings.Repeat("a", 40),
+		bound,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !binding.Focused ||
+		binding.Path != "scip/fixture.scip" ||
+		binding.UnitDigest != bound.Digest {
+		t.Fatalf("unit-bound focused binding = %+v", binding)
+	}
+
+	invalidWhole := analysisunit.CloneState(bound)
+	invalidWhole.SearchIndexPosture =
+		analysisunit.SearchIndexWholeRepository
+	if _, err := BindingFromAnalysisUnit(
+		fixtureRepo,
+		strings.Repeat("a", 40),
+		invalidWhole,
+	); !errors.Is(err, analysisunit.ErrInvalidScope) {
+		t.Fatalf(
+			"whole-repository typed binding error = %v, want ErrInvalidScope",
+			err,
+		)
 	}
 }
 
@@ -422,11 +735,20 @@ func readFixtureIndex(t *testing.T) *scip.Index {
 
 func writeIndex(t *testing.T, repo string, index *scip.Index) {
 	t.Helper()
+	writeIndexAt(t, repo, DefaultIndexPath, index)
+}
+
+func writeIndexAt(
+	t *testing.T,
+	repo, indexPath string,
+	index *scip.Index,
+) {
+	t.Helper()
 	data, err := proto.Marshal(index)
 	if err != nil {
 		t.Fatalf("marshal fixture SCIP: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(repo, DefaultIndexPath), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(repo, indexPath), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

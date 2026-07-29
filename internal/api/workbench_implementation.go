@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path"
 	"regexp"
 	"slices"
@@ -282,6 +283,7 @@ type workbenchImplementationBuild struct {
 	service      *WorkbenchImplementationService
 	ctx          context.Context
 	visible      map[string]store.Repo
+	scopes       map[string]workbenchRepositoryScope
 	rows         []WorkbenchImplementationRow
 	gaps         []WorkbenchImplementationGap
 	capabilities map[string]WorkbenchImplementationCapability
@@ -357,9 +359,16 @@ func (service *WorkbenchImplementationService) Read(
 	if err != nil {
 		return nil, err
 	}
-	visible, visibilityDigest, err :=
+	visible, scopes, visibilityDigest, err :=
 		workbenchImplementationVisibility(visibleRepositoriesAtStart)
 	if err != nil {
+		return nil, err
+	}
+	if err := validateWorkbenchImplementationUniverse(
+		view,
+		visible,
+		scopes,
+	); err != nil {
 		return nil, err
 	}
 	queryDigest := digestJSON(struct {
@@ -382,6 +391,7 @@ func (service *WorkbenchImplementationService) Read(
 		service:      service,
 		ctx:          ctx,
 		visible:      visible,
+		scopes:       scopes,
 		rows:         []WorkbenchImplementationRow{},
 		gaps:         []WorkbenchImplementationGap{},
 		capabilities: make(map[string]WorkbenchImplementationCapability),
@@ -464,7 +474,7 @@ func (service *WorkbenchImplementationService) Read(
 	if err != nil {
 		return nil, err
 	}
-	_, confirmedVisibilityDigest, err :=
+	confirmedVisible, confirmedScopes, confirmedVisibilityDigest, err :=
 		workbenchImplementationVisibility(visibleRepositoriesAtEnd)
 	if err != nil {
 		return nil, err
@@ -473,6 +483,13 @@ func (service *WorkbenchImplementationService) Read(
 		return nil, huma.Error409Conflict(
 			"repository authorization or indexed commits changed while reading related implementation evidence; retry",
 		)
+	}
+	if err := validateWorkbenchImplementationUniverse(
+		confirmedView,
+		confirmedVisible,
+		confirmedScopes,
+	); err != nil {
+		return nil, err
 	}
 
 	build.finalize()
@@ -621,15 +638,16 @@ func (build *workbenchImplementationBuild) catalogSeeds(
 			workbenchImplementationCatalogDigest(selection, detail),
 		)
 		input := workbenchImplementationSelectionKey(selection)
-		seeds = append(
-			seeds,
-			build.claimSeeds(
-				"declaration",
-				detail.Declaration,
-				"selected_contract_declaration_v1",
-				input,
-			)...,
+		declarationSeeds, err := build.claimSeeds(
+			"declaration",
+			detail.Declaration,
+			"selected_contract_declaration_v1",
+			input,
 		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		seeds = append(seeds, declarationSeeds...)
 		relationships := slices.Clone(detail.Implementations)
 		sort.Slice(relationships, func(i, j int) bool {
 			return workbenchImplementationRelationshipKey(relationships[i]) <
@@ -639,15 +657,16 @@ func (build *workbenchImplementationBuild) catalogSeeds(
 			if relationship.Kind != "implementation" {
 				continue
 			}
-			seeds = append(
-				seeds,
-				build.claimSeeds(
-					"implementation",
-					relationship.Claim,
-					"atlas_implementation_relationship_v1",
-					input+"|"+relationship.Classification,
-				)...,
+			implementationSeeds, err := build.claimSeeds(
+				"implementation",
+				relationship.Claim,
+				"atlas_implementation_relationship_v1",
+				input+"|"+relationship.Classification,
 			)
+			if err != nil {
+				return nil, nil, nil, err
+			}
+			seeds = append(seeds, implementationSeeds...)
 		}
 		if detail.RelationshipsTruncated {
 			build.addGap(
@@ -671,7 +690,7 @@ func (build *workbenchImplementationBuild) claimSeeds(
 	kind string,
 	claim ContractCatalogClaim,
 	rule, input string,
-) []workbenchImplementationSeed {
+) ([]workbenchImplementationSeed, error) {
 	sources := slices.Clone(claim.Sources)
 	sort.Slice(sources, func(i, j int) bool {
 		return workbenchImplementationCatalogSourceKey(sources[i]) <
@@ -686,6 +705,12 @@ func (build *workbenchImplementationBuild) claimSeeds(
 		if !gitobj.IsObjectID(source.Commit) ||
 			!validWorkbenchImplementationPath(source.Path) {
 			continue
+		}
+		scope := build.scopes[source.Repository]
+		if !scope.admits(source.Path) {
+			return nil, huma.Error409Conflict(
+				"contract Atlas returned evidence outside the repository analysis unit; retry after focused evidence publication",
+			)
 		}
 		seeds = append(seeds, workbenchImplementationSeed{
 			kind:           kind,
@@ -711,7 +736,7 @@ func (build *workbenchImplementationBuild) claimSeeds(
 			"claim_source_limit",
 		)
 	}
-	return seeds
+	return seeds, nil
 }
 
 func (build *workbenchImplementationBuild) explicitSeeds(
@@ -726,6 +751,11 @@ func (build *workbenchImplementationBuild) explicitSeeds(
 		if anchor.Commit != repository.IndexedCommitHash {
 			return nil, huma.Error409Conflict(
 				"explicit anchors must use the repository's immutable indexed commit",
+			)
+		}
+		if !build.scopes[anchor.Repository].admits(anchor.Path) {
+			return nil, huma.Error400BadRequest(
+				"explicit anchors must be inside the repository analysis unit",
 			)
 		}
 		seeds = append(seeds, workbenchImplementationSeed{
@@ -815,6 +845,16 @@ func (build *workbenchImplementationBuild) addSeed(
 func (build *workbenchImplementationBuild) readSource(
 	source WorkbenchImplementationSourceCitation,
 ) ([]byte, error) {
+	repository, visible := build.visible[source.Repository]
+	if !visible {
+		return nil, store.ErrNotFound
+	}
+	if source.Commit != repository.IndexedCommitHash ||
+		!build.scopes[source.Repository].admits(source.Path) {
+		return nil, huma.Error409Conflict(
+			"cited source is outside the current repository analysis unit",
+		)
+	}
 	if build.service.source == nil {
 		return nil, huma.Error503ServiceUnavailable(
 			"immutable source reader unavailable",
@@ -955,6 +995,11 @@ func (build *workbenchImplementationBuild) searchRelated(
 					!validWorkbenchImplementationPath(file.Path) {
 					continue
 				}
+				if !build.scopes[file.Repo].admits(file.Path) {
+					return huma.Error409Conflict(
+						"source search returned a path outside the repository analysis unit; retry after focused index publication",
+					)
+				}
 				queryFiles = append(queryFiles, file)
 			}
 			queryTruncated := len(queryFiles) > workbenchImplementationSearchLimit
@@ -1056,7 +1101,10 @@ func (build *workbenchImplementationBuild) navigate(
 				"unsupported",
 				"definition_not_resolved",
 			)
-		} else if location, ok := build.validLocation(*definition.Location); ok {
+		} else if location, ok, locationErr :=
+			build.validLocation(*definition.Location); locationErr != nil {
+			return locationErr
+		} else if ok {
 			role := workbenchImplementationCodeRole(location.Path, "")
 			build.addRow(WorkbenchImplementationRow{
 				Kind:           "definition",
@@ -1106,7 +1154,10 @@ func (build *workbenchImplementationBuild) navigate(
 			references.Truncated = true
 		}
 		for _, rawLocation := range locations {
-			location, ok := build.validLocation(rawLocation)
+			location, ok, locationErr := build.validLocation(rawLocation)
+			if locationErr != nil {
+				return locationErr
+			}
 			if !ok {
 				continue
 			}
@@ -1136,13 +1187,19 @@ func (build *workbenchImplementationBuild) navigate(
 
 func (build *workbenchImplementationBuild) validLocation(
 	location codenav.Location,
-) (WorkbenchImplementationSourceCitation, bool) {
+) (WorkbenchImplementationSourceCitation, bool, error) {
 	repository, ok := build.visible[location.Repo]
 	if !ok ||
 		location.Revision != repository.IndexedCommitHash ||
 		!gitobj.IsObjectID(location.Revision) ||
 		!validWorkbenchImplementationPath(location.Path) {
-		return WorkbenchImplementationSourceCitation{}, false
+		return WorkbenchImplementationSourceCitation{}, false, nil
+	}
+	if !build.scopes[location.Repo].admits(location.Path) {
+		return WorkbenchImplementationSourceCitation{}, false,
+			huma.Error409Conflict(
+				"SCIP returned a path outside the repository analysis unit; retry after unit-bound typed-index publication",
+			)
 	}
 	return WorkbenchImplementationSourceCitation{
 		Repository:  location.Repo,
@@ -1152,7 +1209,7 @@ func (build *workbenchImplementationBuild) validLocation(
 		StartColumn: int(location.Range.Start.Character) + 1,
 		EndLine:     int(location.Range.End.Line) + 1,
 		EndColumn:   int(location.Range.End.Character) + 1,
-	}, true
+	}, true, nil
 }
 
 func (build *workbenchImplementationBuild) readHistory(
@@ -1391,34 +1448,138 @@ func canonicalWorkbenchImplementationSeeds(
 
 func workbenchImplementationVisibility(
 	repositories []store.Repo,
-) (map[string]store.Repo, string, error) {
+) (
+	map[string]store.Repo,
+	map[string]workbenchRepositoryScope,
+	string,
+	error,
+) {
 	visible := make(map[string]store.Repo, len(repositories))
+	scopes := make(map[string]workbenchRepositoryScope, len(repositories))
 	type identity struct {
-		Repository string `json:"repository"`
-		Commit     string `json:"commit"`
+		Repository   string `json:"repository"`
+		Commit       string `json:"commit"`
+		ScopePosture string `json:"scope_posture"`
+		UnitDigest   string `json:"unit_digest,omitempty"`
+		TypedPosture string `json:"typed_index_posture,omitempty"`
+		TypedKind    string `json:"typed_index_kind,omitempty"`
+		TypedPath    string `json:"typed_index_path,omitempty"`
+		EvidenceRev  int64  `json:"evidence_revision"`
 	}
 	identities := make([]identity, 0, len(repositories))
 	for _, repository := range repositories {
 		if repository.Name == "" {
-			return nil, "", huma.Error500InternalServerError(
+			return nil, nil, "", huma.Error500InternalServerError(
 				"repository visibility set is inconsistent",
 			)
 		}
 		if _, exists := visible[repository.Name]; exists {
-			return nil, "", huma.Error500InternalServerError(
+			return nil, nil, "", huma.Error500InternalServerError(
 				"repository visibility set is inconsistent",
 			)
 		}
+		scope, err := workbenchScopeForRepository(repository)
+		if err != nil {
+			return nil, nil, "", huma.Error409Conflict(
+				"repository analysis-unit state changed while reading related implementation evidence; retry",
+				err,
+			)
+		}
 		visible[repository.Name] = repository
+		scopes[repository.Name] = scope
 		identities = append(identities, identity{
-			Repository: repository.Name,
-			Commit:     repository.IndexedCommitHash,
+			Repository:   repository.Name,
+			Commit:       repository.IndexedCommitHash,
+			ScopePosture: scope.posture,
+			UnitDigest:   scope.unitDigest,
+			TypedPosture: scope.typedIndexPosture,
+			TypedKind:    scope.typedIndexKind,
+			TypedPath:    scope.typedIndexPath,
+			EvidenceRev:  repository.EvidenceRevision,
 		})
 	}
 	sort.Slice(identities, func(i, j int) bool {
 		return identities[i].Repository < identities[j].Repository
 	})
-	return visible, digestJSON(identities), nil
+	return visible, scopes, digestJSON(identities), nil
+}
+
+func validateWorkbenchImplementationUniverse(
+	view *store.WorkbenchView,
+	visible map[string]store.Repo,
+	scopes map[string]workbenchRepositoryScope,
+) error {
+	selected := make(map[string]struct{}, len(view.Brief.What.Selections))
+	for _, selection := range view.Brief.What.Selections {
+		selected[selection.Repository] = struct{}{}
+	}
+	raw := strings.TrimSpace(view.Revision.DeclaredUniverse)
+	if raw == "" {
+		// Pre-T30.5 whole-repository Workbench revisions did not carry scope
+		// identity. They remain readable, but that legacy omission can never
+		// authorize a focused unit.
+		for repository := range selected {
+			scope, ok := scopes[repository]
+			if !ok {
+				return store.ErrNotFound
+			}
+			if scope.unitDigest != "" {
+				return huma.Error409Conflict(
+					"workbench revision has no analysis-unit identity; create a new preview",
+				)
+			}
+		}
+		return nil
+	}
+	var universe struct {
+		Repositories []store.WorkbenchRepositorySnapshot `json:"repositories"`
+	}
+	decoder := json.NewDecoder(strings.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&universe); err != nil {
+		return huma.Error409Conflict(
+			"workbench declared universe is invalid; create a new preview",
+			err,
+		)
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
+		return huma.Error409Conflict(
+			"workbench declared universe is invalid; create a new preview",
+		)
+	}
+	declared := make(map[string]struct{}, len(universe.Repositories))
+	for _, snapshot := range universe.Repositories {
+		if snapshot.Name == "" {
+			return huma.Error409Conflict(
+				"workbench declared universe is invalid; create a new preview",
+			)
+		}
+		if _, duplicate := declared[snapshot.Name]; duplicate {
+			return huma.Error409Conflict(
+				"workbench declared universe is invalid; create a new preview",
+			)
+		}
+		declared[snapshot.Name] = struct{}{}
+		repository, ok := visible[snapshot.Name]
+		if !ok {
+			return store.ErrNotFound
+		}
+		scope := scopes[snapshot.Name]
+		if snapshot.Commit != repository.IndexedCommitHash ||
+			!scope.matchesSnapshot(snapshot) {
+			return huma.Error409Conflict(
+				"workbench repository commit or analysis unit changed; create a new preview",
+			)
+		}
+	}
+	for repository := range selected {
+		if _, ok := declared[repository]; !ok {
+			return huma.Error409Conflict(
+				"workbench declared universe does not contain a selected repository",
+			)
+		}
+	}
+	return nil
 }
 
 func workbenchImplementationCodeRole(filePath, declared string) string {

@@ -13,6 +13,7 @@ import (
 
 type snapshot struct {
 	documents            map[string]*document
+	documentPaths        map[string]struct{}
 	definitions          map[string][]indexedLocation
 	references           map[string][]indexedLocation
 	symbols              map[string]*symbolInfo
@@ -81,6 +82,7 @@ type symbolInfo struct {
 func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snapshot, error) {
 	result := &snapshot{
 		documents:        make(map[string]*document),
+		documentPaths:    make(map[string]struct{}),
 		definitions:      make(map[string][]indexedLocation),
 		references:       make(map[string][]indexedLocation),
 		symbols:          make(map[string]*symbolInfo),
@@ -111,6 +113,10 @@ func parseSnapshot(ctx context.Context, data []byte, limits parseLimits) (*snaps
 			if result.documentCount > limits.documents {
 				return semanticLimit("documents", result.documentCount, limits.documents)
 			}
+			if err := validateRepoPath(doc.GetRelativePath()); err != nil {
+				return fmt.Errorf("SCIP document path: %w", err)
+			}
+			result.documentPaths[doc.GetRelativePath()] = struct{}{}
 			if err := result.addDocument(doc, limits); err != nil {
 				if errors.Is(err, ErrUnsupportedEncoding) {
 					// Position encoding is document-local. One ambiguous

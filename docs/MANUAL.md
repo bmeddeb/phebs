@@ -37,10 +37,14 @@ allowlist can add up to seven branch/tag revisions, selected with `rev:`.
 For a repository with an `analysis_units` entry, search shards contain only
 the configured primary and supporting paths at each admitted revision; status
 reports `focused`. Repositories without an entry retain whole-repository
-search. SCIP remains repository-root-unbound until the later scoped typed
-index contract. The candidate planner now gates experimental extraction on one
-current streamed HEAD manifest and records unit membership, but extraction
-evidence remains repository-wide and repository/commit-bound until T30.5.
+search and extraction. A focused repository may explicitly designate one
+supporting SCIP artifact as `unit-bound`; without that designation it never
+falls back to repository-root `index.scip`. The candidate planner gates
+experimental extraction on one current streamed HEAD manifest. Local evidence,
+coverage, source citations, and Workbench implementation views consume only
+the unit records and are keyed by the exact indexed commit plus unit digest.
+Repository-wide caller discovery remains a separately labeled overlay owned
+by the next Epic 30 ticket.
 
 ## Evidence boundary
 

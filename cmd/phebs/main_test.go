@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/config"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -31,6 +33,24 @@ import (
 type authenticationWorkbenchFake struct{}
 
 type authenticationWorkbenchChecklistFake struct{}
+
+func TestCodeNavigationRepositoryErrorClassifiesNotFound(t *testing.T) {
+	wrapped := fmt.Errorf("lookup: %w", store.ErrNotFound)
+	if err := codeNavigationRepositoryError(
+		"example.com/repo",
+		wrapped,
+	); !errors.Is(err, codenav.ErrRevisionNotFound) {
+		t.Fatalf("classified error = %v, want ErrRevisionNotFound", err)
+	}
+
+	infrastructure := errors.New("database unavailable")
+	if got := codeNavigationRepositoryError(
+		"example.com/repo",
+		infrastructure,
+	); !errors.Is(got, infrastructure) {
+		t.Fatalf("infrastructure error = %v, want original", got)
+	}
+}
 
 func (authenticationWorkbenchFake) Preview(
 	context.Context,
@@ -1028,8 +1048,8 @@ func TestEvidenceViewUsesAuthenticatedPrincipal(t *testing.T) {
 		http.Header{"Content-Type": []string{"application/json"}}, http.StatusOK, `"authenticated":true`)
 	response := assertStatus(t, client, http.MethodGet, server.URL+"/api/evidence?domain=proto-contract", "", nil,
 		http.StatusOK, `"visible_repository_count":1`)
-	if principalResolutions.Load() != 1 {
-		t.Fatalf("authenticated visibility resolutions = %d, want 1", principalResolutions.Load())
+	if principalResolutions.Load() != 2 {
+		t.Fatalf("authenticated visibility resolutions = %d, want 2", principalResolutions.Load())
 	}
 	if !bytes.Contains(response, []byte(visibleRepo)) || bytes.Contains(response, []byte(hiddenRepo)) ||
 		bytes.Contains(response, []byte("HiddenService")) {
@@ -1047,7 +1067,11 @@ func seedHTTPTestEvidence(t *testing.T, st *store.Surreal, repo, object string) 
 	if err := st.SetRepoIndexed(ctx, repo, commit, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
-	run, err := st.BeginExtractionRun(ctx, repo, commit, "proto-contract", "test")
+	run, err := st.BeginExtractionRun(ctx, store.ExtractionScope{
+		Repository: repo,
+		Commit:     commit,
+		Domain:     "proto-contract",
+	}, "test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1487,8 +1511,8 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 	// activation remains disabled.
 	if len(got) != 4 || got[0].Domain() != "proto-contract" ||
 		got[1].Domain() != "grpc-consumer" ||
-		got[2].Domain() != "scip-proto-field" || got[2].Version() != "1.1.0" ||
-		got[3].Domain() != "grpc-caller" || got[3].Version() != "1.3.0" ||
+		got[2].Domain() != "scip-proto-field" || got[2].Version() != "1.2.0" ||
+		got[3].Domain() != "grpc-caller" || got[3].Version() != "1.4.0" ||
 		got[0].Version() != "3.0.0" {
 		t.Fatalf("proto-only extractor registry = %#v", got)
 	}
@@ -1499,13 +1523,13 @@ func TestEvidenceExtractorsRemainValidationGated(t *testing.T) {
 		thriftOnly[0].Version() != "1.0.0" || thriftOnly[1].Domain() != "thrift-consumer" ||
 		thriftOnly[1].Version() != "1.1.0" ||
 		thriftOnly[2].Domain() != "thrift-caller" ||
-		thriftOnly[2].Version() != "1.3.0" {
+		thriftOnly[2].Version() != "1.4.0" {
 		t.Fatalf("thrift-only extractor registry = %#v", thriftOnly)
 	}
 	thriftFieldOnly := evidenceExtractors(false, false, true, false)
 	if len(thriftFieldOnly) != 1 ||
 		thriftFieldOnly[0].Domain() != "scip-thrift-field" ||
-		thriftFieldOnly[0].Version() != "1.1.0" {
+		thriftFieldOnly[0].Version() != "1.2.0" {
 		t.Fatalf("thrift-field-only extractor registry = %#v", thriftFieldOnly)
 	}
 	// T23.2: both Kafka planes ride one dark flag at 1.0.0 and compose after

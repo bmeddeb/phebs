@@ -157,7 +157,9 @@ func OpenContext(
 	if IsPublishing(root, expected.Repository) {
 		return nil, ErrPublishing
 	}
-	return &Publication{root: root, manifest: manifest, state: manifest.State()}, nil
+	return &Publication{
+		root: root, manifest: manifest, state: manifest.State(), unit: view,
+	}, nil
 }
 
 // OpenPublishingContext strictly validates an interrupted live publication
@@ -189,7 +191,9 @@ func OpenPublishingContext(
 	if err := validatePublishingMarker(root, expected.Repository); err != nil {
 		return nil, err
 	}
-	return &Publication{root: root, manifest: manifest, state: manifest.State()}, nil
+	return &Publication{
+		root: root, manifest: manifest, state: manifest.State(), unit: view,
+	}, nil
 }
 
 func validatePublishingMarker(root, repository string) (resultErr error) {
@@ -266,7 +270,10 @@ func OpenStateContext(
 	// State alone intentionally cannot prove unit path flags. Those are bound
 	// by the manifest digest and are re-proven against the committed unit by
 	// Open whenever extraction starts.
-	return &Publication{root: root, manifest: manifest, state: state}, nil
+	return &Publication{
+		root: root, manifest: manifest, state: state,
+		unit: &analysisUnitView{},
+	}, nil
 }
 
 // Publish validates the complete stage, installs a same-filesystem marker,

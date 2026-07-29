@@ -273,7 +273,7 @@ DEFINE EVENT IF NOT EXISTS %s ON TABLE extraction_run
 	WHEN $event != 'DELETE'
 	  AND $after.store_schema_version IN
 		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4',
-		 't12-store-v5', '%s']
+		 't12-store-v5', 't12-store-v6', '%s']
 	THEN {
 		THROW 'phebs-permanent: retired evidence writer generation'
 	};
@@ -288,7 +288,7 @@ DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
 DEFINE FIELD OVERWRITE store_schema_version ON extraction_run TYPE string
 	ASSERT $value NOT IN
 		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4',
-		 't12-store-v5', '%s'];
+		 't12-store-v5', 't12-store-v6', '%s'];
 DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;
 DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'aborted'];`,
@@ -359,6 +359,8 @@ type evidenceRunMigrationRec struct {
 	RecID                *models.RecordID `json:"id"`
 	RunID                any              `json:"run_id"`
 	Repo                 any              `json:"repo"`
+	Commit               any              `json:"commit"`
+	UnitDigest           any              `json:"unit_digest"`
 	Domain               any              `json:"domain"`
 	Status               any              `json:"status"`
 	StoreSchema          any              `json:"store_schema_version"`
@@ -376,6 +378,123 @@ type evidenceMigrationStateRec struct {
 type evidencePinMigrationRec struct {
 	RecID *models.RecordID `json:"id"`
 	Kind  any              `json:"kind"`
+}
+
+type evidenceAttemptMigrationRec struct {
+	RecID       *models.RecordID `json:"id"`
+	RunID       any              `json:"run_id"`
+	Repo        any              `json:"repo"`
+	Commit      any              `json:"commit"`
+	Domain      any              `json:"domain"`
+	Extractor   any              `json:"extractor"`
+	Status      any              `json:"status"`
+	StartedAt   any              `json:"started_at"`
+	StoreSchema any              `json:"store_schema_version"`
+	Format      any              `json:"evidence_format_version"`
+}
+
+func validMigrationIdentity(value any) (string, bool) {
+	text, ok := migrationString(value)
+	return text, ok && strings.TrimSpace(text) != "" && utf8.ValidString(text) &&
+		len(text) <= maxEvidenceIdentityBytes
+}
+
+// migrateEvidenceAttempts preserves the immediately preceding writer's
+// latest-attempt diagnostics. The old writer had one row per repo/domain, so
+// every compatible row belongs to the explicit whole-repository unit. No
+// current repository state participates in that classification.
+func (s *Surreal) migrateEvidenceAttempts(ctx context.Context) error {
+	const retiredAttemptSchema = "t12-store-retired-v7-attempt"
+	for {
+		results, err := surrealdb.Query[[]evidenceAttemptMigrationRec](ctx, s.db,
+			`SELECT id, run_id, repo, commit, domain, extractor, status, started_at,
+				store_schema_version, evidence_format_version
+			FROM extraction_attempt
+			WHERE store_schema_version = $previous_schema
+			ORDER BY id LIMIT $limit`, map[string]any{
+				"previous_schema": evidencePreviousStoreSchemaVersion,
+				"limit":           evidenceMigrationBatchSize,
+			})
+		if err != nil {
+			return err
+		}
+		var candidates []evidenceAttemptMigrationRec
+		for _, result := range *results {
+			candidates = append(candidates, result.Result...)
+		}
+		if len(candidates) == 0 {
+			return nil
+		}
+
+		for _, row := range candidates {
+			if row.RecID == nil {
+				return errors.New("attempt has no physical record id")
+			}
+			runID, runOK := validMigrationIdentity(row.RunID)
+			repo, repoOK := validMigrationIdentity(row.Repo)
+			commit, commitOK := validMigrationIdentity(row.Commit)
+			domain, domainOK := validMigrationIdentity(row.Domain)
+			extractor, extractorOK := validMigrationIdentity(row.Extractor)
+			status, statusOK := migrationString(row.Status)
+			format, formatOK := migrationString(row.Format)
+			if !runOK || !repoOK || !commitOK || !domainOK || !extractorOK ||
+				!statusOK || (status != "staged" && status != "published" && status != "aborted") ||
+				!formatOK || format != evidenceFormatVersion || row.StartedAt == nil {
+				if _, err := surrealdb.Query[any](ctx, s.db,
+					`UPDATE $rid SET store_schema_version = $retired_schema,
+						evidence_migration_version = $migration RETURN NONE`,
+					map[string]any{
+						"rid": *row.RecID, "retired_schema": retiredAttemptSchema,
+						"migration": evidenceMigrationVersion,
+					}); err != nil {
+					return fmt.Errorf("retire malformed attempt: %w", err)
+				}
+				continue
+			}
+
+			scope := ExtractionScope{
+				Repository: repo,
+				Commit:     commit,
+				UnitDigest: "",
+				Domain:     domain,
+			}
+			moved, err := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
+				`BEGIN;
+				LET $ready = array::len(SELECT id FROM $old_rid
+					WHERE store_schema_version = $previous_schema LIMIT 1) = 1
+					AND array::len(SELECT id FROM $new_rid LIMIT 1) = 0;
+				DELETE $old_rid WHERE $ready RETURN NONE;
+				LET $created = IF $ready THEN
+					(CREATE $new_rid SET run_id = $run_id, repo = $repo, commit = $commit,
+						unit_digest = '', domain = $domain, extractor = $extractor,
+						status = $status, started_at = $started_at,
+						store_schema_version = $store_schema_version,
+						evidence_format_version = $evidence_format_version,
+						evidence_migration_version = $evidence_migration_version RETURN AFTER)
+					ELSE [] END;
+				RETURN $created;
+				COMMIT;`, map[string]any{
+					"old_rid": *row.RecID, "new_rid": extractionAttemptID(scope),
+					"run_id": runID, "repo": repo, "commit": commit,
+					"domain": domain, "extractor": extractor,
+					"status": status, "started_at": row.StartedAt,
+					"previous_schema":            evidencePreviousStoreSchemaVersion,
+					"store_schema_version":       evidenceStoreSchemaVersion,
+					"evidence_format_version":    evidenceFormatVersion,
+					"evidence_migration_version": evidenceMigrationVersion,
+				})
+			if err != nil {
+				return fmt.Errorf("move attempt for %s: %w", repo, err)
+			}
+			progressed := false
+			for _, result := range *moved {
+				progressed = progressed || len(result.Result) == 1
+			}
+			if !progressed {
+				return fmt.Errorf("move attempt for %s: destination collision or source changed", repo)
+			}
+		}
+	}
 }
 
 func (s *Surreal) migrateEvidencePins(ctx context.Context, oldRunID, runID string) error {
@@ -483,7 +602,8 @@ func evidenceMigrationPhysicalID(row evidenceRunMigrationRec) (models.RecordID, 
 
 func isLegacyEvidenceStoreSchema(schema string, present bool) bool {
 	return !present || schema == "" || schema == "t12-store-v1" || schema == "t12-store-v2" ||
-		schema == "t12-store-v3" || schema == "t12-store-v4" || schema == "t12-store-v5"
+		schema == "t12-store-v3" || schema == "t12-store-v4" || schema == "t12-store-v5" ||
+		schema == "t12-store-v6"
 }
 
 func validEvidenceRunStatus(status string) bool {
@@ -514,7 +634,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 
 	for {
 		results, err := surrealdb.Query[[]evidenceRunMigrationRec](ctx, s.db,
-			`SELECT id, run_id, repo, domain, status, store_schema_version,
+			`SELECT id, run_id, repo, commit, unit_digest, domain, status, store_schema_version,
 				evidence_format_version, evidence_migration_ambiguous_run_id,
 				retention_quarantined, retention_phase
 			FROM extraction_run
@@ -538,6 +658,8 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 						OR run_id = '' OR run_id != record::id(id)
 						OR retention_quarantined = NONE
 						OR retention_quarantined NOT IN [true, false]
+						OR unit_digest = NONE
+						OR NOT (type::is_string(unit_digest))
 						OR status = NONE OR NOT (type::is_string(status))
 							OR status NOT IN ['staged', 'published', 'superseded', 'aborted', 'deleting']
 							OR (status = 'deleting' AND (
@@ -557,7 +679,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				"limit": evidenceMigrationBatchSize, "schema": evidenceStoreSchemaVersion,
 				"previous_schema": evidencePreviousStoreSchemaVersion,
 				"legacy_schemas": []string{"t12-store-v1", "t12-store-v2", "t12-store-v3",
-					"t12-store-v4", "t12-store-v5"},
+					"t12-store-v4", "t12-store-v5", "t12-store-v6"},
 				"format":    evidenceFormatVersion,
 				"migration": evidenceMigrationVersion,
 			})
@@ -569,6 +691,9 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			candidates = append(candidates, result.Result...)
 		}
 		if len(candidates) == 0 {
+			if err := s.migrateEvidenceAttempts(ctx); err != nil {
+				return fmt.Errorf("migrate evidence runs: attempts: %w", err)
+			}
 			if _, err := surrealdb.Query[any](ctx, s.db,
 				`UPSERT $rid SET version = $version, completed_at = time::now() RETURN NONE`,
 				map[string]any{"rid": evidenceMigrationStateID(), "version": evidenceMigrationVersion}); err != nil {
@@ -597,6 +722,15 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			knownWriter := schema == evidencePreviousStoreSchemaVersion || schema == evidenceStoreSchemaVersion
 			malformedFormat := knownWriter && ((formatPresent && format == "") ||
 				(!formatPresent && row.Format != nil))
+			unitDigest := ""
+			if schema == evidenceStoreSchemaVersion {
+				var unitOK bool
+				unitDigest, unitOK = migrationString(row.UnitDigest)
+				if !unitOK || (unitDigest != "" && !validSHA256Digest(unitDigest)) {
+					malformedFormat = true
+					unitDigest = ""
+				}
+			}
 			status, statusPresent := migrationString(row.Status)
 			retentionPhase, retentionPhasePresent := migrationString(row.RetentionPhase)
 			quarantined := legacy || malformedFormat
@@ -671,14 +805,23 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			key := ""
 			if status == "published" && !quarantined {
 				repo, repoOK := migrationString(row.Repo)
+				commit, commitOK := migrationString(row.Commit)
 				domain, domainOK := migrationString(row.Domain)
-				if !repoOK || !domainOK || repo == "" || domain == "" ||
-					!utf8.ValidString(repo) || !utf8.ValidString(domain) ||
-					len(repo) > maxEvidenceIdentityBytes || len(domain) > maxEvidenceIdentityBytes {
+				if !repoOK || !commitOK || !domainOK ||
+					repo == "" || commit == "" || domain == "" ||
+					!utf8.ValidString(repo) || !utf8.ValidString(commit) || !utf8.ValidString(domain) ||
+					len(repo) > maxEvidenceIdentityBytes ||
+					len(commit) > maxEvidenceIdentityBytes ||
+					len(domain) > maxEvidenceIdentityBytes {
 					status = "superseded"
 					quarantined = true
 				} else {
-					canonicalKey := publishedKey(repo, domain)
+					canonicalKey := publishedKey(ExtractionScope{
+						Repository: repo,
+						Commit:     commit,
+						UnitDigest: unitDigest,
+						Domain:     domain,
+					})
 					owners, lookupErr := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
 						`SELECT id FROM extraction_run
 							WHERE published_key = $published_key AND id != $rid LIMIT 1`, map[string]any{
@@ -736,6 +879,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 				"store_schema_version":       evidenceStoreSchemaVersion,
 				"evidence_format_version":    evidenceFormatVersion,
 				"evidence_migration_version": evidenceMigrationVersion,
+				"unit_digest":                unitDigest,
 				"retention_quarantined":      quarantined,
 				"has_published_key":          key != "", "published_key": key,
 				"has_ambiguous_run_id": hasAmbiguousRunID,
@@ -746,6 +890,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			updated, updateErr := surrealdb.Query[[]evidenceMigrationStateRec](ctx, s.db,
 				`BEGIN;
 				LET $updated = UPDATE $rid SET run_id = $run_id, status = $status,
+					unit_digest = $unit_digest,
 					store_schema_version = $store_schema_version,
 					evidence_format_version = $evidence_format_version,
 					evidence_migration_version = $evidence_migration_version,
@@ -955,18 +1100,54 @@ LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
 LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
 	indexed_revisions = $revisions, indexed_analysis_unit = NONE,
 	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
+LET $scope_unchanged = ($before.indexed_commit_hash ?? '') = $hash
+	AND ($before.indexed_analysis_unit.digest ?? '') = $unit_digest;
+LET $same_scope_state_changed = array::len($updated) = 1
+	AND $scope_unchanged
+	AND $before.indexed_analysis_unit != NONE;
 LET $identity_changed = array::len($updated) = 1
-	AND (($before.indexed_commit_hash ?? '') != $hash
-		OR ($before.indexed_analysis_unit.digest ?? '') != $unit_digest);
+	AND ($scope_unchanged = false OR $same_scope_state_changed);
 IF $identity_changed {
 	DELETE $publication_rid RETURN NONE
 };
-RETURN $updated;
+IF $same_scope_state_changed {
+	UPDATE extraction_run SET status = 'superseded', published_key = NONE
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'published'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
+	UPDATE extraction_run SET status = 'aborted', published_key = NONE
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'staged'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
+	DELETE extraction_attempt
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND evidence_migration_version = $evidence_migration
+		RETURN NONE
+};
+LET $final = IF $identity_changed THEN
+	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
+		RETURN AFTER)
+	ELSE $updated END;
+RETURN $final;
 COMMIT;`
 	vars := map[string]any{
-		"rid": repoID(name), "hash": defaultCommit,
+		"rid": repoID(name), "name": name, "hash": defaultCommit,
 		"revisions": revisions, "at": at, "unit_digest": "",
-		"publication_rid": candidateManifestPublicationID(name),
+		"publication_rid":             candidateManifestPublicationID(name),
+		"evidence_store_schema":       evidenceStoreSchemaVersion,
+		"evidence_format":             evidenceFormatVersion,
+		"evidence_migration":          evidenceMigrationVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	if unit != nil {
 		statement = `BEGIN;
@@ -974,13 +1155,45 @@ LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
 LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
 	indexed_revisions = $revisions, indexed_analysis_unit = $unit,
 	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
+LET $scope_unchanged = ($before.indexed_commit_hash ?? '') = $hash
+	AND ($before.indexed_analysis_unit.digest ?? '') = $unit_digest;
+LET $same_scope_state_changed = array::len($updated) = 1
+	AND $scope_unchanged
+	AND $before.indexed_analysis_unit != $unit;
 LET $identity_changed = array::len($updated) = 1
-	AND (($before.indexed_commit_hash ?? '') != $hash
-		OR ($before.indexed_analysis_unit.digest ?? '') != $unit_digest);
+	AND ($scope_unchanged = false OR $same_scope_state_changed);
 IF $identity_changed {
 	DELETE $publication_rid RETURN NONE
 };
-RETURN $updated;
+IF $same_scope_state_changed {
+	UPDATE extraction_run SET status = 'superseded', published_key = NONE
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'published'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
+	UPDATE extraction_run SET status = 'aborted', published_key = NONE
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'staged'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
+	DELETE extraction_attempt
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND evidence_migration_version = $evidence_migration
+		RETURN NONE
+};
+LET $final = IF $identity_changed THEN
+	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
+		RETURN AFTER)
+	ELSE $updated END;
+RETURN $final;
 COMMIT;`
 		vars["unit"] = analysisunit.CloneState(unit)
 		vars["unit_digest"] = unit.Digest
@@ -1003,12 +1216,22 @@ COMMIT;`
 func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
 		`BEGIN;
+LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
+LET $publication = (SELECT id FROM $publication_rid)[0];
+LET $visibility_changed = ($before != NONE
+	AND (($before.indexed_commit_hash ?? '') != ''
+		OR $before.indexed_analysis_unit != NONE))
+	OR $publication != NONE;
 LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
 	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
 IF array::len($updated) = 1 {
 	DELETE $publication_rid RETURN NONE
 };
-RETURN $updated;
+LET $final = IF array::len($updated) = 1 AND $visibility_changed THEN
+	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
+		RETURN AFTER)
+	ELSE $updated END;
+RETURN $final;
 COMMIT;`,
 		map[string]any{
 			"rid":             repoID(name),

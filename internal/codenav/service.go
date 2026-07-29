@@ -4,8 +4,13 @@ import (
 	"container/heap"
 	"container/list"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -16,16 +21,26 @@ import (
 const (
 	// Result validation is deliberately oversampled but bounded: corrupt ranges
 	// cannot trigger source reads for every occurrence in a million-hit index.
-	maxDefinitionRangeCandidates = 512
-	maxReferenceRangeCandidates  = MaxReferenceLocations*2 + 1
+	maxDefinitionRangeCandidates     = 512
+	maxReferenceRangeCandidates      = MaxReferenceLocations*2 + 1
+	analysisUnitMaxSelectedPaths     = 128
+	analysisUnitMaxSelectedPathBytes = 64 << 10
+	analysisUnitMaxPathBytes         = 4096
 )
 
 type cacheEntry struct {
-	revision string
-	index    *snapshot
-	loadErr  error
-	bytes    int64
-	element  *list.Element
+	revision        string
+	bindingIdentity string
+	binding         typedIndexBinding
+	index           *snapshot
+	loadErr         error
+	bytes           int64
+	element         *list.Element
+}
+
+type typedIndexBinding struct {
+	TypedIndexBinding
+	identity string
 }
 
 // Service lazily loads immutable SCIP snapshots into a byte-accounted LRU.
@@ -33,6 +48,7 @@ type cacheEntry struct {
 type Service struct {
 	dataDir             string
 	indexPath           string
+	bindingResolver     TypedIndexResolver
 	maxIndexBytes       int64
 	maxSourceBytes      int64
 	maxQuerySourceBytes int64
@@ -71,6 +87,7 @@ func New(opts Options) *Service {
 	return &Service{
 		dataDir:             opts.DataDir,
 		indexPath:           indexPath,
+		bindingResolver:     opts.BindingResolver,
 		maxIndexBytes:       maxBytes,
 		maxSourceBytes:      maxSourceBytes,
 		maxQuerySourceBytes: maxQuerySourceBytes,
@@ -88,24 +105,59 @@ func (s *Service) Ingest(ctx context.Context, repo, revision string) (Availabili
 	if err != nil {
 		return Availability{}, err
 	}
-	if err := validateRepoPath(s.indexPath); err != nil {
-		return Availability{}, fmt.Errorf("index path: %w", err)
+	binding, err := s.resolveTypedIndex(ctx, repo, revision)
+	if err != nil {
+		return Availability{}, err
 	}
 
 	lock := s.repoLock(repo)
 	lock.Lock()
 	defer lock.Unlock()
-	return s.ingestLocked(ctx, repo, revision)
+	availability, err := s.ingestLocked(ctx, repo, revision, binding)
+	if err != nil {
+		return Availability{}, err
+	}
+	if err := s.validateResultBinding(
+		ctx,
+		repo,
+		revision,
+		binding.identity,
+	); err != nil {
+		return Availability{}, err
+	}
+	return availability, nil
 }
 
-func (s *Service) ingestLocked(ctx context.Context, repo, revision string) (Availability, error) {
+func (s *Service) ingestLocked(
+	ctx context.Context,
+	repo, revision string,
+	binding typedIndexBinding,
+) (Availability, error) {
 	availability := Availability{Repo: repo, Revision: revision}
-	if err := validateRepoPath(s.indexPath); err != nil {
-		return Availability{}, fmt.Errorf("index path: %w", err)
+	if binding.Focused && binding.Path == "" {
+		if err := s.storeEntry(repo, cacheEntry{
+			revision:        revision,
+			bindingIdentity: binding.identity,
+			binding:         binding,
+		}); err != nil {
+			return Availability{}, err
+		}
+		return availability, nil
 	}
-	data, err := s.readBlob(ctx, repo, revision, s.indexPath, s.maxIndexBytes, ErrIndexTooLarge)
+	data, err := s.readBlob(
+		ctx,
+		repo,
+		revision,
+		binding.Path,
+		s.maxIndexBytes,
+		ErrIndexTooLarge,
+	)
 	if errors.Is(err, errBlobNotFound) {
-		if err := s.storeEntry(repo, cacheEntry{revision: revision}); err != nil {
+		if err := s.storeEntry(repo, cacheEntry{
+			revision:        revision,
+			bindingIdentity: binding.identity,
+			binding:         binding,
+		}); err != nil {
 			return Availability{}, err
 		}
 		return availability, nil
@@ -122,12 +174,36 @@ func (s *Service) ingestLocked(ctx context.Context, repo, revision string) (Avai
 		// Cache malformed committed indexes by immutable revision. This prevents
 		// every query from rereading and reparsing the same bounded-but-large blob.
 		loadErr := fmt.Errorf("parse committed SCIP index: %w", err)
-		if cacheErr := s.storeEntry(repo, cacheEntry{revision: revision, loadErr: loadErr}); cacheErr != nil {
+		if cacheErr := s.storeEntry(repo, cacheEntry{
+			revision:        revision,
+			bindingIdentity: binding.identity,
+			binding:         binding,
+			loadErr:         loadErr,
+		}); cacheErr != nil {
 			return Availability{}, errors.Join(loadErr, cacheErr)
 		}
 		return Availability{}, loadErr
 	}
-	if err := s.storeEntry(repo, cacheEntry{revision: revision, index: index}); err != nil {
+	if binding.Focused {
+		if err := validateScopedSnapshot(index, binding); err != nil {
+			loadErr := fmt.Errorf("validate scoped SCIP index: %w", err)
+			if cacheErr := s.storeEntry(repo, cacheEntry{
+				revision:        revision,
+				bindingIdentity: binding.identity,
+				binding:         binding,
+				loadErr:         loadErr,
+			}); cacheErr != nil {
+				return Availability{}, errors.Join(loadErr, cacheErr)
+			}
+			return Availability{}, loadErr
+		}
+	}
+	if err := s.storeEntry(repo, cacheEntry{
+		revision:        revision,
+		bindingIdentity: binding.identity,
+		binding:         binding,
+		index:           index,
+	}); err != nil {
 		return Availability{}, err
 	}
 	availability.Available = true
@@ -149,15 +225,32 @@ func (s *Service) Remove(repo string) error {
 	return nil
 }
 
-func (s *Service) Definition(ctx context.Context, q Query) (DefinitionResult, error) {
-	_, entry, doc, occurrence, converter, err := s.resolve(ctx, q)
+func (s *Service) Definition(
+	ctx context.Context,
+	q Query,
+) (result DefinitionResult, resultErr error) {
+	q, entry, doc, occurrence, converter, err := s.resolve(ctx, q)
 	if err != nil {
 		return DefinitionResult{}, err
 	}
+	defer func() {
+		if resultErr != nil {
+			return
+		}
+		if err := s.validateResultBinding(
+			ctx,
+			q.Repo,
+			q.Revision,
+			entry.bindingIdentity,
+		); err != nil {
+			result = DefinitionResult{}
+			resultErr = err
+		}
+	}()
 	if entry.index == nil {
 		return DefinitionResult{Available: false}, nil
 	}
-	result := DefinitionResult{Available: true}
+	result = DefinitionResult{Available: true}
 	if occurrence == nil {
 		return result, nil
 	}
@@ -182,12 +275,29 @@ func (s *Service) Definition(ctx context.Context, q Query) (DefinitionResult, er
 	return result, nil
 }
 
-func (s *Service) References(ctx context.Context, q Query) (ReferencesResult, error) {
-	_, entry, doc, occurrence, converter, err := s.resolve(ctx, q)
+func (s *Service) References(
+	ctx context.Context,
+	q Query,
+) (result ReferencesResult, resultErr error) {
+	q, entry, doc, occurrence, converter, err := s.resolve(ctx, q)
 	if err != nil {
 		return ReferencesResult{}, err
 	}
-	result := ReferencesResult{Available: entry.index != nil, Locations: []Location{}}
+	defer func() {
+		if resultErr != nil {
+			return
+		}
+		if err := s.validateResultBinding(
+			ctx,
+			q.Repo,
+			q.Revision,
+			entry.bindingIdentity,
+		); err != nil {
+			result = ReferencesResult{}
+			resultErr = err
+		}
+	}()
+	result = ReferencesResult{Available: entry.index != nil, Locations: []Location{}}
 	if entry.index == nil || occurrence == nil {
 		return result, nil
 	}
@@ -217,12 +327,29 @@ func (s *Service) References(ctx context.Context, q Query) (ReferencesResult, er
 	return result, nil
 }
 
-func (s *Service) Hover(ctx context.Context, q Query) (HoverResult, error) {
+func (s *Service) Hover(
+	ctx context.Context,
+	q Query,
+) (result HoverResult, resultErr error) {
 	q, entry, doc, occurrence, converter, err := s.resolve(ctx, q)
 	if err != nil {
 		return HoverResult{}, err
 	}
-	result := HoverResult{Available: entry.index != nil}
+	defer func() {
+		if resultErr != nil {
+			return
+		}
+		if err := s.validateResultBinding(
+			ctx,
+			q.Repo,
+			q.Revision,
+			entry.bindingIdentity,
+		); err != nil {
+			result = HoverResult{}
+			resultErr = err
+		}
+	}()
+	result = HoverResult{Available: entry.index != nil}
 	if entry.index == nil || occurrence == nil {
 		return result, nil
 	}
@@ -288,6 +415,13 @@ func (s *Service) resolve(ctx context.Context, q Query) (Query, cacheEntry, *doc
 	if err != nil || entry.index == nil {
 		return q, entry, nil, nil, nil, err
 	}
+	if entry.binding.Focused && !entry.binding.admits(q.Path) {
+		return Query{}, cacheEntry{}, nil, nil, nil, fmt.Errorf(
+			"query path %q: %w",
+			q.Path,
+			ErrDocumentOutsideUnit,
+		)
+	}
 	doc := entry.index.documents[q.Path]
 	if doc == nil {
 		return q, entry, nil, nil, nil, nil
@@ -307,20 +441,66 @@ func (s *Service) resolve(ctx context.Context, q Query) (Query, cacheEntry, *doc
 }
 
 func (s *Service) ensure(ctx context.Context, repo, revision string) (cacheEntry, error) {
-	if entry, ok := s.loadEntry(repo, revision); ok {
+	binding, err := s.resolveTypedIndex(ctx, repo, revision)
+	if err != nil {
+		return cacheEntry{}, err
+	}
+	if entry, ok := s.loadBoundEntry(repo, revision, binding.identity); ok {
 		return entry, entry.loadErr
 	}
 	lock := s.repoLock(repo)
 	lock.Lock()
 	defer lock.Unlock()
-	if entry, ok := s.loadEntry(repo, revision); ok {
+	if entry, ok := s.loadBoundEntry(repo, revision, binding.identity); ok {
 		return entry, entry.loadErr
 	}
-	if _, err := s.ingestLocked(ctx, repo, revision); err != nil {
+	if _, err := s.ingestLocked(ctx, repo, revision, binding); err != nil {
 		return cacheEntry{}, err
 	}
-	entry, _ := s.loadEntry(repo, revision)
+	entry, _ := s.loadBoundEntry(repo, revision, binding.identity)
 	return entry, entry.loadErr
+}
+
+func (s *Service) resolveTypedIndex(
+	ctx context.Context,
+	repo, revision string,
+) (typedIndexBinding, error) {
+	resolved := TypedIndexBinding{
+		Path:   s.indexPath,
+		Commit: revision,
+	}
+	if s.bindingResolver != nil {
+		var err error
+		resolved, err = s.bindingResolver.ResolveTypedIndex(ctx, repo, revision)
+		if err != nil {
+			return typedIndexBinding{}, fmt.Errorf(
+				"resolve typed-index binding: %w",
+				err,
+			)
+		}
+	}
+	binding, err := canonicalTypedIndexBinding(resolved, revision, s.indexPath)
+	if err != nil {
+		return typedIndexBinding{}, err
+	}
+	return binding, nil
+}
+
+func (s *Service) validateResultBinding(
+	ctx context.Context,
+	repo, revision, expectedIdentity string,
+) error {
+	current, err := s.resolveTypedIndex(ctx, repo, revision)
+	if err != nil {
+		return err
+	}
+	if current.identity != expectedIdentity {
+		return fmt.Errorf(
+			"committed typed-index binding changed while producing the result: %w",
+			ErrBindingChanged,
+		)
+	}
+	return nil
 }
 
 func (s *Service) validateRevision(repo, revision string) (string, string, error) {
@@ -370,7 +550,24 @@ func (s *Service) loadEntry(repo, revision string) (cacheEntry, bool) {
 	return *entry, true
 }
 
+func (s *Service) loadBoundEntry(
+	repo, revision, bindingIdentity string,
+) (cacheEntry, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	entry, ok := s.entries[repo]
+	if !ok || entry.revision != revision ||
+		entry.bindingIdentity != bindingIdentity {
+		return cacheEntry{}, false
+	}
+	s.lru.MoveToFront(entry.element)
+	return *entry, true
+}
+
 func (s *Service) storeEntry(repo string, entry cacheEntry) error {
+	if entry.bindingIdentity == "" && entry.binding.identity != "" {
+		entry.bindingIdentity = entry.binding.identity
+	}
 	entry.bytes = cacheEntryBytes(repo, entry)
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -409,7 +606,21 @@ func (s *Service) deleteEntryLocked(repo string) {
 
 func cacheEntryBytes(repo string, entry cacheEntry) int64 {
 	const entryOverhead = 256
-	bytes := int64(entryOverhead + len(repo) + len(entry.revision))
+	bytes := int64(
+		entryOverhead +
+			len(repo) +
+			len(entry.revision) +
+			len(entry.bindingIdentity) +
+			len(entry.binding.Path) +
+			len(entry.binding.Commit) +
+			len(entry.binding.UnitDigest),
+	)
+	for _, selected := range entry.binding.PrimaryPaths {
+		bytes += int64(len(selected))
+	}
+	for _, selected := range entry.binding.SupportingPaths {
+		bytes += int64(len(selected))
+	}
 	if entry.index != nil {
 		bytes += entry.index.estimatedBytes
 	}
@@ -417,6 +628,214 @@ func cacheEntryBytes(repo string, entry cacheEntry) int64 {
 		bytes += int64(len(entry.loadErr.Error()))
 	}
 	return bytes
+}
+
+func canonicalTypedIndexBinding(
+	input TypedIndexBinding,
+	revision, defaultPath string,
+) (typedIndexBinding, error) {
+	if input.Commit == "" {
+		input.Commit = revision
+	}
+	if input.Commit != revision || !validRevision(input.Commit) {
+		return typedIndexBinding{}, fmt.Errorf(
+			"typed-index commit %q does not match requested revision: %w",
+			input.Commit,
+			ErrTypedIndexBinding,
+		)
+	}
+	if !input.Focused {
+		if input.Path == "" {
+			input.Path = defaultPath
+		}
+		if input.UnitDigest != "" ||
+			len(input.PrimaryPaths) != 0 ||
+			len(input.SupportingPaths) != 0 {
+			return typedIndexBinding{}, fmt.Errorf(
+				"whole-repository typed-index binding carries analysis-unit scope: %w",
+				ErrTypedIndexBinding,
+			)
+		}
+		if err := validateRepoPath(input.Path); err != nil {
+			return typedIndexBinding{}, fmt.Errorf(
+				"typed-index path: %w",
+				ErrTypedIndexBinding,
+			)
+		}
+		return bindTypedIndex(input)
+	}
+	if !validUnitDigest(input.UnitDigest) {
+		return typedIndexBinding{}, fmt.Errorf(
+			"focused typed-index binding has invalid unit digest: %w",
+			ErrTypedIndexBinding,
+		)
+	}
+	if len(input.PrimaryPaths)+len(input.SupportingPaths) >
+		analysisUnitMaxSelectedPaths {
+		return typedIndexBinding{}, fmt.Errorf(
+			"focused typed-index binding has too many selected paths: %w",
+			ErrTypedIndexBinding,
+		)
+	}
+	primary, err := canonicalBindingPaths(input.PrimaryPaths, true)
+	if err != nil {
+		return typedIndexBinding{}, err
+	}
+	supporting, err := canonicalBindingPaths(input.SupportingPaths, false)
+	if err != nil {
+		return typedIndexBinding{}, err
+	}
+	if err := validateBindingPathOverlap(primary, supporting); err != nil {
+		return typedIndexBinding{}, err
+	}
+	input.PrimaryPaths = primary
+	input.SupportingPaths = supporting
+	var selectedPathBytes int
+	for _, selected := range append(slices.Clone(primary), supporting...) {
+		selectedPathBytes += len(selected)
+	}
+	if selectedPathBytes > analysisUnitMaxSelectedPathBytes {
+		return typedIndexBinding{}, fmt.Errorf(
+			"focused typed-index binding selected paths are too large: %w",
+			ErrTypedIndexBinding,
+		)
+	}
+	if input.Path != "" {
+		if err := validateRepoPath(input.Path); err != nil {
+			return typedIndexBinding{}, fmt.Errorf(
+				"typed-index path: %w",
+				ErrTypedIndexBinding,
+			)
+		}
+		if !slices.Contains(input.SupportingPaths, input.Path) {
+			return typedIndexBinding{}, fmt.Errorf(
+				"typed-index path %q is not an exact supporting path: %w",
+				input.Path,
+				ErrTypedIndexBinding,
+			)
+		}
+	}
+	return bindTypedIndex(input)
+}
+
+func bindTypedIndex(input TypedIndexBinding) (typedIndexBinding, error) {
+	canonical, err := json.Marshal(input)
+	if err != nil {
+		return typedIndexBinding{}, fmt.Errorf(
+			"encode typed-index binding: %w",
+			err,
+		)
+	}
+	sum := sha256.Sum256(
+		append([]byte("phebs-typed-index-binding-v1\x00"), canonical...),
+	)
+	return typedIndexBinding{
+		TypedIndexBinding: input,
+		identity:          "sha256:" + hex.EncodeToString(sum[:]),
+	}, nil
+}
+
+func canonicalBindingPaths(
+	input []string,
+	required bool,
+) ([]string, error) {
+	if required && len(input) == 0 {
+		return nil, fmt.Errorf(
+			"focused typed-index binding has no primary paths: %w",
+			ErrTypedIndexBinding,
+		)
+	}
+	result := slices.Clone(input)
+	slices.Sort(result)
+	for index, selected := range result {
+		if len(selected) > analysisUnitMaxPathBytes {
+			return nil, fmt.Errorf(
+				"typed-index scope path is too large: %w",
+				ErrTypedIndexBinding,
+			)
+		}
+		if err := validateRepoPath(selected); err != nil {
+			return nil, fmt.Errorf(
+				"typed-index scope path %q: %w",
+				selected,
+				ErrTypedIndexBinding,
+			)
+		}
+		if index > 0 && result[index-1] == selected {
+			return nil, fmt.Errorf(
+				"duplicate typed-index scope path %q: %w",
+				selected,
+				ErrTypedIndexBinding,
+			)
+		}
+	}
+	return result, nil
+}
+
+func validateBindingPathOverlap(primary, supporting []string) error {
+	all := append(slices.Clone(primary), supporting...)
+	slices.Sort(all)
+	for index, selected := range all {
+		for parent := path.Dir(selected); parent != "."; parent = path.Dir(parent) {
+			search := sort.SearchStrings(all, parent)
+			if search < len(all) && all[search] == parent {
+				return fmt.Errorf(
+					"overlapping typed-index scope paths %q and %q: %w",
+					parent,
+					selected,
+					ErrTypedIndexBinding,
+				)
+			}
+		}
+		if index > 0 && all[index-1] == selected {
+			return fmt.Errorf(
+				"duplicate typed-index scope path %q: %w",
+				selected,
+				ErrTypedIndexBinding,
+			)
+		}
+	}
+	return nil
+}
+
+func (binding typedIndexBinding) admits(filePath string) bool {
+	for _, selected := range binding.PrimaryPaths {
+		if selected == filePath || strings.HasPrefix(filePath, selected+"/") {
+			return true
+		}
+	}
+	for _, selected := range binding.SupportingPaths {
+		if selected == filePath || strings.HasPrefix(filePath, selected+"/") {
+			return true
+		}
+	}
+	return false
+}
+
+func validateScopedSnapshot(
+	index *snapshot,
+	binding typedIndexBinding,
+) error {
+	for documentPath := range index.documentPaths {
+		if !binding.admits(documentPath) {
+			return fmt.Errorf(
+				"document %q: %w",
+				documentPath,
+				ErrDocumentOutsideUnit,
+			)
+		}
+	}
+	return nil
+}
+
+func validUnitDigest(value string) bool {
+	if len(value) != len("sha256:")+sha256.Size*2 ||
+		!strings.HasPrefix(value, "sha256:") ||
+		value != strings.ToLower(value) {
+		return false
+	}
+	decoded, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return err == nil && len(decoded) == sha256.Size
 }
 
 func isSkippableLocationError(err error) bool {
