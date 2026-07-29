@@ -3886,7 +3886,7 @@ configured domains before extraction begins. After successful admission,
 ordinary parser and domain-publication failures retain T19.8's per-domain
 isolation. This shared integrity blast radius is deliberate.
 
-The retained
+At T30.4 completion, the retained
 [prospective planner measurement](../spike/t304/README.md) streamed 200,008
 regular files, retained five repository rows and six caller rows, and produced
 three two-bit caller leaves (`00:1`, `10:3`, `11:2`). Each run staged five
@@ -3898,6 +3898,14 @@ peaked at 61,145,088 and 60,801,024 bytes RSS, and reproduced byte-identical
 output. Those observations freeze local gates of at most 10 s planner wall
 time, 256 MiB peak RSS, and 16 MiB peak candidate disk including publication
 plus the higher planner or validation scratch phase.
+
+T30.5 refreshed the same deterministic corpus after typed-input policy entered
+candidate identity. The current receipt still retains five repository rows,
+six caller rows, and the `00:1`, `10:3`, `11:2` leaf distribution; it stages
+five files totaling 13,589 bytes, bounds peak candidate disk at 17,723 bytes,
+and reproduces byte-identical output in 3.28 s/3.30 s at
+62,013,440/61,440,000 bytes RSS. The frozen limits and partition contract did
+not change.
 
 Acceptance coverage includes deterministic repeat builds and canonical
 ordering; exact-once leaf membership; content-only identity change with stable
@@ -3943,3 +3951,85 @@ a content receipt: same-stat preexisting tampering remains fail-closed at the
 strict extraction-consumption seam. Canonical single-fragment lines now return
 owned bytes, and the over-limit regression uses a virtual 256 MiB source to
 prove refusal after at most 1 MiB plus one 64 KiB reader buffer.
+
+### T30.5 · Focused evidence publication
+
+**T30.5 ✅ · Focused evidence publication** *(2026-07-29)* — changed evidence
+from a repository/domain mutable slot to the exact
+`(repository, indexed HEAD commit, committed analysis-unit digest, domain)`
+publication identity. Extraction attempts, staged runs, published pointers,
+freshness checks, assertions, coverage, certificates, raw-evidence reads, and
+consumer snapshots now use that complete scope. Publication rechecks both the
+indexed commit and committed unit in the guarded visibility transaction, and
+supersedes only an identical tuple. Prior commit/unit publications remain
+available for rollback and proof retention without satisfying a current
+lookup. Those exact historical publications deliberately remain `published`
+and are not collected by the current evidence sweep; T30.5 therefore makes no
+database-size bound. The active backlog carries a separate reviewed retention
+decision before Epic 30 closes.
+
+Store schema v8 migrates readable v7 whole-repository runs and attempts with
+their original commit and an empty unit digest. It never attributes historical
+bytes to today's configured unit, never falls back from a focused lookup to a
+whole or different-unit publication, and refuses older mixed writers. Unknown
+writer generations neither satisfy a current-publication lookup nor receive a
+v8 current-publication or staging lookup, and migration leaves their metadata
+untouched; pinned compatible `t12-evidence-v1` proof retains the earlier T12
+cross-writer read, pin, and retention contract.
+Scope, same-HEAD replacement, rollback, supersession, migration, and
+mixed-writer regressions pin that boundary.
+
+The candidate manifest now carries the exact unit corpus and a separate
+commit/unit-bound typed-input envelope. `typed_index` accepts only `kind:
+scip`, names one exact supporting path, and records that path's actual Git blob
+identity, size, presence, and consuming domains. The designation is part of
+candidate generation identity while the existing path remains the semantic
+unit identity. Changing the designation or accepting a different candidate
+manifest immediately retires current-schema evidence whose candidate receipt
+no longer matches, including a same-commit/same-unit transition. Focused code
+navigation and typed extractors never synthesize or fall back to
+repository-root `index.scip`; they reject every parsed SCIP document outside
+canonical unit paths. A missing designation is an explicit per-domain gap
+rather than an omitted field; a designated artifact that is missing or invalid
+refuses the candidate publication.
+
+Local contract, field, topic, consumer, attribution, and Workbench
+implementation extraction replays only candidate rows marked inside the
+committed unit. Existing caller replay remains explicitly
+`repository-overlay` pending T30.6 and cannot widen focused search, Contracts,
+Topics, navigation, or local implementation evidence. Contract Atlas, Topics,
+raw evidence, proof/source citations, coverage certificates, and provisional
+Workbench target/implementation views consume exact store publications rather
+than fixture authority. Workbench repository, endpoint, visibility, cursor,
+search, navigation, source, and history admission binds the commit and unit
+digest; out-of-unit implementation locations are refused or omitted according
+to the owning endpoint contract.
+
+Coverage records and certificates disclose the unit roots and digest,
+typed-input posture/path/blob receipt, local versus overlay plane,
+candidate-manifest identity, complete unit-corpus and planned-read counts,
+bytes, and digests, and freshness over both commit and unit. The ordinary
+worker refuses inconsistent candidate receipts before publication and cannot
+reuse evidence after a same-HEAD scope change. Published coverage is validated
+again on read, including resource bounds, source-path admission, gitlink
+census, and the exact candidate receipt. Raw evidence projects measured zero
+candidate values explicitly. Newly resolved raw evidence, proof bundles,
+navigation, source/history, and Workbench target/implementation responses
+recheck the complete current analysis state before returning, closing
+same-HEAD scope, typed-designation, search-index-posture, and
+`A → unavailable → A` publication races through a monotonic internal evidence
+revision.
+
+AC met: exact scope/stale/rollback/mixed-writer and legacy migration tests;
+candidate and typed-input identity, path-admission, and out-of-unit SCIP
+regressions; exact coverage disclosure and certificate tests; focused
+code-navigation, Contract Atlas, Topics, raw-evidence, source-link, and
+Workbench admission tests; candidate/typed transition invalidation,
+read-corruption refusal, explicit zero/gap projection, future-row isolation,
+deterministic result-time/rollback race regressions, and writer-generation
+attempt isolation; deterministic ordinary-worker acceptance; dated PLAN
+decisions and owning Configuration, Operations, Workflows, Manual, roadmap,
+and active/completed backlog updates; full merge bar. This ticket does not
+establish a historical-publication storage bound, runtime use, completeness,
+extraction accuracy, migration completion, decommission safety, or production
+registration. T30.6 owns the target-bound all-partitions Caller Map generation.

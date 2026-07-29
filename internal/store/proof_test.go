@@ -15,7 +15,7 @@ func TestProofBundleImmutablePersistencePinsRuns(t *testing.T) {
 	ctx := context.Background()
 	repo, commit, domain := "github.com/proof/visible", "aaaaaaaa", "grpc-consumer"
 	seedEvidenceRepo(t, s, repo, commit)
-	run, err := s.BeginExtractionRun(ctx, repo, commit, domain, "grpc-consumer@1")
+	run, err := beginExtractionRun(s, ctx, repo, commit, domain, "grpc-consumer@1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestProofBundleImmutablePersistencePinsRuns(t *testing.T) {
 		t.Fatalf("immutable metadata conflict = %v", err)
 	}
 
-	replacement, err := s.BeginExtractionRun(ctx, repo, commit, domain, "grpc-consumer@2")
+	replacement, err := beginExtractionRun(s, ctx, repo, commit, domain, "grpc-consumer@2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,14 +97,14 @@ func TestProofBundleExpiryReleasesOnlyOwnedPins(t *testing.T) {
 	ctx := context.Background()
 	repo, commit, domain := "github.com/proof/retention", "bbbbbbbb", "grpc-consumer"
 	seedEvidenceRepo(t, s, repo, commit)
-	oldRun, err := s.BeginExtractionRun(ctx, repo, commit, domain, "grpc-consumer@1")
+	oldRun, err := beginExtractionRun(s, ctx, repo, commit, domain, "grpc-consumer@1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := s.PublishExtractionRun(ctx, oldRun.ID, testCoverage(0, 0)); err != nil {
 		t.Fatal(err)
 	}
-	currentRun, err := s.BeginExtractionRun(ctx, repo, commit, domain, "grpc-consumer@2")
+	currentRun, err := beginExtractionRun(s, ctx, repo, commit, domain, "grpc-consumer@2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestProofBundleExpiryReleasesOnlyOwnedPins(t *testing.T) {
 	if n, err := s.SweepProofBundles(ctx, finalCutoff); err != nil || n != 1 {
 		t.Fatalf("sweep live bundle = %d, %v", n, err)
 	}
-	thirdRun, err := s.BeginExtractionRun(ctx, repo, commit, domain, "grpc-consumer@3")
+	thirdRun, err := beginExtractionRun(s, ctx, repo, commit, domain, "grpc-consumer@3")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -46,25 +46,29 @@ func (s *proofToolStore) ListRepos(context.Context) ([]store.Repo, error) {
 	return append([]store.Repo(nil), s.repos...), nil
 }
 
-func (s *proofToolStore) LatestPublishedRun(_ context.Context, repo, domain string) (*store.ExtractionRun, error) {
-	s.calls = append(s.calls, "run:"+proofToolScope(repo, domain))
-	run, ok := s.runs[proofToolScope(repo, domain)]
-	if !ok {
+func (s *proofToolStore) LatestPublishedRun(
+	_ context.Context, scope store.ExtractionScope,
+) (*store.ExtractionRun, error) {
+	s.calls = append(s.calls, "run:"+proofToolScope(scope.Repository, scope.Domain))
+	run, ok := s.runs[proofToolScope(scope.Repository, scope.Domain)]
+	if !ok || run.Commit != scope.Commit || run.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	copyOfRun := run
 	return &copyOfRun, nil
 }
 
-func (s *proofToolStore) LatestExtractionAttempt(_ context.Context, repo, domain string) (*store.ExtractionAttempt, error) {
-	s.calls = append(s.calls, "attempt:"+proofToolScope(repo, domain))
-	run, ok := s.runs[proofToolScope(repo, domain)]
-	if !ok {
+func (s *proofToolStore) LatestExtractionAttempt(
+	_ context.Context, scope store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
+	s.calls = append(s.calls, "attempt:"+proofToolScope(scope.Repository, scope.Domain))
+	run, ok := s.runs[proofToolScope(scope.Repository, scope.Domain)]
+	if !ok || run.Commit != scope.Commit || run.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	return &store.ExtractionAttempt{
 		RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
-		Extractor: run.Extractor, Status: "published",
+		UnitDigest: run.UnitDigest, Extractor: run.Extractor, Status: "published",
 	}, nil
 }
 

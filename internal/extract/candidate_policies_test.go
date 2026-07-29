@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/scipsource"
 )
@@ -12,6 +13,7 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 	tests := []struct {
 		domain string
 		plane  candidate.Plane
+		typed  bool
 		yes    []string
 		no     []string
 	}{
@@ -34,32 +36,36 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 		{
 			domain: "scip-proto-field", plane: candidate.PlaneLocal,
 			yes: []string{
-				"index.scip", "api.go", "api.proto", "nested/buf.yaml",
+				"api.go", "api.proto", "nested/buf.yaml",
 			},
-			no: []string{"buf.yaml.lock", "api.thrift"},
+			no:    []string{"index.scip", "buf.yaml.lock", "api.thrift"},
+			typed: true,
 		},
 		{
 			domain: "scip-thrift-field", plane: candidate.PlaneLocal,
-			yes: []string{"index.scip", "api.go"},
-			no:  []string{"api.proto", "api.thrift"},
+			yes:   []string{"api.go"},
+			no:    []string{"index.scip", "api.proto", "api.thrift"},
+			typed: true,
 		},
 		{
 			domain: "grpc-caller", plane: candidate.PlaneCaller,
 			yes: []string{
-				"api.go", "go.mod", "nested/go.mod", "index.scip",
+				"api.go", "go.mod", "nested/go.mod",
 				layoutSnapshotPath, unitSnapshotPath,
 				generatedFromSnapshotPath,
 			},
-			no: []string{"nested/index.scip", "api.proto"},
+			no:    []string{"index.scip", "nested/index.scip", "api.proto"},
+			typed: true,
 		},
 		{
 			domain: "thrift-caller", plane: candidate.PlaneCaller,
 			yes: []string{
-				"api.go", "go.mod", "nested/go.mod", "index.scip",
+				"api.go", "go.mod", "nested/go.mod",
 				layoutSnapshotPath, unitSnapshotPath,
 				generatedFromSnapshotPath,
 			},
-			no: []string{"nested/index.scip", "api.thrift"},
+			no:    []string{"index.scip", "nested/index.scip", "api.thrift"},
+			typed: true,
 		},
 		{
 			domain: "kafka-producer", plane: candidate.PlaneLocal,
@@ -84,10 +90,13 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 			}
 			if len(policies) != 1 ||
 				policies[0].Plane != testCase.plane ||
-				!strings.HasSuffix(policies[0].EnumerationPolicy, "-v1") ||
 				policies[0].SymlinkPolicy != fixedRootSymlinkPolicy ||
 				policies[0].RejectSymlink == nil {
 				t.Fatalf("policy = %+v", policies)
+			}
+			if got := policies[0].TypedInputs; testCase.typed !=
+				(len(got) == 1 && got[0] == analysisunit.TypedIndexKindSCIP) {
+				t.Fatalf("typed inputs = %v, typed domain = %t", got, testCase.typed)
 			}
 			for _, filePath := range testCase.yes {
 				if !policies[0].Enumerate(filePath) {
@@ -103,7 +112,7 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 				policies[0].Required("not-required.go") {
 				t.Fatal("planner widened or narrowed extractor Candidate")
 			}
-			if !policies[0].RejectSymlink("index.scip") ||
+			if policies[0].RejectSymlink("index.scip") ||
 				!policies[0].RejectSymlink(layoutSnapshotPath) ||
 				policies[0].RejectSymlink("api.go") {
 				t.Fatal("planner changed fixed-root symlink posture")
@@ -176,10 +185,13 @@ func TestCandidatePoliciesMatchSCIPSourceEligibility(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, ancillary := range []string{scipIndexPath, "nested/buf.yaml"} {
+	for _, ancillary := range []string{"nested/buf.yaml"} {
 		if !protoPolicies[0].Enumerate(ancillary) ||
 			scipsource.Eligible(scipsource.ProtoField, ancillary) {
 			t.Errorf("ancillary path %q changed source eligibility", ancillary)
 		}
+	}
+	if protoPolicies[0].Enumerate(scipIndexPath) {
+		t.Fatal("typed SCIP input leaked into ordinary source enumeration")
 	}
 }

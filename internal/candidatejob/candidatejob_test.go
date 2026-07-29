@@ -367,6 +367,134 @@ func TestWorkerRetryRepairsPublicationAndProviderStreamsBothPlanes(
 	}
 }
 
+func TestWorkerSameHEADTypedIndexChangeRecoversNewPublication(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	dataDir, repository, commit := candidateTypedGitFixture(t)
+	scope := analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service/api.proto"},
+		Supporting: []string{
+			"service/a.scip",
+			"service/b.scip",
+		},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "service/a.scip",
+		},
+	}
+	firstUnit, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope.TypedIndex.Path = "service/b.scip"
+	secondUnit, err := scope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstUnit.Digest != secondUnit.Digest ||
+		analysisunit.EqualState(firstUnit, secondUnit) {
+		t.Fatal("typed designation did not preserve semantic identity and change committed state")
+	}
+
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+		IndexedAnalysisUnit: firstUnit,
+	}}
+	worker, provider, err := New(
+		dataDir, state, []extract.Extractor{policyExtractor{
+			domain: "scip-proto-field", version: "scip-v1",
+			requiredSuffix: ".proto",
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := store.Job{Kind: store.JobCandidate, Target: repository}
+	if err := worker.Handle(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	firstPointer := *state.pointer
+	firstRequest := extract.CandidateManifestRequest{
+		Repository: repository, Commit: commit,
+		AnalysisUnit: analysisunit.CloneState(firstUnit),
+		Domains:      slices.Clone(provider.domains),
+	}
+	firstManifest, err := provider.OpenCandidateManifest(ctx, firstRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstTyped, err := firstManifest.TypedInput(
+		"scip-proto-field", "scip-v1", analysisunit.TypedIndexKindSCIP,
+	)
+	if err != nil || !firstTyped.Present ||
+		firstTyped.Path != "service/a.scip" {
+		t.Fatalf("first typed input = %+v, %v", firstTyped, err)
+	}
+
+	// SetRepoIndexedState clears the candidate pointer for this full-state
+	// change even though the semantic unit digest and HEAD are unchanged.
+	state.mu.Lock()
+	state.repository.IndexedAnalysisUnit = analysisunit.CloneState(secondUnit)
+	state.pointer = nil
+	state.publishFailure = errors.New("injected typed-pointer failure")
+	state.mu.Unlock()
+
+	err = worker.Handle(ctx, job)
+	if err == nil ||
+		!strings.Contains(err.Error(), "injected typed-pointer failure") {
+		t.Fatalf("first typed replacement = %v", err)
+	}
+	root := CandidateRoot(dataDir)
+	if !candidate.IsPublishing(root, repository) {
+		t.Fatal("failed typed replacement did not retain its publication marker")
+	}
+	if err := worker.Handle(ctx, job); err != nil {
+		t.Fatalf("recover typed replacement: %v", err)
+	}
+	if candidate.IsPublishing(root, repository) {
+		t.Fatal("recovered typed replacement left its publication marker")
+	}
+
+	state.mu.Lock()
+	if state.pointer == nil {
+		state.mu.Unlock()
+		t.Fatal("typed replacement did not commit a pointer")
+	}
+	secondPointer := *state.pointer
+	state.mu.Unlock()
+	if secondPointer.HeadCommit != firstPointer.HeadCommit ||
+		secondPointer.UnitDigest != firstPointer.UnitDigest ||
+		secondPointer.GenerationDigest == firstPointer.GenerationDigest ||
+		secondPointer.ManifestDigest == firstPointer.ManifestDigest {
+		t.Fatalf(
+			"typed publication identities = first %+v / second %+v",
+			firstPointer, secondPointer,
+		)
+	}
+
+	secondRequest := firstRequest
+	secondRequest.AnalysisUnit = analysisunit.CloneState(secondUnit)
+	secondManifest, err := provider.OpenCandidateManifest(ctx, secondRequest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondTyped, err := secondManifest.TypedInput(
+		"scip-proto-field", "scip-v1", analysisunit.TypedIndexKindSCIP,
+	)
+	if err != nil || !secondTyped.Present ||
+		secondTyped.Path != "service/b.scip" ||
+		secondTyped.ObjectID == firstTyped.ObjectID {
+		t.Fatalf("second typed input = %+v, %v; first = %+v", secondTyped, err, firstTyped)
+	}
+	if _, err := provider.CandidateManifestIdentity(
+		ctx, firstRequest,
+	); err == nil {
+		t.Fatal("old typed designation still satisfied the current pointer")
+	}
+}
+
 func TestWorkerExactPointerReuseRepairsFanoutWithoutStrictOpen(
 	t *testing.T,
 ) {
@@ -844,7 +972,7 @@ func TestWorkerPreservesFixedRootAndRequiredSymlinkPosture(t *testing.T) {
 		{
 			name: "SCIP fixed root", alias: "index.scip",
 			target: "target.go", domain: "scip-proto-field",
-			requiredSuffix: "index.scip", want: "is forbidden",
+			requiredSuffix: "index.scip", want: "typed index",
 		},
 		{
 			name: "attribution fixed root", alias: "layout-snapshot.json",
@@ -1203,6 +1331,29 @@ func candidateGitFixture(t *testing.T) (dataDir, repository, commit string) {
 	writeFixtureFile(t, work, "notes.txt", "not a candidate\n")
 	runGit(t, work, "add", ".")
 	runGit(t, work, "commit", "-m", "fixture")
+	commit = strings.TrimSpace(runGit(t, work, "rev-parse", "HEAD"))
+
+	repoDir := reposync.RepoDir(dataDir, repository)
+	if err := os.MkdirAll(filepath.Dir(repoDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, "", "clone", "--bare", work, repoDir)
+	return dataDir, repository, commit
+}
+
+func candidateTypedGitFixture(t *testing.T) (dataDir, repository, commit string) {
+	t.Helper()
+	dataDir = t.TempDir()
+	repository = "example.com/acme/typed-service"
+	work := filepath.Join(t.TempDir(), "work")
+	runGit(t, "", "init", work)
+	runGit(t, work, "config", "user.email", "candidate@example.invalid")
+	runGit(t, work, "config", "user.name", "Candidate Test")
+	writeFixtureFile(t, work, "service/api.proto", "syntax = \"proto3\";\n")
+	writeFixtureFile(t, work, "service/a.scip", "first typed input\n")
+	writeFixtureFile(t, work, "service/b.scip", "second typed input\n")
+	runGit(t, work, "add", ".")
+	runGit(t, work, "commit", "-m", "typed fixture")
 	commit = strings.TrimSpace(runGit(t, work, "rev-parse", "HEAD"))
 
 	repoDir := reposync.RepoDir(dataDir, repository)

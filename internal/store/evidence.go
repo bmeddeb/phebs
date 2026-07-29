@@ -22,12 +22,12 @@ const (
 	// Store schema is the exact writer generation. Evidence format is the
 	// stable read/pin contract: a newer writer may keep the same format when
 	// its proof bundle remains backwards-compatible.
-	evidenceStoreSchemaVersion         = "t12-store-v7"
-	evidencePreviousStoreSchemaVersion = "t12-store-v6"
+	evidenceStoreSchemaVersion         = "t12-store-v8"
+	evidencePreviousStoreSchemaVersion = "t12-store-v7"
 	evidenceFormatVersion              = "t12-evidence-v1"
-	evidenceMigrationVersion           = "t12-evidence-migration-v6"
-	evidencePreviousMigrationVersion   = "t12-evidence-migration-v5"
-	evidenceWriterGuardEvent           = "extraction_run_writer_v7"
+	evidenceMigrationVersion           = "t12-evidence-migration-v7"
+	evidencePreviousMigrationVersion   = "t12-evidence-migration-v6"
+	evidenceWriterGuardEvent           = "extraction_run_writer_v8"
 	reverseAssertionIndexName          = "assertion_reverse_v6"
 	evidenceMigrationBatchSize         = 128
 	evidenceSweepCandidateBatchSize    = 1
@@ -108,22 +108,46 @@ func evidencePinRecordID(runID, kind string) models.RecordID {
 	return models.NewRecordID("evidence_pin", hashIdentity("ep_", runID, kind))
 }
 
-func publishedKey(repo, domain string) string {
+func publishedKey(scope ExtractionScope) string {
+	return hashIdentity(
+		"published_scope_v2_",
+		scope.Repository,
+		scope.Commit,
+		scope.UnitDigest,
+		scope.Domain,
+	)
+}
+
+func legacyPublishedKey(repo, domain string) string {
 	return hashIdentity("published_", repo, domain)
 }
 
-func extractionAttemptID(repo, domain string) models.RecordID {
+func extractionAttemptID(scope ExtractionScope) models.RecordID {
+	return models.NewRecordID(
+		"extraction_attempt",
+		hashIdentity(
+			"attempt_scope_v2_",
+			scope.Repository,
+			scope.Commit,
+			scope.UnitDigest,
+			scope.Domain,
+		),
+	)
+}
+
+func legacyExtractionAttemptID(repo, domain string) models.RecordID {
 	return models.NewRecordID("extraction_attempt", hashIdentity("attempt_", repo, domain))
 }
 
 type extractionAttemptRec struct {
-	RunID     string    `json:"run_id"`
-	Repo      string    `json:"repo"`
-	Commit    string    `json:"commit"`
-	Domain    string    `json:"domain"`
-	Extractor string    `json:"extractor"`
-	Status    string    `json:"status"`
-	StartedAt time.Time `json:"started_at"`
+	RunID      string    `json:"run_id"`
+	Repo       string    `json:"repo"`
+	Commit     string    `json:"commit"`
+	UnitDigest string    `json:"unit_digest"`
+	Domain     string    `json:"domain"`
+	Extractor  string    `json:"extractor"`
+	Status     string    `json:"status"`
+	StartedAt  time.Time `json:"started_at"`
 }
 
 func (r extractionAttemptRec) attempt() ExtractionAttempt {
@@ -135,6 +159,7 @@ type extractionRunRec struct {
 	RunID       string           `json:"run_id"`
 	Repo        string           `json:"repo"`
 	Commit      string           `json:"commit"`
+	UnitDigest  string           `json:"unit_digest"`
 	Domain      string           `json:"domain"`
 	Extractor   string           `json:"extractor"`
 	Status      string           `json:"status"`
@@ -154,7 +179,7 @@ func (r extractionRunRec) run() ExtractionRun {
 	}
 	return ExtractionRun{
 		ID: id, Repo: r.Repo, Commit: r.Commit, Domain: r.Domain,
-		Extractor: r.Extractor, Status: r.Status,
+		UnitDigest: r.UnitDigest, Extractor: r.Extractor, Status: r.Status,
 		StartedAt: r.StartedAt, PublishedAt: r.PublishedAt, Coverage: r.Coverage,
 	}
 }
@@ -170,17 +195,46 @@ func firstExtractionRows(results *[]surrealdb.QueryResult[[]extractionRunRec]) [
 	return nil
 }
 
-func (s *Surreal) BeginExtractionRun(ctx context.Context, repo, commit, domain, extractor string) (*ExtractionRun, error) {
-	if strings.TrimSpace(repo) == "" || strings.TrimSpace(commit) == "" ||
-		strings.TrimSpace(domain) == "" || strings.TrimSpace(extractor) == "" {
-		return nil, errors.New("begin extraction run: repo, commit, domain, extractor all required")
-	}
+func validateExtractionScope(scope ExtractionScope) error {
 	for name, value := range map[string]string{
-		"repo": repo, "commit": commit, "domain": domain, "extractor": extractor,
+		"repository": scope.Repository,
+		"commit":     scope.Commit,
+		"domain":     scope.Domain,
 	} {
-		if !utf8.ValidString(value) || len(value) > maxEvidenceIdentityBytes {
-			return nil, fmt.Errorf("begin extraction run: %s is not valid bounded UTF-8", name)
+		if strings.TrimSpace(value) == "" || !utf8.ValidString(value) ||
+			len(value) > maxEvidenceIdentityBytes {
+			return fmt.Errorf("%s is not valid bounded UTF-8", name)
 		}
+	}
+	if scope.UnitDigest != "" && !validSHA256Digest(scope.UnitDigest) {
+		return errors.New("unit digest must be empty or canonical sha256")
+	}
+	return nil
+}
+
+func scopeForRun(run *ExtractionRun) ExtractionScope {
+	if run == nil {
+		return ExtractionScope{}
+	}
+	return ExtractionScope{
+		Repository: run.Repo,
+		Commit:     run.Commit,
+		UnitDigest: run.UnitDigest,
+		Domain:     run.Domain,
+	}
+}
+
+func (s *Surreal) BeginExtractionRun(
+	ctx context.Context,
+	scope ExtractionScope,
+	extractor string,
+) (*ExtractionRun, error) {
+	if err := validateExtractionScope(scope); err != nil {
+		return nil, fmt.Errorf("begin extraction run: %w", err)
+	}
+	if strings.TrimSpace(extractor) == "" || !utf8.ValidString(extractor) ||
+		len(extractor) > maxEvidenceIdentityBytes {
+		return nil, errors.New("begin extraction run: extractor is not valid bounded UTF-8")
 	}
 	id, err := authRandomID()
 	if err != nil {
@@ -191,8 +245,22 @@ func (s *Surreal) BeginExtractionRun(ctx context.Context, repo, commit, domain, 
 		`BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $evidence_migration_version LIMIT 1) = 1;
-LET $created = IF $writer_ok THEN
-	(CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
+LET $existing_attempt = (SELECT repo, commit, unit_digest, domain,
+		store_schema_version, evidence_format_version,
+		evidence_migration_version
+	FROM $attempt_rid)[0];
+LET $attempt_ok = $existing_attempt = NONE OR (
+	($existing_attempt.repo ?? '') = $repo
+	AND ($existing_attempt.commit ?? '') = $commit
+	AND ($existing_attempt.unit_digest ?? '') = $unit_digest
+	AND ($existing_attempt.domain ?? '') = $domain
+	AND ($existing_attempt.store_schema_version ?? '') = $store_schema_version
+	AND ($existing_attempt.evidence_format_version ?? '') = $evidence_format_version
+	AND ($existing_attempt.evidence_migration_version ?? '') = $evidence_migration_version
+);
+LET $created = IF $writer_ok AND $attempt_ok THEN
+	(CREATE $rid SET run_id = $run_id, repo = $repo, commit = $commit,
+		unit_digest = $unit_digest, domain = $domain,
 		extractor = $extractor, status = 'staged', started_at = $now,
 		store_schema_version = $store_schema_version,
 		evidence_format_version = $evidence_format_version,
@@ -200,18 +268,22 @@ LET $created = IF $writer_ok THEN
 		retention_quarantined = false, retention_phase = NONE,
 		staged_revision = 0, retention_revision = 0 RETURN AFTER)
 	ELSE [] END;
-IF $writer_ok {
-	UPSERT $attempt_rid SET run_id = $run_id, repo = $repo, commit = $commit, domain = $domain,
+IF $writer_ok AND $attempt_ok {
+	UPSERT $attempt_rid SET run_id = $run_id, repo = $repo, commit = $commit,
+		unit_digest = $unit_digest, domain = $domain,
 		extractor = $extractor, status = 'staged', started_at = $now,
 		store_schema_version = $store_schema_version,
-		evidence_format_version = $evidence_format_version RETURN NONE
+		evidence_format_version = $evidence_format_version,
+		evidence_migration_version = $evidence_migration_version RETURN NONE
 };
 RETURN $created;
 COMMIT;`,
 		map[string]any{
-			"rid": extractionRunID(id), "run_id": id, "repo": repo, "commit": commit,
-			"domain": domain, "extractor": extractor, "now": now,
-			"attempt_rid":                extractionAttemptID(repo, domain),
+			"rid": extractionRunID(id), "run_id": id,
+			"repo": scope.Repository, "commit": scope.Commit,
+			"unit_digest": scope.UnitDigest, "domain": scope.Domain,
+			"extractor": extractor, "now": now,
+			"attempt_rid":                extractionAttemptID(scope),
 			"migration_rid":              evidenceMigrationStateID(),
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_format_version":    evidenceFormatVersion,
@@ -282,6 +354,7 @@ func (s *Surreal) getRun(ctx context.Context, runID string) (*ExtractionRun, err
 		`SELECT * FROM $rid
 			WHERE store_schema_version = $store_schema_version
 				  AND evidence_format_version = $evidence_format_version
+				  AND type::is_string(unit_digest)
 				  AND retention_quarantined = false
 				  AND run_id = record::id(id)
 				  AND `+evidenceRunProbeHasNoClaimantSQL+`
@@ -403,6 +476,211 @@ func validateGitlinkBoundaries(coverage CoverageManifest) error {
 		return errors.New("gitlink sample truncation is inconsistent with its count")
 	}
 	return nil
+}
+
+func validateCandidateCoverage(coverage CoverageManifest, run *ExtractionRun) error {
+	hasCandidateScope := coverage.CandidateManifestDigest != ""
+	if !hasCandidateScope {
+		if coverage.ScopePosture != "" || coverage.CandidatePlane != "" ||
+			coverage.ScopeCorpusFileCount != 0 ||
+			coverage.ScopeCorpusDeclaredBytes != 0 ||
+			coverage.ScopeCorpusDigest != "" ||
+			coverage.PlannedFileCount != 0 ||
+			coverage.PlannedRequiredFileCount != 0 ||
+			coverage.PlannedDeclaredBytes != 0 ||
+			coverage.PlannedScopeDigest != "" ||
+			coverage.TypedInputKind != "" ||
+			coverage.TypedInputPath != "" ||
+			coverage.TypedInputObjectID != "" ||
+			coverage.TypedInputDeclaredBytes != 0 ||
+			coverage.TypedInputDigest != "" ||
+			coverage.TypedInputPresent {
+			return errors.New("candidate coverage fields require a manifest digest")
+		}
+		if run != nil && run.UnitDigest != "" {
+			return errors.New("focused coverage requires a candidate manifest digest")
+		}
+		return nil
+	}
+	if run == nil {
+		return errors.New("candidate coverage requires an extraction run")
+	}
+	if !validSHA256Digest(coverage.CandidateManifestDigest) ||
+		!validSHA256Digest(coverage.ScopeCorpusDigest) ||
+		!validSHA256Digest(coverage.PlannedScopeDigest) {
+		return errors.New("candidate coverage digests must be canonical sha256")
+	}
+	if coverage.CandidatePlane != "local" &&
+		coverage.CandidatePlane != "repository" &&
+		coverage.CandidatePlane != "caller" {
+		return errors.New("candidate coverage has an unknown plane")
+	}
+	expectedPosture := "whole-repository"
+	if run.UnitDigest != "" {
+		expectedPosture = "repository-overlay"
+		if coverage.CandidatePlane == "local" {
+			expectedPosture = "focused-local"
+		}
+	}
+	if coverage.ScopePosture != expectedPosture {
+		return errors.New("candidate coverage posture disagrees with the run scope")
+	}
+	if coverage.ScopeCorpusFileCount < 0 ||
+		coverage.ScopeCorpusFileCount > maxCoverageFileCount ||
+		coverage.ScopeCorpusFileCount != coverage.CorpusFileCount ||
+		coverage.ScopeCorpusDeclaredBytes < 0 ||
+		coverage.ScopeCorpusDeclaredBytes > maxCoverageReadBytes ||
+		coverage.PlannedFileCount < 0 ||
+		coverage.PlannedFileCount > coverage.ScopeCorpusFileCount ||
+		coverage.PlannedRequiredFileCount < 0 ||
+		coverage.PlannedRequiredFileCount > coverage.PlannedFileCount ||
+		coverage.PlannedRequiredFileCount != coverage.CandidateFileCount ||
+		coverage.PlannedDeclaredBytes < 0 ||
+		coverage.PlannedDeclaredBytes > coverage.ScopeCorpusDeclaredBytes {
+		return errors.New("candidate coverage counts or bytes are inconsistent")
+	}
+	if coverage.TypedInputKind == "" {
+		if coverage.TypedInputPath != "" ||
+			coverage.TypedInputObjectID != "" ||
+			coverage.TypedInputDeclaredBytes != 0 ||
+			coverage.TypedInputDigest != "" ||
+			coverage.TypedInputPresent {
+			return errors.New("typed-input coverage requires a kind")
+		}
+		return nil
+	}
+	if coverage.TypedInputKind != "scip" {
+		return errors.New("candidate coverage has an unknown typed-input kind")
+	}
+	if coverage.TypedInputPath != "" {
+		if err := validateEvidencePath(coverage.TypedInputPath); err != nil {
+			return fmt.Errorf("typed-input coverage: %w", err)
+		}
+	}
+	if !coverage.TypedInputPresent {
+		if coverage.TypedInputObjectID != "" ||
+			coverage.TypedInputDeclaredBytes != 0 ||
+			coverage.TypedInputDigest != "" {
+			return errors.New("absent typed-input coverage carries content identity")
+		}
+		return nil
+	}
+	if coverage.TypedInputPath == "" ||
+		!validCoverageGitObjectID(coverage.TypedInputObjectID) ||
+		coverage.TypedInputDeclaredBytes < 0 ||
+		coverage.TypedInputDeclaredBytes > maxCoverageReadBytes ||
+		!validSHA256Digest(coverage.TypedInputDigest) {
+		return errors.New("present typed-input coverage is incomplete or unbounded")
+	}
+	return nil
+}
+
+// validatePublishedCoverage is the shared write/read admission boundary for a
+// published run's honesty record. Publication rejects malformed coverage
+// before visibility flips, and reads repeat the same checks so raw-row damage
+// cannot turn into a false no-op, certificate, or API response.
+func validatePublishedCoverage(
+	coverage CoverageManifest,
+	run *ExtractionRun,
+) error {
+	if run == nil {
+		return errors.New("coverage requires an extraction run")
+	}
+	if coverage.AssertionCount < 0 ||
+		coverage.AtomCount < 0 ||
+		coverage.UnresolvedCount < 0 {
+		return errors.New("coverage counts cannot be negative")
+	}
+	if coverage.CorpusFileCount < 0 ||
+		coverage.CandidateFileCount < 0 ||
+		coverage.ReadFileCount < 0 ||
+		coverage.ReadBytes < 0 ||
+		coverage.CandidateFileCount > coverage.ReadFileCount ||
+		coverage.ReadFileCount > coverage.CorpusFileCount ||
+		coverage.CorpusFileCount > maxCoverageFileCount ||
+		coverage.ReadBytes > maxCoverageReadBytes {
+		return errors.New("invalid or unbounded source coverage")
+	}
+	if !validSHA256Digest(coverage.SourceScopeDigest) {
+		return errors.New("source_scope_digest must be canonical sha256")
+	}
+	if len(coverage.Protocols) > maxEvidenceRefsPerAssertion ||
+		len(coverage.Failures) > maxEvidenceRefsPerAssertion {
+		return fmt.Errorf(
+			"coverage arrays exceed %d entries",
+			maxEvidenceRefsPerAssertion,
+		)
+	}
+	if len(coverage.Failures) > 0 {
+		return errors.New("coverage contains extraction failures")
+	}
+	for _, value := range append(
+		append([]string(nil), coverage.Protocols...),
+		coverage.Failures...,
+	) {
+		if !utf8.ValidString(value) ||
+			len(value) > maxEvidenceIdentityBytes {
+			return errors.New(
+				"coverage entry is not valid bounded UTF-8",
+			)
+		}
+	}
+	if err := validateGitlinkBoundaries(coverage); err != nil {
+		return err
+	}
+	return validateCandidateCoverage(coverage, run)
+}
+
+func (s *Surreal) validatePublishedCandidatePointer(
+	ctx context.Context,
+	run *ExtractionRun,
+) error {
+	if run == nil || run.Coverage.CandidateManifestDigest == "" {
+		return nil
+	}
+	repository, err := s.GetRepo(ctx, run.Repo)
+	if err != nil {
+		return fmt.Errorf(
+			"candidate publication repository state: %w",
+			err,
+		)
+	}
+	currentUnitDigest := ""
+	if repository.IndexedAnalysisUnit != nil {
+		currentUnitDigest = repository.IndexedAnalysisUnit.Digest
+	}
+	// Historical exact-scope runs remain readable for rollback and retained
+	// proof. The singleton candidate pointer represents only the repository's
+	// current indexed commit/unit, so it can corroborate current runs only.
+	if repository.IndexedCommitHash != run.Commit ||
+		currentUnitDigest != run.UnitDigest {
+		return nil
+	}
+	publication, err := s.GetCandidateManifestPublication(
+		ctx,
+		run.Repo,
+	)
+	if err != nil {
+		return fmt.Errorf("candidate publication receipt: %w", err)
+	}
+	if publication.Repository != run.Repo ||
+		publication.HeadCommit != run.Commit ||
+		publication.UnitDigest != run.UnitDigest ||
+		publication.ManifestDigest !=
+			run.Coverage.CandidateManifestDigest {
+		return errors.New(
+			"candidate publication receipt disagrees with the current pointer",
+		)
+	}
+	return nil
+}
+
+func validCoverageGitObjectID(value string) bool {
+	if len(value) != 40 && len(value) != 64 {
+		return false
+	}
+	decoded, err := hex.DecodeString(value)
+	return err == nil && hex.EncodeToString(decoded) == value
 }
 
 func validSHA256Digest(value string) bool {
@@ -660,6 +938,7 @@ LET $locked = UPDATE $run SET staged_revision += 1
 	      WHERE version = $evidence_migration_version LIMIT 1) = 1
       AND store_schema_version = $store_schema_version
 	      AND evidence_format_version = $evidence_format_version
+		  AND type::is_string(unit_digest)
 		  AND run_id = record::id(id)
 		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		  AND published_key = NONE
@@ -775,13 +1054,18 @@ LET $locked = UPDATE $rid SET staged_revision += 1
 	      WHERE version = $evidence_migration_version LIMIT 1) = 1
       AND store_schema_version = $store_schema_version
 	      AND evidence_format_version = $evidence_format_version
+		  AND type::is_string(unit_digest)
 		  AND run_id = record::id(id)
 		  AND ` + evidenceRunProbeHasNoClaimantSQL + `
 		  AND published_key = NONE
 	  AND retention_quarantined = false
 	  AND array::len(SELECT id FROM $attempt_rid
 	      WHERE run_id = $run_id AND status = 'staged'
-	        AND evidence_format_version = $evidence_format_version) = 1 RETURN AFTER;
+			AND repo = $repo AND commit = $commit
+			AND unit_digest = $unit_digest AND domain = $domain
+			AND store_schema_version = $store_schema_version
+			AND evidence_format_version = $evidence_format_version
+			AND evidence_migration_version = $evidence_migration_version) = 1 RETURN AFTER;
 LET $assertion_count = array::len(SELECT VALUE assertion_id FROM assertion WHERE run_id = $run_id);
 LET $association_count = array::len(SELECT VALUE occurrence_id FROM snapshot_evidence WHERE run_id = $run_id);
 LET $atom_count = array::len(array::distinct(SELECT VALUE atom_id FROM snapshot_evidence WHERE run_id = $run_id));
@@ -798,15 +1082,18 @@ LET $counts_ok = $assertion_count = $want_assertions AND $atom_count = $want_ato
 	AND $reference_edges <= $max_reference_edges;
 LET $repo_ok = IF array::len($locked) = 1 AND $counts_ok THEN
     (UPDATE $repo_rid SET evidence_revision = (evidence_revision ?? 0) + 1
-        WHERE (deleting = NONE OR deleting = false) AND indexed_commit_hash = $commit RETURN AFTER)
+        WHERE (deleting = NONE OR deleting = false)
+		  AND indexed_commit_hash = $commit
+		  AND (indexed_analysis_unit.digest ?? '') = $unit_digest RETURN AFTER)
     ELSE [] END;
 LET $ready = array::len($locked) = 1 AND array::len($repo_ok) = 1 AND $counts_ok;
 LET $old = IF $ready THEN
     (UPDATE extraction_run SET status = 'superseded', published_key = NONE
-        WHERE repo = $repo AND domain = $domain AND status = 'published' AND run_id != $run_id
+        WHERE repo = $repo AND commit = $commit AND unit_digest = $unit_digest
+		  AND domain = $domain AND status = 'published' AND run_id != $run_id
 	          AND store_schema_version = $store_schema_version
 	          AND evidence_format_version = $evidence_format_version
-			  AND run_id = record::id(id) AND published_key != NONE
+			  AND run_id = record::id(id) AND published_key = $published_key
 			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
 	          AND retention_quarantined = false RETURN AFTER)
     ELSE [] END;
@@ -820,7 +1107,11 @@ LET $published = IF $ready THEN
 LET $attempt = IF array::len($published) = 1 THEN
 	(UPDATE $attempt_rid SET status = 'published'
 		WHERE run_id = $run_id AND status = 'staged'
-		  AND evidence_format_version = $evidence_format_version RETURN AFTER)
+		  AND repo = $repo AND commit = $commit
+		  AND unit_digest = $unit_digest AND domain = $domain
+		  AND store_schema_version = $store_schema_version
+		  AND evidence_format_version = $evidence_format_version
+		  AND evidence_migration_version = $evidence_migration_version RETURN AFTER)
 	ELSE [] END;
 RETURN IF array::len($attempt) = 1 THEN $published ELSE [] END;
 COMMIT;`
@@ -830,32 +1121,6 @@ COMMIT;`
 // and DeleteRepo. Coverage counts are checked against stored run rows rather
 // than trusted from the extractor.
 func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, coverage CoverageManifest) error {
-	if coverage.AssertionCount < 0 || coverage.AtomCount < 0 || coverage.UnresolvedCount < 0 {
-		return errors.New("publish extraction run: coverage counts cannot be negative")
-	}
-	if coverage.CorpusFileCount < 0 || coverage.CandidateFileCount < 0 || coverage.ReadFileCount < 0 ||
-		coverage.ReadBytes < 0 || coverage.CandidateFileCount > coverage.ReadFileCount ||
-		coverage.ReadFileCount > coverage.CorpusFileCount || coverage.CorpusFileCount > maxCoverageFileCount ||
-		coverage.ReadBytes > maxCoverageReadBytes {
-		return errors.New("publish extraction run: invalid or unbounded source coverage")
-	}
-	if !validSHA256Digest(coverage.SourceScopeDigest) {
-		return errors.New("publish extraction run: source_scope_digest must be canonical sha256")
-	}
-	if len(coverage.Protocols) > maxEvidenceRefsPerAssertion || len(coverage.Failures) > maxEvidenceRefsPerAssertion {
-		return fmt.Errorf("publish extraction run: coverage arrays exceed %d entries", maxEvidenceRefsPerAssertion)
-	}
-	if len(coverage.Failures) > 0 {
-		return errors.New("publish extraction run: coverage contains extraction failures")
-	}
-	for _, value := range append(append([]string(nil), coverage.Protocols...), coverage.Failures...) {
-		if !utf8.ValidString(value) || len(value) > maxEvidenceIdentityBytes {
-			return errors.New("publish extraction run: coverage entry is not valid bounded UTF-8")
-		}
-	}
-	if err := validateGitlinkBoundaries(coverage); err != nil {
-		return fmt.Errorf("publish extraction run: %w", err)
-	}
 	run, err := s.getRun(ctx, runID)
 	if err != nil {
 		return fmt.Errorf("publish extraction run: %w", err)
@@ -863,12 +1128,17 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 	if run.Status != "staged" {
 		return fmt.Errorf("publish extraction run: run %s is %s, not staged: %w", runID, run.Status, ErrConflict)
 	}
+	if err := validatePublishedCoverage(coverage, run); err != nil {
+		return fmt.Errorf("publish extraction run: %w", err)
+	}
+	scope := scopeForRun(run)
 	vars := map[string]any{
 		"rid": extractionRunID(runID), "run_id": runID,
-		"attempt_rid": extractionAttemptID(run.Repo, run.Domain),
+		"attempt_rid": extractionAttemptID(scope),
 		"repo_rid":    repoID(run.Repo), "repo": run.Repo, "commit": run.Commit,
-		"domain": run.Domain, "published_key": publishedKey(run.Repo, run.Domain),
-		"now": time.Now().UTC(), "coverage": coverage,
+		"unit_digest": run.UnitDigest, "domain": run.Domain,
+		"published_key": publishedKey(scope),
+		"now":           time.Now().UTC(), "coverage": coverage,
 		"want_assertions": coverage.AssertionCount, "want_atoms": coverage.AtomCount,
 		"want_unresolved":             coverage.UnresolvedCount,
 		"max_occurrences_per_atom":    maxEvidenceOccurrences,
@@ -911,8 +1181,12 @@ func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {
 	for attempt := 0; ; attempt++ {
 		vars := map[string]any{
 			"rid":                        extractionRunID(runID),
-			"attempt_rid":                extractionAttemptID(run.Repo, run.Domain),
+			"attempt_rid":                extractionAttemptID(scopeForRun(run)),
 			"run_id":                     runID,
+			"repo":                       run.Repo,
+			"commit":                     run.Commit,
+			"unit_digest":                run.UnitDigest,
+			"domain":                     run.Domain,
 			"migration_rid":              evidenceMigrationStateID(),
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_format_version":    evidenceFormatVersion,
@@ -927,6 +1201,7 @@ LET $aborted = UPDATE $rid SET status = 'aborted', published_key = NONE
 					  WHERE version = $evidence_migration_version LIMIT 1) = 1
 				  AND store_schema_version = $store_schema_version
 					  AND evidence_format_version = $evidence_format_version
+					  AND type::is_string(unit_digest)
 					  AND run_id = record::id(id)
 					  AND `+evidenceRunProbeHasNoClaimantSQL+`
 					  AND published_key = NONE
@@ -934,7 +1209,11 @@ LET $aborted = UPDATE $rid SET status = 'aborted', published_key = NONE
 LET $attempt = IF array::len($aborted) = 1 THEN
 	(UPDATE $attempt_rid SET status = 'aborted'
 		WHERE run_id = $run_id AND status = 'staged'
-		  AND evidence_format_version = $evidence_format_version RETURN AFTER)
+		  AND repo = $repo AND commit = $commit
+		  AND unit_digest = $unit_digest AND domain = $domain
+		  AND store_schema_version = $store_schema_version
+		  AND evidence_format_version = $evidence_format_version
+		  AND evidence_migration_version = $evidence_migration_version RETURN AFTER)
 	ELSE [] END;
 RETURN $aborted;
 COMMIT;`, vars)
@@ -958,17 +1237,28 @@ COMMIT;`, vars)
 	}
 }
 
-// LatestExtractionAttempt returns the durable latest attempt for a
-// (repository, domain) pair. Existing stores created before attempt markers
-// were introduced fall back to the latest publication until a new attempt is
-// started.
-func (s *Surreal) LatestExtractionAttempt(ctx context.Context, repo, domain string) (*ExtractionAttempt, error) {
+// LatestExtractionAttempt returns the durable latest attempt for one exact
+// extraction scope. Compatible stores created before attempt markers were
+// introduced fall back only to the publication for that same exact scope.
+func (s *Surreal) LatestExtractionAttempt(
+	ctx context.Context, scope ExtractionScope,
+) (*ExtractionAttempt, error) {
+	if err := validateExtractionScope(scope); err != nil {
+		return nil, fmt.Errorf("latest extraction attempt: %w", err)
+	}
 	results, err := surrealdb.Query[[]extractionAttemptRec](ctx, s.db,
-		`SELECT * FROM $rid WHERE repo = $repo AND domain = $domain
-			AND evidence_format_version = $evidence_format_version LIMIT 1`,
+		`SELECT * FROM $rid WHERE repo = $repo AND commit = $commit
+			AND unit_digest = $unit_digest AND domain = $domain
+			AND store_schema_version = $store_schema_version
+			AND evidence_format_version = $evidence_format_version
+			AND evidence_migration_version = $evidence_migration_version LIMIT 1`,
 		map[string]any{
-			"rid": extractionAttemptID(repo, domain), "repo": repo, "domain": domain,
-			"evidence_format_version": evidenceFormatVersion,
+			"rid":  extractionAttemptID(scope),
+			"repo": scope.Repository, "commit": scope.Commit,
+			"unit_digest": scope.UnitDigest, "domain": scope.Domain,
+			"store_schema_version":       evidenceStoreSchemaVersion,
+			"evidence_format_version":    evidenceFormatVersion,
+			"evidence_migration_version": evidenceMigrationVersion,
 		})
 	if err != nil {
 		return nil, fmt.Errorf("latest extraction attempt: %w", err)
@@ -980,20 +1270,29 @@ func (s *Surreal) LatestExtractionAttempt(ctx context.Context, repo, domain stri
 		attempt := result.Result[0].attempt()
 		return &attempt, nil
 	}
-	run, err := s.LatestPublishedRun(ctx, repo, domain)
+	run, err := s.LatestPublishedRun(ctx, scope)
 	if err != nil {
 		return nil, err
 	}
 	return &ExtractionAttempt{
-		RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
+		RunID: run.ID, Repo: run.Repo, Commit: run.Commit,
+		UnitDigest: run.UnitDigest, Domain: run.Domain,
 		Extractor: run.Extractor, Status: "published", StartedAt: run.StartedAt,
 	}, nil
 }
 
-func (s *Surreal) LatestPublishedRun(ctx context.Context, repo, domain string) (*ExtractionRun, error) {
+func (s *Surreal) LatestPublishedRun(
+	ctx context.Context, scope ExtractionScope,
+) (*ExtractionRun, error) {
+	if err := validateExtractionScope(scope); err != nil {
+		return nil, fmt.Errorf("latest published run: %w", err)
+	}
 	results, err := surrealdb.Query[[]extractionRunRec](ctx, s.db,
-		`SELECT * FROM extraction_run WHERE repo = $repo AND domain = $domain
+		`SELECT * FROM extraction_run WHERE repo = $repo AND commit = $commit
+			AND unit_digest = $unit_digest AND domain = $domain
 			AND status = 'published'
+				AND type::is_string(store_schema_version)
+				AND store_schema_version = $store_schema_version
 				AND evidence_format_version = $evidence_format_version
 				AND retention_quarantined = false
 				AND run_id = record::id(id)
@@ -1001,9 +1300,11 @@ func (s *Surreal) LatestPublishedRun(ctx context.Context, repo, domain string) (
 				AND published_key = $published_key
 			ORDER BY published_at DESC, run_id LIMIT 1`,
 		map[string]any{
-			"repo": repo, "domain": domain,
+			"repo": scope.Repository, "commit": scope.Commit,
+			"unit_digest": scope.UnitDigest, "domain": scope.Domain,
+			"store_schema_version":        evidenceStoreSchemaVersion,
 			"evidence_format_version":     evidenceFormatVersion,
-			"published_key":               publishedKey(repo, domain),
+			"published_key":               publishedKey(scope),
 			"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 		})
 	if err != nil {
@@ -1014,6 +1315,18 @@ func (s *Surreal) LatestPublishedRun(ctx context.Context, repo, domain string) (
 		return nil, ErrNotFound
 	}
 	run := rows[0].run()
+	if err := validatePublishedCoverage(run.Coverage, &run); err != nil {
+		return nil, fmt.Errorf(
+			"latest published run: invalid stored coverage: %w",
+			err,
+		)
+	}
+	if err := s.validatePublishedCandidatePointer(ctx, &run); err != nil {
+		return nil, fmt.Errorf(
+			"latest published run: invalid stored coverage: %w",
+			err,
+		)
+	}
 	return &run, nil
 }
 
@@ -1062,6 +1375,16 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 	if q.RunID != "" && (!utf8.ValidString(q.RunID) || len(q.RunID) > maxEvidenceIdentityBytes) {
 		return nil, errors.New("list assertions: invalid run scope")
 	}
+	if q.Scope != nil {
+		if err := validateExtractionScope(*q.Scope); err != nil {
+			return nil, fmt.Errorf("list assertions: %w", err)
+		}
+		if q.Scope.Repository != q.Repo {
+			return nil, errors.New("list assertions: extraction scope repository does not match repo")
+		}
+	} else if q.RunID == "" {
+		return nil, errors.New("list assertions: run id or exact extraction scope required")
+	}
 	if q.ObjectPrefix != "" &&
 		(!utf8.ValidString(q.ObjectPrefix) || len(q.ObjectPrefix) > maxEvidenceIdentityBytes) {
 		return nil, errors.New("list assertions: invalid object prefix")
@@ -1089,19 +1412,13 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 	if limit > 5000 {
 		return nil, fmt.Errorf("list assertions: maximum limit is 5000: %w", ErrResultLimit)
 	}
-	where := `run_id IN (SELECT VALUE run_id FROM extraction_run
-		WHERE status = 'published'
-		  AND repo = $repo
-			  AND evidence_format_version = $evidence_format_version
-			  AND retention_quarantined = false
-			  AND run_id = record::id(id)
-			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
-			  AND published_key != NONE)`
 	vars := map[string]any{
 		"limit":                       limit + 1,
+		"store_schema_version":        evidenceStoreSchemaVersion,
 		"evidence_format_version":     evidenceFormatVersion,
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
+	var where string
 	if q.RunID != "" {
 		where = `run_id = $run_id AND run_id IN (SELECT VALUE run_id FROM extraction_run
 			WHERE id = $run_rid
@@ -1109,6 +1426,7 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 			  AND status = 'published'
 			  AND repo = $repo
 			  AND evidence_format_version = $evidence_format_version
+			  AND type::is_string(unit_digest)
 			  AND retention_quarantined = false
 			  AND run_id = record::id(id)
 			  AND ` + evidenceRunProbeHasNoClaimantSQL + `
@@ -1116,6 +1434,37 @@ func (s *Surreal) ListAssertions(ctx context.Context, q AssertionQuery) ([]Asser
 		vars["run_id"] = q.RunID
 		vars["run_rid"] = extractionRunID(q.RunID)
 		addProbeVars(vars, q.RunID)
+	} else {
+		where = `run_id IN (SELECT VALUE run_id FROM extraction_run
+			WHERE status = 'published'
+			  AND repo = $repo
+			  AND commit = $scope_commit
+			  AND unit_digest = $scope_unit_digest
+			  AND domain = $scope_domain
+			  AND store_schema_version = $store_schema_version
+			  AND evidence_format_version = $evidence_format_version
+			  AND retention_quarantined = false
+			  AND run_id = record::id(id)
+			  AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+			  AND published_key = $published_key)`
+	}
+	if q.Scope != nil {
+		vars["scope_commit"] = q.Scope.Commit
+		vars["scope_unit_digest"] = q.Scope.UnitDigest
+		vars["scope_domain"] = q.Scope.Domain
+		vars["published_key"] = publishedKey(*q.Scope)
+		if q.RunID != "" {
+			where += ` AND run_id IN (SELECT VALUE run_id FROM extraction_run
+				WHERE repo = $repo
+				  AND commit = $scope_commit
+				  AND unit_digest = $scope_unit_digest
+				  AND domain = $scope_domain
+				  AND status = 'published'
+				  AND store_schema_version = $store_schema_version
+				  AND evidence_format_version = $evidence_format_version
+				  AND retention_quarantined = false
+				  AND published_key = $published_key)`
+		}
 	}
 	if q.Predicate != "" {
 		where += " AND predicate = $predicate"
@@ -1261,6 +1610,7 @@ func reverseAssertionQuerySQL(hasLineage, hasAfter, explain bool) string {
 			  AND status = 'published'
 			  AND repo = $repo
 			  AND evidence_format_version = $evidence_format_version
+			  AND type::is_string(unit_digest)
 			  AND retention_quarantined = false
 			  AND run_id = record::id(id)
 			  AND ` + evidenceRunProbeHasNoClaimantSQL + `
@@ -1544,9 +1894,13 @@ LET $locked = IF $writer_ok THEN
 		RETURN AFTER)
 	ELSE [] END;
 IF array::len($locked) = 1 AND $prior_status = 'staged' {
-	UPDATE extraction_attempt SET status = 'aborted'
+	UPDATE $attempt_rid SET status = 'aborted'
 		WHERE run_id = $run AND status = 'staged'
-		  AND evidence_format_version = $evidence_format_version RETURN NONE
+		  AND repo = $repo AND commit = $commit
+		  AND unit_digest = $unit_digest AND domain = $domain
+		  AND store_schema_version = $store_schema_version
+		  AND evidence_format_version = $evidence_format_version
+		  AND evidence_migration_version = $evidence_migration_version RETURN NONE
 };
 RETURN [{
 	runs_marked_deleting: array::len($locked),
@@ -1669,10 +2023,14 @@ RETURN [{
 COMMIT;`
 
 type evidenceSweepCandidateRec struct {
-	RecID  *models.RecordID `json:"id"`
-	RunID  string           `json:"run_id"`
-	Status string           `json:"status"`
-	Phase  string           `json:"retention_phase"`
+	RecID      *models.RecordID `json:"id"`
+	RunID      string           `json:"run_id"`
+	Repo       string           `json:"repo"`
+	Commit     string           `json:"commit"`
+	UnitDigest string           `json:"unit_digest"`
+	Domain     string           `json:"domain"`
+	Status     string           `json:"status"`
+	Phase      string           `json:"retention_phase"`
 }
 
 func firstEvidenceSweepCandidate(
@@ -1697,7 +2055,8 @@ func (s *Surreal) nextEvidenceSweepCandidate(
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	for _, candidateSQL := range []string{
-		`SELECT id, run_id, status, retention_phase, started_at OMIT started_at
+		`SELECT id, run_id, repo, commit, unit_digest, domain,
+			status, retention_phase, started_at OMIT started_at
 			FROM extraction_run
 			WHERE status = 'deleting'
 			  AND evidence_format_version = $evidence_format_version
@@ -1707,7 +2066,8 @@ func (s *Surreal) nextEvidenceSweepCandidate(
 			  AND published_key = NONE
 			  AND run_id NOT IN (SELECT VALUE run_id FROM evidence_pin)
 			ORDER BY started_at, run_id LIMIT $limit`,
-		`SELECT id, run_id, status, retention_phase, started_at OMIT started_at
+		`SELECT id, run_id, repo, commit, unit_digest, domain,
+			status, retention_phase, started_at OMIT started_at
 			FROM extraction_run
 			WHERE (status IN ['aborted', 'superseded']
 					OR (status = 'staged' AND started_at <= $cutoff))
@@ -1786,10 +2146,23 @@ func (s *Surreal) SweepEvidence(
 			return EvidenceSweepProgress{}, fmt.Errorf("sweep evidence: run %s: %w", candidate.RunID, err)
 		}
 		runID := candidate.RunID
+		scope := ExtractionScope{
+			Repository: candidate.Repo,
+			Commit:     candidate.Commit,
+			UnitDigest: candidate.UnitDigest,
+			Domain:     candidate.Domain,
+		}
 		vars := map[string]any{
-			"rid": *candidate.RecID, "run": runID, "cutoff": cutoff,
+			"rid": *candidate.RecID, "run": runID,
+			"attempt_rid":  extractionAttemptID(scope),
+			"repo":         scope.Repository,
+			"commit":       scope.Commit,
+			"unit_digest":  scope.UnitDigest,
+			"domain":       scope.Domain,
+			"cutoff":       cutoff,
 			"prior_status": candidate.Status, "row_limit": evidenceSweepRowBatchSize,
 			"migration_rid":              evidenceMigrationStateID(),
+			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_format_version":    evidenceFormatVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
 		}

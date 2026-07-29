@@ -60,7 +60,7 @@ func TestT208TypedCallersPublishThroughTrustedWorker(t *testing.T) {
 			if evidence.publishedWith.AssertionCount != testCase.want ||
 				evidence.publishedWith.AtomCount != testCase.want ||
 				evidence.publishedWith.UnresolvedCount != 0 ||
-				evidence.publishedWith.CandidateFileCount != 18 {
+				evidence.publishedWith.CandidateFileCount != 17 {
 				t.Fatalf("coverage = %+v", evidence.publishedWith)
 			}
 			assertions := 0

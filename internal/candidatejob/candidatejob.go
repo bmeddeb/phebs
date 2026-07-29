@@ -77,7 +77,8 @@ func (policies *PolicySet) validate() error {
 	if err != nil {
 		return err
 	}
-	if !slices.Equal(identities, policies.identities) || digest != policies.digest {
+	if !candidate.EqualPolicyIdentities(identities, policies.identities) ||
+		digest != policies.digest {
 		return errors.New("candidate policy set is inconsistent")
 	}
 	return nil
@@ -405,14 +406,15 @@ func expectedUnitDigest(unit *analysisunit.State) string {
 }
 
 func (worker *Worker) expected(repository *store.Repo) (candidate.Expected, error) {
-	unitDigest, err := checkedUnitDigest(
+	_, err := checkedUnitDigest(
 		repository.Name, repository.IndexedAnalysisUnit,
 	)
 	if err != nil {
 		return candidate.Expected{}, err
 	}
 	generation, err := candidate.GenerationDigest(
-		repository.Name, repository.IndexedCommitHash, unitDigest,
+		repository.Name, repository.IndexedCommitHash,
+		repository.IndexedAnalysisUnit,
 		worker.policies.identities,
 	)
 	if err != nil {

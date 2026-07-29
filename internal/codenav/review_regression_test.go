@@ -190,7 +190,7 @@ func TestMalformedIndexFailureIsNegativelyCached(t *testing.T) {
 
 	// A cache miss would now observe an absent index. The identical parse error
 	// proves the immutable revision's failure was served from the LRU entry.
-	service.indexPath = "missing.scip"
+	service.dataDir = filepath.Join(t.TempDir(), "missing")
 	_, secondErr := service.Definition(context.Background(), query)
 	if secondErr == nil || secondErr.Error() != firstErr.Error() {
 		t.Fatalf("cached error = %v, want %v", secondErr, firstErr)

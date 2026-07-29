@@ -23,6 +23,11 @@ const (
 	// TypedIndexRepositoryRootUnbound means the existing repository-root
 	// index.scip input has no reviewed binding to this service scope.
 	TypedIndexRepositoryRootUnbound = "repository-root-unbound"
+	// TypedIndexUnitBound means the exact configured typed input is a reviewed
+	// supporting path in this service scope.
+	TypedIndexUnitBound = "unit-bound"
+	// TypedIndexKindSCIP is the only typed input supported by T30.5.
+	TypedIndexKindSCIP = "scip"
 	// SearchIndexWholeRepository remains readable for T30.2 committed rows.
 	SearchIndexWholeRepository = "whole-repository"
 	// SearchIndexFocused means zoekt input is restricted to the canonical
@@ -43,9 +48,18 @@ var (
 // Config is the repository-keyed YAML value. Repository is supplied by the
 // owning map key so one repository can have at most one active unit.
 type Config struct {
-	Name       string   `yaml:"name" json:"name"`
-	Primary    []string `yaml:"primary" json:"primary"`
-	Supporting []string `yaml:"supporting" json:"supporting"`
+	Name       string      `yaml:"name" json:"name"`
+	Primary    []string    `yaml:"primary" json:"primary"`
+	Supporting []string    `yaml:"supporting" json:"supporting"`
+	TypedIndex *TypedIndex `yaml:"typed_index,omitempty" json:"typed_index,omitempty"`
+}
+
+// TypedIndex names one exact, committed typed-index input. Path must also be
+// present as an exact Supporting entry; a selected directory does not
+// implicitly admit a typed input below it.
+type TypedIndex struct {
+	Kind string `yaml:"kind" json:"kind"`
+	Path string `yaml:"path" json:"path"`
 }
 
 // Scope is the complete stable semantic identity.
@@ -54,21 +68,27 @@ type Scope struct {
 	Name       string   `json:"name"`
 	Primary    []string `json:"primary"`
 	Supporting []string `json:"supporting"`
+	// TypedIndex is deliberately outside the stable semantic scope digest.
+	// The selected paths already bind its bytes to the service boundary; the
+	// candidate generation separately binds which selected artifact is the
+	// typed input so changing that designation cannot reuse a publication.
+	TypedIndex *TypedIndex `json:"-"`
 }
 
 // State is the committed index-state projection and /api/repo-status shape.
 // Counts are explicit operator diagnostics and are validated against the
 // canonical path lists whenever state is committed.
 type State struct {
-	Schema              string   `json:"schema"`
-	Name                string   `json:"name"`
-	Digest              string   `json:"digest"`
-	PrimaryPaths        []string `json:"primary_paths"`
-	SupportingPaths     []string `json:"supporting_paths"`
-	PrimaryPathCount    int      `json:"primary_path_count"`
-	SupportingPathCount int      `json:"supporting_path_count"`
-	SearchIndexPosture  string   `json:"search_index_posture"`
-	TypedIndexPosture   string   `json:"typed_index_posture"`
+	Schema              string      `json:"schema"`
+	Name                string      `json:"name"`
+	Digest              string      `json:"digest"`
+	PrimaryPaths        []string    `json:"primary_paths"`
+	SupportingPaths     []string    `json:"supporting_paths"`
+	PrimaryPathCount    int         `json:"primary_path_count"`
+	SupportingPathCount int         `json:"supporting_path_count"`
+	SearchIndexPosture  string      `json:"search_index_posture"`
+	TypedIndexPosture   string      `json:"typed_index_posture"`
+	TypedIndex          *TypedIndex `json:"typed_index,omitempty"`
 }
 
 func (config Config) Scope(repository string) Scope {
@@ -77,6 +97,7 @@ func (config Config) Scope(repository string) Scope {
 		Name:       config.Name,
 		Primary:    slices.Clone(config.Primary),
 		Supporting: slices.Clone(config.Supporting),
+		TypedIndex: cloneTypedIndex(config.TypedIndex),
 	}
 }
 
@@ -122,6 +143,9 @@ func (scope Scope) Canonical() ([]byte, error) {
 			"%w: selected paths contain %d bytes; at most %d are allowed",
 			ErrInvalidScope, pathBytes, MaxSelectedPathBytes,
 		)
+	}
+	if err := validateTypedIndex(scope.TypedIndex, supporting); err != nil {
+		return nil, fmt.Errorf("%w: typed index: %v", ErrInvalidScope, err)
 	}
 	for _, current := range all {
 		for parent := path.Dir(current); parent != "."; parent = path.Dir(parent) {
@@ -180,7 +204,8 @@ func (scope Scope) State() (*State, error) {
 		PrimaryPathCount:    len(primary),
 		SupportingPathCount: len(supporting),
 		SearchIndexPosture:  SearchIndexFocused,
-		TypedIndexPosture:   TypedIndexRepositoryRootUnbound,
+		TypedIndexPosture:   typedIndexPosture(scope.TypedIndex),
+		TypedIndex:          cloneTypedIndex(scope.TypedIndex),
 	}, nil
 }
 
@@ -193,18 +218,27 @@ func (state *State) Validate(repository string) error {
 		Name:       state.Name,
 		Primary:    state.PrimaryPaths,
 		Supporting: state.SupportingPaths,
+		TypedIndex: cloneTypedIndex(state.TypedIndex),
 	}
 	expected, err := scope.State()
 	if err != nil {
 		return err
 	}
-	legacyWholeRepository := state.SearchIndexPosture == SearchIndexWholeRepository
+	// T30.2 whole-repository rows predate typed-index designation. Preserve
+	// exactly that historical shape without allowing a current focused,
+	// unit-bound state to become whole-repository authority by changing only
+	// its posture string.
+	legacyWholeRepository :=
+		state.SearchIndexPosture == SearchIndexWholeRepository &&
+			state.TypedIndexPosture == TypedIndexRepositoryRootUnbound &&
+			state.TypedIndex == nil
 	if state.Schema != expected.Schema ||
 		state.Digest != expected.Digest ||
 		state.PrimaryPathCount != expected.PrimaryPathCount ||
 		state.SupportingPathCount != expected.SupportingPathCount ||
 		(state.SearchIndexPosture != expected.SearchIndexPosture && !legacyWholeRepository) ||
 		state.TypedIndexPosture != expected.TypedIndexPosture ||
+		!equalTypedIndex(state.TypedIndex, expected.TypedIndex) ||
 		!slices.Equal(state.PrimaryPaths, expected.PrimaryPaths) ||
 		!slices.Equal(state.SupportingPaths, expected.SupportingPaths) {
 		return fmt.Errorf("%w: committed state is not canonical", ErrInvalidScope)
@@ -223,6 +257,7 @@ func EqualState(left, right *State) bool {
 		left.SupportingPathCount == right.SupportingPathCount &&
 		left.SearchIndexPosture == right.SearchIndexPosture &&
 		left.TypedIndexPosture == right.TypedIndexPosture &&
+		equalTypedIndex(left.TypedIndex, right.TypedIndex) &&
 		slices.Equal(left.PrimaryPaths, right.PrimaryPaths) &&
 		slices.Equal(left.SupportingPaths, right.SupportingPaths)
 }
@@ -234,6 +269,45 @@ func CloneState(state *State) *State {
 	cloned := *state
 	cloned.PrimaryPaths = slices.Clone(state.PrimaryPaths)
 	cloned.SupportingPaths = slices.Clone(state.SupportingPaths)
+	cloned.TypedIndex = cloneTypedIndex(state.TypedIndex)
+	return &cloned
+}
+
+func validateTypedIndex(input *TypedIndex, supporting []string) error {
+	if input == nil {
+		return nil
+	}
+	if input.Kind != TypedIndexKindSCIP {
+		return fmt.Errorf("kind must be %q", TypedIndexKindSCIP)
+	}
+	if err := repopath.Validate(input.Path); err != nil {
+		return fmt.Errorf("unsafe repository-relative Git path %q", input.Path)
+	}
+	if !slices.Contains(supporting, input.Path) {
+		return errors.New("path must exactly match one supporting path")
+	}
+	return nil
+}
+
+func typedIndexPosture(input *TypedIndex) string {
+	if input == nil {
+		return TypedIndexRepositoryRootUnbound
+	}
+	return TypedIndexUnitBound
+}
+
+func equalTypedIndex(left, right *TypedIndex) bool {
+	if left == nil || right == nil {
+		return left == right
+	}
+	return *left == *right
+}
+
+func cloneTypedIndex(input *TypedIndex) *TypedIndex {
+	if input == nil {
+		return nil
+	}
+	cloned := *input
 	return &cloned
 }
 

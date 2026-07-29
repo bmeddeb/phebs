@@ -35,7 +35,7 @@ func TestT203ProductionTargetPublicationIntegrity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	previous, err := s.BeginExtractionRun(ctx, repo, commit, domain, extractor)
+	previous, err := beginExtractionRun(s, ctx, repo, commit, domain, extractor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestT203ProductionTargetPublicationIntegrity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	target, err := s.BeginExtractionRun(ctx, repo, commit, domain, extractor)
+	target, err := beginExtractionRun(s, ctx, repo, commit, domain, extractor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func assertOnlyPublishedRun(
 	t *testing.T, ctx context.Context, s *Surreal, repo, domain, wantRunID string,
 ) {
 	t.Helper()
-	latest, err := s.LatestPublishedRun(ctx, repo, domain)
+	latest, err := latestPublishedRun(s, ctx, repo, domain)
 	if err != nil || latest.ID != wantRunID {
 		t.Fatalf("latest publication = %+v, %v; want %s", latest, err, wantRunID)
 	}

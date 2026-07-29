@@ -83,6 +83,9 @@ func codeNavErr(err error) error {
 		return huma.Error404NotFound(err.Error())
 	case errors.Is(err, codenav.ErrInvalidInput), errors.Is(err, codenav.ErrUnsupportedEncoding):
 		return huma.Error400BadRequest(err.Error())
+	case errors.Is(err, codenav.ErrBindingChanged),
+		errors.Is(err, codenav.ErrDocumentOutsideUnit):
+		return huma.Error409Conflict(err.Error())
 	case errors.Is(err, codenav.ErrIndexTooLarge), errors.Is(err, codenav.ErrSourceTooLarge),
 		errors.Is(err, codenav.ErrQuerySourceBudget), errors.Is(err, codenav.ErrCacheBudget),
 		errors.Is(err, codenav.ErrSemanticLimit), errors.Is(err, codenav.ErrHoverTooLarge):

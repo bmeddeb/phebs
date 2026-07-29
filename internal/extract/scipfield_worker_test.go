@@ -13,8 +13,11 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-func (c grpcWorkerCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
-	return c.Read(ctx, "index.scip")
+func (c grpcWorkerCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) {
+	blob, err := c.Read(ctx, "index.scip")
+	return sdk.SCIPInput{
+		Path: "index.scip", Blob: blob, Present: err == nil,
+	}, err
 }
 
 func TestSCIPFieldReferencePublishesThroughTrustedWorker(t *testing.T) {
@@ -79,7 +82,7 @@ func use(x *contract.Item) { _ = x.GetOldName() }
 		t.Fatalf("run state: published=%v aborted=%v", evidence.published, evidence.aborted)
 	}
 	coverage := evidence.publishedWith
-	if coverage.CandidateFileCount != 1 || coverage.ReadFileCount != 4 ||
+	if coverage.CandidateFileCount != 0 || coverage.ReadFileCount != 4 ||
 		coverage.AssertionCount != 1 || coverage.AtomCount != 1 || coverage.UnresolvedCount != 0 {
 		t.Fatalf("coverage = %+v", coverage)
 	}

@@ -11,12 +11,15 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 	"unicode/utf8"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
+	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -168,8 +171,9 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 			domainErrs = append(domainErrs, err)
 			break
 		}
+		scope := extractionScope(repo, ex.domain)
 		if !job.Force {
-			last, latestErr := w.Evidence.LatestPublishedRun(ctx, repo.Name, ex.domain)
+			last, latestErr := w.Evidence.LatestPublishedRun(ctx, scope)
 			if latestErr == nil {
 				if last == nil {
 					return store.WithClass(store.ClassExtract,
@@ -180,7 +184,9 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 				// do not prove the current gitlink and symlink semantics, and
 				// only a fresh walk can bind them.
 				if last.Commit == commit && last.Extractor == ex.version &&
-					last.Coverage.InventoryPolicy == inventoryPolicy {
+					last.Coverage.InventoryPolicy == inventoryPolicy &&
+					(candidateManifest == nil ||
+						last.Coverage.CandidateManifestDigest == candidateManifest.Identity()) {
 					continue
 				}
 			}
@@ -190,7 +196,7 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 			}
 		}
 		if err := w.runOne(
-			ctx, ex, corpus, candidateManifest, inventoryPolicy, boundaries,
+			ctx, ex, scope, corpus, candidateManifest, inventoryPolicy, boundaries,
 		); err != nil {
 			if errors.Is(err, errStaleRun) {
 				// A guarded publish proved the repository was deleted or advanced.
@@ -251,8 +257,9 @@ func (w *Worker) candidateManifestCurrent(
 		return false, err
 	}
 	for _, ex := range extractors {
+		scope := extractionScope(repo, ex.domain)
 		last, latestErr := w.Evidence.LatestPublishedRun(
-			ctx, repo.Name, ex.domain,
+			ctx, scope,
 		)
 		if errors.Is(latestErr, store.ErrNotFound) {
 			return false, nil
@@ -265,11 +272,25 @@ func (w *Worker) candidateManifestCurrent(
 		}
 		if last.Commit != repo.IndexedCommitHash ||
 			last.Extractor != ex.version ||
-			last.Coverage.InventoryPolicy != inventoryPolicy {
+			last.Coverage.InventoryPolicy != inventoryPolicy ||
+			last.Coverage.CandidateManifestDigest != identity {
 			return false, nil
 		}
 	}
 	return true, nil
+}
+
+func extractionScope(repo *store.Repo, domain string) store.ExtractionScope {
+	scope := store.ExtractionScope{Domain: domain}
+	if repo == nil {
+		return scope
+	}
+	scope.Repository = repo.Name
+	scope.Commit = repo.IndexedCommitHash
+	if repo.IndexedAnalysisUnit != nil {
+		scope.UnitDigest = repo.IndexedAnalysisUnit.Digest
+	}
+	return scope
 }
 
 type registeredExtractor struct {
@@ -333,11 +354,17 @@ func validToken(s string) bool {
 func (w *Worker) runOne(
 	ctx context.Context,
 	ex registeredExtractor,
+	scope store.ExtractionScope,
 	corpus Corpus,
 	candidateManifest CandidateManifest,
 	inventoryPolicy string,
 	boundaries gitlinkInventory,
 ) (err error) {
+	if scope.Repository != corpus.RepoName() ||
+		scope.Commit != corpus.Commit() ||
+		scope.Domain != ex.domain {
+		return fmt.Errorf("%s: extraction scope does not match corpus provenance", ex.domain)
+	}
 	verifiedCorpus := newVerifiedCorpus(corpus)
 	log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
 	if candidateManifest == nil {
@@ -358,8 +385,7 @@ func (w *Worker) runOne(
 		verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
 	)
 
-	run, err := w.Evidence.BeginExtractionRun(
-		ctx, corpus.RepoName(), corpus.Commit(), ex.domain, ex.version)
+	run, err := w.Evidence.BeginExtractionRun(ctx, scope, ex.version)
 	if err != nil {
 		verifiedCorpus.Close()
 		return fmt.Errorf("%s: begin: %w", ex.domain, err)
@@ -405,6 +431,9 @@ func (w *Worker) runOne(
 	if err != nil {
 		return fmt.Errorf("%s: corpus coverage: %w", ex.domain, err)
 	}
+	if candidateManifest != nil && stats.unitDigest != scope.UnitDigest {
+		return fmt.Errorf("%s: candidate coverage unit does not match extraction scope", ex.domain)
+	}
 	// Boundary inventory comes from the trusted corpus, never the extractor.
 	// A corpus without the capability (in-memory test corpora) has no
 	// gitlinks by construction, which the canonical empty inventory states.
@@ -421,7 +450,7 @@ func (w *Worker) runOne(
 	}
 	if err := w.Evidence.PublishExtractionRun(ctx, run.ID, manifest); err != nil {
 		if errors.Is(err, store.ErrConflict) {
-			stale, checkErr := w.runBecameStale(ctx, corpus.RepoName(), corpus.Commit())
+			stale, checkErr := w.runBecameStale(ctx, scope)
 			if checkErr != nil {
 				return fmt.Errorf("%s: publish: %w (verify conflict: %v)", ex.domain, err, checkErr)
 			}
@@ -444,17 +473,20 @@ func callExtractor(ctx context.Context, ex Extractor, corpus Corpus, emit sdk.Em
 	return ex.Extract(ctx, corpus, emit)
 }
 
-func (w *Worker) runBecameStale(ctx context.Context, repoName, commit string) (bool, error) {
+func (w *Worker) runBecameStale(ctx context.Context, scope store.ExtractionScope) (bool, error) {
 	checkCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), abortTimeout)
 	defer cancel()
-	repo, err := w.Repos.GetRepo(checkCtx, repoName)
+	repo, err := w.Repos.GetRepo(checkCtx, scope.Repository)
 	if errors.Is(err, store.ErrNotFound) {
 		return true, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	return repo.Deleting || repo.IndexedCommitHash != commit, nil
+	current := extractionScope(repo, scope.Domain)
+	return repo.Deleting ||
+		current.Commit != scope.Commit ||
+		current.UnitDigest != scope.UnitDigest, nil
 }
 
 type runSink struct {
@@ -565,6 +597,13 @@ type verifiedCorpus struct {
 	enumeratedOrder   []string
 	plannedEntries    map[string]treeRecord
 	candidates        map[string]struct{}
+	domainScope       CandidateManifestScope
+	typedInput        treeRecord
+	typedInputKind    string
+	typedInputPresent bool
+	manifestBound     bool
+	scoped            bool
+	pathInScope       func(string) bool
 	attributionOnce   sync.Once
 	attributionSource sdk.AttributionSource
 	attributionErr    error
@@ -696,7 +735,25 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 	entries := make(map[string]treeRecord)
 	candidates := make(map[string]struct{})
 	pathBytes := 0
-	err := manifest.ForEachRepositoryFile(
+	scope, err := manifest.DomainScope(domain, version)
+	if err != nil {
+		return fmt.Errorf("candidate manifest %s scope: %w", domain, err)
+	}
+	if scope.ManifestDigest != manifest.Identity() ||
+		scope.CorpusFileCount < 0 ||
+		scope.CorpusFileCount > candidatepkg.MaxCorpusEntries ||
+		scope.CorpusDeclaredBytes < 0 ||
+		!validSHA256(scope.CorpusDigest) ||
+		scope.CandidateFileCount < 0 ||
+		scope.RequiredFileCount < 0 ||
+		scope.RequiredFileCount > scope.CandidateFileCount ||
+		scope.CandidateDeclaredBytes < 0 ||
+		!validSHA256(scope.CandidateDigest) {
+		return fmt.Errorf(
+			"candidate manifest %s has invalid scope summary", domain)
+	}
+	var plannedDeclaredBytes int64
+	err = manifest.ForEachRepositoryFile(
 		ctx,
 		domain,
 		version,
@@ -739,13 +796,34 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 			if required {
 				candidates[entry.path] = struct{}{}
 			}
+			if entry.size > math.MaxInt64-plannedDeclaredBytes {
+				return fmt.Errorf(
+					"candidate manifest %s declared bytes overflow", domain)
+			}
+			plannedDeclaredBytes += entry.size
 			return nil
 		},
 	)
 	if err != nil {
 		return err
 	}
-	corpusFileCount := manifest.CorpusFileCount()
+	if len(paths) != scope.CandidateFileCount ||
+		len(candidates) != scope.RequiredFileCount ||
+		plannedDeclaredBytes != scope.CandidateDeclaredBytes {
+		return fmt.Errorf(
+			"candidate manifest %s replay disagrees with scope summary", domain)
+	}
+	typed, err := manifest.TypedInput(
+		domain, version, analysisunit.TypedIndexKindSCIP,
+	)
+	if err != nil {
+		return fmt.Errorf("candidate manifest %s typed input: %w", domain, err)
+	}
+	typedEntry, typedPresent, err := normalizeManifestTypedInput(typed)
+	if err != nil {
+		return fmt.Errorf("candidate manifest %s typed input: %w", domain, err)
+	}
+	corpusFileCount := scope.CorpusFileCount
 	if corpusFileCount < len(paths) {
 		return fmt.Errorf(
 			"candidate manifest %s plans %d paths from a %d-file corpus",
@@ -760,6 +838,13 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 	c.enumeratedOrder = paths
 	c.plannedEntries = entries
 	c.candidates = candidates
+	c.domainScope = scope
+	c.typedInput = typedEntry
+	c.typedInputKind = typed.Kind
+	c.typedInputPresent = typedPresent
+	c.manifestBound = true
+	c.scoped = scope.UnitDigest != "" && scope.Plane == candidatepkg.PlaneLocal
+	c.pathInScope = manifest.PathInScope
 	c.corpusFileCount = corpusFileCount
 	c.inventoryComplete = true
 	return nil
@@ -778,14 +863,78 @@ func (c *verifiedCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, e
 	return c.read(ctx, filePath, MaxBlobBytes, c.inner.Read)
 }
 
-func (c *verifiedCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
+func (c *verifiedCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return sdk.SCIPInput{}, errors.New("corpus used after extractor returned")
+	}
+	if !c.inventoryComplete {
+		c.mu.Unlock()
+		return sdk.SCIPInput{}, errors.New("read before complete corpus inventory")
+	}
+	typedPath := c.typedInput.path
+	typedPresent := c.typedInputPresent
+	manifestBound := c.manifestBound
+	fromManifest := c.typedInputKind == analysisunit.TypedIndexKindSCIP
+	_, legacyPresent := c.enumerated[scipIndexPath]
+	c.mu.Unlock()
+	if manifestBound && !fromManifest {
+		return sdk.SCIPInput{}, errors.New(
+			"candidate domain does not declare a SCIP typed input",
+		)
+	}
+	if fromManifest && !typedPresent {
+		return sdk.SCIPInput{Path: typedPath, Present: false}, nil
+	}
 	inner, ok := c.inner.(sdk.SCIPCorpus)
 	if !ok {
-		return sdk.Blob{}, errors.New("corpus does not support bounded SCIP index reads")
+		return sdk.SCIPInput{}, errors.New("corpus does not support bounded SCIP index reads")
 	}
-	return c.read(ctx, scipIndexPath, MaxSCIPIndexBytes, func(ctx context.Context, _ string) (sdk.Blob, error) {
-		return inner.ReadSCIPIndex(ctx)
+	if !fromManifest {
+		typedPath = scipIndexPath
+		if !legacyPresent {
+			return sdk.SCIPInput{Path: typedPath, Present: false}, nil
+		}
+	}
+	blob, err := c.read(ctx, typedPath, MaxSCIPIndexBytes, func(ctx context.Context, _ string) (sdk.Blob, error) {
+		input, readErr := inner.ReadSCIPIndex(ctx)
+		if readErr != nil {
+			return sdk.Blob{}, readErr
+		}
+		if !input.Present {
+			return sdk.Blob{}, fmt.Errorf(
+				"corpus typed input %q disappeared after inventory", typedPath)
+		}
+		if input.Path != typedPath {
+			return sdk.Blob{}, fmt.Errorf(
+				"corpus typed input path changed from %q to %q",
+				typedPath, input.Path)
+		}
+		return input.Blob, nil
 	})
+	if err != nil {
+		if !fromManifest && errors.Is(err, store.ErrNotFound) {
+			return sdk.SCIPInput{Path: typedPath, Present: false}, nil
+		}
+		return sdk.SCIPInput{}, err
+	}
+	return sdk.SCIPInput{Path: typedPath, Blob: blob, Present: true}, nil
+}
+
+func (c *verifiedCorpus) SCIPDocumentInScope(filePath string) bool {
+	if checkCorpusPath(filePath) != nil {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed || !c.inventoryComplete {
+		return false
+	}
+	if !c.scoped {
+		return true
+	}
+	return c.pathInScope != nil && c.pathInScope(filePath)
 }
 
 func (c *verifiedCorpus) AttributionSource(ctx context.Context) (sdk.AttributionSource, error) {
@@ -809,9 +958,14 @@ func (c *verifiedCorpus) containsRegular(ctx context.Context, filePath string) (
 		return false, errors.New("lookup before complete corpus inventory")
 	}
 	_, planned := c.enumerated[filePath]
+	scoped := c.scoped
+	pathInScope := c.pathInScope
 	c.mu.Unlock()
 	if planned {
 		return true, nil
+	}
+	if scoped && (pathInScope == nil || !pathInScope(filePath)) {
+		return false, nil
 	}
 	if exact, ok := c.inner.(exactTreeCorpus); ok {
 		_, present, err := exact.lookupRegular(ctx, filePath)
@@ -841,7 +995,12 @@ func (c *verifiedCorpus) anyRegularUnder(ctx context.Context, root string) (bool
 			return true, nil
 		}
 	}
+	scoped := c.scoped
+	pathInScope := c.pathInScope
 	c.mu.Unlock()
+	if scoped && (pathInScope == nil || !pathInScope(root)) {
+		return false, nil
+	}
 	if exact, ok := c.inner.(exactTreeCorpus); ok {
 		return exact.anyRegularUnder(ctx, root)
 	}
@@ -863,11 +1022,17 @@ func (c *verifiedCorpus) read(
 		c.mu.Unlock()
 		return sdk.Blob{}, errors.New("read before complete corpus inventory")
 	}
-	if _, enumerated := c.enumerated[filePath]; !enumerated {
+	_, enumerated := c.enumerated[filePath]
+	typed := c.typedInputPresent && c.typedInput.path == filePath
+	if !enumerated && !typed {
 		c.mu.Unlock()
 		return sdk.Blob{}, fmt.Errorf("read path %q was not in corpus inventory", filePath)
 	}
 	manifestEntry, fromManifest := c.plannedEntries[filePath]
+	if typed {
+		manifestEntry = c.typedInput
+		fromManifest = true
+	}
 	if c.readCount >= maxCorpusFiles*4 {
 		c.mu.Unlock()
 		return sdk.Blob{}, fmt.Errorf("corpus exceeds %d-read limit", maxCorpusFiles*4)
@@ -887,6 +1052,12 @@ func (c *verifiedCorpus) read(
 	}
 	if int64(len(blob.Content)) > maxBytes {
 		return sdk.Blob{}, fmt.Errorf("corpus blob %q exceeds byte limit", filePath)
+	}
+	if fromManifest && int64(len(blob.Content)) != manifestEntry.size {
+		return sdk.Blob{}, fmt.Errorf(
+			"corpus blob %q has size %d, manifest declares %d",
+			filePath, len(blob.Content), manifestEntry.size,
+		)
 	}
 	digest := sha256.Sum256([]byte(blob.Content))
 	wantDigest := "sha256:" + hex.EncodeToString(digest[:])
@@ -967,6 +1138,23 @@ type corpusStats struct {
 	readFileCount      int
 	readBytes          int64
 	sourceScopeDigest  string
+	scopePosture       string
+	manifestDigest     string
+	unitDigest         string
+	plane              candidatepkg.Plane
+	scopeCorpusFiles   int
+	scopeCorpusBytes   int64
+	scopeCorpusDigest  string
+	plannedFileCount   int
+	plannedRequired    int
+	plannedBytes       int64
+	plannedDigest      string
+	typedInputKind     string
+	typedInputPath     string
+	typedInputObjectID string
+	typedInputBytes    int64
+	typedInputDigest   string
+	typedInputPresent  bool
 }
 
 func (c *verifiedCorpus) Stats() (corpusStats, error) {
@@ -1000,10 +1188,43 @@ func (c *verifiedCorpus) Stats() (corpusStats, error) {
 		_, _ = fmt.Fprintf(hash, "%d:%s;%d:%s;%d;", len(filePath), filePath,
 			len(source.digest), source.digest, source.length)
 	}
+	typedDigest := ""
+	if c.typedInputPresent {
+		typedSource, read := c.sources[c.typedInput.path]
+		if !read {
+			return corpusStats{}, fmt.Errorf(
+				"typed input %q was not read", c.typedInput.path)
+		}
+		typedDigest = typedSource.digest
+	}
+	posture := "whole-repository"
+	if c.domainScope.UnitDigest != "" {
+		posture = "repository-overlay"
+		if c.domainScope.Plane == candidatepkg.PlaneLocal {
+			posture = "focused-local"
+		}
+	}
 	return corpusStats{
 		corpusFileCount: c.corpusFileCount, candidateFileCount: len(c.candidates),
 		readFileCount: len(paths),
 		readBytes:     c.readBytes, sourceScopeDigest: "sha256:" + hex.EncodeToString(hash.Sum(nil)),
+		scopePosture:       posture,
+		manifestDigest:     c.domainScope.ManifestDigest,
+		unitDigest:         c.domainScope.UnitDigest,
+		plane:              c.domainScope.Plane,
+		scopeCorpusFiles:   c.domainScope.CorpusFileCount,
+		scopeCorpusBytes:   c.domainScope.CorpusDeclaredBytes,
+		scopeCorpusDigest:  c.domainScope.CorpusDigest,
+		plannedFileCount:   c.domainScope.CandidateFileCount,
+		plannedRequired:    c.domainScope.RequiredFileCount,
+		plannedBytes:       c.domainScope.CandidateDeclaredBytes,
+		plannedDigest:      c.domainScope.CandidateDigest,
+		typedInputKind:     c.typedInputKind,
+		typedInputPath:     c.typedInput.path,
+		typedInputObjectID: c.typedInput.oid,
+		typedInputBytes:    c.typedInput.size,
+		typedInputDigest:   typedDigest,
+		typedInputPresent:  c.typedInputPresent,
 	}, nil
 }
 
@@ -1267,7 +1488,7 @@ func coverageManifestForPolicy(
 		strings.TrimSpace(inventoryPolicy) != inventoryPolicy {
 		return store.CoverageManifest{}, errors.New("inventory policy is invalid")
 	}
-	return store.CoverageManifest{
+	manifest := store.CoverageManifest{
 		Protocols:              protocols,
 		CorpusFileCount:        stats.corpusFileCount,
 		CandidateFileCount:     stats.candidateFileCount,
@@ -1282,5 +1503,27 @@ func coverageManifestForPolicy(
 		GitlinkDigest:          boundaries.digest,
 		GitlinkSamplePaths:     append([]string(nil), boundaries.samplePaths...),
 		GitlinkSampleTruncated: boundaries.sampleTruncated,
-	}, nil
+	}
+	if stats.manifestDigest == "" {
+		return manifest, nil
+	}
+	manifest.ScopePosture = stats.scopePosture
+	manifest.CandidateManifestDigest = stats.manifestDigest
+	manifest.CandidatePlane = string(stats.plane)
+	manifest.ScopeCorpusFileCount = stats.scopeCorpusFiles
+	manifest.ScopeCorpusDeclaredBytes = stats.scopeCorpusBytes
+	manifest.ScopeCorpusDigest = stats.scopeCorpusDigest
+	manifest.PlannedFileCount = stats.plannedFileCount
+	manifest.PlannedRequiredFileCount = stats.plannedRequired
+	manifest.PlannedDeclaredBytes = stats.plannedBytes
+	manifest.PlannedScopeDigest = stats.plannedDigest
+	if stats.typedInputKind != "" {
+		manifest.TypedInputKind = stats.typedInputKind
+		manifest.TypedInputPath = stats.typedInputPath
+		manifest.TypedInputObjectID = stats.typedInputObjectID
+		manifest.TypedInputDeclaredBytes = stats.typedInputBytes
+		manifest.TypedInputDigest = stats.typedInputDigest
+		manifest.TypedInputPresent = stats.typedInputPresent
+	}
+	return manifest, nil
 }

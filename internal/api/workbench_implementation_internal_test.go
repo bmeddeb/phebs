@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -36,6 +37,26 @@ func (fake *implementationRepoStore) ListRepos(
 	context.Context,
 ) ([]store.Repo, error) {
 	return slices.Clone(fake.repositories), nil
+}
+
+type implementationChangingRepoStore struct {
+	store.Store
+	snapshots [][]store.Repo
+	calls     int
+}
+
+func (fake *implementationChangingRepoStore) ListRepos(
+	context.Context,
+) ([]store.Repo, error) {
+	if len(fake.snapshots) == 0 {
+		return nil, nil
+	}
+	index := fake.calls
+	if index >= len(fake.snapshots) {
+		index = len(fake.snapshots) - 1
+	}
+	fake.calls++
+	return slices.Clone(fake.snapshots[index]), nil
 }
 
 type implementationWorkbenchFake struct {
@@ -614,6 +635,136 @@ func TestWorkbenchImplementationServiceExplicitAnchorIsSelectedAndCited(
 	t.Fatal("explicit anchor row missing")
 }
 
+func TestWorkbenchImplementationFocusedUnitRejectsOutsideAnchorAndReaderRows(
+	t *testing.T,
+) {
+	t.Run("explicit anchor", func(t *testing.T) {
+		service, source, _, _, _ := implementationService(t)
+		focusImplementationService(t, service, "cart")
+		_, err := service.Read(
+			context.Background(),
+			"user:t218",
+			WorkbenchImplementationRequest{
+				InvestigationID: implementationInvestigationID,
+				RevisionID:      implementationRevisionID,
+				Anchors: []WorkbenchImplementationAnchor{{
+					Repository: implementationRepository,
+					Commit:     implementationCommit,
+					Path:       "private/secret.go",
+					Line:       0,
+					Character:  0,
+				}},
+				PageSize: workbenchImplementationMaxPage,
+			},
+		)
+		assertWorkbenchImplementationStatus(t, err, http.StatusBadRequest)
+		if len(source.calls) != 0 {
+			t.Fatalf("outside-unit anchor reached source reader: %+v", source.calls)
+		}
+	})
+
+	t.Run("search result", func(t *testing.T) {
+		service, _, searcher, _, _ := implementationService(t)
+		focusImplementationService(t, service, "cart")
+		searcher.files = append(searcher.files, search.FileResult{
+			Repo: implementationRepository,
+			Ref:  implementationCommit,
+			Path: "private/secret.go",
+		})
+		_, err := service.Read(
+			context.Background(),
+			"user:t218",
+			WorkbenchImplementationRequest{
+				InvestigationID: implementationInvestigationID,
+				RevisionID:      implementationRevisionID,
+				PageSize:        workbenchImplementationMaxPage,
+			},
+		)
+		assertWorkbenchImplementationStatus(t, err, http.StatusConflict)
+	})
+}
+
+func TestWorkbenchImplementationSameHEADUnitChangeInvalidatesSnapshot(
+	t *testing.T,
+) {
+	service, _, _, _, _ := implementationService(t)
+	firstState := focusImplementationService(t, service, "cart")
+	first, err := service.Read(
+		context.Background(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			PageSize:        1,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.SnapshotDigest == "" {
+		t.Fatalf("focused implementation page = %+v", first)
+	}
+
+	repositoryStore := service.opts.Store.(*implementationRepoStore)
+	replacement, err := (analysisunit.Scope{
+		Repository: implementationRepository,
+		Name:       "cart-replacement",
+		Primary:    []string{"internal/cart"},
+		Supporting: []string{
+			"docs/cart.md",
+			"generated/cart.pb.go",
+			"vendor/acme",
+		},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replacement.Digest == firstState.Digest {
+		t.Fatal("replacement unit did not change digest")
+	}
+	repositoryStore.repositories[0].IndexedAnalysisUnit = replacement
+	_, err = service.Read(
+		context.Background(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			PageSize:        1,
+			Cursor:          first.Pagination.NextCursor,
+		},
+	)
+	assertWorkbenchImplementationStatus(t, err, http.StatusConflict)
+}
+
+func TestWorkbenchImplementationRefusesEvidencePublicationChange(
+	t *testing.T,
+) {
+	service, _, _, _, _ := implementationService(t)
+	state := focusImplementationService(t, service, "cart")
+	before := store.Repo{
+		Name:                implementationRepository,
+		IndexedCommitHash:   implementationCommit,
+		IndexedAnalysisUnit: state,
+		EvidenceRevision:    7,
+	}
+	after := before
+	after.EvidenceRevision++
+	service.opts.Store = &implementationChangingRepoStore{
+		snapshots: [][]store.Repo{{before}, {after}},
+	}
+
+	_, err := service.Read(
+		context.Background(),
+		"user:t218",
+		WorkbenchImplementationRequest{
+			InvestigationID: implementationInvestigationID,
+			RevisionID:      implementationRevisionID,
+			PageSize:        workbenchImplementationMaxPage,
+		},
+	)
+	assertWorkbenchImplementationStatus(t, err, http.StatusConflict)
+}
+
 func TestWorkbenchImplementationServiceSearchLimitIsVisible(
 	t *testing.T,
 ) {
@@ -919,6 +1070,45 @@ func implementationService(
 		codeNav:   nav,
 		history:   history,
 	}, source, searcher, nav, history
+}
+
+func focusImplementationService(
+	t *testing.T,
+	service *WorkbenchImplementationService,
+	name string,
+) *analysisunit.State {
+	t.Helper()
+	state, err := (analysisunit.Scope{
+		Repository: implementationRepository,
+		Name:       name,
+		Primary:    []string{"internal/cart"},
+		Supporting: []string{
+			"docs/cart.md",
+			"generated/cart.pb.go",
+			"vendor/acme",
+		},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	repositoryStore := service.opts.Store.(*implementationRepoStore)
+	repositoryStore.repositories[0].IndexedAnalysisUnit = state
+	encoded, err := json.Marshal(struct {
+		Repositories []store.WorkbenchRepositorySnapshot `json:"repositories"`
+	}{
+		Repositories: []store.WorkbenchRepositorySnapshot{{
+			Name:         implementationRepository,
+			Commit:       implementationCommit,
+			ScopePosture: analysisunit.SearchIndexFocused,
+			UnitDigest:   state.Digest,
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	workbench := service.workbench.(*implementationWorkbenchFake)
+	workbench.view.Revision.DeclaredUniverse = string(encoded)
+	return state
 }
 
 func assertWorkbenchImplementationStatus(

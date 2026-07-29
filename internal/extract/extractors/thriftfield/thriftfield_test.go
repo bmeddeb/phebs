@@ -24,6 +24,8 @@ import (
 type memoryCorpus struct {
 	repo, commit string
 	files        map[string]string
+	typedPath    string
+	inScope      func(string) bool
 }
 
 func (c memoryCorpus) RepoName() string { return c.repo }
@@ -53,8 +55,21 @@ func (c memoryCorpus) Read(_ context.Context, filePath string) (sdk.Blob, error)
 	return trustedBlob(content), nil
 }
 
-func (c memoryCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
-	return c.Read(ctx, indexPath)
+func (c memoryCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) {
+	typedPath := c.typedPath
+	if typedPath == "" {
+		typedPath = indexPath
+	}
+	if _, ok := c.files[typedPath]; !ok {
+		return sdk.SCIPInput{Path: typedPath}, nil
+	}
+	blob, err := c.Read(ctx, typedPath)
+	return sdk.SCIPInput{
+		Path: typedPath, Blob: blob, Present: err == nil,
+	}, err
+}
+func (c memoryCorpus) SCIPDocumentInScope(filePath string) bool {
+	return c.inScope == nil || c.inScope(filePath)
 }
 
 func trustedBlob(content string) sdk.Blob {
@@ -238,6 +253,26 @@ func TestMissingAndMalformedIndexesFailClosed(t *testing.T) {
 			t.Fatalf("missing encoding emitted %d partial facts", emitted)
 		}
 	})
+}
+
+func TestConfiguredTypedPathAndScopedDocumentAdmission(t *testing.T) {
+	corpus := fixtureCorpus(t, "v1.0.0", "old_name", "OldName", 10)
+	const typedPath = "service/typed/service.scip"
+	corpus.files[typedPath] = corpus.files[indexPath]
+	delete(corpus.files, indexPath)
+	corpus.typedPath = typedPath
+	facts, _ := extractFacts(t, corpus)
+	if len(facts) != 2 {
+		t.Fatalf("configured typed path facts = %d, want 2", len(facts))
+	}
+	corpus.inScope = func(filePath string) bool {
+		return filePath != "consumer/use.go"
+	}
+	if _, err := New().Extract(
+		context.Background(), corpus, func(sdk.Fact) error { return nil },
+	); err == nil || !strings.Contains(err.Error(), "outside the committed analysis unit") {
+		t.Fatalf("out-of-unit SCIP document error = %v", err)
+	}
 }
 
 func TestPolyglotSCIPIgnoresForeignSourceDocuments(t *testing.T) {

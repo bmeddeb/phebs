@@ -11,6 +11,8 @@ import (
 	"testing"
 
 	surrealdb "github.com/surrealdb/surrealdb.go"
+
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 )
 
 const workbenchOwner = "user:workbench-owner"
@@ -23,6 +25,9 @@ type fixtureWorkbenchResolver struct {
 	endpointDigest      string
 	capabilityDigest    string
 	capabilityAvailable bool
+	scopePosture        string
+	unitDigest          string
+	endpointUnitDigest  string
 	omitRepository      bool
 	omitEndpoint        bool
 }
@@ -78,7 +83,10 @@ func (resolver *fixtureWorkbenchResolver) ResolveWorkbench(
 	if !resolver.omitRepository {
 		for _, repository := range request.Repositories {
 			result.Repositories = append(result.Repositories, WorkbenchRepositorySnapshot{
-				Name: repository, Commit: resolver.repositoryCommit,
+				Name:         repository,
+				Commit:       resolver.repositoryCommit,
+				ScopePosture: resolver.scopePosture,
+				UnitDigest:   resolver.unitDigest,
 			})
 		}
 	}
@@ -88,6 +96,8 @@ func (resolver *fixtureWorkbenchResolver) ResolveWorkbench(
 				Selection:         selection,
 				DeclarationCommit: resolver.endpointCommit,
 				DeclarationDigest: resolver.endpointDigest,
+				ScopePosture:      resolver.scopePosture,
+				UnitDigest:        resolver.unitDigest,
 				DeclarationSources: []WorkbenchDeclarationSource{{
 					Repository:  selection.Repository,
 					Commit:      resolver.endpointCommit,
@@ -101,6 +111,10 @@ func (resolver *fixtureWorkbenchResolver) ResolveWorkbench(
 					AtomID:      "atom-declaration",
 				}},
 			})
+			if resolver.endpointUnitDigest != "" {
+				result.Endpoints[len(result.Endpoints)-1].UnitDigest =
+					resolver.endpointUnitDigest
+			}
 		}
 	}
 	for _, capability := range request.Capabilities {
@@ -288,6 +302,48 @@ func TestWorkbenchPreviewIsCanonicalBoundedAndSideEffectFree(t *testing.T) {
 				t.Fatalf("preview error = %v, want ErrInvalidWorkbench", err)
 			}
 		})
+	}
+}
+
+func TestWorkbenchPreviewBindsFocusedUnitAndRejectsEndpointScopeMismatch(
+	t *testing.T,
+) {
+	s := newRunnerStore(t)
+	resolver := newFixtureWorkbenchResolver()
+	resolver.scopePosture = analysisunit.SearchIndexFocused
+	resolver.unitDigest = "sha256:" + strings.Repeat("1", 64)
+	service := InvestigationWorkbenchService{Store: s, Resolver: resolver}
+
+	preview, err := service.Preview(
+		context.Background(),
+		workbenchOwner,
+		workbenchPlanFixture(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !preview.Ready ||
+		len(preview.Repositories) != 1 ||
+		preview.Repositories[0].ScopePosture !=
+			analysisunit.SearchIndexFocused ||
+		preview.Repositories[0].UnitDigest != resolver.unitDigest ||
+		len(preview.Endpoints) != 1 ||
+		preview.Endpoints[0].UnitDigest != resolver.unitDigest ||
+		!strings.Contains(
+			preview.Revision.DeclaredUniverse,
+			resolver.unitDigest,
+		) {
+		t.Fatalf("focused preview = %+v", preview)
+	}
+
+	resolver.endpointUnitDigest = "sha256:" + strings.Repeat("2", 64)
+	if _, err := service.Preview(
+		context.Background(),
+		workbenchOwner,
+		workbenchPlanFixture(),
+	); err == nil ||
+		!strings.Contains(err.Error(), "outside the repository snapshot") {
+		t.Fatalf("scope-mismatched endpoint error = %v", err)
 	}
 }
 
@@ -536,6 +592,17 @@ func TestWorkbenchCreateRejectsPreviewDriftWithoutPartialWrite(t *testing.T) {
 			reset: func() {
 				resolver.repositoryCommit = strings.Repeat("b", 40)
 				resolver.endpointCommit = strings.Repeat("b", 40)
+			},
+		},
+		{
+			name: "analysis unit at same commit",
+			drift: func() {
+				resolver.scopePosture = analysisunit.SearchIndexFocused
+				resolver.unitDigest = "sha256:" + strings.Repeat("4", 64)
+			},
+			reset: func() {
+				resolver.scopePosture = ""
+				resolver.unitDigest = ""
 			},
 		},
 		{

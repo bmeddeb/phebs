@@ -148,7 +148,7 @@ func TestT304CandidatePlannerMeasurement(t *testing.T) {
 		t.Fatal(err)
 	}
 	if manifest.UnitDigest != unit.Digest ||
-		!slices.Equal(manifest.Policies, identities) {
+		!equalPolicyIdentities(manifest.Policies, identities) {
 		t.Fatalf("planner identities do not match real registry: %+v", manifest)
 	}
 	results := Results{
@@ -184,7 +184,7 @@ func TestT304CandidatePlannerMeasurement(t *testing.T) {
 	if retained.Corpus.Digest != results.Corpus.Digest ||
 		retained.Corpus.Head != results.Corpus.Head ||
 		retained.UnitDigest != results.UnitDigest ||
-		!slices.Equal(retained.Policies, results.Policies) ||
+		!equalPolicyIdentities(retained.Policies, results.Policies) ||
 		retained.PartitionPolicy != results.PartitionPolicy ||
 		stablePlannerRun(retained.Run1) != stablePlannerRun(results.Run1) {
 		t.Fatalf(
@@ -192,6 +192,23 @@ func TestT304CandidatePlannerMeasurement(t *testing.T) {
 			results, retained,
 		)
 	}
+}
+
+func equalPolicyIdentities(
+	left, right []candidate.PolicyIdentity,
+) bool {
+	return slices.EqualFunc(
+		left,
+		right,
+		func(left, right candidate.PolicyIdentity) bool {
+			return left.Domain == right.Domain &&
+				left.Version == right.Version &&
+				left.EnumerationPolicy == right.EnumerationPolicy &&
+				left.SymlinkPolicy == right.SymlinkPolicy &&
+				left.Plane == right.Plane &&
+				slices.Equal(left.TypedInputs, right.TypedInputs)
+		},
+	)
 }
 
 func TestT304CommittedResults(t *testing.T) {

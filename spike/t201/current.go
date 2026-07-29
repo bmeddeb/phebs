@@ -104,6 +104,12 @@ func (c profileCorpus) Read(_ context.Context, path string) (sdk.Blob, error) {
 	}, nil
 }
 
-func (c profileCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
-	return c.Read(ctx, "index.scip")
+func (c profileCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) {
+	if _, ok := c.files["index.scip"]; !ok {
+		return sdk.SCIPInput{Path: "index.scip"}, nil
+	}
+	blob, err := c.Read(ctx, "index.scip")
+	return sdk.SCIPInput{
+		Path: "index.scip", Blob: blob, Present: err == nil,
+	}, err
 }

@@ -94,7 +94,7 @@ func use(v *shared.Item) { _ = v.GetWorkflowId() }
 		t.Fatalf("run state: published=%v aborted=%v", evidence.published, evidence.aborted)
 	}
 	coverage := evidence.publishedWith
-	if coverage.CandidateFileCount != 1 || coverage.ReadFileCount != 3 ||
+	if coverage.CandidateFileCount != 0 || coverage.ReadFileCount != 3 ||
 		coverage.AssertionCount != 1 || coverage.AtomCount != 1 ||
 		coverage.UnresolvedCount != 0 {
 		t.Fatalf("coverage = %+v", coverage)

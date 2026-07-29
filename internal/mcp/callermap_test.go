@@ -296,11 +296,11 @@ func (s *callerToolStore) ListRepos(context.Context) ([]store.Repo, error) {
 
 func (s *callerToolStore) LatestPublishedRun(
 	_ context.Context,
-	repo, domain string,
+	scope store.ExtractionScope,
 ) (*store.ExtractionRun, error) {
-	s.calls = append(s.calls, "run:"+callerToolScope(repo, domain))
-	run, ok := s.runs[callerToolScope(repo, domain)]
-	if !ok {
+	s.calls = append(s.calls, "run:"+callerToolScope(scope.Repository, scope.Domain))
+	run, ok := s.runs[callerToolScope(scope.Repository, scope.Domain)]
+	if !ok || run.Commit != scope.Commit || run.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	copyOfRun := run
@@ -309,15 +309,16 @@ func (s *callerToolStore) LatestPublishedRun(
 
 func (s *callerToolStore) LatestExtractionAttempt(
 	_ context.Context,
-	repo, domain string,
+	scope store.ExtractionScope,
 ) (*store.ExtractionAttempt, error) {
-	s.calls = append(s.calls, "attempt:"+callerToolScope(repo, domain))
-	run, ok := s.runs[callerToolScope(repo, domain)]
-	if !ok {
+	s.calls = append(s.calls, "attempt:"+callerToolScope(scope.Repository, scope.Domain))
+	run, ok := s.runs[callerToolScope(scope.Repository, scope.Domain)]
+	if !ok || run.Commit != scope.Commit || run.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	return &store.ExtractionAttempt{
-		RunID: run.ID, Repo: repo, Commit: run.Commit, Domain: domain,
+		RunID: run.ID, Repo: scope.Repository, Commit: run.Commit,
+		UnitDigest: run.UnitDigest, Domain: scope.Domain,
 		Extractor: run.Extractor, Status: "published",
 	}, nil
 }
@@ -457,9 +458,7 @@ func (s *callerToolStore) ResolveEvidence(
 
 func (s *callerToolStore) BeginExtractionRun(
 	context.Context,
-	string,
-	string,
-	string,
+	store.ExtractionScope,
 	string,
 ) (*store.ExtractionRun, error) {
 	s.writes++

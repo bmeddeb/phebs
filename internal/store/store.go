@@ -67,12 +67,17 @@ type Repo struct {
 	IndexedCommitHash   string              `json:"indexed_commit_hash,omitempty"`
 	IndexedRevisions    []IndexedRevision   `json:"indexed_revisions,omitempty"`
 	IndexedAnalysisUnit *analysisunit.State `json:"-" cbor:"indexed_analysis_unit,omitempty"`
-	LatestJobStatus     string              `json:"latest_indexing_job_status,omitempty"`
-	PushedAt            *time.Time          `json:"pushed_at,omitempty"`
-	ExternalID          string              `json:"external_id,omitempty"`
-	ExternalHostType    string              `json:"external_code_host_type,omitempty"`
-	ExternalHostURL     string              `json:"external_code_host_url,omitempty"`
-	Deleting            bool                `json:"deleting,omitempty"`
+	// EvidenceRevision is an internal monotonic visibility fence. It is
+	// intentionally absent from repository API responses while allowing
+	// consumers that compose live evidence to detect a publication transition
+	// even when commit and semantic unit digest are unchanged.
+	EvidenceRevision int64      `json:"-" cbor:"evidence_revision,omitempty"`
+	LatestJobStatus  string     `json:"latest_indexing_job_status,omitempty"`
+	PushedAt         *time.Time `json:"pushed_at,omitempty"`
+	ExternalID       string     `json:"external_id,omitempty"`
+	ExternalHostType string     `json:"external_code_host_type,omitempty"`
+	ExternalHostURL  string     `json:"external_code_host_url,omitempty"`
+	Deleting         bool       `json:"deleting,omitempty"`
 }
 
 // IndexedRevision is one atomically published zoekt branch. Selector is the
@@ -327,16 +332,49 @@ type CoverageManifest struct {
 	GitlinkDigest          string   `json:"gitlink_digest,omitempty"`
 	GitlinkSamplePaths     []string `json:"gitlink_sample_paths,omitempty"`
 	GitlinkSampleTruncated bool     `json:"gitlink_sample_truncated,omitempty"`
+	// Candidate publication scope is present on T30.5 strict-manifest runs.
+	// The manifest digest binds the complete reusable publication, while the
+	// remaining fields disclose the exact domain projection that was replayed.
+	// Empty fields identify readable legacy/direct-corpus runs.
+	ScopePosture             string `json:"scope_posture,omitempty"` // whole-repository | focused-local | repository-overlay
+	CandidateManifestDigest  string `json:"candidate_manifest_digest,omitempty"`
+	CandidatePlane           string `json:"candidate_plane,omitempty"` // local | repository | caller
+	ScopeCorpusFileCount     int    `json:"scope_corpus_file_count,omitempty"`
+	ScopeCorpusDeclaredBytes int64  `json:"scope_corpus_declared_bytes,omitempty"`
+	ScopeCorpusDigest        string `json:"scope_corpus_digest,omitempty"`
+	PlannedFileCount         int    `json:"planned_file_count,omitempty"`
+	PlannedRequiredFileCount int    `json:"planned_required_file_count,omitempty"`
+	PlannedDeclaredBytes     int64  `json:"planned_declared_bytes,omitempty"`
+	PlannedScopeDigest       string `json:"planned_scope_digest,omitempty"`
+	TypedInputKind           string `json:"typed_input_kind,omitempty"`
+	TypedInputPath           string `json:"typed_input_path,omitempty"`
+	TypedInputObjectID       string `json:"typed_input_object_id,omitempty"`
+	TypedInputDeclaredBytes  int64  `json:"typed_input_declared_bytes,omitempty"`
+	TypedInputDigest         string `json:"typed_input_digest,omitempty"`
+	TypedInputPresent        bool   `json:"typed_input_present,omitempty"`
+}
+
+// ExtractionScope is the complete publication slot for one evidence domain.
+// UnitDigest is empty only for the explicit whole-repository scope; a focused
+// scope carries the canonical analysis-unit digest committed with the indexed
+// source revision.
+type ExtractionScope struct {
+	Repository string `json:"repository"`
+	Commit     string `json:"commit"`
+	UnitDigest string `json:"unit_digest"`
+	Domain     string `json:"domain"`
 }
 
 // ExtractionRun is the atomic publication unit: rows written under a staged
 // run are invisible; PublishExtractionRun flips status in one transaction and
-// supersedes the prior published run for (repo, domain). A failed or killed
-// run therefore never publishes a partial replacement set.
+// supersedes the prior published run for its exact ExtractionScope. A failed
+// or killed run therefore never publishes a partial replacement set, and a
+// scoped run cannot replace whole-repository evidence or another unit.
 type ExtractionRun struct {
 	ID          string           `json:"id"`
 	Repo        string           `json:"repo"`
 	Commit      string           `json:"commit"`
+	UnitDigest  string           `json:"unit_digest"`
 	Domain      string           `json:"domain"` // e.g. "proto-contract"
 	Extractor   string           `json:"extractor"`
 	Status      string           `json:"status"` // staged | published | superseded | aborted | deleting (internal)
@@ -369,18 +407,20 @@ func (p EvidenceSweepProgress) DidWork() bool {
 		p.RetentionPhasesAdvanced > 0
 }
 
-// ExtractionAttempt is the durable latest-attempt marker for one repository
-// and domain. Unlike an aborted ExtractionRun, it is not evidence and is not
-// removed by proof-retention sweeps. It lets coverage reporting distinguish a
-// healthy last publication from a newer staged or aborted replacement.
+// ExtractionAttempt is the durable latest-attempt marker for one exact
+// ExtractionScope. Unlike an aborted ExtractionRun, it is not evidence and is
+// not removed by proof-retention sweeps. It lets coverage reporting
+// distinguish a healthy last publication from a newer staged or aborted
+// replacement without borrowing an attempt from another commit or unit.
 type ExtractionAttempt struct {
-	RunID     string    `json:"run_id"`
-	Repo      string    `json:"repo"`
-	Commit    string    `json:"commit"`
-	Domain    string    `json:"domain"`
-	Extractor string    `json:"extractor"`
-	Status    string    `json:"status"` // staged | published | aborted
-	StartedAt time.Time `json:"started_at"`
+	RunID      string    `json:"run_id"`
+	Repo       string    `json:"repo"`
+	Commit     string    `json:"commit"`
+	UnitDigest string    `json:"unit_digest"`
+	Domain     string    `json:"domain"`
+	Extractor  string    `json:"extractor"`
+	Status     string    `json:"status"` // staged | published | aborted
+	StartedAt  time.Time `json:"started_at"`
 }
 
 // AssertionCursor is the stable tuple used by bounded published-assertion
@@ -393,8 +433,8 @@ type AssertionCursor struct {
 	RunID     string `json:"run_id"`
 }
 
-// AssertionQuery filters published assertions. Repo is mandatory; the other
-// empty fields match anything within that caller-authorized repository.
+// AssertionQuery filters published assertions. Repo is mandatory, and callers
+// must identify a currently published run or one exact ExtractionScope.
 type AssertionQuery struct {
 	Predicate string
 	Subject   string
@@ -403,8 +443,12 @@ type AssertionQuery struct {
 	ObjectPrefix string
 	Lineage      string
 	Repo         string
-	RunID        string // empty = any published run for Repo
-	Limit        int    // 0 = default cap
+	RunID        string
+	// Scope is the exact published slot to read. A query without RunID must
+	// provide Scope; otherwise multiple historical commit/unit publications
+	// could be mixed into one result.
+	Scope *ExtractionScope
+	Limit int // 0 = default cap
 	// After resumes after this exact stable-order tuple.
 	After *AssertionCursor
 	// AllowTruncate returns at most Limit+1 rows instead of ErrResultLimit.
@@ -493,7 +537,7 @@ type ProofBundleRetentionStore interface {
 // narrow-interface house style. Assertion readers only ever see published
 // runs; evidence resolution additionally permits pinned superseded runs.
 type EvidenceStore interface {
-	BeginExtractionRun(ctx context.Context, repo, commit, domain, extractor string) (*ExtractionRun, error)
+	BeginExtractionRun(ctx context.Context, scope ExtractionScope, extractor string) (*ExtractionRun, error)
 	// AddEvidence atomically upserts content-keyed atoms and their occurrence
 	// associations/assertions under a staged run. Every association and atom
 	// reference must be present in the same self-contained batch. Caller
@@ -504,15 +548,16 @@ type EvidenceStore interface {
 	// PublishExtractionRun atomically verifies that the repository still
 	// exists, is not deleting, and is indexed at the run's commit; validates
 	// caller counts against stored rows; publishes the run; and supersedes the
-	// previous published run for the same (repo, domain).
+	// previous published run for the same exact ExtractionScope.
 	PublishExtractionRun(ctx context.Context, runID string, coverage CoverageManifest) error
 	AbortExtractionRun(ctx context.Context, runID string) error
-	// LatestPublishedRun returns ErrNotFound when the (repo, domain) pair has
-	// never published.
-	LatestPublishedRun(ctx context.Context, repo, domain string) (*ExtractionRun, error)
+	// LatestPublishedRun returns ErrNotFound when the exact scope has never
+	// published. It never falls back to another commit, unit, or whole-
+	// repository evidence.
+	LatestPublishedRun(ctx context.Context, scope ExtractionScope) (*ExtractionRun, error)
 	// LatestExtractionAttempt returns the durable latest attempt marker. It
 	// survives evidence sweeps so a failed replacement remains reportable.
-	LatestExtractionAttempt(ctx context.Context, repo, domain string) (*ExtractionAttempt, error)
+	LatestExtractionAttempt(ctx context.Context, scope ExtractionScope) (*ExtractionAttempt, error)
 	// ListAssertions reads assertions of published runs only. Repo is required;
 	// callers must authorize that repository before invoking the method. A
 	// result exceeding Limit fails with ErrResultLimit unless AllowTruncate

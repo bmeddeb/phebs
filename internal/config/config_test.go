@@ -71,6 +71,21 @@ connections:
 			"",
 		},
 		{
+			"analysis unit typed index valid",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/payments/src]\n    supporting: [services/payments/index.scip]\n    typed_index: {kind: scip, path: services/payments/index.scip}\n",
+			"",
+		},
+		{
+			"analysis unit typed index unknown field",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/payments/src]\n    supporting: [services/payments/index.scip]\n    typed_index: {kind: scip, path: services/payments/index.scip, infer: true}\n",
+			"field infer not found",
+		},
+		{
+			"analysis unit typed index must be exact supporting",
+			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/payments/src]\n    supporting: [services/payments]\n    typed_index: {kind: scip, path: services/payments/index.scip}\n",
+			"path must exactly match one supporting path",
+		},
+		{
 			"analysis unit unknown field",
 			"analysis_units:\n  github.com/acme/api:\n    name: payments\n    primary: [services/payments/src]\n    infer: true\n",
 			"field infer not found",
@@ -444,7 +459,8 @@ func TestAnalysisUnitScopesReturnsDefensiveCopy(t *testing.T) {
   github.com/acme/api:
     name: payments
     primary: [services/payments/src]
-    supporting: [contracts/payment.proto]
+    supporting: [contracts/payment.proto, services/payments/index.scip]
+    typed_index: {kind: scip, path: services/payments/index.scip}
 `))
 	if err != nil {
 		t.Fatal(err)
@@ -453,11 +469,14 @@ func TestAnalysisUnitScopesReturnsDefensiveCopy(t *testing.T) {
 	scope := scopes["github.com/acme/api"]
 	scope.Primary[0] = "mutated"
 	scope.Supporting[0] = "mutated"
+	scope.TypedIndex.Path = "mutated"
 	scopes["github.com/acme/api"] = scope
 
 	fresh := cfg.AnalysisUnitScopes()["github.com/acme/api"]
 	if fresh.Primary[0] != "services/payments/src" ||
-		fresh.Supporting[0] != "contracts/payment.proto" {
+		fresh.Supporting[0] != "contracts/payment.proto" ||
+		fresh.TypedIndex == nil ||
+		fresh.TypedIndex.Path != "services/payments/index.scip" {
 		t.Fatalf("AnalysisUnitScopes aliased config: %+v", fresh)
 	}
 }

@@ -109,8 +109,12 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	typedIndex, err := typedIndexSelection(request.Unit, identities)
+	if err != nil {
+		return Manifest{}, err
+	}
 	generationDigest, err := GenerationDigest(
-		request.Repository, request.Commit, unitDigest, identities,
+		request.Repository, request.Commit, request.Unit, identities,
 	)
 	if err != nil {
 		return Manifest{}, err
@@ -128,6 +132,21 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 	defer func() { _ = repositoryWriter.abort() }()
 	callerSpools := make(map[string]*spool)
 	corpus := newCorpusAccumulator()
+	unitCorpus := newCorpusAccumulator()
+	typedInputs := make([]TypedInput, 0, 1)
+	typedInputIndex := -1
+	typedIndexPresent := false
+	if typedIndex != nil {
+		domains := typedInputDomains(identities, typedIndex.Kind)
+		if len(domains) > 0 {
+			typedInputs = append(typedInputs, TypedInput{
+				Kind: typedIndex.Kind, Path: typedIndex.Path,
+				Domains: domains,
+				InUnit:  request.Unit == nil,
+			})
+			typedInputIndex = 0
+		}
+	}
 	selected := selectedPaths(request.Unit)
 	var previousTreePath []byte
 	var primaryPaths, supportingPaths []string
@@ -167,6 +186,33 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 				"%w: %q has unsupported mode %s",
 				ErrSelectedPath, current.path, current.mode,
 			)
+		}
+		if inUnit {
+			if err := unitCorpus.add(current); err != nil {
+				return err
+			}
+		}
+		if typedIndex != nil && current.path == typedIndex.Path {
+			if !isRegular(current) {
+				return fmt.Errorf(
+					"%w: typed index %q has unsupported mode %s",
+					ErrSelectedPath, current.path, current.mode,
+				)
+			}
+			if current.size > MaxDeclaredBytesPerArtifact {
+				return fmt.Errorf(
+					"%w: typed index %q declares %d bytes",
+					ErrCandidateTooLarge, current.path, current.size,
+				)
+			}
+			typedIndexPresent = true
+			if typedInputIndex >= 0 {
+				typedInputs[typedInputIndex].OID = current.oid
+				typedInputs[typedInputIndex].DeclaredBytes = current.size
+				typedInputs[typedInputIndex].Present = true
+				typedInputs[typedInputIndex].InUnit = request.Unit == nil || inUnit
+				typedInputs[typedInputIndex].Shared = request.Unit != nil && shared
+			}
 		}
 		// A valid gitlink is a repository boundary regardless of how its path
 		// happens to match an extractor policy. Its census commitment above is
@@ -258,6 +304,12 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 			return Manifest{}, fmt.Errorf("%w: %q", ErrSelectedPath, root)
 		}
 	}
+	if typedIndex != nil && request.Unit != nil && !typedIndexPresent {
+		return Manifest{}, fmt.Errorf(
+			"%w: typed index %q is not a regular file",
+			ErrSelectedPath, typedIndex.Path,
+		)
+	}
 	repositoryMembers, err := repositoryWriter.finish()
 	if err != nil {
 		return Manifest{}, err
@@ -278,12 +330,20 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 		return Manifest{}, err
 	}
 
+	corpusSummary := corpus.summary()
+	unitCorpusSummary := unitCorpus.summary()
+	if request.Unit == nil {
+		unitCorpusSummary = corpusSummary
+	}
 	manifest := Manifest{
 		Schema: ManifestSchema, Repository: request.Repository, Commit: request.Commit,
 		UnitDigest: unitDigest, PolicyDigest: policyDigest,
-		GenerationDigest: generationDigest, PartitionPolicy: frozenPartitionPolicy(),
-		Policies: identities, Corpus: corpus.summary(),
+		GenerationDigest: generationDigest,
+		TypedIndex:       cloneTypedIndexSelection(typedIndex),
+		PartitionPolicy:  frozenPartitionPolicy(),
+		Policies:         identities, Corpus: corpusSummary, UnitCorpus: unitCorpusSummary,
 		Domains:           finishDomainAccumulators(accumulators),
+		TypedInputs:       typedInputs,
 		RepositoryMembers: repositoryMembers, CallerLeaves: callerLeaves,
 	}
 	manifest.Digest, err = ManifestDigest(manifest)
@@ -306,6 +366,16 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 		return Manifest{}, err
 	}
 	return manifest, nil
+}
+
+func typedInputDomains(identities []PolicyIdentity, kind string) []string {
+	domains := make([]string, 0)
+	for _, identity := range identities {
+		if slices.Contains(identity.TypedInputs, kind) {
+			domains = append(domains, identity.Domain)
+		}
+	}
+	return domains
 }
 
 func summarizeCanonicalArtifacts(

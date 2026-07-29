@@ -13,7 +13,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/gitobj"
 )
 
-const candidateManifestInventoryPrefix = "candidate-manifest-v1-"
+const candidateManifestInventoryPrefix = "candidate-manifest-v2-"
 
 // CandidateManifestDomain identifies the extractor and candidate-policy
 // generation the publication must contain. Candidate policies remain
@@ -35,10 +35,11 @@ type CandidateManifestRequest struct {
 	Domains      []CandidateManifestDomain
 }
 
-// CandidateManifestFile is one repository-view planning record. InUnit is
-// carried forward for T30.5, but T30.4 deliberately does not filter on it.
-// Mode may be empty when the strict provider has already proven a regular
-// blob; otherwise it must be one of Git's two regular-file modes.
+// CandidateManifestFile is one domain-view planning record. Focused local
+// domains receive only InUnit records; caller and repository planes retain
+// their repository view. Mode may be empty when the strict provider has
+// already proven a regular blob; otherwise it must be one of Git's two
+// regular-file modes.
 type CandidateManifestFile struct {
 	Path          string
 	ObjectID      string
@@ -46,6 +47,31 @@ type CandidateManifestFile struct {
 	DeclaredBytes int64
 	Required      bool
 	InUnit        bool
+}
+
+// CandidateManifestTypedInput is one actual-path parser input envelope.
+type CandidateManifestTypedInput struct {
+	Kind          string
+	Path          string
+	ObjectID      string
+	DeclaredBytes int64
+	Present       bool
+}
+
+// CandidateManifestScope is the exact domain projection committed by the
+// publication. Local domains select Unit* fields when a unit is active;
+// caller domains retain Repository* fields through T30.6.
+type CandidateManifestScope struct {
+	ManifestDigest         string
+	UnitDigest             string
+	Plane                  candidate.Plane
+	CorpusFileCount        int
+	CorpusDeclaredBytes    int64
+	CorpusDigest           string
+	CandidateFileCount     int
+	RequiredFileCount      int
+	CandidateDeclaredBytes int64
+	CandidateDigest        string
 }
 
 // CandidateManifestGitlinks is the complete census's repository-boundary
@@ -58,12 +84,17 @@ type CandidateManifestGitlinks struct {
 }
 
 // CandidateManifest is already fully and strictly validated when Open
-// returns. Domain iteration is a bounded replay of canonical repository-view
-// rows and must never select on InUnit until T30.5.
+// returns. Domain iteration is a bounded replay of the exact local or
+// repository-overlay projection committed by the publication.
 type CandidateManifest interface {
 	Identity() string
 	CorpusFileCount() int
 	GitlinkBoundaries() CandidateManifestGitlinks
+	DomainScope(domain, version string) (CandidateManifestScope, error)
+	TypedInput(
+		domain, version, kind string,
+	) (CandidateManifestTypedInput, error)
+	PathInScope(path string) bool
 	ForEachRepositoryFile(
 		ctx context.Context,
 		domain, version string,
@@ -197,4 +228,52 @@ func normalizeManifestFile(input CandidateManifestFile) (treeRecord, error) {
 		mode: input.Mode, objectType: "blob", oid: input.ObjectID,
 		path: input.Path, size: input.DeclaredBytes,
 	}, nil
+}
+
+func normalizeManifestTypedInput(
+	input CandidateManifestTypedInput,
+) (treeRecord, bool, error) {
+	if input.Kind == "" {
+		if input.Path != "" ||
+			input.ObjectID != "" ||
+			input.DeclaredBytes != 0 ||
+			input.Present {
+			return treeRecord{}, false, errors.New(
+				"candidate manifest non-applicable typed input carries an envelope",
+			)
+		}
+		return treeRecord{}, false, nil
+	}
+	if input.Kind != analysisunit.TypedIndexKindSCIP {
+		return treeRecord{}, false, errors.New(
+			"candidate manifest typed input has unsupported kind")
+	}
+	if !input.Present {
+		if input.ObjectID != "" || input.DeclaredBytes != 0 {
+			return treeRecord{}, false, errors.New(
+				"candidate manifest absent typed input has blob identity")
+		}
+		if input.Path != "" {
+			if err := checkCorpusPath(input.Path); err != nil {
+				return treeRecord{}, false, err
+			}
+		}
+		return treeRecord{path: input.Path}, false, nil
+	}
+	if err := checkCorpusPath(input.Path); err != nil {
+		return treeRecord{}, false, err
+	}
+	if !gitobj.IsObjectID(input.ObjectID) {
+		return treeRecord{}, false, errors.New(
+			"candidate manifest typed input has invalid object id")
+	}
+	if input.DeclaredBytes < 0 ||
+		input.DeclaredBytes > MaxSCIPIndexBytes {
+		return treeRecord{}, false, errors.New(
+			"candidate manifest typed input has invalid declared size")
+	}
+	return treeRecord{
+		objectType: "blob", oid: input.ObjectID,
+		path: input.Path, size: input.DeclaredBytes,
+	}, true, nil
 }

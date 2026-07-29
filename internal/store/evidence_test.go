@@ -64,7 +64,7 @@ func TestEvidenceMergesMultipleAtomsForOneSemanticAssertion(t *testing.T) {
 			repo := fmt.Sprintf("github.com/merge/%d", i)
 			const commit = "c0ffee"
 			seedEvidenceRepo(t, s, repo, commit)
-			run, err := s.BeginExtractionRun(ctx, repo, commit, "thrift-consumer", "1")
+			run, err := beginExtractionRun(s, ctx, repo, commit, "thrift-consumer", "1")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -142,9 +142,9 @@ func TestEvidenceAtomDedupAcrossRepos(t *testing.T) {
 		t.Fatal("atom id not deterministic")
 	}
 
-	publish := func(repo string) {
+	publish := func(repo string) *store.ExtractionRun {
 		seedEvidenceRepo(t, s, repo, "c0ffee")
-		run, err := s.BeginExtractionRun(ctx, repo, "c0ffee", "proto-contract", "0.1.0")
+		run, err := beginExtractionRun(s, ctx, repo, "c0ffee", "proto-contract", "0.1.0")
 		if err != nil {
 			t.Fatalf("begin %s: %v", repo, err)
 		}
@@ -166,13 +166,17 @@ func TestEvidenceAtomDedupAcrossRepos(t *testing.T) {
 		if err := s.PublishExtractionRun(ctx, run.ID, testCoverage(1, 1)); err != nil {
 			t.Fatalf("publish %s: %v", repo, err)
 		}
+		return run
 	}
-	publish("github.com/a/one")
-	publish("github.com/b/two")
+	runA := publish("github.com/a/one")
+	runB := publish("github.com/b/two")
 
 	// Both repos' assertions visible, each scoped to its own repo.
-	for _, repo := range []string{"github.com/a/one", "github.com/b/two"} {
-		got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	for repo, run := range map[string]*store.ExtractionRun{
+		"github.com/a/one": runA,
+		"github.com/b/two": runB,
+	} {
+		got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, RunID: run.ID})
 		if err != nil {
 			t.Fatalf("list %s: %v", repo, err)
 		}
@@ -183,12 +187,9 @@ func TestEvidenceAtomDedupAcrossRepos(t *testing.T) {
 
 	// One shared atom: sweep neither repo, then supersede repo A's run and
 	// sweep — the atom must survive because repo B still references it.
-	run2, err := s.BeginExtractionRun(ctx, "github.com/a/one", "c0ffee2", "proto-contract", "0.1.0")
+	run2, err := beginExtractionRun(s, ctx, "github.com/a/one", "c0ffee", "proto-contract", "0.1.0")
 	if err != nil {
 		t.Fatalf("begin replacement: %v", err)
-	}
-	if err := s.SetRepoIndexed(ctx, "github.com/a/one", "c0ffee2", time.Now().UTC()); err != nil {
-		t.Fatalf("reindex replacement: %v", err)
 	}
 	if err := s.PublishExtractionRun(ctx, run2.ID, testCoverage(0, 0)); err != nil {
 		t.Fatalf("publish replacement: %v", err)
@@ -196,7 +197,9 @@ func TestEvidenceAtomDedupAcrossRepos(t *testing.T) {
 	if _, err := sweepEvidenceRun(ctx, s, time.Now().UTC(), time.Hour); err != nil {
 		t.Fatalf("sweep: %v", err)
 	}
-	got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: "github.com/b/two"})
+	got, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: "github.com/b/two", RunID: runB.ID,
+	})
 	if err != nil || len(got) != 1 {
 		t.Fatalf("repo B lost its assertion after sweeping repo A's superseded run: %v %v", got, err)
 	}
@@ -205,7 +208,9 @@ func TestEvidenceAtomDedupAcrossRepos(t *testing.T) {
 		t.Fatalf("repo B shared atom became dangling after sweep: %+v, %v", resolved, err)
 	}
 	// Repo A's replacement run published empty — its old assertion is gone.
-	got, err = s.ListAssertions(ctx, store.AssertionQuery{Repo: "github.com/a/one"})
+	got, err = s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: "github.com/a/one", RunID: run2.ID,
+	})
 	if err != nil || len(got) != 0 {
 		t.Fatalf("repo A still shows superseded assertions: %v %v", got, err)
 	}
@@ -220,11 +225,11 @@ func TestEvidenceStagedRunsInvisibleAndAtomicPublish(t *testing.T) {
 	seedEvidenceRepo(t, s, repo, "aaaa")
 
 	// Nothing published yet: no assertions, no latest run.
-	if _, err := s.LatestPublishedRun(ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
+	if _, err := latestPublishedRun(s, ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("latest on empty = %v", err)
 	}
 
-	run1, err := s.BeginExtractionRun(ctx, repo, "aaaa", "proto-contract", "0.1.0")
+	run1, err := beginExtractionRun(s, ctx, repo, "aaaa", "proto-contract", "0.1.0")
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
@@ -236,18 +241,22 @@ func TestEvidenceStagedRunsInvisibleAndAtomicPublish(t *testing.T) {
 	}
 
 	// Staged rows are invisible.
-	if got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo}); err != nil || len(got) != 0 {
+	if got, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run1.ID,
+	}); err != nil || len(got) != 0 {
 		t.Fatalf("staged rows visible: %v %v", got, err)
 	}
 	if err := s.PublishExtractionRun(ctx, run1.ID, testCoverage(1, 1)); err != nil {
 		t.Fatalf("publish: %v", err)
 	}
-	if got, _ := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo}); len(got) != 1 || got[0].Object != "o1" {
+	if got, _ := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run1.ID,
+	}); len(got) != 1 || got[0].Object != "o1" {
 		t.Fatalf("published assertion missing: %v", got)
 	}
 
 	// Simulated kill: a second run stages a replacement and never publishes.
-	run2, err := s.BeginExtractionRun(ctx, repo, "bbbb", "proto-contract", "0.1.0")
+	run2, err := beginExtractionRun(s, ctx, repo, "bbbb", "proto-contract", "0.1.0")
 	if err != nil {
 		t.Fatalf("begin run2: %v", err)
 	}
@@ -258,11 +267,11 @@ func TestEvidenceStagedRunsInvisibleAndAtomicPublish(t *testing.T) {
 		t.Fatalf("add run2: %v", err)
 	}
 	// Reader still sees exactly the old published set.
-	got, _ := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	got, _ := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, RunID: run1.ID})
 	if len(got) != 1 || got[0].Object != "o1" {
 		t.Fatalf("partial replacement leaked: %v", got)
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	latest, err := latestPublishedRun(s, ctx, repo, "proto-contract")
 	if err != nil || latest.ID != run1.ID {
 		t.Fatalf("latest published = %+v, %v", latest, err)
 	}
@@ -272,28 +281,27 @@ func TestEvidenceStagedRunsInvisibleAndAtomicPublish(t *testing.T) {
 	if err != nil || n != 1 {
 		t.Fatalf("sweep stale staged = %d, %v", n, err)
 	}
-	if got, _ := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo}); len(got) != 1 || got[0].Object != "o1" {
+	if got, _ := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run1.ID,
+	}); len(got) != 1 || got[0].Object != "o1" {
 		t.Fatalf("sweep damaged published facts: %v", got)
 	}
 
 	// Publishing run3 supersedes run1 atomically.
-	if err := s.SetRepoIndexed(ctx, repo, "cccc", time.Now().UTC()); err != nil {
-		t.Fatalf("reindex run3: %v", err)
-	}
-	run3, err := s.BeginExtractionRun(ctx, repo, "cccc", "proto-contract", "0.1.0")
+	run3, err := beginExtractionRun(s, ctx, repo, "aaaa", "proto-contract", "0.1.0")
 	if err != nil {
 		t.Fatalf("begin run3: %v", err)
 	}
 	a3 := testAtom("sha256:v3", "r", "f3")
 	if err := s.AddEvidence(ctx, run3.ID, []store.EvidenceAtom{a3},
-		[]store.SnapshotEvidence{{AtomID: store.ComputeAtomID(a3), Repo: repo, Commit: "cccc", Path: "p", VisibilityScope: "repo:" + repo}},
+		[]store.SnapshotEvidence{{AtomID: store.ComputeAtomID(a3), Repo: repo, Commit: "aaaa", Path: "p", VisibilityScope: "repo:" + repo}},
 		[]store.Assertion{{Predicate: "P", Subject: "s", Object: "o3", Tier: store.TierExact, Repo: repo, Supporting: []string{store.ComputeAtomID(a3)}}}); err != nil {
 		t.Fatalf("add run3: %v", err)
 	}
 	if err := s.PublishExtractionRun(ctx, run3.ID, testCoverage(1, 1)); err != nil {
 		t.Fatalf("publish run3: %v", err)
 	}
-	got, _ = s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	got, _ = s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, RunID: run3.ID})
 	if len(got) != 1 || got[0].Object != "o3" {
 		t.Fatalf("supersession not atomic: %v", got)
 	}
@@ -322,7 +330,7 @@ func TestEvidencePinBlocksSweep(t *testing.T) {
 	repo := "github.com/p/q"
 	seedEvidenceRepo(t, s, repo, "aaaa")
 
-	run1, err := s.BeginExtractionRun(ctx, repo, "aaaa", "proto-contract", "0.1.0")
+	run1, err := beginExtractionRun(s, ctx, repo, "aaaa", "proto-contract", "0.1.0")
 	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
@@ -340,7 +348,7 @@ func TestEvidencePinBlocksSweep(t *testing.T) {
 	}
 
 	// Supersede run1, then sweep: pinned run and its rows must survive.
-	run2, err := s.BeginExtractionRun(ctx, repo, "bbbb", "proto-contract", "0.1.0")
+	run2, err := beginExtractionRun(s, ctx, repo, "bbbb", "proto-contract", "0.1.0")
 	if err != nil {
 		t.Fatalf("begin run2: %v", err)
 	}
@@ -359,7 +367,7 @@ func TestEvidencePinBlocksSweep(t *testing.T) {
 	}
 	// The pinned run row still exists with its evidence (readable via the
 	// run record — superseded rows stay out of ListAssertions by design).
-	latest, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	latest, err := latestPublishedRun(s, ctx, repo, "proto-contract")
 	if err != nil || latest.ID != run2.ID {
 		t.Fatalf("latest = %+v, %v", latest, err)
 	}
@@ -370,7 +378,7 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 	ctx := context.Background()
 	repo, commit := "github.com/secure/repo", "aaaa"
 	seedEvidenceRepo(t, s, repo, commit)
-	run, err := s.BeginExtractionRun(ctx, repo, commit, "proto-contract", "1")
+	run, err := beginExtractionRun(s, ctx, repo, commit, "proto-contract", "1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -470,7 +478,7 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 	if err := s.PublishExtractionRun(ctx, run.ID, coverage); err != nil {
 		t.Fatalf("publish exact coverage: %v", err)
 	}
-	published, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	published, err := latestPublishedRun(s, ctx, repo, "proto-contract")
 	if err != nil || published.Coverage.SourceScopeDigest != coverage.SourceScopeDigest ||
 		published.Coverage.CandidateFileCount != 1 || published.Coverage.ReadBytes != 42 {
 		t.Fatalf("persisted source coverage = %+v, %v", published, err)
@@ -478,7 +486,7 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 	if _, err := s.ListAssertions(ctx, store.AssertionQuery{}); err == nil {
 		t.Fatal("unscoped assertion read accepted")
 	}
-	got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, RunID: run.ID})
 	if err != nil || len(got) != 1 {
 		t.Fatalf("assertions = %+v, %v", got, err)
 	}
@@ -508,7 +516,7 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 		t.Fatalf("cross-repo resolution = %v", err)
 	}
 
-	run2, err := s.BeginExtractionRun(ctx, repo, commit, "identity", "1")
+	run2, err := beginExtractionRun(s, ctx, repo, commit, "identity", "1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -522,12 +530,16 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 	if err := s.PublishExtractionRun(ctx, run2.ID, testCoverage(2, 1)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, Limit: 1}); !errors.Is(err, store.ErrResultLimit) {
+	if _, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run2.ID, Limit: 1,
+	}); !errors.Is(err, store.ErrResultLimit) {
 		t.Fatalf("truncated assertion query = %v", err)
 	}
-	ordered, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo, Limit: 3})
-	if err != nil || len(ordered) != 3 || ordered[0].Predicate != "P" ||
-		ordered[1].Object != "a" || ordered[2].Object != "b" {
+	ordered, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run2.ID, Limit: 3,
+	})
+	if err != nil || len(ordered) != 2 || ordered[0].Predicate != "Q" ||
+		ordered[0].Object != "a" || ordered[1].Object != "b" {
 		t.Fatalf("stable bounded assertions = %+v, %v", ordered, err)
 	}
 	firstPage, err := s.ListAssertions(ctx, store.AssertionQuery{
@@ -554,7 +566,7 @@ func TestEvidenceBatchValidationIdempotencyAndResolution(t *testing.T) {
 		t.Fatalf("object-prefix assertions = %+v, %v", prefixed, err)
 	}
 	if _, err := s.ListAssertions(ctx, store.AssertionQuery{
-		Repo: repo, Object: "a", ObjectPrefix: "a",
+		Repo: repo, RunID: run2.ID, Object: "a", ObjectPrefix: "a",
 	}); err == nil {
 		t.Fatal("object and object-prefix query was accepted")
 	}
@@ -568,7 +580,7 @@ func TestEvidencePublishGuardsRepositoryRevisionAndDeletion(t *testing.T) {
 
 	stage := func(commit, object string) *store.ExtractionRun {
 		t.Helper()
-		run, err := s.BeginExtractionRun(ctx, repo, commit, "proto-contract", "1")
+		run, err := beginExtractionRun(s, ctx, repo, commit, "proto-contract", "1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -586,7 +598,9 @@ func TestEvidencePublishGuardsRepositoryRevisionAndDeletion(t *testing.T) {
 	if err := s.PublishExtractionRun(ctx, stale.ID, testCoverage(1, 1)); !errors.Is(err, store.ErrConflict) {
 		t.Fatalf("stale commit publish = %v", err)
 	}
-	if got, _ := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo}); len(got) != 0 {
+	if got, _ := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: stale.ID,
+	}); len(got) != 0 {
 		t.Fatalf("stale evidence became visible: %+v", got)
 	}
 
@@ -617,7 +631,7 @@ func TestEvidenceConcurrentPublishLeavesOneVisibleRun(t *testing.T) {
 	runs := make([]*store.ExtractionRun, 2)
 	for i := range runs {
 		var err error
-		runs[i], err = s.BeginExtractionRun(ctx, repo, commit, "proto-contract", "1")
+		runs[i], err = beginExtractionRun(s, ctx, repo, commit, "proto-contract", "1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -649,11 +663,13 @@ func TestEvidenceConcurrentPublishLeavesOneVisibleRun(t *testing.T) {
 	if successes == 0 {
 		t.Fatal("no concurrent publisher succeeded")
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, "proto-contract")
+	latest, err := latestPublishedRun(s, ctx, repo, "proto-contract")
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo})
+	got, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: latest.ID,
+	})
 	if err != nil || len(got) != 1 || got[0].RunID != latest.ID {
 		t.Fatalf("visible assertions/latest = %+v / %+v / %v", got, latest, err)
 	}
@@ -664,7 +680,7 @@ func TestEvidenceDeleteRetiresRunsAndPreservesPins(t *testing.T) {
 	ctx := context.Background()
 	repo, commit := "github.com/delete/repo", "aaaa"
 	seedEvidenceRepo(t, s, repo, commit)
-	run, err := s.BeginExtractionRun(ctx, repo, commit, "proto-contract", "1")
+	run, err := beginExtractionRun(s, ctx, repo, commit, "proto-contract", "1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -686,13 +702,15 @@ func TestEvidenceDeleteRetiresRunsAndPreservesPins(t *testing.T) {
 	if err := s.DeleteRepo(ctx, repo); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.LatestPublishedRun(ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
+	if _, err := latestPublishedRun(s, ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("deleted repo latest = %v", err)
 	}
-	if _, err := s.LatestExtractionAttempt(ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
+	if _, err := latestExtractionAttempt(s, ctx, repo, "proto-contract"); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("deleted repo attempt = %v", err)
 	}
-	if got, err := s.ListAssertions(ctx, store.AssertionQuery{Repo: repo}); err != nil || len(got) != 0 {
+	if got, err := s.ListAssertions(ctx, store.AssertionQuery{
+		Repo: repo, RunID: run.ID,
+	}); err != nil || len(got) != 0 {
 		t.Fatalf("deleted repo assertions = %+v, %v", got, err)
 	}
 	canceled, err := s.ListJobs(ctx, store.JobExtract, store.StatusCanceled)
@@ -714,7 +732,7 @@ func TestEvidenceAbortAndSweepAreBounded(t *testing.T) {
 	ctx := context.Background()
 	const runs = 3
 	for i := range runs {
-		run, err := s.BeginExtractionRun(ctx, "github.com/sweep/repo", fmt.Sprintf("%040d", i), "proto-contract", "1")
+		run, err := beginExtractionRun(s, ctx, "github.com/sweep/repo", fmt.Sprintf("%040d", i), "proto-contract", "1")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -750,36 +768,36 @@ func TestExtractionAttemptSurvivesFailedReplacementSweep(t *testing.T) {
 	repo, commit, domain := "github.com/attempt/repo", "aaaaaaaa", "proto-contract"
 	seedEvidenceRepo(t, s, repo, commit)
 
-	published, err := s.BeginExtractionRun(ctx, repo, commit, domain, "1")
+	published, err := beginExtractionRun(s, ctx, repo, commit, domain, "1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if attempt, err := s.LatestExtractionAttempt(ctx, repo, domain); err != nil ||
+	if attempt, err := latestExtractionAttempt(s, ctx, repo, domain); err != nil ||
 		attempt.RunID != published.ID || attempt.Status != "staged" {
 		t.Fatalf("staged attempt = %+v, %v", attempt, err)
 	}
 	if err := s.PublishExtractionRun(ctx, published.ID, testCoverage(0, 0)); err != nil {
 		t.Fatal(err)
 	}
-	if attempt, err := s.LatestExtractionAttempt(ctx, repo, domain); err != nil ||
+	if attempt, err := latestExtractionAttempt(s, ctx, repo, domain); err != nil ||
 		attempt.RunID != published.ID || attempt.Status != "published" {
 		t.Fatalf("published attempt = %+v, %v", attempt, err)
 	}
 
-	failed, err := s.BeginExtractionRun(ctx, repo, commit, domain, "2")
+	failed, err := beginExtractionRun(s, ctx, repo, commit, domain, "2")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := s.AbortExtractionRun(ctx, failed.ID); err != nil {
 		t.Fatal(err)
 	}
-	latest, err := s.LatestPublishedRun(ctx, repo, domain)
+	latest, err := latestPublishedRun(s, ctx, repo, domain)
 	if err != nil || latest.ID != published.ID {
 		t.Fatalf("failed replacement changed publication = %+v, %v", latest, err)
 	}
 	assertFailedAttempt := func(stage string) {
 		t.Helper()
-		attempt, attemptErr := s.LatestExtractionAttempt(ctx, repo, domain)
+		attempt, attemptErr := latestExtractionAttempt(s, ctx, repo, domain)
 		if attemptErr != nil || attempt.RunID != failed.ID || attempt.Commit != commit ||
 			attempt.Extractor != "2" || attempt.Status != "aborted" {
 			t.Fatalf("%s attempt = %+v, %v", stage, attempt, attemptErr)
@@ -797,14 +815,14 @@ func TestExtractionAttemptMarksSweptStagedRunAborted(t *testing.T) {
 	ctx := context.Background()
 	repo, commit, domain := "github.com/attempt/killed", "aaaaaaaa", "proto-contract"
 	seedEvidenceRepo(t, s, repo, commit)
-	run, err := s.BeginExtractionRun(ctx, repo, commit, domain, "1")
+	run, err := beginExtractionRun(s, ctx, repo, commit, domain, "1")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if n, err := sweepEvidenceRun(ctx, s, time.Now().UTC().Add(time.Hour), 0); err != nil || n != 1 {
 		t.Fatalf("sweep killed run = %d, %v", n, err)
 	}
-	attempt, err := s.LatestExtractionAttempt(ctx, repo, domain)
+	attempt, err := latestExtractionAttempt(s, ctx, repo, domain)
 	if err != nil || attempt.RunID != run.ID || attempt.Status != "aborted" {
 		t.Fatalf("swept attempt = %+v, %v", attempt, err)
 	}
@@ -849,7 +867,7 @@ func TestEvidenceSchemaReopenPreservesCurrentPublication(t *testing.T) {
 	}
 	repo, commit := "github.com/reopen/repo", "aaaa"
 	seedEvidenceRepo(t, s, repo, commit)
-	run, err := s.BeginExtractionRun(ctx, repo, commit, "proto-contract", "1")
+	run, err := beginExtractionRun(s, ctx, repo, commit, "proto-contract", "1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -869,11 +887,11 @@ func TestEvidenceSchemaReopenPreservesCurrentPublication(t *testing.T) {
 		t.Fatalf("idempotent reopen: %v", err)
 	}
 	t.Cleanup(func() { _ = reopened.Close(context.Background()) })
-	latest, err := reopened.LatestPublishedRun(ctx, repo, "proto-contract")
+	latest, err := latestPublishedRun(reopened, ctx, repo, "proto-contract")
 	if err != nil || latest.ID != run.ID {
 		t.Fatalf("publication changed across reopen: %+v, %v", latest, err)
 	}
-	attempt, err := reopened.LatestExtractionAttempt(ctx, repo, "proto-contract")
+	attempt, err := latestExtractionAttempt(reopened, ctx, repo, "proto-contract")
 	if err != nil || attempt.RunID != run.ID || attempt.Status != "published" {
 		t.Fatalf("attempt changed across reopen: %+v, %v", attempt, err)
 	}
@@ -891,7 +909,7 @@ func TestEvidenceOccurrenceResolutionBoundary(t *testing.T) {
 
 	stage := func(domain string, count int) (*store.ExtractionRun, store.EvidenceAtom) {
 		t.Helper()
-		run, err := s.BeginExtractionRun(ctx, repo, commit, domain, "1")
+		run, err := beginExtractionRun(s, ctx, repo, commit, domain, "1")
 		if err != nil {
 			t.Fatal(err)
 		}

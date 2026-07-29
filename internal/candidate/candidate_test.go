@@ -333,8 +333,24 @@ func TestBuildUnitFlagsAndSelectedSpecialRefusal(t *testing.T) {
 	}
 	if flags["src/main.go"] != [2]bool{true, false} ||
 		flags["shared/types.go"] != [2]bool{true, true} ||
-		flags["other/out.go"] != [2]bool{false, false} {
+		len(flags) != 2 {
 		t.Fatalf("unit flags = %+v", flags)
+	}
+	caller, err := publication.Domain("go-caller", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var callerPaths []string
+	if err := caller.ForEachRepositoryRecord(
+		t.Context(), func(record Record) error {
+			callerPaths = append(callerPaths, record.Path)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(callerPaths, "other/out.go") {
+		t.Fatalf("caller repository view = %v", callerPaths)
 	}
 
 	special := newGitFixture(t)
@@ -373,6 +389,255 @@ func TestBuildUnitFlagsAndSelectedSpecialRefusal(t *testing.T) {
 	})
 	if !errors.Is(err, ErrSelectedPath) {
 		t.Fatalf("unsafe selected descendant error = %v", err)
+	}
+}
+
+func TestTypedInputEnvelopeAndScopedDomainReplay(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("service/main.go", "package service\n")
+	fixture.write("other/out.go", "package other\n")
+	fixture.write("service/index.scip", "scoped typed input")
+	fixture.write("service/alternate.scip", "alternate typed input")
+	fixture.write("index.scip", "legacy root must not be selected")
+	commit := fixture.commit("typed")
+	unitScope := analysisunit.Scope{
+		Repository: fixture.repository, Name: "service",
+		Primary: []string{"service/main.go"},
+		Supporting: []string{
+			"service/index.scip", "service/alternate.scip",
+		},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "service/index.scip",
+		},
+	}
+	unit, err := unitScope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	policies := []Policy{
+		{
+			Domain: "local", Version: "1",
+			EnumerationPolicy: "typed-local-v1", Plane: PlaneLocal,
+			TypedInputs: []string{analysisunit.TypedIndexKindSCIP},
+			Enumerate: func(value string) bool {
+				return strings.HasSuffix(value, ".go")
+			},
+			Required: func(value string) bool {
+				return value == "service/main.go"
+			},
+		},
+		{
+			Domain: "caller", Version: "1",
+			EnumerationPolicy: "typed-caller-v1", Plane: PlaneCaller,
+			TypedInputs: []string{analysisunit.TypedIndexKindSCIP},
+			Enumerate: func(value string) bool {
+				return strings.HasSuffix(value, ".go")
+			},
+		},
+	}
+	identities, err := PolicyIdentities(policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage := t.TempDir()
+	manifest, err := Build(t.Context(), Request{
+		RepoDir: fixture.directory, OutputDir: stage,
+		Repository: fixture.repository, Commit: commit,
+		Unit: unit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if manifest.TypedIndex == nil ||
+		manifest.TypedIndex.Path != "service/index.scip" ||
+		len(manifest.TypedInputs) != 1 ||
+		!manifest.TypedInputs[0].Present ||
+		manifest.TypedInputs[0].Path != "service/index.scip" ||
+		!manifest.TypedInputs[0].InUnit ||
+		!manifest.TypedInputs[0].Shared ||
+		!slices.Equal(manifest.TypedInputs[0].Domains, []string{"caller", "local"}) {
+		t.Fatalf("typed manifest = %+v / %+v", manifest.TypedIndex, manifest.TypedInputs)
+	}
+	if manifest.UnitCorpus.RegularCount != 3 ||
+		manifest.UnitCorpus.RegularCount >= manifest.Corpus.RegularCount {
+		t.Fatalf(
+			"unit/repository corpus = %+v / %+v",
+			manifest.UnitCorpus, manifest.Corpus,
+		)
+	}
+	publication, err := Open(stage, Expected{
+		Repository: fixture.repository, Commit: commit, Unit: unit,
+		Policies: identities,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	local, err := publication.Domain("local", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var localPaths []string
+	if err := local.ForEachRepositoryRecord(
+		t.Context(), func(record Record) error {
+			localPaths = append(localPaths, record.Path)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(localPaths, []string{"service/main.go"}) {
+		t.Fatalf("local replay = %v", localPaths)
+	}
+	caller, err := publication.Domain("caller", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var callerPaths []string
+	if err := caller.ForEachRepositoryRecord(
+		t.Context(), func(record Record) error {
+			callerPaths = append(callerPaths, record.Path)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(callerPaths, []string{"other/out.go", "service/main.go"}) {
+		t.Fatalf("caller replay = %v", callerPaths)
+	}
+	typed, err := local.TypedInput(analysisunit.TypedIndexKindSCIP)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if typed == nil || typed.Path != "service/index.scip" ||
+		!typed.Present || !gitobj.IsObjectID(typed.OID) {
+		t.Fatalf("local typed input = %+v", typed)
+	}
+	for filePath, want := range map[string]bool{
+		"service/main.go":    true,
+		"service/index.scip": true,
+		"other/out.go":       false,
+	} {
+		if got := publication.PathInScope(filePath); got != want {
+			t.Fatalf("PathInScope(%q) = %t, want %t", filePath, got, want)
+		}
+	}
+
+	alternateScope := unitScope
+	alternateScope.TypedIndex = &analysisunit.TypedIndex{
+		Kind: analysisunit.TypedIndexKindSCIP,
+		Path: "service/alternate.scip",
+	}
+	alternate, err := alternateScope.State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if alternate.Digest != unit.Digest {
+		t.Fatal("typed designation changed stable unit digest")
+	}
+	firstGeneration, err := GenerationDigest(
+		fixture.repository, commit, unit, identities,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondGeneration, err := GenerationDigest(
+		fixture.repository, commit, alternate, identities,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstGeneration == secondGeneration {
+		t.Fatal("typed designation reused candidate generation identity")
+	}
+}
+
+func TestTypedInputLegacyDefaultAndConfiguredNoFallback(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("service/main.go", "package service\n")
+	fixture.write("index.scip", "legacy root")
+	commit := fixture.commit("legacy typed")
+	policies := []Policy{
+		{
+			Domain: "local", Version: "1",
+			EnumerationPolicy: "typed-local-v1", Plane: PlaneLocal,
+			TypedInputs: []string{analysisunit.TypedIndexKindSCIP},
+			Enumerate: func(value string) bool {
+				return strings.HasSuffix(value, ".go")
+			},
+		},
+		{
+			Domain: "plain", Version: "1",
+			EnumerationPolicy: "plain-local-v1", Plane: PlaneLocal,
+			Enumerate: func(value string) bool {
+				return strings.HasSuffix(value, ".go")
+			},
+		},
+	}
+	whole, err := Build(t.Context(), Request{
+		RepoDir: fixture.directory, OutputDir: t.TempDir(),
+		Repository: fixture.repository, Commit: commit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if whole.TypedIndex == nil || whole.TypedIndex.Path != "index.scip" ||
+		len(whole.TypedInputs) != 1 || !whole.TypedInputs[0].Present ||
+		whole.UnitCorpus != whole.Corpus {
+		t.Fatalf("whole typed input = %+v / %+v", whole.TypedIndex, whole.TypedInputs)
+	}
+
+	unit, err := (analysisunit.Scope{
+		Repository: fixture.repository, Name: "service",
+		Primary: []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	scopedDir := t.TempDir()
+	scoped, err := Build(t.Context(), Request{
+		RepoDir: fixture.directory, OutputDir: scopedDir,
+		Repository: fixture.repository, Commit: commit,
+		Unit: unit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scoped.TypedIndex != nil || len(scoped.TypedInputs) != 0 {
+		t.Fatalf(
+			"configured unit silently fell back to root: %+v / %+v",
+			scoped.TypedIndex, scoped.TypedInputs,
+		)
+	}
+	identities, err := PolicyIdentities(policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := Open(scopedDir, Expected{
+		Repository: fixture.repository,
+		Commit:     commit,
+		Unit:       unit,
+		Policies:   identities,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	typedDomain, err := publication.Domain("local", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	typed, err := typedDomain.TypedInput(analysisunit.TypedIndexKindSCIP)
+	if err != nil || typed == nil || typed.Kind != analysisunit.TypedIndexKindSCIP ||
+		typed.Present || typed.Path != "" {
+		t.Fatalf("applicable absent typed input = %+v, %v", typed, err)
+	}
+	plainDomain, err := publication.Domain("plain", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain, err := plainDomain.TypedInput(analysisunit.TypedIndexKindSCIP)
+	if err != nil || plain != nil {
+		t.Fatalf("non-applicable typed input = %+v, %v", plain, err)
 	}
 }
 

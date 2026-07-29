@@ -3,6 +3,8 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
 	"slices"
 	"strings"
 	"testing"
@@ -184,6 +186,79 @@ func TestFieldReferenceReadIsPagedVisibilityBoundAndSideEffectFree(
 	}
 	if len(withHidden.bundles) != 0 {
 		t.Fatalf("paging minted a proof bundle: %+v", withHidden.bundles)
+	}
+}
+
+func TestFieldReferenceReadRejectsEvidenceRevisionABADuringConfirmation(
+	t *testing.T,
+) {
+	const (
+		repository = "github.com/acme/field-revision-race"
+		domain     = "scip-proto-field"
+		lineage    = "contract_scip_package_v1_shop_cart"
+		message    = "shop.Cart"
+	)
+	run := proofRun(repository, domain, "run-field-revision-race")
+	assertion, resolution := proofAssertion(
+		repository,
+		run.ID,
+		"field-revision-race",
+		"REFERENCES_PROTO_FIELD",
+		message+"#1",
+		lineage,
+		"revision-race",
+	)
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name:              repository,
+			IndexedCommitHash: run.Commit,
+			EvidenceRevision:  13,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repository, domain): run,
+		},
+		assertions: map[string][]store.Assertion{
+			repository: {assertion},
+		},
+		resolutions: map[string]store.EvidenceResolution{
+			proofEvidenceScope(
+				repository,
+				run.ID,
+				assertion.Supporting[0],
+			): resolution,
+		},
+	}
+	latestCalls := 0
+	st.onLatestRun = func(store.ExtractionScope) {
+		latestCalls++
+		if latestCalls == 2 {
+			// The confirmed certificate sees identical run bytes while an
+			// A -> unavailable -> A transition advances the final seqlock.
+			st.repos[0].EvidenceRevision += 2
+		}
+	}
+	service := api.NewFieldReferenceService(api.Options{
+		Store: st, Evidence: st,
+	})
+	page, err := service.List(
+		context.Background(),
+		api.FieldReferenceQuery{
+			Fields: []compat.FieldIdentity{{
+				Lineage: lineage, Message: message, Number: 1,
+			}},
+		},
+		10,
+		"",
+	)
+	var statusError interface{ GetStatus() int }
+	if page != nil ||
+		!errors.As(err, &statusError) ||
+		statusError.GetStatus() != http.StatusConflict {
+		t.Fatalf(
+			"field revision ABA = page %+v, error %v",
+			page,
+			err,
+		)
 	}
 }
 

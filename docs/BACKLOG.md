@@ -3,9 +3,9 @@
 Epic 30 is in progress for service-scoped analysis of very large
 monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
 configuration/state boundary, T30.3 shipped and then adversarially repaired
-focused shard integrity, and T30.4 shipped reusable candidate planning.
-T30.5 is the next ticket. Completed Epics 0–24, Epic 29, T30.1–T30.4, and P5
-hardening are retained in the
+focused shard integrity, T30.4 shipped reusable candidate planning, and T30.5
+shipped exact focused evidence publication. T30.6 is the next ticket.
+Completed Epics 0–24, Epic 29, T30.1–T30.5, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -15,14 +15,21 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.5 · Focused evidence publication** is next. T30.4 now gates existing
-repository-wide extraction on one reusable streamed census and precomputes
-unit membership without changing evidence identity. T30.5 narrows the local
-evidence plane to that unit and keys its publication by the unit digest.
+**T30.6 · Target-bound repository Caller Map generation** is next. T30.5 now
+publishes local evidence against one exact repository, indexed HEAD, unit
+digest, and domain; the remaining repository-wide caller plane needs its own
+target-bound complete-generation contract before it can serve focused units.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
 drafted and unscheduled.
+
+T30.5 deliberately retains every exact published commit/unit/domain tuple for
+rollback; the existing evidence sweep does not collect a row while it remains
+`published`. Before Epic 30 closes, a separate reviewed follow-up must decide a
+bounded unpinned historical-publication policy (or explicitly retain the
+unbounded posture) without deleting pinned proof. T30.6 does not silently
+inherit or solve that storage-policy decision.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
@@ -492,7 +499,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.5 next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6 next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -726,7 +733,8 @@ search revision.
 - `docs/guides/CONFIGURATION.md` owns the strict analysis-unit schema,
   path/revision semantics, defaults, limits, and typed-index posture.
 - `docs/guides/OPERATIONS.md` owns build/publication diagnostics, reconciliation,
-  cleanup, backup/restore, failure recovery, and bounded operator verification.
+  cleanup, backup/restore, failure recovery, retained-history storage posture,
+  and bounded operator verification.
 - `docs/guides/WORKFLOWS.md` owns the user-visible distinction between focused
   search/local evidence and repository-overlay callers, including evidence
   caveats and the end-to-end demo.
@@ -769,18 +777,16 @@ without hashing member contents on warm retries; same-stat damage remains a
 strict-consumption refusal, not a metadata claim. Unit membership is
 precomputed only; T30.5 owns the evidence-scope and identity change.
 
-**T30.5 · Focused evidence publication** *(T30.3 and T30.4 complete · next)* — key
-extraction attempts/runs and published evidence by repository, source commit,
-unit digest, and domain; execute provisional contract, field, topic, local
-consumer, attribution, and Workbench implementation readers only over the
-unit manifest. Add a commit/unit-bound typed-index input contract instead of
-relabeling a repository-root SCIP file. Store migrations preserve readable
-legacy whole-repository evidence while preventing a scoped run from
-superseding or satisfying a different unit. Contract Atlas, Topics, coverage,
-source links, and provisional Workbench target/implementation views consume
-real store-published focused evidence without fixture authority. AC:
-scope/stale/rollback/mixed-writer tests, exact coverage disclosure,
-deterministic ordinary-worker acceptance, full merge bar.
+**T30.5 ✅ · Focused evidence publication** *(2026-07-29)* — completed and
+retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t305--focused-evidence-publication).
+Local contract, field, topic, consumer, attribution, and Workbench
+implementation evidence is now candidate- and store-bound to the exact
+repository, indexed HEAD, committed unit digest, and domain. A designated SCIP
+input keeps its real supporting path and blob identity; focused navigation and
+extraction never fall back to repository-root `index.scip`. Legacy
+whole-repository evidence remains readable only in its empty-unit scope, and
+no publication can satisfy or supersede a different unit.
 
 **T30.6 · Target-bound repository Caller Map generation** *(needs T30.4,
 T30.5)* — build the bounded module/generated-resolution catalog for one

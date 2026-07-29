@@ -62,37 +62,84 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbench(
 	if err != nil {
 		return store.WorkbenchResolution{}, err
 	}
+	_, _, visibilityDigest, err := workbenchImplementationVisibility(visible)
+	if err != nil {
+		return store.WorkbenchResolution{}, huma.Error409Conflict(
+			"repository analysis-unit state changed while resolving the Workbench target",
+			err,
+		)
+	}
 	visibleByName := make(map[string]store.Repo, len(visible))
+	visibleScopeByName := make(
+		map[string]workbenchRepositoryScope,
+		len(visible),
+	)
+	visibleScopes := make([]store.WorkbenchRepositorySnapshot, 0, len(visible))
 	for _, repository := range visible {
 		visibleByName[repository.Name] = repository
+		scope, scopeErr := workbenchScopeForRepository(repository)
+		if scopeErr != nil {
+			return store.WorkbenchResolution{}, huma.Error409Conflict(
+				"repository analysis-unit state changed while resolving the Workbench target",
+				scopeErr,
+			)
+		}
+		visibleScopeByName[repository.Name] = scope
+		visibleScopes = append(
+			visibleScopes,
+			scope.snapshot(repository.Name, repository.IndexedCommitHash),
+		)
 	}
+	slices.SortFunc(
+		visibleScopes,
+		func(left, right store.WorkbenchRepositorySnapshot) int {
+			return strings.Compare(left.Name, right.Name)
+		},
+	)
 	result := store.WorkbenchResolution{
 		AuthorizationDigest: digestJSON(
-			catalogVisibilityContext(ctx, resolver.opts, visible),
+			struct {
+				Visibility   VisibilityContext                   `json:"visibility"`
+				Repositories []store.WorkbenchRepositorySnapshot `json:"repositories"`
+			}{
+				Visibility: catalogVisibilityContext(
+					ctx,
+					resolver.opts,
+					visible,
+				),
+				Repositories: visibleScopes,
+			},
 		),
 		Repositories: []store.WorkbenchRepositorySnapshot{},
 		Endpoints:    []store.WorkbenchEndpointSnapshot{},
 		Capabilities: []store.WorkbenchCapabilitySnapshot{},
 	}
-	resolvedRepositories := make(map[string]string)
+	type resolvedRepository struct {
+		commit string
+		scope  workbenchRepositoryScope
+	}
+	resolvedRepositories := make(map[string]resolvedRepository)
 	for _, name := range request.Repositories {
 		repository, ok := visibleByName[name]
 		if !ok || repository.IndexedCommitHash == "" {
 			continue
 		}
-		resolvedRepositories[name] = repository.IndexedCommitHash
+		scope := visibleScopeByName[name]
+		resolvedRepositories[name] = resolvedRepository{
+			commit: repository.IndexedCommitHash,
+			scope:  scope,
+		}
 		result.Repositories = append(
 			result.Repositories,
-			store.WorkbenchRepositorySnapshot{
-				Name: name, Commit: repository.IndexedCommitHash,
-			},
+			scope.snapshot(name, repository.IndexedCommitHash),
 		)
 	}
 	for _, selection := range request.Selections {
-		commit, ok := resolvedRepositories[selection.Repository]
+		resolved, ok := resolvedRepositories[selection.Repository]
 		if !ok {
 			continue
 		}
+		commit := resolved.commit
 		detail, detailErr := resolver.catalog.OperationForProtocol(
 			ctx,
 			selection.Protocol,
@@ -126,7 +173,8 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbench(
 		current := true
 		for index, source := range detail.Declaration.Sources {
 			if source.Repository != selection.Repository ||
-				source.Commit != commit {
+				source.Commit != commit ||
+				!resolved.scope.admits(source.Path) {
 				current = false
 				break
 			}
@@ -170,6 +218,8 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbench(
 				Selection:          selection,
 				DeclarationCommit:  commit,
 				DeclarationDigest:  digestJSON(detail.Declaration),
+				ScopePosture:       resolved.scope.posture,
+				UnitDigest:         resolved.scope.unitDigest,
 				DeclarationSources: sources,
 				SourcesTruncated:   detail.Declaration.SourcesTruncated,
 			},
@@ -199,6 +249,9 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbench(
 		}
 		result.Capabilities = append(result.Capabilities, snapshot)
 	}
+	if err := resolver.confirmWorkbenchVisibility(ctx, visibilityDigest); err != nil {
+		return store.WorkbenchResolution{}, err
+	}
 	return result, nil
 }
 
@@ -221,11 +274,35 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbenchBaseline(
 	if err != nil {
 		return nil, err
 	}
+	_, _, visibilityDigest, err := workbenchImplementationVisibility(visible)
+	if err != nil {
+		return nil, huma.Error409Conflict(
+			"repository analysis-unit state changed while resolving the Workbench baseline",
+			err,
+		)
+	}
 	authorized := false
+	var authorizedScope workbenchRepositoryScope
 	for _, repository := range visible {
 		if repository.Name == request.Repository &&
 			repository.IndexedCommitHash == request.Commit {
+			scope, scopeErr := workbenchScopeForRepository(repository)
+			if scopeErr != nil {
+				return nil, huma.Error409Conflict(
+					"repository analysis-unit state changed while resolving the Workbench baseline",
+					scopeErr,
+				)
+			}
+			if !scope.matchesSnapshot(store.WorkbenchRepositorySnapshot{
+				Name:         request.Repository,
+				Commit:       request.Commit,
+				ScopePosture: request.ScopePosture,
+				UnitDigest:   request.UnitDigest,
+			}) {
+				continue
+			}
 			authorized = true
+			authorizedScope = scope
 			break
 		}
 	}
@@ -236,7 +313,8 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbenchBaseline(
 	previous := ""
 	for index, sourcePath := range request.Paths {
 		if sourcePath <= previous ||
-			!strings.HasSuffix(sourcePath, ".proto") {
+			!strings.HasSuffix(sourcePath, ".proto") ||
+			!authorizedScope.admits(sourcePath) {
 			return nil, store.ErrNotFound
 		}
 		content, readErr := reposync.CatFile(
@@ -254,5 +332,31 @@ func (resolver *WorkbenchTargetResolver) ResolveWorkbenchBaseline(
 		}
 		previous = sourcePath
 	}
+	if err := resolver.confirmWorkbenchVisibility(ctx, visibilityDigest); err != nil {
+		return nil, err
+	}
 	return result, nil
+}
+
+func (resolver *WorkbenchTargetResolver) confirmWorkbenchVisibility(
+	ctx context.Context,
+	expectedDigest string,
+) error {
+	visible, err := visibleRepositories(ctx, resolver.opts)
+	if err != nil {
+		return err
+	}
+	_, _, currentDigest, err := workbenchImplementationVisibility(visible)
+	if err != nil {
+		return huma.Error409Conflict(
+			"repository analysis-unit state changed while resolving the Workbench result",
+			err,
+		)
+	}
+	if currentDigest != expectedDigest {
+		return huma.Error409Conflict(
+			"repository authorization, indexed commit, or analysis unit changed while resolving the Workbench result; retry",
+		)
+	}
+	return nil
 }

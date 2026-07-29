@@ -267,11 +267,18 @@ export interface WorkbenchPreview {
     creator: string
   }
   authorization_digest?: string
-  repositories: { name: string; commit: string }[]
+  repositories: {
+    name: string
+    commit: string
+    scope_posture: 'whole-repository' | 'focused'
+    unit_digest?: string
+  }[]
   endpoints: {
     selection: WorkbenchContractSelection
     declaration_commit: string
     declaration_digest: string
+    scope_posture: 'whole-repository' | 'focused'
+    unit_digest?: string
     declaration_sources: {
       repository: string
       commit: string

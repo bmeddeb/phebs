@@ -913,8 +913,10 @@ column that auto-expands to the current file, and a highlighted, scrolled-to
 anchor line. Search links carry their immutable commit; old links without
 `ref` resolve the repo's recorded indexed commit before loading. Click a
 source position to open precise SCIP hover/definition/reference results when
-that revision contains `index.scip`; **Blame** and **History** open the Git
-views for the same immutable revision.
+that revision has an admitted typed-index binding. A focused repository uses
+only its configured unit-bound SCIP path and rejects an index containing an
+out-of-unit document; it never falls back to root `index.scip`. **Blame** and
+**History** open the Git views for the same immutable revision.
 - **History / blame / commit** (`#/history`, `#/blame`, `#/commit`) — follow a
 file across renames, map lines to commits, and render commit metadata,
 changed-file statistics, and bounded unified diffs.
@@ -923,14 +925,14 @@ orphan flags, indexed commit, and administrator-only **Reindex** controls
 (a forced rebuild defeats the incremental short-circuit). The backing
 `/api/repo-status` response also reports any committed analysis-unit name,
 digest, exact selected paths/counts, and search/typed-index postures.
-Configured repositories report `focused` and
-`repository-root-unbound`: search is physically limited to the selected
-primary/supporting paths at every indexed revision, while root `index.scip`
-still has no reviewed unit binding. Unconfigured repositories remain
-whole-repository. Candidate planning already validates and records unit
-membership before an experimental extraction begins, but T30.4 preserves the
-existing repository-wide extraction view and evidence identity. T30.5, not
-the `focused` search status alone, owns unit-scoped evidence publication.
+Configured repositories report `focused`: search and local evidence are
+physically limited to the selected primary/supporting paths. Typed posture is
+`unit-bound` only when the configuration explicitly designates a supporting
+SCIP artifact; otherwise it remains `repository-root-unbound` and focused code
+navigation/extractors report the gap. Unconfigured repositories remain
+whole-repository. Every experimental local-evidence publication and coverage
+read uses the exact indexed commit plus unit digest, so a same-commit scope
+change cannot reuse the previous unit's evidence.
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
 Named keys are read-only for Investigation mutations by default; the creation
 form can explicitly add the immutable `investigation:write` capability and
@@ -963,7 +965,10 @@ mode defaults to protobuf's 1..536,870,911 rules (including refusal of reserved
 validates the input; the report remains neutral and may render every registered
 field-reference domain that admits the number. Known and unresolved consumers
 cite immutable source revisions; every conclusion renders its complete coverage certificate.
-The navigation item appears only when the server advertises the capability,
+For a focused repository, declarations and local consumers come only from the
+unit manifest, and the coverage certificate names that unit's exact roots,
+candidate scope, typed-input posture, and freshness. The navigation item
+appears only when the server advertises the capability,
 and the contract-change tab additionally requires the pinned Buf startup probe.
 - **Topics** (`#/topics`, experimental) — topic-centered Kafka evidence:
 query one topic spelling and see producers, consumers (group ids as detail),
@@ -973,6 +978,9 @@ explicitly, `≥` marking bounded lower-bound counts, and distinct per-plane
 published-run states so producer-only or consumer-only extraction never turns
 the other plane's unmeasured zeros into affirmative zeros. Whole-file
 extraction gaps are disclosed separately through the coverage certificate.
+For a focused repository, producers and consumers are unit-local; a topic row
+outside the unit cannot enter the answer merely because it shares the same
+repository and commit.
 The navigation item appears with the
 `kafka-topic-usage` capability, which the server advertises whenever the
 proof surfaces exist — including deployments where the Kafka packs

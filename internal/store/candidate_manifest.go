@@ -129,8 +129,84 @@ LET $published = IF $acceptable = false THEN []
 			generation_digest = $generation_digest,
 			manifest_path = $manifest_path,
 			published_at = $published_at
-		RETURN AFTER)
+			RETURN AFTER)
 	END;
+LET $invalidated_runs = (IF array::len($published) = 1 THEN
+	(SELECT id, run_id, domain FROM extraction_run
+		WHERE repo = $repository AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND status IN ['published', 'staged']
+			AND (status = 'published' OR $same_publication = false)
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND (coverage.candidate_manifest_digest ?? '') != $manifest_digest)
+	ELSE [] END) ?? [];
+LET $invalidated_run_rids = $invalidated_runs.map(|$run| $run.id);
+LET $invalidated_run_ids = $invalidated_runs.map(|$run| $run.run_id);
+LET $invalidated_domains = $invalidated_runs.map(|$run| $run.domain);
+LET $invalidated_attempts = (IF array::len($invalidated_runs) > 0 THEN
+	(SELECT id, run_id, domain FROM extraction_attempt
+		WHERE repo = $repository AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND domain IN $invalidated_domains
+			AND run_id IN $invalidated_run_ids
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND evidence_migration_version = $evidence_migration)
+	ELSE [] END) ?? [];
+LET $invalidated_attempt_rids = $invalidated_attempts.map(|$attempt| $attempt.id);
+LET $retired = IF array::len($invalidated_runs) > 0 THEN
+	(UPDATE extraction_run SET status = 'superseded', published_key = NONE
+		WHERE id IN $invalidated_run_rids
+			AND repo = $repository AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND domain IN $invalidated_domains
+			AND run_id IN $invalidated_run_ids
+			AND status = 'published'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		RETURN AFTER)
+	ELSE [] END;
+LET $aborted = IF array::len($invalidated_runs) > 0 THEN
+	(UPDATE extraction_run SET status = 'aborted', published_key = NONE
+		WHERE id IN $invalidated_run_rids
+			AND repo = $repository AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND domain IN $invalidated_domains
+			AND run_id IN $invalidated_run_ids
+			AND status = 'staged'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + `
+		RETURN AFTER)
+	ELSE [] END;
+LET $cleared_attempts = IF array::len($invalidated_attempt_rids) > 0 THEN
+	(DELETE extraction_attempt
+		WHERE id IN $invalidated_attempt_rids
+			AND repo = $repository AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND domain IN $invalidated_domains
+			AND run_id IN $invalidated_run_ids
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND evidence_migration_version = $evidence_migration
+		RETURN BEFORE)
+	ELSE [] END;
+LET $evidence_changed = array::len($retired) > 0
+	OR array::len($aborted) > 0
+	OR array::len($cleared_attempts) > 0
+	OR (array::len($published) = 1 AND $same_publication = false);
+LET $evidence_revision = IF $evidence_changed THEN
+	(UPDATE $repo_rid SET evidence_revision = (evidence_revision ?? 0) + 1
+		RETURN AFTER)
+	ELSE [] END;
 LET $pending = IF array::len($published) = 1 THEN
 	(SELECT id, created_at FROM extraction_job
 		WHERE pending_key = $repository AND status = 'pending'
@@ -154,10 +230,13 @@ COMMIT;`
 
 // PublishCandidateManifest atomically guards publication against the current
 // authoritative indexed HEAD and committed unit, advances the pointer, and
-// ensures one pending extraction successor. Retrying the exact pointer keeps
-// its original PublishedAt while repairing a missing fan-out job. A different
-// manifest for the same HEAD/unit/policy is rejected as planner
-// nondeterminism.
+// ensures one pending extraction successor. Any published or staged evidence
+// for the same semantic scope but a different candidate-manifest digest is
+// atomically retired with its latest-attempt row; historical rows remain for
+// retention and pinning, but cannot satisfy a current consumer. Retrying the
+// exact pointer keeps its original PublishedAt and matching evidence while
+// repairing a missing fan-out job. A different manifest for the same
+// HEAD/unit/policy is rejected as planner nondeterminism.
 func (s *Surreal) PublishCandidateManifest(
 	ctx context.Context,
 	publication CandidateManifestPublication,
@@ -168,16 +247,20 @@ func (s *Surreal) PublishCandidateManifest(
 		return fmt.Errorf("publish candidate manifest: %w", err)
 	}
 	vars := map[string]any{
-		"repo_rid":          repoID(publication.Repository),
-		"publication_rid":   candidateManifestPublicationID(publication.Repository),
-		"repository":        publication.Repository,
-		"head_commit":       publication.HeadCommit,
-		"unit_digest":       publication.UnitDigest,
-		"policy_digest":     publication.PolicyDigest,
-		"manifest_digest":   publication.ManifestDigest,
-		"generation_digest": publication.GenerationDigest,
-		"manifest_path":     publication.ManifestPath,
-		"published_at":      storeTimestamp(time.Now()),
+		"repo_rid":                    repoID(publication.Repository),
+		"publication_rid":             candidateManifestPublicationID(publication.Repository),
+		"repository":                  publication.Repository,
+		"head_commit":                 publication.HeadCommit,
+		"unit_digest":                 publication.UnitDigest,
+		"policy_digest":               publication.PolicyDigest,
+		"manifest_digest":             publication.ManifestDigest,
+		"generation_digest":           publication.GenerationDigest,
+		"manifest_path":               publication.ManifestPath,
+		"published_at":                storeTimestamp(time.Now()),
+		"evidence_store_schema":       evidenceStoreSchemaVersion,
+		"evidence_format":             evidenceFormatVersion,
+		"evidence_migration":          evidenceMigrationVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
 	}
 	for attempt := 0; ; attempt++ {
 		results, err := surrealdb.Query[[]candidateManifestPublicationRec](
@@ -279,8 +362,21 @@ func (s *Surreal) ClearCandidateManifestPublication(
 	_, err := surrealdb.Query[any](
 		ctx,
 		s.db,
-		"DELETE $rid RETURN NONE",
-		map[string]any{"rid": candidateManifestPublicationID(repository)},
+		`BEGIN;
+		LET $current = SELECT id FROM $rid;
+		IF array::len($current) = 1 {
+			DELETE $rid RETURN NONE;
+			UPDATE $repo_rid
+				SET evidence_revision = (evidence_revision ?? 0) + 1
+				WHERE name = $repository
+				RETURN NONE;
+		};
+		COMMIT;`,
+		map[string]any{
+			"rid":        candidateManifestPublicationID(repository),
+			"repo_rid":   repoID(repository),
+			"repository": repository,
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("clear candidate manifest: %w", err)

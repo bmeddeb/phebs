@@ -85,6 +85,10 @@ type ProofBundle struct {
 	VisibilityContext VisibilityContext           `json:"visibility_context"`
 	Compatibility     *compat.CompatibilityResult `json:"compatibility,omitempty"`
 	Caveat            string                      `json:"caveat"`
+
+	// visibilityReceipt is a request-local result fence. It is deliberately
+	// excluded from canonical proof JSON and persisted bundle identity.
+	visibilityReceipt []store.Repo
 }
 
 // KafkaTopicCensus is the first-class abstention census a topic-usage bundle
@@ -512,12 +516,23 @@ func buildProofBundleValue(
 				return nil, huma.Error500InternalServerError("build unresolved census", err)
 			}
 		}
-		confirmed, err := extract.BuildCoverageCertificate(ctx, opts.Evidence, visible, query.Domains)
+		confirmed, err := extract.BuildCoverageCertificate(
+			ctx, opts.Evidence, visible, query.Domains,
+		)
 		if err != nil {
 			return nil, huma.Error500InternalServerError("confirm extraction coverage", err)
 		}
 		if confirmed.Digest != certificate.Digest {
 			continue
+		}
+		confirmedVisible, err := visibleRepositories(ctx, opts)
+		if err != nil {
+			return nil, err
+		}
+		if !sameVisibleEvidenceScopes(visible, confirmedVisible) {
+			return nil, huma.Error409Conflict(
+				"repository authorization or indexed scope changed while building the proof bundle; retry",
+			)
 		}
 		caveat := proofCaveat
 		if compatibility != nil {
@@ -530,6 +545,7 @@ func buildProofBundleValue(
 			ExtractorVersions: certificateExtractors(certificate),
 			VisibilityContext: visibilityContext(ctx, opts, certificate),
 			Compatibility:     compatibility, Caveat: caveat,
+			visibilityReceipt: cloneVisibleEvidenceScopes(confirmedVisible),
 		}
 		return &bundle, nil
 	}
@@ -584,6 +600,35 @@ func buildAndPersistProofBundle(
 		}
 		envelope, err := persistProofBundle(ctx, opts, *bundle)
 		if err == nil {
+			confirmed, confirmErr := extract.BuildCoverageCertificate(
+				ctx,
+				opts.Evidence,
+				envelope.Bundle.visibilityReceipt,
+				envelope.Bundle.Coverage.Domains,
+			)
+			if confirmErr != nil {
+				return nil, huma.Error500InternalServerError(
+					"confirm persisted proof coverage",
+					confirmErr,
+				)
+			}
+			if confirmed.Digest != envelope.Bundle.Coverage.Digest {
+				return nil, huma.Error409Conflict(
+					"evidence or visibility changed while persisting the proof bundle; retry",
+				)
+			}
+			visible, visibleErr := visibleRepositories(ctx, opts)
+			if visibleErr != nil {
+				return nil, visibleErr
+			}
+			if !sameVisibleEvidenceScopes(
+				envelope.Bundle.visibilityReceipt,
+				visible,
+			) {
+				return nil, huma.Error409Conflict(
+					"evidence or visibility changed while persisting the proof bundle; retry",
+				)
+			}
 			return envelope, nil
 		}
 		if !errors.Is(err, store.ErrConflict) {

@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -793,7 +795,7 @@ func TestVerifiedCorpusRejectsChangingOrIncorrectDigest(t *testing.T) {
 }
 
 func TestT206VerifiedSCIPCapabilityFailsClosed(t *testing.T) {
-	t.Run("unadmitted root is never read", func(t *testing.T) {
+	t.Run("unselected root is a supported absence", func(t *testing.T) {
 		inner := &scipCapabilityCorpus{
 			paths: []string{"nested/index.scip"},
 			blob:  trustedCorpusBlob("hidden"),
@@ -802,9 +804,9 @@ func TestT206VerifiedSCIPCapabilityFailsClosed(t *testing.T) {
 		if err := verified.Inventory(context.Background(), func(string) bool { return false }); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := verified.ReadSCIPIndex(context.Background()); err == nil ||
-			!strings.Contains(err.Error(), "was not in corpus inventory") {
-			t.Fatalf("unadmitted read error = %v", err)
+		input, err := verified.ReadSCIPIndex(context.Background())
+		if err != nil || input.Present || input.Path != scipIndexPath {
+			t.Fatalf("unselected typed input = %+v, %v", input, err)
 		}
 		if inner.scipReads != 0 {
 			t.Fatalf("unadmitted SCIP capability performed %d inner reads", inner.scipReads)
@@ -852,6 +854,148 @@ func TestT206VerifiedSCIPCapabilityFailsClosed(t *testing.T) {
 	})
 }
 
+func TestCandidateManifestTypedInputIsSeparateAndScoped(t *testing.T) {
+	const typedPath = "service/typed/custom.scip"
+	blob := trustedCorpusBlob("typed bytes")
+	manifest := validMemoryCandidateManifest()
+	manifest.records[0].Required = false
+	manifest.unitDigest = "sha256:" + strings.Repeat("1", 64)
+	manifest.typed = CandidateManifestTypedInput{
+		Kind: "scip", Path: typedPath, ObjectID: strings.Repeat("f", 40),
+		DeclaredBytes: int64(len(blob.Content)), Present: true,
+	}
+	manifest.inScope = func(filePath string) bool {
+		return filePath == "read.proto" ||
+			filePath == "same.proto" ||
+			filePath == typedPath
+	}
+	inner := &scipCapabilityCorpus{
+		paths: []string{"read.proto", "same.proto"},
+		path:  typedPath,
+		blob:  blob,
+	}
+	verified := newVerifiedCorpus(inner)
+	if err := verified.InventoryCandidateManifest(
+		context.Background(), manifest, "proto-contract", "1",
+		func(string) bool { return false },
+	); err != nil {
+		t.Fatal(err)
+	}
+	var walked []string
+	if err := verified.WalkFiles(
+		context.Background(), func(filePath string) error {
+			walked = append(walked, filePath)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(walked, typedPath) {
+		t.Fatalf("typed input leaked into ordinary replay: %v", walked)
+	}
+	input, err := verified.ReadSCIPIndex(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !input.Present || input.Path != typedPath || input.Content != blob.Content {
+		t.Fatalf("typed input = %+v", input)
+	}
+	if !verified.SCIPDocumentInScope("read.proto") ||
+		verified.SCIPDocumentInScope("outside/secret.go") {
+		t.Fatal("SCIP document scope did not follow the committed unit")
+	}
+	stats, err := verified.Stats()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.scopePosture != "focused-local" ||
+		stats.manifestDigest != manifest.identity ||
+		stats.typedInputPath != typedPath ||
+		stats.typedInputObjectID != strings.Repeat("f", 40) ||
+		stats.typedInputDigest != blob.Digest ||
+		!stats.typedInputPresent {
+		t.Fatalf("typed scope stats = %+v", stats)
+	}
+}
+
+func TestCoverageManifestPreservesApplicableAbsentTypedInput(t *testing.T) {
+	digest := "sha256:" + strings.Repeat("a", 64)
+	coverage, err := coverageManifest(
+		sdk.Coverage{},
+		0,
+		0,
+		0,
+		corpusStats{
+			sourceScopeDigest: digest,
+			scopePosture:      "focused-local",
+			manifestDigest:    digest,
+			unitDigest:        digest,
+			plane:             candidate.PlaneLocal,
+			scopeCorpusDigest: digest,
+			plannedDigest:     digest,
+			typedInputKind:    analysisunit.TypedIndexKindSCIP,
+		},
+		emptyGitlinkInventory(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if coverage.TypedInputKind != analysisunit.TypedIndexKindSCIP ||
+		coverage.TypedInputPath != "" ||
+		coverage.TypedInputPresent ||
+		coverage.TypedInputObjectID != "" ||
+		coverage.TypedInputDeclaredBytes != 0 ||
+		coverage.TypedInputDigest != "" {
+		t.Fatalf(
+			"applicable absent typed-input coverage = %+v",
+			coverage,
+		)
+	}
+}
+
+func TestScopedCandidateManifestBlocksOutOfUnitExactProbes(t *testing.T) {
+	manifest := validMemoryCandidateManifest()
+	manifest.records[0].Required = false
+	manifest.unitDigest = "sha256:" + strings.Repeat("2", 64)
+	manifest.inScope = func(filePath string) bool {
+		return strings.HasPrefix(filePath, "service/")
+	}
+	inner := &countingExactCorpus{
+		scipCapabilityCorpus: &scipCapabilityCorpus{},
+	}
+	verified := newVerifiedCorpus(inner)
+	if err := verified.InventoryCandidateManifest(
+		context.Background(), manifest, "proto-contract", "1",
+		func(string) bool { return false },
+	); err != nil {
+		t.Fatal(err)
+	}
+	present, err := verified.containsRegular(
+		context.Background(), "outside/secret.go",
+	)
+	if err != nil || present {
+		t.Fatalf("out-of-unit exact lookup = %t, %v", present, err)
+	}
+	under, err := verified.anyRegularUnder(
+		context.Background(), "outside",
+	)
+	if err != nil || under {
+		t.Fatalf("out-of-unit root lookup = %t, %v", under, err)
+	}
+	if inner.lookups != 0 || inner.rootLookups != 0 {
+		t.Fatalf(
+			"out-of-unit probes reached exact corpus: %d/%d",
+			inner.lookups, inner.rootLookups,
+		)
+	}
+	present, err = verified.containsRegular(
+		context.Background(), "service/generated.go",
+	)
+	if err != nil || !present || inner.lookups != 1 {
+		t.Fatalf("in-unit exact lookup = %t, %v, calls=%d", present, err, inner.lookups)
+	}
+}
+
 func TestVerifiedCorpusBoundsAggregateInventoryPathBytes(t *testing.T) {
 	verified := newVerifiedCorpus(pathFloodCorpus{})
 	err := verified.Inventory(context.Background(), func(string) bool { return false })
@@ -893,7 +1037,41 @@ func (*changingCorpus) Read(context.Context, string) (sdk.Blob, error) {
 type scipCapabilityCorpus struct {
 	paths     []string
 	blob      sdk.Blob
+	path      string
 	scipReads int
+}
+
+type countingExactCorpus struct {
+	*scipCapabilityCorpus
+	lookups     int
+	rootLookups int
+}
+
+func (c *countingExactCorpus) lookupRegular(
+	context.Context,
+	string,
+) (treeRecord, bool, error) {
+	c.lookups++
+	return treeRecord{
+		mode: "100644", objectType: "blob", oid: strings.Repeat("a", 40),
+		size: 1, path: "service/generated.go",
+	}, true, nil
+}
+
+func (c *countingExactCorpus) anyRegularUnder(
+	context.Context,
+	string,
+) (bool, error) {
+	c.rootLookups++
+	return true, nil
+}
+
+func (c *countingExactCorpus) readManifestBlob(
+	context.Context,
+	treeRecord,
+	int64,
+) (sdk.Blob, error) {
+	return sdk.Blob{}, errors.New("unexpected manifest blob read")
 }
 
 func (*scipCapabilityCorpus) RepoName() string { return "synthetic.invalid/t206" }
@@ -912,9 +1090,15 @@ func (c *scipCapabilityCorpus) WalkFiles(ctx context.Context, visit func(string)
 func (*scipCapabilityCorpus) Read(context.Context, string) (sdk.Blob, error) {
 	return sdk.Blob{}, store.ErrNotFound
 }
-func (c *scipCapabilityCorpus) ReadSCIPIndex(context.Context) (sdk.Blob, error) {
+func (c *scipCapabilityCorpus) ReadSCIPIndex(context.Context) (sdk.SCIPInput, error) {
 	c.scipReads++
-	return c.blob, nil
+	typedPath := c.path
+	if typedPath == "" {
+		typedPath = scipIndexPath
+	}
+	return sdk.SCIPInput{
+		Path: typedPath, Blob: c.blob, Present: true,
+	}, nil
 }
 
 func trustedCorpusBlob(content string) sdk.Blob {

@@ -824,10 +824,23 @@ func (g *gitCorpus) Read(ctx context.Context, filePath string) (sdk.Blob, error)
 	return g.read(ctx, filePath, MaxBlobBytes)
 }
 
-// ReadSCIPIndex exposes only the repository-root committed index through the
-// larger SCIP-specific limit. It cannot be used to read arbitrary blobs.
-func (g *gitCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
-	return g.read(ctx, scipIndexPath, MaxSCIPIndexBytes)
+// ReadSCIPIndex exposes only the legacy repository-root committed index
+// through the larger SCIP-specific limit. Candidate-backed extraction reads
+// the configured exact path through readManifestBlob instead.
+func (g *gitCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) {
+	g.mu.Lock()
+	_, present := g.oids[scipIndexPath]
+	g.mu.Unlock()
+	if !present {
+		return sdk.SCIPInput{Path: scipIndexPath}, nil
+	}
+	blob, err := g.read(ctx, scipIndexPath, MaxSCIPIndexBytes)
+	if err != nil {
+		return sdk.SCIPInput{}, err
+	}
+	return sdk.SCIPInput{
+		Path: scipIndexPath, Blob: blob, Present: true,
+	}, nil
 }
 
 func (g *gitCorpus) read(ctx context.Context, filePath string, maxBytes int64) (sdk.Blob, error) {

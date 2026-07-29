@@ -29,12 +29,13 @@ inputs must preserve both semantic identities and exact publication bytes.
 
 ## Retained observation
 
-The 2026-07-28 Darwin/arm64 run passed. The planner runs took 3.55 s and 3.43 s
-and peaked at 61,145,088 and 60,801,024 bytes RSS. Each staged five files
-totaling 13,049 bytes. Twice the final caller content conservatively bounds
+The 2026-07-29 Darwin/arm64 T30.5 contract refresh passed. The planner runs
+took 3.28 s and 3.30 s and peaked at 62,013,440 and 61,440,000 bytes RSS. Each
+staged five files totaling 13,589 bytes. Twice the final caller content
+conservatively bounds
 planner spool/split scratch at 4,134 bytes; the external-validation scratch
 bound was 3,514 bytes. Adding the larger phase bound to the final stage yields
-17,183 bytes of conservative peak candidate disk. The complete census
+17,723 bytes of conservative peak candidate disk. The complete census
 contained 200,008 regular files; policy projection retained five repository
 rows and six caller rows. The two-bit caller leaves were `00:1`, `10:3`, and
 `11:2`, so no leaf needed a deeper split on this corpus.
@@ -47,13 +48,13 @@ identities are:
 - streamed regular-census digest:
   `sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841`;
 - policy digest:
-  `sha256:8e29086fefcac6741e39ae66df82bf31b8983bbec9077250aca3d45a1033ff05`;
+  `sha256:82dfb887249f1a9c1c914d87a32f065c3aad46a35c8f2993bf1a9e3938f80667`;
 - generation digest:
-  `sha256:726362f9fa59fcb5e18c9dd0d7e83b4f5970658ec0699c12b43d003bdbacd871`;
+  `sha256:bd2e9212ccb47535827822dc4cffe2dda477a25d95459d99ae4d6a77a5fb368b`;
 - manifest digest:
-  `sha256:a52a02522c918e1bcf6878842207f0cf3e7816dcf74bb235f68e1f0c05db6826`;
+  `sha256:030563f0e0c3f2b070623f9d04886c95fd4552beb64f6df7e9df14b4c7053753`;
 - exact staged-output digest:
-  `sha256:1f37b8d8b9306354328d18fddf48130bf1fb457859ecb6de8b1375a8b79e8403`.
+  `sha256:2ed610f823dbfb2146cfd27d54fd4f80afdf920a59cfcd5323c177b3683c549e`.
 
 To reproduce the retained observation:
 

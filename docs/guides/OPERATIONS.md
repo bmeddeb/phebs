@@ -405,11 +405,12 @@ The retained
 [T30.4 prospective measurement](../../spike/t304/README.md) streamed 200,008
 regular files into five repository rows and six caller rows. It produced three
 two-bit caller leaves (`00:1`, `10:3`, `11:2`); each run staged five files
-totaling 13,049 bytes. Twice the final caller content bounds planner spool and
+totaling 13,589 bytes. Twice the final caller content bounds planner spool and
 split scratch at 4,134 bytes; external-validation scratch is bounded at 3,514
-bytes. Adding the larger phase bound to the final stage gives 17,183 bytes of
-conservative peak candidate disk. The runs took 3.55 s and 3.43 s, peaked at
-61,145,088 and 60,801,024 bytes RSS, and reproduced byte-identical output. The
+bytes. Adding the larger phase bound to the final stage gives 17,723 bytes of
+conservative peak candidate disk. The T30.5-refreshed runs took 3.28 s and
+3.30 s, peaked at 62,013,440 and 61,440,000 bytes RSS, and reproduced
+byte-identical output. The
 frozen local planner gates are at most 10 s wall time, 256 MiB peak RSS, and 16
 MiB peak candidate disk including publication plus the higher planner or
 validation scratch phase; exceeding one refuses the prospective measurement
@@ -456,12 +457,72 @@ still refused when strict extraction consumption checks the member digest.
 Before creating an extraction attempt, the worker refuses a publication
 marker, stale database pointer, HEAD/unit/policy disagreement, malformed or
 noncanonical JSON/NDJSON, partial/extra/duplicate member, digest mismatch,
-overlapping or unordered caller leaf, or special filesystem entry. Current
-extractors consume the validated **repository** candidate view. Although each
-record already carries its configured-unit membership, T30.4 does not narrow
-or relabel evidence; T30.5 owns the switch to unit-scoped local extraction and
-unit-keyed publication. Root `index.scip` therefore remains
-`repository-root-unbound`.
+overlapping or unordered caller leaf, or special filesystem entry. Local
+contract, field, topic, consumer, attribution, and Workbench implementation
+domains consume only records whose manifest membership is inside the committed
+unit. A caller-plane domain remains visibly `repository-overlay` input pending
+T30.6's target-bound complete-generation replacement; its rows do not become
+focused search or local implementation evidence.
+
+The candidate manifest carries a designated typed-input envelope separately
+from ordinary source rows. For a focused repository, `typed_index.kind: scip`
+binds the exact configured supporting path, blob identity, size, consuming
+domains, commit, unit, and candidate generation. Readers cite that real path:
+they never invent `index.scip`, fall back to a root artifact, or admit a SCIP
+document outside the unit. A focused unit with no designation reports a typed
+input gap. Whole-repository repositories retain the legacy root lookup.
+
+#### Focused evidence publication and recovery
+
+Every extraction attempt, run, and current-publication pointer is keyed by the
+exact `(repository, indexed HEAD commit, unit digest, domain)` tuple. The unit
+digest is empty only for whole-repository posture. Publication rechecks both
+the repository's indexed commit and committed unit digest in the same guarded
+transaction that makes the run visible. A same-HEAD unit edit, stale candidate
+job, failed replacement, or rollback therefore cannot publish into or read
+another scope. Re-running the identical tuple replaces only that tuple; other
+commit/unit publications remain available for exact rollback and retained
+proof references.
+
+Exact older commit/unit/domain publications remain `published`, so the current
+evidence sweep does not collect them. Database use can therefore grow with
+historical focused publications. Do not delete those rows by hand: pinned proof
+may reference them. The active backlog requires a separately reviewed bounded
+unpinned-retention policy, or an explicit decision to retain this unbounded
+posture, before Epic 30 closes.
+
+Store upgrade preserves readable legacy whole-repository runs with an empty
+unit digest and their original source commit. It does not copy the currently
+configured unit onto historical evidence. Current focused consumers request
+the complete tuple and never fall back to those rows. An older writer refuses
+a store already claimed by this generation, while a newer unknown writer is
+left untouched and unreadable rather than guessed compatible.
+
+Coverage records name the scope posture, unit digest, candidate-manifest
+digest, candidate plane, exact selected candidate count/bytes/digest, and the
+source paths actually read. Coverage certificates additionally disclose the
+unit name and canonical primary/supporting roots, typed-index posture and path,
+and treat freshness as equality of both commit and unit digest. A failed or
+staged replacement remains visible only as the latest attempt for that exact
+tuple; it never displaces the prior complete publication. Treat an
+`unpublished`, stale, typed-index-gap, or extraction-refusal state as a
+coverage gap, never as evidence that no matching code exists.
+
+The candidate-manifest receipt is part of current evidence visibility, not
+only an extraction-time audit field. A typed designation change or a newly
+accepted candidate manifest retires current-schema publications carrying a
+different receipt even when commit and unit digest are unchanged. Reads
+independently validate stored coverage bounds, source-path admission, gitlink
+census, and that exact receipt; malformed or tampered coverage therefore fails
+closed instead of satisfying the steady-state no-op or a consumer query.
+Candidate-pointer create/replace/clear and evidence publication advance a
+monotonic internal repository revision. Indexed commit and full canonical
+analysis-state changes—including typed designation and search-index
+posture—advance it too and retire current evidence when the exact tuple is
+otherwise unchanged. Result-time consumers combine that revision with exact
+publication receipts as their last authoritative read, so a clear-and-restore
+or `A → B → A` rollback is detected even when the final visible tuple equals
+the starting tuple.
 
 Startup removes abandoned package-owned stages, audits orphan candidate bytes,
 and reconciles every indexed repository into a candidate job; that job reuses
@@ -1105,7 +1166,8 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | API or MCP answers `401`                                          | no valid session/key, or a key was revoked/removed                                                     | create a named key in Settings and send `Authorization: Bearer <token>`                               |
 | startup fails during OIDC discovery                               | issuer unavailable, wrong URL/private CA, or incomplete provider config                                | verify HTTPS reachability and discovery metadata; loopback HTTP is test-only                          |
 | OIDC login says verified email is required                        | provider omitted `email_verified=true`                                                                 | configure the provider's email scope/claim mapping; phebs does not accept unverified email identities |
-| code navigation says unavailable                                  | the indexed commit has no root `index.scip`                                                            | generate and commit a SCIP index, then sync/reindex that commit                                       |
+| code navigation says unavailable                                  | whole-repository posture has no root `index.scip`, or focused posture has no valid unit-bound designation | for focused scope, add an exact supporting SCIP path plus `typed_index`, then sync/reindex; never copy or relabel an unrelated root index |
+| code navigation rejects an out-of-unit document                   | the designated SCIP artifact describes source outside the configured unit                              | regenerate the typed index for exactly the unit paths, or explicitly add the required source path to the reviewed unit and reindex |
 | code-navigation/history link returns 404 after a repo update      | requested immutable commit is no longer present in the mirror or repo is unindexed/deleting            | use the current indexed commit from Repos, or restore/fetch the referenced object                     |
 | GitHub sync reports a rate-limit wait                             | host requested a reset delay; phebs waits at most 1 minute and retries once, then uses the job backoff | use a PAT/App or reduce listing frequency                                                             |
 | watch mode "doesn't see my edits"                                 | uncommitted changes are never indexed                                                                   | commit (or amend); the watcher reacts to HEAD and admitted-ref moves                                  |
@@ -1114,6 +1176,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | a focused repo rebuilds after restore                             | its focused generation was invalid/incomplete at backup time and was omitted as derived state          | let the forced replacement finish; the precious database export remains authoritative                 |
 | startup logs `artifact reconciliation: … lifecycle=N`            | a prior process left private build/restore workspace or temporary-marker residue                       | no action if startup continues; phebs reclaimed only prior-process derived residue                     |
 | extraction reports `candidate publication is incomplete`         | a stable candidate `.publishing` marker covers an interrupted or active publication, so even a no-op extraction refuses | let reconciliation finish; if the error repeats with phebs stopped, retain logs, move `$DATA/candidates` aside for diagnosis, and restart to rebuild derived state |
+| focused evidence is unpublished after a same-HEAD scope or typed-designation edit | prior evidence belongs to the old unit digest or candidate receipt and exact lookup correctly refuses to reuse it | allow the forced index → candidate → extraction chain to finish; inspect the typed-input and candidate refusal rather than repairing evidence rows by hand |
 | repository listing/startup reports `invalid committed analysis unit` | the stored focused claim is malformed or was tampered with, so repository reads fail closed instance-wide | restore a validated backup; without one, keep phebs stopped and escalate to the witnessed atomic row repair above |
 | restore rejects a sparse tar member                               | the focused archive uses PAX/GNU sparse expansion, which phebs never accepts                            | recreate the backup with `phebs backup`; do not rewrite or manually extract the archive               |
 | repo tagged `orphaned`                                            | no connection claims it anymore                                                                        | re-add the connection, or enable `sync.cleanup_orphans`                                               |

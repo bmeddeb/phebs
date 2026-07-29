@@ -2,6 +2,7 @@
 package codenav
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -37,6 +38,9 @@ var (
 	ErrHoverTooLarge       = errors.New("SCIP hover content too large")
 	ErrRevisionNotFound    = errors.New("code navigation revision not found")
 	ErrUnsupportedEncoding = errors.New("unsupported position encoding")
+	ErrTypedIndexBinding   = errors.New("invalid typed-index binding")
+	ErrBindingChanged      = errors.New("code navigation binding changed")
+	ErrDocumentOutsideUnit = errors.New("SCIP document is outside the analysis unit")
 )
 
 // PositionEncoding identifies the code units used for character offsets.
@@ -137,9 +141,48 @@ type HoverResult struct {
 	Hover     *HoverInfo `json:"hover,omitempty"`
 }
 
+// TypedIndexBinding is the resolver's immutable description of the SCIP
+// artifact admitted for one repository revision. Focused bindings carry the
+// stable unit digest and complete primary/supporting scope. An empty Path on a
+// focused binding is an explicit typed-index gap; it never falls back to the
+// repository-root index.scip.
+type TypedIndexBinding struct {
+	Focused         bool     `json:"focused"`
+	Path            string   `json:"path,omitempty"`
+	Commit          string   `json:"commit"`
+	UnitDigest      string   `json:"unit_digest,omitempty"`
+	PrimaryPaths    []string `json:"primary_paths,omitempty"`
+	SupportingPaths []string `json:"supporting_paths,omitempty"`
+}
+
+// TypedIndexResolver projects committed repository/unit state into the exact
+// immutable SCIP artifact that code navigation may load.
+type TypedIndexResolver interface {
+	ResolveTypedIndex(
+		context.Context,
+		string,
+		string,
+	) (TypedIndexBinding, error)
+}
+
+// TypedIndexResolveFunc adapts a function to TypedIndexResolver.
+type TypedIndexResolveFunc func(
+	context.Context,
+	string,
+	string,
+) (TypedIndexBinding, error)
+
+func (resolve TypedIndexResolveFunc) ResolveTypedIndex(
+	ctx context.Context,
+	repository, revision string,
+) (TypedIndexBinding, error) {
+	return resolve(ctx, repository, revision)
+}
+
 type Options struct {
-	DataDir   string // bare mirrors live beneath DataDir/repos
-	IndexPath string // repository-relative; defaults to index.scip
+	DataDir         string // bare mirrors live beneath DataDir/repos
+	IndexPath       string // repository-relative; defaults to index.scip
+	BindingResolver TypedIndexResolver
 
 	MaxIndexBytes       int64 // maximum committed SCIP protobuf size
 	MaxSourceBytes      int64 // maximum source blob used for range conversion

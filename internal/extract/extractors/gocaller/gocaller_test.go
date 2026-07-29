@@ -23,6 +23,16 @@ type memoryCorpus struct {
 	commit      string
 	files       map[string][]byte
 	attribution sdk.AttributionSource
+	typedPath   string
+}
+
+type scopedCorpus struct {
+	memoryCorpus
+	inScope map[string]bool
+}
+
+func (c scopedCorpus) SCIPDocumentInScope(filePath string) bool {
+	return c.inScope[filePath]
 }
 
 func (c memoryCorpus) RepoName() string { return c.repo }
@@ -59,8 +69,71 @@ func (c memoryCorpus) Read(_ context.Context, filePath string) (sdk.Blob, error)
 	}, nil
 }
 
-func (c memoryCorpus) ReadSCIPIndex(ctx context.Context) (sdk.Blob, error) {
-	return c.Read(ctx, "index.scip")
+func (c memoryCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) {
+	typedPath := c.typedPath
+	if typedPath == "" {
+		typedPath = "index.scip"
+	}
+	if _, ok := c.files[typedPath]; !ok {
+		return sdk.SCIPInput{Path: typedPath}, nil
+	}
+	blob, err := c.Read(ctx, typedPath)
+	return sdk.SCIPInput{
+		Path: typedPath, Blob: blob, Present: err == nil,
+	}, err
+}
+
+func TestGapUsesActualConfiguredTypedInputPath(t *testing.T) {
+	const typedPath = "service/typed/custom.scip"
+	files := map[string][]byte{
+		typedPath:        []byte("not SCIP"),
+		"service/use.go": []byte("package service\n"),
+	}
+	var facts []sdk.Fact
+	coverage, err := gocaller.NewGRPC().Extract(
+		context.Background(),
+		memoryCorpus{
+			repo: "example.invalid/scoped", commit: strings.Repeat("a", 40),
+			files: files, typedPath: typedPath,
+		},
+		func(fact sdk.Fact) error {
+			facts = append(facts, fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if coverage.UnresolvedCount != 1 || len(facts) != 1 ||
+		facts[0].Path != typedPath ||
+		facts[0].Assertion.Subject != typedPath {
+		t.Fatalf("actual-path gap = %+v / %+v", coverage, facts)
+	}
+}
+
+func TestScopedSCIPRejectsOutOfUnitDocument(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	corpus := scopedCorpus{
+		memoryCorpus: memoryCorpus{
+			repo: "synthetic.invalid/mono", commit: strings.Repeat("b", 40),
+			files: profile.Files, attribution: frozenAttribution(profile),
+		},
+		inScope: map[string]bool{},
+	}
+	_, err = gocaller.NewGRPC().Extract(
+		context.Background(), corpus,
+		func(sdk.Fact) error {
+			t.Fatal("out-of-unit SCIP document emitted a fact")
+			return nil
+		},
+	)
+	if err == nil ||
+		!strings.Contains(err.Error(), "outside the committed analysis unit") {
+		t.Fatalf("scoped SCIP error = %v", err)
+	}
 }
 
 func (c memoryCorpus) AttributionSource(context.Context) (sdk.AttributionSource, error) {

@@ -3,36 +3,48 @@ package extract
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 type certificateRunSource struct {
-	runs     map[string]store.ExtractionRun
-	attempts map[string]store.ExtractionAttempt
-	queried  []string
+	runs      map[string]store.ExtractionRun
+	attempts  map[string]store.ExtractionAttempt
+	runErrors map[string]error
+	queried   []string
 }
 
 func certKey(repo, domain string) string { return repo + "\x00" + domain }
 
-func (f *certificateRunSource) LatestPublishedRun(_ context.Context, repo, domain string) (*store.ExtractionRun, error) {
-	f.queried = append(f.queried, "run\x00"+certKey(repo, domain))
-	run, ok := f.runs[certKey(repo, domain)]
-	if !ok {
+func (f *certificateRunSource) LatestPublishedRun(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionRun, error) {
+	f.queried = append(f.queried, "run\x00"+certKey(scope.Repository, scope.Domain))
+	if err := f.runErrors[certKey(scope.Repository, scope.Domain)]; err != nil {
+		return nil, err
+	}
+	run, ok := f.runs[certKey(scope.Repository, scope.Domain)]
+	if !ok || run.Commit != scope.Commit || run.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	copied := run
 	return &copied, nil
 }
 
-func (f *certificateRunSource) LatestExtractionAttempt(_ context.Context, repo, domain string) (*store.ExtractionAttempt, error) {
-	f.queried = append(f.queried, "attempt\x00"+certKey(repo, domain))
-	attempt, ok := f.attempts[certKey(repo, domain)]
-	if !ok {
+func (f *certificateRunSource) LatestExtractionAttempt(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
+	f.queried = append(f.queried, "attempt\x00"+certKey(scope.Repository, scope.Domain))
+	attempt, ok := f.attempts[certKey(scope.Repository, scope.Domain)]
+	if !ok || attempt.Commit != scope.Commit || attempt.UnitDigest != scope.UnitDigest {
 		return nil, store.ErrNotFound
 	}
 	copied := attempt
@@ -50,7 +62,7 @@ func certRun(repo, domain, commit string, coverage store.CoverageManifest) store
 func certAttempt(run store.ExtractionRun, status string) store.ExtractionAttempt {
 	return store.ExtractionAttempt{
 		RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
-		Extractor: run.Extractor, Status: status,
+		UnitDigest: run.UnitDigest, Extractor: run.Extractor, Status: status,
 	}
 }
 
@@ -90,7 +102,7 @@ func TestCoverageCertificateDeterministicOverVisibleUniverse(t *testing.T) {
 	if !reflect.DeepEqual(first, second) {
 		t.Fatalf("two builds over equal state differ:\n%+v\n%+v", first, second)
 	}
-	if first.SchemaVersion != "coverage-certificate-v1" || !strings.HasPrefix(first.Digest, "sha256:") {
+	if first.SchemaVersion != "coverage-certificate-v2" || !strings.HasPrefix(first.Digest, "sha256:") {
 		t.Fatalf("schema/digest = %q %q", first.SchemaVersion, first.Digest)
 	}
 	if got, want := first.Domains, []string{"proto-contract", "scip-proto-field"}; !reflect.DeepEqual(got, want) {
@@ -124,6 +136,203 @@ func TestCoverageCertificateDeterministicOverVisibleUniverse(t *testing.T) {
 		alpha.RunID == "" || alpha.CorpusFileCount != 9 || alpha.CandidateFileCount != 4 ||
 		alpha.ReadFileCount != 5 || alpha.ReadBytes != 1234 || alpha.SourceScopeDigest != "sha256:scope-alpha" {
 		t.Fatalf("alpha proto-contract run = %+v", alpha)
+	}
+}
+
+func TestCoverageCertificateBindsFocusedUnitAndCandidateScope(t *testing.T) {
+	unitA, err := (analysisunit.Config{
+		Name:       "payments",
+		Primary:    []string{"services/payments/src"},
+		Supporting: []string{"contracts/payment.proto", "services/payments/index.scip"},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "services/payments/index.scip",
+		},
+	}).Scope("alpha").State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	unitB, err := (analysisunit.Config{
+		Name:       "billing",
+		Primary:    []string{"services/billing"},
+		Supporting: []string{"contracts/billing.proto"},
+	}).Scope("alpha").State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	digestA := "sha256:" + strings.Repeat("a", 64)
+	digestB := "sha256:" + strings.Repeat("b", 64)
+	run := certRun("alpha", "proto-contract", commitA, store.CoverageManifest{
+		SourceScopeDigest:        digestA,
+		ScopePosture:             "focused-local",
+		CandidateManifestDigest:  digestB,
+		CandidatePlane:           "local",
+		ScopeCorpusFileCount:     3,
+		ScopeCorpusDeclaredBytes: 300,
+		ScopeCorpusDigest:        digestA,
+		PlannedFileCount:         2,
+		PlannedRequiredFileCount: 1,
+		PlannedDeclaredBytes:     200,
+		PlannedScopeDigest:       digestB,
+		TypedInputKind:           analysisunit.TypedIndexKindSCIP,
+		TypedInputPath:           "services/payments/index.scip",
+		TypedInputObjectID:       strings.Repeat("c", 40),
+		TypedInputDeclaredBytes:  100,
+		TypedInputDigest:         digestA,
+		TypedInputPresent:        true,
+		CorpusFileCount:          3,
+		CandidateFileCount:       1,
+		ReadFileCount:            2,
+		ReadBytes:                200,
+	})
+	run.UnitDigest = unitA.Digest
+	source := &certificateRunSource{
+		runs: map[string]store.ExtractionRun{
+			certKey("alpha", "proto-contract"): run,
+		},
+	}
+	focused, err := BuildCoverageCertificate(
+		context.Background(),
+		source,
+		[]store.Repo{{
+			Name: "alpha", IndexedCommitHash: commitA,
+			IndexedAnalysisUnit: unitA,
+		}},
+		[]string{"proto-contract"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository := focused.Repositories[0]
+	if repository.ScopePosture != "focused" ||
+		repository.AnalysisUnit == nil ||
+		repository.AnalysisUnit.Digest != unitA.Digest ||
+		repository.AnalysisUnit.TypedIndexPath != "services/payments/index.scip" {
+		t.Fatalf("focused repository scope = %+v", repository)
+	}
+	covered := repository.Runs[0]
+	if !covered.Fresh ||
+		covered.UnitDigest != unitA.Digest ||
+		covered.EvidenceScopePosture != "focused-local" ||
+		covered.CandidateScope == nil ||
+		covered.CandidateScope.ManifestDigest != digestB ||
+		covered.CandidateScope.PlannedFileCount != 2 ||
+		covered.CandidateScope.TypedInput == nil ||
+		!covered.CandidateScope.TypedInput.Present {
+		t.Fatalf("focused run coverage = %+v", covered)
+	}
+
+	other, err := BuildCoverageCertificate(
+		context.Background(),
+		source,
+		[]store.Repo{{
+			Name: "alpha", IndexedCommitHash: commitA,
+			IndexedAnalysisUnit: unitB,
+		}},
+		[]string{"proto-contract"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other.Repositories[0].Runs[0].Status != "unpublished" ||
+		other.Repositories[0].Runs[0].UnitDigest != unitB.Digest ||
+		other.Digest == focused.Digest {
+		t.Fatalf("different same-HEAD unit reused focused evidence: %+v", other)
+	}
+}
+
+func TestCoverageCertificateDisclosesApplicableAbsentTypedInput(
+	t *testing.T,
+) {
+	unit, err := (analysisunit.Config{
+		Name:    "payments",
+		Primary: []string{"services/payments"},
+	}).Scope("alpha").State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := "sha256:" + strings.Repeat("a", 64)
+	manifestDigest := "sha256:" + strings.Repeat("b", 64)
+	run := certRun(
+		"alpha",
+		"scip-proto-field",
+		commitA,
+		store.CoverageManifest{
+			SourceScopeDigest:       digest,
+			ScopePosture:            "focused-local",
+			CandidateManifestDigest: manifestDigest,
+			CandidatePlane:          "local",
+			ScopeCorpusDigest:       digest,
+			PlannedScopeDigest:      digest,
+			TypedInputKind:          analysisunit.TypedIndexKindSCIP,
+			Protocols:               []string{"scip-index-absent"},
+		},
+	)
+	run.UnitDigest = unit.Digest
+	certificate, err := BuildCoverageCertificate(
+		context.Background(),
+		&certificateRunSource{
+			runs: map[string]store.ExtractionRun{
+				certKey("alpha", "scip-proto-field"): run,
+			},
+		},
+		[]store.Repo{{
+			Name: "alpha", IndexedCommitHash: commitA,
+			IndexedAnalysisUnit: unit,
+		}},
+		[]string{"scip-proto-field"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidateScope := certificate.Repositories[0].Runs[0].CandidateScope
+	if candidateScope == nil {
+		t.Fatal("candidate scope omitted for explicit zero-count projection")
+	}
+	typed := candidateScope.TypedInput
+	if typed == nil ||
+		typed.Kind != analysisunit.TypedIndexKindSCIP ||
+		typed.Present ||
+		typed.Path != "" ||
+		typed.ObjectID != "" ||
+		typed.DeclaredBytes != 0 ||
+		typed.Digest != "" {
+		t.Fatalf("applicable absent typed input = %+v", typed)
+	}
+	data, err := json.Marshal(certificate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(
+		string(data),
+		`"typed_input":{"kind":"scip","declared_bytes":0,"present":false}`,
+	) {
+		t.Fatalf("certificate omitted explicit typed absence: %s", data)
+	}
+}
+
+func TestCoverageCertificateRefusesInvalidStoredCoverage(t *testing.T) {
+	const (
+		repository = "alpha"
+		domain     = "proto-contract"
+	)
+	_, err := BuildCoverageCertificate(
+		context.Background(),
+		&certificateRunSource{
+			runErrors: map[string]error{
+				certKey(repository, domain): fmt.Errorf(
+					"latest published run: invalid stored coverage",
+				),
+			},
+		},
+		[]store.Repo{{
+			Name: repository, IndexedCommitHash: commitA,
+		}},
+		[]string{domain},
+	)
+	if err == nil ||
+		!strings.Contains(err.Error(), "invalid stored coverage") {
+		t.Fatalf("invalid stored coverage certificate = %v", err)
 	}
 }
 
@@ -418,7 +627,7 @@ func TestCoverageCertificateRejectsInconsistentInput(t *testing.T) {
 		{name: "duplicate repo", visible: []store.Repo{{Name: "alpha"}, {Name: "alpha"}}, domains: []string{"d"}},
 		{name: "deleting repo", visible: []store.Repo{{Name: "alpha", Deleting: true}}, domains: []string{"d"}},
 		{
-			name: "run repo mismatch", visible: []store.Repo{{Name: "alpha"}}, domains: []string{"d"},
+			name: "run repo mismatch", visible: []store.Repo{{Name: "alpha", IndexedCommitHash: commitA}}, domains: []string{"d"},
 			runs: map[string]store.ExtractionRun{certKey("alpha", "d"): func() store.ExtractionRun {
 				bad := run
 				bad.Repo = "other"
@@ -426,7 +635,7 @@ func TestCoverageCertificateRejectsInconsistentInput(t *testing.T) {
 			}()},
 		},
 		{
-			name: "unpublished run status", visible: []store.Repo{{Name: "alpha"}}, domains: []string{"d"},
+			name: "unpublished run status", visible: []store.Repo{{Name: "alpha", IndexedCommitHash: commitA}}, domains: []string{"d"},
 			runs: map[string]store.ExtractionRun{certKey("alpha", "d"): func() store.ExtractionRun {
 				bad := run
 				bad.Status = "staged"
@@ -434,7 +643,7 @@ func TestCoverageCertificateRejectsInconsistentInput(t *testing.T) {
 			}()},
 		},
 		{
-			name: "attempt repo mismatch", visible: []store.Repo{{Name: "alpha"}}, domains: []string{"d"},
+			name: "attempt repo mismatch", visible: []store.Repo{{Name: "alpha", IndexedCommitHash: commitA}}, domains: []string{"d"},
 			attempts: map[string]store.ExtractionAttempt{certKey("alpha", "d"): {
 				RunID: "attempt", Repo: "other", Commit: commitA, Domain: "d",
 				Extractor: "d@2", Status: "aborted",

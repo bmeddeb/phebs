@@ -26,6 +26,7 @@ type Publication struct {
 	root     string
 	manifest Manifest
 	state    State
+	unit     *analysisUnitView
 }
 
 // DomainView is one exact domain/version projection of a publication.
@@ -38,6 +39,7 @@ type analysisUnitView struct {
 	primary    []string
 	supporting []string
 	known      bool
+	whole      bool
 }
 
 func (publication *Publication) Manifest() Manifest {
@@ -61,8 +63,72 @@ func (publication *Publication) Domain(domain, version string) (*DomainView, err
 	return nil, fmt.Errorf("candidate domain %s/%s: %w", domain, version, os.ErrNotExist)
 }
 
-// ForEachRepositoryRecord replays the repository view in its canonical
-// artifact order. T30.4 deliberately does not filter on InUnit.
+// Scope returns the exact manifest-bound projection consumed by this domain.
+func (view *DomainView) Scope() ScopeSummary {
+	if view == nil || view.publication == nil {
+		return ScopeSummary{}
+	}
+	manifest := view.publication.manifest
+	for _, summary := range manifest.Domains {
+		if summary.Domain != view.identity.Domain ||
+			summary.Version != view.identity.Version {
+			continue
+		}
+		corpus := manifest.Corpus
+		if view.identity.Plane == PlaneLocal && manifest.UnitDigest != "" {
+			corpus = manifest.UnitCorpus
+		}
+		return ScopeSummary{
+			ManifestDigest: manifest.Digest,
+			UnitDigest:     manifest.UnitDigest,
+			Corpus:         corpus,
+			Domain:         summary,
+		}
+	}
+	return ScopeSummary{}
+}
+
+// TypedInput returns the actual-path envelope for one declared parser input.
+// A nil result means this domain does not consume the kind. A nonnil envelope
+// with Present=false is an applicable input that has no selected/present blob
+// in this generation.
+func (view *DomainView) TypedInput(kind string) (*TypedInput, error) {
+	if view == nil || view.publication == nil {
+		return nil, errors.New("candidate domain view is invalid")
+	}
+	if !slices.Contains(view.identity.TypedInputs, kind) {
+		return nil, nil
+	}
+	for _, input := range view.publication.manifest.TypedInputs {
+		if input.Kind == kind &&
+			slices.Contains(input.Domains, view.identity.Domain) {
+			cloned := input
+			cloned.Domains = slices.Clone(input.Domains)
+			return &cloned, nil
+		}
+	}
+	return &TypedInput{Kind: kind}, nil
+}
+
+// PathInScope reports whether a typed-index document belongs to the committed
+// unit. Whole-repository publications admit every safe repository path.
+func (publication *Publication) PathInScope(filePath string) bool {
+	if publication == nil || !safePath(filePath) || publication.unit == nil ||
+		!publication.unit.known {
+		return false
+	}
+	if publication.unit.whole {
+		return true
+	}
+	inUnit, _, _ := classifyUnitPath(
+		filePath, publication.unit.primary, publication.unit.supporting,
+	)
+	return inUnit
+}
+
+// ForEachRepositoryRecord replays the domain's canonical view. Local domains
+// are filtered to validated unit records; caller and repository planes retain
+// their repository view until T30.6.
 func (view *DomainView) ForEachRepositoryRecord(
 	ctx context.Context,
 	visit func(Record) error,
@@ -90,6 +156,11 @@ func (view *DomainView) ForEachRepositoryRecord(
 					return err
 				}
 				if !slices.Contains(record.Domains, view.identity.Domain) {
+					return nil
+				}
+				if view.identity.Plane == PlaneLocal &&
+					view.publication.manifest.UnitDigest != "" &&
+					!record.InUnit {
 					return nil
 				}
 				record.Required = slices.Contains(
@@ -299,10 +370,121 @@ func validateArtifactSet(
 			ErrInvalidManifest, recomputed, manifest.Domains,
 		)
 	}
+	if err := validateTypedInputs(manifest, unit); err != nil {
+		return err
+	}
+	if err := validateUnitCorpus(ctx, manifest); err != nil {
+		return err
+	}
 	return validateDirectoryMembership(
 		ctx, directory, manifest.Repository, manifest.GenerationDigest,
 		allowed, exactDirectory,
 	)
+}
+
+func validateTypedInputs(manifest Manifest, unit *analysisUnitView) error {
+	if manifest.TypedInputs == nil {
+		return fmt.Errorf("%w: typed inputs are not canonical", ErrInvalidManifest)
+	}
+	if manifest.TypedIndex == nil {
+		if len(manifest.TypedInputs) != 0 {
+			return fmt.Errorf(
+				"%w: typed input exists without a selection",
+				ErrInvalidManifest,
+			)
+		}
+		return nil
+	}
+	expectedDomains := typedInputDomains(
+		manifest.Policies, manifest.TypedIndex.Kind,
+	)
+	if len(expectedDomains) == 0 {
+		if len(manifest.TypedInputs) != 0 {
+			return fmt.Errorf(
+				"%w: unconsumed typed index has an input envelope",
+				ErrInvalidManifest,
+			)
+		}
+		return nil
+	}
+	if len(manifest.TypedInputs) != 1 {
+		return fmt.Errorf(
+			"%w: typed-index selection must have one envelope",
+			ErrInvalidManifest,
+		)
+	}
+	input := manifest.TypedInputs[0]
+	if input.Kind != manifest.TypedIndex.Kind ||
+		input.Path != manifest.TypedIndex.Path ||
+		!slices.Equal(input.Domains, expectedDomains) ||
+		len(input.Domains) == 0 {
+		return fmt.Errorf("%w: typed input identity mismatch", ErrInvalidManifest)
+	}
+	if input.Present {
+		if !gitobj.IsObjectID(input.OID) ||
+			input.DeclaredBytes < 0 ||
+			input.DeclaredBytes > MaxDeclaredBytesPerArtifact {
+			return fmt.Errorf("%w: malformed typed input", ErrInvalidManifest)
+		}
+	} else if input.OID != "" || input.DeclaredBytes != 0 {
+		return fmt.Errorf("%w: absent typed input has blob identity", ErrInvalidManifest)
+	}
+	if manifest.UnitDigest != "" && !input.Present {
+		return fmt.Errorf(
+			"%w: configured typed input is absent",
+			ErrInvalidManifest,
+		)
+	}
+	expectedInUnit := manifest.UnitDigest == ""
+	expectedShared := false
+	if manifest.UnitDigest != "" {
+		if unit == nil || !unit.known || unit.whole {
+			// State-only validation cannot re-prove paths, but the configured
+			// contract still requires an exact supporting file.
+			expectedInUnit = true
+			expectedShared = true
+		} else {
+			expectedInUnit, expectedShared, _ = classifyUnitPath(
+				input.Path, unit.primary, unit.supporting,
+			)
+		}
+	}
+	if input.InUnit != expectedInUnit || input.Shared != expectedShared {
+		return fmt.Errorf(
+			"%w: typed input unit flags mismatch",
+			ErrInvalidManifest,
+		)
+	}
+	return nil
+}
+
+func validateUnitCorpus(ctx context.Context, manifest Manifest) error {
+	if err := validateCorpusSummary(ctx, manifest.UnitCorpus, ""); err != nil {
+		return fmt.Errorf("unit corpus: %w", err)
+	}
+	if manifest.UnitDigest == "" {
+		if manifest.UnitCorpus != manifest.Corpus {
+			return fmt.Errorf(
+				"%w: whole-repository unit corpus mismatch",
+				ErrInvalidManifest,
+			)
+		}
+		return nil
+	}
+	if manifest.UnitCorpus.RegularCount > manifest.Corpus.RegularCount ||
+		manifest.UnitCorpus.RegularDeclaredBytes >
+			manifest.Corpus.RegularDeclaredBytes ||
+		manifest.UnitCorpus.RegularCount == 0 ||
+		manifest.UnitCorpus.GitlinkCount != 0 ||
+		manifest.UnitCorpus.GitlinkDeclaredBytes != 0 ||
+		manifest.UnitCorpus.SymlinkCount != 0 ||
+		manifest.UnitCorpus.SymlinkDeclaredBytes != 0 {
+		return fmt.Errorf(
+			"%w: unit corpus exceeds repository corpus",
+			ErrInvalidManifest,
+		)
+	}
+	return nil
 }
 
 type prefixBound struct {
@@ -740,7 +922,7 @@ func validateDirectoryMembership(
 
 func unitView(expected Expected) (*analysisUnitView, error) {
 	if expected.Unit == nil {
-		return &analysisUnitView{known: true}, nil
+		return &analysisUnitView{known: true, whole: true}, nil
 	}
 	if _, err := validateUnit(expected.Repository, expected.Unit); err != nil {
 		return nil, err
@@ -804,8 +986,18 @@ func forEachCanonicalRecordContext(
 
 func cloneManifest(input Manifest) Manifest {
 	result := input
+	result.TypedIndex = cloneTypedIndexSelection(input.TypedIndex)
 	result.Policies = slices.Clone(input.Policies)
+	for index := range result.Policies {
+		result.Policies[index].TypedInputs =
+			slices.Clone(input.Policies[index].TypedInputs)
+	}
 	result.Domains = slices.Clone(input.Domains)
+	result.TypedInputs = slices.Clone(input.TypedInputs)
+	for index := range result.TypedInputs {
+		result.TypedInputs[index].Domains =
+			slices.Clone(input.TypedInputs[index].Domains)
+	}
 	result.RepositoryMembers = slices.Clone(input.RepositoryMembers)
 	result.CallerLeaves = slices.Clone(input.CallerLeaves)
 	return result

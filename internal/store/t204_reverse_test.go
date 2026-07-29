@@ -31,7 +31,7 @@ func TestT204ReverseAssertionPagesAreStableAndScopeBound(t *testing.T) {
 	if err := s.SetRepoIndexed(ctx, repo, commit, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
-	run, err := s.BeginExtractionRun(ctx, repo, commit, domain, "t204-pages-v1")
+	run, err := beginExtractionRun(s, ctx, repo, commit, domain, "t204-pages-v1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,7 +228,7 @@ func TestT204ReverseTargetUsesCompositeIndexWithinBudget(t *testing.T) {
 	if err := s.SetRepoIndexed(ctx, repo, commit, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
-	run, err := s.BeginExtractionRun(ctx, repo, commit, domain, "t204-scale-v1")
+	run, err := beginExtractionRun(s, ctx, repo, commit, domain, "t204-scale-v1")
 	if err != nil {
 		t.Fatal(err)
 	}

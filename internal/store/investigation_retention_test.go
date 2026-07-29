@@ -13,7 +13,7 @@ func seedPublishedExtractionRun(t *testing.T, s *store.Surreal, repo, commit, ex
 	t.Helper()
 	ctx := context.Background()
 	seedEvidenceRepo(t, s, repo, commit)
-	run, err := s.BeginExtractionRun(ctx, repo, commit, "proto-contract", extractor)
+	run, err := beginExtractionRun(s, ctx, repo, commit, "proto-contract", extractor)
 	if err != nil {
 		t.Fatalf("begin extraction run: %v", err)
 	}
@@ -25,7 +25,7 @@ func seedPublishedExtractionRun(t *testing.T, s *store.Surreal, repo, commit, ex
 
 func supersedeExtractionRun(t *testing.T, s *store.Surreal, repo, commit, extractor string) *store.ExtractionRun {
 	t.Helper()
-	run, err := s.BeginExtractionRun(context.Background(), repo, commit, "proto-contract", extractor)
+	run, err := beginExtractionRun(s, context.Background(), repo, commit, "proto-contract", extractor)
 	if err != nil {
 		t.Fatalf("begin replacement extraction run: %v", err)
 	}
