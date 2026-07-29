@@ -1027,7 +1027,9 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch
 (same JSON shape as `/api/search`), then a final `done` event with aggregate
-stats; errors arrive as an `error` event. Disconnecting cancels the search.
+stats; errors arrive as an `error` event. Batches remain progressive and share
+one global display ceiling, so their arrival order is not the globally ranked
+top-K order returned by `/api/search`. Disconnecting cancels the search.
 
 ```bash
 export PHEBS_TOKEN='phebs_...'

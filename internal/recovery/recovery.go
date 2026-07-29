@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -186,8 +187,22 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		return Manifest{}, err
 	}
 	focusedPath := filepath.Join(stage, FocusedIndexName)
-	if err := focusedindex.CreateArchive(filepath.Join(dataDir, "index"), focusedPath); err != nil {
+	focusedReport, err := focusedindex.CreateArchiveWithReport(
+		filepath.Join(dataDir, "index"), focusedPath,
+	)
+	if err != nil {
 		return Manifest{}, fmt.Errorf("archive focused index publications: %w", err)
+	}
+	if focusedReport.OmittedPublications > 0 ||
+		focusedReport.OmittedArtifacts > 0 ||
+		focusedReport.StaleMarkers > 0 {
+		log.Printf(
+			"backup focused derived state: archived=%d omitted_publications=%d omitted_artifacts=%d stale_markers=%d",
+			focusedReport.Publications,
+			focusedReport.OmittedPublications,
+			focusedReport.OmittedArtifacts,
+			focusedReport.StaleMarkers,
+		)
 	}
 	if err := os.Chmod(focusedPath, 0o600); err != nil {
 		return Manifest{}, fmt.Errorf("protect focused-index artifact: %w", err)

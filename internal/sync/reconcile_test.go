@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -20,6 +21,7 @@ type reconcileStore struct {
 	repo          store.Repo
 	orphan        bool
 	enqueued      int
+	enqueuedForce bool
 	cleared       int
 	deleted       bool
 	canceledKinds []store.JobKind
@@ -116,6 +118,7 @@ func (s *reconcileStore) CancelPendingJobs(_ context.Context, kind store.JobKind
 
 func (s *reconcileStore) EnqueuePending(_ context.Context, kind store.JobKind, target string, force bool) (*store.Job, error) {
 	s.enqueued++
+	s.enqueuedForce = force
 	return &store.Job{Kind: kind, Target: target, Force: force, Status: store.StatusPending}, nil
 }
 
@@ -123,6 +126,7 @@ func (s *reconcileStore) ClearRepoIndexState(context.Context, string) error {
 	s.cleared++
 	s.repo.IndexedCommitHash = ""
 	s.repo.IndexedRevisions = nil
+	s.repo.IndexedAnalysisUnit = nil
 	s.repo.IndexedAt = nil
 	return nil
 }
@@ -357,6 +361,63 @@ func TestReconcileClearsCommittedRevisionWithoutShard(t *testing.T) {
 	}
 	if st.repo.IndexedCommitHash != "" {
 		t.Fatalf("indexed hash = %q, want fail-closed empty state", st.repo.IndexedCommitHash)
+	}
+}
+
+func TestReconcileClearsInvalidFocusedClaimAndForcesReplacement(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := "example.com/team/focused"
+	commit := strings.Repeat("a", 40)
+	unit, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := store.Repo{
+		Name: repository, CloneURL: "https://example.com/team/focused.git",
+		IndexedCommitHash: commit,
+		IndexedRevisions: []store.IndexedRevision{{
+			Selector: "HEAD", Branch: "HEAD", Commit: commit,
+		}},
+		IndexedAnalysisUnit: unit,
+	}
+	dir := RepoDir(dataDir, repo.Name)
+	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if output, err := exec.Command("git", "init", "--bare", dir).CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, output)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(indexDir, focusedindex.ManifestName(repository)),
+		[]byte("{}\n"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	st := &reconcileStore{repo: repo}
+	report, err := ReconcileArtifacts(t.Context(), st, dataDir, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.RevisionRepairs != 1 || st.cleared != 1 ||
+		st.enqueued != 1 || !st.enqueuedForce {
+		t.Fatalf(
+			"report=%+v cleared=%d enqueued=%d force=%v, want one forced focused repair",
+			report, st.cleared, st.enqueued, st.enqueuedForce,
+		)
+	}
+	if st.repo.IndexedCommitHash != "" ||
+		st.repo.IndexedAnalysisUnit != nil {
+		t.Fatalf("invalid focused claim survived: %+v", st.repo)
 	}
 }
 

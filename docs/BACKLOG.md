@@ -2,9 +2,9 @@
 
 Epic 30 is in progress for service-scoped analysis of very large
 monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
-configuration/state boundary, T30.3 shipped focused shard integrity, and
-T30.4 is the next ticket. Completed Epics 0–24, Epic 29, T30.1–T30.3, and P5
-hardening are retained in the
+configuration/state boundary, T30.3 shipped and then adversarially repaired
+focused shard integrity, and T30.4 is the next ticket. Completed Epics 0–24,
+Epic 29, T30.1–T30.3, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -15,9 +15,10 @@ PR-sized and dependency-ordered for a stacked workflow.
 ## Scheduled ticket
 
 **T30.4 · Reusable candidate-partition manifest** is next. T30.3 now gives
-configured repositories a physical focused-search publication; T30.4 creates
-the reusable streamed census and bounded partitions needed by focused
-extraction and the separate repository-wide caller overlay.
+configured repositories an exact generation-bound focused-search publication
+with repository-local validation; T30.4 creates the reusable streamed census
+and bounded partitions needed by focused extraction and the separate
+repository-wide caller overlay.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -570,10 +571,20 @@ search revision.
   commits the ordered `(ordinal, shard digest, shard metadata digest)` set.
   Shards stage outside the visible set; the manifest becomes visible only
   after every member is durable. The search wrapper validates the manifest,
-  exact membership, every content/metadata digest, and the absence of an
-  unexpected member before constructing a searcher. Per-shard metadata
+  exact repository-local membership, every content/metadata digest, and the
+  absence of an unexpected member before binding a query to that exact member
+  set. Validation may be reused only while the committed identity and every
+  already-bound manifest/member/sidecar identity agree. Warm queries inspect
+  only those repository-local identities: an undeclared added file cannot
+  enter the static reader, while exact-extra rejection remains mandatory on
+  cold admission and reconciliation. Shared-directory watcher timing and
+  another repository's transient shard state never grant or deny admission.
+  Per-shard metadata
   agreement alone is insufficient: a missing member leaves the generation
-  unavailable rather than serving a valid-looking subset.
+  unavailable rather than serving a valid-looking subset. Private build and
+  restore workspaces carry a process token, so reconciliation preserves
+  active same-process work and reclaims only prior-process
+  workspace/temporary-marker residue.
 - **Repository-overlay caller partitions** are bounded work units over
   repository-wide caller candidates for one focused declaration set. They are
   neither searchable shards nor independently visible evidence. A caller
@@ -593,7 +604,33 @@ search revision.
   name, document paths, and branch versions remain the canonical repository,
   original full paths, and original commits. The child retains the current OOM
   isolation, bounded output, atomic replacement, and same-SHA reader/writer
-  requirements.
+  requirements. Focused builder policy v2 sets zoekt's document limit to the
+  trusted reader's 64 MiB blob ceiling and preflights the same pinned content
+  classifier before `Add`: accepted text through the size limit is searchable,
+  while an oversized, binary, sub-trigram, or over-20,000-distinct-trigram
+  blob refuses the complete generation rather than being silently dropped.
+  The child retains path/blob plans without preloading the corpus. The pinned
+  builder holds only its current 64 MiB shard batch, with at most one
+  admitted-document overshoot, and flushes synchronously. The child requires
+  its measured out-of-unit counter to remain exactly zero and refuses any
+  control output beyond the matching 1 MiB reader envelope. Cancellation
+  during pre-child Git configuration remains `context.Canceled` rather than a
+  killed-process error that could be mistaken for OOM.
+- Search opens only the exact validated member descriptors in a static
+  no-watcher composite. One 10-second wall budget covers compilation,
+  starter-owned cold validation/materialization, zoekt execution, and
+  result-time identity checks. At most two cache-owned fills run at once. The
+  query that starts a fill may wait within its budget; a concurrent query
+  immediately omits that already-loading repository and continues to warm
+  bindings. A timed-out fill may continue for up to 10 minutes, a later query
+  reuses its completed exact binding, and shutdown cancels and joins the
+  loaders. JSON fan-out has a fixed eight-worker ceiling and incrementally
+  retains only the global top K; SSE retains the shipped progressive
+  per-shard, arrival-order contract under one shared display ceiling. Both
+  focused and whole-result paths recheck current committed posture and
+  revision, so a same-HEAD whole-to-focused transition fails closed to a
+  conservative short result. Cache pruning retires deleted, unindexed, or
+  whole-posture focused bindings after active leases release.
 - A projected Git tree/commit is explicitly not the default fallback: its
   synthetic commit would become the shard version and force provenance
   rewriting across search, source, SCIP, history, evidence, and Workbench
@@ -707,12 +744,15 @@ completed and retained in the
 It introduced no focused physical indexing; configured and unconfigured
 repositories still use the existing whole-repository child.
 
-**T30.3 ✅ · Focused zoekt child and shard integrity** *(2026-07-28)* —
-completed and retained in the
+**T30.3 ✅ · Focused zoekt child and shard integrity** *(2026-07-28; repaired
+2026-07-29)* — completed and retained in the
 [completed backlog](./BACKLOG_COMPLETED.md#t303--focused-zoekt-child-and-shard-integrity).
 Configured repositories now publish only their selected paths through the
-manifest-bound focused child; absent configuration retains whole-repository
-indexing. Typed-index input remains repository-root-unbound.
+manifest-bound focused child and serve each query from the exact validated
+generation. Zoekt-admissible 2–64 MiB focused text remains searchable and
+every content-policy rejection fails the generation explicitly; stale derived
+publications cannot block precious-state backup; absent configuration retains
+whole-repository indexing. Typed-index input remains repository-root-unbound.
 
 **T30.4 · Reusable candidate-partition manifest** *(T30.3 complete · next)* — replace
 per-domain complete-tree retention with one streamed commit census that

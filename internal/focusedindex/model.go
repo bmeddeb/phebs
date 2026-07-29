@@ -25,7 +25,7 @@ const (
 	RequestSchema  = "phebs-focused-index-request-v1"
 	ResultSchema   = "phebs-focused-index-result-v1"
 	ManifestSchema = "phebs-focused-shard-set-v1"
-	BuilderPolicy  = "phebs-focused-builder-v1"
+	BuilderPolicy  = "phebs-focused-builder-v2"
 
 	MemberSuffix = ".phebs-member.json"
 
@@ -188,6 +188,9 @@ func WriteControlFile(path string, value any) error {
 		return err
 	}
 	data = append(data, '\n')
+	if len(data) > maxControlBytes {
+		return fmt.Errorf("focused control file exceeds its %d-byte limit", maxControlBytes)
+	}
 	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
@@ -231,7 +234,7 @@ func ReadResult(path string) (Result, error) {
 	if result.Schema != ResultSchema || result.Repository == "" ||
 		!validDigest(result.UnitDigest) || !validDigest(result.GenerationDigest) ||
 		!validDigest(result.ManifestDigest) || result.OpenedBlobCount < 1 ||
-		result.OpenedBlobBytes < 0 || result.OutOfUnitBlobReads < 0 ||
+		result.OpenedBlobBytes < 0 || result.OutOfUnitBlobReads != 0 ||
 		result.AdmittedDocuments < 1 ||
 		result.OpenedBlobCount != result.AdmittedDocuments ||
 		result.AdmittedSourceBytes < 0 ||
@@ -243,27 +246,47 @@ func ReadResult(path string) (Result, error) {
 }
 
 func readControlFile(path string, destination any) error {
-	fileInfo, err := os.Lstat(path)
-	if err != nil || fileInfo.Mode()&os.ModeSymlink != 0 ||
-		!fileInfo.Mode().IsRegular() || fileInfo.Size() > maxControlBytes {
+	before, err := os.Lstat(path)
+	if err != nil || !before.Mode().IsRegular() ||
+		before.Size() < 0 || before.Size() > maxControlBytes {
 		return errors.New("focused control file is missing, special, or exceeds its limit")
 	}
 	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	raw, err := io.ReadAll(io.LimitReader(file, maxControlBytes+1))
-	closeErr := file.Close()
-	if err != nil {
-		return err
+	opened, statErr := file.Stat()
+	if statErr != nil || !sameControlFileIdentity(before, opened) {
+		_ = file.Close()
+		return errors.New("focused control file changed while opening")
 	}
-	if closeErr != nil {
-		return closeErr
+	raw, err := io.ReadAll(io.LimitReader(file, maxControlBytes+1))
+	after, afterErr := file.Stat()
+	closeErr := file.Close()
+	current, currentErr := os.Lstat(path)
+	if err != nil || afterErr != nil || closeErr != nil || currentErr != nil {
+		return errors.Join(err, afterErr, closeErr, currentErr)
 	}
 	if len(raw) > maxControlBytes {
 		return errors.New("focused control file exceeds its limit")
 	}
+	if int64(len(raw)) != before.Size() {
+		return errors.New("focused control file changed while reading")
+	}
+	if !sameControlFileIdentity(before, after) ||
+		!sameControlFileIdentity(after, current) {
+		return errors.New("focused control file changed while reading")
+	}
 	return decodeJSONStrict(raw, destination)
+}
+
+func sameControlFileIdentity(left, right os.FileInfo) bool {
+	return left != nil && right != nil &&
+		left.Mode().IsRegular() && right.Mode().IsRegular() &&
+		left.Mode() == right.Mode() &&
+		left.Size() == right.Size() &&
+		left.ModTime().Equal(right.ModTime()) &&
+		os.SameFile(left, right)
 }
 
 func decodeJSONStrict(raw []byte, destination any) error {

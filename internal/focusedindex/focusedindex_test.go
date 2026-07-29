@@ -85,6 +85,18 @@ func TestFocusedBuildIntegrityAndExactRecovery(t *testing.T) {
 	if manifest.Digest != result.ManifestDigest || len(manifest.Members) != result.ShardCount {
 		t.Fatalf("manifest/result mismatch: %+v %+v", manifest, result)
 	}
+	unrelated := filepath.Join(stage, "unrelated-transient.zoekt")
+	if err := os.WriteFile(unrelated, []byte("not a readable zoekt shard"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateStage(
+		stage, fixture.scope.Repository, state, fixture.revisions,
+	); err != nil {
+		t.Fatalf("unrelated unreadable shard invalidated focused publication: %v", err)
+	}
+	if err := os.Remove(unrelated); err != nil {
+		t.Fatal(err)
+	}
 	hits := searchIndex(t, ctx, stage, "ADMITTED_HEAD_NEEDLE branch:HEAD")
 	if len(hits) != 1 || hits[0].FileName != "services/payments/src/main.go" ||
 		hits[0].Version != fixture.head {
@@ -138,14 +150,34 @@ func TestFocusedBuildIntegrityAndExactRecovery(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if err := CreateArchive(
-		orphanDir, filepath.Join(t.TempDir(), "focused-index.tar"),
-	); err == nil {
-		t.Fatal("archive accepted an undeclared focused artifact")
+	orphanArchive := filepath.Join(t.TempDir(), "focused-index.tar")
+	orphanReport, err := CreateArchiveWithReport(orphanDir, orphanArchive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if orphanReport.OmittedArtifacts != 1 ||
+		orphanReport.Publications != 0 {
+		t.Fatalf("orphan archive report = %+v", orphanReport)
+	}
+	if err := VerifyArchive(orphanArchive); err != nil {
+		t.Fatalf("verify orphan-omitting archive: %v", err)
 	}
 
 	archivePath := filepath.Join(t.TempDir(), "focused-index.tar")
-	if err := CreateArchive(live, archivePath); err != nil {
+	if err := startPublication(live, fixture.scope.Repository); err != nil {
+		t.Fatal(err)
+	}
+	archiveReport, err := CreateArchiveWithReport(live, archivePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if archiveReport.Publications != 1 ||
+		archiveReport.StaleMarkers != 1 ||
+		archiveReport.OmittedPublications != 0 ||
+		archiveReport.OmittedArtifacts != 0 {
+		t.Fatalf("stale-marker archive report = %+v", archiveReport)
+	}
+	if err := FinishPublication(live, fixture.scope.Repository); err != nil {
 		t.Fatal(err)
 	}
 	restored := filepath.Join(t.TempDir(), "index")
@@ -194,6 +226,231 @@ func TestFocusedBuildIntegrityAndExactRecovery(t *testing.T) {
 	}
 	// Manifest digests are deliberately not compared: zoekt embeds build
 	// identity/time, so a fresh publication is semantic equality, not restore.
+}
+
+func TestFocusedBuildIndexesBlobAboveZoektDefaultSize(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	repo := t.TempDir()
+	git(t, repo, "init", "-b", "main")
+	content := []byte("package large\n")
+	for len(content) < 3<<20 {
+		content = append(content, "// ordinary focused filler line\n"...)
+	}
+	content = append(content, "const FocusedLargeBlobNeedle = \"FOCUSED_LARGE_BLOB_NEEDLE\"\n"...)
+	path := filepath.Join(repo, "src", "large.go")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	git(t, repo, "add", ".")
+	git(t, repo, "commit", "-m", "large focused source")
+	head := git(t, repo, "rev-parse", "HEAD")
+	scope := analysisunit.Scope{
+		Repository: "example.com/neutral/large",
+		Name:       "large",
+		Primary:    []string{"src"},
+	}
+	stage := newOutputDir(t)
+	result, err := Build(ctx, Request{
+		Schema:    RequestSchema,
+		RepoDir:   repo,
+		OutputDir: stage,
+		Scope:     scope,
+		Revisions: []store.IndexedRevision{{
+			Selector: "HEAD",
+			Branch:   "HEAD",
+			Commit:   head,
+		}},
+	}, BuildOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.OpenedBlobBytes != int64(len(content)) ||
+		result.AdmittedSourceBytes != int64(len(content)) {
+		t.Fatalf("large focused counters = %+v, want bytes=%d", result, len(content))
+	}
+	hits := searchIndex(t, ctx, stage, "FOCUSED_LARGE_BLOB_NEEDLE")
+	if len(hits) != 1 || hits[0].FileName != "src/large.go" {
+		t.Fatalf("large focused blob hits = %+v", hits)
+	}
+}
+
+func TestFocusedBuildRefusesZoektContentTombstones(t *testing.T) {
+	tests := []struct {
+		name    string
+		content []byte
+		want    string
+	}{
+		{
+			name:    "too small",
+			content: []byte("x"),
+			want:    "contains too few trigrams",
+		},
+		{
+			name:    "binary",
+			content: []byte("ordinary text before a NUL\x00after"),
+			want:    "contains binary content",
+		},
+		{
+			name:    "too many trigrams",
+			content: highTrigramFocusedContent(),
+			want:    "contains too many distinct trigrams",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repo := t.TempDir()
+			git(t, repo, "init", "-b", "main")
+			path := filepath.Join(repo, "src", "input.txt")
+			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(path, test.content, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			git(t, repo, "add", ".")
+			git(t, repo, "commit", "-m", "content policy fixture")
+			head := git(t, repo, "rev-parse", "HEAD")
+			repository := "example.com/neutral/content-policy-" +
+				strings.ReplaceAll(test.name, " ", "-")
+			stage := newOutputDir(t)
+			_, err := Build(t.Context(), Request{
+				Schema:    RequestSchema,
+				RepoDir:   repo,
+				OutputDir: stage,
+				Scope: analysisunit.Scope{
+					Repository: repository,
+					Name:       "source",
+					Primary:    []string{"src"},
+				},
+				Revisions: []store.IndexedRevision{{
+					Selector: "HEAD",
+					Branch:   "HEAD",
+					Commit:   head,
+				}},
+			}, BuildOptions{})
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("Build error = %v, want %q refusal", err, test.want)
+			}
+			if _, err := os.Lstat(
+				filepath.Join(stage, ManifestName(repository)),
+			); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("refused content published a manifest: %v", err)
+			}
+		})
+	}
+}
+
+func highTrigramFocusedContent() []byte {
+	const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	var content strings.Builder
+	content.WriteString("high-trigram text fixture\n")
+	for value := 0; value <= maxFocusedTrigrams; value++ {
+		first := value / (len(alphabet) * len(alphabet))
+		second := value / len(alphabet) % len(alphabet)
+		third := value % len(alphabet)
+		fmt.Fprintf(
+			&content, "token %c%c%c\n",
+			alphabet[first], alphabet[second], alphabet[third],
+		)
+	}
+	return []byte(content.String())
+}
+
+func TestControlFileWriteBoundAndResultCounters(t *testing.T) {
+	oversized := filepath.Join(t.TempDir(), "oversized.json")
+	if err := WriteControlFile(oversized, strings.Repeat("x", maxControlBytes)); err == nil {
+		t.Fatal("oversized control file write succeeded")
+	}
+	if _, err := os.Lstat(oversized); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("oversized control file exists: %v", err)
+	}
+
+	digest := "sha256:" + strings.Repeat("a", 64)
+	valid := Result{
+		Schema:              ResultSchema,
+		Repository:          "example.com/neutral/repo",
+		UnitDigest:          digest,
+		GenerationDigest:    digest,
+		ManifestDigest:      digest,
+		OpenedBlobCount:     2,
+		OpenedBlobBytes:     20,
+		AdmittedDocuments:   2,
+		AdmittedSourceBytes: 20,
+		ShardCount:          1,
+		ShardBytes:          100,
+		BuildWallNanos:      1,
+	}
+	tests := []struct {
+		name   string
+		mutate func(*Result)
+	}{
+		{"opened-count", func(result *Result) { result.OpenedBlobCount++ }},
+		{"opened-bytes", func(result *Result) { result.OpenedBlobBytes++ }},
+		{"out-of-unit", func(result *Result) { result.OutOfUnitBlobReads = 1 }},
+		{"shard-count", func(result *Result) { result.ShardCount = 0 }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := valid
+			test.mutate(&result)
+			path := filepath.Join(t.TempDir(), "result.json")
+			writeJSON(t, path, result)
+			if _, err := ReadResult(path); err == nil {
+				t.Fatal("invalid focused child result was accepted")
+			}
+		})
+	}
+	path := filepath.Join(t.TempDir(), "result.json")
+	writeJSON(t, path, valid)
+	if got, err := ReadResult(path); err != nil || got != valid {
+		t.Fatalf("valid focused child result = %+v, %v", got, err)
+	}
+}
+
+func TestControlFileIdentityRejectsSameShapeReplacement(t *testing.T) {
+	dir := t.TempDir()
+	leftPath := filepath.Join(dir, "left.json")
+	rightPath := filepath.Join(dir, "right.json")
+	for _, path := range []string{leftPath, rightPath} {
+		if err := os.WriteFile(path, []byte("{}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	stamp := time.Unix(1_700_000_000, 0)
+	for _, path := range []string{leftPath, rightPath} {
+		if err := os.Chtimes(path, stamp, stamp); err != nil {
+			t.Fatal(err)
+		}
+	}
+	left, err := os.Lstat(leftPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := os.Lstat(rightPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sameControlFileIdentity(left, right) {
+		t.Fatal("same-shape replacement passed the control-file identity gate")
+	}
+}
+
+func TestDigestRegularFileContextHonorsCancellation(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "shard.zoekt")
+	if err := os.WriteFile(path, []byte("ordinary shard bytes"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, _, err := DigestRegularFileContext(
+		ctx, path,
+	); !errors.Is(err, context.Canceled) {
+		t.Fatalf("DigestRegularFileContext error = %v, want context.Canceled", err)
+	}
 }
 
 func TestScopeOnlyReplacementAndRevisionRefusals(t *testing.T) {

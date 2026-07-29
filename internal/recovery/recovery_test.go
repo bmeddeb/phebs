@@ -215,7 +215,15 @@ analysis_units:
 	if err := index.Index(ctx, store.Repo{Name: repository}, false); err != nil {
 		t.Fatal(err)
 	}
-	before := focusedPublicationBytes(t, filepath.Join(dataDir, "index"), repository)
+	indexDir := filepath.Join(dataDir, "index")
+	before := focusedPublicationBytes(t, indexDir, repository)
+	if err := os.WriteFile(
+		filepath.Join(indexDir, focusedindex.PublishingName(repository)),
+		[]byte(repository+"\nstale-process\n"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
 			DataDir: dataDir, Config: configBytes, PhebsVersion: "test-version",
@@ -247,6 +255,11 @@ analysis_units:
 		if !bytes.Equal(after[name], want) {
 			t.Fatalf("focused restore changed %q", name)
 		}
+	}
+	if _, err := os.Lstat(filepath.Join(
+		dataDir, "index", focusedindex.PublishingName(repository),
+	)); !os.IsNotExist(err) {
+		t.Fatalf("stale focused publication marker was restored: %v", err)
 	}
 	restored, err := store.OpenLocal(ctx, dataDir)
 	if err != nil {

@@ -52,12 +52,27 @@ executable's live `export`. A different config that only points at the same
 `$DATA` is refused. The command publishes a private directory
 containing `database.surql`, `focused-index.tar`, and `manifest.json`. The
 focused archive contains only complete, revalidated focused manifests,
-sidecars, and shard members; it never includes whole-repository shards. The
-manifest binds both artifacts' sizes and SHA-256 digests, the exact raw config
-digest, phebs version/binary digest, SurrealDB version/binary digest, database
-identity, store-writer/evidence/migration versions, and the derived-state
-exclusions. It contains no host binary path or database password. Preserve the
-exact config separately; the backup contains its digest, not its bytes.
+sidecars, and shard members; it never includes whole-repository shards. A
+stale marker is omitted but cannot hide an otherwise complete valid
+publication. Invalid, incomplete, or orphan focused artifacts are rebuildable
+damage, not a reason to discard the already completed precious-state database
+export: backup omits them. The manifest binds both artifacts' sizes and
+SHA-256 digests, the exact raw config digest, phebs version/binary digest,
+SurrealDB version/binary digest, database identity,
+store-writer/evidence/migration versions, and the derived-state exclusions. It
+contains no host binary path or database password. Preserve the exact config
+separately; the backup contains its digest, not its bytes.
+
+When any omission or stale-marker count is nonzero, backup emits one bounded
+focused-derived-state summary:
+
+```text
+backup focused derived state: archived=N omitted_publications=N omitted_artifacts=N stale_markers=N
+```
+
+Any nonzero omission count means the precious database export is still valid,
+but that class of derived focused state was not copied and normal startup will
+reconcile its committed claim.
 
 The export is unencrypted credential-bearing state. Move or encrypt the whole
 directory only under the approved retention and key-custody procedure. Do not
@@ -76,18 +91,27 @@ phebs serve   -config /etc/phebs/phebs.yaml
 Recovery config validation deliberately leaves `${SECRET}` references
 unexpanded, so verification/import can happen in an isolated environment
 without live source or OIDC credentials. Restore verifies the complete backup
-and every compatible binary/store identity before it creates `$DATA`, imports
-through an isolated SurrealDB child, restores focused shard/sidecar bytes
-before their manifests, and opens the store once to apply and validate the
-supported schema/migrations. If import begins and then fails, the partial
-target is retained and every later restore refuses it; quarantine or remove it
-under the witnessed recovery procedure rather than retrying over it.
+and every compatible binary/store identity before it creates `$DATA`. Phebs
+performs a structural tar pass on the same open file descriptor. Only canonical
+regular USTAR/PAX entries are accepted; PAX may carry only an exact `path` and
+exact decimal `size`. Every GNU, sparse, or unknown record is rejected before
+the index directory, stage, or output is created. The archive is limited to
+100,000 entries, 255-byte basenames, 16 GiB per focused entry, and 64 GiB for
+both the physical archive and aggregate declared logical bytes; a small sparse
+input cannot expand into a large filesystem write. A newly created archive is
+self-verified before backup returns. Restore then imports through an isolated
+SurrealDB child, restores focused shard/sidecar bytes before their manifests,
+and opens the store once to apply and validate the supported schema/migrations.
+If import begins and then fails, the partial target is retained and every
+later restore refuses it; quarantine or remove it under the witnessed
+recovery procedure rather than retrying over it.
 
 The subsequent normal `serve` start revalidates restored focused publications
 against committed unit/revision state. It keeps exact valid focused bytes,
-clears and requeues any invalid claim, rebuilds excluded whole-repository
-shards, and boot sync re-clones missing mirrors. Restored API keys and sessions
-remain live — rotate them if the backup's custody was ever in doubt.
+clears and force-requeues any claim whose focused publication was invalid or
+omitted, rebuilds excluded whole-repository shards, and boot sync re-clones
+missing mirrors. Restored API keys and sessions remain live — rotate them if
+the backup's custody was ever in doubt.
 
 The stop-first cold path remains available:
 
@@ -267,6 +291,13 @@ swap and leaves the prior publication available. An interrupted publication
 or failed state commit fails closed and is cleared/requeued rather than
 serving mismatched bytes.
 
+Private `.phebs-build-*` and `.phebs-restore-*` workspaces, plus temporary
+publication markers, carry a process token. Runtime reconciliation preserves
+work owned by the current process and removes only residue owned by a prior
+process after a crash. The startup `artifact reconciliation` summary includes
+the reclaimed count as `lifecycle=N`; these paths are derived and are never
+backup content.
+
 Legacy rows reopen with no unit state and are not rewritten or rebuilt when
 `analysis_units` is absent. Configured repositories use the focused child and
 report `search_index_posture: focused`; unconfigured repositories retain the
@@ -278,12 +309,50 @@ builder policy, and generation digest. Member sidecars bind ordinal/count plus
 content and decoded-metadata digests; one stable manifest declares the exact
 set. Search and reconciliation reject a publication marker, missing/extra
 member, mixed/stale digest, sidecar disagreement, branch/commit mismatch, or
-undeclared shard. `phebs_focused_index_opened_blobs` and
+undeclared repository-owned shard. Search validation is repository-local and
+cached only while committed state and every already-bound
+manifest/member/sidecar identity agree. Warm queries inspect only those known
+repository-local files; undeclared added files cannot enter the static reader
+and remain cold-admission/reconciliation errors. Each query opens only that
+exact validated member set in a static no-watcher composite, so a
+shared-directory watcher delay cannot serve a retired same-commit scope and a
+transient shard belonging to another repository cannot remove this one from
+the query. One 10-second wall budget covers query compilation, starter-owned
+cold validation/materialization, execution, and result-time identity checks.
+At most two cache-owned fills run at once. The query that starts a fill may
+wait within its budget; a concurrent query immediately omits that
+already-loading repository and continues to warm bindings. A timed-out fill
+may continue for up to 10 minutes. A later query reuses its completed exact
+binding, and shutdown cancels and joins those loaders. JSON
+fan-out uses at most eight workers and incrementally retains only its global
+top K. Progressive SSE batches retain arrival-order delivery under one shared
+display ceiling. A whole repository that commits focused posture while a
+query is running is removed at the result gate; that concurrent transition may
+return fewer files, but never retired whole content. Deleted, unindexed, or
+whole-posture cache entries close after their active query leases release.
+`phebs_focused_index_opened_blobs` and
 `phebs_focused_index_opened_blob_bytes` measure successful Git reads at the
 trusted scope-checking boundary; any attempted out-of-unit read fails the
-child and is never published.
+child and is never published. Focused builder policy v2 passes selected
+zoekt-admissible text through 64 MiB with the same explicit size ceiling and
+preflights the pinned content classifier. A larger blob, binary content,
+nonempty content shorter than one trigram, or text above 20,000 distinct
+trigrams refuses the complete replacement rather than disappearing silently
+from content search. The child does not preload the corpus: the pinned builder
+retains one 64 MiB current-shard batch, with at most one admitted-document
+overshoot, and flushes synchronously. It refuses a result or manifest before
+it would exceed the 1 MiB control-file reader envelope.
 
-
+Committed focused state is deliberately fail-closed. A malformed or tampered
+`indexed_analysis_unit` can therefore make repository listing, startup
+reconciliation, search compilation, and repository status refuse together.
+Recover by restoring a validated precious-state backup. If no usable backup
+exists, keep phebs stopped and escalate to a witnessed database-row repair
+that atomically clears only that repository's complete index claim
+(`indexed_commit_hash`, `indexed_revisions`, `indexed_analysis_unit`, and
+`indexed_at`). There is no supported online repair command; do not hand-edit
+one digest or leave a partial claim. Restarting after the atomic repair queues
+a forced focused replacement from configured scope.
 
 ### Experimental contract-intelligence extraction
 
@@ -900,6 +969,11 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | GitHub sync reports a rate-limit wait                             | host requested a reset delay; phebs waits at most 1 minute and retries once, then uses the job backoff | use a PAT/App or reduce listing frequency                                                             |
 | watch mode "doesn't see my edits"                                 | uncommitted changes are never indexed                                                                   | commit (or amend); the watcher reacts to HEAD and admitted-ref moves                                  |
 | a repo temporarily disappears from search during repair           | its shard revision did not match committed DB state                                                    | wait for the forced index job; serving is intentionally fail-closed                                   |
+| backup summary has a nonzero `omitted_*` count                    | invalid, incomplete, or orphan focused artifacts were excluded while precious state still succeeded   | retain the backup; restart or reindex so reconciliation replaces the omitted derived publication      |
+| a focused repo rebuilds after restore                             | its focused generation was invalid/incomplete at backup time and was omitted as derived state          | let the forced replacement finish; the precious database export remains authoritative                 |
+| startup logs `artifact reconciliation: … lifecycle=N`            | a prior process left private build/restore workspace or temporary-marker residue                       | no action if startup continues; phebs reclaimed only prior-process derived residue                     |
+| repository listing/startup reports `invalid committed analysis unit` | the stored focused claim is malformed or was tampered with, so repository reads fail closed instance-wide | restore a validated backup; without one, keep phebs stopped and escalate to the witnessed atomic row repair above |
+| restore rejects a sparse tar member                               | the focused archive uses PAX/GNU sparse expansion, which phebs never accepts                            | recreate the backup with `phebs backup`; do not rewrite or manually extract the archive               |
 | repo tagged `orphaned`                                            | no connection claims it anymore                                                                        | re-add the connection, or enable `sync.cleanup_orphans`                                               |
 | sync fails with `auth: git …` and retries slowly                  | credential failure, classified `auth` (10 m backoff)                                                   | fix the token; reindex/restart to retry immediately                                                   |
 | startup rejects a clone URL containing credentials/query data     | URL secrets are no longer persisted                                                                    | move HTTP credentials to `http_auth`; keep `url` credential-free                                      |

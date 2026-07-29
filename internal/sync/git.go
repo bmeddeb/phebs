@@ -23,13 +23,33 @@ func runGit(ctx context.Context, dir string, args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &out
 	if err := cmd.Run(); err != nil {
-		werr := fmt.Errorf("git %s: %w\n%s", redactArgs(args), err, redactGitOutput(out.String(), args))
-		if isAuthFailure(out.String()) {
-			return "", store.WithClass(store.ClassAuth, werr)
-		}
-		return "", werr
+		return "", gitCommandError(ctx, args, out.String(), err)
 	}
 	return strings.TrimSpace(out.String()), nil
+}
+
+func gitCommandError(
+	ctx context.Context,
+	args []string,
+	output string,
+	err error,
+) error {
+	werr := fmt.Errorf(
+		"git %s: %w\n%s",
+		redactArgs(args),
+		err,
+		redactGitOutput(output, args),
+	)
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		// CommandContext commonly reports a killed child. Cancellation remains
+		// the retry/classification authority while the redacted process error
+		// stays in the message for diagnosis.
+		return fmt.Errorf("%v: %w", werr, ctxErr)
+	}
+	if isAuthFailure(output) {
+		return store.WithClass(store.ClassAuth, werr)
+	}
+	return werr
 }
 
 func redactGitOutput(output string, args []string) string {

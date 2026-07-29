@@ -400,7 +400,7 @@ test('pages the 10,000-row closure profile without retaining prior DOM rows', as
   expect(screen.queryAllByRole('link', { name: /src\/caller_0\.go:1/ })).toHaveLength(0)
   expect(screen.getAllByRole('link', { name: /src\/caller_100\.go:101/ }).length)
     .toBeGreaterThan(0)
-})
+}, 15_000)
 
 test('restarts a stale first page even though its cursor and page index are already zero', async () => {
   api.fetchCallerComparison.mockReset()

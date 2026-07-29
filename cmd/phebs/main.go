@@ -294,10 +294,10 @@ func serve(args []string) error {
 		// the server running against state it could not prove safe.
 		return fmt.Errorf("artifact reconciliation: %w", reconcileErr)
 	}
-	if report.OrphanRepos+report.UntrackedShards+report.UntrackedMirrors+report.CredentialsFixed+report.InvalidRepos+report.RevisionRepairs > 0 {
-		log.Printf("artifact reconciliation: orphans=%d shards=%d mirrors=%d credentials_scrubbed=%d invalid_repos=%d revision_repairs=%d deleted=%d",
+	if report.OrphanRepos+report.UntrackedShards+report.UntrackedMirrors+report.CredentialsFixed+report.InvalidRepos+report.RevisionRepairs+report.LifecycleArtifacts > 0 {
+		log.Printf("artifact reconciliation: orphans=%d shards=%d mirrors=%d credentials_scrubbed=%d invalid_repos=%d revision_repairs=%d lifecycle=%d deleted=%d",
 			report.OrphanRepos, report.UntrackedShards, report.UntrackedMirrors, report.CredentialsFixed,
-			report.InvalidRepos, report.RevisionRepairs, report.Deleted)
+			report.InvalidRepos, report.RevisionRepairs, report.LifecycleArtifacts, report.Deleted)
 	}
 	analysisUnits := cfg.AnalysisUnitScopes()
 	unitRepositories := make([]string, 0, len(analysisUnits))

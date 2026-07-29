@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	maxScopeTreeBytes = 16 << 20
-	maxFocusedBlob    = 64 << 20
-	defaultShardMax   = 64 << 20
+	maxScopeTreeBytes  = 16 << 20
+	maxFocusedBlob     = 64 << 20
+	maxFocusedTrigrams = 20_000
+	defaultShardMax    = 64 << 20
 )
 
 type BuildOptions struct {
@@ -45,7 +46,6 @@ type document struct {
 	path     string
 	oid      string
 	branches []string
-	content  []byte
 }
 
 type blobKey struct {
@@ -123,10 +123,7 @@ func Build(ctx context.Context, request Request, options BuildOptions) (Result, 
 	if err != nil {
 		return Result{}, err
 	}
-	documents, reader, err := readDocuments(ctx, request.RepoDir, records, request.Revisions)
-	if err != nil {
-		return Result{}, err
-	}
+	documents, reader := planDocuments(request.RepoDir, records, request.Revisions)
 	repository := zoekt.Repository{
 		Name: request.Scope.Repository,
 		Metadata: map[string]string{
@@ -148,6 +145,8 @@ func Build(ctx context.Context, request Request, options BuildOptions) (Result, 
 	builder, err := index.NewBuilder(index.Options{
 		IndexDir:              request.OutputDir,
 		ShardPrefixOverride:   ShardPrefix(request.Scope.Repository, generationDigest),
+		SizeMax:               maxFocusedBlob,
+		TrigramMax:            maxFocusedTrigrams,
 		ShardMax:              shardMax,
 		Parallelism:           1,
 		DisableCTags:          true,
@@ -163,18 +162,31 @@ func Build(ctx context.Context, request Request, options BuildOptions) (Result, 
 		}
 	}()
 	var admittedBytes int64
+	var contentChecker index.DocChecker
 	for _, current := range documents {
 		if err := ctx.Err(); err != nil {
 			return Result{}, err
 		}
+		content, err := reader.Read(ctx, current.path, current.oid)
+		if err != nil {
+			return Result{}, fmt.Errorf("read focused blob %q: %w", current.path, err)
+		}
+		if reason := contentChecker.Check(
+			content, maxFocusedTrigrams, false,
+		); reason != index.SkipReasonNone {
+			return Result{}, fmt.Errorf(
+				"focused content policy refuses %q: %s",
+				current.path, focusedSkipReason(reason),
+			)
+		}
 		if err := builder.Add(index.Document{
 			Name:     current.path,
-			Content:  current.content,
+			Content:  content,
 			Branches: slices.Clone(current.branches),
 		}); err != nil {
 			return Result{}, fmt.Errorf("add focused document %q: %w", current.path, err)
 		}
-		admittedBytes += int64(len(current.content))
+		admittedBytes += int64(len(content))
 	}
 	if os.Getenv("PHEBS_FOCUSED_INJECT_FAILURE") == "1" {
 		return Result{}, errors.New("injected focused-index child failure")
@@ -208,6 +220,23 @@ func Build(ctx context.Context, request Request, options BuildOptions) (Result, 
 		ShardBytes:          shardBytes,
 		BuildWallNanos:      time.Since(started).Nanoseconds(),
 	}, nil
+}
+
+func focusedSkipReason(reason index.SkipReason) string {
+	switch reason {
+	case index.SkipReasonTooLarge:
+		return "exceeds the maximum size limit"
+	case index.SkipReasonTooSmall:
+		return "contains too few trigrams"
+	case index.SkipReasonBinary:
+		return "contains binary content"
+	case index.SkipReasonTooManyTrigrams:
+		return "contains too many distinct trigrams"
+	case index.SkipReasonMissing:
+		return "content is missing"
+	default:
+		return fmt.Sprintf("unknown skip reason %d", reason)
+	}
 }
 
 func resolveScopeRecords(
@@ -298,12 +327,11 @@ func safeRepositoryPath(value string) bool {
 	return true
 }
 
-func readDocuments(
-	ctx context.Context,
+func planDocuments(
 	repoDir string,
 	records map[string]map[string]treeRecord,
 	revisions []store.IndexedRevision,
-) ([]document, *countingBlobReader, error) {
+) ([]document, *countingBlobReader) {
 	allowed := make(map[blobKey]bool)
 	for _, revisionRecords := range records {
 		for _, record := range revisionRecords {
@@ -332,13 +360,7 @@ func readDocuments(
 			key := blobKey{path: path, oid: record.oid}
 			entry := grouped[key]
 			if entry == nil {
-				content, err := reader.Read(ctx, path, record.oid)
-				if err != nil {
-					return nil, reader, fmt.Errorf(
-						"read focused blob %s:%s: %w", selector, path, err,
-					)
-				}
-				entry = &document{path: path, oid: record.oid, content: content}
+				entry = &document{path: path, oid: record.oid}
 				grouped[key] = entry
 			}
 			entry.branches = append(entry.branches, branchBySelector[selector])
@@ -355,7 +377,7 @@ func readDocuments(
 		}
 		return documents[left].oid < documents[right].oid
 	})
-	return documents, reader, nil
+	return documents, reader
 }
 
 func listTree(

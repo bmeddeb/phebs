@@ -18,15 +18,8 @@ import (
 )
 
 func NewBuildWorkspace(indexDir string) (workspace, outputDir string, err error) {
-	if err := ensureRealDirectory(indexDir); err != nil {
-		return "", "", err
-	}
-	workspace, err = os.MkdirTemp(indexDir, ".phebs-build-")
+	workspace, err = newLifecycleWorkspace(indexDir, buildWorkspacePrefix)
 	if err != nil {
-		return "", "", err
-	}
-	if err := os.Chmod(workspace, 0o700); err != nil {
-		_ = os.RemoveAll(workspace)
 		return "", "", err
 	}
 	outputDir = filepath.Join(workspace, "shards")
@@ -188,7 +181,10 @@ func startPublication(indexDir, repository string) error {
 		return err
 	}
 	path := filepath.Join(indexDir, PublishingName(repository))
-	temp, err := os.CreateTemp(indexDir, "."+PublishingName(repository)+".")
+	temp, err := os.CreateTemp(
+		indexDir,
+		"."+PublishingName(repository)+"."+lifecycleOwner+".",
+	)
 	if err != nil {
 		return err
 	}
@@ -198,7 +194,7 @@ func startPublication(indexDir, repository string) error {
 		_ = temp.Close()
 		return err
 	}
-	if _, err := temp.WriteString(repository + "\n"); err != nil {
+	if _, err := temp.WriteString(repository + "\n" + lifecycleOwner + "\n"); err != nil {
 		_ = temp.Close()
 		return err
 	}

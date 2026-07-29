@@ -3,12 +3,30 @@ package sync
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestGitCommandErrorCancellationIsAuthoritative(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := gitCommandError(
+		ctx,
+		[]string{"config", "zoekt.name", "example.com/acme/repo"},
+		"",
+		errors.New("signal: killed"),
+	)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("git cancellation error = %v, want context.Canceled", err)
+	}
+	if !strings.Contains(err.Error(), "signal: killed") {
+		t.Fatalf("git cancellation diagnostics lost process error: %v", err)
+	}
+}
 
 func TestSanitizeURL(t *testing.T) {
 	tests := []struct {

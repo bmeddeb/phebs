@@ -3666,13 +3666,24 @@ byte-exact backup/restore distinct from semantic rebuild equality.
 
 ### T30.3 · Focused zoekt child and shard integrity
 
-**T30.3 ✅ · Focused zoekt child and shard integrity** *(2026-07-28)* — shipped
-the T30.1-proven `phebs-focused-index` child in development and release builds.
-Configured analysis units now resolve every selected file/root independently
-at HEAD and each allowlisted branch/tag commit, refuse missing or special
-entries in any lane, and feed only the admitted immutable blobs to the exact
-pinned zoekt builder. Repositories without a configured unit retain the
-existing `zoekt-git-index` path.
+**T30.3 ✅ · Focused zoekt child and shard integrity** *(2026-07-28; repaired
+2026-07-29)* — shipped the T30.1-proven `phebs-focused-index` child in
+development and release builds. Configured analysis units now resolve every
+selected file/root independently at HEAD and each allowlisted branch/tag
+commit, refuse missing or special entries in any lane, and feed only the
+admitted immutable blobs to the exact pinned zoekt builder. Focused builder
+policy v2 explicitly matches zoekt's document `SizeMax` to the trusted
+reader's 64 MiB blob ceiling and preflights the same pinned content classifier
+before `Add`: admitted text through that limit remains content-searchable,
+while an oversized, binary, sub-trigram, or over-20,000-distinct-trigram blob
+refuses the complete build instead of being silently tombstoned. The child
+retains only the path/blob plan without preloading the corpus; the pinned
+builder holds one 64 MiB current-shard batch, with at most one admitted-document
+overshoot, and flushes synchronously. It also refuses a control output before
+that output exceeds the 1 MiB reader envelope. Cancellation during pre-child
+Git configuration remains `context.Canceled` instead of surfacing a
+killed-process error that could be mistaken for OOM. Repositories without a
+configured unit retain the existing `zoekt-git-index` path.
 
 The production Git-object reader is the trusted enforcement and measurement
 boundary: every path/blob pair is checked against the selected tree census
@@ -3693,32 +3704,90 @@ until the matching revision/unit state commits.
 Search admits a focused repository only when no publication marker exists and
 the committed state, exact revision matrix, unit/generation digests,
 manifest/member/sidecar bytes, shard metadata, and absence of extra
-repository-owned shards all agree. Missing, extra, mixed, stale, trailing,
-partial, and state-uncommitted generations fail closed to an empty RepoSet.
-Startup reconciliation rechecks the same contract under the repository lock,
-clears invalid claims, and queues a forced replacement. Orphan cleanup and
-failed state commits remove focused manifests, sidecars, markers, and shards.
+repository-owned shards all agree. The validation cache is repository-local
+and reusable only while the committed identity and every already-bound
+manifest/member/sidecar identity still match. Warm queries Lstat only those
+known repository-local files; an undeclared added file cannot enter the
+static reader, while cold admission and reconciliation retain exact-extra
+rejection. Each query runs against a static composite opened from that exact
+validated member set rather than the asynchronously refreshed
+shared-directory searcher. One 10-second query wall budget covers compilation,
+starter-owned cold validation/materialization, execution, and result-time
+identity checks. At most two cache-owned fills run at once. The query that
+starts a fill may wait within its budget; a concurrent query immediately
+omits that already-loading repository and continues to warm bindings. A
+timed-out fill may continue for up to 10 minutes, a later query reuses its
+completed exact binding, and shutdown cancels and joins the loaders. JSON
+fan-out has a fixed eight-worker ceiling and incrementally retains only
+the globally ranked top K; SSE keeps the shipped progressive per-member
+arrival-order contract and one shared display ceiling. Both focused and whole
+results recheck current committed posture/revision before admission, so a
+same-HEAD whole-to-focused transition fails closed to a conservative short
+result rather than serving retired whole content. Deleted, unindexed, and
+whole-posture cache entries retire as soon as their active leases release.
+Missing, extra, mixed, stale, trailing, partial, and state-uncommitted
+generations fail closed to an empty RepoSet. Another repository's transient
+or malformed shard cannot decide this repository's validation. Startup
+reconciliation rechecks the same contract under the repository lock, clears
+invalid claims, and queues a forced replacement. A regression constructs the
+invalid focused claim and proves both complete state clearing and the forced
+enqueue. Build and restore workspaces carry a process token; reconciliation
+preserves active same-process work, reclaims only
+prior-process workspace and temporary-marker residue, and reports its bounded
+lifecycle count. Orphan cleanup and failed state commits remove focused
+manifests, sidecars, markers, and shards.
 
 Backup manifest v2 adds `focused-index.tar`. A crash-safe cross-process lock
 excludes publication/state mutation across the database export and focused
-snapshot. Online backup revalidates each self-contained scope/generation
-manifest before and after copying; offline
-verify extracts into a private directory and revalidates the exact inventory.
-Restore installs shard and sidecar bytes before manifests, preserving every
-focused publication byte-for-byte. Whole-repository shards remain excluded
-derived state. A separate independent-rebuild test asserts identical
-unit/generation/search semantics without comparing publication digests,
-because upstream builder identity/time may legitimately change bytes.
+snapshot. Online backup includes each self-contained scope/generation that
+revalidates even when a crashed writer left a stale publication marker; the
+marker itself is omitted. Invalid, incomplete, or orphan rebuildable artifacts
+are omitted instead of discarding the already exported precious database
+state. A bounded diagnostic reports archived publications, omitted
+publications/artifacts, and stale markers whenever any omission/marker count is
+nonzero. Offline verify performs a structural first pass that permits only
+canonical regular USTAR/PAX entries with exact PAX `path`/decimal-`size`
+records and rejects every GNU, sparse, or unknown record before creating
+output. It enforces 100,000 entries, 255-byte names, 16 GiB per entry, and
+64 GiB physical and aggregate-logical archive ceilings, then revalidates the
+exact inventory; the archive creator also self-verifies the completed output
+before returning.
+Restore installs included shard and sidecar bytes before manifests, preserving
+every included focused publication byte-for-byte; normal startup clears and
+force-requeues a committed focused claim whose derived bytes were omitted.
+Whole-repository shards remain excluded derived state. A separate independent
+rebuild test asserts identical unit/generation/search semantics without
+comparing publication digests, because upstream builder identity/time may
+legitimately change bytes.
 
 AC met: production reader-boundary counters prove zero out-of-unit reads; a
-physical out-of-scope needle is absent while an admitted needle searches at
-its original path and commit; scope-only replacement removes prior members;
-HEAD/branch/tag scope and missing-revision refusal are pinned; size-forced
-splits retain exact metadata and membership; missing/extra/stale/sidecar/
-trailing-JSON and publication-marker cases never serve; child failure/OOM
-classification remains process-bound; failed state publication cleans both
-claims and bytes; focused backup/restore is byte-exact and semantic rebuild is
+physical out-of-scope needle is absent while admitted small and 3 MiB needles
+search at their original paths and commits; scope-only replacement removes
+prior members without a watcher retirement window; HEAD/branch/tag scope and
+missing-revision refusal are pinned; size-forced splits retain exact metadata
+and membership; missing/extra/stale/sidecar/trailing-JSON and
+publication-marker cases never serve; validation reuse avoids per-query
+full-shard hashing and repeated shared-directory scans and is isolated from
+unrelated repositories; bounded merge, cache retirement, and same-HEAD
+whole-to-focused regressions pin the query resource and posture boundaries; child
+failure/OOM classification remains process-bound; failed state publication
+cleans both claims and bytes; an invalid focused claim is cleared and forcibly
+requeued; stale derived state cannot block backup; sparse restore input is
+refused; focused backup/restore is byte-exact and semantic rebuild is
 separate; release manifests and smoke environments require the child; dated
 PLAN decision and owning Configuration, Operations, Workflows, Manual,
-roadmap, and backlog documents updated; full merge bar passed. Search status
-is now `focused`; typed input remains `repository-root-unbound` for T30.5.
+roadmap, and backlog documents updated. Search status is now `focused`; typed
+input remains `repository-root-unbound` for T30.5.
+
+Repair receipt (2026-07-29): an adversarial post-gate review reproduced the
+2 MiB zoekt-default content loss and sparse-tar expansion, and identified the
+validation-to-query generation race, per-query rehash cost, cross-repository
+validation coupling, stale-marker backup failure, and missing invalid-claim
+reconciliation regression. The repaired contract above closes all seven
+without widening product scope; the same pass removed aggregate blob-content
+retention, prevented self-unreadable oversized control output, bounded
+fan-out/top-K retention, made streamed member checks linear, retired unused
+focused mmaps, prevented whole-to-focused stale-reader escape, and added
+crash-residue reclamation without deleting same-process staging. Publication
+bytes remain recovery content, not semantic identity; T30.4 remains the next
+ticket.

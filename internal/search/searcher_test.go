@@ -205,6 +205,26 @@ func TestFocusedManifestAndPublicationMarkerFailClosed(t *testing.T) {
 	}
 	assertFiles("FocusedSearchNeedle", 1)
 	assertFiles("OutsideSearchNeedle", 0)
+	unrelated := filepath.Join(
+		dataDir, "index",
+		focusedindex.RepositoryPrefix("example.com/acme/unrelated")+
+			"transient.zoekt",
+	)
+	if err := os.WriteFile(
+		unrelated, []byte("not a readable zoekt shard"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := focusedindex.ValidatePublished(
+		filepath.Join(dataDir, "index"), repository,
+		st.repo.IndexedAnalysisUnit, st.repo.IndexedRevisions,
+	); err != nil {
+		t.Fatalf("unrelated unreadable shard invalidated publication: %v", err)
+	}
+	assertFiles("FocusedSearchNeedle", 1)
+	if err := os.Remove(unrelated); err != nil {
+		t.Fatal(err)
+	}
 
 	manifestPath := filepath.Join(
 		dataDir, "index", focusedindex.ManifestName(repository),
@@ -229,6 +249,117 @@ func TestFocusedManifestAndPublicationMarkerFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertFiles("FocusedSearchNeedle", 0)
+}
+
+func TestFocusedSameCommitNarrowingIgnoresStaleSharedSearcher(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	for path, content := range map[string]string{
+		"service/main.go": "package service\nconst RetainedNeedle = true\n",
+		"secret/old.go":   "package secret\nconst RetiredNeedle = true\n",
+	} {
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(origin, path)), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(origin, path), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "fixture")
+
+	dataDir := t.TempDir()
+	repository := "example.com/acme/same-head-narrowing"
+	if err := sync.Mirror(
+		ctx, "file://"+origin, sync.RepoDir(dataDir, repository),
+	); err != nil {
+		t.Fatal(err)
+	}
+	st := &revisionStore{repo: store.Repo{
+		Name: repository, CloneURL: "file://" + origin,
+		DefaultBranch: "main", IsPublic: true,
+	}}
+	whole, err := indexer.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	focused, err := focusedindex.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix := &indexer.Indexer{
+		DataDir: dataDir, Bin: whole, FocusedBin: focused, Store: st,
+		AnalysisUnits: map[string]analysisunit.Scope{
+			repository: {
+				Repository: repository, Name: "broad",
+				Primary: []string{"secret", "service"},
+			},
+		},
+	}
+	if err := ix.Index(ctx, store.Repo{Name: repository}, false); err != nil {
+		t.Fatal(err)
+	}
+	commit := st.repo.IndexedCommitHash
+	indexDir := filepath.Join(dataDir, "index")
+	searcher, err := search.Open(indexDir, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+
+	// Keep the process-lifetime DirectorySearcher deliberately attached to a
+	// byte-exact broad generation while publishing the narrow generation at
+	// the original path. This deterministically models a missed fsnotify event
+	// and the one-minute rescan window.
+	staleDir := filepath.Join(dataDir, "stale-index")
+	if err := os.Rename(indexDir, staleDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ix.AnalysisUnits[repository] = analysisunit.Scope{
+		Repository: repository, Name: "narrow", Primary: []string{"service"},
+	}
+	if err := ix.Index(ctx, store.Repo{Name: repository}, true); err != nil {
+		t.Fatal(err)
+	}
+	if st.repo.IndexedCommitHash != commit {
+		t.Fatalf(
+			"same-HEAD narrowing changed commit: got %s want %s",
+			st.repo.IndexedCommitHash, commit,
+		)
+	}
+
+	for expression, want := range map[string]int{
+		"RetainedNeedle": 1,
+		"RetiredNeedle":  0,
+	} {
+		result, err := searcher.Search(ctx, expression, search.Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(result.Files) != want {
+			t.Fatalf(
+				"immediate search %q files = %+v, want %d",
+				expression, result.Files, want,
+			)
+		}
+	}
+	var streamed []search.FileResult
+	if _, err := searcher.Stream(
+		ctx, "RetiredNeedle", search.Options{},
+		func(batch *search.Result) {
+			streamed = append(streamed, batch.Files...)
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if len(streamed) != 0 {
+		t.Fatalf("stale shared generation escaped through Stream: %+v", streamed)
+	}
 }
 
 func gitc(t *testing.T, dir string, args ...string) string {

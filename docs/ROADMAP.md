@@ -33,9 +33,19 @@ recorded GO after proving a focused zoekt child and exact shard-set validation
 over a neutral generated corpus. T30.2 now supplies strict repository-keyed
 analysis-unit configuration, canonical identity, revision-bound committed
 state, same-HEAD rebuild reconciliation, and bounded operator status. T30.3
-now ships the focused child, exact shard-set publication, fail-closed search
-admission, trusted-reader counters, byte-exact focused backup/restore, and
-packaged-binary parity. Configured status says `focused` and
+now ships the focused child, exact shard-set publication, trusted-reader
+counters, byte-exact valid focused backup/restore, and packaged-binary parity.
+Its 2026-07-29 repair binds each query to the exact repository-local validated
+generation, caches validation only while the complete repository-local
+bound manifest/member identities agree without repeating a shared-directory
+scan per focused repository,
+keeps zoekt-admissible selected text through 64 MiB searchable while refusing
+every content-policy tombstone before publication, isolates validation from
+unrelated repositories, bounds JSON fan-out/top-K retention, retires unused
+focused mmaps, gates same-HEAD whole-to-focused results, lets precious-state
+backup omit invalid rebuildable publications, rejects sparse restore input,
+and pins invalid-claim forced reconciliation. Publication content remains
+recovery content rather than semantic identity. Configured status says `focused` and
 `repository-root-unbound`: source search is physically scoped, while root
 SCIP is still not treated as unit-bound. T30.4 is next: produce the reusable
 streamed candidate census and bounded partition manifest.

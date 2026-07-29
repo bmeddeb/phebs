@@ -1,6 +1,7 @@
 package focusedindex
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -105,6 +106,23 @@ func ValidatePublished(
 	state *analysisunit.State,
 	revisions []store.IndexedRevision,
 ) (Manifest, error) {
+	return ValidatePublishedContext(
+		context.Background(), indexDir, repository, state, revisions,
+	)
+}
+
+// ValidatePublishedContext is ValidatePublished with cancellation propagated
+// through repository-local shard hashing. Query admission uses this form so
+// one cold or invalid publication cannot outlive the query-wide work budget.
+func ValidatePublishedContext(
+	ctx context.Context,
+	indexDir, repository string,
+	state *analysisunit.State,
+	revisions []store.IndexedRevision,
+) (Manifest, error) {
+	if err := ctx.Err(); err != nil {
+		return Manifest{}, err
+	}
 	if state == nil || state.SearchIndexPosture != analysisunit.SearchIndexFocused {
 		return Manifest{}, fmt.Errorf("%w: repository has no focused committed state", ErrShardSet)
 	}
@@ -114,7 +132,27 @@ func ValidatePublished(
 	if IsPublishing(indexDir, repository) {
 		return Manifest{}, fmt.Errorf("%w: repository publication is in progress", ErrShardSet)
 	}
-	return validate(indexDir, repository, state, revisions)
+	return validate(ctx, indexDir, repository, state, revisions)
+}
+
+// ValidateCommittedPublication proves a focused publication against committed
+// database state while deliberately ignoring its publication marker. Startup
+// reconciliation uses this only to decide whether a prior-process marker can
+// be safely removed; search callers must continue to use ValidatePublished.
+func ValidateCommittedPublication(
+	indexDir, repository string,
+	state *analysisunit.State,
+	revisions []store.IndexedRevision,
+) (Manifest, error) {
+	if state == nil || state.SearchIndexPosture != analysisunit.SearchIndexFocused {
+		return Manifest{}, fmt.Errorf("%w: repository has no focused committed state", ErrShardSet)
+	}
+	if err := state.Validate(repository); err != nil {
+		return Manifest{}, fmt.Errorf("%w: %v", ErrShardSet, err)
+	}
+	return validateAllowingPublicationMarker(
+		context.Background(), indexDir, repository, state, revisions,
+	)
 }
 
 func ValidateStage(
@@ -125,14 +163,43 @@ func ValidateStage(
 	if state == nil || state.SearchIndexPosture != analysisunit.SearchIndexFocused {
 		return Manifest{}, fmt.Errorf("%w: staged state is not focused", ErrShardSet)
 	}
-	return validate(indexDir, repository, state, revisions)
+	return validate(
+		context.Background(), indexDir, repository, state, revisions,
+	)
 }
 
 func validate(
+	ctx context.Context,
 	indexDir, repository string,
 	state *analysisunit.State,
 	revisions []store.IndexedRevision,
 ) (Manifest, error) {
+	return validateArtifacts(
+		ctx, indexDir, repository, state, revisions, false,
+	)
+}
+
+func validateAllowingPublicationMarker(
+	ctx context.Context,
+	indexDir, repository string,
+	state *analysisunit.State,
+	revisions []store.IndexedRevision,
+) (Manifest, error) {
+	return validateArtifacts(
+		ctx, indexDir, repository, state, revisions, true,
+	)
+}
+
+func validateArtifacts(
+	ctx context.Context,
+	indexDir, repository string,
+	state *analysisunit.State,
+	revisions []store.IndexedRevision,
+	allowPublicationMarker bool,
+) (Manifest, error) {
+	if err := ctx.Err(); err != nil {
+		return Manifest{}, err
+	}
 	if err := ValidateRevisions(revisions); err != nil {
 		return Manifest{}, fmt.Errorf("%w: %v", ErrShardSet, err)
 	}
@@ -205,12 +272,21 @@ func validate(
 			ErrShardSet, actualNames, expectedSorted,
 		)
 	}
-	if err := rejectExtraFocusedArtifacts(indexDir, repository, manifest); err != nil {
+	if err := rejectExtraFocusedArtifacts(
+		indexDir, repository, manifest, allowPublicationMarker,
+	); err != nil {
 		return Manifest{}, err
 	}
 	for _, member := range manifest.Members {
+		if err := ctx.Err(); err != nil {
+			return Manifest{}, err
+		}
 		shardPath := filepath.Join(indexDir, member.Name)
-		contentDigest, _, err := DigestRegularFile(shardPath)
+		contentDigest, _, err := DigestRegularFileContext(ctx, shardPath)
+		if errors.Is(err, context.Canceled) ||
+			errors.Is(err, context.DeadlineExceeded) {
+			return Manifest{}, err
+		}
 		if err != nil || contentDigest != member.ContentDigest {
 			return Manifest{}, fmt.Errorf("%w: content mismatch for %q", ErrShardSet, member.Name)
 		}
@@ -241,7 +317,28 @@ func validate(
 // unit and generation identities; startup reconciliation subsequently binds
 // the same bytes to committed repository state.
 func ValidateSelfContained(indexDir, repository string) (Manifest, error) {
-	if IsPublishing(indexDir, repository) {
+	return validateSelfContained(
+		context.Background(), indexDir, repository, false,
+	)
+}
+
+func validateSelfContainedIgnoringMarker(
+	indexDir, repository string,
+) (Manifest, error) {
+	return validateSelfContained(
+		context.Background(), indexDir, repository, true,
+	)
+}
+
+func validateSelfContained(
+	ctx context.Context,
+	indexDir, repository string,
+	allowPublicationMarker bool,
+) (Manifest, error) {
+	if err := ctx.Err(); err != nil {
+		return Manifest{}, err
+	}
+	if !allowPublicationMarker && IsPublishing(indexDir, repository) {
 		return Manifest{}, fmt.Errorf("%w: repository publication is in progress", ErrShardSet)
 	}
 	var manifest Manifest
@@ -261,7 +358,12 @@ func ValidateSelfContained(indexDir, repository string) (Manifest, error) {
 	if err != nil || generation != manifest.GenerationDigest {
 		return Manifest{}, fmt.Errorf("%w: self-contained generation mismatch", ErrShardSet)
 	}
-	return validate(indexDir, repository, state, manifest.Revisions)
+	if allowPublicationMarker {
+		return validateAllowingPublicationMarker(
+			ctx, indexDir, repository, state, manifest.Revisions,
+		)
+	}
+	return validate(ctx, indexDir, repository, state, manifest.Revisions)
 }
 
 func repositoryShardNames(indexDir, repository string) ([]string, error) {
@@ -269,43 +371,38 @@ func repositoryShardNames(indexDir, repository string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: read index directory: %v", ErrShardSet, err)
 	}
-	names := make(map[string]bool)
+	prefix := RepositoryPrefix(repository)
+	names := make([]string, 0)
 	for _, entry := range entries {
-		if entry.Type()&os.ModeSymlink != 0 {
-			return nil, fmt.Errorf("%w: symlinked index artifact %q", ErrShardSet, entry.Name())
-		}
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".zoekt") {
+		if !strings.HasPrefix(entry.Name(), prefix) ||
+			!strings.HasSuffix(entry.Name(), ".zoekt") {
 			continue
 		}
-		shardPath := filepath.Join(indexDir, entry.Name())
-		repositories, _, readErr := index.ReadMetadataPath(shardPath)
-		if readErr != nil {
+		if entry.Type()&os.ModeSymlink != 0 || entry.IsDir() {
 			return nil, fmt.Errorf(
-				"%w: unreadable shard %q while proving exact membership",
+				"%w: invalid owned shard %q while proving exact membership",
 				ErrShardSet, entry.Name(),
 			)
 		}
-		for _, indexedRepository := range repositories {
-			if indexedRepository.Name == repository {
-				names[entry.Name()] = true
-				break
-			}
-		}
+		names = append(names, entry.Name())
 	}
-	result := make([]string, 0, len(names))
-	for name := range names {
-		result = append(result, name)
-	}
-	sort.Strings(result)
-	return result, nil
+	sort.Strings(names)
+	return names, nil
 }
 
-func rejectExtraFocusedArtifacts(indexDir, repository string, manifest Manifest) error {
+func rejectExtraFocusedArtifacts(
+	indexDir, repository string,
+	manifest Manifest,
+	allowPublicationMarker bool,
+) error {
 	entries, err := os.ReadDir(indexDir)
 	if err != nil {
 		return err
 	}
 	allowed := map[string]bool{ManifestName(repository): true}
+	if allowPublicationMarker {
+		allowed[PublishingName(repository)] = true
+	}
 	for _, member := range manifest.Members {
 		allowed[member.Name] = true
 		allowed[member.Name+MemberSuffix] = true
@@ -350,25 +447,85 @@ func shardMetadataDigest(
 }
 
 func DigestRegularFile(path string) (string, int64, error) {
-	info, err := os.Lstat(path)
+	return DigestRegularFileContext(context.Background(), path)
+}
+
+// DigestRegularFileContext hashes one stable regular-file identity and checks
+// cancellation between bounded reads.
+func DigestRegularFileContext(
+	ctx context.Context,
+	path string,
+) (string, int64, error) {
+	if err := ctx.Err(); err != nil {
+		return "", 0, err
+	}
+	before, err := os.Lstat(path)
 	if err != nil {
 		return "", 0, err
 	}
-	if !info.Mode().IsRegular() {
+	if !before.Mode().IsRegular() {
 		return "", 0, fmt.Errorf("%w: %q is not a regular file", ErrShardSet, path)
 	}
 	file, err := os.Open(path)
 	if err != nil {
 		return "", 0, err
 	}
-	hash := sha256.New()
-	size, copyErr := io.Copy(hash, file)
-	closeErr := file.Close()
-	if copyErr != nil {
-		return "", 0, copyErr
+	opened, err := file.Stat()
+	if err != nil || !opened.Mode().IsRegular() ||
+		!os.SameFile(before, opened) ||
+		opened.Size() != before.Size() ||
+		!opened.ModTime().Equal(before.ModTime()) {
+		_ = file.Close()
+		return "", 0, fmt.Errorf(
+			"%w: %q changed while opening", ErrShardSet, path,
+		)
 	}
-	if closeErr != nil {
-		return "", 0, closeErr
+	hash := sha256.New()
+	buffer := make([]byte, 128<<10)
+	var size int64
+	var readErr error
+	for {
+		if err := ctx.Err(); err != nil {
+			readErr = err
+			break
+		}
+		count, err := file.Read(buffer)
+		if count > 0 {
+			if _, writeErr := hash.Write(buffer[:count]); writeErr != nil {
+				readErr = writeErr
+				break
+			}
+			size += int64(count)
+		}
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			readErr = err
+			break
+		}
+	}
+	if readErr == nil {
+		readErr = ctx.Err()
+	}
+	after, statErr := file.Stat()
+	closeErr := file.Close()
+	if readErr != nil || statErr != nil || closeErr != nil {
+		return "", 0, errors.Join(readErr, statErr, closeErr)
+	}
+	current, lstatErr := os.Lstat(path)
+	if lstatErr != nil || !after.Mode().IsRegular() ||
+		!current.Mode().IsRegular() ||
+		!os.SameFile(before, after) ||
+		!os.SameFile(after, current) ||
+		after.Size() != before.Size() ||
+		current.Size() != before.Size() ||
+		!after.ModTime().Equal(before.ModTime()) ||
+		!current.ModTime().Equal(before.ModTime()) ||
+		size != before.Size() {
+		return "", 0, fmt.Errorf(
+			"%w: %q changed while hashing", ErrShardSet, path,
+		)
 	}
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), size, nil
 }

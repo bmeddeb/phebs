@@ -22,13 +22,14 @@ import (
 
 // ReconcileReport summarizes one startup/runtime artifact audit.
 type ReconcileReport struct {
-	OrphanRepos      int
-	UntrackedShards  int
-	UntrackedMirrors int
-	CredentialsFixed int
-	InvalidRepos     int
-	RevisionRepairs  int
-	Deleted          int
+	OrphanRepos        int
+	UntrackedShards    int
+	UntrackedMirrors   int
+	CredentialsFixed   int
+	InvalidRepos       int
+	RevisionRepairs    int
+	LifecycleArtifacts int
+	Deleted            int
 }
 
 // ErrCredentialAudit marks a startup invariant failure that may leave a
@@ -36,9 +37,10 @@ type ReconcileReport struct {
 var ErrCredentialAudit = errors.New("credential artifact audit failed")
 
 // ReconcileArtifacts audits repository rows, mirrors, and zoekt shards. It
-// always scrubs persisted URL userinfo; destructive cleanup is gated by
-// cleanupEnabled. Confirmed orphan rows are marked deleting before disk work,
-// which removes them from the production search RepoSet immediately.
+// always scrubs persisted URL userinfo and reclaims prior-process private
+// staging. Destructive orphan cleanup is gated by cleanupEnabled. Confirmed
+// orphan rows are marked deleting before disk work, which removes them from
+// the production search RepoSet immediately.
 func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cleanupEnabled bool) (ReconcileReport, error) {
 	var report ReconcileReport
 	var errs []error
@@ -52,6 +54,15 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 		return report, fmt.Errorf("acquire index reconciliation lock: %w", err)
 	}
 	defer releaseMutation()
+
+	lifecycle, err := focusedindex.CleanupAbandonedLifecycle(
+		filepath.Join(dataDir, "index"),
+	)
+	if err != nil {
+		return report, fmt.Errorf("reclaim abandoned index staging: %w", err)
+	}
+	report.LifecycleArtifacts += lifecycle.Workspaces + lifecycle.TemporaryMarkers
+	report.Deleted += lifecycle.Workspaces + lifecycle.TemporaryMarkers
 
 	repos, err := st.ListRepos(ctx)
 	if err != nil {
@@ -134,6 +145,11 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 			}
 		}
 	}
+	if err := reclaimCommittedPublicationMarkers(
+		ctx, dataDir, repos, &report,
+	); err != nil {
+		errs = append(errs, err)
+	}
 	if err := reconcileUntrackedShards(ctx, dataDir, live, cleanupEnabled, &report); err != nil {
 		errs = append(errs, err)
 	}
@@ -201,6 +217,54 @@ func reconcileFocusedArtifacts(
 		}
 	}
 	return nil
+}
+
+func reclaimCommittedPublicationMarkers(
+	ctx context.Context,
+	dataDir string,
+	repos []store.Repo,
+	report *ReconcileReport,
+) error {
+	indexDir := filepath.Join(dataDir, "index")
+	versions, complete, err := indexedVersions(ctx, dataDir)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, repo := range repos {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(append(errs, err)...)
+		}
+		if repo.Deleting || !focusedindex.IsPublishing(indexDir, repo.Name) ||
+			focusedindex.PublicationMarkerOwnedByCurrentProcess(indexDir, repo.Name) {
+			continue
+		}
+		committed := false
+		if repo.IndexedAnalysisUnit != nil &&
+			repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused {
+			_, validateErr := focusedindex.ValidateCommittedPublication(
+				indexDir, repo.Name,
+				repo.IndexedAnalysisUnit, repo.IndexedRevisions,
+			)
+			committed = validateErr == nil
+		} else if complete {
+			repoVersions, hasShard := versions[repo.Name]
+			committed = !indexStateMismatch(repo, repoVersions, hasShard)
+		}
+		if !committed {
+			continue
+		}
+		if err := focusedindex.FinishPublication(indexDir, repo.Name); err != nil {
+			errs = append(errs, fmt.Errorf(
+				"reclaim committed publication marker for %s: %w",
+				repo.Name, err,
+			))
+			continue
+		}
+		report.LifecycleArtifacts++
+		report.Deleted++
+	}
+	return errors.Join(errs...)
 }
 
 func legacyLayoutCollisions(repos []store.Repo) map[string]bool {
@@ -293,10 +357,10 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	if !current.Deleting {
 		return false, nil // a concurrent sync reactivated this repository
 	}
-	if err := removeRepoShardsByMetadata(ctx, dataDir, name); err != nil {
+	if err := focusedindex.RemoveRepository(ctx, filepath.Join(dataDir, "index"), name); err != nil {
 		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
 	}
-	if err := focusedindex.RemoveRepository(ctx, filepath.Join(dataDir, "index"), name); err != nil {
+	if err := removeRepoShardsByMetadata(ctx, dataDir, name); err != nil {
 		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
 	}
 	if err := ctx.Err(); err != nil {

@@ -17,15 +17,18 @@ import (
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
-// Searcher serves queries over the shard directory, in-process
-// (zoekt/search.NewDirectorySearcher — the package upstream renamed from
-// shards). One instance lives for the process lifetime; the underlying
-// searcher watches the directory and picks up new shards as the indexer
-// writes them.
+// Searcher serves queries over the shard directory in-process. One shared
+// DirectorySearcher watches the directory but is queried only for
+// whole-repository rows. Focused repositories are deliberately excluded from
+// that asynchronous view and served through manifest-bound exact-generation
+// searchers in focusedCache.
 type Searcher struct {
 	z        zoekt.Streamer
 	st       store.Store
 	indexDir string
+	focused  *focusedCache
+	// maxWallTime is test-configurable; zero means maxSearchWallTime.
+	maxWallTime time.Duration
 	// Contexts backs `context:<name>` filters (T8.1); assigned once at
 	// startup from config.
 	Contexts map[string][]string
@@ -43,9 +46,14 @@ type Searcher struct {
 	Visible func(ctx context.Context) func(store.Repo) bool
 }
 
-// usageRepoCap bounds the distinct repo names recorded per search, in result
-// (relevance) order.
-const usageRepoCap = 20
+const (
+	// usageRepoCap bounds the distinct repo names recorded per search, in
+	// result (relevance) order.
+	usageRepoCap = 20
+	// maxSearchWallTime is one query-wide budget, beginning before query
+	// compilation and focused publication validation/materialization.
+	maxSearchWallTime = 10 * time.Second
+)
 
 func Open(indexDir string, st store.Store) (*Searcher, error) {
 	// NewDirectorySearcher uses filepath.Glob internally. Reject metacharacters
@@ -73,10 +81,15 @@ func Open(indexDir string, st store.Store) (*Searcher, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open shard dir %s: %w", indexDir, err)
 	}
-	return &Searcher{z: z, st: st, indexDir: indexDir}, nil
+	return &Searcher{
+		z: z, st: st, indexDir: indexDir, focused: newFocusedCache(indexDir),
+	}, nil
 }
 
-func (s *Searcher) Close() { s.z.Close() }
+func (s *Searcher) Close() {
+	s.focused.close()
+	s.z.Close()
+}
 
 // Options bound the work a single query may do.
 type Options struct {
@@ -96,8 +109,22 @@ func (o Options) zoekt() *zoekt.SearchOptions {
 		// Generous safety cap; MaxWallTime is the real backstop.
 		TotalMaxMatchCount: 100000,
 		NumContextLines:    clamp(o.ContextLines, 0, 10),
-		MaxWallTime:        10 * time.Second,
+		MaxWallTime:        maxSearchWallTime,
 	}
+}
+
+func (o Options) zoektWithin(ctx context.Context) *zoekt.SearchOptions {
+	options := o.zoekt()
+	if deadline, ok := ctx.Deadline(); ok {
+		remaining := time.Until(deadline)
+		if remaining < 0 {
+			remaining = 0
+		}
+		if remaining < options.MaxWallTime {
+			options.MaxWallTime = remaining
+		}
+	}
+	return options
 }
 
 func clamp(v, def, max int) int {
@@ -147,63 +174,137 @@ type Stats struct {
 
 // Search compiles raw (T4.1 pre-pass included) and runs one bounded search.
 func (s *Searcher) Search(ctx context.Context, raw string, opts Options) (*Result, error) {
-	q, versions, err := s.compile(ctx, raw)
+	callerCtx := ctx
+	ctx, cancel := context.WithTimeout(ctx, s.queryWallTime())
+	defer cancel()
+	compiled, err := s.compile(ctx, raw)
 	if err != nil {
 		return nil, err
 	}
-	res, err := s.z.Search(ctx, q, opts.zoekt())
+	defer compiled.release()
+	res, err := runBoundSearch(ctx, s.z, compiled, opts)
 	if err != nil {
 		return nil, fmt.Errorf("search: %w", err)
 	}
-	result := toResult(res, versions)
+	filterResultVersions(res, compiled.versions)
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("search result validation: %w", err)
+	}
+	if maxFiles := clamp(opts.MaxMatches, 50, 500); len(res.Files) > maxFiles {
+		res.Files = res.Files[:maxFiles]
+	}
+	result := toResult(res, compiled.versions)
 	if s.Usage != nil {
 		repos := newRepoCollector()
 		for _, f := range result.Files {
 			repos.add(f.Repo)
 		}
-		s.Usage(ctx, usageEvent(result.Stats, repos))
+		s.Usage(callerCtx, usageEvent(result.Stats, repos))
 	}
 	return result, nil
 }
 
-// Stream compiles raw and forwards each zoekt result batch to sink as it
-// arrives, returning the aggregate stats.
-//
-// Flush cadence (T4.3 decision): per-chunk — every shard-level batch zoekt
-// emits goes straight out, no timers. zoekt already batches internally, so
-// event volume is bounded by shard count, and latency-to-first-result stays
-// minimal. Revisit with time-batching only if fleet-scale fan-in (P6) makes
-// event volume a problem.
+// Stream compiles raw and forwards each native shard-level result batch as it
+// arrives. Bound backends fan out concurrently, while one serialized consumer
+// applies the global display limit and result-time focused identity gate.
 func (s *Searcher) Stream(ctx context.Context, raw string, opts Options, sink func(*Result)) (*Stats, error) {
-	q, versions, err := s.compile(ctx, raw)
+	callerCtx := ctx
+	ctx, cancel := context.WithTimeout(ctx, s.queryWallTime())
+	defer cancel()
+	compiled, err := s.compile(ctx, raw)
 	if err != nil {
 		return nil, err
 	}
+	defer compiled.release()
 	var agg Stats
 	repos := newRepoCollector()
-	err = s.z.StreamSearch(ctx, q, opts.zoekt(), zoekt.SenderFunc(func(r *zoekt.SearchResult) {
-		batch := toResult(r, versions)
-		agg.MatchCount += batch.Stats.MatchCount
-		agg.FileCount += batch.Stats.FileCount
-		agg.DurationMS += batch.Stats.DurationMS
-		for _, f := range batch.Files {
-			repos.add(f.Repo)
-		}
-		if len(batch.Files) > 0 {
-			sink(batch)
-		}
-	}))
+	remaining := clamp(opts.MaxMatches, 50, 500)
+	err = runBoundStream(
+		ctx, s.z, compiled, opts,
+		func(r *zoekt.SearchResult, lease *focusedLease) error {
+			if lease != nil {
+				filterFocusedLeaseResult(r, lease.repository)
+			}
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			filterResultVersions(r, compiled.versions)
+			if remaining == 0 {
+				return errBoundStreamLimit
+			}
+			if len(r.Files) > remaining {
+				trimmed := *r
+				trimmed.Files = r.Files[:remaining]
+				r = &trimmed
+			}
+			remaining -= len(r.Files)
+			batch := toResult(r, compiled.versions)
+			agg.MatchCount += batch.Stats.MatchCount
+			agg.FileCount += batch.Stats.FileCount
+			agg.DurationMS += batch.Stats.DurationMS
+			for _, f := range batch.Files {
+				repos.add(f.Repo)
+			}
+			if len(batch.Files) > 0 {
+				sink(batch)
+			}
+			if remaining == 0 {
+				return errBoundStreamLimit
+			}
+			return nil
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("stream search: %w", err)
 	}
 	if s.Usage != nil {
-		s.Usage(ctx, usageEvent(agg, repos))
+		s.Usage(callerCtx, usageEvent(agg, repos))
 	}
 	return &agg, nil
 }
 
-// repoCollector keeps the first usageRepoCap distinct repo names in result
-// order (zoekt relevance order, so the cap drops the least relevant tail).
+func filterFocusedLeaseResult(
+	result *zoekt.SearchResult,
+	repository string,
+) {
+	if result == nil {
+		return
+	}
+	files := result.Files[:0]
+	for _, file := range result.Files {
+		if file.Repository == repository {
+			files = append(files, file)
+		}
+	}
+	result.Files = files
+}
+
+func filterResultVersions(
+	result *zoekt.SearchResult,
+	versions map[string]string,
+) {
+	if result == nil {
+		return
+	}
+	files := result.Files[:0]
+	for _, file := range result.Files {
+		if versions[file.Repository] == file.Version {
+			files = append(files, file)
+		}
+	}
+	result.Files = files
+}
+
+func (s *Searcher) queryWallTime() time.Duration {
+	if s.maxWallTime > 0 {
+		return s.maxWallTime
+	}
+	return maxSearchWallTime
+}
+
+// repoCollector keeps the first usageRepoCap distinct repo names in delivery
+// order. JSON Search delivers relevance order; progressive SSE intentionally
+// records native shard/backend arrival order.
 type repoCollector struct {
 	seen  map[string]bool
 	names []string
@@ -232,38 +333,166 @@ func usageEvent(stats Stats, repos *repoCollector) store.UsageEvent {
 // compile applies the user query and then fails closed to repository rows the
 // store still considers searchable. Stale/untracked shards can remain on disk
 // after an interrupted cleanup, but they must never leak into search results.
-func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string]string, error) {
+type compiledSearch struct {
+	query           query.Q
+	baseQuery       query.Q
+	hasBase         bool
+	versions        map[string]string
+	baseRevisions   map[string]store.IndexedRevision
+	focused         []*focusedLease
+	validateFocused func(context.Context, *focusedLease, bool) bool
+	validateWhole   func(context.Context, string, store.IndexedRevision) bool
+}
+
+func (c *compiledSearch) release() {
+	for _, lease := range c.focused {
+		lease.release()
+	}
+	c.focused = nil
+}
+
+func (c *compiledSearch) focusedCurrent(
+	ctx context.Context,
+	lease *focusedLease,
+	full bool,
+) bool {
+	if lease == nil || c.validateFocused == nil {
+		return true
+	}
+	return c.validateFocused(ctx, lease, full)
+}
+
+func (s *Searcher) validateFocusedLease(
+	ctx context.Context,
+	lease *focusedLease,
+	full bool,
+) bool {
+	repo, err := s.st.GetRepo(ctx, lease.repository)
+	if err != nil || repo == nil {
+		if ctx.Err() == nil {
+			lease.invalidate()
+		}
+		return false
+	}
+	if full {
+		if !lease.current(ctx, *repo) {
+			if ctx.Err() == nil {
+				lease.invalidate()
+			}
+			return false
+		}
+		// The artifact scan can take measurable time. Re-fetch the committed
+		// row so a scope/posture transition during that scan cannot pass by
+		// reusing the pre-scan Repo value.
+		repo, err = s.st.GetRepo(ctx, lease.repository)
+		if err != nil || repo == nil || !lease.active(*repo) {
+			if ctx.Err() == nil {
+				lease.invalidate()
+			}
+			return false
+		}
+		return true
+	}
+	valid := ctx.Err() == nil && lease.active(*repo)
+	if !valid && ctx.Err() == nil {
+		lease.invalidate()
+	}
+	return valid
+}
+
+func (c *compiledSearch) filterCurrentWholeResult(
+	ctx context.Context,
+	result *zoekt.SearchResult,
+) {
+	if result == nil || c.validateWhole == nil {
+		return
+	}
+	current := make(map[string]bool)
+	check := func(repository string) bool {
+		if valid, ok := current[repository]; ok {
+			return valid
+		}
+		expected, ok := c.baseRevisions[repository]
+		valid := ok && c.validateWhole(ctx, repository, expected)
+		current[repository] = valid
+		return valid
+	}
+	files := result.Files[:0]
+	for _, file := range result.Files {
+		if check(file.Repository) {
+			files = append(files, file)
+		}
+	}
+	result.Files = files
+	for repository := range result.RepoURLs {
+		if !current[repository] {
+			delete(result.RepoURLs, repository)
+		}
+	}
+	for repository := range result.LineFragments {
+		if !current[repository] {
+			delete(result.LineFragments, repository)
+		}
+	}
+}
+
+func (s *Searcher) validateWholeRepository(
+	ctx context.Context,
+	repository string,
+	expected store.IndexedRevision,
+) bool {
+	repo, err := s.st.GetRepo(ctx, repository)
+	if err != nil || repo == nil || repo.Deleting ||
+		repo.IndexedCommitHash == "" ||
+		(repo.IndexedAnalysisUnit != nil &&
+			repo.IndexedAnalysisUnit.SearchIndexPosture ==
+				analysisunit.SearchIndexFocused) ||
+		focusedindex.IsPublishing(s.indexDir, repository) {
+		return false
+	}
+	current, ok := indexedRevision(*repo, expected.Selector)
+	return ok && current == expected
+}
+
+func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, error) {
 	q, revision, err := compileQuery(ctx, s.st, s.Contexts, raw)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if revision == "" {
 		revision = "HEAD"
 	}
 	repos, err := s.st.ListRepos(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("resolve searchable repos: %w", err)
+		return nil, fmt.Errorf("resolve searchable repos: %w", err)
 	}
+	focusedRepositories := make(map[string]struct{})
+	for _, repo := range repos {
+		if !repo.Deleting && repo.IndexedCommitHash != "" &&
+			repo.IndexedAnalysisUnit != nil &&
+			repo.IndexedAnalysisUnit.SearchIndexPosture ==
+				analysisunit.SearchIndexFocused {
+			focusedRepositories[repo.Name] = struct{}{}
+		}
+	}
+	s.focused.prune(focusedRepositories)
 	var allow func(store.Repo) bool
 	if s.Visible != nil {
 		allow = s.Visible(ctx)
 	}
 	versions := make(map[string]string, len(repos))
+	baseRevisions := make(map[string]store.IndexedRevision)
 	branchRepos := make(map[string][]string)
+	baseBranchRepos := make(map[string][]string)
+	var focusedLeases []*focusedLease
+	releaseFocused := func() {
+		for _, lease := range focusedLeases {
+			lease.release()
+		}
+	}
 	for _, repo := range repos {
 		if repo.Deleting || repo.IndexedCommitHash == "" {
 			continue
-		}
-		if focusedindex.IsPublishing(s.indexDir, repo.Name) {
-			continue
-		}
-		if repo.IndexedAnalysisUnit != nil &&
-			repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused {
-			if _, err := focusedindex.ValidatePublished(
-				s.indexDir, repo.Name, repo.IndexedAnalysisUnit, repo.IndexedRevisions,
-			); err != nil {
-				continue
-			}
 		}
 		// T10.3: filtering versions too makes toResult's revision check a
 		// second fail-closed gate over the permission boundary.
@@ -274,15 +503,73 @@ func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string
 		if !ok {
 			continue
 		}
+		if focusedindex.IsPublishing(s.indexDir, repo.Name) {
+			continue
+		}
+		focused := repo.IndexedAnalysisUnit != nil &&
+			repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused
+		if focused {
+			lease, acquireErr := s.focused.acquire(
+				ctx, repo.Name, repo.IndexedAnalysisUnit, repo.IndexedRevisions,
+			)
+			if acquireErr != nil || lease == nil {
+				if err := ctx.Err(); err != nil {
+					releaseFocused()
+					return nil, err
+				}
+				continue
+			}
+			if !s.validateFocusedLease(ctx, lease, true) {
+				lease.release()
+				continue
+			}
+			focusedLeases = append(focusedLeases, lease)
+		} else {
+			baseBranchRepos[indexed.Branch] = append(
+				baseBranchRepos[indexed.Branch], repo.Name,
+			)
+			baseRevisions[repo.Name] = indexed
+		}
 		branchRepos[indexed.Branch] = append(branchRepos[indexed.Branch], repo.Name)
 		versions[repo.Name] = indexed.Commit
 	}
-	if len(branchRepos) == 0 {
-		if revision != "HEAD" {
-			return nil, nil, fmt.Errorf("revision %q is not indexed in any visible repository", revision)
-		}
-		return query.Simplify(query.NewAnd(query.NewRepoSet(), q)), versions, nil
+	if err := ctx.Err(); err != nil {
+		releaseFocused()
+		return nil, err
 	}
+	if len(branchRepos) == 0 {
+		releaseFocused()
+		if revision != "HEAD" {
+			return nil, fmt.Errorf(
+				"revision %q is not indexed in any visible repository", revision,
+			)
+		}
+		empty := query.Simplify(query.NewAnd(query.NewRepoSet(), q))
+		return &compiledSearch{
+			query: empty, versions: versions, baseRevisions: baseRevisions,
+			validateFocused: s.validateFocusedLease,
+			validateWhole:   s.validateWholeRepository,
+		}, nil
+	}
+	scoped := scopeQuery(branchRepos, q)
+	baseScoped, hasBase := scopeQueryIfAny(baseBranchRepos, q)
+	return &compiledSearch{
+		query: scoped, baseQuery: baseScoped, hasBase: hasBase,
+		versions: versions, baseRevisions: baseRevisions,
+		focused:         focusedLeases,
+		validateFocused: s.validateFocusedLease,
+		validateWhole:   s.validateWholeRepository,
+	}, nil
+}
+
+func scopeQueryIfAny(branchRepos map[string][]string, q query.Q) (query.Q, bool) {
+	if len(branchRepos) == 0 {
+		return nil, false
+	}
+	return scopeQuery(branchRepos, q), true
+}
+
+func scopeQuery(branchRepos map[string][]string, q query.Q) query.Q {
 	branches := make([]string, 0, len(branchRepos))
 	for branch := range branchRepos {
 		branches = append(branches, branch)
@@ -301,7 +588,7 @@ func (s *Searcher) compile(ctx context.Context, raw string) (query.Q, map[string
 	if len(scopes) > 1 {
 		scope = query.NewOr(scopes...)
 	}
-	return query.Simplify(query.NewAnd(scope, q)), versions, nil
+	return query.Simplify(query.NewAnd(scope, q))
 }
 
 func indexedRevision(repo store.Repo, selector string) (store.IndexedRevision, bool) {
