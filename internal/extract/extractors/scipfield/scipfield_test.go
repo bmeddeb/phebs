@@ -235,6 +235,97 @@ func TestMalformedIndexFailsWithoutPartialFacts(t *testing.T) {
 	}
 }
 
+func TestPolyglotSCIPIgnoresForeignSourceDocuments(t *testing.T) {
+	corpus := fixtureCorpus(
+		t, "example.com/consumer", "v1.0.0", "old_name", "OldName",
+	)
+	wantFacts, wantCoverage := extractFacts(t, corpus)
+	index := decodeFixtureIndex(t, corpus.files[indexPath])
+	index.Documents = append(index.Documents, &scip.Document{
+		RelativePath:     "consumer/Use.java",
+		PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+		Occurrences: []*scip.Occurrence{{
+			Range:       []int32{0, 0, 1},
+			Symbol:      getterSymbol("v1.0.0", "OldName"),
+			SymbolRoles: int32(scip.SymbolRole_ReadAccess),
+		}},
+	})
+	corpus.files[indexPath] = encodeFixtureIndex(t, index)
+
+	gotFacts, gotCoverage := extractFacts(t, corpus)
+	if !reflect.DeepEqual(gotFacts, wantFacts) ||
+		!reflect.DeepEqual(gotCoverage, wantCoverage) {
+		t.Fatalf(
+			"foreign SCIP document changed extraction:\nwant=%+v / %+v\ngot=%+v / %+v",
+			wantFacts, wantCoverage, gotFacts, gotCoverage,
+		)
+	}
+}
+
+func TestPolyglotSCIPStillValidatesForeignDocuments(t *testing.T) {
+	corpus := fixtureCorpus(
+		t, "example.com/consumer", "v1.0.0", "old_name", "OldName",
+	)
+	index := decodeFixtureIndex(t, corpus.files[indexPath])
+	index.Documents = append(index.Documents, &scip.Document{
+		RelativePath:     "consumer/Use.java",
+		PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+		Occurrences: []*scip.Occurrence{{
+			Range:  []int32{0, 0, 1},
+			Symbol: strings.Repeat("x", maxSymbolBytes+1),
+		}},
+	})
+	corpus.files[indexPath] = encodeFixtureIndex(t, index)
+	if _, err := New().Extract(
+		context.Background(), corpus, func(sdk.Fact) error { return nil },
+	); err == nil || !strings.Contains(err.Error(), "symbol over") {
+		t.Fatalf("oversized foreign SCIP symbol error = %v", err)
+	}
+}
+
+func TestMissingEligibleSCIPSourcesRemainFailClosed(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*testing.T, *memoryCorpus)
+	}{
+		{
+			name: "Go document",
+			mutate: func(_ *testing.T, corpus *memoryCorpus) {
+				delete(corpus.files, "consumer/use.go")
+			},
+		},
+		{
+			name: "protobuf document",
+			mutate: func(t *testing.T, corpus *memoryCorpus) {
+				index := decodeFixtureIndex(t, corpus.files[indexPath])
+				index.Documents = append(index.Documents, &scip.Document{
+					RelativePath:     "000-missing.proto",
+					PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+					Occurrences: []*scip.Occurrence{{
+						Range:       []int32{0, 0, 1},
+						Symbol:      getterSymbol("v1.0.0", "OldName"),
+						SymbolRoles: int32(scip.SymbolRole_ReadAccess),
+					}},
+				})
+				corpus.files[indexPath] = encodeFixtureIndex(t, index)
+			},
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			corpus := fixtureCorpus(
+				t, "example.com/consumer", "v1.0.0", "old_name", "OldName",
+			)
+			testCase.mutate(t, &corpus)
+			if _, err := New().Extract(
+				context.Background(), corpus, func(sdk.Fact) error { return nil },
+			); err == nil || !strings.Contains(err.Error(), "absent from the immutable tree") {
+				t.Fatalf("missing eligible source error = %v", err)
+			}
+		})
+	}
+}
+
 func TestSCIPMetadataEncodingAppliesWhenDocumentOverrideIsAbsent(t *testing.T) {
 	rows := []struct {
 		name     string
@@ -433,6 +524,24 @@ func makeIndex(t *testing.T, generated, consumer, field, getter string) *scip.In
 			},
 		},
 	}
+}
+
+func decodeFixtureIndex(t *testing.T, content string) *scip.Index {
+	t.Helper()
+	index := &scip.Index{}
+	if err := proto.Unmarshal([]byte(content), index); err != nil {
+		t.Fatal(err)
+	}
+	return index
+}
+
+func encodeFixtureIndex(t *testing.T, index *scip.Index) string {
+	t.Helper()
+	data, err := (proto.MarshalOptions{Deterministic: true}).Marshal(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }
 
 func fieldSymbol(version, goName string) string {

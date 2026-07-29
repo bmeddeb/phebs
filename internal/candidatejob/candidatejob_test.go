@@ -221,6 +221,23 @@ func TestWorkerRetryRepairsPublicationAndProviderStreamsBothPlanes(
 	if err != nil {
 		t.Fatal(err)
 	}
+	strictOpens := 0
+	recoverPublication := worker.recover
+	worker.recover = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		strictOpens++
+		if !candidate.IsPublishing(root, repository) {
+			t.Fatal("recovery removed the marker before strict validation")
+		}
+		publication, recoverErr := recoverPublication(ctx, root, expected)
+		if !candidate.IsPublishing(root, repository) {
+			t.Fatal("strict recovery removed the marker before state commit")
+		}
+		return publication, recoverErr
+	}
 	if worker.policies != provider.policies ||
 		worker.policies.Digest() != provider.PolicyDigest() {
 		t.Fatal("planner and provider did not share one frozen policy generation")
@@ -262,15 +279,41 @@ func TestWorkerRetryRepairsPublicationAndProviderStreamsBothPlanes(
 			state.publishCalls, state.fanoutCount, state.pointer,
 		)
 	}
+	if strictOpens != 1 {
+		t.Fatalf("marker recovery strict opens = %d, want 1", strictOpens)
+	}
 
 	request := extract.CandidateManifestRequest{
 		Repository: repository, Commit: commit,
 		AnalysisUnit: analysisunit.CloneState(unit),
 		Domains:      slices.Clone(provider.domains),
 	}
+	providerStrictOpens := 0
+	openProviderPublication := provider.open
+	provider.open = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		providerStrictOpens++
+		return openProviderPublication(ctx, root, expected)
+	}
+	identity, err := provider.CandidateManifestIdentity(ctx, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identity != state.pointer.ManifestDigest || providerStrictOpens != 0 {
+		t.Fatalf(
+			"pointer identity/strict opens = %q/%d",
+			identity, providerStrictOpens,
+		)
+	}
 	opened, err := provider.OpenCandidateManifest(ctx, request)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if providerStrictOpens != 1 {
+		t.Fatalf("provider strict opens = %d, want 1", providerStrictOpens)
 	}
 	if opened.Identity() != state.pointer.ManifestDigest ||
 		opened.CorpusFileCount() != 3 {
@@ -321,6 +364,106 @@ func TestWorkerRetryRepairsPublicationAndProviderStreamsBothPlanes(
 		path: "client/use.go", required: true, inUnit: false,
 	}}) {
 		t.Fatalf("caller files = %+v", callerFiles)
+	}
+}
+
+func TestWorkerExactPointerReuseRepairsFanoutWithoutStrictOpen(
+	t *testing.T,
+) {
+	t.Parallel()
+	dataDir, repository, commit := candidateGitFixture(t)
+	state := &manifestStore{
+		repository: &store.Repo{
+			Name: repository, IndexedCommitHash: commit,
+		},
+	}
+	worker, _, err := New(
+		dataDir, state, []extract.Extractor{policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := store.Job{Kind: store.JobCandidate, Target: repository}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	state.mu.Lock()
+	state.fanoutCount = 0
+	state.mu.Unlock()
+	strictOpens := 0
+	worker.open = func(
+		context.Context,
+		string,
+		candidate.Expected,
+	) (*candidate.Publication, error) {
+		strictOpens++
+		return nil, errors.New("unexpected strict publication open")
+	}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if strictOpens != 0 || state.publishCalls != 2 ||
+		state.fanoutCount != 1 {
+		t.Fatalf(
+			"steady-state strict opens/publishes/fanout = %d/%d/%d",
+			strictOpens, state.publishCalls, state.fanoutCount,
+		)
+	}
+}
+
+func TestWorkerMissingPointerControlRebuildsWithoutStrictReuseOpen(
+	t *testing.T,
+) {
+	t.Parallel()
+	dataDir, repository, commit := candidateGitFixture(t)
+	state := &manifestStore{
+		repository: &store.Repo{
+			Name: repository, IndexedCommitHash: commit,
+		},
+	}
+	worker, _, err := New(
+		dataDir, state, []extract.Extractor{policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := store.Job{Kind: store.JobCandidate, Target: repository}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	manifestPath := filepath.Join(
+		CandidateRoot(dataDir), candidate.ManifestName(repository),
+	)
+	if err := os.Remove(manifestPath); err != nil {
+		t.Fatal(err)
+	}
+	strictOpens := 0
+	worker.open = func(
+		context.Context,
+		string,
+		candidate.Expected,
+	) (*candidate.Publication, error) {
+		strictOpens++
+		return nil, errors.New("unexpected strict reuse open")
+	}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if strictOpens != 0 || state.publishCalls != 2 {
+		t.Fatalf(
+			"missing-control strict opens/publishes = %d/%d",
+			strictOpens, state.publishCalls,
+		)
+	}
+	if info, err := os.Lstat(manifestPath); err != nil ||
+		!info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 {
+		t.Fatalf("rebuilt manifest control = %+v, %v", info, err)
 	}
 }
 
@@ -774,6 +917,30 @@ func TestProviderRefusesPartialStaleMalformedAndTamperedPublications(
 		}
 	})
 
+	t.Run("stable publication marker", func(t *testing.T) {
+		markerPath := filepath.Join(
+			CandidateRoot(dataDir), candidate.PublishingName(repository),
+		)
+		if err := os.WriteFile(markerPath, []byte("publishing\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := os.Remove(markerPath); err != nil &&
+				!errors.Is(err, os.ErrNotExist) {
+				t.Errorf("remove marker: %v", err)
+			}
+		}()
+		before := state.getPointerCalls
+		if _, err := provider.CandidateManifestIdentity(
+			ctx, request,
+		); !errors.Is(err, candidate.ErrPublishing) {
+			t.Fatalf("marker identity error = %v", err)
+		}
+		if state.getPointerCalls != before {
+			t.Fatal("marker-covered identity reached the pointer store")
+		}
+	})
+
 	t.Run("tampered manifest bytes", func(t *testing.T) {
 		manifestPath := filepath.Join(
 			CandidateRoot(dataDir), candidate.ManifestName(repository),
@@ -853,6 +1020,7 @@ func TestWorkerDistinguishesStaleAndDeterministicPublicationConflicts(
 		state.pointer.ManifestDigest = "sha256:" + strings.Repeat("c", 64)
 		state.mu.Unlock()
 
+		job.Force = true
 		err = worker.Handle(ctx, job)
 		if err == nil || !errors.Is(err, store.ErrConflict) ||
 			store.Classify(err) != store.ClassExtract ||

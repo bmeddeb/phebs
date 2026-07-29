@@ -51,11 +51,13 @@ var extractorImportAllowlist = map[string]bool{
 	"go.uber.org/thriftrw/ast": true,
 	"go.uber.org/thriftrw/idl": true,
 
-	"github.com/bmeddeb/phebs/internal/extract/sdk":  true,
-	"github.com/bmeddeb/phebs/internal/idlpreflight": true,
+	"github.com/bmeddeb/phebs/internal/extract/scipsource": true,
+	"github.com/bmeddeb/phebs/internal/extract/sdk":        true,
+	"github.com/bmeddeb/phebs/internal/idlpreflight":       true,
 }
 
 var sdkImportAllowlist = map[string]bool{"context": true}
+var scipSourceImportAllowlist = map[string]bool{"strings": true}
 
 var idlPreflightImportAllowlist = map[string]bool{
 	"context": true,
@@ -82,9 +84,9 @@ func TestPureReaderImports(t *testing.T) {
 	}
 }
 
-// The one shared internal helper admitted above is itself recursively
-// allowlisted, so moving the lexical preflight does not create a transitive
-// filesystem, network, process, or asynchronous-work escape hatch.
+// The shared IDL helper admitted above is itself recursively allowlisted, so
+// moving the lexical preflight does not create a transitive filesystem,
+// network, process, or asynchronous-work escape hatch.
 func TestIDLPreflightImports(t *testing.T) {
 	violations, err := scanPureTargets(
 		os.DirFS(".."),
@@ -95,6 +97,24 @@ func TestIDLPreflightImports(t *testing.T) {
 	)
 	if err != nil {
 		t.Fatalf("scan IDL preflight sources: %v", err)
+	}
+	for _, violation := range violations {
+		t.Error(violation)
+	}
+}
+
+// The SCIP source-path helper is shared by candidate planning and pure
+// readers. Keep its transitive capability surface limited to string matching.
+func TestSCIPSourcePolicyImports(t *testing.T) {
+	violations, err := scanPureTargets(
+		os.DirFS("."),
+		[]pureSourceTarget{{
+			dir:     "scipsource",
+			allowed: scipSourceImportAllowlist,
+		}},
+	)
+	if err != nil {
+		t.Fatalf("scan SCIP source policy: %v", err)
 	}
 	for _, violation := range violations {
 		t.Error(violation)

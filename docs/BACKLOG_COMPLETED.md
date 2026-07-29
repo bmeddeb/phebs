@@ -3896,3 +3896,24 @@ restore rebuild behavior. The owning PLAN, Operations, Configuration,
 Workflows, Manual, roadmap, and backlog documents are updated. This ticket
 creates no focused evidence, scoped SCIP, runtime-use, completeness,
 extraction-accuracy, migration-completion, or decommission-safety claim.
+
+Repair receipt (2026-07-29): an adversarial steady-state pass found that every
+ordinary extraction tick strictly rehashed and externally re-sorted the
+complete candidate publication before checking whether any domain needed
+work, while the preceding candidate retry performed the same validation
+again. The repaired worker uses the exact committed pointer and absent marker
+only to decide a no-byte no-op and repair fan-out; extraction resolves that
+identity before the mirror lock and returns immediately when all domain runs
+already carry its manifest digest. Forced or stale work reloads under the lock
+and strictly opens the publication once before consumption. Crash recovery
+retains the stable marker across that validation and removes it only after the
+matching state/fan-out commit. Stable descriptor identity now covers manifests
+and members, and the canonical line reader
+refuses an over-1 MiB record without materializing the containing artifact.
+Polyglot root SCIP input remains globally parsed and bounded, while shared
+domain source-path policy ignores only out-of-policy foreign documents and
+retains the existing missing-eligible-source refusal/gap behavior. Regression
+coverage now pins the extraction marker seam, digest-consistent missing-leaf
+partition refusal, descriptor replacement, bounded newline-free input, and
+polyglot posture. The frozen hash partition, census, publication, evidence,
+and unit identities are unchanged.

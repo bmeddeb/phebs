@@ -863,6 +863,19 @@ extraction failure, not an “index absent” result. T20.1 selected this mode f
 the frozen monorepo target; phebs has no sharded-index manifest or part-reader
 surface.
 
+SCIP-derived experimental extractors parse the complete bounded root index
+before applying their source-language projection, so every foreign-language
+document and occurrence still consumes the global SCIP safety limits. The
+protobuf field reader then considers only `.go` and `.proto` source documents;
+the Thrift field and Go caller readers consider only `.go`. A Java, Python, or
+other out-of-policy document in a polyglot index therefore cannot abort valid
+Go/protobuf extraction merely because its source was not retained by that
+domain's candidate policy. A missing eligible `.go` or `.proto` source remains
+an integrity failure for the field readers and a typed
+`stale_symbol_input` gap for the caller reader. This is a bounded
+source-language posture, not a claim that cross-language references are
+extracted.
+
 ### Git history
 
 History reads the existing bare mirror; it does not enlarge the zoekt index.

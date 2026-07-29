@@ -65,6 +65,27 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 		return store.WithClass(store.ClassExtract, fmt.Errorf("extract %s: %w", job.Target, err))
 	}
 
+	// Production candidate admission has a pointer-only phase. A previously
+	// published extraction run binds the exact candidate manifest digest in
+	// InventoryPolicy, so an unchanged database pointer proves this job is a
+	// no-op without opening publication bytes or taking the mirror lock.
+	//
+	// A concurrent index/delete after this read owns a queued successor. This
+	// path consumes no mirror or candidate bytes, so returning against the
+	// prior complete generation cannot publish stale work.
+	if !job.Force {
+		current, currentErr := w.candidateManifestCurrent(
+			ctx, job.Target, extractors,
+		)
+		if currentErr != nil {
+			return store.WithClass(store.ClassExtract,
+				fmt.Errorf("extract %s: candidate preflight: %w", job.Target, currentErr))
+		}
+		if current {
+			return nil
+		}
+	}
+
 	// Lock before loading the repository row. Fetch, indexing, mirror deletion,
 	// and corpus reads now share one critical section, so a worker cannot pin a
 	// row and then race removal or mutation of the corresponding object store.
@@ -185,6 +206,70 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 			fmt.Errorf("extract %s: %w", repo.Name, errors.Join(domainErrs...)))
 	}
 	return nil
+}
+
+func (w *Worker) candidateManifestCurrent(
+	ctx context.Context,
+	target string,
+	extractors []registeredExtractor,
+) (bool, error) {
+	identityProvider, ok := w.Manifests.(CandidateManifestIdentityProvider)
+	if !ok {
+		return false, nil
+	}
+	repo, err := w.Repos.GetRepo(ctx, target)
+	if errors.Is(err, store.ErrNotFound) {
+		return true, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("load repo: %w", err)
+	}
+	if repo == nil {
+		return false, errors.New("repository store returned nil")
+	}
+	if repo.Deleting || repo.IndexedCommitHash == "" {
+		return true, nil
+	}
+	if repo.Name != target {
+		return false, fmt.Errorf("stored repository name is %q", repo.Name)
+	}
+	if err := checkCommit(repo.IndexedCommitHash); err != nil {
+		return false, fmt.Errorf("indexed revision: %w", err)
+	}
+	identity, err := identityProvider.CandidateManifestIdentity(
+		ctx,
+		manifestRequest(
+			repo.Name, repo.IndexedCommitHash,
+			repo.IndexedAnalysisUnit, extractors,
+		),
+	)
+	if err != nil {
+		return false, fmt.Errorf("candidate manifest identity: %w", err)
+	}
+	inventoryPolicy, err := candidateManifestInventoryPolicy(identity)
+	if err != nil {
+		return false, err
+	}
+	for _, ex := range extractors {
+		last, latestErr := w.Evidence.LatestPublishedRun(
+			ctx, repo.Name, ex.domain,
+		)
+		if errors.Is(latestErr, store.ErrNotFound) {
+			return false, nil
+		}
+		if latestErr != nil {
+			return false, fmt.Errorf("%s: latest run: %w", ex.domain, latestErr)
+		}
+		if last == nil {
+			return false, fmt.Errorf("%s: latest run returned nil", ex.domain)
+		}
+		if last.Commit != repo.IndexedCommitHash ||
+			last.Extractor != ex.version ||
+			last.Coverage.InventoryPolicy != inventoryPolicy {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 type registeredExtractor struct {

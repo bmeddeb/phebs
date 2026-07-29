@@ -32,6 +32,7 @@ import (
 	"github.com/bufbuild/protocompile/reporter"
 	"github.com/scip-code/scip/bindings/go/scip"
 
+	"github.com/bmeddeb/phebs/internal/extract/scipsource"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 )
 
@@ -231,6 +232,9 @@ func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) 
 	}
 	documents := make([]indexedDocument, 0, len(byPath))
 	for _, doc := range byPath {
+		if !scipsource.Eligible(scipsource.ProtoField, doc.path) {
+			continue
+		}
 		sort.Slice(doc.occurrences, func(i, j int) bool {
 			left, right := doc.occurrences[i], doc.occurrences[j]
 			if comparison := left.rangeValue.CompareStrict(right.rangeValue); comparison != 0 {

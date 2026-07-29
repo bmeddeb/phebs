@@ -1,6 +1,7 @@
 package candidate
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -8,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"maps"
 	"math/bits"
 	"os"
@@ -633,6 +635,153 @@ func TestRequiredMustBeEnumerated(t *testing.T) {
 	}
 }
 
+func TestCanonicalLineReaderEnforcesBoundBeforeMaterialization(t *testing.T) {
+	limit := maxTreeRecordBytes
+	exact := bytes.Repeat([]byte{'x'}, limit)
+	exact[len(exact)-1] = '\n'
+	overflowWithNewline := bytes.Repeat([]byte{'x'}, limit+1)
+	overflowWithNewline[len(overflowWithNewline)-1] = '\n'
+	tests := []struct {
+		name      string
+		input     []byte
+		wantBytes int
+		wantError string
+	}{
+		{
+			name: "exact bound with newline", input: exact,
+			wantBytes: limit,
+		},
+		{
+			name:  "bound plus one with newline",
+			input: overflowWithNewline, wantError: "exceeds its byte limit",
+		},
+		{
+			name:      "newline-free overflow",
+			input:     bytes.Repeat([]byte{'x'}, limit+1),
+			wantError: "exceeds its byte limit",
+		},
+		{
+			name:      "newline-free exact bound",
+			input:     bytes.Repeat([]byte{'x'}, limit),
+			wantError: "partial trailing record",
+		},
+		{
+			name:  "short partial",
+			input: []byte("partial"), wantError: "partial trailing record",
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			reader := bufio.NewReaderSize(
+				bytes.NewReader(testCase.input), 64<<10,
+			)
+			line, err := readCanonicalLine(reader, limit)
+			if testCase.wantError == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(line) != testCase.wantBytes || cap(line) > limit {
+					t.Fatalf(
+						"line len/cap = %d/%d, want %d/cap<=%d",
+						len(line), cap(line), testCase.wantBytes, limit,
+					)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), testCase.wantError) {
+				t.Fatalf("line error = %v, want %q", err, testCase.wantError)
+			}
+			if line != nil {
+				t.Fatalf("refused line retained %d bytes", len(line))
+			}
+		})
+	}
+
+	empty := bufio.NewReader(bytes.NewReader(nil))
+	if line, err := readCanonicalLine(
+		empty, limit,
+	); line != nil || !errors.Is(err, io.EOF) {
+		t.Fatalf("empty line read = %d bytes / %v", len(line), err)
+	}
+}
+
+func TestStableRegularFileRejectsSymlinkAndPathReplacement(t *testing.T) {
+	t.Run("initial symlink", func(t *testing.T) {
+		directory := t.TempDir()
+		target := filepath.Join(directory, "target.json")
+		if err := os.WriteFile(target, []byte("{}\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		link := filepath.Join(directory, "manifest.json")
+		if err := os.Symlink(filepath.Base(target), link); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := readManifest(link); err == nil {
+			t.Fatal("symlink manifest unexpectedly opened")
+		}
+	})
+
+	for _, testCase := range []struct {
+		name    string
+		replace func(*testing.T, string, string, []byte)
+	}{
+		{
+			name: "same-size regular replacement",
+			replace: func(t *testing.T, path, _ string, raw []byte) {
+				t.Helper()
+				if err := os.WriteFile(path, raw, 0o600); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "symlink replacement",
+			replace: func(t *testing.T, path, displaced string, _ []byte) {
+				t.Helper()
+				if err := os.Symlink(filepath.Base(displaced), path); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			directory := t.TempDir()
+			path := filepath.Join(directory, "member.ndjson")
+			raw := []byte("{\"stable\":true}\n")
+			if err := os.WriteFile(path, raw, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.Lstat(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			source, err := openStableRegularFile(path, before)
+			if err != nil {
+				t.Fatal(err)
+			}
+			read, readErr := io.ReadAll(source.file)
+			if readErr != nil {
+				_ = source.file.Close()
+				t.Fatal(readErr)
+			}
+			displaced := filepath.Join(directory, "member.original")
+			if err := os.Rename(path, displaced); err != nil {
+				_ = source.file.Close()
+				t.Fatal(err)
+			}
+			testCase.replace(t, path, displaced, raw)
+			verifyErr := source.verifyAfterRead(int64(len(read)))
+			closeErr := source.file.Close()
+			if verifyErr == nil {
+				t.Fatal("path replacement retained a stable identity")
+			}
+			if closeErr != nil {
+				t.Fatal(closeErr)
+			}
+		})
+	}
+}
+
 func TestStrictValidationRejectsTamperingAndStaleness(t *testing.T) {
 	fixture := newGitFixture(t)
 	fixture.write("src/main.go", "package main\n")
@@ -761,6 +910,61 @@ func TestStrictValidationRejectsTamperingAndStaleness(t *testing.T) {
 				t.Fatal("tampered publication unexpectedly opened")
 			}
 		})
+	}
+}
+
+func TestStrictValidationRejectsForgedCallerPartitionCoverage(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("src/main.go", "package main\n")
+	commit := fixture.commit("caller partition")
+	directory := t.TempDir()
+	manifest, expected := buildFixture(
+		t, fixture, commit, nil, directory,
+	)
+	if len(manifest.CallerLeaves) != 1 {
+		t.Fatalf("caller leaves = %d, want one", len(manifest.CallerLeaves))
+	}
+	leaf := &manifest.CallerLeaves[0]
+	for _, forged := range []string{"00", "01", "10", "11"} {
+		if forged != leaf.Prefix {
+			leaf.Prefix = forged
+			leaf.PrefixBits = len(forged)
+			break
+		}
+	}
+	rewriteManifest(t, directory, &manifest)
+	if _, err := Open(
+		directory, expected,
+	); err == nil || !strings.Contains(err.Error(), "outside its leaf") {
+		t.Fatalf("forged caller partition error = %v", err)
+	}
+}
+
+func TestStrictValidationRejectsDigestConsistentMissingCallerLeaf(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("src/main.go", "package main\n")
+	commit := fixture.commit("missing caller partition")
+	directory := t.TempDir()
+	manifest, expected := buildFixture(
+		t, fixture, commit, nil, directory,
+	)
+	if len(manifest.CallerLeaves) != 1 {
+		t.Fatalf("caller leaves = %d, want one", len(manifest.CallerLeaves))
+	}
+	missing := manifest.CallerLeaves[0].Name
+	if err := os.Remove(filepath.Join(directory, missing)); err != nil {
+		t.Fatal(err)
+	}
+	// Preserve the independently committed domain summary, remove only the
+	// leaf descriptor/file, and recompute the outer manifest digest. Every
+	// remaining file and envelope digest is therefore internally consistent,
+	// but the declared caller-domain coverage is incomplete.
+	manifest.CallerLeaves = nil
+	rewriteManifest(t, directory, &manifest)
+	if _, err := Open(
+		directory, expected,
+	); err == nil || !strings.Contains(err.Error(), "domain summaries do not match") {
+		t.Fatalf("missing caller partition error = %v", err)
 	}
 }
 

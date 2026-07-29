@@ -416,6 +416,22 @@ filesystem-before-database transition. Unmarked bytes with no valid pointer
 are re-censused and replaced even if their manifest is internally consistent;
 an orphan or forged generation cannot bootstrap its own authority.
 
+At steady state, the exact persisted pointer, an absent marker, and its present
+regular manifest control file can prove that no publication bytes need to be
+consumed. The candidate job uses that identity-only path to repair the guarded
+extraction fan-out without rehashing or externally sorting every member. The
+extraction job resolves the pointer's manifest digest before taking the
+repository mirror lock and returns when every enabled domain already has a
+current run carrying that digest. A forced or stale domain takes the lock,
+reloads current state, then strictly opens the manifest and members once
+before any run begins. Marker recovery keeps the marker installed throughout
+strict validation and removes it only after the matching database transition;
+a second crash therefore remains fail-closed. A missing or malformed pointer
+and post-restore reconstruction always take the strict validation/rebuild
+path. This shortcut grants no artifact access: actual candidate replay still
+revalidates the bound regular descriptor, record limits, exact digest, and
+marker absence.
+
 Before creating an extraction attempt, the worker refuses a publication
 marker, stale database pointer, HEAD/unit/policy disagreement, malformed or
 noncanonical JSON/NDJSON, partial/extra/duplicate member, digest mismatch,
@@ -1076,6 +1092,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | backup summary has a nonzero `omitted_*` count                    | invalid, incomplete, or orphan focused artifacts were excluded while precious state still succeeded   | retain the backup; restart or reindex so reconciliation replaces the omitted derived publication      |
 | a focused repo rebuilds after restore                             | its focused generation was invalid/incomplete at backup time and was omitted as derived state          | let the forced replacement finish; the precious database export remains authoritative                 |
 | startup logs `artifact reconciliation: … lifecycle=N`            | a prior process left private build/restore workspace or temporary-marker residue                       | no action if startup continues; phebs reclaimed only prior-process derived residue                     |
+| extraction reports `candidate publication is incomplete`         | a stable candidate `.publishing` marker covers an interrupted or active publication, so even a no-op extraction refuses | let reconciliation finish; if the error repeats with phebs stopped, retain logs, move `$DATA/candidates` aside for diagnosis, and restart to rebuild derived state |
 | repository listing/startup reports `invalid committed analysis unit` | the stored focused claim is malformed or was tampered with, so repository reads fail closed instance-wide | restore a validated backup; without one, keep phebs stopped and escalate to the witnessed atomic row repair above |
 | restore rejects a sparse tar member                               | the focused archive uses PAX/GNU sparse expansion, which phebs never accepts                            | recreate the backup with `phebs backup`; do not rewrite or manually extract the archive               |
 | repo tagged `orphaned`                                            | no connection claims it anymore                                                                        | re-add the connection, or enable `sync.cleanup_orphans`                                               |

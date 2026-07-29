@@ -240,6 +240,65 @@ func TestMissingAndMalformedIndexesFailClosed(t *testing.T) {
 	})
 }
 
+func TestPolyglotSCIPIgnoresForeignSourceDocuments(t *testing.T) {
+	corpus := fixtureCorpus(t, "v1.0.0", "old_name", "OldName", 10)
+	wantFacts, wantCoverage := extractFacts(t, corpus)
+	index := decodeIndex(t, corpus.files[indexPath])
+	for _, filePath := range []string{
+		"consumer/Use.java",
+		"schema/service.proto",
+	} {
+		index.Documents = append(index.Documents, &scip.Document{
+			RelativePath:     filePath,
+			PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+			Occurrences: []*scip.Occurrence{{
+				Range:       []int32{0, 0, 1},
+				Symbol:      getterSymbol("v1.0.0", "OldName"),
+				SymbolRoles: int32(scip.SymbolRole_ReadAccess),
+			}},
+		})
+	}
+	corpus.files[indexPath] = encodeIndex(t, index)
+
+	gotFacts, gotCoverage := extractFacts(t, corpus)
+	if !reflect.DeepEqual(gotFacts, wantFacts) ||
+		!reflect.DeepEqual(gotCoverage, wantCoverage) {
+		t.Fatalf(
+			"foreign SCIP documents changed extraction:\nwant=%+v / %+v\ngot=%+v / %+v",
+			wantFacts, wantCoverage, gotFacts, gotCoverage,
+		)
+	}
+}
+
+func TestPolyglotSCIPStillValidatesForeignDocuments(t *testing.T) {
+	corpus := fixtureCorpus(t, "v1.0.0", "old_name", "OldName", 10)
+	index := decodeIndex(t, corpus.files[indexPath])
+	index.Documents = append(index.Documents, &scip.Document{
+		RelativePath:     "consumer/Use.java",
+		PositionEncoding: scip.PositionEncoding_UTF8CodeUnitOffsetFromLineStart,
+		Occurrences: []*scip.Occurrence{{
+			Range:  []int32{0, 0, 1},
+			Symbol: strings.Repeat("x", maxSymbolBytes+1),
+		}},
+	})
+	corpus.files[indexPath] = encodeIndex(t, index)
+	if _, err := New().Extract(
+		context.Background(), corpus, func(sdk.Fact) error { return nil },
+	); err == nil || !strings.Contains(err.Error(), "symbol over") {
+		t.Fatalf("oversized foreign SCIP symbol error = %v", err)
+	}
+}
+
+func TestMissingEligibleGoSCIPSourceRemainsFailClosed(t *testing.T) {
+	corpus := fixtureCorpus(t, "v1.0.0", "old_name", "OldName", 10)
+	delete(corpus.files, "consumer/use.go")
+	if _, err := New().Extract(
+		context.Background(), corpus, func(sdk.Fact) error { return nil },
+	); err == nil || !strings.Contains(err.Error(), "absent from the immutable tree") {
+		t.Fatalf("missing eligible Go source error = %v", err)
+	}
+}
+
 func TestAdmissionLimitsAreExplicitlyNarrowed(t *testing.T) {
 	const (
 		inheritedIndexBytes  = 64 << 20

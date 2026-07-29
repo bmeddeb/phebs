@@ -48,6 +48,12 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
  completed ticket work stays on its ticket branch until Ben says to integrate.
 - Table-driven tests. Every epic ends demoable via `make dev` — an epic that
   can't be shown end-to-end is not done.
+- Every implementation review includes a steady-state-cost pass: enumerate work
+  performed per query/request, sync tick, startup/restart, retry/no-op, and
+  publication transition; identify held locks, repeated full-corpus/shard
+  reads or hashing, cache invalidation, concurrency bounds, and worst-case
+  memory/disk/child-process cost. Green functional gates do not replace this
+  pass.
 - golangci-lint clean. `context.Context` first param. Errors wrapped with `%w`,
   classified at boundaries (T3.3 taxonomy).
 - HEAD is the default and authoritative revision. T10.4 may add at most seven

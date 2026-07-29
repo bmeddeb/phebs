@@ -404,21 +404,23 @@ func validateArtifactFile(
 		return err
 	}
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
-		info.Size() != member.ContentBytes || info.Size() > maxArtifactBytes {
+		info.Size() < 0 || info.Size() != member.ContentBytes ||
+		info.Size() > maxArtifactBytes {
 		return errors.New("artifact is special, oversized, or has the wrong size")
 	}
-	file, err := os.Open(filePath)
+	source, err := openStableRegularFile(filePath, info)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if closeErr := file.Close(); resultErr == nil && closeErr != nil {
+		if closeErr := source.file.Close(); resultErr == nil && closeErr != nil {
 			resultErr = closeErr
 		}
 	}()
 	hasher := sha256.New()
 	_, _ = hasher.Write([]byte("phebs-candidate-artifact-v1\x00"))
-	reader := bufio.NewReaderSize(io.TeeReader(file, hasher), 64<<10)
+	counted := &byteCountingReader{reader: source.file}
+	reader := bufio.NewReaderSize(io.TeeReader(counted, hasher), 64<<10)
 	count := 0
 	var declared int64
 	for {
@@ -450,6 +452,9 @@ func validateArtifactFile(
 			return readErr
 		}
 	}
+	if err := source.verifyAfterRead(counted.count); err != nil {
+		return err
+	}
 	actualDigest := "sha256:" + hex.EncodeToString(hasher.Sum(nil))
 	if count != member.RecordCount || declared != member.DeclaredBytes ||
 		actualDigest != member.ContentDigest {
@@ -459,14 +464,63 @@ func validateArtifactFile(
 }
 
 func readCanonicalLine(reader *bufio.Reader, limit int) ([]byte, error) {
-	line, err := reader.ReadBytes('\n')
-	if len(line) > limit {
-		return nil, errors.New("candidate record exceeds its byte limit")
+	if reader == nil || limit <= 0 {
+		return nil, errors.New("candidate record has an invalid byte limit")
 	}
-	if len(line) > 0 && line[len(line)-1] != '\n' {
-		return nil, errors.New("candidate artifact has a partial trailing record")
+	var line []byte
+	for {
+		fragment, err := reader.ReadSlice('\n')
+		if len(fragment) > limit-len(line) {
+			return nil, errors.New("candidate record exceeds its byte limit")
+		}
+		if line == nil && err == nil {
+			return fragment[:len(fragment):len(fragment)], nil
+		}
+		line = appendLineFragment(line, fragment, limit)
+		switch {
+		case err == nil:
+			return line, nil
+		case errors.Is(err, bufio.ErrBufferFull):
+			continue
+		case errors.Is(err, io.EOF):
+			if len(line) == 0 {
+				return nil, io.EOF
+			}
+			return nil, errors.New(
+				"candidate artifact has a partial trailing record",
+			)
+		default:
+			return nil, err
+		}
 	}
-	return line, err
+}
+
+func appendLineFragment(line, fragment []byte, limit int) []byte {
+	required := len(line) + len(fragment)
+	if cap(line) < required {
+		nextCapacity := cap(line) * 2
+		if nextCapacity < required {
+			nextCapacity = required
+		}
+		if nextCapacity > limit {
+			nextCapacity = limit
+		}
+		grown := make([]byte, len(line), nextCapacity)
+		copy(grown, line)
+		line = grown
+	}
+	return append(line, fragment...)
+}
+
+type byteCountingReader struct {
+	reader io.Reader
+	count  int64
+}
+
+func (reader *byteCountingReader) Read(buffer []byte) (int, error) {
+	count, err := reader.reader.Read(buffer)
+	reader.count += int64(count)
+	return count, err
 }
 
 func strictCanonicalJSONLine(line []byte, destination any) error {

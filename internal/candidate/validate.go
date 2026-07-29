@@ -73,20 +73,23 @@ func readManifest(filePath string) (_ Manifest, resultErr error) {
 		return Manifest{}, err
 	}
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
-		info.Size() > maxManifestBytes {
+		info.Size() < 0 || info.Size() > maxManifestBytes {
 		return Manifest{}, errors.New("candidate manifest is special or oversized")
 	}
-	file, err := os.Open(filePath)
+	source, err := openStableRegularFile(filePath, info)
 	if err != nil {
 		return Manifest{}, err
 	}
 	defer func() {
-		if closeErr := file.Close(); resultErr == nil && closeErr != nil {
+		if closeErr := source.file.Close(); resultErr == nil && closeErr != nil {
 			resultErr = closeErr
 		}
 	}()
-	raw, err := io.ReadAll(io.LimitReader(file, maxManifestBytes+1))
+	raw, err := io.ReadAll(io.LimitReader(source.file, maxManifestBytes+1))
 	if err != nil {
+		return Manifest{}, err
+	}
+	if err := source.verifyAfterRead(int64(len(raw))); err != nil {
 		return Manifest{}, err
 	}
 	if len(raw) > maxManifestBytes {
@@ -105,6 +108,69 @@ func readManifest(filePath string) (_ Manifest, resultErr error) {
 		return Manifest{}, errors.New("candidate manifest is not canonical")
 	}
 	return manifest, nil
+}
+
+// stableRegularFile binds reads to one path identity. The initial Lstat keeps
+// symlinks out, the descriptor Stat closes the Lstat-to-Open race, and the
+// final descriptor/path checks reject replacement or mutation during a read.
+type stableRegularFile struct {
+	path   string
+	file   *os.File
+	before os.FileInfo
+}
+
+func openStableRegularFile(
+	filePath string,
+	before os.FileInfo,
+) (*stableRegularFile, error) {
+	if before == nil || !before.Mode().IsRegular() ||
+		before.Mode()&os.ModeSymlink != 0 || before.Size() < 0 {
+		return nil, errors.New("candidate file is not a regular file")
+	}
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	opened, statErr := file.Stat()
+	current, lstatErr := os.Lstat(filePath)
+	if statErr != nil || lstatErr != nil {
+		closeErr := file.Close()
+		return nil, errors.Join(statErr, lstatErr, closeErr)
+	}
+	if !sameRegularFileIdentity(before, opened) ||
+		!sameRegularFileIdentity(opened, current) {
+		_ = file.Close()
+		return nil, errors.New("candidate file changed while opening")
+	}
+	return &stableRegularFile{
+		path: filePath, file: file, before: before,
+	}, nil
+}
+
+func (source *stableRegularFile) verifyAfterRead(readBytes int64) error {
+	if source == nil || source.file == nil || source.before == nil {
+		return errors.New("candidate file identity is incomplete")
+	}
+	after, statErr := source.file.Stat()
+	current, lstatErr := os.Lstat(source.path)
+	if statErr != nil || lstatErr != nil {
+		return errors.Join(statErr, lstatErr)
+	}
+	if readBytes != source.before.Size() ||
+		!sameRegularFileIdentity(source.before, after) ||
+		!sameRegularFileIdentity(after, current) {
+		return errors.New("candidate file changed while reading")
+	}
+	return nil
+}
+
+func sameRegularFileIdentity(left, right os.FileInfo) bool {
+	return left != nil && right != nil &&
+		left.Mode().IsRegular() && right.Mode().IsRegular() &&
+		left.Mode() == right.Mode() &&
+		left.Size() == right.Size() &&
+		left.ModTime().Equal(right.ModTime()) &&
+		os.SameFile(left, right)
 }
 
 func validateManifestIdentity(manifest Manifest, expected Expected, state *State) error {

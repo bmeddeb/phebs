@@ -754,12 +754,14 @@ every content-policy rejection fails the generation explicitly; stale derived
 publications cannot block precious-state backup; absent configuration retains
 whole-repository indexing. Typed-index input remains repository-root-unbound.
 
-**T30.4 ✅ · Reusable candidate-partition manifest** *(2026-07-28)* —
-completed and retained in the
+**T30.4 ✅ · Reusable candidate-partition manifest** *(2026-07-28; repaired
+2026-07-29)* — completed and retained in the
 [completed backlog](./BACKLOG_COMPLETED.md#t304--reusable-candidate-partition-manifest).
 Existing extraction now waits for one current, strictly validated candidate
-publication and still consumes its repository-wide view. Unit membership is
-precomputed only; T30.5 owns the evidence-scope and identity change.
+publication and still consumes its repository-wide view. Exact no-op work
+uses only its committed digest identity, while stale/forced work strictly
+opens the bytes once. Unit membership is precomputed only; T30.5 owns the
+evidence-scope and identity change.
 
 **T30.5 · Focused evidence publication** *(T30.3 and T30.4 complete · next)* — key
 extraction attempts/runs and published evidence by repository, source commit,

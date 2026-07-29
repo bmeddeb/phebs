@@ -20,6 +20,7 @@ type Provider struct {
 	policies   *PolicySet
 	domains    []extract.CandidateManifestDomain
 	domainKeys map[string]struct{}
+	open       func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
 }
 
 // NewProvider constructs an adapter from the same PolicySet used by its
@@ -52,6 +53,7 @@ func NewProvider(
 		policies:   policies,
 		domains:    domains,
 		domainKeys: keys,
+		open:       candidate.OpenContext,
 	}, nil
 }
 
@@ -63,70 +65,41 @@ func (provider *Provider) PolicyDigest() string {
 	return provider.policies.digest
 }
 
+// CandidateManifestIdentity validates only the committed pointer identity and
+// stable publication marker. It deliberately does not open the manifest or
+// any member bytes; extraction uses this boundary to decide an exact no-op
+// before taking the repository mirror lock.
+func (provider *Provider) CandidateManifestIdentity(
+	ctx context.Context,
+	request extract.CandidateManifestRequest,
+) (string, error) {
+	state, _, err := provider.resolve(ctx, request)
+	if err != nil {
+		return "", err
+	}
+	return state.ManifestDigest, nil
+}
+
 func (provider *Provider) OpenCandidateManifest(
 	ctx context.Context,
 	request extract.CandidateManifestRequest,
 ) (extract.CandidateManifest, error) {
-	if provider == nil || provider.store == nil || provider.policies == nil {
-		return nil, errors.New("candidate provider is not initialized")
-	}
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if !slices.Equal(request.Domains, provider.domains) {
-		return nil, errors.New(
-			"candidate manifest request domain set is partial, reordered, or stale",
-		)
-	}
-	unitDigest, err := checkedUnitDigest(
-		request.Repository, request.AnalysisUnit,
-	)
+	state, expected, err := provider.resolve(ctx, request)
 	if err != nil {
 		return nil, err
 	}
-	generation, err := candidate.GenerationDigest(
-		request.Repository, request.Commit, unitDigest,
-		provider.policies.identities,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("candidate request identity: %w", err)
-	}
-	pointer, err := provider.store.GetCandidateManifestPublication(
-		ctx, request.Repository,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("load candidate publication pointer: %w", err)
-	}
-	if pointer == nil {
-		return nil, errors.New("candidate publication store returned nil")
-	}
-	state, err := pointerState(*pointer)
-	if err != nil {
-		return nil, fmt.Errorf("candidate publication pointer: %w", err)
-	}
-	if state.Repository != request.Repository ||
-		state.Commit != request.Commit ||
-		state.UnitDigest != unitDigest ||
-		state.PolicyDigest != provider.policies.digest ||
-		state.GenerationDigest != generation ||
-		state.Manifest != candidate.ManifestName(request.Repository) {
-		return nil, errors.New(
-			"candidate publication pointer does not match requested indexed generation",
-		)
+	if provider.open == nil {
+		return nil, errors.New("candidate provider opener is not initialized")
 	}
 	if err := ensureCandidateRoot(provider.root, false); err != nil {
 		return nil, err
 	}
-	publication, err := candidate.OpenContext(ctx, provider.root, candidate.Expected{
-		Repository: request.Repository, Commit: request.Commit,
-		Unit:             analysisunit.CloneState(request.AnalysisUnit),
-		Policies:         slices.Clone(provider.policies.identities),
-		PolicyDigest:     provider.policies.digest,
-		GenerationDigest: generation,
-		ManifestDigest:   state.ManifestDigest,
-	})
+	publication, err := provider.open(ctx, provider.root, expected)
 	if err != nil {
 		return nil, fmt.Errorf("open candidate publication: %w", err)
+	}
+	if publication == nil {
+		return nil, errors.New("candidate publication opener returned nil")
 	}
 	if publication.State() != state {
 		return nil, errors.New(
@@ -139,6 +112,78 @@ func (provider *Provider) OpenCandidateManifest(
 	return &manifestAdapter{
 		publication: publication,
 		allowed:     cloneSet(provider.domainKeys),
+	}, nil
+}
+
+func (provider *Provider) resolve(
+	ctx context.Context,
+	request extract.CandidateManifestRequest,
+) (candidate.State, candidate.Expected, error) {
+	if provider == nil || provider.store == nil || provider.policies == nil {
+		return candidate.State{}, candidate.Expected{},
+			errors.New("candidate provider is not initialized")
+	}
+	if err := ctx.Err(); err != nil {
+		return candidate.State{}, candidate.Expected{}, err
+	}
+	if !slices.Equal(request.Domains, provider.domains) {
+		return candidate.State{}, candidate.Expected{}, errors.New(
+			"candidate manifest request domain set is partial, reordered, or stale",
+		)
+	}
+	unitDigest, err := checkedUnitDigest(
+		request.Repository, request.AnalysisUnit,
+	)
+	if err != nil {
+		return candidate.State{}, candidate.Expected{}, err
+	}
+	generation, err := candidate.GenerationDigest(
+		request.Repository, request.Commit, unitDigest,
+		provider.policies.identities,
+	)
+	if err != nil {
+		return candidate.State{}, candidate.Expected{},
+			fmt.Errorf("candidate request identity: %w", err)
+	}
+	if candidate.IsPublishing(provider.root, request.Repository) {
+		return candidate.State{}, candidate.Expected{}, candidate.ErrPublishing
+	}
+	pointer, err := provider.store.GetCandidateManifestPublication(
+		ctx, request.Repository,
+	)
+	if err != nil {
+		return candidate.State{}, candidate.Expected{},
+			fmt.Errorf("load candidate publication pointer: %w", err)
+	}
+	if pointer == nil {
+		return candidate.State{}, candidate.Expected{},
+			errors.New("candidate publication store returned nil")
+	}
+	state, err := pointerState(*pointer)
+	if err != nil {
+		return candidate.State{}, candidate.Expected{},
+			fmt.Errorf("candidate publication pointer: %w", err)
+	}
+	if state.Repository != request.Repository ||
+		state.Commit != request.Commit ||
+		state.UnitDigest != unitDigest ||
+		state.PolicyDigest != provider.policies.digest ||
+		state.GenerationDigest != generation ||
+		state.Manifest != candidate.ManifestName(request.Repository) {
+		return candidate.State{}, candidate.Expected{}, errors.New(
+			"candidate publication pointer does not match requested indexed generation",
+		)
+	}
+	if candidate.IsPublishing(provider.root, request.Repository) {
+		return candidate.State{}, candidate.Expected{}, candidate.ErrPublishing
+	}
+	return state, candidate.Expected{
+		Repository: request.Repository, Commit: request.Commit,
+		Unit:             analysisunit.CloneState(request.AnalysisUnit),
+		Policies:         slices.Clone(provider.policies.identities),
+		PolicyDigest:     provider.policies.digest,
+		GenerationDigest: generation,
+		ManifestDigest:   state.ManifestDigest,
 	}, nil
 }
 
@@ -210,4 +255,5 @@ func cloneSet(input map[string]struct{}) map[string]struct{} {
 }
 
 var _ extract.CandidateManifestProvider = (*Provider)(nil)
+var _ extract.CandidateManifestIdentityProvider = (*Provider)(nil)
 var _ extract.CandidateManifest = (*manifestAdapter)(nil)

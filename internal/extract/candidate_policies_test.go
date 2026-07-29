@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/extract/scipsource"
 )
 
 func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
@@ -121,5 +122,64 @@ func TestCandidatePoliciesRejectUnknownOrDuplicateDomains(t *testing.T) {
 	if _, err := CandidatePolicies([]Extractor{duplicate, duplicate}); err == nil ||
 		!strings.Contains(err.Error(), "duplicate") {
 		t.Fatalf("duplicate domain error = %v", err)
+	}
+}
+
+func TestCandidatePoliciesMatchSCIPSourceEligibility(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		domain string
+		policy scipsource.Policy
+	}{
+		{domain: "scip-proto-field", policy: scipsource.ProtoField},
+		{domain: "scip-thrift-field", policy: scipsource.Go},
+		{domain: "grpc-caller", policy: scipsource.Go},
+		{domain: "thrift-caller", policy: scipsource.Go},
+	}
+	sourcePaths := []string{
+		"api/service.proto",
+		"consumer/use.go",
+		"consumer/Use.java",
+		"consumer/use.ts",
+		"consumer/use.go.bak",
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.domain, func(t *testing.T) {
+			t.Parallel()
+			policies, err := CandidatePolicies([]Extractor{unitExtractor{
+				domain: testCase.domain, version: "test-v1",
+				candidate: func(filePath string) bool {
+					return filePath == scipIndexPath
+				},
+			}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, filePath := range sourcePaths {
+				want := scipsource.Eligible(testCase.policy, filePath)
+				if got := policies[0].Enumerate(filePath); got != want {
+					t.Errorf(
+						"Enumerate(%q) = %t, source eligibility = %t",
+						filePath, got, want,
+					)
+				}
+			}
+		})
+	}
+
+	protoPolicies, err := CandidatePolicies([]Extractor{unitExtractor{
+		domain: "scip-proto-field", version: "test-v1",
+		candidate: func(filePath string) bool {
+			return filePath == scipIndexPath
+		},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ancillary := range []string{scipIndexPath, "nested/buf.yaml"} {
+		if !protoPolicies[0].Enumerate(ancillary) ||
+			scipsource.Eligible(scipsource.ProtoField, ancillary) {
+			t.Errorf("ancillary path %q changed source eligibility", ancillary)
+		}
 	}
 }

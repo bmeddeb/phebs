@@ -181,6 +181,96 @@ func TestTypedSCIPCallsMatchFrozenSmallOracle(t *testing.T) {
 	}
 }
 
+func TestPolyglotSCIPIgnoresForeignSourceDocuments(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name      string
+		extractor sdk.Extractor
+		symbol    string
+	}{
+		{name: "gRPC", extractor: gocaller.NewGRPC(), symbol: t201.ProtoGetSymbol},
+		{name: "Thrift", extractor: gocaller.NewThrift(), symbol: t201.ThriftGetSymbol},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			run := func(files map[string][]byte) ([]sdk.Fact, sdk.Coverage) {
+				t.Helper()
+				var facts []sdk.Fact
+				coverage, err := testCase.extractor.Extract(
+					context.Background(),
+					memoryCorpus{
+						repo:   "synthetic.invalid/mono",
+						commit: strings.Repeat("1", 40),
+						files:  files, attribution: frozenAttribution(profile),
+					},
+					func(fact sdk.Fact) error {
+						facts = append(facts, fact)
+						return nil
+					},
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				return facts, coverage
+			}
+			wantFacts, wantCoverage := run(profile.Files)
+			polyglot := cloneFiles(profile.Files)
+			polyglot["index.scip"] = appendSCIPDocument(
+				t, polyglot["index.scip"], "consumer/Use.java",
+				testCase.symbol, "Get", "Get",
+			)
+			gotFacts, gotCoverage := run(polyglot)
+			if !reflect.DeepEqual(gotFacts, wantFacts) ||
+				!reflect.DeepEqual(gotCoverage, wantCoverage) {
+				t.Fatalf(
+					"foreign SCIP document changed extraction:\nwant=%+v / %+v\ngot=%+v / %+v",
+					wantFacts, wantCoverage, gotFacts, gotCoverage,
+				)
+			}
+		})
+	}
+}
+
+func TestPolyglotSCIPStillAppliesGlobalInputLimits(t *testing.T) {
+	profile, err := t201.GenerateProfile(t201.SmallProfileName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := cloneFiles(profile.Files)
+	files["index.scip"] = appendSCIPDocument(
+		t, files["index.scip"], "consumer/Use.java",
+		strings.Repeat("x", 20<<10), "Get", "Get",
+	)
+	var facts []sdk.Fact
+	coverage, err := gocaller.NewGRPC().Extract(
+		context.Background(),
+		memoryCorpus{
+			repo: "synthetic.invalid/mono", commit: strings.Repeat("1", 40),
+			files: files, attribution: frozenAttribution(profile),
+		},
+		func(fact sdk.Fact) error {
+			facts = append(facts, fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundGap := false
+	for _, fact := range facts {
+		if fact.Assertion.Predicate == "CALLER_EXTRACTION_GAP" &&
+			fact.Assertion.Object == "malformed_symbol_input" {
+			foundGap = true
+		}
+	}
+	if !foundGap || coverage.UnresolvedCount == 0 {
+		t.Fatalf("oversized foreign symbol did not produce a malformed-input gap: %+v / %+v", coverage, facts)
+	}
+}
+
 func TestTypedSCIPMappingAbstentionAndInputFailure(t *testing.T) {
 	profile, err := t201.GenerateProfile(t201.SmallProfileName)
 	if err != nil {

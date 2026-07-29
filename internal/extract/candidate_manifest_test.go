@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -20,6 +21,25 @@ func (f manifestProviderFunc) OpenCandidateManifest(
 	request CandidateManifestRequest,
 ) (CandidateManifest, error) {
 	return f(ctx, request)
+}
+
+type splitManifestProvider struct {
+	identity func(context.Context, CandidateManifestRequest) (string, error)
+	open     func(context.Context, CandidateManifestRequest) (CandidateManifest, error)
+}
+
+func (provider splitManifestProvider) CandidateManifestIdentity(
+	ctx context.Context,
+	request CandidateManifestRequest,
+) (string, error) {
+	return provider.identity(ctx, request)
+}
+
+func (provider splitManifestProvider) OpenCandidateManifest(
+	ctx context.Context,
+	request CandidateManifestRequest,
+) (CandidateManifest, error) {
+	return provider.open(ctx, request)
 }
 
 type memoryCandidateManifest struct {
@@ -156,7 +176,9 @@ func TestWorkerCandidateManifestBindsCoverageAndShortCircuit(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()
 	manifest := validMemoryCandidateManifest()
+	identityChecks := 0
 	opens := 0
+	locks := 0
 	extractions := 0
 	extractor := unitExtractor{
 		domain: "proto-contract", version: "1",
@@ -185,39 +207,61 @@ func TestWorkerCandidateManifestBindsCoverageAndShortCircuit(t *testing.T) {
 	}
 	worker := Worker{
 		Repos: readyRepoGetter(repo), Evidence: evidence,
-		NewCorpus: unitFactory(nil),
-		Manifests: manifestProviderFunc(func(
-			_ context.Context,
-			request CandidateManifestRequest,
-		) (CandidateManifest, error) {
-			opens++
-			if request.Repository != repo.Name ||
-				request.Commit != repo.IndexedCommitHash ||
-				len(request.Domains) != 1 ||
-				request.Domains[0] != (CandidateManifestDomain{
-					Domain: "proto-contract", Version: "1",
-				}) {
-				return nil, errors.New("incorrect candidate manifest request")
-			}
-			return manifest, nil
+		NewCorpus: unitFactory(func(
+			context.Context, string,
+		) (func(), error) {
+			locks++
+			return func() {}, nil
 		}),
+		Manifests: splitManifestProvider{
+			identity: func(
+				_ context.Context,
+				request CandidateManifestRequest,
+			) (string, error) {
+				identityChecks++
+				if err := validateManifestRequest(request, repo); err != nil {
+					return "", err
+				}
+				return manifest.Identity(), nil
+			},
+			open: func(
+				_ context.Context,
+				request CandidateManifestRequest,
+			) (CandidateManifest, error) {
+				opens++
+				if err := validateManifestRequest(request, repo); err != nil {
+					return nil, err
+				}
+				return manifest, nil
+			},
+		},
 		Extractors: []Extractor{extractor},
 	}
 	job := store.Job{Target: repo.Name}
 	if err := worker.Handle(context.Background(), job); err != nil {
 		t.Fatal(err)
 	}
+	if identityChecks != 1 || opens != 1 || locks != 1 ||
+		extractions != 1 {
+		t.Fatalf(
+			"initial identity/open/lock/extraction = %d/%d/%d/%d",
+			identityChecks, opens, locks, extractions,
+		)
+	}
 	if err := worker.Handle(context.Background(), job); err != nil {
 		t.Fatal(err)
 	}
 	wantPolicy := candidateManifestInventoryPrefix + strings.Repeat("a", 64)
-	if opens != 2 || extractions != 1 || evidence.nextRun != 1 ||
+	if identityChecks != 2 || opens != 1 || locks != 1 ||
+		extractions != 1 || evidence.nextRun != 1 ||
 		evidence.publishedWith.InventoryPolicy != wantPolicy ||
 		evidence.publishedWith.CorpusFileCount != 200_008 ||
 		evidence.publishedWith.CandidateFileCount != 1 {
 		t.Fatalf(
-			"opens/extractions/runs/coverage = %d/%d/%d/%+v",
-			opens, extractions, evidence.nextRun, evidence.publishedWith)
+			"no-op identity/open/lock/extractions/runs/coverage = %d/%d/%d/%d/%d/%+v",
+			identityChecks, opens, locks, extractions, evidence.nextRun,
+			evidence.publishedWith,
+		)
 	}
 
 	// A content-only change keeps path assignment but changes manifest
@@ -226,11 +270,96 @@ func TestWorkerCandidateManifestBindsCoverageAndShortCircuit(t *testing.T) {
 	if err := worker.Handle(context.Background(), job); err != nil {
 		t.Fatal(err)
 	}
-	if opens != 3 || extractions != 2 || evidence.nextRun != 2 ||
+	if identityChecks != 3 || opens != 2 || locks != 2 ||
+		extractions != 2 || evidence.nextRun != 2 ||
 		evidence.publishedWith.InventoryPolicy !=
 			candidateManifestInventoryPrefix+strings.Repeat("d", 64) {
 		t.Fatalf(
-			"changed identity opens/extractions/runs/coverage = %d/%d/%d/%+v",
-			opens, extractions, evidence.nextRun, evidence.publishedWith)
+			"changed identity/open/lock/extractions/runs/coverage = %d/%d/%d/%d/%d/%+v",
+			identityChecks, opens, locks, extractions, evidence.nextRun,
+			evidence.publishedWith,
+		)
 	}
+}
+
+func TestWorkerCandidateMarkerRefusesAtNoOpPreflight(t *testing.T) {
+	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	manifest := validMemoryCandidateManifest()
+	markerCovered := false
+	locks := 0
+	opens := 0
+	extractions := 0
+	worker := Worker{
+		Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: unitFactory(func(
+			context.Context, string,
+		) (func(), error) {
+			locks++
+			return func() {}, nil
+		}),
+		Manifests: splitManifestProvider{
+			identity: func(
+				context.Context,
+				CandidateManifestRequest,
+			) (string, error) {
+				if markerCovered {
+					return "", candidate.ErrPublishing
+				}
+				return manifest.Identity(), nil
+			},
+			open: func(
+				context.Context,
+				CandidateManifestRequest,
+			) (CandidateManifest, error) {
+				opens++
+				return manifest, nil
+			},
+		},
+		Extractors: []Extractor{unitExtractor{
+			domain: "proto-contract", version: "1",
+			candidate: func(filePath string) bool {
+				return filePath == "read.proto"
+			},
+			extract: func(
+				ctx context.Context, corpus sdk.Corpus, _ sdk.Emit,
+			) (sdk.Coverage, error) {
+				extractions++
+				_, err := corpus.Read(ctx, "read.proto")
+				return sdk.Coverage{}, err
+			},
+		}},
+	}
+	job := store.Job{Target: repo.Name}
+	if err := worker.Handle(context.Background(), job); err != nil {
+		t.Fatal(err)
+	}
+	markerCovered = true
+	if err := worker.Handle(
+		context.Background(), job,
+	); !errors.Is(err, candidate.ErrPublishing) {
+		t.Fatalf("marker-covered no-op error = %v", err)
+	}
+	if locks != 1 || opens != 1 || extractions != 1 ||
+		evidence.nextRun != 1 {
+		t.Fatalf(
+			"marker-covered lock/open/extractions/runs = %d/%d/%d/%d",
+			locks, opens, extractions, evidence.nextRun,
+		)
+	}
+}
+
+func validateManifestRequest(
+	request CandidateManifestRequest,
+	repo *store.Repo,
+) error {
+	if request.Repository != repo.Name ||
+		request.Commit != repo.IndexedCommitHash ||
+		len(request.Domains) != 1 ||
+		request.Domains[0] != (CandidateManifestDomain{
+			Domain: "proto-contract", Version: "1",
+		}) {
+		return errors.New("incorrect candidate manifest request")
+	}
+	return nil
 }

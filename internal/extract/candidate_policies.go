@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/extract/scipsource"
 )
 
 const (
@@ -68,15 +69,14 @@ func CandidatePolicies(extractors []Extractor) ([]candidate.Policy, error) {
 			policy.EnumerationPolicy = scipProtoEnumeration
 			policy.Enumerate = func(filePath string) bool {
 				return filePath == scipIndexPath ||
-					strings.HasSuffix(filePath, ".go") ||
-					strings.HasSuffix(filePath, ".proto") ||
+					scipsource.Eligible(scipsource.ProtoField, filePath) ||
 					path.Base(filePath) == "buf.yaml"
 			}
 		case "scip-thrift-field":
 			policy.EnumerationPolicy = scipThriftEnumeration
 			policy.Enumerate = func(filePath string) bool {
 				return filePath == scipIndexPath ||
-					strings.HasSuffix(filePath, ".go")
+					scipsource.Eligible(scipsource.Go, filePath)
 			}
 		case "grpc-caller", "thrift-caller":
 			policy.EnumerationPolicy = goCallerEnumeration
@@ -106,7 +106,7 @@ func hasSuffix(suffix string) func(string) bool {
 func callerCandidatePath(filePath string) bool {
 	if filePath == scipIndexPath || filePath == "go.mod" ||
 		strings.HasSuffix(filePath, "/go.mod") ||
-		strings.HasSuffix(filePath, ".go") {
+		scipsource.Eligible(scipsource.Go, filePath) {
 		return true
 	}
 	for _, snapshotPath := range attributionSnapshotPaths {

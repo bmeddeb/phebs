@@ -25,6 +25,7 @@ import (
 
 	"github.com/scip-code/scip/bindings/go/scip"
 
+	"github.com/bmeddeb/phebs/internal/extract/scipsource"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 )
 
@@ -59,7 +60,7 @@ func (e extractor) Version() string { return version }
 func (e extractor) Candidate(filePath string) bool {
 	return filePath == indexPath || filePath == "go.mod" ||
 		strings.HasSuffix(filePath, "/go.mod") ||
-		strings.HasSuffix(filePath, ".go")
+		scipsource.Eligible(scipsource.Go, filePath)
 }
 
 type indexedOccurrence struct {
@@ -832,6 +833,9 @@ func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) 
 	}
 	documents := make([]indexedDocument, 0, len(byPath))
 	for _, document := range byPath {
+		if !scipsource.Eligible(scipsource.Go, document.path) {
+			continue
+		}
 		sort.Slice(document.occurrences, func(i, j int) bool {
 			left, right := document.occurrences[i], document.occurrences[j]
 			if comparison := left.rangeValue.CompareStrict(right.rangeValue); comparison != 0 {

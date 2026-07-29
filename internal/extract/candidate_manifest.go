@@ -81,6 +81,21 @@ type CandidateManifestProvider interface {
 	) (CandidateManifest, error)
 }
 
+// CandidateManifestIdentityProvider is the pointer-only half of production
+// candidate admission. It must validate the request against the committed
+// publication pointer and refuse an active publication marker, but it must
+// not open, hash, parse, or spool candidate publication bytes.
+//
+// Worker uses this optional capability to prove that every extraction domain
+// is already current before taking the repository mirror lock. Providers that
+// do not implement it retain the strict open-first compatibility path.
+type CandidateManifestIdentityProvider interface {
+	CandidateManifestIdentity(
+		ctx context.Context,
+		request CandidateManifestRequest,
+	) (string, error)
+}
+
 func manifestRequest(
 	repoName, commit string,
 	unit *analysisunit.State,
@@ -112,8 +127,9 @@ func validateCandidateManifest(
 		return "", gitlinkInventory{}, errors.New("candidate manifest provider returned nil")
 	}
 	identity := manifest.Identity()
-	if !validSHA256(identity) {
-		return "", gitlinkInventory{}, errors.New("candidate manifest has invalid identity")
+	inventoryPolicy, err := candidateManifestInventoryPolicy(identity)
+	if err != nil {
+		return "", gitlinkInventory{}, err
 	}
 	count := manifest.CorpusFileCount()
 	if count < 0 || count > candidate.MaxCorpusEntries {
@@ -152,8 +168,15 @@ func validateCandidateManifest(
 		return "", gitlinkInventory{}, errors.New(
 			"candidate manifest gitlink sample exceeds its bounds")
 	}
+	return inventoryPolicy, boundaries, nil
+}
+
+func candidateManifestInventoryPolicy(identity string) (string, error) {
+	if !validSHA256(identity) {
+		return "", errors.New("candidate manifest has invalid identity")
+	}
 	return candidateManifestInventoryPrefix +
-		strings.TrimPrefix(identity, "sha256:"), boundaries, nil
+		strings.TrimPrefix(identity, "sha256:"), nil
 }
 
 func normalizeManifestFile(input CandidateManifestFile) (treeRecord, error) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -157,6 +158,74 @@ func OpenContext(
 		return nil, ErrPublishing
 	}
 	return &Publication{root: root, manifest: manifest, state: manifest.State()}, nil
+}
+
+// OpenPublishingContext strictly validates an interrupted live publication
+// while its stable marker remains installed. It is restricted to recovery:
+// callers cannot use it when the marker is absent, and the marker identity is
+// rechecked after all manifest/member bytes have been validated. The caller
+// removes the marker only after the matching database transition succeeds.
+func OpenPublishingContext(
+	ctx context.Context,
+	root string,
+	expected Expected,
+) (*Publication, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := validatePublishingMarker(root, expected.Repository); err != nil {
+		return nil, err
+	}
+	view, err := unitView(expected)
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := validatePublication(
+		ctx, root, expected, nil, false, view,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := validatePublishingMarker(root, expected.Repository); err != nil {
+		return nil, err
+	}
+	return &Publication{root: root, manifest: manifest, state: manifest.State()}, nil
+}
+
+func validatePublishingMarker(root, repository string) (resultErr error) {
+	if !safeRepository(repository) {
+		return fmt.Errorf("%w: invalid repository marker identity", ErrPublishing)
+	}
+	markerPath := filepath.Join(root, PublishingName(repository))
+	info, err := os.Lstat(markerPath)
+	if err != nil {
+		return fmt.Errorf("%w: marker unavailable: %v", ErrPublishing, err)
+	}
+	expectedBytes := int64(len(repository) + 1)
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
+		info.Size() != expectedBytes {
+		return fmt.Errorf("%w: marker is not canonical", ErrPublishing)
+	}
+	source, err := openStableRegularFile(markerPath, info)
+	if err != nil {
+		return fmt.Errorf("%w: marker changed while opening: %v", ErrPublishing, err)
+	}
+	defer func() {
+		if closeErr := source.file.Close(); resultErr == nil && closeErr != nil {
+			resultErr = closeErr
+		}
+	}()
+	raw, err := io.ReadAll(io.LimitReader(source.file, expectedBytes+1))
+	if err != nil {
+		return fmt.Errorf("%w: read marker: %v", ErrPublishing, err)
+	}
+	if err := source.verifyAfterRead(int64(len(raw))); err != nil {
+		return fmt.Errorf("%w: marker changed while reading: %v", ErrPublishing, err)
+	}
+	if string(raw) != repository+"\n" {
+		return fmt.Errorf("%w: marker content is not canonical", ErrPublishing)
+	}
+	return nil
 }
 
 // OpenState opens a publication from an already persisted primitive pointer.

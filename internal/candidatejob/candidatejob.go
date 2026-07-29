@@ -89,6 +89,8 @@ type Worker struct {
 	root     string
 	store    Store
 	policies *PolicySet
+	open     func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
+	recover  func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
 }
 
 // New constructs the planner and extraction provider from the same frozen
@@ -129,6 +131,8 @@ func NewWorker(dataDir string, state Store, policies *PolicySet) (*Worker, error
 		root:     CandidateRoot(dataDir),
 		store:    state,
 		policies: policies,
+		open:     candidate.OpenContext,
+		recover:  candidate.OpenPublishingContext,
 	}, nil
 }
 
@@ -156,7 +160,8 @@ func (worker *Worker) Handle(ctx context.Context, job store.Job) error {
 }
 
 func (worker *Worker) handle(ctx context.Context, job store.Job) error {
-	if worker == nil || worker.store == nil || worker.policies == nil {
+	if worker == nil || worker.store == nil || worker.policies == nil ||
+		worker.open == nil || worker.recover == nil {
 		return errors.New("worker is not initialized")
 	}
 	if err := ctx.Err(); err != nil {
@@ -232,28 +237,50 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	}
 
 	// A marker may mean the database commit succeeded and only marker cleanup
-	// was interrupted, or that filesystem publication stopped midway. The
-	// mirror lock also fences extraction, so remove it, strictly validate the
-	// complete generation, and rebuild if validation proves it partial.
+	// was interrupted, or that filesystem publication stopped midway. Keep it
+	// installed throughout strict recovery: a second crash must remain
+	// distinguishable from a clean exact-pointer no-op. The guarded database
+	// transition removes it only after matching state and fan-out are durable.
 	hadMarker := candidate.IsPublishing(worker.root, repository.Name)
-	if hadMarker {
-		if err := candidate.FinishPublication(worker.root, repository.Name); err != nil {
-			return fmt.Errorf("recover publication marker: %w", err)
-		}
-	}
 	// Unmarked filesystem bytes without a database pointer have no authority:
 	// they may be an orphan or a self-consistent forged generation. Reuse is
 	// limited to an exact persisted pointer or the marker left by Publish
 	// before its guarded database transition.
-	if persistedState != nil || hadMarker {
+	controlReady := false
+	if persistedState != nil {
+		controlReady, err = publicationControlReady(
+			worker.root, *persistedState,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	if persistedState != nil && controlReady && !hadMarker && !job.Force &&
+		publicationMatchesExpected(*persistedState, expected) {
+		// The guarded pointer is already the authority and carries the exact
+		// manifest digest needed by extraction's no-op decision. Re-publishing
+		// it repairs a missing extraction fan-out without re-reading, hashing,
+		// or externally sorting any candidate member.
+		return worker.commitPublication(ctx, repository, *persistedState)
+	}
+	if hadMarker {
 		reuseExpected := expected
 		if persistedState != nil {
 			reuseExpected.ManifestDigest = persistedState.ManifestDigest
 		}
-		if published, openErr := candidate.OpenContext(
+		if published, openErr := worker.recover(
 			ctx, worker.root, reuseExpected,
 		); openErr == nil &&
 			(persistedState == nil || published.State() == *persistedState) {
+			return worker.commitPublication(ctx, repository, published.State())
+		}
+	}
+	if !hadMarker && persistedState != nil && controlReady {
+		reuseExpected := expected
+		reuseExpected.ManifestDigest = persistedState.ManifestDigest
+		if published, openErr := worker.open(
+			ctx, worker.root, reuseExpected,
+		); openErr == nil && published.State() == *persistedState {
 			return worker.commitPublication(ctx, repository, published.State())
 		}
 	}
@@ -279,6 +306,39 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		return fmt.Errorf("publish files: %w", err)
 	}
 	return worker.commitPublication(ctx, repository, state)
+}
+
+func publicationControlReady(root string, state candidate.State) (bool, error) {
+	if err := state.Validate(); err != nil {
+		return false, err
+	}
+	info, err := os.Lstat(filepath.Join(root, state.Manifest))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("inspect candidate manifest control file: %w", err)
+	}
+	return info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0, nil
+}
+
+func publicationMatchesExpected(
+	state candidate.State,
+	expected candidate.Expected,
+) bool {
+	return state.Repository == expected.Repository &&
+		state.Commit == expected.Commit &&
+		state.UnitDigest == expectedUnitDigest(expected.Unit) &&
+		state.PolicyDigest == expected.PolicyDigest &&
+		state.GenerationDigest == expected.GenerationDigest &&
+		state.Manifest == candidate.ManifestName(expected.Repository)
+}
+
+func expectedUnitDigest(unit *analysisunit.State) string {
+	if unit == nil {
+		return ""
+	}
+	return unit.Digest
 }
 
 func (worker *Worker) expected(repository *store.Repo) (candidate.Expected, error) {
