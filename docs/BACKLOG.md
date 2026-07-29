@@ -620,17 +620,20 @@ search revision.
   no-watcher composite. One 10-second wall budget covers compilation,
   starter-owned cold validation/materialization, zoekt execution, and
   result-time identity checks. At most two cache-owned fills run at once. The
-  query that starts a fill may wait within its budget; a concurrent query
-  immediately omits that already-loading repository and continues to warm
-  bindings. A timed-out fill may continue for up to 10 minutes, a later query
-  reuses its completed exact binding, and shutdown cancels and joins the
-  loaders. JSON fan-out has a fixed eight-worker ceiling and incrementally
-  retains only the global top K; SSE retains the shipped progressive
-  per-shard, arrival-order contract under one shared display ceiling. Both
-  focused and whole-result paths recheck current committed posture and
-  revision, so a same-HEAD whole-to-focused transition fails closed to a
-  conservative short result. Cache pruning retires deleted, unindexed, or
-  whole-posture focused bindings after active leases release.
+  same exact-generation query joins an in-flight fill, and saturated cold work
+  queues behind those slots; every waiter uses its own query deadline, whose
+  expiry fails the query instead of returning a knowingly partial RepoSet. A
+  timed-out fill may continue for up to 10 minutes, a later query reuses its
+  completed exact binding, and shutdown cancels and joins the loaders. Stable
+  negative validation entries retry with bounded 250 ms–30 s exponential
+  backoff, while a fingerprint change retries immediately. JSON fan-out has a
+  fixed eight-worker ceiling and incrementally retains only the global top K;
+  SSE retains the shipped progressive per-shard, arrival-order contract under
+  one shared display ceiling. Both focused and whole-result paths recheck
+  current committed posture and revision, so a same-HEAD whole-to-focused
+  transition fails closed to a conservative short result. Cache pruning
+  retires deleted, unindexed, or whole-posture focused bindings after active
+  leases release.
 - A projected Git tree/commit is explicitly not the default fallback: its
   synthetic commit would become the shard version and force provenance
   rewriting across search, source, SCIP, history, evidence, and Workbench
@@ -760,8 +763,11 @@ whole-repository indexing. Typed-index input remains repository-root-unbound.
 Existing extraction now waits for one current, strictly validated candidate
 publication and still consumes its repository-wide view. Exact no-op work
 uses only its committed digest identity, while stale/forced work strictly
-opens the bytes once. Unit membership is precomputed only; T30.5 owns the
-evidence-scope and identity change.
+opens the bytes once. A process-local control fingerprint detects later
+manifest/member identity drift and sends it through strict validation/rebuild
+without hashing member contents on warm retries; same-stat damage remains a
+strict-consumption refusal, not a metadata claim. Unit membership is
+precomputed only; T30.5 owns the evidence-scope and identity change.
 
 **T30.5 · Focused evidence publication** *(T30.3 and T30.4 complete · next)* — key
 extraction attempts/runs and published evidence by repository, source commit,

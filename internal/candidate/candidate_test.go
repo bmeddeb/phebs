@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/gitobj"
@@ -32,6 +33,31 @@ type gitFixture struct {
 type cancelAfterErrChecks struct {
 	context.Context
 	remaining int
+}
+
+type syntheticUntrustedReader struct {
+	remaining int64
+	read      int64
+	maxRead   int
+}
+
+func (reader *syntheticUntrustedReader) Read(buffer []byte) (int, error) {
+	if reader.remaining == 0 {
+		return 0, io.EOF
+	}
+	count := len(buffer)
+	if int64(count) > reader.remaining {
+		count = int(reader.remaining)
+	}
+	for index := range buffer[:count] {
+		buffer[index] = 'x'
+	}
+	reader.remaining -= int64(count)
+	reader.read += int64(count)
+	if count > reader.maxRead {
+		reader.maxRead = count
+	}
+	return count, nil
 }
 
 func (ctx *cancelAfterErrChecks) Err() error {
@@ -702,6 +728,133 @@ func TestCanonicalLineReaderEnforcesBoundBeforeMaterialization(t *testing.T) {
 		empty, limit,
 	); line != nil || !errors.Is(err, io.EOF) {
 		t.Fatalf("empty line read = %d bytes / %v", len(line), err)
+	}
+
+	const untrustedMemberBytes = int64(256 << 20)
+	source := &syntheticUntrustedReader{remaining: untrustedMemberBytes}
+	reader := bufio.NewReaderSize(source, 64<<10)
+	line, err := readCanonicalLine(reader, limit)
+	if err == nil || !strings.Contains(err.Error(), "exceeds its byte limit") {
+		t.Fatalf("virtual oversized line error = %v", err)
+	}
+	if line != nil {
+		t.Fatalf("virtual oversized line retained %d bytes", len(line))
+	}
+	const readerBufferBytes = 64 << 10
+	if source.read > int64(limit+readerBufferBytes) ||
+		source.read >= untrustedMemberBytes ||
+		source.maxRead > readerBufferBytes {
+		t.Fatalf(
+			"virtual oversized line read/max request = %d/%d, want <=%d/%d",
+			source.read, source.maxRead, limit+readerBufferBytes,
+			readerBufferBytes,
+		)
+	}
+}
+
+func TestCanonicalLineReaderFastPathReturnsOwnedBytes(t *testing.T) {
+	reader := bufio.NewReaderSize(
+		strings.NewReader("first\n"+strings.Repeat("x", 64)+"\n"),
+		16,
+	)
+	first, err := readCanonicalLine(reader, maxTreeRecordBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := bytes.Clone(first)
+	if _, err := readCanonicalLine(reader, maxTreeRecordBytes); err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(first, expected) {
+		t.Fatalf(
+			"first canonical line changed after refill: %q, want %q",
+			first, expected,
+		)
+	}
+}
+
+func TestControlFingerprintDetectsIdentityChangeWithoutClaimingContentProof(
+	t *testing.T,
+) {
+	fixture := newGitFixture(t)
+	fixture.write("src/main.go", "package main\n")
+	commit := fixture.commit("fingerprint")
+	root := t.TempDir()
+	manifest, _ := buildFixture(t, fixture, commit, nil, root)
+	if len(manifest.RepositoryMembers) == 0 {
+		t.Fatal("fixture has no repository member")
+	}
+	state := manifest.State()
+	fingerprint, err := CaptureControlFingerprintContext(
+		t.Context(), root, state,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unchanged, err := fingerprint.MatchesContext(
+		t.Context(), root, state,
+	); err != nil || !unchanged {
+		t.Fatalf("initial fingerprint match = %v, %v", unchanged, err)
+	}
+
+	memberPath := filepath.Join(root, manifest.RepositoryMembers[0].Name)
+	before, err := os.Lstat(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("fixture member is empty")
+	}
+	raw[0] ^= 0x01
+	if err := os.WriteFile(memberPath, raw, before.Mode().Perm()); err != nil {
+		t.Fatal(err)
+	}
+	changedTime := before.ModTime().Add(2 * time.Second)
+	if err := os.Chtimes(memberPath, changedTime, changedTime); err != nil {
+		t.Fatal(err)
+	}
+	if unchanged, err := fingerprint.MatchesContext(
+		t.Context(), root, state,
+	); err != nil || unchanged {
+		t.Fatalf("changed fingerprint match = %v, %v", unchanged, err)
+	}
+
+	// A control fingerprint is intentionally metadata-only. If an adversary
+	// restores every observed identity attribute, strict consumption—not this
+	// cheap steady-state signal—must still reject the changed content.
+	if err := os.Chtimes(
+		memberPath, before.ModTime(), before.ModTime(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := os.Lstat(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !restored.ModTime().Equal(before.ModTime()) {
+		t.Fatalf(
+			"restored modification time = %v, want %v",
+			restored.ModTime(), before.ModTime(),
+		)
+	}
+	if unchanged, err := fingerprint.MatchesContext(
+		t.Context(), root, state,
+	); err != nil || !unchanged {
+		t.Fatalf("same-stat fingerprint match = %v, %v", unchanged, err)
+	}
+	if _, err := CaptureControlFingerprintContext(
+		t.Context(), root, state,
+	); err != nil {
+		t.Fatalf("same-stat cold fingerprint = %v", err)
+	}
+	if _, err := OpenStateContext(
+		t.Context(), root, state,
+	); err == nil {
+		t.Fatal("strict consumption accepted same-stat member corruption")
 	}
 }
 

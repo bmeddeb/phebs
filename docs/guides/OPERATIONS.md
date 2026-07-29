@@ -60,13 +60,22 @@ sidecars, and shard members; it never includes whole-repository shards. A
 stale marker is omitted but cannot hide an otherwise complete valid
 publication. Invalid, incomplete, or orphan focused artifacts are rebuildable
 damage, not a reason to discard the already completed precious-state database
-export: backup omits them. The manifest binds both artifacts' sizes and
-SHA-256 digests, the exact raw config digest, phebs version/binary digest,
-SurrealDB version/binary digest, database identity,
-store-writer/evidence/migration versions, and the derived-state exclusions,
-including `$DATA/candidates`. It contains no host binary path or database
-password. Preserve the exact config separately; the backup contains its
-digest, not its bytes.
+export: backup omits them. Creation copies the already validated focused files
+from stable descriptors, rehashes each copy against its frozen digest, and
+proves the exact canonical tar inventory in one bounded streaming pass; it
+does not extract the archive into a second temporary tree. Restore's
+pre-import verification and final installation still perform the complete
+structural extraction and semantic publication validation. The
+`phebs-backup-manifest-v3` manifest
+binds both artifacts' sizes and SHA-256 digests, the exact raw config digest,
+phebs version/binary digest, SurrealDB version/binary digest, database
+identity, store-writer/evidence/migration versions, and the derived-state
+exclusions, including `$DATA/candidates`. Its required
+`phebs-focused-archive-report-v1` receipt records archived publications,
+omitted publications/artifacts, and stale markers; verification independently
+recovers and compares the archived publication count. It contains no host
+binary path or database password. Preserve the exact config separately; the
+backup contains its digest, not its bytes.
 
 When any omission or stale-marker count is nonzero, backup emits one bounded
 focused-derived-state summary:
@@ -328,17 +337,20 @@ shared-directory watcher delay cannot serve a retired same-commit scope and a
 transient shard belonging to another repository cannot remove this one from
 the query. One 10-second wall budget covers query compilation, starter-owned
 cold validation/materialization, execution, and result-time identity checks.
-At most two cache-owned fills run at once. The query that starts a fill may
-wait within its budget; a concurrent query immediately omits that
-already-loading repository and continues to warm bindings. A timed-out fill
-may continue for up to 10 minutes. A later query reuses its completed exact
-binding, and shutdown cancels and joins those loaders. JSON
-fan-out uses at most eight workers and incrementally retains only its global
-top K. Progressive SSE batches retain arrival-order delivery under one shared
-display ceiling. A whole repository that commits focused posture while a
-query is running is removed at the result gate; that concurrent transition may
-return fewer files, but never retired whole content. Deleted, unindexed, or
-whole-posture cache entries close after their active query leases release.
+At most two cache-owned fills run at once. The query that starts a fill and
+same-generation concurrent queries share that fill within their own budgets.
+Saturated cold work queues behind the two slots. Deadline expiry fails the
+query rather than returning a knowingly partial RepoSet. A timed-out fill may
+continue for up to 10 minutes. A later query reuses its completed exact
+binding, and shutdown cancels and joins those loaders. Stable negative
+validation entries retry with exponential backoff from 250 ms to 30 s; an
+artifact-fingerprint change retries immediately. JSON fan-out uses at most
+eight workers and incrementally retains only its global top K. Progressive SSE
+batches retain arrival-order delivery under one shared display ceiling. A
+whole repository that commits focused posture while a query is running is
+removed at the result gate; that concurrent transition may return fewer files,
+but never retired whole content. Deleted, unindexed, or whole-posture cache
+entries close after their active query leases release.
 `phebs_focused_index_opened_blobs` and
 `phebs_focused_index_opened_blob_bytes` measure successful Git reads at the
 trusted scope-checking boundary; any attempted out-of-unit read fails the
@@ -431,6 +443,15 @@ and post-restore reconstruction always take the strict validation/rebuild
 path. This shortcut grants no artifact access: actual candidate replay still
 revalidates the bound regular descriptor, record limits, exact digest, and
 marker absence.
+
+After a cold retry, the candidate worker also keeps a process-local control
+fingerprint over the persisted manifest digest and each manifest/member inode,
+mode, size, and modification time. Warm retries compare only those identities.
+Observed drift forces one strict publication open and rebuilds on failure, so
+ordinary unmarked runtime damage re-enters the repair loop without restoring
+per-tick member hashing. This fingerprint is not cryptographic validation:
+preexisting content damage that preserves every observed metadata field is
+still refused when strict extraction consumption checks the member digest.
 
 Before creating an extraction attempt, the worker refuses a publication
 marker, stale database pointer, HEAD/unit/policy disagreement, malformed or

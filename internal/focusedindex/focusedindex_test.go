@@ -181,6 +181,32 @@ func TestFocusedBuildIntegrityAndExactRecovery(t *testing.T) {
 	if err := VerifyArchive(orphanArchive); err != nil {
 		t.Fatalf("verify orphan-omitting archive: %v", err)
 	}
+	invalidDir := t.TempDir()
+	invalidManifest := filepath.Join(
+		invalidDir,
+		"phebs-focus-"+strings.Repeat("f", 64)+".manifest.json",
+	)
+	if err := os.WriteFile(invalidManifest, []byte("{invalid\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	invalidArchive := filepath.Join(t.TempDir(), "focused-index.tar")
+	invalidReport, err := CreateArchiveWithReport(invalidDir, invalidArchive)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if invalidReport.OmittedPublications != 1 ||
+		invalidReport.Publications != 0 ||
+		invalidReport.OmittedArtifacts != 0 ||
+		invalidReport.StaleMarkers != 0 {
+		t.Fatalf("invalid-publication archive report = %+v", invalidReport)
+	}
+	verifiedInvalidReport, err := VerifyArchiveWithReport(invalidArchive)
+	if err != nil {
+		t.Fatalf("verify invalid-publication-omitting archive: %v", err)
+	}
+	if verifiedInvalidReport.Publications != 0 {
+		t.Fatalf("verified invalid archive report = %+v", verifiedInvalidReport)
+	}
 
 	archivePath := filepath.Join(t.TempDir(), "focused-index.tar")
 	if err := startPublication(live, fixture.scope.Repository); err != nil {

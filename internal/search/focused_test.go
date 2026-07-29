@@ -462,6 +462,7 @@ func TestFocusedCacheColdLoadDoesNotBlockAnotherRepository(t *testing.T) {
 	cache := newFocusedCache(indexDir)
 	t.Cleanup(cache.close)
 	slowStarted := make(chan struct{})
+	releaseSlow := make(chan struct{})
 	var slowOnce sync.Once
 	cache.validate = func(
 		ctx context.Context,
@@ -472,8 +473,11 @@ func TestFocusedCacheColdLoadDoesNotBlockAnotherRepository(t *testing.T) {
 	) (focusedindex.Manifest, error) {
 		if repository == slowRepository {
 			slowOnce.Do(func() { close(slowStarted) })
-			<-ctx.Done()
-			return focusedindex.Manifest{}, ctx.Err()
+			select {
+			case <-releaseSlow:
+			case <-ctx.Done():
+				return focusedindex.Manifest{}, ctx.Err()
+			}
 		}
 		return focusedindex.Manifest{
 			Repository: repository,
@@ -489,13 +493,16 @@ func TestFocusedCacheColdLoadDoesNotBlockAnotherRepository(t *testing.T) {
 		return &cacheTestStreamer{}, func() {}, nil
 	}
 
-	slowCtx, cancelSlow := context.WithCancel(t.Context())
-	slowDone := make(chan error, 1)
+	type loadOutcome struct {
+		lease *focusedLease
+		err   error
+	}
+	slowDone := make(chan loadOutcome, 1)
 	go func() {
-		_, err := cache.acquire(
-			slowCtx, slowRepository, states[slowRepository], revisions,
+		lease, err := cache.acquire(
+			t.Context(), slowRepository, states[slowRepository], revisions,
 		)
-		slowDone <- err
+		slowDone <- loadOutcome{lease: lease, err: err}
 	}()
 	select {
 	case <-slowStarted:
@@ -526,19 +533,147 @@ func TestFocusedCacheColdLoadDoesNotBlockAnotherRepository(t *testing.T) {
 	lease, err := cache.acquire(
 		waitCtx, slowRepository, states[slowRepository], revisions,
 	)
-	if err != nil || lease != nil {
+	if !errors.Is(err, context.DeadlineExceeded) || lease != nil {
 		t.Fatalf(
-			"same-repository later caller = %+v, %v, want fail-closed skip",
+			"same-repository bounded waiter = %+v, %v, want deadline",
 			lease, err,
 		)
 	}
-	if elapsed := time.Since(waitStarted); elapsed > 100*time.Millisecond {
-		t.Fatalf("same-repository skip took %v", elapsed)
+	if elapsed := time.Since(waitStarted); elapsed > 500*time.Millisecond {
+		t.Fatalf("same-repository cancellation took %v", elapsed)
 	}
 
-	cancelSlow()
-	if err := <-slowDone; !errors.Is(err, context.Canceled) {
-		t.Fatalf("slow validation error = %v, want canceled", err)
+	followerDone := make(chan loadOutcome, 1)
+	go func() {
+		lease, err := cache.acquire(
+			t.Context(), slowRepository, states[slowRepository], revisions,
+		)
+		followerDone <- loadOutcome{lease: lease, err: err}
+	}()
+	select {
+	case outcome := <-followerDone:
+		t.Fatalf(
+			"same-generation follower returned before validation: %+v",
+			outcome,
+		)
+	case <-time.After(25 * time.Millisecond):
+	}
+	close(releaseSlow)
+	for name, done := range map[string]<-chan loadOutcome{
+		"starter":  slowDone,
+		"follower": followerDone,
+	} {
+		outcome := <-done
+		if outcome.err != nil || outcome.lease == nil {
+			t.Fatalf(
+				"%s cold validation result = %+v, %v",
+				name, outcome.lease, outcome.err,
+			)
+		}
+		outcome.lease.release()
+	}
+}
+
+func TestFocusedCacheNegativeValidationRetriesWithoutPublicationChange(
+	t *testing.T,
+) {
+	indexDir := t.TempDir()
+	repository := "example.com/acme/transient-negative"
+	if err := os.WriteFile(
+		filepath.Join(indexDir, focusedindex.ManifestName(repository)),
+		[]byte("stable publication identity\n"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	state, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	revisions := []store.IndexedRevision{{
+		Selector: "HEAD",
+		Branch:   "HEAD",
+		Commit:   "1111111111111111111111111111111111111111",
+	}}
+	cache := newFocusedCache(indexDir)
+	t.Cleanup(cache.close)
+	now := time.Unix(100, 0)
+	cache.now = func() time.Time { return now }
+	var validations atomic.Int32
+	cache.validate = func(
+		context.Context,
+		string,
+		string,
+		*analysisunit.State,
+		[]store.IndexedRevision,
+	) (focusedindex.Manifest, error) {
+		if validations.Add(1) == 1 {
+			// ValidatePublishedContext wraps several real read/open/stat
+			// failures with ErrShardSet and %v, erasing their concrete type.
+			// Retry therefore cannot depend on errors.As classification.
+			return focusedindex.Manifest{}, fmt.Errorf(
+				"%w: read metadata: input/output error",
+				focusedindex.ErrShardSet,
+			)
+		}
+		return focusedindex.Manifest{
+			Repository: repository,
+			Digest: "sha256:" +
+				strings.Repeat("a", 64),
+		}, nil
+	}
+	cache.materialize = func(
+		context.Context, string, focusedindex.Manifest,
+	) (zoekt.Streamer, func(), error) {
+		return &cacheTestStreamer{}, func() {}, nil
+	}
+
+	first, err := cache.acquire(t.Context(), repository, state, revisions)
+	if err != nil || first != nil {
+		t.Fatalf("first transient acquire = %+v, %v", first, err)
+	}
+	second, err := cache.acquire(t.Context(), repository, state, revisions)
+	if err != nil || second != nil {
+		t.Fatalf("backoff acquire = %+v, %v", second, err)
+	}
+	if validations.Load() != 1 {
+		t.Fatalf("validations inside first backoff = %d, want 1", validations.Load())
+	}
+
+	now = now.Add(focusedNegativeRetryDelay(1))
+	recovered, err := cache.acquire(
+		t.Context(), repository, state, revisions,
+	)
+	if err != nil || recovered == nil {
+		t.Fatalf("post-backoff acquire = %+v, %v", recovered, err)
+	}
+	recovered.release()
+	if validations.Load() != 2 {
+		t.Fatalf("post-backoff validations = %d, want 2", validations.Load())
+	}
+}
+
+func TestFocusedNegativeRetryDelayIsBounded(t *testing.T) {
+	for _, test := range []struct {
+		failures int
+		want     time.Duration
+	}{
+		{failures: 0, want: focusedNegativeRetryMin},
+		{failures: 1, want: focusedNegativeRetryMin},
+		{failures: 2, want: 2 * focusedNegativeRetryMin},
+		{failures: 8, want: 30 * time.Second},
+		{failures: 1_000, want: focusedNegativeRetryMax},
+	} {
+		if got := focusedNegativeRetryDelay(test.failures); got != test.want {
+			t.Errorf(
+				"retry delay for %d failures = %v, want %v",
+				test.failures, got, test.want,
+			)
+		}
 	}
 }
 

@@ -2,11 +2,14 @@ package focusedindex
 
 import (
 	"archive/tar"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
@@ -32,12 +35,36 @@ type ArchiveReport struct {
 }
 
 func VerifyArchive(archivePath string) error {
+	_, err := VerifyArchiveWithReport(archivePath)
+	return err
+}
+
+// VerifyArchiveWithReport is VerifyArchive with independently recovered
+// publication accounting. Explicit verification deliberately retains the
+// complete restore round trip; backup creation uses a cheaper construction
+// proof instead.
+func VerifyArchiveWithReport(archivePath string) (ArchiveReport, error) {
 	root, err := os.MkdirTemp("", "phebs-focused-archive-")
 	if err != nil {
-		return err
+		return ArchiveReport{}, err
 	}
 	defer func() { _ = os.RemoveAll(root) }()
-	return RestoreArchive(archivePath, filepath.Join(root, "index"))
+	indexDir := filepath.Join(root, "index")
+	if err := RestoreArchive(archivePath, indexDir); err != nil {
+		return ArchiveReport{}, err
+	}
+	entries, err := os.ReadDir(indexDir)
+	if err != nil {
+		return ArchiveReport{}, err
+	}
+	var report ArchiveReport
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "phebs-focus-") &&
+			strings.HasSuffix(entry.Name(), ".manifest.json") {
+			report.Publications++
+		}
+	}
+	return report, nil
 }
 
 // CreateArchive writes a deterministic inventory of every complete focused
@@ -53,10 +80,15 @@ func CreateArchive(indexDir, destination string) error {
 func CreateArchiveWithReport(
 	indexDir, destination string,
 ) (ArchiveReport, error) {
-	publications, files, report, err := archivablePublications(indexDir)
+	expectations, report, err := archivablePublications(indexDir)
 	if err != nil {
 		return report, err
 	}
+	files := make([]string, 0, len(expectations))
+	for name := range expectations {
+		files = append(files, name)
+	}
+	sort.Strings(files)
 	if len(files) > maxArchiveEntries {
 		return report, errors.New("focused archive contains too many entries")
 	}
@@ -114,12 +146,35 @@ func CreateArchiveWithReport(
 				"focused archive input %q changed before it was copied", name,
 			)
 		}
-		written, copyErr := io.CopyN(writer, source, info.Size())
+		digest := sha256.New()
+		written, copyErr := io.CopyN(
+			io.MultiWriter(writer, digest), source, info.Size(),
+		)
+		after, afterErr := source.Stat()
 		closeErr := source.Close()
-		if copyErr != nil || written != info.Size() || closeErr != nil {
+		current, currentErr := os.Lstat(path)
+		if copyErr != nil || written != info.Size() || afterErr != nil ||
+			closeErr != nil || currentErr != nil {
 			_ = writer.Close()
-			return report, errors.Join(copyErr, closeErr)
+			return report, errors.Join(copyErr, afterErr, closeErr, currentErr)
 		}
+		if !sameArchiveFileIdentity(info, after) ||
+			!sameArchiveFileIdentity(after, current) {
+			_ = writer.Close()
+			return report, fmt.Errorf(
+				"focused archive input %q changed while it was copied", name,
+			)
+		}
+		expectation := expectations[name]
+		actualDigest := "sha256:" + hex.EncodeToString(digest.Sum(nil))
+		if actualDigest != expectation.digest {
+			_ = writer.Close()
+			return report, fmt.Errorf(
+				"focused archive input %q changed after validation", name,
+			)
+		}
+		expectation.size = info.Size()
+		expectations[name] = expectation
 	}
 	if err := writer.Close(); err != nil {
 		return report, err
@@ -137,19 +192,108 @@ func CreateArchiveWithReport(
 	if err := file.Close(); err != nil {
 		return report, err
 	}
-	for repository, digest := range publications {
-		manifest, err := validateSelfContainedIgnoringMarker(indexDir, repository)
-		if err != nil || manifest.Digest != digest {
-			return report, errors.New(
-				"focused publication changed while backup was being created",
-			)
-		}
-	}
-	if err := VerifyArchive(destination); err != nil {
+	if err := verifyCreatedArchive(destination, expectations); err != nil {
 		return report, fmt.Errorf("verify created focused archive: %w", err)
 	}
 	complete = true
 	return report, nil
+}
+
+type archiveExpectation struct {
+	digest string
+	size   int64
+}
+
+// verifyCreatedArchive proves that the tar writer emitted exactly the safe,
+// byte-identical inventory frozen by archivablePublications. It performs one
+// bounded streaming pass and never materializes archive contents on disk.
+func verifyCreatedArchive(
+	archivePath string,
+	expectations map[string]archiveExpectation,
+) error {
+	pathInfo, err := os.Lstat(archivePath)
+	if err != nil || !pathInfo.Mode().IsRegular() {
+		return errors.New("created focused archive is missing or special")
+	}
+	archive, err := os.Open(archivePath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = archive.Close() }()
+	archiveInfo, err := archive.Stat()
+	if err != nil || !archiveInfo.Mode().IsRegular() ||
+		!os.SameFile(pathInfo, archiveInfo) ||
+		archiveInfo.Size() <= 0 || archiveInfo.Size() > maxArchiveBytes {
+		return errors.New(
+			"created focused archive is missing, special, empty, or exceeds its limit",
+		)
+	}
+	limited := &io.LimitedReader{R: archive, N: archiveInfo.Size()}
+	reader := tar.NewReader(limited)
+	seen := make(map[string]bool, len(expectations))
+	var total int64
+	for {
+		header, nextErr := reader.Next()
+		if errors.Is(nextErr, io.EOF) {
+			if limited.N != 0 {
+				return errors.New(
+					"created focused archive contains trailing data after its end marker",
+				)
+			}
+			break
+		}
+		if nextErr != nil {
+			return fmt.Errorf("read created focused archive: %w", nextErr)
+		}
+		if err := validateArchiveHeader(
+			header, seen, total, archiveInfo.Size(),
+		); err != nil {
+			return err
+		}
+		expectation, ok := expectations[header.Name]
+		if !ok || expectation.size != header.Size {
+			return fmt.Errorf(
+				"created focused archive entry %q differs from its inventory",
+				header.Name,
+			)
+		}
+		if len(seen) == maxArchiveEntries {
+			return errors.New("created focused archive contains too many entries")
+		}
+		seen[header.Name] = true
+		total += header.Size
+		digest := sha256.New()
+		written, err := io.CopyN(digest, reader, header.Size)
+		if err != nil || written != header.Size {
+			return fmt.Errorf(
+				"read created focused archive entry %q: %w",
+				header.Name, err,
+			)
+		}
+		actualDigest := "sha256:" + hex.EncodeToString(digest.Sum(nil))
+		if actualDigest != expectation.digest {
+			return fmt.Errorf(
+				"created focused archive entry %q failed its content proof",
+				header.Name,
+			)
+		}
+	}
+	if len(seen) != len(expectations) {
+		return errors.New("created focused archive inventory is incomplete")
+	}
+	current, err := os.Lstat(archivePath)
+	if err != nil || !sameArchiveFileIdentity(archiveInfo, current) {
+		return errors.New("created focused archive changed while it was verified")
+	}
+	return nil
+}
+
+func sameArchiveFileIdentity(left, right os.FileInfo) bool {
+	return left != nil && right != nil &&
+		left.Mode().IsRegular() && right.Mode().IsRegular() &&
+		os.SameFile(left, right) &&
+		left.Size() == right.Size() &&
+		left.ModTime().Equal(right.ModTime())
 }
 
 // RestoreArchive performs a complete structural pass before creating the
@@ -345,17 +489,17 @@ func validateArchiveHeader(
 
 func archivablePublications(
 	indexDir string,
-) (map[string]string, []string, ArchiveReport, error) {
+) (map[string]archiveExpectation, ArchiveReport, error) {
 	var report ArchiveReport
 	entries, err := os.ReadDir(indexDir)
 	if errors.Is(err, os.ErrNotExist) {
-		return map[string]string{}, []string{}, report, nil
+		return map[string]archiveExpectation{}, report, nil
 	}
 	if err != nil {
-		return nil, nil, report, err
+		return nil, report, err
 	}
 	publications := map[string]string{}
-	files := map[string]bool{}
+	files := map[string]archiveExpectation{}
 	candidateManifests := map[string]bool{}
 	selectedMarkers := map[string]bool{}
 	for _, entry := range entries {
@@ -380,17 +524,23 @@ func archivablePublications(
 			report.OmittedPublications++
 			continue
 		}
+		publicationFiles, err := archivePublicationExpectations(
+			indexDir, manifest,
+		)
+		if err != nil {
+			report.OmittedPublications++
+			continue
+		}
 		publications[manifest.Repository] = manifest.Digest
 		selectedMarkers[PublishingName(manifest.Repository)] = true
-		files[entry.Name()] = true
-		for _, member := range manifest.Members {
-			files[member.Name] = true
-			files[member.Name+MemberSuffix] = true
+		for name, expectation := range publicationFiles {
+			files[name] = expectation
 		}
 	}
 	for _, entry := range entries {
 		name := entry.Name()
-		if files[name] || !strings.HasPrefix(name, "phebs-focus-") {
+		if _, selected := files[name]; selected ||
+			!strings.HasPrefix(name, "phebs-focus-") {
 			continue
 		}
 		if selectedMarkers[name] {
@@ -402,13 +552,95 @@ func archivablePublications(
 		}
 		report.OmittedArtifacts++
 	}
-	names := make([]string, 0, len(files))
-	for name := range files {
-		names = append(names, name)
-	}
-	sort.Strings(names)
 	report.Publications = len(publications)
-	return publications, names, report, nil
+	return files, report, nil
+}
+
+func archivePublicationExpectations(
+	indexDir string,
+	manifest Manifest,
+) (map[string]archiveExpectation, error) {
+	files := make(
+		map[string]archiveExpectation,
+		1+2*len(manifest.Members),
+	)
+	manifestName := ManifestName(manifest.Repository)
+	var snapshot Manifest
+	expectation, err := archiveControlExpectation(
+		filepath.Join(indexDir, manifestName), &snapshot,
+	)
+	if err != nil || !reflect.DeepEqual(snapshot, manifest) {
+		return nil, errors.New(
+			"focused manifest changed after publication validation",
+		)
+	}
+	files[manifestName] = expectation
+	for _, member := range manifest.Members {
+		files[member.Name] = archiveExpectation{
+			digest: member.ContentDigest,
+		}
+		var sidecar ShardMember
+		sidecarName := member.Name + MemberSuffix
+		expectation, err := archiveControlExpectation(
+			filepath.Join(indexDir, sidecarName), &sidecar,
+		)
+		if err != nil || sidecar != member {
+			return nil, fmt.Errorf(
+				"focused sidecar %q changed after publication validation",
+				sidecarName,
+			)
+		}
+		files[sidecarName] = expectation
+	}
+	return files, nil
+}
+
+func archiveControlExpectation(
+	path string,
+	destination any,
+) (archiveExpectation, error) {
+	before, err := os.Lstat(path)
+	if err != nil || !before.Mode().IsRegular() ||
+		before.Size() < 0 || before.Size() > maxControlBytes {
+		return archiveExpectation{}, errors.New(
+			"focused archive control file is missing, special, or exceeds its limit",
+		)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return archiveExpectation{}, err
+	}
+	opened, statErr := file.Stat()
+	if statErr != nil || !sameControlFileIdentity(before, opened) {
+		_ = file.Close()
+		return archiveExpectation{}, errors.New(
+			"focused archive control file changed while opening",
+		)
+	}
+	raw, readErr := io.ReadAll(io.LimitReader(file, maxControlBytes+1))
+	after, afterErr := file.Stat()
+	closeErr := file.Close()
+	current, currentErr := os.Lstat(path)
+	if readErr != nil || afterErr != nil || closeErr != nil || currentErr != nil {
+		return archiveExpectation{}, errors.Join(
+			readErr, afterErr, closeErr, currentErr,
+		)
+	}
+	if len(raw) > maxControlBytes || int64(len(raw)) != before.Size() ||
+		!sameControlFileIdentity(before, after) ||
+		!sameControlFileIdentity(after, current) {
+		return archiveExpectation{}, errors.New(
+			"focused archive control file changed while reading",
+		)
+	}
+	if err := decodeJSONStrict(raw, destination); err != nil {
+		return archiveExpectation{}, err
+	}
+	sum := sha256.Sum256(raw)
+	return archiveExpectation{
+		digest: "sha256:" + hex.EncodeToString(sum[:]),
+		size:   int64(len(raw)),
+	}, nil
 }
 
 func validatedPublications(indexDir string) (map[string]string, []string, error) {

@@ -474,7 +474,10 @@ func readCanonicalLine(reader *bufio.Reader, limit int) ([]byte, error) {
 			return nil, errors.New("candidate record exceeds its byte limit")
 		}
 		if line == nil && err == nil {
-			return fragment[:len(fragment):len(fragment)], nil
+			// ReadSlice aliases bufio's scratch buffer, which a later read may
+			// compact or refill. Return owned bytes even on the single-fragment
+			// fast path so callers may safely retain a canonical record.
+			return bytes.Clone(fragment), nil
 		}
 		line = appendLineFragment(line, fragment, limit)
 		switch {

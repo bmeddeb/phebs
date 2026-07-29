@@ -34,6 +34,24 @@ func TestArchiveHeaderRejectsSparseMetadataWithinOrdinaryBounds(t *testing.T) {
 	}
 }
 
+func TestCreateArchiveSelfVerifiesWithoutRestoreWorkspace(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("TMPDIR", filepath.Join(root, "missing-temp-root"))
+	archivePath := filepath.Join(root, "focused-index.tar")
+	report, err := CreateArchiveWithReport(
+		filepath.Join(root, "missing-index"), archivePath,
+	)
+	if err != nil {
+		t.Fatalf("CreateArchiveWithReport required a restore workspace: %v", err)
+	}
+	if report != (ArchiveReport{}) {
+		t.Fatalf("empty focused archive report = %+v", report)
+	}
+	if err := VerifyArchive(archivePath); err == nil {
+		t.Fatal("explicit VerifyArchive unexpectedly avoided its restore workspace")
+	}
+}
+
 func TestArchiveHeaderRejectsOversizedPAXName(t *testing.T) {
 	name := "phebs-focus-" + strings.Repeat("a", maxArchiveNameBytes)
 	header := &tar.Header{

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -570,11 +571,15 @@ func TestFocusedCacheFillOutlivesTimedOutWaiter(t *testing.T) {
 			return focusedindex.Manifest{}, ctx.Err()
 		}
 	}
-	loaded := &cacheTestStreamer{}
+	firstLoaded := &cacheTestStreamer{}
+	var materializations atomic.Int32
 	cache.materialize = func(
 		context.Context, string, focusedindex.Manifest,
 	) (zoekt.Streamer, func(), error) {
-		return loaded, func() {}, nil
+		if materializations.Add(1) == 1 {
+			return firstLoaded, func() {}, nil
+		}
+		return &cacheTestStreamer{}, func() {}, nil
 	}
 	waiterCtx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
 	defer cancel()
@@ -604,19 +609,10 @@ func TestFocusedCacheFillOutlivesTimedOutWaiter(t *testing.T) {
 		lease *focusedLease
 		err   error
 	}
-	repoSlot, err := cache.repo(repository)
-	if err != nil {
-		t.Fatal(err)
-	}
-	repoSlot.mu.Lock()
-	inflight := repoSlot.load
-	repoSlot.mu.Unlock()
 	mismatchDone := make(chan acquireOutcome, 1)
 	go func() {
-		lease, err := cache.waitForLoad(
+		lease, err := cache.acquire(
 			t.Context(),
-			repoSlot,
-			inflight,
 			repository,
 			otherState,
 			revisions,
@@ -625,33 +621,36 @@ func TestFocusedCacheFillOutlivesTimedOutWaiter(t *testing.T) {
 	}()
 	close(release)
 	mismatch := <-mismatchDone
-	if mismatch.err != nil || mismatch.lease != nil {
+	if mismatch.err != nil || mismatch.lease == nil {
 		t.Fatalf(
-			"mismatched waiter received old-state load = %+v, %v",
+			"next-generation waiter result = %+v, %v",
 			mismatch.lease, mismatch.err,
 		)
 	}
-	nextCtx, nextCancel := context.WithTimeout(t.Context(), time.Second)
-	defer nextCancel()
-	lease, err := cache.acquire(
-		nextCtx, repository, state, revisions,
-	)
-	if err != nil || lease == nil {
-		t.Fatalf("post-timeout cache acquire = %+v, %v", lease, err)
-	}
-	lease.release()
-	if validations.Load() != 1 {
+	if !analysisunit.EqualState(mismatch.lease.entry.state, otherState) {
 		t.Fatalf(
-			"background-fill validations = %d, want 1",
+			"next-generation lease state = %+v, want %+v",
+			mismatch.lease.entry.state, otherState,
+		)
+	}
+	mismatch.lease.release()
+	if validations.Load() != 2 {
+		t.Fatalf(
+			"background and replacement validations = %d, want 2",
 			validations.Load(),
 		)
 	}
-	if loaded.closes.Load() != 0 {
-		t.Fatalf("background-filled searcher closed early")
+	if firstLoaded.closes.Load() != 1 {
+		t.Fatalf(
+			"obsolete background searcher closes = %d, want 1",
+			firstLoaded.closes.Load(),
+		)
 	}
 }
 
-func TestFocusedCacheColdSlotSaturationDoesNotSuppressWarmHit(t *testing.T) {
+func TestFocusedCacheColdSlotSaturationQueuesColdAndPreservesWarmHit(
+	t *testing.T,
+) {
 	const commit = "1111111111111111111111111111111111111111"
 	repositories := map[string]string{
 		"cold-a": "example.com/acme/cold-a",
@@ -752,16 +751,41 @@ func TestFocusedCacheColdSlotSaturationDoesNotSuppressWarmHit(t *testing.T) {
 			t.Fatalf("%s did not occupy a cold-fill slot", name)
 		}
 	}
-	overflow, err := cache.acquire(
-		t.Context(),
+	overflowCtx, cancelOverflow := context.WithTimeout(
+		t.Context(), 25*time.Millisecond,
+	)
+	defer cancelOverflow()
+	overflow, overflowErr := cache.acquire(
+		overflowCtx,
 		repositories["cold-d"],
 		states[repositories["cold-d"]],
 		revisions,
 	)
-	if err != nil || overflow != nil || overflowValidations.Load() != 0 {
+	if !errors.Is(overflowErr, context.DeadlineExceeded) || overflow != nil {
 		t.Fatalf(
-			"overflow cold acquire = %+v, %v, validations %d",
-			overflow, err, overflowValidations.Load(),
+			"saturated bounded acquire = %+v, %v, want deadline",
+			overflow, overflowErr,
+		)
+	}
+	overflowDone := make(chan loadOutcome, 1)
+	go func() {
+		lease, err := cache.acquire(
+			t.Context(),
+			repositories["cold-d"],
+			states[repositories["cold-d"]],
+			revisions,
+		)
+		overflowDone <- loadOutcome{lease: lease, err: err}
+	}()
+	select {
+	case outcome := <-overflowDone:
+		t.Fatalf("saturated cold acquire returned early: %+v", outcome)
+	case <-time.After(25 * time.Millisecond):
+	}
+	if overflowValidations.Load() != 0 {
+		t.Fatalf(
+			"queued cold validations = %d, want 0 before a slot opens",
+			overflowValidations.Load(),
 		)
 	}
 	warm, err = cache.acquire(
@@ -788,9 +812,25 @@ func TestFocusedCacheColdSlotSaturationDoesNotSuppressWarmHit(t *testing.T) {
 		}
 		result.lease.release()
 	}
+	overflowResult := <-overflowDone
+	if overflowResult.err != nil || overflowResult.lease == nil {
+		t.Fatalf(
+			"queued cold fill result = %+v, %v",
+			overflowResult.lease, overflowResult.err,
+		)
+	}
+	overflowResult.lease.release()
+	if overflowValidations.Load() != 1 {
+		t.Fatalf(
+			"queued cold validations = %d, want 1",
+			overflowValidations.Load(),
+		)
+	}
 }
 
-func TestSearchWarmFocusedRepoSkipsEarlierInflightColdRepos(t *testing.T) {
+func TestSearchWaitsForInflightColdReposRatherThanReturningPartial(
+	t *testing.T,
+) {
 	const commit = "1111111111111111111111111111111111111111"
 	repositories := []string{
 		"example.com/acme/cold-a",
@@ -918,25 +958,39 @@ func TestSearchWarmFocusedRepoSkipsEarlierInflightColdRepos(t *testing.T) {
 	}()
 	select {
 	case outcome := <-searchDone:
-		if outcome.err != nil {
-			t.Fatal(outcome.err)
-		}
-		if outcome.result == nil || len(outcome.result.Files) != 1 ||
-			outcome.result.Files[0].Repo != repositories[2] {
-			t.Fatalf("warm C search result = %+v", outcome.result)
-		}
-	case <-time.After(500 * time.Millisecond):
-		close(releaseCold)
-		<-searchDone
-		t.Fatal("warm C search waited behind in-flight cold A/B")
+		t.Fatalf(
+			"search returned a partial result before cold admission: %+v, %v",
+			outcome.result, outcome.err,
+		)
+	case <-time.After(50 * time.Millisecond):
 	}
 	close(releaseCold)
+	outcome := <-searchDone
+	if outcome.err != nil {
+		t.Fatal(outcome.err)
+	}
+	if outcome.result == nil || len(outcome.result.Files) != len(repositories) {
+		t.Fatalf("complete focused search result = %+v", outcome.result)
+	}
+	gotRepositories := make([]string, 0, len(outcome.result.Files))
+	for _, file := range outcome.result.Files {
+		gotRepositories = append(gotRepositories, file.Repo)
+	}
+	sort.Strings(gotRepositories)
+	wantRepositories := append([]string(nil), repositories...)
+	sort.Strings(wantRepositories)
+	if !slices.Equal(gotRepositories, wantRepositories) {
+		t.Fatalf(
+			"focused result repositories = %v, want %v",
+			gotRepositories, wantRepositories,
+		)
+	}
 	for range 2 {
-		outcome := <-coldDone
-		if outcome.err != nil || outcome.lease == nil {
-			t.Fatalf("cold fill result = %+v, %v", outcome.lease, outcome.err)
+		cold := <-coldDone
+		if cold.err != nil || cold.lease == nil {
+			t.Fatalf("cold fill result = %+v, %v", cold.lease, cold.err)
 		}
-		outcome.lease.release()
+		cold.lease.release()
 	}
 }
 

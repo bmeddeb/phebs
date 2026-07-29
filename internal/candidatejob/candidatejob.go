@@ -85,12 +85,13 @@ func (policies *PolicySet) validate() error {
 
 // Worker plans and publishes one current candidate generation.
 type Worker struct {
-	dataDir  string
-	root     string
-	store    Store
-	policies *PolicySet
-	open     func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
-	recover  func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
+	dataDir      string
+	root         string
+	store        Store
+	policies     *PolicySet
+	fingerprints *controlFingerprintCache
+	open         func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
+	recover      func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
 }
 
 // New constructs the planner and extraction provider from the same frozen
@@ -127,12 +128,13 @@ func NewWorker(dataDir string, state Store, policies *PolicySet) (*Worker, error
 		return nil, fmt.Errorf("candidate worker policies: %w", err)
 	}
 	return &Worker{
-		dataDir:  dataDir,
-		root:     CandidateRoot(dataDir),
-		store:    state,
-		policies: policies,
-		open:     candidate.OpenContext,
-		recover:  candidate.OpenPublishingContext,
+		dataDir:      dataDir,
+		root:         CandidateRoot(dataDir),
+		store:        state,
+		policies:     policies,
+		fingerprints: newControlFingerprintCache(),
+		open:         candidate.OpenContext,
+		recover:      candidate.OpenPublishingContext,
 	}, nil
 }
 
@@ -161,7 +163,8 @@ func (worker *Worker) Handle(ctx context.Context, job store.Job) error {
 
 func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if worker == nil || worker.store == nil || worker.policies == nil ||
-		worker.open == nil || worker.recover == nil {
+		worker.fingerprints == nil || worker.open == nil ||
+		worker.recover == nil {
 		return errors.New("worker is not initialized")
 	}
 	if err := ctx.Err(); err != nil {
@@ -179,6 +182,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 
 	repository, err := worker.store.GetRepo(ctx, job.Target)
 	if errors.Is(err, store.ErrNotFound) {
+		worker.fingerprints.forget(job.Target)
 		return nil
 	}
 	if err != nil {
@@ -188,6 +192,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		return errors.New("repository store returned nil")
 	}
 	if repository.Deleting || repository.IndexedCommitHash == "" {
+		worker.fingerprints.forget(repository.Name)
 		return nil
 	}
 	if repository.Name != job.Target {
@@ -257,11 +262,40 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	}
 	if persistedState != nil && controlReady && !hadMarker && !job.Force &&
 		publicationMatchesExpected(*persistedState, expected) {
-		// The guarded pointer is already the authority and carries the exact
-		// manifest digest needed by extraction's no-op decision. Re-publishing
-		// it repairs a missing extraction fan-out without re-reading, hashing,
-		// or externally sorting any candidate member.
-		return worker.commitPublication(ctx, repository, *persistedState)
+		known, unchanged, err := worker.fingerprints.matches(
+			ctx, worker.root, *persistedState,
+		)
+		if err != nil {
+			return fmt.Errorf("check publication control fingerprint: %w", err)
+		}
+		if known && unchanged {
+			// The guarded pointer and process-local file identities are
+			// unchanged. Re-publishing repairs a missing extraction fan-out
+			// without re-reading, hashing, or externally sorting any member.
+			return worker.commitPublication(ctx, repository, *persistedState)
+		}
+		if !known {
+			// A cold worker establishes only a manifest/member-identity
+			// fingerprint. Actual extraction remains the strict first
+			// consumer; a later identity change forces the strict path below.
+			fingerprint, captureErr :=
+				candidate.CaptureControlFingerprintContext(
+					ctx, worker.root, *persistedState,
+				)
+			if captureErr == nil {
+				worker.fingerprints.remember(
+					*persistedState, fingerprint,
+				)
+				return worker.commitPublication(
+					ctx, repository, *persistedState,
+				)
+			}
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			// Missing, special, wrong-size, or invalid control bytes are
+			// derived-state damage. Rebuild below without adopting them.
+		}
 	}
 	if hadMarker {
 		reuseExpected := expected
@@ -272,7 +306,13 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			ctx, worker.root, reuseExpected,
 		); openErr == nil &&
 			(persistedState == nil || published.State() == *persistedState) {
-			return worker.commitPublication(ctx, repository, published.State())
+			if err := worker.rememberFingerprint(
+				ctx, published.State(),
+			); err == nil {
+				return worker.commitPublication(
+					ctx, repository, published.State(),
+				)
+			}
 		}
 	}
 	if !hadMarker && persistedState != nil && controlReady {
@@ -281,7 +321,13 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		if published, openErr := worker.open(
 			ctx, worker.root, reuseExpected,
 		); openErr == nil && published.State() == *persistedState {
-			return worker.commitPublication(ctx, repository, published.State())
+			if err := worker.rememberFingerprint(
+				ctx, published.State(),
+			); err == nil {
+				return worker.commitPublication(
+					ctx, repository, published.State(),
+				)
+			}
 		}
 	}
 
@@ -305,7 +351,24 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if err != nil {
 		return fmt.Errorf("publish files: %w", err)
 	}
+	if err := worker.rememberFingerprint(ctx, state); err != nil {
+		return fmt.Errorf("record publication control fingerprint: %w", err)
+	}
 	return worker.commitPublication(ctx, repository, state)
+}
+
+func (worker *Worker) rememberFingerprint(
+	ctx context.Context,
+	state candidate.State,
+) error {
+	fingerprint, err := candidate.CaptureControlFingerprintContext(
+		ctx, worker.root, state,
+	)
+	if err != nil {
+		return err
+	}
+	worker.fingerprints.remember(state, fingerprint)
+	return nil
 }
 
 func publicationControlReady(root string, state candidate.State) (bool, error) {

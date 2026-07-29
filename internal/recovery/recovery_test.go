@@ -242,13 +242,45 @@ analysis_units:
 	); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := recovery.Create(ctx, recovery.BackupOptions{
+	if err := os.WriteFile(
+		filepath.Join(
+			indexDir,
+			"phebs-focus-"+strings.Repeat("f", 64)+".manifest.json",
+		),
+		[]byte("{invalid\n"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	backupManifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
 			DataDir: dataDir, Config: configBytes, PhebsVersion: "test-version",
 		},
 		Output: backupDir,
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if backupManifest.FocusedIndex != (recovery.FocusedIndexArchiveReport{
+		Schema:              recovery.FocusedIndexArchiveReportSchema,
+		Publications:        1,
+		OmittedPublications: 1,
+		StaleMarkers:        1,
+	}) {
+		t.Fatalf(
+			"durable focused-index archive report = %+v",
+			backupManifest.FocusedIndex,
+		)
+	}
+	manifestBytes, err := os.ReadFile(filepath.Join(backupDir, recovery.ManifestName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(
+		manifestBytes,
+		[]byte(`"omitted_publications":1`),
+	) {
+		t.Fatalf("backup manifest omitted durable archive report: %s", manifestBytes)
 	}
 	if err := st.Close(context.Background()); err != nil {
 		t.Fatal(err)

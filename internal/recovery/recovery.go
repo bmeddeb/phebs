@@ -25,10 +25,11 @@ import (
 )
 
 const (
-	ManifestSchema   = "phebs-backup-manifest-v2"
-	ManifestName     = "manifest.json"
-	DatabaseName     = "database.surql"
-	FocusedIndexName = "focused-index.tar"
+	ManifestSchema                  = "phebs-backup-manifest-v3"
+	FocusedIndexArchiveReportSchema = "phebs-focused-archive-report-v1"
+	ManifestName                    = "manifest.json"
+	DatabaseName                    = "database.surql"
+	FocusedIndexName                = "focused-index.tar"
 
 	maxManifestBytes = 1 << 20
 	maxCommandOutput = 64 << 10
@@ -65,21 +66,33 @@ type Artifact struct {
 	SHA256         string `json:"sha256"`
 }
 
+// FocusedIndexArchiveReport is the durable omission receipt for derived
+// focused state observed while the backup lock was held. Publications is
+// independently checked against the exact archive during Verify.
+type FocusedIndexArchiveReport struct {
+	Schema              string `json:"schema"`
+	Publications        int    `json:"publications"`
+	OmittedPublications int    `json:"omitted_publications"`
+	OmittedArtifacts    int    `json:"omitted_artifacts"`
+	StaleMarkers        int    `json:"stale_markers"`
+}
+
 // Manifest binds one database export to the exact recovery-compatible inputs.
 // ManifestSHA256 digests the canonical JSON with that field empty, avoiding a
 // recursive file hash while still detecting every meaningful manifest change.
 type Manifest struct {
-	Schema            string              `json:"schema"`
-	CreatedAt         time.Time           `json:"created_at"`
-	Database          DatabaseIdentity    `json:"database"`
-	ConfigSHA256      string              `json:"config_sha256"`
-	Phebs             ToolIdentity        `json:"phebs"`
-	Surreal           ToolIdentity        `json:"surreal"`
-	Store             store.StoreIdentity `json:"store"`
-	ExportCommand     []string            `json:"export_command"`
-	Inventory         []Artifact          `json:"inventory"`
-	DerivedExclusions []string            `json:"derived_exclusions"`
-	ManifestSHA256    string              `json:"manifest_sha256"`
+	Schema            string                    `json:"schema"`
+	CreatedAt         time.Time                 `json:"created_at"`
+	Database          DatabaseIdentity          `json:"database"`
+	ConfigSHA256      string                    `json:"config_sha256"`
+	Phebs             ToolIdentity              `json:"phebs"`
+	Surreal           ToolIdentity              `json:"surreal"`
+	Store             store.StoreIdentity       `json:"store"`
+	ExportCommand     []string                  `json:"export_command"`
+	Inventory         []Artifact                `json:"inventory"`
+	FocusedIndex      FocusedIndexArchiveReport `json:"focused_index_archive"`
+	DerivedExclusions []string                  `json:"derived_exclusions"`
+	ManifestSHA256    string                    `json:"manifest_sha256"`
 }
 
 type Options struct {
@@ -231,9 +244,16 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 			Version: actualSurreal.Version,
 			SHA256:  actualSurreal.SHA256,
 		},
-		Store:             store.CurrentStoreIdentity(),
-		ExportCommand:     slices.Clone(exportCommand),
-		Inventory:         []Artifact{artifact, focusedArtifact},
+		Store:         store.CurrentStoreIdentity(),
+		ExportCommand: slices.Clone(exportCommand),
+		Inventory:     []Artifact{artifact, focusedArtifact},
+		FocusedIndex: FocusedIndexArchiveReport{
+			Schema:              FocusedIndexArchiveReportSchema,
+			Publications:        focusedReport.Publications,
+			OmittedPublications: focusedReport.OmittedPublications,
+			OmittedArtifacts:    focusedReport.OmittedArtifacts,
+			StaleMarkers:        focusedReport.StaleMarkers,
+		},
 		DerivedExclusions: slices.Clone(derivedExclusions),
 	}
 	manifest.ManifestSHA256, err = manifestDigest(manifest)
@@ -420,8 +440,16 @@ func Verify(backup string, opts Options) (Manifest, error) {
 	if focused != manifest.Inventory[1] {
 		return Manifest{}, errors.New("backup focused-index artifact differs from its manifest")
 	}
-	if err := focusedindex.VerifyArchive(filepath.Join(backup, FocusedIndexName)); err != nil {
+	focusedReport, err := focusedindex.VerifyArchiveWithReport(
+		filepath.Join(backup, FocusedIndexName),
+	)
+	if err != nil {
 		return Manifest{}, fmt.Errorf("verify focused-index artifact: %w", err)
+	}
+	if focusedReport.Publications != manifest.FocusedIndex.Publications {
+		return Manifest{}, errors.New(
+			"backup focused-index publication count differs from its manifest",
+		)
 	}
 	return manifest, nil
 }
@@ -443,6 +471,13 @@ func validateManifest(manifest Manifest) error {
 		manifest.Inventory[1].MediaType != "application/x-tar" ||
 		manifest.Inventory[1].Size <= 0 {
 		return errors.New("backup focused-index inventory is invalid")
+	}
+	if manifest.FocusedIndex.Schema != FocusedIndexArchiveReportSchema ||
+		manifest.FocusedIndex.Publications < 0 ||
+		manifest.FocusedIndex.OmittedPublications < 0 ||
+		manifest.FocusedIndex.OmittedArtifacts < 0 ||
+		manifest.FocusedIndex.StaleMarkers < 0 {
+		return errors.New("backup focused-index archive report is invalid")
 	}
 	if !slices.Equal(manifest.DerivedExclusions, derivedExclusions) {
 		return errors.New("backup manifest derived-state classification is invalid")

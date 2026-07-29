@@ -3714,17 +3714,20 @@ validated member set rather than the asynchronously refreshed
 shared-directory searcher. One 10-second query wall budget covers compilation,
 starter-owned cold validation/materialization, execution, and result-time
 identity checks. At most two cache-owned fills run at once. The query that
-starts a fill may wait within its budget; a concurrent query immediately
-omits that already-loading repository and continues to warm bindings. A
-timed-out fill may continue for up to 10 minutes, a later query reuses its
-completed exact binding, and shutdown cancels and joins the loaders. JSON
-fan-out has a fixed eight-worker ceiling and incrementally retains only
-the globally ranked top K; SSE keeps the shipped progressive per-member
-arrival-order contract and one shared display ceiling. Both focused and whole
-results recheck current committed posture/revision before admission, so a
-same-HEAD whole-to-focused transition fails closed to a conservative short
-result rather than serving retired whole content. Deleted, unindexed, and
-whole-posture cache entries retire as soon as their active leases release.
+starts a fill and every same-generation follower wait within their own
+budgets; saturated cold work queues behind the two slots, and deadline expiry
+fails the query instead of knowingly returning a partial RepoSet. A timed-out
+fill may continue for up to 10 minutes, a later query reuses its completed
+exact binding, and shutdown cancels and joins the loaders. Stable negative
+entries retry with bounded 250 ms–30 s exponential backoff; a changed
+fingerprint retries immediately. JSON fan-out has a fixed eight-worker ceiling
+and incrementally retains only the globally ranked top K; SSE keeps the shipped
+progressive per-member arrival-order contract and one shared display ceiling.
+Both focused and whole results recheck current committed posture/revision
+before admission, so a same-HEAD whole-to-focused transition fails closed to a
+conservative short result rather than serving retired whole content. Deleted,
+unindexed, and whole-posture cache entries retire as soon as their active
+leases release.
 Missing, extra, mixed, stale, trailing, partial, and state-uncommitted
 generations fail closed to an empty RepoSet. Another repository's transient
 or malformed shard cannot decide this repository's validation. Startup
@@ -3790,6 +3793,19 @@ fan-out/top-K retention, made streamed member checks linear, retired unused
 focused mmaps, prevented whole-to-focused stale-reader escape, and added
 crash-residue reclamation without deleting same-process staging. Publication
 bytes remain recovery content, not semantic identity; T30.4 follows.
+
+Follow-up receipt (2026-07-29): concurrent callers now share the exact
+repository/generation cold fill, and cold admission queues behind the existing
+two-fill ceiling rather than silently omitting a valid focused repository.
+Each caller remains bounded by its own query deadline; expiry is a loud query
+failure. Negative entries keep fail-closed fingerprint caching but retry from
+250 ms to a 30 s ceiling, with immediate retry after identity change, so a
+transient validation I/O failure cannot become a publication-lifetime outage.
+Focused backup creation now proves stable source digests and the exact tar
+inventory in a streaming pass without extracting the archive; explicit
+Verify/Restore retains full semantic extraction. Backup manifest v3 durably
+records the focused archive/omission receipt and independently checks its
+archived publication count.
 
 ### T30.4 · Reusable candidate-partition manifest
 
@@ -3917,3 +3933,13 @@ coverage now pins the extraction marker seam, digest-consistent missing-leaf
 partition refusal, descriptor replacement, bounded newline-free input, and
 polyglot posture. The frozen hash partition, census, publication, evidence,
 and unit identities are unchanged.
+
+Follow-up receipt (2026-07-29): a process-local control fingerprint binds the
+persisted manifest digest and observed manifest/member inode, mode, size, and
+modification time. Warm exact-pointer retries compare only those identities;
+drift triggers one strict open and rebuild on failure. Cold capture reads only
+the bounded manifest plus member metadata. The fingerprint is deliberately not
+a content receipt: same-stat preexisting tampering remains fail-closed at the
+strict extraction-consumption seam. Canonical single-fragment lines now return
+owned bytes, and the over-limit regression uses a virtual 256 MiB source to
+prove refusal after at most 1 MiB plus one 64 KiB reader buffer.

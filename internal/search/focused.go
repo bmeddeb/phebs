@@ -48,6 +48,7 @@ type focusedCache struct {
 	indexDir    string
 	validate    focusedValidator
 	materialize focusedMaterializer
+	now         func() time.Time
 
 	mu        sync.Mutex
 	repos     map[string]*focusedRepoCache
@@ -60,6 +61,8 @@ type focusedCache struct {
 const (
 	maxConcurrentFocusedLoads = 2
 	focusedCacheLoadTimeout   = 10 * time.Minute
+	focusedNegativeRetryMin   = 250 * time.Millisecond
+	focusedNegativeRetryMax   = 30 * time.Second
 )
 
 // focusedRepoCache is a context-selectable singleflight slot. Its mutex is
@@ -75,11 +78,13 @@ type focusedRepoCache struct {
 }
 
 type focusedCacheLoad struct {
-	ready  chan struct{}
-	entry  *focusedCacheEntry
-	err    error
-	ctx    context.Context
-	cancel context.CancelFunc
+	ready     chan struct{}
+	entry     *focusedCacheEntry
+	err       error
+	state     *analysisunit.State
+	revisions []store.IndexedRevision
+	ctx       context.Context
+	cancel    context.CancelFunc
 }
 
 type focusedCacheEntry struct {
@@ -88,12 +93,14 @@ type focusedCacheEntry struct {
 	// manifestDigest and fingerprint form the cached validation key. The
 	// manifest bytes need not be parsed again while their file identity and
 	// every declared member/sidecar identity remain unchanged.
-	manifestDigest string
-	fingerprint    focusedFingerprint
-	searcher       zoekt.Streamer
-	cleanup        func()
-	refs           int
-	retired        bool
+	manifestDigest   string
+	fingerprint      focusedFingerprint
+	searcher         zoekt.Streamer
+	cleanup          func()
+	refs             int
+	retired          bool
+	negativeFailures int
+	negativeRetryAt  time.Time
 }
 
 type focusedFingerprint []focusedArtifactIdentity
@@ -124,6 +131,7 @@ func newFocusedCache(indexDir string) *focusedCache {
 		indexDir:    indexDir,
 		validate:    focusedindex.ValidatePublishedContext,
 		materialize: materializeFocused,
+		now:         time.Now,
 		repos:       make(map[string]*focusedRepoCache),
 		closeCtx:    closeCtx,
 		cancel:      cancel,
@@ -133,8 +141,9 @@ func newFocusedCache(indexDir string) *focusedCache {
 
 // acquire returns a reference-counted exact-generation searcher. Validation
 // failures are cached against the expected committed identity and the
-// repository-local filesystem identity, so a corrupt publication remains
-// fail-closed without being re-hashed on every query.
+// repository-local filesystem identity with bounded retry backoff, so a
+// corrupt publication remains fail-closed without turning one transient I/O
+// failure into a permanent negative entry.
 func (c *focusedCache) acquire(
 	ctx context.Context,
 	repository string,
@@ -150,60 +159,77 @@ func (c *focusedCache) acquire(
 	}
 	expectedState := analysisunit.CloneState(state)
 	expectedRevisions := append([]store.IndexedRevision(nil), revisions...)
-	lease, err := c.positiveLease(
-		ctx,
-		repo,
-		repository,
-		expectedState,
-		expectedRevisions,
-	)
-	if lease != nil || err != nil {
-		return lease, err
-	}
-	repo.mu.Lock()
-	if repo.pruned {
+	for {
+		lease, err := c.positiveLease(
+			ctx,
+			repo,
+			repository,
+			expectedState,
+			expectedRevisions,
+		)
+		if lease != nil || err != nil {
+			return lease, err
+		}
+		repo.mu.Lock()
+		if repo.pruned {
+			repo.mu.Unlock()
+			return nil, nil
+		}
+		if repo.loading {
+			load := repo.load
+			sameGeneration := analysisunit.EqualState(
+				load.state, expectedState,
+			) && slices.Equal(load.revisions, expectedRevisions)
+			repo.mu.Unlock()
+			lease, err = c.waitForLoad(
+				ctx,
+				repo,
+				load,
+				repository,
+				expectedState,
+				expectedRevisions,
+			)
+			if lease != nil || sameGeneration {
+				return lease, err
+			}
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			// A prior-generation fill completed. Re-enter admission so this
+			// caller can start or join the exact generation it requested.
+			continue
+		}
+		loadCtx, cancel := context.WithTimeout(
+			c.closeCtx, focusedCacheLoadTimeout,
+		)
+		load := &focusedCacheLoad{
+			ready:     make(chan struct{}),
+			state:     analysisunit.CloneState(expectedState),
+			revisions: append([]store.IndexedRevision(nil), expectedRevisions...),
+			ctx:       loadCtx,
+			cancel:    cancel,
+		}
+		repo.load = load
+		repo.loading = true
+		current := repo.entry
+		go c.fill(
+			repo,
+			load,
+			repository,
+			expectedState,
+			expectedRevisions,
+			current,
+		)
 		repo.mu.Unlock()
-		return nil, nil
+		return c.waitForLoad(
+			ctx,
+			repo,
+			load,
+			repository,
+			expectedState,
+			expectedRevisions,
+		)
 	}
-	// Only the caller that starts a cold fill waits for it. Later compiles
-	// fail closed for this repository instead of serially spending their
-	// query-wide budget behind unrelated in-flight cold repositories.
-	if repo.loading {
-		repo.mu.Unlock()
-		return nil, nil
-	}
-	select {
-	case c.loadSlots <- struct{}{}:
-	default:
-		repo.mu.Unlock()
-		return nil, nil
-	}
-	loadCtx, cancel := context.WithTimeout(
-		c.closeCtx, focusedCacheLoadTimeout,
-	)
-	load := &focusedCacheLoad{
-		ready: make(chan struct{}), ctx: loadCtx, cancel: cancel,
-	}
-	repo.load = load
-	repo.loading = true
-	current := repo.entry
-	go c.fill(
-		repo,
-		load,
-		repository,
-		expectedState,
-		expectedRevisions,
-		current,
-	)
-	repo.mu.Unlock()
-	return c.waitForLoad(
-		ctx,
-		repo,
-		load,
-		repository,
-		expectedState,
-		expectedRevisions,
-	)
 }
 
 // positiveLease rechecks an already materialized exact binding without using
@@ -311,15 +337,20 @@ func (c *focusedCache) fill(
 	current *focusedCacheEntry,
 ) {
 	defer load.cancel()
-	defer func() { <-c.loadSlots }()
 	var (
 		replacement *focusedCacheEntry
 		useCurrent  bool
 		loadErr     error
 	)
-	replacement, useCurrent, loadErr = c.load(
-		load.ctx, repository, state, revisions, current,
-	)
+	select {
+	case c.loadSlots <- struct{}{}:
+		replacement, useCurrent, loadErr = c.load(
+			load.ctx, repository, state, revisions, current,
+		)
+		<-c.loadSlots
+	case <-load.ctx.Done():
+		loadErr = load.ctx.Err()
+	}
 
 	repo.mu.Lock()
 	closed := c.isClosed()
@@ -404,8 +435,9 @@ func (c *focusedCache) prune(keep map[string]struct{}) {
 
 // load checks a cache entry or builds its replacement without holding any
 // cache mutex. A validation failure produces a negative entry keyed by the
-// stable repository-local fingerprint; cancellation and transient I/O errors
-// are never cached.
+// stable repository-local fingerprint. Negative entries retry with bounded
+// exponential backoff, so opaque filesystem errors wrapped by the focused
+// validator cannot latch until an unrelated publication or reconciliation.
 func (c *focusedCache) load(
 	ctx context.Context,
 	repository string,
@@ -413,13 +445,11 @@ func (c *focusedCache) load(
 	revisions []store.IndexedRevision,
 	current *focusedCacheEntry,
 ) (*focusedCacheEntry, bool, error) {
+	var fingerprint focusedFingerprint
 	if current != nil &&
 		analysisunit.EqualState(current.state, state) &&
 		slices.Equal(current.revisions, revisions) {
-		var (
-			fingerprint focusedFingerprint
-			err         error
-		)
+		var err error
 		if current.searcher == nil {
 			fingerprint, err = focusedPublicationFingerprint(
 				ctx, c.indexDir, repository,
@@ -432,22 +462,37 @@ func (c *focusedCache) load(
 				ctx, c.indexDir, current.fingerprint,
 			)
 		}
-		if err == nil &&
+		stable := err == nil &&
 			equalFocusedFingerprint(current.fingerprint, fingerprint) &&
 			(current.searcher == nil || current.manifestDigest != "") &&
-			!focusedindex.IsPublishing(c.indexDir, repository) {
-			return nil, current.searcher != nil, nil
+			!focusedindex.IsPublishing(c.indexDir, repository)
+		if stable {
+			if current.searcher != nil {
+				return nil, true, nil
+			}
+			if c.now().Before(current.negativeRetryAt) {
+				return nil, false, nil
+			}
+		}
+		if current.searcher != nil {
+			// A changed positive binding was checked by known name only.
+			// Full validation must begin from a complete repository-local
+			// inventory so it can reject undeclared artifacts.
+			fingerprint = nil
 		}
 		if err := ctx.Err(); err != nil {
 			return nil, false, err
 		}
 	}
 
-	fingerprint, err := focusedPublicationFingerprint(
-		ctx, c.indexDir, repository,
-	)
-	if err != nil {
-		return nil, false, err
+	if fingerprint == nil {
+		var err error
+		fingerprint, err = focusedPublicationFingerprint(
+			ctx, c.indexDir, repository,
+		)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 	entry := &focusedCacheEntry{
 		state:       analysisunit.CloneState(state),
@@ -476,6 +521,19 @@ func (c *focusedCache) load(
 		)
 	}
 	if validateErr != nil {
+		entry.negativeFailures = 1
+		if current != nil && current.searcher == nil &&
+			analysisunit.EqualState(current.state, state) &&
+			slices.Equal(current.revisions, revisions) &&
+			equalFocusedFingerprint(current.fingerprint, fingerprint) {
+			entry.negativeFailures = min(
+				current.negativeFailures+1,
+				32,
+			)
+		}
+		entry.negativeRetryAt = c.now().Add(
+			focusedNegativeRetryDelay(entry.negativeFailures),
+		)
 		return entry, false, nil
 	}
 
@@ -506,6 +564,23 @@ func (c *focusedCache) load(
 	entry.searcher = searcher
 	entry.cleanup = cleanup
 	return entry, false, nil
+}
+
+func focusedNegativeRetryDelay(failures int) time.Duration {
+	if failures <= 1 {
+		return focusedNegativeRetryMin
+	}
+	delay := focusedNegativeRetryMin
+	for range failures - 1 {
+		if delay >= focusedNegativeRetryMax/2 {
+			return focusedNegativeRetryMax
+		}
+		delay *= 2
+	}
+	if delay > focusedNegativeRetryMax {
+		return focusedNegativeRetryMax
+	}
+	return delay
 }
 
 // active rechecks the O(1) state that can retire a lease between streamed

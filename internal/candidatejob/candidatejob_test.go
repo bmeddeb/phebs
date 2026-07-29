@@ -412,6 +412,131 @@ func TestWorkerExactPointerReuseRepairsFanoutWithoutStrictOpen(
 			strictOpens, state.publishCalls, state.fanoutCount,
 		)
 	}
+
+	coldWorker, _, err := New(
+		dataDir, state, []extract.Extractor{policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coldStrictOpens := 0
+	coldWorker.open = func(
+		context.Context,
+		string,
+		candidate.Expected,
+	) (*candidate.Publication, error) {
+		coldStrictOpens++
+		return nil, errors.New("unexpected cold strict publication open")
+	}
+	if err := coldWorker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if coldStrictOpens != 0 || state.publishCalls != 3 {
+		t.Fatalf(
+			"cold identity capture strict opens/publishes = %d/%d",
+			coldStrictOpens, state.publishCalls,
+		)
+	}
+}
+
+func TestWorkerRepairsMemberChangedAfterControlFingerprint(
+	t *testing.T,
+) {
+	t.Parallel()
+	dataDir, repository, commit := candidateGitFixture(t)
+	state := &manifestStore{
+		repository: &store.Repo{
+			Name: repository, IndexedCommitHash: commit,
+		},
+	}
+	worker, _, err := New(
+		dataDir, state, []extract.Extractor{policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := store.Job{Kind: store.JobCandidate, Target: repository}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := pointerState(*state.pointer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := CandidateRoot(dataDir)
+	opened, err := candidate.OpenStateContext(
+		t.Context(), root, persisted,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := opened.Manifest()
+	if len(manifest.RepositoryMembers) == 0 {
+		t.Fatal("fixture has no repository member")
+	}
+	memberPath := filepath.Join(root, manifest.RepositoryMembers[0].Name)
+	info, err := os.Lstat(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) == 0 {
+		t.Fatal("fixture member is empty")
+	}
+	raw[len(raw)/2] ^= 0x01
+	if err := os.WriteFile(memberPath, raw, info.Mode().Perm()); err != nil {
+		t.Fatal(err)
+	}
+	changedTime := info.ModTime().Add(2 * time.Second)
+	if err := os.Chtimes(memberPath, changedTime, changedTime); err != nil {
+		t.Fatal(err)
+	}
+
+	strictOpens := 0
+	openPublication := worker.open
+	worker.open = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		strictOpens++
+		return openPublication(ctx, root, expected)
+	}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if strictOpens != 1 || state.publishCalls != 2 {
+		t.Fatalf(
+			"repair strict opens/publishes = %d/%d, want 1/2",
+			strictOpens, state.publishCalls,
+		)
+	}
+	if _, err := candidate.OpenStateContext(
+		t.Context(), root, persisted,
+	); err != nil {
+		t.Fatalf("rebuilt publication remains invalid: %v", err)
+	}
+
+	// The rebuild refreshes the process-local identities. The next retry is
+	// again metadata-only and does not strictly consume member bytes.
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if strictOpens != 1 || state.publishCalls != 3 {
+		t.Fatalf(
+			"warm retry strict opens/publishes = %d/%d, want 1/3",
+			strictOpens, state.publishCalls,
+		)
+	}
 }
 
 func TestWorkerMissingPointerControlRebuildsWithoutStrictReuseOpen(
