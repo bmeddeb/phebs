@@ -130,6 +130,34 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 		request.OutputDir, request.Repository, generationDigest, "repository",
 	)
 	defer func() { _ = repositoryWriter.abort() }()
+	localProjectionBudget := &artifactBudget{
+		maxMembers: MaxLocalProjectionArtifacts,
+		maxBytes:   MaxLocalProjectionContentBytes,
+	}
+	localProjectionWriters := make(map[string]*artifactPacker)
+	localProjections := make([]LocalProjection, 0)
+	if request.Unit != nil {
+		for policyOrdinal, identity := range identities {
+			if identity.Plane != PlaneLocal {
+				continue
+			}
+			writer := newArtifactPacker(
+				request.OutputDir, request.Repository, generationDigest,
+				fmt.Sprintf("local-%03d", policyOrdinal),
+			)
+			writer.budget = localProjectionBudget
+			localProjectionWriters[identity.Domain] = writer
+			localProjections = append(localProjections, LocalProjection{
+				Domain: identity.Domain, Version: identity.Version,
+				PolicyOrdinal: policyOrdinal, Members: []Artifact{},
+			})
+		}
+	}
+	defer func() {
+		for _, writer := range localProjectionWriters {
+			_ = writer.abort()
+		}
+	}()
 	callerSpools := make(map[string]*spool)
 	corpus := newCorpusAccumulator()
 	unitCorpus := newCorpusAccumulator()
@@ -274,6 +302,19 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 			if err := repositoryWriter.add(record); err != nil {
 				return err
 			}
+			if record.InUnit {
+				for _, domain := range record.Domains {
+					writer := localProjectionWriters[domain]
+					if writer == nil {
+						continue
+					}
+					if err := writer.add(record); err != nil {
+						return fmt.Errorf(
+							"pack local projection %q: %w", domain, err,
+						)
+					}
+				}
+			}
 		}
 		if len(callerDomains) > 0 {
 			sum := candidatePathHash(current.path)
@@ -314,6 +355,18 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	for index := range localProjections {
+		projection := &localProjections[index]
+		members, finishErr :=
+			localProjectionWriters[projection.Domain].finish()
+		if finishErr != nil {
+			return Manifest{}, fmt.Errorf(
+				"finish local projection %q: %w",
+				projection.Domain, finishErr,
+			)
+		}
+		projection.Members = members
+	}
 	callerLeaves, err := planCallerLeaves(
 		ctx, spoolDir, request.OutputDir, request.Repository, generationDigest, callerSpools,
 	)
@@ -344,7 +397,9 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 		Policies:         identities, Corpus: corpusSummary, UnitCorpus: unitCorpusSummary,
 		Domains:           finishDomainAccumulators(accumulators),
 		TypedInputs:       typedInputs,
-		RepositoryMembers: repositoryMembers, CallerLeaves: callerLeaves,
+		RepositoryMembers: repositoryMembers,
+		LocalProjections:  localProjections,
+		CallerLeaves:      callerLeaves,
 	}
 	manifest.Digest, err = ManifestDigest(manifest)
 	if err != nil {
@@ -814,6 +869,40 @@ type artifactPacker struct {
 	file                                     *os.File
 	hash                                     hash.Hash
 	current                                  Artifact
+	budget                                   *artifactBudget
+}
+
+type artifactBudget struct {
+	maxMembers, members int
+	maxBytes, bytes     int64
+}
+
+func (budget *artifactBudget) reserveMember() error {
+	if budget == nil {
+		return nil
+	}
+	if budget.members >= budget.maxMembers {
+		return fmt.Errorf(
+			"%w: local projections exceed %d artifacts",
+			ErrCandidateTooLarge, budget.maxMembers,
+		)
+	}
+	budget.members++
+	return nil
+}
+
+func (budget *artifactBudget) reserveBytes(count int64) error {
+	if budget == nil {
+		return nil
+	}
+	if count < 0 || count > budget.maxBytes-budget.bytes {
+		return fmt.Errorf(
+			"%w: local projections exceed %d content bytes",
+			ErrCandidateTooLarge, budget.maxBytes,
+		)
+	}
+	budget.bytes += count
+	return nil
 }
 
 func newArtifactPacker(outputDir, repository, generation, plane string) *artifactPacker {
@@ -825,6 +914,14 @@ func newArtifactPacker(outputDir, repository, generation, plane string) *artifac
 func (packer *artifactPacker) add(record Record) error {
 	if record.DeclaredBytes > MaxDeclaredBytesPerArtifact {
 		return fmt.Errorf("%w: %q", ErrCandidateTooLarge, record.Path)
+	}
+	payload, err := json.Marshal(record)
+	if err != nil {
+		return err
+	}
+	payload = append(payload, '\n')
+	if len(payload) > maxTreeRecordBytes {
+		return errors.New("candidate record exceeds its canonical byte limit")
 	}
 	if packer.file != nil &&
 		(packer.current.RecordCount >= MaxRecordsPerArtifact ||
@@ -839,13 +936,8 @@ func (packer *artifactPacker) add(record Record) error {
 			return err
 		}
 	}
-	payload, err := json.Marshal(record)
-	if err != nil {
+	if err := packer.budget.reserveBytes(int64(len(payload))); err != nil {
 		return err
-	}
-	payload = append(payload, '\n')
-	if len(payload) > maxTreeRecordBytes {
-		return errors.New("candidate record exceeds its canonical byte limit")
 	}
 	written, err := packer.file.Write(payload)
 	if err != nil {
@@ -859,6 +951,9 @@ func (packer *artifactPacker) add(record Record) error {
 }
 
 func (packer *artifactPacker) start() error {
+	if err := packer.budget.reserveMember(); err != nil {
+		return err
+	}
 	ordinal := packer.nextOrdinal
 	name := ArtifactPrefix(packer.repository, packer.generation) +
 		fmt.Sprintf("%s-%06d.ndjson", packer.plane, ordinal)

@@ -29,18 +29,24 @@ inputs must preserve both semantic identities and exact publication bytes.
 
 ## Retained observation
 
-The 2026-07-29 Darwin/arm64 T30.5 contract refresh passed. The planner runs
-took 3.28 s and 3.30 s and peaked at 62,013,440 and 61,440,000 bytes RSS. Each
-staged five files totaling 13,589 bytes. Twice the final caller content
-conservatively bounds
-planner spool/split scratch at 4,134 bytes; the external-validation scratch
-bound was 3,514 bytes. Adding the larger phase bound to the final stage yields
-17,723 bytes of conservative peak candidate disk. The complete census
-contained 200,008 regular files; policy projection retained five repository
-rows and six caller rows. The two-bit caller leaves were `00:1`, `10:3`, and
-`11:2`, so no leaf needed a deeper split on this corpus.
+The 2026-07-29 Darwin/arm64 post-T30.5 repair refresh passed. Candidate
+manifest v3 adds explicit focused-local domain projections without changing
+the frozen caller partition. The planner runs took 3.80 s and 3.62 s and
+peaked at 60,604,416 and 61,652,992 bytes RSS. Each staged 12 files totaling
+24,288 bytes. Twice the final caller content conservatively bounds planner
+spool/split scratch at 4,134 bytes; the external-validation scratch bound was
+3,514 bytes. Adding the larger phase bound to the final stage yields 28,422
+bytes of conservative peak candidate disk. The complete census contained
+200,008 regular files; policy projection retained five repository rows and six
+caller rows. The two-bit caller leaves were `00:1`, `10:3`, and `11:2`, so no
+leaf needed a deeper split on this corpus.
 
-The repeat run reproduced the exact five filenames and all bytes. Its retained
+The 16 MiB disk threshold remains this neutral fixture's prospective
+measurement gate; it is not the production schema's aggregate projection
+ceiling. Manifest v3 independently refuses more than 16,384 focused-local
+projection artifacts or 4 GiB of their canonical content.
+
+The repeat run reproduced the exact 12 filenames and all bytes. Its retained
 identities are:
 
 - source-corpus digest:
@@ -48,13 +54,13 @@ identities are:
 - streamed regular-census digest:
   `sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841`;
 - policy digest:
-  `sha256:82dfb887249f1a9c1c914d87a32f065c3aad46a35c8f2993bf1a9e3938f80667`;
+  `sha256:ed5e5d784dfeca1f52bd1a1f77a373907dcb21470799350a9e93b6999dc91d3d`;
 - generation digest:
-  `sha256:bd2e9212ccb47535827822dc4cffe2dda477a25d95459d99ae4d6a77a5fb368b`;
+  `sha256:667fd53e187f433ac3ecdd024e4dd8fe6a48ab8c47f1f15a6842676d65b52641`;
 - manifest digest:
-  `sha256:030563f0e0c3f2b070623f9d04886c95fd4552beb64f6df7e9df14b4c7053753`;
+  `sha256:8a4ece5d2e1a4684b7ce937717db78c2780221f2ff2d4477067240236a666022`;
 - exact staged-output digest:
-  `sha256:2ed610f823dbfb2146cfd27d54fd4f80afdf920a59cfcd5323c177b3683c549e`.
+  `sha256:3dbf0db9649f1f51745a0a9d8eca92f7215d38f8540c294570ed44e799190b21`.
 
 To reproduce the retained observation:
 

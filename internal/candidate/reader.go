@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"math"
 	"os"
@@ -147,6 +148,24 @@ func (view *DomainView) ForEachRepositoryRecord(
 		for _, leaf := range view.publication.manifest.CallerLeaves {
 			members = append(members, leaf.Artifact)
 		}
+	} else if view.identity.Plane == PlaneLocal &&
+		view.publication.manifest.UnitDigest != "" {
+		members = nil
+		found := false
+		for _, projection := range view.publication.manifest.LocalProjections {
+			if projection.Domain == view.identity.Domain &&
+				projection.Version == view.identity.Version {
+				members = projection.Members
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf(
+				"%w: local projection %s/%s is missing",
+				ErrInvalidManifest, view.identity.Domain, view.identity.Version,
+			)
+		}
 	}
 	for _, member := range members {
 		err := validateArtifactFile(
@@ -181,6 +200,182 @@ func (view *DomainView) ForEachRepositoryRecord(
 	return nil
 }
 
+type localProjectionVerifier struct {
+	projection  LocalProjection
+	memberIndex int
+	active      bool
+	count       int
+	declared    int64
+	content     int64
+	hash        hash.Hash
+}
+
+func prepareLocalProjectionVerifiers(
+	manifest Manifest,
+	allowed map[string]bool,
+) ([]*localProjectionVerifier, map[string]*localProjectionVerifier, error) {
+	if manifest.LocalProjections == nil {
+		return nil, nil, fmt.Errorf(
+			"%w: local projections are not explicit", ErrInvalidManifest,
+		)
+	}
+	expected := make([]struct {
+		identity PolicyIdentity
+		ordinal  int
+	}, 0)
+	if manifest.UnitDigest != "" {
+		for policyOrdinal, identity := range manifest.Policies {
+			if identity.Plane == PlaneLocal {
+				expected = append(expected, struct {
+					identity PolicyIdentity
+					ordinal  int
+				}{identity: identity, ordinal: policyOrdinal})
+			}
+		}
+	}
+	if len(manifest.LocalProjections) != len(expected) {
+		return nil, nil, fmt.Errorf(
+			"%w: local projection set does not match focused local policies",
+			ErrInvalidManifest,
+		)
+	}
+	verifiers := make([]*localProjectionVerifier, 0, len(expected))
+	byDomain := make(map[string]*localProjectionVerifier, len(expected))
+	totalMembers := 0
+	var totalBytes int64
+	prefix := ArtifactPrefix(manifest.Repository, manifest.GenerationDigest)
+	for index, wanted := range expected {
+		projection := manifest.LocalProjections[index]
+		if projection.Domain != wanted.identity.Domain ||
+			projection.Version != wanted.identity.Version ||
+			projection.PolicyOrdinal != wanted.ordinal ||
+			projection.Members == nil {
+			return nil, nil, fmt.Errorf(
+				"%w: local projection identity is not canonical",
+				ErrInvalidManifest,
+			)
+		}
+		if len(projection.Members) >
+			MaxLocalProjectionArtifacts-totalMembers {
+			return nil, nil, fmt.Errorf(
+				"%w: local projections exceed %d artifacts",
+				ErrInvalidManifest, MaxLocalProjectionArtifacts,
+			)
+		}
+		totalMembers += len(projection.Members)
+		for ordinal, member := range projection.Members {
+			expectedName := prefix + fmt.Sprintf(
+				"local-%03d-%06d.ndjson", wanted.ordinal, ordinal,
+			)
+			if err := validateArtifactEnvelope(
+				member, ordinal, expectedName,
+			); err != nil {
+				return nil, nil, err
+			}
+			if member.ContentBytes >
+				MaxLocalProjectionContentBytes-totalBytes {
+				return nil, nil, fmt.Errorf(
+					"%w: local projections exceed %d content bytes",
+					ErrInvalidManifest, MaxLocalProjectionContentBytes,
+				)
+			}
+			totalBytes += member.ContentBytes
+			if allowed[member.Name] {
+				return nil, nil, fmt.Errorf(
+					"%w: duplicate candidate member name",
+					ErrInvalidManifest,
+				)
+			}
+			allowed[member.Name] = true
+		}
+		verifier := &localProjectionVerifier{projection: projection}
+		verifiers = append(verifiers, verifier)
+		byDomain[projection.Domain] = verifier
+	}
+	return verifiers, byDomain, nil
+}
+
+func (verifier *localProjectionVerifier) add(record Record) error {
+	if verifier == nil {
+		return fmt.Errorf("%w: local projection verifier is nil", ErrInvalidManifest)
+	}
+	if verifier.active &&
+		(verifier.count >= MaxRecordsPerArtifact ||
+			record.DeclaredBytes >
+				MaxDeclaredBytesPerArtifact-verifier.declared) {
+		if err := verifier.finishMember(); err != nil {
+			return err
+		}
+	}
+	if !verifier.active {
+		verifier.active = true
+		verifier.hash = sha256.New()
+		_, _ = verifier.hash.Write([]byte("phebs-candidate-artifact-v1\x00"))
+	}
+	payload, err := json.Marshal(record)
+	if err != nil {
+		return err
+	}
+	payload = append(payload, '\n')
+	if len(payload) > maxTreeRecordBytes {
+		return fmt.Errorf(
+			"%w: local projection record exceeds its byte limit",
+			ErrInvalidManifest,
+		)
+	}
+	_, _ = verifier.hash.Write(payload)
+	verifier.count++
+	verifier.declared += record.DeclaredBytes
+	verifier.content += int64(len(payload))
+	return nil
+}
+
+func (verifier *localProjectionVerifier) finish() error {
+	if verifier == nil {
+		return fmt.Errorf("%w: local projection verifier is nil", ErrInvalidManifest)
+	}
+	if verifier.active {
+		if err := verifier.finishMember(); err != nil {
+			return err
+		}
+	}
+	if verifier.memberIndex != len(verifier.projection.Members) {
+		return fmt.Errorf(
+			"%w: local projection %q has extra members",
+			ErrInvalidManifest, verifier.projection.Domain,
+		)
+	}
+	return nil
+}
+
+func (verifier *localProjectionVerifier) finishMember() error {
+	if !verifier.active ||
+		verifier.memberIndex >= len(verifier.projection.Members) {
+		return fmt.Errorf(
+			"%w: local projection %q member coverage mismatch",
+			ErrInvalidManifest, verifier.projection.Domain,
+		)
+	}
+	member := verifier.projection.Members[verifier.memberIndex]
+	digest := "sha256:" + hex.EncodeToString(verifier.hash.Sum(nil))
+	if member.RecordCount != verifier.count ||
+		member.DeclaredBytes != verifier.declared ||
+		member.ContentBytes != verifier.content ||
+		member.ContentDigest != digest {
+		return fmt.Errorf(
+			"%w: local projection %q does not exactly cover its domain",
+			ErrInvalidManifest, verifier.projection.Domain,
+		)
+	}
+	verifier.memberIndex++
+	verifier.active = false
+	verifier.count = 0
+	verifier.declared = 0
+	verifier.content = 0
+	verifier.hash = nil
+	return nil
+}
+
 func validateArtifactSet(
 	ctx context.Context,
 	directory string,
@@ -200,6 +395,12 @@ func validateArtifactSet(
 	}
 	allowed := map[string]bool{ManifestName(manifest.Repository): true}
 	accumulators := makeDomainAccumulators(manifest.Policies)
+	localVerifiers, localByDomain, err := prepareLocalProjectionVerifiers(
+		manifest, allowed,
+	)
+	if err != nil {
+		return err
+	}
 	projectionDirectory, err := os.MkdirTemp(
 		directory, validationDirectoryPrefix,
 	)
@@ -263,6 +464,17 @@ func validateArtifactSet(
 				); err != nil {
 					return err
 				}
+				if record.InUnit {
+					for _, domain := range record.Domains {
+						verifier := localByDomain[domain]
+						if verifier == nil {
+							continue
+						}
+						if err := verifier.add(record); err != nil {
+							return err
+						}
+					}
+				}
 				return addDomainRecords(
 					accumulators, record, record.Domains, record.RequiredDomains,
 				)
@@ -282,6 +494,47 @@ func validateArtifactSet(
 				"%w: repository member %d has a non-greedy boundary",
 				ErrInvalidManifest, index,
 			)
+		}
+	}
+	for _, verifier := range localVerifiers {
+		if err := verifier.finish(); err != nil {
+			return err
+		}
+		var previousLocal *Record
+		for _, member := range verifier.projection.Members {
+			err := validateArtifactFile(
+				ctx, filepath.Join(directory, member.Name), member,
+				func(record Record) error {
+					if err := validateRecord(
+						record, PlaneRepository, policyByDomain, unit,
+					); err != nil {
+						return err
+					}
+					if !record.InUnit ||
+						!slices.Contains(record.Domains, verifier.projection.Domain) {
+						return fmt.Errorf(
+							"%w: local projection %q contains an out-of-scope record",
+							ErrInvalidManifest, verifier.projection.Domain,
+						)
+					}
+					if previousLocal != nil &&
+						compareRepositoryRecords(*previousLocal, record) >= 0 {
+						return fmt.Errorf(
+							"%w: local projection %q is not canonical",
+							ErrInvalidManifest, verifier.projection.Domain,
+						)
+					}
+					copied := record
+					previousLocal = &copied
+					return nil
+				},
+			)
+			if err != nil {
+				return fmt.Errorf(
+					"local projection %q member %q: %w",
+					verifier.projection.Domain, member.Name, err,
+				)
+			}
 		}
 	}
 
@@ -602,6 +855,12 @@ func validateArtifactFile(
 	hasher := sha256.New()
 	_, _ = hasher.Write([]byte("phebs-candidate-artifact-v1\x00"))
 	counted := &byteCountingReader{reader: source.file}
+	observer, _ := ctx.Value(artifactReadObserverKey{}).(func(string, int64))
+	if observer != nil {
+		defer func() {
+			observer(member.Name, counted.count)
+		}()
+	}
 	reader := bufio.NewReaderSize(io.TeeReader(counted, hasher), 64<<10)
 	count := 0
 	var declared int64
@@ -643,6 +902,15 @@ func validateArtifactFile(
 		return errors.New("artifact count, declared bytes, or digest mismatch")
 	}
 	return nil
+}
+
+type artifactReadObserverKey struct{}
+
+func withArtifactReadObserver(
+	ctx context.Context,
+	observer func(string, int64),
+) context.Context {
+	return context.WithValue(ctx, artifactReadObserverKey{}, observer)
 }
 
 func readCanonicalLine(reader *bufio.Reader, limit int) ([]byte, error) {
@@ -999,6 +1267,11 @@ func cloneManifest(input Manifest) Manifest {
 			slices.Clone(input.TypedInputs[index].Domains)
 	}
 	result.RepositoryMembers = slices.Clone(input.RepositoryMembers)
+	result.LocalProjections = slices.Clone(input.LocalProjections)
+	for index := range result.LocalProjections {
+		result.LocalProjections[index].Members =
+			slices.Clone(input.LocalProjections[index].Members)
+	}
 	result.CallerLeaves = slices.Clone(input.CallerLeaves)
 	return result
 }

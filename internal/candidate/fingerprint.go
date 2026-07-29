@@ -74,6 +74,11 @@ func CaptureControlFingerprintContext(
 	); err != nil {
 		return nil, err
 	}
+	if _, _, err := prepareLocalProjectionVerifiers(
+		manifest, map[string]bool{state.Manifest: true},
+	); err != nil {
+		return nil, err
+	}
 
 	fingerprint := &ControlFingerprint{
 		state: state,
@@ -127,6 +132,19 @@ func CaptureControlFingerprintContext(
 			prefix+fmt.Sprintf("repository-%06d.ndjson", ordinal),
 		); err != nil {
 			return nil, err
+		}
+	}
+	for _, projection := range manifest.LocalProjections {
+		for ordinal, member := range projection.Members {
+			if err := addArtifact(
+				member, ordinal,
+				prefix+fmt.Sprintf(
+					"local-%03d-%06d.ndjson",
+					projection.PolicyOrdinal, ordinal,
+				),
+			); err != nil {
+				return nil, err
+			}
 		}
 	}
 	var previousLeaf string

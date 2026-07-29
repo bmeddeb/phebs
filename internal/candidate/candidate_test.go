@@ -188,6 +188,8 @@ func TestBuildIsDeterministicBoundedAndNilUnitSafe(t *testing.T) {
 	if first.Corpus.RegularCount != 4 ||
 		first.Corpus.RegularDeclaredBytes <= 0 ||
 		len(first.RepositoryMembers) != 1 ||
+		first.LocalProjections == nil ||
+		len(first.LocalProjections) != 0 ||
 		len(first.CallerLeaves) == 0 {
 		t.Fatalf("unexpected census/partition: %+v", first)
 	}
@@ -2034,4 +2036,505 @@ func TestDomainSummaryOverflowRefused(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "overflows") {
 		t.Fatalf("domain overflow error = %v", err)
 	}
+}
+
+func TestFocusedLocalProjectionReadsRepositoryMembersOnce(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("unit/a.go", "package unit\n")
+	fixture.write("unit/b.go", "package unit\n")
+	for index := 0; index < 24; index++ {
+		fixture.write(
+			fmt.Sprintf("outside/file-%02d.go", index),
+			"package outside\n",
+		)
+	}
+	commit := fixture.commit("focused projections")
+	unit, err := (analysisunit.Scope{
+		Repository: fixture.repository,
+		Name:       "unit",
+		Primary:    []string{"unit"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	goFiles := func(value string) bool {
+		return strings.HasSuffix(value, ".go")
+	}
+	policies := []Policy{
+		{
+			Domain: "empty-local", Version: "1",
+			EnumerationPolicy: "proto-v1", Plane: PlaneLocal,
+			Enumerate: func(value string) bool {
+				return strings.HasSuffix(value, ".proto")
+			},
+		},
+		{
+			Domain: "local-a", Version: "1",
+			EnumerationPolicy: "go-a-v1", Plane: PlaneLocal,
+			Enumerate: goFiles,
+		},
+		{
+			Domain: "local-b", Version: "1",
+			EnumerationPolicy: "go-b-v1", Plane: PlaneLocal,
+			Enumerate: goFiles,
+		},
+		{
+			Domain: "repository-all", Version: "1",
+			EnumerationPolicy: "go-repository-v1", Plane: PlaneRepository,
+			Enumerate: goFiles,
+		},
+		{
+			Domain: "caller-all", Version: "1",
+			EnumerationPolicy: "go-caller-v1", Plane: PlaneCaller,
+			Enumerate: goFiles,
+		},
+	}
+	identities, err := PolicyIdentities(policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	manifest, err := Build(t.Context(), Request{
+		RepoDir: fixture.directory, OutputDir: root,
+		Repository: fixture.repository, Commit: commit,
+		Unit: unit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.LocalProjections) != 3 {
+		t.Fatalf(
+			"local projection count = %d, want 3",
+			len(manifest.LocalProjections),
+		)
+	}
+	for _, projection := range manifest.LocalProjections {
+		if projection.Members == nil {
+			t.Fatalf("projection %q has a nil member commitment", projection.Domain)
+		}
+		if projection.Domain == "empty-local" &&
+			len(projection.Members) != 0 {
+			t.Fatalf("empty projection has members: %+v", projection.Members)
+		}
+	}
+
+	reads := make(map[string]int64)
+	observedContext := withArtifactReadObserver(
+		t.Context(), func(name string, count int64) {
+			reads[name] += count
+		},
+	)
+	publication, err := OpenContext(observedContext, root, Expected{
+		Repository: fixture.repository, Commit: commit,
+		Unit: unit, Policies: identities,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertReadOnce := func(member Artifact) {
+		t.Helper()
+		if reads[member.Name] != member.ContentBytes {
+			t.Fatalf(
+				"open read %q bytes = %d, want exactly %d",
+				member.Name, reads[member.Name], member.ContentBytes,
+			)
+		}
+	}
+	for _, member := range manifest.RepositoryMembers {
+		assertReadOnce(member)
+	}
+	for _, projection := range manifest.LocalProjections {
+		for _, member := range projection.Members {
+			assertReadOnce(member)
+		}
+	}
+	for _, leaf := range manifest.CallerLeaves {
+		assertReadOnce(leaf.Artifact)
+	}
+
+	reads = make(map[string]int64)
+	replayContext := withArtifactReadObserver(
+		t.Context(), func(name string, count int64) {
+			reads[name] += count
+		},
+	)
+	for _, domain := range []string{"empty-local", "local-a", "local-b"} {
+		view, err := publication.Domain(domain, "1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var paths []string
+		if err := view.ForEachRepositoryRecord(
+			replayContext, func(record Record) error {
+				if !record.InUnit ||
+					!strings.HasPrefix(record.Path, "unit/") {
+					t.Fatalf(
+						"local domain %q received out-of-unit record %+v",
+						domain, record,
+					)
+				}
+				paths = append(paths, record.Path)
+				return nil
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		if domain == "empty-local" && len(paths) != 0 {
+			t.Fatalf("empty local replay = %v", paths)
+		}
+		if domain != "empty-local" &&
+			!slices.Equal(paths, []string{"unit/a.go", "unit/b.go"}) {
+			t.Fatalf("%s local replay = %v", domain, paths)
+		}
+	}
+	for _, member := range manifest.RepositoryMembers {
+		if reads[member.Name] != 0 {
+			t.Fatalf(
+				"local replay re-read repository member %q: %d bytes",
+				member.Name, reads[member.Name],
+			)
+		}
+	}
+	for _, leaf := range manifest.CallerLeaves {
+		if reads[leaf.Name] != 0 {
+			t.Fatalf(
+				"local replay read caller member %q: %d bytes",
+				leaf.Name, reads[leaf.Name],
+			)
+		}
+	}
+	for _, projection := range manifest.LocalProjections {
+		for _, member := range projection.Members {
+			if reads[member.Name] != member.ContentBytes {
+				t.Fatalf(
+					"local replay read %q bytes = %d, want %d",
+					member.Name, reads[member.Name], member.ContentBytes,
+				)
+			}
+		}
+	}
+
+	repositoryView, err := publication.Domain("repository-all", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var repositoryPaths []string
+	if err := repositoryView.ForEachRepositoryRecord(
+		t.Context(), func(record Record) error {
+			repositoryPaths = append(repositoryPaths, record.Path)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if len(repositoryPaths) != 26 ||
+		!slices.Contains(repositoryPaths, "outside/file-00.go") {
+		t.Fatalf("repository replay changed scope: %v", repositoryPaths)
+	}
+	callerView, err := publication.Domain("caller-all", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var callerPaths []string
+	if err := callerView.ForEachRepositoryRecord(
+		t.Context(), func(record Record) error {
+			callerPaths = append(callerPaths, record.Path)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	slices.Sort(repositoryPaths)
+	slices.Sort(callerPaths)
+	if !slices.Equal(callerPaths, repositoryPaths) {
+		t.Fatalf(
+			"caller/repository behavior diverged: %v / %v",
+			callerPaths, repositoryPaths,
+		)
+	}
+
+	localView, err := publication.Domain("local-a", "1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	canceled, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := localView.ForEachRepositoryRecord(
+		canceled, func(Record) error { return nil },
+	); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled local replay = %v", err)
+	}
+	markerPath := filepath.Join(root, PublishingName(fixture.repository))
+	if err := os.WriteFile(
+		markerPath, []byte(fixture.repository+"\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := localView.ForEachRepositoryRecord(
+		t.Context(), func(Record) error { return nil },
+	); !errors.Is(err, ErrPublishing) {
+		t.Fatalf("marked local replay = %v", err)
+	}
+	if err := os.Remove(markerPath); err != nil {
+		t.Fatal(err)
+	}
+	var localMember Artifact
+	for _, projection := range manifest.LocalProjections {
+		if projection.Domain == "local-a" &&
+			len(projection.Members) > 0 {
+			localMember = projection.Members[0]
+			break
+		}
+	}
+	if localMember.Name == "" {
+		t.Fatal("local-a projection has no member")
+	}
+	fingerprint, err := CaptureControlFingerprintContext(
+		t.Context(), root, manifest.State(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	localPath := filepath.Join(root, localMember.Name)
+	beforeLocal, err := os.Lstat(localPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(localPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw[0] ^= 0x01
+	if err := os.WriteFile(localPath, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	changedLocalTime := beforeLocal.ModTime().Add(2 * time.Second)
+	if err := os.Chtimes(
+		localPath, changedLocalTime, changedLocalTime,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if unchanged, err := fingerprint.MatchesContext(
+		t.Context(), root, manifest.State(),
+	); err != nil || unchanged {
+		t.Fatalf(
+			"tampered local projection fingerprint = %t, %v",
+			unchanged, err,
+		)
+	}
+	if err := localView.ForEachRepositoryRecord(
+		t.Context(), func(Record) error { return nil },
+	); err == nil {
+		t.Fatal("tampered local projection replay unexpectedly succeeded")
+	}
+}
+
+func TestStrictValidationRejectsForgedLocalProjectionCoverage(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("unit/in.go", "package unit\n")
+	fixture.write("outside/out.go", "package outside\n")
+	commit := fixture.commit("forged local projection")
+	unit, err := (analysisunit.Scope{
+		Repository: fixture.repository,
+		Name:       "unit",
+		Primary:    []string{"unit"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	manifest, expected := buildFixture(t, fixture, commit, unit, root)
+	if len(manifest.LocalProjections) != 1 ||
+		len(manifest.LocalProjections[0].Members) != 1 {
+		t.Fatalf("local projection fixture = %+v", manifest.LocalProjections)
+	}
+	var outside Record
+	for _, member := range manifest.RepositoryMembers {
+		if err := forEachCanonicalRecordContext(
+			t.Context(), filepath.Join(root, member.Name),
+			func(record Record) error {
+				if record.Path == "outside/out.go" {
+					outside = record
+				}
+				return nil
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if outside.Path == "" || outside.InUnit {
+		t.Fatalf("outside fixture record = %+v", outside)
+	}
+	payload, err := json.Marshal(outside)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload = append(payload, '\n')
+	member := &manifest.LocalProjections[0].Members[0]
+	if err := os.WriteFile(
+		filepath.Join(root, member.Name), payload, 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	member.RecordCount = 1
+	member.DeclaredBytes = outside.DeclaredBytes
+	member.ContentBytes = int64(len(payload))
+	member.ContentDigest = artifactDigest(payload)
+	rewriteManifest(t, root, &manifest)
+	if _, err := Open(root, expected); err == nil ||
+		!strings.Contains(err.Error(), "does not exactly cover") {
+		t.Fatalf("forged local projection error = %v", err)
+	}
+	if _, err := OpenState(root, manifest.State()); err == nil {
+		t.Fatal("forged local projection opened through a persisted pointer")
+	}
+}
+
+func TestFocusedLocalProjectionPublicationLifecycle(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("unit/in.go", "package unit\n")
+	fixture.write("outside/out.go", "package outside\n")
+	firstCommit := fixture.commit("first focused generation")
+	unit, err := (analysisunit.Scope{
+		Repository: fixture.repository,
+		Name:       "unit",
+		Primary:    []string{"unit"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	firstStage, err := NewStage(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, firstExpected := buildFixture(
+		t, fixture, firstCommit, unit, firstStage,
+	)
+	firstState, err := Publish(root, firstStage, firstExpected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := FinishPublication(root, fixture.repository); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenState(root, firstState); err != nil {
+		t.Fatal(err)
+	}
+	if len(first.LocalProjections) != 1 ||
+		len(first.LocalProjections[0].Members) != 1 {
+		t.Fatalf("first local projection = %+v", first.LocalProjections)
+	}
+	firstLocalName := first.LocalProjections[0].Members[0].Name
+	if _, err := os.Stat(filepath.Join(root, firstLocalName)); err != nil {
+		t.Fatalf("published local projection: %v", err)
+	}
+
+	fixture.write("unit/in.go", "package unit\n// changed\n")
+	secondCommit := fixture.commit("second focused generation")
+	secondStage, err := NewStage(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, secondExpected := buildFixture(
+		t, fixture, secondCommit, unit, secondStage,
+	)
+	secondState, err := Publish(root, secondStage, secondExpected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := FinishPublication(root, fixture.repository); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenState(root, secondState); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := OpenState(root, firstState); err == nil {
+		t.Fatal("stale focused publication pointer unexpectedly opened")
+	}
+	secondNames := make(map[string]bool)
+	for _, projection := range second.LocalProjections {
+		for _, member := range projection.Members {
+			secondNames[member.Name] = true
+		}
+	}
+	if !secondNames[firstLocalName] {
+		if _, err := os.Lstat(
+			filepath.Join(root, firstLocalName),
+		); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("stale local projection remains: %v", err)
+		}
+	}
+}
+
+func TestLocalProjectionAggregateAdmissionBounds(t *testing.T) {
+	t.Run("build member budget", func(t *testing.T) {
+		budget := &artifactBudget{maxMembers: 1, maxBytes: 10}
+		if err := budget.reserveMember(); err != nil {
+			t.Fatal(err)
+		}
+		if err := budget.reserveMember(); !errors.Is(err, ErrCandidateTooLarge) {
+			t.Fatalf("member budget overflow = %v", err)
+		}
+	})
+	t.Run("build content budget", func(t *testing.T) {
+		budget := &artifactBudget{maxMembers: 1, maxBytes: 10}
+		if err := budget.reserveBytes(10); err != nil {
+			t.Fatal(err)
+		}
+		if err := budget.reserveBytes(1); !errors.Is(err, ErrCandidateTooLarge) {
+			t.Fatalf("content budget overflow = %v", err)
+		}
+	})
+	baseManifest := func(members []Artifact) Manifest {
+		return Manifest{
+			Repository:       "example.invalid/bounds",
+			GenerationDigest: "sha256:" + strings.Repeat("a", 64),
+			UnitDigest:       "sha256:" + strings.Repeat("b", 64),
+			Policies: []PolicyIdentity{{
+				Domain: "local", Version: "1",
+				EnumerationPolicy: "local-v1",
+				SymlinkPolicy:     "none",
+				Plane:             PlaneLocal,
+			}},
+			LocalProjections: []LocalProjection{{
+				Domain: "local", Version: "1",
+				PolicyOrdinal: 0, Members: members,
+			}},
+		}
+	}
+	t.Run("manifest artifact budget", func(t *testing.T) {
+		manifest := baseManifest(
+			make([]Artifact, MaxLocalProjectionArtifacts+1),
+		)
+		if _, _, err := prepareLocalProjectionVerifiers(
+			manifest, map[string]bool{},
+		); !errors.Is(err, ErrInvalidManifest) {
+			t.Fatalf("manifest artifact overflow = %v", err)
+		}
+	})
+	t.Run("manifest content budget", func(t *testing.T) {
+		count := int(MaxLocalProjectionContentBytes/maxArtifactBytes) + 1
+		members := make([]Artifact, count)
+		prefix := ArtifactPrefix(
+			"example.invalid/bounds",
+			"sha256:"+strings.Repeat("a", 64),
+		)
+		for ordinal := range members {
+			members[ordinal] = Artifact{
+				Name: prefix + fmt.Sprintf(
+					"local-000-%06d.ndjson", ordinal,
+				),
+				Ordinal: ordinal, RecordCount: 1,
+				ContentBytes:  maxArtifactBytes,
+				ContentDigest: "sha256:" + strings.Repeat("c", 64),
+			}
+		}
+		manifest := baseManifest(members)
+		if _, _, err := prepareLocalProjectionVerifiers(
+			manifest, map[string]bool{},
+		); !errors.Is(err, ErrInvalidManifest) {
+			t.Fatalf("manifest content overflow = %v", err)
+		}
+	})
 }

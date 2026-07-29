@@ -346,6 +346,19 @@ func PublishContext(
 			return State{}, err
 		}
 	}
+	for _, projection := range manifest.LocalProjections {
+		for _, member := range projection.Members {
+			if err := ctx.Err(); err != nil {
+				return State{}, err
+			}
+			if err := moveRegular(
+				filepath.Join(stage, member.Name),
+				filepath.Join(root, member.Name),
+			); err != nil {
+				return State{}, err
+			}
+		}
+	}
 	for _, leaf := range manifest.CallerLeaves {
 		if err := ctx.Err(); err != nil {
 			return State{}, err
@@ -471,6 +484,11 @@ func removeStaleRepositoryArtifacts(
 	}
 	for _, member := range manifest.RepositoryMembers {
 		allowed[member.Name] = true
+	}
+	for _, projection := range manifest.LocalProjections {
+		for _, member := range projection.Members {
+			allowed[member.Name] = true
+		}
 	}
 	for _, leaf := range manifest.CallerLeaves {
 		allowed[leaf.Name] = true

@@ -21,17 +21,20 @@ import (
 )
 
 const (
-	ManifestSchema = "phebs-candidate-manifest-v2"
+	ManifestSchema = "phebs-candidate-manifest-v3"
 	RecordSchema   = "phebs-candidate-record-v1"
-	StateSchema    = "phebs-candidate-state-v2"
+	StateSchema    = "phebs-candidate-state-v3"
 
-	EnumerationPolicyVersion          = "phebs-candidate-enumeration-v2"
-	CallerHashPolicy                  = "phebs-caller-path-v1"
-	InitialCallerPrefixBits           = 2
-	MaxPolicies                       = 64
-	MaxCorpusEntries                  = 10_000_000
-	MaxRecordsPerArtifact             = 4096
-	MaxDeclaredBytesPerArtifact int64 = 64 << 20
+	EnumerationPolicyVersion             = "phebs-candidate-enumeration-v2"
+	CallerHashPolicy                     = "phebs-caller-path-v1"
+	LocalProjectionPolicy                = "focused-domain-repository-order-v1"
+	InitialCallerPrefixBits              = 2
+	MaxPolicies                          = 64
+	MaxCorpusEntries                     = 10_000_000
+	MaxRecordsPerArtifact                = 4096
+	MaxDeclaredBytesPerArtifact    int64 = 64 << 20
+	MaxLocalProjectionArtifacts          = 16_384
+	MaxLocalProjectionContentBytes       = int64(4 << 30)
 
 	maxManifestBytes = 8 << 20
 	maxArtifactBytes = 128 << 20
@@ -47,8 +50,9 @@ var (
 	ErrPublishing        = errors.New("candidate publication is incomplete")
 )
 
-// Plane identifies how a domain consumes candidates. Local and repository
-// policies share one bounded artifact plane; caller policies use hash leaves.
+// Plane identifies how a domain consumes candidates. Repository policies use
+// the canonical repository plane, focused local policies use exact durable
+// projections, and caller policies use hash leaves.
 type Plane string
 
 const (
@@ -107,26 +111,33 @@ type TypedInput struct {
 	Shared        bool     `json:"shared"`
 }
 
-// PartitionPolicy freezes every caller assignment and artifact bound.
+// PartitionPolicy freezes every caller assignment, focused-local projection,
+// and artifact bound.
 type PartitionPolicy struct {
-	EnumerationPolicy string `json:"enumeration_policy"`
-	CallerHashPolicy  string `json:"caller_hash_policy"`
-	InitialPrefixBits int    `json:"initial_prefix_bits"`
-	MaxRecords        int    `json:"max_records"`
-	MaxDeclaredBytes  int64  `json:"max_declared_bytes"`
-	RecordOrdering    string `json:"record_ordering"`
-	SplitRule         string `json:"split_rule"`
+	EnumerationPolicy              string `json:"enumeration_policy"`
+	CallerHashPolicy               string `json:"caller_hash_policy"`
+	LocalProjectionPolicy          string `json:"local_projection_policy"`
+	InitialPrefixBits              int    `json:"initial_prefix_bits"`
+	MaxRecords                     int    `json:"max_records"`
+	MaxDeclaredBytes               int64  `json:"max_declared_bytes"`
+	MaxLocalProjectionArtifacts    int    `json:"max_local_projection_artifacts"`
+	MaxLocalProjectionContentBytes int64  `json:"max_local_projection_content_bytes"`
+	RecordOrdering                 string `json:"record_ordering"`
+	SplitRule                      string `json:"split_rule"`
 }
 
 func frozenPartitionPolicy() PartitionPolicy {
 	return PartitionPolicy{
-		EnumerationPolicy: EnumerationPolicyVersion,
-		CallerHashPolicy:  CallerHashPolicy,
-		InitialPrefixBits: InitialCallerPrefixBits,
-		MaxRecords:        MaxRecordsPerArtifact,
-		MaxDeclaredBytes:  MaxDeclaredBytesPerArtifact,
-		RecordOrdering:    "hash-path-oid-v1",
-		SplitRule:         "next-hash-bit-v1",
+		EnumerationPolicy:              EnumerationPolicyVersion,
+		CallerHashPolicy:               CallerHashPolicy,
+		LocalProjectionPolicy:          LocalProjectionPolicy,
+		InitialPrefixBits:              InitialCallerPrefixBits,
+		MaxRecords:                     MaxRecordsPerArtifact,
+		MaxDeclaredBytes:               MaxDeclaredBytesPerArtifact,
+		MaxLocalProjectionArtifacts:    MaxLocalProjectionArtifacts,
+		MaxLocalProjectionContentBytes: MaxLocalProjectionContentBytes,
+		RecordOrdering:                 "hash-path-oid-v1",
+		SplitRule:                      "next-hash-bit-v1",
 	}
 }
 
@@ -198,6 +209,16 @@ type CallerLeaf struct {
 	PrefixBits int    `json:"prefix_bits"`
 }
 
+// LocalProjection is the durable, domain-addressed focused-unit replay plane.
+// PolicyOrdinal binds its filesystem namespace to the canonical policy set;
+// an empty Members slice explicitly commits that the domain has no candidates.
+type LocalProjection struct {
+	Domain        string     `json:"domain"`
+	Version       string     `json:"version"`
+	PolicyOrdinal int        `json:"policy_ordinal"`
+	Members       []Artifact `json:"members"`
+}
+
 // Manifest is the sole visibility authority for one candidate generation.
 type Manifest struct {
 	Schema            string               `json:"schema"`
@@ -214,6 +235,7 @@ type Manifest struct {
 	Domains           []DomainSummary      `json:"domains"`
 	TypedInputs       []TypedInput         `json:"typed_inputs"`
 	RepositoryMembers []Artifact           `json:"repository_members"`
+	LocalProjections  []LocalProjection    `json:"local_projections"`
 	CallerLeaves      []CallerLeaf         `json:"caller_leaves"`
 	Digest            string               `json:"digest"`
 }

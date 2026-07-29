@@ -13,7 +13,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/gitobj"
 )
 
-const candidateManifestInventoryPrefix = "candidate-manifest-v2-"
+const candidateManifestInventoryPrefix = "candidate-manifest-v3-"
 
 // CandidateManifestDomain identifies the extractor and candidate-policy
 // generation the publication must contain. Candidate policies remain

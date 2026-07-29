@@ -124,9 +124,12 @@
   "partition_policy": {
     "enumeration_policy": "phebs-candidate-enumeration-v2",
     "caller_hash_policy": "phebs-caller-path-v1",
+    "local_projection_policy": "focused-domain-repository-order-v1",
     "initial_prefix_bits": 2,
     "max_records": 4096,
     "max_declared_bytes": 67108864,
+    "max_local_projection_artifacts": 16384,
+    "max_local_projection_content_bytes": 4294967296,
     "record_ordering": "hash-path-oid-v1",
     "split_rule": "next-hash-bit-v1"
   },
@@ -138,9 +141,9 @@
   "run1": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:82dfb887249f1a9c1c914d87a32f065c3aad46a35c8f2993bf1a9e3938f80667",
-    "generation_digest": "sha256:bd2e9212ccb47535827822dc4cffe2dda477a25d95459d99ae4d6a77a5fb368b",
-    "manifest_digest": "sha256:030563f0e0c3f2b070623f9d04886c95fd4552beb64f6df7e9df14b4c7053753",
+    "policy_digest": "sha256:ed5e5d784dfeca1f52bd1a1f77a373907dcb21470799350a9e93b6999dc91d3d",
+    "generation_digest": "sha256:667fd53e187f433ac3ecdd024e4dd8fe6a48ab8c47f1f15a6842676d65b52641",
+    "manifest_digest": "sha256:8a4ece5d2e1a4684b7ce937717db78c2780221f2ff2d4477067240236a666022",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -177,21 +180,21 @@
         "content_bytes": 698
       }
     ],
-    "staged_artifact_count": 5,
-    "staged_artifact_bytes": 13589,
+    "staged_artifact_count": 12,
+    "staged_artifact_bytes": 24288,
     "planner_scratch_upper_bound_bytes": 4134,
     "validation_scratch_upper_bound_bytes": 3514,
-    "peak_candidate_disk_bytes": 17723,
-    "canonical_output_digest": "sha256:2ed610f823dbfb2146cfd27d54fd4f80afdf920a59cfcd5323c177b3683c549e",
-    "planner_wall_nanos": 3276544709,
-    "peak_rss_bytes": 62013440
+    "peak_candidate_disk_bytes": 28422,
+    "canonical_output_digest": "sha256:3dbf0db9649f1f51745a0a9d8eca92f7215d38f8540c294570ed44e799190b21",
+    "planner_wall_nanos": 3796393708,
+    "peak_rss_bytes": 60604416
   },
   "run2": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:82dfb887249f1a9c1c914d87a32f065c3aad46a35c8f2993bf1a9e3938f80667",
-    "generation_digest": "sha256:bd2e9212ccb47535827822dc4cffe2dda477a25d95459d99ae4d6a77a5fb368b",
-    "manifest_digest": "sha256:030563f0e0c3f2b070623f9d04886c95fd4552beb64f6df7e9df14b4c7053753",
+    "policy_digest": "sha256:ed5e5d784dfeca1f52bd1a1f77a373907dcb21470799350a9e93b6999dc91d3d",
+    "generation_digest": "sha256:667fd53e187f433ac3ecdd024e4dd8fe6a48ab8c47f1f15a6842676d65b52641",
+    "manifest_digest": "sha256:8a4ece5d2e1a4684b7ce937717db78c2780221f2ff2d4477067240236a666022",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -228,14 +231,14 @@
         "content_bytes": 698
       }
     ],
-    "staged_artifact_count": 5,
-    "staged_artifact_bytes": 13589,
+    "staged_artifact_count": 12,
+    "staged_artifact_bytes": 24288,
     "planner_scratch_upper_bound_bytes": 4134,
     "validation_scratch_upper_bound_bytes": 3514,
-    "peak_candidate_disk_bytes": 17723,
-    "canonical_output_digest": "sha256:2ed610f823dbfb2146cfd27d54fd4f80afdf920a59cfcd5323c177b3683c549e",
-    "planner_wall_nanos": 3300075292,
-    "peak_rss_bytes": 61440000
+    "peak_candidate_disk_bytes": 28422,
+    "canonical_output_digest": "sha256:3dbf0db9649f1f51745a0a9d8eca92f7215d38f8540c294570ed44e799190b21",
+    "planner_wall_nanos": 3619698083,
+    "peak_rss_bytes": 61652992
   },
   "canonical_bytes_equal": true
 }

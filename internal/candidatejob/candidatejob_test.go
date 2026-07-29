@@ -2,6 +2,9 @@ package candidatejob
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -36,6 +39,216 @@ func (extractor policyExtractor) Extract(
 	sdk.Emit,
 ) (sdk.Coverage, error) {
 	return sdk.Coverage{}, nil
+}
+
+type replayAuditExtractor struct {
+	domain, version, suffix string
+	paths                   []string
+}
+
+func (extractor *replayAuditExtractor) Domain() string  { return extractor.domain }
+func (extractor *replayAuditExtractor) Version() string { return extractor.version }
+func (extractor *replayAuditExtractor) Candidate(filePath string) bool {
+	return strings.HasSuffix(filePath, extractor.suffix)
+}
+func (extractor *replayAuditExtractor) Extract(
+	ctx context.Context,
+	corpus sdk.Corpus,
+	_ sdk.Emit,
+) (sdk.Coverage, error) {
+	var paths []string
+	if err := corpus.WalkFiles(ctx, func(filePath string) error {
+		if _, err := corpus.Read(ctx, filePath); err != nil {
+			return err
+		}
+		paths = append(paths, filePath)
+		return nil
+	}); err != nil {
+		return sdk.Coverage{}, err
+	}
+	extractor.paths = paths
+	return sdk.Coverage{}, nil
+}
+
+type replayAuditEvidence struct {
+	mu      sync.Mutex
+	next    int
+	staged  map[string]*store.ExtractionRun
+	current map[string]*store.ExtractionRun
+}
+
+func newReplayAuditEvidence() *replayAuditEvidence {
+	return &replayAuditEvidence{
+		staged:  make(map[string]*store.ExtractionRun),
+		current: make(map[string]*store.ExtractionRun),
+	}
+}
+
+func (evidence *replayAuditEvidence) BeginExtractionRun(
+	_ context.Context,
+	scope store.ExtractionScope,
+	extractor string,
+) (*store.ExtractionRun, error) {
+	evidence.mu.Lock()
+	defer evidence.mu.Unlock()
+	evidence.next++
+	run := &store.ExtractionRun{
+		ID:   fmt.Sprintf("replay-run-%d", evidence.next),
+		Repo: scope.Repository, Commit: scope.Commit,
+		UnitDigest: scope.UnitDigest, Domain: scope.Domain,
+		Extractor: extractor, Status: "staged",
+	}
+	evidence.staged[run.ID] = run
+	cloned := *run
+	return &cloned, nil
+}
+
+func (*replayAuditEvidence) AddEvidence(
+	context.Context,
+	string,
+	[]store.EvidenceAtom,
+	[]store.SnapshotEvidence,
+	[]store.Assertion,
+) error {
+	return nil
+}
+
+func (evidence *replayAuditEvidence) PublishExtractionRun(
+	_ context.Context,
+	runID string,
+	coverage store.CoverageManifest,
+) error {
+	evidence.mu.Lock()
+	defer evidence.mu.Unlock()
+	run := evidence.staged[runID]
+	if run == nil {
+		return store.ErrNotFound
+	}
+	run.Status = "published"
+	run.Coverage = coverage
+	evidence.current[run.Domain] = run
+	return nil
+}
+
+func (evidence *replayAuditEvidence) AbortExtractionRun(
+	_ context.Context,
+	runID string,
+) error {
+	evidence.mu.Lock()
+	defer evidence.mu.Unlock()
+	delete(evidence.staged, runID)
+	return nil
+}
+
+func (evidence *replayAuditEvidence) LatestPublishedRun(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionRun, error) {
+	evidence.mu.Lock()
+	defer evidence.mu.Unlock()
+	run := evidence.current[scope.Domain]
+	if run == nil ||
+		run.Repo != scope.Repository ||
+		run.Commit != scope.Commit ||
+		run.UnitDigest != scope.UnitDigest {
+		return nil, store.ErrNotFound
+	}
+	cloned := *run
+	return &cloned, nil
+}
+
+func (*replayAuditEvidence) LatestExtractionAttempt(
+	context.Context,
+	store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*replayAuditEvidence) ListAssertions(
+	context.Context,
+	store.AssertionQuery,
+) ([]store.Assertion, error) {
+	return nil, nil
+}
+
+func (*replayAuditEvidence) ListReverseAssertions(
+	context.Context,
+	store.ReverseAssertionQuery,
+) (*store.ReverseAssertionPage, error) {
+	return &store.ReverseAssertionPage{}, nil
+}
+
+func (*replayAuditEvidence) ResolveEvidence(
+	context.Context,
+	string,
+	string,
+	string,
+) (*store.EvidenceResolution, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*replayAuditEvidence) PinRun(
+	context.Context,
+	string,
+	string,
+) error {
+	return nil
+}
+
+func (*replayAuditEvidence) SweepEvidence(
+	context.Context,
+	time.Time,
+	time.Duration,
+) (store.EvidenceSweepProgress, error) {
+	return store.EvidenceSweepProgress{}, nil
+}
+
+type legacyV2PartitionPolicy struct {
+	EnumerationPolicy string `json:"enumeration_policy"`
+	CallerHashPolicy  string `json:"caller_hash_policy"`
+	InitialPrefixBits int    `json:"initial_prefix_bits"`
+	MaxRecords        int    `json:"max_records"`
+	MaxDeclaredBytes  int64  `json:"max_declared_bytes"`
+	RecordOrdering    string `json:"record_ordering"`
+	SplitRule         string `json:"split_rule"`
+}
+
+func legacyV2FrozenPartitionPolicy() legacyV2PartitionPolicy {
+	return legacyV2PartitionPolicy{
+		EnumerationPolicy: "phebs-candidate-enumeration-v2",
+		CallerHashPolicy:  "phebs-caller-path-v1",
+		InitialPrefixBits: 2,
+		MaxRecords:        4096,
+		MaxDeclaredBytes:  64 << 20,
+		RecordOrdering:    "hash-path-oid-v1",
+		SplitRule:         "next-hash-bit-v1",
+	}
+}
+
+type legacyV2Manifest struct {
+	Schema            string                         `json:"schema"`
+	Repository        string                         `json:"repository"`
+	Commit            string                         `json:"commit"`
+	UnitDigest        string                         `json:"unit_digest"`
+	PolicyDigest      string                         `json:"policy_digest"`
+	GenerationDigest  string                         `json:"generation_digest"`
+	TypedIndex        *candidate.TypedIndexSelection `json:"typed_index,omitempty"`
+	PartitionPolicy   legacyV2PartitionPolicy        `json:"partition_policy"`
+	Policies          []candidate.PolicyIdentity     `json:"policies"`
+	Corpus            candidate.CorpusSummary        `json:"corpus"`
+	UnitCorpus        candidate.CorpusSummary        `json:"unit_corpus"`
+	Domains           []candidate.DomainSummary      `json:"domains"`
+	TypedInputs       []candidate.TypedInput         `json:"typed_inputs"`
+	RepositoryMembers []candidate.Artifact           `json:"repository_members"`
+	CallerLeaves      []candidate.CallerLeaf         `json:"caller_leaves"`
+	Digest            string                         `json:"digest"`
+}
+
+func legacyV2Digest(domain string, payload []byte) string {
+	hasher := sha256.New()
+	_, _ = hasher.Write([]byte(domain))
+	_, _ = hasher.Write(payload)
+	return "sha256:" + hex.EncodeToString(hasher.Sum(nil))
 }
 
 type manifestStore struct {
@@ -364,6 +577,254 @@ func TestWorkerRetryRepairsPublicationAndProviderStreamsBothPlanes(
 		path: "client/use.go", required: true, inUnit: false,
 	}}) {
 		t.Fatalf("caller files = %+v", callerFiles)
+	}
+}
+
+func TestExtractionProviderReplaysTwoFocusedDomainsWithoutRepositoryMembers(
+	t *testing.T,
+) {
+	dataDir, repository, commit := candidateMultiLocalGitFixture(t)
+	unit, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+		IndexedAnalysisUnit: unit,
+	}}
+	proto := &replayAuditExtractor{
+		domain: "proto-contract", version: "proto-v1", suffix: ".proto",
+	}
+	goConsumer := &replayAuditExtractor{
+		domain: "grpc-consumer", version: "grpc-v1", suffix: ".go",
+	}
+	extractors := []extract.Extractor{proto, goConsumer}
+	planner, provider, err := New(dataDir, state, extractors)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := planner.Handle(t.Context(), store.Job{
+		Kind: store.JobCandidate, Target: repository,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	manifestRaw, err := os.ReadFile(filepath.Join(
+		CandidateRoot(dataDir), candidate.ManifestName(repository),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest candidate.Manifest
+	if err := json.Unmarshal(manifestRaw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Digest != state.pointer.ManifestDigest ||
+		len(manifest.RepositoryMembers) == 0 ||
+		len(manifest.LocalProjections) != 2 {
+		t.Fatalf(
+			"focused publication members/projections = %d/%d",
+			len(manifest.RepositoryMembers), len(manifest.LocalProjections),
+		)
+	}
+	for _, projection := range manifest.LocalProjections {
+		if len(projection.Members) == 0 {
+			t.Fatalf("local projection %q is unexpectedly empty", projection.Domain)
+		}
+	}
+
+	strictOpens := 0
+	removedRepositoryMembers := false
+	openPublication := provider.open
+	provider.open = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		strictOpens++
+		publication, openErr := openPublication(ctx, root, expected)
+		if openErr != nil {
+			return nil, openErr
+		}
+		if removedRepositoryMembers {
+			return nil, errors.New("provider opened the publication more than once")
+		}
+		for _, member := range manifest.RepositoryMembers {
+			source := filepath.Join(root, member.Name)
+			blocked := source + ".replay-blocked"
+			if err := os.Rename(source, blocked); err != nil {
+				return nil, err
+			}
+			t.Cleanup(func() {
+				if _, err := os.Lstat(blocked); err == nil {
+					_ = os.Rename(blocked, source)
+				}
+			})
+		}
+		removedRepositoryMembers = true
+		return publication, nil
+	}
+
+	evidence := newReplayAuditEvidence()
+	extraction := &extract.Worker{
+		Repos: state, Evidence: evidence,
+		NewCorpus: extract.GitCorpus(dataDir),
+		Manifests: provider, Extractors: extractors,
+	}
+	if err := extraction.Handle(t.Context(), store.Job{
+		Kind: store.JobExtract, Target: repository,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if strictOpens != 1 || !removedRepositoryMembers {
+		t.Fatalf(
+			"strict opens/repository removal = %d/%t, want 1/true",
+			strictOpens, removedRepositoryMembers,
+		)
+	}
+	if !slices.Equal(proto.paths, []string{"service/api.proto"}) {
+		t.Fatalf("proto focused replay = %v", proto.paths)
+	}
+	if !slices.Equal(goConsumer.paths, []string{"service/consumer.go"}) {
+		t.Fatalf("Go focused replay = %v", goConsumer.paths)
+	}
+	for _, domain := range []string{"proto-contract", "grpc-consumer"} {
+		run := evidence.current[domain]
+		if run == nil ||
+			run.Coverage.CandidateManifestDigest != state.pointer.ManifestDigest ||
+			run.Coverage.ScopePosture != "focused-local" {
+			t.Fatalf("published %s coverage = %+v", domain, run)
+		}
+	}
+}
+
+func TestWorkerUpgradesLegacyV2PublicationAndCleansArtifacts(t *testing.T) {
+	dataDir, repository, commit := candidateGitFixture(t)
+	unit, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+		IndexedAnalysisUnit: unit,
+	}}
+	worker, _, err := New(dataDir, state, []extract.Extractor{
+		policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		},
+		policyExtractor{
+			domain: "grpc-caller", version: "caller-v1",
+			requiredSuffix: ".go",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := store.Job{Kind: store.JobCandidate, Target: repository}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	initialState, err := pointerState(*state.pointer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialPublication, err := candidate.OpenStateContext(
+		t.Context(), CandidateRoot(dataDir), initialState,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	initialManifest := initialPublication.Manifest()
+	if initialManifest.Schema != candidate.ManifestSchema ||
+		len(initialManifest.LocalProjections) != 1 {
+		t.Fatalf("initial v3 manifest = %+v", initialManifest)
+	}
+
+	legacyPointer, legacyNames := installLegacyV2Publication(
+		t, CandidateRoot(dataDir), initialManifest,
+	)
+	if len(legacyNames) < 2 ||
+		legacyPointer.PolicyDigest == worker.policies.digest ||
+		legacyPointer.GenerationDigest == initialState.GenerationDigest {
+		t.Fatalf(
+			"legacy pointer/names = %+v / %v",
+			legacyPointer, legacyNames,
+		)
+	}
+	legacyRaw, err := os.ReadFile(filepath.Join(
+		CandidateRoot(dataDir), candidate.ManifestName(repository),
+	))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(
+		string(legacyRaw), `"schema":"phebs-candidate-manifest-v2"`,
+	) || strings.Contains(string(legacyRaw), `"local_projections"`) {
+		t.Fatalf("legacy manifest is not v2-shaped: %s", legacyRaw)
+	}
+	state.mu.Lock()
+	state.pointer = &legacyPointer
+	state.mu.Unlock()
+
+	strictUpgradeOpens := 0
+	openPublication := worker.open
+	worker.open = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.Publication, error) {
+		strictUpgradeOpens++
+		return openPublication(ctx, root, expected)
+	}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if strictUpgradeOpens != 1 || state.publishCalls != 2 {
+		t.Fatalf(
+			"v2 upgrade strict opens/publishes = %d/%d, want 1/2",
+			strictUpgradeOpens, state.publishCalls,
+		)
+	}
+	state.mu.Lock()
+	upgradedPointer := *state.pointer
+	state.mu.Unlock()
+	if upgradedPointer.PolicyDigest != worker.policies.digest ||
+		upgradedPointer.GenerationDigest == legacyPointer.GenerationDigest ||
+		upgradedPointer.ManifestDigest == legacyPointer.ManifestDigest {
+		t.Fatalf(
+			"v2 pointer was not replaced by v3: old=%+v new=%+v",
+			legacyPointer, upgradedPointer,
+		)
+	}
+	upgradedState, err := pointerState(upgradedPointer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upgraded, err := candidate.OpenStateContext(
+		t.Context(), CandidateRoot(dataDir), upgradedState,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	upgradedManifest := upgraded.Manifest()
+	if upgradedManifest.Schema != candidate.ManifestSchema ||
+		len(upgradedManifest.LocalProjections) != 1 {
+		t.Fatalf("upgraded manifest = %+v", upgradedManifest)
+	}
+	for _, name := range legacyNames {
+		if _, err := os.Lstat(
+			filepath.Join(CandidateRoot(dataDir), name),
+		); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("legacy v2 artifact %q remains: %v", name, err)
+		}
 	}
 }
 
@@ -1339,6 +1800,162 @@ func candidateGitFixture(t *testing.T) (dataDir, repository, commit string) {
 	}
 	runGit(t, "", "clone", "--bare", work, repoDir)
 	return dataDir, repository, commit
+}
+
+func candidateMultiLocalGitFixture(
+	t *testing.T,
+) (dataDir, repository, commit string) {
+	t.Helper()
+	dataDir = t.TempDir()
+	repository = "example.com/acme/multi-local"
+	work := filepath.Join(t.TempDir(), "work")
+	runGit(t, "", "init", work)
+	runGit(t, work, "config", "user.email", "candidate@example.invalid")
+	runGit(t, work, "config", "user.name", "Candidate Test")
+	writeFixtureFile(t, work, "service/api.proto", "syntax = \"proto3\";\n")
+	writeFixtureFile(t, work, "service/consumer.go", "package service\n")
+	writeFixtureFile(t, work, "outside/api.proto", "syntax = \"proto3\";\n")
+	writeFixtureFile(t, work, "outside/consumer.go", "package outside\n")
+	runGit(t, work, "add", ".")
+	runGit(t, work, "commit", "-m", "multi-local fixture")
+	commit = strings.TrimSpace(runGit(t, work, "rev-parse", "HEAD"))
+
+	repoDir := reposync.RepoDir(dataDir, repository)
+	if err := os.MkdirAll(filepath.Dir(repoDir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, "", "clone", "--bare", work, repoDir)
+	return dataDir, repository, commit
+}
+
+func installLegacyV2Publication(
+	t *testing.T,
+	root string,
+	current candidate.Manifest,
+) (store.CandidateManifestPublication, []string) {
+	t.Helper()
+	partition := legacyV2FrozenPartitionPolicy()
+	policyPayload, err := json.Marshal(struct {
+		Schema    string                     `json:"schema"`
+		Partition legacyV2PartitionPolicy    `json:"partition_policy"`
+		Policies  []candidate.PolicyIdentity `json:"policies"`
+	}{
+		Schema:    "phebs-candidate-manifest-v2",
+		Partition: partition,
+		Policies:  current.Policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	policyDigest := legacyV2Digest(
+		"phebs-candidate-policy-v1\x00", policyPayload,
+	)
+	generationPayload, err := json.Marshal(struct {
+		Schema       string                         `json:"schema"`
+		Repository   string                         `json:"repository"`
+		Commit       string                         `json:"commit"`
+		UnitDigest   string                         `json:"unit_digest"`
+		PolicyDigest string                         `json:"policy_digest"`
+		TypedIndex   *candidate.TypedIndexSelection `json:"typed_index,omitempty"`
+	}{
+		Schema:       "phebs-candidate-manifest-v2",
+		Repository:   current.Repository,
+		Commit:       current.Commit,
+		UnitDigest:   current.UnitDigest,
+		PolicyDigest: policyDigest,
+		TypedIndex:   current.TypedIndex,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	generationDigest := legacyV2Digest(
+		"phebs-candidate-generation-v1\x00", generationPayload,
+	)
+	legacy := legacyV2Manifest{
+		Schema:            "phebs-candidate-manifest-v2",
+		Repository:        current.Repository,
+		Commit:            current.Commit,
+		UnitDigest:        current.UnitDigest,
+		PolicyDigest:      policyDigest,
+		GenerationDigest:  generationDigest,
+		TypedIndex:        current.TypedIndex,
+		PartitionPolicy:   partition,
+		Policies:          slices.Clone(current.Policies),
+		Corpus:            current.Corpus,
+		UnitCorpus:        current.UnitCorpus,
+		Domains:           slices.Clone(current.Domains),
+		TypedInputs:       slices.Clone(current.TypedInputs),
+		RepositoryMembers: slices.Clone(current.RepositoryMembers),
+		CallerLeaves:      slices.Clone(current.CallerLeaves),
+	}
+	prefix := candidate.ArtifactPrefix(
+		current.Repository, generationDigest,
+	)
+	oldNames := make([]string, 0,
+		len(legacy.RepositoryMembers)+len(legacy.CallerLeaves))
+	for ordinal := range legacy.RepositoryMembers {
+		member := &legacy.RepositoryMembers[ordinal]
+		legacyName := prefix + fmt.Sprintf(
+			"repository-%06d.ndjson", ordinal,
+		)
+		if err := os.Rename(
+			filepath.Join(root, member.Name),
+			filepath.Join(root, legacyName),
+		); err != nil {
+			t.Fatal(err)
+		}
+		member.Name = legacyName
+		oldNames = append(oldNames, legacyName)
+	}
+	for ordinal := range legacy.CallerLeaves {
+		leaf := &legacy.CallerLeaves[ordinal]
+		legacyName := prefix + fmt.Sprintf(
+			"caller-%06d.ndjson", ordinal,
+		)
+		if err := os.Rename(
+			filepath.Join(root, leaf.Name),
+			filepath.Join(root, legacyName),
+		); err != nil {
+			t.Fatal(err)
+		}
+		leaf.Name = legacyName
+		oldNames = append(oldNames, legacyName)
+	}
+	for _, projection := range current.LocalProjections {
+		for _, member := range projection.Members {
+			if err := os.Remove(filepath.Join(root, member.Name)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	manifestPayload, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy.Digest = legacyV2Digest(
+		"phebs-candidate-manifest-v1\x00", manifestPayload,
+	)
+	manifestPayload, err = json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestPayload = append(manifestPayload, '\n')
+	if err := os.WriteFile(
+		filepath.Join(root, candidate.ManifestName(current.Repository)),
+		manifestPayload, 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	return store.CandidateManifestPublication{
+		Repository:       current.Repository,
+		HeadCommit:       current.Commit,
+		UnitDigest:       current.UnitDigest,
+		PolicyDigest:     policyDigest,
+		ManifestDigest:   legacy.Digest,
+		GenerationDigest: generationDigest,
+		ManifestPath:     candidate.ManifestName(current.Repository),
+		PublishedAt:      time.Now().UTC(),
+	}, oldNames
 }
 
 func candidateTypedGitFixture(t *testing.T) (dataDir, repository, commit string) {
