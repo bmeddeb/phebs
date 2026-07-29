@@ -716,11 +716,20 @@ index state only after every scoped shard is durable. Search startup,
 directory watching, reconciliation, force rebuild, revision allowlists,
 backup/restore, orphan cleanup, and failed state commits validate both exact
 branch/commit metadata, unit digest, index-generation digest, and the complete
-shard-set manifest. AC: an out-of-scope needle is absent from the physical
-shard, an admitted needle searches under the original commit/path, scope-only
-changes replace shards, stale/mixed/missing/extra-member sets never serve, the
-revision-set matrix is pinned, child OOM/error classification remains intact,
-packaged binary parity, and size-driven shard splits preserve identical
+shard-set manifest. Instrument the production Git-object reader itself so
+opened-blob count/bytes and zero out-of-unit reads are measured at the trusted
+read boundary rather than inferred from admitted paths or search results.
+Backup/restore preserves and revalidates the exact published manifest,
+sidecars, and shard bytes; an independent rebuild with the same semantic unit
+and generation may have different publication digests because the pinned
+builder embeds build identity and time, and is not byte-equal restoration. AC:
+the reader-boundary counter proves zero out-of-unit blob reads and an
+out-of-scope needle is absent from the physical shard; an admitted needle
+searches under the original commit/path; scope-only changes replace shards;
+stale/mixed/missing/extra-member sets never serve; the revision-set matrix is
+pinned; backup/restore is byte-exact while equivalent rebuild semantics are
+tested separately; child OOM/error classification remains intact; packaged
+binary parity; and size-driven shard splits preserve identical
 unit/revision/generation metadata plus exact expected membership; full merge
 bar.
 

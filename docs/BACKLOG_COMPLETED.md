@@ -3609,10 +3609,13 @@ caller.
 An OOM-isolated test child feeds only one unit's exact regular blobs to the
 pinned upstream `index.Builder`, preserves the canonical repository name, full
 paths, and original HEAD/branch/tag commits, and records zero out-of-unit blob
-reads. The retained run admitted seven documents totaling 528 bytes and
-produced three manifest-bound shards totaling 13,129 bytes. Two isolated builds
-retained identical corpus, unit, and generation digests with equivalent
-focused search results.
+paths in its asserted opened-path trace. T30.3 must replace that trace-derived
+result with a counter at the production Git-object reader boundary. The
+retained run admitted seven documents totaling 528 bytes and produced three
+manifest-bound shards totaling 13,129 bytes. Two isolated builds retained
+identical corpus, unit, and generation digests with equivalent focused search
+results; their differing publication digests require byte-preserving
+backup/restore rather than rebuild-as-restore.
 
 The spike re-reads unit and index-generation metadata from every shard and
 validates an exact, checksummed shard-set manifest before opening a searcher.

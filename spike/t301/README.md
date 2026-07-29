@@ -60,11 +60,15 @@ primary paths, and sorted supporting paths. Changing commits preserves that
 unit digest but changes the domain-separated index-generation digest over the
 ordered revision set and builder policy.
 
-The child process added seven revision-distinct documents totaling 528 bytes
-and opened zero out-of-unit blobs. A deliberately small spike shard ceiling
-produced three physical shards totaling 13,129 bytes. Every zoekt shard
-re-read the canonical repository name, original branch/commit set, unit
-digest, generation digest, builder policy, and corpus digest.
+The child process added seven revision-distinct documents totaling 528 bytes.
+Its opened-path trace contained no bulk or shipping path, and focused search
+returned no out-of-unit needle. The retained `OutOfUnitBlobReads: 0` is derived
+from those assertions rather than an independent reader-boundary counter;
+T30.3 must instrument the production Git-object reader so the same claim is
+self-measuring. A deliberately small spike shard ceiling produced three
+physical shards totaling 13,129 bytes. Every zoekt shard re-read the canonical
+repository name, original branch/commit set, unit digest, generation digest,
+builder policy, and corpus digest.
 
 The phebs-owned visibility manifest orders every member by ordinal and binds
 its regular-file SHA-256 plus a digest of re-read zoekt metadata. A per-member
@@ -76,7 +80,9 @@ Two isolated builds retained identical corpus, unit, and generation digests and
 equivalent focused search results. Their shard/manifest digests intentionally
 differ because the pinned builder embeds a build time and generated build ID;
 T30.3 must treat those bytes as publication content, not semantic unit
-identity.
+identity. Backup/restore must preserve and verify the exact publication bytes
+and digests. A fresh equivalent rebuild is semantically equal by unit and
+generation identity but is not a byte-equal restore.
 
 ## Revision and failure matrix
 
@@ -104,7 +110,7 @@ The merge-bar test preregisters these local ceilings:
 | Focused child build wall time | ≤ 5 s | 0.228 s maximum |
 | Search wall time | ≤ 250 ms | 1.394 ms |
 | Child peak RSS | ≤ 512 MiB | 99,336,192 bytes |
-| Out-of-unit blob reads | 0 | 0 |
+| Out-of-unit opened-path trace | 0 | 0 |
 
 The complete machine-readable observation is
 [`results.json`](./results.json), SHA-256
@@ -132,7 +138,8 @@ strict configuration, canonical unit identity, and committed state.
 
 This does not authorize T30.3 production indexing yet. T30.2 must first land
 the configuration and state boundary, and T30.3 must port the proven child,
-exact manifest validation, atomic visibility, revision matrix, cleanup, and
-packaging behavior under the full merge bar. No runtime-use, completeness,
-extraction-accuracy, migration-completion, or decommission-safety claim is
-established.
+reader-boundary object counters, exact manifest validation, atomic visibility,
+byte-preserving backup/restore, semantic-versus-byte equality tests, revision
+matrix, cleanup, and packaging behavior under the full merge bar. No
+runtime-use, completeness, extraction-accuracy, migration-completion, or
+decommission-safety claim is established.
