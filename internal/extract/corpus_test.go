@@ -180,6 +180,73 @@ func TestGitCorpusReadAbsentWalkedPathReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestGitCorpusExactLookupAndRootProbeAreCommitBound(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	oldCommit := f.commitFile("svc/[literal]/api.go", "package old\n", "old")
+	f.commitFile("svc/[literal]/api.go", "package current\n", "current")
+	f.commitFile("outside.go", "package outside\n", "outside")
+	f.addSymlink("links/api.go", "../outside.go")
+	f.git(f.source, "commit", "-q", "-m", "symlink")
+	f.cloneMirror()
+
+	corpus := GitCorpus(f.dataDir).New(f.repoName, oldCommit).(*gitCorpus)
+	entry, present, err := corpus.lookupRegular(
+		context.Background(), "svc/[literal]/api.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !present || entry.path != "svc/[literal]/api.go" ||
+		entry.mode != "100644" || entry.objectType != "blob" ||
+		entry.size != int64(len("package old\n")) {
+		t.Fatalf("exact entry = %+v, present=%v", entry, present)
+	}
+	blob, err := corpus.readManifestBlob(context.Background(), entry, MaxBlobBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blob.Content != "package old\n" {
+		t.Fatalf("exact blob observed mutable ref content %q", blob.Content)
+	}
+
+	for _, testCase := range []struct {
+		path string
+		want bool
+	}{
+		{"missing.go", false},
+		{"svc", false},
+	} {
+		_, got, err := corpus.lookupRegular(context.Background(), testCase.path)
+		if err != nil || got != testCase.want {
+			t.Fatalf("lookupRegular(%q) = %v, %v", testCase.path, got, err)
+		}
+	}
+	if got, err := corpus.anyRegularUnder(context.Background(), "svc"); err != nil || !got {
+		t.Fatalf("anyRegularUnder(svc) = %v, %v", got, err)
+	}
+	// This commit predates both the symlink and its target. The probe is pinned
+	// to the exact tree rather than the mirror's mutable default branch.
+	if got, err := corpus.anyRegularUnder(context.Background(), "links"); err != nil || got {
+		t.Fatalf("anyRegularUnder(links) = %v, %v", got, err)
+	}
+}
+
+func TestGitCorpusManifestBlobChecksDeclaredSize(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	head := f.commitFile("api.proto", "content", "content")
+	f.cloneMirror()
+	corpus := GitCorpus(f.dataDir).New(f.repoName, head).(*gitCorpus)
+	entry, present, err := corpus.lookupRegular(context.Background(), "api.proto")
+	if err != nil || !present {
+		t.Fatalf("lookupRegular = %+v, %v, %v", entry, present, err)
+	}
+	entry.size++
+	if _, err := corpus.readManifestBlob(
+		context.Background(), entry, MaxBlobBytes); err == nil ||
+		!strings.Contains(err.Error(), "does not match") {
+		t.Fatalf("declared-size mismatch error = %v", err)
+	}
+}
+
 func TestReadNULRecordRejectsTruncatedRecord(t *testing.T) {
 	_, err := readNULRecord(bufio.NewReader(strings.NewReader("unterminated")), 64)
 	if !errors.Is(err, io.ErrUnexpectedEOF) {

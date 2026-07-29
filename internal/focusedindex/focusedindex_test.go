@@ -19,6 +19,7 @@ import (
 	zoektsearch "github.com/sourcegraph/zoekt/search"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -27,6 +28,24 @@ type focusedFixture struct {
 	scope     analysisunit.Scope
 	revisions []store.IndexedRevision
 	head      string
+}
+
+func TestAdmitRecordUsesSharedRepositoryPathContract(t *testing.T) {
+	t.Parallel()
+	longPath := "scope/" + strings.Repeat(
+		"a", repopath.MaxBytes-len("scope/")+1,
+	)
+	destination := map[string]treeRecord{}
+	err := admitRecord("HEAD", "scope", treeRecord{
+		mode: "100644", kind: "blob", oid: strings.Repeat("a", 40),
+		path: longPath,
+	}, destination)
+	if !errors.Is(err, ErrSpecialEntry) {
+		t.Fatalf("overlong focused descendant = %v, want ErrSpecialEntry", err)
+	}
+	if len(destination) != 0 {
+		t.Fatalf("overlong focused descendant was admitted: %+v", destination)
+	}
 }
 
 func TestBackupLockExcludesPublicationMutations(t *testing.T) {

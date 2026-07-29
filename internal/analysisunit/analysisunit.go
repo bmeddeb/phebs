@@ -11,8 +11,10 @@ import (
 	"path"
 	"regexp"
 	"slices"
-	"strings"
 	"unicode/utf8"
+
+	"github.com/bmeddeb/phebs/internal/reponame"
+	"github.com/bmeddeb/phebs/internal/repopath"
 )
 
 const (
@@ -29,7 +31,7 @@ const (
 
 	MaxSelectedPaths     = 128
 	MaxSelectedPathBytes = 64 << 10
-	MaxRepositoryBytes   = 1024
+	MaxRepositoryBytes   = reponame.MaxBytes
 	MaxUnitNameBytes     = 128
 )
 
@@ -244,9 +246,7 @@ func canonicalPaths(input []string, required bool) ([]string, error) {
 	result := append([]string{}, input...)
 	slices.Sort(result)
 	for _, value := range result {
-		if value == "" || value == "." || path.IsAbs(value) ||
-			path.Clean(value) != value || strings.Contains(value, `\`) ||
-			!validText(value) {
+		if err := repopath.Validate(value); err != nil {
 			return nil, fmt.Errorf("unsafe repository-relative Git path %q", value)
 		}
 	}
@@ -254,20 +254,8 @@ func canonicalPaths(input []string, required bool) ([]string, error) {
 }
 
 func validateRepository(repository string) error {
-	if len(repository) > MaxRepositoryBytes || !validText(repository) ||
-		path.IsAbs(repository) || strings.Contains(repository, `\`) ||
-		path.Clean(repository) != repository || repository == "." {
+	if err := reponame.Validate(repository); err != nil {
 		return errors.New("unsafe repository name")
-	}
-	components := strings.Split(repository, "/")
-	for index, component := range components {
-		if component == "" || component == "." || component == ".." {
-			return errors.New("unsafe repository name")
-		}
-		if index < len(components)-1 &&
-			strings.HasSuffix(strings.ToLower(component), ".git") {
-			return errors.New("repository namespace ending in .git is unsupported")
-		}
 	}
 	return nil
 }

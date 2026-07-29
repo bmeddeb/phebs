@@ -1115,7 +1115,7 @@ func webhookSignature(body []byte, secret string) string {
 	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
 }
 
-type extractionBackfillStore struct {
+type candidateBackfillStore struct {
 	store.Store
 	repos      []store.Repo
 	listErr    error
@@ -1124,21 +1124,21 @@ type extractionBackfillStore struct {
 	created    int
 }
 
-func (s *extractionBackfillStore) ListRepos(context.Context) ([]store.Repo, error) {
+func (s *candidateBackfillStore) ListRepos(context.Context) ([]store.Repo, error) {
 	if s.listErr != nil {
 		return nil, s.listErr
 	}
 	return s.repos, nil
 }
 
-func (s *extractionBackfillStore) EnqueuePending(
+func (s *candidateBackfillStore) EnqueuePending(
 	_ context.Context, kind store.JobKind, target string, force bool,
 ) (*store.Job, error) {
 	if s.enqueueErr != nil {
 		return nil, s.enqueueErr
 	}
-	if kind != store.JobExtract {
-		return nil, errors.New("unexpected non-extraction job")
+	if kind != store.JobCandidate {
+		return nil, errors.New("unexpected non-candidate job")
 	}
 	if s.pending == nil {
 		s.pending = make(map[string]store.Job)
@@ -1152,17 +1152,17 @@ func (s *extractionBackfillStore) EnqueuePending(
 	return &job, nil
 }
 
-func TestEnqueueExtractionBackfillIndexedLiveReposOnlyAndDedupes(t *testing.T) {
-	st := &extractionBackfillStore{repos: []store.Repo{
+func TestEnqueueCandidateBackfillIndexedLiveReposOnlyAndDedupes(t *testing.T) {
+	st := &candidateBackfillStore{repos: []store.Repo{
 		{Name: "example.com/live/one", IndexedCommitHash: "a"},
 		{Name: "example.com/unindexed"},
 		{Name: "example.com/deleting", IndexedCommitHash: "b", Deleting: true},
 		{Name: "example.com/live/two", IndexedCommitHash: "c"},
 	}}
-	if err := enqueueExtractionBackfill(t.Context(), st); err != nil {
+	if err := enqueueCandidateBackfill(t.Context(), st); err != nil {
 		t.Fatalf("first backfill: %v", err)
 	}
-	if err := enqueueExtractionBackfill(t.Context(), st); err != nil {
+	if err := enqueueCandidateBackfill(t.Context(), st); err != nil {
 		t.Fatalf("second backfill: %v", err)
 	}
 	if st.created != 2 || len(st.pending) != 2 {
@@ -1175,29 +1175,29 @@ func TestEnqueueExtractionBackfillIndexedLiveReposOnlyAndDedupes(t *testing.T) {
 	}
 }
 
-func TestEnqueueExtractionBackfillPropagatesListError(t *testing.T) {
+func TestEnqueueCandidateBackfillPropagatesListError(t *testing.T) {
 	want := errors.New("list failed")
-	err := enqueueExtractionBackfill(t.Context(), &extractionBackfillStore{listErr: want})
+	err := enqueueCandidateBackfill(t.Context(), &candidateBackfillStore{listErr: want})
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want wrapped %v", err, want)
 	}
 }
 
-func TestEnqueueExtractionBackfillPropagatesEnqueueError(t *testing.T) {
+func TestEnqueueCandidateBackfillPropagatesEnqueueError(t *testing.T) {
 	want := errors.New("enqueue failed")
-	st := &extractionBackfillStore{
+	st := &candidateBackfillStore{
 		repos:      []store.Repo{{Name: "example.com/live", IndexedCommitHash: "a"}},
 		enqueueErr: want,
 	}
-	err := enqueueExtractionBackfill(t.Context(), st)
+	err := enqueueCandidateBackfill(t.Context(), st)
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want wrapped %v", err, want)
 	}
 }
 
-func TestEnqueueExtractionAfterIndexClassifiesEnqueueError(t *testing.T) {
+func TestEnqueueCandidateAfterIndexClassifiesEnqueueError(t *testing.T) {
 	want := errors.New("enqueue failed")
-	err := enqueueExtractionAfterIndex(t.Context(), &extractionBackfillStore{enqueueErr: want},
+	err := enqueueCandidateAfterIndex(t.Context(), &candidateBackfillStore{enqueueErr: want},
 		"example.com/live", "abc123")
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want wrapped %v", err, want)
@@ -1465,7 +1465,7 @@ func TestMCPCallerMapServicesPreserveNilness(t *testing.T) {
 	// Map keeps the annex dark (its gate requires both), and the interface
 	// nilness is what that gate reads.
 	fixture := &api.ContractCatalogFixture{}
-	partial := api.Options{ContractCatalogFixture: fixture, Store: &extractionBackfillStore{}, Principal: func(context.Context) string { return "user:test" }}
+	partial := api.Options{ContractCatalogFixture: fixture, Store: &candidateBackfillStore{}, Principal: func(context.Context) string { return "user:test" }}
 	partial.ContractCatalog = api.NewContractCatalogService(partial)
 	partial.CallerMap = api.NewCallerMapService(partial)
 	if partial.ContractCatalog == nil {

@@ -1,0 +1,229 @@
+{
+  "schema": "t304-candidate-planner-measurement-v1",
+  "decision": "GO",
+  "reason": "The production streamed planner stayed within the prospective local gates on the deterministic 200,008-file corpus, and a second build reproduced every staged byte.",
+  "go_version": "go1.26.5",
+  "goos": "darwin",
+  "goarch": "arm64",
+  "corpus": {
+    "schema": "t301-focused-index-spike-v1",
+    "repository": "example.com/neutral/monorepo",
+    "head": "47a57a0202fed1a994f134126c9ae3b3f1de64e6",
+    "branch": "373be3d66a2f9dae783281feffec6bb40b590a7b",
+    "tag": "659232e6772f52c1989dd47783409597fa27f828",
+    "missing_scope_commit": "6e2411dfd9ce5dd8752ff8e6926dd579b152115f",
+    "symlink_commit": "20736bec50fdeac347b0fcea96c5164e6005df0f",
+    "gitlink_commit": "6b9ce8c13043915b313a68172111d2c2fa5d7ea0",
+    "revisions": [
+      {
+        "selector": "HEAD",
+        "branch": "HEAD",
+        "commit": "47a57a0202fed1a994f134126c9ae3b3f1de64e6"
+      },
+      {
+        "selector": "release",
+        "branch": "refs/heads/release",
+        "commit": "373be3d66a2f9dae783281feffec6bb40b590a7b"
+      },
+      {
+        "selector": "v1",
+        "branch": "refs/tags/v1",
+        "commit": "659232e6772f52c1989dd47783409597fa27f828"
+      }
+    ],
+    "regular_files": 200008,
+    "inventory_path_bytes": 21000305,
+    "git_object_bytes": 588006,
+    "digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2"
+  },
+  "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
+  "policies": [
+    {
+      "domain": "grpc-caller",
+      "version": "1.3.0",
+      "enumeration_policy": "go-caller-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "caller"
+    },
+    {
+      "domain": "grpc-consumer",
+      "version": "1.1.0",
+      "enumeration_policy": "grpc-consumer-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    },
+    {
+      "domain": "kafka-consumer",
+      "version": "1.1.0",
+      "enumeration_policy": "kafka-go-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    },
+    {
+      "domain": "kafka-producer",
+      "version": "1.1.0",
+      "enumeration_policy": "kafka-go-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    },
+    {
+      "domain": "proto-contract",
+      "version": "3.0.0",
+      "enumeration_policy": "proto-contract-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    },
+    {
+      "domain": "scip-proto-field",
+      "version": "1.1.0",
+      "enumeration_policy": "scip-proto-field-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    },
+    {
+      "domain": "scip-thrift-field",
+      "version": "1.1.0",
+      "enumeration_policy": "scip-thrift-field-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    },
+    {
+      "domain": "thrift-caller",
+      "version": "1.3.0",
+      "enumeration_policy": "go-caller-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "caller"
+    },
+    {
+      "domain": "thrift-consumer",
+      "version": "1.1.0",
+      "enumeration_policy": "thrift-consumer-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    },
+    {
+      "domain": "thrift-contract",
+      "version": "1.0.0",
+      "enumeration_policy": "thrift-contract-paths-v1",
+      "symlink_policy": "fixed-root-regular-v1",
+      "plane": "local"
+    }
+  ],
+  "partition_policy": {
+    "enumeration_policy": "phebs-candidate-enumeration-v1",
+    "caller_hash_policy": "phebs-caller-path-v1",
+    "initial_prefix_bits": 2,
+    "max_records": 4096,
+    "max_declared_bytes": 67108864,
+    "record_ordering": "hash-path-oid-v1",
+    "split_rule": "next-hash-bit-v1"
+  },
+  "frozen_gates": {
+    "planner_wall_nanos": 10000000000,
+    "peak_rss_bytes": 268435456,
+    "candidate_disk_bytes": 16777216
+  },
+  "run1": {
+    "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
+    "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
+    "policy_digest": "sha256:8e29086fefcac6741e39ae66df82bf31b8983bbec9077250aca3d45a1033ff05",
+    "generation_digest": "sha256:726362f9fa59fcb5e18c9dd0d7e83b4f5970658ec0699c12b43d003bdbacd871",
+    "manifest_digest": "sha256:a52a02522c918e1bcf6878842207f0cf3e7816dcf74bb235f68e1f0c05db6826",
+    "census": {
+      "regular_count": 200008,
+      "regular_declared_bytes": 4800559,
+      "regular_digest": "sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841",
+      "gitlink_count": 0,
+      "gitlink_declared_bytes": 0,
+      "gitlink_digest": "sha256:7866fae8156d4bcfd20cc6e5819dcaaaac6117149fdce65306f988707a720182",
+      "symlink_count": 0,
+      "symlink_declared_bytes": 0,
+      "symlink_digest": "sha256:adf500d071af4c31dea3d00b43a0fa6a078cbfda28fbf73d482b0a239b174045"
+    },
+    "repository_candidate_rows": 5,
+    "caller_candidate_rows": 6,
+    "caller_leaves": [
+      {
+        "prefix": "00",
+        "prefix_bits": 2,
+        "record_count": 1,
+        "declared_bytes": 62,
+        "content_bytes": 344
+      },
+      {
+        "prefix": "10",
+        "prefix_bits": 2,
+        "record_count": 3,
+        "declared_bytes": 188,
+        "content_bytes": 1025
+      },
+      {
+        "prefix": "11",
+        "prefix_bits": 2,
+        "record_count": 2,
+        "declared_bytes": 130,
+        "content_bytes": 698
+      }
+    ],
+    "staged_artifact_count": 5,
+    "staged_artifact_bytes": 13049,
+    "planner_scratch_upper_bound_bytes": 4134,
+    "validation_scratch_upper_bound_bytes": 3514,
+    "peak_candidate_disk_bytes": 17183,
+    "canonical_output_digest": "sha256:1f37b8d8b9306354328d18fddf48130bf1fb457859ecb6de8b1375a8b79e8403",
+    "planner_wall_nanos": 3547291917,
+    "peak_rss_bytes": 61145088
+  },
+  "run2": {
+    "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
+    "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
+    "policy_digest": "sha256:8e29086fefcac6741e39ae66df82bf31b8983bbec9077250aca3d45a1033ff05",
+    "generation_digest": "sha256:726362f9fa59fcb5e18c9dd0d7e83b4f5970658ec0699c12b43d003bdbacd871",
+    "manifest_digest": "sha256:a52a02522c918e1bcf6878842207f0cf3e7816dcf74bb235f68e1f0c05db6826",
+    "census": {
+      "regular_count": 200008,
+      "regular_declared_bytes": 4800559,
+      "regular_digest": "sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841",
+      "gitlink_count": 0,
+      "gitlink_declared_bytes": 0,
+      "gitlink_digest": "sha256:7866fae8156d4bcfd20cc6e5819dcaaaac6117149fdce65306f988707a720182",
+      "symlink_count": 0,
+      "symlink_declared_bytes": 0,
+      "symlink_digest": "sha256:adf500d071af4c31dea3d00b43a0fa6a078cbfda28fbf73d482b0a239b174045"
+    },
+    "repository_candidate_rows": 5,
+    "caller_candidate_rows": 6,
+    "caller_leaves": [
+      {
+        "prefix": "00",
+        "prefix_bits": 2,
+        "record_count": 1,
+        "declared_bytes": 62,
+        "content_bytes": 344
+      },
+      {
+        "prefix": "10",
+        "prefix_bits": 2,
+        "record_count": 3,
+        "declared_bytes": 188,
+        "content_bytes": 1025
+      },
+      {
+        "prefix": "11",
+        "prefix_bits": 2,
+        "record_count": 2,
+        "declared_bytes": 130,
+        "content_bytes": 698
+      }
+    ],
+    "staged_artifact_count": 5,
+    "staged_artifact_bytes": 13049,
+    "planner_scratch_upper_bound_bytes": 4134,
+    "validation_scratch_upper_bound_bytes": 3514,
+    "peak_candidate_disk_bytes": 17183,
+    "canonical_output_digest": "sha256:1f37b8d8b9306354328d18fddf48130bf1fb457859ecb6de8b1375a8b79e8403",
+    "planner_wall_nanos": 3430892792,
+    "peak_rss_bytes": 60801024
+  },
+  "canonical_bytes_equal": true
+}

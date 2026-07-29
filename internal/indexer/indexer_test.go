@@ -666,8 +666,8 @@ func TestCanceledIndexChildIsNotClassifiedOOM(t *testing.T) {
 	}
 }
 
-// T12.2: OnIndexed (the index→extract chain hook) fires after a successful
-// state commit and on an unchanged-HEAD retry, but never on commit failure.
+// OnIndexed (the index→candidate chain hook) fires after a successful state
+// commit and on an unchanged-HEAD retry, but never on commit failure.
 func TestOnIndexedChainsFreshAndCurrentCommit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -704,7 +704,7 @@ func TestOnIndexedChainsFreshAndCurrentCommit(t *testing.T) {
 
 // A post-index enqueue failure must fail the index job. Its retry sees the
 // already-current shard and retries only the chain hook, preventing a lost
-// extraction event without doing another expensive build.
+// candidate event without doing another expensive build.
 func TestOnIndexedErrorPropagatesAndRetriesOnShortCircuit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()

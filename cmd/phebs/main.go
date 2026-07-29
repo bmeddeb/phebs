@@ -26,6 +26,8 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
@@ -287,6 +289,16 @@ func serve(args []string) error {
 	if err := st.PruneConnections(ctx, names); err != nil {
 		return fmt.Errorf("prune connections: %w", err)
 	}
+	// Stages have no committed owner after process restart. Clean them only at
+	// this startup seam, before any candidate worker can be active; runtime
+	// orphan reconciliation must never race an in-progress plan.
+	if removed, err := candidate.CleanupStages(
+		ctx, candidatejob.CandidateRoot(cfg.Server.DataDir),
+	); err != nil {
+		return fmt.Errorf("cleanup abandoned candidate stages: %w", err)
+	} else if removed > 0 {
+		log.Printf("candidate reconciliation: removed %d abandoned stage(s)", removed)
+	}
 	report, reconcileErr := phebssync.ReconcileArtifacts(ctx, st, cfg.Server.DataDir, cfg.Sync.CleanupOrphans)
 	if reconcileErr != nil {
 		// Reconciliation establishes the artifact/search trust boundary. A
@@ -294,10 +306,14 @@ func serve(args []string) error {
 		// the server running against state it could not prove safe.
 		return fmt.Errorf("artifact reconciliation: %w", reconcileErr)
 	}
-	if report.OrphanRepos+report.UntrackedShards+report.UntrackedMirrors+report.CredentialsFixed+report.InvalidRepos+report.RevisionRepairs+report.LifecycleArtifacts > 0 {
-		log.Printf("artifact reconciliation: orphans=%d shards=%d mirrors=%d credentials_scrubbed=%d invalid_repos=%d revision_repairs=%d lifecycle=%d deleted=%d",
-			report.OrphanRepos, report.UntrackedShards, report.UntrackedMirrors, report.CredentialsFixed,
-			report.InvalidRepos, report.RevisionRepairs, report.LifecycleArtifacts, report.Deleted)
+	if report.OrphanRepos+report.UntrackedShards+report.UntrackedMirrors+
+		report.UntrackedCandidates+report.CredentialsFixed+report.InvalidRepos+
+		report.RevisionRepairs+report.LifecycleArtifacts > 0 {
+		log.Printf("artifact reconciliation: orphans=%d shards=%d mirrors=%d candidates=%d credentials_scrubbed=%d invalid_repos=%d revision_repairs=%d lifecycle=%d deleted=%d",
+			report.OrphanRepos, report.UntrackedShards, report.UntrackedMirrors,
+			report.UntrackedCandidates, report.CredentialsFixed,
+			report.InvalidRepos, report.RevisionRepairs, report.LifecycleArtifacts,
+			report.Deleted)
 	}
 	analysisUnits := cfg.AnalysisUnitScopes()
 	unitRepositories := make([]string, 0, len(analysisUnits))
@@ -340,10 +356,10 @@ func serve(args []string) error {
 		runBackground(func() { phebssync.Resync(ctx, st, cfg, every) })
 	}
 
-	// Extraction is an independent queue consumer: it must drain boot
-	// backfill even when this binary cannot start new zoekt index children.
-	// One runner processes repositories serially, bounding extraction
-	// concurrency and its Git/parser resource use at this integration seam.
+	// Candidate planning and extraction are independent queue consumers: they
+	// must drain boot backfill even when this binary cannot start new zoekt
+	// index children. Each runner processes repositories serially, bounding
+	// Git/parser resource use at this integration seam.
 	var onIndexed func(context.Context, string, string) error
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
@@ -380,19 +396,31 @@ func serve(args []string) error {
 		} else {
 			compatibility = checker
 		}
+		candidateWorker, manifestProvider, err := candidatejob.New(
+			cfg.Server.DataDir, st, exs,
+		)
+		if err != nil {
+			return fmt.Errorf("configure candidate planning: %w", err)
+		}
 		worker := &extract.Worker{
 			Repos: st, Evidence: st,
 			NewCorpus:  extract.GitCorpus(cfg.Server.DataDir),
+			Manifests:  manifestProvider,
 			Extractors: exs,
 		}
-		if err := enqueueExtractionBackfill(ctx, st); err != nil {
+		if err := enqueueCandidateBackfill(ctx, st); err != nil {
 			return err
 		}
+		candidateRunner := &store.Runner{
+			Store: st, Kind: store.JobCandidate, Handle: candidateWorker.Handle,
+			Interval: cfg.Sync.Interval(),
+		}
+		runBackground(func() { candidateRunner.Run(ctx) })
 		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: worker.Handle,
 			Interval: cfg.Sync.Interval()}
 		runBackground(func() { exRunner.Run(ctx) })
 		onIndexed = func(ctx context.Context, name, commit string) error {
-			return enqueueExtractionAfterIndex(ctx, st, name, commit)
+			return enqueueCandidateAfterIndex(ctx, st, name, commit)
 		}
 	}
 	if lifetime := cfg.ProofBundles.RetentionFor(); lifetime > 0 {
@@ -1031,32 +1059,32 @@ func evidenceExtractors(
 	return extractors
 }
 
-func enqueueExtractionAfterIndex(ctx context.Context, st store.Store, repo, commit string) error {
-	if err := store.EnqueueUnlessInFlight(ctx, st, store.JobExtract, repo); err != nil {
+func enqueueCandidateAfterIndex(ctx context.Context, st store.Store, repo, commit string) error {
+	if err := store.EnqueueUnlessInFlight(ctx, st, store.JobCandidate, repo); err != nil {
 		return store.WithClass(store.ClassExtract,
-			fmt.Errorf("enqueue extraction for %s@%s: %w", repo, commit, err))
+			fmt.Errorf("enqueue candidate planning for %s@%s: %w", repo, commit, err))
 	}
 	return nil
 }
 
-// enqueueExtractionBackfill closes the upgrade gap for repositories indexed
-// before extraction existed. The queue provides one pending slot per target,
-// so restart and partial-progress retries are idempotent. Any store failure is
-// fatal to startup rather than silently leaving a repository unextracted.
-func enqueueExtractionBackfill(ctx context.Context, st store.Store) error {
+// enqueueCandidateBackfill closes the upgrade and restart gap for repositories
+// indexed before the current candidate-policy generation existed. The queue
+// provides one pending slot per target, so restart and partial-progress
+// retries are idempotent. Publication itself creates the extraction successor.
+func enqueueCandidateBackfill(ctx context.Context, st store.Store) error {
 	repos, err := st.ListRepos(ctx)
 	if err != nil {
-		return fmt.Errorf("backfill extraction jobs: list repositories: %w", err)
+		return fmt.Errorf("backfill candidate jobs: list repositories: %w", err)
 	}
 	for _, repo := range repos {
 		if err := ctx.Err(); err != nil {
-			return fmt.Errorf("backfill extraction jobs: %w", err)
+			return fmt.Errorf("backfill candidate jobs: %w", err)
 		}
 		if repo.IndexedCommitHash == "" || repo.Deleting {
 			continue
 		}
-		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobExtract, repo.Name); err != nil {
-			return fmt.Errorf("backfill extraction job for %s: %w", repo.Name, err)
+		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobCandidate, repo.Name); err != nil {
+			return fmt.Errorf("backfill candidate job for %s: %w", repo.Name, err)
 		}
 	}
 	return nil

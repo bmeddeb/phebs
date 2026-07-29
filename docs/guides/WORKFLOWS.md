@@ -914,7 +914,10 @@ Configured repositories report `focused` and
 `repository-root-unbound`: search is physically limited to the selected
 primary/supporting paths at every indexed revision, while root `index.scip`
 still has no reviewed unit binding. Unconfigured repositories remain
-whole-repository.
+whole-repository. Candidate planning already validates and records unit
+membership before an experimental extraction begins, but T30.4 preserves the
+existing repository-wide extraction view and evidence identity. T30.5, not
+the `focused` search status alone, owns unit-scoped evidence publication.
 - **Settings** (`#/settings`) — create, copy once, list, and revoke API keys.
 Named keys are read-only for Investigation mutations by default; the creation
 form can explicitly add the immutable `investigation:write` capability and

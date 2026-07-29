@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -62,6 +63,55 @@ func TestReconcileFocusedArtifactsRemovesOnlyOrphanOwnership(t *testing.T) {
 	for _, name := range orphanArtifacts {
 		if _, err := os.Stat(filepath.Join(indexDir, name)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("orphan focused artifact %q survived: %v", name, err)
+		}
+	}
+}
+
+func TestReconcileCandidateArtifactsOnlyRemovesConfiguredOrphans(t *testing.T) {
+	dataDir := t.TempDir()
+	root := filepath.Join(dataDir, "candidates")
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	live := "example.com/live"
+	liveArtifact := candidate.ManifestName(live)
+	orphanArtifact := candidate.ManifestName("example.com/orphan")
+	unrelated := "operator-note.txt"
+	for _, name := range []string{liveArtifact, orphanArtifact, unrelated} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte("artifact"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	report := ReconcileReport{}
+	if err := reconcileCandidateArtifacts(
+		t.Context(), dataDir, map[string]bool{live: true}, false, &report,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if report.UntrackedCandidates != 1 || report.Deleted != 0 {
+		t.Fatalf("candidate audit report = %+v, want orphan retained", report)
+	}
+	for _, name := range []string{liveArtifact, orphanArtifact, unrelated} {
+		if _, err := os.Stat(filepath.Join(root, name)); err != nil {
+			t.Fatalf("audit-only pass removed %q: %v", name, err)
+		}
+	}
+
+	report = ReconcileReport{}
+	if err := reconcileCandidateArtifacts(
+		t.Context(), dataDir, map[string]bool{live: true}, true, &report,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if report.UntrackedCandidates != 1 || report.Deleted != 1 {
+		t.Fatalf("candidate cleanup report = %+v", report)
+	}
+	if _, err := os.Stat(filepath.Join(root, orphanArtifact)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("orphan candidate artifact survived: %v", err)
+	}
+	for _, name := range []string{liveArtifact, unrelated} {
+		if _, err := os.Stat(filepath.Join(root, name)); err != nil {
+			t.Fatalf("candidate cleanup removed %q: %v", name, err)
 		}
 	}
 }
@@ -548,20 +598,35 @@ func TestDeleteRepoArtifactsReactivatesRowAfterDiskFailure(t *testing.T) {
 	}
 }
 
-func TestDeleteRepoArtifactsCancelsExtractionJobs(t *testing.T) {
+func TestDeleteRepoArtifactsCancelsCandidateAndExtractionJobs(t *testing.T) {
+	dataDir := t.TempDir()
 	st := &reconcileStore{repo: store.Repo{Name: "example.com/team/repo"}, orphan: true}
-	deleted, err := deleteRepoArtifacts(t.Context(), st, t.TempDir(), st.repo.Name)
+	candidateRoot := filepath.Join(dataDir, "candidates")
+	if err := os.MkdirAll(candidateRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	candidatePath := filepath.Join(candidateRoot, candidate.ManifestName(st.repo.Name))
+	if err := os.WriteFile(candidatePath, []byte("derived"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	deleted, err := deleteRepoArtifacts(t.Context(), st, dataDir, st.repo.Name)
 	if err != nil || !deleted {
 		t.Fatalf("deleteRepoArtifacts = %v, %v; want successful deletion", deleted, err)
 	}
-	var extractCancellations int
-	for _, kind := range st.canceledKinds {
-		if kind == store.JobExtract {
-			extractCancellations++
-		}
+	if _, err := os.Stat(candidatePath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("repository candidate artifact survived deletion: %v", err)
 	}
-	if extractCancellations != 2 {
-		t.Fatalf("extraction job cancellations = %d, want 2 (before and after repo lock)", extractCancellations)
+	cancellations := map[store.JobKind]int{}
+	for _, kind := range st.canceledKinds {
+		cancellations[kind]++
+	}
+	for _, kind := range []store.JobKind{store.JobCandidate, store.JobExtract} {
+		if cancellations[kind] != 2 {
+			t.Fatalf(
+				"%s cancellations = %d, want 2 (before and after repo lock)",
+				kind, cancellations[kind],
+			)
+		}
 	}
 }
 

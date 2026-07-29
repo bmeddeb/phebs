@@ -17,11 +17,13 @@ $DATA/                     # server.data_dir, default ~/.phebs
 ├── db/                    # SurrealDB — users, API keys, sessions, repo/jobs
 ├── .surreal-runtime.json  # private, process-owned live-backup rendezvous
 ├── repos/<host>/<path>.git  # bare mirrors
+├── candidates/            # derived candidate manifests and NDJSON members
 └── index/                 # whole/focused zoekt shards; focused manifests and sidecars
 ```
 
-Mirrors, shards, repo rows, and jobs are rebuildable from config and upstream
-Git. **Authentication state is not derived:** `$DATA/db` now contains users,
+Mirrors, candidate publications, shards, repo rows, and jobs are rebuildable
+from config and upstream Git. **Authentication state is not derived:**
+`$DATA/db` now contains users,
 OIDC links, API-key hashes, and sessions (see *Backup & restore*). Deleting
 the whole data directory is an intentional auth reset as well as a reindex;
 the next start requires first-user enrollment.
@@ -35,6 +37,8 @@ along but are derivable). Mirrors and whole-repository shards are derived.
 Focused shards are also derived semantically, but online backup preserves
 their currently published bytes exactly because builder timestamps/identity
 make rebuild output an unsuitable restore-equality test.
+Candidate manifests and their partition members are derived planning state:
+they are excluded and rebuilt from the restored indexed commit and mirror.
 
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
@@ -59,9 +63,10 @@ damage, not a reason to discard the already completed precious-state database
 export: backup omits them. The manifest binds both artifacts' sizes and
 SHA-256 digests, the exact raw config digest, phebs version/binary digest,
 SurrealDB version/binary digest, database identity,
-store-writer/evidence/migration versions, and the derived-state exclusions. It
-contains no host binary path or database password. Preserve the exact config
-separately; the backup contains its digest, not its bytes.
+store-writer/evidence/migration versions, and the derived-state exclusions,
+including `$DATA/candidates`. It contains no host binary path or database
+password. Preserve the exact config separately; the backup contains its
+digest, not its bytes.
 
 When any omission or stale-marker count is nonzero, backup emits one bounded
 focused-derived-state summary:
@@ -102,6 +107,8 @@ input cannot expand into a large filesystem write. A newly created archive is
 self-verified before backup returns. Restore then imports through an isolated
 SurrealDB child, restores focused shard/sidecar bytes before their manifests,
 and opens the store once to apply and validate the supported schema/migrations.
+That validation open clears every imported candidate-publication pointer
+because `$DATA/candidates` is deliberately absent from the backup.
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
 recovery procedure rather than retrying over it.
@@ -109,9 +116,10 @@ recovery procedure rather than retrying over it.
 The subsequent normal `serve` start revalidates restored focused publications
 against committed unit/revision state. It keeps exact valid focused bytes,
 clears and force-requeues any claim whose focused publication was invalid or
-omitted, rebuilds excluded whole-repository shards, and boot sync re-clones
-missing mirrors. Restored API keys and sessions remain live — rotate them if
-the backup's custody was ever in doubt.
+omitted, rebuilds excluded whole-repository shards, rebuilds the cleared
+candidate publications before extraction, and
+boot sync re-clones missing mirrors. Restored API keys and sessions remain
+live — rotate them if the backup's custody was ever in doubt.
 
 The stop-first cold path remains available:
 
@@ -211,7 +219,8 @@ The `#/analytics` dashboard and `GET /api/analytics` aggregate them on demand;
 
 ### Job system
 
-Sync, fetch, index, and extraction work runs through queues in SurrealDB,
+Sync, fetch, index, candidate-manifest, and extraction work runs through
+queues in SurrealDB,
 drained by one poller per kind that wakes every `poll_interval` (±50 %
 jitter). Job states:
 `pending → claimed → running → done | failed | canceled`.
@@ -342,6 +351,96 @@ from content search. The child does not preload the corpus: the pinned builder
 retains one 64 MiB current-shard batch, with at most one admitted-document
 overshoot, and flushes synchronously. It refuses a result or manifest before
 it would exceed the 1 MiB control-file reader envelope.
+
+#### Candidate planning and extraction admission
+
+Every successful index now schedules `candidate_manifest_job` before
+`extraction_job`. Under the repository work lock, the planner re-reads the
+authoritative indexed HEAD and committed analysis-unit state, then consumes
+one NUL-delimited `git ls-tree` stream. It records complete regular-file,
+gitlink, and symlink counts/digests and versioned per-domain repository/unit
+counts/digests, but writes rows only for candidates selected by the current
+enumeration policies. A noncandidate path therefore changes corpus coverage
+and manifest identity without consuming a retained row or becoming readable
+to an extractor. Before that census, the planner rejects an external Git
+object alternate and proves that the requested object is a commit. Every tree
+leaf must have an explicitly supported Git mode; gitlinks remain census-only
+repository boundaries even when their paths resemble an extractor candidate.
+Each regular-file, gitlink, and symlink census dimension is capped at
+10,000,000 entries on both build and open, so the planner cannot publish a
+pointer that production extraction is structurally unable to admit.
+The configured unit, focused-index descendant walk, planner, and extraction
+reader also share the same 4,096-byte canonical repository-path validator, so
+a focused publication cannot hand the planner an in-unit path it cannot
+represent.
+
+Repository/local rows are packed into canonical NDJSON members. Caller rows
+are assigned by
+`SHA-256("phebs-caller-path-v1\0" || UTF8(repository-relative-path))`.
+Planning starts at two hash-prefix bits and recursively splits an over-limit
+bucket by the next bit. Every member or nonempty leaf is limited to 4,096
+records and 64 MiB of declared blob bytes; a larger singleton or a bucket that
+cannot split at 256 bits fails the job. Blob OID and declared size contribute
+to manifest identity but never move an unchanged path. The stable manifest
+names every generation-digest-prefixed member, binds its exact content digest,
+and commits the repository, HEAD, unit, policy, generation, corpus, domain,
+and partition identities. Admission recomputes cross-plane identities with a
+bounded external merge rather than retaining the path set in memory. Its
+package-owned validation scratch is context-cancellable, removed before exact
+publication membership is checked, and cleaned after a crash at startup.
+
+The retained
+[T30.4 prospective measurement](../../spike/t304/README.md) streamed 200,008
+regular files into five repository rows and six caller rows. It produced three
+two-bit caller leaves (`00:1`, `10:3`, `11:2`); each run staged five files
+totaling 13,049 bytes. Twice the final caller content bounds planner spool and
+split scratch at 4,134 bytes; external-validation scratch is bounded at 3,514
+bytes. Adding the larger phase bound to the final stage gives 17,183 bytes of
+conservative peak candidate disk. The runs took 3.55 s and 3.43 s, peaked at
+61,145,088 and 60,801,024 bytes RSS, and reproduced byte-identical output. The
+frozen local planner gates are at most 10 s wall time, 256 MiB peak RSS, and 16
+MiB peak candidate disk including publication plus the higher planner or
+validation scratch phase; exceeding one refuses the prospective measurement
+rather than relaxing the production partition contract.
+
+Publication stages and syncs the new bytes in `$DATA/candidates`, creates the
+stable repository `.publishing` marker, replaces prior members, and renames
+`phebs-candidate-<sha256(repository)>.manifest.json` last. One guarded
+database transaction advances the matching pointer and ensures one pending
+extraction successor; only then is the marker removed. A retry reuses the
+identical generation and repairs missing fan-out. A second result for the same
+HEAD, unit, and policy is an integrity error, not an alternate publication.
+Filesystem bytes are reusable only when the exact valid database pointer names
+their opened state or when the stable marker proves an interrupted
+filesystem-before-database transition. Unmarked bytes with no valid pointer
+are re-censused and replaced even if their manifest is internally consistent;
+an orphan or forged generation cannot bootstrap its own authority.
+
+Before creating an extraction attempt, the worker refuses a publication
+marker, stale database pointer, HEAD/unit/policy disagreement, malformed or
+noncanonical JSON/NDJSON, partial/extra/duplicate member, digest mismatch,
+overlapping or unordered caller leaf, or special filesystem entry. Current
+extractors consume the validated **repository** candidate view. Although each
+record already carries its configured-unit membership, T30.4 does not narrow
+or relabel evidence; T30.5 owns the switch to unit-scoped local extraction and
+unit-keyed publication. Root `index.scip` therefore remains
+`repository-root-unbound`.
+
+Startup removes abandoned package-owned stages, audits orphan candidate bytes,
+and reconciles every indexed repository into a candidate job; that job reuses
+or replaces stale live publications before resuming the extraction handoff.
+Orphan publication bytes follow the existing `sync.cleanup_orphans` deletion
+gate. Repository deletion cancels both job kinds and removes the database
+pointer and derived bytes. A malformed derived database pointer is cleared
+under the repository lock and rebuilt; database transport/query failures still
+fail closed. A preexisting stable marker permits strict reuse of a complete
+generation after a real publication crash; without that marker, clearing the
+pointer forces a fresh Git census. If a crash marker or corrupt candidate
+publication continues to refuse after automatic reconciliation, stop phebs,
+retain logs, move `$DATA/candidates` aside for diagnosis, and restart: the
+directory is derived and is rebuilt before extraction. The supported restore
+path clears the imported database pointer automatically; do not manually copy
+a pointer or individual member into a new installation.
 
 Committed focused state is deliberately fail-closed. A malformed or tampered
 `indexed_analysis_unit` can therefore make repository listing, startup
@@ -827,33 +926,38 @@ extensions; extension declarations fail closed. These facts must not drive
 compatibility, migration, or negative-proof conclusions as though canonical
 lineage had been established.
 
-The run is bounded to 200,000 regular inventory paths and 16 MiB of aggregate
-path text, 10 MiB per source blob, a separate 64 MiB ceiling for the fixed
-root `index.scip`, 512 MiB of distinct reads, 12,500
-emitted facts, and a cooperative 15-minute context deadline. The Git tree
-producer is nevertheless terminated synchronously when inventory refuses a
-repository or that deadline cancels the walk, so a child blocked writing to
-the abandoned inventory pipe cannot leave the extraction job running
-indefinitely. A candidate
+The candidate manifest permits a complete streamed census beyond the old
+200,000-file/16 MiB retained-tree ceiling, but one extractor still admits at
+most 200,000 planned repository-view paths and 16 MiB of aggregate path text.
+Reads remain bounded to 10 MiB per source blob, a separate 64 MiB ceiling for
+the fixed root `index.scip`, 512 MiB of distinct reads, 12,500 emitted facts,
+and a cooperative 15-minute context deadline. A candidate
 Go parser input is further limited to 4 MiB; a protobuf parser input is limited
 to 4 MiB, 500,000 lexical tokens, and 128 structural levels. Neither in-process
 parser can be preempted inside one parse call, so this is not yet a hard
 CPU/memory/process isolation boundary. More than 100 placements of one content
-atom also prevents publication. Symlinks are now gated per extractor under
-`gitlink-boundary-v2`: a symlink that does not satisfy the current extractor's
-candidate predicate is skipped and cannot abort that domain. Candidate alias
-paths have independent 200,000-entry and 16 MiB aggregate path bounds. A
-candidate symlink is resolved only from Git tree/blob objects at the pinned
-commit, never through the host filesystem. Its relative chain is limited to
-16 links and must end at a regular path that is also a candidate; only that
-final path is enumerated, read, counted, and cited.
+atom also prevents publication. Symlinks are policy-gated during shared
+candidate planning. A symlink selected only by a broad enumeration predicate
+is skipped and cannot abort planning. An alias selected by a domain's required
+predicate is resolved only from Git tree/blob objects at the pinned commit,
+never through the host filesystem. Its relative chain is limited to 16 links
+and must end at a regular path selected and required by the same domain; only
+that independently enumerated final path is retained, read, counted, and
+cited. Candidate alias paths consume no retained row.
+
 Absolute or root-escaping targets, unsafe target bytes or paths, missing
 targets, directories, gitlinks, cycles, oversized targets, and unsupported
-modes fail that extractor's run closed. Root `index.scip` and attribution
-snapshot symlinks remain unconditional failures. Runs stamped with the prior
+modes are shared publication-integrity failures. Root `index.scip` and
+attribution snapshot symlinks remain unconditional failures. Because every
+configured domain consumes one commit/unit candidate publication, one such
+refusal blocks all configured domains before any extraction run begins. This
+is the deliberate shared-planner seam added by T30.4; once admission succeeds,
+ordinary parser or domain publication failures retain T19.8's per-domain
+isolation and retry behavior. Runs stamped with the prior
 `gitlink-boundary-v1` policy are replaced on the next extraction so their
 symlink semantics are never treated as current. Gitlinks are still recorded
-as repository boundaries and are not traversed. A
+as census-only repository boundaries and are not traversed, even when their
+paths match a candidate suffix. A
 non-candidate file whose name cannot be represented safely (control bytes, a
 backslash, invalid UTF-8, or a
 leading `-`) is included in the published coverage certificate's
@@ -866,18 +970,18 @@ startup backfills indexed repositories even when new indexing is unavailable.
 The same opt-in exposes these three proof queries as MCP envelope structured
 content; HTTP proof-bundle routes and MCP envelope projection call one shared
 proof service. Operational state is also visible through the database and
-`phebs_jobs_total{kind="extraction_job"}`.
+`phebs_jobs_total` with `kind="candidate_manifest_job"` or
+`kind="extraction_job"`.
 
 Each domain logs `inventory started`, inventory file/candidate counts,
 `extractor started`, emitted fact count, and either `published` or `aborted`
 with the refusal. Contract Atlas, Impact, Topics, and Workbench surfaces remain
 empty until their required domains have a published run; enabling their flags
-does not bypass extraction admission. A repository beyond an inventory,
-candidate-read, aggregate-byte, fact, or parser bound is unsupported as one
-extraction unit: the job retries and then fails with that bound recorded rather
-than publishing a partial result. Split or otherwise narrow that Git evidence
-unit, or schedule a separately reviewed extraction-scope/scale change; Epics
-25–27 do not remove these bounds.
+does not bypass candidate-manifest or extraction admission. A repository view
+beyond a planned-path, path-byte, candidate-read, aggregate-byte, fact, or
+parser bound is unsupported as one extraction unit: the job retries and then
+fails with that bound recorded rather than publishing a partial result. T30.5
+will narrow configured local domains; T30.4 does not silently do so.
 
 Proof-aware retention checks at startup and hourly while idle, deleting
 aborted, superseded, or stale unpinned staged runs in bounded transactional

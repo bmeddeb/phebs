@@ -190,6 +190,79 @@ func TestT207AbsentSnapshotsAreStableUnavailable(t *testing.T) {
 	}
 }
 
+func TestAttributionUsesExactTreeLookupOutsidePlannedRows(t *testing.T) {
+	f := newCorpusGitFixture(t)
+	f.commitFile("src/call.go", "package src\n", "source")
+	f.commitFile("gen/api.go", "package gen\n", "generated")
+	f.commitFile("idl/api.proto", `syntax = "proto3";`+"\n", "declaration")
+	f.commitFile(layoutSnapshotPath, `{
+		"version":"t20-layout-snapshot-v1",
+		"roots":[
+			{"kind":"source","path":"src"},
+			{"kind":"generated","path":"gen","protocol":"grpc"},
+			{"kind":"idl","path":"idl","protocol":"grpc"}
+		]
+	}`, "layout")
+	f.commitFile(unitSnapshotPath, `{
+		"version":"t20-unit-snapshot-v1",
+		"mappings":[
+			{"source_path":"src/call.go","logical_services":["svc"]}
+		]
+	}`, "units")
+	head := f.commitFile(generatedFromSnapshotPath, `{
+		"version":"t20-generated-from-v1",
+		"mappings":[],
+		"invocations":[
+			{"protocol":"grpc","generated_root":"gen","generator_invocation_root":"idl"}
+		]
+	}`, "generated-from")
+	f.cloneMirror()
+
+	inner := GitCorpus(f.dataDir).New(f.repoName, head).(*gitCorpus)
+	manifest := &memoryCandidateManifest{
+		identity:    "sha256:" + strings.Repeat("e", 64),
+		corpusFiles: 6,
+		gitlinks: CandidateManifestGitlinks{
+			Digest: emptyGitlinkInventory().digest,
+		},
+	}
+	for _, filePath := range attributionSnapshotPaths {
+		entry, present, err := inner.lookupRegular(context.Background(), filePath)
+		if err != nil || !present {
+			t.Fatalf("lookup %q = %+v, %v, %v", filePath, entry, present, err)
+		}
+		manifest.records = append(manifest.records, CandidateManifestFile{
+			Path: filePath, ObjectID: entry.oid, Mode: entry.mode,
+			DeclaredBytes: entry.size,
+		})
+	}
+	sort.Slice(manifest.records, func(i, j int) bool {
+		return manifest.records[i].Path < manifest.records[j].Path
+	})
+	verified := newVerifiedCorpus(inner)
+	if err := verified.InventoryCandidateManifest(
+		context.Background(), manifest, "grpc-caller", "test-v1",
+		func(string) bool { return false },
+	); err != nil {
+		t.Fatal(err)
+	}
+	if len(verified.enumerated) != len(attributionSnapshotPaths) {
+		t.Fatalf("planned rows retained complete tree: %v", verified.enumeratedOrder)
+	}
+	source, err := verified.AttributionSource(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := source.ConsumerUnits("src/call.go", 1); got.State != sdk.AttributionStateResolved {
+		t.Fatalf("exact source-path validation = %+v", got)
+	}
+	if got := source.GeneratedFrom(
+		"grpc", "gen/api.go", "api.proto",
+	); got.State != sdk.AttributionStateResolved {
+		t.Fatalf("exact generated/declaration validation = %+v", got)
+	}
+}
+
 func TestT207MalformedSnapshotsFailClosed(t *testing.T) {
 	tests := []struct {
 		name, snapshotPath, snapshot, want string

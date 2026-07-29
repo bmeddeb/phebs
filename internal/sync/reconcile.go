@@ -15,6 +15,7 @@ import (
 	"github.com/sourcegraph/zoekt/index"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -22,14 +23,15 @@ import (
 
 // ReconcileReport summarizes one startup/runtime artifact audit.
 type ReconcileReport struct {
-	OrphanRepos        int
-	UntrackedShards    int
-	UntrackedMirrors   int
-	CredentialsFixed   int
-	InvalidRepos       int
-	RevisionRepairs    int
-	LifecycleArtifacts int
-	Deleted            int
+	OrphanRepos         int
+	UntrackedShards     int
+	UntrackedMirrors    int
+	UntrackedCandidates int
+	CredentialsFixed    int
+	InvalidRepos        int
+	RevisionRepairs     int
+	LifecycleArtifacts  int
+	Deleted             int
 }
 
 // ErrCredentialAudit marks a startup invariant failure that may leave a
@@ -156,6 +158,11 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 	if err := reconcileFocusedArtifacts(ctx, dataDir, live, cleanupEnabled, &report); err != nil {
 		errs = append(errs, err)
 	}
+	if err := reconcileCandidateArtifacts(
+		ctx, dataDir, live, cleanupEnabled, &report,
+	); err != nil {
+		errs = append(errs, err)
+	}
 	if err := reconcileUntrackedMirrors(ctx, dataDir, liveMirrors, cleanupEnabled, &report); err != nil {
 		errs = append(errs, err)
 	}
@@ -163,6 +170,54 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 		errs = append(errs, err)
 	}
 	return report, errors.Join(errs...)
+}
+
+func reconcileCandidateArtifacts(
+	ctx context.Context,
+	dataDir string,
+	live map[string]bool,
+	remove bool,
+	report *ReconcileReport,
+) error {
+	root := filepath.Join(dataDir, "candidates")
+	names, err := candidate.ManagedArtifactNames(root)
+	if err != nil {
+		return fmt.Errorf("audit candidate artifacts: %w", err)
+	}
+	liveBases := make([]string, 0, len(live))
+	for repository := range live {
+		liveBases = append(liveBases, candidate.ArtifactBase(repository))
+	}
+	for _, name := range names {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		owned := false
+		for _, base := range liveBases {
+			if name == base+".manifest.json" ||
+				name == base+".publishing" ||
+				strings.HasPrefix(name, base+"-") {
+				owned = true
+				break
+			}
+		}
+		if owned {
+			continue
+		}
+		report.UntrackedCandidates++
+		if !remove {
+			continue
+		}
+		// ManagedArtifactNames is a non-recursive basename audit. Removing the
+		// exact child with os.Remove cannot follow a symlink or recursively
+		// traverse an attacker-controlled directory.
+		if err := os.Remove(filepath.Join(root, name)); err != nil &&
+			!errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("remove orphan candidate artifact %q: %w", name, err)
+		}
+		report.Deleted++
+	}
+	return nil
 }
 
 func reconcileFocusedArtifacts(
@@ -330,7 +385,9 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 		}
 		return false, cause
 	}
-	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex, store.JobExtract} {
+	for _, kind := range []store.JobKind{
+		store.JobFetch, store.JobIndex, store.JobCandidate, store.JobExtract,
+	} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel %s jobs for %s: %w", kind, name, err))
 		}
@@ -342,7 +399,9 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	}
 	defer unlock()
 	// Close the enqueue-before-lock window.
-	for _, kind := range []store.JobKind{store.JobFetch, store.JobIndex, store.JobExtract} {
+	for _, kind := range []store.JobKind{
+		store.JobFetch, store.JobIndex, store.JobCandidate, store.JobExtract,
+	} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel late %s jobs for %s: %w", kind, name, err))
 		}
@@ -362,6 +421,11 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	}
 	if err := removeRepoShardsByMetadata(ctx, dataDir, name); err != nil {
 		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
+	}
+	if err := candidate.Remove(
+		ctx, filepath.Join(dataDir, "candidates"), name,
+	); err != nil {
+		return rollback(fmt.Errorf("cleanup %s candidate artifacts: %w", name, err))
 	}
 	if err := ctx.Err(); err != nil {
 		return rollback(err)

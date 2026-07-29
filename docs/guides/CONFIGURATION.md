@@ -138,6 +138,14 @@ continues to report `typed_index_posture: repository-root-unbound`.
 Repositories absent from `analysis_units` retain the prior
 whole-repository `zoekt-git-index`, extraction behavior, and response shape.
 
+Candidate planning now records the committed unit membership of every planned
+repository/local input and refuses stale or mismatched scope before extraction
+starts. That is preparation, not an evidence migration: through T30.4,
+configured repositories still run the enabled extractors over the manifest's
+repository view and publish the existing repository/commit identities. T30.5
+owns the later switch to unit-only local evidence and a unit-bound typed-index
+contract; phebs does not infer either from this configuration today.
+
 
 ### Provisional Change Workbench
 

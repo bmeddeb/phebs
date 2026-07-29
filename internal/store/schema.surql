@@ -66,6 +66,28 @@ DEFINE FIELD OVERWRITE status ON extraction_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
 DEFINE INDEX IF NOT EXISTS extraction_job_status ON extraction_job FIELDS status;
 
+-- Commit-bound candidate planning is a distinct durable queue stage between
+-- indexing and extraction (T30.4).
+DEFINE TABLE IF NOT EXISTS candidate_manifest_job SCHEMALESS;
+DEFINE FIELD OVERWRITE status ON candidate_manifest_job TYPE string
+    ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS candidate_manifest_job_status ON candidate_manifest_job FIELDS status;
+
+-- One strict current pointer per repository. Candidate member files remain
+-- derived filesystem artifacts; this row is the atomic authority that binds
+-- their content identity to the indexed HEAD, committed unit, and policy.
+DEFINE TABLE IF NOT EXISTS candidate_manifest_publication SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS head_commit ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS unit_digest ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS policy_digest ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS manifest_digest ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation_digest ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS manifest_path ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS published_at ON candidate_manifest_publication TYPE datetime;
+DEFINE INDEX IF NOT EXISTS candidate_manifest_publication_repository
+    ON candidate_manifest_publication FIELDS repository UNIQUE;
+
 DEFINE TABLE IF NOT EXISTS investigation_run_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON investigation_run_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];

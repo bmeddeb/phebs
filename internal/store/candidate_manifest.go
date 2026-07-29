@@ -1,0 +1,307 @@
+package store
+
+import (
+	"context"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"time"
+
+	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/models"
+
+	"github.com/bmeddeb/phebs/internal/candidateid"
+	"github.com/bmeddeb/phebs/internal/reponame"
+)
+
+// CandidateManifestPublication is the strict database pointer to one
+// commit-bound filesystem publication. ManifestPath is relative to the
+// candidate artifact root so restoring the database never binds a new
+// installation to the old data directory.
+//
+// UnitDigest is empty for an unscoped repository. All other digest fields use
+// canonical "sha256:<lowercase hex>" encoding.
+type CandidateManifestPublication struct {
+	Repository       string    `json:"repository"`
+	HeadCommit       string    `json:"head_commit"`
+	UnitDigest       string    `json:"unit_digest"`
+	PolicyDigest     string    `json:"policy_digest"`
+	ManifestDigest   string    `json:"manifest_digest"`
+	GenerationDigest string    `json:"generation_digest"`
+	ManifestPath     string    `json:"manifest_path"`
+	PublishedAt      time.Time `json:"published_at"`
+}
+
+// CandidateManifestPublicationStore is deliberately narrower than Store.
+// Candidate planning can depend on this capability without widening every
+// sync/search/store test double.
+type CandidateManifestPublicationStore interface {
+	GetCandidateManifestPublication(ctx context.Context, repository string) (*CandidateManifestPublication, error)
+	PublishCandidateManifest(ctx context.Context, publication CandidateManifestPublication) error
+	ClearCandidateManifestPublication(ctx context.Context, repository string) error
+	ListCandidateManifestPublications(ctx context.Context) ([]CandidateManifestPublication, error)
+}
+
+var _ CandidateManifestPublicationStore = (*Surreal)(nil)
+
+type candidateManifestPublicationRec struct {
+	CandidateManifestPublication
+	RecID *models.RecordID `json:"id"`
+}
+
+func candidateManifestPublicationID(repository string) models.RecordID {
+	return models.NewRecordID("candidate_manifest_publication", repository)
+}
+
+func validateCandidateManifestPublication(publication CandidateManifestPublication, requireTimestamp bool) error {
+	if err := validateCandidateRepository(publication.Repository); err != nil {
+		return fmt.Errorf("repository: %w", err)
+	}
+	if !validGitObjectID(publication.HeadCommit) {
+		return errors.New("head_commit must be a canonical SHA-1 or SHA-256 object ID")
+	}
+	if publication.UnitDigest != "" && !validSHA256Digest(publication.UnitDigest) {
+		return errors.New("unit_digest must be empty or canonical sha256")
+	}
+	if !validSHA256Digest(publication.PolicyDigest) {
+		return errors.New("policy_digest must be canonical sha256")
+	}
+	if !validSHA256Digest(publication.ManifestDigest) {
+		return errors.New("manifest_digest must be canonical sha256")
+	}
+	if !validSHA256Digest(publication.GenerationDigest) {
+		return errors.New("generation_digest must be canonical sha256")
+	}
+	if publication.ManifestPath != candidateid.ManifestName(publication.Repository) {
+		return errors.New("manifest_path must be the stable repository manifest name")
+	}
+	if requireTimestamp && publication.PublishedAt.IsZero() {
+		return errors.New("published_at is required")
+	}
+	return nil
+}
+
+func validateCandidateRepository(repository string) error {
+	if err := reponame.Validate(repository); err != nil {
+		return errors.New("must be a bounded canonical repository name")
+	}
+	return nil
+}
+
+func validGitObjectID(value string) bool {
+	if len(value) != 40 && len(value) != 64 {
+		return false
+	}
+	decoded, err := hex.DecodeString(value)
+	return err == nil && hex.EncodeToString(decoded) == value
+}
+
+const publishCandidateManifestSQL = `
+BEGIN;
+LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
+	FROM $repo_rid)[0];
+LET $current = (SELECT * FROM $publication_rid)[0];
+LET $repo_ok = $repo_state != NONE
+	AND ($repo_state.deleting = NONE OR $repo_state.deleting = false)
+	AND $repo_state.indexed_commit_hash = $head_commit
+	AND ($repo_state.indexed_analysis_unit.digest ?? '') = $unit_digest;
+LET $same_scope = $current != NONE
+	AND $current.repository = $repository
+	AND $current.head_commit = $head_commit
+	AND $current.unit_digest = $unit_digest
+	AND $current.policy_digest = $policy_digest;
+LET $same_publication = $same_scope
+	AND $current.manifest_digest = $manifest_digest
+	AND $current.generation_digest = $generation_digest
+	AND $current.manifest_path = $manifest_path;
+LET $acceptable = $repo_ok
+	AND ($same_scope = false OR $same_publication = true);
+LET $published = IF $acceptable = false THEN []
+	ELSE IF $same_publication = true THEN
+		[$current]
+	ELSE
+		(UPSERT $publication_rid SET
+			repository = $repository,
+			head_commit = $head_commit,
+			unit_digest = $unit_digest,
+			policy_digest = $policy_digest,
+			manifest_digest = $manifest_digest,
+			generation_digest = $generation_digest,
+			manifest_path = $manifest_path,
+			published_at = $published_at
+		RETURN AFTER)
+	END;
+LET $pending = IF array::len($published) = 1 THEN
+	(SELECT id, created_at FROM extraction_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $fanout = IF array::len($published) != 1 THEN []
+	ELSE IF $pending != NONE THEN
+		(UPDATE $pending SET force = force RETURN AFTER)
+	ELSE
+		(CREATE extraction_job CONTENT {
+			target: $repository,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repository,
+			force: false
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($fanout) = 1 THEN $published ELSE [] END;
+COMMIT;`
+
+// PublishCandidateManifest atomically guards publication against the current
+// authoritative indexed HEAD and committed unit, advances the pointer, and
+// ensures one pending extraction successor. Retrying the exact pointer keeps
+// its original PublishedAt while repairing a missing fan-out job. A different
+// manifest for the same HEAD/unit/policy is rejected as planner
+// nondeterminism.
+func (s *Surreal) PublishCandidateManifest(
+	ctx context.Context,
+	publication CandidateManifestPublication,
+) error {
+	// Receipt time belongs to the store, not the planner.
+	publication.PublishedAt = time.Time{}
+	if err := validateCandidateManifestPublication(publication, false); err != nil {
+		return fmt.Errorf("publish candidate manifest: %w", err)
+	}
+	vars := map[string]any{
+		"repo_rid":          repoID(publication.Repository),
+		"publication_rid":   candidateManifestPublicationID(publication.Repository),
+		"repository":        publication.Repository,
+		"head_commit":       publication.HeadCommit,
+		"unit_digest":       publication.UnitDigest,
+		"policy_digest":     publication.PolicyDigest,
+		"manifest_digest":   publication.ManifestDigest,
+		"generation_digest": publication.GenerationDigest,
+		"manifest_path":     publication.ManifestPath,
+		"published_at":      storeTimestamp(time.Now()),
+	}
+	for attempt := 0; ; attempt++ {
+		results, err := surrealdb.Query[[]candidateManifestPublicationRec](
+			ctx, s.db, publishCandidateManifestSQL, vars,
+		)
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil && attempt+1 < maxQueueRetries {
+				continue
+			}
+			return fmt.Errorf("publish candidate manifest: %w", err)
+		}
+		rows := firstDomainRows(results)
+		if len(rows) == 1 {
+			if err := validateCandidateManifestPublication(
+				rows[0].CandidateManifestPublication, true,
+			); err != nil {
+				return fmt.Errorf("publish candidate manifest: persisted pointer: %w", err)
+			}
+			return nil
+		}
+		return fmt.Errorf(
+			"publish candidate manifest: repository state is stale or immutable publication conflicts: %w",
+			ErrConflict,
+		)
+	}
+}
+
+func (s *Surreal) GetCandidateManifestPublication(
+	ctx context.Context,
+	repository string,
+) (*CandidateManifestPublication, error) {
+	if err := validateCandidateRepository(repository); err != nil {
+		return nil, fmt.Errorf("get candidate manifest: repository: %w", err)
+	}
+	results, err := surrealdb.Query[[]candidateManifestPublicationRec](
+		ctx,
+		s.db,
+		"SELECT * FROM $rid",
+		map[string]any{"rid": candidateManifestPublicationID(repository)},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("get candidate manifest: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("candidate manifest for %q: %w", repository, ErrNotFound)
+	}
+	publication := rows[0].CandidateManifestPublication
+	if publication.Repository != repository {
+		return nil, fmt.Errorf(
+			"get candidate manifest: %w: persisted repository identity is inconsistent",
+			ErrInvalidCandidateManifestPublication,
+		)
+	}
+	if err := validateCandidateManifestPublication(publication, true); err != nil {
+		return nil, fmt.Errorf(
+			"get candidate manifest: %w: %v",
+			ErrInvalidCandidateManifestPublication, err,
+		)
+	}
+	publication.PublishedAt = publication.PublishedAt.UTC()
+	return &publication, nil
+}
+
+func (s *Surreal) ListCandidateManifestPublications(
+	ctx context.Context,
+) ([]CandidateManifestPublication, error) {
+	results, err := surrealdb.Query[[]candidateManifestPublicationRec](
+		ctx, s.db,
+		"SELECT * FROM candidate_manifest_publication ORDER BY repository",
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list candidate manifests: %w", err)
+	}
+	rows := firstDomainRows(results)
+	publications := make([]CandidateManifestPublication, len(rows))
+	for index := range rows {
+		publication := rows[index].CandidateManifestPublication
+		if err := validateCandidateManifestPublication(publication, true); err != nil {
+			return nil, fmt.Errorf(
+				"list candidate manifests: row %d: %w: %v",
+				index, ErrInvalidCandidateManifestPublication, err,
+			)
+		}
+		publication.PublishedAt = publication.PublishedAt.UTC()
+		publications[index] = publication
+	}
+	return publications, nil
+}
+
+func (s *Surreal) ClearCandidateManifestPublication(
+	ctx context.Context,
+	repository string,
+) error {
+	if err := validateCandidateRepository(repository); err != nil {
+		return fmt.Errorf("clear candidate manifest: repository: %w", err)
+	}
+	_, err := surrealdb.Query[any](
+		ctx,
+		s.db,
+		"DELETE $rid RETURN NONE",
+		map[string]any{"rid": candidateManifestPublicationID(repository)},
+	)
+	if err != nil {
+		return fmt.Errorf("clear candidate manifest: %w", err)
+	}
+	return nil
+}
+
+// ClearAllCandidateManifestPublications removes the derived pointer table
+// without decoding its rows. Restore must be able to discard even a malformed
+// imported pointer because candidate publications are never backup authority.
+func (s *Surreal) ClearAllCandidateManifestPublications(
+	ctx context.Context,
+) error {
+	_, err := surrealdb.Query[any](
+		ctx,
+		s.db,
+		"DELETE candidate_manifest_publication RETURN NONE",
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("clear all candidate manifests: %w", err)
+	}
+	return nil
+}

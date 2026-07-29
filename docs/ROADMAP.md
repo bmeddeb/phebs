@@ -47,8 +47,13 @@ backup omit invalid rebuildable publications, rejects sparse restore input,
 and pins invalid-claim forced reconciliation. Publication content remains
 recovery content rather than semantic identity. Configured status says `focused` and
 `repository-root-unbound`: source search is physically scoped, while root
-SCIP is still not treated as unit-bound. T30.4 is next: produce the reusable
-streamed candidate census and bounded partition manifest.
+SCIP is still not treated as unit-bound. T30.4 now inserts one durable
+candidate-planning stage between indexing and extraction: a streamed HEAD
+census produces a strict content-addressed repository/unit manifest and
+bounded caller leaves, and no extraction run begins without its current
+publication. It precomputes unit membership but deliberately preserves the
+existing repository-wide evidence view. T30.5 is next: publish local evidence
+under the unit digest and add a reviewed unit-bound typed-index contract.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
 browsing, related implementation, and the Workbench use one physically
@@ -74,7 +79,9 @@ evidence remain HEAD-bound. Repository-wide Caller Map work is split again,
 independently, by domain-separated SHA-256 prefixes of normalized candidate
 paths. Over-limit hash buckets recursively split by the next bit under frozen
 candidate-count and declared-byte bounds; blob identity changes the manifest,
-not path assignment. A bounded resolver catalog publishes before those
+not path assignment. T30.4 freezes the initial depth at two bits and each
+artifact at 4,096 records and 64 MiB of declared blob bytes. A bounded resolver
+catalog publishes before those
 target-bound source partitions run, and no caller generation becomes visible
 until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.

@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/bmeddeb/phebs/internal/repopath"
 )
 
 func TestScopeIdentityAndState(t *testing.T) {
@@ -98,6 +100,10 @@ func TestScopeRefusals(t *testing.T) {
 		}},
 		{"missing primary", func(scope *Scope) { scope.Primary = nil }},
 		{"absolute", func(scope *Scope) { scope.Primary = []string{"/service"} }},
+		{"leading dash", func(scope *Scope) { scope.Primary = []string{"-service"} }},
+		{"path byte limit", func(scope *Scope) {
+			scope.Primary = []string{strings.Repeat("p", repopath.MaxBytes+1)}
+		}},
 		{"traversal", func(scope *Scope) { scope.Primary = []string{"service/../other"} }},
 		{"backslash", func(scope *Scope) { scope.Primary = []string{`service\\src`} }},
 		{"control", func(scope *Scope) { scope.Primary = []string{"service/\nsource"} }},

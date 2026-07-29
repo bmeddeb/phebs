@@ -38,6 +38,7 @@ const (
 var derivedExclusions = []string{
 	"index/ whole-repository zoekt shards (focused publications are preserved byte-exactly)",
 	"repos/ (bare repository mirrors)",
+	"candidates/ (content-addressed candidate manifests and partition rows)",
 	"temporary extraction and build caches",
 }
 
@@ -326,10 +327,25 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, fmt.Errorf("validate restored store: %w", err)
 	}
+	if err := clearCandidateManifestPublications(ctx, st); err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf(
+			"clear derived candidate publications after restore: %w", err,
+		)
+	}
 	if err := st.Close(context.WithoutCancel(ctx)); err != nil {
 		return Manifest{}, fmt.Errorf("close validated restored store: %w", err)
 	}
 	return manifest, nil
+}
+
+func clearCandidateManifestPublications(
+	ctx context.Context,
+	publications interface {
+		ClearAllCandidateManifestPublications(context.Context) error
+	},
+) error {
+	return publications.ClearAllCandidateManifestPublications(ctx)
 }
 
 // Verify performs offline artifact and compatibility validation without

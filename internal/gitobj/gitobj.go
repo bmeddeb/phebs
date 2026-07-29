@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -21,6 +22,10 @@ import (
 
 // ErrTooLarge is returned when a read exceeds the caller's byte limit.
 var ErrTooLarge = errors.New("git object exceeds byte limit")
+
+// ErrExternalAlternate marks an object store whose reads could escape the
+// managed mirror into another filesystem object database.
+var ErrExternalAlternate = errors.New("git object store uses an external object alternate")
 
 // maxStderrBytes caps retained diagnostics so a noisy failing child cannot
 // allocate unbounded memory.
@@ -135,6 +140,37 @@ func IsObjectID(value string) bool {
 		}
 	}
 	return true
+}
+
+// RejectAlternates refuses both bare-repository and ordinary-worktree
+// alternates files. Lstat treats a symlink at the control path as present.
+func RejectAlternates(dir string) error {
+	for _, candidate := range []string{
+		filepath.Join(dir, "objects", "info", "alternates"),
+		filepath.Join(dir, ".git", "objects", "info", "alternates"),
+	} {
+		if _, err := os.Lstat(candidate); err == nil {
+			return ErrExternalAlternate
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("inspect git object alternates: %w", err)
+		}
+	}
+	return nil
+}
+
+// EnsureCommit proves oid is an actual commit in the managed object store.
+func EnsureCommit(ctx context.Context, dir, oid string) error {
+	if !IsObjectID(oid) {
+		return errors.New("commit must be a full lowercase object id")
+	}
+	out, err := Output(ctx, dir, 32, "cat-file", "-t", oid)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(string(out)) != "commit" {
+		return fmt.Errorf("git object %s is not a commit", oid)
+	}
+	return nil
 }
 
 // ResolveBlob resolves spec (a "rev" or "rev:path" expression) to an

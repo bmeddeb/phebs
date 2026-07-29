@@ -69,16 +69,23 @@ property of the export.
 
 ### 2.2 Derived state
 
-Bare repository mirrors, zoekt shards, extracted temporary trees, module
-caches, build caches, queues of reproducible derived work, and other scratch
-artifacts are rebuildable. They are excluded by default to reduce credential,
-source, and stale-index exposure. If an approved capacity or recovery objective
-requires any derived artifact in the backup, the manifest must identify it,
-justify it, bind its digest, and apply the same authorization and deletion
-rules as source-derived evidence.
+Bare repository mirrors, whole-repository zoekt shards, commit-bound candidate
+manifests/partition members, extracted temporary trees, module caches, build
+caches, queues of reproducible derived work, and other scratch artifacts are
+rebuildable. They are excluded by default to reduce credential, source, and
+stale-index exposure. Focused zoekt publications are the current documented
+exception: the production online backup preserves their exact bytes because
+fresh builder identity/timestamps make rebuild bytes unsuitable for restore
+equality. If an approved capacity or recovery objective requires any other
+derived artifact in the backup, the manifest must identify it, justify it,
+bind its digest, and apply the same authorization and deletion rules as
+source-derived evidence.
 
 After restore, derived state is rebuilt only from frozen, authorized inputs.
 It must not be treated as current merely because it existed at backup time.
+The supported import explicitly clears candidate-publication pointers before
+the restored store is accepted, so normal startup must rebuild the excluded
+candidate manifests and members before extraction resumes.
 
 ### 2.3 Credentials and external authority
 

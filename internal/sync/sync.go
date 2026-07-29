@@ -18,6 +18,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -87,23 +88,8 @@ func safeName(name, cloneURL string) (string, error) {
 // ValidateRepoName rejects names that can escape, alias, or nest another
 // mirror in the legacy host/path.git disk layout.
 func ValidateRepoName(name string) error {
-	if name == "" || filepath.IsAbs(name) || strings.ContainsRune(name, 0) || strings.Contains(name, `\`) {
+	if err := reponame.Validate(name); err != nil {
 		return fmt.Errorf("unsafe repository name: %w", ErrBadInput)
-	}
-	normalized := strings.ReplaceAll(name, `\`, "/")
-	parts := strings.Split(normalized, "/")
-	for i, part := range parts {
-		if part == "" || part == "." || part == ".." {
-			return fmt.Errorf("unsafe repository name: %w", ErrBadInput)
-		}
-		for _, r := range part {
-			if r < 0x20 || r == 0x7f {
-				return fmt.Errorf("unsafe repository name: %w", ErrBadInput)
-			}
-		}
-		if i < len(parts)-1 && strings.HasSuffix(strings.ToLower(part), ".git") {
-			return fmt.Errorf("repository namespace ending in .git is unsupported: %w", ErrBadInput)
-		}
 	}
 	return nil
 }

@@ -15,20 +15,26 @@ import (
 )
 
 var (
-	ErrNotFound    = errors.New("not found")
-	ErrConflict    = errors.New("conflict")
-	ErrLeaseLost   = errors.New("job lease lost")
-	ErrResultLimit = errors.New("result limit exceeded")
+	ErrNotFound                            = errors.New("not found")
+	ErrConflict                            = errors.New("conflict")
+	ErrLeaseLost                           = errors.New("job lease lost")
+	ErrResultLimit                         = errors.New("result limit exceeded")
+	ErrInvalidCandidateManifestPublication = errors.New(
+		"invalid candidate manifest publication",
+	)
 )
 
 type JobKind string
 
 // Job kinds name their SurrealDB table directly.
 const (
-	JobSync    JobKind = "connection_sync_job"
-	JobIndex   JobKind = "indexing_job"
-	JobFetch   JobKind = "repo_fetch_job" // webhook-driven single-repo fetch (T7.4)
-	JobExtract JobKind = "extraction_job" // evidence extraction, chained after indexing (T12.2)
+	JobSync  JobKind = "connection_sync_job"
+	JobIndex JobKind = "indexing_job"
+	JobFetch JobKind = "repo_fetch_job" // webhook-driven single-repo fetch (T7.4)
+	// JobCandidate plans and publishes the commit-bound candidate manifest
+	// that extraction must validate before starting (T30.4).
+	JobCandidate JobKind = "candidate_manifest_job"
+	JobExtract   JobKind = "extraction_job" // evidence extraction, chained after indexing (T12.2)
 	// JobInvestigate runs one preflighted Investigation Run (T16.4). Its
 	// generic queue lease and the Run's publication lease are independent:
 	// losing either fences the worker.
@@ -79,7 +85,7 @@ type IndexedRevision struct {
 }
 
 // Job is one row in a job table. Target is the connection name for sync jobs
-// and the repo name for indexing jobs.
+// and the repository name for repository-scoped jobs.
 type Job struct {
 	ID          string     `json:"-"` // "table:key" record id, set on read
 	Kind        JobKind    `json:"-"`

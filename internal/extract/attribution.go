@@ -11,6 +11,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
@@ -113,7 +114,17 @@ type monorepoAttributionSource struct {
 	units       map[string][]unitRecord
 	generated   map[string][]sdk.GeneratedFromCandidate
 	invocations []invocationRecord
-	inventory   map[string]struct{}
+	// planned is the bounded repository-wide candidate view for this domain,
+	// not a retained copy of the complete Git tree. Dynamic invocation lookup
+	// is limited to declaration candidates already admitted by that view;
+	// snapshot validation uses the exact immutable-tree probes below.
+	planned map[string]struct{}
+	lookup  *verifiedCorpus
+
+	lookupCtx   context.Context
+	lookupMu    sync.Mutex
+	lookupCache map[string]bool
+	lookupErr   error
 }
 
 var (
@@ -131,25 +142,32 @@ func loadAttributionSource(ctx context.Context, corpus *verifiedCorpus) (sdk.Att
 		corpus.mu.Unlock()
 		return nil, errors.New("attribution read before complete corpus inventory")
 	}
-	inventory := make(map[string]struct{}, len(corpus.enumerated))
-	for filePath := range corpus.enumerated {
-		inventory[filePath] = struct{}{}
-	}
+	// Inventory is immutable after completion, so attribution can share the
+	// bounded planned-path index instead of duplicating it. In production this
+	// is the candidate view, never the complete repository tree.
+	planned := corpus.enumerated
 	repository, commit := corpus.repo, corpus.commit
 	corpus.mu.Unlock()
 
 	source := &monorepoAttributionSource{
-		repository: repository,
-		units:      make(map[string][]unitRecord),
-		generated:  make(map[string][]sdk.GeneratedFromCandidate),
-		inventory:  inventory,
+		repository:  repository,
+		units:       make(map[string][]unitRecord),
+		generated:   make(map[string][]sdk.GeneratedFromCandidate),
+		planned:     planned,
+		lookup:      corpus,
+		lookupCtx:   ctx,
+		lookupCache: make(map[string]bool),
 	}
 	type selectedBlob struct {
 		path, digest, content string
 	}
 	var selected []selectedBlob
 	for _, filePath := range attributionSnapshotPaths {
-		if _, present := inventory[filePath]; !present {
+		present, err := corpus.containsRegular(ctx, filePath)
+		if err != nil {
+			return nil, fmt.Errorf("inspect attribution snapshot %q: %w", filePath, err)
+		}
+		if !present {
 			continue
 		}
 		blob, err := corpus.Read(ctx, filePath)
@@ -179,7 +197,7 @@ func loadAttributionSource(ctx context.Context, corpus *verifiedCorpus) (sdk.Att
 			if input.Version != layoutSnapshotVersion {
 				return nil, fmt.Errorf("%s has unsupported version %q", blob.path, input.Version)
 			}
-			if err := source.loadRoots(input.Roots); err != nil {
+			if err := source.loadRoots(ctx, input.Roots); err != nil {
 				return nil, fmt.Errorf("%s: %w", blob.path, err)
 			}
 		case unitSnapshotPath:
@@ -190,7 +208,7 @@ func loadAttributionSource(ctx context.Context, corpus *verifiedCorpus) (sdk.Att
 			if input.Version != unitSnapshotVersion {
 				return nil, fmt.Errorf("%s has unsupported version %q", blob.path, input.Version)
 			}
-			if err := source.loadUnits(input.Mappings); err != nil {
+			if err := source.loadUnits(ctx, input.Mappings); err != nil {
 				return nil, fmt.Errorf("%s: %w", blob.path, err)
 			}
 		case generatedFromSnapshotPath:
@@ -201,7 +219,7 @@ func loadAttributionSource(ctx context.Context, corpus *verifiedCorpus) (sdk.Att
 			if input.Version != generatedFromSnapshotVersion {
 				return nil, fmt.Errorf("%s has unsupported version %q", blob.path, input.Version)
 			}
-			if err := source.loadGeneratedFrom(input.Mappings, input.Invocations); err != nil {
+			if err := source.loadGeneratedFrom(ctx, input.Mappings, input.Invocations); err != nil {
 				return nil, fmt.Errorf("%s: %w", blob.path, err)
 			}
 		}
@@ -253,7 +271,10 @@ func decodeAttributionSnapshot(content string, out any) error {
 	return nil
 }
 
-func (s *monorepoAttributionSource) loadRoots(inputs []layoutRootInput) error {
+func (s *monorepoAttributionSource) loadRoots(
+	ctx context.Context,
+	inputs []layoutRootInput,
+) error {
 	if len(inputs) > maxAttributionRoots {
 		return fmt.Errorf("more than %d layout roots", maxAttributionRoots)
 	}
@@ -275,12 +296,9 @@ func (s *monorepoAttributionSource) loadRoots(inputs []layoutRootInput) error {
 				return fmt.Errorf("%s root %q requires a valid protocol", input.Kind, input.Path)
 			}
 		}
-		matched := false
-		for filePath := range s.inventory {
-			if pathWithinRoot(filePath, input.Path) && filePath != input.Path {
-				matched = true
-				break
-			}
+		matched, err := s.lookup.anyRegularUnder(ctx, input.Path)
+		if err != nil {
+			return fmt.Errorf("inspect root %q: %w", input.Path, err)
 		}
 		if !matched {
 			return fmt.Errorf("root %q matches no regular corpus file", input.Path)
@@ -309,7 +327,10 @@ func (s *monorepoAttributionSource) loadRoots(inputs []layoutRootInput) error {
 	return nil
 }
 
-func (s *monorepoAttributionSource) loadUnits(inputs []unitMappingInput) error {
+func (s *monorepoAttributionSource) loadUnits(
+	ctx context.Context,
+	inputs []unitMappingInput,
+) error {
 	if len(inputs) > maxAttributionMappings {
 		return fmt.Errorf("more than %d unit mappings", maxAttributionMappings)
 	}
@@ -319,7 +340,12 @@ func (s *monorepoAttributionSource) loadUnits(inputs []unitMappingInput) error {
 		if err := checkCorpusPath(input.SourcePath); err != nil {
 			return fmt.Errorf("mapping %d source path: %w", index, err)
 		}
-		if _, present := s.inventory[input.SourcePath]; !present {
+		present, err := s.lookup.containsRegular(ctx, input.SourcePath)
+		if err != nil {
+			return fmt.Errorf(
+				"mapping %d inspect source path %q: %w", index, input.SourcePath, err)
+		}
+		if !present {
 			return fmt.Errorf("mapping %d source path %q is absent from the corpus", index, input.SourcePath)
 		}
 		if len(s.roots) > 0 {
@@ -344,19 +370,19 @@ func (s *monorepoAttributionSource) loadUnits(inputs []unitMappingInput) error {
 		if input.Source != "" && input.Source != "unit-snapshot-v1" {
 			return fmt.Errorf("mapping %d has unsupported source %q", index, input.Source)
 		}
-		var err error
+		var normalizeErr error
 		candidate := sdk.ConsumerUnitCandidate{}
-		if candidate.BuildTargets, err = normalizeAttributionValues(input.BuildTargets); err != nil {
-			return fmt.Errorf("mapping %d build targets: %w", index, err)
+		if candidate.BuildTargets, normalizeErr = normalizeAttributionValues(input.BuildTargets); normalizeErr != nil {
+			return fmt.Errorf("mapping %d build targets: %w", index, normalizeErr)
 		}
-		if candidate.Deployables, err = normalizeAttributionValues(input.Deployables); err != nil {
-			return fmt.Errorf("mapping %d deployables: %w", index, err)
+		if candidate.Deployables, normalizeErr = normalizeAttributionValues(input.Deployables); normalizeErr != nil {
+			return fmt.Errorf("mapping %d deployables: %w", index, normalizeErr)
 		}
-		if candidate.LogicalServices, err = normalizeAttributionValues(input.LogicalServices); err != nil {
-			return fmt.Errorf("mapping %d logical services: %w", index, err)
+		if candidate.LogicalServices, normalizeErr = normalizeAttributionValues(input.LogicalServices); normalizeErr != nil {
+			return fmt.Errorf("mapping %d logical services: %w", index, normalizeErr)
 		}
-		if candidate.Owners, err = normalizeAttributionValues(input.Owners); err != nil {
-			return fmt.Errorf("mapping %d owners: %w", index, err)
+		if candidate.Owners, normalizeErr = normalizeAttributionValues(input.Owners); normalizeErr != nil {
+			return fmt.Errorf("mapping %d owners: %w", index, normalizeErr)
 		}
 		candidate.ID = attributionCandidateID(
 			"unit", input.SourcePath, fmt.Sprintf("%d", input.StartLine),
@@ -389,6 +415,7 @@ func (s *monorepoAttributionSource) loadUnits(inputs []unitMappingInput) error {
 }
 
 func (s *monorepoAttributionSource) loadGeneratedFrom(
+	ctx context.Context,
 	mappings []generatedFromMappingInput,
 	invocations []generatorInvocationInput,
 ) error {
@@ -403,7 +430,12 @@ func (s *monorepoAttributionSource) loadGeneratedFrom(
 			if err := checkCorpusPath(value); err != nil {
 				return fmt.Errorf("mapping %d %s: %w", index, label, err)
 			}
-			if _, present := s.inventory[value]; !present {
+			present, err := s.lookup.containsRegular(ctx, value)
+			if err != nil {
+				return fmt.Errorf(
+					"mapping %d inspect %s %q: %w", index, label, value, err)
+			}
+			if !present {
 				return fmt.Errorf("mapping %d %s %q is absent from the corpus", index, label, value)
 			}
 		}
@@ -471,12 +503,10 @@ func (s *monorepoAttributionSource) loadGeneratedFrom(
 			if err := checkCorpusPath(value); err != nil {
 				return fmt.Errorf("invocation %d %s: %w", index, label, err)
 			}
-			matched := false
-			for filePath := range s.inventory {
-				if pathWithinRoot(filePath, value) && filePath != value {
-					matched = true
-					break
-				}
+			matched, err := s.lookup.anyRegularUnder(ctx, value)
+			if err != nil {
+				return fmt.Errorf(
+					"invocation %d inspect %s %q: %w", index, label, value, err)
 			}
 			if !matched {
 				return fmt.Errorf("invocation %d %s %q matches no regular corpus file",
@@ -732,7 +762,7 @@ func (s *monorepoAttributionSource) GeneratedFrom(
 		if !pathWithinRoot(declarationPath, invocation.declarationRoot) {
 			continue
 		}
-		if _, present := s.inventory[declarationPath]; !present {
+		if !s.dynamicDeclarationPresent(declarationPath) {
 			continue
 		}
 		candidate := sdk.GeneratedFromCandidate{
@@ -763,6 +793,41 @@ func (s *monorepoAttributionSource) GeneratedFrom(
 			Candidates: cloneGeneratedCandidates(candidates),
 		}
 	}
+}
+
+func (s *monorepoAttributionSource) dynamicDeclarationPresent(
+	declarationPath string,
+) bool {
+	if _, present := s.planned[declarationPath]; present {
+		return true
+	}
+	s.lookupMu.Lock()
+	defer s.lookupMu.Unlock()
+	if present, cached := s.lookupCache[declarationPath]; cached {
+		return present
+	}
+	if s.lookupErr != nil {
+		return false
+	}
+	present, err := s.lookup.containsRegular(s.lookupCtx, declarationPath)
+	if err != nil {
+		s.lookupErr = fmt.Errorf(
+			"inspect dynamic declaration %q: %w", declarationPath, err)
+		return false
+	}
+	if len(s.lookupCache) >= maxCorpusFiles {
+		s.lookupErr = fmt.Errorf(
+			"dynamic declaration lookup exceeds %d-path limit", maxCorpusFiles)
+		return false
+	}
+	s.lookupCache[declarationPath] = present
+	return present
+}
+
+func (s *monorepoAttributionSource) validationError() error {
+	s.lookupMu.Lock()
+	defer s.lookupMu.Unlock()
+	return s.lookupErr
 }
 
 func cloneUnitCandidate(candidate sdk.ConsumerUnitCandidate) sdk.ConsumerUnitCandidate {

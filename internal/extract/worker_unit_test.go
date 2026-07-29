@@ -922,7 +922,7 @@ func TestWorkerRecoversExtractorPanicAndAborts(t *testing.T) {
 	}
 }
 
-func TestWorkerRecoversCandidatePanicAndAborts(t *testing.T) {
+func TestWorkerRecoversCandidatePanicBeforeBeginningRun(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()
 	extractor := unitExtractor{
@@ -939,8 +939,10 @@ func TestWorkerRecoversCandidatePanicAndAborts(t *testing.T) {
 		store.Classify(err) != store.ClassExtract {
 		t.Fatalf("Handle error = %v", err)
 	}
-	if evidence.published || !evidence.aborted {
-		t.Fatalf("candidate panic state: published=%v aborted=%v", evidence.published, evidence.aborted)
+	if evidence.published || evidence.aborted || evidence.nextRun != 0 {
+		t.Fatalf(
+			"candidate panic state: published=%v aborted=%v begun=%d",
+			evidence.published, evidence.aborted, evidence.nextRun)
 	}
 }
 

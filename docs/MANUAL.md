@@ -38,7 +38,9 @@ For a repository with an `analysis_units` entry, search shards contain only
 the configured primary and supporting paths at each admitted revision; status
 reports `focused`. Repositories without an entry retain whole-repository
 search. SCIP remains repository-root-unbound until the later scoped typed
-index contract.
+index contract. The candidate planner now gates experimental extraction on one
+current streamed HEAD manifest and records unit membership, but extraction
+evidence remains repository-wide and repository/commit-bound until T30.5.
 
 ## Evidence boundary
 

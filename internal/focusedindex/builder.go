@@ -6,19 +6,18 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	pathpkg "path"
 	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/sourcegraph/zoekt"
 	"github.com/sourcegraph/zoekt/index"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -292,7 +291,7 @@ func admitRecord(
 	record treeRecord,
 	destination map[string]treeRecord,
 ) error {
-	if !safeRepositoryPath(record.path) ||
+	if repopath.Validate(record.path) != nil ||
 		(record.path != selected && !strings.HasPrefix(record.path, selected+"/")) {
 		return fmt.Errorf(
 			"%w at %s: unsafe descendant %q under %q",
@@ -311,20 +310,6 @@ func admitRecord(
 	}
 	destination[record.path] = record
 	return nil
-}
-
-func safeRepositoryPath(value string) bool {
-	if value == "" || value == "." || pathpkg.IsAbs(value) ||
-		pathpkg.Clean(value) != value || strings.Contains(value, `\`) ||
-		!utf8.ValidString(value) {
-		return false
-	}
-	for _, char := range value {
-		if char < 0x20 || char == 0x7f {
-			return false
-		}
-	}
-	return true
 }
 
 func planDocuments(

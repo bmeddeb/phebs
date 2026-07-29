@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
@@ -72,6 +74,17 @@ connections:
 	if err != nil || indexedBefore.IndexedCommitHash == "" {
 		t.Fatalf("initial indexed repo = %+v, %v", indexedBefore, err)
 	}
+	candidatePointer := store.CandidateManifestPublication{
+		Repository:       names[0],
+		HeadCommit:       indexedBefore.IndexedCommitHash,
+		PolicyDigest:     "sha256:" + strings.Repeat("a", 64),
+		ManifestDigest:   "sha256:" + strings.Repeat("b", 64),
+		GenerationDigest: "sha256:" + strings.Repeat("c", 64),
+		ManifestPath:     candidate.ManifestName(names[0]),
+	}
+	if err := st.PublishCandidateManifest(ctx, candidatePointer); err != nil {
+		t.Fatalf("publish pre-backup candidate pointer: %v", err)
+	}
 
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
@@ -122,6 +135,11 @@ connections:
 	got, err := restored.GetRepo(ctx, names[0])
 	if err != nil || got.IndexedCommitHash != indexedBefore.IndexedCommitHash {
 		t.Fatalf("restored repo = %+v, %v; want commit %q", got, err, indexedBefore.IndexedCommitHash)
+	}
+	if _, err := restored.GetCandidateManifestPublication(
+		ctx, names[0],
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored derived candidate pointer = %v, want ErrNotFound", err)
 	}
 
 	// This is the same boot seam serve executes: reconcile clears an index

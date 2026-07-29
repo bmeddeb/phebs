@@ -9,16 +9,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -34,7 +34,7 @@ const (
 	MaxSCIPIndexBytes = int64(64 << 20)
 	scipIndexPath     = "index.scip"
 
-	maxCorpusPathBytes = 4096
+	maxCorpusPathBytes = repopath.MaxBytes
 	maxTreeRecordBytes = maxCorpusPathBytes + 128
 	maxCorpusFiles     = 200_000
 	// Inventory keeps path identities so the extractor can replay the trusted
@@ -51,6 +51,12 @@ const (
 	// short chain bound prevents a malicious alias graph from turning one
 	// candidate into unbounded object lookups.
 	maxCorpusSymlinkDepth = 16
+	// Exact root probes are used only to validate bounded attribution metadata.
+	// They stream and stop at the first safe regular descendant, but a
+	// repository can contain an arbitrarily large run of symlinks/gitlinks
+	// before that proof. Refuse instead of scanning without a work bound.
+	maxCorpusLookupRecords   = 4096
+	maxCorpusLookupPathBytes = 1 << 20
 )
 
 // CorpusFactory constructs immutable corpora and fences them with the same
@@ -138,6 +144,16 @@ type inventoryCorpus interface {
 		func(string) (bool, error),
 		func(string, bool) error,
 	) error
+}
+
+// exactTreeCorpus is a trusted harness capability, deliberately absent from
+// the extractor SDK. Candidate manifests replace complete-tree retention, so
+// attribution validation uses exact immutable-tree probes for paths and roots
+// that are not part of the bounded domain plan.
+type exactTreeCorpus interface {
+	lookupRegular(context.Context, string) (treeRecord, bool, error)
+	anyRegularUnder(context.Context, string) (bool, error)
+	readManifestBlob(context.Context, treeRecord, int64) (sdk.Blob, error)
 }
 
 func (g *gitCorpus) gitlinkBoundaries() gitlinkInventory {
@@ -576,6 +592,229 @@ func lookupTreeEntry(ctx context.Context, dir, commit, filePath string) (treeRec
 	return entry, nil
 }
 
+func (g *gitCorpus) lookupRegular(
+	ctx context.Context,
+	filePath string,
+) (treeRecord, bool, error) {
+	if err := checkCorpusPath(filePath); err != nil {
+		return treeRecord{}, false, err
+	}
+	dir, err := g.repoDir()
+	if err != nil {
+		return treeRecord{}, false, err
+	}
+	if err := checkCommit(g.commit); err != nil {
+		return treeRecord{}, false, err
+	}
+	if err := ensureCommit(ctx, dir, g.commit); err != nil {
+		return treeRecord{}, false, err
+	}
+	entry, err := lookupSizedTreeEntry(ctx, dir, g.commit, filePath)
+	if errors.Is(err, store.ErrNotFound) {
+		return treeRecord{}, false, nil
+	}
+	if err != nil {
+		return treeRecord{}, false, err
+	}
+	switch {
+	case entry.objectType != "blob":
+		return treeRecord{}, false, nil
+	case entry.mode == "100644" || entry.mode == "100755":
+		if entry.size < 0 {
+			return treeRecord{}, false, fmt.Errorf(
+				"lookup corpus %q: regular blob has no declared size", filePath)
+		}
+		return entry, true, nil
+	case entry.mode == "120000":
+		return treeRecord{}, false, nil
+	default:
+		return treeRecord{}, false, fmt.Errorf(
+			"lookup corpus %q: unsupported blob mode %s", filePath, entry.mode)
+	}
+}
+
+func lookupSizedTreeEntry(
+	ctx context.Context,
+	dir, commit, filePath string,
+) (treeRecord, error) {
+	out, err := gitobj.Output(
+		ctx,
+		dir,
+		int64(maxTreeRecordBytes+32),
+		"ls-tree",
+		"-l",
+		"-z",
+		"--full-tree",
+		commit,
+		"--",
+		":(literal)"+filePath,
+	)
+	if err != nil {
+		return treeRecord{}, err
+	}
+	if len(out) == 0 {
+		return treeRecord{}, store.ErrNotFound
+	}
+	if out[len(out)-1] != 0 {
+		return treeRecord{}, errors.New("lookup corpus: exact tree lookup returned a truncated record")
+	}
+	records := bytes.Split(out[:len(out)-1], []byte{0})
+	if len(records) != 1 {
+		return treeRecord{}, fmt.Errorf(
+			"lookup corpus: exact tree lookup for %q returned %d records",
+			filePath, len(records))
+	}
+	entry, err := parseSizedTreeRecord(records[0])
+	if err != nil {
+		return treeRecord{}, err
+	}
+	if entry.path != filePath {
+		return treeRecord{}, fmt.Errorf(
+			"lookup corpus: exact tree lookup for %q returned %q",
+			filePath, entry.path)
+	}
+	return entry, nil
+}
+
+func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, error) {
+	if err := checkCorpusPath(root); err != nil {
+		return false, err
+	}
+	dir, err := g.repoDir()
+	if err != nil {
+		return false, err
+	}
+	if err := checkCommit(g.commit); err != nil {
+		return false, err
+	}
+	if err := ensureCommit(ctx, dir, g.commit); err != nil {
+		return false, err
+	}
+
+	cmdCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	args := []string{
+		"ls-tree", "-r", "-l", "-z", "--full-tree", g.commit,
+		"--", ":(literal)" + root,
+	}
+	cmd := gitobj.Command(cmdCtx, dir, args...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return false, fmt.Errorf("lookup corpus root: stdout: %w", err)
+	}
+	cmd.Cancel = func() error {
+		_ = stdout.Close()
+		return cmd.Process.Kill()
+	}
+	cmd.WaitDelay = abortTimeout
+	var stderr gitobj.StderrBuffer
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		return false, fmt.Errorf("lookup corpus root: start git: %w", err)
+	}
+
+	reader := bufio.NewReaderSize(stdout, maxTreeRecordBytes+32)
+	records := 0
+	pathBytes := 0
+	for {
+		if err := ctx.Err(); err != nil {
+			stopTreeCommand(cmd, stdout)
+			return false, fmt.Errorf("lookup corpus root: %w", err)
+		}
+		record, readErr := readNULRecord(reader, maxTreeRecordBytes+31)
+		if len(record) > 0 {
+			records++
+			if records > maxCorpusLookupRecords {
+				stopTreeCommand(cmd, stdout)
+				return false, fmt.Errorf(
+					"lookup corpus root %q exceeds %d-record probe limit",
+					root, maxCorpusLookupRecords)
+			}
+			entry, parseErr := parseSizedTreeRecord(record)
+			if parseErr != nil {
+				stopTreeCommand(cmd, stdout)
+				return false, parseErr
+			}
+			pathBytes += len(entry.path)
+			if pathBytes > maxCorpusLookupPathBytes {
+				stopTreeCommand(cmd, stdout)
+				return false, fmt.Errorf(
+					"lookup corpus root %q exceeds %d-byte path probe limit",
+					root, maxCorpusLookupPathBytes)
+			}
+			if entry.path != root &&
+				strings.HasPrefix(entry.path, root+"/") &&
+				entry.objectType == "blob" &&
+				(entry.mode == "100644" || entry.mode == "100755") &&
+				entry.size >= 0 &&
+				checkCorpusPath(entry.path) == nil {
+				stopTreeCommand(cmd, stdout)
+				return true, nil
+			}
+		}
+		if readErr != nil {
+			if !errors.Is(readErr, io.EOF) {
+				stopTreeCommand(cmd, stdout)
+				return false, fmt.Errorf("lookup corpus root: read tree: %w", readErr)
+			}
+			break
+		}
+	}
+	if err := cmd.Wait(); err != nil {
+		return false, gitobj.WrapError(ctx, args, err, stderr.String())
+	}
+	return false, nil
+}
+
+func (g *gitCorpus) readManifestBlob(
+	ctx context.Context,
+	entry treeRecord,
+	maxBytes int64,
+) (sdk.Blob, error) {
+	if err := checkCorpusPath(entry.path); err != nil {
+		return sdk.Blob{}, err
+	}
+	if entry.objectType != "blob" ||
+		(entry.mode != "" && entry.mode != "100644" && entry.mode != "100755") ||
+		!gitobj.IsObjectID(entry.oid) ||
+		entry.size < 0 {
+		return sdk.Blob{}, fmt.Errorf(
+			"read corpus %q: invalid candidate-manifest entry", entry.path)
+	}
+	actual, present, err := g.lookupRegular(ctx, entry.path)
+	if err != nil {
+		return sdk.Blob{}, fmt.Errorf(
+			"read corpus %q: verify candidate-manifest entry: %w", entry.path, err)
+	}
+	if !present || actual.oid != entry.oid || actual.size != entry.size ||
+		entry.mode != "" && actual.mode != entry.mode {
+		return sdk.Blob{}, fmt.Errorf(
+			"read corpus %q: candidate-manifest entry does not match commit tree",
+			entry.path)
+	}
+	if entry.size > maxBytes {
+		return sdk.Blob{}, fmt.Errorf("corpus blob %q exceeds byte limit", entry.path)
+	}
+	dir, err := g.repoDir()
+	if err != nil {
+		return sdk.Blob{}, err
+	}
+	content, err := gitobj.ReadBlob(ctx, dir, entry.oid, maxBytes)
+	if err != nil {
+		return sdk.Blob{}, fmt.Errorf("read corpus %q: content: %w", entry.path, err)
+	}
+	if int64(len(content)) != entry.size {
+		return sdk.Blob{}, fmt.Errorf(
+			"read corpus %q: manifest size %d does not match blob size %d",
+			entry.path, entry.size, len(content))
+	}
+	digest := sha256.Sum256(content)
+	return sdk.Blob{
+		Content: string(content),
+		Digest:  "sha256:" + hex.EncodeToString(digest[:]),
+	}, nil
+}
+
 // Read serves blob content by the object id recorded during WalkFiles: one
 // immutable cat-file per read instead of re-verifying the commit and
 // re-resolving path, type, and size through four child processes. Object ids
@@ -622,10 +861,8 @@ func (g *gitCorpus) repoDir() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("corpus repository: %w", err)
 	}
-	if _, err := os.Lstat(filepath.Join(dir, "objects", "info", "alternates")); err == nil {
-		return "", errors.New("corpus repository uses an external object alternate")
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return "", fmt.Errorf("inspect corpus object alternates: %w", err)
+	if err := gitobj.RejectAlternates(dir); err != nil {
+		return "", fmt.Errorf("corpus repository: %w", err)
 	}
 	return dir, nil
 }
@@ -638,32 +875,16 @@ func checkCommit(commit string) error {
 }
 
 func checkCorpusPath(filePath string) error {
-	if filePath == "" || len(filePath) > maxCorpusPathBytes ||
-		strings.HasPrefix(filePath, "/") || strings.HasPrefix(filePath, "-") ||
-		strings.Contains(filePath, `\`) || path.Clean(filePath) != filePath ||
-		!utf8.ValidString(filePath) {
+	if len(filePath) > maxCorpusPathBytes ||
+		repopath.Validate(filePath) != nil {
 		return fmt.Errorf("invalid corpus path %q", filePath)
-	}
-	for _, part := range strings.Split(filePath, "/") {
-		if part == "" || part == "." || part == ".." {
-			return fmt.Errorf("invalid corpus path %q", filePath)
-		}
-	}
-	for _, r := range filePath {
-		if r < 0x20 || r == 0x7f {
-			return fmt.Errorf("invalid corpus path %q", filePath)
-		}
 	}
 	return nil
 }
 
 func ensureCommit(ctx context.Context, dir, commit string) error {
-	out, err := gitobj.Output(ctx, dir, 32, "cat-file", "-t", commit)
-	if err != nil {
+	if err := gitobj.EnsureCommit(ctx, dir, commit); err != nil {
 		return fmt.Errorf("corpus commit %s: %w", commit, err)
-	}
-	if strings.TrimSpace(string(out)) != "commit" {
-		return fmt.Errorf("corpus object %s is not a commit", commit)
 	}
 	return nil
 }
@@ -673,6 +894,7 @@ type treeRecord struct {
 	objectType string
 	oid        string
 	path       string
+	size       int64
 }
 
 // parseTreeRecord validates record structure and object id only. Path rules
@@ -688,6 +910,29 @@ func parseTreeRecord(record []byte) (treeRecord, error) {
 		return treeRecord{}, errors.New("walk corpus: invalid Git object id")
 	}
 	return treeRecord{mode: fields[0], objectType: fields[1], oid: fields[2], path: string(name)}, nil
+}
+
+func parseSizedTreeRecord(record []byte) (treeRecord, error) {
+	meta, name, ok := bytes.Cut(record, []byte{'\t'})
+	fields := strings.Fields(string(meta))
+	if !ok || len(fields) != 4 || len(name) == 0 {
+		return treeRecord{}, errors.New("lookup corpus: malformed sized ls-tree record")
+	}
+	if !gitobj.IsObjectID(fields[2]) {
+		return treeRecord{}, errors.New("lookup corpus: invalid Git object id")
+	}
+	size := int64(-1)
+	if fields[3] != "-" {
+		var err error
+		size, err = strconv.ParseInt(fields[3], 10, 64)
+		if err != nil || size < 0 {
+			return treeRecord{}, errors.New("lookup corpus: invalid Git object size")
+		}
+	}
+	return treeRecord{
+		mode: fields[0], objectType: fields[1], oid: fields[2],
+		path: string(name), size: size,
+	}, nil
 }
 
 func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {

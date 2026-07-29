@@ -3,8 +3,9 @@
 Epic 30 is in progress for service-scoped analysis of very large
 monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
 configuration/state boundary, T30.3 shipped and then adversarially repaired
-focused shard integrity, and T30.4 is the next ticket. Completed Epics 0–24,
-Epic 29, T30.1–T30.3, and P5 hardening are retained in the
+focused shard integrity, and T30.4 shipped reusable candidate planning.
+T30.5 is the next ticket. Completed Epics 0–24, Epic 29, T30.1–T30.4, and P5
+hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -14,11 +15,10 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.4 · Reusable candidate-partition manifest** is next. T30.3 now gives
-configured repositories an exact generation-bound focused-search publication
-with repository-local validation; T30.4 creates the reusable streamed census
-and bounded partitions needed by focused extraction and the separate
-repository-wide caller overlay.
+**T30.5 · Focused evidence publication** is next. T30.4 now gates existing
+repository-wide extraction on one reusable streamed census and precomputes
+unit membership without changing evidence identity. T30.5 narrows the local
+evidence plane to that unit and keys its publication by the unit digest.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -492,7 +492,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.4 next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.5 next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -754,26 +754,14 @@ every content-policy rejection fails the generation explicitly; stale derived
 publications cannot block precious-state backup; absent configuration retains
 whole-repository indexing. Typed-index input remains repository-root-unbound.
 
-**T30.4 · Reusable candidate-partition manifest** *(T30.3 complete · next)* — replace
-per-domain complete-tree retention with one streamed commit census that
-produces a content-addressed manifest: repository/unit candidates for focused
-domains and deterministic repository-global caller partitions. The trusted
-walker records blob IDs, total regular-file and gitlink digests, candidate
-policy versions, per-domain counts/digests, and bounded partition files/rows
-without retaining the full path set. Manifest publication, reuse, stale
-replacement, retention, crash cleanup, and queue fan-out are atomic and
-resumable. Implement the domain-separated path-hash prefix algorithm above;
-freeze its initial bit depth and per-leaf candidate/declared-byte limits from
-the spike measurements. AC: the T30.1 over-limit corpus plans successfully
-inside frozen memory/disk/wall gates; every candidate is assigned exactly
-once; leaf prefixes are prefix-free, disjoint, canonically ordered, and
-deterministic across repeated runs; content-only changes preserve assignment
-while changing manifest identity; an oversized singleton and an unsplittable
-collision fail closed; noncandidate paths affect corpus coverage but consume
-no retained path row; malformed, partial, duplicate, or stale manifests
-cannot start extraction; full merge bar.
+**T30.4 ✅ · Reusable candidate-partition manifest** *(2026-07-28)* —
+completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t304--reusable-candidate-partition-manifest).
+Existing extraction now waits for one current, strictly validated candidate
+publication and still consumes its repository-wide view. Unit membership is
+precomputed only; T30.5 owns the evidence-scope and identity change.
 
-**T30.5 · Focused evidence publication** *(needs T30.3, T30.4)* — key
+**T30.5 · Focused evidence publication** *(T30.3 and T30.4 complete · next)* — key
 extraction attempts/runs and published evidence by repository, source commit,
 unit digest, and domain; execute provisional contract, field, topic, local
 consumer, attribution, and Workbench implementation readers only over the

@@ -106,3 +106,8 @@ themselves.
 validation evidence, non-sealed spikes, deterministic fixtures, the design
 handoff, and planning history. Retained records explain decisions or preserve
 test inputs; they are not current user instructions or product claims.
+
+The retained
+[T30.4 candidate-planner measurement](../spike/t304/README.md) records the
+prospective local resource gates and deterministic publication observation
+that selected the production partition bounds.

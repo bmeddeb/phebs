@@ -258,6 +258,7 @@ const pendingJobIndexes = `
 DEFINE INDEX IF NOT EXISTS connection_sync_job_pending_key ON connection_sync_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS indexing_job_pending_key ON indexing_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS candidate_manifest_job_pending_key ON candidate_manifest_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
 
@@ -298,7 +299,9 @@ DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
 // successor. Keep the oldest pending row, cancel duplicates, then requeue only
 // an unfenced active row that has no successor.
 func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
-	for _, kind := range []JobKind{JobSync, JobIndex, JobFetch, JobExtract, JobInvestigate} {
+	for _, kind := range []JobKind{
+		JobSync, JobIndex, JobFetch, JobCandidate, JobExtract, JobInvestigate,
+	} {
 		jobs, err := s.ListJobs(ctx, kind, "")
 		if err != nil {
 			return fmt.Errorf("migrate %s: list: %w", kind, err)
@@ -898,6 +901,10 @@ DELETE extraction_attempt WHERE repo = $name RETURN NONE;
 UPDATE extraction_job SET status = 'canceled', error = 'repository deleting',
     finished_at = time::now(), not_before = NONE, pending_key = NONE
     WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE candidate_manifest_job SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
+DELETE candidate_manifest_publication WHERE repository = $name RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
 DELETE repo_connection WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
@@ -943,39 +950,74 @@ func (s *Surreal) SetRepoIndexedState(
 	if err := unit.Validate(name); err != nil {
 		return fmt.Errorf("repo %q: analysis unit: %w", name, err)
 	}
-	statement := `UPDATE $rid SET indexed_commit_hash = $hash,
-		indexed_revisions = $revisions, indexed_analysis_unit = NONE,
-		indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`
+	statement := `BEGIN;
+LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
+LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
+	indexed_revisions = $revisions, indexed_analysis_unit = NONE,
+	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
+LET $identity_changed = array::len($updated) = 1
+	AND (($before.indexed_commit_hash ?? '') != $hash
+		OR ($before.indexed_analysis_unit.digest ?? '') != $unit_digest);
+IF $identity_changed {
+	DELETE $publication_rid RETURN NONE
+};
+RETURN $updated;
+COMMIT;`
 	vars := map[string]any{
 		"rid": repoID(name), "hash": defaultCommit,
-		"revisions": revisions, "at": at,
+		"revisions": revisions, "at": at, "unit_digest": "",
+		"publication_rid": candidateManifestPublicationID(name),
 	}
 	if unit != nil {
-		statement = `UPDATE $rid SET indexed_commit_hash = $hash,
-			indexed_revisions = $revisions, indexed_analysis_unit = $unit,
-			indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER`
+		statement = `BEGIN;
+LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
+LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
+	indexed_revisions = $revisions, indexed_analysis_unit = $unit,
+	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
+LET $identity_changed = array::len($updated) = 1
+	AND (($before.indexed_commit_hash ?? '') != $hash
+		OR ($before.indexed_analysis_unit.digest ?? '') != $unit_digest);
+IF $identity_changed {
+	DELETE $publication_rid RETURN NONE
+};
+RETURN $updated;
+COMMIT;`
 		vars["unit"] = analysisunit.CloneState(unit)
+		vars["unit_digest"] = unit.Digest
 	}
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
 		statement, vars)
 	if err != nil {
 		return err
 	}
-	if len((*results)[0].Result) == 0 {
+	rows := firstDomainRows(results)
+	if len(rows) == 0 {
 		return fmt.Errorf("repo %q: %w", name, ErrNotFound)
+	}
+	if err := validateRepoAnalysisUnit(&rows[0]); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		`UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
-			indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER`,
-		map[string]any{"rid": repoID(name)})
+		`BEGIN;
+LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
+	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
+IF array::len($updated) = 1 {
+	DELETE $publication_rid RETURN NONE
+};
+RETURN $updated;
+COMMIT;`,
+		map[string]any{
+			"rid":             repoID(name),
+			"publication_rid": candidateManifestPublicationID(name),
+		})
 	if err != nil {
 		return err
 	}
-	if len((*results)[0].Result) == 0 {
+	if len(firstDomainRows(results)) == 0 {
 		return fmt.Errorf("repo %q: %w", name, ErrNotFound)
 	}
 	return nil

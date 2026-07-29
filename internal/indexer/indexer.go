@@ -95,10 +95,10 @@ type Indexer struct {
 	AnalysisUnits map[string]analysisunit.Scope
 
 	// OnIndexed, when set, runs once the indexed state is known current — the
-	// index→extract chain hook (T12.2), mirroring how sync chains index. It also
-	// runs on an unchanged-HEAD short circuit: if persisting the successor job
-	// failed after a prior index commit, the retried index job must be able to
-	// repair that missing chain without rebuilding the shard.
+	// index→candidate chain hook, mirroring how sync chains index. It also runs
+	// on an unchanged-HEAD short circuit: if persisting the successor job failed
+	// after a prior index commit, the retried index job can repair the missing
+	// chain without rebuilding the shard.
 	OnIndexed func(ctx context.Context, repoName, commit string) error
 }
 

@@ -52,6 +52,7 @@ type Worker struct {
 	Repos      RepoGetter
 	Evidence   store.EvidenceStore
 	NewCorpus  CorpusFactory
+	Manifests  CandidateManifestProvider
 	Extractors []Extractor
 }
 
@@ -114,6 +115,26 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 			fmt.Errorf("extract %s: corpus factory returned mismatched provenance", repo.Name))
 	}
 
+	inventoryPolicy := corpusInventoryPolicy
+	boundaries := emptyGitlinkInventory()
+	var candidateManifest CandidateManifest
+	if w.Manifests != nil {
+		candidateManifest, err = w.Manifests.OpenCandidateManifest(
+			ctx,
+			manifestRequest(
+				repo.Name, commit, repo.IndexedAnalysisUnit, extractors),
+		)
+		if err != nil {
+			return store.WithClass(store.ClassExtract,
+				fmt.Errorf("extract %s: open candidate manifest: %w", repo.Name, err))
+		}
+		inventoryPolicy, boundaries, err = validateCandidateManifest(candidateManifest)
+		if err != nil {
+			return store.WithClass(store.ClassExtract,
+				fmt.Errorf("extract %s: validate candidate manifest: %w", repo.Name, err))
+		}
+	}
+
 	// Domains publish independently, so one domain's failure must not starve
 	// the rest (T19.8): ordinary per-domain errors are collected and joined,
 	// stale-run conflicts still return immediately, and cancellation or the
@@ -138,7 +159,7 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 				// do not prove the current gitlink and symlink semantics, and
 				// only a fresh walk can bind them.
 				if last.Commit == commit && last.Extractor == ex.version &&
-					last.Coverage.InventoryPolicy == corpusInventoryPolicy {
+					last.Coverage.InventoryPolicy == inventoryPolicy {
 					continue
 				}
 			}
@@ -147,7 +168,9 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 					fmt.Errorf("extract %s: %s: latest run: %w", repo.Name, ex.domain, latestErr))
 			}
 		}
-		if err := w.runOne(ctx, ex, corpus); err != nil {
+		if err := w.runOne(
+			ctx, ex, corpus, candidateManifest, inventoryPolicy, boundaries,
+		); err != nil {
 			if errors.Is(err, errStaleRun) {
 				// A guarded publish proved the repository was deleted or advanced.
 				// The deleting workflow or successor index event owns the next step;
@@ -222,12 +245,42 @@ func validToken(s string) bool {
 // runOne stages streaming batches under one run and performs exactly one
 // guarded publish. Any extractor, validation, staging, cancellation, or
 // coverage failure aborts the run; prior published evidence remains visible.
-func (w *Worker) runOne(ctx context.Context, ex registeredExtractor, corpus Corpus) (err error) {
-	run, err := w.Evidence.BeginExtractionRun(ctx, corpus.RepoName(), corpus.Commit(), ex.domain, ex.version)
+func (w *Worker) runOne(
+	ctx context.Context,
+	ex registeredExtractor,
+	corpus Corpus,
+	candidateManifest CandidateManifest,
+	inventoryPolicy string,
+	boundaries gitlinkInventory,
+) (err error) {
+	verifiedCorpus := newVerifiedCorpus(corpus)
+	log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
+	if candidateManifest == nil {
+		err = verifiedCorpus.Inventory(ctx, ex.extractor.Candidate)
+	} else {
+		err = verifiedCorpus.InventoryCandidateManifest(
+			ctx, candidateManifest, ex.domain, ex.version,
+			ex.extractor.Candidate,
+		)
+	}
 	if err != nil {
+		verifiedCorpus.Close()
+		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
+	}
+	log.Printf(
+		"extract %s: %s inventory complete: files=%d candidates=%d",
+		corpus.RepoName(), ex.domain,
+		verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
+	)
+
+	run, err := w.Evidence.BeginExtractionRun(
+		ctx, corpus.RepoName(), corpus.Commit(), ex.domain, ex.version)
+	if err != nil {
+		verifiedCorpus.Close()
 		return fmt.Errorf("%s: begin: %w", ex.domain, err)
 	}
 	if run == nil || run.ID == "" {
+		verifiedCorpus.Close()
 		return fmt.Errorf("%s: begin returned no run identity", ex.domain)
 	}
 	defer func() {
@@ -245,17 +298,6 @@ func (w *Worker) runOne(ctx context.Context, ex registeredExtractor, corpus Corp
 		log.Printf("extract %s: %s aborted: %v", corpus.RepoName(), ex.domain, err)
 	}()
 
-	verifiedCorpus := newVerifiedCorpus(corpus)
-	log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
-	if err := verifiedCorpus.Inventory(ctx, ex.extractor.Candidate); err != nil {
-		verifiedCorpus.Close()
-		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
-	}
-	log.Printf(
-		"extract %s: %s inventory complete: files=%d candidates=%d",
-		corpus.RepoName(), ex.domain,
-		verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
-	)
 	sink := newRunSink(ctx, w.Evidence, run.ID, corpus.RepoName(), corpus.Commit(), ex.version, verifiedCorpus)
 	log.Printf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
 	coverage, extractErr := callExtractor(ctx, ex.extractor, verifiedCorpus, sink.Emit)
@@ -281,12 +323,14 @@ func (w *Worker) runOne(ctx context.Context, ex registeredExtractor, corpus Corp
 	// Boundary inventory comes from the trusted corpus, never the extractor.
 	// A corpus without the capability (in-memory test corpora) has no
 	// gitlinks by construction, which the canonical empty inventory states.
-	boundaries := emptyGitlinkInventory()
-	if boundaryAware, ok := corpus.(boundaryCorpus); ok {
-		boundaries = boundaryAware.gitlinkBoundaries()
+	if candidateManifest == nil {
+		if boundaryAware, ok := corpus.(boundaryCorpus); ok {
+			boundaries = boundaryAware.gitlinkBoundaries()
+		}
 	}
-	manifest, err := coverageManifest(
-		coverage, sink.atomCount, sink.assertionCount, sink.unresolvedCount, stats, boundaries)
+	manifest, err := coverageManifestForPolicy(
+		coverage, sink.atomCount, sink.assertionCount, sink.unresolvedCount,
+		stats, boundaries, inventoryPolicy)
 	if err != nil {
 		return fmt.Errorf("%s: coverage: %w", ex.domain, err)
 	}
@@ -434,6 +478,7 @@ type verifiedCorpus struct {
 	inventoryComplete bool
 	enumerated        map[string]struct{}
 	enumeratedOrder   []string
+	plannedEntries    map[string]treeRecord
 	candidates        map[string]struct{}
 	attributionOnce   sync.Once
 	attributionSource sdk.AttributionSource
@@ -549,6 +594,92 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	return nil
 }
 
+func (c *verifiedCorpus) InventoryCandidateManifest(
+	ctx context.Context,
+	manifest CandidateManifest,
+	domain, version string,
+	candidate func(string) bool,
+) error {
+	if manifest == nil {
+		return errors.New("nil candidate manifest")
+	}
+	if candidate == nil {
+		return errors.New("nil candidate predicate")
+	}
+	paths := make([]string, 0)
+	enumerated := make(map[string]struct{})
+	entries := make(map[string]treeRecord)
+	candidates := make(map[string]struct{})
+	pathBytes := 0
+	err := manifest.ForEachRepositoryFile(
+		ctx,
+		domain,
+		version,
+		func(input CandidateManifestFile) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			entry, err := normalizeManifestFile(input)
+			if err != nil {
+				return fmt.Errorf("candidate manifest %s record: %w", domain, err)
+			}
+			if _, duplicate := enumerated[entry.path]; duplicate {
+				return fmt.Errorf(
+					"candidate manifest %s repeats record %q",
+					domain, entry.path)
+			}
+			if len(paths) >= maxCorpusFiles {
+				return fmt.Errorf(
+					"candidate manifest %s exceeds %d-file extraction limit",
+					domain, maxCorpusFiles)
+			}
+			if len(entry.path) > maxCorpusInventoryPathBytes-pathBytes {
+				return fmt.Errorf(
+					"candidate manifest %s exceeds %d-byte aggregate path limit",
+					domain, maxCorpusInventoryPathBytes)
+			}
+			pathBytes += len(entry.path)
+			required, err := callCandidate(candidate, entry.path)
+			if err != nil {
+				return err
+			}
+			if required != input.Required {
+				return fmt.Errorf(
+					"candidate manifest %s required ledger disagrees for %q",
+					domain, entry.path)
+			}
+			enumerated[entry.path] = struct{}{}
+			entries[entry.path] = entry
+			paths = append(paths, entry.path)
+			if required {
+				candidates[entry.path] = struct{}{}
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		return err
+	}
+	corpusFileCount := manifest.CorpusFileCount()
+	if corpusFileCount < len(paths) {
+		return fmt.Errorf(
+			"candidate manifest %s plans %d paths from a %d-file corpus",
+			domain, len(paths), corpusFileCount)
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed {
+		return errors.New("corpus used after extractor returned")
+	}
+	c.enumerated = enumerated
+	c.enumeratedOrder = paths
+	c.plannedEntries = entries
+	c.candidates = candidates
+	c.corpusFileCount = corpusFileCount
+	c.inventoryComplete = true
+	return nil
+}
+
 func callCandidate(candidate func(string) bool, filePath string) (isCandidate bool, err error) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
@@ -579,6 +710,59 @@ func (c *verifiedCorpus) AttributionSource(ctx context.Context) (sdk.Attribution
 	return c.attributionSource, c.attributionErr
 }
 
+func (c *verifiedCorpus) containsRegular(ctx context.Context, filePath string) (bool, error) {
+	if err := checkCorpusPath(filePath); err != nil {
+		return false, err
+	}
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return false, errors.New("corpus used after extractor returned")
+	}
+	if !c.inventoryComplete {
+		c.mu.Unlock()
+		return false, errors.New("lookup before complete corpus inventory")
+	}
+	_, planned := c.enumerated[filePath]
+	c.mu.Unlock()
+	if planned {
+		return true, nil
+	}
+	if exact, ok := c.inner.(exactTreeCorpus); ok {
+		_, present, err := exact.lookupRegular(ctx, filePath)
+		return present, err
+	}
+	// A corpus without the trusted exact-lookup capability is an isolated
+	// in-memory corpus whose WalkFiles result is its complete tree.
+	return false, nil
+}
+
+func (c *verifiedCorpus) anyRegularUnder(ctx context.Context, root string) (bool, error) {
+	if err := checkCorpusPath(root); err != nil {
+		return false, err
+	}
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return false, errors.New("corpus used after extractor returned")
+	}
+	if !c.inventoryComplete {
+		c.mu.Unlock()
+		return false, errors.New("lookup before complete corpus inventory")
+	}
+	for filePath := range c.enumerated {
+		if filePath != root && pathWithinRoot(filePath, root) {
+			c.mu.Unlock()
+			return true, nil
+		}
+	}
+	c.mu.Unlock()
+	if exact, ok := c.inner.(exactTreeCorpus); ok {
+		return exact.anyRegularUnder(ctx, root)
+	}
+	return false, nil
+}
+
 func (c *verifiedCorpus) read(
 	ctx context.Context,
 	filePath string,
@@ -598,6 +782,7 @@ func (c *verifiedCorpus) read(
 		c.mu.Unlock()
 		return sdk.Blob{}, fmt.Errorf("read path %q was not in corpus inventory", filePath)
 	}
+	manifestEntry, fromManifest := c.plannedEntries[filePath]
 	if c.readCount >= maxCorpusFiles*4 {
 		c.mu.Unlock()
 		return sdk.Blob{}, fmt.Errorf("corpus exceeds %d-read limit", maxCorpusFiles*4)
@@ -605,7 +790,13 @@ func (c *verifiedCorpus) read(
 	c.readCount++
 	c.mu.Unlock()
 
-	blob, err := read(ctx, filePath)
+	var blob sdk.Blob
+	var err error
+	if exact, ok := c.inner.(exactTreeCorpus); ok && fromManifest {
+		blob, err = exact.readManifestBlob(ctx, manifestEntry, maxBytes)
+	} else {
+		blob, err = read(ctx, filePath)
+	}
 	if err != nil {
 		return sdk.Blob{}, err
 	}
@@ -694,6 +885,15 @@ type corpusStats struct {
 }
 
 func (c *verifiedCorpus) Stats() (corpusStats, error) {
+	c.mu.Lock()
+	attributionSource := c.attributionSource
+	c.mu.Unlock()
+	if validated, ok := attributionSource.(interface{ validationError() error }); ok {
+		if err := validated.validationError(); err != nil {
+			return corpusStats{}, fmt.Errorf(
+				"attribution tree validation: %w", err)
+		}
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !c.inventoryComplete {
@@ -936,7 +1136,24 @@ func validSHA256(value string) bool {
 // match.
 const corpusInventoryPolicy = "gitlink-boundary-v2"
 
-func coverageManifest(coverage sdk.Coverage, atomCount, assertionCount, unresolvedCount int, stats corpusStats, boundaries gitlinkInventory) (store.CoverageManifest, error) {
+func coverageManifest(
+	coverage sdk.Coverage,
+	atomCount, assertionCount, unresolvedCount int,
+	stats corpusStats,
+	boundaries gitlinkInventory,
+) (store.CoverageManifest, error) {
+	return coverageManifestForPolicy(
+		coverage, atomCount, assertionCount, unresolvedCount,
+		stats, boundaries, corpusInventoryPolicy)
+}
+
+func coverageManifestForPolicy(
+	coverage sdk.Coverage,
+	atomCount, assertionCount, unresolvedCount int,
+	stats corpusStats,
+	boundaries gitlinkInventory,
+	inventoryPolicy string,
+) (store.CoverageManifest, error) {
 	if len(coverage.Failures) != 0 {
 		return store.CoverageManifest{}, fmt.Errorf("extractor reported %d failure(s); refusing partial publication", len(coverage.Failures))
 	}
@@ -961,6 +1178,10 @@ func coverageManifest(coverage sdk.Coverage, atomCount, assertionCount, unresolv
 		boundaries.count == 0 && len(boundaries.samplePaths) > 0 {
 		return store.CoverageManifest{}, errors.New("gitlink boundary inventory is inconsistent")
 	}
+	if inventoryPolicy == "" || len(inventoryPolicy) > 128 ||
+		strings.TrimSpace(inventoryPolicy) != inventoryPolicy {
+		return store.CoverageManifest{}, errors.New("inventory policy is invalid")
+	}
 	return store.CoverageManifest{
 		Protocols:              protocols,
 		CorpusFileCount:        stats.corpusFileCount,
@@ -971,7 +1192,7 @@ func coverageManifest(coverage sdk.Coverage, atomCount, assertionCount, unresolv
 		UnresolvedCount:        unresolvedCount,
 		AssertionCount:         assertionCount,
 		AtomCount:              atomCount,
-		InventoryPolicy:        corpusInventoryPolicy,
+		InventoryPolicy:        inventoryPolicy,
 		GitlinkCount:           boundaries.count,
 		GitlinkDigest:          boundaries.digest,
 		GitlinkSamplePaths:     append([]string(nil), boundaries.samplePaths...),

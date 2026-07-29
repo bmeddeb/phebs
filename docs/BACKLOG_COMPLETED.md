@@ -3789,5 +3789,110 @@ retention, prevented self-unreadable oversized control output, bounded
 fan-out/top-K retention, made streamed member checks linear, retired unused
 focused mmaps, prevented whole-to-focused stale-reader escape, and added
 crash-residue reclamation without deleting same-process staging. Publication
-bytes remain recovery content, not semantic identity; T30.4 remains the next
-ticket.
+bytes remain recovery content, not semantic identity; T30.4 follows.
+
+### T30.4 · Reusable candidate-partition manifest
+
+**T30.4 ✅ · Reusable candidate-partition manifest** *(2026-07-28)* — inserted
+a durable `candidate_manifest_job` between indexing and extraction. Under the
+same repository work lock, one trusted `git ls-tree` stream now censuses the
+authoritative indexed HEAD and produces complete regular-file, gitlink, and
+symlink counts/digests without retaining the repository's complete path set.
+Only versioned domain candidates become canonical NDJSON rows. The manifest
+binds repository, commit, committed unit digest when present, candidate-policy
+and generation digests, per-domain repository/unit counts, bytes, and digests,
+and every exact member digest.
+
+Repository/local candidate rows are packed into bounded canonical members
+whose filenames share the generation-digest prefix and whose exact content
+digests are bound by the manifest. Caller-plane rows are assigned by
+`SHA-256("phebs-caller-path-v1\0" || UTF8(path))`, beginning at two hash-prefix
+bits and recursively splitting by the next bit until each nonempty leaf has at
+most 4,096 records and 64 MiB of declared blob bytes. Leaves are prefix-free,
+disjoint, and ordered by numeric range; records are ordered by hash, UTF-8 path
+bytes, and blob OID. Blob identity and size change manifest identity without
+moving an unchanged path. An over-byte singleton or a bucket still
+unsplittable at 256 bits refuses.
+
+The planner precomputes whether each applicable row is inside the committed
+analysis unit. T30.4 intentionally does not consume that projection as a new
+evidence boundary: enabled extractors still receive the repository view and
+retain their existing repository/commit evidence identities. T30.5 alone may
+narrow the local domains, bind typed-index input, and key publication by unit.
+The planner first rejects external object alternates and non-commit object
+inputs. Its complete census refuses unsupported leaf modes, while exact
+gitlinks remain census-only boundaries even when their paths match a candidate
+suffix. Planner and consumer share an independently validated 10,000,000-entry
+ceiling for each regular-file, gitlink, and symlink census dimension, so an
+unusable over-limit pointer is never published. Configuration, focused-index
+descendant admission, candidate planning, and extraction share the same
+4,096-byte canonical repository-relative path validator, preventing an
+index-to-planner dead end.
+
+Filesystem publication stages and syncs all members, creates a stable
+repository `.publishing` marker, replaces prior members, and renames
+`phebs-candidate-<sha256(repository)>.manifest.json` last. One guarded store
+transaction advances the exact database pointer and ensures one pending
+extraction successor before the marker is removed. Exact retries reuse the
+publication and repair missing fan-out; a different result for the same
+repository/HEAD/unit/policy is rejected as nondeterminism. Extraction opens
+and strictly validates the database pointer, marker absence, current
+HEAD/unit/policy, manifest, exact member inventory, record ordering,
+partition coverage, and every digest before it starts a run. A stale,
+malformed, partial, extra, duplicate, mixed, or marker-covered publication
+therefore cannot create even an aborted extraction attempt. Cross-plane
+identity validation uses a bounded, cancellable external merge; package-owned
+scratch is removed before exact membership validation and by startup recovery
+after a crash.
+
+Live filesystem bytes are reused only when an exact valid database pointer
+matches their opened state or a preexisting stable marker proves an interrupted
+filesystem-before-database transition. With no valid pointer and no marker,
+even an internally consistent generation is re-censused from Git and replaced;
+an orphan or forged manifest cannot bootstrap its own authority.
+
+Startup reconciliation removes abandoned stages, audits orphan publication
+bytes, and queues missing/current planning work; current jobs replace stale
+live publications, while orphan deletion follows `sync.cleanup_orphans`.
+Repository deletion cancels candidate and extraction work and removes both
+state and derived files. `$DATA/candidates` is explicitly excluded from
+backup; restore keeps the precious database export and exact focused-search
+bytes, then clears/rebuilds candidate publications from restored indexed state
+and re-cloned mirrors. A malformed derived candidate pointer is likewise
+cleared under the repository lock and rebuilt, while store infrastructure
+failures remain fail-closed.
+
+Symlinks selected only by broad enumeration are skipped. A required alias is
+validated at the shared planner seam against the same domain's required final
+regular path; fixed `index.scip` and attribution roots remain unconditional.
+An invalid required/fixed alias blocks the one shared publication and thus all
+configured domains before extraction begins. After successful admission,
+ordinary parser and domain-publication failures retain T19.8's per-domain
+isolation. This shared integrity blast radius is deliberate.
+
+The retained
+[prospective planner measurement](../spike/t304/README.md) streamed 200,008
+regular files, retained five repository rows and six caller rows, and produced
+three two-bit caller leaves (`00:1`, `10:3`, `11:2`). Each run staged five
+files totaling 13,049 bytes. Twice the final caller content bounds planner
+spool/split scratch at 4,134 bytes; external-validation scratch is bounded at
+3,514 bytes. Adding the larger phase bound to the final stage gives 17,183
+bytes of conservative peak candidate disk. The runs took 3.55 s and 3.43 s,
+peaked at 61,145,088 and 60,801,024 bytes RSS, and reproduced byte-identical
+output. Those observations freeze local gates of at most 10 s planner wall
+time, 256 MiB peak RSS, and 16 MiB peak candidate disk including publication
+plus the higher planner or validation scratch phase.
+
+Acceptance coverage includes deterministic repeat builds and canonical
+ordering; exact-once leaf membership; content-only identity change with stable
+assignment; count/byte boundary cases; oversized-singleton and forced
+256-bit-collision refusal; noncandidate corpus coverage without retained rows;
+selected-unit special-entry refusal; symlink alias validation; stale,
+malformed, partial, duplicate, extra, marker, and database-pointer mismatch
+admission failures; policy-shaped gitlink preservation; bounded validation
+scratch and cancellation; cross-stage path-bound equivalence; forged-unmarked
+publication refusal; atomic/retryable queue fan-out; restart, cleanup, and
+restore rebuild behavior. The owning PLAN, Operations, Configuration,
+Workflows, Manual, roadmap, and backlog documents are updated. This ticket
+creates no focused evidence, scoped SCIP, runtime-use, completeness,
+extraction-accuracy, migration-completion, or decommission-safety claim.
