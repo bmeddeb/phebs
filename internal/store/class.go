@@ -32,6 +32,34 @@ func WithClass(class ErrClass, err error) error {
 	return &Classified{Class: class, Err: err}
 }
 
+// Terminal marks an error the runner must not retry: a deterministic refusal
+// that re-running the identical work cannot clear. It is a separate typed
+// marker rather than a new ErrClass because ErrClass is the five-value backoff
+// hint and every extraction error is already ClassExtract — the class says how
+// long to wait, this says not to wait at all. It composes with WithClass in
+// either order, since both lookups use errors.As.
+type Terminal struct {
+	Err error
+}
+
+func (t *Terminal) Error() string { return "terminal: " + t.Err.Error() }
+func (t *Terminal) Unwrap() error { return t.Err }
+
+// WithTerminal marks err terminal, preserving its class and message chain. A
+// nil error is not terminal: there is nothing to refuse.
+func WithTerminal(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &Terminal{Err: err}
+}
+
+// IsTerminal reports whether a terminal marker appears anywhere in the chain.
+func IsTerminal(err error) bool {
+	var terminal *Terminal
+	return errors.As(err, &terminal)
+}
+
 // Classify extracts the class from anywhere in the chain; unclassified
 // errors are generic.
 func Classify(err error) ErrClass {

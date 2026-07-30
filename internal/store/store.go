@@ -8,6 +8,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
@@ -421,6 +422,142 @@ type ExtractionAttempt struct {
 	Extractor  string    `json:"extractor"`
 	Status     string    `json:"status"` // staged | published | aborted
 	StartedAt  time.Time `json:"started_at"`
+}
+
+// MaxExtractionOutcomeReceiptBytes bounds the operational receipt an outcome
+// may carry. The caller owns staying inside it: a published outcome commits in
+// the same transaction as its publication, so an oversized diagnostic must
+// never be able to fail a legitimate publish.
+const MaxExtractionOutcomeReceiptBytes = 8 << 10
+
+// DomainOutcomeDisposition is the closed set of durable per-domain extraction
+// outcomes (T30.6b). It is decided only by typed error classification, never
+// from error text, and is deliberately independent of the non-authoritative
+// T30.6a operational reason vocabulary: a receipt reason and a disposition may
+// legitimately disagree.
+type DomainOutcomeDisposition string
+
+const (
+	// DomainOutcomePublished names a committed generation for this exact scope.
+	DomainOutcomePublished DomainOutcomeDisposition = "published"
+	// DomainOutcomeUnavailablePrerequisite names a declared input this
+	// generation cannot supply. It settles the generation and is never
+	// re-executed, so only a typed prerequisite absence may map to it: an
+	// over-broad mapping stalls the domain until its generation advances.
+	DomainOutcomeUnavailablePrerequisite DomainOutcomeDisposition = "unavailable_prerequisite"
+	// DomainOutcomeTerminalGenerationRefusal names a deterministic refusal that
+	// re-running the identical generation cannot clear.
+	DomainOutcomeTerminalGenerationRefusal DomainOutcomeDisposition = "terminal_generation_refusal"
+	// DomainOutcomeRetryableFailure names a transient failure. The job requeues
+	// while any configured domain holds it.
+	DomainOutcomeRetryableFailure DomainOutcomeDisposition = "retryable_failure"
+)
+
+// ValidDomainOutcomeDisposition is the authoritative closed-set check. The
+// schema assertion on the stored disposition is defence in depth only: an
+// older writer reapplying its own schema can weaken a field assertion, which
+// is exactly why the writer-generation guard is an EVENT and not an ASSERT.
+func ValidDomainOutcomeDisposition(disposition DomainOutcomeDisposition) bool {
+	switch disposition {
+	case DomainOutcomePublished, DomainOutcomeUnavailablePrerequisite,
+		DomainOutcomeTerminalGenerationRefusal, DomainOutcomeRetryableFailure:
+		return true
+	default:
+		return false
+	}
+}
+
+// Settled reports whether the disposition forbids re-execution within its own
+// generation. A job is terminal only when every configured domain is settled;
+// it requeues while any domain is retryable.
+func (disposition DomainOutcomeDisposition) Settled() bool {
+	switch disposition {
+	case DomainOutcomePublished, DomainOutcomeUnavailablePrerequisite,
+		DomainOutcomeTerminalGenerationRefusal:
+		return true
+	default:
+		return false
+	}
+}
+
+// ExtractionGenerationIdentity is everything beyond ExtractionScope that must
+// change before a settled outcome may be re-executed. Scope identity lives in
+// the record id; these fields are the generation the outcome was settled
+// under, and any difference invalidates it.
+//
+// DependencyDigest is deliberately narrow: no extractor reads another domain's
+// evidence today, so it binds only the writer/format/migration triple, the
+// run's gitlink boundary digest, and the typed-input object identity. A real
+// cross-domain dependency identity is later T30.6 work.
+type ExtractionGenerationIdentity struct {
+	CandidateManifestDigest string `json:"candidate_manifest_digest,omitempty"`
+	CandidatePolicyDigest   string `json:"candidate_policy_digest,omitempty"`
+	Extractor               string `json:"extractor"`
+	InventoryPolicy         string `json:"inventory_policy,omitempty"`
+	TypedInputKind          string `json:"typed_input_kind,omitempty"`
+	TypedInputObjectID      string `json:"typed_input_object_id,omitempty"`
+	TypedInputDigest        string `json:"typed_input_digest,omitempty"`
+	TypedInputPresent       bool   `json:"typed_input_present,omitempty"`
+	DependencyDigest        string `json:"dependency_digest,omitempty"`
+	// Digest is recomputed by the store from the fields above on every write
+	// and every read comparison. A caller-supplied value is never trusted.
+	Digest string `json:"digest"`
+}
+
+// ExtractionDomainOutcome is the durable latest-only record of how one exact
+// ExtractionScope resolved, and the sole authority for extraction terminality
+// and retry. Like ExtractionAttempt it is not evidence and no proof-retention
+// sweep removes it; unlike ExtractionAttempt it carries a typed disposition and
+// the exact generation that disposition applies to, so a changed commit, unit,
+// candidate manifest, policy, extractor, typed input, or dependency identity
+// invalidates it rather than suppressing fresh work.
+//
+// Receipt is the deliberately opaque bounded canonical JSON of the matching
+// T30.6a domain receipt, carried the way ProofBundleRecord.Content is: the
+// store persists and bounds the bytes and never parses them. It is a
+// diagnostic. No field here participates in publication visibility, and no
+// outcome can make a mismatched historical publication current.
+type ExtractionDomainOutcome struct {
+	Scope         ExtractionScope              `json:"scope"`
+	Disposition   DomainOutcomeDisposition     `json:"disposition"`
+	Generation    ExtractionGenerationIdentity `json:"generation"`
+	RunID         string                       `json:"run_id,omitempty"`
+	ReceiptSchema string                       `json:"receipt_schema,omitempty"`
+	Receipt       string                       `json:"receipt,omitempty"`
+	RecordedAt    time.Time                    `json:"recorded_at"`
+}
+
+// Validate is the write-side trust boundary. It rejects an unknown
+// disposition, an incomplete scope, a published outcome with no run identity,
+// and an oversized receipt. It deliberately does not check Generation.Digest:
+// the store recomputes that itself and never trusts the caller's value.
+func (outcome ExtractionDomainOutcome) Validate() error {
+	if !ValidDomainOutcomeDisposition(outcome.Disposition) {
+		return fmt.Errorf(
+			"extraction domain outcome disposition %q is not in the frozen set",
+			outcome.Disposition)
+	}
+	if outcome.Scope.Repository == "" || outcome.Scope.Commit == "" ||
+		outcome.Scope.Domain == "" {
+		return errors.New(
+			"extraction domain outcome requires repository, commit, and domain")
+	}
+	if outcome.Generation.Extractor == "" {
+		return errors.New("extraction domain outcome requires an extractor version")
+	}
+	if outcome.Disposition == DomainOutcomePublished && outcome.RunID == "" {
+		return errors.New("published extraction domain outcome requires a run id")
+	}
+	if len(outcome.Receipt) > MaxExtractionOutcomeReceiptBytes {
+		return fmt.Errorf(
+			"extraction domain outcome receipt is %d bytes, limit %d",
+			len(outcome.Receipt), MaxExtractionOutcomeReceiptBytes)
+	}
+	if outcome.Receipt != "" && outcome.ReceiptSchema == "" {
+		return errors.New(
+			"extraction domain outcome receipt requires its schema name")
+	}
+	return nil
 }
 
 // AssertionCursor is the stable tuple used by bounded published-assertion
