@@ -4181,3 +4181,59 @@ bumps refreshed the neutral candidate receipt with unchanged row/artifact/disk
 bounds and byte-identical 3.34 s/3.35 s runs at
 61,767,680/61,243,392 bytes RSS. T30.6c owns aggregate-bounded domain
 scheduling.
+
+### T30.6c · Aggregate-bounded domain scheduling
+
+**T30.6c ✅ · Aggregate-bounded domain scheduling** *(2026-07-30)* — replaced
+the one shared extraction context with absolute, non-renewable scheduler
+bounds. The complete post-lock job is capped at 15 minutes, cumulative mirror
+ownership at 14 minutes 50 seconds, and each serial domain at five minutes
+clipped to the remaining aggregate budget. Five seconds each are reserved for
+detached abort and outcome persistence before mirror expiry, with a final ten
+seconds after mirror release for durable deferrals. A domain needs one second
+of remaining work budget to start.
+
+The registry is limited to 16 domains, retained scheduler identity to 64 KiB,
+association-plus-assertion staging to 100,000 rows per job and 25,000 per
+domain clipped to the remaining aggregate allowance. At that maximum, existing
+fact staging also supplies at most 50,000 content-keyed atom upsert inputs.
+Production bounds are compile-time constants; the package test seam can only
+tighten them. Execution remains serial with one verified corpus/run sink
+active at a time. Candidate inventory still gates and precedes run
+creation. After successful admission, the durable run marker supplies the
+attempt identity for both extractor and publication failures; bounded detached
+abort keeps failed staging invisible, with the existing sweeper as fallback.
+
+Before execution, the worker resolves each exact current outcome.
+Never-attempted domains run first in registry order. Retryable domains with a
+run identity follow by oldest durable attempt timestamp and then registry
+order. A budget-deferred domain records `retryable_failure` with its prior run
+identity preserved, so restart cannot reset ordering and one slow retry cannot
+start twice before every configured peer receives one opportunity. Exact
+published, unavailable, and terminal peers remain untouched. A per-domain
+deadline or staged-row refusal is retryable; early terminal failure still
+allows later domains to run.
+
+The additive v1 job and durable receipts now include exact staged-row counts,
+the aggregate/mirror/domain/abort/outcome time ceilings, serial-domain and
+scheduler-memory bounds, and aggregate/domain staged-row ceilings. Their
+frozen generic vocabulary adds `aggregate_budget` and `domain_budget`.
+Deferred outcomes are written only after mirror release within the original
+aggregate deadline.
+
+AC met: frozen-limit validation; early-terminal isolation; four-job restart
+fixture proving `a,b,c,a` fairness; slow-domain cap with a later peer;
+aggregate wall and mirror-lock timing; retry-only execution inherited and
+regressed through exact outcomes; staged-row deferral followed by successor
+execution; zero-partial-row domain refusal and bounded abort; existing
+candidate-admission and cancellation compatibility; race/full merge bar;
+dated PLAN decision and Operations, Manual, roadmap, AGENTS, and
+active/completed backlog updates. Steady state retains the pointer-only settled
+no-op with no mirror lock, corpus walk, candidate/member hash, publication
+open, blob read, or evidence write. A stale job performs O(D log D) scheduling
+for D ≤ 16, one outcome point lookup per domain, and one attempt point lookup
+only for an exact retryable or forced-published domain. No store-writer/API
+schema, child process, or concurrency fan-out was added. The ticket changes no
+search behavior, production registration, completeness, extraction-accuracy,
+migration-completion, decommission-safety, or historical-evidence-retention
+claim. T30.6d owns candidate-v4 source-lane classification.

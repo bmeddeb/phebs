@@ -593,7 +593,11 @@ bytes already observed by those operations; the existing corpus/read/blob/
 typed-input/fact limits; and one generic reason:
 `already_current`, `not_ready`, `stale`, `no_candidates`,
 `typed_input_absent`, `limit_refusal`, `published_empty`,
-`published_nonempty`, `canceled`, or `failed`. They never contain a source
+`published_nonempty`, `aggregate_budget`, `domain_budget`, `canceled`, or
+`failed`. Scheduler fields additionally freeze the aggregate, mirror,
+per-domain, abort, and outcome-persistence time bounds; maximum serial domains
+and retained scheduling identity; aggregate/domain staged-row limits; and the
+exact association-plus-assertion rows staged by that domain. They never contain a source
 path, source content, path sample, or raw extractor diagnostic. Use the
 ordinary domain log immediately preceding the receipt when a raw local
 diagnostic is required for troubleshooting.
@@ -666,6 +670,46 @@ domain. A settled no-op performs no corpus walk, candidate/member hash,
 publication open, blob read, or evidence write. Outcome storage is bounded to
 one row per repository/domain and one receipt of at most 8 KiB.
 
+##### Aggregate domain scheduling
+
+The extraction budget begins only after the repository mirror is locked.
+Every job has one absolute 15-minute post-lock deadline and releases the mirror
+by one absolute 14-minute-50-second deadline. Domains remain serial and each
+receives at most five minutes, clipped to the time left in those enclosing
+bounds. A retry or later domain never receives a replacement aggregate
+deadline. The scheduler reserves five seconds for detached abort, five seconds
+for a durable outcome before mirror expiry, and ten seconds after mirror
+release for durable deferral outcomes. Work needs at least one second of
+remaining domain-work time to start.
+
+One job admits at most 16 configured domains, retains at most 64 KiB of
+scheduling identity, stages at most 100,000 association-plus-assertion rows in
+aggregate, and permits at most 25,000 such rows in one domain. These are fixed
+production ceilings, not configuration knobs. The effective domain row cap is
+also clipped to the aggregate allowance left when it starts. At the aggregate
+maximum, the same fact chunks carry at most 50,000 content-keyed atom upsert
+inputs. Do not raise the existing
+corpus, path, blob, read, fact, or scheduler limits to mask a deterministic
+refusal.
+
+After strict admission, the worker resolves every configured domain's exact
+outcome. A current settled generation is skipped. Never-attempted generations
+run first in registry order; current retryable generations then run by oldest
+persisted attempt and registry order. Consequently, a slow retryable domain
+cannot start twice while a configured peer remains untried. A successor job
+runs only remaining retryables after its peers settle. Work that cannot start
+records `retryable_failure` with reason `aggregate_budget` after the mirror is
+released; if it previously started, the outcome preserves that run identity
+and therefore its ordering age. A started domain that exhausts its own time or
+staged-row allowance records `domain_budget`. Prior published evidence and
+terminal or unavailable peer outcomes are not erased.
+
+Candidate inventory remains the pre-run admission gate: malformed manifest
+membership creates no staged run. After admission, the run attempt marker
+precedes extractor execution. A failed run is aborted with a detached bounded
+context; its rows remain invisible, and an interrupted abort leaves them to
+the existing stale-run sweeper.
+
 ##### Scheduled T30.6 operating sequence
 
 The accepted large-monorepo review changes sequencing, not current runtime
@@ -679,9 +723,9 @@ single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
 failure diagnostic and wait for the target-bound caller generation.
 
-T30.6a supplies the bounded job report described above, and T30.6b makes exact
-terminal and retryable outcomes durable. T30.6c next schedules them beneath
-independent per-domain and aggregate job/lock bounds. T30.6d advances
+T30.6a supplies the bounded job report described above, T30.6b makes exact
+terminal and retryable outcomes durable, and T30.6c schedules them beneath
+independent per-domain and aggregate job/lock bounds. T30.6d next advances
 candidate identity with `source_lane: base|go_test`, and T30.6e consumes
 `base` only for focused local evidence while safety-accounting the complete
 typed SCIP artifact before removing exact test documents' definitions,

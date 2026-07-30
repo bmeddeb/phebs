@@ -214,7 +214,7 @@ func TestExtractionOperationPublishedAccountingAndFakeClock(t *testing.T) {
 	if domain.Counts != (ExtractionOperationDomainCounts{
 		CorpusFiles: 1, CandidateFiles: 1, OpenedSourceAttempts: 1,
 		OpenedSourceFiles: 1, Facts: 1, Atoms: 1, Assertions: 1,
-		StagedChunks: 1,
+		StagedChunks: 1, StagedRows: 2,
 	}) {
 		t.Fatalf("domain counts = %+v", domain.Counts)
 	}
@@ -222,7 +222,14 @@ func TestExtractionOperationPublishedAccountingAndFakeClock(t *testing.T) {
 		domain.Limits.CorpusFiles != maxCorpusFiles ||
 		domain.Limits.OpenedSourceAttempts != maxCorpusFiles*4 ||
 		domain.Limits.Facts != maxFactsPerRun ||
-		domain.Limits.OpenedSourceBytes != maxCorpusRunBytes {
+		domain.Limits.OpenedSourceBytes != maxCorpusRunBytes ||
+		domain.Limits.AggregateWallMS != 15*60*1000 ||
+		domain.Limits.MirrorLockMS != 14*60*1000+50*1000 ||
+		domain.Limits.DomainWallMS != 5*60*1000 ||
+		domain.Limits.MaxSerialDomains != 16 ||
+		domain.Limits.SchedulerIdentityBytes != 64<<10 ||
+		domain.Limits.AggregateStagedRows != 100_000 ||
+		domain.Limits.DomainStagedRows != 25_000 {
 		t.Fatalf("domain bytes/limits = %+v / %+v", domain.Bytes, domain.Limits)
 	}
 	counters.mu.Lock()
@@ -615,6 +622,7 @@ func TestExtractionOperationGenericReasonsAndDiagnosticRedaction(t *testing.T) {
 		OperationReasonStale, OperationReasonNoCandidates,
 		OperationReasonTypedInputAbsent, OperationReasonLimitRefusal,
 		OperationReasonPublishedEmpty, OperationReasonPublishedNonempty,
+		OperationReasonAggregateBudget, OperationReasonDomainBudget,
 		OperationReasonCanceled, OperationReasonFailed,
 	} {
 		if !validOperationReason(reason) {
@@ -629,6 +637,8 @@ func TestExtractionOperationGenericReasonsAndDiagnosticRedaction(t *testing.T) {
 		{"not ready", candidatepkg.ErrPublishing, OperationReasonNotReady},
 		{"stale", errStaleRun, OperationReasonStale},
 		{"limit", operationLimitError("cap exceeded"), OperationReasonLimitRefusal},
+		{"aggregate budget", errExtractionAggregateBudget, OperationReasonAggregateBudget},
+		{"domain budget", errExtractionDomainBudget, OperationReasonDomainBudget},
 		{"git object limit", gitobj.ErrTooLarge, OperationReasonLimitRefusal},
 		{"semantic limit", codenav.ErrSemanticLimit, OperationReasonLimitRefusal},
 		{"hover limit", codenav.ErrHoverTooLarge, OperationReasonLimitRefusal},

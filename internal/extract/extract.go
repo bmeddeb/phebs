@@ -28,7 +28,6 @@ const (
 	evidenceChunkSize   = 256
 	evidenceChunkSchema = "t20-fact-chunk-v1"
 	abortTimeout        = 5 * time.Second
-	extractionTimeout   = 15 * time.Minute
 	maxFactTextBytes    = 64 << 10
 	// The T20.1 target has 10,010 source-granular call facts / 20,020 rows.
 	// T20.3's frozen admission target is 25,000 rows, so the worker's
@@ -60,6 +59,10 @@ type Worker struct {
 	Extractors       []Extractor
 	Now              func() time.Time
 	OperationReports ExtractionOperationSink
+
+	// schedulingLimits is a package-test seam that may only tighten the
+	// production caps. Runtime configuration cannot expand these bounds.
+	schedulingLimits *domainSchedulingLimits
 }
 
 var errStaleRun = errors.New("stale extraction run")
@@ -85,7 +88,12 @@ func (w *Worker) Handle(
 	if err != nil {
 		return store.WithClass(store.ClassExtract, fmt.Errorf("extract %s: %w", job.Target, err))
 	}
-	operation.registerDomains(extractors)
+	limits, err := effectiveDomainSchedulingLimits(w.schedulingLimits)
+	if err != nil {
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("extract %s: scheduler: %w", job.Target, err))
+	}
+	operation.registerDomains(extractors, limits)
 	policyDigest := ""
 	if provider, ok := w.Manifests.(interface{ PolicyDigest() string }); ok {
 		policyDigest = provider.PolicyDigest()
@@ -134,13 +142,31 @@ func (w *Worker) Handle(
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: corpus lock returned no release function", job.Target))
 	}
-	defer unlock()
+	mirrorReleased := false
+	releaseMirror := func() {
+		if mirrorReleased {
+			return
+		}
+		unlock()
+		mirrorReleased = true
+	}
+	defer releaseMirror()
 
-	// The extraction budget starts once the mirror is fenced.
-	ctx, cancel := context.WithTimeout(ctx, extractionTimeout)
-	defer cancel()
+	// Both deadlines are fixed once the mirror is fenced. Per-domain contexts
+	// are children clipped to these absolute deadlines; neither a later domain
+	// nor a successor attempt inside this job can extend them.
+	budgetStarted := time.Now()
+	aggregateDeadline := budgetStarted.Add(limits.AggregateTimeout)
+	mirrorDeadline := budgetStarted.Add(limits.MirrorTimeout)
+	aggregateCtx, cancelAggregate := context.WithDeadline(ctx, aggregateDeadline)
+	defer cancelAggregate()
+	mirrorCtx, cancelMirror := context.WithDeadline(aggregateCtx, mirrorDeadline)
+	defer cancelMirror()
+	domainWorkDeadline := mirrorDeadline.Add(
+		-limits.AbortTimeout - limits.OutcomeTimeout,
+	)
 
-	repo, err := w.Repos.GetRepo(ctx, job.Target)
+	repo, err := w.Repos.GetRepo(mirrorCtx, job.Target)
 	if errors.Is(err, store.ErrNotFound) {
 		operation.completeRemaining(OperationReasonNotReady)
 		return nil
@@ -183,14 +209,14 @@ func (w *Worker) Handle(
 	if w.Manifests != nil {
 		openStarted := now()
 		candidateManifest, err = w.Manifests.OpenCandidateManifest(
-			ctx,
+			mirrorCtx,
 			manifestRequest(
 				repo.Name, commit, repo.IndexedAnalysisUnit, extractors),
 		)
 		operation.addStrictOpen(nonnegativeDuration(openStarted, now()))
 		if err != nil {
 			return w.recordManifestOpenOutcomes(
-				ctx, repo, extractors, policyDigest, pointerIdentity,
+				mirrorCtx, repo, extractors, policyDigest, pointerIdentity,
 				operation, err,
 			)
 		}
@@ -218,16 +244,15 @@ func (w *Worker) Handle(
 		}
 	}
 
-	// Domains publish independently, so one domain's failure must not starve
-	// the rest (T19.8): ordinary per-domain errors are collected and joined,
-	// stale-run conflicts still return immediately, and cancellation or the
-	// extraction deadline stops new attempts. The aggregate error keeps the
-	// job retrying; on retry, published domains short-circuit above while
-	// aborted domains run again.
+	// Resolve the durable state of every configured domain before starting any
+	// work. Never-attempted generations sort ahead of retryable generations;
+	// retryables use their durable attempt time, so restart cannot reset
+	// fairness or let one slow domain repeatedly jump an untried peer.
 	var domainErrs []error
+	scheduled := make([]scheduledDomain, 0, len(extractors))
 	for index, ex := range extractors {
 		domainOperation := operation.domain(index)
-		if err := ctx.Err(); err != nil {
+		if err := mirrorCtx.Err(); err != nil {
 			domainOperation.complete(operationReason(err))
 			domainErrs = append(domainErrs, err)
 			break
@@ -242,7 +267,7 @@ func (w *Worker) Handle(
 			domainOperation.complete(operationReason(generationErr))
 			disposition, controlFailure := classifyDomainOutcome(generationErr)
 			if recordErr := w.recordDomainOutcome(
-				ctx, scope, generation, disposition, controlFailure, "",
+				mirrorCtx, scope, generation, disposition, controlFailure, "",
 				domainOperation,
 			); recordErr != nil {
 				if errors.Is(recordErr, errStaleRun) {
@@ -256,8 +281,9 @@ func (w *Worker) Handle(
 			continue
 		}
 		latest, latestErr := w.Evidence.LatestExtractionDomainOutcome(
-			ctx, scope,
+			mirrorCtx, scope,
 		)
+		var exactLatest *store.ExtractionDomainOutcome
 		if latestErr == nil {
 			if latest == nil {
 				return store.WithClass(store.ClassExtract,
@@ -272,6 +298,9 @@ func (w *Worker) Handle(
 				domainOperation.complete(OperationReasonAlreadyCurrent)
 				continue
 			}
+			if store.SameExtractionGeneration(latest.Generation, generation) {
+				exactLatest = latest
+			}
 		} else if !errors.Is(latestErr, store.ErrNotFound) {
 			domainOperation.complete(operationReason(latestErr))
 			return store.WithClass(store.ClassExtract,
@@ -281,7 +310,7 @@ func (w *Worker) Handle(
 		if scope.UnitDigest != "" && typedApplicable && !typedPresent {
 			domainOperation.complete(OperationReasonTypedInputAbsent)
 			if err := w.recordDomainOutcome(
-				ctx, scope, generation,
+				mirrorCtx, scope, generation,
 				store.DomainOutcomeUnavailablePrerequisite, false, "",
 				domainOperation,
 			); err != nil {
@@ -289,20 +318,131 @@ func (w *Worker) Handle(
 			}
 			continue
 		}
-		if err := w.runOne(
-			ctx, ex, scope, corpus, candidateManifest, inventoryPolicy, boundaries,
-			generation, domainOperation,
-		); err != nil {
-			if errors.Is(err, errStaleRun) {
+
+		task := scheduledDomain{
+			index: index, extractor: ex, scope: scope, generation: generation,
+		}
+		if exactLatest != nil &&
+			(exactLatest.Disposition == store.DomainOutcomeRetryableFailure ||
+				job.Force &&
+					exactLatest.Disposition == store.DomainOutcomePublished) {
+			task.previousRunID = exactLatest.RunID
+			attempt, attemptErr := w.Evidence.LatestExtractionAttempt(
+				mirrorCtx, scope,
+			)
+			if attemptErr != nil &&
+				(!errors.Is(attemptErr, store.ErrNotFound) ||
+					exactLatest.RunID != "") {
+				domainOperation.complete(operationReason(attemptErr))
+				return store.WithClass(store.ClassExtract,
+					fmt.Errorf("extract %s: %s: latest attempt: %w",
+						repo.Name, ex.domain, attemptErr))
+			}
+			if attemptErr == nil && attempt == nil {
+				domainOperation.complete(OperationReasonFailed)
+				return store.WithClass(store.ClassExtract,
+					fmt.Errorf("extract %s: %s: latest attempt returned nil",
+						repo.Name, ex.domain))
+			}
+			attemptIsCurrent := attemptErr == nil && attempt != nil &&
+				(exactLatest.RunID != "" ||
+					!exactLatest.RecordedAt.IsZero() &&
+						attempt.StartedAt.After(exactLatest.RecordedAt))
+			if attemptIsCurrent {
+				if attempt == nil || attempt.RunID == "" ||
+					attempt.Repo != scope.Repository ||
+					attempt.Commit != scope.Commit ||
+					attempt.UnitDigest != scope.UnitDigest ||
+					attempt.Domain != scope.Domain ||
+					attempt.Extractor != ex.version ||
+					attempt.StartedAt.IsZero() {
+					domainOperation.complete(OperationReasonFailed)
+					return store.WithClass(store.ClassExtract,
+						fmt.Errorf("extract %s: %s: latest attempt does not match scope",
+							repo.Name, ex.domain))
+				}
+				task.previousRunID = attempt.RunID
+				task.retryable = true
+				task.attemptedAt = attempt.StartedAt
+			}
+		}
+		scheduled = append(scheduled, task)
+	}
+	scheduleDomains(scheduled)
+	scheduleErr := validateScheduledDomains(scheduled, limits)
+
+	startedDomains := 0
+	stagedRows := 0
+	deferred := make([]scheduledDomain, 0)
+	if scheduleErr != nil {
+		deferred = append(deferred, scheduled...)
+		domainErrs = append(domainErrs, scheduleErr)
+	}
+	for position, task := range scheduled {
+		if scheduleErr != nil {
+			break
+		}
+		if err := ctx.Err(); err != nil {
+			domainErrs = append(domainErrs, err)
+			break
+		}
+		remainingStageRows := limits.MaxStagedRows - stagedRows
+		if mirrorCtx.Err() != nil ||
+			time.Until(domainWorkDeadline) < limits.MinimumStartBudget ||
+			startedDomains >= limits.MaxSerialDomains ||
+			remainingStageRows <= 0 {
+			deferred = append(deferred, scheduled[position:]...)
+			domainErrs = append(domainErrs, errExtractionAggregateBudget)
+			break
+		}
+
+		domainOperation := operation.domain(task.index)
+		domainStagedRows := min(
+			limits.MaxDomainStagedRows, remainingStageRows,
+		)
+		domainOperation.setStagedRowLimit(domainStagedRows)
+		domainDeadline := earlierDeadline(
+			time.Now().Add(limits.DomainTimeout), domainWorkDeadline,
+		)
+		domainCtx, cancelDomain := context.WithDeadline(
+			mirrorCtx, domainDeadline,
+		)
+		attempt := domainRunAttempt{}
+		runErr := w.runOne(
+			domainCtx, task.extractor, task.scope, corpus,
+			candidateManifest, inventoryPolicy, boundaries,
+			task.generation, domainOperation, domainStagedRows,
+			limits.AbortTimeout, &attempt,
+		)
+		cancelDomain()
+		startedDomains++
+		stagedRows += attempt.stagedRows
+		if runErr != nil {
+			if errors.Is(runErr, errStaleRun) {
 				// A guarded publish proved the repository was deleted or advanced.
 				// The deleting workflow or successor index event owns the next step;
 				// retrying this obsolete job would only create queue churn.
 				operation.completeRemaining(OperationReasonStale)
 				return nil
 			}
-			disposition, controlFailure := classifyDomainOutcome(err)
+			switch {
+			case errors.Is(runErr, errExtractionDomainBudget):
+				domainOperation.complete(OperationReasonDomainBudget)
+			case ctx.Err() != nil &&
+				(errors.Is(runErr, context.Canceled) ||
+					errors.Is(runErr, context.DeadlineExceeded)):
+				domainOperation.complete(operationReason(ctx.Err()))
+			case errors.Is(runErr, context.DeadlineExceeded):
+				if domainDeadline.Equal(domainWorkDeadline) {
+					domainOperation.complete(OperationReasonAggregateBudget)
+				} else {
+					domainOperation.complete(OperationReasonDomainBudget)
+				}
+			}
+			disposition, controlFailure := classifyDomainOutcome(runErr)
 			if recordErr := w.recordDomainOutcome(
-				ctx, scope, generation, disposition, controlFailure, "",
+				mirrorCtx, task.scope, task.generation,
+				disposition, controlFailure, attempt.runID,
 				domainOperation,
 			); recordErr != nil {
 				if errors.Is(recordErr, errStaleRun) {
@@ -311,11 +451,32 @@ func (w *Worker) Handle(
 				}
 				domainErrs = append(
 					domainErrs,
-					errors.Join(err, recordErr),
+					errors.Join(runErr, recordErr),
 				)
 			} else if !disposition.Settled() {
-				domainErrs = append(domainErrs, err)
+				domainErrs = append(domainErrs, runErr)
 			}
+		}
+	}
+
+	// The aggregate budget intentionally outlives the mirror budget. Release
+	// the mirror first, then spend only that fixed reserve persisting retryable
+	// deferrals for work that could not start.
+	releaseMirror()
+	cancelMirror()
+	for _, task := range deferred {
+		domainOperation := operation.domain(task.index)
+		domainOperation.complete(OperationReasonAggregateBudget)
+		if recordErr := w.recordDomainOutcome(
+			aggregateCtx, task.scope, task.generation,
+			store.DomainOutcomeRetryableFailure, false, task.previousRunID,
+			domainOperation,
+		); recordErr != nil {
+			if errors.Is(recordErr, errStaleRun) {
+				operation.completeRemaining(OperationReasonStale)
+				return nil
+			}
+			domainErrs = append(domainErrs, recordErr)
 		}
 	}
 	if len(domainErrs) > 0 {
@@ -708,9 +869,20 @@ type registeredExtractor struct {
 	version   string
 }
 
+type domainRunAttempt struct {
+	runID      string
+	stagedRows int
+}
+
 func (w *Worker) validate() ([]registeredExtractor, error) {
 	if w.Repos == nil || w.Evidence == nil || w.NewCorpus == nil {
 		return nil, errors.New("worker repositories, evidence store, and corpus factory are required")
+	}
+	if len(w.Extractors) > maxSerialExtractionDomains {
+		return nil, fmt.Errorf(
+			"%d extractors exceed the %d-domain scheduler bound",
+			len(w.Extractors), maxSerialExtractionDomains,
+		)
 	}
 	seen := make(map[string]struct{}, len(w.Extractors))
 	registered := make([]registeredExtractor, 0, len(w.Extractors))
@@ -770,12 +942,55 @@ func (w *Worker) runOne(
 	boundaries gitlinkInventory,
 	generation store.ExtractionGenerationIdentity,
 	operation *domainOperationRecorder,
+	maxStagedRows int,
+	abortBudget time.Duration,
+	attempt *domainRunAttempt,
 ) (err error) {
 	if scope.Repository != corpus.RepoName() ||
 		scope.Commit != corpus.Commit() ||
 		scope.Domain != ex.domain {
 		return fmt.Errorf("%s: extraction scope does not match corpus provenance", ex.domain)
 	}
+	if attempt == nil {
+		return fmt.Errorf("%s: extraction attempt recorder is required", ex.domain)
+	}
+
+	var run *store.ExtractionRun
+	beginRun := func() error {
+		stageStarted := operation.started()
+		started, beginErr := w.Evidence.BeginExtractionRun(
+			ctx, scope, ex.version,
+		)
+		operation.addStaging(operation.elapsed(stageStarted))
+		if beginErr != nil {
+			return fmt.Errorf("%s: begin: %w", ex.domain, beginErr)
+		}
+		if started == nil || started.ID == "" {
+			return fmt.Errorf("%s: begin returned no run identity", ex.domain)
+		}
+		run = started
+		attempt.runID = run.ID
+		return nil
+	}
+	defer func() {
+		if err == nil || run == nil {
+			return
+		}
+		// Cleanup survives job cancellation but is time-bounded. A failed abort
+		// leaves an invisible staged run for the stale-run sweeper, never a
+		// partially published replacement.
+		abortCtx, cancel := context.WithTimeout(
+			context.WithoutCancel(ctx), abortBudget,
+		)
+		defer cancel()
+		abortStarted := operation.started()
+		if abortErr := w.Evidence.AbortExtractionRun(abortCtx, run.ID); abortErr != nil {
+			err = errors.Join(err, fmt.Errorf("%s: abort: %w", ex.domain, abortErr))
+		}
+		operation.addAbort(operation.elapsed(abortStarted))
+		log.Printf("extract %s: %s aborted: %v", corpus.RepoName(), ex.domain, err)
+	}()
+
 	verifiedCorpus := newVerifiedCorpus(corpus)
 	verifiedCorpus.operation = operation
 	var sink *runSink
@@ -795,6 +1010,9 @@ func (w *Worker) runOne(
 	defer func() {
 		closeResources()
 		operation.capture(verifiedCorpus, sink)
+		if sink != nil {
+			attempt.stagedRows = sink.operationSnapshot().stagedRows
+		}
 		operation.completeIfEmpty(operationReason(err))
 	}()
 
@@ -810,6 +1028,8 @@ func (w *Worker) runOne(
 	}
 	operation.addInventory(operation.elapsed(inventoryStarted))
 	if err != nil {
+		// Inventory is the admission gate, not a run start: rejected manifest
+		// members must never create staged evidence or attempt markers.
 		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
 	}
 	log.Printf(
@@ -817,36 +1037,13 @@ func (w *Worker) runOne(
 		corpus.RepoName(), ex.domain,
 		verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
 	)
-
-	stageStarted := operation.started()
-	run, err := w.Evidence.BeginExtractionRun(ctx, scope, ex.version)
-	operation.addStaging(operation.elapsed(stageStarted))
-	if err != nil {
-		return fmt.Errorf("%s: begin: %w", ex.domain, err)
+	if err := beginRun(); err != nil {
+		return err
 	}
-	if run == nil || run.ID == "" {
-		return fmt.Errorf("%s: begin returned no run identity", ex.domain)
-	}
-	defer func() {
-		if err == nil {
-			return
-		}
-		// Cleanup survives job cancellation but is time-bounded. A failed abort
-		// leaves an invisible staged run for the stale-run sweeper, never a
-		// partially published replacement.
-		abortCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), abortTimeout)
-		defer cancel()
-		abortStarted := operation.started()
-		if abortErr := w.Evidence.AbortExtractionRun(abortCtx, run.ID); abortErr != nil {
-			err = errors.Join(err, fmt.Errorf("%s: abort: %w", ex.domain, abortErr))
-		}
-		operation.addAbort(operation.elapsed(abortStarted))
-		log.Printf("extract %s: %s aborted: %v", corpus.RepoName(), ex.domain, err)
-	}()
 
 	sink = newRunSink(
 		ctx, w.Evidence, run.ID, corpus.RepoName(), corpus.Commit(),
-		ex.version, verifiedCorpus, operation,
+		ex.version, verifiedCorpus, operation, maxStagedRows,
 	)
 	log.Printf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
 	extractorStarted := operation.started()
@@ -946,14 +1143,15 @@ func (w *Worker) runBecameStale(ctx context.Context, scope store.ExtractionScope
 }
 
 type runSink struct {
-	ctx       context.Context
-	evidence  store.EvidenceStore
-	runID     string
-	repo      string
-	commit    string
-	version   string
-	corpus    *verifiedCorpus
-	operation *domainOperationRecorder
+	ctx           context.Context
+	evidence      store.EvidenceStore
+	runID         string
+	repo          string
+	commit        string
+	version       string
+	corpus        *verifiedCorpus
+	operation     *domainOperationRecorder
+	maxStagedRows int
 
 	mu              sync.Mutex
 	closed          bool
@@ -968,6 +1166,7 @@ type runSink struct {
 	atomCount       int
 	assertionCount  int
 	unresolvedCount int
+	stagedRows      int
 }
 
 func newRunSink(
@@ -976,10 +1175,12 @@ func newRunSink(
 	runID, repo, commit, version string,
 	corpus *verifiedCorpus,
 	operation *domainOperationRecorder,
+	maxStagedRows int,
 ) *runSink {
 	return &runSink{
 		ctx: ctx, evidence: evidence, runID: runID, repo: repo, commit: commit, version: version, corpus: corpus,
 		operation:      operation,
+		maxStagedRows:  maxStagedRows,
 		facts:          make([]sdk.Fact, 0, evidenceChunkSize),
 		stagedChunks:   make(map[string]struct{}),
 		atomIDs:        make(map[string]struct{}),
@@ -1743,6 +1944,7 @@ type runSinkOperationSnapshot struct {
 	assertions   int
 	unresolved   int
 	stagedChunks int
+	stagedRows   int
 }
 
 func (s *runSink) operationSnapshot() runSinkOperationSnapshot {
@@ -1755,6 +1957,7 @@ func (s *runSink) operationSnapshot() runSinkOperationSnapshot {
 		facts: s.factCount, atoms: s.atomCount,
 		assertions: s.assertionCount, unresolved: s.unresolvedCount,
 		stagedChunks: len(s.stagedChunkIDs),
+		stagedRows:   s.stagedRows,
 	}
 }
 
@@ -1888,9 +2091,17 @@ func (s *runSink) stageChunkLocked(chunk sdk.FactChunk) error {
 			Repo: s.repo, Supporting: []string{atom.ID}, Detail: fact.Assertion.Detail,
 		})
 	}
+	chunkStagedRows := len(assocs) + len(asserts)
+	if s.stagedRows+chunkStagedRows > s.maxStagedRows {
+		return fmt.Errorf(
+			"%w: domain would exceed %d staged rows",
+			errExtractionDomainBudget, s.maxStagedRows,
+		)
+	}
 	if err := s.evidence.AddEvidence(s.ctx, s.runID, atoms, assocs, asserts); err != nil {
 		return err
 	}
+	s.stagedRows += chunkStagedRows
 
 	for i, atom := range atoms {
 		if _, exists := s.atomIDs[atom.ID]; !exists {

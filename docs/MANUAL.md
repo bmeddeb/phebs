@@ -47,8 +47,11 @@ Repository-wide caller discovery remains a separately labeled overlay owned
 by the T30.6 caller-overlay sequence. T30.6a emits one bounded,
 non-authoritative extraction-operation report per repository job; T30.6b now
 persists exact-generation per-domain outcomes so settled unavailable and
-terminal generations do not blind-retry across restart. Aggregate scheduling,
-catalog, partition-publication, and read integration remain later tickets.
+terminal generations do not blind-retry across restart; and T30.6c bounds the
+complete post-lock job and cumulative mirror hold while scheduling
+never-attempted domains ahead of oldest retryables. Candidate source-lane
+classification, catalog, partition-publication, and read integration remain
+later tickets.
 
 ## Evidence boundary
 

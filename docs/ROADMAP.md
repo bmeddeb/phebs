@@ -76,7 +76,13 @@ typed-input, dependency, or candidate-control change invalidates them. A
 strict same-semantic candidate repair advances its control revision, clears
 only the matching terminal control outcome, and enqueues one extraction
 successor. Focused missing SCIP is unavailable before staging; legacy
-whole-repository behavior is unchanged.
+whole-repository behavior is unchanged. T30.6c now fixes one 15-minute
+post-lock aggregate deadline, a 14-minute-50-second cumulative mirror bound,
+and clipped five-minute serial domain caps. Never-attempted current
+generations run before retryables ordered by their durable attempt time;
+deferrals preserve settled peers and record retryable outcomes after mirror
+release. Scheduling is capped at 16 domains, 64 KiB of identity, 100,000
+staged rows per job, and 25,000 per domain, with no concurrency fan-out.
 
 The post-T30.5 repair gate closed two reported integration issues:
 whole-repository Search/Stream binds an exact committed shard generation across
@@ -96,8 +102,9 @@ inventory as the next integration boundary; raising global extraction limits
 is not the repair. T30.6 remains that caller-overlay umbrella and is split at
 each operational-state, scheduler, candidate-lane, catalog, leaf-artifact,
 complete-publication, consumer, and retention seam. T30.6a bounded job
-receipts and T30.6b durable exact-generation domain outcomes are shipped;
-T30.6c aggregate-bounded domain scheduling is next. Exact `_test.go` suffix wins when candidate
+receipts, T30.6b durable exact-generation domain outcomes, and T30.6c
+aggregate-bounded domain scheduling are shipped; T30.6d candidate-v4
+source-lane classification is next. Exact `_test.go` suffix wins when candidate
 v4 ships; focused local evidence for a committed non-empty unit consumes the
 resulting `base` lane in the following ticket, while empty-unit
 whole-repository extraction keeps shipped behavior and current search

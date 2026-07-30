@@ -5,10 +5,11 @@ monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
 configuration/state boundary, T30.3 shipped and then adversarially repaired
 focused shard integrity, T30.4 shipped reusable candidate planning, and T30.5
 shipped exact focused evidence publication. The post-T30.5 issue-repair gate
-is closed. The separate large-monorepo review is complete, T30.6a shipped
-bounded extraction job receipts, and T30.6b shipped durable per-domain
-outcomes. T30.6c aggregate-bounded domain scheduling is next. Completed Epics
-0–24, Epic 29, T30.1–T30.6b, and P5 hardening are
+is closed. The separate large-monorepo review is complete; T30.6a shipped
+bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
+and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
+source-lane classification is next. Completed Epics
+0–24, Epic 29, T30.1–T30.6c, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -18,12 +19,11 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6c · Aggregate-bounded domain scheduling** is next. T30.6a emits the
-bounded non-authoritative operational receipt that makes shared job cost and
-per-domain work visible, while T30.6b persists the exact-generation outcome
-and typed retry disposition without inferring authority from that log report.
-T30.6c schedules absent and retryable domains beneath aggregate job and lock
-bounds. The accepted
+**T30.6d · Candidate-v4 source-lane classification** is next. T30.6a–T30.6c
+now provide bounded operational receipts, durable exact-generation outcomes,
+and aggregate/fair retry scheduling. T30.6d advances candidate identity and
+classifies ordinary source records as `base` or `go_test` without yet changing
+extractor consumption or search semantics. The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
@@ -547,7 +547,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6c next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6d next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -869,20 +869,16 @@ Strict same-semantic candidate repair advances a durable control revision,
 clears only its matching terminal control outcome, and creates exactly one
 extraction successor.
 
-**T30.6c · Aggregate-bounded domain scheduling** *(needs T30.6b)* — replace the
-one shared domain cancellation context without multiplying wall time or mirror
-lock hold by domain count. Freeze one numeric aggregate post-lock job budget,
-an equal or smaller cumulative mirror-lock bound, a per-domain cap bounded by
-the remaining aggregate budget and strictly smaller than the aggregate budget,
-maximum serial domains, memory, and staged-row cost. Starting or retrying a
-domain never extends either aggregate bound; work that cannot start within the
-remaining budget records a retryable outcome without erasing terminal or
-published peers. A successor job schedules never-attempted domains first, then
-retryable domains by oldest persisted attempt. AC: early deterministic failure
-does not starve later domains, one slow retryable domain cannot start twice
-before every configured peer gets one start opportunity, slow-domain cap,
-aggregate cap, lock-hold cap, restart scheduling, retry-only execution, bounded
-stage cleanup, race/full merge bar.
+**T30.6c ✅ · Aggregate-bounded domain scheduling** *(2026-07-30; needs
+T30.6b)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306c--aggregate-bounded-domain-scheduling).
+One fixed 15-minute post-lock budget, a 14-minute-50-second cumulative mirror
+budget, and clipped five-minute serial domain caps now replace the shared
+renewable context. Scheduling is bounded to 16 domains, 64 KiB of identity,
+100,000 staged rows per job, and 25,000 per domain. Never-attempted domains run
+before retryables ordered by oldest durable attempt; budget-deferred work
+records a retryable outcome after mirror release without erasing settled
+peers.
 
 **T30.6d · Candidate-v4 source-lane classification** *(needs T30.6c)* —
 advance manifest/state/record schemas; enumeration/local-projection policies;

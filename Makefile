@@ -197,7 +197,7 @@ ci-go: verify-go verify-surreal
 	go test ./... -count=1 -timeout=25m
 
 ci-race: verify-go verify-surreal
-	go test -race ./internal/store ./internal/sync ./internal/indexer ./internal/search -count=1 -timeout=40m
+	go test -race ./internal/store ./internal/sync ./internal/indexer ./internal/search ./internal/extract -count=1 -timeout=40m
 
 ci-ui: verify-node verify-go
 	cd ui && npm ci

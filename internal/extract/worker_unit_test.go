@@ -81,12 +81,13 @@ type memoryEvidence struct {
 	mu sync.Mutex
 
 	nextRun       int
+	nextEvent     int64
 	runs          map[string]*store.ExtractionRun
 	latest        *store.ExtractionRun
 	latestByScope map[string]*store.ExtractionRun
 	outcomes      map[string]*store.ExtractionDomainOutcome
 	latestErr     error
-	latestAttempt *store.ExtractionAttempt
+	attempts      map[string]*store.ExtractionAttempt
 	batches       []evidenceBatch
 	// assertionAttributes mirrors the store's per-semantic-ID attribute
 	// consistency guard so worker tests fail where SurrealDB would THROW.
@@ -108,6 +109,7 @@ func newMemoryEvidence() *memoryEvidence {
 		runs:          make(map[string]*store.ExtractionRun),
 		latestByScope: make(map[string]*store.ExtractionRun),
 		outcomes:      make(map[string]*store.ExtractionDomainOutcome),
+		attempts:      make(map[string]*store.ExtractionAttempt),
 		retainBatches: true,
 	}
 }
@@ -120,6 +122,7 @@ func (m *memoryEvidence) BeginExtractionRun(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.nextRun++
+	m.nextEvent++
 	run := &store.ExtractionRun{
 		ID:   fmt.Sprintf("run-%d", m.nextRun),
 		Repo: scope.Repository, Commit: scope.Commit,
@@ -127,10 +130,11 @@ func (m *memoryEvidence) BeginExtractionRun(
 		Extractor: extractor, Status: "staged",
 	}
 	m.runs[run.ID] = run
-	m.latestAttempt = &store.ExtractionAttempt{
+	m.attempts[memoryScopeKey(scope)] = &store.ExtractionAttempt{
 		RunID: run.ID, Repo: scope.Repository, Commit: scope.Commit,
 		UnitDigest: scope.UnitDigest, Domain: scope.Domain,
 		Extractor: extractor, Status: "staged",
+		StartedAt: time.Unix(m.nextEvent, 0).UTC(),
 	}
 	copyOfRun := *run
 	return &copyOfRun, nil
@@ -192,8 +196,13 @@ func (m *memoryEvidence) PublishExtractionRun(_ context.Context, runID string, c
 			Repository: run.Repo, Commit: run.Commit,
 			UnitDigest: run.UnitDigest, Domain: run.Domain,
 		})] = run
-		if m.latestAttempt != nil && m.latestAttempt.RunID == runID {
-			m.latestAttempt.Status = "published"
+		scope := store.ExtractionScope{
+			Repository: run.Repo, Commit: run.Commit,
+			UnitDigest: run.UnitDigest, Domain: run.Domain,
+		}
+		if attempt := m.attempts[memoryScopeKey(scope)]; attempt != nil &&
+			attempt.RunID == runID {
+			attempt.Status = "published"
 		}
 	}
 	return nil
@@ -218,6 +227,8 @@ func (m *memoryEvidence) RecordExtractionDomainOutcome(
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	copyOfOutcome := outcome
+	m.nextEvent++
+	copyOfOutcome.RecordedAt = time.Unix(m.nextEvent, 0).UTC()
 	copyOfOutcome.Generation.Digest =
 		store.ComputeExtractionGenerationDigest(copyOfOutcome.Generation)
 	m.outcomes[memoryOutcomeKey(outcome.Scope)] = &copyOfOutcome
@@ -248,8 +259,13 @@ func (m *memoryEvidence) AbortExtractionRun(ctx context.Context, runID string) e
 	}
 	if run := m.runs[runID]; run != nil && run.Status == "staged" {
 		run.Status = "aborted"
-		if m.latestAttempt != nil && m.latestAttempt.RunID == runID {
-			m.latestAttempt.Status = "aborted"
+		scope := store.ExtractionScope{
+			Repository: run.Repo, Commit: run.Commit,
+			UnitDigest: run.UnitDigest, Domain: run.Domain,
+		}
+		if attempt := m.attempts[memoryScopeKey(scope)]; attempt != nil &&
+			attempt.RunID == runID {
+			attempt.Status = "aborted"
 		}
 	}
 	return nil
@@ -273,15 +289,16 @@ func (m *memoryEvidence) LatestPublishedRun(
 }
 
 func (m *memoryEvidence) LatestExtractionAttempt(
-	context.Context,
-	store.ExtractionScope,
+	_ context.Context,
+	scope store.ExtractionScope,
 ) (*store.ExtractionAttempt, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.latestAttempt == nil {
+	attempt := m.attempts[memoryScopeKey(scope)]
+	if attempt == nil {
 		return nil, store.ErrNotFound
 	}
-	copyOfAttempt := *m.latestAttempt
+	copyOfAttempt := *attempt
 	return &copyOfAttempt, nil
 }
 
@@ -477,7 +494,8 @@ func stageDeterministicUnitChunks(t *testing.T, count int) (*runSink, *memoryEvi
 	}
 	evidence := newMemoryEvidence()
 	sink := newRunSink(context.Background(), evidence, "run-1",
-		"host/repo", unitCommit, "1", corpus, nil)
+		"host/repo", unitCommit, "1", corpus, nil,
+		maxDomainExtractionStagedRows)
 	for i := range count {
 		fact := unitFact("same.proto", fmt.Sprintf("object-%04d", i))
 		if err := sink.Emit(fact); err != nil {
@@ -548,7 +566,8 @@ func TestFactChunkReplayChangesNoRowsOrCounters(t *testing.T) {
 	}
 	evidence := newMemoryEvidence()
 	sink := newRunSink(context.Background(), evidence, "run-1",
-		"host/repo", unitCommit, "1", corpus, nil)
+		"host/repo", unitCommit, "1", corpus, nil,
+		maxDomainExtractionStagedRows)
 	chunk := buildFactChunk(0, []sdk.Fact{unitFact("same.proto", "object")})
 
 	if err := sink.stageChunkLocked(chunk); err != nil {
@@ -603,7 +622,8 @@ func TestFactChunkMalformedShapesFailBeforeStaging(t *testing.T) {
 			test.mutate(&chunk)
 			evidence := newMemoryEvidence()
 			sink := newRunSink(context.Background(), evidence, "run-1",
-				"host/repo", unitCommit, "1", nil, nil)
+				"host/repo", unitCommit, "1", nil, nil,
+				maxDomainExtractionStagedRows)
 			if err := sink.stageChunkLocked(chunk); err == nil {
 				t.Fatal("malformed chunk staged")
 			}

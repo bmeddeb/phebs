@@ -30,6 +30,8 @@ const (
 	OperationReasonLimitRefusal      = "limit_refusal"
 	OperationReasonPublishedEmpty    = "published_empty"
 	OperationReasonPublishedNonempty = "published_nonempty"
+	OperationReasonAggregateBudget   = "aggregate_budget"
+	OperationReasonDomainBudget      = "domain_budget"
 	OperationReasonCanceled          = "canceled"
 	OperationReasonFailed            = "failed"
 )
@@ -97,6 +99,7 @@ type ExtractionOperationDomainCounts struct {
 	Assertions           int `json:"assertions"`
 	Unresolved           int `json:"unresolved"`
 	StagedChunks         int `json:"staged_chunks"`
+	StagedRows           int `json:"staged_rows"`
 }
 
 type ExtractionOperationDomainBytes struct {
@@ -105,13 +108,22 @@ type ExtractionOperationDomainBytes struct {
 }
 
 type ExtractionOperationDomainLimits struct {
-	CorpusFiles          int   `json:"corpus_files"`
-	OpenedSourceAttempts int   `json:"opened_source_attempts"`
-	OpenedSourceFiles    int   `json:"opened_source_files"`
-	OpenedSourceBytes    int64 `json:"opened_source_bytes"`
-	Facts                int   `json:"facts"`
-	SourceBlobBytes      int64 `json:"source_blob_bytes"`
-	TypedInputBytes      int64 `json:"typed_input_bytes"`
+	CorpusFiles            int   `json:"corpus_files"`
+	OpenedSourceAttempts   int   `json:"opened_source_attempts"`
+	OpenedSourceFiles      int   `json:"opened_source_files"`
+	OpenedSourceBytes      int64 `json:"opened_source_bytes"`
+	Facts                  int   `json:"facts"`
+	SourceBlobBytes        int64 `json:"source_blob_bytes"`
+	TypedInputBytes        int64 `json:"typed_input_bytes"`
+	AggregateWallMS        int64 `json:"aggregate_wall_ms"`
+	MirrorLockMS           int64 `json:"mirror_lock_ms"`
+	DomainWallMS           int64 `json:"domain_wall_ms"`
+	AbortWallMS            int64 `json:"abort_wall_ms"`
+	OutcomeWallMS          int64 `json:"outcome_wall_ms"`
+	MaxSerialDomains       int   `json:"max_serial_domains"`
+	SchedulerIdentityBytes int   `json:"scheduler_identity_bytes"`
+	AggregateStagedRows    int   `json:"aggregate_staged_rows"`
+	DomainStagedRows       int   `json:"domain_staged_rows"`
 }
 
 // ExtractionDomainOutcomeReceipt is the bounded durable diagnostic committed
@@ -190,6 +202,7 @@ func newOperationRecorder(
 
 func (operation *operationRecorder) registerDomains(
 	extractors []registeredExtractor,
+	scheduling domainSchedulingLimits,
 ) {
 	operation.mu.Lock()
 	defer operation.mu.Unlock()
@@ -200,13 +213,22 @@ func (operation *operationRecorder) registerDomains(
 			report: ExtractionOperationDomain{
 				Domain: extractor.domain, ExtractorVersion: extractor.version,
 				Limits: ExtractionOperationDomainLimits{
-					CorpusFiles:          maxCorpusFiles,
-					OpenedSourceAttempts: maxCorpusFiles * 4,
-					OpenedSourceFiles:    maxCorpusFiles,
-					OpenedSourceBytes:    maxCorpusRunBytes,
-					Facts:                maxFactsPerRun,
-					SourceBlobBytes:      MaxBlobBytes,
-					TypedInputBytes:      MaxSCIPIndexBytes,
+					CorpusFiles:            maxCorpusFiles,
+					OpenedSourceAttempts:   maxCorpusFiles * 4,
+					OpenedSourceFiles:      maxCorpusFiles,
+					OpenedSourceBytes:      maxCorpusRunBytes,
+					Facts:                  maxFactsPerRun,
+					SourceBlobBytes:        MaxBlobBytes,
+					TypedInputBytes:        MaxSCIPIndexBytes,
+					AggregateWallMS:        durationMilliseconds(scheduling.AggregateTimeout),
+					MirrorLockMS:           durationMilliseconds(scheduling.MirrorTimeout),
+					DomainWallMS:           durationMilliseconds(scheduling.DomainTimeout),
+					AbortWallMS:            durationMilliseconds(scheduling.AbortTimeout),
+					OutcomeWallMS:          durationMilliseconds(scheduling.OutcomeTimeout),
+					MaxSerialDomains:       scheduling.MaxSerialDomains,
+					SchedulerIdentityBytes: scheduling.MaxSchedulerBytes,
+					AggregateStagedRows:    scheduling.MaxStagedRows,
+					DomainStagedRows:       scheduling.MaxDomainStagedRows,
 				},
 			},
 		}
@@ -354,6 +376,15 @@ func (domain *domainOperationRecorder) addCleanup(elapsed time.Duration) {
 	domain.addDuration(&domain.report.CleanupMS, elapsed)
 }
 
+func (domain *domainOperationRecorder) setStagedRowLimit(limit int) {
+	if domain == nil || limit <= 0 {
+		return
+	}
+	domain.mu.Lock()
+	domain.report.Limits.DomainStagedRows = limit
+	domain.mu.Unlock()
+}
+
 func (domain *domainOperationRecorder) addDuration(
 	field *int64,
 	elapsed time.Duration,
@@ -391,6 +422,7 @@ func (domain *domainOperationRecorder) capture(
 	domain.report.Counts.Assertions = sinkSnapshot.assertions
 	domain.report.Counts.Unresolved = sinkSnapshot.unresolved
 	domain.report.Counts.StagedChunks = sinkSnapshot.stagedChunks
+	domain.report.Counts.StagedRows = sinkSnapshot.stagedRows
 	domain.report.Bytes.PlannedDeclared = corpusSnapshot.plannedBytes
 	domain.report.Bytes.OpenedSource = corpusSnapshot.readBytes
 	domain.mu.Unlock()
@@ -460,6 +492,7 @@ func validOperationReason(reason string) bool {
 		OperationReasonStale, OperationReasonNoCandidates,
 		OperationReasonTypedInputAbsent, OperationReasonLimitRefusal,
 		OperationReasonPublishedEmpty, OperationReasonPublishedNonempty,
+		OperationReasonAggregateBudget, OperationReasonDomainBudget,
 		OperationReasonCanceled, OperationReasonFailed:
 		return true
 	default:
@@ -471,6 +504,10 @@ func operationReasonForError(err error) string {
 	switch {
 	case err == nil:
 		return OperationReasonFailed
+	case errors.Is(err, errExtractionAggregateBudget):
+		return OperationReasonAggregateBudget
+	case errors.Is(err, errExtractionDomainBudget):
+		return OperationReasonDomainBudget
 	case errors.Is(err, context.Canceled),
 		errors.Is(err, context.DeadlineExceeded):
 		return OperationReasonCanceled
