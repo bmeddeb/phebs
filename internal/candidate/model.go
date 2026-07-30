@@ -27,7 +27,7 @@ const (
 
 	EnumerationPolicyVersion             = "phebs-candidate-enumeration-v3"
 	CallerHashPolicy                     = "phebs-caller-path-v1"
-	LocalProjectionPolicy                = "focused-domain-repository-order-v2"
+	LocalProjectionPolicy                = "focused-domain-source-lane-v2"
 	InitialCallerPrefixBits              = 2
 	MaxPolicies                          = 64
 	MaxCorpusEntries                     = 10_000_000
@@ -136,7 +136,7 @@ func frozenPartitionPolicy() PartitionPolicy {
 		MaxDeclaredBytes:               MaxDeclaredBytesPerArtifact,
 		MaxLocalProjectionArtifacts:    MaxLocalProjectionArtifacts,
 		MaxLocalProjectionContentBytes: MaxLocalProjectionContentBytes,
-		RecordOrdering:                 "hash-path-oid-source-lane-v2",
+		RecordOrdering:                 "hash-path-oid-v2",
 		SplitRule:                      "next-hash-bit-v1",
 	}
 }

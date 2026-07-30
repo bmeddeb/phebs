@@ -31,15 +31,21 @@ inputs must preserve both semantic identities and exact publication bytes.
 
 The 2026-07-30 Darwin/arm64 T30.6d identity refresh passed. Candidate manifest
 v4 retains explicit focused-local domain projections and the frozen caller
-partition while adding path-derived source lanes. The planner runs took 7.99 s
-and 5.34 s and peaked at 61,784,064 and 61,456,384 bytes RSS. Each staged 12
-files totaling 24,984 bytes. Twice the final caller content conservatively
+partition while adding path-derived source lanes. The planner runs took 3.61 s
+and 3.62 s and peaked at 61,112,320 and 61,947,904 bytes RSS. Each staged 12
+files totaling 24,967 bytes. Twice the final caller content conservatively
 bounds planner spool/split scratch at 4,386 bytes; the external-validation
 scratch bound was 3,514 bytes. Adding the larger phase bound to the final stage
-yields 29,370 bytes of conservative peak candidate disk. The complete census
+yields 29,353 bytes of conservative peak candidate disk. The complete census
 contained 200,008 regular files; policy projection retained five repository
 rows and six caller rows. The two-bit caller leaves were `00:1`, `10:3`, and
 `11:2`, so no leaf needed a deeper split on this corpus.
+
+The review-observed predecessor receipt measured 7.99 s/5.34 s, or 2.4×/1.6×
+its 3.34 s/3.35 s baseline, with the slower run consuming 80% of the frozen
+gate. This corrected-policy rerun returned to the prior wall-time range; flat
+RSS and zero added blob reads make host variance the likely cause of the
+superseded spike rather than the derived-field work.
 
 The 16 MiB disk threshold remains this neutral fixture's prospective
 measurement gate; it is not the production schema's aggregate projection

@@ -1167,8 +1167,8 @@ func enqueueCandidateBackfill(
 			}
 			continue
 		}
-		if err := store.EnqueuePending(
-			ctx, st, store.JobCandidate, repo.Name, false,
+		if err := store.EnqueueUnlessInFlight(
+			ctx, st, store.JobCandidate, repo.Name,
 		); err != nil {
 			return fmt.Errorf("backfill candidate job for %s: %w", repo.Name, err)
 		}

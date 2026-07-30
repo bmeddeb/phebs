@@ -481,7 +481,10 @@ Every ordinary repository, local-projection, and caller record also carries a
 strictly path-derived `source_lane`: exact lowercase `_test.go` suffix is
 `go_test`, even below generated, mock, fixture, or `testdata` paths; all other
 ordinary candidates are `base`. Strict admission recomputes the lane and
-includes it in cross-plane identity rather than trusting stored JSON.
+rejects a missing or forged value before the record enters cross-plane
+validation. Lane is a pure function of canonical path, so equal paths
+necessarily agree and the external-merge projection does not carry a
+redundant lane field.
 Planning starts at two hash-prefix bits and recursively splits an over-limit
 bucket by the next bit. Every member or nonempty leaf is limited to 4,096
 records and 64 MiB of declared blob bytes; a larger singleton or a bucket that
@@ -499,11 +502,11 @@ The retained
 regular files into five repository rows and six caller rows. It produced three
 two-bit caller leaves (`00:1`, `10:3`, `11:2`). The T30.6d manifest-v4
 refresh retains the focused-local projections; each run staged 12 files
-totaling 24,984 bytes. Twice the final caller content bounds planner spool and
+totaling 24,967 bytes. Twice the final caller content bounds planner spool and
 split scratch at 4,386 bytes; external-validation scratch is bounded at 3,514
-bytes. Adding the larger phase bound to the final stage gives 29,370 bytes of
-conservative peak candidate disk. The refresh runs took 7.99 s and 5.34 s,
-peaked at 61,784,064 and 61,456,384 bytes RSS, and
+bytes. Adding the larger phase bound to the final stage gives 29,353 bytes of
+conservative peak candidate disk. The refresh runs took 3.61 s and 3.62 s,
+peaked at 61,112,320 and 61,947,904 bytes RSS, and
 reproduced byte-identical
 output. The
 frozen local planner gates are at most 10 s wall time, 256 MiB peak RSS, and 16
@@ -525,13 +528,16 @@ their opened state or when the stable marker proves an interrupted
 filesystem-before-database transition. Unmarked bytes with no valid pointer
 are re-censused and replaced even if their manifest is internally consistent;
 an orphan or forged generation cannot bootstrap its own authority.
-On a candidate-v4 upgrade, startup compares each live pointer with the current
-complete policy digest before candidate runners begin. A v3 pointer is cleared
-and its deduplicated pending candidate job is upgraded to `force`; failure to
-clear or enqueue aborts startup. The replacement re-censuses the same
-authoritative HEAD/unit and normal publication cleanup removes the retired v3
-members. Do not preserve a v3 pointer by renaming its artifacts or disabling
-the backfill.
+On a candidate-v4 upgrade, startup compares each indexed, non-deleting
+repository's pointer with the current complete policy digest before candidate
+runners begin. A v3 pointer is cleared and its deduplicated pending candidate
+job is upgraded to `force`; failure to clear or enqueue aborts startup. An
+unindexed repository has no candidate work to reconcile, and a deleting
+repository remains owned by its deletion flow; either repository self-heals
+through that next transition rather than this startup pass. The replacement
+re-censuses the same authoritative HEAD/unit and normal publication cleanup
+removes the retired v3 members. Do not preserve a v3 pointer by renaming its
+artifacts or disabling the backfill.
 This reconciliation adds one indexed candidate-pointer point read per live
 indexed repository after the existing repository list; it reads or hashes no
 candidate artifact.

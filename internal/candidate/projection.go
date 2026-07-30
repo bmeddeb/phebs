@@ -19,21 +19,20 @@ const projectionChunkRecords = 512
 // cross-plane agreement, and the corpus lower bounds. It is externally sorted
 // in bounded chunks so strict Open never retains the selected path set.
 type candidateProjection struct {
-	Path          string     `json:"path"`
-	OID           string     `json:"oid"`
-	DeclaredBytes int64      `json:"declared_bytes"`
-	SourceLane    SourceLane `json:"source_lane"`
-	InUnit        bool       `json:"in_unit"`
-	Shared        bool       `json:"shared"`
-	Plane         Plane      `json:"plane"`
+	Path          string `json:"path"`
+	OID           string `json:"oid"`
+	DeclaredBytes int64  `json:"declared_bytes"`
+	InUnit        bool   `json:"in_unit"`
+	Shared        bool   `json:"shared"`
+	Plane         Plane  `json:"plane"`
 }
 
 func projectionFromRecord(record Record, plane Plane) candidateProjection {
 	return candidateProjection{
 		Path: record.Path, OID: record.OID,
 		DeclaredBytes: record.DeclaredBytes,
-		SourceLane:    record.SourceLane, InUnit: record.InUnit,
-		Shared: record.Shared, Plane: plane,
+		InUnit:        record.InUnit,
+		Shared:        record.Shared, Plane: plane,
 	}
 }
 
@@ -48,7 +47,6 @@ func sameProjectionIdentity(left, right candidateProjection) bool {
 	return left.Path == right.Path &&
 		left.OID == right.OID &&
 		left.DeclaredBytes == right.DeclaredBytes &&
-		left.SourceLane == right.SourceLane &&
 		left.InUnit == right.InUnit &&
 		left.Shared == right.Shared
 }

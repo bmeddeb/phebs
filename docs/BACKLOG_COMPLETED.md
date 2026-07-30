@@ -4271,22 +4271,25 @@ Every ordinary repository, focused-local projection, and caller record carries
 `go_test`, including generated, mock, fixture, and `testdata` paths; every
 other ordinary candidate is `base`. The builder derives the lane from the one
 streamed canonical tree path. Strict validation independently recomputes it,
-includes it in per-domain repository/unit summaries, bounded projection spool
-identity, and external-merge cross-plane comparison, and refuses missing,
-forged, or disagreeing lanes.
+includes it in per-domain repository/unit summaries, and refuses missing or
+forged lanes before cross-plane validation. Since canonical path determines
+lane, equal paths necessarily agree and the bounded projection spool does not
+carry a redundant lane field.
 
 Candidate v3 is never current under v4. Before candidate runners start,
-startup reconciliation compares each live pointer with the complete current
-policy digest, clears a mismatched pointer, and upgrades its deduplicated
-pending candidate job to forced replacement. Failure to clear or enqueue
-aborts startup. The candidate worker still regression-covers direct v3→v4
-replacement and cleanup of retired members. Candidate publications remain
-derived and excluded from backup; restore clears imported pointers/control
-outcomes and ordinary backfill rebuilds v4 from authoritative restored state.
+startup reconciliation compares each indexed, non-deleting repository pointer
+with the complete current policy digest, clears a mismatched pointer, and
+upgrades its deduplicated pending candidate job to forced replacement. Failure
+to clear or enqueue aborts startup. Unindexed and deleting repositories remain
+owned by their next index or deletion transition. The candidate worker still
+regression-covers direct v3→v4 replacement and cleanup of retired members.
+Candidate publications remain derived and excluded from backup; restore clears
+imported pointers/control outcomes and ordinary backfill rebuilds v4 from
+authoritative restored state.
 
 AC met: exact suffix and generated/mock/fixture/`testdata` overlap fixtures;
-digest-consistent forged-lane refusal; source lane in external-merge
-cross-plane identity; existing marker, descriptor-stability,
+digest-consistent forged-lane refusal before external merge; no redundant lane
+key in the path-keyed cross-plane projection; existing marker, descriptor-stability,
 missing/extra/reordered focused-projection, publication cleanup, and
 backup/restore coverage under the v4 schema; same-HEAD startup policy
 transition; direct v3 replacement; dated PLAN decision and Operations,
@@ -4296,10 +4299,10 @@ schema, focused shard, unit digest, search generation, or search behavior.
 
 The refreshed neutral T30.4 receipt retains 200,008 regular files, five
 repository rows, six caller rows, three leaves (`00:1`, `10:3`, `11:2`), and
-12 staged files. The canonical lane field raises staged bytes to 24,984,
-planner scratch to 4,386 bytes, and conservative peak candidate disk to 29,370
-bytes. Byte-identical runs completed in 7.99 s/5.34 s at
-61,784,064/61,456,384 bytes RSS, within the frozen gates. Strict open remains
+12 staged files. The canonical lane field raises staged bytes to 24,967,
+planner scratch to 4,386 bytes, and conservative peak candidate disk to 29,353
+bytes. Byte-identical runs completed in 3.61 s/3.62 s at
+61,112,320/61,947,904 bytes RSS, within the frozen gates. Strict open remains
 `B_repository + C_caller + ΣP`, stale local replay remains `P_d`, and path
 classification performs zero source-blob reads. Startup adds one indexed
 candidate-pointer point read per live indexed repository after the existing

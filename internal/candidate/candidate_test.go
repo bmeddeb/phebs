@@ -1833,37 +1833,6 @@ func TestProjectionValidationUsesBoundedExternalMerge(t *testing.T) {
 	})
 }
 
-func TestExternalMergeRejectsCrossPlaneSourceLaneMismatch(t *testing.T) {
-	directory := t.TempDir()
-	sorter := newProjectionSorter(t.Context(), directory)
-	base := candidateProjection{
-		Path: "src/main_test.go", OID: strings.Repeat("a", 40),
-		DeclaredBytes: 10, SourceLane: SourceLaneGoTest,
-		InUnit: true, Plane: PlaneRepository,
-	}
-	caller := base
-	caller.Plane = PlaneCaller
-	caller.SourceLane = SourceLaneBase
-	if err := sorter.add(base); err != nil {
-		t.Fatal(err)
-	}
-	if err := sorter.add(caller); err != nil {
-		t.Fatal(err)
-	}
-	run, err := sorter.finish()
-	if err != nil {
-		t.Fatal(err)
-	}
-	summary := newCorpusAccumulator().summary()
-	summary.RegularCount = 1
-	summary.RegularDeclaredBytes = base.DeclaredBytes
-	if err := validateCorpusSummary(
-		t.Context(), summary, run,
-	); err == nil || !strings.Contains(err.Error(), "cross-plane candidate mismatch") {
-		t.Fatalf("cross-plane lane mismatch error = %v", err)
-	}
-}
-
 func TestPublicationLifecycleAndStageCleanup(t *testing.T) {
 	fixture := newGitFixture(t)
 	fixture.write("src/main.go", "package main\n")
