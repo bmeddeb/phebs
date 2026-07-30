@@ -50,7 +50,8 @@ type RepoGetter interface {
 }
 
 // Worker drives extraction jobs. NewCorpus must fence the same bare mirror
-// path as fetch/index/delete before it constructs a corpus.
+// path as fetch/index/delete before it constructs a corpus. An injected Now
+// function must be safe for concurrent calls from extractor-owned read paths.
 type Worker struct {
 	Repos            RepoGetter
 	Evidence         store.EvidenceStore
@@ -192,13 +193,13 @@ func (w *Worker) Handle(
 			return store.WithClass(store.ClassExtract,
 				fmt.Errorf("extract %s: open candidate manifest: %w", repo.Name, err))
 		}
-		operation.bindManifest(candidateManifest.Identity())
 		inventoryPolicy, boundaries, err = validateCandidateManifest(candidateManifest)
 		if err != nil {
 			operation.completeRemaining(operationReason(err))
 			return store.WithClass(store.ClassExtract,
 				fmt.Errorf("extract %s: validate candidate manifest: %w", repo.Name, err))
 		}
+		operation.bindManifest(candidateManifest.Identity())
 	}
 
 	// Domains publish independently, so one domain's failure must not starve
@@ -256,7 +257,7 @@ func (w *Worker) Handle(
 		}
 	}
 	if len(domainErrs) > 0 {
-		operation.completeRemaining(operationReason(errors.Join(domainErrs...)))
+		operation.completeRemaining(operationReasonForError(errors.Join(domainErrs...)))
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: %w", repo.Name, errors.Join(domainErrs...)))
 	}
@@ -606,12 +607,8 @@ func newRunSink(
 	evidence store.EvidenceStore,
 	runID, repo, commit, version string,
 	corpus *verifiedCorpus,
-	operations ...*domainOperationRecorder,
+	operation *domainOperationRecorder,
 ) *runSink {
-	var operation *domainOperationRecorder
-	if len(operations) > 0 {
-		operation = operations[0]
-	}
 	return &runSink{
 		ctx: ctx, evidence: evidence, runID: runID, repo: repo, commit: commit, version: version, corpus: corpus,
 		operation:      operation,
@@ -759,10 +756,15 @@ func (c *verifiedCorpus) Inventory(ctx context.Context, candidate func(string) b
 	unreadable := 0
 	visit := func(filePath string, isCandidate bool) error {
 		if len(paths)+unreadable >= maxCorpusFiles {
-			return fmt.Errorf("corpus inventory exceeds %d-file limit", maxCorpusFiles)
+			return operationLimitError(
+				fmt.Sprintf("corpus inventory exceeds %d-file limit", maxCorpusFiles),
+			)
 		}
 		if len(filePath) > maxCorpusInventoryPathBytes-pathBytes {
-			return fmt.Errorf("corpus inventory exceeds %d-byte aggregate path limit", maxCorpusInventoryPathBytes)
+			return operationLimitError(fmt.Sprintf(
+				"corpus inventory exceeds %d-byte aggregate path limit",
+				maxCorpusInventoryPathBytes,
+			))
 		}
 		pathBytes += len(filePath)
 		if pathErr := checkCorpusPath(filePath); pathErr != nil {
@@ -873,14 +875,16 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 					domain, entry.path)
 			}
 			if len(paths) >= maxCorpusFiles {
-				return fmt.Errorf(
+				return operationLimitError(fmt.Sprintf(
 					"candidate manifest %s exceeds %d-file extraction limit",
-					domain, maxCorpusFiles)
+					domain, maxCorpusFiles,
+				))
 			}
 			if len(entry.path) > maxCorpusInventoryPathBytes-pathBytes {
-				return fmt.Errorf(
+				return operationLimitError(fmt.Sprintf(
 					"candidate manifest %s exceeds %d-byte aggregate path limit",
-					domain, maxCorpusInventoryPathBytes)
+					domain, maxCorpusInventoryPathBytes,
+				))
 			}
 			pathBytes += len(entry.path)
 			required, err := callCandidate(candidate, entry.path)
@@ -1137,7 +1141,9 @@ func (c *verifiedCorpus) read(
 	}
 	if c.readCount >= maxCorpusFiles*4 {
 		c.mu.Unlock()
-		return sdk.Blob{}, fmt.Errorf("corpus exceeds %d-read limit", maxCorpusFiles*4)
+		return sdk.Blob{}, operationLimitError(
+			fmt.Sprintf("corpus exceeds %d-read limit", maxCorpusFiles*4),
+		)
 	}
 	c.readCount++
 	c.mu.Unlock()
@@ -1155,7 +1161,9 @@ func (c *verifiedCorpus) read(
 		return sdk.Blob{}, err
 	}
 	if int64(len(blob.Content)) > maxBytes {
-		return sdk.Blob{}, fmt.Errorf("corpus blob %q exceeds byte limit", filePath)
+		return sdk.Blob{}, operationLimitError(
+			fmt.Sprintf("corpus blob %q exceeds byte limit", filePath),
+		)
 	}
 	if fromManifest && int64(len(blob.Content)) != manifestEntry.size {
 		return sdk.Blob{}, fmt.Errorf(
@@ -1176,13 +1184,17 @@ func (c *verifiedCorpus) read(
 		return sdk.Blob{}, errors.New("corpus used after extractor returned")
 	}
 	if _, exists := c.sources[filePath]; !exists && int64(len(blob.Content)) > maxCorpusRunBytes-c.readBytes {
-		return sdk.Blob{}, fmt.Errorf("corpus exceeds %d-byte aggregate read limit", maxCorpusRunBytes)
+		return sdk.Blob{}, operationLimitError(fmt.Sprintf(
+			"corpus exceeds %d-byte aggregate read limit", maxCorpusRunBytes,
+		))
 	}
 	if previous, ok := c.sources[filePath]; ok && previous != record {
 		return sdk.Blob{}, fmt.Errorf("corpus blob %q changed during extraction", filePath)
 	}
 	if _, ok := c.sources[filePath]; !ok && len(c.sources) >= maxCorpusFiles {
-		return sdk.Blob{}, fmt.Errorf("corpus exceeds %d-read-file limit", maxCorpusFiles)
+		return sdk.Blob{}, operationLimitError(
+			fmt.Sprintf("corpus exceeds %d-read-file limit", maxCorpusFiles),
+		)
 	}
 	if _, exists := c.sources[filePath]; !exists {
 		c.readBytes += int64(len(blob.Content))

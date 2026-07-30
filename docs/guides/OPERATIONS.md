@@ -566,7 +566,8 @@ Every repository extraction job emits one JSON log entry prefixed
 as a bounded operational diagnostic, not durable evidence. The job envelope
 names the canonical repository, indexed HEAD, committed unit digest,
 candidate-manifest and candidate-policy digests, and queue attempt. It records
-queue wait, repository-lock wait, pointer-only preflight, and strict
+queue wait from the attempt's eligibility time (the later of creation or
+`not_before`), repository-lock wait, pointer-only preflight, and strict
 candidate-publication open once per job instead of copying those shared costs
 into each domain.
 
@@ -581,6 +582,12 @@ path, source content, path sample, or raw extractor diagnostic. Use the
 ordinary domain log immediately preceding the receipt when a raw local
 diagnostic is required for troubleshooting.
 
+Phase durations are not additive. `extractor_ms` is the inclusive wall time of
+the extractor call, so it contains `opened_source_ms` and any `staging_ms`
+incurred by reads and emitted fact chunks during that call. Use each duration
+to locate where time was spent; do not sum sibling fields to reconstruct
+`total_ms`.
+
 The complete report is capped at 64 KiB inclusive. An over-cap report becomes
 one deterministic identity-only envelope with `truncated: true` and
 `domain_count`; it carries no nested domains. Encoding failure, log/sink
@@ -592,6 +599,8 @@ hash, publication open, or blob read.
 
 Prometheus exposes `phebs_extraction_operations_total` and
 `phebs_extraction_operation_duration_seconds` without labels.
+The duration histogram's exponential finite buckets span 100 ms through about
+27.3 minutes, covering the 15-minute extraction budget.
 `phebs_extraction_operation_domains_total` has only the frozen generic
 `reason` label. Repository, extractor, commit, unit, manifest, and policy are
 deliberately absent from metric labels; use the bounded log receipt for those

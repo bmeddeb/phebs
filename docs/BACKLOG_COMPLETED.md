@@ -4094,12 +4094,14 @@ registration. T30.6 owns the target-bound all-partitions Caller Map generation.
 `phebs-extraction-operation-v1` report for every repository extraction job.
 The envelope binds the canonical repository, indexed HEAD, committed unit,
 candidate-manifest and policy digests, and queue attempt without exposing the
-lease token. Queue wait, mirror-lock wait, pointer-only preflight, and strict
-candidate-publication open are recorded exactly once at job level. Each
-configured domain carries only its frozen generic reason, inventory,
-opened-source, extractor, staging, publication, abort, and cleanup durations,
-existing count/byte/limit values, and no source path, content, sample, or raw
-diagnostic.
+lease token. Queue wait begins at the later of creation or `not_before`;
+mirror-lock wait, pointer-only preflight, and strict candidate-publication
+open are recorded exactly once at job level. Each configured domain carries
+only its frozen generic reason, inventory, opened-source, extractor, staging,
+publication, abort, and cleanup durations, existing count/byte/limit values,
+and no source path, content, sample, or raw diagnostic. Extractor duration is
+inclusive of reads and Emit-triggered staging, so phase timings are
+intentionally non-additive.
 
 The frozen outcome vocabulary is `already_current`, `not_ready`, `stale`,
 `no_candidates`, `typed_input_absent`, `limit_refusal`, `published_empty`,

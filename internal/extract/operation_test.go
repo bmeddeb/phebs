@@ -13,7 +13,10 @@ import (
 	"time"
 
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -252,6 +255,39 @@ func TestExtractionOperationPublishedAccountingAndFakeClock(t *testing.T) {
 	}
 }
 
+func TestExtractionOperationQueueWaitStartsAtAttemptEligibility(t *testing.T) {
+	claimedAt := time.Date(2026, 7, 30, 12, 0, 0, 0, time.UTC)
+	notBefore := claimedAt.Add(-time.Minute)
+	operation := newOperationRecorder(store.Job{
+		Target:    "example.invalid/retry",
+		CreatedAt: claimedAt.Add(-16 * time.Minute),
+		NotBefore: &notBefore,
+		ClaimedAt: &claimedAt,
+	}, func() time.Time {
+		return claimedAt
+	})
+	if operation.report.QueueWaitMS != int64(time.Minute/time.Millisecond) {
+		t.Fatalf(
+			"retry queue wait = %dms, want %dms",
+			operation.report.QueueWaitMS,
+			time.Minute/time.Millisecond,
+		)
+	}
+}
+
+func TestExtractionOperationDurationBucketsCoverExtractionBudget(t *testing.T) {
+	if len(extractionOperationDurationBuckets) == 0 {
+		t.Fatal("extraction operation duration has no finite buckets")
+	}
+	last := extractionOperationDurationBuckets[len(extractionOperationDurationBuckets)-1]
+	if last < extractionTimeout.Seconds() {
+		t.Fatalf(
+			"last extraction duration bucket = %.1fs, want at least %.1fs",
+			last, extractionTimeout.Seconds(),
+		)
+	}
+}
+
 type operationCurrentProvider struct {
 	identity      string
 	policyDigest  string
@@ -355,6 +391,116 @@ func TestExtractionOperationAlreadyCurrentIsPointerOnly(t *testing.T) {
 		len(report.Domains) != 1 ||
 		report.Domains[0].Reason != OperationReasonAlreadyCurrent {
 		t.Fatalf("already-current report = %+v", report)
+	}
+}
+
+func TestExtractionOperationNilManifestIsClassifiedWithoutPanic(t *testing.T) {
+	repository := &store.Repo{
+		Name: "example.invalid/nil-manifest", IndexedCommitHash: unitCommit,
+	}
+	extractor := unitExtractor{
+		domain: "proto-contract", version: "v1",
+		candidate: func(string) bool { return true },
+		extract: func(
+			context.Context, sdk.Corpus, sdk.Emit,
+		) (sdk.Coverage, error) {
+			t.Fatal("nil manifest reached extractor")
+			return sdk.Coverage{}, nil
+		},
+	}
+	sink, read := captureOperationReport(t)
+	worker := Worker{
+		Repos: readyRepoGetter(repository), Evidence: newMemoryEvidence(),
+		NewCorpus: unitFactory(nil),
+		Manifests: manifestProviderFunc(func(
+			context.Context,
+			CandidateManifestRequest,
+		) (CandidateManifest, error) {
+			return nil, nil
+		}),
+		Extractors:       []Extractor{extractor},
+		OperationReports: sink,
+	}
+	err := worker.Handle(
+		context.Background(),
+		store.Job{Target: repository.Name},
+	)
+	if err == nil ||
+		!strings.Contains(err.Error(), "candidate manifest provider returned nil") {
+		t.Fatalf("Handle error = %v", err)
+	}
+	report, _ := read()
+	if len(report.Domains) != 1 ||
+		report.Domains[0].Reason != OperationReasonFailed {
+		t.Fatalf("nil-manifest report = %+v", report)
+	}
+}
+
+func TestExtractionOperationNeverAttemptedDomainsFollowCancellation(
+	t *testing.T,
+) {
+	repository := &store.Repo{
+		Name:              "example.invalid/cancel-after-limit",
+		IndexedCommitHash: unitCommit,
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	extractors := []Extractor{
+		unitExtractor{
+			domain: "limit", version: "v1",
+			candidate: func(string) bool { return false },
+			extract: func(
+				context.Context, sdk.Corpus, sdk.Emit,
+			) (sdk.Coverage, error) {
+				cancel()
+				return sdk.Coverage{}, operationLimitError("read-byte cap")
+			},
+		},
+	}
+	for _, domain := range []string{"canceled", "never-c", "never-d"} {
+		domain := domain
+		extractors = append(extractors, unitExtractor{
+			domain: domain, version: "v1",
+			candidate: func(string) bool { return false },
+			extract: func(
+				context.Context, sdk.Corpus, sdk.Emit,
+			) (sdk.Coverage, error) {
+				t.Fatalf("domain %q unexpectedly executed", domain)
+				return sdk.Coverage{}, nil
+			},
+		})
+	}
+	sink, read := captureOperationReport(t)
+	worker := Worker{
+		Repos: readyRepoGetter(repository), Evidence: newMemoryEvidence(),
+		NewCorpus: unitFactory(nil), Extractors: extractors,
+		OperationReports: sink,
+	}
+	err := worker.Handle(ctx, store.Job{Target: repository.Name})
+	if !errors.Is(err, context.Canceled) ||
+		!errors.Is(err, errOperationLimitRefusal) {
+		t.Fatalf("Handle error = %v, want cancellation and limit refusal", err)
+	}
+	report, _ := read()
+	if len(report.Domains) != 4 {
+		t.Fatalf("domain count = %d, want 4", len(report.Domains))
+	}
+	wantReasons := []string{
+		OperationReasonLimitRefusal,
+		OperationReasonCanceled,
+		OperationReasonCanceled,
+		OperationReasonCanceled,
+	}
+	for index, domain := range report.Domains {
+		if domain.Reason != wantReasons[index] {
+			t.Errorf(
+				"domain %q reason = %q, want %q",
+				domain.Domain, domain.Reason, wantReasons[index],
+			)
+		}
+		if index > 0 && domain.Counts != (ExtractionOperationDomainCounts{}) {
+			t.Errorf("unattempted domain %q has counts %+v", domain.Domain, domain.Counts)
+		}
 	}
 }
 
@@ -483,6 +629,17 @@ func TestExtractionOperationGenericReasonsAndDiagnosticRedaction(t *testing.T) {
 		{"not ready", candidatepkg.ErrPublishing, OperationReasonNotReady},
 		{"stale", errStaleRun, OperationReasonStale},
 		{"limit", operationLimitError("cap exceeded"), OperationReasonLimitRefusal},
+		{"git object limit", gitobj.ErrTooLarge, OperationReasonLimitRefusal},
+		{"semantic limit", codenav.ErrSemanticLimit, OperationReasonLimitRefusal},
+		{"hover limit", codenav.ErrHoverTooLarge, OperationReasonLimitRefusal},
+		{"candidate corpus limit", candidatepkg.ErrCorpusTooLarge, OperationReasonLimitRefusal},
+		{"candidate byte limit", candidatepkg.ErrCandidateTooLarge, OperationReasonLimitRefusal},
+		{"compat limit", compat.ErrLimit, OperationReasonLimitRefusal},
+		{
+			"integrity prose is not a limit",
+			errors.New("candidate manifest gitlink sample exceeds its bounds"),
+			OperationReasonFailed,
+		},
 		{"canceled", context.Canceled, OperationReasonCanceled},
 		{"failed", errors.New("raw diagnostic"), OperationReasonFailed},
 	} {
@@ -491,6 +648,12 @@ func TestExtractionOperationGenericReasonsAndDiagnosticRedaction(t *testing.T) {
 				t.Fatalf("reason = %q, want %q", got, test.want)
 			}
 		})
+	}
+	limitErr := operationLimitError("run exceeds fact limit")
+	if !errors.Is(limitErr, errOperationLimitRefusal) ||
+		errors.Unwrap(limitErr) != errOperationLimitRefusal ||
+		strings.Contains(limitErr.Error(), "\n") {
+		t.Fatalf("limit error wrapping = %q / %v", limitErr, errors.Unwrap(limitErr))
 	}
 	for _, test := range []struct {
 		name  string

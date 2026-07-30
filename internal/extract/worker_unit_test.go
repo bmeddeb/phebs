@@ -432,7 +432,7 @@ func stageDeterministicUnitChunks(t *testing.T, count int) (*runSink, *memoryEvi
 	}
 	evidence := newMemoryEvidence()
 	sink := newRunSink(context.Background(), evidence, "run-1",
-		"host/repo", unitCommit, "1", corpus)
+		"host/repo", unitCommit, "1", corpus, nil)
 	for i := range count {
 		fact := unitFact("same.proto", fmt.Sprintf("object-%04d", i))
 		if err := sink.Emit(fact); err != nil {
@@ -503,7 +503,7 @@ func TestFactChunkReplayChangesNoRowsOrCounters(t *testing.T) {
 	}
 	evidence := newMemoryEvidence()
 	sink := newRunSink(context.Background(), evidence, "run-1",
-		"host/repo", unitCommit, "1", corpus)
+		"host/repo", unitCommit, "1", corpus, nil)
 	chunk := buildFactChunk(0, []sdk.Fact{unitFact("same.proto", "object")})
 
 	if err := sink.stageChunkLocked(chunk); err != nil {
@@ -558,7 +558,7 @@ func TestFactChunkMalformedShapesFailBeforeStaging(t *testing.T) {
 			test.mutate(&chunk)
 			evidence := newMemoryEvidence()
 			sink := newRunSink(context.Background(), evidence, "run-1",
-				"host/repo", unitCommit, "1", nil)
+				"host/repo", unitCommit, "1", nil, nil)
 			if err := sink.stageChunkLocked(chunk); err == nil {
 				t.Fatal("malformed chunk staged")
 			}

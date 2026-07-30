@@ -999,7 +999,9 @@ func TestScopedCandidateManifestBlocksOutOfUnitExactProbes(t *testing.T) {
 func TestVerifiedCorpusBoundsAggregateInventoryPathBytes(t *testing.T) {
 	verified := newVerifiedCorpus(pathFloodCorpus{})
 	err := verified.Inventory(context.Background(), func(string) bool { return false })
-	if err == nil || !strings.Contains(err.Error(), "aggregate path limit") {
+	if err == nil ||
+		!errors.Is(err, errOperationLimitRefusal) ||
+		!strings.Contains(err.Error(), "aggregate path limit") {
 		t.Fatalf("Inventory error = %v", err)
 	}
 }
@@ -1007,7 +1009,9 @@ func TestVerifiedCorpusBoundsAggregateInventoryPathBytes(t *testing.T) {
 func TestVerifiedCorpusBoundsUnreadableAggregateInventoryPathBytes(t *testing.T) {
 	verified := newVerifiedCorpus(unreadablePathFloodCorpus{})
 	err := verified.Inventory(context.Background(), func(string) bool { return false })
-	if err == nil || !strings.Contains(err.Error(), "aggregate path limit") {
+	if err == nil ||
+		!errors.Is(err, errOperationLimitRefusal) ||
+		!strings.Contains(err.Error(), "aggregate path limit") {
 		t.Fatalf("Inventory error = %v", err)
 	}
 }

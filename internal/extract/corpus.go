@@ -281,7 +281,10 @@ func (g *gitCorpus) walkTree(
 				// bounded display-safe sample) and never traversed (T19.8).
 				boundaries.count++
 				if boundaries.count > maxCorpusFiles {
-					walkErr = fmt.Errorf("walk corpus: more than %d gitlink boundaries", maxCorpusFiles)
+					walkErr = operationLimitError(fmt.Sprintf(
+						"walk corpus: more than %d gitlink boundaries",
+						maxCorpusFiles,
+					))
 					break
 				}
 				_, _ = boundaryHash.Write([]byte(entry.path))
@@ -326,14 +329,17 @@ func (g *gitCorpus) walkTree(
 					break
 				}
 				if len(candidateSymlinks) >= maxCorpusFiles {
-					walkErr = fmt.Errorf(
-						"corpus inventory exceeds %d candidate-symlink limit", maxCorpusFiles)
+					walkErr = operationLimitError(fmt.Sprintf(
+						"corpus inventory exceeds %d candidate-symlink limit",
+						maxCorpusFiles,
+					))
 					break
 				}
 				if len(entry.path) > maxCorpusInventoryPathBytes-candidateSymlinkPathBytes {
-					walkErr = fmt.Errorf(
+					walkErr = operationLimitError(fmt.Sprintf(
 						"corpus inventory exceeds %d-byte candidate-symlink path limit",
-						maxCorpusInventoryPathBytes)
+						maxCorpusInventoryPathBytes,
+					))
 					break
 				}
 				candidateSymlinkPathBytes += len(entry.path)
@@ -346,7 +352,9 @@ func (g *gitCorpus) walkTree(
 			default:
 				fileCount++
 				if fileCount > maxCorpusFiles {
-					walkErr = fmt.Errorf("walk corpus: more than %d regular files", maxCorpusFiles)
+					walkErr = operationLimitError(fmt.Sprintf(
+						"walk corpus: more than %d regular files", maxCorpusFiles,
+					))
 					break
 				}
 				// Entries with unrepresentable names are still visited so the
@@ -507,9 +515,10 @@ func resolveCandidateSymlink(
 				alias.path, next.objectType, resolved)
 		case next.mode == "120000":
 			if depth+1 == maxCorpusSymlinkDepth {
-				return fmt.Errorf(
+				return operationLimitError(fmt.Sprintf(
 					"walk corpus: candidate symlink %q exceeds %d-link depth limit",
-					alias.path, maxCorpusSymlinkDepth)
+					alias.path, maxCorpusSymlinkDepth,
+				))
 			}
 			current = next
 		case next.mode == "100644" || next.mode == "100755":
@@ -525,9 +534,10 @@ func resolveCandidateSymlink(
 				alias.path, next.mode, resolved)
 		}
 	}
-	return fmt.Errorf(
+	return operationLimitError(fmt.Sprintf(
 		"walk corpus: candidate symlink %q exceeds %d-link depth limit",
-		alias.path, maxCorpusSymlinkDepth)
+		alias.path, maxCorpusSymlinkDepth,
+	))
 }
 
 func resolveCorpusSymlinkTarget(linkPath, target string) (string, error) {
@@ -726,9 +736,10 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 			records++
 			if records > maxCorpusLookupRecords {
 				stopTreeCommand(cmd, stdout)
-				return false, fmt.Errorf(
+				return false, operationLimitError(fmt.Sprintf(
 					"lookup corpus root %q exceeds %d-record probe limit",
-					root, maxCorpusLookupRecords)
+					root, maxCorpusLookupRecords,
+				))
 			}
 			entry, parseErr := parseSizedTreeRecord(record)
 			if parseErr != nil {
@@ -738,9 +749,10 @@ func (g *gitCorpus) anyRegularUnder(ctx context.Context, root string) (bool, err
 			pathBytes += len(entry.path)
 			if pathBytes > maxCorpusLookupPathBytes {
 				stopTreeCommand(cmd, stdout)
-				return false, fmt.Errorf(
+				return false, operationLimitError(fmt.Sprintf(
 					"lookup corpus root %q exceeds %d-byte path probe limit",
-					root, maxCorpusLookupPathBytes)
+					root, maxCorpusLookupPathBytes,
+				))
 			}
 			if entry.path != root &&
 				strings.HasPrefix(entry.path, root+"/") &&
@@ -793,7 +805,9 @@ func (g *gitCorpus) readManifestBlob(
 			entry.path)
 	}
 	if entry.size > maxBytes {
-		return sdk.Blob{}, fmt.Errorf("corpus blob %q exceeds byte limit", entry.path)
+		return sdk.Blob{}, operationLimitError(
+			fmt.Sprintf("corpus blob %q exceeds byte limit", entry.path),
+		)
 	}
 	dir, err := g.repoDir()
 	if err != nil {
@@ -951,7 +965,9 @@ func parseSizedTreeRecord(record []byte) (treeRecord, error) {
 func readNULRecord(r *bufio.Reader, max int) ([]byte, error) {
 	record, err := r.ReadSlice(0)
 	if errors.Is(err, bufio.ErrBufferFull) || len(record) > max+1 {
-		return nil, fmt.Errorf("tree record exceeds %d-byte limit", max)
+		return nil, operationLimitError(
+			fmt.Sprintf("tree record exceeds %d-byte limit", max),
+		)
 	}
 	if len(record) > 0 && record[len(record)-1] != 0 && errors.Is(err, io.EOF) {
 		return nil, io.ErrUnexpectedEOF

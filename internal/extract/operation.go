@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/codenav"
+	"github.com/bmeddeb/phebs/internal/compat"
+	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -147,7 +150,11 @@ func newOperationRecorder(
 	started := now()
 	queueWait := time.Duration(0)
 	if job.ClaimedAt != nil && !job.CreatedAt.IsZero() {
-		queueWait = nonnegativeDuration(job.CreatedAt, *job.ClaimedAt)
+		eligibleAt := job.CreatedAt
+		if job.NotBefore != nil && job.NotBefore.After(eligibleAt) {
+			eligibleAt = *job.NotBefore
+		}
+		queueWait = nonnegativeDuration(eligibleAt, *job.ClaimedAt)
 	}
 	return &operationRecorder{
 		now: now, started: started,
@@ -421,7 +428,7 @@ func operationReasonForError(err error) string {
 		return OperationReasonCanceled
 	case errors.Is(err, errStaleRun):
 		return OperationReasonStale
-	case errors.Is(err, errOperationLimitRefusal):
+	case isOperationLimitRefusal(err):
 		return OperationReasonLimitRefusal
 	default:
 		return OperationReasonFailed
@@ -429,15 +436,15 @@ func operationReasonForError(err error) string {
 }
 
 func operationReason(err error) string {
+	reason := operationReasonForError(err)
+	if reason != OperationReasonFailed || err == nil {
+		return reason
+	}
 	if errors.Is(err, store.ErrNotFound) ||
 		errors.Is(err, candidatepkg.ErrPublishing) {
 		return OperationReasonNotReady
 	}
-	if errors.Is(err, errOperationLimitRefusal) ||
-		isGenericLimitRefusal(err) {
-		return OperationReasonLimitRefusal
-	}
-	return operationReasonForError(err)
+	return OperationReasonFailed
 }
 
 func successfulOperationReason(stats corpusStats, facts int) string {
@@ -453,28 +460,31 @@ func successfulOperationReason(stats corpusStats, facts int) string {
 	}
 }
 
-func isGenericLimitRefusal(err error) bool {
-	if err == nil {
-		return false
-	}
-	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "exceeds") &&
-		(strings.Contains(message, "limit") ||
-			strings.Contains(message, "maximum") ||
-			strings.Contains(message, "bound"))
+func isOperationLimitRefusal(err error) bool {
+	return errors.Is(err, errOperationLimitRefusal) ||
+		errors.Is(err, gitobj.ErrTooLarge) ||
+		errors.Is(err, codenav.ErrSemanticLimit) ||
+		errors.Is(err, codenav.ErrHoverTooLarge) ||
+		errors.Is(err, candidatepkg.ErrCorpusTooLarge) ||
+		errors.Is(err, candidatepkg.ErrCandidateTooLarge) ||
+		errors.Is(err, compat.ErrLimit)
 }
 
 var errOperationLimitRefusal = errors.New("extraction limit refusal")
 
 var (
+	extractionOperationDurationBuckets = prometheus.ExponentialBuckets(
+		0.1, 2, 15, // 100ms .. ~27.3min, beyond the 15-minute extraction budget.
+	)
 	extractionOperationsTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "phebs_extraction_operations_total",
 		Help: "Repository extraction jobs that emitted an operational receipt.",
 	})
 	extractionOperationDuration = promauto.NewHistogram(
 		prometheus.HistogramOpts{
-			Name: "phebs_extraction_operation_duration_seconds",
-			Help: "Wall time of repository extraction jobs.",
+			Name:    "phebs_extraction_operation_duration_seconds",
+			Help:    "Wall time of repository extraction jobs.",
+			Buckets: extractionOperationDurationBuckets,
 		},
 	)
 	extractionOperationDomainsTotal = promauto.NewCounterVec(
@@ -487,7 +497,7 @@ var (
 )
 
 func operationLimitError(message string) error {
-	return errors.Join(errOperationLimitRefusal, errors.New(message))
+	return fmt.Errorf("%w: %s", errOperationLimitRefusal, message)
 }
 
 func encodeExtractionOperation(
@@ -529,6 +539,7 @@ func (worker *Worker) emitOperationReport(report ExtractionOperationReport) {
 	}
 	data, err := encodeExtractionOperation(report)
 	if err != nil {
+		log.Printf("encode extraction operation: %v", err)
 		return
 	}
 	sink := worker.OperationReports
@@ -540,9 +551,13 @@ func (worker *Worker) emitOperationReport(report ExtractionOperationReport) {
 	}
 	func() {
 		defer func() {
-			_ = recover()
+			if recovered := recover(); recovered != nil {
+				log.Printf("extraction operation sink panic (%T)", recovered)
+			}
 		}()
-		_ = sink(data)
+		if err := sink(data); err != nil {
+			log.Printf("extraction operation sink: %v", err)
+		}
 	}()
 }
 
