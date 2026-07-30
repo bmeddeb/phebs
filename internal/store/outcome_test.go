@@ -59,7 +59,7 @@ func validOutcome() ExtractionDomainOutcome {
 			CandidateManifestDigest:  "sha256:" + strings.Repeat("c", 64),
 			CandidatePolicyDigest:    "sha256:" + strings.Repeat("d", 64),
 			CandidateControlRevision: 1,
-			InventoryPolicy:          "candidate-manifest-v3-current",
+			InventoryPolicy:          "candidate-manifest-v4-current",
 			DependencyDigest:         "sha256:" + strings.Repeat("e", 64),
 		},
 		RunID:         "extraction_run:1",
@@ -267,7 +267,7 @@ func TestExtractionGenerationIdentityInvalidatesEveryInput(t *testing.T) {
 			g.Extractor = "v2"
 		}},
 		{"inventory policy", func(g *ExtractionGenerationIdentity) {
-			g.InventoryPolicy = "candidate-manifest-v4-current"
+			g.InventoryPolicy = "candidate-manifest-v5-current"
 		}},
 		{"typed input kind", func(g *ExtractionGenerationIdentity) {
 			g.TypedInputKind = ""

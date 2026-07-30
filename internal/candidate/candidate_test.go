@@ -285,6 +285,103 @@ func TestBuildIsDeterministicBoundedAndNilUnitSafe(t *testing.T) {
 	}
 }
 
+func TestSourceLaneClassificationAndStrictRecomputation(t *testing.T) {
+	fixture := newGitFixture(t)
+	for path := range map[string]SourceLane{
+		"src/main.go":                       SourceLaneBase,
+		"src/main_test.go":                  SourceLaneGoTest,
+		"generated/mock/fixture_test.go":    SourceLaneGoTest,
+		"testdata/generated/client_test.go": SourceLaneGoTest,
+		"src/generated_test.go.go":          SourceLaneBase,
+		"src/test.go":                       SourceLaneBase,
+	} {
+		fixture.write(path, "package fixture\n")
+	}
+	commit := fixture.commit("source lanes")
+	unit, err := (analysisunit.Scope{
+		Repository: fixture.repository,
+		Name:       "source-lane-fixture",
+		Primary:    []string{"src"},
+		Supporting: []string{"generated", "testdata"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	directory := t.TempDir()
+	manifest, expected := buildFixture(
+		t, fixture, commit, unit, directory,
+	)
+	publication, err := Open(directory, expected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]SourceLane{
+		"src/main.go":                       SourceLaneBase,
+		"src/main_test.go":                  SourceLaneGoTest,
+		"generated/mock/fixture_test.go":    SourceLaneGoTest,
+		"testdata/generated/client_test.go": SourceLaneGoTest,
+		"src/generated_test.go.go":          SourceLaneBase,
+		"src/test.go":                       SourceLaneBase,
+	}
+	for _, domain := range []string{"go-local", "go-caller"} {
+		view, err := publication.Domain(domain, "1")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := make(map[string]SourceLane, len(want))
+		if err := view.ForEachRepositoryRecord(
+			t.Context(), func(record Record) error {
+				got[record.Path] = record.SourceLane
+				return nil
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		if !maps.Equal(got, want) {
+			t.Fatalf("%s source lanes = %v, want %v", domain, got, want)
+		}
+	}
+
+	member := &manifest.RepositoryMembers[0]
+	if !strings.Contains(member.Name, "-v4-") {
+		t.Fatalf("candidate-v4 member namespace = %q", member.Name)
+	}
+	memberPath := filepath.Join(directory, member.Name)
+	raw, err := os.ReadFile(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newline := bytes.IndexByte(raw, '\n')
+	if newline < 0 {
+		t.Fatal("repository member has no record")
+	}
+	var forged Record
+	if err := strictCanonicalJSONLine(raw[:newline+1], &forged); err != nil {
+		t.Fatal(err)
+	}
+	if forged.SourceLane == SourceLaneGoTest {
+		forged.SourceLane = SourceLaneBase
+	} else {
+		forged.SourceLane = SourceLaneGoTest
+	}
+	line, err := json.Marshal(forged)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line = append(line, '\n')
+	replaced := append(slices.Clone(line), raw[newline+1:]...)
+	if err := os.WriteFile(memberPath, replaced, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	member.ContentBytes = int64(len(replaced))
+	member.ContentDigest = artifactDigest(replaced)
+	rewriteManifest(t, directory, &manifest)
+	if _, err := Open(directory, expected); err == nil ||
+		!strings.Contains(err.Error(), "malformed candidate record") {
+		t.Fatalf("forged source lane error = %v", err)
+	}
+}
+
 func callerAssignments(
 	t *testing.T,
 	directory string,
@@ -1412,7 +1509,7 @@ func TestStrictValidationRejectsDigestConsistentMissingCallerLeaf(t *testing.T) 
 
 func artifactDigest(raw []byte) string {
 	hash := sha256.New()
-	_, _ = hash.Write([]byte("phebs-candidate-artifact-v1\x00"))
+	_, _ = hash.Write([]byte("phebs-candidate-artifact-v2\x00"))
 	_, _ = hash.Write(raw)
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
 }
@@ -1604,7 +1701,8 @@ func TestCallerSpoolScanHonorsCancellation(t *testing.T) {
 func partitionTestRecord(hashText, filePath string) Record {
 	return Record{
 		Schema: RecordSchema, Path: filePath, OID: strings.Repeat("a", 40),
-		Domains: []string{"caller"}, Hash: hashText,
+		SourceLane: sourceLane(filePath),
+		Domains:    []string{"caller"}, Hash: hashText,
 	}
 }
 
@@ -1616,7 +1714,7 @@ func TestOversizedSingletonRefused(t *testing.T) {
 	err := packer.add(Record{
 		Schema: RecordSchema, Path: "big.go", OID: strings.Repeat("a", 40),
 		DeclaredBytes: MaxDeclaredBytesPerArtifact + 1,
-		Domains:       []string{"local"},
+		SourceLane:    SourceLaneBase, Domains: []string{"local"},
 	})
 	if !errors.Is(err, ErrCandidateTooLarge) {
 		t.Fatalf("oversized singleton error = %v", err)
@@ -1630,7 +1728,8 @@ func TestArtifactPackerAbortClosesPartialMemberAndIsIdempotent(t *testing.T) {
 	)
 	if err := packer.add(Record{
 		Schema: RecordSchema, Path: "partial.go",
-		OID: strings.Repeat("a", 40), Domains: []string{"local"},
+		OID: strings.Repeat("a", 40), SourceLane: SourceLaneBase,
+		Domains: []string{"local"},
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1732,6 +1831,37 @@ func TestProjectionValidationUsesBoundedExternalMerge(t *testing.T) {
 			t.Fatalf("canceled projection sort = %v", err)
 		}
 	})
+}
+
+func TestExternalMergeRejectsCrossPlaneSourceLaneMismatch(t *testing.T) {
+	directory := t.TempDir()
+	sorter := newProjectionSorter(t.Context(), directory)
+	base := candidateProjection{
+		Path: "src/main_test.go", OID: strings.Repeat("a", 40),
+		DeclaredBytes: 10, SourceLane: SourceLaneGoTest,
+		InUnit: true, Plane: PlaneRepository,
+	}
+	caller := base
+	caller.Plane = PlaneCaller
+	caller.SourceLane = SourceLaneBase
+	if err := sorter.add(base); err != nil {
+		t.Fatal(err)
+	}
+	if err := sorter.add(caller); err != nil {
+		t.Fatal(err)
+	}
+	run, err := sorter.finish()
+	if err != nil {
+		t.Fatal(err)
+	}
+	summary := newCorpusAccumulator().summary()
+	summary.RegularCount = 1
+	summary.RegularDeclaredBytes = base.DeclaredBytes
+	if err := validateCorpusSummary(
+		t.Context(), summary, run,
+	); err == nil || !strings.Contains(err.Error(), "cross-plane candidate mismatch") {
+		t.Fatalf("cross-plane lane mismatch error = %v", err)
+	}
 }
 
 func TestPublicationLifecycleAndStageCleanup(t *testing.T) {

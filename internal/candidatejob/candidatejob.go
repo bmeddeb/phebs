@@ -95,6 +95,16 @@ type Worker struct {
 	recover      func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
 }
 
+// PolicyDigest returns the complete current candidate-policy identity used by
+// startup reconciliation. A persisted pointer with any other digest is never
+// current for this worker generation.
+func (worker *Worker) PolicyDigest() string {
+	if worker == nil || worker.policies == nil {
+		return ""
+	}
+	return worker.policies.digest
+}
+
 // New constructs the planner and extraction provider from the same frozen
 // policy object. This is the preferred production wiring.
 func New(

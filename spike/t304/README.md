@@ -29,39 +29,41 @@ inputs must preserve both semantic identities and exact publication bytes.
 
 ## Retained observation
 
-The 2026-07-30 Darwin/arm64 T30.6b identity refresh passed. Candidate manifest
-v3 retains explicit focused-local domain projections and the frozen caller
-partition while the affected extractor/enumeration generations advance. The
-planner runs took 3.34 s and 3.35 s and peaked at 61,767,680 and 61,243,392
-bytes RSS. Each staged 12 files totaling 24,288 bytes. Twice the final caller
-content conservatively bounds planner
-spool/split scratch at 4,134 bytes; the external-validation scratch bound was
-3,514 bytes. Adding the larger phase bound to the final stage yields 28,422
-bytes of conservative peak candidate disk. The complete census contained
-200,008 regular files; policy projection retained five repository rows and six
-caller rows. The two-bit caller leaves were `00:1`, `10:3`, and `11:2`, so no
-leaf needed a deeper split on this corpus.
+The 2026-07-30 Darwin/arm64 T30.6d identity refresh passed. Candidate manifest
+v4 retains explicit focused-local domain projections and the frozen caller
+partition while adding path-derived source lanes. The planner runs took 7.99 s
+and 5.34 s and peaked at 61,784,064 and 61,456,384 bytes RSS. Each staged 12
+files totaling 24,984 bytes. Twice the final caller content conservatively
+bounds planner spool/split scratch at 4,386 bytes; the external-validation
+scratch bound was 3,514 bytes. Adding the larger phase bound to the final stage
+yields 29,370 bytes of conservative peak candidate disk. The complete census
+contained 200,008 regular files; policy projection retained five repository
+rows and six caller rows. The two-bit caller leaves were `00:1`, `10:3`, and
+`11:2`, so no leaf needed a deeper split on this corpus.
 
 The 16 MiB disk threshold remains this neutral fixture's prospective
 measurement gate; it is not the production schema's aggregate projection
-ceiling. Manifest v3 independently refuses more than 16,384 focused-local
+ceiling. Manifest v4 independently refuses more than 16,384 focused-local
 projection artifacts or 4 GiB of their canonical content.
 
+Strict validation retains `B_repository + C_caller + ΣP`, one stale local
+replay remains `P_d`, and lane classification adds no source-blob read: it is
+derived from the canonical path already present in the streamed tree census.
 The repeat run reproduced the exact 12 filenames and all bytes. Its retained
 identities are:
 
 - source-corpus digest:
   `sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2`;
 - streamed regular-census digest:
-  `sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841`;
+  `sha256:157e95650c495956bf73b7f24bb668d062e667ff363aeda0aace58f29663602d`;
 - policy digest:
-  `sha256:dca5479f48050cc032ed1ee8eb487bb324a20dfe275b9fe55c6165e5f53b14c2`;
+  `sha256:b2d6df428a480f48a6258266576a2acdd95c29d59aef1fc2ca18fa552f3f90bb`;
 - generation digest:
-  `sha256:9b4504ad2ac5a44f85c35966de98b9b7309ec61b63252d393b67091f93fe78cd`;
+  `sha256:6a0b94c42ca967fe8f2bca8763f77b287a3d1d37974a9432971a3fdd076f0be9`;
 - manifest digest:
-  `sha256:91397ec557f0afd7eb4f861fe8a9989c31d25e586c9869bd648da277ed33b684`;
+  `sha256:b6b5ad4e18b8c34df6050acc92c5af781cca50aff4498871f3d76cf20ccadc67`;
 - exact staged-output digest:
-  `sha256:209f0a74aa863d8eb8986c7d853f34206d11527d86822056dfdd54071cedfb89`.
+  `sha256:6ff6f0622128512aafc09bbcc57336242a2c86ab1f08fa0d24eb2b2cb339067b`.
 
 To reproduce the retained observation:
 

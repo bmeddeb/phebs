@@ -4257,3 +4257,56 @@ schema, child process, or concurrency fan-out was added. The ticket changes no
 search behavior, production registration, completeness, extraction-accuracy,
 migration-completion, decommission-safety, or historical-evidence-retention
 claim. T30.6d owns candidate-v4 source-lane classification.
+
+### T30.6d · Candidate-v4 source-lane classification
+
+**T30.6d ✅ · Candidate-v4 source-lane classification** *(2026-07-30)* —
+advanced candidate manifest/state/record schemas; enumeration,
+focused-local-projection, and record-order policies; policy, generation,
+corpus, domain-summary, manifest, and artifact hash domains; member namespace;
+extraction inventory prefix; and process-local control identity.
+
+Every ordinary repository, focused-local projection, and caller record carries
+`source_lane: base|go_test`. Exact canonical lowercase `_test.go` suffix is
+`go_test`, including generated, mock, fixture, and `testdata` paths; every
+other ordinary candidate is `base`. The builder derives the lane from the one
+streamed canonical tree path. Strict validation independently recomputes it,
+includes it in per-domain repository/unit summaries, bounded projection spool
+identity, and external-merge cross-plane comparison, and refuses missing,
+forged, or disagreeing lanes.
+
+Candidate v3 is never current under v4. Before candidate runners start,
+startup reconciliation compares each live pointer with the complete current
+policy digest, clears a mismatched pointer, and upgrades its deduplicated
+pending candidate job to forced replacement. Failure to clear or enqueue
+aborts startup. The candidate worker still regression-covers direct v3→v4
+replacement and cleanup of retired members. Candidate publications remain
+derived and excluded from backup; restore clears imported pointers/control
+outcomes and ordinary backfill rebuilds v4 from authoritative restored state.
+
+AC met: exact suffix and generated/mock/fixture/`testdata` overlap fixtures;
+digest-consistent forged-lane refusal; source lane in external-merge
+cross-plane identity; existing marker, descriptor-stability,
+missing/extra/reordered focused-projection, publication cleanup, and
+backup/restore coverage under the v4 schema; same-HEAD startup policy
+transition; direct v3 replacement; dated PLAN decision and Operations,
+Configuration, roadmap, AGENTS, and active/completed backlog updates; full
+merge bar. T30.6d changes no extractor consumption, evidence/store/API
+schema, focused shard, unit digest, search generation, or search behavior.
+
+The refreshed neutral T30.4 receipt retains 200,008 regular files, five
+repository rows, six caller rows, three leaves (`00:1`, `10:3`, `11:2`), and
+12 staged files. The canonical lane field raises staged bytes to 24,984,
+planner scratch to 4,386 bytes, and conservative peak candidate disk to 29,370
+bytes. Byte-identical runs completed in 7.99 s/5.34 s at
+61,784,064/61,456,384 bytes RSS, within the frozen gates. Strict open remains
+`B_repository + C_caller + ΣP`, stale local replay remains `P_d`, and path
+classification performs zero source-blob reads. Startup adds one indexed
+candidate-pointer point read per live indexed repository after the existing
+repository list, with no artifact read/hash or added memory proportional to
+the corpus. Steady-state exact-pointer and
+control-fingerprint reuse adds no corpus walk, member hash, projection pass,
+blob read, child process, or concurrency. No production-registration,
+completeness, extraction-accuracy, migration-completion,
+decommission-safety, or historical-retention claim is created. T30.6e owns
+focused local-evidence base-lane consumption.

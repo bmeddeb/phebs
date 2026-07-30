@@ -78,6 +78,14 @@ recovers and compares the archived publication count. It contains no host
 binary path or database password. Preserve the exact config separately; the
 backup contains its digest, not its bytes.
 
+Candidate publications remain derived and are deliberately absent from the
+archive, including candidate-v4 members and the stable candidate manifest.
+Restore clears imported candidate pointers and candidate-control outcomes;
+ordinary startup backfill then reconstructs the current v4 generation from
+the restored repository, HEAD, unit, and current policies. Never copy a v3 or
+v4 `$DATA/candidates` directory beside a restore: those bytes have no authority
+without the installation-local reconstructed pointer.
+
 When any omission or stale-marker count is nonzero, backup emits one bounded
 focused-derived-state summary:
 
@@ -462,13 +470,18 @@ a focused publication cannot hand the planner an in-unit path it cannot
 represent.
 
 Repository rows are packed into canonical NDJSON members. For a focused
-publication, candidate manifest v3 additionally commits one explicitly
+publication, candidate manifest v4 commits one explicitly
 addressed projection for every local domain. Each projection contains exactly
 that domain's in-unit repository records in canonical repository order; an
 empty projection is represented by an explicit empty member list. Projection
 members are named by the canonical policy ordinal and are limited in aggregate
 to 16,384 artifacts and 4 GiB of canonical content. Caller rows are assigned by
 `SHA-256("phebs-caller-path-v1\0" || UTF8(repository-relative-path))`.
+Every ordinary repository, local-projection, and caller record also carries a
+strictly path-derived `source_lane`: exact lowercase `_test.go` suffix is
+`go_test`, even below generated, mock, fixture, or `testdata` paths; all other
+ordinary candidates are `base`. Strict admission recomputes the lane and
+includes it in cross-plane identity rather than trusting stored JSON.
 Planning starts at two hash-prefix bits and recursively splits an over-limit
 bucket by the next bit. Every member or nonempty leaf is limited to 4,096
 records and 64 MiB of declared blob bytes; a larger singleton or a bucket that
@@ -484,13 +497,13 @@ publication membership is checked, and cleaned after a crash at startup.
 The retained
 [T30.4 prospective measurement](../../spike/t304/README.md) streamed 200,008
 regular files into five repository rows and six caller rows. It produced three
-two-bit caller leaves (`00:1`, `10:3`, `11:2`). The post-T30.5 manifest-v3
-refresh added the focused-local projections; each run staged 12 files totaling
-24,288 bytes. Twice the final caller content bounds planner spool and
-split scratch at 4,134 bytes; external-validation scratch is bounded at 3,514
-bytes. Adding the larger phase bound to the final stage gives 28,422 bytes of
-conservative peak candidate disk. The T30.6b identity refresh runs took
-3.34 s and 3.35 s, peaked at 61,767,680 and 61,243,392 bytes RSS, and
+two-bit caller leaves (`00:1`, `10:3`, `11:2`). The T30.6d manifest-v4
+refresh retains the focused-local projections; each run staged 12 files
+totaling 24,984 bytes. Twice the final caller content bounds planner spool and
+split scratch at 4,386 bytes; external-validation scratch is bounded at 3,514
+bytes. Adding the larger phase bound to the final stage gives 29,370 bytes of
+conservative peak candidate disk. The refresh runs took 7.99 s and 5.34 s,
+peaked at 61,784,064 and 61,456,384 bytes RSS, and
 reproduced byte-identical
 output. The
 frozen local planner gates are at most 10 s wall time, 256 MiB peak RSS, and 16
@@ -512,6 +525,16 @@ their opened state or when the stable marker proves an interrupted
 filesystem-before-database transition. Unmarked bytes with no valid pointer
 are re-censused and replaced even if their manifest is internally consistent;
 an orphan or forged generation cannot bootstrap its own authority.
+On a candidate-v4 upgrade, startup compares each live pointer with the current
+complete policy digest before candidate runners begin. A v3 pointer is cleared
+and its deduplicated pending candidate job is upgraded to `force`; failure to
+clear or enqueue aborts startup. The replacement re-censuses the same
+authoritative HEAD/unit and normal publication cleanup removes the retired v3
+members. Do not preserve a v3 pointer by renaming its artifacts or disabling
+the backfill.
+This reconciliation adds one indexed candidate-pointer point read per live
+indexed repository after the existing repository list; it reads or hashes no
+candidate artifact.
 
 At steady state, the exact persisted pointer, an absent marker, and its present
 regular manifest control file can prove that no publication bytes need to be
@@ -737,8 +760,8 @@ failure diagnostic and wait for the target-bound caller generation.
 
 T30.6a supplies the bounded job report described above, T30.6b makes exact
 terminal and retryable outcomes durable, and T30.6c schedules them beneath
-independent per-domain and aggregate job/lock bounds. T30.6d next advances
-candidate identity with `source_lane: base|go_test`, and T30.6e consumes
+independent per-domain and aggregate job/lock bounds. T30.6d advances
+candidate identity with `source_lane: base|go_test`; T30.6e next consumes
 `base` only for focused local evidence while safety-accounting the complete
 typed SCIP artifact before removing exact test documents' definitions,
 anchors, occurrences, and joins. Empty-unit repositories retain shipped
@@ -1374,7 +1397,7 @@ does not bypass candidate-manifest or extraction admission. A repository view
 beyond a planned-path, path-byte, candidate-read, aggregate-byte, fact, or
 parser bound is unsupported as one extraction unit: the job retries and then
 fails with that bound recorded rather than publishing a partial result.
-Focused local domains consume their manifest-v3 unit projection; repository
+Focused local domains consume their manifest-v4 unit projection; repository
 and caller planes do not silently narrow.
 
 Proof-aware retention checks at startup and hourly while idle, deleting

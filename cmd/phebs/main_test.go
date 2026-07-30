@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -1141,11 +1142,16 @@ func webhookSignature(body []byte, secret string) string {
 
 type candidateBackfillStore struct {
 	store.Store
-	repos      []store.Repo
-	listErr    error
-	enqueueErr error
-	pending    map[string]store.Job
-	created    int
+	store.CandidateManifestPublicationStore
+	repos          []store.Repo
+	publications   []store.CandidateManifestPublication
+	listErr        error
+	publicationErr error
+	clearErr       error
+	enqueueErr     error
+	pending        map[string]store.Job
+	cleared        []string
+	created        int
 }
 
 func (s *candidateBackfillStore) ListRepos(context.Context) ([]store.Repo, error) {
@@ -1153,6 +1159,50 @@ func (s *candidateBackfillStore) ListRepos(context.Context) ([]store.Repo, error
 		return nil, s.listErr
 	}
 	return s.repos, nil
+}
+
+func (s *candidateBackfillStore) GetCandidateManifestPublication(
+	_ context.Context,
+	repository string,
+) (*store.CandidateManifestPublication, error) {
+	if s.publicationErr != nil {
+		return nil, s.publicationErr
+	}
+	for _, publication := range s.publications {
+		if publication.Repository == repository {
+			result := publication
+			return &result, nil
+		}
+	}
+	return nil, store.ErrNotFound
+}
+
+func (s *candidateBackfillStore) ListCandidateManifestPublications(
+	context.Context,
+) ([]store.CandidateManifestPublication, error) {
+	if s.publicationErr != nil {
+		return nil, s.publicationErr
+	}
+	return slices.Clone(s.publications), nil
+}
+
+func (s *candidateBackfillStore) ClearCandidateManifestPublication(
+	_ context.Context,
+	repository string,
+) error {
+	if s.clearErr != nil {
+		return s.clearErr
+	}
+	s.cleared = append(s.cleared, repository)
+	for index := range s.publications {
+		if s.publications[index].Repository == repository {
+			s.publications = append(
+				s.publications[:index], s.publications[index+1:]...,
+			)
+			break
+		}
+	}
+	return nil
 }
 
 func (s *candidateBackfillStore) EnqueuePending(
@@ -1168,6 +1218,8 @@ func (s *candidateBackfillStore) EnqueuePending(
 		s.pending = make(map[string]store.Job)
 	}
 	if job, ok := s.pending[target]; ok {
+		job.Force = job.Force || force
+		s.pending[target] = job
 		return &job, nil
 	}
 	job := store.Job{Kind: kind, Target: target, Status: store.StatusPending, Force: force}
@@ -1183,10 +1235,10 @@ func TestEnqueueCandidateBackfillIndexedLiveReposOnlyAndDedupes(t *testing.T) {
 		{Name: "example.com/deleting", IndexedCommitHash: "b", Deleting: true},
 		{Name: "example.com/live/two", IndexedCommitHash: "c"},
 	}}
-	if err := enqueueCandidateBackfill(t.Context(), st); err != nil {
+	if err := enqueueCandidateBackfill(t.Context(), st, "current"); err != nil {
 		t.Fatalf("first backfill: %v", err)
 	}
-	if err := enqueueCandidateBackfill(t.Context(), st); err != nil {
+	if err := enqueueCandidateBackfill(t.Context(), st, "current"); err != nil {
 		t.Fatalf("second backfill: %v", err)
 	}
 	if st.created != 2 || len(st.pending) != 2 {
@@ -1199,9 +1251,64 @@ func TestEnqueueCandidateBackfillIndexedLiveReposOnlyAndDedupes(t *testing.T) {
 	}
 }
 
+func TestEnqueueCandidateBackfillClearsRetiredPolicyAndForcesReplacement(
+	t *testing.T,
+) {
+	const repository = "example.com/live/legacy"
+	st := &candidateBackfillStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: strings.Repeat("a", 40),
+		}},
+		publications: []store.CandidateManifestPublication{{
+			Repository:   repository,
+			PolicyDigest: "retired-v3-policy",
+		}},
+		pending: map[string]store.Job{
+			repository: {
+				Kind: store.JobCandidate, Target: repository,
+				Status: store.StatusPending,
+			},
+		},
+	}
+	if err := enqueueCandidateBackfill(
+		t.Context(), st, "current-v4-policy",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(st.cleared, []string{repository}) {
+		t.Fatalf("cleared publications = %v", st.cleared)
+	}
+	if job := st.pending[repository]; !job.Force {
+		t.Fatalf("replacement job = %+v, want force", job)
+	}
+}
+
+func TestEnqueueCandidateBackfillRepairsInvalidPointer(t *testing.T) {
+	const repository = "example.com/live/invalid"
+	st := &candidateBackfillStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: strings.Repeat("a", 40),
+		}},
+		publicationErr: store.ErrInvalidCandidateManifestPublication,
+	}
+	if err := enqueueCandidateBackfill(
+		t.Context(), st, "current-v4-policy",
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(st.cleared, []string{repository}) {
+		t.Fatalf("cleared publications = %v", st.cleared)
+	}
+	if job := st.pending[repository]; !job.Force {
+		t.Fatalf("replacement job = %+v, want force", job)
+	}
+}
+
 func TestEnqueueCandidateBackfillPropagatesListError(t *testing.T) {
 	want := errors.New("list failed")
-	err := enqueueCandidateBackfill(t.Context(), &candidateBackfillStore{listErr: want})
+	err := enqueueCandidateBackfill(
+		t.Context(), &candidateBackfillStore{listErr: want}, "current",
+	)
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want wrapped %v", err, want)
 	}
@@ -1213,7 +1320,7 @@ func TestEnqueueCandidateBackfillPropagatesEnqueueError(t *testing.T) {
 		repos:      []store.Repo{{Name: "example.com/live", IndexedCommitHash: "a"}},
 		enqueueErr: want,
 	}
-	err := enqueueCandidateBackfill(t.Context(), st)
+	err := enqueueCandidateBackfill(t.Context(), st, "current")
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want wrapped %v", err, want)
 	}

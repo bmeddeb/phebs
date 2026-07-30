@@ -250,29 +250,35 @@ func (*replayAuditEvidence) SweepEvidence(
 	return store.EvidenceSweepProgress{}, nil
 }
 
-type legacyV2PartitionPolicy struct {
-	EnumerationPolicy string `json:"enumeration_policy"`
-	CallerHashPolicy  string `json:"caller_hash_policy"`
-	InitialPrefixBits int    `json:"initial_prefix_bits"`
-	MaxRecords        int    `json:"max_records"`
-	MaxDeclaredBytes  int64  `json:"max_declared_bytes"`
-	RecordOrdering    string `json:"record_ordering"`
-	SplitRule         string `json:"split_rule"`
+type legacyV3PartitionPolicy struct {
+	EnumerationPolicy              string `json:"enumeration_policy"`
+	CallerHashPolicy               string `json:"caller_hash_policy"`
+	LocalProjectionPolicy          string `json:"local_projection_policy"`
+	InitialPrefixBits              int    `json:"initial_prefix_bits"`
+	MaxRecords                     int    `json:"max_records"`
+	MaxDeclaredBytes               int64  `json:"max_declared_bytes"`
+	MaxLocalProjectionArtifacts    int    `json:"max_local_projection_artifacts"`
+	MaxLocalProjectionContentBytes int64  `json:"max_local_projection_content_bytes"`
+	RecordOrdering                 string `json:"record_ordering"`
+	SplitRule                      string `json:"split_rule"`
 }
 
-func legacyV2FrozenPartitionPolicy() legacyV2PartitionPolicy {
-	return legacyV2PartitionPolicy{
-		EnumerationPolicy: "phebs-candidate-enumeration-v2",
-		CallerHashPolicy:  "phebs-caller-path-v1",
-		InitialPrefixBits: 2,
-		MaxRecords:        4096,
-		MaxDeclaredBytes:  64 << 20,
-		RecordOrdering:    "hash-path-oid-v1",
-		SplitRule:         "next-hash-bit-v1",
+func legacyV3FrozenPartitionPolicy() legacyV3PartitionPolicy {
+	return legacyV3PartitionPolicy{
+		EnumerationPolicy:              "phebs-candidate-enumeration-v2",
+		CallerHashPolicy:               "phebs-caller-path-v1",
+		LocalProjectionPolicy:          "focused-domain-repository-order-v1",
+		InitialPrefixBits:              2,
+		MaxRecords:                     4096,
+		MaxDeclaredBytes:               64 << 20,
+		MaxLocalProjectionArtifacts:    16_384,
+		MaxLocalProjectionContentBytes: 4 << 30,
+		RecordOrdering:                 "hash-path-oid-v1",
+		SplitRule:                      "next-hash-bit-v1",
 	}
 }
 
-type legacyV2Manifest struct {
+type legacyV3Manifest struct {
 	Schema            string                         `json:"schema"`
 	Repository        string                         `json:"repository"`
 	Commit            string                         `json:"commit"`
@@ -280,18 +286,19 @@ type legacyV2Manifest struct {
 	PolicyDigest      string                         `json:"policy_digest"`
 	GenerationDigest  string                         `json:"generation_digest"`
 	TypedIndex        *candidate.TypedIndexSelection `json:"typed_index,omitempty"`
-	PartitionPolicy   legacyV2PartitionPolicy        `json:"partition_policy"`
+	PartitionPolicy   legacyV3PartitionPolicy        `json:"partition_policy"`
 	Policies          []candidate.PolicyIdentity     `json:"policies"`
 	Corpus            candidate.CorpusSummary        `json:"corpus"`
 	UnitCorpus        candidate.CorpusSummary        `json:"unit_corpus"`
 	Domains           []candidate.DomainSummary      `json:"domains"`
 	TypedInputs       []candidate.TypedInput         `json:"typed_inputs"`
 	RepositoryMembers []candidate.Artifact           `json:"repository_members"`
+	LocalProjections  []candidate.LocalProjection    `json:"local_projections"`
 	CallerLeaves      []candidate.CallerLeaf         `json:"caller_leaves"`
 	Digest            string                         `json:"digest"`
 }
 
-func legacyV2Digest(domain string, payload []byte) string {
+func legacyV3Digest(domain string, payload []byte) string {
 	hasher := sha256.New()
 	_, _ = hasher.Write([]byte(domain))
 	_, _ = hasher.Write(payload)
@@ -946,7 +953,7 @@ func TestTamperTerminalOutcomeSameDigestStrictRepairRunsExtractionOnce(
 	}
 }
 
-func TestWorkerUpgradesLegacyV2PublicationAndCleansArtifacts(t *testing.T) {
+func TestWorkerUpgradesLegacyV3PublicationAndCleansArtifacts(t *testing.T) {
 	dataDir, repository, commit := candidateGitFixture(t)
 	unit, err := (analysisunit.Scope{
 		Repository: repository,
@@ -990,10 +997,10 @@ func TestWorkerUpgradesLegacyV2PublicationAndCleansArtifacts(t *testing.T) {
 	initialManifest := initialPublication.Manifest()
 	if initialManifest.Schema != candidate.ManifestSchema ||
 		len(initialManifest.LocalProjections) != 1 {
-		t.Fatalf("initial v3 manifest = %+v", initialManifest)
+		t.Fatalf("initial v4 manifest = %+v", initialManifest)
 	}
 
-	legacyPointer, legacyNames := installLegacyV2Publication(
+	legacyPointer, legacyNames := installLegacyV3Publication(
 		t, CandidateRoot(dataDir), initialManifest,
 	)
 	if len(legacyNames) < 2 ||
@@ -1011,9 +1018,9 @@ func TestWorkerUpgradesLegacyV2PublicationAndCleansArtifacts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !strings.Contains(
-		string(legacyRaw), `"schema":"phebs-candidate-manifest-v2"`,
-	) || strings.Contains(string(legacyRaw), `"local_projections"`) {
-		t.Fatalf("legacy manifest is not v2-shaped: %s", legacyRaw)
+		string(legacyRaw), `"schema":"phebs-candidate-manifest-v3"`,
+	) || !strings.Contains(string(legacyRaw), `"local_projections"`) {
+		t.Fatalf("legacy manifest is not v3-shaped: %s", legacyRaw)
 	}
 	state.mu.Lock()
 	state.pointer = &legacyPointer
@@ -1034,7 +1041,7 @@ func TestWorkerUpgradesLegacyV2PublicationAndCleansArtifacts(t *testing.T) {
 	}
 	if strictUpgradeOpens != 1 || state.publishCalls != 2 {
 		t.Fatalf(
-			"v2 upgrade strict opens/publishes = %d/%d, want 1/2",
+			"v3 upgrade strict opens/publishes = %d/%d, want 1/2",
 			strictUpgradeOpens, state.publishCalls,
 		)
 	}
@@ -1045,7 +1052,7 @@ func TestWorkerUpgradesLegacyV2PublicationAndCleansArtifacts(t *testing.T) {
 		upgradedPointer.GenerationDigest == legacyPointer.GenerationDigest ||
 		upgradedPointer.ManifestDigest == legacyPointer.ManifestDigest {
 		t.Fatalf(
-			"v2 pointer was not replaced by v3: old=%+v new=%+v",
+			"v3 pointer was not replaced by v4: old=%+v new=%+v",
 			legacyPointer, upgradedPointer,
 		)
 	}
@@ -1068,7 +1075,7 @@ func TestWorkerUpgradesLegacyV2PublicationAndCleansArtifacts(t *testing.T) {
 		if _, err := os.Lstat(
 			filepath.Join(CandidateRoot(dataDir), name),
 		); !errors.Is(err, os.ErrNotExist) {
-			t.Fatalf("legacy v2 artifact %q remains: %v", name, err)
+			t.Fatalf("legacy v3 artifact %q remains: %v", name, err)
 		}
 	}
 }
@@ -2073,26 +2080,26 @@ func candidateMultiLocalGitFixture(
 	return dataDir, repository, commit
 }
 
-func installLegacyV2Publication(
+func installLegacyV3Publication(
 	t *testing.T,
 	root string,
 	current candidate.Manifest,
 ) (store.CandidateManifestPublication, []string) {
 	t.Helper()
-	partition := legacyV2FrozenPartitionPolicy()
+	partition := legacyV3FrozenPartitionPolicy()
 	policyPayload, err := json.Marshal(struct {
 		Schema    string                     `json:"schema"`
-		Partition legacyV2PartitionPolicy    `json:"partition_policy"`
+		Partition legacyV3PartitionPolicy    `json:"partition_policy"`
 		Policies  []candidate.PolicyIdentity `json:"policies"`
 	}{
-		Schema:    "phebs-candidate-manifest-v2",
+		Schema:    "phebs-candidate-manifest-v3",
 		Partition: partition,
 		Policies:  current.Policies,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	policyDigest := legacyV2Digest(
+	policyDigest := legacyV3Digest(
 		"phebs-candidate-policy-v1\x00", policyPayload,
 	)
 	generationPayload, err := json.Marshal(struct {
@@ -2103,7 +2110,7 @@ func installLegacyV2Publication(
 		PolicyDigest string                         `json:"policy_digest"`
 		TypedIndex   *candidate.TypedIndexSelection `json:"typed_index,omitempty"`
 	}{
-		Schema:       "phebs-candidate-manifest-v2",
+		Schema:       "phebs-candidate-manifest-v3",
 		Repository:   current.Repository,
 		Commit:       current.Commit,
 		UnitDigest:   current.UnitDigest,
@@ -2113,11 +2120,11 @@ func installLegacyV2Publication(
 	if err != nil {
 		t.Fatal(err)
 	}
-	generationDigest := legacyV2Digest(
+	generationDigest := legacyV3Digest(
 		"phebs-candidate-generation-v1\x00", generationPayload,
 	)
-	legacy := legacyV2Manifest{
-		Schema:            "phebs-candidate-manifest-v2",
+	legacy := legacyV3Manifest{
+		Schema:            "phebs-candidate-manifest-v3",
 		Repository:        current.Repository,
 		Commit:            current.Commit,
 		UnitDigest:        current.UnitDigest,
@@ -2131,13 +2138,14 @@ func installLegacyV2Publication(
 		Domains:           slices.Clone(current.Domains),
 		TypedInputs:       slices.Clone(current.TypedInputs),
 		RepositoryMembers: slices.Clone(current.RepositoryMembers),
+		LocalProjections:  slices.Clone(current.LocalProjections),
 		CallerLeaves:      slices.Clone(current.CallerLeaves),
 	}
-	prefix := candidate.ArtifactPrefix(
-		current.Repository, generationDigest,
-	)
+	prefix := candidate.ArtifactBase(current.Repository) + "-" +
+		strings.TrimPrefix(generationDigest, "sha256:") + "-"
 	oldNames := make([]string, 0,
-		len(legacy.RepositoryMembers)+len(legacy.CallerLeaves))
+		len(legacy.RepositoryMembers)+len(legacy.CallerLeaves)+
+			len(legacy.LocalProjections))
 	for ordinal := range legacy.RepositoryMembers {
 		member := &legacy.RepositoryMembers[ordinal]
 		legacyName := prefix + fmt.Sprintf(
@@ -2151,6 +2159,24 @@ func installLegacyV2Publication(
 		}
 		member.Name = legacyName
 		oldNames = append(oldNames, legacyName)
+	}
+	for projectionIndex := range legacy.LocalProjections {
+		projection := &legacy.LocalProjections[projectionIndex]
+		for ordinal := range projection.Members {
+			member := &projection.Members[ordinal]
+			legacyName := prefix + fmt.Sprintf(
+				"local-%03d-%06d.ndjson",
+				projection.PolicyOrdinal, ordinal,
+			)
+			if err := os.Rename(
+				filepath.Join(root, member.Name),
+				filepath.Join(root, legacyName),
+			); err != nil {
+				t.Fatal(err)
+			}
+			member.Name = legacyName
+			oldNames = append(oldNames, legacyName)
+		}
 	}
 	for ordinal := range legacy.CallerLeaves {
 		leaf := &legacy.CallerLeaves[ordinal]
@@ -2166,18 +2192,11 @@ func installLegacyV2Publication(
 		leaf.Name = legacyName
 		oldNames = append(oldNames, legacyName)
 	}
-	for _, projection := range current.LocalProjections {
-		for _, member := range projection.Members {
-			if err := os.Remove(filepath.Join(root, member.Name)); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
 	manifestPayload, err := json.Marshal(legacy)
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacy.Digest = legacyV2Digest(
+	legacy.Digest = legacyV3Digest(
 		"phebs-candidate-manifest-v1\x00", manifestPayload,
 	)
 	manifestPayload, err = json.Marshal(legacy)

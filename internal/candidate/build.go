@@ -676,7 +676,8 @@ func newRecord(
 ) Record {
 	return Record{
 		Schema: RecordSchema, Path: current.path, OID: current.oid,
-		DeclaredBytes: current.size, Domains: append([]string{}, domains...),
+		DeclaredBytes: current.size, SourceLane: sourceLane(current.path),
+		Domains:         append([]string{}, domains...),
 		RequiredDomains: append([]string{}, required...), InUnit: inUnit,
 		Shared: shared, Hash: hashText,
 	}
@@ -692,9 +693,9 @@ func newCorpusAccumulator() *corpusAccumulator {
 	result := &corpusAccumulator{
 		regularHash: sha256.New(), gitlinkHash: sha256.New(), symlinkHash: sha256.New(),
 	}
-	_, _ = result.regularHash.Write([]byte("phebs-candidate-corpus-regular-v1\x00"))
-	_, _ = result.gitlinkHash.Write([]byte("phebs-candidate-corpus-gitlink-v1\x00"))
-	_, _ = result.symlinkHash.Write([]byte("phebs-candidate-corpus-symlink-v1\x00"))
+	_, _ = result.regularHash.Write([]byte("phebs-candidate-corpus-regular-v2\x00"))
+	_, _ = result.gitlinkHash.Write([]byte("phebs-candidate-corpus-gitlink-v2\x00"))
+	_, _ = result.symlinkHash.Write([]byte("phebs-candidate-corpus-symlink-v2\x00"))
 	return result
 }
 
@@ -786,8 +787,8 @@ func makeDomainAccumulators(identities []PolicyIdentity) map[string]*domainAccum
 			repositoryHash: sha256.New(),
 			unitHash:       sha256.New(),
 		}
-		_, _ = current.repositoryHash.Write([]byte("phebs-candidate-domain-repository-v1\x00"))
-		_, _ = current.unitHash.Write([]byte("phebs-candidate-domain-unit-v1\x00"))
+		_, _ = current.repositoryHash.Write([]byte("phebs-candidate-domain-repository-v2\x00"))
+		_, _ = current.unitHash.Write([]byte("phebs-candidate-domain-unit-v2\x00"))
 		result[identity.Domain] = current
 	}
 	return result
@@ -819,13 +820,18 @@ func addDomainRecords(
 			current.summary.RepositoryRequiredCount++
 		}
 		payload, _ := json.Marshal(struct {
-			Path     string `json:"path"`
-			OID      string `json:"oid"`
-			Size     int64  `json:"declared_bytes"`
-			InUnit   bool   `json:"in_unit"`
-			Shared   bool   `json:"shared"`
-			Required bool   `json:"required"`
-		}{record.Path, record.OID, record.DeclaredBytes, record.InUnit, record.Shared, requiredSet[domain]})
+			Path       string     `json:"path"`
+			OID        string     `json:"oid"`
+			Size       int64      `json:"declared_bytes"`
+			SourceLane SourceLane `json:"source_lane"`
+			InUnit     bool       `json:"in_unit"`
+			Shared     bool       `json:"shared"`
+			Required   bool       `json:"required"`
+		}{
+			record.Path, record.OID, record.DeclaredBytes,
+			record.SourceLane, record.InUnit, record.Shared,
+			requiredSet[domain],
+		})
 		_, _ = current.repositoryHash.Write(payload)
 		_, _ = current.repositoryHash.Write([]byte{'\n'})
 		if record.InUnit {
@@ -965,7 +971,7 @@ func (packer *artifactPacker) start() error {
 	}
 	packer.file = file
 	packer.hash = sha256.New()
-	_, _ = packer.hash.Write([]byte("phebs-candidate-artifact-v1\x00"))
+	_, _ = packer.hash.Write([]byte("phebs-candidate-artifact-v2\x00"))
 	packer.current = Artifact{Name: name, Ordinal: ordinal}
 	return nil
 }
