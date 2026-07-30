@@ -3807,6 +3807,37 @@ Verify/Restore retains full semantic extraction. Backup manifest v3 durably
 records the focused archive/omission receipt and independently checks its
 archived publication count.
 
+Post-T30.5 issue #2 repair receipt (2026-07-29): whole-repository publications
+now rename builder output into a repository-hash/format/ordinal namespace and
+commit an exact manifest over the ordered revision set and each shard's name,
+ordinal/count, bytes, content digest, and decoded-metadata digest before their
+indexed row becomes searchable. Startup captures only stable identities around
+the synchronous shared reader and one loaded inventory; the first query lazily
+validates bytes. Any runtime publication or identity transition uses one exact
+static reader for the process lifetime, so an indefinitely stale or mixed
+watcher cannot produce false negatives. JSON uses one batched final generation
+barrier. SSE checks only repositories represented by surviving file matches
+before emission and retains one full final barrier, avoiding a fleet scan per
+event while preserving the same no-old-generation contract. Failures are
+explicit, fingerprint-keyed negative entries retry with bounded backoff, and
+strict binding damage requests a deduplicated forced replacement. Reconciliation
+clears and force-requeues pre-receipt or locally metadata-invalid state;
+prior-process markers are reclaimed only after full validation. A managed
+repository-hash basename is the sole cleanup authority; decoded metadata
+classifies only legacy names, so tampered B metadata cannot delete or perturb
+A and mixed metadata cannot wedge removal of A's own shard. Regression coverage
+pins immediate HEAD/branch/tag/revision-set
+replacement, stale and mixed readers, JSON/SSE parity, no-match distinction,
+marker/missing/corrupt/extra publications, long repository names, bounded
+concurrent binding, repair/backoff, pre-receipt reconciliation, and
+unreadable/cross-repository cleanup and reconciliation isolation. A stable
+startup generation incurs one lazy full validation; a cold runtime exact bind
+deliberately digests bytes twice, once for strict publication validation and
+once from the descriptor-stable mmap. Runtime exact overlays allow roughly
+twice the current whole-shard mapping/file-descriptor set in steady state with
+one cache-owned current exact generation; retired mappings survive only for
+active leases. Warm queries do no content rehash.
+
 ### T30.4 · Reusable candidate-partition manifest
 
 **T30.4 ✅ · Reusable candidate-partition manifest** *(2026-07-28)* — inserted
@@ -3951,6 +3982,29 @@ a content receipt: same-stat preexisting tampering remains fail-closed at the
 strict extraction-consumption seam. Canonical single-fragment lines now return
 owned bytes, and the over-limit regression uses a virtual 256 MiB source to
 prove refusal after at most 1 MiB plus one 64 KiB reader buffer.
+
+Post-T30.5 issue #3 repair receipt (2026-07-29): candidate manifest, state,
+policy, generation, extraction-inventory, and filesystem publication identity
+advance to v3. A focused build streams each in-unit repository record into the
+applicable canonical local-domain projection, including an explicit empty
+projection, without retaining the corpus. Strict open reads repository members
+once while independently reconstructing every expected projection envelope,
+validates the unchanged caller leaves once, then validates each declared
+projection from stable descriptors. Its measured I/O shape is
+`B_repository + C_caller + ΣP`; replay for one stale local domain reads only
+`P_d`, so adding local domains no longer multiplies repository-wide candidate
+reads.
+Exact coverage refuses a forged, missing, extra, reordered, wrong-domain, or
+out-of-unit projection even when its envelope and manifest digests are
+self-consistent. Projection output is limited in aggregate to 16,384 artifacts
+and 4 GiB of canonical content, in addition to the existing per-artifact
+bounds. Repository and caller views remain unchanged and T30.6 still owns the
+target-bound caller overlay. The refreshed deterministic 200,008-file receipt
+retains five repository rows, six caller rows, and the `00:1`, `10:3`, `11:2`
+caller leaves; stages 12 files totaling 24,288 bytes; bounds peak candidate
+disk at 28,422 bytes; and reproduces byte-identical output in 3.80 s/3.62 s at
+60,604,416/61,652,992 bytes RSS. The unchanged 16 MiB prospective fixture gate
+is not the production 4 GiB aggregate projection ceiling.
 
 ### T30.5 · Focused evidence publication
 

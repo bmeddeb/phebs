@@ -4,7 +4,9 @@ Epic 30 is in progress for service-scoped analysis of very large
 monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
 configuration/state boundary, T30.3 shipped and then adversarially repaired
 focused shard integrity, T30.4 shipped reusable candidate planning, and T30.5
-shipped exact focused evidence publication. T30.6 is the next ticket.
+shipped exact focused evidence publication. The post-T30.5 issue-repair gate
+is closed. T30.6 remains paused while the operator's large-monorepo runs and
+ideas receive a separate review.
 Completed Epics 0–24, Epic 29, T30.1–T30.5, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
@@ -13,12 +15,15 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Scheduled ticket
+## Paused sequencing gate
 
-**T30.6 · Target-bound repository Caller Map generation** is next. T30.5 now
-publishes local evidence against one exact repository, indexed HEAD, unit
-digest, and domain; the remaining repository-wide caller plane needs its own
-target-bound complete-generation contract before it can serve focused units.
+**T30.6 · Target-bound repository Caller Map generation** is not active.
+T30.5 now publishes local evidence against one exact repository, indexed HEAD,
+unit digest, and domain; the remaining repository-wide caller plane still
+needs its own target-bound complete-generation contract before it can serve
+focused units. The repair ticket below is closed; before implementation begins,
+review the operator's retained large-monorepo runs and proposed directions as
+new design input.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -30,6 +35,42 @@ rollback; the existing evidence sweep does not collect a row while it remains
 bounded unpinned historical-publication policy (or explicitly retain the
 unbounded posture) without deleting pinned proof. T30.6 does not silently
 inherit or solve that storage-policy decision.
+
+### Post-T30.5 issue closure ✅ *(closed 2026-07-29)*
+
+This completed repair is a prerequisite, not T30.6 implementation.
+
+- **GitHub #2 · whole-repository generation handoff** — publish a durable exact
+  whole-shard receipt; make immediate HEAD, branch, tag, and revision-set
+  Search/Stream queries bind the committed generation without sleeps; never
+  leak or silently omit an old/mixed generation; recover or rebuild missing,
+  invalid, marker-covered, and pre-receipt publications; retain bounded,
+  non-latching validation and exact cleanup.
+- **GitHub #3 · focused-local candidate replay** — advance candidate
+  publication identity to v3 with exact per-domain in-unit projections; prove
+  repository bytes are read once, caller leaves remain one validation pass,
+  and replay is only `P_d` rather than `(D + 1) × B_repository`; keep
+  repository/caller planes unchanged; enforce descriptor stability, exact
+  coverage, aggregate projection bounds, crash recovery, and v2 replacement.
+- **Closure evidence** — repeated adversarial Search and Stream tests,
+  candidate and extraction cost instrumentation,
+  tamper/marker/reconciliation/migration fixtures, and the refreshed T30.4
+  receipt are retained. Full repository and race gates passed; detailed repair
+  commits `76f68f2` and `f74fd49` were pushed before evidence-backed closure of
+  GitHub issues #2 and #3. No merge into `main` is authorized by this section.
+
+#### Documentation updates
+
+- `PLAN.md` records the exact whole-search handoff, candidate-manifest-v3
+  projection contract, resource bounds, and T30.6 pause in dated decisions.
+- `docs/guides/OPERATIONS.md` owns publication-upgrade/recovery diagnostics and
+  the `B_repository + C_caller + ΣP` strict-open / `P_d` replay cost model.
+- `spike/t304/README.md` and `spike/t304/results.json` retain the refreshed
+  deterministic v3 measurement and distinguish its 16 MiB fixture gate from
+  the production aggregate projection ceiling.
+- `docs/ROADMAP.md`, this active backlog, and
+  `docs/BACKLOG_COMPLETED.md` must agree on issue closure and keep T30.6 paused
+  pending the separate monorepo-results review.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
@@ -499,7 +540,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6 next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6 paused)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -788,8 +829,10 @@ extraction never fall back to repository-root `index.scip`. Legacy
 whole-repository evidence remains readable only in its empty-unit scope, and
 no publication can satisfy or supersede a different unit.
 
-**T30.6 · Target-bound repository Caller Map generation** *(needs T30.4,
-T30.5)* — build the bounded module/generated-resolution catalog for one
+**T30.6 ⏸ · Target-bound repository Caller Map generation** *(needs T30.4,
+T30.5 and the large-monorepo results review; post-T30.5 issue repairs
+complete)* — after the pause is explicitly lifted, build the bounded
+module/generated-resolution catalog for one
 focused declaration set before any source-partition scan, execute
 repository-global gRPC/Thrift caller partitions against that immutable
 catalog, and atomically publish a complete generation. Extend reverse

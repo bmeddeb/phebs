@@ -59,9 +59,22 @@ domain. Legacy whole-repository evidence remains readable only in its empty-unit
 scope, and same-HEAD unit changes cannot reuse it. Exact historical
 commit/unit/domain publications are intentionally retained outside the current
 sweep, so Epic 30 still needs a reviewed bounded-unpinned retention decision
-(or an explicit decision to keep that unbounded posture). T30.6 is next:
-replace the temporary repository caller view with one target-bound, completely
-published partition generation.
+(or an explicit decision to keep that unbounded posture).
+
+T30.6 is paused. The post-T30.5 repair gate closed two reported integration
+issues: whole-repository Search/Stream now binds an exact committed shard
+generation across asynchronous watcher handoff, and focused local candidate
+consumption no longer replays repository-member bytes once per stale domain.
+Whole publications carry an exact canonical shard receipt; startup validation
+is lazy, while a runtime replacement remains on a receipt-bound static reader
+and every stale boundary is a loud error rather than a false empty result.
+Candidate manifest v3 commits exact in-unit domain projections: strict open
+costs `B_repository + C_caller + ΣP`, each local replay costs `P_d`, and
+repository/caller planes remain unchanged. Both issues retain adversarial
+tests, full and race gates, detailed pushed fixes, and evidence-backed closure.
+The next action is a separate review of the operator's large-monorepo results
+and proposed directions. Only that review can lift the pause and start the
+target-bound Caller Map generation.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
 browsing, related implementation, and the Workbench use one physically

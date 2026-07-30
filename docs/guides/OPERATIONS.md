@@ -348,9 +348,10 @@ artifact-fingerprint change retries immediately. JSON fan-out uses at most
 eight workers and incrementally retains only its global top K. Progressive SSE
 batches retain arrival-order delivery under one shared display ceiling. A
 whole repository that commits focused posture while a query is running is
-removed at the result gate; that concurrent transition may return fewer files,
-but never retired whole content. Deleted, unindexed, or whole-posture cache
-entries close after their active query leases release.
+rejected at the result gate with an explicit generation-change error; the
+query cannot succeed with fewer files or retired whole content. Deleted,
+unindexed, or whole-posture cache entries close after their active query
+leases release.
 `phebs_focused_index_opened_blobs` and
 `phebs_focused_index_opened_blob_bytes` measure successful Git reads at the
 trusted scope-checking boundary; any attempted out-of-unit read fails the
@@ -363,6 +364,74 @@ from content search. The child does not preload the corpus: the pinned builder
 retains one 64 MiB current-shard batch, with at most one admitted-document
 overshoot, and flushes synchronously. It refuses a result or manifest before
 it would exceed the 1 MiB control-file reader envelope.
+
+#### Whole-repository publication handoff
+
+Unconfigured repositories retain whole-repository indexing, but their
+searchability now uses the same explicit filesystem/store handoff as focused
+indexes. Before publication, phebs renames every builder shard into a
+`phebs-whole-<repository-sha256>_v<format>.<ordinal>.zoekt` namespace and writes
+one canonical manifest containing the exact ordered revision set and each
+member's ordinal/count, byte length, content digest, and decoded-metadata
+digest. Shards are synced first; the manifest is renamed last while the stable
+repository publication marker remains present. The matching indexed row
+commits before the marker is removed. The manifest digest is a byte-publication
+receipt, not semantic identity: a builder timestamp can change it across
+equivalent rebuilds.
+
+Searcher startup records manifest/member identities before the synchronous
+shared-directory open, captures the loaded repository inventory once, and
+rechecks store/filesystem identity afterward. It does not hash the whole fleet
+at startup. The first query for an unchanged startup generation lazily performs
+one complete content/metadata validation. A repository published or changed
+after process start never trusts the asynchronous watcher: queries bind a
+static reader to exactly the manifest members for the rest of that process.
+That cold exact bind deliberately reads every member twice: once for strict
+publication validation, then again from the descriptor-stable mmap before it
+can serve. This closes mixed-member, replacement-race, and watcher-delay false
+negatives without a sleep; budget the bounded two-pass cold cost for a newly
+published large repository.
+At most two whole-repository fills run concurrently, and stable validation
+failures retry with fingerprint-keyed exponential backoff from 250 ms to 30 s.
+Member identity change retries immediately.
+
+Warm query compilation checks the complete known file identity without
+rehashing shard contents. JSON performs one final batched store/loaded-inventory
+barrier before returning. SSE validates only repositories represented by
+surviving file matches against their committed row, publication marker, and
+manifest identity before emitting that event, then performs one complete final
+barrier for no-match and out-of-band member changes. A stale, marker-covered,
+mixed, missing, or invalid generation is an explicit search error, never a
+successful empty result. The failed binding is retired so a repaired
+publication can bind exactly on the next attempt.
+
+The safety tradeoff is bounded overlap: a repository republished during this
+process can have its exact static mapping open alongside the shared directory
+reader's mapping. There is at most one cache-owned current exact generation per
+repository, so steady state is roughly twice the current whole-shard mappings
+and file descriptors. A rapid sequence of publications can transiently add
+retired exact generations still held by active queries; those leases are
+limited by the 10-second query budget and close on release. Shutdown cancels
+and joins fills. Warm queries perform file-identity checks, not full-shard
+SHA-256.
+
+Missing pre-receipt publications are a one-time derived-state upgrade:
+reconciliation clears their committed index claim and queues a forced
+replacement. A prior-process marker is removed only when full receipt
+validation proves that the store already committed those bytes. Reconciliation
+also checks each declared member's decoded repository/revision metadata and
+metadata digest locally; unreadable or mismatched metadata clears and
+force-requeues only that repository. Search-time same-size content corruption
+or another strict-binding failure requests a deduplicated forced index
+replacement. The managed repository-hash basename—not decoded metadata—is the
+sole ownership authority for current shards; metadata ownership applies only
+to legacy noncanonical names. Cleanup can therefore remove an unreadable or
+mixed-metadata target shard without selecting another repository's managed
+path.
+If a query reports `whole-repository generation changed` or cannot bind the
+committed publication, inspect the forced `index_job`, let it complete, and
+retry. Do not clear the repository row or rename shards manually. Whole shards
+and receipts remain derived and excluded from backup.
 
 #### Candidate planning and extraction admission
 
@@ -386,8 +455,13 @@ reader also share the same 4,096-byte canonical repository-path validator, so
 a focused publication cannot hand the planner an in-unit path it cannot
 represent.
 
-Repository/local rows are packed into canonical NDJSON members. Caller rows
-are assigned by
+Repository rows are packed into canonical NDJSON members. For a focused
+publication, candidate manifest v3 additionally commits one explicitly
+addressed projection for every local domain. Each projection contains exactly
+that domain's in-unit repository records in canonical repository order; an
+empty projection is represented by an explicit empty member list. Projection
+members are named by the canonical policy ordinal and are limited in aggregate
+to 16,384 artifacts and 4 GiB of canonical content. Caller rows are assigned by
 `SHA-256("phebs-caller-path-v1\0" || UTF8(repository-relative-path))`.
 Planning starts at two hash-prefix bits and recursively splits an over-limit
 bucket by the next bit. Every member or nonempty leaf is limited to 4,096
@@ -404,17 +478,20 @@ publication membership is checked, and cleaned after a crash at startup.
 The retained
 [T30.4 prospective measurement](../../spike/t304/README.md) streamed 200,008
 regular files into five repository rows and six caller rows. It produced three
-two-bit caller leaves (`00:1`, `10:3`, `11:2`); each run staged five files
-totaling 13,589 bytes. Twice the final caller content bounds planner spool and
+two-bit caller leaves (`00:1`, `10:3`, `11:2`). The post-T30.5 manifest-v3
+refresh added the focused-local projections; each run staged 12 files totaling
+24,288 bytes. Twice the final caller content bounds planner spool and
 split scratch at 4,134 bytes; external-validation scratch is bounded at 3,514
-bytes. Adding the larger phase bound to the final stage gives 17,723 bytes of
-conservative peak candidate disk. The T30.5-refreshed runs took 3.28 s and
-3.30 s, peaked at 62,013,440 and 61,440,000 bytes RSS, and reproduced
-byte-identical output. The
+bytes. Adding the larger phase bound to the final stage gives 28,422 bytes of
+conservative peak candidate disk. The refreshed runs took 3.80 s and 3.62 s,
+peaked at 60,604,416 and 61,652,992 bytes RSS, and reproduced byte-identical
+output. The
 frozen local planner gates are at most 10 s wall time, 256 MiB peak RSS, and 16
 MiB peak candidate disk including publication plus the higher planner or
 validation scratch phase; exceeding one refuses the prospective measurement
-rather than relaxing the production partition contract.
+rather than relaxing the production partition contract. The 16 MiB value is
+the neutral fixture's prospective disk gate, not the production schema's
+independent 16,384-artifact/4 GiB focused-projection ceiling.
 
 Publication stages and syncs the new bytes in `$DATA/candidates`, creates the
 stable repository `.publishing` marker, replaces prior members, and renames
@@ -444,6 +521,16 @@ and post-restore reconstruction always take the strict validation/rebuild
 path. This shortcut grants no artifact access: actual candidate replay still
 revalidates the bound regular descriptor, record limits, exact digest, and
 marker absence.
+
+When extraction must strictly open a focused candidate publication, it scans
+the repository members exactly once while reconstructing the expected local
+projection envelopes, then independently validates each declared projection.
+If `B_repository` is the canonical repository-member content, `C_caller` is
+the unchanged caller-leaf content, and `P_d` is one local domain's projection,
+strict-open I/O is `B_repository + C_caller + ΣP`; subsequent stale
+local-domain replay reads only `P_d`. Adding local domains therefore does not
+multiply repository-wide reads. Repository and caller planes retain their
+existing views, and target-bound caller overlay remains owned by T30.6.
 
 After a cold retry, the candidate worker also keeps a process-local control
 fingerprint over the persisted manifest digest and each manifest/member inode,
@@ -1078,8 +1165,9 @@ empty until their required domains have a published run; enabling their flags
 does not bypass candidate-manifest or extraction admission. A repository view
 beyond a planned-path, path-byte, candidate-read, aggregate-byte, fact, or
 parser bound is unsupported as one extraction unit: the job retries and then
-fails with that bound recorded rather than publishing a partial result. T30.5
-will narrow configured local domains; T30.4 does not silently do so.
+fails with that bound recorded rather than publishing a partial result.
+Focused local domains consume their manifest-v3 unit projection; repository
+and caller planes do not silently narrow.
 
 Proof-aware retention checks at startup and hourly while idle, deleting
 aborted, superseded, or stale unpinned staged runs in bounded transactional
