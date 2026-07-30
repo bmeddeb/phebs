@@ -122,15 +122,15 @@
     }
   ],
   "partition_policy": {
-    "enumeration_policy": "phebs-candidate-enumeration-v2",
+    "enumeration_policy": "phebs-candidate-enumeration-v3",
     "caller_hash_policy": "phebs-caller-path-v1",
-    "local_projection_policy": "focused-domain-repository-order-v1",
+    "local_projection_policy": "focused-domain-repository-order-v2",
     "initial_prefix_bits": 2,
     "max_records": 4096,
     "max_declared_bytes": 67108864,
     "max_local_projection_artifacts": 16384,
     "max_local_projection_content_bytes": 4294967296,
-    "record_ordering": "hash-path-oid-v1",
+    "record_ordering": "hash-path-oid-source-lane-v2",
     "split_rule": "next-hash-bit-v1"
   },
   "frozen_gates": {
@@ -141,19 +141,19 @@
   "run1": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:dca5479f48050cc032ed1ee8eb487bb324a20dfe275b9fe55c6165e5f53b14c2",
-    "generation_digest": "sha256:9b4504ad2ac5a44f85c35966de98b9b7309ec61b63252d393b67091f93fe78cd",
-    "manifest_digest": "sha256:91397ec557f0afd7eb4f861fe8a9989c31d25e586c9869bd648da277ed33b684",
+    "policy_digest": "sha256:b2d6df428a480f48a6258266576a2acdd95c29d59aef1fc2ca18fa552f3f90bb",
+    "generation_digest": "sha256:6a0b94c42ca967fe8f2bca8763f77b287a3d1d37974a9432971a3fdd076f0be9",
+    "manifest_digest": "sha256:b6b5ad4e18b8c34df6050acc92c5af781cca50aff4498871f3d76cf20ccadc67",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
-      "regular_digest": "sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841",
+      "regular_digest": "sha256:157e95650c495956bf73b7f24bb668d062e667ff363aeda0aace58f29663602d",
       "gitlink_count": 0,
       "gitlink_declared_bytes": 0,
-      "gitlink_digest": "sha256:7866fae8156d4bcfd20cc6e5819dcaaaac6117149fdce65306f988707a720182",
+      "gitlink_digest": "sha256:aec1f720b0a4bbe13987285043dfe11214338a204642bfb15b0669e870b7949a",
       "symlink_count": 0,
       "symlink_declared_bytes": 0,
-      "symlink_digest": "sha256:adf500d071af4c31dea3d00b43a0fa6a078cbfda28fbf73d482b0a239b174045"
+      "symlink_digest": "sha256:b79300365ad5f9d3aff090167bfc45b666b9245093bb8096a156d83f565e1673"
     },
     "repository_candidate_rows": 5,
     "caller_candidate_rows": 6,
@@ -163,48 +163,48 @@
         "prefix_bits": 2,
         "record_count": 1,
         "declared_bytes": 62,
-        "content_bytes": 344
+        "content_bytes": 365
       },
       {
         "prefix": "10",
         "prefix_bits": 2,
         "record_count": 3,
         "declared_bytes": 188,
-        "content_bytes": 1025
+        "content_bytes": 1088
       },
       {
         "prefix": "11",
         "prefix_bits": 2,
         "record_count": 2,
         "declared_bytes": 130,
-        "content_bytes": 698
+        "content_bytes": 740
       }
     ],
     "staged_artifact_count": 12,
-    "staged_artifact_bytes": 24288,
-    "planner_scratch_upper_bound_bytes": 4134,
+    "staged_artifact_bytes": 24984,
+    "planner_scratch_upper_bound_bytes": 4386,
     "validation_scratch_upper_bound_bytes": 3514,
-    "peak_candidate_disk_bytes": 28422,
-    "canonical_output_digest": "sha256:209f0a74aa863d8eb8986c7d853f34206d11527d86822056dfdd54071cedfb89",
-    "planner_wall_nanos": 3335869917,
-    "peak_rss_bytes": 61767680
+    "peak_candidate_disk_bytes": 29370,
+    "canonical_output_digest": "sha256:6ff6f0622128512aafc09bbcc57336242a2c86ab1f08fa0d24eb2b2cb339067b",
+    "planner_wall_nanos": 7990774208,
+    "peak_rss_bytes": 61784064
   },
   "run2": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:dca5479f48050cc032ed1ee8eb487bb324a20dfe275b9fe55c6165e5f53b14c2",
-    "generation_digest": "sha256:9b4504ad2ac5a44f85c35966de98b9b7309ec61b63252d393b67091f93fe78cd",
-    "manifest_digest": "sha256:91397ec557f0afd7eb4f861fe8a9989c31d25e586c9869bd648da277ed33b684",
+    "policy_digest": "sha256:b2d6df428a480f48a6258266576a2acdd95c29d59aef1fc2ca18fa552f3f90bb",
+    "generation_digest": "sha256:6a0b94c42ca967fe8f2bca8763f77b287a3d1d37974a9432971a3fdd076f0be9",
+    "manifest_digest": "sha256:b6b5ad4e18b8c34df6050acc92c5af781cca50aff4498871f3d76cf20ccadc67",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
-      "regular_digest": "sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841",
+      "regular_digest": "sha256:157e95650c495956bf73b7f24bb668d062e667ff363aeda0aace58f29663602d",
       "gitlink_count": 0,
       "gitlink_declared_bytes": 0,
-      "gitlink_digest": "sha256:7866fae8156d4bcfd20cc6e5819dcaaaac6117149fdce65306f988707a720182",
+      "gitlink_digest": "sha256:aec1f720b0a4bbe13987285043dfe11214338a204642bfb15b0669e870b7949a",
       "symlink_count": 0,
       "symlink_declared_bytes": 0,
-      "symlink_digest": "sha256:adf500d071af4c31dea3d00b43a0fa6a078cbfda28fbf73d482b0a239b174045"
+      "symlink_digest": "sha256:b79300365ad5f9d3aff090167bfc45b666b9245093bb8096a156d83f565e1673"
     },
     "repository_candidate_rows": 5,
     "caller_candidate_rows": 6,
@@ -214,31 +214,31 @@
         "prefix_bits": 2,
         "record_count": 1,
         "declared_bytes": 62,
-        "content_bytes": 344
+        "content_bytes": 365
       },
       {
         "prefix": "10",
         "prefix_bits": 2,
         "record_count": 3,
         "declared_bytes": 188,
-        "content_bytes": 1025
+        "content_bytes": 1088
       },
       {
         "prefix": "11",
         "prefix_bits": 2,
         "record_count": 2,
         "declared_bytes": 130,
-        "content_bytes": 698
+        "content_bytes": 740
       }
     ],
     "staged_artifact_count": 12,
-    "staged_artifact_bytes": 24288,
-    "planner_scratch_upper_bound_bytes": 4134,
+    "staged_artifact_bytes": 24984,
+    "planner_scratch_upper_bound_bytes": 4386,
     "validation_scratch_upper_bound_bytes": 3514,
-    "peak_candidate_disk_bytes": 28422,
-    "canonical_output_digest": "sha256:209f0a74aa863d8eb8986c7d853f34206d11527d86822056dfdd54071cedfb89",
-    "planner_wall_nanos": 3345786875,
-    "peak_rss_bytes": 61243392
+    "peak_candidate_disk_bytes": 29370,
+    "canonical_output_digest": "sha256:6ff6f0622128512aafc09bbcc57336242a2c86ab1f08fa0d24eb2b2cb339067b",
+    "planner_wall_nanos": 5342873333,
+    "peak_rss_bytes": 61456384
   },
   "canonical_bytes_equal": true
 }

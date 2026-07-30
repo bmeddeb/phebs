@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const artifactNamespace = "v4"
+
 func ArtifactBase(repository string) string {
 	sum := sha256.Sum256([]byte(repository))
 	return "phebs-candidate-" + hex.EncodeToString(sum[:])
@@ -22,6 +24,6 @@ func PublishingName(repository string) string {
 }
 
 func ArtifactPrefix(repository, generationDigest string) string {
-	return ArtifactBase(repository) + "-" +
+	return ArtifactBase(repository) + "-" + artifactNamespace + "-" +
 		strings.TrimPrefix(generationDigest, "sha256:") + "-"
 }

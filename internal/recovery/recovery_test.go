@@ -122,7 +122,7 @@ connections:
 			CandidatePolicyDigest:    publishedPointer.PolicyDigest,
 			CandidateControlRevision: publishedPointer.ControlRevision,
 			Extractor:                "restore-control-v1",
-			InventoryPolicy: "candidate-manifest-v3-" +
+			InventoryPolicy: "candidate-manifest-v4-" +
 				strings.Repeat("b", 64),
 			DependencyDigest: "sha256:" + strings.Repeat("e", 64),
 		},

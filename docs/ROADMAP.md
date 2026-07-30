@@ -101,7 +101,8 @@ replays repository-member bytes once per stale domain. Whole publications
 carry an exact canonical shard receipt; startup validation is lazy, while a
 runtime replacement remains on a receipt-bound static reader and every stale
 boundary is a loud error rather than a false empty result. Candidate manifest
-v3 commits exact in-unit domain projections: strict open costs
+v4 commits exact in-unit domain projections and path-derived source lanes:
+strict open costs
 `B_repository + C_caller + ΣP`, each local replay costs `P_d`, and
 repository/caller planes remain unchanged. Both issues retain adversarial
 tests, full and race gates, detailed pushed fixes, and evidence-backed closure.
@@ -112,10 +113,11 @@ inventory as the next integration boundary; raising global extraction limits
 is not the repair. T30.6 remains that caller-overlay umbrella and is split at
 each operational-state, scheduler, candidate-lane, catalog, leaf-artifact,
 complete-publication, consumer, and retention seam. T30.6a bounded job
-receipts, T30.6b durable exact-generation domain outcomes, and T30.6c
-aggregate-bounded domain scheduling are shipped; T30.6d candidate-v4
-source-lane classification is next. Exact `_test.go` suffix wins when candidate
-v4 ships; focused local evidence for a committed non-empty unit consumes the
+receipts, T30.6b durable exact-generation domain outcomes, T30.6c
+aggregate-bounded domain scheduling, and T30.6d candidate-v4 source-lane
+classification are shipped; T30.6e focused local-evidence base-lane
+consumption is next. Exact `_test.go` suffix now wins in candidate v4; focused
+local evidence for a committed non-empty unit consumes the
 resulting `base` lane in the following ticket, while empty-unit
 whole-repository extraction keeps shipped behavior and current search
 continues indexing every admitted test file. A physical test-search overlay,

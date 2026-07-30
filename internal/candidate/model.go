@@ -21,13 +21,13 @@ import (
 )
 
 const (
-	ManifestSchema = "phebs-candidate-manifest-v3"
-	RecordSchema   = "phebs-candidate-record-v1"
-	StateSchema    = "phebs-candidate-state-v3"
+	ManifestSchema = "phebs-candidate-manifest-v4"
+	RecordSchema   = "phebs-candidate-record-v2"
+	StateSchema    = "phebs-candidate-state-v4"
 
-	EnumerationPolicyVersion             = "phebs-candidate-enumeration-v2"
+	EnumerationPolicyVersion             = "phebs-candidate-enumeration-v3"
 	CallerHashPolicy                     = "phebs-caller-path-v1"
-	LocalProjectionPolicy                = "focused-domain-repository-order-v1"
+	LocalProjectionPolicy                = "focused-domain-repository-order-v2"
 	InitialCallerPrefixBits              = 2
 	MaxPolicies                          = 64
 	MaxCorpusEntries                     = 10_000_000
@@ -136,24 +136,36 @@ func frozenPartitionPolicy() PartitionPolicy {
 		MaxDeclaredBytes:               MaxDeclaredBytesPerArtifact,
 		MaxLocalProjectionArtifacts:    MaxLocalProjectionArtifacts,
 		MaxLocalProjectionContentBytes: MaxLocalProjectionContentBytes,
-		RecordOrdering:                 "hash-path-oid-v1",
+		RecordOrdering:                 "hash-path-oid-source-lane-v2",
 		SplitRule:                      "next-hash-bit-v1",
 	}
 }
 
-// Record is one regular Git blob selected by at least one policy. Required is
-// a domain-view projection and is not persisted.
+// SourceLane is the path-derived ordinary-source classification retained for
+// later local-evidence and caller-leaf consumers. It is independent of
+// semantic analysis-unit scope and richer extractor code roles.
+type SourceLane string
+
+const (
+	SourceLaneBase   SourceLane = "base"
+	SourceLaneGoTest SourceLane = "go_test"
+)
+
+// Record is one regular Git blob selected by at least one policy. SourceLane
+// is recomputed from Path during strict validation. Required is a domain-view
+// projection and is not persisted.
 type Record struct {
-	Schema          string   `json:"schema"`
-	Path            string   `json:"path"`
-	OID             string   `json:"oid"`
-	DeclaredBytes   int64    `json:"declared_bytes"`
-	Domains         []string `json:"domains"`
-	RequiredDomains []string `json:"required_domains"`
-	InUnit          bool     `json:"in_unit"`
-	Shared          bool     `json:"shared"`
-	Hash            string   `json:"hash,omitempty"`
-	Required        bool     `json:"-"`
+	Schema          string     `json:"schema"`
+	Path            string     `json:"path"`
+	OID             string     `json:"oid"`
+	DeclaredBytes   int64      `json:"declared_bytes"`
+	SourceLane      SourceLane `json:"source_lane"`
+	Domains         []string   `json:"domains"`
+	RequiredDomains []string   `json:"required_domains"`
+	InUnit          bool       `json:"in_unit"`
+	Shared          bool       `json:"shared"`
+	Hash            string     `json:"hash,omitempty"`
+	Required        bool       `json:"-"`
 }
 
 type CorpusSummary struct {
@@ -312,7 +324,7 @@ func PolicyDigest(identities []PolicyIdentity) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return digest("phebs-candidate-policy-v1\x00", payload), nil
+	return digest("phebs-candidate-policy-v2\x00", payload), nil
 }
 
 func clonePolicyIdentities(input []PolicyIdentity) []PolicyIdentity {
@@ -390,7 +402,7 @@ func generationDigest(
 	if err != nil {
 		return "", err
 	}
-	return digest("phebs-candidate-generation-v1\x00", payload), nil
+	return digest("phebs-candidate-generation-v2\x00", payload), nil
 }
 
 func ManifestDigest(manifest Manifest) (string, error) {
@@ -399,7 +411,14 @@ func ManifestDigest(manifest Manifest) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return digest("phebs-candidate-manifest-v1\x00", payload), nil
+	return digest("phebs-candidate-manifest-v2\x00", payload), nil
+}
+
+func sourceLane(path string) SourceLane {
+	if strings.HasSuffix(path, "_test.go") {
+		return SourceLaneGoTest
+	}
+	return SourceLaneBase
 }
 
 func (manifest Manifest) State() State {

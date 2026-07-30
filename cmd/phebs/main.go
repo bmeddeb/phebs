@@ -408,7 +408,9 @@ func serve(args []string) error {
 			Manifests:  manifestProvider,
 			Extractors: exs,
 		}
-		if err := enqueueCandidateBackfill(ctx, st); err != nil {
+		if err := enqueueCandidateBackfill(
+			ctx, st, candidateWorker.PolicyDigest(),
+		); err != nil {
 			return err
 		}
 		candidateRunner := &store.Runner{
@@ -1098,7 +1100,19 @@ func enqueueCandidateAfterIndex(ctx context.Context, st store.Store, repo, commi
 // indexed before the current candidate-policy generation existed. The queue
 // provides one pending slot per target, so restart and partial-progress
 // retries are idempotent. Publication itself creates the extraction successor.
-func enqueueCandidateBackfill(ctx context.Context, st store.Store) error {
+type candidateBackfillState interface {
+	store.Store
+	store.CandidateManifestPublicationStore
+}
+
+func enqueueCandidateBackfill(
+	ctx context.Context,
+	st candidateBackfillState,
+	currentPolicyDigest string,
+) error {
+	if currentPolicyDigest == "" {
+		return errors.New("backfill candidate jobs: current policy digest is required")
+	}
 	repos, err := st.ListRepos(ctx)
 	if err != nil {
 		return fmt.Errorf("backfill candidate jobs: list repositories: %w", err)
@@ -1110,7 +1124,52 @@ func enqueueCandidateBackfill(ctx context.Context, st store.Store) error {
 		if repo.IndexedCommitHash == "" || repo.Deleting {
 			continue
 		}
-		if err := store.EnqueueUnlessInFlight(ctx, st, store.JobCandidate, repo.Name); err != nil {
+		publication, publicationErr :=
+			st.GetCandidateManifestPublication(ctx, repo.Name)
+		retired := errors.Is(
+			publicationErr, store.ErrInvalidCandidateManifestPublication,
+		)
+		if publicationErr == nil {
+			if publication == nil {
+				return fmt.Errorf(
+					"backfill candidate job for %s: publication store returned nil",
+					repo.Name,
+				)
+			}
+			retired = publication.PolicyDigest != currentPolicyDigest
+		} else if !errors.Is(publicationErr, store.ErrNotFound) && !retired {
+			return fmt.Errorf(
+				"backfill candidate job for %s: load publication: %w",
+				repo.Name, publicationErr,
+			)
+		}
+		if retired {
+			// Candidate v3 cannot remain current under the v4 policy. Clear
+			// the derived pointer before runners start and force one
+			// replacement. Queue first so a crash cannot clear authority
+			// without retaining the replacement request. A failure aborts
+			// startup; restart repeats the idempotent reconciliation.
+			if err := store.EnqueuePending(
+				ctx, st, store.JobCandidate, repo.Name, true,
+			); err != nil {
+				return fmt.Errorf(
+					"backfill candidate job for %s: force retired publication replacement: %w",
+					repo.Name, err,
+				)
+			}
+			if err := st.ClearCandidateManifestPublication(
+				ctx, repo.Name,
+			); err != nil {
+				return fmt.Errorf(
+					"backfill candidate job for %s: clear retired publication: %w",
+					repo.Name, err,
+				)
+			}
+			continue
+		}
+		if err := store.EnqueuePending(
+			ctx, st, store.JobCandidate, repo.Name, false,
+		); err != nil {
 			return fmt.Errorf("backfill candidate job for %s: %w", repo.Name, err)
 		}
 	}

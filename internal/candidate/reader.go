@@ -310,7 +310,7 @@ func (verifier *localProjectionVerifier) add(record Record) error {
 	if !verifier.active {
 		verifier.active = true
 		verifier.hash = sha256.New()
-		_, _ = verifier.hash.Write([]byte("phebs-candidate-artifact-v1\x00"))
+		_, _ = verifier.hash.Write([]byte("phebs-candidate-artifact-v2\x00"))
 	}
 	payload, err := json.Marshal(record)
 	if err != nil {
@@ -853,7 +853,7 @@ func validateArtifactFile(
 		}
 	}()
 	hasher := sha256.New()
-	_, _ = hasher.Write([]byte("phebs-candidate-artifact-v1\x00"))
+	_, _ = hasher.Write([]byte("phebs-candidate-artifact-v2\x00"))
 	counted := &byteCountingReader{reader: source.file}
 	observer, _ := ctx.Value(artifactReadObserverKey{}).(func(string, int64))
 	if observer != nil {
@@ -1004,6 +1004,7 @@ func validateRecord(
 ) error {
 	if record.Schema != RecordSchema || !safePath(record.Path) ||
 		len(record.Path) > maxCandidatePathBytes ||
+		record.SourceLane != sourceLane(record.Path) ||
 		!gitobj.IsObjectID(record.OID) ||
 		record.DeclaredBytes < 0 ||
 		record.DeclaredBytes > MaxDeclaredBytesPerArtifact ||

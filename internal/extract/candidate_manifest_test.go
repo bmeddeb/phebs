@@ -646,7 +646,7 @@ func TestWorkerCandidateManifestBindsCoverageAndShortCircuit(t *testing.T) {
 	if err := worker.Handle(context.Background(), job); err != nil {
 		t.Fatal(err)
 	}
-	wantPolicy := "candidate-manifest-v3-" + strings.Repeat("a", 64)
+	wantPolicy := "candidate-manifest-v4-" + strings.Repeat("a", 64)
 	if identityChecks != 2 || opens != 1 || locks != 1 ||
 		extractions != 1 || evidence.nextRun != 1 ||
 		evidence.publishedWith.InventoryPolicy != wantPolicy ||
@@ -668,7 +668,7 @@ func TestWorkerCandidateManifestBindsCoverageAndShortCircuit(t *testing.T) {
 	if identityChecks != 3 || opens != 2 || locks != 2 ||
 		extractions != 2 || evidence.nextRun != 2 ||
 		evidence.publishedWith.InventoryPolicy !=
-			"candidate-manifest-v3-"+strings.Repeat("d", 64) {
+			"candidate-manifest-v4-"+strings.Repeat("d", 64) {
 		t.Fatalf(
 			"changed identity/open/lock/extractions/runs/coverage = %d/%d/%d/%d/%d/%+v",
 			identityChecks, opens, locks, extractions, evidence.nextRun,
