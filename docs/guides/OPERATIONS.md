@@ -559,6 +559,44 @@ they never invent `index.scip`, fall back to a root artifact, or admit a SCIP
 document outside the unit. A focused unit with no designation reports a typed
 input gap. Whole-repository repositories retain the legacy root lookup.
 
+##### Scheduled T30.6 operating sequence
+
+The accepted large-monorepo review changes sequencing, not current runtime
+behavior. Today an admitted `*_test.go` file remains searchable and participates
+in candidate planning when an enabled domain policy enumerates it, the
+extraction runner may retry a deterministic domain failure to its attempt cap,
+and caller domains still consume the temporary repository-overlay view that
+can refuse its flattened aggregate inventory.
+Operators should not raise the global file, path-byte, read-byte, fact, or
+single-run deadline limits to work around that refusal. Configure the smallest
+truthful analysis unit and, when required, its exact typed input; preserve the
+failure diagnostic and wait for the target-bound caller generation.
+
+T30.6a first adds one bounded job report with nested domain entries and no
+source/path samples or repository-labeled metrics. T30.6b makes exact terminal
+and retryable outcomes durable; T30.6c schedules them beneath independent
+per-domain and aggregate job/lock bounds. T30.6d advances candidate identity
+with `source_lane: base|go_test`, and T30.6e consumes `base` only for focused
+local evidence while safety-accounting the complete typed SCIP artifact before
+removing exact test documents' definitions, anchors, occurrences, and joins.
+Empty-unit repositories retain shipped whole-repository extraction behavior,
+and focused search remains unchanged.
+T30.6f–T30.6i separately deliver catalog lifecycle, resolver materialization,
+leaf artifacts, and complete caller publication. T30.6j–T30.6l bind Caller Map,
+comparison, and Workbench Impact as separate authorized consumers. T30.6m
+selects the historical-retention posture and T30.6n implements only that
+selected policy.
+
+This sequence does not authorize a physical Go-test search overlay, optional
+test evidence, test-to-source association, build-system discovery, SCIP
+generation, pack-specific recognizer expansion, or per-file parser degradation.
+Neither the private evaluation report nor any identifier, path, measurement,
+or code copied from it is committed or used as merge-bar evidence. Production
+T30.6a receipts will contain the canonical repository identity already required
+by store state but retain no source path, source content, path sample, or raw
+extractor diagnostic. T30.6 merge-bar fixtures and new measurements will be
+neutral and generated.
+
 #### Focused evidence publication and recovery
 
 Every extraction attempt, run, and current-publication pointer is keyed by the

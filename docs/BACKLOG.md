@@ -5,8 +5,8 @@ monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
 configuration/state boundary, T30.3 shipped and then adversarially repaired
 focused shard integrity, T30.4 shipped reusable candidate planning, and T30.5
 shipped exact focused evidence publication. The post-T30.5 issue-repair gate
-is closed. T30.6 remains paused while the operator's large-monorepo runs and
-ideas receive a separate review.
+is closed. The separate large-monorepo review is complete and T30.6a bounded
+extraction job receipts are next.
 Completed Epics 0–24, Epic 29, T30.1–T30.5, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
@@ -15,15 +15,16 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Paused sequencing gate
+## Scheduled ticket
 
-**T30.6 · Target-bound repository Caller Map generation** is not active.
-T30.5 now publishes local evidence against one exact repository, indexed HEAD,
-unit digest, and domain; the remaining repository-wide caller plane still
-needs its own target-bound complete-generation contract before it can serve
-focused units. The repair ticket below is closed; before implementation begins,
-review the operator's retained large-monorepo runs and proposed directions as
-new design input.
+**T30.6a · Bounded extraction job receipts** is next. The accepted
+large-monorepo review keeps T30.6 as the target-bound repository Caller Map
+umbrella, split across PR-sized tickets for operational receipts, durable
+outcomes, aggregate scheduling, source-lane classification and consumption,
+catalog lifecycle and materialization, leaf execution and complete publication,
+authorized consumers, and retention decision and implementation. It does not
+raise existing global extraction limits, change current search semantics, or
+introduce a physical Go-test search overlay.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -33,8 +34,8 @@ T30.5 deliberately retains every exact published commit/unit/domain tuple for
 rollback; the existing evidence sweep does not collect a row while it remains
 `published`. Before Epic 30 closes, a separate reviewed follow-up must decide a
 bounded unpinned historical-publication policy (or explicitly retain the
-unbounded posture) without deleting pinned proof. T30.6 does not silently
-inherit or solve that storage-policy decision.
+unbounded posture) without deleting pinned proof. T30.6m owns that decision and
+T30.6n implements only its selected posture.
 
 ### Post-T30.5 issue closure ✅ *(closed 2026-07-29)*
 
@@ -69,8 +70,8 @@ This completed repair is a prerequisite, not T30.6 implementation.
   deterministic v3 measurement and distinguish its 16 MiB fixture gate from
   the production aggregate projection ceiling.
 - `docs/ROADMAP.md`, this active backlog, and
-  `docs/BACKLOG_COMPLETED.md` must agree on issue closure and keep T30.6 paused
-  pending the separate monorepo-results review.
+  `docs/BACKLOG_COMPLETED.md` must agree on issue closure. The accepted
+  monorepo review supersedes only the sequencing pause, not this repair record.
 
 ## Epic 25 · Embedded documentation browser *(drafted 2026-07-27 · unscheduled nice-to-have)*
 
@@ -540,7 +541,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6 paused)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6a next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -829,34 +830,306 @@ extraction never fall back to repository-root `index.scip`. Legacy
 whole-repository evidence remains readable only in its empty-unit scope, and
 no publication can satisfy or supersede a different unit.
 
-**T30.6 ⏸ · Target-bound repository Caller Map generation** *(needs T30.4,
-T30.5 and the large-monorepo results review; post-T30.5 issue repairs
-complete)* — after the pause is explicitly lifted, build the bounded
-module/generated-resolution catalog for one
-focused declaration set before any source-partition scan, execute
-repository-global gRPC/Thrift caller partitions against that immutable
-catalog, and atomically publish a complete generation. Extend reverse
-lookup and Caller Map/comparison services to page across that generation
-without weakening exact declaration identity, repository authorization,
-cursor snapshots, or unresolved vocabulary. Focused and overlay evidence
-remain visibly distinct; a missing/failed partition is a coverage gap, never
-zero callers. AC: neutral cross-service callers outside the focused shard
-appear with immutable citations, unrelated operation calls do not enter the
-target generation, partial/stale generations remain invisible, 10,000+ caller
-pages preserve existing bounds, Workbench Impact composes the overlay, full
+**T30.6 · Target-bound repository Caller Map generation** *(needs T30.4–T30.5;
+large-monorepo review and post-T30.5 issue repairs complete)* — retain one
+focused local-evidence plane and add one independently bounded relationship
+plane without raising the existing global extraction limits or building a
+whole-repository search index. The umbrella is split into the following
+dependency-ordered, one-PR tickets.
+
+**T30.6a · Bounded extraction job receipts** — emit one
+`phebs-extraction-operation-v1` report per repository extraction job, with
+bounded nested domain entries rather than duplicating job costs per domain.
+The job envelope binds canonical repository, indexed HEAD, unit,
+candidate-manifest, policy, and attempt identity and records queue wait,
+mirror-lock wait, and pointer/strict-open work. Each domain entry records only
+its inventory, opened-source, extractor, staging, publication, abort, cleanup,
+counts, bytes, limits, and generic completion reason: `already_current`,
+`not_ready`, `stale`, `no_candidates`, `typed_input_absent`, `limit_refusal`,
+`published_empty`, `published_nonempty`, `canceled`, or `failed`.
+Pack-specific library/anchor/shape funnels remain separate extractor work. The
+complete report is at most 64 KiB; overflow emits one deterministic minimal
+envelope with `truncated: true`, and report encoding or logging failure never
+changes extraction, publication, or retry disposition. Timings are never
+freshness, cursor, proof, or evidence identity. Production reports contain the
+canonical repository identity already required by store state but no source
+path/content/sample or raw extractor diagnostic; metrics use only frozen
+low-cardinality labels. Instrumentation performs no additional corpus pass,
+candidate hash, or blob read. This ticket emits the report through the existing
+operational/log hook and changes no store/API schema. AC: generic reason and
+no-op fixtures, exact job-versus-domain accounting, fake clock, cap/cap+1
+minimal overflow, zero added opens/hashes/reads, cancellation, report-sink
+failure, full merge bar.
+
+**T30.6b · Durable per-domain outcomes and retry disposition** *(needs
+T30.6a)* — add one latest-only exact-generation outcome record carrying the
+matching bounded domain receipt and typed `published`,
+`unavailable_prerequisite`, `terminal_generation_refusal`, or
+`retryable_failure` disposition; never infer disposition from error text.
+Outcome and receipt commit transactionally, survive restart/startup fan-out,
+preserve a prior visible publication, and invalidate immediately when commit,
+unit, candidate manifest, typed input, extractor policy, or dependency identity
+changes. A job is terminal only when every configured domain is published,
+unavailable, or terminally refused; it is requeued only while a domain is
+retryable, and retries execute only retryable or not-yet-attempted domains.
+Automatic forced reconciliation does not rerun a terminal outcome for the
+identical semantic generation. A descriptor/integrity terminal outcome also
+binds the candidate publication control fingerprint: marker, manifest, member,
+or descriptor identity change invalidates it immediately, and successful
+strict reconciliation repair clears it even when the semantic manifest digest
+is unchanged. Reconciliation never clears it without validating or rebuilding
+the publication. A prior publication may remain retained but is visible only
+while the existing T30.5 freshness and candidate-receipt fences match, and no
+outcome row can make a mismatched historical publication current.
+Focused missing-SCIP behavior advances affected extractor/policy generations:
+an old `scip-index-absent` empty publication cannot remain current and the new
+outcome is visibly unavailable; whole-repository legacy behavior is unchanged.
+AC: store-writer compatibility/migration, restore, exact invalidation, stable
+descriptor/integrity refusal, temporary store/lease retry, prior-publication
+visibility fences, forced semantic-terminal no-op, tamper to terminal outcome
+to same-digest strict repair to one successful extraction without blind retry,
+no string matching, full merge bar.
+
+**T30.6c · Aggregate-bounded domain scheduling** *(needs T30.6b)* — replace the
+one shared domain cancellation context without multiplying wall time or mirror
+lock hold by domain count. Freeze one numeric aggregate post-lock job budget,
+an equal or smaller cumulative mirror-lock bound, a per-domain cap bounded by
+the remaining aggregate budget and strictly smaller than the aggregate budget,
+maximum serial domains, memory, and staged-row cost. Starting or retrying a
+domain never extends either aggregate bound; work that cannot start within the
+remaining budget records a retryable outcome without erasing terminal or
+published peers. A successor job schedules never-attempted domains first, then
+retryable domains by oldest persisted attempt. AC: early deterministic failure
+does not starve later domains, one slow retryable domain cannot start twice
+before every configured peer gets one start opportunity, slow-domain cap,
+aggregate cap, lock-hold cap, restart scheduling, retry-only execution, bounded
+stage cleanup, race/full merge bar.
+
+**T30.6d · Candidate-v4 source-lane classification** *(needs T30.6c)* —
+advance manifest/state/record schemas; enumeration/local-projection policies;
+policy, generation, inventory, and self-digest domain separators; artifact
+namespace; extraction inventory prefix; control fingerprint; projection
+identity; and external-merge comparison. Every ordinary record carries
+`source_lane: base|go_test`: exact `_test.go` suffix wins even under generated,
+mock, fixture, or `testdata` paths, and every other ordinary candidate is
+`base`. Strict validation recomputes the lane from the canonical path rather
+than trusting stored bytes. Candidate v3 is never current under v4:
+reconciliation clears its pointer and force-enqueues replacement. This ticket
+changes no extractor consumption, evidence, focused shards, or search
+generation. AC: suffix/overlap and forged-lane fixtures, marker and
+descriptor-stability boundaries, missing/extra/reordered projections,
+backup/restore/cleanup, same-HEAD policy transition, v3 replacement, refreshed
+neutral T30.4 receipt retaining `B_repository + C_caller + ΣP`, `P_d`, and zero
+additional source-blob reads, full merge bar.
+
+**T30.6e · Focused local-evidence base-lane consumption** *(needs T30.6d)* —
+for repositories with a committed non-empty analysis unit, `grpc-consumer`,
+`thrift-consumer`, `kafka-producer`, and `kafka-consumer` skip `go_test` rows
+before blob open and report excluded files and declared blob bytes. The focused
+`scip-proto-field` and `scip-thrift-field` readers retain one designated typed
+blob: they open and globally safety-account the complete artifact once, then
+classify every canonical document path and remove the complete semantic
+contribution of each exact `_test.go` document—definitions, anchors,
+occurrences, and joins—before any ordinary source read, resolution, or fact
+emission. They report excluded documents/definitions/occurrences and do not
+open corresponding ordinary test-source blobs. Repositories with an empty unit
+digest retain shipped whole-repository extraction behavior: candidate v4
+records the lane, but whole-repository consumers ignore it. Advance every
+affected focused extractor and candidate-policy generation so prior
+test-bearing focused evidence cannot remain current; keep the exact
+`(repository, commit, unit, domain)` publication identity and add no
+test-evidence lane. AC: zero ordinary excluded-test blob reads, exact excluded
+declared-byte accounting, SCIP global bounds and whole-document filtering,
+test-only definition/anchor referenced by a non-test occurrence yields no
+resolved fact and no test-source open, no focused test fact leakage, unchanged
+empty-unit whole-repository behavior, replacement/freshness fences, and default
+Search plus Stream still return a needle present only in an admitted exact
+`_test.go` file because candidate-lane changes never alter focused shard/search
+identity; full merge bar.
+
+**T30.6f · Resolver-catalog lifecycle** *(needs T30.6e)* — define the immutable
+catalog schema, identity, member receipts, publication, validation, recovery,
+backup, and cleanup without yet implementing resolver adapters. Identity binds
+repository, indexed HEAD, unit, ordered declaration-publication identities,
+declaration-set digest, candidate-manifest-v4 digest, source-lane policy,
+ordered resolver-pack/version set, and catalog policy. Canonical members carry
+name, length, content/metadata digests, and manifest self-digest. Members become
+durable first, the manifest renames last under a marker, the store pointer
+commits only after manifest durability, and the marker clears only after that
+commit. Cold validation is descriptor-stable; warm no-op checks control/file
+identity with zero member-content hashing. Freeze numeric record/content,
+memory/disk/open-file bounds. A valid publication is archived exactly; an
+invalid or marker-covered derived publication is omitted with a bounded report,
+restore never installs or retains its exported pointer, and reconciliation
+force-enqueues replacement. AC: store-writer/schema compatibility and
+migration, empty/neutral fixture catalog, tamper/symlink/descriptor swap, every
+crash boundary, prior-process staging, canonical local ownership, exact archive
+or bounded omission, restore pointer clearing, reconcile/requeue, cap/cap+1,
+full merge bar.
+
+**T30.6g · Bounded resolver materialization** *(needs T30.6f)* — implement the
+bounded v1 resolver set over immutable candidate and declaration inputs: only
+the existing committed Go module identity and committed generated-attribution
+inputs required by the shipped gRPC and Thrift caller resolvers. New workspace
+formats or resolver packs require later tickets. No build, `go list`,
+dependency query, generator, corpus execution, mutable checkout, or network
+request is allowed. Ambiguous or unsupported identity remains explicit rather
+than selecting by tie-breaker, and partitions never rerun discovery. AC:
+neutral module/generated fixtures, ordered adapter/version identity,
+missing/special/stale input, ambiguity, deterministic double run, no unplanned
+blob reads, populated-catalog warm no-op with zero input blob reads/hashes,
+lifecycle bounds inherited from T30.6f, full merge bar.
+
+**T30.6h · Direct caller-leaf execution artifacts** *(needs T30.6g)* — consume
+T30.4 caller leaves directly without rebuilding a flattened repository path
+inventory. Default work processes only `base`; `go_test` remains retained
+planning input for a future separately authorized generation. Address one
+artifact and durable leaf outcome by `(caller domain, leaf prefix, complete
+generation identity)`; the expected set includes every declared pair, including
+explicit successful empty/abstention artifacts. Each worker opens only blobs
+declared by its leaf, measures exactly zero out-of-leaf reads, and writes an
+immutable artifact that is not independently product-visible. A terminal
+outcome for one pair does not erase a successful sibling domain, but prevents
+the complete generation containing that domain from publishing. Leaf state
+carries schema/writer generation, exact artifact receipt/digest, and
+disposition. Restart descriptor/content-validates a successful artifact once
+before reuse; prior-process staging and file-without-state or state-without-file
+cases are reclaimed or requeued without trusting decoded cross-repository
+content. Freeze per-pair and aggregate-generation limits for artifact count,
+result/abstention records, canonical content bytes, staging disk, and
+concurrently open files. Aggregate admission is checked before complete
+publication; cap+1 refuses replacement while preserving the prior complete
+generation. AC: cross-service and unrelated-target neutral fixtures, per-record
+abstentions, explicit empty pair, sibling-domain failure isolation, no all-leaf
+memory materialization, fixed worker/memory/deadline bounds, per-pair and
+aggregate cap/cap+1 output receipts, prior-generation preservation, leaf
+tamper/descriptor swap, every restart mismatch, crash/resume, no
+aggregate-path-limit dependency, full merge bar.
+
+**T30.6i · Atomic complete caller-generation publication** *(needs T30.6h)* —
+coordinate only successfully published caller-domain/leaf artifacts into one
+receipt naming the exact ordered expected pair set and each artifact's identity,
+canonical name, record count, bytes, content/metadata digests, and abstention
+summary. Generation identity binds repository, HEAD, unit, declaration set,
+candidate-manifest-v4, `base` lane, resolver catalog, caller policy, and ordered
+extractor versions. A terminally refused, missing, stale, or invalid pair
+prevents replacement visibility. Result artifacts become durable first, the
+checksummed manifest renames last under a marker, the store pointer commits
+after durability, and the marker clears after the matching commit. The same
+store transaction that publishes, clears, invalidates, or restores the pointer
+advances one repository-local monotonic caller-publication revision; an exact
+no-op does not advance it, while every real transition, including
+`A → unavailable → A`, does. Reconciliation covers every crash boundary,
+validates canonical local ownership, reclaims prior-process staging, and never
+trusts an artifact-selected cross-repository path. First admission performs
+descriptor-stable cold validation of the complete receipt; warm admission
+checks stable control/file identity without rehashing every artifact. Active
+readers lease retired generations. A valid publication is archived exactly; an
+invalid or marker-covered derived publication is omitted with a bounded report,
+restore never installs or retains its exported pointer, and reconciliation
+force-enqueues replacement. AC: store-writer/schema compatibility and revision
+migration, partial/stale invisibility, same-HEAD unit transition, exact no-op
+revision, `A → unavailable → A`, marker/tamper/swap/cross-repository fixtures,
+lease retirement, cold descriptor stability, exact archive or bounded omission,
+restore pointer clearing, zero warm content hashes, full merge bar.
+
+**T30.6j · Authorized exact Caller Map reads** *(needs T30.6i)* — move reverse
+lookup and Caller Map paging onto one exact complete generation. Unauthorized
+repositories remain absent from rows, gaps, totals, and cursors under the
+existing non-disclosure contract. For an already authorized repository,
+missing, failed, or stale generation state is explicit and never zero callers
+or a partial page. Cursor/result fences bind full generation identity plus a
+monotonic caller-publication revision so `A → B → A` cannot evade validation.
+Every citation binds the generation commit and blob identity and reads that
+immutable object, never mirror HEAD. Citation access discloses only the exact
+authorized cited path/range at that commit; it grants no unrelated path
+listing, directory browsing, or source access and does not widen focused
+search/local evidence. Exact static bindings retire by lease; result-time
+authorization is rechecked. AC: 10,000+ caller rows traversed over multiple
+pages under the existing maximum page size, no per-page full
+hash/materialization, bounded query/read/memory cost, non-disclosure,
+permission loss, transition races, immutable citations, HTTP/MCP parity, full
 merge bar.
 
-**T30.7 · Scope-aware UI, operations, and epic demo** *(needs T30.3–T30.6)* —
+**T30.6k · Caller comparison integration** *(needs T30.6j)* — bind migration
+comparison to exact authorized caller-generation snapshots without changing
+old/replacement declaration identity or unresolved vocabulary. Missing or
+stale authorized input remains a typed gap, cursors bind both sides, and no
+caller row is inferred from absence. AC: old-only/both/new-only/unresolved
+neutral fixtures, independent side transitions, permission loss, bounded
+paging, immutable citations, full merge bar.
+
+**T30.6l · Workbench Impact caller integration** *(needs T30.6k)* — compose the
+exact caller generation through the existing Workbench revision/evidence
+snapshot and authorization fences. Focused local evidence and
+`repository-overlay` callers remain separately typed; caller gaps cannot become
+completeness, migration-completion, or retirement-safety claims. AC: current
+Workbench revision, stale caller transition, hidden repository, bounded
+composition/cursors, immutable citations, API/UI fixture parity, full merge
+bar.
+
+**T30.6m · Historical-publication retention decision** *(needs T30.6l)* —
+change no cleanup behavior. Build a retained neutral storage/invariant model
+and select in a dated ADR either an exact bounded policy or the current
+unbounded posture. A bounded selection must freeze count/age/byte dimension,
+per-repository/domain versus global scope, default/config surface, batch and
+sweep bounds, evidence/caller/catalog/artifact coverage, pin ownership,
+transaction and lease ordering, and restore-before-sweep behavior. An
+unbounded selection must require bounded retained-count/byte status plus an
+explicit capacity warning. The decision must also prove its selected
+implementation fits one PR; if a bounded selection crosses independent state
+owners, this ticket adds dependency-ordered implementation tickets before
+authorizing cleanup and T30.6n is not treated as an umbrella PR. AC: selected
+decision and escape hatch, implementation-size proof, pin/current/
+failed-replacement/backup matrix, neutral capacity receipt, Operations update,
+docs/static gates.
+
+**T30.6n · Selected retention posture** *(needs T30.6m)* — implement only the
+posture selected and fully specified by T30.6m. A bounded selection adds its
+cap/age/byte, pin/unpin race, batch, active-lease, failed-replacement,
+backup/restore, and same-commit-unit tests. An unbounded selection performs no
+deletion and adds the required bounded status/capacity warning tests. Either
+path preserves pinned proof, active/current generations, immutable cited
+inputs, and latest failed-replacement diagnostics. Full merge bar.
+
+### T30.6 documentation updates
+
+- Every T30.6 PR adds its dated identity/publication/resource decision to
+  `PLAN.md` and updates this dependency/AC record without rewriting historical
+  decisions.
+- T30.6a–T30.6c update `docs/guides/OPERATIONS.md`; T30.6b also updates
+  durable failure/outcome troubleshooting and backup/restore guidance.
+- T30.6d–T30.6e update Operations and `docs/guides/CONFIGURATION.md` while
+  stating that source lane is neither semantic unit scope nor search
+  configuration; T30.6d also updates backup/restore guidance for candidate-v4
+  replacement.
+- T30.6f–T30.6i update Operations and backup/restore guidance for catalog,
+  leaf, complete-generation, ownership, gap, and recovery behavior.
+- T30.6j–T30.6l update Operations and `docs/guides/WORKFLOWS.md` for
+  authorization, citations, Caller Map, comparison, and Workbench composition.
+- T30.6m–T30.6n update Operations and backup/restore guidance with the selected
+  retention posture, and update `docs/guides/CONFIGURATION.md` whenever that
+  posture exposes configuration. `docs/MANUAL.md`, `docs/README.md`, roadmap,
+  and active or completed backlog change whenever routing or ticket posture
+  changes.
+- Retained gates use generated neutral repositories and bounded receipts. The
+  private operator report and all employer-specific identifiers, paths,
+  measurements, code, hosts, and infrastructure remain outside the repository.
+
+**T30.7 · Scope-aware UI, operations, and epic demo** *(needs T30.6a–T30.6n)* —
 show the active service unit and exact primary/supporting scope in Search,
 Contracts, Topics, Caller Map, Impact, and Workbench; distinguish focused
-search/local evidence from repository-overlay callers; render partition
-progress, stale state, refusals, and typed-index gaps adjacent to results.
+search/local evidence from repository-overlay callers; render durable
+per-domain outcomes and bounded domain receipts, `base` and excluded `go_test`
+counts, partition progress, stale state, refusals, and typed-index gaps adjacent
+to results, while job-level queue/lock diagnostics remain operational logs.
 Reindex controls name the unit they replace. Add a neutral `make dev` cohort
 that indexes one service unit, excludes an irrelevant bulk needle, publishes
 real focused declarations/topics, and displays a caller from outside the
-focused shard through the complete overlay—without Contract Atlas or
-Workbench fixtures. AC: responsive/accessibility/bounded-DOM tests, API/MCP
-schema parity, Operations/Workflows updates, end-to-end demo, full merge bar.
+focused shard through the complete overlay—without Contract Atlas or Workbench
+fixtures. This ticket adds no physical test-search overlay or test toggle. AC:
+responsive/accessibility/bounded-DOM tests, API/MCP schema parity,
+Operations/Workflows updates, end-to-end demo, full merge bar.
 
 ## Deliberate non-goals *(per historical PORT_MAP §7/§12)*
 

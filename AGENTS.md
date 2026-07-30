@@ -89,8 +89,15 @@ state; T30.3 shipped manifest-bound focused physical indexing and exact focused
 backup/restore; T30.4 shipped the reusable streamed candidate manifest and
 fail-closed extraction admission; T30.5 shipped exact focused evidence
 publication. The post-T30.5 whole-search and focused-local candidate-replay
-issue gate closed on 2026-07-29. T30.6 remains paused pending a separate design
-review of the operator's large-monorepo results and proposed directions.
+issue gate closed on 2026-07-29. The separate large-monorepo design review is
+complete: T30.6 remains the target-bound caller-overlay umbrella, decomposed
+across PR-sized tickets for operational receipts, durable outcomes, aggregate
+scheduling, source-lane classification and consumption, catalog lifecycle and
+materialization, leaf execution and complete publication, authorized
+consumers, and retention decision and implementation. T30.6a operational
+receipts are next. A physical Go-test search overlay, test-source association,
+extractor expansion, and automatic unit discovery remain separately reviewed
+future work.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
 completeness, migration-completion, or decommission-safety claim exists.
 

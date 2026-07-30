@@ -59,22 +59,36 @@ domain. Legacy whole-repository evidence remains readable only in its empty-unit
 scope, and same-HEAD unit changes cannot reuse it. Exact historical
 commit/unit/domain publications are intentionally retained outside the current
 sweep, so Epic 30 still needs a reviewed bounded-unpinned retention decision
-(or an explicit decision to keep that unbounded posture).
+(or an explicit decision to keep that unbounded posture); T30.6m selects it and
+T30.6n implements only the selected posture.
 
-T30.6 is paused. The post-T30.5 repair gate closed two reported integration
-issues: whole-repository Search/Stream now binds an exact committed shard
-generation across asynchronous watcher handoff, and focused local candidate
-consumption no longer replays repository-member bytes once per stale domain.
-Whole publications carry an exact canonical shard receipt; startup validation
-is lazy, while a runtime replacement remains on a receipt-bound static reader
-and every stale boundary is a loud error rather than a false empty result.
-Candidate manifest v3 commits exact in-unit domain projections: strict open
-costs `B_repository + C_caller + ΣP`, each local replay costs `P_d`, and
+The post-T30.5 repair gate closed two reported integration issues:
+whole-repository Search/Stream binds an exact committed shard generation across
+asynchronous watcher handoff, and focused local candidate consumption no longer
+replays repository-member bytes once per stale domain. Whole publications
+carry an exact canonical shard receipt; startup validation is lazy, while a
+runtime replacement remains on a receipt-bound static reader and every stale
+boundary is a loud error rather than a false empty result. Candidate manifest
+v3 commits exact in-unit domain projections: strict open costs
+`B_repository + C_caller + ΣP`, each local replay costs `P_d`, and
 repository/caller planes remain unchanged. Both issues retain adversarial
 tests, full and race gates, detailed pushed fixes, and evidence-backed closure.
-The next action is a separate review of the operator's large-monorepo results
-and proposed directions. Only that review can lift the pause and start the
-target-bound Caller Map generation.
+
+The separate large-monorepo review is complete. It did not overturn the
+focused-unit architecture and identified the temporary flattened caller
+inventory as the next integration boundary; raising global extraction limits
+is not the repair. T30.6 remains that caller-overlay umbrella and is split at
+each operational-state, scheduler, candidate-lane, catalog, leaf-artifact,
+complete-publication, consumer, and retention seam. T30.6a bounded job
+receipts are next. Exact `_test.go` suffix wins when candidate v4 ships;
+focused local evidence for a committed non-empty unit consumes the resulting
+`base` lane in the following ticket, while empty-unit whole-repository
+extraction keeps shipped behavior and current search continues indexing every
+admitted test file. A physical test-search overlay, test-source association,
+automatic unit discovery, SCIP generation, pack-specific recognizer expansion,
+and per-file parser degradation remain separately reviewed future work. The
+private operator evaluation is not a retained source or merge-bar artifact;
+neutral generated fixtures reproduce only the accepted behavior classes.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
 browsing, related implementation, and the Workbench use one physically
