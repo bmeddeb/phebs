@@ -6,11 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
-	"sort"
 	"strings"
 
-	"github.com/sourcegraph/zoekt"
 	"github.com/sourcegraph/zoekt/index"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
@@ -71,14 +68,16 @@ func PublishFocused(
 	return syncDirectory(indexDir)
 }
 
-// PublishWhole gives the legacy whole-repository builder the same state-commit
-// boundary. It intentionally publishes no focused manifest.
+// PublishWhole gives the whole-repository builder the same state-commit
+// boundary and publishes an exact member receipt after every shard is durable.
 func PublishWhole(
 	ctx context.Context,
 	indexDir, stageDir, repository string,
 	revisions []store.IndexedRevision,
 ) error {
-	shards, err := validateWholeStage(stageDir, repository, revisions)
+	manifest, err := createWholeStageManifest(
+		ctx, stageDir, repository, revisions,
+	)
 	if err != nil {
 		return err
 	}
@@ -88,10 +87,22 @@ func PublishWhole(
 	if err := removeRepositoryArtifacts(ctx, indexDir, repository, true); err != nil {
 		return err
 	}
-	for _, shard := range shards {
-		if err := moveRegular(shard, filepath.Join(indexDir, filepath.Base(shard))); err != nil {
+	for _, member := range manifest.Members {
+		if err := moveRegular(
+			filepath.Join(stageDir, member.Name),
+			filepath.Join(indexDir, member.Name),
+		); err != nil {
 			return err
 		}
+	}
+	if err := syncDirectory(indexDir); err != nil {
+		return err
+	}
+	if err := moveRegular(
+		filepath.Join(stageDir, WholeManifestName(repository)),
+		filepath.Join(indexDir, WholeManifestName(repository)),
+	); err != nil {
+		return err
 	}
 	return syncDirectory(indexDir)
 }
@@ -129,6 +140,8 @@ func removeRepositoryArtifacts(
 		return err
 	}
 	focusedBase := strings.TrimSuffix(ManifestName(repository), ".manifest.json")
+	wholeManifest := WholeManifestName(repository)
+	removals := make([]string, 0)
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -139,18 +152,27 @@ func removeRepositoryArtifacts(
 			continue
 		}
 		if entry.Type()&os.ModeSymlink != 0 {
-			if strings.HasPrefix(name, focusedBase) {
-				if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-					return err
-				}
+			if strings.HasPrefix(name, focusedBase) ||
+				name == wholeManifest ||
+				(strings.HasPrefix(
+					name, WholeShardPrefix(repository)+"_v",
+				) && strings.HasSuffix(name, ".zoekt")) {
+				removals = append(removals, path)
 			}
 			continue
 		}
-		remove := strings.HasPrefix(name, focusedBase)
+		remove := strings.HasPrefix(name, focusedBase) ||
+			name == wholeManifest
+		if strings.HasPrefix(
+			name, WholeShardPrefix(repository)+"_v",
+		) && strings.HasSuffix(name, ".zoekt") {
+			remove = true
+		}
 		if preserveMarker && name == PublishingName(repository) {
 			remove = false
 		}
-		if strings.HasSuffix(name, ".zoekt") {
+		if strings.HasSuffix(name, ".zoekt") &&
+			!IsManagedShardName(name) {
 			repositories, _, readErr := index.ReadMetadataPath(path)
 			if readErr != nil {
 				remove = remove || strings.HasPrefix(name, RepositoryPrefix(repository))
@@ -168,9 +190,16 @@ func removeRepositoryArtifacts(
 			}
 		}
 		if remove {
-			if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-				return err
-			}
+			removals = append(removals, path)
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	for _, path := range removals {
+		if err := os.Remove(path); err != nil &&
+			!errors.Is(err, os.ErrNotExist) {
+			return err
 		}
 	}
 	return syncDirectory(indexDir)
@@ -209,51 +238,6 @@ func startPublication(indexDir, repository string) error {
 		return err
 	}
 	return syncDirectory(indexDir)
-}
-
-func validateWholeStage(
-	stageDir, repository string,
-	revisions []store.IndexedRevision,
-) ([]string, error) {
-	if err := ValidateRevisions(revisions); err != nil {
-		return nil, err
-	}
-	shards, err := filepath.Glob(filepath.Join(stageDir, "*.zoekt"))
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(shards)
-	if len(shards) == 0 {
-		return nil, errors.New("whole-repository builder produced no shards")
-	}
-	expectedBranches := make([]zoekt.RepositoryBranch, 0, len(revisions))
-	for _, revision := range revisions {
-		expectedBranches = append(expectedBranches, zoekt.RepositoryBranch{
-			Name: revision.Branch, Version: revision.Commit,
-		})
-	}
-	for _, shard := range shards {
-		info, err := os.Lstat(shard)
-		if err != nil || !info.Mode().IsRegular() {
-			return nil, errors.New("whole-repository stage contains a special shard")
-		}
-		repositories, _, err := index.ReadMetadataPath(shard)
-		if err != nil {
-			return nil, err
-		}
-		if len(repositories) != 1 || repositories[0].Name != repository ||
-			!slices.Equal(repositories[0].Branches, expectedBranches) {
-			return nil, errors.New("whole-repository staged shard metadata mismatch")
-		}
-		if len(repositories[0].Metadata) > 0 &&
-			repositories[0].Metadata["phebs.analysis_unit"] != "" {
-			return nil, errors.New("whole-repository staged shard carries focused metadata")
-		}
-		if err := syncFile(shard); err != nil {
-			return nil, err
-		}
-	}
-	return shards, nil
 }
 
 func moveRegular(source, destination string) error {

@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sourcegraph/zoekt"
+	"github.com/sourcegraph/zoekt/index"
+
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
@@ -37,12 +40,20 @@ func TestReconcileFocusedArtifactsRemovesOnlyOrphanOwnership(t *testing.T) {
 	live := "example.com/live"
 	orphan := "example.com/orphan"
 	liveArtifact := focusedindex.ArtifactBase(live) + ".manifest.json"
+	liveWholeArtifacts := []string{
+		focusedindex.WholeManifestName(live),
+		focusedindex.WholeShardName(live, 16, 0),
+	}
 	orphanArtifacts := []string{
 		focusedindex.ArtifactBase(orphan) + ".manifest.json",
 		focusedindex.ArtifactBase(orphan) + ".publishing",
 		focusedindex.ArtifactBase(orphan) + "-old.zoekt" + focusedindex.MemberSuffix,
+		focusedindex.WholeManifestName(orphan),
+		focusedindex.WholeShardName(orphan, 16, 0),
 	}
-	for _, name := range append([]string{liveArtifact}, orphanArtifacts...) {
+	names := append([]string{liveArtifact}, liveWholeArtifacts...)
+	names = append(names, orphanArtifacts...)
+	for _, name := range names {
 		if err := os.WriteFile(filepath.Join(indexDir, name), []byte("artifact"), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -60,10 +71,52 @@ func TestReconcileFocusedArtifactsRemovesOnlyOrphanOwnership(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(indexDir, liveArtifact)); err != nil {
 		t.Fatalf("live focused artifact removed: %v", err)
 	}
+	for _, name := range liveWholeArtifacts {
+		if _, err := os.Stat(filepath.Join(indexDir, name)); err != nil {
+			t.Fatalf("live whole artifact %q removed: %v", name, err)
+		}
+	}
 	for _, name := range orphanArtifacts {
 		if _, err := os.Stat(filepath.Join(indexDir, name)); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("orphan focused artifact %q survived: %v", name, err)
 		}
+	}
+}
+
+func TestReconcileManagedShardUsesNameNotDecodedMetadata(t *testing.T) {
+	dataDir := t.TempDir()
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const orphanMetadata = "example.com/orphan-metadata"
+	const liveNamespace = "example.com/live-namespace"
+	managedPath := writeManagedShardWithMetadata(
+		t,
+		indexDir,
+		focusedindex.WholeShardName(liveNamespace, 16, 0),
+		orphanMetadata,
+	)
+	report := ReconcileReport{}
+	live := map[string]bool{liveNamespace: true}
+	if err := reconcileUntrackedShards(
+		t.Context(), dataDir, live, true, &report,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := reconcileFocusedArtifacts(
+		t.Context(), dataDir, live, true, &report,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(managedPath); err != nil {
+		t.Fatalf(
+			"live B namespace was deleted from orphan A metadata: %v",
+			err,
+		)
+	}
+	if report.UntrackedShards != 0 || report.Deleted != 0 {
+		t.Fatalf("managed-name reconciliation report = %+v", report)
 	}
 }
 
@@ -531,7 +584,7 @@ func TestReconcileRevisionRepairWaitsForRepositoryLock(t *testing.T) {
 	}
 }
 
-func TestReconcilePreservesUnreadableShardAndCommittedState(t *testing.T) {
+func TestReconcilePreReceiptPublicationClearsAndQueuesReplacement(t *testing.T) {
 	dataDir := t.TempDir()
 	repo := store.Repo{
 		Name:              "example.com/team/repo",
@@ -559,15 +612,166 @@ func TestReconcilePreservesUnreadableShardAndCommittedState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReconcileArtifacts failed on unreadable shard: %v", err)
 	}
-	if st.cleared != 0 || report.RevisionRepairs != 0 {
-		t.Fatalf("incomplete audit cleared committed state: report=%+v cleared=%d", report, st.cleared)
+	if st.cleared != 1 || report.RevisionRepairs != 1 ||
+		st.enqueued != 1 || !st.enqueuedForce {
+		t.Fatalf(
+			"pre-receipt repair report=%+v cleared=%d enqueued=%d force=%v",
+			report, st.cleared, st.enqueued, st.enqueuedForce,
+		)
 	}
 	if _, err := os.Stat(shard); err != nil {
-		t.Fatalf("unreadable shard was removed: %v", err)
+		t.Fatalf("unowned unreadable shard was removed: %v", err)
 	}
 }
 
-func TestDeleteRepoArtifactsReactivatesRowAfterDiskFailure(t *testing.T) {
+func TestReconcileLocallyRepairsReceiptBoundUnreadableShard(
+	t *testing.T,
+) {
+	dataDir := t.TempDir()
+	commit := strings.Repeat("a", 40)
+	repository := "example.com/team/receipt-bound"
+	repo := store.Repo{
+		Name:              repository,
+		CloneURL:          "https://example.com/team/receipt-bound.git",
+		IndexedCommitHash: commit,
+	}
+	dir := RepoDir(dataDir, repo.Name)
+	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if out, err := exec.Command(
+		"git", "init", "--bare", dir,
+	).CombinedOutput(); err != nil {
+		t.Fatalf("git init: %v\n%s", err, out)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	memberName := focusedindex.WholeShardName(repository, 16, 0)
+	memberBytes := []byte("unreadable zoekt member")
+	if err := os.WriteFile(
+		filepath.Join(indexDir, memberName), memberBytes, 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	revisions := []store.IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD", Commit: commit,
+	}}
+	manifest := focusedindex.WholeManifest{
+		Schema:     focusedindex.WholeManifestSchema,
+		Repository: repository,
+		Revisions:  revisions,
+		Members: []focusedindex.WholeShardMember{{
+			Ordinal: 0, Count: 1, Name: memberName,
+			ContentDigest:  "sha256:" + strings.Repeat("1", 64),
+			ContentBytes:   int64(len(memberBytes)),
+			MetadataDigest: "sha256:" + strings.Repeat("2", 64),
+		}},
+	}
+	var err error
+	manifest.Digest, err = focusedindex.WholeManifestDigest(manifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := focusedindex.WriteControlFile(
+		filepath.Join(
+			indexDir, focusedindex.WholeManifestName(repository),
+		),
+		manifest,
+	); err != nil {
+		t.Fatal(err)
+	}
+	st := &reconcileStore{repo: repo}
+	report, err := ReconcileArtifacts(
+		t.Context(), st, dataDir, true,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.cleared != 1 || report.RevisionRepairs != 1 ||
+		st.enqueued != 1 || !st.enqueuedForce {
+		t.Fatalf(
+			"receipt-local repair: report=%+v cleared=%d enqueue=%d force=%v",
+			report, st.cleared, st.enqueued, st.enqueuedForce,
+		)
+	}
+	if _, err := os.Lstat(
+		filepath.Join(indexDir, memberName),
+	); err != nil {
+		t.Fatalf("derived member was removed before replacement: %v", err)
+	}
+}
+
+func TestWholeCommittedMismatchIgnoresForeignManagedMetadata(
+	t *testing.T,
+) {
+	dataDir := t.TempDir()
+	indexDir := filepath.Join(dataDir, "index")
+	if err := os.MkdirAll(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const repository = "example.com/team/local-receipt"
+	const commit = "1111111111111111111111111111111111111111"
+	revisions := []store.IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD", Commit: commit,
+	}}
+	stageDir := buildWholeMetadataStage(
+		t, repository, commit,
+	)
+	if err := focusedindex.PublishWhole(
+		t.Context(), indexDir, stageDir, repository, revisions,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := focusedindex.FinishPublication(
+		indexDir, repository,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignStage := buildWholeMetadataStage(
+		t, repository, strings.Repeat("2", 40),
+	)
+	foreignShards, err := filepath.Glob(
+		filepath.Join(foreignStage, "*.zoekt"),
+	)
+	if err != nil || len(foreignShards) != 1 {
+		t.Fatalf("foreign fixture shards = %v, %v", foreignShards, err)
+	}
+	if err := os.Rename(
+		foreignShards[0],
+		filepath.Join(
+			indexDir,
+			focusedindex.WholeShardName(
+				"example.com/team/foreign-namespace", 16, 0,
+			),
+		),
+	); err != nil {
+		t.Fatal(err)
+	}
+	versions, complete, err := indexedVersions(t.Context(), dataDir)
+	if err != nil || !complete {
+		t.Fatalf("global metadata inventory = %v, complete=%v", err, complete)
+	}
+	if versions[repository]["HEAD"] != "" {
+		t.Fatalf(
+			"fixture did not create global conflict: %+v",
+			versions[repository],
+		)
+	}
+	repo := store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+		IndexedRevisions: revisions,
+	}
+	if committedIndexMismatch(
+		dataDir, repo, versions[repository], true, complete,
+	) {
+		t.Fatal("foreign managed metadata invalidated local whole receipt")
+	}
+}
+
+func TestDeleteRepoArtifactsIgnoresUnrelatedUnreadableShard(t *testing.T) {
 	dataDir := t.TempDir()
 	repo := store.Repo{Name: "example.com/team/repo"}
 	dir := RepoDir(dataDir, repo.Name)
@@ -584,17 +788,52 @@ func TestDeleteRepoArtifactsReactivatesRowAfterDiskFailure(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(indexDir, "unreadable.zoekt"), []byte("incomplete"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	manifestPath := filepath.Join(
+		indexDir, focusedindex.WholeManifestName(repo.Name),
+	)
+	memberPath := filepath.Join(
+		indexDir, focusedindex.WholeShardName(repo.Name, 16, 0),
+	)
+	for _, path := range []string{manifestPath, memberPath} {
+		if err := os.WriteFile(path, []byte("owned"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	foreignManagedPath := writeManagedShardWithMetadata(
+		t,
+		indexDir,
+		focusedindex.WholeShardName(
+			"example.com/team/foreign-owner", 16, 0,
+		),
+		repo.Name,
+	)
 
 	st := &reconcileStore{repo: repo, orphan: true}
 	deleted, err := deleteRepoArtifacts(t.Context(), st, dataDir, repo.Name)
-	if err == nil || deleted {
-		t.Fatalf("deleteRepoArtifacts = %v, %v; want disk audit failure", deleted, err)
+	if err != nil || !deleted {
+		t.Fatalf(
+			"deleteRepoArtifacts = %v, %v; want unrelated residue ignored",
+			deleted, err,
+		)
 	}
-	if st.repo.Deleting {
-		t.Fatal("failed cleanup left repository marked deleting")
+	if !st.deleted {
+		t.Fatal("repository row survived successful cleanup")
 	}
-	if _, err := os.Stat(filepath.Join(dir, "HEAD")); err != nil {
-		t.Fatalf("failed cleanup removed mirror: %v", err)
+	for _, path := range []string{manifestPath, memberPath} {
+		if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("owned canonical artifact survived: %s: %v", path, err)
+		}
+	}
+	if _, err := os.Stat(
+		filepath.Join(indexDir, "unreadable.zoekt"),
+	); err != nil {
+		t.Fatalf("unrelated unreadable residue was removed: %v", err)
+	}
+	if _, err := os.Stat(foreignManagedPath); err != nil {
+		t.Fatalf(
+			"foreign managed namespace was metadata-deleted with target: %v",
+			err,
+		)
 	}
 }
 
@@ -644,6 +883,59 @@ func TestReconcileHonorsCanceledContextBeforeFilesystemAudit(t *testing.T) {
 	if visited {
 		t.Fatal("walkMirrorDirs visited filesystem entries after cancellation")
 	}
+}
+
+func writeManagedShardWithMetadata(
+	t *testing.T,
+	indexDir, managedName, metadataRepository string,
+) string {
+	t.Helper()
+	stageDir := buildWholeMetadataStage(
+		t, metadataRepository, strings.Repeat("1", 40),
+	)
+	shards, err := filepath.Glob(filepath.Join(stageDir, "*.zoekt"))
+	if err != nil || len(shards) != 1 {
+		t.Fatalf("fixture shards = %v, %v", shards, err)
+	}
+	path := filepath.Join(indexDir, managedName)
+	if err := os.Rename(shards[0], path); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func buildWholeMetadataStage(
+	t *testing.T,
+	metadataRepository, commit string,
+) string {
+	t.Helper()
+	stageDir := t.TempDir()
+	builder, err := index.NewBuilder(index.Options{
+		IndexDir:            stageDir,
+		ShardPrefixOverride: "metadata-fixture",
+		Parallelism:         1,
+		DisableCTags:        true,
+		RepositoryDescription: zoekt.Repository{
+			Name: metadataRepository,
+			Branches: []zoekt.RepositoryBranch{{
+				Name: "HEAD", Version: commit,
+			}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.Add(index.Document{
+		Name:     "fixture.go",
+		Content:  []byte("package fixture\nconst Needle = true\n"),
+		Branches: []string{"HEAD"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := builder.Finish(); err != nil {
+		t.Fatal(err)
+	}
+	return stageDir
 }
 
 func TestReconcileQuarantinesDotGitNamespace(t *testing.T) {

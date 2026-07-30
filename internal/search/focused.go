@@ -881,43 +881,67 @@ func materializeFocused(
 	indexDir string,
 	manifest focusedindex.Manifest,
 ) (zoekt.Streamer, func(), error) {
-	if err := ctx.Err(); err != nil {
+	members := make([]staticShardDescriptor, 0, len(manifest.Members))
+	for _, member := range manifest.Members {
+		members = append(members, staticShardDescriptor{
+			name: member.Name, contentDigest: member.ContentDigest,
+		})
+	}
+	searcher, err := materializeStaticShards(
+		ctx, indexDir, "focused", manifest.Repository, members,
+	)
+	if err != nil {
 		return nil, nil, err
 	}
-	cleanup := func() {}
-	shards := make([]staticFocusedShard, 0, len(manifest.Members))
+	return searcher, func() {}, nil
+}
+
+type staticShardDescriptor struct {
+	name          string
+	contentDigest string
+}
+
+func materializeStaticShards(
+	ctx context.Context,
+	indexDir, kind, repository string,
+	members []staticShardDescriptor,
+) (*staticFocusedSearcher, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	shards := make([]staticFocusedShard, 0, len(members))
 	closeShards := func() {
 		for _, shard := range shards {
 			shard.searcher.Close()
 		}
 		shards = nil
 	}
-	for _, member := range manifest.Members {
+	for _, member := range members {
 		if err := ctx.Err(); err != nil {
 			closeShards()
-			return nil, nil, err
+			return nil, err
 		}
-		source := filepath.Join(indexDir, member.Name)
+		source := filepath.Join(indexDir, member.name)
 		sourceBefore, err := os.Lstat(source)
 		if err != nil {
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"inspect focused member %q before binding: %w",
-				member.Name, err,
+			return nil, fmt.Errorf(
+				"inspect %s member %q before binding: %w",
+				kind, member.name, err,
 			)
 		}
 		if !sourceBefore.Mode().IsRegular() {
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"focused member %q is not regular before binding",
-				member.Name,
+			return nil, fmt.Errorf(
+				"%s member %q is not regular before binding",
+				kind, member.name,
 			)
 		}
 		file, err := os.Open(source)
 		if err != nil {
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"open focused member %q: %w", member.Name, err,
+			return nil, fmt.Errorf(
+				"open %s member %q: %w", kind, member.name, err,
 			)
 		}
 		opened, statErr := file.Stat()
@@ -933,46 +957,50 @@ func materializeFocused(
 			!current.ModTime().Equal(sourceBefore.ModTime()) {
 			_ = file.Close()
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"focused member %q changed before mmap", member.Name,
+			return nil, fmt.Errorf(
+				"%s member %q changed before mmap", kind, member.name,
 			)
 		}
 		indexFile, err := index.NewIndexFile(file)
 		if err != nil {
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"mmap focused member %q: %w", member.Name, err,
+			return nil, fmt.Errorf(
+				"mmap %s member %q: %w", kind, member.name, err,
 			)
 		}
-		digest, err := digestIndexFileContext(ctx, indexFile)
-		if err != nil || digest != member.ContentDigest {
-			indexFile.Close()
-			closeShards()
-			if err != nil {
-				return nil, nil, fmt.Errorf(
-					"hash focused member %q after mmap: %w",
-					member.Name, err,
+		if member.contentDigest != "" {
+			digest, err := digestIndexFileContext(ctx, indexFile)
+			if err != nil || digest != member.contentDigest {
+				indexFile.Close()
+				closeShards()
+				if err != nil {
+					return nil, fmt.Errorf(
+						"hash %s member %q after mmap: %w",
+						kind, member.name, err,
+					)
+				}
+				return nil, fmt.Errorf(
+					"%s member %q differs after private mmap",
+					kind, member.name,
 				)
 			}
-			return nil, nil, fmt.Errorf(
-				"focused member %q differs after private mmap",
-				member.Name,
-			)
 		}
 		shard, err := index.NewSearcher(indexFile)
 		if err != nil {
 			indexFile.Close()
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"open focused member %q searcher: %w", member.Name, err,
+			return nil, fmt.Errorf(
+				"open %s member %q searcher: %w",
+				kind, member.name, err,
 			)
 		}
 		priority, err := focusedShardPriority(ctx, shard)
 		if err != nil {
 			shard.Close()
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"read focused member %q priority: %w", member.Name, err,
+			return nil, fmt.Errorf(
+				"read %s member %q priority: %w",
+				kind, member.name, err,
 			)
 		}
 		sourceAfter, err := os.Lstat(source)
@@ -983,15 +1011,16 @@ func materializeFocused(
 			!sourceAfter.ModTime().Equal(sourceBefore.ModTime()) {
 			shard.Close()
 			closeShards()
-			return nil, nil, fmt.Errorf(
-				"focused member %q changed after mmap", member.Name,
+			return nil, fmt.Errorf(
+				"%s member %q changed after mmap", kind, member.name,
 			)
 		}
 		shards = append(shards, staticFocusedShard{
-			name: member.Name,
+			name: member.name,
 			path: source,
+			kind: kind,
 			identity: focusedArtifactIdentity{
-				name:       member.Name,
+				name:       member.name,
 				info:       sourceAfter,
 				changeTime: fileInfoChangeTime(sourceAfter),
 			},
@@ -1006,8 +1035,8 @@ func materializeFocused(
 		return shards[i].name < shards[j].name
 	})
 	return &staticFocusedSearcher{
-		name: manifest.Repository, shards: shards,
-	}, cleanup, nil
+		kind: kind, name: repository, shards: shards,
+	}, nil
 }
 
 func focusedShardPriority(
@@ -1073,6 +1102,7 @@ func digestIndexFileContext(
 // valid but undeclared shard to the shared index directory cannot alter the
 // served generation.
 type staticFocusedSearcher struct {
+	kind      string
 	name      string
 	shards    []staticFocusedShard
 	closeOnce sync.Once
@@ -1081,6 +1111,7 @@ type staticFocusedSearcher struct {
 type staticFocusedShard struct {
 	name     string
 	path     string
+	kind     string
 	identity focusedArtifactIdentity
 	searcher zoekt.Searcher
 	priority float64
@@ -1097,7 +1128,7 @@ func (s staticFocusedShard) current(ctx context.Context) error {
 	}
 	info, err := os.Lstat(s.path)
 	if err != nil {
-		return fmt.Errorf("inspect focused member %q: %w", s.name, err)
+		return fmt.Errorf("inspect %s member %q: %w", s.label(), s.name, err)
 	}
 	actual := focusedFingerprint{{
 		name:       s.identity.name,
@@ -1105,9 +1136,18 @@ func (s staticFocusedShard) current(ctx context.Context) error {
 		changeTime: fileInfoChangeTime(info),
 	}}
 	if !equalFocusedFingerprint(focusedFingerprint{s.identity}, actual) {
-		return fmt.Errorf("focused member %q changed during search", s.name)
+		return fmt.Errorf(
+			"%s member %q changed during search", s.label(), s.name,
+		)
 	}
 	return nil
+}
+
+func (s staticFocusedShard) label() string {
+	if s.kind == "" {
+		return "focused"
+	}
+	return s.kind
 }
 
 func (s *staticFocusedSearcher) Search(
@@ -1290,5 +1330,9 @@ func (s *staticFocusedSearcher) Close() {
 }
 
 func (s *staticFocusedSearcher) String() string {
-	return "static-focused(" + s.name + ")"
+	kind := s.kind
+	if kind == "" {
+		kind = "focused"
+	}
+	return "static-" + kind + "(" + s.name + ")"
 }

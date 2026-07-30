@@ -6,6 +6,7 @@ package search_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -29,7 +30,9 @@ var update = flag.Bool("update", false, "rewrite golden files")
 
 type revisionStore struct {
 	store.Store
-	repo store.Repo
+	repo           store.Repo
+	repairEnqueues int
+	repairForced   bool
 }
 
 func (s *revisionStore) GetRepo(_ context.Context, name string) (*store.Repo, error) {
@@ -80,6 +83,23 @@ func (s *revisionStore) ClearRepoIndexState(_ context.Context, name string) erro
 	s.repo.IndexedRevisions = nil
 	s.repo.IndexedAt = nil
 	return nil
+}
+
+func (s *revisionStore) EnqueuePending(
+	_ context.Context,
+	kind store.JobKind,
+	target string,
+	force bool,
+) (*store.Job, error) {
+	if kind != store.JobIndex || target != s.repo.Name {
+		return nil, errors.New("unexpected search repair job")
+	}
+	s.repairEnqueues++
+	s.repairForced = s.repairForced || force
+	return &store.Job{
+		Kind: kind, Target: target, Force: force,
+		Status: store.StatusPending,
+	}, nil
 }
 
 func TestOpenRejectsGlobMetacharacters(t *testing.T) {
@@ -362,6 +382,379 @@ func TestFocusedSameCommitNarrowingIgnoresStaleSharedSearcher(t *testing.T) {
 	}
 }
 
+func TestWholeCommitChangeIgnoresIndefinitelyStaleSharedSearcher(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(
+		filepath.Join(origin, "main.go"),
+		[]byte("package main\nconst RetiredWholeNeedle = true\n"),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "initial")
+
+	dataDir := t.TempDir()
+	repository := "example.com/acme/stale-whole-reader"
+	if err := sync.Mirror(
+		ctx, "file://"+origin, sync.RepoDir(dataDir, repository),
+	); err != nil {
+		t.Fatal(err)
+	}
+	st := &revisionStore{repo: store.Repo{
+		Name: repository, CloneURL: "file://" + origin,
+		DefaultBranch: "main", IsPublic: true,
+	}}
+	bin, err := indexer.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix := &indexer.Indexer{DataDir: dataDir, Bin: bin, Store: st}
+	if err := ix.Index(ctx, store.Repo{Name: repository}, false); err != nil {
+		t.Fatal(err)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	searcher, err := search.Open(indexDir, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+
+	// Keep DirectorySearcher attached to the original directory inode. No
+	// watcher or fallback ticker can ever converge it to the replacement.
+	staleDir := filepath.Join(dataDir, "stale-whole-index")
+	if err := os.Rename(indexDir, staleDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(indexDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(origin, "main.go"),
+		[]byte("package main\nconst CurrentWholeNeedle = true\n"),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "replace")
+	currentCommit := gitc(t, origin, "rev-parse", "HEAD")
+	if err := sync.Mirror(
+		ctx, "file://"+origin, sync.RepoDir(dataDir, repository),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := ix.Index(ctx, store.Repo{Name: repository}, false); err != nil {
+		t.Fatal(err)
+	}
+
+	// All same-generation callers join the first exact bind after the shared
+	// reader has become permanently stale.
+	const concurrent = 16
+	start := make(chan struct{})
+	outcomes := make(chan error, concurrent)
+	for index := range concurrent {
+		go func(stream bool) {
+			<-start
+			if !stream {
+				result, err := searcher.Search(
+					ctx, "CurrentWholeNeedle", search.Options{},
+				)
+				if err == nil && len(result.Files) != 1 {
+					err = fmt.Errorf(
+						"concurrent JSON files = %d, want 1",
+						len(result.Files),
+					)
+				}
+				outcomes <- err
+				return
+			}
+			var files []search.FileResult
+			_, err := searcher.Stream(
+				ctx, "CurrentWholeNeedle", search.Options{},
+				func(batch *search.Result) {
+					files = append(files, batch.Files...)
+				},
+			)
+			if err == nil && len(files) != 1 {
+				err = fmt.Errorf(
+					"concurrent Stream files = %d, want 1",
+					len(files),
+				)
+			}
+			outcomes <- err
+		}(index%2 == 1)
+	}
+	close(start)
+	for range concurrent {
+		if err := <-outcomes; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	for expression, want := range map[string]int{
+		"CurrentWholeNeedle": 1,
+		"RetiredWholeNeedle": 0,
+	} {
+		result, err := searcher.Search(ctx, expression, search.Options{})
+		if err != nil {
+			t.Fatalf("search %q: %v", expression, err)
+		}
+		if len(result.Files) != want {
+			t.Fatalf(
+				"search %q files = %+v, want %d",
+				expression, result.Files, want,
+			)
+		}
+		for _, file := range result.Files {
+			if file.Ref != currentCommit {
+				t.Fatalf(
+					"search %q ref = %s, want %s",
+					expression, file.Ref, currentCommit,
+				)
+			}
+		}
+		var streamed []search.FileResult
+		if _, err := searcher.Stream(
+			ctx, expression, search.Options{},
+			func(batch *search.Result) {
+				streamed = append(streamed, batch.Files...)
+			},
+		); err != nil {
+			t.Fatalf("stream %q: %v", expression, err)
+		}
+		if len(streamed) != want {
+			t.Fatalf(
+				"stream %q files = %+v, want %d",
+				expression, streamed, want,
+			)
+		}
+		for _, file := range streamed {
+			if file.Ref != currentCommit {
+				t.Fatalf(
+					"stream %q ref = %s, want %s",
+					expression, file.Ref, currentCommit,
+				)
+			}
+		}
+	}
+}
+
+func TestWholePublicationIntegrityErrorsQueueBoundedRepair(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	origin := t.TempDir()
+	gitc(t, origin, "init", "-b", "main")
+	if err := os.WriteFile(
+		filepath.Join(origin, "main.go"),
+		[]byte("package main\nconst WholeIntegrityNeedle = true\n"),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	gitc(t, origin, "add", ".")
+	gitc(t, origin, "commit", "-m", "fixture")
+	dataDir := t.TempDir()
+	repository := "example.com/acme/whole-integrity"
+	if err := sync.Mirror(
+		ctx, "file://"+origin, sync.RepoDir(dataDir, repository),
+	); err != nil {
+		t.Fatal(err)
+	}
+	st := &revisionStore{repo: store.Repo{
+		Name: repository, CloneURL: "file://" + origin,
+		DefaultBranch: "main", IsPublic: true,
+	}}
+	bin, err := indexer.FindBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix := &indexer.Indexer{DataDir: dataDir, Bin: bin, Store: st}
+	if err := ix.Index(ctx, store.Repo{Name: repository}, false); err != nil {
+		t.Fatal(err)
+	}
+	indexDir := filepath.Join(dataDir, "index")
+	searcher, err := search.Open(indexDir, st)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+
+	assertNoMatch := func() {
+		t.Helper()
+		result, err := searcher.Search(
+			ctx, "DefinitelyAbsentWholeNeedle", search.Options{},
+		)
+		if err != nil || len(result.Files) != 0 {
+			t.Fatalf("true JSON no-match = %+v, %v", result, err)
+		}
+		var streamed []search.FileResult
+		if _, err := searcher.Stream(
+			ctx, "DefinitelyAbsentWholeNeedle", search.Options{},
+			func(batch *search.Result) {
+				streamed = append(streamed, batch.Files...)
+			},
+		); err != nil || len(streamed) != 0 {
+			t.Fatalf("true Stream no-match = %+v, %v", streamed, err)
+		}
+	}
+	assertIntegrityError := func(stage string) {
+		t.Helper()
+		if result, err := searcher.Search(
+			ctx, "WholeIntegrityNeedle", search.Options{},
+		); err == nil {
+			t.Fatalf("%s JSON returned success: %+v", stage, result)
+		}
+		var streamed []search.FileResult
+		if _, err := searcher.Stream(
+			ctx, "WholeIntegrityNeedle", search.Options{},
+			func(batch *search.Result) {
+				streamed = append(streamed, batch.Files...)
+			},
+		); err == nil {
+			t.Fatalf("%s Stream returned success", stage)
+		}
+		if len(streamed) != 0 {
+			t.Fatalf("%s Stream leaked files: %+v", stage, streamed)
+		}
+	}
+	assertNoMatch()
+
+	markerPath := filepath.Join(
+		indexDir, focusedindex.PublishingName(repository),
+	)
+	if err := os.WriteFile(
+		markerPath, []byte(repository+"\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	assertIntegrityError("marker-covered publication")
+	if st.repairEnqueues != 0 {
+		t.Fatalf(
+			"active marker queued %d repairs, want 0",
+			st.repairEnqueues,
+		)
+	}
+	if err := os.Remove(markerPath); err != nil {
+		t.Fatal(err)
+	}
+
+	manifestPath := filepath.Join(
+		indexDir, focusedindex.WholeManifestName(repository),
+	)
+	manifestBytes, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(manifestPath); err != nil {
+		t.Fatal(err)
+	}
+	assertIntegrityError("missing receipt")
+	if st.repairEnqueues != 1 || !st.repairForced {
+		t.Fatalf(
+			"missing-receipt repairs = %d force=%v, want 1/true",
+			st.repairEnqueues, st.repairForced,
+		)
+	}
+	if err := os.WriteFile(
+		manifestPath, manifestBytes, 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := searcher.Search(
+		ctx, "WholeIntegrityNeedle", search.Options{},
+	); err != nil || len(result.Files) != 1 {
+		t.Fatalf("restored receipt search = %+v, %v", result, err)
+	}
+
+	manifest, err := focusedindex.ReadWholeManifest(
+		indexDir, repository, st.repo.IndexedRevisions,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	memberPath := filepath.Join(indexDir, manifest.Members[0].Name)
+	memberBytes, err := os.ReadFile(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	extraPath := filepath.Join(indexDir, "undeclared-extra.zoekt")
+	if err := os.WriteFile(extraPath, memberBytes, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := searcher.Search(
+		ctx, "WholeIntegrityNeedle", search.Options{},
+	); err != nil || len(result.Files) != 1 {
+		t.Fatalf(
+			"undeclared extra shard entered exact JSON reader: %+v, %v",
+			result, err,
+		)
+	}
+	var extraStreamed []search.FileResult
+	if _, err := searcher.Stream(
+		ctx, "WholeIntegrityNeedle", search.Options{},
+		func(batch *search.Result) {
+			extraStreamed = append(extraStreamed, batch.Files...)
+		},
+	); err != nil || len(extraStreamed) != 1 {
+		t.Fatalf(
+			"undeclared extra shard entered exact Stream reader: %+v, %v",
+			extraStreamed, err,
+		)
+	}
+	if err := os.Remove(extraPath); err != nil {
+		t.Fatal(err)
+	}
+	corrupt := append([]byte(nil), memberBytes...)
+	corrupt[len(corrupt)-1] ^= 0xff
+	replaceRegularFile(t, memberPath, corrupt)
+	assertIntegrityError("same-size member tamper")
+	if st.repairEnqueues != 2 || !st.repairForced {
+		t.Fatalf(
+			"tamper repairs = %d force=%v, want 2/true",
+			st.repairEnqueues, st.repairForced,
+		)
+	}
+	replaceRegularFile(t, memberPath, memberBytes)
+	var streamed []search.FileResult
+	if _, err := searcher.Stream(
+		ctx, "WholeIntegrityNeedle", search.Options{},
+		func(batch *search.Result) {
+			streamed = append(streamed, batch.Files...)
+		},
+	); err != nil || len(streamed) != 1 {
+		t.Fatalf(
+			"member repair Stream = %+v, %v; want immediate retry",
+			streamed, err,
+		)
+	}
+}
+
+func replaceRegularFile(t *testing.T, path string, content []byte) {
+	t.Helper()
+	temp, err := os.CreateTemp(filepath.Dir(path), ".replace-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tempPath := temp.Name()
+	t.Cleanup(func() { _ = os.Remove(tempPath) })
+	if _, err := temp.Write(content); err != nil {
+		_ = temp.Close()
+		t.Fatal(err)
+	}
+	if err := temp.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(tempPath, path); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func gitc(t *testing.T, dir string, args ...string) string {
 	t.Helper()
 	full := append([]string{
@@ -586,6 +979,32 @@ func TestSearchMultipleRevisions(t *testing.T) {
 				t.Errorf("search %q ref = %s, want %s", query, file.Ref, wantCommit)
 			}
 		}
+		var streamed []search.FileResult
+		if _, err := s.Stream(
+			ctx, query, search.Options{},
+			func(batch *search.Result) {
+				streamed = append(streamed, batch.Files...)
+			},
+		); err != nil {
+			t.Fatalf("stream %q: %v", query, err)
+		}
+		if wantFiles && len(streamed) == 0 {
+			t.Fatalf("stream %q returned no files", query)
+		}
+		if !wantFiles && len(streamed) != 0 {
+			t.Fatalf(
+				"stream %q leaked files outside the selected revision: %+v",
+				query, streamed,
+			)
+		}
+		for _, file := range streamed {
+			if file.Ref != wantCommit {
+				t.Errorf(
+					"stream %q ref = %s, want %s",
+					query, file.Ref, wantCommit,
+				)
+			}
+		}
 	}
 	assertRevision("defaultOnlyNeedle", mainCommit, true)
 	assertRevision("releaseOnlyNeedle", mainCommit, false)
@@ -603,6 +1022,9 @@ func TestSearchMultipleRevisions(t *testing.T) {
 	s.Visible = nil
 
 	gitc(t, origin, "checkout", "release/1")
+	if err := os.Remove(filepath.Join(origin, "release.go")); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(origin, "updated.go"), []byte("package main\nvar updatedReleaseNeedle = true\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -622,6 +1044,7 @@ func TestSearchMultipleRevisions(t *testing.T) {
 	}
 	assertRevision("updatedReleaseNeedle", mainCommit, false)
 	assertRevision("updatedReleaseNeedle rev:release", updatedRelease, true)
+	assertRevision("releaseOnlyNeedle rev:v1", releaseCommit, true)
 
 	// Removing the allowlist republishes a HEAD-only shard even though HEAD
 	// itself did not move; the retired selector becomes unreachable.
@@ -730,10 +1153,16 @@ func TestSearchExcludesShardWithoutRepoRow(t *testing.T) {
 	if err := st.SetRepoIndexed(ctx, "example.com/forked", "mismatched-revision", time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
-	assertHidden := func(stage string) {
+	assertHidden := func(stage string, wantError bool) {
 		res, err := s.Search(ctx, "phebsNeedle", search.Options{})
+		if wantError {
+			if err == nil {
+				t.Fatalf("%s returned no integrity error", stage)
+			}
+			return
+		}
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf("%s: %v", stage, err)
 		}
 		for _, file := range res.Files {
 			if file.Repo == "example.com/forked" {
@@ -741,11 +1170,11 @@ func TestSearchExcludesShardWithoutRepoRow(t *testing.T) {
 			}
 		}
 	}
-	assertHidden("revision mismatch")
+	assertHidden("revision mismatch", true)
 	if err := st.ClearRepoIndexState(ctx, "example.com/forked"); err != nil {
 		t.Fatal(err)
 	}
-	assertHidden("unindexed")
+	assertHidden("unindexed", false)
 	if err := st.SetRepoIndexed(ctx, "example.com/forked", indexedHash, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
@@ -755,18 +1184,18 @@ func TestSearchExcludesShardWithoutRepoRow(t *testing.T) {
 	}, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
-	assertHidden("malformed persisted revision set")
+	assertHidden("malformed persisted revision set", false)
 	if err := st.SetRepoIndexed(ctx, "example.com/forked", indexedHash, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if err := st.SetRepoDeleting(ctx, "example.com/forked", true); err != nil {
 		t.Fatal(err)
 	}
-	assertHidden("deleting")
+	assertHidden("deleting", false)
 	if err := st.DeleteRepo(ctx, "example.com/forked"); err != nil {
 		t.Fatal(err)
 	}
-	assertHidden("untracked")
+	assertHidden("untracked", false)
 }
 
 // T4.3: streaming forwards batches progressively and aggregates stats;

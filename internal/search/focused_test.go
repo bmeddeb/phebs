@@ -1315,15 +1315,20 @@ func TestStreamGlobalDisplayCapAndWholePublicationMarker(t *testing.T) {
 			}
 			t.Cleanup(searcher.Close)
 			var streamed []FileResult
-			if _, err := searcher.Stream(
+			_, streamErr := searcher.Stream(
 				t.Context(),
 				"needle",
 				Options{MaxMatches: 2},
 				func(result *Result) {
 					streamed = append(streamed, result.Files...)
 				},
-			); err != nil {
-				t.Fatal(err)
+			)
+			if marker {
+				if streamErr == nil {
+					t.Fatal("marker-covered whole stream returned no error")
+				}
+			} else if streamErr != nil {
+				t.Fatal(streamErr)
 			}
 			want := 2
 			if marker {

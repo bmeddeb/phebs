@@ -236,15 +236,70 @@ func reconcileFocusedArtifacts(
 		return err
 	}
 	liveBases := make([]string, 0, len(live))
+	liveWholeManifests := make(map[string]bool, len(live))
+	liveWholePrefixes := make([]string, 0, len(live))
 	for repository := range live {
 		liveBases = append(liveBases, focusedindex.ArtifactBase(repository))
+		liveWholeManifests[focusedindex.WholeManifestName(repository)] = true
+		liveWholePrefixes = append(
+			liveWholePrefixes,
+			focusedindex.WholeShardPrefix(repository)+"_v",
+		)
 	}
 	for _, entry := range entries {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 		name := entry.Name()
-		if entry.IsDir() || !strings.HasPrefix(name, "phebs-focus-") {
+		if entry.IsDir() {
+			continue
+		}
+		if focusedindex.IsManagedShardName(name) {
+			owned := false
+			if strings.HasPrefix(name, "phebs-whole-") {
+				for _, prefix := range liveWholePrefixes {
+					if strings.HasPrefix(name, prefix) {
+						owned = true
+						break
+					}
+				}
+			} else {
+				for _, base := range liveBases {
+					if strings.HasPrefix(name, base+"-") {
+						owned = true
+						break
+					}
+				}
+			}
+			if owned {
+				continue
+			}
+			report.UntrackedShards++
+			if remove {
+				if err := os.Remove(filepath.Join(indexDir, name)); err != nil &&
+					!errors.Is(err, os.ErrNotExist) {
+					return err
+				}
+				report.Deleted++
+			}
+			continue
+		}
+		if strings.HasPrefix(name, "phebs-whole-") &&
+			strings.HasSuffix(name, ".manifest.json") {
+			if liveWholeManifests[name] {
+				continue
+			}
+			report.UntrackedShards++
+			if remove {
+				if err := os.Remove(filepath.Join(indexDir, name)); err != nil &&
+					!errors.Is(err, os.ErrNotExist) {
+					return err
+				}
+				report.Deleted++
+			}
+			continue
+		}
+		if !strings.HasPrefix(name, "phebs-focus-") {
 			continue
 		}
 		if strings.HasSuffix(name, ".zoekt") {
@@ -281,10 +336,6 @@ func reclaimCommittedPublicationMarkers(
 	report *ReconcileReport,
 ) error {
 	indexDir := filepath.Join(dataDir, "index")
-	versions, complete, err := indexedVersions(ctx, dataDir)
-	if err != nil {
-		return err
-	}
 	var errs []error
 	for _, repo := range repos {
 		if err := ctx.Err(); err != nil {
@@ -302,9 +353,11 @@ func reclaimCommittedPublicationMarkers(
 				repo.IndexedAnalysisUnit, repo.IndexedRevisions,
 			)
 			committed = validateErr == nil
-		} else if complete {
-			repoVersions, hasShard := versions[repo.Name]
-			committed = !indexStateMismatch(repo, repoVersions, hasShard)
+		} else {
+			_, validateErr := focusedindex.ValidateCommittedWholePublication(
+				ctx, indexDir, repo.Name, wholeRevisions(repo),
+			)
+			committed = validateErr == nil
 		}
 		if !committed {
 			continue
@@ -416,25 +469,39 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	if !current.Deleting {
 		return false, nil // a concurrent sync reactivated this repository
 	}
-	if err := focusedindex.RemoveRepository(ctx, filepath.Join(dataDir, "index"), name); err != nil {
-		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
+	legacyShards, err := planRepoShardsByMetadata(
+		ctx, dataDir, name,
+	)
+	if err != nil {
+		return rollback(fmt.Errorf(
+			"preflight %s legacy shards: %w", name, err,
+		))
 	}
-	if err := removeRepoShardsByMetadata(ctx, dataDir, name); err != nil {
-		return rollback(fmt.Errorf("cleanup %s shards: %w", name, err))
+	// From this point onward, a failure leaves the row marked deleting. Disk
+	// mutation may already have removed the authoritative receipt/member set,
+	// so reactivation would expose a searchable row without its bytes.
+	destructiveFailure := func(cause error) (bool, error) {
+		return false, cause
+	}
+	if err := focusedindex.RemoveRepository(ctx, filepath.Join(dataDir, "index"), name); err != nil {
+		return destructiveFailure(fmt.Errorf("cleanup %s shards: %w", name, err))
+	}
+	if err := removeRepoShardPaths(legacyShards); err != nil {
+		return destructiveFailure(fmt.Errorf("cleanup %s legacy shards: %w", name, err))
 	}
 	if err := candidate.Remove(
 		ctx, filepath.Join(dataDir, "candidates"), name,
 	); err != nil {
-		return rollback(fmt.Errorf("cleanup %s candidate artifacts: %w", name, err))
+		return destructiveFailure(fmt.Errorf("cleanup %s candidate artifacts: %w", name, err))
 	}
 	if err := ctx.Err(); err != nil {
-		return rollback(err)
+		return destructiveFailure(err)
 	}
 	if err := os.RemoveAll(dir); err != nil {
-		return rollback(fmt.Errorf("cleanup %s mirror: %w", name, err))
+		return destructiveFailure(fmt.Errorf("cleanup %s mirror: %w", name, err))
 	}
 	if err := st.DeleteRepo(ctx, name); err != nil {
-		return rollback(fmt.Errorf("cleanup %s row: %w", name, err))
+		return destructiveFailure(fmt.Errorf("cleanup %s row: %w", name, err))
 	}
 	// T10.3: drop grants so a future repo reusing this name starts with none.
 	// Best-effort — the row is gone, so stale edges grant nothing today.
@@ -446,21 +513,35 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	return true, nil
 }
 
-func removeRepoShardsByMetadata(ctx context.Context, dataDir, name string) error {
+func planRepoShardsByMetadata(
+	ctx context.Context,
+	dataDir, name string,
+) ([]string, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	paths, err := shardPaths(dataDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var removals []string
 	for _, shard := range paths {
 		if err := ctx.Err(); err != nil {
-			return err
+			return nil, err
+		}
+		if focusedindex.IsManagedShardName(filepath.Base(shard)) {
+			// Cryptographic managed basenames are the sole ownership
+			// authority. RemoveRepository handles the target namespace; never
+			// let decoded metadata select another repository's managed path.
+			continue
 		}
 		repos, _, err := index.ReadMetadataPath(shard)
 		if err != nil {
-			return fmt.Errorf("read %s: %w", filepath.Base(shard), err)
+			// Ownership of an unreadable legacy name is unknowable. Current
+			// publications use repository-keyed canonical names and are removed
+			// separately; preserve this legacy residue for reconciliation
+			// rather than coupling another repository's deletion to it.
+			continue
 		}
 		contains := false
 		allTarget := len(repos) > 0
@@ -469,15 +550,23 @@ func removeRepoShardsByMetadata(ctx context.Context, dataDir, name string) error
 			allTarget = allTarget && repo.Name == name
 		}
 		if contains && !allTarget {
-			return fmt.Errorf("shard %s mixes %q with live repositories", filepath.Base(shard), name)
+			return nil, fmt.Errorf(
+				"shard %s mixes %q with live repositories",
+				filepath.Base(shard), name,
+			)
 		}
 		if allTarget {
-			if err := ctx.Err(); err != nil {
-				return err
-			}
-			if err := os.Remove(shard); err != nil && !os.IsNotExist(err) {
-				return err
-			}
+			removals = append(removals, shard)
+		}
+	}
+	return removals, nil
+}
+
+func removeRepoShardPaths(paths []string) error {
+	for _, shard := range paths {
+		if err := os.Remove(shard); err != nil &&
+			!os.IsNotExist(err) {
+			return err
 		}
 	}
 	return nil
@@ -495,6 +584,11 @@ func reconcileUntrackedShards(ctx context.Context, dataDir string, live map[stri
 	for _, shard := range paths {
 		if err := ctx.Err(); err != nil {
 			return errors.Join(append(errs, err)...)
+		}
+		if focusedindex.IsManagedShardName(filepath.Base(shard)) {
+			// reconcileFocusedArtifacts classifies managed paths solely by
+			// their cryptographic repository namespace.
+			continue
 		}
 		repos, _, err := index.ReadMetadataPath(shard)
 		if err != nil {
@@ -658,8 +752,8 @@ func reconcileIndexedRevisions(ctx context.Context, st store.Store, dataDir stri
 func committedIndexMismatch(
 	dataDir string,
 	repo store.Repo,
-	versions map[string]string,
-	hasShard, complete bool,
+	_ map[string]string,
+	_, _ bool,
 ) bool {
 	if repo.IndexedAnalysisUnit != nil &&
 		repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused {
@@ -669,7 +763,27 @@ func committedIndexMismatch(
 		)
 		return err != nil
 	}
-	return complete && indexStateMismatch(repo, versions, hasShard)
+	if _, err := focusedindex.ValidateWholeReceipt(
+		filepath.Join(dataDir, "index"), repo.Name,
+		wholeRevisions(repo),
+	); err != nil {
+		return true
+	}
+	// The canonical receipt validates this repository's exact member set and
+	// decoded metadata. Global shard metadata is only a legacy inventory and
+	// must not let another repository perturb this committed claim.
+	return false
+}
+
+func wholeRevisions(repo store.Repo) []store.IndexedRevision {
+	if len(repo.IndexedRevisions) == 0 && repo.IndexedCommitHash != "" {
+		return []store.IndexedRevision{{
+			Selector: "HEAD",
+			Branch:   "HEAD",
+			Commit:   repo.IndexedCommitHash,
+		}}
+	}
+	return append([]store.IndexedRevision(nil), repo.IndexedRevisions...)
 }
 
 func indexedVersions(ctx context.Context, dataDir string) (map[string]map[string]string, bool, error) {

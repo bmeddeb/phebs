@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"runtime"
 	"sort"
 	"sync"
@@ -17,9 +18,14 @@ type boundBackend struct {
 	searcher zoekt.Streamer
 	query    query.Q
 	focused  *focusedLease
+	whole    *wholeLease
+	shared   bool
 }
 
 var errBoundStreamLimit = errors.New("bound stream display limit reached")
+var errWholeGenerationChanged = errors.New(
+	"whole-repository generation changed during query",
+)
 
 const maxBoundWorkers = 8
 
@@ -32,12 +38,23 @@ func boundBackends(
 		backends = append(backends, boundBackend{
 			searcher: shared,
 			query:    compiled.baseQuery,
+			shared:   true,
 		})
 	}
 	for _, lease := range compiled.focused {
 		backends = append(backends, boundBackend{
 			searcher: lease.searcher,
 			focused:  lease,
+			query: query.Simplify(query.NewAnd(
+				compiled.query,
+				query.NewRepoSet(lease.repository),
+			)),
+		})
+	}
+	for _, lease := range compiled.whole {
+		backends = append(backends, boundBackend{
+			searcher: lease.searcher,
+			whole:    lease,
 			query: query.Simplify(query.NewAnd(
 				compiled.query,
 				query.NewRepoSet(lease.repository),
@@ -129,13 +146,15 @@ func runBoundSearch(
 	for outcome := range outcomes {
 		if outcome.result != nil {
 			filterResultVersions(outcome.result, compiled.versions)
-			if focused := backends[outcome.index].focused; focused != nil {
+			backend := backends[outcome.index]
+			if focused := backend.focused; focused != nil {
 				filterFocusedLeaseResult(
 					outcome.result, focused.repository,
 				)
-			} else {
-				compiled.filterCurrentWholeResult(ctx, outcome.result)
 			}
+			// Whole backends were bound against compile's single repository
+			// snapshot. The once-per-query result barrier below rejects the
+			// complete response if that snapshot or receipt identity changed.
 			accumulator.add(outcome.index, outcome.result)
 		}
 		if outcome.err != nil {
@@ -154,7 +173,19 @@ func runBoundSearch(
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	return accumulator.finish(time.Since(started)), nil
+	if !compiled.wholeGenerationsCurrent(ctx, true) {
+		return nil, wholeGenerationError(
+			ctx, "reader generation changed during search",
+		)
+	}
+	result := accumulator.finish(time.Since(started))
+	if compiled.legacyWhole &&
+		!compiled.filterCurrentWholeResult(ctx, result, true) {
+		return nil, wholeGenerationError(
+			ctx, "legacy whole-repository row changed during search",
+		)
+	}
+	return result, nil
 }
 
 type boundSearchError struct {
@@ -333,6 +364,8 @@ func runBoundStream(
 	type event struct {
 		result  *zoekt.SearchResult
 		focused *focusedLease
+		whole   *wholeLease
+		shared  bool
 		ack     chan struct{}
 		err     error
 	}
@@ -363,7 +396,11 @@ func runBoundStream(
 						ack := make(chan struct{})
 						select {
 						case events <- event{
-							result: result, focused: backend.focused, ack: ack,
+							result:  result,
+							focused: backend.focused,
+							whole:   backend.whole,
+							shared:  backend.shared,
+							ack:     ack,
 						}:
 							// Sender retains result ownership. Apply bounded
 							// backpressure until the serialized consumer has
@@ -415,7 +452,22 @@ func runBoundStream(
 		}
 		if event.focused == nil {
 			filterResultVersions(event.result, compiled.versions)
-			compiled.filterCurrentWholeResult(ctx, event.result)
+			if !compiled.filterCurrentWholeResult(
+				ctx, event.result, false,
+			) {
+				if event.ack != nil {
+					close(event.ack)
+				}
+				if ctx.Err() == nil &&
+					streamErr == nil && !limitReached {
+					streamErr = fmt.Errorf(
+						"%w: streamed repository is not current",
+						errWholeGenerationChanged,
+					)
+					cancel()
+				}
+				continue
+			}
 		}
 		sinkErr := sink(event.result, event.focused)
 		if event.ack != nil {
@@ -433,12 +485,25 @@ func runBoundStream(
 	if err := callerCtx.Err(); err != nil {
 		return err
 	}
+	if streamErr == nil &&
+		!compiled.wholeGenerationsCurrent(callerCtx, true) {
+		return wholeGenerationError(
+			callerCtx, "reader generation changed during stream",
+		)
+	}
 	return streamErr
 }
 
 func contextTermination(err error) bool {
 	return errors.Is(err, context.Canceled) ||
 		errors.Is(err, context.DeadlineExceeded)
+}
+
+func wholeGenerationError(ctx context.Context, detail string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return fmt.Errorf("%w: %s", errWholeGenerationChanged, detail)
 }
 
 func boundWorkerCount(backends int) int {

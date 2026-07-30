@@ -329,6 +329,232 @@ func TestBoundStreamUsesOneFullGateAndConstantWorkPerMember(t *testing.T) {
 	}
 }
 
+func TestWholeWarmGatesDoNotMultiplyFleetWorkByStreamBatches(
+	t *testing.T,
+) {
+	const batches = 32
+	const version = "1111111111111111111111111111111111111111"
+	const emitted = "example.com/acme/emitted"
+	const idle = "example.com/acme/idle"
+	backend := &staticFocusedSearcher{name: "whole-fixture"}
+	for batch := range batches {
+		backend.shards = append(backend.shards, staticFocusedShard{
+			name: fmt.Sprintf("member-%03d.zoekt", batch),
+			searcher: &resultTestStreamer{result: &zoekt.SearchResult{
+				Files: []zoekt.FileMatch{{
+					Repository: emitted,
+					FileName:   fmt.Sprintf("file-%03d.go", batch),
+					Version:    version,
+				}},
+			}},
+		})
+	}
+	t.Cleanup(backend.Close)
+	newCompiled := func(
+		barriers *atomic.Int32,
+		targeted map[string]*atomic.Int32,
+		targetedFull *atomic.Int32,
+	) *compiledSearch {
+		revisions := []store.IndexedRevision{{
+			Selector: "HEAD", Branch: "HEAD", Commit: version,
+		}}
+		return &compiledSearch{
+			query:     &query.Const{Value: true},
+			baseQuery: &query.Const{Value: true},
+			hasBase:   true,
+			versions: map[string]string{
+				emitted: version,
+				idle:    version,
+			},
+			baseRevisions: map[string]store.IndexedRevision{
+				emitted: revisions[0],
+				idle:    revisions[0],
+			},
+			sharedRevisions: map[string][]store.IndexedRevision{
+				emitted: revisions,
+				idle:    revisions,
+			},
+			validateWhole: func(
+				context.Context, string, store.IndexedRevision,
+			) bool {
+				return true
+			},
+			validateSharedWhole: func(
+				_ context.Context,
+				repository string,
+				_ []store.IndexedRevision,
+				full bool,
+			) bool {
+				targeted[repository].Add(1)
+				if full {
+					targetedFull.Add(1)
+				}
+				return true
+			},
+			validateWholeGenerations: func(
+				context.Context,
+				map[string][]store.IndexedRevision,
+				[]*wholeLease,
+				bool,
+			) bool {
+				barriers.Add(1)
+				return true
+			},
+			validateWholeTouched: func(
+				_ context.Context,
+				shared map[string][]store.IndexedRevision,
+				_ []*wholeLease,
+				full bool,
+			) bool {
+				for repository := range shared {
+					targeted[repository].Add(1)
+				}
+				if full {
+					targetedFull.Add(1)
+				}
+				return true
+			},
+		}
+	}
+
+	var searchBarriers atomic.Int32
+	searchTargets := map[string]*atomic.Int32{
+		emitted: new(atomic.Int32), idle: new(atomic.Int32),
+	}
+	var searchTargetFull atomic.Int32
+	if _, err := runBoundSearch(
+		t.Context(), backend,
+		newCompiled(
+			&searchBarriers, searchTargets, &searchTargetFull,
+		),
+		Options{},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if searchBarriers.Load() != 1 ||
+		searchTargets[emitted].Load() != 0 ||
+		searchTargets[idle].Load() != 0 ||
+		searchTargetFull.Load() != 0 {
+		t.Fatalf(
+			"warm JSON barriers/emitted/idle/full = %d/%d/%d/%d, "+
+				"want 1/0/0/0",
+			searchBarriers.Load(),
+			searchTargets[emitted].Load(),
+			searchTargets[idle].Load(),
+			searchTargetFull.Load(),
+		)
+	}
+
+	var streamBarriers atomic.Int32
+	streamTargets := map[string]*atomic.Int32{
+		emitted: new(atomic.Int32), idle: new(atomic.Int32),
+	}
+	var streamTargetFull atomic.Int32
+	var delivered int
+	if err := runBoundStream(
+		t.Context(), backend,
+		newCompiled(
+			&streamBarriers, streamTargets, &streamTargetFull,
+		),
+		Options{},
+		func(result *zoekt.SearchResult, _ *focusedLease) error {
+			delivered += len(result.Files)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if streamBarriers.Load() != 1 ||
+		streamTargets[emitted].Load() != batches ||
+		streamTargets[idle].Load() != 0 ||
+		streamTargetFull.Load() != 0 ||
+		delivered != batches {
+		t.Fatalf(
+			"warm stream barriers/emitted/idle/full/files = "+
+				"%d/%d/%d/%d/%d, want 1/%d/0/0/%d",
+			streamBarriers.Load(),
+			streamTargets[emitted].Load(),
+			streamTargets[idle].Load(),
+			streamTargetFull.Load(),
+			delivered,
+			batches,
+			batches,
+		)
+	}
+}
+
+func TestWholeStreamNoMatchIgnoresMetadataOnlyRepositories(t *testing.T) {
+	const repository = "example.com/acme/no-match"
+	const version = "1111111111111111111111111111111111111111"
+	backend := &resultTestStreamer{result: &zoekt.SearchResult{
+		RepoURLs: map[string]string{
+			repository:                       "https://example.com/acme/no-match",
+			repository + "/nested-submodule": "https://example.com/nested",
+		},
+		LineFragments: map[string]string{
+			repository:                       "main",
+			repository + "/nested-submodule": "subrepo",
+		},
+	}}
+	var touched, barriers atomic.Int32
+	compiled := &compiledSearch{
+		query:     &query.Const{Value: true},
+		baseQuery: &query.Const{Value: true},
+		hasBase:   true,
+		versions:  map[string]string{repository: version},
+		baseRevisions: map[string]store.IndexedRevision{
+			repository: {
+				Selector: "HEAD", Branch: "HEAD", Commit: version,
+			},
+		},
+		sharedRevisions: map[string][]store.IndexedRevision{
+			repository: {{
+				Selector: "HEAD", Branch: "HEAD", Commit: version,
+			}},
+		},
+		validateWhole: func(
+			context.Context, string, store.IndexedRevision,
+		) bool {
+			return true
+		},
+		validateWholeTouched: func(
+			context.Context,
+			map[string][]store.IndexedRevision,
+			[]*wholeLease,
+			bool,
+		) bool {
+			touched.Add(1)
+			return true
+		},
+		validateWholeGenerations: func(
+			context.Context,
+			map[string][]store.IndexedRevision,
+			[]*wholeLease,
+			bool,
+		) bool {
+			barriers.Add(1)
+			return true
+		},
+	}
+	var delivered int
+	if err := runBoundStream(
+		t.Context(), backend, compiled, Options{},
+		func(result *zoekt.SearchResult, _ *focusedLease) error {
+			delivered += len(result.Files)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if touched.Load() != 0 || barriers.Load() != 1 ||
+		delivered != 0 {
+		t.Fatalf(
+			"no-match touched/barriers/files = %d/%d/%d, want 0/1/0",
+			touched.Load(), barriers.Load(), delivered,
+		)
+	}
+}
+
 func TestBoundWorkerCountHasFixedCeiling(t *testing.T) {
 	previous := runtime.GOMAXPROCS(64)
 	defer runtime.GOMAXPROCS(previous)
@@ -359,7 +585,21 @@ func TestBoundSearchErrorSelectionIsDeterministic(t *testing.T) {
 
 type resourceRepoStore struct {
 	store.Store
-	repos []store.Repo
+	repos    []store.Repo
+	enqueues atomic.Int32
+}
+
+func (s *resourceRepoStore) EnqueuePending(
+	_ context.Context,
+	kind store.JobKind,
+	target string,
+	force bool,
+) (*store.Job, error) {
+	s.enqueues.Add(1)
+	return &store.Job{
+		Kind: kind, Target: target, Force: force,
+		Status: store.StatusPending,
+	}, nil
 }
 
 func (s *resourceRepoStore) ListRepos(context.Context) ([]store.Repo, error) {
@@ -381,6 +621,48 @@ func (s *resourceRepoStore) GetRepo(
 		}
 	}
 	return nil, store.ErrNotFound
+}
+
+func TestWholeRepairRequestRetriesUnchangedFailureAfterBackoff(t *testing.T) {
+	const repository = "example.com/acme/repair-retry"
+	revisions := []store.IndexedRevision{{
+		Selector: "HEAD", Branch: "HEAD",
+		Commit: "1111111111111111111111111111111111111111",
+	}}
+	st := &resourceRepoStore{}
+	searcher := &Searcher{
+		st: st, indexDir: t.TempDir(),
+		wholeRepairs: make(map[string]wholeRepairRequest),
+	}
+	for range 2 {
+		if err := searcher.requestWholeRepair(
+			t.Context(), repository, revisions,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if st.enqueues.Load() != 1 {
+		t.Fatalf(
+			"repair enqueues inside backoff = %d, want 1",
+			st.enqueues.Load(),
+		)
+	}
+	searcher.wholeRepairMu.Lock()
+	request := searcher.wholeRepairs[repository]
+	request.retryAt = time.Now().Add(-time.Second)
+	searcher.wholeRepairs[repository] = request
+	searcher.wholeRepairMu.Unlock()
+	if err := searcher.requestWholeRepair(
+		t.Context(), repository, revisions,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if st.enqueues.Load() != 2 {
+		t.Fatalf(
+			"repair enqueues after backoff = %d, want 2",
+			st.enqueues.Load(),
+		)
+	}
 }
 
 func TestCompilePrunesDeletedAndWholeFocusedCacheEntries(t *testing.T) {
@@ -1134,8 +1416,8 @@ func TestWholeResultTimeGateDropsSameCommitFocusedTransition(t *testing.T) {
 			close(backend.release)
 			select {
 			case result := <-done:
-				if result.err != nil {
-					t.Fatal(result.err)
+				if result.err == nil {
+					t.Fatal("whole-to-focused transition returned no error")
 				}
 				if len(result.files) != 0 {
 					t.Fatalf(

@@ -177,6 +177,29 @@ func ArtifactBase(repository string) string {
 	return "phebs-focus-" + repositoryKey(repository)
 }
 
+// IsManagedShardName reports whether name belongs to the cryptographic
+// repository namespace used by focused or whole-repository publications.
+// Decoded shard metadata must never override this ownership boundary.
+func IsManagedShardName(name string) bool {
+	return managedHashShardName(name, "phebs-focus-", '-') ||
+		managedHashShardName(name, "phebs-whole-", '_')
+}
+
+func managedHashShardName(name, prefix string, separator byte) bool {
+	if filepath.Base(name) != name ||
+		!strings.HasPrefix(name, prefix) ||
+		!strings.HasSuffix(name, ".zoekt") {
+		return false
+	}
+	identity := strings.TrimPrefix(name, prefix)
+	if len(identity) <= sha256.Size*2 ||
+		identity[sha256.Size*2] != separator {
+		return false
+	}
+	_, err := hex.DecodeString(identity[:sha256.Size*2])
+	return err == nil
+}
+
 func repositoryKey(repository string) string {
 	sum := sha256.Sum256([]byte(repository))
 	return hex.EncodeToString(sum[:])

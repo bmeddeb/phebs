@@ -2,10 +2,13 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/sourcegraph/zoekt"
@@ -27,6 +30,10 @@ type Searcher struct {
 	st       store.Store
 	indexDir string
 	focused  *focusedCache
+	whole    *wholeCache
+
+	wholeRepairMu sync.Mutex
+	wholeRepairs  map[string]wholeRepairRequest
 	// maxWallTime is test-configurable; zero means maxSearchWallTime.
 	maxWallTime time.Duration
 	// Contexts backs `context:<name>` filters (T8.1); assigned once at
@@ -44,6 +51,12 @@ type Searcher struct {
 	// Filtering happens here, in the pre-pass, so REST, SSE, and MCP inherit
 	// it and nothing is post-filtered.
 	Visible func(ctx context.Context) func(store.Repo) bool
+}
+
+type wholeRepairRequest struct {
+	key      string
+	failures int
+	retryAt  time.Time
 }
 
 const (
@@ -77,18 +90,62 @@ func Open(indexDir string, st store.Store) (*Searcher, error) {
 	} else if !os.IsNotExist(err) {
 		return nil, fmt.Errorf("open shard dir: %w", err)
 	}
+	whole := newWholeCache(indexDir)
+	var candidates map[string]wholeSharedCandidate
+	var err error
+	if st != nil {
+		bootstrapCtx, cancel := context.WithTimeout(
+			context.Background(), wholeCacheLoadTimeout,
+		)
+		candidates, err = whole.captureSharedCandidates(
+			bootstrapCtx, st,
+		)
+		cancel()
+		if err != nil {
+			whole.close()
+			return nil, fmt.Errorf(
+				"capture whole-repository startup generations: %w", err,
+			)
+		}
+	}
 	z, err := zoektsearch.NewDirectorySearcher(indexDir)
 	if err != nil {
+		whole.close()
 		return nil, fmt.Errorf("open shard dir %s: %w", indexDir, err)
 	}
+	if st != nil {
+		bootstrapCtx, cancel := context.WithTimeout(
+			context.Background(), wholeCacheLoadTimeout,
+		)
+		err = whole.bootstrapShared(
+			bootstrapCtx, z, st, candidates,
+		)
+		cancel()
+		if err != nil {
+			z.Close()
+			whole.close()
+			return nil, fmt.Errorf(
+				"bind whole-repository startup generations: %w", err,
+			)
+		}
+	}
 	return &Searcher{
-		z: z, st: st, indexDir: indexDir, focused: newFocusedCache(indexDir),
+		z: z, st: st, indexDir: indexDir,
+		focused: newFocusedCache(indexDir),
+		whole:   whole,
 	}, nil
 }
 
 func (s *Searcher) Close() {
-	s.focused.close()
-	s.z.Close()
+	if s.focused != nil {
+		s.focused.close()
+	}
+	if s.whole != nil {
+		s.whole.close()
+	}
+	if s.z != nil {
+		s.z.Close()
+	}
 }
 
 // Options bound the work a single query may do.
@@ -334,14 +391,36 @@ func usageEvent(stats Stats, repos *repoCollector) store.UsageEvent {
 // store still considers searchable. Stale/untracked shards can remain on disk
 // after an interrupted cleanup, but they must never leak into search results.
 type compiledSearch struct {
-	query           query.Q
-	baseQuery       query.Q
-	hasBase         bool
-	versions        map[string]string
-	baseRevisions   map[string]store.IndexedRevision
-	focused         []*focusedLease
-	validateFocused func(context.Context, *focusedLease, bool) bool
-	validateWhole   func(context.Context, string, store.IndexedRevision) bool
+	query               query.Q
+	baseQuery           query.Q
+	hasBase             bool
+	versions            map[string]string
+	baseRevisions       map[string]store.IndexedRevision
+	sharedRevisions     map[string][]store.IndexedRevision
+	focused             []*focusedLease
+	whole               []*wholeLease
+	legacyWhole         bool
+	validateFocused     func(context.Context, *focusedLease, bool) bool
+	validateWholeLease  func(context.Context, *wholeLease, bool) bool
+	validateWhole       func(context.Context, string, store.IndexedRevision) bool
+	validateSharedWhole func(
+		context.Context,
+		string,
+		[]store.IndexedRevision,
+		bool,
+	) bool
+	validateWholeGenerations func(
+		context.Context,
+		map[string][]store.IndexedRevision,
+		[]*wholeLease,
+		bool,
+	) bool
+	validateWholeTouched func(
+		context.Context,
+		map[string][]store.IndexedRevision,
+		[]*wholeLease,
+		bool,
+	) bool
 }
 
 func (c *compiledSearch) release() {
@@ -349,6 +428,10 @@ func (c *compiledSearch) release() {
 		lease.release()
 	}
 	c.focused = nil
+	for _, lease := range c.whole {
+		lease.release()
+	}
+	c.whole = nil
 }
 
 func (c *compiledSearch) focusedCurrent(
@@ -360,6 +443,57 @@ func (c *compiledSearch) focusedCurrent(
 		return true
 	}
 	return c.validateFocused(ctx, lease, full)
+}
+
+func (c *compiledSearch) wholeCurrent(
+	ctx context.Context,
+	lease *wholeLease,
+	full bool,
+) bool {
+	if lease == nil || c.validateWholeLease == nil {
+		return true
+	}
+	return c.validateWholeLease(ctx, lease, full)
+}
+
+func (c *compiledSearch) wholeLeasesCurrent(
+	ctx context.Context,
+	full bool,
+) bool {
+	for _, lease := range c.whole {
+		if !c.wholeCurrent(ctx, lease, full) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *compiledSearch) wholeGenerationsCurrent(
+	ctx context.Context,
+	full bool,
+) bool {
+	if c.validateWholeGenerations == nil {
+		return c.sharedWholeCurrent(ctx, full) &&
+			c.wholeLeasesCurrent(ctx, full)
+	}
+	return c.validateWholeGenerations(
+		ctx, c.sharedRevisions, c.whole, full,
+	)
+}
+
+func (c *compiledSearch) sharedWholeCurrent(
+	ctx context.Context,
+	full bool,
+) bool {
+	if c.validateSharedWhole == nil {
+		return true
+	}
+	for repository, revisions := range c.sharedRevisions {
+		if !c.validateSharedWhole(ctx, repository, revisions, full) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *Searcher) validateFocusedLease(
@@ -403,37 +537,94 @@ func (s *Searcher) validateFocusedLease(
 func (c *compiledSearch) filterCurrentWholeResult(
 	ctx context.Context,
 	result *zoekt.SearchResult,
-) {
+	full bool,
+) bool {
 	if result == nil || c.validateWhole == nil {
-		return
+		return true
+	}
+	if c.validateWholeTouched != nil {
+		names := make(map[string]struct{})
+		for _, file := range result.Files {
+			names[file.Repository] = struct{}{}
+		}
+		if len(names) == 0 {
+			return true
+		}
+		shared := make(
+			map[string][]store.IndexedRevision, len(names),
+		)
+		leases := make([]*wholeLease, 0, len(names))
+		for repository := range names {
+			if revisions, ok := c.sharedRevisions[repository]; ok {
+				shared[repository] = revisions
+				continue
+			}
+			found := false
+			for _, lease := range c.whole {
+				if lease.repository == repository {
+					leases = append(leases, lease)
+					found = true
+					break
+				}
+			}
+			if !found {
+				return false
+			}
+		}
+		return c.validateWholeTouched(ctx, shared, leases, full)
 	}
 	current := make(map[string]bool)
 	check := func(repository string) bool {
 		if valid, ok := current[repository]; ok {
 			return valid
 		}
-		expected, ok := c.baseRevisions[repository]
-		valid := ok && c.validateWhole(ctx, repository, expected)
+		valid := false
+		if revisions, ok := c.sharedRevisions[repository]; ok &&
+			c.validateSharedWhole != nil {
+			valid = c.validateSharedWhole(
+				ctx, repository, revisions, full,
+			)
+		} else {
+			matchedLease := false
+			for _, lease := range c.whole {
+				if lease.repository == repository {
+					matchedLease = true
+					valid = c.wholeCurrent(ctx, lease, full)
+					break
+				}
+			}
+			if !matchedLease {
+				expected, ok := c.baseRevisions[repository]
+				valid = ok &&
+					c.validateWhole(ctx, repository, expected)
+			}
+		}
 		current[repository] = valid
 		return valid
 	}
+	allCurrent := true
 	files := result.Files[:0]
 	for _, file := range result.Files {
 		if check(file.Repository) {
 			files = append(files, file)
+		} else {
+			allCurrent = false
 		}
 	}
 	result.Files = files
 	for repository := range result.RepoURLs {
-		if !current[repository] {
+		if !check(repository) {
 			delete(result.RepoURLs, repository)
+			allCurrent = false
 		}
 	}
 	for repository := range result.LineFragments {
-		if !current[repository] {
+		if !check(repository) {
 			delete(result.LineFragments, repository)
+			allCurrent = false
 		}
 	}
+	return allCurrent
 }
 
 func (s *Searcher) validateWholeRepository(
@@ -454,6 +645,304 @@ func (s *Searcher) validateWholeRepository(
 	return ok && current == expected
 }
 
+func (s *Searcher) validateWholeLease(
+	ctx context.Context,
+	lease *wholeLease,
+	full bool,
+) bool {
+	if lease == nil {
+		return true
+	}
+	repo, err := s.st.GetRepo(ctx, lease.repository)
+	current := err == nil && repo != nil &&
+		lease.current(ctx, *repo, full)
+	if full && !current {
+		lease.invalidate()
+	}
+	return current
+}
+
+func (s *Searcher) requestWholeRepair(
+	ctx context.Context,
+	repository string,
+	revisions []store.IndexedRevision,
+) error {
+	key := "missing-or-invalid"
+	if manifest, err := focusedindex.ReadWholeManifest(
+		s.indexDir, repository, revisions,
+	); err == nil {
+		key = manifest.Digest
+	} else if info, statErr := os.Lstat(filepath.Join(
+		s.indexDir, focusedindex.WholeManifestName(repository),
+	)); statErr == nil {
+		key = fmt.Sprintf(
+			"invalid:%d:%d:%d",
+			info.Size(), info.ModTime().UnixNano(), info.Mode(),
+		)
+	}
+	s.wholeRepairMu.Lock()
+	if s.wholeRepairs == nil {
+		s.wholeRepairs = make(map[string]wholeRepairRequest)
+	}
+	previous := s.wholeRepairs[repository]
+	if previous.key == key && time.Now().Before(previous.retryAt) {
+		s.wholeRepairMu.Unlock()
+		return nil
+	}
+	failures := 1
+	if previous.key == key {
+		failures = min(previous.failures+1, 32)
+	}
+	request := wholeRepairRequest{
+		key:      key,
+		failures: failures,
+		retryAt: time.Now().Add(
+			focusedNegativeRetryDelay(failures),
+		),
+	}
+	s.wholeRepairs[repository] = request
+	s.wholeRepairMu.Unlock()
+	if _, err := s.st.EnqueuePending(
+		ctx, store.JobIndex, repository, true,
+	); err != nil {
+		s.wholeRepairMu.Lock()
+		if s.wholeRepairs[repository] == request {
+			delete(s.wholeRepairs, repository)
+		}
+		s.wholeRepairMu.Unlock()
+		return err
+	}
+	return nil
+}
+
+func (s *Searcher) clearWholeRepair(repository string) {
+	s.wholeRepairMu.Lock()
+	delete(s.wholeRepairs, repository)
+	s.wholeRepairMu.Unlock()
+}
+
+func (s *Searcher) validateSharedWhole(
+	ctx context.Context,
+	repository string,
+	revisions []store.IndexedRevision,
+	full bool,
+) bool {
+	repo, err := s.st.GetRepo(ctx, repository)
+	if err != nil || repo == nil ||
+		!wholeRepoIdentityMatches(*repo, revisions) {
+		if full && s.whole != nil {
+			s.whole.invalidateShared(repository, revisions)
+		}
+		return false
+	}
+	if !full {
+		return !focusedindex.IsPublishing(s.indexDir, repository)
+	}
+	if s.whole == nil {
+		return false
+	}
+	if !s.whole.sharedCurrent(
+		ctx, repository, revisions, full,
+	) {
+		if full {
+			s.whole.invalidateShared(repository, revisions)
+		}
+		return false
+	}
+	if !full {
+		return true
+	}
+	manifest, err := focusedindex.ReadWholeManifest(
+		s.indexDir, repository, revisions,
+	)
+	if err != nil {
+		s.whole.invalidateShared(repository, revisions)
+		return false
+	}
+	list, err := s.z.List(
+		ctx, query.NewRepoSet(repository), nil,
+	)
+	current := err == nil && wholeRepoListMatches(
+		list, repository, revisions, len(manifest.Members),
+	)
+	if !current {
+		s.whole.invalidateShared(repository, revisions)
+	}
+	return current
+}
+
+// validateWholeGenerations batches the committed-row barrier for all
+// whole-repository backends. Filesystem identities remain repository-local,
+// but each query phase performs one store scan rather than one round trip per
+// repository.
+func (s *Searcher) validateWholeGenerations(
+	ctx context.Context,
+	shared map[string][]store.IndexedRevision,
+	leases []*wholeLease,
+	full bool,
+) bool {
+	if len(shared) == 0 && len(leases) == 0 {
+		return ctx.Err() == nil
+	}
+	repositories, err := s.st.ListRepos(ctx)
+	if err != nil {
+		return false
+	}
+	rows := make(map[string]store.Repo, len(repositories))
+	for _, repository := range repositories {
+		rows[repository.Name] = repository
+	}
+	var inventory map[string]*zoekt.RepoListEntry
+	inventoryOK := true
+	if full && len(shared) > 0 {
+		names := make([]string, 0, len(shared))
+		for repository := range shared {
+			names = append(names, repository)
+		}
+		list, listErr := s.z.List(
+			ctx, query.NewRepoSet(names...), nil,
+		)
+		if listErr != nil {
+			inventoryOK = false
+		} else {
+			inventory, inventoryOK = wholeRepoInventory(list)
+		}
+	}
+	allSharedCurrent := inventoryOK
+	for repository, revisions := range shared {
+		row, ok := rows[repository]
+		current := ok && wholeRepoIdentityMatches(row, revisions) &&
+			s.whole != nil &&
+			s.whole.sharedCurrent(
+				ctx, repository, revisions, full,
+			)
+		if current && full {
+			manifest, manifestErr := focusedindex.ReadWholeManifest(
+				s.indexDir, repository, revisions,
+			)
+			current = manifestErr == nil && inventoryOK &&
+				wholeRepoEntryMatches(
+					inventory[repository],
+					repository,
+					revisions,
+					len(manifest.Members),
+				)
+		}
+		if !current {
+			if s.whole != nil {
+				s.whole.invalidateShared(repository, revisions)
+			}
+			allSharedCurrent = false
+		}
+	}
+	if !allSharedCurrent {
+		return false
+	}
+	for _, lease := range leases {
+		row, ok := rows[lease.repository]
+		if !ok || !lease.current(ctx, row, full) {
+			if full {
+				lease.invalidate()
+			}
+			return false
+		}
+	}
+	return ctx.Err() == nil
+}
+
+// validateWholeTouchedSet is the pre-emission Stream fence. It reads only
+// repository rows represented by the current event. The ordinary quick path
+// checks each touched marker and receipt identity; its full mode can also
+// batch shared inventory and member fingerprints. The final barrier remains
+// the only result-time fleet scan.
+func (s *Searcher) validateWholeTouchedSet(
+	ctx context.Context,
+	shared map[string][]store.IndexedRevision,
+	leases []*wholeLease,
+	full bool,
+) bool {
+	if len(shared) == 0 && len(leases) == 0 {
+		return ctx.Err() == nil
+	}
+	rows := make(
+		map[string]store.Repo, len(shared)+len(leases),
+	)
+	for repository := range shared {
+		row, err := s.st.GetRepo(ctx, repository)
+		if err != nil || row == nil {
+			return false
+		}
+		rows[repository] = *row
+	}
+	for _, lease := range leases {
+		if _, exists := rows[lease.repository]; exists {
+			continue
+		}
+		row, err := s.st.GetRepo(ctx, lease.repository)
+		if err != nil || row == nil {
+			return false
+		}
+		rows[lease.repository] = *row
+	}
+	var inventory map[string]*zoekt.RepoListEntry
+	inventoryOK := true
+	if full && len(shared) > 0 {
+		names := make([]string, 0, len(shared))
+		for repository := range shared {
+			names = append(names, repository)
+		}
+		list, err := s.z.List(
+			ctx, query.NewRepoSet(names...), nil,
+		)
+		if err != nil {
+			inventoryOK = false
+		} else {
+			inventory, inventoryOK = wholeRepoInventory(list)
+		}
+	}
+	allSharedCurrent := inventoryOK
+	for repository, revisions := range shared {
+		current := wholeRepoIdentityMatches(
+			rows[repository], revisions,
+		) && s.whole != nil &&
+			s.whole.sharedCurrent(
+				ctx, repository, revisions, full,
+			)
+		if current && full {
+			manifest, err := focusedindex.ReadWholeManifest(
+				s.indexDir, repository, revisions,
+			)
+			current = err == nil && inventoryOK &&
+				wholeRepoEntryMatches(
+					inventory[repository],
+					repository,
+					revisions,
+					len(manifest.Members),
+				)
+		}
+		if !current {
+			if s.whole != nil {
+				s.whole.invalidateShared(repository, revisions)
+			}
+			allSharedCurrent = false
+		}
+	}
+	if !allSharedCurrent {
+		return false
+	}
+	for _, lease := range leases {
+		if !lease.current(
+			ctx, rows[lease.repository], full,
+		) {
+			if full {
+				lease.invalidate()
+			}
+			return false
+		}
+	}
+	return ctx.Err() == nil
+}
+
 func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, error) {
 	q, revision, err := compileQuery(ctx, s.st, s.Contexts, raw)
 	if err != nil {
@@ -467,26 +956,49 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 		return nil, fmt.Errorf("resolve searchable repos: %w", err)
 	}
 	focusedRepositories := make(map[string]struct{})
+	wholeRepositories := make(map[string]struct{})
 	for _, repo := range repos {
-		if !repo.Deleting && repo.IndexedCommitHash != "" &&
-			repo.IndexedAnalysisUnit != nil &&
+		if repo.Deleting || repo.IndexedCommitHash == "" {
+			continue
+		}
+		if repo.IndexedAnalysisUnit != nil &&
 			repo.IndexedAnalysisUnit.SearchIndexPosture ==
 				analysisunit.SearchIndexFocused {
 			focusedRepositories[repo.Name] = struct{}{}
+		} else {
+			wholeRepositories[repo.Name] = struct{}{}
 		}
 	}
 	s.focused.prune(focusedRepositories)
+	if s.whole != nil {
+		s.whole.prune(wholeRepositories)
+	}
+	var validateWholeTouched func(
+		context.Context,
+		map[string][]store.IndexedRevision,
+		[]*wholeLease,
+		bool,
+	) bool
+	if s.whole != nil {
+		validateWholeTouched = s.validateWholeTouchedSet
+	}
 	var allow func(store.Repo) bool
 	if s.Visible != nil {
 		allow = s.Visible(ctx)
 	}
 	versions := make(map[string]string, len(repos))
 	baseRevisions := make(map[string]store.IndexedRevision)
+	sharedRevisions := make(map[string][]store.IndexedRevision)
 	branchRepos := make(map[string][]string)
 	baseBranchRepos := make(map[string][]string)
 	var focusedLeases []*focusedLease
-	releaseFocused := func() {
+	var wholeLeases []*wholeLease
+	legacyWhole := false
+	releaseLeases := func() {
 		for _, lease := range focusedLeases {
+			lease.release()
+		}
+		for _, lease := range wholeLeases {
 			lease.release()
 		}
 	}
@@ -503,18 +1015,26 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 		if !ok {
 			continue
 		}
+		focused := repo.IndexedAnalysisUnit != nil &&
+			repo.IndexedAnalysisUnit.SearchIndexPosture ==
+				analysisunit.SearchIndexFocused
 		if focusedindex.IsPublishing(s.indexDir, repo.Name) {
+			if !focused {
+				releaseLeases()
+				return nil, fmt.Errorf(
+					"%w: repository %q publication is in progress",
+					errWholeGenerationChanged, repo.Name,
+				)
+			}
 			continue
 		}
-		focused := repo.IndexedAnalysisUnit != nil &&
-			repo.IndexedAnalysisUnit.SearchIndexPosture == analysisunit.SearchIndexFocused
 		if focused {
 			lease, acquireErr := s.focused.acquire(
 				ctx, repo.Name, repo.IndexedAnalysisUnit, repo.IndexedRevisions,
 			)
 			if acquireErr != nil || lease == nil {
 				if err := ctx.Err(); err != nil {
-					releaseFocused()
+					releaseLeases()
 					return nil, err
 				}
 				continue
@@ -525,20 +1045,68 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 			}
 			focusedLeases = append(focusedLeases, lease)
 		} else {
-			baseBranchRepos[indexed.Branch] = append(
-				baseBranchRepos[indexed.Branch], repo.Name,
+			revisions := canonicalWholeRevisions(repo)
+			if s.whole == nil {
+				// Test/compatibility construction without the generation
+				// cache retains the pre-receipt result fence. Production Open
+				// always installs wholeCache and requires a receipt.
+				baseBranchRepos[indexed.Branch] = append(
+					baseBranchRepos[indexed.Branch], repo.Name,
+				)
+				legacyWhole = true
+				baseRevisions[repo.Name] = indexed
+				branchRepos[indexed.Branch] = append(
+					branchRepos[indexed.Branch], repo.Name,
+				)
+				versions[repo.Name] = indexed.Commit
+				continue
+			}
+			lease, acquireErr := s.whole.acquireIfStale(
+				ctx, s.z, repo.Name, revisions,
 			)
+			if acquireErr != nil {
+				releaseLeases()
+				bindErr := fmt.Errorf(
+					"resolve whole-repository publication %q: %w",
+					repo.Name, acquireErr,
+				)
+				if ctx.Err() != nil ||
+					contextTermination(acquireErr) {
+					return nil, bindErr
+				}
+				if repairErr := s.requestWholeRepair(
+					ctx, repo.Name, revisions,
+				); repairErr != nil {
+					return nil, errors.Join(
+						bindErr,
+						fmt.Errorf(
+							"queue forced replacement for %q: %w",
+							repo.Name, repairErr,
+						),
+					)
+				}
+				return nil, bindErr
+			}
+			s.clearWholeRepair(repo.Name)
+			if lease == nil {
+				baseBranchRepos[indexed.Branch] = append(
+					baseBranchRepos[indexed.Branch], repo.Name,
+				)
+				sharedRevisions[repo.Name] = revisions
+			} else {
+				wholeLeases = append(wholeLeases, lease)
+			}
 			baseRevisions[repo.Name] = indexed
 		}
 		branchRepos[indexed.Branch] = append(branchRepos[indexed.Branch], repo.Name)
 		versions[repo.Name] = indexed.Commit
 	}
 	if err := ctx.Err(); err != nil {
-		releaseFocused()
+		releaseLeases()
 		return nil, err
 	}
 	if len(branchRepos) == 0 {
-		releaseFocused()
+		releaseLeases()
 		if revision != "HEAD" {
 			return nil, fmt.Errorf(
 				"revision %q is not indexed in any visible repository", revision,
@@ -547,8 +1115,13 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 		empty := query.Simplify(query.NewAnd(query.NewRepoSet(), q))
 		return &compiledSearch{
 			query: empty, versions: versions, baseRevisions: baseRevisions,
-			validateFocused: s.validateFocusedLease,
-			validateWhole:   s.validateWholeRepository,
+			sharedRevisions:          sharedRevisions,
+			validateFocused:          s.validateFocusedLease,
+			validateWholeLease:       s.validateWholeLease,
+			validateWhole:            s.validateWholeRepository,
+			validateSharedWhole:      s.validateSharedWhole,
+			validateWholeGenerations: s.validateWholeGenerations,
+			validateWholeTouched:     validateWholeTouched,
 		}, nil
 	}
 	scoped := scopeQuery(branchRepos, q)
@@ -556,9 +1129,16 @@ func (s *Searcher) compile(ctx context.Context, raw string) (*compiledSearch, er
 	return &compiledSearch{
 		query: scoped, baseQuery: baseScoped, hasBase: hasBase,
 		versions: versions, baseRevisions: baseRevisions,
-		focused:         focusedLeases,
-		validateFocused: s.validateFocusedLease,
-		validateWhole:   s.validateWholeRepository,
+		sharedRevisions:          sharedRevisions,
+		focused:                  focusedLeases,
+		whole:                    wholeLeases,
+		legacyWhole:              legacyWhole,
+		validateFocused:          s.validateFocusedLease,
+		validateWholeLease:       s.validateWholeLease,
+		validateWhole:            s.validateWholeRepository,
+		validateSharedWhole:      s.validateSharedWhole,
+		validateWholeGenerations: s.validateWholeGenerations,
+		validateWholeTouched:     validateWholeTouched,
 	}, nil
 }
 
