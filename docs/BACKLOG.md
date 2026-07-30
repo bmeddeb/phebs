@@ -5,11 +5,11 @@ monorepositories; T30.1 recorded a GO result, T30.2 committed the strict
 configuration/state boundary, T30.3 shipped and then adversarially repaired
 focused shard integrity, T30.4 shipped reusable candidate planning, and T30.5
 shipped exact focused evidence publication. The post-T30.5 issue-repair gate
-is closed. The separate large-monorepo review is complete and T30.6a bounded
-extraction job receipts are next.
-Completed Epics 0–24, Epic 29, T30.1–T30.5, and P5 hardening are retained in the
-[completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
-points are summarized in [ROADMAP.md](./ROADMAP.md).
+is closed. The separate large-monorepo review is complete, T30.6a shipped
+bounded extraction job receipts, and T30.6b durable per-domain outcomes are
+next. Completed Epics 0–24, Epic 29, T30.1–T30.6a, and P5 hardening are
+retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
+and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
 New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
@@ -17,14 +17,18 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6a · Bounded extraction job receipts** is next. The accepted
+**T30.6b · Durable per-domain outcomes and retry disposition** is next. T30.6a
+now emits the bounded non-authoritative operational receipt that makes shared
+job cost and per-domain work visible without changing queue disposition.
+T30.6b adds the durable exact-generation outcome and typed retry disposition;
+it does not infer authority from the T30.6a log report. The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
-catalog lifecycle and materialization, leaf execution and complete publication,
-authorized consumers, and retention decision and implementation. It does not
-raise existing global extraction limits, change current search semantics, or
-introduce a physical Go-test search overlay.
+catalog lifecycle and materialization, leaf execution and complete
+publication, authorized consumers, and retention decision and implementation.
+It does not raise existing global extraction limits, change current search
+semantics, or introduce a physical Go-test search overlay.
 
 Production evidence/pilot gating and the distributed P6 fleet profile remain
 explicitly gated or demand-driven in the roadmap. Epics 25–28 below remain
@@ -541,7 +545,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6a next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6b next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -837,31 +841,17 @@ plane without raising the existing global extraction limits or building a
 whole-repository search index. The umbrella is split into the following
 dependency-ordered, one-PR tickets.
 
-**T30.6a · Bounded extraction job receipts** — emit one
-`phebs-extraction-operation-v1` report per repository extraction job, with
-bounded nested domain entries rather than duplicating job costs per domain.
-The job envelope binds canonical repository, indexed HEAD, unit,
-candidate-manifest, policy, and attempt identity and records queue wait,
-mirror-lock wait, and pointer/strict-open work. Each domain entry records only
-its inventory, opened-source, extractor, staging, publication, abort, cleanup,
-counts, bytes, limits, and generic completion reason: `already_current`,
-`not_ready`, `stale`, `no_candidates`, `typed_input_absent`, `limit_refusal`,
-`published_empty`, `published_nonempty`, `canceled`, or `failed`.
-Pack-specific library/anchor/shape funnels remain separate extractor work. The
-complete report is at most 64 KiB; overflow emits one deterministic minimal
-envelope with `truncated: true`, and report encoding or logging failure never
-changes extraction, publication, or retry disposition. Timings are never
-freshness, cursor, proof, or evidence identity. Production reports contain the
-canonical repository identity already required by store state but no source
-path/content/sample or raw extractor diagnostic; metrics use only frozen
-low-cardinality labels. Instrumentation performs no additional corpus pass,
-candidate hash, or blob read. This ticket emits the report through the existing
-operational/log hook and changes no store/API schema. AC: generic reason and
-no-op fixtures, exact job-versus-domain accounting, fake clock, cap/cap+1
-minimal overflow, zero added opens/hashes/reads, cancellation, report-sink
-failure, full merge bar.
+**T30.6a ✅ · Bounded extraction job receipts** *(2026-07-29)* — completed and
+retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306a--bounded-extraction-job-receipts).
+Every repository extraction job now emits one capped
+`phebs-extraction-operation-v1` operational report. Shared queue, mirror-lock,
+pointer, and strict-open work remains job-level; nested domains carry only
+generic outcomes and bounded phase/count/byte/limit diagnostics. The report is
+non-authoritative, source-free, and failure-isolated and changes no store/API
+schema or retry disposition.
 
-**T30.6b · Durable per-domain outcomes and retry disposition** *(needs
+**T30.6b · Durable per-domain outcomes and retry disposition** *(next; needs
 T30.6a)* — add one latest-only exact-generation outcome record carrying the
 matching bounded domain receipt and typed `published`,
 `unavailable_prerequisite`, `terminal_generation_refusal`, or

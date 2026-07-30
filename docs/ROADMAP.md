@@ -60,7 +60,13 @@ scope, and same-HEAD unit changes cannot reuse it. Exact historical
 commit/unit/domain publications are intentionally retained outside the current
 sweep, so Epic 30 still needs a reviewed bounded-unpinned retention decision
 (or an explicit decision to keep that unbounded posture); T30.6m selects it and
-T30.6n implements only the selected posture.
+T30.6n implements only the selected posture. T30.6a now emits one
+non-authoritative, source-free, 64 KiB-capped extraction operation report per
+repository job. Shared queue, mirror-lock, pointer, and strict-open work is
+recorded once at job level; nested domains carry only frozen generic outcomes
+and bounded phase/count/byte/limit diagnostics. Report failure cannot affect
+publication or retry disposition, and the recorder adds no corpus pass,
+candidate/member hash, publication open, or blob read.
 
 The post-T30.5 repair gate closed two reported integration issues:
 whole-repository Search/Stream binds an exact committed shard generation across
@@ -80,15 +86,17 @@ inventory as the next integration boundary; raising global extraction limits
 is not the repair. T30.6 remains that caller-overlay umbrella and is split at
 each operational-state, scheduler, candidate-lane, catalog, leaf-artifact,
 complete-publication, consumer, and retention seam. T30.6a bounded job
-receipts are next. Exact `_test.go` suffix wins when candidate v4 ships;
-focused local evidence for a committed non-empty unit consumes the resulting
-`base` lane in the following ticket, while empty-unit whole-repository
-extraction keeps shipped behavior and current search continues indexing every
-admitted test file. A physical test-search overlay, test-source association,
-automatic unit discovery, SCIP generation, pack-specific recognizer expansion,
-and per-file parser degradation remain separately reviewed future work. The
-private operator evaluation is not a retained source or merge-bar artifact;
-neutral generated fixtures reproduce only the accepted behavior classes.
+receipts are shipped; T30.6b durable exact-generation domain outcomes and
+typed retry disposition are next. Exact `_test.go` suffix wins when candidate
+v4 ships; focused local evidence for a committed non-empty unit consumes the
+resulting `base` lane in the following ticket, while empty-unit
+whole-repository extraction keeps shipped behavior and current search
+continues indexing every admitted test file. A physical test-search overlay,
+test-source association, automatic unit discovery, SCIP generation,
+pack-specific recognizer expansion, and per-file parser degradation remain
+separately reviewed future work. The private operator evaluation is not a
+retained source or merge-bar artifact; neutral generated fixtures reproduce
+only the accepted behavior classes.
 
 The selected direction is dual-plane. Search, Contracts, Topics, source
 browsing, related implementation, and the Workbench use one physically

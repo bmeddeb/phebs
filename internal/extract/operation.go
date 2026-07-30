@@ -1,0 +1,561 @@
+package extract
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log"
+	"strings"
+	"sync"
+	"time"
+
+	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/store"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+const (
+	ExtractionOperationSchema  = "phebs-extraction-operation-v1"
+	MaxExtractionOperationSize = 64 << 10
+
+	OperationReasonAlreadyCurrent    = "already_current"
+	OperationReasonNotReady          = "not_ready"
+	OperationReasonStale             = "stale"
+	OperationReasonNoCandidates      = "no_candidates"
+	OperationReasonTypedInputAbsent  = "typed_input_absent"
+	OperationReasonLimitRefusal      = "limit_refusal"
+	OperationReasonPublishedEmpty    = "published_empty"
+	OperationReasonPublishedNonempty = "published_nonempty"
+	OperationReasonCanceled          = "canceled"
+	OperationReasonFailed            = "failed"
+)
+
+// ExtractionOperationSink is the existing operational-log seam made
+// injectable for deterministic verification. A sink failure is deliberately
+// advisory: it never changes extraction, publication, or retry disposition.
+type ExtractionOperationSink func(report []byte) error
+
+// ExtractionOperationReport is one bounded, non-authoritative operational
+// receipt for a repository extraction job. Durations are diagnostics only;
+// no field participates in freshness, publication, proof, or evidence
+// identity.
+type ExtractionOperationReport struct {
+	Schema                  string                      `json:"schema"`
+	Repository              string                      `json:"repository"`
+	IndexedHead             string                      `json:"indexed_head,omitempty"`
+	UnitDigest              string                      `json:"unit_digest,omitempty"`
+	CandidateManifestDigest string                      `json:"candidate_manifest_digest,omitempty"`
+	PolicyDigest            string                      `json:"policy_digest,omitempty"`
+	Attempt                 ExtractionOperationAttempt  `json:"attempt"`
+	QueueWaitMS             int64                       `json:"queue_wait_ms"`
+	MirrorLockWaitMS        int64                       `json:"mirror_lock_wait_ms"`
+	PointerWorkMS           int64                       `json:"pointer_work_ms"`
+	StrictOpenMS            int64                       `json:"strict_open_ms"`
+	TotalMS                 int64                       `json:"total_ms"`
+	Domains                 []ExtractionOperationDomain `json:"domains,omitempty"`
+	Truncated               bool                        `json:"truncated,omitempty"`
+}
+
+// ExtractionOperationAttempt names the queue attempt without exposing the
+// runner lease token.
+type ExtractionOperationAttempt struct {
+	JobID  string `json:"job_id,omitempty"`
+	Number int    `json:"number"`
+	Force  bool   `json:"force,omitempty"`
+}
+
+// ExtractionOperationDomain contains only bounded phase durations, aggregate
+// counts/bytes/limits, and a frozen generic completion reason. It never carries
+// source paths, content, samples, or raw extractor diagnostics.
+type ExtractionOperationDomain struct {
+	Domain           string                          `json:"domain"`
+	ExtractorVersion string                          `json:"extractor_version"`
+	Reason           string                          `json:"reason"`
+	InventoryMS      int64                           `json:"inventory_ms"`
+	OpenedSourceMS   int64                           `json:"opened_source_ms"`
+	ExtractorMS      int64                           `json:"extractor_ms"`
+	StagingMS        int64                           `json:"staging_ms"`
+	PublicationMS    int64                           `json:"publication_ms"`
+	AbortMS          int64                           `json:"abort_ms"`
+	CleanupMS        int64                           `json:"cleanup_ms"`
+	Counts           ExtractionOperationDomainCounts `json:"counts"`
+	Bytes            ExtractionOperationDomainBytes  `json:"bytes"`
+	Limits           ExtractionOperationDomainLimits `json:"limits"`
+}
+
+type ExtractionOperationDomainCounts struct {
+	CorpusFiles          int `json:"corpus_files"`
+	CandidateFiles       int `json:"candidate_files"`
+	OpenedSourceAttempts int `json:"opened_source_attempts"`
+	OpenedSourceFiles    int `json:"opened_source_files"`
+	Facts                int `json:"facts"`
+	Atoms                int `json:"atoms"`
+	Assertions           int `json:"assertions"`
+	Unresolved           int `json:"unresolved"`
+	StagedChunks         int `json:"staged_chunks"`
+}
+
+type ExtractionOperationDomainBytes struct {
+	PlannedDeclared int64 `json:"planned_declared"`
+	OpenedSource    int64 `json:"opened_source"`
+}
+
+type ExtractionOperationDomainLimits struct {
+	CorpusFiles          int   `json:"corpus_files"`
+	OpenedSourceAttempts int   `json:"opened_source_attempts"`
+	OpenedSourceFiles    int   `json:"opened_source_files"`
+	OpenedSourceBytes    int64 `json:"opened_source_bytes"`
+	Facts                int   `json:"facts"`
+	SourceBlobBytes      int64 `json:"source_blob_bytes"`
+	TypedInputBytes      int64 `json:"typed_input_bytes"`
+}
+
+type extractionOperationMinimal struct {
+	Schema                  string                     `json:"schema"`
+	Repository              string                     `json:"repository"`
+	IndexedHead             string                     `json:"indexed_head,omitempty"`
+	UnitDigest              string                     `json:"unit_digest,omitempty"`
+	CandidateManifestDigest string                     `json:"candidate_manifest_digest,omitempty"`
+	PolicyDigest            string                     `json:"policy_digest,omitempty"`
+	Attempt                 ExtractionOperationAttempt `json:"attempt"`
+	DomainCount             int                        `json:"domain_count"`
+	Truncated               bool                       `json:"truncated"`
+}
+
+type operationRecorder struct {
+	mu      sync.Mutex
+	now     func() time.Time
+	started time.Time
+	report  ExtractionOperationReport
+	domains []*domainOperationRecorder
+}
+
+type domainOperationRecorder struct {
+	mu     sync.Mutex
+	now    func() time.Time
+	report ExtractionOperationDomain
+}
+
+func newOperationRecorder(
+	job store.Job,
+	now func() time.Time,
+) *operationRecorder {
+	if now == nil {
+		now = time.Now
+	}
+	started := now()
+	queueWait := time.Duration(0)
+	if job.ClaimedAt != nil && !job.CreatedAt.IsZero() {
+		queueWait = nonnegativeDuration(job.CreatedAt, *job.ClaimedAt)
+	}
+	return &operationRecorder{
+		now: now, started: started,
+		report: ExtractionOperationReport{
+			Schema:     ExtractionOperationSchema,
+			Repository: job.Target,
+			Attempt: ExtractionOperationAttempt{
+				JobID: job.ID, Number: job.Attempts + 1, Force: job.Force,
+			},
+			QueueWaitMS: durationMilliseconds(queueWait),
+		},
+	}
+}
+
+func (operation *operationRecorder) registerDomains(
+	extractors []registeredExtractor,
+) {
+	operation.mu.Lock()
+	defer operation.mu.Unlock()
+	operation.domains = make([]*domainOperationRecorder, len(extractors))
+	for index, extractor := range extractors {
+		operation.domains[index] = &domainOperationRecorder{
+			now: operation.now,
+			report: ExtractionOperationDomain{
+				Domain: extractor.domain, ExtractorVersion: extractor.version,
+				Limits: ExtractionOperationDomainLimits{
+					CorpusFiles:          maxCorpusFiles,
+					OpenedSourceAttempts: maxCorpusFiles * 4,
+					OpenedSourceFiles:    maxCorpusFiles,
+					OpenedSourceBytes:    maxCorpusRunBytes,
+					Facts:                maxFactsPerRun,
+					SourceBlobBytes:      MaxBlobBytes,
+					TypedInputBytes:      MaxSCIPIndexBytes,
+				},
+			},
+		}
+	}
+}
+
+func (operation *operationRecorder) domain(
+	index int,
+) *domainOperationRecorder {
+	operation.mu.Lock()
+	defer operation.mu.Unlock()
+	if index < 0 || index >= len(operation.domains) {
+		return nil
+	}
+	return operation.domains[index]
+}
+
+func (operation *operationRecorder) bindRepository(repo *store.Repo) {
+	if repo == nil {
+		return
+	}
+	operation.mu.Lock()
+	defer operation.mu.Unlock()
+	operation.report.Repository = repo.Name
+	operation.report.IndexedHead = repo.IndexedCommitHash
+	if repo.IndexedAnalysisUnit != nil {
+		operation.report.UnitDigest = repo.IndexedAnalysisUnit.Digest
+	}
+}
+
+func (operation *operationRecorder) bindPolicy(digest string) {
+	operation.mu.Lock()
+	operation.report.PolicyDigest = digest
+	operation.mu.Unlock()
+}
+
+func (operation *operationRecorder) bindManifest(digest string) {
+	operation.mu.Lock()
+	operation.report.CandidateManifestDigest = digest
+	operation.mu.Unlock()
+}
+
+func (operation *operationRecorder) addMirrorLockWait(elapsed time.Duration) {
+	operation.mu.Lock()
+	operation.report.MirrorLockWaitMS += durationMilliseconds(elapsed)
+	operation.mu.Unlock()
+}
+
+func (operation *operationRecorder) addPointerWork(elapsed time.Duration) {
+	operation.mu.Lock()
+	operation.report.PointerWorkMS += durationMilliseconds(elapsed)
+	operation.mu.Unlock()
+}
+
+func (operation *operationRecorder) addStrictOpen(elapsed time.Duration) {
+	operation.mu.Lock()
+	operation.report.StrictOpenMS += durationMilliseconds(elapsed)
+	operation.mu.Unlock()
+}
+
+func (operation *operationRecorder) completeRemaining(reason string) {
+	operation.mu.Lock()
+	domains := append([]*domainOperationRecorder(nil), operation.domains...)
+	operation.mu.Unlock()
+	for _, domain := range domains {
+		domain.completeIfEmpty(reason)
+	}
+}
+
+func (operation *operationRecorder) snapshot() ExtractionOperationReport {
+	operation.mu.Lock()
+	report := operation.report
+	report.TotalMS = durationMilliseconds(
+		nonnegativeDuration(operation.started, operation.now()),
+	)
+	domains := append([]*domainOperationRecorder(nil), operation.domains...)
+	operation.mu.Unlock()
+	report.Domains = make([]ExtractionOperationDomain, len(domains))
+	for index, domain := range domains {
+		report.Domains[index] = domain.snapshot()
+	}
+	return report
+}
+
+func (domain *domainOperationRecorder) started() time.Time {
+	if domain == nil {
+		return time.Time{}
+	}
+	return domain.now()
+}
+
+func (domain *domainOperationRecorder) elapsed(started time.Time) time.Duration {
+	if domain == nil || started.IsZero() {
+		return 0
+	}
+	return nonnegativeDuration(started, domain.now())
+}
+
+func (domain *domainOperationRecorder) addInventory(elapsed time.Duration) {
+	if domain == nil {
+		return
+	}
+	domain.addDuration(&domain.report.InventoryMS, elapsed)
+}
+
+func (domain *domainOperationRecorder) addOpenedSource(elapsed time.Duration) {
+	if domain == nil {
+		return
+	}
+	domain.addDuration(&domain.report.OpenedSourceMS, elapsed)
+}
+
+func (domain *domainOperationRecorder) addExtractor(elapsed time.Duration) {
+	if domain == nil {
+		return
+	}
+	domain.addDuration(&domain.report.ExtractorMS, elapsed)
+}
+
+func (domain *domainOperationRecorder) addStaging(elapsed time.Duration) {
+	if domain == nil {
+		return
+	}
+	domain.addDuration(&domain.report.StagingMS, elapsed)
+}
+
+func (domain *domainOperationRecorder) addPublication(elapsed time.Duration) {
+	if domain == nil {
+		return
+	}
+	domain.addDuration(&domain.report.PublicationMS, elapsed)
+}
+
+func (domain *domainOperationRecorder) addAbort(elapsed time.Duration) {
+	if domain == nil {
+		return
+	}
+	domain.addDuration(&domain.report.AbortMS, elapsed)
+}
+
+func (domain *domainOperationRecorder) addCleanup(elapsed time.Duration) {
+	if domain == nil {
+		return
+	}
+	domain.addDuration(&domain.report.CleanupMS, elapsed)
+}
+
+func (domain *domainOperationRecorder) addDuration(
+	field *int64,
+	elapsed time.Duration,
+) {
+	if domain == nil {
+		return
+	}
+	domain.mu.Lock()
+	*field += durationMilliseconds(elapsed)
+	domain.mu.Unlock()
+}
+
+func (domain *domainOperationRecorder) capture(
+	corpus *verifiedCorpus,
+	sink *runSink,
+) {
+	if domain == nil {
+		return
+	}
+	var corpusSnapshot verifiedCorpusOperationSnapshot
+	if corpus != nil {
+		corpusSnapshot = corpus.operationSnapshot()
+	}
+	var sinkSnapshot runSinkOperationSnapshot
+	if sink != nil {
+		sinkSnapshot = sink.operationSnapshot()
+	}
+	domain.mu.Lock()
+	domain.report.Counts.CorpusFiles = corpusSnapshot.corpusFiles
+	domain.report.Counts.CandidateFiles = corpusSnapshot.candidateFiles
+	domain.report.Counts.OpenedSourceAttempts = corpusSnapshot.readAttempts
+	domain.report.Counts.OpenedSourceFiles = corpusSnapshot.readFiles
+	domain.report.Counts.Facts = sinkSnapshot.facts
+	domain.report.Counts.Atoms = sinkSnapshot.atoms
+	domain.report.Counts.Assertions = sinkSnapshot.assertions
+	domain.report.Counts.Unresolved = sinkSnapshot.unresolved
+	domain.report.Counts.StagedChunks = sinkSnapshot.stagedChunks
+	domain.report.Bytes.PlannedDeclared = corpusSnapshot.plannedBytes
+	domain.report.Bytes.OpenedSource = corpusSnapshot.readBytes
+	domain.mu.Unlock()
+}
+
+func (domain *domainOperationRecorder) complete(reason string) {
+	if domain == nil || !validOperationReason(reason) {
+		return
+	}
+	domain.mu.Lock()
+	domain.report.Reason = reason
+	domain.mu.Unlock()
+}
+
+func (domain *domainOperationRecorder) completeIfEmpty(reason string) {
+	if domain == nil || !validOperationReason(reason) {
+		return
+	}
+	domain.mu.Lock()
+	if domain.report.Reason == "" {
+		domain.report.Reason = reason
+	}
+	domain.mu.Unlock()
+}
+
+func (domain *domainOperationRecorder) snapshot() ExtractionOperationDomain {
+	if domain == nil {
+		return ExtractionOperationDomain{}
+	}
+	domain.mu.Lock()
+	defer domain.mu.Unlock()
+	return domain.report
+}
+
+func validOperationReason(reason string) bool {
+	switch reason {
+	case OperationReasonAlreadyCurrent, OperationReasonNotReady,
+		OperationReasonStale, OperationReasonNoCandidates,
+		OperationReasonTypedInputAbsent, OperationReasonLimitRefusal,
+		OperationReasonPublishedEmpty, OperationReasonPublishedNonempty,
+		OperationReasonCanceled, OperationReasonFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+func operationReasonForError(err error) string {
+	switch {
+	case err == nil:
+		return OperationReasonFailed
+	case errors.Is(err, context.Canceled),
+		errors.Is(err, context.DeadlineExceeded):
+		return OperationReasonCanceled
+	case errors.Is(err, errStaleRun):
+		return OperationReasonStale
+	case errors.Is(err, errOperationLimitRefusal):
+		return OperationReasonLimitRefusal
+	default:
+		return OperationReasonFailed
+	}
+}
+
+func operationReason(err error) string {
+	if errors.Is(err, store.ErrNotFound) ||
+		errors.Is(err, candidatepkg.ErrPublishing) {
+		return OperationReasonNotReady
+	}
+	if errors.Is(err, errOperationLimitRefusal) ||
+		isGenericLimitRefusal(err) {
+		return OperationReasonLimitRefusal
+	}
+	return operationReasonForError(err)
+}
+
+func successfulOperationReason(stats corpusStats, facts int) string {
+	switch {
+	case facts > 0:
+		return OperationReasonPublishedNonempty
+	case stats.typedInputKind != "" && !stats.typedInputPresent:
+		return OperationReasonTypedInputAbsent
+	case stats.candidateFileCount == 0:
+		return OperationReasonNoCandidates
+	default:
+		return OperationReasonPublishedEmpty
+	}
+}
+
+func isGenericLimitRefusal(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "exceeds") &&
+		(strings.Contains(message, "limit") ||
+			strings.Contains(message, "maximum") ||
+			strings.Contains(message, "bound"))
+}
+
+var errOperationLimitRefusal = errors.New("extraction limit refusal")
+
+var (
+	extractionOperationsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "phebs_extraction_operations_total",
+		Help: "Repository extraction jobs that emitted an operational receipt.",
+	})
+	extractionOperationDuration = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name: "phebs_extraction_operation_duration_seconds",
+			Help: "Wall time of repository extraction jobs.",
+		},
+	)
+	extractionOperationDomainsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "phebs_extraction_operation_domains_total",
+			Help: "Extraction domain outcomes by frozen generic reason.",
+		},
+		[]string{"reason"},
+	)
+)
+
+func operationLimitError(message string) error {
+	return errors.Join(errOperationLimitRefusal, errors.New(message))
+}
+
+func encodeExtractionOperation(
+	report ExtractionOperationReport,
+) ([]byte, error) {
+	data, err := json.Marshal(report)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) <= MaxExtractionOperationSize {
+		return data, nil
+	}
+	minimal := extractionOperationMinimal{
+		Schema: report.Schema, Repository: report.Repository,
+		IndexedHead: report.IndexedHead, UnitDigest: report.UnitDigest,
+		CandidateManifestDigest: report.CandidateManifestDigest,
+		PolicyDigest:            report.PolicyDigest, Attempt: report.Attempt,
+		DomainCount: len(report.Domains), Truncated: true,
+	}
+	data, err = json.Marshal(minimal)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > MaxExtractionOperationSize {
+		return nil, errors.New("minimal extraction operation exceeds report cap")
+	}
+	return data, nil
+}
+
+func (worker *Worker) emitOperationReport(report ExtractionOperationReport) {
+	extractionOperationsTotal.Inc()
+	extractionOperationDuration.Observe(
+		float64(report.TotalMS) / float64(time.Second/time.Millisecond),
+	)
+	for _, domain := range report.Domains {
+		if validOperationReason(domain.Reason) {
+			extractionOperationDomainsTotal.WithLabelValues(domain.Reason).Inc()
+		}
+	}
+	data, err := encodeExtractionOperation(report)
+	if err != nil {
+		return
+	}
+	sink := worker.OperationReports
+	if sink == nil {
+		sink = func(report []byte) error {
+			log.Printf("extraction operation: %s", report)
+			return nil
+		}
+	}
+	func() {
+		defer func() {
+			_ = recover()
+		}()
+		_ = sink(data)
+	}()
+}
+
+func durationMilliseconds(duration time.Duration) int64 {
+	if duration <= 0 {
+		return 0
+	}
+	return duration.Milliseconds()
+}
+
+func nonnegativeDuration(start, end time.Time) time.Duration {
+	if start.IsZero() || end.Before(start) {
+		return 0
+	}
+	return end.Sub(start)
+}

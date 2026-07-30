@@ -44,8 +44,10 @@ experimental extraction on one current streamed HEAD manifest. Local evidence,
 coverage, source citations, and Workbench implementation views consume only
 the unit records and are keyed by the exact indexed commit plus unit digest.
 Repository-wide caller discovery remains a separately labeled overlay owned
-by the T30.6 caller-overlay sequence; T30.6a bounded job receipts precede its
-catalog, partition-publication, and read-integration tickets.
+by the T30.6 caller-overlay sequence. T30.6a now emits one bounded,
+non-authoritative extraction-operation report per repository job; T30.6b
+durable per-domain outcomes precede the later catalog, partition-publication,
+and read-integration tickets.
 
 ## Evidence boundary
 

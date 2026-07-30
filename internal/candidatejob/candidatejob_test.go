@@ -669,10 +669,22 @@ func TestExtractionProviderReplaysTwoFocusedDomainsWithoutRepositoryMembers(
 	}
 
 	evidence := newReplayAuditEvidence()
+	reportClock := time.Date(2026, 7, 29, 14, 0, 0, 0, time.UTC)
+	now := func() time.Time {
+		current := reportClock
+		reportClock = reportClock.Add(5 * time.Millisecond)
+		return current
+	}
+	var operationRaw []byte
 	extraction := &extract.Worker{
 		Repos: state, Evidence: evidence,
 		NewCorpus: extract.GitCorpus(dataDir),
 		Manifests: provider, Extractors: extractors,
+		Now: now,
+		OperationReports: func(report []byte) error {
+			operationRaw = slices.Clone(report)
+			return nil
+		},
 	}
 	if err := extraction.Handle(t.Context(), store.Job{
 		Kind: store.JobExtract, Target: repository,
@@ -684,6 +696,35 @@ func TestExtractionProviderReplaysTwoFocusedDomainsWithoutRepositoryMembers(
 			"strict opens/repository removal = %d/%t, want 1/true",
 			strictOpens, removedRepositoryMembers,
 		)
+	}
+	var operation extract.ExtractionOperationReport
+	if err := json.Unmarshal(operationRaw, &operation); err != nil {
+		t.Fatalf("decode extraction operation: %v", err)
+	}
+	if operation.CandidateManifestDigest != state.pointer.ManifestDigest ||
+		operation.PolicyDigest != provider.PolicyDigest() ||
+		operation.StrictOpenMS != 5 ||
+		operation.MirrorLockWaitMS != 5 ||
+		len(operation.Domains) != 2 {
+		t.Fatalf("extraction operation envelope = %+v", operation)
+	}
+	for _, domain := range operation.Domains {
+		if domain.Reason != extract.OperationReasonPublishedEmpty ||
+			domain.Counts.CandidateFiles != 1 ||
+			domain.Counts.OpenedSourceFiles != 1 ||
+			domain.Counts.OpenedSourceAttempts != 1 {
+			t.Fatalf("extraction operation domain = %+v", domain)
+		}
+	}
+	for _, forbidden := range []string{
+		"service/api.proto", "service/consumer.go", "client/use.go",
+	} {
+		if strings.Contains(string(operationRaw), forbidden) {
+			t.Fatalf(
+				"extraction operation exposed source path %q: %s",
+				forbidden, operationRaw,
+			)
+		}
 	}
 	if !slices.Equal(proto.paths, []string{"service/api.proto"}) {
 		t.Fatalf("proto focused replay = %v", proto.paths)

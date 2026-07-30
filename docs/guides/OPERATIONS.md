@@ -559,6 +559,44 @@ they never invent `index.scip`, fall back to a root artifact, or admit a SCIP
 document outside the unit. A focused unit with no designation reports a typed
 input gap. Whole-repository repositories retain the legacy root lookup.
 
+##### Extraction operation receipts
+
+Every repository extraction job emits one JSON log entry prefixed
+`extraction operation:` with schema `phebs-extraction-operation-v1`. Treat it
+as a bounded operational diagnostic, not durable evidence. The job envelope
+names the canonical repository, indexed HEAD, committed unit digest,
+candidate-manifest and candidate-policy digests, and queue attempt. It records
+queue wait, repository-lock wait, pointer-only preflight, and strict
+candidate-publication open once per job instead of copying those shared costs
+into each domain.
+
+Nested domain entries contain only durations for inventory, opened source,
+extractor, staging, publication, abort, and cleanup; aggregate counts and
+bytes already observed by those operations; the existing corpus/read/blob/
+typed-input/fact limits; and one generic reason:
+`already_current`, `not_ready`, `stale`, `no_candidates`,
+`typed_input_absent`, `limit_refusal`, `published_empty`,
+`published_nonempty`, `canceled`, or `failed`. They never contain a source
+path, source content, path sample, or raw extractor diagnostic. Use the
+ordinary domain log immediately preceding the receipt when a raw local
+diagnostic is required for troubleshooting.
+
+The complete report is capped at 64 KiB inclusive. An over-cap report becomes
+one deterministic identity-only envelope with `truncated: true` and
+`domain_count`; it carries no nested domains. Encoding failure, log/sink
+failure, or sink panic cannot change extraction, publication, abort, or retry
+disposition. Timings are never a freshness, cursor, proof, publication, or
+evidence identity. Receipt collection observes existing transitions and
+in-memory counters only: it performs no extra corpus pass, candidate/member
+hash, publication open, or blob read.
+
+Prometheus exposes `phebs_extraction_operations_total` and
+`phebs_extraction_operation_duration_seconds` without labels.
+`phebs_extraction_operation_domains_total` has only the frozen generic
+`reason` label. Repository, extractor, commit, unit, manifest, and policy are
+deliberately absent from metric labels; use the bounded log receipt for those
+identities.
+
 ##### Scheduled T30.6 operating sequence
 
 The accepted large-monorepo review changes sequencing, not current runtime
@@ -572,15 +610,14 @@ single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
 failure diagnostic and wait for the target-bound caller generation.
 
-T30.6a first adds one bounded job report with nested domain entries and no
-source/path samples or repository-labeled metrics. T30.6b makes exact terminal
-and retryable outcomes durable; T30.6c schedules them beneath independent
-per-domain and aggregate job/lock bounds. T30.6d advances candidate identity
-with `source_lane: base|go_test`, and T30.6e consumes `base` only for focused
-local evidence while safety-accounting the complete typed SCIP artifact before
-removing exact test documents' definitions, anchors, occurrences, and joins.
-Empty-unit repositories retain shipped whole-repository extraction behavior,
-and focused search remains unchanged.
+T30.6a now supplies the bounded job report described above. T30.6b next makes
+exact terminal and retryable outcomes durable; T30.6c schedules them beneath
+independent per-domain and aggregate job/lock bounds. T30.6d advances
+candidate identity with `source_lane: base|go_test`, and T30.6e consumes
+`base` only for focused local evidence while safety-accounting the complete
+typed SCIP artifact before removing exact test documents' definitions,
+anchors, occurrences, and joins. Empty-unit repositories retain shipped
+whole-repository extraction behavior, and focused search remains unchanged.
 T30.6f–T30.6i separately deliver catalog lifecycle, resolver materialization,
 leaf artifacts, and complete caller publication. T30.6j–T30.6l bind Caller Map,
 comparison, and Workbench Impact as separate authorized consumers. T30.6m
@@ -592,10 +629,10 @@ test evidence, test-to-source association, build-system discovery, SCIP
 generation, pack-specific recognizer expansion, or per-file parser degradation.
 Neither the private evaluation report nor any identifier, path, measurement,
 or code copied from it is committed or used as merge-bar evidence. Production
-T30.6a receipts will contain the canonical repository identity already required
-by store state but retain no source path, source content, path sample, or raw
-extractor diagnostic. T30.6 merge-bar fixtures and new measurements will be
-neutral and generated.
+T30.6a receipts contain the canonical repository identity already required by
+store state but retain no source path, source content, path sample, or raw
+extractor diagnostic. Later T30.6 merge-bar fixtures and new measurements
+remain neutral and generated.
 
 #### Focused evidence publication and recovery
 

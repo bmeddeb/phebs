@@ -52,20 +52,41 @@ type RepoGetter interface {
 // Worker drives extraction jobs. NewCorpus must fence the same bare mirror
 // path as fetch/index/delete before it constructs a corpus.
 type Worker struct {
-	Repos      RepoGetter
-	Evidence   store.EvidenceStore
-	NewCorpus  CorpusFactory
-	Manifests  CandidateManifestProvider
-	Extractors []Extractor
+	Repos            RepoGetter
+	Evidence         store.EvidenceStore
+	NewCorpus        CorpusFactory
+	Manifests        CandidateManifestProvider
+	Extractors       []Extractor
+	Now              func() time.Time
+	OperationReports ExtractionOperationSink
 }
 
 var errStaleRun = errors.New("stale extraction run")
 
 // Handle adapts the worker to store.Runner: the job target is the repo name.
-func (w *Worker) Handle(ctx context.Context, job store.Job) error {
+func (w *Worker) Handle(
+	ctx context.Context,
+	job store.Job,
+) (result error) {
+	now := time.Now
+	if w != nil && w.Now != nil {
+		now = w.Now
+	}
+	operation := newOperationRecorder(job, now)
+	defer func() {
+		operation.completeRemaining(operationReasonForError(result))
+		if w != nil {
+			w.emitOperationReport(operation.snapshot())
+		}
+	}()
+
 	extractors, err := w.validate()
 	if err != nil {
 		return store.WithClass(store.ClassExtract, fmt.Errorf("extract %s: %w", job.Target, err))
+	}
+	operation.registerDomains(extractors)
+	if provider, ok := w.Manifests.(interface{ PolicyDigest() string }); ok {
+		operation.bindPolicy(provider.PolicyDigest())
 	}
 
 	// Production candidate admission has a pointer-only phase. A previously
@@ -77,14 +98,18 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 	// path consumes no mirror or candidate bytes, so returning against the
 	// prior complete generation cannot publish stale work.
 	if !job.Force {
+		pointerStarted := now()
 		current, currentErr := w.candidateManifestCurrent(
-			ctx, job.Target, extractors,
+			ctx, job.Target, extractors, operation,
 		)
+		operation.addPointerWork(nonnegativeDuration(pointerStarted, now()))
 		if currentErr != nil {
+			operation.completeRemaining(operationReason(currentErr))
 			return store.WithClass(store.ClassExtract,
 				fmt.Errorf("extract %s: candidate preflight: %w", job.Target, currentErr))
 		}
 		if current {
+			operation.completeRemaining(OperationReasonAlreadyCurrent)
 			return nil
 		}
 	}
@@ -95,12 +120,16 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 	// The wait uses the job context, not the extraction budget: queueing behind
 	// a long index or fetch of the same mirror is not extraction work, and the
 	// runner's lease heartbeat keeps the claim alive while blocked here.
+	lockStarted := now()
 	unlock, err := w.NewCorpus.Lock(ctx, job.Target)
+	operation.addMirrorLockWait(nonnegativeDuration(lockStarted, now()))
 	if err != nil {
+		operation.completeRemaining(operationReason(err))
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: lock corpus: %w", job.Target, err))
 	}
 	if unlock == nil {
+		operation.completeRemaining(OperationReasonFailed)
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: corpus lock returned no release function", job.Target))
 	}
@@ -112,22 +141,29 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 
 	repo, err := w.Repos.GetRepo(ctx, job.Target)
 	if errors.Is(err, store.ErrNotFound) {
+		operation.completeRemaining(OperationReasonNotReady)
 		return nil
 	}
 	if err != nil {
+		operation.completeRemaining(operationReason(err))
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: load repo: %w", job.Target, err))
 	}
 	if repo.Deleting || repo.IndexedCommitHash == "" {
 		// Not ready: deletion owns the mirror, or the next successful index will
 		// chain a fresh extraction job.
+		operation.bindRepository(repo)
+		operation.completeRemaining(OperationReasonNotReady)
 		return nil
 	}
+	operation.bindRepository(repo)
 	if repo.Name != job.Target {
+		operation.completeRemaining(OperationReasonFailed)
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: stored repository name is %q", job.Target, repo.Name))
 	}
 	if err := checkCommit(repo.IndexedCommitHash); err != nil {
+		operation.completeRemaining(OperationReasonFailed)
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: indexed revision: %w", repo.Name, err))
 	}
@@ -135,6 +171,7 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 	commit := repo.IndexedCommitHash
 	corpus := w.NewCorpus.New(repo.Name, commit)
 	if corpus == nil || corpus.RepoName() != repo.Name || corpus.Commit() != commit {
+		operation.completeRemaining(OperationReasonFailed)
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: corpus factory returned mismatched provenance", repo.Name))
 	}
@@ -143,17 +180,22 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 	boundaries := emptyGitlinkInventory()
 	var candidateManifest CandidateManifest
 	if w.Manifests != nil {
+		openStarted := now()
 		candidateManifest, err = w.Manifests.OpenCandidateManifest(
 			ctx,
 			manifestRequest(
 				repo.Name, commit, repo.IndexedAnalysisUnit, extractors),
 		)
+		operation.addStrictOpen(nonnegativeDuration(openStarted, now()))
 		if err != nil {
+			operation.completeRemaining(operationReason(err))
 			return store.WithClass(store.ClassExtract,
 				fmt.Errorf("extract %s: open candidate manifest: %w", repo.Name, err))
 		}
+		operation.bindManifest(candidateManifest.Identity())
 		inventoryPolicy, boundaries, err = validateCandidateManifest(candidateManifest)
 		if err != nil {
+			operation.completeRemaining(operationReason(err))
 			return store.WithClass(store.ClassExtract,
 				fmt.Errorf("extract %s: validate candidate manifest: %w", repo.Name, err))
 		}
@@ -166,8 +208,10 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 	// job retrying; on retry, published domains short-circuit above while
 	// aborted domains run again.
 	var domainErrs []error
-	for _, ex := range extractors {
+	for index, ex := range extractors {
+		domainOperation := operation.domain(index)
 		if err := ctx.Err(); err != nil {
+			domainOperation.complete(operationReason(err))
 			domainErrs = append(domainErrs, err)
 			break
 		}
@@ -187,27 +231,32 @@ func (w *Worker) Handle(ctx context.Context, job store.Job) error {
 					last.Coverage.InventoryPolicy == inventoryPolicy &&
 					(candidateManifest == nil ||
 						last.Coverage.CandidateManifestDigest == candidateManifest.Identity()) {
+					domainOperation.complete(OperationReasonAlreadyCurrent)
 					continue
 				}
 			}
 			if latestErr != nil && !errors.Is(latestErr, store.ErrNotFound) {
+				domainOperation.complete(operationReason(latestErr))
 				return store.WithClass(store.ClassExtract,
 					fmt.Errorf("extract %s: %s: latest run: %w", repo.Name, ex.domain, latestErr))
 			}
 		}
 		if err := w.runOne(
 			ctx, ex, scope, corpus, candidateManifest, inventoryPolicy, boundaries,
+			domainOperation,
 		); err != nil {
 			if errors.Is(err, errStaleRun) {
 				// A guarded publish proved the repository was deleted or advanced.
 				// The deleting workflow or successor index event owns the next step;
 				// retrying this obsolete job would only create queue churn.
+				operation.completeRemaining(OperationReasonStale)
 				return nil
 			}
 			domainErrs = append(domainErrs, err)
 		}
 	}
 	if len(domainErrs) > 0 {
+		operation.completeRemaining(operationReason(errors.Join(domainErrs...)))
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("extract %s: %w", repo.Name, errors.Join(domainErrs...)))
 	}
@@ -218,6 +267,7 @@ func (w *Worker) candidateManifestCurrent(
 	ctx context.Context,
 	target string,
 	extractors []registeredExtractor,
+	operation *operationRecorder,
 ) (bool, error) {
 	identityProvider, ok := w.Manifests.(CandidateManifestIdentityProvider)
 	if !ok {
@@ -225,6 +275,7 @@ func (w *Worker) candidateManifestCurrent(
 	}
 	repo, err := w.Repos.GetRepo(ctx, target)
 	if errors.Is(err, store.ErrNotFound) {
+		operation.completeRemaining(OperationReasonNotReady)
 		return true, nil
 	}
 	if err != nil {
@@ -233,7 +284,9 @@ func (w *Worker) candidateManifestCurrent(
 	if repo == nil {
 		return false, errors.New("repository store returned nil")
 	}
+	operation.bindRepository(repo)
 	if repo.Deleting || repo.IndexedCommitHash == "" {
+		operation.completeRemaining(OperationReasonNotReady)
 		return true, nil
 	}
 	if repo.Name != target {
@@ -252,6 +305,7 @@ func (w *Worker) candidateManifestCurrent(
 	if err != nil {
 		return false, fmt.Errorf("candidate manifest identity: %w", err)
 	}
+	operation.bindManifest(identity)
 	inventoryPolicy, err := candidateManifestInventoryPolicy(identity)
 	if err != nil {
 		return false, err
@@ -359,6 +413,7 @@ func (w *Worker) runOne(
 	candidateManifest CandidateManifest,
 	inventoryPolicy string,
 	boundaries gitlinkInventory,
+	operation *domainOperationRecorder,
 ) (err error) {
 	if scope.Repository != corpus.RepoName() ||
 		scope.Commit != corpus.Commit() ||
@@ -366,7 +421,29 @@ func (w *Worker) runOne(
 		return fmt.Errorf("%s: extraction scope does not match corpus provenance", ex.domain)
 	}
 	verifiedCorpus := newVerifiedCorpus(corpus)
+	verifiedCorpus.operation = operation
+	var sink *runSink
+	resourcesClosed := false
+	closeResources := func() {
+		if resourcesClosed {
+			return
+		}
+		cleanupStarted := operation.started()
+		if sink != nil {
+			sink.Close()
+		}
+		verifiedCorpus.Close()
+		operation.addCleanup(operation.elapsed(cleanupStarted))
+		resourcesClosed = true
+	}
+	defer func() {
+		closeResources()
+		operation.capture(verifiedCorpus, sink)
+		operation.completeIfEmpty(operationReason(err))
+	}()
+
 	log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
+	inventoryStarted := operation.started()
 	if candidateManifest == nil {
 		err = verifiedCorpus.Inventory(ctx, ex.extractor.Candidate)
 	} else {
@@ -375,8 +452,8 @@ func (w *Worker) runOne(
 			ex.extractor.Candidate,
 		)
 	}
+	operation.addInventory(operation.elapsed(inventoryStarted))
 	if err != nil {
-		verifiedCorpus.Close()
 		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
 	}
 	log.Printf(
@@ -385,13 +462,13 @@ func (w *Worker) runOne(
 		verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
 	)
 
+	stageStarted := operation.started()
 	run, err := w.Evidence.BeginExtractionRun(ctx, scope, ex.version)
+	operation.addStaging(operation.elapsed(stageStarted))
 	if err != nil {
-		verifiedCorpus.Close()
 		return fmt.Errorf("%s: begin: %w", ex.domain, err)
 	}
 	if run == nil || run.ID == "" {
-		verifiedCorpus.Close()
 		return fmt.Errorf("%s: begin returned no run identity", ex.domain)
 	}
 	defer func() {
@@ -403,17 +480,23 @@ func (w *Worker) runOne(
 		// partially published replacement.
 		abortCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), abortTimeout)
 		defer cancel()
+		abortStarted := operation.started()
 		if abortErr := w.Evidence.AbortExtractionRun(abortCtx, run.ID); abortErr != nil {
 			err = errors.Join(err, fmt.Errorf("%s: abort: %w", ex.domain, abortErr))
 		}
+		operation.addAbort(operation.elapsed(abortStarted))
 		log.Printf("extract %s: %s aborted: %v", corpus.RepoName(), ex.domain, err)
 	}()
 
-	sink := newRunSink(ctx, w.Evidence, run.ID, corpus.RepoName(), corpus.Commit(), ex.version, verifiedCorpus)
+	sink = newRunSink(
+		ctx, w.Evidence, run.ID, corpus.RepoName(), corpus.Commit(),
+		ex.version, verifiedCorpus, operation,
+	)
 	log.Printf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
+	extractorStarted := operation.started()
 	coverage, extractErr := callExtractor(ctx, ex.extractor, verifiedCorpus, sink.Emit)
-	sink.Close()
-	verifiedCorpus.Close()
+	operation.addExtractor(operation.elapsed(extractorStarted))
+	closeResources()
 	if extractErr != nil {
 		return fmt.Errorf("%s: extract: %w", ex.domain, extractErr)
 	}
@@ -448,7 +531,9 @@ func (w *Worker) runOne(
 	if err != nil {
 		return fmt.Errorf("%s: coverage: %w", ex.domain, err)
 	}
+	publicationStarted := operation.started()
 	if err := w.Evidence.PublishExtractionRun(ctx, run.ID, manifest); err != nil {
+		operation.addPublication(operation.elapsed(publicationStarted))
 		if errors.Is(err, store.ErrConflict) {
 			stale, checkErr := w.runBecameStale(ctx, scope)
 			if checkErr != nil {
@@ -460,7 +545,9 @@ func (w *Worker) runOne(
 		}
 		return fmt.Errorf("%s: publish: %w", ex.domain, err)
 	}
+	operation.addPublication(operation.elapsed(publicationStarted))
 	log.Printf("extract %s: %s published", corpus.RepoName(), ex.domain)
+	operation.complete(successfulOperationReason(stats, sink.factCount))
 	return nil
 }
 
@@ -490,13 +577,14 @@ func (w *Worker) runBecameStale(ctx context.Context, scope store.ExtractionScope
 }
 
 type runSink struct {
-	ctx      context.Context
-	evidence store.EvidenceStore
-	runID    string
-	repo     string
-	commit   string
-	version  string
-	corpus   *verifiedCorpus
+	ctx       context.Context
+	evidence  store.EvidenceStore
+	runID     string
+	repo      string
+	commit    string
+	version   string
+	corpus    *verifiedCorpus
+	operation *domainOperationRecorder
 
 	mu              sync.Mutex
 	closed          bool
@@ -513,9 +601,20 @@ type runSink struct {
 	unresolvedCount int
 }
 
-func newRunSink(ctx context.Context, evidence store.EvidenceStore, runID, repo, commit, version string, corpus *verifiedCorpus) *runSink {
+func newRunSink(
+	ctx context.Context,
+	evidence store.EvidenceStore,
+	runID, repo, commit, version string,
+	corpus *verifiedCorpus,
+	operations ...*domainOperationRecorder,
+) *runSink {
+	var operation *domainOperationRecorder
+	if len(operations) > 0 {
+		operation = operations[0]
+	}
 	return &runSink{
 		ctx: ctx, evidence: evidence, runID: runID, repo: repo, commit: commit, version: version, corpus: corpus,
+		operation:      operation,
 		facts:          make([]sdk.Fact, 0, evidenceChunkSize),
 		stagedChunks:   make(map[string]struct{}),
 		atomIDs:        make(map[string]struct{}),
@@ -557,7 +656,9 @@ func (s *runSink) Emit(fact sdk.Fact) error {
 		return s.err
 	}
 	if s.factCount >= maxFactsPerRun {
-		s.err = fmt.Errorf("run exceeds %d-fact limit", maxFactsPerRun)
+		s.err = operationLimitError(
+			fmt.Sprintf("run exceeds %d-fact limit", maxFactsPerRun),
+		)
 		return s.err
 	}
 
@@ -579,9 +680,10 @@ type sourceRecord struct {
 // identities, its read ledger stores digest and byte length, and only the
 // currently read immutable blob remains available for fact validation.
 type verifiedCorpus struct {
-	inner  Corpus
-	repo   string
-	commit string
+	inner     Corpus
+	repo      string
+	commit    string
+	operation *domainOperationRecorder
 
 	mu                sync.Mutex
 	closed            bool
@@ -1042,11 +1144,13 @@ func (c *verifiedCorpus) read(
 
 	var blob sdk.Blob
 	var err error
+	readStarted := c.operation.started()
 	if exact, ok := c.inner.(exactTreeCorpus); ok && fromManifest {
 		blob, err = exact.readManifestBlob(ctx, manifestEntry, maxBytes)
 	} else {
 		blob, err = read(ctx, filePath)
 	}
+	c.operation.addOpenedSource(c.operation.elapsed(readStarted))
 	if err != nil {
 		return sdk.Blob{}, err
 	}
@@ -1157,6 +1261,31 @@ type corpusStats struct {
 	typedInputPresent  bool
 }
 
+type verifiedCorpusOperationSnapshot struct {
+	corpusFiles    int
+	candidateFiles int
+	readAttempts   int
+	readFiles      int
+	readBytes      int64
+	plannedBytes   int64
+}
+
+func (c *verifiedCorpus) operationSnapshot() verifiedCorpusOperationSnapshot {
+	if c == nil {
+		return verifiedCorpusOperationSnapshot{}
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return verifiedCorpusOperationSnapshot{
+		corpusFiles:    c.corpusFileCount,
+		candidateFiles: len(c.candidates),
+		readAttempts:   c.readCount,
+		readFiles:      len(c.sources),
+		readBytes:      c.readBytes,
+		plannedBytes:   c.domainScope.CandidateDeclaredBytes,
+	}
+}
+
 func (c *verifiedCorpus) Stats() (corpusStats, error) {
 	c.mu.Lock()
 	attributionSource := c.attributionSource
@@ -1228,6 +1357,27 @@ func (c *verifiedCorpus) Stats() (corpusStats, error) {
 	}, nil
 }
 
+type runSinkOperationSnapshot struct {
+	facts        int
+	atoms        int
+	assertions   int
+	unresolved   int
+	stagedChunks int
+}
+
+func (s *runSink) operationSnapshot() runSinkOperationSnapshot {
+	if s == nil {
+		return runSinkOperationSnapshot{}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return runSinkOperationSnapshot{
+		facts: s.factCount, atoms: s.atomCount,
+		assertions: s.assertionCount, unresolved: s.unresolvedCount,
+		stagedChunks: len(s.stagedChunkIDs),
+	}
+}
+
 func (s *runSink) Close() {
 	s.mu.Lock()
 	s.closed = true
@@ -1251,6 +1401,10 @@ func (s *runSink) flushLocked() error {
 	if len(s.facts) == 0 {
 		return nil
 	}
+	stageStarted := s.operation.started()
+	defer func() {
+		s.operation.addStaging(s.operation.elapsed(stageStarted))
+	}()
 	chunk := buildFactChunk(s.chunkSequence, s.facts)
 	if err := s.stageChunkLocked(chunk); err != nil {
 		return err

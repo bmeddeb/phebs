@@ -4087,3 +4087,42 @@ and active/completed backlog updates; full merge bar. This ticket does not
 establish a historical-publication storage bound, runtime use, completeness,
 extraction accuracy, migration completion, decommission safety, or production
 registration. T30.6 owns the target-bound all-partitions Caller Map generation.
+
+### T30.6a · Bounded extraction job receipts
+
+**T30.6a ✅ · Bounded extraction job receipts** *(2026-07-29)* — added one
+`phebs-extraction-operation-v1` report for every repository extraction job.
+The envelope binds the canonical repository, indexed HEAD, committed unit,
+candidate-manifest and policy digests, and queue attempt without exposing the
+lease token. Queue wait, mirror-lock wait, pointer-only preflight, and strict
+candidate-publication open are recorded exactly once at job level. Each
+configured domain carries only its frozen generic reason, inventory,
+opened-source, extractor, staging, publication, abort, and cleanup durations,
+existing count/byte/limit values, and no source path, content, sample, or raw
+diagnostic.
+
+The frozen outcome vocabulary is `already_current`, `not_ready`, `stale`,
+`no_candidates`, `typed_input_absent`, `limit_refusal`, `published_empty`,
+`published_nonempty`, `canceled`, and `failed`. The canonical full JSON report
+is accepted through 64 KiB inclusive; cap+1 emits a deterministic minimal
+identity envelope with `truncated: true` and no domain entries. Encoding,
+logging, injected sink error, and sink panic are advisory and never alter
+extraction, publication, abort, or retry disposition. Timings remain
+operational diagnostics rather than freshness, cursor, proof, publication, or
+evidence identity. Metrics carry no repository or extractor label: job count
+and duration are unlabeled, and the only domain-counter label is the frozen
+generic reason.
+
+AC met: table-pinned generic reasons; full and pointer-only no-op fixtures;
+deterministic fake-clock job/domain accounting; exact cap and cap+1 minimal
+overflow; one real candidate-v3 strict open across two focused domains;
+instrumented zero-extra lock, inventory, publication-open, and blob-read
+counts; cancellation and report-sink failure isolation; source/diagnostic
+redaction; focused and full package regressions; dated PLAN decision and
+Operations, Manual, roadmap, and active/completed backlog updates; full merge
+bar. The recorder observes only existing transitions and in-memory counters,
+so it adds no corpus pass, candidate/member hash, publication open, or blob
+read. This ticket changes no store/API schema, evidence format, search
+behavior, production registration, runtime-use, completeness,
+extraction-accuracy, migration-completion, or decommission-safety claim.
+T30.6b owns durable exact-generation outcomes and typed retry disposition.
