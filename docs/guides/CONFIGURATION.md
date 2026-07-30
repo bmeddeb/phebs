@@ -165,7 +165,7 @@ for T30.6; they do not widen focused search or local evidence.
 
 There is currently no production/test search split or Go-test overlay setting.
 An exact `*_test.go` path admitted by the configured unit remains in focused
-search. The scheduled T30.6d candidate policy will stamp ordinary records with
+search. Candidate v4 stamps ordinary records with
 `source_lane: base|go_test`; an exact `_test.go` suffix wins even under a
 generated, mock, fixture, or `testdata` path, and every other ordinary
 candidate is `base`. For repositories with a committed non-empty analysis unit,
@@ -174,6 +174,7 @@ empty unit digest will record the lane but retain shipped whole-repository
 extraction behavior. T30.6h will consume the retained lane classification for
 caller-leaf planning. The source lane is not semantic unit scope, does not
 change the stable unit digest, and is not a search configuration surface.
+There is no setting that overrides the path-derived classification.
 
 Repositories absent from `analysis_units` retain whole-repository indexing and
 extraction. Their exact evidence scope has an empty unit digest, and their

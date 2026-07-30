@@ -933,7 +933,8 @@ type Store interface {
 }
 
 // EnqueuePending persists a freshness event without allowing duplicate pending
-// successors. force is meaningful for index jobs and harmless for other kinds.
+// successors. Index, candidate, and extraction workers use force to bypass
+// their respective current-generation short circuits.
 func EnqueuePending(ctx context.Context, st Store, kind JobKind, target string, force bool) error {
 	_, err := st.EnqueuePending(ctx, kind, target, force)
 	return err

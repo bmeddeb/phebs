@@ -31,7 +31,8 @@ func projectionFromRecord(record Record, plane Plane) candidateProjection {
 	return candidateProjection{
 		Path: record.Path, OID: record.OID,
 		DeclaredBytes: record.DeclaredBytes,
-		InUnit:        record.InUnit, Shared: record.Shared, Plane: plane,
+		InUnit:        record.InUnit,
+		Shared:        record.Shared, Plane: plane,
 	}
 }
 

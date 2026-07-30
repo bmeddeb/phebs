@@ -8,8 +8,9 @@ shipped exact focused evidence publication. The post-T30.5 issue-repair gate
 is closed. The separate large-monorepo review is complete; T30.6a shipped
 bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
 and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
-source-lane classification is next. Completed Epics
-0–24, Epic 29, T30.1–T30.6c, and P5 hardening are
+source-lane classification is shipped; T30.6e focused local-evidence base-lane
+consumption is next. Completed Epics
+0–24, Epic 29, T30.1–T30.6d, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -19,11 +20,11 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6d · Candidate-v4 source-lane classification** is next. T30.6a–T30.6c
+**T30.6e · Focused local-evidence base-lane consumption** is next. T30.6a–T30.6d
 now provide bounded operational receipts, durable exact-generation outcomes,
-and aggregate/fair retry scheduling. T30.6d advances candidate identity and
-classifies ordinary source records as `base` or `go_test` without yet changing
-extractor consumption or search semantics. The accepted
+aggregate/fair retry scheduling, and strict path-derived candidate source
+lanes. T30.6e consumes the `base` lane only for focused local evidence while
+preserving empty-unit extraction and all search semantics. The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
@@ -547,7 +548,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6d next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6e next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -880,22 +881,13 @@ before retryables ordered by oldest durable attempt; budget-deferred work
 records a retryable outcome after mirror release without erasing settled
 peers.
 
-**T30.6d · Candidate-v4 source-lane classification** *(needs T30.6c)* —
-advance manifest/state/record schemas; enumeration/local-projection policies;
-policy, generation, inventory, and self-digest domain separators; artifact
-namespace; extraction inventory prefix; control fingerprint; projection
-identity; and external-merge comparison. Every ordinary record carries
-`source_lane: base|go_test`: exact `_test.go` suffix wins even under generated,
-mock, fixture, or `testdata` paths, and every other ordinary candidate is
-`base`. Strict validation recomputes the lane from the canonical path rather
-than trusting stored bytes. Candidate v3 is never current under v4:
-reconciliation clears its pointer and force-enqueues replacement. This ticket
-changes no extractor consumption, evidence, focused shards, or search
-generation. AC: suffix/overlap and forged-lane fixtures, marker and
-descriptor-stability boundaries, missing/extra/reordered projections,
-backup/restore/cleanup, same-HEAD policy transition, v3 replacement, refreshed
-neutral T30.4 receipt retaining `B_repository + C_caller + ΣP`, `P_d`, and zero
-additional source-blob reads, full merge bar.
+**T30.6d ✅ · Candidate-v4 source-lane classification** *(2026-07-30; needs
+T30.6c)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306d--candidate-v4-source-lane-classification).
+Every ordinary record now carries a strictly recomputed `base` or `go_test`
+lane under advanced candidate identities. Startup clears candidate-v3
+pointers and force-enqueues replacement; classification changes no extractor,
+evidence, focused-shard, or search behavior.
 
 **T30.6e · Focused local-evidence base-lane consumption** *(needs T30.6d)* —
 for repositories with a committed non-empty analysis unit, `grpc-consumer`,

@@ -252,7 +252,7 @@ func TestCandidateControlTerminalRepairAdvancesSameDigestAndClearsOutcome(
 	refusal.Generation.CandidatePolicyDigest = pointer.PolicyDigest
 	refusal.Generation.CandidateControlRevision = pointer.ControlRevision
 	refusal.Generation.InventoryPolicy =
-		"candidate-manifest-v3-" + strings.Repeat("b", 64)
+		"candidate-manifest-v4-" + strings.Repeat("b", 64)
 	refusal.Generation.Digest =
 		store.ComputeExtractionGenerationDigest(refusal.Generation)
 	refusal.CandidateControlFailure = true
