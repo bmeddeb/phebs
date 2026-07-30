@@ -443,16 +443,34 @@ func (s *Surreal) ClearCandidateManifestPublication(
 // ClearAllCandidateManifestPublications removes the derived pointer table
 // without decoding its rows. Restore must be able to discard even a malformed
 // imported pointer because candidate publications are never backup authority.
-// Durable outcomes remain precious restored state, but cannot become eligible
-// until candidate rebuilding re-establishes their exact pointer generation.
+// Ordinary durable outcomes remain precious restored state. Control-failure
+// outcomes are discarded because rebuilding starts a fresh control lineage;
+// retaining an old revision would let a restored revision-1 refusal become
+// authoritative over newly rebuilt bytes.
 func (s *Surreal) ClearAllCandidateManifestPublications(
 	ctx context.Context,
 ) error {
 	_, err := surrealdb.Query[any](
 		ctx,
 		s.db,
-		"DELETE candidate_manifest_publication RETURN NONE",
-		nil,
+		`BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+IF $writer_ok = false {
+	THROW 'phebs-permanent: evidence writer generation is not active'
+};
+DELETE candidate_manifest_publication RETURN NONE;
+DELETE extraction_domain_outcome
+	WHERE candidate_control_failure = true
+		AND store_schema_version = $store_schema_version
+		AND evidence_migration_version = $evidence_migration_version
+	RETURN NONE;
+COMMIT;`,
+		map[string]any{
+			"migration_rid":              evidenceMigrationStateID(),
+			"store_schema_version":       evidenceStoreSchemaVersion,
+			"evidence_migration_version": evidenceMigrationVersion,
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("clear all candidate manifests: %w", err)

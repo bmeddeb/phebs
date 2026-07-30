@@ -46,6 +46,45 @@ func (provider splitManifestProvider) OpenCandidateManifest(
 	return provider.open(ctx, request)
 }
 
+type generationManifestProvider struct {
+	pointer CandidateManifestPointerIdentity
+	open    func(context.Context, CandidateManifestRequest) (CandidateManifest, error)
+}
+
+type generationControlledManifest struct {
+	CandidateManifest
+	revision uint64
+}
+
+func (manifest generationControlledManifest) CandidateControlRevision() uint64 {
+	return manifest.revision
+}
+
+func (provider *generationManifestProvider) PolicyDigest() string {
+	return provider.pointer.PolicyDigest
+}
+
+func (provider *generationManifestProvider) CandidateManifestGeneration(
+	context.Context,
+	CandidateManifestRequest,
+) (CandidateManifestPointerIdentity, error) {
+	return provider.pointer, nil
+}
+
+func (provider *generationManifestProvider) OpenCandidateManifest(
+	ctx context.Context,
+	request CandidateManifestRequest,
+) (CandidateManifest, error) {
+	manifest, err := provider.open(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	return generationControlledManifest{
+		CandidateManifest: manifest,
+		revision:          provider.pointer.ControlRevision,
+	}, nil
+}
+
 type focusedManifestCorpusFactory struct {
 	files     map[string]string
 	typedPath string
@@ -380,6 +419,151 @@ func TestWorkerNoOpRefusesInvalidStoredCoverage(t *testing.T) {
 			extractions,
 			evidence.nextRun,
 		)
+	}
+}
+
+func TestWorkerProductionGenerationSettledPreflightIsPointerOnly(t *testing.T) {
+	repo := &store.Repo{Name: "host/production-preflight", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	manifest := validMemoryCandidateManifest()
+	locks, opens, extractions := 0, 0, 0
+	provider := &generationManifestProvider{
+		pointer: CandidateManifestPointerIdentity{
+			ManifestDigest:  manifest.Identity(),
+			PolicyDigest:    "sha256:" + strings.Repeat("f", 64),
+			ControlRevision: 1,
+		},
+		open: func(
+			context.Context,
+			CandidateManifestRequest,
+		) (CandidateManifest, error) {
+			opens++
+			return manifest, nil
+		},
+	}
+	worker := Worker{
+		Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: unitFactory(func(
+			context.Context,
+			string,
+		) (func(), error) {
+			locks++
+			return func() {}, nil
+		}),
+		Manifests: provider,
+		Extractors: []Extractor{unitExtractor{
+			domain: "proto-contract", version: "v1",
+			candidate: func(filePath string) bool {
+				return filePath == "read.proto"
+			},
+			extract: func(
+				ctx context.Context,
+				corpus sdk.Corpus,
+				_ sdk.Emit,
+			) (sdk.Coverage, error) {
+				extractions++
+				_, err := corpus.Read(ctx, "read.proto")
+				return sdk.Coverage{}, err
+			},
+		}},
+	}
+	job := store.Job{Target: repo.Name}
+	if err := worker.Handle(context.Background(), job); err != nil {
+		t.Fatalf("initial generation: %v", err)
+	}
+	if err := worker.Handle(context.Background(), job); err != nil {
+		t.Fatalf("settled generation: %v", err)
+	}
+	if locks != 1 || opens != 1 || extractions != 1 ||
+		evidence.nextRun != 1 {
+		t.Fatalf("production preflight locks/opens/extractions/runs = %d/%d/%d/%d",
+			locks, opens, extractions, evidence.nextRun)
+	}
+}
+
+func TestWorkerRetryableStrictOpenPreservesSettledOutcomes(t *testing.T) {
+	repo := &store.Repo{Name: "host/open-retry", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	manifest := validMemoryCandidateManifest()
+	var openErr error
+	provider := &generationManifestProvider{
+		pointer: CandidateManifestPointerIdentity{
+			ManifestDigest:  manifest.Identity(),
+			PolicyDigest:    "sha256:" + strings.Repeat("f", 64),
+			ControlRevision: 1,
+		},
+		open: func(
+			context.Context,
+			CandidateManifestRequest,
+		) (CandidateManifest, error) {
+			return manifest, openErr
+		},
+	}
+	extractors := make([]Extractor, 0, 2)
+	for _, domain := range []string{"proto-contract", "second-domain"} {
+		extractors = append(extractors, unitExtractor{
+			domain: domain, version: "v1",
+			candidate: func(filePath string) bool {
+				return filePath == "read.proto"
+			},
+			extract: func(
+				ctx context.Context,
+				corpus sdk.Corpus,
+				_ sdk.Emit,
+			) (sdk.Coverage, error) {
+				_, err := corpus.Read(ctx, "read.proto")
+				return sdk.Coverage{}, err
+			},
+		})
+	}
+	worker := Worker{
+		Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: unitFactory(nil), Manifests: provider,
+		Extractors: extractors,
+	}
+	job := store.Job{Target: repo.Name}
+	if err := worker.Handle(context.Background(), job); err != nil {
+		t.Fatalf("initial outcomes: %v", err)
+	}
+	before := make(map[string]*store.ExtractionDomainOutcome, len(extractors))
+	for _, extractor := range extractors {
+		scope := store.ExtractionScope{
+			Repository: repo.Name,
+			Commit:     unitCommit,
+			Domain:     extractor.Domain(),
+		}
+		outcome, err := evidence.LatestExtractionDomainOutcome(
+			context.Background(), scope,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		before[extractor.Domain()] = outcome
+	}
+
+	openErr = candidate.ErrPublishing
+	err := worker.Handle(
+		context.Background(),
+		store.Job{Target: repo.Name, Force: true},
+	)
+	if !errors.Is(err, candidate.ErrPublishing) || store.IsTerminal(err) {
+		t.Fatalf("strict-open retry = %v", err)
+	}
+	for domain, prior := range before {
+		outcome, latestErr := evidence.LatestExtractionDomainOutcome(
+			context.Background(),
+			store.ExtractionScope{
+				Repository: repo.Name,
+				Commit:     unitCommit,
+				Domain:     domain,
+			},
+		)
+		if latestErr != nil || outcome.Disposition != prior.Disposition ||
+			outcome.RunID != prior.RunID ||
+			!outcome.RecordedAt.Equal(prior.RecordedAt) {
+			t.Fatalf("%s outcome changed from %+v to %+v: %v",
+				domain, prior, outcome, latestErr)
+		}
 	}
 }
 
@@ -813,6 +997,20 @@ func TestFocusedMissingSCIPSettlesUnavailableWithoutLegacyEmptyPublication(
 			"forced settled generation reran: extractions=%d runs=%d",
 			extractions, evidence.nextRun,
 		)
+	}
+
+	staleEvidence := newMemoryEvidence()
+	staleEvidence.recordOutcomeErr = store.ErrConflict
+	staleWorker := worker
+	staleWorker.Evidence = staleEvidence
+	if err := staleWorker.Handle(
+		context.Background(), job,
+	); err != nil {
+		t.Fatalf("stale unavailable outcome should complete quietly: %v", err)
+	}
+	if staleEvidence.nextRun != 0 {
+		t.Fatalf("stale unavailable outcome staged %d runs",
+			staleEvidence.nextRun)
 	}
 
 	// Without a committed focused unit the historical extractor behavior is

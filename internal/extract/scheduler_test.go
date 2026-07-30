@@ -73,6 +73,162 @@ func TestDomainSchedulingLimitsAreFrozenAndConsistent(t *testing.T) {
 	}
 }
 
+func TestScheduledDomainIdentityBoundIncludesRetainedOverhead(t *testing.T) {
+	domain := scheduledDomain{
+		extractor: registeredExtractor{domain: "domain", version: "v1"},
+		scope: store.ExtractionScope{
+			Repository: "host/repo",
+			Commit:     unitCommit,
+			Domain:     "domain",
+		},
+		generation: store.ExtractionGenerationIdentity{
+			Extractor:        "v1",
+			DependencyDigest: "sha256:" + string(make([]byte, 64)),
+		},
+	}
+	got := scheduledDomainIdentityBytes(domain)
+	raw := len(domain.extractor.domain) +
+		len(domain.extractor.version) +
+		len(domain.scope.Repository) +
+		len(domain.scope.Commit) +
+		len(domain.scope.Domain) +
+		len(domain.generation.Extractor) +
+		len(domain.generation.DependencyDigest)
+	if got != raw+256 {
+		t.Fatalf("scheduled identity bytes = %d, want %d retained bytes + 256",
+			got, raw)
+	}
+	limits := testDomainSchedulingLimits()
+	limits.MaxSchedulerBytes = got
+	if err := validateScheduledDomains(
+		[]scheduledDomain{domain}, limits,
+	); err != nil {
+		t.Fatalf("exact scheduler identity bound: %v", err)
+	}
+	limits.MaxSchedulerBytes--
+	if err := validateScheduledDomains(
+		[]scheduledDomain{domain}, limits,
+	); !errors.Is(err, errExtractionAggregateBudget) {
+		t.Fatalf("scheduler identity overflow = %v", err)
+	}
+}
+
+func TestSchedulerIdentityRefusalDefersAllWithoutStarting(t *testing.T) {
+	evidence := newMemoryEvidence()
+	started := 0
+	limits := testDomainSchedulingLimits()
+	limits.MaxSchedulerBytes = 1
+	worker := schedulerTestWorker(evidence, []Extractor{unitExtractor{
+		domain: "too-large", version: "v1",
+		extract: func(
+			context.Context, sdk.Corpus, sdk.Emit,
+		) (sdk.Coverage, error) {
+			started++
+			return sdk.Coverage{}, nil
+		},
+	}}, limits)
+	err := worker.Handle(
+		context.Background(), store.Job{Target: "host/scheduler"},
+	)
+	if !errors.Is(err, errExtractionAggregateBudget) ||
+		store.IsYield(err) || started != 0 || evidence.nextRun != 0 {
+		t.Fatalf("identity refusal err=%v yield=%v started=%d runs=%d",
+			err, store.IsYield(err), started, evidence.nextRun)
+	}
+	outcome, outcomeErr := evidence.LatestExtractionDomainOutcome(
+		context.Background(),
+		store.ExtractionScope{
+			Repository: "host/scheduler",
+			Commit:     unitCommit,
+			Domain:     "too-large",
+		},
+	)
+	if outcomeErr != nil ||
+		outcome.Disposition != store.DomainOutcomeRetryableFailure ||
+		outcome.RunID != "" {
+		t.Fatalf("identity refusal outcome = %+v, %v", outcome, outcomeErr)
+	}
+}
+
+func TestSchedulerNoProgressDeferralConsumesOrdinaryAttempt(t *testing.T) {
+	evidence := newMemoryEvidence()
+	started := 0
+	limits := testDomainSchedulingLimits()
+	limits.AggregateTimeout = 120 * time.Millisecond
+	limits.MirrorTimeout = 90 * time.Millisecond
+	limits.DomainTimeout = 40 * time.Millisecond
+	limits.AbortTimeout = 10 * time.Millisecond
+	limits.OutcomeTimeout = 10 * time.Millisecond
+	limits.MinimumStartBudget = 5 * time.Millisecond
+	worker := schedulerTestWorker(evidence, []Extractor{unitExtractor{
+		domain: "not-started", version: "v1",
+		extract: func(
+			context.Context, sdk.Corpus, sdk.Emit,
+		) (sdk.Coverage, error) {
+			started++
+			return sdk.Coverage{}, nil
+		},
+	}}, limits)
+	worker.Repos = repoGetterFunc(func(
+		ctx context.Context,
+		_ string,
+	) (*store.Repo, error) {
+		timer := time.NewTimer(75 * time.Millisecond)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+			return &store.Repo{
+				Name: "host/scheduler", IndexedCommitHash: unitCommit,
+			}, nil
+		}
+	})
+	err := worker.Handle(
+		context.Background(), store.Job{Target: "host/scheduler"},
+	)
+	if !errors.Is(err, errExtractionAggregateBudget) ||
+		store.IsYield(err) || started != 0 {
+		t.Fatalf("zero-progress deferral err=%v yield=%v started=%d",
+			err, store.IsYield(err), started)
+	}
+}
+
+func TestSchedulerPreRunFailureDoesNotYieldWithoutDurableProgress(t *testing.T) {
+	evidence := newMemoryEvidence()
+	manifest := validMemoryCandidateManifest()
+	manifest.walkErr = errors.New("temporary inventory read failure")
+	extractors := []Extractor{
+		unitExtractor{domain: "first", version: "v1"},
+		unitExtractor{domain: "second", version: "v1"},
+	}
+	limits := testDomainSchedulingLimits()
+	limits.MaxSerialDomains = 1
+	worker := schedulerTestWorker(evidence, extractors, limits)
+	worker.Manifests = splitManifestProvider{
+		identity: func(
+			context.Context,
+			CandidateManifestRequest,
+		) (string, error) {
+			return manifest.Identity(), nil
+		},
+		open: func(
+			context.Context,
+			CandidateManifestRequest,
+		) (CandidateManifest, error) {
+			return manifest, nil
+		},
+	}
+	err := worker.Handle(
+		context.Background(), store.Job{Target: "host/scheduler"},
+	)
+	if !errors.Is(err, manifest.walkErr) || store.IsYield(err) ||
+		evidence.nextRun != 0 {
+		t.Fatalf("pre-run failure err=%v yield=%v runs=%d",
+			err, store.IsYield(err), evidence.nextRun)
+	}
+}
+
 func TestSchedulerEarlyTerminalFailureDoesNotStarvePeers(t *testing.T) {
 	evidence := newMemoryEvidence()
 	started := make([]string, 0, 3)
@@ -98,8 +254,8 @@ func TestSchedulerEarlyTerminalFailureDoesNotStarvePeers(t *testing.T) {
 
 	if err := worker.Handle(
 		context.Background(), store.Job{Target: "host/scheduler"},
-	); err != nil {
-		t.Fatalf("settled terminal peer changed job success: %v", err)
+	); !store.IsTerminal(err) {
+		t.Fatalf("settled terminal peer error = %v, want terminal marker", err)
 	}
 	if want := []string{"first", "second", "third"}; !equalStrings(started, want) {
 		t.Fatalf("starts = %v, want %v", started, want)
@@ -136,11 +292,16 @@ func TestSchedulerRestartGivesEveryNeverAttemptedDomainAStart(t *testing.T) {
 	limits.MaxSerialDomains = 1
 	worker := schedulerTestWorker(evidence, extractors, limits)
 
-	for range 4 {
-		if err := worker.Handle(
+	for attempt := range 4 {
+		err := worker.Handle(
 			context.Background(), store.Job{Target: "host/scheduler"},
-		); err == nil {
+		)
+		if err == nil {
 			t.Fatal("retryable fixture unexpectedly completed")
+		}
+		if got, want := store.IsYield(err), attempt < 2; got != want {
+			t.Fatalf("attempt %d yield = %v, want %v: %v",
+				attempt+1, got, want, err)
 		}
 	}
 	if want := []string{"a", "b", "c", "a"}; !equalStrings(started, want) {

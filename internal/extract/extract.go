@@ -249,6 +249,8 @@ func (w *Worker) Handle(
 	// retryables use their durable attempt time, so restart cannot reset
 	// fairness or let one slow domain repeatedly jump an untried peer.
 	var domainErrs []error
+	var terminalErrs []error
+	continuationProgress := false
 	scheduled := make([]scheduledDomain, 0, len(extractors))
 	for index, ex := range extractors {
 		domainOperation := operation.domain(index)
@@ -275,8 +277,14 @@ func (w *Worker) Handle(
 					return nil
 				}
 				domainErrs = append(domainErrs, recordErr)
+			} else if disposition ==
+				store.DomainOutcomeTerminalGenerationRefusal {
+				continuationProgress = true
+				terminalErrs = append(terminalErrs, generationErr)
 			} else if !disposition.Settled() {
 				domainErrs = append(domainErrs, generationErr)
+			} else {
+				continuationProgress = true
 			}
 			continue
 		}
@@ -314,7 +322,13 @@ func (w *Worker) Handle(
 				store.DomainOutcomeUnavailablePrerequisite, false, "",
 				domainOperation,
 			); err != nil {
+				if errors.Is(err, errStaleRun) {
+					operation.completeRemaining(OperationReasonStale)
+					return nil
+				}
 				domainErrs = append(domainErrs, err)
+			} else {
+				continuationProgress = true
 			}
 			continue
 		}
@@ -374,6 +388,7 @@ func (w *Worker) Handle(
 	startedDomains := 0
 	stagedRows := 0
 	deferred := make([]scheduledDomain, 0)
+	yieldAfterDeferrals := false
 	if scheduleErr != nil {
 		deferred = append(deferred, scheduled...)
 		domainErrs = append(domainErrs, scheduleErr)
@@ -417,7 +432,9 @@ func (w *Worker) Handle(
 		cancelDomain()
 		startedDomains++
 		stagedRows += attempt.stagedRows
-		if runErr != nil {
+		if runErr == nil {
+			continuationProgress = true
+		} else {
 			if errors.Is(runErr, errStaleRun) {
 				// A guarded publish proved the repository was deleted or advanced.
 				// The deleting workflow or successor index event owns the next step;
@@ -453,8 +470,17 @@ func (w *Worker) Handle(
 					domainErrs,
 					errors.Join(runErr, recordErr),
 				)
+			} else if disposition ==
+				store.DomainOutcomeTerminalGenerationRefusal {
+				continuationProgress = true
+				terminalErrs = append(terminalErrs, runErr)
 			} else if !disposition.Settled() {
+				if attempt.runID != "" {
+					continuationProgress = true
+				}
 				domainErrs = append(domainErrs, runErr)
+			} else {
+				continuationProgress = true
 			}
 		}
 	}
@@ -464,6 +490,14 @@ func (w *Worker) Handle(
 	// deferrals for work that could not start.
 	releaseMirror()
 	cancelMirror()
+	if scheduleErr == nil && continuationProgress {
+		for _, task := range deferred {
+			if !task.retryable {
+				yieldAfterDeferrals = true
+				break
+			}
+		}
+	}
 	for _, task := range deferred {
 		domainOperation := operation.domain(task.index)
 		domainOperation.complete(OperationReasonAggregateBudget)
@@ -476,13 +510,23 @@ func (w *Worker) Handle(
 				operation.completeRemaining(OperationReasonStale)
 				return nil
 			}
+			yieldAfterDeferrals = false
 			domainErrs = append(domainErrs, recordErr)
 		}
 	}
 	if len(domainErrs) > 0 {
-		operation.completeRemaining(operationReasonForError(errors.Join(domainErrs...)))
-		return store.WithClass(store.ClassExtract,
-			fmt.Errorf("extract %s: %w", repo.Name, errors.Join(domainErrs...)))
+		joined := errors.Join(domainErrs...)
+		operation.completeRemaining(operationReasonForError(joined))
+		result := error(fmt.Errorf("extract %s: %w", repo.Name, joined))
+		if len(deferred) > 0 && yieldAfterDeferrals {
+			result = store.WithYield(result)
+		}
+		return store.WithClass(store.ClassExtract, result)
+	}
+	if len(terminalErrs) > 0 {
+		return store.WithClass(store.ClassExtract, store.WithTerminal(
+			fmt.Errorf("extract %s: %w", repo.Name, errors.Join(terminalErrs...)),
+		))
 	}
 	return nil
 }
@@ -801,6 +845,12 @@ func (w *Worker) recordManifestOpenOutcomes(
 	openErr error,
 ) error {
 	disposition, controlFailure := classifyDomainOutcome(openErr)
+	if !disposition.Settled() {
+		operation.completeRemaining(operationReason(openErr))
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("extract %s: open candidate manifest: %w",
+				repo.Name, openErr))
+	}
 	if !validSHA256(pointer.ManifestDigest) ||
 		!validSHA256(pointer.PolicyDigest) ||
 		pointer.ControlRevision == 0 {
@@ -855,12 +905,10 @@ func (w *Worker) recordManifestOpenOutcomes(
 			fmt.Errorf("extract %s: persist manifest outcomes: %w",
 				repo.Name, errors.Join(retryable...)))
 	}
-	if disposition.Settled() {
-		return nil
-	}
-	return store.WithClass(store.ClassExtract,
+	return store.WithClass(store.ClassExtract, store.WithTerminal(
 		fmt.Errorf("extract %s: open candidate manifest: %w",
-			repo.Name, openErr))
+			repo.Name, openErr),
+	))
 }
 
 type registeredExtractor struct {

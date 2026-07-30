@@ -151,6 +151,23 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}) {
 			recordJob(r.Kind, "released")
 		}
+	case IsTerminal(err):
+		log.Printf("runner %s: %s %s refused terminally: %v",
+			r.Who, job.Kind, job.Target, err)
+		if r.persist(job, "fail terminal job", func(writeCtx context.Context) error {
+			return r.Store.SetJobStatus(
+				writeCtx, job, StatusFailed, err.Error(),
+			)
+		}) {
+			recordJob(r.Kind, "failed")
+			recordJobError(r.Kind, err)
+		}
+	case IsYield(err):
+		if r.persist(job, "yield job", func(writeCtx context.Context) error {
+			return r.Store.ReleaseJob(writeCtx, job, err.Error())
+		}) {
+			recordJob(r.Kind, "deferred")
+		}
 	case job.Attempts+1 >= r.MaxAttempts:
 		log.Printf("runner %s: %s %s failed permanently: %v", r.Who, job.Kind, job.Target, err)
 		if r.persist(job, "fail job", func(writeCtx context.Context) error {

@@ -110,6 +110,115 @@ func TestExtractionDomainOutcomePublicationAndLatestOnlyLifecycle(t *testing.T) 
 	}
 }
 
+func TestExtractionDomainOutcomeRejectsPublishedAndOwnerDowngrades(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repository := "github.com/acme/outcome-fence"
+	commit := strings.Repeat("8", 40)
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://github.com/acme/outcome-fence.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	scope := store.ExtractionScope{
+		Repository: repository, Commit: commit, Domain: "proto-contract",
+	}
+	run, err := s.BeginExtractionRun(ctx, scope, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	published := durableOutcome(
+		scope, store.DomainOutcomePublished, run.Extractor,
+	)
+	published.RunID = run.ID
+	if err := s.PublishExtractionRunWithOutcome(
+		ctx, run.ID, testCoverage(0, 0), published,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	retryable := published
+	retryable.Disposition = store.DomainOutcomeRetryableFailure
+	if err := s.RecordExtractionDomainOutcome(
+		ctx, retryable,
+	); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("published attempt downgrade = %v, want ErrConflict", err)
+	}
+	retryable.RunID = ""
+	if err := s.RecordExtractionDomainOutcome(
+		ctx, retryable,
+	); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("unstarted settled downgrade = %v, want ErrConflict", err)
+	}
+	current, err := s.LatestExtractionDomainOutcome(ctx, scope)
+	if err != nil ||
+		current.Disposition != store.DomainOutcomePublished ||
+		current.RunID != run.ID {
+		t.Fatalf("published outcome after downgrade attempts = %+v, %v",
+			current, err)
+	}
+
+	retryable.Generation.Extractor = "2.0.0"
+	retryable.Generation.Digest =
+		store.ComputeExtractionGenerationDigest(retryable.Generation)
+	if err := s.RecordExtractionDomainOutcome(ctx, retryable); err != nil {
+		t.Fatalf("new-generation retryable outcome: %v", err)
+	}
+	current, err = s.LatestExtractionDomainOutcome(ctx, scope)
+	if err != nil ||
+		current.Disposition != store.DomainOutcomeRetryableFailure ||
+		current.Generation.Extractor != "2.0.0" {
+		t.Fatalf("new-generation retryable = %+v, %v", current, err)
+	}
+}
+
+func TestExtractionDomainOutcomeRejectsRetiredAttemptWriter(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	repository := "github.com/acme/outcome-owner-fence"
+	commit := strings.Repeat("9", 40)
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name:     repository,
+		CloneURL: "https://github.com/acme/outcome-owner-fence.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	scope := store.ExtractionScope{
+		Repository: repository, Commit: commit, Domain: "proto-contract",
+	}
+	retired, err := s.BeginExtractionRun(ctx, scope, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.AbortExtractionRun(ctx, retired.ID); err != nil {
+		t.Fatal(err)
+	}
+	current, err := s.BeginExtractionRun(ctx, scope, "1.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	outcome := durableOutcome(
+		scope, store.DomainOutcomeRetryableFailure, retired.Extractor,
+	)
+	outcome.RunID = retired.ID
+	if err := s.RecordExtractionDomainOutcome(
+		ctx, outcome,
+	); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("retired attempt outcome = %v, want ErrConflict", err)
+	}
+	attempt, err := s.LatestExtractionAttempt(ctx, scope)
+	if err != nil || attempt.RunID != current.ID || attempt.Status != "staged" {
+		t.Fatalf("current attempt changed = %+v, %v", attempt, err)
+	}
+	if _, err := s.LatestExtractionDomainOutcome(
+		ctx, scope,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("retired attempt created outcome: %v", err)
+	}
+}
+
 func TestCandidateControlTerminalRepairAdvancesSameDigestAndClearsOutcome(
 	t *testing.T,
 ) {

@@ -658,6 +658,10 @@ If extraction keeps retrying, inspect the ordinary classified error rather
 than parsing either receipt: temporary store, lease, cancellation, and
 untyped extractor failures are retryable. Stable typed limit and candidate
 descriptor/integrity refusals are terminal for their exact generation.
+Transient candidate-manifest filesystem failures are job-level retryable
+errors: they do not overwrite each domain's settled ledger. A recorded
+terminal refusal fails the queue job immediately rather than consuming the
+ordinary retry allowance or being reported as a successful job.
 Changing commit, unit, candidate publication, extractor/inventory policy,
 typed input, dependency identity, or control revision makes the old row
 ineligible automatically; do not delete outcome rows by hand. Candidate
@@ -703,6 +707,14 @@ released; if it previously started, the outcome preserves that run identity
 and therefore its ordering age. A started domain that exhausts its own time or
 staged-row allowance records `domain_budget`. Prior published evidence and
 terminal or unavailable peer outcomes are not erased.
+
+When a bounded job durably settles a domain or creates a new attempt identity
+and defers a never-attempted peer, the queue releases that job for immediate
+continuation without consuming its failure-attempt allowance. This continues
+only until every configured current generation has an attempt identity. A
+zero-progress execution, a retry before run creation, subsequent retryable
+failures, and deterministic scheduler-admission refusals such as an oversized
+retained identity use the ordinary retry cap.
 
 Candidate inventory remains the pre-run admission gate: malformed manifest
 membership creates no staged run. After admission, the run attempt marker
@@ -773,6 +785,11 @@ the complete tuple and never fall back to those rows. An older writer refuses
 a store already claimed by this generation, while a newer unknown writer is
 left untouched and unreadable rather than guessed compatible.
 
+This release advances extractor and enumeration identities in the shared
+policy digest. On first processing after upgrade, every indexed repository
+therefore re-extracts every enabled domain once; settled pointer-only no-op
+cost resumes after those replacement outcomes publish or settle.
+
 Coverage records name the scope posture, unit digest, candidate-manifest
 digest, candidate plane, exact selected candidate count/bytes/digest, and the
 source paths actually read. Coverage certificates additionally disclose the
@@ -812,8 +829,11 @@ pointer forces a fresh Git census. If a crash marker or corrupt candidate
 publication continues to refuse after automatic reconciliation, stop phebs,
 retain logs, move `$DATA/candidates` aside for diagnosis, and restart: the
 directory is derived and is rebuilt before extraction. The supported restore
-path clears the imported database pointer automatically; do not manually copy
-a pointer or individual member into a new installation.
+path clears the imported database pointer automatically and discards only
+candidate-control-failure outcomes before reconstruction. Ordinary durable
+outcomes remain restored state but cannot become eligible until the exact
+candidate generation exists again. Do not manually copy a pointer or
+individual member into a new installation.
 
 Committed focused state is deliberately fail-closed. A malformed or tampered
 `indexed_analysis_unit` can therefore make repository listing, startup

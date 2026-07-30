@@ -1335,6 +1335,8 @@ func (s *Surreal) publishExtractionRun(
 
 const recordExtractionDomainOutcomeSQL = `
 BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $evidence_migration_version LIMIT 1) = 1;
 LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
 	FROM $repo_rid)[0];
 LET $repo_ok = $repo_state != NONE
@@ -1352,7 +1354,41 @@ LET $candidate_ok = IF $candidate_manifest_digest = '' THEN true
 		AND $candidate.manifest_digest = $candidate_manifest_digest
 		AND $candidate.control_revision = $candidate_control_revision
 	END;
-LET $recorded = IF $repo_ok AND $candidate_ok THEN
+LET $existing = (SELECT disposition, generation, run_id
+	FROM $outcome_rid)[0];
+LET $same_generation = $existing != NONE
+	AND ($existing.generation.digest ?? '') = $generation.digest;
+LET $settled_existing = $same_generation
+	AND $existing.disposition IN [
+		'published', 'unavailable_prerequisite',
+		'terminal_generation_refusal'
+	];
+LET $attempt = IF $run_id = '' THEN NONE
+	ELSE (SELECT run_id, status, repo, commit, unit_digest, domain,
+		store_schema_version, evidence_format_version,
+		evidence_migration_version
+		FROM $attempt_rid)[0] END;
+LET $attempt_ok = IF $run_id = '' THEN true
+	ELSE $attempt != NONE
+		AND $attempt.run_id = $run_id
+		AND $attempt.status IN ['staged', 'aborted']
+		AND $attempt.repo = $repo
+		AND $attempt.commit = $commit
+		AND $attempt.unit_digest = $unit_digest
+		AND $attempt.domain = $domain
+		AND $attempt.store_schema_version = $store_schema_version
+		AND $attempt.evidence_format_version = $evidence_format_version
+		AND $attempt.evidence_migration_version =
+			$evidence_migration_version
+	END;
+LET $retryable_ok = IF $disposition != 'retryable_failure'
+		OR $run_id != '' THEN true
+	ELSE $settled_existing = false
+		AND ($same_generation = false
+			OR ($existing.run_id ?? '') = '')
+	END;
+LET $recorded = IF $writer_ok AND $repo_ok AND $candidate_ok
+		AND $attempt_ok AND $retryable_ok THEN
 	(UPSERT $outcome_rid CONTENT {
 		repo: $repo,
 		commit: $commit,
@@ -1413,6 +1449,7 @@ func (s *Surreal) RecordExtractionDomainOutcome(
 	vars := map[string]any{
 		"repo_rid":      repoID(prepared.Scope.Repository),
 		"candidate_rid": candidateManifestPublicationID(prepared.Scope.Repository),
+		"attempt_rid":   extractionAttemptID(prepared.Scope),
 		"outcome_rid": extractionDomainOutcomeID(
 			prepared.Scope.Repository, prepared.Scope.Domain,
 		),
@@ -1430,7 +1467,9 @@ func (s *Surreal) RecordExtractionDomainOutcome(
 		"receipt_schema":             prepared.ReceiptSchema,
 		"receipt":                    prepared.Receipt,
 		"now":                        time.Now().UTC(),
+		"migration_rid":              evidenceMigrationStateID(),
 		"store_schema_version":       evidenceStoreSchemaVersion,
+		"evidence_format_version":    evidenceFormatVersion,
 		"evidence_migration_version": evidenceMigrationVersion,
 	}
 	for attempt := 0; ; attempt++ {
@@ -1448,7 +1487,7 @@ func (s *Surreal) RecordExtractionDomainOutcome(
 			return nil
 		}
 		return fmt.Errorf(
-			"record extraction domain outcome: repository or candidate generation changed: %w",
+			"record extraction domain outcome: writer, repository, candidate, attempt, or prior outcome changed: %w",
 			ErrConflict,
 		)
 	}

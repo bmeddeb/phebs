@@ -221,6 +221,26 @@ func TestTerminalMarkerComposesWithClass(t *testing.T) {
 	}
 }
 
+func TestYieldMarkerComposesWithClass(t *testing.T) {
+	base := errors.New("aggregate work remains")
+	if WithYield(nil) != nil {
+		t.Error("WithYield(nil) must stay nil")
+	}
+	if IsYield(nil) || IsYield(base) {
+		t.Error("an unmarked error must not read as yield")
+	}
+	for _, marked := range []error{
+		WithClass(ClassExtract, WithYield(base)),
+		WithYield(WithClass(ClassExtract, base)),
+		fmt.Errorf("worker: %w", WithYield(WithClass(ClassExtract, base))),
+	} {
+		if !IsYield(marked) || Classify(marked) != ClassExtract ||
+			!errors.Is(marked, base) {
+			t.Fatalf("yield marker did not compose: %v", marked)
+		}
+	}
+}
+
 func TestExtractionGenerationIdentityInvalidatesEveryInput(t *testing.T) {
 	base := validOutcome().Generation
 	base.TypedInputKind = "scip"

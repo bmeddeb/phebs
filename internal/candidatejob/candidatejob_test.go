@@ -887,8 +887,8 @@ func TestTamperTerminalOutcomeSameDigestStrictRepairRunsExtractionOnce(
 	extractionJob := store.Job{
 		Kind: store.JobExtract, Target: repository,
 	}
-	if err := extraction.Handle(t.Context(), extractionJob); err != nil {
-		t.Fatalf("tampered extraction: %v", err)
+	if err := extraction.Handle(t.Context(), extractionJob); !store.IsTerminal(err) {
+		t.Fatalf("tampered extraction error = %v, want terminal marker", err)
 	}
 	scope := store.ExtractionScope{
 		Repository: repository, Commit: commit,

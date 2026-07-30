@@ -85,6 +85,12 @@ connections:
 	if err := st.PublishCandidateManifest(ctx, candidatePointer); err != nil {
 		t.Fatalf("publish pre-backup candidate pointer: %v", err)
 	}
+	publishedPointer, err := st.GetCandidateManifestPublication(
+		ctx, names[0],
+	)
+	if err != nil {
+		t.Fatalf("read pre-backup candidate pointer: %v", err)
+	}
 	outcomeScope := store.ExtractionScope{
 		Repository: names[0],
 		Commit:     indexedBefore.IndexedCommitHash,
@@ -104,6 +110,30 @@ connections:
 	}
 	if err := st.RecordExtractionDomainOutcome(ctx, outcome); err != nil {
 		t.Fatalf("record pre-backup extraction outcome: %v", err)
+	}
+	controlScope := outcomeScope
+	controlScope.Domain = "grpc-consumer"
+	controlOutcome := store.ExtractionDomainOutcome{
+		Scope:                   controlScope,
+		Disposition:             store.DomainOutcomeTerminalGenerationRefusal,
+		CandidateControlFailure: true,
+		Generation: store.ExtractionGenerationIdentity{
+			CandidateManifestDigest:  publishedPointer.ManifestDigest,
+			CandidatePolicyDigest:    publishedPointer.PolicyDigest,
+			CandidateControlRevision: publishedPointer.ControlRevision,
+			Extractor:                "restore-control-v1",
+			InventoryPolicy: "candidate-manifest-v3-" +
+				strings.Repeat("b", 64),
+			DependencyDigest: "sha256:" + strings.Repeat("e", 64),
+		},
+		ReceiptSchema: store.ExtractionOutcomeReceiptSchema,
+		Receipt: `{"schema":"` +
+			store.ExtractionOutcomeReceiptSchema + `"}`,
+	}
+	if err := st.RecordExtractionDomainOutcome(
+		ctx, controlOutcome,
+	); err != nil {
+		t.Fatalf("record pre-backup control outcome: %v", err)
 	}
 
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
@@ -168,6 +198,11 @@ connections:
 		restoredOutcome.Disposition != store.DomainOutcomeRetryableFailure ||
 		restoredOutcome.Generation.Extractor != "restore-v1" {
 		t.Fatalf("restored extraction outcome = %+v, %v", restoredOutcome, err)
+	}
+	if _, err := restored.LatestExtractionDomainOutcome(
+		ctx, controlScope,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored control outcome = %v, want ErrNotFound", err)
 	}
 
 	// This is the same boot seam serve executes: reconcile clears an index

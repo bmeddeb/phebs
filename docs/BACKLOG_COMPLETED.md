@@ -4182,6 +4182,18 @@ bounds and byte-identical 3.34 s/3.35 s runs at
 61,767,680/61,243,392 bytes RSS. T30.6c owns aggregate-bounded domain
 scheduling.
 
+Verifier follow-up fenced every standalone outcome mutation on the active
+migration marker and, for run-bound results, the exact current staged/aborted
+attempt. A publication acknowledgement lost after server commit, a successor
+claimant, and a reaped zombie therefore cannot downgrade the published
+outcome; a no-run retryable strict-open failure does not fan out over settled
+domain rows. Transient manifest I/O remains retryable, while deterministic
+integrity refusal is terminal and makes the queue job visibly failed.
+Restore retains ordinary outcomes but removes candidate-control failures when
+it resets candidate-pointer control lineage. The shared policy-generation
+bumps cause one disclosed all-enabled-domain re-extraction per indexed
+repository on upgrade.
+
 ### T30.6c · Aggregate-bounded domain scheduling
 
 **T30.6c ✅ · Aggregate-bounded domain scheduling** *(2026-07-30)* — replaced
@@ -4220,6 +4232,14 @@ scheduler-memory bounds, and aggregate/domain staged-row ceilings. Their
 frozen generic vocabulary adds `aggregate_budget` and `domain_budget`.
 Deferred outcomes are written only after mirror release within the original
 aggregate deadline.
+
+An execution that durably settles a domain or creates a new attempt identity
+and persists deferral of a never-attempted peer now yields a queue continuation
+without consuming the three-attempt failure budget. Once every domain has a
+durable attempt identity, ordinary retry accounting resumes; zero-progress,
+pre-run retry, and deterministic scheduler-identity refusals never yield. The
+exact 64 KiB retained-identity refusal, including its 256-byte envelope
+allowance, and the defer-all path are regression-tested.
 
 AC met: frozen-limit validation; early-terminal isolation; four-job restart
 fixture proving `a,b,c,a` fairness; slow-domain cap with a later peer;

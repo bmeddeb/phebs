@@ -53,7 +53,7 @@ func validatePublication(
 	}
 	manifest, err := readManifest(manifestPath)
 	if err != nil {
-		return Manifest{}, fmt.Errorf("%w: %v", ErrInvalidManifest, err)
+		return Manifest{}, err
 	}
 	if err := validateManifestIdentity(manifest, expected, state); err != nil {
 		return Manifest{}, err
@@ -73,11 +73,13 @@ func readManifest(filePath string) (_ Manifest, resultErr error) {
 	}
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
 		info.Size() < 0 || info.Size() > maxManifestBytes {
-		return Manifest{}, errors.New("candidate manifest is special or oversized")
+		return Manifest{}, invalidManifestRead(
+			errors.New("candidate manifest is special or oversized"),
+		)
 	}
 	source, err := openStableRegularFile(filePath, info)
 	if err != nil {
-		return Manifest{}, err
+		return Manifest{}, classifyManifestReadError(err)
 	}
 	defer func() {
 		if closeErr := source.file.Close(); resultErr == nil && closeErr != nil {
@@ -89,24 +91,43 @@ func readManifest(filePath string) (_ Manifest, resultErr error) {
 		return Manifest{}, err
 	}
 	if err := source.verifyAfterRead(int64(len(raw))); err != nil {
-		return Manifest{}, err
+		return Manifest{}, classifyManifestReadError(err)
 	}
 	if len(raw) > maxManifestBytes {
-		return Manifest{}, errors.New("candidate manifest is oversized")
+		return Manifest{}, invalidManifestRead(
+			errors.New("candidate manifest is oversized"),
+		)
 	}
 	var manifest Manifest
 	if err := strictDecode(bytes.NewReader(raw), maxManifestBytes, &manifest); err != nil {
-		return Manifest{}, err
+		return Manifest{}, invalidManifestRead(err)
 	}
 	canonical, err := json.Marshal(manifest)
 	if err != nil {
-		return Manifest{}, err
+		return Manifest{}, invalidManifestRead(err)
 	}
 	canonical = append(canonical, '\n')
 	if !bytes.Equal(raw, canonical) {
-		return Manifest{}, errors.New("candidate manifest is not canonical")
+		return Manifest{}, invalidManifestRead(
+			errors.New("candidate manifest is not canonical"),
+		)
 	}
 	return manifest, nil
+}
+
+func classifyManifestReadError(err error) error {
+	if err == nil {
+		return nil
+	}
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		return err
+	}
+	return invalidManifestRead(err)
+}
+
+func invalidManifestRead(err error) error {
+	return fmt.Errorf("%w: %v", ErrInvalidManifest, err)
 }
 
 // stableRegularFile binds reads to one path identity. The initial Lstat keeps

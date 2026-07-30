@@ -83,6 +83,16 @@ generations run before retryables ordered by their durable attempt time;
 deferrals preserve settled peers and record retryable outcomes after mirror
 release. Scheduling is capped at 16 domains, 64 KiB of identity, 100,000
 staged rows per job, and 25,000 per domain, with no concurrency fan-out.
+Verifier follow-up fences nonpublication outcomes against migration, committed
+publication, and successor-attempt races; keeps transient strict-open failures
+from erasing settled rows; makes terminal refusals visibly fail their queue
+job; clears restored control-bound refusals with the candidate pointer; and
+yields after a durable settle or new attempt when a persisted never-attempted
+deferral remains, without consuming the ordinary failure-attempt budget.
+Zero-progress and pre-run retries retain the normal cap. The
+identity-generation upgrade causes one disclosed
+all-enabled-domain re-extraction per indexed repository before steady-state
+no-op cost resumes.
 
 The post-T30.5 repair gate closed two reported integration issues:
 whole-repository Search/Stream binds an exact committed shard generation across

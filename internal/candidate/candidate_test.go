@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -39,6 +40,27 @@ type syntheticUntrustedReader struct {
 	remaining int64
 	read      int64
 	maxRead   int
+}
+
+func TestManifestReadSeparatesIOFailureFromIntegrityRefusal(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing.json")
+	if _, err := readManifest(missing); !errors.Is(err, os.ErrNotExist) ||
+		errors.Is(err, ErrInvalidManifest) {
+		t.Fatalf("missing manifest error = %v", err)
+	}
+	ioErr := &os.PathError{Op: "read", Path: missing, Err: syscall.EIO}
+	if err := classifyManifestReadError(ioErr); !errors.Is(err, syscall.EIO) ||
+		errors.Is(err, ErrInvalidManifest) {
+		t.Fatalf("transient manifest I/O classification = %v", err)
+	}
+
+	invalid := filepath.Join(t.TempDir(), "invalid.json")
+	if err := os.WriteFile(invalid, []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readManifest(invalid); !errors.Is(err, ErrInvalidManifest) {
+		t.Fatalf("invalid manifest error = %v, want ErrInvalidManifest", err)
+	}
 }
 
 func (reader *syntheticUntrustedReader) Read(buffer []byte) (int, error) {

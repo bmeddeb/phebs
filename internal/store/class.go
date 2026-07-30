@@ -60,6 +60,31 @@ func IsTerminal(err error) bool {
 	return errors.As(err, &terminal)
 }
 
+// Yield marks bounded, durable progress that needs another execution but must
+// not consume the runner's failure-attempt budget. It is used when one
+// aggregate-bounded job settles some work and durably defers the remainder.
+type Yield struct {
+	Err error
+}
+
+func (y *Yield) Error() string { return "yield: " + y.Err.Error() }
+func (y *Yield) Unwrap() error { return y.Err }
+
+// WithYield marks err as scheduler continuation. A nil error has no remaining
+// work and therefore cannot yield.
+func WithYield(err error) error {
+	if err == nil {
+		return nil
+	}
+	return &Yield{Err: err}
+}
+
+// IsYield reports whether a scheduler-yield marker appears in the chain.
+func IsYield(err error) bool {
+	var yield *Yield
+	return errors.As(err, &yield)
+}
+
 // Classify extracts the class from anywhere in the chain; unclassified
 // errors are generic.
 func Classify(err error) ErrClass {

@@ -101,6 +101,8 @@ type memoryEvidence struct {
 	batchCount          int
 	stagedFacts         int
 	publishHook         func() error
+	publishOutcomeErr   error
+	recordOutcomeErr    error
 	addHook             func() error
 }
 
@@ -217,7 +219,15 @@ func (m *memoryEvidence) PublishExtractionRunWithOutcome(
 	if err := m.PublishExtractionRun(ctx, runID, coverage); err != nil {
 		return err
 	}
-	return m.RecordExtractionDomainOutcome(ctx, outcome)
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	copyOfOutcome := outcome
+	m.nextEvent++
+	copyOfOutcome.RecordedAt = time.Unix(m.nextEvent, 0).UTC()
+	copyOfOutcome.Generation.Digest =
+		store.ComputeExtractionGenerationDigest(copyOfOutcome.Generation)
+	m.outcomes[memoryOutcomeKey(outcome.Scope)] = &copyOfOutcome
+	return m.publishOutcomeErr
 }
 
 func (m *memoryEvidence) RecordExtractionDomainOutcome(
@@ -226,11 +236,30 @@ func (m *memoryEvidence) RecordExtractionDomainOutcome(
 ) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.recordOutcomeErr != nil {
+		return m.recordOutcomeErr
+	}
 	copyOfOutcome := outcome
 	m.nextEvent++
 	copyOfOutcome.RecordedAt = time.Unix(m.nextEvent, 0).UTC()
 	copyOfOutcome.Generation.Digest =
 		store.ComputeExtractionGenerationDigest(copyOfOutcome.Generation)
+	existing := m.outcomes[memoryOutcomeKey(outcome.Scope)]
+	sameGeneration := existing != nil && store.SameExtractionGeneration(
+		existing.Generation, copyOfOutcome.Generation,
+	)
+	if copyOfOutcome.RunID != "" {
+		attempt := m.attempts[memoryScopeKey(copyOfOutcome.Scope)]
+		if attempt == nil || attempt.RunID != copyOfOutcome.RunID ||
+			attempt.Status != "staged" && attempt.Status != "aborted" {
+			return store.ErrConflict
+		}
+	}
+	if copyOfOutcome.Disposition == store.DomainOutcomeRetryableFailure &&
+		copyOfOutcome.RunID == "" && sameGeneration &&
+		(existing.Disposition.Settled() || existing.RunID != "") {
+		return store.ErrConflict
+	}
 	m.outcomes[memoryOutcomeKey(outcome.Scope)] = &copyOfOutcome
 	return nil
 }
@@ -653,8 +682,8 @@ func TestWorkerRejectsFactBeyondChunkedRunLimit(t *testing.T) {
 	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
 		NewCorpus: unitFactory(nil), Extractors: []Extractor{extractor}}
 	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
-	if err != nil {
-		t.Fatalf("terminal limit should settle the job: %v", err)
+	if !store.IsTerminal(err) {
+		t.Fatalf("terminal limit error = %v, want terminal marker", err)
 	}
 	if evidence.published || !evidence.aborted {
 		t.Fatalf("over-limit state: published=%v aborted=%v", evidence.published, evidence.aborted)
@@ -678,6 +707,41 @@ func TestWorkerRejectsFactBeyondChunkedRunLimit(t *testing.T) {
 	}
 	if evidence.nextRun != 1 {
 		t.Fatalf("forced terminal generation created %d runs", evidence.nextRun)
+	}
+}
+
+func TestWorkerPublishAcknowledgementLossPreservesPublishedOutcome(t *testing.T) {
+	repo := &store.Repo{Name: "host/publish-ack", IndexedCommitHash: unitCommit}
+	evidence := newMemoryEvidence()
+	evidence.publishOutcomeErr = context.DeadlineExceeded
+	worker := Worker{
+		Repos: readyRepoGetter(repo), Evidence: evidence,
+		NewCorpus: unitFactory(nil),
+		Extractors: []Extractor{unitExtractor{
+			domain: "unit", version: "v1",
+			extract: func(
+				context.Context, sdk.Corpus, sdk.Emit,
+			) (sdk.Coverage, error) {
+				return sdk.Coverage{}, nil
+			},
+		}},
+	}
+	if err := worker.Handle(
+		context.Background(), store.Job{Target: repo.Name},
+	); err != nil {
+		t.Fatalf("server-committed publish acknowledgement loss: %v", err)
+	}
+	scope := store.ExtractionScope{
+		Repository: repo.Name, Commit: unitCommit, Domain: "unit",
+	}
+	outcome, err := evidence.LatestExtractionDomainOutcome(
+		context.Background(), scope,
+	)
+	if err != nil ||
+		outcome.Disposition != store.DomainOutcomePublished ||
+		outcome.RunID == "" || !evidence.published {
+		t.Fatalf("published outcome after acknowledgement loss = %+v, %v",
+			outcome, err)
 	}
 }
 

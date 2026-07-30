@@ -381,6 +381,7 @@ type flakyRunnerStore struct {
 	mu                 sync.Mutex
 	terminalFailures   int
 	statuses           []JobStatus
+	releases           []Job
 	heartbeatLeaseLost bool
 }
 
@@ -399,6 +400,17 @@ func (s *flakyRunnerStore) HeartbeatJob(context.Context, Job) error {
 	if s.heartbeatLeaseLost {
 		return ErrLeaseLost
 	}
+	return nil
+}
+
+func (s *flakyRunnerStore) ReleaseJob(
+	_ context.Context,
+	job Job,
+	_ string,
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.releases = append(s.releases, job)
 	return nil
 }
 
@@ -426,6 +438,61 @@ func TestRunnerRetriesTerminalPersistence(t *testing.T) {
 	}
 	if doneWrites != 3 {
 		t.Errorf("done writes = %d, want 3 (two retries)", doneWrites)
+	}
+}
+
+func TestRunnerTerminalMarkerFailsOnFirstExecution(t *testing.T) {
+	st := &flakyRunnerStore{}
+	r := &Runner{
+		Store: st,
+		Kind:  JobExtract,
+		Handle: func(context.Context, Job) error {
+			return WithTerminal(errors.New("deterministic refusal"))
+		},
+		HeartbeatEvery: time.Second,
+		MaxAttempts:    3,
+		Who:            "terminal-worker",
+	}
+	r.execute(context.Background(), Job{
+		ID: "extraction_job:terminal", Kind: JobExtract, Target: "repo",
+		ClaimedBy: "terminal-worker", LeaseToken: "lease",
+	})
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if len(st.statuses) != 2 ||
+		st.statuses[0] != StatusRunning ||
+		st.statuses[1] != StatusFailed ||
+		len(st.releases) != 0 {
+		t.Fatalf("terminal transitions = %v releases=%d",
+			st.statuses, len(st.releases))
+	}
+}
+
+func TestRunnerYieldReleasesWithoutConsumingAttempt(t *testing.T) {
+	st := &flakyRunnerStore{}
+	r := &Runner{
+		Store: st,
+		Kind:  JobExtract,
+		Handle: func(context.Context, Job) error {
+			return WithYield(errors.New("bounded work remains"))
+		},
+		HeartbeatEvery: time.Second,
+		MaxAttempts:    3,
+		Who:            "yield-worker",
+	}
+	job := Job{
+		ID: "extraction_job:yield", Kind: JobExtract, Target: "repo",
+		Attempts: 2, ClaimedBy: "yield-worker", LeaseToken: "lease",
+	}
+	r.execute(context.Background(), job)
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if len(st.statuses) != 1 || st.statuses[0] != StatusRunning ||
+		len(st.releases) != 1 || st.releases[0].Attempts != job.Attempts {
+		t.Fatalf("yield transitions = %v releases=%+v",
+			st.statuses, st.releases)
 	}
 }
 

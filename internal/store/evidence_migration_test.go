@@ -98,6 +98,49 @@ func evidenceMigrationMarker(t *testing.T, s *Surreal) evidenceMigrationTestMark
 	return evidenceMigrationTestMarker{}
 }
 
+func TestRecordExtractionDomainOutcomeRequiresMigrationMarker(t *testing.T) {
+	s := newRunnerStore(t)
+	ctx := context.Background()
+	repository := "github.com/migration/outcome-marker"
+	commit := strings.Repeat("7", 40)
+	if err := s.UpsertRepo(ctx, Repo{
+		Name: repository, CloneURL: "https://example.com/outcome-marker.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetRepoIndexed(ctx, repository, commit, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	scope := ExtractionScope{
+		Repository: repository, Commit: commit, Domain: "proto-contract",
+	}
+	outcome := ExtractionDomainOutcome{
+		Scope:       scope,
+		Disposition: DomainOutcomeRetryableFailure,
+		Generation: ExtractionGenerationIdentity{
+			Extractor:        "v1",
+			InventoryPolicy:  "gitlink-boundary-v2",
+			DependencyDigest: "sha256:" + strings.Repeat("a", 64),
+		},
+		ReceiptSchema: ExtractionOutcomeReceiptSchema,
+		Receipt:       `{"schema":"phebs-extraction-domain-outcome-v1"}`,
+	}
+	if err := s.RecordExtractionDomainOutcome(ctx, outcome); err != nil {
+		t.Fatal(err)
+	}
+	clearEvidenceMigrationMarker(t, s)
+	outcome.Generation.Extractor = "v2"
+	if err := s.RecordExtractionDomainOutcome(
+		ctx, outcome,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("markerless outcome write = %v, want ErrConflict", err)
+	}
+	current, err := s.LatestExtractionDomainOutcome(ctx, scope)
+	if err != nil || current.Generation.Extractor != "v1" {
+		t.Fatalf("markerless write changed outcome = %+v, %v", current, err)
+	}
+}
+
 // The retracted T12 store could leave rows with an explicit run_id but no
 // version marker, deterministic occurrence key, or typed atom link. Reopen
 // must retain those rows for audit and explicit administrator cleanup while
