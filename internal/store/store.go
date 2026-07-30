@@ -340,22 +340,28 @@ type CoverageManifest struct {
 	// The manifest digest binds the complete reusable publication, while the
 	// remaining fields disclose the exact domain projection that was replayed.
 	// Empty fields identify readable legacy/direct-corpus runs.
-	ScopePosture             string `json:"scope_posture,omitempty"` // whole-repository | focused-local | repository-overlay
-	CandidateManifestDigest  string `json:"candidate_manifest_digest,omitempty"`
-	CandidatePlane           string `json:"candidate_plane,omitempty"` // local | repository | caller
-	ScopeCorpusFileCount     int    `json:"scope_corpus_file_count,omitempty"`
-	ScopeCorpusDeclaredBytes int64  `json:"scope_corpus_declared_bytes,omitempty"`
-	ScopeCorpusDigest        string `json:"scope_corpus_digest,omitempty"`
-	PlannedFileCount         int    `json:"planned_file_count,omitempty"`
-	PlannedRequiredFileCount int    `json:"planned_required_file_count,omitempty"`
-	PlannedDeclaredBytes     int64  `json:"planned_declared_bytes,omitempty"`
-	PlannedScopeDigest       string `json:"planned_scope_digest,omitempty"`
-	TypedInputKind           string `json:"typed_input_kind,omitempty"`
-	TypedInputPath           string `json:"typed_input_path,omitempty"`
-	TypedInputObjectID       string `json:"typed_input_object_id,omitempty"`
-	TypedInputDeclaredBytes  int64  `json:"typed_input_declared_bytes,omitempty"`
-	TypedInputDigest         string `json:"typed_input_digest,omitempty"`
-	TypedInputPresent        bool   `json:"typed_input_present"`
+	ScopePosture                string `json:"scope_posture,omitempty"` // whole-repository | focused-local | repository-overlay
+	CandidateManifestDigest     string `json:"candidate_manifest_digest,omitempty"`
+	CandidatePlane              string `json:"candidate_plane,omitempty"` // local | repository | caller
+	ScopeCorpusFileCount        int    `json:"scope_corpus_file_count,omitempty"`
+	ScopeCorpusDeclaredBytes    int64  `json:"scope_corpus_declared_bytes,omitempty"`
+	ScopeCorpusDigest           string `json:"scope_corpus_digest,omitempty"`
+	PlannedFileCount            int    `json:"planned_file_count,omitempty"`
+	PlannedRequiredFileCount    int    `json:"planned_required_file_count,omitempty"`
+	PlannedDeclaredBytes        int64  `json:"planned_declared_bytes,omitempty"`
+	PlannedScopeDigest          string `json:"planned_scope_digest,omitempty"`
+	ExcludedSourceFileCount     int    `json:"excluded_source_file_count,omitempty"`
+	ExcludedSourceRequiredCount int    `json:"excluded_source_required_count,omitempty"`
+	ExcludedSourceDeclaredBytes int64  `json:"excluded_source_declared_bytes,omitempty"`
+	ExcludedSCIPDocumentCount   int    `json:"excluded_scip_document_count,omitempty"`
+	ExcludedSCIPDefinitionCount int    `json:"excluded_scip_definition_count,omitempty"`
+	ExcludedSCIPOccurrenceCount int    `json:"excluded_scip_occurrence_count,omitempty"`
+	TypedInputKind              string `json:"typed_input_kind,omitempty"`
+	TypedInputPath              string `json:"typed_input_path,omitempty"`
+	TypedInputObjectID          string `json:"typed_input_object_id,omitempty"`
+	TypedInputDeclaredBytes     int64  `json:"typed_input_declared_bytes,omitempty"`
+	TypedInputDigest            string `json:"typed_input_digest,omitempty"`
+	TypedInputPresent           bool   `json:"typed_input_present"`
 }
 
 // ExtractionScope is the complete publication slot for one evidence domain.

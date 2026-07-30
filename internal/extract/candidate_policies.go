@@ -12,13 +12,13 @@ import (
 
 const (
 	protoContractEnumeration  = "proto-contract-paths-v1"
-	grpcConsumerEnumeration   = "grpc-consumer-paths-v1"
+	grpcConsumerEnumeration   = "grpc-consumer-paths-v2"
 	thriftContractEnumeration = "thrift-contract-paths-v1"
-	thriftConsumerEnumeration = "thrift-consumer-paths-v1"
-	scipProtoEnumeration      = "scip-proto-field-paths-v3"
-	scipThriftEnumeration     = "scip-thrift-field-paths-v3"
+	thriftConsumerEnumeration = "thrift-consumer-paths-v2"
+	scipProtoEnumeration      = "scip-proto-field-paths-v4"
+	scipThriftEnumeration     = "scip-thrift-field-paths-v4"
 	goCallerEnumeration       = "go-caller-paths-v3"
-	kafkaGoEnumeration        = "kafka-go-paths-v1"
+	kafkaGoEnumeration        = "kafka-go-paths-v2"
 	fixedRootSymlinkPolicy    = "fixed-root-regular-v1"
 )
 

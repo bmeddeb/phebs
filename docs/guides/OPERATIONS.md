@@ -500,13 +500,13 @@ publication membership is checked, and cleaned after a crash at startup.
 The retained
 [T30.4 prospective measurement](../../spike/t304/README.md) streamed 200,008
 regular files into five repository rows and six caller rows. It produced three
-two-bit caller leaves (`00:1`, `10:3`, `11:2`). The T30.6d manifest-v4
-refresh retains the focused-local projections; each run staged 12 files
+two-bit caller leaves (`00:1`, `10:3`, `11:2`). The T30.6e policy refresh
+retains the manifest-v4 focused-local projections; each run staged 12 files
 totaling 24,967 bytes. Twice the final caller content bounds planner spool and
 split scratch at 4,386 bytes; external-validation scratch is bounded at 3,514
 bytes. Adding the larger phase bound to the final stage gives 29,353 bytes of
-conservative peak candidate disk. The refresh runs took 3.61 s and 3.62 s,
-peaked at 61,112,320 and 61,947,904 bytes RSS, and
+conservative peak candidate disk. The refresh runs took 3.61 s and 3.55 s,
+peaked at 61,554,688 and 61,456,384 bytes RSS, and
 reproduced byte-identical
 output. The
 frozen local planner gates are at most 10 s wall time, 256 MiB peak RSS, and 16
@@ -604,6 +604,15 @@ they never invent `index.scip`, fall back to a root artifact, or admit a SCIP
 document outside the unit. A focused unit with no designation reports a typed
 input gap. Whole-repository repositories retain the legacy root lookup.
 
+For a committed non-empty unit, local evidence consumes only candidate records
+whose source lane is `base`; `go_test` records are rejected before an ordinary
+blob open. Focused SCIP field readers still stream and globally safety-account
+the complete typed artifact once, but discard exact `_test.go` documents and
+all of their definitions, anchors/ranges, occurrences, and joins before
+ordinary source reads or fact emission. Empty-unit whole-repository extraction
+ignores the lane and retains shipped behavior. Search is independent: every
+test file admitted by the focused unit remains searchable.
+
 ##### Extraction operation receipts
 
 Every repository extraction job emits one JSON log entry prefixed
@@ -630,6 +639,12 @@ exact association-plus-assertion rows staged by that domain. They never contain 
 path, source content, path sample, or raw extractor diagnostic. Use the
 ordinary domain log immediately preceding the receipt when a raw local
 diagnostic is required for troubleshooting.
+
+For focused local evidence, the counts also disclose ordinary source files
+excluded by lane and their aggregate declared bytes. SCIP field domains add
+excluded typed-document, definition, and occurrence counts. The same scalar
+fields enter the bounded durable domain receipt and authoritative coverage;
+they are accounting, not a second evidence lane.
 
 Phase durations are not additive. `extractor_ms` is the inclusive wall time of
 the extractor call, so it contains `opened_source_ms` and any `staging_ms`
@@ -767,12 +782,13 @@ failure diagnostic and wait for the target-bound caller generation.
 T30.6a supplies the bounded job report described above, T30.6b makes exact
 terminal and retryable outcomes durable, and T30.6c schedules them beneath
 independent per-domain and aggregate job/lock bounds. T30.6d advances
-candidate identity with `source_lane: base|go_test`; T30.6e next consumes
+candidate identity with `source_lane: base|go_test`; T30.6e now consumes
 `base` only for focused local evidence while safety-accounting the complete
 typed SCIP artifact before removing exact test documents' definitions,
-anchors, occurrences, and joins. Empty-unit repositories retain shipped
+anchors, occurrences, and joins. Coverage and bounded receipts expose the
+excluded counts and declared bytes. Empty-unit repositories retain shipped
 whole-repository extraction behavior, and focused search remains unchanged.
-T30.6f–T30.6i separately deliver catalog lifecycle, resolver materialization,
+T30.6f is next; T30.6f–T30.6i separately deliver catalog lifecycle, resolver materialization,
 leaf artifacts, and complete caller publication. T30.6j–T30.6l bind Caller Map,
 comparison, and Workbench Impact as separate authorized consumers. T30.6m
 selects the historical-retention posture and T30.6n implements only that
@@ -821,7 +837,9 @@ cost resumes after those replacement outcomes publish or settle.
 
 Coverage records name the scope posture, unit digest, candidate-manifest
 digest, candidate plane, exact selected candidate count/bytes/digest, and the
-source paths actually read. Coverage certificates additionally disclose the
+source paths actually read. Focused local coverage also reports excluded
+ordinary source file/required counts and declared bytes; SCIP field coverage
+adds excluded document/definition/occurrence counts. Coverage certificates additionally disclose the
 unit name and canonical primary/supporting roots, typed-index posture and path,
 and treat freshness as equality of both commit and unit digest. A failed or
 staged replacement remains visible only as the latest attempt for that exact

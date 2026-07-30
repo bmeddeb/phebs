@@ -341,6 +341,7 @@ func (manifest *manifestAdapter) ForEachRepositoryFile(
 		return visit(extract.CandidateManifestFile{
 			Path: record.Path, ObjectID: record.OID,
 			DeclaredBytes: record.DeclaredBytes,
+			SourceLane:    record.SourceLane,
 			Required:      record.Required,
 			InUnit:        record.InUnit,
 		})

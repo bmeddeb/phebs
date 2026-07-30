@@ -40,6 +40,16 @@ type SCIPDocumentScope interface {
 	SCIPDocumentInScope(path string) bool
 }
 
+// SCIPDocumentFilter is the optional focused-evidence lane filter paired with
+// SCIPDocumentScope. Built-in SCIP readers first validate that every canonical
+// document is in scope and globally safety-account its occurrences, then call
+// this method before retaining any document semantics. Whole-repository
+// corpora may omit it; their shipped behavior includes every in-scope
+// document.
+type SCIPDocumentFilter interface {
+	SCIPDocumentIncluded(path string) bool
+}
+
 // SCIPInput preserves the real committed provenance of typed parser input.
 // Present=false is a supported absence; Path may be empty when a configured
 // unit deliberately has no typed-index designation.
@@ -109,9 +119,12 @@ type FactChunk struct {
 // retained for future extractor APIs, but the worker refuses to publish any
 // result that reports one: an incomplete replacement set is never visible.
 type Coverage struct {
-	Protocols       []string
-	Failures        []string
-	UnresolvedCount int
+	Protocols               []string
+	Failures                []string
+	UnresolvedCount         int
+	ExcludedSCIPDocuments   int
+	ExcludedSCIPDefinitions int
+	ExcludedSCIPOccurrences int
 }
 
 // Emit streams one fact to the trusted worker harness. The fact must cite the

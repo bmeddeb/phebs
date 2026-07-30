@@ -111,3 +111,128 @@ func TestValidateCandidateCoverageRejectsUnboundFields(t *testing.T) {
 		t.Fatal("focused coverage without candidate scope unexpectedly accepted")
 	}
 }
+
+func TestValidateCandidateCoverageBindsFocusedExclusions(t *testing.T) {
+	digest := func(value string) string {
+		return "sha256:" + strings.Repeat(value, 64)
+	}
+	base := CoverageManifest{
+		CorpusFileCount:             4,
+		CandidateFileCount:          1,
+		CandidateManifestDigest:     digest("a"),
+		ScopePosture:                "focused-local",
+		CandidatePlane:              "local",
+		ScopeCorpusFileCount:        4,
+		ScopeCorpusDeclaredBytes:    40,
+		ScopeCorpusDigest:           digest("b"),
+		PlannedFileCount:            2,
+		PlannedRequiredFileCount:    2,
+		PlannedDeclaredBytes:        20,
+		PlannedScopeDigest:          digest("c"),
+		ExcludedSourceFileCount:     1,
+		ExcludedSourceRequiredCount: 1,
+		ExcludedSourceDeclaredBytes: 9,
+	}
+	run := &ExtractionRun{UnitDigest: digest("f")}
+	if err := validateCandidateCoverage(base, run); err != nil {
+		t.Fatalf("valid source exclusions: %v", err)
+	}
+
+	scip := base
+	scip.CandidateFileCount = 0
+	scip.PlannedRequiredFileCount = 1
+	scip.ExcludedSCIPDocumentCount = 1
+	scip.ExcludedSCIPDefinitionCount = 2
+	scip.ExcludedSCIPOccurrenceCount = 3
+	scip.TypedInputKind = "scip"
+	scip.TypedInputPath = "service/index.scip"
+	scip.TypedInputObjectID = strings.Repeat("d", 40)
+	scip.TypedInputDeclaredBytes = 10
+	scip.TypedInputDigest = digest("e")
+	scip.TypedInputPresent = true
+	if err := validateCandidateCoverage(scip, run); err != nil {
+		t.Fatalf("valid SCIP exclusions: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*CoverageManifest)
+	}{
+		{
+			name: "non-focused",
+			mutate: func(got *CoverageManifest) {
+				got.ScopePosture = "repository-overlay"
+				got.CandidatePlane = "caller"
+			},
+		},
+		{
+			name: "too many excluded files",
+			mutate: func(got *CoverageManifest) {
+				got.ExcludedSourceFileCount = got.PlannedFileCount + 1
+			},
+		},
+		{
+			name: "excluded required exceeds files",
+			mutate: func(got *CoverageManifest) {
+				got.ExcludedSourceRequiredCount = 2
+			},
+		},
+		{
+			name: "included required mismatch",
+			mutate: func(got *CoverageManifest) {
+				got.CandidateFileCount++
+			},
+		},
+		{
+			name: "excluded bytes exceed plan",
+			mutate: func(got *CoverageManifest) {
+				got.ExcludedSourceDeclaredBytes =
+					got.PlannedDeclaredBytes + 1
+			},
+		},
+		{
+			name: "excluded bytes without file",
+			mutate: func(got *CoverageManifest) {
+				got.ExcludedSourceFileCount = 0
+				got.ExcludedSourceRequiredCount = 0
+				got.ExcludedSourceDeclaredBytes = 1
+				got.CandidateFileCount = got.PlannedRequiredFileCount
+			},
+		},
+		{
+			name: "definitions exceed occurrences",
+			mutate: func(got *CoverageManifest) {
+				got.ExcludedSCIPDefinitionCount =
+					got.ExcludedSCIPOccurrenceCount + 1
+			},
+		},
+		{
+			name: "SCIP semantics without document",
+			mutate: func(got *CoverageManifest) {
+				got.ExcludedSCIPDocumentCount = 0
+				got.ExcludedSCIPDefinitionCount = 0
+				got.ExcludedSCIPOccurrenceCount = 1
+			},
+		},
+		{
+			name: "SCIP counts without typed input",
+			mutate: func(got *CoverageManifest) {
+				got.TypedInputKind = ""
+				got.TypedInputPath = ""
+				got.TypedInputObjectID = ""
+				got.TypedInputDeclaredBytes = 0
+				got.TypedInputDigest = ""
+				got.TypedInputPresent = false
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := scip
+			test.mutate(&got)
+			if err := validateCandidateCoverage(got, run); err == nil {
+				t.Fatal("invalid exclusion coverage unexpectedly accepted")
+			}
+		})
+	}
+}

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -88,6 +89,7 @@ func (provider *generationManifestProvider) OpenCandidateManifest(
 type focusedManifestCorpusFactory struct {
 	files     map[string]string
 	typedPath string
+	reads     map[string]int
 }
 
 func (focusedManifestCorpusFactory) Lock(
@@ -106,6 +108,7 @@ func (factory focusedManifestCorpusFactory) New(
 		commit:     commit,
 		files:      factory.files,
 		typedPath:  factory.typedPath,
+		reads:      factory.reads,
 	}
 }
 
@@ -114,6 +117,7 @@ type focusedManifestCorpus struct {
 	commit     string
 	files      map[string]string
 	typedPath  string
+	reads      map[string]int
 }
 
 func (corpus *focusedManifestCorpus) RepoName() string {
@@ -148,6 +152,9 @@ func (corpus *focusedManifestCorpus) Read(
 	_ context.Context,
 	filePath string,
 ) (sdk.Blob, error) {
+	if corpus.reads != nil {
+		corpus.reads[filePath]++
+	}
 	content, ok := corpus.files[filePath]
 	if !ok {
 		return sdk.Blob{}, store.ErrNotFound
@@ -260,13 +267,174 @@ func validMemoryCandidateManifest() *memoryCandidateManifest {
 		records: []CandidateManifestFile{
 			{
 				Path: "read.proto", ObjectID: strings.Repeat("b", 40),
-				DeclaredBytes: int64(len("same blob")), Required: true,
+				DeclaredBytes: int64(len("same blob")),
+				SourceLane:    candidate.SourceLaneBase, Required: true,
 			},
 			{
 				Path: "same.proto", ObjectID: strings.Repeat("c", 40),
 				DeclaredBytes: int64(len("same blob")),
+				SourceLane:    candidate.SourceLaneBase,
 			},
 		},
+	}
+}
+
+func TestCandidateManifestFocusedReplayConsumesBaseLaneBeforeBlobOpen(
+	t *testing.T,
+) {
+	const (
+		basePath = "service/use.go"
+		testPath = "service/use_test.go"
+	)
+	files := map[string]string{
+		basePath: "package service\nvar Base = true\n",
+		testPath: "package service\nvar TestOnly = true\n",
+	}
+	for _, test := range []struct {
+		name    string
+		focused bool
+	}{
+		{name: "focused local", focused: true},
+		{name: "whole repository"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			manifest := &memoryCandidateManifest{
+				identity:    "sha256:" + strings.Repeat("a", 64),
+				corpusFiles: len(files),
+				gitlinks: CandidateManifestGitlinks{
+					Digest: emptyGitlinkInventory().digest,
+				},
+				plane: candidate.PlaneLocal,
+				records: []CandidateManifestFile{
+					{
+						Path: basePath, ObjectID: strings.Repeat("b", 40),
+						DeclaredBytes: int64(len(files[basePath])),
+						SourceLane:    candidate.SourceLaneBase,
+						Required:      true,
+					},
+					{
+						Path: testPath, ObjectID: strings.Repeat("c", 40),
+						DeclaredBytes: int64(len(files[testPath])),
+						SourceLane:    candidate.SourceLaneGoTest,
+						Required:      true,
+					},
+				},
+			}
+			if test.focused {
+				manifest.unitDigest =
+					"sha256:" + strings.Repeat("d", 64)
+			}
+			inner := &focusedManifestCorpus{
+				repository: "example.invalid/service",
+				commit:     strings.Repeat("e", 40),
+				files:      files,
+				reads:      make(map[string]int),
+			}
+			verified := newVerifiedCorpus(inner)
+			if err := verified.InventoryCandidateManifest(
+				t.Context(), manifest, "grpc-consumer", "test-v1",
+				func(filePath string) bool {
+					return strings.HasSuffix(filePath, ".go")
+				},
+			); err != nil {
+				t.Fatal(err)
+			}
+			var walked []string
+			if err := verified.WalkFiles(
+				t.Context(), func(filePath string) error {
+					walked = append(walked, filePath)
+					return nil
+				},
+			); err != nil {
+				t.Fatal(err)
+			}
+			wantWalked := []string{basePath, testPath}
+			if test.focused {
+				wantWalked = []string{basePath}
+			}
+			if !slices.Equal(walked, wantWalked) {
+				t.Fatalf("walked = %v, want %v", walked, wantWalked)
+			}
+			if _, err := verified.Read(t.Context(), basePath); err != nil {
+				t.Fatal(err)
+			}
+			if test.focused {
+				if _, err := verified.Read(
+					t.Context(), testPath,
+				); err == nil || !strings.Contains(
+					err.Error(), "not in corpus inventory",
+				) {
+					t.Fatalf("excluded test read error = %v", err)
+				}
+				if inner.reads[testPath] != 0 {
+					t.Fatalf(
+						"excluded test reached inner corpus %d time(s)",
+						inner.reads[testPath],
+					)
+				}
+			} else if _, err := verified.Read(
+				t.Context(), testPath,
+			); err != nil {
+				t.Fatal(err)
+			}
+			stats, err := verified.Stats()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if test.focused {
+				if stats.candidateFileCount != 1 ||
+					stats.excludedFiles != 1 ||
+					stats.excludedRequired != 1 ||
+					stats.excludedBytes != int64(len(files[testPath])) {
+					t.Fatalf("focused stats = %+v", stats)
+				}
+				coverage, err := coverageManifestForPolicy(
+					sdk.Coverage{}, 0, 0, 0, stats,
+					emptyGitlinkInventory(),
+					candidateManifestInventoryPrefix+
+						strings.Repeat("a", 64),
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if coverage.ExcludedSourceFileCount != 1 ||
+					coverage.ExcludedSourceRequiredCount != 1 ||
+					coverage.ExcludedSourceDeclaredBytes !=
+						int64(len(files[testPath])) {
+					t.Fatalf("focused exclusion coverage = %+v", coverage)
+				}
+			} else if stats.excludedFiles != 0 ||
+				stats.excludedRequired != 0 ||
+				stats.excludedBytes != 0 ||
+				inner.reads[testPath] != 1 {
+				t.Fatalf(
+					"whole-repository lane behavior changed: stats=%+v reads=%v",
+					stats, inner.reads,
+				)
+			}
+		})
+	}
+}
+
+func TestCandidateManifestReplayRejectsForgedSourceLane(t *testing.T) {
+	manifest := validMemoryCandidateManifest()
+	manifest.records[0].SourceLane = candidate.SourceLaneGoTest
+	inner := &focusedManifestCorpus{
+		repository: "example.invalid/service",
+		commit:     strings.Repeat("e", 40),
+		files:      map[string]string{"read.proto": "syntax = \"proto3\";\n"},
+		reads:      make(map[string]int),
+	}
+	verified := newVerifiedCorpus(inner)
+	err := verified.InventoryCandidateManifest(
+		t.Context(), manifest, "proto-contract", "1",
+		func(filePath string) bool { return filePath == "read.proto" },
+	)
+	if err == nil || !strings.Contains(err.Error(), "invalid source lane") {
+		t.Fatalf("forged source lane error = %v", err)
+	}
+	if len(inner.reads) != 0 {
+		t.Fatalf("forged source lane reached source reads: %v", inner.reads)
 	}
 }
 

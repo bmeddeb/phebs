@@ -45,6 +45,7 @@ type CandidateManifestFile struct {
 	ObjectID      string
 	Mode          string
 	DeclaredBytes int64
+	SourceLane    candidate.SourceLane
 	Required      bool
 	InUnit        bool
 }
@@ -243,6 +244,10 @@ func normalizeManifestFile(input CandidateManifestFile) (treeRecord, error) {
 	}
 	if input.DeclaredBytes < 0 {
 		return treeRecord{}, errors.New("candidate manifest record has negative declared size")
+	}
+	if input.SourceLane != candidate.SourceLaneForPath(input.Path) {
+		return treeRecord{}, errors.New(
+			"candidate manifest record has invalid source lane")
 	}
 	if input.Mode != "" && input.Mode != "100644" && input.Mode != "100755" {
 		return treeRecord{}, fmt.Errorf(

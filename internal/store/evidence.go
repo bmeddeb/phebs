@@ -555,6 +555,12 @@ func validateCandidateCoverage(coverage CoverageManifest, run *ExtractionRun) er
 			coverage.PlannedRequiredFileCount != 0 ||
 			coverage.PlannedDeclaredBytes != 0 ||
 			coverage.PlannedScopeDigest != "" ||
+			coverage.ExcludedSourceFileCount != 0 ||
+			coverage.ExcludedSourceRequiredCount != 0 ||
+			coverage.ExcludedSourceDeclaredBytes != 0 ||
+			coverage.ExcludedSCIPDocumentCount != 0 ||
+			coverage.ExcludedSCIPDefinitionCount != 0 ||
+			coverage.ExcludedSCIPOccurrenceCount != 0 ||
 			coverage.TypedInputKind != "" ||
 			coverage.TypedInputPath != "" ||
 			coverage.TypedInputObjectID != "" ||
@@ -600,10 +606,52 @@ func validateCandidateCoverage(coverage CoverageManifest, run *ExtractionRun) er
 		coverage.PlannedFileCount > coverage.ScopeCorpusFileCount ||
 		coverage.PlannedRequiredFileCount < 0 ||
 		coverage.PlannedRequiredFileCount > coverage.PlannedFileCount ||
-		coverage.PlannedRequiredFileCount != coverage.CandidateFileCount ||
 		coverage.PlannedDeclaredBytes < 0 ||
 		coverage.PlannedDeclaredBytes > coverage.ScopeCorpusDeclaredBytes {
 		return errors.New("candidate coverage counts or bytes are inconsistent")
+	}
+	if coverage.ExcludedSourceFileCount < 0 ||
+		coverage.ExcludedSourceFileCount > coverage.PlannedFileCount ||
+		coverage.ExcludedSourceRequiredCount < 0 ||
+		coverage.ExcludedSourceRequiredCount >
+			coverage.ExcludedSourceFileCount ||
+		coverage.ExcludedSourceRequiredCount >
+			coverage.PlannedRequiredFileCount ||
+		coverage.ExcludedSourceDeclaredBytes < 0 ||
+		coverage.ExcludedSourceDeclaredBytes >
+			coverage.PlannedDeclaredBytes ||
+		coverage.ExcludedSourceFileCount == 0 &&
+			coverage.ExcludedSourceDeclaredBytes != 0 ||
+		coverage.CandidateFileCount !=
+			coverage.PlannedRequiredFileCount-
+				coverage.ExcludedSourceRequiredCount ||
+		coverage.ExcludedSCIPDocumentCount < 0 ||
+		coverage.ExcludedSCIPDocumentCount > maxCoverageFileCount ||
+		coverage.ExcludedSCIPDefinitionCount < 0 ||
+		coverage.ExcludedSCIPDefinitionCount > maxCoverageFileCount ||
+		coverage.ExcludedSCIPOccurrenceCount < 0 ||
+		coverage.ExcludedSCIPOccurrenceCount > maxCoverageFileCount ||
+		coverage.ExcludedSCIPDefinitionCount >
+			coverage.ExcludedSCIPOccurrenceCount ||
+		coverage.ExcludedSCIPDocumentCount == 0 &&
+			(coverage.ExcludedSCIPDefinitionCount != 0 ||
+				coverage.ExcludedSCIPOccurrenceCount != 0) {
+		return errors.New("candidate exclusion coverage is inconsistent")
+	}
+	hasExclusions := coverage.ExcludedSourceFileCount != 0 ||
+		coverage.ExcludedSourceRequiredCount != 0 ||
+		coverage.ExcludedSourceDeclaredBytes != 0 ||
+		coverage.ExcludedSCIPDocumentCount != 0 ||
+		coverage.ExcludedSCIPDefinitionCount != 0 ||
+		coverage.ExcludedSCIPOccurrenceCount != 0
+	if hasExclusions && coverage.ScopePosture != "focused-local" {
+		return errors.New("candidate exclusions require focused-local coverage")
+	}
+	hasSCIPExclusions := coverage.ExcludedSCIPDocumentCount != 0 ||
+		coverage.ExcludedSCIPDefinitionCount != 0 ||
+		coverage.ExcludedSCIPOccurrenceCount != 0
+	if hasSCIPExclusions && coverage.TypedInputKind != "scip" {
+		return errors.New("SCIP exclusions require a SCIP typed input")
 	}
 	if coverage.TypedInputKind == "" {
 		if coverage.TypedInputPath != "" ||

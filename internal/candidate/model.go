@@ -414,7 +414,10 @@ func ManifestDigest(manifest Manifest) (string, error) {
 	return digest("phebs-candidate-manifest-v2\x00", payload), nil
 }
 
-func sourceLane(path string) SourceLane {
+// SourceLaneForPath returns the canonical ordinary-source lane for a validated
+// repository-relative path. Exact lowercase _test.go suffix is the complete
+// v1 classification rule; directory names and SCIP roles do not override it.
+func SourceLaneForPath(path string) SourceLane {
 	if strings.HasSuffix(path, "_test.go") {
 		return SourceLaneGoTest
 	}

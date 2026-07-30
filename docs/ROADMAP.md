@@ -114,13 +114,13 @@ is not the repair. T30.6 remains that caller-overlay umbrella and is split at
 each operational-state, scheduler, candidate-lane, catalog, leaf-artifact,
 complete-publication, consumer, and retention seam. T30.6a bounded job
 receipts, T30.6b durable exact-generation domain outcomes, T30.6c
-aggregate-bounded domain scheduling, and T30.6d candidate-v4 source-lane
-classification are shipped; T30.6e focused local-evidence base-lane
-consumption is next. Exact `_test.go` suffix now wins in candidate v4; focused
-local evidence for a committed non-empty unit consumes the
-resulting `base` lane in the following ticket, while empty-unit
-whole-repository extraction keeps shipped behavior and current search
-continues indexing every admitted test file. A physical test-search overlay,
+aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
+classification, and T30.6e focused local-evidence base-lane consumption are
+shipped; T30.6f resolver-catalog lifecycle is next. Exact `_test.go` suffix
+wins in candidate v4; focused local evidence for a committed non-empty unit
+now consumes only `base`, while empty-unit whole-repository extraction keeps
+shipped behavior and current search continues indexing every admitted test
+file. A physical test-search overlay,
 test-source association, automatic unit discovery, SCIP generation,
 pack-specific recognizer expansion, and per-file parser degradation remain
 separately reviewed future work. The private operator evaluation is not a

@@ -1004,7 +1004,7 @@ func validateRecord(
 ) error {
 	if record.Schema != RecordSchema || !safePath(record.Path) ||
 		len(record.Path) > maxCandidatePathBytes ||
-		record.SourceLane != sourceLane(record.Path) ||
+		record.SourceLane != SourceLaneForPath(record.Path) ||
 		!gitobj.IsObjectID(record.OID) ||
 		record.DeclaredBytes < 0 ||
 		record.DeclaredBytes > MaxDeclaredBytesPerArtifact ||

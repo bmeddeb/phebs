@@ -50,22 +50,22 @@
     },
     {
       "domain": "grpc-consumer",
-      "version": "1.1.0",
-      "enumeration_policy": "grpc-consumer-paths-v1",
+      "version": "1.2.0",
+      "enumeration_policy": "grpc-consumer-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local"
     },
     {
       "domain": "kafka-consumer",
-      "version": "1.1.0",
-      "enumeration_policy": "kafka-go-paths-v1",
+      "version": "1.2.0",
+      "enumeration_policy": "kafka-go-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local"
     },
     {
       "domain": "kafka-producer",
-      "version": "1.1.0",
-      "enumeration_policy": "kafka-go-paths-v1",
+      "version": "1.2.0",
+      "enumeration_policy": "kafka-go-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local"
     },
@@ -78,8 +78,8 @@
     },
     {
       "domain": "scip-proto-field",
-      "version": "1.3.0",
-      "enumeration_policy": "scip-proto-field-paths-v3",
+      "version": "1.4.0",
+      "enumeration_policy": "scip-proto-field-paths-v4",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local",
       "typed_inputs": [
@@ -88,8 +88,8 @@
     },
     {
       "domain": "scip-thrift-field",
-      "version": "1.3.0",
-      "enumeration_policy": "scip-thrift-field-paths-v3",
+      "version": "1.4.0",
+      "enumeration_policy": "scip-thrift-field-paths-v4",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local",
       "typed_inputs": [
@@ -108,8 +108,8 @@
     },
     {
       "domain": "thrift-consumer",
-      "version": "1.1.0",
-      "enumeration_policy": "thrift-consumer-paths-v1",
+      "version": "1.2.0",
+      "enumeration_policy": "thrift-consumer-paths-v2",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local"
     },
@@ -141,9 +141,9 @@
   "run1": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:e4d26b1ae2f6656c6448ce6c2cc5e8a9590fcebbe6f176e71c11e3f7307aed39",
-    "generation_digest": "sha256:975f1cd5980ce6c01bf708c6ff4d58fd2dc2fcbc79b87ac431351bd919563c3a",
-    "manifest_digest": "sha256:dff439f6f4b82a9fbd7bb4bec2bd59692c7f56afc4d55cd396d8a898c546d039",
+    "policy_digest": "sha256:73ad1537c150a93f6efaa96ada48c1ce477e5c68f0a1a6e86849455bcfd6a7ba",
+    "generation_digest": "sha256:65d50dac9bede00d8304e8c5e7a288a460062b4c42e59c7c519b0d36a54e0826",
+    "manifest_digest": "sha256:75fd91c2a3686d0193a035b49078f1c58674f9e23e8e4aabe8cc3dafeae880a1",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -185,16 +185,16 @@
     "planner_scratch_upper_bound_bytes": 4386,
     "validation_scratch_upper_bound_bytes": 3514,
     "peak_candidate_disk_bytes": 29353,
-    "canonical_output_digest": "sha256:f9562a9561fcaad0cd670ea6d756628bb4694624761c157d213f5b9911e4aa06",
-    "planner_wall_nanos": 3611308959,
-    "peak_rss_bytes": 61112320
+    "canonical_output_digest": "sha256:30ef974fc4f162100b5903526f53967511b7618ac11a3505a757c50d25db3bfd",
+    "planner_wall_nanos": 3608773292,
+    "peak_rss_bytes": 61554688
   },
   "run2": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:e4d26b1ae2f6656c6448ce6c2cc5e8a9590fcebbe6f176e71c11e3f7307aed39",
-    "generation_digest": "sha256:975f1cd5980ce6c01bf708c6ff4d58fd2dc2fcbc79b87ac431351bd919563c3a",
-    "manifest_digest": "sha256:dff439f6f4b82a9fbd7bb4bec2bd59692c7f56afc4d55cd396d8a898c546d039",
+    "policy_digest": "sha256:73ad1537c150a93f6efaa96ada48c1ce477e5c68f0a1a6e86849455bcfd6a7ba",
+    "generation_digest": "sha256:65d50dac9bede00d8304e8c5e7a288a460062b4c42e59c7c519b0d36a54e0826",
+    "manifest_digest": "sha256:75fd91c2a3686d0193a035b49078f1c58674f9e23e8e4aabe8cc3dafeae880a1",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -236,9 +236,9 @@
     "planner_scratch_upper_bound_bytes": 4386,
     "validation_scratch_upper_bound_bytes": 3514,
     "peak_candidate_disk_bytes": 29353,
-    "canonical_output_digest": "sha256:f9562a9561fcaad0cd670ea6d756628bb4694624761c157d213f5b9911e4aa06",
-    "planner_wall_nanos": 3621766459,
-    "peak_rss_bytes": 61947904
+    "canonical_output_digest": "sha256:30ef974fc4f162100b5903526f53967511b7618ac11a3505a757c50d25db3bfd",
+    "planner_wall_nanos": 3550392250,
+    "peak_rss_bytes": 61456384
   },
   "canonical_bytes_equal": true
 }

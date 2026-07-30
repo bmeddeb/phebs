@@ -1097,6 +1097,7 @@ func (w *Worker) runOne(
 	extractorStarted := operation.started()
 	coverage, extractErr := callExtractor(ctx, ex.extractor, verifiedCorpus, sink.Emit)
 	operation.addExtractor(operation.elapsed(extractorStarted))
+	operation.captureCoverage(coverage)
 	closeResources()
 	if extractErr != nil {
 		return fmt.Errorf("%s: extract: %w", ex.domain, extractErr)
@@ -1320,6 +1321,9 @@ type verifiedCorpus struct {
 	manifestBound     bool
 	scoped            bool
 	pathInScope       func(string) bool
+	excludedFiles     int
+	excludedRequired  int
+	excludedBytes     int64
 	attributionOnce   sync.Once
 	attributionSource sdk.AttributionSource
 	attributionErr    error
@@ -1455,6 +1459,7 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 	enumerated := make(map[string]struct{})
 	entries := make(map[string]treeRecord)
 	candidates := make(map[string]struct{})
+	seen := make(map[string]struct{})
 	pathBytes := 0
 	scope, err := manifest.DomainScope(domain, version)
 	if err != nil {
@@ -1473,7 +1478,13 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 		return fmt.Errorf(
 			"candidate manifest %s has invalid scope summary", domain)
 	}
-	var plannedDeclaredBytes int64
+	focused := scope.UnitDigest != "" && scope.Plane == candidatepkg.PlaneLocal
+	manifestFiles := 0
+	manifestRequired := 0
+	var manifestDeclaredBytes int64
+	excludedFiles := 0
+	excludedRequired := 0
+	var excludedBytes int64
 	err = manifest.ForEachRepositoryFile(
 		ctx,
 		domain,
@@ -1486,12 +1497,13 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 			if err != nil {
 				return fmt.Errorf("candidate manifest %s record: %w", domain, err)
 			}
-			if _, duplicate := enumerated[entry.path]; duplicate {
+			if _, duplicate := seen[entry.path]; duplicate {
 				return fmt.Errorf(
 					"candidate manifest %s repeats record %q",
 					domain, entry.path)
 			}
-			if len(paths) >= maxCorpusFiles {
+			seen[entry.path] = struct{}{}
+			if manifestFiles >= maxCorpusFiles {
 				return operationLimitError(fmt.Sprintf(
 					"candidate manifest %s exceeds %d-file extraction limit",
 					domain, maxCorpusFiles,
@@ -1513,26 +1525,38 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 					"candidate manifest %s required ledger disagrees for %q",
 					domain, entry.path)
 			}
+			manifestFiles++
+			if required {
+				manifestRequired++
+			}
+			if entry.size > math.MaxInt64-manifestDeclaredBytes {
+				return fmt.Errorf(
+					"candidate manifest %s declared bytes overflow", domain)
+			}
+			manifestDeclaredBytes += entry.size
+			if focused && input.SourceLane == candidatepkg.SourceLaneGoTest {
+				excludedFiles++
+				if required {
+					excludedRequired++
+				}
+				excludedBytes += entry.size
+				return nil
+			}
 			enumerated[entry.path] = struct{}{}
 			entries[entry.path] = entry
 			paths = append(paths, entry.path)
 			if required {
 				candidates[entry.path] = struct{}{}
 			}
-			if entry.size > math.MaxInt64-plannedDeclaredBytes {
-				return fmt.Errorf(
-					"candidate manifest %s declared bytes overflow", domain)
-			}
-			plannedDeclaredBytes += entry.size
 			return nil
 		},
 	)
 	if err != nil {
 		return err
 	}
-	if len(paths) != scope.CandidateFileCount ||
-		len(candidates) != scope.RequiredFileCount ||
-		plannedDeclaredBytes != scope.CandidateDeclaredBytes {
+	if manifestFiles != scope.CandidateFileCount ||
+		manifestRequired != scope.RequiredFileCount ||
+		manifestDeclaredBytes != scope.CandidateDeclaredBytes {
 		return fmt.Errorf(
 			"candidate manifest %s replay disagrees with scope summary", domain)
 	}
@@ -1547,10 +1571,10 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 		return fmt.Errorf("candidate manifest %s typed input: %w", domain, err)
 	}
 	corpusFileCount := scope.CorpusFileCount
-	if corpusFileCount < len(paths) {
+	if corpusFileCount < manifestFiles {
 		return fmt.Errorf(
 			"candidate manifest %s plans %d paths from a %d-file corpus",
-			domain, len(paths), corpusFileCount)
+			domain, manifestFiles, corpusFileCount)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -1566,8 +1590,11 @@ func (c *verifiedCorpus) InventoryCandidateManifest(
 	c.typedInputKind = typed.Kind
 	c.typedInputPresent = typedPresent
 	c.manifestBound = true
-	c.scoped = scope.UnitDigest != "" && scope.Plane == candidatepkg.PlaneLocal
+	c.scoped = focused
 	c.pathInScope = manifest.PathInScope
+	c.excludedFiles = excludedFiles
+	c.excludedRequired = excludedRequired
+	c.excludedBytes = excludedBytes
 	c.corpusFileCount = corpusFileCount
 	c.inventoryComplete = true
 	return nil
@@ -1658,6 +1685,19 @@ func (c *verifiedCorpus) SCIPDocumentInScope(filePath string) bool {
 		return true
 	}
 	return c.pathInScope != nil && c.pathInScope(filePath)
+}
+
+func (c *verifiedCorpus) SCIPDocumentIncluded(filePath string) bool {
+	if checkCorpusPath(filePath) != nil {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.closed || !c.inventoryComplete {
+		return false
+	}
+	return !c.scoped ||
+		candidatepkg.SourceLaneForPath(filePath) == candidatepkg.SourceLaneBase
 }
 
 func (c *verifiedCorpus) AttributionSource(ctx context.Context) (sdk.AttributionSource, error) {
@@ -1882,6 +1922,9 @@ type corpusStats struct {
 	plannedRequired    int
 	plannedBytes       int64
 	plannedDigest      string
+	excludedFiles      int
+	excludedRequired   int
+	excludedBytes      int64
 	typedInputKind     string
 	typedInputPath     string
 	typedInputObjectID string
@@ -1897,6 +1940,8 @@ type verifiedCorpusOperationSnapshot struct {
 	readFiles      int
 	readBytes      int64
 	plannedBytes   int64
+	excludedFiles  int
+	excludedBytes  int64
 }
 
 func (c *verifiedCorpus) operationSnapshot() verifiedCorpusOperationSnapshot {
@@ -1912,6 +1957,8 @@ func (c *verifiedCorpus) operationSnapshot() verifiedCorpusOperationSnapshot {
 		readFiles:      len(c.sources),
 		readBytes:      c.readBytes,
 		plannedBytes:   c.domainScope.CandidateDeclaredBytes,
+		excludedFiles:  c.excludedFiles,
+		excludedBytes:  c.excludedBytes,
 	}
 }
 
@@ -1977,6 +2024,9 @@ func (c *verifiedCorpus) Stats() (corpusStats, error) {
 		plannedRequired:    c.domainScope.RequiredFileCount,
 		plannedBytes:       c.domainScope.CandidateDeclaredBytes,
 		plannedDigest:      c.domainScope.CandidateDigest,
+		excludedFiles:      c.excludedFiles,
+		excludedRequired:   c.excludedRequired,
+		excludedBytes:      c.excludedBytes,
 		typedInputKind:     c.typedInputKind,
 		typedInputPath:     c.typedInput.path,
 		typedInputObjectID: c.typedInput.oid,
@@ -2310,6 +2360,12 @@ func coverageManifestForPolicy(
 	manifest.PlannedRequiredFileCount = stats.plannedRequired
 	manifest.PlannedDeclaredBytes = stats.plannedBytes
 	manifest.PlannedScopeDigest = stats.plannedDigest
+	manifest.ExcludedSourceFileCount = stats.excludedFiles
+	manifest.ExcludedSourceRequiredCount = stats.excludedRequired
+	manifest.ExcludedSourceDeclaredBytes = stats.excludedBytes
+	manifest.ExcludedSCIPDocumentCount = coverage.ExcludedSCIPDocuments
+	manifest.ExcludedSCIPDefinitionCount = coverage.ExcludedSCIPDefinitions
+	manifest.ExcludedSCIPOccurrenceCount = coverage.ExcludedSCIPOccurrences
 	if stats.typedInputKind != "" {
 		manifest.TypedInputKind = stats.typedInputKind
 		manifest.TypedInputPath = stats.typedInputPath

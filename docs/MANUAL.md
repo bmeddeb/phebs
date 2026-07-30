@@ -50,8 +50,11 @@ persists exact-generation per-domain outcomes so settled unavailable and
 terminal generations do not blind-retry across restart; and T30.6c bounds the
 complete post-lock job and cumulative mirror hold while scheduling
 never-attempted domains ahead of oldest retryables. Candidate source-lane
-classification, catalog, partition-publication, and read integration remain
-later tickets.
+classification is now consumed by focused local evidence: ordinary `go_test`
+rows are excluded before blob open and exact `_test.go` SCIP documents are
+removed after complete typed-artifact safety accounting. Empty-unit extraction
+and focused search retain shipped behavior. Catalog, partition-publication,
+and read integration remain later tickets.
 
 ## Evidence boundary
 

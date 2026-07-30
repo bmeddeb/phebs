@@ -12,6 +12,7 @@ import (
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
+	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/prometheus/client_golang/prometheus"
@@ -90,21 +91,26 @@ type ExtractionOperationDomain struct {
 }
 
 type ExtractionOperationDomainCounts struct {
-	CorpusFiles          int `json:"corpus_files"`
-	CandidateFiles       int `json:"candidate_files"`
-	OpenedSourceAttempts int `json:"opened_source_attempts"`
-	OpenedSourceFiles    int `json:"opened_source_files"`
-	Facts                int `json:"facts"`
-	Atoms                int `json:"atoms"`
-	Assertions           int `json:"assertions"`
-	Unresolved           int `json:"unresolved"`
-	StagedChunks         int `json:"staged_chunks"`
-	StagedRows           int `json:"staged_rows"`
+	CorpusFiles             int `json:"corpus_files"`
+	CandidateFiles          int `json:"candidate_files"`
+	ExcludedSourceFiles     int `json:"excluded_source_files"`
+	ExcludedSCIPDocuments   int `json:"excluded_scip_documents"`
+	ExcludedSCIPDefinitions int `json:"excluded_scip_definitions"`
+	ExcludedSCIPOccurrences int `json:"excluded_scip_occurrences"`
+	OpenedSourceAttempts    int `json:"opened_source_attempts"`
+	OpenedSourceFiles       int `json:"opened_source_files"`
+	Facts                   int `json:"facts"`
+	Atoms                   int `json:"atoms"`
+	Assertions              int `json:"assertions"`
+	Unresolved              int `json:"unresolved"`
+	StagedChunks            int `json:"staged_chunks"`
+	StagedRows              int `json:"staged_rows"`
 }
 
 type ExtractionOperationDomainBytes struct {
-	PlannedDeclared int64 `json:"planned_declared"`
-	OpenedSource    int64 `json:"opened_source"`
+	PlannedDeclared        int64 `json:"planned_declared"`
+	ExcludedSourceDeclared int64 `json:"excluded_source_declared"`
+	OpenedSource           int64 `json:"opened_source"`
 }
 
 type ExtractionOperationDomainLimits struct {
@@ -415,6 +421,7 @@ func (domain *domainOperationRecorder) capture(
 	domain.mu.Lock()
 	domain.report.Counts.CorpusFiles = corpusSnapshot.corpusFiles
 	domain.report.Counts.CandidateFiles = corpusSnapshot.candidateFiles
+	domain.report.Counts.ExcludedSourceFiles = corpusSnapshot.excludedFiles
 	domain.report.Counts.OpenedSourceAttempts = corpusSnapshot.readAttempts
 	domain.report.Counts.OpenedSourceFiles = corpusSnapshot.readFiles
 	domain.report.Counts.Facts = sinkSnapshot.facts
@@ -424,7 +431,22 @@ func (domain *domainOperationRecorder) capture(
 	domain.report.Counts.StagedChunks = sinkSnapshot.stagedChunks
 	domain.report.Counts.StagedRows = sinkSnapshot.stagedRows
 	domain.report.Bytes.PlannedDeclared = corpusSnapshot.plannedBytes
+	domain.report.Bytes.ExcludedSourceDeclared = corpusSnapshot.excludedBytes
 	domain.report.Bytes.OpenedSource = corpusSnapshot.readBytes
+	domain.mu.Unlock()
+}
+
+func (domain *domainOperationRecorder) captureCoverage(coverage sdk.Coverage) {
+	if domain == nil {
+		return
+	}
+	domain.mu.Lock()
+	domain.report.Counts.ExcludedSCIPDocuments =
+		coverage.ExcludedSCIPDocuments
+	domain.report.Counts.ExcludedSCIPDefinitions =
+		coverage.ExcludedSCIPDefinitions
+	domain.report.Counts.ExcludedSCIPOccurrences =
+		coverage.ExcludedSCIPOccurrences
 	domain.mu.Unlock()
 }
 

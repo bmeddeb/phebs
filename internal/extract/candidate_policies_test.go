@@ -11,30 +11,36 @@ import (
 
 func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 	tests := []struct {
-		domain string
-		plane  candidate.Plane
-		typed  bool
-		yes    []string
-		no     []string
+		domain      string
+		enumeration string
+		plane       candidate.Plane
+		typed       bool
+		yes         []string
+		no          []string
 	}{
 		{
-			domain: "proto-contract", plane: candidate.PlaneLocal,
-			yes: []string{"api.proto"}, no: []string{"api.go"},
+			domain: "proto-contract", enumeration: protoContractEnumeration,
+			plane: candidate.PlaneLocal,
+			yes:   []string{"api.proto"}, no: []string{"api.go"},
 		},
 		{
-			domain: "grpc-consumer", plane: candidate.PlaneLocal,
-			yes: []string{"api.go"}, no: []string{"api.proto"},
+			domain: "grpc-consumer", enumeration: grpcConsumerEnumeration,
+			plane: candidate.PlaneLocal,
+			yes:   []string{"api.go"}, no: []string{"api.proto"},
 		},
 		{
-			domain: "thrift-contract", plane: candidate.PlaneLocal,
-			yes: []string{"api.thrift"}, no: []string{"api.go"},
+			domain: "thrift-contract", enumeration: thriftContractEnumeration,
+			plane: candidate.PlaneLocal,
+			yes:   []string{"api.thrift"}, no: []string{"api.go"},
 		},
 		{
-			domain: "thrift-consumer", plane: candidate.PlaneLocal,
-			yes: []string{"api.go"}, no: []string{"api.thrift"},
+			domain: "thrift-consumer", enumeration: thriftConsumerEnumeration,
+			plane: candidate.PlaneLocal,
+			yes:   []string{"api.go"}, no: []string{"api.thrift"},
 		},
 		{
-			domain: "scip-proto-field", plane: candidate.PlaneLocal,
+			domain: "scip-proto-field", enumeration: scipProtoEnumeration,
+			plane: candidate.PlaneLocal,
 			yes: []string{
 				"api.go", "api.proto", "nested/buf.yaml",
 			},
@@ -42,13 +48,15 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 			typed: true,
 		},
 		{
-			domain: "scip-thrift-field", plane: candidate.PlaneLocal,
+			domain: "scip-thrift-field", enumeration: scipThriftEnumeration,
+			plane: candidate.PlaneLocal,
 			yes:   []string{"api.go"},
 			no:    []string{"index.scip", "api.proto", "api.thrift"},
 			typed: true,
 		},
 		{
-			domain: "grpc-caller", plane: candidate.PlaneCaller,
+			domain: "grpc-caller", enumeration: goCallerEnumeration,
+			plane: candidate.PlaneCaller,
 			yes: []string{
 				"api.go", "go.mod", "nested/go.mod",
 				layoutSnapshotPath, unitSnapshotPath,
@@ -58,7 +66,8 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 			typed: true,
 		},
 		{
-			domain: "thrift-caller", plane: candidate.PlaneCaller,
+			domain: "thrift-caller", enumeration: goCallerEnumeration,
+			plane: candidate.PlaneCaller,
 			yes: []string{
 				"api.go", "go.mod", "nested/go.mod",
 				layoutSnapshotPath, unitSnapshotPath,
@@ -68,12 +77,14 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 			typed: true,
 		},
 		{
-			domain: "kafka-producer", plane: candidate.PlaneLocal,
-			yes: []string{"api.go"}, no: []string{"api.proto"},
+			domain: "kafka-producer", enumeration: kafkaGoEnumeration,
+			plane: candidate.PlaneLocal,
+			yes:   []string{"api.go"}, no: []string{"api.proto"},
 		},
 		{
-			domain: "kafka-consumer", plane: candidate.PlaneLocal,
-			yes: []string{"api.go"}, no: []string{"api.proto"},
+			domain: "kafka-consumer", enumeration: kafkaGoEnumeration,
+			plane: candidate.PlaneLocal,
+			yes:   []string{"api.go"}, no: []string{"api.proto"},
 		},
 	}
 	for _, testCase := range tests {
@@ -90,6 +101,7 @@ func TestCandidatePoliciesFreezeEnumerationAndRequiredSeparation(t *testing.T) {
 			}
 			if len(policies) != 1 ||
 				policies[0].Plane != testCase.plane ||
+				policies[0].EnumerationPolicy != testCase.enumeration ||
 				policies[0].SymlinkPolicy != fixedRootSymlinkPolicy ||
 				policies[0].RejectSymlink == nil {
 				t.Fatalf("policy = %+v", policies)

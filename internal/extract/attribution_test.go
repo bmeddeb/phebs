@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
 	"github.com/bmeddeb/phebs/spike/t201"
@@ -234,6 +235,7 @@ func TestAttributionUsesExactTreeLookupOutsidePlannedRows(t *testing.T) {
 		manifest.records = append(manifest.records, CandidateManifestFile{
 			Path: filePath, ObjectID: entry.oid, Mode: entry.mode,
 			DeclaredBytes: entry.size,
+			SourceLane:    candidate.SourceLaneForPath(filePath),
 		})
 	}
 	sort.Slice(manifest.records, func(i, j int) bool {

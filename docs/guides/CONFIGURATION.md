@@ -169,12 +169,16 @@ search. Candidate v4 stamps ordinary records with
 `source_lane: base|go_test`; an exact `_test.go` suffix wins even under a
 generated, mock, fixture, or `testdata` path, and every other ordinary
 candidate is `base`. For repositories with a committed non-empty analysis unit,
-T30.6e will consume `base` for focused local evidence; repositories with an
-empty unit digest will record the lane but retain shipped whole-repository
-extraction behavior. T30.6h will consume the retained lane classification for
-caller-leaf planning. The source lane is not semantic unit scope, does not
-change the stable unit digest, and is not a search configuration surface.
-There is no setting that overrides the path-derived classification.
+focused local evidence now consumes only `base`; coverage and bounded receipts
+report the excluded source-file count and declared bytes. Focused SCIP field
+readers still validate the complete designated typed artifact, then remove
+exact `_test.go` documents before source reads or joins and report their
+excluded document/definition/occurrence counts. Repositories with an empty unit
+digest record the lane but retain shipped whole-repository extraction
+behavior. T30.6h will consume the retained lane classification for caller-leaf
+planning. The source lane is not semantic unit scope, does not change the
+stable unit digest, and is not a search configuration surface. There is no
+setting that overrides the path-derived classification.
 
 Repositories absent from `analysis_units` retain whole-repository indexing and
 extraction. Their exact evidence scope has an empty unit digest, and their

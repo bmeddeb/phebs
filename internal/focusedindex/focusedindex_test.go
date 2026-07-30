@@ -121,6 +121,22 @@ func TestFocusedBuildIntegrityAndExactRecovery(t *testing.T) {
 		hits[0].Version != fixture.head {
 		t.Fatalf("admitted hits = %+v", hits)
 	}
+	const testNeedle = "FOCUSED_TEST_ONLY_SEARCH_NEEDLE"
+	for name, testHits := range map[string][]zoekt.FileMatch{
+		"Search": searchIndex(
+			t, ctx, stage, testNeedle+" branch:HEAD",
+		),
+		"Stream": streamIndex(
+			t, ctx, stage, testNeedle+" branch:HEAD",
+		),
+	} {
+		if len(testHits) != 1 ||
+			testHits[0].FileName !=
+				"services/payments/src/only_test.go" ||
+			testHits[0].Version != fixture.head {
+			t.Fatalf("%s exact _test.go hits = %+v", name, testHits)
+		}
+	}
 	if hits := searchIndex(t, ctx, stage, "OUT_OF_SCOPE_PHYSICAL_NEEDLE"); len(hits) != 0 {
 		t.Fatalf("out-of-scope shard hits = %+v", hits)
 	}
@@ -695,6 +711,10 @@ func newFocusedFixture(t *testing.T) focusedFixture {
 		}
 	}
 	write("services/payments/src/main.go", "package payments\nconst Needle = \"ADMITTED_V1_NEEDLE\"\n")
+	write(
+		"services/payments/src/only_test.go",
+		"package payments\nconst TestNeedle = \"FOCUSED_TEST_ONLY_SEARCH_NEEDLE\"\n",
+	)
 	for index := range 8 {
 		write(
 			fmt.Sprintf("services/payments/src/file%d.go", index),
@@ -776,6 +796,33 @@ func searchIndex(
 		t.Fatal(err)
 	}
 	return result.Files
+}
+
+func streamIndex(
+	t *testing.T,
+	ctx context.Context,
+	indexDir, expression string,
+) []zoekt.FileMatch {
+	t.Helper()
+	searcher, err := zoektsearch.NewDirectorySearcher(indexDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer searcher.Close()
+	parsed, err := query.Parse(expression)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var files []zoekt.FileMatch
+	if err := searcher.StreamSearch(
+		ctx, parsed, &zoekt.SearchOptions{},
+		zoekt.SenderFunc(func(result *zoekt.SearchResult) {
+			files = append(files, result.Files...)
+		}),
+	); err != nil {
+		t.Fatal(err)
+	}
+	return files
 }
 
 func sameHits(left, right []zoekt.FileMatch) bool {

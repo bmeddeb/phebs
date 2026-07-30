@@ -295,6 +295,55 @@ func TestExtractionOperationDurationBucketsCoverExtractionBudget(t *testing.T) {
 	}
 }
 
+func TestExtractionOperationReportsFocusedExclusions(t *testing.T) {
+	domain := &domainOperationRecorder{
+		now: time.Now,
+		report: ExtractionOperationDomain{
+			Domain:           "scip-proto-field",
+			ExtractorVersion: "1.4.0",
+			Reason:           OperationReasonPublishedEmpty,
+		},
+	}
+	corpus := &verifiedCorpus{
+		corpusFileCount: 12,
+		candidates:      map[string]struct{}{"consumer/use.go": {}},
+		domainScope: CandidateManifestScope{
+			CandidateDeclaredBytes: 4096,
+		},
+		excludedFiles: 3,
+		excludedBytes: 2048,
+	}
+	coverage := sdk.Coverage{
+		ExcludedSCIPDocuments:   2,
+		ExcludedSCIPDefinitions: 4,
+		ExcludedSCIPOccurrences: 9,
+	}
+	domain.capture(corpus, nil)
+	domain.captureCoverage(coverage)
+
+	report := domain.snapshot()
+	if report.Counts.ExcludedSourceFiles != 3 ||
+		report.Bytes.ExcludedSourceDeclared != 2048 ||
+		report.Counts.ExcludedSCIPDocuments != 2 ||
+		report.Counts.ExcludedSCIPDefinitions != 4 ||
+		report.Counts.ExcludedSCIPOccurrences != 9 {
+		t.Fatalf("operation exclusions = %+v / %+v", report.Counts, report.Bytes)
+	}
+	var receipt ExtractionDomainOutcomeReceipt
+	raw := encodeExtractionDomainOutcomeReceipt(
+		domain, store.DomainOutcomePublished,
+	)
+	if err := json.Unmarshal([]byte(raw), &receipt); err != nil {
+		t.Fatal(err)
+	}
+	if receipt.Counts != report.Counts || receipt.Bytes != report.Bytes {
+		t.Fatalf(
+			"durable receipt exclusions = %+v / %+v, want %+v / %+v",
+			receipt.Counts, receipt.Bytes, report.Counts, report.Bytes,
+		)
+	}
+}
+
 type operationCurrentProvider struct {
 	identity      string
 	policyDigest  string

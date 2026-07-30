@@ -26,6 +26,8 @@ type memoryCorpus struct {
 	files        map[string]string
 	typedPath    string
 	inScope      func(string) bool
+	included     func(string) bool
+	reads        map[string]int
 }
 
 func (c memoryCorpus) RepoName() string { return c.repo }
@@ -48,6 +50,9 @@ func (c memoryCorpus) WalkFiles(ctx context.Context, visit func(string) error) e
 }
 
 func (c memoryCorpus) Read(_ context.Context, filePath string) (sdk.Blob, error) {
+	if c.reads != nil {
+		c.reads[filePath]++
+	}
 	content, ok := c.files[filePath]
 	if !ok {
 		return sdk.Blob{}, fmt.Errorf("missing %q", filePath)
@@ -70,6 +75,9 @@ func (c memoryCorpus) ReadSCIPIndex(ctx context.Context) (sdk.SCIPInput, error) 
 }
 func (c memoryCorpus) SCIPDocumentInScope(filePath string) bool {
 	return c.inScope == nil || c.inScope(filePath)
+}
+func (c memoryCorpus) SCIPDocumentIncluded(filePath string) bool {
+	return c.included == nil || c.included(filePath)
 }
 
 func trustedBlob(content string) sdk.Blob {
@@ -122,6 +130,62 @@ func TestReferencesUseExactSCIPSpansAndClassification(t *testing.T) {
 	}
 	if classifications["read"].Assertion.Subject == classifications["write"].Assertion.Subject {
 		t.Fatal("distinct occurrences collapsed to one semantic subject")
+	}
+}
+
+func TestFocusedFilterDropsTestDefinitionDocumentBeforeSourceReads(t *testing.T) {
+	corpus := fixtureCorpus(t, "v1.0.0", "old_name", "OldName", 10)
+	index := decodeIndex(t, corpus.files[indexPath])
+	generated := index.Documents[0]
+	oldPath := generated.GetRelativePath()
+	testPath := strings.TrimSuffix(oldPath, ".go") + "_test.go"
+	generated.RelativePath = testPath
+	corpus.files[testPath] = corpus.files[oldPath]
+	delete(corpus.files, oldPath)
+	corpus.files[indexPath] = encodeIndex(t, index)
+	corpus.included = func(filePath string) bool {
+		return !strings.HasSuffix(filePath, "_test.go")
+	}
+	corpus.reads = make(map[string]int)
+
+	expectedDefinitions := 0
+	for _, occurrence := range generated.GetOccurrences() {
+		if occurrence.GetSymbolRoles()&
+			int32(scip.SymbolRole_Definition) != 0 {
+			expectedDefinitions++
+		}
+	}
+	var facts []sdk.Fact
+	coverage, err := New().Extract(
+		context.Background(), corpus,
+		func(fact sdk.Fact) error {
+			facts = append(facts, fact)
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(facts) != 0 {
+		t.Fatalf("test-only definitions resolved base references: %+v", facts)
+	}
+	if corpus.reads[testPath] != 0 {
+		t.Fatalf("excluded test source reads = %d", corpus.reads[testPath])
+	}
+	if coverage.ExcludedSCIPDocuments != 1 ||
+		coverage.ExcludedSCIPDefinitions != expectedDefinitions ||
+		coverage.ExcludedSCIPOccurrences != len(generated.GetOccurrences()) {
+		t.Fatalf("excluded SCIP coverage = %+v", coverage)
+	}
+
+	index = decodeIndex(t, corpus.files[indexPath])
+	index.Documents[0].Occurrences[0].Symbol =
+		strings.Repeat("x", maxSymbolBytes+1)
+	corpus.files[indexPath] = encodeIndex(t, index)
+	if _, err := New().Extract(
+		context.Background(), corpus, func(sdk.Fact) error { return nil },
+	); err == nil || !strings.Contains(err.Error(), "symbol over") {
+		t.Fatalf("excluded document escaped global validation: %v", err)
 	}
 }
 

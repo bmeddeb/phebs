@@ -38,7 +38,7 @@ import (
 
 const (
 	domain        = "scip-proto-field"
-	version       = "1.3.0"
+	version       = "1.4.0"
 	schemaVersion = "t13-v1"
 	indexPath     = "index.scip" // legacy whole-repository test fixture path
 
@@ -119,7 +119,7 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 	if !input.Present {
 		return sdk.Coverage{Protocols: []string{"scip-index-absent"}}, nil
 	}
-	documents, err := parseIndexScoped(ctx, input.Content, corpus)
+	documents, exclusions, err := parseIndexScoped(ctx, input.Content, corpus)
 	if err != nil {
 		return sdk.Coverage{}, fmt.Errorf("parse %s: %w", input.Path, err)
 	}
@@ -134,23 +134,32 @@ func (extractor) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 	if err := emitReferences(ctx, corpus, paths, documents, bindings, emit); err != nil {
 		return sdk.Coverage{}, err
 	}
-	return sdk.Coverage{Protocols: []string{
-		"protobuf-generated-accessor-v1",
-		"scip",
-		"scip-package-lineage-v1",
-	}}, nil
+	return sdk.Coverage{
+		Protocols: []string{
+			"protobuf-generated-accessor-v1",
+			"scip",
+			"scip-package-lineage-v1",
+		},
+		ExcludedSCIPDocuments:   exclusions.ExcludedSCIPDocuments,
+		ExcludedSCIPDefinitions: exclusions.ExcludedSCIPDefinitions,
+		ExcludedSCIPOccurrences: exclusions.ExcludedSCIPOccurrences,
+	}, nil
 }
 
 func parseIndex(ctx context.Context, content string) ([]indexedDocument, error) {
-	return parseIndexScoped(ctx, content, nil)
+	documents, _, err := parseIndexScoped(ctx, content, nil)
+	return documents, err
 }
 
 func parseIndexScoped(
 	ctx context.Context,
 	content string,
 	corpus sdk.Corpus,
-) ([]indexedDocument, error) {
+) ([]indexedDocument, sdk.Coverage, error) {
 	byPath := make(map[string]*indexedDocument)
+	encodings := make(map[string]scip.PositionEncoding)
+	excludedPaths := make(map[string]struct{})
+	exclusions := sdk.Coverage{}
 	metadataSeen := false
 	metadataEncoding := scip.PositionEncoding_UnspecifiedPositionEncoding
 	documentCount := 0
@@ -206,26 +215,60 @@ func parseIndexScoped(
 			if !validEncoding(encoding) {
 				return fmt.Errorf("document %q has unspecified position encoding", doc.GetRelativePath())
 			}
-			stored := byPath[doc.GetRelativePath()]
-			if stored == nil {
-				stored = &indexedDocument{path: doc.GetRelativePath(), encoding: encoding}
-				byPath[stored.path] = stored
-			} else if stored.encoding != encoding {
-				return fmt.Errorf("document %q has conflicting position encodings", stored.path)
+			previousEncoding, seen := encodings[doc.GetRelativePath()]
+			if seen && previousEncoding != encoding {
+				return fmt.Errorf(
+					"document %q has conflicting position encodings",
+					doc.GetRelativePath(),
+				)
 			}
+			encodings[doc.GetRelativePath()] = encoding
 			if len(doc.GetOccurrences()) > maxOccurrences-occurrenceCount {
 				return fmt.Errorf("more than %d occurrences", maxOccurrences)
 			}
 			occurrenceCount += len(doc.GetOccurrences())
+			included := true
+			if filter, ok := corpus.(sdk.SCIPDocumentFilter); ok {
+				included = filter.SCIPDocumentIncluded(doc.GetRelativePath())
+			}
+			if !included {
+				if _, seen := excludedPaths[doc.GetRelativePath()]; !seen {
+					excludedPaths[doc.GetRelativePath()] = struct{}{}
+					exclusions.ExcludedSCIPDocuments++
+				}
+			}
+			var stored *indexedDocument
+			if included {
+				stored = byPath[doc.GetRelativePath()]
+				if stored == nil {
+					stored = &indexedDocument{
+						path: doc.GetRelativePath(), encoding: encoding,
+					}
+					byPath[stored.path] = stored
+				}
+			}
 			for _, occurrence := range doc.GetOccurrences() {
+				if !included {
+					exclusions.ExcludedSCIPOccurrences++
+					if occurrence.GetSymbolRoles()&
+						int32(scip.SymbolRole_Definition) != 0 {
+						exclusions.ExcludedSCIPDefinitions++
+					}
+				}
 				if occurrence.GetSymbol() == "" {
 					continue
 				}
 				if len(occurrence.GetSymbol()) > maxSymbolBytes {
-					return fmt.Errorf("document %q has a symbol over %d bytes", stored.path, maxSymbolBytes)
+					return fmt.Errorf(
+						"document %q has a symbol over %d bytes",
+						doc.GetRelativePath(), maxSymbolBytes,
+					)
 				}
 				rangeValue, present := occurrence.SourceRange()
 				if !present || rangeValue.Validate() != nil {
+					continue
+				}
+				if !included {
 					continue
 				}
 				stored.occurrences = append(stored.occurrences, indexedOccurrence{
@@ -238,10 +281,10 @@ func parseIndexScoped(
 		},
 	}
 	if err := visitor.ParseStreaming(ctx, strings.NewReader(content)); err != nil {
-		return nil, err
+		return nil, sdk.Coverage{}, err
 	}
 	if !metadataSeen {
-		return nil, errors.New("metadata is missing")
+		return nil, sdk.Coverage{}, errors.New("metadata is missing")
 	}
 	documents := make([]indexedDocument, 0, len(byPath))
 	for _, doc := range byPath {
@@ -261,7 +304,7 @@ func parseIndexScoped(
 		documents = append(documents, *doc)
 	}
 	sort.Slice(documents, func(i, j int) bool { return documents[i].path < documents[j].path })
-	return documents, nil
+	return documents, exclusions, nil
 }
 
 func bindGeneratedFields(

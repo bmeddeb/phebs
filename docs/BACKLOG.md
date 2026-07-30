@@ -8,9 +8,9 @@ shipped exact focused evidence publication. The post-T30.5 issue-repair gate
 is closed. The separate large-monorepo review is complete; T30.6a shipped
 bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
 and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
-source-lane classification is shipped; T30.6e focused local-evidence base-lane
-consumption is next. Completed Epics
-0–24, Epic 29, T30.1–T30.6d, and P5 hardening are
+source-lane classification and T30.6e focused local-evidence base-lane
+consumption are shipped; T30.6f resolver-catalog lifecycle is next. Completed
+Epics 0–24, Epic 29, T30.1–T30.6e, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -20,11 +20,10 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6e · Focused local-evidence base-lane consumption** is next. T30.6a–T30.6d
-now provide bounded operational receipts, durable exact-generation outcomes,
-aggregate/fair retry scheduling, and strict path-derived candidate source
-lanes. T30.6e consumes the `base` lane only for focused local evidence while
-preserving empty-unit extraction and all search semantics. The accepted
+**T30.6f · Resolver-catalog lifecycle** is next. T30.6a–T30.6e now provide
+bounded operational receipts, durable exact-generation outcomes,
+aggregate/fair retry scheduling, strict path-derived candidate source lanes,
+and focused base-lane evidence consumption without changing search. The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
@@ -548,7 +547,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6e next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6f next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -889,30 +888,14 @@ lane under advanced candidate identities. Startup clears candidate-v3
 pointers and force-enqueues replacement; classification changes no extractor,
 evidence, focused-shard, or search behavior.
 
-**T30.6e · Focused local-evidence base-lane consumption** *(needs T30.6d)* —
-for repositories with a committed non-empty analysis unit, `grpc-consumer`,
-`thrift-consumer`, `kafka-producer`, and `kafka-consumer` skip `go_test` rows
-before blob open and report excluded files and declared blob bytes. The focused
-`scip-proto-field` and `scip-thrift-field` readers retain one designated typed
-blob: they open and globally safety-account the complete artifact once, then
-classify every canonical document path and remove the complete semantic
-contribution of each exact `_test.go` document—definitions, anchors,
-occurrences, and joins—before any ordinary source read, resolution, or fact
-emission. They report excluded documents/definitions/occurrences and do not
-open corresponding ordinary test-source blobs. Repositories with an empty unit
-digest retain shipped whole-repository extraction behavior: candidate v4
-records the lane, but whole-repository consumers ignore it. Advance every
-affected focused extractor and candidate-policy generation so prior
-test-bearing focused evidence cannot remain current; keep the exact
-`(repository, commit, unit, domain)` publication identity and add no
-test-evidence lane. AC: zero ordinary excluded-test blob reads, exact excluded
-declared-byte accounting, SCIP global bounds and whole-document filtering,
-test-only definition/anchor referenced by a non-test occurrence yields no
-resolved fact and no test-source open, no focused test fact leakage, unchanged
-empty-unit whole-repository behavior, replacement/freshness fences, and default
-Search plus Stream still return a needle present only in an admitted exact
-`_test.go` file because candidate-lane changes never alter focused shard/search
-identity; full merge bar.
+**T30.6e ✅ · Focused local-evidence base-lane consumption** *(2026-07-30;
+needs T30.6d)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306e--focused-local-evidence-base-lane-consumption).
+Focused local consumers now exclude ordinary `go_test` candidates before blob
+open; typed SCIP consumers safety-account the complete artifact before
+removing exact `_test.go` document semantics. Durable coverage and bounded
+receipts disclose exact exclusions. Empty-unit extraction and focused
+Search/Stream behavior remain unchanged.
 
 **T30.6f · Resolver-catalog lifecycle** *(needs T30.6e)* — define the immutable
 catalog schema, identity, member receipts, publication, validation, recovery,

@@ -676,7 +676,7 @@ func newRecord(
 ) Record {
 	return Record{
 		Schema: RecordSchema, Path: current.path, OID: current.oid,
-		DeclaredBytes: current.size, SourceLane: sourceLane(current.path),
+		DeclaredBytes: current.size, SourceLane: SourceLaneForPath(current.path),
 		Domains:         append([]string{}, domains...),
 		RequiredDomains: append([]string{}, required...), InUnit: inUnit,
 		Shared: shared, Hash: hashText,

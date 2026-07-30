@@ -4313,3 +4313,64 @@ blob read, child process, or concurrency. No production-registration,
 completeness, extraction-accuracy, migration-completion,
 decommission-safety, or historical-retention claim is created. T30.6e owns
 focused local-evidence base-lane consumption.
+
+### T30.6e · Focused local-evidence base-lane consumption
+
+**T30.6e ✅ · Focused local-evidence base-lane consumption** *(2026-07-30)* —
+for a committed non-empty analysis unit, the trusted candidate replay now
+validates every projected record and its recomputed source lane, but removes
+`go_test` records from the corpus exposed to local extractors. Consequently
+`grpc-consumer`, `thrift-consumer`, `kafka-producer`, and `kafka-consumer`
+cannot open an excluded ordinary test blob. Coverage and the bounded
+operational/durable domain receipts disclose excluded source-file counts and
+declared bytes.
+
+The focused `scip-proto-field` and `scip-thrift-field` readers still open the
+one designated typed index once. Their streaming pass validates scope,
+document paths, position encodings, symbols and ranges while globally applying
+the existing document and occurrence caps before retention. It then drops the
+complete contribution of an exact lowercase `_test.go` document—definitions,
+anchors/ranges, occurrences, and all downstream joins—before any ordinary
+source read, resolution, or fact emission. Coverage and receipts disclose
+excluded SCIP document, definition, and occurrence counts. A test-only
+definition referenced by a base document therefore emits no fact and never
+opens the test source.
+
+Extractor versions advance to `grpc-consumer` 1.2.0, `thrift-consumer` 1.2.0,
+`kafka-producer`/`kafka-consumer` 1.2.0, and
+`scip-proto-field`/`scip-thrift-field` 1.4.0. Their candidate enumeration
+identities advance to `grpc-consumer-paths-v2`,
+`thrift-consumer-paths-v2`, `kafka-go-paths-v2`,
+`scip-proto-field-paths-v4`, and `scip-thrift-field-paths-v4`. The complete
+policy digest consequently forces one candidate replacement and one
+all-enabled-domain extraction pass per indexed repository after upgrade; exact
+settled generations then return to the existing pointer-only no-op.
+Publication remains exactly `(repository, commit, unit, domain)`: no
+test-evidence lane or alternate current pointer exists.
+
+AC met: forged replay-lane refusal before source access; focused base-only
+candidate replay with exact excluded file/required/declared-byte accounting;
+real-worker SCIP filtering and durable/operational receipt assertions; complete
+typed-artifact safety accounting; test-only definition plus base reference
+yielding zero facts and zero test-source reads; excluded-document cap and
+symbol validation; unchanged empty-unit whole-repository behavior; existing
+generation and publication freshness fences; direct Search and Stream hits for
+an admitted test-only needle; affected registry/baseline generation gates;
+dated PLAN decision and Operations, Configuration, Manual, roadmap, AGENTS,
+and active/completed backlog updates; refreshed retained T30.4 receipt; full
+merge bar.
+
+The neutral 200,008-file planner refresh remains byte-identical across two
+runs: five repository rows, six caller rows, 12 artifacts and 24,967 staged
+bytes, with a 29,353-byte conservative peak-disk bound. Runs completed in
+3.61 s/3.55 s at 61,554,688/61,456,384 bytes RSS inside the frozen gates.
+Steady-state settled work adds no mirror lock, corpus walk, candidate/member
+hash, publication open, source/typed blob read, evidence write, child process,
+or concurrency. A stale focused local domain still replays only `P_d`, adding
+one constant-time lane check per record and retaining only base paths. SCIP
+work remains one bounded typed read and `O(documents + occurrences)` streaming
+validation, while excluded documents reduce retained semantic state and cause
+no ordinary test-source read. Empty-unit whole-repository extraction performs
+the shipped work. No search behavior, production registration, completeness,
+extraction-accuracy, migration-completion, decommission-safety, or historical
+retention claim is created. T30.6f owns resolver-catalog lifecycle.

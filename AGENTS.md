@@ -97,8 +97,8 @@ materialization, leaf execution and complete publication, authorized
 consumers, and retention decision and implementation. T30.6a bounded
 operational receipts, T30.6b durable exact-generation outcomes, and T30.6c
 aggregate-bounded domain scheduling are shipped; T30.6d candidate-v4
-source-lane classification is also shipped, and T30.6e focused local-evidence
-base-lane consumption is next. A physical Go-test search overlay,
+source-lane classification and T30.6e focused local-evidence base-lane
+consumption are also shipped, and T30.6f resolver-catalog lifecycle is next. A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,

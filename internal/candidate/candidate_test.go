@@ -1701,7 +1701,7 @@ func TestCallerSpoolScanHonorsCancellation(t *testing.T) {
 func partitionTestRecord(hashText, filePath string) Record {
 	return Record{
 		Schema: RecordSchema, Path: filePath, OID: strings.Repeat("a", 40),
-		SourceLane: sourceLane(filePath),
+		SourceLane: SourceLaneForPath(filePath),
 		Domains:    []string{"caller"}, Hash: hashText,
 	}
 }

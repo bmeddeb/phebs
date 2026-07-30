@@ -30,7 +30,7 @@ import (
 
 const (
 	domain        = "grpc-consumer"
-	version       = "1.1.0"
+	version       = "1.2.0"
 	schemaVersion = "t13-v1"
 
 	// go/parser is in-process and bounded by input size; cap the source so a

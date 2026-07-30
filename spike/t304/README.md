@@ -29,10 +29,11 @@ inputs must preserve both semantic identities and exact publication bytes.
 
 ## Retained observation
 
-The 2026-07-30 Darwin/arm64 T30.6d identity refresh passed. Candidate manifest
-v4 retains explicit focused-local domain projections and the frozen caller
-partition while adding path-derived source lanes. The planner runs took 3.61 s
-and 3.62 s and peaked at 61,112,320 and 61,947,904 bytes RSS. Each staged 12
+The 2026-07-30 Darwin/arm64 T30.6e policy refresh passed. Candidate manifest
+v4 retains explicit focused-local domain projections, path-derived source
+lanes, and the frozen caller partition while advancing the affected local
+consumer generations. The planner runs took 3.61 s and 3.55 s and peaked at
+61,554,688 and 61,456,384 bytes RSS. Each staged 12
 files totaling 24,967 bytes. Twice the final caller content conservatively
 bounds planner spool/split scratch at 4,386 bytes; the external-validation
 scratch bound was 3,514 bytes. Adding the larger phase bound to the final stage
@@ -43,9 +44,10 @@ rows and six caller rows. The two-bit caller leaves were `00:1`, `10:3`, and
 
 The review-observed predecessor receipt measured 7.99 s/5.34 s, or 2.4×/1.6×
 its 3.34 s/3.35 s baseline, with the slower run consuming 80% of the frozen
-gate. This corrected-policy rerun returned to the prior wall-time range; flat
-RSS and zero added blob reads make host variance the likely cause of the
-superseded spike rather than the derived-field work.
+gate. Both the corrected-policy and current policy refreshes returned to the
+prior wall-time range; flat RSS and zero added planner blob reads make host
+variance the likely cause of the superseded spike rather than the
+derived-field work.
 
 The 16 MiB disk threshold remains this neutral fixture's prospective
 measurement gate; it is not the production schema's aggregate projection
@@ -53,8 +55,7 @@ ceiling. Manifest v4 independently refuses more than 16,384 focused-local
 projection artifacts or 4 GiB of their canonical content.
 
 Strict validation retains `B_repository + C_caller + ΣP`, one stale local
-replay remains `P_d`, and lane classification adds no source-blob read: it is
-derived from the canonical path already present in the streamed tree census.
+replay remains `P_d`, and the policy refresh adds no planner source-blob read.
 The repeat run reproduced the exact 12 filenames and all bytes. Its retained
 identities are:
 
@@ -63,13 +64,13 @@ identities are:
 - streamed regular-census digest:
   `sha256:157e95650c495956bf73b7f24bb668d062e667ff363aeda0aace58f29663602d`;
 - policy digest:
-  `sha256:b2d6df428a480f48a6258266576a2acdd95c29d59aef1fc2ca18fa552f3f90bb`;
+  `sha256:73ad1537c150a93f6efaa96ada48c1ce477e5c68f0a1a6e86849455bcfd6a7ba`;
 - generation digest:
-  `sha256:6a0b94c42ca967fe8f2bca8763f77b287a3d1d37974a9432971a3fdd076f0be9`;
+  `sha256:65d50dac9bede00d8304e8c5e7a288a460062b4c42e59c7c519b0d36a54e0826`;
 - manifest digest:
-  `sha256:b6b5ad4e18b8c34df6050acc92c5af781cca50aff4498871f3d76cf20ccadc67`;
+  `sha256:75fd91c2a3686d0193a035b49078f1c58674f9e23e8e4aabe8cc3dafeae880a1`;
 - exact staged-output digest:
-  `sha256:6ff6f0622128512aafc09bbcc57336242a2c86ab1f08fa0d24eb2b2cb339067b`.
+  `sha256:30ef974fc4f162100b5903526f53967511b7618ac11a3505a757c50d25db3bfd`.
 
 To reproduce the retained observation:
 
