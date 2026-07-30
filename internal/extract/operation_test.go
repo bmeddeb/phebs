@@ -478,8 +478,8 @@ func TestExtractionOperationNeverAttemptedDomainsFollowCancellation(
 	}
 	err := worker.Handle(ctx, store.Job{Target: repository.Name})
 	if !errors.Is(err, context.Canceled) ||
-		!errors.Is(err, errOperationLimitRefusal) {
-		t.Fatalf("Handle error = %v, want cancellation and limit refusal", err)
+		errors.Is(err, errOperationLimitRefusal) {
+		t.Fatalf("Handle error = %v, want only cancellation; the durable limit outcome is settled", err)
 	}
 	report, _ := read()
 	if len(report.Domains) != 4 {
@@ -792,5 +792,58 @@ func TestExtractionOperationCapAndMinimalOverflow(t *testing.T) {
 	}
 	if bytes.Contains(overflow, []byte(`"domains"`)) {
 		t.Fatalf("minimal overflow retained domains: %s", overflow)
+	}
+}
+
+func TestClassifyDomainOutcomeUsesTypedMarkers(t *testing.T) {
+	tests := []struct {
+		name        string
+		err         error
+		disposition store.DomainOutcomeDisposition
+		control     bool
+	}{
+		{
+			name:        "untyped integrity lookalike stays retryable",
+			err:         errors.New(candidatepkg.ErrInvalidManifest.Error()),
+			disposition: store.DomainOutcomeRetryableFailure,
+		},
+		{
+			name: "typed candidate integrity is terminal control",
+			err: errors.Join(
+				errors.New("strict open"),
+				candidatepkg.ErrInvalidManifest,
+			),
+			disposition: store.DomainOutcomeTerminalGenerationRefusal,
+			control:     true,
+		},
+		{
+			name:        "untyped limit prose stays retryable",
+			err:         errors.New("run exceeds 12500-fact limit"),
+			disposition: store.DomainOutcomeRetryableFailure,
+		},
+		{
+			name:        "typed limit is terminal",
+			err:         operationLimitError("run exceeds fact limit"),
+			disposition: store.DomainOutcomeTerminalGenerationRefusal,
+		},
+		{
+			name: "explicit terminal marker is terminal",
+			err: store.WithTerminal(
+				errors.New("deterministic refusal"),
+			),
+			disposition: store.DomainOutcomeTerminalGenerationRefusal,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			disposition, control := classifyDomainOutcome(test.err)
+			if disposition != test.disposition || control != test.control {
+				t.Fatalf(
+					"classification = %q/%t, want %q/%t",
+					disposition, control,
+					test.disposition, test.control,
+				)
+			}
+		})
 	}
 }

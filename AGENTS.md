@@ -95,8 +95,8 @@ across PR-sized tickets for operational receipts, durable outcomes, aggregate
 scheduling, source-lane classification and consumption, catalog lifecycle and
 materialization, leaf execution and complete publication, authorized
 consumers, and retention decision and implementation. T30.6a bounded
-operational receipts are shipped; T30.6b durable exact-generation outcomes and
-typed retry disposition are next. A physical Go-test search overlay,
+operational receipts and T30.6b durable exact-generation outcomes are shipped;
+T30.6c aggregate-bounded domain scheduling is next. A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,

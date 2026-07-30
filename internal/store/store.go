@@ -7,9 +7,12 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
@@ -352,7 +355,7 @@ type CoverageManifest struct {
 	TypedInputObjectID       string `json:"typed_input_object_id,omitempty"`
 	TypedInputDeclaredBytes  int64  `json:"typed_input_declared_bytes,omitempty"`
 	TypedInputDigest         string `json:"typed_input_digest,omitempty"`
-	TypedInputPresent        bool   `json:"typed_input_present,omitempty"`
+	TypedInputPresent        bool   `json:"typed_input_present"`
 }
 
 // ExtractionScope is the complete publication slot for one evidence domain.
@@ -430,6 +433,13 @@ type ExtractionAttempt struct {
 // never be able to fail a legitimate publish.
 const MaxExtractionOutcomeReceiptBytes = 8 << 10
 
+// ExtractionOutcomeReceiptSchema is the canonical bounded receipt embedded in
+// a durable domain outcome. It is intentionally distinct from the enclosing
+// T30.6a job report: publication commits before post-publication and cleanup
+// timings exist, so pretending the nested job-report object were identical
+// would make the durable receipt untruthful.
+const ExtractionOutcomeReceiptSchema = "phebs-extraction-domain-outcome-v1"
+
 // DomainOutcomeDisposition is the closed set of durable per-domain extraction
 // outcomes (T30.6b). It is decided only by typed error classification, never
 // from error text, and is deliberately independent of the non-authoritative
@@ -492,16 +502,48 @@ func (disposition DomainOutcomeDisposition) Settled() bool {
 type ExtractionGenerationIdentity struct {
 	CandidateManifestDigest string `json:"candidate_manifest_digest,omitempty"`
 	CandidatePolicyDigest   string `json:"candidate_policy_digest,omitempty"`
-	Extractor               string `json:"extractor"`
-	InventoryPolicy         string `json:"inventory_policy,omitempty"`
-	TypedInputKind          string `json:"typed_input_kind,omitempty"`
-	TypedInputObjectID      string `json:"typed_input_object_id,omitempty"`
-	TypedInputDigest        string `json:"typed_input_digest,omitempty"`
-	TypedInputPresent       bool   `json:"typed_input_present,omitempty"`
-	DependencyDigest        string `json:"dependency_digest,omitempty"`
+	// CandidateControlRevision is the durable identity of the validated
+	// publication controls. It advances after strict repair even when the
+	// rebuilt semantic manifest digest is unchanged.
+	CandidateControlRevision uint64 `json:"candidate_control_revision,omitempty"`
+	Extractor                string `json:"extractor"`
+	InventoryPolicy          string `json:"inventory_policy,omitempty"`
+	TypedInputKind           string `json:"typed_input_kind,omitempty"`
+	TypedInputObjectID       string `json:"typed_input_object_id,omitempty"`
+	TypedInputDigest         string `json:"typed_input_digest,omitempty"`
+	TypedInputPresent        bool   `json:"typed_input_present,omitempty"`
+	DependencyDigest         string `json:"dependency_digest,omitempty"`
 	// Digest is recomputed by the store from the fields above on every write
 	// and every read comparison. A caller-supplied value is never trusted.
 	Digest string `json:"digest"`
+}
+
+// ComputeExtractionGenerationDigest is the sole canonical generation
+// identity. The store invokes it on every write and read; workers may use it
+// only for equality checks and cannot select a caller-supplied digest.
+func ComputeExtractionGenerationDigest(generation ExtractionGenerationIdentity) string {
+	return hashIdentity(
+		"extraction_generation_v1_",
+		generation.CandidateManifestDigest,
+		generation.CandidatePolicyDigest,
+		strconv.FormatUint(generation.CandidateControlRevision, 10),
+		generation.Extractor,
+		generation.InventoryPolicy,
+		generation.TypedInputKind,
+		generation.TypedInputObjectID,
+		generation.TypedInputDigest,
+		strconv.FormatBool(generation.TypedInputPresent),
+		generation.DependencyDigest,
+	)
+}
+
+// SameExtractionGeneration compares canonical identities without trusting
+// either value's cached Digest field.
+func SameExtractionGeneration(
+	left, right ExtractionGenerationIdentity,
+) bool {
+	return ComputeExtractionGenerationDigest(left) ==
+		ComputeExtractionGenerationDigest(right)
 }
 
 // ExtractionDomainOutcome is the durable latest-only record of how one exact
@@ -513,18 +555,23 @@ type ExtractionGenerationIdentity struct {
 // invalidates it rather than suppressing fresh work.
 //
 // Receipt is the deliberately opaque bounded canonical JSON of the matching
-// T30.6a domain receipt, carried the way ProofBundleRecord.Content is: the
-// store persists and bounds the bytes and never parses them. It is a
-// diagnostic. No field here participates in publication visibility, and no
-// outcome can make a mismatched historical publication current.
+// pre-transition T30.6b domain receipt, carried the way
+// ProofBundleRecord.Content is: the store persists and bounds the bytes and
+// never interprets it as retry authority. It is distinct from the later
+// T30.6a job report. No field here participates in publication visibility,
+// and no outcome can make a mismatched historical publication current.
 type ExtractionDomainOutcome struct {
-	Scope         ExtractionScope              `json:"scope"`
-	Disposition   DomainOutcomeDisposition     `json:"disposition"`
-	Generation    ExtractionGenerationIdentity `json:"generation"`
-	RunID         string                       `json:"run_id,omitempty"`
-	ReceiptSchema string                       `json:"receipt_schema,omitempty"`
-	Receipt       string                       `json:"receipt,omitempty"`
-	RecordedAt    time.Time                    `json:"recorded_at"`
+	Scope       ExtractionScope              `json:"scope"`
+	Disposition DomainOutcomeDisposition     `json:"disposition"`
+	Generation  ExtractionGenerationIdentity `json:"generation"`
+	// CandidateControlFailure is true only for a deterministic candidate
+	// publication descriptor/member integrity refusal. Recording one also
+	// schedules strict candidate reconciliation in the same transaction.
+	CandidateControlFailure bool      `json:"candidate_control_failure,omitempty"`
+	RunID                   string    `json:"run_id,omitempty"`
+	ReceiptSchema           string    `json:"receipt_schema,omitempty"`
+	Receipt                 string    `json:"receipt,omitempty"`
+	RecordedAt              time.Time `json:"recorded_at"`
 }
 
 // Validate is the write-side trust boundary. It rejects an unknown
@@ -537,25 +584,92 @@ func (outcome ExtractionDomainOutcome) Validate() error {
 			"extraction domain outcome disposition %q is not in the frozen set",
 			outcome.Disposition)
 	}
-	if outcome.Scope.Repository == "" || outcome.Scope.Commit == "" ||
-		outcome.Scope.Domain == "" {
-		return errors.New(
-			"extraction domain outcome requires repository, commit, and domain")
+	if err := validateExtractionScope(outcome.Scope); err != nil {
+		return fmt.Errorf("extraction domain outcome scope: %w", err)
 	}
-	if outcome.Generation.Extractor == "" {
-		return errors.New("extraction domain outcome requires an extractor version")
+	if err := validateOutcomeGeneration(outcome.Generation); err != nil {
+		return fmt.Errorf("extraction domain outcome generation: %w", err)
 	}
 	if outcome.Disposition == DomainOutcomePublished && outcome.RunID == "" {
 		return errors.New("published extraction domain outcome requires a run id")
+	}
+	if outcome.CandidateControlFailure &&
+		(outcome.Disposition != DomainOutcomeTerminalGenerationRefusal ||
+			outcome.Generation.CandidateControlRevision == 0) {
+		return errors.New(
+			"candidate control failure requires a terminal candidate generation")
 	}
 	if len(outcome.Receipt) > MaxExtractionOutcomeReceiptBytes {
 		return fmt.Errorf(
 			"extraction domain outcome receipt is %d bytes, limit %d",
 			len(outcome.Receipt), MaxExtractionOutcomeReceiptBytes)
 	}
-	if outcome.Receipt != "" && outcome.ReceiptSchema == "" {
+	if outcome.ReceiptSchema != ExtractionOutcomeReceiptSchema {
+		return fmt.Errorf(
+			"extraction domain outcome receipt schema must be %q",
+			ExtractionOutcomeReceiptSchema,
+		)
+	}
+	if outcome.Receipt == "" || !json.Valid([]byte(outcome.Receipt)) {
 		return errors.New(
-			"extraction domain outcome receipt requires its schema name")
+			"extraction domain outcome receipt must be canonical JSON")
+	}
+	return nil
+}
+
+func validateOutcomeGeneration(generation ExtractionGenerationIdentity) error {
+	if strings.TrimSpace(generation.Extractor) == "" ||
+		len(generation.Extractor) > 128 {
+		return errors.New("extractor version is missing or unbounded")
+	}
+	hasCandidate := generation.CandidateManifestDigest != "" ||
+		generation.CandidatePolicyDigest != "" ||
+		generation.CandidateControlRevision != 0
+	if hasCandidate {
+		if !validSHA256Digest(generation.CandidateManifestDigest) ||
+			!validSHA256Digest(generation.CandidatePolicyDigest) ||
+			generation.CandidateControlRevision == 0 {
+			return errors.New(
+				"candidate generation requires manifest, policy, and control identities")
+		}
+	} else if generation.InventoryPolicy != "" &&
+		strings.HasPrefix(generation.InventoryPolicy, "candidate-manifest-") {
+		return errors.New(
+			"candidate inventory policy requires a candidate generation")
+	}
+	if generation.InventoryPolicy == "" ||
+		strings.TrimSpace(generation.InventoryPolicy) !=
+			generation.InventoryPolicy ||
+		len(generation.InventoryPolicy) > 256 {
+		return errors.New("inventory policy is missing or unbounded")
+	}
+	if generation.TypedInputKind == "" {
+		if generation.TypedInputObjectID != "" ||
+			generation.TypedInputDigest != "" ||
+			generation.TypedInputPresent {
+			return errors.New(
+				"non-applicable typed input carries an identity")
+		}
+	} else {
+		if generation.TypedInputKind != "scip" {
+			return errors.New("typed input kind is unsupported")
+		}
+		if generation.TypedInputPresent {
+			if !validGitObjectID(generation.TypedInputObjectID) {
+				return errors.New(
+					"present typed input requires a canonical object id")
+			}
+		} else if generation.TypedInputObjectID != "" ||
+			generation.TypedInputDigest != "" {
+			return errors.New("absent typed input carries content identity")
+		}
+		if generation.TypedInputDigest != "" &&
+			!validSHA256Digest(generation.TypedInputDigest) {
+			return errors.New("typed input digest must be canonical sha256")
+		}
+	}
+	if !validSHA256Digest(generation.DependencyDigest) {
+		return errors.New("dependency digest must be canonical sha256")
 	}
 	return nil
 }
@@ -687,6 +801,29 @@ type EvidenceStore interface {
 	// caller counts against stored rows; publishes the run; and supersedes the
 	// previous published run for the same exact ExtractionScope.
 	PublishExtractionRun(ctx context.Context, runID string, coverage CoverageManifest) error
+	// PublishExtractionRunWithOutcome is the T30.6b worker transition:
+	// publication, prior-run supersession, latest-attempt state, bounded
+	// receipt, and published disposition commit atomically.
+	PublishExtractionRunWithOutcome(
+		ctx context.Context,
+		runID string,
+		coverage CoverageManifest,
+		outcome ExtractionDomainOutcome,
+	) error
+	// RecordExtractionDomainOutcome records a non-published disposition while
+	// preserving any prior visible publication. A candidate-control terminal
+	// record also force-enqueues strict candidate reconciliation atomically.
+	RecordExtractionDomainOutcome(
+		ctx context.Context,
+		outcome ExtractionDomainOutcome,
+	) error
+	// LatestExtractionDomainOutcome reads the latest repository/domain row
+	// only when its exact scope matches. A caller compares Generation before
+	// treating a settled row as current.
+	LatestExtractionDomainOutcome(
+		ctx context.Context,
+		scope ExtractionScope,
+	) (*ExtractionDomainOutcome, error)
 	AbortExtractionRun(ctx context.Context, runID string) error
 	// LatestPublishedRun returns ErrNotFound when the exact scope has never
 	// published. It never falls back to another commit, unit, or whole-

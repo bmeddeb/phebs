@@ -380,7 +380,7 @@ func TestCurrentExtractionBaseline(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []ExtractionMeasurement{
-		{Domain: "grpc-caller", Version: "1.4.0", Facts: 4, UnresolvedCount: 4, Predicates: map[string]int{
+		{Domain: "grpc-caller", Version: "1.5.0", Facts: 4, UnresolvedCount: 4, Predicates: map[string]int{
 			"UNRESOLVED_CALLER": 4,
 		}},
 		{Domain: "grpc-consumer", Version: "1.1.0", Facts: 9, UnresolvedCount: 9, Predicates: map[string]int{
@@ -395,9 +395,9 @@ func TestCurrentExtractionBaseline(t *testing.T) {
 		{Domain: "proto-contract", Version: "3.0.0", Facts: 13, Predicates: map[string]int{
 			"DECLARES_FIELD": 4, "DECLARES_MESSAGE": 4, "DECLARES_OPERATION": 3, "DECLARES_SERVICE": 2,
 		}},
-		{Domain: "scip-proto-field", Version: "1.2.0", Predicates: map[string]int{}},
-		{Domain: "scip-thrift-field", Version: "1.2.0", Predicates: map[string]int{}},
-		{Domain: "thrift-caller", Version: "1.4.0", Facts: 1, UnresolvedCount: 1, Predicates: map[string]int{
+		{Domain: "scip-proto-field", Version: "1.3.0", Predicates: map[string]int{}},
+		{Domain: "scip-thrift-field", Version: "1.3.0", Predicates: map[string]int{}},
+		{Domain: "thrift-caller", Version: "1.5.0", Facts: 1, UnresolvedCount: 1, Predicates: map[string]int{
 			"UNRESOLVED_CALLER": 1,
 		}},
 		{Domain: "thrift-consumer", Version: "1.1.0", Facts: 25, UnresolvedCount: 25, Predicates: map[string]int{

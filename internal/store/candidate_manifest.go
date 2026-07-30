@@ -22,14 +22,19 @@ import (
 // UnitDigest is empty for an unscoped repository. All other digest fields use
 // canonical "sha256:<lowercase hex>" encoding.
 type CandidateManifestPublication struct {
-	Repository       string    `json:"repository"`
-	HeadCommit       string    `json:"head_commit"`
-	UnitDigest       string    `json:"unit_digest"`
-	PolicyDigest     string    `json:"policy_digest"`
-	ManifestDigest   string    `json:"manifest_digest"`
-	GenerationDigest string    `json:"generation_digest"`
-	ManifestPath     string    `json:"manifest_path"`
-	PublishedAt      time.Time `json:"published_at"`
+	Repository       string `json:"repository"`
+	HeadCommit       string `json:"head_commit"`
+	UnitDigest       string `json:"unit_digest"`
+	PolicyDigest     string `json:"policy_digest"`
+	ManifestDigest   string `json:"manifest_digest"`
+	GenerationDigest string `json:"generation_digest"`
+	ManifestPath     string `json:"manifest_path"`
+	// ControlRevision advances only after a strict validated publication
+	// transition. Zero on input asks the store to preserve an exact pointer or
+	// assign the next revision; persisted pointers always carry a non-zero
+	// value.
+	ControlRevision uint64    `json:"control_revision"`
+	PublishedAt     time.Time `json:"published_at"`
 }
 
 // CandidateManifestPublicationStore is deliberately narrower than Store.
@@ -42,7 +47,18 @@ type CandidateManifestPublicationStore interface {
 	ListCandidateManifestPublications(ctx context.Context) ([]CandidateManifestPublication, error)
 }
 
+// CandidateControlOutcomeStore is the optional restart-safe repair signal used
+// by the candidate worker. Keeping it separate avoids widening consumers that
+// only resolve publication pointers.
+type CandidateControlOutcomeStore interface {
+	CandidateControlRepairNeeded(
+		ctx context.Context,
+		publication CandidateManifestPublication,
+	) (bool, error)
+}
+
 var _ CandidateManifestPublicationStore = (*Surreal)(nil)
+var _ CandidateControlOutcomeStore = (*Surreal)(nil)
 
 type candidateManifestPublicationRec struct {
 	CandidateManifestPublication
@@ -74,6 +90,9 @@ func validateCandidateManifestPublication(publication CandidateManifestPublicati
 	}
 	if publication.ManifestPath != candidateid.ManifestName(publication.Repository) {
 		return errors.New("manifest_path must be the stable repository manifest name")
+	}
+	if requireTimestamp && publication.ControlRevision == 0 {
+		return errors.New("control_revision is required")
 	}
 	if requireTimestamp && publication.PublishedAt.IsZero() {
 		return errors.New("published_at is required")
@@ -114,10 +133,28 @@ LET $same_publication = $same_scope
 	AND $current.manifest_digest = $manifest_digest
 	AND $current.generation_digest = $generation_digest
 	AND $current.manifest_path = $manifest_path;
+LET $current_control_revision = $current.control_revision ?? 0;
+LET $control_advanced = $same_publication
+	AND $requested_control_revision = $current_control_revision + 1;
+LET $control_ok = IF $current = NONE THEN
+		$requested_control_revision IN [0, 1]
+	ELSE IF $same_publication THEN
+		$requested_control_revision = 0
+			OR $requested_control_revision = $current_control_revision
+			OR $control_advanced
+	ELSE
+		$requested_control_revision = 0
+			OR $requested_control_revision = $current_control_revision + 1
+	END;
+LET $next_control_revision = IF $current = NONE THEN 1
+	ELSE IF $same_publication AND $control_advanced = false
+		THEN $current_control_revision
+	ELSE $current_control_revision + 1 END;
 LET $acceptable = $repo_ok
-	AND ($same_scope = false OR $same_publication = true);
+	AND ($same_scope = false OR $same_publication = true)
+	AND $control_ok;
 LET $published = IF $acceptable = false THEN []
-	ELSE IF $same_publication = true THEN
+	ELSE IF $same_publication = true AND $control_advanced = false THEN
 		[$current]
 	ELSE
 		(UPSERT $publication_rid SET
@@ -128,6 +165,7 @@ LET $published = IF $acceptable = false THEN []
 			manifest_digest = $manifest_digest,
 			generation_digest = $generation_digest,
 			manifest_path = $manifest_path,
+			control_revision = $next_control_revision,
 			published_at = $published_at
 			RETURN AFTER)
 	END;
@@ -199,6 +237,21 @@ LET $cleared_attempts = IF array::len($invalidated_attempt_rids) > 0 THEN
 			AND evidence_migration_version = $evidence_migration
 		RETURN BEFORE)
 	ELSE [] END;
+LET $cleared_control_outcomes = IF array::len($published) = 1
+		AND $control_advanced THEN
+	(DELETE extraction_domain_outcome
+		WHERE repo = $repository
+			AND commit = $head_commit
+			AND unit_digest = $unit_digest
+			AND candidate_control_failure = true
+			AND generation.candidate_manifest_digest = $manifest_digest
+			AND generation.candidate_policy_digest = $policy_digest
+			AND generation.candidate_control_revision =
+				$current_control_revision
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_migration_version = $evidence_migration
+		RETURN BEFORE)
+	ELSE [] END;
 LET $evidence_changed = array::len($retired) > 0
 	OR array::len($aborted) > 0
 	OR array::len($cleared_attempts) > 0
@@ -256,6 +309,7 @@ func (s *Surreal) PublishCandidateManifest(
 		"manifest_digest":             publication.ManifestDigest,
 		"generation_digest":           publication.GenerationDigest,
 		"manifest_path":               publication.ManifestPath,
+		"requested_control_revision":  publication.ControlRevision,
 		"published_at":                storeTimestamp(time.Now()),
 		"evidence_store_schema":       evidenceStoreSchemaVersion,
 		"evidence_format":             evidenceFormatVersion,
@@ -366,6 +420,8 @@ func (s *Surreal) ClearCandidateManifestPublication(
 		LET $current = SELECT id FROM $rid;
 		IF array::len($current) = 1 {
 			DELETE $rid RETURN NONE;
+			DELETE extraction_domain_outcome
+				WHERE repo = $repository RETURN NONE;
 			UPDATE $repo_rid
 				SET evidence_revision = (evidence_revision ?? 0) + 1
 				WHERE name = $repository
@@ -387,6 +443,8 @@ func (s *Surreal) ClearCandidateManifestPublication(
 // ClearAllCandidateManifestPublications removes the derived pointer table
 // without decoding its rows. Restore must be able to discard even a malformed
 // imported pointer because candidate publications are never backup authority.
+// Durable outcomes remain precious restored state, but cannot become eligible
+// until candidate rebuilding re-establishes their exact pointer generation.
 func (s *Surreal) ClearAllCandidateManifestPublications(
 	ctx context.Context,
 ) error {

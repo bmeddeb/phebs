@@ -40,7 +40,7 @@ import (
 
 const (
 	domain        = "scip-thrift-field"
-	version       = "1.2.0"
+	version       = "1.3.0"
 	schemaVersion = "t22-v1"
 	indexPath     = "index.scip" // legacy whole-repository test fixture path
 

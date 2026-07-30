@@ -73,18 +73,35 @@ func (provider *Provider) CandidateManifestIdentity(
 	ctx context.Context,
 	request extract.CandidateManifestRequest,
 ) (string, error) {
-	state, _, err := provider.resolve(ctx, request)
+	state, _, _, err := provider.resolve(ctx, request)
 	if err != nil {
 		return "", err
 	}
 	return state.ManifestDigest, nil
 }
 
+// CandidateManifestGeneration returns the complete persisted preflight
+// identity without touching publication bytes.
+func (provider *Provider) CandidateManifestGeneration(
+	ctx context.Context,
+	request extract.CandidateManifestRequest,
+) (extract.CandidateManifestPointerIdentity, error) {
+	state, _, revision, err := provider.resolve(ctx, request)
+	if err != nil {
+		return extract.CandidateManifestPointerIdentity{}, err
+	}
+	return extract.CandidateManifestPointerIdentity{
+		ManifestDigest:  state.ManifestDigest,
+		PolicyDigest:    state.PolicyDigest,
+		ControlRevision: revision,
+	}, nil
+}
+
 func (provider *Provider) OpenCandidateManifest(
 	ctx context.Context,
 	request extract.CandidateManifestRequest,
 ) (extract.CandidateManifest, error) {
-	state, expected, err := provider.resolve(ctx, request)
+	state, expected, revision, err := provider.resolve(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -110,24 +127,26 @@ func (provider *Provider) OpenCandidateManifest(
 		return nil, err
 	}
 	return &manifestAdapter{
-		publication: publication,
-		allowed:     cloneSet(provider.domainKeys),
+		publication:     publication,
+		allowed:         cloneSet(provider.domainKeys),
+		controlRevision: revision,
 	}, nil
 }
 
 func (provider *Provider) resolve(
 	ctx context.Context,
 	request extract.CandidateManifestRequest,
-) (candidate.State, candidate.Expected, error) {
+) (candidate.State, candidate.Expected, uint64, error) {
 	if provider == nil || provider.store == nil || provider.policies == nil {
 		return candidate.State{}, candidate.Expected{},
+			0,
 			errors.New("candidate provider is not initialized")
 	}
 	if err := ctx.Err(); err != nil {
-		return candidate.State{}, candidate.Expected{}, err
+		return candidate.State{}, candidate.Expected{}, 0, err
 	}
 	if !slices.Equal(request.Domains, provider.domains) {
-		return candidate.State{}, candidate.Expected{}, errors.New(
+		return candidate.State{}, candidate.Expected{}, 0, errors.New(
 			"candidate manifest request domain set is partial, reordered, or stale",
 		)
 	}
@@ -135,7 +154,7 @@ func (provider *Provider) resolve(
 		request.Repository, request.AnalysisUnit,
 	)
 	if err != nil {
-		return candidate.State{}, candidate.Expected{}, err
+		return candidate.State{}, candidate.Expected{}, 0, err
 	}
 	generation, err := candidate.GenerationDigest(
 		request.Repository, request.Commit, request.AnalysisUnit,
@@ -143,25 +162,29 @@ func (provider *Provider) resolve(
 	)
 	if err != nil {
 		return candidate.State{}, candidate.Expected{},
+			0,
 			fmt.Errorf("candidate request identity: %w", err)
 	}
 	if candidate.IsPublishing(provider.root, request.Repository) {
-		return candidate.State{}, candidate.Expected{}, candidate.ErrPublishing
+		return candidate.State{}, candidate.Expected{}, 0, candidate.ErrPublishing
 	}
 	pointer, err := provider.store.GetCandidateManifestPublication(
 		ctx, request.Repository,
 	)
 	if err != nil {
 		return candidate.State{}, candidate.Expected{},
+			0,
 			fmt.Errorf("load candidate publication pointer: %w", err)
 	}
 	if pointer == nil {
 		return candidate.State{}, candidate.Expected{},
+			0,
 			errors.New("candidate publication store returned nil")
 	}
 	state, err := pointerState(*pointer)
 	if err != nil {
 		return candidate.State{}, candidate.Expected{},
+			0,
 			fmt.Errorf("candidate publication pointer: %w", err)
 	}
 	if state.Repository != request.Repository ||
@@ -170,12 +193,12 @@ func (provider *Provider) resolve(
 		state.PolicyDigest != provider.policies.digest ||
 		state.GenerationDigest != generation ||
 		state.Manifest != candidate.ManifestName(request.Repository) {
-		return candidate.State{}, candidate.Expected{}, errors.New(
+		return candidate.State{}, candidate.Expected{}, 0, errors.New(
 			"candidate publication pointer does not match requested indexed generation",
 		)
 	}
 	if candidate.IsPublishing(provider.root, request.Repository) {
-		return candidate.State{}, candidate.Expected{}, candidate.ErrPublishing
+		return candidate.State{}, candidate.Expected{}, 0, candidate.ErrPublishing
 	}
 	return state, candidate.Expected{
 		Repository: request.Repository, Commit: request.Commit,
@@ -184,12 +207,20 @@ func (provider *Provider) resolve(
 		PolicyDigest:     provider.policies.digest,
 		GenerationDigest: generation,
 		ManifestDigest:   state.ManifestDigest,
-	}, nil
+	}, pointer.ControlRevision, nil
 }
 
 type manifestAdapter struct {
-	publication *candidate.Publication
-	allowed     map[string]struct{}
+	publication     *candidate.Publication
+	allowed         map[string]struct{}
+	controlRevision uint64
+}
+
+func (manifest *manifestAdapter) CandidateControlRevision() uint64 {
+	if manifest == nil {
+		return 0
+	}
+	return manifest.controlRevision
 }
 
 func (manifest *manifestAdapter) Identity() string {
@@ -330,4 +361,6 @@ func cloneSet(input map[string]struct{}) map[string]struct{} {
 
 var _ extract.CandidateManifestProvider = (*Provider)(nil)
 var _ extract.CandidateManifestIdentityProvider = (*Provider)(nil)
+var _ extract.CandidateManifestGenerationProvider = (*Provider)(nil)
 var _ extract.CandidateManifest = (*manifestAdapter)(nil)
+var _ extract.CandidateManifestControl = (*manifestAdapter)(nil)

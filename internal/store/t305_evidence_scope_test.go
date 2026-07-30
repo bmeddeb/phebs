@@ -966,7 +966,105 @@ func TestT305LatestPublishedRunRejectsMismatchedCandidateReceipt(
 	}
 }
 
-func TestT305PreviousWriterMigratesOnlyToExplicitWholeScope(t *testing.T) {
+// A predecessor that does record unit digests must keep them across the writer
+// bump. Reading the unit digest only at the current generation would recompute
+// this row's published_key against an empty unit, collapsing a focused
+// publication into the whole-repository slot for the same repository, commit,
+// and domain — silently, and only for stores that had focused evidence.
+func TestT306bWriterBumpPreservesPredecessorUnitScope(t *testing.T) {
+	s := newRunnerStore(t)
+	t305RelaxEvidenceWriterGuards(t, s)
+	ctx := context.Background()
+	const (
+		repository = "github.com/t306b/unit-scope"
+		commit     = "focused-head"
+		domain     = "scip-field"
+		runID      = "predecessor-focused-run"
+	)
+	if err := s.UpsertRepo(ctx, Repo{
+		Name: repository, CloneURL: "https://example.com/t306b.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	focused := t305Unit(t, repository, "focused-now", "service/current")
+	t305IndexedState(t, ctx, s, repository, commit, focused)
+	focusedScope := ExtractionScope{
+		Repository: repository, Commit: commit,
+		UnitDigest: focused.Digest, Domain: domain,
+	}
+	now := time.Now().UTC()
+	if _, err := surrealdb.Query[any](ctx, s.db, `
+		CREATE $run_rid CONTENT {
+			run_id: $run_id, repo: $repo, commit: $commit,
+			unit_digest: $unit, domain: $domain, extractor: 'v1',
+			status: 'published', started_at: $now, published_at: $now,
+			store_schema_version: $previous_schema,
+			evidence_format_version: $format,
+			retention_quarantined: false,
+			published_key: $focused_key,
+			coverage: {
+				corpus_file_count: 0, candidate_file_count: 0,
+				read_file_count: 0, read_bytes: 0,
+				source_scope_digest: $empty_digest,
+				unresolved_count: 0, assertion_count: 0, atom_count: 0
+			}
+		};
+		CREATE $attempt_rid CONTENT {
+			run_id: $run_id, repo: $repo, commit: $commit,
+			unit_digest: $unit, domain: $domain, extractor: 'v1',
+			status: 'published', started_at: $now,
+			store_schema_version: $previous_schema,
+			evidence_format_version: $format
+		};`, map[string]any{
+		"run_rid": extractionRunID(runID), "run_id": runID,
+		"attempt_rid": extractionAttemptID(focusedScope),
+		"repo":        repository, "commit": commit, "domain": domain,
+		"unit": focused.Digest, "now": now,
+		"previous_schema": evidencePreviousStoreSchemaVersion,
+		"format":          evidenceFormatVersion,
+		"empty_digest":    t305EmptyDigest,
+		"focused_key":     publishedKey(focusedScope),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t305ClearEvidenceMigrationMarker(t, s)
+	if err := s.applySchema(ctx); err != nil {
+		t.Fatalf("apply writer bump migration: %v", err)
+	}
+
+	state := t305ReadMigrationState(t, s, runID)
+	if state.UnitDigest != focused.Digest ||
+		state.PublishedKey != publishedKey(focusedScope) ||
+		state.StoreSchema != evidenceStoreSchemaVersion ||
+		state.Migration != evidenceMigrationVersion {
+		t.Fatalf("migrated focused run = %+v", state)
+	}
+	// Collapsing into the whole-repository slot is the exact corruption this
+	// guards, so assert the recomputed key against it directly. Reading the run
+	// back through LatestPublishedRun would pull in the whole T30.5
+	// candidate-receipt fence stack, which other tests own; the migration's job
+	// is only to land the row in the right slot.
+	whole := ExtractionScope{
+		Repository: repository, Commit: commit, Domain: domain,
+	}
+	if state.PublishedKey == publishedKey(whole) {
+		t.Fatal("focused publication collapsed into the whole-repository slot")
+	}
+	// The attempt row keeps its own id and unit digest: it is stamped in place,
+	// never moved, so there is no destination for it to collide with.
+	attempt, err := s.LatestExtractionAttempt(ctx, focusedScope)
+	if err != nil || attempt.RunID != runID ||
+		attempt.UnitDigest != focused.Digest {
+		t.Fatalf("focused attempt = %+v, %v", attempt, err)
+	}
+}
+
+// The pre-unit writer predates focused scopes entirely, so a unit digest on one
+// of its rows is never authentic. This is bound to that generation's own
+// literal, not to "the previous generation": once a generation that legitimately
+// records unit digests occupies the previous slot, ignoring its digest would
+// silently relabel real focused evidence as whole-repository.
+func TestT305PreUnitWriterMigratesOnlyToExplicitWholeScope(t *testing.T) {
 	s := newRunnerStore(t)
 	t305RelaxEvidenceWriterGuards(t, s)
 	ctx := context.Background()
@@ -1011,7 +1109,7 @@ func TestT305PreviousWriterMigratesOnlyToExplicitWholeScope(t *testing.T) {
 		"attempt_rid": legacyExtractionAttemptID(repository, domain),
 		"repo":        repository, "commit": commit, "domain": domain,
 		"forged_unit": focused.Digest, "now": now,
-		"previous_schema": evidencePreviousStoreSchemaVersion,
+		"previous_schema": evidenceLegacyUpgradableStoreSchemaVersion,
 		"format":          evidenceFormatVersion,
 		"empty_digest":    t305EmptyDigest,
 		"legacy_key":      legacyPublishedKey(repository, domain),
@@ -1020,7 +1118,7 @@ func TestT305PreviousWriterMigratesOnlyToExplicitWholeScope(t *testing.T) {
 	}
 	t305ClearEvidenceMigrationMarker(t, s)
 	if err := s.applySchema(ctx); err != nil {
-		t.Fatalf("apply v8 migration: %v", err)
+		t.Fatalf("apply pre-unit writer migration: %v", err)
 	}
 
 	whole := ExtractionScope{

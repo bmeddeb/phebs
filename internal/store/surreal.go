@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -112,6 +113,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateAPIKeyCapabilities(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateCandidateControlRevisions(ctx); err != nil {
+		return err
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilitySchema, nil)
 	if err != nil {
 		return err
@@ -146,6 +150,64 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+const candidateControlRevisionMigrationVersion = "t30.6b-candidate-control-v1"
+
+// migrateCandidateControlRevisions gives pre-T30.6b derived pointers their
+// initial durable control identity. The fixed completion row keeps steady-state
+// startup off the publication table.
+func (s *Surreal) migrateCandidateControlRevisions(ctx context.Context) error {
+	marker := models.NewRecordID("store_migration", "candidate_control_revision")
+	results, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+LET $version = (SELECT version FROM $marker LIMIT 1)[0].version;
+UPDATE candidate_manifest_publication SET control_revision = 1
+	WHERE $version = NONE
+		AND (control_revision = NONE OR control_revision < 1)
+	RETURN NONE;
+UPSERT $marker SET
+	version = IF $version = NONE THEN $wanted ELSE $version END,
+	completed_at = IF $version = NONE THEN time::now() ELSE completed_at END
+	RETURN NONE;
+COMMIT;`, map[string]any{
+		"marker": marker,
+		"wanted": candidateControlRevisionMigrationVersion,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate candidate control revisions: %w", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"migrate candidate control revisions statement %d: %s",
+				index, result.Error.Message,
+			)
+		}
+	}
+	check, err := surrealdb.Query[[]struct {
+		Version string `json:"version"`
+	}](ctx, s.db, "SELECT version FROM $marker", map[string]any{"marker": marker})
+	if err != nil {
+		return fmt.Errorf("migrate candidate control revisions: verify: %w", err)
+	}
+	var markerVersion string
+	for _, result := range *check {
+		for _, row := range result.Result {
+			markerVersion = row.Version
+		}
+	}
+	if markerVersion == candidateControlRevisionMigrationVersion {
+		return nil
+	}
+	if markerVersion != "" {
+		return fmt.Errorf(
+			"migrate candidate control revisions: unsupported marker %q",
+			markerVersion,
+		)
+	}
+	return errors.New(
+		"migrate candidate control revisions: completion marker missing")
 }
 
 const apiKeyCapabilityMigrationVersion = "t21.12-api-key-capabilities-v1"
@@ -262,6 +324,47 @@ DEFINE INDEX IF NOT EXISTS candidate_manifest_job_pending_key ON candidate_manif
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
 
+// retiredEvidenceStoreSchemas are the writer generations this binary neither
+// writes nor upgrades: their per-generation upgrade passes never ran on any
+// store that reaches this binary, so their rows are quarantined instead. The
+// supported predecessors are retired for writes but upgraded rather than
+// quarantined, so they are named separately and appended by
+// retiredEvidenceWriterGenerations.
+//
+// This is the single source of truth on purpose. Four hand-maintained copies
+// previously had to be advanced together, and missing one strands a published
+// row against its unique published_key forever — the exact failure recorded for
+// v3–v5 (see migrateEvidenceRuns).
+var retiredEvidenceStoreSchemas = []string{
+	"t12-store-v1", "t12-store-v2", "t12-store-v3",
+	"t12-store-v4", "t12-store-v5", "t12-store-v6",
+}
+
+// retiredEvidenceWriterGenerations is every generation this binary refuses to
+// write: the quarantined set plus both upgraded-in-place predecessors. A row at
+// a supported predecessor is migrated forward, but nothing may create a new one.
+func retiredEvidenceWriterGenerations() []string {
+	return append(slices.Clone(retiredEvidenceStoreSchemas),
+		evidencePreviousStoreSchemaVersion,
+		evidenceLegacyUpgradableStoreSchemaVersion)
+}
+
+// surrealStringList renders a SurrealQL array literal. Every caller passes
+// package constants, so a value carrying a quote or backslash is a programming
+// error in this file rather than untrusted input; failing at package
+// initialization is preferable to emitting SQL that silently means something
+// else.
+func surrealStringList(values []string) string {
+	quoted := make([]string, len(values))
+	for i, value := range values {
+		if strings.ContainsAny(value, "'\"\\") {
+			panic("schema identifier is not a bare token: " + value)
+		}
+		quoted[i] = "'" + value + "'"
+	}
+	return "[" + strings.Join(quoted, ", ") + "]"
+}
+
 // This generation-specific event is intentionally installed before migration
 // and never overwritten by later generations. Unlike a field assertion, an
 // older binary does not know its name and therefore cannot weaken it while
@@ -271,28 +374,27 @@ DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_ru
 var evidencePreMigrationSchema = fmt.Sprintf(`
 DEFINE EVENT IF NOT EXISTS %s ON TABLE extraction_run
 	WHEN $event != 'DELETE'
-	  AND $after.store_schema_version IN
-		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4',
-		 't12-store-v5', 't12-store-v6', '%s']
+	  AND $after.store_schema_version IN %s
 	THEN {
 		THROW 'phebs-permanent: retired evidence writer generation'
 	};
 DEFINE INDEX IF NOT EXISTS %s ON TABLE assertion
 	FIELDS run_id, predicate, object, repo, lineage, subject, assertion_id;`,
-	evidenceWriterGuardEvent, evidencePreviousStoreSchemaVersion, reverseAssertionIndexName)
+	evidenceWriterGuardEvent,
+	surrealStringList(retiredEvidenceWriterGenerations()),
+	reverseAssertionIndexName)
 
 var evidenceIndexes = fmt.Sprintf(`
 DEFINE FIELD OVERWRITE status ON extraction_run TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'superseded', 'aborted', 'deleting']
         OR $this.evidence_format_version != '%s';
 DEFINE FIELD OVERWRITE store_schema_version ON extraction_run TYPE string
-	ASSERT $value NOT IN
-		['t12-store-v1', 't12-store-v2', 't12-store-v3', 't12-store-v4',
-		 't12-store-v5', 't12-store-v6', '%s'];
+	ASSERT $value NOT IN %s;
 DEFINE INDEX IF NOT EXISTS extraction_run_published_key ON extraction_run FIELDS published_key UNIQUE;
 DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
     ASSERT $value INSIDE ['staged', 'published', 'aborted'];`,
-	evidenceFormatVersion, evidencePreviousStoreSchemaVersion)
+	evidenceFormatVersion,
+	surrealStringList(retiredEvidenceWriterGenerations()))
 
 // migrateLegacyJobs runs before the pending-key indexes are installed. Old
 // rows had no lease or pending slot, and may contain an active job plus a
@@ -385,6 +487,7 @@ type evidenceAttemptMigrationRec struct {
 	RunID       any              `json:"run_id"`
 	Repo        any              `json:"repo"`
 	Commit      any              `json:"commit"`
+	UnitDigest  any              `json:"unit_digest"`
 	Domain      any              `json:"domain"`
 	Extractor   any              `json:"extractor"`
 	Status      any              `json:"status"`
@@ -393,22 +496,72 @@ type evidenceAttemptMigrationRec struct {
 	Format      any              `json:"evidence_format_version"`
 }
 
+// retiredAttemptSchema marks an attempt row this binary will not migrate. It is
+// deliberately generation-neutral: the row is inert either way, so no future
+// writer bump has to advance this literal. Rows retired by earlier binaries
+// carry a generation-specific marker and stay equally invisible.
+const retiredAttemptSchema = "t12-store-retired-attempt"
+
+func (s *Surreal) retireEvidenceAttempt(ctx context.Context, rid models.RecordID) error {
+	if _, err := surrealdb.Query[any](ctx, s.db,
+		`UPDATE $rid SET store_schema_version = $retired_schema,
+			evidence_migration_version = $migration RETURN NONE`,
+		map[string]any{
+			"rid": rid, "retired_schema": retiredAttemptSchema,
+			"migration": evidenceMigrationVersion,
+		}); err != nil {
+		return fmt.Errorf("retire malformed attempt: %w", err)
+	}
+	return nil
+}
+
+// evidenceAttemptMigrationFields validates the fields every migration path
+// needs. A row failing any of them is retired rather than carried forward:
+// stamping it current would make a malformed diagnostic visible.
+func evidenceAttemptMigrationFields(
+	row evidenceAttemptMigrationRec,
+) (runID, repo, commit, domain, extractor, status string, ok bool) {
+	runID, runOK := validMigrationIdentity(row.RunID)
+	repo, repoOK := validMigrationIdentity(row.Repo)
+	commit, commitOK := validMigrationIdentity(row.Commit)
+	domain, domainOK := validMigrationIdentity(row.Domain)
+	extractor, extractorOK := validMigrationIdentity(row.Extractor)
+	status, statusOK := migrationString(row.Status)
+	format, formatOK := migrationString(row.Format)
+	ok = runOK && repoOK && commitOK && domainOK && extractorOK &&
+		statusOK && (status == "staged" || status == "published" || status == "aborted") &&
+		formatOK && format == evidenceFormatVersion && row.StartedAt != nil
+	return runID, repo, commit, domain, extractor, status, ok
+}
+
 func validMigrationIdentity(value any) (string, bool) {
 	text, ok := migrationString(value)
 	return text, ok && strings.TrimSpace(text) != "" && utf8.ValidString(text) &&
 		len(text) <= maxEvidenceIdentityBytes
 }
 
-// migrateEvidenceAttempts preserves the immediately preceding writer's
-// latest-attempt diagnostics. The old writer had one row per repo/domain, so
-// every compatible row belongs to the explicit whole-repository unit. No
-// current repository state participates in that classification.
+// migrateEvidenceAttempts carries latest-attempt diagnostics forward from both
+// supported predecessors. The two need different treatment and must not be
+// conflated: binding the pre-unit reshape to "the previous generation" instead
+// of to its own literal is what would force a correctly keyed unit-scoped row
+// into the whole-repository slot on the next bump, and hard-fail Open on the
+// resulting collision.
 func (s *Surreal) migrateEvidenceAttempts(ctx context.Context) error {
-	const retiredAttemptSchema = "t12-store-retired-v7-attempt"
+	if err := s.stampEvidenceAttempts(ctx); err != nil {
+		return err
+	}
+	return s.reshapeLegacyEvidenceAttempts(ctx)
+}
+
+// stampEvidenceAttempts advances rows already written in the current shape.
+// Their record id and unit digest are already correct, so the row is stamped in
+// place: no move means no destination to collide with, and the pass is
+// idempotent across a crash.
+func (s *Surreal) stampEvidenceAttempts(ctx context.Context) error {
 	for {
 		results, err := surrealdb.Query[[]evidenceAttemptMigrationRec](ctx, s.db,
-			`SELECT id, run_id, repo, commit, domain, extractor, status, started_at,
-				store_schema_version, evidence_format_version
+			`SELECT id, run_id, repo, commit, unit_digest, domain, extractor, status,
+				started_at, store_schema_version, evidence_format_version
 			FROM extraction_attempt
 			WHERE store_schema_version = $previous_schema
 			ORDER BY id LIMIT $limit`, map[string]any{
@@ -430,24 +583,67 @@ func (s *Surreal) migrateEvidenceAttempts(ctx context.Context) error {
 			if row.RecID == nil {
 				return errors.New("attempt has no physical record id")
 			}
-			runID, runOK := validMigrationIdentity(row.RunID)
-			repo, repoOK := validMigrationIdentity(row.Repo)
-			commit, commitOK := validMigrationIdentity(row.Commit)
-			domain, domainOK := validMigrationIdentity(row.Domain)
-			extractor, extractorOK := validMigrationIdentity(row.Extractor)
-			status, statusOK := migrationString(row.Status)
-			format, formatOK := migrationString(row.Format)
-			if !runOK || !repoOK || !commitOK || !domainOK || !extractorOK ||
-				!statusOK || (status != "staged" && status != "published" && status != "aborted") ||
-				!formatOK || format != evidenceFormatVersion || row.StartedAt == nil {
-				if _, err := surrealdb.Query[any](ctx, s.db,
-					`UPDATE $rid SET store_schema_version = $retired_schema,
-						evidence_migration_version = $migration RETURN NONE`,
-					map[string]any{
-						"rid": *row.RecID, "retired_schema": retiredAttemptSchema,
-						"migration": evidenceMigrationVersion,
-					}); err != nil {
-					return fmt.Errorf("retire malformed attempt: %w", err)
+			_, _, _, _, _, _, fieldsOK := evidenceAttemptMigrationFields(row)
+			unitDigest, unitOK := migrationString(row.UnitDigest)
+			if !fieldsOK || !unitOK ||
+				(unitDigest != "" && !validSHA256Digest(unitDigest)) {
+				if err := s.retireEvidenceAttempt(ctx, *row.RecID); err != nil {
+					return err
+				}
+				continue
+			}
+			if _, err := surrealdb.Query[any](ctx, s.db,
+				`UPDATE $rid SET store_schema_version = $store_schema_version,
+					evidence_migration_version = $evidence_migration_version
+				WHERE store_schema_version = $previous_schema RETURN NONE`,
+				map[string]any{
+					"rid":                        *row.RecID,
+					"previous_schema":            evidencePreviousStoreSchemaVersion,
+					"store_schema_version":       evidenceStoreSchemaVersion,
+					"evidence_migration_version": evidenceMigrationVersion,
+				}); err != nil {
+				return fmt.Errorf("stamp attempt %s: %w", row.RecID, err)
+			}
+		}
+	}
+}
+
+// reshapeLegacyEvidenceAttempts migrates the pre-unit writer, which kept one row
+// per repo/domain. Every compatible row therefore belongs to the explicit
+// whole-repository unit; no current repository state participates in that
+// classification. This is bound to its own generation literal, not to
+// "previous", because the reshape describes that writer's shape and nothing else.
+func (s *Surreal) reshapeLegacyEvidenceAttempts(ctx context.Context) error {
+	for {
+		results, err := surrealdb.Query[[]evidenceAttemptMigrationRec](ctx, s.db,
+			`SELECT id, run_id, repo, commit, domain, extractor, status, started_at,
+				store_schema_version, evidence_format_version
+			FROM extraction_attempt
+			WHERE store_schema_version = $legacy_schema
+			ORDER BY id LIMIT $limit`, map[string]any{
+				"legacy_schema": evidenceLegacyUpgradableStoreSchemaVersion,
+				"limit":         evidenceMigrationBatchSize,
+			})
+		if err != nil {
+			return err
+		}
+		var candidates []evidenceAttemptMigrationRec
+		for _, result := range *results {
+			candidates = append(candidates, result.Result...)
+		}
+		if len(candidates) == 0 {
+			return nil
+		}
+
+		for _, row := range candidates {
+			if row.RecID == nil {
+				return errors.New("attempt has no physical record id")
+			}
+			runID, repo, commit, domain, extractor, status, fieldsOK :=
+				evidenceAttemptMigrationFields(row)
+			if !fieldsOK {
+				if err := s.retireEvidenceAttempt(ctx, *row.RecID); err != nil {
+					return err
 				}
 				continue
 			}
@@ -461,7 +657,7 @@ func (s *Surreal) migrateEvidenceAttempts(ctx context.Context) error {
 			moved, err := surrealdb.Query[[]extractionRunIdentityRec](ctx, s.db,
 				`BEGIN;
 				LET $ready = array::len(SELECT id FROM $old_rid
-					WHERE store_schema_version = $previous_schema LIMIT 1) = 1
+					WHERE store_schema_version = $legacy_schema LIMIT 1) = 1
 					AND array::len(SELECT id FROM $new_rid LIMIT 1) = 0;
 				DELETE $old_rid WHERE $ready RETURN NONE;
 				LET $created = IF $ready THEN
@@ -478,7 +674,7 @@ func (s *Surreal) migrateEvidenceAttempts(ctx context.Context) error {
 					"run_id": runID, "repo": repo, "commit": commit,
 					"domain": domain, "extractor": extractor,
 					"status": status, "started_at": row.StartedAt,
-					"previous_schema":            evidencePreviousStoreSchemaVersion,
+					"legacy_schema":              evidenceLegacyUpgradableStoreSchemaVersion,
 					"store_schema_version":       evidenceStoreSchemaVersion,
 					"evidence_format_version":    evidenceFormatVersion,
 					"evidence_migration_version": evidenceMigrationVersion,
@@ -491,7 +687,62 @@ func (s *Surreal) migrateEvidenceAttempts(ctx context.Context) error {
 				progressed = progressed || len(result.Result) == 1
 			}
 			if !progressed {
-				return fmt.Errorf("move attempt for %s: destination collision or source changed", repo)
+				// The whole-repository slot is already occupied — a current-shape
+				// attempt for the same repository, commit, and domain outranks a
+				// pre-unit diagnostic, so retire the legacy row instead of
+				// failing Open. The retirement is itself guarded by both facts:
+				// a source that changed after our read is never overwritten, and
+				// a missing destination is not mislabeled as a collision.
+				retired, retireErr := surrealdb.Query[[]extractionRunIdentityRec](
+					ctx, s.db,
+					`LET $retired = UPDATE $old_rid SET
+						store_schema_version = $retired_schema,
+						evidence_migration_version = $migration
+						WHERE store_schema_version = $legacy_schema
+							AND array::len(SELECT id FROM $new_rid LIMIT 1) = 1
+						RETURN AFTER;
+					RETURN $retired;`,
+					map[string]any{
+						"old_rid":        *row.RecID,
+						"new_rid":        extractionAttemptID(scope),
+						"retired_schema": retiredAttemptSchema,
+						"migration":      evidenceMigrationVersion,
+						"legacy_schema":  evidenceLegacyUpgradableStoreSchemaVersion,
+					},
+				)
+				if retireErr != nil {
+					return fmt.Errorf(
+						"retire colliding attempt for %s: %w", repo, retireErr)
+				}
+				retiredRow := false
+				for _, result := range *retired {
+					retiredRow = retiredRow || len(result.Result) == 1
+				}
+				if retiredRow {
+					continue
+				}
+				stillLegacy, checkErr := surrealdb.Query[[]struct {
+					StoreSchema string `json:"store_schema_version"`
+				}](ctx, s.db,
+					`SELECT store_schema_version FROM $rid
+						WHERE store_schema_version = $legacy_schema LIMIT 1`,
+					map[string]any{
+						"rid":           *row.RecID,
+						"legacy_schema": evidenceLegacyUpgradableStoreSchemaVersion,
+					},
+				)
+				if checkErr != nil {
+					return fmt.Errorf(
+						"check unchanged attempt for %s: %w", repo, checkErr)
+				}
+				for _, result := range *stillLegacy {
+					if len(result.Result) > 0 {
+						return fmt.Errorf(
+							"move attempt for %s made no progress without a destination collision",
+							repo,
+						)
+					}
+				}
 			}
 		}
 	}
@@ -601,9 +852,25 @@ func evidenceMigrationPhysicalID(row evidenceRunMigrationRec) (models.RecordID, 
 }
 
 func isLegacyEvidenceStoreSchema(schema string, present bool) bool {
-	return !present || schema == "" || schema == "t12-store-v1" || schema == "t12-store-v2" ||
-		schema == "t12-store-v3" || schema == "t12-store-v4" || schema == "t12-store-v5" ||
-		schema == "t12-store-v6"
+	return !present || schema == "" ||
+		slices.Contains(retiredEvidenceStoreSchemas, schema)
+}
+
+// evidenceWriterIsUpgradable reports whether a row's writer generation is one
+// this binary migrates forward in place rather than quarantines.
+func evidenceWriterIsUpgradable(schema string) bool {
+	return schema == evidenceStoreSchemaVersion ||
+		schema == evidencePreviousStoreSchemaVersion ||
+		schema == evidenceLegacyUpgradableStoreSchemaVersion
+}
+
+// evidenceWriterCarriesUnitDigest reports whether a row's writer generation
+// recorded a per-unit extraction scope. Generations before v8 predate focused
+// units entirely, so their rows belong to the explicit whole-repository scope
+// and an empty unit digest is the correct reading — not a malformed one.
+func evidenceWriterCarriesUnitDigest(schema string) bool {
+	return schema == evidenceStoreSchemaVersion ||
+		schema == evidencePreviousStoreSchemaVersion
 }
 
 func validEvidenceRunStatus(status string) bool {
@@ -642,7 +909,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			   OR NOT (type::is_string(store_schema_version))
 			   OR store_schema_version = ''
 			   OR store_schema_version IN $legacy_schemas
-			   OR (store_schema_version = $previous_schema
+			   OR (store_schema_version IN $upgradable_predecessors
 				   AND (evidence_format_version = NONE
 					OR NOT (type::is_string(evidence_format_version))
 					OR evidence_format_version = ''
@@ -677,11 +944,13 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 						))))
 			ORDER BY id LIMIT $limit`, map[string]any{
 				"limit": evidenceMigrationBatchSize, "schema": evidenceStoreSchemaVersion,
-				"previous_schema": evidencePreviousStoreSchemaVersion,
-				"legacy_schemas": []string{"t12-store-v1", "t12-store-v2", "t12-store-v3",
-					"t12-store-v4", "t12-store-v5", "t12-store-v6"},
-				"format":    evidenceFormatVersion,
-				"migration": evidenceMigrationVersion,
+				"upgradable_predecessors": []string{
+					evidencePreviousStoreSchemaVersion,
+					evidenceLegacyUpgradableStoreSchemaVersion,
+				},
+				"legacy_schemas": retiredEvidenceStoreSchemas,
+				"format":         evidenceFormatVersion,
+				"migration":      evidenceMigrationVersion,
 			})
 		if err != nil {
 			return fmt.Errorf("migrate evidence runs: list: %w", err)
@@ -709,7 +978,7 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			}
 			schema, schemaPresent := migrationString(row.StoreSchema)
 			legacy := isLegacyEvidenceStoreSchema(schema, schemaPresent)
-			if !legacy && schema != evidencePreviousStoreSchemaVersion && schema != evidenceStoreSchemaVersion {
+			if !legacy && !evidenceWriterIsUpgradable(schema) {
 				return fmt.Errorf("migrate evidence run %s: candidate has unknown writer schema", runID)
 			}
 
@@ -719,11 +988,16 @@ func (s *Surreal) migrateEvidenceRuns(ctx context.Context) error {
 			rewriteRunID := oldRunIDUsable && oldRunID != runID
 
 			format, formatPresent := migrationString(row.Format)
-			knownWriter := schema == evidencePreviousStoreSchemaVersion || schema == evidenceStoreSchemaVersion
+			knownWriter := evidenceWriterIsUpgradable(schema)
 			malformedFormat := knownWriter && ((formatPresent && format == "") ||
 				(!formatPresent && row.Format != nil))
+			// The unit digest must be read for every generation that recorded
+			// one, not only the current writer: reading it only at the current
+			// generation would recompute a predecessor's published_key against
+			// an empty unit and collide its focused publication with the
+			// whole-repository slot for the same repository, commit, and domain.
 			unitDigest := ""
-			if schema == evidenceStoreSchemaVersion {
+			if evidenceWriterCarriesUnitDigest(schema) {
 				var unitOK bool
 				unitDigest, unitOK = migrationString(row.UnitDigest)
 				if !unitOK || (unitDigest != "" && !validSHA256Digest(unitDigest)) {
@@ -1043,6 +1317,7 @@ UPDATE extraction_run SET status = 'superseded', published_key = NONE
 UPDATE extraction_run SET status = 'aborted', published_key = NONE
     WHERE repo = $name AND status = 'staged' RETURN NONE;
 DELETE extraction_attempt WHERE repo = $name RETURN NONE;
+DELETE extraction_domain_outcome WHERE repo = $name RETURN NONE;
 UPDATE extraction_job SET status = 'canceled', error = 'repository deleting',
     finished_at = time::now(), not_before = NONE, pending_key = NONE
     WHERE target = $name AND status = 'pending' RETURN NONE;
@@ -1133,6 +1408,9 @@ IF $same_scope_state_changed {
 			AND evidence_format_version = $evidence_format
 			AND evidence_migration_version = $evidence_migration
 		RETURN NONE
+	;
+	DELETE extraction_domain_outcome
+		WHERE repo = $name RETURN NONE
 };
 LET $final = IF $identity_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
@@ -1188,6 +1466,9 @@ IF $same_scope_state_changed {
 			AND evidence_format_version = $evidence_format
 			AND evidence_migration_version = $evidence_migration
 		RETURN NONE
+	;
+	DELETE extraction_domain_outcome
+		WHERE repo = $name RETURN NONE
 };
 LET $final = IF $identity_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
@@ -1225,7 +1506,8 @@ LET $visibility_changed = ($before != NONE
 LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
 	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
 IF array::len($updated) = 1 {
-	DELETE $publication_rid RETURN NONE
+	DELETE $publication_rid RETURN NONE;
+	DELETE extraction_domain_outcome WHERE repo = $name RETURN NONE
 };
 LET $final = IF array::len($updated) = 1 AND $visibility_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
@@ -1236,6 +1518,7 @@ COMMIT;`,
 		map[string]any{
 			"rid":             repoID(name),
 			"publication_rid": candidateManifestPublicationID(name),
+			"name":            name,
 		})
 	if err != nil {
 		return err

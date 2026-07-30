@@ -114,6 +114,25 @@ type ExtractionOperationDomainLimits struct {
 	TypedInputBytes      int64 `json:"typed_input_bytes"`
 }
 
+// ExtractionDomainOutcomeReceipt is the bounded durable diagnostic committed
+// with one authoritative disposition. It freezes only work completed before
+// the store transition; publication/abort and enclosing-job timing remain in
+// the later T30.6a report.
+type ExtractionDomainOutcomeReceipt struct {
+	Schema           string                          `json:"schema"`
+	Domain           string                          `json:"domain"`
+	ExtractorVersion string                          `json:"extractor_version"`
+	Disposition      store.DomainOutcomeDisposition  `json:"disposition"`
+	Reason           string                          `json:"reason"`
+	InventoryMS      int64                           `json:"inventory_ms"`
+	OpenedSourceMS   int64                           `json:"opened_source_ms"`
+	ExtractorMS      int64                           `json:"extractor_ms"`
+	StagingMS        int64                           `json:"staging_ms"`
+	Counts           ExtractionOperationDomainCounts `json:"counts"`
+	Bytes            ExtractionOperationDomainBytes  `json:"bytes"`
+	Limits           ExtractionOperationDomainLimits `json:"limits"`
+}
+
 type extractionOperationMinimal struct {
 	Schema                  string                     `json:"schema"`
 	Repository              string                     `json:"repository"`
@@ -404,6 +423,35 @@ func (domain *domainOperationRecorder) snapshot() ExtractionOperationDomain {
 	domain.mu.Lock()
 	defer domain.mu.Unlock()
 	return domain.report
+}
+
+func encodeExtractionDomainOutcomeReceipt(
+	domain *domainOperationRecorder,
+	disposition store.DomainOutcomeDisposition,
+) string {
+	report := domain.snapshot()
+	receipt := ExtractionDomainOutcomeReceipt{
+		Schema:           store.ExtractionOutcomeReceiptSchema,
+		Domain:           report.Domain,
+		ExtractorVersion: report.ExtractorVersion,
+		Disposition:      disposition,
+		Reason:           report.Reason,
+		InventoryMS:      report.InventoryMS,
+		OpenedSourceMS:   report.OpenedSourceMS,
+		ExtractorMS:      report.ExtractorMS,
+		StagingMS:        report.StagingMS,
+		Counts:           report.Counts,
+		Bytes:            report.Bytes,
+		Limits:           report.Limits,
+	}
+	data, err := json.Marshal(receipt)
+	if err == nil && len(data) <= store.MaxExtractionOutcomeReceiptBytes {
+		return string(data)
+	}
+	// Every field above is scalar or a fixed struct, so this path is defensive
+	// against a future accidental expansion. Keep publication independent of
+	// diagnostics with a tiny valid schema-bearing fallback.
+	return `{"schema":"` + store.ExtractionOutcomeReceiptSchema + `"}`
 }
 
 func validOperationReason(reason string) bool {

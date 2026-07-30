@@ -15,9 +15,9 @@ const (
 	grpcConsumerEnumeration   = "grpc-consumer-paths-v1"
 	thriftContractEnumeration = "thrift-contract-paths-v1"
 	thriftConsumerEnumeration = "thrift-consumer-paths-v1"
-	scipProtoEnumeration      = "scip-proto-field-paths-v2"
-	scipThriftEnumeration     = "scip-thrift-field-paths-v2"
-	goCallerEnumeration       = "go-caller-paths-v2"
+	scipProtoEnumeration      = "scip-proto-field-paths-v3"
+	scipThriftEnumeration     = "scip-thrift-field-paths-v3"
+	goCallerEnumeration       = "go-caller-paths-v3"
 	kafkaGoEnumeration        = "kafka-go-paths-v1"
 	fixedRootSymlinkPolicy    = "fixed-root-regular-v1"
 )

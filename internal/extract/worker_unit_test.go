@@ -84,6 +84,7 @@ type memoryEvidence struct {
 	runs          map[string]*store.ExtractionRun
 	latest        *store.ExtractionRun
 	latestByScope map[string]*store.ExtractionRun
+	outcomes      map[string]*store.ExtractionDomainOutcome
 	latestErr     error
 	latestAttempt *store.ExtractionAttempt
 	batches       []evidenceBatch
@@ -106,6 +107,7 @@ func newMemoryEvidence() *memoryEvidence {
 	return &memoryEvidence{
 		runs:          make(map[string]*store.ExtractionRun),
 		latestByScope: make(map[string]*store.ExtractionRun),
+		outcomes:      make(map[string]*store.ExtractionDomainOutcome),
 		retainBatches: true,
 	}
 }
@@ -197,6 +199,45 @@ func (m *memoryEvidence) PublishExtractionRun(_ context.Context, runID string, c
 	return nil
 }
 
+func (m *memoryEvidence) PublishExtractionRunWithOutcome(
+	ctx context.Context,
+	runID string,
+	coverage store.CoverageManifest,
+	outcome store.ExtractionDomainOutcome,
+) error {
+	if err := m.PublishExtractionRun(ctx, runID, coverage); err != nil {
+		return err
+	}
+	return m.RecordExtractionDomainOutcome(ctx, outcome)
+}
+
+func (m *memoryEvidence) RecordExtractionDomainOutcome(
+	_ context.Context,
+	outcome store.ExtractionDomainOutcome,
+) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	copyOfOutcome := outcome
+	copyOfOutcome.Generation.Digest =
+		store.ComputeExtractionGenerationDigest(copyOfOutcome.Generation)
+	m.outcomes[memoryOutcomeKey(outcome.Scope)] = &copyOfOutcome
+	return nil
+}
+
+func (m *memoryEvidence) LatestExtractionDomainOutcome(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	outcome := m.outcomes[memoryOutcomeKey(scope)]
+	if outcome == nil || outcome.Scope != scope {
+		return nil, store.ErrNotFound
+	}
+	copyOfOutcome := *outcome
+	return &copyOfOutcome, nil
+}
+
 func (m *memoryEvidence) AbortExtractionRun(ctx context.Context, runID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -247,6 +288,10 @@ func (m *memoryEvidence) LatestExtractionAttempt(
 func memoryScopeKey(scope store.ExtractionScope) string {
 	return scope.Repository + "\x00" + scope.Commit + "\x00" +
 		scope.UnitDigest + "\x00" + scope.Domain
+}
+
+func memoryOutcomeKey(scope store.ExtractionScope) string {
+	return scope.Repository + "\x00" + scope.Domain
 }
 
 func (*memoryEvidence) ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error) {
@@ -588,11 +633,31 @@ func TestWorkerRejectsFactBeyondChunkedRunLimit(t *testing.T) {
 	worker := Worker{Repos: readyRepoGetter(repo), Evidence: evidence,
 		NewCorpus: unitFactory(nil), Extractors: []Extractor{extractor}}
 	err := worker.Handle(context.Background(), store.Job{Target: repo.Name})
-	if err == nil || !strings.Contains(err.Error(), fmt.Sprintf("exceeds %d-fact limit", maxFactsPerRun)) {
-		t.Fatalf("Handle error = %v", err)
+	if err != nil {
+		t.Fatalf("terminal limit should settle the job: %v", err)
 	}
 	if evidence.published || !evidence.aborted {
 		t.Fatalf("over-limit state: published=%v aborted=%v", evidence.published, evidence.aborted)
+	}
+	scope := store.ExtractionScope{
+		Repository: repo.Name, Commit: unitCommit, Domain: "unit",
+	}
+	outcome, err := evidence.LatestExtractionDomainOutcome(
+		context.Background(), scope,
+	)
+	if err != nil ||
+		outcome.Disposition != store.DomainOutcomeTerminalGenerationRefusal ||
+		!strings.Contains(outcome.Receipt, `"reason":"limit_refusal"`) {
+		t.Fatalf("limit outcome = %+v, %v", outcome, err)
+	}
+	if err := worker.Handle(
+		context.Background(),
+		store.Job{Target: repo.Name, Force: true},
+	); err != nil {
+		t.Fatalf("forced terminal no-op: %v", err)
+	}
+	if evidence.nextRun != 1 {
+		t.Fatalf("forced terminal generation created %d runs", evidence.nextRun)
 	}
 }
 
@@ -749,7 +814,14 @@ func TestWorkerFailureAfterFlushAbortsWithoutPublish(t *testing.T) {
 func TestWorkerStagingConflictLeavesRunInvisible(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()
-	evidence.addHook = func() error { return store.ErrConflict }
+	addCalls := 0
+	evidence.addHook = func() error {
+		addCalls++
+		if addCalls == 1 {
+			return store.ErrConflict
+		}
+		return nil
+	}
 	extractor := unitExtractor{domain: "unit", version: "1",
 		extract: func(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
 			for i := range evidenceChunkSize {
@@ -769,6 +841,32 @@ func TestWorkerStagingConflictLeavesRunInvisible(t *testing.T) {
 	if evidence.published || !evidence.aborted || evidence.batchCount != 0 {
 		t.Fatalf("staging conflict state: published=%v aborted=%v batches=%d",
 			evidence.published, evidence.aborted, evidence.batchCount)
+	}
+	scope := store.ExtractionScope{
+		Repository: repo.Name, Commit: unitCommit, Domain: "unit",
+	}
+	outcome, outcomeErr := evidence.LatestExtractionDomainOutcome(
+		context.Background(), scope,
+	)
+	if outcomeErr != nil ||
+		outcome.Disposition != store.DomainOutcomeRetryableFailure {
+		t.Fatalf("staging retry outcome = %+v, %v", outcome, outcomeErr)
+	}
+	if err := worker.Handle(
+		context.Background(), store.Job{Target: repo.Name},
+	); err != nil {
+		t.Fatalf("retry after temporary staging conflict: %v", err)
+	}
+	outcome, outcomeErr = evidence.LatestExtractionDomainOutcome(
+		context.Background(), scope,
+	)
+	if outcomeErr != nil ||
+		outcome.Disposition != store.DomainOutcomePublished ||
+		!evidence.published || evidence.nextRun != 2 {
+		t.Fatalf(
+			"retried publication = %+v, %v, published=%v runs=%d",
+			outcome, outcomeErr, evidence.published, evidence.nextRun,
+		)
 	}
 }
 
@@ -1062,10 +1160,9 @@ func TestWorkerRejectsUnboundOrForgedSourceProvenance(t *testing.T) {
 	}
 }
 
-// A published run whose manifest predates the current inventory generation
-// has unknown boundary/symlink semantics, so the worker replaces it even when
-// commit and extractor version match; a policy-current run still
-// short-circuits.
+// A pre-outcome published run has no durable generation authority, so the
+// worker replaces it even when commit and extractor version match. Once an
+// outcome exists, that exact generation short-circuits.
 func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()
@@ -1095,9 +1192,10 @@ func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
 	}
 
 	// The prior nonempty generation must be replaced because it predates the
-	// extractor-gated symlink contract.
+	// extractor-gated symlink contract and has no durable outcome.
 	evidence.mu.Lock()
 	evidence.latest.Coverage.InventoryPolicy = "gitlink-boundary-v1"
+	clear(evidence.outcomes)
 	evidence.mu.Unlock()
 	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
 		t.Fatal(err)
@@ -1110,6 +1208,7 @@ func TestWorkerReplacesLegacyInventoryRuns(t *testing.T) {
 	evidence.mu.Lock()
 	evidence.latest.Coverage.InventoryPolicy = ""
 	evidence.latest.Coverage.GitlinkDigest = ""
+	clear(evidence.outcomes)
 	evidence.mu.Unlock()
 	if err := worker.Handle(context.Background(), store.Job{Target: repo.Name}); err != nil {
 		t.Fatal(err)

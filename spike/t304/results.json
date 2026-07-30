@@ -40,8 +40,8 @@
   "policies": [
     {
       "domain": "grpc-caller",
-      "version": "1.4.0",
-      "enumeration_policy": "go-caller-paths-v2",
+      "version": "1.5.0",
+      "enumeration_policy": "go-caller-paths-v3",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "caller",
       "typed_inputs": [
@@ -78,8 +78,8 @@
     },
     {
       "domain": "scip-proto-field",
-      "version": "1.2.0",
-      "enumeration_policy": "scip-proto-field-paths-v2",
+      "version": "1.3.0",
+      "enumeration_policy": "scip-proto-field-paths-v3",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local",
       "typed_inputs": [
@@ -88,8 +88,8 @@
     },
     {
       "domain": "scip-thrift-field",
-      "version": "1.2.0",
-      "enumeration_policy": "scip-thrift-field-paths-v2",
+      "version": "1.3.0",
+      "enumeration_policy": "scip-thrift-field-paths-v3",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "local",
       "typed_inputs": [
@@ -98,8 +98,8 @@
     },
     {
       "domain": "thrift-caller",
-      "version": "1.4.0",
-      "enumeration_policy": "go-caller-paths-v2",
+      "version": "1.5.0",
+      "enumeration_policy": "go-caller-paths-v3",
       "symlink_policy": "fixed-root-regular-v1",
       "plane": "caller",
       "typed_inputs": [
@@ -141,9 +141,9 @@
   "run1": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:ed5e5d784dfeca1f52bd1a1f77a373907dcb21470799350a9e93b6999dc91d3d",
-    "generation_digest": "sha256:667fd53e187f433ac3ecdd024e4dd8fe6a48ab8c47f1f15a6842676d65b52641",
-    "manifest_digest": "sha256:8a4ece5d2e1a4684b7ce937717db78c2780221f2ff2d4477067240236a666022",
+    "policy_digest": "sha256:dca5479f48050cc032ed1ee8eb487bb324a20dfe275b9fe55c6165e5f53b14c2",
+    "generation_digest": "sha256:9b4504ad2ac5a44f85c35966de98b9b7309ec61b63252d393b67091f93fe78cd",
+    "manifest_digest": "sha256:91397ec557f0afd7eb4f861fe8a9989c31d25e586c9869bd648da277ed33b684",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -185,16 +185,16 @@
     "planner_scratch_upper_bound_bytes": 4134,
     "validation_scratch_upper_bound_bytes": 3514,
     "peak_candidate_disk_bytes": 28422,
-    "canonical_output_digest": "sha256:3dbf0db9649f1f51745a0a9d8eca92f7215d38f8540c294570ed44e799190b21",
-    "planner_wall_nanos": 3796393708,
-    "peak_rss_bytes": 60604416
+    "canonical_output_digest": "sha256:209f0a74aa863d8eb8986c7d853f34206d11527d86822056dfdd54071cedfb89",
+    "planner_wall_nanos": 3335869917,
+    "peak_rss_bytes": 61767680
   },
   "run2": {
     "corpus_digest": "sha256:600ddbac4c51b8434a32bc7443747c8070a4738cc5f575e9580978af722b7bb2",
     "unit_digest": "sha256:494eaa79044f330e08ecc3e9ef14c4c71150a887b1ea860681e26ee7e411b768",
-    "policy_digest": "sha256:ed5e5d784dfeca1f52bd1a1f77a373907dcb21470799350a9e93b6999dc91d3d",
-    "generation_digest": "sha256:667fd53e187f433ac3ecdd024e4dd8fe6a48ab8c47f1f15a6842676d65b52641",
-    "manifest_digest": "sha256:8a4ece5d2e1a4684b7ce937717db78c2780221f2ff2d4477067240236a666022",
+    "policy_digest": "sha256:dca5479f48050cc032ed1ee8eb487bb324a20dfe275b9fe55c6165e5f53b14c2",
+    "generation_digest": "sha256:9b4504ad2ac5a44f85c35966de98b9b7309ec61b63252d393b67091f93fe78cd",
+    "manifest_digest": "sha256:91397ec557f0afd7eb4f861fe8a9989c31d25e586c9869bd648da277ed33b684",
     "census": {
       "regular_count": 200008,
       "regular_declared_bytes": 4800559,
@@ -236,9 +236,9 @@
     "planner_scratch_upper_bound_bytes": 4134,
     "validation_scratch_upper_bound_bytes": 3514,
     "peak_candidate_disk_bytes": 28422,
-    "canonical_output_digest": "sha256:3dbf0db9649f1f51745a0a9d8eca92f7215d38f8540c294570ed44e799190b21",
-    "planner_wall_nanos": 3619698083,
-    "peak_rss_bytes": 61652992
+    "canonical_output_digest": "sha256:209f0a74aa863d8eb8986c7d853f34206d11527d86822056dfdd54071cedfb89",
+    "planner_wall_nanos": 3345786875,
+    "peak_rss_bytes": 61243392
   },
   "canonical_bytes_equal": true
 }

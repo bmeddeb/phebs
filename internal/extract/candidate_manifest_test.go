@@ -720,6 +720,129 @@ func TestWorkerPublishesExactFocusedScopeAndDoesNotReuseOtherUnit(
 	}
 }
 
+func TestFocusedMissingSCIPSettlesUnavailableWithoutLegacyEmptyPublication(
+	t *testing.T,
+) {
+	repository := "host/missing-scip"
+	unit, err := (analysisunit.Config{
+		Name:       "service",
+		Primary:    []string{"service/api.proto"},
+		Supporting: []string{"service/index.scip"},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "service/index.scip",
+		},
+	}).Scope(repository).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest := validMemoryCandidateManifest()
+	manifest.corpusFiles = 0
+	manifest.records = nil
+	manifest.unitDigest = unit.Digest
+	manifest.typed = CandidateManifestTypedInput{
+		Kind:    analysisunit.TypedIndexKindSCIP,
+		Path:    "service/index.scip",
+		Present: false,
+	}
+	evidence := newMemoryEvidence()
+	extractions := 0
+	extractor := unitExtractor{
+		domain:  "scip-proto-field",
+		version: "1.3.0",
+		extract: func(
+			context.Context, sdk.Corpus, sdk.Emit,
+		) (sdk.Coverage, error) {
+			extractions++
+			return sdk.Coverage{
+				Protocols: []string{"scip-index-absent"},
+			}, nil
+		},
+	}
+	worker := Worker{
+		Repos: readyRepoGetter(&store.Repo{
+			Name: repository, IndexedCommitHash: unitCommit,
+			IndexedAnalysisUnit: unit,
+		}),
+		Evidence: evidence,
+		NewCorpus: focusedManifestCorpusFactory{
+			files:     map[string]string{},
+			typedPath: "service/index.scip",
+		},
+		Manifests: splitManifestProvider{
+			identity: func(
+				context.Context, CandidateManifestRequest,
+			) (string, error) {
+				return manifest.Identity(), nil
+			},
+			open: func(
+				context.Context, CandidateManifestRequest,
+			) (CandidateManifest, error) {
+				return manifest, nil
+			},
+		},
+		Extractors: []Extractor{extractor},
+	}
+	job := store.Job{Target: repository}
+	if err := worker.Handle(context.Background(), job); err != nil {
+		t.Fatalf("focused missing SCIP: %v", err)
+	}
+	scope := store.ExtractionScope{
+		Repository: repository, Commit: unitCommit,
+		UnitDigest: unit.Digest, Domain: "scip-proto-field",
+	}
+	outcome, err := evidence.LatestExtractionDomainOutcome(
+		context.Background(), scope,
+	)
+	if err != nil ||
+		outcome.Disposition != store.DomainOutcomeUnavailablePrerequisite ||
+		extractions != 0 || evidence.nextRun != 0 || evidence.published {
+		t.Fatalf(
+			"focused missing SCIP outcome=%+v err=%v extractions=%d runs=%d published=%v",
+			outcome, err, extractions, evidence.nextRun, evidence.published,
+		)
+	}
+	if err := worker.Handle(
+		context.Background(),
+		store.Job{Target: repository, Force: true},
+	); err != nil {
+		t.Fatalf("forced settled missing SCIP: %v", err)
+	}
+	if extractions != 0 || evidence.nextRun != 0 {
+		t.Fatalf(
+			"forced settled generation reran: extractions=%d runs=%d",
+			extractions, evidence.nextRun,
+		)
+	}
+
+	// Without a committed focused unit the historical extractor behavior is
+	// retained: the absent index is an empty publication, not unavailable.
+	wholeEvidence := newMemoryEvidence()
+	manifest.unitDigest = ""
+	whole := worker
+	whole.Repos = readyRepoGetter(&store.Repo{
+		Name: repository, IndexedCommitHash: unitCommit,
+	})
+	whole.Evidence = wholeEvidence
+	extractions = 0
+	if err := whole.Handle(context.Background(), job); err != nil {
+		t.Fatalf("whole-repository missing SCIP: %v", err)
+	}
+	wholeScope := scope
+	wholeScope.UnitDigest = ""
+	wholeOutcome, err := wholeEvidence.LatestExtractionDomainOutcome(
+		context.Background(), wholeScope,
+	)
+	if err != nil ||
+		wholeOutcome.Disposition != store.DomainOutcomePublished ||
+		extractions != 1 || !wholeEvidence.published {
+		t.Fatalf(
+			"whole missing SCIP outcome=%+v err=%v extractions=%d published=%v",
+			wholeOutcome, err, extractions, wholeEvidence.published,
+		)
+	}
+}
+
 func TestWorkerCandidateMarkerRefusesAtNoOpPreflight(t *testing.T) {
 	repo := &store.Repo{Name: "host/repo", IndexedCommitHash: unitCommit}
 	evidence := newMemoryEvidence()

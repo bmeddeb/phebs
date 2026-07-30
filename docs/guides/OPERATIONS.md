@@ -32,8 +32,9 @@ the next start requires first-user enrollment.
 
 Precious state is `$DATA/db` plus the exact config file — the users, OIDC
 links, API-key hashes, sessions, permission edges, audit/analytics history,
-evidence, and proof pins that cannot be rebuilt (repo rows and job state ride
-along but are derivable). Mirrors and whole-repository shards are derived.
+evidence, extraction outcomes, and proof pins that cannot be rebuilt (repo
+rows and job state ride along but are derivable). Mirrors and
+whole-repository shards are derived.
 Focused shards are also derived semantically, but online backup preserves
 their currently published bytes exactly because builder timestamps/identity
 make rebuild output an unsuitable restore-equality test.
@@ -117,7 +118,12 @@ self-verified before backup returns. Restore then imports through an isolated
 SurrealDB child, restores focused shard/sidecar bytes before their manifests,
 and opens the store once to apply and validate the supported schema/migrations.
 That validation open clears every imported candidate-publication pointer
-because `$DATA/candidates` is deliberately absent from the backup.
+because `$DATA/candidates` is deliberately absent from the backup. Durable
+domain outcomes are present in the imported database, but they are ineligible
+while the candidate pointer and bytes are absent. Normal candidate rebuilding
+must first re-establish the exact pointer; only an outcome whose complete
+generation still matches may then short-circuit. A changed rebuild leaves the
+old latest row ineligible, so no outcome can authorize missing derived bytes.
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
 recovery procedure rather than retrying over it.
@@ -483,8 +489,9 @@ refresh added the focused-local projections; each run staged 12 files totaling
 24,288 bytes. Twice the final caller content bounds planner spool and
 split scratch at 4,134 bytes; external-validation scratch is bounded at 3,514
 bytes. Adding the larger phase bound to the final stage gives 28,422 bytes of
-conservative peak candidate disk. The refreshed runs took 3.80 s and 3.62 s,
-peaked at 60,604,416 and 61,652,992 bytes RSS, and reproduced byte-identical
+conservative peak candidate disk. The T30.6b identity refresh runs took
+3.34 s and 3.35 s, peaked at 61,767,680 and 61,243,392 bytes RSS, and
+reproduced byte-identical
 output. The
 frozen local planner gates are at most 10 s wall time, 256 MiB peak RSS, and 16
 MiB peak candidate disk including publication plus the higher planner or
@@ -510,10 +517,10 @@ At steady state, the exact persisted pointer, an absent marker, and its present
 regular manifest control file can prove that no publication bytes need to be
 consumed. The candidate job uses that identity-only path to repair the guarded
 extraction fan-out without rehashing or externally sorting every member. The
-extraction job resolves the pointer's manifest digest before taking the
-repository mirror lock and returns when every enabled domain already has a
-current run carrying that digest. A forced or stale domain takes the lock,
-reloads current state, then strictly opens the manifest and members once
+extraction job resolves the pointer's manifest, policy, and control identity
+before taking the repository mirror lock and returns when every enabled domain
+has a settled exact-generation outcome. A forced or stale domain takes the
+lock, reloads current state, then strictly opens the manifest and members once
 before any run begins. Marker recovery keeps the marker installed throughout
 strict validation and removes it only after the matching database transition;
 a second crash therefore remains fail-closed. A missing or malformed pointer
@@ -540,6 +547,15 @@ ordinary unmarked runtime damage re-enters the repair loop without restoring
 per-tick member hashing. This fingerprint is not cryptographic validation:
 preexisting content damage that preserves every observed metadata field is
 still refused when strict extraction consumption checks the member digest.
+The persisted pointer also carries a nonzero control revision. An exact
+ordinary retry preserves it. A typed descriptor/integrity refusal records a
+terminal control outcome and force-enqueues candidate repair in the same
+transaction; a successful strict repair advances the control revision even
+when rebuilt bytes produce the same semantic manifest digest, clears only the
+matching old control outcome, and ensures exactly one extraction successor.
+The repair lookup matches repository, commit, unit, manifest, policy, and
+revision, so an outcome from a retired scope cannot trigger repair of the
+current pointer.
 
 Before creating an extraction attempt, the worker refuses a publication
 marker, stale database pointer, HEAD/unit/policy disagreement, malformed or
@@ -606,6 +622,50 @@ The duration histogram's exponential finite buckets span 100 ms through about
 deliberately absent from metric labels; use the bounded log receipt for those
 identities.
 
+##### Durable extraction outcomes and retry
+
+The operation log above is not retry authority. The database stores one
+latest-only outcome per repository/domain for the exact current generation.
+The frozen dispositions are `published`, `unavailable_prerequisite`,
+`terminal_generation_refusal`, and `retryable_failure`. Their
+`phebs-extraction-domain-outcome-v1` receipt is separate from the job log,
+source-free, capped at 8 KiB, and limited to work known before the store
+transition: domain phases, bounded counts/bytes/limits, disposition, and
+generic reason.
+
+The exact generation binds repository, indexed HEAD, committed unit digest,
+candidate manifest/policy/control revision, extractor generation, inventory
+policy, typed-input identity and presence, and dependent scope inputs.
+`published` commits in the same transaction that publishes and supersedes
+evidence. Other outcomes never retire an older publication, but that older
+publication remains readable only while the existing exact freshness fences
+still match. A current settled generation short-circuits after restart.
+Ordinary or forced work does not rerun the same unavailable or terminal
+generation; force may deliberately rerun a published generation. Retryable or
+missing outcomes run again.
+
+For a focused unit, an applicable but absent designated SCIP input records
+`unavailable_prerequisite` before an extraction run is staged. The same
+generation remains settled until the typed-input identity or another
+generation input changes. Whole-repository missing-SCIP extraction retains its
+legacy empty-publication behavior.
+
+If extraction keeps retrying, inspect the ordinary classified error rather
+than parsing either receipt: temporary store, lease, cancellation, and
+untyped extractor failures are retryable. Stable typed limit and candidate
+descriptor/integrity refusals are terminal for their exact generation.
+Changing commit, unit, candidate publication, extractor/inventory policy,
+typed input, dependency identity, or control revision makes the old row
+ineligible automatically; do not delete outcome rows by hand. Candidate
+control damage should converge through the forced strict repair described
+above. Repository deletion and committed scope cleanup remove its bounded
+latest rows.
+
+At steady state, extraction adds one indexed latest-row lookup per configured
+domain. A settled no-op performs no corpus walk, candidate/member hash,
+publication open, blob read, or evidence write. Outcome storage is bounded to
+one row per repository/domain and one receipt of at most 8 KiB.
+
 ##### Scheduled T30.6 operating sequence
 
 The accepted large-monorepo review changes sequencing, not current runtime
@@ -619,8 +679,8 @@ single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
 failure diagnostic and wait for the target-bound caller generation.
 
-T30.6a now supplies the bounded job report described above. T30.6b next makes
-exact terminal and retryable outcomes durable; T30.6c schedules them beneath
+T30.6a supplies the bounded job report described above, and T30.6b makes exact
+terminal and retryable outcomes durable. T30.6c next schedules them beneath
 independent per-domain and aggregate job/lock bounds. T30.6d advances
 candidate identity with `source_lane: base|go_test`, and T30.6e consumes
 `base` only for focused local evidence while safety-accounting the complete

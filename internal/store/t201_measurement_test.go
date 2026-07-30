@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -87,12 +88,38 @@ func TestT204ReverseEvidenceSchemaIdentities(t *testing.T) {
 }
 
 func TestT205RetentionSchemaIdentities(t *testing.T) {
-	if evidenceStoreSchemaVersion != "t12-store-v8" ||
-		evidencePreviousStoreSchemaVersion != "t12-store-v7" ||
-		evidenceMigrationVersion != "t12-evidence-migration-v7" ||
-		evidencePreviousMigrationVersion != "t12-evidence-migration-v6" ||
-		evidenceWriterGuardEvent != "extraction_run_writer_v8" {
+	if evidenceStoreSchemaVersion != "t12-store-v9" ||
+		evidencePreviousStoreSchemaVersion != "t12-store-v8" ||
+		evidenceLegacyUpgradableStoreSchemaVersion != "t12-store-v7" ||
+		evidenceMigrationVersion != "t12-evidence-migration-v8" ||
+		evidencePreviousMigrationVersion != "t12-evidence-migration-v7" ||
+		evidenceWriterGuardEvent != "extraction_run_writer_v9" {
 		t.Fatal("evidence scope schema identities changed; review and remeasure")
+	}
+	// v7 shipped in v0.2.0 and v8 never shipped, so both predecessors are
+	// upgradable for this release and neither may appear in the quarantine set.
+	// A retired generation that is still reachable by an upgrade path would be
+	// migrated and quarantined at the same time.
+	for _, upgradable := range []string{
+		evidenceStoreSchemaVersion,
+		evidencePreviousStoreSchemaVersion,
+		evidenceLegacyUpgradableStoreSchemaVersion,
+	} {
+		if slices.Contains(retiredEvidenceStoreSchemas, upgradable) {
+			t.Fatalf("upgradable generation %q is also quarantined", upgradable)
+		}
+		if !evidenceWriterIsUpgradable(upgradable) {
+			t.Fatalf("generation %q is not reachable by any upgrade path", upgradable)
+		}
+	}
+	// Every generation this binary refuses to write must be either quarantined
+	// or upgradable — a generation in neither set is silently invisible, which
+	// is exactly how an upgrade loses evidence without reporting anything.
+	for _, retired := range retiredEvidenceWriterGenerations() {
+		if !slices.Contains(retiredEvidenceStoreSchemas, retired) &&
+			!evidenceWriterIsUpgradable(retired) {
+			t.Fatalf("retired generation %q has no migration branch", retired)
+		}
 	}
 }
 

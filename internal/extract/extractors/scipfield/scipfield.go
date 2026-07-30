@@ -38,7 +38,7 @@ import (
 
 const (
 	domain        = "scip-proto-field"
-	version       = "1.2.0"
+	version       = "1.3.0"
 	schemaVersion = "t13-v1"
 	indexPath     = "index.scip" // legacy whole-repository test fixture path
 

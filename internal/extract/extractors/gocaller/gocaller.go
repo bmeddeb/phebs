@@ -32,7 +32,7 @@ import (
 const (
 	grpcDomain   = "grpc-caller"
 	thriftDomain = "thrift-caller"
-	version      = "1.4.0"
+	version      = "1.5.0"
 	indexPath    = "index.scip" // legacy whole-repository test fixture path
 
 	schemaVersion       = "t20-caller-v1"

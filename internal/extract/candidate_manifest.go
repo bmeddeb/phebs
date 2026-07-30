@@ -127,6 +127,30 @@ type CandidateManifestIdentityProvider interface {
 	) (string, error)
 }
 
+// CandidateManifestPointerIdentity is the complete durable identity available
+// from the pointer-only preflight. ControlRevision changes only after strict
+// validation/repair, including same-semantic-digest repairs.
+type CandidateManifestPointerIdentity struct {
+	ManifestDigest  string
+	PolicyDigest    string
+	ControlRevision uint64
+}
+
+// CandidateManifestGenerationProvider extends the legacy digest-only
+// preflight with the identities required by durable outcome reconciliation.
+type CandidateManifestGenerationProvider interface {
+	CandidateManifestGeneration(
+		ctx context.Context,
+		request CandidateManifestRequest,
+	) (CandidateManifestPointerIdentity, error)
+}
+
+// CandidateManifestControl identifies the validated controls behind a strict
+// open without widening the compatibility CandidateManifest interface.
+type CandidateManifestControl interface {
+	CandidateControlRevision() uint64
+}
+
 func manifestRequest(
 	repoName, commit string,
 	unit *analysisunit.State,

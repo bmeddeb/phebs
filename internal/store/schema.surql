@@ -84,6 +84,8 @@ DEFINE FIELD IF NOT EXISTS policy_digest ON candidate_manifest_publication TYPE 
 DEFINE FIELD IF NOT EXISTS manifest_digest ON candidate_manifest_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS generation_digest ON candidate_manifest_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS manifest_path ON candidate_manifest_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS control_revision ON candidate_manifest_publication TYPE int
+    DEFAULT 1 ASSERT $value >= 1;
 DEFINE FIELD IF NOT EXISTS published_at ON candidate_manifest_publication TYPE datetime;
 DEFINE INDEX IF NOT EXISTS candidate_manifest_publication_repository
     ON candidate_manifest_publication FIELDS repository UNIQUE;
@@ -136,6 +138,64 @@ DEFINE INDEX IF NOT EXISTS extraction_attempt_repo ON extraction_attempt FIELDS 
 DEFINE INDEX IF NOT EXISTS extraction_attempt_scope_v8 ON extraction_attempt
     FIELDS repo, commit, unit_digest, domain;
 DEFINE INDEX IF NOT EXISTS extraction_attempt_run ON extraction_attempt FIELDS run_id UNIQUE;
+
+-- T30.6b: one durable, non-evidence row per repository/domain records how its
+-- latest exact scope resolved and the exact generation the resolution applies
+-- to. It is the authority for extraction terminality and retry; it is not
+-- evidence, takes no part in publication visibility, and no proof-retention
+-- sweep removes it.
+-- Latest-only is structural: the record id is the repository/domain hash, so a
+-- commit or unit advance makes the old row ineligible without growing one row
+-- per generation. Go remains the primary trust boundary; these field types and
+-- assertions are defence in depth against raw writes.
+DEFINE TABLE IF NOT EXISTS extraction_domain_outcome SCHEMALESS;
+DEFINE FIELD OVERWRITE repo ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE commit ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE unit_digest ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE domain ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE disposition ON extraction_domain_outcome TYPE string
+    ASSERT $value INSIDE ['published', 'unavailable_prerequisite',
+        'terminal_generation_refusal', 'retryable_failure'];
+DEFINE FIELD OVERWRITE generation ON extraction_domain_outcome TYPE object;
+DEFINE FIELD OVERWRITE generation.candidate_manifest_digest
+    ON extraction_domain_outcome TYPE option<string>;
+DEFINE FIELD OVERWRITE generation.candidate_policy_digest
+    ON extraction_domain_outcome TYPE option<string>;
+DEFINE FIELD OVERWRITE generation.candidate_control_revision
+    ON extraction_domain_outcome TYPE option<int>;
+DEFINE FIELD OVERWRITE generation.extractor
+    ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE generation.inventory_policy
+    ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE generation.typed_input_kind
+    ON extraction_domain_outcome TYPE option<string>;
+DEFINE FIELD OVERWRITE generation.typed_input_object_id
+    ON extraction_domain_outcome TYPE option<string>;
+DEFINE FIELD OVERWRITE generation.typed_input_digest
+    ON extraction_domain_outcome TYPE option<string>;
+DEFINE FIELD OVERWRITE generation.typed_input_present
+    ON extraction_domain_outcome TYPE option<bool>;
+DEFINE FIELD OVERWRITE generation.dependency_digest
+    ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE generation.digest
+    ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE candidate_control_failure
+    ON extraction_domain_outcome TYPE bool DEFAULT false;
+DEFINE FIELD OVERWRITE run_id ON extraction_domain_outcome TYPE option<string>;
+DEFINE FIELD OVERWRITE receipt_schema ON extraction_domain_outcome TYPE string
+    ASSERT $value = 'phebs-extraction-domain-outcome-v1';
+DEFINE FIELD OVERWRITE receipt ON extraction_domain_outcome TYPE string
+    ASSERT string::len($value) <= 8192;
+DEFINE FIELD OVERWRITE recorded_at ON extraction_domain_outcome TYPE datetime;
+DEFINE FIELD OVERWRITE store_schema_version ON extraction_domain_outcome TYPE string;
+DEFINE FIELD OVERWRITE evidence_migration_version
+    ON extraction_domain_outcome TYPE string;
+DEFINE INDEX IF NOT EXISTS extraction_domain_outcome_repo ON extraction_domain_outcome
+    FIELDS repo;
+DEFINE INDEX IF NOT EXISTS extraction_domain_outcome_scope ON extraction_domain_outcome
+    FIELDS repo, commit, unit_digest, domain;
+DEFINE INDEX IF NOT EXISTS extraction_domain_outcome_control ON extraction_domain_outcome
+    FIELDS repo, candidate_control_failure, generation.candidate_control_revision;
 
 -- Proof-aware retention: a pinned run (and everything it references) is
 -- immune to sweeps regardless of supersession or age.

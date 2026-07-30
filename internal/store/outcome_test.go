@@ -50,17 +50,21 @@ func validOutcome() ExtractionDomainOutcome {
 		Scope: ExtractionScope{
 			Repository: "example.invalid/mono",
 			Commit:     strings.Repeat("a", 40),
-			UnitDigest: "sha256:unit",
+			UnitDigest: "sha256:" + strings.Repeat("b", 64),
 			Domain:     "proto-contract",
 		},
 		Disposition: DomainOutcomePublished,
 		Generation: ExtractionGenerationIdentity{
-			Extractor:               "v1",
-			CandidateManifestDigest: "sha256:manifest",
+			Extractor:                "v1",
+			CandidateManifestDigest:  "sha256:" + strings.Repeat("c", 64),
+			CandidatePolicyDigest:    "sha256:" + strings.Repeat("d", 64),
+			CandidateControlRevision: 1,
+			InventoryPolicy:          "candidate-manifest-v3-current",
+			DependencyDigest:         "sha256:" + strings.Repeat("e", 64),
 		},
 		RunID:         "extraction_run:1",
-		ReceiptSchema: "phebs-extraction-operation-v1",
-		Receipt:       `{"domain":"proto-contract"}`,
+		ReceiptSchema: ExtractionOutcomeReceiptSchema,
+		Receipt:       `{"schema":"phebs-extraction-domain-outcome-v1"}`,
 	}
 }
 
@@ -85,12 +89,12 @@ func TestExtractionDomainOutcomeValidate(t *testing.T) {
 			"",
 		},
 		{
-			"valid without receipt",
+			"missing receipt",
 			func(o *ExtractionDomainOutcome) {
 				o.Receipt = ""
 				o.ReceiptSchema = ""
 			},
-			"",
+			"receipt schema",
 		},
 		{
 			"unknown disposition",
@@ -105,17 +109,17 @@ func TestExtractionDomainOutcomeValidate(t *testing.T) {
 		{
 			"missing repository",
 			func(o *ExtractionDomainOutcome) { o.Scope.Repository = "" },
-			"repository, commit, and domain",
+			"repository",
 		},
 		{
 			"missing commit",
 			func(o *ExtractionDomainOutcome) { o.Scope.Commit = "" },
-			"repository, commit, and domain",
+			"commit",
 		},
 		{
 			"missing domain",
 			func(o *ExtractionDomainOutcome) { o.Scope.Domain = "" },
-			"repository, commit, and domain",
+			"domain",
 		},
 		{
 			"missing extractor",
@@ -130,19 +134,23 @@ func TestExtractionDomainOutcomeValidate(t *testing.T) {
 		{
 			"receipt without schema",
 			func(o *ExtractionDomainOutcome) { o.ReceiptSchema = "" },
-			"schema name",
+			"receipt schema",
 		},
 		{
 			"receipt at the cap",
 			func(o *ExtractionDomainOutcome) {
-				o.Receipt = strings.Repeat("x", MaxExtractionOutcomeReceiptBytes)
+				o.Receipt = `"` +
+					strings.Repeat("x", MaxExtractionOutcomeReceiptBytes-2) +
+					`"`
 			},
 			"",
 		},
 		{
 			"receipt one byte over the cap",
 			func(o *ExtractionDomainOutcome) {
-				o.Receipt = strings.Repeat("x", MaxExtractionOutcomeReceiptBytes+1)
+				o.Receipt = `"` +
+					strings.Repeat("x", MaxExtractionOutcomeReceiptBytes-1) +
+					`"`
 			},
 			"limit",
 		},
@@ -210,5 +218,71 @@ func TestTerminalMarkerComposesWithClass(t *testing.T) {
 	plain := WithClass(ClassExtract, base)
 	if DefaultBackoff(terminal, 1) != DefaultBackoff(plain, 1) {
 		t.Error("the terminal marker must not alter class-derived backoff")
+	}
+}
+
+func TestExtractionGenerationIdentityInvalidatesEveryInput(t *testing.T) {
+	base := validOutcome().Generation
+	base.TypedInputKind = "scip"
+	base.TypedInputObjectID = strings.Repeat("f", 40)
+	base.TypedInputDigest = "sha256:" + strings.Repeat("1", 64)
+	base.TypedInputPresent = true
+	base.DependencyDigest = "sha256:" + strings.Repeat("2", 64)
+	base.Digest = "caller-controlled"
+
+	tests := []struct {
+		name   string
+		mutate func(*ExtractionGenerationIdentity)
+	}{
+		{"candidate manifest", func(g *ExtractionGenerationIdentity) {
+			g.CandidateManifestDigest = "sha256:" + strings.Repeat("3", 64)
+		}},
+		{"candidate policy", func(g *ExtractionGenerationIdentity) {
+			g.CandidatePolicyDigest = "sha256:" + strings.Repeat("4", 64)
+		}},
+		{"candidate control", func(g *ExtractionGenerationIdentity) {
+			g.CandidateControlRevision++
+		}},
+		{"extractor", func(g *ExtractionGenerationIdentity) {
+			g.Extractor = "v2"
+		}},
+		{"inventory policy", func(g *ExtractionGenerationIdentity) {
+			g.InventoryPolicy = "candidate-manifest-v4-current"
+		}},
+		{"typed input kind", func(g *ExtractionGenerationIdentity) {
+			g.TypedInputKind = ""
+			g.TypedInputObjectID = ""
+			g.TypedInputDigest = ""
+			g.TypedInputPresent = false
+		}},
+		{"typed input object", func(g *ExtractionGenerationIdentity) {
+			g.TypedInputObjectID = strings.Repeat("e", 40)
+		}},
+		{"typed input digest", func(g *ExtractionGenerationIdentity) {
+			g.TypedInputDigest = "sha256:" + strings.Repeat("5", 64)
+		}},
+		{"typed input presence", func(g *ExtractionGenerationIdentity) {
+			g.TypedInputObjectID = ""
+			g.TypedInputDigest = ""
+			g.TypedInputPresent = false
+		}},
+		{"dependency", func(g *ExtractionGenerationIdentity) {
+			g.DependencyDigest = "sha256:" + strings.Repeat("6", 64)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			changed := base
+			changed.Digest = base.Digest
+			test.mutate(&changed)
+			if SameExtractionGeneration(base, changed) {
+				t.Fatal("changed generation remained current")
+			}
+		})
+	}
+	copyWithForgedDigest := base
+	copyWithForgedDigest.Digest = "different-caller-value"
+	if !SameExtractionGeneration(base, copyWithForgedDigest) {
+		t.Fatal("caller-supplied cached digest affected canonical equality")
 	}
 }

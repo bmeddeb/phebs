@@ -86,8 +86,10 @@ func (w *Worker) Handle(
 		return store.WithClass(store.ClassExtract, fmt.Errorf("extract %s: %w", job.Target, err))
 	}
 	operation.registerDomains(extractors)
+	policyDigest := ""
 	if provider, ok := w.Manifests.(interface{ PolicyDigest() string }); ok {
-		operation.bindPolicy(provider.PolicyDigest())
+		policyDigest = provider.PolicyDigest()
+		operation.bindPolicy(policyDigest)
 	}
 
 	// Production candidate admission has a pointer-only phase. A previously
@@ -98,21 +100,19 @@ func (w *Worker) Handle(
 	// A concurrent index/delete after this read owns a queued successor. This
 	// path consumes no mirror or candidate bytes, so returning against the
 	// prior complete generation cannot publish stale work.
-	if !job.Force {
-		pointerStarted := now()
-		current, currentErr := w.candidateManifestCurrent(
-			ctx, job.Target, extractors, operation,
-		)
-		operation.addPointerWork(nonnegativeDuration(pointerStarted, now()))
-		if currentErr != nil {
-			operation.completeRemaining(operationReason(currentErr))
-			return store.WithClass(store.ClassExtract,
-				fmt.Errorf("extract %s: candidate preflight: %w", job.Target, currentErr))
-		}
-		if current {
-			operation.completeRemaining(OperationReasonAlreadyCurrent)
-			return nil
-		}
+	pointerStarted := now()
+	current, pointerIdentity, currentErr := w.candidateManifestCurrent(
+		ctx, job.Target, extractors, operation, job.Force,
+	)
+	operation.addPointerWork(nonnegativeDuration(pointerStarted, now()))
+	if currentErr != nil {
+		operation.completeRemaining(operationReason(currentErr))
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("extract %s: candidate preflight: %w", job.Target, currentErr))
+	}
+	if current {
+		operation.completeRemaining(OperationReasonAlreadyCurrent)
+		return nil
 	}
 
 	// Lock before loading the repository row. Fetch, indexing, mirror deletion,
@@ -189,9 +189,10 @@ func (w *Worker) Handle(
 		)
 		operation.addStrictOpen(nonnegativeDuration(openStarted, now()))
 		if err != nil {
-			operation.completeRemaining(operationReason(err))
-			return store.WithClass(store.ClassExtract,
-				fmt.Errorf("extract %s: open candidate manifest: %w", repo.Name, err))
+			return w.recordManifestOpenOutcomes(
+				ctx, repo, extractors, policyDigest, pointerIdentity,
+				operation, err,
+			)
 		}
 		inventoryPolicy, boundaries, err = validateCandidateManifest(candidateManifest)
 		if err != nil {
@@ -200,6 +201,21 @@ func (w *Worker) Handle(
 				fmt.Errorf("extract %s: validate candidate manifest: %w", repo.Name, err))
 		}
 		operation.bindManifest(candidateManifest.Identity())
+		if _, production := w.Manifests.(CandidateManifestGenerationProvider); production {
+			control, ok := candidateManifest.(CandidateManifestControl)
+			if !ok || control.CandidateControlRevision() == 0 {
+				return store.WithClass(store.ClassExtract, errors.New(
+					"strict candidate manifest has no durable control revision"))
+			}
+			if pointerIdentity.ControlRevision != 0 &&
+				(control.CandidateControlRevision() !=
+					pointerIdentity.ControlRevision ||
+					candidateManifest.Identity() !=
+						pointerIdentity.ManifestDigest) {
+				operation.completeRemaining(OperationReasonStale)
+				return nil
+			}
+		}
 	}
 
 	// Domains publish independently, so one domain's failure must not starve
@@ -217,34 +233,65 @@ func (w *Worker) Handle(
 			break
 		}
 		scope := extractionScope(repo, ex.domain)
-		if !job.Force {
-			last, latestErr := w.Evidence.LatestPublishedRun(ctx, scope)
-			if latestErr == nil {
-				if last == nil {
-					return store.WithClass(store.ClassExtract,
-						fmt.Errorf("extract %s: %s: latest run returned nil", repo.Name, ex.domain))
+		generation, typedApplicable, typedPresent, generationErr :=
+			extractionGeneration(
+				candidateManifest, ex, inventoryPolicy, boundaries,
+				policyDigest,
+			)
+		if generationErr != nil {
+			domainOperation.complete(operationReason(generationErr))
+			disposition, controlFailure := classifyDomainOutcome(generationErr)
+			if recordErr := w.recordDomainOutcome(
+				ctx, scope, generation, disposition, controlFailure, "",
+				domainOperation,
+			); recordErr != nil {
+				if errors.Is(recordErr, errStaleRun) {
+					operation.completeRemaining(OperationReasonStale)
+					return nil
 				}
-				// A run without the current inventory policy is replaced even
-				// at the same commit and extractor version: older generations
-				// do not prove the current gitlink and symlink semantics, and
-				// only a fresh walk can bind them.
-				if last.Commit == commit && last.Extractor == ex.version &&
-					last.Coverage.InventoryPolicy == inventoryPolicy &&
-					(candidateManifest == nil ||
-						last.Coverage.CandidateManifestDigest == candidateManifest.Identity()) {
-					domainOperation.complete(OperationReasonAlreadyCurrent)
-					continue
-				}
+				domainErrs = append(domainErrs, recordErr)
+			} else if !disposition.Settled() {
+				domainErrs = append(domainErrs, generationErr)
 			}
-			if latestErr != nil && !errors.Is(latestErr, store.ErrNotFound) {
-				domainOperation.complete(operationReason(latestErr))
+			continue
+		}
+		latest, latestErr := w.Evidence.LatestExtractionDomainOutcome(
+			ctx, scope,
+		)
+		if latestErr == nil {
+			if latest == nil {
 				return store.WithClass(store.ClassExtract,
-					fmt.Errorf("extract %s: %s: latest run: %w", repo.Name, ex.domain, latestErr))
+					fmt.Errorf("extract %s: %s: latest outcome returned nil",
+						repo.Name, ex.domain))
 			}
+			if store.SameExtractionGeneration(
+				latest.Generation, generation,
+			) && latest.Disposition.Settled() &&
+				(!job.Force ||
+					latest.Disposition != store.DomainOutcomePublished) {
+				domainOperation.complete(OperationReasonAlreadyCurrent)
+				continue
+			}
+		} else if !errors.Is(latestErr, store.ErrNotFound) {
+			domainOperation.complete(operationReason(latestErr))
+			return store.WithClass(store.ClassExtract,
+				fmt.Errorf("extract %s: %s: latest outcome: %w",
+					repo.Name, ex.domain, latestErr))
+		}
+		if scope.UnitDigest != "" && typedApplicable && !typedPresent {
+			domainOperation.complete(OperationReasonTypedInputAbsent)
+			if err := w.recordDomainOutcome(
+				ctx, scope, generation,
+				store.DomainOutcomeUnavailablePrerequisite, false, "",
+				domainOperation,
+			); err != nil {
+				domainErrs = append(domainErrs, err)
+			}
+			continue
 		}
 		if err := w.runOne(
 			ctx, ex, scope, corpus, candidateManifest, inventoryPolicy, boundaries,
-			domainOperation,
+			generation, domainOperation,
 		); err != nil {
 			if errors.Is(err, errStaleRun) {
 				// A guarded publish proved the repository was deleted or advanced.
@@ -253,7 +300,22 @@ func (w *Worker) Handle(
 				operation.completeRemaining(OperationReasonStale)
 				return nil
 			}
-			domainErrs = append(domainErrs, err)
+			disposition, controlFailure := classifyDomainOutcome(err)
+			if recordErr := w.recordDomainOutcome(
+				ctx, scope, generation, disposition, controlFailure, "",
+				domainOperation,
+			); recordErr != nil {
+				if errors.Is(recordErr, errStaleRun) {
+					operation.completeRemaining(OperationReasonStale)
+					return nil
+				}
+				domainErrs = append(
+					domainErrs,
+					errors.Join(err, recordErr),
+				)
+			} else if !disposition.Settled() {
+				domainErrs = append(domainErrs, err)
+			}
 		}
 	}
 	if len(domainErrs) > 0 {
@@ -269,70 +331,135 @@ func (w *Worker) candidateManifestCurrent(
 	target string,
 	extractors []registeredExtractor,
 	operation *operationRecorder,
-) (bool, error) {
-	identityProvider, ok := w.Manifests.(CandidateManifestIdentityProvider)
-	if !ok {
-		return false, nil
+	force bool,
+) (bool, CandidateManifestPointerIdentity, error) {
+	generationProvider, generationOK := w.Manifests.(CandidateManifestGenerationProvider)
+	legacyProvider, legacyOK := w.Manifests.(CandidateManifestIdentityProvider)
+	if !generationOK && !legacyOK {
+		return false, CandidateManifestPointerIdentity{}, nil
 	}
 	repo, err := w.Repos.GetRepo(ctx, target)
 	if errors.Is(err, store.ErrNotFound) {
 		operation.completeRemaining(OperationReasonNotReady)
-		return true, nil
+		return true, CandidateManifestPointerIdentity{}, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("load repo: %w", err)
+		return false, CandidateManifestPointerIdentity{},
+			fmt.Errorf("load repo: %w", err)
 	}
 	if repo == nil {
-		return false, errors.New("repository store returned nil")
+		return false, CandidateManifestPointerIdentity{},
+			errors.New("repository store returned nil")
 	}
 	operation.bindRepository(repo)
 	if repo.Deleting || repo.IndexedCommitHash == "" {
 		operation.completeRemaining(OperationReasonNotReady)
-		return true, nil
+		return true, CandidateManifestPointerIdentity{}, nil
 	}
 	if repo.Name != target {
-		return false, fmt.Errorf("stored repository name is %q", repo.Name)
+		return false, CandidateManifestPointerIdentity{},
+			fmt.Errorf("stored repository name is %q", repo.Name)
 	}
 	if err := checkCommit(repo.IndexedCommitHash); err != nil {
-		return false, fmt.Errorf("indexed revision: %w", err)
+		return false, CandidateManifestPointerIdentity{},
+			fmt.Errorf("indexed revision: %w", err)
 	}
-	identity, err := identityProvider.CandidateManifestIdentity(
+	request := manifestRequest(
+		repo.Name, repo.IndexedCommitHash,
+		repo.IndexedAnalysisUnit, extractors,
+	)
+	if !generationOK {
+		identity, identityErr := legacyProvider.CandidateManifestIdentity(
+			ctx, request,
+		)
+		if identityErr != nil {
+			return false, CandidateManifestPointerIdentity{},
+				fmt.Errorf("candidate manifest identity: %w", identityErr)
+		}
+		operation.bindManifest(identity)
+		inventoryPolicy, policyErr :=
+			candidateManifestInventoryPolicy(identity)
+		if policyErr != nil {
+			return false, CandidateManifestPointerIdentity{}, policyErr
+		}
+		if force {
+			return false, CandidateManifestPointerIdentity{}, nil
+		}
+		for _, ex := range extractors {
+			last, latestErr := w.Evidence.LatestPublishedRun(
+				ctx, extractionScope(repo, ex.domain),
+			)
+			if errors.Is(latestErr, store.ErrNotFound) {
+				return false, CandidateManifestPointerIdentity{}, nil
+			}
+			if latestErr != nil {
+				return false, CandidateManifestPointerIdentity{},
+					fmt.Errorf("%s: latest run: %w", ex.domain, latestErr)
+			}
+			if last == nil {
+				return false, CandidateManifestPointerIdentity{},
+					fmt.Errorf("%s: latest run returned nil", ex.domain)
+			}
+			if last.Extractor != ex.version ||
+				last.Coverage.InventoryPolicy != inventoryPolicy ||
+				last.Coverage.CandidateManifestDigest != identity {
+				return false, CandidateManifestPointerIdentity{}, nil
+			}
+		}
+		return true, CandidateManifestPointerIdentity{}, nil
+	}
+	identity, err := generationProvider.CandidateManifestGeneration(
 		ctx,
-		manifestRequest(
-			repo.Name, repo.IndexedCommitHash,
-			repo.IndexedAnalysisUnit, extractors,
-		),
+		request,
 	)
 	if err != nil {
-		return false, fmt.Errorf("candidate manifest identity: %w", err)
+		return false, CandidateManifestPointerIdentity{},
+			fmt.Errorf("candidate manifest identity: %w", err)
 	}
-	operation.bindManifest(identity)
-	inventoryPolicy, err := candidateManifestInventoryPolicy(identity)
+	if !validSHA256(identity.ManifestDigest) ||
+		!validSHA256(identity.PolicyDigest) ||
+		identity.ControlRevision == 0 {
+		return false, CandidateManifestPointerIdentity{}, errors.New(
+			"candidate manifest pointer identity is incomplete")
+	}
+	operation.bindManifest(identity.ManifestDigest)
+	inventoryPolicy, err := candidateManifestInventoryPolicy(
+		identity.ManifestDigest,
+	)
 	if err != nil {
-		return false, err
+		return false, CandidateManifestPointerIdentity{}, err
 	}
 	for _, ex := range extractors {
 		scope := extractionScope(repo, ex.domain)
-		last, latestErr := w.Evidence.LatestPublishedRun(
+		latest, latestErr := w.Evidence.LatestExtractionDomainOutcome(
 			ctx, scope,
 		)
 		if errors.Is(latestErr, store.ErrNotFound) {
-			return false, nil
+			return false, identity, nil
 		}
 		if latestErr != nil {
-			return false, fmt.Errorf("%s: latest run: %w", ex.domain, latestErr)
+			return false, CandidateManifestPointerIdentity{},
+				fmt.Errorf("%s: latest outcome: %w", ex.domain, latestErr)
 		}
-		if last == nil {
-			return false, fmt.Errorf("%s: latest run returned nil", ex.domain)
+		if latest == nil {
+			return false, CandidateManifestPointerIdentity{},
+				fmt.Errorf("%s: latest outcome returned nil", ex.domain)
 		}
-		if last.Commit != repo.IndexedCommitHash ||
-			last.Extractor != ex.version ||
-			last.Coverage.InventoryPolicy != inventoryPolicy ||
-			last.Coverage.CandidateManifestDigest != identity {
-			return false, nil
+		if !latest.Disposition.Settled() ||
+			(force &&
+				latest.Disposition == store.DomainOutcomePublished) ||
+			latest.Generation.Extractor != ex.version ||
+			latest.Generation.InventoryPolicy != inventoryPolicy ||
+			latest.Generation.CandidateManifestDigest !=
+				identity.ManifestDigest ||
+			latest.Generation.CandidatePolicyDigest !=
+				identity.PolicyDigest ||
+			latest.Generation.CandidateControlRevision !=
+				identity.ControlRevision {
+			return false, identity, nil
 		}
 	}
-	return true, nil
+	return true, identity, nil
 }
 
 func extractionScope(repo *store.Repo, domain string) store.ExtractionScope {
@@ -346,6 +473,233 @@ func extractionScope(repo *store.Repo, domain string) store.ExtractionScope {
 		scope.UnitDigest = repo.IndexedAnalysisUnit.Digest
 	}
 	return scope
+}
+
+func extractionGeneration(
+	manifest CandidateManifest,
+	ex registeredExtractor,
+	inventoryPolicy string,
+	boundaries gitlinkInventory,
+	policyDigest string,
+) (store.ExtractionGenerationIdentity, bool, bool, error) {
+	generation := store.ExtractionGenerationIdentity{
+		Extractor:       ex.version,
+		InventoryPolicy: inventoryPolicy,
+	}
+	dependencyFields := []string{
+		"phebs-extraction-dependency-v1",
+		inventoryPolicy,
+		boundaries.digest,
+	}
+	if manifest == nil {
+		generation.DependencyDigest =
+			extractionDependencyDigest(dependencyFields...)
+		generation.Digest =
+			store.ComputeExtractionGenerationDigest(generation)
+		return generation, false, false, nil
+	}
+	if !validSHA256(manifest.Identity()) {
+		return generation, false, false, fmt.Errorf(
+			"%w: candidate manifest identity is invalid",
+			candidatepkg.ErrInvalidManifest,
+		)
+	}
+	if !validSHA256(policyDigest) {
+		// Compatibility manifests used by isolated tests predate the production
+		// shared-policy provider. Derive a stable bounded identity; production
+		// always supplies the actual candidate policy digest.
+		policyDigest = extractionDependencyDigest(
+			"compat-candidate-policy-v1", manifest.Identity(),
+		)
+	}
+	controlRevision := uint64(1)
+	if control, ok := manifest.(CandidateManifestControl); ok {
+		controlRevision = control.CandidateControlRevision()
+	}
+	if controlRevision == 0 {
+		return generation, false, false, fmt.Errorf(
+			"%w: candidate control revision is missing",
+			candidatepkg.ErrInvalidManifest,
+		)
+	}
+	generation.CandidateManifestDigest = manifest.Identity()
+	generation.CandidatePolicyDigest = policyDigest
+	generation.CandidateControlRevision = controlRevision
+	generation.DependencyDigest = extractionDependencyDigest(
+		"candidate-control-generation-v1",
+		manifest.Identity(),
+		policyDigest,
+		fmt.Sprintf("%d", controlRevision),
+	)
+	generation.Digest =
+		store.ComputeExtractionGenerationDigest(generation)
+	scope, err := manifest.DomainScope(ex.domain, ex.version)
+	if err != nil {
+		return generation, false, false, fmt.Errorf(
+			"%w: candidate domain scope: %v",
+			candidatepkg.ErrInvalidManifest, err,
+		)
+	}
+	typed, err := manifest.TypedInput(
+		ex.domain, ex.version, analysisunit.TypedIndexKindSCIP,
+	)
+	if err != nil {
+		return generation, false, false, fmt.Errorf(
+			"%w: candidate typed input: %v",
+			candidatepkg.ErrInvalidManifest, err,
+		)
+	}
+	_, typedPresent, err := normalizeManifestTypedInput(typed)
+	if err != nil {
+		return generation, false, false, fmt.Errorf(
+			"%w: candidate typed input: %v",
+			candidatepkg.ErrInvalidManifest, err,
+		)
+	}
+	generation.TypedInputKind = typed.Kind
+	generation.TypedInputObjectID = typed.ObjectID
+	generation.TypedInputPresent = typedPresent
+	dependencyFields = append(
+		dependencyFields,
+		scope.ManifestDigest,
+		scope.UnitDigest,
+		string(scope.Plane),
+		scope.CorpusDigest,
+		scope.CandidateDigest,
+		typed.Kind,
+		typed.ObjectID,
+		fmt.Sprintf("%t", typedPresent),
+	)
+	generation.DependencyDigest =
+		extractionDependencyDigest(dependencyFields...)
+	generation.Digest = store.ComputeExtractionGenerationDigest(generation)
+	return generation, typed.Kind != "", typedPresent, nil
+}
+
+func extractionDependencyDigest(fields ...string) string {
+	hash := sha256.New()
+	for _, field := range fields {
+		_, _ = fmt.Fprintf(hash, "%d:", len(field))
+		_, _ = hash.Write([]byte(field))
+		_, _ = hash.Write([]byte{';'})
+	}
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
+}
+
+func classifyDomainOutcome(
+	err error,
+) (store.DomainOutcomeDisposition, bool) {
+	switch {
+	case errors.Is(err, candidatepkg.ErrInvalidManifest):
+		return store.DomainOutcomeTerminalGenerationRefusal, true
+	case store.IsTerminal(err), isOperationLimitRefusal(err):
+		return store.DomainOutcomeTerminalGenerationRefusal, false
+	default:
+		return store.DomainOutcomeRetryableFailure, false
+	}
+}
+
+func (w *Worker) recordDomainOutcome(
+	ctx context.Context,
+	scope store.ExtractionScope,
+	generation store.ExtractionGenerationIdentity,
+	disposition store.DomainOutcomeDisposition,
+	controlFailure bool,
+	runID string,
+	operation *domainOperationRecorder,
+) error {
+	outcome := store.ExtractionDomainOutcome{
+		Scope:                   scope,
+		Disposition:             disposition,
+		Generation:              generation,
+		CandidateControlFailure: controlFailure,
+		RunID:                   runID,
+		ReceiptSchema:           store.ExtractionOutcomeReceiptSchema,
+		Receipt: encodeExtractionDomainOutcomeReceipt(
+			operation, disposition,
+		),
+	}
+	if err := w.Evidence.RecordExtractionDomainOutcome(ctx, outcome); err != nil {
+		if errors.Is(err, store.ErrConflict) {
+			return fmt.Errorf("%s: outcome generation changed: %w",
+				scope.Domain, errStaleRun)
+		}
+		return fmt.Errorf("%s: record %s outcome: %w",
+			scope.Domain, disposition, err)
+	}
+	return nil
+}
+
+func (w *Worker) recordManifestOpenOutcomes(
+	ctx context.Context,
+	repo *store.Repo,
+	extractors []registeredExtractor,
+	policyDigest string,
+	pointer CandidateManifestPointerIdentity,
+	operation *operationRecorder,
+	openErr error,
+) error {
+	disposition, controlFailure := classifyDomainOutcome(openErr)
+	if !validSHA256(pointer.ManifestDigest) ||
+		!validSHA256(pointer.PolicyDigest) ||
+		pointer.ControlRevision == 0 {
+		operation.completeRemaining(operationReason(openErr))
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("extract %s: open candidate manifest: %w",
+				repo.Name, openErr))
+	}
+	inventoryPolicy, policyErr := candidateManifestInventoryPolicy(
+		pointer.ManifestDigest,
+	)
+	if policyErr != nil {
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("extract %s: candidate identity: %w",
+				repo.Name, policyErr))
+	}
+	if policyDigest == "" {
+		policyDigest = pointer.PolicyDigest
+	}
+	var retryable []error
+	for index, ex := range extractors {
+		domainOperation := operation.domain(index)
+		domainOperation.complete(operationReason(openErr))
+		generation := store.ExtractionGenerationIdentity{
+			CandidateManifestDigest:  pointer.ManifestDigest,
+			CandidatePolicyDigest:    policyDigest,
+			CandidateControlRevision: pointer.ControlRevision,
+			Extractor:                ex.version,
+			InventoryPolicy:          inventoryPolicy,
+			DependencyDigest: extractionDependencyDigest(
+				"candidate-control-refusal-v1",
+				pointer.ManifestDigest,
+				policyDigest,
+				fmt.Sprintf("%d", pointer.ControlRevision),
+			),
+		}
+		generation.Digest =
+			store.ComputeExtractionGenerationDigest(generation)
+		if err := w.recordDomainOutcome(
+			ctx, extractionScope(repo, ex.domain), generation,
+			disposition, controlFailure, "", domainOperation,
+		); err != nil {
+			if errors.Is(err, errStaleRun) {
+				operation.completeRemaining(OperationReasonStale)
+				return nil
+			}
+			retryable = append(retryable, err)
+		}
+	}
+	if len(retryable) > 0 {
+		return store.WithClass(store.ClassExtract,
+			fmt.Errorf("extract %s: persist manifest outcomes: %w",
+				repo.Name, errors.Join(retryable...)))
+	}
+	if disposition.Settled() {
+		return nil
+	}
+	return store.WithClass(store.ClassExtract,
+		fmt.Errorf("extract %s: open candidate manifest: %w",
+			repo.Name, openErr))
 }
 
 type registeredExtractor struct {
@@ -414,6 +768,7 @@ func (w *Worker) runOne(
 	candidateManifest CandidateManifest,
 	inventoryPolicy string,
 	boundaries gitlinkInventory,
+	generation store.ExtractionGenerationIdentity,
 	operation *domainOperationRecorder,
 ) (err error) {
 	if scope.Repository != corpus.RepoName() ||
@@ -532,8 +887,22 @@ func (w *Worker) runOne(
 	if err != nil {
 		return fmt.Errorf("%s: coverage: %w", ex.domain, err)
 	}
+	operation.capture(verifiedCorpus, sink)
+	operation.complete(successfulOperationReason(stats, sink.factCount))
+	outcome := store.ExtractionDomainOutcome{
+		Scope:         scope,
+		Disposition:   store.DomainOutcomePublished,
+		Generation:    generation,
+		RunID:         run.ID,
+		ReceiptSchema: store.ExtractionOutcomeReceiptSchema,
+		Receipt: encodeExtractionDomainOutcomeReceipt(
+			operation, store.DomainOutcomePublished,
+		),
+	}
 	publicationStarted := operation.started()
-	if err := w.Evidence.PublishExtractionRun(ctx, run.ID, manifest); err != nil {
+	if err := w.Evidence.PublishExtractionRunWithOutcome(
+		ctx, run.ID, manifest, outcome,
+	); err != nil {
 		operation.addPublication(operation.elapsed(publicationStarted))
 		if errors.Is(err, store.ErrConflict) {
 			stale, checkErr := w.runBecameStale(ctx, scope)
@@ -548,7 +917,6 @@ func (w *Worker) runOne(
 	}
 	operation.addPublication(operation.elapsed(publicationStarted))
 	log.Printf("extract %s: %s published", corpus.RepoName(), ex.domain)
-	operation.complete(successfulOperationReason(stats, sink.factCount))
 	return nil
 }
 

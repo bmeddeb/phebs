@@ -6,8 +6,9 @@ configuration/state boundary, T30.3 shipped and then adversarially repaired
 focused shard integrity, T30.4 shipped reusable candidate planning, and T30.5
 shipped exact focused evidence publication. The post-T30.5 issue-repair gate
 is closed. The separate large-monorepo review is complete, T30.6a shipped
-bounded extraction job receipts, and T30.6b durable per-domain outcomes are
-next. Completed Epics 0–24, Epic 29, T30.1–T30.6a, and P5 hardening are
+bounded extraction job receipts, and T30.6b shipped durable per-domain
+outcomes. T30.6c aggregate-bounded domain scheduling is next. Completed Epics
+0–24, Epic 29, T30.1–T30.6b, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -17,11 +18,12 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6b · Durable per-domain outcomes and retry disposition** is next. T30.6a
-now emits the bounded non-authoritative operational receipt that makes shared
-job cost and per-domain work visible without changing queue disposition.
-T30.6b adds the durable exact-generation outcome and typed retry disposition;
-it does not infer authority from the T30.6a log report. The accepted
+**T30.6c · Aggregate-bounded domain scheduling** is next. T30.6a emits the
+bounded non-authoritative operational receipt that makes shared job cost and
+per-domain work visible, while T30.6b persists the exact-generation outcome
+and typed retry disposition without inferring authority from that log report.
+T30.6c schedules absent and retryable domains beneath aggregate job and lock
+bounds. The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
@@ -545,7 +547,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6b next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6c next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -851,34 +853,21 @@ generic outcomes and bounded phase/count/byte/limit diagnostics. The report is
 non-authoritative, source-free, and failure-isolated and changes no store/API
 schema or retry disposition.
 
-**T30.6b · Durable per-domain outcomes and retry disposition** *(next; needs
-T30.6a)* — add one latest-only exact-generation outcome record carrying the
-matching bounded domain receipt and typed `published`,
+**T30.6b ✅ · Durable per-domain outcomes and retry disposition** *(2026-07-30;
+needs T30.6a)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306b--durable-per-domain-outcomes-and-retry-disposition).
+One latest-only exact-generation outcome per repository/domain now carries a
+bounded transactional receipt and typed `published`,
 `unavailable_prerequisite`, `terminal_generation_refusal`, or
-`retryable_failure` disposition; never infer disposition from error text.
-Outcome and receipt commit transactionally, survive restart/startup fan-out,
-preserve a prior visible publication, and invalidate immediately when commit,
-unit, candidate manifest, typed input, extractor policy, or dependency identity
-changes. A job is terminal only when every configured domain is published,
-unavailable, or terminally refused; it is requeued only while a domain is
-retryable, and retries execute only retryable or not-yet-attempted domains.
-Automatic forced reconciliation does not rerun a terminal outcome for the
-identical semantic generation. A descriptor/integrity terminal outcome also
-binds the candidate publication control fingerprint: marker, manifest, member,
-or descriptor identity change invalidates it immediately, and successful
-strict reconciliation repair clears it even when the semantic manifest digest
-is unchanged. Reconciliation never clears it without validating or rebuilding
-the publication. A prior publication may remain retained but is visible only
-while the existing T30.5 freshness and candidate-receipt fences match, and no
-outcome row can make a mismatched historical publication current.
-Focused missing-SCIP behavior advances affected extractor/policy generations:
-an old `scip-index-absent` empty publication cannot remain current and the new
-outcome is visibly unavailable; whole-repository legacy behavior is unchanged.
-AC: store-writer compatibility/migration, restore, exact invalidation, stable
-descriptor/integrity refusal, temporary store/lease retry, prior-publication
-visibility fences, forced semantic-terminal no-op, tamper to terminal outcome
-to same-digest strict repair to one successful extraction without blind retry,
-no string matching, full merge bar.
+`retryable_failure` disposition. Exact settled generations survive restart and
+short-circuit; retryable and absent generations rerun; every scope, candidate,
+extractor, inventory, typed-input, dependency, or candidate-control change
+invalidates immediately. Published outcome and evidence commit atomically,
+nonpublished outcomes preserve prior visibility, focused missing SCIP records
+unavailable before staging, and whole-repository legacy behavior is unchanged.
+Strict same-semantic candidate repair advances a durable control revision,
+clears only its matching terminal control outcome, and creates exactly one
+extraction successor.
 
 **T30.6c · Aggregate-bounded domain scheduling** *(needs T30.6b)* — replace the
 one shared domain cancellation context without multiplying wall time or mirror

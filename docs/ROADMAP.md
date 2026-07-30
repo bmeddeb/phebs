@@ -66,7 +66,17 @@ repository job. Shared queue, mirror-lock, pointer, and strict-open work is
 recorded once at job level; nested domains carry only frozen generic outcomes
 and bounded phase/count/byte/limit diagnostics. Report failure cannot affect
 publication or retry disposition, and the recorder adds no corpus pass,
-candidate/member hash, publication open, or blob read.
+candidate/member hash, publication open, or blob read. T30.6b now persists one
+latest-only exact-generation outcome per repository/domain with a bounded
+source-free receipt and typed published, unavailable, terminal, or retryable
+disposition. Published evidence and outcome commit atomically; nonpublished
+outcomes preserve prior publication visibility. Exact settled generations
+short-circuit across restart, while any scope, candidate, extractor, inventory,
+typed-input, dependency, or candidate-control change invalidates them. A
+strict same-semantic candidate repair advances its control revision, clears
+only the matching terminal control outcome, and enqueues one extraction
+successor. Focused missing SCIP is unavailable before staging; legacy
+whole-repository behavior is unchanged.
 
 The post-T30.5 repair gate closed two reported integration issues:
 whole-repository Search/Stream binds an exact committed shard generation across
@@ -86,8 +96,8 @@ inventory as the next integration boundary; raising global extraction limits
 is not the repair. T30.6 remains that caller-overlay umbrella and is split at
 each operational-state, scheduler, candidate-lane, catalog, leaf-artifact,
 complete-publication, consumer, and retention seam. T30.6a bounded job
-receipts are shipped; T30.6b durable exact-generation domain outcomes and
-typed retry disposition are next. Exact `_test.go` suffix wins when candidate
+receipts and T30.6b durable exact-generation domain outcomes are shipped;
+T30.6c aggregate-bounded domain scheduling is next. Exact `_test.go` suffix wins when candidate
 v4 ships; focused local evidence for a committed non-empty unit consumes the
 resulting `base` lane in the following ticket, while empty-unit
 whole-repository extraction keeps shipped behavior and current search

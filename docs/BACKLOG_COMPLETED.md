@@ -4128,3 +4128,56 @@ read. This ticket changes no store/API schema, evidence format, search
 behavior, production registration, runtime-use, completeness,
 extraction-accuracy, migration-completion, or decommission-safety claim.
 T30.6b owns durable exact-generation outcomes and typed retry disposition.
+
+### T30.6b · Durable per-domain outcomes and retry disposition
+
+**T30.6b ✅ · Durable per-domain outcomes and retry disposition**
+*(2026-07-30)* — added one latest-only `extraction_domain_outcome` row per
+repository/domain. Its exact scope and store-computed generation identity bind
+repository, indexed HEAD, committed unit digest, candidate manifest and policy
+digests, candidate control revision, extractor generation, inventory policy,
+typed-input identity/presence, and dependent scope inputs. The frozen
+dispositions are `published`, `unavailable_prerequisite`,
+`terminal_generation_refusal`, and `retryable_failure`; classification uses
+typed sentinels rather than error prose.
+
+Each outcome carries a distinct, source-free
+`phebs-extraction-domain-outcome-v1` receipt capped at 8 KiB. It records only
+pre-transition domain phases, bounded counts/bytes/limits, disposition, and
+generic reason. The bounded T30.6a job report remains advisory and is never
+parsed as durable authority. Published evidence and its outcome commit in one
+guarded transaction. A nonpublished outcome preserves the prior publication,
+which remains visible only through the existing exact T30.5 freshness fences.
+Exact settled generations short-circuit across restart; force reruns
+`published` only, while retryable or missing generations run again.
+
+Candidate publications now carry a nonzero repository-local control revision.
+An exact retry preserves it. A typed descriptor/integrity refusal records a
+terminal control outcome and atomically requests forced candidate repair; a
+strict validated same-semantic repair advances the revision, clears only its
+matching old control outcome, and enqueues exactly one extraction successor.
+The repair lookup matches the complete pointer identity, so a retired
+commit/unit outcome cannot trigger repair of a new generation. Focused absence
+of an applicable SCIP input records unavailable before staging and advances
+the affected policy generations; whole-repository missing-SCIP behavior
+remains unchanged.
+
+Evidence writer v9 includes explicit migration or quarantine coverage for
+every refused writer generation. Outcomes survive database backup/restore and
+remain ineligible until exact candidate reconstruction; repository deletion
+and committed scope cleanup remove bounded latest rows. AC met: transactional
+publication/outcome tests; exact input invalidation; store-owned digest
+verification; prior-publication preservation; restart terminal/no-op and
+retryable-retry tests; focused missing-SCIP and whole-repository compatibility
+fixtures; candidate tamper → terminal control outcome → same-digest strict
+repair → one successful extraction; restore coverage; no string matching;
+dated PLAN decision and Operations, Manual, roadmap, and active/completed
+backlog updates; full merge bar. Steady state adds one indexed outcome lookup
+per configured domain and one pointer lookup per candidate job, with no extra
+corpus pass, candidate/member hash, publication open, blob read, or evidence
+write for a settled no-op. Storage is bounded to one outcome row per
+repository/domain and one receipt of at most 8 KiB. The required identity
+bumps refreshed the neutral candidate receipt with unchanged row/artifact/disk
+bounds and byte-identical 3.34 s/3.35 s runs at
+61,767,680/61,243,392 bytes RSS. T30.6c owns aggregate-bounded domain
+scheduling.

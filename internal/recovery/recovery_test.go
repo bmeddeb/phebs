@@ -85,6 +85,26 @@ connections:
 	if err := st.PublishCandidateManifest(ctx, candidatePointer); err != nil {
 		t.Fatalf("publish pre-backup candidate pointer: %v", err)
 	}
+	outcomeScope := store.ExtractionScope{
+		Repository: names[0],
+		Commit:     indexedBefore.IndexedCommitHash,
+		Domain:     "proto-contract",
+	}
+	outcome := store.ExtractionDomainOutcome{
+		Scope:       outcomeScope,
+		Disposition: store.DomainOutcomeRetryableFailure,
+		Generation: store.ExtractionGenerationIdentity{
+			Extractor:        "restore-v1",
+			InventoryPolicy:  "gitlink-boundary-v2",
+			DependencyDigest: "sha256:" + strings.Repeat("d", 64),
+		},
+		ReceiptSchema: store.ExtractionOutcomeReceiptSchema,
+		Receipt: `{"schema":"` +
+			store.ExtractionOutcomeReceiptSchema + `"}`,
+	}
+	if err := st.RecordExtractionDomainOutcome(ctx, outcome); err != nil {
+		t.Fatalf("record pre-backup extraction outcome: %v", err)
+	}
 
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
@@ -140,6 +160,14 @@ connections:
 		ctx, names[0],
 	); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("restored derived candidate pointer = %v, want ErrNotFound", err)
+	}
+	restoredOutcome, err := restored.LatestExtractionDomainOutcome(
+		ctx, outcomeScope,
+	)
+	if err != nil ||
+		restoredOutcome.Disposition != store.DomainOutcomeRetryableFailure ||
+		restoredOutcome.Generation.Extractor != "restore-v1" {
+		t.Fatalf("restored extraction outcome = %+v, %v", restoredOutcome, err)
 	}
 
 	// This is the same boot seam serve executes: reconcile clears an index

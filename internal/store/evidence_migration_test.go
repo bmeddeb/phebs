@@ -357,11 +357,12 @@ func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testin
 		`CREATE $published CONTENT {
 			run_id: 'v3-old-id', repo: $repo, commit: 'v3-commit', domain: 'proto-contract',
 			extractor: 'v3', status: 'published', started_at: $now, published_at: $now,
-			store_schema_version: $v3
+			unit_digest: '', store_schema_version: $v3
 		};
 		CREATE $staged CONTENT {
 			run_id: 'v3-staged', repo: $repo, commit: 'v3-commit', domain: 'identity',
-			extractor: 'v3', status: 'staged', started_at: $now, store_schema_version: $v3
+			extractor: 'v3', status: 'staged', started_at: $now,
+			unit_digest: '', store_schema_version: $v3
 		};
 		CREATE $hidden_alias CONTENT {
 			run_id: 'v3-hidden-logical', repo: $repo, commit: 'future', domain: 'proto-contract',
@@ -372,7 +373,7 @@ func TestMigrateEvidenceRunsUpgradesPreviousWriterAndCanonicalizesPins(t *testin
 		CREATE $blocked_candidate CONTENT {
 			run_id: 'v3-blocked', repo: $repo, commit: 'v3-commit', domain: 'blocked',
 			extractor: 'v3', status: 'published', started_at: $now, published_at: $now,
-			store_schema_version: $v3
+			unit_digest: '', store_schema_version: $v3
 		};
 		CREATE $canonical_blocker CONTENT {
 			run_id: 'not-the-physical-id', repo: $repo, commit: 'future', domain: 'blocked',
@@ -504,22 +505,22 @@ func TestMigrateEvidenceRunIDCollisionDoesNotStealProof(t *testing.T) {
 		`CREATE $owner CONTENT {
 				run_id: 'collision-owner', repo: $repo, commit: 'owner', domain: 'owner',
 				extractor: 'v3', status: 'published', started_at: $now, published_at: $now,
-				store_schema_version: $v3
+				unit_digest: '', store_schema_version: $v3
 			};
 			CREATE $collider CONTENT {
 				run_id: 'collision-owner', repo: $repo, commit: 'owner', domain: 'owner',
 				extractor: 'v3', status: 'published', started_at: $now, published_at: $now,
-				store_schema_version: $v3
+				unit_digest: '', store_schema_version: $v3
 		};
 		CREATE $orphan_a CONTENT {
 			run_id: 'orphan-x', repo: $repo, commit: 'orphan-a', domain: 'orphan',
 			extractor: 'v3', status: 'published', started_at: $now, published_at: $now,
-			store_schema_version: $v3
+			unit_digest: '', store_schema_version: $v3
 		};
 		CREATE $orphan_b CONTENT {
 			run_id: 'orphan-x', repo: $repo, commit: 'orphan-b', domain: 'orphan',
 			extractor: 'v3', status: 'superseded', started_at: $now,
-			store_schema_version: $v3
+			unit_digest: '', store_schema_version: $v3
 		};
 		CREATE $atom CONTENT {
 			atom_id: 'collision-atom', schema_version: 'v3', blob_digest: 'collision',
@@ -677,7 +678,7 @@ func TestMigrateEvidenceRunIDCollisionDoesNotStealProof(t *testing.T) {
 		CREATE $late CONTENT {
 			run_id: 'orphan-x', repo: $repo, commit: 'late', domain: 'orphan',
 			extractor: 'v3', status: 'published', started_at: $now, published_at: $now,
-			store_schema_version: $v3
+			unit_digest: '', store_schema_version: $v3
 		};
 		UPSERT $marker SET version = 't12-evidence-migration-v1', completed_at = $now;`,
 		map[string]any{
@@ -728,19 +729,19 @@ func TestMigrateEvidenceUnsafeRetainedClaimsReserveOwner(t *testing.T) {
 		CREATE $prequarantined CONTENT {
 			run_id: 'unsafe-owner', repo: $repo, commit: 'owner', domain: 'prequarantined',
 			extractor: 'v3', status: 'superseded', started_at: $old,
-			store_schema_version: $v3, evidence_format_version: $format,
+			unit_digest: '', store_schema_version: $v3, evidence_format_version: $format,
 			retention_quarantined: true
 		};
 		CREATE $invalid_status CONTENT {
 			run_id: 'unsafe-owner', repo: $repo, commit: 'owner', domain: 'invalid',
 			extractor: 'v3', status: 'invalid-old-status', started_at: $old,
-			store_schema_version: $v3, evidence_format_version: $format,
+			unit_digest: '', store_schema_version: $v3, evidence_format_version: $format,
 			retention_quarantined: false
 		};
 		CREATE $staged CONTENT {
 			run_id: 'unsafe-owner', repo: $repo, commit: 'owner', domain: 'staged',
 			extractor: 'v3', status: 'staged', started_at: $old,
-			store_schema_version: $v3, evidence_format_version: $format,
+			unit_digest: '', store_schema_version: $v3, evidence_format_version: $format,
 			retention_quarantined: false
 		};
 		CREATE $atom CONTENT {
@@ -850,7 +851,7 @@ func TestMigrateEvidenceRejectsConflictingAmbiguityMarkers(t *testing.T) {
 	if _, err := surrealdb.Query[any](ctx, s.db,
 		`CREATE $rid CONTENT {
 			run_id: 'first-owner', repo: 'repo', commit: 'c', domain: 'd', extractor: 'v3',
-			status: 'superseded', started_at: $now, store_schema_version: $v3,
+			status: 'superseded', started_at: $now, unit_digest: '', store_schema_version: $v3,
 			evidence_format_version: $format, evidence_migration_version: 't12-evidence-migration-v1',
 			evidence_migration_ambiguous_run_id: 'second-owner', retention_quarantined: true
 		};`, map[string]any{
@@ -1334,7 +1335,7 @@ func TestMigrateEvidenceRunsClassifiesMalformedSchemaTypes(t *testing.T) {
 		`CREATE $empty_v3 CONTENT {
 			run_id: 'format-empty-v3', repo: 'repo', commit: 'c', domain: 'd', extractor: 'x',
 			status: 'published', started_at: $now, published_at: $now,
-			store_schema_version: $v3, evidence_format_version: '',
+			unit_digest: '', store_schema_version: $v3, evidence_format_version: '',
 			retention_quarantined: false, published_key: 'bad-empty-slot'
 		};
 		CREATE $object_v4 CONTENT {
@@ -1385,7 +1386,7 @@ func TestMigrateEvidenceRunsClassifiesMalformedSchemaTypes(t *testing.T) {
 			};
 			CREATE $unknown_v3 CONTENT {
 			run_id: 'format-unknown-v3', repo: 'repo', commit: 'c', domain: 'd', extractor: 'x',
-			status: 'future-state', started_at: $now, store_schema_version: $v3,
+			status: 'future-state', started_at: $now, unit_digest: '', store_schema_version: $v3,
 			evidence_format_version: 't12-evidence-v999', retention_quarantined: false
 		};
 		CREATE $unknown_v4 CONTENT {

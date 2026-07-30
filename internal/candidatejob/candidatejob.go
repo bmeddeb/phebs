@@ -216,6 +216,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		ctx, repository.Name,
 	)
 	var persistedState *candidate.State
+	var persistedControlRevision uint64
 	if errors.Is(pointerErr, store.ErrInvalidCandidateManifestPublication) {
 		// Candidate publications are derived state. Under the same mirror lock
 		// that fences extraction, discard a corrupt pointer so strict
@@ -240,6 +241,18 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			return fmt.Errorf("publication pointer: %w", err)
 		}
 		persistedState = &state
+		persistedControlRevision = currentPointer.ControlRevision
+	}
+	repairNeeded := false
+	if persistedState != nil {
+		if outcomes, ok := worker.store.(store.CandidateControlOutcomeStore); ok {
+			repairNeeded, err = outcomes.CandidateControlRepairNeeded(
+				ctx, *currentPointer,
+			)
+			if err != nil {
+				return fmt.Errorf("load candidate control outcome: %w", err)
+			}
+		}
 	}
 
 	// A marker may mean the database commit succeeded and only marker cleanup
@@ -262,6 +275,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		}
 	}
 	if persistedState != nil && controlReady && !hadMarker && !job.Force &&
+		!repairNeeded &&
 		publicationMatchesExpected(*persistedState, expected) {
 		known, unchanged, err := worker.fingerprints.matches(
 			ctx, worker.root, *persistedState,
@@ -273,7 +287,9 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			// The guarded pointer and process-local file identities are
 			// unchanged. Re-publishing repairs a missing extraction fan-out
 			// without re-reading, hashing, or externally sorting any member.
-			return worker.commitPublication(ctx, repository, *persistedState)
+			return worker.commitPublication(
+				ctx, repository, *persistedState, 0,
+			)
 		}
 		if !known {
 			// A cold worker establishes only a manifest/member-identity
@@ -288,7 +304,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 					*persistedState, fingerprint,
 				)
 				return worker.commitPublication(
-					ctx, repository, *persistedState,
+					ctx, repository, *persistedState, 0,
 				)
 			}
 			if err := ctx.Err(); err != nil {
@@ -312,6 +328,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			); err == nil {
 				return worker.commitPublication(
 					ctx, repository, published.State(),
+					nextControlRevision(persistedControlRevision),
 				)
 			}
 		}
@@ -327,6 +344,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			); err == nil {
 				return worker.commitPublication(
 					ctx, repository, published.State(),
+					nextControlRevision(persistedControlRevision),
 				)
 			}
 		}
@@ -355,7 +373,17 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if err := worker.rememberFingerprint(ctx, state); err != nil {
 		return fmt.Errorf("record publication control fingerprint: %w", err)
 	}
-	return worker.commitPublication(ctx, repository, state)
+	return worker.commitPublication(
+		ctx, repository, state,
+		nextControlRevision(persistedControlRevision),
+	)
+}
+
+func nextControlRevision(current uint64) uint64 {
+	if current == 0 {
+		return 0
+	}
+	return current + 1
 }
 
 func (worker *Worker) rememberFingerprint(
@@ -434,11 +462,13 @@ func (worker *Worker) commitPublication(
 	ctx context.Context,
 	repository *store.Repo,
 	state candidate.State,
+	controlRevision uint64,
 ) error {
 	publication, err := publicationFromState(state)
 	if err != nil {
 		return err
 	}
+	publication.ControlRevision = controlRevision
 	if err := worker.store.PublishCandidateManifest(ctx, publication); err != nil {
 		if !errors.Is(err, store.ErrConflict) {
 			// Keep the marker installed. A retry can validate and reuse these

@@ -71,16 +71,19 @@ func (extractor *replayAuditExtractor) Extract(
 }
 
 type replayAuditEvidence struct {
-	mu      sync.Mutex
-	next    int
-	staged  map[string]*store.ExtractionRun
-	current map[string]*store.ExtractionRun
+	mu        sync.Mutex
+	next      int
+	staged    map[string]*store.ExtractionRun
+	current   map[string]*store.ExtractionRun
+	outcomes  map[string]*store.ExtractionDomainOutcome
+	onOutcome func(store.ExtractionDomainOutcome)
 }
 
 func newReplayAuditEvidence() *replayAuditEvidence {
 	return &replayAuditEvidence{
-		staged:  make(map[string]*store.ExtractionRun),
-		current: make(map[string]*store.ExtractionRun),
+		staged:   make(map[string]*store.ExtractionRun),
+		current:  make(map[string]*store.ExtractionRun),
+		outcomes: make(map[string]*store.ExtractionDomainOutcome),
 	}
 }
 
@@ -128,6 +131,50 @@ func (evidence *replayAuditEvidence) PublishExtractionRun(
 	run.Coverage = coverage
 	evidence.current[run.Domain] = run
 	return nil
+}
+
+func (evidence *replayAuditEvidence) PublishExtractionRunWithOutcome(
+	ctx context.Context,
+	runID string,
+	coverage store.CoverageManifest,
+	outcome store.ExtractionDomainOutcome,
+) error {
+	if err := evidence.PublishExtractionRun(ctx, runID, coverage); err != nil {
+		return err
+	}
+	return evidence.RecordExtractionDomainOutcome(ctx, outcome)
+}
+
+func (evidence *replayAuditEvidence) RecordExtractionDomainOutcome(
+	_ context.Context,
+	outcome store.ExtractionDomainOutcome,
+) error {
+	evidence.mu.Lock()
+	defer evidence.mu.Unlock()
+	copyOfOutcome := outcome
+	copyOfOutcome.Generation.Digest =
+		store.ComputeExtractionGenerationDigest(copyOfOutcome.Generation)
+	evidence.outcomes[outcome.Scope.Repository+"\x00"+outcome.Scope.Domain] =
+		&copyOfOutcome
+	hook := evidence.onOutcome
+	if hook != nil {
+		hook(copyOfOutcome)
+	}
+	return nil
+}
+
+func (evidence *replayAuditEvidence) LatestExtractionDomainOutcome(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	evidence.mu.Lock()
+	defer evidence.mu.Unlock()
+	outcome := evidence.outcomes[scope.Repository+"\x00"+scope.Domain]
+	if outcome == nil || outcome.Scope != scope {
+		return nil, store.ErrNotFound
+	}
+	copyOfOutcome := *outcome
+	return &copyOfOutcome, nil
 }
 
 func (evidence *replayAuditEvidence) AbortExtractionRun(
@@ -265,6 +312,16 @@ type manifestStore struct {
 	fanoutCount     int
 	getPointerCalls int
 	clearCalls      int
+	repairRevision  uint64
+}
+
+func (state *manifestStore) CandidateControlRepairNeeded(
+	_ context.Context,
+	publication store.CandidateManifestPublication,
+) (bool, error) {
+	state.mu.Lock()
+	defer state.mu.Unlock()
+	return state.repairRevision == publication.ControlRevision, nil
 }
 
 func (state *manifestStore) GetRepo(
@@ -320,16 +377,35 @@ func (state *manifestStore) PublishCandidateManifest(
 		unitDigest(state.repository.IndexedAnalysisUnit) != publication.UnitDigest {
 		return store.ErrConflict
 	}
+	same := state.pointer != nil &&
+		samePublication(*state.pointer, publication)
 	if state.pointer != nil && samePublicationScope(*state.pointer, publication) &&
-		!samePublication(*state.pointer, publication) {
+		!same {
 		return store.ErrConflict
 	}
-	if state.pointer == nil || !samePublication(*state.pointer, publication) {
+	switch {
+	case state.pointer == nil:
+		publication.ControlRevision = 1
+	case same && publication.ControlRevision == 0:
+		publication.ControlRevision = state.pointer.ControlRevision
+	case same &&
+		publication.ControlRevision == state.pointer.ControlRevision+1:
+	case !same && publication.ControlRevision == 0:
+		publication.ControlRevision = state.pointer.ControlRevision + 1
+	default:
+		return store.ErrConflict
+	}
+	if state.pointer == nil || !same ||
+		publication.ControlRevision != state.pointer.ControlRevision {
 		publication.PublishedAt = time.Now().UTC()
 		state.pointer = &publication
 	} else {
 		publication.PublishedAt = state.pointer.PublishedAt
 		state.pointer = &publication
+	}
+	if state.repairRevision != 0 &&
+		publication.ControlRevision > state.repairRevision {
+		state.repairRevision = 0
 	}
 	if state.fanoutCount == 0 {
 		state.fanoutCount++
@@ -739,6 +815,134 @@ func TestExtractionProviderReplaysTwoFocusedDomainsWithoutRepositoryMembers(
 			run.Coverage.ScopePosture != "focused-local" {
 			t.Fatalf("published %s coverage = %+v", domain, run)
 		}
+	}
+}
+
+func TestTamperTerminalOutcomeSameDigestStrictRepairRunsExtractionOnce(
+	t *testing.T,
+) {
+	dataDir, repository, commit := candidateGitFixture(t)
+	unit, err := (analysisunit.Scope{
+		Repository: repository,
+		Name:       "service",
+		Primary:    []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+		IndexedAnalysisUnit: unit,
+	}}
+	proto := &replayAuditExtractor{
+		domain: "proto-contract", version: "proto-v1", suffix: ".proto",
+	}
+	planner, provider, err := New(
+		dataDir, state, []extract.Extractor{proto},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	candidateJob := store.Job{
+		Kind: store.JobCandidate, Target: repository,
+	}
+	if err := planner.Handle(t.Context(), candidateJob); err != nil {
+		t.Fatal(err)
+	}
+	initial := *state.pointer
+	if initial.ControlRevision != 1 {
+		t.Fatalf("initial control revision = %d", initial.ControlRevision)
+	}
+	manifestPath := filepath.Join(
+		CandidateRoot(dataDir), candidate.ManifestName(repository),
+	)
+	file, err := os.OpenFile(manifestPath, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteString(" "); err != nil {
+		_ = file.Close()
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	evidence := newReplayAuditEvidence()
+	evidence.onOutcome = func(outcome store.ExtractionDomainOutcome) {
+		if !outcome.CandidateControlFailure {
+			return
+		}
+		state.mu.Lock()
+		state.repairRevision =
+			outcome.Generation.CandidateControlRevision
+		state.mu.Unlock()
+	}
+	extraction := &extract.Worker{
+		Repos: state, Evidence: evidence,
+		NewCorpus:  extract.GitCorpus(dataDir),
+		Manifests:  provider,
+		Extractors: []extract.Extractor{proto},
+	}
+	extractionJob := store.Job{
+		Kind: store.JobExtract, Target: repository,
+	}
+	if err := extraction.Handle(t.Context(), extractionJob); err != nil {
+		t.Fatalf("tampered extraction: %v", err)
+	}
+	scope := store.ExtractionScope{
+		Repository: repository, Commit: commit,
+		UnitDigest: unit.Digest, Domain: proto.domain,
+	}
+	refusal, err := evidence.LatestExtractionDomainOutcome(
+		t.Context(), scope,
+	)
+	if err != nil ||
+		refusal.Disposition !=
+			store.DomainOutcomeTerminalGenerationRefusal ||
+		!refusal.CandidateControlFailure ||
+		len(proto.paths) != 0 {
+		t.Fatalf(
+			"tamper refusal=%+v err=%v extractor paths=%v",
+			refusal, err, proto.paths,
+		)
+	}
+	if err := extraction.Handle(t.Context(), store.Job{
+		Kind: store.JobExtract, Target: repository, Force: true,
+	}); err != nil {
+		t.Fatalf("forced terminal no-op: %v", err)
+	}
+	if len(proto.paths) != 0 {
+		t.Fatalf("forced terminal outcome reran extractor: %v", proto.paths)
+	}
+
+	if err := planner.Handle(t.Context(), store.Job{
+		Kind: store.JobCandidate, Target: repository, Force: true,
+	}); err != nil {
+		t.Fatalf("strict repair: %v", err)
+	}
+	repaired := *state.pointer
+	if repaired.ManifestDigest != initial.ManifestDigest ||
+		repaired.ControlRevision != initial.ControlRevision+1 {
+		t.Fatalf(
+			"same-digest repair pointer = %+v, want digest %s revision %d",
+			repaired, initial.ManifestDigest, initial.ControlRevision+1,
+		)
+	}
+	if err := extraction.Handle(t.Context(), extractionJob); err != nil {
+		t.Fatalf("post-repair extraction: %v", err)
+	}
+	if !slices.Equal(proto.paths, []string{"service/api.proto"}) {
+		t.Fatalf("post-repair extractor paths = %v", proto.paths)
+	}
+	published, err := evidence.LatestExtractionDomainOutcome(
+		t.Context(), scope,
+	)
+	if err != nil ||
+		published.Disposition != store.DomainOutcomePublished ||
+		published.Generation.CandidateControlRevision !=
+			repaired.ControlRevision {
+		t.Fatalf("post-repair outcome = %+v, %v", published, err)
 	}
 }
 

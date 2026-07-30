@@ -22,17 +22,27 @@ const (
 	// Store schema is the exact writer generation. Evidence format is the
 	// stable read/pin contract: a newer writer may keep the same format when
 	// its proof bundle remains backwards-compatible.
-	evidenceStoreSchemaVersion         = "t12-store-v8"
-	evidencePreviousStoreSchemaVersion = "t12-store-v7"
-	evidenceFormatVersion              = "t12-evidence-v1"
-	evidenceMigrationVersion           = "t12-evidence-migration-v7"
-	evidencePreviousMigrationVersion   = "t12-evidence-migration-v6"
-	evidenceWriterGuardEvent           = "extraction_run_writer_v8"
-	reverseAssertionIndexName          = "assertion_reverse_v6"
-	evidenceMigrationBatchSize         = 128
-	evidenceSweepCandidateBatchSize    = 1
-	evidenceSweepRowBatchSize          = 512
-	maxEvidenceRowsPerRun              = 25_000
+	evidenceStoreSchemaVersion         = "t12-store-v9"
+	evidencePreviousStoreSchemaVersion = "t12-store-v8"
+	// evidenceLegacyUpgradableStoreSchemaVersion is the second supported
+	// predecessor, exceptionally kept upgradable for one release: v8 was never
+	// released (it landed after the v0.2.0 tag), so v7 is the generation real
+	// stores are actually on and quarantining it would silently discard their
+	// evidence. Unlike v1–v6 its per-generation upgrade pass did run, so it is
+	// migrated rather than retired. It carries no unit digest — the v7 writer
+	// had one attempt row per repo/domain — so it maps to the explicit
+	// whole-repository scope. This window closes at the next bump, when v7
+	// finally joins retiredEvidenceStoreSchemas.
+	evidenceLegacyUpgradableStoreSchemaVersion = "t12-store-v7"
+	evidenceFormatVersion                      = "t12-evidence-v1"
+	evidenceMigrationVersion                   = "t12-evidence-migration-v8"
+	evidencePreviousMigrationVersion           = "t12-evidence-migration-v7"
+	evidenceWriterGuardEvent                   = "extraction_run_writer_v9"
+	reverseAssertionIndexName                  = "assertion_reverse_v6"
+	evidenceMigrationBatchSize                 = 128
+	evidenceSweepCandidateBatchSize            = 1
+	evidenceSweepRowBatchSize                  = 512
+	maxEvidenceRowsPerRun                      = 25_000
 	// T20.3 raises whole-run admission only. Individual worker transactions
 	// remain independently bounded and are currently at most 256 facts.
 	maxEvidenceBatchRows              = 10_000
@@ -139,6 +149,16 @@ func legacyExtractionAttemptID(repo, domain string) models.RecordID {
 	return models.NewRecordID("extraction_attempt", hashIdentity("attempt_", repo, domain))
 }
 
+// extractionDomainOutcomeID is latest-only per configured domain. The row
+// carries its exact commit/unit scope and generation, so a scope advance makes
+// the prior row ineligible immediately without accumulating one row per commit.
+func extractionDomainOutcomeID(repository, domain string) models.RecordID {
+	return models.NewRecordID(
+		"extraction_domain_outcome",
+		hashIdentity("domain_outcome_v1_", repository, domain),
+	)
+}
+
 type extractionAttemptRec struct {
 	RunID      string    `json:"run_id"`
 	Repo       string    `json:"repo"`
@@ -152,6 +172,52 @@ type extractionAttemptRec struct {
 
 func (r extractionAttemptRec) attempt() ExtractionAttempt {
 	return ExtractionAttempt(r)
+}
+
+type extractionDomainOutcomeRec struct {
+	Repo                    string                       `json:"repo"`
+	Commit                  string                       `json:"commit"`
+	UnitDigest              string                       `json:"unit_digest"`
+	Domain                  string                       `json:"domain"`
+	Disposition             DomainOutcomeDisposition     `json:"disposition"`
+	Generation              ExtractionGenerationIdentity `json:"generation"`
+	CandidateControlFailure bool                         `json:"candidate_control_failure"`
+	RunID                   string                       `json:"run_id"`
+	ReceiptSchema           string                       `json:"receipt_schema"`
+	Receipt                 string                       `json:"receipt"`
+	RecordedAt              time.Time                    `json:"recorded_at"`
+	StoreSchema             string                       `json:"store_schema_version"`
+	Migration               string                       `json:"evidence_migration_version"`
+}
+
+func (row extractionDomainOutcomeRec) outcome() ExtractionDomainOutcome {
+	return ExtractionDomainOutcome{
+		Scope: ExtractionScope{
+			Repository: row.Repo,
+			Commit:     row.Commit,
+			UnitDigest: row.UnitDigest,
+			Domain:     row.Domain,
+		},
+		Disposition:             row.Disposition,
+		Generation:              row.Generation,
+		CandidateControlFailure: row.CandidateControlFailure,
+		RunID:                   row.RunID,
+		ReceiptSchema:           row.ReceiptSchema,
+		Receipt:                 row.Receipt,
+		RecordedAt:              row.RecordedAt,
+	}
+}
+
+func prepareExtractionDomainOutcome(
+	outcome ExtractionDomainOutcome,
+) (ExtractionDomainOutcome, error) {
+	outcome.RecordedAt = time.Time{}
+	outcome.Generation.Digest =
+		ComputeExtractionGenerationDigest(outcome.Generation)
+	if err := outcome.Validate(); err != nil {
+		return ExtractionDomainOutcome{}, err
+	}
+	return outcome, nil
 }
 
 type extractionRunRec struct {
@@ -1080,13 +1146,28 @@ LET $counts_ok = $assertion_count = $want_assertions AND $atom_count = $want_ato
 	AND $unresolved_count = $want_unresolved AND $max_occurrences <= $max_occurrences_per_atom
 	AND ($association_count + $assertion_count) <= $max_run_rows
 	AND $reference_edges <= $max_reference_edges;
-LET $repo_ok = IF array::len($locked) = 1 AND $counts_ok THEN
+LET $candidate = (SELECT repository, head_commit, unit_digest, policy_digest,
+	manifest_digest, control_revision FROM $candidate_rid)[0];
+LET $candidate_ok = IF $write_outcome = false
+		OR $outcome_candidate_manifest_digest = '' THEN true
+	ELSE $candidate != NONE
+		AND $candidate.repository = $repo
+		AND $candidate.head_commit = $commit
+		AND $candidate.unit_digest = $unit_digest
+		AND $candidate.policy_digest = $outcome_candidate_policy_digest
+		AND $candidate.manifest_digest = $outcome_candidate_manifest_digest
+		AND $candidate.control_revision =
+			$outcome_candidate_control_revision
+	END;
+LET $repo_ok = IF array::len($locked) = 1 AND $counts_ok
+		AND $candidate_ok THEN
     (UPDATE $repo_rid SET evidence_revision = (evidence_revision ?? 0) + 1
         WHERE (deleting = NONE OR deleting = false)
 		  AND indexed_commit_hash = $commit
 		  AND (indexed_analysis_unit.digest ?? '') = $unit_digest RETURN AFTER)
     ELSE [] END;
-LET $ready = array::len($locked) = 1 AND array::len($repo_ok) = 1 AND $counts_ok;
+LET $ready = array::len($locked) = 1 AND array::len($repo_ok) = 1
+	AND $counts_ok AND $candidate_ok;
 LET $old = IF $ready THEN
     (UPDATE extraction_run SET status = 'superseded', published_key = NONE
         WHERE repo = $repo AND commit = $commit AND unit_digest = $unit_digest
@@ -1113,7 +1194,26 @@ LET $attempt = IF array::len($published) = 1 THEN
 		  AND evidence_format_version = $evidence_format_version
 		  AND evidence_migration_version = $evidence_migration_version RETURN AFTER)
 	ELSE [] END;
-RETURN IF array::len($attempt) = 1 THEN $published ELSE [] END;
+LET $outcome = IF array::len($attempt) != 1 THEN []
+	ELSE IF $write_outcome = false THEN $published
+	ELSE
+		(UPSERT $outcome_rid CONTENT {
+			repo: $repo,
+			commit: $commit,
+			unit_digest: $unit_digest,
+			domain: $domain,
+			disposition: $outcome_disposition,
+			generation: $outcome_generation,
+			candidate_control_failure: false,
+			run_id: $run_id,
+			receipt_schema: $outcome_receipt_schema,
+			receipt: $outcome_receipt,
+			recorded_at: $now,
+			store_schema_version: $store_schema_version,
+			evidence_migration_version: $evidence_migration_version
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($outcome) = 1 THEN $published ELSE [] END;
 COMMIT;`
 
 // PublishExtractionRun validates and flips visibility in one transaction.
@@ -1121,6 +1221,36 @@ COMMIT;`
 // and DeleteRepo. Coverage counts are checked against stored run rows rather
 // than trusted from the extractor.
 func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, coverage CoverageManifest) error {
+	return s.publishExtractionRun(ctx, runID, coverage, nil)
+}
+
+// PublishExtractionRunWithOutcome is the worker-facing publication transition.
+// The diagnostic receipt cannot fail after visibility flips: validation and
+// bounding happen before the transaction, and the outcome UPSERT is inside the
+// same commit as the status/attempt transitions.
+func (s *Surreal) PublishExtractionRunWithOutcome(
+	ctx context.Context,
+	runID string,
+	coverage CoverageManifest,
+	outcome ExtractionDomainOutcome,
+) error {
+	prepared, err := prepareExtractionDomainOutcome(outcome)
+	if err != nil {
+		return fmt.Errorf("publish extraction run outcome: %w", err)
+	}
+	if prepared.Disposition != DomainOutcomePublished {
+		return errors.New(
+			"publish extraction run outcome requires published disposition")
+	}
+	return s.publishExtractionRun(ctx, runID, coverage, &prepared)
+}
+
+func (s *Surreal) publishExtractionRun(
+	ctx context.Context,
+	runID string,
+	coverage CoverageManifest,
+	outcome *ExtractionDomainOutcome,
+) error {
 	run, err := s.getRun(ctx, runID)
 	if err != nil {
 		return fmt.Errorf("publish extraction run: %w", err)
@@ -1132,23 +1262,53 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 		return fmt.Errorf("publish extraction run: %w", err)
 	}
 	scope := scopeForRun(run)
+	if outcome != nil &&
+		(outcome.RunID != runID || outcome.Scope != scope ||
+			outcome.Generation.Extractor != run.Extractor ||
+			coverage.CandidateManifestDigest !=
+				outcome.Generation.CandidateManifestDigest) {
+		return errors.New(
+			"publish extraction run outcome disagrees with the staged run")
+	}
 	vars := map[string]any{
 		"rid": extractionRunID(runID), "run_id": runID,
-		"attempt_rid": extractionAttemptID(scope),
-		"repo_rid":    repoID(run.Repo), "repo": run.Repo, "commit": run.Commit,
+		"attempt_rid":   extractionAttemptID(scope),
+		"outcome_rid":   extractionDomainOutcomeID(scope.Repository, scope.Domain),
+		"candidate_rid": candidateManifestPublicationID(scope.Repository),
+		"repo_rid":      repoID(run.Repo), "repo": run.Repo, "commit": run.Commit,
 		"unit_digest": run.UnitDigest, "domain": run.Domain,
 		"published_key": publishedKey(scope),
 		"now":           time.Now().UTC(), "coverage": coverage,
 		"want_assertions": coverage.AssertionCount, "want_atoms": coverage.AtomCount,
-		"want_unresolved":             coverage.UnresolvedCount,
-		"max_occurrences_per_atom":    maxEvidenceOccurrences,
-		"max_run_rows":                maxEvidenceRowsPerRun,
-		"max_reference_edges":         maxEvidenceReferenceEdges,
-		"migration_rid":               evidenceMigrationStateID(),
-		"store_schema_version":        evidenceStoreSchemaVersion,
-		"evidence_format_version":     evidenceFormatVersion,
-		"evidence_migration_version":  evidenceMigrationVersion,
-		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		"want_unresolved":                    coverage.UnresolvedCount,
+		"max_occurrences_per_atom":           maxEvidenceOccurrences,
+		"max_run_rows":                       maxEvidenceRowsPerRun,
+		"max_reference_edges":                maxEvidenceReferenceEdges,
+		"migration_rid":                      evidenceMigrationStateID(),
+		"store_schema_version":               evidenceStoreSchemaVersion,
+		"evidence_format_version":            evidenceFormatVersion,
+		"evidence_migration_version":         evidenceMigrationVersion,
+		"max_evidence_identity_bytes":        maxEvidenceIdentityBytes,
+		"write_outcome":                      outcome != nil,
+		"outcome_disposition":                "",
+		"outcome_generation":                 ExtractionGenerationIdentity{},
+		"outcome_receipt_schema":             "",
+		"outcome_receipt":                    "",
+		"outcome_candidate_manifest_digest":  "",
+		"outcome_candidate_policy_digest":    "",
+		"outcome_candidate_control_revision": uint64(0),
+	}
+	if outcome != nil {
+		vars["outcome_disposition"] = string(outcome.Disposition)
+		vars["outcome_generation"] = outcome.Generation
+		vars["outcome_receipt_schema"] = outcome.ReceiptSchema
+		vars["outcome_receipt"] = outcome.Receipt
+		vars["outcome_candidate_manifest_digest"] =
+			outcome.Generation.CandidateManifestDigest
+		vars["outcome_candidate_policy_digest"] =
+			outcome.Generation.CandidatePolicyDigest
+		vars["outcome_candidate_control_revision"] =
+			outcome.Generation.CandidateControlRevision
 	}
 	addProbeVars(vars, runID)
 	for attempt := 0; ; attempt++ {
@@ -1171,6 +1331,235 @@ func (s *Surreal) PublishExtractionRun(ctx context.Context, runID string, covera
 		}
 		return fmt.Errorf("publish extraction run %s: run status, repository revision/deletion, or coverage validation changed (status %s): %w", runID, current.Status, ErrConflict)
 	}
+}
+
+const recordExtractionDomainOutcomeSQL = `
+BEGIN;
+LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
+	FROM $repo_rid)[0];
+LET $repo_ok = $repo_state != NONE
+	AND ($repo_state.deleting = NONE OR $repo_state.deleting = false)
+	AND $repo_state.indexed_commit_hash = $commit
+	AND ($repo_state.indexed_analysis_unit.digest ?? '') = $unit_digest;
+LET $candidate = (SELECT repository, head_commit, unit_digest, policy_digest,
+	manifest_digest, control_revision FROM $candidate_rid)[0];
+LET $candidate_ok = IF $candidate_manifest_digest = '' THEN true
+	ELSE $candidate != NONE
+		AND $candidate.repository = $repo
+		AND $candidate.head_commit = $commit
+		AND $candidate.unit_digest = $unit_digest
+		AND $candidate.policy_digest = $candidate_policy_digest
+		AND $candidate.manifest_digest = $candidate_manifest_digest
+		AND $candidate.control_revision = $candidate_control_revision
+	END;
+LET $recorded = IF $repo_ok AND $candidate_ok THEN
+	(UPSERT $outcome_rid CONTENT {
+		repo: $repo,
+		commit: $commit,
+		unit_digest: $unit_digest,
+		domain: $domain,
+		disposition: $disposition,
+		generation: $generation,
+		candidate_control_failure: $candidate_control_failure,
+		run_id: $run_id,
+		receipt_schema: $receipt_schema,
+		receipt: $receipt,
+		recorded_at: $now,
+		store_schema_version: $store_schema_version,
+		evidence_migration_version: $evidence_migration_version
+	} RETURN AFTER)
+	ELSE [] END;
+LET $pending = IF array::len($recorded) != 1
+		OR $candidate_control_failure = false THEN NONE
+	ELSE
+		(SELECT id, created_at FROM candidate_manifest_job
+			WHERE pending_key = $repo AND status = 'pending'
+			ORDER BY created_at LIMIT 1)[0].id
+	END;
+LET $repair = IF array::len($recorded) != 1
+		OR $candidate_control_failure = false THEN []
+	ELSE IF $pending != NONE THEN
+		(UPDATE $pending SET force = true RETURN AFTER)
+	ELSE
+		(CREATE candidate_manifest_job CONTENT {
+			target: $repo,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repo,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($recorded) = 1
+	AND ($candidate_control_failure = false OR array::len($repair) = 1)
+	THEN $recorded ELSE [] END;
+COMMIT;`
+
+// RecordExtractionDomainOutcome records only non-published dispositions. The
+// previous published run is deliberately untouched; T30.5's existing
+// commit/unit/candidate fences remain its sole visibility authority.
+func (s *Surreal) RecordExtractionDomainOutcome(
+	ctx context.Context,
+	outcome ExtractionDomainOutcome,
+) error {
+	prepared, err := prepareExtractionDomainOutcome(outcome)
+	if err != nil {
+		return fmt.Errorf("record extraction domain outcome: %w", err)
+	}
+	if prepared.Disposition == DomainOutcomePublished {
+		return errors.New(
+			"record extraction domain outcome cannot publish evidence")
+	}
+	vars := map[string]any{
+		"repo_rid":      repoID(prepared.Scope.Repository),
+		"candidate_rid": candidateManifestPublicationID(prepared.Scope.Repository),
+		"outcome_rid": extractionDomainOutcomeID(
+			prepared.Scope.Repository, prepared.Scope.Domain,
+		),
+		"repo":                       prepared.Scope.Repository,
+		"commit":                     prepared.Scope.Commit,
+		"unit_digest":                prepared.Scope.UnitDigest,
+		"domain":                     prepared.Scope.Domain,
+		"disposition":                string(prepared.Disposition),
+		"generation":                 prepared.Generation,
+		"candidate_manifest_digest":  prepared.Generation.CandidateManifestDigest,
+		"candidate_policy_digest":    prepared.Generation.CandidatePolicyDigest,
+		"candidate_control_revision": prepared.Generation.CandidateControlRevision,
+		"candidate_control_failure":  prepared.CandidateControlFailure,
+		"run_id":                     prepared.RunID,
+		"receipt_schema":             prepared.ReceiptSchema,
+		"receipt":                    prepared.Receipt,
+		"now":                        time.Now().UTC(),
+		"store_schema_version":       evidenceStoreSchemaVersion,
+		"evidence_migration_version": evidenceMigrationVersion,
+	}
+	for attempt := 0; ; attempt++ {
+		results, queryErr := surrealdb.Query[[]extractionDomainOutcomeRec](
+			ctx, s.db, recordExtractionDomainOutcomeSQL, vars,
+		)
+		if queryErr != nil {
+			if isRetryableEnqueue(queryErr) && ctx.Err() == nil &&
+				attempt+1 < maxQueueRetries {
+				continue
+			}
+			return fmt.Errorf("record extraction domain outcome: %w", queryErr)
+		}
+		if len(firstOutcomeRows(results)) == 1 {
+			return nil
+		}
+		return fmt.Errorf(
+			"record extraction domain outcome: repository or candidate generation changed: %w",
+			ErrConflict,
+		)
+	}
+}
+
+func firstOutcomeRows(
+	results *[]surrealdb.QueryResult[[]extractionDomainOutcomeRec],
+) []extractionDomainOutcomeRec {
+	if results == nil {
+		return nil
+	}
+	for _, result := range *results {
+		if len(result.Result) > 0 {
+			return result.Result
+		}
+	}
+	return nil
+}
+
+// LatestExtractionDomainOutcome reads a current-schema row only when the exact
+// scope agrees. A stale latest-only row therefore behaves as absent.
+func (s *Surreal) LatestExtractionDomainOutcome(
+	ctx context.Context,
+	scope ExtractionScope,
+) (*ExtractionDomainOutcome, error) {
+	if err := validateExtractionScope(scope); err != nil {
+		return nil, fmt.Errorf("latest extraction domain outcome: %w", err)
+	}
+	results, err := surrealdb.Query[[]extractionDomainOutcomeRec](
+		ctx, s.db,
+		`SELECT * FROM $rid WHERE repo = $repo AND commit = $commit
+			AND unit_digest = $unit_digest AND domain = $domain
+			AND store_schema_version = $store_schema_version
+			AND evidence_migration_version = $evidence_migration_version
+			LIMIT 1`,
+		map[string]any{
+			"rid":  extractionDomainOutcomeID(scope.Repository, scope.Domain),
+			"repo": scope.Repository, "commit": scope.Commit,
+			"unit_digest": scope.UnitDigest, "domain": scope.Domain,
+			"store_schema_version":       evidenceStoreSchemaVersion,
+			"evidence_migration_version": evidenceMigrationVersion,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("latest extraction domain outcome: %w", err)
+	}
+	rows := firstOutcomeRows(results)
+	if len(rows) == 0 {
+		return nil, fmt.Errorf(
+			"extraction domain outcome for %q/%q: %w",
+			scope.Repository, scope.Domain, ErrNotFound,
+		)
+	}
+	outcome := rows[0].outcome()
+	if err := outcome.Validate(); err != nil {
+		return nil, fmt.Errorf(
+			"latest extraction domain outcome: invalid persisted row: %w", err)
+	}
+	if outcome.Generation.Digest !=
+		ComputeExtractionGenerationDigest(outcome.Generation) {
+		return nil, errors.New(
+			"latest extraction domain outcome: generation digest mismatch")
+	}
+	outcome.RecordedAt = outcome.RecordedAt.UTC()
+	return &outcome, nil
+}
+
+// CandidateControlRepairNeeded reports whether any current domain is settled
+// on a terminal control failure for this exact durable pointer revision.
+func (s *Surreal) CandidateControlRepairNeeded(
+	ctx context.Context,
+	publication CandidateManifestPublication,
+) (bool, error) {
+	if err := validateCandidateManifestPublication(publication, true); err != nil {
+		return false, fmt.Errorf("candidate control repair: %w", err)
+	}
+	results, err := surrealdb.Query[[]struct {
+		Count int `json:"count"`
+	}](ctx, s.db,
+		`SELECT count() AS count FROM extraction_domain_outcome
+			WHERE repo = $repo
+				AND commit = $commit
+				AND unit_digest = $unit_digest
+				AND candidate_control_failure = true
+				AND disposition = $terminal
+				AND generation.candidate_manifest_digest = $manifest_digest
+				AND generation.candidate_policy_digest = $policy_digest
+				AND generation.candidate_control_revision = $control_revision
+				AND store_schema_version = $store_schema_version
+				AND evidence_migration_version = $evidence_migration_version
+			GROUP ALL`,
+		map[string]any{
+			"repo":                       publication.Repository,
+			"commit":                     publication.HeadCommit,
+			"unit_digest":                publication.UnitDigest,
+			"manifest_digest":            publication.ManifestDigest,
+			"policy_digest":              publication.PolicyDigest,
+			"control_revision":           publication.ControlRevision,
+			"terminal":                   string(DomainOutcomeTerminalGenerationRefusal),
+			"store_schema_version":       evidenceStoreSchemaVersion,
+			"evidence_migration_version": evidenceMigrationVersion,
+		})
+	if err != nil {
+		return false, fmt.Errorf("candidate control repair: %w", err)
+	}
+	for _, result := range *results {
+		for _, row := range result.Result {
+			return row.Count > 0, nil
+		}
+	}
+	return false, nil
 }
 
 func (s *Surreal) AbortExtractionRun(ctx context.Context, runID string) error {

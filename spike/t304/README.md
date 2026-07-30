@@ -29,11 +29,12 @@ inputs must preserve both semantic identities and exact publication bytes.
 
 ## Retained observation
 
-The 2026-07-29 Darwin/arm64 post-T30.5 repair refresh passed. Candidate
-manifest v3 adds explicit focused-local domain projections without changing
-the frozen caller partition. The planner runs took 3.80 s and 3.62 s and
-peaked at 60,604,416 and 61,652,992 bytes RSS. Each staged 12 files totaling
-24,288 bytes. Twice the final caller content conservatively bounds planner
+The 2026-07-30 Darwin/arm64 T30.6b identity refresh passed. Candidate manifest
+v3 retains explicit focused-local domain projections and the frozen caller
+partition while the affected extractor/enumeration generations advance. The
+planner runs took 3.34 s and 3.35 s and peaked at 61,767,680 and 61,243,392
+bytes RSS. Each staged 12 files totaling 24,288 bytes. Twice the final caller
+content conservatively bounds planner
 spool/split scratch at 4,134 bytes; the external-validation scratch bound was
 3,514 bytes. Adding the larger phase bound to the final stage yields 28,422
 bytes of conservative peak candidate disk. The complete census contained
@@ -54,13 +55,13 @@ identities are:
 - streamed regular-census digest:
   `sha256:5e183c73730e5233c96568e69ca3bfb4abc2e8c1eed15e183a296163cb69e841`;
 - policy digest:
-  `sha256:ed5e5d784dfeca1f52bd1a1f77a373907dcb21470799350a9e93b6999dc91d3d`;
+  `sha256:dca5479f48050cc032ed1ee8eb487bb324a20dfe275b9fe55c6165e5f53b14c2`;
 - generation digest:
-  `sha256:667fd53e187f433ac3ecdd024e4dd8fe6a48ab8c47f1f15a6842676d65b52641`;
+  `sha256:9b4504ad2ac5a44f85c35966de98b9b7309ec61b63252d393b67091f93fe78cd`;
 - manifest digest:
-  `sha256:8a4ece5d2e1a4684b7ce937717db78c2780221f2ff2d4477067240236a666022`;
+  `sha256:91397ec557f0afd7eb4f861fe8a9989c31d25e586c9869bd648da277ed33b684`;
 - exact staged-output digest:
-  `sha256:3dbf0db9649f1f51745a0a9d8eca92f7215d38f8540c294570ed44e799190b21`.
+  `sha256:209f0a74aa863d8eb8986c7d853f34206d11527d86822056dfdd54071cedfb89`.
 
 To reproduce the retained observation:
 
