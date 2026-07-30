@@ -1320,6 +1320,7 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | `make dev`           | build UI + pinned whole/focused zoekt and Buf children, bind synthetic Investigation/Contract Atlas fixtures, the retained neutral Change Workbench closure repo, the fixture-coupled Workbench, and the committed Thrift field-zero repo through normal sync/index/extraction; run with embedded UI |
 | `make dev-api`       | backend-only loop with the same children, explicit UI/Workbench fixtures, and Thrift field-zero repository (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
+| `make clean`         | from a verified phebs checkout working directory, remove `phebs`, `coverage.out`, the three named `bin/` children, `ui/dist`, and reserved `dist/.build-*`, `dist/phebs-*`, and `dist/.phebs-*.tmp-*` outputs; preserve data, configuration, dependencies/caches, other `bin`/`dist` entries, and custom release roots outside those namespaces |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |
 | `make verify-release` | reject any manifest, payload, mode, symlink, missing-file, or extra-file drift in `RELEASE_BUNDLE`                                                      |
 | `make smoke-release` | run the verified bundle from empty state through auth, sync, index, search, pinned browse, and default-dark Contract Atlas checks                       |
@@ -1330,6 +1331,15 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 | `make ui`            | production UI build only                                                                                                                                |
 | `make db-server`     | SurrealDB in server mode via docker compose (testing only)                                                                                              |
 | `make verify-glossary` | regenerate the canonical Go, TypeScript, schema, MCP, and MANUAL glossary bytes in memory and reject checked-in drift                                |
+
+`make clean` is not an index, candidate, evidence, backup, or database cleanup
+command. It never reads configuration or follows `DATA`/`RELEASE_ROOT`, and no
+other target invokes it implicitly. The three listed `dist` prefixes are
+reserved build-output namespaces; `dist/release` packaged archives are
+preserved. Run it after changing to the repository root. A `make -f` invocation
+from a non-checkout directory refuses without mutation; from another verified
+phebs checkout, that working checkout remains authoritative and only its owned
+outputs are removed.
 
 The hosted release gate runs four independently visible local-equivalent
 targets: `make ci-static`, `make ci-go`, `make ci-race`, and `make ci-ui`.

@@ -50,6 +50,15 @@ exact value is printed by `phebs version`, returned by `/api/version`, written
 to backup manifests, and included in startup logs. Release builds refuse a
 non-SemVer `VERSION`.
 
+For a clean source rebuild, run `make clean` from the repository root before
+`make build`. The clean target removes only standard repository-local
+binaries, the UI bundle,
+coverage output, and the reserved default release stage/bundle/temp
+namespaces. It does not touch repository data, configuration, backups,
+`ui/node_modules`, Go/npm caches, `dist/release` packaged archives, custom
+`RELEASE_ROOT` locations outside those reserved `dist` namespaces, or
+runtime-derived publications.
+
 To assemble and exercise the distributable directory with the exact pinned
 release toolchain:
 

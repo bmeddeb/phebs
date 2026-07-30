@@ -14,7 +14,7 @@ RELEASE_STAGE = $(RELEASE_ROOT)/.build-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH
 RELEASE_BUNDLE = $(RELEASE_ROOT)/phebs-$(VERSION)-$(TARGET_GOOS)-$(TARGET_GOARCH)
 T2014_RESULTS_PATH ?= /private/tmp/phebs-t20.14-results.json
 
-.PHONY: dev dev-api build validate-version validate-release-version validate-release-target \
+.PHONY: dev dev-api build clean validate-version validate-release-version validate-release-target \
 	release verify-release smoke-release test ui-test lint ui db-server \
 	verify-go verify-node verify-golangci-lint verify-surreal verify-glossary t20-closure \
 	docs-check ci ci-static ci-go ci-race ci-ui
@@ -75,6 +75,44 @@ validate-release-target:
 build: validate-version bin/zoekt-git-index bin/phebs-focused-index bin/buf ui ## version-stamped binary with embedded UI
 	go build -trimpath -tags ui -ldflags "-X main.version=$(VERSION)" -o phebs ./cmd/phebs
 	@test "$$(./phebs version)" = "$(VERSION)"
+
+clean: ## remove only standard source-tree build/package outputs; never runtime data or caches
+	@root=$$(pwd -P); \
+	if [ -z "$$root" ] || [ "$$root" = "/" ] || \
+		[ ! -f "$$root/Makefile" ] || [ -L "$$root/Makefile" ] || \
+		[ ! -f "$$root/go.mod" ] || [ -L "$$root/go.mod" ] || \
+		[ ! -f "$$root/ui/package.json" ] || [ -L "$$root/ui/package.json" ] || \
+		[ ! -d "$$root/cmd/phebs" ] || [ -L "$$root/cmd/phebs" ] || \
+		[ -L "$$root/.git" ] || { [ ! -f "$$root/.git" ] && [ ! -d "$$root/.git" ]; }; then \
+		printf 'make clean: refusing unsafe checkout root %s\n' "$$root" >&2; \
+		exit 1; \
+	fi; \
+	if ! IFS= read -r module_line < "$$root/go.mod" || \
+		[ "$$module_line" != "module github.com/bmeddeb/phebs" ]; then \
+		printf 'make clean: refusing checkout with unexpected go.mod %s\n' "$$root/go.mod" >&2; \
+		exit 1; \
+	fi; \
+	for parent in "$$root/bin" "$$root/dist" "$$root/ui"; do \
+		if [ -L "$$parent" ] || { [ -e "$$parent" ] && [ ! -d "$$parent" ]; }; then \
+			printf 'make clean: refusing unsafe path %s (parent must be a real directory)\n' "$$parent" >&2; \
+			exit 1; \
+		fi; \
+	done; \
+	for output in \
+		"$$root/phebs" \
+		"$$root/coverage.out" \
+		"$$root/bin/zoekt-git-index" \
+		"$$root/bin/phebs-focused-index" \
+		"$$root/bin/buf"; do \
+		if [ -e "$$output" ] && [ ! -f "$$output" ] && [ ! -L "$$output" ]; then \
+			printf 'make clean: refusing unsafe path %s (file output must be regular or a symlink)\n' "$$output" >&2; \
+			exit 1; \
+		fi; \
+	done; \
+	rm -f "$$root/phebs" "$$root/coverage.out" || exit 1; \
+	rm -f "$$root/bin/zoekt-git-index" "$$root/bin/phebs-focused-index" "$$root/bin/buf" || exit 1; \
+	rm -rf "$$root/ui/dist" || exit 1; \
+	rm -rf "$$root/dist"/.build-* "$$root/dist"/phebs-* "$$root/dist"/.phebs-*.tmp-* || exit 1
 
 release: validate-release-version validate-release-target verify-go verify-node ui ## deterministic manifest-bound release directory
 	mkdir -p "$(RELEASE_STAGE)/bin"
