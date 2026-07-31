@@ -919,7 +919,9 @@ than selecting by tie-breaker, and partitions never rerun discovery. AC:
 neutral module/generated fixtures, ordered adapter/version identity,
 missing/special/stale input, ambiguity, deterministic double run, no unplanned
 blob reads, populated-catalog warm no-op with zero input blob reads/hashes,
-lifecycle bounds inherited from T30.6f, full merge bar.
+lifecycle bounds inherited from T30.6f, and repository-lock serialization that
+reconciles any pre-existing publication marker before staging and never
+overwrites another publisher's marker, full merge bar.
 
 **T30.6h · Direct caller-leaf execution artifacts** *(needs T30.6g)* — consume
 T30.4 caller leaves directly without rebuilding a flattened repository path

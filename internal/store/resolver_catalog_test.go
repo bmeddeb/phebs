@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -187,6 +188,16 @@ func testResolverCatalogRetiredByCandidateAndRepoTransitions(
 	if _, err := s.GetResolverCatalogPublication(ctx, repository); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("catalog after candidate clear = %v, want not found", err)
 	}
+	jobs, err := s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	jobs = resolverJobsForTarget(jobs, repository)
+	if err != nil || len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("candidate-clear catalog successor = %+v, %v", jobs, err)
+	}
+	if canceled, err := s.CancelPendingJobs(
+		ctx, store.JobResolverCatalog, repository,
+	); err != nil || canceled != 1 {
+		t.Fatalf("cancel candidate-clear successor = %d, %v", canceled, err)
+	}
 	candidate.ControlRevision = 0
 	if err := s.PublishCandidateManifest(ctx, candidate); err != nil {
 		t.Fatal(err)
@@ -194,10 +205,105 @@ func testResolverCatalogRetiredByCandidateAndRepoTransitions(
 	if err := s.PublishResolverCatalog(ctx, catalog); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.EnqueuePending(
+		ctx, store.JobResolverCatalog, repository, false,
+	); err != nil {
+		t.Fatal(err)
+	}
 	nextCommit := candidateCommit('2')
 	setCandidateIndexedState(t, ctx, s, repository, nextCommit, nil, nil)
 	if _, err := s.GetResolverCatalogPublication(ctx, repository); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("catalog after repo transition = %v, want not found", err)
+	}
+	jobs, err = s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	jobs = resolverJobsForTarget(jobs, repository)
+	if err != nil || len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("repo-transition catalog successor = %+v, %v", jobs, err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, nextCommit, nil, nil)
+	jobs, err = s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	jobs = resolverJobsForTarget(jobs, repository)
+	if err != nil || len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("exact repo retry duplicated catalog successor = %+v, %v", jobs, err)
+	}
+
+	scopedRepository := "github.com/acme/resolver-retire-scoped"
+	unit, err := (analysisunit.Scope{
+		Repository: scopedRepository,
+		Name:       "service",
+		Primary:    []string{"service"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: scopedRepository, CloneURL: "https://" + scopedRepository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, scopedRepository, commit, unit, nil)
+	scopedCandidate := candidatePublication(scopedRepository, commit, unit.Digest)
+	if err := s.PublishCandidateManifest(ctx, scopedCandidate); err != nil {
+		t.Fatal(err)
+	}
+	scopedIdentity, err := resolvercatalog.NewIdentity(
+		scopedRepository, commit, unit.Digest, scopedCandidate.ManifestDigest,
+		nil, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scopedCatalog := resolverPublication(
+		scopedRepository, commit, scopedCandidate.ManifestDigest,
+	)
+	scopedCatalog.UnitDigest = unit.Digest
+	scopedCatalog.GenerationDigest = scopedIdentity.GenerationDigest
+	if err := s.PublishResolverCatalog(ctx, scopedCatalog); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(
+		t, ctx, s, scopedRepository, nextCommit, unit, nil,
+	)
+	if _, err := s.GetResolverCatalogPublication(
+		ctx, scopedRepository,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("scoped catalog after repo transition = %v, want not found", err)
+	}
+	jobs, err = s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	jobs = resolverJobsForTarget(jobs, scopedRepository)
+	if err != nil || len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("scoped repo-transition catalog successor = %+v, %v", jobs, err)
+	}
+
+	clearRepository := "github.com/acme/resolver-clear-index"
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: clearRepository, CloneURL: "https://" + clearRepository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, clearRepository, commit, nil, nil)
+	clearCandidate := candidatePublication(clearRepository, commit, "")
+	if err := s.PublishCandidateManifest(ctx, clearCandidate); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.PublishResolverCatalog(
+		ctx,
+		resolverPublication(clearRepository, commit, clearCandidate.ManifestDigest),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ClearRepoIndexState(ctx, clearRepository); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.GetResolverCatalogPublication(
+		ctx, clearRepository,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("catalog after index clear = %v, want not found", err)
+	}
+	jobs, err = s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	jobs = resolverJobsForTarget(jobs, clearRepository)
+	if err != nil || len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("index-clear catalog successor = %+v, %v", jobs, err)
 	}
 }
 

@@ -9,14 +9,16 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	MaxOmissionDetails = 64
-	maxArchiveEntries  = MaxDirectoryEntries
-	maxArchiveBytes    = int64(1 << 40)
+	MaxOmissionDetails  = 64
+	maxArchiveEntries   = MaxDirectoryEntries
+	maxArchiveBytes     = int64(1 << 40)
+	maxArchiveNameBytes = 512
 )
 
 type Omission struct {
@@ -33,6 +35,25 @@ type ArchiveReport struct {
 	StaleMarkers        int        `json:"stale_markers"`
 	Details             []Omission `json:"details,omitempty"`
 	TruncatedDetails    int        `json:"truncated_details"`
+}
+
+type boundedArchiveOutput struct {
+	destination io.Writer
+	remaining   int64
+	written     int64
+}
+
+func (output *boundedArchiveOutput) Write(raw []byte) (int, error) {
+	if int64(len(raw)) > output.remaining {
+		return 0, ErrLimit
+	}
+	written, err := output.destination.Write(raw)
+	output.remaining -= int64(written)
+	output.written += int64(written)
+	if err == nil && written != len(raw) {
+		err = io.ErrShortWrite
+	}
+	return written, err
 }
 
 func (report *ArchiveReport) omit(name, reason string, publication bool) {
@@ -52,7 +73,7 @@ func (report *ArchiveReport) omit(name, reason string, publication bool) {
 // only strictly valid, marker-free catalog publication.
 func CreateArchiveWithReport(root, output string) (ArchiveReport, error) {
 	var report ArchiveReport
-	if err := ensureRealDirectory(root); err != nil {
+	if err := validateOptionalArchiveRoot(root); err != nil {
 		return report, err
 	}
 	if err := os.MkdirAll(filepath.Dir(output), 0o700); err != nil {
@@ -69,8 +90,13 @@ func CreateArchiveWithReport(root, output string) (ArchiveReport, error) {
 			_ = os.Remove(output)
 		}
 	}()
-	writer := tar.NewWriter(file)
+	boundedOutput := &boundedArchiveOutput{
+		destination: file, remaining: maxArchiveBytes,
+	}
+	writer := tar.NewWriter(boundedOutput)
 	archived := make(map[string]struct{})
+	archiveEntries := 0
+	var logicalBytes int64
 	publications, scanReport, err := discoverPublications(root)
 	report = scanReport
 	if err != nil {
@@ -82,6 +108,7 @@ func CreateArchiveWithReport(root, output string) (ArchiveReport, error) {
 		for _, name := range names {
 			if err := appendStableTarFile(
 				writer, filepath.Join(root, name), name,
+				&archiveEntries, &logicalBytes,
 			); err != nil {
 				_ = writer.Close()
 				return report, fmt.Errorf("archive resolver catalog %q: %w", name, err)
@@ -104,11 +131,30 @@ func CreateArchiveWithReport(root, output string) (ArchiveReport, error) {
 	if err := file.Sync(); err != nil {
 		return report, err
 	}
+	archiveInfo, err := file.Stat()
+	if err != nil || archiveInfo.Size() != boundedOutput.written ||
+		archiveInfo.Size() > maxArchiveBytes {
+		return report, errors.New("resolver catalog archive exceeds its physical limit")
+	}
 	if err := file.Close(); err != nil {
 		return report, err
 	}
 	success = true
 	return report, nil
+}
+
+func validateOptionalArchiveRoot(root string) error {
+	info, err := os.Lstat(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("resolver catalog archive root is not a real directory")
+	}
+	return nil
 }
 
 func discoverPublications(root string) ([]*Publication, ArchiveReport, error) {
@@ -204,7 +250,12 @@ func countUnarchivedArtifacts(
 	return nil
 }
 
-func appendStableTarFile(writer *tar.Writer, sourcePath, name string) error {
+func appendStableTarFile(
+	writer *tar.Writer,
+	sourcePath, name string,
+	archiveEntries *int,
+	logicalBytes *int64,
+) error {
 	info, err := os.Lstat(sourcePath)
 	if err != nil {
 		return err
@@ -216,6 +267,11 @@ func appendStableTarFile(writer *tar.Writer, sourcePath, name string) error {
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
 		info.Size() < 0 || info.Size() > limit {
 		return errors.New("archive source is not a bounded regular file")
+	}
+	if err := reserveResolverArchiveEntry(
+		archiveEntries, logicalBytes, info.Size(),
+	); err != nil {
+		return err
 	}
 	file, fingerprint, err := openStableRegular(sourcePath, info.Size())
 	if err != nil {
@@ -236,12 +292,53 @@ func appendStableTarFile(writer *tar.Writer, sourcePath, name string) error {
 	return verifyFingerprint(file, fingerprint)
 }
 
+func reserveResolverArchiveEntry(
+	entries *int,
+	logicalBytes *int64,
+	size int64,
+) error {
+	if entries == nil || logicalBytes == nil || size < 0 ||
+		*entries >= maxArchiveEntries ||
+		*logicalBytes > maxArchiveBytes-size {
+		return ErrLimit
+	}
+	(*entries)++
+	*logicalBytes += size
+	return nil
+}
+
 // RestoreArchive validates every header and publication in a private stage,
 // then renames the complete filesystem set into an absent target.
 func RestoreArchive(archivePath, target string) error {
 	if _, err := os.Lstat(target); err == nil {
 		return errors.New("resolver catalog restore target already exists")
 	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	pathInfo, err := os.Lstat(archivePath)
+	if err != nil || !pathInfo.Mode().IsRegular() {
+		return errors.New("resolver catalog archive is missing or special")
+	}
+	source, err := os.Open(archivePath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = source.Close() }()
+	archiveInfo, err := source.Stat()
+	if err != nil || !archiveInfo.Mode().IsRegular() ||
+		!os.SameFile(pathInfo, archiveInfo) ||
+		archiveInfo.Size() <= 0 || archiveInfo.Size() > maxArchiveBytes {
+		return errors.New(
+			"resolver catalog archive is missing, special, empty, or exceeds its limit",
+		)
+	}
+	preflight, err := scanResolverArchive(
+		source, archiveInfo.Size(), "",
+	)
+	if err != nil {
+		return err
+	}
+	if _, err := source.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
@@ -257,60 +354,18 @@ func RestoreArchive(archivePath, target string) error {
 			_ = os.RemoveAll(stage)
 		}
 	}()
-	source, err := os.Open(archivePath)
+	extracted, err := scanResolverArchive(
+		source, archiveInfo.Size(), stage,
+	)
 	if err != nil {
 		return err
 	}
-	defer func() { _ = source.Close() }()
-	reader := tar.NewReader(source)
-	seen := make(map[string]struct{})
-	var entries int
-	var total int64
-	for {
-		header, nextErr := reader.Next()
-		if errors.Is(nextErr, io.EOF) {
-			break
-		}
-		if nextErr != nil {
-			return nextErr
-		}
-		entries++
-		total += header.Size
-		entryLimit := MaxMemberContentBytes
-		if strings.HasSuffix(header.Name, ".manifest.json") {
-			entryLimit = int64(maxManifestBytes)
-		}
-		if entries > maxArchiveEntries || total > maxArchiveBytes ||
-			header.Typeflag != tar.TypeReg ||
-			header.Name == "" || filepath.Base(header.Name) != header.Name ||
-			len(header.Name) > 512 ||
-			!strings.HasPrefix(header.Name, "phebs-resolver-catalog-") ||
-			header.Size < 0 || header.Size > entryLimit {
-			return errors.New("resolver catalog archive has an invalid entry")
-		}
-		if _, duplicate := seen[header.Name]; duplicate {
-			return errors.New("resolver catalog archive has a duplicate entry")
-		}
-		seen[header.Name] = struct{}{}
-		targetPath := filepath.Join(stage, header.Name)
-		file, createErr := os.OpenFile(
-			targetPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600,
-		)
-		if createErr != nil {
-			return createErr
-		}
-		_, copyErr := io.CopyN(file, reader, header.Size)
-		syncErr := file.Sync()
-		closeErr := file.Close()
-		if copyErr != nil {
-			return copyErr
-		}
-		if syncErr != nil {
-			return syncErr
-		}
-		if closeErr != nil {
-			return closeErr
-		}
+	if !slices.Equal(preflight, extracted) {
+		return errors.New("resolver catalog archive changed between validation passes")
+	}
+	current, err := os.Lstat(archivePath)
+	if err != nil || !sameArchiveFileIdentity(archiveInfo, current) {
+		return errors.New("resolver catalog archive changed while it was restored")
 	}
 	publications, report, err := discoverPublications(stage)
 	if err != nil {
@@ -325,10 +380,10 @@ func RestoreArchive(archivePath, target string) error {
 			referenced[name] = struct{}{}
 		}
 	}
-	if len(referenced) != len(seen) {
+	if len(referenced) != len(extracted) {
 		return errors.New("resolver catalog archive contains an unreferenced artifact")
 	}
-	for name := range seen {
+	for _, name := range extracted {
 		if _, ok := referenced[name]; !ok {
 			return errors.New("resolver catalog archive contains an unreferenced artifact")
 		}
@@ -341,6 +396,122 @@ func RestoreArchive(archivePath, target string) error {
 	}
 	published = true
 	return syncDirectory(filepath.Dir(target))
+}
+
+func scanResolverArchive(
+	source *os.File,
+	physicalSize int64,
+	destination string,
+) ([]string, error) {
+	limited := &io.LimitedReader{R: source, N: physicalSize}
+	reader := tar.NewReader(limited)
+	extracted := make([]string, 0)
+	seen := make(map[string]bool)
+	var total int64
+	for {
+		header, nextErr := reader.Next()
+		if errors.Is(nextErr, io.EOF) {
+			if limited.N != 0 {
+				return nil, errors.New(
+					"resolver catalog archive contains trailing data after its end marker",
+				)
+			}
+			break
+		}
+		if nextErr != nil {
+			return nil, fmt.Errorf("read resolver catalog archive: %w", nextErr)
+		}
+		if err := validateResolverArchiveHeader(
+			header, seen, total, physicalSize,
+		); err != nil {
+			return nil, err
+		}
+		if len(extracted) == maxArchiveEntries {
+			return nil, errors.New("resolver catalog archive contains too many entries")
+		}
+		seen[header.Name] = true
+		total += header.Size
+		if destination == "" {
+			if _, err := io.CopyN(io.Discard, reader, header.Size); err != nil {
+				return nil, fmt.Errorf(
+					"read resolver catalog archive entry %q: %w",
+					header.Name, err,
+				)
+			}
+		} else {
+			output, err := os.OpenFile(
+				filepath.Join(destination, header.Name),
+				os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600,
+			)
+			if err != nil {
+				return nil, err
+			}
+			written, copyErr := io.CopyN(output, reader, header.Size)
+			syncErr := output.Sync()
+			closeErr := output.Close()
+			if copyErr != nil || written != header.Size ||
+				syncErr != nil || closeErr != nil {
+				return nil, errors.Join(copyErr, syncErr, closeErr)
+			}
+		}
+		extracted = append(extracted, header.Name)
+	}
+	return extracted, nil
+}
+
+func validateResolverArchiveHeader(
+	header *tar.Header,
+	seen map[string]bool,
+	total, physicalSize int64,
+) error {
+	name := header.Name
+	unsafe := func() error {
+		return fmt.Errorf("resolver catalog archive entry %q is unsafe", name)
+	}
+	entryLimit := MaxMemberContentBytes
+	if strings.HasSuffix(name, ".manifest.json") {
+		entryLimit = int64(maxManifestBytes)
+	}
+	if header.Typeflag != tar.TypeReg ||
+		(header.Format != tar.FormatUSTAR && header.Format != tar.FormatPAX) ||
+		name == "" || len(name) > maxArchiveNameBytes ||
+		filepath.Base(name) != name ||
+		!strings.HasPrefix(name, "phebs-resolver-catalog-") ||
+		seen[name] || header.Linkname != "" ||
+		header.Mode != 0o600 ||
+		header.Uid != 0 || header.Gid != 0 ||
+		header.Uname != "" || header.Gname != "" ||
+		header.Devmajor != 0 || header.Devminor != 0 ||
+		!header.ModTime.Equal(time.Unix(0, 0)) ||
+		!header.AccessTime.IsZero() || !header.ChangeTime.IsZero() ||
+		header.Size < 0 || header.Size > entryLimit ||
+		total > maxArchiveBytes-header.Size ||
+		total > physicalSize-header.Size {
+		return unsafe()
+	}
+	for key, value := range header.PAXRecords {
+		switch key {
+		case "path":
+			if value != name {
+				return unsafe()
+			}
+		case "size":
+			if value != strconv.FormatInt(header.Size, 10) {
+				return unsafe()
+			}
+		default:
+			return unsafe()
+		}
+	}
+	return nil
+}
+
+func sameArchiveFileIdentity(left, right os.FileInfo) bool {
+	return left != nil && right != nil &&
+		left.Mode().IsRegular() && right.Mode().IsRegular() &&
+		os.SameFile(left, right) &&
+		left.Size() == right.Size() &&
+		left.ModTime().Equal(right.ModTime())
 }
 
 // VerifyArchiveWithReport runs the exact restore validator in a disposable

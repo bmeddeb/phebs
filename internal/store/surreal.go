@@ -1391,9 +1391,12 @@ LET $same_scope_state_changed = array::len($updated) = 1
 	AND $before.indexed_analysis_unit != NONE;
 LET $identity_changed = array::len($updated) = 1
 	AND ($scope_unchanged = false OR $same_scope_state_changed);
+LET $retired_catalog = IF $identity_changed THEN
+	(DELETE resolver_catalog_publication
+		WHERE repository = $name RETURN BEFORE)
+	ELSE [] END;
 IF $identity_changed {
-	DELETE $publication_rid RETURN NONE;
-	DELETE $catalog_rid RETURN NONE
+	DELETE $publication_rid RETURN NONE
 };
 IF $same_scope_state_changed {
 	UPDATE extraction_run SET status = 'superseded', published_key = NONE
@@ -1426,13 +1429,33 @@ LET $final = IF $identity_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
 		RETURN AFTER)
 	ELSE $updated END;
-RETURN $final;
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $name AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $name,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $name,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($final) = 1
+	AND (array::len($retired_catalog) = 0
+		OR array::len($catalog_fanout) = 1)
+	THEN $final ELSE [] END;
 COMMIT;`
 	vars := map[string]any{
 		"rid": repoID(name), "name": name, "hash": defaultCommit,
 		"revisions": revisions, "at": at, "unit_digest": "",
 		"publication_rid":             candidateManifestPublicationID(name),
-		"catalog_rid":                 resolverCatalogPublicationID(name),
 		"evidence_store_schema":       evidenceStoreSchemaVersion,
 		"evidence_format":             evidenceFormatVersion,
 		"evidence_migration":          evidenceMigrationVersion,
@@ -1451,9 +1474,12 @@ LET $same_scope_state_changed = array::len($updated) = 1
 	AND $before.indexed_analysis_unit != $unit;
 LET $identity_changed = array::len($updated) = 1
 	AND ($scope_unchanged = false OR $same_scope_state_changed);
+LET $retired_catalog = IF $identity_changed THEN
+	(DELETE resolver_catalog_publication
+		WHERE repository = $name RETURN BEFORE)
+	ELSE [] END;
 IF $identity_changed {
-	DELETE $publication_rid RETURN NONE;
-	DELETE $catalog_rid RETURN NONE
+	DELETE $publication_rid RETURN NONE
 };
 IF $same_scope_state_changed {
 	UPDATE extraction_run SET status = 'superseded', published_key = NONE
@@ -1486,7 +1512,28 @@ LET $final = IF $identity_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
 		RETURN AFTER)
 	ELSE $updated END;
-RETURN $final;
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $name AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $name,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $name,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($final) = 1
+	AND (array::len($retired_catalog) = 0
+		OR array::len($catalog_fanout) = 1)
+	THEN $final ELSE [] END;
 COMMIT;`
 		vars["unit"] = analysisunit.CloneState(unit)
 		vars["unit_digest"] = unit.Digest
@@ -1518,16 +1565,40 @@ LET $visibility_changed = ($before != NONE
 	OR $publication != NONE OR $catalog != NONE;
 LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
 	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
+LET $retired_catalog = IF array::len($updated) = 1 THEN
+	(DELETE resolver_catalog_publication
+		WHERE repository = $name RETURN BEFORE)
+	ELSE [] END;
 IF array::len($updated) = 1 {
 	DELETE $publication_rid RETURN NONE;
-	DELETE $catalog_rid RETURN NONE;
 	DELETE extraction_domain_outcome WHERE repo = $name RETURN NONE
 };
 LET $final = IF array::len($updated) = 1 AND $visibility_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
 		RETURN AFTER)
 	ELSE $updated END;
-RETURN $final;
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $name AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $name,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $name,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($final) = 1
+	AND (array::len($retired_catalog) = 0
+		OR array::len($catalog_fanout) = 1)
+	THEN $final ELSE [] END;
 COMMIT;`,
 		map[string]any{
 			"rid":             repoID(name),

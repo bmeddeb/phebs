@@ -17,6 +17,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
+	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -837,7 +838,7 @@ func TestDeleteRepoArtifactsIgnoresUnrelatedUnreadableShard(t *testing.T) {
 	}
 }
 
-func TestDeleteRepoArtifactsCancelsCandidateAndExtractionJobs(t *testing.T) {
+func TestDeleteRepoArtifactsRemovesCatalogAndCancelsDerivedJobs(t *testing.T) {
 	dataDir := t.TempDir()
 	st := &reconcileStore{repo: store.Repo{Name: "example.com/team/repo"}, orphan: true}
 	candidateRoot := filepath.Join(dataDir, "candidates")
@@ -848,6 +849,28 @@ func TestDeleteRepoArtifactsCancelsCandidateAndExtractionJobs(t *testing.T) {
 	if err := os.WriteFile(candidatePath, []byte("derived"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	catalogRoot := filepath.Join(dataDir, "resolver-catalogs")
+	if err := os.MkdirAll(catalogRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	targetCatalog := []string{
+		resolvercatalogid.ManifestName(st.repo.Name),
+		resolvercatalogid.ArtifactBase(st.repo.Name) + "-generation-member.ndjson",
+	}
+	for _, name := range targetCatalog {
+		if err := os.WriteFile(
+			filepath.Join(catalogRoot, name), []byte("derived"), 0o600,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	foreignCatalog := filepath.Join(
+		catalogRoot,
+		resolvercatalogid.ArtifactBase("example.com/team/foreign")+"-keep.ndjson",
+	)
+	if err := os.WriteFile(foreignCatalog, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
 	deleted, err := deleteRepoArtifacts(t.Context(), st, dataDir, st.repo.Name)
 	if err != nil || !deleted {
 		t.Fatalf("deleteRepoArtifacts = %v, %v; want successful deletion", deleted, err)
@@ -855,11 +878,23 @@ func TestDeleteRepoArtifactsCancelsCandidateAndExtractionJobs(t *testing.T) {
 	if _, err := os.Stat(candidatePath); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("repository candidate artifact survived deletion: %v", err)
 	}
+	for _, name := range targetCatalog {
+		if _, err := os.Stat(
+			filepath.Join(catalogRoot, name),
+		); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("repository resolver artifact %q survived deletion: %v", name, err)
+		}
+	}
+	if _, err := os.Stat(foreignCatalog); err != nil {
+		t.Fatalf("foreign resolver artifact was removed: %v", err)
+	}
 	cancellations := map[store.JobKind]int{}
 	for _, kind := range st.canceledKinds {
 		cancellations[kind]++
 	}
-	for _, kind := range []store.JobKind{store.JobCandidate, store.JobExtract} {
+	for _, kind := range []store.JobKind{
+		store.JobCandidate, store.JobExtract, store.JobResolverCatalog,
+	} {
 		if cancellations[kind] != 2 {
 			t.Fatalf(
 				"%s cancellations = %d, want 2 (before and after repo lock)",

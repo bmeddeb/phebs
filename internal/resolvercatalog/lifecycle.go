@@ -27,6 +27,7 @@ type Stage struct {
 	path         string
 	identity     Identity
 	members      []MemberReceipt
+	memberKeys   map[string]struct{}
 	contentBytes int64
 	records      int
 	sealed       bool
@@ -97,7 +98,10 @@ func NewStage(root string, identity Identity) (*Stage, error) {
 		_ = os.Remove(stage)
 		return nil, err
 	}
-	return &Stage{root: root, path: stage, identity: identity}, nil
+	return &Stage{
+		root: root, path: stage, identity: identity,
+		memberKeys: make(map[string]struct{}),
+	}, nil
 }
 
 // AddMember streams canonical JSON records to one member. emit may retain no
@@ -120,6 +124,10 @@ func (stage *Stage) AddMember(
 	}
 	if len(stage.members) >= MaxMembers {
 		return ErrLimit
+	}
+	key := portableMemberNameKey(name)
+	if _, duplicate := stage.memberKeys[key]; duplicate {
+		return errors.New("resolver catalog member names collide on a portable filesystem")
 	}
 	if len(stage.members) > 0 && stage.members[len(stage.members)-1].Name >= name {
 		return errors.New("resolver catalog members must be added in unique name order")
@@ -205,6 +213,7 @@ func (stage *Stage) AddMember(
 		ContentDigest:  "sha256:" + hex.EncodeToString(hash.Sum(nil)),
 		MetadataDigest: metadataDigest,
 	})
+	stage.memberKeys[key] = struct{}{}
 	stage.records += count
 	stage.contentBytes += contentBytes
 	return nil
@@ -340,37 +349,9 @@ func CleanupRetired(root string, current Manifest) error {
 	if err := validateManifest(current); err != nil {
 		return err
 	}
-	entries, err := readBoundedDirectory(root)
-	if err != nil {
-		return err
-	}
-	ownedPrefix := resolvercatalogid.OwnedArtifactPrefix(current.Identity.Repository)
-	keep := make(map[string]struct{}, len(current.Members))
-	for _, member := range current.Members {
-		keep[memberArtifactName(current.Identity, member.Name)] = struct{}{}
-	}
-	removed := false
-	for _, entry := range entries {
-		name := entry.Name()
-		if !strings.HasPrefix(name, ownedPrefix) {
-			continue
-		}
-		if _, ok := keep[name]; ok {
-			continue
-		}
-		target := filepath.Join(root, name)
-		if entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
-			return fmt.Errorf("resolver catalog owned path %q is a directory", name)
-		}
-		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-		removed = true
-	}
-	if removed {
-		return syncDirectory(root)
-	}
-	return nil
+	cleanup := newReconcileCleanup()
+	cleanup.keep(current)
+	return cleanup.apply(context.Background(), root)
 }
 
 func validatePrepared(prepared *Prepared) error {
@@ -390,11 +371,20 @@ func validatePrepared(prepared *Prepared) error {
 // ClearPublishing removes the marker only after the matching store pointer is
 // durable. A missing marker is idempotent for recovery.
 func ClearPublishing(root, repository string) error {
-	marker := filepath.Join(root, resolvercatalogid.PublishingName(repository))
-	if err := os.Remove(marker); err != nil && !errors.Is(err, os.ErrNotExist) {
+	rootHandle, rootDirectory, err := openStableDirectoryRoot(root)
+	if err != nil {
 		return err
 	}
-	return syncDirectory(root)
+	defer func() {
+		_ = rootDirectory.Close()
+		_ = rootHandle.Close()
+	}()
+	if err := rootHandle.Remove(
+		resolvercatalogid.PublishingName(repository),
+	); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return rootDirectory.Sync()
 }
 
 func IsPublishing(root, repository string) bool {
@@ -426,7 +416,7 @@ func CleanupStages(ctx context.Context, root string) (int, error) {
 		target := filepath.Join(root, name)
 		if strings.HasPrefix(name, stageDirectoryPrefix) {
 			if entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
-				if err := os.RemoveAll(target); err != nil {
+				if err := removeOwnedStage(target); err != nil {
 					return removed, err
 				}
 			} else if err := os.Remove(target); err != nil &&
@@ -455,7 +445,65 @@ func CleanupStages(ctx context.Context, root string) (int, error) {
 	return removed, nil
 }
 
+// removeOwnedStage removes only the flat shape emitted by Stage. It refuses a
+// nested directory or an oversized inventory instead of recursively walking
+// attacker- or corruption-controlled residue during startup.
+func removeOwnedStage(target string) error {
+	stageRoot, stageDirectory, err := openStableDirectoryRoot(target)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = stageDirectory.Close()
+		_ = stageRoot.Close()
+	}()
+	entries, err := readOpenDirectoryUpTo(stageDirectory, MaxMembers+1)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		info, err := stageRoot.Lstat(entry.Name())
+		if err != nil {
+			return err
+		}
+		if info.IsDir() && info.Mode()&os.ModeSymlink == 0 {
+			return fmt.Errorf(
+				"resolver catalog stage path %q is a directory", entry.Name(),
+			)
+		}
+		if err := stageRoot.Remove(entry.Name()); err != nil &&
+			!errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	openedInfo, err := stageDirectory.Stat()
+	if err != nil {
+		return err
+	}
+	if err := stageDirectory.Sync(); err != nil {
+		return err
+	}
+	if err := stageDirectory.Close(); err != nil {
+		return err
+	}
+	if err := stageRoot.Close(); err != nil {
+		return err
+	}
+	info, err := os.Lstat(target)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 ||
+		!os.SameFile(openedInfo, info) {
+		return errors.New("resolver catalog stage changed during cleanup")
+	}
+	return os.Remove(target)
+}
+
 func installMarker(root, repository string) error {
+	// A pre-existing canonical marker may belong to a live publisher. Never
+	// replace it here: startup or a worker holding the repository lock must
+	// reconcile the marked generation before it may stage another one.
 	if IsPublishing(root, repository) {
 		return ErrPublishing
 	}
@@ -491,6 +539,9 @@ func installMarker(root, repository string) error {
 }
 
 // Open performs descriptor-stable cold validation of the exact store state.
+// The manifest is the sole visibility authority: same-namespace residue is
+// not admitted and is swept by CleanupRetired only after this declared set is
+// valid, preserving the store-commit-before-cleanup crash boundary.
 func Open(ctx context.Context, root string, expected State) (*Publication, error) {
 	return open(ctx, root, expected, false)
 }
@@ -894,14 +945,18 @@ func readBoundedDirectory(directory string) ([]os.DirEntry, error) {
 }
 
 func readDirectoryUpTo(directory string, limit int) ([]os.DirEntry, error) {
-	if limit <= 0 {
-		return nil, ErrLimit
-	}
 	file, err := os.Open(directory)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = file.Close() }()
+	return readOpenDirectoryUpTo(file, limit)
+}
+
+func readOpenDirectoryUpTo(file *os.File, limit int) ([]os.DirEntry, error) {
+	if file == nil || limit <= 0 {
+		return nil, ErrLimit
+	}
 	entries := make([]os.DirEntry, 0, 256)
 	for {
 		batch, readErr := file.ReadDir(256)
@@ -920,6 +975,32 @@ func readDirectoryUpTo(directory string, limit int) ([]os.DirEntry, error) {
 		return strings.Compare(left.Name(), right.Name())
 	})
 	return entries, nil
+}
+
+func openStableDirectoryRoot(directory string) (*os.Root, *os.File, error) {
+	before, err := os.Lstat(directory)
+	if err != nil {
+		return nil, nil, err
+	}
+	if !before.IsDir() || before.Mode()&os.ModeSymlink != 0 {
+		return nil, nil, errors.New("resolver catalog root is not a real directory")
+	}
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		return nil, nil, err
+	}
+	opened, err := root.Open(".")
+	if err != nil {
+		_ = root.Close()
+		return nil, nil, err
+	}
+	after, err := opened.Stat()
+	if err != nil || !after.IsDir() || !os.SameFile(before, after) {
+		_ = opened.Close()
+		_ = root.Close()
+		return nil, nil, errors.New("resolver catalog directory changed while opening")
+	}
+	return root, opened, nil
 }
 
 func syncDirectory(directory string) error {

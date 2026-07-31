@@ -2,6 +2,7 @@ package resolvercatalog
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -80,6 +82,46 @@ func testInstall(
 ) State {
 	t.Helper()
 	state, err := testPrepared(t, root, repository, withMember).Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return state
+}
+
+func testInstallWithMembers(
+	t *testing.T,
+	root, repository string,
+	packs []ResolverPack,
+	members ...string,
+) State {
+	t.Helper()
+	identity, err := NewIdentity(
+		repository, strings.Repeat("1", 40), "", testDigest('a'), nil, packs,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stage, err := NewStage(root, identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range members {
+		if err := stage.AddMember(
+			t.Context(), name, json.RawMessage(`{}`),
+			func(write func(json.RawMessage) error) error {
+				return write(json.RawMessage(
+					`{"schema":"phebs-resolver-catalog-record-v1"}`,
+				))
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prepared, err := stage.Seal(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := prepared.Install(t.Context())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,6 +255,148 @@ func TestPublishCleansOnlyRetiredLocalMembers(t *testing.T) {
 	}
 }
 
+func TestCatalogMemberNamesRejectPortableAliases(t *testing.T) {
+	tests := []struct {
+		name   string
+		first  string
+		second string
+	}{
+		{"case fold", "A.ndjson", "a.ndjson"},
+		{"unicode composition", "cafe\u0301.ndjson", "caf\u00e9.ndjson"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stage, err := NewStage(
+				filepath.Join(t.TempDir(), "catalogs"),
+				testIdentity(t, "github.com/acme/member-alias"),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := stage.AddMember(
+				t.Context(), test.first, json.RawMessage(`{}`), nil,
+			); err != nil {
+				t.Fatal(err)
+			}
+			if err := stage.AddMember(
+				t.Context(), test.second, json.RawMessage(`{}`), nil,
+			); err == nil || !strings.Contains(err.Error(), "portable filesystem") {
+				t.Fatalf("portable alias AddMember = %v, want collision refusal", err)
+			}
+		})
+	}
+
+	stage, err := NewStage(
+		filepath.Join(t.TempDir(), "catalogs"),
+		testIdentity(t, "github.com/acme/forged-member-alias"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"A.ndjson", "b.ndjson"} {
+		if err := stage.AddMember(
+			t.Context(), name, json.RawMessage(`{}`), nil,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prepared, err := stage.Seal(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	forged := cloneManifest(prepared.manifest)
+	forged.Members[1].Name = "a.ndjson"
+	unsigned := forged
+	unsigned.Digest = ""
+	forged.Digest, err = digestCanonical(unsigned)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateManifest(forged); !errors.Is(err, ErrInvalidManifest) ||
+		!strings.Contains(err.Error(), "portable filesystem") {
+		t.Fatalf("forged portable aliases = %v, want ErrInvalidManifest", err)
+	}
+}
+
+func TestInstallMarkerPreservesActivePublisherFence(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "catalogs")
+	repository := "github.com/acme/active-publisher"
+	if err := ensureRealDirectory(root); err != nil {
+		t.Fatal(err)
+	}
+	if err := installMarker(root, repository); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(root, resolvercatalogid.PublishingName(repository))
+	before, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := installMarker(root, repository); !errors.Is(err, ErrPublishing) {
+		t.Fatalf("second installMarker = %v, want ErrPublishing", err)
+	}
+	after, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(before, after) {
+		t.Fatal("active publisher marker was overwritten")
+	}
+}
+
+func TestRemoveRepositoryRejectsSymlinkRoot(t *testing.T) {
+	parent := t.TempDir()
+	repository := "github.com/acme/symlink-root"
+	external := filepath.Join(parent, "external")
+	if err := os.Mkdir(external, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	owned := filepath.Join(
+		external, resolvercatalogid.ArtifactBase(repository)+"-v1-member.ndjson",
+	)
+	if err := os.WriteFile(owned, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(parent, "resolver-catalogs")
+	if err := os.Symlink(external, root); err != nil {
+		t.Fatal(err)
+	}
+	if err := RemoveRepository(t.Context(), root, repository); err == nil {
+		t.Fatal("RemoveRepository accepted a symlink catalog root")
+	}
+	if raw, err := os.ReadFile(owned); err != nil || string(raw) != "keep" {
+		t.Fatalf("symlink-root refusal changed external artifact: %q, %v", raw, err)
+	}
+}
+
+func TestCleanupRetiredRejectsSymlinkRoot(t *testing.T) {
+	parent := t.TempDir()
+	repository := "github.com/acme/symlink-cleanup"
+	prepared := testPrepared(
+		t, filepath.Join(parent, "source"), repository, true,
+	)
+	external := filepath.Join(parent, "external")
+	if err := os.Mkdir(external, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	stale := filepath.Join(
+		external, resolvercatalogid.OwnedArtifactPrefix(repository)+"stale.ndjson",
+	)
+	if err := os.WriteFile(stale, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(parent, "resolver-catalogs")
+	if err := os.Symlink(external, root); err != nil {
+		t.Fatal(err)
+	}
+	if err := CleanupRetired(root, prepared.manifest); err == nil {
+		t.Fatal("CleanupRetired accepted a symlink catalog root")
+	}
+	if raw, err := os.ReadFile(stale); err != nil || string(raw) != "keep" {
+		t.Fatalf("symlink-root refusal changed external artifact: %q, %v", raw, err)
+	}
+}
+
 func TestCatalogColdValidationRejectsTamperSymlinkAndDescriptorSwap(t *testing.T) {
 	t.Run("tamper", func(t *testing.T) {
 		root := filepath.Join(t.TempDir(), "catalogs")
@@ -296,11 +480,33 @@ func TestCatalogColdValidationRejectsTamperSymlinkAndDescriptorSwap(t *testing.T
 }
 
 func TestCatalogBoundsAtCapAndCapPlusOne(t *testing.T) {
-	if got := FrozenPolicy().MaxDirectoryEntries; got != MaxDirectoryEntries {
+	policy := FrozenPolicy()
+	if got := policy.MaxDirectoryEntries; got != MaxDirectoryEntries {
 		t.Fatalf(
 			"policy directory entries = %d, want %d",
 			got, MaxDirectoryEntries,
 		)
+	}
+	if policy.PublicationMemoryDesignBytes != PublicationMemoryDesignBytes {
+		t.Fatalf("per-publication memory design budget = %+v", policy)
+	}
+	policyJSON, err := json.Marshal(policy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(policyJSON, []byte(`"max_memory_bytes":67108864`)) ||
+		bytes.Contains(policyJSON, []byte("max_per_publication_memory_bytes")) {
+		t.Fatalf("policy v1 memory identity changed: %s", policyJSON)
+	}
+	if MaxPublicationDiskBytes != MaxStagingDiskBytes+
+		MaxCatalogContentBytes+2*int64(MaxManifestBytes) {
+		t.Fatalf(
+			"publication disk peak = %d, want exact stage+live+manifests bound",
+			MaxPublicationDiskBytes,
+		)
+	}
+	if policy.MaxOpenFiles != 2 {
+		t.Fatalf("lifecycle open descriptors = %d, want structural bound 2", policy.MaxOpenFiles)
 	}
 	declarations := make([]DeclarationPublication, MaxDeclarationPublications)
 	for index := range declarations {
@@ -381,6 +587,27 @@ func TestCleanupStagesAndReconcileCrashBoundaries(t *testing.T) {
 		removed, err := CleanupStages(t.Context(), root)
 		if err != nil || removed != 1 {
 			t.Fatalf("CleanupStages = %d, %v; want 1", removed, err)
+		}
+	})
+	t.Run("nested stage is never recursively removed", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		if err := os.MkdirAll(root, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		stage := filepath.Join(root, stageDirectoryPrefix+"nested")
+		nested := filepath.Join(stage, "nested")
+		if err := os.MkdirAll(nested, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		witness := filepath.Join(nested, "witness")
+		if err := os.WriteFile(witness, []byte("keep"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if removed, err := CleanupStages(t.Context(), root); err == nil {
+			t.Fatalf("CleanupStages = %d, nil; want nested-stage refusal", removed)
+		}
+		if raw, err := os.ReadFile(witness); err != nil || string(raw) != "keep" {
+			t.Fatalf("nested-stage refusal changed witness: %q, %v", raw, err)
 		}
 	})
 	t.Run("manifest durable before store", func(t *testing.T) {
@@ -515,6 +742,233 @@ func TestCleanupStagesAndReconcileCrashBoundaries(t *testing.T) {
 			"queue:" + repository, "clear:" + repository,
 		}) {
 			t.Fatalf("report=%+v operations=%v", report, fake.operations)
+		}
+	})
+	t.Run("maximum repository marker", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := strings.Repeat("a", reponame.MaxBytes)
+		if err := ensureRealDirectory(root); err != nil {
+			t.Fatal(err)
+		}
+		if err := installMarker(root, repository); err != nil {
+			t.Fatal(err)
+		}
+		fake := newFakeReconcileStore()
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report.ReplacementsQueued != 1 || !slices.Equal(
+			fake.operations, []string{"queue:" + repository},
+		) {
+			t.Fatalf("report=%+v operations=%v", report, fake.operations)
+		}
+		if IsPublishing(root, repository) {
+			t.Fatal("maximum-length marker survived recovery cleanup")
+		}
+	})
+	t.Run("known pack mismatch reads no members", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/pack-mismatch"
+		identity, err := NewIdentity(
+			repository, strings.Repeat("1", 40), "", testDigest('a'), nil,
+			[]ResolverPack{{Name: "neutral", Version: "1.0.0"}},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stage, err := NewStage(root, identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := stage.AddMember(
+			t.Context(), "go.ndjson", json.RawMessage(`{}`),
+			func(write func(json.RawMessage) error) error {
+				return write(json.RawMessage(
+					`{"schema":"phebs-resolver-catalog-record-v1"}`,
+				))
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		prepared, err := stage.Seal(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		state, err := prepared.Install(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		fake := newFakeReconcileStore()
+		fake.publications[repository] = storeFromState(state)
+		memberOpens := 0
+		testAfterStableOpen = func(path string) {
+			if strings.HasSuffix(path, ".ndjson") {
+				memberOpens++
+			}
+		}
+		t.Cleanup(func() { testAfterStableOpen = nil })
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if memberOpens != 0 || report.ReplacementsQueued != 1 ||
+			report.PointersCleared != 1 {
+			t.Fatalf("member opens=%d report=%+v", memberOpens, report)
+		}
+	})
+	t.Run("current pointer sweeps undeclared owned debris", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/owned-debris"
+		state := testInstall(t, root, repository, true)
+		if err := ClearPublishing(root, repository); err != nil {
+			t.Fatal(err)
+		}
+		owned := filepath.Join(
+			root, resolvercatalogid.OwnedArtifactPrefix(repository)+"undeclared",
+		)
+		foreign := filepath.Join(
+			root,
+			resolvercatalogid.OwnedArtifactPrefix("github.com/acme/foreign")+"keep",
+		)
+		if err := os.WriteFile(owned, []byte("debris"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(foreign, []byte("keep"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		fake := newFakeReconcileStore()
+		fake.publications[repository] = storeFromState(state)
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report.PublicationsCurrent != 1 || report.ReplacementsQueued != 0 {
+			t.Fatalf("report = %+v", report)
+		}
+		if _, err := os.Stat(owned); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("undeclared owned debris survived: %v", err)
+		}
+		if _, err := os.Stat(foreign); err != nil {
+			t.Fatalf("foreign debris was removed: %v", err)
+		}
+	})
+}
+
+func TestReconcileMarkedCatalogsStreamOnceAndUnfenceFailures(t *testing.T) {
+	t.Run("corrupt current pointer streams each member once", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/corrupt-marked"
+		state := testInstallWithMembers(
+			t, root, repository, nil, "a.ndjson", "b.ndjson",
+		)
+		manifest := readTestManifest(t, root, state)
+		corrupt := filepath.Join(
+			root,
+			memberArtifactName(manifest.Identity, manifest.Members[1].Name),
+		)
+		raw, err := os.ReadFile(corrupt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		raw[0] = '['
+		if err := os.WriteFile(corrupt, raw, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		fake := newFakeReconcileStore()
+		fake.publications[repository] = storeFromState(state)
+		memberOpens := 0
+		testAfterStableOpen = func(path string) {
+			if strings.HasSuffix(path, ".ndjson") {
+				memberOpens++
+			}
+		}
+		t.Cleanup(func() { testAfterStableOpen = nil })
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if memberOpens != 2 || report.ReplacementsQueued != 1 ||
+			report.PointersCleared != 1 {
+			t.Fatalf("member opens=%d report=%+v", memberOpens, report)
+		}
+		if IsPublishing(root, repository) {
+			t.Fatal("corrupt prior-process marker survived queued replacement")
+		}
+	})
+
+	t.Run("pointerless pack mismatch opens no member and removes marker", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/pointerless-pack-mismatch"
+		state := testInstallWithMembers(
+			t, root, repository,
+			[]ResolverPack{{Name: "neutral", Version: "1.0.0"}},
+			"go.ndjson",
+		)
+		foreign := filepath.Join(
+			root,
+			resolvercatalogid.ArtifactBase("github.com/acme/foreign")+"-v1-keep",
+		)
+		if err := os.WriteFile(foreign, []byte("keep"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		memberOpens := 0
+		testAfterStableOpen = func(path string) {
+			if strings.HasSuffix(path, ".ndjson") {
+				memberOpens++
+			}
+		}
+		t.Cleanup(func() { testAfterStableOpen = nil })
+		fake := newFakeReconcileStore()
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if memberOpens != 0 || report.ReplacementsQueued != 1 ||
+			report.OrphansObserved != 1 ||
+			!slices.Equal(fake.operations, []string{"queue:" + repository}) {
+			t.Fatalf(
+				"member opens=%d report=%+v operations=%v",
+				memberOpens, report, fake.operations,
+			)
+		}
+		if IsPublishing(root, repository) {
+			t.Fatal("pack-mismatched marker survived queued replacement")
+		}
+		if _, err := os.Stat(filepath.Join(root, state.Manifest)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("pack-mismatched manifest survived: %v", err)
+		}
+		if _, err := os.Stat(foreign); err != nil {
+			t.Fatalf("foreign namespace removed: %v", err)
+		}
+	})
+
+	t.Run("guarded recovery rejection removes marker after queue", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/rejected-marked-recovery"
+		_ = testInstallWithMembers(t, root, repository, nil, "go.ndjson")
+		fake := newFakeReconcileStore()
+		fake.publishErr = store.ErrConflict
+		memberOpens := 0
+		testAfterStableOpen = func(path string) {
+			if strings.HasSuffix(path, ".ndjson") {
+				memberOpens++
+			}
+		}
+		t.Cleanup(func() { testAfterStableOpen = nil })
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if memberOpens != 1 || report.ReplacementsQueued != 1 ||
+			!slices.Equal(fake.operations, []string{"queue:" + repository}) {
+			t.Fatalf(
+				"member opens=%d report=%+v operations=%v",
+				memberOpens, report, fake.operations,
+			)
+		}
+		if IsPublishing(root, repository) {
+			t.Fatal("store-rejected marker survived queued replacement")
 		}
 	})
 }
@@ -681,6 +1135,7 @@ type fakeReconcileStore struct {
 	publications map[string]store.ResolverCatalogPublication
 	jobs         []store.Job
 	operations   []string
+	publishErr   error
 }
 
 func newFakeReconcileStore() *fakeReconcileStore {
@@ -724,6 +1179,9 @@ func (fake *fakeReconcileStore) PublishResolverCatalog(
 	_ context.Context,
 	publication store.ResolverCatalogPublication,
 ) error {
+	if fake.publishErr != nil {
+		return fake.publishErr
+	}
 	publication.ControlRevision = 1
 	publication.WriterSchema = "phebs-resolver-catalog-store-v1"
 	publication.PublishedAt = time.Now().UTC()

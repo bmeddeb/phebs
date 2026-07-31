@@ -19,6 +19,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/reponame"
+	"github.com/bmeddeb/phebs/internal/repowork"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 )
 
@@ -40,11 +41,20 @@ const (
 	MaxManifestBytes           = 1 << 20
 	MaxMemberContentBytes      = int64(64 << 20)
 	MaxCatalogContentBytes     = int64(512 << 20)
-	MaxMemoryBytes             = int64(64 << 20)
-	MaxDirectoryEntries        = 32_768
-	MaxStagingDiskBytes        = int64(520 << 20)
-	MaxPublicationDiskBytes    = int64(1034 << 20)
-	MaxOpenFiles               = 2
+	// PublicationMemoryDesignBytes is the modeled per-publication design
+	// budget, not a Go heap meter. The enforceable inputs beneath it retain
+	// their individual byte/count caps.
+	PublicationMemoryDesignBytes = int64(64 << 20)
+	MaxDirectoryEntries          = 32_768
+	MaxStagingDiskBytes          = int64(520 << 20)
+	// MaxPublicationDiskBytes models one clean old live catalog, one full
+	// serialized stage, and both manifests during a replacement transition.
+	// Prior-process stages and undeclared residue are outside this model and
+	// are bounded/reclaimed through the directory lifecycle.
+	MaxPublicationDiskBytes = int64(1034 << 20)
+	// MaxOpenFiles is structural: lifecycle code opens at most an archive plus
+	// one artifact, or one member plus no other lifecycle-owned descriptor.
+	MaxOpenFiles = 2
 
 	maxManifestBytes = MaxManifestBytes
 )
@@ -73,46 +83,46 @@ type ResolverPack struct {
 
 // Policy freezes lifecycle resource bounds as digest-bearing behavior.
 type Policy struct {
-	Name                       string `json:"name"`
-	RecordSchema               string `json:"record_schema"`
-	RecordOrdering             string `json:"record_ordering"`
-	MaxDeclarationPublications int    `json:"max_declaration_publications"`
-	MaxResolverPacks           int    `json:"max_resolver_packs"`
-	MaxMembers                 int    `json:"max_members"`
-	MaxRecordsPerMember        int    `json:"max_records_per_member"`
-	MaxRecords                 int    `json:"max_records"`
-	MaxRecordBytes             int    `json:"max_record_bytes"`
-	MaxMetadataBytes           int    `json:"max_metadata_bytes"`
-	MaxManifestBytes           int    `json:"max_manifest_bytes"`
-	MaxMemberContentBytes      int64  `json:"max_member_content_bytes"`
-	MaxCatalogContentBytes     int64  `json:"max_catalog_content_bytes"`
-	MaxMemoryBytes             int64  `json:"max_memory_bytes"`
-	MaxDirectoryEntries        int    `json:"max_directory_entries"`
-	MaxStagingDiskBytes        int64  `json:"max_staging_disk_bytes"`
-	MaxPublicationDiskBytes    int64  `json:"max_publication_disk_bytes"`
-	MaxOpenFiles               int    `json:"max_open_files"`
+	Name                         string `json:"name"`
+	RecordSchema                 string `json:"record_schema"`
+	RecordOrdering               string `json:"record_ordering"`
+	MaxDeclarationPublications   int    `json:"max_declaration_publications"`
+	MaxResolverPacks             int    `json:"max_resolver_packs"`
+	MaxMembers                   int    `json:"max_members"`
+	MaxRecordsPerMember          int    `json:"max_records_per_member"`
+	MaxRecords                   int    `json:"max_records"`
+	MaxRecordBytes               int    `json:"max_record_bytes"`
+	MaxMetadataBytes             int    `json:"max_metadata_bytes"`
+	MaxManifestBytes             int    `json:"max_manifest_bytes"`
+	MaxMemberContentBytes        int64  `json:"max_member_content_bytes"`
+	MaxCatalogContentBytes       int64  `json:"max_catalog_content_bytes"`
+	PublicationMemoryDesignBytes int64  `json:"max_memory_bytes"`
+	MaxDirectoryEntries          int    `json:"max_directory_entries"`
+	MaxStagingDiskBytes          int64  `json:"max_staging_disk_bytes"`
+	MaxPublicationDiskBytes      int64  `json:"max_publication_disk_bytes"`
+	MaxOpenFiles                 int    `json:"max_open_files"`
 }
 
 func FrozenPolicy() Policy {
 	return Policy{
-		Name:                       CatalogPolicyName,
-		RecordSchema:               RecordSchema,
-		RecordOrdering:             "member-name-then-emission-v1",
-		MaxDeclarationPublications: MaxDeclarationPublications,
-		MaxResolverPacks:           MaxResolverPacks,
-		MaxMembers:                 MaxMembers,
-		MaxRecordsPerMember:        MaxRecordsPerMember,
-		MaxRecords:                 MaxRecords,
-		MaxRecordBytes:             MaxRecordBytes,
-		MaxMetadataBytes:           MaxMetadataBytes,
-		MaxManifestBytes:           MaxManifestBytes,
-		MaxMemberContentBytes:      MaxMemberContentBytes,
-		MaxCatalogContentBytes:     MaxCatalogContentBytes,
-		MaxMemoryBytes:             MaxMemoryBytes,
-		MaxDirectoryEntries:        MaxDirectoryEntries,
-		MaxStagingDiskBytes:        MaxStagingDiskBytes,
-		MaxPublicationDiskBytes:    MaxPublicationDiskBytes,
-		MaxOpenFiles:               MaxOpenFiles,
+		Name:                         CatalogPolicyName,
+		RecordSchema:                 RecordSchema,
+		RecordOrdering:               "member-name-then-emission-v1",
+		MaxDeclarationPublications:   MaxDeclarationPublications,
+		MaxResolverPacks:             MaxResolverPacks,
+		MaxMembers:                   MaxMembers,
+		MaxRecordsPerMember:          MaxRecordsPerMember,
+		MaxRecords:                   MaxRecords,
+		MaxRecordBytes:               MaxRecordBytes,
+		MaxMetadataBytes:             MaxMetadataBytes,
+		MaxManifestBytes:             MaxManifestBytes,
+		MaxMemberContentBytes:        MaxMemberContentBytes,
+		MaxCatalogContentBytes:       MaxCatalogContentBytes,
+		PublicationMemoryDesignBytes: PublicationMemoryDesignBytes,
+		MaxDirectoryEntries:          MaxDirectoryEntries,
+		MaxStagingDiskBytes:          MaxStagingDiskBytes,
+		MaxPublicationDiskBytes:      MaxPublicationDiskBytes,
+		MaxOpenFiles:                 MaxOpenFiles,
 	}
 }
 
@@ -326,6 +336,7 @@ func validateManifest(manifest Manifest) error {
 	}
 	var records int
 	var contentBytes int64
+	memberKeys := make(map[string]struct{}, len(manifest.Members))
 	for index, member := range manifest.Members {
 		if !validMemberName(member.Name) || len(member.Metadata) == 0 ||
 			len(member.Metadata) > MaxMetadataBytes ||
@@ -348,6 +359,11 @@ func validateManifest(manifest Manifest) error {
 		if index > 0 && manifest.Members[index-1].Name >= member.Name {
 			return fmt.Errorf("%w: members are not uniquely ordered", ErrInvalidManifest)
 		}
+		key := portableMemberNameKey(member.Name)
+		if _, duplicate := memberKeys[key]; duplicate {
+			return fmt.Errorf("%w: members collide on a portable filesystem", ErrInvalidManifest)
+		}
+		memberKeys[key] = struct{}{}
 		records += member.RecordCount
 		contentBytes += member.ContentBytes
 		if records > MaxRecords || contentBytes > MaxCatalogContentBytes {
@@ -366,6 +382,13 @@ func validateManifest(manifest Manifest) error {
 func validMemberName(value string) bool {
 	return validToken(value, 128) && path.Base(value) == value &&
 		!strings.HasPrefix(value, ".") && strings.HasSuffix(value, ".ndjson")
+}
+
+// portableMemberNameKey matches the case-folded, NFC-normalized identity used
+// by repository locks. APFS commonly aliases these spellings even when their
+// UTF-8 byte ordering is distinct.
+func portableMemberNameKey(value string) string {
+	return repowork.CanonicalKey(value)
 }
 
 func validToken(value string, max int) bool {

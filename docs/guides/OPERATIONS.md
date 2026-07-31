@@ -91,7 +91,17 @@ derived damage. The required
 `phebs-resolver-catalog-archive-report-v1` receipt keeps exact publication,
 omission, artifact, stale-marker, and truncated-detail counts; at most 64
 generic omission details are retained. Backup logs one source-free bounded
-summary when any count is nonzero.
+summary when any count is nonzero. If the live resolver-catalog root does not
+exist, backup writes an empty catalog archive without creating that root.
+Catalog restore pins one unchanged regular archive descriptor and completes a
+structural preflight before creating its target. It accepts only canonical
+regular USTAR/PAX entries; PAX may contain only exact `path` and decimal
+`size`, while GNU, sparse, and unknown metadata are rejected. The archive is
+bounded to 32,768 entries, 512-byte basenames, 64 MiB per member (1 MiB per
+manifest), and 1 TiB for both physical size and aggregate declared logical
+bytes; archive creation enforces those same entry, logical-byte, and final
+physical-byte ceilings. Sparse metadata therefore cannot amplify a small input
+into a large write, and backup cannot emit an archive its own restore rejects.
 
 Candidate publications remain derived and are deliberately absent from the
 archive, including candidate-v4 members and the stable candidate manifest.
@@ -154,12 +164,31 @@ orphan and a forced `resolver_catalog_job` replacement is durably enqueued.
 T30.6f registers no adapter/worker, so ordinary installations produce no
 catalog publication; T30.6g owns draining that queue through bounded resolver
 materialization.
-Each process startup cold-validates every retained catalog against its store
-authority and streams all member bytes once: at most 512 MiB per repository,
-with two lifecycle-owned descriptors and no repository corpus or Git/blob
-walk. After that cold open, a process-cached no-op checks only the marker and
-at most 257 captured manifest/member path identities; it opens or hashes no
-member content.
+Each process startup cold-validates every store-authorized catalog and every
+marked crash-recovery candidate whose resolver-pack set matches current
+policy. It streams each such catalog's member bytes at most once: at most
+512 MiB per repository, with two lifecycle-owned descriptors and no repository
+corpus or Git/blob walk. A known resolver-pack mismatch is rejected from the
+pointer or manifest before any member is opened. Pointerless, unmarked restored
+or orphaned bytes receive bounded manifest validation only; they are never
+admitted and are force-requeued. A marked pointerless publication that cannot
+be recovered is removed only after that queue write is durable, so it cannot
+permanently fence the successor. After a successful cold open, reconciliation
+sweeps undeclared files only from that repository's current v1 member
+namespace while preserving foreign namespaces. The manifest remains the sole
+visibility authority, which permits safe cleanup after a crash between store
+commit and retired-file cleanup. Startup performs up to three serial bounded
+inventories of the dedicated catalog directory (stage cleanup, discovery, and
+one batched repository cleanup), retains the store pointer list, and performs
+one bounded authority check per pointer; it holds no mirror lock and starts no
+child process. Each top-level inventory is capped at 32,768 entries; abandoned
+stages are removed only when they retain the flat lifecycle-produced shape of
+at most 257 entries, never by an unbounded recursive walk. Each successful
+ordinary publication transition performs one additional serial bounded
+`O(D)` inventory of the catalog directory to retire old current-v1 members; it
+does no member rehash, repository walk, Git/blob read, or child work. A
+process-cached no-op checks only the marker and at most 257 captured
+manifest/member path identities; it opens or hashes no member content.
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
 recovery procedure rather than retrying over it.

@@ -4398,6 +4398,11 @@ before committing a monotonic current pointer; only that commit permits marker
 removal. A replacement of any bound declaration atomically retires the catalog
 pointer and force-enqueues one successor. Candidate, index, unit, clear, and
 repository deletion transitions also retire catalog authority.
+Repository deletion removes the cryptographic catalog namespace and cancels
+pending catalog work; candidate/index clear and indexed-identity transitions
+that retire a catalog atomically leave one forced successor. Member names must
+also be unique under NFC plus Unicode case-folding so byte-distinct aliases
+cannot collide on APFS.
 
 Startup removes prior-process stages, recovers an exact manifest made durable
 before its store commit, clears a marker left after the commit, or
@@ -4416,18 +4421,32 @@ symlinks, descriptor swaps, noncanonical JSON, forged schemas, receipt
 count/length/digest mismatches, and foreign ownership. A process-cached
 publication's warm `Current` path checks only the marker and captured
 manifest/member file identities, with zero member-content opens or hashes.
+The manifest is the sole visibility authority; after a valid open,
+reconciliation removes undeclared residue only from the same repository's
+current v1 member namespace. An existing canonical marker remains a concurrent
+publisher fence and is never overwritten by staging.
 
 The frozen lifecycle limits are 16 declaration publications, 16 packs, 256
 members, 100,000 records/member, 1,000,000 records/catalog, 1 MiB/record,
 64 KiB/member metadata, a 1 MiB canonical manifest, 64 MiB/member content,
-512 MiB/catalog content, 64 MiB lifecycle memory, 32,768 managed directory
-entries, 520 MiB staging disk, a 1,034 MiB replacement-transition peak, and
-two lifecycle-owned open descriptors. Deterministic
+512 MiB/catalog content, and 520 MiB staging disk. Modeled structural budgets
+are 64 MiB per publication in memory, a 1,034 MiB clean
+replacement-transition disk peak, and two lifecycle-owned open descriptors;
+the serialized policy-v1 `max_memory_bytes` field retains that design-budget
+meaning rather than claiming a measured Go-heap ceiling. Each top-level
+filesystem inventory and archive bookkeeping are bounded separately by 32,768
+directory entries; abandoned stages are reclaimed only as the flat
+lifecycle-produced shape of at most 257 entries, and store-pointer count
+remains installation state. Deterministic
 `resolver-catalog.tar` backup includes every and
 only exact valid marker-free publication. Its bounded report retains exact
 publication/omission/artifact/marker counts, at most 64 generic details, and a
-truncated-detail count; restore enforces the same entry/content bounds and
-strictly validates the complete staged set before rename.
+truncated-detail count; backup does not create an absent live catalog root and
+enforces the restore entry/logical/physical ceilings before success. Restore
+pins one regular archive descriptor, bounds physical and declared
+logical bytes together, rejects GNU/sparse or non-whitelisted PAX metadata,
+performs a complete preflight before creating its target, and strictly
+validates the complete staged set before rename.
 
 AC met: independent store writer marker and schema assertion; unknown-writer
 reopen refusal; guarded pointer publication and monotonic replacement;
@@ -4437,20 +4456,31 @@ abandoned stage, marker-only, manifest-before-store, and store-before-marker
 crash boundaries; queue-before-clear reconciliation; repository-local cleanup
 ownership; exact archive round trip; marker and invalid-publication omission;
 bounded omission detail overflow; retained-byte restore with pointer clearing
-and forced requeue; backup-manifest-v4 compatibility; dated PLAN decision and
+and forced requeue; sparse/special/oversized archive refusal before target
+creation; maximum-length marker recovery; portable member-alias refusal;
+repository deletion and reindex-successor coverage; backup-manifest-v4
+compatibility; dated PLAN decision and
 Operations, roadmap, AGENTS, and active/completed backlog updates; full merge
 bar.
 
 Steady state adds no registered worker, resolver adapter, declaration/candidate
 read, Git/blob read, child process, or concurrency. A cached catalog no-op is
 `O(M)` metadata checks for at most 257 manifest/member paths and performs zero
-content hashing. Cold validation, backup, and each process startup are `O(B)`
-streaming work over at most 512 MiB of catalog member bytes per repository
-with two lifecycle-owned descriptors; startup also scans only the dedicated
-catalog directory and rechecks one store pointer plus its bounded declaration
-rows per publication. Staging is sequential and bounded by one canonical
-record plus buffers in memory. Startup does no repository corpus or Git/blob
-walk.
+content hashing. Cold validation and backup are `O(B)` streaming work over at
+most 512 MiB of catalog member bytes per publication with two lifecycle-owned
+descriptors. Startup streams member bytes once only for store-authorized or
+marked recovery candidates with the current pack set; a known pack mismatch
+opens no members, and a pointerless unmarked orphan reads only its bounded
+manifest. Startup performs up to three serial bounded inventories of only the
+dedicated catalog directory (stage cleanup, discovery, and one batched
+repository cleanup), plus one store-pointer/declaration authority check per
+publication; it retains the store's pointer list and bounded manifest identity
+per accepted publication. Staging is sequential and bounded by one canonical
+record plus buffers in memory. Each successful ordinary publication transition
+performs one serial `O(D)` bounded inventory of the catalog directory to retire
+old current-v1 members, with no member rehash, repository walk, Git/blob read,
+or child work. Startup does no repository corpus or Git/blob walk, held mirror
+lock, child process, or concurrency fan-out.
 Invalid authority produces one deduplicated forced pending successor before
 clear. T30.6f registers no resolver worker, changes no search/evidence/API
 behavior, and establishes no production-use, completeness, extraction

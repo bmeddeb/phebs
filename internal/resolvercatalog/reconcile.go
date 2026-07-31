@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -41,6 +42,7 @@ func Reconcile(
 	expectedPacks []ResolverPack,
 ) (ReconcileReport, error) {
 	var report ReconcileReport
+	cleanup := newReconcileCleanup()
 	expectedPacks = append([]ResolverPack{}, expectedPacks...)
 	if err := validateResolverPacks(expectedPacks); err != nil {
 		return report, err
@@ -64,40 +66,31 @@ func Reconcile(
 			return report, authorityErr
 		}
 		if IsPublishing(root, pointer.Repository) {
-			if authorityCurrent {
-				if publication, openErr := OpenPublishing(
-					ctx, root, state,
-				); openErr == nil &&
-					slices.Equal(state.ResolverPacks, expectedPacks) {
-					if err := finishMarkedPublication(
-						root, publication,
-					); err != nil {
-						return report, err
-					}
-					report.MarkersRecovered++
-					report.PublicationsCurrent++
-					continue
-				}
-			}
 			// The stable manifest may be a replacement made durable after
 			// the still-current pointer was read but before its store commit.
-			// Revalidate that manifest from its own canonical identity and
-			// let the guarded store transaction decide whether it is current.
-			if publication, openErr := openMarkedManifest(
-				ctx, root, pointer.Repository, expectedPacks,
-			); openErr == nil {
-				replacement := storeFromState(publication.State())
-				if publishErr := st.PublishResolverCatalog(
-					ctx, replacement,
-				); publishErr == nil {
-					if err := finishMarkedPublication(
-						root, publication,
-					); err != nil {
-						return report, err
+			// Read that identity first, then stream its members exactly once.
+			markedState, stateErr := readMarkedManifestState(
+				root, pointer.Repository, expectedPacks,
+			)
+			if stateErr == nil {
+				if publication, openErr := OpenPublishing(
+					ctx, root, markedState,
+				); openErr == nil {
+					accepted := authorityCurrent && statesEqual(markedState, state)
+					if !accepted {
+						accepted = st.PublishResolverCatalog(
+							ctx, storeFromState(markedState),
+						) == nil
 					}
-					report.MarkersRecovered++
-					report.PublicationsCurrent++
-					continue
+					if accepted {
+						if err := finishMarkedPublication(root, publication); err != nil {
+							return report, err
+						}
+						cleanup.keep(publication.manifest)
+						report.MarkersRecovered++
+						report.PublicationsCurrent++
+						continue
+					}
 				}
 			}
 		}
@@ -112,21 +105,16 @@ func Reconcile(
 				return report, err
 			}
 			report.PointersCleared++
-			if err := removeRepositoryArtifacts(root, pointer.Repository); err != nil {
-				return report, err
-			}
+			cleanup.remove(pointer.Repository)
 			continue
 		}
-		if !IsPublishing(root, pointer.Repository) {
+		if !IsPublishing(root, pointer.Repository) && slices.Equal(
+			state.ResolverPacks, expectedPacks,
+		) {
 			if publication, openErr := Open(
 				ctx, root, state,
-			); openErr == nil &&
-				slices.Equal(state.ResolverPacks, expectedPacks) {
-				if err := CleanupRetired(
-					root, publication.manifest,
-				); err != nil {
-					return report, err
-				}
+			); openErr == nil {
+				cleanup.keep(publication.manifest)
 				report.PublicationsCurrent++
 				continue
 			}
@@ -139,30 +127,33 @@ func Reconcile(
 			return report, err
 		}
 		report.PointersCleared++
-		if err := removeRepositoryArtifacts(root, pointer.Repository); err != nil {
-			return report, err
-		}
+		cleanup.remove(pointer.Repository)
 	}
 
 	states, markerRepositories, err := discoverStatesAndMarkers(root)
 	if err != nil {
 		return report, err
 	}
+	stateRepositories := make(map[string]struct{}, len(states))
 	for _, state := range states {
+		stateRepositories[state.Repository] = struct{}{}
 		if _, exists := pointerByRepository[state.Repository]; exists {
 			continue
 		}
-		if IsPublishing(root, state.Repository) {
+		marked := IsPublishing(root, state.Repository)
+		if marked && slices.Equal(
+			state.ResolverPacks, expectedPacks,
+		) {
 			if publication, openErr := OpenPublishing(
 				ctx, root, state,
-			); openErr == nil &&
-				slices.Equal(state.ResolverPacks, expectedPacks) {
+			); openErr == nil {
 				if err := st.PublishResolverCatalog(ctx, storeFromState(state)); err == nil {
 					if err := finishMarkedPublication(
 						root, publication,
 					); err != nil {
 						return report, err
 					}
+					cleanup.keep(publication.manifest)
 					report.MarkersRecovered++
 					report.PublicationsCurrent++
 					continue
@@ -177,56 +168,54 @@ func Reconcile(
 		}
 		report.ReplacementsQueued++
 		report.OrphansObserved++
+		if marked {
+			// The durable successor makes this failed prior-process marker
+			// disposable. Leaving it would fence every future publisher.
+			cleanup.remove(state.Repository)
+		}
 	}
 	for _, repository := range markerRepositories {
 		if _, exists := pointerByRepository[repository]; exists {
 			continue
 		}
-		foundState := false
-		for _, state := range states {
-			if state.Repository == repository {
-				foundState = true
-				break
-			}
-		}
-		if foundState {
+		if _, foundState := stateRepositories[repository]; foundState {
 			continue
 		}
 		if err := queueReplacement(ctx, st, repository); err != nil {
 			return report, err
 		}
 		report.ReplacementsQueued++
-		if err := removeRepositoryArtifacts(root, repository); err != nil {
-			return report, err
-		}
+		cleanup.remove(repository)
+	}
+	if err := cleanup.apply(ctx, root); err != nil {
+		return report, err
 	}
 	return report, nil
 }
 
-func openMarkedManifest(
-	ctx context.Context,
+func readMarkedManifestState(
 	root, repository string,
 	expectedPacks []ResolverPack,
-) (*Publication, error) {
+) (State, error) {
 	manifestPath := filepath.Join(
 		root, resolvercatalogid.ManifestName(repository),
 	)
 	raw, _, err := readStableRegular(manifestPath, maxManifestBytes)
 	if err != nil {
-		return nil, err
+		return State{}, err
 	}
 	var manifest Manifest
 	if err := decodeCanonical(raw, &manifest); err != nil {
-		return nil, err
+		return State{}, err
 	}
 	if err := validateManifest(manifest); err != nil {
-		return nil, err
+		return State{}, err
 	}
 	if manifest.Identity.Repository != repository ||
 		!slices.Equal(manifest.Identity.ResolverPacks, expectedPacks) {
-		return nil, ErrInvalidManifest
+		return State{}, ErrInvalidManifest
 	}
-	return OpenPublishing(ctx, root, manifest.State())
+	return manifest.State(), nil
 }
 
 func finishMarkedPublication(root string, publication *Publication) error {
@@ -238,7 +227,7 @@ func finishMarkedPublication(root string, publication *Publication) error {
 	); err != nil {
 		return err
 	}
-	return CleanupRetired(root, publication.manifest)
+	return nil
 }
 
 func validateResolverPacks(packs []ResolverPack) error {
@@ -353,13 +342,14 @@ func discoverStatesAndMarkers(root string) ([]State, []string, error) {
 		if strings.HasSuffix(name, ".publishing") &&
 			strings.HasPrefix(name, "phebs-resolver-catalog-") {
 			raw, _, readErr := readStableRegular(
-				filepath.Join(root, name), 1024,
+				filepath.Join(root, name), reponame.MaxBytes+1,
 			)
 			if readErr != nil || len(raw) < 2 || raw[len(raw)-1] != '\n' {
 				continue
 			}
 			repository := string(raw[:len(raw)-1])
-			if resolvercatalogid.PublishingName(repository) == name {
+			if reponame.Validate(repository) == nil &&
+				resolvercatalogid.PublishingName(repository) == name {
 				markerRepositories = append(markerRepositories, repository)
 			}
 		}
@@ -367,29 +357,116 @@ func discoverStatesAndMarkers(root string) ([]State, []string, error) {
 	return states, markerRepositories, nil
 }
 
-func removeRepositoryArtifacts(root, repository string) error {
-	entries, err := readBoundedDirectory(root)
+// RemoveRepository removes only artifacts in repository's cryptographic
+// resolver-catalog namespace. It is the deletion counterpart to publication;
+// foreign namespaces and unrelated files are never selected by decoded data.
+func RemoveRepository(ctx context.Context, root, repository string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := reponame.Validate(repository); err != nil {
+		return err
+	}
+	cleanup := newReconcileCleanup()
+	cleanup.remove(repository)
+	return cleanup.apply(ctx, root)
+}
+
+type repositoryCleanupPlan struct {
+	removeAll    bool
+	memberPrefix string
+	keepMembers  map[string]struct{}
+}
+
+type reconcileCleanup struct {
+	byBase map[string]*repositoryCleanupPlan
+}
+
+func newReconcileCleanup() *reconcileCleanup {
+	return &reconcileCleanup{
+		byBase: make(map[string]*repositoryCleanupPlan),
+	}
+}
+
+func (cleanup *reconcileCleanup) keep(manifest Manifest) {
+	repository := manifest.Identity.Repository
+	base := resolvercatalogid.ArtifactBase(repository)
+	plan := cleanup.byBase[base]
+	if plan != nil && plan.removeAll {
+		return
+	}
+	if plan == nil {
+		plan = &repositoryCleanupPlan{}
+		cleanup.byBase[base] = plan
+	}
+	plan.memberPrefix = resolvercatalogid.OwnedArtifactPrefix(repository)
+	plan.keepMembers = make(map[string]struct{}, len(manifest.Members))
+	for _, member := range manifest.Members {
+		plan.keepMembers[memberArtifactName(manifest.Identity, member.Name)] = struct{}{}
+	}
+}
+
+func (cleanup *reconcileCleanup) remove(repository string) {
+	cleanup.byBase[resolvercatalogid.ArtifactBase(repository)] =
+		&repositoryCleanupPlan{removeAll: true}
+}
+
+func (cleanup *reconcileCleanup) apply(ctx context.Context, root string) error {
+	if len(cleanup.byBase) == 0 {
+		return nil
+	}
+	rootHandle, rootDirectory, err := openStableDirectoryRoot(root)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	base := resolvercatalogid.ArtifactBase(repository)
+	defer func() {
+		_ = rootDirectory.Close()
+		_ = rootHandle.Close()
+	}()
+	entries, err := readOpenDirectoryUpTo(rootDirectory, MaxDirectoryEntries)
+	if err != nil {
+		return err
+	}
+	baseBytes := len(resolvercatalogid.ArtifactBase(""))
+	removed := false
 	for _, entry := range entries {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		name := entry.Name()
-		if name != resolvercatalogid.ManifestName(repository) &&
-			name != resolvercatalogid.PublishingName(repository) &&
-			!strings.HasPrefix(name, base+"-") {
+		if len(name) < baseBytes {
 			continue
 		}
-		target := filepath.Join(root, name)
+		base := name[:baseBytes]
+		plan := cleanup.byBase[base]
+		if plan == nil {
+			continue
+		}
+		selected := false
+		if plan.removeAll {
+			selected = name == base+".manifest.json" ||
+				name == base+".publishing" || strings.HasPrefix(name, base+"-")
+		} else if strings.HasPrefix(name, plan.memberPrefix) {
+			_, retained := plan.keepMembers[name]
+			selected = !retained
+		}
+		if !selected {
+			continue
+		}
 		if entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
 			return fmt.Errorf("resolver catalog owned path %q is a directory", name)
 		}
-		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
+		if err := rootHandle.Remove(name); err != nil &&
+			!errors.Is(err, os.ErrNotExist) {
 			return err
 		}
+		removed = true
 	}
-	return syncDirectory(root)
+	if removed {
+		return rootDirectory.Sync()
+	}
+	return nil
 }

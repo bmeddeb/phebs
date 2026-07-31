@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
+	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -440,6 +441,7 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	}
 	for _, kind := range []store.JobKind{
 		store.JobFetch, store.JobIndex, store.JobCandidate, store.JobExtract,
+		store.JobResolverCatalog,
 	} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel %s jobs for %s: %w", kind, name, err))
@@ -454,6 +456,7 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	// Close the enqueue-before-lock window.
 	for _, kind := range []store.JobKind{
 		store.JobFetch, store.JobIndex, store.JobCandidate, store.JobExtract,
+		store.JobResolverCatalog,
 	} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel late %s jobs for %s: %w", kind, name, err))
@@ -493,6 +496,11 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 		ctx, filepath.Join(dataDir, "candidates"), name,
 	); err != nil {
 		return destructiveFailure(fmt.Errorf("cleanup %s candidate artifacts: %w", name, err))
+	}
+	if err := resolvercatalog.RemoveRepository(
+		ctx, filepath.Join(dataDir, "resolver-catalogs"), name,
+	); err != nil {
+		return destructiveFailure(fmt.Errorf("cleanup %s resolver catalog: %w", name, err))
 	}
 	if err := ctx.Err(); err != nil {
 		return destructiveFailure(err)

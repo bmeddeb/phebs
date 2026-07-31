@@ -444,16 +444,40 @@ func (s *Surreal) ClearCandidateManifestPublication(
 		s.db,
 		`BEGIN;
 		LET $current = SELECT id FROM $rid;
+		LET $retired_catalog = IF array::len($current) = 1 THEN
+			(DELETE resolver_catalog_publication
+				WHERE repository = $repository RETURN BEFORE)
+			ELSE [] END;
 		IF array::len($current) = 1 {
 			DELETE $rid RETURN NONE;
-			DELETE resolver_catalog_publication
-				WHERE repository = $repository RETURN NONE;
 			DELETE extraction_domain_outcome
 				WHERE repo = $repository RETURN NONE;
 			UPDATE $repo_rid
 				SET evidence_revision = (evidence_revision ?? 0) + 1
 				WHERE name = $repository
 				RETURN NONE;
+		};
+		LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+			(SELECT id, created_at FROM resolver_catalog_job
+				WHERE pending_key = $repository AND status = 'pending'
+				ORDER BY created_at LIMIT 1)[0].id
+			ELSE NONE END;
+		LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+			ELSE IF $pending_catalog != NONE THEN
+				(UPDATE $pending_catalog SET force = true RETURN AFTER)
+			ELSE
+				(CREATE resolver_catalog_job CONTENT {
+					target: $repository,
+					status: 'pending',
+					attempts: 0,
+					created_at: time::now(),
+					pending_key: $repository,
+					force: true
+				} RETURN AFTER)
+			END;
+		IF array::len($retired_catalog) = 1
+			AND array::len($catalog_fanout) != 1 {
+			THROW 'phebs-retryable: resolver catalog successor was not persisted'
 		};
 		COMMIT;`,
 		map[string]any{
