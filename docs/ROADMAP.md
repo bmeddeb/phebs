@@ -115,8 +115,11 @@ each operational-state, scheduler, candidate-lane, catalog, leaf-artifact,
 complete-publication, consumer, and retention seam. T30.6a bounded job
 receipts, T30.6b durable exact-generation domain outcomes, T30.6c
 aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
-classification, and T30.6e focused local-evidence base-lane consumption are
-shipped; T30.6f resolver-catalog lifecycle is next. Exact `_test.go` suffix
+classification, T30.6e focused local-evidence base-lane consumption, and
+T30.6f resolver-catalog lifecycle are shipped; T30.6g bounded resolver
+materialization is next. T30.6f registers no adapter or worker: it freezes the
+immutable identity/member/resource contract, store pointer, crash recovery,
+and exact valid-only backup/restore substrate that T30.6g will consume. Exact `_test.go` suffix
 wins in candidate v4; focused local evidence for a committed non-empty unit
 now consumes only `base`, while empty-unit whole-repository extraction keeps
 shipped behavior and current search continues indexing every admitted test

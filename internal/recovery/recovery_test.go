@@ -21,6 +21,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/indexer"
 	"github.com/bmeddeb/phebs/internal/recovery"
+	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -90,6 +91,44 @@ connections:
 	)
 	if err != nil {
 		t.Fatalf("read pre-backup candidate pointer: %v", err)
+	}
+	catalogIdentity, err := resolvercatalog.NewIdentity(
+		names[0], indexedBefore.IndexedCommitHash, "",
+		publishedPointer.ManifestDigest, nil, nil,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogRoot := filepath.Join(dataDir, "resolver-catalogs")
+	catalogStage, err := resolvercatalog.NewStage(catalogRoot, catalogIdentity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogPrepared, err := catalogStage.Seal(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalogState, err := catalogPrepared.Install(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := st.PublishResolverCatalog(ctx, store.ResolverCatalogPublication{
+		Repository: names[0], HeadCommit: indexedBefore.IndexedCommitHash,
+		Declarations:            []store.ResolverCatalogDeclarationPublication{},
+		DeclarationSetDigest:    catalogState.DeclarationSetDigest,
+		CandidateManifestDigest: catalogState.CandidateManifestDigest,
+		SourceLanePolicy:        catalogState.SourceLanePolicy,
+		ResolverPacks:           []store.ResolverCatalogPack{},
+		ResolverPackSetDigest:   catalogState.ResolverPackSetDigest,
+		CatalogPolicyDigest:     catalogState.CatalogPolicyDigest,
+		GenerationDigest:        catalogState.GenerationDigest,
+		ManifestDigest:          catalogState.ManifestDigest,
+		ManifestPath:            catalogState.Manifest,
+	}); err != nil {
+		t.Fatalf("publish pre-backup resolver catalog pointer: %v", err)
+	}
+	if err := resolvercatalog.ClearPublishing(catalogRoot, names[0]); err != nil {
+		t.Fatal(err)
 	}
 	outcomeScope := store.ExtractionScope{
 		Repository: names[0],
@@ -190,6 +229,29 @@ connections:
 		ctx, names[0],
 	); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("restored derived candidate pointer = %v, want ErrNotFound", err)
+	}
+	if _, err := restored.GetResolverCatalogPublication(
+		ctx, names[0],
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored derived resolver catalog pointer = %v, want ErrNotFound", err)
+	}
+	if _, err := resolvercatalog.Open(
+		ctx, filepath.Join(dataDir, "resolver-catalogs"), catalogState,
+	); err != nil {
+		t.Fatalf("restored exact resolver catalog bytes: %v", err)
+	}
+	catalogReport, err := resolvercatalog.Reconcile(
+		ctx, filepath.Join(dataDir, "resolver-catalogs"), restored, nil,
+	)
+	if err != nil || catalogReport.ReplacementsQueued != 1 ||
+		catalogReport.OrphansObserved != 1 {
+		t.Fatalf("restored catalog reconciliation = %+v, %v", catalogReport, err)
+	}
+	catalogJobs, err := restored.ListJobs(
+		ctx, store.JobResolverCatalog, store.StatusPending,
+	)
+	if err != nil || len(catalogJobs) != 1 || !catalogJobs[0].Force {
+		t.Fatalf("restored catalog jobs = %+v, %v", catalogJobs, err)
 	}
 	restoredOutcome, err := restored.LatestExtractionDomainOutcome(
 		ctx, outcomeScope,

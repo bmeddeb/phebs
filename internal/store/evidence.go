@@ -1261,7 +1261,35 @@ LET $outcome = IF array::len($attempt) != 1 THEN []
 			evidence_migration_version: $evidence_migration_version
 		} RETURN AFTER)
 	END;
-RETURN IF array::len($outcome) = 1 THEN $published ELSE [] END;
+LET $catalog = (SELECT declarations FROM $catalog_rid)[0];
+LET $catalog_depends = $catalog != NONE
+	AND $domain IN $catalog.declarations.map(
+		|$declaration| $declaration.domain);
+LET $retired_catalog = IF array::len($outcome) = 1
+		AND $catalog_depends THEN
+	(DELETE $catalog_rid RETURN BEFORE)
+	ELSE [] END;
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $repo AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $repo,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repo,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($outcome) = 1
+	AND ($catalog_depends = false OR array::len($catalog_fanout) = 1)
+	THEN $published ELSE [] END;
 COMMIT;`
 
 // PublishExtractionRun validates and flips visibility in one transaction.
@@ -1323,6 +1351,7 @@ func (s *Surreal) publishExtractionRun(
 		"attempt_rid":   extractionAttemptID(scope),
 		"outcome_rid":   extractionDomainOutcomeID(scope.Repository, scope.Domain),
 		"candidate_rid": candidateManifestPublicationID(scope.Repository),
+		"catalog_rid":   resolverCatalogPublicationID(scope.Repository),
 		"repo_rid":      repoID(run.Repo), "repo": run.Repo, "commit": run.Commit,
 		"unit_digest": run.UnitDigest, "domain": run.Domain,
 		"published_key": publishedKey(scope),
@@ -1474,8 +1503,35 @@ LET $repair = IF array::len($recorded) != 1
 			force: true
 		} RETURN AFTER)
 	END;
+LET $catalog = (SELECT declarations FROM $catalog_rid)[0];
+LET $catalog_depends = $catalog != NONE
+	AND $domain IN $catalog.declarations.map(
+		|$declaration| $declaration.domain);
+LET $retired_catalog = IF array::len($recorded) = 1
+		AND $catalog_depends THEN
+	(DELETE $catalog_rid RETURN BEFORE)
+	ELSE [] END;
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $repo AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $repo,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repo,
+			force: true
+		} RETURN AFTER)
+	END;
 RETURN IF array::len($recorded) = 1
 	AND ($candidate_control_failure = false OR array::len($repair) = 1)
+	AND ($catalog_depends = false OR array::len($catalog_fanout) = 1)
 	THEN $recorded ELSE [] END;
 COMMIT;`
 
@@ -1497,6 +1553,7 @@ func (s *Surreal) RecordExtractionDomainOutcome(
 	vars := map[string]any{
 		"repo_rid":      repoID(prepared.Scope.Repository),
 		"candidate_rid": candidateManifestPublicationID(prepared.Scope.Repository),
+		"catalog_rid":   resolverCatalogPublicationID(prepared.Scope.Repository),
 		"attempt_rid":   extractionAttemptID(prepared.Scope),
 		"outcome_rid": extractionDomainOutcomeID(
 			prepared.Scope.Repository, prepared.Scope.Domain,

@@ -26,6 +26,9 @@ var (
 	ErrInvalidCandidateManifestPublication = errors.New(
 		"invalid candidate manifest publication",
 	)
+	ErrInvalidResolverCatalogPublication = errors.New(
+		"invalid resolver catalog publication",
+	)
 )
 
 type JobKind string
@@ -39,6 +42,10 @@ const (
 	// that extraction must validate before starting (T30.4).
 	JobCandidate JobKind = "candidate_manifest_job"
 	JobExtract   JobKind = "extraction_job" // evidence extraction, chained after indexing (T12.2)
+	// JobResolverCatalog materializes the immutable declaration/candidate-bound
+	// catalog. T30.6f defines its durable queue without registering an adapter
+	// worker; T30.6g supplies that consumer.
+	JobResolverCatalog JobKind = "resolver_catalog_job"
 	// JobInvestigate runs one preflighted Investigation Run (T16.4). Its
 	// generic queue lease and the Run's publication lease are independent:
 	// losing either fences the worker.

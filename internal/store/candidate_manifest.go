@@ -169,6 +169,11 @@ LET $published = IF $acceptable = false THEN []
 			published_at = $published_at
 			RETURN AFTER)
 	END;
+LET $retired_catalog = IF array::len($published) = 1
+		AND $same_publication = false THEN
+	(DELETE resolver_catalog_publication
+		WHERE repository = $repository RETURN BEFORE)
+	ELSE [] END;
 LET $invalidated_runs = (IF array::len($published) = 1 THEN
 	(SELECT id, run_id, domain FROM extraction_run
 		WHERE repo = $repository AND commit = $head_commit
@@ -278,7 +283,28 @@ LET $fanout = IF array::len($published) != 1 THEN []
 			force: false
 		} RETURN AFTER)
 	END;
-RETURN IF array::len($fanout) = 1 THEN $published ELSE [] END;
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $repository,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repository,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($fanout) = 1
+	AND (array::len($retired_catalog) = 0
+		OR array::len($catalog_fanout) = 1)
+	THEN $published ELSE [] END;
 COMMIT;`
 
 // PublishCandidateManifest atomically guards publication against the current
@@ -420,6 +446,8 @@ func (s *Surreal) ClearCandidateManifestPublication(
 		LET $current = SELECT id FROM $rid;
 		IF array::len($current) = 1 {
 			DELETE $rid RETURN NONE;
+			DELETE resolver_catalog_publication
+				WHERE repository = $repository RETURN NONE;
 			DELETE extraction_domain_outcome
 				WHERE repo = $repository RETURN NONE;
 			UPDATE $repo_rid
@@ -460,6 +488,7 @@ IF $writer_ok = false {
 	THROW 'phebs-permanent: evidence writer generation is not active'
 };
 DELETE candidate_manifest_publication RETURN NONE;
+DELETE resolver_catalog_publication RETURN NONE;
 DELETE extraction_domain_outcome
 	WHERE candidate_control_failure = true
 		AND store_schema_version = $store_schema_version

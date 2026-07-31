@@ -90,6 +90,43 @@ DEFINE FIELD IF NOT EXISTS published_at ON candidate_manifest_publication TYPE d
 DEFINE INDEX IF NOT EXISTS candidate_manifest_publication_repository
     ON candidate_manifest_publication FIELDS repository UNIQUE;
 
+-- T30.6f: the resolver catalog has its own durable replacement queue and one
+-- strict current pointer per repository. Catalog bytes remain derived
+-- filesystem artifacts, while this row is the atomic current authority.
+DEFINE TABLE IF NOT EXISTS resolver_catalog_job SCHEMALESS;
+DEFINE FIELD OVERWRITE status ON resolver_catalog_job TYPE string
+    ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS resolver_catalog_job_status ON resolver_catalog_job FIELDS status;
+
+DEFINE TABLE IF NOT EXISTS resolver_catalog_publication SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS head_commit ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS unit_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS declarations ON resolver_catalog_publication TYPE array<object>
+    ASSERT array::len($value) <= 16;
+DEFINE FIELD IF NOT EXISTS declarations.*.domain ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS declarations.*.run_id ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS declarations.*.generation_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS declaration_set_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS candidate_manifest_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS source_lane_policy ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS resolver_packs ON resolver_catalog_publication TYPE array<object>
+    ASSERT array::len($value) <= 16;
+DEFINE FIELD IF NOT EXISTS resolver_packs.*.name ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS resolver_packs.*.version ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS resolver_pack_set_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS catalog_policy_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS manifest_digest ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS manifest_path ON resolver_catalog_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS control_revision ON resolver_catalog_publication TYPE int
+    DEFAULT 1 ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS writer_schema ON resolver_catalog_publication TYPE string
+    ASSERT $value = 'phebs-resolver-catalog-store-v1';
+DEFINE FIELD IF NOT EXISTS published_at ON resolver_catalog_publication TYPE datetime;
+DEFINE INDEX IF NOT EXISTS resolver_catalog_publication_repository
+    ON resolver_catalog_publication FIELDS repository UNIQUE;
+
 DEFINE TABLE IF NOT EXISTS investigation_run_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON investigation_run_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];

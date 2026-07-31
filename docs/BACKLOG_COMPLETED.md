@@ -4374,3 +4374,85 @@ no ordinary test-source read. Empty-unit whole-repository extraction performs
 the shipped work. No search behavior, production registration, completeness,
 extraction-accuracy, migration-completion, decommission-safety, or historical
 retention claim is created. T30.6f owns resolver-catalog lifecycle.
+
+### T30.6f · Resolver-catalog lifecycle
+
+**T30.6f ✅ · Resolver-catalog lifecycle** *(2026-07-30)* — adds the immutable
+adapter-independent publication boundary that must precede caller-leaf
+execution. Exact identity binds canonical repository, indexed HEAD, committed
+unit, ordered declaration-publication identities and set digest,
+candidate-manifest-v4 digest, `candidate-source-lane-base-v1`, ordered
+resolver-pack/version identities and set digest, and the complete frozen
+catalog policy. The empty declaration/pack/member set is a valid neutral
+fixture and authorizes no resolver behavior.
+
+Canonical member metadata and NDJSON records are emitted sequentially.
+Receipts bind member name, canonical metadata, record count, byte length, and
+content/metadata digests; every record carries
+`phebs-resolver-catalog-record-v1`, and the stable manifest binds the ordered
+receipts with a self-digest. Members become durable first, a canonical
+repository marker precedes live renames, and the manifest renames last. The
+writer-v1 store transaction then rechecks indexed HEAD/unit and the exact
+candidate pointer plus every ordered published declaration run/generation
+before committing a monotonic current pointer; only that commit permits marker
+removal. A replacement of any bound declaration atomically retires the catalog
+pointer and force-enqueues one successor. Candidate, index, unit, clear, and
+repository deletion transitions also retire catalog authority.
+
+Startup removes prior-process stages, recovers an exact manifest made durable
+before its store commit, clears a marker left after the commit, or
+force-enqueues replacement before clearing an invalid pointer/artifact set.
+It rechecks repository, candidate, declaration, resolver-pack, writer, and
+pointer authority in the store before accepting filesystem bytes, closing
+stale state left by restore or an older process.
+Cleanup derives its local namespace only from the canonical repository and
+never follows a manifest-selected foreign path. A restored exact publication
+has its imported pointer cleared and is treated as a pointerless orphan that
+force-enqueues replacement rather than being promoted.
+
+Cold validation binds path, opened regular descriptor, bounded read, and
+post-read path/descriptor identities for manifest and every member. It rejects
+symlinks, descriptor swaps, noncanonical JSON, forged schemas, receipt
+count/length/digest mismatches, and foreign ownership. A process-cached
+publication's warm `Current` path checks only the marker and captured
+manifest/member file identities, with zero member-content opens or hashes.
+
+The frozen lifecycle limits are 16 declaration publications, 16 packs, 256
+members, 100,000 records/member, 1,000,000 records/catalog, 1 MiB/record,
+64 KiB/member metadata, a 1 MiB canonical manifest, 64 MiB/member content,
+512 MiB/catalog content, 64 MiB lifecycle memory, 32,768 managed directory
+entries, 520 MiB staging disk, a 1,034 MiB replacement-transition peak, and
+two lifecycle-owned open descriptors. Deterministic
+`resolver-catalog.tar` backup includes every and
+only exact valid marker-free publication. Its bounded report retains exact
+publication/omission/artifact/marker counts, at most 64 generic details, and a
+truncated-detail count; restore enforces the same entry/content bounds and
+strictly validates the complete staged set before rename.
+
+AC met: independent store writer marker and schema assertion; unknown-writer
+reopen refusal; guarded pointer publication and monotonic replacement;
+candidate/index/restore clearing; durable empty fixture; canonical populated
+member; cap/cap+1; tamper, symlink, and deterministic descriptor-swap refusal;
+abandoned stage, marker-only, manifest-before-store, and store-before-marker
+crash boundaries; queue-before-clear reconciliation; repository-local cleanup
+ownership; exact archive round trip; marker and invalid-publication omission;
+bounded omission detail overflow; retained-byte restore with pointer clearing
+and forced requeue; backup-manifest-v4 compatibility; dated PLAN decision and
+Operations, roadmap, AGENTS, and active/completed backlog updates; full merge
+bar.
+
+Steady state adds no registered worker, resolver adapter, declaration/candidate
+read, Git/blob read, child process, or concurrency. A cached catalog no-op is
+`O(M)` metadata checks for at most 257 manifest/member paths and performs zero
+content hashing. Cold validation, backup, and each process startup are `O(B)`
+streaming work over at most 512 MiB of catalog member bytes per repository
+with two lifecycle-owned descriptors; startup also scans only the dedicated
+catalog directory and rechecks one store pointer plus its bounded declaration
+rows per publication. Staging is sequential and bounded by one canonical
+record plus buffers in memory. Startup does no repository corpus or Git/blob
+walk.
+Invalid authority produces one deduplicated forced pending successor before
+clear. T30.6f registers no resolver worker, changes no search/evidence/API
+behavior, and establishes no production-use, completeness, extraction
+accuracy, migration completion, decommission safety, or historical-retention
+claim. T30.6g owns bounded resolver materialization.

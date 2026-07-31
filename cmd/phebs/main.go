@@ -44,6 +44,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/indexer"
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/recovery"
+	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -298,6 +299,22 @@ func serve(args []string) error {
 		return fmt.Errorf("cleanup abandoned candidate stages: %w", err)
 	} else if removed > 0 {
 		log.Printf("candidate reconciliation: removed %d abandoned stage(s)", removed)
+	}
+	catalogReport, err := resolvercatalog.Reconcile(
+		ctx, filepath.Join(cfg.Server.DataDir, "resolver-catalogs"), st, nil,
+	)
+	if err != nil {
+		return fmt.Errorf("resolver catalog reconciliation: %w", err)
+	}
+	if catalogReport.StagesRemoved+catalogReport.MarkersRecovered+
+		catalogReport.PublicationsCurrent+catalogReport.ReplacementsQueued+
+		catalogReport.PointersCleared+catalogReport.OrphansObserved > 0 {
+		log.Printf(
+			"resolver catalog reconciliation: stages_removed=%d markers_recovered=%d current=%d replacements_queued=%d pointers_cleared=%d orphans=%d",
+			catalogReport.StagesRemoved, catalogReport.MarkersRecovered,
+			catalogReport.PublicationsCurrent, catalogReport.ReplacementsQueued,
+			catalogReport.PointersCleared, catalogReport.OrphansObserved,
+		)
 	}
 	report, reconcileErr := phebssync.ReconcileArtifacts(ctx, st, cfg.Server.DataDir, cfg.Sync.CleanupOrphans)
 	if reconcileErr != nil {

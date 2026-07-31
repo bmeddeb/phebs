@@ -116,6 +116,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateCandidateControlRevisions(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateResolverCatalogWriter(ctx); err != nil {
+		return err
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilitySchema, nil)
 	if err != nil {
 		return err
@@ -322,6 +325,7 @@ DEFINE INDEX IF NOT EXISTS indexing_job_pending_key ON indexing_job FIELDS pendi
 DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS candidate_manifest_job_pending_key ON candidate_manifest_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS resolver_catalog_job_pending_key ON resolver_catalog_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
 
 // retiredEvidenceStoreSchemas are the writer generations this binary neither
@@ -402,7 +406,8 @@ DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
 // an unfenced active row that has no successor.
 func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
 	for _, kind := range []JobKind{
-		JobSync, JobIndex, JobFetch, JobCandidate, JobExtract, JobInvestigate,
+		JobSync, JobIndex, JobFetch, JobCandidate, JobExtract,
+		JobResolverCatalog, JobInvestigate,
 	} {
 		jobs, err := s.ListJobs(ctx, kind, "")
 		if err != nil {
@@ -1324,7 +1329,11 @@ UPDATE extraction_job SET status = 'canceled', error = 'repository deleting',
 UPDATE candidate_manifest_job SET status = 'canceled', error = 'repository deleting',
     finished_at = time::now(), not_before = NONE, pending_key = NONE
     WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE resolver_catalog_job SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
 DELETE candidate_manifest_publication WHERE repository = $name RETURN NONE;
+DELETE resolver_catalog_publication WHERE repository = $name RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
 DELETE repo_connection WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
@@ -1383,7 +1392,8 @@ LET $same_scope_state_changed = array::len($updated) = 1
 LET $identity_changed = array::len($updated) = 1
 	AND ($scope_unchanged = false OR $same_scope_state_changed);
 IF $identity_changed {
-	DELETE $publication_rid RETURN NONE
+	DELETE $publication_rid RETURN NONE;
+	DELETE $catalog_rid RETURN NONE
 };
 IF $same_scope_state_changed {
 	UPDATE extraction_run SET status = 'superseded', published_key = NONE
@@ -1422,6 +1432,7 @@ COMMIT;`
 		"rid": repoID(name), "name": name, "hash": defaultCommit,
 		"revisions": revisions, "at": at, "unit_digest": "",
 		"publication_rid":             candidateManifestPublicationID(name),
+		"catalog_rid":                 resolverCatalogPublicationID(name),
 		"evidence_store_schema":       evidenceStoreSchemaVersion,
 		"evidence_format":             evidenceFormatVersion,
 		"evidence_migration":          evidenceMigrationVersion,
@@ -1441,7 +1452,8 @@ LET $same_scope_state_changed = array::len($updated) = 1
 LET $identity_changed = array::len($updated) = 1
 	AND ($scope_unchanged = false OR $same_scope_state_changed);
 IF $identity_changed {
-	DELETE $publication_rid RETURN NONE
+	DELETE $publication_rid RETURN NONE;
+	DELETE $catalog_rid RETURN NONE
 };
 IF $same_scope_state_changed {
 	UPDATE extraction_run SET status = 'superseded', published_key = NONE
@@ -1499,14 +1511,16 @@ func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
 		`BEGIN;
 LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
 LET $publication = (SELECT id FROM $publication_rid)[0];
+LET $catalog = (SELECT id FROM $catalog_rid)[0];
 LET $visibility_changed = ($before != NONE
 	AND (($before.indexed_commit_hash ?? '') != ''
 		OR $before.indexed_analysis_unit != NONE))
-	OR $publication != NONE;
+	OR $publication != NONE OR $catalog != NONE;
 LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
 	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
 IF array::len($updated) = 1 {
 	DELETE $publication_rid RETURN NONE;
+	DELETE $catalog_rid RETURN NONE;
 	DELETE extraction_domain_outcome WHERE repo = $name RETURN NONE
 };
 LET $final = IF array::len($updated) = 1 AND $visibility_changed THEN
@@ -1518,6 +1532,7 @@ COMMIT;`,
 		map[string]any{
 			"rid":             repoID(name),
 			"publication_rid": candidateManifestPublicationID(name),
+			"catalog_rid":     resolverCatalogPublicationID(name),
 			"name":            name,
 		})
 	if err != nil {

@@ -8,9 +8,10 @@ shipped exact focused evidence publication. The post-T30.5 issue-repair gate
 is closed. The separate large-monorepo review is complete; T30.6a shipped
 bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
 and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
-source-lane classification and T30.6e focused local-evidence base-lane
-consumption are shipped; T30.6f resolver-catalog lifecycle is next. Completed
-Epics 0–24, Epic 29, T30.1–T30.6e, and P5 hardening are
+source-lane classification, T30.6e focused local-evidence base-lane
+consumption, and T30.6f resolver-catalog lifecycle are shipped; T30.6g
+bounded resolver materialization is next. Completed
+Epics 0–24, Epic 29, T30.1–T30.6f, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -20,10 +21,11 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6f · Resolver-catalog lifecycle** is next. T30.6a–T30.6e now provide
+**T30.6g · Bounded resolver materialization** is next. T30.6a–T30.6f now provide
 bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
-and focused base-lane evidence consumption without changing search. The accepted
+focused base-lane evidence consumption, and the adapter-free immutable catalog
+lifecycle without changing search. The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
@@ -547,7 +549,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6f next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6g next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -897,25 +899,14 @@ removing exact `_test.go` document semantics. Durable coverage and bounded
 receipts disclose exact exclusions. Empty-unit extraction and focused
 Search/Stream behavior remain unchanged.
 
-**T30.6f · Resolver-catalog lifecycle** *(needs T30.6e)* — define the immutable
-catalog schema, identity, member receipts, publication, validation, recovery,
-backup, and cleanup without yet implementing resolver adapters. Identity binds
-repository, indexed HEAD, unit, ordered declaration-publication identities,
-declaration-set digest, candidate-manifest-v4 digest, source-lane policy,
-ordered resolver-pack/version set, and catalog policy. Canonical members carry
-name, length, content/metadata digests, and manifest self-digest. Members become
-durable first, the manifest renames last under a marker, the store pointer
-commits only after manifest durability, and the marker clears only after that
-commit. Cold validation is descriptor-stable; warm no-op checks control/file
-identity with zero member-content hashing. Freeze numeric record/content,
-memory/disk/open-file bounds. A valid publication is archived exactly; an
-invalid or marker-covered derived publication is omitted with a bounded report,
-restore never installs or retains its exported pointer, and reconciliation
-force-enqueues replacement. AC: store-writer/schema compatibility and
-migration, empty/neutral fixture catalog, tamper/symlink/descriptor swap, every
-crash boundary, prior-process staging, canonical local ownership, exact archive
-or bounded omission, restore pointer clearing, reconcile/requeue, cap/cap+1,
-full merge bar.
+**T30.6f ✅ · Resolver-catalog lifecycle** *(2026-07-30; needs T30.6e)* —
+completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306f--resolver-catalog-lifecycle).
+The adapter-free immutable catalog now has bounded canonical members, strict
+generation/store identity, marker-ordered publication, cold descriptor-stable
+validation, metadata-only warm reuse, crash reconciliation, and exact
+valid-only backup/restore with pointer clearing. No resolver adapter or worker
+is registered; T30.6g supplies bounded materialization.
 
 **T30.6g · Bounded resolver materialization** *(needs T30.6f)* — implement the
 bounded v1 resolver set over immutable candidate and declaration inputs: only

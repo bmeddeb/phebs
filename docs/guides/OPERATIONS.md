@@ -18,6 +18,7 @@ $DATA/                     # server.data_dir, default ~/.phebs
 ├── .surreal-runtime.json  # private, process-owned live-backup rendezvous
 ├── repos/<host>/<path>.git  # bare mirrors
 ├── candidates/            # derived candidate manifests and NDJSON members
+├── resolver-catalogs/     # derived immutable resolver catalog publications
 └── index/                 # whole/focused zoekt shards; focused manifests and sidecars
 ```
 
@@ -40,6 +41,9 @@ their currently published bytes exactly because builder timestamps/identity
 make rebuild output an unsuitable restore-equality test.
 Candidate manifests and their partition members are derived planning state:
 they are excluded and rebuilt from the restored indexed commit and mirror.
+Resolver catalogs are also derived, but valid immutable publications are
+preserved byte-exactly so later bounded materialization can avoid repeating
+their declaration/candidate input work.
 
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
@@ -55,7 +59,8 @@ acquires a crash-released cross-process snapshot lock that lets in-flight
 publication/state commits finish and pauses new ones, and runs that
 executable's live `export`. A different config that only points at the same
 `$DATA` is refused. The command publishes a private directory
-containing `database.surql`, `focused-index.tar`, and `manifest.json`. The
+containing `database.surql`, `focused-index.tar`, `resolver-catalog.tar`, and
+`manifest.json`. The
 focused archive contains only complete, revalidated focused manifests,
 sidecars, and shard members; it never includes whole-repository shards. A
 stale marker is omitted but cannot hide an otherwise complete valid
@@ -67,8 +72,8 @@ proves the exact canonical tar inventory in one bounded streaming pass; it
 does not extract the archive into a second temporary tree. Restore's
 pre-import verification and final installation still perform the complete
 structural extraction and semantic publication validation. The
-`phebs-backup-manifest-v3` manifest
-binds both artifacts' sizes and SHA-256 digests, the exact raw config digest,
+`phebs-backup-manifest-v4` manifest
+binds all three artifacts' sizes and SHA-256 digests, the exact raw config digest,
 phebs version/binary digest, SurrealDB version/binary digest, database
 identity, store-writer/evidence/migration versions, and the derived-state
 exclusions, including `$DATA/candidates`. Its required
@@ -77,6 +82,16 @@ omitted publications/artifacts, and stale markers; verification independently
 recovers and compares the archived publication count. It contains no host
 binary path or database password. Preserve the exact config separately; the
 backup contains its digest, not its bytes.
+
+`resolver-catalog.tar` contains every and only strict, marker-free immutable
+catalog publication. Catalog manifests and canonical NDJSON members retain
+their exact bytes. Invalid, incomplete, symlinked, descriptor-swapped,
+unreferenced, or marker-covered catalog state is omitted as rebuildable
+derived damage. The required
+`phebs-resolver-catalog-archive-report-v1` receipt keeps exact publication,
+omission, artifact, stale-marker, and truncated-detail counts; at most 64
+generic omission details are retained. Backup logs one source-free bounded
+summary when any count is nonzero.
 
 Candidate publications remain derived and are deliberately absent from the
 archive, including candidate-v4 members and the stable candidate manifest.
@@ -132,6 +147,19 @@ while the candidate pointer and bytes are absent. Normal candidate rebuilding
 must first re-establish the exact pointer; only an outcome whose complete
 generation still matches may then short-circuit. A changed rebuild leaves the
 old latest row ineligible, so no outcome can authorize missing derived bytes.
+Restore validates and installs exact catalog filesystem bytes but always
+clears every imported resolver-catalog pointer. Startup never promotes that
+exported authority: a pointerless retained publication is classified as an
+orphan and a forced `resolver_catalog_job` replacement is durably enqueued.
+T30.6f registers no adapter/worker, so ordinary installations produce no
+catalog publication; T30.6g owns draining that queue through bounded resolver
+materialization.
+Each process startup cold-validates every retained catalog against its store
+authority and streams all member bytes once: at most 512 MiB per repository,
+with two lifecycle-owned descriptors and no repository corpus or Git/blob
+walk. After that cold open, a process-cached no-op checks only the marker and
+at most 257 captured manifest/member path identities; it opens or hashes no
+member content.
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
 recovery procedure rather than retrying over it.
@@ -140,7 +168,8 @@ The subsequent normal `serve` start revalidates restored focused publications
 against committed unit/revision state. It keeps exact valid focused bytes,
 clears and force-requeues any claim whose focused publication was invalid or
 omitted, rebuilds excluded whole-repository shards, rebuilds the cleared
-candidate publications before extraction, and
+candidate publications before extraction, reconciles resolver-catalog crash
+markers and queues (without yet executing) any required catalog replacement, and
 boot sync re-clones missing mirrors. Restored API keys and sessions remain
 live — rotate them if the backup's custody was ever in doubt.
 
@@ -788,7 +817,8 @@ typed SCIP artifact before removing exact test documents' definitions,
 anchors, occurrences, and joins. Coverage and bounded receipts expose the
 excluded counts and declared bytes. Empty-unit repositories retain shipped
 whole-repository extraction behavior, and focused search remains unchanged.
-T30.6f is next; T30.6f–T30.6i separately deliver catalog lifecycle, resolver materialization,
+T30.6f now supplies the adapter-free catalog lifecycle; T30.6g is next, and
+T30.6g–T30.6i separately deliver resolver materialization,
 leaf artifacts, and complete caller publication. T30.6j–T30.6l bind Caller Map,
 comparison, and Workbench Impact as separate authorized consumers. T30.6m
 selects the historical-retention posture and T30.6n implements only that

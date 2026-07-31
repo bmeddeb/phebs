@@ -70,9 +70,12 @@ CREATE candidate_manifest_job CONTENT {
 	if err != nil {
 		t.Fatalf("reopen legacy candidate jobs: %v", err)
 	}
+	reopenedClosed := false
 	t.Cleanup(func() {
-		if err := reopened.Close(context.Background()); err != nil {
-			t.Errorf("close reopened store: %v", err)
+		if !reopenedClosed {
+			if err := reopened.Close(context.Background()); err != nil {
+				t.Errorf("close reopened store: %v", err)
+			}
 		}
 	})
 	pending, err := reopened.ListJobs(ctx, JobCandidate, StatusPending)
@@ -83,6 +86,71 @@ CREATE candidate_manifest_job CONTENT {
 	if err != nil || len(canceled) != 1 ||
 		canceled[0].Error != "migration: duplicate pending job" {
 		t.Fatalf("migrated canceled = %+v, %v; want duplicate cancellation", canceled, err)
+	}
+
+	testResolverCatalogSchemaRejectsWrongWriter(t, ctx, reopened)
+	requireCandidateRawQuery(t, ctx, reopened, `
+UPDATE $rid SET version = 'future-resolver-catalog-writer' RETURN NONE;`,
+		map[string]any{"rid": resolverCatalogMigrationID()},
+	)
+	if err := reopened.Close(ctx); err != nil {
+		t.Fatal(err)
+	}
+	reopenedClosed = true
+	if _, err := OpenLocal(ctx, directory); err == nil ||
+		!strings.Contains(err.Error(), "unsupported resolver catalog writer generation") {
+		t.Fatalf("reopen with future resolver writer marker = %v", err)
+	}
+}
+
+func testResolverCatalogSchemaRejectsWrongWriter(
+	t *testing.T, ctx context.Context, s *Surreal,
+) {
+	t.Helper()
+	declarationDigest, err := resolverCatalogDeclarationSetDigest(
+		[]ResolverCatalogDeclarationPublication{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	packDigest, err := resolverCatalogPackSetDigest(
+		[]ResolverCatalogPack{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	results, err := surrealdb.Query[any](ctx, s.db, `
+CREATE resolver_catalog_publication:test CONTENT {
+	repository: 'github.com/acme/wrong-writer',
+	head_commit: '1111111111111111111111111111111111111111',
+	unit_digest: '',
+	declarations: [],
+	declaration_set_digest: $declaration_digest,
+	candidate_manifest_digest: $digest,
+	source_lane_policy: 'candidate-source-lane-base-v1',
+	resolver_packs: [],
+	resolver_pack_set_digest: $pack_digest,
+	catalog_policy_digest: $digest,
+	generation_digest: $digest,
+	manifest_digest: $digest,
+	manifest_path: 'wrong',
+	control_revision: 1,
+	writer_schema: 'future-writer',
+	published_at: time::now()
+};`, map[string]any{
+		"digest":             "sha256:" + strings.Repeat("a", 64),
+		"declaration_digest": declarationDigest,
+		"pack_digest":        packDigest,
+	})
+	if err != nil {
+		return
+	}
+	hasError := false
+	for _, result := range *results {
+		hasError = hasError || result.Error != nil
+	}
+	if !hasError {
+		t.Fatal("wrong resolver catalog writer schema was accepted")
 	}
 }
 

@@ -360,6 +360,8 @@ func TestCandidateManifestClearDeleteAndList(t *testing.T) {
 	if err != nil || len(canceled) != 1 || canceled[0].Target != repositories[1] {
 		t.Fatalf("deleted candidate jobs = %+v, %v; want one canceled", canceled, err)
 	}
+
+	testResolverCatalogStoreLifecycle(t, s)
 }
 
 func TestCandidateManifestPublicationRejectsInvalidPrimitiveIdentity(t *testing.T) {

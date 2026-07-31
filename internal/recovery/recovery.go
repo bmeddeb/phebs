@@ -21,15 +21,18 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/focusedindex"
+	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 const (
-	ManifestSchema                  = "phebs-backup-manifest-v3"
-	FocusedIndexArchiveReportSchema = "phebs-focused-archive-report-v1"
-	ManifestName                    = "manifest.json"
-	DatabaseName                    = "database.surql"
-	FocusedIndexName                = "focused-index.tar"
+	ManifestSchema                     = "phebs-backup-manifest-v4"
+	FocusedIndexArchiveReportSchema    = "phebs-focused-archive-report-v1"
+	ResolverCatalogArchiveReportSchema = "phebs-resolver-catalog-archive-report-v1"
+	ManifestName                       = "manifest.json"
+	DatabaseName                       = "database.surql"
+	FocusedIndexName                   = "focused-index.tar"
+	ResolverCatalogName                = "resolver-catalog.tar"
 
 	maxManifestBytes = 1 << 20
 	maxCommandOutput = 64 << 10
@@ -77,22 +80,33 @@ type FocusedIndexArchiveReport struct {
 	StaleMarkers        int    `json:"stale_markers"`
 }
 
+type ResolverCatalogArchiveReport struct {
+	Schema              string                     `json:"schema"`
+	Publications        int                        `json:"publications"`
+	OmittedPublications int                        `json:"omitted_publications"`
+	OmittedArtifacts    int                        `json:"omitted_artifacts"`
+	StaleMarkers        int                        `json:"stale_markers"`
+	Details             []resolvercatalog.Omission `json:"details,omitempty"`
+	TruncatedDetails    int                        `json:"truncated_details"`
+}
+
 // Manifest binds one database export to the exact recovery-compatible inputs.
 // ManifestSHA256 digests the canonical JSON with that field empty, avoiding a
 // recursive file hash while still detecting every meaningful manifest change.
 type Manifest struct {
-	Schema            string                    `json:"schema"`
-	CreatedAt         time.Time                 `json:"created_at"`
-	Database          DatabaseIdentity          `json:"database"`
-	ConfigSHA256      string                    `json:"config_sha256"`
-	Phebs             ToolIdentity              `json:"phebs"`
-	Surreal           ToolIdentity              `json:"surreal"`
-	Store             store.StoreIdentity       `json:"store"`
-	ExportCommand     []string                  `json:"export_command"`
-	Inventory         []Artifact                `json:"inventory"`
-	FocusedIndex      FocusedIndexArchiveReport `json:"focused_index_archive"`
-	DerivedExclusions []string                  `json:"derived_exclusions"`
-	ManifestSHA256    string                    `json:"manifest_sha256"`
+	Schema            string                       `json:"schema"`
+	CreatedAt         time.Time                    `json:"created_at"`
+	Database          DatabaseIdentity             `json:"database"`
+	ConfigSHA256      string                       `json:"config_sha256"`
+	Phebs             ToolIdentity                 `json:"phebs"`
+	Surreal           ToolIdentity                 `json:"surreal"`
+	Store             store.StoreIdentity          `json:"store"`
+	ExportCommand     []string                     `json:"export_command"`
+	Inventory         []Artifact                   `json:"inventory"`
+	FocusedIndex      FocusedIndexArchiveReport    `json:"focused_index_archive"`
+	ResolverCatalog   ResolverCatalogArchiveReport `json:"resolver_catalog_archive"`
+	DerivedExclusions []string                     `json:"derived_exclusions"`
+	ManifestSHA256    string                       `json:"manifest_sha256"`
 }
 
 type Options struct {
@@ -230,6 +244,38 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	resolverPath := filepath.Join(stage, ResolverCatalogName)
+	resolverReport, err := resolvercatalog.CreateArchiveWithReport(
+		filepath.Join(dataDir, "resolver-catalogs"), resolverPath,
+	)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("archive resolver catalog publications: %w", err)
+	}
+	if resolverReport.OmittedPublications > 0 ||
+		resolverReport.OmittedArtifacts > 0 ||
+		resolverReport.StaleMarkers > 0 {
+		log.Printf(
+			"backup resolver catalog derived state: archived=%d omitted_publications=%d omitted_artifacts=%d stale_markers=%d truncated_details=%d",
+			resolverReport.Publications,
+			resolverReport.OmittedPublications,
+			resolverReport.OmittedArtifacts,
+			resolverReport.StaleMarkers,
+			resolverReport.TruncatedDetails,
+		)
+	}
+	if err := os.Chmod(resolverPath, 0o600); err != nil {
+		return Manifest{}, fmt.Errorf("protect resolver-catalog artifact: %w", err)
+	}
+	if err := syncFile(resolverPath); err != nil {
+		return Manifest{}, err
+	}
+	resolverArtifact, err := inspectArtifact(
+		resolverPath, ResolverCatalogName,
+		"derived-byte-exact", "application/x-tar",
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
 	now := time.Now
 	if opts.Now != nil {
 		now = opts.Now
@@ -246,13 +292,22 @@ func Create(ctx context.Context, opts BackupOptions) (Manifest, error) {
 		},
 		Store:         store.CurrentStoreIdentity(),
 		ExportCommand: slices.Clone(exportCommand),
-		Inventory:     []Artifact{artifact, focusedArtifact},
+		Inventory:     []Artifact{artifact, focusedArtifact, resolverArtifact},
 		FocusedIndex: FocusedIndexArchiveReport{
 			Schema:              FocusedIndexArchiveReportSchema,
 			Publications:        focusedReport.Publications,
 			OmittedPublications: focusedReport.OmittedPublications,
 			OmittedArtifacts:    focusedReport.OmittedArtifacts,
 			StaleMarkers:        focusedReport.StaleMarkers,
+		},
+		ResolverCatalog: ResolverCatalogArchiveReport{
+			Schema:              ResolverCatalogArchiveReportSchema,
+			Publications:        resolverReport.Publications,
+			OmittedPublications: resolverReport.OmittedPublications,
+			OmittedArtifacts:    resolverReport.OmittedArtifacts,
+			StaleMarkers:        resolverReport.StaleMarkers,
+			Details:             slices.Clone(resolverReport.Details),
+			TruncatedDetails:    resolverReport.TruncatedDetails,
 		},
 		DerivedExclusions: slices.Clone(derivedExclusions),
 	}
@@ -340,6 +395,12 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 	); err != nil {
 		return Manifest{}, fmt.Errorf("restore focused index publications: %w", err)
 	}
+	if err := resolvercatalog.RestoreArchive(
+		filepath.Join(backup, ResolverCatalogName),
+		filepath.Join(target, "resolver-catalogs"),
+	); err != nil {
+		return Manifest{}, fmt.Errorf("restore resolver catalog publications: %w", err)
+	}
 
 	// Opening once applies the supported idempotent schema/migration set and
 	// proves the imported database reaches the same application boundary.
@@ -351,6 +412,12 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 		_ = st.Close(context.WithoutCancel(ctx))
 		return Manifest{}, fmt.Errorf(
 			"clear derived candidate publications after restore: %w", err,
+		)
+	}
+	if err := clearResolverCatalogPublications(ctx, st); err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf(
+			"clear derived resolver catalog publications after restore: %w", err,
 		)
 	}
 	if err := st.Close(context.WithoutCancel(ctx)); err != nil {
@@ -368,6 +435,15 @@ func clearCandidateManifestPublications(
 	return publications.ClearAllCandidateManifestPublications(ctx)
 }
 
+func clearResolverCatalogPublications(
+	ctx context.Context,
+	publications interface {
+		ClearAllResolverCatalogPublications(context.Context) error
+	},
+) error {
+	return publications.ClearAllResolverCatalogPublications(ctx)
+}
+
 // Verify performs offline artifact and compatibility validation without
 // writing to the restore target.
 func Verify(backup string, opts Options) (Manifest, error) {
@@ -383,7 +459,9 @@ func Verify(backup string, opts Options) (Manifest, error) {
 		names = append(names, entry.Name())
 	}
 	slices.Sort(names)
-	if !slices.Equal(names, []string{DatabaseName, FocusedIndexName, ManifestName}) {
+	if !slices.Equal(names, []string{
+		DatabaseName, FocusedIndexName, ManifestName, ResolverCatalogName,
+	}) {
 		return Manifest{}, fmt.Errorf("backup inventory is incomplete or contains undeclared files: %v", names)
 	}
 	manifest, err := readManifest(filepath.Join(backup, ManifestName))
@@ -440,6 +518,16 @@ func Verify(backup string, opts Options) (Manifest, error) {
 	if focused != manifest.Inventory[1] {
 		return Manifest{}, errors.New("backup focused-index artifact differs from its manifest")
 	}
+	resolver, err := inspectArtifact(
+		filepath.Join(backup, ResolverCatalogName),
+		ResolverCatalogName, "derived-byte-exact", "application/x-tar",
+	)
+	if err != nil {
+		return Manifest{}, err
+	}
+	if resolver != manifest.Inventory[2] {
+		return Manifest{}, errors.New("backup resolver-catalog artifact differs from its manifest")
+	}
 	focusedReport, err := focusedindex.VerifyArchiveWithReport(
 		filepath.Join(backup, FocusedIndexName),
 	)
@@ -449,6 +537,17 @@ func Verify(backup string, opts Options) (Manifest, error) {
 	if focusedReport.Publications != manifest.FocusedIndex.Publications {
 		return Manifest{}, errors.New(
 			"backup focused-index publication count differs from its manifest",
+		)
+	}
+	resolverArchiveReport, err := resolvercatalog.VerifyArchiveWithReport(
+		filepath.Join(backup, ResolverCatalogName),
+	)
+	if err != nil {
+		return Manifest{}, fmt.Errorf("verify resolver-catalog artifact: %w", err)
+	}
+	if resolverArchiveReport.Publications != manifest.ResolverCatalog.Publications {
+		return Manifest{}, errors.New(
+			"backup resolver-catalog publication count differs from its manifest",
 		)
 	}
 	return manifest, nil
@@ -461,7 +560,7 @@ func validateManifest(manifest Manifest) error {
 		manifest.Surreal.Version == "" || manifest.Surreal.SHA256 == "" || manifest.ManifestSHA256 == "" {
 		return errors.New("backup manifest identity is incomplete")
 	}
-	if len(manifest.Inventory) != 2 || manifest.Inventory[0].Path != DatabaseName ||
+	if len(manifest.Inventory) != 3 || manifest.Inventory[0].Path != DatabaseName ||
 		manifest.Inventory[0].Classification != "precious" ||
 		manifest.Inventory[0].MediaType != "application/surrealql" || manifest.Inventory[0].Size <= 0 {
 		return errors.New("backup manifest inventory is invalid")
@@ -472,12 +571,36 @@ func validateManifest(manifest Manifest) error {
 		manifest.Inventory[1].Size <= 0 {
 		return errors.New("backup focused-index inventory is invalid")
 	}
+	if manifest.Inventory[2].Path != ResolverCatalogName ||
+		manifest.Inventory[2].Classification != "derived-byte-exact" ||
+		manifest.Inventory[2].MediaType != "application/x-tar" ||
+		manifest.Inventory[2].Size <= 0 {
+		return errors.New("backup resolver-catalog inventory is invalid")
+	}
 	if manifest.FocusedIndex.Schema != FocusedIndexArchiveReportSchema ||
 		manifest.FocusedIndex.Publications < 0 ||
 		manifest.FocusedIndex.OmittedPublications < 0 ||
 		manifest.FocusedIndex.OmittedArtifacts < 0 ||
 		manifest.FocusedIndex.StaleMarkers < 0 {
 		return errors.New("backup focused-index archive report is invalid")
+	}
+	if manifest.ResolverCatalog.Schema != ResolverCatalogArchiveReportSchema ||
+		manifest.ResolverCatalog.Publications < 0 ||
+		manifest.ResolverCatalog.OmittedPublications < 0 ||
+		manifest.ResolverCatalog.OmittedArtifacts < 0 ||
+		manifest.ResolverCatalog.StaleMarkers < 0 ||
+		len(manifest.ResolverCatalog.Details) > resolvercatalog.MaxOmissionDetails ||
+		manifest.ResolverCatalog.TruncatedDetails < 0 {
+		return errors.New("backup resolver-catalog archive report is invalid")
+	}
+	for _, detail := range manifest.ResolverCatalog.Details {
+		if detail.Name == "" || len(detail.Name) > 512 ||
+			(detail.Reason != "invalid_manifest" &&
+				detail.Reason != "publication_marker" &&
+				detail.Reason != "invalid_publication" &&
+				detail.Reason != "unreferenced_artifact") {
+			return errors.New("backup resolver-catalog omission detail is invalid")
+		}
 	}
 	if !slices.Equal(manifest.DerivedExclusions, derivedExclusions) {
 		return errors.New("backup manifest derived-state classification is invalid")
@@ -488,6 +611,7 @@ func validateManifest(manifest Manifest) error {
 	for _, digest := range []string{
 		manifest.ConfigSHA256, manifest.Phebs.SHA256, manifest.Surreal.SHA256,
 		manifest.Inventory[0].SHA256, manifest.Inventory[1].SHA256,
+		manifest.Inventory[2].SHA256,
 		manifest.ManifestSHA256,
 	} {
 		if !validSHA256(digest) {

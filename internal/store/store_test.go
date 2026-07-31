@@ -245,6 +245,7 @@ func TestJobLifecycle(t *testing.T) {
 
 	for _, kind := range []store.JobKind{
 		store.JobSync, store.JobIndex, store.JobCandidate,
+		store.JobResolverCatalog,
 	} {
 		t.Run(string(kind), func(t *testing.T) {
 			job, err := s.CreateJob(ctx, kind, "target-1")
