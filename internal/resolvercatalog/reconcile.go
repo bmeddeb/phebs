@@ -32,6 +32,14 @@ type ReconcileReport struct {
 	OrphansObserved     int
 }
 
+// ErrNondeterministicPublication means one resolver generation produced two
+// different immutable manifests. Recovery must retain the store pointer and
+// publication marker: clearing either would turn the rejected challenger into
+// authority on the next attempt.
+var ErrNondeterministicPublication = errors.New(
+	"resolver catalog generation produced conflicting manifests",
+)
+
 // Reconcile repairs every publication crash boundary. Queue-before-clear is
 // deliberate: a process death can leave a redundant forced successor, but
 // never a cleared pointer with no durable replacement request.
@@ -65,33 +73,66 @@ func Reconcile(
 		if authorityErr != nil {
 			return report, authorityErr
 		}
-		if IsPublishing(root, pointer.Repository) {
+		publishing, publishingErr := Publishing(root, pointer.Repository)
+		if publishingErr != nil {
+			return report, publishingErr
+		}
+		if publishing {
 			// The stable manifest may be a replacement made durable after
 			// the still-current pointer was read but before its store commit.
 			// Read that identity first, then stream its members exactly once.
-			markedState, stateErr := readMarkedManifestState(
-				root, pointer.Repository, expectedPacks,
-			)
-			if stateErr == nil {
-				if publication, openErr := OpenPublishing(
-					ctx, root, markedState,
-				); openErr == nil {
-					accepted := authorityCurrent && statesEqual(markedState, state)
-					if !accepted {
-						accepted = st.PublishResolverCatalog(
-							ctx, storeFromState(markedState),
-						) == nil
+			if publication, openErr := OpenMarked(
+				ctx, root, pointer.Repository, expectedPacks,
+			); openErr == nil {
+				markedState := publication.State()
+				accepted := authorityCurrent && statesEqual(markedState, state)
+				if !accepted {
+					publishErr := st.PublishResolverCatalog(
+						ctx, storeFromState(markedState),
+					)
+					accepted = publishErr == nil
+					if publishErr != nil && !errors.Is(publishErr, store.ErrConflict) {
+						return report, fmt.Errorf(
+							"recover marked resolver catalog for %q: %w",
+							pointer.Repository, publishErr,
+						)
 					}
-					if accepted {
-						if err := finishMarkedPublication(root, publication); err != nil {
-							return report, err
+					if errors.Is(publishErr, store.ErrConflict) && authorityCurrent {
+						// Authority may have changed after the first probe. Recheck
+						// before allowing the ordinary queue-before-clear recovery.
+						stillCurrent, currentErr :=
+							st.ResolverCatalogPublicationCurrent(ctx, pointer)
+						if currentErr != nil {
+							return report, currentErr
 						}
-						cleanup.keep(publication.manifest)
-						report.MarkersRecovered++
-						report.PublicationsCurrent++
-						continue
+						if stillCurrent {
+							if markedState.GenerationDigest == state.GenerationDigest {
+								return report, fmt.Errorf(
+									"%w: repository %q generation %q has manifests %q and %q",
+									ErrNondeterministicPublication,
+									pointer.Repository, state.GenerationDigest,
+									state.ManifestDigest, markedState.ManifestDigest,
+								)
+							}
+							return report, fmt.Errorf(
+								"marked resolver catalog for %q conflicts with current authority: %w",
+								pointer.Repository, publishErr,
+							)
+						}
+						authorityCurrent = false
 					}
 				}
+				if accepted {
+					if err := finishMarkedPublication(root, publication); err != nil {
+						return report, err
+					}
+					cleanup.keep(publication.manifest)
+					report.MarkersRecovered++
+					report.PublicationsCurrent++
+					continue
+				}
+			} else if errors.Is(openErr, ErrCatalogIO) {
+				return report, openErr
 			}
 		}
 		if !authorityCurrent {
@@ -108,7 +149,7 @@ func Reconcile(
 			cleanup.remove(pointer.Repository)
 			continue
 		}
-		if !IsPublishing(root, pointer.Repository) && slices.Equal(
+		if !publishing && slices.Equal(
 			state.ResolverPacks, expectedPacks,
 		) {
 			if publication, openErr := Open(
@@ -117,6 +158,8 @@ func Reconcile(
 				cleanup.keep(publication.manifest)
 				report.PublicationsCurrent++
 				continue
+			} else if errors.Is(openErr, ErrCatalogIO) {
+				return report, openErr
 			}
 		}
 		if err := queueReplacement(ctx, st, pointer.Repository); err != nil {
@@ -140,14 +183,18 @@ func Reconcile(
 		if _, exists := pointerByRepository[state.Repository]; exists {
 			continue
 		}
-		marked := IsPublishing(root, state.Repository)
+		marked, markedErr := Publishing(root, state.Repository)
+		if markedErr != nil {
+			return report, markedErr
+		}
 		if marked && slices.Equal(
 			state.ResolverPacks, expectedPacks,
 		) {
 			if publication, openErr := OpenPublishing(
 				ctx, root, state,
 			); openErr == nil {
-				if err := st.PublishResolverCatalog(ctx, storeFromState(state)); err == nil {
+				publishErr := st.PublishResolverCatalog(ctx, storeFromState(state))
+				if publishErr == nil {
 					if err := finishMarkedPublication(
 						root, publication,
 					); err != nil {
@@ -158,6 +205,14 @@ func Reconcile(
 					report.PublicationsCurrent++
 					continue
 				}
+				if !errors.Is(publishErr, store.ErrConflict) {
+					return report, fmt.Errorf(
+						"recover pointerless marked resolver catalog for %q: %w",
+						state.Repository, publishErr,
+					)
+				}
+			} else if errors.Is(openErr, ErrCatalogIO) {
+				return report, openErr
 			}
 		}
 		// An unmarked exact catalog without a pointer is restored or orphaned
@@ -191,6 +246,44 @@ func Reconcile(
 		return report, err
 	}
 	return report, nil
+}
+
+// OpenMarked validates one repository's exact marked publication without
+// mutating the catalog root. It is the runtime recovery seam for a caller that
+// already holds that repository's repowork lock: it performs no stage cleanup,
+// directory inventory, marker removal, store write, or foreign-repository
+// access. The caller may commit the returned Publication.State, or use an error
+// as the signal to deliberately clear only the named repository before
+// staging a replacement.
+//
+// The expected pack set is copied and must already be in strict name order.
+// Pack mismatch is established from the bounded manifest before any member is
+// opened. OpenPublishing rechecks the existing marker before and after member
+// validation, so this function never replaces or weakens another publisher's
+// marker fence.
+func OpenMarked(
+	ctx context.Context,
+	root, repository string,
+	expectedPacks []ResolverPack,
+) (*Publication, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := reponame.Validate(repository); err != nil {
+		return nil, fmt.Errorf("open marked resolver catalog: repository: %w", err)
+	}
+	expectedPacks = append([]ResolverPack{}, expectedPacks...)
+	if err := validateResolverPacks(expectedPacks); err != nil {
+		return nil, fmt.Errorf("open marked resolver catalog: expected packs: %w", err)
+	}
+	if err := validateMarker(root, repository); err != nil {
+		return nil, err
+	}
+	state, err := readMarkedManifestState(root, repository, expectedPacks)
+	if err != nil {
+		return nil, err
+	}
+	return OpenPublishing(ctx, root, state)
 }
 
 func readMarkedManifestState(
@@ -329,6 +422,9 @@ func discoverStatesAndMarkers(root string) ([]State, []string, error) {
 				filepath.Join(root, name), maxManifestBytes,
 			)
 			if readErr != nil {
+				if errors.Is(readErr, ErrCatalogIO) {
+					return nil, nil, readErr
+				}
 				continue
 			}
 			var manifest Manifest
@@ -344,6 +440,9 @@ func discoverStatesAndMarkers(root string) ([]State, []string, error) {
 			raw, _, readErr := readStableRegular(
 				filepath.Join(root, name), reponame.MaxBytes+1,
 			)
+			if errors.Is(readErr, ErrCatalogIO) {
+				return nil, nil, readErr
+			}
 			if readErr != nil || len(raw) < 2 || raw[len(raw)-1] != '\n' {
 				continue
 			}

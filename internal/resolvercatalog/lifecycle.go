@@ -34,9 +34,10 @@ type Stage struct {
 }
 
 type Prepared struct {
-	root     string
-	stage    string
-	manifest Manifest
+	root           string
+	stage          string
+	manifest       Manifest
+	installStarted bool
 }
 
 // Publication retains descriptor identities from one cold validation. Current
@@ -102,6 +103,27 @@ func NewStage(root string, identity Identity) (*Stage, error) {
 		root: root, path: stage, identity: identity,
 		memberKeys: make(map[string]struct{}),
 	}, nil
+}
+
+// Discard removes only this Stage's package-created, flat unpublished
+// directory. It is idempotent on the same Stage and never inventories or
+// cleans the catalog root. Once Seal succeeds, the returned Prepared owns the
+// directory and must be discarded instead.
+func (stage *Stage) Discard() error {
+	if stage == nil || stage.path == "" {
+		return nil
+	}
+	if stage.sealed {
+		return errors.New(
+			"resolver catalog stage is sealed; discard the prepared publication",
+		)
+	}
+	if err := discardOwnedStage(stage.root, stage.path); err != nil {
+		return err
+	}
+	stage.path = ""
+	stage.sealed = true
+	return nil
 }
 
 // AddMember streams canonical JSON records to one member. emit may retain no
@@ -267,6 +289,26 @@ func (stage *Stage) Seal(ctx context.Context) (*Prepared, error) {
 	}, nil
 }
 
+// Discard removes only this Prepared publication's package-created, flat
+// stage before Install begins. It is idempotent on the same Prepared and
+// deliberately refuses after an install attempt: at that point the marker and
+// any already-renamed live artifacts belong to marked-publication recovery.
+func (prepared *Prepared) Discard() error {
+	if prepared == nil || prepared.stage == "" {
+		return nil
+	}
+	if prepared.installStarted {
+		return errors.New(
+			"resolver catalog installation has started; recover the marked publication",
+		)
+	}
+	if err := discardOwnedStage(prepared.root, prepared.stage); err != nil {
+		return err
+	}
+	prepared.stage = ""
+	return nil
+}
+
 // Install makes all members durable, then atomically renames the stable
 // manifest last while the publication marker remains present. The caller must
 // commit State to the store before calling ClearPublishing.
@@ -277,6 +319,10 @@ func (prepared *Prepared) Install(ctx context.Context) (State, error) {
 	if err := validatePrepared(prepared); err != nil {
 		return State{}, err
 	}
+	if prepared.installStarted {
+		return State{}, errors.New("resolver catalog installation already started")
+	}
+	prepared.installStarted = true
 	repository := prepared.manifest.Identity.Repository
 	if err := installMarker(prepared.root, repository); err != nil {
 		return State{}, err
@@ -313,6 +359,7 @@ func (prepared *Prepared) Install(ctx context.Context) (State, error) {
 	if err := syncDirectory(prepared.root); err != nil {
 		return State{}, err
 	}
+	prepared.stage = ""
 	return prepared.manifest.State(), nil
 }
 
@@ -336,7 +383,7 @@ func (prepared *Prepared) Publish(
 	if err := ClearPublishing(prepared.root, state.Repository); err != nil {
 		return state, fmt.Errorf("clear resolver catalog marker: %w", err)
 	}
-	if err := CleanupRetired(prepared.root, prepared.manifest); err != nil {
+	if err := CleanupRetiredContext(ctx, prepared.root, prepared.manifest); err != nil {
 		return state, fmt.Errorf("cleanup retired resolver catalog artifacts: %w", err)
 	}
 	return state, nil
@@ -346,12 +393,22 @@ func (prepared *Prepared) Publish(
 // not referenced by the exact current manifest. The stable manifest and all
 // foreign repository namespaces are untouched.
 func CleanupRetired(root string, current Manifest) error {
+	return CleanupRetiredContext(context.Background(), root, current)
+}
+
+// CleanupRetiredContext is CleanupRetired with caller-owned cancellation. It
+// is used by worker publication so the bounded directory inventory and retired
+// artifact removal remain inside that worker's post-lock deadline.
+func CleanupRetiredContext(ctx context.Context, root string, current Manifest) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if err := validateManifest(current); err != nil {
 		return err
 	}
 	cleanup := newReconcileCleanup()
 	cleanup.keep(current)
-	return cleanup.apply(context.Background(), root)
+	return cleanup.apply(ctx, root)
 }
 
 func validatePrepared(prepared *Prepared) error {
@@ -387,9 +444,30 @@ func ClearPublishing(root, repository string) error {
 	return rootDirectory.Sync()
 }
 
+// Publishing reports whether repository has a publication marker while
+// preserving operational filesystem failures. A missing marker is ordinary
+// state; other Lstat failures must not be collapsed into "not publishing"
+// because recovery could then clear still-authoritative derived bytes.
+func Publishing(root, repository string) (bool, error) {
+	marker := filepath.Join(root, resolvercatalogid.PublishingName(repository))
+	if testCatalogPathError != nil {
+		if err := testCatalogPathError(marker); err != nil {
+			return false, catalogIOError(err)
+		}
+	}
+	_, err := os.Lstat(marker)
+	if err == nil {
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	return false, catalogIOError(err)
+}
+
 func IsPublishing(root, repository string) bool {
-	_, err := os.Lstat(filepath.Join(root, resolvercatalogid.PublishingName(repository)))
-	return err == nil
+	publishing, _ := Publishing(root, repository)
+	return publishing
 }
 
 // CleanupStages removes only package-owned prior-process stages and temporary
@@ -461,6 +539,9 @@ func removeOwnedStage(target string) error {
 	if err != nil {
 		return err
 	}
+	// Validate the complete bounded inventory before unlinking anything. A
+	// damaged stage containing a real directory is therefore refused without
+	// partially deleting otherwise valid flat entries that sort before it.
 	for _, entry := range entries {
 		info, err := stageRoot.Lstat(entry.Name())
 		if err != nil {
@@ -471,6 +552,8 @@ func removeOwnedStage(target string) error {
 				"resolver catalog stage path %q is a directory", entry.Name(),
 			)
 		}
+	}
+	for _, entry := range entries {
 		if err := stageRoot.Remove(entry.Name()); err != nil &&
 			!errors.Is(err, os.ErrNotExist) {
 			return err
@@ -498,6 +581,29 @@ func removeOwnedStage(target string) error {
 		return errors.New("resolver catalog stage changed during cleanup")
 	}
 	return os.Remove(target)
+}
+
+func discardOwnedStage(root, target string) error {
+	if root == "" || target == "" || filepath.Dir(target) != root ||
+		!strings.HasPrefix(filepath.Base(target), stageDirectoryPrefix) {
+		return errors.New("resolver catalog discard target is outside its owned root")
+	}
+	info, err := os.Lstat(target)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 {
+		return errors.New("resolver catalog discard target is not its owned directory")
+	}
+	if err := removeOwnedStage(target); errors.Is(err, os.ErrNotExist) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	return syncDirectory(root)
 }
 
 func installMarker(root, repository string) error {
@@ -568,13 +674,19 @@ func open(
 		if err := validateMarker(root, expected.Repository); err != nil {
 			return nil, err
 		}
-	} else if IsPublishing(root, expected.Repository) {
-		return nil, ErrPublishing
+	} else {
+		publishing, err := Publishing(root, expected.Repository)
+		if err != nil {
+			return nil, err
+		}
+		if publishing {
+			return nil, ErrPublishing
+		}
 	}
 	manifestPath := filepath.Join(root, expected.Manifest)
 	raw, fingerprint, err := readStableRegular(manifestPath, maxManifestBytes)
 	if err != nil {
-		return nil, fmt.Errorf("%w: manifest: %v", ErrInvalidManifest, err)
+		return nil, fmt.Errorf("%w: manifest: %w", ErrInvalidManifest, err)
 	}
 	var manifest Manifest
 	if err := decodeCanonical(raw, &manifest); err != nil {
@@ -614,8 +726,14 @@ func open(
 		if err := validateMarker(root, expected.Repository); err != nil {
 			return nil, err
 		}
-	} else if IsPublishing(root, expected.Repository) {
-		return nil, ErrPublishing
+	} else {
+		publishing, err := Publishing(root, expected.Repository)
+		if err != nil {
+			return nil, err
+		}
+		if publishing {
+			return nil, ErrPublishing
+		}
 	}
 	return &Publication{
 		root: root, manifest: manifest, fingerprints: fingerprints,
@@ -630,7 +748,7 @@ func validateMember(
 	file, fingerprint, err := openStableRegular(filePath, receipt.ContentBytes)
 	if err != nil {
 		return 0, "", fileFingerprint{}, fmt.Errorf(
-			"%w: member %q: %v", ErrInvalidManifest, receipt.Name, err,
+			"%w: member %q: %w", ErrInvalidManifest, receipt.Name, err,
 		)
 	}
 	defer func() { _ = file.Close() }()
@@ -674,7 +792,10 @@ func validateMember(
 			break
 		}
 		if err != nil {
-			return 0, "", fileFingerprint{}, err
+			return 0, "", fileFingerprint{}, fmt.Errorf(
+				"%w: member %q read: %w",
+				ErrInvalidManifest, receipt.Name, catalogIOError(err),
+			)
 		}
 	}
 	if consumed != receipt.ContentBytes {
@@ -684,12 +805,14 @@ func validateMember(
 	}
 	if err := verifyFingerprint(file, fingerprint); err != nil {
 		return 0, "", fileFingerprint{}, fmt.Errorf(
-			"%w: member %q changed while reading", ErrInvalidManifest, receipt.Name,
+			"%w: member %q changed while reading: %w",
+			ErrInvalidManifest, receipt.Name, err,
 		)
 	}
 	if err := verifyPathFingerprint(filePath, fingerprint); err != nil {
 		return 0, "", fileFingerprint{}, fmt.Errorf(
-			"%w: member %q path changed while reading", ErrInvalidManifest, receipt.Name,
+			"%w: member %q path changed while reading: %w",
+			ErrInvalidManifest, receipt.Name, err,
 		)
 	}
 	return count, "sha256:" + hex.EncodeToString(hash.Sum(nil)), fingerprint, nil
@@ -698,9 +821,13 @@ func validateMember(
 // Current performs only lstat/control identity checks over the paths captured
 // by Open. It does not open or hash any member.
 func (publication *Publication) Current() bool {
-	if publication == nil || IsPublishing(
+	if publication == nil {
+		return false
+	}
+	publishing, err := Publishing(
 		publication.root, publication.manifest.Identity.Repository,
-	) {
+	)
+	if err != nil || publishing {
 		return false
 	}
 	for name, expected := range publication.fingerprints {
@@ -780,6 +907,9 @@ func validateMarker(root, repository string) error {
 		filepath.Join(root, resolvercatalogid.PublishingName(repository)),
 		len(repository)+1,
 	)
+	if errors.Is(err, ErrCatalogIO) {
+		return fmt.Errorf("%w: marker: %w", ErrPublishing, err)
+	}
 	if err != nil || string(raw) != repository+"\n" {
 		return ErrPublishing
 	}
@@ -823,10 +953,21 @@ func fingerprintFromInfo(info os.FileInfo) fileFingerprint {
 
 func sameFingerprint(left, right fileFingerprint) bool { return left == right }
 
+// testCatalogPathError is an adversarial operational-I/O seam. Tests set it
+// synchronously; production leaves it nil.
+var testCatalogPathError func(string) error
+
+func catalogIOError(err error) error {
+	if err == nil || errors.Is(err, os.ErrNotExist) || errors.Is(err, ErrCatalogIO) {
+		return err
+	}
+	return fmt.Errorf("%w: %w", ErrCatalogIO, err)
+}
+
 func readStableRegular(filePath string, max int) ([]byte, fileFingerprint, error) {
 	info, err := os.Lstat(filePath)
 	if err != nil {
-		return nil, fileFingerprint{}, err
+		return nil, fileFingerprint{}, catalogIOError(err)
 	}
 	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
 		info.Size() < 0 || info.Size() > int64(max) {
@@ -842,7 +983,7 @@ func readStableRegular(filePath string, max int) ([]byte, fileFingerprint, error
 	}
 	raw, err := io.ReadAll(io.LimitReader(file, int64(max)+1))
 	if err != nil {
-		return nil, fileFingerprint{}, err
+		return nil, fileFingerprint{}, catalogIOError(err)
 	}
 	if int64(len(raw)) != info.Size() {
 		return nil, fileFingerprint{}, errors.New("file length changed")
@@ -860,9 +1001,14 @@ func openStableRegular(
 	filePath string,
 	expectedSize int64,
 ) (*os.File, fileFingerprint, error) {
+	if testCatalogPathError != nil {
+		if err := testCatalogPathError(filePath); err != nil {
+			return nil, fileFingerprint{}, catalogIOError(err)
+		}
+	}
 	before, err := os.Lstat(filePath)
 	if err != nil {
-		return nil, fileFingerprint{}, err
+		return nil, fileFingerprint{}, catalogIOError(err)
 	}
 	if !before.Mode().IsRegular() || before.Mode()&os.ModeSymlink != 0 ||
 		before.Size() != expectedSize {
@@ -870,12 +1016,12 @@ func openStableRegular(
 	}
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fileFingerprint{}, err
+		return nil, fileFingerprint{}, catalogIOError(err)
 	}
 	after, err := file.Stat()
 	if err != nil {
 		_ = file.Close()
-		return nil, fileFingerprint{}, err
+		return nil, fileFingerprint{}, catalogIOError(err)
 	}
 	fingerprint := fingerprintFromInfo(before)
 	if !sameFingerprint(fingerprint, fingerprintFromInfo(after)) {
@@ -888,7 +1034,7 @@ func openStableRegular(
 func verifyFingerprint(file *os.File, expected fileFingerprint) error {
 	info, err := file.Stat()
 	if err != nil {
-		return err
+		return catalogIOError(err)
 	}
 	if !sameFingerprint(fingerprintFromInfo(info), expected) {
 		return errors.New("descriptor identity changed")
@@ -899,7 +1045,7 @@ func verifyFingerprint(file *os.File, expected fileFingerprint) error {
 func verifyPathFingerprint(filePath string, expected fileFingerprint) error {
 	info, err := os.Lstat(filePath)
 	if err != nil {
-		return err
+		return catalogIOError(err)
 	}
 	if !sameFingerprint(fingerprintFromInfo(info), expected) {
 		return errors.New("path identity changed")

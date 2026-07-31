@@ -63,7 +63,11 @@ var (
 	ErrInvalidIdentity = errors.New("invalid resolver catalog identity")
 	ErrInvalidManifest = errors.New("invalid resolver catalog manifest")
 	ErrPublishing      = errors.New("resolver catalog publication is incomplete")
-	ErrLimit           = errors.New("resolver catalog bound exceeded")
+	// ErrCatalogIO distinguishes operational filesystem/read failures from
+	// deterministic missing, malformed, or tampered derived catalog bytes.
+	// Recovery must preserve existing authority when this error is present.
+	ErrCatalogIO = errors.New("resolver catalog operational I/O failure")
+	ErrLimit     = errors.New("resolver catalog bound exceeded")
 )
 
 // DeclarationPublication identifies one exact declaration plane consumed by

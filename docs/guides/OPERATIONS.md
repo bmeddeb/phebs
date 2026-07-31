@@ -42,8 +42,8 @@ make rebuild output an unsuitable restore-equality test.
 Candidate manifests and their partition members are derived planning state:
 they are excluded and rebuilt from the restored indexed commit and mirror.
 Resolver catalogs are also derived, but valid immutable publications are
-preserved byte-exactly so later bounded materialization can avoid repeating
-their declaration/candidate input work.
+preserved byte-exactly so a matching current generation can be validated and
+reused without repeating its declaration/candidate input work.
 
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
@@ -161,9 +161,10 @@ Restore validates and installs exact catalog filesystem bytes but always
 clears every imported resolver-catalog pointer. Startup never promotes that
 exported authority: a pointerless retained publication is classified as an
 orphan and a forced `resolver_catalog_job` replacement is durably enqueued.
-T30.6f registers no adapter/worker, so ordinary installations produce no
-catalog publication; T30.6g owns draining that queue through bounded resolver
-materialization.
+When at least one shipped gRPC or Thrift caller adapter is enabled, the
+resolver worker drains that queue through the bounded materialization path
+described below. With neither adapter enabled, no resolver worker or startup
+backfill is registered.
 Each process startup cold-validates every store-authorized catalog and every
 marked crash-recovery candidate whose resolver-pack set matches current
 policy. It streams each such catalog's member bytes at most once: at most
@@ -189,6 +190,106 @@ ordinary publication transition performs one additional serial bounded
 does no member rehash, repository walk, Git/blob read, or child work. A
 process-cached no-op checks only the marker and at most 257 captured
 manifest/member path identities; it opens or hashes no member content.
+
+#### Resolver catalog materialization
+
+The enabled extraction registry determines one ordered resolver generation.
+The current v1 set contains `go-module` plus the enabled
+`grpc-generated-attribution` and `thrift-generated-attribution` packs, all at
+version `1.0.0`. A build is eligible only when its repository, indexed HEAD,
+committed analysis unit, candidate-manifest-v4 digest/policy/control revision,
+and current
+published protobuf/Thrift declaration runs and generation digests agree.
+Candidate generation/control transitions and every successful protobuf/Thrift
+declaration publication atomically ensure one forced pending
+`resolver_catalog_job`, including when a prior catalog did not yet consume that
+domain. A non-published declaration outcome retires authority only when the
+current catalog actually declares that domain; retryable, unavailable, and
+terminal outcomes do not rebuild an unrelated or empty catalog. An
+exact unchanged candidate retry repairs a missing non-forced successor without
+downgrading an existing force; startup also
+backfills one deduplicated pending job for every indexed, non-deleting
+repository when an adapter is enabled.
+
+Materialization replays immutable candidate rows and pages the exact published
+declaration assertions. It opens only candidate-declared regular `go.mod`,
+`layout-snapshot.json`, and `generated-from-snapshot.json` blobs. The layout
+snapshot is an optional validation fence; ordinary candidate source and
+declaration blobs are not opened. The worker never invokes a build, `go list`,
+dependency query, generator, corpus program, mutable checkout, or network
+request. Missing or malformed committed content and conflicting mapping or
+generator authority are retained as explicit `unavailable`, `ambiguous`, or
+`unsupported` records. The catalog intentionally supports only a single-line
+`module path` directive with a standard-double-quoted or unquoted token that
+passes the pinned Go import-path validator. A legal factored `module (...)`
+block and malformed quote, punctuation, comment, or control tokens are recorded
+as `unsupported`, never as resolved literal identities such as `"("` or
+`'example.invalid/root'`. This strict-token parser surface is committed in
+member policy and does not change the shipped extraction compatibility path. A
+special, forged, or stale input envelope fails closed.
+The worker never chooses a target by tie-breaker.
+
+One repository work lock serializes prior-marker reconciliation, current
+authority checks, materialization, and publication. The worker reconciles a
+prior-process marker before creating a stage and never overwrites an existing
+publisher's marker. Operational filesystem failures while inspecting or
+reading a marker, manifest, or member are retryable: the worker and startup
+reconciler preserve the pointer, marker, and catalog bytes rather than
+misclassifying a transient open/read failure as corruption. A
+same-generation/different-manifest conflict is terminal nondeterminism. It
+also preserves both the current pointer and the competing marker so the two
+immutable receipts remain available for operator diagnosis; startup fails
+closed until that conflict is resolved. Do not delete either side while phebs
+is running: stop the process, retain the logs and `$DATA/resolver-catalogs`
+bytes, and use a witnessed recovery rather than choosing a manifest by hand.
+
+Before an ordinary transition creates its marker, the worker durably ensures
+an independent non-forced resolver job. A store-commit, marker-clear, cleanup,
+or process failure can therefore be recovered even when the publishing claim
+was on its final attempt. After a successful publication, that successor takes
+the bounded exact-current path and performs no candidate/input blob read or
+content hash. An already pending forced successor is never downgraded.
+
+A deterministically missing, malformed, or tampered marked publication—or a
+malformed catalog store pointer—follows a different path. The worker first
+durably queues an independent forced
+successor, then clears that repository's pointer and derived catalog bytes and
+finishes the current claim without rebuilding in place. The successor owns the
+rebuild, so even a final-attempt claim cannot be reaped after clearing authority
+with no pending work. Startup uses the same queue-before-clear ordering when it
+finds deterministic invalid authority. The post-lock work context is capped
+at five minutes; each `go.mod` is capped at 4 MiB, each fixed layout/generated
+snapshot at 10 MiB, and source work in aggregate at 100,000 blob reads and
+512 MiB of blob bytes. All four thresholds are committed in member policy.
+Snapshot structure is capped at 128 layout roots, 25,000 generated
+mappings, and 128 generator invocations. Generated selectors retain at most
+1,024 candidates and 128 KiB of candidate identity each, with 25,000 expansion
+attempts and 16 MiB of candidate identity across one materialization; cap+1
+refuses before building a cross-product. Declaration retention is capped at
+25,000 records and 16 MiB of canonical paths. Those four aggregate ceilings
+are shared across every enabled protocol adapter in the build and never reset
+at a catalog-member boundary. T30.6f's member, catalog,
+descriptor, staging-disk, and publication bounds still apply. The materializer
+decodes snapshot collections as a bounded stream and rejects unknown,
+case-variant, or duplicate keys; this does not change the shipped extraction
+parser. A snapshot beyond a structural root, mapping, or invocation bound
+publishes an explicit `unsupported` record. Aggregate input-work,
+declaration-retention, and lifecycle-output limit refusals are terminal for
+that job generation and never publish a partial replacement; an input
+transition may already have retired a stale prior generation.
+
+For a matching non-forced job, store authority plus the process-cached
+manifest/member fingerprints provides the warm no-op: no candidate manifest
+is opened, no candidate or input blob is read, and no catalog or input content
+is hashed. A matching cold publication is streamed and hashed once to seed
+that cache. Startup reconciliation separately validates every store-authorized
+publication, so the first queued reuse after a process restart may perform a
+second bounded catalog validation before subsequent jobs become metadata-only.
+Stale work performs one strict candidate open, two bounded replays
+of one caller projection, and declaration paging once per catalog generation;
+caller partitions consume the catalog in
+the following ticket and never rerun discovery independently.
+
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
 recovery procedure rather than retrying over it.
@@ -198,8 +299,9 @@ against committed unit/revision state. It keeps exact valid focused bytes,
 clears and force-requeues any claim whose focused publication was invalid or
 omitted, rebuilds excluded whole-repository shards, rebuilds the cleared
 candidate publications before extraction, reconciles resolver-catalog crash
-markers and queues (without yet executing) any required catalog replacement, and
-boot sync re-clones missing mirrors. Restored API keys and sessions remain
+markers, queues any required catalog replacement, and starts its worker when a
+shipped caller adapter is enabled; boot sync re-clones missing mirrors.
+Restored API keys and sessions remain
 live — rotate them if the backup's custody was ever in doubt.
 
 The stop-first cold path remains available:
@@ -300,8 +402,8 @@ The `#/analytics` dashboard and `GET /api/analytics` aggregate them on demand;
 
 ### Job system
 
-Sync, fetch, index, candidate-manifest, and extraction work runs through
-queues in SurrealDB,
+Sync, fetch, index, candidate-manifest, extraction, and resolver-catalog work
+runs through queues in SurrealDB,
 drained by one poller per kind that wakes every `poll_interval` (±50 %
 jitter). Job states:
 `pending → claimed → running → done | failed | canceled`.
@@ -846,9 +948,10 @@ typed SCIP artifact before removing exact test documents' definitions,
 anchors, occurrences, and joins. Coverage and bounded receipts expose the
 excluded counts and declared bytes. Empty-unit repositories retain shipped
 whole-repository extraction behavior, and focused search remains unchanged.
-T30.6f now supplies the adapter-free catalog lifecycle; T30.6g is next, and
-T30.6g–T30.6i separately deliver resolver materialization,
-leaf artifacts, and complete caller publication. T30.6j–T30.6l bind Caller Map,
+T30.6f supplies the catalog lifecycle, and T30.6g now supplies the ordered
+bounded gRPC/Thrift materialization described above. T30.6h is next; T30.6h
+and T30.6i separately deliver leaf artifacts and complete caller publication.
+T30.6j–T30.6l bind Caller Map,
 comparison, and Workbench Impact as separate authorized consumers. T30.6m
 selects the historical-retention posture and T30.6n implements only that
 selected policy.
@@ -926,8 +1029,9 @@ Startup removes abandoned package-owned stages, audits orphan candidate bytes,
 and reconciles every indexed repository into a candidate job; that job reuses
 or replaces stale live publications before resuming the extraction handoff.
 Orphan publication bytes follow the existing `sync.cleanup_orphans` deletion
-gate. Repository deletion cancels both job kinds and removes the database
-pointer and derived bytes. A malformed derived database pointer is cleared
+gate. Repository deletion cancels candidate, extraction, and resolver-catalog
+jobs and removes their database pointers and derived bytes. A malformed
+derived database pointer is cleared
 under the repository lock and rebuilt; database transport/query failures still
 fail closed. A preexisting stable marker permits strict reuse of a complete
 generation after a real publication crash; without that marker, clearing the

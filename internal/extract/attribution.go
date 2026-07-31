@@ -4,10 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"path"
 	"sort"
 	"strings"
@@ -15,16 +13,17 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/resolverinput"
 )
 
 const (
-	layoutSnapshotPath        = "layout-snapshot.json"
+	layoutSnapshotPath        = resolverinput.LayoutSnapshotPath
 	unitSnapshotPath          = "unit-snapshot.json"
-	generatedFromSnapshotPath = "generated-from-snapshot.json"
+	generatedFromSnapshotPath = resolverinput.GeneratedFromSnapshotPath
 
-	layoutSnapshotVersion        = "t20-layout-snapshot-v1"
+	layoutSnapshotVersion        = resolverinput.LayoutSnapshotVersion
 	unitSnapshotVersion          = "t20-unit-snapshot-v1"
-	generatedFromSnapshotVersion = "t20-generated-from-v1"
+	generatedFromSnapshotVersion = resolverinput.GeneratedFromSnapshotVersion
 
 	maxAttributionRoots       = 128
 	maxAttributionMappings    = 25_000
@@ -39,17 +38,6 @@ var attributionSnapshotPaths = []string{
 	layoutSnapshotPath,
 	unitSnapshotPath,
 	generatedFromSnapshotPath,
-}
-
-type layoutSnapshotInput struct {
-	Version string            `json:"version"`
-	Roots   []layoutRootInput `json:"roots"`
-}
-
-type layoutRootInput struct {
-	Kind     string `json:"kind"`
-	Path     string `json:"path"`
-	Protocol string `json:"protocol,omitempty"`
 }
 
 type unitSnapshotInput struct {
@@ -67,25 +55,6 @@ type unitMappingInput struct {
 	Owners          []string `json:"owners,omitempty"`
 	State           string   `json:"state,omitempty"`
 	Source          string   `json:"source,omitempty"`
-}
-
-type generatedFromSnapshotInput struct {
-	Version     string                      `json:"version"`
-	Mappings    []generatedFromMappingInput `json:"mappings"`
-	Invocations []generatorInvocationInput  `json:"invocations,omitempty"`
-}
-
-type generatedFromMappingInput struct {
-	Protocol              string `json:"protocol,omitempty"`
-	GeneratedPath         string `json:"generated_path"`
-	GeneratorRelativePath string `json:"generator_relative_path,omitempty"`
-	DeclarationPath       string `json:"declaration_path"`
-}
-
-type generatorInvocationInput struct {
-	Protocol                string `json:"protocol"`
-	GeneratedRoot           string `json:"generated_root"`
-	GeneratorInvocationRoot string `json:"generator_invocation_root"`
 }
 
 type attributionRoot struct {
@@ -190,8 +159,8 @@ func loadAttributionSource(ctx context.Context, corpus *verifiedCorpus) (sdk.Att
 	for _, blob := range selected {
 		switch blob.path {
 		case layoutSnapshotPath:
-			var input layoutSnapshotInput
-			if err := decodeAttributionSnapshot(blob.content, &input); err != nil {
+			var input resolverinput.LayoutSnapshot
+			if err := resolverinput.DecodeSnapshot(blob.content, &input); err != nil {
 				return nil, fmt.Errorf("decode %s: %w", blob.path, err)
 			}
 			if input.Version != layoutSnapshotVersion {
@@ -202,7 +171,7 @@ func loadAttributionSource(ctx context.Context, corpus *verifiedCorpus) (sdk.Att
 			}
 		case unitSnapshotPath:
 			var input unitSnapshotInput
-			if err := decodeAttributionSnapshot(blob.content, &input); err != nil {
+			if err := resolverinput.DecodeSnapshot(blob.content, &input); err != nil {
 				return nil, fmt.Errorf("decode %s: %w", blob.path, err)
 			}
 			if input.Version != unitSnapshotVersion {
@@ -212,8 +181,8 @@ func loadAttributionSource(ctx context.Context, corpus *verifiedCorpus) (sdk.Att
 				return nil, fmt.Errorf("%s: %w", blob.path, err)
 			}
 		case generatedFromSnapshotPath:
-			var input generatedFromSnapshotInput
-			if err := decodeAttributionSnapshot(blob.content, &input); err != nil {
+			var input resolverinput.GeneratedFromSnapshot
+			if err := resolverinput.DecodeSnapshot(blob.content, &input); err != nil {
 				return nil, fmt.Errorf("decode %s: %w", blob.path, err)
 			}
 			if input.Version != generatedFromSnapshotVersion {
@@ -255,25 +224,9 @@ func declarationLineageID(repository, declarationPath string) string {
 	return "provisional_repo_path_v1_" + hex.EncodeToString(sum[:])
 }
 
-func decodeAttributionSnapshot(content string, out any) error {
-	decoder := json.NewDecoder(strings.NewReader(content))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(out); err != nil {
-		return err
-	}
-	var extra any
-	if err := decoder.Decode(&extra); !errors.Is(err, io.EOF) {
-		if err == nil {
-			return errors.New("snapshot contains more than one JSON value")
-		}
-		return err
-	}
-	return nil
-}
-
 func (s *monorepoAttributionSource) loadRoots(
 	ctx context.Context,
-	inputs []layoutRootInput,
+	inputs []resolverinput.LayoutRoot,
 ) error {
 	if len(inputs) > maxAttributionRoots {
 		return fmt.Errorf("more than %d layout roots", maxAttributionRoots)
@@ -416,8 +369,8 @@ func (s *monorepoAttributionSource) loadUnits(
 
 func (s *monorepoAttributionSource) loadGeneratedFrom(
 	ctx context.Context,
-	mappings []generatedFromMappingInput,
-	invocations []generatorInvocationInput,
+	mappings []resolverinput.GeneratedFromMapping,
+	invocations []resolverinput.GeneratorInvocation,
 ) error {
 	if len(mappings) > maxAttributionMappings || len(invocations) > maxAttributionRoots {
 		return errors.New("generated-from snapshot exceeds mapping or invocation-root limit")

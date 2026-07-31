@@ -253,7 +253,8 @@ LET $evidence_writer_ok = array::len(SELECT id FROM $evidence_migration_rid
 	WHERE version = $evidence_migration_version LIMIT 1) = 1;
 LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
 	FROM $repo_rid)[0];
-LET $candidate = (SELECT manifest_digest FROM $candidate_rid)[0];
+LET $candidate = (SELECT manifest_digest, policy_digest, control_revision
+	FROM $candidate_rid)[0];
 LET $current = (SELECT * FROM $publication_rid)[0];
 LET $repo_ok = $repo_state != NONE
 	AND ($repo_state.deleting = NONE OR $repo_state.deleting = false)
@@ -272,6 +273,8 @@ LET $current_declarations = (SELECT domain, run_id,
 		AND disposition = 'published'
 		AND run_id != NONE
 		AND generation.candidate_manifest_digest = $candidate_manifest_digest
+		AND generation.candidate_policy_digest = $candidate.policy_digest
+		AND generation.candidate_control_revision = $candidate.control_revision
 		AND store_schema_version = $evidence_store_schema
 		AND evidence_migration_version = $evidence_migration_version
 	ORDER BY domain);
@@ -454,7 +457,8 @@ func (s *Surreal) ResolverCatalogPublicationCurrent(
 		ctx, s.db, `
 LET $repo = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
 	FROM $repo_rid)[0];
-LET $candidate = (SELECT manifest_digest FROM $candidate_rid)[0];
+LET $candidate = (SELECT manifest_digest, policy_digest, control_revision
+	FROM $candidate_rid)[0];
 LET $catalog = (SELECT manifest_digest, control_revision, writer_schema
 	FROM $catalog_rid)[0];
 LET $declaration_domains = $declarations.map(|$declaration| $declaration.domain);
@@ -468,6 +472,8 @@ LET $current_declarations = (SELECT domain, run_id,
 		AND disposition = 'published'
 		AND run_id != NONE
 		AND generation.candidate_manifest_digest = $candidate_manifest_digest
+		AND generation.candidate_policy_digest = $candidate.policy_digest
+		AND generation.candidate_control_revision = $candidate.control_revision
 		AND store_schema_version = $evidence_store_schema
 		AND evidence_migration_version = $evidence_migration_version
 	ORDER BY domain);

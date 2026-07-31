@@ -170,7 +170,7 @@ LET $published = IF $acceptable = false THEN []
 			RETURN AFTER)
 	END;
 LET $retired_catalog = IF array::len($published) = 1
-		AND $same_publication = false THEN
+		AND ($same_publication = false OR $control_advanced) THEN
 	(DELETE resolver_catalog_publication
 		WHERE repository = $repository RETURN BEFORE)
 	ELSE [] END;
@@ -283,14 +283,17 @@ LET $fanout = IF array::len($published) != 1 THEN []
 			force: false
 		} RETURN AFTER)
 	END;
-LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+LET $pending_catalog = IF array::len($published) = 1 THEN
 	(SELECT id, created_at FROM resolver_catalog_job
 		WHERE pending_key = $repository AND status = 'pending'
 		ORDER BY created_at LIMIT 1)[0].id
 	ELSE NONE END;
-LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+LET $catalog_force = ($same_publication = false) OR $control_advanced;
+LET $catalog_fanout = IF array::len($published) != 1 THEN []
 	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+		(UPDATE $pending_catalog SET
+			force = IF $catalog_force THEN true ELSE force END
+			RETURN AFTER)
 	ELSE
 		(CREATE resolver_catalog_job CONTENT {
 			target: $repository,
@@ -298,24 +301,26 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 			attempts: 0,
 			created_at: time::now(),
 			pending_key: $repository,
-			force: true
+			force: $catalog_force
 		} RETURN AFTER)
 	END;
 RETURN IF array::len($fanout) = 1
-	AND (array::len($retired_catalog) = 0
-		OR array::len($catalog_fanout) = 1)
+	AND array::len($catalog_fanout) = 1
 	THEN $published ELSE [] END;
 COMMIT;`
 
 // PublishCandidateManifest atomically guards publication against the current
 // authoritative indexed HEAD and committed unit, advances the pointer, and
-// ensures one pending extraction successor. Any published or staged evidence
-// for the same semantic scope but a different candidate-manifest digest is
-// atomically retired with its latest-attempt row; historical rows remain for
-// retention and pinning, but cannot satisfy a current consumer. Retrying the
-// exact pointer keeps its original PublishedAt and matching evidence while
-// repairing a missing fan-out job. A different manifest for the same
-// HEAD/unit/policy is rejected as planner nondeterminism.
+// ensures pending extraction and resolver-catalog successors. Candidate
+// generation/control transitions force resolver replacement; an exact retry
+// repairs a missing non-forced successor without downgrading an existing
+// forced request. Any
+// published or staged evidence for the same semantic scope but a different
+// candidate-manifest digest is atomically retired with its latest-attempt row;
+// historical rows remain for retention and pinning, but cannot satisfy a
+// current consumer. Retrying the exact pointer keeps its original PublishedAt
+// and matching evidence while repairing missing successors. A different
+// manifest for the same HEAD/unit/policy is rejected as planner nondeterminism.
 func (s *Surreal) PublishCandidateManifest(
 	ctx context.Context,
 	publication CandidateManifestPublication,

@@ -1265,16 +1265,21 @@ LET $catalog = (SELECT declarations FROM $catalog_rid)[0];
 LET $catalog_depends = $catalog != NONE
 	AND $domain IN $catalog.declarations.map(
 		|$declaration| $declaration.domain);
+LET $catalog_relevant = $write_outcome
+	AND $domain IN ['proto-contract', 'thrift-contract'];
+LET $catalog_trigger = $catalog_depends OR $catalog_relevant;
 LET $retired_catalog = IF array::len($outcome) = 1
-		AND $catalog_depends THEN
+		AND $catalog_trigger AND $catalog != NONE THEN
 	(DELETE $catalog_rid RETURN BEFORE)
 	ELSE [] END;
-LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+LET $pending_catalog = IF array::len($outcome) = 1
+		AND $catalog_trigger THEN
 	(SELECT id, created_at FROM resolver_catalog_job
 		WHERE pending_key = $repo AND status = 'pending'
 		ORDER BY created_at LIMIT 1)[0].id
 	ELSE NONE END;
-LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+LET $catalog_fanout = IF array::len($outcome) != 1
+		OR $catalog_trigger = false THEN []
 	ELSE IF $pending_catalog != NONE THEN
 		(UPDATE $pending_catalog SET force = true RETURN AFTER)
 	ELSE
@@ -1288,7 +1293,7 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 		} RETURN AFTER)
 	END;
 RETURN IF array::len($outcome) = 1
-	AND ($catalog_depends = false OR array::len($catalog_fanout) = 1)
+	AND ($catalog_trigger = false OR array::len($catalog_fanout) = 1)
 	THEN $published ELSE [] END;
 COMMIT;`
 
@@ -1507,16 +1512,19 @@ LET $catalog = (SELECT declarations FROM $catalog_rid)[0];
 LET $catalog_depends = $catalog != NONE
 	AND $domain IN $catalog.declarations.map(
 		|$declaration| $declaration.domain);
+LET $catalog_trigger = $catalog_depends;
 LET $retired_catalog = IF array::len($recorded) = 1
-		AND $catalog_depends THEN
+		AND $catalog_trigger AND $catalog != NONE THEN
 	(DELETE $catalog_rid RETURN BEFORE)
 	ELSE [] END;
-LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+LET $pending_catalog = IF array::len($recorded) = 1
+		AND $catalog_trigger THEN
 	(SELECT id, created_at FROM resolver_catalog_job
 		WHERE pending_key = $repo AND status = 'pending'
 		ORDER BY created_at LIMIT 1)[0].id
 	ELSE NONE END;
-LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+LET $catalog_fanout = IF array::len($recorded) != 1
+		OR $catalog_trigger = false THEN []
 	ELSE IF $pending_catalog != NONE THEN
 		(UPDATE $pending_catalog SET force = true RETURN AFTER)
 	ELSE
@@ -1531,7 +1539,7 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 	END;
 RETURN IF array::len($recorded) = 1
 	AND ($candidate_control_failure = false OR array::len($repair) = 1)
-	AND ($catalog_depends = false OR array::len($catalog_fanout) = 1)
+	AND ($catalog_trigger = false OR array::len($catalog_fanout) = 1)
 	THEN $recorded ELSE [] END;
 COMMIT;`
 

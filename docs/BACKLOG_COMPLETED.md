@@ -4486,3 +4486,136 @@ clear. T30.6f registers no resolver worker, changes no search/evidence/API
 behavior, and establishes no production-use, completeness, extraction
 accuracy, migration completion, decommission safety, or historical-retention
 claim. T30.6g owns bounded resolver materialization.
+
+### T30.6g · Bounded resolver materialization
+
+**T30.6g ✅ · Bounded resolver materialization** *(2026-07-31)* — registers
+one ordered v1 resolver generation for each enabled shipped gRPC or Thrift
+caller lane. The registry is derived from the validated extraction registry;
+it binds the complete candidate-domain order and the `go-module`,
+`grpc-generated-attribution`, and `thrift-generated-attribution` packs at
+version `1.0.0`. New workspace formats and resolver packs remain later work.
+
+Materialization runs only from immutable authority for the same repository,
+indexed HEAD, committed unit, candidate-manifest-v4 digest/policy/control
+revision, and exact current published declaration runs/generations. Candidate
+replay supplies canonical
+paths, object IDs, sizes, modes, and source lanes. The worker opens only
+candidate-declared `go.mod`, `layout-snapshot.json`, and
+`generated-from-snapshot.json` regular blobs; layout is an optional committed
+validation fence, and declaration targets come from the exact published
+protobuf or Thrift assertions. It never invokes a build, `go list`, dependency
+query, generator, corpus code, mutable checkout, or network request, and it
+does not open ordinary candidate source or declaration blobs. Caller leaves
+will consume the resulting catalog in T30.6h rather than repeating discovery.
+
+Go module declarations use a bounded parser derived from the shipped extraction
+fallback. The catalog's member policy commits its single-line strict-token
+module grammar; legal factored `module (...)` blocks and malformed quote,
+punctuation, comment, or control tokens are retained as explicit `unsupported`
+records instead of sealing their literal text as module identity. Resolved
+paths pass the pinned Go import-path validator. The shipped extraction
+compatibility view remains unchanged. Generated mappings
+and invocation roots are canonicalized against
+the candidate and declaration inputs. Every result is deterministic and
+ordered. Missing or malformed committed content and conflicting mappings or
+invocation authority are retained as explicit `unavailable`, `ambiguous`, or
+`unsupported` state; a special, forged, or stale input envelope fails closed.
+No tie-breaker converts ambiguity into an asserted target.
+
+One five-minute post-lock context covers marker reconciliation, current-state
+checks, materialization, and publication while the repository work lock is
+held. A prior-process catalog marker is reconciled before a stage is created;
+an existing live publisher's marker is never overwritten. Operational marker,
+manifest, or member I/O returns a retryable error while preserving the pointer,
+marker, and catalog bytes. A same-generation/different-manifest conflict is a
+terminal nondeterminism refusal and also preserves its pointer and marker for
+operator diagnosis. A deterministically invalid marked publication or malformed
+store pointer first
+durably queues an independent forced successor, then clears only that
+repository's pointer and derived bytes; the current claim ends successfully
+and the successor performs the rebuild, including when the original claim was
+on its final attempt. Every ordinary transition also persists an independent
+non-forced successor before installation creates the marker. Post-marker
+failure therefore retains a recovery claimant even on the current job's final
+attempt; success leaves one exact-current no-op turn. Candidate
+generation/control transitions and successful `proto-contract` or
+`thrift-contract` publications atomically ensure one forced pending
+`resolver_catalog_job`; a non-published outcome does so only when the current
+catalog declares that domain. An exact unchanged candidate retry repairs a missing
+non-forced successor and preserves any pending force. A crash therefore cannot
+expose a new input generation without a durable successor.
+Startup performs lifecycle reconciliation, backfills indexed non-deleting
+repositories when at least one adapter is enabled, and starts the resolver
+worker. Publication retains T30.6f's marker ordering, exact guarded store
+commit, immutable members, and backup/restore behavior.
+
+Source admission is capped at 4 MiB per `go.mod`, 10 MiB per fixed snapshot,
+100,000 input blob reads, and 512 MiB of input blob bytes, all committed in
+member policy. Snapshot structure retains the shipped limits of 128 layout roots,
+25,000 generated mappings, and 128 generator invocations. Generated selectors
+retain at most 1,024 candidates and 128 KiB of candidate identity each, with
+25,000 candidate-expansion attempts and 16 MiB of candidate identity across a
+materialization. Published declaration retention is capped at 25,000 records
+and 16 MiB of canonical paths. All four aggregate ceilings share one budget
+across every enabled protocol adapter and do not reset per member. Those limits
+are policy identity alongside the five-minute deadline and
+the materializer's exact-key, duplicate-rejecting, streaming snapshot decoder.
+T30.6f's 16 declarations, 16 packs, 256 members,
+100,000 records/member, 1,000,000 records/catalog, 64 MiB/member, 512 MiB
+catalog, 520 MiB stage, and descriptor/filesystem bounds also apply. A
+snapshot that exceeds a structural root, mapping, or invocation bound
+publishes an explicit `unsupported` record. Aggregate input-work,
+declaration-retention, and lifecycle-output cap refusals are typed terminal
+generation failures and never publish a partial replacement; an input
+transition may already have retired a stale prior generation.
+
+AC met: neutral Go module and generated-attribution fixtures; ordered adapter,
+version, pack, and policy identity; missing, malformed, special, stale, and
+ambiguous inputs; no-tie-breaker outcomes; deterministic double
+materialization; exact candidate/declaration generation fencing; input-read
+traces proving no unplanned blob opens; cap/cap+1 source and dual-adapter
+declaration limits; selector/aggregate expansion cap boundaries across enabled
+adapters and cross-product refusal;
+prior-marker recovery and publisher-fence behavior under the
+repository lock; retry-preserving operational I/O classification;
+same-generation manifest-conflict refusal without authority loss; durable
+successor-before-clear recovery for marked bytes and malformed store pointers,
+plus successor-before-install recovery after a final-attempt publication
+failure; candidate and
+declaration transactional fan-out; startup
+backfill; and a populated warm no-op with zero candidate/input blob reads and
+zero content hashes; dated PLAN decision and Operations, roadmap, AGENTS, and
+active/completed backlog updates; full merge bar.
+
+Steady state performs one repository/pointer/candidate-generation lookup plus
+the bounded current declaration-outcome reads required to derive exact
+identity. A non-forced matching process-cached publication then checks store
+authority and captured marker/manifest/member file identities only: it takes
+no corpus or candidate-member pass, opens no input blob, hashes no catalog or
+input content, starts no child process, and adds no concurrency. A cold
+matching publication streams and hashes its bounded catalog members once to
+seed the worker cache. Startup lifecycle reconciliation independently validates
+each store-authorized publication, so the first queued reuse after a process
+restart can perform a second bounded catalog validation before later jobs
+become metadata-only. Stale work performs one strict candidate open plus two bounded
+replays of one caller projection to discover the two fixed attribution inputs
+and module declarations, pages at
+most 25,000 exact declaration assertions, opens at most the admitted module
+and fixed-input blobs, and stages members sequentially under T30.6f's output
+bounds. It performs no tree walk and holds no separate mirror lock beyond the
+single repository work lock. Startup adds one repository-list backfill and
+one deduplicated pending resolver event per indexed non-deleting repository
+when adapters are enabled; ordinary queue collapse and the warm identity path
+bound subsequent no-op cost. Deterministic damaged-marker or invalid-pointer recovery adds one
+forced queue turn and does no materialization in the original claim. A
+transient I/O or nondeterministic-manifest refusal preserves the existing
+artifacts and performs no cleanup or replacement build. Each actual
+publication adds one independent non-forced queue turn; after success it takes
+the exact-current warm path without candidate/input reads or content hashes,
+while after post-marker failure it owns recovery.
+
+This ticket changes no search/evidence/API surface, publishes no caller leaf
+or complete caller generation, and creates no production-use, completeness,
+extraction-accuracy, migration-completion, decommission-safety, or historical
+retention claim. T30.6h owns direct caller-leaf execution artifacts.

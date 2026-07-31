@@ -53,8 +53,12 @@ never-attempted domains ahead of oldest retryables. Candidate source-lane
 classification is now consumed by focused local evidence: ordinary `go_test`
 rows are excluded before blob open and exact `_test.go` SCIP documents are
 removed after complete typed-artifact safety accounting. Empty-unit extraction
-and focused search retain shipped behavior. Catalog, partition-publication,
-and read integration remain later tickets.
+and focused search retain shipped behavior. The bounded resolver worker now
+materializes ordered gRPC/Thrift catalogs from exact candidate and published
+declaration generations using only committed Go module, layout-snapshot, and
+generated-attribution inputs; ambiguous or unsupported authority stays
+explicit. Caller-leaf artifacts, complete partition publication, and read
+integration remain later tickets.
 
 ## Evidence boundary
 

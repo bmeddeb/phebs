@@ -45,6 +45,7 @@ import (
 	phebsmcp "github.com/bmeddeb/phebs/internal/mcp"
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
+	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -192,6 +193,16 @@ func serve(args []string) error {
 	if *addr != "" {
 		cfg.Server.Addr = *addr
 	}
+	exs := evidenceExtractors(
+		cfg.Experimental.ProvisionalProtoExtraction,
+		cfg.Experimental.ProvisionalThriftExtraction,
+		cfg.Experimental.ProvisionalThriftFieldExtraction,
+		cfg.Experimental.ProvisionalKafkaExtraction,
+	)
+	resolverRegistry, err := resolvermaterialize.NewRegistry(exs)
+	if err != nil {
+		return fmt.Errorf("configure resolver adapters: %w", err)
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -301,7 +312,8 @@ func serve(args []string) error {
 		log.Printf("candidate reconciliation: removed %d abandoned stage(s)", removed)
 	}
 	catalogReport, err := resolvercatalog.Reconcile(
-		ctx, filepath.Join(cfg.Server.DataDir, "resolver-catalogs"), st, nil,
+		ctx, filepath.Join(cfg.Server.DataDir, "resolver-catalogs"), st,
+		resolverRegistry.Packs(),
 	)
 	if err != nil {
 		return fmt.Errorf("resolver catalog reconciliation: %w", err)
@@ -381,12 +393,7 @@ func serve(args []string) error {
 	var evidenceView store.EvidenceStore
 	var proofBundles store.ProofBundleStore
 	var compatibility compat.Service
-	if exs := evidenceExtractors(
-		cfg.Experimental.ProvisionalProtoExtraction,
-		cfg.Experimental.ProvisionalThriftExtraction,
-		cfg.Experimental.ProvisionalThriftFieldExtraction,
-		cfg.Experimental.ProvisionalKafkaExtraction,
-	); len(exs) > 0 {
+	if len(exs) > 0 {
 		if cfg.Experimental.ProvisionalProtoExtraction {
 			log.Print("WARNING: experimental provisional protobuf extraction enabled; T11.1/T12.3 validation is not established")
 		}
@@ -430,6 +437,22 @@ func serve(args []string) error {
 		); err != nil {
 			return err
 		}
+		var resolverRunner *store.Runner
+		if resolverRegistry.Enabled() {
+			resolverWorker, err := resolvermaterialize.NewWorker(
+				cfg.Server.DataDir, st, manifestProvider, resolverRegistry,
+			)
+			if err != nil {
+				return fmt.Errorf("configure resolver materialization: %w", err)
+			}
+			if err := resolvermaterialize.EnqueueBackfill(ctx, st); err != nil {
+				return err
+			}
+			resolverRunner = &store.Runner{
+				Store: st, Kind: store.JobResolverCatalog,
+				Handle: resolverWorker.Handle, Interval: cfg.Sync.Interval(),
+			}
+		}
 		candidateRunner := &store.Runner{
 			Store: st, Kind: store.JobCandidate, Handle: candidateWorker.Handle,
 			Interval: cfg.Sync.Interval(),
@@ -438,6 +461,9 @@ func serve(args []string) error {
 		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: worker.Handle,
 			Interval: cfg.Sync.Interval()}
 		runBackground(func() { exRunner.Run(ctx) })
+		if resolverRunner != nil {
+			runBackground(func() { resolverRunner.Run(ctx) })
+		}
 		onIndexed = func(ctx context.Context, name, commit string) error {
 			return enqueueCandidateAfterIndex(ctx, st, name, commit)
 		}

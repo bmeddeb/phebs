@@ -116,10 +116,24 @@ complete-publication, consumer, and retention seam. T30.6a bounded job
 receipts, T30.6b durable exact-generation domain outcomes, T30.6c
 aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
 classification, T30.6e focused local-evidence base-lane consumption, and
-T30.6f resolver-catalog lifecycle are shipped; T30.6g bounded resolver
-materialization is next. T30.6f registers no adapter or worker: it freezes the
-immutable identity/member/resource contract, store pointer, crash recovery,
-and exact valid-only backup/restore substrate that T30.6g will consume. Exact `_test.go` suffix
+T30.6f resolver-catalog lifecycle and T30.6g bounded resolver materialization
+are shipped; T30.6h direct caller-leaf execution is next. T30.6g registers the
+ordered gRPC/Thrift resolver adapters and materializes one immutable catalog
+from the exact candidate/declaration generation. It opens only committed
+`go.mod`, `layout-snapshot.json`, and `generated-from-snapshot.json` inputs,
+retains explicit unavailable/ambiguous/unsupported states, and never runs a
+build, dependency query, generator, mutable checkout, corpus code, or network
+request. Candidate and relevant declaration publication atomically fan out
+resolver work; startup reconciles and backfills it. A matching process-cached
+catalog takes zero candidate/input blob reads or content hashes; stale work is
+bounded to five minutes, 100,000 input reads, 512 MiB of input bytes, 128
+layout roots, 25,000 generated mappings, 128 generator invocations, 25,000
+declaration records, and 16 MiB of declaration paths in addition to the
+lifecycle caps. Recovery preserves authority across transient catalog I/O and
+same-generation manifest conflicts, while deterministic damaged markers or
+malformed store pointers use a durable forced successor before clear. Every
+publication also ensures a non-forced successor before creating its marker,
+closing the final-attempt crash boundary. Exact `_test.go` suffix
 wins in candidate v4; focused local evidence for a committed non-empty unit
 now consumes only `base`, while empty-unit whole-repository extraction keeps
 shipped behavior and current search continues indexing every admitted test

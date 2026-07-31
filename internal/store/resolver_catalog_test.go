@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -42,6 +43,12 @@ func testResolverCatalogStoreLifecycle(t *testing.T, s *store.Surreal) {
 	t.Run("guarded publication", func(t *testing.T) {
 		testResolverCatalogGuardedPublicationLifecycle(t, s)
 	})
+	t.Run("candidate first-publication fanout", func(t *testing.T) {
+		testResolverCatalogCandidateFirstPublicationFanout(t, s)
+	})
+	t.Run("declaration outcome fanout", func(t *testing.T) {
+		testResolverCatalogDeclarationOutcomeFanout(t, s)
+	})
 	t.Run("candidate and repo retirement", func(t *testing.T) {
 		testResolverCatalogRetiredByCandidateAndRepoTransitions(t, s)
 	})
@@ -51,6 +58,423 @@ func testResolverCatalogStoreLifecycle(t *testing.T, s *store.Surreal) {
 	t.Run("restore clear and queue kind", func(t *testing.T) {
 		testResolverCatalogRestoreClearAndQueueKind(t, s)
 	})
+}
+
+func testResolverCatalogCandidateFirstPublicationFanout(
+	t *testing.T, s *store.Surreal,
+) {
+	ctx := context.Background()
+	repository := "github.com/acme/resolver-first-candidate"
+	commit := candidateCommit('1')
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name: repository, CloneURL: "https://" + repository + ".git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	publication := candidatePublication(repository, commit, "")
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatal(err)
+	}
+	assertPendingResolverSuccessor(t, ctx, s, repository, true)
+
+	// An exact retry repairs but never duplicates the durable successor.
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatalf("exact candidate retry: %v", err)
+	}
+	assertPendingResolverSuccessor(t, ctx, s, repository, true)
+	if canceled, err := s.CancelPendingJobs(
+		ctx, store.JobResolverCatalog, repository,
+	); err != nil || canceled != 1 {
+		t.Fatalf("cancel first successor = %d, %v", canceled, err)
+	}
+
+	// A rejected publication cannot leak a resolver job out of its transaction.
+	stale := publication
+	stale.HeadCommit = candidateCommit('2')
+	if err := s.PublishCandidateManifest(ctx, stale); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("stale candidate publication = %v, want ErrConflict", err)
+	}
+	assertPendingResolverSuccessor(t, ctx, s, repository, false)
+
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatalf("repair missing candidate successor: %v", err)
+	}
+	assertPendingResolverSuccessorForce(t, ctx, s, repository, false)
+}
+
+func testResolverCatalogDeclarationOutcomeFanout(
+	t *testing.T, s *store.Surreal,
+) {
+	type outcomeCase struct {
+		name        string
+		domain      string
+		disposition store.DomainOutcomeDisposition
+		wantJob     bool
+		wantCatalog bool
+	}
+	cases := []outcomeCase{
+		{
+			name: "published proto", domain: "proto-contract",
+			disposition: store.DomainOutcomePublished,
+			wantJob:     true, wantCatalog: false,
+		},
+		{
+			name: "published thrift", domain: "thrift-contract",
+			disposition: store.DomainOutcomePublished,
+			wantJob:     true, wantCatalog: false,
+		},
+		{
+			name: "terminal proto", domain: "proto-contract",
+			disposition: store.DomainOutcomeTerminalGenerationRefusal,
+			wantCatalog: true,
+		},
+		{
+			name: "terminal thrift", domain: "thrift-contract",
+			disposition: store.DomainOutcomeTerminalGenerationRefusal,
+			wantCatalog: true,
+		},
+		{
+			name: "retryable proto", domain: "proto-contract",
+			disposition: store.DomainOutcomeRetryableFailure,
+			wantCatalog: true,
+		},
+		{
+			name: "retryable thrift", domain: "thrift-contract",
+			disposition: store.DomainOutcomeRetryableFailure,
+			wantCatalog: true,
+		},
+		{
+			name: "unavailable proto", domain: "proto-contract",
+			disposition: store.DomainOutcomeUnavailablePrerequisite,
+			wantCatalog: true,
+		},
+		{
+			name: "unavailable thrift", domain: "thrift-contract",
+			disposition: store.DomainOutcomeUnavailablePrerequisite,
+			wantCatalog: true,
+		},
+		{
+			name: "unrelated terminal", domain: "grpc-go",
+			disposition: store.DomainOutcomeTerminalGenerationRefusal,
+			wantCatalog: true,
+		},
+	}
+	for index, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			repository := fmt.Sprintf(
+				"github.com/acme/resolver-outcome-fanout-%d", index,
+			)
+			commit := candidateCommit("3456789ab"[index])
+			if err := s.UpsertRepo(ctx, store.Repo{
+				Name: repository, CloneURL: "https://" + repository + ".git",
+			}); err != nil {
+				t.Fatal(err)
+			}
+			setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+			candidate := candidatePublication(repository, commit, "")
+			if err := s.PublishCandidateManifest(ctx, candidate); err != nil {
+				t.Fatal(err)
+			}
+			if canceled, err := s.CancelPendingJobs(
+				ctx, store.JobResolverCatalog, repository,
+			); err != nil || canceled != 1 {
+				t.Fatalf("cancel candidate successor = %d, %v", canceled, err)
+			}
+			pointer, err := s.GetCandidateManifestPublication(ctx, repository)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.PublishResolverCatalog(
+				ctx, resolverPublication(
+					repository, commit, pointer.ManifestDigest,
+				),
+			); err != nil {
+				t.Fatalf("publish empty catalog: %v", err)
+			}
+			scope := store.ExtractionScope{
+				Repository: repository, Commit: commit, Domain: test.domain,
+			}
+			outcome := durableOutcome(scope, test.disposition, "1.0.0")
+			outcome.Generation.CandidateManifestDigest = pointer.ManifestDigest
+			outcome.Generation.CandidatePolicyDigest = pointer.PolicyDigest
+			outcome.Generation.CandidateControlRevision = pointer.ControlRevision
+			outcome.Generation.InventoryPolicy =
+				"candidate-manifest-v4-" + strings.Repeat("b", 64)
+			outcome.Generation.Digest =
+				store.ComputeExtractionGenerationDigest(outcome.Generation)
+
+			if test.disposition == store.DomainOutcomePublished {
+				run, runErr := s.BeginExtractionRun(ctx, scope, outcome.Generation.Extractor)
+				if runErr != nil {
+					t.Fatal(runErr)
+				}
+				outcome.RunID = run.ID
+				if err := s.PublishExtractionRunWithOutcome(
+					ctx, run.ID, candidateCoverage(pointer.ManifestDigest), outcome,
+				); err != nil {
+					t.Fatalf("publish declaration outcome: %v", err)
+				}
+			} else if err := s.RecordExtractionDomainOutcome(ctx, outcome); err != nil {
+				t.Fatalf("record declaration outcome: %v", err)
+			}
+			assertPendingResolverSuccessor(
+				t, ctx, s, repository, test.wantJob,
+			)
+			_, catalogErr := s.GetResolverCatalogPublication(ctx, repository)
+			if test.wantCatalog && catalogErr != nil {
+				t.Fatalf("catalog was retired: %v", catalogErr)
+			}
+			if !test.wantCatalog && !errors.Is(catalogErr, store.ErrNotFound) {
+				t.Fatalf("catalog after publication = %v, want not found", catalogErr)
+			}
+		})
+	}
+
+	t.Run("nonpublished dependent retirement", func(t *testing.T) {
+		cases := []struct {
+			name               string
+			domain             string
+			disposition        store.DomainOutcomeDisposition
+			preexistingPending bool
+		}{
+			{
+				name: "proto creates forced successor", domain: "proto-contract",
+				disposition: store.DomainOutcomeTerminalGenerationRefusal,
+			},
+			{
+				name: "thrift upgrades pending successor", domain: "thrift-contract",
+				disposition:        store.DomainOutcomeRetryableFailure,
+				preexistingPending: true,
+			},
+		}
+		for index, test := range cases {
+			t.Run(test.name, func(t *testing.T) {
+				ctx := context.Background()
+				repository := fmt.Sprintf(
+					"github.com/acme/resolver-dependent-outcome-%d", index,
+				)
+				commit := candidateCommit("cd"[index])
+				if err := s.UpsertRepo(ctx, store.Repo{
+					Name: repository, CloneURL: "https://" + repository + ".git",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+				if err := s.PublishCandidateManifest(
+					ctx, candidatePublication(repository, commit, ""),
+				); err != nil {
+					t.Fatal(err)
+				}
+				if canceled, err := s.CancelPendingJobs(
+					ctx, store.JobResolverCatalog, repository,
+				); err != nil || canceled != 1 {
+					t.Fatalf("cancel candidate successor = %d, %v", canceled, err)
+				}
+				pointer, err := s.GetCandidateManifestPublication(ctx, repository)
+				if err != nil {
+					t.Fatal(err)
+				}
+				scope := store.ExtractionScope{
+					Repository: repository, Commit: commit, Domain: test.domain,
+				}
+				published := durableOutcome(
+					scope, store.DomainOutcomePublished, "1.0.0",
+				)
+				published.Generation.CandidateManifestDigest = pointer.ManifestDigest
+				published.Generation.CandidatePolicyDigest = pointer.PolicyDigest
+				published.Generation.CandidateControlRevision = pointer.ControlRevision
+				published.Generation.InventoryPolicy =
+					"candidate-manifest-v4-" + strings.Repeat("b", 64)
+				published.Generation.Digest =
+					store.ComputeExtractionGenerationDigest(published.Generation)
+				run, err := s.BeginExtractionRun(
+					ctx, scope, published.Generation.Extractor,
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				published.RunID = run.ID
+				if err := s.PublishExtractionRunWithOutcome(
+					ctx, run.ID, candidateCoverage(pointer.ManifestDigest), published,
+				); err != nil {
+					t.Fatalf("publish declaration outcome: %v", err)
+				}
+				if canceled, err := s.CancelPendingJobs(
+					ctx, store.JobResolverCatalog, repository,
+				); err != nil || canceled != 1 {
+					t.Fatalf("cancel declaration successor = %d, %v", canceled, err)
+				}
+
+				declaration := resolvercatalog.DeclarationPublication{
+					Domain: test.domain, RunID: run.ID,
+					GenerationDigest: published.Generation.Digest,
+				}
+				identity, err := resolvercatalog.NewIdentity(
+					repository, commit, "", pointer.ManifestDigest,
+					[]resolvercatalog.DeclarationPublication{declaration}, nil,
+				)
+				if err != nil {
+					t.Fatal(err)
+				}
+				catalog := resolverPublication(
+					repository, commit, pointer.ManifestDigest,
+				)
+				catalog.Declarations = []store.ResolverCatalogDeclarationPublication{{
+					Domain: test.domain, RunID: run.ID,
+					GenerationDigest: published.Generation.Digest,
+				}}
+				catalog.DeclarationSetDigest = identity.DeclarationSetDigest
+				catalog.GenerationDigest = identity.GenerationDigest
+				catalog.ManifestDigest = candidateDigest("de"[index])
+				if err := s.PublishResolverCatalog(ctx, catalog); err != nil {
+					t.Fatalf("publish dependent catalog: %v", err)
+				}
+				if test.preexistingPending {
+					if _, err := s.EnqueuePending(
+						ctx, store.JobResolverCatalog, repository, false,
+					); err != nil {
+						t.Fatal(err)
+					}
+					assertPendingResolverSuccessorForce(
+						t, ctx, s, repository, false,
+					)
+				} else {
+					assertPendingResolverSuccessor(t, ctx, s, repository, false)
+				}
+
+				replacement := durableOutcome(
+					scope, test.disposition, "2.0.0",
+				)
+				replacement.Generation.CandidateManifestDigest = pointer.ManifestDigest
+				replacement.Generation.CandidatePolicyDigest = pointer.PolicyDigest
+				replacement.Generation.CandidateControlRevision = pointer.ControlRevision
+				replacement.Generation.InventoryPolicy =
+					"candidate-manifest-v4-" + strings.Repeat("b", 64)
+				replacement.Generation.Digest =
+					store.ComputeExtractionGenerationDigest(replacement.Generation)
+				if err := s.RecordExtractionDomainOutcome(ctx, replacement); err != nil {
+					t.Fatalf("record dependent nonpublished outcome: %v", err)
+				}
+				if _, err := s.GetResolverCatalogPublication(
+					ctx, repository,
+				); !errors.Is(err, store.ErrNotFound) {
+					t.Fatalf("catalog after dependent outcome = %v, want not found", err)
+				}
+				assertPendingResolverSuccessor(t, ctx, s, repository, true)
+			})
+		}
+	})
+
+	t.Run("upgrades existing pending successor", func(t *testing.T) {
+		ctx := context.Background()
+		repository := "github.com/acme/resolver-outcome-upgrade"
+		commit := candidateCommit('9')
+		if err := s.UpsertRepo(ctx, store.Repo{
+			Name: repository, CloneURL: "https://" + repository + ".git",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+		candidate := candidatePublication(repository, commit, "")
+		if err := s.PublishCandidateManifest(ctx, candidate); err != nil {
+			t.Fatal(err)
+		}
+		if canceled, err := s.CancelPendingJobs(
+			ctx, store.JobResolverCatalog, repository,
+		); err != nil || canceled != 1 {
+			t.Fatalf("cancel candidate successor = %d, %v", canceled, err)
+		}
+		if _, err := s.EnqueuePending(
+			ctx, store.JobResolverCatalog, repository, false,
+		); err != nil {
+			t.Fatal(err)
+		}
+		pointer, err := s.GetCandidateManifestPublication(ctx, repository)
+		if err != nil {
+			t.Fatal(err)
+		}
+		scope := store.ExtractionScope{
+			Repository: repository, Commit: commit, Domain: "proto-contract",
+		}
+		outcome := durableOutcome(scope, store.DomainOutcomePublished, "1.0.0")
+		outcome.Generation.CandidateManifestDigest = pointer.ManifestDigest
+		outcome.Generation.CandidatePolicyDigest = pointer.PolicyDigest
+		outcome.Generation.CandidateControlRevision = pointer.ControlRevision
+		outcome.Generation.InventoryPolicy =
+			"candidate-manifest-v4-" + strings.Repeat("b", 64)
+		outcome.Generation.Digest =
+			store.ComputeExtractionGenerationDigest(outcome.Generation)
+		run, err := s.BeginExtractionRun(ctx, scope, outcome.Generation.Extractor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		outcome.RunID = run.ID
+		if err := s.PublishExtractionRunWithOutcome(
+			ctx, run.ID, candidateCoverage(pointer.ManifestDigest), outcome,
+		); err != nil {
+			t.Fatal(err)
+		}
+		assertPendingResolverSuccessor(t, ctx, s, repository, true)
+	})
+}
+
+func candidateCoverage(candidateManifestDigest string) store.CoverageManifest {
+	emptyDigest := "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	return store.CoverageManifest{
+		SourceScopeDigest:       emptyDigest,
+		CandidateManifestDigest: candidateManifestDigest,
+		ScopePosture:            "whole-repository",
+		CandidatePlane:          "local",
+		ScopeCorpusDigest:       emptyDigest,
+		PlannedScopeDigest:      emptyDigest,
+	}
+}
+
+func assertPendingResolverSuccessor(
+	t *testing.T,
+	ctx context.Context,
+	s *store.Surreal,
+	repository string,
+	want bool,
+) {
+	t.Helper()
+	jobs, err := s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobs = resolverJobsForTarget(jobs, repository)
+	if !want {
+		if len(jobs) != 0 {
+			t.Fatalf("resolver successor = %+v, want none", jobs)
+		}
+		return
+	}
+	if len(jobs) != 1 || !jobs[0].Force {
+		t.Fatalf("resolver successor = %+v, want one forced job", jobs)
+	}
+}
+
+func assertPendingResolverSuccessorForce(
+	t *testing.T,
+	ctx context.Context,
+	s *store.Surreal,
+	repository string,
+	wantForce bool,
+) {
+	t.Helper()
+	jobs, err := s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jobs = resolverJobsForTarget(jobs, repository)
+	if len(jobs) != 1 || jobs[0].Force != wantForce {
+		t.Fatalf(
+			"resolver successor = %+v, want one job with force=%v",
+			jobs, wantForce,
+		)
+	}
 }
 
 func testResolverCatalogGuardedPublicationLifecycle(
@@ -179,8 +603,13 @@ func testResolverCatalogRetiredByCandidateAndRepoTransitions(
 	if err := s.PublishCandidateManifest(ctx, candidate); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.GetResolverCatalogPublication(ctx, repository); err != nil {
-		t.Fatalf("catalog after byte-identical candidate control transition: %v", err)
+	if _, err := s.GetResolverCatalogPublication(
+		ctx, repository,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf(
+			"catalog after byte-identical candidate control transition = %v, want not found",
+			err,
+		)
 	}
 	if err := s.ClearCandidateManifestPublication(ctx, repository); err != nil {
 		t.Fatal(err)
@@ -387,11 +816,29 @@ func testResolverCatalogAcceptsExactPublishedDeclarationSet(
 	if err := s.PublishResolverCatalog(ctx, publication); err != nil {
 		t.Fatalf("publish catalog with exact declarations: %v", err)
 	}
+	candidate.ControlRevision = candidatePointer.ControlRevision + 1
+	if err := s.PublishCandidateManifest(ctx, candidate); err != nil {
+		t.Fatalf("advance candidate control revision: %v", err)
+	}
+	if _, err := s.GetResolverCatalogPublication(
+		ctx, repository,
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("catalog after candidate control repair = %v, want not found", err)
+	}
+	if err := s.PublishResolverCatalog(ctx, publication); !errors.Is(err, store.ErrConflict) {
+		t.Fatalf("republish catalog with pre-repair declaration = %v, want conflict", err)
+	}
+	candidatePointer, err = s.GetCandidateManifestPublication(ctx, repository)
+	if err != nil {
+		t.Fatal(err)
+	}
 	nextRun, err := s.BeginExtractionRun(ctx, scope, "1.1.0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	nextGeneration := generation
+	nextGeneration.CandidatePolicyDigest = candidatePointer.PolicyDigest
+	nextGeneration.CandidateControlRevision = candidatePointer.ControlRevision
 	nextGeneration.Extractor = nextRun.Extractor
 	nextGeneration.DependencyDigest = candidateDigest('8')
 	nextGeneration.Digest = store.ComputeExtractionGenerationDigest(nextGeneration)

@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
+	"github.com/bmeddeb/phebs/internal/resolverinput"
 )
 
 type byteRange struct {
@@ -138,69 +139,13 @@ func readModulePaths(
 		if err != nil {
 			return nil, err
 		}
-		modulePath, ok := parseModulePath(blob.Content)
+		modulePath, ok := resolverinput.ParseGoModulePath(blob.Content)
 		if !ok {
 			continue
 		}
 		modules[path.Dir(filePath)] = modulePath
 	}
 	return modules, nil
-}
-
-func parseModulePath(content string) (string, bool) {
-	if len(content) > maxSourceBytes || !utf8.ValidString(content) {
-		return "", false
-	}
-	modulePath := ""
-	for _, line := range strings.Split(content, "\n") {
-		fields := strings.Fields(strings.TrimSpace(strings.SplitN(line, "//", 2)[0]))
-		if len(fields) == 0 || fields[0] != "module" {
-			continue
-		}
-		if len(fields) != 2 || modulePath != "" {
-			return "", false
-		}
-		modulePath = fields[1]
-		if strings.HasPrefix(modulePath, `"`) {
-			unquoted, err := strconv.Unquote(modulePath)
-			if err != nil {
-				return "", false
-			}
-			modulePath = unquoted
-		}
-		if !validModulePath(modulePath) {
-			return "", false
-		}
-	}
-	return modulePath, modulePath != ""
-}
-
-// moduleFor resolves the deepest module root enclosing filePath.
-func moduleFor(modules map[string]string, filePath string) (string, string, bool) {
-	directory := path.Dir(filePath)
-	for {
-		if modulePath, ok := modules[directory]; ok {
-			return directory, modulePath, true
-		}
-		if directory == "." {
-			return "", "", false
-		}
-		directory = path.Dir(directory)
-	}
-}
-
-func validModulePath(value string) bool {
-	if value == "" || len(value) > 1024 || strings.HasPrefix(value, "/") ||
-		strings.HasSuffix(value, "/") || strings.Contains(value, `\`) ||
-		strings.ContainsAny(value, " \t\r\n\x00") {
-		return false
-	}
-	for _, component := range strings.Split(value, "/") {
-		if component == "" || component == "." || component == ".." {
-			return false
-		}
-	}
-	return true
 }
 
 func (e extractor) buildGeneratedSyntaxIndex(
@@ -233,7 +178,7 @@ func (e extractor) buildGeneratedSyntaxIndex(
 		if len(blob.Content) > maxGeneratedBytes || !utf8.ValidString(blob.Content) {
 			continue
 		}
-		importPath := generatedImportPath(modules, filePath)
+		importPath := resolverinput.GoImportPath(modules, filePath)
 		if importPath == "" {
 			continue
 		}
@@ -270,29 +215,6 @@ func (e extractor) buildGeneratedSyntaxIndex(
 		}
 	}
 	return index, nil
-}
-
-func generatedImportPath(modules map[string]string, filePath string) string {
-	if marker := strings.LastIndex(filePath, "/vendor/"); marker >= 0 {
-		return path.Dir(strings.TrimPrefix(
-			filePath[marker+len("/vendor/"):], "/",
-		))
-	}
-	if strings.HasPrefix(filePath, "vendor/") {
-		return strings.TrimPrefix(path.Dir(filePath), "vendor/")
-	}
-	moduleDir, modulePath, ok := moduleFor(modules, filePath)
-	if !ok {
-		return ""
-	}
-	directory := path.Dir(filePath)
-	if directory == moduleDir {
-		return modulePath
-	}
-	if moduleDir == "." {
-		return modulePath + "/" + directory
-	}
-	return modulePath + "/" + strings.TrimPrefix(directory, moduleDir+"/")
 }
 
 func grpcSyntaxMethods(

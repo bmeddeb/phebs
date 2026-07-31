@@ -9,9 +9,9 @@ is closed. The separate large-monorepo review is complete; T30.6a shipped
 bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
 and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
 source-lane classification, T30.6e focused local-evidence base-lane
-consumption, and T30.6f resolver-catalog lifecycle are shipped; T30.6g
-bounded resolver materialization is next. Completed
-Epics 0–24, Epic 29, T30.1–T30.6f, and P5 hardening are
+consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
+materialization are shipped; T30.6h direct caller-leaf execution is next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6g, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -21,11 +21,12 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6g · Bounded resolver materialization** is next. T30.6a–T30.6f now provide
+**T30.6h · Direct caller-leaf execution artifacts** is next. T30.6a–T30.6g now provide
 bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, and the adapter-free immutable catalog
-lifecycle without changing search. The accepted
+lifecycle plus bounded gRPC/Thrift resolver materialization without changing
+search. The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
@@ -549,7 +550,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6g next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6h next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -908,20 +909,16 @@ validation, metadata-only warm reuse, crash reconciliation, and exact
 valid-only backup/restore with pointer clearing. No resolver adapter or worker
 is registered; T30.6g supplies bounded materialization.
 
-**T30.6g · Bounded resolver materialization** *(needs T30.6f)* — implement the
-bounded v1 resolver set over immutable candidate and declaration inputs: only
-the existing committed Go module identity and committed generated-attribution
-inputs required by the shipped gRPC and Thrift caller resolvers. New workspace
-formats or resolver packs require later tickets. No build, `go list`,
-dependency query, generator, corpus execution, mutable checkout, or network
-request is allowed. Ambiguous or unsupported identity remains explicit rather
-than selecting by tie-breaker, and partitions never rerun discovery. AC:
-neutral module/generated fixtures, ordered adapter/version identity,
-missing/special/stale input, ambiguity, deterministic double run, no unplanned
-blob reads, populated-catalog warm no-op with zero input blob reads/hashes,
-lifecycle bounds inherited from T30.6f, and repository-lock serialization that
-reconciles any pre-existing publication marker before staging and never
-overwrites another publisher's marker, full merge bar.
+**T30.6g ✅ · Bounded resolver materialization** *(2026-07-31; needs T30.6f)* —
+completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306g--bounded-resolver-materialization).
+Ordered gRPC and Thrift adapters now materialize one immutable catalog from
+the exact candidate/declaration generation and only its committed `go.mod`,
+`layout-snapshot.json`, and `generated-from-snapshot.json` inputs. Explicit
+unavailable, ambiguous, and unsupported states replace tie-breaks; bounded
+repository-locked publication, transactional fan-out, startup backfill and
+marker recovery, and a zero-input-read/hash warm no-op are shipped. T30.6h
+consumes this catalog without rerunning discovery.
 
 **T30.6h · Direct caller-leaf execution artifacts** *(needs T30.6g)* — consume
 T30.4 caller leaves directly without rebuilding a flattened repository path

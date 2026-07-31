@@ -54,6 +54,7 @@ var extractorImportAllowlist = map[string]bool{
 	"github.com/bmeddeb/phebs/internal/extract/scipsource": true,
 	"github.com/bmeddeb/phebs/internal/extract/sdk":        true,
 	"github.com/bmeddeb/phebs/internal/idlpreflight":       true,
+	"github.com/bmeddeb/phebs/internal/resolverinput":      true,
 }
 
 var sdkImportAllowlist = map[string]bool{"context": true}
@@ -63,6 +64,18 @@ var idlPreflightImportAllowlist = map[string]bool{
 	"context": true,
 	"errors":  true,
 	"fmt":     true,
+}
+
+var resolverInputImportAllowlist = map[string]bool{
+	"encoding/json": true,
+	"errors":        true,
+	"io":            true,
+	"path":          true,
+	"strconv":       true,
+	"strings":       true,
+	"unicode/utf8":  true,
+	// Pinned pure import-path validation; no filesystem/toolchain capability.
+	"golang.org/x/mod/module": true,
 }
 
 type pureSourceTarget struct {
@@ -97,6 +110,25 @@ func TestIDLPreflightImports(t *testing.T) {
 	)
 	if err != nil {
 		t.Fatalf("scan IDL preflight sources: %v", err)
+	}
+	for _, violation := range violations {
+		t.Error(violation)
+	}
+}
+
+// Resolver inputs are shared with catalog materialization, but extractor use
+// remains pure computation over supplied blob content. Recursively constrain
+// the helper so it cannot become a capability bypass.
+func TestResolverInputImports(t *testing.T) {
+	violations, err := scanPureTargets(
+		os.DirFS(".."),
+		[]pureSourceTarget{{
+			dir:     "resolverinput",
+			allowed: resolverInputImportAllowlist,
+		}},
+	)
+	if err != nil {
+		t.Fatalf("scan resolver inputs: %v", err)
 	}
 	for _, violation := range violations {
 		t.Error(violation)

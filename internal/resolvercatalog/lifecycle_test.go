@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -164,6 +165,31 @@ func TestNeutralCatalogPublicationAndWarmCurrent(t *testing.T) {
 	}
 	if publication.Current() {
 		t.Fatal("warm check accepted changed file identity")
+	}
+}
+
+func TestPublicationCurrentFailsClosedOnMarkerIO(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "resolver-catalogs")
+	repository := "github.com/acme/current-marker-io"
+	state := testInstall(t, root, repository, false)
+	if err := ClearPublishing(root, repository); err != nil {
+		t.Fatal(err)
+	}
+	publication, err := Open(t.Context(), root, state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(root, resolvercatalogid.PublishingName(repository))
+	prior := testCatalogPathError
+	testCatalogPathError = func(opened string) error {
+		if opened == marker {
+			return &os.PathError{Op: "lstat", Path: opened, Err: syscall.EMFILE}
+		}
+		return nil
+	}
+	t.Cleanup(func() { testCatalogPathError = prior })
+	if publication.Current() {
+		t.Fatal("publication remained current when marker authority could not be checked")
 	}
 }
 
@@ -394,6 +420,26 @@ func TestCleanupRetiredRejectsSymlinkRoot(t *testing.T) {
 	}
 	if raw, err := os.ReadFile(stale); err != nil || string(raw) != "keep" {
 		t.Fatalf("symlink-root refusal changed external artifact: %q, %v", raw, err)
+	}
+}
+
+func TestCleanupRetiredContextHonorsCancellation(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "resolver-catalogs")
+	repository := "github.com/acme/canceled-cleanup"
+	prepared := testPrepared(t, root, repository, true)
+	stale := filepath.Join(
+		root, resolvercatalogid.OwnedArtifactPrefix(repository)+"stale.ndjson",
+	)
+	if err := os.WriteFile(stale, []byte("keep"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := CleanupRetiredContext(ctx, root, prepared.manifest); !errors.Is(err, context.Canceled) {
+		t.Fatalf("CleanupRetiredContext = %v, want context.Canceled", err)
+	}
+	if raw, err := os.ReadFile(stale); err != nil || string(raw) != "keep" {
+		t.Fatalf("canceled cleanup changed retired artifact: %q, %v", raw, err)
 	}
 }
 
@@ -855,6 +901,256 @@ func TestCleanupStagesAndReconcileCrashBoundaries(t *testing.T) {
 	})
 }
 
+func TestReconcileMarkedSameGenerationConflictFailsClosed(t *testing.T) {
+	newFixture := func(t *testing.T, repository string) (
+		string, State, State, *fakeReconcileStore,
+	) {
+		t.Helper()
+		root := filepath.Join(t.TempDir(), "catalogs")
+		current := testInstallWithMembers(
+			t, root, repository, nil, "go.ndjson",
+		)
+		if err := ClearPublishing(root, repository); err != nil {
+			t.Fatal(err)
+		}
+		currentManifest := readTestManifest(t, root, current)
+		stage, err := NewStage(root, currentManifest.Identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := stage.AddMember(
+			t.Context(), "go.ndjson", json.RawMessage(`{}`),
+			func(write func(json.RawMessage) error) error {
+				return write(json.RawMessage(
+					`{"schema":"phebs-resolver-catalog-record-v1","variant":"challenger"}`,
+				))
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		prepared, err := stage.Seal(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		challenger, err := prepared.Install(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if challenger.GenerationDigest != current.GenerationDigest ||
+			challenger.ManifestDigest == current.ManifestDigest {
+			t.Fatalf(
+				"fixture states do not conflict within one generation: current=%+v challenger=%+v",
+				current, challenger,
+			)
+		}
+		fake := newFakeReconcileStore()
+		fake.publications[repository] = storeFromState(current)
+		fake.publishErr = store.ErrConflict
+		return root, current, challenger, fake
+	}
+
+	t.Run("current authority retains pointer and marker across attempts", func(t *testing.T) {
+		repository := "github.com/acme/marked-nondeterminism"
+		root, current, challenger, fake := newFixture(t, repository)
+		for attempt := 1; attempt <= 2; attempt++ {
+			report, err := Reconcile(t.Context(), root, fake, nil)
+			if !errors.Is(err, ErrNondeterministicPublication) {
+				t.Fatalf(
+					"attempt %d error = %v, want ErrNondeterministicPublication",
+					attempt, err,
+				)
+			}
+			if report.ReplacementsQueued != 0 || report.PointersCleared != 0 ||
+				len(fake.operations) != 0 {
+				t.Fatalf(
+					"attempt %d mutated recovery state: report=%+v operations=%v",
+					attempt, report, fake.operations,
+				)
+			}
+			if got := fake.publications[repository]; got.ManifestDigest != current.ManifestDigest {
+				t.Fatalf("attempt %d pointer = %+v, want current", attempt, got)
+			}
+			if !IsPublishing(root, repository) {
+				t.Fatalf("attempt %d removed the nondeterminism marker", attempt)
+			}
+			if got := readTestManifest(t, root, challenger); got.Digest != challenger.ManifestDigest {
+				t.Fatalf("attempt %d changed challenger manifest: %+v", attempt, got)
+			}
+		}
+	})
+
+	t.Run("stale authority keeps queue before clear recovery", func(t *testing.T) {
+		repository := "github.com/acme/marked-stale-authority"
+		root, _, _, fake := newFixture(t, repository)
+		fake.stale[repository] = true
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report.ReplacementsQueued != 1 || report.PointersCleared != 1 ||
+			!slices.Equal(fake.operations, []string{
+				"queue:" + repository, "clear:" + repository,
+			}) {
+			t.Fatalf("report=%+v operations=%v", report, fake.operations)
+		}
+		if IsPublishing(root, repository) {
+			t.Fatal("stale marked publication remained fenced")
+		}
+	})
+}
+
+func TestReconcilePreservesAuthorityOnCatalogIO(t *testing.T) {
+	inject := func(t *testing.T, target string) {
+		t.Helper()
+		prior := testCatalogPathError
+		testCatalogPathError = func(opened string) error {
+			if opened == target {
+				return &os.PathError{Op: "open", Path: opened, Err: syscall.EMFILE}
+			}
+			return nil
+		}
+		t.Cleanup(func() { testCatalogPathError = prior })
+	}
+	assertPreserved := func(
+		t *testing.T,
+		root, repository string,
+		fake *fakeReconcileStore,
+		wantPointer bool,
+	) {
+		t.Helper()
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if !errors.Is(err, ErrCatalogIO) || !errors.Is(err, syscall.EMFILE) {
+			t.Fatalf("Reconcile error = %v, want ErrCatalogIO/EMFILE", err)
+		}
+		if report.ReplacementsQueued != 0 || report.PointersCleared != 0 ||
+			len(fake.operations) != 0 {
+			t.Fatalf("I/O failure mutated recovery: report=%+v operations=%v", report, fake.operations)
+		}
+		_, pointerPresent := fake.publications[repository]
+		if pointerPresent != wantPointer {
+			t.Fatalf("pointer present = %v, want %v", pointerPresent, wantPointer)
+		}
+	}
+
+	t.Run("marked current manifest read", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/marked-current-io"
+		state := testInstallWithMembers(t, root, repository, nil, "go.ndjson")
+		fake := newFakeReconcileStore()
+		fake.publications[repository] = storeFromState(state)
+		inject(t, filepath.Join(root, state.Manifest))
+		assertPreserved(t, root, repository, fake, true)
+		if !IsPublishing(root, repository) {
+			t.Fatal("marked current I/O failure removed marker")
+		}
+	})
+
+	t.Run("unmarked current member read", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/unmarked-current-io"
+		state := testInstallWithMembers(t, root, repository, nil, "go.ndjson")
+		if err := ClearPublishing(root, repository); err != nil {
+			t.Fatal(err)
+		}
+		manifest := readTestManifest(t, root, state)
+		member := filepath.Join(
+			root, memberArtifactName(manifest.Identity, manifest.Members[0].Name),
+		)
+		fake := newFakeReconcileStore()
+		fake.publications[repository] = storeFromState(state)
+		inject(t, member)
+		assertPreserved(t, root, repository, fake, true)
+	})
+
+	t.Run("pointerless marked member read", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/pointerless-marked-io"
+		state := testInstallWithMembers(t, root, repository, nil, "go.ndjson")
+		manifest := readTestManifest(t, root, state)
+		member := filepath.Join(
+			root, memberArtifactName(manifest.Identity, manifest.Members[0].Name),
+		)
+		fake := newFakeReconcileStore()
+		inject(t, member)
+		assertPreserved(t, root, repository, fake, false)
+		if !IsPublishing(root, repository) {
+			t.Fatal("pointerless marked I/O failure removed marker")
+		}
+	})
+}
+
+func TestReconcilePreservesMarkedBytesOnStorePublishFailure(t *testing.T) {
+	t.Run("pointer present", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/marked-store-io-current"
+		current := testInstall(t, root, repository, false)
+		if err := ClearPublishing(root, repository); err != nil {
+			t.Fatal(err)
+		}
+		replacementIdentity, err := NewIdentity(
+			repository, strings.Repeat("2", 40), "", testDigest('a'), nil, nil,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		stage, err := NewStage(root, replacementIdentity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		prepared, err := stage.Seal(t.Context())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := prepared.Install(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		fake := newFakeReconcileStore()
+		fake.publications[repository] = storeFromState(current)
+		storeFailure := errors.New("resolver catalog store unavailable")
+		fake.publishErr = storeFailure
+
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if !errors.Is(err, storeFailure) {
+			t.Fatalf("Reconcile = %v, want store failure", err)
+		}
+		if report.ReplacementsQueued != 0 || report.PointersCleared != 0 ||
+			len(fake.operations) != 0 ||
+			fake.publications[repository].ManifestDigest != current.ManifestDigest {
+			t.Fatalf(
+				"store failure mutated current recovery: report=%+v operations=%v pointer=%+v",
+				report, fake.operations, fake.publications[repository],
+			)
+		}
+		if !IsPublishing(root, repository) {
+			t.Fatal("store failure removed current recovery marker")
+		}
+	})
+
+	t.Run("pointerless", func(t *testing.T) {
+		root := filepath.Join(t.TempDir(), "catalogs")
+		repository := "github.com/acme/marked-store-io-pointerless"
+		_ = testInstall(t, root, repository, false)
+		fake := newFakeReconcileStore()
+		storeFailure := errors.New("resolver catalog store unavailable")
+		fake.publishErr = storeFailure
+
+		report, err := Reconcile(t.Context(), root, fake, nil)
+		if !errors.Is(err, storeFailure) {
+			t.Fatalf("Reconcile = %v, want store failure", err)
+		}
+		if report.ReplacementsQueued != 0 || report.PointersCleared != 0 ||
+			len(fake.operations) != 0 || len(fake.publications) != 0 {
+			t.Fatalf(
+				"store failure mutated pointerless recovery: report=%+v operations=%v pointers=%v",
+				report, fake.operations, fake.publications,
+			)
+		}
+		if !IsPublishing(root, repository) {
+			t.Fatal("store failure removed pointerless recovery marker")
+		}
+	})
+}
+
 func TestReconcileMarkedCatalogsStreamOnceAndUnfenceFailures(t *testing.T) {
 	t.Run("corrupt current pointer streams each member once", func(t *testing.T) {
 		root := filepath.Join(t.TempDir(), "catalogs")
@@ -1136,11 +1432,13 @@ type fakeReconcileStore struct {
 	jobs         []store.Job
 	operations   []string
 	publishErr   error
+	stale        map[string]bool
 }
 
 func newFakeReconcileStore() *fakeReconcileStore {
 	return &fakeReconcileStore{
 		publications: make(map[string]store.ResolverCatalogPublication),
+		stale:        make(map[string]bool),
 	}
 }
 
@@ -1169,10 +1467,10 @@ func (fake *fakeReconcileStore) GetResolverCatalogPublication(
 }
 
 func (fake *fakeReconcileStore) ResolverCatalogPublicationCurrent(
-	context.Context,
-	store.ResolverCatalogPublication,
+	_ context.Context,
+	publication store.ResolverCatalogPublication,
 ) (bool, error) {
-	return true, nil
+	return !fake.stale[publication.Repository], nil
 }
 
 func (fake *fakeReconcileStore) PublishResolverCatalog(
