@@ -158,7 +158,7 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 	}
 	catalog := api.NewContractCatalogService(opts)
 	callers := api.NewLegacyCallerMapService(opts)
-	comparison := api.NewCallerComparisonService(opts)
+	comparison := api.NewLegacyCallerComparisonService(opts)
 	if catalog == nil || callers == nil || comparison == nil {
 		t.Fatal("T20.14 shared services were not constructed")
 	}
@@ -219,15 +219,18 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("compare discovered endpoints: %v", err)
 	}
+	if comparisonPage.TotalRows == nil {
+		t.Fatalf("scale comparison omitted total: %+v", comparisonPage)
+	}
 	if len(comparisonPage.Rows) != 100 ||
-		comparisonPage.TotalRows < t201.ScaleLogicalUnits ||
+		*comparisonPage.TotalRows < t201.ScaleLogicalUnits ||
 		comparisonPage.Pagination.NextCursor == "" {
 		t.Fatalf("scale comparison first page = %d/%d, cursor=%t",
-			len(comparisonPage.Rows), comparisonPage.TotalRows,
+			len(comparisonPage.Rows), *comparisonPage.TotalRows,
 			comparisonPage.Pagination.NextCursor != "")
 	}
 	measurements.ComparisonRows = len(comparisonPage.Rows)
-	measurements.ComparisonTotalRows = comparisonPage.TotalRows
+	measurements.ComparisonTotalRows = *comparisonPage.TotalRows
 
 	// Advance the immutable repository to a malformed unit snapshot. The
 	// declaration domain may publish independently, but the caller domain

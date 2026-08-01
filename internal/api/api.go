@@ -56,22 +56,23 @@ type Options struct {
 	// complete caller-generation publication. Serve shares its underlying
 	// publication registry with the worker and lifecycle reconcilers so an
 	// active result lease delays byte retirement. Nil keeps the exact reader
-	// dark; the temporary legacy constructor remains only for the T30.6k/l
-	// comparison and Workbench migrations.
+	// dark; the temporary legacy constructors remain only for the T30.6l
+	// Workbench migration.
 	CallerReader *callerexecute.PublicationReader
 	// ContractCatalog, CallerMap, and CallerComparison optionally bind
-	// preconstructed shared read services. Serve supplies the same instances
-	// to Huma and MCP so neither transport can recreate authorization, cursor,
-	// classification, or evidence semantics. Nil preserves the ordinary
-	// constructor path used by tests and embedders.
-	ContractCatalog *ContractCatalogService
-	CallerMap       *CallerMapService
-	// LegacyCallerMap is the temporary evidence-backed reader used only by
-	// Workbench Impact until T30.6l composes the exact caller generation into
-	// the Workbench revision. It must never be registered as the public HTTP or
-	// MCP Caller Map service.
-	LegacyCallerMap  *CallerMapService
+	// preconstructed shared product read services. Serve supplies the same
+	// instances to Huma and MCP so neither transport can recreate
+	// authorization, cursor, classification, or evidence semantics. Nil
+	// preserves the ordinary constructor path used by tests and embedders.
+	ContractCatalog  *ContractCatalogService
+	CallerMap        *CallerMapService
 	CallerComparison *CallerComparisonService
+	// LegacyCallerMap and LegacyCallerComparison are the temporary
+	// evidence-backed readers used only by Workbench Impact until T30.6l
+	// composes the exact caller generation into the Workbench revision. They
+	// must never be registered as public HTTP or MCP services.
+	LegacyCallerMap        *CallerMapService
+	LegacyCallerComparison *CallerComparisonService
 	// FieldReferences is the side-effect-free stable-field read shared by the
 	// proof endpoint and Workbench. It never persists a proof bundle itself.
 	FieldReferences *FieldReferenceService
@@ -142,6 +143,16 @@ type Options struct {
 // New builds the /api/* handler: health, version, repos, plus the OpenAPI
 // document at /api/openapi.json and docs UI at /api/docs.
 func New(opts Options) http.Handler {
+	// Construct the exact caller engine once so Caller Map, comparison,
+	// citations, HTTP, and capability discovery share one HMAC secret and one
+	// bounded reverse-index/binding cache. Production supplies these instances
+	// explicitly; this normalization keeps embedders and tests equally safe.
+	if opts.CallerMap == nil {
+		opts.CallerMap = NewCallerMapService(opts)
+	}
+	if opts.CallerComparison == nil {
+		opts.CallerComparison = NewCallerComparisonService(opts)
+	}
 	mux := http.NewServeMux()
 	cfg := huma.DefaultConfig("phebs", opts.Version)
 	cfg.OpenAPIPath = "/api/openapi"

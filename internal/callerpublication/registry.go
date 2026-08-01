@@ -14,11 +14,13 @@ import (
 
 const (
 	// The registry is a parsed-state cache, not the durable authority. These
-	// process-wide ceilings retain at most one maximum-size 16,384-pair
-	// publication (or a bounded mix of smaller publications) plus seven empty
-	// publication identities. Store-authoritative bytes remain cold-openable.
+	// process-wide ceilings retain at most two maximum-size 16,384-pair
+	// publications so one exact old/replacement comparison can hold both
+	// immutable leases. Smaller publications may occupy the remaining identity
+	// slots within the same pair-reference ceiling. Store-authoritative bytes
+	// remain cold-openable.
 	MaxRegistryPublications = 8
-	MaxRegistryPairRefs     = callerleaf.MaxExpectedPairs
+	MaxRegistryPairRefs     = 2 * callerleaf.MaxExpectedPairs
 	// MaxConcurrentColdAdmissions bounds cross-repository manifest/leaf content
 	// validation. Warm leases never enter this gate.
 	MaxConcurrentColdAdmissions = 2

@@ -43,6 +43,9 @@ type PublicationReadStore interface {
 	CallerGenerationPublicationSummaryAuthorityCurrent(
 		context.Context, store.CallerGenerationPublicationSummary,
 	) (bool, error)
+	CallerGenerationPublicationSummariesAuthorityCurrent(
+		context.Context, []store.CallerGenerationPublicationSummary,
+	) (bool, error)
 	GetCallerGenerationAdmission(
 		context.Context, store.CallerGenerationIdentity,
 	) (*store.CallerGenerationAdmission, error)
@@ -535,6 +538,57 @@ func (reader *PublicationReader) Current(
 		return false, err
 	}
 	return reflect.DeepEqual(read.lease.State(), *read.State), nil
+}
+
+// CurrentPair is the result-time transition fence for an exact two-sided
+// product. Both store authorities are observed in one bounded transaction;
+// each distinct immutable filesystem publication is then descriptor-checked.
+// Identical reads are checked only once, while each read must still carry its
+// own live lease and exact admitted state. Authorization remains a separate
+// final transport-neutral fence.
+func (reader *PublicationReader) CurrentPair(
+	ctx context.Context,
+	left *PublicationRead,
+	right *PublicationRead,
+) (bool, error) {
+	if reader == nil || reader.state == nil {
+		return false, nil
+	}
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	reads := [2]*PublicationRead{left, right}
+	summaries := make([]store.CallerGenerationPublicationSummary, 0, len(reads))
+	filesystems := make([]*callerpublication.Publication, 0, len(reads))
+	seenFilesystems := make(map[*callerpublication.Publication]struct{}, len(reads))
+	for _, read := range reads {
+		if read == nil || read.Summary == nil || read.State == nil ||
+			read.lease == nil || read.Availability != PublicationCurrent {
+			return false, nil
+		}
+		publication := read.lease.Publication()
+		if publication == nil ||
+			!reflect.DeepEqual(read.lease.State(), *read.State) {
+			return false, nil
+		}
+		summaries = append(summaries, *read.Summary)
+		if _, duplicate := seenFilesystems[publication]; !duplicate {
+			seenFilesystems[publication] = struct{}{}
+			filesystems = append(filesystems, publication)
+		}
+	}
+	current, err := reader.state.
+		CallerGenerationPublicationSummariesAuthorityCurrent(ctx, summaries)
+	if err != nil || !current {
+		return false, err
+	}
+	for _, publication := range filesystems {
+		current, err = publication.CurrentResult()
+		if err != nil || !current {
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 // UnavailableCurrent is the result-time fence for a typed missing, stale, or

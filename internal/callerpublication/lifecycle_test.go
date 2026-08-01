@@ -989,6 +989,12 @@ func TestRegistryBoundsCompactAuthorityTokens(t *testing.T) {
 }
 
 func TestRegistryBoundsParsedPublicationsAndRetriesAdmission(t *testing.T) {
+	if MaxRegistryPairRefs != 2*callerleaf.MaxExpectedPairs {
+		t.Fatalf(
+			"parsed publication pair refs = %d, want two maximum generations",
+			MaxRegistryPairRefs,
+		)
+	}
 	root := filepath.Join(t.TempDir(), "caller-leaves")
 	registry := NewRegistry(root)
 	publications := make([]*Publication, 0, MaxRegistryPublications+1)

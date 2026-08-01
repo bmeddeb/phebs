@@ -144,6 +144,25 @@ func (state *exactCallerAPIStore) CallerGenerationPublicationSummaryAuthorityCur
 	return current, nil
 }
 
+func (state *exactCallerAPIStore) CallerGenerationPublicationSummariesAuthorityCurrent(
+	_ context.Context,
+	summaries []store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	if len(summaries) < 1 || len(summaries) > 2 {
+		return false, errors.New("caller publication joint fence requires one or two summaries")
+	}
+	state.currentChecks++
+	state.authorityCurrentChecks++
+	current := true
+	for _, summary := range summaries {
+		current = current && state.summaryCurrent(summary)
+	}
+	if state.afterAuthorityCurrent != nil {
+		state.afterAuthorityCurrent(state.authorityCurrentChecks)
+	}
+	return current, nil
+}
+
 func (state *exactCallerAPIStore) summaryCurrent(
 	summary store.CallerGenerationPublicationSummary,
 ) bool {
@@ -194,6 +213,7 @@ type exactCallerAPIFixture struct {
 	revokeOnVisibilityCheck int
 	publication             *callerpublication.Publication
 	publications            *callerpublication.Registry
+	reader                  *callerexecute.PublicationReader
 }
 
 func newExactCallerAPIFixture(t *testing.T, recordCount int) *exactCallerAPIFixture {
@@ -214,12 +234,26 @@ func newExactCallerAPIFixtureWithMutators(
 	mutateDetail func(map[string]any),
 	mutateRecord func(*callerleaf.Record),
 ) *exactCallerAPIFixture {
+	return newExactCallerAPIFixtureConfigured(
+		t, recordCount, exactCallerRepository, t.TempDir(),
+		mutateDetail, mutateRecord,
+	)
+}
+
+func newExactCallerAPIFixtureConfigured(
+	t *testing.T,
+	recordCount int,
+	repositoryName string,
+	dataDir string,
+	mutateDetail func(map[string]any),
+	mutateRecord func(*callerleaf.Record),
+) *exactCallerAPIFixture {
 	t.Helper()
 	if recordCount < 1 || recordCount > callerleaf.MaxResultRecordsPerPair {
 		t.Fatalf("invalid exact caller fixture record count %d", recordCount)
 	}
 	fixture := &exactCallerAPIFixture{
-		dataDir: t.TempDir(), repository: exactCallerRepository,
+		dataDir: dataDir, repository: repositoryName,
 		principal: "user:exact-member",
 		visible:   map[string]bool{exactCallerRepository: true},
 		query: api.CallerMapQuery{Endpoint: api.CallerMapEndpoint{
@@ -491,6 +525,7 @@ func newExactCallerAPIFixtureWithMutators(
 	if err != nil {
 		t.Fatal(err)
 	}
+	fixture.reader = reader
 	probe, err := reader.Open(t.Context(), fixture.repository)
 	if err != nil {
 		t.Fatalf("open exact caller publication fixture: %v", err)

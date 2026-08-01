@@ -767,8 +767,90 @@ unrelated path, whole-file, focused-search, or local-evidence access.
 The exact reader exposes direct-syntax results and retained abstentions for one
 complete repository-overlay generation. It does not prove runtime use,
 completeness, extraction accuracy, migration completion, decommission safety,
-or a retention bound. Caller comparison and Workbench Impact intentionally
-remain on the legacy evidence reader until T30.6k and T30.6l.
+or a retention bound. Caller comparison now uses the same exact engine under
+the additional two-sided fences below. Workbench Impact intentionally remains
+on the legacy caller reader until T30.6l.
+
+#### Authorized exact caller comparison
+
+T30.6k registers caller comparison only beside the exact Caller Map service;
+it reuses that service's publication reader, leases, reverse indexes, HMAC
+secret, binding registry, service gates, and exact-range citation reader. It
+does not start a second reader or cache and does not reconstruct a comparison
+from legacy evidence rows, coverage, or attribution digests.
+
+Every first page and continuation authenticates and authorizes both the old
+and replacement repositories before either repository's caller pointer,
+publication directory, or cache key is accessed. Unknown, hidden, and deleting
+repositories all return the same `404`. For a current pair, the service
+acquires both request-scoped complete-publication leases. After the page is
+built, the store checks both bounded summaries in one transaction, the reader
+checks both final publication descriptors together, and both authorizations run as the last
+result fence. A permission or publication transition on either endpoint
+therefore fails the entire read rather than exposing rows from the other
+endpoint.
+
+Both endpoint generation panels use `current`, `missing`, `failed`, and
+`stale`. Only two current generations may be compared. If either side is
+unavailable, each side repeats its applicable bounded scalar authority and
+admission selection before the response becomes one whole-page typed gap with
+no rows,
+classifications, cursor, or numeric total. An operational store or filesystem
+failure remains a request error. In particular, the service never converts an
+unavailable old side into `new_only_evidence`, an unavailable replacement into
+`old_only_evidence`, or either gap into a zero-caller claim.
+
+For a current pair, the first page uses both exact reverse indexes and inspects
+at most 50,000 protocol/operation-bucket positions across them, charged before
+declaration-lineage and optional filters. It retains one compact two-
+index binding of integer positions and bounded comparison metadata beneath the
+same process-wide limit of eight live bindings, 200,000 aggregate retained
+positions, and an up-to-five-minute lifetime. It neither copies complete
+caller records into a second cache nor adds an unbounded comparison registry.
+Idle pressure retirement, expiry, or restart requires a new first page; active
+and retired-in-flight bindings remain fully counted. One request may hold at
+most two parsed complete publications and 32,768 pair references total. A cold
+first page can stream each missing reverse index once under the existing
+one-index-build and 128-MiB counted-identity limits; it performs no corpus
+tree walk, mirror lock, or source Git read.
+
+The HMAC cursor binds the complete normalized comparison query and page size,
+both authorization projections, both generation/manifest/pair-set digests,
+both caller-publication revisions and non-repeating incarnations, the retained
+comparison binding, and next offset. Either side can transition independently;
+permission loss, binding expiry, pressure retirement, restart, or any
+generation/revision/incarnation change conflicts and requires a restart from
+the first page. The `A → B → A` fence applies independently to both sides.
+
+A page defaults to 50 and admits at most 100 classified rows. Each side of one
+row exposes its exact occurrence count and at most four source citations with
+an explicit truncation bit, while the entire page hydrates at most 100 exact
+canonical records. A resolved unit's potentially large attribution appears
+once on the comparison row and is not duplicated in its citation samples. A
+warm continuation never rematerializes either reverse
+index: it reacquires both leases, rereads only those selected records, and
+performs both publications' bounded identity/final-authority sweeps. It adds no
+caller-content hash, store mutation, mirror lock, source Git read, or child
+process. Restart or shared-registry eviction can still cause the separately
+bounded cold publication validation. Shared binding/index bookkeeping locks
+are not held while publications stream, records hydrate, final store and
+authorization fences run, citations read Git, or transports encode responses.
+
+Comparison citations are ordinary compact `caller-map-citation-v1` tokens.
+Open them only through `GET /api/contract_callers/citation` or MCP
+`read_operation_caller_citation`; those routes reauthorize the cited side,
+reopen the exact generation, verify the immutable commit, object ID, complete
+blob digest, record, and range, and return only the cited bytes. Comparison
+does not grant tree, directory, unrelated-path, whole-file, focused-search, or
+local-evidence access.
+
+Startup creates no comparison binding, reverse scan, caller-content hash, Git
+read, mirror lock, or child work. The shared eight-active-read and two-citation-
+phase gates remain in force, and their slots end before transport encoding.
+Static comparison rows and the literal old-only/both/new-only/unresolved
+classifications establish no runtime use, completeness, extraction accuracy,
+migration completion, decommission safety, production validation, or
+historical-retention bound.
 
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
@@ -1416,11 +1498,12 @@ the existing stale-run sweeper.
 
 The accepted large-monorepo review now has its bounded operational, outcome,
 scheduler, source-lane, resolver, caller-leaf, and complete-publication seams
-through T30.6j. An admitted `*_test.go` file remains searchable and participates
+through T30.6k. An admitted `*_test.go` file remains searchable and participates
 in candidate planning when an enabled domain policy enumerates it, while direct
 caller execution excludes its `go_test` lane. The public Caller Map now reads
-only the exact complete repository-overlay authority; caller comparison and
-Workbench Impact remain on their legacy reader until T30.6k and T30.6l.
+only the exact complete repository-overlay authority; caller comparison now
+uses that exact authority in one jointly fenced two-endpoint read, while
+Workbench Impact remains on its legacy caller reader until T30.6l.
 Operators should not raise the global file, path-byte, read-byte, fact, or
 single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
@@ -1440,8 +1523,8 @@ gRPC/Thrift materialization, T30.6h supplies the independently durable direct
 caller-leaf artifacts, and T30.6i supplies the atomic complete publication and
 recovery lifecycle described above. T30.6j supplies the authorized exact Caller
 Map reader, revision-bound cursor, and exact-range citation path described
-above. T30.6k is next; it and T30.6l separately migrate comparison and
-Workbench Impact. T30.6m
+above. T30.6k supplies the exact two-sided comparison described above. T30.6l
+next migrates Workbench Impact. T30.6m
 selects the historical-retention posture and T30.6n implements only that
 selected policy.
 

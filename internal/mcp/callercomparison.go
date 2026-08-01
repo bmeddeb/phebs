@@ -48,17 +48,18 @@ func registerCallerComparisonTool(s *sdk.Server, opts Options) {
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name: "compare_operation_callers",
-		Description: "Compare two exact Contract Atlas endpoint identities through the shared snapshot-consistent " +
-			"Caller Map service. Pages occurrence- or unit-level old_only_evidence, both_evidence, " +
-			"new_only_evidence, and unresolved classifications with bounded exact citations, both attribution " +
-			"bindings, shared coverage, and one opaque cursor. These labels describe static matching evidence, " +
-			"not migration completion, runtime use, completeness, or decommissioning safety.",
+		Description: "Compare two exact Contract Atlas endpoint identities through two jointly fenced, authorized " +
+			"repository-overlay caller generations. Pages occurrence- or unit-level old_only_evidence, " +
+			"both_evidence, new_only_evidence, and unresolved classifications with bounded immutable-range " +
+			"citations and one cursor bound to both generations. If either generation is unavailable, rows, " +
+			"classifications, and totals are unavailable rather than inferred from absence. These labels do not " +
+			"establish migration completion, runtime use, completeness, or decommissioning safety.",
 		OutputSchema: callerComparisonOutputSchema(),
 	}, func(
 		ctx context.Context,
 		_ *sdk.CallToolRequest,
 		in comparisonIn,
-	) (*sdk.CallToolResult, api.CallerComparisonPage, error) {
+	) (*sdk.CallToolResult, api.CallerComparisonExactPage, error) {
 		result, err := opts.CallerComparison.Compare(
 			ctx,
 			api.CallerComparisonQuery{
@@ -82,28 +83,49 @@ func registerCallerComparisonTool(s *sdk.Server, opts Options) {
 			in.Cursor,
 		)
 		if err != nil {
-			return nil, api.CallerComparisonPage{}, err
+			return nil, api.CallerComparisonExactPage{}, err
 		}
-		return nil, *result, nil
+		exact, err := api.AsExactCallerComparisonPage(result)
+		if err != nil {
+			return nil, api.CallerComparisonExactPage{}, err
+		}
+		return nil, *exact, nil
 	})
 }
 
 func callerComparisonOutputSchema() map[string]any {
+	snapshot := map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required": []string{
+			"endpoint", "generation", "matching_rows_state",
+		},
+		"properties": map[string]any{
+			"endpoint":    map[string]any{"type": "object"},
+			"declaration": map[string]any{"type": "object"},
+			"generation":  map[string]any{"type": "object"},
+			"matching_rows_state": map[string]any{
+				"type": "string", "enum": []string{"exact", "unavailable"},
+			},
+		},
+	}
 	return topLevelOutputSchema(
 		[]string{
 			"schema_version", "query", "old", "replacement", "rows",
-			"total_rows", "pagination", "coverage", "caveat",
+			"matching_rows_state", "pagination", "caveat",
 		},
 		map[string]any{
 			"schema_version": map[string]any{"type": "string"},
 			"query":          map[string]any{"type": "object"},
-			"old":            map[string]any{"type": "object"},
-			"replacement":    map[string]any{"type": "object"},
+			"old":            snapshot,
+			"replacement":    snapshot,
 			"rows":           objectArraySchema(),
 			"total_rows":     map[string]any{"type": "integer"},
-			"pagination":     map[string]any{"type": "object"},
-			"coverage":       map[string]any{"type": "object"},
-			"caveat":         map[string]any{"type": "string"},
+			"matching_rows_state": map[string]any{
+				"type": "string", "enum": []string{"exact", "unavailable"},
+			},
+			"pagination": map[string]any{"type": "object"},
+			"caveat":     map[string]any{"type": "string"},
 		},
 	)
 }

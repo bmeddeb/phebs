@@ -24,6 +24,9 @@ type publicationReaderTestStore struct {
 	authorityValues []bool
 	authorityErr    error
 	authorityCalls  int
+	jointValues     []bool
+	jointErr        error
+	jointCalls      int
 	exactValues     []bool
 	exactErr        error
 	exactCalls      int
@@ -95,6 +98,27 @@ func (state *publicationReaderTestStore) CallerGenerationPublicationSummaryAutho
 	)
 }
 
+func (state *publicationReaderTestStore) CallerGenerationPublicationSummariesAuthorityCurrent(
+	ctx context.Context,
+	publications []store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	state.mu.Lock()
+	state.jointCalls++
+	calls := state.jointCalls
+	err := state.jointErr
+	values := state.jointValues
+	state.mu.Unlock()
+	if err != nil {
+		return false, err
+	}
+	if len(values) > 0 {
+		index := min(calls-1, len(values)-1)
+		return values[index], nil
+	}
+	return state.workerTestStore.
+		CallerGenerationPublicationSummariesAuthorityCurrent(ctx, publications)
+}
+
 func newHarnessPublicationReader(
 	t *testing.T,
 	harness workerHarness,
@@ -152,6 +176,49 @@ func TestPublicationReaderReturnsExactCurrentLeaseAndFinalFence(t *testing.T) {
 	}
 	if err := read.Release(); err != nil {
 		t.Fatalf("second release = %v", err)
+	}
+}
+
+func TestPublicationReaderCurrentPairUsesOneJointFence(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	state := &publicationReaderTestStore{workerTestStore: harness.state}
+	reader := newHarnessPublicationReader(t, harness, state)
+	read, err := reader.Open(t.Context(), harness.state.repo.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = read.Release() }()
+
+	current, err := reader.CurrentPair(t.Context(), read, read)
+	if err != nil || !current || state.jointCalls != 1 {
+		t.Fatalf("joint current = %t, calls=%d, err=%v", current, state.jointCalls, err)
+	}
+
+	state.jointValues = []bool{false}
+	current, err = reader.CurrentPair(t.Context(), read, read)
+	if err != nil || current || state.jointCalls != 2 {
+		t.Fatalf("joint transition = %t, calls=%d, err=%v", current, state.jointCalls, err)
+	}
+
+	wantedErr := errors.New("joint authority unavailable")
+	state.jointErr = wantedErr
+	current, err = reader.CurrentPair(t.Context(), read, read)
+	if current || !errors.Is(err, wantedErr) || state.jointCalls != 3 {
+		t.Fatalf("joint failure = %t, calls=%d, err=%v", current, state.jointCalls, err)
+	}
+
+	badState := cloneCallerPublicationState(*read.State)
+	badState.ManifestDigest = "sha256:" + strings.Repeat("9", 64)
+	invalid := &PublicationRead{
+		Availability: PublicationCurrent, Summary: read.Summary,
+		State: &badState, lease: read.lease,
+	}
+	current, err = reader.CurrentPair(t.Context(), read, invalid)
+	if err != nil || current || state.jointCalls != 3 {
+		t.Fatalf("invalid pair = %t, calls=%d, err=%v", current, state.jointCalls, err)
 	}
 }
 

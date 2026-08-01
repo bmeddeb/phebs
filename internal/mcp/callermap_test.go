@@ -110,12 +110,48 @@ func (schemaCallerComparisonQueries) Compare(
 	return nil, errors.New("not called")
 }
 
+// exactEnvelopeCallerComparisonQueries keeps the older evidence fixture useful
+// for transport pagination tests while pinning T30.6k's mandatory exact
+// envelope. Production registration supplies the exact publication-backed
+// service; exact publication and citation behavior is covered in the API tests.
+type exactEnvelopeCallerComparisonQueries struct {
+	legacy *api.CallerComparisonService
+}
+
+func (service exactEnvelopeCallerComparisonQueries) Compare(
+	ctx context.Context,
+	query api.CallerComparisonQuery,
+	pageSize int,
+	cursor string,
+) (*api.CallerComparisonPage, error) {
+	page, err := service.legacy.Compare(ctx, query, pageSize, cursor)
+	if err != nil {
+		return nil, err
+	}
+	page.SchemaVersion = "caller-comparison-v2"
+	page.MatchingRowsState = "exact"
+	page.Coverage = nil
+	for _, snapshot := range []*api.CallerComparisonSnapshot{
+		&page.Old,
+		&page.Replacement,
+	} {
+		snapshot.Generation = &api.CallerMapGeneration{
+			State: "current", Plane: "repository-overlay",
+			Repository: snapshot.Endpoint.Repository, Commit: callerToolCommit,
+		}
+		snapshot.MatchingRowsState = "exact"
+		snapshot.CoverageDigest = ""
+		snapshot.AttributionDigest = ""
+	}
+	return page, nil
+}
+
 func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 	schemaDigests := map[string]string{
 		"search_contract_operations": "sha256:e2b2b80c7ebb5eeece8c6179b0e21a1b5676dee1ec3a481487f1984c93fbefc2",
 		"get_contract_operation":     "sha256:3a8bfc0a42ac27ffbfbd3e546892924a6cd8ec4ef6ab1fe7bb44a95ae4881af9",
 		"list_operation_callers":     "sha256:c4b6828e0870ce1c6151163cb86fe7ae02f3080644989ab54c2cb73e16f473ab",
-		"compare_operation_callers":  "sha256:6c63e9f1e84092df0cbc343f3449be3e4df3a848fc3cdf265e4d4e2d1a850678",
+		"compare_operation_callers":  "sha256:a6df9c83577b74080b819b88ee6c271fa7a3277cd16324cd8e025542a6edc22d",
 	}
 	for _, test := range []struct {
 		name          string
@@ -281,11 +317,14 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 					}
 					for _, field := range []string{
 						`"old"`, `"replacement"`, `"rows"`, `"pagination"`,
-						`"coverage"`, `"caveat"`,
+						`"total_rows"`, `"matching_rows_state"`, `"caveat"`,
 					} {
 						if !strings.Contains(string(output), field) {
 							t.Fatalf("%s output omitted %s: %s", name, field, output)
 						}
+					}
+					if strings.Contains(string(output), `"coverage"`) {
+						t.Fatalf("%s output retained legacy coverage: %s", name, output)
 					}
 				}
 			}
@@ -647,7 +686,7 @@ func callerToolFixture(
 ) (
 	*api.ContractCatalogService,
 	CallerMapQueries,
-	*api.CallerComparisonService,
+	CallerComparisonQueries,
 	*callerToolStore,
 ) {
 	t.Helper()
@@ -769,10 +808,11 @@ func callerToolFixture(
 	catalog := api.NewContractCatalogService(opts)
 	legacyCallerMap := api.NewLegacyCallerMapService(opts)
 	callerMap := exactEnvelopeCallerMapQueries{legacy: legacyCallerMap}
-	comparison := api.NewCallerComparisonService(opts)
-	if catalog == nil || legacyCallerMap == nil || comparison == nil {
+	legacyComparison := api.NewLegacyCallerComparisonService(opts)
+	if catalog == nil || legacyCallerMap == nil || legacyComparison == nil {
 		t.Fatal("T20.11 services unavailable")
 	}
+	comparison := exactEnvelopeCallerComparisonQueries{legacy: legacyComparison}
 	return catalog, callerMap, comparison, st
 }
 
@@ -1058,7 +1098,7 @@ func TestCallerMapToolsPreserveSharedRefusals(t *testing.T) {
 func assertCallerComparisonToolSession(
 	t *testing.T,
 	session *sdk.ClientSession,
-	comparison *api.CallerComparisonService,
+	comparison CallerComparisonQueries,
 	st *callerToolStore,
 ) {
 	t.Helper()

@@ -5082,3 +5082,110 @@ exhaustive program analysis. It establishes no completeness, extraction-
 accuracy, migration-completion, decommission-safety, production-validation, or
 historical-retention claim. `GATE2-V2` remains `NOT_ESTABLISHED`; T30.6k is the
 separate exact caller-comparison migration.
+
+### T30.6k · Caller comparison integration
+
+**T30.6k ✅ · Caller comparison integration** *(2026-08-01; needs
+T30.6j)* — moves `compare_operation_callers` from its legacy evidence scan to
+one shared exact read of the old and replacement endpoints' current complete
+`repository-overlay` generations. Both repository names are authenticated,
+authorized, proven live, and proven non-deleting before the service reads
+either caller pointer, publication filesystem, or repository-specific cache.
+The exact reader holds both request-scoped publication leases, checks both
+bounded summaries in one final store transaction, and checks both final
+publication descriptors together before authorization for both repositories
+runs as the last result fence. Unknown, hidden, and deleting endpoints remain
+the same non-disclosing `404`; one authorized endpoint cannot be used to probe derived
+state for the other.
+
+Each side reports the same `current`, `missing`, `failed`, or `stale`
+generation state as Caller Map. Only a pair of current generations may be
+classified. If either side is unavailable, the whole comparison page is a
+typed gap with no rows, no classifications, no cursor, and no numeric total.
+It therefore never turns missing or stale input into an old-only/new-only
+claim and never treats a gap as zero callers. Operational store or filesystem
+failures remain errors. A current pair preserves the existing exact endpoint
+and declaration identities, immutable occurrence key, resolved-singleton unit
+key, and literal `old_only_evidence`, `both_evidence`, `new_only_evidence`, and
+`unresolved` vocabulary. One typed lexicographic comparator orders mixed
+resolved-unit and unresolved entries deterministically for every input
+permutation. Ambiguous, unavailable-attribution, inconsistent-
+unit, and extractor-abstention sites remain distinct unresolved occurrences;
+the migration does not strengthen them into resolved callers or migration
+verdicts.
+
+HTTP, UI, and MCP call the same transport-neutral service and the same exact
+engine as T30.6j. The comparison does not create a second publication reader,
+HMAC secret, reverse-index cache, binding registry, citation cache, or legacy
+coverage/attribution snapshot. A first page uses both exact endpoint indexes
+and inspects at most 50,000 protocol/operation-bucket positions across them,
+charged before declaration-lineage and optional filters. It derives one
+compact two-index comparison binding containing integer positions and bounded
+classification metadata, admitted under the existing shared limit of eight
+live bindings, 200,000 aggregate retained positions, and an up-to-five-minute
+lifetime. Admission may pressure-retire only idle bindings after preflight;
+active and retired-in-flight bindings remain fully counted. A process restart,
+expiry, or pressure retirement requires a new first page.
+
+The opaque HMAC cursor binds the normalized query, level, filters, ordering,
+page size, both repository authorization projections, both complete semantic
+generation/manifest/pair-set digests, both monotonic publication revisions,
+both non-repeating publication incarnations, the compact comparison binding,
+and next offset. Either side may change independently, and a permission,
+generation, revision, incarnation, lease, or descriptor transition on either
+side conflicts rather than continuing against the surviving side. The
+complete `A → B → A` case remains fenced independently for each endpoint.
+
+Pages default to 50 and contain at most 100 classified rows. Each side of one
+row keeps its exact occurrence count and at most four source citations with an
+explicit truncation marker, while the whole page hydrates at most 100 canonical
+caller records. A resolved unit's potentially large attribution is emitted
+once on the comparison row and omitted from its citation samples, so the unit
+projection cannot double the inherited maximum-page transport posture. Every
+citation is the same compact `caller-map-citation-v1`
+token used by Caller Map. The HTTP exact-citation route and MCP
+`read_operation_caller_citation` reauthorize the cited repository, reopen and
+fence its exact publication, reread the exact caller record, resolve the
+immutable `commit:path`, verify Git object ID and complete blob digest, and
+return only the cited byte range. Comparison creates no broader tree,
+directory, unrelated-path, whole-file, focused-search, or local-evidence read
+authority.
+
+The steady-state-cost review is explicit:
+
+- startup allocates empty comparison state and performs no caller scan,
+  publication open, Git read, content hash, store write, mirror lock, or child
+  work;
+- a cold first page may acquire at most two parsed complete publications and
+  32,768 pair references total, then stream each missing reverse index once
+  beneath the shared two-publication cold-admission, one-index-build, and
+  128-MiB-per-index counted-identity bounds;
+- a warm first page reuses both exact indexes, inspects at most 50,000
+  protocol/operation-bucket positions before lineage and optional filters, and
+  stores only its compact bounded binding rather than copying
+  canonical records;
+- a warm continuation does not rescan either reverse index. It reacquires both
+  request-scoped leases, rereads at most 100 selected canonical records, and
+  performs the two publications' bounded file-identity/final-authority sweeps
+  without caller-content hashes, corpus walks, mirror locks, Git source reads,
+  store mutations, or child processes. Shared-registry eviction or restart can
+  still reintroduce the already bounded cold publication validation;
+- locks cover only the shared registry/binding bookkeeping and are not held
+  across publication streaming, canonical-record hydration, final store
+  fences, authorization calls, Git/blob citation work, or response encoding.
+  The existing eight active exact-service requests, two citation Git/blob
+  phases, shared index/binding caps, and transport-after-gate caveat remain the
+  process bounds.
+
+Acceptance covers old-only, both, new-only, and unresolved neutral fixtures;
+whole-page missing/failed/stale gaps; independent old and replacement
+transitions; pre-read and result-time permission loss; two-sided cursor
+binding; bounded scan, page, hydration, citation, and retained-reference
+limits; exact immutable citation reads; HTTP/UI/MCP parity; and the full merge
+bar.
+
+Workbench Impact deliberately remains on its legacy caller reader until
+T30.6l. This static direct-syntax comparison establishes no runtime use,
+completeness, extraction accuracy, migration completion, decommission safety,
+production validation, or historical-publication retention bound.
+`GATE2-V2` remains `NOT_ESTABLISHED`.

@@ -11,9 +11,10 @@ and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
 source-lane classification, T30.6e focused local-evidence base-lane
 consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
 materialization, T30.6h direct caller-leaf execution, T30.6i atomic complete
-caller-generation publication, and T30.6j authorized exact Caller Map reads
-are shipped; T30.6k caller comparison integration is next.
-Completed Epics 0–24, Epic 29, T30.1–T30.6j, and P5 hardening are
+caller-generation publication, T30.6j authorized exact Caller Map reads, and
+T30.6k exact caller comparison integration are shipped; T30.6l Workbench
+Impact caller integration is next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6k, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -23,16 +24,17 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6k · Caller comparison integration** is next. T30.6a–T30.6j now provide
+**T30.6l · Workbench Impact caller integration** is next. T30.6a–T30.6k now provide
 bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, and the adapter-free immutable catalog
 lifecycle, bounded gRPC/Thrift resolver materialization, independently durable
 direct caller-leaf artifacts, one atomic complete-generation authority, and
-authorized revision-bound Caller Map paging and exact-range citations. The
-public Caller Map now uses only that repository-overlay authority; migration
-comparison and Workbench Impact deliberately remain on their legacy evidence
-reader until T30.6k and T30.6l respectively.
+authorized revision-bound Caller Map paging and exact-range citations, plus a
+jointly fenced exact old/replacement caller comparison. The public Caller Map
+and migration comparison now use only that repository-overlay authority;
+Workbench Impact deliberately remains on its legacy caller reader until
+T30.6l.
 The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
@@ -557,7 +559,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6k next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6l next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -963,16 +965,20 @@ set, manifest, monotonic publication revision, and the non-repeating store-
 owned exact-writer-claim-and-nonce publication incarnation; compact citations share the
 capped, pressure-retirable, up-to-five-minute request binding, reauthorize, and return only their immutable object- and digest-verified byte range through
 the shared HTTP/MCP service. Missing, failed, and stale generations never
-become zero callers or partial rows. Comparison and Workbench remain separately
-scheduled T30.6k/T30.6l migrations.
+become zero callers or partial rows. T30.6k has now migrated comparison;
+Workbench remains the separately scheduled T30.6l migration.
 
-**T30.6k · Caller comparison integration** *(needs T30.6j)* — bind migration
-comparison to exact authorized caller-generation snapshots without changing
-old/replacement declaration identity or unresolved vocabulary. Missing or
-stale authorized input remains a typed gap, cursors bind both sides, and no
-caller row is inferred from absence. AC: old-only/both/new-only/unresolved
-neutral fixtures, independent side transitions, permission loss, bounded
-paging, immutable citations, full merge bar.
+**T30.6k ✅ · Caller comparison integration** *(2026-08-01; needs T30.6j)* —
+completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306k--caller-comparison-integration).
+Migration comparison now authorizes both endpoint repositories before derived
+access and jointly fences their exact complete caller-generation summaries and
+final descriptors. A missing, failed, or stale side makes the whole page a
+typed gap without rows, classifications, cursor, or numeric total. Current
+pairs preserve old/replacement declaration identity and the existing
+old-only/both/new-only/unresolved vocabulary, use one compact bounded two-index
+binding and an HMAC cursor over both full publication identities, and return
+only shared exact-range citations.
 
 **T30.6l · Workbench Impact caller integration** *(needs T30.6k)* — compose the
 exact caller generation through the existing Workbench revision/evidence

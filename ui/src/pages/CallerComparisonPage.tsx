@@ -20,6 +20,7 @@ import { OpenIcon } from '../icons'
 import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import ExactCallerCitation from './ExactCallerCitation'
 
 const pageSize = 100
 const maxCursorHistory = 500
@@ -466,50 +467,21 @@ function ComparisonResults({
       {!loading && page && (
         <>
           <ComparisonProgress page={page} pageIndex={pageIndex} />
-          <ComparisonRows rows={page.rows} />
-          <Pager
-            pageIndex={pageIndex}
-            nextCursor={page.pagination.next_cursor ?? ''}
-            canRememberNext={cursors.length < maxCursorHistory}
-            onPrevious={() => setPageIndex((value) => Math.max(0, value - 1))}
-            onNext={() => {
-              const next = page.pagination.next_cursor
-              if (!next || cursors.length >= maxCursorHistory) return
-              setCursors((values) => [...values.slice(0, pageIndex + 1), next])
-              setPageIndex((value) => value + 1)
-            }}
-          />
-          <details className={css({
-            marginTop: '14px',
-            border: `1px solid ${tok.cardBorder}`,
-            backgroundColor: tok.pageBg,
-          })}>
-            <summary className={css({
-              padding: '10px 12px',
-              cursor: 'pointer',
-              color: tok.textSecondary,
-              fontSize: '11px',
-              backgroundColor: tok.bandBg,
-              ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
-            })}>
-              Shared coverage certificate · {page.coverage.repository_count} visible repositories · {shortID(page.coverage.digest)}
-            </summary>
-            <div className={css({ padding: '10px 12px', color: tok.textTertiary, fontSize: '10px', lineHeight: '16px' })}>
-              Domains: {page.coverage.domains.join(', ')}. The same union certificate binds both endpoint classifications.
-              <div className={css({ marginTop: '6px', display: 'grid', gap: '2px' })} data-testid="comparison-coverage-states">
-                {page.coverage.repositories.flatMap((repository) =>
-                  repository.runs.map((run) => (
-                    <span key={`${repository.repository}:${run.domain}`}>
-                      {repository.repository} · {run.domain} ·{' '}
-                      {run.status !== 'published'
-                        ? 'not published / unsupported — evidence for this side is absent, not empty'
-                        : `${run.fresh ? 'fresh' : 'stale'}${run.failures?.length ? ` · ${run.failures.length} recorded failure${run.failures.length === 1 ? '' : 's'}` : ''}`}
-                    </span>
-                  )),
-                )}
-              </div>
-            </div>
-          </details>
+          <ComparisonRows page={page} />
+          {page.matching_rows_state !== 'unavailable' && (
+            <Pager
+              pageIndex={pageIndex}
+              nextCursor={page.pagination.next_cursor ?? ''}
+              canRememberNext={cursors.length < maxCursorHistory}
+              onPrevious={() => setPageIndex((value) => Math.max(0, value - 1))}
+              onNext={() => {
+                const next = page.pagination.next_cursor
+                if (!next || cursors.length >= maxCursorHistory) return
+                setCursors((values) => [...values.slice(0, pageIndex + 1), next])
+                setPageIndex((value) => value + 1)
+              }}
+            />
+          )}
           <div className={css({
             marginTop: '12px',
             padding: '11px 12px',
@@ -619,20 +591,30 @@ function ComparisonProgress({ page, pageIndex }: { page: ComparisonResponse; pag
   const tok = usePhebsTokens()
   const start = page.rows.length === 0 ? 0 : pageIndex * pageSize + 1
   const end = pageIndex * pageSize + page.rows.length
+  const unavailable = page.matching_rows_state === 'unavailable'
   return (
-    <div className={css({
+    <div
+      data-testid="caller-comparison-progress"
+      data-matching-rows-state={page.matching_rows_state ?? 'legacy'}
+      className={css({
       padding: '10px 12px',
-      border: `1px solid ${tok.cardBorder}`,
+      border: `1px solid ${unavailable ? tok.statusAmber : tok.cardBorder}`,
       borderBottom: 'none',
       backgroundColor: tok.bandBg,
       color: tok.textSecondary,
       fontSize: '11px',
     })}>
-      {page.total_rows === 0
-        ? 'No matching comparison evidence'
+      {unavailable
+        ? 'Comparison rows and totals unavailable'
+        : page.total_rows === 0
+        ? 'No comparison rows matched both exact generation snapshots'
+        : page.total_rows === undefined
+        ? 'Comparison total unavailable'
         : `Rows ${start}–${end} of ${page.total_rows}`}
       <span className={css({ marginLeft: '8px', color: tok.textTertiary })}>
-        {page.pagination.complete
+        {unavailable
+          ? 'No partial page, classification, or zero-caller conclusion is shown.'
+          : page.pagination.complete
           ? `Exact snapshot exhausted on page ${pageIndex + 1}.`
           : `Traversed through at least ${end}; continue this exact snapshot.`}
       </span>
@@ -640,10 +622,12 @@ function ComparisonProgress({ page, pageIndex }: { page: ComparisonResponse; pag
   )
 }
 
-function ComparisonRows({ rows }: { rows: CallerComparisonRow[] }) {
+function ComparisonRows({ page }: { page: ComparisonResponse }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  const rows = page.rows
   if (rows.length === 0) {
+    const unavailable = page.matching_rows_state === 'unavailable'
     return (
       <div className={css({
         padding: '26px',
@@ -652,8 +636,9 @@ function ComparisonRows({ rows }: { rows: CallerComparisonRow[] }) {
         fontSize: '12px',
         lineHeight: '18px',
       })}>
-        No matching static evidence within this displayed scope. This does not
-        establish completion, absence, or decommissioning safety.
+        {unavailable
+          ? 'Comparison evidence is unavailable because at least one endpoint has no current complete caller generation. No partial rows are classified, and this is not evidence of zero callers.'
+          : 'No comparison rows matched these filters within both exact generation snapshots. This does not establish runtime completion, absence, or decommissioning safety.'}
       </div>
     )
   }
@@ -728,10 +713,12 @@ function ComparisonSide({ label, side }: { label: string; side: CallerComparison
       </div>
       {side.rows.length === 0 ? (
         <div className={css({ marginTop: '5px', color: tok.textTertiary, fontSize: '10px' })}>
-          No matching evidence on this side.
+          No retained occurrence sample on this side; runtime absence is not inferred.
         </div>
       ) : side.rows.map((row) => (
-        <SourceCitation key={rowIdentity(row)} row={row} />
+        <div key={rowIdentity(row)} className={css({ marginTop: '6px' })}>
+          <ExactCallerCitation source={row.source} />
+        </div>
       ))}
       {side.rows_truncated && (
         <div className={css({ marginTop: '5px', color: tok.statusAmber, fontSize: '9px' })}>
@@ -739,38 +726,6 @@ function ComparisonSide({ label, side }: { label: string; side: CallerComparison
         </div>
       )}
     </section>
-  )
-}
-
-function SourceCitation({ row }: { row: CallerMapRow }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <a
-      href={href('/file', {
-        repo: row.source.repository,
-        path: row.source.path,
-        ref: row.source.commit,
-        L: String(row.source.start_line),
-      })}
-      className={css({
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        marginTop: '6px',
-        color: tok.accent,
-        fontFamily: FONTS.MONO,
-        fontSize: '9px',
-        lineHeight: '15px',
-        textDecoration: 'none',
-        overflowWrap: 'anywhere',
-        ':hover': { textDecoration: 'underline' },
-        ':focus-visible': { outline: `2px solid ${tok.accent}` },
-      })}
-    >
-      {row.source.repository}/{row.source.path}:{row.source.start_line}
-      <OpenIcon size={10} />
-    </a>
   )
 }
 
@@ -785,7 +740,9 @@ function EndpointIdentity({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const declarationSource = snapshot?.declaration.sources[0]
+  const declarationSource = snapshot?.declaration?.sources[0]
+  const exact = snapshot?.matching_rows_state === 'exact'
+  const generation = snapshot?.generation
   return (
     <section className={css({
       padding: '10px 11px',
@@ -814,9 +771,41 @@ function EndpointIdentity({
       <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '9px', overflowWrap: 'anywhere' })}>
         {endpoint.protocol} · {endpoint.repository} · {shortID(endpoint.declaration_lineage)}
       </div>
-      {snapshot && (
+      {generation && (
+        <div
+          data-testid="caller-comparison-generation"
+          data-matching-rows-state={snapshot?.matching_rows_state ?? ''}
+          className={css({
+            display: 'grid',
+            gap: '3px',
+            marginTop: '7px',
+            paddingTop: '6px',
+            borderTop: `1px solid ${tok.innerSep}`,
+            color: tok.textTertiary,
+            fontSize: '9px',
+            lineHeight: '14px',
+          })}
+        >
+          <span className={css({ color: exact ? tok.statusGreen : tok.statusAmber, fontWeight: 650 })}>
+            {exact ? 'exact rows' : 'rows unavailable'} · generation {generation.state}
+          </span>
+          {generation.reason && (
+            <span>{generation.reason}. This side does not support an absence conclusion.</span>
+          )}
+          <span className={css({ fontFamily: FONTS.MONO, overflowWrap: 'anywhere' })}>
+            revision {generation.publication_revision ?? 'unavailable'}
+            {generation.commit ? ` · commit ${shortID(generation.commit)}` : ''}
+            {generation.generation_digest
+              ? ` · generation ${shortID(generation.generation_digest)}`
+              : ''}
+          </span>
+        </div>
+      )}
+      {!generation && snapshot && (snapshot.coverage_digest || snapshot.attribution_digest) && (
         <div className={css({ marginTop: '5px', color: tok.textTertiary, fontFamily: FONTS.MONO, fontSize: '8px' })}>
-          coverage {shortID(snapshot.coverage_digest)} · attribution {shortID(snapshot.attribution_digest)}
+          {snapshot.coverage_digest && `coverage ${shortID(snapshot.coverage_digest)}`}
+          {snapshot.coverage_digest && snapshot.attribution_digest && ' · '}
+          {snapshot.attribution_digest && `attribution ${shortID(snapshot.attribution_digest)}`}
         </div>
       )}
       {declarationSource && (

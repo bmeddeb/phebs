@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"time"
 
@@ -100,6 +101,7 @@ type CallerGenerationPublicationStore interface {
 	ListCallerGenerationPublicationSummaries(context.Context) ([]CallerGenerationPublicationSummary, error)
 	CallerGenerationPublicationCurrent(context.Context, CallerGenerationPublication) (bool, error)
 	CallerGenerationPublicationSummaryAuthorityCurrent(context.Context, CallerGenerationPublicationSummary) (bool, error)
+	CallerGenerationPublicationSummariesAuthorityCurrent(context.Context, []CallerGenerationPublicationSummary) (bool, error)
 	CallerGenerationPublicationSummaryCurrent(context.Context, CallerGenerationPublicationSummary) (bool, error)
 	ClearCallerGenerationPublication(context.Context, string) error
 	ClearAllCallerPublicationStateForRestore(context.Context) error
@@ -126,6 +128,14 @@ type callerGenerationPublicationSummaryRec struct {
 type callerGenerationCurrentResult struct {
 	Current            bool `json:"current"`
 	PairPayloadInvalid bool `json:"pair_payload_invalid"`
+}
+
+type callerGenerationSummaryAuthorityBinding struct {
+	RepositoryRID  models.RecordID                    `json:"repository_rid"`
+	CandidateRID   models.RecordID                    `json:"candidate_rid"`
+	ResolverRID    models.RecordID                    `json:"resolver_rid"`
+	PublicationRID models.RecordID                    `json:"publication_rid"`
+	Summary        CallerGenerationPublicationSummary `json:"summary"`
 }
 
 type callerPublicationRepositoryEligibleResult struct {
@@ -1059,6 +1069,167 @@ func (s *Surreal) CallerGenerationPublicationSummaryAuthorityCurrent(
 	summary CallerGenerationPublicationSummary,
 ) (bool, error) {
 	return s.callerGenerationPublicationSummaryCurrent(ctx, summary, false)
+}
+
+const callerGenerationPublicationSummariesAuthorityCurrentSQL = `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $migration_version LIMIT 1) = 1;
+LET $authorities = $bindings.map(|$binding| {
+	expected: $binding.summary,
+	repository: (SELECT indexed_commit_hash, indexed_analysis_unit, deleting,
+		caller_publication_revision FROM $binding.repository_rid)[0],
+	candidate: (SELECT head_commit, unit_digest, manifest_digest,
+		policy_digest, control_revision FROM $binding.candidate_rid)[0],
+	resolver: (SELECT head_commit, unit_digest, candidate_manifest_digest,
+		declaration_set_digest, generation_digest, manifest_digest,
+		control_revision, writer_schema FROM $binding.resolver_rid)[0],
+	publication: (SELECT ` + callerGenerationPublicationSummaryProjection + `
+		FROM $binding.publication_rid)[0]
+});
+LET $checks = $authorities.map(|$authority|
+	$writer_ok AND $authority.repository != NONE
+		AND ($authority.repository.deleting = NONE
+			OR $authority.repository.deleting = false)
+		AND $authority.repository.indexed_commit_hash =
+			$authority.expected.generation.head_commit
+		AND ($authority.repository.indexed_analysis_unit.digest ?? '') =
+			$authority.expected.generation.unit_digest
+		AND $authority.repository.caller_publication_revision =
+			$authority.expected.publication_revision
+		AND $authority.candidate != NONE
+		AND $authority.candidate.head_commit =
+			$authority.expected.generation.head_commit
+		AND $authority.candidate.unit_digest =
+			$authority.expected.generation.unit_digest
+		AND $authority.candidate.manifest_digest =
+			$authority.expected.generation.candidate_manifest_digest
+		AND $authority.candidate.policy_digest =
+			$authority.expected.generation.candidate_policy_digest
+		AND $authority.candidate.control_revision =
+			$authority.expected.generation.candidate_control_revision
+		AND $authority.resolver != NONE
+		AND $authority.resolver.head_commit =
+			$authority.expected.generation.head_commit
+		AND $authority.resolver.unit_digest =
+			$authority.expected.generation.unit_digest
+		AND $authority.resolver.candidate_manifest_digest =
+			$authority.expected.generation.candidate_manifest_digest
+		AND $authority.resolver.declaration_set_digest =
+			$authority.expected.generation.declaration_set_digest
+		AND $authority.resolver.generation_digest =
+			$authority.expected.generation.resolver_generation_digest
+		AND $authority.resolver.manifest_digest =
+			$authority.expected.generation.resolver_manifest_digest
+		AND $authority.resolver.control_revision =
+			$authority.expected.generation.resolver_control_revision
+		AND $authority.resolver.writer_schema =
+			$authority.expected.generation.resolver_writer_schema
+		AND $authority.publication != NONE
+		AND $authority.publication.repository =
+			$authority.expected.generation.repository
+		AND $authority.publication.generation =
+			$authority.expected.generation
+		AND $authority.publication.generation_digest =
+			$authority.expected.generation.digest
+		AND $authority.publication.pair_payload_count =
+			$authority.expected.pair_count
+		AND $authority.publication.pair_payload_digest =
+			$authority.expected.pair_payload_digest
+		AND $authority.publication.pair_set_digest =
+			$authority.expected.pair_set_digest
+		AND $authority.publication.pair_count =
+			$authority.expected.pair_count
+		AND $authority.publication.artifact_count =
+			$authority.expected.artifact_count
+		AND $authority.publication.result_count =
+			$authority.expected.result_count
+		AND $authority.publication.abstention_count =
+			$authority.expected.abstention_count
+		AND $authority.publication.canonical_bytes =
+			$authority.expected.canonical_bytes
+		AND $authority.publication.staging_bytes =
+			$authority.expected.staging_bytes
+		AND $authority.publication.peak_open_files =
+			$authority.expected.peak_open_files
+		AND $authority.publication.manifest_digest =
+			$authority.expected.manifest_digest
+		AND $authority.publication.manifest_path =
+			$authority.expected.manifest_path
+		AND $authority.publication.publication_revision =
+			$authority.expected.publication_revision
+		AND $authority.publication.publication_incarnation =
+			$authority.expected.publication_incarnation
+		AND $authority.publication.writer_schema = $writer_schema
+);
+RETURN [{ current: array::all($checks) }];
+COMMIT;`
+
+// CallerGenerationPublicationSummariesAuthorityCurrent is the joint bounded
+// warm-path fence used by two-sided products. It validates and deduplicates one
+// or two already cold-authenticated summaries, then observes every mutable
+// store authority for the retained publications in one Surreal transaction.
+// Like the scalar warm fence, it checks actual pair-array lengths but does not
+// rehash pair payloads.
+func (s *Surreal) CallerGenerationPublicationSummariesAuthorityCurrent(
+	ctx context.Context,
+	summaries []CallerGenerationPublicationSummary,
+) (bool, error) {
+	if len(summaries) < 1 || len(summaries) > 2 {
+		return false, errors.New(
+			"check caller generation summary authorities: requires one or two summaries",
+		)
+	}
+	bindings := make([]callerGenerationSummaryAuthorityBinding, 0, len(summaries))
+	for index, summary := range summaries {
+		recordID := callerGenerationPublicationID(summary.Generation.Repository)
+		validated, err := validateCallerGenerationPublicationSummary(
+			callerGenerationPublicationSummaryRec{
+				CallerGenerationPublicationSummary: summary,
+				Repository:                         summary.Generation.Repository,
+				GenerationDigest:                   summary.Generation.Digest,
+				RecID:                              &recordID,
+			},
+		)
+		if err != nil {
+			return false, fmt.Errorf(
+				"check caller generation summary authorities row %d: %w",
+				index, err,
+			)
+		}
+		if len(bindings) == 1 &&
+			reflect.DeepEqual(bindings[0].Summary, validated) {
+			continue
+		}
+		bindings = append(bindings, callerGenerationSummaryAuthorityBinding{
+			RepositoryRID:  repoID(validated.Generation.Repository),
+			CandidateRID:   candidateManifestPublicationID(validated.Generation.Repository),
+			ResolverRID:    resolverCatalogPublicationID(validated.Generation.Repository),
+			PublicationRID: callerGenerationPublicationID(validated.Generation.Repository),
+			Summary:        validated,
+		})
+	}
+	results, err := surrealdb.Query[[]callerGenerationCurrentResult](
+		ctx, s.db, callerGenerationPublicationSummariesAuthorityCurrentSQL,
+		map[string]any{
+			"migration_rid":     callerGenerationPublicationMigrationID(),
+			"migration_version": callerGenerationPublicationMigrationVersion,
+			"bindings":          bindings,
+			"writer_schema":     CallerGenerationPublicationWriterSchema,
+		},
+	)
+	if err != nil {
+		return false, fmt.Errorf(
+			"check caller generation summary authorities: %w", err,
+		)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) != 1 {
+		return false, errors.New(
+			"check caller generation summary authorities: empty result",
+		)
+	}
+	return rows[0].Current, nil
 }
 
 func (s *Surreal) callerGenerationPublicationSummaryCurrent(

@@ -122,7 +122,7 @@ func apiCapabilities(opts Options) []string {
 	if opts.CallerMap != nil || NewCallerMapService(opts) != nil {
 		capabilities = append(capabilities, callerMapCapability)
 	}
-	if NewCallerComparisonService(opts) != nil {
+	if opts.CallerComparison != nil || NewCallerComparisonService(opts) != nil {
 		capabilities = append(capabilities, callerComparisonCapability)
 	}
 	if opts.InvestigationViews != nil {

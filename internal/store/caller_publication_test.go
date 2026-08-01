@@ -392,6 +392,78 @@ func TestCallerGenerationPublicationSummaryReadAndCurrent(t *testing.T) {
 	if err != nil || current {
 		t.Fatalf("recreated exact summary current = %t, %v", current, err)
 	}
+	if err := s.SetJobStatus(ctx, *fixture.job, store.StatusDone, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.CancelPendingJobs(
+		ctx, store.JobCallerLeaf, fixture.repository,
+	); err != nil {
+		t.Fatal(err)
+	}
+	// Reuse this store process for the two-authority transaction coverage. The
+	// first fixture's crash-recovery successor must be canceled because
+	// ClaimJob is intentionally global by kind rather than target.
+	right := newCallerPublicationFixture(
+		t, s, "github.com/acme/caller-publication-summary-right",
+	)
+	if err := s.PublishCallerGeneration(
+		ctx, *right.job, right.publication,
+	); err != nil {
+		t.Fatal(err)
+	}
+	rightSummary, err := s.GetCallerGenerationPublicationSummary(
+		ctx, right.repository,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err = s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, []store.CallerGenerationPublicationSummary{*summary, *rightSummary},
+	)
+	if err != nil || !current {
+		t.Fatalf("joint summaries current = %t, %v", current, err)
+	}
+	current, err = s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, []store.CallerGenerationPublicationSummary{*summary},
+	)
+	if err != nil || !current {
+		t.Fatalf("single summary current = %t, %v", current, err)
+	}
+	current, err = s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, []store.CallerGenerationPublicationSummary{*summary, *summary},
+	)
+	if err != nil || !current {
+		t.Fatalf("deduplicated summary current = %t, %v", current, err)
+	}
+	jointStale := *rightSummary
+	jointStale.PublicationRevision++
+	current, err = s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, []store.CallerGenerationPublicationSummary{*summary, jointStale},
+	)
+	if err != nil || current {
+		t.Fatalf("one stale summary current = %t, %v", current, err)
+	}
+	if err := s.ClearCallerGenerationPublication(ctx, right.repository); err != nil {
+		t.Fatal(err)
+	}
+	current, err = s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, []store.CallerGenerationPublicationSummary{*summary, *rightSummary},
+	)
+	if err != nil || current {
+		t.Fatalf("transitioned right summary current = %t, %v", current, err)
+	}
+	if _, err := s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, nil,
+	); err == nil {
+		t.Fatal("empty joint fence succeeded")
+	}
+	if _, err := s.CallerGenerationPublicationSummariesAuthorityCurrent(
+		ctx, []store.CallerGenerationPublicationSummary{
+			*summary, *rightSummary, *summary,
+		},
+	); err == nil {
+		t.Fatal("oversized joint fence succeeded")
+	}
 	if err := s.ClearCallerGenerationPublication(ctx, fixture.repository); err != nil {
 		t.Fatal(err)
 	}

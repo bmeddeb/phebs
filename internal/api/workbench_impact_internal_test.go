@@ -232,6 +232,7 @@ func (fake *impactComparisonFake) Compare(
 		"comparison",
 		[]string{"proto-contract", "grpc-caller"},
 	)
+	total := 1
 	return &CallerComparisonPage{
 		SchemaVersion: callerComparisonSchemaVersion,
 		Query:         query,
@@ -247,9 +248,9 @@ func (fake *impactComparisonFake) Compare(
 			Level: "occurrence", Key: "caller.go:1",
 			Classification: "old_only_evidence",
 		}},
-		TotalRows:  1,
+		TotalRows:  &total,
 		Pagination: CallerMapPagination{Complete: true},
-		Coverage:   coverage,
+		Coverage:   &coverage,
 	}, nil
 }
 
@@ -476,6 +477,53 @@ func impactService(
 		compatibility: workbench,
 		resources:     resources,
 	}, catalog, callers, comparison, fields
+}
+
+func TestWorkbenchImpactUsesOnlyLegacyCallerServices(t *testing.T) {
+	workbench := &workbenchAPIFake{}
+	legacyCallers := &CallerMapService{}
+	publicCallers := &CallerMapService{}
+	legacyComparison := &CallerComparisonService{}
+	publicComparison := &CallerComparisonService{}
+	opts := Options{
+		Principal:              func(context.Context) string { return "user:t306k" },
+		Workbench:              workbench,
+		ContractCatalog:        &ContractCatalogService{},
+		CallerMap:              publicCallers,
+		LegacyCallerMap:        legacyCallers,
+		CallerComparison:       publicComparison,
+		LegacyCallerComparison: legacyComparison,
+		FieldReferences:        &FieldReferenceService{},
+	}
+	service := NewWorkbenchImpactService(opts)
+	if service == nil {
+		t.Fatal("Workbench Impact did not construct with explicit legacy readers")
+	}
+	if service.callers != legacyCallers || service.comparison != legacyComparison {
+		t.Fatalf(
+			"Workbench Impact readers = callers %p comparison %p, want legacy %p/%p",
+			service.callers, service.comparison, legacyCallers, legacyComparison,
+		)
+	}
+
+	// A public exact comparison must not become Workbench's provisional
+	// revision source when no legacy comparison can be constructed.
+	opts.LegacyCallerComparison = nil
+	if got := NewWorkbenchImpactService(opts); got != nil {
+		t.Fatal("Workbench Impact fell back to the public exact comparison")
+	}
+	if !slices.Contains(
+		apiCapabilities(Options{CallerComparison: publicComparison}),
+		callerComparisonCapability,
+	) {
+		t.Fatal("explicit public comparison was absent from version capabilities")
+	}
+	if slices.Contains(
+		apiCapabilities(Options{LegacyCallerComparison: legacyComparison}),
+		callerComparisonCapability,
+	) {
+		t.Fatal("legacy Workbench comparison leaked into version capabilities")
+	}
 }
 
 func TestWorkbenchImpactScenarioComposition(t *testing.T) {

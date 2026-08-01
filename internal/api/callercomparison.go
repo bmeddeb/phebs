@@ -16,20 +16,42 @@ import (
 )
 
 const (
-	callerComparisonSchemaVersion = "caller-comparison-v1"
-	callerComparisonCursorVersion = "caller-comparison-cursor-v1"
-	callerComparisonCapability    = "contract-caller-comparison"
-	callerComparisonCitationLimit = 4
+	callerComparisonSchemaVersion       = "caller-comparison-v2"
+	legacyCallerComparisonSchemaVersion = "caller-comparison-v1"
+	callerComparisonCursorVersion       = "caller-comparison-cursor-v1"
+	callerComparisonCapability          = "contract-caller-comparison"
+	callerComparisonCitationLimit       = 4
 )
 
 // CallerComparisonService is the shared old-to-replacement classification
-// engine. It builds both endpoint populations inside one authorization,
-// coverage, and attribution snapshot; transports only project its result.
+// engine. The public constructor binds the same exact repository-overlay
+// engine as Caller Map. The legacy constructor exists only for Workbench
+// until T30.6l composes that product's revision snapshot with exact callers.
 type CallerComparisonService struct {
-	opts Options
+	opts  Options
+	exact *exactCallerMapService
 }
 
 func NewCallerComparisonService(opts Options) *CallerComparisonService {
+	if !opts.CallerMapEnabled ||
+		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil ||
+		opts.CallerReader == nil || strings.TrimSpace(opts.DataDir) == "" {
+		return nil
+	}
+	callerMap := opts.CallerMap
+	if callerMap == nil {
+		callerMap = NewCallerMapService(opts)
+	}
+	if callerMap == nil || callerMap.exact == nil {
+		return nil
+	}
+	return &CallerComparisonService{opts: opts, exact: callerMap.exact}
+}
+
+// NewLegacyCallerComparisonService retains the pre-T30.6k evidence-backed
+// comparison solely for Workbench Impact's separately scheduled T30.6l
+// migration and historical acceptance fixtures.
+func NewLegacyCallerComparisonService(opts Options) *CallerComparisonService {
 	if !opts.CallerMapEnabled ||
 		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil {
 		return nil
@@ -53,10 +75,12 @@ type CallerComparisonQuery struct {
 }
 
 type CallerComparisonSnapshot struct {
-	Endpoint          CallerMapEndpoint    `json:"endpoint"`
-	Declaration       ContractCatalogClaim `json:"declaration"`
-	CoverageDigest    string               `json:"coverage_digest"`
-	AttributionDigest string               `json:"attribution_digest"`
+	Endpoint          CallerMapEndpoint     `json:"endpoint"`
+	Declaration       *ContractCatalogClaim `json:"declaration,omitempty"`
+	Generation        *CallerMapGeneration  `json:"generation,omitempty"`
+	MatchingRowsState string                `json:"matching_rows_state,omitempty"`
+	CoverageDigest    string                `json:"coverage_digest,omitempty"`
+	AttributionDigest string                `json:"attribution_digest,omitempty"`
 }
 
 type CallerComparisonSide struct {
@@ -75,15 +99,85 @@ type CallerComparisonRow struct {
 }
 
 type CallerComparisonPage struct {
-	SchemaVersion string                      `json:"schema_version"`
-	Query         CallerComparisonQuery       `json:"query"`
-	Old           CallerComparisonSnapshot    `json:"old"`
-	Replacement   CallerComparisonSnapshot    `json:"replacement"`
-	Rows          []CallerComparisonRow       `json:"rows"`
-	TotalRows     int                         `json:"total_rows"`
-	Pagination    CallerMapPagination         `json:"pagination"`
-	Coverage      extract.CoverageCertificate `json:"coverage"`
-	Caveat        string                      `json:"caveat"`
+	SchemaVersion     string                       `json:"schema_version"`
+	Query             CallerComparisonQuery        `json:"query"`
+	Old               CallerComparisonSnapshot     `json:"old"`
+	Replacement       CallerComparisonSnapshot     `json:"replacement"`
+	Rows              []CallerComparisonRow        `json:"rows"`
+	TotalRows         *int                         `json:"total_rows,omitempty"`
+	MatchingRowsState string                       `json:"matching_rows_state,omitempty"`
+	Pagination        CallerMapPagination          `json:"pagination"`
+	Coverage          *extract.CoverageCertificate `json:"coverage,omitempty"`
+	Caveat            string                       `json:"caveat"`
+}
+
+// CallerComparisonExactSnapshot is the public T30.6k endpoint contract. The
+// legacy Workbench snapshot remains separately represented by
+// CallerComparisonSnapshot until T30.6l, but public HTTP and MCP schemas must
+// not make exact generation/state fields optional merely for that migration.
+type CallerComparisonExactSnapshot struct {
+	Endpoint          CallerMapEndpoint     `json:"endpoint"`
+	Declaration       *ContractCatalogClaim `json:"declaration,omitempty"`
+	Generation        CallerMapGeneration   `json:"generation"`
+	MatchingRowsState string                `json:"matching_rows_state" enum:"exact,unavailable"`
+}
+
+// CallerComparisonExactPage excludes every legacy evidence-plane digest and
+// coverage field. TotalRows remains optional because an unavailable side is a
+// typed gap, never an exact zero.
+type CallerComparisonExactPage struct {
+	SchemaVersion     string                        `json:"schema_version" enum:"caller-comparison-v2"`
+	Query             CallerComparisonQuery         `json:"query"`
+	Old               CallerComparisonExactSnapshot `json:"old"`
+	Replacement       CallerComparisonExactSnapshot `json:"replacement"`
+	Rows              []CallerComparisonRow         `json:"rows"`
+	TotalRows         *int                          `json:"total_rows,omitempty"`
+	MatchingRowsState string                        `json:"matching_rows_state" enum:"exact,unavailable"`
+	Pagination        CallerMapPagination           `json:"pagination"`
+	Caveat            string                        `json:"caveat"`
+}
+
+// AsExactCallerComparisonPage validates and projects the shared service result
+// onto its public v2 contract. It is exported so the MCP adapter can use the
+// identical envelope instead of independently reclassifying or reshaping it.
+func AsExactCallerComparisonPage(
+	page *CallerComparisonPage,
+) (*CallerComparisonExactPage, error) {
+	if page == nil || page.SchemaVersion != callerComparisonSchemaVersion ||
+		page.Old.Generation == nil || page.Replacement.Generation == nil ||
+		!stringIn(page.MatchingRowsState, "exact", "unavailable") ||
+		!stringIn(page.Old.MatchingRowsState, "exact", "unavailable") ||
+		!stringIn(page.Replacement.MatchingRowsState, "exact", "unavailable") {
+		return nil, errors.New("caller comparison exact envelope is invalid")
+	}
+	if page.MatchingRowsState == "exact" {
+		if page.Old.MatchingRowsState != "exact" ||
+			page.Replacement.MatchingRowsState != "exact" || page.TotalRows == nil {
+			return nil, errors.New("caller comparison exact envelope is inconsistent")
+		}
+	} else if page.TotalRows != nil || len(page.Rows) != 0 ||
+		page.Pagination.NextCursor != "" || !page.Pagination.Complete ||
+		page.Old.MatchingRowsState == "exact" &&
+			page.Replacement.MatchingRowsState == "exact" {
+		return nil, errors.New("caller comparison gap envelope is inconsistent")
+	}
+	return &CallerComparisonExactPage{
+		SchemaVersion: page.SchemaVersion, Query: page.Query,
+		Old: CallerComparisonExactSnapshot{
+			Endpoint: page.Old.Endpoint, Declaration: page.Old.Declaration,
+			Generation:        *page.Old.Generation,
+			MatchingRowsState: page.Old.MatchingRowsState,
+		},
+		Replacement: CallerComparisonExactSnapshot{
+			Endpoint:          page.Replacement.Endpoint,
+			Declaration:       page.Replacement.Declaration,
+			Generation:        *page.Replacement.Generation,
+			MatchingRowsState: page.Replacement.MatchingRowsState,
+		},
+		Rows: page.Rows, TotalRows: page.TotalRows,
+		MatchingRowsState: page.MatchingRowsState,
+		Pagination:        page.Pagination, Caveat: page.Caveat,
+	}, nil
 }
 
 type callerComparisonCursor struct {
@@ -110,6 +204,18 @@ type callerComparisonEntry struct {
 }
 
 func (s *CallerComparisonService) Compare(
+	ctx context.Context,
+	query CallerComparisonQuery,
+	pageSize int,
+	cursor string,
+) (*CallerComparisonPage, error) {
+	if s != nil && s.exact != nil {
+		return s.compareExact(ctx, query, pageSize, cursor)
+	}
+	return s.compareLegacy(ctx, query, pageSize, cursor)
+}
+
+func (s *CallerComparisonService) compareLegacy(
 	ctx context.Context,
 	query CallerComparisonQuery,
 	pageSize int,
@@ -307,21 +413,22 @@ func (s *CallerComparisonService) Compare(
 				)
 			}
 		}
+		totalRows := len(entries)
 		return &CallerComparisonPage{
-			SchemaVersion: callerComparisonSchemaVersion,
+			SchemaVersion: legacyCallerComparisonSchemaVersion,
 			Query:         query,
 			Old: CallerComparisonSnapshot{
-				Endpoint: query.Old, Declaration: oldDeclaration,
+				Endpoint: query.Old, Declaration: &oldDeclaration,
 				CoverageDigest:    certificate.Digest,
 				AttributionDigest: oldAttribution,
 			},
 			Replacement: CallerComparisonSnapshot{
-				Endpoint: query.Replacement, Declaration: replacementDeclaration,
+				Endpoint: query.Replacement, Declaration: &replacementDeclaration,
 				CoverageDigest:    certificate.Digest,
 				AttributionDigest: replacementAttribution,
 			},
-			Rows: rows, TotalRows: len(entries), Pagination: pagination,
-			Coverage: *certificate,
+			Rows: rows, TotalRows: &totalRows, Pagination: pagination,
+			Coverage: certificate,
 			Caveat:   "Static evidence comparison only; old-only, both, new-only, and unresolved describe matching source evidence within the displayed scope, not migration completion, runtime use, completeness, or decommissioning safety.",
 		}, nil
 	}
@@ -665,14 +772,11 @@ func registerCallerComparisonAPI(api huma.API, opts Options) {
 		PageSize              int    `query:"page_size" minimum:"0" maximum:"100"`
 		Cursor                string `query:"cursor" maxLength:"16384"`
 	}
-	type comparisonOut struct {
-		Body CallerComparisonPage
-	}
-	huma.Get(api, "/api/compare_operation_callers", func(
+	compare := func(
 		ctx context.Context,
 		in *comparisonIn,
-	) (*comparisonOut, error) {
-		result, err := service.Compare(ctx, CallerComparisonQuery{
+	) (*CallerComparisonPage, error) {
+		return service.Compare(ctx, CallerComparisonQuery{
 			Old: CallerMapEndpoint{
 				Protocol: in.OldProtocol, Repository: in.OldRepository,
 				Lineage: in.OldLineage, Operation: in.OldOperation,
@@ -689,9 +793,43 @@ func registerCallerComparisonAPI(api huma.API, opts Options) {
 			Ordering: in.Ordering, Level: in.Level,
 			Classification: in.Classification,
 		}, in.PageSize, in.Cursor)
+	}
+	if service.exact == nil {
+		// Historical acceptance fixtures and Workbench's explicitly injected
+		// legacy reader keep their v1 schema. Production never registers this
+		// branch; T30.6l removes the final legacy consumer.
+		type legacyComparisonOut struct {
+			Body CallerComparisonPage
+		}
+		huma.Get(api, "/api/compare_operation_callers", func(
+			ctx context.Context,
+			in *comparisonIn,
+		) (*legacyComparisonOut, error) {
+			result, err := compare(ctx, in)
+			if err != nil {
+				return nil, err
+			}
+			return &legacyComparisonOut{Body: *result}, nil
+		})
+		return
+	}
+	type exactComparisonOut struct {
+		Body CallerComparisonExactPage
+	}
+	huma.Get(api, "/api/compare_operation_callers", func(
+		ctx context.Context,
+		in *comparisonIn,
+	) (*exactComparisonOut, error) {
+		result, err := compare(ctx, in)
 		if err != nil {
 			return nil, err
 		}
-		return &comparisonOut{Body: *result}, nil
+		exact, err := AsExactCallerComparisonPage(result)
+		if err != nil {
+			return nil, huma.Error500InternalServerError(
+				"serialize exact caller comparison", err,
+			)
+		}
+		return &exactComparisonOut{Body: *exact}, nil
 	})
 }

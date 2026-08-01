@@ -118,8 +118,9 @@ aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
 classification, T30.6e focused local-evidence base-lane consumption, and
 T30.6f resolver-catalog lifecycle, T30.6g bounded resolver materialization,
 T30.6h direct caller-leaf execution artifacts, T30.6i atomic complete
-caller-generation publication, and T30.6j authorized exact Caller Map reads
-are shipped; T30.6k caller comparison integration is next. T30.6g registers the
+caller-generation publication, T30.6j authorized exact Caller Map reads, and
+T30.6k exact caller comparison integration are shipped; T30.6l Workbench
+Impact caller integration is next. T30.6g registers the
 ordered gRPC/Thrift resolver adapters and materializes one immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,
 `layout-snapshot.json`, and `generated-from-snapshot.json` inputs plus each
@@ -194,9 +195,14 @@ index-limit refusals use exact-key bounded negative entries rather than
 repeating full scans. HTTP, UI, and MCP share compact request-binding-backed
 exact-range citations that
 reauthorize and verify commit, path, Git object, blob digest, record, and range
-before returning only the cited bytes. Migration comparison and Workbench
-Impact intentionally remain on their legacy evidence reader until T30.6k and
-T30.6l.
+before returning only the cited bytes. T30.6k now uses that same exact engine
+for migration comparison in one authorization-first, jointly fenced two-
+generation read. Either unavailable side makes the whole page a typed gap
+without classifications or a numeric total; a current pair uses one compact
+shared-registry binding and a cursor over both complete publication identities.
+Workbench Impact intentionally remains on its legacy caller reader until
+T30.6l. The comparison creates no completeness, migration-completion,
+decommission-safety, or historical-retention claim.
 A physical test-search overlay,
 test-source association, automatic unit discovery, SCIP generation,
 pack-specific recognizer expansion, and per-file parser degradation remain

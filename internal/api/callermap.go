@@ -51,9 +51,8 @@ func NewCallerMapService(opts Options) *CallerMapService {
 }
 
 // NewLegacyCallerMapService keeps the pre-T30.6j evidence reader available
-// only to the comparison and Workbench integrations whose generation-bound
-// migrations are deliberately split into T30.6k and T30.6l. New product
-// routes must use NewCallerMapService.
+// only to Workbench Impact, whose generation-bound migration is deliberately
+// deferred to T30.6l. New product routes must use NewCallerMapService.
 func NewLegacyCallerMapService(opts Options) *CallerMapService {
 	if !opts.CallerMapEnabled ||
 		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil {

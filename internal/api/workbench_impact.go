@@ -97,15 +97,16 @@ func NewWorkbenchImpactService(opts Options) *WorkbenchImpactService {
 	if catalog == nil {
 		catalog = NewContractCatalogService(opts)
 	}
-	// T30.6j intentionally moves only the public Caller Map. Workbench's
-	// revision/evidence snapshot remains on its legacy plane until T30.6l.
+	// T30.6j/T30.6k intentionally move only the public Caller Map and caller
+	// comparison. Workbench's revision/evidence snapshot remains on its legacy
+	// plane until T30.6l.
 	callers := opts.LegacyCallerMap
 	if callers == nil {
 		callers = NewLegacyCallerMapService(opts)
 	}
-	comparison := opts.CallerComparison
+	comparison := opts.LegacyCallerComparison
 	if comparison == nil {
-		comparison = NewCallerComparisonService(opts)
+		comparison = NewLegacyCallerComparisonService(opts)
 	}
 	fields := opts.FieldReferences
 	if fields == nil {
@@ -897,6 +898,11 @@ func (service *WorkbenchImpactService) readWorkbenchComparisonStream(
 	if err != nil {
 		return workbenchImpactStreamCursor{}, nil, err
 	}
+	if value.TotalRows == nil || value.Coverage == nil {
+		return workbenchImpactStreamCursor{}, nil, errors.New(
+			"legacy workbench caller comparison omitted its coverage snapshot",
+		)
+	}
 	snapshot := digestJSON(struct {
 		Query       CallerComparisonQuery    `json:"query"`
 		Old         CallerComparisonSnapshot `json:"old"`
@@ -907,7 +913,7 @@ func (service *WorkbenchImpactService) readWorkbenchComparisonStream(
 		Query:       value.Query,
 		Old:         value.Old,
 		Replacement: value.Replacement,
-		Total:       value.TotalRows,
+		Total:       *value.TotalRows,
 		Coverage:    value.Coverage.Digest,
 	})
 	if hadPrevious && snapshot != previous.Snapshot {
@@ -921,7 +927,7 @@ func (service *WorkbenchImpactService) readWorkbenchComparisonStream(
 		"contract-caller-comparison",
 		workbenchSelectionTarget(current)+"->"+
 			workbenchSelectionTarget(replacement),
-		value.Coverage,
+		*value.Coverage,
 	)
 	workbenchAddCapability(
 		page,

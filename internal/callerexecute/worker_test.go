@@ -355,6 +355,24 @@ func (state *workerTestStore) CallerGenerationPublicationSummaryAuthorityCurrent
 		publication.Generation.ResolverControlRevision == state.resolver.ControlRevision, nil
 }
 
+func (state *workerTestStore) CallerGenerationPublicationSummariesAuthorityCurrent(
+	ctx context.Context,
+	publications []store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	if len(publications) < 1 || len(publications) > 2 {
+		return false, errors.New("caller publication joint fence requires one or two summaries")
+	}
+	for _, publication := range publications {
+		current, err := state.CallerGenerationPublicationSummaryAuthorityCurrent(
+			ctx, publication,
+		)
+		if err != nil || !current {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
 func (state *workerTestStore) ClearCallerGenerationPublication(
 	context.Context,
 	string,

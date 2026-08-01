@@ -1230,12 +1230,27 @@ export interface CallerComparisonQuery {
   classification?: 'old_only_evidence' | 'both_evidence' | 'new_only_evidence' | 'unresolved'
 }
 
-export interface CallerComparisonSnapshot {
+interface CallerComparisonSnapshotBase {
   endpoint: CallerMapEndpoint
-  declaration: ContractCatalogClaim
-  coverage_digest: string
-  attribution_digest: string
+  declaration?: ContractCatalogClaim
+  // Retained only for the Workbench's legacy caller-comparison-v1 payload.
+  coverage_digest?: string
+  attribution_digest?: string
 }
+
+export interface CallerComparisonExactSnapshot extends CallerComparisonSnapshotBase {
+  generation: CallerMapGeneration
+  matching_rows_state: 'exact' | 'unavailable'
+}
+
+export interface CallerComparisonLegacySnapshot extends CallerComparisonSnapshotBase {
+  generation?: undefined
+  matching_rows_state?: undefined
+}
+
+export type CallerComparisonSnapshot =
+  | CallerComparisonExactSnapshot
+  | CallerComparisonLegacySnapshot
 
 export interface CallerComparisonSide {
   occurrence_count: number
@@ -1252,20 +1267,42 @@ export interface CallerComparisonRow {
   replacement: CallerComparisonSide
 }
 
-export interface CallerComparisonPage {
-  schema_version: string
+interface CallerComparisonPageBase {
   query: CallerComparisonQuery
   old: CallerComparisonSnapshot
   replacement: CallerComparisonSnapshot
   rows: CallerComparisonRow[]
-  total_rows: number
   pagination: {
     complete: boolean
     next_cursor?: string
   }
-  coverage: CoverageCertificate
   caveat: string
 }
+
+export interface CallerComparisonExactPage extends CallerComparisonPageBase {
+  schema_version: 'caller-comparison-v2'
+  old: CallerComparisonExactSnapshot
+  replacement: CallerComparisonExactSnapshot
+  // Omitted when either side has no current complete generation. In
+  // particular, an unavailable comparison never serializes a misleading 0.
+  total_rows?: number
+  matching_rows_state: 'exact' | 'unavailable'
+  coverage?: undefined
+}
+
+export interface CallerComparisonLegacyPage extends CallerComparisonPageBase {
+  schema_version: 'caller-comparison-v1'
+  old: CallerComparisonLegacySnapshot
+  replacement: CallerComparisonLegacySnapshot
+  total_rows: number
+  matching_rows_state?: undefined
+  // Workbench remains on the legacy evidence-plane payload until T30.6l.
+  coverage?: CoverageCertificate
+}
+
+export type CallerComparisonPage =
+  | CallerComparisonExactPage
+  | CallerComparisonLegacyPage
 
 export interface ImpactEvidenceRow {
   kind: 'operation_call' | 'field_reference' | 'unresolved_candidate'

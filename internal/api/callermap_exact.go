@@ -138,9 +138,41 @@ type exactCallerBinding struct {
 	declaration    ContractCatalogClaim
 	generation     CallerMapGeneration
 	excludedGoTest int
+	comparison     *exactCallerComparisonBinding
 	uses           int
 	retired        bool
 	finalized      bool
+}
+
+// exactCallerComparisonBinding retains only fixed-size union metadata and a
+// bounded sample of index positions. Exact caller records and their strings
+// remain owned by the at-most-two pinned reverse indexes.
+type exactCallerComparisonBinding struct {
+	old         exactCallerComparisonSource
+	replacement exactCallerComparisonSource
+	snapshot    string
+	entries     []exactCallerComparisonEntry
+}
+
+type exactCallerComparisonSource struct {
+	visibility  VisibilityContext
+	indexKey    string
+	publication callerexecute.PublicationBinding
+	declaration ContractCatalogClaim
+	generation  CallerMapGeneration
+}
+
+type exactCallerComparisonEntry struct {
+	kind              uint8
+	unresolved        bool
+	representativeOld bool
+	representative    int
+	oldCount          int
+	oldStart          int
+	oldEnd            int
+	replacementCount  int
+	replacementStart  int
+	replacementEnd    int
 }
 
 type exactCallerCursor struct {
@@ -161,6 +193,7 @@ type exactCallerCitation struct {
 	Binding    string `json:"binding"`
 	Position   int    `json:"position"`
 	RecordID   string `json:"record_id"`
+	Side       string `json:"side,omitempty"`
 }
 
 // CallerMapCitation is the only source content returned by a repository-
@@ -1100,6 +1133,39 @@ func sameExactCallerRecord(left, right exactCallerRecord) bool {
 	return reflect.DeepEqual(left, right)
 }
 
+func exactCallerBindingIndexKeys(binding *exactCallerBinding) []string {
+	if binding == nil {
+		return nil
+	}
+	if binding.comparison == nil {
+		if binding.indexKey == "" {
+			return nil
+		}
+		return []string{binding.indexKey}
+	}
+	oldKey := binding.comparison.old.indexKey
+	replacementKey := binding.comparison.replacement.indexKey
+	switch {
+	case oldKey == "" && replacementKey == "":
+		return nil
+	case oldKey == replacementKey || replacementKey == "":
+		return []string{oldKey}
+	case oldKey == "":
+		return []string{replacementKey}
+	default:
+		return []string{oldKey, replacementKey}
+	}
+}
+
+func exactCallerBindingPinsIndex(binding *exactCallerBinding, key string) bool {
+	for _, candidate := range exactCallerBindingIndexKeys(binding) {
+		if candidate == key {
+			return true
+		}
+	}
+	return false
+}
+
 func (service *exactCallerMapService) acquireIndex(key string) *exactCallerIndex {
 	service.mu.Lock()
 	defer service.mu.Unlock()
@@ -1173,7 +1239,7 @@ func (service *exactCallerMapService) indexAdmissionVictimLocked() (
 		}
 		bindings := make([]*exactCallerBinding, 0, retained.bindings)
 		for _, binding := range service.bindings {
-			if binding != nil && binding.indexKey == candidate &&
+			if binding != nil && exactCallerBindingPinsIndex(binding, candidate) &&
 				binding.uses == 0 && !binding.retired && !binding.finalized {
 				bindings = append(bindings, binding)
 			}
@@ -1215,9 +1281,14 @@ func (service *exactCallerMapService) retainBindingWithUse(
 	service.mu.Lock()
 	defer service.mu.Unlock()
 	service.expireBindingsLocked(time.Now())
-	index := service.indexes[binding.indexKey]
-	if index == nil {
+	indexKeys := exactCallerBindingIndexKeys(binding)
+	if len(indexKeys) == 0 {
 		return huma.Error409Conflict("caller map index snapshot expired")
+	}
+	for _, indexKey := range indexKeys {
+		if service.indexes[indexKey] == nil {
+			return huma.Error409Conflict("caller map index snapshot expired")
+		}
 	}
 	victims, ok := service.bindingAdmissionVictimsLocked(len(binding.records))
 	if !ok {
@@ -1239,7 +1310,9 @@ func (service *exactCallerMapService) retainBindingWithUse(
 	service.bindings[binding.id] = binding
 	service.bindingCount++
 	service.bindingRefs += len(binding.records)
-	index.bindings++
+	for _, indexKey := range indexKeys {
+		service.indexes[indexKey].bindings++
+	}
 	if active {
 		binding.uses++
 	}
@@ -1348,9 +1421,10 @@ func (service *exactCallerMapService) finalizeBindingLocked(
 	if service.bindingCount > 0 {
 		service.bindingCount--
 	}
-	if index := service.indexes[binding.indexKey]; index != nil &&
-		index.bindings > 0 {
-		index.bindings--
+	for _, indexKey := range exactCallerBindingIndexKeys(binding) {
+		if index := service.indexes[indexKey]; index != nil && index.bindings > 0 {
+			index.bindings--
+		}
 	}
 }
 
@@ -1406,19 +1480,98 @@ func (service *exactCallerMapService) encodeCitation(
 	position int,
 	record exactCallerRecord,
 ) (string, error) {
+	return service.encodeCitationFor(binding, "", position, record)
+}
+
+func (service *exactCallerMapService) encodeComparisonCitation(
+	binding *exactCallerBinding,
+	side string,
+	position int,
+	record exactCallerRecord,
+) (string, error) {
+	if side != "old" && side != "replacement" {
+		return "", errors.New("caller comparison citation side is invalid")
+	}
+	return service.encodeCitationFor(binding, side, position, record)
+}
+
+func (service *exactCallerMapService) encodeCitationFor(
+	binding *exactCallerBinding,
+	side string,
+	position int,
+	record exactCallerRecord,
+) (string, error) {
 	if binding == nil || binding.id == "" || position < 0 || record.recordID == "" {
 		return "", errors.New("caller citation binding is invalid")
 	}
+	repository := binding.generation.Repository
+	if binding.comparison != nil {
+		source, ok := exactCallerComparisonSourceFor(binding, side)
+		if !ok {
+			return "", errors.New("caller comparison citation binding is invalid")
+		}
+		repository = source.generation.Repository
+	} else if side != "" {
+		return "", errors.New("caller citation binding side is invalid")
+	}
 	citation := exactCallerCitation{
 		Schema:     exactCallerCitationVersion,
-		Repository: binding.generation.Repository, Binding: binding.id,
-		Position: position, RecordID: record.recordID,
+		Repository: repository, Binding: binding.id,
+		Position: position, RecordID: record.recordID, Side: side,
 	}
 	encoded := service.encodeSigned(citation)
 	if len(encoded) > callerMapCursorLimit {
 		return "", errors.New("caller citation exceeds its bounded envelope")
 	}
 	return encoded, nil
+}
+
+func exactCallerComparisonSourceFor(
+	binding *exactCallerBinding,
+	side string,
+) (exactCallerComparisonSource, bool) {
+	if binding == nil || binding.comparison == nil {
+		return exactCallerComparisonSource{}, false
+	}
+	switch side {
+	case "old":
+		return binding.comparison.old, true
+	case "replacement":
+		return binding.comparison.replacement, true
+	default:
+		return exactCallerComparisonSource{}, false
+	}
+}
+
+func exactCallerCitationSource(
+	binding *exactCallerBinding,
+	side string,
+) (
+	VisibilityContext,
+	string,
+	callerexecute.PublicationBinding,
+	CallerMapGeneration,
+	bool,
+) {
+	if binding == nil {
+		return VisibilityContext{}, "", callerexecute.PublicationBinding{},
+			CallerMapGeneration{}, false
+	}
+	if binding.comparison == nil {
+		if side != "" {
+			return VisibilityContext{}, "", callerexecute.PublicationBinding{},
+				CallerMapGeneration{}, false
+		}
+		return binding.visibility, binding.indexKey, binding.publication,
+			binding.generation, true
+	}
+	source, ok := exactCallerComparisonSourceFor(binding, side)
+	if !ok {
+		return VisibilityContext{}, "", callerexecute.PublicationBinding{},
+			CallerMapGeneration{}, false
+	}
+	return source.visibility, source.indexKey, source.publication,
+		source.generation, true
 }
 
 func (service *exactCallerMapService) readCitation(
@@ -1454,13 +1607,15 @@ func (service *exactCallerMapService) readCitation(
 		return nil, huma.Error409Conflict("caller citation snapshot expired")
 	}
 	defer service.releaseBinding(binding)
-	if binding.generation.Repository != citation.Repository {
+	boundVisibility, indexKey, publication, generation, ok :=
+		exactCallerCitationSource(binding, citation.Side)
+	if !ok || generation.Repository != citation.Repository {
 		return nil, huma.Error400BadRequest("caller citation is invalid")
 	}
-	if visibility != binding.visibility {
+	if visibility != boundVisibility {
 		return nil, huma.Error404NotFound("caller citation not found")
 	}
-	index := service.acquireIndex(binding.indexKey)
+	index := service.acquireIndex(indexKey)
 	if index == nil {
 		service.dropBinding(binding.id)
 		return nil, huma.Error409Conflict("caller citation snapshot expired")
@@ -1478,7 +1633,7 @@ func (service *exactCallerMapService) readCitation(
 		return nil, err
 	}
 	defer finishCitationRead()
-	read, err := service.opts.CallerReader.Reopen(ctx, binding.publication)
+	read, err := service.opts.CallerReader.Reopen(ctx, publication)
 	if err != nil {
 		return nil, exactCallerReaderError("open caller citation", err)
 	}
@@ -1492,12 +1647,12 @@ func (service *exactCallerMapService) readCitation(
 		return nil, huma.Error409Conflict("caller citation generation is no longer current")
 	}
 	currentGeneration := service.generation(read)
-	if currentGeneration.Repository != binding.generation.Repository ||
-		currentGeneration.Commit != binding.generation.Commit ||
-		currentGeneration.GenerationDigest != binding.generation.GenerationDigest ||
-		currentGeneration.ManifestDigest != binding.generation.ManifestDigest ||
-		currentGeneration.PairSetDigest != binding.generation.PairSetDigest ||
-		currentGeneration.PublicationRevision != binding.generation.PublicationRevision {
+	if currentGeneration.Repository != generation.Repository ||
+		currentGeneration.Commit != generation.Commit ||
+		currentGeneration.GenerationDigest != generation.GenerationDigest ||
+		currentGeneration.ManifestDigest != generation.ManifestDigest ||
+		currentGeneration.PairSetDigest != generation.PairSetDigest ||
+		currentGeneration.PublicationRevision != generation.PublicationRevision {
 		return nil, huma.Error409Conflict("caller citation generation is no longer current")
 	}
 	pair, record, err := read.Lease().ReadRecord(ctx, indexed.reference)
@@ -1514,13 +1669,13 @@ func (service *exactCallerMapService) readCitation(
 		return nil, huma.Error400BadRequest("caller citation is invalid")
 	}
 	repositoryDir, err := exactCallerCitationRepositoryDir(
-		service.opts.DataDir, binding.generation.Repository,
+		service.opts.DataDir, generation.Repository,
 	)
 	if err != nil {
 		return nil, err
 	}
 	resolved, blobBytes, err := gitobj.ResolveBlob(
-		ctx, repositoryDir, binding.generation.Commit+":"+indexed.path,
+		ctx, repositoryDir, generation.Commit+":"+indexed.path,
 	)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
@@ -1550,19 +1705,19 @@ func (service *exactCallerMapService) readCitation(
 		return nil, huma.Error409Conflict("caller citation immutable content differs")
 	}
 	if err := service.confirm(
-		ctx, read, binding.generation.Repository, visibility,
+		ctx, read, generation.Repository, visibility,
 	); err != nil {
 		return nil, err
 	}
 	return &CallerMapCitation{
-		SchemaVersion: exactCallerCitationVersion, Generation: binding.generation,
+		SchemaVersion: exactCallerCitationVersion, Generation: generation,
 		Source: CallerMapSource{
-			Repository: binding.generation.Repository, Commit: binding.generation.Commit,
+			Repository: generation.Repository, Commit: generation.Commit,
 			Path: indexed.path, ObjectID: indexed.objectID,
 			BlobDigest: indexed.blobDigest, Plane: exactCallerMapPlane,
 			StartByte: indexed.startByte, EndByte: indexed.endByte,
 			StartLine: indexed.startLine, EndLine: indexed.endLine,
-			AssertionID: indexed.recordID, RunID: binding.generation.GenerationDigest,
+			AssertionID: indexed.recordID, RunID: generation.GenerationDigest,
 			AtomID: indexed.blobDigest,
 		},
 		Content: string(blob[indexed.startByte:indexed.endByte]),

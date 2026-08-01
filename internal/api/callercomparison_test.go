@@ -22,7 +22,7 @@ func TestCallerComparisonExactUnionPagesAndUnitAmbiguity(t *testing.T) {
 		callerMapContractRepo: true,
 		callerMapSourceRepo:   true,
 	}
-	handler := api.New(callerMapOptions(st, "user:member", &visible))
+	handler := legacyCallerComparisonHandler(st, "user:member", &visible)
 
 	var first api.CallerComparisonPage
 	code, body := catalogHTTP(
@@ -31,7 +31,7 @@ func TestCallerComparisonExactUnionPagesAndUnitAmbiguity(t *testing.T) {
 	if code != http.StatusOK || first.SchemaVersion != "caller-comparison-v1" ||
 		first.Query.Old.Lineage != callerMapLineage ||
 		first.Query.Replacement.Lineage != replacementLineage ||
-		first.TotalRows != 5 || len(first.Rows) != 2 ||
+		first.TotalRows == nil || *first.TotalRows != 5 || len(first.Rows) != 2 ||
 		first.Pagination.Complete || first.Pagination.NextCursor == "" ||
 		first.Old.CoverageDigest == "" ||
 		first.Old.CoverageDigest != first.Replacement.CoverageDigest ||
@@ -84,7 +84,7 @@ func TestCallerComparisonExactUnionPagesAndUnitAmbiguity(t *testing.T) {
 	code, body = catalogHTTP(
 		t, handler, callerComparisonTarget("level=unit&page_size=100"), &units,
 	)
-	if code != http.StatusOK || units.TotalRows != 5 || len(units.Rows) != 5 {
+	if code != http.StatusOK || units.TotalRows == nil || *units.TotalRows != 5 || len(units.Rows) != 5 {
 		t.Fatalf("unit comparison = %d %s / %+v", code, body, units)
 	}
 	unitClasses := make(map[string]int)
@@ -150,7 +150,7 @@ func TestCallerComparisonDeterminismHiddenIsolationAndCursorBinding(t *testing.T
 		callerMapHiddenRepo:   false,
 	}
 	firstStore := callerComparisonStore(t)
-	firstHandler := api.New(callerMapOptions(firstStore, "user:member", &visible))
+	firstHandler := legacyCallerComparisonHandler(firstStore, "user:member", &visible)
 	var first api.CallerComparisonPage
 	_, firstBody := catalogHTTP(
 		t, firstHandler, callerComparisonTarget("level=unit&page_size=2"), &first,
@@ -176,7 +176,7 @@ func TestCallerComparisonDeterminismHiddenIsolationAndCursorBinding(t *testing.T
 	secondStore.runs[proofScope(callerMapHiddenRepo, "grpc-caller")] = hiddenRun
 	secondStore.assertions[callerMapHiddenRepo] = nil
 	_, secondBody := catalogHTTP(
-		t, api.New(callerMapOptions(secondStore, "user:member", &visible)),
+		t, legacyCallerComparisonHandler(secondStore, "user:member", &visible),
 		callerComparisonTarget("level=unit&page_size=2"), nil,
 	)
 	if firstBody != secondBody {
@@ -231,7 +231,7 @@ func TestCallerComparisonFiltersRefusalsAndCapability(t *testing.T) {
 		callerMapContractRepo: true,
 		callerMapSourceRepo:   true,
 	}
-	handler := api.New(callerMapOptions(st, "user:member", &visible))
+	handler := legacyCallerComparisonHandler(st, "user:member", &visible)
 	var page api.CallerComparisonPage
 	code, body := catalogHTTP(
 		t, handler,
@@ -252,7 +252,7 @@ func TestCallerComparisonFiltersRefusalsAndCapability(t *testing.T) {
 		),
 		&empty,
 	)
-	if code != http.StatusOK || empty.TotalRows != 0 || len(empty.Rows) != 0 ||
+	if code != http.StatusOK || empty.TotalRows == nil || *empty.TotalRows != 0 || len(empty.Rows) != 0 ||
 		!strings.Contains(empty.Caveat, "not migration completion") ||
 		!strings.Contains(empty.Caveat, "decommissioning safety") {
 		t.Fatalf("empty old-only comparison = %d %s / %+v", code, body, empty)
@@ -281,6 +281,16 @@ func TestCallerComparisonFiltersRefusalsAndCapability(t *testing.T) {
 			}
 		})
 	}
+}
+
+func legacyCallerComparisonHandler(
+	st *proofAPIStore,
+	principal string,
+	visible *map[string]bool,
+) http.Handler {
+	opts := callerMapOptions(st, principal, visible)
+	opts.CallerComparison = api.NewLegacyCallerComparisonService(opts)
+	return api.New(opts)
 }
 
 func callerComparisonStore(t *testing.T) *proofAPIStore {
@@ -474,7 +484,7 @@ func TestCallerComparisonCrossProtocolDigestsAndDemotion(t *testing.T) {
 		callerMapContractRepo: true,
 		callerMapSourceRepo:   true,
 	}
-	handler := api.New(callerMapOptions(st, "user:member", &visible))
+	handler := legacyCallerComparisonHandler(st, "user:member", &visible)
 	values := url.Values{}
 	values.Set("old_protocol", "protobuf")
 	values.Set("old_repository", callerMapContractRepo)
@@ -581,7 +591,7 @@ func TestCallerComparisonSharedScanBudget(t *testing.T) {
 		callerMapContractRepo: true,
 		callerMapSourceRepo:   true,
 	}
-	handler := api.New(callerMapOptions(st, "user:member", &visible))
+	handler := legacyCallerComparisonHandler(st, "user:member", &visible)
 	values := url.Values{}
 	values.Set("old_protocol", "protobuf")
 	values.Set("old_repository", callerMapContractRepo)

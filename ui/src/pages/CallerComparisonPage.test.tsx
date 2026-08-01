@@ -5,9 +5,12 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import CallerComparisonPage from './CallerComparisonPage'
 import type {
+  CallerComparisonExactPage,
   CallerComparisonPage as ComparisonResponse,
   CallerComparisonRow,
+  CallerMapCitation,
   CallerMapEndpoint,
+  CallerMapGeneration,
   CallerMapRow,
   ContractCatalogClaim,
   ContractCatalogItem,
@@ -16,6 +19,7 @@ import type {
 } from '../api'
 
 const api = vi.hoisted(() => ({
+  fetchCallerCitation: vi.fn(),
   fetchCallerComparison: vi.fn(),
   fetchContractCatalog: vi.fn(),
 }))
@@ -73,6 +77,7 @@ function declaration(endpoint: CallerMapEndpoint, id: string): ContractCatalogCl
 }
 
 function callerRow(index: number, endpoint: CallerMapEndpoint, unresolved = false): CallerMapRow {
+  const endpointIdentity = endpoint.protocol === 'protobuf' ? 'a' : 'b'
   return {
     classification: unresolved ? 'extractor_abstention' : 'resolved_caller',
     resolution: unresolved ? 'unresolved' : 'syntax',
@@ -97,6 +102,9 @@ function callerRow(index: number, endpoint: CallerMapEndpoint, unresolved = fals
       repository: 'github.com/acme/orders',
       commit,
       path: `src/caller_${index}.go`,
+      object_id: endpointIdentity.repeat(40),
+      blob_digest: `sha256:${endpointIdentity.repeat(64)}`,
+      plane: 'repository-overlay',
       start_byte: index * 10,
       end_byte: index * 10 + 8,
       start_line: index + 1,
@@ -104,8 +112,30 @@ function callerRow(index: number, endpoint: CallerMapEndpoint, unresolved = fals
       assertion_id: `assertion-${endpoint.protocol}-${index}`,
       run_id: `run-${endpoint.protocol}`,
       atom_id: `atom-${endpoint.protocol}-${index}`,
+      citation: `exact-citation-${endpoint.protocol}-${index}`,
     },
     unresolved_reason: unresolved ? 'selector_expr' : undefined,
+  }
+}
+
+function generation(
+  endpoint: CallerMapEndpoint,
+  state: CallerMapGeneration['state'] = 'current',
+): CallerMapGeneration {
+  const endpointIdentity = endpoint.protocol === 'protobuf' ? 'a' : 'b'
+  return {
+    state,
+    reason: state === 'current' ? undefined : 'complete generation is stale',
+    plane: 'repository-overlay',
+    repository: endpoint.repository,
+    commit,
+    generation_digest: `sha256:${endpointIdentity.repeat(64)}`,
+    declaration_set_digest: `sha256:${'c'.repeat(64)}`,
+    candidate_manifest_digest: `sha256:${'d'.repeat(64)}`,
+    resolver_manifest_digest: `sha256:${'e'.repeat(64)}`,
+    pair_set_digest: `sha256:${'f'.repeat(64)}`,
+    manifest_digest: `sha256:${'1'.repeat(64)}`,
+    publication_revision: endpoint.protocol === 'protobuf' ? 7 : 11,
   }
 }
 
@@ -140,9 +170,9 @@ function comparisonPage(
   rows: CallerComparisonRow[],
   total = rows.length,
   nextCursor = '',
-): ComparisonResponse {
+): CallerComparisonExactPage {
   return {
-    schema_version: 'caller-comparison-v1',
+    schema_version: 'caller-comparison-v2',
     query: {
       old: oldEndpoint,
       replacement: replacementEndpoint,
@@ -154,14 +184,14 @@ function comparisonPage(
     old: {
       endpoint: oldEndpoint,
       declaration: declaration(oldEndpoint, 'old-declaration'),
-      coverage_digest: coverage.digest,
-      attribution_digest: `sha256:${'d'.repeat(64)}`,
+      generation: generation(oldEndpoint),
+      matching_rows_state: 'exact',
     },
     replacement: {
       endpoint: replacementEndpoint,
       declaration: declaration(replacementEndpoint, 'replacement-declaration'),
-      coverage_digest: coverage.digest,
-      attribution_digest: `sha256:${'e'.repeat(64)}`,
+      generation: generation(replacementEndpoint),
+      matching_rows_state: 'exact',
     },
     rows,
     total_rows: total,
@@ -169,8 +199,23 @@ function comparisonPage(
       complete: nextCursor === '',
       next_cursor: nextCursor || undefined,
     },
-    coverage,
+    matching_rows_state: 'exact',
     caveat: 'Static source evidence only; comparison does not establish runtime completeness or migration safety.',
+  }
+}
+
+function unavailableComparisonPage(): CallerComparisonExactPage {
+  return {
+    ...comparisonPage([]),
+    old: {
+      endpoint: oldEndpoint,
+      generation: generation(oldEndpoint, 'stale'),
+      matching_rows_state: 'unavailable',
+    },
+    matching_rows_state: 'unavailable',
+    total_rows: undefined,
+    rows: [],
+    pagination: { complete: true },
   }
 }
 
@@ -231,6 +276,19 @@ function renderPage(params = route()) {
 }
 
 beforeEach(() => {
+  api.fetchCallerCitation.mockReset().mockImplementation(
+    async (token: string): Promise<CallerMapCitation> => {
+      const parts = token.split('-')
+      const index = Number(parts.at(-1))
+      const endpoint = parts.at(-2) === 'protobuf' ? oldEndpoint : replacementEndpoint
+      return {
+        schema_version: 'caller-map-citation-v1',
+        generation: generation(endpoint),
+        source: callerRow(index, endpoint).source,
+        content: `client.Get(order${index})`,
+      }
+    },
+  )
   api.fetchCallerComparison.mockReset().mockResolvedValue(comparisonPage([
     comparisonRow(1, 'old_only_evidence'),
     comparisonRow(2, 'both_evidence'),
@@ -276,7 +334,7 @@ test('discovers a replacement through bounded catalog pages and submits reposito
   })
 })
 
-test('renders exact identities, four classifications, bounded citations, coverage, and caveat', async () => {
+test('renders two exact generations, four classifications, and range-only citations', async () => {
   renderPage()
   await screen.findByText('Rows 1–4 of 4')
   expect(screen.getByTestId('caller-comparison-page').getAttribute('data-responsive-layout'))
@@ -290,18 +348,33 @@ test('renders exact identities, four classifications, bounded citations, coverag
     expect(screen.getByText(classification)).toBeTruthy()
   }
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(4)
-  const citation = screen.getAllByRole('link', {
-    name: /github.com\/acme\/orders\/src\/caller_1.go:2/,
-  })[0]
-  expect(citation.getAttribute('href')).toBe(
-    `#/file?repo=github.com%2Facme%2Forders&path=src%2Fcaller_1.go&ref=${commit}&L=2`,
+  const generations = screen.getAllByTestId('caller-comparison-generation')
+  expect(generations).toHaveLength(2)
+  expect(generations.map((item) => item.getAttribute('data-matching-rows-state')))
+    .toEqual(['exact', 'exact'])
+  expect(screen.getByText(/revision 7/)).toBeTruthy()
+  expect(screen.getByText(/revision 11/)).toBeTruthy()
+
+  const sourceLabel = screen.getAllByText(
+    'github.com/acme/orders/src/caller_1.go:2',
+  )[0]
+  expect(sourceLabel.closest('a')).toBeNull()
+  expect(document.querySelector(
+    `a[href="#/file?repo=github.com%2Facme%2Forders&path=src%2Fcaller_1.go&ref=${commit}&L=2"]`,
+  )).toBeNull()
+  expect(api.fetchCallerCitation).not.toHaveBeenCalled()
+  const exactCitationButton = sourceLabel.parentElement?.querySelector('button')
+  expect(exactCitationButton).not.toBeNull()
+  fireEvent.click(exactCitationButton!)
+  expect((await screen.findByLabelText(
+    'Exact cited bytes for github.com/acme/orders/src/caller_1.go:2',
+  )).textContent).toBe('client.Get(order1)')
+  expect(api.fetchCallerCitation).toHaveBeenCalledWith(
+    'exact-citation-protobuf-1', expect.any(AbortSignal),
   )
-  expect(screen.getByText(/Shared coverage certificate/)).toBeTruthy()
+  expect(screen.queryByText(/Shared coverage certificate/)).toBeNull()
   expect(screen.getByText(/does not establish runtime completeness or migration safety/))
     .toBeTruthy()
-  expect(screen.getAllByText(/coverage sha256:ccc/)).toHaveLength(2)
-  expect(screen.getByText(/attribution sha256:ddd/)).toBeTruthy()
-  expect(screen.getByText(/attribution sha256:eee/)).toBeTruthy()
   expect(screen.getByRole('link', { name: 'Old endpoint declaration' }).getAttribute('href'))
     .toBe(
       `#/file?repo=${encodeURIComponent(oldEndpoint.repository)}&path=idl%2Forders.proto&ref=${commit}&L=4`,
@@ -389,7 +462,7 @@ test('pages the 10,000-row closure profile without retaining prior DOM rows', as
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
   expect(document.querySelectorAll('[data-testid="caller-comparison-row"]').length)
     .toBe(100)
-  expect(screen.getAllByRole('link', { name: /src\/caller_0\.go:1/ }).length)
+  expect(screen.getAllByText(/src\/caller_0\.go:1/).length)
     .toBeGreaterThan(0)
 
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
@@ -397,8 +470,8 @@ test('pages the 10,000-row closure profile without retaining prior DOM rows', as
   expect(screen.getAllByTestId('caller-comparison-row')).toHaveLength(100)
   expect(document.querySelectorAll('[data-testid="caller-comparison-row"]').length)
     .toBe(100)
-  expect(screen.queryAllByRole('link', { name: /src\/caller_0\.go:1/ })).toHaveLength(0)
-  expect(screen.getAllByRole('link', { name: /src\/caller_100\.go:101/ }).length)
+  expect(screen.queryAllByText(/src\/caller_0\.go:1/)).toHaveLength(0)
+  expect(screen.getAllByText(/src\/caller_100\.go:101/).length)
     .toBeGreaterThan(0)
 }, 15_000)
 
@@ -447,8 +520,27 @@ test('announces loading and renders the empty scope without an absence claim', a
   renderPage()
   expect(screen.getByRole('status', { name: 'Loading caller comparison' })).toBeTruthy()
   await act(async () => finish(comparisonPage([])))
-  expect(await screen.findByText(/No matching static evidence within this displayed scope/))
+  expect(await screen.findByText(/No comparison rows matched these filters/))
     .toBeTruthy()
-  expect(screen.getByText(/does not establish completion, absence, or decommissioning safety/))
+  expect(screen.getByText(/does not establish runtime completion, absence, or decommissioning safety/))
     .toBeTruthy()
+})
+
+test('shows independent generation states and suppresses every absence signal on a gap', async () => {
+  api.fetchCallerComparison.mockResolvedValue(unavailableComparisonPage())
+  renderPage()
+
+  expect(await screen.findByText('Comparison rows and totals unavailable')).toBeTruthy()
+  expect(screen.getByTestId('caller-comparison-progress').getAttribute('data-matching-rows-state'))
+    .toBe('unavailable')
+  const generations = screen.getAllByTestId('caller-comparison-generation')
+  expect(generations.map((item) => item.getAttribute('data-matching-rows-state')))
+    .toEqual(['unavailable', 'exact'])
+  expect(screen.getByText(/at least one endpoint has no current complete caller generation/))
+    .toBeTruthy()
+  expect(screen.getByText(/this is not evidence of zero callers/)).toBeTruthy()
+  expect(screen.queryByText(/No comparison rows matched/)).toBeNull()
+  expect(screen.queryByText(/No matching comparison evidence/)).toBeNull()
+  expect(screen.queryByRole('navigation', { name: 'Comparison pagination' })).toBeNull()
+  expect(screen.queryByTestId('caller-comparison-row')).toBeNull()
 })
