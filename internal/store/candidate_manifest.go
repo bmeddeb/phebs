@@ -117,6 +117,8 @@ func validGitObjectID(value string) bool {
 
 const publishCandidateManifestSQL = `
 BEGIN;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
 LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
 	FROM $repo_rid)[0];
 LET $current = (SELECT * FROM $publication_rid)[0];
@@ -150,7 +152,7 @@ LET $next_control_revision = IF $current = NONE THEN 1
 	ELSE IF $same_publication AND $control_advanced = false
 		THEN $current_control_revision
 	ELSE $current_control_revision + 1 END;
-LET $acceptable = $repo_ok
+LET $acceptable = $caller_writer_ok AND $repo_ok
 	AND ($same_scope = false OR $same_publication = true)
 	AND $control_ok;
 LET $published = IF $acceptable = false THEN []
@@ -173,6 +175,15 @@ LET $retired_catalog = IF array::len($published) = 1
 		AND ($same_publication = false OR $control_advanced) THEN
 	(DELETE resolver_catalog_publication
 		WHERE repository = $repository RETURN BEFORE)
+	ELSE [] END;
+LET $retired_caller = IF array::len($published) = 1
+		AND ($same_publication = false OR $control_advanced) THEN
+	(DELETE caller_generation_publication
+		WHERE repository = $repository RETURN BEFORE)
+	ELSE [] END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
 	ELSE [] END;
 LET $invalidated_runs = (IF array::len($published) = 1 THEN
 	(SELECT id, run_id, domain FROM extraction_run
@@ -308,6 +319,8 @@ LET $catalog_fanout = IF array::len($published) != 1 THEN []
 	END;
 RETURN IF array::len($fanout) = 1
 	AND array::len($catalog_fanout) = 1
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
 	THEN $published ELSE [] END;
 COMMIT;`
 
@@ -348,6 +361,8 @@ func (s *Surreal) PublishCandidateManifest(
 		"evidence_format":             evidenceFormatVersion,
 		"evidence_migration":          evidenceMigrationVersion,
 		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		"caller_migration_rid":        callerGenerationPublicationMigrationID(),
+		"caller_migration_version":    callerGenerationPublicationMigrationVersion,
 	}
 	for attempt := 0; ; attempt++ {
 		results, err := surrealdb.Query[[]candidateManifestPublicationRec](
@@ -450,11 +465,18 @@ func (s *Surreal) ClearCandidateManifestPublication(
 		ctx,
 		s.db,
 		`BEGIN;
+		LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+			WHERE version = $caller_migration_version LIMIT 1) = 1;
+		IF $caller_writer_ok = false {
+			THROW 'phebs-permanent: caller-generation publication writer is not active'
+		};
 		LET $current = SELECT id FROM $rid;
 		LET $retired_catalog = IF array::len($current) = 1 THEN
 			(DELETE resolver_catalog_publication
 				WHERE repository = $repository RETURN BEFORE)
 			ELSE [] END;
+		LET $retired_caller = DELETE caller_generation_publication
+			WHERE repository = $repository RETURN BEFORE;
 		IF array::len($current) = 1 {
 			DELETE $rid RETURN NONE;
 			DELETE extraction_domain_outcome
@@ -463,6 +485,10 @@ func (s *Surreal) ClearCandidateManifestPublication(
 				SET evidence_revision = (evidence_revision ?? 0) + 1
 				WHERE name = $repository
 				RETURN NONE;
+		};
+		IF array::len($retired_caller) = 1 {
+			UPDATE $repo_rid SET caller_publication_revision =
+				(caller_publication_revision ?? 0) + 1 RETURN NONE;
 		};
 		LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
 			(SELECT id, created_at FROM resolver_catalog_job
@@ -489,9 +515,11 @@ func (s *Surreal) ClearCandidateManifestPublication(
 		};
 		COMMIT;`,
 		map[string]any{
-			"rid":        candidateManifestPublicationID(repository),
-			"repo_rid":   repoID(repository),
-			"repository": repository,
+			"rid":                      candidateManifestPublicationID(repository),
+			"repo_rid":                 repoID(repository),
+			"repository":               repository,
+			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+			"caller_migration_version": callerGenerationPublicationMigrationVersion,
 		},
 	)
 	if err != nil {
@@ -516,11 +544,19 @@ func (s *Surreal) ClearAllCandidateManifestPublications(
 		`BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $evidence_migration_version LIMIT 1) = 1;
-IF $writer_ok = false {
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $writer_ok = false OR $caller_writer_ok = false {
 	THROW 'phebs-permanent: evidence writer generation is not active'
 };
+LET $caller_repositories = SELECT VALUE record::id(id)
+	FROM caller_generation_publication;
+UPDATE repo SET caller_publication_revision =
+	(caller_publication_revision ?? 0) + 1
+	WHERE name IN $caller_repositories RETURN NONE;
 DELETE candidate_manifest_publication RETURN NONE;
 DELETE resolver_catalog_publication RETURN NONE;
+DELETE caller_generation_publication RETURN NONE;
 DELETE extraction_domain_outcome
 	WHERE candidate_control_failure = true
 		AND store_schema_version = $store_schema_version
@@ -531,6 +567,8 @@ COMMIT;`,
 			"migration_rid":              evidenceMigrationStateID(),
 			"store_schema_version":       evidenceStoreSchemaVersion,
 			"evidence_migration_version": evidenceMigrationVersion,
+			"caller_migration_rid":       callerGenerationPublicationMigrationID(),
+			"caller_migration_version":   callerGenerationPublicationMigrationVersion,
 		},
 	)
 	if err != nil {

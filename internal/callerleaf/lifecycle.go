@@ -18,6 +18,8 @@ import (
 	"sync"
 
 	"github.com/bmeddeb/phebs/internal/callerleafid"
+	"github.com/bmeddeb/phebs/internal/callerpublicationid"
+	"github.com/bmeddeb/phebs/internal/reponame"
 )
 
 const stageArtifactName = "artifact.ndjson"
@@ -463,6 +465,94 @@ func Open(
 	)
 }
 
+// VerifyReader performs the canonical content, receipt, and aggregate checks
+// used by Open against one already bounded artifact stream. The visitor must
+// not publish side effects until VerifyReader returns successfully.
+func VerifyReader(
+	ctx context.Context,
+	reader io.Reader,
+	generation GenerationIdentity,
+	pair PairIdentity,
+	receipt Receipt,
+	visit func(Record) error,
+) error {
+	if ctx == nil {
+		return errors.New("caller leaf verification context is required")
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := ValidateReceipt(generation, pair, receipt); err != nil {
+		return err
+	}
+	return verifyReader(ctx, reader, receipt, visit)
+}
+
+func verifyReader(
+	ctx context.Context,
+	reader io.Reader,
+	receipt Receipt,
+	visit func(Record) error,
+) error {
+	if ctx == nil {
+		return errors.New("caller leaf verification context is required")
+	}
+	if reader == nil {
+		return fmt.Errorf("%w: artifact reader is unavailable", ErrInvalidArtifact)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	hash := sha256.New()
+	buffered := bufio.NewReaderSize(io.TeeReader(reader, hash), 64<<10)
+	counts := Receipt{}
+	var consumed int64
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		line, readErr := readLine(buffered, MaxRecordBytes+1)
+		consumed += int64(len(line))
+		if readErr != nil && !errors.Is(readErr, io.EOF) {
+			return readErr
+		}
+		if len(line) > 0 {
+			var record Record
+			if err := decodeCanonicalLine(line, &record); err != nil {
+				return fmt.Errorf("%w: %v", ErrInvalidArtifact, err)
+			}
+			if err := ValidateRecord(record); err != nil {
+				return err
+			}
+			counts.RecordCount++
+			if record.Kind == RecordResult {
+				counts.ResultCount++
+			} else {
+				counts.AbstentionCount++
+			}
+			if visit != nil {
+				if err := visit(record); err != nil {
+					return err
+				}
+			}
+		}
+		if errors.Is(readErr, io.EOF) {
+			break
+		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	digest := "sha256:" + hex.EncodeToString(hash.Sum(nil))
+	if consumed != receipt.ContentBytes || digest != receipt.ContentDigest ||
+		counts.RecordCount != receipt.RecordCount ||
+		counts.ResultCount != receipt.ResultCount ||
+		counts.AbstentionCount != receipt.AbstentionCount {
+		return fmt.Errorf("%w: artifact receipt mismatch", ErrInvalidArtifact)
+	}
+	return nil
+}
+
 func openArtifactAt(
 	ctx context.Context,
 	repositoryDirectory string,
@@ -503,55 +593,14 @@ func openArtifactAt(
 	if err != nil || !sameFile(before, opened) {
 		return nil, fmt.Errorf("%w: artifact changed while opening", ErrInvalidArtifact)
 	}
-	hash := sha256.New()
-	reader := bufio.NewReaderSize(io.TeeReader(file, hash), 64<<10)
-	counts := Receipt{}
-	var consumed int64
-	for {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		line, readErr := readLine(reader, MaxRecordBytes+1)
-		consumed += int64(len(line))
-		if readErr != nil && !errors.Is(readErr, io.EOF) {
-			return nil, readErr
-		}
-		if len(line) > 0 {
-			var record Record
-			if err := decodeCanonicalLine(line, &record); err != nil {
-				return nil, fmt.Errorf("%w: %v", ErrInvalidArtifact, err)
-			}
-			if err := ValidateRecord(record); err != nil {
-				return nil, err
-			}
-			counts.RecordCount++
-			if record.Kind == RecordResult {
-				counts.ResultCount++
-			} else {
-				counts.AbstentionCount++
-			}
-			if visit != nil {
-				if err := visit(record); err != nil {
-					return nil, err
-				}
-			}
-		}
-		if errors.Is(readErr, io.EOF) {
-			break
-		}
+	if err := verifyReader(ctx, file, receipt, visit); err != nil {
+		return nil, err
 	}
 	after, statErr := file.Stat()
 	current, lstatErr := authority.root.Lstat(receipt.Name)
 	if statErr != nil || lstatErr != nil || !sameFile(before, after) ||
 		!sameFile(after, current) {
 		return nil, fmt.Errorf("%w: artifact changed while reading", ErrInvalidArtifact)
-	}
-	digest := "sha256:" + hex.EncodeToString(hash.Sum(nil))
-	if consumed != receipt.ContentBytes || digest != receipt.ContentDigest ||
-		counts.RecordCount != receipt.RecordCount ||
-		counts.ResultCount != receipt.ResultCount ||
-		counts.AbstentionCount != receipt.AbstentionCount {
-		return nil, fmt.Errorf("%w: artifact receipt mismatch", ErrInvalidArtifact)
 	}
 	return &Publication{
 		root: repositoryDirectory, path: artifactPath, receipt: receipt, info: current,
@@ -575,11 +624,50 @@ func (publication *Publication) Current() bool {
 	return err == nil && sameFile(publication.info, current)
 }
 
+// CurrentAtRepository verifies this cold admission against identities read
+// through a caller-owned descriptor for the exact shared repository. It does
+// no filesystem I/O, allowing a complete-generation publication to check all
+// of its leaves after opening the repository only once.
+func (publication *Publication) CurrentAtRepository(
+	directory string,
+	receipt Receipt,
+	directoryInfo, artifactInfo os.FileInfo,
+) bool {
+	if publication == nil || publication.info == nil ||
+		publication.receipt != receipt || !validArtifactFileName(receipt.Name) {
+		return false
+	}
+	return publication.root == directory &&
+		publication.path == filepath.Join(directory, receipt.Name) &&
+		sameDirectory(publication.directoryInfo, directoryInfo) &&
+		sameFile(publication.info, artifactInfo)
+}
+
 func (publication *Publication) Receipt() Receipt {
 	if publication == nil {
 		return Receipt{}
 	}
 	return publication.receipt
+}
+
+// Matches proves that a descriptor-stable publication was opened for the
+// exact caller-owned root, repository, and derived artifact name. Complete
+// generation admission uses it to reuse a caller worker's cold validation
+// without trusting a publication from another repository namespace.
+func (publication *Publication) Matches(
+	root, repository string,
+	receipt Receipt,
+) bool {
+	if publication == nil || publication.receipt != receipt ||
+		!validArtifactFileName(receipt.Name) {
+		return false
+	}
+	wantedRoot, err := repositoryRoot(root, repository)
+	if err != nil {
+		return false
+	}
+	return publication.root == wantedRoot &&
+		publication.path == filepath.Join(wantedRoot, receipt.Name)
 }
 
 func ArtifactPath(root, repository string, receipt Receipt) (string, error) {
@@ -639,6 +727,9 @@ func ArtifactNames(root, repository string) ([]string, error) {
 			}
 			continue
 		}
+		if reservedCallerPublicationEntry(entry) {
+			continue
+		}
 		if entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() ||
 			!validArtifactFileName(name) {
 			return nil, fmt.Errorf("%w: unexpected repository artifact %q", ErrInvalidArtifact, name)
@@ -684,6 +775,9 @@ func OpenArtifactInventory(
 					"%w: invalid stage entry %q", ErrInvalidArtifact, name,
 				)
 			}
+			continue
+		}
+		if reservedCallerPublicationEntry(entry) {
 			continue
 		}
 		if entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() ||
@@ -806,6 +900,17 @@ func RemoveRepository(ctx context.Context, root, repository string) error {
 			}
 			continue
 		}
+		if callerpublicationid.ValidStageName(name) {
+			if err := validateCallerPublicationStageAt(
+				repositoryAuthority, name, nil,
+			); err != nil {
+				return err
+			}
+			continue
+		}
+		if reservedCallerPublicationRegular(entry) {
+			continue
+		}
 		if entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() ||
 			!validArtifactFileName(name) {
 			return fmt.Errorf("%w: unexpected repository artifact %q", ErrInvalidArtifact, name)
@@ -818,6 +923,20 @@ func RemoveRepository(ctx context.Context, root, repository string) error {
 		name := entry.Name()
 		if validStageDirectoryName(name) {
 			if err := removeOwnedStageAt(repositoryAuthority, name, nil); err != nil {
+				return err
+			}
+			continue
+		}
+		if callerpublicationid.ValidStageName(name) {
+			if err := removeCallerPublicationStageAt(
+				repositoryAuthority, name, nil,
+			); err != nil {
+				return err
+			}
+			continue
+		}
+		if reservedCallerPublicationRegular(entry) {
+			if err := repositoryAuthority.root.Remove(name); err != nil {
 				return err
 			}
 			continue
@@ -847,17 +966,77 @@ func RemoveRepository(ctx context.Context, root, repository string) error {
 }
 
 func ensureRepositoryRoot(root, repository string) (string, error) {
-	if err := ensureRealDirectory(root, true); err != nil {
+	if err := EnsureRepository(root, repository); err != nil {
 		return "", err
 	}
 	directory := filepath.Join(root, callerleafid.RepositoryDirectory(repository))
-	if err := os.Mkdir(directory, 0o700); err != nil && !errors.Is(err, os.ErrExist) {
-		return "", err
-	}
-	if err := ensureRealDirectory(directory, false); err != nil {
-		return "", err
-	}
 	return directory, nil
+}
+
+var repositoryCreationMu sync.Mutex
+
+// EnsureRepository creates one caller-owned repository directory without
+// allowing concurrent leaf and complete-publication writers to cross the
+// installation-wide repository ceiling. Existing exact directories remain
+// usable at the ceiling.
+func EnsureRepository(root, repository string) error {
+	return ensureRepositoryWithinLimit(
+		root, repository, callerpublicationid.InstallationPublicationRepositories,
+	)
+}
+
+func ensureRepositoryWithinLimit(root, repository string, limit int) error {
+	if err := reponame.Validate(repository); err != nil {
+		return err
+	}
+	if limit <= 0 {
+		return ErrCapacity
+	}
+	repositoryCreationMu.Lock()
+	defer repositoryCreationMu.Unlock()
+	if err := ensureRealDirectory(root, true); err != nil {
+		return err
+	}
+	rootAuthority, err := openStableDirectoryRoot(root)
+	if err != nil {
+		return err
+	}
+	defer rootAuthority.close()
+	repositoryName := callerleafid.RepositoryDirectory(repository)
+	if _, err := rootAuthority.root.Lstat(repositoryName); err == nil {
+		authority, openErr := openChildDirectoryAuthority(
+			rootAuthority, repositoryName, nil,
+		)
+		if openErr == nil {
+			authority.close()
+		}
+		return openErr
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	entries, err := readRootDirectory(rootAuthority.root, limit)
+	if errors.Is(err, ErrLimit) {
+		return ErrCapacity
+	}
+	if err != nil {
+		return err
+	}
+	if len(entries) >= limit {
+		return ErrCapacity
+	}
+	if err := rootAuthority.root.Mkdir(repositoryName, 0o700); err != nil &&
+		!errors.Is(err, os.ErrExist) {
+		return err
+	}
+	if err := syncRootDirectory(rootAuthority.root, "."); err != nil {
+		return err
+	}
+	authority, err := openChildDirectoryAuthority(rootAuthority, repositoryName, nil)
+	if err != nil {
+		return err
+	}
+	authority.close()
+	return nil
 }
 
 func repositoryRoot(root, repository string) (string, error) {
@@ -903,21 +1082,16 @@ func openRepositoryAuthority(
 		return "", nil, err
 	}
 	repositoryName := callerleafid.RepositoryDirectory(repository)
-	if create {
-		if err := rootAuthority.root.Mkdir(repositoryName, 0o700); err != nil &&
-			!errors.Is(err, os.ErrExist) {
-			rootAuthority.close()
-			return "", nil, err
-		}
-		if err := syncRootDirectory(rootAuthority.root, "."); err != nil {
-			rootAuthority.close()
-			return "", nil, err
-		}
-	}
 	repositoryAuthority, err := openChildDirectoryAuthority(
 		rootAuthority, repositoryName, nil,
 	)
 	rootAuthority.close()
+	if create && errors.Is(err, os.ErrNotExist) {
+		if err := EnsureRepository(root, repository); err != nil {
+			return "", nil, err
+		}
+		return openRepositoryAuthority(root, repository, false)
+	}
 	if err != nil {
 		return "", nil, err
 	}
@@ -1117,6 +1291,101 @@ func removeOwnedStageAt(
 		return errors.New("caller leaf stage changed before removal")
 	}
 	if err := authority.root.Remove(name); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return syncRootDirectory(authority.root, ".")
+}
+
+func reservedCallerPublicationRegular(entry os.DirEntry) bool {
+	if entry == nil || entry.Type()&os.ModeSymlink != 0 ||
+		!entry.Type().IsRegular() {
+		return false
+	}
+	name := entry.Name()
+	return callerpublicationid.ValidManifestName(name) ||
+		name == callerpublicationid.PublishingName ||
+		name == callerpublicationid.DeletingName
+}
+
+func reservedCallerPublicationEntry(entry os.DirEntry) bool {
+	if entry == nil {
+		return false
+	}
+	if callerpublicationid.ValidStageName(entry.Name()) {
+		return entry.IsDir() && entry.Type()&os.ModeSymlink == 0
+	}
+	return reservedCallerPublicationRegular(entry)
+}
+
+func validateCallerPublicationStageAt(
+	authority *directoryAuthority,
+	name string,
+	expected os.FileInfo,
+) error {
+	if authority == nil || authority.root == nil ||
+		!callerpublicationid.ValidStageName(name) {
+		return errors.New("caller publication stage path is not package-owned")
+	}
+	info, err := authority.root.Lstat(name)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() || info.Mode()&os.ModeSymlink != 0 ||
+		expected != nil && !sameDirectory(expected, info) {
+		return errors.New("caller publication stage is not a real directory")
+	}
+	stageAuthority, err := openChildDirectoryAuthority(authority, name, info)
+	if err != nil {
+		return err
+	}
+	defer stageAuthority.close()
+	entries, err := readRootDirectory(stageAuthority.root, 3)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if (entry.Name() != "manifest.json" && entry.Name() != "marker.json") ||
+			entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() {
+			return errors.New("caller publication stage has unexpected contents")
+		}
+	}
+	return nil
+}
+
+func removeCallerPublicationStageAt(
+	authority *directoryAuthority,
+	name string,
+	expected os.FileInfo,
+) error {
+	if err := validateCallerPublicationStageAt(authority, name, expected); err != nil {
+		return err
+	}
+	info, err := authority.root.Lstat(name)
+	if err != nil {
+		return err
+	}
+	stageAuthority, err := openChildDirectoryAuthority(authority, name, info)
+	if err != nil {
+		return err
+	}
+	entries, err := readRootDirectory(stageAuthority.root, 3)
+	if err != nil {
+		stageAuthority.close()
+		return err
+	}
+	for _, entry := range entries {
+		if err := stageAuthority.root.Remove(entry.Name()); err != nil {
+			stageAuthority.close()
+			return err
+		}
+	}
+	stageAuthority.close()
+	current, err := authority.root.Lstat(name)
+	if err != nil || !sameDirectory(info, current) {
+		return errors.New("caller publication stage changed before removal")
+	}
+	if err := authority.root.Remove(name); err != nil &&
+		!errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	return syncRootDirectory(authority.root, ".")

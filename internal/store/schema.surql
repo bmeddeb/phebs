@@ -178,6 +178,77 @@ DEFINE FIELD OVERWRITE recorded_at ON caller_generation_admission TYPE datetime;
 DEFINE INDEX IF NOT EXISTS caller_generation_admission_repository
     ON caller_generation_admission FIELDS repository, generation_digest;
 
+-- T30.6i: exactly one complete caller-generation pointer is visible per
+-- repository. Immutable pair artifacts remain multi-generation filesystem
+-- state; this row is the atomic authority over one exact ordered receipt set.
+DEFINE TABLE IF NOT EXISTS caller_generation_publication SCHEMAFULL;
+DEFINE FIELD IF NOT EXISTS repository ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation ON caller_generation_publication TYPE object;
+DEFINE FIELD IF NOT EXISTS generation.repository ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.head_commit ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.unit_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.declaration_set_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.candidate_manifest_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.candidate_policy_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.candidate_control_revision ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS generation.resolver_generation_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.resolver_manifest_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.resolver_control_revision ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS generation.resolver_writer_schema ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.source_lane_policy ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.caller_policy_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.extractor_set_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation.digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS generation_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs ON caller_generation_publication TYPE array<object>
+    ASSERT array::len($value) <= 16384;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair ON caller_generation_publication TYPE object;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.domain ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.extractor_version ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.leaf_adapter_version ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.leaf_ordinal ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.leaf_prefix ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.leaf_prefix_bits ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.candidate_member_name ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.candidate_record_count ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.candidate_declared_bytes ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.candidate_content_bytes ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.candidate_content_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.pair.digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt ON caller_generation_publication TYPE object;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.artifact_name ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.artifact_count ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.result_count ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.abstention_count ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.canonical_bytes ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.staging_bytes ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.content_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.metadata_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.excluded_go_test_records ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.source_blob_reads ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.source_blob_bytes ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.receipt.out_of_leaf_reads ON caller_generation_publication TYPE int;
+DEFINE FIELD IF NOT EXISTS pairs.*.record_count ON caller_generation_publication TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS pair_payload_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pair_set_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS pair_count ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS artifact_count ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS result_count ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS abstention_count ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS canonical_bytes ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS staging_bytes ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS peak_open_files ON caller_generation_publication TYPE int ASSERT $value >= 0;
+DEFINE FIELD IF NOT EXISTS manifest_digest ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS manifest_path ON caller_generation_publication TYPE string;
+DEFINE FIELD IF NOT EXISTS publication_revision ON caller_generation_publication TYPE int
+    ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS writer_schema ON caller_generation_publication TYPE string
+    ASSERT $value = 'phebs-caller-generation-publication-store-v1';
+DEFINE FIELD IF NOT EXISTS published_at ON caller_generation_publication TYPE datetime;
+DEFINE INDEX IF NOT EXISTS caller_generation_publication_repository
+    ON caller_generation_publication FIELDS repository UNIQUE;
+
 -- Generation-named immutable writer guards cannot be weakened by an older
 -- binary reapplying field definitions. DELETE remains available to bounded
 -- reconciliation and repository removal.
@@ -194,6 +265,13 @@ DEFINE EVENT IF NOT EXISTS caller_generation_admission_writer_v1
       AND ($after.writer_schema ?? '') != 'phebs-caller-leaf-store-v1'
     THEN {
         THROW 'phebs-permanent: retired caller-leaf writer generation'
+    };
+DEFINE EVENT IF NOT EXISTS caller_generation_publication_writer_v1
+    ON TABLE caller_generation_publication
+    WHEN $event != 'DELETE'
+      AND ($after.writer_schema ?? '') != 'phebs-caller-generation-publication-store-v1'
+    THEN {
+        THROW 'phebs-permanent: retired caller-generation publication writer generation'
     };
 
 DEFINE TABLE IF NOT EXISTS investigation_run_job SCHEMALESS;

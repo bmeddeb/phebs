@@ -471,9 +471,11 @@ func prepareCallerLeafOutcome(outcome CallerLeafOutcome) (CallerLeafOutcome, err
 }
 
 func validateCallerJob(job Job, repository string) error {
+	recordID, recordErr := models.ParseRecordID(job.ID)
 	if job.Kind != JobCallerLeaf || job.Target != repository || job.ID == "" ||
 		job.LeaseToken == "" || job.ClaimedBy == "" ||
-		(job.Status != StatusClaimed && job.Status != StatusRunning) {
+		(job.Status != StatusClaimed && job.Status != StatusRunning) ||
+		recordErr != nil || recordID.Table != string(JobCallerLeaf) {
 		return fmt.Errorf("caller leaf job %q: %w", job.ID, ErrLeaseLost)
 	}
 	return nil
@@ -1118,7 +1120,8 @@ func (s *Surreal) ClearCallerLeafOutcome(ctx context.Context, generation CallerG
 		DELETE $admission_rid RETURN NONE;`, map[string]any{
 		"outcome_rid":   callerLeafOutcomeID(preparedGeneration, preparedPair),
 		"admission_rid": callerGenerationAdmissionID(preparedGeneration),
-	}, "clear caller leaf outcome")
+	}, preparedGeneration.Repository, preparedGeneration.Digest, false,
+		"clear caller leaf outcome")
 }
 
 func (s *Surreal) ClearCallerLeafGeneration(ctx context.Context, generation CallerGenerationIdentity) error {
@@ -1133,7 +1136,8 @@ func (s *Surreal) ClearCallerLeafGeneration(ctx context.Context, generation Call
 		"repository":        prepared.Repository,
 		"generation_digest": prepared.Digest,
 		"admission_rid":     callerGenerationAdmissionID(prepared),
-	}, "clear caller leaf generation")
+	}, prepared.Repository, prepared.Digest, false,
+		"clear caller leaf generation")
 }
 
 func (s *Surreal) ClearAllCallerLeafState(ctx context.Context, repository string) error {
@@ -1143,32 +1147,53 @@ func (s *Surreal) ClearAllCallerLeafState(ctx context.Context, repository string
 	return s.clearCallerLeafState(ctx, `
 		DELETE caller_leaf_outcome WHERE repository = $repository RETURN NONE;
 		DELETE caller_generation_admission WHERE repository = $repository RETURN NONE;`,
-		map[string]any{"repository": repository}, "clear all caller leaf state")
+		map[string]any{"repository": repository}, repository, "", true,
+		"clear all caller leaf state")
 }
 
-// ClearAllCallerLeafStateForRestore discards every imported caller-leaf
-// outcome and admission without decoding rows. Caller-leaf artifacts are
-// derived and deliberately excluded from backup, so retaining even otherwise
-// valid store rows would let absent bytes masquerade as completed work. The
-// raw table delete also makes restore recoverable from malformed imported
-// rows that the normal typed readers must reject.
+// ClearAllCallerLeafStateForRestore is the compatibility entry point for the
+// unified raw restore clear. It retires imported publication authority before
+// removing caller-leaf outcomes and admissions without decoding any row.
 func (s *Surreal) ClearAllCallerLeafStateForRestore(ctx context.Context) error {
-	return s.clearCallerLeafState(ctx, `
-		DELETE caller_leaf_outcome RETURN NONE;
-		DELETE caller_generation_admission RETURN NONE;`,
-		map[string]any{}, "clear all caller leaf state for restore")
+	return s.ClearAllCallerPublicationStateForRestore(ctx)
 }
 
-func (s *Surreal) clearCallerLeafState(ctx context.Context, body string, vars map[string]any, operation string) error {
+func (s *Surreal) clearCallerLeafState(
+	ctx context.Context,
+	body string,
+	vars map[string]any,
+	repository,
+	generationDigest string,
+	clearAll bool,
+	operation string,
+) error {
 	statement := `BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
-IF $writer_ok = false {
+LET $publication_writer_ok = array::len(SELECT id FROM $publication_migration_rid
+	WHERE version = $publication_migration_version LIMIT 1) = 1;
+IF $writer_ok = false OR $publication_writer_ok = false {
 	THROW 'phebs-permanent: caller-leaf writer generation is not active'
-};` + body + `
+};
+LET $publication = (SELECT generation_digest FROM $publication_rid)[0];
+LET $retire_publication = $publication != NONE
+	AND ($clear_all OR $publication.generation_digest = $generation_digest);
+` + body + `
+LET $retired_publication = IF $retire_publication THEN
+	(DELETE $publication_rid RETURN BEFORE) ELSE [] END;
+IF array::len($retired_publication) = 1 {
+	UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN NONE;
+};
 COMMIT;`
 	vars["migration_rid"] = callerLeafMigrationID()
 	vars["migration_version"] = callerLeafWriterMigrationVersion
+	vars["publication_migration_rid"] = callerGenerationPublicationMigrationID()
+	vars["publication_migration_version"] = callerGenerationPublicationMigrationVersion
+	vars["publication_rid"] = callerGenerationPublicationID(repository)
+	vars["repo_rid"] = repoID(repository)
+	vars["generation_digest"] = generationDigest
+	vars["clear_all"] = clearAll
 	results, err := surrealdb.Query[any](ctx, s.db, statement, vars)
 	if err != nil {
 		return fmt.Errorf("%s: %w", operation, err)

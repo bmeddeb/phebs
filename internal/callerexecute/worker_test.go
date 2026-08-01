@@ -7,10 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerleafid"
+	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
@@ -76,14 +79,18 @@ type workerTestStore struct {
 	candidate store.CandidateManifestPublication
 	resolver  store.ResolverCatalogPublication
 
-	outcomes  []store.CallerLeafOutcome
-	admission *store.CallerGenerationAdmission
-	events    []string
+	outcomes    []store.CallerLeafOutcome
+	admission   *store.CallerGenerationAdmission
+	publication *store.CallerGenerationPublication
+	events      []string
 
-	recordFailures    int
-	admissionFailures int
-	clearFailures     int
-	ensureErr         error
+	recordFailures        int
+	admissionFailures     int
+	publicationFailures   int
+	publicationLostAck    bool
+	summaryPayloadInvalid bool
+	clearFailures         int
+	ensureErr             error
 }
 
 func (state *workerTestStore) GetRepo(context.Context, string) (*store.Repo, error) {
@@ -246,6 +253,124 @@ func (state *workerTestStore) ClearAllCallerLeafStateForRestore(context.Context)
 	return nil
 }
 
+func (state *workerTestStore) PublishCallerGeneration(
+	_ context.Context,
+	_ store.Job,
+	publication store.CallerGenerationPublication,
+) error {
+	if state.publicationFailures > 0 {
+		state.publicationFailures--
+		state.events = append(state.events, "publish-error")
+		return errors.New("injected caller publication write failure")
+	}
+	publication.PublicationRevision = 1
+	if state.publication != nil {
+		publication.PublicationRevision = state.publication.PublicationRevision
+		if state.publication.ManifestDigest != publication.ManifestDigest {
+			publication.PublicationRevision++
+		}
+	}
+	publication.WriterSchema = store.CallerGenerationPublicationWriterSchema
+	publication.PublishedAt = time.Now().UTC()
+	state.events = append(state.events, "publish")
+	state.publication = &publication
+	if state.publicationLostAck {
+		state.publicationLostAck = false
+		state.events[len(state.events)-1] = "publish-lost-ack"
+		return errors.New("injected lost publication acknowledgement")
+	}
+	return nil
+}
+
+func (state *workerTestStore) GetCallerGenerationPublication(
+	context.Context,
+	string,
+) (*store.CallerGenerationPublication, error) {
+	if state.publication == nil {
+		return nil, fmt.Errorf("caller publication: %w", store.ErrNotFound)
+	}
+	publication := *state.publication
+	publication.Pairs = slices.Clone(state.publication.Pairs)
+	return &publication, nil
+}
+
+func (state *workerTestStore) GetCallerGenerationPublicationSummary(
+	context.Context,
+	string,
+) (*store.CallerGenerationPublicationSummary, error) {
+	if state.publication == nil {
+		return nil, fmt.Errorf("caller publication summary: %w", store.ErrNotFound)
+	}
+	summary := callerPublicationSummary(*state.publication)
+	return &summary, nil
+}
+
+func (state *workerTestStore) ListCallerGenerationPublicationSummaries(
+	context.Context,
+) ([]store.CallerGenerationPublicationSummary, error) {
+	if state.publication == nil {
+		return []store.CallerGenerationPublicationSummary{}, nil
+	}
+	return []store.CallerGenerationPublicationSummary{
+		callerPublicationSummary(*state.publication),
+	}, nil
+}
+
+func (state *workerTestStore) CallerGenerationPublicationCurrent(
+	_ context.Context,
+	publication store.CallerGenerationPublication,
+) (bool, error) {
+	return state.publication != nil &&
+		state.publication.Generation == publication.Generation &&
+		state.publication.ManifestDigest == publication.ManifestDigest &&
+		state.publication.PublicationRevision == publication.PublicationRevision &&
+		publication.Generation.CandidateControlRevision == state.candidate.ControlRevision &&
+		publication.Generation.ResolverControlRevision == state.resolver.ControlRevision, nil
+}
+
+func (state *workerTestStore) CallerGenerationPublicationSummaryCurrent(
+	ctx context.Context,
+	publication store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	if state.summaryPayloadInvalid {
+		return false, store.ErrInvalidCallerGenerationPublication
+	}
+	return state.CallerGenerationPublicationSummaryAuthorityCurrent(
+		ctx, publication,
+	)
+}
+
+func (state *workerTestStore) CallerGenerationPublicationSummaryAuthorityCurrent(
+	_ context.Context,
+	publication store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	return state.publication != nil &&
+		state.publication.Generation == publication.Generation &&
+		state.publication.PairPayloadDigest == publication.PairPayloadDigest &&
+		state.publication.ManifestDigest == publication.ManifestDigest &&
+		state.publication.PublicationRevision == publication.PublicationRevision &&
+		publication.Generation.CandidateControlRevision == state.candidate.ControlRevision &&
+		publication.Generation.ResolverControlRevision == state.resolver.ControlRevision, nil
+}
+
+func (state *workerTestStore) ClearCallerGenerationPublication(
+	context.Context,
+	string,
+) error {
+	state.events = append(state.events, "clear-publication")
+	state.publication = nil
+	return nil
+}
+
+func (state *workerTestStore) ClearAllCallerPublicationStateForRestore(
+	context.Context,
+) error {
+	state.publication = nil
+	state.outcomes = nil
+	state.admission = nil
+	return nil
+}
+
 type workerHarness struct {
 	worker   *Worker
 	state    *workerTestStore
@@ -331,6 +456,7 @@ func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 	}
 	if got, want := harness.state.events, []string{
 		"enqueue:false", "record:succeeded", "admission:admitted",
+		"enqueue:false", "publish",
 	}; !slices.Equal(got, want) {
 		t.Fatalf("pair mutation order = %v, want %v", got, want)
 	}
@@ -359,6 +485,114 @@ func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 	}
 	if harness.provider.opens != opens {
 		t.Fatalf("control-only reuse reopened candidate content: %d -> %d", opens, harness.provider.opens)
+	}
+}
+
+func TestWorkerQueuesBeforeClearingInvalidPairPayload(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	harness.state.summaryPayloadInvalid = true
+	before := len(harness.state.events)
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := harness.state.events[before:], []string{
+		"enqueue:true", "clear-publication",
+	}; !slices.Equal(got, want) {
+		t.Fatalf("pair-payload repair order = %v, want %v", got, want)
+	}
+	if harness.state.publication != nil {
+		t.Fatalf("invalid publication remains: %+v", harness.state.publication)
+	}
+}
+
+func TestWorkerRecoversManifestBeforeStoreCommit(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.state.publicationFailures = 1
+	if err := harness.worker.Handle(t.Context(), harness.job); err == nil ||
+		!store.IsSuccessorRetry(err) {
+		t.Fatalf("publication commit failure = %v, want successor retry", err)
+	}
+	if got, want := harness.state.events, []string{
+		"enqueue:false", "record:succeeded", "admission:admitted",
+		"enqueue:false", "publish-error",
+	}; !slices.Equal(got, want) {
+		t.Fatalf("failed publication order = %v, want %v", got, want)
+	}
+	marked, err := callerpublication.Publishing(
+		harness.worker.root, harness.state.repo.Name,
+	)
+	if err != nil || !marked || harness.state.publication != nil {
+		t.Fatalf("manifest-before-store boundary = marked %v pointer %+v err %v",
+			marked, harness.state.publication, err)
+	}
+	harness.state.events = nil
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := harness.state.events, []string{
+		"enqueue:false", "publish",
+	}; !slices.Equal(got, want) {
+		t.Fatalf("recovered publication order = %v, want %v", got, want)
+	}
+	marked, err = callerpublication.Publishing(
+		harness.worker.root, harness.state.repo.Name,
+	)
+	if err != nil || marked || harness.state.publication == nil {
+		t.Fatalf("recovered publication = marked %v pointer %+v err %v",
+			marked, harness.state.publication, err)
+	}
+}
+
+func TestWorkerRecoversCommittedMarkerAcrossRegistryGenerationConflict(
+	t *testing.T,
+) {
+	harness := newWorkerHarness(t, 1)
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	first := *harness.state.publication
+
+	nextDigest := "sha256:" + strings.Repeat("9", 64)
+	harness.plan.digest = nextDigest
+	harness.state.candidate.ManifestDigest = nextDigest
+	harness.state.candidate.GenerationDigest = "sha256:" + strings.Repeat("8", 64)
+	harness.state.resolver.CandidateManifestDigest = nextDigest
+	harness.state.outcomes = nil
+	harness.state.admission = nil
+	harness.state.publicationLostAck = true
+	harness.state.events = nil
+	if err := harness.worker.Handle(t.Context(), harness.job); err == nil ||
+		!store.IsSuccessorRetry(err) {
+		t.Fatalf("lost publication acknowledgement = %v, want successor retry", err)
+	}
+	if harness.state.publication == nil ||
+		harness.state.publication.ManifestDigest == first.ManifestDigest {
+		t.Fatalf("store did not commit replacement publication: %+v", harness.state.publication)
+	}
+	if marked, err := callerpublication.Publishing(
+		harness.worker.root, harness.state.repo.Name,
+	); err != nil || !marked {
+		t.Fatalf("replacement marker after lost acknowledgement = %v, %v", marked, err)
+	}
+
+	// Registry still holds A while store and the exact surviving marker name B.
+	// The warm successor must cross that conflict, clear only B's marker, and
+	// make B process-current without another corpus plan open.
+	opens := harness.provider.opens
+	harness.state.events = nil
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if harness.provider.opens != opens {
+		t.Fatalf("committed marker recovery reopened plan: %d -> %d", opens, harness.provider.opens)
+	}
+	if marked, err := callerpublication.Publishing(
+		harness.worker.root, harness.state.repo.Name,
+	); err != nil || marked {
+		t.Fatalf("replacement marker remains after recovery = %v, %v", marked, err)
 	}
 }
 
@@ -429,11 +663,47 @@ func TestWorkerRepairsStateWithoutFileQueueBeforeClear(t *testing.T) {
 	if err := restarted.Handle(t.Context(), harness.job); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := harness.state.events, []string{"enqueue:true", "clear-outcome"}; !slices.Equal(got, want) {
+	if got, want := harness.state.events, []string{"enqueue:true", "clear-publication"}; !slices.Equal(got, want) {
 		t.Fatalf("repair order = %v, want %v", got, want)
 	}
+	if len(harness.state.outcomes) != 1 {
+		t.Fatalf("pointer retirement mutated leaf outcomes: %+v", harness.state.outcomes)
+	}
+	harness.state.events = nil
+	if err := restarted.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := harness.state.events, []string{"enqueue:true", "clear-outcome"}; !slices.Equal(got, want) {
+		t.Fatalf("leaf repair order = %v, want %v", got, want)
+	}
 	if len(harness.state.outcomes) != 0 {
-		t.Fatalf("stale outcome survived repair: %+v", harness.state.outcomes)
+		t.Fatalf("stale outcome survived leaf repair: %+v", harness.state.outcomes)
+	}
+}
+
+func TestWorkerRepairsInvalidPairPayloadQueueBeforeClear(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if harness.state.publication == nil {
+		t.Fatal("worker did not publish the complete generation")
+	}
+	// The cheap pre-admission fence still matches: a same-length raw pair
+	// mutation leaves every scalar and the stored commitment unchanged. The
+	// final exact fence classifies the payload mismatch deterministically.
+	harness.state.summaryPayloadInvalid = true
+	harness.state.events = nil
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := harness.state.events, []string{
+		"enqueue:true", "clear-publication",
+	}; !slices.Equal(got, want) {
+		t.Fatalf("pair-payload repair order = %v, want %v", got, want)
+	}
+	if harness.state.publication != nil {
+		t.Fatalf("invalid pair payload remains: %+v", harness.state.publication)
 	}
 }
 
@@ -476,8 +746,15 @@ func TestWorkerRepairsSameSizeCorruptArtifactQueueBeforeClear(t *testing.T) {
 	if err := restarted.Handle(t.Context(), harness.job); err != nil {
 		t.Fatal(err)
 	}
-	if got, want := harness.state.events, []string{"enqueue:true", "clear-outcome"}; !slices.Equal(got, want) {
+	if got, want := harness.state.events, []string{"enqueue:true", "clear-publication"}; !slices.Equal(got, want) {
 		t.Fatalf("corruption repair order = %v, want %v", got, want)
+	}
+	harness.state.events = nil
+	if err := restarted.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := harness.state.events, []string{"enqueue:true", "clear-outcome"}; !slices.Equal(got, want) {
+		t.Fatalf("corrupt leaf repair order = %v, want %v", got, want)
 	}
 	if len(harness.state.outcomes) != 0 {
 		t.Fatalf("corrupt outcome survived repair: %+v", harness.state.outcomes)
@@ -505,6 +782,7 @@ func TestWorkerRecoversFileWithoutState(t *testing.T) {
 		}
 		if got, want := harness.state.events, []string{
 			"enqueue:false", "record:succeeded", "admission:admitted",
+			"enqueue:false", "publish",
 		}; !slices.Equal(got, want) {
 			t.Fatalf("resume mutations = %v, want %v", got, want)
 		}
@@ -816,6 +1094,7 @@ func TestWorkerEnsuresSuccessorBeforeSettledAdmissionRetry(t *testing.T) {
 	}
 	if got, want := harness.state.events, []string{
 		"enqueue:false", "admission:admitted",
+		"enqueue:false", "publish",
 	}; !slices.Equal(got, want) {
 		t.Fatalf("settled admission completion order = %v, want %v", got, want)
 	}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -112,6 +113,26 @@ func TestArtifactLifecycleAndWarmFingerprint(t *testing.T) {
 		return nil
 	}); err != nil || seen != 2 {
 		t.Fatalf("Open seen=%d err=%v", seen, err)
+	}
+	raw, err := os.ReadFile(publication.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen = 0
+	if err := VerifyReader(
+		t.Context(), bytes.NewReader(raw), generation, pair, publication.Receipt(),
+		func(Record) error {
+			seen++
+			return nil
+		},
+	); err != nil || seen != 2 {
+		t.Fatalf("VerifyReader seen=%d err=%v", seen, err)
+	}
+	if err := VerifyReader(
+		t.Context(), bytes.NewReader(append(slices.Clone(raw), 'x')),
+		generation, pair, publication.Receipt(), nil,
+	); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("VerifyReader appended content = %v, want ErrInvalidArtifact", err)
 	}
 }
 
@@ -461,6 +482,67 @@ func TestPublicationCurrentRejectsRepositoryIdentityReplacement(t *testing.T) {
 	}
 	if publication.Current() {
 		t.Fatal("publication remained current across repository identity replacement")
+	}
+}
+
+func TestRepositoryCreationFenceHonorsInstallationLimit(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	const limit = 2
+	for _, repository := range []string{
+		"github.com/acme/cap-a", "github.com/acme/cap-b",
+	} {
+		if err := ensureRepositoryWithinLimit(root, repository, limit); err != nil {
+			t.Fatalf("ensure %q: %v", repository, err)
+		}
+	}
+	if err := ensureRepositoryWithinLimit(
+		root, "github.com/acme/cap-a", limit,
+	); err != nil {
+		t.Fatalf("existing repository at cap: %v", err)
+	}
+	if err := ensureRepositoryWithinLimit(
+		root, "github.com/acme/cap-c", limit,
+	); !errors.Is(err, ErrCapacity) {
+		t.Fatalf("repository beyond cap = %v, want ErrCapacity", err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != limit {
+		t.Fatalf("repository entries at cap = %d, %v", len(entries), err)
+	}
+}
+
+func TestRepositoryCreationFenceSerializesConcurrentAdmission(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	start := make(chan struct{})
+	results := make(chan error, 2)
+	for _, repository := range []string{
+		"github.com/acme/race-a", "github.com/acme/race-b",
+	} {
+		go func() {
+			<-start
+			results <- ensureRepositoryWithinLimit(root, repository, 1)
+		}()
+	}
+	close(start)
+	succeeded := 0
+	refused := 0
+	for range 2 {
+		err := <-results
+		switch {
+		case err == nil:
+			succeeded++
+		case errors.Is(err, ErrCapacity):
+			refused++
+		default:
+			t.Fatalf("concurrent repository admission: %v", err)
+		}
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != 1 || succeeded != 1 || refused != 1 {
+		t.Fatalf(
+			"concurrent fence = entries:%d success:%d refused:%d err:%v",
+			len(entries), succeeded, refused, err,
+		)
 	}
 }
 

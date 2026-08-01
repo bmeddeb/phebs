@@ -117,8 +117,9 @@ receipts, T30.6b durable exact-generation domain outcomes, T30.6c
 aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
 classification, T30.6e focused local-evidence base-lane consumption, and
 T30.6f resolver-catalog lifecycle, T30.6g bounded resolver materialization,
-and T30.6h direct caller-leaf execution artifacts are shipped; T30.6i atomic
-complete caller-generation publication is next. T30.6g registers the
+T30.6h direct caller-leaf execution artifacts, and T30.6i atomic complete
+caller-generation publication are shipped; T30.6j authorized exact Caller Map
+reads are next. T30.6g registers the
 ordered gRPC/Thrift resolver adapters and materializes one immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,
 `layout-snapshot.json`, and `generated-from-snapshot.json` inputs plus each
@@ -149,7 +150,34 @@ complete admission without erasing successful outcomes. Exact `_test.go` suffix
 wins in candidate v4; focused local evidence for a committed non-empty unit
 now consumes only `base`, while empty-unit whole-repository extraction keeps
 shipped behavior and current search continues indexing every admitted test
-file. A physical test-search overlay,
+file. T30.6i now coordinates only the exact admitted successful pair set into
+one immutable complete manifest and one store pointer fenced by the live caller
+job, repository/candidate/resolver authority, and a repository-local monotonic
+publication revision. Exact retries do not advance the revision; every real
+publish or invalidation does, including `A → unavailable → A`. Pair bytes and
+the manifest become durable before the pointer, marker recovery spans every
+crash edge, and process leases delay retired leaf reclamation until the final
+reader releases. A cold open validates every referenced leaf once; the warm
+path checks store authority and captured file identities with zero content
+hashes, mirror lock, candidate replay, tree walk, source read, or child. The
+process cache is capped at eight parsed publications and 16,384 pair
+references. Evicted cleanup authority retains only a fixed repository-directory
+key and exact manifest basename, capped at the same 65,536 current-publication
+installation limit (15 MiB maximum raw identity payload), rather than a full
+store state or dormant transition slot. Pair-free pointer summaries carry a
+writer-owned pair-payload
+commitment and actual length; the warm path applies one scalar precheck, no
+`P`-element Go copy, and one final server-side pair-metadata hash while retaining
+zero leaf-content hashes. Startup keyset-pages eligible
+repository repair, and refuses more than 65,536 current publication rows or
+manifest-plus-leaf references, 65,536 caller-root entries, or 1 TiB of
+declared canonical caller bytes. Backup manifest v5 carries a hardened exact
+caller archive under a 4 TiB physical/logical envelope and
+bounded omission receipt. Restore validates and installs those bytes but raw-clears imported
+caller authority, advances a real imported visibility edge once, and leaves
+startup to force-queue reconstruction. No API, search, MCP, citation, paging,
+or authorization surface consumes this authority until T30.6j.
+A physical test-search overlay,
 test-source association, automatic unit discovery, SCIP generation,
 pack-specific recognizer expansion, and per-file parser degradation remain
 separately reviewed future work. The private operator evaluation is not a

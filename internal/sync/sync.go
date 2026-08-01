@@ -435,6 +435,16 @@ func followSourceHead(ctx context.Context, sourcePath, mirrorDir string) {
 // the connection name; membership is recorded after a successful sync, and
 // orphan cleanup runs when the config enables it.
 func Handler(cfg *config.Config, st store.Store) func(context.Context, store.Job) error {
+	return HandlerWithCallerLifecycle(cfg, st, nil)
+}
+
+// HandlerWithCallerLifecycle routes live orphan cleanup through the shared
+// caller publication lease registry.
+func HandlerWithCallerLifecycle(
+	cfg *config.Config,
+	st store.Store,
+	callerLifecycle CallerPublicationLifecycle,
+) func(context.Context, store.Job) error {
 	return func(ctx context.Context, job store.Job) error {
 		var conn *config.Connection
 		for i := range cfg.Connections {
@@ -460,7 +470,9 @@ func Handler(cfg *config.Config, st store.Store) func(context.Context, store.Job
 			return err
 		}
 		if cfg.Sync.CleanupOrphans {
-			_, err := ReconcileArtifacts(ctx, st, cfg.Server.DataDir, true)
+			_, err := ReconcileArtifactsWithCallerLifecycle(
+				ctx, st, cfg.Server.DataDir, true, callerLifecycle,
+			)
 			return err
 		}
 		return nil
@@ -521,7 +533,20 @@ func Resync(ctx context.Context, st store.Store, cfg *config.Config, every time.
 
 // CleanupOrphans deletes repo rows and mirrors that no connection claims.
 func CleanupOrphans(ctx context.Context, st store.Store, dataDir string) error {
-	_, err := ReconcileArtifacts(ctx, st, dataDir, true)
+	return CleanupOrphansWithCallerLifecycle(ctx, st, dataDir, nil)
+}
+
+// CleanupOrphansWithCallerLifecycle preserves live caller leases while
+// deleting repositories that no configured connection still owns.
+func CleanupOrphansWithCallerLifecycle(
+	ctx context.Context,
+	st store.Store,
+	dataDir string,
+	callerLifecycle CallerPublicationLifecycle,
+) error {
+	_, err := ReconcileArtifactsWithCallerLifecycle(
+		ctx, st, dataDir, true, callerLifecycle,
+	)
 	return err
 }
 

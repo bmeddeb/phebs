@@ -50,9 +50,11 @@ type LocalRuntime struct {
 // CurrentStoreIdentity is the writer/read contract a restore must validate
 // before importing any bytes into a new data directory.
 type StoreIdentity struct {
-	StoreSchema       string `json:"store_schema_version"`
-	EvidenceFormat    string `json:"evidence_format_version"`
-	EvidenceMigration string `json:"evidence_migration_version"`
+	StoreSchema                string `json:"store_schema_version"`
+	EvidenceFormat             string `json:"evidence_format_version"`
+	EvidenceMigration          string `json:"evidence_migration_version"`
+	CallerPublicationWriter    string `json:"caller_publication_writer_schema"`
+	CallerPublicationMigration string `json:"caller_publication_migration_version"`
 }
 
 type surrealIdentityCacheKey struct {
@@ -69,7 +71,9 @@ var surrealIdentityCache = struct {
 func CurrentStoreIdentity() StoreIdentity {
 	return StoreIdentity{
 		StoreSchema: evidenceStoreSchemaVersion, EvidenceFormat: evidenceFormatVersion,
-		EvidenceMigration: evidenceMigrationVersion,
+		EvidenceMigration:          evidenceMigrationVersion,
+		CallerPublicationWriter:    CallerGenerationPublicationWriterSchema,
+		CallerPublicationMigration: callerGenerationPublicationMigrationVersion,
 	}
 }
 

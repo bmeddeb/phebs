@@ -40,12 +40,32 @@ type ReconcileReport struct {
 // credential-bearing legacy URL persisted in the database or mirror config.
 var ErrCredentialAudit = errors.New("credential artifact audit failed")
 
+// CallerPublicationLifecycle is the live process boundary that delays caller
+// artifact removal until every exact reader lease has released.
+type CallerPublicationLifecycle interface {
+	RemoveRepository(context.Context, string) error
+}
+
 // ReconcileArtifacts audits repository rows, mirrors, and zoekt shards. It
 // always scrubs persisted URL userinfo and reclaims prior-process private
 // staging. Destructive orphan cleanup is gated by cleanupEnabled. Confirmed
 // orphan rows are marked deleting before disk work, which removes them from
 // the production search RepoSet immediately.
 func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cleanupEnabled bool) (ReconcileReport, error) {
+	return ReconcileArtifactsWithCallerLifecycle(
+		ctx, st, dataDir, cleanupEnabled, nil,
+	)
+}
+
+// ReconcileArtifactsWithCallerLifecycle performs the same audit while routing
+// caller artifact deletion through the shared process lease registry.
+func ReconcileArtifactsWithCallerLifecycle(
+	ctx context.Context,
+	st store.Store,
+	dataDir string,
+	cleanupEnabled bool,
+	callerLifecycle CallerPublicationLifecycle,
+) (ReconcileReport, error) {
 	var report ReconcileReport
 	var errs []error
 	if err := ctx.Err(); err != nil {
@@ -120,7 +140,9 @@ func ReconcileArtifacts(ctx context.Context, st store.Store, dataDir string, cle
 		if invalidNames[status.Name] {
 			continue // quarantined legacy collisions are never touched automatically
 		}
-		deleted, err := deleteRepoArtifacts(ctx, st, dataDir, status.Name)
+		deleted, err := deleteRepoArtifactsWithCallerLifecycle(
+			ctx, st, dataDir, status.Name, callerLifecycle,
+		)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -424,7 +446,20 @@ func legacyArtifactKey(name string) (string, bool) {
 	return filepath.ToSlash(repowork.CanonicalKey(clean + ".git")), true
 }
 
-func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name string) (bool, error) {
+func deleteRepoArtifacts(
+	ctx context.Context,
+	st store.Store,
+	dataDir, name string,
+) (bool, error) {
+	return deleteRepoArtifactsWithCallerLifecycle(ctx, st, dataDir, name, nil)
+}
+
+func deleteRepoArtifactsWithCallerLifecycle(
+	ctx context.Context,
+	st store.Store,
+	dataDir, name string,
+	callerLifecycle CallerPublicationLifecycle,
+) (bool, error) {
 	dir, err := SafeRepoDir(dataDir, name)
 	if err != nil {
 		return false, fmt.Errorf("refuse cleanup of %q: %w", name, err)
@@ -506,10 +541,18 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	// This literal is the same package-owned root returned by
 	// callerexecute.Root. Importing callerexecute here would create a cycle
 	// because caller execution consumes SafeRepoDir from this package.
-	if err := callerleaf.RemoveRepository(
-		ctx, filepath.Join(dataDir, "caller-leaves"), name,
-	); err != nil {
-		return destructiveFailure(fmt.Errorf("cleanup %s caller leaves: %w", name, err))
+	var callerErr error
+	if callerLifecycle != nil {
+		callerErr = callerLifecycle.RemoveRepository(ctx, name)
+	} else {
+		callerErr = callerleaf.RemoveRepository(
+			ctx, filepath.Join(dataDir, "caller-leaves"), name,
+		)
+	}
+	if callerErr != nil {
+		return destructiveFailure(fmt.Errorf(
+			"cleanup %s caller leaves: %w", name, callerErr,
+		))
 	}
 	if err := ctx.Err(); err != nil {
 		return destructiveFailure(err)

@@ -4767,3 +4767,155 @@ This ticket changes no search, evidence, API, or MCP visibility and establishes
 no caller completeness, extraction accuracy, migration completion,
 decommission safety, or historical retention claim. T30.6i owns atomic complete
 caller-generation publication.
+
+### T30.6i · Atomic complete caller-generation publication
+
+**T30.6i ✅ · Atomic complete caller-generation publication** *(2026-07-31)* —
+makes exactly one complete manifest and matching store pointer the authority
+over a caller generation. The manifest recomputes and binds the full semantic
+generation, ordered pair-set digest, every successful pair identity and
+canonical artifact basename, record/result/abstention counts, canonical and
+staged bytes, content and metadata digests, aggregate receipt, and its own
+checksum. A terminal, missing, stale, corrupt, or extra pair cannot produce a
+replacement; T30.6h outcomes and admissions remain independently invisible.
+
+Leaf artifacts become durable first. A repository-owned canonical marker then
+binds the generation-derived immutable manifest target, the manifest rename is
+the last filesystem visibility step, the live caller job commits the store
+pointer under exact repository, candidate, resolver, admission, outcome, writer,
+and lease fences, and only the matching commit clears the marker. The store
+recomputes the admitted outcome projection rather than trusting aggregate input.
+An exact retry is a true no-op. Every actual publish or invalidation advances a
+repository-owned monotonic caller-publication revision, including
+`A → unavailable → A`; candidate/control, resolver, declaration, indexed
+HEAD/unit, deleting, caller-state repair, restore, and repository lifecycle
+transitions retire the pointer and revision atomically.
+
+The existing repository-keyed caller worker now continues from admitted state
+through complete publication in the same bounded claim. It ensures a durable
+successor before the marker/store boundary. A manifest-before-store retry opens
+and validates only the exact marked state and commits it through the new live
+lease; a store-before-marker-clear retry verifies the exact current pointer and
+clears the marker without rewriting state. Invalid or incomplete markers queue
+forced replacement before cleanup only for an eligible repository. Ineligible
+marker-before-manifest residue cannot accept work, so startup removes the
+canonical marker and package-owned manifest/stage state without guessing leaf
+identity; a deterministically incomplete deletion tombstone similarly removes
+only itself. Exact ineligible cleanup removes leaves, then its manifest receipt,
+and only then the marker so every crash boundary remains resumable. Valid
+pointerless marked bytes for an indexed, non-deleting
+repository remain for a claimed worker, while operational I/O preserves marker,
+bytes, and prior authority. Startup never bypasses the job fence. It validates current pointers,
+retires frozen-policy/extractor drift, clears exact post-commit markers, queues
+eligible pointerless restored or crash-residue bytes, reclaims exact residue
+for absent/unindexed/deleting repositories only when a complete manifest
+supplies that authority, and removes only bounded package-shaped stages and
+identity-proven derived files.
+
+Cold admission descriptor-stably reads the canonical complete manifest and
+hash-validates every exact referenced leaf once, reusing leaf publications the
+worker already opened. The shared process registry retains at most eight
+parsed publications and 16,384 aggregate pair references with stable
+directory, manifest, and leaf identities. Inactive states evict to cold
+store-authoritative reopen without retaining their full `State` or a dormant
+transition slot. Exact cleanup authority is a separate map capped at the
+installation's 65,536 current-publication rows: each entry is one fixed
+85-byte cryptographic repository-directory key and one fixed 155-byte exact
+manifest basename, for at most 15 MiB of raw identity payload plus bounded Go
+map/string overhead. A new authority above that cap refuses retryably; an
+existing repository replacement does not grow the map. Retirement reconstructs
+its transient slot, validates the token-selected canonical manifest and decoded
+repository, removes referenced leaves before the manifest, and clears the token
+only after successful cleanup. If every candidate is lease-pinned, another
+admission refuses retryably without removing durable bytes. A warm job
+performs store-current checks plus
+only marker/directory/file identity checks: it takes no mirror lock, candidate
+manifest/member replay, content hash, tree or corpus walk, source blob read, or
+child process. A control-only candidate or resolver repair can republish the
+same cached immutable manifest under the new transaction fences without
+reopening candidate content. Active readers receive reference-counted leases;
+retirement removes parsed authority immediately, retains its manifest as a
+durable cleanup receipt, and defers unshared leaf reclamation until the final
+lease releases. Active repository deletion writes a canonical tombstone so
+final release or startup completes bounded removal without racing a same-name
+recreation. That final release may
+synchronously unlink one retired publication's at-most-16,384 pair references
+and sync its repository directory.
+
+Backup advances to `phebs-backup-manifest-v5` and adds
+`caller-publication.tar`. Offline discovery archives every unambiguous,
+marker-free, cold-valid complete publication and exactly its manifest plus
+referenced leaf basenames. Invalid, incomplete, marker-covered, ambiguous, and
+unreferenced derived state is omitted with exact counts and at most 64 retained
+details. Creation, cancellable zero-scratch streaming verification, and staged
+restore reject aliases, duplicates, links, devices, sparse or unknown PAX/GNU
+metadata, oversized/trailing input, descriptor swaps, and unreferenced members
+under 65,536 entries, 64 MiB per
+leaf, 32 MiB per manifest, 512-byte names, and 4 TiB physical/logical archive
+bounds. That envelope includes headroom above the live 1 TiB leaf-canonical
+ceiling for complete manifests, tar headers, and padding.
+Restore installs only the fully validated set, then raw-clears imported caller
+pointers, outcomes, and admissions before candidate/resolver clears can observe
+them. A repository with an imported pointer advances its revision exactly once;
+startup force-queues reconstruction and never promotes exported authority.
+
+Steady-state cost is bounded by transition. A warm exact job performs a fixed
+set of repository/candidate/resolver/admission/pair-free-pointer-summary
+queries and `O(P)` cheap file-identity stats beneath one repository descriptor
+over the already parsed `P` pair manifest. A scalar preliminary store fence
+does not hash pairs; the final visibility fence hashes the persisted pair
+metadata once server-side against a writer-owned commitment. Marker/conflict
+recovery may repeat that fence before mutating marker or registry state. The warm Go path
+allocates no `P`-element pair copy and performs zero leaf-content bytes or
+hashes. The first cold process admission reads one manifest
+and each referenced leaf once under T30.6h's 16,384-pair, 512 MiB canonical,
+520 MiB staged, five-descriptor, and 65,536-directory-entry ceilings; it adds no
+repository or source input work. A real publication writes one bounded stage,
+marker, and manifest, syncs their directories, commits one store transaction,
+and performs one resumable cleanup batch capped at 32 manifests, 65,536 pair
+references, and 1 GiB of manifest content after a 65,536-name inventory.
+Startup uses lightweight store projections that carry actual pair-array length
+and the private writer commitment without transferring or hashing the array.
+It refuses more than 65,536 current publication rows, 65,536 cumulative
+manifest-plus-leaf references, or 1 TiB of declared canonical caller bytes
+before exact per-pointer pair-metadata hashing and content admission; eligible
+repository marker repair is keyset-paged 512 names at a time without another
+total-repository cap. The physical root and each repository directory are each
+capped at 65,536 names, so invalid residue has a documented product-of-bounds
+worst-case scan even though valid references have the smaller global cap.
+Startup performs no Git corpus walk or child execution. Backup reads each exact
+leaf twice—once for cold discovery and once for descriptor-rooted copy-time
+digest verification—and retains no second extracted tree during creation. Its
+cross-process lock freezes focused-index publication/reconciliation, not the
+candidate/resolver/caller lifecycles; the caller archive therefore performs
+its own exact marker-free admission and restore/startup re-fencing. Per-
+publication and archive work is capped. Every real publish aggregate-scans at
+most 65,536 current pointer rows to recompute the installation fence; an exact
+retry skips that installation-wide scan after its own `O(P)` pair comparison.
+Same-length raw pair corruption fails the exact summary fence; startup retains
+queue-before-clear ordering, while a live exact admitted writer may replace
+only a commitment-invalid same-generation row and advances publication
+revision. A different commitment-valid result remains a conflict.
+Retained historical T30.6h pair
+artifacts still have no installation-wide disk-retention bound. T30.6m/T30.6n
+remain the explicit decision and implementation boundary for that posture.
+
+AC met: writer/schema identity and migration; exact outcome recomputation;
+partial and terminal invisibility; stale lease/authority rejection; same-HEAD
+unit transition; exact no-op revision and `A → unavailable → A`; marker-before-
+manifest, manifest-before-store, store-before-clear, tamper, same-size damage,
+descriptor swap, cross-repository placement, and prior-process stage fixtures;
+lease-delayed retirement, recurring-generation shared-leaf safety, bounded
+cache admission, resumable cleanup, and live deletion/recreation; frozen
+policy/extractor drift; cold descriptor stability and warm zero-content work;
+exact archive and bounded omission; restore repository-directory swap refusal;
+malformed raw restore clearing and single revision advance; control-only cached
+republish; ineligible pointerless residue reclamation; live
+backup/restore/startup reconstruction; dated PLAN decision and Operations,
+roadmap, AGENTS, and active/completed backlog updates; full merge bar.
+
+This ticket adds no Caller Map/API/MCP/search reader and establishes no
+authorization, completeness, extraction-accuracy, migration-completion,
+decommission-safety, or historical-retention claim. T30.6j owns authorized
+exact reads, paging, revision-bound cursors, immutable citations, and product
+visibility.

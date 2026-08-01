@@ -34,6 +34,21 @@ func internalCallerGeneration() CallerGenerationIdentity {
 	}
 }
 
+func TestValidateCallerJobRejectsRelabeledForeignQueueLease(t *testing.T) {
+	job := Job{
+		ID: "extraction_job:foreign", Kind: JobCallerLeaf,
+		Target: "github.com/acme/cap", Status: StatusRunning,
+		LeaseToken: "lease", ClaimedBy: "worker",
+	}
+	if err := validateCallerJob(job, job.Target); !errors.Is(err, ErrLeaseLost) {
+		t.Fatalf("relabeled foreign queue lease = %v, want ErrLeaseLost", err)
+	}
+	job.ID = "caller_leaf_job:owned"
+	if err := validateCallerJob(job, job.Target); err != nil {
+		t.Fatalf("valid caller lease: %v", err)
+	}
+}
+
 func TestCallerGenerationAdmissionRetainsTerminalCapPlusOne(t *testing.T) {
 	generation, err := prepareCallerGeneration(internalCallerGeneration())
 	if err != nil {

@@ -1162,6 +1162,11 @@ func (s *Surreal) AddEvidence(ctx context.Context, runID string, atoms []Evidenc
 
 const publishExtractionRunSQL = `
 BEGIN;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $caller_writer_ok = false {
+	THROW 'phebs-permanent: caller-generation publication writer is not active'
+};
 LET $locked = UPDATE $rid SET staged_revision += 1
     WHERE status = 'staged'
       AND array::len(SELECT id FROM $migration_rid
@@ -1214,7 +1219,8 @@ LET $repo_ok = IF array::len($locked) = 1 AND $counts_ok
 		  AND indexed_commit_hash = $commit
 		  AND (indexed_analysis_unit.digest ?? '') = $unit_digest RETURN AFTER)
     ELSE [] END;
-LET $ready = array::len($locked) = 1 AND array::len($repo_ok) = 1
+LET $ready = $caller_writer_ok
+	AND array::len($locked) = 1 AND array::len($repo_ok) = 1
 	AND $counts_ok AND $candidate_ok;
 LET $old = IF $ready THEN
     (UPDATE extraction_run SET status = 'superseded', published_key = NONE
@@ -1272,6 +1278,14 @@ LET $retired_catalog = IF array::len($outcome) = 1
 		AND $catalog_trigger AND $catalog != NONE THEN
 	(DELETE $catalog_rid RETURN BEFORE)
 	ELSE [] END;
+LET $retired_caller = IF array::len($retired_catalog) = 1 THEN
+	(DELETE caller_generation_publication
+		WHERE repository = $repo RETURN BEFORE)
+	ELSE [] END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;
 LET $pending_catalog = IF array::len($outcome) = 1
 		AND $catalog_trigger THEN
 	(SELECT id, created_at FROM resolver_catalog_job
@@ -1295,6 +1309,8 @@ LET $catalog_fanout = IF array::len($outcome) != 1
 	END;
 RETURN IF array::len($outcome) = 1
 	AND ($catalog_trigger = false OR array::len($catalog_fanout) = 1)
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
 	THEN $published ELSE [] END;
 COMMIT;`
 
@@ -1372,6 +1388,8 @@ func (s *Surreal) publishExtractionRun(
 		"evidence_format_version":            evidenceFormatVersion,
 		"evidence_migration_version":         evidenceMigrationVersion,
 		"max_evidence_identity_bytes":        maxEvidenceIdentityBytes,
+		"caller_migration_rid":               callerGenerationPublicationMigrationID(),
+		"caller_migration_version":           callerGenerationPublicationMigrationVersion,
 		"write_outcome":                      outcome != nil,
 		"outcome_disposition":                "",
 		"outcome_generation":                 ExtractionGenerationIdentity{},
@@ -1420,6 +1438,11 @@ const recordExtractionDomainOutcomeSQL = `
 BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $evidence_migration_version LIMIT 1) = 1;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $caller_writer_ok = false {
+	THROW 'phebs-permanent: caller-generation publication writer is not active'
+};
 LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
 	FROM $repo_rid)[0];
 LET $repo_ok = $repo_state != NONE
@@ -1470,7 +1493,7 @@ LET $retryable_ok = IF $disposition != 'retryable_failure'
 		AND ($same_generation = false
 			OR ($existing.run_id ?? '') = '')
 	END;
-LET $recorded = IF $writer_ok AND $repo_ok AND $candidate_ok
+LET $recorded = IF $writer_ok AND $caller_writer_ok AND $repo_ok AND $candidate_ok
 		AND $attempt_ok AND $retryable_ok THEN
 	(UPSERT $outcome_rid CONTENT {
 		repo: $repo,
@@ -1519,6 +1542,14 @@ LET $retired_catalog = IF array::len($recorded) = 1
 		AND $catalog_trigger AND $catalog != NONE THEN
 	(DELETE $catalog_rid RETURN BEFORE)
 	ELSE [] END;
+LET $retired_caller = IF array::len($retired_catalog) = 1 THEN
+	(DELETE caller_generation_publication
+		WHERE repository = $repo RETURN BEFORE)
+	ELSE [] END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;
 LET $pending_catalog = IF array::len($recorded) = 1
 		AND $catalog_trigger THEN
 	(SELECT id, created_at FROM resolver_catalog_job
@@ -1543,6 +1574,8 @@ LET $catalog_fanout = IF array::len($recorded) != 1
 RETURN IF array::len($recorded) = 1
 	AND ($candidate_control_failure = false OR array::len($repair) = 1)
 	AND ($catalog_trigger = false OR array::len($catalog_fanout) = 1)
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
 	THEN $recorded ELSE [] END;
 COMMIT;`
 
@@ -1587,6 +1620,8 @@ func (s *Surreal) RecordExtractionDomainOutcome(
 		"store_schema_version":       evidenceStoreSchemaVersion,
 		"evidence_format_version":    evidenceFormatVersion,
 		"evidence_migration_version": evidenceMigrationVersion,
+		"caller_migration_rid":       callerGenerationPublicationMigrationID(),
+		"caller_migration_version":   callerGenerationPublicationMigrationVersion,
 	}
 	for attempt := 0; ; attempt++ {
 		results, queryErr := surrealdb.Query[[]extractionDomainOutcomeRec](

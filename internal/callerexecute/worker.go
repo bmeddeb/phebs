@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sync"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/gitobj"
@@ -24,6 +26,7 @@ import (
 // Store is the exact state boundary used by the direct caller-leaf worker.
 type Store interface {
 	store.CallerLeafStore
+	store.CallerGenerationPublicationStore
 	GetRepo(context.Context, string) (*store.Repo, error)
 	GetCandidateManifestPublication(
 		context.Context, string,
@@ -74,9 +77,10 @@ type cachedResolvers struct {
 }
 
 type validationCache struct {
-	key      string
-	pairs    map[string]struct{}
-	complete bool
+	key         string
+	pairs       map[string]*callerleaf.Publication
+	settled     bool
+	publication *callerpublication.Publication
 }
 
 // Worker executes one unsettled pair at a time and drains canonical pairs
@@ -95,6 +99,7 @@ type Worker struct {
 	resolve      directResolverOpen
 	execute      pairExecute
 	install      pairInstall
+	publications *callerpublication.Registry
 
 	cacheMu     sync.Mutex
 	resolvers   cachedResolvers
@@ -110,10 +115,25 @@ func NewWorker(
 	manifests extract.CandidateCallerPlanProvider,
 	registry *Registry,
 ) (*Worker, error) {
+	return NewWorkerWithPublicationRegistry(
+		dataDir, state, manifests, registry,
+		callerpublication.NewRegistry(Root(dataDir)),
+	)
+}
+
+// NewWorkerWithPublicationRegistry shares the process-wide complete-generation
+// lease registry with startup reconciliation and future authorized readers.
+func NewWorkerWithPublicationRegistry(
+	dataDir string,
+	state Store,
+	manifests extract.CandidateCallerPlanProvider,
+	registry *Registry,
+	publications *callerpublication.Registry,
+) (*Worker, error) {
 	if dataDir == "" || !filepath.IsAbs(dataDir) {
 		return nil, errors.New("caller worker data directory must be absolute")
 	}
-	if state == nil || manifests == nil {
+	if state == nil || manifests == nil || publications == nil {
 		return nil, errors.New("caller worker state and candidate provider are required")
 	}
 	if err := registry.validate(); err != nil {
@@ -123,7 +143,8 @@ func NewWorker(
 		dataDir: dataDir, root: Root(dataDir),
 		resolverRoot: filepath.Join(dataDir, "resolver-catalogs"),
 		store:        state, manifests: manifests, registry: registry,
-		readBlob: gitobj.ReadBlob, open: resolvermaterialize.OpenCallerResolvers,
+		publications: publications,
+		readBlob:     gitobj.ReadBlob, open: resolvermaterialize.OpenCallerResolvers,
 		execute: ExecutePair,
 		install: func(
 			ctx context.Context,
@@ -176,7 +197,8 @@ func (worker *Worker) ensureJobSuccessor(
 func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if worker == nil || worker.store == nil || worker.manifests == nil ||
 		worker.registry == nil || worker.readBlob == nil || worker.open == nil ||
-		worker.resolve == nil || worker.execute == nil || worker.install == nil {
+		worker.resolve == nil || worker.execute == nil || worker.install == nil ||
+		worker.publications == nil {
 		return errors.New("caller worker is not initialized")
 	}
 	if job.Kind != store.JobCallerLeaf || job.Target == "" {
@@ -189,13 +211,43 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if err != nil || current == nil {
 		return err
 	}
+	if err := worker.publications.ActivateRepository(
+		workCtx, job.Target,
+	); err != nil {
+		return fmt.Errorf("activate caller publication repository: %w", err)
+	}
 	if job.Force {
 		worker.forgetValidation(current.semantic.Digest)
 	}
 	if admission, getErr := worker.store.GetCallerGenerationAdmission(
 		workCtx, current.stored,
-	); getErr == nil && admission != nil && worker.generationValidated(current.semantic.Digest) {
-		return nil
+	); getErr == nil && admission != nil {
+		switch admission.Disposition {
+		case store.CallerGenerationAdmitted:
+			currentPublication, publicationErr := worker.completePublicationCurrent(
+				workCtx, current,
+			)
+			if publicationErr != nil {
+				if deterministicPublicationFailure(publicationErr) {
+					return worker.handlePublicationFailure(workCtx, job, current)
+				}
+				return publicationErr
+			}
+			if currentPublication {
+				return nil
+			}
+			if cached := worker.cachedGenerationPublication(
+				current.semantic.Digest,
+			); cached != nil {
+				return worker.republishCachedGeneration(
+					workCtx, job, current, cached,
+				)
+			}
+		case store.CallerGenerationTerminalGenerationRefusal:
+			if worker.generationSettled(current.semantic.Digest) {
+				return nil
+			}
+		}
 	} else if getErr != nil && !errors.Is(getErr, store.ErrNotFound) &&
 		!errors.Is(getErr, store.ErrInvalidCallerLeafState) {
 		return getErr
@@ -280,7 +332,17 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		) != nil {
 			return worker.recoverGeneration(workCtx, job, current.stored)
 		}
-		worker.markGenerationValidated(current.semantic.Digest)
+		if admission.Disposition == store.CallerGenerationAdmitted {
+			return worker.publishAdmittedGeneration(
+				workCtx, job, current, pairs, outcomes,
+			)
+		}
+		if err := worker.retireUnavailablePublication(
+			workCtx, current.semantic.Repository,
+		); err != nil {
+			return err
+		}
+		worker.markGenerationSettled(current.semantic.Digest)
 		return nil
 	}
 	if settled == len(pairs) {
@@ -304,7 +366,17 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 				fmt.Errorf("record settled caller admission: %w", err),
 			)
 		}
-		worker.markGenerationValidated(current.semantic.Digest)
+		if disposition == store.CallerGenerationAdmitted {
+			return worker.publishAdmittedGeneration(
+				workCtx, job, current, pairs, outcomes,
+			)
+		}
+		if err := worker.retireUnavailablePublication(
+			workCtx, current.semantic.Repository,
+		); err != nil {
+			return err
+		}
+		worker.markGenerationSettled(current.semantic.Digest)
 		return nil
 	}
 
@@ -426,7 +498,191 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			successorQueued,
 		)
 	}
-	worker.markGenerationValidated(current.semantic.Digest)
+	if disposition == store.CallerGenerationAdmitted {
+		return worker.publishAdmittedGeneration(
+			workCtx, job, current, pairs, outcomes,
+		)
+	}
+	if err := worker.retireUnavailablePublication(
+		ctx, current.semantic.Repository,
+	); err != nil {
+		return withSuccessorRetry(err, successorQueued)
+	}
+	worker.markGenerationSettled(current.semantic.Digest)
+	return nil
+}
+
+func (worker *Worker) publishAdmittedGeneration(
+	ctx context.Context,
+	job store.Job,
+	current *authority,
+	expected []ExpectedPair,
+	outcomes []store.CallerLeafOutcome,
+) error {
+	outcomeByDigest := make(map[string]store.CallerLeafOutcome, len(outcomes))
+	for _, outcome := range outcomes {
+		if _, exists := outcomeByDigest[outcome.Pair.PairDigest]; exists {
+			return worker.recoverGeneration(ctx, job, current.stored)
+		}
+		outcomeByDigest[outcome.Pair.PairDigest] = outcome
+	}
+	pairs := make([]callerpublication.PairReceipt, len(expected))
+	for index, pair := range expected {
+		outcome, ok := outcomeByDigest[pair.Identity.Digest]
+		if !ok || outcome.Disposition != store.CallerLeafSucceeded ||
+			outcome.Receipt == nil || outcome.Pair != storePair(pair) {
+			return worker.recoverGeneration(ctx, job, current.stored)
+		}
+		pairs[index] = callerpublication.PairReceipt{
+			Pair: pair.Identity, Receipt: artifactReceipt(*outcome.Receipt),
+		}
+	}
+	manifest, err := callerpublication.BuildManifest(current.semantic, pairs)
+	if err != nil {
+		return fmt.Errorf("build complete caller manifest: %w", err)
+	}
+	if err := worker.ensureJobSuccessor(ctx, job, false); err != nil {
+		return fmt.Errorf("enqueue complete caller publication recovery: %w", err)
+	}
+	prepared, err := callerpublication.PrepareWithValidated(
+		ctx, worker.root, manifest,
+		worker.validatedPairs(current.semantic.Digest),
+	)
+	if errors.Is(err, callerpublication.ErrPublishing) {
+		return worker.recoverMarkedAdmittedGeneration(
+			ctx, job, current, manifest,
+		)
+	}
+	if err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("prepare complete caller publication: %w", err),
+		)
+	}
+	defer func() { _ = prepared.Discard() }()
+	publication, err := prepared.Publish(
+		ctx,
+		func(commitCtx context.Context, state callerpublication.State) error {
+			if !reflect.DeepEqual(state, manifest.State()) {
+				return errors.New("caller publication stage returned another state")
+			}
+			return worker.store.PublishCallerGeneration(
+				commitCtx, job, storePublication(current.stored, manifest),
+			)
+		},
+	)
+	if err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("publish complete caller generation: %w", err),
+		)
+	}
+	if err := worker.publications.Observe(ctx, publication); err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("observe complete caller generation: %w", err),
+		)
+	}
+	worker.markPublication(current.semantic.Digest, publication)
+	publicationCurrent, err := worker.completePublicationCurrent(ctx, current)
+	if err != nil {
+		return store.WithSuccessorRetry(err)
+	}
+	if !publicationCurrent {
+		return store.WithSuccessorRetry(errors.New(
+			"complete caller publication lost authority after commit",
+		))
+	}
+	return nil
+}
+
+func (worker *Worker) recoverMarkedAdmittedGeneration(
+	ctx context.Context,
+	job store.Job,
+	current *authority,
+	manifest callerpublication.Manifest,
+) error {
+	publication, err := callerpublication.RecoverPublishing(
+		ctx, worker.root, current.semantic.Repository,
+		worker.registry.ExtractorIdentities(),
+		func(commitCtx context.Context, state callerpublication.State) error {
+			if !reflect.DeepEqual(state, manifest.State()) {
+				return fmt.Errorf(
+					"%w: marked state differs from the admitted generation",
+					callerpublication.ErrInvalidManifest,
+				)
+			}
+			return worker.store.PublishCallerGeneration(
+				commitCtx, job, storePublication(current.stored, manifest),
+			)
+		},
+	)
+	if err != nil {
+		if !deterministicPublicationFailure(err) {
+			return store.WithSuccessorRetry(
+				fmt.Errorf("recover marked caller publication: %w", err),
+			)
+		}
+		if queueErr := worker.ensureJobSuccessor(ctx, job, true); queueErr != nil {
+			return queueErr
+		}
+		if abandonErr := callerpublication.AbandonPublishing(
+			ctx, worker.root, current.semantic.Repository, nil,
+		); abandonErr != nil {
+			return store.WithSuccessorRetry(abandonErr)
+		}
+		worker.forgetValidation(current.semantic.Digest)
+		return nil
+	}
+	if err := worker.publications.Observe(ctx, publication); err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("observe recovered caller generation: %w", err),
+		)
+	}
+	worker.markPublication(current.semantic.Digest, publication)
+	publicationCurrent, err := worker.completePublicationCurrent(ctx, current)
+	if err != nil {
+		return store.WithSuccessorRetry(err)
+	}
+	if !publicationCurrent {
+		return store.WithSuccessorRetry(errors.New(
+			"recovered caller publication lost authority after commit",
+		))
+	}
+	return nil
+}
+
+func (worker *Worker) republishCachedGeneration(
+	ctx context.Context,
+	job store.Job,
+	current *authority,
+	publication *callerpublication.Publication,
+) error {
+	if publication == nil || !publication.Current() {
+		return errors.New("cached caller publication is no longer current")
+	}
+	if err := worker.ensureJobSuccessor(ctx, job, false); err != nil {
+		return fmt.Errorf("enqueue cached caller publication recovery: %w", err)
+	}
+	if err := worker.store.PublishCallerGeneration(
+		ctx, job, storePublication(current.stored, publication.Manifest()),
+	); err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("republish cached caller generation: %w", err),
+		)
+	}
+	if err := worker.publications.Observe(ctx, publication); err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("observe cached caller generation: %w", err),
+		)
+	}
+	worker.markPublication(current.semantic.Digest, publication)
+	publicationCurrent, err := worker.completePublicationCurrent(ctx, current)
+	if err != nil {
+		return store.WithSuccessorRetry(err)
+	}
+	if !publicationCurrent {
+		return store.WithSuccessorRetry(errors.New(
+			"cached caller publication lost authority after commit",
+		))
+	}
 	return nil
 }
 
@@ -573,7 +829,9 @@ func (worker *Worker) executeAndRecordPair(
 			if err = worker.store.RecordCallerLeafOutcome(ctx, job, outcome); err != nil {
 				return outcome, true, false, err
 			}
-			worker.markPairValidated(current.semantic.Digest, pair.Identity.Digest)
+			worker.markPairValidated(
+				current.semantic.Digest, pair.Identity.Digest, publication,
+			)
 			return outcome, true, false, nil
 		}
 	}
@@ -727,6 +985,285 @@ func artifactReceipt(receipt store.CallerLeafArtifactReceipt) callerleaf.Receipt
 	}
 }
 
+func storePairIdentity(pair callerleaf.PairIdentity) store.CallerLeafPair {
+	leaf := pair.Leaf
+	return store.CallerLeafPair{
+		Domain: pair.Domain, ExtractorVersion: pair.ExtractorVersion,
+		LeafAdapterVersion: pair.LeafAdapterVersion,
+		LeafOrdinal:        leaf.Ordinal, LeafPrefix: leaf.Prefix,
+		LeafPrefixBits: leaf.PrefixBits, CandidateMemberName: leaf.Name,
+		CandidateRecordCount:   leaf.RecordCount,
+		CandidateDeclaredBytes: leaf.DeclaredBytes,
+		CandidateContentBytes:  leaf.ContentBytes,
+		CandidateContentDigest: leaf.ContentDigest,
+		PairDigest:             pair.Digest,
+	}
+}
+
+func storePublication(
+	generation store.CallerGenerationIdentity,
+	manifest callerpublication.Manifest,
+) store.CallerGenerationPublication {
+	pairs := make([]store.CallerGenerationPairPublication, len(manifest.Pairs))
+	for index, pair := range manifest.Pairs {
+		receipt := storeReceipt(pair.Receipt)
+		pairs[index] = store.CallerGenerationPairPublication{
+			Pair: storePairIdentity(pair.Pair), Receipt: *receipt,
+			RecordCount: pair.Receipt.RecordCount,
+		}
+	}
+	return store.CallerGenerationPublication{
+		Generation: generation, Pairs: pairs,
+		PairSetDigest:   manifest.PairSetDigest,
+		PairCount:       manifest.Aggregate.PairCount,
+		ArtifactCount:   manifest.Aggregate.ArtifactCount,
+		ResultCount:     manifest.Aggregate.ResultCount,
+		AbstentionCount: manifest.Aggregate.AbstentionCount,
+		CanonicalBytes:  manifest.Aggregate.CanonicalBytes,
+		StagingBytes:    manifest.Aggregate.StagingBytes,
+		PeakOpenFiles:   manifest.Aggregate.PeakOpenFiles,
+		ManifestDigest:  manifest.Digest,
+		ManifestPath:    manifest.State().Manifest,
+	}
+}
+
+func publicationState(
+	current *authority,
+	pointer store.CallerGenerationPublication,
+) (callerpublication.State, error) {
+	return publicationStateFromSummary(current, callerPublicationSummary(pointer))
+}
+
+func publicationStateFromSummary(
+	current *authority,
+	pointer store.CallerGenerationPublicationSummary,
+) (callerpublication.State, error) {
+	if current == nil || pointer.Generation != current.stored {
+		return callerpublication.State{}, errors.New(
+			"caller publication points at another generation",
+		)
+	}
+	state := callerpublication.State{
+		Schema: callerpublication.StateSchema, Generation: current.semantic,
+		PairSetDigest: pointer.PairSetDigest,
+		Aggregate: callerleaf.AggregateReceipt{
+			PairCount: pointer.PairCount, ArtifactCount: pointer.ArtifactCount,
+			ResultCount:     pointer.ResultCount,
+			AbstentionCount: pointer.AbstentionCount,
+			CanonicalBytes:  pointer.CanonicalBytes,
+			StagingBytes:    pointer.StagingBytes,
+			PeakOpenFiles:   pointer.PeakOpenFiles,
+		},
+		ManifestDigest: pointer.ManifestDigest, Manifest: pointer.ManifestPath,
+	}
+	if err := callerpublication.ValidateState(state); err != nil {
+		return callerpublication.State{}, err
+	}
+	return state, nil
+}
+
+func publicationMatchesSummary(
+	current *authority,
+	publication *callerpublication.Publication,
+	pointer store.CallerGenerationPublicationSummary,
+) bool {
+	if publication == nil || current == nil {
+		return false
+	}
+	// State is the scalar projection already captured by the cold-opened
+	// publication. Avoid Manifest here: cloning it and converting its pair
+	// receipts would allocate two complete P-element slices on every warm job.
+	state := publication.State()
+	aggregate := state.Aggregate
+	return reflect.DeepEqual(state.Generation, current.semantic) &&
+		current.stored == pointer.Generation &&
+		state.PairSetDigest == pointer.PairSetDigest &&
+		aggregate.PairCount == pointer.PairCount &&
+		aggregate.ArtifactCount == pointer.ArtifactCount &&
+		aggregate.ResultCount == pointer.ResultCount &&
+		aggregate.AbstentionCount == pointer.AbstentionCount &&
+		aggregate.CanonicalBytes == pointer.CanonicalBytes &&
+		aggregate.StagingBytes == pointer.StagingBytes &&
+		aggregate.PeakOpenFiles == pointer.PeakOpenFiles &&
+		state.ManifestDigest == pointer.ManifestDigest &&
+		state.Manifest == pointer.ManifestPath
+}
+
+func deterministicPublicationFailure(err error) bool {
+	return errors.Is(err, callerpublication.ErrInvalidManifest) ||
+		errors.Is(err, callerleaf.ErrInvalidArtifact) ||
+		errors.Is(err, store.ErrInvalidCallerGenerationPublication) ||
+		errors.Is(err, os.ErrNotExist)
+}
+
+func (worker *Worker) completePublicationCurrent(
+	ctx context.Context,
+	current *authority,
+) (bool, error) {
+	pointer, err := worker.store.GetCallerGenerationPublicationSummary(
+		ctx, current.semantic.Repository,
+	)
+	if errors.Is(err, store.ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	storeCurrent, err := worker.store.
+		CallerGenerationPublicationSummaryAuthorityCurrent(ctx, *pointer)
+	if err != nil || !storeCurrent {
+		return false, err
+	}
+	state, err := publicationStateFromSummary(current, *pointer)
+	if err != nil {
+		return false, fmt.Errorf("caller publication state: %w", err)
+	}
+	lease, err := worker.publications.Acquire(ctx, state)
+	var publication *callerpublication.Publication
+	if err == nil {
+		defer func() { _ = lease.Release() }()
+		publication = lease.Publication()
+	} else if errors.Is(err, callerpublication.ErrRegistryConflict) {
+		publication, err = callerpublication.Open(ctx, worker.root, state)
+		marked := false
+		if errors.Is(err, callerpublication.ErrPublishing) {
+			publication, err = callerpublication.OpenPublishing(
+				ctx, worker.root, state,
+			)
+			marked = err == nil
+		}
+		if err == nil {
+			storeCurrent, err = worker.store.CallerGenerationPublicationSummaryCurrent(
+				ctx, *pointer,
+			)
+			if err == nil && !storeCurrent {
+				return false, nil
+			}
+			if err == nil && marked {
+				err = callerpublication.ClearPublishing(worker.root, state)
+			}
+			if err == nil {
+				err = worker.publications.Observe(ctx, publication)
+			}
+		}
+	} else if errors.Is(err, callerpublication.ErrPublishing) {
+		publication, err = callerpublication.OpenPublishing(ctx, worker.root, state)
+		if err == nil {
+			storeCurrent, err = worker.store.CallerGenerationPublicationSummaryCurrent(
+				ctx, *pointer,
+			)
+			if err == nil && !storeCurrent {
+				return false, nil
+			}
+			if err == nil {
+				err = callerpublication.ClearPublishing(worker.root, state)
+			}
+			if err == nil {
+				err = worker.publications.Observe(ctx, publication)
+			}
+		}
+	}
+	if err != nil {
+		return false, fmt.Errorf("open caller publication: %w", err)
+	}
+	if !publicationMatchesSummary(current, publication, *pointer) {
+		return false, fmt.Errorf(
+			"%w: filesystem manifest differs from the store pointer",
+			callerpublication.ErrInvalidManifest,
+		)
+	}
+	storeCurrent, err = worker.store.CallerGenerationPublicationSummaryCurrent(ctx, *pointer)
+	if err != nil || !storeCurrent || !publication.Current() {
+		return false, err
+	}
+	worker.markPublication(current.semantic.Digest, publication)
+	return true, nil
+}
+
+func (worker *Worker) recoverPublication(
+	ctx context.Context,
+	job store.Job,
+	repository, generation string,
+) error {
+	if err := worker.ensureJobSuccessor(ctx, job, true); err != nil {
+		return err
+	}
+	if err := worker.store.ClearCallerGenerationPublication(ctx, repository); err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("clear invalid caller publication: %w", err),
+		)
+	}
+	if err := worker.publications.Retire(ctx, repository); err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("retire invalid caller publication: %w", err),
+		)
+	}
+	worker.forgetValidation(generation)
+	return nil
+}
+
+func (worker *Worker) handlePublicationFailure(
+	ctx context.Context,
+	job store.Job,
+	current *authority,
+) error {
+	marked, err := callerpublication.Publishing(
+		worker.root, current.semantic.Repository,
+	)
+	if err != nil {
+		return err
+	}
+	if !marked {
+		return worker.recoverPublication(
+			ctx, job, current.semantic.Repository, current.semantic.Digest,
+		)
+	}
+	_, err = callerpublication.OpenMarked(
+		ctx, worker.root, current.semantic.Repository,
+	)
+	if err == nil {
+		// A valid different marker is recoverable only through the exact active
+		// job lease after its expected pair set is reconstructed under the mirror
+		// lock. Leave every byte intact for the forced successor.
+		if queueErr := worker.ensureJobSuccessor(ctx, job, true); queueErr != nil {
+			return queueErr
+		}
+		worker.forgetValidation(current.semantic.Digest)
+		return nil
+	}
+	if errors.Is(err, callerpublication.ErrPublicationIO) {
+		return err
+	}
+	pointer, pointerErr := worker.store.GetCallerGenerationPublication(
+		ctx, current.semantic.Repository,
+	)
+	var keep *callerpublication.State
+	if pointerErr == nil {
+		state, stateErr := publicationState(current, *pointer)
+		if stateErr == nil {
+			keep = &state
+		}
+	} else if !errors.Is(pointerErr, store.ErrNotFound) &&
+		!errors.Is(pointerErr, store.ErrInvalidCallerGenerationPublication) {
+		return pointerErr
+	}
+	if queueErr := worker.ensureJobSuccessor(ctx, job, true); queueErr != nil {
+		return queueErr
+	}
+	if abandonErr := callerpublication.AbandonPublishing(
+		ctx, worker.root, current.semantic.Repository, keep,
+	); abandonErr != nil {
+		return store.WithSuccessorRetry(abandonErr)
+	}
+	worker.forgetValidation(current.semantic.Digest)
+	if keep == nil {
+		return worker.recoverPublication(
+			ctx, job, current.semantic.Repository, current.semantic.Digest,
+		)
+	}
+	return nil
+}
+
 func (worker *Worker) validateOutcomes(
 	ctx context.Context,
 	job store.Job,
@@ -752,18 +1289,20 @@ func (worker *Worker) validateOutcomes(
 		if outcome.Disposition != store.CallerLeafSucceeded || outcome.Receipt == nil {
 			return 0, true, worker.recoverGeneration(ctx, job, current.stored)
 		}
-		if worker.pairValidated(current.semantic.Digest, pair.Identity.Digest) {
+		if worker.validatedPair(current.semantic.Digest, pair.Identity.Digest) != nil {
 			continue
 		}
 		receipt := artifactReceipt(*outcome.Receipt)
 		receiptValid := callerleaf.ValidateReceipt(
 			current.semantic, pair.Identity, receipt,
 		) == nil
-		_, err := callerleaf.Open(
+		publication, err := callerleaf.Open(
 			ctx, worker.root, current.semantic, pair.Identity, receipt, nil,
 		)
 		if err == nil {
-			worker.markPairValidated(current.semantic.Digest, pair.Identity.Digest)
+			worker.markPairValidated(
+				current.semantic.Digest, pair.Identity.Digest, publication,
+			)
 			continue
 		}
 		if !errors.Is(err, callerleaf.ErrInvalidArtifact) &&
@@ -833,8 +1372,40 @@ func (worker *Worker) recoverGeneration(
 			fmt.Errorf("clear invalid caller generation: %w", err),
 		)
 	}
+	if err := worker.retireUnavailablePublication(
+		ctx, generation.Repository,
+	); err != nil {
+		return store.WithSuccessorRetry(
+			fmt.Errorf("retire invalid caller publication: %w", err),
+		)
+	}
 	worker.forgetValidation(generation.Digest)
 	return nil
+}
+
+// retireUnavailablePublication never lets a failed proposal remove the files
+// of a different store-current generation. Upstream transitions normally clear
+// that pointer atomically; this final check also protects repair and test seams
+// where an older publication remains authoritative.
+func (worker *Worker) retireUnavailablePublication(
+	ctx context.Context,
+	repository string,
+) error {
+	pointer, err := worker.store.GetCallerGenerationPublication(ctx, repository)
+	if errors.Is(err, store.ErrNotFound) {
+		return worker.publications.Retire(ctx, repository)
+	}
+	if err != nil {
+		return err
+	}
+	current, err := worker.store.CallerGenerationPublicationCurrent(ctx, *pointer)
+	if err != nil {
+		return err
+	}
+	if current {
+		return nil
+	}
+	return worker.publications.Retire(ctx, repository)
 }
 
 func (worker *Worker) resolverFor(
@@ -912,42 +1483,101 @@ func resolverState(pointer store.ResolverCatalogPublication) resolvercatalog.Sta
 	}
 }
 
-func (worker *Worker) pairValidated(generation, pair string) bool {
+func (worker *Worker) validatedPair(
+	generation, pair string,
+) *callerleaf.Publication {
 	worker.cacheMu.Lock()
 	defer worker.cacheMu.Unlock()
 	if worker.validations.key != generation {
-		return false
+		return nil
 	}
-	_, ok := worker.validations.pairs[pair]
-	return ok
-}
-
-func (worker *Worker) markPairValidated(generation, pair string) {
-	worker.cacheMu.Lock()
-	defer worker.cacheMu.Unlock()
-	if worker.validations.key != generation {
-		worker.validations = validationCache{
-			key: generation, pairs: make(map[string]struct{}),
-		}
+	publication := worker.validations.pairs[pair]
+	if publication == nil || !publication.Current() {
+		return nil
 	}
-	worker.validations.pairs[pair] = struct{}{}
+	return publication
 }
 
-func (worker *Worker) generationValidated(generation string) bool {
-	worker.cacheMu.Lock()
-	defer worker.cacheMu.Unlock()
-	return worker.validations.key == generation && worker.validations.complete
-}
-
-func (worker *Worker) markGenerationValidated(generation string) {
+func (worker *Worker) markPairValidated(
+	generation, pair string,
+	publication *callerleaf.Publication,
+) {
+	if publication == nil {
+		return
+	}
 	worker.cacheMu.Lock()
 	defer worker.cacheMu.Unlock()
 	if worker.validations.key != generation {
 		worker.validations = validationCache{
-			key: generation, pairs: make(map[string]struct{}),
+			key: generation, pairs: make(map[string]*callerleaf.Publication),
 		}
 	}
-	worker.validations.complete = true
+	worker.validations.pairs[pair] = publication
+}
+
+func (worker *Worker) validatedPairs(
+	generation string,
+) map[string]*callerleaf.Publication {
+	worker.cacheMu.Lock()
+	defer worker.cacheMu.Unlock()
+	if worker.validations.key != generation {
+		return nil
+	}
+	result := make(map[string]*callerleaf.Publication, len(worker.validations.pairs))
+	for pair, publication := range worker.validations.pairs {
+		if publication != nil && publication.Current() {
+			result[pair] = publication
+		}
+	}
+	return result
+}
+
+func (worker *Worker) generationSettled(generation string) bool {
+	worker.cacheMu.Lock()
+	defer worker.cacheMu.Unlock()
+	return worker.validations.key == generation && worker.validations.settled
+}
+
+func (worker *Worker) markGenerationSettled(generation string) {
+	worker.cacheMu.Lock()
+	defer worker.cacheMu.Unlock()
+	if worker.validations.key != generation {
+		worker.validations = validationCache{
+			key: generation, pairs: make(map[string]*callerleaf.Publication),
+		}
+	}
+	worker.validations.settled = true
+	worker.validations.publication = nil
+}
+
+func (worker *Worker) cachedGenerationPublication(
+	generation string,
+) *callerpublication.Publication {
+	worker.cacheMu.Lock()
+	defer worker.cacheMu.Unlock()
+	if worker.validations.key != generation || worker.validations.publication == nil ||
+		!worker.validations.publication.Current() {
+		return nil
+	}
+	return worker.validations.publication
+}
+
+func (worker *Worker) markPublication(
+	generation string,
+	publication *callerpublication.Publication,
+) {
+	if publication == nil {
+		return
+	}
+	worker.cacheMu.Lock()
+	defer worker.cacheMu.Unlock()
+	if worker.validations.key != generation {
+		worker.validations = validationCache{
+			key: generation, pairs: make(map[string]*callerleaf.Publication),
+		}
+	}
+	worker.validations.settled = true
+	worker.validations.publication = publication
 }
 
 func (worker *Worker) forgetValidation(generation string) {

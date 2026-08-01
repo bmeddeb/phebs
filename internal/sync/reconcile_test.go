@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +32,7 @@ type reconcileStore struct {
 	cleared       int
 	deleted       bool
 	canceledKinds []store.JobKind
+	cancelErr     error
 }
 
 func TestReconcileFocusedArtifactsRemovesOnlyOrphanOwnership(t *testing.T) {
@@ -207,7 +209,15 @@ func (s *reconcileStore) SetRepoDeleting(_ context.Context, _ string, deleting b
 	if s.deleted {
 		return store.ErrNotFound
 	}
+	wasDeleting := s.repo.Deleting
 	s.repo.Deleting = deleting
+	if wasDeleting && !deleting {
+		// The real store makes reactivation and its forced caller successor
+		// one transaction. Model that contract so rollback tests fail if the
+		// sync layer tries to recreate the old post-commit queue gap.
+		s.enqueued++
+		s.enqueuedForce = true
+	}
 	return nil
 }
 
@@ -218,6 +228,9 @@ func (s *reconcileStore) DeleteRepo(context.Context, string) error {
 
 func (s *reconcileStore) CancelPendingJobs(_ context.Context, kind store.JobKind, _ string) (int, error) {
 	s.canceledKinds = append(s.canceledKinds, kind)
+	if s.cancelErr != nil {
+		return 0, s.cancelErr
+	}
 	return 0, nil
 }
 
@@ -935,6 +948,82 @@ func TestDeleteRepoArtifactsRemovesCatalogAndCancelsDerivedJobs(t *testing.T) {
 				kind, cancellations[kind],
 			)
 		}
+	}
+}
+
+type callerLifecycleRecorder struct {
+	repositories []string
+	err          error
+}
+
+func (lifecycle *callerLifecycleRecorder) RemoveRepository(
+	_ context.Context,
+	repository string,
+) error {
+	lifecycle.repositories = append(lifecycle.repositories, repository)
+	return lifecycle.err
+}
+
+func TestDeleteRepoArtifactsDelegatesCallerRemovalToLeaseLifecycle(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := "example.com/team/leased-delete"
+	directory := RepoDir(dataDir, repository)
+	if err := os.MkdirAll(directory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	callerDirectory := filepath.Join(
+		dataDir, "caller-leaves", callerleafid.RepositoryDirectory(repository),
+	)
+	if err := os.MkdirAll(callerDirectory, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	retained := filepath.Join(callerDirectory, callerleafid.ArtifactName(
+		"sha256:"+strings.Repeat("a", 64),
+		"sha256:"+strings.Repeat("b", 64),
+	))
+	if err := os.WriteFile(retained, []byte("leased\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	state := &reconcileStore{
+		repo: store.Repo{Name: repository}, orphan: true,
+	}
+	lifecycle := &callerLifecycleRecorder{}
+	deleted, err := deleteRepoArtifactsWithCallerLifecycle(
+		t.Context(), state, dataDir, repository, lifecycle,
+	)
+	if err != nil || !deleted {
+		t.Fatalf("delete with caller lifecycle = %v, %v", deleted, err)
+	}
+	if got, want := lifecycle.repositories, []string{repository}; !slices.Equal(got, want) {
+		t.Fatalf("caller lifecycle calls = %v, want %v", got, want)
+	}
+	if _, err := os.Lstat(retained); err != nil {
+		t.Fatalf("sync bypassed caller lease lifecycle: %v", err)
+	}
+}
+
+func TestDeleteRepoArtifactsRollbackQueuesCallerRepair(t *testing.T) {
+	dataDir := t.TempDir()
+	repository := "example.com/team/delete-rollback"
+	if err := os.MkdirAll(RepoDir(dataDir, repository), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	injected := errors.New("cancel unavailable")
+	state := &reconcileStore{
+		repo: store.Repo{Name: repository}, orphan: true, cancelErr: injected,
+	}
+	deleted, err := deleteRepoArtifacts(t.Context(), state, dataDir, repository)
+	if deleted || !errors.Is(err, injected) {
+		t.Fatalf("delete rollback = %v, %v", deleted, err)
+	}
+	if state.repo.Deleting {
+		t.Fatal("failed pre-destructive cleanup left repository deleting")
+	}
+	if state.enqueued != 1 || !state.enqueuedForce {
+		t.Fatalf(
+			"caller rollback repair = count:%d force:%t",
+			state.enqueued, state.enqueuedForce,
+		)
 	}
 }
 

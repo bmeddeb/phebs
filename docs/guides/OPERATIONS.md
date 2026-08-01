@@ -19,7 +19,7 @@ $DATA/                     # server.data_dir, default ~/.phebs
 ├── repos/<host>/<path>.git  # bare mirrors
 ├── candidates/            # derived candidate manifests and NDJSON members
 ├── resolver-catalogs/     # derived immutable resolver catalog publications
-├── caller-leaves/         # derived, non-visible direct caller pair artifacts
+├── caller-leaves/         # derived caller pair artifacts and complete manifests
 └── index/                 # whole/focused zoekt shards; focused manifests and sidecars
 ```
 
@@ -45,10 +45,11 @@ they are excluded and rebuilt from the restored indexed commit and mirror.
 Resolver catalogs are also derived, but valid immutable publications are
 preserved byte-exactly so a matching current generation can be validated and
 reused without repeating its declaration/candidate input work.
-Direct caller-leaf pair artifacts are derived and are not independently
-visible: T30.6h excludes them from backup and rebuilds them from restored
-candidate and resolver authority. T30.6i owns exact complete-generation
-archive/restore.
+Direct caller-leaf pair artifacts remain derived and are not independently
+visible. Backup preserves only an exact, marker-free complete-generation
+manifest and the precise immutable leaf artifacts it references; incomplete,
+ambiguous, invalid, marker-covered, or unreferenced caller state is omitted for
+reconstruction from candidate and resolver authority.
 
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
@@ -61,11 +62,15 @@ The output path must not exist. The command discovers only the supervised
 loopback SurrealDB child through `$DATA/.surreal-runtime.json`, verifies the
 exact child executable and the raw-config digest that started the live server,
 acquires a crash-released cross-process snapshot lock that lets in-flight
-publication/state commits finish and pauses new ones, and runs that
-executable's live `export`. A different config that only points at the same
+focused-index publication/reconciliation commits finish and pauses new ones,
+and runs that executable's live `export`. Candidate, resolver-catalog, and
+caller-generation transitions are not covered by that focused-index lock;
+their derived archives independently admit only exact marker-free immutable
+publications, and restore/startup re-fences them against imported store
+authority. A different config that only points at the same
 `$DATA` is refused. The command publishes a private directory
-containing `database.surql`, `focused-index.tar`, `resolver-catalog.tar`, and
-`manifest.json`. The
+containing `database.surql`, `focused-index.tar`, `resolver-catalog.tar`,
+`caller-publication.tar`, and `manifest.json`. The
 focused archive contains only complete, revalidated focused manifests,
 sidecars, and shard members; it never includes whole-repository shards. A
 stale marker is omitted but cannot hide an otherwise complete valid
@@ -77,11 +82,12 @@ proves the exact canonical tar inventory in one bounded streaming pass; it
 does not extract the archive into a second temporary tree. Restore's
 pre-import verification and final installation still perform the complete
 structural extraction and semantic publication validation. The
-`phebs-backup-manifest-v4` manifest
-binds all three artifacts' sizes and SHA-256 digests, the exact raw config digest,
+`phebs-backup-manifest-v5` manifest
+binds all four artifacts' sizes and SHA-256 digests, the exact raw config digest,
 phebs version/binary digest, SurrealDB version/binary digest, database
 identity, store-writer/evidence/migration versions, and the derived-state
-exclusions, including `$DATA/candidates` and `$DATA/caller-leaves`. Its required
+exclusions, including `$DATA/candidates` and invalid or incomplete caller
+publication state. Its required
 `phebs-focused-archive-report-v1` receipt records archived publications,
 omitted publications/artifacts, and stale markers; verification independently
 recovers and compares the archived publication count. It contains no host
@@ -107,6 +113,47 @@ manifest), and 1 TiB for both physical size and aggregate declared logical
 bytes; archive creation enforces those same entry, logical-byte, and final
 physical-byte ceilings. Sparse metadata therefore cannot amplify a small input
 into a large write, and backup cannot emit an archive its own restore rejects.
+
+`caller-publication.tar` contains every and only strict, marker-free,
+unambiguous complete caller publication. Each canonical tar name has exactly
+two components: the cryptographic repository directory and one complete
+manifest or referenced caller-leaf basename. The required
+`phebs-caller-publication-archive-report-v1` receipt records exact publication,
+omitted-publication, omitted-artifact, stale-marker, and truncated-detail
+counts, retaining at most 64 generic details. More than one immutable complete
+manifest in a repository is ambiguous exported authority, so backup omits all
+of that repository's manifests and leaves instead of choosing one. Offline
+verification and restore preflight stream one complete publication at a time,
+cold-validating every canonical manifest and referenced leaf with bounded
+memory, context cancellation, and no extracted verification tree. Restore pins
+one unchanged regular archive descriptor, completes that semantic preflight
+before creating its private target, then extracts and cold-validates the staged
+set before one rename installs it. Only canonical
+regular USTAR/PAX entries are accepted; PAX may contain only exact `path` and
+decimal `size`, while symlinks, hard links, devices, sparse/GNU metadata,
+unknown metadata, trailing bytes, duplicate paths, and unreferenced entries are
+rejected. Creation and restore both enforce 65,536 total entries, 512-byte tar
+paths, 64 MiB per leaf, 32 MiB per complete manifest, and 4 TiB for both
+physical size and aggregate declared logical bytes. The archive envelope is
+deliberately larger than the live 1 TiB leaf-canonical admission ceiling so
+valid manifests, tar headers, and padding cannot make a live installation
+impossible to back up.
+Creation intentionally reads each exported leaf twice: strict discovery hashes
+it once for admission, then the descriptor-rooted tar copy streams and hashes
+it again while writing. Restore additionally streams and hashes the archive
+preflight, cold-validates the private extracted tree before installation, and
+revalidates the installed descriptor-rooted tree after the rename; these
+repeated reads are integrity fences, not heap copies or scratch-tree copies.
+
+The restored caller bytes deliberately carry no visibility authority. Before
+candidate or resolver restore clearing can observe the imported caller edge,
+restore raw-clears every imported complete pointer, caller outcome, and
+admission and advances that repository's caller-publication revision exactly
+once. Valid pointerless bytes for an indexed, non-deleting repository remain
+available for startup reconciliation, which force-queues reconstruction;
+absent, unindexed, and deleting repositories have their exact validated
+pointerless caller residue reclaimed. Exported store state is never promoted
+as a current complete caller generation.
 
 Candidate publications remain derived and are deliberately absent from the
 archive, including candidate-v4 members and the stable candidate manifest.
@@ -434,8 +481,117 @@ no mirror lock, content open/hash, corpus or tree walk, source blob, or child.
 Work for another generation evicts it; the next exact job reacquires the mirror
 lock, reopens the candidate plan, and hashes that generation's successful
 artifacts once before restoring the metadata-only path. Pair artifacts and
-admissions are not API/search/evidence-visible;
-T30.6i owns complete publication and readers.
+admissions are not independently API/search/evidence-visible. Only the exact
+complete manifest and matching store pointer establish caller-generation
+authority; T30.6j owns authorized product reads over that authority.
+
+Complete publication continues only from an exact `admitted` generation. It
+recomputes one ordered receipt for every successful pair, writes and syncs a
+bounded stage, links `complete-v1.publishing`, renames the immutable
+generation-and-manifest-derived `complete-v1-*.manifest.json` last, commits the
+pointer under the active caller-job lease, and then clears only the matching
+marker. The pointer carries a repository-local monotonic publication revision.
+An exact pointer retry preserves both revision and timestamp; every real
+publish or invalidation advances it, including publish A, clear to unavailable,
+and republish the byte-identical A. Candidate/control, resolver, relevant
+declaration, indexed HEAD/unit, deleting, caller-state repair, restore, and
+repository deletion transitions retire authority atomically. A failed or
+terminal proposed generation cannot erase an otherwise-current prior pointer
+by itself. If deletion cleanup is rolled back or a repository is otherwise
+reactivated, the `deleting: true → false` transition atomically coalesces one
+forced caller job; an ordinary refresh of an already-active repository does
+not enqueue caller work.
+
+Startup runs complete-publication reconciliation after resolver reconciliation
+and before caller workers. A valid manifest-before-store marker is force-queued
+and retained for a claimed worker; an exact store-before-marker-clear state is
+cold-validated and has its marker cleared without bypassing the job fence.
+An invalid or incomplete marker for an eligible repository is force-queued
+before cleanup. An absent, unindexed, or deleting repository cannot accept
+that work: startup descriptor-removes its canonical marker plus package-owned
+manifest/stage residue, and reclaims leaf bytes only when an exact complete
+manifest supplies their identities. Unrelated or receipt-less leaf files are
+left to the bounded directory lifecycle rather than inferred from corrupt
+bytes. Exact ineligible cleanup removes leaves, then the manifest receipt, and
+the marker last, making every intervening crash shape resumable. A
+deterministically incomplete deletion tombstone likewise removes only
+the canonical tombstone; a valid tombstone still completes deletion or is
+cleared when store state proves a same-name recreation.
+Operational I/O stops startup or retries the job without deleting authority.
+Current publications hash each referenced leaf at most once during startup;
+the subsequent orphan inventory reuses those admissions while still reading
+the canonical manifest and checking directory identity. The store query
+projects summaries rather than pair arrays. It transfers the writer-owned pair
+payload commitment and actual array length without hashing the array, then
+refuses more than 65,536 current publication rows or 65,536 cumulative
+manifest-plus-leaf references before exact current checks hash valid persisted
+pair metadata once per pointer. Indexed, non-deleting repositories used for
+marker repair are keyset-paged in fixed pages of at most 512 and have no additional
+total-count ceiling. Before content opens, startup also refuses more than
+1 TiB of declared canonical caller bytes across current publications. The
+caller root admits a new repository directory only below 65,536 total root entries, and each repository
+directory admits at most
+65,536 entries. A hostile invalid inventory can therefore require up to the
+product of those name bounds across startup's bounded passes; valid admitted
+references remain subject to the much smaller installation-wide 65,536-
+reference ceiling. Startup performs no Git or child work.
+
+The shared in-process complete-publication registry caches at most eight
+parsed publications and 16,384 aggregate pair references; inactive entries
+are evicted and store-authoritative states cold-open again on demand. Eviction
+retains no full store state or per-repository transition slot. It retains at
+most 65,536 compact cleanup-authority tokens, matching the durable publication
+installation ceiling: one fixed 85-byte cryptographic repository-directory key
+and one fixed 155-byte exact manifest basename per token. That is at most
+15 MiB of raw identity payload plus bounded Go map/string overhead. A new
+authority above the cap refuses retryably; an existing repository's exact
+replacement does not consume another slot. Retirement reconstructs a transient
+serialization slot, descriptor-opens that exact manifest, verifies its
+canonical digest and decoded repository, removes referenced leaves before the
+manifest, and clears the token only after successful cleanup. If every
+admission that could be evicted is lease-pinned, another admission returns a
+retryable capacity refusal without removing its durable bytes. Acquisition
+first rechecks a pair-free store summary with a scalar authority, revision,
+actual-length, and stored-commitment fence, then uses captured directory,
+marker, manifest, and leaf file identities; all leaf identities are checked
+beneath one repository descriptor. Its final store fence hashes the persisted
+pair metadata once server-side; marker/conflict recovery may repeat that exact
+fence before changing marker or registry state. A warm caller job performs `O(P)` file stats
+but no leaf-content read or hash, allocates no `P`-element Go pair copy, and
+takes no mirror lock. The first cold acquisition reads one
+at-most-32-MiB manifest and each exact referenced leaf once under the
+16,384-pair and 512-MiB canonical aggregate ceilings. Readers lease an
+immutable descriptor snapshot. On replacement, old process/store visibility
+retires immediately, but its manifest remains as the durable cleanup receipt
+and its unshared leaves remain until the last lease releases;
+same-state descriptor replacement refreshes future leases without deleting
+identically named bytes. Final release may synchronously unlink that retired
+publication's at-most-16,384 pair references and sync its repository
+directory. A repository deletion with an active lease first writes a canonical
+deletion tombstone; final release removes the bounded package directory, while
+startup completes a valid crash-interrupted deletion or clears only that
+tombstone when store eligibility proves a same-name recreation. An incomplete
+tombstone never authorizes directory removal. Publication transitions
+scan at most 65,536 directory names and
+reclaim residue in resumable batches of at most 32 manifests, 65,536 pair
+references, and 1 GiB of manifest content; later startup or publication
+transitions resume residue left by that batch. Closing the process registry
+blocks new acquisition only and never removes store-authoritative files.
+
+Every real caller publication transaction recomputes the installation fence by
+aggregate-scanning at most 65,536 current caller pointer rows before it accepts
+the proposed row. This is `O(N)` store work per real publish. An exact retry
+skips that installation-wide scan after comparing its own `O(P)` persisted and
+proposed pair arrays; the warm no-publication job path does not execute the
+writer.
+
+The private pair-payload commitment is store integrity metadata, not product
+identity. A same-length raw pair mutation therefore fails the final current
+fence even when every projected aggregate remains plausible. Startup queues a
+forced successor before clearing that malformed pointer. During a live claimed
+job, the exact admitted writer may replace only a commitment-invalid current
+payload and advances caller-publication revision; a different payload whose
+commitment validates remains a nondeterministic same-generation conflict.
 
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
@@ -447,7 +603,13 @@ clears and force-requeues any claim whose focused publication was invalid or
 omitted, rebuilds excluded whole-repository shards, rebuilds the cleared
 candidate publications before extraction, reconciles resolver-catalog crash
 markers, queues any required catalog replacement, and starts its worker when a
-shipped caller adapter is enabled; boot sync re-clones missing mirrors.
+shipped caller adapter is enabled. It also reconciles complete caller
+publication markers and valid pointerless restored bytes for indexed,
+non-deleting repositories, reclaims only complete-manifest-authorized residue
+for ineligible repositories, repairs receipt-less markers without guessing
+leaf identities, force-queues any required complete-generation replacement,
+and starts the caller worker; boot
+sync re-clones missing mirrors.
 Restored API keys and sessions remain
 live — rotate them if the backup's custody was ever in doubt.
 
@@ -1075,12 +1237,12 @@ the existing stale-run sweeper.
 
 ##### Scheduled T30.6 operating sequence
 
-The accepted large-monorepo review changes sequencing, not current runtime
-behavior. Today an admitted `*_test.go` file remains searchable and participates
-in candidate planning when an enabled domain policy enumerates it, the
-extraction runner may retry a deterministic domain failure to its attempt cap,
-and caller domains still consume the temporary repository-overlay view that
-can refuse its flattened aggregate inventory.
+The accepted large-monorepo review now has its bounded operational, outcome,
+scheduler, source-lane, resolver, caller-leaf, and complete-publication seams
+through T30.6i. An admitted `*_test.go` file remains searchable and participates
+in candidate planning when an enabled domain policy enumerates it, while direct
+caller execution excludes its `go_test` lane. The complete caller authority is
+still product-dark until T30.6j supplies authorized reads.
 Operators should not raise the global file, path-byte, read-byte, fact, or
 single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
@@ -1096,10 +1258,9 @@ anchors, occurrences, and joins. Coverage and bounded receipts expose the
 excluded counts and declared bytes. Empty-unit repositories retain shipped
 whole-repository extraction behavior, and focused search remains unchanged.
 T30.6f supplies the catalog lifecycle, T30.6g supplies the ordered bounded
-gRPC/Thrift materialization, and T30.6h supplies the independently durable,
-non-visible direct caller-leaf artifacts described above. T30.6i next owns
-atomic complete caller publication.
-T30.6j–T30.6l bind Caller Map,
+gRPC/Thrift materialization, T30.6h supplies the independently durable direct
+caller-leaf artifacts, and T30.6i supplies the atomic complete publication and
+recovery lifecycle described above. T30.6j is next; T30.6j–T30.6l bind Caller Map,
 comparison, and Workbench Impact as separate authorized consumers. T30.6m
 selects the historical-retention posture and T30.6n implements only that
 selected policy.

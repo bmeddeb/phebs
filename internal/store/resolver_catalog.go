@@ -249,6 +249,8 @@ const publishResolverCatalogSQL = `
 BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
 LET $evidence_writer_ok = array::len(SELECT id FROM $evidence_migration_rid
 	WHERE version = $evidence_migration_version LIMIT 1) = 1;
 LET $repo_state = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
@@ -302,7 +304,7 @@ LET $control_ok = IF $current = NONE THEN $requested_revision IN [0, 1]
 	ELSE
 		$requested_revision IN [0, $current_revision + 1]
 	END;
-LET $acceptable = $writer_ok AND $evidence_writer_ok
+LET $acceptable = $writer_ok AND $caller_writer_ok AND $evidence_writer_ok
 	AND $repo_ok AND $candidate_ok AND $declarations_ok
 	AND ($same_generation = false OR $same_publication)
 	AND $control_ok;
@@ -330,7 +332,16 @@ LET $published = IF $acceptable = false THEN []
 		published_at = time::now()
 		RETURN AFTER)
 	END;
-LET $caller_force = $same_generation = false;
+LET $retired_caller = IF array::len($published) = 1
+		AND $same_publication = false THEN
+	(DELETE caller_generation_publication
+		WHERE repository = $repository RETURN BEFORE)
+	ELSE [] END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;
+LET $caller_force = $same_publication = false;
 LET $pending_caller = IF array::len($published) = 1 THEN
 	(SELECT id, created_at FROM caller_leaf_job
 		WHERE pending_key = $repository AND status = 'pending'
@@ -350,7 +361,10 @@ LET $caller_fanout = IF array::len($published) != 1 THEN []
 		pending_key: $repository,
 		force: $caller_force
 	} RETURN AFTER) END;
-RETURN IF array::len($caller_fanout) = 1 THEN $published ELSE [] END;
+RETURN IF array::len($caller_fanout) = 1
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
+	THEN $published ELSE [] END;
 COMMIT;`
 
 // PublishResolverCatalog also atomically ensures the repository-keyed
@@ -370,6 +384,8 @@ func (s *Surreal) PublishResolverCatalog(
 		ctx, s.db, publishResolverCatalogSQL, map[string]any{
 			"migration_rid":              resolverCatalogMigrationID(),
 			"migration_version":          resolverCatalogWriterMigrationVersion,
+			"caller_migration_rid":       callerGenerationPublicationMigrationID(),
+			"caller_migration_version":   callerGenerationPublicationMigrationVersion,
 			"evidence_migration_rid":     evidenceMigrationStateID(),
 			"evidence_migration_version": evidenceMigrationVersion,
 			"evidence_store_schema":      evidenceStoreSchemaVersion,
@@ -550,15 +566,27 @@ func (s *Surreal) ClearResolverCatalogPublication(
 BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
-IF $writer_ok = false {
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $writer_ok = false OR $caller_writer_ok = false {
 	THROW 'phebs-permanent: resolver catalog writer generation is not active'
 };
 DELETE $rid RETURN NONE;
+LET $retired_caller = DELETE caller_generation_publication
+	WHERE repository = $repository RETURN BEFORE;
+IF array::len($retired_caller) = 1 {
+	UPDATE $repo_rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN NONE;
+};
 COMMIT;`,
 		map[string]any{
-			"rid":               resolverCatalogPublicationID(repository),
-			"migration_rid":     resolverCatalogMigrationID(),
-			"migration_version": resolverCatalogWriterMigrationVersion,
+			"rid":                      resolverCatalogPublicationID(repository),
+			"migration_rid":            resolverCatalogMigrationID(),
+			"migration_version":        resolverCatalogWriterMigrationVersion,
+			"repository":               repository,
+			"repo_rid":                 repoID(repository),
+			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+			"caller_migration_version": callerGenerationPublicationMigrationVersion,
 		},
 	)
 	if err != nil {
@@ -582,13 +610,23 @@ func (s *Surreal) ClearAllResolverCatalogPublications(ctx context.Context) error
 BEGIN;
 LET $writer_ok = array::len(SELECT id FROM $migration_rid
 	WHERE version = $migration_version LIMIT 1) = 1;
-IF $writer_ok = false {
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $writer_ok = false OR $caller_writer_ok = false {
 	THROW 'phebs-permanent: resolver catalog writer generation is not active'
 };
+LET $caller_repositories = SELECT VALUE record::id(id)
+	FROM caller_generation_publication;
+UPDATE repo SET caller_publication_revision =
+	(caller_publication_revision ?? 0) + 1
+	WHERE name IN $caller_repositories RETURN NONE;
 DELETE resolver_catalog_publication RETURN NONE;
+DELETE caller_generation_publication RETURN NONE;
 COMMIT;`, map[string]any{
-		"migration_rid":     resolverCatalogMigrationID(),
-		"migration_version": resolverCatalogWriterMigrationVersion,
+		"migration_rid":            resolverCatalogMigrationID(),
+		"migration_version":        resolverCatalogWriterMigrationVersion,
+		"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+		"caller_migration_version": callerGenerationPublicationMigrationVersion,
 	})
 	if err != nil {
 		return fmt.Errorf("clear all resolver catalogs: %w", err)

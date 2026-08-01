@@ -19,9 +19,11 @@ func AcquireMutationLock(ctx context.Context, indexDir string) (func(), error) {
 	return acquireLock(ctx, indexDir, false)
 }
 
-// AcquireBackupLock waits until every publication/state mutation is complete,
-// then excludes new ones until the caller has exported the database and copied
-// all focused publication bytes.
+// AcquireBackupLock waits until every focused-index publication or artifact-
+// reconciliation mutation admitted through this lock is complete, then
+// excludes new ones while the caller exports the database and copies focused
+// publication bytes. Candidate, resolver, and caller publication lifecycles
+// use their own exact-state reconciliation rather than this lock.
 func AcquireBackupLock(ctx context.Context, indexDir string) (func(), error) {
 	return acquireLock(ctx, indexDir, true)
 }

@@ -100,7 +100,8 @@ aggregate-bounded domain scheduling are shipped; T30.6d candidate-v4
 source-lane classification, T30.6e focused local-evidence base-lane
 consumption, T30.6f resolver-catalog lifecycle, T30.6g bounded resolver
 materialization, and T30.6h direct caller-leaf execution artifacts are also
-shipped; T30.6i atomic complete caller-generation publication is next.
+shipped; T30.6i atomic complete caller-generation publication is shipped and
+T30.6j authorized exact Caller Map reads are next.
 A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.

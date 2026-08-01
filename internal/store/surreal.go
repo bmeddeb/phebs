@@ -122,6 +122,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateCallerLeafWriter(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateCallerGenerationPublications(ctx); err != nil {
+		return err
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilitySchema, nil)
 	if err != nil {
 		return err
@@ -1341,6 +1344,7 @@ UPDATE caller_leaf_job SET status = 'canceled', error = 'repository deleting',
     WHERE target = $name AND status = 'pending' RETURN NONE;
 DELETE candidate_manifest_publication WHERE repository = $name RETURN NONE;
 DELETE resolver_catalog_publication WHERE repository = $name RETURN NONE;
+DELETE caller_generation_publication WHERE repository = $name RETURN NONE;
 DELETE caller_leaf_outcome WHERE repository = $name RETURN NONE;
 DELETE caller_generation_admission WHERE repository = $name RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
@@ -1354,14 +1358,66 @@ COMMIT;`, map[string]any{"rid": repoID(name), "name": name})
 	}
 }
 
+// SetRepoDeleting retires complete caller authority when deletion begins. A
+// true-to-false reactivation atomically coalesces a forced caller successor so
+// a failed cleanup cannot make the repository live between state and queue
+// commits; an already-active false-to-false refresh remains queue-neutral.
 func (s *Surreal) SetRepoDeleting(ctx context.Context, name string, deleting bool) error {
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
-		"UPDATE $rid SET deleting = $deleting RETURN AFTER",
-		map[string]any{"rid": repoID(name), "deleting": deleting})
+		`BEGIN;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $caller_writer_ok = false {
+	THROW 'phebs-permanent: caller-generation publication writer is not active'
+};
+LET $before = (SELECT deleting FROM $rid)[0];
+LET $updated = UPDATE $rid SET deleting = $deleting RETURN AFTER;
+LET $retired_caller = IF $deleting AND array::len($updated) = 1 THEN
+	(DELETE caller_generation_publication
+		WHERE repository = $repository RETURN BEFORE)
+	ELSE [] END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;
+LET $final = IF array::len($retired_caller) = 1 THEN
+	$caller_revision ELSE $updated END;
+LET $reactivated = array::len($updated) = 1 AND $deleting = false
+	AND ($before.deleting ?? false) = true;
+LET $pending_caller = IF $reactivated THEN
+	(SELECT id, created_at FROM caller_leaf_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $caller_fanout = IF $reactivated = false THEN []
+	ELSE IF $pending_caller != NONE THEN
+		(UPDATE $pending_caller SET force = true,
+			recovery_lease = NONE RETURN AFTER)
+	ELSE
+		(CREATE caller_leaf_job CONTENT {
+			target: $repository,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $repository,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($final) = 1
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
+	AND ($reactivated = false OR array::len($caller_fanout) = 1)
+	THEN $final ELSE [] END;
+COMMIT;`,
+		map[string]any{
+			"rid": repoID(name), "repository": name, "deleting": deleting,
+			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+			"caller_migration_version": callerGenerationPublicationMigrationVersion,
+		})
 	if err != nil {
 		return err
 	}
-	if len((*results)[0].Result) == 0 {
+	if len(firstDomainRows(results)) == 0 {
 		return fmt.Errorf("repo %q: %w", name, ErrNotFound)
 	}
 	return nil
@@ -1389,6 +1445,11 @@ func (s *Surreal) SetRepoIndexedState(
 		return fmt.Errorf("repo %q: analysis unit: %w", name, err)
 	}
 	statement := `BEGIN;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $caller_writer_ok = false {
+	THROW 'phebs-permanent: caller-generation publication writer is not active'
+};
 LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
 LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
 	indexed_revisions = $revisions, indexed_analysis_unit = NONE,
@@ -1404,88 +1465,8 @@ LET $retired_catalog = IF $identity_changed THEN
 	(DELETE resolver_catalog_publication
 		WHERE repository = $name RETURN BEFORE)
 	ELSE [] END;
-IF $identity_changed {
-	DELETE $publication_rid RETURN NONE
-};
-IF $same_scope_state_changed {
-	UPDATE extraction_run SET status = 'superseded', published_key = NONE
-		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
-			AND status = 'published'
-			AND store_schema_version = $evidence_store_schema
-			AND evidence_format_version = $evidence_format
-			AND retention_quarantined = false
-			AND run_id = record::id(id)
-			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
-	UPDATE extraction_run SET status = 'aborted', published_key = NONE
-		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
-			AND status = 'staged'
-			AND store_schema_version = $evidence_store_schema
-			AND evidence_format_version = $evidence_format
-			AND retention_quarantined = false
-			AND run_id = record::id(id)
-			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
-	DELETE extraction_attempt
-		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
-			AND store_schema_version = $evidence_store_schema
-			AND evidence_format_version = $evidence_format
-			AND evidence_migration_version = $evidence_migration
-		RETURN NONE
-	;
-	DELETE extraction_domain_outcome
-		WHERE repo = $name RETURN NONE
-};
-LET $final = IF $identity_changed THEN
-	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
-		RETURN AFTER)
-	ELSE $updated END;
-LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
-	(SELECT id, created_at FROM resolver_catalog_job
-		WHERE pending_key = $name AND status = 'pending'
-		ORDER BY created_at LIMIT 1)[0].id
-	ELSE NONE END;
-LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
-	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true,
-			recovery_lease = NONE RETURN AFTER)
-	ELSE
-		(CREATE resolver_catalog_job CONTENT {
-			target: $name,
-			status: 'pending',
-			attempts: 0,
-			created_at: time::now(),
-			pending_key: $name,
-			force: true
-		} RETURN AFTER)
-	END;
-RETURN IF array::len($final) = 1
-	AND (array::len($retired_catalog) = 0
-		OR array::len($catalog_fanout) = 1)
-	THEN $final ELSE [] END;
-COMMIT;`
-	vars := map[string]any{
-		"rid": repoID(name), "name": name, "hash": defaultCommit,
-		"revisions": revisions, "at": at, "unit_digest": "",
-		"publication_rid":             candidateManifestPublicationID(name),
-		"evidence_store_schema":       evidenceStoreSchemaVersion,
-		"evidence_format":             evidenceFormatVersion,
-		"evidence_migration":          evidenceMigrationVersion,
-		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
-	}
-	if unit != nil {
-		statement = `BEGIN;
-LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
-LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
-	indexed_revisions = $revisions, indexed_analysis_unit = $unit,
-	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
-LET $scope_unchanged = ($before.indexed_commit_hash ?? '') = $hash
-	AND ($before.indexed_analysis_unit.digest ?? '') = $unit_digest;
-LET $same_scope_state_changed = array::len($updated) = 1
-	AND $scope_unchanged
-	AND $before.indexed_analysis_unit != $unit;
-LET $identity_changed = array::len($updated) = 1
-	AND ($scope_unchanged = false OR $same_scope_state_changed);
-LET $retired_catalog = IF $identity_changed THEN
-	(DELETE resolver_catalog_publication
+LET $retired_caller = IF $identity_changed THEN
+	(DELETE caller_generation_publication
 		WHERE repository = $name RETURN BEFORE)
 	ELSE [] END;
 IF $identity_changed {
@@ -1522,6 +1503,10 @@ LET $final = IF $identity_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
 		RETURN AFTER)
 	ELSE $updated END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;
 LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
 	(SELECT id, created_at FROM resolver_catalog_job
 		WHERE pending_key = $name AND status = 'pending'
@@ -1544,6 +1529,109 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_catalog) = 0
 		OR array::len($catalog_fanout) = 1)
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
+	THEN $final ELSE [] END;
+COMMIT;`
+	vars := map[string]any{
+		"rid": repoID(name), "name": name, "hash": defaultCommit,
+		"revisions": revisions, "at": at, "unit_digest": "",
+		"publication_rid":             candidateManifestPublicationID(name),
+		"evidence_store_schema":       evidenceStoreSchemaVersion,
+		"evidence_format":             evidenceFormatVersion,
+		"evidence_migration":          evidenceMigrationVersion,
+		"max_evidence_identity_bytes": maxEvidenceIdentityBytes,
+		"caller_migration_rid":        callerGenerationPublicationMigrationID(),
+		"caller_migration_version":    callerGenerationPublicationMigrationVersion,
+	}
+	if unit != nil {
+		statement = `BEGIN;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $caller_writer_ok = false {
+	THROW 'phebs-permanent: caller-generation publication writer is not active'
+};
+LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
+LET $updated = UPDATE $rid SET indexed_commit_hash = $hash,
+	indexed_revisions = $revisions, indexed_analysis_unit = $unit,
+	indexed_at = $at, latest_indexing_job_status = 'done' RETURN AFTER;
+LET $scope_unchanged = ($before.indexed_commit_hash ?? '') = $hash
+	AND ($before.indexed_analysis_unit.digest ?? '') = $unit_digest;
+LET $same_scope_state_changed = array::len($updated) = 1
+	AND $scope_unchanged
+	AND $before.indexed_analysis_unit != $unit;
+LET $identity_changed = array::len($updated) = 1
+	AND ($scope_unchanged = false OR $same_scope_state_changed);
+LET $retired_catalog = IF $identity_changed THEN
+	(DELETE resolver_catalog_publication
+		WHERE repository = $name RETURN BEFORE)
+	ELSE [] END;
+LET $retired_caller = IF $identity_changed THEN
+	(DELETE caller_generation_publication
+		WHERE repository = $name RETURN BEFORE)
+	ELSE [] END;
+IF $identity_changed {
+	DELETE $publication_rid RETURN NONE
+};
+IF $same_scope_state_changed {
+	UPDATE extraction_run SET status = 'superseded', published_key = NONE
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'published'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
+	UPDATE extraction_run SET status = 'aborted', published_key = NONE
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND status = 'staged'
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND retention_quarantined = false
+			AND run_id = record::id(id)
+			AND ` + evidenceRunHasNoAmbiguousClaimantSQL + ` RETURN NONE;
+	DELETE extraction_attempt
+		WHERE repo = $name AND commit = $hash AND unit_digest = $unit_digest
+			AND store_schema_version = $evidence_store_schema
+			AND evidence_format_version = $evidence_format
+			AND evidence_migration_version = $evidence_migration
+		RETURN NONE
+	;
+	DELETE extraction_domain_outcome
+		WHERE repo = $name RETURN NONE
+};
+LET $final = IF $identity_changed THEN
+	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
+		RETURN AFTER)
+	ELSE $updated END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;
+LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
+	(SELECT id, created_at FROM resolver_catalog_job
+		WHERE pending_key = $name AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
+	ELSE IF $pending_catalog != NONE THEN
+		(UPDATE $pending_catalog SET force = true,
+			recovery_lease = NONE RETURN AFTER)
+	ELSE
+		(CREATE resolver_catalog_job CONTENT {
+			target: $name,
+			status: 'pending',
+			attempts: 0,
+			created_at: time::now(),
+			pending_key: $name,
+			force: true
+		} RETURN AFTER)
+	END;
+RETURN IF array::len($final) = 1
+	AND (array::len($retired_catalog) = 0
+		OR array::len($catalog_fanout) = 1)
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
 	THEN $final ELSE [] END;
 COMMIT;`
 		vars["unit"] = analysisunit.CloneState(unit)
@@ -1567,17 +1655,27 @@ COMMIT;`
 func (s *Surreal) ClearRepoIndexState(ctx context.Context, name string) error {
 	results, err := surrealdb.Query[[]Repo](ctx, s.db,
 		`BEGIN;
+LET $caller_writer_ok = array::len(SELECT id FROM $caller_migration_rid
+	WHERE version = $caller_migration_version LIMIT 1) = 1;
+IF $caller_writer_ok = false {
+	THROW 'phebs-permanent: caller-generation publication writer is not active'
+};
 LET $before = (SELECT indexed_commit_hash, indexed_analysis_unit FROM $rid)[0];
 LET $publication = (SELECT id FROM $publication_rid)[0];
 LET $catalog = (SELECT id FROM $catalog_rid)[0];
+LET $caller = (SELECT id FROM $caller_rid)[0];
 LET $visibility_changed = ($before != NONE
 	AND (($before.indexed_commit_hash ?? '') != ''
 		OR $before.indexed_analysis_unit != NONE))
-	OR $publication != NONE OR $catalog != NONE;
+	OR $publication != NONE OR $catalog != NONE OR $caller != NONE;
 LET $updated = UPDATE $rid SET indexed_commit_hash = NONE, indexed_revisions = NONE,
 	indexed_analysis_unit = NONE, indexed_at = NONE RETURN AFTER;
 LET $retired_catalog = IF array::len($updated) = 1 THEN
 	(DELETE resolver_catalog_publication
+		WHERE repository = $name RETURN BEFORE)
+	ELSE [] END;
+LET $retired_caller = IF array::len($updated) = 1 THEN
+	(DELETE caller_generation_publication
 		WHERE repository = $name RETURN BEFORE)
 	ELSE [] END;
 IF array::len($updated) = 1 {
@@ -1588,6 +1686,10 @@ LET $final = IF array::len($updated) = 1 AND $visibility_changed THEN
 	(UPDATE $rid SET evidence_revision = (evidence_revision ?? 0) + 1
 		RETURN AFTER)
 	ELSE $updated END;
+LET $caller_revision = IF array::len($retired_caller) = 1 THEN
+	(UPDATE $rid SET caller_publication_revision =
+		(caller_publication_revision ?? 0) + 1 RETURN AFTER)
+	ELSE [] END;
 LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
 	(SELECT id, created_at FROM resolver_catalog_job
 		WHERE pending_key = $name AND status = 'pending'
@@ -1610,13 +1712,18 @@ LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 RETURN IF array::len($final) = 1
 	AND (array::len($retired_catalog) = 0
 		OR array::len($catalog_fanout) = 1)
+	AND (array::len($retired_caller) = 0
+		OR array::len($caller_revision) = 1)
 	THEN $final ELSE [] END;
 COMMIT;`,
 		map[string]any{
-			"rid":             repoID(name),
-			"publication_rid": candidateManifestPublicationID(name),
-			"catalog_rid":     resolverCatalogPublicationID(name),
-			"name":            name,
+			"rid":                      repoID(name),
+			"publication_rid":          candidateManifestPublicationID(name),
+			"catalog_rid":              resolverCatalogPublicationID(name),
+			"caller_rid":               callerGenerationPublicationID(name),
+			"name":                     name,
+			"caller_migration_rid":     callerGenerationPublicationMigrationID(),
+			"caller_migration_version": callerGenerationPublicationMigrationVersion,
 		})
 	if err != nil {
 		return err

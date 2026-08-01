@@ -91,6 +91,24 @@ func (registry *Registry) CandidateDomains() []extract.CandidateManifestDomain {
 	return slices.Clone(registry.candidateDomains)
 }
 
+// ExtractorIdentities returns the exact ordered semantic adapter set bound by
+// every complete caller-generation publication. Startup reconciliation uses
+// this projection to retire a publication produced by an older binary or a
+// different enabled caller set before any reader may acquire it.
+func (registry *Registry) ExtractorIdentities() []callerleaf.ExtractorIdentity {
+	if registry == nil {
+		return nil
+	}
+	identities := make([]callerleaf.ExtractorIdentity, len(registry.adapters))
+	for index, adapter := range registry.adapters {
+		identities[index] = callerleaf.ExtractorIdentity{
+			Domain: adapter.Domain, Version: adapter.Version,
+			LeafAdapterVersion: callerleaf.LeafAdapterV1,
+		}
+	}
+	return identities
+}
+
 func (registry *Registry) validate() error {
 	if registry == nil || len(registry.adapters) == 0 || len(registry.candidateDomains) == 0 {
 		return errors.New("caller registry is empty")

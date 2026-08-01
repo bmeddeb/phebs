@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
@@ -134,29 +136,61 @@ connections:
 	if err := resolvercatalog.ClearPublishing(catalogRoot, names[0]); err != nil {
 		t.Fatal(err)
 	}
+	callerLeafGeneration, err := callerleaf.NewGenerationIdentity(
+		callerleaf.GenerationIdentity{
+			Repository: names[0], HeadCommit: indexedBefore.IndexedCommitHash,
+			UnitDigest:               publishedPointer.UnitDigest,
+			DeclarationSetDigest:     publishedCatalog.DeclarationSetDigest,
+			CandidateManifestDigest:  publishedPointer.ManifestDigest,
+			CandidatePolicyDigest:    publishedPointer.PolicyDigest,
+			ResolverGenerationDigest: publishedCatalog.GenerationDigest,
+			ResolverManifestDigest:   publishedCatalog.ManifestDigest,
+			Extractors: []callerleaf.ExtractorIdentity{{
+				Domain: "grpc-caller", Version: "1.0.0",
+				LeafAdapterVersion: callerleaf.LeafAdapterV1,
+			}},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	callerLeafPair, err := callerleaf.NewPairIdentity(
+		callerLeafGeneration, "grpc-caller", "1.0.0",
+		callerleaf.LeafDescriptor{
+			Name:    "phebs-candidate-neutral-v4-caller-000001.ndjson",
+			Ordinal: 0, Prefix: "00", PrefixBits: 2, RecordCount: 1,
+			DeclaredBytes: 32, ContentBytes: 64,
+			ContentDigest: "sha256:" + strings.Repeat("8", 64),
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 	callerGeneration := store.CallerGenerationIdentity{
 		Repository: names[0], HeadCommit: indexedBefore.IndexedCommitHash,
-		UnitDigest:               publishedPointer.UnitDigest,
-		DeclarationSetDigest:     publishedCatalog.DeclarationSetDigest,
-		CandidateManifestDigest:  publishedPointer.ManifestDigest,
-		CandidatePolicyDigest:    publishedPointer.PolicyDigest,
+		UnitDigest:               callerLeafGeneration.UnitDigest,
+		DeclarationSetDigest:     callerLeafGeneration.DeclarationSetDigest,
+		CandidateManifestDigest:  callerLeafGeneration.CandidateManifestDigest,
+		CandidatePolicyDigest:    callerLeafGeneration.CandidatePolicyDigest,
 		CandidateControlRevision: publishedPointer.ControlRevision,
-		ResolverGenerationDigest: publishedCatalog.GenerationDigest,
-		ResolverManifestDigest:   publishedCatalog.ManifestDigest,
+		ResolverGenerationDigest: callerLeafGeneration.ResolverGenerationDigest,
+		ResolverManifestDigest:   callerLeafGeneration.ResolverManifestDigest,
 		ResolverControlRevision:  publishedCatalog.ControlRevision,
 		ResolverWriterSchema:     publishedCatalog.WriterSchema,
-		SourceLanePolicy:         store.CallerBaseSourceLanePolicy,
-		CallerPolicyDigest:       "sha256:" + strings.Repeat("6", 64),
-		ExtractorSetDigest:       "sha256:" + strings.Repeat("7", 64),
+		SourceLanePolicy:         callerLeafGeneration.SourceLanePolicy,
+		CallerPolicyDigest:       callerLeafGeneration.CallerPolicyDigest,
+		ExtractorSetDigest:       callerLeafGeneration.ExtractorSetDigest,
 	}
 	callerPair := store.CallerLeafPair{
-		Domain: "grpc-caller", ExtractorVersion: "1.0.0",
-		LeafAdapterVersion: "direct-syntax-base-v1",
-		LeafOrdinal:        0, LeafPrefix: "00", LeafPrefixBits: 2,
-		CandidateMemberName:  "phebs-candidate-neutral-v4-caller-000001.ndjson",
-		CandidateRecordCount: 1, CandidateDeclaredBytes: 32,
-		CandidateContentBytes:  64,
-		CandidateContentDigest: "sha256:" + strings.Repeat("8", 64),
+		Domain: callerLeafPair.Domain, ExtractorVersion: callerLeafPair.ExtractorVersion,
+		LeafAdapterVersion: callerLeafPair.LeafAdapterVersion,
+		LeafOrdinal:        callerLeafPair.Leaf.Ordinal, LeafPrefix: callerLeafPair.Leaf.Prefix,
+		LeafPrefixBits:         callerLeafPair.Leaf.PrefixBits,
+		CandidateMemberName:    callerLeafPair.Leaf.Name,
+		CandidateRecordCount:   callerLeafPair.Leaf.RecordCount,
+		CandidateDeclaredBytes: callerLeafPair.Leaf.DeclaredBytes,
+		CandidateContentBytes:  callerLeafPair.Leaf.ContentBytes,
+		CandidateContentDigest: callerLeafPair.Leaf.ContentDigest,
 	}
 	callerJob, err := st.ClaimJob(ctx, store.JobCallerLeaf, "recovery-caller")
 	if err != nil {
@@ -166,10 +200,38 @@ connections:
 		t.Fatalf("run pre-backup caller leaf job: %v", err)
 	}
 	callerJob.Status = store.StatusRunning
+	callerArtifactRoot := filepath.Join(dataDir, "caller-leaves")
+	callerStage, err := callerleaf.NewStage(
+		callerArtifactRoot, callerLeafGeneration, callerLeafPair,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	callerPreparedLeaf, err := callerStage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	callerLeafPublication, err := callerPreparedLeaf.Install(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	callerLeafReceipt := callerLeafPublication.Receipt()
+	callerStoreReceipt := store.CallerLeafArtifactReceipt{
+		ArtifactName: callerLeafReceipt.Name, ArtifactCount: 1,
+		ResultCount:           callerLeafReceipt.ResultCount,
+		AbstentionCount:       callerLeafReceipt.AbstentionCount,
+		CanonicalBytes:        callerLeafReceipt.ContentBytes,
+		StagingBytes:          callerLeafReceipt.StagingBytes,
+		ContentDigest:         callerLeafReceipt.ContentDigest,
+		MetadataDigest:        callerLeafReceipt.MetadataDigest,
+		ExcludedGoTestRecords: callerLeafReceipt.ExcludedGoTestRecords,
+		SourceBlobReads:       callerLeafReceipt.SourceBlobReads,
+		SourceBlobBytes:       callerLeafReceipt.SourceBlobBytes,
+		OutOfLeafReads:        callerLeafReceipt.OutOfLeafReads,
+	}
 	if err := st.RecordCallerLeafOutcome(ctx, *callerJob, store.CallerLeafOutcome{
-		Generation:  callerGeneration,
-		Pair:        callerPair,
-		Disposition: store.CallerLeafTerminalGenerationRefusal,
+		Generation: callerGeneration, Pair: callerPair,
+		Disposition: store.CallerLeafSucceeded, Receipt: &callerStoreReceipt,
 	}); err != nil {
 		t.Fatalf("record pre-backup caller leaf outcome: %v", err)
 	}
@@ -178,16 +240,44 @@ connections:
 		*callerJob,
 		store.CallerGenerationAdmission{
 			Generation:  callerGeneration,
-			Disposition: store.CallerGenerationTerminalGenerationRefusal,
+			Disposition: store.CallerGenerationAdmitted,
 		},
 		[]store.CallerLeafPair{callerPair},
 	); err != nil {
 		t.Fatalf("record pre-backup caller generation admission: %v", err)
 	}
-	callerArtifactRoot := filepath.Join(dataDir, "caller-leaves")
-	if err := os.MkdirAll(callerArtifactRoot, 0o700); err != nil {
+	callerManifest, err := callerpublication.BuildManifest(
+		callerLeafGeneration, []callerpublication.PairReceipt{{
+			Pair: callerLeafPair, Receipt: callerLeafReceipt,
+		}},
+	)
+	if err != nil {
 		t.Fatal(err)
 	}
+	callerPrepared, err := callerpublication.Prepare(ctx, callerArtifactRoot, callerManifest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	callerPublication, err := callerPrepared.Publish(
+		ctx, func(ctx context.Context, state callerpublication.State) error {
+			return st.PublishCallerGeneration(ctx, *callerJob, store.CallerGenerationPublication{
+				Generation: callerGeneration,
+				Pairs: []store.CallerGenerationPairPublication{{
+					Pair: callerPair, Receipt: callerStoreReceipt,
+				}},
+				ManifestDigest: state.ManifestDigest, ManifestPath: state.Manifest,
+			})
+		},
+	)
+	if err != nil || callerPublication == nil || !callerPublication.Current() {
+		t.Fatalf("publish pre-backup caller generation = %+v, %v", callerPublication, err)
+	}
+	publishedCaller, err := st.GetCallerGenerationPublication(ctx, names[0])
+	if err != nil {
+		t.Fatalf("read pre-backup caller pointer: %v", err)
+	}
+	callerRevisionBeforeRestore := publishedCaller.PublicationRevision
+	callerBytesBeforeRestore := callerPublicationBytes(t, callerArtifactRoot, callerManifest)
 	if err := os.WriteFile(
 		filepath.Join(callerArtifactRoot, "must-not-be-archived.ndjson"),
 		[]byte("derived caller bytes\n"), 0o600,
@@ -250,13 +340,19 @@ connections:
 		t.Fatalf("live backup: %v", err)
 	}
 	if _, err := os.Lstat(filepath.Join(backupDir, "caller-leaves")); !os.IsNotExist(err) {
-		t.Fatalf("backup included caller-leaf artifact root: %v", err)
+		t.Fatalf("backup copied caller-leaf root outside its archive: %v", err)
 	}
-	if !strings.Contains(
-		strings.Join(manifest.DerivedExclusions, "\n"),
-		"caller-leaves/",
-	) {
-		t.Fatalf("backup manifest omitted caller-leaf exclusion: %+v", manifest.DerivedExclusions)
+	if manifest.CallerPublication.Schema != recovery.CallerPublicationArchiveReportSchema ||
+		manifest.CallerPublication.Publications != 1 ||
+		manifest.CallerPublication.OmittedPublications != 0 ||
+		manifest.CallerPublication.OmittedArtifacts != 0 ||
+		manifest.CallerPublication.StaleMarkers != 0 {
+		t.Fatalf("backup caller-publication report = %+v", manifest.CallerPublication)
+	}
+	exclusions := strings.Join(manifest.DerivedExclusions, "\n")
+	if !strings.Contains(exclusions, "caller-leaves/ invalid") ||
+		strings.Contains(exclusions, "caller-leaves/ (derived direct") {
+		t.Fatalf("backup manifest caller classification = %+v", manifest.DerivedExclusions)
 	}
 	assertManifestDigests(t, backupDir, manifest, dataDir, origin, "SURREAL_PASS", `"root"`)
 	if _, err := recovery.Verify(backupDir, recovery.Options{
@@ -298,6 +394,12 @@ connections:
 	if err != nil || got.IndexedCommitHash != indexedBefore.IndexedCommitHash {
 		t.Fatalf("restored repo = %+v, %v; want commit %q", got, err, indexedBefore.IndexedCommitHash)
 	}
+	if got.CallerPublicationRevision != int64(callerRevisionBeforeRestore)+1 {
+		t.Fatalf(
+			"restored caller publication revision = %d, want exactly %d",
+			got.CallerPublicationRevision, callerRevisionBeforeRestore+1,
+		)
+	}
 	if _, err := restored.GetCandidateManifestPublication(
 		ctx, names[0],
 	); !errors.Is(err, store.ErrNotFound) {
@@ -307,6 +409,11 @@ connections:
 		ctx, names[0],
 	); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("restored derived resolver catalog pointer = %v, want ErrNotFound", err)
+	}
+	if _, err := restored.GetCallerGenerationPublication(
+		ctx, names[0],
+	); !errors.Is(err, store.ErrNotFound) {
+		t.Fatalf("restored derived caller pointer = %v, want ErrNotFound", err)
 	}
 	if got, err := restored.ListCallerLeafOutcomes(
 		ctx, callerGeneration,
@@ -322,6 +429,25 @@ connections:
 		dataDir, "caller-leaves", "must-not-be-archived.ndjson",
 	)); !os.IsNotExist(err) {
 		t.Fatalf("restore materialized excluded caller-leaf artifact: %v", err)
+	}
+	callerBytesAfterRestore := callerPublicationBytes(
+		t, filepath.Join(dataDir, "caller-leaves"), callerManifest,
+	)
+	if len(callerBytesAfterRestore) != len(callerBytesBeforeRestore) {
+		t.Fatalf(
+			"restored caller byte inventory = %d, want %d",
+			len(callerBytesAfterRestore), len(callerBytesBeforeRestore),
+		)
+	}
+	for name, want := range callerBytesBeforeRestore {
+		if !bytes.Equal(callerBytesAfterRestore[name], want) {
+			t.Fatalf("restored caller publication changed %q", name)
+		}
+	}
+	if opened, err := callerpublication.Open(
+		ctx, filepath.Join(dataDir, "caller-leaves"), callerManifest.State(),
+	); err != nil || !opened.Current() {
+		t.Fatalf("restored pointerless caller publication = current:%v, %v", opened != nil && opened.Current(), err)
 	}
 	if _, err := resolvercatalog.Open(
 		ctx, filepath.Join(dataDir, "resolver-catalogs"), catalogState,
@@ -614,6 +740,22 @@ func assertManifestDigests(t *testing.T, backupDir string, manifest recovery.Man
 	if got := "sha256:" + hex.EncodeToString(focusedSum[:]); got != manifest.Inventory[1].SHA256 {
 		t.Fatalf("focused artifact digest = %s, want %s", got, manifest.Inventory[1].SHA256)
 	}
+	resolverArtifact, err := os.ReadFile(filepath.Join(backupDir, recovery.ResolverCatalogName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolverSum := sha256.Sum256(resolverArtifact)
+	if got := "sha256:" + hex.EncodeToString(resolverSum[:]); got != manifest.Inventory[2].SHA256 {
+		t.Fatalf("resolver artifact digest = %s, want %s", got, manifest.Inventory[2].SHA256)
+	}
+	callerArtifact, err := os.ReadFile(filepath.Join(backupDir, recovery.CallerPublicationName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	callerSum := sha256.Sum256(callerArtifact)
+	if got := "sha256:" + hex.EncodeToString(callerSum[:]); got != manifest.Inventory[3].SHA256 {
+		t.Fatalf("caller artifact digest = %s, want %s", got, manifest.Inventory[3].SHA256)
+	}
 	digestManifest := manifest
 	digestManifest.ManifestSHA256 = ""
 	canonical, err := json.Marshal(digestManifest)
@@ -714,6 +856,27 @@ func focusedPublicationBytes(
 	return result
 }
 
+func callerPublicationBytes(
+	t *testing.T,
+	root string,
+	manifest callerpublication.Manifest,
+) map[string][]byte {
+	t.Helper()
+	result := make(map[string][]byte)
+	for _, reference := range callerpublication.ArtifactRefs(manifest) {
+		name := reference.RelativePath()
+		if name == "" {
+			t.Fatal("caller publication returned an invalid artifact reference")
+		}
+		raw, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(name)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		result[name] = raw
+	}
+	return result
+}
+
 func TestVerifyRejectsUndeclaredEntry(t *testing.T) {
 	// The complete live path above supplies a valid fixture. This smaller test
 	// pins the inventory check before any manifest or executable inspection.
@@ -726,5 +889,15 @@ func TestVerifyRejectsUndeclaredEntry(t *testing.T) {
 	_, err := recovery.Verify(backup, recovery.Options{})
 	if err == nil || !strings.Contains(err.Error(), "undeclared") {
 		t.Fatalf("Verify error = %v", err)
+	}
+}
+
+func TestVerifyContextHonorsCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if _, err := recovery.VerifyContext(
+		ctx, t.TempDir(), recovery.Options{},
+	); !errors.Is(err, context.Canceled) {
+		t.Fatalf("VerifyContext cancellation = %v", err)
 	}
 }

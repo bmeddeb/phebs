@@ -10,9 +10,10 @@ bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
 and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
 source-lane classification, T30.6e focused local-evidence base-lane
 consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
-materialization, and T30.6h direct caller-leaf execution are shipped; T30.6i
-atomic complete caller-generation publication is next.
-Completed Epics 0–24, Epic 29, T30.1–T30.6h, and P5 hardening are
+materialization, T30.6h direct caller-leaf execution, and T30.6i atomic
+complete caller-generation publication are shipped; T30.6j authorized exact
+Caller Map reads are next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6i, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -22,12 +23,13 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6i · Atomic complete caller-generation publication** is next. T30.6a–T30.6h now provide
+**T30.6j · Authorized exact Caller Map reads** is next. T30.6a–T30.6i now provide
 bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, and the adapter-free immutable catalog
-lifecycle, bounded gRPC/Thrift resolver materialization, and independently
-durable but non-visible direct caller-leaf artifacts without changing search.
+lifecycle, bounded gRPC/Thrift resolver materialization, independently durable
+direct caller-leaf artifacts, and one atomic complete-generation authority
+without changing search or exposing a reader.
 The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
@@ -552,7 +554,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6i next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6j next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -936,32 +938,16 @@ fan-out, frozen pair/generation limits, and cap+1 refusal preserve prior and
 sibling authority. T30.6i owns complete visibility, readers, leases, and exact
 archive/restore.
 
-**T30.6i · Atomic complete caller-generation publication** *(needs T30.6h)* —
-coordinate only successfully published caller-domain/leaf artifacts into one
-receipt naming the exact ordered expected pair set and each artifact's identity,
-canonical name, record count, bytes, content/metadata digests, and abstention
-summary. Generation identity binds repository, HEAD, unit, declaration set,
-candidate-manifest-v4, `base` lane, resolver catalog, caller policy, and ordered
-extractor versions. A terminally refused, missing, stale, or invalid pair
-prevents replacement visibility. Result artifacts become durable first, the
-checksummed manifest renames last under a marker, the store pointer commits
-after durability, and the marker clears after the matching commit. The same
-store transaction that publishes, clears, invalidates, or restores the pointer
-advances one repository-local monotonic caller-publication revision; an exact
-no-op does not advance it, while every real transition, including
-`A → unavailable → A`, does. Reconciliation covers every crash boundary,
-validates canonical local ownership, reclaims prior-process staging, and never
-trusts an artifact-selected cross-repository path. First admission performs
-descriptor-stable cold validation of the complete receipt; warm admission
-checks stable control/file identity without rehashing every artifact. Active
-readers lease retired generations. A valid publication is archived exactly; an
-invalid or marker-covered derived publication is omitted with a bounded report,
-restore never installs or retains its exported pointer, and reconciliation
-force-enqueues replacement. AC: store-writer/schema compatibility and revision
-migration, partial/stale invisibility, same-HEAD unit transition, exact no-op
-revision, `A → unavailable → A`, marker/tamper/swap/cross-repository fixtures,
-lease retirement, cold descriptor stability, exact archive or bounded omission,
-restore pointer clearing, zero warm content hashes, full merge bar.
+**T30.6i ✅ · Atomic complete caller-generation publication** *(2026-07-31;
+needs T30.6h)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306i--atomic-complete-caller-generation-publication).
+One checksummed manifest and matching revisioned store pointer now name the
+exact ordered successful pair set; partial, terminal, stale, marker-covered,
+or invalid state remains invisible. Lease-fenced publication, startup and
+claimed-worker crash reconciliation, descriptor-stable cold/warm admission,
+lease-delayed retirement, backup manifest v5, exact caller archive/restore,
+and every upstream invalidation are shipped. This ticket creates authority
+only; T30.6j owns authorization and all product reads.
 
 **T30.6j · Authorized exact Caller Map reads** *(needs T30.6i)* — move reverse
 lookup and Caller Map paging onto one exact complete generation. Unauthorized

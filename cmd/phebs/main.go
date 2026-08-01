@@ -28,6 +28,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/codenav"
@@ -209,6 +210,9 @@ func serve(args []string) error {
 	if err != nil {
 		return fmt.Errorf("configure caller-leaf adapters: %w", err)
 	}
+	callerPublications := callerpublication.NewRegistry(
+		callerexecute.Root(cfg.Server.DataDir),
+	)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -341,7 +345,36 @@ func serve(args []string) error {
 			catalogReport.PointersCleared, catalogReport.OrphansObserved,
 		)
 	}
-	report, reconcileErr := phebssync.ReconcileArtifacts(ctx, st, cfg.Server.DataDir, cfg.Sync.CleanupOrphans)
+	if !callerRegistry.Enabled() {
+		if err := callerpublication.ReconcileDeletionMarkers(
+			ctx, callerexecute.Root(cfg.Server.DataDir),
+			st.CallerPublicationRepositoryEligible,
+		); err != nil {
+			return fmt.Errorf("caller publication deletion reconciliation: %w", err)
+		}
+	}
+	if callerRegistry.Enabled() {
+		callerReport, err := callerexecute.ReconcilePublications(
+			ctx, cfg.Server.DataDir, st, callerRegistry, callerPublications,
+		)
+		if err != nil {
+			return fmt.Errorf("caller publication reconciliation: %w", err)
+		}
+		if callerReport.StagesRemoved+callerReport.MarkersRecovered+
+			callerReport.PublicationsCurrent+callerReport.ReplacementsQueued+
+			callerReport.PointersCleared+callerReport.OrphansObserved > 0 {
+			log.Printf(
+				"caller publication reconciliation: stages_removed=%d markers_recovered=%d current=%d replacements_queued=%d pointers_cleared=%d orphans=%d",
+				callerReport.StagesRemoved, callerReport.MarkersRecovered,
+				callerReport.PublicationsCurrent, callerReport.ReplacementsQueued,
+				callerReport.PointersCleared, callerReport.OrphansObserved,
+			)
+		}
+	}
+	report, reconcileErr := phebssync.ReconcileArtifactsWithCallerLifecycle(
+		ctx, st, cfg.Server.DataDir, cfg.Sync.CleanupOrphans,
+		callerPublications,
+	)
 	if reconcileErr != nil {
 		// Reconciliation establishes the artifact/search trust boundary. A
 		// failed quarantine, revision clear, or credential scrub must not leave
@@ -383,7 +416,8 @@ func serve(args []string) error {
 	if err := phebssync.EnqueueMissing(ctx, st, cfg); err != nil {
 		return fmt.Errorf("enqueue sync jobs: %w", err)
 	}
-	runner := &store.Runner{Store: st, Kind: store.JobSync, Handle: phebssync.Handler(cfg, st),
+	runner := &store.Runner{Store: st, Kind: store.JobSync,
+		Handle:   phebssync.HandlerWithCallerLifecycle(cfg, st, callerPublications),
 		Interval: cfg.Sync.Interval()}
 	runBackground(func() { runner.Run(ctx) })
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st),
@@ -467,8 +501,9 @@ func serve(args []string) error {
 			}
 		}
 		if callerRegistry.Enabled() {
-			callerWorker, err := callerexecute.NewWorker(
+			callerWorker, err := callerexecute.NewWorkerWithPublicationRegistry(
 				cfg.Server.DataDir, st, manifestProvider, callerRegistry,
+				callerPublications,
 			)
 			if err != nil {
 				return fmt.Errorf("configure caller-leaf execution: %w", err)

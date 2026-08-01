@@ -29,6 +29,9 @@ var (
 	ErrInvalidResolverCatalogPublication = errors.New(
 		"invalid resolver catalog publication",
 	)
+	ErrInvalidCallerGenerationPublication = errors.New(
+		"invalid caller-generation publication",
+	)
 )
 
 type JobKind string
@@ -87,13 +90,18 @@ type Repo struct {
 	// intentionally absent from repository API responses while allowing
 	// consumers that compose live evidence to detect a publication transition
 	// even when commit and semantic unit digest are unchanged.
-	EvidenceRevision int64      `json:"-" cbor:"evidence_revision,omitempty"`
-	LatestJobStatus  string     `json:"latest_indexing_job_status,omitempty"`
-	PushedAt         *time.Time `json:"pushed_at,omitempty"`
-	ExternalID       string     `json:"external_id,omitempty"`
-	ExternalHostType string     `json:"external_code_host_type,omitempty"`
-	ExternalHostURL  string     `json:"external_code_host_url,omitempty"`
-	Deleting         bool       `json:"deleting,omitempty"`
+	EvidenceRevision int64 `json:"-" cbor:"evidence_revision,omitempty"`
+	// CallerPublicationRevision is the repository-local monotonic visibility
+	// fence for complete caller generations. It deliberately survives an
+	// unavailable interval: publishing A, clearing A, and republishing the same
+	// immutable A are three distinct transitions for cursor consumers.
+	CallerPublicationRevision int64      `json:"-" cbor:"caller_publication_revision,omitempty"`
+	LatestJobStatus           string     `json:"latest_indexing_job_status,omitempty"`
+	PushedAt                  *time.Time `json:"pushed_at,omitempty"`
+	ExternalID                string     `json:"external_id,omitempty"`
+	ExternalHostType          string     `json:"external_code_host_type,omitempty"`
+	ExternalHostURL           string     `json:"external_code_host_url,omitempty"`
+	Deleting                  bool       `json:"deleting,omitempty"`
 }
 
 // IndexedRevision is one atomically published zoekt branch. Selector is the
