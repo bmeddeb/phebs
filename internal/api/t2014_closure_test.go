@@ -157,7 +157,7 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 		},
 	}
 	catalog := api.NewContractCatalogService(opts)
-	callers := api.NewCallerMapService(opts)
+	callers := api.NewLegacyCallerMapService(opts)
 	comparison := api.NewCallerComparisonService(opts)
 	if catalog == nil || callers == nil || comparison == nil {
 		t.Fatal("T20.14 shared services were not constructed")
@@ -188,10 +188,11 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("page discovered endpoint callers: %v", err)
 	}
-	if len(firstPage.Rows) != 100 || firstPage.TotalMatchingRows < t201.ScaleLogicalUnits ||
+	if len(firstPage.Rows) != 100 || firstPage.TotalMatchingRows == nil ||
+		*firstPage.TotalMatchingRows < t201.ScaleLogicalUnits ||
 		firstPage.Pagination.NextCursor == "" {
 		t.Fatalf("scale Caller Map first page = %d/%d, cursor=%t",
-			len(firstPage.Rows), firstPage.TotalMatchingRows,
+			len(firstPage.Rows), *firstPage.TotalMatchingRows,
 			firstPage.Pagination.NextCursor != "")
 	}
 	citation := firstPage.Rows[0].Source
@@ -201,7 +202,7 @@ func TestT2014ScaleFailureAndEndToEndClosure(t *testing.T) {
 		t.Fatalf("Caller Map did not reach an immutable citation: %+v", citation)
 	}
 	measurements.CallerMapRows = len(firstPage.Rows)
-	measurements.CallerMapTotalRows = firstPage.TotalMatchingRows
+	measurements.CallerMapTotalRows = *firstPage.TotalMatchingRows
 	measurements.CitedCaller = t2014Citation{
 		Repository: "<generated-local-profile>", Commit: citation.Commit,
 		Path: citation.Path, StartByte: citation.StartByte,

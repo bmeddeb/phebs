@@ -217,6 +217,7 @@ func TestCallerGenerationPublicationRevisionLifecycle(t *testing.T) {
 	}
 	if first.PublicationRevision != 1 || first.WriterSchema !=
 		store.CallerGenerationPublicationWriterSchema ||
+		!strings.HasPrefix(first.PublicationIncarnation, "sha256:") ||
 		first.PairCount != 2 || first.ArtifactCount != 2 ||
 		first.ResultCount != 5 || first.AbstentionCount != 3 ||
 		first.Pairs[0].RecordCount != 3 || first.Pairs[1].RecordCount != 5 {
@@ -234,8 +235,18 @@ func TestCallerGenerationPublicationRevisionLifecycle(t *testing.T) {
 	}
 	retried, err := s.GetCallerGenerationPublication(ctx, fixture.repository)
 	if err != nil || retried.PublicationRevision != 1 ||
+		retried.PublicationIncarnation != first.PublicationIncarnation ||
 		!retried.PublishedAt.Equal(first.PublishedAt) {
 		t.Fatalf("exact retry = %+v, %v", retried, err)
+	}
+	staleIncarnation := *first
+	staleIncarnation.PublicationIncarnation = candidateDigest('0')
+	if staleIncarnation.PublicationIncarnation == first.PublicationIncarnation {
+		staleIncarnation.PublicationIncarnation = candidateDigest('f')
+	}
+	current, err = s.CallerGenerationPublicationCurrent(ctx, staleIncarnation)
+	if err != nil || current {
+		t.Fatalf("recreated full publication current = %v, %v", current, err)
 	}
 	conflict := fixture.publication
 	conflict.ManifestDigest = candidateDigest('8')
@@ -260,8 +271,23 @@ func TestCallerGenerationPublicationRevisionLifecycle(t *testing.T) {
 	if err != nil || repo.CallerPublicationRevision != 2 {
 		t.Fatalf("revision after unavailable = %+v, %v", repo, err)
 	}
+	// Even if one active claim survives an authority reset, a new visibility
+	// edge receives a fresh store nonce and cannot reuse its prior incarnation.
+	if err := s.PublishCallerGeneration(
+		ctx, *fixture.job, fixture.publication,
+	); err != nil {
+		t.Fatalf("same-claim republish A: %v", err)
+	}
+	sameClaim, err := s.GetCallerGenerationPublication(ctx, fixture.repository)
+	if err != nil || sameClaim.PublicationRevision != 3 ||
+		sameClaim.PublicationIncarnation == first.PublicationIncarnation {
+		t.Fatalf("same-claim republished A = %+v, %v", sameClaim, err)
+	}
+	if err := s.ClearCallerGenerationPublication(ctx, fixture.repository); err != nil {
+		t.Fatal(err)
+	}
 	// A new live lease can republish byte-identical A, but it is a new visibility
-	// transition and therefore receives revision 3.
+	// transition and therefore receives revision 5.
 	if err := s.SetJobStatus(ctx, *fixture.job, store.StatusDone, ""); err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +305,8 @@ func TestCallerGenerationPublicationRevisionLifecycle(t *testing.T) {
 		t.Fatalf("republish A: %v", err)
 	}
 	republished, err := s.GetCallerGenerationPublication(ctx, fixture.repository)
-	if err != nil || republished.PublicationRevision != 3 {
+	if err != nil || republished.PublicationRevision != 5 ||
+		republished.PublicationIncarnation == sameClaim.PublicationIncarnation {
 		t.Fatalf("republished A = %+v, %v", republished, err)
 	}
 	// The old lease remains structurally plausible to the caller but is fenced
@@ -317,16 +344,17 @@ func TestCallerGenerationPublicationSummaryReadAndCurrent(t *testing.T) {
 		PairPayloadDigest: publication.PairPayloadDigest,
 		PairSetDigest:     publication.PairSetDigest,
 		PairCount:         publication.PairCount, ArtifactCount: publication.ArtifactCount,
-		ResultCount:         publication.ResultCount,
-		AbstentionCount:     publication.AbstentionCount,
-		CanonicalBytes:      publication.CanonicalBytes,
-		StagingBytes:        publication.StagingBytes,
-		PeakOpenFiles:       publication.PeakOpenFiles,
-		ManifestDigest:      publication.ManifestDigest,
-		ManifestPath:        publication.ManifestPath,
-		PublicationRevision: publication.PublicationRevision,
-		WriterSchema:        publication.WriterSchema,
-		PublishedAt:         publication.PublishedAt,
+		ResultCount:            publication.ResultCount,
+		AbstentionCount:        publication.AbstentionCount,
+		CanonicalBytes:         publication.CanonicalBytes,
+		StagingBytes:           publication.StagingBytes,
+		PeakOpenFiles:          publication.PeakOpenFiles,
+		ManifestDigest:         publication.ManifestDigest,
+		ManifestPath:           publication.ManifestPath,
+		PublicationRevision:    publication.PublicationRevision,
+		PublicationIncarnation: publication.PublicationIncarnation,
+		WriterSchema:           publication.WriterSchema,
+		PublishedAt:            publication.PublishedAt,
 	}
 	if !reflect.DeepEqual(*summary, want) {
 		t.Fatalf("caller publication summary = %+v, want %+v", summary, want)
@@ -340,6 +368,29 @@ func TestCallerGenerationPublicationSummaryReadAndCurrent(t *testing.T) {
 	current, err = s.CallerGenerationPublicationSummaryCurrent(ctx, stale)
 	if err != nil || current {
 		t.Fatalf("stale caller publication summary current = %t, %v", current, err)
+	}
+	stale = *summary
+	stale.PublishedAt = stale.PublishedAt.Add(-time.Second)
+	current, err = s.CallerGenerationPublicationSummaryAuthorityCurrent(ctx, stale)
+	if err != nil || !current {
+		t.Fatalf("informational timestamp scalar summary current = %t, %v", current, err)
+	}
+	current, err = s.CallerGenerationPublicationSummaryCurrent(ctx, stale)
+	if err != nil || !current {
+		t.Fatalf("informational timestamp exact summary current = %t, %v", current, err)
+	}
+	stale = *summary
+	stale.PublicationIncarnation = "sha256:" + strings.Repeat("0", 64)
+	if stale.PublicationIncarnation == summary.PublicationIncarnation {
+		stale.PublicationIncarnation = "sha256:" + strings.Repeat("f", 64)
+	}
+	current, err = s.CallerGenerationPublicationSummaryAuthorityCurrent(ctx, stale)
+	if err != nil || current {
+		t.Fatalf("recreated scalar summary current = %t, %v", current, err)
+	}
+	current, err = s.CallerGenerationPublicationSummaryCurrent(ctx, stale)
+	if err != nil || current {
+		t.Fatalf("recreated exact summary current = %t, %v", current, err)
 	}
 	if err := s.ClearCallerGenerationPublication(ctx, fixture.repository); err != nil {
 		t.Fatal(err)

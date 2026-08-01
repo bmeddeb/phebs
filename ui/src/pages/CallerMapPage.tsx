@@ -5,10 +5,13 @@ import { Input } from 'baseui/input'
 import { Notification, KIND as NOTIFICATION_KIND } from 'baseui/notification'
 import { Spinner } from 'baseui/spinner'
 import {
+  fetchCallerCitation,
   fetchContractCallers,
+  type CallerMapCitation,
   type CallerMapEndpoint,
   type CallerMapPage as CallerMapResponse,
   type CallerMapRow,
+  type CallerMapSource,
   type CallerMapUnitCandidate,
   type CoverageCertificate,
   type CoverageRun,
@@ -262,6 +265,7 @@ export default function CallerMapPage({
 
       {!loading && page && (
         <>
+          <GenerationStatus page={page} />
           <PageProgress
             page={page}
             pageIndex={pageIndex}
@@ -277,7 +281,7 @@ export default function CallerMapPage({
             onPrevious={() => setPageIndex((current) => Math.max(0, current - 1))}
             onNext={nextPage}
           />
-          <CoveragePanel certificate={page.coverage} />
+          {page.coverage && <CoveragePanel certificate={page.coverage} />}
           <div className={css({
             marginTop: '14px',
             padding: '11px 13px',
@@ -315,7 +319,7 @@ function EndpointHeader({
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  const declarationSources = page?.declaration.sources ?? []
+  const declarationSources = page?.declaration?.sources ?? []
   return (
     <header className={css({
       display: 'flex',
@@ -390,7 +394,7 @@ function EndpointHeader({
             Declaration{declarationSources.length > 1 ? ` ${index + 1}` : ''} <OpenIcon size={12} />
           </a>
         ))}
-        {page?.declaration.sources_truncated && (
+        {page?.declaration?.sources_truncated && (
           <span className={css({ fontSize: '12px', color: tok.textTertiary })}>
             declaration citations truncated
           </span>
@@ -607,6 +611,71 @@ function FilterSelect({
   )
 }
 
+function GenerationStatus({ page }: { page: CallerMapResponse }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const generation = page.generation
+  if (!generation && !page.matching_rows_state) return null
+  const exact = page.matching_rows_state === 'exact'
+  return (
+    <section
+      data-testid="caller-map-generation"
+      data-matching-rows-state={page.matching_rows_state ?? ''}
+      className={css({
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '12px',
+        flexWrap: 'wrap',
+        padding: '10px 12px',
+        marginBottom: '10px',
+        border: `1px solid ${exact ? tok.statusGreen : tok.statusAmber}`,
+        backgroundColor: tok.bandBg,
+      })}
+    >
+      <div>
+        <div className={css({
+          display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+          color: tok.textPrimary, fontSize: '11px', fontWeight: 650,
+        })}>
+          <Chip tone={exact ? 'green' : 'amber'}>
+            {exact ? 'exact rows' : 'rows unavailable'}
+          </Chip>
+          <span>
+            {exact
+              ? 'Exact repository-overlay generation'
+              : 'Complete caller generation unavailable'}
+          </span>
+        </div>
+        {generation?.reason && (
+          <div className={css({
+            marginTop: '4px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px',
+          })}>
+            {generation.reason}. This is not evidence of zero callers.
+          </div>
+        )}
+      </div>
+      {generation && (
+        <div className={css({
+          color: tok.textTertiary,
+          fontFamily: FONTS.MONO,
+          fontSize: '9px',
+          lineHeight: '15px',
+          textAlign: 'right',
+          overflowWrap: 'anywhere',
+          '@media screen and (max-width: 560px)': { textAlign: 'left' },
+        })}>
+          <div>{generation.state} · revision {generation.publication_revision ?? 'unavailable'}</div>
+          {generation.commit && <div>commit {shortID(generation.commit)}</div>}
+          {generation.generation_digest && (
+            <div>generation {shortID(generation.generation_digest)}</div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 function PageProgress({
   page,
   pageIndex,
@@ -625,6 +694,8 @@ function PageProgress({
   const start = page.rows.length === 0 ? 0 : pageIndex * pageSize + 1
   const end = pageIndex * pageSize + page.rows.length
   const unresolved = page.rows.filter(isUnresolved).length
+  const unavailable = page.matching_rows_state === 'unavailable'
+  const total = page.total_matching_rows
   return (
     <section className={css({
       display: 'flex',
@@ -642,16 +713,21 @@ function PageProgress({
     })}>
       <div>
         <div className={css({ color: tok.textPrimary, fontSize: '12px', fontWeight: 650 })}>
-          {page.total_matching_rows === 0
+          {unavailable
+            ? 'Caller totals unavailable'
+            : total === 0
             ? 'No matching static evidence'
-            : `Rows ${start}–${end} of ${page.total_matching_rows}`}
+            : total === undefined
+            ? 'Caller total unavailable'
+            : `Rows ${start}–${end} of ${total}`}
         </div>
         <div className={css({ marginTop: '3px', color: tok.textTertiary, fontSize: '10px', lineHeight: '15px' })}>
-          {page.pagination.complete
+          {unavailable
+            ? 'No partial page or zero-caller conclusion is shown.'
+            : page.pagination.complete
             ? `Exact snapshot exhausted on page ${pageIndex + 1}.`
             : `Traversed through at least ${end} rows; continue to exhaust this exact snapshot.`}
-          {' '}
-          Current page: {unresolved} unresolved.
+          {!unavailable && <> Current page: {unresolved} unresolved.</>}
         </div>
       </div>
       <div className={css({ display: 'flex', gap: '7px', flexWrap: 'wrap' })}>
@@ -697,6 +773,7 @@ function CallerRows({
   const tok = usePhebsTokens()
   const [expandedCandidates, setExpandedCandidates] = useState('')
   if (page.rows.length === 0) {
+    const unavailable = page.matching_rows_state === 'unavailable'
     return (
       <div className={css({
         padding: '28px',
@@ -706,8 +783,9 @@ function CallerRows({
         fontSize: '12px',
         lineHeight: '19px',
       })}>
-        No caller rows matched these filters within the displayed coverage.
-        This does not establish absence, completeness, or migration safety.
+        {unavailable
+          ? 'Caller rows are unavailable because no exact complete repository-overlay generation is current. This is not zero callers and no partial rows are shown.'
+          : 'No caller rows matched these filters within the exact generation. This does not establish runtime use, completeness, migration completion, or decommissioning safety.'}
       </div>
     )
   }
@@ -850,26 +928,7 @@ function CallerRow({
       })}
     >
       <div className={css({ minWidth: 0 })}>
-        <a
-          href={sourceHref(row.source)}
-          className={css({
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '5px',
-            maxWidth: '100%',
-            color: tok.accent,
-            fontFamily: FONTS.MONO,
-            fontSize: '12px',
-            lineHeight: '18px',
-            textDecoration: 'none',
-            overflowWrap: 'anywhere',
-            ':hover': { textDecoration: 'underline' },
-            ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' },
-          })}
-        >
-          {row.source.repository}/{row.source.path}:{row.source.start_line}
-          <OpenIcon size={11} />
-        </a>
+        <ExactCallerSource source={row.source} />
         <div className={css({
           display: 'flex',
           gap: '5px',
@@ -902,7 +961,9 @@ function CallerRow({
             fontSize: '10px',
             ':focus-visible': { outline: `2px solid ${tok.accent}` },
           })}>
-            Evidence identity and byte span
+            {row.source.plane === 'repository-overlay'
+              ? 'Repository-overlay identity and byte span'
+              : 'Evidence identity and byte span'}
           </summary>
           <div className={css({
             marginTop: '5px',
@@ -911,9 +972,18 @@ function CallerRow({
             lineHeight: '15px',
             overflowWrap: 'anywhere',
           })}>
-            bytes {row.source.start_byte}–{row.source.end_byte} · assertion{' '}
-            {row.source.assertion_id} · run {row.source.run_id} · atom{' '}
-            {row.source.atom_id}
+            bytes {row.source.start_byte}–{row.source.end_byte} ·{' '}
+            {row.source.plane === 'repository-overlay' ? (
+              <>
+                record {row.source.assertion_id} · generation {row.source.run_id} · blob{' '}
+                {row.source.atom_id}
+              </>
+            ) : (
+              <>
+                assertion {row.source.assertion_id} · run {row.source.run_id} · atom{' '}
+                {row.source.atom_id}
+              </>
+            )}
           </div>
         </details>
       </div>
@@ -989,6 +1059,152 @@ function CallerRow({
       </div>
     </article>
   )
+}
+
+function ExactCallerSource({ source }: { source: CallerMapSource }) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const [citation, setCitation] = useState<CallerMapCitation | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const request = useRef<AbortController | null>(null)
+  const exactCapability = source.plane === 'repository-overlay' &&
+    Boolean(source.citation && source.object_id && source.blob_digest)
+
+  useEffect(() => () => request.current?.abort(), [])
+
+  const toggleCitation = () => {
+    if (citation) {
+      setCitation(null)
+      setError('')
+      return
+    }
+    if (!exactCapability || !source.citation) return
+    request.current?.abort()
+    const controller = new AbortController()
+    request.current = controller
+    setLoading(true)
+    setError('')
+    fetchCallerCitation(source.citation, controller.signal)
+      .then((result) => {
+        if (!exactCitationMatches(source, result)) {
+          throw new Error('Exact citation response did not match the selected caller occurrence.')
+        }
+        setCitation(result)
+      })
+      .catch((cause) => {
+        if (!isAbortError(cause)) {
+          setError(cause instanceof Error ? cause.message : String(cause))
+        }
+      })
+      .finally(() => {
+        if (request.current === controller) {
+          request.current = null
+          setLoading(false)
+        }
+      })
+  }
+
+  const label = `${source.repository}/${source.path}:${source.start_line}`
+  return (
+    <div>
+      <div className={css({
+        display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap',
+      })}>
+        <span className={css({
+          color: tok.textPrimary,
+          fontFamily: FONTS.MONO,
+          fontSize: '12px',
+          lineHeight: '18px',
+          overflowWrap: 'anywhere',
+        })}>
+          {label}
+        </span>
+        {exactCapability ? (
+          <Button
+            type="button"
+            size={BUTTON_SIZE.mini}
+            kind={BUTTON_KIND.secondary}
+            aria-expanded={citation !== null}
+            disabled={loading}
+            onClick={toggleCitation}
+          >
+            {loading ? 'Reading exact citation…' : citation ? 'Hide exact citation' : 'Read exact cited bytes'}
+          </Button>
+        ) : (
+          <Chip tone="amber">exact citation unavailable</Chip>
+        )}
+      </div>
+      <div className={css({
+        marginTop: '3px', color: tok.textTertiary, fontSize: '9px', lineHeight: '14px',
+      })}>
+        Repository-overlay occurrence; source access is limited to its authorized byte range.
+      </div>
+      {error && (
+        <div role="alert" className={css({
+          marginTop: '7px', color: tok.statusRed, fontSize: '10px', lineHeight: '15px',
+        })}>
+          Exact citation unavailable: {error}
+        </div>
+      )}
+      {citation && (
+        <section
+          data-testid="caller-map-exact-citation"
+          className={css({
+            marginTop: '8px',
+            border: `1px solid ${tok.cardBorder}`,
+            backgroundColor: tok.bandBg,
+          })}
+        >
+          <div className={css({
+            padding: '6px 8px',
+            borderBottom: `1px solid ${tok.innerSep}`,
+            color: tok.textTertiary,
+            fontSize: '9px',
+            lineHeight: '14px',
+          })}>
+            Exact cited bytes · repository-overlay · object {shortID(citation.source.object_id ?? '')}
+          </div>
+          <pre
+            aria-label={`Exact cited bytes for ${label}`}
+            className={css({
+              margin: 0,
+              padding: '8px',
+              overflowX: 'auto',
+              color: tok.textPrimary,
+              fontFamily: FONTS.MONO,
+              fontSize: '10px',
+              lineHeight: '16px',
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+            })}
+          >
+            {citation.content}
+          </pre>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function exactCitationMatches(
+  source: CallerMapSource,
+  citation: CallerMapCitation,
+) {
+  const confirmed = citation.source
+  return citation.schema_version === 'caller-map-citation-v1' &&
+    citation.generation.plane === 'repository-overlay' &&
+    confirmed.plane === 'repository-overlay' &&
+    confirmed.repository === source.repository &&
+    confirmed.commit === source.commit &&
+    confirmed.path === source.path &&
+    confirmed.object_id === source.object_id &&
+    confirmed.blob_digest === source.blob_digest &&
+    confirmed.start_byte === source.start_byte &&
+    confirmed.end_byte === source.end_byte &&
+    confirmed.start_line === source.start_line &&
+    confirmed.end_line === source.end_line &&
+    typeof citation.content === 'string'
 }
 
 function UnitCandidate({ candidate }: { candidate: CallerMapUnitCandidate }) {

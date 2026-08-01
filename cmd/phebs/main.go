@@ -225,6 +225,15 @@ func serve(args []string) error {
 		return err
 	}
 	defer func() { _ = st.Close(context.Background()) }()
+	var callerReader *callerexecute.PublicationReader
+	if callerRegistry.Enabled() {
+		callerReader, err = callerexecute.NewPublicationReader(
+			st, callerRegistry, callerPublications,
+		)
+		if err != nil {
+			return fmt.Errorf("configure caller publication reader: %w", err)
+		}
+	}
 
 	// Every service-owned goroutine is joined before the store is closed.
 	// Calling cancel in this later-registered defer also covers startup and
@@ -242,6 +251,7 @@ func serve(args []string) error {
 		stopBackgroundOnce.Do(func() {
 			cancel()
 			background.Wait()
+			_ = callerPublications.Close()
 		})
 	}
 	defer stopBackground()
@@ -699,6 +709,7 @@ func serve(args []string) error {
 		Evidence: evidenceView, ProofBundles: proofBundles,
 		CallerMapEnabled: cfg.Experimental.ProvisionalProtoExtraction ||
 			cfg.Experimental.ProvisionalThriftExtraction,
+		CallerReader:         callerReader,
 		ProofBundleRetention: cfg.ProofBundles.RetentionFor(),
 		Compatibility:        compatibility, Visible: visibleFor,
 		Principal: func(ctx context.Context) string {
@@ -751,6 +762,7 @@ func serve(args []string) error {
 		log.Printf("WARNING: synthetic Contract Atlas fixture enabled from %s; not production evidence", fixturePath)
 	}
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
+	apiOpts.LegacyCallerMap = api.NewLegacyCallerMapService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
 	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
@@ -1123,9 +1135,6 @@ func bindSyntheticWorkbenchClosureDemo(cfg *config.Config, fixture string) error
 	return nil
 }
 
-// evidenceExtractors is the validation-gated registry. The provisional
-// declared-protobuf reader stays absent unless the operator explicitly opts
-// in; T11.1/T12.3 do not support default production activation.
 // mcpCallerMapServices converts the typed Caller Map service pointers into
 // the MCP option interfaces, preserving nilness. Assigning a nil typed
 // pointer directly into an interface field produces a NON-nil interface, so
@@ -1164,6 +1173,9 @@ func mcpInvestigationMutation(ctx context.Context) bool {
 	)
 }
 
+// evidenceExtractors is the validation-gated registry. The provisional
+// declared-protobuf reader stays absent unless the operator explicitly opts
+// in; T11.1/T12.3 do not support default production activation.
 func evidenceExtractors(
 	provisionalProto, provisionalThrift, provisionalThriftField, provisionalKafka bool,
 ) []extract.Extractor {

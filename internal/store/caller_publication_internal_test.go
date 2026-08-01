@@ -95,14 +95,16 @@ func seedCallerPublicationAggregate(
 				staging_bytes: 0, peak_open_files: 5,
 				manifest_digest: 'seed', manifest_path: 'seed',
 				publication_revision: 1,
+				publication_incarnation: $publication_incarnation,
 				writer_schema: $writer_schema, published_at: time::now()
 			} RETURN NONE;
 		`, map[string]any{
-			"rid":             callerGenerationPublicationID(row.repository),
-			"repository":      row.repository,
-			"pair_count":      row.pairs,
-			"canonical_bytes": row.canonicalByte,
-			"writer_schema":   CallerGenerationPublicationWriterSchema,
+			"rid":                     callerGenerationPublicationID(row.repository),
+			"repository":              row.repository,
+			"pair_count":              row.pairs,
+			"canonical_bytes":         row.canonicalByte,
+			"publication_incarnation": internalCallerDigest('0'),
+			"writer_schema":           CallerGenerationPublicationWriterSchema,
 		})
 	}
 }
@@ -374,6 +376,39 @@ func TestCallerPublicationSummaryCurrentRejectsRawPairPayloadMutation(t *testing
 	if err != nil || !current {
 		t.Fatalf("initial scalar authority current = %t, %v", current, err)
 	}
+	// Model the authority shape produced by delete/recreate/identical republish:
+	// repository-local revision and second-precision time may repeat, while the
+	// newly owned writer job produces a different incarnation. The old binding
+	// must fail both scalar and exact fences.
+	oldIncarnation := summary.PublicationIncarnation
+	newIncarnation := internalCallerDigest('f')
+	if newIncarnation == oldIncarnation {
+		newIncarnation = internalCallerDigest('e')
+	}
+	requireCandidateRawQuery(t, t.Context(), s,
+		"UPDATE $rid SET publication_incarnation = $incarnation RETURN NONE",
+		map[string]any{
+			"rid":         callerGenerationPublicationID(repository),
+			"incarnation": newIncarnation,
+		})
+	current, err = s.CallerGenerationPublicationSummaryAuthorityCurrent(
+		t.Context(), *summary,
+	)
+	if err != nil || current {
+		t.Fatalf("recreated scalar authority current = %t, %v", current, err)
+	}
+	current, err = s.CallerGenerationPublicationSummaryCurrent(
+		t.Context(), *summary,
+	)
+	if err != nil || current {
+		t.Fatalf("recreated exact authority current = %t, %v", current, err)
+	}
+	requireCandidateRawQuery(t, t.Context(), s,
+		"UPDATE $rid SET publication_incarnation = $incarnation RETURN NONE",
+		map[string]any{
+			"rid":         callerGenerationPublicationID(repository),
+			"incarnation": oldIncarnation,
+		})
 
 	// SourceBlobReads is a valid, non-aggregate receipt field. Mutating it
 	// leaves every scalar summary and every independently validated pair field
@@ -442,6 +477,43 @@ func TestCallerPublicationSummaryCurrentRejectsRawPairPayloadMutation(t *testing
 	if err != nil || !current {
 		t.Fatalf("repaired summary current = %t, %v", current, err)
 	}
+
+	// Model a pre-hardening row whose prefix/length are plausible but payload
+	// is not canonical lowercase hex. The exact writer must treat it as
+	// repairable corruption instead of taking the same-publication no-op branch.
+	requireCandidateRawQuery(t, t.Context(), s, `
+		REMOVE FIELD publication_incarnation ON caller_generation_publication;
+		DEFINE FIELD publication_incarnation ON caller_generation_publication TYPE string
+			ASSERT string::len($value) = 71
+				AND string::starts_with($value, 'sha256:');
+		UPDATE $rid SET publication_incarnation = $invalid RETURN NONE;
+		DEFINE FIELD OVERWRITE publication_incarnation ON caller_generation_publication TYPE string
+			ASSERT string::len($value) = 71
+				AND string::starts_with($value, 'sha256:')
+				AND string::is_hexadecimal(string::slice($value, 7))
+				AND string::lowercase($value) = $value;
+	`, map[string]any{
+		"rid":     callerGenerationPublicationID(repository),
+		"invalid": "sha256:" + strings.Repeat("z", 64),
+	})
+	if _, err := s.GetCallerGenerationPublication(
+		t.Context(), repository,
+	); !errors.Is(err, ErrInvalidCallerGenerationPublication) {
+		t.Fatalf("nonhex incarnation = %v, want invalid publication", err)
+	}
+	if err := s.PublishCallerGeneration(
+		t.Context(), job, publication,
+	); err != nil {
+		t.Fatalf("repair nonhex incarnation: %v", err)
+	}
+	incarnationRepaired, err := s.GetCallerGenerationPublication(
+		t.Context(), repository,
+	)
+	if err != nil || incarnationRepaired.PublicationRevision !=
+		repaired.PublicationRevision+1 ||
+		!validSHA256Digest(incarnationRepaired.PublicationIncarnation) {
+		t.Fatalf("incarnation-repaired publication = %+v, %v", incarnationRepaired, err)
+	}
 }
 
 func TestCallerGenerationPublicationMigrationAndWriterGuard(t *testing.T) {
@@ -482,6 +554,63 @@ func TestCallerGenerationPublicationMigrationAndWriterGuard(t *testing.T) {
 	if err != nil || len(firstDomainRows(marker)) != 1 ||
 		firstDomainRows(marker)[0].Version != callerGenerationPublicationMigrationVersion {
 		t.Fatalf("migration marker = %+v, %v", marker, err)
+	}
+	// The supported v1 upgrade preserves current pointer visibility in place
+	// while adding a repository-specific incarnation. Process restart has
+	// already invalidated every process-local T30.6j request binding.
+	requireCandidateRawQuery(t, ctx, s, `
+		UPDATE $marker SET version = $prior RETURN NONE;
+		REMOVE FIELD publication_incarnation ON caller_generation_publication;
+		CREATE $publication CONTENT {
+			repository: $repository,
+			generation: {
+				repository: $repository,
+				head_commit: 'seed', unit_digest: '',
+				declaration_set_digest: 'seed',
+				candidate_manifest_digest: 'seed',
+				candidate_policy_digest: 'seed',
+				candidate_control_revision: 1,
+				resolver_generation_digest: 'seed',
+				resolver_manifest_digest: 'seed',
+				resolver_control_revision: 1,
+				resolver_writer_schema: 'seed',
+				source_lane_policy: 'seed', caller_policy_digest: 'seed',
+				extractor_set_digest: 'seed', digest: 'seed'
+			},
+			generation_digest: 'seed', pairs: [],
+			pair_payload_digest: $pair_payload_digest,
+			pair_set_digest: 'seed', pair_count: 0,
+			artifact_count: 0, result_count: 0, abstention_count: 0,
+			canonical_bytes: 0, staging_bytes: 0, peak_open_files: 5,
+			manifest_digest: 'seed', manifest_path: 'seed',
+			publication_revision: 1,
+			writer_schema: $writer_schema,
+			published_at: time::now()
+		} RETURN NONE;
+		DEFINE FIELD publication_incarnation ON caller_generation_publication TYPE string
+			ASSERT string::len($value) = 71
+				AND string::starts_with($value, 'sha256:')
+				AND string::is_hexadecimal(string::slice($value, 7))
+				AND string::lowercase($value) = $value;
+	`, map[string]any{
+		"marker":              callerGenerationPublicationMigrationID(),
+		"prior":               callerGenerationPublicationPriorMigration,
+		"publication":         callerGenerationPublicationID(repository),
+		"repository":          repository,
+		"pair_payload_digest": internalCallerDigest('0'),
+		"writer_schema":       CallerGenerationPublicationWriterSchema,
+	})
+	if err := s.migrateCallerGenerationPublications(ctx); err != nil {
+		t.Fatalf("upgrade v1 caller publication marker: %v", err)
+	}
+	upgraded, err := surrealdb.Query[[]struct {
+		Incarnation string `json:"publication_incarnation"`
+	}](ctx, s.db, "SELECT publication_incarnation FROM $rid", map[string]any{
+		"rid": callerGenerationPublicationID(repository),
+	})
+	if err != nil || len(firstDomainRows(upgraded)) != 1 ||
+		!validSHA256Digest(firstDomainRows(upgraded)[0].Incarnation) {
+		t.Fatalf("upgraded publication incarnation = %+v, %v", upgraded, err)
 	}
 	guarded, queryErr := surrealdb.Query[any](ctx, s.db, `
 		CREATE caller_generation_publication CONTENT {
@@ -549,6 +678,7 @@ func TestCallerPublicationRestoreClearUsesRecordIdentityForMalformedPointer(t *t
 			abstention_count: 0, canonical_bytes: 0, staging_bytes: 0,
 			peak_open_files: 0, manifest_digest: 'malformed',
 			manifest_path: 'malformed', publication_revision: 1,
+			publication_incarnation: $publication_incarnation,
 			writer_schema: $writer_schema, published_at: time::now()
 		};
 		CREATE caller_leaf_outcome CONTENT {
@@ -568,11 +698,12 @@ func TestCallerPublicationRestoreClearUsesRecordIdentityForMalformedPointer(t *t
 			recorded_at: time::now()
 		};
 	`, map[string]any{
-		"pointer":            callerGenerationPublicationID(withPointer),
-		"repository":         withPointer,
-		"stored_repository":  withoutPointer,
-		"writer_schema":      CallerGenerationPublicationWriterSchema,
-		"leaf_writer_schema": CallerLeafWriterSchema,
+		"pointer":                 callerGenerationPublicationID(withPointer),
+		"repository":              withPointer,
+		"stored_repository":       withoutPointer,
+		"publication_incarnation": internalCallerDigest('0'),
+		"writer_schema":           CallerGenerationPublicationWriterSchema,
+		"leaf_writer_schema":      CallerLeafWriterSchema,
 	})
 	if _, err := s.GetCallerGenerationPublication(
 		ctx, withPointer,

@@ -593,6 +593,183 @@ job, the exact admitted writer may replace only a commitment-invalid current
 payload and advances caller-publication revision; a different payload whose
 commitment validates remains a nondeterministic same-generation conflict.
 
+#### Authorized exact Caller Map reads
+
+When a shipped gRPC or Thrift caller adapter is enabled, `serve` constructs the
+T30.6j publication reader over the same adapter registry and complete-
+publication lease registry used by the caller worker. The public Caller Map is
+registered only when that reader is available. Reader index and request-binding caches
+start empty: startup does not build a reverse index, scan caller records, read
+Git source, take a mirror lock, or start a child for the read surface. The
+T30.6i startup reconciliation and publication admission described above remain
+the separate derived-state lifecycle. The T30.6j store upgrade advances the
+caller-publication migration marker from v1 to v2 and derives a store-owned
+`publication_incarnation` for each existing pointer in place. Process-local
+bindings have already been lost at startup, so this upgrade does not require a
+global caller rebuild; later publications derive the incarnation from the
+exact owned writer claim plus a fresh store nonce, including when the same job
+survives a delete/recreate transition.
+
+Every list, continuation, and citation request first authenticates and checks
+permission for the one endpoint repository. It also requires that repository
+to exist and not be deleting before it reads a caller pointer, opens a caller
+directory, or consults a repository-specific read cache. Unknown, hidden, and
+deleting repositories therefore share the same `404` response and cannot
+affect rows, totals, gap detail, cursors, or caller-publication/index work
+shape. The final store/filesystem authority sweep runs before authorization is
+rechecked as the last result fence after response construction. A permission or authority transition
+during the request fails closed instead of serializing rows from the former
+snapshot. After authorization, at most eight exact list, continuation, or
+citation requests perform store, publication, and index work concurrently;
+excess work receives an immediate retryable service-unavailable response. The
+gate ends before HTTP/MCP transport serialization, so it bounds active service
+work, not the lifetime of a slow client's encoded response.
+
+For an authorized repository, the generation state has these meanings:
+
+| State | Product behavior |
+|---|---|
+| `current` | One exact complete generation is leased and may supply rows. |
+| `missing` | No current complete generation is authoritative; rows and totals are unavailable. |
+| `failed` | Current derived state is deterministically invalid, or the expected generation has a terminal admission; rows and totals are unavailable. |
+| `stale` | The pointer, resolver, filesystem publication, or cursor binding no longer agrees with current authority; rows and totals are unavailable. |
+
+Only `current` carries a request-scoped immutable lease. A first-page
+`missing`, `failed`, or `stale` response contains
+no partial rows and sets `matching_rows_state: unavailable`; it omits the
+numeric total rather than serializing zero callers. Operational store or
+filesystem failures remain request errors rather than being collapsed into a
+gap. Pointerless gaps repeat the scalar authority/admission selection at the
+result fence. A deterministic cold-filesystem refusal is retained under its
+exact generation/revision in an eight-entry reader cache, so its result fence
+and later no-op requests recheck scalar authority without hashing the complete
+publication again. A transition detected while continuing a cursor or reading a citation is
+a conflict and requires a new first-page read.
+
+The first page reads the exact complete pointer, including its at-most-16,384
+pair receipts, binds the matching resolver publication, acquires the shared
+lease, and applies a final exact store/filesystem fence. On a reverse-index
+cache miss, it then streams every canonical caller record in the complete
+generation, bounded by 100,000 results plus 100,000 abstentions and 512 MiB of
+canonical leaf content. It retains at most 200,000 projected records and
+128 MiB of explicitly counted record identity in that index; the count is an
+accounting bound, not a Go-heap measurement. The process retains at most eight
+such indexes, so the maximum counted identity across the separate index cache
+is 1 GiB plus Go object/map overhead. Cold index construction is serialized
+through one process-wide slot, so at most one additional 128 MiB counted index
+is under construction (a 1.125 GiB transient counted ceiling plus overhead).
+Deterministic semantic-projection and index-identity-limit refusals are retained
+as tiny negative entries under the same exact key and eight-slot bound; a
+stable retry does not rescan 128–512 MiB. Transition and operational failures
+are never negative-cached. Cache replacement drops the oldest index with no active request or request
+binding; if all eight are busy, the newly built request receives retryable
+service-unavailable rather than evicting live state. Cold reader admission is
+single-flight per exact key and admits at most 64 distinct active keys; a 65th
+key receives the same immediate retryable response.
+The 128 MiB ceiling is an independent consumer-admission bound, not a value
+derived from the caller writer's 200,000-record and 512 MiB publication
+ceilings. A writer-valid maximum-count generation can therefore exceed the
+reader budget; it receives deterministic `422` with no rows or numeric total,
+and retrying the same exact generation reuses the negative entry. The fixed
+reference and derived-record-ID charge is 357 bytes per record before semantic
+payload. Exact-cap admits and cap-plus-one refuses. Raising this bound would
+multiply every retained index; requiring every writer-valid generation to be
+readable instead needs a future frozen aggregate projection-identity writer
+policy and rebuild.
+Exact semantic projection revalidates canonical operations, declaration
+lineages, source coordinates within the 4 MiB direct-source envelope, direct-
+result heuristic confidence, nonempty code roles, unit states/reasons, and
+result-versus-abstention kind/predicate pairing. One record may carry at most 25,000
+canonically ordered unit candidates; each candidate has at most 64 ordered
+values per attribution category and each value is at most 4 KiB. Counted index
+identity includes deterministic charges for candidate structs and retained
+string headers as well as payload bytes. Endpoint lookup keys retain only
+string headers into that already charged operation payload, rather than a
+second copy of each operation.
+
+The shared publication registry may independently cold-admit at most two
+repositories concurrently before that scan. Each admission streams one
+at-most-32-MiB manifest and its at-most-512-MiB complete canonical generation;
+these are I/O/work ceilings, not claims that all bytes are resident in Go heap.
+A first authorized read after restart can therefore perform one bounded cold
+publication validation and one bounded index-construction pass, while another
+repository may be undergoing its own cold validation.
+
+Filtering retains integer positions, not another copy of records. At most
+eight live request bindings share at most 200,000 positions and survive for up
+to five minutes after their first page. Every non-empty first page retains one
+so both continuations and citations can use compact references. Each live
+binding pins its reverse index. Before crossing either capacity, admission
+preflights and retires enough of the oldest idle bindings; their cursors and
+citations then return conflict and must be relisted. Pressure made solely of
+active or retired-in-flight bindings receives a retryable service-unavailable
+response. An expired/retired binding that is still in use remains fully counted
+and keeps its index pinned until the active request releases it. Expiry of a decoded live-process binding makes continuation conflict;
+a ninth cold index similarly prefers an inactive unbound victim, then an
+inactive index whose complete pin set is idle; it pressure-retires that set
+before eviction. Active and retired-in-flight pins are never reclaimed.
+a process restart rotates the HMAC secret, so an old token is invalid input and
+the client starts again from a new first page. Each HMAC cursor binds its normalized query
+and page size, authorization projection, generation digest, manifest digest,
+pair-set digest, monotonic publication revision, store-owned publication
+incarnation, and next offset. The claim-plus-fresh-nonce incarnation cannot
+repeat across same-name repository delete/recreate even if revision and second-precision
+publication time repeat, so a real transition—including `A → B → A`—cannot
+resume the old cursor. Exact index and deterministic-failure cache keys carry
+the same incarnation.
+
+A warm continuation reopens the pair-free scalar binding, reacquires a lease,
+and reads and validates only its at-most-100 referenced canonical records;
+each record is capped at 1 MiB and no read scans or hashes the remainder of its
+leaf. Reopen and final current fences still perform complete-publication
+identity checks, so one warm page may make roughly three `O(P)` stat sweeps
+over the at-most-16,384 leaf references without rereading or hashing their
+content. It never rematerializes the reverse index: if that index was evicted, the
+page fails defensively with conflict, while a live unexpired binding normally
+prevents that eviction. Leases deliberately do not survive between requests,
+so pressure that evicts the same publication from the separate shared registry
+may cause its existing bounded cold manifest/leaf validation before a later
+page can reopen. Thus warm admitted paging has no intrinsic repeated full hash,
+while restart or cache pressure can reintroduce one bounded cold-admission pass.
+Every request releases its lease after the final authorization and authority
+checks; a retired generation's bytes remain only until the final active request
+releases them. A maximum 100-row page may retain close to 100 MiB of canonical
+record/response data before encoding; this finite page bound is separate from
+the eight-request service-work gate and may outlive that gate during transport
+serialization.
+
+Each row carries `repository-overlay` provenance: repository, indexed commit,
+canonical path, Git object ID, SHA-256 blob digest, byte and line range, exact
+generation and publication identity, and an opaque signed citation. A citation
+token contains only its repository authorization key, random process-local
+binding ID, bounded index position, and exact record ID; maximum-shaped path,
+policy, extractor, and visibility fields remain in the capped binding rather
+than being duplicated into the token. The signed repository is authorized
+before the binding cache is touched. Tokens share the process-local HMAC secret and 16 KiB envelope
+with cursors and survive with their up-to-five-minute binding; after expiry,
+idle pressure retirement, or process restart, list the row again rather than
+retaining the old token.
+HTTP
+`GET /api/contract_callers/citation?citation=...` and MCP
+`read_operation_caller_citation` share one citation reader. It reauthorizes,
+reopens and fences the same complete generation/revision, rereads only the
+named canonical caller record, and rechecks its pair, operation, lineage,
+source coordinates, object ID, and digest. It then runs bounded immutable Git
+resolution (three small `rev-parse`/`cat-file` metadata children) and one
+`cat-file blob` child, reads the complete cited blob under the existing 4 MiB
+direct-source limit to verify SHA-256, and returns only the cited byte range.
+At most two citation Git/blob phases run concurrently, bounding active child
+and blob-read work; excess citations receive immediate retryable service-
+unavailable. The phase gate also ends before response serialization.
+It does not enumerate a tree or directory and the opaque citation grants no
+unrelated path, whole-file, focused-search, or local-evidence access.
+
+The exact reader exposes direct-syntax results and retained abstentions for one
+complete repository-overlay generation. It does not prove runtime use,
+completeness, extraction accuracy, migration completion, decommission safety,
+or a retention bound. Caller comparison and Workbench Impact intentionally
+remain on the legacy evidence reader until T30.6k and T30.6l.
+
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
 recovery procedure rather than retrying over it.
@@ -1239,10 +1416,11 @@ the existing stale-run sweeper.
 
 The accepted large-monorepo review now has its bounded operational, outcome,
 scheduler, source-lane, resolver, caller-leaf, and complete-publication seams
-through T30.6i. An admitted `*_test.go` file remains searchable and participates
+through T30.6j. An admitted `*_test.go` file remains searchable and participates
 in candidate planning when an enabled domain policy enumerates it, while direct
-caller execution excludes its `go_test` lane. The complete caller authority is
-still product-dark until T30.6j supplies authorized reads.
+caller execution excludes its `go_test` lane. The public Caller Map now reads
+only the exact complete repository-overlay authority; caller comparison and
+Workbench Impact remain on their legacy reader until T30.6k and T30.6l.
 Operators should not raise the global file, path-byte, read-byte, fact, or
 single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
@@ -1260,8 +1438,10 @@ whole-repository extraction behavior, and focused search remains unchanged.
 T30.6f supplies the catalog lifecycle, T30.6g supplies the ordered bounded
 gRPC/Thrift materialization, T30.6h supplies the independently durable direct
 caller-leaf artifacts, and T30.6i supplies the atomic complete publication and
-recovery lifecycle described above. T30.6j is next; T30.6j–T30.6l bind Caller Map,
-comparison, and Workbench Impact as separate authorized consumers. T30.6m
+recovery lifecycle described above. T30.6j supplies the authorized exact Caller
+Map reader, revision-bound cursor, and exact-range citation path described
+above. T30.6k is next; it and T30.6l separately migrate comparison and
+Workbench Impact. T30.6m
 selects the historical-retention posture and T30.6n implements only that
 selected policy.
 
@@ -1646,8 +1826,9 @@ protocol, classification, and lineage so equal protobuf and Thrift operation
 spellings remain distinguishable. Empty evidence never establishes absence.
 
 Authenticated `/api/version` responses advertise `contract-caller-map` when
-the exact Caller Map service and HTTP route are registered; anonymous version
-discovery omits it with every other capability. The same authenticated
+the exact Caller Map service, page route, and exact-range citation route are
+registered; anonymous version discovery omits it with every other capability.
+The same authenticated
 response advertises `contract-caller-comparison` when the shared comparison
 service, HTTP route, UI sub-route, and MCP tool are available.
 

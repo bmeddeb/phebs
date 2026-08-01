@@ -7,7 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
@@ -180,6 +183,29 @@ func TestWarmCurrentReusesOnePinnedRepositoryForLeafIdentity(t *testing.T) {
 		t.Fatalf(
 			"descriptor-batched Current = current:%v swapped:%v restored:%v",
 			current, swapped, restored,
+		)
+	}
+}
+
+func TestCurrentResultPreservesOperationalFilesystemFailure(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	fixture := newPublicationFixture(
+		t, root, "github.com/acme/current-io", 'f',
+	)
+	publication := publishFixture(t, fixture)
+	repositoryDirectory := filepath.Join(
+		root,
+		callerpublicationid.RepositoryDirectory(fixture.generation.Repository),
+	)
+	if err := os.Chmod(repositoryDirectory, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(repositoryDirectory, 0o700) })
+	current, err := publication.CurrentResult()
+	if current || !errors.Is(err, ErrPublicationIO) {
+		t.Fatalf(
+			"CurrentResult under unreadable authority = current:%v err:%v",
+			current, err,
 		)
 	}
 }
@@ -400,6 +426,168 @@ func TestRegistryDefersRetiredLeafRemovalUntilFinalRelease(t *testing.T) {
 	}
 	if !second.Current() {
 		t.Fatal("replacement publication was disturbed by retirement")
+	}
+}
+
+func TestRegistryBoundsCrossRepositoryColdAdmissions(t *testing.T) {
+	resetLifecycleHooks(t)
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	fixtures := make([]publicationFixture, MaxConcurrentColdAdmissions+1)
+	for index := range fixtures {
+		fixtures[index] = newPublicationFixture(
+			t, root, fmt.Sprintf("github.com/acme/cold-%d", index),
+			byte('1'+index),
+		)
+		publishFixture(t, fixtures[index])
+	}
+
+	var active atomic.Int32
+	var maximum atomic.Int32
+	entered := make(chan struct{}, len(fixtures))
+	release := make(chan struct{})
+	var releaseOnce sync.Once
+	releaseAll := func() { releaseOnce.Do(func() { close(release) }) }
+	t.Cleanup(releaseAll)
+	testArtifactColdOpen = func(string) {
+		current := active.Add(1)
+		for observed := maximum.Load(); current > observed; observed = maximum.Load() {
+			if maximum.CompareAndSwap(observed, current) {
+				break
+			}
+		}
+		entered <- struct{}{}
+		<-release
+		active.Add(-1)
+	}
+
+	registry := NewRegistry(root)
+	t.Cleanup(func() { _ = registry.Close() })
+	type result struct {
+		lease *Lease
+		err   error
+	}
+	results := make(chan result, len(fixtures))
+	start := make(chan struct{})
+	for _, fixture := range fixtures {
+		state := fixture.manifest.State()
+		go func() {
+			<-start
+			lease, err := registry.Acquire(t.Context(), state)
+			results <- result{lease: lease, err: err}
+		}()
+	}
+	close(start)
+	for range MaxConcurrentColdAdmissions {
+		select {
+		case <-entered:
+		case <-time.After(time.Second):
+			t.Fatal("cold admissions did not reach the configured concurrency")
+		}
+	}
+	select {
+	case <-entered:
+		t.Fatal("cold admission exceeded its cross-repository concurrency bound")
+	case <-time.After(100 * time.Millisecond):
+	}
+	releaseAll()
+	for range fixtures {
+		result := <-results
+		if result.err != nil {
+			t.Fatal(result.err)
+		}
+		if err := result.lease.Release(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if maximum.Load() != MaxConcurrentColdAdmissions {
+		t.Fatalf("maximum cold admissions = %d", maximum.Load())
+	}
+}
+
+func TestRegistryAcquireClassifiesPostOpenTransition(t *testing.T) {
+	resetLifecycleHooks(t)
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	fixture := newPublicationFixture(
+		t, root, "github.com/acme/cold-transition", '3',
+	)
+	publishFixture(t, fixture)
+
+	var removeOnce sync.Once
+	testAfterCurrentRepositoryOpen = func(path string) {
+		removeOnce.Do(func() {
+			if err := os.Remove(filepath.Join(path, fixture.receipt.Name)); err != nil {
+				t.Errorf("remove caller leaf during admission: %v", err)
+			}
+		})
+	}
+	registry := NewRegistry(root)
+	t.Cleanup(func() { _ = registry.Close() })
+	lease, err := registry.Acquire(t.Context(), fixture.manifest.State())
+	if lease != nil || !errors.Is(err, ErrRegistryConflict) {
+		t.Fatalf("post-open transition = lease:%v err:%v, want registry conflict", lease, err)
+	}
+}
+
+func TestRegistryLeaseScansAndRereadsExactRecords(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	fixture := newPublicationFixture(
+		t, root, "github.com/acme/reader-lease", '4',
+	)
+	publication := publishFixture(t, fixture)
+	registry := NewRegistry(root)
+	if err := registry.Observe(t.Context(), publication); err != nil {
+		t.Fatal(err)
+	}
+	lease, err := registry.Acquire(t.Context(), publication.State())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var references []RecordReference
+	if err := lease.ScanRecords(t.Context(), func(
+		pair PairReceipt,
+		reference RecordReference,
+		record callerleaf.Record,
+	) error {
+		if pair != fixture.manifest.Pairs[0] ||
+			reference.PairDigest != fixture.pair.Digest ||
+			reference.ArtifactName != fixture.receipt.Name ||
+			record.Path != "service/client.go" {
+			t.Fatalf("unexpected leased record: %+v %+v %+v", pair, reference, record)
+		}
+		references = append(references, reference)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(references) != 1 {
+		t.Fatalf("record references = %+v", references)
+	}
+	pair, record, err := lease.ReadRecord(t.Context(), references[0])
+	if err != nil || pair != fixture.manifest.Pairs[0] ||
+		record.Path != "service/client.go" {
+		t.Fatalf("ReadRecord = %+v %+v, %v", pair, record, err)
+	}
+	wrongPair := references[0]
+	wrongPair.PairDigest = "sha256:" + strings.Repeat("0", 64)
+	if _, _, err := lease.ReadRecord(t.Context(), wrongPair); !errors.Is(
+		err, callerleaf.ErrInvalidArtifact,
+	) {
+		t.Fatalf("ReadRecord cross-pair error = %v", err)
+	}
+	if err := lease.Release(); err != nil {
+		t.Fatal(err)
+	}
+	if err := lease.ScanRecords(t.Context(), func(
+		PairReceipt, RecordReference, callerleaf.Record,
+	) error {
+		return nil
+	}); err == nil {
+		t.Fatal("ScanRecords accepted a released lease")
+	}
+	if _, _, err := lease.ReadRecord(t.Context(), references[0]); !errors.Is(
+		err, callerleaf.ErrInvalidArtifact,
+	) {
+		t.Fatalf("ReadRecord released-lease error = %v", err)
 	}
 }
 

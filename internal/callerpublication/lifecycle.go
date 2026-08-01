@@ -507,14 +507,32 @@ func open(
 		return nil, err
 	}
 	currentManifest, err := authority.root.Lstat(expected.Manifest)
-	if err != nil || !sameFile(manifestInfo, currentManifest) {
+	if err != nil {
+		if operationalErr := currentOperationalError(err); operationalErr != nil {
+			return nil, operationalErr
+		}
 		return nil, fmt.Errorf("%w: manifest changed during admission", ErrInvalidManifest)
 	}
-	if !leavesCurrentAt(root, manifest, authority, leaves) {
+	if !sameFile(manifestInfo, currentManifest) {
+		return nil, fmt.Errorf("%w: manifest changed during admission", ErrInvalidManifest)
+	}
+	leavesCurrent, err := leavesCurrentResultAt(
+		root, manifest, authority, leaves,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if !leavesCurrent {
 		return nil, fmt.Errorf("%w: leaf changed during admission", ErrInvalidManifest)
 	}
 	currentDirectory, err := os.Lstat(directory)
-	if err != nil || !sameDirectory(authority.info, currentDirectory) {
+	if err != nil {
+		if operationalErr := currentOperationalError(err); operationalErr != nil {
+			return nil, operationalErr
+		}
+		return nil, fmt.Errorf("%w: repository changed during admission", ErrInvalidManifest)
+	}
+	if !sameDirectory(authority.info, currentDirectory) {
 		return nil, fmt.Errorf("%w: repository changed during admission", ErrInvalidManifest)
 	}
 	return &Publication{
@@ -524,29 +542,48 @@ func open(
 }
 
 func (publication *Publication) Current() bool {
-	return publication.current(false)
+	current, _ := publication.CurrentResult()
+	return current
+}
+
+// CurrentResult performs the same descriptor-stable identity fence as Current,
+// but preserves operational filesystem failures for product-read boundaries.
+// Missing or replaced derived authority is an ordinary transition and returns
+// (false, nil); permission, device, and other path I/O failures remain errors.
+func (publication *Publication) CurrentResult() (bool, error) {
+	return publication.currentResult(false)
 }
 
 func (publication *Publication) current(allowPublishing bool) bool {
+	current, _ := publication.currentResult(allowPublishing)
+	return current
+}
+
+func (publication *Publication) currentResult(allowPublishing bool) (bool, error) {
 	if publication == nil || ValidateState(publication.state) != nil {
-		return false
+		return false, nil
 	}
 	_, authority, err := openRepositoryAuthority(
 		publication.root, publication.state.Generation.Repository, false,
 	)
 	if err != nil {
-		return false
+		return false, currentOperationalError(err)
 	}
 	defer authority.close()
-	if !sameDirectory(publication.directoryInfo, authority.info) ||
-		checkPublishingAt(
-			authority, markerForState(publication.state), allowPublishing,
-		) != nil {
-		return false
+	if !sameDirectory(publication.directoryInfo, authority.info) {
+		return false, nil
+	}
+	if err := checkPublishingAt(
+		authority, markerForState(publication.state), allowPublishing,
+	); err != nil {
+		return false, currentOperationalError(err)
 	}
 	info, err := authority.root.Lstat(publication.state.Manifest)
-	if err != nil || !sameFile(publication.manifestInfo, info) {
-		return false
+	if err != nil {
+		return false, currentOperationalError(err)
+	}
+	if !sameFile(publication.manifestInfo, info) {
+		return false, nil
 	}
 	repositoryDirectory := filepath.Join(
 		publication.root,
@@ -557,29 +594,33 @@ func (publication *Publication) current(allowPublishing bool) bool {
 	if testAfterCurrentRepositoryOpen != nil {
 		testAfterCurrentRepositoryOpen(repositoryDirectory)
 	}
-	if !leavesCurrentAt(
+	leavesCurrent, err := leavesCurrentResultAt(
 		publication.root, publication.manifest, authority, publication.leaves,
-	) {
-		return false
+	)
+	if err != nil || !leavesCurrent {
+		return false, err
 	}
 	if testAfterCurrentLeafChecks != nil {
 		testAfterCurrentLeafChecks(repositoryDirectory)
 	}
 	currentDirectory, err := os.Lstat(repositoryDirectory)
-	if err != nil || !sameDirectory(authority.info, currentDirectory) {
-		return false
+	if err != nil {
+		return false, currentOperationalError(err)
 	}
-	return true
+	if !sameDirectory(authority.info, currentDirectory) {
+		return false, nil
+	}
+	return true, nil
 }
 
-func leavesCurrentAt(
+func leavesCurrentResultAt(
 	root string,
 	manifest Manifest,
 	authority *directoryAuthority,
 	leaves []*callerleaf.Publication,
-) bool {
+) (bool, error) {
 	if authority == nil || authority.root == nil || len(leaves) != len(manifest.Pairs) {
-		return false
+		return false, nil
 	}
 	repositoryDirectory := filepath.Join(
 		root,
@@ -587,13 +628,33 @@ func leavesCurrentAt(
 	)
 	for index, pair := range manifest.Pairs {
 		info, err := authority.root.Lstat(pair.Receipt.Name)
-		if err != nil || !leaves[index].CurrentAtRepository(
+		if err != nil {
+			return false, currentOperationalError(err)
+		}
+		if !leaves[index].CurrentAtRepository(
 			repositoryDirectory, pair.Receipt, authority.info, info,
 		) {
-			return false
+			return false, nil
 		}
 	}
-	return true
+	return true, nil
+}
+
+// currentOperationalError separates an ordinary authority transition from an
+// inability to inspect authority. Stable-shape helpers use plain deterministic
+// errors; actual path operations retain *os.PathError (or ErrPublicationIO).
+func currentOperationalError(err error) error {
+	if err == nil || errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if errors.Is(err, ErrPublicationIO) {
+		return err
+	}
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		return publicationIOError(err)
+	}
+	return nil
 }
 
 func Publishing(root, repository string) (bool, error) {
@@ -902,7 +963,15 @@ func openStableDirectoryRoot(directory string) (*directoryAuthority, error) {
 	}
 	after, statErr := opened.Stat()
 	closeErr := opened.Close()
-	if statErr != nil || closeErr != nil || !sameDirectory(before, after) {
+	if statErr != nil {
+		_ = root.Close()
+		return nil, publicationIOError(statErr)
+	}
+	if closeErr != nil {
+		_ = root.Close()
+		return nil, publicationIOError(closeErr)
+	}
+	if !sameDirectory(before, after) {
 		_ = root.Close()
 		return nil, errors.New("caller publication directory changed while opening")
 	}
@@ -936,7 +1005,15 @@ func openChildDirectoryAuthority(
 	}
 	after, statErr := opened.Stat()
 	closeErr := opened.Close()
-	if statErr != nil || closeErr != nil || !sameDirectory(before, after) {
+	if statErr != nil {
+		_ = root.Close()
+		return nil, publicationIOError(statErr)
+	}
+	if closeErr != nil {
+		_ = root.Close()
+		return nil, publicationIOError(closeErr)
+	}
+	if !sameDirectory(before, after) {
 		_ = root.Close()
 		return nil, errors.New("caller publication child directory changed while opening")
 	}

@@ -252,7 +252,8 @@ func callerPublicationSummary(
 		CanonicalBytes:  pointer.CanonicalBytes, StagingBytes: pointer.StagingBytes,
 		PeakOpenFiles:  pointer.PeakOpenFiles,
 		ManifestDigest: pointer.ManifestDigest, ManifestPath: pointer.ManifestPath,
-		PublicationRevision: pointer.PublicationRevision,
-		WriterSchema:        pointer.WriterSchema, PublishedAt: pointer.PublishedAt,
+		PublicationRevision:    pointer.PublicationRevision,
+		PublicationIncarnation: pointer.PublicationIncarnation,
+		WriterSchema:           pointer.WriterSchema, PublishedAt: pointer.PublishedAt,
 	}
 }

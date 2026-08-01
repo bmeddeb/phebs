@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -133,6 +134,184 @@ func TestArtifactLifecycleAndWarmFingerprint(t *testing.T) {
 		generation, pair, publication.Receipt(), nil,
 	); !errors.Is(err, ErrInvalidArtifact) {
 		t.Fatalf("VerifyReader appended content = %v, want ErrInvalidArtifact", err)
+	}
+}
+
+func TestPublicationScansAndRereadsExactRecords(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	generation, pair := testIdentity(t)
+	stage, err := NewStage(root, generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = stage.Discard() })
+	records := []Record{
+		testResultRecord(),
+		{
+			Schema: RecordSchema, Kind: RecordAbstention,
+			Path:       "service/empty.go",
+			ObjectID:   "abcdefabcdefabcdefabcdefabcdefabcdefabcd",
+			SourceLane: candidate.SourceLaneBase, Reason: "no_direct_caller",
+		},
+	}
+	for _, record := range records {
+		if err := stage.Add(record); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = prepared.Discard() })
+	publication, err := prepared.Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var references []RecordReference
+	if err := publication.ScanRecords(
+		t.Context(), generation, pair,
+		func(reference RecordReference, record Record) error {
+			if !reflect.DeepEqual(record, records[len(references)]) {
+				t.Fatalf("scanned record %d = %+v", len(references), record)
+			}
+			references = append(references, reference)
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if len(references) != len(records) || references[0].Offset != 0 ||
+		references[1].Offset != int64(references[0].Length) {
+		t.Fatalf("record references = %+v", references)
+	}
+	for index, reference := range references {
+		record, err := publication.ReadRecord(t.Context(), reference)
+		if err != nil || !reflect.DeepEqual(record, records[index]) {
+			t.Fatalf("ReadRecord(%d) = %+v, %v", index, record, err)
+		}
+	}
+	forged := references[0]
+	forged.Digest = "sha256:" + strings.Repeat("0", 64)
+	if _, err := publication.ReadRecord(t.Context(), forged); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("ReadRecord(forged) = %v, want ErrInvalidArtifact", err)
+	}
+	raw, err := os.ReadFile(publication.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marker := []byte("service/client.go")
+	position := bytes.Index(raw, marker)
+	if position < 0 {
+		t.Fatal("test record path is absent from the artifact")
+	}
+	raw[position] = 'S'
+	if err := os.WriteFile(publication.path, raw, publication.info.Mode().Perm()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(
+		publication.path, publication.info.ModTime(), publication.info.ModTime(),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if !publication.Current() {
+		t.Fatal("same-identity mutation unexpectedly changed the warm fingerprint")
+	}
+	if _, err := publication.ReadRecord(
+		t.Context(), references[0],
+	); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("ReadRecord(same-identity mutation) = %v, want ErrInvalidArtifact", err)
+	}
+}
+
+func TestPublicationRecordReadsClassifyRemovedLeafAsTransition(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	generation, pair := testIdentity(t)
+	stage, err := NewStage(root, generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := stage.Add(testResultRecord()); err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := prepared.Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reference RecordReference
+	if err := publication.ScanRecords(
+		t.Context(), generation, pair,
+		func(current RecordReference, _ Record) error {
+			reference = current
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(publication.path); err != nil {
+		t.Fatal(err)
+	}
+	if err := publication.ScanRecords(
+		t.Context(), generation, pair,
+		func(RecordReference, Record) error { return nil },
+	); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("scan removed leaf = %v, want ErrInvalidArtifact", err)
+	}
+	if _, err := publication.ReadRecord(
+		t.Context(), reference,
+	); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("read removed leaf = %v, want ErrInvalidArtifact", err)
+	}
+}
+
+func TestPublicationRecordReadsClassifyReplacedRepositoryAsTransition(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "caller-leaves")
+	generation, pair := testIdentity(t)
+	stage, err := NewStage(root, generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := stage.Add(testResultRecord()); err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := stage.Seal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication, err := prepared.Install(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reference RecordReference
+	if err := publication.ScanRecords(
+		t.Context(), generation, pair,
+		func(current RecordReference, _ Record) error {
+			reference = current
+			return nil
+		},
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(publication.root, publication.root+".retired"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(publication.root, []byte("replacement"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := publication.ScanRecords(
+		t.Context(), generation, pair,
+		func(RecordReference, Record) error { return nil },
+	); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("scan replaced repository = %v, want ErrInvalidArtifact", err)
+	}
+	if _, err := publication.ReadRecord(
+		t.Context(), reference,
+	); !errors.Is(err, ErrInvalidArtifact) {
+		t.Fatalf("read replaced repository = %v, want ErrInvalidArtifact", err)
 	}
 }
 

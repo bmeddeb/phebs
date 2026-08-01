@@ -1124,6 +1124,9 @@ export interface CallerMapSource {
   repository: string
   commit: string
   path: string
+  object_id?: string
+  blob_digest?: string
+  plane?: 'repository-overlay'
   start_byte: number
   end_byte: number
   start_line: number
@@ -1131,6 +1134,45 @@ export interface CallerMapSource {
   assertion_id: string
   run_id: string
   atom_id: string
+  // Opaque capability for the dedicated exact-range endpoint. It does not
+  // grant generic repository browsing or whole-file source access.
+  citation?: string
+}
+
+export type CallerMapGenerationState =
+  | 'missing'
+  | 'stale'
+  | 'failed'
+  | 'current'
+
+export interface CallerMapGeneration {
+  state: CallerMapGenerationState
+  reason?: string
+  plane: 'repository-overlay'
+  repository: string
+  commit?: string
+  unit_digest?: string
+  generation_digest?: string
+  declaration_set_digest?: string
+  candidate_manifest_digest?: string
+  resolver_manifest_digest?: string
+  pair_set_digest?: string
+  manifest_digest?: string
+  publication_revision?: number
+  pair_count?: number
+  result_count?: number
+  abstention_count?: number
+  canonical_bytes?: number
+  excluded_go_test_records?: number
+}
+
+export interface CallerMapCitation {
+  schema_version: 'caller-map-citation-v1'
+  generation: CallerMapGeneration
+  source: CallerMapSource
+  // The server returns only source.start_byte through source.end_byte from the
+  // immutable, object-ID- and digest-verified blob.
+  content: string
 }
 
 export interface CallerMapRow {
@@ -1157,17 +1199,19 @@ export interface CallerMapGroup {
 export interface CallerMapPage {
   schema_version: string
   query: CallerMapQuery
-  declaration: ContractCatalogClaim
+  declaration?: ContractCatalogClaim
   rows: CallerMapRow[]
   groups?: CallerMapGroup[]
-  total_matching_rows: number
+  total_matching_rows?: number
   pagination: {
     complete: boolean
     next_cursor?: string
   }
-  coverage_digest: string
-  attribution_digest: string
-  coverage: CoverageCertificate
+  generation?: CallerMapGeneration
+  matching_rows_state?: 'exact' | 'unavailable'
+  coverage_digest?: string
+  attribution_digest?: string
+  coverage?: CoverageCertificate
   caveat: string
 }
 
@@ -1705,6 +1749,14 @@ export const fetchContractCallers = (
     page_size: pageSize,
     cursor,
   })}`,
+  signal,
+)
+
+export const fetchCallerCitation = (
+  citation: string,
+  signal?: AbortSignal,
+) => getJSON<CallerMapCitation>(
+  `/api/contract_callers/citation?${query({ citation })}`,
   signal,
 )
 

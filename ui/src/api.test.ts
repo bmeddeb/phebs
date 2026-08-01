@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createWorkbench,
   createAPIKey,
+  fetchCallerCitation,
   fetchCallerComparison,
   fetchContractCallers,
   fetchContractCatalog,
@@ -237,6 +238,7 @@ describe('request helpers', () => {
       resolution: 'scip',
       ordering: 'unit',
     }, 100, 'caller+/cursor', signal)
+    await fetchCallerCitation('exact+/citation', signal)
     await fetchCallerComparison({
       protocol: 'protobuf',
       repository: 'github.com/acme/contracts',
@@ -270,6 +272,10 @@ describe('request helpers', () => {
       ],
       [
         '/api/contract_callers?protocol=protobuf&repository=github.com%2Facme%2Fcontracts&lineage=lineage+one&operation=%2Fdemo.v1.Catalog%2FGet&owner=team+one&freshness=fresh&resolution=scip&ordering=unit&page_size=100&cursor=caller%2B%2Fcursor',
+        { credentials: 'same-origin', signal },
+      ],
+      [
+        '/api/contract_callers/citation?citation=exact%2B%2Fcitation',
         { credentials: 'same-origin', signal },
       ],
       [

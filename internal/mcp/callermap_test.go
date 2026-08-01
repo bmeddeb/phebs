@@ -53,6 +53,52 @@ func (schemaCallerMapQueries) List(
 	return nil, errors.New("not called")
 }
 
+// exactEnvelopeCallerMapQueries keeps the older evidence fixture useful for
+// transport pagination tests while pinning T30.6j's mandatory exact envelope.
+// Production registration supplies the exact publication-backed service.
+type exactEnvelopeCallerMapQueries struct {
+	legacy *api.CallerMapService
+}
+
+func (service exactEnvelopeCallerMapQueries) List(
+	ctx context.Context,
+	query api.CallerMapQuery,
+	pageSize int,
+	cursor string,
+) (*api.CallerMapPage, error) {
+	page, err := service.legacy.List(ctx, query, pageSize, cursor)
+	if err != nil {
+		return nil, err
+	}
+	page.Generation = &api.CallerMapGeneration{
+		State: "current", Plane: "repository-overlay",
+		Repository: query.Endpoint.Repository, Commit: callerToolCommit,
+	}
+	page.MatchingRowsState = "exact"
+	return page, nil
+}
+
+type schemaExactCallerMapQueries struct {
+	schemaCallerMapQueries
+	wantToken string
+	result    api.CallerMapCitation
+	called    bool
+}
+
+func (service *schemaExactCallerMapQueries) CitationAvailable() bool { return true }
+
+func (service *schemaExactCallerMapQueries) ReadCitation(
+	_ context.Context,
+	token string,
+) (*api.CallerMapCitation, error) {
+	if token != service.wantToken {
+		return nil, errors.New("citation token differs")
+	}
+	service.called = true
+	result := service.result
+	return &result, nil
+}
+
 type schemaCallerComparisonQueries struct{}
 
 func (schemaCallerComparisonQueries) Compare(
@@ -68,7 +114,7 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 	schemaDigests := map[string]string{
 		"search_contract_operations": "sha256:e2b2b80c7ebb5eeece8c6179b0e21a1b5676dee1ec3a481487f1984c93fbefc2",
 		"get_contract_operation":     "sha256:3a8bfc0a42ac27ffbfbd3e546892924a6cd8ec4ef6ab1fe7bb44a95ae4881af9",
-		"list_operation_callers":     "sha256:ea91fc93492c15723db645b08c38d9e28f191ebc3e7669b481e04730c5963098",
+		"list_operation_callers":     "sha256:c4b6828e0870ce1c6151163cb86fe7ae02f3080644989ab54c2cb73e16f473ab",
 		"compare_operation_callers":  "sha256:6c63e9f1e84092df0cbc343f3449be3e4df3a848fc3cdf265e4d4e2d1a850678",
 	}
 	for _, test := range []struct {
@@ -213,7 +259,8 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 					}
 					for _, field := range []string{
 						`"rows"`, `"pagination"`, `"coverage_digest"`,
-						`"attribution_digest"`, `"caveat"`,
+						`"attribution_digest"`, `"generation"`,
+						`"matching_rows_state"`, `"caveat"`,
 					} {
 						if !strings.Contains(string(output), field) {
 							t.Fatalf("%s output omitted %s: %s", name, field, output)
@@ -252,6 +299,79 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExactCallerCitationToolRegistrationAndParity(t *testing.T) {
+	want := api.CallerMapCitation{
+		SchemaVersion: "caller-map-citation-v1",
+		Generation: api.CallerMapGeneration{
+			State: "current", Plane: "repository-overlay",
+			Repository: "github.com/acme/orders", Commit: strings.Repeat("a", 40),
+			GenerationDigest:    "sha256:" + strings.Repeat("b", 64),
+			PublicationRevision: 7,
+		},
+		Source: api.CallerMapSource{
+			Repository: "github.com/acme/orders", Commit: strings.Repeat("a", 40),
+			Path: "src/client.go", ObjectID: strings.Repeat("c", 40),
+			BlobDigest: "sha256:" + strings.Repeat("d", 64),
+			Plane:      "repository-overlay", StartByte: 10, EndByte: 16,
+			StartLine: 2, EndLine: 2, AssertionID: "record-1",
+			RunID: "generation-1", AtomID: "atom-1",
+		},
+		Content: "Call()",
+	}
+	callers := &schemaExactCallerMapQueries{
+		wantToken: "opaque-exact-citation", result: want,
+	}
+	server := NewServer(Options{
+		Version: "test", ContractCatalog: schemaContractCatalogQueries{},
+		CallerMap: callers,
+	})
+	serverTransport, clientTransport := sdk.NewInMemoryTransports()
+	go func() { _, _ = server.Connect(t.Context(), serverTransport, nil) }()
+	client := sdk.NewClient(
+		&sdk.Implementation{Name: "t30.6j-citation", Version: "1"}, nil,
+	)
+	session, err := client.Connect(t.Context(), clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close() })
+	listed, err := session.ListTools(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, tool := range listed.Tools {
+		if tool.Name == "read_operation_caller_citation" {
+			found = true
+			input, _ := json.Marshal(tool.InputSchema)
+			encoded, _ := json.Marshal(tool.OutputSchema)
+			schemaBytes := append(append(input, '\n'), encoded...)
+			digest := sha256.Sum256(schemaBytes)
+			gotDigest := "sha256:" + hex.EncodeToString(digest[:])
+			const wantDigest = "sha256:347a381058e52c07c1e95c2558a4b4435cd577048f03e8e2c4dd74f273ee3f87"
+			if gotDigest != wantDigest {
+				t.Fatalf("citation input/output schema digest = %s, want %s", gotDigest, wantDigest)
+			}
+			if !strings.Contains(string(encoded), `"content"`) ||
+				!strings.Contains(string(encoded), `"generation"`) ||
+				!strings.Contains(string(encoded), `"source"`) {
+				t.Fatalf("citation output schema = %s", encoded)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("exact citation tool is not registered")
+	}
+	got, result := callToolSession[api.CallerMapCitation](
+		t, session, "read_operation_caller_citation",
+		map[string]any{"citation": callers.wantToken},
+	)
+	if result.IsError || !callers.called {
+		t.Fatalf("citation call = %+v, called=%v", result, callers.called)
+	}
+	assertSameJSON(t, got, want)
 }
 
 const (
@@ -526,7 +646,7 @@ func callerToolFixture(
 	t *testing.T,
 ) (
 	*api.ContractCatalogService,
-	*api.CallerMapService,
+	CallerMapQueries,
 	*api.CallerComparisonService,
 	*callerToolStore,
 ) {
@@ -647,9 +767,10 @@ func callerToolFixture(
 		AuthorizationProvider: "t20.11-test-v1",
 	}
 	catalog := api.NewContractCatalogService(opts)
-	callerMap := api.NewCallerMapService(opts)
+	legacyCallerMap := api.NewLegacyCallerMapService(opts)
+	callerMap := exactEnvelopeCallerMapQueries{legacy: legacyCallerMap}
 	comparison := api.NewCallerComparisonService(opts)
-	if catalog == nil || callerMap == nil || comparison == nil {
+	if catalog == nil || legacyCallerMap == nil || comparison == nil {
 		t.Fatal("T20.11 services unavailable")
 	}
 	return catalog, callerMap, comparison, st
@@ -1035,7 +1156,7 @@ func assertCallerMapToolsSession(
 	t *testing.T,
 	session *sdk.ClientSession,
 	catalog *api.ContractCatalogService,
-	callerMap *api.CallerMapService,
+	callerMap CallerMapQueries,
 	st *callerToolStore,
 ) {
 	t.Helper()
@@ -1190,8 +1311,8 @@ func assertCallerMapToolsSession(
 		}
 		cursor = page.Pagination.NextCursor
 	}
-	if total != 4 || firstPage.TotalMatchingRows != 4 {
-		t.Fatalf("caller page totals = %d / %d", total, firstPage.TotalMatchingRows)
+	if total != 4 || firstPage.TotalMatchingRows == nil || *firstPage.TotalMatchingRows != 4 {
+		t.Fatalf("caller page totals = %d / %v", total, firstPage.TotalMatchingRows)
 	}
 
 	beforeMutation, err := json.Marshal(firstPage)

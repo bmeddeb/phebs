@@ -243,6 +243,11 @@ DEFINE FIELD IF NOT EXISTS manifest_digest ON caller_generation_publication TYPE
 DEFINE FIELD IF NOT EXISTS manifest_path ON caller_generation_publication TYPE string;
 DEFINE FIELD IF NOT EXISTS publication_revision ON caller_generation_publication TYPE int
     ASSERT $value >= 1;
+DEFINE FIELD IF NOT EXISTS publication_incarnation ON caller_generation_publication TYPE string
+    ASSERT string::len($value) = 71
+        AND string::starts_with($value, 'sha256:')
+        AND string::is_hexadecimal(string::slice($value, 7))
+        AND string::lowercase($value) = $value;
 DEFINE FIELD IF NOT EXISTS writer_schema ON caller_generation_publication TYPE string
     ASSERT $value = 'phebs-caller-generation-publication-store-v1';
 DEFINE FIELD IF NOT EXISTS published_at ON caller_generation_publication TYPE datetime;

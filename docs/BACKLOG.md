@@ -10,10 +10,10 @@ bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
 and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
 source-lane classification, T30.6e focused local-evidence base-lane
 consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
-materialization, T30.6h direct caller-leaf execution, and T30.6i atomic
-complete caller-generation publication are shipped; T30.6j authorized exact
-Caller Map reads are next.
-Completed Epics 0–24, Epic 29, T30.1–T30.6i, and P5 hardening are
+materialization, T30.6h direct caller-leaf execution, T30.6i atomic complete
+caller-generation publication, and T30.6j authorized exact Caller Map reads
+are shipped; T30.6k caller comparison integration is next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6j, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -23,13 +23,16 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6j · Authorized exact Caller Map reads** is next. T30.6a–T30.6i now provide
+**T30.6k · Caller comparison integration** is next. T30.6a–T30.6j now provide
 bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, and the adapter-free immutable catalog
 lifecycle, bounded gRPC/Thrift resolver materialization, independently durable
-direct caller-leaf artifacts, and one atomic complete-generation authority
-without changing search or exposing a reader.
+direct caller-leaf artifacts, one atomic complete-generation authority, and
+authorized revision-bound Caller Map paging and exact-range citations. The
+public Caller Map now uses only that repository-overlay authority; migration
+comparison and Workbench Impact deliberately remain on their legacy evidence
+reader until T30.6k and T30.6l respectively.
 The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
@@ -554,7 +557,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6j next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6k next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -949,23 +952,19 @@ lease-delayed retirement, backup manifest v5, exact caller archive/restore,
 and every upstream invalidation are shipped. This ticket creates authority
 only; T30.6j owns authorization and all product reads.
 
-**T30.6j · Authorized exact Caller Map reads** *(needs T30.6i)* — move reverse
-lookup and Caller Map paging onto one exact complete generation. Unauthorized
-repositories remain absent from rows, gaps, totals, and cursors under the
-existing non-disclosure contract. For an already authorized repository,
-missing, failed, or stale generation state is explicit and never zero callers
-or a partial page. Cursor/result fences bind full generation identity plus a
-monotonic caller-publication revision so `A → B → A` cannot evade validation.
-Every citation binds the generation commit and blob identity and reads that
-immutable object, never mirror HEAD. Citation access discloses only the exact
-authorized cited path/range at that commit; it grants no unrelated path
-listing, directory browsing, or source access and does not widen focused
-search/local evidence. Exact static bindings retire by lease; result-time
-authorization is rechecked. AC: 10,000+ caller rows traversed over multiple
-pages under the existing maximum page size, no per-page full
-hash/materialization, bounded query/read/memory cost, non-disclosure,
-permission loss, transition races, immutable citations, HTTP/MCP parity, full
-merge bar.
+**T30.6j ✅ · Authorized exact Caller Map reads** *(2026-08-01; needs
+T30.6i)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306j--authorized-exact-caller-map-reads).
+The public Caller Map now authorizes one endpoint repository before caller
+authority or derived-byte access, exposes explicit complete-generation states,
+and pages one exact revision-bound `repository-overlay` generation through
+request leases. Opaque cursors bind visibility, full generation identity, pair
+set, manifest, monotonic publication revision, and the non-repeating store-
+owned exact-writer-claim-and-nonce publication incarnation; compact citations share the
+capped, pressure-retirable, up-to-five-minute request binding, reauthorize, and return only their immutable object- and digest-verified byte range through
+the shared HTTP/MCP service. Missing, failed, and stale generations never
+become zero callers or partial rows. Comparison and Workbench remain separately
+scheduled T30.6k/T30.6l migrations.
 
 **T30.6k · Caller comparison integration** *(needs T30.6j)* — bind migration
 comparison to exact authorized caller-generation snapshots without changing

@@ -145,10 +145,10 @@ multi-valued candidate are `ambiguous`. phebs never chooses a build target,
 deployable, service, or owner. Evidence retains the complete candidate set;
 each Caller Map row serializes at most 64 candidates plus the exact
 pre-truncation `candidate_total`, so omitted display candidates remain explicit
-rather than silently disappearing. The trusted loader returns exact
-repository/commit/path/blob-digest provenance and an attribution digest;
-metadata changes move that digest without changing source assertion identity.
-The Caller Map cursor binds this digest. No snapshot causes
+rather than silently disappearing. The resolver catalog retains exact
+repository/commit/path/blob-digest attribution; its manifest is part of the
+complete caller-generation identity and therefore part of every Caller Map
+cursor fence. No snapshot causes
 phebs to run a build, generator, plugin, binary, or catalog client, and the
 current adapter performs no external lookup.
 
@@ -158,18 +158,61 @@ The default-dark Caller Map read service is now available at
 `operation`. Optional `unit`, `owner`, `path_prefix`, `code_role`, `tier`,
 `freshness`, and `resolution` filters narrow the result; `ordering=source`
 (default) or `ordering=unit` chooses the stable ordering. Pages default to 50
-rows and accept at most 100. Every row retains its exact source repository,
-commit, path, byte range, line range, assertion, run, and atom. Unit state is
-independent metadata: unavailable or ambiguous attribution never hides a
-source occurrence.
+rows and accept at most 100. After authorizing the endpoint repository, the
+service reads only that repository's exact complete `repository-overlay`
+generation. It does not union callers from other visible repositories and no
+longer reconstructs public caller rows from legacy caller assertions; the
+declaration header is still resolved from the exact declaration run named by
+the generation-bound resolver catalog. Every row retains the indexed commit,
+canonical path, Git object ID, SHA-256 blob
+digest, byte and line range, exact record identity, and an opaque citation.
+Unit state remains independent metadata: unavailable or ambiguous attribution
+never hides a source occurrence.
 
-Caller Map cursors are opaque and snapshot-bound. They stop with conflict if
-the principal or permission projection, visible repository set, extraction
-publication or coverage certificate, or immutable unit-attribution digest
-changes. Start a new read instead of editing or reusing such a cursor. The
-service scans a bounded candidate population and does not persist a proof
-bundle or Investigation. T20.11 exposes that same shared service through MCP,
-and T20.12 exposes it as the dedicated Caller Map UI described below.
+The response's generation state is `current`, `missing`, `failed`, or `stale`.
+Only `current` sets `matching_rows_state: exact` and can return rows from the
+leased current generation. The other three states return no
+partial rows and set `matching_rows_state: unavailable`; they omit the numeric
+total rather than serializing a zero-caller claim. Unknown, hidden, and
+deleting repositories all return `404` before
+caller authority, filesystem bytes, or repository-specific caches are read.
+
+Caller Map cursors are opaque, HMAC-authenticated, process-local, and
+snapshot-bound. They bind the normalized query and page size, authorization
+projection, complete generation, manifest, pair set, and monotonic publication
+revision plus the store-owned exact-writer-claim-and-nonce publication
+incarnation. The
+incarnation cannot repeat across same-name delete/recreate, so permission loss,
+a generation transition, and `A → B → A` all invalidate continuation. A
+non-empty first page retains one request binding
+for its cursor and citations. It survives for up to five minutes after that
+first page; process restart loses it, while a live binding pins its reverse
+index. Capacity pressure retires the oldest idle binding only after it can
+preflight enough slots and positions; active and retired-in-flight bindings
+remain fully counted, and only unreclaimable pressure refuses retryably.
+Restart from the first page after an expiry or pressure-retirement conflict; after process restart the
+rotated HMAC makes the old cursor invalid input. After every page is built,
+generation authority is swept first and authorization is checked last. A warm continuation rereads
+only its selected canonical records and never rematerializes the reverse index,
+but its reopen/final fences still perform bounded complete-publication file-
+identity sweeps without content reads or hashes; a
+restart or publication-registry cache miss can still perform the separately
+bounded cold complete-publication validation. The list creates no proof bundle
+or Investigation.
+
+Each exact row's citation can be opened through
+`GET /api/contract_callers/citation?citation=...`. The server reauthorizes the
+repository, reopens the exact generation and publication revision, rereads the
+named caller record, resolves its path at the generation's immutable commit,
+and verifies the Git object ID and complete at-most-4-MiB blob digest. The
+response contains only the cited byte range. A citation cannot list a tree or
+directory, open an unrelated path, fetch the whole file, or widen focused
+search/local evidence. Its compact signed token refers to that row through the
+capped request binding instead of embedding maximum-shaped generation state.
+It expires with the binding and is process-local like the cursor; after expiry
+or server restart, list the row again to obtain a new token. T20.12's dedicated UI
+exposes this as **Read exact cited bytes**; MCP exposes the same service as
+`read_operation_caller_citation`.
 
 Select an operation in Contract Atlas and choose **View callers** to open
 `#/callers` with its protocol, declaration repository, lineage, and canonical
@@ -182,20 +225,25 @@ The page shows at most one 100-row server page. Filters cover unit, owner, path
 prefix, code role, tier, freshness, resolution, and source/unit server
 ordering. Source view places abstentions in **Needs review**; unit view groups
 the same current-page occurrence identities without another request. Each row
-retains its immutable source link and expandable assertion/run/atom byte
-identity. Resolved singleton attribution is inline; only one ambiguous
+retains its immutable source identity, exact object/digest identity, expandable
+record byte identity, and exact-range citation action. Resolved singleton
+attribution is inline; only one ambiguous
 candidate list of at most 64 candidates is mounted at once, and its
 pre-truncation total names any omitted remainder. Previous pages retain only
-opaque cursors, not hidden rows, and a changed authorization, coverage,
-publication, or attribution snapshot requires **Restart from first page**.
+opaque cursors, not hidden rows, and a changed authorization or complete
+generation requires **Restart from first page**.
 
-The progress line is exact only when the response says the snapshot is
-exhausted; otherwise it states the traversed lower bound. The coverage panel
-shows every requested repository/domain row, stale publications, failed
-replacement attempts, failures recorded on a published coverage row,
-unsupported or unpublished domains, counts, and the certificate digest. Empty
-results mean no matching static evidence within that displayed scope—not
-absence, completeness, runtime behavior, or migration safety.
+The generation panel distinguishes exact rows from unavailable rows and shows
+the publication state, revision, commit, and generation digest when present.
+The progress line uses an exact total only for `matching_rows_state: exact`;
+an unavailable generation displays no caller total. An exhausted exact empty
+page means only that no retained direct-syntax result or abstention matched the
+filters in that generation. It does not establish runtime use, completeness,
+extraction accuracy, migration completion, or decommission safety.
+The reverse index also has an independent 128 MiB identity ceiling below the
+writer's maximum publication shape. A writer-valid generation that crosses it
+returns deterministic `422`, not partial rows or a zero total; retrying that
+unchanged generation cannot clear the refusal.
 
 Choose **Compare replacement** from an exact Caller Map header to open the
 default-dark `#/compare-callers` workflow. The route first uses the bounded
@@ -203,6 +251,15 @@ Contract Atlas catalog to select a second complete endpoint identity; it does
 not ask for a typed operation string. The comparison is available only with
 the authenticated `contract-caller-comparison` capability and remains under
 the existing **Impact** navigation item.
+
+T30.6j changes only the public Caller Map. The comparison service still reads
+its pre-T30.6j legacy evidence snapshot until T30.6k, so its population,
+coverage certificate, citation shape, and cursor are not the exact complete
+caller generation described above. Do not use a comparison response as a
+cross-check that the current repository-overlay generation is complete or
+unchanged. Workbench Impact likewise remains on the legacy caller reader until
+T30.6l; its revision/evidence composition has not silently inherited the new
+Caller Map authority.
 
 The UI and `GET /api/compare_operation_callers` classify the union of both
 endpoint populations at `level=occurrence` (default) or `level=unit`.
@@ -237,8 +294,10 @@ abstention is `extractor_abstention`. `contract-impact-report-v2`, whose input
 is still a bare operation rather than a declaration identity, separates
 `resolved_evidence`, `matching_call_evidence`, and
 `extractor_abstentions`. It does not present an operation-object match as a
-known-caller roster. The caller readers are 1.2.0 and remain behind their
-existing provisional protocol flags.
+known-caller roster. Those legacy evidence readers remain at 1.2.0 for
+comparison and Workbench compatibility; the public Caller Map now projects the
+separate direct-syntax complete caller generation. Both surfaces remain behind
+their existing provisional protocol flags.
 
 The MCP Caller Map annex now supplies the missing exact-identity workflow.
 `search_contract_operations` returns selectable protocol, repository,
@@ -248,8 +307,13 @@ identity and returns its endpoint header, request/response shapes, immutable
 declaration citation, related evidence, and coverage.
 `list_operation_callers` pages the same exact Caller Map service and accepts
 its unit, owner, path, code-role, tier, freshness, resolution, ordering,
-page-size, and cursor controls. Its rows, ambiguity, abstentions, digests,
-citations, and cursor are not reinterpreted by the MCP adapter.
+page-size, and cursor controls. Its generation states, rows, ambiguity,
+abstentions, exact total or unavailable-total state, revision-bound cursor, and
+opaque citations are not reinterpreted by the MCP adapter.
+`read_operation_caller_citation` accepts one opaque citation returned by that
+list. It invokes the same reauthorization, complete-generation, record,
+immutable-object, digest, and exact-range reader as the HTTP citation route and
+returns only the cited bytes.
 
 The older `find_operation_consumers` remains deliberately different: it
 requires a caller-supplied bare canonical operation and persists one bounded
@@ -260,9 +324,11 @@ Investigation. `compare_operation_callers` projects the same shared comparison
 service as HTTP, accepts both complete endpoint identities and the shared
 filters, and returns bounded occurrence- or unit-level classifications with
 both digests, citations, shared coverage, and one opaque cursor. It performs
-no adapter-side classification or summarization. Every Caller Map tool is
-bounded and cursor-driven, and a stale authorization, coverage, or attribution
-snapshot must be restarted rather than bypassed.
+no adapter-side classification or summarization, but remains on the legacy
+evidence snapshot until T30.6k. Exact Caller Map paging/citations and legacy
+comparison each retain their own bounded cursor and authority rules; a stale
+authorization, generation, coverage, or attribution snapshot must be restarted
+rather than bypassed.
 
 Epic 20's capacity, publication, paging, and closure gates are retained
 engineering records rather than workflow instructions. Their receipts and
@@ -1034,7 +1100,8 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/contract_impact_reports/{id}`                                 | GET             | reauthorized deterministic report projection of one immutable proof bundle                      |
 | `/api/contract_atlas?repository=&package=&protocol=&lineage=&page_size=&cursor=` | GET | experimental bounded service/operation catalog over exact published evidence                    |
 | `/api/contract_atlas/operation?repository=&lineage=&operation=`     | GET             | experimental bounded operation, message-shape, implementation, and caller detail                |
-| `/api/contract_callers?protocol=&repository=&lineage=&operation=&page_size=&cursor=` | GET | experimental exact-declaration Caller Map with source/unit ordering and snapshot-bound pages |
+| `/api/contract_callers?protocol=&repository=&lineage=&operation=&page_size=&cursor=` | GET | experimental one-repository exact-generation Caller Map with source/unit ordering, typed gaps, and revision-bound pages |
+| `/api/contract_callers/citation?citation=`                         | GET             | reauthorized exact caller citation; returns only the commit/object/digest-verified byte range                    |
 | `/api/compare_operation_callers?old_protocol=&old_repository=&old_lineage=&old_operation=&replacement_protocol=&replacement_repository=&replacement_lineage=&replacement_operation=&level=&page_size=&cursor=` | GET | experimental old-to-replacement static caller-evidence comparison over one shared snapshot |
 | `/api/source?repo=&path=&ref=`                                      | GET             | file content (`ref` defaults HEAD); binary comes base64; blobs over 10 MiB return 413          |
 | `/api/folder_contents?repo=&path=&ref=`                             | GET             | one directory level                                                                            |
@@ -1102,13 +1169,13 @@ suggestion identity, supersession, and idempotency checks remain authoritative.
 
 Ten core tools are always present. Enabling any provisional extraction pack
 adds five evidence-query tools, for fifteen. Enabling a protobuf or Thrift
-caller pack also adds the three-tool Caller Map annex and the comparison tool,
-for nineteen tools. A pinned Buf binary and successful host-sandbox startup
-probe adds compatibility as the final tool, for twenty total; otherwise
+caller pack also adds the four-tool Caller Map annex and the comparison tool,
+for twenty tools. A pinned Buf binary and successful host-sandbox startup
+probe adds compatibility as the final tool, for twenty-one total; otherwise
 compatibility stays undiscoverable. A complete synthetic Workbench adds two
 read tools for otherwise authenticated credentials and two additional durable
 mutation tools only for a write-capable named key. The maximum synthetic counts
-alongside every existing annex are therefore twenty-two and twenty-four.
+alongside every existing annex are therefore twenty-three and twenty-five.
 
 The agent workflow is explicit: discover an endpoint with
 `search_contract_operations`, preview a complete Workbench plan, submit that
@@ -1141,8 +1208,9 @@ action in T21.13, and the adapter does not synthesize suggestions or conclusions
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
 | `search_contract_operations` | bounded Contract Atlas discovery page with complete selectable protocol/repository/declaration-lineage/operation identities, coverage, and continuation cursor |
 | `get_contract_operation` | one protocol-qualified exact operation with request/response shapes, immutable declaration citation, related evidence, and coverage |
-| `list_operation_callers` | exact-declaration Caller Map page with shared filters, source and unit-attribution states, unresolved rows, coverage/attribution digests, citations, and snapshot-bound cursor |
-| `compare_operation_callers` | occurrence- or unit-level union of two exact endpoint caller populations with evidence-qualified classifications, both attribution digests, shared coverage, bounded citations, and snapshot-bound cursor |
+| `list_operation_callers` | one authorized repository's exact complete-generation Caller Map page with typed unavailable states, source/unit ordering, direct-syntax rows and abstentions, exact totals, opaque citations, and revision-bound cursor |
+| `read_operation_caller_citation` | reauthorize and return only one caller row's exact commit/object/digest-verified source byte range; grants no tree, directory, unrelated-path, or whole-file read |
+| `compare_operation_callers` | legacy-evidence occurrence- or unit-level union of two endpoint populations with evidence-qualified classifications, both attribution digests, shared coverage, bounded citations, and snapshot-bound cursor; T30.6k owns exact-generation migration |
 | `preview_change_workbench` | side-effect-free shared-service preview of one plan; requires a named key with `investigation:write` because the returned digest can bind a later mutation |
 | `create_change_workbench` | explicit durable creation of one preview-bound Investigation and initial immutable revision; advertised only to a write-capable named key |
 | `get_change_workbench` | authorized read of one current Workbench revision and its human-authored brief; creates no evidence or durable state |

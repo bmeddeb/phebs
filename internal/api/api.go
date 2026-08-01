@@ -16,6 +16,7 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humago"
 	"github.com/danielgtaylor/huma/v2/sse"
 
+	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/search"
@@ -51,13 +52,25 @@ type Options struct {
 	// configured. Evidence alone is insufficient because Kafka- or field-only
 	// deployments must not advertise an unreachable Caller Map.
 	CallerMapEnabled bool
+	// CallerReader is the sole T30.6j product read boundary over an exact
+	// complete caller-generation publication. Serve shares its underlying
+	// publication registry with the worker and lifecycle reconcilers so an
+	// active result lease delays byte retirement. Nil keeps the exact reader
+	// dark; the temporary legacy constructor remains only for the T30.6k/l
+	// comparison and Workbench migrations.
+	CallerReader *callerexecute.PublicationReader
 	// ContractCatalog, CallerMap, and CallerComparison optionally bind
 	// preconstructed shared read services. Serve supplies the same instances
 	// to Huma and MCP so neither transport can recreate authorization, cursor,
 	// classification, or evidence semantics. Nil preserves the ordinary
 	// constructor path used by tests and embedders.
-	ContractCatalog  *ContractCatalogService
-	CallerMap        *CallerMapService
+	ContractCatalog *ContractCatalogService
+	CallerMap       *CallerMapService
+	// LegacyCallerMap is the temporary evidence-backed reader used only by
+	// Workbench Impact until T30.6l composes the exact caller generation into
+	// the Workbench revision. It must never be registered as the public HTTP or
+	// MCP Caller Map service.
+	LegacyCallerMap  *CallerMapService
 	CallerComparison *CallerComparisonService
 	// FieldReferences is the side-effect-free stable-field read shared by the
 	// proof endpoint and Workbench. It never persists a proof bundle itself.

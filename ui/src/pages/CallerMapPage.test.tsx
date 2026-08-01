@@ -5,6 +5,7 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import CallerMapPage from './CallerMapPage'
 import type {
+  CallerMapCitation,
   CallerMapPage as CallerMapResponse,
   CallerMapRow,
   ContractCatalogClaim,
@@ -12,6 +13,7 @@ import type {
 } from '../api'
 
 const api = vi.hoisted(() => ({
+  fetchCallerCitation: vi.fn(),
   fetchContractCallers: vi.fn(),
 }))
 
@@ -208,6 +210,9 @@ function callerRow(
       repository: sourceRepo,
       commit,
       path: `src/caller_${index}.go`,
+      object_id: `${index.toString(16)}`.repeat(40).slice(0, 40),
+      blob_digest: `sha256:${index.toString(16)}`.padEnd(71, 'd').slice(0, 71),
+      plane: 'repository-overlay',
       start_byte: index * 10,
       end_byte: index * 10 + 8,
       start_line: index + 1,
@@ -215,6 +220,7 @@ function callerRow(
       assertion_id: `assertion-${index}`,
       run_id: 'run-callers',
       atom_id: `atom-${index}`,
+      citation: `exact-citation-${index}`,
     },
     unresolved_reason: unresolved ? 'unsupported_receiver_flow' : undefined,
   }
@@ -226,7 +232,7 @@ function callerPage(
   nextCursor = '',
 ): CallerMapResponse {
   return {
-    schema_version: 'caller-map-v1',
+    schema_version: 'caller-map-v2',
     query: {
       endpoint: {
         protocol: 'protobuf',
@@ -246,6 +252,24 @@ function callerPage(
       complete: nextCursor === '',
       next_cursor: nextCursor || undefined,
     },
+    generation: {
+      state: 'current',
+      plane: 'repository-overlay',
+      repository: sourceRepo,
+      commit,
+      generation_digest: `sha256:${'e'.repeat(64)}`,
+      declaration_set_digest: `sha256:${'f'.repeat(64)}`,
+      candidate_manifest_digest: `sha256:${'1'.repeat(64)}`,
+      resolver_manifest_digest: `sha256:${'2'.repeat(64)}`,
+      pair_set_digest: `sha256:${'3'.repeat(64)}`,
+      manifest_digest: `sha256:${'4'.repeat(64)}`,
+      publication_revision: 7,
+      pair_count: 3,
+      result_count: rows.filter((row) => row.classification === 'resolved_caller').length,
+      abstention_count: rows.filter((row) => row.classification === 'extractor_abstention').length,
+      canonical_bytes: 4096,
+    },
+    matching_rows_state: 'exact',
     coverage_digest: coverage.digest,
     attribution_digest: `sha256:${'b'.repeat(64)}`,
     coverage,
@@ -271,6 +295,18 @@ function renderPage(params = route(), comparisonAvailable = false) {
 }
 
 beforeEach(() => {
+  api.fetchCallerCitation.mockReset().mockImplementation(
+    async (token: string): Promise<CallerMapCitation> => {
+      const index = Number(token.split('-').at(-1))
+      const source = callerRow(index).source
+      return {
+        schema_version: 'caller-map-citation-v1',
+        generation: callerPage([]).generation!,
+        source,
+        content: `client.Get(order${index})`,
+      }
+    },
+  )
   api.fetchContractCallers.mockReset().mockResolvedValue(callerPage([
     callerRow(1),
     callerRow(2, { state: 'ambiguous', candidates: 2 }),
@@ -297,13 +333,44 @@ test('announces loading and renders the scoped empty state honestly', async () =
   expect(screen.getByRole('status', { name: 'Loading Caller Map' })).toBeTruthy()
   await act(async () => finish(callerPage([])))
   expect(await screen.findByText(/No caller rows matched these filters/)).toBeTruthy()
-  expect(screen.getByText(/does not establish absence, completeness, or migration safety/))
+  expect(screen.getByText(/does not establish runtime use, completeness, migration completion/))
     .toBeTruthy()
+})
+
+test('renders a typed generation gap without zero callers or required coverage', async () => {
+  const gap = callerPage([])
+  gap.matching_rows_state = 'unavailable'
+  gap.generation = {
+    state: 'missing',
+    reason: 'complete caller generation missing',
+    plane: 'repository-overlay',
+    repository: sourceRepo,
+  }
+  gap.coverage = undefined
+  gap.declaration = undefined
+  gap.total_matching_rows = undefined
+  gap.coverage_digest = undefined
+  gap.attribution_digest = undefined
+  gap.caveat = 'Caller totals and absence are unavailable until one exact generation is current.'
+  api.fetchContractCallers.mockResolvedValue(gap)
+  renderPage()
+
+  expect(await screen.findByText('Caller totals unavailable')).toBeTruthy()
+  expect(screen.getByText(/This is not evidence of zero callers/)).toBeTruthy()
+  expect(screen.getByText(/This is not zero callers and no partial rows are shown/))
+    .toBeTruthy()
+  expect(screen.queryByTestId('caller-map-coverage')).toBeNull()
+  expect(screen.queryByText('No matching static evidence')).toBeNull()
 })
 
 test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile-safe controls', async () => {
   renderPage(route(), true)
   await screen.findByText('Rows 1–3 of 3')
+  expect(screen.getByTestId('caller-map-generation').getAttribute('data-matching-rows-state'))
+    .toBe('exact')
+  expect(screen.getByText('Exact repository-overlay generation')).toBeTruthy()
+  expect(screen.getAllByText('Repository-overlay identity and byte span')).toHaveLength(3)
+  expect(screen.queryByText('Evidence identity and byte span')).toBeNull()
   expect(screen.getByTestId('caller-map-page').getAttribute('data-responsive-layout'))
     .toBe('desktop-table-mobile-cards')
   expect(screen.getByRole('heading', { name: operation })).toBeTruthy()
@@ -324,12 +391,22 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   expect(declarationLink.getAttribute('href')).toBe(
     `#/file?repo=${encodeURIComponent(contractRepo)}&path=idl%2Forders.proto&ref=${commit}&L=7`,
   )
-  const sourceLink = screen.getByRole('link', {
-    name: `${sourceRepo}/src/caller_1.go:2`,
-  })
-  expect(sourceLink.getAttribute('href')).toBe(
-    `#/file?repo=${encodeURIComponent(sourceRepo)}&path=src%2Fcaller_1.go&ref=${commit}&L=2`,
+  const sourceLabel = screen.getByText(`${sourceRepo}/src/caller_1.go:2`)
+  expect(sourceLabel.closest('a')).toBeNull()
+  expect(document.querySelector(
+    `a[href="#/file?repo=${encodeURIComponent(sourceRepo)}&path=src%2Fcaller_1.go&ref=${commit}&L=2"]`,
+  )).toBeNull()
+  const exactCitationButton = sourceLabel.parentElement?.querySelector('button')
+  expect(exactCitationButton).not.toBeNull()
+  fireEvent.click(exactCitationButton!)
+  expect((await screen.findByLabelText(
+    `Exact cited bytes for ${sourceRepo}/src/caller_1.go:2`,
+  )).textContent).toBe('client.Get(order1)')
+  expect(api.fetchCallerCitation).toHaveBeenCalledWith(
+    'exact-citation-1', expect.any(AbortSignal),
   )
+  expect(screen.getAllByText(/Repository-overlay occurrence; source access is limited/).length)
+    .toBe(3)
 
   const before = screen.getAllByTestId('caller-map-row')
     .map((row) => row.getAttribute('data-occurrence-id'))
@@ -350,6 +427,25 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   expect(api.fetchContractCallers.mock.calls[1][1]).toMatchObject({
     resolution: 'unresolved',
   })
+})
+
+test('refuses a citation response that differs from the selected exact occurrence', async () => {
+  const source = callerRow(1).source
+  api.fetchCallerCitation.mockResolvedValue({
+    schema_version: 'caller-map-citation-v1',
+    generation: callerPage([]).generation!,
+    source: { ...source, path: 'src/another.go' },
+    content: 'wrong occurrence',
+  } satisfies CallerMapCitation)
+  renderPage()
+  await screen.findByText('Rows 1–3 of 3')
+  fireEvent.click(screen.getAllByRole('button', { name: 'Read exact cited bytes' })[0])
+
+  expect(await screen.findByRole('alert')).toHaveProperty(
+    'textContent',
+    'Exact citation unavailable: Exact citation response did not match the selected caller occurrence.',
+  )
+  expect(screen.queryByTestId('caller-map-exact-citation')).toBeNull()
 })
 
 test('keeps comparison undiscoverable without its authenticated capability', async () => {

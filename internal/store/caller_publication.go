@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
@@ -16,7 +18,8 @@ import (
 
 const (
 	CallerGenerationPublicationWriterSchema     = callerpublicationid.WriterSchema
-	callerGenerationPublicationMigrationVersion = "t30.6i-caller-generation-publication-writer-v1"
+	callerGenerationPublicationPriorMigration   = "t30.6i-caller-generation-publication-writer-v1"
+	callerGenerationPublicationMigrationVersion = "t30.6j-caller-generation-publication-writer-v2"
 	// MaxCallerPublicationRepositories bounds the one startup pointer-summary
 	// query. Pair receipts are deliberately excluded from that query.
 	MaxCallerPublicationRepositories = callerpublicationid.InstallationPublicationRepositories
@@ -45,20 +48,25 @@ type CallerGenerationPublication struct {
 	Pairs      []CallerGenerationPairPublication `json:"pairs"`
 	// PairPayloadDigest is store-owned integrity metadata over Pairs. Callers
 	// carry it between exact reads and current checks but never compute it.
-	PairPayloadDigest   string    `json:"pair_payload_digest"`
-	PairSetDigest       string    `json:"pair_set_digest"`
-	PairCount           int       `json:"pair_count"`
-	ArtifactCount       int       `json:"artifact_count"`
-	ResultCount         int       `json:"result_count"`
-	AbstentionCount     int       `json:"abstention_count"`
-	CanonicalBytes      int64     `json:"canonical_bytes"`
-	StagingBytes        int64     `json:"staging_bytes"`
-	PeakOpenFiles       int       `json:"peak_open_files"`
-	ManifestDigest      string    `json:"manifest_digest"`
-	ManifestPath        string    `json:"manifest_path"`
-	PublicationRevision uint64    `json:"publication_revision"`
-	WriterSchema        string    `json:"writer_schema"`
-	PublishedAt         time.Time `json:"published_at"`
+	PairPayloadDigest   string `json:"pair_payload_digest"`
+	PairSetDigest       string `json:"pair_set_digest"`
+	PairCount           int    `json:"pair_count"`
+	ArtifactCount       int    `json:"artifact_count"`
+	ResultCount         int    `json:"result_count"`
+	AbstentionCount     int    `json:"abstention_count"`
+	CanonicalBytes      int64  `json:"canonical_bytes"`
+	StagingBytes        int64  `json:"staging_bytes"`
+	PeakOpenFiles       int    `json:"peak_open_files"`
+	ManifestDigest      string `json:"manifest_digest"`
+	ManifestPath        string `json:"manifest_path"`
+	PublicationRevision uint64 `json:"publication_revision"`
+	// PublicationIncarnation is a store-owned digest of the exact owned writer
+	// claim plus a fresh publication nonce. Unlike repository-local revision or
+	// second-precision time, it cannot repeat across delete/recreate of the same
+	// repository identity, even if one job record survives that transition.
+	PublicationIncarnation string    `json:"publication_incarnation"`
+	WriterSchema           string    `json:"writer_schema"`
+	PublishedAt            time.Time `json:"published_at"`
 }
 
 // CallerGenerationPublicationSummary is the bounded startup and warm-current
@@ -67,21 +75,22 @@ type CallerGenerationPublication struct {
 // cold-validated filesystem receipt while product reads remain free to request
 // the full pointer.
 type CallerGenerationPublicationSummary struct {
-	Generation          CallerGenerationIdentity `json:"generation"`
-	PairPayloadDigest   string                   `json:"pair_payload_digest"`
-	PairSetDigest       string                   `json:"pair_set_digest"`
-	PairCount           int                      `json:"pair_count"`
-	ArtifactCount       int                      `json:"artifact_count"`
-	ResultCount         int                      `json:"result_count"`
-	AbstentionCount     int                      `json:"abstention_count"`
-	CanonicalBytes      int64                    `json:"canonical_bytes"`
-	StagingBytes        int64                    `json:"staging_bytes"`
-	PeakOpenFiles       int                      `json:"peak_open_files"`
-	ManifestDigest      string                   `json:"manifest_digest"`
-	ManifestPath        string                   `json:"manifest_path"`
-	PublicationRevision uint64                   `json:"publication_revision"`
-	WriterSchema        string                   `json:"writer_schema"`
-	PublishedAt         time.Time                `json:"published_at"`
+	Generation             CallerGenerationIdentity `json:"generation"`
+	PairPayloadDigest      string                   `json:"pair_payload_digest"`
+	PairSetDigest          string                   `json:"pair_set_digest"`
+	PairCount              int                      `json:"pair_count"`
+	ArtifactCount          int                      `json:"artifact_count"`
+	ResultCount            int                      `json:"result_count"`
+	AbstentionCount        int                      `json:"abstention_count"`
+	CanonicalBytes         int64                    `json:"canonical_bytes"`
+	StagingBytes           int64                    `json:"staging_bytes"`
+	PeakOpenFiles          int                      `json:"peak_open_files"`
+	ManifestDigest         string                   `json:"manifest_digest"`
+	ManifestPath           string                   `json:"manifest_path"`
+	PublicationRevision    uint64                   `json:"publication_revision"`
+	PublicationIncarnation string                   `json:"publication_incarnation"`
+	WriterSchema           string                   `json:"writer_schema"`
+	PublishedAt            time.Time                `json:"published_at"`
 }
 
 type CallerGenerationPublicationStore interface {
@@ -148,7 +157,7 @@ const callerGenerationPublicationSummaryProjection = `id, repository,
 	generation, generation_digest, pair_set_digest, pair_count, artifact_count,
 	result_count, abstention_count, canonical_bytes, staging_bytes,
 	peak_open_files, manifest_digest, manifest_path, publication_revision,
-	writer_schema, published_at, pair_payload_digest,
+	publication_incarnation, writer_schema, published_at, pair_payload_digest,
 	array::len(pairs) AS pair_payload_count`
 
 func callerGenerationPublicationID(repository string) models.RecordID {
@@ -206,6 +215,7 @@ func validateCallerGenerationPublicationSummary(
 		summary.ManifestPath != callerpublicationid.ManifestName(
 			generation.Digest, summary.ManifestDigest,
 		) || summary.PublicationRevision == 0 ||
+		!validSHA256Digest(summary.PublicationIncarnation) ||
 		summary.WriterSchema != CallerGenerationPublicationWriterSchema ||
 		summary.PublishedAt.IsZero() {
 		return CallerGenerationPublicationSummary{},
@@ -235,7 +245,7 @@ func (s *Surreal) migrateCallerGenerationPublications(ctx context.Context) error
 	results, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
 LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
-IF $current != NONE AND $current != $wanted {
+IF $current != NONE AND $current != $wanted AND $current != $prior {
 	THROW 'phebs-permanent: unsupported caller-generation publication writer generation'
 };
 UPDATE repo SET caller_publication_revision = 0
@@ -250,12 +260,24 @@ UPDATE repo SET caller_publication_revision =
 	WHERE name IN $retired_repositories RETURN NONE;
 DELETE caller_generation_publication
 	WHERE $current = NONE RETURN NONE;
+
+-- A process restart invalidates every T30.6j request binding, so the supported
+-- v1 -> v2 upgrade may add a unique incarnation to current pointers in place.
+-- The repository record ID makes this upgrade identity repository-specific;
+-- all subsequent publications derive it from an exact owned writer claim and
+-- a fresh store-generated publication nonce.
+UPDATE caller_generation_publication SET publication_incarnation =
+	'sha256:' + crypto::sha256(type::string([
+		id, published_at, publication_revision
+	]))
+	WHERE $current = $prior RETURN NONE;
 UPSERT $marker SET
-	version = IF $current = NONE THEN $wanted ELSE $current END,
-	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END
+	version = IF $current = $wanted THEN $current ELSE $wanted END,
+	completed_at = IF $current = $wanted THEN completed_at ELSE time::now() END
 	RETURN NONE;
 COMMIT;`, map[string]any{
 		"marker": callerGenerationPublicationMigrationID(),
+		"prior":  callerGenerationPublicationPriorMigration,
 		"wanted": callerGenerationPublicationMigrationVersion,
 	})
 	if err != nil {
@@ -385,6 +407,7 @@ func prepareCallerGenerationPublication(
 	publication.StagingBytes = admission.StagingBytes
 	publication.PeakOpenFiles = admission.PeakOpenFiles
 	publication.PublicationRevision = 0
+	publication.PublicationIncarnation = ""
 	publication.WriterSchema = CallerGenerationPublicationWriterSchema
 	publication.PublishedAt = time.Time{}
 	return publication, projections, nil
@@ -443,6 +466,7 @@ func validateCallerGenerationPublication(
 		row.GenerationDigest != publication.Generation.Digest ||
 		!validSHA256Digest(publication.PairPayloadDigest) ||
 		publication.PublicationRevision == 0 ||
+		!validSHA256Digest(publication.PublicationIncarnation) ||
 		publication.WriterSchema != CallerGenerationPublicationWriterSchema ||
 		publication.PublishedAt.IsZero() {
 		return CallerGenerationPublication{}, ErrInvalidCallerGenerationPublication
@@ -533,6 +557,18 @@ LET $current_pair_payload_valid = IF $current != NONE
 		($current.pair_payload_digest = ('sha256:' +
 			crypto::sha256(type::string($current.pairs)))) = true
 	ELSE false END;
+LET $current_incarnation_valid = $current != NONE
+	AND string::len($current.publication_incarnation ?? '') = 71
+	AND string::starts_with(
+		$current.publication_incarnation ?? '', 'sha256:'
+	)
+	AND string::is_hexadecimal(string::slice(
+		$current.publication_incarnation ?? '', 7
+	))
+	AND string::lowercase($current.publication_incarnation ?? '') =
+		($current.publication_incarnation ?? '');
+LET $publication_incarnation = 'sha256:' +
+	crypto::sha256(type::string([$owned, $lease, $publication_nonce]));
 LET $authority_ok = $writer_ok AND $leaf_writer_ok AND $owned != NONE
 	AND $repo != NONE AND ($repo.deleting = NONE OR $repo.deleting = false)
 	AND $repo.indexed_commit_hash = $head_commit
@@ -584,12 +620,14 @@ LET $same_publication = $same_generation
 	AND $current.peak_open_files = $peak_open_files
 	AND $current.manifest_digest = $manifest_digest
 	AND $current.manifest_path = $manifest_path
+	AND $current_incarnation_valid
 	AND $current.writer_schema = $writer_schema
 	AND $current.publication_revision = ($repo.caller_publication_revision ?? 0);
 ` + callerPublicationInstallationFenceSQL + `
 LET $acceptable = $authority_ok
 	AND ($same_generation = false OR $same_publication = true
-		OR $current_pair_payload_valid = false)
+		OR $current_pair_payload_valid = false
+		OR $current_incarnation_valid = false)
 	AND $installation_ok;
 LET $advanced = IF $acceptable AND $same_publication = false THEN
 	(UPDATE $repo_rid SET caller_publication_revision =
@@ -615,6 +653,7 @@ LET $published = IF $acceptable = false THEN []
 			manifest_digest = $manifest_digest,
 			manifest_path = $manifest_path,
 			publication_revision = $advanced[0].caller_publication_revision,
+			publication_incarnation = $publication_incarnation,
 			writer_schema = $writer_schema,
 			published_at = time::now()
 			RETURN AFTER)
@@ -653,6 +692,10 @@ func (s *Surreal) PublishCallerGeneration(
 	if err != nil {
 		return fmt.Errorf("publish caller generation: %w: %v", ErrInvalidCallerGenerationPublication, err)
 	}
+	publicationNonce, err := newCallerPublicationNonce()
+	if err != nil {
+		return fmt.Errorf("publish caller generation: %w", err)
+	}
 	vars := map[string]any{
 		"migration_rid":          callerGenerationPublicationMigrationID(),
 		"migration_version":      callerGenerationPublicationMigrationVersion,
@@ -664,6 +707,7 @@ func (s *Surreal) PublishCallerGeneration(
 		"admission_rid":          callerGenerationAdmissionID(prepared.Generation),
 		"publication_rid":        callerGenerationPublicationID(prepared.Generation.Repository),
 		"job_id":                 job.ID, "lease": job.LeaseToken, "claimed_by": job.ClaimedBy,
+		"publication_nonce":            publicationNonce,
 		"repository":                   prepared.Generation.Repository,
 		"head_commit":                  prepared.Generation.HeadCommit,
 		"unit_digest":                  prepared.Generation.UnitDigest,
@@ -718,6 +762,14 @@ func (s *Surreal) PublishCallerGeneration(
 		}
 		return nil
 	}
+}
+
+func newCallerPublicationNonce() (string, error) {
+	var nonce [16]byte
+	if _, err := rand.Read(nonce[:]); err != nil {
+		return "", fmt.Errorf("generate caller publication nonce: %w", err)
+	}
+	return hex.EncodeToString(nonce[:]), nil
 }
 
 func (s *Surreal) GetCallerGenerationPublication(
@@ -965,6 +1017,7 @@ LET $scalar_current = $writer_ok AND $repo != NONE
 		AND $current.manifest_digest = $manifest_digest
 		AND $current.manifest_path = $manifest_path
 		AND $current.publication_revision = $publication_revision
+		AND $current.publication_incarnation = $publication_incarnation
 		AND $current.writer_schema = $writer_schema;
 LET $pair_payload_identity = $scalar_current
 	AND $current.pair_payload_count = $pair_count
@@ -995,11 +1048,12 @@ func (s *Surreal) CallerGenerationPublicationSummaryCurrent(
 	return s.callerGenerationPublicationSummaryCurrent(ctx, summary, true)
 }
 
-// CallerGenerationPublicationSummaryAuthorityCurrent is the provisional warm
-// path fence. It checks every mutable authority/scalar, actual pair-array
-// length, and the carried writer-owned payload digest, but deliberately does
-// not hash pairs. A reader must still call the exact SummaryCurrent after its
-// filesystem admission and before exposing visibility.
+// CallerGenerationPublicationSummaryAuthorityCurrent is the bounded warm-path
+// fence. It checks every mutable authority/scalar, actual pair-array length,
+// and the carried writer-owned payload digest, but deliberately does not hash
+// pairs. A product reader may use it only after an exact SummaryCurrent cold
+// read authenticated a bounded immutable publication binding; an unbound
+// lifecycle reader must still call the exact method before exposing visibility.
 func (s *Surreal) CallerGenerationPublicationSummaryAuthorityCurrent(
 	ctx context.Context,
 	summary CallerGenerationPublicationSummary,
@@ -1060,6 +1114,7 @@ func (s *Surreal) callerGenerationPublicationSummaryCurrent(
 			"manifest_digest":            validated.ManifestDigest,
 			"manifest_path":              validated.ManifestPath,
 			"publication_revision":       validated.PublicationRevision,
+			"publication_incarnation":    validated.PublicationIncarnation,
 			"writer_schema":              CallerGenerationPublicationWriterSchema,
 			"verify_pair_payload":        verifyPairPayload,
 		},
@@ -1138,6 +1193,7 @@ RETURN [{
 		AND $current.manifest_digest = $manifest_digest
 		AND $current.manifest_path = $manifest_path
 		AND $current.publication_revision = $publication_revision
+		AND $current.publication_incarnation = $publication_incarnation
 		AND $current.writer_schema = $writer_schema
 }];`
 
@@ -1189,6 +1245,7 @@ func (s *Surreal) CallerGenerationPublicationCurrent(
 			"manifest_digest":            validated.ManifestDigest,
 			"manifest_path":              validated.ManifestPath,
 			"publication_revision":       validated.PublicationRevision,
+			"publication_incarnation":    validated.PublicationIncarnation,
 			"writer_schema":              CallerGenerationPublicationWriterSchema,
 		})
 	if err != nil {

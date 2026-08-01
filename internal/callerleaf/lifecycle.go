@@ -24,6 +24,10 @@ import (
 
 const stageArtifactName = "artifact.ndjson"
 
+var errCallerLeafDirectoryTransition = errors.New(
+	"caller leaf directory authority transitioned",
+)
+
 type Stage struct {
 	root       string
 	repository string
@@ -68,6 +72,16 @@ type Publication struct {
 	receipt       Receipt
 	info          os.FileInfo
 	directoryInfo os.FileInfo
+}
+
+// RecordReference is one bounded position produced by ScanRecords. Digest
+// binds the exact canonical NDJSON line at that position, allowing a paged
+// reader to reread only selected records without rehashing the complete leaf.
+// References are meaningful only with the Publication that produced them.
+type RecordReference struct {
+	Offset int64
+	Length int
+	Digest string
 }
 
 type directoryAuthority struct {
@@ -494,6 +508,21 @@ func verifyReader(
 	receipt Receipt,
 	visit func(Record) error,
 ) error {
+	if visit == nil {
+		return verifyReaderAt(ctx, reader, receipt, nil)
+	}
+	return verifyReaderAt(
+		ctx, reader, receipt,
+		func(_ RecordReference, record Record) error { return visit(record) },
+	)
+}
+
+func verifyReaderAt(
+	ctx context.Context,
+	reader io.Reader,
+	receipt Receipt,
+	visit func(RecordReference, Record) error,
+) error {
 	if ctx == nil {
 		return errors.New("caller leaf verification context is required")
 	}
@@ -531,7 +560,11 @@ func verifyReader(
 				counts.AbstentionCount++
 			}
 			if visit != nil {
-				if err := visit(record); err != nil {
+				reference := RecordReference{
+					Offset: consumed - int64(len(line)), Length: len(line),
+					Digest: recordReferenceDigest(line),
+				}
+				if err := visit(reference, record); err != nil {
 					return err
 				}
 			}
@@ -551,6 +584,11 @@ func verifyReader(
 		return fmt.Errorf("%w: artifact receipt mismatch", ErrInvalidArtifact)
 	}
 	return nil
+}
+
+func recordReferenceDigest(line []byte) string {
+	digest := sha256.Sum256(line)
+	return "sha256:" + hex.EncodeToString(digest[:])
 }
 
 func openArtifactAt(
@@ -590,15 +628,24 @@ func openArtifactAt(
 		}
 	}()
 	opened, err := file.Stat()
-	if err != nil || !sameFile(before, opened) {
+	if err != nil {
+		return nil, err
+	}
+	if !sameFile(before, opened) {
 		return nil, fmt.Errorf("%w: artifact changed while opening", ErrInvalidArtifact)
 	}
 	if err := verifyReader(ctx, file, receipt, visit); err != nil {
 		return nil, err
 	}
-	after, statErr := file.Stat()
-	current, lstatErr := authority.root.Lstat(receipt.Name)
-	if statErr != nil || lstatErr != nil || !sameFile(before, after) ||
+	after, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	current, err := authority.root.Lstat(receipt.Name)
+	if err != nil {
+		return nil, err
+	}
+	if !sameFile(before, after) ||
 		!sameFile(after, current) {
 		return nil, fmt.Errorf("%w: artifact changed while reading", ErrInvalidArtifact)
 	}
@@ -622,6 +669,167 @@ func (publication *Publication) Current() bool {
 	}
 	current, err := authority.root.Lstat(filepath.Base(publication.path))
 	return err == nil && sameFile(publication.info, current)
+}
+
+// ScanRecords descriptor-stably verifies the complete immutable artifact and
+// reports each canonical record with an exact bounded reread reference. The
+// visitor must not publish side effects until ScanRecords returns successfully:
+// a later record or the final receipt/descriptor check may still fail.
+func (publication *Publication) ScanRecords(
+	ctx context.Context,
+	generation GenerationIdentity,
+	pair PairIdentity,
+	visit func(RecordReference, Record) error,
+) (resultErr error) {
+	if ctx == nil || publication == nil || publication.info == nil || visit == nil {
+		return errors.New("caller leaf record scan is invalid")
+	}
+	if err := ValidateReceipt(generation, pair, publication.receipt); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	authority, err := openStableDirectoryRoot(publication.root)
+	if err != nil {
+		return callerLeafReadAccessError("open caller leaf repository", err)
+	}
+	defer authority.close()
+	if !sameDirectory(publication.directoryInfo, authority.info) {
+		return fmt.Errorf("%w: caller leaf repository changed", ErrInvalidArtifact)
+	}
+	name := filepath.Base(publication.path)
+	before, err := authority.root.Lstat(name)
+	if err != nil {
+		return callerLeafReadAccessError("stat caller leaf before scan", err)
+	}
+	if !sameFile(publication.info, before) {
+		return fmt.Errorf("%w: caller leaf changed before scan", ErrInvalidArtifact)
+	}
+	file, err := authority.root.Open(name)
+	if err != nil {
+		return callerLeafReadAccessError("open caller leaf for scan", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); resultErr == nil && closeErr != nil {
+			resultErr = closeErr
+		}
+	}()
+	opened, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("stat caller leaf after open: %w", err)
+	}
+	if !sameFile(before, opened) {
+		return fmt.Errorf("%w: caller leaf changed while opening", ErrInvalidArtifact)
+	}
+	if err := verifyReaderAt(ctx, file, publication.receipt, visit); err != nil {
+		return err
+	}
+	after, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("stat caller leaf after scan: %w", err)
+	}
+	current, err := authority.root.Lstat(name)
+	if err != nil {
+		return callerLeafReadAccessError("stat caller leaf after scan", err)
+	}
+	if !sameFile(before, after) ||
+		!sameFile(after, current) {
+		return fmt.Errorf("%w: caller leaf changed while scanning", ErrInvalidArtifact)
+	}
+	return nil
+}
+
+// ReadRecord descriptor-stably reads and validates exactly one reference
+// produced by ScanRecords. It never scans or hashes the rest of the artifact.
+func (publication *Publication) ReadRecord(
+	ctx context.Context,
+	reference RecordReference,
+) (result Record, resultErr error) {
+	if ctx == nil || publication == nil || publication.info == nil ||
+		reference.Offset < 0 || reference.Length < 1 ||
+		reference.Length > MaxRecordBytes+1 || !validDigest(reference.Digest) ||
+		int64(reference.Length) > publication.receipt.ContentBytes ||
+		reference.Offset > publication.receipt.ContentBytes-int64(reference.Length) {
+		return Record{}, fmt.Errorf("%w: caller leaf record reference is invalid", ErrInvalidArtifact)
+	}
+	if err := ctx.Err(); err != nil {
+		return Record{}, err
+	}
+	authority, err := openStableDirectoryRoot(publication.root)
+	if err != nil {
+		return Record{}, callerLeafReadAccessError("open caller leaf repository", err)
+	}
+	defer authority.close()
+	if !sameDirectory(publication.directoryInfo, authority.info) {
+		return Record{}, fmt.Errorf("%w: caller leaf repository changed", ErrInvalidArtifact)
+	}
+	name := filepath.Base(publication.path)
+	before, err := authority.root.Lstat(name)
+	if err != nil {
+		return Record{}, callerLeafReadAccessError("stat caller leaf before read", err)
+	}
+	if !sameFile(publication.info, before) {
+		return Record{}, fmt.Errorf("%w: caller leaf changed before read", ErrInvalidArtifact)
+	}
+	file, err := authority.root.Open(name)
+	if err != nil {
+		return Record{}, callerLeafReadAccessError("open caller leaf for read", err)
+	}
+	defer func() {
+		if closeErr := file.Close(); resultErr == nil && closeErr != nil {
+			resultErr = closeErr
+		}
+	}()
+	opened, err := file.Stat()
+	if err != nil {
+		return Record{}, fmt.Errorf("stat caller leaf after open: %w", err)
+	}
+	if !sameFile(before, opened) {
+		return Record{}, fmt.Errorf("%w: caller leaf changed while opening", ErrInvalidArtifact)
+	}
+	raw := make([]byte, reference.Length)
+	if _, err := io.ReadFull(
+		io.NewSectionReader(file, reference.Offset, int64(reference.Length)), raw,
+	); err != nil {
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+			return Record{}, fmt.Errorf(
+				"%w: referenced caller leaf record was truncated",
+				ErrInvalidArtifact,
+			)
+		}
+		return Record{}, fmt.Errorf("read referenced caller leaf record: %w", err)
+	}
+	if recordReferenceDigest(raw) != reference.Digest ||
+		decodeCanonicalLine(raw, &result) != nil || ValidateRecord(result) != nil {
+		return Record{}, fmt.Errorf("%w: referenced caller leaf record differs", ErrInvalidArtifact)
+	}
+	if err := ctx.Err(); err != nil {
+		return Record{}, err
+	}
+	after, err := file.Stat()
+	if err != nil {
+		return Record{}, fmt.Errorf("stat caller leaf after record read: %w", err)
+	}
+	current, err := authority.root.Lstat(name)
+	if err != nil {
+		return Record{}, callerLeafReadAccessError(
+			"stat caller leaf after record read", err,
+		)
+	}
+	if !sameFile(before, after) ||
+		!sameFile(after, current) {
+		return Record{}, fmt.Errorf("%w: caller leaf changed while reading", ErrInvalidArtifact)
+	}
+	return result, nil
+}
+
+func callerLeafReadAccessError(action string, err error) error {
+	if errors.Is(err, os.ErrNotExist) ||
+		errors.Is(err, errCallerLeafDirectoryTransition) {
+		return fmt.Errorf("%w: %s: %v", ErrInvalidArtifact, action, err)
+	}
+	return fmt.Errorf("%s: %w", action, err)
 }
 
 // CurrentAtRepository verifies this cold admission against identities read
@@ -1104,7 +1312,10 @@ func openStableDirectoryRoot(directory string) (*directoryAuthority, error) {
 		return nil, err
 	}
 	if !before.IsDir() || before.Mode()&os.ModeSymlink != 0 {
-		return nil, errors.New("caller leaf directory is not real")
+		return nil, fmt.Errorf(
+			"%w: caller leaf directory is not real",
+			errCallerLeafDirectoryTransition,
+		)
 	}
 	root, err := os.OpenRoot(directory)
 	if err != nil {
@@ -1117,9 +1328,20 @@ func openStableDirectoryRoot(directory string) (*directoryAuthority, error) {
 	}
 	after, statErr := opened.Stat()
 	closeErr := opened.Close()
-	if statErr != nil || closeErr != nil || !sameDirectory(before, after) {
+	if statErr != nil {
 		_ = root.Close()
-		return nil, errors.New("caller leaf directory changed while opening")
+		return nil, statErr
+	}
+	if closeErr != nil {
+		_ = root.Close()
+		return nil, closeErr
+	}
+	if !sameDirectory(before, after) {
+		_ = root.Close()
+		return nil, fmt.Errorf(
+			"%w: caller leaf directory changed while opening",
+			errCallerLeafDirectoryTransition,
+		)
 	}
 	return &directoryAuthority{root: root, info: after}, nil
 }
@@ -1151,7 +1373,15 @@ func openChildDirectoryAuthority(
 	}
 	after, statErr := opened.Stat()
 	closeErr := opened.Close()
-	if statErr != nil || closeErr != nil || !sameDirectory(before, after) {
+	if statErr != nil {
+		_ = root.Close()
+		return nil, statErr
+	}
+	if closeErr != nil {
+		_ = root.Close()
+		return nil, closeErr
+	}
+	if !sameDirectory(before, after) {
 		_ = root.Close()
 		return nil, errors.New("caller leaf child directory changed while opening")
 	}

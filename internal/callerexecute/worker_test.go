@@ -324,6 +324,7 @@ func (state *workerTestStore) CallerGenerationPublicationCurrent(
 		state.publication.Generation == publication.Generation &&
 		state.publication.ManifestDigest == publication.ManifestDigest &&
 		state.publication.PublicationRevision == publication.PublicationRevision &&
+		state.publication.PublicationIncarnation == publication.PublicationIncarnation &&
 		publication.Generation.CandidateControlRevision == state.candidate.ControlRevision &&
 		publication.Generation.ResolverControlRevision == state.resolver.ControlRevision, nil
 }
@@ -349,6 +350,7 @@ func (state *workerTestStore) CallerGenerationPublicationSummaryAuthorityCurrent
 		state.publication.PairPayloadDigest == publication.PairPayloadDigest &&
 		state.publication.ManifestDigest == publication.ManifestDigest &&
 		state.publication.PublicationRevision == publication.PublicationRevision &&
+		state.publication.PublicationIncarnation == publication.PublicationIncarnation &&
 		publication.Generation.CandidateControlRevision == state.candidate.ControlRevision &&
 		publication.Generation.ResolverControlRevision == state.resolver.ControlRevision, nil
 }

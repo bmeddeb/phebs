@@ -119,7 +119,7 @@ func apiCapabilities(opts Options) []string {
 	if NewContractCatalogService(opts) != nil {
 		capabilities = append(capabilities, contractCatalogCapability)
 	}
-	if NewCallerMapService(opts) != nil {
+	if opts.CallerMap != nil || NewCallerMapService(opts) != nil {
 		capabilities = append(capabilities, callerMapCapability)
 	}
 	if NewCallerComparisonService(opts) != nil {

@@ -117,9 +117,9 @@ receipts, T30.6b durable exact-generation domain outcomes, T30.6c
 aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
 classification, T30.6e focused local-evidence base-lane consumption, and
 T30.6f resolver-catalog lifecycle, T30.6g bounded resolver materialization,
-T30.6h direct caller-leaf execution artifacts, and T30.6i atomic complete
-caller-generation publication are shipped; T30.6j authorized exact Caller Map
-reads are next. T30.6g registers the
+T30.6h direct caller-leaf execution artifacts, T30.6i atomic complete
+caller-generation publication, and T30.6j authorized exact Caller Map reads
+are shipped; T30.6k caller comparison integration is next. T30.6g registers the
 ordered gRPC/Thrift resolver adapters and materializes one immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,
 `layout-snapshot.json`, and `generated-from-snapshot.json` inputs plus each
@@ -175,8 +175,28 @@ declared canonical caller bytes. Backup manifest v5 carries a hardened exact
 caller archive under a 4 TiB physical/logical envelope and
 bounded omission receipt. Restore validates and installs those bytes but raw-clears imported
 caller authority, advances a real imported visibility edge once, and leaves
-startup to force-queue reconstruction. No API, search, MCP, citation, paging,
-or authorization surface consumes this authority until T30.6j.
+startup to force-queue reconstruction. T30.6j now consumes that authority for
+the public Caller Map only: authorization precedes caller pointer, filesystem,
+and cache access; `current`, `missing`, `failed`, and `stale` are explicit;
+and only a current exact generation can
+produce rows. HMAC cursors bind the authorization projection, full generation,
+manifest, pair set, monotonic publication revision, and the store-owned
+writer-claim-plus-nonce incarnation that cannot repeat across delete/recreate, so `A → B → A`
+fails closed. A process-bounded reverse index is built lazily after an
+authorized request, request-scoped leases protect immutable records, and warm
+continuations reread only selected rows plus bounded complete-publication
+identity-stat sweeps; restart or shared-registry eviction
+may perform the existing bounded cold publication validation, never an
+unbounded reconstruction. Eight active exact service reads, two citation Git
+phases, and two cross-repository cold admissions are the process caps. Stable
+cold-validation, semantic-projection, and
+index-limit refusals use exact-key bounded negative entries rather than
+repeating full scans. HTTP, UI, and MCP share compact request-binding-backed
+exact-range citations that
+reauthorize and verify commit, path, Git object, blob digest, record, and range
+before returning only the cited bytes. Migration comparison and Workbench
+Impact intentionally remain on their legacy evidence reader until T30.6k and
+T30.6l.
 A physical test-search overlay,
 test-source association, automatic unit discovery, SCIP generation,
 pack-specific recognizer expansion, and per-file parser degradation remain

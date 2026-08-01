@@ -1,0 +1,1637 @@
+package api
+
+import (
+	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"reflect"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+	"unicode/utf8"
+
+	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/bmeddeb/phebs/internal/callerexecute"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/gitobj"
+	"github.com/bmeddeb/phebs/internal/store"
+	phebssync "github.com/bmeddeb/phebs/internal/sync"
+)
+
+const (
+	exactCallerMapSchemaVersion = "caller-map-v2"
+	exactCallerMapCursorVersion = "caller-map-cursor-v2"
+	exactCallerCitationVersion  = "caller-map-citation-v1"
+	exactCallerMapPlane         = "repository-overlay"
+
+	exactCallerMapMaxRecords = callerleaf.MaxAggregateResultRecords +
+		callerleaf.MaxAggregateAbstentionRecords
+	exactCallerMapMaxIdentityBytes = 128 << 20
+	exactCallerMapMaxIndexes       = 8
+	exactCallerMapMaxBindings      = 8
+	exactCallerMapBindingRefs      = exactCallerMapMaxRecords
+	exactCallerMapBindingLifetime  = 5 * time.Minute
+	exactCallerReadLimit           = 8
+	exactCallerCitationReadLimit   = 2
+	exactCallerUnitCandidateLimit  = 25_000
+	exactCallerUnitValueLimit      = 64
+	exactCallerUnitValueBytes      = 4 << 10
+	// These deterministic charges cover the retained Go candidate struct and
+	// each retained string header in addition to separately counted payload.
+	exactCallerUnitCandidateStructuralBytes = 112
+	exactCallerUnitValueStructuralBytes     = 16
+)
+
+var errExactCallerProjectionInvalid = errors.New(
+	"caller publication record is semantically invalid",
+)
+
+type exactCallerMapService struct {
+	opts Options
+
+	mu           sync.Mutex
+	indexBuild   chan struct{}
+	exactRead    chan struct{}
+	citationRead chan struct{}
+	secret       [sha256.Size]byte
+	indexes      map[string]*exactCallerIndex
+	indexOrder   []string
+	bindings     map[string]*exactCallerBinding
+	bindingCount int
+	bindingRefs  int
+}
+
+type exactCallerIndex struct {
+	key           string
+	records       []exactCallerRecord
+	endpoints     map[exactCallerEndpointKey]exactCallerEndpointIndex
+	identityBytes int
+	failure       exactCallerIndexFailure
+	bindings      int
+	uses          int
+}
+
+type exactCallerIndexFailure uint8
+
+const (
+	exactCallerIndexUsable exactCallerIndexFailure = iota
+	exactCallerIndexSemanticFailure
+	exactCallerIndexLimitFailure
+)
+
+type exactCallerEndpointIndex struct {
+	source []int
+	unit   []int
+}
+
+// exactCallerEndpointKey copies only two string headers into the map and
+// reuses the already counted immutable record payload. Concatenating a string
+// key would retain a second operation copy per endpoint outside the index's
+// identity budget.
+type exactCallerEndpointKey struct {
+	protocol  string
+	operation string
+}
+
+type exactCallerRecord struct {
+	reference callerpublication.RecordReference
+	recordID  string
+	protocol  string
+	operation string
+	lineage   string
+
+	classification   string
+	resolution       string
+	tier             string
+	codeRole         string
+	path             string
+	objectID         string
+	blobDigest       string
+	startByte        int
+	endByte          int
+	startLine        int
+	endLine          int
+	unitGroup        string
+	unitState        string
+	unitReason       string
+	unitCandidates   []CallerMapUnitCandidate
+	unresolvedReason string
+}
+
+type exactCallerBinding struct {
+	id             string
+	createdAt      time.Time
+	queryDigest    string
+	visibility     VisibilityContext
+	indexKey       string
+	records        []int
+	publication    callerexecute.PublicationBinding
+	declaration    ContractCatalogClaim
+	generation     CallerMapGeneration
+	excludedGoTest int
+	uses           int
+	retired        bool
+	finalized      bool
+}
+
+type exactCallerCursor struct {
+	Schema      string            `json:"schema"`
+	Binding     string            `json:"binding"`
+	QueryDigest string            `json:"query_digest"`
+	Visibility  VisibilityContext `json:"visibility"`
+	Generation  string            `json:"generation_digest"`
+	Manifest    string            `json:"manifest_digest"`
+	PairSet     string            `json:"pair_set_digest"`
+	Revision    uint64            `json:"publication_revision"`
+	Offset      int               `json:"offset"`
+}
+
+type exactCallerCitation struct {
+	Schema     string `json:"schema"`
+	Repository string `json:"repository"`
+	Binding    string `json:"binding"`
+	Position   int    `json:"position"`
+	RecordID   string `json:"record_id"`
+}
+
+// CallerMapCitation is the only source content returned by a repository-
+// overlay citation. Content is exactly the cited byte range, not the file.
+type CallerMapCitation struct {
+	SchemaVersion string              `json:"schema_version"`
+	Generation    CallerMapGeneration `json:"generation"`
+	Source        CallerMapSource     `json:"source"`
+	Content       string              `json:"content"`
+}
+
+func newExactCallerMapService(opts Options) *exactCallerMapService {
+	service := &exactCallerMapService{
+		opts: opts, indexes: make(map[string]*exactCallerIndex),
+		bindings:     make(map[string]*exactCallerBinding),
+		indexBuild:   make(chan struct{}, 1),
+		exactRead:    make(chan struct{}, exactCallerReadLimit),
+		citationRead: make(chan struct{}, exactCallerCitationReadLimit),
+	}
+	if _, err := rand.Read(service.secret[:]); err != nil {
+		return nil
+	}
+	return service
+}
+
+func (service *exactCallerMapService) list(
+	ctx context.Context,
+	query CallerMapQuery,
+	pageSize int,
+	cursor string,
+) (*CallerMapPage, error) {
+	if service == nil || service.opts.CallerReader == nil {
+		return nil, huma.Error503ServiceUnavailable("caller map unavailable")
+	}
+	if !catalogAuthenticated(ctx, service.opts) {
+		return nil, huma.Error404NotFound("caller map not found")
+	}
+	pack, err := validateCallerMapQuery(query)
+	if err != nil {
+		return nil, huma.Error400BadRequest(err.Error())
+	}
+	if pageSize == 0 {
+		pageSize = callerMapDefaultPage
+	}
+	if pageSize < 1 || pageSize > callerMapMaxPage {
+		return nil, huma.Error400BadRequest(
+			fmt.Sprintf("page_size must be from 1 through %d", callerMapMaxPage),
+		)
+	}
+	query = normalizeCallerMapQuery(query)
+	queryDigest := digestJSON(struct {
+		Query CallerMapQuery `json:"query"`
+		Size  int            `json:"page_size"`
+	}{query, pageSize})
+
+	repository, visibility, err := service.authorize(ctx, query.Endpoint.Repository)
+	if err != nil {
+		return nil, err
+	}
+	finishExactRead, err := service.beginExactRead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer finishExactRead()
+	if cursor != "" {
+		return service.continuePage(
+			ctx, query, pageSize, cursor, queryDigest, visibility,
+		)
+	}
+
+	read, err := service.opts.CallerReader.Open(ctx, repository.Name)
+	if err != nil {
+		return nil, exactCallerReaderError("open caller generation", err)
+	}
+	if read == nil {
+		return nil, huma.Error500InternalServerError(
+			"open caller generation", errors.New("caller reader returned no state"),
+		)
+	}
+	defer func() { _ = read.Release() }()
+	if read.Availability != callerexecute.PublicationCurrent {
+		return service.gapPage(
+			ctx, query, read, visibility,
+		)
+	}
+	declaration, err := exactCallerDeclaration(
+		ctx, service.opts.Evidence, read, pack, query,
+	)
+	if err != nil {
+		return nil, err
+	}
+	index, err := service.index(ctx, read)
+	if err != nil {
+		if errors.Is(err, errExactCallerProjectionInvalid) {
+			return service.projectionFailurePage(
+				ctx, query, read, visibility,
+			)
+		}
+		return nil, err
+	}
+	defer service.releaseIndex(index)
+	ordered := index.endpoints[exactEndpointKey(protocolExtractorName(pack.protocol), query.Endpoint.Operation)]
+	positions := ordered.source
+	if query.Ordering == "unit" {
+		positions = ordered.unit
+	}
+	filtered := make([]int, 0, len(positions))
+	for _, position := range positions {
+		if exactCallerRecordMatches(index.records[position], query) {
+			filtered = append(filtered, position)
+		}
+	}
+	if len(filtered) > exactCallerMapBindingRefs {
+		return nil, huma.Error422UnprocessableEntity("caller map result exceeds its bounded generation")
+	}
+
+	publicationBinding, err := read.Binding()
+	if err != nil {
+		return nil, huma.Error500InternalServerError("bind caller generation", err)
+	}
+	binding := &exactCallerBinding{
+		createdAt: time.Now(), queryDigest: queryDigest, visibility: visibility,
+		indexKey: index.key, records: filtered,
+		publication: publicationBinding, declaration: declaration,
+		generation: service.generation(read),
+	}
+	if read.Publication != nil {
+		for _, pair := range read.Publication.Pairs {
+			binding.excludedGoTest += pair.Receipt.ExcludedGoTestRecords
+		}
+	}
+	binding.generation.ExcludedGoTestRecords = binding.excludedGoTest
+	// Every serialized row carries a citation. Retain the same bounded request
+	// binding for citations even when the first page is also the final page;
+	// the compact token never embeds the potentially maximum-shaped generation
+	// and publication state.
+	if len(filtered) > 0 {
+		if err := service.retainActiveBinding(binding); err != nil {
+			return nil, err
+		}
+		defer service.releaseBinding(binding)
+	}
+	page, err := service.page(ctx, read, index, binding, query, pageSize, 0)
+	if err != nil {
+		if binding.id != "" {
+			service.dropBinding(binding.id)
+		}
+		return nil, err
+	}
+	if err := service.confirm(ctx, read, query.Endpoint.Repository, visibility); err != nil {
+		if binding.id != "" {
+			service.dropBinding(binding.id)
+		}
+		return nil, err
+	}
+	return page, nil
+}
+
+func (service *exactCallerMapService) continuePage(
+	ctx context.Context,
+	query CallerMapQuery,
+	pageSize int,
+	encoded, queryDigest string,
+	visibility VisibilityContext,
+) (*CallerMapPage, error) {
+	cursor, err := service.decodeCursor(encoded)
+	if err != nil {
+		return nil, err
+	}
+	if cursor.QueryDigest != queryDigest {
+		return nil, huma.Error400BadRequest("caller map cursor does not match the query")
+	}
+	if cursor.Visibility != visibility {
+		return nil, huma.Error409Conflict("caller map cursor is no longer valid")
+	}
+	binding := service.acquireBinding(cursor.Binding)
+	if binding == nil {
+		return nil, huma.Error409Conflict("caller map cursor is no longer valid")
+	}
+	defer service.releaseBinding(binding)
+	if binding.queryDigest != queryDigest ||
+		binding.visibility != visibility || cursor.Offset < 1 ||
+		cursor.Offset >= len(binding.records) ||
+		cursor.Generation != binding.generation.GenerationDigest ||
+		cursor.Manifest != binding.generation.ManifestDigest ||
+		cursor.PairSet != binding.generation.PairSetDigest ||
+		cursor.Revision != binding.generation.PublicationRevision {
+		return nil, huma.Error409Conflict("caller map cursor is no longer valid")
+	}
+	read, err := service.opts.CallerReader.Reopen(ctx, binding.publication)
+	if err != nil {
+		return nil, exactCallerReaderError("reopen caller generation", err)
+	}
+	if read == nil {
+		return nil, huma.Error500InternalServerError(
+			"reopen caller generation", errors.New("caller reader returned no state"),
+		)
+	}
+	defer func() { _ = read.Release() }()
+	if read.Availability != callerexecute.PublicationCurrent {
+		service.dropBinding(binding.id)
+		return nil, huma.Error409Conflict("caller map cursor is no longer valid")
+	}
+	index := service.acquireIndex(binding.indexKey)
+	if index == nil {
+		service.dropBinding(binding.id)
+		return nil, huma.Error409Conflict("caller map cursor snapshot expired")
+	}
+	defer service.releaseIndex(index)
+	page, err := service.page(
+		ctx, read, index, binding, query, pageSize, cursor.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if err := service.confirm(ctx, read, query.Endpoint.Repository, visibility); err != nil {
+		service.dropBinding(binding.id)
+		return nil, err
+	}
+	return page, nil
+}
+
+func (service *exactCallerMapService) page(
+	ctx context.Context,
+	read *callerexecute.PublicationRead,
+	index *exactCallerIndex,
+	binding *exactCallerBinding,
+	query CallerMapQuery,
+	pageSize, offset int,
+) (*CallerMapPage, error) {
+	end := min(offset+pageSize, len(binding.records))
+	rows := make([]CallerMapRow, 0, end-offset)
+	for _, position := range binding.records[offset:end] {
+		indexed := index.records[position]
+		pair, record, err := read.Lease().ReadRecord(ctx, indexed.reference)
+		if err != nil {
+			if errors.Is(err, callerleaf.ErrInvalidArtifact) {
+				return nil, huma.Error409Conflict("caller generation changed while reading")
+			}
+			return nil, huma.Error500InternalServerError("read caller record", err)
+		}
+		confirmed, err := projectExactCallerRecord(
+			callerReadGeneration(read), pair, indexed.reference, record,
+		)
+		if err != nil || !sameExactCallerRecord(indexed, confirmed) {
+			return nil, huma.Error409Conflict("caller generation changed while reading")
+		}
+		row := exactCallerRow(read, indexed)
+		citation, err := service.encodeCitation(binding, position, indexed)
+		if err != nil {
+			return nil, huma.Error500InternalServerError("encode caller citation", err)
+		}
+		row.Source.Citation = citation
+		rows = append(rows, row)
+	}
+	pagination := CallerMapPagination{Complete: end == len(binding.records)}
+	if !pagination.Complete {
+		cursor := exactCallerCursor{
+			Schema: exactCallerMapCursorVersion, Binding: binding.id,
+			QueryDigest: binding.queryDigest, Visibility: binding.visibility,
+			Generation: binding.generation.GenerationDigest,
+			Manifest:   binding.generation.ManifestDigest,
+			PairSet:    binding.generation.PairSetDigest,
+			Revision:   binding.generation.PublicationRevision, Offset: end,
+		}
+		pagination.NextCursor = service.encodeSigned(cursor)
+	}
+	declaration := binding.declaration
+	return &CallerMapPage{
+		SchemaVersion: exactCallerMapSchemaVersion, Query: query,
+		Declaration: &declaration, Rows: rows,
+		Groups:            callerMapGroups(rows, query.Ordering),
+		TotalMatchingRows: callerMapTotal(len(binding.records)), Pagination: pagination,
+		Generation: &binding.generation, MatchingRowsState: "exact",
+		Caveat: "Repository-overlay static source evidence only; a complete generation is not runtime use, completeness, migration completion, or decommissioning safety.",
+	}, nil
+}
+
+func (service *exactCallerMapService) gapPage(
+	ctx context.Context,
+	query CallerMapQuery,
+	read *callerexecute.PublicationRead,
+	visibility VisibilityContext,
+) (*CallerMapPage, error) {
+	generation := service.generation(read)
+	if generation.State == "" {
+		generation.State = string(read.Availability)
+	}
+	generation.Reason = "complete caller generation " + string(read.Availability)
+	current, err := service.opts.CallerReader.UnavailableCurrent(ctx, read)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"confirm caller generation gap", err,
+		)
+	}
+	if !current {
+		return nil, huma.Error409Conflict(
+			"caller generation changed while building the response",
+		)
+	}
+	if _, err := service.confirmAuthorization(
+		ctx, query.Endpoint.Repository, visibility,
+	); err != nil {
+		return nil, err
+	}
+	return exactCallerGapPage(query, generation), nil
+}
+
+func (service *exactCallerMapService) projectionFailurePage(
+	ctx context.Context,
+	query CallerMapQuery,
+	read *callerexecute.PublicationRead,
+	visibility VisibilityContext,
+) (*CallerMapPage, error) {
+	if err := service.confirm(
+		ctx, read, query.Endpoint.Repository, visibility,
+	); err != nil {
+		return nil, err
+	}
+	generation := service.generation(read)
+	generation.State = string(callerexecute.PublicationFailed)
+	generation.Reason = "complete caller generation failed semantic projection validation"
+	return exactCallerGapPage(query, generation), nil
+}
+
+func exactCallerGapPage(
+	query CallerMapQuery,
+	generation CallerMapGeneration,
+) *CallerMapPage {
+	return &CallerMapPage{
+		SchemaVersion: exactCallerMapSchemaVersion, Query: query,
+		Rows: []CallerMapRow{}, Pagination: CallerMapPagination{Complete: true},
+		Generation: &generation, MatchingRowsState: "unavailable",
+		Caveat: "Caller totals and absence are unavailable until one exact complete repository-overlay generation is current.",
+	}
+}
+
+func (service *exactCallerMapService) index(
+	ctx context.Context,
+	read *callerexecute.PublicationRead,
+) (*exactCallerIndex, error) {
+	key := exactIndexKey(read)
+	if cached := service.acquireIndex(key); cached != nil {
+		return service.indexResult(cached)
+	}
+	// A cold scan materializes the generation's bounded reverse index once.
+	// Serialize construction across repositories so concurrent cold requests
+	// cannot multiply the 128 MiB accounted identity budget. Waiting honors the
+	// request context; the cache is rechecked after admission to the build slot.
+	select {
+	case service.indexBuild <- struct{}{}:
+		defer func() { <-service.indexBuild }()
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+	if cached := service.acquireIndex(key); cached != nil {
+		return service.indexResult(cached)
+	}
+	index := &exactCallerIndex{
+		key: key, endpoints: make(map[exactCallerEndpointKey]exactCallerEndpointIndex),
+	}
+	var projectionErr error
+	var limitErr error
+	err := read.Lease().ScanRecords(ctx, func(
+		pair callerpublication.PairReceipt,
+		reference callerpublication.RecordReference,
+		record callerleaf.Record,
+	) error {
+		// Once one semantic defect is known, finish the generic descriptor and
+		// receipt validation without retaining more API projection state. A
+		// physical mutation or I/O failure discovered later takes precedence.
+		if projectionErr != nil || limitErr != nil {
+			return nil
+		}
+		projected, err := projectExactCallerRecord(
+			callerReadGeneration(read), pair, reference, record,
+		)
+		if err != nil {
+			projectionErr = err
+			return nil
+		}
+		if projected.operation == "" {
+			return nil
+		}
+		recordIdentityBytes := exactCallerRecordIdentityBytes(projected)
+		if len(index.records) >= exactCallerMapMaxRecords ||
+			!exactCallerIdentityAdmits(index.identityBytes, recordIdentityBytes) {
+			limitErr = callerleaf.ErrLimit
+			return nil
+		}
+		index.identityBytes += recordIdentityBytes
+		index.records = append(index.records, projected)
+		return nil
+	})
+	err = exactCallerIndexScanError(err, projectionErr, limitErr)
+	if err != nil {
+		switch {
+		case errors.Is(err, callerleaf.ErrLimit):
+			index.failure = exactCallerIndexLimitFailure
+		case errors.Is(err, errExactCallerProjectionInvalid):
+			index.failure = exactCallerIndexSemanticFailure
+		case errors.Is(err, callerleaf.ErrInvalidArtifact):
+			return nil, huma.Error409Conflict("caller generation changed while indexing")
+		default:
+			return nil, huma.Error500InternalServerError("index caller generation", err)
+		}
+		// Stable, query-independent refusals are tiny negative entries under the
+		// same exact key and eight-slot eviction bound as usable indexes. Retry
+		// and no-op requests therefore never rehash 128-512 MiB indefinitely.
+		index.records = nil
+		index.endpoints = nil
+		index.identityBytes = 0
+		if retainErr := service.retainIndex(index); retainErr != nil {
+			return nil, retainErr
+		}
+		service.releaseIndex(index)
+		return nil, exactCallerIndexFailureError(index.failure)
+	}
+	for position := range index.records {
+		record := index.records[position]
+		key := exactEndpointKey(record.protocol, record.operation)
+		endpoint := index.endpoints[key]
+		endpoint.source = append(endpoint.source, position)
+		endpoint.unit = append(endpoint.unit, position)
+		index.endpoints[key] = endpoint
+	}
+	for key, endpoint := range index.endpoints {
+		sort.Slice(endpoint.source, func(i, j int) bool {
+			return exactCallerRecordLess(index.records[endpoint.source[i]], index.records[endpoint.source[j]], false)
+		})
+		sort.Slice(endpoint.unit, func(i, j int) bool {
+			return exactCallerRecordLess(index.records[endpoint.unit[i]], index.records[endpoint.unit[j]], true)
+		})
+		index.endpoints[key] = endpoint
+	}
+	if err := service.retainIndex(index); err != nil {
+		return nil, err
+	}
+	return index, nil
+}
+
+func exactCallerIndexScanError(scanErr, projectionErr, limitErr error) error {
+	if scanErr != nil {
+		return scanErr
+	}
+	if projectionErr != nil {
+		return projectionErr
+	}
+	return limitErr
+}
+
+func (service *exactCallerMapService) indexResult(
+	index *exactCallerIndex,
+) (*exactCallerIndex, error) {
+	if index == nil || index.failure == exactCallerIndexUsable {
+		return index, nil
+	}
+	service.releaseIndex(index)
+	return nil, exactCallerIndexFailureError(index.failure)
+}
+
+func exactCallerIndexFailureError(failure exactCallerIndexFailure) error {
+	switch failure {
+	case exactCallerIndexSemanticFailure:
+		return errExactCallerProjectionInvalid
+	case exactCallerIndexLimitFailure:
+		return huma.Error422UnprocessableEntity(
+			"caller map index exceeds its bounded identity budget",
+		)
+	default:
+		return nil
+	}
+}
+
+func projectExactCallerRecord(
+	generation store.CallerGenerationIdentity,
+	pair callerpublication.PairReceipt,
+	reference callerpublication.RecordReference,
+	record callerleaf.Record,
+) (exactCallerRecord, error) {
+	if record.Fact == nil {
+		return exactCallerRecord{}, nil
+	}
+	fact := record.Fact
+	if fact.Path != record.Path || fact.Atom.StartByte < 0 ||
+		fact.Atom.EndByte <= fact.Atom.StartByte || fact.StartLine < 1 ||
+		fact.EndLine < fact.StartLine ||
+		fact.Atom.EndByte > int(callerleaf.MaxDirectSourceBytes) ||
+		fact.EndLine > int(callerleaf.MaxDirectSourceBytes)+1 ||
+		fact.Atom.BlobDigest == "" {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record source identity is invalid", nil,
+		)
+	}
+	path, start, end, err := parseCallerSubject(fact.Assertion.Subject)
+	if err != nil || path != record.Path || start != fact.Atom.StartByte ||
+		end != fact.Atom.EndByte {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record subject is inconsistent", err,
+		)
+	}
+	var detail callerMapDetail
+	if err := decodeCatalogDetail(fact.Assertion.Detail, "go-caller-detail-v1", &detail); err != nil {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record detail is invalid", err,
+		)
+	}
+	if err := validateExactCallerUnitCandidates(detail.UnitCandidates); err != nil {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record unit candidates are invalid", err,
+		)
+	}
+	if err := validateExactCallerContract(record, detail); err != nil {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record semantic contract is invalid", err,
+		)
+	}
+	protocol := detail.Protocol
+	if protocol != "grpc" && protocol != "thrift" ||
+		detail.Resolution != "direct-syntax" ||
+		detail.AttributionDigest != "" {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record resolver identity is inconsistent", nil,
+		)
+	}
+	wantedDomain := map[string]string{"grpc": "grpc-caller", "thrift": "thrift-caller"}[protocol]
+	if pair.Pair.Domain != wantedDomain || pair.Pair.Digest != reference.PairDigest ||
+		pair.Receipt.Name != reference.ArtifactName {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record pair identity is inconsistent", nil,
+		)
+	}
+	var directDetail struct {
+		ResolverCatalogDigest string `json:"resolver_catalog_digest"`
+	}
+	if err := json.Unmarshal([]byte(fact.Assertion.Detail), &directDetail); err != nil ||
+		directDetail.ResolverCatalogDigest != generation.ResolverManifestDigest {
+		return exactCallerRecord{}, exactCallerProjectionError(
+			"caller record resolver manifest is inconsistent", err,
+		)
+	}
+	classification := "resolved_caller"
+	lineage := fact.Assertion.Lineage
+	resolution := "syntax"
+	if fact.Assertion.Predicate == "UNRESOLVED_CALLER" {
+		classification, lineage, resolution = "extractor_abstention", "", "unresolved"
+	}
+	recordID := digestJSON(struct {
+		Generation string                            `json:"generation"`
+		Reference  callerpublication.RecordReference `json:"reference"`
+	}{generation.Digest, reference})
+	return exactCallerRecord{
+		reference: reference, recordID: recordID,
+		protocol: protocol, operation: fact.Assertion.Object, lineage: lineage,
+		classification: classification, resolution: resolution,
+		tier: fact.Assertion.Tier, codeRole: fact.Assertion.CodeRole,
+		path: record.Path, objectID: record.ObjectID,
+		blobDigest: fact.Atom.BlobDigest,
+		startByte:  start, endByte: end,
+		startLine: fact.StartLine, endLine: fact.EndLine,
+		unitGroup: callerUnitGroup(detail), unitState: detail.UnitState,
+		unitReason:       detail.UnitReason,
+		unitCandidates:   cloneExactCallerUnitCandidates(detail.UnitCandidates),
+		unresolvedReason: detail.UnresolvedReason,
+	}, nil
+}
+
+func validateExactCallerContract(
+	record callerleaf.Record,
+	detail callerMapDetail,
+) error {
+	if record.Fact == nil {
+		return errors.New("caller record fact is missing")
+	}
+	assertion := record.Fact.Assertion
+	if err := validateOperation(assertion.Object); err != nil {
+		return err
+	}
+	if !stringIn(assertion.Tier,
+		store.TierExact, store.TierDerived, store.TierHeuristic, store.TierUnresolved) {
+		return errors.New("caller record confidence tier is invalid")
+	}
+	if !stringIn(assertion.CodeRole,
+		"production", "test", "mock", "generated", "vendor") {
+		return errors.New("caller record code role is invalid")
+	}
+	if !stringIn(detail.UnitState, "resolved", "ambiguous", "unavailable") {
+		return errors.New("caller record unit state is invalid")
+	}
+	for _, value := range []string{detail.UnitReason, detail.UnresolvedReason} {
+		if value != "" && !validCatalogFilter(value) {
+			return errors.New("caller record reason is invalid")
+		}
+	}
+	switch assertion.Predicate {
+	case "CALLS_OPERATION":
+		if record.Kind != callerleaf.RecordResult || record.Reason != "" ||
+			!validQueryIdentity(assertion.Lineage) ||
+			assertion.Tier != store.TierHeuristic || detail.UnresolvedReason != "" {
+			return errors.New("caller result record is inconsistent")
+		}
+	case "UNRESOLVED_CALLER":
+		if record.Kind != callerleaf.RecordAbstention ||
+			record.Reason != "unresolved_caller" || assertion.Lineage != "" ||
+			assertion.Tier != store.TierUnresolved || detail.UnresolvedReason == "" {
+			return errors.New("caller abstention record is inconsistent")
+		}
+	default:
+		return errors.New("caller record predicate is invalid")
+	}
+	return nil
+}
+
+func exactCallerProjectionError(message string, cause error) error {
+	if cause == nil {
+		return fmt.Errorf("%w: %s", errExactCallerProjectionInvalid, message)
+	}
+	return fmt.Errorf(
+		"%w: %s: %v", errExactCallerProjectionInvalid, message, cause,
+	)
+}
+
+func exactCallerRecordMatches(record exactCallerRecord, query CallerMapQuery) bool {
+	if record.classification == "resolved_caller" && record.lineage != query.Endpoint.Lineage ||
+		query.PathPrefix != "" && !strings.HasPrefix(record.path, query.PathPrefix) ||
+		query.CodeRole != "" && record.codeRole != query.CodeRole ||
+		query.Tier != "" && record.tier != query.Tier ||
+		query.Freshness == "stale" ||
+		query.Resolution != "any" && query.Resolution != record.resolution {
+		return false
+	}
+	if query.Unit == "" && query.Owner == "" {
+		return true
+	}
+	for _, candidate := range record.unitCandidates {
+		if query.Unit != "" && !callerUnitMatches(candidate, query.Unit) ||
+			query.Owner != "" && !stringSliceContains(candidate.Owners, query.Owner) {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func exactCallerRecordLess(left, right exactCallerRecord, unit bool) bool {
+	if unit && left.unitGroup != right.unitGroup {
+		return left.unitGroup < right.unitGroup
+	}
+	if left.path != right.path {
+		return left.path < right.path
+	}
+	if left.startByte != right.startByte {
+		return left.startByte < right.startByte
+	}
+	return left.recordID < right.recordID
+}
+
+func exactCallerRow(
+	read *callerexecute.PublicationRead,
+	record exactCallerRecord,
+) CallerMapRow {
+	return CallerMapRow{
+		Classification: record.classification, Resolution: record.resolution,
+		Protocol:  map[string]string{"grpc": "protobuf", "thrift": "thrift"}[record.protocol],
+		Operation: record.operation, DeclarationLineage: record.lineage,
+		Tier: record.tier, CodeRole: record.codeRole, Fresh: true,
+		UnitGroup: record.unitGroup,
+		Unit: boundedUnitAttribution(
+			record.unitState, record.unitReason, record.unitCandidates,
+		),
+		Source: CallerMapSource{
+			Repository: callerReadGeneration(read).Repository,
+			Commit:     callerReadGeneration(read).HeadCommit,
+			Path:       record.path, ObjectID: record.objectID,
+			BlobDigest: record.blobDigest, Plane: exactCallerMapPlane,
+			StartByte: record.startByte, EndByte: record.endByte,
+			StartLine: record.startLine, EndLine: record.endLine,
+			AssertionID: record.recordID, RunID: callerReadGeneration(read).Digest,
+			AtomID: record.blobDigest,
+		},
+		UnresolvedReason: record.unresolvedReason,
+	}
+}
+
+func exactCallerDeclaration(
+	ctx context.Context,
+	source store.EvidenceStore,
+	read *callerexecute.PublicationRead,
+	pack protocolPack,
+	query CallerMapQuery,
+) (ContractCatalogClaim, error) {
+	if source == nil || read == nil || read.Resolver == nil || read.Summary == nil {
+		return ContractCatalogClaim{}, huma.Error409Conflict("caller declaration generation is unavailable")
+	}
+	runID := ""
+	for _, declaration := range read.Resolver.Declarations {
+		if declaration.Domain == pack.declarationDomain {
+			runID = declaration.RunID
+			break
+		}
+	}
+	if runID == "" {
+		return ContractCatalogClaim{}, huma.Error404NotFound("caller map endpoint not found")
+	}
+	rows, err := source.ListAssertions(ctx, store.AssertionQuery{
+		Repo: query.Endpoint.Repository, RunID: runID,
+		Predicate: "DECLARES_OPERATION",
+		Object:    strings.TrimPrefix(query.Endpoint.Operation, "/"),
+		Lineage:   query.Endpoint.Lineage, Limit: 1,
+	})
+	if err != nil {
+		return ContractCatalogClaim{}, huma.Error500InternalServerError("read caller declaration", err)
+	}
+	if len(rows) != 1 {
+		return ContractCatalogClaim{}, huma.Error404NotFound("caller map endpoint not found")
+	}
+	claim, _, err := resolveCatalogClaim(
+		ctx, source, rows[0], callerReadGeneration(read).HeadCommit,
+		catalogLocatorsPerClaimLimit,
+	)
+	if err != nil {
+		return ContractCatalogClaim{}, huma.Error500InternalServerError("resolve caller declaration", err)
+	}
+	return claim, nil
+}
+
+func (service *exactCallerMapService) authorize(
+	ctx context.Context,
+	repository string,
+) (store.Repo, VisibilityContext, error) {
+	allow := repoFilter(ctx, service.opts)
+	repo, err := service.opts.Store.GetRepo(ctx, repository)
+	if err != nil && !errors.Is(err, store.ErrNotFound) {
+		return store.Repo{}, VisibilityContext{},
+			huma.Error500InternalServerError("authorize caller map repository", err)
+	}
+	if err == nil && repo == nil {
+		return store.Repo{}, VisibilityContext{},
+			huma.Error500InternalServerError(
+				"authorize caller map repository",
+				errors.New("repository store returned no record"),
+			)
+	}
+	if err != nil || repo.Deleting ||
+		allow != nil && !allow(*repo) {
+		return store.Repo{}, VisibilityContext{}, huma.Error404NotFound("caller map endpoint not found")
+	}
+	return *repo, catalogVisibilityContext(ctx, service.opts, []store.Repo{*repo}), nil
+}
+
+func (service *exactCallerMapService) confirm(
+	ctx context.Context,
+	read *callerexecute.PublicationRead,
+	repository string,
+	visibility VisibilityContext,
+) error {
+	current, err := service.opts.CallerReader.Current(ctx, read)
+	if err != nil {
+		return huma.Error500InternalServerError("confirm caller generation", err)
+	}
+	if !current {
+		return huma.Error409Conflict("caller generation changed while building the response")
+	}
+	_, err = service.confirmAuthorization(ctx, repository, visibility)
+	return err
+}
+
+func (service *exactCallerMapService) confirmAuthorization(
+	ctx context.Context,
+	repository string,
+	visibility VisibilityContext,
+) (store.Repo, error) {
+	repo, confirmed, err := service.authorize(ctx, repository)
+	if err != nil {
+		return store.Repo{}, err
+	}
+	if confirmed != visibility {
+		return store.Repo{}, huma.Error409Conflict("caller map authorization changed while building the response; retry")
+	}
+	return repo, nil
+}
+
+func (service *exactCallerMapService) generation(
+	read *callerexecute.PublicationRead,
+) CallerMapGeneration {
+	generation := callerReadGeneration(read)
+	result := CallerMapGeneration{
+		State: string(read.Availability), Plane: exactCallerMapPlane,
+		Repository: generation.Repository, Commit: generation.HeadCommit,
+		UnitDigest:           generation.UnitDigest,
+		GenerationDigest:     generation.Digest,
+		DeclarationSetDigest: generation.DeclarationSetDigest,
+		CandidateManifest:    generation.CandidateManifestDigest,
+		ResolverManifest:     generation.ResolverManifestDigest,
+	}
+	if read.Summary == nil {
+		return result
+	}
+	result.PairSetDigest = read.Summary.PairSetDigest
+	result.ManifestDigest = read.Summary.ManifestDigest
+	result.PublicationRevision = read.Summary.PublicationRevision
+	result.PairCount = read.Summary.PairCount
+	result.ResultCount = read.Summary.ResultCount
+	result.AbstentionCount = read.Summary.AbstentionCount
+	result.CanonicalBytes = read.Summary.CanonicalBytes
+	return result
+}
+
+func exactIndexKey(read *callerexecute.PublicationRead) string {
+	return digestJSON(struct {
+		Generation  string `json:"generation"`
+		Manifest    string `json:"manifest"`
+		PairSet     string `json:"pair_set"`
+		Revision    uint64 `json:"revision"`
+		Incarnation string `json:"incarnation"`
+	}{
+		read.Summary.Generation.Digest, read.Summary.ManifestDigest,
+		read.Summary.PairSetDigest, read.Summary.PublicationRevision,
+		read.Summary.PublicationIncarnation,
+	})
+}
+
+func exactEndpointKey(protocol, operation string) exactCallerEndpointKey {
+	return exactCallerEndpointKey{protocol: protocol, operation: operation}
+}
+
+func exactCallerRecordIdentityBytes(record exactCallerRecord) int {
+	result := len(record.reference.PairDigest) +
+		len(record.reference.ArtifactName) +
+		len(record.reference.Record.Digest) +
+		len(record.recordID) + len(record.protocol) + len(record.operation) +
+		len(record.lineage) + len(record.classification) + len(record.resolution) +
+		len(record.tier) + len(record.codeRole) + len(record.path) +
+		len(record.objectID) + len(record.blobDigest) + len(record.unitGroup) +
+		len(record.unitState) + len(record.unitReason) + len(record.unresolvedReason)
+	result += len(record.unitCandidates) * exactCallerUnitCandidateStructuralBytes
+	for _, candidate := range record.unitCandidates {
+		result += len(candidate.ID)
+		for _, values := range [][]string{
+			candidate.BuildTargets, candidate.Deployables,
+			candidate.LogicalServices, candidate.Owners,
+		} {
+			for _, value := range values {
+				result += len(value) + exactCallerUnitValueStructuralBytes
+			}
+		}
+	}
+	return result
+}
+
+func exactCallerIdentityAdmits(current, addition int) bool {
+	return current >= 0 && addition >= 0 && current <= exactCallerMapMaxIdentityBytes &&
+		addition <= exactCallerMapMaxIdentityBytes-current
+}
+
+func validateExactCallerUnitCandidates(candidates []CallerMapUnitCandidate) error {
+	if len(candidates) > exactCallerUnitCandidateLimit {
+		return fmt.Errorf("more than %d unit candidates", exactCallerUnitCandidateLimit)
+	}
+	previousID := ""
+	for index, candidate := range candidates {
+		if len(candidate.ID) != len("au_")+64 ||
+			!strings.HasPrefix(candidate.ID, "au_") ||
+			!exactCallerLowerHex(candidate.ID[len("au_"):]) {
+			return fmt.Errorf("candidate %d has a noncanonical id", index)
+		}
+		if previousID != "" && previousID >= candidate.ID {
+			return fmt.Errorf("candidate %d is unordered or duplicated", index)
+		}
+		previousID = candidate.ID
+		for _, values := range [][]string{
+			candidate.BuildTargets, candidate.Deployables,
+			candidate.LogicalServices, candidate.Owners,
+		} {
+			if len(values) > exactCallerUnitValueLimit {
+				return fmt.Errorf("candidate %d has too many attribution values", index)
+			}
+			previous := ""
+			for valueIndex, value := range values {
+				if value == "" || len(value) > exactCallerUnitValueBytes ||
+					!utf8.ValidString(value) {
+					return fmt.Errorf("candidate %d has an invalid attribution value", index)
+				}
+				for _, current := range value {
+					if current < 0x20 || current == 0x7f {
+						return fmt.Errorf("candidate %d attribution value contains a control character", index)
+					}
+				}
+				if valueIndex > 0 && previous >= value {
+					return fmt.Errorf("candidate %d attribution values are unordered or duplicated", index)
+				}
+				previous = value
+			}
+		}
+	}
+	return nil
+}
+
+func cloneExactCallerUnitCandidates(
+	candidates []CallerMapUnitCandidate,
+) []CallerMapUnitCandidate {
+	cloned := make([]CallerMapUnitCandidate, len(candidates))
+	for index, candidate := range candidates {
+		cloned[index] = candidate
+		cloned[index].BuildTargets = cloneExactCallerStrings(candidate.BuildTargets)
+		cloned[index].Deployables = cloneExactCallerStrings(candidate.Deployables)
+		cloned[index].LogicalServices = cloneExactCallerStrings(candidate.LogicalServices)
+		cloned[index].Owners = cloneExactCallerStrings(candidate.Owners)
+	}
+	return cloned
+}
+
+func cloneExactCallerStrings(values []string) []string {
+	if values == nil {
+		return nil
+	}
+	cloned := make([]string, len(values))
+	copy(cloned, values)
+	return cloned
+}
+
+func exactCallerLowerHex(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, current := range value {
+		if current < '0' || current > '9' && current < 'a' || current > 'f' {
+			return false
+		}
+	}
+	return true
+}
+
+func sameExactCallerRecord(left, right exactCallerRecord) bool {
+	left.reference = callerpublication.RecordReference{}
+	right.reference = callerpublication.RecordReference{}
+	return reflect.DeepEqual(left, right)
+}
+
+func (service *exactCallerMapService) acquireIndex(key string) *exactCallerIndex {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	index := service.indexes[key]
+	if index != nil {
+		index.uses++
+	}
+	return index
+}
+
+func (service *exactCallerMapService) releaseIndex(index *exactCallerIndex) {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	if index != nil && index.uses > 0 {
+		index.uses--
+	}
+}
+
+func (service *exactCallerMapService) retainIndex(index *exactCallerIndex) error {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	// Binding expiry must release index pins even when the next request is a
+	// fresh first page rather than a continuation or another binding. Without
+	// this sweep, eight abandoned cursors could keep cache admission wedged
+	// after their documented lifetime.
+	service.expireBindingsLocked(time.Now())
+	if prior := service.indexes[index.key]; prior != nil {
+		return nil
+	}
+	for len(service.indexOrder) >= exactCallerMapMaxIndexes {
+		victimPosition, bindingVictims := service.indexAdmissionVictimLocked()
+		if victimPosition < 0 {
+			return huma.Error503ServiceUnavailable(
+				"caller map index capacity is busy; retry",
+			)
+		}
+		for _, binding := range bindingVictims {
+			service.retireBindingLocked(binding)
+		}
+		victim := service.indexOrder[victimPosition]
+		service.indexOrder = append(
+			service.indexOrder[:victimPosition],
+			service.indexOrder[victimPosition+1:]...,
+		)
+		delete(service.indexes, victim)
+	}
+	service.indexes[index.key] = index
+	index.uses = 1
+	service.indexOrder = append(service.indexOrder, index.key)
+	return nil
+}
+
+func (service *exactCallerMapService) indexAdmissionVictimLocked() (
+	int,
+	[]*exactCallerBinding,
+) {
+	// Prefer an already unbound index so pressure never invalidates a token
+	// needlessly.
+	for position, candidate := range service.indexOrder {
+		if retained := service.indexes[candidate]; retained != nil &&
+			retained.bindings == 0 && retained.uses == 0 {
+			return position, nil
+		}
+	}
+	victimPosition := -1
+	var victimBindings []*exactCallerBinding
+	for position, candidate := range service.indexOrder {
+		retained := service.indexes[candidate]
+		if retained == nil || retained.uses != 0 || retained.bindings == 0 {
+			continue
+		}
+		bindings := make([]*exactCallerBinding, 0, retained.bindings)
+		for _, binding := range service.bindings {
+			if binding != nil && binding.indexKey == candidate &&
+				binding.uses == 0 && !binding.retired && !binding.finalized {
+				bindings = append(bindings, binding)
+			}
+		}
+		// A missing pin is retired in flight; a visible non-idle pin is active.
+		// Neither is reclaimable until its request releases it.
+		if len(bindings) != retained.bindings {
+			continue
+		}
+		if victimPosition < 0 || len(bindings) < len(victimBindings) {
+			victimPosition, victimBindings = position, bindings
+		}
+	}
+	return victimPosition, victimBindings
+}
+
+func (service *exactCallerMapService) retainBinding(binding *exactCallerBinding) error {
+	return service.retainBindingWithUse(binding, false)
+}
+
+func (service *exactCallerMapService) retainActiveBinding(
+	binding *exactCallerBinding,
+) error {
+	return service.retainBindingWithUse(binding, true)
+}
+
+func (service *exactCallerMapService) retainBindingWithUse(
+	binding *exactCallerBinding,
+	active bool,
+) error {
+	// Own an exact-capacity position slice before retaining the binding. A
+	// selective query may have been filtered through a much larger endpoint
+	// slice; retaining that backing allocation would exceed the documented
+	// aggregate-position bound even though len(records) remained within it.
+	positions := make([]int, len(binding.records))
+	copy(positions, binding.records)
+	binding.records = positions
+
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	service.expireBindingsLocked(time.Now())
+	index := service.indexes[binding.indexKey]
+	if index == nil {
+		return huma.Error409Conflict("caller map index snapshot expired")
+	}
+	victims, ok := service.bindingAdmissionVictimsLocked(len(binding.records))
+	if !ok {
+		return huma.Error503ServiceUnavailable(
+			"caller map request binding capacity is busy; retry",
+		)
+	}
+	raw := make([]byte, 18)
+	if _, err := rand.Read(raw); err != nil {
+		return huma.Error500InternalServerError("allocate caller map cursor", err)
+	}
+	binding.id = base64.RawURLEncoding.EncodeToString(raw)
+	// Complete the admission only after both capacity and ID allocation are
+	// known to succeed. Pressure may retire the oldest idle tokens, but never an
+	// active request or a retired binding whose positions remain in use.
+	for _, victim := range victims {
+		service.retireBindingLocked(victim)
+	}
+	service.bindings[binding.id] = binding
+	service.bindingCount++
+	service.bindingRefs += len(binding.records)
+	index.bindings++
+	if active {
+		binding.uses++
+	}
+	return nil
+}
+
+func (service *exactCallerMapService) bindingAdmissionVictimsLocked(
+	incomingRefs int,
+) ([]*exactCallerBinding, bool) {
+	if incomingRefs > exactCallerMapBindingRefs {
+		return nil, false
+	}
+	candidates := make([]*exactCallerBinding, 0, len(service.bindings))
+	for _, candidate := range service.bindings {
+		if candidate != nil && candidate.uses == 0 &&
+			!candidate.retired && !candidate.finalized {
+			candidates = append(candidates, candidate)
+		}
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].createdAt.Equal(candidates[j].createdAt) {
+			return candidates[i].id < candidates[j].id
+		}
+		return candidates[i].createdAt.Before(candidates[j].createdAt)
+	})
+	retainedCount, retainedRefs := service.bindingCount, service.bindingRefs
+	victims := make([]*exactCallerBinding, 0, len(candidates))
+	for retainedCount >= exactCallerMapMaxBindings ||
+		incomingRefs > exactCallerMapBindingRefs-retainedRefs {
+		if len(victims) == len(candidates) {
+			return nil, false
+		}
+		victim := candidates[len(victims)]
+		victims = append(victims, victim)
+		retainedCount--
+		retainedRefs -= len(victim.records)
+	}
+	return victims, true
+}
+
+func (service *exactCallerMapService) acquireBinding(id string) *exactCallerBinding {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	service.expireBindingsLocked(time.Now())
+	binding := service.bindings[id]
+	if binding == nil || binding.retired || binding.finalized {
+		return nil
+	}
+	// A live user keeps the position slice accounted and the reverse index
+	// pinned even when wall-clock expiry or an error retires the map entry.
+	binding.uses++
+	return binding
+}
+
+func (service *exactCallerMapService) releaseBinding(binding *exactCallerBinding) {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	if binding == nil || binding.finalized || binding.uses < 1 {
+		return
+	}
+	binding.uses--
+	if binding.retired && binding.uses == 0 {
+		service.finalizeBindingLocked(binding)
+	}
+}
+
+func (service *exactCallerMapService) dropBinding(id string) {
+	service.mu.Lock()
+	defer service.mu.Unlock()
+	if binding := service.bindings[id]; binding != nil {
+		service.retireBindingLocked(binding)
+	}
+}
+
+func (service *exactCallerMapService) expireBindingsLocked(now time.Time) {
+	for _, binding := range service.bindings {
+		if now.Sub(binding.createdAt) > exactCallerMapBindingLifetime {
+			service.retireBindingLocked(binding)
+		}
+	}
+}
+
+func (service *exactCallerMapService) retireBindingLocked(
+	binding *exactCallerBinding,
+) {
+	if binding == nil || binding.retired || binding.finalized {
+		return
+	}
+	binding.retired = true
+	if service.bindings[binding.id] == binding {
+		delete(service.bindings, binding.id)
+	}
+	if binding.uses == 0 {
+		service.finalizeBindingLocked(binding)
+	}
+}
+
+func (service *exactCallerMapService) finalizeBindingLocked(
+	binding *exactCallerBinding,
+) {
+	if binding == nil || binding.finalized {
+		return
+	}
+	binding.finalized = true
+	service.bindingRefs -= len(binding.records)
+	if service.bindingCount > 0 {
+		service.bindingCount--
+	}
+	if index := service.indexes[binding.indexKey]; index != nil &&
+		index.bindings > 0 {
+		index.bindings--
+	}
+}
+
+func (service *exactCallerMapService) encodeSigned(value any) string {
+	raw, _ := json.Marshal(value)
+	signature := hmac.New(sha256.New, service.secret[:])
+	_, _ = signature.Write(raw)
+	return base64.RawURLEncoding.EncodeToString(raw) + "." +
+		base64.RawURLEncoding.EncodeToString(signature.Sum(nil))
+}
+
+func (service *exactCallerMapService) decodeCursor(encoded string) (exactCallerCursor, error) {
+	var cursor exactCallerCursor
+	if len(encoded) > callerMapCursorLimit {
+		return cursor, huma.Error400BadRequest("caller map cursor is invalid")
+	}
+	if err := service.decodeSigned(encoded, &cursor); err != nil ||
+		cursor.Schema != exactCallerMapCursorVersion {
+		return exactCallerCursor{}, huma.Error400BadRequest("caller map cursor is invalid")
+	}
+	return cursor, nil
+}
+
+func (service *exactCallerMapService) decodeSigned(encoded string, destination any) error {
+	payload, signature, ok := strings.Cut(encoded, ".")
+	if !ok {
+		return errors.New("signed value has no authentication")
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(payload)
+	if err != nil || base64.RawURLEncoding.EncodeToString(raw) != payload ||
+		len(raw) > callerMapCursorLimit || !json.Valid(raw) {
+		return errors.New("signed value is invalid")
+	}
+	want, err := base64.RawURLEncoding.DecodeString(signature)
+	if err != nil || base64.RawURLEncoding.EncodeToString(want) != signature {
+		return errors.New("signed value authentication is invalid")
+	}
+	mac := hmac.New(sha256.New, service.secret[:])
+	_, _ = mac.Write(raw)
+	if !hmac.Equal(want, mac.Sum(nil)) {
+		return errors.New("signed value authentication differs")
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(destination); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *exactCallerMapService) encodeCitation(
+	binding *exactCallerBinding,
+	position int,
+	record exactCallerRecord,
+) (string, error) {
+	if binding == nil || binding.id == "" || position < 0 || record.recordID == "" {
+		return "", errors.New("caller citation binding is invalid")
+	}
+	citation := exactCallerCitation{
+		Schema:     exactCallerCitationVersion,
+		Repository: binding.generation.Repository, Binding: binding.id,
+		Position: position, RecordID: record.recordID,
+	}
+	encoded := service.encodeSigned(citation)
+	if len(encoded) > callerMapCursorLimit {
+		return "", errors.New("caller citation exceeds its bounded envelope")
+	}
+	return encoded, nil
+}
+
+func (service *exactCallerMapService) readCitation(
+	ctx context.Context,
+	encoded string,
+) (*CallerMapCitation, error) {
+	if service == nil || !catalogAuthenticated(ctx, service.opts) {
+		return nil, huma.Error404NotFound("caller citation not found")
+	}
+	if len(encoded) > callerMapCursorLimit {
+		return nil, huma.Error400BadRequest("caller citation is invalid")
+	}
+	var citation exactCallerCitation
+	if err := service.decodeSigned(encoded, &citation); err != nil ||
+		citation.Schema != exactCallerCitationVersion || citation.Repository == "" ||
+		citation.Binding == "" ||
+		citation.Position < 0 || citation.RecordID == "" {
+		return nil, huma.Error400BadRequest("caller citation is invalid")
+	}
+	_, visibility, err := service.authorize(
+		ctx, citation.Repository,
+	)
+	if err != nil {
+		return nil, err
+	}
+	finishExactRead, err := service.beginExactRead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer finishExactRead()
+	binding := service.acquireBinding(citation.Binding)
+	if binding == nil {
+		return nil, huma.Error409Conflict("caller citation snapshot expired")
+	}
+	defer service.releaseBinding(binding)
+	if binding.generation.Repository != citation.Repository {
+		return nil, huma.Error400BadRequest("caller citation is invalid")
+	}
+	if visibility != binding.visibility {
+		return nil, huma.Error404NotFound("caller citation not found")
+	}
+	index := service.acquireIndex(binding.indexKey)
+	if index == nil {
+		service.dropBinding(binding.id)
+		return nil, huma.Error409Conflict("caller citation snapshot expired")
+	}
+	defer service.releaseIndex(index)
+	if citation.Position >= len(index.records) {
+		return nil, huma.Error400BadRequest("caller citation is invalid")
+	}
+	indexed := index.records[citation.Position]
+	if indexed.recordID != citation.RecordID {
+		return nil, huma.Error400BadRequest("caller citation is invalid")
+	}
+	finishCitationRead, err := service.beginCitationRead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer finishCitationRead()
+	read, err := service.opts.CallerReader.Reopen(ctx, binding.publication)
+	if err != nil {
+		return nil, exactCallerReaderError("open caller citation", err)
+	}
+	if read == nil {
+		return nil, huma.Error500InternalServerError(
+			"open caller citation", errors.New("caller reader returned no state"),
+		)
+	}
+	defer func() { _ = read.Release() }()
+	if read.Availability != callerexecute.PublicationCurrent {
+		return nil, huma.Error409Conflict("caller citation generation is no longer current")
+	}
+	currentGeneration := service.generation(read)
+	if currentGeneration.Repository != binding.generation.Repository ||
+		currentGeneration.Commit != binding.generation.Commit ||
+		currentGeneration.GenerationDigest != binding.generation.GenerationDigest ||
+		currentGeneration.ManifestDigest != binding.generation.ManifestDigest ||
+		currentGeneration.PairSetDigest != binding.generation.PairSetDigest ||
+		currentGeneration.PublicationRevision != binding.generation.PublicationRevision {
+		return nil, huma.Error409Conflict("caller citation generation is no longer current")
+	}
+	pair, record, err := read.Lease().ReadRecord(ctx, indexed.reference)
+	if err != nil {
+		if errors.Is(err, callerleaf.ErrInvalidArtifact) {
+			return nil, huma.Error409Conflict("caller citation record is no longer current")
+		}
+		return nil, huma.Error500InternalServerError("read caller citation record", err)
+	}
+	projected, err := projectExactCallerRecord(
+		callerReadGeneration(read), pair, indexed.reference, record,
+	)
+	if err != nil || !sameExactCallerRecord(indexed, projected) {
+		return nil, huma.Error400BadRequest("caller citation is invalid")
+	}
+	repositoryDir, err := exactCallerCitationRepositoryDir(
+		service.opts.DataDir, binding.generation.Repository,
+	)
+	if err != nil {
+		return nil, err
+	}
+	resolved, blobBytes, err := gitobj.ResolveBlob(
+		ctx, repositoryDir, binding.generation.Commit+":"+indexed.path,
+	)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return nil, huma.Error409Conflict("caller citation immutable object differs")
+		}
+		return nil, huma.Error500InternalServerError("resolve caller citation object", err)
+	}
+	if resolved != indexed.objectID {
+		return nil, huma.Error409Conflict("caller citation immutable object differs")
+	}
+	if blobBytes > callerleaf.MaxDirectSourceBytes {
+		return nil, huma.Error409Conflict("caller citation immutable content differs")
+	}
+	blob, err := gitobj.ReadBlob(
+		ctx, repositoryDir, indexed.objectID, callerleaf.MaxDirectSourceBytes,
+	)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) || errors.Is(err, gitobj.ErrTooLarge) {
+			return nil, huma.Error409Conflict("caller citation immutable content differs")
+		}
+		return nil, huma.Error500InternalServerError("read caller citation object", err)
+	}
+	digest := sha256.Sum256(blob)
+	if "sha256:"+hex.EncodeToString(digest[:]) != indexed.blobDigest ||
+		indexed.startByte < 0 || indexed.endByte <= indexed.startByte ||
+		indexed.endByte > len(blob) {
+		return nil, huma.Error409Conflict("caller citation immutable content differs")
+	}
+	if err := service.confirm(
+		ctx, read, binding.generation.Repository, visibility,
+	); err != nil {
+		return nil, err
+	}
+	return &CallerMapCitation{
+		SchemaVersion: exactCallerCitationVersion, Generation: binding.generation,
+		Source: CallerMapSource{
+			Repository: binding.generation.Repository, Commit: binding.generation.Commit,
+			Path: indexed.path, ObjectID: indexed.objectID,
+			BlobDigest: indexed.blobDigest, Plane: exactCallerMapPlane,
+			StartByte: indexed.startByte, EndByte: indexed.endByte,
+			StartLine: indexed.startLine, EndLine: indexed.endLine,
+			AssertionID: indexed.recordID, RunID: binding.generation.GenerationDigest,
+			AtomID: indexed.blobDigest,
+		},
+		Content: string(blob[indexed.startByte:indexed.endByte]),
+	}, nil
+}
+
+func (service *exactCallerMapService) beginCitationRead(
+	ctx context.Context,
+) (func(), error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	select {
+	case service.citationRead <- struct{}{}:
+		return func() { <-service.citationRead }, nil
+	default:
+		return nil, huma.Error503ServiceUnavailable(
+			"caller citation read capacity is busy; retry",
+		)
+	}
+}
+
+func (service *exactCallerMapService) beginExactRead(
+	ctx context.Context,
+) (func(), error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	select {
+	case service.exactRead <- struct{}{}:
+		return func() { <-service.exactRead }, nil
+	default:
+		return nil, huma.Error503ServiceUnavailable(
+			"caller map exact read capacity is busy; retry",
+		)
+	}
+}
+
+func exactCallerCitationRepositoryDir(dataDir, repository string) (string, error) {
+	directory, err := phebssync.SafeRepoDir(dataDir, repository)
+	if err == nil {
+		return directory, nil
+	}
+	if errors.Is(err, phebssync.ErrBadInput) {
+		return "", huma.Error404NotFound("caller citation not found")
+	}
+	return "", huma.Error500InternalServerError(
+		"resolve caller citation repository", err,
+	)
+}
+
+func callerReadGeneration(read *callerexecute.PublicationRead) store.CallerGenerationIdentity {
+	if read == nil {
+		return store.CallerGenerationIdentity{}
+	}
+	if read.Summary != nil {
+		return read.Summary.Generation
+	}
+	if read.Publication != nil {
+		return read.Publication.Generation
+	}
+	return read.ExpectedGeneration
+}
+
+func exactCallerReaderError(action string, err error) error {
+	if errors.Is(err, callerleaf.ErrCapacity) {
+		return huma.Error503ServiceUnavailable(
+			"caller publication capacity is busy; retry",
+		)
+	}
+	return huma.Error500InternalServerError(action, err)
+}

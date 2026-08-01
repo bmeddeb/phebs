@@ -32,10 +32,29 @@ const (
 // CallerMapService is the shared, transport-neutral exact-caller read engine.
 // Huma is only an adapter; T20.11 binds MCP to these same methods.
 type CallerMapService struct {
-	opts Options
+	opts  Options
+	exact *exactCallerMapService
 }
 
 func NewCallerMapService(opts Options) *CallerMapService {
+	if !opts.CallerMapEnabled ||
+		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil ||
+		opts.CallerReader == nil || strings.TrimSpace(opts.DataDir) == "" {
+		return nil
+	}
+	service := &CallerMapService{opts: opts}
+	service.exact = newExactCallerMapService(opts)
+	if service.exact == nil {
+		return nil
+	}
+	return service
+}
+
+// NewLegacyCallerMapService keeps the pre-T30.6j evidence reader available
+// only to the comparison and Workbench integrations whose generation-bound
+// migrations are deliberately split into T30.6k and T30.6l. New product
+// routes must use NewCallerMapService.
+func NewLegacyCallerMapService(opts Options) *CallerMapService {
 	if !opts.CallerMapEnabled ||
 		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil {
 		return nil
@@ -89,6 +108,9 @@ type CallerMapSource struct {
 	Repository  string `json:"repository"`
 	Commit      string `json:"commit"`
 	Path        string `json:"path"`
+	ObjectID    string `json:"object_id,omitempty"`
+	BlobDigest  string `json:"blob_digest,omitempty"`
+	Plane       string `json:"plane,omitempty"`
 	StartByte   int    `json:"start_byte"`
 	EndByte     int    `json:"end_byte"`
 	StartLine   int    `json:"start_line"`
@@ -96,6 +118,31 @@ type CallerMapSource struct {
 	AssertionID string `json:"assertion_id"`
 	RunID       string `json:"run_id"`
 	AtomID      string `json:"atom_id"`
+	// Citation is an opaque, exact-range capability. It is useful only at the
+	// dedicated caller-citation read boundary, which independently rechecks
+	// repository permission and generation authority.
+	Citation string `json:"citation,omitempty"`
+}
+
+type CallerMapGeneration struct {
+	State                 string `json:"state"`
+	Reason                string `json:"reason,omitempty"`
+	Plane                 string `json:"plane"`
+	Repository            string `json:"repository"`
+	Commit                string `json:"commit,omitempty"`
+	UnitDigest            string `json:"unit_digest,omitempty"`
+	GenerationDigest      string `json:"generation_digest,omitempty"`
+	DeclarationSetDigest  string `json:"declaration_set_digest,omitempty"`
+	CandidateManifest     string `json:"candidate_manifest_digest,omitempty"`
+	ResolverManifest      string `json:"resolver_manifest_digest,omitempty"`
+	PairSetDigest         string `json:"pair_set_digest,omitempty"`
+	ManifestDigest        string `json:"manifest_digest,omitempty"`
+	PublicationRevision   uint64 `json:"publication_revision,omitempty"`
+	PairCount             int    `json:"pair_count,omitempty"`
+	ResultCount           int    `json:"result_count,omitempty"`
+	AbstentionCount       int    `json:"abstention_count,omitempty"`
+	CanonicalBytes        int64  `json:"canonical_bytes,omitempty"`
+	ExcludedGoTestRecords int    `json:"excluded_go_test_records,omitempty"`
 }
 
 type CallerMapRow struct {
@@ -125,17 +172,19 @@ type CallerMapPagination struct {
 }
 
 type CallerMapPage struct {
-	SchemaVersion     string                      `json:"schema_version"`
-	Query             CallerMapQuery              `json:"query"`
-	Declaration       ContractCatalogClaim        `json:"declaration"`
-	Rows              []CallerMapRow              `json:"rows"`
-	Groups            []CallerMapGroup            `json:"groups,omitempty"`
-	TotalMatchingRows int                         `json:"total_matching_rows"`
-	Pagination        CallerMapPagination         `json:"pagination"`
-	CoverageDigest    string                      `json:"coverage_digest"`
-	AttributionDigest string                      `json:"attribution_digest"`
-	Coverage          extract.CoverageCertificate `json:"coverage"`
-	Caveat            string                      `json:"caveat"`
+	SchemaVersion     string                       `json:"schema_version"`
+	Query             CallerMapQuery               `json:"query"`
+	Declaration       *ContractCatalogClaim        `json:"declaration,omitempty"`
+	Rows              []CallerMapRow               `json:"rows"`
+	Groups            []CallerMapGroup             `json:"groups,omitempty"`
+	TotalMatchingRows *int                         `json:"total_matching_rows,omitempty"`
+	Pagination        CallerMapPagination          `json:"pagination"`
+	Generation        *CallerMapGeneration         `json:"generation,omitempty"`
+	MatchingRowsState string                       `json:"matching_rows_state,omitempty"`
+	CoverageDigest    string                       `json:"coverage_digest,omitempty"`
+	AttributionDigest string                       `json:"attribution_digest,omitempty"`
+	Coverage          *extract.CoverageCertificate `json:"coverage,omitempty"`
+	Caveat            string                       `json:"caveat"`
 }
 
 type callerMapDetail struct {
@@ -174,6 +223,35 @@ type callerMapCursor struct {
 }
 
 func (s *CallerMapService) List(
+	ctx context.Context,
+	query CallerMapQuery,
+	pageSize int,
+	cursor string,
+) (*CallerMapPage, error) {
+	if s != nil && s.exact != nil {
+		return s.exact.list(ctx, query, pageSize, cursor)
+	}
+	return s.listLegacy(ctx, query, pageSize, cursor)
+}
+
+// ReadCitation reauthorizes and reads only the immutable byte range carried
+// by one exact repository-overlay citation. Legacy evidence readers have no
+// citation capability.
+func (s *CallerMapService) ReadCitation(
+	ctx context.Context,
+	citation string,
+) (*CallerMapCitation, error) {
+	if s == nil || s.exact == nil {
+		return nil, huma.Error503ServiceUnavailable("caller citation unavailable")
+	}
+	return s.exact.readCitation(ctx, citation)
+}
+
+func (s *CallerMapService) CitationAvailable() bool {
+	return s != nil && s.exact != nil
+}
+
+func (s *CallerMapService) listLegacy(
 	ctx context.Context,
 	query CallerMapQuery,
 	pageSize int,
@@ -316,15 +394,19 @@ func (s *CallerMapService) List(
 		}
 		return &CallerMapPage{
 			SchemaVersion: callerMapSchemaVersion, Query: query,
-			Declaration: declaration, Rows: rows,
+			Declaration: &declaration, Rows: rows,
 			Groups:            callerMapGroups(rows, query.Ordering),
-			TotalMatchingRows: len(projections), Pagination: pagination,
+			TotalMatchingRows: callerMapTotal(len(projections)), Pagination: pagination,
 			CoverageDigest:    certificate.Digest,
-			AttributionDigest: attributionDigest, Coverage: *certificate,
+			AttributionDigest: attributionDigest, Coverage: certificate,
 			Caveat: "Static source evidence only; unresolved and unattributed rows are retained, and no absence or runtime-completeness conclusion is implied.",
 		}, nil
 	}
 	return nil, huma.Error409Conflict("evidence changed while building the caller map; retry")
+}
+
+func callerMapTotal(value int) *int {
+	return &value
 }
 
 func normalizeCallerMapQuery(query CallerMapQuery) CallerMapQuery {
@@ -695,14 +777,14 @@ func resolveCallerMapProjection(
 }
 
 func boundedUnitAttribution(state, reason string, candidates []CallerMapUnitCandidate) CallerMapUnitAttribution {
+	limit := min(len(candidates), callerMapUnitCandidateLimit)
+	bounded := make([]CallerMapUnitCandidate, limit)
+	copy(bounded, candidates[:limit])
 	attribution := CallerMapUnitAttribution{
 		State:          state,
 		Reason:         reason,
 		CandidateTotal: len(candidates),
-		Candidates:     append([]CallerMapUnitCandidate(nil), candidates...),
-	}
-	if len(attribution.Candidates) > callerMapUnitCandidateLimit {
-		attribution.Candidates = attribution.Candidates[:callerMapUnitCandidateLimit]
+		Candidates:     bounded,
 	}
 	return attribution
 }
@@ -895,4 +977,22 @@ func registerCallerMapAPI(api huma.API, opts Options) {
 		}
 		return &callerMapOut{Body: *result}, nil
 	})
+	if service.exact != nil {
+		type callerCitationIn struct {
+			Citation string `query:"citation" required:"true" maxLength:"16384"`
+		}
+		type callerCitationOut struct {
+			Body CallerMapCitation
+		}
+		huma.Get(api, "/api/contract_callers/citation", func(
+			ctx context.Context,
+			in *callerCitationIn,
+		) (*callerCitationOut, error) {
+			result, err := service.ReadCitation(ctx, in.Citation)
+			if err != nil {
+				return nil, err
+			}
+			return &callerCitationOut{Body: *result}, nil
+		})
+	}
 }

@@ -854,7 +854,36 @@ func (worker *Worker) currentAuthority(
 	ctx context.Context,
 	repository string,
 ) (*authority, error) {
-	repo, err := worker.store.GetRepo(ctx, repository)
+	return currentAuthority(ctx, worker.store, worker.registry, repository)
+}
+
+// authorityStore is the read-only subset needed to reconstruct the exact
+// caller generation selected by current repository, candidate, and resolver
+// authority. Workers and product readers share this function so neither can
+// accidentally drift from the other's generation fence.
+type authorityStore interface {
+	GetRepo(context.Context, string) (*store.Repo, error)
+	GetCandidateManifestPublication(
+		context.Context, string,
+	) (*store.CandidateManifestPublication, error)
+	GetResolverCatalogPublication(
+		context.Context, string,
+	) (*store.ResolverCatalogPublication, error)
+	ResolverCatalogPublicationCurrent(
+		context.Context, store.ResolverCatalogPublication,
+	) (bool, error)
+}
+
+func currentAuthority(
+	ctx context.Context,
+	state authorityStore,
+	registry *Registry,
+	repository string,
+) (*authority, error) {
+	if state == nil || registry == nil {
+		return nil, errors.New("caller generation authority is not configured")
+	}
+	repo, err := state.GetRepo(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, nil
 	}
@@ -872,21 +901,21 @@ func (worker *Worker) currentAuthority(
 			return nil, err
 		}
 	}
-	candidatePointer, err := worker.store.GetCandidateManifestPublication(ctx, repository)
+	candidatePointer, err := state.GetCandidateManifestPublication(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	resolverPointer, err := worker.store.GetResolverCatalogPublication(ctx, repository)
+	resolverPointer, err := state.GetResolverCatalogPublication(ctx, repository)
 	if errors.Is(err, store.ErrNotFound) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	resolverCurrent, err := worker.store.ResolverCatalogPublicationCurrent(
+	resolverCurrent, err := state.ResolverCatalogPublicationCurrent(
 		ctx, *resolverPointer,
 	)
 	if err != nil {
@@ -897,7 +926,7 @@ func (worker *Worker) currentAuthority(
 	}
 	semantic, err := GenerationIdentity(GenerationAuthority{
 		Repository: repo, Candidate: candidatePointer, Resolver: resolverPointer,
-	}, worker.registry)
+	}, registry)
 	if err != nil {
 		return nil, nil
 	}
@@ -912,7 +941,7 @@ func (worker *Worker) currentAuthority(
 		request: extract.CandidateManifestRequest{
 			Repository: repository, Commit: repo.IndexedCommitHash,
 			AnalysisUnit: analysisunit.CloneState(repo.IndexedAnalysisUnit),
-			Domains:      worker.registry.CandidateDomains(),
+			Domains:      registry.CandidateDomains(),
 		},
 	}, nil
 }

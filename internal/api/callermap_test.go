@@ -40,7 +40,7 @@ func TestCallerMapPagesExactIdentityAndHidesInvisibleRepositories(t *testing.T) 
 	}
 	if first.SchemaVersion != "caller-map-v1" ||
 		first.Query.Endpoint.Lineage != callerMapLineage ||
-		first.TotalMatchingRows != 3 || first.Pagination.Complete ||
+		first.TotalMatchingRows == nil || *first.TotalMatchingRows != 3 || first.Pagination.Complete ||
 		first.Pagination.NextCursor == "" || len(first.Rows) != 2 ||
 		first.AttributionDigest == "" || len(first.Groups) == 0 {
 		t.Fatalf("first caller page = %+v", first)
@@ -179,7 +179,7 @@ func TestCallerMapEveryFilterAndOrderingIsPinned(t *testing.T) {
 				callerMapTarget(testCase.query+"&page_size=100"), &page,
 			)
 			if code != http.StatusOK || len(page.Rows) != testCase.want ||
-				page.TotalMatchingRows != testCase.want {
+				page.TotalMatchingRows == nil || *page.TotalMatchingRows != testCase.want {
 				t.Fatalf("filtered page = %d %s / %+v", code, body, page)
 			}
 			if testCase.firstID != "" &&
@@ -406,6 +406,10 @@ func callerMapOptions(
 ) api.Options {
 	options := catalogOptions(st, principal, visible)
 	options.CallerMapEnabled = true
+	// These retained T20 behavior fixtures exercise the legacy evidence plane.
+	// T30.6j exact-publication fixtures live separately and bind the production
+	// constructor through CallerReader.
+	options.CallerMap = api.NewLegacyCallerMapService(options)
 	return options
 }
 

@@ -196,19 +196,19 @@ func (fake *impactCallerFake) List(
 	return &CallerMapPage{
 		SchemaVersion: callerMapSchemaVersion,
 		Query:         query,
-		Declaration: ContractCatalogClaim{
+		Declaration: &ContractCatalogClaim{
 			AssertionID: "caller-declaration",
 			Sources:     []ContractCatalogSource{},
 		},
 		Rows:              rows,
 		Groups:            []CallerMapGroup{},
-		TotalMatchingRows: fake.pages * len(rows),
+		TotalMatchingRows: callerMapTotal(fake.pages * len(rows)),
 		Pagination: CallerMapPagination{
 			Complete: complete, NextCursor: next,
 		},
 		CoverageDigest:    coverage.Digest,
 		AttributionDigest: "sha256:" + strings.Repeat("b", 64),
-		Coverage:          coverage,
+		Coverage:          &coverage,
 	}, nil
 }
 

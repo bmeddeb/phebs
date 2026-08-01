@@ -97,9 +97,11 @@ func NewWorkbenchImpactService(opts Options) *WorkbenchImpactService {
 	if catalog == nil {
 		catalog = NewContractCatalogService(opts)
 	}
-	callers := opts.CallerMap
+	// T30.6j intentionally moves only the public Caller Map. Workbench's
+	// revision/evidence snapshot remains on its legacy plane until T30.6l.
+	callers := opts.LegacyCallerMap
 	if callers == nil {
-		callers = NewCallerMapService(opts)
+		callers = NewLegacyCallerMapService(opts)
 	}
 	comparison := opts.CallerComparison
 	if comparison == nil {
@@ -790,6 +792,10 @@ func (service *WorkbenchImpactService) readWorkbenchCallerStream(
 	if err != nil {
 		return workbenchImpactStreamCursor{}, nil, err
 	}
+	if value.TotalMatchingRows == nil || value.Declaration == nil {
+		return workbenchImpactStreamCursor{}, nil,
+			huma.Error409Conflict("workbench impact caller snapshot is unavailable")
+	}
 	snapshot := digestJSON(struct {
 		Query             CallerMapQuery       `json:"query"`
 		Declaration       ContractCatalogClaim `json:"declaration"`
@@ -798,8 +804,8 @@ func (service *WorkbenchImpactService) readWorkbenchCallerStream(
 		AttributionDigest string               `json:"attribution_digest"`
 	}{
 		Query:             value.Query,
-		Declaration:       value.Declaration,
-		Total:             value.TotalMatchingRows,
+		Declaration:       *value.Declaration,
+		Total:             *value.TotalMatchingRows,
 		CoverageDigest:    value.CoverageDigest,
 		AttributionDigest: value.AttributionDigest,
 	})
@@ -809,11 +815,15 @@ func (service *WorkbenchImpactService) readWorkbenchCallerStream(
 				"workbench impact caller snapshot is no longer valid",
 			)
 	}
+	if value.Coverage == nil {
+		return workbenchImpactStreamCursor{}, nil,
+			huma.Error409Conflict("workbench impact caller coverage is unavailable")
+	}
 	workbenchAddCoverage(
 		page,
 		"contract-caller-map",
 		workbenchSelectionTarget(selection),
-		value.Coverage,
+		*value.Coverage,
 	)
 	workbenchAddCapability(
 		page,
@@ -846,11 +856,11 @@ func (service *WorkbenchImpactService) readWorkbenchCallerStream(
 	return state, &WorkbenchCallerImpact{
 		Selection:            selection,
 		Query:                value.Query,
-		Declaration:          value.Declaration,
+		Declaration:          *value.Declaration,
 		ResolvedCallers:      resolved,
 		ExtractorAbstentions: abstentions,
 		Groups:               slices.Clone(value.Groups),
-		TotalMatchingRows:    value.TotalMatchingRows,
+		TotalMatchingRows:    *value.TotalMatchingRows,
 		Pagination:           value.Pagination,
 		CoverageDigest:       value.CoverageDigest,
 		AttributionDigest:    value.AttributionDigest,

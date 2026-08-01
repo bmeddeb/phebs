@@ -28,7 +28,8 @@ type ContractCatalogQueries interface {
 	) (*api.ContractCatalogOperation, error)
 }
 
-// CallerMapQueries is the transport-neutral paged read boundary from T20.10.
+// CallerMapQueries is the transport-neutral paged read boundary. T30.6j moves
+// the public implementation to one exact complete repository generation.
 // MCP forwards the complete query and returns its response without filtering,
 // regrouping, cursor translation, or summary.
 type CallerMapQueries interface {
@@ -38,6 +39,11 @@ type CallerMapQueries interface {
 		int,
 		string,
 	) (*api.CallerMapPage, error)
+}
+
+type callerCitationQueries interface {
+	CitationAvailable() bool
+	ReadCitation(context.Context, string) (*api.CallerMapCitation, error)
 }
 
 type contractOperationResult struct {
@@ -147,7 +153,8 @@ func registerCallerMapTools(s *sdk.Server, opts Options) {
 		Name: "list_operation_callers",
 		Description: "Page the exact declaration-proven Caller Map for one selected endpoint. Returns every " +
 			"shared-service row verbatim with source citation, unit-attribution ambiguity, extractor abstention, " +
-			"coverage and attribution digests, applied filters, caveat, and opaque continuation cursor. " +
+			"complete-generation state, exact-or-unavailable total state, applied filters, caveat, and " +
+			"revision-bound opaque continuation cursor. " +
 			"Static evidence does not establish runtime use, completeness, absence, or migration safety.",
 		OutputSchema: callerMapPageOutputSchema(),
 	}, func(
@@ -175,6 +182,32 @@ func registerCallerMapTools(s *sdk.Server, opts Options) {
 		}
 		return nil, *result, nil
 	})
+
+	citations, ok := opts.CallerMap.(callerCitationQueries)
+	if !ok || !citations.CitationAvailable() {
+		return
+	}
+	type callerCitationIn struct {
+		Citation string `json:"citation" jsonschema:"opaque exact-range citation returned by list_operation_callers"`
+	}
+	sdk.AddTool(s, &sdk.Tool{
+		Name: "read_operation_caller_citation",
+		Description: "Read only the immutable byte range named by one repository-overlay Caller Map citation. " +
+			"The shared service rechecks repository authorization, full caller generation identity, publication " +
+			"revision, record position, commit/path object identity, and blob digest. It grants no tree, directory, " +
+			"or unrelated source access.",
+		OutputSchema: callerCitationOutputSchema(),
+	}, func(
+		ctx context.Context,
+		_ *sdk.CallToolRequest,
+		in callerCitationIn,
+	) (*sdk.CallToolResult, api.CallerMapCitation, error) {
+		result, err := citations.ReadCitation(ctx, in.Citation)
+		if err != nil {
+			return nil, api.CallerMapCitation{}, err
+		}
+		return nil, *result, nil
+	})
 }
 
 func contractCatalogListOutputSchema() map[string]any {
@@ -198,9 +231,8 @@ func contractCatalogListOutputSchema() map[string]any {
 func callerMapPageOutputSchema() map[string]any {
 	return topLevelOutputSchema(
 		[]string{
-			"schema_version", "query", "declaration", "rows",
-			"total_matching_rows", "pagination", "coverage_digest",
-			"attribution_digest", "coverage", "caveat",
+			"schema_version", "query", "rows", "pagination", "generation",
+			"matching_rows_state", "caveat",
 		},
 		map[string]any{
 			"schema_version":      map[string]any{"type": "string"},
@@ -210,10 +242,24 @@ func callerMapPageOutputSchema() map[string]any {
 			"groups":              objectArraySchema(),
 			"total_matching_rows": map[string]any{"type": "integer"},
 			"pagination":          map[string]any{"type": "object"},
+			"generation":          map[string]any{"type": "object"},
+			"matching_rows_state": map[string]any{"type": "string"},
 			"coverage_digest":     map[string]any{"type": "string"},
 			"attribution_digest":  map[string]any{"type": "string"},
 			"coverage":            map[string]any{"type": "object"},
 			"caveat":              map[string]any{"type": "string"},
+		},
+	)
+}
+
+func callerCitationOutputSchema() map[string]any {
+	return topLevelOutputSchema(
+		[]string{"schema_version", "generation", "source", "content"},
+		map[string]any{
+			"schema_version": map[string]any{"type": "string"},
+			"generation":     map[string]any{"type": "object"},
+			"source":         map[string]any{"type": "object"},
+			"content":        map[string]any{"type": "string"},
 		},
 	)
 }

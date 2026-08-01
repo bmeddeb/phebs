@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+	"sync/atomic"
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
@@ -18,6 +19,9 @@ const (
 	// publication identities. Store-authoritative bytes remain cold-openable.
 	MaxRegistryPublications = 8
 	MaxRegistryPairRefs     = callerleaf.MaxExpectedPairs
+	// MaxConcurrentColdAdmissions bounds cross-repository manifest/leaf content
+	// validation. Warm leases never enter this gate.
+	MaxConcurrentColdAdmissions = 2
 
 	// MaxRegistryAuthorityTokens is the installation-wide ceiling for compact
 	// cleanup authority retained after parsed-state eviction. Each token is only
@@ -63,10 +67,11 @@ type registrySlot struct {
 // registry only prevents retired leaf bytes from being removed while a reader
 // still holds them.
 type Registry struct {
-	root    string
-	mu      sync.Mutex
-	slots   map[string]*registrySlot
-	entries map[*registryEntry]*registrySlot
+	root           string
+	coldAdmissions chan struct{}
+	mu             sync.Mutex
+	slots          map[string]*registrySlot
+	entries        map[*registryEntry]*registrySlot
 	// authorities is keyed by the same cryptographic repository directory that
 	// owns the physical publication. It deliberately retains neither repository
 	// spelling, semantic generation, pair arrays, nor aggregate receipts.
@@ -83,14 +88,36 @@ type Lease struct {
 	// acquisitions without changing the snapshot already handed to a reader.
 	publication *Publication
 	once        sync.Once
+	released    atomic.Bool
+}
+
+// RecordReference binds one leaf-local record reference to the exact pair and
+// artifact that produced it. PairIndex is an implementation position rather
+// than caller authority; the pair digest and artifact name are rechecked on
+// every exact reread.
+type RecordReference struct {
+	PairIndex    int
+	PairDigest   string
+	ArtifactName string
+	Record       callerleaf.RecordReference
 }
 
 func NewRegistry(root string) *Registry {
 	return &Registry{
-		root:        root,
-		slots:       make(map[string]*registrySlot),
-		entries:     make(map[*registryEntry]*registrySlot),
-		authorities: make(map[string]registryAuthority),
+		root:           root,
+		coldAdmissions: make(chan struct{}, MaxConcurrentColdAdmissions),
+		slots:          make(map[string]*registrySlot),
+		entries:        make(map[*registryEntry]*registrySlot),
+		authorities:    make(map[string]registryAuthority),
+	}
+}
+
+func (registry *Registry) beginColdAdmission(ctx context.Context) (func(), error) {
+	select {
+	case registry.coldAdmissions <- struct{}{}:
+		return func() { <-registry.coldAdmissions }, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
 }
 
@@ -313,7 +340,12 @@ func (registry *Registry) Acquire(
 		lease := &Lease{
 			registry: registry, entry: entry, publication: publication,
 		}
-		if publication.Current() {
+		current, err := publication.CurrentResult()
+		if err != nil {
+			_ = lease.Release()
+			return nil, err
+		}
+		if current {
 			return lease, nil
 		}
 		_ = lease.Release()
@@ -340,7 +372,7 @@ func (registry *Registry) Acquire(
 	}
 	if slot.removeWhenUnused {
 		registry.mu.Unlock()
-		return nil, errors.New("caller publication repository is retiring")
+		return nil, ErrRegistryConflict
 	}
 	if authority, present := registry.authorityLocked(repository); present && authority.manifest != state.Manifest {
 		registry.mu.Unlock()
@@ -351,7 +383,15 @@ func (registry *Registry) Acquire(
 	if entry != nil && !reflect.DeepEqual(entry.publication.state, state) {
 		return nil, ErrRegistryConflict
 	}
-	if entry != nil && entry.publication.Current() {
+	entryCurrent := false
+	if entry != nil {
+		var err error
+		entryCurrent, err = entry.publication.CurrentResult()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if entry != nil && entryCurrent {
 		registry.mu.Lock()
 		if registry.closed || slot.removeWhenUnused || slot.current != entry {
 			registry.mu.Unlock()
@@ -365,12 +405,21 @@ func (registry *Registry) Acquire(
 		}, nil
 	}
 
-	publication, err := Open(ctx, registry.root, state)
+	finishColdAdmission, err := registry.beginColdAdmission(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if !publication.Current() {
-		return nil, errors.New("caller publication changed during registry admission")
+	publication, err = Open(ctx, registry.root, state)
+	finishColdAdmission()
+	if err != nil {
+		return nil, err
+	}
+	publicationCurrent, err := publication.CurrentResult()
+	if err != nil {
+		return nil, err
+	}
+	if !publicationCurrent {
+		return nil, ErrRegistryConflict
 	}
 	// A prior authoritative Observe may have been unable to cache this state
 	// while a replaced max-size publication was lease-pinned. Once that lease
@@ -381,11 +430,15 @@ func (registry *Registry) Acquire(
 	); err != nil {
 		return nil, err
 	}
-	if err := ctx.Err(); err != nil || !publication.Current() {
-		if err != nil {
-			return nil, err
-		}
-		return nil, errors.New("caller publication changed during registry admission")
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	publicationCurrent, err = publication.CurrentResult()
+	if err != nil {
+		return nil, err
+	}
+	if !publicationCurrent {
+		return nil, ErrRegistryConflict
 	}
 	registry.mu.Lock()
 	if registry.closed || slot.removeWhenUnused || slot.current != entry {
@@ -423,13 +476,17 @@ func (registry *Registry) Acquire(
 	lease := &Lease{
 		registry: registry, entry: entry, publication: publication,
 	}
-	if !publication.Current() {
+	publicationCurrent, err = publication.CurrentResult()
+	if err != nil || !publicationCurrent {
 		// The per-repository transition is already held, so unwind directly
 		// rather than recursively entering Release.
 		registry.mu.Lock()
 		entry.refs--
 		registry.mu.Unlock()
-		return nil, errors.New("caller publication changed during registry admission")
+		if err != nil {
+			return nil, err
+		}
+		return nil, ErrRegistryConflict
 	}
 	return lease, nil
 }
@@ -787,11 +844,100 @@ func (lease *Lease) State() State {
 	return State{}
 }
 
+// ScanRecords verifies every leaf in the leased complete generation exactly
+// once and yields canonical records with exact bounded reread references. The
+// visitor must discard any accumulated state when ScanRecords returns an
+// error; the complete generation is not accepted until every leaf succeeds.
+func (lease *Lease) ScanRecords(
+	ctx context.Context,
+	visit func(PairReceipt, RecordReference, callerleaf.Record) error,
+) error {
+	if ctx == nil || lease == nil || lease.released.Load() || visit == nil {
+		return errors.New("caller publication record scan requires an active lease")
+	}
+	publication := lease.Publication()
+	if publication == nil || len(publication.manifest.Pairs) != len(publication.leaves) {
+		return errors.New("caller publication lease is invalid")
+	}
+	for pairIndex, pair := range publication.manifest.Pairs {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		leaf := publication.leaves[pairIndex]
+		if leaf == nil {
+			return errors.New("caller publication leaf is unavailable")
+		}
+		err := leaf.ScanRecords(
+			ctx, publication.manifest.Generation, pair.Pair,
+			func(reference callerleaf.RecordReference, record callerleaf.Record) error {
+				return visit(pair, RecordReference{
+					PairIndex: pairIndex, PairDigest: pair.Pair.Digest,
+					ArtifactName: pair.Receipt.Name, Record: reference,
+				}, record)
+			},
+		)
+		if err != nil {
+			return err
+		}
+	}
+	if lease.released.Load() {
+		return errors.New("caller publication lease was released during record scan")
+	}
+	return nil
+}
+
+// ReadRecord reads and validates only the exact leased record named by a
+// ScanRecords reference. It does not hash or materialize another record or
+// leaf, making it suitable for bounded result-page hydration.
+func (lease *Lease) ReadRecord(
+	ctx context.Context,
+	reference RecordReference,
+) (PairReceipt, callerleaf.Record, error) {
+	if ctx == nil || lease == nil || lease.released.Load() {
+		return PairReceipt{}, callerleaf.Record{}, fmt.Errorf(
+			"%w: caller publication record read requires an active lease",
+			callerleaf.ErrInvalidArtifact,
+		)
+	}
+	publication := lease.Publication()
+	if publication == nil || reference.PairIndex < 0 ||
+		reference.PairIndex >= len(publication.manifest.Pairs) ||
+		reference.PairIndex >= len(publication.leaves) {
+		return PairReceipt{}, callerleaf.Record{}, fmt.Errorf(
+			"%w: caller publication record reference is invalid",
+			callerleaf.ErrInvalidArtifact,
+		)
+	}
+	pair := publication.manifest.Pairs[reference.PairIndex]
+	if pair.Pair.Digest != reference.PairDigest ||
+		pair.Receipt.Name != reference.ArtifactName ||
+		publication.leaves[reference.PairIndex] == nil {
+		return PairReceipt{}, callerleaf.Record{}, fmt.Errorf(
+			"%w: caller publication record reference differs from its lease",
+			callerleaf.ErrInvalidArtifact,
+		)
+	}
+	record, err := publication.leaves[reference.PairIndex].ReadRecord(
+		ctx, reference.Record,
+	)
+	if err != nil {
+		return PairReceipt{}, callerleaf.Record{}, err
+	}
+	if lease.released.Load() {
+		return PairReceipt{}, callerleaf.Record{}, fmt.Errorf(
+			"%w: caller publication lease was released during record read",
+			callerleaf.ErrInvalidArtifact,
+		)
+	}
+	return pair, record, nil
+}
+
 func (lease *Lease) Release() (resultErr error) {
 	if lease == nil || lease.registry == nil || lease.entry == nil {
 		return nil
 	}
 	lease.once.Do(func() {
+		lease.released.Store(true)
 		registry := lease.registry
 		entry := lease.entry
 		repository := entry.publication.state.Generation.Repository
