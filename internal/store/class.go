@@ -85,6 +85,39 @@ func IsYield(err error) bool {
 	return errors.As(err, &yield)
 }
 
+// SuccessorRetry marks a retryable failure after the handler invoked the
+// durable successor transaction for the same target. The transaction either
+// committed or may have committed before its response failed. Ordinary retries
+// merge into any pending row through RequeueJob. On the final allowed attempt
+// the runner invokes a provenance-aware transition: it exhausts a recovery row
+// still owned exclusively by this handler, or preserves a coalesced freshness
+// event while failing only the active claim.
+type SuccessorRetry struct {
+	Err error
+}
+
+func (s *SuccessorRetry) Error() string { return s.Err.Error() }
+func (s *SuccessorRetry) Unwrap() error { return s.Err }
+
+// WithSuccessorRetry records a crossed or commit-ambiguous durable queue
+// boundary without changing the error's class or displayed message.
+func WithSuccessorRetry(err error) error {
+	if err == nil {
+		return nil
+	}
+	if IsSuccessorRetry(err) {
+		return err
+	}
+	return &SuccessorRetry{Err: err}
+}
+
+// IsSuccessorRetry reports whether the handler crossed or may have committed
+// its durable recovery-successor boundary.
+func IsSuccessorRetry(err error) bool {
+	var retry *SuccessorRetry
+	return errors.As(err, &retry)
+}
+
 // Classify extracts the class from anywhere in the chain; unclassified
 // errors are generic.
 func Classify(err error) ErrClass {

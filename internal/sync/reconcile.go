@@ -15,6 +15,7 @@ import (
 	"github.com/sourcegraph/zoekt/index"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
@@ -441,7 +442,7 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	}
 	for _, kind := range []store.JobKind{
 		store.JobFetch, store.JobIndex, store.JobCandidate, store.JobExtract,
-		store.JobResolverCatalog,
+		store.JobResolverCatalog, store.JobCallerLeaf,
 	} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel %s jobs for %s: %w", kind, name, err))
@@ -456,7 +457,7 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 	// Close the enqueue-before-lock window.
 	for _, kind := range []store.JobKind{
 		store.JobFetch, store.JobIndex, store.JobCandidate, store.JobExtract,
-		store.JobResolverCatalog,
+		store.JobResolverCatalog, store.JobCallerLeaf,
 	} {
 		if _, err := st.CancelPendingJobs(ctx, kind, name); err != nil {
 			return rollback(fmt.Errorf("cancel late %s jobs for %s: %w", kind, name, err))
@@ -501,6 +502,14 @@ func deleteRepoArtifacts(ctx context.Context, st store.Store, dataDir, name stri
 		ctx, filepath.Join(dataDir, "resolver-catalogs"), name,
 	); err != nil {
 		return destructiveFailure(fmt.Errorf("cleanup %s resolver catalog: %w", name, err))
+	}
+	// This literal is the same package-owned root returned by
+	// callerexecute.Root. Importing callerexecute here would create a cycle
+	// because caller execution consumes SafeRepoDir from this package.
+	if err := callerleaf.RemoveRepository(
+		ctx, filepath.Join(dataDir, "caller-leaves"), name,
+	); err != nil {
+		return destructiveFailure(fmt.Errorf("cleanup %s caller leaves: %w", name, err))
 	}
 	if err := ctx.Err(); err != nil {
 		return destructiveFailure(err)

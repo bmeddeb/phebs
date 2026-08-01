@@ -119,7 +119,6 @@ func TestRunnerRetriesThenFails(t *testing.T) {
 	cancel()
 
 	mu.Lock()
-	defer mu.Unlock()
 	if runs != 2 {
 		t.Errorf("handler ran %d times, want 2 (MaxAttempts)", runs)
 	}
@@ -127,6 +126,56 @@ func TestRunnerRetriesThenFails(t *testing.T) {
 	if len(failed) != 1 || failed[0].Error != "boom" || failed[0].Attempts != 1 {
 		t.Errorf("failed job = %+v, want error boom recorded", failed)
 	}
+	mu.Unlock()
+
+	t.Run("handler-ensured successor", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		var mu sync.Mutex
+		runs := 0
+		r := &Runner{
+			Store: s, Kind: JobCallerLeaf,
+			Handle: func(ctx context.Context, job Job) error {
+				mu.Lock()
+				runs++
+				mu.Unlock()
+				if _, err := s.EnsureJobSuccessor(ctx, job, false); err != nil {
+					return err
+				}
+				return WithSuccessorRetry(errors.New("persistent install failure"))
+			},
+			Interval: 20 * time.Millisecond, HeartbeatEvery: 5 * time.Second,
+			StaleAfter: 20 * time.Second, MaxAttempts: 3,
+			Backoff: func(error, int) time.Duration { return time.Millisecond },
+			Who:     "successor-exhaustion-worker",
+		}
+		if _, err := s.EnqueuePending(ctx, JobCallerLeaf, "repo", false); err != nil {
+			t.Fatal(err)
+		}
+		go r.Run(ctx)
+
+		waitFor(t, 15*time.Second, func() bool {
+			failed, err := s.ListJobs(ctx, JobCallerLeaf, StatusFailed)
+			return err == nil && len(failed) == 1 && failed[0].Attempts == 3
+		}, "handler-ensured successor reset the exhausted attempt budget")
+		cancel()
+
+		mu.Lock()
+		defer mu.Unlock()
+		if runs != 3 {
+			t.Fatalf("handler ran %d times, want 3", runs)
+		}
+		pending, err := s.ListJobs(context.Background(), JobCallerLeaf, StatusPending)
+		if err != nil || len(pending) != 0 {
+			t.Fatalf("pending successors after exhaustion = %+v, %v", pending, err)
+		}
+		failed, err := s.ListJobs(context.Background(), JobCallerLeaf, StatusFailed)
+		if err != nil || len(failed) != 1 ||
+			failed[0].Error != "persistent install failure" {
+			t.Fatalf("exhausted successor = %+v, %v", failed, err)
+		}
+	})
 }
 
 func TestRunnerShutdownReleasesWithoutConsumingAttempt(t *testing.T) {
@@ -211,6 +260,44 @@ func TestReaperRecoversDeadWorker(t *testing.T) {
 	if len(failed) != 1 || failed[0].FinishedAt == nil {
 		t.Errorf("failed = %+v, want the exhausted job finished", failed)
 	}
+
+	t.Run("final attempt preserves independent successor", func(t *testing.T) {
+		if _, err := s.EnqueuePending(ctx, JobCallerLeaf, "repo", false); err != nil {
+			t.Fatal(err)
+		}
+		active, err := s.ClaimJob(ctx, JobCallerLeaf, "dead-caller-worker")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := s.SetJobStatus(ctx, *active, StatusRunning, ""); err != nil {
+			t.Fatal(err)
+		}
+		successor, err := s.EnsureJobSuccessor(ctx, *active, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := surrealdb.Query[any](ctx, s.db,
+			"UPDATE type::record($id) SET heartbeat_at = time::now() - 1h, attempts = 2",
+			map[string]any{"id": active.ID}); err != nil {
+			t.Fatal(err)
+		}
+		if n, err := s.ReapStale(ctx, JobCallerLeaf, 10*time.Minute, 3); err != nil || n != 1 {
+			t.Fatalf("final caller reap = %d, %v; want 1", n, err)
+		}
+		failed, err := s.ListJobs(ctx, JobCallerLeaf, StatusFailed)
+		if err != nil || len(failed) != 1 || failed[0].ID != active.ID {
+			t.Fatalf("reaped active = %+v, %v", failed, err)
+		}
+		pending, err := s.ListJobs(ctx, JobCallerLeaf, StatusPending)
+		if err != nil || len(pending) != 1 || pending[0].ID != successor.ID ||
+			pending[0].Attempts != 0 {
+			t.Fatalf("crash successor = %+v, %v", pending, err)
+		}
+		rescued, err := s.ClaimJob(ctx, JobCallerLeaf, "reconciliation-worker")
+		if err != nil || rescued.ID != successor.ID {
+			t.Fatalf("claim crash successor = %+v, %v", rescued, err)
+		}
+	})
 }
 
 func TestReaperDoesNotStealRefreshedLease(t *testing.T) {
@@ -382,6 +469,8 @@ type flakyRunnerStore struct {
 	terminalFailures   int
 	statuses           []JobStatus
 	releases           []Job
+	successorFailures  []Job
+	heartbeatErr       error
 	heartbeatLeaseLost bool
 }
 
@@ -400,6 +489,17 @@ func (s *flakyRunnerStore) HeartbeatJob(context.Context, Job) error {
 	if s.heartbeatLeaseLost {
 		return ErrLeaseLost
 	}
+	return s.heartbeatErr
+}
+
+func (s *flakyRunnerStore) FailJobWithSuccessor(
+	_ context.Context,
+	job Job,
+	_ string,
+) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.successorFailures = append(s.successorFailures, job)
 	return nil
 }
 
@@ -469,6 +569,37 @@ func TestRunnerTerminalMarkerFailsOnFirstExecution(t *testing.T) {
 	}
 }
 
+func TestRunnerTerminalSuccessorMarkerUsesProvenanceAwareFailure(t *testing.T) {
+	st := &flakyRunnerStore{}
+	r := &Runner{
+		Store: st,
+		Kind:  JobResolverCatalog,
+		Handle: func(context.Context, Job) error {
+			return WithTerminal(WithSuccessorRetry(
+				errors.New("nondeterministic publication"),
+			))
+		},
+		HeartbeatEvery: time.Second,
+		MaxAttempts:    3,
+		Who:            "terminal-successor-worker",
+	}
+	job := Job{
+		ID:   "resolver_catalog_job:terminal-successor",
+		Kind: JobResolverCatalog, Target: "repo",
+		ClaimedBy: r.Who, LeaseToken: "lease",
+	}
+	r.execute(context.Background(), job)
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if len(st.statuses) != 1 || st.statuses[0] != StatusRunning ||
+		len(st.successorFailures) != 1 ||
+		st.successorFailures[0].ID != job.ID {
+		t.Fatalf("terminal successor transitions = statuses:%v failures:%+v",
+			st.statuses, st.successorFailures)
+	}
+}
+
 func TestRunnerYieldReleasesWithoutConsumingAttempt(t *testing.T) {
 	st := &flakyRunnerStore{}
 	r := &Runner{
@@ -524,5 +655,34 @@ func TestRunnerStopsHandlerWhenHeartbeatLosesLease(t *testing.T) {
 	defer st.mu.Unlock()
 	if len(st.statuses) != 1 || st.statuses[0] != StatusRunning {
 		t.Errorf("status writes = %v, want only running transition", st.statuses)
+	}
+}
+
+func TestRunnerTreatsHeartbeatReplacementAsPossiblyCommittedSuccessor(t *testing.T) {
+	st := &flakyRunnerStore{heartbeatErr: errors.New("heartbeat unavailable")}
+	r := &Runner{
+		Store: st,
+		Kind:  JobCallerLeaf,
+		Handle: func(ctx context.Context, _ Job) error {
+			<-ctx.Done()
+			return nil
+		},
+		HeartbeatEvery: 5 * time.Millisecond,
+		MaxAttempts:    3,
+		Who:            "heartbeat-successor-worker",
+	}
+	job := Job{
+		ID: "caller_leaf_job:test", Kind: JobCallerLeaf, Target: "repo",
+		Attempts: 2, ClaimedBy: r.Who, LeaseToken: "lease",
+	}
+	r.execute(context.Background(), job)
+
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	if len(st.statuses) != 1 || st.statuses[0] != StatusRunning ||
+		len(st.successorFailures) != 1 ||
+		st.successorFailures[0].ID != job.ID {
+		t.Fatalf("heartbeat successor transitions = statuses:%v failures:%+v",
+			st.statuses, st.successorFailures)
 	}
 }

@@ -46,6 +46,11 @@ const (
 	// catalog. T30.6f defines its durable queue without registering an adapter
 	// worker; T30.6g supplies that consumer.
 	JobResolverCatalog JobKind = "resolver_catalog_job"
+	// JobCallerLeaf executes and reconciles the immutable caller-domain/leaf
+	// artifacts for one exact candidate and resolver generation (T30.6h).
+	// The target remains the repository: pair identity lives in the durable
+	// outcome rows, while one pending successor is the lossless rescan signal.
+	JobCallerLeaf JobKind = "caller_leaf_job"
 	// JobInvestigate runs one preflighted Investigation Run (T16.4). Its
 	// generic queue lease and the Run's publication lease are independent:
 	// losing either fences the worker.
@@ -938,7 +943,16 @@ type Store interface {
 	SetJobStatus(ctx context.Context, job Job, status JobStatus, errMsg string) error
 	HeartbeatJob(ctx context.Context, job Job) error
 	RequeueJob(ctx context.Context, job Job, errMsg string, notBefore time.Time) error // attempts+1, back to pending
-	ReleaseJob(ctx context.Context, job Job, errMsg string) error                      // back to pending without consuming an attempt
+	// EnsureJobSuccessor records that this exact active lease created its pending
+	// crash-recovery successor. Any ordinary enqueue clears that provenance. Its
+	// errors carry SuccessorRetry because transaction commit may be ambiguous;
+	// the marker is safe even when validation proves that no row was created.
+	EnsureJobSuccessor(ctx context.Context, job Job, force bool) (*Job, error)
+	// FailJobWithSuccessor atomically fails only a successor still owned by this
+	// exact active lease and cancels the active row. If a freshness event has
+	// coalesced into the successor, it is preserved and only the active row fails.
+	FailJobWithSuccessor(ctx context.Context, job Job, errMsg string) error
+	ReleaseJob(ctx context.Context, job Job, errMsg string) error // back to pending without consuming an attempt
 	CancelPendingJobs(ctx context.Context, kind JobKind, target string) (int, error)
 	ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error)
 

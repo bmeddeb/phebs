@@ -33,9 +33,7 @@ type Store interface {
 		context.Context, store.ExtractionScope,
 	) (*store.ExtractionDomainOutcome, error)
 	ListAssertions(context.Context, store.AssertionQuery) ([]store.Assertion, error)
-	EnqueuePending(
-		context.Context, store.JobKind, string, bool,
-	) (*store.Job, error)
+	EnsureJobSuccessor(context.Context, store.Job, bool) (*store.Job, error)
 }
 
 type ManifestProvider interface {
@@ -115,7 +113,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 
 	workCtx, cancel := context.WithTimeout(ctx, MaterializationTimeout)
 	defer cancel()
-	handled, err := worker.reconcileMarked(workCtx, job.Target)
+	handled, err := worker.reconcileMarked(workCtx, job)
 	if err != nil {
 		return fmt.Errorf("reconcile marked publication: %w", err)
 	}
@@ -197,7 +195,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		return fmt.Errorf("load resolver pointer: %w", currentErr)
 	}
 	if errors.Is(currentErr, store.ErrInvalidResolverCatalogPublication) {
-		if err := worker.queueRecoveryAndClear(workCtx, repository.Name); err != nil {
+		if err := worker.queueRecoveryAndClear(workCtx, job); err != nil {
 			return fmt.Errorf("retire invalid resolver pointer: %w", err)
 		}
 		return nil
@@ -257,9 +255,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	// independent successor before crossing that crash boundary. An existing
 	// forced successor keeps its force; otherwise the successful-publication
 	// path pays one bounded exact-current no-op turn.
-	if _, err := worker.store.EnqueuePending(
-		workCtx, store.JobResolverCatalog, repository.Name, false,
-	); err != nil {
+	if err := worker.ensureJobSuccessor(workCtx, job, false); err != nil {
 		return fmt.Errorf("enqueue resolver publication recovery: %w", err)
 	}
 	state, err := prepared.Publish(
@@ -276,21 +272,23 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 				workCtx, repository.Name,
 			)
 			if currentErr != nil {
-				return currentErr
+				return markSuccessorRetry(currentErr)
 			}
 			if current {
-				return fmt.Errorf(
+				return markSuccessorRetry(fmt.Errorf(
 					"%w: repository %q rejected a second manifest for current authority: %w",
 					resolvercatalog.ErrNondeterministicPublication,
 					repository.Name, err,
-				)
+				))
 			}
 		}
-		return err
+		return markSuccessorRetry(err)
 	}
 	publication, err := resolvercatalog.Open(workCtx, worker.root, state)
 	if err != nil {
-		return fmt.Errorf("open published resolver catalog: %w", err)
+		return markSuccessorRetry(fmt.Errorf(
+			"open published resolver catalog: %w", err,
+		))
 	}
 	worker.remember(repository.Name, publication)
 	return nil
@@ -348,8 +346,9 @@ func (worker *Worker) currentDeclarations(
 
 func (worker *Worker) reconcileMarked(
 	ctx context.Context,
-	repository string,
+	job store.Job,
 ) (bool, error) {
+	repository := job.Target
 	publishing, err := resolvercatalog.Publishing(worker.root, repository)
 	if err != nil {
 		return false, fmt.Errorf("inspect resolver publication marker: %w", err)
@@ -361,35 +360,40 @@ func (worker *Worker) reconcileMarked(
 		ctx, worker.root, repository, worker.registry.Packs(),
 	)
 	if openErr == nil {
+		if err := worker.ensureJobSuccessor(ctx, job, false); err != nil {
+			return false, fmt.Errorf(
+				"enqueue marked resolver publication recovery: %w", err,
+			)
+		}
 		state := publication.State()
 		commitErr := worker.store.PublishResolverCatalog(
 			ctx, storeFromState(state),
 		)
 		if commitErr == nil {
 			if err := resolvercatalog.ClearPublishing(worker.root, repository); err != nil {
-				return false, err
+				return false, markSuccessorRetry(err)
 			}
 			if err := resolvercatalog.CleanupRetiredContext(
 				ctx, worker.root, publication.Manifest(),
 			); err != nil {
-				return false, err
+				return false, markSuccessorRetry(err)
 			}
 			worker.remember(repository, publication)
 			return true, nil
 		}
 		if !errors.Is(commitErr, store.ErrConflict) {
-			return false, commitErr
+			return false, markSuccessorRetry(commitErr)
 		}
 		current, currentErr := worker.currentCatalogAuthority(ctx, repository)
 		if currentErr != nil {
-			return false, currentErr
+			return false, markSuccessorRetry(currentErr)
 		}
 		if current {
-			return false, fmt.Errorf(
+			return false, markSuccessorRetry(fmt.Errorf(
 				"%w: repository %q marked manifest conflicts with current authority: %w",
 				resolvercatalog.ErrNondeterministicPublication,
 				repository, commitErr,
-			)
+			))
 		}
 	} else {
 		if err := ctx.Err(); err != nil {
@@ -403,7 +407,7 @@ func (worker *Worker) reconcileMarked(
 	// successor before clearing any derived authority, then let that successor
 	// perform the rebuild. This bounds recovery to one extra queue turn without
 	// a process-death or reap gap.
-	if err := worker.queueRecoveryAndClear(ctx, repository); err != nil {
+	if err := worker.queueRecoveryAndClear(ctx, job); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -411,21 +415,39 @@ func (worker *Worker) reconcileMarked(
 
 func (worker *Worker) queueRecoveryAndClear(
 	ctx context.Context,
-	repository string,
+	job store.Job,
 ) error {
-	if _, err := worker.store.EnqueuePending(
-		ctx, store.JobResolverCatalog, repository, true,
-	); err != nil {
+	repository := job.Target
+	if err := worker.ensureJobSuccessor(ctx, job, true); err != nil {
 		return fmt.Errorf("enqueue resolver-catalog recovery: %w", err)
 	}
 	if err := worker.store.ClearResolverCatalogPublication(ctx, repository); err != nil {
-		return err
+		return markSuccessorRetry(err)
 	}
 	if err := resolvercatalog.RemoveRepository(ctx, worker.root, repository); err != nil {
-		return err
+		return markSuccessorRetry(err)
 	}
 	worker.forget(repository)
 	return nil
+}
+
+func markSuccessorRetry(err error) error {
+	if err == nil || store.IsSuccessorRetry(err) {
+		return err
+	}
+	return store.WithSuccessorRetry(err)
+}
+
+func (worker *Worker) ensureJobSuccessor(
+	ctx context.Context,
+	job store.Job,
+	force bool,
+) error {
+	_, err := worker.store.EnsureJobSuccessor(ctx, job, force)
+	// A transport error can follow a committed queue transaction. The marker is
+	// safe when it did not commit too: the runner preserves external work and
+	// touches a successor only when its exact lease provenance exists.
+	return markSuccessorRetry(err)
 }
 
 func (worker *Worker) currentCatalogAuthority(

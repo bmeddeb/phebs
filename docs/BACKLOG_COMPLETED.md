@@ -4578,7 +4578,10 @@ traces proving no unplanned blob opens; cap/cap+1 source and dual-adapter
 declaration limits; selector/aggregate expansion cap boundaries across enabled
 adapters and cross-product refusal;
 prior-marker recovery and publisher-fence behavior under the
-repository lock; retry-preserving operational I/O classification;
+repository lock; lease-owned retry provenance for post-marker operational and
+terminal publication failures without discarding coalesced freshness work;
+commit-ambiguous successor responses resolved by exact lease provenance;
+retry-preserving operational I/O classification;
 same-generation manifest-conflict refusal without authority loss; durable
 successor-before-clear recovery for marked bytes and malformed store pointers,
 plus successor-before-install recovery after a final-attempt publication
@@ -4612,10 +4615,155 @@ forced queue turn and does no materialization in the original claim. A
 transient I/O or nondeterministic-manifest refusal preserves the existing
 artifacts and performs no cleanup or replacement build. Each actual
 publication adds one independent non-forced queue turn; after success it takes
-the exact-current warm path without candidate/input reads or content hashes,
-while after post-marker failure it owns recovery.
+the exact-current warm path without candidate/input reads or content hashes.
+After a post-marker failure, retry state moves into that turn while it remains
+owned by the active lease. A failed successor response is treated as possibly
+committed; the same provenance-aware final transition safely fails only the
+active row if no owned successor exists. A final live or terminal failure
+exhausts an owned recovery row, but an
+ordinary coalesced freshness event clears ownership and survives. Final stale
+reaping preserves the independent recovery turn because the crashed worker's
+marker boundary is unknowable.
 
 This ticket changes no search/evidence/API surface, publishes no caller leaf
 or complete caller generation, and creates no production-use, completeness,
 extraction-accuracy, migration-completion, decommission-safety, or historical
 retention claim. T30.6h owns direct caller-leaf execution artifacts.
+
+### T30.6h · Direct caller-leaf execution artifacts
+
+**T30.6h ✅ · Direct caller-leaf execution artifacts** *(2026-07-31)* —
+replaces the temporary flattened caller corpus with independently durable work
+for every exact `(caller domain, candidate leaf, complete caller generation)`
+pair. The semantic generation binds repository, indexed HEAD, committed unit,
+declaration set, candidate manifest and policy, the literal base-lane policy,
+resolver generation and manifest, the complete caller resource policy, and the
+ordered caller extractor/direct-adapter set. Candidate and resolver control
+revisions remain transaction fences rather than semantic identity, so an exact
+byte repair does not discard already settled output.
+
+The candidate provider opens only the canonical manifest and caller leaf
+envelopes, then descriptor-stably validates the one selected leaf during
+replay. Every configured caller domain is crossed with every ordered leaf,
+including pairs with no record for that domain. `go_test` records are counted
+and excluded before blob open. Each admitted base record either produces a
+direct syntax result, produces an `UNRESOLVED_CALLER` abstention, or receives
+an explicit input abstention; the worker can address Git only by the validated
+leaf OID and declared size. Receipts retain exact result/abstention counts,
+canonical and staged bytes, excluded tests, source blob reads/bytes, and zero
+out-of-leaf reads. SCIP is deliberately absent from direct-v1.
+
+Resolver packs advance to 1.1.0 and materialization policy v2. During the
+already bounded catalog build, each mapped generated base Go blob is read and
+parsed once into exact package/import, client, constructor, method,
+wire-operation, declaration, object, and content identities. Resolved,
+unavailable, ambiguous, and unsupported states remain explicit. The catalog
+cold reader builds both enabled protocol projections and their immutable
+syntax indexes in one descriptor-stable member pass; a leaf therefore neither
+rereads generated source nor rebuilds a 100,000-symbol lookup per source file.
+An exact generated path/object encountered as a candidate caller record emits
+a no-read `resolver_generated_input` abstention.
+The added projection is capped at 25,000 generated source files, 4 MiB per
+source, 100,000 symbols, and one 32 MiB catalog-wide identity budget shared by
+unique source path/object pairs and retained descriptors under the existing
+100,000-read and 512 MiB materialization ceilings. An omitted protobuf
+generator-relative path is an input wildcard whose retained descriptors carry
+the parsed concrete selector; equivalent wildcard and explicit mappings
+deduplicate. A declared source above 4 MiB is envelope-validated without a
+blob read and retained as `unsupported: generated_source_too_large`, while
+valid protocol siblings continue.
+The 1.0.0 → 1.1.0 pack cutover intentionally forces one catalog
+rematerialization and, after acceptance, one first caller-leaf generation for
+every indexed non-deleting repository with an enabled adapter.
+
+One repository-keyed `caller_leaf_job` executes canonical missing pairs one at
+a time while draining fast pairs within the same five-minute turn. Resolver
+publication atomically ensures its initial successor, and every outcome
+transaction is fenced by the live job lease, non-deleting
+repository HEAD/unit, exact candidate and resolver pointers, writer migration,
+and both control revisions while also ensuring the next pending turn. The
+store recomputes generation, pair, pair-set, outcome, and admission identity;
+rows are multi-generation and an exact success cannot be downgraded. A
+terminal pair leaves successful siblings intact but forces terminal aggregate
+admission, which T30.6i must reject.
+
+Each cold turn builds `O(D × L)` pair/outcome metadata, scans at most 65,536
+caller artifact names once, and replays each selected candidate member once per
+domain. Each admitted base record has one serial blob read capped by its exact
+declared size; each newly installed artifact is then opened and hashed once.
+No repository tree/corpus walk or all-leaf content materialization occurs.
+
+Artifacts stream into a package-shaped stage and install under a
+repository-hash directory before their durable outcome. Empty pairs install a
+canonical zero-byte artifact. A retry reuses only byte-identical output;
+another content artifact for the same immutable pair is terminal
+nondeterminism. A successor exists before the install boundary, so a crash
+after bytes but before state resumes from the exact orphan. Startup removes
+only bounded lifecycle-shaped stages and backfills indexed, non-deleting
+repositories with current catalogs. On first worker reuse after restart, the
+worker content-validates each successful artifact. Deterministic
+state-without-file, corrupt-file, and exact-path orphan mismatch queues repair
+before clearing/removing only identity-proven owned bytes; operational I/O
+preserves authority. Oversized logical records and same-size newline damage
+are typed artifact corruption. Any live operational error after a successor is
+ensured is returned. Retry state moves into an exclusively lease-owned recovery
+row; a final failure exhausts that row, while an ordinary freshness enqueue
+clears ownership and survives. A failed successor response is also marked as
+possibly committed and safely falls back to the active claim when no tagged
+row exists. A stale final claim deliberately retains its
+independent recovery turn because its byte-install boundary is unknowable.
+The same provenance fence covers resolver-catalog post-marker failures and
+terminal publication conflicts. This prevents a zero-delay self-successor loop
+without dropping newer work. The
+validation and compiled-resolver caches retain one
+generation process-wide. While it remains the most recently validated, a
+settled turn reads pointer, outcome, and admission metadata only and takes no
+mirror lock, manifest/member/artifact content read, hash, tree walk, source
+blob, or child process; another generation evicts that cache and makes the next
+exact job perform one bounded cold validation again.
+
+Pair limits are 12,500 results, 4,096 abstentions, 1 MiB per record, 64 MiB
+canonical output, 65 MiB staged output, one serial 4 MiB source blob, 64 MiB
+of source bytes reserved before read independently of output, five
+structurally owned descriptors/pipes, and five minutes. A generation admits at
+most 16 caller domains, 16,384 pair artifacts, 100,000 results, 100,000
+abstentions, 512 MiB canonical output, and 520 MiB staged output, with a 128
+MiB worker design-memory budget. Exact cap output admits; cap+1 records a
+terminal aggregate receipt and preserves any prior complete generation. The
+first crossing pair is the sole allowed cap-plus-one content work; every
+remaining expected pair is terminal-settled without further resolver,
+candidate-member, source, or artifact work. The 65,536-entry local directory
+bound reserves its rename-before-stage-removal crash slot. Because directory
+capacity is mutable installation state, a new pair at that boundary receives a
+retryable capacity refusal before content work and creates no terminal outcome
+or admission; an exact same-pair orphan may use the slot only for bounded
+reuse/divergence validation. Progress requires later package-owned lifecycle or
+retention reclamation, which this ticket does not define.
+An expected Cartesian pair set above 16,384 refuses at typed job preflight and
+creates no partial outcome or admission because that exact set is not
+representable; the durable cap-plus-one admission applies to aggregate output
+crossed by one otherwise valid pair.
+
+Caller leaf bytes are derived and independently invisible in this ticket.
+Backup excludes `caller-leaves/`, restore raw-clears imported outcomes and
+admissions behind the writer marker, repository deletion cancels caller work
+and removes only its cryptographic namespace, and startup rebuilds from
+candidate/resolver authority. T30.6i owns the complete publication pointer,
+reader leases, exact archive/restore, and product visibility.
+
+AC met: neutral cross-service and unrelated-target fixtures, result and
+per-record abstention paths, explicit empty pairs, base/test/generated
+separation, exact
+selected-leaf read traces, compiled resolver reuse, sibling terminal isolation,
+pair-output and aggregate cap/cap+1 plus pair-set preflight refusal,
+prior-generation preservation, candidate leaf and
+artifact descriptor swaps, tamper, state/file asymmetry, file-before-state
+crash resume, control-only repair reuse, stage cleanup, deletion and restore,
+transactional fan-out, startup backfill, and process-warm zero-content work;
+dated PLAN decision, operations/manual/roadmap/AGENTS and active/completed
+backlog updates; full merge bar.
+
+This ticket changes no search, evidence, API, or MCP visibility and establishes
+no caller completeness, extraction accuracy, migration completion,
+decommission safety, or historical retention claim. T30.6i owns atomic complete
+caller-generation publication.

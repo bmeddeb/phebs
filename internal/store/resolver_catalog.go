@@ -330,9 +330,33 @@ LET $published = IF $acceptable = false THEN []
 		published_at = time::now()
 		RETURN AFTER)
 	END;
-RETURN $published;
+LET $caller_force = $same_generation = false;
+LET $pending_caller = IF array::len($published) = 1 THEN
+	(SELECT id, created_at FROM caller_leaf_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $caller_fanout = IF array::len($published) != 1 THEN []
+	ELSE IF $pending_caller != NONE THEN
+		(UPDATE $pending_caller SET
+			force = IF $caller_force THEN true ELSE force END,
+			recovery_lease = NONE
+			RETURN AFTER)
+	ELSE (CREATE caller_leaf_job CONTENT {
+		target: $repository,
+		status: 'pending',
+		attempts: 0,
+		created_at: time::now(),
+		pending_key: $repository,
+		force: $caller_force
+	} RETURN AFTER) END;
+RETURN IF array::len($caller_fanout) = 1 THEN $published ELSE [] END;
 COMMIT;`
 
+// PublishResolverCatalog also atomically ensures the repository-keyed
+// caller-leaf successor. A new semantic catalog generation forces execution;
+// an exact accepted retry repairs a missing non-forced successor without ever
+// downgrading an existing forced request.
 func (s *Surreal) PublishResolverCatalog(
 	ctx context.Context,
 	publication ResolverCatalogPublication,

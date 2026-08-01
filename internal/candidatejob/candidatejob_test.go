@@ -622,6 +622,61 @@ func TestWorkerRetryRepairsPublicationAndProviderStreamsBothPlanes(
 		boundaries.Digest == "" || boundaries.SampleTruncated {
 		t.Fatalf("gitlink boundaries = %+v", boundaries)
 	}
+	callerPlanOpens := 0
+	openCallerPlan := provider.openCaller
+	provider.openCaller = func(
+		ctx context.Context,
+		root string,
+		expected candidate.Expected,
+	) (*candidate.CallerPlan, error) {
+		callerPlanOpens++
+		return openCallerPlan(ctx, root, expected)
+	}
+	callerPlan, err := provider.OpenCandidateCallerPlan(ctx, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if callerPlanOpens != 1 || providerStrictOpens != 1 ||
+		callerPlan.Identity() != state.pointer.ManifestDigest ||
+		callerPlan.CandidateControlRevision() != state.pointer.ControlRevision {
+		t.Fatalf(
+			"caller/strict opens, identity, control = %d/%d/%q/%d",
+			callerPlanOpens, providerStrictOpens, callerPlan.Identity(),
+			callerPlan.CandidateControlRevision(),
+		)
+	}
+	if domains := callerPlan.CallerDomains(); !slices.Equal(domains, []extract.CandidateManifestDomain{{
+		Domain: "grpc-caller", Version: "caller-v1",
+	}}) {
+		t.Fatalf("caller-plan domains = %+v", domains)
+	}
+	leaves := callerPlan.CallerLeaves()
+	if len(leaves) == 0 {
+		t.Fatal("caller plan has no leaf descriptors")
+	}
+	var leafPaths []string
+	for _, leaf := range leaves {
+		if err := callerPlan.ForEachCallerLeafFile(
+			ctx, "grpc-caller", "caller-v1", leaf,
+			func(file extract.CandidateManifestFile) error {
+				leafPaths = append(leafPaths, file.Path)
+				return nil
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !slices.Equal(leafPaths, []string{"client/use.go"}) {
+		t.Fatalf("caller leaf replay = %v", leafPaths)
+	}
+	forgedLeaf := leaves[0]
+	forgedLeaf.ContentBytes++
+	if err := callerPlan.ForEachCallerLeafFile(
+		ctx, "grpc-caller", "caller-v1", forgedLeaf,
+		func(extract.CandidateManifestFile) error { return nil },
+	); !errors.Is(err, candidate.ErrInvalidManifest) {
+		t.Fatalf("forged caller leaf error = %v", err)
+	}
 
 	type seenFile struct {
 		path     string

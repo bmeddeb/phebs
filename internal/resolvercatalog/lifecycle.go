@@ -49,6 +49,18 @@ type Publication struct {
 	fingerprints map[string]fileFingerprint
 }
 
+// RecordVisitor observes one canonical record while OpenWithVisitor performs
+// the descriptor-stable cold validation pass. The raw record is valid only
+// for the duration of the call; visitors that retain it must copy or decode
+// it. A successful visit is provisional until OpenWithVisitor itself returns
+// successfully because later receipt and path-fingerprint checks may still
+// reject the publication.
+type RecordVisitor func(
+	member MemberReceipt,
+	recordIndex int,
+	record json.RawMessage,
+) error
+
 // testAfterStableOpen is an adversarial descriptor-swap seam. Production
 // leaves it nil; package tests use it synchronously.
 var testAfterStableOpen func(string)
@@ -649,13 +661,26 @@ func installMarker(root, repository string) error {
 // not admitted and is swept by CleanupRetired only after this declared set is
 // valid, preserving the store-commit-before-cleanup crash boundary.
 func Open(ctx context.Context, root string, expected State) (*Publication, error) {
-	return open(ctx, root, expected, false)
+	return open(ctx, root, expected, false, nil)
+}
+
+// OpenWithVisitor performs the same descriptor-stable cold validation as
+// Open and visits each canonical record during that one content pass. It is
+// the bounded projection hook for typed resolver consumers: member content is
+// never reopened merely to decode already-validated records.
+func OpenWithVisitor(
+	ctx context.Context,
+	root string,
+	expected State,
+	visit RecordVisitor,
+) (*Publication, error) {
+	return open(ctx, root, expected, false, visit)
 }
 
 // OpenPublishing is restricted to recovery of a manifest made durable before
 // its store commit; it requires and rechecks the canonical marker.
 func OpenPublishing(ctx context.Context, root string, expected State) (*Publication, error) {
-	return open(ctx, root, expected, true)
+	return open(ctx, root, expected, true, nil)
 }
 
 func open(
@@ -663,6 +688,7 @@ func open(
 	root string,
 	expected State,
 	allowPublishing bool,
+	visit RecordVisitor,
 ) (*Publication, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -707,7 +733,7 @@ func open(
 		}
 		name := memberArtifactName(manifest.Identity, member.Name)
 		count, digest, fp, err := validateMember(
-			ctx, filepath.Join(root, name), member,
+			ctx, filepath.Join(root, name), member, visit,
 		)
 		if err != nil {
 			return nil, err
@@ -744,6 +770,7 @@ func validateMember(
 	ctx context.Context,
 	filePath string,
 	receipt MemberReceipt,
+	visit RecordVisitor,
 ) (int, string, fileFingerprint, error) {
 	file, fingerprint, err := openStableRegular(filePath, receipt.ContentBytes)
 	if err != nil {
@@ -782,6 +809,13 @@ func validateMember(
 					"%w: member %q record schema: %v",
 					ErrInvalidManifest, receipt.Name, err,
 				)
+			}
+			if visit != nil {
+				if err := visit(receipt, count, json.RawMessage(canonical)); err != nil {
+					return 0, "", fileFingerprint{}, fmt.Errorf(
+						"visit member %q record %d: %w", receipt.Name, count, err,
+					)
+				}
 			}
 			count++
 			if count > MaxRecordsPerMember {

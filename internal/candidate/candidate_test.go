@@ -285,6 +285,299 @@ func TestBuildIsDeterministicBoundedAndNilUnitSafe(t *testing.T) {
 	}
 }
 
+func TestCallerPlanOpensEnvelopesAndReplaysOneExactLeaf(t *testing.T) {
+	fixture := newGitFixture(t)
+	for index := range 64 {
+		fixture.write(
+			fmt.Sprintf("caller/a-%03d.go", index), "package caller\n",
+		)
+	}
+	fixture.write("special/only.rpc", "rpc\n")
+	commit := fixture.commit("caller leaf plan")
+	unit, err := (analysisunit.Scope{
+		Repository: fixture.repository, Name: "caller-plan",
+		Primary: []string{"caller"}, Supporting: []string{"special"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	policies := []Policy{
+		{
+			Domain: "go-local", Version: "1",
+			EnumerationPolicy: "go-local-v1", Plane: PlaneLocal,
+			Enumerate: func(path string) bool {
+				return strings.HasSuffix(path, ".go")
+			},
+		},
+		{
+			Domain: "grpc-caller", Version: "1",
+			EnumerationPolicy: "go-caller-v1", Plane: PlaneCaller,
+			Enumerate: func(path string) bool {
+				return strings.HasSuffix(path, ".go")
+			},
+		},
+		{
+			Domain: "thrift-caller", Version: "1",
+			EnumerationPolicy: "rpc-caller-v1", Plane: PlaneCaller,
+			Enumerate: func(path string) bool {
+				return strings.HasSuffix(path, ".rpc")
+			},
+		},
+	}
+	identities, err := PolicyIdentities(policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	manifest, err := Build(t.Context(), Request{
+		RepoDir: fixture.directory, OutputDir: root,
+		Repository: fixture.repository, Commit: commit,
+		Unit: unit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.CallerLeaves) < 2 {
+		t.Fatalf("caller leaves = %d, want at least two", len(manifest.CallerLeaves))
+	}
+	if len(manifest.RepositoryMembers) == 0 ||
+		len(manifest.LocalProjections) != 1 ||
+		len(manifest.LocalProjections[0].Members) == 0 {
+		t.Fatalf("fixture has no non-caller artifacts: %+v", manifest)
+	}
+	for _, member := range []Artifact{
+		manifest.RepositoryMembers[0], manifest.LocalProjections[0].Members[0],
+	} {
+		if err := os.Rename(
+			filepath.Join(root, member.Name),
+			filepath.Join(root, member.Name+".caller-plan-blocked"),
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	reads := make(map[string]int64)
+	openContext := withArtifactReadObserver(
+		t.Context(), func(name string, count int64) { reads[name] += count },
+	)
+	plan, err := OpenCallerPlanContext(openContext, root, Expected{
+		Repository: fixture.repository, Commit: commit,
+		Unit: unit, Policies: identities,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(reads) != 0 {
+		t.Fatalf("caller-plan open read member contents: %v", reads)
+	}
+	gotDomains := plan.Domains()
+	var wantDomains []PolicyIdentity
+	for _, identity := range identities {
+		if identity.Plane == PlaneCaller {
+			wantDomains = append(wantDomains, identity)
+		}
+	}
+	if !EqualPolicyIdentities(gotDomains, wantDomains) {
+		t.Fatalf("caller domains = %+v, want %+v", gotDomains, wantDomains)
+	}
+	leaves := plan.Leaves()
+	if !slices.Equal(leaves, manifest.CallerLeaves) {
+		t.Fatalf("caller leaves = %+v, want %+v", leaves, manifest.CallerLeaves)
+	}
+
+	var selected CallerLeaf
+	for _, leaf := range leaves {
+		hasThrift := false
+		if err := forEachCanonicalRecord(
+			filepath.Join(root, leaf.Name), func(record Record) error {
+				hasThrift = hasThrift || slices.Contains(
+					record.Domains, "thrift-caller",
+				)
+				return nil
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		if !hasThrift {
+			selected = leaf
+			break
+		}
+	}
+	if selected.Name == "" {
+		t.Fatal("fixture has no empty thrift-caller/leaf pair")
+	}
+	reads = make(map[string]int64)
+	replayContext := withArtifactReadObserver(
+		t.Context(), func(name string, count int64) { reads[name] += count },
+	)
+	visits := 0
+	if err := plan.ReplayLeaf(
+		replayContext, "thrift-caller", "1", selected,
+		func(Record) error { visits++; return nil },
+	); err != nil {
+		t.Fatal(err)
+	}
+	if visits != 0 || reads[selected.Name] != selected.ContentBytes ||
+		len(reads) != 1 {
+		t.Fatalf(
+			"empty pair visits/reads = %d/%v, want 0 and selected leaf only",
+			visits, reads,
+		)
+	}
+	swapped := selected
+	swapped.Prefix = strings.Repeat("0", swapped.PrefixBits)
+	if swapped == selected {
+		swapped.ContentDigest = strings.Repeat("0", len(swapped.ContentDigest))
+	}
+	if err := plan.ReplayLeaf(
+		t.Context(), "thrift-caller", "1", swapped,
+		func(Record) error { return nil },
+	); !errors.Is(err, ErrInvalidManifest) {
+		t.Fatalf("descriptor swap error = %v", err)
+	}
+
+	marker := filepath.Join(root, PublishingName(fixture.repository))
+	markerInstalled := false
+	if err := plan.ReplayLeaf(
+		t.Context(), "grpc-caller", "1", selected,
+		func(Record) error {
+			if markerInstalled {
+				return nil
+			}
+			markerInstalled = true
+			return os.WriteFile(
+				marker, []byte(fixture.repository+"\n"), 0o600,
+			)
+		},
+	); !errors.Is(err, ErrPublishing) {
+		t.Fatalf("marker installed during replay error = %v", err)
+	}
+	if err := os.Remove(marker); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		marker, []byte(fixture.repository+"\n"), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if err := plan.ReplayLeaf(
+		t.Context(), "thrift-caller", "1", selected,
+		func(Record) error { return nil },
+	); !errors.Is(err, ErrPublishing) {
+		t.Fatalf("marked replay error = %v", err)
+	}
+}
+
+func TestCallerPlanValidatesUnselectedDomainRecords(t *testing.T) {
+	fixture := newGitFixture(t)
+	fixture.write("caller/a.go", "package caller\n")
+	fixture.write("special/only.rpc", "rpc\n")
+	commit := fixture.commit("caller validation")
+	policies := []Policy{
+		{
+			Domain: "grpc-caller", Version: "1",
+			EnumerationPolicy: "go-caller-v1", Plane: PlaneCaller,
+			Enumerate: func(path string) bool {
+				return strings.HasSuffix(path, ".go")
+			},
+		},
+		{
+			Domain: "thrift-caller", Version: "1",
+			EnumerationPolicy: "rpc-caller-v1", Plane: PlaneCaller,
+			Enumerate: func(path string) bool {
+				return strings.HasSuffix(path, ".rpc")
+			},
+		},
+	}
+	identities, err := PolicyIdentities(policies)
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := t.TempDir()
+	manifest, err := Build(t.Context(), Request{
+		RepoDir: fixture.directory, OutputDir: root,
+		Repository: fixture.repository, Commit: commit, Policies: policies,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ordinal int
+	selected := false
+	for index, leaf := range manifest.CallerLeaves {
+		found := false
+		if err := forEachCanonicalRecord(
+			filepath.Join(root, leaf.Name), func(record Record) error {
+				if slices.Contains(record.Domains, "grpc-caller") &&
+					!slices.Contains(record.Domains, "thrift-caller") {
+					found = true
+				}
+				return nil
+			},
+		); err != nil {
+			t.Fatal(err)
+		}
+		if found {
+			ordinal = index
+			selected = true
+			break
+		}
+	}
+	if !selected {
+		t.Fatal("fixture has no grpc-only caller record")
+	}
+	leaf := &manifest.CallerLeaves[ordinal]
+	memberPath := filepath.Join(root, leaf.Name)
+	raw, err := os.ReadFile(memberPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := bytes.SplitAfter(raw, []byte{'\n'})
+	forgedIndex := -1
+	for index, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+		var record Record
+		if err := strictCanonicalJSONLine(line, &record); err != nil {
+			t.Fatal(err)
+		}
+		if slices.Contains(record.Domains, "grpc-caller") &&
+			!slices.Contains(record.Domains, "thrift-caller") {
+			record.SourceLane = SourceLaneGoTest
+			forged, marshalErr := json.Marshal(record)
+			if marshalErr != nil {
+				t.Fatal(marshalErr)
+			}
+			lines[index] = append(forged, '\n')
+			forgedIndex = index
+			break
+		}
+	}
+	if forgedIndex < 0 {
+		t.Fatal("selected caller leaf has no grpc-only record")
+	}
+	replaced := bytes.Join(lines, nil)
+	if err := os.WriteFile(memberPath, replaced, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	leaf.ContentBytes = int64(len(replaced))
+	leaf.ContentDigest = artifactDigest(replaced)
+	rewriteManifest(t, root, &manifest)
+
+	plan, err := OpenCallerPlanContext(t.Context(), root, Expected{
+		Repository: fixture.repository, Commit: commit, Policies: identities,
+	})
+	if err != nil {
+		t.Fatalf("narrow caller-plan open read leaf contents: %v", err)
+	}
+	if err := plan.ReplayLeaf(
+		t.Context(), "thrift-caller", "1", plan.Leaves()[ordinal],
+		func(Record) error { return nil },
+	); err == nil || !strings.Contains(err.Error(), "malformed candidate record") {
+		t.Fatalf("unselected-domain forged record error = %v", err)
+	}
+}
+
 func TestSourceLaneClassificationAndStrictRecomputation(t *testing.T) {
 	fixture := newGitFixture(t)
 	for path := range map[string]SourceLane{

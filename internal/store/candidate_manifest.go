@@ -270,9 +270,10 @@ LET $pending = IF array::len($published) = 1 THEN
 		WHERE pending_key = $repository AND status = 'pending'
 		ORDER BY created_at LIMIT 1)[0].id
 	ELSE NONE END;
-LET $fanout = IF array::len($published) != 1 THEN []
+	LET $fanout = IF array::len($published) != 1 THEN []
 	ELSE IF $pending != NONE THEN
-		(UPDATE $pending SET force = force RETURN AFTER)
+		(UPDATE $pending SET force = force,
+			recovery_lease = NONE RETURN AFTER)
 	ELSE
 		(CREATE extraction_job CONTENT {
 			target: $repository,
@@ -292,7 +293,8 @@ LET $catalog_force = ($same_publication = false) OR $control_advanced;
 LET $catalog_fanout = IF array::len($published) != 1 THEN []
 	ELSE IF $pending_catalog != NONE THEN
 		(UPDATE $pending_catalog SET
-			force = IF $catalog_force THEN true ELSE force END
+			force = IF $catalog_force THEN true ELSE force END,
+			recovery_lease = NONE
 			RETURN AFTER)
 	ELSE
 		(CREATE resolver_catalog_job CONTENT {
@@ -469,7 +471,8 @@ func (s *Surreal) ClearCandidateManifestPublication(
 			ELSE NONE END;
 		LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 			ELSE IF $pending_catalog != NONE THEN
-				(UPDATE $pending_catalog SET force = true RETURN AFTER)
+				(UPDATE $pending_catalog SET force = true,
+					recovery_lease = NONE RETURN AFTER)
 			ELSE
 				(CREATE resolver_catalog_job CONTENT {
 					target: $repository,

@@ -127,6 +127,75 @@ DEFINE FIELD IF NOT EXISTS published_at ON resolver_catalog_publication TYPE dat
 DEFINE INDEX IF NOT EXISTS resolver_catalog_publication_repository
     ON resolver_catalog_publication FIELDS repository UNIQUE;
 
+-- T30.6h: repository-keyed caller-leaf execution queue. One immutable outcome
+-- row exists per complete-generation/pair; the admission row is aggregate
+-- state only and is not a product-visible caller publication.
+DEFINE TABLE IF NOT EXISTS caller_leaf_job SCHEMALESS;
+DEFINE FIELD OVERWRITE status ON caller_leaf_job TYPE string
+    ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];
+DEFINE INDEX IF NOT EXISTS caller_leaf_job_status ON caller_leaf_job FIELDS status;
+
+DEFINE TABLE IF NOT EXISTS caller_leaf_outcome SCHEMALESS;
+DEFINE FIELD OVERWRITE repository ON caller_leaf_outcome TYPE string;
+DEFINE FIELD OVERWRITE generation ON caller_leaf_outcome TYPE object;
+DEFINE FIELD OVERWRITE generation_digest ON caller_leaf_outcome TYPE string;
+DEFINE FIELD OVERWRITE pair ON caller_leaf_outcome TYPE object;
+DEFINE FIELD OVERWRITE domain ON caller_leaf_outcome TYPE string;
+DEFINE FIELD OVERWRITE leaf_prefix ON caller_leaf_outcome TYPE string;
+DEFINE FIELD OVERWRITE disposition ON caller_leaf_outcome TYPE string
+    ASSERT $value INSIDE ['succeeded', 'terminal_generation_refusal'];
+DEFINE FIELD OVERWRITE receipt ON caller_leaf_outcome TYPE option<object>;
+DEFINE FIELD OVERWRITE writer_schema ON caller_leaf_outcome TYPE string
+    ASSERT $value = 'phebs-caller-leaf-store-v1';
+DEFINE FIELD OVERWRITE recorded_at ON caller_leaf_outcome TYPE datetime;
+DEFINE INDEX IF NOT EXISTS caller_leaf_outcome_generation
+    ON caller_leaf_outcome FIELDS repository, generation_digest, domain, leaf_prefix;
+
+DEFINE TABLE IF NOT EXISTS caller_generation_admission SCHEMALESS;
+DEFINE FIELD OVERWRITE repository ON caller_generation_admission TYPE string;
+DEFINE FIELD OVERWRITE generation ON caller_generation_admission TYPE object;
+DEFINE FIELD OVERWRITE generation_digest ON caller_generation_admission TYPE string;
+DEFINE FIELD OVERWRITE disposition ON caller_generation_admission TYPE string
+    ASSERT $value INSIDE ['admitted', 'terminal_generation_refusal'];
+DEFINE FIELD OVERWRITE pair_set_digest ON caller_generation_admission TYPE string;
+DEFINE FIELD OVERWRITE pair_count ON caller_generation_admission TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE artifact_count ON caller_generation_admission TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE result_count ON caller_generation_admission TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE abstention_count ON caller_generation_admission TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE canonical_bytes ON caller_generation_admission TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE staging_bytes ON caller_generation_admission TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE peak_open_files ON caller_generation_admission TYPE int
+    ASSERT $value >= 0;
+DEFINE FIELD OVERWRITE writer_schema ON caller_generation_admission TYPE string
+    ASSERT $value = 'phebs-caller-leaf-store-v1';
+DEFINE FIELD OVERWRITE recorded_at ON caller_generation_admission TYPE datetime;
+DEFINE INDEX IF NOT EXISTS caller_generation_admission_repository
+    ON caller_generation_admission FIELDS repository, generation_digest;
+
+-- Generation-named immutable writer guards cannot be weakened by an older
+-- binary reapplying field definitions. DELETE remains available to bounded
+-- reconciliation and repository removal.
+DEFINE EVENT IF NOT EXISTS caller_leaf_outcome_writer_v1
+    ON TABLE caller_leaf_outcome
+    WHEN $event != 'DELETE'
+      AND ($after.writer_schema ?? '') != 'phebs-caller-leaf-store-v1'
+    THEN {
+        THROW 'phebs-permanent: retired caller-leaf writer generation'
+    };
+DEFINE EVENT IF NOT EXISTS caller_generation_admission_writer_v1
+    ON TABLE caller_generation_admission
+    WHEN $event != 'DELETE'
+      AND ($after.writer_schema ?? '') != 'phebs-caller-leaf-store-v1'
+    THEN {
+        THROW 'phebs-permanent: retired caller-leaf writer generation'
+    };
+
 DEFINE TABLE IF NOT EXISTS investigation_run_job SCHEMALESS;
 DEFINE FIELD OVERWRITE status ON investigation_run_job TYPE string
     ASSERT $value INSIDE ['pending', 'claimed', 'running', 'done', 'failed', 'canceled'];

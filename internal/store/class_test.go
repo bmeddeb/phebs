@@ -43,6 +43,11 @@ func TestClassifyAndBackoff(t *testing.T) {
 	if !errors.Is(WithClass(ClassAuth, base), base) {
 		t.Error("WithClass broke the error chain")
 	}
+	successor := WithClass(ClassExtract, WithSuccessorRetry(base))
+	if !IsSuccessorRetry(successor) || !errors.Is(successor, base) ||
+		Classify(successor) != ClassExtract {
+		t.Errorf("successor retry marker broke classification: %v", successor)
+	}
 }
 
 // T3.3 AC: a classified failure lands with its class's retry schedule and

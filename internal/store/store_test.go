@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"reflect"
+	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -245,7 +247,7 @@ func TestJobLifecycle(t *testing.T) {
 
 	for _, kind := range []store.JobKind{
 		store.JobSync, store.JobIndex, store.JobCandidate,
-		store.JobResolverCatalog,
+		store.JobResolverCatalog, store.JobCallerLeaf,
 	} {
 		t.Run(string(kind), func(t *testing.T) {
 			job, err := s.CreateJob(ctx, kind, "target-1")
@@ -347,15 +349,22 @@ func TestEnqueuePendingCollapsesConcurrentSuccessorsAndUpgradesForce(t *testing.
 	if len(pending) != 1 || !pending[0].Force || pending[0].ID == active.ID {
 		t.Fatalf("successor jobs = %+v, want one distinct forced pending job", pending)
 	}
-	if err := s.RequeueJob(ctx, *active, "retry", time.Now().UTC()); err != nil {
+	retryGate := time.Now().UTC().Add(time.Minute)
+	if err := s.RequeueJob(ctx, *active, "retry", retryGate); err != nil {
 		t.Fatal(err)
 	}
 	pending, err = s.ListJobs(ctx, store.JobIndex, store.StatusPending)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(pending) != 1 || pending[0].Attempts != 1 || !pending[0].Force {
-		t.Fatalf("merged retry successor = %+v, want one forced job with attempts=1", pending)
+	if len(pending) != 1 || pending[0].Attempts != 1 || !pending[0].Force ||
+		pending[0].Error != "retry" || pending[0].NotBefore == nil ||
+		pending[0].NotBefore.Before(retryGate.Add(-time.Second)) ||
+		pending[0].NotBefore.After(retryGate.Add(time.Second)) {
+		t.Fatalf(
+			"merged retry successor = %+v, want forced attempts=1/error/backoff",
+			pending,
+		)
 	}
 
 	if n, err := s.CancelPendingJobs(ctx, store.JobIndex, active.Target); err != nil || n != 1 {
@@ -365,6 +374,92 @@ func TestEnqueuePendingCollapsesConcurrentSuccessorsAndUpgradesForce(t *testing.
 	if err != nil || len(canceled) != 2 {
 		t.Fatalf("canceled jobs = %+v, %v; want superseded active and canceled successor", canceled, err)
 	}
+
+	for _, test := range []struct {
+		name           string
+		externalBefore bool
+		force          bool
+	}{
+		{name: "external before recovery", externalBefore: true},
+		{name: "external before recovery forced", externalBefore: true, force: true},
+		{name: "external after recovery"},
+		{name: "external after recovery forced", force: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			target := "github.com/acme/" + strings.ReplaceAll(test.name, " ", "-")
+			if _, err := s.EnqueuePending(ctx, store.JobCallerLeaf, target, false); err != nil {
+				t.Fatal(err)
+			}
+			active, err := s.ClaimJob(ctx, store.JobCallerLeaf, "active-worker")
+			if err != nil {
+				t.Fatal(err)
+			}
+			active.Attempts = 2
+			if err := s.SetJobStatus(ctx, *active, store.StatusRunning, ""); err != nil {
+				t.Fatal(err)
+			}
+
+			var recovery, external *store.Job
+			if test.externalBefore {
+				external, err = s.EnqueuePending(
+					ctx, store.JobCallerLeaf, target, test.force,
+				)
+				if err == nil {
+					recovery, err = s.EnsureJobSuccessor(ctx, *active, false)
+				}
+			} else {
+				recovery, err = s.EnsureJobSuccessor(ctx, *active, false)
+				if err == nil {
+					external, err = s.EnqueuePending(
+						ctx, store.JobCallerLeaf, target, test.force,
+					)
+				}
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if recovery.ID != external.ID {
+				t.Fatalf("coalesced successor ids = recovery:%s external:%s",
+					recovery.ID, external.ID)
+			}
+			if err := s.FailJobWithSuccessor(
+				ctx, *active, "persistent install failure",
+			); err != nil {
+				t.Fatal(err)
+			}
+
+			pending, err := s.ListJobs(ctx, store.JobCallerLeaf, store.StatusPending)
+			if err != nil {
+				t.Fatal(err)
+			}
+			pending = slices.DeleteFunc(pending, func(job store.Job) bool {
+				return job.Target != target
+			})
+			if len(pending) != 1 || pending[0].ID != external.ID ||
+				pending[0].Force != test.force || pending[0].Attempts != 0 {
+				t.Fatalf("fresh successor after final failure = %+v", pending)
+			}
+			failed, err := s.ListJobs(ctx, store.JobCallerLeaf, store.StatusFailed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			failed = slices.DeleteFunc(failed, func(job store.Job) bool {
+				return job.Target != target
+			})
+			if len(failed) != 1 || failed[0].ID != active.ID ||
+				failed[0].Attempts != 3 {
+				t.Fatalf("exhausted active job = %+v", failed)
+			}
+			if count, err := s.CancelPendingJobs(
+				ctx, store.JobCallerLeaf, target,
+			); err != nil || count != 1 {
+				t.Fatalf("cleanup preserved successor = %d, %v", count, err)
+			}
+		})
+	}
+	t.Run("candidate fanout clears recovery provenance", func(t *testing.T) {
+		assertCandidateFanoutPreservesFreshResolverWork(t, ctx, s)
+	})
 }
 
 func TestLeaseFencesReapedWorker(t *testing.T) {

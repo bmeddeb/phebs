@@ -119,6 +119,9 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateResolverCatalogWriter(ctx); err != nil {
 		return err
 	}
+	if err := s.migrateCallerLeafWriter(ctx); err != nil {
+		return err
+	}
 	results, err = surrealdb.Query[any](ctx, s.db, apiKeyCapabilitySchema, nil)
 	if err != nil {
 		return err
@@ -326,6 +329,7 @@ DEFINE INDEX IF NOT EXISTS repo_fetch_job_pending_key ON repo_fetch_job FIELDS p
 DEFINE INDEX IF NOT EXISTS candidate_manifest_job_pending_key ON candidate_manifest_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS extraction_job_pending_key ON extraction_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS resolver_catalog_job_pending_key ON resolver_catalog_job FIELDS pending_key UNIQUE;
+DEFINE INDEX IF NOT EXISTS caller_leaf_job_pending_key ON caller_leaf_job FIELDS pending_key UNIQUE;
 DEFINE INDEX IF NOT EXISTS investigation_run_job_pending_key ON investigation_run_job FIELDS pending_key UNIQUE;`
 
 // retiredEvidenceStoreSchemas are the writer generations this binary neither
@@ -407,7 +411,7 @@ DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
 func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
 	for _, kind := range []JobKind{
 		JobSync, JobIndex, JobFetch, JobCandidate, JobExtract,
-		JobResolverCatalog, JobInvestigate,
+		JobResolverCatalog, JobCallerLeaf, JobInvestigate,
 	} {
 		jobs, err := s.ListJobs(ctx, kind, "")
 		if err != nil {
@@ -1332,8 +1336,13 @@ UPDATE candidate_manifest_job SET status = 'canceled', error = 'repository delet
 UPDATE resolver_catalog_job SET status = 'canceled', error = 'repository deleting',
     finished_at = time::now(), not_before = NONE, pending_key = NONE
     WHERE target = $name AND status = 'pending' RETURN NONE;
+UPDATE caller_leaf_job SET status = 'canceled', error = 'repository deleting',
+    finished_at = time::now(), not_before = NONE, pending_key = NONE
+    WHERE target = $name AND status = 'pending' RETURN NONE;
 DELETE candidate_manifest_publication WHERE repository = $name RETURN NONE;
 DELETE resolver_catalog_publication WHERE repository = $name RETURN NONE;
+DELETE caller_leaf_outcome WHERE repository = $name RETURN NONE;
+DELETE caller_generation_admission WHERE repository = $name RETURN NONE;
 DELETE repo_permission WHERE repo = $name RETURN NONE;
 DELETE repo_connection WHERE repo = $name RETURN NONE;
 DELETE $rid RETURN NONE;
@@ -1436,7 +1445,8 @@ LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
 	ELSE NONE END;
 LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+		(UPDATE $pending_catalog SET force = true,
+			recovery_lease = NONE RETURN AFTER)
 	ELSE
 		(CREATE resolver_catalog_job CONTENT {
 			target: $name,
@@ -1519,7 +1529,8 @@ LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
 	ELSE NONE END;
 LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+		(UPDATE $pending_catalog SET force = true,
+			recovery_lease = NONE RETURN AFTER)
 	ELSE
 		(CREATE resolver_catalog_job CONTENT {
 			target: $name,
@@ -1584,7 +1595,8 @@ LET $pending_catalog = IF array::len($retired_catalog) = 1 THEN
 	ELSE NONE END;
 LET $catalog_fanout = IF array::len($retired_catalog) != 1 THEN []
 	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+		(UPDATE $pending_catalog SET force = true,
+			recovery_lease = NONE RETURN AFTER)
 	ELSE
 		(CREATE resolver_catalog_job CONTENT {
 			target: $name,
@@ -1735,7 +1747,8 @@ LET $pending = (SELECT id, created_at FROM type::table($table)
     WHERE pending_key = $target AND status = 'pending'
     ORDER BY created_at LIMIT 1)[0].id;
 RETURN IF $pending != NONE THEN
-    (UPDATE $pending SET force = IF $force THEN true ELSE force END RETURN AFTER)
+    (UPDATE $pending SET force = IF $force THEN true ELSE force END,
+        recovery_lease = NONE RETURN AFTER)
 ELSE
     (CREATE type::table($table) CONTENT {
         target: $target,
@@ -1772,6 +1785,74 @@ func (s *Surreal) EnqueuePending(ctx context.Context, kind JobKind, target strin
 	}
 }
 
+const ensureJobSuccessorSQL = `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who)[0].id;
+LET $pending = (SELECT id, created_at FROM type::table($table)
+    WHERE pending_key = $target AND status = 'pending'
+    ORDER BY created_at LIMIT 1)[0].id;
+RETURN IF $owned = NONE THEN []
+ELSE IF $pending != NONE THEN
+    (UPDATE $pending SET force = IF $force THEN true ELSE force END RETURN AFTER)
+ELSE
+    (CREATE type::table($table) CONTENT {
+        target: $target,
+        status: 'pending',
+        attempts: 0,
+        created_at: time::now(),
+        pending_key: $target,
+        force: $force,
+        recovery_lease: $lease
+    } RETURN AFTER)
+END;
+COMMIT;`
+
+// EnsureJobSuccessor creates a crash-recovery successor owned by this active
+// lease. It deliberately does not claim an already-pending event as recovery
+// work: that row may represent fresher candidate/resolver authority. A later
+// ordinary EnqueuePending clears ownership even when it only coalesces into the
+// same row, giving final-attempt failure a safe compare-and-set boundary. Every
+// returned error carries SuccessorRetry because a transport/context failure may
+// arrive after the transaction committed; the provenance-aware final transition
+// is safe whether the tagged row exists or not.
+func (s *Surreal) EnsureJobSuccessor(
+	ctx context.Context,
+	job Job,
+	force bool,
+) (*Job, error) {
+	if job.ID == "" || job.LeaseToken == "" || job.ClaimedBy == "" ||
+		job.Kind == "" || job.Target == "" {
+		return nil, WithSuccessorRetry(fmt.Errorf(
+			"job %q: %w", job.ID, ErrLeaseLost,
+		))
+	}
+	vars := map[string]any{
+		"id": job.ID, "table": string(job.Kind), "target": job.Target,
+		"lease": job.LeaseToken, "who": job.ClaimedBy, "force": force,
+	}
+	for attempt := 0; ; attempt++ {
+		results, err := surrealdb.Query[[]jobRec](
+			ctx, s.db, ensureJobSuccessorSQL, vars,
+		)
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil &&
+				attempt+1 < maxQueueRetries {
+				continue
+			}
+			return nil, WithSuccessorRetry(err)
+		}
+		rows := firstNonEmpty(results)
+		if len(rows) == 0 {
+			return nil, WithSuccessorRetry(fmt.Errorf(
+				"job %q: %w", job.ID, ErrLeaseLost,
+			))
+		}
+		out := rows[0].toJob(job.Kind)
+		return &out, nil
+	}
+}
+
 func (s *Surreal) ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) {
 	sql := "SELECT * FROM type::table($table) ORDER BY created_at"
 	vars := map[string]any{"table": string(kind)}
@@ -1801,7 +1882,7 @@ LET $cand = (SELECT id, created_at FROM type::table($table)
     ORDER BY created_at LIMIT 1)[0].id;
 RETURN IF $cand != NONE THEN
     (UPDATE $cand SET status = 'claimed', claimed_by = $who, lease_token = $lease, pending_key = NONE,
-     claimed_at = time::now(), heartbeat_at = time::now()
+     claimed_at = time::now(), heartbeat_at = time::now(), recovery_lease = NONE
      WHERE status = 'pending' RETURN AFTER)
 ELSE [] END;`
 
@@ -1911,6 +1992,71 @@ func (s *Surreal) RequeueJob(ctx context.Context, job Job, errMsg string, notBef
 	return s.returnToPending(ctx, job, errMsg, notBefore, true, nil)
 }
 
+const failJobWithSuccessorSQL = `
+BEGIN;
+LET $owned = (SELECT id FROM type::record($id)
+    WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who)[0].id;
+LET $successor = (SELECT id, created_at FROM type::table($table)
+    WHERE pending_key = $target AND status = 'pending'
+    AND recovery_lease = $lease
+    ORDER BY created_at LIMIT 1)[0].id;
+LET $failed_successor = IF $owned != NONE AND $successor != NONE THEN
+    (UPDATE $successor SET status = 'failed', attempts = $attempts,
+        error = $err, not_before = NONE, finished_at = time::now(),
+        pending_key = NONE RETURN AFTER)
+ELSE [] END;
+RETURN IF $owned = NONE THEN []
+ELSE IF $successor != NONE THEN
+    (UPDATE type::record($id) SET status = 'canceled', error = $superseded,
+        finished_at = time::now(), lease_token = NONE, pending_key = NONE
+     WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who
+     RETURN AFTER)
+ELSE
+    (UPDATE type::record($id) SET status = 'failed', attempts = $attempts,
+        error = $err, not_before = NONE, finished_at = time::now(),
+        lease_token = NONE, pending_key = NONE
+     WHERE status = 'running' AND lease_token = $lease AND claimed_by = $who
+     RETURN AFTER)
+END;
+COMMIT;`
+
+// FailJobWithSuccessor exhausts an error returned after the handler created a
+// pending successor. It may consume only a row still carrying this exact
+// active lease's recovery provenance. An ordinary enqueue clears that field,
+// so fresher coalesced work survives while the exhausted active row fails.
+func (s *Surreal) FailJobWithSuccessor(
+	ctx context.Context,
+	job Job,
+	errMsg string,
+) error {
+	if job.ID == "" || job.LeaseToken == "" || job.ClaimedBy == "" {
+		return fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
+	}
+	vars := map[string]any{
+		"id": job.ID, "table": string(job.Kind), "target": job.Target,
+		"lease": job.LeaseToken, "who": job.ClaimedBy,
+		"attempts":   job.Attempts + 1,
+		"err":        errMsg,
+		"superseded": "attempts exhausted by pending successor: " + errMsg,
+	}
+	for attempt := 0; ; attempt++ {
+		results, err := surrealdb.Query[[]jobRec](
+			ctx, s.db, failJobWithSuccessorSQL, vars,
+		)
+		if err != nil {
+			if isRetryableEnqueue(err) && ctx.Err() == nil &&
+				attempt+1 < maxQueueRetries {
+				continue
+			}
+			return err
+		}
+		if !queryContainsJob(results, job.ID) {
+			return fmt.Errorf("job %q: %w", job.ID, ErrLeaseLost)
+		}
+		return nil
+	}
+}
+
 // ReleaseJob is the shutdown path: work returns to pending immediately without
 // being counted as a failed attempt.
 func (s *Surreal) ReleaseJob(ctx context.Context, job Job, errMsg string) error {
@@ -1937,7 +2083,8 @@ LET $merged = IF $owned != NONE AND $successor != NONE THEN
         force = IF $force THEN true ELSE force END,
         attempts = IF $increment THEN $attempts ELSE attempts END,
         error = $err,
-        not_before = IF $increment THEN $nb ELSE NONE END
+        not_before = IF $increment THEN $nb ELSE NONE END,
+        recovery_lease = NONE
      RETURN AFTER)
 ELSE [] END;
 RETURN IF $owned = NONE THEN []
@@ -1951,7 +2098,8 @@ ELSE
     (UPDATE type::record($id) SET status = 'pending', attempts = $attempts, error = $err,
         not_before = IF $increment THEN $nb ELSE NONE END,
         claimed_by = NONE, claimed_at = NONE, heartbeat_at = NONE,
-        lease_token = NONE, finished_at = NONE, pending_key = $target
+        lease_token = NONE, recovery_lease = NONE,
+        finished_at = NONE, pending_key = $target
      WHERE status IN ['claimed', 'running'] AND lease_token = $lease AND claimed_by = $who
      AND ($reaping = false OR (time::nano(heartbeat_at) = $heartbeat_nanos AND heartbeat_at < $cutoff))
      RETURN AFTER)
@@ -2033,7 +2181,10 @@ func (s *Surreal) CancelPendingJobs(ctx context.Context, kind JobKind, target st
 
 // ReapStale rescues jobs whose worker died: claimed/running rows without a
 // recent heartbeat go back to pending (attempts+1), or to failed once
-// maxAttempts is exhausted. Returns how many rows it touched.
+// maxAttempts is exhausted. A separately pending crash-recovery successor is
+// intentionally left fresh on final reap: process death cannot reveal whether
+// the worker crossed its install boundary, and StaleAfter paces another turn.
+// Returns how many rows it touched.
 // ponytail: staleness cutoff computed on the Go clock vs server-side
 // heartbeats — same host today (supervised child); revisit for fleet mode.
 func (s *Surreal) ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error) {

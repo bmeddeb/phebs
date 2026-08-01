@@ -10,8 +10,9 @@ bounded extraction job receipts, T30.6b shipped durable per-domain outcomes,
 and T30.6c shipped aggregate-bounded domain scheduling. T30.6d candidate-v4
 source-lane classification, T30.6e focused local-evidence base-lane
 consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
-materialization are shipped; T30.6h direct caller-leaf execution is next.
-Completed Epics 0–24, Epic 29, T30.1–T30.6g, and P5 hardening are
+materialization, and T30.6h direct caller-leaf execution are shipped; T30.6i
+atomic complete caller-generation publication is next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6h, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -21,12 +22,13 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6h · Direct caller-leaf execution artifacts** is next. T30.6a–T30.6g now provide
+**T30.6i · Atomic complete caller-generation publication** is next. T30.6a–T30.6h now provide
 bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, and the adapter-free immutable catalog
-lifecycle plus bounded gRPC/Thrift resolver materialization without changing
-search. The accepted
+lifecycle, bounded gRPC/Thrift resolver materialization, and independently
+durable but non-visible direct caller-leaf artifacts without changing search.
+The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
 outcomes, aggregate scheduling, source-lane classification and consumption,
@@ -550,7 +552,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6h next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6i next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -913,38 +915,26 @@ is registered; T30.6g supplies bounded materialization.
 completed and retained in the
 [completed backlog](./BACKLOG_COMPLETED.md#t306g--bounded-resolver-materialization).
 Ordered gRPC and Thrift adapters now materialize one immutable catalog from
-the exact candidate/declaration generation and only its committed `go.mod`,
-`layout-snapshot.json`, and `generated-from-snapshot.json` inputs. Explicit
+the exact candidate/declaration generation and its committed `go.mod`,
+`layout-snapshot.json`, and `generated-from-snapshot.json` inputs; resolver
+pack 1.1.0 additionally opens each mapped generated `base`-lane Go source once
+during materialization. Explicit
 unavailable, ambiguous, and unsupported states replace tie-breaks; bounded
 repository-locked publication, transactional fan-out, startup backfill and
 marker recovery, and a zero-input-read/hash warm no-op are shipped. T30.6h
 consumes this catalog without rerunning discovery.
 
-**T30.6h · Direct caller-leaf execution artifacts** *(needs T30.6g)* — consume
-T30.4 caller leaves directly without rebuilding a flattened repository path
-inventory. Default work processes only `base`; `go_test` remains retained
-planning input for a future separately authorized generation. Address one
-artifact and durable leaf outcome by `(caller domain, leaf prefix, complete
-generation identity)`; the expected set includes every declared pair, including
-explicit successful empty/abstention artifacts. Each worker opens only blobs
-declared by its leaf, measures exactly zero out-of-leaf reads, and writes an
-immutable artifact that is not independently product-visible. A terminal
-outcome for one pair does not erase a successful sibling domain, but prevents
-the complete generation containing that domain from publishing. Leaf state
-carries schema/writer generation, exact artifact receipt/digest, and
-disposition. Restart descriptor/content-validates a successful artifact once
-before reuse; prior-process staging and file-without-state or state-without-file
-cases are reclaimed or requeued without trusting decoded cross-repository
-content. Freeze per-pair and aggregate-generation limits for artifact count,
-result/abstention records, canonical content bytes, staging disk, and
-concurrently open files. Aggregate admission is checked before complete
-publication; cap+1 refuses replacement while preserving the prior complete
-generation. AC: cross-service and unrelated-target neutral fixtures, per-record
-abstentions, explicit empty pair, sibling-domain failure isolation, no all-leaf
-memory materialization, fixed worker/memory/deadline bounds, per-pair and
-aggregate cap/cap+1 output receipts, prior-generation preservation, leaf
-tamper/descriptor swap, every restart mismatch, crash/resume, no
-aggregate-path-limit dependency, full merge bar.
+**T30.6h ✅ · Direct caller-leaf execution artifacts** *(2026-07-31; needs
+T30.6g)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306h--direct-caller-leaf-execution-artifacts).
+The repository-keyed worker consumes one exact candidate-v4 caller leaf at a
+time, excludes `go_test` before blob open, and publishes immutable but
+independently invisible pair artifacts with durable success/terminal outcomes
+and aggregate admission. Resolver packs now retain the exact generated-symbol
+projection needed by syntax-only direct execution; restart repair, transactional
+fan-out, frozen pair/generation limits, and cap+1 refusal preserve prior and
+sibling authority. T30.6i owns complete visibility, readers, leases, and exact
+archive/restore.
 
 **T30.6i · Atomic complete caller-generation publication** *(needs T30.6h)* —
 coordinate only successfully published caller-domain/leaf artifacts into one

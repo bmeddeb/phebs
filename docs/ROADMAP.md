@@ -116,11 +116,13 @@ complete-publication, consumer, and retention seam. T30.6a bounded job
 receipts, T30.6b durable exact-generation domain outcomes, T30.6c
 aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
 classification, T30.6e focused local-evidence base-lane consumption, and
-T30.6f resolver-catalog lifecycle and T30.6g bounded resolver materialization
-are shipped; T30.6h direct caller-leaf execution is next. T30.6g registers the
+T30.6f resolver-catalog lifecycle, T30.6g bounded resolver materialization,
+and T30.6h direct caller-leaf execution artifacts are shipped; T30.6i atomic
+complete caller-generation publication is next. T30.6g registers the
 ordered gRPC/Thrift resolver adapters and materializes one immutable catalog
-from the exact candidate/declaration generation. It opens only committed
-`go.mod`, `layout-snapshot.json`, and `generated-from-snapshot.json` inputs,
+from the exact candidate/declaration generation. It opens committed `go.mod`,
+`layout-snapshot.json`, and `generated-from-snapshot.json` inputs plus each
+mapped generated `base`-lane Go source required by resolver pack 1.1.0,
 retains explicit unavailable/ambiguous/unsupported states, and never runs a
 build, dependency query, generator, mutable checkout, corpus code, or network
 request. Candidate and relevant declaration publication atomically fan out
@@ -133,7 +135,17 @@ lifecycle caps. Recovery preserves authority across transient catalog I/O and
 same-generation manifest conflicts, while deterministic damaged markers or
 malformed store pointers use a durable forced successor before clear. Every
 publication also ensures a non-forced successor before creating its marker,
-closing the final-attempt crash boundary. Exact `_test.go` suffix
+closing the final-attempt crash boundary. T30.6h consumes only the selected
+candidate leaf, excludes `go_test` before blob open, and retains direct-v1
+results or per-record abstentions in independently durable, non-visible pair
+artifacts. Resolver packs advance to 1.1.0 to carry exact generated Go symbol
+identity parsed once during catalog materialization under one symmetric
+catalog-wide unique-source-plus-descriptor identity budget; an oversized
+mapped source becomes a zero-read unsupported input without discarding valid
+siblings. SCIP remains outside this
+syntax-only leaf generation. Per-pair and aggregate receipts fence result,
+abstention, byte, stage, and descriptor bounds, while terminal siblings prevent
+complete admission without erasing successful outcomes. Exact `_test.go` suffix
 wins in candidate v4; focused local evidence for a committed non-empty unit
 now consumes only `base`, while empty-unit whole-repository extraction keeps
 shipped behavior and current search continues indexing every admitted test

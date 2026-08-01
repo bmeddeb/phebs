@@ -127,7 +127,71 @@ connections:
 	}); err != nil {
 		t.Fatalf("publish pre-backup resolver catalog pointer: %v", err)
 	}
+	publishedCatalog, err := st.GetResolverCatalogPublication(ctx, names[0])
+	if err != nil {
+		t.Fatalf("read pre-backup resolver catalog pointer: %v", err)
+	}
 	if err := resolvercatalog.ClearPublishing(catalogRoot, names[0]); err != nil {
+		t.Fatal(err)
+	}
+	callerGeneration := store.CallerGenerationIdentity{
+		Repository: names[0], HeadCommit: indexedBefore.IndexedCommitHash,
+		UnitDigest:               publishedPointer.UnitDigest,
+		DeclarationSetDigest:     publishedCatalog.DeclarationSetDigest,
+		CandidateManifestDigest:  publishedPointer.ManifestDigest,
+		CandidatePolicyDigest:    publishedPointer.PolicyDigest,
+		CandidateControlRevision: publishedPointer.ControlRevision,
+		ResolverGenerationDigest: publishedCatalog.GenerationDigest,
+		ResolverManifestDigest:   publishedCatalog.ManifestDigest,
+		ResolverControlRevision:  publishedCatalog.ControlRevision,
+		ResolverWriterSchema:     publishedCatalog.WriterSchema,
+		SourceLanePolicy:         store.CallerBaseSourceLanePolicy,
+		CallerPolicyDigest:       "sha256:" + strings.Repeat("6", 64),
+		ExtractorSetDigest:       "sha256:" + strings.Repeat("7", 64),
+	}
+	callerPair := store.CallerLeafPair{
+		Domain: "grpc-caller", ExtractorVersion: "1.0.0",
+		LeafAdapterVersion: "direct-syntax-base-v1",
+		LeafOrdinal:        0, LeafPrefix: "00", LeafPrefixBits: 2,
+		CandidateMemberName:  "phebs-candidate-neutral-v4-caller-000001.ndjson",
+		CandidateRecordCount: 1, CandidateDeclaredBytes: 32,
+		CandidateContentBytes:  64,
+		CandidateContentDigest: "sha256:" + strings.Repeat("8", 64),
+	}
+	callerJob, err := st.ClaimJob(ctx, store.JobCallerLeaf, "recovery-caller")
+	if err != nil {
+		t.Fatalf("claim pre-backup caller leaf job: %v", err)
+	}
+	if err := st.SetJobStatus(ctx, *callerJob, store.StatusRunning, ""); err != nil {
+		t.Fatalf("run pre-backup caller leaf job: %v", err)
+	}
+	callerJob.Status = store.StatusRunning
+	if err := st.RecordCallerLeafOutcome(ctx, *callerJob, store.CallerLeafOutcome{
+		Generation:  callerGeneration,
+		Pair:        callerPair,
+		Disposition: store.CallerLeafTerminalGenerationRefusal,
+	}); err != nil {
+		t.Fatalf("record pre-backup caller leaf outcome: %v", err)
+	}
+	if err := st.RecordCallerGenerationAdmission(
+		ctx,
+		*callerJob,
+		store.CallerGenerationAdmission{
+			Generation:  callerGeneration,
+			Disposition: store.CallerGenerationTerminalGenerationRefusal,
+		},
+		[]store.CallerLeafPair{callerPair},
+	); err != nil {
+		t.Fatalf("record pre-backup caller generation admission: %v", err)
+	}
+	callerArtifactRoot := filepath.Join(dataDir, "caller-leaves")
+	if err := os.MkdirAll(callerArtifactRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(callerArtifactRoot, "must-not-be-archived.ndjson"),
+		[]byte("derived caller bytes\n"), 0o600,
+	); err != nil {
 		t.Fatal(err)
 	}
 	outcomeScope := store.ExtractionScope{
@@ -185,6 +249,15 @@ connections:
 	if err != nil {
 		t.Fatalf("live backup: %v", err)
 	}
+	if _, err := os.Lstat(filepath.Join(backupDir, "caller-leaves")); !os.IsNotExist(err) {
+		t.Fatalf("backup included caller-leaf artifact root: %v", err)
+	}
+	if !strings.Contains(
+		strings.Join(manifest.DerivedExclusions, "\n"),
+		"caller-leaves/",
+	) {
+		t.Fatalf("backup manifest omitted caller-leaf exclusion: %+v", manifest.DerivedExclusions)
+	}
 	assertManifestDigests(t, backupDir, manifest, dataDir, origin, "SURREAL_PASS", `"root"`)
 	if _, err := recovery.Verify(backupDir, recovery.Options{
 		DataDir: dataDir, Config: configBytes, PhebsVersion: "test-version",
@@ -234,6 +307,21 @@ connections:
 		ctx, names[0],
 	); !errors.Is(err, store.ErrNotFound) {
 		t.Fatalf("restored derived resolver catalog pointer = %v, want ErrNotFound", err)
+	}
+	if got, err := restored.ListCallerLeafOutcomes(
+		ctx, callerGeneration,
+	); err != nil || len(got) != 0 {
+		t.Fatalf("restored derived caller leaf outcomes = %+v, %v; want none", got, err)
+	}
+	if got, err := restored.ListCallerGenerationAdmissions(
+		ctx, names[0],
+	); err != nil || len(got) != 0 {
+		t.Fatalf("restored derived caller admissions = %+v, %v; want none", got, err)
+	}
+	if _, err := os.Lstat(filepath.Join(
+		dataDir, "caller-leaves", "must-not-be-archived.ndjson",
+	)); !os.IsNotExist(err) {
+		t.Fatalf("restore materialized excluded caller-leaf artifact: %v", err)
 	}
 	if _, err := resolvercatalog.Open(
 		ctx, filepath.Join(dataDir, "resolver-catalogs"), catalogState,

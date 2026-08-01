@@ -21,6 +21,7 @@ type Provider struct {
 	domains    []extract.CandidateManifestDomain
 	domainKeys map[string]struct{}
 	open       func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
+	openCaller func(context.Context, string, candidate.Expected) (*candidate.CallerPlan, error)
 }
 
 // NewProvider constructs an adapter from the same PolicySet used by its
@@ -54,6 +55,7 @@ func NewProvider(
 		domains:    domains,
 		domainKeys: keys,
 		open:       candidate.OpenContext,
+		openCaller: candidate.OpenCallerPlanContext,
 	}, nil
 }
 
@@ -129,6 +131,45 @@ func (provider *Provider) OpenCandidateManifest(
 	return &manifestAdapter{
 		publication:     publication,
 		allowed:         cloneSet(provider.domainKeys),
+		controlRevision: revision,
+	}, nil
+}
+
+// OpenCandidateCallerPlan resolves the same exact store-bound generation as
+// OpenCandidateManifest, but opens only the canonical manifest and caller leaf
+// envelopes. Individual leaf contents are descriptor-checked and streamed on
+// demand by the returned plan.
+func (provider *Provider) OpenCandidateCallerPlan(
+	ctx context.Context,
+	request extract.CandidateManifestRequest,
+) (extract.CandidateCallerPlan, error) {
+	state, expected, revision, err := provider.resolve(ctx, request)
+	if err != nil {
+		return nil, err
+	}
+	if provider.openCaller == nil {
+		return nil, errors.New("candidate caller-plan opener is not initialized")
+	}
+	if err := ensureCandidateRoot(provider.root, false); err != nil {
+		return nil, err
+	}
+	plan, err := provider.openCaller(ctx, provider.root, expected)
+	if err != nil {
+		return nil, fmt.Errorf("open candidate caller plan: %w", err)
+	}
+	if plan == nil {
+		return nil, errors.New("candidate caller-plan opener returned nil")
+	}
+	if plan.State() != state {
+		return nil, errors.New(
+			"candidate caller-plan bytes do not match the persisted pointer",
+		)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return &callerPlanAdapter{
+		plan: plan, allowed: cloneSet(provider.domainKeys),
 		controlRevision: revision,
 	}, nil
 }
@@ -214,6 +255,97 @@ type manifestAdapter struct {
 	publication     *candidate.Publication
 	allowed         map[string]struct{}
 	controlRevision uint64
+}
+
+type callerPlanAdapter struct {
+	plan            *candidate.CallerPlan
+	allowed         map[string]struct{}
+	controlRevision uint64
+}
+
+func (plan *callerPlanAdapter) CandidateControlRevision() uint64 {
+	if plan == nil {
+		return 0
+	}
+	return plan.controlRevision
+}
+
+func (plan *callerPlanAdapter) Identity() string {
+	if plan == nil || plan.plan == nil {
+		return ""
+	}
+	return plan.plan.State().ManifestDigest
+}
+
+func (plan *callerPlanAdapter) CallerDomains() []extract.CandidateManifestDomain {
+	if plan == nil || plan.plan == nil {
+		return nil
+	}
+	identities := plan.plan.Domains()
+	result := make([]extract.CandidateManifestDomain, 0, len(identities))
+	for _, identity := range identities {
+		if _, ok := plan.allowed[domainKey(identity.Domain, identity.Version)]; !ok {
+			continue
+		}
+		result = append(result, extract.CandidateManifestDomain{
+			Domain: identity.Domain, Version: identity.Version,
+		})
+	}
+	return result
+}
+
+func (plan *callerPlanAdapter) CallerLeaves() []extract.CandidateCallerLeaf {
+	if plan == nil || plan.plan == nil {
+		return nil
+	}
+	leaves := plan.plan.Leaves()
+	result := make([]extract.CandidateCallerLeaf, 0, len(leaves))
+	for _, leaf := range leaves {
+		result = append(result, callerLeafDescriptor(leaf))
+	}
+	return result
+}
+
+func (plan *callerPlanAdapter) ForEachCallerLeafFile(
+	ctx context.Context,
+	domain, version string,
+	leaf extract.CandidateCallerLeaf,
+	visit func(extract.CandidateManifestFile) error,
+) error {
+	if plan == nil || plan.plan == nil || visit == nil {
+		return errors.New("candidate caller-plan replay is invalid")
+	}
+	if _, ok := plan.allowed[domainKey(domain, version)]; !ok {
+		return fmt.Errorf("candidate domain %s/%s is outside the request", domain, version)
+	}
+	selected := candidate.CallerLeaf{
+		Artifact: candidate.Artifact{
+			Name: leaf.Name, Ordinal: leaf.Ordinal,
+			RecordCount: leaf.RecordCount, DeclaredBytes: leaf.DeclaredBytes,
+			ContentBytes: leaf.ContentBytes, ContentDigest: leaf.ContentDigest,
+		},
+		Prefix: leaf.Prefix, PrefixBits: leaf.PrefixBits,
+	}
+	return plan.plan.ReplayLeaf(
+		ctx, domain, version, selected,
+		func(record candidate.Record) error {
+			return visit(extract.CandidateManifestFile{
+				Path: record.Path, ObjectID: record.OID,
+				DeclaredBytes: record.DeclaredBytes,
+				SourceLane:    record.SourceLane, Required: record.Required,
+				InUnit: record.InUnit,
+			})
+		},
+	)
+}
+
+func callerLeafDescriptor(leaf candidate.CallerLeaf) extract.CandidateCallerLeaf {
+	return extract.CandidateCallerLeaf{
+		Name: leaf.Name, Ordinal: leaf.Ordinal,
+		Prefix: leaf.Prefix, PrefixBits: leaf.PrefixBits,
+		RecordCount: leaf.RecordCount, DeclaredBytes: leaf.DeclaredBytes,
+		ContentBytes: leaf.ContentBytes, ContentDigest: leaf.ContentDigest,
+	}
 }
 
 func (manifest *manifestAdapter) CandidateControlRevision() uint64 {
@@ -361,7 +493,10 @@ func cloneSet(input map[string]struct{}) map[string]struct{} {
 }
 
 var _ extract.CandidateManifestProvider = (*Provider)(nil)
+var _ extract.CandidateCallerPlanProvider = (*Provider)(nil)
 var _ extract.CandidateManifestIdentityProvider = (*Provider)(nil)
 var _ extract.CandidateManifestGenerationProvider = (*Provider)(nil)
 var _ extract.CandidateManifest = (*manifestAdapter)(nil)
 var _ extract.CandidateManifestControl = (*manifestAdapter)(nil)
+var _ extract.CandidateCallerPlan = (*callerPlanAdapter)(nil)
+var _ extract.CandidateManifestControl = (*callerPlanAdapter)(nil)

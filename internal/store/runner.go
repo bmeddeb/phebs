@@ -135,6 +135,10 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		log.Printf("runner %s: heartbeat %s %s: %v", r.Who, job.Kind, job.Target, hbErr)
 		if err == nil || errors.Is(err, context.Canceled) {
 			err = fmt.Errorf("heartbeat: %w", hbErr)
+			// A handler may have committed its recovery successor and returned nil
+			// just before this heartbeat failure won the race. The provenance-aware
+			// transition is also safe when no successor exists.
+			err = WithSuccessorRetry(err)
 		}
 	}
 
@@ -154,10 +158,15 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 	case IsTerminal(err):
 		log.Printf("runner %s: %s %s refused terminally: %v",
 			r.Who, job.Kind, job.Target, err)
-		if r.persist(job, "fail terminal job", func(writeCtx context.Context) error {
-			return r.Store.SetJobStatus(
-				writeCtx, job, StatusFailed, err.Error(),
-			)
+		action := "fail terminal job"
+		if IsSuccessorRetry(err) {
+			action = "fail terminal job with pending successor"
+		}
+		if r.persist(job, action, func(writeCtx context.Context) error {
+			if IsSuccessorRetry(err) {
+				return r.Store.FailJobWithSuccessor(writeCtx, job, err.Error())
+			}
+			return r.Store.SetJobStatus(writeCtx, job, StatusFailed, err.Error())
 		}) {
 			recordJob(r.Kind, "failed")
 			recordJobError(r.Kind, err)
@@ -170,7 +179,14 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}
 	case job.Attempts+1 >= r.MaxAttempts:
 		log.Printf("runner %s: %s %s failed permanently: %v", r.Who, job.Kind, job.Target, err)
-		if r.persist(job, "fail job", func(writeCtx context.Context) error {
+		action := "fail job"
+		if IsSuccessorRetry(err) {
+			action = "fail job with pending successor"
+		}
+		if r.persist(job, action, func(writeCtx context.Context) error {
+			if IsSuccessorRetry(err) {
+				return r.Store.FailJobWithSuccessor(writeCtx, job, err.Error())
+			}
 			return r.Store.SetJobStatus(writeCtx, job, StatusFailed, err.Error())
 		}) {
 			recordJob(r.Kind, "failed")

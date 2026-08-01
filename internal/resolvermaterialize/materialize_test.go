@@ -267,7 +267,7 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 		if err := json.Unmarshal(member.Metadata, &metadata); err != nil {
 			t.Fatal(err)
 		}
-		if member.Name != "go-module-v1.ndjson" &&
+		if member.Name != "go-module-v2.ndjson" &&
 			metadata.RecordSchema != ProtocolMemberRecordSchema {
 			t.Fatalf("protocol member %q schema = %q, want %q",
 				member.Name, metadata.RecordSchema, ProtocolMemberRecordSchema)
@@ -285,7 +285,7 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 		}
 	}
 
-	moduleRecords := decodeMember[moduleRecord](t, first.members["go-module-v1.ndjson"])
+	moduleRecords := decodeMember[moduleRecord](t, first.members["go-module-v2.ndjson"])
 	if len(moduleRecords) != 2 {
 		t.Fatalf("module records = %+v", moduleRecords)
 	}
@@ -309,7 +309,7 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 	}
 
 	grpcRecords := decodeMember[generatedRecord](
-		t, first.members[GRPCGeneratedPackName+"-v1.ndjson"],
+		t, first.members[GRPCGeneratedPackName+"-v2.ndjson"],
 	)
 	grpc := findGeneratedRecord(t, grpcRecords, "generated_mapping", "gen/grpc/orders_grpc.pb.go")
 	if grpc.State != StateResolved || grpc.Protocol != ProtocolGRPC ||
@@ -318,7 +318,7 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 		t.Fatalf("gRPC generated record = %+v", grpc)
 	}
 	thriftRecords := decodeMember[generatedRecord](
-		t, first.members[ThriftGeneratedPackName+"-v1.ndjson"],
+		t, first.members[ThriftGeneratedPackName+"-v2.ndjson"],
 	)
 	thrift := findGeneratedRecord(t, thriftRecords, "generated_mapping", "gen/thrift/ledger.go")
 	if thrift.State != StateResolved || thrift.Protocol != ProtocolThrift ||
@@ -332,14 +332,15 @@ func TestBuildResolvedInputsAreDeterministicAndBlobBounded(t *testing.T) {
 		resolverinput.GeneratedFromSnapshotPath,
 		"go.mod",
 		"services/payments/go.mod",
+		"gen/grpc/orders_grpc.pb.go",
+		"gen/thrift/ledger.go",
 	}
 	for index, got := range [][]string{firstBlobs.readPaths, secondBlobs.readPaths} {
 		if !slices.Equal(got, wantReads) {
 			t.Errorf("build %d blob reads = %v, want %v", index+1, got, wantReads)
 		}
 		for _, forbidden := range []string{
-			"src/main.go", "unit-snapshot.json", "gen/grpc/orders_grpc.pb.go",
-			"gen/thrift/ledger.go", "idl/proto/orders.proto",
+			"src/main.go", "unit-snapshot.json", "idl/proto/orders.proto",
 			"idl/thrift/ledger.thrift",
 		} {
 			if slices.Contains(got, forbidden) {
@@ -423,7 +424,7 @@ func TestBuildModuleStates(t *testing.T) {
 				nil, &materializeAssertionReader{},
 			)
 			image := buildMaterializedImage(t, request)
-			records := decodeMember[moduleRecord](t, image.members["go-module-v1.ndjson"])
+			records := decodeMember[moduleRecord](t, image.members["go-module-v2.ndjson"])
 			if len(records) != 1 || records[0].State != testCase.state ||
 				records[0].Reason != testCase.reason || records[0].ModulePath != "" {
 				t.Fatalf("module records = %+v, want state=%q reason=%q",
@@ -526,7 +527,7 @@ func TestBuildSnapshotStates(t *testing.T) {
 			)
 			image := buildMaterializedImage(t, request)
 			records := decodeMember[generatedRecord](
-				t, image.members[GRPCGeneratedPackName+"-v1.ndjson"],
+				t, image.members[GRPCGeneratedPackName+"-v2.ndjson"],
 			)
 			status := findGeneratedRecord(t, records, "generated_attribution_input", "")
 			if status.State != testCase.state || status.Reason != testCase.reason {
@@ -659,7 +660,7 @@ func TestBuildSnapshotCollectionLimitsAreExplicit(t *testing.T) {
 			)
 			image := buildMaterializedImage(t, request)
 			records := decodeMember[generatedRecord](
-				t, image.members[GRPCGeneratedPackName+"-v1.ndjson"],
+				t, image.members[GRPCGeneratedPackName+"-v2.ndjson"],
 			)
 			status := findGeneratedRecord(t, records, "generated_attribution_input", "")
 			if status.State != StateUnsupported || status.Reason != testCase.reason {
@@ -1059,7 +1060,10 @@ func TestBuildPreservesAmbiguousGeneratedSelector(t *testing.T) {
 		`{"generated_path":"gen/api_grpc.pb.go","generator_relative_path":"api.proto",` +
 		`"declaration_path":"idl/b/api.proto"}]}`
 	files := []extract.CandidateManifestFile{
-		blobs.add("gen/api_grpc.pb.go", "package gen\n"),
+		blobs.add("go.mod", "module example.invalid/root\n"),
+		blobs.add("gen/api_grpc.pb.go", strings.ReplaceAll(
+			materializedGRPCSource, "orders.proto", "api.proto",
+		)),
 		blobs.add(resolverinput.LayoutSnapshotPath, layout),
 		blobs.add(resolverinput.GeneratedFromSnapshotPath, generated),
 		blobs.add("idl/a/api.proto", "syntax = \"proto3\";\n"),
@@ -1079,15 +1083,32 @@ func TestBuildPreservesAmbiguousGeneratedSelector(t *testing.T) {
 	)
 	image := buildMaterializedImage(t, request)
 	records := decodeMember[generatedRecord](
-		t, image.members[GRPCGeneratedPackName+"-v1.ndjson"],
+		t, image.members[GRPCGeneratedPackName+"-v2.ndjson"],
 	)
 	mapping := findGeneratedRecord(t, records, "generated_mapping", "gen/api_grpc.pb.go")
 	if mapping.State != StateAmbiguous || mapping.Reason != "multiple_declaration_paths" ||
 		len(mapping.Candidates) != 2 {
 		t.Fatalf("ambiguous selector record = %+v", mapping)
 	}
+	symbolRecords := decodeMember[generatedSymbolRecord](
+		t, image.members[GRPCGeneratedPackName+"-v2.ndjson"],
+	)
+	var symbol *generatedSymbolRecord
+	for index := range symbolRecords {
+		if symbolRecords[index].Kind == "generated_symbol" {
+			symbol = &symbolRecords[index]
+			break
+		}
+	}
+	if symbol == nil || symbol.State != StateAmbiguous ||
+		symbol.Reason != "multiple_declaration_paths" ||
+		symbol.Operation != "/orders.Orders/Get" ||
+		symbol.DeclarationPath != "" || symbol.DeclarationLineage != "" {
+		t.Fatalf("ambiguous symbol descriptor = %+v", symbol)
+	}
 	if got := blobs.readPaths; !slices.Equal(got, []string{
 		resolverinput.LayoutSnapshotPath, resolverinput.GeneratedFromSnapshotPath,
+		"go.mod", "gen/api_grpc.pb.go",
 	}) {
 		t.Fatalf("ambiguous selector blob reads = %v", got)
 	}

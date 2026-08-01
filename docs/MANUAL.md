@@ -57,8 +57,13 @@ and focused search retain shipped behavior. The bounded resolver worker now
 materializes ordered gRPC/Thrift catalogs from exact candidate and published
 declaration generations using only committed Go module, layout-snapshot, and
 generated-attribution inputs; ambiguous or unsupported authority stays
-explicit. Caller-leaf artifacts, complete partition publication, and read
-integration remain later tickets.
+explicit. Its direct-caller projection additionally reads each mapped,
+candidate-declared generated `base`-lane Go blob once during materialization;
+leaf execution never reopens that generated source. Direct caller-leaf
+execution now processes one exact `base`-lane domain/leaf pair at a time, opens
+no source outside that leaf, and durably retains results or per-record
+abstentions without making an incomplete generation visible. Complete
+partition publication and read integration remain later tickets.
 
 ## Evidence boundary
 

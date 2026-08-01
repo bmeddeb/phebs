@@ -14,6 +14,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/repopath"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
@@ -65,7 +66,20 @@ type generatedPlan struct {
 	layoutProblem    string
 	generatedProblem string
 	generatedPaths   map[string]bool
+	generatedFiles   map[string]extract.CandidateManifestFile
 	invocationRoots  map[string]bool
+	modules          map[string]string
+	parsedSymbols    map[string]generatedSymbolParse
+	blobs            *blobBudget
+}
+
+type generatedSymbolParse struct {
+	protocol Protocol
+	file     extract.CandidateManifestFile
+	digest   string
+	symbols  []gocaller.GeneratedSymbol
+	state    string
+	reason   string
 }
 
 type blobBudget struct {
@@ -84,6 +98,10 @@ type materializationBudget struct {
 	declarationPathBytes         int
 	generatedCandidateExpansions int
 	generatedCandidateBytes      int
+	generatedSymbolDescriptors   int
+	generatedSymbolIdentityBytes int
+	generatedSourceObjects       map[string]string
+	generatedSymbolRecords       map[string]string
 }
 
 func (budget *blobBudget) load(
@@ -124,7 +142,8 @@ func (budget *blobBudget) load(
 
 // Build streams one deterministic stage. It never walks a repository tree:
 // candidate replay supplies every admitted path/OID, and ReadBlob is invoked
-// only for go.mod plus the two fixed generated-attribution inputs.
+// only for go.mod, the two fixed generated-attribution inputs, and mapped
+// generated base-lane Go sources retained by the v1.1 symbol projection.
 func Build(ctx context.Context, request BuildRequest) (*resolvercatalog.Prepared, error) {
 	if err := validateBuildRequest(request); err != nil {
 		return nil, err
@@ -157,7 +176,7 @@ func Build(ctx context.Context, request BuildRequest) (*resolvercatalog.Prepared
 	}
 	caller := request.Registry.adapters[0]
 	if err := stage.AddMember(
-		ctx, "go-module-v1.ndjson", metadata,
+		ctx, "go-module-v2.ndjson", metadata,
 		func(write func(json.RawMessage) error) error {
 			return emitModulesAndValidateGeneratedPaths(
 				ctx, request.Manifest, caller, blobs, plan, write,
@@ -182,7 +201,7 @@ func Build(ctx context.Context, request BuildRequest) (*resolvercatalog.Prepared
 		if err != nil {
 			return nil, err
 		}
-		name := current.pack.Name + "-v1.ndjson"
+		name := current.pack.Name + "-v2.ndjson"
 		if err := stage.AddMember(
 			ctx, name, metadata,
 			func(write func(json.RawMessage) error) error {
@@ -285,7 +304,11 @@ func discoverGeneratedInputs(
 ) (*generatedPlan, error) {
 	plan := &generatedPlan{
 		generatedPaths:  make(map[string]bool),
+		generatedFiles:  make(map[string]extract.CandidateManifestFile),
 		invocationRoots: make(map[string]bool),
+		modules:         make(map[string]string),
+		parsedSymbols:   make(map[string]generatedSymbolParse),
+		blobs:           budget,
 	}
 	fixed := make(map[string]extract.CandidateManifestFile, 2)
 	caller := request.Registry.adapters[0]
@@ -524,6 +547,7 @@ func emitModulesAndValidateGeneratedPaths(
 						return err
 					}
 					plan.generatedPaths[file.Path] = true
+					plan.generatedFiles[file.Path] = file
 				}
 				for root := range plan.invocationRoots {
 					if pathWithinRoot(file.Path, root) {
@@ -565,6 +589,7 @@ func emitModulesAndValidateGeneratedPaths(
 			switch classification.State {
 			case resolverinput.ModuleResolved:
 				record.State = StateResolved
+				plan.modules[record.ModuleRoot] = classification.ModulePath
 			case resolverinput.ModuleUnavailable:
 				record.State = StateUnavailable
 			case resolverinput.ModuleAmbiguous:
@@ -908,7 +933,7 @@ func emitGeneratedMappings(
 			// reduced by input order; retain every candidate and mark ambiguity.
 			state, reason = StateAmbiguous, "mixed_mapping_candidates"
 		}
-		if err := writeJSON(write, generatedRecord{
+		mappingRecord := generatedRecord{
 			Schema:       resolvercatalog.RecordSchema,
 			RecordSchema: GeneratedRecordSchema,
 			Pack:         current.pack.Name, PackVersion: current.pack.Version,
@@ -920,11 +945,240 @@ func emitGeneratedMappings(
 			GeneratedPath:         key.generated,
 			GeneratorRelativePath: key.relative,
 			Candidates:            group.candidates,
-		}); err != nil {
+		}
+		if err := writeJSON(write, mappingRecord); err != nil {
+			return err
+		}
+		if err := emitGeneratedSymbols(
+			ctx, current, plan, key, state, reason, group.candidates, budget, write,
+		); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func emitGeneratedSymbols(
+	ctx context.Context,
+	current adapter,
+	plan *generatedPlan,
+	key mappingKey,
+	state, reason string,
+	candidates []generatedCandidate,
+	budget *materializationBudget,
+	write func(json.RawMessage) error,
+) error {
+	// Unit tests that exercise mapping reduction in isolation predate the
+	// generated-source projection. Production Build always fills this map from
+	// the same candidate pass that proves generatedPaths.
+	file, present := plan.generatedFiles[key.generated]
+	if !present {
+		return nil
+	}
+	if err := validateInputFile(file); err != nil {
+		return err
+	}
+	if err := reserveGeneratedSourceIdentity(
+		budget, file.Path, file.ObjectID,
+	); err != nil {
+		return err
+	}
+	parsed, err := loadGeneratedSymbols(ctx, current.protocol, plan, file)
+	if err != nil {
+		return err
+	}
+	base := generatedSymbolRecord{
+		Schema:       resolvercatalog.RecordSchema,
+		RecordSchema: GeneratedSymbolRecordSchema,
+		Pack:         current.pack.Name, PackVersion: current.pack.Version,
+		Protocol: current.protocol, GeneratedPath: file.Path,
+		GeneratedObjectID: file.ObjectID, GeneratedDigest: parsed.digest,
+		GeneratorRelativePath: key.relative,
+	}
+	if parsed.reason != "" {
+		base.Kind, base.State, base.Reason = "generated_symbol_input", parsed.state, parsed.reason
+		return writeGeneratedSymbol(write, budget, base)
+	}
+	matched := make([]gocaller.GeneratedSymbol, 0, len(parsed.symbols))
+	for _, symbol := range parsed.symbols {
+		if current.protocol == ProtocolGRPC && key.relative != "" &&
+			symbol.GeneratorRelativePath != key.relative {
+			continue
+		}
+		matched = append(matched, symbol)
+	}
+	if len(matched) == 0 {
+		base.Kind, base.State, base.Reason = "generated_symbol_input", StateUnavailable,
+			"no_generated_client_symbols"
+		return writeGeneratedSymbol(write, budget, base)
+	}
+	for _, symbol := range matched {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		record := base
+		record.Kind = "generated_symbol"
+		record.State, record.Reason = state, reason
+		record.ImportPath = symbol.ImportPath
+		record.Package = symbol.Package
+		record.ClientType = symbol.ClientType
+		record.Method = symbol.Method
+		record.Operation = symbol.Operation
+		record.Constructors = slices.Clone(symbol.Constructors)
+		record.GeneratorRelativePath = symbol.GeneratorRelativePath
+		if state == StateResolved && len(candidates) == 1 {
+			record.DeclarationPath = candidates[0].DeclarationPath
+			record.DeclarationLineage = candidates[0].DeclarationLineage
+		} else if record.Reason == "" {
+			record.Reason = "generated_mapping_" + state
+		}
+		if err := writeGeneratedSymbol(write, budget, record); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func loadGeneratedSymbols(
+	ctx context.Context,
+	protocol Protocol,
+	plan *generatedPlan,
+	file extract.CandidateManifestFile,
+) (generatedSymbolParse, error) {
+	if err := validateInputFile(file); err != nil {
+		return generatedSymbolParse{}, err
+	}
+	if file.DeclaredBytes > MaxGeneratedSymbolSourceBytes {
+		return generatedSymbolParse{
+			protocol: protocol, file: file, state: StateUnsupported,
+			reason: generatedSourceTooLargeReason,
+		}, nil
+	}
+	if plan.parsedSymbols == nil {
+		plan.parsedSymbols = make(map[string]generatedSymbolParse)
+	}
+	if parsed, present := plan.parsedSymbols[file.Path]; present {
+		if parsed.protocol != protocol {
+			return generatedSymbolParse{
+				protocol: protocol, file: file, digest: parsed.digest,
+				state: StateUnsupported, reason: "generated_path_protocol_conflict",
+			}, nil
+		}
+		return parsed, nil
+	}
+	if plan.blobs == nil {
+		return generatedSymbolParse{}, errors.New("generated symbol blob budget is unavailable")
+	}
+	if len(plan.parsedSymbols) >= MaxGeneratedSymbolSources {
+		return generatedSymbolParse{}, resolvercatalog.ErrLimit
+	}
+	content, err := plan.blobs.load(ctx, file, MaxGeneratedSymbolSourceBytes)
+	if err != nil {
+		return generatedSymbolParse{}, fmt.Errorf("read generated symbol source %q: %w", file.Path, err)
+	}
+	parsed := generatedSymbolParse{
+		protocol: protocol, file: file, digest: digestBytes(content),
+	}
+	importPath := resolverinput.GoImportPath(plan.modules, file.Path)
+	parsed.symbols, err = gocaller.DescribeGeneratedSource(
+		string(protocol), file.Path, importPath, string(content),
+	)
+	if err != nil {
+		parsed.state, parsed.reason = StateUnsupported, "generated_source_unparseable"
+		parsed.symbols = nil
+	}
+	for _, symbol := range parsed.symbols {
+		if protocol == ProtocolGRPC &&
+			(symbol.GeneratorRelativePath == "" ||
+				repopath.Validate(symbol.GeneratorRelativePath) != nil ||
+				!strings.HasSuffix(symbol.GeneratorRelativePath, ".proto")) ||
+			protocol == ProtocolThrift && symbol.GeneratorRelativePath != "" {
+			parsed.state, parsed.reason = StateUnsupported, "generated_source_unparseable"
+			parsed.symbols = nil
+			break
+		}
+	}
+	if importPath == "" && parsed.reason == "" {
+		parsed.state, parsed.reason = StateUnavailable, "module_path_unavailable"
+	}
+	plan.parsedSymbols[file.Path] = parsed
+	return parsed, nil
+}
+
+func writeGeneratedSymbol(
+	write func(json.RawMessage) error,
+	budget *materializationBudget,
+	record generatedSymbolRecord,
+) error {
+	if err := reserveGeneratedSourceIdentity(
+		budget, record.GeneratedPath, record.GeneratedObjectID,
+	); err != nil {
+		return err
+	}
+	if record.Kind != "generated_symbol" {
+		return writeJSON(write, record)
+	}
+	raw, err := json.Marshal(record)
+	if err != nil {
+		return err
+	}
+	key := directDescriptorKey(directDescriptorFromRecord(record))
+	if budget.generatedSymbolRecords == nil {
+		budget.generatedSymbolRecords = make(map[string]string)
+	}
+	if prior, present := budget.generatedSymbolRecords[key]; present {
+		if prior != string(raw) {
+			return errors.New("generated symbol identity has conflicting records")
+		}
+		return nil
+	}
+	identityBytes := generatedSymbolIdentityBytes(record)
+	if budget.generatedSymbolDescriptors >= MaxGeneratedSymbolDescriptors ||
+		identityBytes > MaxGeneratedSymbolIdentityBytes-
+			budget.generatedSymbolIdentityBytes {
+		return resolvercatalog.ErrLimit
+	}
+	budget.generatedSymbolDescriptors++
+	budget.generatedSymbolIdentityBytes += identityBytes
+	budget.generatedSymbolRecords[key] = string(raw)
+	return write(json.RawMessage(raw))
+}
+
+func reserveGeneratedSourceIdentity(
+	budget *materializationBudget,
+	generatedPath, objectID string,
+) error {
+	if budget.generatedSourceObjects == nil {
+		budget.generatedSourceObjects = make(map[string]string)
+	}
+	if prior, present := budget.generatedSourceObjects[generatedPath]; present {
+		if prior != objectID {
+			return errors.New("generated source path names multiple objects")
+		}
+		return nil
+	}
+	identityBytes := len(generatedPath) + len(objectID)
+	if len(budget.generatedSourceObjects) >= MaxGeneratedSymbolSources ||
+		identityBytes > MaxGeneratedSymbolIdentityBytes-
+			budget.generatedSymbolIdentityBytes {
+		return resolvercatalog.ErrLimit
+	}
+	budget.generatedSourceObjects[generatedPath] = objectID
+	budget.generatedSymbolIdentityBytes += identityBytes
+	return nil
+}
+
+func generatedSymbolIdentityBytes(record generatedSymbolRecord) int {
+	result := len(record.State) + len(record.Reason) + len(record.Protocol) +
+		len(record.ImportPath) + len(record.Package) + len(record.ClientType) +
+		len(record.Method) + len(record.Operation) + len(record.GeneratedPath) +
+		len(record.GeneratedObjectID) + len(record.GeneratedDigest) +
+		len(record.GeneratorRelativePath) + len(record.DeclarationPath) +
+		len(record.DeclarationLineage)
+	for _, constructor := range record.Constructors {
+		result += len(constructor)
+	}
+	return result
 }
 
 func emitGeneratorInvocations(

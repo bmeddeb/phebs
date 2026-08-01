@@ -14,6 +14,7 @@ import (
 	"github.com/sourcegraph/zoekt/index"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
+	"github.com/bmeddeb/phebs/internal/callerleafid"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/focusedindex"
 	"github.com/bmeddeb/phebs/internal/repowork"
@@ -871,6 +872,32 @@ func TestDeleteRepoArtifactsRemovesCatalogAndCancelsDerivedJobs(t *testing.T) {
 	if err := os.WriteFile(foreignCatalog, []byte("keep"), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	callerRoot := filepath.Join(dataDir, "caller-leaves")
+	targetCallerDirectory := filepath.Join(
+		callerRoot, callerleafid.RepositoryDirectory(st.repo.Name),
+	)
+	foreignCallerDirectory := filepath.Join(
+		callerRoot,
+		callerleafid.RepositoryDirectory("example.com/team/foreign"),
+	)
+	for _, directory := range []string{
+		targetCallerDirectory, foreignCallerDirectory,
+	} {
+		if err := os.MkdirAll(directory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	callerArtifact := callerleafid.ArtifactName(
+		"sha256:"+strings.Repeat("a", 64),
+		"sha256:"+strings.Repeat("b", 64),
+	)
+	targetCaller := filepath.Join(targetCallerDirectory, callerArtifact)
+	foreignCaller := filepath.Join(foreignCallerDirectory, callerArtifact)
+	for _, artifact := range []string{targetCaller, foreignCaller} {
+		if err := os.WriteFile(artifact, []byte("derived\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
 	deleted, err := deleteRepoArtifacts(t.Context(), st, dataDir, st.repo.Name)
 	if err != nil || !deleted {
 		t.Fatalf("deleteRepoArtifacts = %v, %v; want successful deletion", deleted, err)
@@ -888,12 +915,19 @@ func TestDeleteRepoArtifactsRemovesCatalogAndCancelsDerivedJobs(t *testing.T) {
 	if _, err := os.Stat(foreignCatalog); err != nil {
 		t.Fatalf("foreign resolver artifact was removed: %v", err)
 	}
+	if _, err := os.Stat(targetCaller); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("repository caller artifact survived deletion: %v", err)
+	}
+	if _, err := os.Stat(foreignCaller); err != nil {
+		t.Fatalf("foreign caller artifact was removed: %v", err)
+	}
 	cancellations := map[store.JobKind]int{}
 	for _, kind := range st.canceledKinds {
 		cancellations[kind]++
 	}
 	for _, kind := range []store.JobKind{
 		store.JobCandidate, store.JobExtract, store.JobResolverCatalog,
+		store.JobCallerLeaf,
 	} {
 		if cancellations[kind] != 2 {
 			t.Fatalf(

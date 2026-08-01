@@ -13,27 +13,31 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolverinput"
 )
 
 const (
-	PackVersion = "1.0.0"
+	PackVersion = "1.1.0"
 
-	GoModulePackName           = "go-module"
-	GRPCGeneratedPackName      = "grpc-generated-attribution"
-	ThriftGeneratedPackName    = "thrift-generated-attribution"
-	GoModuleRecordSchema       = "phebs-resolver-go-module-v1"
-	GeneratedRecordSchema      = "phebs-resolver-generated-attribution-v1"
-	DeclarationRecordSchema    = "phebs-resolver-declaration-target-v1"
-	ProtocolMemberRecordSchema = "phebs-resolver-protocol-member-v1"
-	MemberMetadataSchema       = "phebs-resolver-member-metadata-v1"
-	MaterializationPolicyName  = "phebs-resolver-materialization-policy-v1"
+	GoModulePackName            = "go-module"
+	GRPCGeneratedPackName       = "grpc-generated-attribution"
+	ThriftGeneratedPackName     = "thrift-generated-attribution"
+	GoModuleRecordSchema        = "phebs-resolver-go-module-v1"
+	GeneratedRecordSchema       = "phebs-resolver-generated-attribution-v2"
+	GeneratedSymbolRecordSchema = "phebs-resolver-generated-go-symbol-v1"
+	DeclarationRecordSchema     = "phebs-resolver-declaration-target-v1"
+	ProtocolMemberRecordSchema  = "phebs-resolver-protocol-member-v2"
+	MemberMetadataSchema        = "phebs-resolver-member-metadata-v2"
+	MaterializationPolicyName   = "phebs-resolver-materialization-policy-v2"
 
 	StateResolved    = "resolved"
 	StateUnavailable = "unavailable"
 	StateAmbiguous   = "ambiguous"
 	StateUnsupported = "unsupported"
+
+	generatedSourceTooLargeReason = "generated_source_too_large"
 
 	// The output lifecycle independently caps member and catalog bytes. These
 	// limits bound the immutable source work performed before that output can
@@ -49,6 +53,10 @@ const (
 	MaxGeneratedCandidateBytes                  = 16 << 20
 	MaxDeclarationRecords                       = 25_000
 	MaxDeclarationPathBytes                     = 16 << 20
+	MaxGeneratedSymbolDescriptors               = 100_000
+	MaxGeneratedSymbolIdentityBytes             = 32 << 20
+	MaxGeneratedSymbolSources                   = 25_000
+	MaxGeneratedSymbolSourceBytes         int64 = gocaller.MaxDirectGeneratedSourceBytes
 	MaterializationTimeout                      = 5 * time.Minute
 )
 
@@ -203,6 +211,7 @@ type MaterializationPolicy struct {
 	Name                                  string `json:"name"`
 	ModuleRecordSchema                    string `json:"module_record_schema"`
 	GeneratedRecordSchema                 string `json:"generated_record_schema"`
+	GeneratedSymbolRecordSchema           string `json:"generated_symbol_record_schema"`
 	DeclarationRecordSchema               string `json:"declaration_record_schema"`
 	ProtocolMemberSchema                  string `json:"protocol_member_schema"`
 	StateVocabulary                       string `json:"state_vocabulary"`
@@ -210,6 +219,7 @@ type MaterializationPolicy struct {
 	SnapshotDecoding                      string `json:"snapshot_decoding"`
 	ModuleOrdering                        string `json:"module_ordering"`
 	GeneratedOrdering                     string `json:"generated_ordering"`
+	GeneratedSymbolIdentityAccounting     string `json:"generated_symbol_identity_accounting"`
 	MaxGoModuleBytes                      int    `json:"max_go_module_bytes"`
 	MaxSnapshotBlobBytes                  int64  `json:"max_snapshot_blob_bytes"`
 	MaxInputBlobReads                     int    `json:"max_input_blob_reads"`
@@ -223,6 +233,10 @@ type MaterializationPolicy struct {
 	MaxGeneratedCandidateBytes            int    `json:"max_generated_candidate_bytes"`
 	MaxDeclarationRecords                 int    `json:"max_declaration_records"`
 	MaxDeclarationPathBytes               int    `json:"max_declaration_path_bytes"`
+	MaxGeneratedSymbolDescriptors         int    `json:"max_generated_symbol_descriptors"`
+	MaxGeneratedSymbolIdentityBytes       int    `json:"max_generated_symbol_identity_bytes"`
+	MaxGeneratedSymbolSources             int    `json:"max_generated_symbol_sources"`
+	MaxGeneratedSymbolSourceBytes         int64  `json:"max_generated_symbol_source_bytes"`
 	TimeoutMilliseconds                   int64  `json:"timeout_milliseconds"`
 }
 
@@ -231,13 +245,15 @@ func FrozenMaterializationPolicy() MaterializationPolicy {
 		Name:                                  MaterializationPolicyName,
 		ModuleRecordSchema:                    GoModuleRecordSchema,
 		GeneratedRecordSchema:                 GeneratedRecordSchema,
+		GeneratedSymbolRecordSchema:           GeneratedSymbolRecordSchema,
 		DeclarationRecordSchema:               DeclarationRecordSchema,
 		ProtocolMemberSchema:                  ProtocolMemberRecordSchema,
 		StateVocabulary:                       "resolved-unavailable-ambiguous-unsupported-v1",
 		ModuleParsing:                         "single-line-strict-token-factored-unsupported-v1",
 		SnapshotDecoding:                      "exact-unique-keys-bounded-stream-v1",
 		ModuleOrdering:                        "candidate-caller-order-v1",
-		GeneratedOrdering:                     "declaration-input-mapping-sorted-candidates-invocation-v1",
+		GeneratedOrdering:                     "declaration-input-mapping-symbol-sorted-candidates-invocation-v2",
+		GeneratedSymbolIdentityAccounting:     "catalog-wide-unique-source-plus-descriptor-v1",
 		MaxGoModuleBytes:                      resolverinput.MaxGoModuleBytes,
 		MaxSnapshotBlobBytes:                  extract.MaxBlobBytes,
 		MaxInputBlobReads:                     MaxInputBlobReads,
@@ -251,6 +267,10 @@ func FrozenMaterializationPolicy() MaterializationPolicy {
 		MaxGeneratedCandidateBytes:            MaxGeneratedCandidateBytes,
 		MaxDeclarationRecords:                 MaxDeclarationRecords,
 		MaxDeclarationPathBytes:               MaxDeclarationPathBytes,
+		MaxGeneratedSymbolDescriptors:         MaxGeneratedSymbolDescriptors,
+		MaxGeneratedSymbolIdentityBytes:       MaxGeneratedSymbolIdentityBytes,
+		MaxGeneratedSymbolSources:             MaxGeneratedSymbolSources,
+		MaxGeneratedSymbolSourceBytes:         MaxGeneratedSymbolSourceBytes,
 		TimeoutMilliseconds:                   MaterializationTimeout.Milliseconds(),
 	}
 }
@@ -314,4 +334,27 @@ type generatedRecord struct {
 	GeneratedRoot           string               `json:"generated_root,omitempty"`
 	GeneratorInvocationRoot string               `json:"generator_invocation_root,omitempty"`
 	Candidates              []generatedCandidate `json:"candidates,omitempty"`
+}
+
+type generatedSymbolRecord struct {
+	Schema                string   `json:"schema"`
+	RecordSchema          string   `json:"record_schema"`
+	Pack                  string   `json:"pack"`
+	PackVersion           string   `json:"pack_version"`
+	Kind                  string   `json:"kind"`
+	State                 string   `json:"state"`
+	Reason                string   `json:"reason,omitempty"`
+	Protocol              Protocol `json:"protocol"`
+	ImportPath            string   `json:"import_path,omitempty"`
+	Package               string   `json:"package,omitempty"`
+	ClientType            string   `json:"client_type,omitempty"`
+	Method                string   `json:"method,omitempty"`
+	Operation             string   `json:"operation,omitempty"`
+	Constructors          []string `json:"constructors,omitempty"`
+	GeneratedPath         string   `json:"generated_path"`
+	GeneratedObjectID     string   `json:"generated_object_id"`
+	GeneratedDigest       string   `json:"generated_digest"`
+	GeneratorRelativePath string   `json:"generator_relative_path,omitempty"`
+	DeclarationPath       string   `json:"declaration_path,omitempty"`
+	DeclarationLineage    string   `json:"declaration_lineage,omitempty"`
 }

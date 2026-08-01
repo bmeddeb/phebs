@@ -1281,7 +1281,8 @@ LET $pending_catalog = IF array::len($outcome) = 1
 LET $catalog_fanout = IF array::len($outcome) != 1
 		OR $catalog_trigger = false THEN []
 	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+		(UPDATE $pending_catalog SET force = true,
+			recovery_lease = NONE RETURN AFTER)
 	ELSE
 		(CREATE resolver_catalog_job CONTENT {
 			target: $repo,
@@ -1497,7 +1498,8 @@ LET $pending = IF array::len($recorded) != 1
 LET $repair = IF array::len($recorded) != 1
 		OR $candidate_control_failure = false THEN []
 	ELSE IF $pending != NONE THEN
-		(UPDATE $pending SET force = true RETURN AFTER)
+		(UPDATE $pending SET force = true,
+			recovery_lease = NONE RETURN AFTER)
 	ELSE
 		(CREATE candidate_manifest_job CONTENT {
 			target: $repo,
@@ -1526,7 +1528,8 @@ LET $pending_catalog = IF array::len($recorded) = 1
 LET $catalog_fanout = IF array::len($recorded) != 1
 		OR $catalog_trigger = false THEN []
 	ELSE IF $pending_catalog != NONE THEN
-		(UPDATE $pending_catalog SET force = true RETURN AFTER)
+		(UPDATE $pending_catalog SET force = true,
+			recovery_lease = NONE RETURN AFTER)
 	ELSE
 		(CREATE resolver_catalog_job CONTENT {
 			target: $repo,

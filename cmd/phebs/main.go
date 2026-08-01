@@ -26,6 +26,8 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
+	"github.com/bmeddeb/phebs/internal/callerexecute"
+	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/candidatejob"
 	"github.com/bmeddeb/phebs/internal/codenav"
@@ -203,6 +205,10 @@ func serve(args []string) error {
 	if err != nil {
 		return fmt.Errorf("configure resolver adapters: %w", err)
 	}
+	callerRegistry, err := callerexecute.NewRegistry(exs)
+	if err != nil {
+		return fmt.Errorf("configure caller-leaf adapters: %w", err)
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -310,6 +316,13 @@ func serve(args []string) error {
 		return fmt.Errorf("cleanup abandoned candidate stages: %w", err)
 	} else if removed > 0 {
 		log.Printf("candidate reconciliation: removed %d abandoned stage(s)", removed)
+	}
+	if removed, err := callerleaf.CleanupStages(
+		ctx, callerexecute.Root(cfg.Server.DataDir),
+	); err != nil {
+		return fmt.Errorf("cleanup abandoned caller-leaf stages: %w", err)
+	} else if removed > 0 {
+		log.Printf("caller-leaf reconciliation: removed %d abandoned stage(s)", removed)
 	}
 	catalogReport, err := resolvercatalog.Reconcile(
 		ctx, filepath.Join(cfg.Server.DataDir, "resolver-catalogs"), st,
@@ -437,7 +450,7 @@ func serve(args []string) error {
 		); err != nil {
 			return err
 		}
-		var resolverRunner *store.Runner
+		var resolverRunner, callerRunner *store.Runner
 		if resolverRegistry.Enabled() {
 			resolverWorker, err := resolvermaterialize.NewWorker(
 				cfg.Server.DataDir, st, manifestProvider, resolverRegistry,
@@ -453,6 +466,21 @@ func serve(args []string) error {
 				Handle: resolverWorker.Handle, Interval: cfg.Sync.Interval(),
 			}
 		}
+		if callerRegistry.Enabled() {
+			callerWorker, err := callerexecute.NewWorker(
+				cfg.Server.DataDir, st, manifestProvider, callerRegistry,
+			)
+			if err != nil {
+				return fmt.Errorf("configure caller-leaf execution: %w", err)
+			}
+			if err := callerexecute.EnqueueBackfill(ctx, st); err != nil {
+				return err
+			}
+			callerRunner = &store.Runner{
+				Store: st, Kind: store.JobCallerLeaf,
+				Handle: callerWorker.Handle, Interval: cfg.Sync.Interval(),
+			}
+		}
 		candidateRunner := &store.Runner{
 			Store: st, Kind: store.JobCandidate, Handle: candidateWorker.Handle,
 			Interval: cfg.Sync.Interval(),
@@ -463,6 +491,9 @@ func serve(args []string) error {
 		runBackground(func() { exRunner.Run(ctx) })
 		if resolverRunner != nil {
 			runBackground(func() { resolverRunner.Run(ctx) })
+		}
+		if callerRunner != nil {
+			runBackground(func() { callerRunner.Run(ctx) })
 		}
 		onIndexed = func(ctx context.Context, name, commit string) error {
 			return enqueueCandidateAfterIndex(ctx, st, name, commit)

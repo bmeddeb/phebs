@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -165,6 +166,40 @@ func TestNeutralCatalogPublicationAndWarmCurrent(t *testing.T) {
 	}
 	if publication.Current() {
 		t.Fatal("warm check accepted changed file identity")
+	}
+}
+
+func TestOpenWithVisitorProjectsColdValidationRecords(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "resolver-catalogs")
+	repository := "github.com/acme/visitor"
+	state := testInstall(t, root, repository, true)
+	if err := ClearPublishing(root, repository); err != nil {
+		t.Fatal(err)
+	}
+	var visited []string
+	publication, err := OpenWithVisitor(
+		t.Context(), root, state,
+		func(member MemberReceipt, index int, raw json.RawMessage) error {
+			visited = append(visited, member.Name+":"+strconv.Itoa(index)+":"+string(raw))
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if publication == nil || len(visited) != 2 ||
+		!strings.Contains(visited[0], `go.ndjson:0:{"name":"a"`) ||
+		!strings.Contains(visited[1], `go.ndjson:1:{"name":"b"`) {
+		t.Fatalf("visited = %q", visited)
+	}
+
+	want := errors.New("stop projection")
+	_, err = OpenWithVisitor(
+		t.Context(), root, state,
+		func(MemberReceipt, int, json.RawMessage) error { return want },
+	)
+	if !errors.Is(err, want) {
+		t.Fatalf("visitor error = %v, want %v", err, want)
 	}
 }
 

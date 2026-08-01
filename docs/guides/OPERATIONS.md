@@ -19,6 +19,7 @@ $DATA/                     # server.data_dir, default ~/.phebs
 ├── repos/<host>/<path>.git  # bare mirrors
 ├── candidates/            # derived candidate manifests and NDJSON members
 ├── resolver-catalogs/     # derived immutable resolver catalog publications
+├── caller-leaves/         # derived, non-visible direct caller pair artifacts
 └── index/                 # whole/focused zoekt shards; focused manifests and sidecars
 ```
 
@@ -44,6 +45,10 @@ they are excluded and rebuilt from the restored indexed commit and mirror.
 Resolver catalogs are also derived, but valid immutable publications are
 preserved byte-exactly so a matching current generation can be validated and
 reused without repeating its declaration/candidate input work.
+Direct caller-leaf pair artifacts are derived and are not independently
+visible: T30.6h excludes them from backup and rebuilds them from restored
+candidate and resolver authority. T30.6i owns exact complete-generation
+archive/restore.
 
 For an online backup, keep the local phebs server running and use the same
 phebs executable/configuration generation as that server:
@@ -76,7 +81,7 @@ structural extraction and semantic publication validation. The
 binds all three artifacts' sizes and SHA-256 digests, the exact raw config digest,
 phebs version/binary digest, SurrealDB version/binary digest, database
 identity, store-writer/evidence/migration versions, and the derived-state
-exclusions, including `$DATA/candidates`. Its required
+exclusions, including `$DATA/candidates` and `$DATA/caller-leaves`. Its required
 `phebs-focused-archive-report-v1` receipt records archived publications,
 omitted publications/artifacts, and stale markers; verification independently
 recovers and compares the archived publication count. It contains no host
@@ -161,6 +166,11 @@ Restore validates and installs exact catalog filesystem bytes but always
 clears every imported resolver-catalog pointer. Startup never promotes that
 exported authority: a pointerless retained publication is classified as an
 orphan and a forced `resolver_catalog_job` replacement is durably enqueued.
+Restore also clears all imported caller-leaf outcomes and aggregate admissions
+without decoding their repository or artifact fields, because caller-leaf
+bytes are deliberately absent. Startup backfill or the next resolver
+publication recreates only current work; imported rows cannot authorize a
+missing artifact.
 When at least one shipped gRPC or Thrift caller adapter is enabled, the
 resolver worker drains that queue through the bounded materialization path
 described below. With neither adapter enabled, no resolver worker or startup
@@ -194,9 +204,9 @@ manifest/member path identities; it opens or hashes no member content.
 #### Resolver catalog materialization
 
 The enabled extraction registry determines one ordered resolver generation.
-The current v1 set contains `go-module` plus the enabled
+The current resolver set contains `go-module` plus the enabled
 `grpc-generated-attribution` and `thrift-generated-attribution` packs, all at
-version `1.0.0`. A build is eligible only when its repository, indexed HEAD,
+version `1.1.0`. A build is eligible only when its repository, indexed HEAD,
 committed analysis unit, candidate-manifest-v4 digest/policy/control revision,
 and current
 published protobuf/Thrift declaration runs and generation digests agree.
@@ -211,11 +221,19 @@ downgrading an existing force; startup also
 backfills one deduplicated pending job for every indexed, non-deleting
 repository when an adapter is enabled.
 
+Upgrading from resolver packs 1.0.0 to 1.1.0 is a deliberate derived-state
+cutover. Startup rejects each old pack set before opening member content,
+force-queues its replacement, and clears the retired pointer; every indexed,
+non-deleting repository with an enabled caller adapter then rematerializes its
+catalog (including mapped generated-Go reads), and the accepted replacement
+triggers that repository's first complete caller-leaf execution.
+
 Materialization replays immutable candidate rows and pages the exact published
-declaration assertions. It opens only candidate-declared regular `go.mod`,
-`layout-snapshot.json`, and `generated-from-snapshot.json` blobs. The layout
-snapshot is an optional validation fence; ordinary candidate source and
-declaration blobs are not opened. The worker never invokes a build, `go list`,
+declaration assertions. It opens candidate-declared regular `go.mod`,
+`layout-snapshot.json`, and `generated-from-snapshot.json` blobs, plus each
+mapped generated `base`-lane Go source needed by resolver pack 1.1.0. The
+layout snapshot is an optional validation fence; unmapped ordinary candidate
+source and declaration blobs are not opened. The worker never invokes a build, `go list`,
 dependency query, generator, corpus program, mutable checkout, or network
 request. Missing or malformed committed content and conflicting mapping or
 generator authority are retained as explicit `unavailable`, `ambiguous`, or
@@ -244,11 +262,19 @@ is running: stop the process, retain the logs and `$DATA/resolver-catalogs`
 bytes, and use a witnessed recovery rather than choosing a manifest by hand.
 
 Before an ordinary transition creates its marker, the worker durably ensures
-an independent non-forced resolver job. A store-commit, marker-clear, cleanup,
-or process failure can therefore be recovered even when the publishing claim
-was on its final attempt. After a successful publication, that successor takes
-the bounded exact-current path and performs no candidate/input blob read or
-content hash. An already pending forced successor is never downgraded.
+an independent non-forced resolver job owned by the exact active lease. A
+store-commit, marker-clear, cleanup, or process failure therefore has a durable
+recovery turn. A failed successor response is treated as possibly committed;
+the provenance-aware transition safely falls back to the active claim when no
+tagged row exists. Retryable live failures merge their attempt, error, and backoff
+into that successor; a final live failure or terminal publication conflict may
+exhaust it only while the lease provenance remains exclusive. Any ordinary
+candidate, declaration, or backfill enqueue clears that ownership and survives
+as fresher work. A final stale reap also preserves the independent successor
+because process death cannot reveal whether the marker boundary was crossed.
+After a successful publication, the successor takes the bounded exact-current
+path and performs no candidate/input blob read or content hash. An already
+pending forced successor is never downgraded.
 
 A deterministically missing, malformed, or tampered marked publication—or a
 malformed catalog store pointer—follows a different path. The worker first
@@ -278,6 +304,22 @@ declaration-retention, and lifecycle-output limit refusals are terminal for
 that job generation and never publish a partial replacement; an input
 transition may already have retired a stale prior generation.
 
+Pack 1.1.0 also parses each mapped generated base-lane Go source once during
+materialization and retains its exact package/import, client, constructor,
+method, wire-operation, declaration, object, and content identities. It does
+not execute generated code or reopen those sources in caller work. This
+projection is capped at 25,000 generated source files, 4 MiB per source,
+100,000 symbol descriptors, and one 32 MiB catalog-wide identity budget shared
+by unique source path/object pairs and descriptors under the same
+100,000-read/512 MiB aggregate source budget. A protobuf mapping with no
+generator-relative path is an input wildcard; retained descriptors always
+carry the concrete parsed `.proto` selector, and overlap with an equivalent
+explicit mapping is deduplicated. A declared source above 4 MiB is not read:
+its validated path/object envelope is retained as explicit
+`unsupported: generated_source_too_large`, and valid protocol siblings still
+materialize. Other invalid or unparseable generated content stays explicit
+`unsupported`/`unavailable` authority; it never becomes a guessed symbol.
+
 For a matching non-forced job, store authority plus the process-cached
 manifest/member fingerprints provides the warm no-op: no candidate manifest
 is opened, no candidate or input blob is read, and no catalog or input content
@@ -287,8 +329,113 @@ publication, so the first queued reuse after a process restart may perform a
 second bounded catalog validation before subsequent jobs become metadata-only.
 Stale work performs one strict candidate open, two bounded replays
 of one caller projection, and declaration paging once per catalog generation;
-caller partitions consume the catalog in
-the following ticket and never rerun discovery independently.
+caller partitions consume the resulting compiled projection and never rerun
+discovery independently.
+
+#### Direct caller-leaf execution
+
+When at least one shipped caller adapter is enabled, every accepted resolver
+catalog publication atomically ensures a repository-keyed `caller_leaf_job`;
+startup also backfills indexed, non-deleting repositories with a current
+catalog. Each turn selects canonical missing pairs one at a time from the
+Cartesian product of every configured caller domain and every candidate-v4
+caller leaf, draining fast pairs beneath the same five-minute mirror-hold bound.
+The pair remains expected when that leaf contains no record for the domain and
+publishes a canonical empty artifact.
+
+Startup stage cleanup performs one bounded sorted read of the caller root
+(at most 65,536 entries) and one bounded sorted read of each package-shaped
+repository directory (at most 65,536 entries each), for `O(R + ΣE_r)` names;
+it opens or hashes no artifact content and runs even after caller adapters are
+disabled so prior-process stages remain reclaimable. When an adapter is
+enabled, backfill separately lists repositories once, checks the current
+resolver pointer for each indexed non-deleting repository, and idempotently
+enqueues caller work. Neither startup path takes a mirror lock or reads Git
+source.
+
+One cold turn allocates the `D × L` expected pair/outcome envelopes and scans
+the caller artifact-name directory once, capped at 65,536 entries. Candidate
+member validation remains per pair: with `D` caller domains it reads bounded
+caller-member content `D` times, while each admitted base Go record launches at
+most one serial immutable-blob read capped by that record's exact declared
+size. A newly installed artifact is then descriptor/content-opened and hashed
+once before its success row commits. There is no repository tree/corpus walk
+or all-leaf content materialization.
+
+The worker takes the repository work lock, opens only the canonical candidate
+manifest and leaf envelopes, and descriptor-stably streams the selected leaf.
+It excludes `go_test` rows before a blob open. Each base-lane Go row is read by
+its validated immutable OID and declared size and scanned against the catalog's
+precompiled syntax index; non-Go, oversized, invalid-UTF-8, unresolved, and
+neutral inputs retain explicit abstentions. An exact generated path/object
+owned by the resolver projection receives a no-read
+`resolver_generated_input` abstention, so caller execution never reopens
+generated source merely because it also appears in a candidate leaf. The
+capability cannot enumerate a
+tree, open another candidate leaf, read generated source, consult SCIP, run a
+build, or use the network. Its receipt must report zero out-of-leaf reads.
+
+Pair output is capped at 12,500 results, 4,096 abstentions, 1 MiB per record,
+64 MiB canonical content, 65 MiB stage, one serial 4 MiB source blob, 64 MiB
+of source bytes per pair, five structurally owned descriptors/pipes, and five
+minutes. The source-byte budget is generation identity and is reserved before
+each exact declared-size blob read; it is independent of the output cap.
+Aggregate admission is
+capped at 16 caller domains, 16,384 artifacts, 100,000 results, 100,000
+abstentions, 512 MiB canonical content, and 520 MiB staged content; the worker
+has a 128 MiB design-memory budget. Exact cap output admits. The first crossing
+success may retain at most one additional pair beneath its pair limits; the
+worker then records terminal outcomes for every remaining expected pair
+without resolver, candidate-member, source-blob, or artifact work. That
+bounded cap-plus-one envelope records a terminal generation admission and
+cannot replace any older complete generation. Local directory capacity is
+mutable installation state, not immutable generation output: when the
+65,536-entry bound has only its rename-before-stage-removal crash slot free, a
+new pair receives a retryable capacity refusal before content work and records
+no terminal outcome or admission. An exact same-pair orphan may use that last
+slot only to validate/reuse or reject the existing sibling. Progress for a new
+pair requires a later package-owned lifecycle or retention action to free an
+entry; T30.6h defines no retention policy.
+An expected Cartesian pair set above 16,384 is not representable as an exact
+admission: it refuses at typed job preflight before pair content work and
+creates no partial outcome/admission row. “Cap-plus-one terminal admission”
+refers to aggregate output crossed by one otherwise valid pair, not to this
+unrepresentable pair-set preflight.
+
+Artifacts install before their lease/repository/candidate/resolver-fenced
+multi-generation outcome. An independent successor exists before that install,
+so a crash with bytes but no row resumes from a byte-identical orphan. Another
+content artifact for the same immutable pair is terminal nondeterminism.
+Terminal outcomes preserve successful sibling pairs but prevent aggregate
+admission. On the first worker reuse after restart, current successes are
+descriptor/content-validated;
+deterministic state/file mismatch queues forced repair before clearing only
+identity-proven package bytes, while operational I/O preserves authority.
+Logical-record framing damage—including a same-size missing newline or a line
+over the 1 MiB record limit—is deterministic artifact corruption and follows
+that queue-before-clear repair path. A later install, outcome, admission,
+remove, or clear failure is still returned to the runner. The handler-created
+successor carries provenance for the exact active lease. A failed ensure
+response is treated as commit-ambiguous because the row may already exist;
+the same final transition is safe when it does not. Ordinary retries
+merge their attempt, error, and `not_before` backoff into that row, and a final
+live failure may exhaust it only while that provenance remains exclusive. Any
+ordinary candidate/resolver/backfill enqueue clears the provenance, so a
+coalesced freshness event survives and receives its own turn. A final-attempt
+stale reap likewise preserves the fresh independent successor because the
+process may have died after installing bytes; the stale-claim interval paces
+that crash path. Persistent live filesystem/store faults therefore back off
+and exhaust instead of spinning as successful zero-delay turns, without
+discarding fresher work.
+The validation and compiled-resolver caches intentionally retain only one
+generation process-wide. While that generation remains most recently
+validated, a settled warm turn uses pointer/outcome/admission metadata only:
+no mirror lock, content open/hash, corpus or tree walk, source blob, or child.
+Work for another generation evicts it; the next exact job reacquires the mirror
+lock, reopens the candidate plan, and hashes that generation's successful
+artifacts once before restoring the metadata-only path. Pair artifacts and
+admissions are not API/search/evidence-visible;
+T30.6i owns complete publication and readers.
 
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
@@ -948,9 +1095,10 @@ typed SCIP artifact before removing exact test documents' definitions,
 anchors, occurrences, and joins. Coverage and bounded receipts expose the
 excluded counts and declared bytes. Empty-unit repositories retain shipped
 whole-repository extraction behavior, and focused search remains unchanged.
-T30.6f supplies the catalog lifecycle, and T30.6g now supplies the ordered
-bounded gRPC/Thrift materialization described above. T30.6h is next; T30.6h
-and T30.6i separately deliver leaf artifacts and complete caller publication.
+T30.6f supplies the catalog lifecycle, T30.6g supplies the ordered bounded
+gRPC/Thrift materialization, and T30.6h supplies the independently durable,
+non-visible direct caller-leaf artifacts described above. T30.6i next owns
+atomic complete caller publication.
 T30.6j–T30.6l bind Caller Map,
 comparison, and Workbench Impact as separate authorized consumers. T30.6m
 selects the historical-retention posture and T30.6n implements only that

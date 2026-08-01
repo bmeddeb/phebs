@@ -43,6 +43,7 @@ var derivedExclusions = []string{
 	"index/ whole-repository zoekt shards (focused publications are preserved byte-exactly)",
 	"repos/ (bare repository mirrors)",
 	"candidates/ (content-addressed candidate manifests and partition rows)",
+	"caller-leaves/ (derived direct caller-leaf execution artifacts)",
 	"temporary extraction and build caches",
 }
 
@@ -420,6 +421,12 @@ func Restore(ctx context.Context, opts RestoreOptions) (Manifest, error) {
 			"clear derived resolver catalog publications after restore: %w", err,
 		)
 	}
+	if err := clearCallerLeafState(ctx, st); err != nil {
+		_ = st.Close(context.WithoutCancel(ctx))
+		return Manifest{}, fmt.Errorf(
+			"clear derived caller leaf state after restore: %w", err,
+		)
+	}
 	if err := st.Close(context.WithoutCancel(ctx)); err != nil {
 		return Manifest{}, fmt.Errorf("close validated restored store: %w", err)
 	}
@@ -442,6 +449,15 @@ func clearResolverCatalogPublications(
 	},
 ) error {
 	return publications.ClearAllResolverCatalogPublications(ctx)
+}
+
+func clearCallerLeafState(
+	ctx context.Context,
+	state interface {
+		ClearAllCallerLeafStateForRestore(context.Context) error
+	},
+) error {
+	return state.ClearAllCallerLeafStateForRestore(ctx)
 }
 
 // Verify performs offline artifact and compatibility validation without

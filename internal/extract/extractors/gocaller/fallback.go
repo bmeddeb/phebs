@@ -31,9 +31,10 @@ type generatedMethod struct {
 }
 
 type generatedSyntaxIndex struct {
-	methods      map[string][]generatedMethod
-	packageNames map[string]string
-	constructors map[string][]string
+	methods        map[string][]generatedMethod
+	methodFallback map[string][]generatedMethod
+	packageNames   map[string]string
+	constructors   map[string][]string
 }
 
 type sourceType struct {
@@ -105,7 +106,7 @@ func (e extractor) emitSyntaxFallback(
 		}
 		count, err := e.scanSyntaxFile(
 			filePath, blob, typedSpans[filePath], index, attribution,
-			attributionDigest, emit,
+			attributionDigest, "syntax", emit,
 		)
 		if err != nil {
 			return len(unresolved), err
@@ -156,9 +157,10 @@ func (e extractor) buildGeneratedSyntaxIndex(
 	attribution generatedFromLookup,
 ) (generatedSyntaxIndex, error) {
 	index := generatedSyntaxIndex{
-		methods:      make(map[string][]generatedMethod),
-		packageNames: make(map[string]string),
-		constructors: make(map[string][]string),
+		methods:        make(map[string][]generatedMethod),
+		methodFallback: make(map[string][]generatedMethod),
+		packageNames:   make(map[string]string),
+		constructors:   make(map[string][]string),
 	}
 	filePaths := make([]string, 0, len(paths))
 	for filePath := range paths {
@@ -200,6 +202,10 @@ func (e extractor) buildGeneratedSyntaxIndex(
 		for _, method := range methods {
 			key := syntaxMethodKey(method.importPath, method.clientType, method.method)
 			index.methods[key] = appendGeneratedMethodUnique(index.methods[key], method)
+			fallbackKey := syntaxFallbackKey(method.importPath, method.method)
+			index.methodFallback[fallbackKey] = appendGeneratedMethodUnique(
+				index.methodFallback[fallbackKey], method,
+			)
 			if prior, present := index.packageNames[method.importPath]; !present {
 				index.packageNames[method.importPath] = method.packageName
 			} else if prior != method.packageName {
@@ -427,6 +433,10 @@ func syntaxMethodKey(importPath, clientType, method string) string {
 	return importPath + "\x00" + clientType + "\x00" + method
 }
 
+func syntaxFallbackKey(importPath, method string) string {
+	return importPath + "\x00" + method
+}
+
 func (e extractor) scanSyntaxFile(
 	filePath string,
 	blob sdk.Blob,
@@ -434,6 +444,7 @@ func (e extractor) scanSyntaxFile(
 	index generatedSyntaxIndex,
 	attribution attributionLookup,
 	attributionDigest string,
+	resolution string,
 	emit sdk.Emit,
 ) ([]string, error) {
 	fset := token.NewFileSet()
@@ -487,7 +498,7 @@ func (e extractor) scanSyntaxFile(
 						attribution.ConsumerUnits(
 							filePath, lineAtByte(starts, spanStart),
 						),
-						"syntax", rowReason,
+						resolution, rowReason,
 						classifyRole(filePath, blob.Content), emit,
 					)
 					if err != nil {
@@ -753,13 +764,22 @@ func resolveSyntaxCall(
 	receiverTypes := inferExpression(selector.X, model, index, env)
 	receiverTypes = expandEmbedded(receiverTypes, model, make(map[string]bool))
 	var bindings []symbolBinding
+	seenBindings := make(map[directMethodIdentity]struct{})
+	appendBinding := func(binding symbolBinding) {
+		identity := directBindingIdentity(binding)
+		if _, duplicate := seenBindings[identity]; duplicate {
+			return
+		}
+		seenBindings[identity] = struct{}{}
+		bindings = append(bindings, binding)
+	}
 	for _, receiver := range receiverTypes {
 		if receiver.importPath == "" || receiver.clientType == "" {
 			continue
 		}
 		key := syntaxMethodKey(receiver.importPath, receiver.clientType, selector.Sel.Name)
 		for _, method := range index.methods[key] {
-			bindings = appendBindingUnique(bindings, method.binding)
+			appendBinding(method.binding)
 		}
 	}
 	if len(bindings) == 1 {
@@ -779,21 +799,9 @@ func resolveSyntaxCall(
 		importPaths = append(importPaths, importPath)
 	}
 	sort.Strings(importPaths)
-	methodKeys := make([]string, 0, len(index.methods))
-	for key := range index.methods {
-		methodKeys = append(methodKeys, key)
-	}
-	sort.Strings(methodKeys)
 	for _, importPath := range importPaths {
-		for _, key := range methodKeys {
-			if !strings.HasPrefix(key, importPath+"\x00") {
-				continue
-			}
-			for _, method := range index.methods[key] {
-				if method.method == selector.Sel.Name {
-					bindings = appendBindingUnique(bindings, method.binding)
-				}
-			}
+		for _, method := range index.methodFallback[syntaxFallbackKey(importPath, selector.Sel.Name)] {
+			appendBinding(method.binding)
 		}
 	}
 	if len(bindings) == 0 {
@@ -839,7 +847,12 @@ func operationKeyedBindings(input []symbolBinding) []symbolBinding {
 		first := values[0]
 		consistent := true
 		for _, value := range values[1:] {
-			if value.lineage != first.lineage || value.reason != first.reason {
+			strictMismatch := (value.strictProvenance || first.strictProvenance) &&
+				(value.generatedPath != first.generatedPath ||
+					value.declarationPath != first.declarationPath ||
+					value.generatorRelative != first.generatorRelative)
+			if value.lineage != first.lineage || value.reason != first.reason ||
+				strictMismatch {
 				consistent = false
 				break
 			}
@@ -847,7 +860,9 @@ func operationKeyedBindings(input []symbolBinding) []symbolBinding {
 		if consistent {
 			result = append(result, first)
 		} else {
-			result = append(result, symbolBinding{operation: operation})
+			result = append(result, symbolBinding{
+				symbol: first.symbol, operation: operation,
+			})
 		}
 	}
 	return result
@@ -894,20 +909,6 @@ func appendTypeUnique(values []sourceType, candidates ...sourceType) []sourceTyp
 		}
 	}
 	return values
-}
-
-func appendBindingUnique(
-	values []symbolBinding,
-	candidate symbolBinding,
-) []symbolBinding {
-	for _, value := range values {
-		if value.operation == candidate.operation &&
-			value.lineage == candidate.lineage &&
-			value.reason == candidate.reason {
-			return values
-		}
-	}
-	return append(values, candidate)
 }
 
 func cloneBindings(

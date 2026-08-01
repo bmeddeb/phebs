@@ -161,6 +161,62 @@ func TestCandidateManifestGuardedPublicationAndIdempotentFanout(t *testing.T) {
 	}
 }
 
+func assertCandidateFanoutPreservesFreshResolverWork(
+	t *testing.T,
+	ctx context.Context,
+	s *store.Surreal,
+) {
+	t.Helper()
+	repository := "github.com/acme/candidate-recovery-race"
+	commit := candidateCommit('8')
+	publication := candidatePublication(repository, commit, "")
+	if err := s.UpsertRepo(ctx, store.Repo{
+		Name:     repository,
+		CloneURL: "https://github.com/acme/candidate-recovery-race.git",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setCandidateIndexedState(t, ctx, s, repository, commit, nil, nil)
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatal(err)
+	}
+	active, err := s.ClaimJob(ctx, store.JobResolverCatalog, "resolver-worker")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, *active, store.StatusRunning, ""); err != nil {
+		t.Fatal(err)
+	}
+	active.Attempts = 2
+	recovery, err := s.EnsureJobSuccessor(ctx, *active, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// This exact candidate retry is independent freshness work. Its direct SQL
+	// fan-out must clear the active lease's recovery ownership even though it
+	// merely coalesces into the already-pending row.
+	if err := s.PublishCandidateManifest(ctx, publication); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.FailJobWithSuccessor(
+		ctx, *active, "final resolver publication failure",
+	); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := s.ListJobs(ctx, store.JobResolverCatalog, store.StatusPending)
+	if err != nil || len(pending) != 1 || pending[0].ID != recovery.ID ||
+		pending[0].Attempts != 0 {
+		t.Fatalf("fresh resolver successor = %+v, %v; want %s at attempt 0",
+			pending, err, recovery.ID)
+	}
+	failed, err := s.ListJobs(ctx, store.JobResolverCatalog, store.StatusFailed)
+	if err != nil || len(failed) != 1 || failed[0].ID != active.ID ||
+		failed[0].Attempts != 3 {
+		t.Fatalf("exhausted active resolver = %+v, %v; want %s at attempt 3",
+			failed, err, active.ID)
+	}
+}
+
 func TestCandidateManifestInvalidationTracksHeadUnitAndTypedDesignation(t *testing.T) {
 	s := newTestStore(t)
 	ctx := context.Background()

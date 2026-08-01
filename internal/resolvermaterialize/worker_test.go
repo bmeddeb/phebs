@@ -128,6 +128,7 @@ type workerTestStore struct {
 	outcomeErr       error
 	assertionErr     error
 	enqueueErr       error
+	enqueueCommitErr error
 	publishErr       error
 	clearErr         error
 	authorityErr     error
@@ -199,10 +200,9 @@ func (state *workerTestStore) PublishResolverCatalog(
 	return nil
 }
 
-func (state *workerTestStore) EnqueuePending(
+func (state *workerTestStore) EnsureJobSuccessor(
 	_ context.Context,
-	kind store.JobKind,
-	target string,
+	active store.Job,
 	force bool,
 ) (*store.Job, error) {
 	state.enqueueCalls++
@@ -210,8 +210,14 @@ func (state *workerTestStore) EnqueuePending(
 	if state.enqueueErr != nil {
 		return nil, state.enqueueErr
 	}
-	job := store.Job{Kind: kind, Target: target, Force: force, Status: store.StatusPending}
+	job := store.Job{
+		Kind: active.Kind, Target: active.Target,
+		Force: force, Status: store.StatusPending,
+	}
 	state.enqueued = append(state.enqueued, job)
+	if state.enqueueCommitErr != nil {
+		return &job, state.enqueueCommitErr
+	}
 	return &job, nil
 }
 
@@ -544,8 +550,8 @@ func TestWorkerFinalAttemptQueuesSuccessorBeforePublicationMarker(t *testing.T) 
 		Kind: store.JobResolverCatalog, Target: fixture.repository,
 		Force: true, Attempts: 2,
 	})
-	if !errors.Is(err, commitFailure) {
-		t.Fatalf("Handle = %v, want commit failure", err)
+	if !errors.Is(err, commitFailure) || !store.IsSuccessorRetry(err) {
+		t.Fatalf("Handle = %v, want successor-marked commit failure", err)
 	}
 	if len(fixture.state.enqueued) != 1 ||
 		fixture.state.enqueued[0].Kind != store.JobResolverCatalog ||
@@ -739,9 +745,10 @@ func TestWorkerNondeterministicMarkedPublicationCannotBypassConflict(t *testing.
 	for attempt := 1; attempt <= 2; attempt++ {
 		err := fixture.handle(true)
 		if !errors.Is(err, resolvercatalog.ErrNondeterministicPublication) ||
-			!errors.Is(err, store.ErrConflict) || !store.IsTerminal(err) {
+			!errors.Is(err, store.ErrConflict) || !store.IsTerminal(err) ||
+			!store.IsSuccessorRetry(err) {
 			t.Fatalf(
-				"attempt %d error = %v; want terminal nondeterminism/store conflict",
+				"attempt %d error = %v; want successor-marked terminal nondeterminism/store conflict",
 				attempt, err,
 			)
 		}
@@ -871,8 +878,8 @@ func TestWorkerRecoveryEnqueueFailurePreservesDamagedAuthority(t *testing.T) {
 		Kind: store.JobResolverCatalog, Target: fixture.repository,
 		Force: true, Attempts: 2,
 	})
-	if !errors.Is(err, fixture.state.enqueueErr) {
-		t.Fatalf("Handle = %v, want queue error", err)
+	if !errors.Is(err, fixture.state.enqueueErr) || !store.IsSuccessorRetry(err) {
+		t.Fatalf("Handle = %v, want marked queue error", err)
 	}
 	if fixture.state.clearCalls != 0 || fixture.state.pointer == nil ||
 		!reflect.DeepEqual(*fixture.state.pointer, prior) {
@@ -881,6 +888,77 @@ func TestWorkerRecoveryEnqueueFailurePreservesDamagedAuthority(t *testing.T) {
 	}
 	if !resolvercatalog.IsPublishing(fixture.worker.root, fixture.repository) {
 		t.Fatal("queue failure removed recovery marker")
+	}
+}
+
+func TestWorkerMarksAmbiguousRecoverySuccessorCommit(t *testing.T) {
+	fixture := newWorkerFixture(t)
+	prior := workerTestPriorPointer(t, fixture.repository, fixture.registry)
+	fixture.state.pointer = &prior
+	if err := os.MkdirAll(fixture.worker.root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(
+		fixture.worker.root,
+		resolvercatalogid.PublishingName(fixture.repository),
+	)
+	if err := os.WriteFile(marker, []byte(fixture.repository+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fixture.state.enqueueCommitErr = errors.New("successor response unavailable")
+	err := fixture.worker.Handle(t.Context(), store.Job{
+		Kind: store.JobResolverCatalog, Target: fixture.repository,
+		Force: true, Attempts: 2,
+	})
+	if !errors.Is(err, fixture.state.enqueueCommitErr) ||
+		!store.IsSuccessorRetry(err) {
+		t.Fatalf("Handle = %v, want marked ambiguous successor error", err)
+	}
+	if len(fixture.state.enqueued) != 1 || !fixture.state.enqueued[0].Force ||
+		fixture.state.clearCalls != 0 || fixture.state.pointer == nil ||
+		!reflect.DeepEqual(*fixture.state.pointer, prior) {
+		t.Fatalf(
+			"ambiguous successor boundary: enqueued=%+v clears=%d pointer=%+v",
+			fixture.state.enqueued, fixture.state.clearCalls, fixture.state.pointer,
+		)
+	}
+	if !resolvercatalog.IsPublishing(fixture.worker.root, fixture.repository) {
+		t.Fatal("ambiguous successor response removed recovery marker")
+	}
+}
+
+func TestWorkerRecoveryClearFailureCarriesSuccessorProvenance(t *testing.T) {
+	fixture := newWorkerFixture(t)
+	prior := workerTestPriorPointer(t, fixture.repository, fixture.registry)
+	fixture.state.pointer = &prior
+	if err := os.MkdirAll(fixture.worker.root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(
+		fixture.worker.root,
+		resolvercatalogid.PublishingName(fixture.repository),
+	)
+	if err := os.WriteFile(marker, []byte(fixture.repository+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fixture.state.clearErr = errors.New("resolver pointer clear unavailable")
+	err := fixture.worker.Handle(t.Context(), store.Job{
+		Kind: store.JobResolverCatalog, Target: fixture.repository,
+		Force: true, Attempts: 2,
+	})
+	if !errors.Is(err, fixture.state.clearErr) || !store.IsSuccessorRetry(err) {
+		t.Fatalf("Handle = %v, want successor-marked clear error", err)
+	}
+	if len(fixture.state.enqueued) != 1 || !fixture.state.enqueued[0].Force ||
+		fixture.state.clearCalls != 1 || fixture.state.pointer == nil ||
+		!reflect.DeepEqual(*fixture.state.pointer, prior) {
+		t.Fatalf(
+			"clear failure boundary: enqueued=%+v clears=%d pointer=%+v",
+			fixture.state.enqueued, fixture.state.clearCalls, fixture.state.pointer,
+		)
+	}
+	if !resolvercatalog.IsPublishing(fixture.worker.root, fixture.repository) {
+		t.Fatal("clear failure removed recovery marker")
 	}
 }
 

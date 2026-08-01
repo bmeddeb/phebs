@@ -50,6 +50,20 @@ type CandidateManifestFile struct {
 	InUnit        bool
 }
 
+// CandidateCallerLeaf is one immutable, manifest-bound caller partition. The
+// complete ordered descriptor participates in replay admission so a caller
+// cannot substitute a different member, prefix, or content receipt.
+type CandidateCallerLeaf struct {
+	Name          string
+	Ordinal       int
+	Prefix        string
+	PrefixBits    int
+	RecordCount   int
+	DeclaredBytes int64
+	ContentBytes  int64
+	ContentDigest string
+}
+
 // CandidateManifestTypedInput is one actual-path parser input envelope.
 type CandidateManifestTypedInput struct {
 	Kind          string
@@ -111,6 +125,32 @@ type CandidateManifestProvider interface {
 		ctx context.Context,
 		request CandidateManifestRequest,
 	) (CandidateManifest, error)
+}
+
+// CandidateCallerPlan exposes the narrow direct-leaf execution surface. Its
+// ordered domain and leaf lists define an exact cross product: a domain/leaf
+// pair remains expected even when replay visits no record for that domain.
+type CandidateCallerPlan interface {
+	Identity() string
+	CandidateControlRevision() uint64
+	CallerDomains() []CandidateManifestDomain
+	CallerLeaves() []CandidateCallerLeaf
+	ForEachCallerLeafFile(
+		ctx context.Context,
+		domain, version string,
+		leaf CandidateCallerLeaf,
+		visit func(CandidateManifestFile) error,
+	) error
+}
+
+// CandidateCallerPlanProvider opens only the store-bound candidate manifest
+// and its caller leaf envelopes. Selected leaf contents are read later by
+// ForEachCallerLeafFile; other candidate members are not opened by this path.
+type CandidateCallerPlanProvider interface {
+	OpenCandidateCallerPlan(
+		ctx context.Context,
+		request CandidateManifestRequest,
+	) (CandidateCallerPlan, error)
 }
 
 // CandidateManifestIdentityProvider is the pointer-only half of production

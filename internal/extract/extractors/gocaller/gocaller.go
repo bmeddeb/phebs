@@ -92,22 +92,24 @@ type symbolBinding struct {
 	declarationPath   string
 	generatorRelative string
 	reason            string
+	strictProvenance  bool
 }
 
 type callerDetail struct {
-	Schema              string                `json:"schema"`
-	Resolution          string                `json:"resolution"`
-	Protocol            string                `json:"protocol"`
-	GeneratedSymbol     string                `json:"generated_symbol"`
-	GeneratedPath       string                `json:"generated_path,omitempty"`
-	DeclarationPath     string                `json:"declaration_path,omitempty"`
-	GeneratorRelative   string                `json:"generator_relative_path,omitempty"`
-	AttributionDigest   string                `json:"attribution_digest,omitempty"`
-	UnresolvedReason    string                `json:"unresolved_reason,omitempty"`
-	DeclarationEvidence string                `json:"declaration_evidence,omitempty"`
-	UnitState           string                `json:"unit_state"`
-	UnitReason          string                `json:"unit_reason,omitempty"`
-	UnitCandidates      []unitCandidateDetail `json:"unit_candidates,omitempty"`
+	Schema                string                `json:"schema"`
+	Resolution            string                `json:"resolution"`
+	Protocol              string                `json:"protocol"`
+	GeneratedSymbol       string                `json:"generated_symbol"`
+	GeneratedPath         string                `json:"generated_path,omitempty"`
+	DeclarationPath       string                `json:"declaration_path,omitempty"`
+	GeneratorRelative     string                `json:"generator_relative_path,omitempty"`
+	AttributionDigest     string                `json:"attribution_digest,omitempty"`
+	ResolverCatalogDigest string                `json:"resolver_catalog_digest,omitempty"`
+	UnresolvedReason      string                `json:"unresolved_reason,omitempty"`
+	DeclarationEvidence   string                `json:"declaration_evidence,omitempty"`
+	UnitState             string                `json:"unit_state"`
+	UnitReason            string                `json:"unit_reason,omitempty"`
+	UnitCandidates        []unitCandidateDetail `json:"unit_candidates,omitempty"`
 }
 
 type unitCandidateDetail struct {
@@ -658,8 +660,8 @@ func emitCallerFact(
 		return errors.New("caller source span is invalid")
 	}
 	tier, rule := "derived", "go-caller-scip-v1"
-	if resolution == "syntax" {
-		tier, rule = "heuristic", "go-caller-syntax-v1"
+	if resolution == "syntax" || resolution == "direct-syntax" {
+		tier, rule = "heuristic", "go-caller-"+resolution+"-v1"
 	}
 	predicate, lineage := "CALLS_OPERATION", binding.lineage
 	if reason != "" {
@@ -675,6 +677,10 @@ func emitCallerFact(
 		DeclarationEvidence: binding.lineage,
 		UnitState:           units.State, UnitReason: units.Reason,
 		UnitCandidates: unitCandidateDetails(units.Candidates),
+	}
+	if resolution == "direct-syntax" {
+		detail.AttributionDigest = ""
+		detail.ResolverCatalogDigest = attributionDigest
 	}
 	encoded, err := json.Marshal(detail)
 	if err != nil {

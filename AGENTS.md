@@ -98,8 +98,9 @@ consumers, and retention decision and implementation. T30.6a bounded
 operational receipts, T30.6b durable exact-generation outcomes, and T30.6c
 aggregate-bounded domain scheduling are shipped; T30.6d candidate-v4
 source-lane classification, T30.6e focused local-evidence base-lane
-consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
-materialization are also shipped; T30.6h direct caller-leaf execution is next.
+consumption, T30.6f resolver-catalog lifecycle, T30.6g bounded resolver
+materialization, and T30.6h direct caller-leaf execution artifacts are also
+shipped; T30.6i atomic complete caller-generation publication is next.
 A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.

@@ -1,0 +1,1182 @@
+package store
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	surrealdb "github.com/surrealdb/surrealdb.go"
+	"github.com/surrealdb/surrealdb.go/pkg/models"
+
+	"github.com/bmeddeb/phebs/internal/callerleafid"
+	"github.com/bmeddeb/phebs/internal/reponame"
+)
+
+const (
+	// CallerLeafWriterSchema is persisted on every T30.6h state row. Filesystem
+	// artifact schemas are separate; this names only the store writer contract.
+	CallerLeafWriterSchema = "phebs-caller-leaf-store-v1"
+	// CallerBaseSourceLanePolicy names T30.6h's base-only execution generation.
+	// Retained go_test candidate records require a separately authorized future
+	// generation and cannot alias this identity.
+	CallerBaseSourceLanePolicy = "candidate-source-lane-base-v1"
+
+	callerLeafWriterMigrationVersion = "t30.6h-caller-leaf-writer-v1"
+
+	maxCallerCandidateRecords       = 4096
+	maxCallerCandidateDeclaredBytes = int64(64 << 20)
+	maxCallerCandidateContentBytes  = int64(128 << 20)
+	maxCallerPairResults            = 12_500
+	maxCallerPairAbstentions        = 4096
+	maxCallerPairCanonicalBytes     = int64(64 << 20)
+	maxCallerPairStagingBytes       = int64(65 << 20)
+	maxCallerPairSourceBytes        = int64(64 << 20)
+	maxCallerGenerationPairs        = 16_384
+	maxCallerGenerationResults      = 100_000
+	maxCallerGenerationAbstentions  = 100_000
+	maxCallerGenerationCanonical    = int64(512 << 20)
+	maxCallerGenerationStaging      = int64(520 << 20)
+	maxCallerPeakOpenFiles          = 5
+)
+
+var ErrInvalidCallerLeafState = errors.New("invalid caller-leaf state")
+
+// CallerGenerationIdentity is the complete immutable input generation for
+// direct caller-leaf execution. T30.6h records per-pair work against it;
+// T30.6i may coordinate those rows but owns the product-visible publication.
+// Digest is always recomputed by this package.
+type CallerGenerationIdentity struct {
+	Repository               string `json:"repository"`
+	HeadCommit               string `json:"head_commit"`
+	UnitDigest               string `json:"unit_digest"`
+	DeclarationSetDigest     string `json:"declaration_set_digest"`
+	CandidateManifestDigest  string `json:"candidate_manifest_digest"`
+	CandidatePolicyDigest    string `json:"candidate_policy_digest"`
+	CandidateControlRevision uint64 `json:"candidate_control_revision"`
+	ResolverGenerationDigest string `json:"resolver_generation_digest"`
+	ResolverManifestDigest   string `json:"resolver_manifest_digest"`
+	ResolverControlRevision  uint64 `json:"resolver_control_revision"`
+	ResolverWriterSchema     string `json:"resolver_writer_schema"`
+	SourceLanePolicy         string `json:"source_lane_policy"`
+	CallerPolicyDigest       string `json:"caller_policy_digest"`
+	ExtractorSetDigest       string `json:"extractor_set_digest"`
+	Digest                   string `json:"digest"`
+}
+
+// ComputeCallerGenerationDigest is the sole store-side generation digest.
+func ComputeCallerGenerationDigest(identity CallerGenerationIdentity) string {
+	return callerLeafDigestFields(
+		"phebs-caller-generation-v1\x00",
+		identity.Repository,
+		identity.HeadCommit,
+		identity.UnitDigest,
+		identity.DeclarationSetDigest,
+		identity.CandidateManifestDigest,
+		identity.CandidatePolicyDigest,
+		identity.SourceLanePolicy,
+		identity.ResolverGenerationDigest,
+		identity.ResolverManifestDigest,
+		identity.CallerPolicyDigest,
+		identity.ExtractorSetDigest,
+	)
+}
+
+// CallerLeafPair is the exact candidate leaf descriptor assigned to one
+// caller-domain adapter. Its cached PairDigest is never trusted on write.
+type CallerLeafPair struct {
+	Domain                 string `json:"domain"`
+	ExtractorVersion       string `json:"extractor_version"`
+	LeafAdapterVersion     string `json:"leaf_adapter_version"`
+	LeafOrdinal            int    `json:"leaf_ordinal"`
+	LeafPrefix             string `json:"leaf_prefix"`
+	LeafPrefixBits         int    `json:"leaf_prefix_bits"`
+	CandidateMemberName    string `json:"candidate_member_name"`
+	CandidateRecordCount   int    `json:"candidate_record_count"`
+	CandidateDeclaredBytes int64  `json:"candidate_declared_bytes"`
+	CandidateContentBytes  int64  `json:"candidate_content_bytes"`
+	CandidateContentDigest string `json:"candidate_content_digest"`
+	PairDigest             string `json:"digest"`
+}
+
+// ComputeCallerLeafPairDigest binds the domain, adapter, and complete
+// candidate-member envelope, preventing a descriptor swap from aliasing a
+// previously successful pair.
+func ComputeCallerLeafPairDigest(
+	generation CallerGenerationIdentity,
+	pair CallerLeafPair,
+) string {
+	return callerLeafDigestFields(
+		"phebs-caller-leaf-pair-v1\x00",
+		ComputeCallerGenerationDigest(generation),
+		pair.Domain,
+		pair.ExtractorVersion,
+		pair.LeafAdapterVersion,
+		strconv.Itoa(pair.LeafOrdinal),
+		pair.LeafPrefix,
+		strconv.Itoa(pair.LeafPrefixBits),
+		pair.CandidateMemberName,
+		strconv.Itoa(pair.CandidateRecordCount),
+		strconv.FormatInt(pair.CandidateDeclaredBytes, 10),
+		strconv.FormatInt(pair.CandidateContentBytes, 10),
+		pair.CandidateContentDigest,
+	)
+}
+
+// ComputeCallerLeafPairSetDigest validates canonical pair order through the
+// same path as admission and returns a digest over every exact pair envelope.
+func ComputeCallerLeafPairSetDigest(
+	generation CallerGenerationIdentity,
+	pairs []CallerLeafPair,
+) (string, error) {
+	preparedGeneration, err := prepareCallerGeneration(generation)
+	if err != nil {
+		return "", err
+	}
+	prepared, err := prepareCallerLeafPairs(preparedGeneration, pairs)
+	if err != nil {
+		return "", err
+	}
+	fields := make([]string, len(prepared))
+	for index := range prepared {
+		fields[index] = prepared[index].PairDigest
+	}
+	return callerLeafDigestFields("phebs-caller-leaf-pair-set-v1\x00", fields...), nil
+}
+
+func callerLeafDigestFields(domain string, fields ...string) string {
+	hash := sha256.New()
+	_, _ = hash.Write([]byte(domain))
+	for _, field := range fields {
+		_, _ = fmt.Fprintf(hash, "%d:%s;", len(field), field)
+	}
+	return "sha256:" + hex.EncodeToString(hash.Sum(nil))
+}
+
+type CallerLeafDisposition string
+
+const (
+	CallerLeafSucceeded                 CallerLeafDisposition = "succeeded"
+	CallerLeafTerminalGenerationRefusal CallerLeafDisposition = "terminal_generation_refusal"
+)
+
+// CallerLeafArtifactReceipt is the exact immutable artifact envelope for one
+// successful pair. Empty and abstention-only pairs still publish one artifact.
+type CallerLeafArtifactReceipt struct {
+	ArtifactName          string `json:"artifact_name"`
+	ArtifactCount         int    `json:"artifact_count"`
+	ResultCount           int    `json:"result_count"`
+	AbstentionCount       int    `json:"abstention_count"`
+	CanonicalBytes        int64  `json:"canonical_bytes"`
+	StagingBytes          int64  `json:"staging_bytes"`
+	ContentDigest         string `json:"content_digest"`
+	MetadataDigest        string `json:"metadata_digest"`
+	ExcludedGoTestRecords int    `json:"excluded_go_test_records"`
+	SourceBlobReads       int    `json:"source_blob_reads"`
+	SourceBlobBytes       int64  `json:"source_blob_bytes"`
+	OutOfLeafReads        int    `json:"out_of_leaf_reads"`
+}
+
+// CallerLeafOutcome is immutable multi-generation execution state. RecordedAt
+// and WriterSchema are store-owned on write.
+type CallerLeafOutcome struct {
+	Generation   CallerGenerationIdentity   `json:"generation"`
+	Pair         CallerLeafPair             `json:"pair"`
+	Disposition  CallerLeafDisposition      `json:"disposition"`
+	Receipt      *CallerLeafArtifactReceipt `json:"receipt,omitempty"`
+	WriterSchema string                     `json:"writer_schema"`
+	RecordedAt   time.Time                  `json:"recorded_at"`
+}
+
+type CallerGenerationAdmissionDisposition string
+
+const (
+	CallerGenerationAdmitted                  CallerGenerationAdmissionDisposition = "admitted"
+	CallerGenerationTerminalGenerationRefusal CallerGenerationAdmissionDisposition = "terminal_generation_refusal"
+)
+
+// CallerGenerationAdmission is aggregate pre-publication state. Pair and
+// aggregate fields are recomputed from immutable outcomes; PeakOpenFiles is
+// the frozen structural worker maximum, not an operating-system FD meter. It
+// creates no caller publication pointer.
+type CallerGenerationAdmission struct {
+	Generation      CallerGenerationIdentity             `json:"generation"`
+	Disposition     CallerGenerationAdmissionDisposition `json:"disposition"`
+	PairSetDigest   string                               `json:"pair_set_digest"`
+	PairCount       int                                  `json:"pair_count"`
+	ArtifactCount   int                                  `json:"artifact_count"`
+	ResultCount     int                                  `json:"result_count"`
+	AbstentionCount int                                  `json:"abstention_count"`
+	CanonicalBytes  int64                                `json:"canonical_bytes"`
+	StagingBytes    int64                                `json:"staging_bytes"`
+	PeakOpenFiles   int                                  `json:"peak_open_files"`
+	WriterSchema    string                               `json:"writer_schema"`
+	RecordedAt      time.Time                            `json:"recorded_at"`
+}
+
+type CallerLeafStore interface {
+	RecordCallerLeafOutcome(context.Context, Job, CallerLeafOutcome) error
+	GetCallerLeafOutcome(context.Context, CallerGenerationIdentity, CallerLeafPair) (*CallerLeafOutcome, error)
+	ListCallerLeafOutcomes(context.Context, CallerGenerationIdentity) ([]CallerLeafOutcome, error)
+	RecordCallerGenerationAdmission(context.Context, Job, CallerGenerationAdmission, []CallerLeafPair) error
+	GetCallerGenerationAdmission(context.Context, CallerGenerationIdentity) (*CallerGenerationAdmission, error)
+	ListCallerGenerationAdmissions(context.Context, string) ([]CallerGenerationAdmission, error)
+	ClearCallerLeafOutcome(context.Context, CallerGenerationIdentity, CallerLeafPair) error
+	ClearCallerLeafGeneration(context.Context, CallerGenerationIdentity) error
+	ClearAllCallerLeafState(context.Context, string) error
+	ClearAllCallerLeafStateForRestore(context.Context) error
+}
+
+var _ CallerLeafStore = (*Surreal)(nil)
+
+func callerLeafMigrationID() models.RecordID {
+	return models.NewRecordID("store_migration", "caller_leaf_writer")
+}
+
+func callerLeafOutcomeID(generation CallerGenerationIdentity, pair CallerLeafPair) models.RecordID {
+	return models.NewRecordID("caller_leaf_outcome", hashIdentity(
+		"clo_", generation.Repository, generation.Digest, pair.PairDigest,
+	))
+}
+
+func callerGenerationAdmissionID(generation CallerGenerationIdentity) models.RecordID {
+	return models.NewRecordID("caller_generation_admission", hashIdentity(
+		"cga_", generation.Repository, generation.Digest,
+	))
+}
+
+func (s *Surreal) migrateCallerLeafWriter(ctx context.Context) error {
+	results, err := surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
+IF $current != NONE AND $current != $wanted {
+	THROW 'phebs-permanent: unsupported caller-leaf writer generation'
+};
+DELETE caller_leaf_outcome
+	WHERE $current = NONE AND (writer_schema ?? '') != $writer_schema RETURN NONE;
+DELETE caller_generation_admission
+	WHERE $current = NONE AND (writer_schema ?? '') != $writer_schema RETURN NONE;
+UPSERT $marker SET
+	version = IF $current = NONE THEN $wanted ELSE $current END,
+	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END
+	RETURN NONE;
+COMMIT;`, map[string]any{
+		"marker": callerLeafMigrationID(), "wanted": callerLeafWriterMigrationVersion,
+		"writer_schema": CallerLeafWriterSchema,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate caller-leaf writer: %w", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf("migrate caller-leaf writer statement %d: %s", index, result.Error.Message)
+		}
+	}
+	return nil
+}
+
+func prepareCallerGeneration(identity CallerGenerationIdentity) (CallerGenerationIdentity, error) {
+	if err := reponame.Validate(identity.Repository); err != nil {
+		return identity, fmt.Errorf("repository: %w", err)
+	}
+	if !validGitObjectID(identity.HeadCommit) {
+		return identity, errors.New("head_commit must be a canonical object ID")
+	}
+	if identity.UnitDigest != "" && !validSHA256Digest(identity.UnitDigest) {
+		return identity, errors.New("unit_digest must be empty or canonical sha256")
+	}
+	for name, digest := range map[string]string{
+		"declaration_set_digest":     identity.DeclarationSetDigest,
+		"candidate_manifest_digest":  identity.CandidateManifestDigest,
+		"candidate_policy_digest":    identity.CandidatePolicyDigest,
+		"resolver_generation_digest": identity.ResolverGenerationDigest,
+		"resolver_manifest_digest":   identity.ResolverManifestDigest,
+		"caller_policy_digest":       identity.CallerPolicyDigest,
+		"extractor_set_digest":       identity.ExtractorSetDigest,
+	} {
+		if !validSHA256Digest(digest) {
+			return identity, fmt.Errorf("%s must be canonical sha256", name)
+		}
+	}
+	if identity.CandidateControlRevision == 0 || identity.ResolverControlRevision == 0 {
+		return identity, errors.New("candidate and resolver control revisions are required")
+	}
+	if identity.ResolverWriterSchema != resolverCatalogWriterSchema {
+		return identity, errors.New("resolver writer schema is incompatible")
+	}
+	if identity.SourceLanePolicy != CallerBaseSourceLanePolicy {
+		return identity, errors.New("source lane policy must be candidate-source-lane-base-v1")
+	}
+	identity.Digest = ComputeCallerGenerationDigest(identity)
+	return identity, nil
+}
+
+func sameCallerGenerationSemantics(left, right CallerGenerationIdentity) bool {
+	return ComputeCallerGenerationDigest(left) == ComputeCallerGenerationDigest(right)
+}
+
+func prepareCallerLeafPair(
+	generation CallerGenerationIdentity,
+	pair CallerLeafPair,
+) (CallerLeafPair, error) {
+	if !validCallerToken(pair.Domain, 128) ||
+		!validCallerToken(pair.ExtractorVersion, 128) ||
+		!validCallerToken(pair.LeafAdapterVersion, 128) {
+		return pair, errors.New("domain or adapter version is missing or unbounded")
+	}
+	if pair.LeafOrdinal < 0 || pair.LeafOrdinal > maxCallerGenerationPairs {
+		return pair, errors.New("leaf ordinal is outside its bound")
+	}
+	if pair.LeafPrefixBits < 2 || pair.LeafPrefixBits > 256 ||
+		len(pair.LeafPrefix) != pair.LeafPrefixBits {
+		return pair, errors.New("leaf prefix has an invalid bit length")
+	}
+	for _, value := range pair.LeafPrefix {
+		if value != '0' && value != '1' {
+			return pair, errors.New("leaf prefix is not binary")
+		}
+	}
+	if !validCallerArtifactName(pair.CandidateMemberName) ||
+		!strings.HasSuffix(pair.CandidateMemberName, ".ndjson") {
+		return pair, errors.New("candidate member name is invalid")
+	}
+	if pair.CandidateRecordCount <= 0 || pair.CandidateRecordCount > maxCallerCandidateRecords ||
+		pair.CandidateDeclaredBytes < 0 || pair.CandidateDeclaredBytes > maxCallerCandidateDeclaredBytes ||
+		pair.CandidateContentBytes <= 0 || pair.CandidateContentBytes > maxCallerCandidateContentBytes ||
+		!validSHA256Digest(pair.CandidateContentDigest) {
+		return pair, errors.New("candidate member envelope is invalid")
+	}
+	pair.PairDigest = ComputeCallerLeafPairDigest(generation, pair)
+	return pair, nil
+}
+
+func prepareCallerLeafPairs(
+	generation CallerGenerationIdentity,
+	pairs []CallerLeafPair,
+) ([]CallerLeafPair, error) {
+	if pairs == nil || len(pairs) > maxCallerGenerationPairs {
+		return nil, errors.New("caller leaf pairs must be an explicit bounded set")
+	}
+	prepared := make([]CallerLeafPair, len(pairs))
+	for index := range pairs {
+		var err error
+		prepared[index], err = prepareCallerLeafPair(generation, pairs[index])
+		if err != nil {
+			return nil, fmt.Errorf("pair %d: %w", index, err)
+		}
+		if index > 0 && !callerPairLess(prepared[index-1], prepared[index]) {
+			return nil, fmt.Errorf("pair %d is duplicate or unordered", index)
+		}
+	}
+	return prepared, nil
+}
+
+func callerPairLess(left, right CallerLeafPair) bool {
+	if left.Domain != right.Domain {
+		return left.Domain < right.Domain
+	}
+	return left.LeafPrefix < right.LeafPrefix
+}
+
+func validCallerToken(value string, maxBytes int) bool {
+	if value == "" || len(value) > maxBytes || !utf8.ValidString(value) ||
+		strings.TrimSpace(value) != value {
+		return false
+	}
+	for _, current := range value {
+		if current <= 0x20 || current == 0x7f || current == '/' || current == '\\' {
+			return false
+		}
+	}
+	return true
+}
+
+func validCallerArtifactName(value string) bool {
+	return validCallerToken(value, 255) && value != "." && value != ".."
+}
+
+func validateCallerReceipt(receipt CallerLeafArtifactReceipt) error {
+	if !validCallerArtifactName(receipt.ArtifactName) ||
+		!strings.HasSuffix(receipt.ArtifactName, ".ndjson") {
+		return errors.New("artifact name is invalid")
+	}
+	if receipt.ArtifactCount != 1 {
+		return errors.New("a successful pair must name exactly one artifact")
+	}
+	if receipt.ResultCount < 0 || receipt.ResultCount > maxCallerPairResults ||
+		receipt.AbstentionCount < 0 || receipt.AbstentionCount > maxCallerPairAbstentions {
+		return errors.New("result or abstention count is outside its bound")
+	}
+	if receipt.CanonicalBytes < 0 || receipt.CanonicalBytes > maxCallerPairCanonicalBytes ||
+		receipt.StagingBytes != receipt.CanonicalBytes ||
+		receipt.StagingBytes > maxCallerPairStagingBytes {
+		return errors.New("artifact byte receipt is outside its bound")
+	}
+	if !validSHA256Digest(receipt.ContentDigest) || !validSHA256Digest(receipt.MetadataDigest) {
+		return errors.New("artifact digests must be canonical sha256")
+	}
+	if receipt.ExcludedGoTestRecords < 0 || receipt.SourceBlobReads < 0 ||
+		receipt.SourceBlobBytes < 0 || receipt.SourceBlobBytes > maxCallerPairSourceBytes ||
+		receipt.OutOfLeafReads != 0 {
+		return errors.New("source-read receipt is invalid or contains an out-of-leaf read")
+	}
+	return nil
+}
+
+func prepareCallerLeafOutcome(outcome CallerLeafOutcome) (CallerLeafOutcome, error) {
+	var err error
+	outcome.Generation, err = prepareCallerGeneration(outcome.Generation)
+	if err != nil {
+		return outcome, fmt.Errorf("generation: %w", err)
+	}
+	outcome.Pair, err = prepareCallerLeafPair(outcome.Generation, outcome.Pair)
+	if err != nil {
+		return outcome, fmt.Errorf("pair: %w", err)
+	}
+	switch outcome.Disposition {
+	case CallerLeafSucceeded:
+		if outcome.Receipt == nil {
+			return outcome, errors.New("successful caller leaf requires an artifact receipt")
+		}
+		if err := validateCallerReceipt(*outcome.Receipt); err != nil {
+			return outcome, fmt.Errorf("receipt: %w", err)
+		}
+		if outcome.Receipt.ArtifactName != callerleafid.ArtifactName(
+			outcome.Pair.PairDigest, outcome.Receipt.ContentDigest,
+		) {
+			return outcome, errors.New("receipt artifact name is outside its exact pair")
+		}
+		if outcome.Receipt.ExcludedGoTestRecords > outcome.Pair.CandidateRecordCount ||
+			outcome.Receipt.SourceBlobReads > outcome.Pair.CandidateRecordCount ||
+			outcome.Receipt.ExcludedGoTestRecords >
+				outcome.Pair.CandidateRecordCount-outcome.Receipt.SourceBlobReads ||
+			outcome.Receipt.SourceBlobBytes > outcome.Pair.CandidateDeclaredBytes {
+			return outcome, errors.New("source-read receipt exceeds its candidate leaf")
+		}
+	case CallerLeafTerminalGenerationRefusal:
+		if outcome.Receipt != nil {
+			return outcome, errors.New("terminal caller leaf cannot carry an artifact receipt")
+		}
+	default:
+		return outcome, errors.New("caller leaf disposition is not in the frozen set")
+	}
+	outcome.WriterSchema = CallerLeafWriterSchema
+	outcome.RecordedAt = time.Time{}
+	return outcome, nil
+}
+
+func validateCallerJob(job Job, repository string) error {
+	if job.Kind != JobCallerLeaf || job.Target != repository || job.ID == "" ||
+		job.LeaseToken == "" || job.ClaimedBy == "" ||
+		(job.Status != StatusClaimed && job.Status != StatusRunning) {
+		return fmt.Errorf("caller leaf job %q: %w", job.ID, ErrLeaseLost)
+	}
+	return nil
+}
+
+type callerLeafOutcomeRec struct {
+	CallerLeafOutcome
+	Repository       string           `json:"repository"`
+	GenerationDigest string           `json:"generation_digest"`
+	Domain           string           `json:"domain"`
+	LeafPrefix       string           `json:"leaf_prefix"`
+	RecID            *models.RecordID `json:"id"`
+}
+
+const recordCallerLeafOutcomeSQL = `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $migration_version LIMIT 1) = 1;
+LET $repo = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
+	FROM $repo_rid)[0];
+LET $candidate = (SELECT head_commit, unit_digest, manifest_digest,
+	policy_digest, control_revision
+	FROM $candidate_rid)[0];
+LET $resolver = (SELECT head_commit, unit_digest, candidate_manifest_digest,
+	declaration_set_digest, generation_digest, manifest_digest,
+	control_revision, writer_schema FROM $resolver_rid)[0];
+LET $owned = (SELECT id FROM type::record($job_id)
+	WHERE target = $repository AND status IN ['claimed', 'running']
+		AND lease_token = $lease AND claimed_by = $claimed_by LIMIT 1)[0].id;
+LET $current = (SELECT * FROM $outcome_rid)[0];
+LET $normalized_receipt = IF $receipt = NULL THEN NONE ELSE $receipt END;
+LET $authority_ok = $writer_ok AND $owned != NONE AND $repo != NONE
+	AND ($repo.deleting = NONE OR $repo.deleting = false)
+	AND $repo.indexed_commit_hash = $head_commit
+	AND ($repo.indexed_analysis_unit.digest ?? '') = $unit_digest
+	AND $candidate != NONE
+	AND $candidate.head_commit = $head_commit
+	AND $candidate.unit_digest = $unit_digest
+	AND $candidate.manifest_digest = $candidate_manifest_digest
+	AND $candidate.policy_digest = $candidate_policy_digest
+	AND $candidate.control_revision = $candidate_control_revision
+	AND $resolver != NONE
+	AND $resolver.head_commit = $head_commit
+	AND $resolver.unit_digest = $unit_digest
+	AND $resolver.candidate_manifest_digest = $candidate_manifest_digest
+	AND $resolver.declaration_set_digest = $declaration_set_digest
+	AND $resolver.generation_digest = $resolver_generation_digest
+	AND $resolver.manifest_digest = $resolver_manifest_digest
+	AND $resolver.control_revision = $resolver_control_revision
+	AND $resolver.writer_schema = $resolver_writer_schema;
+LET $same = $current != NONE
+	AND $current.repository = $repository
+	AND $current.generation_digest = $generation_digest
+	AND $current.pair.digest = $pair.digest
+	AND $current.domain = $domain
+	AND $current.leaf_prefix = $leaf_prefix
+	AND $current.disposition = $disposition
+	AND $current.receipt = $normalized_receipt
+	AND $current.writer_schema = $writer_schema;
+LET $written = IF $authority_ok = false THEN []
+	ELSE IF $current != NONE AND $same = false THEN []
+	ELSE IF $same THEN [$current]
+	ELSE (CREATE $outcome_rid CONTENT {
+		repository: $repository,
+		generation: $generation,
+		generation_digest: $generation_digest,
+		pair: $pair,
+		domain: $domain,
+		leaf_prefix: $leaf_prefix,
+		disposition: $disposition,
+		receipt: $normalized_receipt,
+		writer_schema: $writer_schema,
+		recorded_at: time::now()
+	} RETURN AFTER) END;
+LET $pending = IF array::len($written) = 1 THEN
+	(SELECT id, created_at FROM caller_leaf_job
+		WHERE pending_key = $repository AND status = 'pending'
+		ORDER BY created_at LIMIT 1)[0].id
+	ELSE NONE END;
+LET $successor = IF array::len($written) != 1 THEN []
+	ELSE IF $pending != NONE THEN
+		(UPDATE $pending SET force = force RETURN AFTER)
+	ELSE (CREATE caller_leaf_job CONTENT {
+		target: $repository,
+		status: 'pending',
+		attempts: 0,
+		created_at: time::now(),
+		pending_key: $repository,
+		force: false,
+		recovery_lease: $lease
+	} RETURN AFTER) END;
+RETURN IF array::len($written) = 1 AND array::len($successor) = 1
+	THEN $written ELSE [] END;
+COMMIT;`
+
+func (s *Surreal) RecordCallerLeafOutcome(ctx context.Context, job Job, outcome CallerLeafOutcome) error {
+	prepared, err := prepareCallerLeafOutcome(outcome)
+	if err != nil {
+		return fmt.Errorf("record caller leaf outcome: %w: %v", ErrInvalidCallerLeafState, err)
+	}
+	if err := validateCallerJob(job, prepared.Generation.Repository); err != nil {
+		return fmt.Errorf("record caller leaf outcome: %w", err)
+	}
+	results, err := surrealdb.Query[[]callerLeafOutcomeRec](ctx, s.db, recordCallerLeafOutcomeSQL, map[string]any{
+		"migration_rid":     callerLeafMigrationID(),
+		"migration_version": callerLeafWriterMigrationVersion,
+		"repo_rid":          repoID(prepared.Generation.Repository),
+		"candidate_rid":     candidateManifestPublicationID(prepared.Generation.Repository),
+		"resolver_rid":      resolverCatalogPublicationID(prepared.Generation.Repository),
+		"outcome_rid":       callerLeafOutcomeID(prepared.Generation, prepared.Pair),
+		"job_id":            job.ID, "lease": job.LeaseToken, "claimed_by": job.ClaimedBy,
+		"repository":                 prepared.Generation.Repository,
+		"head_commit":                prepared.Generation.HeadCommit,
+		"unit_digest":                prepared.Generation.UnitDigest,
+		"declaration_set_digest":     prepared.Generation.DeclarationSetDigest,
+		"candidate_manifest_digest":  prepared.Generation.CandidateManifestDigest,
+		"candidate_policy_digest":    prepared.Generation.CandidatePolicyDigest,
+		"candidate_control_revision": prepared.Generation.CandidateControlRevision,
+		"resolver_generation_digest": prepared.Generation.ResolverGenerationDigest,
+		"resolver_manifest_digest":   prepared.Generation.ResolverManifestDigest,
+		"resolver_control_revision":  prepared.Generation.ResolverControlRevision,
+		"resolver_writer_schema":     prepared.Generation.ResolverWriterSchema,
+		"generation":                 prepared.Generation,
+		"generation_digest":          prepared.Generation.Digest,
+		"pair":                       prepared.Pair,
+		"domain":                     prepared.Pair.Domain,
+		"leaf_prefix":                prepared.Pair.LeafPrefix,
+		"disposition":                prepared.Disposition,
+		"receipt":                    prepared.Receipt,
+		"writer_schema":              CallerLeafWriterSchema,
+	})
+	if err != nil {
+		return fmt.Errorf("record caller leaf outcome: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) != 1 {
+		return fmt.Errorf("record caller leaf outcome: stale or conflicting authority: %w", ErrConflict)
+	}
+	if _, err := validatePersistedCallerLeafOutcome(rows[0]); err != nil {
+		return fmt.Errorf("record caller leaf outcome: persisted row: %w", err)
+	}
+	return nil
+}
+
+func validatePersistedCallerLeafOutcome(row callerLeafOutcomeRec) (CallerLeafOutcome, error) {
+	originalGenerationDigest := row.Generation.Digest
+	originalPairDigest := row.Pair.PairDigest
+	prepared, err := prepareCallerLeafOutcome(row.CallerLeafOutcome)
+	if err != nil {
+		return CallerLeafOutcome{}, err
+	}
+	if originalGenerationDigest != prepared.Generation.Digest ||
+		originalPairDigest != prepared.Pair.PairDigest ||
+		row.GenerationDigest != prepared.Generation.Digest ||
+		row.Repository != prepared.Generation.Repository ||
+		row.Domain != prepared.Pair.Domain || row.LeafPrefix != prepared.Pair.LeafPrefix ||
+		row.WriterSchema != CallerLeafWriterSchema || row.RecordedAt.IsZero() {
+		return CallerLeafOutcome{}, ErrInvalidCallerLeafState
+	}
+	prepared.RecordedAt = row.RecordedAt.UTC()
+	prepared.WriterSchema = row.WriterSchema
+	return prepared, nil
+}
+
+func (s *Surreal) GetCallerLeafOutcome(ctx context.Context, generation CallerGenerationIdentity, pair CallerLeafPair) (*CallerLeafOutcome, error) {
+	preparedGeneration, err := prepareCallerGeneration(generation)
+	if err != nil {
+		return nil, fmt.Errorf("get caller leaf outcome: %w", err)
+	}
+	preparedPair, err := prepareCallerLeafPair(preparedGeneration, pair)
+	if err != nil {
+		return nil, fmt.Errorf("get caller leaf outcome: %w", err)
+	}
+	results, err := surrealdb.Query[[]callerLeafOutcomeRec](ctx, s.db,
+		"SELECT * FROM $rid", map[string]any{"rid": callerLeafOutcomeID(preparedGeneration, preparedPair)})
+	if err != nil {
+		return nil, fmt.Errorf("get caller leaf outcome: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("caller leaf outcome: %w", ErrNotFound)
+	}
+	outcome, err := validatePersistedCallerLeafOutcome(rows[0])
+	if err != nil || !sameCallerGenerationSemantics(outcome.Generation, preparedGeneration) ||
+		outcome.Pair.PairDigest != preparedPair.PairDigest {
+		return nil, fmt.Errorf("get caller leaf outcome: %w", ErrInvalidCallerLeafState)
+	}
+	outcome.Generation = preparedGeneration
+	outcome.Pair = preparedPair
+	return &outcome, nil
+}
+
+func (s *Surreal) ListCallerLeafOutcomes(ctx context.Context, generation CallerGenerationIdentity) ([]CallerLeafOutcome, error) {
+	preparedGeneration, err := prepareCallerGeneration(generation)
+	if err != nil {
+		return nil, fmt.Errorf("list caller leaf outcomes: %w", err)
+	}
+	results, err := surrealdb.Query[[]callerLeafOutcomeRec](ctx, s.db,
+		`SELECT * FROM caller_leaf_outcome
+		 WHERE repository = $repository AND generation_digest = $generation_digest
+		 ORDER BY domain, leaf_prefix`, map[string]any{
+			"repository":        preparedGeneration.Repository,
+			"generation_digest": preparedGeneration.Digest,
+		})
+	if err != nil {
+		return nil, fmt.Errorf("list caller leaf outcomes: %w", err)
+	}
+	rows := firstDomainRows(results)
+	outcomes := make([]CallerLeafOutcome, len(rows))
+	for index := range rows {
+		outcomes[index], err = validatePersistedCallerLeafOutcome(rows[index])
+		if err != nil || !sameCallerGenerationSemantics(outcomes[index].Generation, preparedGeneration) ||
+			(index > 0 && !callerPairLess(outcomes[index-1].Pair, outcomes[index].Pair)) {
+			return nil, fmt.Errorf("list caller leaf outcomes row %d: %w", index, ErrInvalidCallerLeafState)
+		}
+		normalizedPair, pairErr := prepareCallerLeafPair(preparedGeneration, outcomes[index].Pair)
+		if pairErr != nil || normalizedPair.PairDigest != outcomes[index].Pair.PairDigest {
+			return nil, fmt.Errorf("list caller leaf outcomes row %d: %w", index, ErrInvalidCallerLeafState)
+		}
+		outcomes[index].Generation = preparedGeneration
+		outcomes[index].Pair = normalizedPair
+	}
+	return outcomes, nil
+}
+
+type callerLeafOutcomeSummary struct {
+	PairDigest  string                `json:"pair_digest"`
+	Domain      string                `json:"domain"`
+	LeafPrefix  string                `json:"leaf_prefix"`
+	Disposition CallerLeafDisposition `json:"disposition"`
+}
+
+func prepareCallerGenerationAdmission(
+	admission CallerGenerationAdmission,
+	pairs []CallerLeafPair,
+	outcomes []CallerLeafOutcome,
+) (CallerGenerationAdmission, []callerLeafOutcomeSummary, error) {
+	var err error
+	admission.Generation, err = prepareCallerGeneration(admission.Generation)
+	if err != nil {
+		return admission, nil, fmt.Errorf("generation: %w", err)
+	}
+	preparedPairs, err := prepareCallerLeafPairs(admission.Generation, pairs)
+	if err != nil {
+		return admission, nil, err
+	}
+	if len(outcomes) != len(preparedPairs) {
+		return admission, nil, errors.New("every expected pair must have one immutable outcome")
+	}
+	if admission.PeakOpenFiles < 0 || admission.PeakOpenFiles > maxCallerPeakOpenFiles {
+		return admission, nil, errors.New("peak open files is outside its bound")
+	}
+	summaries := make([]callerLeafOutcomeSummary, len(outcomes))
+	allSucceeded := true
+	for index := range outcomes {
+		if outcomes[index].Generation != admission.Generation || outcomes[index].Pair != preparedPairs[index] {
+			return admission, nil, fmt.Errorf("outcome %d does not match its expected pair", index)
+		}
+		summaries[index] = callerLeafOutcomeSummary{
+			PairDigest:  outcomes[index].Pair.PairDigest,
+			Domain:      outcomes[index].Pair.Domain,
+			LeafPrefix:  outcomes[index].Pair.LeafPrefix,
+			Disposition: outcomes[index].Disposition,
+		}
+		if outcomes[index].Disposition != CallerLeafSucceeded {
+			allSucceeded = false
+			continue
+		}
+		receipt := outcomes[index].Receipt
+		if receipt == nil {
+			return admission, nil, fmt.Errorf("outcome %d has no success receipt", index)
+		}
+		if err := addCallerCount(
+			&admission.ArtifactCount, receipt.ArtifactCount,
+			maxCallerGenerationPairs, "artifact",
+		); err != nil {
+			return admission, nil, err
+		}
+		if err := addCallerCount(
+			&admission.ResultCount, receipt.ResultCount,
+			maxCallerGenerationResults+maxCallerPairResults, "result",
+		); err != nil {
+			return admission, nil, err
+		}
+		if err := addCallerCount(
+			&admission.AbstentionCount, receipt.AbstentionCount,
+			maxCallerGenerationAbstentions+maxCallerPairAbstentions,
+			"abstention",
+		); err != nil {
+			return admission, nil, err
+		}
+		if err := addCallerBytes(
+			&admission.CanonicalBytes, receipt.CanonicalBytes,
+			maxCallerGenerationCanonical+maxCallerPairCanonicalBytes,
+			"canonical",
+		); err != nil {
+			return admission, nil, err
+		}
+		if err := addCallerBytes(
+			&admission.StagingBytes, receipt.StagingBytes,
+			maxCallerGenerationStaging+maxCallerPairStagingBytes,
+			"staging",
+		); err != nil {
+			return admission, nil, err
+		}
+	}
+	aggregateExceeded := admission.ResultCount > maxCallerGenerationResults ||
+		admission.AbstentionCount > maxCallerGenerationAbstentions ||
+		admission.CanonicalBytes > maxCallerGenerationCanonical ||
+		admission.StagingBytes > maxCallerGenerationStaging
+	switch admission.Disposition {
+	case CallerGenerationAdmitted:
+		if !allSucceeded {
+			return admission, nil, errors.New("a generation with a terminal pair cannot be admitted")
+		}
+		if aggregateExceeded {
+			return admission, nil, errors.New("admitted caller generation exceeds an aggregate bound")
+		}
+	case CallerGenerationTerminalGenerationRefusal:
+		if allSucceeded && !aggregateExceeded {
+			return admission, nil, errors.New(
+				"terminal caller generation has neither a terminal pair nor an aggregate refusal",
+			)
+		}
+	default:
+		return admission, nil, errors.New("caller generation admission disposition is not in the frozen set")
+	}
+	admission.PairCount = len(preparedPairs)
+	fields := make([]string, len(preparedPairs))
+	for index := range preparedPairs {
+		fields[index] = preparedPairs[index].PairDigest
+	}
+	admission.PairSetDigest = callerLeafDigestFields(
+		"phebs-caller-leaf-pair-set-v1\x00", fields...,
+	)
+	admission.WriterSchema = CallerLeafWriterSchema
+	admission.RecordedAt = time.Time{}
+	return admission, summaries, nil
+}
+
+// ValidateCallerGenerationAdmission recomputes every immutable aggregate field
+// from the exact expected pair/outcome set. RecordedAt remains store-owned and
+// is intentionally excluded from the equality check.
+func ValidateCallerGenerationAdmission(
+	admission CallerGenerationAdmission,
+	pairs []CallerLeafPair,
+	outcomes []CallerLeafOutcome,
+) error {
+	input := admission
+	input.PairSetDigest = ""
+	input.PairCount = 0
+	input.ArtifactCount = 0
+	input.ResultCount = 0
+	input.AbstentionCount = 0
+	input.CanonicalBytes = 0
+	input.StagingBytes = 0
+	input.WriterSchema = ""
+	input.RecordedAt = time.Time{}
+	expected, _, err := prepareCallerGenerationAdmission(input, pairs, outcomes)
+	if err != nil {
+		return err
+	}
+	if admission.Generation != expected.Generation ||
+		admission.Disposition != expected.Disposition ||
+		admission.PairSetDigest != expected.PairSetDigest ||
+		admission.PairCount != expected.PairCount ||
+		admission.ArtifactCount != expected.ArtifactCount ||
+		admission.ResultCount != expected.ResultCount ||
+		admission.AbstentionCount != expected.AbstentionCount ||
+		admission.CanonicalBytes != expected.CanonicalBytes ||
+		admission.StagingBytes != expected.StagingBytes ||
+		admission.PeakOpenFiles != expected.PeakOpenFiles ||
+		admission.WriterSchema != expected.WriterSchema {
+		return ErrInvalidCallerLeafState
+	}
+	return nil
+}
+
+func addCallerCount(total *int, value, limit int, name string) error {
+	if value < 0 || *total < 0 || value > limit-*total {
+		return fmt.Errorf("caller generation %s count overflows its bound", name)
+	}
+	*total += value
+	return nil
+}
+
+func addCallerBytes(total *int64, value, limit int64, name string) error {
+	if value < 0 || *total < 0 || value > limit-*total {
+		return fmt.Errorf("caller generation %s bytes overflow their bound", name)
+	}
+	*total += value
+	return nil
+}
+
+type callerGenerationAdmissionRec struct {
+	CallerGenerationAdmission
+	Repository       string           `json:"repository"`
+	GenerationDigest string           `json:"generation_digest"`
+	RecID            *models.RecordID `json:"id"`
+}
+
+const recordCallerGenerationAdmissionSQL = `
+BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $migration_version LIMIT 1) = 1;
+LET $repo = (SELECT indexed_commit_hash, indexed_analysis_unit, deleting
+	FROM $repo_rid)[0];
+LET $candidate = (SELECT head_commit, unit_digest, manifest_digest,
+	policy_digest, control_revision
+	FROM $candidate_rid)[0];
+LET $resolver = (SELECT head_commit, unit_digest, candidate_manifest_digest,
+	declaration_set_digest, generation_digest, manifest_digest,
+	control_revision, writer_schema FROM $resolver_rid)[0];
+LET $owned = (SELECT id FROM type::record($job_id)
+	WHERE target = $repository AND status IN ['claimed', 'running']
+		AND lease_token = $lease AND claimed_by = $claimed_by LIMIT 1)[0].id;
+LET $outcomes = (SELECT pair.digest AS pair_digest, domain, leaf_prefix, disposition
+	FROM caller_leaf_outcome
+	WHERE repository = $repository AND generation_digest = $generation_digest
+	ORDER BY domain, leaf_prefix);
+LET $current = (SELECT * FROM $admission_rid)[0];
+LET $authority_ok = $writer_ok AND $owned != NONE AND $repo != NONE
+	AND ($repo.deleting = NONE OR $repo.deleting = false)
+	AND $repo.indexed_commit_hash = $head_commit
+	AND ($repo.indexed_analysis_unit.digest ?? '') = $unit_digest
+	AND $candidate != NONE
+	AND $candidate.head_commit = $head_commit
+	AND $candidate.unit_digest = $unit_digest
+	AND $candidate.manifest_digest = $candidate_manifest_digest
+	AND $candidate.policy_digest = $candidate_policy_digest
+	AND $candidate.control_revision = $candidate_control_revision
+	AND $resolver != NONE
+	AND $resolver.head_commit = $head_commit
+	AND $resolver.unit_digest = $unit_digest
+	AND $resolver.candidate_manifest_digest = $candidate_manifest_digest
+	AND $resolver.declaration_set_digest = $declaration_set_digest
+	AND $resolver.generation_digest = $resolver_generation_digest
+	AND $resolver.manifest_digest = $resolver_manifest_digest
+	AND $resolver.control_revision = $resolver_control_revision
+	AND $resolver.writer_schema = $resolver_writer_schema
+	AND $outcomes = $expected_outcomes;
+LET $same = $current != NONE
+	AND $current.repository = $repository
+	AND $current.generation_digest = $generation_digest
+	AND $current.disposition = $disposition
+	AND $current.pair_set_digest = $pair_set_digest
+	AND $current.pair_count = $pair_count
+	AND $current.artifact_count = $artifact_count
+	AND $current.result_count = $result_count
+	AND $current.abstention_count = $abstention_count
+	AND $current.canonical_bytes = $canonical_bytes
+	AND $current.staging_bytes = $staging_bytes
+	AND $current.peak_open_files = $peak_open_files
+	AND $current.writer_schema = $writer_schema;
+LET $written = IF $authority_ok = false THEN []
+	ELSE IF $current != NONE AND $same = false THEN []
+	ELSE IF $same THEN [$current]
+	ELSE (CREATE $admission_rid CONTENT {
+		repository: $repository,
+		generation: $generation,
+		generation_digest: $generation_digest,
+		disposition: $disposition,
+		pair_set_digest: $pair_set_digest,
+		pair_count: $pair_count,
+		artifact_count: $artifact_count,
+		result_count: $result_count,
+		abstention_count: $abstention_count,
+		canonical_bytes: $canonical_bytes,
+		staging_bytes: $staging_bytes,
+		peak_open_files: $peak_open_files,
+		writer_schema: $writer_schema,
+		recorded_at: time::now()
+	} RETURN AFTER) END;
+RETURN $written;
+COMMIT;`
+
+func (s *Surreal) RecordCallerGenerationAdmission(
+	ctx context.Context,
+	job Job,
+	admission CallerGenerationAdmission,
+	pairs []CallerLeafPair,
+) error {
+	preparedGeneration, err := prepareCallerGeneration(admission.Generation)
+	if err != nil {
+		return fmt.Errorf("record caller generation admission: %w", err)
+	}
+	outcomes, err := s.ListCallerLeafOutcomes(ctx, preparedGeneration)
+	if err != nil {
+		return fmt.Errorf("record caller generation admission: %w", err)
+	}
+	// Aggregate fields are output, never caller authority.
+	admission.PairSetDigest = ""
+	admission.PairCount = 0
+	admission.ArtifactCount = 0
+	admission.ResultCount = 0
+	admission.AbstentionCount = 0
+	admission.CanonicalBytes = 0
+	admission.StagingBytes = 0
+	prepared, summaries, err := prepareCallerGenerationAdmission(admission, pairs, outcomes)
+	if err != nil {
+		return fmt.Errorf("record caller generation admission: %w: %v", ErrInvalidCallerLeafState, err)
+	}
+	if err := validateCallerJob(job, prepared.Generation.Repository); err != nil {
+		return fmt.Errorf("record caller generation admission: %w", err)
+	}
+	results, err := surrealdb.Query[[]callerGenerationAdmissionRec](ctx, s.db,
+		recordCallerGenerationAdmissionSQL, map[string]any{
+			"migration_rid":     callerLeafMigrationID(),
+			"migration_version": callerLeafWriterMigrationVersion,
+			"repo_rid":          repoID(prepared.Generation.Repository),
+			"candidate_rid":     candidateManifestPublicationID(prepared.Generation.Repository),
+			"resolver_rid":      resolverCatalogPublicationID(prepared.Generation.Repository),
+			"admission_rid":     callerGenerationAdmissionID(prepared.Generation),
+			"job_id":            job.ID, "lease": job.LeaseToken, "claimed_by": job.ClaimedBy,
+			"repository":                 prepared.Generation.Repository,
+			"head_commit":                prepared.Generation.HeadCommit,
+			"unit_digest":                prepared.Generation.UnitDigest,
+			"declaration_set_digest":     prepared.Generation.DeclarationSetDigest,
+			"candidate_manifest_digest":  prepared.Generation.CandidateManifestDigest,
+			"candidate_policy_digest":    prepared.Generation.CandidatePolicyDigest,
+			"candidate_control_revision": prepared.Generation.CandidateControlRevision,
+			"resolver_generation_digest": prepared.Generation.ResolverGenerationDigest,
+			"resolver_manifest_digest":   prepared.Generation.ResolverManifestDigest,
+			"resolver_control_revision":  prepared.Generation.ResolverControlRevision,
+			"resolver_writer_schema":     prepared.Generation.ResolverWriterSchema,
+			"generation":                 prepared.Generation,
+			"generation_digest":          prepared.Generation.Digest,
+			"expected_outcomes":          summaries,
+			"disposition":                prepared.Disposition,
+			"pair_set_digest":            prepared.PairSetDigest,
+			"pair_count":                 prepared.PairCount,
+			"artifact_count":             prepared.ArtifactCount,
+			"result_count":               prepared.ResultCount,
+			"abstention_count":           prepared.AbstentionCount,
+			"canonical_bytes":            prepared.CanonicalBytes,
+			"staging_bytes":              prepared.StagingBytes,
+			"peak_open_files":            prepared.PeakOpenFiles,
+			"writer_schema":              CallerLeafWriterSchema,
+		})
+	if err != nil {
+		return fmt.Errorf("record caller generation admission: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) != 1 {
+		return fmt.Errorf("record caller generation admission: stale or conflicting authority: %w", ErrConflict)
+	}
+	if _, err := validatePersistedCallerGenerationAdmission(rows[0]); err != nil {
+		return fmt.Errorf("record caller generation admission: persisted row: %w", err)
+	}
+	return nil
+}
+
+func validatePersistedCallerGenerationAdmission(row callerGenerationAdmissionRec) (CallerGenerationAdmission, error) {
+	originalDigest := row.Generation.Digest
+	preparedGeneration, err := prepareCallerGeneration(row.Generation)
+	if err != nil {
+		return CallerGenerationAdmission{}, err
+	}
+	if originalDigest != preparedGeneration.Digest || row.GenerationDigest != preparedGeneration.Digest ||
+		row.Repository != preparedGeneration.Repository || row.WriterSchema != CallerLeafWriterSchema ||
+		row.RecordedAt.IsZero() || row.PairCount < 0 || row.PairCount > maxCallerGenerationPairs ||
+		row.ArtifactCount < 0 || row.ArtifactCount > row.PairCount ||
+		row.ResultCount < 0 || row.ResultCount > maxCallerGenerationResults+maxCallerPairResults ||
+		row.AbstentionCount < 0 || row.AbstentionCount > maxCallerGenerationAbstentions+maxCallerPairAbstentions ||
+		row.CanonicalBytes < 0 || row.CanonicalBytes > maxCallerGenerationCanonical+maxCallerPairCanonicalBytes ||
+		row.StagingBytes < 0 || row.StagingBytes > maxCallerGenerationStaging+maxCallerPairStagingBytes ||
+		row.PeakOpenFiles < 0 || row.PeakOpenFiles > maxCallerPeakOpenFiles ||
+		!validSHA256Digest(row.PairSetDigest) {
+		return CallerGenerationAdmission{}, ErrInvalidCallerLeafState
+	}
+	if row.Disposition != CallerGenerationAdmitted &&
+		row.Disposition != CallerGenerationTerminalGenerationRefusal {
+		return CallerGenerationAdmission{}, ErrInvalidCallerLeafState
+	}
+	if row.Disposition == CallerGenerationAdmitted &&
+		(row.ResultCount > maxCallerGenerationResults ||
+			row.AbstentionCount > maxCallerGenerationAbstentions ||
+			row.CanonicalBytes > maxCallerGenerationCanonical ||
+			row.StagingBytes > maxCallerGenerationStaging) {
+		return CallerGenerationAdmission{}, ErrInvalidCallerLeafState
+	}
+	row.Generation = preparedGeneration
+	row.RecordedAt = row.RecordedAt.UTC()
+	return row.CallerGenerationAdmission, nil
+}
+
+func (s *Surreal) GetCallerGenerationAdmission(ctx context.Context, generation CallerGenerationIdentity) (*CallerGenerationAdmission, error) {
+	prepared, err := prepareCallerGeneration(generation)
+	if err != nil {
+		return nil, fmt.Errorf("get caller generation admission: %w", err)
+	}
+	results, err := surrealdb.Query[[]callerGenerationAdmissionRec](ctx, s.db,
+		"SELECT * FROM $rid", map[string]any{"rid": callerGenerationAdmissionID(prepared)})
+	if err != nil {
+		return nil, fmt.Errorf("get caller generation admission: %w", err)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("caller generation admission: %w", ErrNotFound)
+	}
+	admission, err := validatePersistedCallerGenerationAdmission(rows[0])
+	if err != nil || !sameCallerGenerationSemantics(admission.Generation, prepared) {
+		return nil, fmt.Errorf("get caller generation admission: %w", ErrInvalidCallerLeafState)
+	}
+	admission.Generation = prepared
+	return &admission, nil
+}
+
+func (s *Surreal) ListCallerGenerationAdmissions(ctx context.Context, repository string) ([]CallerGenerationAdmission, error) {
+	if err := reponame.Validate(repository); err != nil {
+		return nil, fmt.Errorf("list caller generation admissions: %w", err)
+	}
+	results, err := surrealdb.Query[[]callerGenerationAdmissionRec](ctx, s.db,
+		`SELECT * FROM caller_generation_admission
+		 WHERE repository = $repository ORDER BY recorded_at, generation_digest`,
+		map[string]any{"repository": repository})
+	if err != nil {
+		return nil, fmt.Errorf("list caller generation admissions: %w", err)
+	}
+	rows := firstDomainRows(results)
+	admissions := make([]CallerGenerationAdmission, len(rows))
+	for index := range rows {
+		admissions[index], err = validatePersistedCallerGenerationAdmission(rows[index])
+		if err != nil || admissions[index].Generation.Repository != repository {
+			return nil, fmt.Errorf("list caller generation admissions row %d: %w", index, ErrInvalidCallerLeafState)
+		}
+	}
+	return admissions, nil
+}
+
+func (s *Surreal) ClearCallerLeafOutcome(ctx context.Context, generation CallerGenerationIdentity, pair CallerLeafPair) error {
+	preparedGeneration, err := prepareCallerGeneration(generation)
+	if err != nil {
+		return fmt.Errorf("clear caller leaf outcome: %w", err)
+	}
+	preparedPair, err := prepareCallerLeafPair(preparedGeneration, pair)
+	if err != nil {
+		return fmt.Errorf("clear caller leaf outcome: %w", err)
+	}
+	return s.clearCallerLeafState(ctx, `
+		DELETE $outcome_rid RETURN NONE;
+		DELETE $admission_rid RETURN NONE;`, map[string]any{
+		"outcome_rid":   callerLeafOutcomeID(preparedGeneration, preparedPair),
+		"admission_rid": callerGenerationAdmissionID(preparedGeneration),
+	}, "clear caller leaf outcome")
+}
+
+func (s *Surreal) ClearCallerLeafGeneration(ctx context.Context, generation CallerGenerationIdentity) error {
+	prepared, err := prepareCallerGeneration(generation)
+	if err != nil {
+		return fmt.Errorf("clear caller leaf generation: %w", err)
+	}
+	return s.clearCallerLeafState(ctx, `
+		DELETE caller_leaf_outcome WHERE repository = $repository
+			AND generation_digest = $generation_digest RETURN NONE;
+		DELETE $admission_rid RETURN NONE;`, map[string]any{
+		"repository":        prepared.Repository,
+		"generation_digest": prepared.Digest,
+		"admission_rid":     callerGenerationAdmissionID(prepared),
+	}, "clear caller leaf generation")
+}
+
+func (s *Surreal) ClearAllCallerLeafState(ctx context.Context, repository string) error {
+	if err := reponame.Validate(repository); err != nil {
+		return fmt.Errorf("clear all caller leaf state: %w", err)
+	}
+	return s.clearCallerLeafState(ctx, `
+		DELETE caller_leaf_outcome WHERE repository = $repository RETURN NONE;
+		DELETE caller_generation_admission WHERE repository = $repository RETURN NONE;`,
+		map[string]any{"repository": repository}, "clear all caller leaf state")
+}
+
+// ClearAllCallerLeafStateForRestore discards every imported caller-leaf
+// outcome and admission without decoding rows. Caller-leaf artifacts are
+// derived and deliberately excluded from backup, so retaining even otherwise
+// valid store rows would let absent bytes masquerade as completed work. The
+// raw table delete also makes restore recoverable from malformed imported
+// rows that the normal typed readers must reject.
+func (s *Surreal) ClearAllCallerLeafStateForRestore(ctx context.Context) error {
+	return s.clearCallerLeafState(ctx, `
+		DELETE caller_leaf_outcome RETURN NONE;
+		DELETE caller_generation_admission RETURN NONE;`,
+		map[string]any{}, "clear all caller leaf state for restore")
+}
+
+func (s *Surreal) clearCallerLeafState(ctx context.Context, body string, vars map[string]any, operation string) error {
+	statement := `BEGIN;
+LET $writer_ok = array::len(SELECT id FROM $migration_rid
+	WHERE version = $migration_version LIMIT 1) = 1;
+IF $writer_ok = false {
+	THROW 'phebs-permanent: caller-leaf writer generation is not active'
+};` + body + `
+COMMIT;`
+	vars["migration_rid"] = callerLeafMigrationID()
+	vars["migration_version"] = callerLeafWriterMigrationVersion
+	results, err := surrealdb.Query[any](ctx, s.db, statement, vars)
+	if err != nil {
+		return fmt.Errorf("%s: %w", operation, err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf("%s statement %d: %s", operation, index, result.Error.Message)
+		}
+	}
+	return nil
+}
