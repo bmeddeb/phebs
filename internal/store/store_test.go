@@ -23,9 +23,12 @@ func newTestStore(t *testing.T) *store.Surreal {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
-	s, err := store.OpenLocal(ctx, t.TempDir())
+	// Memory engine: identical child/schema/migrations, no surrealkv fsync
+	// cost (~6s per fresh data dir). Persistence-dependent tests reopen a
+	// fixed directory through store.OpenLocal instead of this helper.
+	s, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
-		t.Fatalf("OpenLocal: %v", err)
+		t.Fatalf("OpenLocalMemory: %v", err)
 	}
 	t.Cleanup(func() { _ = s.Close(context.Background()) })
 	return s

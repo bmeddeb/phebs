@@ -31,7 +31,17 @@ var _ Store = (*Surreal)(nil)
 // OpenLocal starts a supervised surreal child storing under dataDir and
 // connects to it. This is the single-node default (dev and prod).
 func OpenLocal(ctx context.Context, dataDir string) (*Surreal, error) {
-	return openLocal(ctx, dataDir, "")
+	return openLocal(ctx, dataDir, "", false)
+}
+
+// OpenLocalMemory is the test bootstrap seam: the identical supervised child,
+// WS session, runtime descriptor, schema, and migrations as OpenLocal, but on
+// SurrealDB's volatile in-process "memory" engine. A fresh surrealkv data
+// directory pays ~6s of per-DEFINE fsync cost applying the schema; memory
+// applies it in ~40ms. Nothing survives Close, so production servers and any
+// test that reopens a data directory must use OpenLocal.
+func OpenLocalMemory(ctx context.Context, dataDir string) (*Surreal, error) {
+	return openLocal(ctx, dataDir, "", true)
 }
 
 // OpenLocalWithConfig starts the production local store and binds its runtime
@@ -41,14 +51,21 @@ func OpenLocalWithConfig(ctx context.Context, dataDir, configSHA256 string) (*Su
 	if !validSHA256(configSHA256) {
 		return nil, errors.New("open local store: config digest is invalid")
 	}
-	return openLocal(ctx, dataDir, configSHA256)
+	return openLocal(ctx, dataDir, configSHA256, false)
 }
 
-func openLocal(ctx context.Context, dataDir, configSHA256 string) (*Surreal, error) {
+func openLocal(ctx context.Context, dataDir, configSHA256 string, memory bool) (*Surreal, error) {
 	if err := checkLocalRuntimeAvailable(dataDir); err != nil {
 		return nil, err
 	}
-	runtime, stop, err := startLocal(ctx, dataDir)
+	var runtime LocalRuntime
+	var stop func()
+	var err error
+	if memory {
+		runtime, stop, err = startEngine(ctx, "memory")
+	} else {
+		runtime, stop, err = startLocal(ctx, dataDir)
+	}
 	if err != nil {
 		return nil, err
 	}

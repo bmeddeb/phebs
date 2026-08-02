@@ -202,7 +202,14 @@ func validSemverBuildMetadata(value string) bool {
 // startLocal launches a supervised `surreal` child with surrealkv storage
 // under dataDir, waits until it is healthy, and returns its runtime plus a
 // stop func. This replaces in-process embedding — see the 2026-07-09 ADR.
-func startLocal(ctx context.Context, dataDir string) (runtime LocalRuntime, stop func(), err error) {
+func startLocal(ctx context.Context, dataDir string) (LocalRuntime, func(), error) {
+	return startEngine(ctx, "surrealkv:"+filepath.Join(dataDir, "db"))
+}
+
+// startEngine is startLocal with an explicit storage engine. The only
+// non-surrealkv caller is the OpenLocalMemory test seam; production servers
+// always run surrealkv under the data directory.
+func startEngine(ctx context.Context, engine string) (runtime LocalRuntime, stop func(), err error) {
 	identity, err := findSurrealBinary(true)
 	if err != nil {
 		return LocalRuntime{}, nil, err
@@ -223,7 +230,7 @@ func startLocal(ctx context.Context, dataDir string) (runtime LocalRuntime, stop
 		"--bind", addr,
 		"--user", "root", "--pass", "root",
 		"--log", "warn",
-		"surrealkv:"+filepath.Join(dataDir, "db"),
+		engine,
 	)
 	cmd.Stderr = os.Stderr
 	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
