@@ -60,6 +60,7 @@ export interface RepoStatus {
   orphaned: boolean
   connections?: string[]
   last_index_job?: IndexJob
+  last_index_job_state: 'exact' | 'unavailable'
 }
 
 export interface SourceFile {

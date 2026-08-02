@@ -1658,8 +1658,8 @@ above. T30.6k supplies the exact two-sided comparison described above. T30.6l
 supplies the exact Workbench composition, completed-stream confirmation, typed
 gaps, citation-only caller source access, and deterministic checklist identity
 described above. T30.6m explicitly selects unbounded historical-publication
-retention without changing cleanup. T30.6n next bounds job-history reads and
-repairs startup migration without deleting history. T30.6o then adds the
+retention without changing cleanup. T30.6n bounds job-history reads and
+repairs startup migration without deleting history. T30.6o next adds the
 authorization-first retention-status shell, fixed registry, budgets, and
 unconditional capacity warning; T30.6p–T30.6r populate its bounded store and
 filesystem collectors, with T30.6r completing the declared surface.
@@ -1778,15 +1778,57 @@ For exact component accounting, the 24-table Investigation/Workbench group is
 `investigation_watch_revision`. Grouping these rows in operator output must not
 permit a component to disappear silently.
 
-T30.6n first bounds job-history reads, including the frequently polled
-repository-status path, and repairs the startup-migration path. It performs no
-job-history deletion and establishes no retention bound. This repair is split
-out because an unbounded read or migration can become the first operational
-failure well before disk exhaustion. A current-job projection, index, or
-legacy reconstruction must install and advance through bounded,
-restart-resumable work. Until that reconstruction completes, legacy latest
-state is explicitly partial or unavailable; first open never synchronously
-indexes or backfills lifetime terminal history.
+T30.6n bounds both job-history consumers without deleting or compacting a job
+row. Internal history reads are record-ID-keyset pages: one call returns and
+materializes at most 257 physical-ID-ordered rows and at most 100 rows matching
+its optional status. Continuations use an exclusive record-range seek, not an
+ID predicate that filters again from the first table key.
+Because status filtering happens after the fixed physical scan, a sparse
+filter can return an empty page with a continuation cursor. Keep following that
+cursor; an empty page does not mean that no later matching diagnostic exists.
+Each returned row contains only the declared diagnostic fields. Target, error,
+and claimant are capped at 1,024, 2,048, and 256 Unicode characters and carry
+independent truncation flags; the lease token is authority, not a diagnostic,
+and is omitted. The durable row is not rewritten. This shape avoids adding
+eight historical compound indexes during upgrade. Pagination is weakly
+consistent with concurrent random-ID inserts: it never rescans behind its
+physical cursor, so use it as a bounded diagnostic traversal rather than a
+frozen snapshot.
+
+`/api/repo-status` no longer reads `indexing_job` history. It scans current
+repository and membership rows and dereferences at most one prospective job
+record link per current repository. Supported indexing-job writer transactions
+install that link atomically when they create a row; a job created through
+those writers after this upgrade is exact,
+and later claim, heartbeat, retry, and terminal transitions remain visible
+through the same link. A repository whose latest job predates the projection,
+was deleted and recreated under the same name, or otherwise has no current
+link reports `last_index_job_state: "unavailable"`; neither the API nor the UI
+calls that state “never indexed,” counts it as idle, or enables its per-row
+reindex action. Its next supported indexing-job writer transaction establishes
+exact state for the current repository incarnation. No retrospective terminal-
+history backfill runs, and no table event replays projection work while retained
+job rows are restored.
+
+The first supported upgraded store open reads only `pending`, `claimed`, and
+`running` rows through each of the eight status indexes, with a 131,072-active-
+row installation safety/refusal bound per table. That number is not a claimed
+queue-cardinality ceiling or retention bound. It preserves oldest-pending
+coalescing and active lease recovery, verifies the already-shipped pending-key
+indexes, then records one versioned completion marker. An interrupted repair
+safely resumes because every transition is status-fenced; later opens read
+only that marker. A nonempty table missing its required pending-key index, or
+an unsupported store above the safety bound, refuses instead of silently
+scanning or indexing lifetime terminal history. Database export and restore
+retain terminal rows and exact diagnostics; the ordinary raw database backup
+also retains the job projection and completion fence without one projection
+event per restored indexing-job row. Stale-job reaping reads
+only `claimed` and `running` rows through the status index, performs no server-
+side sort, and returns or mutates at most 256 stale rows per poll; later polls
+drain further batches. Its index scan is `O(current active jobs)`, not
+`O(terminal history)`, while Go allocation and mutation count stay fixed. This
+establishes no job-retention bound and adds no TTL, deletion, or retention
+configuration.
 
 T30.6o then adds administrator-only `GET /api/retention-status` as an
 authorization-first shell. Authorization completes before any component store,

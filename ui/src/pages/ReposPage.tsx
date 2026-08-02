@@ -83,6 +83,7 @@ export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
 
   const indexed = repos.filter((r) => r.indexed_commit_hash).length
   const running = repos.filter((r) => r.last_index_job && !['done', 'failed', 'canceled'].includes(r.last_index_job.status)).length
+  const indexingStateUnavailable = repos.some((r) => r.last_index_job_state === 'unavailable')
 
   return (
     <div className={css({ border: `1px solid ${tok.cardBorder}`, borderRadius: '8px', overflow: 'hidden' })}>
@@ -91,7 +92,7 @@ export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
           Repositories
         </span>
         <span className={css({ fontSize: '12px', lineHeight: '16px', color: tok.textTertiary, '@media screen and (max-width: 520px)': { display: 'none' } })}>
-          {repos.length} · {indexed} indexed · {running} indexing
+          {repos.length} · {indexed} indexed · {indexingStateUnavailable ? 'indexing status unavailable' : `${running} indexing`}
         </span>
         <span className={css({ flex: 1 })} />
         {isAdmin && (
@@ -156,6 +157,7 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
   const tok = usePhebsTokens()
   const job = repo.last_index_job
   const running = !!job && !['done', 'failed', 'canceled'].includes(job.status)
+  const reindexDisabled = running || repo.last_index_job_state === 'unavailable'
   const cell = css({ height: '40px', padding: '0 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' })
   return (
     <tr className={css({ height: '40px', borderBottom: `1px solid ${tok.innerSep}`, ':last-child': { borderBottom: 'none' }, ':hover': { backgroundColor: tok.hoverFill } })}>
@@ -177,7 +179,7 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
         </div>
       </td>
       <td className={cell}>
-        <Status job={job} />
+        <Status job={job} state={repo.last_index_job_state} />
       </td>
       <td className={cell}>
         {repo.indexed_at ? (
@@ -204,7 +206,8 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
           {canReindex && (
             <button
               type="button"
-              disabled={running}
+              disabled={reindexDisabled}
+              title={repo.last_index_job_state === 'unavailable' ? 'Index job status unavailable' : undefined}
               onClick={onReindex}
               className={css({
                 height: '26px',
@@ -212,14 +215,14 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
                 alignItems: 'center',
                 fontSize: '12.5px',
                 lineHeight: '16px',
-                color: running ? tok.textTertiary : tok.textSecondary,
+                color: reindexDisabled ? tok.textTertiary : tok.textSecondary,
                 backgroundColor: tok.fill,
                 border: 'none',
                 borderRadius: '7px',
                 padding: '0 10px',
-                cursor: running ? 'default' : 'pointer',
-                opacity: running ? 0.6 : 1,
-                ':hover': running ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
+                cursor: reindexDisabled ? 'default' : 'pointer',
+                opacity: reindexDisabled ? 0.6 : 1,
+                ':hover': reindexDisabled ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
               })}
             >
               {job?.status === 'failed' ? 'Retry' : 'Reindex'}
@@ -231,9 +234,12 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
   )
 }
 
-function Status({ job }: { job: RepoStatus['last_index_job'] }) {
+function Status({ job, state }: { job: RepoStatus['last_index_job']; state: RepoStatus['last_index_job_state'] }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  if (!job && state === 'unavailable') {
+    return <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.textTertiary })}><Dot color={tok.gutter} /> status unavailable</span>
+  }
   if (!job) return <span className={css({ display: 'flex', alignItems: 'center', gap: '6px', color: tok.textTertiary })}><Dot color={tok.gutter} /> never indexed</span>
   const map: Record<string, { color: string; label: string }> = {
     done: { color: tok.statusGreen, label: 'Indexed' },

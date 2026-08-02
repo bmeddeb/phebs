@@ -71,6 +71,15 @@ const (
 	StatusCanceled JobStatus = "canceled"
 )
 
+// JobProjectionState says whether a current/latest job projection is complete.
+// Unavailable never means that no historical job exists.
+type JobProjectionState string
+
+const (
+	JobProjectionExact       JobProjectionState = "exact"
+	JobProjectionUnavailable JobProjectionState = "unavailable"
+)
+
 // Repo mirrors the upstream Repo model's P1 fields (PORT_MAP §5).
 type Repo struct {
 	Name                string              `json:"name"` // unique, e.g. "github.com/foo/bar"
@@ -116,30 +125,74 @@ type IndexedRevision struct {
 // Job is one row in a job table. Target is the connection name for sync jobs
 // and the repository name for repository-scoped jobs.
 type Job struct {
-	ID          string     `json:"-"` // "table:key" record id, set on read
-	Kind        JobKind    `json:"-"`
-	Target      string     `json:"target"`
-	Status      JobStatus  `json:"status"`
-	Attempts    int        `json:"attempts"` // executions so far
-	Error       string     `json:"error,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	NotBefore   *time.Time `json:"not_before,omitempty"` // backoff gate for claims
-	ClaimedBy   string     `json:"claimed_by,omitempty"`
-	ClaimedAt   *time.Time `json:"claimed_at,omitempty"`
-	HeartbeatAt *time.Time `json:"heartbeat_at,omitempty"`
-	FinishedAt  *time.Time `json:"finished_at,omitempty"`
-	Force       bool       `json:"force,omitempty"`
-	LeaseToken  string     `json:"-" cbor:"lease_token,omitempty"`
+	ID              string    `json:"-"` // "table:key" record id, set on read
+	Kind            JobKind   `json:"-"`
+	Target          string    `json:"target"`
+	TargetTruncated bool      `json:"target_truncated,omitempty"`
+	Status          JobStatus `json:"status"`
+	Attempts        int       `json:"attempts"` // executions so far
+	Error           string    `json:"error,omitempty"`
+	// The truncation flags are set only on bounded diagnostic reads. Durable
+	// queue rows and worker-authority reads remain byte-for-byte unchanged.
+	ErrorTruncated     bool       `json:"error_truncated,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	NotBefore          *time.Time `json:"not_before,omitempty"` // backoff gate for claims
+	ClaimedBy          string     `json:"claimed_by,omitempty"`
+	ClaimedByTruncated bool       `json:"claimed_by_truncated,omitempty"`
+	ClaimedAt          *time.Time `json:"claimed_at,omitempty"`
+	HeartbeatAt        *time.Time `json:"heartbeat_at,omitempty"`
+	FinishedAt         *time.Time `json:"finished_at,omitempty"`
+	Force              bool       `json:"force,omitempty"`
+	LeaseToken         string     `json:"-" cbor:"lease_token,omitempty"`
+}
+
+const (
+	MaxJobHistoryPageRows            = 100
+	MaxJobHistoryTargetCharacters    = 1_024
+	MaxJobHistoryErrorCharacters     = 2_048
+	MaxJobHistoryClaimedByCharacters = 256
+)
+
+// JobCursor is the stable physical-row boundary for one bounded history scan.
+// Kind and Status prevent a cursor from being reused against another table or
+// filter. ID is the Surreal record-id component, not a user-controlled target.
+type JobCursor struct {
+	Kind   JobKind   `json:"kind"`
+	Status JobStatus `json:"status,omitempty"`
+	ID     string    `json:"id"`
+}
+
+// JobPageQuery requests at most Limit matching rows while scanning one fixed
+// physical record-id window. A sparse status filter may therefore return an
+// empty page with Next set; continuing never rescans terminal history from the
+// beginning and never requires a historical status/order index build.
+type JobPageQuery struct {
+	Kind   JobKind
+	Status JobStatus
+	Limit  int
+	After  *JobCursor
+}
+
+type JobPage struct {
+	Jobs []Job      `json:"jobs"`
+	Next *JobCursor `json:"next,omitempty"`
+}
+
+// JobHistoryStore is separate from the worker queue boundary. Queue consumers
+// do not acquire an unbounded diagnostic-history read by implementing Store.
+type JobHistoryStore interface {
+	ListJobsPage(context.Context, JobPageQuery) (*JobPage, error)
 }
 
 // RepoStatus is a repo row annotated with connection membership and the
 // most recent indexing job — the /api/repo-status shape.
 type RepoStatus struct {
 	Repo
-	Orphaned     bool                `json:"orphaned"` // no connection claims this repo
-	Connections  []string            `json:"connections,omitempty"`
-	LastIndexJob *Job                `json:"last_index_job,omitempty"`
-	AnalysisUnit *analysisunit.State `json:"analysis_unit,omitempty"`
+	Orphaned          bool                `json:"orphaned"` // no connection claims this repo
+	Connections       []string            `json:"connections,omitempty"`
+	LastIndexJob      *Job                `json:"last_index_job,omitempty"`
+	LastIndexJobState JobProjectionState  `json:"last_index_job_state"`
+	AnalysisUnit      *analysisunit.State `json:"analysis_unit,omitempty"`
 }
 
 // User is the shared identity behind local-password and OIDC logins. Secret
@@ -946,8 +999,7 @@ type Store interface {
 	// Calls made while a job is claimed/running create one pending successor;
 	// force upgrades an existing pending job and is never downgraded.
 	EnqueuePending(ctx context.Context, kind JobKind, target string, force bool) (*Job, error)
-	ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) // status "" = all
-	ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error)        // ErrNotFound when nothing claimable
+	ClaimJob(ctx context.Context, kind JobKind, who string) (*Job, error) // ErrNotFound when nothing claimable
 	SetJobStatus(ctx context.Context, job Job, status JobStatus, errMsg string) error
 	HeartbeatJob(ctx context.Context, job Job) error
 	RequeueJob(ctx context.Context, job Job, errMsg string, notBefore time.Time) error // attempts+1, back to pending

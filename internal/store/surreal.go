@@ -166,13 +166,13 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 	if err := s.migrateEvidenceRuns(ctx); err != nil {
 		return err
 	}
-	results, err = surrealdb.Query[any](ctx, s.db, pendingJobIndexes+evidenceIndexes, nil)
+	results, err = surrealdb.Query[any](ctx, s.db, evidenceIndexes, nil)
 	if err != nil {
 		return err
 	}
 	for i, r := range *results {
 		if r.Error != nil {
-			return fmt.Errorf("pending index statement %d: %s", i, r.Error.Message)
+			return fmt.Errorf("evidence index statement %d: %s", i, r.Error.Message)
 		}
 	}
 	return nil
@@ -424,16 +424,63 @@ DEFINE FIELD OVERWRITE status ON extraction_attempt TYPE string
 	evidenceFormatVersion,
 	surrealStringList(retiredEvidenceWriterGenerations()))
 
-// migrateLegacyJobs runs before the pending-key indexes are installed. Old
-// rows had no lease or pending slot, and may contain an active job plus a
-// successor. Keep the oldest pending row, cancel duplicates, then requeue only
-// an unfenced active row that has no successor.
+const (
+	jobActiveMigrationVersion = "t30.6n-active-jobs-v1"
+	// maxJobActiveMigrationRows is an installation-wide safety/refusal bound
+	// for unsupported pre-fence active state, not a runtime queue-cardinality
+	// or retention claim. The supported predecessor already has pending guards.
+	// The cap is per table and excludes terminal history through the existing
+	// status index; a larger legacy active set refuses instead of widening Open.
+	maxJobActiveMigrationRows = 131_072
+)
+
+var durableJobKinds = [...]JobKind{
+	JobSync, JobIndex, JobFetch, JobCandidate, JobExtract,
+	JobResolverCatalog, JobCallerLeaf, JobInvestigate,
+}
+
+func jobActiveMigrationID() models.RecordID {
+	return models.NewRecordID("store_migration", "active_jobs")
+}
+
+type jobActiveMigrationState struct {
+	Version string `json:"version"`
+}
+
+// migrateLegacyJobs reads a cap-plus-one active window through the status
+// index and marks completion durably. Sorting that bounded window in Go avoids
+// a server-side sort over either active or terminal history. Old rows had no
+// lease or pending slot, and may contain an active job plus a successor. Keep
+// the oldest pending row, cancel duplicates, then requeue only an unfenced
+// active row that has no successor. Terminal rows are never selected, decoded,
+// sorted, or rewritten.
 func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
-	for _, kind := range []JobKind{
-		JobSync, JobIndex, JobFetch, JobCandidate, JobExtract,
-		JobResolverCatalog, JobCallerLeaf, JobInvestigate,
-	} {
-		jobs, err := s.ListJobs(ctx, kind, "")
+	complete, err := s.jobActiveMigrationComplete(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate active jobs: %w", err)
+	}
+	if complete {
+		return nil
+	}
+	missingPendingIndexes, err := s.missingPendingJobIndexes(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate active jobs: inspect pending indexes: %w", err)
+	}
+	for _, kind := range missingPendingIndexes {
+		nonempty, queryErr := s.jobTableNonempty(ctx, kind)
+		if queryErr != nil {
+			return fmt.Errorf("migrate active jobs: inspect %s: %w", kind, queryErr)
+		}
+		if nonempty {
+			return fmt.Errorf(
+				"migrate active jobs: nonempty %s lacks its required pending-key index",
+				kind,
+			)
+		}
+	}
+
+	for _, kind := range durableJobKinds {
+		jobs, err := s.listActiveJobsForMigration(ctx, kind)
 		if err != nil {
 			return fmt.Errorf("migrate %s: list: %w", kind, err)
 		}
@@ -483,7 +530,166 @@ func (s *Surreal) migrateLegacyJobs(ctx context.Context) error {
 			pending[job.Target] = true
 		}
 	}
+
+	results, err := surrealdb.Query[any](ctx, s.db, pendingJobIndexes, nil)
+	if err != nil {
+		return fmt.Errorf("migrate active jobs: install pending indexes: %w", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"migrate active jobs: pending index statement %d: %s",
+				index,
+				result.Error.Message,
+			)
+		}
+	}
+
+	results, err = surrealdb.Query[any](ctx, s.db, `
+BEGIN;
+LET $current = (SELECT version FROM $marker LIMIT 1)[0].version;
+IF $current != NONE AND $current != $wanted {
+	THROW 'phebs-permanent: unsupported active-job migration generation'
+};
+UPSERT $marker SET
+	version = IF $current = NONE THEN $wanted ELSE $current END,
+	completed_at = IF $current = NONE THEN time::now() ELSE completed_at END
+	RETURN NONE;
+COMMIT;`, map[string]any{
+		"marker": jobActiveMigrationID(), "wanted": jobActiveMigrationVersion,
+	})
+	if err != nil {
+		return fmt.Errorf("migrate active jobs: record completion: %w", err)
+	}
+	for index, result := range *results {
+		if result.Error != nil {
+			return fmt.Errorf(
+				"migrate active jobs: completion statement %d: %s",
+				index,
+				result.Error.Message,
+			)
+		}
+	}
+	complete, err = s.jobActiveMigrationComplete(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate active jobs: verify completion: %w", err)
+	}
+	if !complete {
+		return errors.New("migrate active jobs: completion marker missing")
+	}
 	return nil
+}
+
+func (s *Surreal) jobActiveMigrationComplete(ctx context.Context) (bool, error) {
+	results, err := surrealdb.Query[[]jobActiveMigrationState](ctx, s.db,
+		"SELECT version FROM $marker LIMIT 1",
+		map[string]any{"marker": jobActiveMigrationID()})
+	if err != nil {
+		return false, err
+	}
+	var version string
+	for _, result := range *results {
+		if len(result.Result) > 0 {
+			version = result.Result[0].Version
+		}
+	}
+	switch version {
+	case "":
+		return false, nil
+	case jobActiveMigrationVersion:
+		return true, nil
+	default:
+		return false, fmt.Errorf("unsupported marker %q", version)
+	}
+}
+
+func (s *Surreal) listActiveJobsForMigration(
+	ctx context.Context,
+	kind JobKind,
+) ([]Job, error) {
+	if !validJobKind(kind) {
+		return nil, fmt.Errorf("invalid job kind %q", kind)
+	}
+	statement := fmt.Sprintf(`SELECT id, target, status, attempts, created_at, lease_token
+		FROM %s WITH INDEX %s_status
+		WHERE status IN ['pending', 'claimed', 'running']
+		LIMIT $limit`, kind, kind)
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db, statement,
+		map[string]any{"limit": maxJobActiveMigrationRows + 1})
+	if err != nil {
+		return nil, err
+	}
+	var rows []jobRec
+	for _, result := range *results {
+		rows = append(rows, result.Result...)
+	}
+	if len(rows) > maxJobActiveMigrationRows {
+		return nil, fmt.Errorf(
+			"active row count exceeds the per-table migration bound of %d",
+			maxJobActiveMigrationRows,
+		)
+	}
+	jobs := make([]Job, len(rows))
+	for index, row := range rows {
+		jobs[index] = row.toJob(kind)
+	}
+	slices.SortFunc(jobs, func(left, right Job) int {
+		if order := left.CreatedAt.Compare(right.CreatedAt); order != 0 {
+			return order
+		}
+		return strings.Compare(left.ID, right.ID)
+	})
+	return jobs, nil
+}
+
+func (s *Surreal) missingPendingJobIndexes(ctx context.Context) ([]JobKind, error) {
+	missing := make([]JobKind, 0, len(durableJobKinds))
+	for _, kind := range durableJobKinds {
+		statement := fmt.Sprintf("INFO FOR TABLE %s", kind)
+		results, err := surrealdb.Query[map[string]any](ctx, s.db, statement, nil)
+		if err != nil {
+			return nil, err
+		}
+		present := false
+		for _, result := range *results {
+			indexes, ok := result.Result["indexes"].(map[string]any)
+			if !ok {
+				continue
+			}
+			_, present = indexes[string(kind)+"_pending_key"]
+		}
+		if !present {
+			missing = append(missing, kind)
+		}
+	}
+	return missing, nil
+}
+
+func (s *Surreal) jobTableNonempty(ctx context.Context, kind JobKind) (bool, error) {
+	if !validJobKind(kind) {
+		return false, fmt.Errorf("invalid job kind %q", kind)
+	}
+	results, err := surrealdb.Query[[]struct {
+		RecID *models.RecordID `json:"id"`
+	}](ctx, s.db, fmt.Sprintf("SELECT id FROM %s LIMIT 1", kind), nil)
+	if err != nil {
+		return false, err
+	}
+	for _, result := range *results {
+		if len(result.Result) > 0 {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func validJobKind(kind JobKind) bool {
+	for _, candidate := range durableJobKinds {
+		if kind == candidate {
+			return true
+		}
+	}
+	return false
 }
 
 type evidenceRunMigrationRec struct {
@@ -1785,13 +1991,62 @@ func (s *Surreal) GetRepoConnections(ctx context.Context, repo string) ([]string
 	return conns, nil
 }
 
-// RepoStatuses joins repos, membership, and latest indexing jobs in Go.
-// ponytail: three queries + maps, no server-side joins; revisit if repo
-// counts make it slow.
+const indexingJobProjectionVersion = "t30.6n-indexing-job-latest-v1"
+
+type repoStatusRec struct {
+	Repo
+	ProjectedJob                    *jobRec `json:"projected_job"`
+	LatestIndexJobProjectionVersion string  `json:"latest_index_job_projection_version"`
+}
+
+// RepoStatuses joins current repos and membership with one prospective record
+// link per repo. It never reads the indexing-job table as history. A repository
+// without this writer generation's CREATE projection is explicitly unavailable
+// until a new indexing job establishes current authority.
 func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
-	repos, err := s.ListRepos(ctx)
+	repoResults, err := surrealdb.Query[[]repoStatusRec](ctx, s.db,
+		`SELECT *, {
+			id: latest_index_job,
+			target: IF type::is_string(latest_index_job.target)
+				THEN string::slice(latest_index_job.target, 0, $max_target_characters)
+				ELSE '' END,
+			target_truncated: IF type::is_string(latest_index_job.target)
+				THEN string::len(latest_index_job.target) > $max_target_characters
+				ELSE false END,
+			status: latest_index_job.status,
+			attempts: latest_index_job.attempts,
+			error: IF type::is_string(latest_index_job.error)
+				THEN string::slice(latest_index_job.error, 0, $max_error_characters)
+				ELSE '' END,
+			error_truncated: IF type::is_string(latest_index_job.error)
+				THEN string::len(latest_index_job.error) > $max_error_characters
+				ELSE false END,
+			created_at: latest_index_job.created_at,
+			not_before: latest_index_job.not_before,
+			claimed_by: IF type::is_string(latest_index_job.claimed_by)
+				THEN string::slice(latest_index_job.claimed_by, 0, $max_claimed_by_characters)
+				ELSE '' END,
+			claimed_by_truncated: IF type::is_string(latest_index_job.claimed_by)
+				THEN string::len(latest_index_job.claimed_by) > $max_claimed_by_characters
+				ELSE false END,
+			claimed_at: latest_index_job.claimed_at,
+			heartbeat_at: latest_index_job.heartbeat_at,
+			finished_at: latest_index_job.finished_at,
+			force: latest_index_job.force
+		} AS projected_job
+		FROM repo ORDER BY name`, map[string]any{
+			"max_target_characters":     MaxJobHistoryTargetCharacters,
+			"max_error_characters":      MaxJobHistoryErrorCharacters,
+			"max_claimed_by_characters": MaxJobHistoryClaimedByCharacters,
+		})
 	if err != nil {
 		return nil, err
+	}
+	repos := (*repoResults)[0].Result
+	for index := range repos {
+		if err := validateRepoAnalysisUnit(&repos[index].Repo); err != nil {
+			return nil, err
+		}
 	}
 	memb, err := surrealdb.Query[[]struct {
 		Connection string `json:"connection"`
@@ -1804,26 +2059,26 @@ func (s *Surreal) RepoStatuses(ctx context.Context) ([]RepoStatus, error) {
 	for _, m := range (*memb)[0].Result {
 		conns[m.Repo] = append(conns[m.Repo], m.Connection)
 	}
-	jobs, err := s.ListJobs(ctx, JobIndex, "")
-	if err != nil {
-		return nil, err
-	}
-	latest := map[string]*Job{}
-	for i := range jobs {
-		j := jobs[i]
-		if cur, ok := latest[j.Target]; !ok || j.CreatedAt.After(cur.CreatedAt) {
-			latest[j.Target] = &j
-		}
-	}
 
 	statuses := make([]RepoStatus, len(repos))
-	for i, r := range repos {
+	for i, row := range repos {
+		state := JobProjectionUnavailable
+		var latest *Job
+		if row.LatestIndexJobProjectionVersion == indexingJobProjectionVersion &&
+			row.ProjectedJob != nil {
+			job := row.ProjectedJob.toJob(JobIndex)
+			if job.ID != "" && job.Target == row.Name {
+				state = JobProjectionExact
+				latest = &job
+			}
+		}
 		statuses[i] = RepoStatus{
-			Repo:         r,
-			Connections:  conns[r.Name],
-			Orphaned:     len(conns[r.Name]) == 0,
-			LastIndexJob: latest[r.Name],
-			AnalysisUnit: analysisunit.CloneState(r.IndexedAnalysisUnit),
+			Repo:              row.Repo,
+			Connections:       conns[row.Name],
+			Orphaned:          len(conns[row.Name]) == 0,
+			LastIndexJob:      latest,
+			LastIndexJobState: state,
+			AnalysisUnit:      analysisunit.CloneState(row.IndexedAnalysisUnit),
 		}
 	}
 	return statuses, nil
@@ -1846,18 +2101,40 @@ func (j jobRec) toJob(kind JobKind) Job {
 	return out
 }
 
+// projectLatestIndexJobSQL is embedded in every generic queue transaction that
+// can create an indexing job. Keeping the projection in those writer
+// transactions avoids replaying a table event for every retained job during a
+// database restore. Existing/coalesced rows deliberately do not establish
+// authority: only a newly created post-cutover job can make the projection
+// exact.
+const projectLatestIndexJobSQL = `
+IF $table = 'indexing_job' AND $created_job != NONE {
+	UPDATE type::record('repo', $target)
+	SET latest_index_job = $created_job.id,
+		latest_index_job_created_at = $created_job.created_at,
+		latest_index_job_projection_version = 't30.6n-indexing-job-latest-v1'
+	WHERE latest_index_job_created_at = NONE
+		OR latest_index_job_created_at < $created_job.created_at
+		OR (latest_index_job_created_at = $created_job.created_at
+			AND latest_index_job < $created_job.id)
+	RETURN NONE;
+};`
+
 func (s *Surreal) CreateJob(ctx context.Context, kind JobKind, target string) (*Job, error) {
 	created := time.Now().UTC()
 	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
-		`CREATE type::table($table) CONTENT {
+		`BEGIN;
+LET $created_job = (CREATE type::table($table) CONTENT {
 			target: $target, status: 'pending', attempts: 0,
 			created_at: $created, pending_key: $target, force: false
-		}`,
+		} RETURN AFTER)[0];`+projectLatestIndexJobSQL+`
+RETURN [$created_job];
+COMMIT;`,
 		map[string]any{"table": string(kind), "target": target, "created": created})
 	if err != nil {
 		return nil, err
 	}
-	rows := (*results)[0].Result
+	rows := firstNonEmpty(results)
 	if len(rows) == 0 {
 		return nil, fmt.Errorf("create %s: empty result", kind)
 	}
@@ -1870,7 +2147,7 @@ BEGIN;
 LET $pending = (SELECT id, created_at FROM type::table($table)
     WHERE pending_key = $target AND status = 'pending'
     ORDER BY created_at LIMIT 1)[0].id;
-RETURN IF $pending != NONE THEN
+LET $job = IF $pending != NONE THEN
     (UPDATE $pending SET force = IF $force THEN true ELSE force END,
         recovery_lease = NONE RETURN AFTER)
 ELSE
@@ -1883,6 +2160,9 @@ ELSE
         force: $force
     } RETURN AFTER)
 END;
+LET $created_job = IF $pending = NONE THEN $job[0] ELSE NONE END;` +
+	projectLatestIndexJobSQL + `
+RETURN $job;
 COMMIT;`
 
 const maxQueueRetries = 64
@@ -1916,7 +2196,7 @@ LET $owned = (SELECT id FROM type::record($id)
 LET $pending = (SELECT id, created_at FROM type::table($table)
     WHERE pending_key = $target AND status = 'pending'
     ORDER BY created_at LIMIT 1)[0].id;
-RETURN IF $owned = NONE THEN []
+LET $job = IF $owned = NONE THEN []
 ELSE IF $pending != NONE THEN
     (UPDATE $pending SET force = IF $force THEN true ELSE force END RETURN AFTER)
 ELSE
@@ -1930,6 +2210,9 @@ ELSE
         recovery_lease: $lease
     } RETURN AFTER)
 END;
+LET $created_job = IF $owned != NONE AND $pending = NONE THEN $job[0] ELSE NONE END;` +
+	projectLatestIndexJobSQL + `
+RETURN $job;
 COMMIT;`
 
 // EnsureJobSuccessor creates a crash-recovery successor owned by this active
@@ -1977,23 +2260,169 @@ func (s *Surreal) EnsureJobSuccessor(
 	}
 }
 
-func (s *Surreal) ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) {
-	sql := "SELECT * FROM type::table($table) ORDER BY created_at"
-	vars := map[string]any{"table": string(kind)}
-	if status != "" {
-		sql = "SELECT * FROM type::table($table) WHERE status = $status ORDER BY created_at"
-		vars["status"] = string(status)
+const jobHistoryScanRows = 256
+
+const boundedJobHistoryFields = `id,
+	IF type::is_string(target)
+		THEN string::slice(target, 0, $max_target_characters)
+		ELSE '' END AS target,
+	IF type::is_string(target)
+		THEN string::len(target) > $max_target_characters
+		ELSE false END AS target_truncated,
+	status, attempts,
+	IF type::is_string(error)
+		THEN string::slice(error, 0, $max_error_characters)
+		ELSE '' END AS error,
+	IF type::is_string(error)
+		THEN string::len(error) > $max_error_characters
+		ELSE false END AS error_truncated,
+	created_at, not_before,
+	IF type::is_string(claimed_by)
+		THEN string::slice(claimed_by, 0, $max_claimed_by_characters)
+		ELSE '' END AS claimed_by,
+	IF type::is_string(claimed_by)
+		THEN string::len(claimed_by) > $max_claimed_by_characters
+		ELSE false END AS claimed_by_truncated,
+	claimed_at, heartbeat_at, finished_at, force`
+
+var _ JobHistoryStore = (*Surreal)(nil)
+
+// ListJobsPage scans one fixed record-id window, then applies the optional
+// status filter in Go. Filtering in Surreal would either scan the complete
+// historical status index at a late cursor or scan forward without a physical
+// bound when the requested status is sparse. Continuations use SurrealDB's
+// record-range syntax so the storage engine seeks to the cursor instead of
+// filtering a table scan from its first key; LIMIT bounds the forward scan and
+// no server-side sort is required.
+func (s *Surreal) ListJobsPage(ctx context.Context, query JobPageQuery) (*JobPage, error) {
+	if !validJobKind(query.Kind) {
+		return nil, fmt.Errorf("list jobs: invalid kind %q", query.Kind)
 	}
-	results, err := surrealdb.Query[[]jobRec](ctx, s.db, sql, vars)
+	if !validJobStatus(query.Status, true) {
+		return nil, fmt.Errorf("list jobs: invalid status %q", query.Status)
+	}
+	if query.Limit < 1 || query.Limit > MaxJobHistoryPageRows {
+		return nil, fmt.Errorf(
+			"list jobs: limit must be from 1 through %d",
+			MaxJobHistoryPageRows,
+		)
+	}
+	vars := map[string]any{
+		"table": string(query.Kind), "scan_limit": jobHistoryScanRows + 1,
+		"max_target_characters":     MaxJobHistoryTargetCharacters,
+		"max_error_characters":      MaxJobHistoryErrorCharacters,
+		"max_claimed_by_characters": MaxJobHistoryClaimedByCharacters,
+	}
+	statement := `SELECT ` + boundedJobHistoryFields + `
+		FROM type::table($table) ORDER BY id LIMIT $scan_limit`
+	if query.After != nil {
+		if query.After.Kind != query.Kind || query.After.Status != query.Status ||
+			!validJobCursorID(query.After.ID) {
+			return nil, errors.New("list jobs: cursor does not match query scope")
+		}
+		cursorRecord := models.NewRecordID(string(query.Kind), query.After.ID)
+		statement = `SELECT ` + boundedJobHistoryFields + `
+			FROM ` + cursorRecord.String() + `>..
+			ORDER BY id LIMIT $scan_limit`
+	}
+	results, err := surrealdb.Query[[]jobRec](ctx, s.db, statement, vars)
 	if err != nil {
 		return nil, err
 	}
-	rows := (*results)[0].Result
-	jobs := make([]Job, len(rows))
-	for i, r := range rows {
-		jobs[i] = r.toJob(kind)
+	var scanned []jobRec
+	for _, result := range *results {
+		scanned = append(scanned, result.Result...)
 	}
-	return jobs, nil
+	hasMore := len(scanned) > jobHistoryScanRows
+	if hasMore {
+		scanned = scanned[:jobHistoryScanRows]
+	}
+
+	page := &JobPage{Jobs: make([]Job, 0, query.Limit)}
+	var lastReturnedID string
+	for _, row := range scanned {
+		if query.Status != "" && row.Status != query.Status {
+			continue
+		}
+		cursorID, cursorErr := jobRecordCursorID(row)
+		if cursorErr != nil {
+			return nil, fmt.Errorf("list jobs: %w", cursorErr)
+		}
+		if len(page.Jobs) == query.Limit {
+			page.Next = &JobCursor{
+				Kind: query.Kind, Status: query.Status, ID: lastReturnedID,
+			}
+			return page, nil
+		}
+		page.Jobs = append(page.Jobs, row.toJob(query.Kind))
+		lastReturnedID = cursorID
+	}
+	if hasMore {
+		cursorID, cursorErr := jobRecordCursorID(scanned[len(scanned)-1])
+		if cursorErr != nil {
+			return nil, fmt.Errorf("list jobs: %w", cursorErr)
+		}
+		page.Next = &JobCursor{
+			Kind: query.Kind, Status: query.Status, ID: cursorID,
+		}
+	}
+	return page, nil
+}
+
+// ListJobs is a fixed-window compatibility helper for tests and small
+// diagnostic callers. It never continues across history implicitly; callers
+// requiring complete traversal must use ListJobsPage and its explicit cursor.
+func (s *Surreal) ListJobs(ctx context.Context, kind JobKind, status JobStatus) ([]Job, error) {
+	page, err := s.ListJobsPage(ctx, JobPageQuery{
+		Kind: kind, Status: status, Limit: MaxJobHistoryPageRows,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if page.Next != nil {
+		return nil, fmt.Errorf("list %s jobs: %w", kind, ErrResultLimit)
+	}
+	return page.Jobs, nil
+}
+
+func validJobStatus(status JobStatus, allowEmpty bool) bool {
+	if status == "" {
+		return allowEmpty
+	}
+	switch status {
+	case StatusPending, StatusClaimed, StatusRunning,
+		StatusDone, StatusFailed, StatusCanceled:
+		return true
+	default:
+		return false
+	}
+}
+
+func validJobCursorID(id string) bool {
+	if id == "" || len(id) > 128 {
+		return false
+	}
+	for _, character := range id {
+		if character >= 'a' && character <= 'z' ||
+			character >= 'A' && character <= 'Z' ||
+			character >= '0' && character <= '9' ||
+			character == '-' || character == '_' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
+func jobRecordCursorID(row jobRec) (string, error) {
+	if row.RecID == nil {
+		return "", errors.New("job row has no record id")
+	}
+	id, ok := row.RecID.ID.(string)
+	if row.RecID.Table == "" || !ok || !validJobCursorID(id) {
+		return "", errors.New("job row has an unsupported record id")
+	}
+	return id, nil
 }
 
 // claimSQL is the T1.3 spike winner: optimistic conditional update, no
@@ -2303,21 +2732,30 @@ func (s *Surreal) CancelPendingJobs(ctx context.Context, kind JobKind, target st
 	return n, nil
 }
 
-// ReapStale rescues jobs whose worker died: claimed/running rows without a
-// recent heartbeat go back to pending (attempts+1), or to failed once
-// maxAttempts is exhausted. A separately pending crash-recovery successor is
-// intentionally left fresh on final reap: process death cannot reveal whether
-// the worker crossed its install boundary, and StaleAfter paces another turn.
-// Returns how many rows it touched.
+const maxJobReapRows = 256
+
+// ReapStale rescues one fixed active-row batch whose worker died:
+// claimed/running rows without a recent heartbeat go back to pending
+// (attempts+1), or to failed once maxAttempts is exhausted. The status index
+// and limit avoid terminal history and an active-set sort/materialization;
+// later runner polls drain further stale batches. A separately pending crash-
+// recovery successor is intentionally left fresh on final reap: process death
+// cannot reveal whether the worker crossed its install boundary, and
+// StaleAfter paces another turn. Returns how many rows it touched.
 // ponytail: staleness cutoff computed on the Go clock vs server-side
 // heartbeats — same host today (supervised child); revisit for fleet mode.
 func (s *Surreal) ReapStale(ctx context.Context, kind JobKind, staleAfter time.Duration, maxAttempts int) (int, error) {
+	if !validJobKind(kind) {
+		return 0, fmt.Errorf("reap stale jobs: invalid kind %q", kind)
+	}
 	cutoff := time.Now().UTC().Add(-staleAfter)
+	statement := fmt.Sprintf(`SELECT id, target, status, attempts, heartbeat_at,
+		claimed_by, lease_token, force FROM %s WITH INDEX %s_status
+		WHERE status IN ['claimed', 'running']
+			AND heartbeat_at != NONE AND heartbeat_at < $cutoff
+		LIMIT $limit`, kind, kind)
 	results, err := surrealdb.Query[[]jobRec](ctx, s.db,
-		`SELECT * FROM type::table($table)
-		 WHERE status IN ['claimed', 'running'] AND heartbeat_at != NONE AND heartbeat_at < $cutoff
-		 ORDER BY heartbeat_at`,
-		map[string]any{"table": string(kind), "cutoff": cutoff})
+		statement, map[string]any{"cutoff": cutoff, "limit": maxJobReapRows})
 	if err != nil {
 		return 0, err
 	}

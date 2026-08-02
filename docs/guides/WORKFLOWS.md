@@ -1148,7 +1148,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/search?q=&max_matches=&context_lines=`                        | GET             | search, JSON in one shot                                                                       |
 | `/api/stream_search?q=…`                                            | GET             | search over SSE (below)                                                                        |
 | `/api/repos`                                                        | GET             | repo rows                                                                                      |
-| `/api/repo-status`                                                  | GET             | repos + connections + orphan flag + last index job + committed analysis-unit diagnostics       |
+| `/api/repo-status`                                                  | GET             | repos + connections + orphan flag + exact/unavailable prospective last-index-job state + committed analysis-unit diagnostics |
 | `/api/reindex`                                                      | POST            | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job           |
 | `/api/audit?offset=&limit=`                                         | GET             | administrator only: audit events, newest first, `has_more` paging                              |
 | `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |

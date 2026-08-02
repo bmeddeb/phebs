@@ -94,8 +94,12 @@ evidence; the independent evidence sweeper may later reclaim a newly unpinned
 superseded run only when that run is otherwise eligible. This key does not
 bound historical published scopes or the other retained owners.
 
-T30.6n will bound job-history reads and repair startup migration without
-deleting job history. T30.6o will add the authorization-first status shell,
+T30.6n bounds job-history reads and repairs startup migration without deleting
+job history, and it adds no configuration key. The 100-row response cap,
+257-row physical scan window, 1,024/2,048/256-character target/error/claimant
+caps, 256-row stale-reap batch, and active-row migration refusal are frozen
+safety contracts rather than operator-tunable retention controls. T30.6o will
+add the authorization-first status shell,
 fixed 52-component registry, and unconditional warning; it initially reports
 every component as explicitly unavailable and performs no store or filesystem
 inventory scan. T30.6p will populate the 21 core SurrealDB components, T30.6q

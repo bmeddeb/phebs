@@ -14,8 +14,8 @@ const api = vi.hoisted(() => ({
 vi.mock('../api', () => api)
 
 const repos: RepoStatus[] = [
-  { name: 'github.com/one/shared', clone_url: '', orphaned: false },
-  { name: 'github.com/two/shared', clone_url: '', orphaned: false },
+  { name: 'github.com/one/shared', clone_url: '', orphaned: false, last_index_job_state: 'unavailable' },
+  { name: 'github.com/two/shared', clone_url: '', orphaned: false, last_index_job_state: 'unavailable' },
 ]
 
 const engine = new Client()
@@ -62,4 +62,21 @@ test('repo search actions use anchored full-name filters', async () => {
     '#/search?q=repo:"^github\\\\.com/two/shared$"+',
   )
   expect(screen.queryByRole('button', { name: 'Reindex all' })).toBeNull()
+})
+
+test('legacy job state is unavailable rather than never indexed', async () => {
+  render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}>
+        <ReposPage isAdmin />
+      </BaseProvider>
+    </StyletronProvider>,
+  )
+  expect((await screen.findAllByText('status unavailable')).length).toBe(2)
+  expect(screen.queryByText('never indexed')).toBeNull()
+  expect(screen.getByText(/indexing status unavailable/)).toBeTruthy()
+  expect(screen.queryByText(/0 indexing/)).toBeNull()
+  for (const button of screen.getAllByRole('button', { name: 'Reindex' })) {
+    expect((button as HTMLButtonElement).disabled).toBe(true)
+  }
 })

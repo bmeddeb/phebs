@@ -328,6 +328,47 @@ connections:
 	); err != nil {
 		t.Fatalf("record pre-backup control outcome: %v", err)
 	}
+	const (
+		retainedJobTarget = "recovery-fixture/retained-terminal-job"
+		retainedJobError  = "retained backup diagnostic: exact terminal failure"
+	)
+	createdRetainedJob, err := st.CreateJob(
+		ctx, store.JobFetch, retainedJobTarget,
+	)
+	if err != nil {
+		t.Fatalf("create retained terminal job: %v", err)
+	}
+	claimedRetainedJob, err := st.ClaimJob(
+		ctx, store.JobFetch, "recovery-terminal-fixture",
+	)
+	if err != nil {
+		t.Fatalf("claim retained terminal job: %v", err)
+	}
+	if claimedRetainedJob.ID != createdRetainedJob.ID {
+		t.Fatalf(
+			"claimed retained job %q, want created job %q",
+			claimedRetainedJob.ID, createdRetainedJob.ID,
+		)
+	}
+	if err := st.SetJobStatus(
+		ctx, *claimedRetainedJob, store.StatusRunning, "",
+	); err != nil {
+		t.Fatalf("run retained terminal job: %v", err)
+	}
+	if err := st.SetJobStatus(
+		ctx, *claimedRetainedJob, store.StatusFailed, retainedJobError,
+	); err != nil {
+		t.Fatalf("fail retained terminal job: %v", err)
+	}
+	retainedJobBeforeRestore := requireRecoveryJob(
+		t, ctx, st, store.JobFetch, store.StatusFailed, createdRetainedJob.ID,
+	)
+	if retainedJobBeforeRestore.Target != retainedJobTarget ||
+		retainedJobBeforeRestore.Status != store.StatusFailed ||
+		retainedJobBeforeRestore.Error != retainedJobError ||
+		retainedJobBeforeRestore.FinishedAt == nil {
+		t.Fatalf("pre-backup retained terminal job = %+v", retainedJobBeforeRestore)
+	}
 
 	manifest, err := recovery.Create(ctx, recovery.BackupOptions{
 		Options: recovery.Options{
@@ -394,6 +435,13 @@ connections:
 	if err != nil || got.IndexedCommitHash != indexedBefore.IndexedCommitHash {
 		t.Fatalf("restored repo = %+v, %v; want commit %q", got, err, indexedBefore.IndexedCommitHash)
 	}
+	retainedJobAfterRestore := requireRecoveryJob(
+		t, ctx, restored, store.JobFetch, store.StatusFailed,
+		retainedJobBeforeRestore.ID,
+	)
+	assertRecoveryJobEqual(
+		t, retainedJobBeforeRestore, retainedJobAfterRestore,
+	)
 	if got.CallerPublicationRevision != int64(callerRevisionBeforeRestore)+1 {
 		t.Fatalf(
 			"restored caller publication revision = %d, want exactly %d",
@@ -519,6 +567,54 @@ connections:
 		Backup:  backupDir,
 	}); err == nil || !strings.Contains(err.Error(), "not empty") {
 		t.Fatalf("second restore error = %v, want non-empty-target refusal", err)
+	}
+}
+
+func requireRecoveryJob(
+	t *testing.T,
+	ctx context.Context,
+	s *store.Surreal,
+	kind store.JobKind,
+	status store.JobStatus,
+	id string,
+) store.Job {
+	t.Helper()
+	jobs, err := s.ListJobs(ctx, kind, status)
+	if err != nil {
+		t.Fatalf("list %s %s jobs: %v", kind, status, err)
+	}
+	for _, job := range jobs {
+		if job.ID == id {
+			return job
+		}
+	}
+	t.Fatalf("%s job %q is missing from %s history", status, id, kind)
+	return store.Job{}
+}
+
+func assertRecoveryJobEqual(t *testing.T, before, after store.Job) {
+	t.Helper()
+	equalOptionalTime := func(left, right *time.Time) bool {
+		if left == nil || right == nil {
+			return left == nil && right == nil
+		}
+		return left.Equal(*right)
+	}
+	if before.ID != after.ID || before.Kind != after.Kind ||
+		before.Target != after.Target ||
+		before.TargetTruncated != after.TargetTruncated ||
+		before.Status != after.Status ||
+		before.Attempts != after.Attempts || before.Error != after.Error ||
+		before.ErrorTruncated != after.ErrorTruncated ||
+		!before.CreatedAt.Equal(after.CreatedAt) ||
+		!equalOptionalTime(before.NotBefore, after.NotBefore) ||
+		before.ClaimedBy != after.ClaimedBy ||
+		before.ClaimedByTruncated != after.ClaimedByTruncated ||
+		!equalOptionalTime(before.ClaimedAt, after.ClaimedAt) ||
+		!equalOptionalTime(before.HeartbeatAt, after.HeartbeatAt) ||
+		!equalOptionalTime(before.FinishedAt, after.FinishedAt) ||
+		before.Force != after.Force || before.LeaseToken != after.LeaseToken {
+		t.Fatalf("restored terminal job changed: before=%+v after=%+v", before, after)
 	}
 }
 

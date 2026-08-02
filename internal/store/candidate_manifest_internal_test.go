@@ -56,10 +56,12 @@ CREATE candidate_manifest_job CONTENT {
 };
 CREATE candidate_manifest_job CONTENT {
 	target: $target, status: 'pending', attempts: 0, created_at: $second
-};`, map[string]any{
-		"target": target,
-		"first":  created,
-		"second": created.Add(time.Second),
+};
+DELETE $job_migration_marker;`, map[string]any{
+		"target":               target,
+		"first":                created,
+		"second":               created.Add(time.Second),
+		"job_migration_marker": jobActiveMigrationID(),
 	})
 	if err := s.Close(ctx); err != nil {
 		t.Fatal(err)

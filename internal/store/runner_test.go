@@ -344,6 +344,11 @@ func TestReaperDoesNotStealRefreshedLease(t *testing.T) {
 			if observed.HeartbeatAt == nil {
 				t.Fatal("stale candidate was not observed")
 			}
+			// ListJobs is a diagnostic projection and deliberately omits lease
+			// authority. ReapStale's private active-row query carries the exact
+			// lease fields; restore those here to exercise the heartbeat CAS.
+			observed.LeaseToken = claimed.LeaseToken
+			observed.ClaimedBy = claimed.ClaimedBy
 			cutoff := time.Now().UTC().Add(-30 * time.Minute)
 
 			// This heartbeat lands after the reaper's SELECT but before its
@@ -379,7 +384,10 @@ func TestSchemaRequeuesLegacyUnfencedJob(t *testing.T) {
 	if _, err := surrealdb.Query[any](ctx, s.db,
 		`UPDATE type::record($id) SET status = 'running', claimed_by = 'old-worker',
 		 claimed_at = time::now(), heartbeat_at = time::now(), lease_token = NONE,
-		 pending_key = NONE`, map[string]any{"id": job.ID}); err != nil {
+		 pending_key = NONE;
+		 DELETE $marker`, map[string]any{
+			"id": job.ID, "marker": jobActiveMigrationID(),
+		}); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.applySchema(ctx); err != nil {
@@ -412,8 +420,9 @@ func TestSchemaKeepsLegacyPendingSuccessor(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := surrealdb.Query[any](ctx, s.db,
-		"UPDATE type::record($id) SET pending_key = NONE",
-		map[string]any{"id": successor.ID}); err != nil {
+		`UPDATE type::record($id) SET pending_key = NONE;
+		 DELETE $marker`,
+		map[string]any{"id": successor.ID, "marker": jobActiveMigrationID()}); err != nil {
 		t.Fatal(err)
 	}
 

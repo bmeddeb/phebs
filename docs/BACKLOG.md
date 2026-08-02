@@ -13,12 +13,12 @@ consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
 materialization, T30.6h direct caller-leaf execution, T30.6i atomic complete
 caller-generation publication, T30.6j authorized exact Caller Map reads, and
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
-caller integration, and T30.6m explicit unbounded historical-publication
-retention decision are shipped; T30.6n bounded job-history reads and startup
-migration is next, followed by T30.6o's retention-status shell, T30.6p's core
+caller integration, T30.6m explicit unbounded historical-publication
+retention decision, and T30.6n bounded job-history reads and startup migration
+are shipped; T30.6o's retention-status shell is next, followed by T30.6p's core
 Surreal collectors, T30.6q's Investigation/Workbench collector, and T30.6r's
 derived store/filesystem collectors.
-Completed Epics 0–24, Epic 29, T30.1–T30.6m, and P5 hardening are
+Completed Epics 0–24, Epic 29, T30.1–T30.6n, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -28,8 +28,8 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6n · Bounded job-history reads and startup migration** is next.
-T30.6a–T30.6m
+**T30.6o · Authorization-first retention-status shell and warning** is next.
+T30.6a–T30.6n
 now provide bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, the adapter-free immutable catalog
@@ -41,8 +41,8 @@ same shared authority. T30.6m changes no cleanup behavior and explicitly
 selects unbounded retention. Review grounding expanded its original nine-group
 inventory to twelve: all eight durable job tables, the 24-table Investigation/
 Workbench graph, and proof bundles are independent retained owners too.
-T30.6n first bounds the job-history read and startup-migration paths that can
-stall before a status endpoint is reachable. T30.6o then adds only the
+T30.6n now bounds the job-history read and startup-migration paths that could
+stall before a status endpoint is reachable. T30.6o adds only the
 authorization-first status shell, complete fixed registry/budget, and
 unconditional warning; T30.6p–T30.6r fill the core Surreal,
 Investigation/Workbench, and derived store/filesystem collectors in order.
@@ -63,7 +63,7 @@ T30.5 deliberately retains every exact published commit/unit/domain tuple for
 rollback; the existing evidence sweep does not collect a row while it remains
 `published`. T30.6m explicitly retains that unbounded posture and authorizes no
 historical deletion. Before Epic 30 closes, T30.6n bounds job-history reads and
-legacy startup migration without deleting terminal diagnostics, and
+legacy startup migration without deleting terminal diagnostics;
 T30.6o–T30.6r deliver the warning and bounded cross-owner status in PR-sized
 layers without deleting pinned proof or other retained state.
 
@@ -571,7 +571,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6n next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6o next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -1026,31 +1026,16 @@ The correction preserves the unbounded decision but disproves the earlier
 claim that one read-only status PR covered the complete inventory, so T30.6n–
 T30.6r are separate tickets and none is a deletion umbrella.
 
-**T30.6n · Bounded job-history reads and startup migration** *(needs T30.6m)*
-— remove lifetime job count from ordinary read and restart cost without deleting
-or rewriting terminal history. Cover all eight durable tables:
-`connection_sync_job`, `indexing_job`, `repo_fetch_job`, `extraction_job`,
-`candidate_manifest_job`, `resolver_catalog_job`, `caller_leaf_job`, and
-`investigation_run_job`. `RepoStatuses` must scale with current repositories
-and their current/latest job projection, never with all historical indexing
-jobs. Public/internal job-history reads must be explicitly bounded or paged.
-Legacy pending/claim repair must use a durable versioned completion fence or an
-equivalently bounded active-row migration; both the first upgraded boot and
-steady-state store open must avoid scanning, sorting, or materializing terminal
-history. Preserve exact pending coalescing, active lease recovery, retry
-behavior, every terminal row and diagnostic, database backup/restore, and
-existing queue semantics. A prospective current-job projection, supporting
-index, or backfill must install and advance through bounded, restart-resumable
-work; neither first open nor steady state may synchronously index or backfill
-lifetime terminal history. Legacy latest state remains explicitly partial or
-unavailable until any bounded reconstruction completes. Add no terminal
-deletion, TTL, retention configuration, `/api/retention-status`, or cross-owner
-status surface. This is one PR because it is one queue subsystem, two lifetime-
-history consumers, one active-row migration fence, and table-driven eight-kind
-coverage. Cover large terminal histories, all eight kinds, bounded current-
-status cost, interrupted and idempotent migration, explicit partial bootstrap,
-and byte-for-byte/row-count proof that terminal history survives. Full merge
-bar.
+**T30.6n ✅ · Bounded job-history reads and startup migration** *(2026-08-01;
+needs T30.6m)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306n--bounded-job-history-reads-and-startup-migration).
+All eight durable job kinds now have bounded, cursor-driven history reads;
+`RepoStatuses` uses one prospective current-repository projection and reports
+pre-projection state explicitly unavailable; startup repairs only active rows
+behind a durable completion marker and refuses unsafe legacy index state. Every
+terminal row and its stored diagnostic remains unchanged. The ticket adds no
+terminal deletion, TTL, retention configuration, `/api/retention-status`, or
+cross-owner status surface.
 
 **T30.6o · Authorization-first retention-status shell and warning** *(needs
 T30.6n)* — add administrator-only `GET /api/retention-status`, the static

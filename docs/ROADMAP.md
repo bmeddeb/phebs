@@ -70,10 +70,15 @@ but it defaults disabled and governs only that owner. Inventorying the job and
 Investigation groups records incidental current behavior; it does not select
 or justify that growth as a future policy. No neutral evidence
 justifies a destructive rollback depth, and a generation count would not bind
-bytes across pins, leases, and independent owners. T30.6n will first bound
-job-history reads and both first-upgrade and steady-state startup migration
-without scanning terminal history or deleting terminal diagnostics. T30.6o
-then adds the authorization-first status shell, complete 52-component registry
+bytes across pins, leases, and independent owners. T30.6n now bounds
+job-history reads to one 257-record physical-ID window and at most 100 returned
+rows, gives `RepoStatuses` a prospective exact-or-unavailable latest-job
+projection, and fences active-only first-upgrade repair durably without
+scanning terminal history or deleting terminal diagnostics. Its keyset pages
+use direct record-range continuation seeks and are weakly consistent with
+concurrent random-ID inserts rather than a frozen snapshot. T30.6o next adds
+the authorization-first status shell, complete
+52-component registry
 and selected aggregate component-work allocation, and unconditional pre-store-
 open capacity warning while reporting every component unavailable and
 performing zero inventory scans. T30.6p fills
@@ -143,9 +148,9 @@ T30.6f resolver-catalog lifecycle, T30.6g bounded resolver materialization,
 T30.6h direct caller-leaf execution artifacts, T30.6i atomic complete
 caller-generation publication, T30.6j authorized exact Caller Map reads,
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
-caller integration, and T30.6m historical-publication retention decision are
-shipped; T30.6n bounded job-history reads and startup migration is next,
-followed by the T30.6o status shell, T30.6p core Surreal collectors, T30.6q
+caller integration, T30.6m historical-publication retention decision, and
+T30.6n bounded job-history reads and startup migration are shipped; T30.6o's
+status shell is next, followed by T30.6p core Surreal collectors, T30.6q
 Investigation/Workbench collector, and T30.6r derived collectors. T30.7 waits
 for that complete sequence.
 T30.6g registers the ordered gRPC/Thrift resolver adapters and materializes one

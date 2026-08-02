@@ -5498,3 +5498,93 @@ migration-completion, production-validation, or decommission-safety claim.
 `GATE2-V2` remains `NOT_ESTABLISHED`; T30.6n owns job-read/startup containment,
 T30.6o owns the warning/status shell, and T30.6p–T30.6r own collector
 completion.
+
+### T30.6n · Bounded job-history reads and startup migration
+
+**T30.6n ✅ · Bounded job-history reads and startup migration** *(2026-08-01;
+needs T30.6m)* — removes lifetime terminal-job count from ordinary history
+reads, repository status, and store-open migration without deleting or
+rewriting retained history. The one queue-subsystem cut covers all eight
+durable kinds: `connection_sync_job`, `indexing_job`, `repo_fetch_job`,
+`extraction_job`, `candidate_manifest_job`, `resolver_catalog_job`,
+`caller_leaf_job`, and `investigation_run_job`. Pending-key coalescing, claim
+and lease fencing, retry/backoff, terminal dispositions, and worker behavior
+remain the queue authority.
+
+`ListJobsPage` is the separate diagnostic-history interface. A request names
+one validated job kind, an optional validated status, a limit of at most 100,
+and an optional cursor scoped to that exact kind/status pair. Each call returns
+and materializes at most 257 monotonically ordered physical record IDs—a
+256-row work window plus one continuation sentinel—then applies the status filter in Go and
+returns at most 100 jobs. A sparse filter can therefore return zero jobs with
+a non-nil continuation; clients must continue that cursor rather than treating
+the page as exhausted. The cursor is a forward physical-ID boundary, so pages
+are weakly consistent with concurrent random-ID inserts, not a transactionally
+frozen snapshot: a row inserted behind the boundary is outside that traversal,
+while one inserted ahead can be observed. Continuations compile to exclusive
+record-range seeks; no page sorts or materializes the lifetime table or resumes
+from its beginning.
+
+History and repository-status projections select only the declared diagnostic
+fields. Target, error, and claimant are limited to 1,024, 2,048, and 256
+characters with independent truncation bits; lease authority is omitted. This
+read-time representation neither mutates nor shortens stored fields, and
+unknown schemaless payload fields are not transferred. The former concrete
+`ListJobs` helper now permits only
+one maximum page and refuses with the result-limit error when continuation is
+required, so it cannot silently reacquire a complete-history read.
+
+`RepoStatuses` now scales with current repository rows, current connection
+memberships, and one record-link lookup per repository rather than all
+historical indexing jobs. Every supported queue transaction that creates an
+indexing job records the prospective link on the current repository incarnation
+in the same transaction; later job updates are visible through that link without
+copying state. Keeping projection in the writers rather than a table event means
+database restore does not replay one keyed repository update per retained job.
+The API reports the job
+`exact` only when the link carries the current projection generation, resolves
+to a real job, and targets that repository. Pre-cutover repositories, a
+deleted-and-recreated repository before its next indexing job, missing links,
+and otherwise unprojected repositories report `unavailable`, never a
+fabricated `never indexed` or exact-zero result. No lifetime backfill is
+attempted; the UI labels that state unavailable and disables its per-row
+reindex action instead of treating missing projected data as idle.
+
+The legacy queue repair is active-only and restart-fenced. Store open first
+point-reads `store_migration:active_jobs`; the completed
+`t30.6n-active-jobs-v1` marker makes steady-state work constant, while an
+unknown future generation refuses. Before the marker exists, each of the eight
+tables is read through its existing status index for only `pending`, `claimed`,
+and `running` rows, with the deterministic legacy repair applied idempotently.
+The explicit 131,072-row per-table cap is a safety/refusal boundary for
+unsupported pre-fence active state, not a runtime queue-cardinality or
+retention claim. Exceeding it fails open rather than widening startup work.
+Likewise, a nonempty table missing its required pending-key uniqueness index is
+refused instead of synchronously indexing lifetime history; an empty table may
+install the missing index before the marker is committed.
+
+Terminal rows are never selected, decoded, sorted, or rewritten by migration.
+An interrupted pass writes no marker; a resumed pass leaves already repaired
+rows unchanged and records completion only after every kind and required index
+succeeds. Tests cover all eight status-index plans, duplicate-pending and
+unleased-active repair, interruption/resume, repeat-open idempotence, future-
+marker and missing-index refusal, and byte-for-byte plus row-count preservation
+of large terminal fixtures. A real `surrealkv` close/reopen/close/reopen case
+proves the marker persists and suppresses a later repair, while the recovery
+suite proves a terminal row and its exact diagnostic survive database backup
+and restore.
+
+The steady-state-cost result is bounded by current work rather than retained
+terminal lifetime: one history call returns one 257-ID window and a continuation
+seeks directly to its record range; `RepoStatuses`
+reads current repositories/memberships and one projected job link per repo;
+completed store open point-reads one marker. First upgrade is proportional to
+currently active jobs across the eight indexed tables, subject to the explicit
+per-table refusal. Stale reap performs no server sort, returns and mutates at
+most 256 stale active rows per poll, and remains proportional only to currently
+claimed or running jobs selected through the status index; it does not read
+terminal history. No new corpus read, content hash, filesystem scan, mirror
+lock, child process, terminal deletion, TTL, retention configuration,
+`/api/retention-status`, or cross-owner collector is introduced. Historical
+job growth remains the explicit unbounded posture selected by T30.6m;
+T30.6o is next and owns only the authorization-first status shell and warning.

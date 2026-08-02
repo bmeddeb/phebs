@@ -148,6 +148,7 @@ const repoStatus = (name: string, commit?: string): RepoStatus => ({
   clone_url: `https://${name}.git`,
   indexed_commit_hash: commit,
   orphaned: false,
+  last_index_job_state: 'unavailable',
 })
 
 test('cold Search browses only visible repositories and opens a pinned file without searching', async () => {
