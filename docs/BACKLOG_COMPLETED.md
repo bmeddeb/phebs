@@ -5420,19 +5420,23 @@ index or backfills lifetime terminal history. Its one-PR proof is one queue
 subsystem, two lifetime-history consumers, one active-row migration fence, and
 table-driven coverage across the eight kinds.
 
-T30.6o then adds only the administrator-authorized
+T30.6o adds only the administrator-authorized
 `GET /api/retention-status` shell, the complete twelve-owner/fifty-two-
 component registry, and the unconditional
-`unbounded_historical_publication_retention` warning before `store.Open` and in
-every response. Authorization precedes any store, filesystem, or cache touch.
-The 64 KiB shape freezes independent completeness and the per-summary 4,096
+`unbounded_historical_publication_retention` warning before `store.Open`.
+Every endpoint response carries the warning header, including denial/error,
+and every successful body repeats the code. Authorization precedes any store,
+filesystem, or cache touch. The 64 KiB shape freezes independent completeness,
+ordered non-combinable byte kinds, the proof-bundle-only retention control,
+and the per-summary 4,096
 report/4,097 sentinel. T30.6o separately selects and gates one aggregate
 component-work allocation that prevents an early component from starving a
 later one; it does not multiply the per-summary cap into an unmeasured scan
-budget. Every component and data-volume metric remains explicitly
-`unavailable`; T30.6o performs zero inventory scans and never converts absence
-of a collector into exact zero. Its one-PR proof is one API/auth envelope, one
-warning site, one fixed registry/budget, and table-driven shape tests.
+budget. Every component count, every declared typed byte metric, and every
+data-volume metric remains explicitly `unavailable`; T30.6o performs zero
+inventory scans and never converts absence of a collector into exact zero. Its
+one-PR proof is one API/auth envelope, one warning site, one fixed
+registry/budget, and table-driven shape tests.
 
 T30.6p populates the seven core Surreal owner groups and 21 components:
 evidence publications/graph/shared atoms, attempts, outcomes, three pin
@@ -5587,4 +5591,117 @@ terminal history. No new corpus read, content hash, filesystem scan, mirror
 lock, child process, terminal deletion, TTL, retention configuration,
 `/api/retention-status`, or cross-owner collector is introduced. Historical
 job growth remains the explicit unbounded posture selected by T30.6m;
-T30.6o is next and owns only the authorization-first status shell and warning.
+T30.6o now owns the authorization-first status shell and warning; T30.6p is
+next and owns the first 21 core Surreal collectors.
+
+### T30.6o · Authorization-first retention-status shell and warning
+
+**T30.6o ✅ · Authorization-first retention-status shell and warning**
+*(2026-08-02; needs T30.6n)* — ships administrator-only
+`GET /api/retention-status` with schema `phebs-retention-status-v1`. A missing
+administrator hook fails closed. The handler completes authorization before
+invoking its status source, so after ordinary authentication a denied request
+performs only the administrator check and spends no retention store,
+filesystem, cache, or component-work budget. Every
+response from this path, including authorization denial and internal error,
+carries `X-Phebs-Warning-Code: unbounded_historical_publication_retention`;
+every successful body repeats the code as `warning_code`, including the fixed
+empty-installation shell. Startup logs the same static warning immediately before
+`store.Open`; a failed or slow store open therefore cannot suppress the
+capacity warning.
+
+The response freezes the T30.6m registry as these twelve ordered owners and 52
+ordered components:
+
+1. `evidence_publications` (4): `extraction_run`, `snapshot_evidence`,
+   `assertion`, and `evidence_atom`;
+2. `extraction_attempts` (1): `extraction_attempt`;
+3. `extraction_outcomes` (1): `extraction_domain_outcome`;
+4. `evidence_pins` (3): `evidence_pin[kind=proof-bundle:<bundle_id>]`,
+   `evidence_pin[kind=investigation-artifact:<artifact_id>]`, and
+   `evidence_pin[kind=<other exact store-accepted value>]`;
+5. `proof_bundles` (1): `proof_bundle`; this owner alone exposes
+   `retention_control` for `proof_bundles.retention`. Its `default_state` and
+   owner `accumulating` flag reflect the effective configured lifetime:
+   disabled/accumulating when the lifetime is zero, enabled/non-accumulating
+   when it is positive. A positive lifetime deletes the expired bundle and
+   exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction
+   evidence; the independent evidence sweep may later reclaim newly unpinned
+   superseded evidence when otherwise eligible;
+6. `durable_job_history` (8): `connection_sync_job`, `indexing_job`,
+   `repo_fetch_job`, `candidate_manifest_job`, `extraction_job`,
+   `resolver_catalog_job`, `caller_leaf_job`, and `investigation_run_job`;
+7. `investigation_workbench_rows` (24): `investigation`,
+   `investigation_revision`, `investigation_change_brief`,
+   `investigation_workbench_mutation`, `investigation_workbench_disposition`,
+   `investigation_run`, `investigation_run_event`,
+   `investigation_run_artifact`, `investigation_artifact_owner`,
+   `investigation_artifact_owner_release`,
+   `investigation_artifact_retention_override`, `investigation_decision`,
+   `investigation_disposition`, `investigation_baseline_designation`,
+   `investigation_grant`, `investigation_cursor`, `investigation_creation`,
+   `investigation_consumer_snapshot`, `investigation_consumer_edge_ledger`,
+   `investigation_review_projection`, `investigation_review_item`,
+   `investigation_dossier`, `investigation_watch`, and
+   `investigation_watch_revision`;
+8. `candidate_artifacts` (2): `candidate_manifest_publication` and
+   `$DATA/candidates managed publication files`;
+9. `focused_indexes` (2): `repo indexed analysis-unit/revision state` and
+   `$DATA/index focused publication files`;
+10. `resolver_catalogs` (2): `resolver_catalog_publication` and
+    `$DATA/resolver-catalogs package-owned files`;
+11. `caller_rows` (3): `caller_generation_publication`,
+    `caller_generation_admission`, and `caller_leaf_outcome`;
+12. `caller_artifacts` (1):
+    `$DATA/caller-leaves managed manifests and leaf artifacts`.
+
+Every other owner encodes `retention_control: null`; the field never implies a
+hidden cleanup lever. Component count and byte-metric completeness are
+independent and use only `exact`, `lower_bound`, or `unavailable`. Each
+component carries an ordered `byte_metrics` array whose kinds are selected from
+`logical_encoded`, `canonical_content`, `canonical_receipt`, `apparent_file`,
+and `physical_database`. A component can expose more than one kind, and those
+non-combinable measurements must never be summed. This shell deliberately
+reports every component count and every declared typed byte metric, plus
+data-volume total bytes and available bytes, as `unavailable` with null values;
+it never converts a missing collector or an empty installation into exact
+zero. It performs zero store, filesystem, or cache inventory scans.
+
+The retained per-summary maximum remains 4,096 reported identities after at
+most one 4,097th scan sentinel. The selected endpoint aggregate does not
+multiply that ceiling by 52. It fairly reserves one shared 4,096-report budget:
+the first 40 ordered components receive 79 report slots each and the last 12
+receive 78 each. Every component also receives one private sentinel, totaling
+4,148 aggregate scan slots. Tests prove every component receives work, the
+allocation totals are exact, and no later component can be starved by an
+earlier growing owner.
+
+Count shape is also closed: an `exact` count equals the number of identities
+scanned and cannot consume the sentinel; a non-truncated `lower_bound` equals
+its nonempty partial scan below the report allocation; and only the full
+cap-plus-one scan may set `truncated: true`, with the count fixed at its report
+allocation. An unavailable count may disclose work already scanned but cannot
+claim truncation.
+
+The encoded-response hard limit is 65,536 bytes. The deterministic unavailable
+shell is exactly 19,955 Huma HTTP-body bytes; the same fixed envelope with
+counts at their report allocations and every typed byte metric at `MaxInt64`,
+all as lower bounds, is 20,766 bytes. Both are
+measured beneath the cap, and runtime validation refuses a malformed registry,
+allocation, completeness state, or oversized response rather than widening
+the contract. Tests also cover denial-before-source, missing-admin fail-closed,
+the empty installation, every ordered identifier and byte kind,
+unavailable-not-zero semantics, the proof-bundle control and all other null
+controls, warning headers on success/denial/error, schema resolution, and
+warning-before-open ordering even when open fails.
+
+The steady-state-cost pass finds one administrator check on denial. An
+authorized shell request validates and encodes a fixed `O(52)` structure with
+a sub-64-KiB encoded body and zero I/O. Startup adds one static log
+line; sync ticks, retries, no-ops, and publication transitions add no work.
+There are no held locks, corpus or shard reads, content hashes, filesystem
+walks, cache invalidations, child processes, query indexes, store writers,
+deletes, backup/restore changes, configuration keys, or owner-lifecycle
+mutations. T30.6p is next and may populate exactly the 21 core Surreal
+components behind this frozen shell; the remaining 31 stay visibly
+`unavailable`.

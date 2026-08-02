@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	Schema = "t306m-historical-retention-decision-v2"
+	Schema = "t306m-historical-retention-decision-v3"
 
-	SelectedPosture = "unbounded"
-	WarningCode     = "unbounded_historical_publication_retention"
+	SelectedPosture                   = "unbounded"
+	WarningCode                       = "unbounded_historical_publication_retention"
+	ProofBundlePositiveLifetimeEffect = "deletes the expired bundle and exactly its proof-bundle:<bundle_id> evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible"
 
 	RelationSelected   = "selected_t306m_unbounded_retention"
 	RelationExisting   = "existing_owner_lifecycle_unchanged"
@@ -29,9 +30,12 @@ const (
 	// StatusScanIdentityLimit includes one sentinel identity so collectors
 	// added after T30.6o can distinguish exact-at-cap from a labeled lower
 	// bound without scanning on.
-	StatusReportedIdentityLimit = 4_096
-	StatusScanIdentityLimit     = StatusReportedIdentityLimit + 1
-	StatusResponseByteLimit     = 64 << 10
+	StatusReportedIdentityLimit               = 4_096
+	StatusScanIdentityLimit                   = StatusReportedIdentityLimit + 1
+	StatusResponseByteLimit                   = 64 << 10
+	StatusComponentCount                      = 52
+	StatusAggregateReportedIdentityAllocation = StatusReportedIdentityLimit
+	StatusAggregateScanIdentityAllocation     = StatusAggregateReportedIdentityAllocation + StatusComponentCount
 
 	// EvidenceAdmissionRows is the exact association-plus-assertion ceiling
 	// retained by the T20 current-writer receipt. The T30.6m gate checks this
@@ -102,21 +106,33 @@ type StatusSummary struct {
 	WarningCode       string       `json:"warning_code"`
 }
 
+type StatusRetentionControl struct {
+	ConfigKey              string `json:"config_key"`
+	DefaultState           string `json:"default_state"`
+	PositiveLifetimeEffect string `json:"positive_lifetime_effect"`
+}
+
 type StatusContract struct {
-	Endpoint                        string        `json:"endpoint"`
-	Authorization                   string        `json:"authorization"`
-	InventoryScope                  string        `json:"inventory_scope"`
-	ReportedIdentityLimitPerSummary int           `json:"reported_identity_limit_per_summary"`
-	ScanIdentityLimitPerSummary     int           `json:"scan_identity_limit_per_summary"`
-	ComponentCoverage               string        `json:"component_coverage"`
-	ComponentScanAllocation         string        `json:"component_scan_allocation"`
-	EncodedResponseByteLimit        int           `json:"encoded_response_byte_limit"`
-	CompletenessVocabulary          []string      `json:"completeness_vocabulary"`
-	PhysicalDatabaseBytes           StatusMetric  `json:"physical_database_bytes"`
-	WarningCode                     string        `json:"warning_code"`
-	EmptySample                     StatusSummary `json:"empty_sample"`
-	CapPlusOneSample                StatusSummary `json:"cap_plus_one_sample"`
-	InvalidByteMetricSample         StatusSummary `json:"invalid_byte_metric_sample"`
+	Endpoint                            string                 `json:"endpoint"`
+	Authorization                       string                 `json:"authorization"`
+	InventoryScope                      string                 `json:"inventory_scope"`
+	ReportedIdentityLimitPerSummary     int                    `json:"reported_identity_limit_per_summary"`
+	ScanIdentityLimitPerSummary         int                    `json:"scan_identity_limit_per_summary"`
+	ComponentCoverage                   string                 `json:"component_coverage"`
+	ComponentScanAllocation             string                 `json:"component_scan_allocation"`
+	AggregateReportedIdentityAllocation int                    `json:"aggregate_reported_identity_allocation"`
+	AggregateScanIdentityAllocation     int                    `json:"aggregate_scan_identity_allocation"`
+	EncodedResponseByteLimit            int                    `json:"encoded_response_byte_limit"`
+	CompletenessVocabulary              []string               `json:"completeness_vocabulary"`
+	PhysicalDatabaseBytes               StatusMetric           `json:"physical_database_bytes"`
+	WarningCode                         string                 `json:"warning_code"`
+	WarningHeader                       string                 `json:"warning_header"`
+	ByteMetricKinds                     []string               `json:"byte_metric_kinds"`
+	ByteMetricCombinationRule           string                 `json:"byte_metric_combination_rule"`
+	ProofBundleRetentionControl         StatusRetentionControl `json:"proof_bundle_retention_control"`
+	EmptySample                         StatusSummary          `json:"empty_sample"`
+	CapPlusOneSample                    StatusSummary          `json:"cap_plus_one_sample"`
+	InvalidByteMetricSample             StatusSummary          `json:"invalid_byte_metric_sample"`
 }
 
 type ImplementationTicket struct {
@@ -279,20 +295,36 @@ func RetainedResults() Results {
 			},
 		},
 		Status: StatusContract{
-			Endpoint:                        "GET /api/retention-status",
-			Authorization:                   "administrator only",
-			InventoryScope:                  "the twelve declared groups cover T30.6 publication and adjacent persisted domains, not every database table; audit, analytics, authentication, and other installation state retain their separately documented lifecycles",
-			ReportedIdentityLimitPerSummary: StatusReportedIdentityLimit,
-			ScanIdentityLimitPerSummary:     StatusScanIdentityLimit,
-			ComponentCoverage:               "every declared owner component; evidence_pin rows additionally partition into proof-bundle, investigation-artifact, and other exact kind namespaces",
-			ComponentScanAllocation:         "unresolved in T30.6m; T30.6o must select and gate a fixed-work allocation that cannot hide a later component behind an earlier component's growth while its initial shell performs zero inventory scans, then T30.6p through T30.6r populate collectors within that allocation",
-			EncodedResponseByteLimit:        StatusResponseByteLimit,
-			CompletenessVocabulary:          []string{"exact", "lower_bound", "unavailable"},
-			PhysicalDatabaseBytes:           unavailableMetric("bytes"),
-			WarningCode:                     WarningCode,
-			EmptySample:                     SummarizeStatus(nil),
-			CapPlusOneSample:                SummarizeStatus(capPlusOne),
-			InvalidByteMetricSample:         SummarizeStatus([]int64{-1}),
+			Endpoint:                            "GET /api/retention-status",
+			Authorization:                       "administrator only",
+			InventoryScope:                      "the twelve declared groups cover T30.6 publication and adjacent persisted domains, not every database table; audit, analytics, authentication, and other installation state retain their separately documented lifecycles",
+			ReportedIdentityLimitPerSummary:     StatusReportedIdentityLimit,
+			ScanIdentityLimitPerSummary:         StatusScanIdentityLimit,
+			ComponentCoverage:                   "every declared owner component; evidence_pin rows additionally partition into proof-bundle, investigation-artifact, and other exact kind namespaces",
+			ComponentScanAllocation:             "one non-transferable fair share of the endpoint's 4,096 aggregate reported-identity allocation plus one private sentinel per component; the first 40 components reserve 79 reported plus one sentinel identity and the remaining 12 reserve 78 plus one, totaling 4,148 scan identities; T30.6o performs zero inventory scans",
+			AggregateReportedIdentityAllocation: StatusAggregateReportedIdentityAllocation,
+			AggregateScanIdentityAllocation:     StatusAggregateScanIdentityAllocation,
+			EncodedResponseByteLimit:            StatusResponseByteLimit,
+			CompletenessVocabulary:              []string{"exact", "lower_bound", "unavailable"},
+			PhysicalDatabaseBytes:               unavailableMetric("bytes"),
+			WarningCode:                         WarningCode,
+			WarningHeader:                       "X-Phebs-Warning-Code",
+			ByteMetricKinds: []string{
+				"logical_encoded",
+				"canonical_content",
+				"canonical_receipt",
+				"apparent_file",
+				"physical_database",
+			},
+			ByteMetricCombinationRule: "ordered metrics are independent and non-combinable across kinds; never sum them",
+			ProofBundleRetentionControl: StatusRetentionControl{
+				ConfigKey:              "proof_bundles.retention",
+				DefaultState:           "disabled",
+				PositiveLifetimeEffect: ProofBundlePositiveLifetimeEffect,
+			},
+			EmptySample:             SummarizeStatus(nil),
+			CapPlusOneSample:        SummarizeStatus(capPlusOne),
+			InvalidByteMetricSample: SummarizeStatus([]int64{-1}),
 		},
 		Implementation: ImplementationProof{
 			Tickets: []ImplementationTicket{

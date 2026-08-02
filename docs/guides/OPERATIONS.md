@@ -1659,7 +1659,7 @@ supplies the exact Workbench composition, completed-stream confirmation, typed
 gaps, citation-only caller source access, and deterministic checklist identity
 described above. T30.6m explicitly selects unbounded historical-publication
 retention without changing cleanup. T30.6n bounds job-history reads and
-repairs startup migration without deleting history. T30.6o next adds the
+repairs startup migration without deleting history. T30.6o now supplies the
 authorization-first retention-status shell, fixed registry, budgets, and
 unconditional capacity warning; T30.6p–T30.6r populate its bounded store and
 filesystem collectors, with T30.6r completing the declared surface.
@@ -1830,17 +1830,43 @@ drain further batches. Its index scan is `O(current active jobs)`, not
 establishes no job-retention bound and adds no TTL, deletion, or retention
 configuration.
 
-T30.6o then adds administrator-only `GET /api/retention-status` as an
+T30.6o adds administrator-only `GET /api/retention-status` as an
 authorization-first shell. Authorization completes before any component store,
 filesystem, or cache touch; denial consumes none of the component-scan budget.
-The shell freezes all twelve owner groups and all 52 declared components in the
-response shape, the aggregate fixed-work allocation, at-most-4,096 reported
-identities after at most one 4,097th sentinel per summary, a 64 KiB encoded
-response, and independent `exact`, `lower_bound`, or `unavailable` labels for
-counts and owner-defined byte metrics. Its initial implementation reports all
-52 components explicitly as `unavailable` and performs zero store or filesystem
-inventory scans. Registry presence therefore proves coverage of the declared
-model, not that T30.6o alone inventories retained capacity.
+The `phebs-retention-status-v1` shell freezes all twelve owner groups and all 52
+declared components in their exact order, the aggregate fixed-work allocation,
+at-most-4,096 reported identities after at most one 4,097th sentinel per
+summary, a 64 KiB encoded response, and independent `exact`, `lower_bound`, or
+`unavailable` labels for counts and typed byte metrics. Each component's
+ordered `byte_metrics` array declares one or more of `logical_encoded`,
+`canonical_content`, `canonical_receipt`, `apparent_file`, and
+`physical_database`. Those kinds describe different accounting planes, may
+coexist on one component, and must never be summed. Endpoint-wide
+work is not 4,097 multiplied by 52: 4,096 report slots are split fairly, with
+79 reserved for each of the first 40 components and 78 for each of the last 12,
+plus one private sentinel each for a 4,148-scan aggregate. The fixed empty wire
+response is 19,955 bytes, and the maximum-shaped fixed envelope is 20,766
+bytes. Every component count, every declared typed byte metric, and both
+data-volume metrics is explicitly `unavailable` with a null value; the
+shell performs zero store, filesystem, or cache inventory scans and never
+turns absence into exact zero. Registry presence therefore proves coverage of
+the declared model, not that T30.6o alone inventories retained capacity.
+
+For each component, an `exact` count must equal the identities scanned below
+its report allocation. A non-truncated `lower_bound` must equal a nonempty
+partial scan, while a full cap-plus-one scan is the sole shape that sets
+`truncated: true` and reports the allocation ceiling. An unavailable count may
+retain a partial scan counter but cannot claim truncation.
+
+Owner metadata makes the one existing scoped control explicit. Only
+`proof_bundles` carries a non-null `retention_control`:
+`proof_bundles.retention`. `default_state` is `disabled` when its effective
+lifetime is zero and `enabled` when positive; the owner `accumulating` flag is
+the inverse. A positive lifetime deletes the expired bundle and exactly its
+`proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the
+independent evidence sweep may later reclaim newly unpinned superseded
+evidence when otherwise eligible. Every other owner encodes null. This is
+disclosure of an existing lifecycle, not a new cross-owner retention control.
 
 T30.6p populates the 21 core SurrealDB components: four evidence-publication
 graph components, extraction attempts, extraction outcomes, three logical
@@ -1869,17 +1895,24 @@ logical evidence rows, shared atoms, canonical bytes, apparent files, or
 physical SurrealDB allocation into a false exact total.
 
 The unconditional static warning
-`unbounded_historical_publication_retention` lands in T30.6o and is logged
-before opening the store, so a slow or failed store open/startup migration
-cannot hide it. Every status response repeats the warning, including for an
-empty installation. Until T30.6r lands, the fixed registry makes unfinished
+`unbounded_historical_publication_retention` is logged before opening the
+store, so a slow or failed store open/startup migration cannot hide it. Every
+response from `/api/retention-status`, including authorization denial and
+internal error, carries it in `X-Phebs-Warning-Code`; every successful body
+also repeats it as `warning_code`, including for an empty installation. Until
+T30.6r lands, the fixed registry makes unfinished
 collector coverage explicit through `unavailable` component summaries; there
 is no complete retained-capacity status surface for the twelve T30.6 modeled
 owner groups. Audit, analytics, authentication, and other installation state
 retain their separately documented lifecycles; this endpoint is not a claim to
-inventory every database table. T30.6n–T30.6r add no retained-owner deletion,
-configuration, lifecycle mutation, corpus read, content hash, mirror lock, or
-child work.
+inventory every database table. After ordinary authentication, a denied
+request performs only the administrator check. The authorized shell validates
+and encodes one fixed `O(52)` structure with a sub-64-KiB body and no retention
+I/O; startup adds one log line,
+while sync ticks, retries, no-ops, and publication transitions add no work. It
+takes no lock, starts no child, and adds no retained-owner deletion,
+configuration, lifecycle mutation, corpus read, content hash, or mirror work.
+The same boundary governs T30.6p–T30.6r.
 
 Expanding or relocating `server.data_dir` is the only unconditional live-
 capacity escape. Take a verified backup before supported repository removal;

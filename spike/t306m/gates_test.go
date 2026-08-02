@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/config"
@@ -304,11 +305,41 @@ func TestT306MFollowupSplit(t *testing.T) {
 
 func TestT306MStatusBoundAndWarning(t *testing.T) {
 	contract := loadResults(t).Status
+	if StatusReportedIdentityLimit != api.RetentionStatusReportedIdentityLimit ||
+		StatusScanIdentityLimit != api.RetentionStatusScanIdentityLimit ||
+		StatusComponentCount != api.RetentionStatusComponentCount ||
+		StatusAggregateReportedIdentityAllocation != api.RetentionStatusAggregateReportedIdentityAllocation ||
+		StatusAggregateScanIdentityAllocation != api.RetentionStatusAggregateScanIdentityAllocation ||
+		StatusResponseByteLimit != api.RetentionStatusResponseByteLimit ||
+		WarningCode != api.RetentionStatusWarningCode {
+		t.Fatalf("retained and production status budgets disagree")
+	}
 	if contract.ReportedIdentityLimitPerSummary != StatusReportedIdentityLimit ||
 		contract.ScanIdentityLimitPerSummary != StatusScanIdentityLimit ||
+		contract.AggregateReportedIdentityAllocation != StatusAggregateReportedIdentityAllocation ||
+		contract.AggregateScanIdentityAllocation != StatusAggregateScanIdentityAllocation ||
+		contract.EncodedResponseByteLimit != StatusResponseByteLimit ||
 		contract.InventoryScope != "the twelve declared groups cover T30.6 publication and adjacent persisted domains, not every database table; audit, analytics, authentication, and other installation state retain their separately documented lifecycles" ||
-		contract.ComponentCoverage == "" || contract.ComponentScanAllocation == "" {
+		contract.ComponentCoverage == "" || contract.ComponentScanAllocation == "" ||
+		contract.WarningHeader != api.RetentionStatusWarningHeader ||
+		contract.WarningCode != api.RetentionStatusWarningCode ||
+		!slices.Equal(contract.ByteMetricKinds, []string{
+			string(api.RetentionStatusByteLogicalEncoded),
+			string(api.RetentionStatusByteCanonicalContent),
+			string(api.RetentionStatusByteCanonicalReceipt),
+			string(api.RetentionStatusByteApparentFile),
+			string(api.RetentionStatusBytePhysicalDatabase),
+		}) ||
+		contract.ByteMetricCombinationRule != "ordered metrics are independent and non-combinable across kinds; never sum them" ||
+		contract.ProofBundleRetentionControl != (StatusRetentionControl{
+			ConfigKey:              "proof_bundles.retention",
+			DefaultState:           "disabled",
+			PositiveLifetimeEffect: ProofBundlePositiveLifetimeEffect,
+		}) {
 		t.Fatalf("status contract = %+v", contract)
+	}
+	if ProofBundlePositiveLifetimeEffect != api.RetentionStatusProofBundlePositiveLifetimeEffect {
+		t.Fatal("retained and production proof-bundle lifetime effects disagree")
 	}
 	values := make([]int64, StatusScanIdentityLimit)
 	for index := range values {

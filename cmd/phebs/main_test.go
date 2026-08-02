@@ -53,6 +53,30 @@ func TestCodeNavigationRepositoryErrorClassifiesNotFound(t *testing.T) {
 	}
 }
 
+func TestRetentionWarningPrecedesStoreOpenEvenWhenOpenFails(t *testing.T) {
+	openErr := errors.New("store open failed")
+	var events []string
+	opened, err := openStoreAfterRetentionWarning(
+		func(code string) {
+			events = append(events, "warning:"+code)
+		},
+		func() (*store.Surreal, error) {
+			events = append(events, "store-open")
+			return nil, openErr
+		},
+	)
+	if opened != nil || !errors.Is(err, openErr) {
+		t.Fatalf("open = %v, %v, want nil and sentinel error", opened, err)
+	}
+	want := []string{
+		"warning:" + api.RetentionStatusWarningCode,
+		"store-open",
+	}
+	if !slices.Equal(events, want) {
+		t.Fatalf("events = %v, want %v", events, want)
+	}
+}
+
 func (authenticationWorkbenchFake) Preview(
 	context.Context,
 	string,
@@ -201,6 +225,13 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	assertStatus(t, client, http.MethodGet, server.URL+"/metrics", "", nil, http.StatusOK, "metrics")
 	assertStatus(t, client, http.MethodGet, server.URL+"/", "", nil, http.StatusOK, "ui")
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/repos", "", nil, http.StatusUnauthorized, "authentication required")
+	assertRetentionStatusWithWarningHeader(
+		t,
+		client,
+		server.URL+"/api/retention-status",
+		http.StatusUnauthorized,
+		"authentication required",
+	)
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/mcp", "", nil, http.StatusUnauthorized, "authentication required")
 	legacyTools, err := mcpToolNamesWithBearer(
 		t,
@@ -252,6 +283,8 @@ func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 		}
 	}
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/repos", "", nil, http.StatusOK, "[]")
+	assertStatus(t, client, http.MethodGet, server.URL+"/api/retention-status", "", nil,
+		http.StatusOK, `"warning_code":"`+api.RetentionStatusWarningCode+`"`)
 	assertStatus(t, client, http.MethodGet, server.URL+"/api/evidence?domain=proto-contract", "", nil,
 		http.StatusNotFound, "404")
 	assertStatus(t, client, http.MethodPost, server.URL+"/api/reindex", `{"repo":"github.com/no/repo"}`,
@@ -1132,6 +1165,39 @@ func assertStatus(t *testing.T, client *http.Client, method, target, body string
 		t.Fatalf("%s %s = %d %s, want %d containing %q", method, target, response.StatusCode, data, want, contains)
 	}
 	return data
+}
+
+func assertRetentionStatusWithWarningHeader(
+	t *testing.T,
+	client *http.Client,
+	target string,
+	want int,
+	contains string,
+) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, target, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			t.Errorf("close response body: %v", err)
+		}
+	}()
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != want || contains != "" && !bytes.Contains(data, []byte(contains)) {
+		t.Fatalf("GET %s = %d %s, want %d containing %q", target, response.StatusCode, data, want, contains)
+	}
+	if got := response.Header.Get(api.RetentionStatusWarningHeader); got != api.RetentionStatusWarningCode {
+		t.Fatalf("GET %s warning header = %q, want %q", target, got, api.RetentionStatusWarningCode)
+	}
 }
 
 func webhookSignature(body []byte, secret string) string {

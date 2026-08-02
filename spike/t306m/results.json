@@ -1,5 +1,5 @@
 {
-  "schema": "t306m-historical-retention-decision-v2",
+  "schema": "t306m-historical-retention-decision-v3",
   "decision": "unbounded",
   "cleanup_changed": false,
   "reason": "No measured rollback depth justifies destructive default eviction of historical publications, and a generation count would not bound their physical bytes across durable evidence pins, caller leases, shared atoms, and independent database/filesystem owners. The adjacent proof-bundle owner remains under its existing configured lifecycle; this selection does not override it or justify unbounded job or Investigation/Workbench growth. Any new lifecycle or retention policy requires a separate decision.",
@@ -386,7 +386,9 @@
     "reported_identity_limit_per_summary": 4096,
     "scan_identity_limit_per_summary": 4097,
     "component_coverage": "every declared owner component; evidence_pin rows additionally partition into proof-bundle, investigation-artifact, and other exact kind namespaces",
-    "component_scan_allocation": "unresolved in T30.6m; T30.6o must select and gate a fixed-work allocation that cannot hide a later component behind an earlier component's growth while its initial shell performs zero inventory scans, then T30.6p through T30.6r populate collectors within that allocation",
+    "component_scan_allocation": "one non-transferable fair share of the endpoint's 4,096 aggregate reported-identity allocation plus one private sentinel per component; the first 40 components reserve 79 reported plus one sentinel identity and the remaining 12 reserve 78 plus one, totaling 4,148 scan identities; T30.6o performs zero inventory scans",
+    "aggregate_reported_identity_allocation": 4096,
+    "aggregate_scan_identity_allocation": 4148,
     "encoded_response_byte_limit": 65536,
     "completeness_vocabulary": [
       "exact",
@@ -399,6 +401,20 @@
       "completeness": "unavailable"
     },
     "warning_code": "unbounded_historical_publication_retention",
+    "warning_header": "X-Phebs-Warning-Code",
+    "byte_metric_kinds": [
+      "logical_encoded",
+      "canonical_content",
+      "canonical_receipt",
+      "apparent_file",
+      "physical_database"
+    ],
+    "byte_metric_combination_rule": "ordered metrics are independent and non-combinable across kinds; never sum them",
+    "proof_bundle_retention_control": {
+      "config_key": "proof_bundles.retention",
+      "default_state": "disabled",
+      "positive_lifetime_effect": "deletes the expired bundle and exactly its proof-bundle:\u003cbundle_id\u003e evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible"
+    },
     "empty_sample": {
       "scanned_identities": 0,
       "count": {

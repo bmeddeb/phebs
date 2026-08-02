@@ -32,8 +32,13 @@ type Options struct {
 	CodeNav *codenav.Service // nil = precise code navigation answers 503
 	DataDir string           // bare mirrors for file serving (T4.4)
 	// IsAdmin is set by serve to gate operational mutations. Nil preserves the
-	// standalone handler's test and embedding behavior.
+	// standalone handler's test and embedding behavior except for explicitly
+	// administrator-only inventory reads, which fail closed when it is nil.
 	IsAdmin func(context.Context) bool
+	// RetentionStatusSource supplies the bounded T30.6 retention inventory.
+	// Nil serves the fixed zero-scan shell. The retention handler authorizes
+	// before invoking this function so a denial cannot consume inventory work.
+	RetentionStatusSource RetentionStatusSource
 
 	// T10.1 audit log. AuditRecord is called for every mutating huma operation
 	// (serve resolves the actor from the request context); nil disables
@@ -390,6 +395,7 @@ func New(opts Options) http.Handler {
 	registerCodeNavigation(api, opts)
 	registerAudit(api, opts)
 	registerAnalytics(api, opts)
+	registerRetentionStatus(api, opts)
 	registerEvidence(api, opts)
 	registerContractCatalogAPI(api, opts)
 	registerCallerMapAPI(api, opts)
@@ -404,7 +410,7 @@ func New(opts Options) http.Handler {
 		mux.HandleFunc("POST /api/webhook", webhookHandler(opts))
 	}
 
-	return mux
+	return WithRetentionStatusWarning(mux)
 }
 
 func requireReadableRepo(ctx context.Context, opts Options, name string) error {

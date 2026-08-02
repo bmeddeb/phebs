@@ -71,7 +71,7 @@ analysis_units:
 | `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
-| `proof_bundles.retention`                   | *(disabled; effective `0`)* | positive Go duration expires proof bundles after their latest materialization, deleting the bundle and only its exact proof pins; omission or `"0"` keeps both indefinitely; bundle expiry deletes no extraction evidence |
+| `proof_bundles.retention`                   | *(disabled; effective `0`)* | positive Go duration expires proof bundles after their latest materialization, deleting the bundle and exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible; omission or `"0"` keeps bundles and pins indefinitely |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
@@ -98,17 +98,33 @@ T30.6n bounds job-history reads and repairs startup migration without deleting
 job history, and it adds no configuration key. The 100-row response cap,
 257-row physical scan window, 1,024/2,048/256-character target/error/claimant
 caps, 256-row stale-reap batch, and active-row migration refusal are frozen
-safety contracts rather than operator-tunable retention controls. T30.6o will
-add the authorization-first status shell,
-fixed 52-component registry, and unconditional warning; it initially reports
-every component as explicitly unavailable and performs no store or filesystem
-inventory scan. T30.6p will populate the 21 core SurrealDB components, T30.6q
+safety contracts rather than operator-tunable retention controls. T30.6o now
+ships the authorization-first status shell, fixed 52-component registry, and
+unconditional `unbounded_historical_publication_retention` warning; it reports
+the warning in `X-Phebs-Warning-Code` on every endpoint response, including
+authorization and internal errors, while successful bodies also carry
+`warning_code`. Every component count and every declared typed byte metric is
+explicitly unavailable, and the shell performs no store or filesystem
+inventory scan. Ordered `logical_encoded`, `canonical_content`,
+`canonical_receipt`, `apparent_file`, and `physical_database` byte kinds are
+non-combinable accounting contracts, not selectable configuration. The
+`proof_bundles` owner exposes the existing `proof_bundles.retention` control.
+Its `default_state` and `accumulating` posture follow the effective configured
+lifetime: zero reports disabled/accumulating and a positive duration reports
+enabled/nonaccumulating. A positive lifetime deletes the expired bundle and
+exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence;
+the independent evidence sweep may later reclaim newly unpinned superseded
+evidence when otherwise eligible. Every other owner has no retention control. The fixed
+4,096-report/4,148-scan aggregate allocation and
+64-KiB response ceiling are implementation safety contracts, not configuration
+keys. T30.6p will populate the 21 core SurrealDB components, T30.6q
 the exact 24 Investigation/Workbench tables, and T30.6r the seven derived
 store/filesystem components and thereby complete the status surface. Any
 supporting database index bootstrap in T30.6p or T30.6q must be bounded,
 restart-resumable, and nonblocking; every filesystem scan in T30.6r must be
-bounded. None of T30.6n–T30.6r adds deletion, changes an owner lifecycle, or
-adds retention configuration. A future bounded historical-publication policy
+bounded. Neither T30.6n nor T30.6o adds deletion, changes an owner lifecycle,
+or adds retention configuration; the same boundary governs T30.6p–T30.6r. A
+future bounded historical-publication policy
 requires a new ADR and configuration contract; omission and numeric zero are
 not reserved as destructive/default aliases for such a future key.
 

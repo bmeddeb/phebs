@@ -1150,6 +1150,7 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/repos`                                                        | GET             | repo rows                                                                                      |
 | `/api/repo-status`                                                  | GET             | repos + connections + orphan flag + exact/unavailable prospective last-index-job state + committed analysis-unit diagnostics |
 | `/api/reindex`                                                      | POST            | administrator only: `{"repo":"github.com/foo/bar","force":true}` → enqueue index job           |
+| `/api/retention-status`                                             | GET             | administrator only: fixed twelve-owner/fifty-two-component retained-capacity status shell      |
 | `/api/audit?offset=&limit=`                                         | GET             | administrator only: audit events, newest first, `has_more` paging                              |
 | `/api/analytics?days=`                                              | GET             | administrator only: search volume, per-day counts, top repos over the window (default 30 days) |
 | `/api/webhook`                                                      | POST            | code-host push/repository events, HMAC-authed (no bearer); 404 unless `webhook.secret` set     |
@@ -1181,6 +1182,31 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/commit?repo=&ref=`                                            | GET             | commit metadata, parents, and changed files                                                    |
 | `/api/diff?repo=&head=&base=&path=&context_lines=`                  | GET             | bounded unified diff and file statistics; context defaults to 3 and accepts explicit 0         |
 | `/metrics`                                                          | GET             | Prometheus metrics                                                                             |
+
+The retention-status shell is intentionally useful before its collectors are
+populated. Every response from this path—including authorization denial and
+internal error—carries
+`X-Phebs-Warning-Code: unbounded_historical_publication_retention`; every
+successful body repeats the code in `warning_code`, identifies schema
+`phebs-retention-status-v1`, and lists the complete ordered registry. In
+T30.6o every component count and every declared entry in its ordered
+`byte_metrics` array, plus data-volume total and available bytes, is
+`unavailable` with a null value. Byte kinds are `logical_encoded`,
+`canonical_content`, `canonical_receipt`, `apparent_file`, and
+`physical_database`; multiple kinds can describe one component and must never
+be summed. Do not interpret unavailable states as zero retained data.
+
+The `proof_bundles` owner alone reports a non-null `retention_control`:
+`proof_bundles.retention`. Its `default_state` is derived from the effective
+configured lifetime and its `accumulating` flag is the inverse. A positive
+lifetime deletes the expired bundle and exactly its
+`proof-bundle:<bundle_id>` evidence pins but no extraction evidence; the
+independent evidence sweep may later reclaim newly unpinned superseded
+evidence when otherwise eligible. Other owners report null. A
+non-administrator is rejected before the status source or any store,
+filesystem, or cache inventory work runs. The static startup warning is
+emitted before store open even if startup later fails; T30.6p–T30.6r will
+populate the fixed shell without changing that authorization boundary.
 
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch

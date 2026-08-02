@@ -220,7 +220,18 @@ func serve(args []string) error {
 	if err := os.MkdirAll(cfg.Server.DataDir, 0o755); err != nil {
 		return fmt.Errorf("create data dir: %w", err)
 	}
-	st, err := store.OpenLocalWithConfig(ctx, cfg.Server.DataDir, recovery.ConfigDigest(rawConfig))
+	st, err := openStoreAfterRetentionWarning(
+		func(code string) {
+			log.Printf("WARNING: %s", code)
+		},
+		func() (*store.Surreal, error) {
+			return store.OpenLocalWithConfig(
+				ctx,
+				cfg.Server.DataDir,
+				recovery.ConfigDigest(rawConfig),
+			)
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -896,6 +907,14 @@ func serve(args []string) error {
 	return nil
 }
 
+func openStoreAfterRetentionWarning(
+	warn func(string),
+	open func() (*store.Surreal, error),
+) (*store.Surreal, error) {
+	warn(api.RetentionStatusWarningCode)
+	return open()
+}
+
 func bindProvisionalWorkbench(
 	opts *api.Options,
 	hasProtocolEvidence bool,
@@ -1000,7 +1019,7 @@ func newHTTPHandler(authService *auth.Service, apiHandler, mcpHandler, metricsHa
 	}))
 	mux.Handle("GET /metrics", metricsHandler)
 	mux.Handle("/", uiHandler)
-	return authService.LoadAndSave(mux)
+	return api.WithRetentionStatusWarning(authService.LoadAndSave(mux))
 }
 
 func loadServerConfig(path string) (*config.Config, []byte, error) {

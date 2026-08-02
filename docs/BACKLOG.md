@@ -14,11 +14,11 @@ materialization, T30.6h direct caller-leaf execution, T30.6i atomic complete
 caller-generation publication, T30.6j authorized exact Caller Map reads, and
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
 caller integration, T30.6m explicit unbounded historical-publication
-retention decision, and T30.6n bounded job-history reads and startup migration
-are shipped; T30.6o's retention-status shell is next, followed by T30.6p's core
-Surreal collectors, T30.6q's Investigation/Workbench collector, and T30.6r's
-derived store/filesystem collectors.
-Completed Epics 0–24, Epic 29, T30.1–T30.6n, and P5 hardening are
+retention decision, T30.6n bounded job-history reads and startup migration,
+and T30.6o's retention-status shell are shipped; T30.6p's core Surreal
+collectors are next, followed by T30.6q's Investigation/Workbench collector,
+and T30.6r's derived store/filesystem collectors.
+Completed Epics 0–24, Epic 29, T30.1–T30.6o, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -28,8 +28,7 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6o · Authorization-first retention-status shell and warning** is next.
-T30.6a–T30.6n
+**T30.6p · Core Surreal retention collectors** is next. T30.6a–T30.6o
 now provide bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, the adapter-free immutable catalog
@@ -42,7 +41,7 @@ selects unbounded retention. Review grounding expanded its original nine-group
 inventory to twelve: all eight durable job tables, the 24-table Investigation/
 Workbench graph, and proof bundles are independent retained owners too.
 T30.6n now bounds the job-history read and startup-migration paths that could
-stall before a status endpoint is reachable. T30.6o adds only the
+stall before a status endpoint is reachable. T30.6o now supplies the
 authorization-first status shell, complete fixed registry/budget, and
 unconditional warning; T30.6p–T30.6r fill the core Surreal,
 Investigation/Workbench, and derived store/filesystem collectors in order.
@@ -64,7 +63,8 @@ rollback; the existing evidence sweep does not collect a row while it remains
 `published`. T30.6m explicitly retains that unbounded posture and authorizes no
 historical deletion. Before Epic 30 closes, T30.6n bounds job-history reads and
 legacy startup migration without deleting terminal diagnostics;
-T30.6o–T30.6r deliver the warning and bounded cross-owner status in PR-sized
+T30.6o now delivers the warning and zero-inventory status shell; T30.6p–T30.6r
+populate the bounded cross-owner status in PR-sized
 layers without deleting pinned proof or other retained state.
 
 ### Post-T30.5 issue closure ✅ *(closed 2026-07-29)*
@@ -571,7 +571,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6o next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6p next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -1037,27 +1037,15 @@ terminal row and its stored diagnostic remains unchanged. The ticket adds no
 terminal deletion, TTL, retention configuration, `/api/retention-status`, or
 cross-owner status surface.
 
-**T30.6o · Authorization-first retention-status shell and warning** *(needs
-T30.6n)* — add administrator-only `GET /api/retention-status`, the static
-`unbounded_historical_publication_retention` warning before `store.Open`, and
-the same warning in every response, including an empty installation.
-Authorization completes before any store, filesystem, or cache touch; denial
-consumes no inventory budget. Freeze the complete twelve-owner,
-fifty-two-component registry, a 64 KiB encoded response, independent
-`exact`/`lower_bound`/`unavailable` count and byte states, at most 4,096
-reported identities after one 4,097th sentinel per summary, and one explicitly
-selected/gated aggregate component-work allocation that reserves work for
-every component so an earlier component cannot starve a later one. Do not
-derive that aggregate by multiplying the per-summary cap without measurement.
-Every component and data-volume metric ships explicitly `unavailable`: this
-ticket performs zero store/filesystem inventory scans and never reports an
-exact zero. It is one PR because it owns one authorization/API envelope, one
-static warning site, one fixed registry/budget, and table-driven shape/size
-tests. Cover denial-before-work, empty installation, all component identifiers,
-fixed response size, unavailable-not-zero semantics, allocation/no-starvation,
-and pre-open warning ordering. Add no query index, writer/delete,
-backup/restore, retention configuration, corpus read, content hash, mirror
-lock, child work, or owner lifecycle mutation. Full merge bar.
+**T30.6o ✅ · Authorization-first retention-status shell and warning**
+*(2026-08-02; needs T30.6n)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306o--authorization-first-retention-status-shell-and-warning).
+The administrator-only shell freezes the twelve-owner/fifty-two-component
+registry, ordered non-combinable byte kinds, proof-bundle-only retention
+control, and aggregate allocation. It reports every metric unavailable without
+inventory I/O, places the static warning header on every endpoint response,
+repeats it in successful bodies, and logs it before store open. T30.6p owns the
+first 21 collectors.
 
 **T30.6p · Core Surreal retention collectors** *(needs T30.6o)* — populate the
 seven database-backed owner groups and 21 declared components for evidence

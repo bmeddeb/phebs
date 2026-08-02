@@ -116,9 +116,13 @@ The corrected inventory requires five implementation PRs in dependency order:
    52-component registry, fixed response/scan budgets, independent
    `exact`/`lower_bound`/`unavailable` labels, and unconditional
    `unbounded_historical_publication_retention` warnings before `store.Open`
-   and in every status response. Authorization finishes before any inventory or
-   cache touch. Every collector initially reports `unavailable` and performs
-   zero store or filesystem scans.
+   and in every status response through `X-Phebs-Warning-Code`; successful
+   bodies repeat it as `warning_code`. Authorization finishes before any
+   inventory or cache touch. Ordered typed byte metrics remain non-combinable,
+   and the proof-bundle owner alone discloses its effective configured lifecycle:
+   zero reports disabled/accumulating and a positive duration reports
+   enabled/nonaccumulating. Every collector initially reports `unavailable` and performs zero
+   store or filesystem scans.
 3. **T30.6p — core SurrealDB collectors.** Fill the evidence graph, attempt,
    outcome, pin, proof-bundle, durable-job, and caller-row summaries using one
    bespoke evidence classifier and generic bounded table summaries. Any needed
@@ -153,8 +157,8 @@ completed surface covers all exact component tables and filesystem components,
 and partitions `evidence_pin` into
 `proof-bundle:<bundle_id>`, `investigation-artifact:<artifact_id>`, and other
 exact store-accepted kind namespaces. It must not list identities, disclose
-repository names, or mislabel logical rows/canonical bytes as physical
-SurrealDB bytes.
+repository names, combine unlike logical/canonical/apparent/physical byte
+kinds, or mislabel logical rows/canonical bytes as physical SurrealDB bytes.
 
 Data-volume total/available space remains a separate filesystem metric. None of
 the five follow-ups adds cleanup, deletion, backup/restore mutation, a retention
