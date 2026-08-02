@@ -85,7 +85,7 @@ func (factory provisionalWorkbenchCorpusFactory) New(
 
 func TestProvisionalWorkbenchResolvesWorkerPublishedContract(t *testing.T) {
 	ctx := t.Context()
-	st, err := store.OpenLocal(ctx, t.TempDir())
+	st, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

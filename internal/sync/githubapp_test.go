@@ -127,7 +127,7 @@ func TestSyncGitHubAppMode(t *testing.T) {
 	t.Cleanup(func() { ghAPIBase = old })
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,7 +205,7 @@ func TestSyncGitHubAppUserSelectorUsesInstallationRepos(t *testing.T) {
 	old := ghAPIBase
 	ghAPIBase = srv.URL
 	t.Cleanup(func() { ghAPIBase = old })
-	st, err := store.OpenLocal(ctx, t.TempDir())
+	st, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -70,7 +70,7 @@ func TestSyncGiteaEndToEnd(t *testing.T) {
 	defer srv.Close()
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}

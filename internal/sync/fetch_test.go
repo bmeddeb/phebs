@@ -34,7 +34,7 @@ func TestFetchHandler(t *testing.T) {
 	gitc(t, origin, "commit", "-m", "one")
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestResync(t *testing.T) {
 	defer cancel()
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}

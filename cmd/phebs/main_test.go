@@ -101,7 +101,7 @@ func (authenticationWorkbenchChecklistFake) RecordDisposition(
 func TestHTTPHandlerAuthenticationBoundaries(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	st, err := store.OpenLocal(ctx, t.TempDir())
+	st, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -550,7 +550,7 @@ func authenticationWorkbenchPlan() store.WorkbenchPlan {
 func TestVersionCapabilitiesRequireAuthenticatedPrincipal(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	st, err := store.OpenLocal(ctx, t.TempDir())
+	st, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -990,7 +990,7 @@ func TestPrintVersion(t *testing.T) {
 func TestEvidenceViewUsesAuthenticatedPrincipal(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	st, err := store.OpenLocal(ctx, t.TempDir())
+	st, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -290,7 +290,7 @@ func TestSyncGitHubEndToEnd(t *testing.T) {
 	t.Cleanup(func() { ghAPIBase = old })
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -378,7 +378,7 @@ func TestSyncGitHubAuthedUserListsPrivate(t *testing.T) {
 	t.Cleanup(func() { ghAPIBase = old })
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}

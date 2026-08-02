@@ -83,7 +83,7 @@ func TestSyncFollowsSourceBranch(t *testing.T) {
 	gitc(t, origin, "commit", "-m", "on main")
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestWatcherEnqueuesOnHeadMove(t *testing.T) {
 	gitc(t, origin, "add", ".")
 	gitc(t, origin, "commit", "-m", "one")
 
-	st, err := store.OpenLocal(ctx, t.TempDir())
+	st, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

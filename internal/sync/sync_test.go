@@ -99,7 +99,7 @@ func TestSyncGenericEndToEnd(t *testing.T) {
 	gitc(t, origin, "commit", "-m", "one")
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestSyncHomeRelativeEndToEnd(t *testing.T) {
 	gitc(t, origin, "commit", "-m", "initial")
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,7 +254,7 @@ func TestOrchestration(t *testing.T) {
 	gitc(t, origin, "commit", "-m", "init")
 
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}

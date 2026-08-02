@@ -35,7 +35,7 @@ func aclStore(t *testing.T, ctx context.Context, dataDir string) *store.Surreal 
 	if _, err := exec.LookPath("surreal"); err != nil {
 		t.Skip("surreal binary not installed")
 	}
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}

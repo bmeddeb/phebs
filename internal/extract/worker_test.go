@@ -26,7 +26,7 @@ func newTestStore(t *testing.T) *store.Surreal {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
-	s, err := store.OpenLocal(ctx, t.TempDir())
+	s, err := store.OpenLocalMemory(ctx, t.TempDir())
 	if err != nil {
 		t.Fatalf("OpenLocal: %v", err)
 	}

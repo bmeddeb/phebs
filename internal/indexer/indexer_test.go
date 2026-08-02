@@ -101,7 +101,7 @@ func newIndexer(t *testing.T, ctx context.Context) (*indexer.Indexer, store.Stor
 		t.Skip("surreal binary not installed")
 	}
 	dataDir := t.TempDir()
-	st, err := store.OpenLocal(ctx, dataDir)
+	st, err := store.OpenLocalMemory(ctx, dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
