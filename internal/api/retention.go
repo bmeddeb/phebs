@@ -23,9 +23,10 @@ const (
 	RetentionStatusWarningHeader                     = "X-Phebs-Warning-Code"
 	RetentionStatusProofBundlePositiveLifetimeEffect = "deletes the expired bundle and exactly its proof-bundle:<bundle_id> evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible"
 
-	RetentionStatusOwnerCount         = 12
-	RetentionStatusComponentCount     = 52
-	RetentionStatusCoreComponentCount = 21
+	RetentionStatusOwnerCount                  = 12
+	RetentionStatusComponentCount              = 52
+	RetentionStatusCoreComponentCount          = 21
+	RetentionStatusInvestigationComponentCount = 24
 
 	// RetentionStatusReportedIdentityLimit is the most identities one summary
 	// may represent exactly. The scan limit owns one cap-plus-one sentinel so a
@@ -150,6 +151,15 @@ var coreRetentionOwnerIDs = map[string]struct{}{
 	"caller_rows":           {},
 }
 
+var investigationRetentionOwnerIDs = map[string]struct{}{
+	"investigation_workbench_rows": {},
+}
+
+type retentionComponentCollector func(
+	context.Context,
+	[]store.RetentionComponentRequest,
+) ([]store.RetentionComponentResult, error)
+
 // NewCoreRetentionStatusSource adapts the bounded store-plane collector into
 // the fixed T30.6o response shell. Ordinary component failures stay localized
 // as unavailable metrics; malformed collector output and request cancellation
@@ -158,40 +168,79 @@ func NewCoreRetentionStatusSource(
 	source store.CoreRetentionStore,
 	reportError RetentionStatusErrorReporter,
 ) RetentionStatusSource {
-	if reportError == nil {
-		reportError = func(
-			_ context.Context,
-			component store.RetentionComponent,
-			err error,
-		) {
-			class := "query_error"
-			if errors.Is(err, store.ErrRetentionComponentUnavailable) {
-				class = "not_ready"
-			}
-			log.Printf(
-				"retention status: component=%q class=%s error=%v",
-				component,
-				class,
-				err,
-			)
+	if source == nil {
+		return func(context.Context, *RetentionStatus) error { return nil }
+	}
+	return newRetentionComponentStatusSource(
+		"core",
+		source.CollectCoreRetention,
+		coreRetentionOwnerIDs,
+		RetentionStatusCoreComponentCount,
+		reportError,
+	)
+}
+
+// NewInvestigationRetentionStatusSource adapts the 24-table T30.6q collector
+// into the fixed response shell. It does not include investigation_run_job;
+// that table remains part of the core durable-job component.
+func NewInvestigationRetentionStatusSource(
+	source store.InvestigationRetentionStatusStore,
+	reportError RetentionStatusErrorReporter,
+) RetentionStatusSource {
+	if source == nil {
+		return func(context.Context, *RetentionStatus) error { return nil }
+	}
+	return newRetentionComponentStatusSource(
+		"investigation",
+		source.CollectInvestigationRetention,
+		investigationRetentionOwnerIDs,
+		RetentionStatusInvestigationComponentCount,
+		reportError,
+	)
+}
+
+// NewStoreRetentionStatusSource composes the independently bounded core and
+// Investigation collectors in fixed registry order.
+func NewStoreRetentionStatusSource(
+	source store.RetentionStatusStore,
+	reportError RetentionStatusErrorReporter,
+) RetentionStatusSource {
+	if source == nil {
+		return func(context.Context, *RetentionStatus) error { return nil }
+	}
+	core := NewCoreRetentionStatusSource(source, reportError)
+	investigation := NewInvestigationRetentionStatusSource(source, reportError)
+	return func(ctx context.Context, status *RetentionStatus) error {
+		if err := core(ctx, status); err != nil {
+			return err
 		}
+		return investigation(ctx, status)
+	}
+}
+
+func newRetentionComponentStatusSource(
+	scope string,
+	collect retentionComponentCollector,
+	ownerIDs map[string]struct{},
+	wantComponents int,
+	reportError RetentionStatusErrorReporter,
+) RetentionStatusSource {
+	if reportError == nil {
+		reportError = defaultRetentionStatusErrorReporter
 	}
 	return func(ctx context.Context, status *RetentionStatus) error {
-		if source == nil {
-			return nil
-		}
-		requests := make([]store.RetentionComponentRequest, 0, RetentionStatusCoreComponentCount)
-		components := make(map[store.RetentionComponent]*RetentionComponentStatus, RetentionStatusCoreComponentCount)
+		requests := make([]store.RetentionComponentRequest, 0, wantComponents)
+		components := make(map[store.RetentionComponent]*RetentionComponentStatus, wantComponents)
 		for ownerIndex := range status.Owners {
 			owner := &status.Owners[ownerIndex]
-			if _, core := coreRetentionOwnerIDs[owner.ID]; !core {
+			if _, selected := ownerIDs[owner.ID]; !selected {
 				continue
 			}
 			for componentIndex := range owner.Components {
 				component := &owner.Components[componentIndex]
 				id := store.RetentionComponent(component.ID)
 				if _, duplicate := components[id]; duplicate {
-					return fmt.Errorf("duplicate core retention component %q", id)
+					return fmt.Errorf("duplicate %s retention component %q", scope, id)
 				}
 				components[id] = component
 				requests = append(requests, store.RetentionComponentRequest{
@@ -201,11 +250,11 @@ func NewCoreRetentionStatusSource(
 				})
 			}
 		}
-		if len(requests) != RetentionStatusCoreComponentCount {
-			return fmt.Errorf("core retention component count %d is not %d", len(requests), RetentionStatusCoreComponentCount)
+		if len(requests) != wantComponents {
+			return fmt.Errorf("%s retention component count %d is not %d", scope, len(requests), wantComponents)
 		}
 
-		results, err := source.CollectCoreRetention(ctx, requests)
+		results, err := collect(ctx, requests)
 		if err != nil {
 			return err
 		}
@@ -213,28 +262,45 @@ func NewCoreRetentionStatusSource(
 		for _, result := range results {
 			component, exists := components[result.Component]
 			if !exists {
-				return fmt.Errorf("collector returned unknown core retention component %q", result.Component)
+				return fmt.Errorf("collector returned unknown %s retention component %q", scope, result.Component)
 			}
 			if _, duplicate := seen[result.Component]; duplicate {
-				return fmt.Errorf("collector returned duplicate core retention component %q", result.Component)
+				return fmt.Errorf("collector returned duplicate %s retention component %q", scope, result.Component)
 			}
 			seen[result.Component] = struct{}{}
 			if result.Err != nil {
 				reportError(ctx, result.Component, result.Err)
 				continue
 			}
-			if err := applyCoreRetentionSummary(component, result.Summary); err != nil {
-				return fmt.Errorf("core retention component %q: %w", result.Component, err)
+			if err := applyRetentionSummary(component, result.Summary); err != nil {
+				return fmt.Errorf("%s retention component %q: %w", scope, result.Component, err)
 			}
 		}
 		if len(seen) != len(requests) {
-			return fmt.Errorf("collector returned %d of %d core retention components", len(seen), len(requests))
+			return fmt.Errorf("collector returned %d of %d %s retention components", len(seen), len(requests), scope)
 		}
 		return nil
 	}
 }
 
-func applyCoreRetentionSummary(
+func defaultRetentionStatusErrorReporter(
+	_ context.Context,
+	component store.RetentionComponent,
+	err error,
+) {
+	class := "query_error"
+	if errors.Is(err, store.ErrRetentionComponentUnavailable) {
+		class = "not_ready"
+	}
+	log.Printf(
+		"retention status: component=%q class=%s error=%v",
+		component,
+		class,
+		err,
+	)
+}
+
+func applyRetentionSummary(
 	component *RetentionComponentStatus,
 	summary store.RetentionComponentSummary,
 ) error {
@@ -374,30 +440,30 @@ var retentionStatusRegistry = [...]retentionOwnerDefinition{
 		databaseRetentionComponent(string(store.JobInvestigate)),
 	}},
 	{id: "investigation_workbench_rows", scope: "investigation/revision/run/artifact/review/watch", decisionRelation: "incidental_growth_requires_separate_decision", accumulating: true, components: []retentionComponentDefinition{
-		databaseRetentionComponent("investigation"),
-		databaseRetentionComponent("investigation_revision"),
-		databaseRetentionComponent("investigation_change_brief"),
-		databaseRetentionComponent("investigation_workbench_mutation"),
-		databaseRetentionComponent("investigation_workbench_disposition"),
-		databaseRetentionComponent("investigation_run"),
-		databaseRetentionComponent("investigation_run_event"),
-		databaseRetentionComponent("investigation_run_artifact"),
-		databaseRetentionComponent("investigation_artifact_owner"),
-		databaseRetentionComponent("investigation_artifact_owner_release"),
-		databaseRetentionComponent("investigation_artifact_retention_override"),
-		databaseRetentionComponent("investigation_decision"),
-		databaseRetentionComponent("investigation_disposition"),
-		databaseRetentionComponent("investigation_baseline_designation"),
-		databaseRetentionComponent("investigation_grant"),
-		databaseRetentionComponent("investigation_cursor"),
-		databaseRetentionComponent("investigation_creation"),
-		databaseRetentionComponent("investigation_consumer_snapshot"),
-		databaseRetentionComponent("investigation_consumer_edge_ledger"),
-		databaseRetentionComponent("investigation_review_projection"),
-		databaseRetentionComponent("investigation_review_item"),
-		databaseRetentionComponent("investigation_dossier"),
-		databaseRetentionComponent("investigation_watch"),
-		databaseRetentionComponent("investigation_watch_revision"),
+		databaseRetentionComponent(string(store.RetentionInvestigation)),
+		databaseRetentionComponent(string(store.RetentionInvestigationRevision)),
+		databaseRetentionComponent(string(store.RetentionInvestigationChangeBrief)),
+		databaseRetentionComponent(string(store.RetentionWorkbenchMutation)),
+		databaseRetentionComponent(string(store.RetentionWorkbenchDisposition)),
+		databaseRetentionComponent(string(store.RetentionInvestigationRun)),
+		databaseRetentionComponent(string(store.RetentionInvestigationRunEvent)),
+		databaseRetentionComponent(string(store.RetentionInvestigationRunArtifact)),
+		databaseRetentionComponent(string(store.RetentionInvestigationArtifactOwner)),
+		databaseRetentionComponent(string(store.RetentionInvestigationArtifactOwnerRelease)),
+		databaseRetentionComponent(string(store.RetentionInvestigationArtifactRetentionOverride)),
+		databaseRetentionComponent(string(store.RetentionInvestigationDecision)),
+		databaseRetentionComponent(string(store.RetentionInvestigationDisposition)),
+		databaseRetentionComponent(string(store.RetentionInvestigationBaselineDesignation)),
+		databaseRetentionComponent(string(store.RetentionInvestigationGrant)),
+		databaseRetentionComponent(string(store.RetentionInvestigationCursor)),
+		databaseRetentionComponent(string(store.RetentionInvestigationCreation)),
+		databaseRetentionComponent(string(store.RetentionInvestigationConsumerSnapshot)),
+		databaseRetentionComponent(string(store.RetentionInvestigationConsumerEdgeLedger)),
+		databaseRetentionComponent(string(store.RetentionInvestigationReviewProjection)),
+		databaseRetentionComponent(string(store.RetentionInvestigationReviewItem)),
+		databaseRetentionComponent(string(store.RetentionInvestigationDossier)),
+		databaseRetentionComponent(string(store.RetentionInvestigationWatch)),
+		databaseRetentionComponent(string(store.RetentionInvestigationWatchRevision)),
 	}},
 	{id: "candidate_artifacts", scope: "repository/generation", decisionRelation: "selected_t306m_unbounded_retention", accumulating: true, components: []retentionComponentDefinition{
 		databaseRetentionComponent("candidate_manifest_publication"),

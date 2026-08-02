@@ -83,15 +83,20 @@ unconditional pre-store-open capacity warning. Every endpoint response carries
 the warning header, and successful bodies repeat the code. Its fixed
 19,955-byte empty response preserves ordered non-combinable byte kinds and
 discloses the proof-bundle-only retention control. T30.6p now fills 21 core
-Surreal components with bounded aggregate table/namespace totals while the
-other 31 components and both data-volume metrics remain unavailable. T30.6q
-next fills the 24 Investigation/Workbench
-components, and T30.6r fills the seven derived store/filesystem components and
-completes the surface. T30.6p/T30.6q cannot move lifetime work into a
-synchronous index build or backfill during store open; T30.6r uses bounded
-incremental directory scans. Partial bootstrap or runtime I/O remains
-explicitly unavailable, never exact zero. None of T30.6n–T30.6r adds deletion,
-retention configuration, or owner lifecycle mutation. T30.6a now emits one
+Surreal components with bounded aggregate table/namespace totals. T30.6q now
+adds one aggregate row total for each of the exact 24
+Investigation/Workbench tables. Together they populate 45 components under
+3,550 report and 3,595 scan identities; the final seven derived components and
+both data-volume metrics remain unavailable. T30.6q uses one catalog preflight
+that returns at most the 24 allowlisted table names and at most 24 direct
+bounded record-ID table scans—25 calls, or 53 together
+with T30.6p—with no new index, backfill, or startup reconstruction. T30.6r is
+next and completes the surface with bounded incremental directory scans.
+Concurrent authorized requests independently multiply the P+Q per-request
+bounds because this surface adds no retention-specific cache or concurrency
+gate. Runtime I/O remains explicitly unavailable, never exact zero. None of
+T30.6n–T30.6r adds deletion, retention configuration, or owner lifecycle
+mutation. T30.6a now emits one
 non-authoritative, source-free, 64 KiB-capped extraction operation report per
 repository job. Shared queue, mirror-lock, pointer, and strict-open work is
 recorded once at job level; nested domains carry only frozen generic outcomes
@@ -153,9 +158,9 @@ caller-generation publication, T30.6j authorized exact Caller Map reads,
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
 caller integration, T30.6m historical-publication retention decision,
 T30.6n bounded job-history reads and startup migration, T30.6o's status shell,
-and T30.6p core Surreal collectors are shipped; T30.6q
-Investigation/Workbench collector is next, followed by T30.6r derived collectors. T30.7 waits
-for that complete sequence.
+T30.6p core Surreal collectors, and T30.6q's Investigation/Workbench collector
+are shipped; T30.6r derived collectors are next. T30.7 waits for that complete
+sequence.
 T30.6g registers the ordered gRPC/Thrift resolver adapters and materializes one
 immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,

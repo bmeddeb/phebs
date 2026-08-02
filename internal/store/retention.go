@@ -10,26 +10,50 @@ import (
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
-// RetentionComponent identifies one T30.6p database-backed component. The
-// values deliberately match the fixed API registry, but the store owns the
-// query allowlist so a caller cannot select an arbitrary SurrealDB table or
+// RetentionComponent identifies one T30.6p/T30.6q database-backed component.
+// The values deliberately match the fixed API registry, but the store owns the
+// query allowlists so a caller cannot select an arbitrary SurrealDB table or
 // expression.
 type RetentionComponent string
 
 const (
-	RetentionExtractionRun            RetentionComponent = "extraction_run"
-	RetentionSnapshotEvidence         RetentionComponent = "snapshot_evidence"
-	RetentionAssertion                RetentionComponent = "assertion"
-	RetentionEvidenceAtom             RetentionComponent = "evidence_atom"
-	RetentionExtractionAttempt        RetentionComponent = "extraction_attempt"
-	RetentionExtractionOutcome        RetentionComponent = "extraction_domain_outcome"
-	RetentionProofBundlePin           RetentionComponent = "evidence_pin[kind=proof-bundle:<bundle_id>]"
-	RetentionInvestigationArtifactPin RetentionComponent = "evidence_pin[kind=investigation-artifact:<artifact_id>]"
-	RetentionOtherEvidencePin         RetentionComponent = "evidence_pin[kind=<other exact store-accepted value>]"
-	RetentionProofBundle              RetentionComponent = "proof_bundle"
-	RetentionCallerPublication        RetentionComponent = "caller_generation_publication"
-	RetentionCallerAdmission          RetentionComponent = "caller_generation_admission"
-	RetentionCallerLeafOutcome        RetentionComponent = "caller_leaf_outcome"
+	RetentionExtractionRun                          RetentionComponent = "extraction_run"
+	RetentionSnapshotEvidence                       RetentionComponent = "snapshot_evidence"
+	RetentionAssertion                              RetentionComponent = "assertion"
+	RetentionEvidenceAtom                           RetentionComponent = "evidence_atom"
+	RetentionExtractionAttempt                      RetentionComponent = "extraction_attempt"
+	RetentionExtractionOutcome                      RetentionComponent = "extraction_domain_outcome"
+	RetentionProofBundlePin                         RetentionComponent = "evidence_pin[kind=proof-bundle:<bundle_id>]"
+	RetentionInvestigationArtifactPin               RetentionComponent = "evidence_pin[kind=investigation-artifact:<artifact_id>]"
+	RetentionOtherEvidencePin                       RetentionComponent = "evidence_pin[kind=<other exact store-accepted value>]"
+	RetentionProofBundle                            RetentionComponent = "proof_bundle"
+	RetentionCallerPublication                      RetentionComponent = "caller_generation_publication"
+	RetentionCallerAdmission                        RetentionComponent = "caller_generation_admission"
+	RetentionCallerLeafOutcome                      RetentionComponent = "caller_leaf_outcome"
+	RetentionInvestigation                          RetentionComponent = "investigation"
+	RetentionInvestigationRevision                  RetentionComponent = "investigation_revision"
+	RetentionInvestigationChangeBrief               RetentionComponent = "investigation_change_brief"
+	RetentionWorkbenchMutation                      RetentionComponent = "investigation_workbench_mutation"
+	RetentionWorkbenchDisposition                   RetentionComponent = "investigation_workbench_disposition"
+	RetentionInvestigationRun                       RetentionComponent = "investigation_run"
+	RetentionInvestigationRunEvent                  RetentionComponent = "investigation_run_event"
+	RetentionInvestigationRunArtifact               RetentionComponent = "investigation_run_artifact"
+	RetentionInvestigationArtifactOwner             RetentionComponent = "investigation_artifact_owner"
+	RetentionInvestigationArtifactOwnerRelease      RetentionComponent = "investigation_artifact_owner_release"
+	RetentionInvestigationArtifactRetentionOverride RetentionComponent = "investigation_artifact_retention_override"
+	RetentionInvestigationDecision                  RetentionComponent = "investigation_decision"
+	RetentionInvestigationDisposition               RetentionComponent = "investigation_disposition"
+	RetentionInvestigationBaselineDesignation       RetentionComponent = "investigation_baseline_designation"
+	RetentionInvestigationGrant                     RetentionComponent = "investigation_grant"
+	RetentionInvestigationCursor                    RetentionComponent = "investigation_cursor"
+	RetentionInvestigationCreation                  RetentionComponent = "investigation_creation"
+	RetentionInvestigationConsumerSnapshot          RetentionComponent = "investigation_consumer_snapshot"
+	RetentionInvestigationConsumerEdgeLedger        RetentionComponent = "investigation_consumer_edge_ledger"
+	RetentionInvestigationReviewProjection          RetentionComponent = "investigation_review_projection"
+	RetentionInvestigationReviewItem                RetentionComponent = "investigation_review_item"
+	RetentionInvestigationDossier                   RetentionComponent = "investigation_dossier"
+	RetentionInvestigationWatch                     RetentionComponent = "investigation_watch"
+	RetentionInvestigationWatchRevision             RetentionComponent = "investigation_watch_revision"
 )
 
 // RetentionComponentRequest gives one component its non-transferable share of
@@ -67,14 +91,31 @@ type CoreRetentionStore interface {
 	CollectCoreRetention(context.Context, []RetentionComponentRequest) ([]RetentionComponentResult, error)
 }
 
+// InvestigationRetentionStatusStore is the T30.6q bounded Investigation/Workbench
+// inventory boundary. It deliberately excludes investigation_run_job, which
+// remains part of CoreRetentionStore's durable-job group.
+type InvestigationRetentionStatusStore interface {
+	CollectInvestigationRetention(context.Context, []RetentionComponentRequest) ([]RetentionComponentResult, error)
+}
+
+// RetentionStatusStore is the database-backed portion of the fixed retention
+// status surface shipped through T30.6q.
+type RetentionStatusStore interface {
+	CoreRetentionStore
+	InvestigationRetentionStatusStore
+}
+
 var _ CoreRetentionStore = (*Surreal)(nil)
+var _ InvestigationRetentionStatusStore = (*Surreal)(nil)
+var _ RetentionStatusStore = (*Surreal)(nil)
 
 var ErrRetentionComponentUnavailable = errors.New("retention component unavailable")
 
 type retentionReadiness int
 
 const (
-	retentionEvidenceReady retentionReadiness = iota
+	retentionNoReadiness retentionReadiness = iota
+	retentionEvidenceReady
 	retentionEvidencePinReady
 	retentionJobsReady
 	retentionCallerLeafReady
@@ -156,11 +197,76 @@ var coreRetentionPlans = map[RetentionComponent]retentionQueryPlan{
 	},
 }
 
+var investigationRetentionPlans = map[RetentionComponent]retentionQueryPlan{
+	RetentionInvestigation:                     {table: "investigation"},
+	RetentionInvestigationRevision:             {table: "investigation_revision"},
+	RetentionInvestigationChangeBrief:          {table: "investigation_change_brief"},
+	RetentionWorkbenchMutation:                 {table: "investigation_workbench_mutation"},
+	RetentionWorkbenchDisposition:              {table: "investigation_workbench_disposition"},
+	RetentionInvestigationRun:                  {table: "investigation_run"},
+	RetentionInvestigationRunEvent:             {table: "investigation_run_event"},
+	RetentionInvestigationRunArtifact:          {table: "investigation_run_artifact"},
+	RetentionInvestigationArtifactOwner:        {table: "investigation_artifact_owner"},
+	RetentionInvestigationArtifactOwnerRelease: {table: "investigation_artifact_owner_release"},
+	RetentionInvestigationArtifactRetentionOverride: {
+		table: "investigation_artifact_retention_override",
+	},
+	RetentionInvestigationDecision:            {table: "investigation_decision"},
+	RetentionInvestigationDisposition:         {table: "investigation_disposition"},
+	RetentionInvestigationBaselineDesignation: {table: "investigation_baseline_designation"},
+	RetentionInvestigationGrant:               {table: "investigation_grant"},
+	RetentionInvestigationCursor:              {table: "investigation_cursor"},
+	RetentionInvestigationCreation:            {table: "investigation_creation"},
+	RetentionInvestigationConsumerSnapshot:    {table: "investigation_consumer_snapshot"},
+	RetentionInvestigationConsumerEdgeLedger:  {table: "investigation_consumer_edge_ledger"},
+	RetentionInvestigationReviewProjection:    {table: "investigation_review_projection"},
+	RetentionInvestigationReviewItem:          {table: "investigation_review_item"},
+	RetentionInvestigationDossier:             {table: "investigation_dossier"},
+	RetentionInvestigationWatch:               {table: "investigation_watch"},
+	RetentionInvestigationWatchRevision:       {table: "investigation_watch_revision"},
+}
+
+// Keep table definitions inside SurrealDB. Only names intersecting the fixed
+// T30.6q allowlist may cross the WebSocket boundary.
+const investigationRetentionCatalogSQL = `
+RETURN array::intersect(
+	object::keys((INFO FOR DB).tables),
+	[
+		'investigation',
+		'investigation_revision',
+		'investigation_change_brief',
+		'investigation_workbench_mutation',
+		'investigation_workbench_disposition',
+		'investigation_run',
+		'investigation_run_event',
+		'investigation_run_artifact',
+		'investigation_artifact_owner',
+		'investigation_artifact_owner_release',
+		'investigation_artifact_retention_override',
+		'investigation_decision',
+		'investigation_disposition',
+		'investigation_baseline_designation',
+		'investigation_grant',
+		'investigation_cursor',
+		'investigation_creation',
+		'investigation_consumer_snapshot',
+		'investigation_consumer_edge_ledger',
+		'investigation_review_projection',
+		'investigation_review_item',
+		'investigation_dossier',
+		'investigation_watch',
+		'investigation_watch_revision'
+	]
+)`
+
 const (
-	maxCoreRetentionReportedPerComponent = 79
-	maxCoreRetentionRequests             = 21
-	maxCoreRetentionReportedIdentities   = 1_656
-	maxCoreRetentionScanIdentities       = 1_677
+	maxRetentionReportedPerComponent            = 79
+	maxCoreRetentionRequests                    = 21
+	maxCoreRetentionReportedIdentities          = 1_656
+	maxCoreRetentionScanIdentities              = 1_677
+	maxInvestigationRetentionRequests           = 24
+	maxInvestigationRetentionReportedIdentities = 1_894
+	maxInvestigationRetentionScanIdentities     = 1_918
 )
 
 type retentionRow struct {
@@ -177,35 +283,52 @@ type retentionReadyResult struct {
 	err   error
 }
 
-func (s *Surreal) CollectCoreRetention(
-	ctx context.Context,
+func validateRetentionRequests(
+	scope string,
 	requests []RetentionComponentRequest,
-) ([]RetentionComponentResult, error) {
-	if len(requests) > maxCoreRetentionRequests {
-		return nil, fmt.Errorf("collect core retention: %d requests exceed %d", len(requests), maxCoreRetentionRequests)
+	plans map[RetentionComponent]retentionQueryPlan,
+	maxRequests, maxReported, maxScan int,
+) error {
+	if len(requests) > maxRequests {
+		return fmt.Errorf("collect %s retention: %d requests exceed %d", scope, len(requests), maxRequests)
 	}
 	seen := make(map[RetentionComponent]struct{}, len(requests))
 	reportedTotal, scanTotal := 0, 0
 	for _, request := range requests {
-		_, ok := coreRetentionPlans[request.Component]
-		if !ok {
-			return nil, fmt.Errorf("collect core retention: unsupported component %q", request.Component)
+		if _, ok := plans[request.Component]; !ok {
+			return fmt.Errorf("collect %s retention: unsupported component %q", scope, request.Component)
 		}
 		if _, duplicate := seen[request.Component]; duplicate {
-			return nil, fmt.Errorf("collect core retention: duplicate component %q", request.Component)
+			return fmt.Errorf("collect %s retention: duplicate component %q", scope, request.Component)
 		}
 		seen[request.Component] = struct{}{}
 		if request.ReportedIdentities <= 0 ||
-			request.ReportedIdentities > maxCoreRetentionReportedPerComponent ||
+			request.ReportedIdentities > maxRetentionReportedPerComponent ||
 			request.ScanIdentities != request.ReportedIdentities+1 {
-			return nil, fmt.Errorf("collect core retention: invalid allocation for %q", request.Component)
+			return fmt.Errorf("collect %s retention: invalid allocation for %q", scope, request.Component)
 		}
 		reportedTotal += request.ReportedIdentities
 		scanTotal += request.ScanIdentities
 	}
-	if reportedTotal > maxCoreRetentionReportedIdentities ||
-		scanTotal > maxCoreRetentionScanIdentities {
-		return nil, fmt.Errorf("collect core retention: aggregate allocation %d/%d exceeds %d/%d", reportedTotal, scanTotal, maxCoreRetentionReportedIdentities, maxCoreRetentionScanIdentities)
+	if reportedTotal > maxReported || scanTotal > maxScan {
+		return fmt.Errorf("collect %s retention: aggregate allocation %d/%d exceeds %d/%d", scope, reportedTotal, scanTotal, maxReported, maxScan)
+	}
+	return nil
+}
+
+func (s *Surreal) CollectCoreRetention(
+	ctx context.Context,
+	requests []RetentionComponentRequest,
+) ([]RetentionComponentResult, error) {
+	if err := validateRetentionRequests(
+		"core",
+		requests,
+		coreRetentionPlans,
+		maxCoreRetentionRequests,
+		maxCoreRetentionReportedIdentities,
+		maxCoreRetentionScanIdentities,
+	); err != nil {
+		return nil, err
 	}
 
 	readiness := make(map[retentionReadiness]retentionReadyResult, 5)
@@ -246,6 +369,64 @@ func (s *Surreal) CollectCoreRetention(
 		}
 		if !ready.ready {
 			result.Err = ErrRetentionComponentUnavailable
+			results = append(results, result)
+			continue
+		}
+		rows, err := s.retentionRows(ctx, plan, request.ScanIdentities)
+		if err != nil {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			result.Err = err
+			results = append(results, result)
+			continue
+		}
+		result.Summary = summarizeRetentionRows(plan, request, rows)
+		results = append(results, result)
+	}
+	return results, nil
+}
+
+func (s *Surreal) CollectInvestigationRetention(
+	ctx context.Context,
+	requests []RetentionComponentRequest,
+) ([]RetentionComponentResult, error) {
+	if err := validateRetentionRequests(
+		"investigation",
+		requests,
+		investigationRetentionPlans,
+		maxInvestigationRetentionRequests,
+		maxInvestigationRetentionReportedIdentities,
+		maxInvestigationRetentionScanIdentities,
+	); err != nil {
+		return nil, err
+	}
+	if len(requests) == 0 {
+		return []RetentionComponentResult{}, nil
+	}
+	tables, catalogErr := s.retentionCatalogTables(ctx)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	results := make([]RetentionComponentResult, 0, len(requests))
+	for _, request := range requests {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		result := RetentionComponentResult{Component: request.Component}
+		if catalogErr != nil {
+			result.Err = catalogErr
+			results = append(results, result)
+			continue
+		}
+		plan := investigationRetentionPlans[request.Component]
+		if _, present := tables[plan.table]; !present {
+			result.Err = fmt.Errorf(
+				"%w: table %s is absent from the database catalog",
+				ErrRetentionComponentUnavailable,
+				plan.table,
+			)
 			results = append(results, result)
 			continue
 		}
@@ -313,6 +494,38 @@ func (s *Surreal) requireRetentionIndex(
 		return fmt.Errorf("inspect retention index %s: %w", index, err)
 	}
 	return nil
+}
+
+func (s *Surreal) retentionCatalogTables(ctx context.Context) (map[string]struct{}, error) {
+	results, err := surrealdb.Query[[]string](ctx, s.db, investigationRetentionCatalogSQL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("inspect retention database catalog: %w", err)
+	}
+	if err := retentionQueryResultsError(results); err != nil {
+		return nil, fmt.Errorf("inspect retention database catalog: %w", err)
+	}
+
+	names := (*results)[0].Result
+	if len(names) > len(investigationRetentionPlans) {
+		return nil, fmt.Errorf(
+			"inspect retention database catalog: %d tables exceed fixed projection of %d",
+			len(names),
+			len(investigationRetentionPlans),
+		)
+	}
+
+	tables := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		plan, allowed := investigationRetentionPlans[RetentionComponent(name)]
+		if !allowed || plan.table != name {
+			return nil, fmt.Errorf("inspect retention database catalog: unexpected table %q", name)
+		}
+		if _, duplicate := tables[name]; duplicate {
+			return nil, fmt.Errorf("inspect retention database catalog: duplicate table %q", name)
+		}
+		tables[name] = struct{}{}
+	}
+	return tables, nil
 }
 
 func (s *Surreal) retentionRows(

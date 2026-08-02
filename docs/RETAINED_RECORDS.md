@@ -47,9 +47,9 @@ at registry indices 0–17 and 48–50 for at most 1,677 scanned identities, whi
 the store accepts any report allocation from 1 through 79 only with scan equal
 to report plus one and enforces the unchanged 1,656/1,677 aggregate ceilings. It
 reports only attributable logical outcome-receipt, canonical proof-content, and
-canonical caller-receipt bytes. Physical database attribution, both data-volume
-metrics, and the other 31 components remain unavailable. Each authorized
-request produces 21 bounded
+canonical caller-receipt bytes. At the T30.6p boundary, physical database
+attribution, both data-volume metrics, and the other 31 components remained
+unavailable. Each authorized request produces 21 bounded
 component summaries using at most 23 row-range queries after four cached
 writer/migration-marker point checks and one pin-index catalog check. Every
 one-statement query requires exactly one result envelope; a failed component
@@ -58,12 +58,23 @@ from the closed operational class set—`not_ready` or `query_error`—at most 2
 per request. The existing schema batch adds a scalar string definition for
 `evidence_pin.kind` and reuses the existing kind index; it adds no row backfill,
 writer-generation bump, new
-query index, sync-tick work, or writer work. T30.6q owns the exact 24
-Investigation/Workbench tables, and T30.6r owns seven bounded derived store and
-filesystem components and completes the status
-surface. Any database-index bootstrap introduced by T30.6q must be bounded and
-restart-resumable, and T30.6r directory scans must be bounded. None of these
-tickets changes deletion, configuration, or owner lifecycle semantics.
+query index, sync-tick work, or writer work. T30.6q now owns the exact 24
+Investigation/Workbench tables. Registry indices 18–39 retain 79 report slots
+plus one sentinel and the two Watch components at 40–41 retain 78 plus one:
+1,894 reported and at most 1,918 scanned identities. One catalog preflight plus
+at most 24 direct bounded record-ID scans costs at most 25 queries, retains at
+most 80 selected IDs for the active table, returns at most the 24 fixed
+allowlisted catalog names, and adds no index or backfill.
+Missing tables and read failures remain localized, and successful summaries
+are weakly consistent. T30.6p plus T30.6q populate 45 components within
+3,550-report/3,595-scan and 53-query ceilings; physical database attribution,
+both data-volume metrics, and the final seven derived components remain
+unavailable. Concurrent authorized requests independently multiply the
+per-request query and identity bounds; this surface adds no separate cache or
+concurrency gate. T30.6r owns those bounded derived store/filesystem components
+and completes the status surface; its directory scans must remain bounded.
+None of these tickets changes deletion, configuration, or owner lifecycle
+semantics.
 
 ### Deterministic product fixtures
 

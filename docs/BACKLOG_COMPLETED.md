@@ -5765,5 +5765,77 @@ backfill, sort, index installation, or migration generation; the endpoint takes
 no owner lock, scans no corpus or filesystem, starts no child, and changes no
 deletion, retention, backup/restore, or owner lifecycle. Sync ticks, retries,
 no-ops, writers, publication transitions, and maintenance add no work. T30.6q
-is next and fills one aggregate summary for each exact Investigation/Workbench
+follows with one aggregate summary for each exact Investigation/Workbench
 table.
+
+### T30.6q · Investigation/Workbench retention collector
+
+**T30.6q ✅ · Investigation/Workbench retention collector** *(2026-08-02;
+needs T30.6p)* — binds the fixed retention-status shell to the exact 24-table
+Investigation/Workbench owner group: Investigation, Revision, Change Brief,
+Workbench mutation and disposition receipts, Run and RunEvent, RunArtifact,
+artifact owner/release/override audit rows, Decision, Disposition, Baseline,
+grant and cursor state, guided-creation receipts, consumer snapshots and edge
+ledgers, Review projections and items, Dossiers, and Watch/WatchRevision rows.
+`investigation_run_job` remains exclusively in T30.6p's durable-job group, so
+the collector neither duplicates it nor broadens the frozen 52-component
+registry. The final seven derived store/filesystem components remain visibly
+`unavailable` for T30.6r.
+
+Each exact table reports one aggregate retained-row count across every
+immutable history and mutable owner, release, override, access, cursor,
+review, Dossier, and Watch state. The fixed v1 wire has no owner-lifecycle
+partition field, so the collector performs no hidden classification or join
+that the response could not expose. It does not subtract released owners,
+swept artifacts, superseded projections, closed Investigations, disabled
+Watches, or any other lifecycle state. Physical-database byte metrics remain
+unavailable rather than being inferred from logical rows.
+
+Registry indices 18–39 retain 79 report identities plus one private sentinel;
+indices 40–41 retain 78 plus one. The T30.6q boundary therefore accepts at
+most 24 distinct allowlisted requests, 1,894 reported identities, and 1,918
+scans. Together with T30.6p's independently enforced 1,656/1,677 allocation,
+the populated database-backed surface is exactly 45 components with aggregate
+ceilings of 3,550 reported and 3,595 scanned identities; the other seven
+components remain unavailable. The deterministic empty core-plus-Investigation
+response is 19,505 bytes under the unchanged 64-KiB encoded-response cap.
+Exhaustion below or exactly at a report cap is `exact`, while consuming the
+private sentinel reports that component's cap as a truncated `lower_bound`.
+Allocations cannot be borrowed across components.
+
+One bounded server-side `INFO FOR DB` intersection returns only present names
+from the fixed 24-table allowlist and requires exactly one non-error result
+envelope.
+Absent or malformed catalog authority never becomes exact zero. A present
+allowlisted table then uses the same bounded record-id projection as T30.6p:
+`ORDER BY id LIMIT $scan_limit`, with the physical limit pushed into the
+TableScan and no Sort. All 24 tables already have their product identity
+indexes, but this projection requires none of them; T30.6q adds no index,
+index build, retained-row bootstrap, migration marker, or writer generation.
+A missing table affects only its component, and a row-query failure leaves
+that component unavailable while successful siblings remain visible. A
+catalog failure honestly leaves all 24 dependent summaries unavailable.
+Cancellation and malformed collector output remain request failures.
+
+The steady-state T30.6q bound is one fixed catalog query plus at most 24
+bounded row queries: at most 25 SurrealDB calls and 1,918 returned identities
+per authorized request. Combined with T30.6p, the database-backed surface uses
+at most 53 calls and 3,595 returned identities. Rows are consumed one table at
+a time, so peak row-result memory is one at-most-80-identity page plus the
+at-most-24-name catalog result and 24 summaries. These independent summaries
+are weakly consistent diagnostics, not a cross-table snapshot. There is no
+retention-specific cache or concurrency gate, so concurrent authorized
+requests independently multiply these per-request bounds; this surface
+supplies no additional process-level bound. Administrator denial still
+precedes both collectors and performs no inventory work.
+
+Startup, sync ticks, retries, no-ops, writers, publication transitions, and
+maintenance gain no work. The collector holds no owner lock, scans no corpus,
+shard, or filesystem, reads no artifact content, computes no content hash,
+starts no child, and adds no artifact sweep wiring, deletion, retention
+configuration, owner writer/lifecycle mutation, or backup/restore behavior.
+Tests pin the 24-entry registry and schema correspondence, exact request order
+and allocation, every table and retained state, empty/exact/cap-plus-one
+results, partial catalog readiness, aggregate refusal, error localization,
+composed 45-populated/7-unavailable posture, and denial before either store
+collector. T30.6r is next and completes the final seven derived components.

@@ -1188,10 +1188,12 @@ and internal error—carries
 `X-Phebs-Warning-Code: unbounded_historical_publication_retention`; every
 successful body repeats the code in `warning_code`, identifies schema
 `phebs-retention-status-v1`, and lists the complete ordered registry. T30.6p
-now populates 21 core SurrealDB components: evidence graph rows, extraction
+populates 21 core SurrealDB components: evidence graph rows, extraction
 attempts and outcomes, three evidence-pin namespaces, proof bundles, all eight
-durable job tables, and the three caller-row tables. The other 31 components,
-both installation data-volume metrics, and every per-table
+durable job tables, and the three caller-row tables. T30.6q now adds one
+aggregate count for each of the exact 24 Investigation/Workbench tables.
+Together they populate 45 components. The final seven derived components, both
+installation data-volume metrics, and every per-table
 `physical_database` byte metric remain `unavailable` with a null value. Byte
 kinds are `logical_encoded`,
 `canonical_content`, `canonical_receipt`, `apparent_file`, and
@@ -1231,8 +1233,30 @@ reads are separate, the response is a weakly consistent diagnostic rather than
 a frozen cross-table snapshot. The existing schema batch adds a scalar string
 definition for `evidence_pin.kind` and reuses the existing kind index, with no
 row backfill, writer-generation bump, or new query index. T30.6p adds no writer
-work, sync-tick work, or lifecycle mutation. T30.6q and T30.6r will populate the
-remaining Investigation/Workbench and derived store/filesystem components.
+work, sync-tick work, or lifecycle mutation.
+
+T30.6q owns registry indices 18–41. The first 22 tables receive 79 report and
+80 scan slots; `investigation_watch` and `investigation_watch_revision` receive
+78 and 79. The fixed owner allocation is therefore 1,894 reported and at most
+1,918 scanned identities. One `INFO FOR DB` catalog preflight proves which of
+the 24 closed allowlisted tables exist, then up to 24 direct record-ID-ordered
+queries scan only through each table's limit. A missing table or failed row
+read leaves that component unavailable; a catalog-query failure leaves the
+fixed owner unavailable rather than inventing zero. Each one-statement query
+must return exactly one result envelope. One T30.6q request uses at most 25
+SurrealDB calls and retains at most 80 selected IDs for the active table plus
+24 summaries; the server-side catalog intersection returns at most the 24
+fixed allowlisted table names. It emits at most 24 localized `not_ready` or
+`query_error` events. Successful table summaries are weakly consistent and
+contain counts only; physical database bytes remain unavailable. No query index, schema
+backfill, startup reconstruction, writer, or lifecycle work is added.
+
+Together T30.6p and T30.6q remain within 3,550 reported identities, 3,595
+scanned identities, 53 SurrealDB calls, and 45 localized operational events per
+authorized request. Concurrent authorized requests independently multiply
+these per-request ceilings because this surface adds no retention-specific
+cache or concurrency gate. T30.6r is next and will populate the final seven
+derived store/filesystem components.
 
 The `proof_bundles` owner alone reports a non-null `retention_control`:
 `proof_bundles.retention`. Its `default_state` is derived from the effective
@@ -1244,8 +1268,8 @@ evidence when otherwise eligible. Other owners report null. A
 non-administrator is rejected before the status source or any store,
 filesystem, or cache inventory work runs. The static startup warning is
 emitted before store open even if startup later fails; the populated T30.6p
-collector and later T30.6q–T30.6r collectors do not change that authorization
-boundary.
+and T30.6q collectors and the later T30.6r collector do not change that
+authorization boundary.
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch
 (same JSON shape as `/api/search`), then a final `done` event with aggregate

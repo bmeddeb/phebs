@@ -712,7 +712,7 @@ func serve(args []string) error {
 		Version: version,
 		Store:   st, Search: searcher, DataDir: cfg.Server.DataDir,
 		CodeNav:               codeNavigation,
-		RetentionStatusSource: api.NewCoreRetentionStatusSource(st, nil),
+		RetentionStatusSource: api.NewStoreRetentionStatusSource(st, nil),
 		IsAdmin: func(ctx context.Context) bool {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin

@@ -106,10 +106,10 @@ T30.6l exact Workbench Impact caller integration, and T30.6m explicit
 unbounded historical-publication retention decision are shipped; T30.6n
 bounded job-history reads and startup-migration repair, T30.6o's
 authorization-first retention-status shell and capacity warning, and T30.6p's
-21 core SurrealDB retention collectors are also shipped. T30.6q the exact
-24-table Investigation/Workbench collector is next, followed by T30.6r
-derived-publication store and filesystem collectors completing the status
-surface.
+21 core SurrealDB retention collectors are also shipped. T30.6q's exact
+24-table Investigation/Workbench collector is shipped; T30.6r's
+derived-publication store and filesystem collectors are next and complete the
+status surface.
 A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.

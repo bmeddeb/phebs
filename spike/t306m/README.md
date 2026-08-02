@@ -129,9 +129,10 @@ The corrected inventory requires five implementation PRs in dependency order:
    query-index install/backfill is bounded, resumable, and nonblocking; no
    first-open full-history index build is allowed.
 4. **T30.6q — Investigation/Workbench collector.** Summarize one aggregate
-   row total for each of its exact 24 component tables. The same bounded, resumable,
-   nonblocking index/backfill rule applies, with no first-open full-history
-   build.
+   row total for each of its exact 24 component tables. One server-side
+   `INFO FOR DB` intersection returns at most those 24 allowlisted names before
+   up to 24 direct, record-ID-ordered scans apply their physical limits. This
+   needs no new query index, schema backfill, or first-open reconstruction.
 5. **T30.6r — derived-publication collectors.** Reconcile candidate, focused,
    resolver, and caller store authority with bounded filesystem inventories,
    replacing the final four `unavailable` owner summaries. Every installation-
@@ -150,6 +151,21 @@ T30.6p and T30.6q report aggregate physical rows rather than computing hidden
 classifiers. The five tickets do not fit one combined PR, and T30.7 depends
 on completion through T30.6r.
 
+T30.6q owns registry indices 18–41. The first 22 Investigation/Workbench
+components reserve 79 reported identities plus one sentinel each, while
+`investigation_watch` and `investigation_watch_revision` reserve 78 plus one.
+That is 1,894 reported and at most 1,918 scanned identities for T30.6q; together
+with T30.6p it is 3,550 reported and at most 3,595 scanned identities. One
+authorized request performs at most one catalog preflight plus 24 row reads—25
+T30.6q calls and 53 T30.6p-plus-T30.6q calls. The collector retains at most 80
+selected record IDs for the active table, plus at most 24 fixed allowlisted
+catalog names and 24 summaries. A missing table or failed row read leaves the affected component
+unavailable; a catalog-query failure leaves the fixed owner unavailable rather
+than inventing zero. Successful sibling summaries are weakly consistent rather
+than one frozen cross-table snapshot. These are per-request bounds: the status
+surface adds no retention-specific cache or concurrency gate, so concurrent
+authorized requests multiply them independently.
+
 The neutral status sample reports at most 4,096 identities after observing one
 4,097th sentinel. That is a per-summary model, not a fabricated per-component
 implementation bound. T30.6o selects and gates a fixed-work allocation that
@@ -165,9 +181,9 @@ kinds, or mislabel logical rows/canonical bytes as physical SurrealDB bytes.
 Data-volume total/available space remains a separate filesystem metric. None of
 the five follow-ups adds cleanup, deletion, backup/restore mutation, a retention
 configuration alias, or retained-owner lifecycle/data mutations. T30.6p and
-T30.6q may add separately justified bounded-query indexes only with bounded,
-resumable, nonblocking install/backfill and never a first-open full-history
-build. T30.6r forbids unbounded directory walks or filesystem inventories.
+T30.6q reuse existing bounded record and catalog paths without installing an
+index or running a schema backfill. T30.6r forbids unbounded directory walks or
+filesystem inventories.
 
 The unconditional operational escape hatch is to monitor and expand or
 relocate `server.data_dir`. Take a verified backup before supported repository

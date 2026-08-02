@@ -237,6 +237,36 @@ func TestT306MFollowupSplit(t *testing.T) {
 		componentCount("candidate_artifacts", "focused_indexes", "resolver_catalogs", "caller_artifacts") != 7 {
 		t.Fatalf("collector component split does not equal 21 / 24 / 7")
 	}
+	allocationTotals := func(names ...string) (reported int, scanned int) {
+		componentIndex := 0
+		base := api.RetentionStatusAggregateReportedIdentityAllocation / api.RetentionStatusComponentCount
+		remainder := api.RetentionStatusAggregateReportedIdentityAllocation % api.RetentionStatusComponentCount
+		for _, owner := range results.Owners {
+			selected := slices.Contains(names, owner.Name)
+			for range owner.Components {
+				componentReported := base
+				if componentIndex < remainder {
+					componentReported++
+				}
+				if selected {
+					reported += componentReported
+					scanned += componentReported + 1
+				}
+				componentIndex++
+			}
+		}
+		return reported, scanned
+	}
+	qReported, qScanned := allocationTotals("investigation_workbench_rows")
+	pqReported, pqScanned := allocationTotals(
+		"evidence_publications", "extraction_attempts", "extraction_outcomes",
+		"evidence_pins", "proof_bundles", "durable_job_history", "caller_rows",
+		"investigation_workbench_rows",
+	)
+	if qReported != 1_894 || qScanned != 1_918 ||
+		pqReported != 3_550 || pqScanned != 3_595 {
+		t.Fatalf("T30.6q and combined allocations = %d/%d and %d/%d", qReported, qScanned, pqReported, pqScanned)
+	}
 	wantTickets := []struct {
 		name      string
 		sizeProof []string
@@ -263,8 +293,10 @@ func TestT306MFollowupSplit(t *testing.T) {
 		}},
 		{"T30.6q", []string{
 			"one owner and twenty-four exact component tables",
-			"one bounded generic table-summary path with no unrepresentable lifecycle classifier",
-			"table-driven exact-table, aggregate-row, bounds, and completeness coverage",
+			"one fixed at-most-twenty-four-name catalog presence result plus at most twenty-four bounded record-ID table scans",
+			"1,894/1,918 T30.6q and 3,550/3,595 combined reported/scanned identity bounds",
+			"twenty-five T30.6q and fifty-three combined query-call bounds with eighty selected record IDs, twenty-four catalog names, and twenty-four summaries retained per request",
+			"table-driven exact-table, aggregate-row, localized-failure, weak-consistency, bounds, and completeness coverage",
 		}},
 		{"T30.6r", []string{
 			"four owners and seven declared components",
@@ -295,8 +327,12 @@ func TestT306MFollowupSplit(t *testing.T) {
 		!slices.Contains(p.Changes, "reuse existing record and evidence-pin kind indexes without an install or backfill") ||
 		!slices.Contains(p.Excluded, "first-open full-history index build or backfill") ||
 		!slices.Contains(q.Changes, "bounded aggregate collector for investigation_workbench_rows across its exact twenty-four component tables") ||
-		!slices.Contains(q.Changes, "bounded, resumable, nonblocking install and backfill for any separately justified bounded-query index") ||
-		!slices.Contains(q.Excluded, "first-open full-history index build or backfill") ||
+		!slices.Contains(q.Changes, "one server-side INFO FOR DB intersection returning at most twenty-four allowlisted table names plus at most twenty-four direct record-ID-ordered table scans with physical limit pushdown and no new index or backfill") ||
+		!slices.Contains(q.Changes, "non-transferable allocation of 1,894 reported and 1,918 scanned identities; T30.6p plus T30.6q remain bounded at 3,550 reported and 3,595 scanned identities") ||
+		!slices.Contains(q.Changes, "at most twenty-five T30.6q query calls and fifty-three T30.6p-plus-T30.6q calls with at most eighty selected record IDs, twenty-four catalog names, and twenty-four summaries retained per request") ||
+		!slices.Contains(q.Changes, "missing tables and row-query failures remain localized while successful summaries are weakly consistent") ||
+		!slices.Contains(q.Changes, "per-request bounds have no retention-specific cache or concurrency gate, so concurrent authorized requests multiply them independently") ||
+		!slices.Contains(q.Excluded, "new query index, schema backfill, or first-open full-history reconstruction") ||
 		!slices.Contains(r.Changes, "bound every installation-root and repository-directory scan with explicit cap-plus-one and independently labeled completeness") ||
 		!slices.Contains(r.Excluded, "unbounded directory walk or filesystem inventory") {
 		t.Fatalf("implementation boundaries = %+v", proof)

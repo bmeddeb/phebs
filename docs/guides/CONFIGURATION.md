@@ -104,11 +104,14 @@ unconditional `unbounded_historical_publication_retention` warning; it reports
 the warning in `X-Phebs-Warning-Code` on every endpoint response, including
 authorization and internal errors, while successful bodies also carry
 `warning_code`. T30.6p populates 21 core SurrealDB components with bounded
-aggregate per-table or per-pin-namespace row totals. The remaining 31
-components, both installation data-volume metrics, and per-component physical
-database attribution stay explicitly unavailable. The populated byte metrics
-are logical encoded outcome-receipt bytes, canonical proof-content bytes, and
-canonical caller-receipt bytes. Ordered `logical_encoded`,
+aggregate per-table or per-pin-namespace row totals. T30.6q now populates one
+aggregate physical-row total for each of the exact 24
+Investigation/Workbench tables. Together they populate 45 components; the
+remaining seven derived components, both installation data-volume metrics,
+and per-component physical-database attribution stay explicitly unavailable.
+The populated byte metrics remain logical encoded outcome-receipt bytes,
+canonical proof-content bytes, and canonical caller-receipt bytes; T30.6q
+adds counts but does not infer physical database bytes. Ordered `logical_encoded`,
 `canonical_content`, `canonical_receipt`, `apparent_file`, and
 `physical_database` byte kinds are non-combinable accounting contracts, not
 selectable configuration. The `proof_bundles` owner exposes the existing
@@ -136,13 +139,26 @@ operational class set—`not_ready` or `query_error`—per failed component, at 
 schema batch adds one scalar string definition for `evidence_pin.kind` and
 reuses the existing kind index; there is no row backfill, writer-generation
 bump, new index, sync-tick work,
-writer work, or retention lifecycle change. T30.6q will populate the exact 24
-Investigation/Workbench tables, and T30.6r the seven derived store/filesystem
-components and thereby complete the status surface. Any supporting database
-index bootstrap in T30.6q must be bounded, restart-resumable, and nonblocking;
-every filesystem scan in T30.6r
-must be bounded. T30.6n–T30.6p add no deletion, change no owner lifecycle, and
-add no retention configuration; the same boundary governs T30.6q–T30.6r. A
+writer work, or retention lifecycle change. T30.6q preserves the shell's
+non-transferable allocation: indices 18–39 receive 79 report slots plus one
+sentinel, and Watch indices 40–41 receive 78 plus one, for 1,894 reported and
+at most 1,918 scanned identities. One `INFO FOR DB` catalog preflight plus at
+most 24 direct record-ID-ordered table scans produces those summaries with at
+most 25 calls and 80 selected IDs retained for the active table. The
+server-side catalog intersection returns at most the 24 fixed allowlisted table
+names.
+Missing tables and failed reads remain unavailable and emit at most 24
+additional events classified as `not_ready` or `query_error`. Together T30.6p
+and T30.6q stay within
+3,550-report, 3,595-scan, 53-call, and 45-event ceilings. The collector adds no
+query index, schema backfill, startup reconstruction, configuration, writer,
+or lifecycle work. These are per-request ceilings; concurrent authorized
+requests multiply them because this surface adds no retention-specific cache
+or concurrency gate. T30.6r is next and populates the seven derived
+store/filesystem components, completing the status surface; every filesystem
+scan in that ticket must be bounded. T30.6n–T30.6q add no deletion, change no
+owner lifecycle, and add no retention configuration; the same boundary governs
+T30.6r. A
 future bounded historical-publication policy requires a new ADR and
 configuration contract; omission and numeric zero are
 not reserved as destructive/default aliases for such a future key.

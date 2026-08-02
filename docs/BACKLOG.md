@@ -15,10 +15,10 @@ caller-generation publication, T30.6j authorized exact Caller Map reads, and
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
 caller integration, T30.6m explicit unbounded historical-publication
 retention decision, T30.6n bounded job-history reads and startup migration,
-T30.6o's retention-status shell, and T30.6p's core Surreal collectors are
-shipped; T30.6q's Investigation/Workbench collector is next, followed by
-T30.6r's derived store/filesystem collectors.
-Completed Epics 0–24, Epic 29, T30.1–T30.6p, and P5 hardening are
+T30.6o's retention-status shell, T30.6p's core Surreal collectors, and
+T30.6q's Investigation/Workbench collector are shipped; T30.6r's derived
+store/filesystem collectors are next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6q, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -28,7 +28,7 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6q · Investigation/Workbench retention collector** is next. T30.6a–T30.6p
+**T30.6r · Derived retention collectors and complete surface** is next. T30.6a–T30.6q
 now provide bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, the adapter-free immutable catalog
@@ -44,8 +44,8 @@ T30.6n now bounds the job-history read and startup-migration paths that could
 stall before a status endpoint is reachable. T30.6o supplies the
 authorization-first status shell, complete fixed registry/budget, and
 unconditional warning. T30.6p now fills the 21 core Surreal components;
-T30.6q and T30.6r fill the Investigation/Workbench and derived
-store/filesystem components in order.
+T30.6q fills the exact 24-table Investigation/Workbench group, and T30.6r
+finishes the seven derived store/filesystem components.
 The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
@@ -65,8 +65,9 @@ rollback; the existing evidence sweep does not collect a row while it remains
 historical deletion. Before Epic 30 closes, T30.6n bounds job-history reads and
 legacy startup migration without deleting terminal diagnostics;
 T30.6o delivers the warning and status shell, T30.6p populates its core
-Surreal layer, and T30.6q–T30.6r finish the bounded cross-owner status in PR-sized
-layers without deleting pinned proof or other retained state.
+Surreal layer, T30.6q populates the Investigation/Workbench group, and T30.6r
+finishes the bounded cross-owner status without deleting pinned proof or other
+retained state.
 
 ### Post-T30.5 issue closure ✅ *(closed 2026-07-29)*
 
@@ -572,7 +573,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6q next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6r next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -1075,24 +1076,18 @@ row backfill, writer-generation bump, new index, deletion, retention
 configuration, owner writer/lifecycle mutation, filesystem inventory, or
 backup/restore behavior change.
 
-**T30.6q · Investigation/Workbench retention collector** *(needs T30.6p)* —
-populate the single 24-component Investigation/Workbench owner group,
-including immutable histories, mutable projections, Run/artifact ownership and
-release/override state, access/cursor state, review/Dossier, and Watch rows;
-`investigation_run_job` remains only in T30.6p's durable-job group. A missing
-or failed component remains independently visible and the seven derived
-components remain `unavailable`. Each exact table reports one aggregate
-physical-row total; the
-fixed v1 wire has no owner-lifecycle partition field, so no hidden partition is
-computed. Any supporting index follows the same bounded,
-restart-resumable, non-blocking install/backfill rule, with no synchronous
-lifetime scan at `store.Open`. This is one PR because it is one store domain
-and a fixed 24-table registry over a shared bounded collector.
-Cover every exact schema table, rows in every owner/release/override state,
-partial bootstrap, cap-plus-one, aggregate-budget accounting, and absence of
-the separately counted job table. Add no artifact sweep wiring, deletion,
-retention configuration, owner writer/lifecycle mutation, or backup/restore
-change. Full merge bar.
+**T30.6q ✅ · Investigation/Workbench retention collector** *(2026-08-02;
+needs T30.6p)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306q--investigationworkbench-retention-collector).
+It populates the exact 24-component Investigation/Workbench owner group while
+leaving `investigation_run_job` in T30.6p's durable-job group and the final
+seven derived components unavailable. One bounded catalog preflight plus at
+most 24 sentinel-limited table reads consumes at most 1,894 report identities
+and 1,918 scans; together with T30.6p, the database-backed surface consumes at
+most 3,550/3,595. Missing tables and query failures remain independently
+unavailable. No index, bootstrap, lifecycle partition, artifact sweep,
+deletion, retention configuration, owner mutation, or backup/restore behavior
+is added.
 
 **T30.6r · Derived retention collectors and complete surface** *(needs
 T30.6q)* — populate the final four owner groups and seven components: candidate

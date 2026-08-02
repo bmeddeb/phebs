@@ -1662,8 +1662,9 @@ retention without changing cleanup. T30.6n bounds job-history reads and
 repairs startup migration without deleting history. T30.6o now supplies the
 authorization-first retention-status shell, fixed registry, budgets, and
 unconditional capacity warning. T30.6p now populates its 21 core SurrealDB
-components; T30.6q and T30.6r add the remaining Investigation/Workbench and
-derived filesystem collectors, with T30.6r completing the declared surface.
+components, and T30.6q now populates the 24 Investigation/Workbench table
+components. T30.6r is next and adds the final seven derived filesystem/store
+collectors, completing the declared surface.
 
 This sequence does not authorize a physical Go-test search overlay, optional
 test evidence, test-to-source association, build-system discovery, SCIP
@@ -1907,8 +1908,9 @@ extraction outcomes, canonical content bytes for proof bundles, and canonical
 receipt bytes for the three caller-row components. It reads only server-side
 byte lengths or stored scalar totals, not proof content, caller pair arrays, or
 job diagnostics. Per-component `physical_database` metrics remain
-`unavailable`, as do the other 31 components and both installation data-volume
-metrics. Those unavailable values are not zeros.
+`unavailable`. At the T30.6p boundary, the other 31 components and both
+installation data-volume metrics were unavailable. Those unavailable values
+were not zeros.
 
 T30.6p adds no new index or row bootstrap. `store.Open` applies the one scalar
 field definition as part of its existing batched schema, with no retained-row
@@ -1928,10 +1930,41 @@ starts a child, scans the filesystem or corpus, or hashes content.
 T30.6q populates the exact 24 Investigation/Workbench component tables listed
 above and retains one independent aggregate summary for every table. The fixed
 v1 wire has no owner-lifecycle partition field, so it does not compute a hidden
-partition. If it requires a supporting database index, installation and
-backfill must be bounded, restart-resumable, and nonblocking; failure or
-incomplete reconstruction is visible in completeness rather than silently
-omitting a table.
+partition: every physical row contributes regardless of owner, release,
+override, access, review, or Watch state, and `investigation_run_job` remains
+only in durable-job history. Components at registry indices 18–39 receive 79
+report slots plus one sentinel; `investigation_watch` and
+`investigation_watch_revision` at indices 40–41 receive 78 plus one. The q
+allocation is therefore 1,894 reported and at most 1,918 scanned identities.
+
+One `INFO FOR DB` catalog preflight must return exactly one result envelope and
+proves which of the closed 24-table allowlist is present. The collector then
+runs at most 24 direct record-ID-ordered table reads, each with physical limit
+pushdown and the same exact-one-envelope rule. A missing catalog entry leaves
+only that component unavailable; a row-query failure does the same, while a
+catalog-query failure leaves all 24 unavailable rather than inventing zero.
+Successful siblings remain visible and are weakly consistent rather than a
+frozen owner snapshot. One q request performs at most 25 SurrealDB calls,
+returns at most 1,918 identities, retains at most 80 selected IDs for the
+active table plus 24 summaries, and receives at most the 24 fixed allowlisted
+names from the server-side catalog intersection. It emits at most 24
+`not_ready` or `query_error` events. It reads no row payload or byte content,
+so every q `physical_database` byte metric remains unavailable.
+
+T30.6q uses the existing table record order and schema catalog. It adds no
+query index, schema backfill, migration marker, first-open reconstruction,
+writer, or owner-lifecycle work. Together T30.6p and T30.6q populate 45
+components within 3,550-report, 3,595-scan, 53-query, and 45-event ceilings.
+The deterministic empty core-plus-Investigation response is 19,505 bytes under
+the unchanged 64-KiB encoded-response cap.
+
+These are per-request ceilings. The surface adds no retention-specific cache
+or concurrency gate, so concurrent authorized requests independently multiply
+the query, identity, and response-memory work; it supplies no additional
+process-level bound.
+
+The final seven derived components and both installation data-volume metrics
+remain unavailable.
 
 T30.6r populates the final seven derived components: candidate store authority
 and managed files, focused repository state and publication files, resolver
@@ -1952,23 +1985,24 @@ also repeats it as `warning_code`, including for an empty installation. Until
 T30.6r lands, the fixed registry makes unfinished
 collector coverage explicit through `unavailable` component summaries; there
 is no complete retained-capacity status surface for the twelve T30.6 modeled
-owner groups. T30.6p query or readiness failures are localized as
-`unavailable` summaries rather than converted to exact zero or used to hide
-successful sibling components; their operational log event carries the fixed
-`not_ready` or `query_error` class. Audit, analytics, authentication, and other
-installation state retain their separately documented lifecycles; this
+owner groups. T30.6p and T30.6q query, readiness, or catalog failures are
+localized as `unavailable` summaries rather than converted to exact zero or
+used to hide successful sibling components; their operational log event
+carries the fixed `not_ready` or `query_error` class. Audit, analytics,
+authentication, and other installation state retain their separately
+documented lifecycles; this
 endpoint is not a claim to
 inventory every database table. After ordinary authentication, a denied
 request performs only the administrator check. An authorized production
-request runs T30.6p's bounded store work, then validates and encodes one fixed
-`O(52)` structure with a sub-64-KiB body. Startup still adds only the existing
-warning log line plus the scalar field definition inside the existing batched
-schema; it adds no retained-row scan, backfill, sort, index installation, or
-migration generation. Sync ticks, retries, no-ops, and publication transitions
-add no work. The endpoint takes no lock, starts no child, and adds no
-retained-owner deletion, configuration, lifecycle mutation, corpus read,
-content hash, or
-mirror work. The same boundary governs T30.6q and T30.6r.
+request runs T30.6p's and T30.6q's bounded store work, then validates and encodes
+one fixed `O(52)` structure with a sub-64-KiB body. Startup still adds only the
+existing warning log line plus T30.6p's scalar field definition inside the
+existing batched schema; T30.6q adds no startup work, retained-row scan,
+backfill, sort, index installation, or migration generation. Sync ticks,
+retries, no-ops, and publication transitions add no work. The endpoint takes
+no lock, starts no child, and adds no retained-owner deletion, configuration,
+lifecycle mutation, corpus read, content hash, or mirror work. The same
+boundary governs T30.6r.
 
 Expanding or relocating `server.data_dir` is the only unconditional live-
 capacity escape. Take a verified backup before supported repository removal;

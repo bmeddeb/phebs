@@ -31,6 +31,47 @@ func (fn coreRetentionStoreFunc) CollectCoreRetention(
 	return fn(ctx, requests)
 }
 
+type investigationRetentionStoreFunc func(
+	context.Context,
+	[]store.RetentionComponentRequest,
+) ([]store.RetentionComponentResult, error)
+
+func (fn investigationRetentionStoreFunc) CollectInvestigationRetention(
+	ctx context.Context,
+	requests []store.RetentionComponentRequest,
+) ([]store.RetentionComponentResult, error) {
+	return fn(ctx, requests)
+}
+
+type retentionStatusStoreFuncs struct {
+	core          coreRetentionStoreFunc
+	investigation investigationRetentionStoreFunc
+}
+
+func (storeFuncs retentionStatusStoreFuncs) CollectCoreRetention(
+	ctx context.Context,
+	requests []store.RetentionComponentRequest,
+) ([]store.RetentionComponentResult, error) {
+	return storeFuncs.core(ctx, requests)
+}
+
+func (storeFuncs retentionStatusStoreFuncs) CollectInvestigationRetention(
+	ctx context.Context,
+	requests []store.RetentionComponentRequest,
+) ([]store.RetentionComponentResult, error) {
+	return storeFuncs.investigation(ctx, requests)
+}
+
+func exactRetentionResults(
+	requests []store.RetentionComponentRequest,
+) []store.RetentionComponentResult {
+	results := make([]store.RetentionComponentResult, len(requests))
+	for index, request := range requests {
+		results[index].Component = request.Component
+	}
+	return results
+}
+
 func TestRetentionStatusAuthorizationPrecedesInventoryWork(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -327,6 +368,383 @@ func TestCoreRetentionStatusRejectsStructurallyIncompleteResults(t *testing.T) {
 				t.Fatalf("status = %d (%s), want 500", recorder.Code, recorder.Body)
 			}
 		})
+	}
+}
+
+func TestInvestigationRetentionStatusPopulatesExactRegistryOrderAndAllocation(t *testing.T) {
+	wantComponents := []store.RetentionComponent{
+		store.RetentionInvestigation,
+		store.RetentionInvestigationRevision,
+		store.RetentionInvestigationChangeBrief,
+		store.RetentionWorkbenchMutation,
+		store.RetentionWorkbenchDisposition,
+		store.RetentionInvestigationRun,
+		store.RetentionInvestigationRunEvent,
+		store.RetentionInvestigationRunArtifact,
+		store.RetentionInvestigationArtifactOwner,
+		store.RetentionInvestigationArtifactOwnerRelease,
+		store.RetentionInvestigationArtifactRetentionOverride,
+		store.RetentionInvestigationDecision,
+		store.RetentionInvestigationDisposition,
+		store.RetentionInvestigationBaselineDesignation,
+		store.RetentionInvestigationGrant,
+		store.RetentionInvestigationCursor,
+		store.RetentionInvestigationCreation,
+		store.RetentionInvestigationConsumerSnapshot,
+		store.RetentionInvestigationConsumerEdgeLedger,
+		store.RetentionInvestigationReviewProjection,
+		store.RetentionInvestigationReviewItem,
+		store.RetentionInvestigationDossier,
+		store.RetentionInvestigationWatch,
+		store.RetentionInvestigationWatchRevision,
+	}
+	var captured []store.RetentionComponentRequest
+	source := api.NewInvestigationRetentionStatusSource(
+		investigationRetentionStoreFunc(func(
+			_ context.Context,
+			requests []store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			captured = append([]store.RetentionComponentRequest(nil), requests...)
+			return exactRetentionResults(requests), nil
+		}),
+		nil,
+	)
+	status, _ := getRetentionStatus(t, source)
+
+	if len(captured) != api.RetentionStatusInvestigationComponentCount ||
+		len(captured) != len(wantComponents) {
+		t.Fatalf(
+			"Investigation requests = %d, want %d",
+			len(captured),
+			len(wantComponents),
+		)
+	}
+	reportedTotal, scanTotal := 0, 0
+	for index, request := range captured {
+		if request.Component != wantComponents[index] {
+			t.Fatalf(
+				"Investigation request %d = %q, want %q",
+				index,
+				request.Component,
+				wantComponents[index],
+			)
+		}
+		wantReported, wantScan := 79, 80
+		if index >= 22 {
+			wantReported, wantScan = 78, 79
+		}
+		if request.ReportedIdentities != wantReported ||
+			request.ScanIdentities != wantScan {
+			t.Fatalf(
+				"Investigation request %d allocation = %d/%d, want %d/%d",
+				index,
+				request.ReportedIdentities,
+				request.ScanIdentities,
+				wantReported,
+				wantScan,
+			)
+		}
+		reportedTotal += request.ReportedIdentities
+		scanTotal += request.ScanIdentities
+	}
+	if reportedTotal != 1_894 || scanTotal != 1_918 {
+		t.Fatalf(
+			"Investigation allocation = %d/%d, want 1894/1918",
+			reportedTotal,
+			scanTotal,
+		)
+	}
+
+	populated, unavailable := 0, 0
+	for ownerIndex := range status.Owners {
+		owner := &status.Owners[ownerIndex]
+		for componentIndex := range owner.Components {
+			component := &owner.Components[componentIndex]
+			if owner.ID != "investigation_workbench_rows" {
+				unavailable++
+				if component.Count.Value != nil ||
+					component.Count.Completeness != api.RetentionStatusUnavailable {
+					t.Fatalf("non-Investigation component %q was populated: %+v", component.ID, component)
+				}
+				continue
+			}
+			populated++
+			if componentIndex >= len(wantComponents) ||
+				component.ID != string(wantComponents[componentIndex]) {
+				t.Fatalf(
+					"Investigation component %d = %q, want %q",
+					componentIndex,
+					component.ID,
+					wantComponents[componentIndex],
+				)
+			}
+			if component.ScannedIdentities != 0 || component.Truncated ||
+				component.Count.Value == nil || *component.Count.Value != 0 ||
+				component.Count.Completeness != api.RetentionStatusExact {
+				t.Fatalf("empty Investigation component %q = %+v", component.ID, component)
+			}
+			assertUnavailableRetentionByteMetrics(
+				t,
+				component.ID,
+				component.ByteMetrics,
+				[]api.RetentionStatusByteKind{api.RetentionStatusBytePhysicalDatabase},
+			)
+		}
+	}
+	if populated != 24 || unavailable != 28 {
+		t.Fatalf(
+			"Investigation-only posture = %d populated/%d unavailable, want 24/28",
+			populated,
+			unavailable,
+		)
+	}
+}
+
+func TestStoreRetentionStatusComposesCoreThenInvestigation(t *testing.T) {
+	var calls []string
+	storeSource := retentionStatusStoreFuncs{
+		core: func(
+			_ context.Context,
+			requests []store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			calls = append(calls, "core")
+			results := exactRetentionResults(requests)
+			for index := range results {
+				switch results[index].Component {
+				case store.RetentionExtractionOutcome,
+					store.RetentionProofBundle,
+					store.RetentionCallerPublication,
+					store.RetentionCallerAdmission,
+					store.RetentionCallerLeafOutcome:
+					zero := int64(0)
+					results[index].Summary.Bytes = &zero
+				}
+			}
+			return results, nil
+		},
+		investigation: func(
+			_ context.Context,
+			requests []store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			calls = append(calls, "investigation")
+			return exactRetentionResults(requests), nil
+		},
+	}
+	status, encoded := getRetentionStatus(
+		t,
+		api.NewStoreRetentionStatusSource(storeSource, nil),
+	)
+	if !slices.Equal(calls, []string{"core", "investigation"}) {
+		t.Fatalf("store collector order = %v, want core then investigation", calls)
+	}
+	populated, unavailable := 0, 0
+	for _, owner := range status.Owners {
+		for _, component := range owner.Components {
+			if component.Count.Value == nil {
+				unavailable++
+				if component.Count.Completeness != api.RetentionStatusUnavailable {
+					t.Fatalf("unavailable component %q = %+v", component.ID, component.Count)
+				}
+				continue
+			}
+			populated++
+			if *component.Count.Value != 0 ||
+				component.Count.Completeness != api.RetentionStatusExact {
+				t.Fatalf("populated component %q = %+v", component.ID, component.Count)
+			}
+		}
+	}
+	if populated != 45 || unavailable != 7 {
+		t.Fatalf(
+			"composed posture = %d populated/%d unavailable, want 45/7",
+			populated,
+			unavailable,
+		)
+	}
+	const wantProductionEmptyCoreAndInvestigationResponseBytes = 19_505
+	if len(encoded) != wantProductionEmptyCoreAndInvestigationResponseBytes {
+		t.Fatalf(
+			"production empty core-plus-Investigation response = %d bytes, want %d",
+			len(encoded),
+			wantProductionEmptyCoreAndInvestigationResponseBytes,
+		)
+	}
+	if len(encoded) > api.RetentionStatusResponseByteLimit {
+		t.Fatalf(
+			"production empty core-plus-Investigation response = %d bytes, limit %d",
+			len(encoded),
+			api.RetentionStatusResponseByteLimit,
+		)
+	}
+}
+
+func TestInvestigationRetentionStatusLocalizesAndClassifiesFailures(t *testing.T) {
+	type reportedFailure struct {
+		component store.RetentionComponent
+		err       error
+	}
+	var failures []reportedFailure
+	source := api.NewInvestigationRetentionStatusSource(
+		investigationRetentionStoreFunc(func(
+			_ context.Context,
+			requests []store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			results := exactRetentionResults(requests)
+			results[0].Err = store.ErrRetentionComponentUnavailable
+			results[1].Err = errors.New("Investigation query failed")
+			results[2].Summary = store.RetentionComponentSummary{
+				ScannedIdentities:  requests[2].ScanIdentities,
+				ReportedIdentities: int64(requests[2].ReportedIdentities),
+				Truncated:          true,
+			}
+			return results, nil
+		}),
+		func(_ context.Context, component store.RetentionComponent, err error) {
+			failures = append(failures, reportedFailure{component: component, err: err})
+		},
+	)
+	status, _ := getRetentionStatus(t, source)
+	var owner *api.RetentionOwnerStatus
+	for ownerIndex := range status.Owners {
+		if status.Owners[ownerIndex].ID == "investigation_workbench_rows" {
+			owner = &status.Owners[ownerIndex]
+			break
+		}
+	}
+	if owner == nil {
+		t.Fatal("Investigation retention owner not found")
+	}
+	for index := range 2 {
+		component := owner.Components[index]
+		if component.Count.Value != nil ||
+			component.Count.Completeness != api.RetentionStatusUnavailable {
+			t.Fatalf("failed Investigation component %d = %+v", index, component)
+		}
+	}
+	truncated := owner.Components[2]
+	if !truncated.Truncated ||
+		truncated.ScannedIdentities != truncated.Allocation.ScanIdentities ||
+		truncated.Count.Value == nil ||
+		*truncated.Count.Value != int64(truncated.Allocation.ReportedIdentities) ||
+		truncated.Count.Completeness != api.RetentionStatusLowerBound {
+		t.Fatalf("truncated Investigation component = %+v", truncated)
+	}
+	if len(failures) != 2 ||
+		failures[0].component != store.RetentionInvestigation ||
+		!errors.Is(failures[0].err, store.ErrRetentionComponentUnavailable) ||
+		failures[1].component != store.RetentionInvestigationRevision ||
+		errors.Is(failures[1].err, store.ErrRetentionComponentUnavailable) {
+		t.Fatalf(
+			"reported Investigation failures = %+v, want not-ready then query-error",
+			failures,
+		)
+	}
+}
+
+func TestInvestigationRetentionStatusRejectsMalformedCollectorOutput(t *testing.T) {
+	tests := []struct {
+		name    string
+		results func([]store.RetentionComponentRequest) []store.RetentionComponentResult
+	}{
+		{
+			name: "omitted component",
+			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
+				results := exactRetentionResults(requests)
+				return results[:len(results)-1]
+			},
+		},
+		{
+			name: "duplicate component",
+			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
+				results := exactRetentionResults(requests)
+				results[len(results)-1].Component = requests[0].Component
+				return results
+			},
+		},
+		{
+			name: "unknown component",
+			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
+				results := exactRetentionResults(requests)
+				results[len(results)-1].Component = "unknown"
+				return results
+			},
+		},
+		{
+			name: "invalid summary",
+			results: func(requests []store.RetentionComponentRequest) []store.RetentionComponentResult {
+				results := exactRetentionResults(requests)
+				results[0].Summary = store.RetentionComponentSummary{
+					ScannedIdentities:  1,
+					ReportedIdentities: 0,
+				}
+				return results
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			handler := api.New(api.Options{
+				Version: "test",
+				IsAdmin: func(context.Context) bool { return true },
+				RetentionStatusSource: api.NewInvestigationRetentionStatusSource(
+					investigationRetentionStoreFunc(func(
+						_ context.Context,
+						requests []store.RetentionComponentRequest,
+					) ([]store.RetentionComponentResult, error) {
+						return test.results(requests), nil
+					}),
+					nil,
+				),
+			})
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(
+				recorder,
+				httptest.NewRequest(http.MethodGet, api.RetentionStatusPath, nil),
+			)
+			if recorder.Code != http.StatusInternalServerError {
+				t.Fatalf("status = %d (%s), want 500", recorder.Code, recorder.Body)
+			}
+		})
+	}
+}
+
+func TestStoreRetentionStatusAuthorizationPrecedesBothCollectors(t *testing.T) {
+	coreCalls, investigationCalls := 0, 0
+	storeSource := retentionStatusStoreFuncs{
+		core: func(
+			context.Context,
+			[]store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			coreCalls++
+			return nil, nil
+		},
+		investigation: func(
+			context.Context,
+			[]store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			investigationCalls++
+			return nil, nil
+		},
+	}
+	handler := api.New(api.Options{
+		Version:               "test",
+		IsAdmin:               func(context.Context) bool { return false },
+		RetentionStatusSource: api.NewStoreRetentionStatusSource(storeSource, nil),
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(
+		recorder,
+		httptest.NewRequest(http.MethodGet, api.RetentionStatusPath, nil),
+	)
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("status = %d (%s), want 403", recorder.Code, recorder.Body)
+	}
+	if coreCalls != 0 || investigationCalls != 0 {
+		t.Fatalf(
+			"denied collector calls = core:%d Investigation:%d, want zero",
+			coreCalls,
+			investigationCalls,
+		)
 	}
 }
 
