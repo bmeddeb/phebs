@@ -40,12 +40,30 @@ job tables and exact 24-table Investigation/Workbench domain. It authorizes no
 cleanup. T30.6n owns bounded
 job reads and startup-migration repair. T30.6o owns the authorization-first
 status shell, fixed 52-component registry, zero-scan unavailable projection,
-and warning; T30.6p owns 21 core SurrealDB components, T30.6q owns the exact 24
+and warning. T30.6p now owns 21 core SurrealDB components as bounded aggregate
+per-table or per-pin-namespace row totals; lifecycle/status classifications are
+neither computed nor separate v1 wire fields. The API uses the fixed allocations
+at registry indices 0–17 and 48–50 for at most 1,677 scanned identities, while
+the store accepts any report allocation from 1 through 79 only with scan equal
+to report plus one and enforces the unchanged 1,656/1,677 aggregate ceilings. It
+reports only attributable logical outcome-receipt, canonical proof-content, and
+canonical caller-receipt bytes. Physical database attribution, both data-volume
+metrics, and the other 31 components remain unavailable. Each authorized
+request produces 21 bounded
+component summaries using at most 23 row-range queries after four cached
+writer/migration-marker point checks and one pin-index catalog check. Every
+one-statement query requires exactly one result envelope; a failed component
+remains unavailable without hiding successful siblings and emits one log event
+from the closed operational class set—`not_ready` or `query_error`—at most 21
+per request. The existing schema batch adds a scalar string definition for
+`evidence_pin.kind` and reuses the existing kind index; it adds no row backfill,
+writer-generation bump, new
+query index, sync-tick work, or writer work. T30.6q owns the exact 24
 Investigation/Workbench tables, and T30.6r owns seven bounded derived store and
-filesystem components and completes the status surface. Database index
-bootstrap in T30.6p/T30.6q must be bounded and restart-resumable, and T30.6r
-directory scans must be bounded. None of these tickets changes deletion,
-configuration, or owner lifecycle semantics.
+filesystem components and completes the status
+surface. Any database-index bootstrap introduced by T30.6q must be bounded and
+restart-resumable, and T30.6r directory scans must be bounded. None of these
+tickets changes deletion, configuration, or owner lifecycle semantics.
 
 ### Deterministic product fixtures
 

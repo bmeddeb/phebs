@@ -124,12 +124,12 @@ The corrected inventory requires five implementation PRs in dependency order:
    enabled/nonaccumulating. Every collector initially reports `unavailable` and performs zero
    store or filesystem scans.
 3. **T30.6p — core SurrealDB collectors.** Fill the evidence graph, attempt,
-   outcome, pin, proof-bundle, durable-job, and caller-row summaries using one
-   bespoke evidence classifier and generic bounded table summaries. Any needed
+   outcome, pin, proof-bundle, durable-job, and caller-row summaries using four
+   independent evidence-table totals and generic bounded table summaries. Any needed
    query-index install/backfill is bounded, resumable, and nonblocking; no
    first-open full-history index build is allowed.
-4. **T30.6q — Investigation/Workbench collector.** Summarize its exact 24
-   component tables and owner lifecycle state. The same bounded, resumable,
+4. **T30.6q — Investigation/Workbench collector.** Summarize one aggregate
+   row total for each of its exact 24 component tables. The same bounded, resumable,
    nonblocking index/backfill rule applies, with no first-open full-history
    build.
 5. **T30.6r — derived-publication collectors.** Reconcile candidate, focused,
@@ -140,12 +140,14 @@ The corrected inventory requires five implementation PRs in dependency order:
 Each ticket has its own retained size proof: T30.6n stays within one queue
 subsystem and two consumers; T30.6o ships only the auth/warning/status shell,
 registry, and budget model; T30.6p covers seven owners and 21 components through
-one bespoke classifier plus one generic table path; T30.6q covers one owner and
+four evidence scans plus one generic table path; T30.6q covers one owner and
 24 exact tables; and T30.6r covers four owners and seven components through
 four fixed filesystem adapters. Any additional unmodeled non-generic behavior
-beyond T30.6p's retained evidence classifier and T30.6q's retained owner-
-lifecycle classifier—or any unbounded bootstrap—must split again before
-implementation. The five tickets do not fit one combined PR, and T30.7 depends
+beyond T30.6p's aggregate evidence-table summaries and T30.6q's aggregate
+owner-table summaries—or any unbounded bootstrap—must split again before
+implementation. The fixed v1 response exposes no lifecycle partition field, so
+T30.6p and T30.6q report aggregate physical rows rather than computing hidden
+classifiers. The five tickets do not fit one combined PR, and T30.7 depends
 on completion through T30.6r.
 
 The neutral status sample reports at most 4,096 identities after observing one

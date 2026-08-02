@@ -49,7 +49,7 @@
       "retention": "historical published and pinned superseded runs are unbounded; quarantined runs require administrator resolution; sweep-eligible backlog remains until bounded maintenance drains it",
       "protection": "live current scope, every durable evidence pin, and retention quarantine",
       "backup_restore": "database export and restore retain runs, associations, assertions, atoms, and pins",
-      "count_metric": "all run statuses plus association, assertion, and distinct shared atom rows, partitioned as current/historical published, pinned, quarantined, and sweep backlog",
+      "count_metric": "aggregate physical extraction-run, association, assertion, and distinct shared-atom rows; v1 does not compute or expose lifecycle partitions",
       "byte_metric": "unavailable for physical database attribution",
       "accumulating": true,
       "deletion_authorized": false
@@ -79,7 +79,7 @@
       "retention": "latest-only per repository/domain",
       "protection": "latest live-scope failure diagnostic",
       "backup_restore": "database export imports outcomes; restore selectively clears candidate-control outcomes with candidate authority",
-      "count_metric": "outcome rows by disposition",
+      "count_metric": "aggregate outcome rows; v1 does not expose disposition partitions",
       "byte_metric": "logical encoded receipt bytes; physical database attribution unavailable",
       "bounds": [
         {
@@ -104,7 +104,7 @@
       "retention": "pin rows follow their owning existing lifecycle rather than an intrinsic global policy; proof pins accumulate while proof retention is disabled and a positive proof TTL releases only its exact namespace",
       "protection": "proof, checkpoint, Investigation, and any other store-accepted owner lifecycle",
       "backup_restore": "database export and restore retain every pin kind",
-      "count_metric": "pin rows and distinct pinned runs partitioned into proof-bundle, investigation-artifact, and other exact kind namespaces",
+      "count_metric": "pin rows partitioned only into proof-bundle, investigation-artifact, and other exact kind-prefix components; v1 does not report distinct pinned-run totals",
       "byte_metric": "unavailable for physical database attribution",
       "accumulating": true,
       "deletion_authorized": false
@@ -119,7 +119,7 @@
       "retention": "proof_bundles.retention defaults to disabled (empty or 0), so bundles accumulate; a positive TTL expires from latest successful materialization through the existing sweeper, which deletes the expired bundle and exactly its proof-bundle:\u003cbundle_id\u003e evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible",
       "protection": "immutable bundle identity until its configured lifecycle expires it",
       "backup_restore": "database export and restore retain bundles and their pins",
-      "count_metric": "bundle rows plus referenced-run counts; exact proof pin rows remain reported by the evidence_pins owner",
+      "count_metric": "bundle rows only; exact proof pin rows remain separate under evidence_pins and v1 does not report referenced-run totals",
       "byte_metric": "logical canonical content bytes; physical database attribution unavailable",
       "accumulating": true,
       "deletion_authorized": false
@@ -141,7 +141,7 @@
       "retention": "pending coalescing bounds only one pending target slot; claim releases that slot, and done, failed, and canceled rows have no deletion or pruning path",
       "protection": "pending and active queue correctness; terminal history has no separately selected retention policy",
       "backup_restore": "database export and restore retain job rows; startup legacy reconciliation currently reads all eight tables",
-      "count_metric": "rows partitioned by exact table and status",
+      "count_metric": "aggregate rows partitioned only by exact table; v1 does not expose job-status partitions",
       "byte_metric": "unavailable for physical database attribution",
       "accumulating": true,
       "deletion_authorized": false
@@ -179,7 +179,7 @@
       "retention": "semantic history and current projections have no aggregate or runtime-wired sweep; the package-local single-artifact sweep has no production caller and does not bound the other component tables",
       "protection": "Investigation, Workbench, artifact-owner, review, dossier, authorization, and watch lifecycles",
       "backup_restore": "database export and restore retain all component rows",
-      "count_metric": "rows partitioned by all 24 exact component tables and owner-specific lifecycle state; investigation_run_job is reported only under durable_job_history",
+      "count_metric": "aggregate rows partitioned only by all 24 exact component tables; v1 does not expose owner lifecycle partitions and investigation_run_job remains under durable_job_history",
       "byte_metric": "unavailable for physical database attribution",
       "accumulating": true,
       "deletion_authorized": false
@@ -518,8 +518,8 @@
         "purpose": "bounded core SurrealDB retention-status collectors",
         "changes": [
           "bounded collectors for evidence_publications, extraction_attempts, extraction_outcomes, evidence_pins, proof_bundles, durable_job_history, and caller_rows",
-          "one bespoke evidence-graph classifier plus generic bounded SurrealDB table summaries",
-          "bounded, resumable, nonblocking install and backfill for any separately justified bounded-query index",
+          "four independent bounded evidence-table totals plus generic bounded SurrealDB table and pin-namespace summaries",
+          "reuse existing record and evidence-pin kind indexes without an install or backfill",
           "replace only these seven owners' unavailable shell values with independently labeled exact, lower_bound, or unavailable summaries"
         ],
         "excluded": [
@@ -530,7 +530,7 @@
         "fits_one_pr": true,
         "size_proof": [
           "seven owners and twenty-one declared components",
-          "one bespoke evidence-graph classifier",
+          "four bounded evidence-table scans with distinct shared-atom accounting",
           "one generic bounded SurrealDB table-summary path",
           "table-driven bounds and completeness coverage",
           "no filesystem adapters"
@@ -540,7 +540,7 @@
         "ticket": "T30.6q",
         "purpose": "bounded Investigation and Workbench retention-status collector",
         "changes": [
-          "bounded collector for investigation_workbench_rows across its exact twenty-four component tables and owner lifecycle state",
+          "bounded aggregate collector for investigation_workbench_rows across its exact twenty-four component tables",
           "bounded, resumable, nonblocking install and backfill for any separately justified bounded-query index",
           "replace only the Investigation/Workbench owner's unavailable shell value with independently labeled exact, lower_bound, or unavailable summaries"
         ],
@@ -552,8 +552,8 @@
         "fits_one_pr": true,
         "size_proof": [
           "one owner and twenty-four exact component tables",
-          "one bounded generic table-summary path plus one owner-lifecycle classifier",
-          "table-driven exact-table, lifecycle-state, bounds, and completeness coverage"
+          "one bounded generic table-summary path with no unrepresentable lifecycle classifier",
+          "table-driven exact-table, aggregate-row, bounds, and completeness coverage"
         ]
       },
       {

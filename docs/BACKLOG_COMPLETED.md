@@ -5440,12 +5440,12 @@ registry/budget, and table-driven shape tests.
 
 T30.6p populates the seven core Surreal owner groups and 21 components:
 evidence publications/graph/shared atoms, attempts, outcomes, three pin
-namespaces, proof bundles, eight job tables, and three caller-row tables. One
-bounded cross-table evidence query family owns current/historical/pinned/
-quarantined/sweep-backlog and distinct-atom accounting; the remaining tables
-use one generic bounded projection collector. T30.6q separately populates the
-24 Investigation/Workbench tables and their owner-defined lifecycle
-partitions, excluding the already counted `investigation_run_job`. For both
+namespaces, proof bundles, eight job tables, and three caller-row tables. The
+fixed v1 wire has no lifecycle/status partition field, so it reports aggregate
+physical-table totals and counts distinct shared atoms directly instead of
+performing an unobservable classification. T30.6q separately populates one
+aggregate total for each of the 24 Investigation/Workbench tables, excluding
+the already counted `investigation_run_job`. For both
 tickets, supporting indexes install/backfill only through bounded,
 restart-resumable, non-blocking work; partial bootstrap is unavailable or a
 labeled lower bound, and first open never builds an index across lifetime
@@ -5590,9 +5590,9 @@ claimed or running jobs selected through the status index; it does not read
 terminal history. No new corpus read, content hash, filesystem scan, mirror
 lock, child process, terminal deletion, TTL, retention configuration,
 `/api/retention-status`, or cross-owner collector is introduced. Historical
-job growth remains the explicit unbounded posture selected by T30.6m;
-T30.6o now owns the authorization-first status shell and warning; T30.6p is
-next and owns the first 21 core Surreal collectors.
+job growth remains the explicit unbounded posture selected by T30.6m. T30.6o
+follows with the authorization-first status shell and warning; T30.6p then
+owns the first 21 core Surreal collectors.
 
 ### T30.6o · Authorization-first retention-status shell and warning
 
@@ -5702,6 +5702,68 @@ line; sync ticks, retries, no-ops, and publication transitions add no work.
 There are no held locks, corpus or shard reads, content hashes, filesystem
 walks, cache invalidations, child processes, query indexes, store writers,
 deletes, backup/restore changes, configuration keys, or owner-lifecycle
-mutations. T30.6p is next and may populate exactly the 21 core Surreal
-components behind this frozen shell; the remaining 31 stay visibly
-`unavailable`.
+mutations. T30.6p may populate exactly the 21 core Surreal components behind
+this frozen shell; the remaining 31 stay visibly `unavailable`.
+
+### T30.6p · Core Surreal retention collectors
+
+**T30.6p ✅ · Core Surreal retention collectors** *(2026-08-02; needs
+T30.6o)* — binds the authorization-first status source to 21 bounded SurrealDB
+components across evidence publications, attempts, outcomes, three pin
+namespaces, proof bundles, all eight durable job tables, and caller
+publication/admission/leaf-outcome rows. The remaining 31 components, both
+installation data-volume metrics, and every physical-database byte metric stay
+explicitly `unavailable`.
+
+The collector preserves the fixed shell allocation: components 0–17 receive
+79 report identities plus one sentinel and caller components 48–50 receive 78
+plus one, totaling 1,656 report identities and at most 1,677 scans. Exhaustion
+below or exactly at the report cap is `exact`; consuming the private sentinel
+reports the cap as a truncated `lower_bound`. The store validates the reusable
+invariants—report allocation 1 through 79, scan exactly report plus one, and
+aggregate totals no greater than 1,656/1,677—rather than freezing that API
+79/78 placement into its own interface. Every one-statement readiness,
+catalog, or component query must return exactly one SurrealDB result envelope;
+zero or multiple envelopes are failures, not empty tables. A missing readiness
+marker, required pin index, malformed query result, or per-component query
+failure is localized as `unavailable` on the wire and cannot hide a successful
+sibling or become a false exact zero. Production emits one log event classified
+only as `not_ready` or `query_error` for each such failed component, at most 21 events
+per request. The production empty-core response is regression-gated at 19,721
+bytes beneath the unchanged 64-KiB limit.
+
+Evidence runs, associations, assertions, and atoms are four independent
+physical-table totals. All run, attempt, outcome, and job states contribute;
+the fixed v1 response has no lifecycle/status partition field, so the
+collector does not spend work computing a classification it cannot expose.
+`evidence_atom` rows are counted directly, so two associations referencing one
+atom still report one atom. Pin components use the existing
+`evidence_pin_kind` index and disjoint proof, Investigation, and complementary
+other ranges, each with its own non-transferable allocation. The existing
+schema batch now defines `evidence_pin.kind` as a scalar string so an
+array-shaped kind cannot undermine those ranges. This is one field definition,
+not a row backfill or writer-generation bump; no index or migration bootstrap
+is added.
+
+Count and bytes remain independent. Outcomes expose bounded logical receipt
+bytes, proof bundles expose canonical content bytes, and caller rows expose
+their stored canonical-byte totals. A selected row with no valid byte source
+leaves only that byte metric unavailable while retaining an exact or lower-
+bound count. Sentinel bytes are excluded. Physical database attribution is
+never inferred from logical values.
+
+The steady-state bound is 21 component summaries from at most 23 row-range
+queries plus four cached writer/migration-marker point checks and one pin-index
+catalog check—at most 28 SurrealDB query calls and 1,677 returned identities per
+authorized request. The summaries are weakly consistent diagnostics rather
+than a frozen cross-table snapshot. Exact proof-content measurement can inspect
+up to 80 bounded 64-MiB values inside SurrealDB (5.00 GiB), including the
+later-excluded sentinel, but only scalar lengths cross the WebSocket/API
+boundary. Denial still precedes all collector work. Startup adds only the one
+field definition in the already-batched schema and performs no retained-row scan,
+backfill, sort, index installation, or migration generation; the endpoint takes
+no owner lock, scans no corpus or filesystem, starts no child, and changes no
+deletion, retention, backup/restore, or owner lifecycle. Sync ticks, retries,
+no-ops, writers, publication transitions, and maintenance add no work. T30.6q
+is next and fills one aggregate summary for each exact Investigation/Workbench
+table.

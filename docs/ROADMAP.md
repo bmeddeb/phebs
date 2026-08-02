@@ -81,11 +81,11 @@ the administrator-only `phebs-retention-status-v1` status shell, complete
 52-component registry, fair 4,096-report/4,148-scan aggregate allocation, and
 unconditional pre-store-open capacity warning. Every endpoint response carries
 the warning header, and successful bodies repeat the code. Its fixed
-19,955-byte empty response preserves ordered non-combinable byte kinds,
-discloses the proof-bundle-only retention control, reports every component and
-both data-volume metrics unavailable, and performs zero inventory scans.
-T30.6p next fills
-the 21 core Surreal components, T30.6q fills the 24 Investigation/Workbench
+19,955-byte empty response preserves ordered non-combinable byte kinds and
+discloses the proof-bundle-only retention control. T30.6p now fills 21 core
+Surreal components with bounded aggregate table/namespace totals while the
+other 31 components and both data-volume metrics remain unavailable. T30.6q
+next fills the 24 Investigation/Workbench
 components, and T30.6r fills the seven derived store/filesystem components and
 completes the surface. T30.6p/T30.6q cannot move lifetime work into a
 synchronous index build or backfill during store open; T30.6r uses bounded
@@ -152,9 +152,9 @@ T30.6h direct caller-leaf execution artifacts, T30.6i atomic complete
 caller-generation publication, T30.6j authorized exact Caller Map reads,
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
 caller integration, T30.6m historical-publication retention decision,
-T30.6n bounded job-history reads and startup migration, and T30.6o's status
-shell are shipped; T30.6p core Surreal collectors are next, followed by T30.6q
-Investigation/Workbench collector, and T30.6r derived collectors. T30.7 waits
+T30.6n bounded job-history reads and startup migration, T30.6o's status shell,
+and T30.6p core Surreal collectors are shipped; T30.6q
+Investigation/Workbench collector is next, followed by T30.6r derived collectors. T30.7 waits
 for that complete sequence.
 T30.6g registers the ordered gRPC/Thrift resolver adapters and materializes one
 immutable catalog

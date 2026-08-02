@@ -389,6 +389,7 @@ DEFINE INDEX IF NOT EXISTS extraction_domain_outcome_control ON extraction_domai
 -- Proof-aware retention: a pinned run (and everything it references) is
 -- immune to sweeps regardless of supersession or age.
 DEFINE TABLE IF NOT EXISTS evidence_pin SCHEMALESS;
+DEFINE FIELD OVERWRITE kind ON evidence_pin TYPE string;
 DEFINE INDEX IF NOT EXISTS evidence_pin_run ON evidence_pin FIELDS run_id;
 DEFINE INDEX IF NOT EXISTS evidence_pin_kind ON evidence_pin FIELDS kind;
 DEFINE INDEX IF NOT EXISTS evidence_pin_identity ON evidence_pin FIELDS pin_key UNIQUE;

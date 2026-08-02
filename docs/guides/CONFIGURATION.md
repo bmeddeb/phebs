@@ -103,29 +103,48 @@ ships the authorization-first status shell, fixed 52-component registry, and
 unconditional `unbounded_historical_publication_retention` warning; it reports
 the warning in `X-Phebs-Warning-Code` on every endpoint response, including
 authorization and internal errors, while successful bodies also carry
-`warning_code`. Every component count and every declared typed byte metric is
-explicitly unavailable, and the shell performs no store or filesystem
-inventory scan. Ordered `logical_encoded`, `canonical_content`,
-`canonical_receipt`, `apparent_file`, and `physical_database` byte kinds are
-non-combinable accounting contracts, not selectable configuration. The
-`proof_bundles` owner exposes the existing `proof_bundles.retention` control.
+`warning_code`. T30.6p populates 21 core SurrealDB components with bounded
+aggregate per-table or per-pin-namespace row totals. The remaining 31
+components, both installation data-volume metrics, and per-component physical
+database attribution stay explicitly unavailable. The populated byte metrics
+are logical encoded outcome-receipt bytes, canonical proof-content bytes, and
+canonical caller-receipt bytes. Ordered `logical_encoded`,
+`canonical_content`, `canonical_receipt`, `apparent_file`, and
+`physical_database` byte kinds are non-combinable accounting contracts, not
+selectable configuration. The `proof_bundles` owner exposes the existing
+`proof_bundles.retention` control.
 Its `default_state` and `accumulating` posture follow the effective configured
 lifetime: zero reports disabled/accumulating and a positive duration reports
 enabled/nonaccumulating. A positive lifetime deletes the expired bundle and
 exactly its `proof-bundle:<bundle_id>` evidence pins but no extraction evidence;
 the independent evidence sweep may later reclaim newly unpinned superseded
-evidence when otherwise eligible. Every other owner has no retention control. The fixed
-4,096-report/4,148-scan aggregate allocation and
+evidence when otherwise eligible. Every other owner has no retention control.
+The fixed 4,096-report/4,148-scan aggregate allocation and
 64-KiB response ceiling are implementation safety contracts, not configuration
-keys. T30.6p will populate the 21 core SurrealDB components, T30.6q
-the exact 24 Investigation/Workbench tables, and T30.6r the seven derived
-store/filesystem components and thereby complete the status surface. Any
-supporting database index bootstrap in T30.6p or T30.6q must be bounded,
-restart-resumable, and nonblocking; every filesystem scan in T30.6r must be
-bounded. Neither T30.6n nor T30.6o adds deletion, changes an owner lifecycle,
-or adds retention configuration; the same boundary governs T30.6p–T30.6r. A
-future bounded historical-publication policy
-requires a new ADR and configuration contract; omission and numeric zero are
+keys. For the shipped core collector, registry indices 0–17 receive 79 report
+slots plus one sentinel and caller-row indices 48–50 receive 78 plus one, for a
+maximum of 1,677 scanned component identities. That placement is an API-shell
+choice: the store accepts report allocations from 1 through 79 only when scan
+is exactly report plus one and separately enforces the unchanged 1,656/1,677
+aggregate ceilings. It produces 21 component summaries using at most 23
+bounded row-range queries after four cached writer/migration-marker point
+checks and one pin-index catalog check. Each one-statement query must return
+exactly one result envelope. Failures remain localized as unavailable metrics
+and emit one log event from the closed
+operational class set—`not_ready` or `query_error`—per failed component, at most
+21 per request. These limits are not configuration keys. The existing startup
+schema batch adds one scalar string definition for `evidence_pin.kind` and
+reuses the existing kind index; there is no row backfill, writer-generation
+bump, new index, sync-tick work,
+writer work, or retention lifecycle change. T30.6q will populate the exact 24
+Investigation/Workbench tables, and T30.6r the seven derived store/filesystem
+components and thereby complete the status surface. Any supporting database
+index bootstrap in T30.6q must be bounded, restart-resumable, and nonblocking;
+every filesystem scan in T30.6r
+must be bounded. T30.6n–T30.6p add no deletion, change no owner lifecycle, and
+add no retention configuration; the same boundary governs T30.6q–T30.6r. A
+future bounded historical-publication policy requires a new ADR and
+configuration contract; omission and numeric zero are
 not reserved as destructive/default aliases for such a future key.
 
 

@@ -711,7 +711,8 @@ func serve(args []string) error {
 	apiOpts := api.Options{
 		Version: version,
 		Store:   st, Search: searcher, DataDir: cfg.Server.DataDir,
-		CodeNav: codeNavigation,
+		CodeNav:               codeNavigation,
+		RetentionStatusSource: api.NewCoreRetentionStatusSource(st, nil),
 		IsAdmin: func(ctx context.Context) bool {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin

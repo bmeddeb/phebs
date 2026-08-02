@@ -1183,18 +1183,56 @@ by omitting `auth.api_key`. Always open: `/api/health`, `/api/version`,
 | `/api/diff?repo=&head=&base=&path=&context_lines=`                  | GET             | bounded unified diff and file statistics; context defaults to 3 and accepts explicit 0         |
 | `/metrics`                                                          | GET             | Prometheus metrics                                                                             |
 
-The retention-status shell is intentionally useful before its collectors are
-populated. Every response from this path—including authorization denial and
-internal error—carries
+Every response from the retention-status path—including authorization denial
+and internal error—carries
 `X-Phebs-Warning-Code: unbounded_historical_publication_retention`; every
 successful body repeats the code in `warning_code`, identifies schema
-`phebs-retention-status-v1`, and lists the complete ordered registry. In
-T30.6o every component count and every declared entry in its ordered
-`byte_metrics` array, plus data-volume total and available bytes, is
-`unavailable` with a null value. Byte kinds are `logical_encoded`,
+`phebs-retention-status-v1`, and lists the complete ordered registry. T30.6p
+now populates 21 core SurrealDB components: evidence graph rows, extraction
+attempts and outcomes, three evidence-pin namespaces, proof bundles, all eight
+durable job tables, and the three caller-row tables. The other 31 components,
+both installation data-volume metrics, and every per-table
+`physical_database` byte metric remain `unavailable` with a null value. Byte
+kinds are `logical_encoded`,
 `canonical_content`, `canonical_receipt`, `apparent_file`, and
 `physical_database`; multiple kinds can describe one component and must never
 be summed. Do not interpret unavailable states as zero retained data.
+
+Each implemented component reports one aggregate per-table or per-namespace
+row count. Lifecycle classes and job statuses are neither computed nor separate
+fields in the v1 response; every retained physical row contributes. An
+exhausted scan under the component allocation is `exact`; consuming its private
+sentinel is a truncated `lower_bound`. Registry indices 0–17 receive 79 report
+slots and 80 scan slots, while the caller-row components at indices 48–50
+receive 78 and 79.
+T30.6p therefore scans at most 1,677 component identities per authorized
+request. The store does not freeze that API placement: it accepts any report
+allocation from 1 through 79 only with scan equal to report plus one and
+enforces the same 1,656/1,677 aggregate ceilings. It reports logical encoded
+bytes for outcome receipts, canonical content bytes for proof bundles, and
+canonical receipt bytes for caller rows.
+It derives those measurements from server-side byte lengths or stored scalar
+totals without materializing proof content, caller pair arrays, or job
+diagnostic payloads in the API process. The bounded proof-content work can
+still inspect as much as 5.00 GiB inside SurrealDB at 80 maximum-size bundles,
+including the later-excluded sentinel.
+
+The production collector produces 21 component summaries using at most 23
+bounded row-range queries; the `other` pin namespace uses up to three disjoint
+index ranges to complement the two reserved prefixes. Those queries follow four
+cached writer/migration-marker point checks plus one required pin-index catalog
+check. Each one-statement query must return exactly one result envelope; zero
+or multiple envelopes are failures, not empty collections. A failed point
+check or query leaves the affected group or component unavailable while
+successful siblings remain visible; it never turns incomplete collection into
+exact zero. The operational log event for each failed component uses only
+`not_ready` or `query_error`, with at most 21 events per request. Because those
+reads are separate, the response is a weakly consistent diagnostic rather than
+a frozen cross-table snapshot. The existing schema batch adds a scalar string
+definition for `evidence_pin.kind` and reuses the existing kind index, with no
+row backfill, writer-generation bump, or new query index. T30.6p adds no writer
+work, sync-tick work, or lifecycle mutation. T30.6q and T30.6r will populate the
+remaining Investigation/Workbench and derived store/filesystem components.
 
 The `proof_bundles` owner alone reports a non-null `retention_control`:
 `proof_bundles.retention`. Its `default_state` is derived from the effective
@@ -1205,9 +1243,9 @@ independent evidence sweep may later reclaim newly unpinned superseded
 evidence when otherwise eligible. Other owners report null. A
 non-administrator is rejected before the status source or any store,
 filesystem, or cache inventory work runs. The static startup warning is
-emitted before store open even if startup later fails; T30.6p–T30.6r will
-populate the fixed shell without changing that authorization boundary.
-
+emitted before store open even if startup later fails; the populated T30.6p
+collector and later T30.6q–T30.6r collectors do not change that authorization
+boundary.
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch
 (same JSON shape as `/api/search`), then a final `done` event with aggregate

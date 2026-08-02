@@ -36,8 +36,10 @@ type Options struct {
 	// administrator-only inventory reads, which fail closed when it is nil.
 	IsAdmin func(context.Context) bool
 	// RetentionStatusSource supplies the bounded T30.6 retention inventory.
-	// Nil serves the fixed zero-scan shell. The retention handler authorizes
-	// before invoking this function so a denial cannot consume inventory work.
+	// Nil serves the fixed zero-scan shell. Production binds the T30.6p core
+	// Surreal collector; later tickets add the remaining owners. The retention
+	// handler authorizes before invoking this function so a denial cannot
+	// consume inventory work.
 	RetentionStatusSource RetentionStatusSource
 
 	// T10.1 audit log. AuditRecord is called for every mutating huma operation

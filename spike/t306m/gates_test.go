@@ -256,15 +256,15 @@ func TestT306MFollowupSplit(t *testing.T) {
 		}},
 		{"T30.6p", []string{
 			"seven owners and twenty-one declared components",
-			"one bespoke evidence-graph classifier",
+			"four bounded evidence-table scans with distinct shared-atom accounting",
 			"one generic bounded SurrealDB table-summary path",
 			"table-driven bounds and completeness coverage",
 			"no filesystem adapters",
 		}},
 		{"T30.6q", []string{
 			"one owner and twenty-four exact component tables",
-			"one bounded generic table-summary path plus one owner-lifecycle classifier",
-			"table-driven exact-table, lifecycle-state, bounds, and completeness coverage",
+			"one bounded generic table-summary path with no unrepresentable lifecycle classifier",
+			"table-driven exact-table, aggregate-row, bounds, and completeness coverage",
 		}},
 		{"T30.6r", []string{
 			"four owners and seven declared components",
@@ -292,9 +292,9 @@ func TestT306MFollowupSplit(t *testing.T) {
 		!slices.Contains(o.Changes, "administrator authorization completes before any store or filesystem inventory or cache touch; unauthorized requests consume none of the 52-component scan budget") ||
 		!slices.Contains(o.Changes, "all collectors report explicitly unavailable and perform zero inventory scans until their follow-up ticket lands") ||
 		!slices.Contains(o.Excluded, "store or filesystem inventory collectors and inventory-cache population") ||
-		!slices.Contains(p.Changes, "bounded, resumable, nonblocking install and backfill for any separately justified bounded-query index") ||
+		!slices.Contains(p.Changes, "reuse existing record and evidence-pin kind indexes without an install or backfill") ||
 		!slices.Contains(p.Excluded, "first-open full-history index build or backfill") ||
-		!slices.Contains(q.Changes, "bounded collector for investigation_workbench_rows across its exact twenty-four component tables and owner lifecycle state") ||
+		!slices.Contains(q.Changes, "bounded aggregate collector for investigation_workbench_rows across its exact twenty-four component tables") ||
 		!slices.Contains(q.Changes, "bounded, resumable, nonblocking install and backfill for any separately justified bounded-query index") ||
 		!slices.Contains(q.Excluded, "first-open full-history index build or backfill") ||
 		!slices.Contains(r.Changes, "bound every installation-root and repository-directory scan with explicit cap-plus-one and independently labeled completeness") ||

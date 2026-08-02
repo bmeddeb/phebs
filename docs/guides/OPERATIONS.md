@@ -1661,8 +1661,9 @@ described above. T30.6m explicitly selects unbounded historical-publication
 retention without changing cleanup. T30.6n bounds job-history reads and
 repairs startup migration without deleting history. T30.6o now supplies the
 authorization-first retention-status shell, fixed registry, budgets, and
-unconditional capacity warning; T30.6p–T30.6r populate its bounded store and
-filesystem collectors, with T30.6r completing the declared surface.
+unconditional capacity warning. T30.6p now populates its 21 core SurrealDB
+components; T30.6q and T30.6r add the remaining Investigation/Workbench and
+derived filesystem collectors, with T30.6r completing the declared surface.
 
 This sequence does not authorize a physical Go-test search overlay, optional
 test evidence, test-to-source association, build-system discovery, SCIP
@@ -1733,7 +1734,7 @@ The owner behavior is intentionally asymmetric:
 
 | Owner | Live retention | Backup/restore behavior |
 | --- | --- | --- |
-| evidence publications | historical published and pinned-superseded runs remain; quarantined runs require administrator resolution; sweep-eligible and in-progress backlog remains until bounded maintenance drains it; all statuses, association/assertion rows, and distinct shared atoms are reported separately | restore retains the graph and every pin |
+| evidence publications | historical published and pinned-superseded runs remain; quarantined runs require administrator resolution; sweep-eligible and in-progress backlog remains until bounded maintenance drains it; the v1 status reports bounded aggregate physical-row totals for runs, associations, assertions, and distinct shared atoms without computing a lifecycle partition | restore retains the graph and every pin |
 | extraction attempts | exact-scope attempts accumulate | restore retains attempts |
 | extraction outcomes | latest-only per repository/domain; each logical diagnostic receipt is capped at 8 KiB | restore imports outcomes, then selectively clears candidate-control outcomes with candidate authority |
 | evidence pins | pin rows and the superseded evidence they protect accumulate according to their owner lifecycle; proof pins are indefinite when `proof_bundles.retention` is omitted or `"0"` | restore retains every pin kind; only its owning lifecycle may release it |
@@ -1871,18 +1872,66 @@ disclosure of an existing lifecycle, not a new cross-owner retention control.
 T30.6p populates the 21 core SurrealDB components: four evidence-publication
 graph components, extraction attempts, extraction outcomes, three logical
 evidence-pin namespaces, proof bundles, all eight durable job tables, and the
-three caller-row tables. It uses a bespoke bounded evidence-graph classifier
-and generic bounded table summaries. Any supporting query index must install
-and backfill through bounded, restart-resumable, nonblocking work; neither the
-first upgraded `store.Open` nor steady-state open may scan, sort, materialize,
-or synchronously index lifetime history. An incomplete bootstrap is labeled
-`lower_bound` or `unavailable` as appropriate, never exact zero.
+three caller-row tables. The v1 wire reports one aggregate bounded row count
+per table or pin namespace; it does not expose or compute lifecycle or
+job-status partitions. Every retained physical row contributes regardless of
+its state. The evidence collector counts shared `evidence_atom` rows directly
+instead of multiplying an atom by the number of associations that reference it.
+
+Each component keeps its non-transferable shell allocation. Registry indices
+0–17 receive 79 report slots plus one sentinel; the caller-row components at
+indices 48–50 receive 78 plus one. A complete T30.6p request can therefore scan
+at most 1,677 component identities, not 21 times the old per-summary ceiling.
+That 79/78 placement belongs to the API registry. The store accepts any report
+allocation from 1 through 79 only when scan is exactly report plus one and
+independently enforces the unchanged 1,656-report/1,677-scan aggregate ceilings.
+The implementation produces 21 component summaries using at most 23 bounded
+row-range queries: the `other` pin namespace is the complement of two reserved
+prefixes and therefore uses as many as three disjoint index ranges. Collection
+follows four cached writer/migration-marker point checks and one required
+pin-index catalog check. Every one-statement readiness, catalog, and component
+query must return exactly one SurrealDB result envelope; zero or multiple
+envelopes are failures rather than empty tables. The three pin namespaces use
+the existing kind index and fixed ranges without sharing or borrowing one
+another's allocations. The existing schema batch defines `evidence_pin.kind`
+as a scalar string, so an array-shaped value cannot undermine those ranges. A
+failed readiness check or component query leaves only the affected readiness
+group or component `unavailable`; successful later components remain visible.
+The production reporter emits one log event per failed component under only the
+`not_ready` or `query_error` class, so one request emits at most 21 such events.
+
+Counts become `exact` only when the bounded query exhausts its table or
+namespace. Consuming the private sentinel reports the component allocation as
+a truncated `lower_bound`. T30.6p publishes logical encoded receipt bytes for
+extraction outcomes, canonical content bytes for proof bundles, and canonical
+receipt bytes for the three caller-row components. It reads only server-side
+byte lengths or stored scalar totals, not proof content, caller pair arrays, or
+job diagnostics. Per-component `physical_database` metrics remain
+`unavailable`, as do the other 31 components and both installation data-volume
+metrics. Those unavailable values are not zeros.
+
+T30.6p adds no new index or row bootstrap. `store.Open` applies the one scalar
+field definition as part of its existing batched schema, with no retained-row
+scan, backfill, sort, synchronous indexing, writer-generation bump, or migration
+generation. It adds no sync-tick, retry, writer, publication-transition, or
+maintenance work.
+
+An authorized request performs at most five readiness queries and 23 bounded
+row-range queries. The resulting summaries are weakly consistent diagnostics,
+not one frozen cross-table snapshot; denial still precedes all of them.
+Computing an exact proof-bundle byte metric may inspect up to 80 bounded 64-MiB
+canonical content values, including the later-excluded sentinel, inside
+SurrealDB (5.00 GiB worst case), while only scalar byte lengths cross the
+WebSocket/API boundary. No request takes an owner lock, writes retained state,
+starts a child, scans the filesystem or corpus, or hashes content.
 
 T30.6q populates the exact 24 Investigation/Workbench component tables listed
-above and retains one independent summary for every table and its owner-defined
-lifecycle state. It has the same bounded, restart-resumable, nonblocking
-database-index bootstrap rule as T30.6p; failure or incomplete reconstruction
-is visible in completeness rather than silently omitting a table.
+above and retains one independent aggregate summary for every table. The fixed
+v1 wire has no owner-lifecycle partition field, so it does not compute a hidden
+partition. If it requires a supporting database index, installation and
+backfill must be bounded, restart-resumable, and nonblocking; failure or
+incomplete reconstruction is visible in completeness rather than silently
+omitting a table.
 
 T30.6r populates the final seven derived components: candidate store authority
 and managed files, focused repository state and publication files, resolver
@@ -1903,16 +1952,23 @@ also repeats it as `warning_code`, including for an empty installation. Until
 T30.6r lands, the fixed registry makes unfinished
 collector coverage explicit through `unavailable` component summaries; there
 is no complete retained-capacity status surface for the twelve T30.6 modeled
-owner groups. Audit, analytics, authentication, and other installation state
-retain their separately documented lifecycles; this endpoint is not a claim to
+owner groups. T30.6p query or readiness failures are localized as
+`unavailable` summaries rather than converted to exact zero or used to hide
+successful sibling components; their operational log event carries the fixed
+`not_ready` or `query_error` class. Audit, analytics, authentication, and other
+installation state retain their separately documented lifecycles; this
+endpoint is not a claim to
 inventory every database table. After ordinary authentication, a denied
-request performs only the administrator check. The authorized shell validates
-and encodes one fixed `O(52)` structure with a sub-64-KiB body and no retention
-I/O; startup adds one log line,
-while sync ticks, retries, no-ops, and publication transitions add no work. It
-takes no lock, starts no child, and adds no retained-owner deletion,
-configuration, lifecycle mutation, corpus read, content hash, or mirror work.
-The same boundary governs T30.6p–T30.6r.
+request performs only the administrator check. An authorized production
+request runs T30.6p's bounded store work, then validates and encodes one fixed
+`O(52)` structure with a sub-64-KiB body. Startup still adds only the existing
+warning log line plus the scalar field definition inside the existing batched
+schema; it adds no retained-row scan, backfill, sort, index installation, or
+migration generation. Sync ticks, retries, no-ops, and publication transitions
+add no work. The endpoint takes no lock, starts no child, and adds no
+retained-owner deletion, configuration, lifecycle mutation, corpus read,
+content hash, or
+mirror work. The same boundary governs T30.6q and T30.6r.
 
 Expanding or relocating `server.data_dir` is the only unconditional live-
 capacity escape. Take a verified backup before supported repository removal;
