@@ -25,8 +25,7 @@ const (
 
 // CallerComparisonService is the shared old-to-replacement classification
 // engine. The public constructor binds the same exact repository-overlay
-// engine as Caller Map. The legacy constructor exists only for Workbench
-// until T30.6l composes that product's revision snapshot with exact callers.
+// engine as Caller Map.
 type CallerComparisonService struct {
 	opts  Options
 	exact *exactCallerMapService
@@ -49,8 +48,7 @@ func NewCallerComparisonService(opts Options) *CallerComparisonService {
 }
 
 // NewLegacyCallerComparisonService retains the pre-T30.6k evidence-backed
-// comparison solely for Workbench Impact's separately scheduled T30.6l
-// migration and historical acceptance fixtures.
+// comparison solely for historical acceptance fixtures.
 func NewLegacyCallerComparisonService(opts Options) *CallerComparisonService {
 	if !opts.CallerMapEnabled ||
 		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil {
@@ -109,17 +107,34 @@ type CallerComparisonPage struct {
 	Pagination        CallerMapPagination          `json:"pagination"`
 	Coverage          *extract.CoverageCertificate `json:"coverage,omitempty"`
 	Caveat            string                       `json:"caveat"`
+	// exactSnapshot is the transport-hidden joint publication/authorization
+	// digest used by composed readers when a complete page has no cursor.
+	// Legacy comparison deliberately leaves it empty.
+	exactSnapshot string
+	// exactAuthority is the signed, transport-hidden confirmation input for
+	// the joint publication pair. It is not a pagination cursor and is never
+	// serialized by the public comparison transport.
+	exactAuthority string
 }
 
-// CallerComparisonExactSnapshot is the public T30.6k endpoint contract. The
-// legacy Workbench snapshot remains separately represented by
-// CallerComparisonSnapshot until T30.6l, but public HTTP and MCP schemas must
-// not make exact generation/state fields optional merely for that migration.
+// CallerComparisonExactSnapshot is the public exact endpoint and Workbench
+// composition contract. Historical legacy fixtures remain represented by
+// CallerComparisonSnapshot without weakening the product schema.
 type CallerComparisonExactSnapshot struct {
 	Endpoint          CallerMapEndpoint     `json:"endpoint"`
 	Declaration       *ContractCatalogClaim `json:"declaration,omitempty"`
 	Generation        CallerMapGeneration   `json:"generation"`
 	MatchingRowsState string                `json:"matching_rows_state" enum:"exact,unavailable"`
+}
+
+// exactCallerComparisonSnapshotConfirmation is the bounded joint projection
+// returned only after both token-bound repositories, publications, and final
+// authorization views have been rechecked.
+type exactCallerComparisonSnapshotConfirmation struct {
+	Snapshot          string
+	MatchingRowsState string
+	Old               CallerComparisonExactSnapshot
+	Replacement       CallerComparisonExactSnapshot
 }
 
 // CallerComparisonExactPage excludes every legacy evidence-plane digest and

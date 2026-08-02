@@ -31,6 +31,7 @@ const (
 	exactCallerMapSchemaVersion = "caller-map-v2"
 	exactCallerMapCursorVersion = "caller-map-cursor-v2"
 	exactCallerCitationVersion  = "caller-map-citation-v1"
+	exactCallerAuthorityVersion = "caller-map-authority-v1"
 	exactCallerMapPlane         = "repository-overlay"
 
 	exactCallerMapMaxRecords = callerleaf.MaxAggregateResultRecords +
@@ -187,6 +188,19 @@ type exactCallerCursor struct {
 	Offset      int               `json:"offset"`
 }
 
+type exactCallerAuthority struct {
+	Schema             string                               `json:"schema"`
+	QueryDigest        string                               `json:"query_digest"`
+	Repository         string                               `json:"repository"`
+	Visibility         VisibilityContext                    `json:"visibility"`
+	RepositoryRevision uint64                               `json:"repository_revision"`
+	Snapshot           string                               `json:"snapshot"`
+	MatchingRowsState  string                               `json:"matching_rows_state"`
+	Generation         CallerMapGeneration                  `json:"generation"`
+	ProjectionFailed   bool                                 `json:"projection_failed,omitempty"`
+	Publication        *callerexecute.PublicationDescriptor `json:"publication,omitempty"`
+}
+
 type exactCallerCitation struct {
 	Schema     string `json:"schema"`
 	Repository string `json:"repository"`
@@ -253,6 +267,10 @@ func (service *exactCallerMapService) list(
 	if err != nil {
 		return nil, err
 	}
+	repositoryRevision, err := exactCallerRepositoryRevision(repository)
+	if err != nil {
+		return nil, err
+	}
 	finishExactRead, err := service.beginExactRead(ctx)
 	if err != nil {
 		return nil, err
@@ -276,7 +294,7 @@ func (service *exactCallerMapService) list(
 	defer func() { _ = read.Release() }()
 	if read.Availability != callerexecute.PublicationCurrent {
 		return service.gapPage(
-			ctx, query, read, visibility,
+			ctx, query, queryDigest, read, visibility, repositoryRevision,
 		)
 	}
 	declaration, err := exactCallerDeclaration(
@@ -289,7 +307,8 @@ func (service *exactCallerMapService) list(
 	if err != nil {
 		if errors.Is(err, errExactCallerProjectionInvalid) {
 			return service.projectionFailurePage(
-				ctx, query, read, visibility,
+				ctx, query, queryDigest, read, visibility,
+				repositoryRevision,
 			)
 		}
 		return nil, err
@@ -462,27 +481,68 @@ func (service *exactCallerMapService) page(
 		pagination.NextCursor = service.encodeSigned(cursor)
 	}
 	declaration := binding.declaration
+	snapshot := exactCallerPageSnapshot(binding)
+	repositoryRevision := binding.publication.Summary.PublicationRevision
+	publication, err := exactCallerRequiredPublicationDescriptor(read)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"describe caller map publication", err,
+		)
+	}
+	authority, err := service.encodeExactAuthority(exactCallerAuthority{
+		Schema: exactCallerAuthorityVersion, QueryDigest: binding.queryDigest,
+		Repository: binding.generation.Repository, Visibility: binding.visibility,
+		RepositoryRevision: repositoryRevision, Snapshot: snapshot,
+		MatchingRowsState: "exact", Generation: binding.generation,
+		Publication: publication,
+	})
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"encode caller map authority", err,
+		)
+	}
 	return &CallerMapPage{
 		SchemaVersion: exactCallerMapSchemaVersion, Query: query,
 		Declaration: &declaration, Rows: rows,
 		Groups:            callerMapGroups(rows, query.Ordering),
 		TotalMatchingRows: callerMapTotal(len(binding.records)), Pagination: pagination,
 		Generation: &binding.generation, MatchingRowsState: "exact",
-		Caveat: "Repository-overlay static source evidence only; a complete generation is not runtime use, completeness, migration completion, or decommissioning safety.",
+		Caveat:         "Repository-overlay static source evidence only; a complete generation is not runtime use, completeness, migration completion, or decommissioning safety.",
+		exactSnapshot:  snapshot,
+		exactAuthority: authority,
 	}, nil
+}
+
+func exactCallerPageSnapshot(binding *exactCallerBinding) string {
+	if binding == nil {
+		return ""
+	}
+	return digestJSON(struct {
+		Visibility  VisibilityContext                `json:"visibility"`
+		Publication callerexecute.PublicationBinding `json:"publication"`
+		Declaration ContractCatalogClaim             `json:"declaration"`
+		Generation  CallerMapGeneration              `json:"generation"`
+	}{
+		Visibility: binding.visibility, Publication: binding.publication,
+		Declaration: binding.declaration, Generation: binding.generation,
+	})
 }
 
 func (service *exactCallerMapService) gapPage(
 	ctx context.Context,
 	query CallerMapQuery,
+	queryDigest string,
 	read *callerexecute.PublicationRead,
 	visibility VisibilityContext,
+	authorizedRevision uint64,
 ) (*CallerMapPage, error) {
-	generation := service.generation(read)
-	if generation.State == "" {
-		generation.State = string(read.Availability)
+	generation := service.unavailableGeneration(read)
+	publication, err := exactCallerPublicationDescriptor(read)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"describe caller generation gap", err,
+		)
 	}
-	generation.Reason = "complete caller generation " + string(read.Availability)
 	current, err := service.opts.CallerReader.UnavailableCurrent(ctx, read)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
@@ -494,41 +554,431 @@ func (service *exactCallerMapService) gapPage(
 			"caller generation changed while building the response",
 		)
 	}
-	if _, err := service.confirmAuthorization(
+	repository, err := service.confirmAuthorization(
 		ctx, query.Endpoint.Repository, visibility,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
 	}
-	return exactCallerGapPage(query, generation), nil
+	revision, err := exactCallerRepositoryRevision(repository)
+	if err != nil {
+		return nil, err
+	}
+	if revision != authorizedRevision {
+		return nil, exactCallerAuthorityConflict()
+	}
+	return service.exactCallerGapPage(
+		query, queryDigest, visibility, revision, generation, false, publication,
+	)
 }
 
 func (service *exactCallerMapService) projectionFailurePage(
 	ctx context.Context,
 	query CallerMapQuery,
+	queryDigest string,
 	read *callerexecute.PublicationRead,
 	visibility VisibilityContext,
+	authorizedRevision uint64,
 ) (*CallerMapPage, error) {
-	if err := service.confirm(
+	repository, err := service.confirmWithRepository(
 		ctx, read, query.Endpoint.Repository, visibility,
-	); err != nil {
+	)
+	if err != nil {
 		return nil, err
+	}
+	revision, err := exactCallerRepositoryRevision(repository)
+	if err != nil {
+		return nil, err
+	}
+	if revision != authorizedRevision {
+		return nil, exactCallerAuthorityConflict()
+	}
+	publication, err := exactCallerRequiredPublicationDescriptor(read)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"describe failed caller generation", err,
+		)
 	}
 	generation := service.generation(read)
 	generation.State = string(callerexecute.PublicationFailed)
 	generation.Reason = "complete caller generation failed semantic projection validation"
-	return exactCallerGapPage(query, generation), nil
+	return service.exactCallerGapPage(
+		query, queryDigest, visibility, revision, generation, true, publication,
+	)
 }
 
-func exactCallerGapPage(
+func (service *exactCallerMapService) exactCallerGapPage(
 	query CallerMapQuery,
+	queryDigest string,
+	visibility VisibilityContext,
+	repositoryRevision uint64,
 	generation CallerMapGeneration,
-) *CallerMapPage {
+	projectionFailed bool,
+	publication *callerexecute.PublicationDescriptor,
+) (*CallerMapPage, error) {
+	snapshot := exactCallerGapSnapshot(
+		visibility, repositoryRevision, generation, publication,
+	)
+	authority, err := service.encodeExactAuthority(exactCallerAuthority{
+		Schema: exactCallerAuthorityVersion, QueryDigest: queryDigest,
+		Repository: generation.Repository, Visibility: visibility,
+		RepositoryRevision: repositoryRevision, Snapshot: snapshot,
+		MatchingRowsState: "unavailable", Generation: generation,
+		ProjectionFailed: projectionFailed, Publication: publication,
+	})
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"encode caller map gap authority", err,
+		)
+	}
 	return &CallerMapPage{
 		SchemaVersion: exactCallerMapSchemaVersion, Query: query,
 		Rows: []CallerMapRow{}, Pagination: CallerMapPagination{Complete: true},
 		Generation: &generation, MatchingRowsState: "unavailable",
-		Caveat: "Caller totals and absence are unavailable until one exact complete repository-overlay generation is current.",
+		Caveat:         "Caller totals and absence are unavailable until one exact complete repository-overlay generation is current.",
+		exactSnapshot:  snapshot,
+		exactAuthority: authority,
+	}, nil
+}
+
+func exactCallerGapSnapshot(
+	visibility VisibilityContext,
+	repositoryRevision uint64,
+	generation CallerMapGeneration,
+	publication *callerexecute.PublicationDescriptor,
+) string {
+	return digestJSON(struct {
+		Visibility         VisibilityContext                    `json:"visibility"`
+		RepositoryRevision uint64                               `json:"repository_revision"`
+		Generation         CallerMapGeneration                  `json:"generation"`
+		Publication        *callerexecute.PublicationDescriptor `json:"publication,omitempty"`
+	}{visibility, repositoryRevision, generation, publication})
+}
+
+func exactCallerPublicationDescriptor(
+	read *callerexecute.PublicationRead,
+) (*callerexecute.PublicationDescriptor, error) {
+	if read == nil || read.Summary == nil {
+		return nil, nil
 	}
+	descriptor, err := read.Descriptor()
+	if err != nil {
+		return nil, err
+	}
+	return &descriptor, nil
+}
+
+func exactCallerRequiredPublicationDescriptor(
+	read *callerexecute.PublicationRead,
+) (*callerexecute.PublicationDescriptor, error) {
+	descriptor, err := exactCallerPublicationDescriptor(read)
+	if err != nil {
+		return nil, err
+	}
+	if descriptor == nil {
+		return nil, errors.New("caller publication read has no descriptor")
+	}
+	return descriptor, nil
+}
+
+func (service *CallerMapService) confirmWorkbenchCallerSnapshot(
+	ctx context.Context,
+	query CallerMapQuery,
+	pageSize int,
+	encoded string,
+) (exactCallerSnapshotConfirmation, error) {
+	if service == nil || service.exact == nil {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error503ServiceUnavailable("caller map unavailable")
+	}
+	return service.exact.confirmWorkbenchCallerSnapshot(
+		ctx, query, pageSize, encoded,
+	)
+}
+
+func (service *exactCallerMapService) confirmWorkbenchCallerSnapshot(
+	ctx context.Context,
+	query CallerMapQuery,
+	pageSize int,
+	encoded string,
+) (exactCallerSnapshotConfirmation, error) {
+	if service == nil || service.opts.CallerReader == nil {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error503ServiceUnavailable("caller map unavailable")
+	}
+	if !catalogAuthenticated(ctx, service.opts) {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error404NotFound("caller map not found")
+	}
+	if _, err := validateCallerMapQuery(query); err != nil {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error400BadRequest(err.Error())
+	}
+	if pageSize == 0 {
+		pageSize = callerMapDefaultPage
+	}
+	if pageSize < 1 || pageSize > callerMapMaxPage {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error400BadRequest(
+				fmt.Sprintf(
+					"page_size must be from 1 through %d", callerMapMaxPage,
+				),
+			)
+	}
+	query = normalizeCallerMapQuery(query)
+	queryDigest := digestJSON(struct {
+		Query CallerMapQuery `json:"query"`
+		Size  int            `json:"page_size"`
+	}{query, pageSize})
+
+	repository, visibility, err := service.authorize(
+		ctx, query.Endpoint.Repository,
+	)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{}, err
+	}
+	repositoryRevision, err := exactCallerRepositoryRevision(repository)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{}, err
+	}
+	var authority exactCallerAuthority
+	if len(encoded) > callerMapCursorLimit ||
+		service.decodeSigned(encoded, &authority) != nil ||
+		!validExactCallerAuthority(authority) ||
+		authority.QueryDigest != queryDigest ||
+		authority.Repository != query.Endpoint.Repository ||
+		authority.Visibility != visibility ||
+		authority.RepositoryRevision != repositoryRevision {
+		return exactCallerSnapshotConfirmation{},
+			exactCallerAuthorityConflict()
+	}
+	finishExactRead, err := service.beginExactRead(ctx)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{}, err
+	}
+	defer finishExactRead()
+
+	if authority.MatchingRowsState == "exact" {
+		return service.confirmWorkbenchCurrentCallerSnapshot(
+			ctx, query, authority,
+		)
+	}
+	return service.confirmWorkbenchCallerGapSnapshot(
+		ctx, query, authority,
+	)
+}
+
+func validExactCallerAuthority(authority exactCallerAuthority) bool {
+	if authority.Schema != exactCallerAuthorityVersion ||
+		authority.QueryDigest == "" || authority.Repository == "" ||
+		authority.Snapshot == "" ||
+		authority.Generation.Repository != authority.Repository ||
+		authority.Generation.Plane != exactCallerMapPlane {
+		return false
+	}
+	switch authority.MatchingRowsState {
+	case "exact":
+		return !authority.ProjectionFailed && authority.Publication != nil &&
+			authority.Generation.State == string(callerexecute.PublicationCurrent) &&
+			validExactCallerPublicationDescriptor(
+				authority.Publication, authority.Repository,
+				authority.Generation,
+			) &&
+			authority.Publication.PublicationRevision ==
+				authority.RepositoryRevision &&
+			authority.Generation.PublicationRevision ==
+				authority.RepositoryRevision
+	case "unavailable":
+		if authority.ProjectionFailed {
+			return authority.Publication != nil &&
+				authority.Generation.State == string(callerexecute.PublicationFailed) &&
+				validExactCallerPublicationDescriptor(
+					authority.Publication, authority.Repository,
+					authority.Generation,
+				) &&
+				authority.Publication.PublicationRevision ==
+					authority.RepositoryRevision &&
+				authority.Generation.PublicationRevision ==
+					authority.RepositoryRevision
+		}
+		return stringIn(
+			authority.Generation.State,
+			string(callerexecute.PublicationMissing),
+			string(callerexecute.PublicationStale),
+			string(callerexecute.PublicationFailed),
+		) && validExactCallerPublicationDescriptor(
+			authority.Publication, authority.Repository,
+			authority.Generation,
+		)
+	default:
+		return false
+	}
+}
+
+func validExactCallerPublicationDescriptor(
+	descriptor *callerexecute.PublicationDescriptor,
+	repository string,
+	generation CallerMapGeneration,
+) bool {
+	if descriptor == nil {
+		return generation.PublicationRevision == 0 &&
+			generation.ManifestDigest == "" && generation.PairSetDigest == ""
+	}
+	return descriptor.Validate() == nil &&
+		descriptor.Repository == repository &&
+		descriptor.GenerationDigest == generation.GenerationDigest &&
+		descriptor.ManifestDigest == generation.ManifestDigest &&
+		descriptor.PairSetDigest == generation.PairSetDigest &&
+		descriptor.PublicationRevision == generation.PublicationRevision
+}
+
+func exactCallerAuthorityConflict() error {
+	return huma.Error409Conflict(
+		"caller map authority is no longer valid",
+	)
+}
+
+func (service *exactCallerMapService) confirmWorkbenchCurrentCallerSnapshot(
+	ctx context.Context,
+	query CallerMapQuery,
+	authority exactCallerAuthority,
+) (exactCallerSnapshotConfirmation, error) {
+	read, err := service.opts.CallerReader.ReopenDescriptor(
+		ctx, *authority.Publication,
+	)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{},
+			exactCallerReaderError("reopen caller generation authority", err)
+	}
+	if read == nil {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error500InternalServerError(
+				"reopen caller generation authority",
+				errors.New("caller reader returned no state"),
+			)
+	}
+	defer func() { _ = read.Release() }()
+	if read.Availability != callerexecute.PublicationCurrent {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+	publication, descriptorErr := exactCallerPublicationDescriptor(read)
+	if descriptorErr != nil ||
+		!reflect.DeepEqual(publication, authority.Publication) {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+	generation := service.generation(read)
+	generation.ExcludedGoTestRecords = authority.Generation.ExcludedGoTestRecords
+	if !reflect.DeepEqual(generation, authority.Generation) {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+	repository, err := service.confirmWithRepository(
+		ctx, read, query.Endpoint.Repository, authority.Visibility,
+	)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{}, err
+	}
+	revision, err := exactCallerRepositoryRevision(repository)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{}, err
+	}
+	if revision != authority.RepositoryRevision {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+	return exactCallerSnapshotConfirmation{
+		Snapshot: authority.Snapshot, MatchingRowsState: "exact",
+		Generation: generation,
+	}, nil
+}
+
+func (service *exactCallerMapService) confirmWorkbenchCallerGapSnapshot(
+	ctx context.Context,
+	query CallerMapQuery,
+	authority exactCallerAuthority,
+) (exactCallerSnapshotConfirmation, error) {
+	var read *callerexecute.PublicationRead
+	var err error
+	if authority.ProjectionFailed {
+		read, err = service.opts.CallerReader.ReopenDescriptor(
+			ctx, *authority.Publication,
+		)
+	} else {
+		read, err = service.opts.CallerReader.Open(ctx, authority.Repository)
+	}
+	if err != nil {
+		return exactCallerSnapshotConfirmation{},
+			exactCallerReaderError("reopen caller generation gap authority", err)
+	}
+	if read == nil {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error500InternalServerError(
+				"reopen caller generation gap authority",
+				errors.New("caller reader returned no state"),
+			)
+	}
+	defer func() { _ = read.Release() }()
+	publication, descriptorErr := exactCallerPublicationDescriptor(read)
+	if descriptorErr != nil ||
+		!reflect.DeepEqual(publication, authority.Publication) {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+
+	var generation CallerMapGeneration
+	if authority.ProjectionFailed {
+		if read.Availability != callerexecute.PublicationCurrent {
+			return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+		}
+		generation = service.generation(read)
+		generation.ExcludedGoTestRecords =
+			authority.Generation.ExcludedGoTestRecords
+		generation.State = string(callerexecute.PublicationFailed)
+		generation.Reason =
+			"complete caller generation failed semantic projection validation"
+	} else {
+		if read.Availability == callerexecute.PublicationCurrent {
+			return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+		}
+		generation = service.unavailableGeneration(read)
+	}
+	if !reflect.DeepEqual(generation, authority.Generation) {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+
+	var current bool
+	if authority.ProjectionFailed {
+		current, err = service.opts.CallerReader.Current(ctx, read)
+	} else {
+		current, err = service.opts.CallerReader.UnavailableCurrent(ctx, read)
+	}
+	if err != nil {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error500InternalServerError(
+				"confirm caller generation gap authority", err,
+			)
+	}
+	if !current {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+	repository, err := service.confirmAuthorization(
+		ctx, query.Endpoint.Repository, authority.Visibility,
+	)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{}, err
+	}
+	revision, err := exactCallerRepositoryRevision(repository)
+	if err != nil {
+		return exactCallerSnapshotConfirmation{}, err
+	}
+	if revision != authority.RepositoryRevision ||
+		exactCallerGapSnapshot(
+			authority.Visibility, revision, generation,
+			authority.Publication,
+		) != authority.Snapshot {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
+	return exactCallerSnapshotConfirmation{
+		Snapshot: authority.Snapshot, MatchingRowsState: "unavailable",
+		Generation: generation,
+	}, nil
 }
 
 func (service *exactCallerMapService) index(
@@ -950,15 +1400,30 @@ func (service *exactCallerMapService) confirm(
 	repository string,
 	visibility VisibilityContext,
 ) error {
+	_, err := service.confirmWithRepository(
+		ctx, read, repository, visibility,
+	)
+	return err
+}
+
+func (service *exactCallerMapService) confirmWithRepository(
+	ctx context.Context,
+	read *callerexecute.PublicationRead,
+	repository string,
+	visibility VisibilityContext,
+) (store.Repo, error) {
 	current, err := service.opts.CallerReader.Current(ctx, read)
 	if err != nil {
-		return huma.Error500InternalServerError("confirm caller generation", err)
+		return store.Repo{}, huma.Error500InternalServerError(
+			"confirm caller generation", err,
+		)
 	}
 	if !current {
-		return huma.Error409Conflict("caller generation changed while building the response")
+		return store.Repo{}, huma.Error409Conflict(
+			"caller generation changed while building the response",
+		)
 	}
-	_, err = service.confirmAuthorization(ctx, repository, visibility)
-	return err
+	return service.confirmAuthorization(ctx, repository, visibility)
 }
 
 func (service *exactCallerMapService) confirmAuthorization(
@@ -974,6 +1439,16 @@ func (service *exactCallerMapService) confirmAuthorization(
 		return store.Repo{}, huma.Error409Conflict("caller map authorization changed while building the response; retry")
 	}
 	return repo, nil
+}
+
+func exactCallerRepositoryRevision(repository store.Repo) (uint64, error) {
+	if repository.CallerPublicationRevision < 0 {
+		return 0, huma.Error500InternalServerError(
+			"confirm caller publication revision",
+			errors.New("repository caller publication revision is negative"),
+		)
+	}
+	return uint64(repository.CallerPublicationRevision), nil
 }
 
 func (service *exactCallerMapService) generation(
@@ -1000,6 +1475,20 @@ func (service *exactCallerMapService) generation(
 	result.AbstentionCount = read.Summary.AbstentionCount
 	result.CanonicalBytes = read.Summary.CanonicalBytes
 	return result
+}
+
+func (service *exactCallerMapService) unavailableGeneration(
+	read *callerexecute.PublicationRead,
+) CallerMapGeneration {
+	generation := service.generation(read)
+	if generation.State == "" && read != nil {
+		generation.State = string(read.Availability)
+	}
+	if read != nil {
+		generation.Reason = "complete caller generation " +
+			string(read.Availability)
+	}
+	return generation
 }
 
 func exactIndexKey(read *callerexecute.PublicationRead) string {
@@ -1434,6 +1923,16 @@ func (service *exactCallerMapService) encodeSigned(value any) string {
 	_, _ = signature.Write(raw)
 	return base64.RawURLEncoding.EncodeToString(raw) + "." +
 		base64.RawURLEncoding.EncodeToString(signature.Sum(nil))
+}
+
+func (service *exactCallerMapService) encodeExactAuthority(
+	value any,
+) (string, error) {
+	encoded := service.encodeSigned(value)
+	if encoded == "" || len(encoded) > callerMapCursorLimit {
+		return "", errors.New("exact caller authority exceeds its bound")
+	}
+	return encoded, nil
 }
 
 func (service *exactCallerMapService) decodeCursor(encoded string) (exactCallerCursor, error) {

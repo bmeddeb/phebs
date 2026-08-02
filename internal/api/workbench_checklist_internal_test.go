@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -21,6 +22,80 @@ const (
 	checklistRepository      = "github.com/acme/cart"
 	checklistCommit          = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 )
+
+func TestWorkbenchChecklistRawAccumulatorRetainsCanonicalCeiling(
+	t *testing.T,
+) {
+	const candidateCount = workbenchChecklistMaxSuggestions + 250
+	all := make([]workbenchChecklistRawSuggestion, candidateCount)
+	allKeys := make([]string, candidateCount)
+	for index := range all {
+		all[index] = workbenchChecklistRawSuggestion{
+			kind:          "review_candidate",
+			summary:       fmt.Sprintf("Review candidate %04d.", index),
+			selectionRule: "t30.6l:bounded_accumulator_v1",
+		}
+		allKeys[index] = workbenchChecklistRawKey(all[index])
+	}
+	slices.Sort(allKeys)
+	accumulator := newWorkbenchChecklistRawAccumulator(nil, false)
+	for index := len(all) - 1; index >= 0; index-- {
+		accumulator.add(all[index], all[index])
+	}
+	retained := accumulator.retained()
+	retainedKeys := make([]string, len(retained))
+	for index := range retained {
+		retainedKeys[index] = workbenchChecklistRawKey(retained[index])
+	}
+	slices.Sort(retainedKeys)
+	if !accumulator.overflow ||
+		len(retained) != workbenchChecklistMaxSuggestions ||
+		!slices.Equal(
+			retainedKeys,
+			allKeys[:workbenchChecklistMaxSuggestions],
+		) {
+		t.Fatalf(
+			"bounded accumulator = overflow:%t retained:%d canonical:%t",
+			accumulator.overflow,
+			len(retained),
+			slices.Equal(
+				retainedKeys,
+				allKeys[:workbenchChecklistMaxSuggestions],
+			),
+		)
+	}
+}
+
+func TestNormalizeWorkbenchChecklistEvidenceCanonicalizesImpactDefaults(
+	t *testing.T,
+) {
+	implicit, err := normalizeWorkbenchChecklistEvidence(
+		WorkbenchChecklistEvidenceInput{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	explicit, err := normalizeWorkbenchChecklistEvidence(
+		WorkbenchChecklistEvidenceInput{
+			ImpactFilters: WorkbenchImpactFilters{
+				Freshness:  "any",
+				Resolution: "any",
+				Ordering:   "source",
+				Level:      "occurrence",
+			},
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(implicit, explicit) {
+		t.Fatalf(
+			"normalized checklist evidence differs: implicit=%+v explicit=%+v",
+			implicit,
+			explicit,
+		)
+	}
+}
 
 type checklistWorkbenchFake struct {
 	view *store.WorkbenchView
@@ -57,6 +132,99 @@ func (fake *checklistImpactFake) Read(
 	encoded, _ := json.Marshal(fake.page)
 	var page WorkbenchImpactPage
 	_ = json.Unmarshal(encoded, &page)
+	return &page, nil
+}
+
+type checklistRotatingImpactFake struct {
+	pages []WorkbenchImpactPage
+	build int
+}
+
+func (fake *checklistRotatingImpactFake) Read(
+	_ context.Context,
+	_ string,
+	request WorkbenchImpactRequest,
+) (*WorkbenchImpactPage, error) {
+	if request.InvestigationID != checklistInvestigationID ||
+		request.RevisionID != checklistRevisionID || len(fake.pages) != 2 {
+		return nil, store.ErrNotFound
+	}
+	pageIndex := 0
+	if request.Cursor == "" {
+		fake.build++
+	} else if request.Cursor == fmt.Sprintf(
+		"outer-%d-next",
+		fake.build,
+	) {
+		pageIndex = 1
+	} else {
+		return nil, store.ErrNotFound
+	}
+	encoded, _ := json.Marshal(fake.pages[pageIndex])
+	var page WorkbenchImpactPage
+	_ = json.Unmarshal(encoded, &page)
+	if pageIndex == 0 {
+		page.Pagination = WorkbenchImpactPagination{
+			NextCursor: fmt.Sprintf("outer-%d-next", fake.build),
+		}
+	} else {
+		page.Pagination = WorkbenchImpactPagination{Complete: true}
+	}
+	for callerIndex := range page.Callers {
+		caller := &page.Callers[callerIndex]
+		if !caller.Pagination.Complete {
+			caller.Pagination.NextCursor = fmt.Sprintf(
+				"caller-%d-%d-next",
+				fake.build,
+				pageIndex,
+			)
+		}
+		for rowIndex := range caller.ResolvedCallers {
+			caller.ResolvedCallers[rowIndex].Source.Citation = fmt.Sprintf(
+				"caller-%d-%d-%d",
+				fake.build,
+				pageIndex,
+				rowIndex,
+			)
+		}
+		for rowIndex := range caller.ExtractorAbstentions {
+			caller.ExtractorAbstentions[rowIndex].Source.Citation = fmt.Sprintf(
+				"abstention-%d-%d-%d",
+				fake.build,
+				pageIndex,
+				rowIndex,
+			)
+		}
+	}
+	return &page, nil
+}
+
+type checklistEndlessImpactFake struct {
+	page  WorkbenchImpactPage
+	calls int
+}
+
+func (fake *checklistEndlessImpactFake) Read(
+	_ context.Context,
+	_ string,
+	request WorkbenchImpactRequest,
+) (*WorkbenchImpactPage, error) {
+	wantCursor := ""
+	if fake.calls > 0 {
+		wantCursor = fmt.Sprintf("impact-page-%d", fake.calls)
+	}
+	if request.InvestigationID != checklistInvestigationID ||
+		request.RevisionID != checklistRevisionID ||
+		request.Cursor != wantCursor {
+		return nil, store.ErrNotFound
+	}
+	fake.calls++
+	encoded, _ := json.Marshal(fake.page)
+	var page WorkbenchImpactPage
+	_ = json.Unmarshal(encoded, &page)
+	page.Pagination = WorkbenchImpactPagination{
+		NextCursor: fmt.Sprintf("impact-page-%d", fake.calls),
+	}
 	return &page, nil
 }
 
@@ -295,6 +463,280 @@ func TestWorkbenchChecklistDeterministicUnacceptedProjectionAndCursor(
 		next.Entries[0].Suggestion.ID ==
 			first.Entries[0].Suggestion.ID {
 		t.Fatalf("cursor did not advance: first=%+v next=%+v", first, next)
+	}
+}
+
+func TestWorkbenchChecklistIgnoresRotatedImpactCapabilities(
+	t *testing.T,
+) {
+	service, impact, _, _ := checklistService(t, "user:t219")
+	firstImpact := cloneChecklistImpactPage(t, impact.page)
+	firstImpact.Callers[0].Pagination = CallerMapPagination{Complete: false}
+	firstImpact.Callers[0].ResolvedCallers[0].Source.ObjectID =
+		strings.Repeat("a", 40)
+	firstImpact.Callers[0].ResolvedCallers[0].Source.BlobDigest =
+		"sha256:" + strings.Repeat("b", 64)
+	firstImpact.Callers[0].ResolvedCallers[0].Source.Plane =
+		exactCallerMapPlane
+
+	secondImpact := cloneChecklistImpactPage(t, impact.page)
+	secondImpact.Callers[0].Pagination = CallerMapPagination{Complete: true}
+	secondImpact.Callers[0].ResolvedCallers[0].Source.Path =
+		"internal/cart/second_client.go"
+	secondImpact.Callers[0].ResolvedCallers[0].Source.ObjectID =
+		strings.Repeat("c", 40)
+	secondImpact.Callers[0].ResolvedCallers[0].Source.BlobDigest =
+		"sha256:" + strings.Repeat("d", 64)
+	secondImpact.Callers[0].ResolvedCallers[0].Source.Plane =
+		exactCallerMapPlane
+
+	rotating := &checklistRotatingImpactFake{
+		pages: []WorkbenchImpactPage{firstImpact, secondImpact},
+	}
+	service.impact = rotating
+
+	first := checklistReadAll(t, service, "user:t219")
+	second := checklistReadAll(t, service, "user:t219")
+	firstJSON, _ := json.Marshal(first)
+	secondJSON, _ := json.Marshal(second)
+	if string(firstJSON) != string(secondJSON) {
+		t.Fatalf(
+			"rotated Impact capabilities changed checklist identity\nfirst: %s\nsecond: %s",
+			firstJSON,
+			secondJSON,
+		)
+	}
+	if rotating.build != 2 {
+		t.Fatalf("Impact builds = %d, want 2", rotating.build)
+	}
+
+	var suggestion store.WorkbenchSuggestion
+	for _, entry := range first.Entries {
+		if entry.Suggestion.Kind == "review_resolved_caller" {
+			suggestion = entry.Suggestion
+			break
+		}
+	}
+	if suggestion.ID == "" {
+		t.Fatal("exact caller suggestion was not derived")
+	}
+	disposition, err := service.RecordDisposition(
+		context.Background(),
+		"user:t219",
+		WorkbenchDispositionMutation{
+			InvestigationID:    checklistInvestigationID,
+			ExpectedRevisionID: checklistRevisionID,
+			IdempotencyKey:     "accept-rotated-citation",
+			Suggestion:         suggestion,
+			Category:           "accepted",
+		},
+	)
+	if err != nil {
+		t.Fatalf("record disposition after capability rotation: %v", err)
+	}
+	current := checklistReadAll(t, service, "user:t219")
+	entry := checklistEntryByID(t, current, suggestion.ID)
+	if entry.EvidenceState != "current" || entry.State != "accepted" ||
+		entry.Disposition == nil || entry.Disposition.ID != disposition.ID {
+		t.Fatalf("rotated capability made disposition stale: %+v", entry)
+	}
+}
+
+func TestWorkbenchChecklistKeepsFivePageImpactBound(t *testing.T) {
+	service, impact, _, _ := checklistService(t, "user:t219")
+	base := cloneChecklistImpactPage(t, impact.page)
+	base.Callers[0].Pagination = CallerMapPagination{Complete: true}
+	endless := &checklistEndlessImpactFake{page: base}
+	service.impact = endless
+	page := checklistReadAll(t, service, "user:t219")
+	if endless.calls != workbenchChecklistEvidencePages {
+		t.Fatalf(
+			"Impact page reads = %d, want %d",
+			endless.calls,
+			workbenchChecklistEvidencePages,
+		)
+	}
+	if !page.EvidenceSnapshot.ImpactTruncated {
+		t.Fatal("five-page Impact limit was not retained in the snapshot")
+	}
+	for _, entry := range page.Entries {
+		if entry.Suggestion.Kind == "review_remaining_evidence" {
+			return
+		}
+	}
+	t.Fatal("five-page Impact limit omitted its review suggestion")
+}
+
+func TestCanonicalWorkbenchImpactStripsOnlyTransportCapabilities(
+	t *testing.T,
+) {
+	source := CallerMapSource{
+		Repository: checklistRepository,
+		Commit:     checklistCommit,
+		Path:       "internal/cart/client.go",
+		ObjectID:   strings.Repeat("a", 40),
+		BlobDigest: "sha256:" + strings.Repeat("b", 64),
+		Plane:      exactCallerMapPlane,
+		StartByte:  10,
+		EndByte:    20,
+		StartLine:  4,
+		EndLine:    4,
+		Citation:   "caller-capability-one",
+	}
+	row := CallerMapRow{
+		Classification: "resolved_caller",
+		Resolution:     "syntax",
+		Protocol:       "protobuf",
+		Operation:      "/shop.Cart/Get",
+		Tier:           "direct",
+		Fresh:          true,
+		Source:         source,
+	}
+	total := 1
+	endpoint := CallerMapEndpoint{
+		Protocol: "protobuf", Repository: checklistRepository,
+		Lineage: "proto/cart.proto:shop.Cart", Operation: "/shop.Cart/Get",
+	}
+	replacementEndpoint := endpoint
+	replacementEndpoint.Operation = "/shop.Cart/GetV2"
+	generation := CallerMapGeneration{
+		State: string(callerexecute.PublicationCurrent),
+		Plane: exactCallerMapPlane, Repository: checklistRepository,
+		Commit:           checklistCommit,
+		GenerationDigest: "sha256:" + strings.Repeat("1", 64),
+		ManifestDigest:   "sha256:" + strings.Repeat("2", 64),
+		PairSetDigest:    "sha256:" + strings.Repeat("3", 64),
+	}
+	page := WorkbenchImpactPage{
+		SchemaVersion:   workbenchImpactSchemaVersion,
+		InvestigationID: checklistInvestigationID,
+		RevisionID:      checklistRevisionID,
+		TicketKind:      store.ChangeBriefMigrate,
+		Callers: []WorkbenchCallerImpact{{
+			Query:             CallerMapQuery{Endpoint: endpoint, Ordering: "source"},
+			Generation:        generation,
+			MatchingRowsState: "exact",
+			ResolvedCallers:   []CallerMapRow{row},
+			TotalMatchingRows: &total,
+			Pagination: CallerMapPagination{
+				NextCursor: "caller-cursor-one",
+			},
+		}},
+		Comparison: &CallerComparisonExactPage{
+			SchemaVersion: callerComparisonSchemaVersion,
+			Query: CallerComparisonQuery{
+				Old: endpoint, Replacement: replacementEndpoint,
+				Ordering: "source", Level: "occurrence",
+			},
+			Old: CallerComparisonExactSnapshot{
+				Endpoint: endpoint, Generation: generation,
+				MatchingRowsState: "exact",
+			},
+			Replacement: CallerComparisonExactSnapshot{
+				Endpoint: replacementEndpoint, Generation: generation,
+				MatchingRowsState: "exact",
+			},
+			Rows: []CallerComparisonRow{{
+				Level: "occurrence", Key: "caller-key",
+				Classification: "both_evidence",
+				Old: CallerComparisonSide{
+					OccurrenceCount: 1,
+					Rows:            []CallerMapRow{row},
+				},
+				Replacement: CallerComparisonSide{
+					OccurrenceCount: 1,
+					Rows: []CallerMapRow{{
+						Classification: "resolved_caller",
+						Source: CallerMapSource{
+							Repository: checklistRepository,
+							Commit:     checklistCommit,
+							Path:       "internal/cart/replacement.go",
+							ObjectID:   strings.Repeat("c", 40),
+							BlobDigest: "sha256:" + strings.Repeat("d", 64),
+							Plane:      exactCallerMapPlane,
+							StartByte:  30,
+							EndByte:    40,
+							Citation:   "replacement-capability-one",
+						},
+					}},
+				},
+			}},
+			TotalRows:         &total,
+			MatchingRowsState: "exact",
+			Pagination: CallerMapPagination{
+				NextCursor: "comparison-cursor-one",
+			},
+		},
+		FieldReferences: &FieldReferencePage{
+			Pagination: CallerMapPagination{
+				NextCursor: "field-cursor-one",
+			},
+		},
+		Pagination: WorkbenchImpactPagination{
+			NextCursor: "outer-cursor-one",
+		},
+	}
+	rotated := cloneChecklistImpactPage(t, page)
+	rotated.Pagination.NextCursor = "outer-cursor-two"
+	rotated.Callers[0].Pagination.NextCursor = "caller-cursor-two"
+	rotated.Callers[0].ResolvedCallers[0].Source.Citation =
+		"caller-capability-two"
+	rotated.Comparison.Pagination.NextCursor = "comparison-cursor-two"
+	rotated.Comparison.Rows[0].Old.Rows[0].Source.Citation =
+		"old-capability-two"
+	rotated.Comparison.Rows[0].Replacement.Rows[0].Source.Citation =
+		"replacement-capability-two"
+	rotated.FieldReferences.Pagination.NextCursor = "field-cursor-two"
+
+	canonical := canonicalWorkbenchChecklistImpactPage(page)
+	rotatedCanonical := canonicalWorkbenchChecklistImpactPage(rotated)
+	if digestJSON(canonical) != digestJSON(rotatedCanonical) {
+		t.Fatal("rotated cursor or citation changed canonical Impact digest")
+	}
+	raw := rawSuggestionsFromImpact(page)
+	rotatedRaw := rawSuggestionsFromImpact(rotated)
+	if len(raw) != len(rotatedRaw) {
+		t.Fatalf("rotated capability changed suggestion count: %d != %d", len(raw), len(rotatedRaw))
+	}
+	for index := range raw {
+		if workbenchChecklistRawKey(raw[index]) !=
+			workbenchChecklistRawKey(rotatedRaw[index]) {
+			t.Fatalf("rotated capability changed suggestion %d identity", index)
+		}
+	}
+	if page.Pagination.NextCursor == "" ||
+		page.Callers[0].ResolvedCallers[0].Source.Citation == "" {
+		t.Fatal("canonicalization mutated its input page")
+	}
+	if canonical.Pagination.NextCursor != "" ||
+		canonical.Callers[0].Pagination.NextCursor != "" ||
+		canonical.Callers[0].ResolvedCallers[0].Source.Citation != "" ||
+		canonical.Comparison.Pagination.NextCursor != "" ||
+		canonical.Comparison.Rows[0].Old.Rows[0].Source.Citation != "" ||
+		canonical.Comparison.Rows[0].Replacement.Rows[0].Source.Citation != "" ||
+		canonical.FieldReferences.Pagination.NextCursor != "" {
+		t.Fatalf("transport capability survived canonicalization: %+v", canonical)
+	}
+	confirmed := canonical.Callers[0].ResolvedCallers[0].Source
+	if confirmed.ObjectID != source.ObjectID ||
+		confirmed.BlobDigest != source.BlobDigest ||
+		confirmed.Path != source.Path || confirmed.StartByte != source.StartByte ||
+		confirmed.EndByte != source.EndByte ||
+		canonical.Callers[0].Generation.GenerationDigest !=
+			generation.GenerationDigest {
+		t.Fatalf("semantic source identity changed: %+v", confirmed)
+	}
+	semanticChange := cloneChecklistImpactPage(t, rotatedCanonical)
+	semanticChange.Callers[0].ResolvedCallers[0].Source.ObjectID =
+		strings.Repeat("e", 40)
+	if digestJSON(canonical) == digestJSON(semanticChange) {
+		t.Fatal("semantic source identity was omitted from canonical digest")
+	}
+	semanticChange = cloneChecklistImpactPage(t, rotatedCanonical)
+	semanticChange.Callers[0].Generation.GenerationDigest =
+		"sha256:" + strings.Repeat("f", 64)
+	if digestJSON(canonical) == digestJSON(semanticChange) {
+		t.Fatal("semantic generation identity was omitted from canonical digest")
 	}
 }
 
@@ -715,6 +1157,22 @@ func checklistReadAll(
 		t.Fatalf("fixture exceeded one page: %+v", page.Pagination)
 	}
 	return page
+}
+
+func cloneChecklistImpactPage(
+	t *testing.T,
+	page WorkbenchImpactPage,
+) WorkbenchImpactPage {
+	t.Helper()
+	raw, err := json.Marshal(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result WorkbenchImpactPage
+	if err := json.Unmarshal(raw, &result); err != nil {
+		t.Fatal(err)
+	}
+	return result
 }
 
 func checklistEntryByID(

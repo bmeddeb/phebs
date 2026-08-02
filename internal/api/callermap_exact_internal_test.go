@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,9 +12,464 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
+	"github.com/bmeddeb/phebs/internal/store"
 )
+
+const exactAuthorityTestLineage = "provisional_repo_path_v1_" +
+	"abababababababababababababababababababababababababababababababab"
+
+type exactAuthorityGapStore struct {
+	store.Store
+	store.EvidenceStore
+	repositories     map[string]store.Repo
+	publications     map[string]*store.CallerGenerationPublication
+	visible          map[string]bool
+	repositoryReads  map[string]int
+	publicationReads int
+	summaryReads     int
+	visibilityChecks int
+	repositoryHook   func(string, int, *store.Repo)
+}
+
+func (state *exactAuthorityGapStore) GetRepo(
+	_ context.Context,
+	repository string,
+) (*store.Repo, error) {
+	value, found := state.repositories[repository]
+	if !found {
+		return nil, store.ErrNotFound
+	}
+	state.repositoryReads[repository]++
+	if state.repositoryHook != nil {
+		state.repositoryHook(
+			repository, state.repositoryReads[repository], &value,
+		)
+	}
+	return &value, nil
+}
+
+func (*exactAuthorityGapStore) GetCandidateManifestPublication(
+	context.Context,
+	string,
+) (*store.CandidateManifestPublication, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*exactAuthorityGapStore) GetResolverCatalogPublication(
+	context.Context,
+	string,
+) (*store.ResolverCatalogPublication, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*exactAuthorityGapStore) ResolverCatalogPublicationCurrent(
+	context.Context,
+	store.ResolverCatalogPublication,
+) (bool, error) {
+	return false, nil
+}
+
+func (state *exactAuthorityGapStore) GetCallerGenerationPublication(
+	_ context.Context,
+	repository string,
+) (*store.CallerGenerationPublication, error) {
+	state.publicationReads++
+	if publication := state.publications[repository]; publication != nil {
+		owned := *publication
+		owned.Pairs = append(
+			[]store.CallerGenerationPairPublication(nil), publication.Pairs...,
+		)
+		return &owned, nil
+	}
+	return nil, store.ErrNotFound
+}
+
+func (state *exactAuthorityGapStore) GetCallerGenerationPublicationSummary(
+	_ context.Context,
+	repository string,
+) (*store.CallerGenerationPublicationSummary, error) {
+	state.summaryReads++
+	publication := state.publications[repository]
+	if publication == nil {
+		return nil, store.ErrNotFound
+	}
+	summary := exactAuthorityPublicationSummary(*publication)
+	return &summary, nil
+}
+
+func (*exactAuthorityGapStore) CallerGenerationPublicationSummaryCurrent(
+	context.Context,
+	store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	return false, nil
+}
+
+func (*exactAuthorityGapStore) CallerGenerationPublicationSummaryAuthorityCurrent(
+	context.Context,
+	store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	return false, nil
+}
+
+func (*exactAuthorityGapStore) CallerGenerationPublicationSummariesAuthorityCurrent(
+	context.Context,
+	[]store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	return false, nil
+}
+
+func (*exactAuthorityGapStore) GetCallerGenerationAdmission(
+	context.Context,
+	store.CallerGenerationIdentity,
+) (*store.CallerGenerationAdmission, error) {
+	return nil, store.ErrNotFound
+}
+
+func newExactAuthorityGapServices(
+	t *testing.T,
+	repositories ...string,
+) (*exactAuthorityGapStore, *CallerMapService, *CallerComparisonService) {
+	t.Helper()
+	state := &exactAuthorityGapStore{
+		repositories:    make(map[string]store.Repo, len(repositories)),
+		publications:    make(map[string]*store.CallerGenerationPublication),
+		visible:         make(map[string]bool, len(repositories)),
+		repositoryReads: make(map[string]int, len(repositories)),
+	}
+	for _, repository := range repositories {
+		state.repositories[repository] = store.Repo{
+			Name: repository, CallerPublicationRevision: 7,
+		}
+		state.visible[repository] = true
+	}
+	adapters, err := callerexecute.NewRegistry(
+		[]extract.Extractor{gocaller.NewGRPC()},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publications := callerpublication.NewRegistry(t.TempDir())
+	t.Cleanup(func() { _ = publications.Close() })
+	reader, err := callerexecute.NewPublicationReader(
+		state, adapters, publications,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{
+		Store: state, Evidence: state, DataDir: t.TempDir(),
+		CallerMapEnabled: true, CallerReader: reader,
+		Principal: func(context.Context) string { return "user:authority" },
+		Visible: func(context.Context) func(store.Repo) bool {
+			return func(repository store.Repo) bool {
+				state.visibilityChecks++
+				return state.visible[repository.Name]
+			}
+		},
+		AuthorizationProvider: "authority-test-v1",
+	}
+	callerMap := NewCallerMapService(opts)
+	if callerMap == nil {
+		t.Fatal("exact caller map service is unavailable")
+	}
+	opts.CallerMap = callerMap
+	comparison := NewCallerComparisonService(opts)
+	if comparison == nil {
+		t.Fatal("exact caller comparison service is unavailable")
+	}
+	return state, callerMap, comparison
+}
+
+func exactAuthorityPublicationSummary(
+	publication store.CallerGenerationPublication,
+) store.CallerGenerationPublicationSummary {
+	return store.CallerGenerationPublicationSummary{
+		Generation:             publication.Generation,
+		PairPayloadDigest:      publication.PairPayloadDigest,
+		PairSetDigest:          publication.PairSetDigest,
+		PairCount:              publication.PairCount,
+		ArtifactCount:          publication.ArtifactCount,
+		ResultCount:            publication.ResultCount,
+		AbstentionCount:        publication.AbstentionCount,
+		CanonicalBytes:         publication.CanonicalBytes,
+		StagingBytes:           publication.StagingBytes,
+		PeakOpenFiles:          publication.PeakOpenFiles,
+		ManifestDigest:         publication.ManifestDigest,
+		ManifestPath:           publication.ManifestPath,
+		PublicationRevision:    publication.PublicationRevision,
+		PublicationIncarnation: publication.PublicationIncarnation,
+		WriterSchema:           publication.WriterSchema,
+		PublishedAt:            publication.PublishedAt,
+	}
+}
+
+func exactAuthorityDigest(marker string) string {
+	return "sha256:" + strings.Repeat(marker, 64)
+}
+
+func exactAuthorityStalePublication(
+	repository string,
+	generationMarker string,
+	incarnationMarker string,
+) *store.CallerGenerationPublication {
+	return &store.CallerGenerationPublication{
+		Generation: store.CallerGenerationIdentity{
+			Repository: repository,
+			Digest:     exactAuthorityDigest(generationMarker),
+		},
+		PairPayloadDigest:      exactAuthorityDigest("d"),
+		PairSetDigest:          exactAuthorityDigest(generationMarker),
+		ManifestDigest:         exactAuthorityDigest(generationMarker),
+		PublicationRevision:    7,
+		PublicationIncarnation: exactAuthorityDigest(incarnationMarker),
+		PublishedAt:            time.Unix(1_700_000_000, 0).UTC(),
+	}
+}
+
+func exactAuthorityMaxFixture(
+	t *testing.T,
+	repository string,
+	marker string,
+) (callerexecute.PublicationBinding, callerexecute.PublicationDescriptor, CallerMapGeneration) {
+	t.Helper()
+	extractors := make([]callerleaf.ExtractorIdentity, callerleaf.MaxCallerDomains)
+	for index := range extractors {
+		prefix := fmt.Sprintf("%03d-", index)
+		extractors[index] = callerleaf.ExtractorIdentity{
+			Domain:             prefix + strings.Repeat("d", 128-len(prefix)),
+			Version:            strings.Repeat("v", 64),
+			LeafAdapterVersion: callerleaf.LeafAdapterV1,
+		}
+	}
+	leafGeneration, err := callerleaf.NewGenerationIdentity(
+		callerleaf.GenerationIdentity{
+			Repository:               repository,
+			HeadCommit:               strings.Repeat(marker, 40),
+			DeclarationSetDigest:     exactAuthorityDigest(marker),
+			CandidateManifestDigest:  exactAuthorityDigest(marker),
+			CandidatePolicyDigest:    exactAuthorityDigest(marker),
+			ResolverGenerationDigest: exactAuthorityDigest(marker),
+			ResolverManifestDigest:   exactAuthorityDigest(marker),
+			Extractors:               extractors,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publication := exactAuthorityStalePublication(
+		repository, marker, marker,
+	)
+	publication.Generation = store.CallerGenerationIdentity{
+		Repository:               repository,
+		HeadCommit:               leafGeneration.HeadCommit,
+		DeclarationSetDigest:     leafGeneration.DeclarationSetDigest,
+		CandidateManifestDigest:  leafGeneration.CandidateManifestDigest,
+		CandidatePolicyDigest:    leafGeneration.CandidatePolicyDigest,
+		ResolverGenerationDigest: leafGeneration.ResolverGenerationDigest,
+		ResolverManifestDigest:   leafGeneration.ResolverManifestDigest,
+		SourceLanePolicy:         leafGeneration.SourceLanePolicy,
+		CallerPolicyDigest:       leafGeneration.CallerPolicyDigest,
+		ExtractorSetDigest:       leafGeneration.ExtractorSetDigest,
+		Digest:                   leafGeneration.Digest,
+	}
+	publication.PairSetDigest = exactAuthorityDigest(marker)
+	publication.ManifestDigest = exactAuthorityDigest(marker)
+	publicationState := (callerpublication.Manifest{
+		Generation:    leafGeneration,
+		PairSetDigest: publication.PairSetDigest,
+		Aggregate: callerleaf.AggregateReceipt{
+			PeakOpenFiles: callerleaf.MaxOpenFiles,
+		},
+		Digest: publication.ManifestDigest,
+	}).State()
+	if err := callerpublication.ValidateState(publicationState); err != nil {
+		t.Fatalf("maximum publication state: %v", err)
+	}
+	summary := exactAuthorityPublicationSummary(*publication)
+	read := &callerexecute.PublicationRead{
+		Availability: callerexecute.PublicationStale,
+		Summary:      &summary,
+		Revision:     summary.PublicationRevision,
+	}
+	descriptor, err := read.Descriptor()
+	if err != nil {
+		t.Fatal(err)
+	}
+	binding := callerexecute.PublicationBinding{
+		Summary: summary,
+		State:   publicationState,
+	}
+	generation := CallerMapGeneration{
+		State: string(callerexecute.PublicationCurrent),
+		Plane: exactCallerMapPlane, Repository: repository,
+		Commit:               leafGeneration.HeadCommit,
+		GenerationDigest:     leafGeneration.Digest,
+		DeclarationSetDigest: leafGeneration.DeclarationSetDigest,
+		CandidateManifest:    leafGeneration.CandidateManifestDigest,
+		ResolverManifest:     leafGeneration.ResolverManifestDigest,
+		ManifestDigest:       publication.ManifestDigest,
+		PairSetDigest:        publication.PairSetDigest,
+		PublicationRevision:  publication.PublicationRevision,
+	}
+	return binding, descriptor, generation
+}
+
+func exactAuthorityTestEndpoint(repository string) CallerMapEndpoint {
+	return CallerMapEndpoint{
+		Protocol: "protobuf", Repository: repository,
+		Lineage:   exactAuthorityTestLineage,
+		Operation: "/acme.orders.v1.Orders/Get",
+	}
+}
+
+func requireExactAuthorityStatus(t *testing.T, err error, want int) {
+	t.Helper()
+	var statusError interface{ GetStatus() int }
+	if !errors.As(err, &statusError) || statusError.GetStatus() != want {
+		t.Fatalf("status error = %v, want %d", err, want)
+	}
+}
+
+func TestExactCallerGapAuthorityConfirmsWithoutTransportExposure(t *testing.T) {
+	const repository = "github.com/acme/authority-gap"
+	state, service, _ := newExactAuthorityGapServices(t, repository)
+	query := CallerMapQuery{Endpoint: exactAuthorityTestEndpoint(repository)}
+	page, err := service.List(t.Context(), query, 10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.MatchingRowsState != "unavailable" || page.exactSnapshot == "" ||
+		page.exactAuthority == "" || len(page.exactAuthority) > callerMapCursorLimit {
+		t.Fatalf("gap authority page = %+v", page)
+	}
+	encoded, err := json.Marshal(page)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), page.exactSnapshot) ||
+		strings.Contains(string(encoded), page.exactAuthority) {
+		t.Fatalf("transport exposed hidden exact authority: %s", encoded)
+	}
+	confirmation, err := service.confirmWorkbenchCallerSnapshot(
+		t.Context(), query, 10, page.exactAuthority,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if confirmation.Snapshot != page.exactSnapshot ||
+		confirmation.MatchingRowsState != "unavailable" ||
+		confirmation.Generation != *page.Generation {
+		t.Fatalf("gap confirmation = %+v, page = %+v", confirmation, page)
+	}
+	_, err = service.confirmWorkbenchCallerSnapshot(
+		t.Context(), query, 10, page.exactAuthority+"tampered",
+	)
+	requireExactAuthorityStatus(t, err, http.StatusConflict)
+
+	_, err = service.confirmWorkbenchCallerSnapshot(
+		t.Context(), query, 11, page.exactAuthority,
+	)
+	requireExactAuthorityStatus(t, err, http.StatusConflict)
+	state.visible[repository] = false
+	state.publicationReads = 0
+	_, err = service.confirmWorkbenchCallerSnapshot(
+		t.Context(), query, 10, page.exactAuthority,
+	)
+	requireExactAuthorityStatus(t, err, http.StatusNotFound)
+	if state.publicationReads != 0 {
+		t.Fatalf("hidden authority reached publication I/O %d times", state.publicationReads)
+	}
+}
+
+func TestExactCallerGapAuthorityRejectsFinalRevisionTransition(t *testing.T) {
+	const repository = "github.com/acme/authority-transition"
+	state, service, _ := newExactAuthorityGapServices(t, repository)
+	query := CallerMapQuery{Endpoint: exactAuthorityTestEndpoint(repository)}
+	page, err := service.List(t.Context(), query, 10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline := state.repositoryReads[repository]
+	state.repositoryHook = func(name string, read int, value *store.Repo) {
+		if name == repository && read == baseline+4 {
+			value.CallerPublicationRevision++
+		}
+	}
+	_, err = service.confirmWorkbenchCallerSnapshot(
+		t.Context(), query, 10, page.exactAuthority,
+	)
+	requireExactAuthorityStatus(t, err, http.StatusConflict)
+}
+
+func TestExactCallerGapAuthorityRejectsABAIncarnation(t *testing.T) {
+	const repository = "github.com/acme/authority-aba"
+	state, service, _ := newExactAuthorityGapServices(t, repository)
+	state.publications[repository] = exactAuthorityStalePublication(
+		repository, "a", "1",
+	)
+	query := CallerMapQuery{Endpoint: exactAuthorityTestEndpoint(repository)}
+	page, err := service.List(t.Context(), query, 10, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Generation == nil ||
+		page.Generation.State != string(callerexecute.PublicationStale) {
+		t.Fatalf("initial stale generation = %+v", page.Generation)
+	}
+	state.publications[repository] = exactAuthorityStalePublication(
+		repository, "b", "2",
+	)
+	state.publications[repository] = exactAuthorityStalePublication(
+		repository, "a", "3",
+	)
+	_, err = service.confirmWorkbenchCallerSnapshot(
+		t.Context(), query, 10, page.exactAuthority,
+	)
+	requireExactAuthorityStatus(t, err, http.StatusConflict)
+}
+
+func TestExactCallerAuthorityFitsMaximumPublicationIdentity(t *testing.T) {
+	repository := "r" + strings.Repeat("a", 1023)
+	binding, publication, generation := exactAuthorityMaxFixture(
+		t, repository, "a",
+	)
+	snapshot := exactCallerPageSnapshot(&exactCallerBinding{
+		visibility: VisibilityContext{
+			Principal: "user:max", AuthorizationProvider: "max-v1",
+			PermissionSnapshot:         exactAuthorityDigest("b"),
+			VisibleRepositorySetDigest: exactAuthorityDigest("c"),
+		},
+		publication: binding, generation: generation,
+	})
+	service := &exactCallerMapService{}
+	authority := exactCallerAuthority{
+		Schema: exactCallerAuthorityVersion, QueryDigest: exactAuthorityDigest("d"),
+		Repository: repository,
+		Visibility: VisibilityContext{
+			Principal: "user:max", AuthorizationProvider: "max-v1",
+			PermissionSnapshot:         exactAuthorityDigest("b"),
+			VisibleRepositorySetDigest: exactAuthorityDigest("c"),
+		},
+		RepositoryRevision: generation.PublicationRevision,
+		Snapshot:           snapshot, MatchingRowsState: "exact",
+		Generation: generation, Publication: &publication,
+	}
+	if !validExactCallerAuthority(authority) {
+		t.Fatalf("maximum exact caller authority is invalid: %+v", authority)
+	}
+	encoded, err := service.encodeExactAuthority(authority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(encoded) > callerMapCursorLimit {
+		t.Fatalf("maximum exact caller authority bytes = %d", len(encoded))
+	}
+}
 
 func TestExactCallerNegativeIndexesReuseTheEightSlotCache(t *testing.T) {
 	for _, test := range []struct {

@@ -768,8 +768,8 @@ The exact reader exposes direct-syntax results and retained abstentions for one
 complete repository-overlay generation. It does not prove runtime use,
 completeness, extraction accuracy, migration completion, decommission safety,
 or a retention bound. Caller comparison now uses the same exact engine under
-the additional two-sided fences below. Workbench Impact intentionally remains
-on the legacy caller reader until T30.6l.
+the additional two-sided fences below. Workbench Impact now uses that shared
+single- or two-generation exact authority under the composition fences below.
 
 #### Authorized exact caller comparison
 
@@ -851,6 +851,116 @@ Static comparison rows and the literal old-only/both/new-only/unresolved
 classifications establish no runtime use, completeness, extraction accuracy,
 migration completion, decommission safety, production validation, or
 historical-retention bound.
+
+#### Exact Workbench caller composition
+
+T30.6l registers `workbench-impact-inventory-v2` only with the already shared
+exact Caller Map and comparison services. Production construction creates
+those services once and passes the same Caller Map instance into comparison
+and Workbench. Do not create a second exact reader for Workbench: a second
+instance would split the HMAC secret, reverse-index cache, request-binding
+registry, publication leases, citation reader, and concurrency gates and would
+invalidate the intended process bounds.
+
+Every Impact request first reads and validates one current authorized
+Investigation Revision and immutable Change Brief. Modify and retire call the
+single-generation exact reader; migrate calls the jointly fenced two-generation
+comparison; add has no caller stream. Each subordinate service keeps its own
+authorization-first repository access and final store/filesystem/permission
+fences. After Atlas, caller, comparison, compatibility, fields, and resource
+planes are assembled, Workbench rereads the Investigation as the last result
+fence. A revoked, hidden, or replaced current Revision returns the
+same non-disclosing not-found posture. A changed digest for the selected
+Revision/brief conflicts instead of serializing a mixed composition.
+
+Caller and comparison output carries its exact `repository-overlay`
+generation and `matching_rows_state`. `current` may expose rows and a numeric
+total. `missing`, `failed`, and `stale` are typed unavailable gaps and expose
+no partial rows, groups, classifications, subordinate cursor, or numeric zero.
+The generation gap is added to Analysis scope as a caller capability/gap. It
+is not added to the Coverage list: that list remains authority for
+focused-local extraction publications, not complete repository-overlay caller
+generations.
+
+The HMAC-authenticated v2 outer cursor retains each subordinate stream's
+semantic snapshot. For a
+caller or comparison stream that completed before the outer page, it also
+retains a signed transport-hidden authority token. The token uses the shared
+HMAC and at-most-16-KiB exact-token envelope and binds normalized query,
+visibility projection, repository revision, generation/manifest/pair-set and
+caller-publication revision, snapshot state, and the non-repeating publication
+incarnation for every bound publication across one or both sides. It is never
+serialized in the public Impact
+page as a distinct field; it exists only inside the opaque composite cursor
+and is not a source citation or subordinate pagination cursor.
+The outer signature covers every stream's complete/next state, so a client
+cannot skip remaining rows by rewriting an unfinished stream as complete.
+
+On a later outer page the exact service confirms that token directly. It
+reauthorizes, reopens, and applies its current/final publication fences, then
+returns only the bounded generation-state confirmation. It does not list page
+one, allocate or pressure-retire a request binding, rebuild a reverse index,
+hydrate caller rows, mint citations, or encode a duplicate caller response.
+Thus a long field-reference stream cannot exhaust the shared eight-binding
+limit merely by repeatedly confirming an already completed caller stream.
+Restart, permission change, token invalidity, or any generation,
+publication-revision, incarnation, or `A → B → A` transition conflicts and
+requires a fresh first Workbench page. If the shared publication registry was
+evicted, confirmation may still pay its already bounded cold manifest/leaf
+validation; it makes no stronger zero-hash promise across that boundary.
+
+Composition bounds are cumulative but finite:
+
+- the public request accepts 1–100 rows and the v2 composite cursor is at most
+  64 KiB in both encoded and decoded form;
+- the UI requests 25 rows, mounts one server page, and retains at most 500
+  cursor entries independently for Impact, implementation, and checklist. At
+  the 64 KiB token ceiling one history is below 32 MiB of encoded cursor text;
+  the How step can hold its implementation and checklist histories together
+  below 64 MiB before JavaScript string/array overhead, while the Where and
+  How steps unmount rather than retaining all three histories together;
+- exact caller/comparison work remains under the shared eight active reads,
+  two citation Git/blob phases, eight bindings, 200,000 retained positions,
+  eight indexes, 128 MiB counted identity per index, and documented cold
+  publication/index admissions;
+- a maximum exact caller response may still approach 100 MiB. The 100-row cap
+  is a finite transport bound, not a small-memory claim, and service-work slots
+  still end before response encoding;
+- checklist derivation reads no more than five 100-row Impact pages and five
+  100-row implementation pages, processes each Impact page before requesting
+  the next, and uses a deterministic top-1,000 accumulator rather than
+  retaining every raw candidate. Final suggestions retain at most 32 evidence
+  references each, and the response returns at most 100 entries behind a
+  64 KiB cursor. Its mutation body remains capped at 512 KiB.
+
+Checklist identity deliberately excludes transport authority. Before hashing
+an Impact page or caller evidence, the checklist projection removes the outer
+cursor, every subordinate cursor, and every signed caller citation. It retains
+page digests and compact suggestion evidence rather than five complete exact-
+caller pages. Rotating a binding, citation, or cursor for an unchanged exact
+publication therefore cannot change suggestion IDs or make an existing human
+Disposition stale. The five-page ceiling still emits an explicit truncation
+suggestion.
+
+Workbench caller source access is only the shared exact-range citation route.
+It reauthorizes and verifies immutable commit, path, Git object ID, complete
+blob digest, record, and byte range before returning those bytes. There is no
+whole-file fallback and no tree, directory, unrelated-path, focused-search, or
+focused-local evidence authority.
+
+Startup constructs empty shared exact caches and the Workbench composition
+only when its experimental capability is enabled. It adds no eager caller
+scan, publication open, reverse-index build, Git read, content hash, store
+write, mirror lock, or child process. Warm active streams inherit the exact
+readers' selected-record and bounded identity-sweep costs; completed streams
+use only the confirmation path above. Registry locks are not held across
+publication validation, authorization, Git citation work, final Investigation
+confirmation, or transport serialization.
+
+No row, exact empty page, typed gap, completed cursor, or fully dispositioned
+checklist establishes runtime use, completeness, extraction accuracy,
+compatibility, migration completion, decommission safety, production
+validation, or historical-retention safety.
 
 If import begins and then fails, the partial target is retained and every
 later restore refuses it; quarantine or remove it under the witnessed
@@ -1497,13 +1607,14 @@ the existing stale-run sweeper.
 ##### Scheduled T30.6 operating sequence
 
 The accepted large-monorepo review now has its bounded operational, outcome,
-scheduler, source-lane, resolver, caller-leaf, and complete-publication seams
-through T30.6k. An admitted `*_test.go` file remains searchable and participates
+scheduler, source-lane, resolver, caller-leaf, publication, and exact-consumer
+seams through T30.6l. An admitted `*_test.go` file remains searchable and participates
 in candidate planning when an enabled domain policy enumerates it, while direct
 caller execution excludes its `go_test` lane. The public Caller Map now reads
 only the exact complete repository-overlay authority; caller comparison now
-uses that exact authority in one jointly fenced two-endpoint read, while
-Workbench Impact remains on its legacy caller reader until T30.6l.
+uses that exact authority in one jointly fenced two-endpoint read, and
+Workbench Impact now composes the same exact single- or two-generation
+authority through its current Revision and final Investigation fence.
 Operators should not raise the global file, path-byte, read-byte, fact, or
 single-run deadline limits to work around that refusal. Configure the smallest
 truthful analysis unit and, when required, its exact typed input; preserve the
@@ -1524,9 +1635,10 @@ caller-leaf artifacts, and T30.6i supplies the atomic complete publication and
 recovery lifecycle described above. T30.6j supplies the authorized exact Caller
 Map reader, revision-bound cursor, and exact-range citation path described
 above. T30.6k supplies the exact two-sided comparison described above. T30.6l
-next migrates Workbench Impact. T30.6m
-selects the historical-retention posture and T30.6n implements only that
-selected policy.
+supplies the exact Workbench composition, completed-stream confirmation, typed
+gaps, citation-only caller source access, and deterministic checklist identity
+described above. T30.6m next selects the historical-retention posture and
+T30.6n implements only that selected policy.
 
 This sequence does not authorize a physical Go-test search overlay, optional
 test evidence, test-to-source association, build-system discovery, SCIP
@@ -1761,7 +1873,10 @@ Workbench or Contract Atlas fixture would create a second catalog authority
 (`workbench-authority-conflict`). `PHEBS_SYNTHETIC_WORKBENCH` accepts only an
 empty value or exact `1`; malformed values retain that strict parsing error
 instead of being classified as an authority conflict. Successful startup logs
-one warning naming the provisional, non-production posture.
+one warning naming the provisional, non-production posture. The bound evidence
+service reuses the instance's exact Caller Map and comparison objects; startup
+does not populate their publication, index, binding, or citation caches merely
+because Workbench is enabled.
 
 For a bounded operator smoke over public, remote-HEAD evidence:
 
@@ -1770,11 +1885,17 @@ For a bounded operator smoke over public, remote-HEAD evidence:
 2. Run `make build`, then `./phebs serve -config phebs-everything.yaml`.
 3. Wait for one configured public repository to finish sync, index, and
    protobuf or Thrift declaration extraction. Confirm a published declaration
-   run in the extraction logs or Contract Atlas coverage.
+   run in the extraction logs or Contract Atlas coverage. For a modify,
+   migrate, or retire observation, also wait for the applicable complete caller
+   generation, or deliberately retain its `missing`, `failed`, or `stale`
+   state as the typed gap under test.
 4. Sign in, open **Contract Atlas**, select one exact published operation, and
    choose **Start Workbench**. Confirm the resulting Workbench retains the
    repository, indexed HEAD commit, declaration lineage, and operation shown
-   by Contract Atlas.
+   by Contract Atlas. In Where, confirm focused-local coverage is separate from
+   the repository-overlay generation. A current generation may show exact rows
+   and **Read exact cited bytes**; an unavailable generation must show no
+   caller total or comparison classification.
 5. Stop the instance and remove the disposable data directory if the
    observation does not need to be retained locally.
 

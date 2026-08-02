@@ -1,6 +1,7 @@
 package api
 
 import (
+	"container/heap"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -219,6 +220,96 @@ type workbenchChecklistBuild struct {
 	entries          []WorkbenchChecklistEntry
 	revisionDigest   string
 	snapshotDigest   string
+}
+
+type workbenchChecklistImpactCollection struct {
+	digest      string
+	raw         []workbenchChecklistRawSuggestion
+	rawOverflow bool
+	truncated   bool
+}
+
+// workbenchChecklistRawAccumulator retains the lexicographically first
+// suggestion ceiling under the same canonical key used by final projection.
+// This makes collection order irrelevant, deduplicates before retention, and
+// preserves the historical "first 999 plus explicit limit entry" output
+// without retaining every candidate from all bounded evidence pages.
+type workbenchChecklistRawAccumulator struct {
+	values   map[string]workbenchChecklistRawSuggestion
+	largest  workbenchChecklistRawMaxHeap
+	overflow bool
+}
+
+type workbenchChecklistRawMaxHeap []string
+
+func (values workbenchChecklistRawMaxHeap) Len() int { return len(values) }
+
+func (values workbenchChecklistRawMaxHeap) Less(left, right int) bool {
+	return values[left] > values[right]
+}
+
+func (values workbenchChecklistRawMaxHeap) Swap(left, right int) {
+	values[left], values[right] = values[right], values[left]
+}
+
+func (values *workbenchChecklistRawMaxHeap) Push(value any) {
+	*values = append(*values, value.(string))
+}
+
+func (values *workbenchChecklistRawMaxHeap) Pop() any {
+	old := *values
+	last := old[len(old)-1]
+	*values = old[:len(old)-1]
+	return last
+}
+
+func newWorkbenchChecklistRawAccumulator(
+	initial []workbenchChecklistRawSuggestion,
+	overflow bool,
+) *workbenchChecklistRawAccumulator {
+	accumulator := &workbenchChecklistRawAccumulator{
+		values:   make(map[string]workbenchChecklistRawSuggestion),
+		overflow: overflow,
+	}
+	accumulator.add(initial...)
+	return accumulator
+}
+
+func (accumulator *workbenchChecklistRawAccumulator) add(
+	candidates ...workbenchChecklistRawSuggestion,
+) {
+	for _, candidate := range candidates {
+		key := workbenchChecklistRawKey(candidate)
+		if _, found := accumulator.values[key]; found {
+			continue
+		}
+		if len(accumulator.values) < workbenchChecklistMaxSuggestions {
+			accumulator.values[key] = candidate
+			heap.Push(&accumulator.largest, key)
+			continue
+		}
+		accumulator.overflow = true
+		largest := accumulator.largest[0]
+		if key >= largest {
+			continue
+		}
+		delete(accumulator.values, largest)
+		heap.Pop(&accumulator.largest)
+		accumulator.values[key] = candidate
+		heap.Push(&accumulator.largest, key)
+	}
+}
+
+func (accumulator *workbenchChecklistRawAccumulator) retained() []workbenchChecklistRawSuggestion {
+	values := make(
+		[]workbenchChecklistRawSuggestion,
+		0,
+		len(accumulator.values),
+	)
+	for _, candidate := range accumulator.values {
+		values = append(values, candidate)
+	}
+	return values
 }
 
 func (service *WorkbenchChecklistService) Read(
@@ -505,6 +596,9 @@ func normalizeWorkbenchChecklistEvidence(
 		return evidence, err
 	}
 	evidence.Anchors = anchors
+	evidence.ImpactFilters = normalizeWorkbenchImpactFilters(
+		evidence.ImpactFilters,
+	)
 	if strings.TrimSpace(evidence.CompatibilityRun) !=
 		evidence.CompatibilityRun {
 		return evidence, errors.New(
@@ -578,7 +672,7 @@ func (service *WorkbenchChecklistService) build(
 		Revision store.Revision    `json:"revision"`
 		Brief    store.ChangeBrief `json:"brief"`
 	}{Revision: view.Revision, Brief: view.Brief})
-	impactPages, impactTruncated, err := service.collectImpact(
+	impact, err := service.collectImpact(
 		ctx,
 		principal,
 		investigationID,
@@ -599,7 +693,7 @@ func (service *WorkbenchChecklistService) build(
 	if err != nil {
 		return nil, err
 	}
-	impactDigest := digestJSON(impactPages)
+	impactDigest := impact.digest
 	implementationDigest := digestJSON(implementationPages)
 	combinedDigest := digestJSON(struct {
 		Input                   WorkbenchChecklistEvidenceInput `json:"input"`
@@ -611,31 +705,31 @@ func (service *WorkbenchChecklistService) build(
 		Input:                   evidenceInput,
 		ImpactDigest:            impactDigest,
 		ImplementationDigest:    implementationDigest,
-		ImpactTruncated:         impactTruncated,
+		ImpactTruncated:         impact.truncated,
 		ImplementationTruncated: implementationTruncated,
 	})
 	evidenceSnapshot := WorkbenchChecklistEvidenceSnapshot{
 		ImpactDigest:            impactDigest,
 		ImplementationDigest:    implementationDigest,
 		CombinedDigest:          combinedDigest,
-		ImpactTruncated:         impactTruncated,
+		ImpactTruncated:         impact.truncated,
 		ImplementationTruncated: implementationTruncated,
 	}
-	raw := make([]workbenchChecklistRawSuggestion, 0)
-	for _, page := range impactPages {
-		raw = append(raw, rawSuggestionsFromImpact(page)...)
-	}
+	raw := newWorkbenchChecklistRawAccumulator(
+		impact.raw,
+		impact.rawOverflow,
+	)
 	for _, page := range implementationPages {
-		raw = append(raw, rawSuggestionsFromImplementation(page)...)
+		raw.add(rawSuggestionsFromImplementation(page)...)
 	}
-	if impactTruncated {
-		raw = append(raw, workbenchChecklistTruncationSuggestion(
+	if impact.truncated {
+		raw.add(workbenchChecklistTruncationSuggestion(
 			"impact",
 			impactDigest,
 		))
 	}
 	if implementationTruncated {
-		raw = append(raw, workbenchChecklistTruncationSuggestion(
+		raw.add(workbenchChecklistTruncationSuggestion(
 			"implementation",
 			implementationDigest,
 		))
@@ -644,7 +738,8 @@ func (service *WorkbenchChecklistService) build(
 		investigationID,
 		revisionID,
 		combinedDigest,
-		raw,
+		raw.retained(),
+		raw.overflow,
 	)
 	if err != nil {
 		return nil, huma.Error500InternalServerError(
@@ -734,8 +829,9 @@ func (service *WorkbenchChecklistService) collectImpact(
 	investigationID,
 	revisionID string,
 	evidence WorkbenchChecklistEvidenceInput,
-) ([]WorkbenchImpactPage, bool, error) {
-	pages := make([]WorkbenchImpactPage, 0, workbenchChecklistEvidencePages)
+) (workbenchChecklistImpactCollection, error) {
+	pageDigests := make([]string, 0, workbenchChecklistEvidencePages)
+	raw := newWorkbenchChecklistRawAccumulator(nil, false)
 	cursor := ""
 	for pageIndex := 0; pageIndex < workbenchChecklistEvidencePages; pageIndex++ {
 		page, err := service.impact.Read(
@@ -751,28 +847,114 @@ func (service *WorkbenchChecklistService) collectImpact(
 			},
 		)
 		if err != nil {
-			return nil, false, err
+			return workbenchChecklistImpactCollection{}, err
 		}
 		if page == nil ||
 			page.InvestigationID != investigationID ||
 			page.RevisionID != revisionID ||
 			page.SchemaVersion != workbenchImpactSchemaVersion {
-			return nil, false, huma.Error409Conflict(
+			return workbenchChecklistImpactCollection{}, huma.Error409Conflict(
 				"impact inventory returned an inconsistent Workbench snapshot",
 			)
 		}
-		pages = append(pages, *page)
+		canonical := canonicalWorkbenchChecklistImpactPage(*page)
+		pageDigests = append(pageDigests, digestJSON(canonical))
+		raw.add(rawSuggestionsFromImpact(canonical)...)
 		if page.Pagination.Complete {
-			return pages, false, nil
+			return workbenchChecklistImpactCollection{
+				digest:      workbenchChecklistImpactDigest(pageDigests),
+				raw:         raw.retained(),
+				rawOverflow: raw.overflow,
+			}, nil
 		}
 		if page.Pagination.NextCursor == "" {
-			return nil, false, huma.Error500InternalServerError(
+			return workbenchChecklistImpactCollection{}, huma.Error500InternalServerError(
 				"impact inventory omitted its continuation cursor",
 			)
 		}
 		cursor = page.Pagination.NextCursor
 	}
-	return pages, true, nil
+	return workbenchChecklistImpactCollection{
+		digest:      workbenchChecklistImpactDigest(pageDigests),
+		raw:         raw.retained(),
+		rawOverflow: raw.overflow,
+		truncated:   true,
+	}, nil
+}
+
+func workbenchChecklistImpactDigest(pageDigests []string) string {
+	// Retain only the ordered digest spine. The caller has already extracted
+	// compact suggestions from each page, so a maximum-shaped exact response
+	// becomes unreachable before the next page is requested.
+	return digestJSON(struct {
+		Schema string   `json:"schema"`
+		Pages  []string `json:"pages"`
+	}{
+		Schema: "workbench-checklist-impact-pages-v1",
+		Pages:  pageDigests,
+	})
+}
+
+// canonicalWorkbenchChecklistImpactPage removes process-local transport
+// capabilities before an Impact page contributes to durable checklist
+// identity. Exact caller cursors and citations may rotate while the semantic
+// Workbench revision, publication, rows, and source identities remain the
+// same. They therefore cannot participate in evidence snapshots, suggestion
+// IDs, or Disposition currency.
+func canonicalWorkbenchChecklistImpactPage(
+	page WorkbenchImpactPage,
+) WorkbenchImpactPage {
+	page.Pagination.NextCursor = ""
+	page.Callers = slices.Clone(page.Callers)
+	for index := range page.Callers {
+		page.Callers[index].Pagination.NextCursor = ""
+		page.Callers[index].ResolvedCallers =
+			canonicalWorkbenchChecklistCallerRows(
+				page.Callers[index].ResolvedCallers,
+			)
+		page.Callers[index].ExtractorAbstentions =
+			canonicalWorkbenchChecklistCallerRows(
+				page.Callers[index].ExtractorAbstentions,
+			)
+	}
+	if page.Comparison != nil {
+		comparison := *page.Comparison
+		comparison.Pagination.NextCursor = ""
+		comparison.Rows = slices.Clone(comparison.Rows)
+		for index := range comparison.Rows {
+			comparison.Rows[index] =
+				canonicalWorkbenchChecklistComparisonRow(
+					comparison.Rows[index],
+				)
+		}
+		page.Comparison = &comparison
+	}
+	if page.FieldReferences != nil {
+		fields := *page.FieldReferences
+		fields.Pagination.NextCursor = ""
+		page.FieldReferences = &fields
+	}
+	return page
+}
+
+func canonicalWorkbenchChecklistCallerRows(
+	rows []CallerMapRow,
+) []CallerMapRow {
+	rows = slices.Clone(rows)
+	for index := range rows {
+		rows[index].Source.Citation = ""
+	}
+	return rows
+}
+
+func canonicalWorkbenchChecklistComparisonRow(
+	row CallerComparisonRow,
+) CallerComparisonRow {
+	row.Old.Rows = canonicalWorkbenchChecklistCallerRows(row.Old.Rows)
+	row.Replacement.Rows = canonicalWorkbenchChecklistCallerRows(
+		row.Replacement.Rows,
+	)
+	return row
 }
 
 func (service *WorkbenchChecklistService) collectImplementation(
@@ -865,6 +1047,7 @@ func checklistCallerEvidence(
 	kind string,
 	row CallerMapRow,
 ) store.WorkbenchSuggestionEvidence {
+	row.Source.Citation = ""
 	id := checklistEvidenceID(
 		"caller",
 		struct {
@@ -1084,6 +1267,7 @@ func rawSuggestionsFromImpact(
 	}
 	if page.Comparison != nil {
 		for _, row := range page.Comparison.Rows {
+			row = canonicalWorkbenchChecklistComparisonRow(row)
 			evidence := []store.WorkbenchSuggestionEvidence{
 				checklistGenericEvidence(
 					"impact",
@@ -1255,6 +1439,7 @@ func canonicalWorkbenchChecklistSuggestions(
 	revisionID,
 	snapshotDigest string,
 	raw []workbenchChecklistRawSuggestion,
+	rawOverflow bool,
 ) ([]store.WorkbenchSuggestion, error) {
 	raw = slices.Clone(raw)
 	sort.Slice(raw, func(left, right int) bool {
@@ -1271,8 +1456,10 @@ func canonicalWorkbenchChecklistSuggestions(
 				workbenchChecklistRawKey(right)
 		},
 	)
-	if len(raw) > workbenchChecklistMaxSuggestions {
-		raw = raw[:workbenchChecklistMaxSuggestions-1]
+	if len(raw) > workbenchChecklistMaxSuggestions || rawOverflow {
+		if len(raw) >= workbenchChecklistMaxSuggestions {
+			raw = raw[:workbenchChecklistMaxSuggestions-1]
+		}
 		raw = append(raw, workbenchChecklistRawSuggestion{
 			kind: "review_suggestion_limit",
 			summary: "Review additional evidence omitted by the " +

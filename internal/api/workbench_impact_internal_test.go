@@ -2,14 +2,19 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/danielgtaylor/huma/v2"
+
+	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -25,16 +30,22 @@ const (
 type impactWorkbenchFake struct {
 	view          *store.WorkbenchView
 	compatibility *store.WorkbenchCompatibilityAnalysis
+	reads         int
+	readHook      func(int, *store.WorkbenchView) (*store.WorkbenchView, error)
 }
 
 func (fake *impactWorkbenchFake) Read(
 	_ context.Context,
 	_, _ string,
 ) (*store.WorkbenchView, error) {
+	fake.reads++
 	if fake.view == nil {
 		return nil, store.ErrNotFound
 	}
 	value := *fake.view
+	if fake.readHook != nil {
+		return fake.readHook(fake.reads, &value)
+	}
 	return &value, nil
 }
 
@@ -131,9 +142,13 @@ func (fake *impactCatalogFake) OperationForProtocol(
 }
 
 type impactCallerFake struct {
-	calls  []string
-	pages  int
-	hidden map[string]bool
+	calls        []string
+	confirmCalls []string
+	pages        int
+	hidden       map[string]bool
+	state        string
+	snapshot     string
+	authority    string
 }
 
 func (fake *impactCallerFake) List(
@@ -142,14 +157,23 @@ func (fake *impactCallerFake) List(
 	_ int,
 	cursor string,
 ) (*CallerMapPage, error) {
+	query = normalizeCallerMapQuery(query)
 	if fake.hidden[query.Endpoint.Repository] {
 		return nil, store.ErrNotFound
 	}
 	fake.calls = append(fake.calls, cursor)
-	coverage := impactCoverage(
-		"caller:"+query.Endpoint.Repository,
-		[]string{"proto-contract", "grpc-caller"},
-	)
+	state := fake.state
+	if state == "" {
+		state = string(callerexecute.PublicationCurrent)
+	}
+	snapshot := fake.snapshot
+	if snapshot == "" {
+		snapshot = "caller-snapshot"
+	}
+	authority := fake.authority
+	if authority == "" {
+		authority = "caller-authority"
+	}
 	page := 1
 	if cursor == "caller-2" {
 		page = 2
@@ -193,28 +217,91 @@ func (fake *impactCallerFake) List(
 			},
 		},
 	}
+	generation := CallerMapGeneration{
+		State: state, Plane: exactCallerMapPlane,
+		Repository: query.Endpoint.Repository, Commit: impactCommit,
+		GenerationDigest:    "sha256:" + strings.Repeat("6", 64),
+		ManifestDigest:      "sha256:" + strings.Repeat("7", 64),
+		PairSetDigest:       "sha256:" + strings.Repeat("8", 64),
+		PublicationRevision: 1,
+	}
+	matchingState := "exact"
+	declaration := &ContractCatalogClaim{
+		AssertionID: "caller-declaration",
+		Sources:     []ContractCatalogSource{},
+	}
+	total := callerMapTotal(fake.pages * len(rows))
+	if state != string(callerexecute.PublicationCurrent) {
+		matchingState = "unavailable"
+		declaration = nil
+		total = nil
+		rows = []CallerMapRow{}
+		complete = true
+		next = ""
+	}
 	return &CallerMapPage{
-		SchemaVersion: callerMapSchemaVersion,
-		Query:         query,
-		Declaration: &ContractCatalogClaim{
-			AssertionID: "caller-declaration",
-			Sources:     []ContractCatalogSource{},
-		},
+		SchemaVersion:     exactCallerMapSchemaVersion,
+		Query:             query,
+		Declaration:       declaration,
 		Rows:              rows,
 		Groups:            []CallerMapGroup{},
-		TotalMatchingRows: callerMapTotal(fake.pages * len(rows)),
+		TotalMatchingRows: total,
 		Pagination: CallerMapPagination{
 			Complete: complete, NextCursor: next,
 		},
-		CoverageDigest:    coverage.Digest,
-		AttributionDigest: "sha256:" + strings.Repeat("b", 64),
-		Coverage:          &coverage,
+		Generation:        &generation,
+		MatchingRowsState: matchingState,
+		exactSnapshot:     snapshot,
+		exactAuthority:    authority,
+	}, nil
+}
+
+func (fake *impactCallerFake) confirmWorkbenchCallerSnapshot(
+	_ context.Context,
+	query CallerMapQuery,
+	_ int,
+	authority string,
+) (exactCallerSnapshotConfirmation, error) {
+	fake.confirmCalls = append(fake.confirmCalls, authority)
+	if fake.hidden[query.Endpoint.Repository] {
+		return exactCallerSnapshotConfirmation{}, store.ErrNotFound
+	}
+	wantAuthority := fake.authority
+	if wantAuthority == "" {
+		wantAuthority = "caller-authority"
+	}
+	if authority != wantAuthority {
+		return exactCallerSnapshotConfirmation{},
+			huma.Error409Conflict("caller snapshot changed")
+	}
+	state := fake.state
+	if state == "" {
+		state = string(callerexecute.PublicationCurrent)
+	}
+	snapshot := fake.snapshot
+	if snapshot == "" {
+		snapshot = "caller-snapshot"
+	}
+	matchingState := "exact"
+	if state != string(callerexecute.PublicationCurrent) {
+		matchingState = "unavailable"
+	}
+	return exactCallerSnapshotConfirmation{
+		Snapshot: snapshot, MatchingRowsState: matchingState,
+		Generation: CallerMapGeneration{
+			State: state, Plane: exactCallerMapPlane,
+			Repository: query.Endpoint.Repository,
+		},
 	}, nil
 }
 
 type impactComparisonFake struct {
-	calls  []string
-	hidden map[string]bool
+	calls        []string
+	confirmCalls []string
+	hidden       map[string]bool
+	state        string
+	snapshot     string
+	authority    string
 }
 
 func (fake *impactComparisonFake) Compare(
@@ -223,34 +310,116 @@ func (fake *impactComparisonFake) Compare(
 	_ int,
 	cursor string,
 ) (*CallerComparisonPage, error) {
+	query = normalizeCallerComparisonQuery(query)
 	if fake.hidden[query.Old.Repository] ||
 		fake.hidden[query.Replacement.Repository] {
 		return nil, store.ErrNotFound
 	}
 	fake.calls = append(fake.calls, cursor)
-	coverage := impactCoverage(
-		"comparison",
-		[]string{"proto-contract", "grpc-caller"},
-	)
+	state := fake.state
+	if state == "" {
+		state = string(callerexecute.PublicationCurrent)
+	}
+	matchingState := "exact"
+	if state != string(callerexecute.PublicationCurrent) {
+		matchingState = "unavailable"
+	}
 	total := 1
-	return &CallerComparisonPage{
+	page := &CallerComparisonPage{
 		SchemaVersion: callerComparisonSchemaVersion,
 		Query:         query,
 		Old: CallerComparisonSnapshot{
-			Endpoint:       query.Old,
-			CoverageDigest: coverage.Digest,
+			Endpoint: query.Old,
 		},
 		Replacement: CallerComparisonSnapshot{
-			Endpoint:       query.Replacement,
-			CoverageDigest: coverage.Digest,
+			Endpoint: query.Replacement,
 		},
 		Rows: []CallerComparisonRow{{
 			Level: "occurrence", Key: "caller.go:1",
 			Classification: "old_only_evidence",
 		}},
-		TotalRows:  &total,
-		Pagination: CallerMapPagination{Complete: true},
-		Coverage:   &coverage,
+		TotalRows:         &total,
+		MatchingRowsState: matchingState,
+		Pagination:        CallerMapPagination{Complete: true},
+		exactSnapshot:     "comparison-snapshot",
+		exactAuthority:    "comparison-authority",
+	}
+	if fake.snapshot != "" {
+		page.exactSnapshot = fake.snapshot
+	}
+	if fake.authority != "" {
+		page.exactAuthority = fake.authority
+	}
+	for side, endpoint := range map[string]CallerMapEndpoint{
+		"old": query.Old, "replacement": query.Replacement,
+	} {
+		generation := &CallerMapGeneration{
+			State: state, Plane: exactCallerMapPlane,
+			Repository: endpoint.Repository, Commit: impactCommit,
+		}
+		declaration := &ContractCatalogClaim{
+			AssertionID: side + "-declaration",
+			Sources:     []ContractCatalogSource{},
+		}
+		snapshot := CallerComparisonSnapshot{
+			Endpoint: endpoint, Declaration: declaration,
+			Generation: generation, MatchingRowsState: matchingState,
+		}
+		if side == "old" {
+			page.Old = snapshot
+		} else {
+			page.Replacement = snapshot
+		}
+	}
+	if matchingState == "unavailable" {
+		page.Rows = []CallerComparisonRow{}
+		page.TotalRows = nil
+		page.Old.Declaration = nil
+		page.Replacement.Declaration = nil
+	}
+	return page, nil
+}
+
+func (fake *impactComparisonFake) confirmWorkbenchComparisonSnapshot(
+	_ context.Context,
+	query CallerComparisonQuery,
+	_ int,
+	authority string,
+) (exactCallerComparisonSnapshotConfirmation, error) {
+	fake.confirmCalls = append(fake.confirmCalls, authority)
+	wantAuthority := fake.authority
+	if wantAuthority == "" {
+		wantAuthority = "comparison-authority"
+	}
+	if authority != wantAuthority {
+		return exactCallerComparisonSnapshotConfirmation{},
+			huma.Error409Conflict("comparison snapshot changed")
+	}
+	state := fake.state
+	if state == "" {
+		state = string(callerexecute.PublicationCurrent)
+	}
+	matchingState := "exact"
+	if state != string(callerexecute.PublicationCurrent) {
+		matchingState = "unavailable"
+	}
+	project := func(endpoint CallerMapEndpoint) CallerComparisonExactSnapshot {
+		return CallerComparisonExactSnapshot{
+			Endpoint: endpoint,
+			Generation: CallerMapGeneration{
+				State: state, Plane: exactCallerMapPlane,
+				Repository: endpoint.Repository,
+			},
+			MatchingRowsState: matchingState,
+		}
+	}
+	snapshot := fake.snapshot
+	if snapshot == "" {
+		snapshot = "comparison-snapshot"
+	}
+	return exactCallerComparisonSnapshotConfirmation{
+		Snapshot: snapshot, MatchingRowsState: matchingState,
+		Old: project(query.Old), Replacement: project(query.Replacement),
 	}, nil
 }
 
@@ -479,50 +648,55 @@ func impactService(
 	}, catalog, callers, comparison, fields
 }
 
-func TestWorkbenchImpactUsesOnlyLegacyCallerServices(t *testing.T) {
+func TestWorkbenchImpactUsesSharedExactCallerServices(t *testing.T) {
+	_, exactCallers, _ := newExactAuthorityGapServices(
+		t, "github.com/acme/workbench-impact-secret",
+	)
+	wantSecret := [32]byte{1, 2, 3, 4}
+	exactCallers.exact.secret = wantSecret
 	workbench := &workbenchAPIFake{}
-	legacyCallers := &CallerMapService{}
-	publicCallers := &CallerMapService{}
-	legacyComparison := &CallerComparisonService{}
-	publicComparison := &CallerComparisonService{}
-	opts := Options{
-		Principal:              func(context.Context) string { return "user:t306k" },
-		Workbench:              workbench,
-		ContractCatalog:        &ContractCatalogService{},
-		CallerMap:              publicCallers,
-		LegacyCallerMap:        legacyCallers,
-		CallerComparison:       publicComparison,
-		LegacyCallerComparison: legacyComparison,
-		FieldReferences:        &FieldReferenceService{},
-	}
+	opts := exactCallers.exact.opts
+	opts.Workbench = workbench
+	opts.ContractCatalog = &ContractCatalogService{}
+	opts.CallerMap = exactCallers
+	opts.CallerComparison = nil
+	opts.FieldReferences = &FieldReferenceService{}
 	service := NewWorkbenchImpactService(opts)
 	if service == nil {
-		t.Fatal("Workbench Impact did not construct with explicit legacy readers")
+		t.Fatal("Workbench Impact did not construct with the exact Caller Map")
 	}
-	if service.callers != legacyCallers || service.comparison != legacyComparison {
+	exactComparison, ok := service.comparison.(*CallerComparisonService)
+	if !ok || service.callers != exactCallers ||
+		exactComparison.exact != exactCallers.exact {
 		t.Fatalf(
-			"Workbench Impact readers = callers %p comparison %p, want legacy %p/%p",
-			service.callers, service.comparison, legacyCallers, legacyComparison,
+			"Workbench Impact readers = callers %p comparison %T, want shared exact caller service",
+			service.callers, service.comparison,
 		)
 	}
-
-	// A public exact comparison must not become Workbench's provisional
-	// revision source when no legacy comparison can be constructed.
-	opts.LegacyCallerComparison = nil
-	if got := NewWorkbenchImpactService(opts); got != nil {
-		t.Fatal("Workbench Impact fell back to the public exact comparison")
+	if service.cursorSecret != wantSecret ||
+		service.cursorSecret == ([32]byte{}) {
+		t.Fatalf(
+			"Workbench Impact HMAC secret = %x, want known nonzero shared secret",
+			service.cursorSecret,
+		)
 	}
 	if !slices.Contains(
-		apiCapabilities(Options{CallerComparison: publicComparison}),
+		apiCapabilities(Options{CallerComparison: exactComparison}),
 		callerComparisonCapability,
 	) {
 		t.Fatal("explicit public comparison was absent from version capabilities")
 	}
-	if slices.Contains(
-		apiCapabilities(Options{LegacyCallerComparison: legacyComparison}),
-		callerComparisonCapability,
-	) {
-		t.Fatal("legacy Workbench comparison leaked into version capabilities")
+	legacy := opts
+	legacy.CallerMap = &CallerMapService{}
+	if NewWorkbenchImpactService(legacy) != nil {
+		t.Fatal("Workbench Impact admitted the legacy Caller Map")
+	}
+	separate := opts
+	separate.CallerComparison = &CallerComparisonService{
+		exact: &exactCallerMapService{},
+	}
+	if NewWorkbenchImpactService(separate) != nil {
+		t.Fatal("Workbench Impact admitted a separately keyed comparison engine")
 	}
 }
 
@@ -691,6 +865,158 @@ func TestWorkbenchImpactKeepsEvidenceClassesSeparate(t *testing.T) {
 	}
 }
 
+func TestWorkbenchImpactKeepsCallerGenerationGapsTyped(t *testing.T) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	service, _, callers, _, _ := impactService(
+		impactView(
+			store.ChangeBriefRetire,
+			[]store.ChangeBriefContractSelection{current},
+		),
+		nil,
+		nil,
+	)
+	callers.state = string(callerexecute.PublicationStale)
+	page, err := service.Read(
+		context.Background(),
+		"user:t217",
+		WorkbenchImpactRequest{
+			InvestigationID: impactInvestigationID,
+			RevisionID:      impactRevisionID,
+			PageSize:        10,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Callers) != 1 ||
+		page.Callers[0].MatchingRowsState != "unavailable" ||
+		page.Callers[0].Generation.State !=
+			string(callerexecute.PublicationStale) ||
+		page.Callers[0].TotalMatchingRows != nil ||
+		page.Callers[0].Declaration != nil ||
+		len(page.Callers[0].ResolvedCallers) != 0 ||
+		len(page.Callers[0].ExtractorAbstentions) != 0 {
+		t.Fatalf("caller gap was promoted to evidence: %+v", page.Callers)
+	}
+	for _, coverage := range page.AnalysisScope.Coverage {
+		if coverage.Capability == "contract-caller-map" {
+			t.Fatalf("repository overlay became focused coverage: %+v", coverage)
+		}
+	}
+	wantGap := false
+	for _, gap := range page.AnalysisScope.Gaps {
+		if gap.Capability == "contract-caller-map" &&
+			gap.State == string(callerexecute.PublicationStale) &&
+			gap.Code == "caller_generation_stale" {
+			wantGap = true
+		}
+	}
+	if !wantGap {
+		t.Fatalf("typed caller gap absent: %+v", page.AnalysisScope)
+	}
+}
+
+func TestWorkbenchImpactKeepsComparisonGapJointAndUnclassified(t *testing.T) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	replacement := impactSelection(store.ChangeBriefReplacement, "replacement")
+	service, _, _, comparison, _ := impactService(
+		impactView(
+			store.ChangeBriefMigrate,
+			[]store.ChangeBriefContractSelection{current, replacement},
+		),
+		nil,
+		nil,
+	)
+	comparison.state = string(callerexecute.PublicationMissing)
+	page, err := service.Read(
+		context.Background(),
+		"user:t217",
+		WorkbenchImpactRequest{
+			InvestigationID: impactInvestigationID,
+			RevisionID:      impactRevisionID,
+			PageSize:        10,
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Comparison == nil ||
+		page.Comparison.MatchingRowsState != "unavailable" ||
+		page.Comparison.TotalRows != nil || len(page.Comparison.Rows) != 0 ||
+		!page.Comparison.Pagination.Complete ||
+		page.Comparison.Pagination.NextCursor != "" {
+		t.Fatalf("comparison gap became a classification: %+v", page.Comparison)
+	}
+	gapCount := 0
+	for _, gap := range page.AnalysisScope.Gaps {
+		if gap.Capability == "contract-caller-comparison" &&
+			gap.Code == "caller_generation_missing" {
+			gapCount++
+		}
+	}
+	if gapCount != 2 {
+		t.Fatalf("comparison side gaps = %d, want 2: %+v", gapCount, page.AnalysisScope)
+	}
+}
+
+func TestWorkbenchImpactFinalRevisionFence(t *testing.T) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	newService := func() (*WorkbenchImpactService, *impactWorkbenchFake) {
+		service, _, _, _, _ := impactService(
+			impactView(
+				store.ChangeBriefRetire,
+				[]store.ChangeBriefContractSelection{current},
+			),
+			nil,
+			nil,
+		)
+		return service, service.workbench.(*impactWorkbenchFake)
+	}
+	request := WorkbenchImpactRequest{
+		InvestigationID: impactInvestigationID,
+		RevisionID:      impactRevisionID,
+		PageSize:        10,
+	}
+	t.Run("access revoked", func(t *testing.T) {
+		service, workbench := newService()
+		workbench.readHook = func(
+			call int,
+			view *store.WorkbenchView,
+		) (*store.WorkbenchView, error) {
+			if call == 2 {
+				return nil, store.ErrNotFound
+			}
+			return view, nil
+		}
+		page, err := service.Read(
+			context.Background(), "user:t217", request,
+		)
+		if page != nil || !errors.Is(err, store.ErrNotFound) {
+			t.Fatalf("revoked final authority = page:%+v err:%v", page, err)
+		}
+	})
+	t.Run("same id content changed", func(t *testing.T) {
+		service, workbench := newService()
+		workbench.readHook = func(
+			call int,
+			view *store.WorkbenchView,
+		) (*store.WorkbenchView, error) {
+			if call == 2 {
+				view.Brief.ContentDigest = "sha256:" + strings.Repeat("f", 64)
+			}
+			return view, nil
+		}
+		page, err := service.Read(
+			context.Background(), "user:t217", request,
+		)
+		var statusError interface{ GetStatus() int }
+		if page != nil || !errors.As(err, &statusError) ||
+			statusError.GetStatus() != http.StatusConflict {
+			t.Fatalf("changed final authority = page:%+v err:%v", page, err)
+		}
+	})
+}
+
 func TestWorkbenchImpactPaginationPreservesPlaneAndSnapshotState(
 	t *testing.T,
 ) {
@@ -831,15 +1157,175 @@ func TestWorkbenchImpactPaginationPreservesPlaneAndSnapshotState(
 	}
 	if !reflect.DeepEqual(
 		callers.calls,
-		[]string{"", "caller-2", ""},
+		[]string{"", "caller-2"},
 	) || !reflect.DeepEqual(
 		fields.calls,
 		[]string{"", "field-2", "field-3"},
+	) || !reflect.DeepEqual(
+		callers.confirmCalls,
+		[]string{"caller-authority"},
 	) {
 		t.Fatalf(
-			"delegate cursors caller=%v fields=%v",
+			"delegate cursors caller=%v confirms=%v fields=%v",
 			callers.calls,
+			callers.confirmCalls,
 			fields.calls,
+		)
+	}
+}
+
+func TestWorkbenchImpactCursorUsesNormalizedFilterIdentity(t *testing.T) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	service, _, callers, _, _ := impactService(
+		impactView(
+			store.ChangeBriefModify,
+			[]store.ChangeBriefContractSelection{current},
+		),
+		nil,
+		nil,
+	)
+	callers.pages = 2
+	request := WorkbenchImpactRequest{
+		InvestigationID: impactInvestigationID,
+		RevisionID:      impactRevisionID,
+		PageSize:        1,
+	}
+	first, err := service.Read(
+		context.Background(), "user:t217", request,
+	)
+	if err != nil || first.Pagination.Complete ||
+		first.Pagination.NextCursor == "" {
+		t.Fatalf("first page = %+v err=%v", first, err)
+	}
+	request.Cursor = first.Pagination.NextCursor
+	request.Filters = WorkbenchImpactFilters{
+		Freshness:  "any",
+		Resolution: "any",
+		Ordering:   "source",
+		Level:      "occurrence",
+	}
+	second, err := service.Read(
+		context.Background(), "user:t217", request,
+	)
+	if err != nil || !second.Pagination.Complete ||
+		len(second.Callers) != 1 ||
+		second.Callers[0].Query.Freshness != "any" ||
+		second.Callers[0].Query.Resolution != "any" ||
+		second.Callers[0].Query.Ordering != "source" ||
+		!reflect.DeepEqual(callers.calls, []string{"", "caller-2"}) {
+		t.Fatalf(
+			"normalized continuation = page:%+v err:%v calls:%v",
+			second, err, callers.calls,
+		)
+	}
+}
+
+func TestWorkbenchImpactRejectsCompletedCallerTransition(t *testing.T) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	field := compat.FieldIdentity{
+		Lineage: current.DeclarationLineage,
+		Message: "shop.Cart",
+		Number:  1,
+	}
+	service, _, callers, _, fields := impactService(
+		impactView(
+			store.ChangeBriefModify,
+			[]store.ChangeBriefContractSelection{current},
+		),
+		impactCompatibility([]compat.FieldIdentity{field}),
+		nil,
+	)
+	fields.pages = 2
+	request := WorkbenchImpactRequest{
+		InvestigationID:  impactInvestigationID,
+		RevisionID:       impactRevisionID,
+		CompatibilityRun: impactRunID,
+		PageSize:         1,
+	}
+	first, err := service.Read(
+		context.Background(), "user:t217", request,
+	)
+	if err != nil || first.Pagination.Complete ||
+		first.Pagination.NextCursor == "" {
+		t.Fatalf("first page = %+v err=%v", first, err)
+	}
+	callers.snapshot = "transitioned-caller-snapshot"
+	request.Cursor = first.Pagination.NextCursor
+	page, err := service.Read(
+		context.Background(), "user:t217", request,
+	)
+	var statusError interface{ GetStatus() int }
+	if page != nil || !errors.As(err, &statusError) ||
+		statusError.GetStatus() != http.StatusConflict ||
+		len(callers.calls) != 1 || len(callers.confirmCalls) != 1 {
+		t.Fatalf(
+			"transition = page:%+v err:%v list:%v confirm:%v",
+			page, err, callers.calls, callers.confirmCalls,
+		)
+	}
+}
+
+func TestWorkbenchImpactRejectsForgedEarlyStreamCompletion(t *testing.T) {
+	current := impactSelection(store.ChangeBriefCurrent, "current")
+	service, _, callers, _, _ := impactService(
+		impactView(
+			store.ChangeBriefModify,
+			[]store.ChangeBriefContractSelection{current},
+		),
+		nil,
+		nil,
+	)
+	callers.pages = 2
+	request := WorkbenchImpactRequest{
+		InvestigationID: impactInvestigationID,
+		RevisionID:      impactRevisionID,
+		PageSize:        1,
+	}
+	first, err := service.Read(
+		context.Background(), "user:t217", request,
+	)
+	if err != nil || first.Pagination.Complete ||
+		first.Pagination.NextCursor == "" {
+		t.Fatalf("first page = %+v err=%v", first, err)
+	}
+	payload, signature, ok := strings.Cut(
+		first.Pagination.NextCursor, ".",
+	)
+	if !ok {
+		t.Fatal("signed Workbench cursor has no signature")
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var forged workbenchImpactCursor
+	if err := json.Unmarshal(raw, &forged); err != nil {
+		t.Fatal(err)
+	}
+	key := workbenchCallerStreamKey(current)
+	stream := forged.Streams[key]
+	if stream.Complete || stream.Next == "" {
+		t.Fatalf("first caller stream = %+v", stream)
+	}
+	stream.Complete = true
+	stream.Next = ""
+	forged.Streams[key] = stream
+	forgedRaw, err := json.Marshal(forged)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Cursor = base64.RawURLEncoding.EncodeToString(forgedRaw) +
+		"." + signature
+	page, err := service.Read(
+		context.Background(), "user:t217", request,
+	)
+	var statusError interface{ GetStatus() int }
+	if page != nil || !errors.As(err, &statusError) ||
+		statusError.GetStatus() != http.StatusBadRequest ||
+		len(callers.calls) != 1 {
+		t.Fatalf(
+			"forged completion = page:%+v err:%v caller calls:%v",
+			page, err, callers.calls,
 		)
 	}
 }

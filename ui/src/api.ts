@@ -350,8 +350,24 @@ export interface WorkbenchResourcePlane {
   relationships: WorkbenchResourcePlaneRelationship[]
 }
 
+export interface WorkbenchCallerImpact {
+  selection: WorkbenchContractSelection
+  query: CallerMapQuery
+  generation: CallerMapGeneration
+  matching_rows_state: 'exact' | 'unavailable'
+  // Exact generation gaps deliberately omit the declaration and total. A
+  // missing value is unavailable authority, never an inferred zero.
+  declaration?: ContractCatalogClaim
+  resolved_callers: CallerMapRow[]
+  extractor_abstentions: CallerMapRow[]
+  groups?: CallerMapGroup[]
+  total_matching_rows?: number
+  pagination: CallerMapPage['pagination']
+  caveat: string
+}
+
 export interface WorkbenchImpactPage {
-  schema_version: string
+  schema_version: 'workbench-impact-inventory-v2'
   investigation_id: string
   revision_id: string
   ticket_kind: WorkbenchTicketKind
@@ -369,20 +385,8 @@ export interface WorkbenchImpactPage {
     shape_truncated: boolean
     coverage_digest: string
   }[]
-  callers: {
-    selection: WorkbenchContractSelection
-    query: CallerMapQuery
-    declaration: ContractCatalogClaim
-    resolved_callers: CallerMapRow[]
-    extractor_abstentions: CallerMapRow[]
-    groups?: CallerMapGroup[]
-    total_matching_rows: number
-    pagination: CallerMapPage['pagination']
-    coverage_digest: string
-    attribution_digest: string
-    caveat: string
-  }[]
-  comparison?: CallerComparisonPage
+  callers: WorkbenchCallerImpact[]
+  comparison?: CallerComparisonExactPage
   compatibility?: {
     status: string
     run_id?: string
@@ -1233,7 +1237,8 @@ export interface CallerComparisonQuery {
 interface CallerComparisonSnapshotBase {
   endpoint: CallerMapEndpoint
   declaration?: ContractCatalogClaim
-  // Retained only for the Workbench's legacy caller-comparison-v1 payload.
+  // Retained only for compatibility with historical v1 payload fixtures;
+  // Workbench impact v2 accepts the exact snapshot shape exclusively.
   coverage_digest?: string
   attribution_digest?: string
 }
@@ -1296,7 +1301,7 @@ export interface CallerComparisonLegacyPage extends CallerComparisonPageBase {
   replacement: CallerComparisonLegacySnapshot
   total_rows: number
   matching_rows_state?: undefined
-  // Workbench remains on the legacy evidence-plane payload until T30.6l.
+  // Workbench impact v2 never exposes this legacy evidence-plane field.
   coverage?: CoverageCertificate
 }
 

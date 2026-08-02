@@ -762,10 +762,7 @@ func serve(args []string) error {
 		log.Printf("WARNING: synthetic Contract Atlas fixture enabled from %s; not production evidence", fixturePath)
 	}
 	apiOpts.ContractCatalog = api.NewContractCatalogService(apiOpts)
-	apiOpts.LegacyCallerMap = api.NewLegacyCallerMapService(apiOpts)
 	apiOpts.CallerMap = api.NewCallerMapService(apiOpts)
-	apiOpts.LegacyCallerComparison =
-		api.NewLegacyCallerComparisonService(apiOpts)
 	apiOpts.CallerComparison = api.NewCallerComparisonService(apiOpts)
 	syntheticWorkbenchSetting := os.Getenv("PHEBS_SYNTHETIC_WORKBENCH")
 	workbenchMode := ""

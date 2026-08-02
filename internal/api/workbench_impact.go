@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -12,14 +14,15 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 const (
-	workbenchImpactSchemaVersion = "workbench-impact-inventory-v1"
-	workbenchImpactCursorVersion = "workbench-impact-cursor-v1"
+	workbenchImpactSchemaVersion = "workbench-impact-inventory-v2"
+	workbenchImpactCursorVersion = "workbench-impact-cursor-v2"
 	workbenchImpactCursorLimit   = 64 << 10
 	workbenchImpactCaveat        = "Cited static evidence within the displayed authorization and extraction snapshots; rows, empty pages, and completed pagination do not establish runtime use, completeness, migration completion, or decommissioning safety."
 )
@@ -45,6 +48,12 @@ type workbenchImpactCallerMap interface {
 		int,
 		string,
 	) (*CallerMapPage, error)
+	confirmWorkbenchCallerSnapshot(
+		context.Context,
+		CallerMapQuery,
+		int,
+		string,
+	) (exactCallerSnapshotConfirmation, error)
 }
 
 type workbenchImpactComparison interface {
@@ -54,6 +63,12 @@ type workbenchImpactComparison interface {
 		int,
 		string,
 	) (*CallerComparisonPage, error)
+	confirmWorkbenchComparisonSnapshot(
+		context.Context,
+		CallerComparisonQuery,
+		int,
+		string,
+	) (exactCallerComparisonSnapshotConfirmation, error)
 }
 
 type workbenchImpactFieldReferences interface {
@@ -80,6 +95,7 @@ type workbenchImpactCompatibility interface {
 // services or mint proof bundles.
 type WorkbenchImpactService struct {
 	opts          Options
+	cursorSecret  [sha256.Size]byte
 	workbench     workbenchImpactReader
 	catalog       workbenchImpactCatalog
 	callers       workbenchImpactCallerMap
@@ -97,22 +113,29 @@ func NewWorkbenchImpactService(opts Options) *WorkbenchImpactService {
 	if catalog == nil {
 		catalog = NewContractCatalogService(opts)
 	}
-	// T30.6j/T30.6k intentionally move only the public Caller Map and caller
-	// comparison. Workbench's revision/evidence snapshot remains on its legacy
-	// plane until T30.6l.
-	callers := opts.LegacyCallerMap
+	callers := opts.CallerMap
 	if callers == nil {
-		callers = NewLegacyCallerMapService(opts)
+		callers = NewCallerMapService(opts)
 	}
-	comparison := opts.LegacyCallerComparison
+	if callers == nil || callers.exact == nil {
+		return nil
+	}
+	comparison := opts.CallerComparison
 	if comparison == nil {
-		comparison = NewLegacyCallerComparisonService(opts)
+		// The comparison and Caller Map must share one HMAC secret, binding
+		// registry, reverse-index cache, and exact citation reader.
+		exactOpts := opts
+		exactOpts.CallerMap = callers
+		comparison = NewCallerComparisonService(exactOpts)
+	}
+	if comparison == nil || comparison.exact != callers.exact {
+		return nil
 	}
 	fields := opts.FieldReferences
 	if fields == nil {
 		fields = NewFieldReferenceService(opts)
 	}
-	if catalog == nil || callers == nil || comparison == nil || fields == nil {
+	if catalog == nil || fields == nil {
 		return nil
 	}
 	resources := opts.ResourcePlanes
@@ -122,6 +145,7 @@ func NewWorkbenchImpactService(opts Options) *WorkbenchImpactService {
 	compatibility, _ := opts.Workbench.(workbenchImpactCompatibility)
 	return &WorkbenchImpactService{
 		opts:          opts,
+		cursorSecret:  callers.exact.secret,
 		workbench:     opts.Workbench,
 		catalog:       catalog,
 		callers:       callers,
@@ -170,14 +194,14 @@ type WorkbenchAtlasImpact struct {
 type WorkbenchCallerImpact struct {
 	Selection            store.ChangeBriefContractSelection `json:"selection"`
 	Query                CallerMapQuery                     `json:"query"`
-	Declaration          ContractCatalogClaim               `json:"declaration"`
+	Declaration          *ContractCatalogClaim              `json:"declaration,omitempty"`
+	Generation           CallerMapGeneration                `json:"generation"`
+	MatchingRowsState    string                             `json:"matching_rows_state" enum:"exact,unavailable"`
 	ResolvedCallers      []CallerMapRow                     `json:"resolved_callers"`
 	ExtractorAbstentions []CallerMapRow                     `json:"extractor_abstentions"`
 	Groups               []CallerMapGroup                   `json:"groups,omitempty"`
-	TotalMatchingRows    int                                `json:"total_matching_rows"`
+	TotalMatchingRows    *int                               `json:"total_matching_rows,omitempty"`
 	Pagination           CallerMapPagination                `json:"pagination"`
-	CoverageDigest       string                             `json:"coverage_digest"`
-	AttributionDigest    string                             `json:"attribution_digest"`
 	Caveat               string                             `json:"caveat"`
 }
 
@@ -230,7 +254,7 @@ type WorkbenchImpactPage struct {
 	ScenarioEmphasis []string                      `json:"scenario_emphasis"`
 	Atlas            []WorkbenchAtlasImpact        `json:"atlas"`
 	Callers          []WorkbenchCallerImpact       `json:"callers"`
-	Comparison       *CallerComparisonPage         `json:"comparison,omitempty"`
+	Comparison       *CallerComparisonExactPage    `json:"comparison,omitempty"`
 	Compatibility    *WorkbenchCompatibilityImpact `json:"compatibility,omitempty"`
 	FieldReferences  *FieldReferencePage           `json:"field_references,omitempty"`
 	ResourcePlanes   []ResourcePlaneSnapshot       `json:"resource_planes"`
@@ -240,9 +264,10 @@ type WorkbenchImpactPage struct {
 }
 
 type workbenchImpactStreamCursor struct {
-	Complete bool   `json:"complete"`
-	Next     string `json:"next,omitempty"`
-	Snapshot string `json:"snapshot"`
+	Complete  bool   `json:"complete"`
+	Next      string `json:"next,omitempty"`
+	Snapshot  string `json:"snapshot"`
+	Authority string `json:"authority,omitempty"`
 }
 
 type workbenchImpactCursor struct {
@@ -254,14 +279,13 @@ type workbenchImpactCursor struct {
 	CompatibilityDigest string                                 `json:"compatibility_digest"`
 	ResourceDigest      string                                 `json:"resource_digest"`
 	Streams             map[string]workbenchImpactStreamCursor `json:"streams"`
-	Checksum            string                                 `json:"checksum"`
 }
 
 func (service *WorkbenchImpactService) Read(
 	ctx context.Context,
 	principal string,
 	request WorkbenchImpactRequest,
-) (*WorkbenchImpactPage, error) {
+) (result *WorkbenchImpactPage, resultErr error) {
 	if service == nil {
 		return nil, huma.Error503ServiceUnavailable(
 			"workbench impact inventory unavailable",
@@ -292,6 +316,7 @@ func (service *WorkbenchImpactService) Read(
 			),
 		)
 	}
+	request.Filters = normalizeWorkbenchImpactFilters(request.Filters)
 	view, err := service.workbench.Read(
 		ctx,
 		principal,
@@ -300,15 +325,34 @@ func (service *WorkbenchImpactService) Read(
 	if err != nil {
 		return nil, err
 	}
-	if view == nil ||
-		view.Investigation.ID != request.InvestigationID ||
-		view.Investigation.CurrentRevisionID != request.RevisionID ||
-		view.Revision.ID != request.RevisionID ||
-		view.Revision.InvestigationID != request.InvestigationID ||
-		view.Brief.RevisionID != request.RevisionID ||
-		view.Brief.InvestigationID != request.InvestigationID {
+	if !workbenchImpactViewCurrent(view, request) {
 		return nil, store.ErrNotFound
 	}
+	revisionDigest := workbenchImpactRevisionDigest(view)
+	// Every subordinate service has its own result-time repository/evidence
+	// fence. Repeat the Investigation authority last as well so a revocation or
+	// revision advance during composition cannot leak the subordinate error or
+	// serialize evidence under an obsolete Workbench revision.
+	defer func() {
+		confirmed, err := service.workbench.Read(
+			ctx, principal, request.InvestigationID,
+		)
+		if err != nil || !workbenchImpactViewCurrent(confirmed, request) {
+			result = nil
+			if errors.Is(err, store.ErrNotFound) || err == nil {
+				resultErr = store.ErrNotFound
+			} else {
+				resultErr = err
+			}
+			return
+		}
+		if workbenchImpactRevisionDigest(confirmed) != revisionDigest {
+			result = nil
+			resultErr = huma.Error409Conflict(
+				"workbench impact revision changed while building the response",
+			)
+		}
+	}()
 	if request.CompatibilityRun != "" &&
 		view.Brief.TicketKind != store.ChangeBriefModify {
 		return nil, huma.Error400BadRequest(
@@ -328,11 +372,7 @@ func (service *WorkbenchImpactService) Read(
 		Filters:          request.Filters,
 		PageSize:         request.PageSize,
 	})
-	revisionDigest := digestJSON(struct {
-		Revision store.Revision    `json:"revision"`
-		Brief    store.ChangeBrief `json:"brief"`
-	}{Revision: view.Revision, Brief: view.Brief})
-	cursor, err := decodeWorkbenchImpactCursor(
+	cursor, err := service.decodeWorkbenchImpactCursor(
 		request.Cursor,
 		queryDigest,
 		principal,
@@ -541,6 +581,12 @@ func (service *WorkbenchImpactService) Read(
 			return nil, err
 		}
 	}
+	if err := validateWorkbenchImpactStreamSet(
+		next.Streams,
+		expectedStreams,
+	); err != nil {
+		return nil, err
+	}
 	sortWorkbenchImpactScope(&page.AnalysisScope)
 	page.Pagination.Complete = true
 	for _, state := range next.Streams {
@@ -550,7 +596,7 @@ func (service *WorkbenchImpactService) Read(
 		}
 	}
 	if !page.Pagination.Complete {
-		page.Pagination.NextCursor, err = encodeWorkbenchImpactCursor(next)
+		page.Pagination.NextCursor, err = service.encodeWorkbenchImpactCursor(next)
 		if err != nil {
 			return nil, huma.Error500InternalServerError(
 				"encode workbench impact cursor",
@@ -559,6 +605,24 @@ func (service *WorkbenchImpactService) Read(
 		}
 	}
 	return page, nil
+}
+
+func normalizeWorkbenchImpactFilters(
+	filters WorkbenchImpactFilters,
+) WorkbenchImpactFilters {
+	if filters.Freshness == "" {
+		filters.Freshness = "any"
+	}
+	if filters.Resolution == "" {
+		filters.Resolution = "any"
+	}
+	if filters.Ordering == "" {
+		filters.Ordering = "source"
+	}
+	if filters.Level == "" {
+		filters.Level = "occurrence"
+	}
+	return filters
 }
 
 func (service *WorkbenchImpactService) readWorkbenchAtlas(
@@ -777,68 +841,65 @@ func (service *WorkbenchImpactService) readWorkbenchCallerStream(
 	page *WorkbenchImpactPage,
 ) (workbenchImpactStreamCursor, *WorkbenchCallerImpact, error) {
 	previous, hadPrevious := workbenchImpactPreviousStream(cursor, key)
-	delegate := previous.Next
-	emit := true
-	if hadPrevious && previous.Complete {
-		delegate = ""
-		emit = false
-	}
 	query := workbenchCallerQuery(selection, request.Filters)
+	if hadPrevious && previous.Complete {
+		confirmed, err := service.callers.confirmWorkbenchCallerSnapshot(
+			ctx, query, request.PageSize, previous.Authority,
+		)
+		if err != nil {
+			return workbenchImpactStreamCursor{}, nil, err
+		}
+		if confirmed.Snapshot == "" ||
+			confirmed.Snapshot != previous.Snapshot {
+			return workbenchImpactStreamCursor{}, nil,
+				huma.Error409Conflict(
+					"workbench impact caller snapshot is no longer valid",
+				)
+		}
+		if err := workbenchCallerGenerationScope(
+			page, "contract-caller-map",
+			workbenchSelectionTarget(selection),
+			confirmed.MatchingRowsState, confirmed.Generation,
+		); err != nil {
+			return workbenchImpactStreamCursor{}, nil, err
+		}
+		return previous, nil, nil
+	}
 	value, err := service.callers.List(
 		ctx,
 		query,
 		request.PageSize,
-		delegate,
+		previous.Next,
 	)
 	if err != nil {
 		return workbenchImpactStreamCursor{}, nil, err
 	}
-	if value.TotalMatchingRows == nil || value.Declaration == nil {
+	if err := validateWorkbenchExactCallerPage(value, query); err != nil {
 		return workbenchImpactStreamCursor{}, nil,
-			huma.Error409Conflict("workbench impact caller snapshot is unavailable")
+			huma.Error409Conflict(
+				"workbench impact caller snapshot is unavailable", err,
+			)
 	}
-	snapshot := digestJSON(struct {
-		Query             CallerMapQuery       `json:"query"`
-		Declaration       ContractCatalogClaim `json:"declaration"`
-		Total             int                  `json:"total"`
-		CoverageDigest    string               `json:"coverage_digest"`
-		AttributionDigest string               `json:"attribution_digest"`
-	}{
-		Query:             value.Query,
-		Declaration:       *value.Declaration,
-		Total:             *value.TotalMatchingRows,
-		CoverageDigest:    value.CoverageDigest,
-		AttributionDigest: value.AttributionDigest,
-	})
-	if hadPrevious && snapshot != previous.Snapshot {
+	if hadPrevious && (value.exactSnapshot != previous.Snapshot ||
+		value.exactAuthority != previous.Authority) {
 		return workbenchImpactStreamCursor{}, nil,
 			huma.Error409Conflict(
 				"workbench impact caller snapshot is no longer valid",
 			)
 	}
-	if value.Coverage == nil {
-		return workbenchImpactStreamCursor{}, nil,
-			huma.Error409Conflict("workbench impact caller coverage is unavailable")
-	}
-	workbenchAddCoverage(
+	if err := workbenchCallerGenerationScope(
 		page,
 		"contract-caller-map",
 		workbenchSelectionTarget(selection),
-		*value.Coverage,
-	)
-	workbenchAddCapability(
-		page,
-		"contract-caller-map",
-		"enabled",
-		"",
-	)
-	state := workbenchImpactStreamCursor{
-		Complete: value.Pagination.Complete,
-		Next:     value.Pagination.NextCursor,
-		Snapshot: snapshot,
+		value.MatchingRowsState, *value.Generation,
+	); err != nil {
+		return workbenchImpactStreamCursor{}, nil, err
 	}
-	if !emit {
-		return previous, nil, nil
+	state := workbenchImpactStreamCursor{
+		Complete:  value.Pagination.Complete,
+		Next:      value.Pagination.NextCursor,
+		Snapshot:  value.exactSnapshot,
+		Authority: value.exactAuthority,
 	}
 	resolved := []CallerMapRow{}
 	abstentions := []CallerMapRow{}
@@ -857,14 +918,14 @@ func (service *WorkbenchImpactService) readWorkbenchCallerStream(
 	return state, &WorkbenchCallerImpact{
 		Selection:            selection,
 		Query:                value.Query,
-		Declaration:          *value.Declaration,
+		Declaration:          value.Declaration,
+		Generation:           *value.Generation,
+		MatchingRowsState:    value.MatchingRowsState,
 		ResolvedCallers:      resolved,
 		ExtractorAbstentions: abstentions,
 		Groups:               slices.Clone(value.Groups),
-		TotalMatchingRows:    *value.TotalMatchingRows,
+		TotalMatchingRows:    value.TotalMatchingRows,
 		Pagination:           value.Pagination,
-		CoverageDigest:       value.CoverageDigest,
-		AttributionDigest:    value.AttributionDigest,
 		Caveat:               value.Caveat,
 	}, nil
 }
@@ -876,74 +937,205 @@ func (service *WorkbenchImpactService) readWorkbenchComparisonStream(
 	key string,
 	cursor *workbenchImpactCursor,
 	page *WorkbenchImpactPage,
-) (workbenchImpactStreamCursor, *CallerComparisonPage, error) {
+) (workbenchImpactStreamCursor, *CallerComparisonExactPage, error) {
 	previous, hadPrevious := workbenchImpactPreviousStream(cursor, key)
-	delegate := previous.Next
-	emit := true
-	if hadPrevious && previous.Complete {
-		delegate = ""
-		emit = false
-	}
 	query := workbenchComparisonQuery(
 		current,
 		replacement,
 		request.Filters,
 	)
+	if hadPrevious && previous.Complete {
+		confirmed, err := service.comparison.
+			confirmWorkbenchComparisonSnapshot(
+				ctx, query, request.PageSize, previous.Authority,
+			)
+		if err != nil {
+			return workbenchImpactStreamCursor{}, nil, err
+		}
+		if confirmed.Snapshot == "" ||
+			confirmed.Snapshot != previous.Snapshot {
+			return workbenchImpactStreamCursor{}, nil,
+				huma.Error409Conflict(
+					"workbench impact comparison snapshot is no longer valid",
+				)
+		}
+		if err := workbenchComparisonGenerationScope(
+			page, current, replacement, confirmed,
+		); err != nil {
+			return workbenchImpactStreamCursor{}, nil, err
+		}
+		return previous, nil, nil
+	}
 	value, err := service.comparison.Compare(
 		ctx,
 		query,
 		request.PageSize,
-		delegate,
+		previous.Next,
 	)
 	if err != nil {
 		return workbenchImpactStreamCursor{}, nil, err
 	}
-	if value.TotalRows == nil || value.Coverage == nil {
-		return workbenchImpactStreamCursor{}, nil, errors.New(
-			"legacy workbench caller comparison omitted its coverage snapshot",
-		)
+	exact, err := AsExactCallerComparisonPage(value)
+	if err != nil || value.exactSnapshot == "" || value.exactAuthority == "" ||
+		exact.Query != normalizeCallerComparisonQuery(query) {
+		return workbenchImpactStreamCursor{}, nil,
+			huma.Error409Conflict(
+				"workbench impact comparison snapshot is unavailable", err,
+			)
 	}
-	snapshot := digestJSON(struct {
-		Query       CallerComparisonQuery    `json:"query"`
-		Old         CallerComparisonSnapshot `json:"old"`
-		Replacement CallerComparisonSnapshot `json:"replacement"`
-		Total       int                      `json:"total"`
-		Coverage    string                   `json:"coverage"`
-	}{
-		Query:       value.Query,
-		Old:         value.Old,
-		Replacement: value.Replacement,
-		Total:       *value.TotalRows,
-		Coverage:    value.Coverage.Digest,
-	})
-	if hadPrevious && snapshot != previous.Snapshot {
+	if hadPrevious && (value.exactSnapshot != previous.Snapshot ||
+		value.exactAuthority != previous.Authority) {
 		return workbenchImpactStreamCursor{}, nil,
 			huma.Error409Conflict(
 				"workbench impact comparison snapshot is no longer valid",
 			)
 	}
-	workbenchAddCoverage(
-		page,
-		"contract-caller-comparison",
-		workbenchSelectionTarget(current)+"->"+
-			workbenchSelectionTarget(replacement),
-		*value.Coverage,
-	)
-	workbenchAddCapability(
-		page,
-		"contract-caller-comparison",
-		"enabled",
-		"",
-	)
+	confirmed := exactCallerComparisonSnapshotConfirmation{
+		Snapshot:          value.exactSnapshot,
+		MatchingRowsState: exact.MatchingRowsState,
+		Old:               exact.Old,
+		Replacement:       exact.Replacement,
+	}
+	if err := workbenchComparisonGenerationScope(
+		page, current, replacement, confirmed,
+	); err != nil {
+		return workbenchImpactStreamCursor{}, nil, err
+	}
 	state := workbenchImpactStreamCursor{
-		Complete: value.Pagination.Complete,
-		Next:     value.Pagination.NextCursor,
-		Snapshot: snapshot,
+		Complete:  value.Pagination.Complete,
+		Next:      value.Pagination.NextCursor,
+		Snapshot:  value.exactSnapshot,
+		Authority: value.exactAuthority,
 	}
-	if !emit {
-		return previous, nil, nil
+	return state, exact, nil
+}
+
+func validateWorkbenchExactCallerPage(
+	page *CallerMapPage,
+	query CallerMapQuery,
+) error {
+	if page == nil || page.SchemaVersion != exactCallerMapSchemaVersion ||
+		page.Query != normalizeCallerMapQuery(query) || page.Generation == nil ||
+		page.exactSnapshot == "" || page.exactAuthority == "" ||
+		!stringIn(page.MatchingRowsState, "exact", "unavailable") ||
+		page.Coverage != nil || page.CoverageDigest != "" ||
+		page.AttributionDigest != "" ||
+		page.Generation.Plane != exactCallerMapPlane ||
+		page.Generation.Repository != query.Endpoint.Repository {
+		return errors.New("caller map exact envelope is invalid")
 	}
-	return state, value, nil
+	switch page.MatchingRowsState {
+	case "exact":
+		if page.Generation.State != string(callerexecute.PublicationCurrent) ||
+			page.Declaration == nil || page.TotalMatchingRows == nil {
+			return errors.New("caller map exact envelope is inconsistent")
+		}
+	case "unavailable":
+		if !stringIn(
+			page.Generation.State,
+			string(callerexecute.PublicationMissing),
+			string(callerexecute.PublicationFailed),
+			string(callerexecute.PublicationStale),
+		) || page.TotalMatchingRows != nil || len(page.Rows) != 0 ||
+			len(page.Groups) != 0 || !page.Pagination.Complete ||
+			page.Pagination.NextCursor != "" {
+			return errors.New("caller map gap envelope is inconsistent")
+		}
+	}
+	return nil
+}
+
+func workbenchCallerGenerationScope(
+	page *WorkbenchImpactPage,
+	capability string,
+	target string,
+	matchingRowsState string,
+	generation CallerMapGeneration,
+) error {
+	if matchingRowsState == "exact" &&
+		generation.State == string(callerexecute.PublicationCurrent) {
+		workbenchAddCapability(page, capability, "enabled", "")
+		return nil
+	}
+	if matchingRowsState != "unavailable" || !stringIn(
+		generation.State,
+		string(callerexecute.PublicationMissing),
+		string(callerexecute.PublicationFailed),
+		string(callerexecute.PublicationStale),
+	) {
+		return errors.New("caller generation scope is inconsistent")
+	}
+	workbenchAddCapability(
+		page, capability, "unavailable", generation.State,
+	)
+	workbenchAddGap(
+		page, capability, target, generation.State,
+		"caller_generation_"+generation.State,
+	)
+	return nil
+}
+
+func workbenchComparisonGenerationScope(
+	page *WorkbenchImpactPage,
+	current store.ChangeBriefContractSelection,
+	replacement store.ChangeBriefContractSelection,
+	confirmed exactCallerComparisonSnapshotConfirmation,
+) error {
+	if confirmed.Old.Endpoint != workbenchCallerQuery(
+		current, WorkbenchImpactFilters{},
+	).Endpoint || confirmed.Replacement.Endpoint != workbenchCallerQuery(
+		replacement, WorkbenchImpactFilters{},
+	).Endpoint || confirmed.Old.Generation.Plane != exactCallerMapPlane ||
+		confirmed.Replacement.Generation.Plane != exactCallerMapPlane ||
+		confirmed.Old.Generation.Repository != current.Repository ||
+		confirmed.Replacement.Generation.Repository != replacement.Repository {
+		return errors.New("caller comparison generation scope is mismatched")
+	}
+	capability := "contract-caller-comparison"
+	if confirmed.MatchingRowsState == "exact" {
+		if confirmed.Old.MatchingRowsState != "exact" ||
+			confirmed.Replacement.MatchingRowsState != "exact" ||
+			confirmed.Old.Generation.State !=
+				string(callerexecute.PublicationCurrent) ||
+			confirmed.Replacement.Generation.State !=
+				string(callerexecute.PublicationCurrent) {
+			return errors.New("caller comparison exact scope is inconsistent")
+		}
+		workbenchAddCapability(page, capability, "enabled", "")
+		return nil
+	}
+	if confirmed.MatchingRowsState != "unavailable" {
+		return errors.New("caller comparison scope is inconsistent")
+	}
+	workbenchAddCapability(page, capability, "unavailable", "caller generation gap")
+	for _, side := range []struct {
+		selection store.ChangeBriefContractSelection
+		snapshot  CallerComparisonExactSnapshot
+	}{
+		{current, confirmed.Old},
+		{replacement, confirmed.Replacement},
+	} {
+		if side.snapshot.MatchingRowsState == "exact" &&
+			side.snapshot.Generation.State ==
+				string(callerexecute.PublicationCurrent) {
+			continue
+		}
+		if side.snapshot.MatchingRowsState != "unavailable" ||
+			!stringIn(
+				side.snapshot.Generation.State,
+				string(callerexecute.PublicationMissing),
+				string(callerexecute.PublicationFailed),
+				string(callerexecute.PublicationStale),
+			) {
+			return errors.New("caller comparison gap scope is inconsistent")
+		}
+		workbenchAddGap(
+			page, capability, workbenchSelectionTarget(side.selection),
+			side.snapshot.Generation.State,
+			"caller_generation_"+side.snapshot.Generation.State,
+		)
+	}
+	return nil
 }
 
 func (service *WorkbenchImpactService) readWorkbenchFieldStream(
@@ -1030,6 +1222,29 @@ func workbenchCallerQuery(
 		Resolution: filters.Resolution,
 		Ordering:   filters.Ordering,
 	}
+}
+
+func workbenchImpactViewCurrent(
+	view *store.WorkbenchView,
+	request WorkbenchImpactRequest,
+) bool {
+	return view != nil &&
+		view.Investigation.ID == request.InvestigationID &&
+		view.Investigation.CurrentRevisionID == request.RevisionID &&
+		view.Revision.ID == request.RevisionID &&
+		view.Revision.InvestigationID == request.InvestigationID &&
+		view.Brief.RevisionID == request.RevisionID &&
+		view.Brief.InvestigationID == request.InvestigationID
+}
+
+func workbenchImpactRevisionDigest(view *store.WorkbenchView) string {
+	if view == nil {
+		return ""
+	}
+	return digestJSON(struct {
+		Revision store.Revision    `json:"revision"`
+		Brief    store.ChangeBrief `json:"brief"`
+	}{Revision: view.Revision, Brief: view.Brief})
 }
 
 func workbenchComparisonQuery(
@@ -1141,7 +1356,13 @@ func validateWorkbenchImpactStreamSet(
 		)
 	}
 	for key := range expected {
-		if _, ok := streams[key]; !ok {
+		value, ok := streams[key]
+		if !ok || value.Snapshot == "" ||
+			value.Complete != (value.Next == "") ||
+			len(value.Next) > callerMapCursorLimit ||
+			len(value.Authority) > callerMapCursorLimit ||
+			(strings.HasPrefix(key, "caller:") ||
+				key == "caller-comparison") && value.Authority == "" {
 			return huma.Error409Conflict(
 				"workbench impact cursor is no longer valid",
 			)
@@ -1171,7 +1392,7 @@ func bindWorkbenchImpactDigest(
 	return nil
 }
 
-func decodeWorkbenchImpactCursor(
+func (service *WorkbenchImpactService) decodeWorkbenchImpactCursor(
 	encoded, queryDigest, principal, revisionDigest string,
 ) (*workbenchImpactCursor, error) {
 	if encoded == "" {
@@ -1182,9 +1403,28 @@ func decodeWorkbenchImpactCursor(
 			"workbench impact cursor is invalid",
 		)
 	}
-	raw, err := base64.RawURLEncoding.DecodeString(encoded)
-	if err != nil || len(raw) > workbenchImpactCursorLimit ||
+	payload, encodedSignature, ok := strings.Cut(encoded, ".")
+	if !ok {
+		return nil, huma.Error400BadRequest(
+			"workbench impact cursor is invalid",
+		)
+	}
+	raw, err := base64.RawURLEncoding.DecodeString(payload)
+	signature, signatureErr := base64.RawURLEncoding.DecodeString(
+		encodedSignature,
+	)
+	if err != nil || signatureErr != nil ||
+		base64.RawURLEncoding.EncodeToString(raw) != payload ||
+		base64.RawURLEncoding.EncodeToString(signature) != encodedSignature ||
+		len(raw) > workbenchImpactCursorLimit ||
 		!json.Valid(raw) {
+		return nil, huma.Error400BadRequest(
+			"workbench impact cursor is invalid",
+		)
+	}
+	mac := hmac.New(sha256.New, service.cursorSecret[:])
+	_, _ = mac.Write(raw)
+	if !hmac.Equal(signature, mac.Sum(nil)) {
 		return nil, huma.Error400BadRequest(
 			"workbench impact cursor is invalid",
 		)
@@ -1197,11 +1437,7 @@ func decodeWorkbenchImpactCursor(
 			"workbench impact cursor is invalid",
 		)
 	}
-	checksum := cursor.Checksum
-	cursor.Checksum = ""
 	if cursor.Schema != workbenchImpactCursorVersion ||
-		checksum == "" ||
-		checksum != digestJSON(cursor) ||
 		cursor.Streams == nil {
 		return nil, huma.Error400BadRequest(
 			"workbench impact cursor is invalid",
@@ -1221,11 +1457,9 @@ func decodeWorkbenchImpactCursor(
 	return &cursor, nil
 }
 
-func encodeWorkbenchImpactCursor(
+func (service *WorkbenchImpactService) encodeWorkbenchImpactCursor(
 	cursor workbenchImpactCursor,
 ) (string, error) {
-	cursor.Checksum = ""
-	cursor.Checksum = digestJSON(cursor)
 	raw, err := json.Marshal(cursor)
 	if err != nil {
 		return "", err
@@ -1233,7 +1467,14 @@ func encodeWorkbenchImpactCursor(
 	if len(raw) > workbenchImpactCursorLimit {
 		return "", errors.New("workbench impact cursor exceeds its bound")
 	}
-	return base64.RawURLEncoding.EncodeToString(raw), nil
+	mac := hmac.New(sha256.New, service.cursorSecret[:])
+	_, _ = mac.Write(raw)
+	encoded := base64.RawURLEncoding.EncodeToString(raw) + "." +
+		base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	if len(encoded) > workbenchImpactCursorLimit {
+		return "", errors.New("workbench impact cursor exceeds its bound")
+	}
+	return encoded, nil
 }
 
 func workbenchAddCoverage(

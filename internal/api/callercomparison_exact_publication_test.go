@@ -71,6 +71,16 @@ func (state *exactComparisonMultiStore) GetCallerGenerationPublication(
 	return nil, store.ErrNotFound
 }
 
+func (state *exactComparisonMultiStore) GetCallerGenerationPublicationSummary(
+	ctx context.Context,
+	repository string,
+) (*store.CallerGenerationPublicationSummary, error) {
+	if source := state.exactState(repository); source != nil {
+		return source.GetCallerGenerationPublicationSummary(ctx, repository)
+	}
+	return nil, store.ErrNotFound
+}
+
 func (state *exactComparisonMultiStore) CallerGenerationPublicationSummaryCurrent(
 	ctx context.Context,
 	summary store.CallerGenerationPublicationSummary,

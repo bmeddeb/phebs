@@ -119,8 +119,9 @@ classification, T30.6e focused local-evidence base-lane consumption, and
 T30.6f resolver-catalog lifecycle, T30.6g bounded resolver materialization,
 T30.6h direct caller-leaf execution artifacts, T30.6i atomic complete
 caller-generation publication, T30.6j authorized exact Caller Map reads, and
-T30.6k exact caller comparison integration are shipped; T30.6l Workbench
-Impact caller integration is next. T30.6g registers the
+T30.6k exact caller comparison integration and T30.6l exact Workbench Impact
+caller integration are shipped; T30.6m historical-publication retention
+decision is next. T30.6g registers the
 ordered gRPC/Thrift resolver adapters and materializes one immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,
 `layout-snapshot.json`, and `generated-from-snapshot.json` inputs plus each
@@ -200,9 +201,14 @@ for migration comparison in one authorization-first, jointly fenced two-
 generation read. Either unavailable side makes the whole page a typed gap
 without classifications or a numeric total; a current pair uses one compact
 shared-registry binding and a cursor over both complete publication identities.
-Workbench Impact intentionally remains on its legacy caller reader until
-T30.6l. The comparison creates no completeness, migration-completion,
-decommission-safety, or historical-retention claim.
+T30.6l now composes those exact single- or two-generation caller snapshots
+through the current Workbench Revision, typed Analysis-scope gaps, and a final
+Investigation fence. Completed subordinate streams are confirmed through a
+hidden signed full-incarnation authority token without relisting, minting
+citations, or creating a new request binding. Focused-local coverage remains a
+separate plane, and checklist identity excludes rotating cursors and citation
+tokens. Exact comparison and Workbench composition create no completeness,
+migration-completion, decommission-safety, or historical-retention claim.
 A physical test-search overlay,
 test-source association, automatic unit discovery, SCIP generation,
 pack-specific recognizer expansion, and per-file parser degradation remain

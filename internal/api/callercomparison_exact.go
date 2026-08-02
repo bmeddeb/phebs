@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	exactCallerComparisonCursorVersion = "caller-comparison-cursor-v2"
+	exactCallerComparisonCursorVersion    = "caller-comparison-cursor-v2"
+	exactCallerComparisonAuthorityVersion = "caller-comparison-authority-v1"
 	// One maximum response hydrates no more exact records than an ordinary
 	// maximum Caller Map page. Per-side samples remain capped at four, but the
 	// page-wide ceiling prevents 100 comparison rows from multiplying that
@@ -37,6 +38,25 @@ type exactCallerComparisonCursor struct {
 	ReplacementVisibility VisibilityContext `json:"replacement_visibility"`
 	Snapshot              string            `json:"snapshot"`
 	Offset                int               `json:"offset"`
+}
+
+type exactCallerComparisonAuthority struct {
+	Schema                      string                               `json:"schema"`
+	QueryDigest                 string                               `json:"query_digest"`
+	OldRepository               string                               `json:"old_repository"`
+	ReplacementRepository       string                               `json:"replacement_repository"`
+	OldVisibility               VisibilityContext                    `json:"old_visibility"`
+	ReplacementVisibility       VisibilityContext                    `json:"replacement_visibility"`
+	OldRepositoryRevision       uint64                               `json:"old_repository_revision"`
+	ReplacementRevision         uint64                               `json:"replacement_repository_revision"`
+	Snapshot                    string                               `json:"snapshot"`
+	MatchingRowsState           string                               `json:"matching_rows_state"`
+	OldGeneration               CallerMapGeneration                  `json:"old_generation"`
+	ReplacementGeneration       CallerMapGeneration                  `json:"replacement_generation"`
+	OldProjectionFailed         bool                                 `json:"old_projection_failed,omitempty"`
+	ReplacementProjectionFailed bool                                 `json:"replacement_projection_failed,omitempty"`
+	OldPublication              *callerexecute.PublicationDescriptor `json:"old_publication,omitempty"`
+	ReplacementPublication      *callerexecute.PublicationDescriptor `json:"replacement_publication,omitempty"`
 }
 
 type exactComparisonAuthorization struct {
@@ -137,14 +157,18 @@ func (s *CallerComparisonService) compareExact(
 	defer reads.release()
 	if reads.old.Availability != callerexecute.PublicationCurrent ||
 		reads.replacement.Availability != callerexecute.PublicationCurrent {
-		if err := s.confirmExactComparisonGap(
-			ctx, reads, oldAuthorization, replacementAuthorization,
-		); err != nil {
+		confirmedOld, confirmedReplacement, err :=
+			s.confirmExactComparisonGapValues(
+				ctx, reads, oldAuthorization, replacementAuthorization,
+			)
+		if err != nil {
 			return nil, err
 		}
-		return exactCallerComparisonGapPage(
-			s.exact, query, reads, false, false, nil, nil,
-		), nil
+		return s.buildExactCallerComparisonGapPage(
+			query, queryDigest, reads, oldAuthorization,
+			replacementAuthorization, false, false, nil, nil,
+			confirmedOld, confirmedReplacement,
+		)
 	}
 
 	oldDeclaration, err := exactCallerDeclaration(
@@ -171,16 +195,20 @@ func (s *CallerComparisonService) compareExact(
 		defer indexes.release(s.exact)
 	}
 	if oldProjectionFailed || replacementProjectionFailed {
-		if err := s.confirmExactComparisonCurrent(
-			ctx, reads, oldAuthorization, replacementAuthorization,
-		); err != nil {
+		confirmedOld, confirmedReplacement, err :=
+			s.confirmExactComparisonCurrentValues(
+				ctx, reads, oldAuthorization, replacementAuthorization,
+			)
+		if err != nil {
 			return nil, err
 		}
-		return exactCallerComparisonGapPage(
-			s.exact, query, reads, oldProjectionFailed,
+		return s.buildExactCallerComparisonGapPage(
+			query, queryDigest, reads, oldAuthorization,
+			replacementAuthorization, oldProjectionFailed,
 			replacementProjectionFailed, &oldDeclaration,
 			&replacementDeclaration,
-		), nil
+			confirmedOld, confirmedReplacement,
+		)
 	}
 
 	oldSource, err := s.exactComparisonSource(
@@ -558,7 +586,26 @@ func buildExactCallerComparisonBinding(
 	comparison := &exactCallerComparisonBinding{
 		old: oldSource, replacement: replacementSource, entries: retained,
 	}
-	comparison.snapshot = digestJSON(struct {
+	comparison.snapshot = exactCallerComparisonCurrentSnapshot(
+		oldSource.visibility, replacementSource.visibility,
+		oldSource.publication, replacementSource.publication,
+		oldSource.declaration, replacementSource.declaration,
+	)
+	return &exactCallerBinding{
+		createdAt: time.Now(), queryDigest: queryDigest,
+		records: records, comparison: comparison,
+	}, nil
+}
+
+func exactCallerComparisonCurrentSnapshot(
+	oldVisibility VisibilityContext,
+	replacementVisibility VisibilityContext,
+	oldPublication callerexecute.PublicationBinding,
+	replacementPublication callerexecute.PublicationBinding,
+	oldDeclaration ContractCatalogClaim,
+	replacementDeclaration ContractCatalogClaim,
+) string {
+	return digestJSON(struct {
 		OldVisibility          VisibilityContext                `json:"old_visibility"`
 		ReplacementVisibility  VisibilityContext                `json:"replacement_visibility"`
 		Old                    callerexecute.PublicationBinding `json:"old"`
@@ -566,14 +613,10 @@ func buildExactCallerComparisonBinding(
 		OldDeclaration         ContractCatalogClaim             `json:"old_declaration"`
 		ReplacementDeclaration ContractCatalogClaim             `json:"replacement_declaration"`
 	}{
-		oldSource.visibility, replacementSource.visibility,
-		oldSource.publication, replacementSource.publication,
-		oldSource.declaration, replacementSource.declaration,
+		oldVisibility, replacementVisibility,
+		oldPublication, replacementPublication,
+		oldDeclaration, replacementDeclaration,
 	})
-	return &exactCallerBinding{
-		createdAt: time.Now(), queryDigest: queryDigest,
-		records: records, comparison: comparison,
-	}, nil
 }
 
 func exactComparisonIdentityFor(
@@ -778,6 +821,45 @@ func (s *CallerComparisonService) pageExactCallerComparison(
 		comparison.old.declaration, comparison.replacement.declaration
 	oldGeneration, replacementGeneration :=
 		comparison.old.generation, comparison.replacement.generation
+	oldRevision := comparison.old.publication.Summary.PublicationRevision
+	replacementRevision :=
+		comparison.replacement.publication.Summary.PublicationRevision
+	oldPublication, err := exactCallerRequiredPublicationDescriptor(reads.old)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"describe old caller comparison publication", err,
+		)
+	}
+	replacementPublication, err := exactCallerRequiredPublicationDescriptor(
+		reads.replacement,
+	)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"describe replacement caller comparison publication", err,
+		)
+	}
+	authority, err := s.exact.encodeExactAuthority(
+		exactCallerComparisonAuthority{
+			Schema:                exactCallerComparisonAuthorityVersion,
+			QueryDigest:           binding.queryDigest,
+			OldRepository:         query.Old.Repository,
+			ReplacementRepository: query.Replacement.Repository,
+			OldVisibility:         comparison.old.visibility,
+			ReplacementVisibility: comparison.replacement.visibility,
+			OldRepositoryRevision: oldRevision,
+			ReplacementRevision:   replacementRevision,
+			Snapshot:              comparison.snapshot, MatchingRowsState: "exact",
+			OldGeneration:          oldGeneration,
+			ReplacementGeneration:  replacementGeneration,
+			OldPublication:         oldPublication,
+			ReplacementPublication: replacementPublication,
+		},
+	)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"encode caller comparison authority", err,
+		)
+	}
 	return &CallerComparisonPage{
 		SchemaVersion: callerComparisonSchemaVersion, Query: query,
 		Old: CallerComparisonSnapshot{
@@ -789,8 +871,10 @@ func (s *CallerComparisonService) pageExactCallerComparison(
 			Generation: &replacementGeneration, MatchingRowsState: "exact",
 		},
 		Rows: rows, TotalRows: &total, MatchingRowsState: "exact",
-		Pagination: pagination,
-		Caveat:     "Repository-overlay static source evidence only; old-only, both, new-only, and unresolved describe matching rows in two exact generations, not runtime use, completeness, migration completion, or decommissioning safety.",
+		Pagination:     pagination,
+		Caveat:         "Repository-overlay static source evidence only; old-only, both, new-only, and unresolved describe matching rows in two exact generations, not runtime use, completeness, migration completion, or decommissioning safety.",
+		exactSnapshot:  comparison.snapshot,
+		exactAuthority: authority,
 	}, nil
 }
 
@@ -1045,6 +1129,131 @@ func (s *CallerComparisonService) reopenExactComparisonReads(
 	return result, nil
 }
 
+func (s *CallerComparisonService) reopenExactComparisonDescriptorReads(
+	ctx context.Context,
+	oldPublication callerexecute.PublicationDescriptor,
+	replacementPublication callerexecute.PublicationDescriptor,
+) (*exactComparisonReads, error) {
+	result := &exactComparisonReads{}
+	oldRead, err := s.opts.CallerReader.ReopenDescriptor(
+		ctx, oldPublication,
+	)
+	if err != nil {
+		return nil, exactCallerReaderError(
+			"reopen old caller comparison authority", err,
+		)
+	}
+	if oldRead == nil {
+		return nil, huma.Error500InternalServerError(
+			"reopen old caller comparison authority",
+			errors.New("caller reader returned no state"),
+		)
+	}
+	result.old = oldRead
+	result.unique = append(result.unique, oldRead)
+	if oldPublication == replacementPublication {
+		result.replacement = oldRead
+		return result, nil
+	}
+	replacementRead, err := s.opts.CallerReader.ReopenDescriptor(
+		ctx, replacementPublication,
+	)
+	if err != nil {
+		result.release()
+		return nil, exactCallerReaderError(
+			"reopen replacement caller comparison authority", err,
+		)
+	}
+	if replacementRead == nil {
+		result.release()
+		return nil, huma.Error500InternalServerError(
+			"reopen replacement caller comparison authority",
+			errors.New("caller reader returned no state"),
+		)
+	}
+	result.replacement = replacementRead
+	result.unique = append(result.unique, replacementRead)
+	return result, nil
+}
+
+func (s *CallerComparisonService) openExactComparisonAuthorityReads(
+	ctx context.Context,
+	authority exactCallerComparisonAuthority,
+) (*exactComparisonReads, error) {
+	oldCompact := authority.OldProjectionFailed ||
+		authority.OldGeneration.State ==
+			string(callerexecute.PublicationCurrent)
+	replacementCompact := authority.ReplacementProjectionFailed ||
+		authority.ReplacementGeneration.State ==
+			string(callerexecute.PublicationCurrent)
+	result := &exactComparisonReads{}
+	oldRead, err := s.openExactComparisonAuthorityRead(
+		ctx, authority.OldRepository, authority.OldPublication, oldCompact,
+	)
+	if err != nil {
+		return nil, err
+	}
+	result.old = oldRead
+	result.unique = append(result.unique, oldRead)
+	if authority.OldRepository == authority.ReplacementRepository {
+		if oldCompact != replacementCompact ||
+			!reflect.DeepEqual(
+				authority.OldPublication, authority.ReplacementPublication,
+			) {
+			result.release()
+			return nil, exactCallerComparisonAuthorityConflict()
+		}
+		result.replacement = oldRead
+		return result, nil
+	}
+	replacementRead, err := s.openExactComparisonAuthorityRead(
+		ctx, authority.ReplacementRepository,
+		authority.ReplacementPublication, replacementCompact,
+	)
+	if err != nil {
+		result.release()
+		return nil, err
+	}
+	result.replacement = replacementRead
+	result.unique = append(result.unique, replacementRead)
+	return result, nil
+}
+
+func (s *CallerComparisonService) openExactComparisonAuthorityRead(
+	ctx context.Context,
+	repository string,
+	publication *callerexecute.PublicationDescriptor,
+	compact bool,
+) (*callerexecute.PublicationRead, error) {
+	var read *callerexecute.PublicationRead
+	var err error
+	if compact {
+		if publication == nil {
+			return nil, exactCallerComparisonAuthorityConflict()
+		}
+		read, err = s.opts.CallerReader.ReopenDescriptor(ctx, *publication)
+	} else {
+		read, err = s.opts.CallerReader.Open(ctx, repository)
+	}
+	if err != nil {
+		return nil, exactCallerReaderError(
+			"open caller comparison authority", err,
+		)
+	}
+	if read == nil {
+		return nil, huma.Error500InternalServerError(
+			"open caller comparison authority",
+			errors.New("caller reader returned no state"),
+		)
+	}
+	descriptor, descriptorErr := exactCallerPublicationDescriptor(read)
+	if descriptorErr != nil || !reflect.DeepEqual(descriptor, publication) {
+		_ = read.Release()
+		return nil, exactCallerComparisonAuthorityConflict()
+	}
+	return read, nil
+}
+
 func (s *CallerComparisonService) acquireExactComparisonIndexes(
 	comparison *exactCallerComparisonBinding,
 ) *exactComparisonIndexes {
@@ -1075,28 +1284,42 @@ func (s *CallerComparisonService) confirmExactComparisonCurrent(
 	oldAuthorization exactComparisonAuthorization,
 	replacementAuthorization exactComparisonAuthorization,
 ) error {
-	current, err := s.opts.CallerReader.CurrentPair(
-		ctx, reads.old, reads.replacement,
+	_, _, err := s.confirmExactComparisonCurrentValues(
+		ctx, reads, oldAuthorization, replacementAuthorization,
 	)
-	if err != nil {
-		return huma.Error500InternalServerError("confirm caller comparison generations", err)
-	}
-	if !current {
-		return huma.Error409Conflict(
-			"caller comparison generations changed while building the response",
-		)
-	}
-	return s.confirmExactComparisonAuthorization(
-		ctx, oldAuthorization, replacementAuthorization,
-	)
+	return err
 }
 
-func (s *CallerComparisonService) confirmExactComparisonGap(
+func (s *CallerComparisonService) confirmExactComparisonCurrentValues(
 	ctx context.Context,
 	reads *exactComparisonReads,
 	oldAuthorization exactComparisonAuthorization,
 	replacementAuthorization exactComparisonAuthorization,
-) error {
+) (store.Repo, store.Repo, error) {
+	current, err := s.opts.CallerReader.CurrentPair(
+		ctx, reads.old, reads.replacement,
+	)
+	if err != nil {
+		return store.Repo{}, store.Repo{}, huma.Error500InternalServerError(
+			"confirm caller comparison generations", err,
+		)
+	}
+	if !current {
+		return store.Repo{}, store.Repo{}, huma.Error409Conflict(
+			"caller comparison generations changed while building the response",
+		)
+	}
+	return s.confirmExactComparisonAuthorizationValues(
+		ctx, oldAuthorization, replacementAuthorization,
+	)
+}
+
+func (s *CallerComparisonService) confirmExactComparisonGapValues(
+	ctx context.Context,
+	reads *exactComparisonReads,
+	oldAuthorization exactComparisonAuthorization,
+	replacementAuthorization exactComparisonAuthorization,
+) (store.Repo, store.Repo, error) {
 	for _, read := range reads.unique {
 		var current bool
 		var err error
@@ -1106,58 +1329,68 @@ func (s *CallerComparisonService) confirmExactComparisonGap(
 			current, err = s.opts.CallerReader.UnavailableCurrent(ctx, read)
 		}
 		if err != nil {
-			return huma.Error500InternalServerError("confirm caller comparison gap", err)
+			return store.Repo{}, store.Repo{}, huma.Error500InternalServerError(
+				"confirm caller comparison gap", err,
+			)
 		}
 		if !current {
-			return huma.Error409Conflict(
+			return store.Repo{}, store.Repo{}, huma.Error409Conflict(
 				"caller comparison generations changed while building the response",
 			)
 		}
 	}
-	return s.confirmExactComparisonAuthorization(
+	return s.confirmExactComparisonAuthorizationValues(
 		ctx, oldAuthorization, replacementAuthorization,
 	)
 }
 
-func (s *CallerComparisonService) confirmExactComparisonAuthorization(
+func (s *CallerComparisonService) confirmExactComparisonAuthorizationValues(
 	ctx context.Context,
 	oldAuthorization exactComparisonAuthorization,
 	replacementAuthorization exactComparisonAuthorization,
-) error {
-	if _, err := s.exact.confirmAuthorization(
+) (store.Repo, store.Repo, error) {
+	oldRepository, err := s.exact.confirmAuthorization(
 		ctx, oldAuthorization.repository.Name, oldAuthorization.visibility,
-	); err != nil {
-		return err
+	)
+	if err != nil {
+		return store.Repo{}, store.Repo{}, err
 	}
 	if replacementAuthorization.repository.Name == oldAuthorization.repository.Name {
 		if replacementAuthorization.visibility != oldAuthorization.visibility {
-			return huma.Error409Conflict(
+			return store.Repo{}, store.Repo{}, huma.Error409Conflict(
 				"caller comparison authorization changed while building the response; retry",
 			)
 		}
-		return nil
+		return oldRepository, oldRepository, nil
 	}
-	_, err := s.exact.confirmAuthorization(
+	replacementRepository, err := s.exact.confirmAuthorization(
 		ctx, replacementAuthorization.repository.Name,
 		replacementAuthorization.visibility,
 	)
-	return err
+	if err != nil {
+		return store.Repo{}, store.Repo{}, err
+	}
+	return oldRepository, replacementRepository, nil
 }
 
-func exactCallerComparisonGapPage(
-	service *exactCallerMapService,
+func (s *CallerComparisonService) buildExactCallerComparisonGapPage(
 	query CallerComparisonQuery,
+	queryDigest string,
 	reads *exactComparisonReads,
+	oldAuthorization exactComparisonAuthorization,
+	replacementAuthorization exactComparisonAuthorization,
 	oldProjectionFailed bool,
 	replacementProjectionFailed bool,
 	oldDeclaration *ContractCatalogClaim,
 	replacementDeclaration *ContractCatalogClaim,
-) *CallerComparisonPage {
+	confirmedOld store.Repo,
+	confirmedReplacement store.Repo,
+) (*CallerComparisonPage, error) {
 	oldGeneration := exactComparisonGeneration(
-		service, reads.old, oldProjectionFailed,
+		s.exact, reads.old, oldProjectionFailed,
 	)
 	replacementGeneration := exactComparisonGeneration(
-		service, reads.replacement, replacementProjectionFailed,
+		s.exact, reads.replacement, replacementProjectionFailed,
 	)
 	oldState := "unavailable"
 	if reads.old.Availability == callerexecute.PublicationCurrent &&
@@ -1168,6 +1401,73 @@ func exactCallerComparisonGapPage(
 	if reads.replacement.Availability == callerexecute.PublicationCurrent &&
 		!replacementProjectionFailed {
 		replacementState = "exact"
+	}
+	oldRevision, err := exactCallerRepositoryRevision(confirmedOld)
+	if err != nil {
+		return nil, err
+	}
+	replacementRevision, err := exactCallerRepositoryRevision(
+		confirmedReplacement,
+	)
+	if err != nil {
+		return nil, err
+	}
+	authorizedOldRevision, err := exactCallerRepositoryRevision(
+		oldAuthorization.repository,
+	)
+	if err != nil {
+		return nil, err
+	}
+	authorizedReplacementRevision, err := exactCallerRepositoryRevision(
+		replacementAuthorization.repository,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if oldRevision != authorizedOldRevision ||
+		replacementRevision != authorizedReplacementRevision {
+		return nil, exactCallerComparisonAuthorityConflict()
+	}
+	oldPublication, err := exactCallerPublicationDescriptor(reads.old)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"describe old caller comparison gap", err,
+		)
+	}
+	replacementPublication, err := exactCallerPublicationDescriptor(
+		reads.replacement,
+	)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"describe replacement caller comparison gap", err,
+		)
+	}
+	snapshot := exactCallerComparisonGapSnapshot(
+		oldAuthorization.visibility, replacementAuthorization.visibility,
+		oldRevision, replacementRevision, oldGeneration, replacementGeneration,
+		oldPublication, replacementPublication,
+	)
+	authority := exactCallerComparisonAuthority{
+		Schema:      exactCallerComparisonAuthorityVersion,
+		QueryDigest: queryDigest, OldRepository: query.Old.Repository,
+		ReplacementRepository: query.Replacement.Repository,
+		OldVisibility:         oldAuthorization.visibility,
+		ReplacementVisibility: replacementAuthorization.visibility,
+		OldRepositoryRevision: oldRevision,
+		ReplacementRevision:   replacementRevision,
+		Snapshot:              snapshot, MatchingRowsState: "unavailable",
+		OldGeneration:               oldGeneration,
+		ReplacementGeneration:       replacementGeneration,
+		OldProjectionFailed:         oldProjectionFailed,
+		ReplacementProjectionFailed: replacementProjectionFailed,
+		OldPublication:              oldPublication,
+		ReplacementPublication:      replacementPublication,
+	}
+	encodedAuthority, err := s.exact.encodeExactAuthority(authority)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"encode caller comparison gap authority", err,
+		)
 	}
 	return &CallerComparisonPage{
 		SchemaVersion: callerComparisonSchemaVersion, Query: query,
@@ -1181,9 +1481,433 @@ func exactCallerComparisonGapPage(
 			MatchingRowsState: replacementState,
 		},
 		Rows: []CallerComparisonRow{}, MatchingRowsState: "unavailable",
-		Pagination: CallerMapPagination{Complete: true},
-		Caveat:     "Caller comparison totals, classifications, and absence are unavailable until both authorized exact complete repository-overlay generations are current.",
+		Pagination:     CallerMapPagination{Complete: true},
+		Caveat:         "Caller comparison totals, classifications, and absence are unavailable until both authorized exact complete repository-overlay generations are current.",
+		exactSnapshot:  snapshot,
+		exactAuthority: encodedAuthority,
+	}, nil
+}
+
+func exactCallerComparisonGapSnapshot(
+	oldVisibility VisibilityContext,
+	replacementVisibility VisibilityContext,
+	oldRevision uint64,
+	replacementRevision uint64,
+	oldGeneration CallerMapGeneration,
+	replacementGeneration CallerMapGeneration,
+	oldPublication *callerexecute.PublicationDescriptor,
+	replacementPublication *callerexecute.PublicationDescriptor,
+) string {
+	return digestJSON(struct {
+		OldVisibility          VisibilityContext                    `json:"old_visibility"`
+		ReplacementVisibility  VisibilityContext                    `json:"replacement_visibility"`
+		OldRevision            uint64                               `json:"old_repository_revision"`
+		ReplacementRevision    uint64                               `json:"replacement_repository_revision"`
+		OldGeneration          CallerMapGeneration                  `json:"old_generation"`
+		ReplacementGeneration  CallerMapGeneration                  `json:"replacement_generation"`
+		OldPublication         *callerexecute.PublicationDescriptor `json:"old_publication,omitempty"`
+		ReplacementPublication *callerexecute.PublicationDescriptor `json:"replacement_publication,omitempty"`
+	}{
+		oldVisibility, replacementVisibility, oldRevision,
+		replacementRevision, oldGeneration, replacementGeneration,
+		oldPublication, replacementPublication,
+	})
+}
+
+func (s *CallerComparisonService) confirmWorkbenchComparisonSnapshot(
+	ctx context.Context,
+	query CallerComparisonQuery,
+	pageSize int,
+	encoded string,
+) (exactCallerComparisonSnapshotConfirmation, error) {
+	if s == nil || s.exact == nil || s.opts.CallerReader == nil {
+		return exactCallerComparisonSnapshotConfirmation{},
+			huma.Error503ServiceUnavailable("caller comparison unavailable")
 	}
+	if !catalogAuthenticated(ctx, s.opts) {
+		return exactCallerComparisonSnapshotConfirmation{},
+			huma.Error404NotFound("caller comparison not found")
+	}
+	query = normalizeCallerComparisonQuery(query)
+	oldPack, replacementPack, pageSize, err :=
+		validateExactCallerComparison(query, pageSize)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	queryDigest := digestJSON(struct {
+		Query CallerComparisonQuery `json:"query"`
+		Size  int                   `json:"page_size"`
+	}{query, pageSize})
+
+	oldAuthorization, replacementAuthorization, err :=
+		s.authorizeExactComparison(ctx, query)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	oldRevision, err := exactCallerRepositoryRevision(
+		oldAuthorization.repository,
+	)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	replacementRevision, err := exactCallerRepositoryRevision(
+		replacementAuthorization.repository,
+	)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	var authority exactCallerComparisonAuthority
+	if len(encoded) > callerMapCursorLimit ||
+		s.exact.decodeSigned(encoded, &authority) != nil ||
+		!validExactCallerComparisonAuthority(authority) ||
+		authority.QueryDigest != queryDigest ||
+		authority.OldRepository != query.Old.Repository ||
+		authority.ReplacementRepository != query.Replacement.Repository ||
+		authority.OldVisibility != oldAuthorization.visibility ||
+		authority.ReplacementVisibility != replacementAuthorization.visibility ||
+		authority.OldRepositoryRevision != oldRevision ||
+		authority.ReplacementRevision != replacementRevision {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	finishExactRead, err := s.exact.beginExactRead(ctx)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	defer finishExactRead()
+
+	if authority.MatchingRowsState == "exact" {
+		return s.confirmWorkbenchCurrentComparisonSnapshot(
+			ctx, query, oldPack, replacementPack, authority,
+			oldAuthorization, replacementAuthorization,
+		)
+	}
+	return s.confirmWorkbenchComparisonGapSnapshot(
+		ctx, query, oldPack, replacementPack, authority,
+		oldAuthorization, replacementAuthorization,
+	)
+}
+
+func validExactCallerComparisonAuthority(
+	authority exactCallerComparisonAuthority,
+) bool {
+	if authority.Schema != exactCallerComparisonAuthorityVersion ||
+		authority.QueryDigest == "" || authority.OldRepository == "" ||
+		authority.ReplacementRepository == "" || authority.Snapshot == "" ||
+		authority.OldGeneration.Repository != authority.OldRepository ||
+		authority.ReplacementGeneration.Repository !=
+			authority.ReplacementRepository ||
+		authority.OldGeneration.Plane != exactCallerMapPlane ||
+		authority.ReplacementGeneration.Plane != exactCallerMapPlane {
+		return false
+	}
+	if authority.OldRepository == authority.ReplacementRepository &&
+		(authority.OldVisibility != authority.ReplacementVisibility ||
+			authority.OldRepositoryRevision != authority.ReplacementRevision ||
+			authority.OldProjectionFailed != authority.ReplacementProjectionFailed ||
+			!reflect.DeepEqual(
+				authority.OldGeneration, authority.ReplacementGeneration,
+			) || !reflect.DeepEqual(
+			authority.OldPublication, authority.ReplacementPublication,
+		)) {
+		return false
+	}
+	switch authority.MatchingRowsState {
+	case "exact":
+		return !authority.OldProjectionFailed &&
+			!authority.ReplacementProjectionFailed &&
+			authority.OldGeneration.State ==
+				string(callerexecute.PublicationCurrent) &&
+			authority.ReplacementGeneration.State ==
+				string(callerexecute.PublicationCurrent) &&
+			validExactCallerComparisonAuthoritySide(
+				authority.OldRepository, authority.OldRepositoryRevision,
+				authority.OldGeneration, false, authority.OldPublication,
+			) && validExactCallerComparisonAuthoritySide(
+			authority.ReplacementRepository,
+			authority.ReplacementRevision,
+			authority.ReplacementGeneration, false,
+			authority.ReplacementPublication,
+		)
+	case "unavailable":
+		return validExactCallerComparisonAuthoritySide(
+			authority.OldRepository, authority.OldRepositoryRevision,
+			authority.OldGeneration, authority.OldProjectionFailed,
+			authority.OldPublication,
+		) && validExactCallerComparisonAuthoritySide(
+			authority.ReplacementRepository,
+			authority.ReplacementRevision,
+			authority.ReplacementGeneration,
+			authority.ReplacementProjectionFailed,
+			authority.ReplacementPublication,
+		) && (authority.OldProjectionFailed ||
+			authority.ReplacementProjectionFailed ||
+			authority.OldGeneration.State !=
+				string(callerexecute.PublicationCurrent) ||
+			authority.ReplacementGeneration.State !=
+				string(callerexecute.PublicationCurrent))
+	default:
+		return false
+	}
+}
+
+func validExactCallerComparisonAuthoritySide(
+	repository string,
+	repositoryRevision uint64,
+	generation CallerMapGeneration,
+	projectionFailed bool,
+	publication *callerexecute.PublicationDescriptor,
+) bool {
+	if !validExactCallerPublicationDescriptor(
+		publication, repository, generation,
+	) {
+		return false
+	}
+	if projectionFailed {
+		return publication != nil &&
+			generation.State == string(callerexecute.PublicationFailed) &&
+			publication.PublicationRevision == repositoryRevision
+	}
+	switch generation.State {
+	case string(callerexecute.PublicationCurrent):
+		return publication != nil &&
+			publication.PublicationRevision == repositoryRevision
+	case string(callerexecute.PublicationMissing),
+		string(callerexecute.PublicationStale),
+		string(callerexecute.PublicationFailed):
+		return true
+	default:
+		return false
+	}
+}
+
+func exactCallerComparisonAuthorityConflict() error {
+	return huma.Error409Conflict(
+		"caller comparison authority is no longer valid",
+	)
+}
+
+func (s *CallerComparisonService) confirmWorkbenchCurrentComparisonSnapshot(
+	ctx context.Context,
+	query CallerComparisonQuery,
+	oldPack protocolPack,
+	replacementPack protocolPack,
+	authority exactCallerComparisonAuthority,
+	oldAuthorization exactComparisonAuthorization,
+	replacementAuthorization exactComparisonAuthorization,
+) (exactCallerComparisonSnapshotConfirmation, error) {
+	reads, err := s.reopenExactComparisonDescriptorReads(
+		ctx, *authority.OldPublication, *authority.ReplacementPublication,
+	)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	defer reads.release()
+	if reads.old.Availability != callerexecute.PublicationCurrent ||
+		reads.replacement.Availability != callerexecute.PublicationCurrent {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	oldPublication, oldDescriptorErr := exactCallerPublicationDescriptor(reads.old)
+	replacementPublication, replacementDescriptorErr :=
+		exactCallerPublicationDescriptor(reads.replacement)
+	if oldDescriptorErr != nil || replacementDescriptorErr != nil ||
+		!reflect.DeepEqual(oldPublication, authority.OldPublication) ||
+		!reflect.DeepEqual(
+			replacementPublication, authority.ReplacementPublication,
+		) {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	oldBound, oldBindErr := reads.old.Binding()
+	replacementBound, replacementBindErr := reads.replacement.Binding()
+	if oldBindErr != nil || replacementBindErr != nil {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	oldGeneration := exactComparisonAuthorityGeneration(
+		s.exact, reads.old, false, authority.OldGeneration,
+	)
+	replacementGeneration := exactComparisonAuthorityGeneration(
+		s.exact, reads.replacement, false, authority.ReplacementGeneration,
+	)
+	if !reflect.DeepEqual(oldGeneration, authority.OldGeneration) ||
+		!reflect.DeepEqual(
+			replacementGeneration, authority.ReplacementGeneration,
+		) {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	oldDeclaration, err := exactCallerDeclaration(
+		ctx, s.opts.Evidence, reads.old, oldPack,
+		comparisonCallerQuery(query, query.Old),
+	)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	replacementDeclaration, err := exactCallerDeclaration(
+		ctx, s.opts.Evidence, reads.replacement, replacementPack,
+		comparisonCallerQuery(query, query.Replacement),
+	)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	snapshot := exactCallerComparisonCurrentSnapshot(
+		authority.OldVisibility, authority.ReplacementVisibility,
+		oldBound, replacementBound,
+		oldDeclaration, replacementDeclaration,
+	)
+	if snapshot != authority.Snapshot {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	confirmedOld, confirmedReplacement, err :=
+		s.confirmExactComparisonCurrentValues(
+			ctx, reads, oldAuthorization, replacementAuthorization,
+		)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	if !exactCallerComparisonRevisionsMatch(
+		confirmedOld, confirmedReplacement, authority,
+	) {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	return exactCallerComparisonSnapshotConfirmation{
+		Snapshot: snapshot, MatchingRowsState: "exact",
+		Old: CallerComparisonExactSnapshot{
+			Endpoint: query.Old, Declaration: &oldDeclaration,
+			Generation: oldGeneration, MatchingRowsState: "exact",
+		},
+		Replacement: CallerComparisonExactSnapshot{
+			Endpoint: query.Replacement, Declaration: &replacementDeclaration,
+			Generation: replacementGeneration, MatchingRowsState: "exact",
+		},
+	}, nil
+}
+
+func (s *CallerComparisonService) confirmWorkbenchComparisonGapSnapshot(
+	ctx context.Context,
+	query CallerComparisonQuery,
+	oldPack protocolPack,
+	replacementPack protocolPack,
+	authority exactCallerComparisonAuthority,
+	oldAuthorization exactComparisonAuthorization,
+	replacementAuthorization exactComparisonAuthorization,
+) (exactCallerComparisonSnapshotConfirmation, error) {
+	reads, err := s.openExactComparisonAuthorityReads(ctx, authority)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	defer reads.release()
+	projectionGap := authority.OldProjectionFailed ||
+		authority.ReplacementProjectionFailed
+	if projectionGap &&
+		(reads.old.Availability != callerexecute.PublicationCurrent ||
+			reads.replacement.Availability != callerexecute.PublicationCurrent) {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	oldGeneration := exactComparisonAuthorityGeneration(
+		s.exact, reads.old, authority.OldProjectionFailed,
+		authority.OldGeneration,
+	)
+	replacementGeneration := exactComparisonAuthorityGeneration(
+		s.exact, reads.replacement, authority.ReplacementProjectionFailed,
+		authority.ReplacementGeneration,
+	)
+	if !reflect.DeepEqual(oldGeneration, authority.OldGeneration) ||
+		!reflect.DeepEqual(
+			replacementGeneration, authority.ReplacementGeneration,
+		) {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	oldState := "unavailable"
+	if reads.old.Availability == callerexecute.PublicationCurrent &&
+		!authority.OldProjectionFailed {
+		oldState = "exact"
+	}
+	replacementState := "unavailable"
+	if reads.replacement.Availability == callerexecute.PublicationCurrent &&
+		!authority.ReplacementProjectionFailed {
+		replacementState = "exact"
+	}
+	if oldState == "exact" && replacementState == "exact" {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	var oldDeclaration *ContractCatalogClaim
+	var replacementDeclaration *ContractCatalogClaim
+	if projectionGap {
+		value, declarationErr := exactCallerDeclaration(
+			ctx, s.opts.Evidence, reads.old, oldPack,
+			comparisonCallerQuery(query, query.Old),
+		)
+		if declarationErr != nil {
+			return exactCallerComparisonSnapshotConfirmation{}, declarationErr
+		}
+		oldDeclaration = &value
+		value, declarationErr = exactCallerDeclaration(
+			ctx, s.opts.Evidence, reads.replacement, replacementPack,
+			comparisonCallerQuery(query, query.Replacement),
+		)
+		if declarationErr != nil {
+			return exactCallerComparisonSnapshotConfirmation{}, declarationErr
+		}
+		replacementDeclaration = &value
+	}
+	confirmedOld, confirmedReplacement, err :=
+		s.confirmExactComparisonGapValues(
+			ctx, reads, oldAuthorization, replacementAuthorization,
+		)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	if !exactCallerComparisonRevisionsMatch(
+		confirmedOld, confirmedReplacement, authority,
+	) {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	snapshot := exactCallerComparisonGapSnapshot(
+		authority.OldVisibility, authority.ReplacementVisibility,
+		authority.OldRepositoryRevision, authority.ReplacementRevision,
+		oldGeneration, replacementGeneration,
+		authority.OldPublication, authority.ReplacementPublication,
+	)
+	if snapshot != authority.Snapshot {
+		return exactCallerComparisonSnapshotConfirmation{},
+			exactCallerComparisonAuthorityConflict()
+	}
+	return exactCallerComparisonSnapshotConfirmation{
+		Snapshot: snapshot, MatchingRowsState: "unavailable",
+		Old: CallerComparisonExactSnapshot{
+			Endpoint: query.Old, Declaration: oldDeclaration,
+			Generation: oldGeneration, MatchingRowsState: oldState,
+		},
+		Replacement: CallerComparisonExactSnapshot{
+			Endpoint: query.Replacement, Declaration: replacementDeclaration,
+			Generation:        replacementGeneration,
+			MatchingRowsState: replacementState,
+		},
+	}, nil
+}
+
+func exactCallerComparisonRevisionsMatch(
+	oldRepository store.Repo,
+	replacementRepository store.Repo,
+	authority exactCallerComparisonAuthority,
+) bool {
+	oldRevision, err := exactCallerRepositoryRevision(oldRepository)
+	if err != nil || oldRevision != authority.OldRepositoryRevision {
+		return false
+	}
+	replacementRevision, err := exactCallerRepositoryRevision(
+		replacementRepository,
+	)
+	return err == nil && replacementRevision == authority.ReplacementRevision
 }
 
 func exactComparisonGeneration(
@@ -1204,5 +1928,19 @@ func exactComparisonGeneration(
 			generation.ExcludedGoTestRecords += pair.Receipt.ExcludedGoTestRecords
 		}
 	}
+	return generation
+}
+
+func exactComparisonAuthorityGeneration(
+	service *exactCallerMapService,
+	read *callerexecute.PublicationRead,
+	projectionFailed bool,
+	authority CallerMapGeneration,
+) CallerMapGeneration {
+	generation := exactComparisonGeneration(service, read, projectionFailed)
+	// Compact descriptor reopens deliberately avoid the full pair payload, so
+	// they cannot recompute this receipt-derived presentation count. The
+	// service-signed authority captured it from the original exact page.
+	generation.ExcludedGoTestRecords = authority.ExcludedGoTestRecords
 	return generation
 }

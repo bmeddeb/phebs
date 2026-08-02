@@ -190,7 +190,7 @@ function preview(
 
 function emptyImpact(kind: WorkbenchTicketKind): WorkbenchImpactPage {
   return {
-    schema_version: 'workbench-impact-v1',
+    schema_version: 'workbench-impact-inventory-v2',
     investigation_id: investigationID,
     revision_id: revisionID,
     ticket_kind: kind,

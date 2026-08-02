@@ -20,6 +20,8 @@ import {
 } from './workbenchEvidenceState'
 import {
   WorkbenchAPIError,
+  type CallerMapCitation,
+  type CallerMapGeneration,
   type WorkbenchChecklistPage,
   type WorkbenchDisposition,
   type WorkbenchImpactPage,
@@ -28,6 +30,7 @@ import {
 import { lightTheme, ModeContext } from '../theme'
 
 const api = vi.hoisted(() => ({
+  fetchCallerCitation: vi.fn(),
   fetchWorkbenchImpact: vi.fn(),
   fetchWorkbenchImplementation: vi.fn(),
   fetchWorkbenchChecklist: vi.fn(),
@@ -45,12 +48,35 @@ const repository = 'github.com/acme/contracts'
 const commit = 'a'.repeat(40)
 const engine = new Client()
 
+function callerGeneration(
+  state: CallerMapGeneration['state'] = 'current',
+): CallerMapGeneration {
+  return {
+    state,
+    reason: state === 'current'
+      ? undefined
+      : `complete caller generation is ${state}`,
+    plane: 'repository-overlay',
+    repository,
+    commit: state === 'missing' ? undefined : commit,
+    generation_digest: state === 'missing'
+      ? undefined
+      : `sha256:${'e'.repeat(64)}`,
+    declaration_set_digest: `sha256:${'f'.repeat(64)}`,
+    candidate_manifest_digest: `sha256:${'1'.repeat(64)}`,
+    resolver_manifest_digest: `sha256:${'2'.repeat(64)}`,
+    pair_set_digest: `sha256:${'3'.repeat(64)}`,
+    manifest_digest: `sha256:${'4'.repeat(64)}`,
+    publication_revision: state === 'missing' ? undefined : 7,
+  }
+}
+
 function impactPage(
   path = 'src/callers/first.ts',
   complete = false,
 ): WorkbenchImpactPage {
   return {
-    schema_version: 'workbench-impact-v1',
+    schema_version: 'workbench-impact-inventory-v2',
     investigation_id: investigationID,
     revision_id: revisionID,
     ticket_kind: 'migrate',
@@ -65,6 +91,8 @@ function impactPage(
         canonical_operation: '/demo.v1.Catalog/Get',
       },
       query: {} as never,
+      generation: callerGeneration(),
+      matching_rows_state: 'exact',
       declaration: {
         assertion_id: 'declaration-1',
         run_id: 'run-1',
@@ -94,6 +122,9 @@ function impactPage(
           repository,
           commit,
           path,
+          object_id: '1'.repeat(40),
+          blob_digest: `sha256:${'2'.repeat(64)}`,
+          plane: 'repository-overlay',
           start_byte: 100,
           end_byte: 130,
           start_line: 42,
@@ -101,13 +132,12 @@ function impactPage(
           assertion_id: `caller:${path}`,
           run_id: 'run-1',
           atom_id: 'atom-1',
+          citation: `exact-citation:${path}`,
         },
       }],
       extractor_abstentions: [],
       total_matching_rows: 2,
       pagination: { complete: true },
-      coverage_digest: `sha256:${'b'.repeat(64)}`,
-      attribution_digest: `sha256:${'c'.repeat(64)}`,
       caveat: 'Caller evidence is bounded.',
     }],
     resource_planes: [{
@@ -334,6 +364,18 @@ function EvidenceHarness({
 
 beforeEach(() => {
   for (const mock of Object.values(api)) mock.mockReset()
+  api.fetchCallerCitation.mockImplementation(
+    async (token: string): Promise<CallerMapCitation> => {
+      const path = token.replace('exact-citation:', '')
+      const source = impactPage(path, true).callers[0].resolved_callers[0].source
+      return {
+        schema_version: 'caller-map-citation-v1',
+        generation: callerGeneration(),
+        source,
+        content: `client.Get(${path})`,
+      }
+    },
+  )
 })
 
 afterEach(() => {
@@ -341,7 +383,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-test('Where keeps gaps adjacent, cites exact source, and replaces pages', async () => {
+test('Where keeps gaps adjacent, reads exact overlay citations, and replaces pages', async () => {
   api.fetchWorkbenchImpact.mockImplementation(
     (_investigation, _revision, options) =>
       Promise.resolve(options.cursor
@@ -367,18 +409,27 @@ test('Where keeps gaps adjacent, cites exact source, and replaces pages', async 
   expect(screen.getByText('The bounded inventory read failed.')).toBeTruthy()
   expect(screen.getByText(/2 candidate units/)).toBeTruthy()
   expect(screen.getByText('stale')).toBeTruthy()
-  const source = screen.getByRole('link', {
-    name: /src\/callers\/first\.ts:42–44/,
-  })
-  expect(source.getAttribute('href')).toBe(
-    `#/file?repo=${encodeURIComponent(repository)}` +
-    '&path=src%2Fcallers%2Ffirst.ts' +
-    `&ref=${commit}&L=42`,
+  expect(screen.getByText(`${repository}/src/callers/first.ts:42`)).toBeTruthy()
+  expect(screen.queryByRole('link', {
+    name: /src\/callers\/first\.ts/,
+  })).toBeNull()
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Read exact cited bytes',
+  }))
+  expect(await screen.findByText('client.Get(src/callers/first.ts)'))
+    .toBeTruthy()
+  expect(api.fetchCallerCitation).toHaveBeenCalledWith(
+    'exact-citation:src/callers/first.ts',
+    expect.any(AbortSignal),
   )
 
   fireEvent.click(screen.getByRole('button', { name: 'Next page' }))
-  expect(await screen.findByText('src/callers/second.ts:42–44')).toBeTruthy()
-  expect(screen.queryByText('src/callers/first.ts:42–44')).toBeNull()
+  expect(await screen.findByText(
+    `${repository}/src/callers/second.ts:42`,
+  )).toBeTruthy()
+  expect(screen.queryByText(
+    `${repository}/src/callers/first.ts:42`,
+  )).toBeNull()
   expect(api.fetchWorkbenchImpact).toHaveBeenLastCalledWith(
     investigationID,
     revisionID,
@@ -388,6 +439,32 @@ test('Where keeps gaps adjacent, cites exact source, and replaces pages', async 
     }),
     expect.any(AbortSignal),
   )
+})
+
+test('Where renders a typed caller-generation gap without zero or classifications', async () => {
+  const page = impactPage('src/callers/hidden.ts', true)
+  page.callers[0] = {
+    ...page.callers[0],
+    generation: callerGeneration('stale'),
+    matching_rows_state: 'unavailable',
+    declaration: undefined,
+    total_matching_rows: undefined,
+    resolved_callers: [],
+    extractor_abstentions: [],
+    pagination: { complete: true },
+  }
+  api.fetchWorkbenchImpact.mockResolvedValue(page)
+
+  render(<EvidenceHarness step="where" />)
+
+  expect(await screen.findByText('stale · rows unavailable')).toBeTruthy()
+  expect(screen.getByText(/Caller rows and totals are unavailable/)).toBeTruthy()
+  expect(screen.getByText(/not evidence of zero callers/i)).toBeTruthy()
+  expect(screen.queryByText(/0 exact matches/)).toBeNull()
+  expect(screen.queryByText('resolved caller')).toBeNull()
+  expect(screen.queryByRole('button', {
+    name: 'Read exact cited bytes',
+  })).toBeNull()
 })
 
 test('Where preserves comparison, field, and resource-plane source citations', async () => {
@@ -402,7 +479,7 @@ test('Where preserves comparison, field, and resource-plane source citations', a
   }
   page.callers = []
   page.comparison = {
-    schema_version: 'caller-comparison-v1',
+    schema_version: 'caller-comparison-v2',
     query: {
       old: currentEndpoint,
       replacement: {
@@ -417,8 +494,8 @@ test('Where preserves comparison, field, and resource-plane source citations', a
     old: {
       endpoint: currentEndpoint,
       declaration: callerImpact.declaration,
-      coverage_digest: `sha256:${'1'.repeat(64)}`,
-      attribution_digest: `sha256:${'2'.repeat(64)}`,
+      generation: callerGeneration(),
+      matching_rows_state: 'exact',
     },
     replacement: {
       endpoint: {
@@ -426,8 +503,8 @@ test('Where preserves comparison, field, and resource-plane source citations', a
         operation: '/demo.v2.Catalog/Get',
       },
       declaration: callerImpact.declaration,
-      coverage_digest: `sha256:${'3'.repeat(64)}`,
-      attribution_digest: `sha256:${'4'.repeat(64)}`,
+      generation: callerGeneration(),
+      matching_rows_state: 'exact',
     },
     rows: [{
       level: 'unit',
@@ -446,8 +523,8 @@ test('Where preserves comparison, field, and resource-plane source citations', a
       },
     }],
     total_rows: 1,
+    matching_rows_state: 'exact',
     pagination: { complete: true },
-    coverage: {} as never,
     caveat: 'Comparison evidence is bounded.',
   }
   page.field_references = {
@@ -531,13 +608,76 @@ test('Where preserves comparison, field, and resource-plane source citations', a
 
   expect(await screen.findByText('3 evidence groups')).toBeTruthy()
   for (const expected of [
-    /src\/callers\/current\.ts:42–44/,
     /src\/models\/catalog\.go:55/,
     /deploy\/catalog\.yaml:12–13/,
   ]) {
     expect(screen.getByRole('link', { name: expected })).toBeTruthy()
   }
+  expect(screen.getByText(`${repository}/src/callers/current.ts:42`))
+    .toBeTruthy()
+  expect(screen.queryByRole('link', {
+    name: /src\/callers\/current\.ts/,
+  })).toBeNull()
+  expect(screen.getByRole('button', { name: 'Read exact cited bytes' }))
+    .toBeTruthy()
+  expect(screen.getAllByTestId('workbench-caller-generation')).toHaveLength(2)
   expect(screen.getAllByText('catalog-api → catalog-v1')).toHaveLength(2)
+})
+
+test('Where renders an unavailable comparison without totals or classifications', async () => {
+  const page = impactPage('unused.ts', true)
+  const endpoint = {
+    protocol: 'protobuf',
+    repository,
+    declaration_lineage: 'catalog-v1',
+    operation: '/demo.v1.Catalog/Get',
+  }
+  page.callers = []
+  page.comparison = {
+    schema_version: 'caller-comparison-v2',
+    query: {
+      old: endpoint,
+      replacement: {
+        ...endpoint,
+        operation: '/demo.v2.Catalog/Get',
+      },
+      freshness: 'any',
+      resolution: 'any',
+      ordering: 'source',
+      level: 'occurrence',
+    },
+    old: {
+      endpoint,
+      generation: callerGeneration('stale'),
+      matching_rows_state: 'unavailable',
+    },
+    replacement: {
+      endpoint: {
+        ...endpoint,
+        operation: '/demo.v2.Catalog/Get',
+      },
+      generation: callerGeneration(),
+      matching_rows_state: 'exact',
+    },
+    rows: [],
+    total_rows: undefined,
+    matching_rows_state: 'unavailable',
+    pagination: { complete: true },
+    caveat: 'Comparison is unavailable until both generations are current.',
+  }
+  api.fetchWorkbenchImpact.mockResolvedValue(page)
+
+  render(<EvidenceHarness step="where" />)
+
+  expect(await screen.findByText(
+    'Repository-overlay migration comparison',
+  )).toBeTruthy()
+  expect(screen.getByText(/Comparison rows, totals, and classifications are unavailable/))
+    .toBeTruthy()
+  expect(screen.getByText(/not evidence of zero callers or migration completion/))
+    .toBeTruthy()
+  expect(screen.queryByText('0 exact rows')).toBeNull()
+  expect(screen.queryByText('Old Only Evidence')).toBeNull()
 })
 
 test('Where exposes honest empty and cursor invalidation states with restart', async () => {

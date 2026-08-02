@@ -51,8 +51,8 @@ func NewCallerMapService(opts Options) *CallerMapService {
 }
 
 // NewLegacyCallerMapService keeps the pre-T30.6j evidence reader available
-// only to Workbench Impact, whose generation-bound migration is deliberately
-// deferred to T30.6l. New product routes must use NewCallerMapService.
+// only to historical acceptance fixtures. Product routes and Workbench Impact
+// must use NewCallerMapService.
 func NewLegacyCallerMapService(opts Options) *CallerMapService {
 	if !opts.CallerMapEnabled ||
 		opts.Store == nil || opts.Evidence == nil || opts.Principal == nil {
@@ -184,6 +184,25 @@ type CallerMapPage struct {
 	AttributionDigest string                       `json:"attribution_digest,omitempty"`
 	Coverage          *extract.CoverageCertificate `json:"coverage,omitempty"`
 	Caveat            string                       `json:"caveat"`
+	// exactSnapshot is a transport-hidden authority digest for composed
+	// readers. A complete one-page exact stream has no cursor from which an
+	// outer snapshot could otherwise recover the publication incarnation.
+	// Legacy evidence pages deliberately leave it empty.
+	exactSnapshot string
+	// exactAuthority is the signed, transport-hidden confirmation input for
+	// an outer composed reader. It is deliberately separate from pagination:
+	// a complete one-page result still needs a final authority fence.
+	exactAuthority string
+}
+
+// exactCallerSnapshotConfirmation is the small authoritative projection a
+// composed reader may retain after the exact service has reauthorized and
+// re-fenced the token-bound publication. It intentionally contains no rows,
+// cursor, publication path, or process-cache identity.
+type exactCallerSnapshotConfirmation struct {
+	Snapshot          string
+	MatchingRowsState string
+	Generation        CallerMapGeneration
 }
 
 type callerMapDetail struct {

@@ -31,6 +31,7 @@ type publicationReaderTestStore struct {
 	exactErr        error
 	exactCalls      int
 	fullReads       int
+	summaryReads    int
 	resolverReads   int
 }
 
@@ -42,6 +43,18 @@ func (state *publicationReaderTestStore) GetCallerGenerationPublication(
 	state.fullReads++
 	state.mu.Unlock()
 	return state.workerTestStore.GetCallerGenerationPublication(ctx, repository)
+}
+
+func (state *publicationReaderTestStore) GetCallerGenerationPublicationSummary(
+	ctx context.Context,
+	repository string,
+) (*store.CallerGenerationPublicationSummary, error) {
+	state.mu.Lock()
+	state.summaryReads++
+	state.mu.Unlock()
+	return state.workerTestStore.GetCallerGenerationPublicationSummary(
+		ctx, repository,
+	)
 }
 
 func (state *publicationReaderTestStore) GetResolverCatalogPublication(
@@ -278,6 +291,201 @@ func TestPublicationReaderReopensBoundWarmPageWithoutPairPayloadRead(t *testing.
 			"warm final costs: full=%d exact=%d authority=%d",
 			state.fullReads, state.exactCalls, state.authorityCalls,
 		)
+	}
+}
+
+func TestPublicationReaderReopensCompactDescriptorWithoutPairPayloadRead(
+	t *testing.T,
+) {
+	harness := newWorkerHarness(t, 1)
+	harness.state.resolver.SourceLanePolicy = "candidate-source-lane-base-v1"
+	harness.state.resolver.Declarations = []store.ResolverCatalogDeclarationPublication{{
+		Domain: "proto-contract", RunID: "run-compact-declarations",
+		GenerationDigest: harness.state.resolver.GenerationDigest,
+	}}
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	harness.state.publication.PublicationIncarnation = "sha256:" +
+		strings.Repeat("1", 64)
+
+	coldReader := newHarnessPublicationReader(t, harness, harness.state)
+	cold, err := coldReader.Open(t.Context(), harness.state.repo.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	descriptor, err := cold.Descriptor()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := descriptor.Validate(); err != nil {
+		t.Fatalf("validate descriptor: %v", err)
+	}
+	changedSummary := *cold.Summary
+	changedSummary.PublishedAt = changedSummary.PublishedAt.Add(time.Nanosecond)
+	changedDescriptor, err := publicationDescriptorFromSummary(changedSummary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changedDescriptor.Repository != descriptor.Repository ||
+		changedDescriptor.GenerationDigest != descriptor.GenerationDigest ||
+		changedDescriptor.ManifestDigest != descriptor.ManifestDigest ||
+		changedDescriptor.PairSetDigest != descriptor.PairSetDigest ||
+		changedDescriptor.PublicationRevision != descriptor.PublicationRevision ||
+		changedDescriptor.PublicationIncarnation != descriptor.PublicationIncarnation ||
+		changedDescriptor.SummaryDigest == descriptor.SummaryDigest {
+		t.Fatalf(
+			"full-summary commitment did not isolate scalar change: before=%+v after=%+v",
+			descriptor, changedDescriptor,
+		)
+	}
+	if err := cold.Release(); err != nil {
+		t.Fatal(err)
+	}
+	for _, observation := range []struct {
+		availability PublicationAvailability
+	}{
+		{availability: PublicationStale},
+		{availability: PublicationFailed},
+	} {
+		observed := &PublicationRead{
+			Availability: observation.availability, Summary: cold.Summary,
+			Revision: cold.Revision,
+		}
+		observedDescriptor, err := observed.Descriptor()
+		if err != nil || observedDescriptor != descriptor {
+			t.Fatalf(
+				"%s observed descriptor = %+v, want %+v, err=%v",
+				observation.availability, observedDescriptor, descriptor, err,
+			)
+		}
+	}
+	inconsistent := &PublicationRead{
+		Availability: PublicationFailed, Summary: cold.Summary,
+		Revision: cold.Revision + 1,
+	}
+	if _, err := inconsistent.Descriptor(); err == nil {
+		t.Fatal("inconsistent observed revision minted a descriptor")
+	}
+
+	state := &publicationReaderTestStore{workerTestStore: harness.state}
+	warmReader := newHarnessPublicationReader(t, harness, state)
+	warm, err := warmReader.ReopenDescriptor(t.Context(), descriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = warm.Release() }()
+	if err := warm.validate(); err != nil {
+		t.Fatal(err)
+	}
+	if warm.Availability != PublicationCurrent || warm.Publication != nil ||
+		warm.Lease() == nil || warm.State == nil || warm.Summary == nil ||
+		warm.Resolver == nil || len(warm.Resolver.Declarations) != 1 ||
+		warm.Resolver.Declarations[0].RunID != "run-compact-declarations" {
+		t.Fatalf("compact warm read = %+v", warm)
+	}
+	if state.fullReads != 0 || state.summaryReads != 1 ||
+		state.exactCalls != 0 || state.authorityCalls != 2 ||
+		state.resolverReads != 1 {
+		t.Fatalf(
+			"compact warm costs: full=%d summary=%d exact=%d authority=%d resolver=%d",
+			state.fullReads, state.summaryReads, state.exactCalls,
+			state.authorityCalls, state.resolverReads,
+		)
+	}
+	reopenedDescriptor, err := warm.Descriptor()
+	if err != nil || reopenedDescriptor != descriptor {
+		t.Fatalf(
+			"reopened descriptor = %+v, want %+v, err=%v",
+			reopenedDescriptor, descriptor, err,
+		)
+	}
+}
+
+func TestPublicationReaderCompactDescriptorRejectsABAIncarnation(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.state.resolver.SourceLanePolicy = "candidate-source-lane-base-v1"
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	harness.state.publication.PublicationIncarnation = "sha256:" +
+		strings.Repeat("1", 64)
+
+	reader := newHarnessPublicationReader(t, harness, harness.state)
+	first, err := reader.Open(t.Context(), harness.state.repo.Name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	descriptor, err := first.Descriptor()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Release(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Model A -> B -> A with the same repository-local revision and exact
+	// generation bytes. Only the store-owned incarnation distinguishes the
+	// recreated A publication from the authority named by the old descriptor.
+	original := *harness.state.publication
+	transitioned := original
+	transitioned.ManifestDigest = "sha256:" + strings.Repeat("9", 64)
+	transitioned.PublicationRevision++
+	harness.state.publication = &transitioned
+	recreated := original
+	recreated.PublicationIncarnation = "sha256:" + strings.Repeat("2", 64)
+	harness.state.publication = &recreated
+
+	state := &publicationReaderTestStore{workerTestStore: harness.state}
+	reopened, err := newHarnessPublicationReader(t, harness, state).
+		ReopenDescriptor(t.Context(), descriptor)
+	if err != nil || reopened == nil ||
+		reopened.Availability != PublicationStale || reopened.Lease() != nil {
+		t.Fatalf("A-B-A compact reopen = %+v, %v", reopened, err)
+	}
+	if state.fullReads != 0 || state.summaryReads != 1 ||
+		state.authorityCalls != 0 || state.resolverReads != 0 {
+		t.Fatalf(
+			"A-B-A compact costs: full=%d summary=%d authority=%d resolver=%d",
+			state.fullReads, state.summaryReads, state.authorityCalls,
+			state.resolverReads,
+		)
+	}
+}
+
+func TestPublicationDescriptorValidatesIndependently(t *testing.T) {
+	digest := func(fill string) string {
+		return "sha256:" + strings.Repeat(fill, 64)
+	}
+	valid := PublicationDescriptor{
+		Schema: publicationDescriptorSchema, Repository: "github.com/acme/repo",
+		GenerationDigest: digest("1"), ManifestDigest: digest("2"),
+		PairSetDigest: digest("3"), PublicationRevision: 1,
+		PublicationIncarnation: digest("4"), SummaryDigest: digest("5"),
+	}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("valid descriptor: %v", err)
+	}
+	for _, test := range []struct {
+		name   string
+		mutate func(*PublicationDescriptor)
+	}{
+		{name: "schema", mutate: func(value *PublicationDescriptor) { value.Schema = "v0" }},
+		{name: "repository", mutate: func(value *PublicationDescriptor) { value.Repository = "" }},
+		{name: "generation", mutate: func(value *PublicationDescriptor) { value.GenerationDigest = "sha256:short" }},
+		{name: "manifest", mutate: func(value *PublicationDescriptor) { value.ManifestDigest = "sha256:short" }},
+		{name: "pair set", mutate: func(value *PublicationDescriptor) { value.PairSetDigest = "sha256:short" }},
+		{name: "revision", mutate: func(value *PublicationDescriptor) { value.PublicationRevision = 0 }},
+		{name: "incarnation", mutate: func(value *PublicationDescriptor) { value.PublicationIncarnation = "sha256:short" }},
+		{name: "summary", mutate: func(value *PublicationDescriptor) { value.SummaryDigest = "sha256:short" }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := valid
+			test.mutate(&candidate)
+			if err := candidate.Validate(); err == nil {
+				t.Fatalf("invalid descriptor accepted: %+v", candidate)
+			}
+		})
 	}
 }
 

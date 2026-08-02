@@ -56,8 +56,7 @@ type Options struct {
 	// complete caller-generation publication. Serve shares its underlying
 	// publication registry with the worker and lifecycle reconcilers so an
 	// active result lease delays byte retirement. Nil keeps the exact reader
-	// dark; the temporary legacy constructors remain only for the T30.6l
-	// Workbench migration.
+	// dark.
 	CallerReader *callerexecute.PublicationReader
 	// ContractCatalog, CallerMap, and CallerComparison optionally bind
 	// preconstructed shared product read services. Serve supplies the same
@@ -67,12 +66,6 @@ type Options struct {
 	ContractCatalog  *ContractCatalogService
 	CallerMap        *CallerMapService
 	CallerComparison *CallerComparisonService
-	// LegacyCallerMap and LegacyCallerComparison are the temporary
-	// evidence-backed readers used only by Workbench Impact until T30.6l
-	// composes the exact caller generation into the Workbench revision. They
-	// must never be registered as public HTTP or MCP services.
-	LegacyCallerMap        *CallerMapService
-	LegacyCallerComparison *CallerComparisonService
 	// FieldReferences is the side-effect-free stable-field read shared by the
 	// proof endpoint and Workbench. It never persists a proof bundle itself.
 	FieldReferences *FieldReferenceService

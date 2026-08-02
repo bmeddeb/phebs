@@ -22,6 +22,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/resolvercatalogid"
@@ -50,13 +51,14 @@ type exactCallerAPIStore struct {
 	admissionReads      int
 	repoError           error
 
-	currentRevision        uint64
-	resolverCurrent        bool
-	authorityReads         int
-	publicationReads       int
-	currentChecks          int
-	authorityCurrentChecks int
-	afterAuthorityCurrent  func(int)
+	currentRevision         uint64
+	resolverCurrent         bool
+	authorityReads          int
+	publicationReads        int
+	publicationSummaryReads int
+	currentChecks           int
+	authorityCurrentChecks  int
+	afterAuthorityCurrent   func(int)
 }
 
 func (state *exactCallerAPIStore) GetRepo(
@@ -121,6 +123,36 @@ func (state *exactCallerAPIStore) GetCallerGenerationPublication(
 		state.publication.Pairs...,
 	)
 	return &copyOfPointer, nil
+}
+
+func (state *exactCallerAPIStore) GetCallerGenerationPublicationSummary(
+	_ context.Context,
+	repository string,
+) (*store.CallerGenerationPublicationSummary, error) {
+	state.publicationSummaryReads++
+	if state.publication == nil ||
+		state.publication.Generation.Repository != repository {
+		return nil, store.ErrNotFound
+	}
+	publication := state.publication
+	return &store.CallerGenerationPublicationSummary{
+		Generation:             publication.Generation,
+		PairPayloadDigest:      publication.PairPayloadDigest,
+		PairSetDigest:          publication.PairSetDigest,
+		PairCount:              publication.PairCount,
+		ArtifactCount:          publication.ArtifactCount,
+		ResultCount:            publication.ResultCount,
+		AbstentionCount:        publication.AbstentionCount,
+		CanonicalBytes:         publication.CanonicalBytes,
+		StagingBytes:           publication.StagingBytes,
+		PeakOpenFiles:          publication.PeakOpenFiles,
+		ManifestDigest:         publication.ManifestDigest,
+		ManifestPath:           publication.ManifestPath,
+		PublicationRevision:    publication.PublicationRevision,
+		PublicationIncarnation: publication.PublicationIncarnation,
+		WriterSchema:           publication.WriterSchema,
+		PublishedAt:            publication.PublishedAt,
+	}, nil
 }
 
 func (state *exactCallerAPIStore) CallerGenerationPublicationSummaryCurrent(
@@ -214,6 +246,37 @@ type exactCallerAPIFixture struct {
 	publication             *callerpublication.Publication
 	publications            *callerpublication.Registry
 	reader                  *callerexecute.PublicationReader
+}
+
+type exactCallerImpactWorkbench struct {
+	store.InvestigationWorkbench
+	view          *store.WorkbenchView
+	compatibility *store.WorkbenchCompatibilityAnalysis
+}
+
+func (workbench *exactCallerImpactWorkbench) Read(
+	_ context.Context,
+	_, _ string,
+) (*store.WorkbenchView, error) {
+	if workbench.view == nil {
+		return nil, store.ErrNotFound
+	}
+	value := *workbench.view
+	return &value, nil
+}
+
+func (workbench *exactCallerImpactWorkbench) ReadCompatibility(
+	_ context.Context,
+	_, investigationID, revisionID, runID string,
+) (*store.WorkbenchCompatibilityAnalysis, error) {
+	if workbench.compatibility == nil ||
+		workbench.compatibility.InvestigationID != investigationID ||
+		workbench.compatibility.RevisionID != revisionID ||
+		workbench.compatibility.Run.ID != runID {
+		return nil, store.ErrNotFound
+	}
+	value := *workbench.compatibility
+	return &value, nil
 }
 
 func newExactCallerAPIFixture(t *testing.T, recordCount int) *exactCallerAPIFixture {
@@ -1124,6 +1187,164 @@ func TestExactCallerMapHTTPExposesOnlyExactCitationRoute(t *testing.T) {
 	}
 	if strings.Contains(body, "call00001") {
 		t.Fatalf("HTTP citation leaked unrelated source: %s", body)
+	}
+}
+
+func TestWorkbenchImpactConfirmsCompletedCurrentCallerSnapshot(t *testing.T) {
+	const (
+		investigationID = "01J00000000000000000000306"
+		revisionID      = "ivr_exact_caller_confirmation"
+		compatibilityID = "ir_exact_caller_confirmation"
+		fieldDomain     = "scip-proto-field"
+		fieldLineage    = "contract_scip_package_v1_shop_cart"
+		fieldMessage    = "shop.Cart"
+	)
+	fixture := newExactCallerAPIFixture(t, 1)
+	declarationRun := proofRun(
+		fixture.repository,
+		"proto-contract",
+		exactDeclarationRun,
+	)
+	declarationRun.Commit = fixture.commit
+	declarationRun.Coverage.Protocols = []string{"protobuf", "protobuf-shapes"}
+	fixture.store.runs[proofScope(fixture.repository, "proto-contract")] =
+		declarationRun
+	field := compat.FieldIdentity{
+		Lineage: fieldLineage,
+		Message: fieldMessage,
+		Number:  1,
+	}
+	fieldRun := proofRun(
+		fixture.repository,
+		fieldDomain,
+		"run-exact-caller-confirmation-fields",
+	)
+	fieldRun.Commit = fixture.commit
+	fieldRun.Coverage.AssertionCount = 2
+	fieldRun.Coverage.AtomCount = 2
+	fixture.store.runs[proofScope(fixture.repository, fieldDomain)] = fieldRun
+	for _, marker := range []string{"a", "b"} {
+		assertion, resolution := proofAssertion(
+			fixture.repository,
+			fieldRun.ID,
+			"exact-caller-confirmation-field-"+marker,
+			"REFERENCES_PROTO_FIELD",
+			fieldMessage+"#1",
+			fieldLineage,
+			"field-"+marker,
+		)
+		resolution.Occurrences[0].Commit = fixture.commit
+		fixture.store.assertions[fixture.repository] = append(
+			fixture.store.assertions[fixture.repository],
+			assertion,
+		)
+		fixture.store.resolutions[proofEvidenceScope(
+			fixture.repository,
+			fieldRun.ID,
+			assertion.Supporting[0],
+		)] = resolution
+	}
+
+	workbench := &exactCallerImpactWorkbench{
+		view: &store.WorkbenchView{
+			Investigation: store.Investigation{
+				ID: investigationID, CurrentRevisionID: revisionID,
+			},
+			Revision: store.Revision{
+				ID: revisionID, InvestigationID: investigationID,
+				ContentDigest: "sha256:" + strings.Repeat("7", 64),
+			},
+			Brief: store.ChangeBrief{
+				ID:              "icb_exact_caller_confirmation",
+				InvestigationID: investigationID, RevisionID: revisionID,
+				TicketKind: store.ChangeBriefModify,
+				What: store.ChangeBriefWhat{
+					Selections: []store.ChangeBriefContractSelection{{
+						Role:               store.ChangeBriefCurrent,
+						Protocol:           "protobuf",
+						Repository:         fixture.repository,
+						DeclarationLineage: exactCallerLineage,
+						CanonicalOperation: exactCallerOperation,
+					}},
+				},
+				ContentDigest: "sha256:" + strings.Repeat("8", 64),
+			},
+		},
+		compatibility: &store.WorkbenchCompatibilityAnalysis{
+			SchemaVersion:   store.WorkbenchCompatibilityAnalysisSchemaVersion,
+			Status:          "published",
+			InvestigationID: investigationID,
+			RevisionID:      revisionID,
+			Run:             store.Run{ID: compatibilityID, RevisionID: revisionID},
+			Artifact: store.RunArtifact{
+				RunID:         compatibilityID,
+				ContentDigest: "sha256:" + strings.Repeat("9", 64),
+			},
+			Compatibility: &compat.CompatibilityResult{
+				Compatible: true, AffectedFields: []compat.FieldIdentity{field},
+				Violations: []compat.Violation{},
+			},
+		},
+	}
+	opts := fixture.serviceOptions()
+	opts.CallerReader = fixture.reader
+	opts.CallerMap = fixture.service
+	opts.Workbench = workbench
+	service := api.NewWorkbenchImpactService(opts)
+	if service == nil {
+		t.Fatal("exact Workbench Impact service is unavailable")
+	}
+	request := api.WorkbenchImpactRequest{
+		InvestigationID:  investigationID,
+		RevisionID:       revisionID,
+		CompatibilityRun: compatibilityID,
+		PageSize:         1,
+	}
+	first, err := service.Read(t.Context(), fixture.principal, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Pagination.Complete || first.Pagination.NextCursor == "" ||
+		len(first.Callers) != 1 || !first.Callers[0].Pagination.Complete ||
+		first.FieldReferences == nil ||
+		first.FieldReferences.Pagination.Complete {
+		t.Fatalf("first Workbench Impact page = %+v", first)
+	}
+
+	request.Cursor = first.Pagination.NextCursor
+	fullReads := fixture.store.publicationReads
+	summaryReads := fixture.store.publicationSummaryReads
+	authorityChecks := fixture.store.authorityCurrentChecks
+	second, err := service.Read(t.Context(), fixture.principal, request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !second.Pagination.Complete || second.Pagination.NextCursor != "" ||
+		len(second.Callers) != 0 || second.FieldReferences == nil ||
+		!second.FieldReferences.Pagination.Complete {
+		t.Fatalf("confirmed Workbench Impact page = %+v", second)
+	}
+	if got := fixture.store.publicationReads - fullReads; got != 0 {
+		t.Fatalf("current confirmation full publication reads = %d, want 0", got)
+	}
+	if got := fixture.store.publicationSummaryReads - summaryReads; got != 1 {
+		t.Fatalf("current confirmation summary reads = %d, want 1", got)
+	}
+	if got := fixture.store.authorityCurrentChecks - authorityChecks; got != 3 {
+		t.Fatalf("current confirmation authority checks = %d, want 3", got)
+	}
+
+	fixture.store.publication.PublicationIncarnation =
+		"sha256:" + strings.Repeat("f", 64)
+	fullReads = fixture.store.publicationReads
+	summaryReads = fixture.store.publicationSummaryReads
+	_, err = service.Read(t.Context(), fixture.principal, request)
+	requireCatalogStatus(t, err, http.StatusConflict)
+	if got := fixture.store.publicationReads - fullReads; got != 0 {
+		t.Fatalf("ABA confirmation full publication reads = %d, want 0", got)
+	}
+	if got := fixture.store.publicationSummaryReads - summaryReads; got != 1 {
+		t.Fatalf("ABA confirmation summary reads = %d, want 1", got)
 	}
 }
 

@@ -2,15 +2,20 @@ package callerexecute
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/reponame"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -37,6 +42,9 @@ type PublicationReadStore interface {
 	GetCallerGenerationPublication(
 		context.Context, string,
 	) (*store.CallerGenerationPublication, error)
+	GetCallerGenerationPublicationSummary(
+		context.Context, string,
+	) (*store.CallerGenerationPublicationSummary, error)
 	CallerGenerationPublicationSummaryCurrent(
 		context.Context, store.CallerGenerationPublicationSummary,
 	) (bool, error)
@@ -58,6 +66,59 @@ type PublicationReadStore interface {
 type PublicationBinding struct {
 	Summary store.CallerGenerationPublicationSummary `json:"summary"`
 	State   callerpublication.State                  `json:"state"`
+}
+
+const publicationDescriptorSchema = "caller-publication-descriptor-v1"
+
+// PublicationDescriptor is the compact, immutable authority carried by a
+// caller product between exact reads. The explicit scalar fields make the
+// publication identity inspectable; SummaryDigest additionally commits to
+// every field of the bounded full summary without carrying that summary or
+// the potentially large pair payload. A transport must integrity-protect the
+// descriptor before accepting it back from an untrusted client.
+type PublicationDescriptor struct {
+	Schema                 string `json:"schema"`
+	Repository             string `json:"repository"`
+	GenerationDigest       string `json:"generation_digest"`
+	ManifestDigest         string `json:"manifest_digest"`
+	PairSetDigest          string `json:"pair_set_digest"`
+	PublicationRevision    uint64 `json:"publication_revision"`
+	PublicationIncarnation string `json:"publication_incarnation"`
+	SummaryDigest          string `json:"summary_digest"`
+}
+
+// Validate rejects an incomplete or non-canonical compact descriptor without
+// touching publication storage or the filesystem.
+func (descriptor PublicationDescriptor) Validate() error {
+	if descriptor.Schema != publicationDescriptorSchema {
+		return errors.New("caller publication descriptor schema is invalid")
+	}
+	if err := reponame.Validate(descriptor.Repository); err != nil {
+		return fmt.Errorf("caller publication descriptor repository: %w", err)
+	}
+	for _, field := range [...]struct {
+		name  string
+		value string
+	}{
+		{name: "generation_digest", value: descriptor.GenerationDigest},
+		{name: "manifest_digest", value: descriptor.ManifestDigest},
+		{name: "pair_set_digest", value: descriptor.PairSetDigest},
+		{name: "publication_incarnation", value: descriptor.PublicationIncarnation},
+		{name: "summary_digest", value: descriptor.SummaryDigest},
+	} {
+		if !validPublicationDescriptorDigest(field.value) {
+			return fmt.Errorf(
+				"caller publication descriptor %s is not canonical sha256",
+				field.name,
+			)
+		}
+	}
+	if descriptor.PublicationRevision == 0 {
+		return errors.New(
+			"caller publication descriptor revision must be positive",
+		)
+	}
+	return nil
 }
 
 // PublicationRead is one request-scoped exact caller-generation snapshot.
@@ -106,6 +167,40 @@ func (read *PublicationRead) Binding() (PublicationBinding, error) {
 		Summary: *read.Summary,
 		State:   cloneCallerPublicationState(*read.State),
 	}, nil
+}
+
+// Descriptor returns the compact cryptographic commitment for any observed
+// pointer summary, including a typed stale or failed read. It never includes
+// the full summary, store pair payload, or process-local lease state.
+func (read *PublicationRead) Descriptor() (PublicationDescriptor, error) {
+	if read == nil || read.Summary == nil {
+		return PublicationDescriptor{}, errors.New(
+			"caller publication read has no observed descriptor",
+		)
+	}
+	if read.Revision != read.Summary.PublicationRevision {
+		return PublicationDescriptor{}, errors.New(
+			"caller publication read descriptor revision is inconsistent",
+		)
+	}
+	descriptor, err := publicationDescriptorFromSummary(*read.Summary)
+	if err != nil {
+		return PublicationDescriptor{}, err
+	}
+	if read.Availability == PublicationCurrent {
+		if err := read.validate(); err != nil {
+			return PublicationDescriptor{}, err
+		}
+		if read.State == nil || read.lease == nil ||
+			descriptor.GenerationDigest != read.State.Generation.Digest ||
+			descriptor.ManifestDigest != read.State.ManifestDigest ||
+			descriptor.PairSetDigest != read.State.PairSetDigest {
+			return PublicationDescriptor{}, errors.New(
+				"caller publication read descriptor disagrees with admitted state",
+			)
+		}
+	}
+	return descriptor, nil
 }
 
 // Release relinquishes the immutable generation after response construction.
@@ -270,6 +365,87 @@ func (reader *PublicationReader) Reopen(
 	if errors.Is(err, store.ErrNotFound) ||
 		errors.Is(err, errPublicationReadTransition) {
 		result.Availability = PublicationStale
+		return result, nil
+	}
+	if err != nil {
+		if deterministicPublicationReadFailure(err) {
+			result.Availability = PublicationFailed
+			return result, nil
+		}
+		return nil, err
+	}
+	result.Resolver = resolver
+	return reader.acquire(ctx, result, publicationState, false)
+}
+
+// ReopenDescriptor reacquires an exact publication from a compact descriptor.
+// It reads only the bounded store summary, never the full pair payload. The
+// summary digest recovers every scalar needed to derive the immutable
+// filesystem state; the ordinary authority fences then reject a store,
+// resolver, or filesystem transition before the lease becomes visible.
+func (reader *PublicationReader) ReopenDescriptor(
+	ctx context.Context,
+	descriptor PublicationDescriptor,
+) (*PublicationRead, error) {
+	if reader == nil || reader.state == nil || reader.adapters == nil ||
+		reader.publications == nil {
+		return nil, errors.New("caller publication reader is not configured")
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err := descriptor.Validate(); err != nil {
+		return nil, err
+	}
+
+	result := &PublicationRead{
+		Availability: PublicationStale,
+		ExpectedGeneration: store.CallerGenerationIdentity{
+			Repository: descriptor.Repository,
+			Digest:     descriptor.GenerationDigest,
+		},
+		Revision: descriptor.PublicationRevision,
+	}
+	pointer, err := reader.state.GetCallerGenerationPublicationSummary(
+		ctx, descriptor.Repository,
+	)
+	if errors.Is(err, store.ErrNotFound) {
+		return result, nil
+	}
+	if err != nil {
+		if deterministicPublicationReadFailure(err) {
+			result.Availability = PublicationFailed
+			return result, nil
+		}
+		return nil, err
+	}
+	if pointer == nil {
+		return nil, errors.New("caller publication store returned a nil summary")
+	}
+	summary := *pointer
+	summary.PublishedAt = summary.PublishedAt.UTC()
+	result.ExpectedGeneration = summary.Generation
+	result.Summary = &summary
+	result.Revision = summary.PublicationRevision
+
+	currentDescriptor, err := publicationDescriptorFromSummary(summary)
+	if err != nil {
+		result.Availability = PublicationFailed
+		return result, nil
+	}
+	if currentDescriptor != descriptor {
+		return result, nil
+	}
+	publicationState, err := callerPublicationStateFromStore(
+		summary, reader.adapters.ExtractorIdentities(),
+	)
+	if err != nil {
+		result.Availability = PublicationFailed
+		return result, nil
+	}
+	resolver, err := reader.boundResolver(ctx, summary.Generation)
+	if errors.Is(err, store.ErrNotFound) ||
+		errors.Is(err, errPublicationReadTransition) {
 		return result, nil
 	}
 	if err != nil {
@@ -641,6 +817,47 @@ func publicationFailureKey(
 		state.ManifestDigest, state.PairSetDigest, summary.PublicationRevision,
 		summary.PublicationIncarnation, summary.PublishedAt.UnixNano(),
 	)
+}
+
+func publicationDescriptorFromSummary(
+	summary store.CallerGenerationPublicationSummary,
+) (PublicationDescriptor, error) {
+	summary.PublishedAt = summary.PublishedAt.UTC()
+	encoded, err := json.Marshal(struct {
+		Schema  string                                   `json:"schema"`
+		Summary store.CallerGenerationPublicationSummary `json:"summary"`
+	}{
+		Schema: publicationDescriptorSchema, Summary: summary,
+	})
+	if err != nil {
+		return PublicationDescriptor{}, fmt.Errorf(
+			"encode caller publication summary descriptor: %w", err,
+		)
+	}
+	sum := sha256.Sum256(encoded)
+	descriptor := PublicationDescriptor{
+		Schema:                 publicationDescriptorSchema,
+		Repository:             summary.Generation.Repository,
+		GenerationDigest:       summary.Generation.Digest,
+		ManifestDigest:         summary.ManifestDigest,
+		PairSetDigest:          summary.PairSetDigest,
+		PublicationRevision:    summary.PublicationRevision,
+		PublicationIncarnation: summary.PublicationIncarnation,
+		SummaryDigest:          "sha256:" + hex.EncodeToString(sum[:]),
+	}
+	if err := descriptor.Validate(); err != nil {
+		return PublicationDescriptor{}, err
+	}
+	return descriptor, nil
+}
+
+func validPublicationDescriptorDigest(value string) bool {
+	if len(value) != len("sha256:")+sha256.Size*2 ||
+		!strings.HasPrefix(value, "sha256:") {
+		return false
+	}
+	decoded, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return err == nil && "sha256:"+hex.EncodeToString(decoded) == value
 }
 
 func (reader *PublicationReader) failedAdmission(key string) bool {

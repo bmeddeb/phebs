@@ -12,9 +12,10 @@ source-lane classification, T30.6e focused local-evidence base-lane
 consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
 materialization, T30.6h direct caller-leaf execution, T30.6i atomic complete
 caller-generation publication, T30.6j authorized exact Caller Map reads, and
-T30.6k exact caller comparison integration are shipped; T30.6l Workbench
-Impact caller integration is next.
-Completed Epics 0–24, Epic 29, T30.1–T30.6k, and P5 hardening are
+T30.6k exact caller comparison integration and T30.6l exact Workbench Impact
+caller integration are shipped; T30.6m historical-publication retention
+decision is next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6l, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -24,17 +25,17 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6l · Workbench Impact caller integration** is next. T30.6a–T30.6k now provide
-bounded operational receipts, durable exact-generation outcomes,
+**T30.6m · Historical-publication retention decision** is next. T30.6a–T30.6l
+now provide bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
-focused base-lane evidence consumption, and the adapter-free immutable catalog
+focused base-lane evidence consumption, the adapter-free immutable catalog
 lifecycle, bounded gRPC/Thrift resolver materialization, independently durable
-direct caller-leaf artifacts, one atomic complete-generation authority, and
-authorized revision-bound Caller Map paging and exact-range citations, plus a
-jointly fenced exact old/replacement caller comparison. The public Caller Map
-and migration comparison now use only that repository-overlay authority;
-Workbench Impact deliberately remains on its legacy caller reader until
-T30.6l.
+direct caller-leaf artifacts, one atomic complete-generation authority,
+authorized exact Caller Map paging and citations, jointly fenced exact
+old/replacement comparison, and exact Workbench Revision composition over the
+same shared authority. T30.6m changes no cleanup behavior: it must select and
+retain either a precise bounded historical-publication policy or the current
+unbounded posture before T30.6n implements only that selected decision.
 The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
@@ -559,7 +560,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6l next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6m next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -965,8 +966,8 @@ set, manifest, monotonic publication revision, and the non-repeating store-
 owned exact-writer-claim-and-nonce publication incarnation; compact citations share the
 capped, pressure-retirable, up-to-five-minute request binding, reauthorize, and return only their immutable object- and digest-verified byte range through
 the shared HTTP/MCP service. Missing, failed, and stale generations never
-become zero callers or partial rows. T30.6k has now migrated comparison;
-Workbench remains the separately scheduled T30.6l migration.
+become zero callers or partial rows. T30.6k migrated comparison and T30.6l
+migrated Workbench Impact onto the same exact authority.
 
 **T30.6k ✅ · Caller comparison integration** *(2026-08-01; needs T30.6j)* —
 completed and retained in the
@@ -980,14 +981,18 @@ old-only/both/new-only/unresolved vocabulary, use one compact bounded two-index
 binding and an HMAC cursor over both full publication identities, and return
 only shared exact-range citations.
 
-**T30.6l · Workbench Impact caller integration** *(needs T30.6k)* — compose the
-exact caller generation through the existing Workbench revision/evidence
-snapshot and authorization fences. Focused local evidence and
-`repository-overlay` callers remain separately typed; caller gaps cannot become
-completeness, migration-completion, or retirement-safety claims. AC: current
-Workbench revision, stale caller transition, hidden repository, bounded
-composition/cursors, immutable citations, API/UI fixture parity, full merge
-bar.
+**T30.6l ✅ · Workbench Impact caller integration** *(2026-08-01; needs
+T30.6k)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306l--workbench-impact-caller-integration).
+Workbench Impact v2 now composes exact single- or two-generation
+`repository-overlay` caller state through its current Revision and final
+Investigation fence, while focused-local coverage remains separately typed.
+Completed subordinate streams use hidden signed full-incarnation confirmation
+without relisting or creating a new binding; exact-range citations are the only
+caller source-read capability. Missing, failed, and stale caller authority is a
+typed gap without rows, classifications, or numeric totals. Composite cursors,
+UI cursor history, checklist projection, and deterministic token-free
+suggestion identity are bounded and regression-covered.
 
 **T30.6m · Historical-publication retention decision** *(needs T30.6l)* —
 change no cleanup behavior. Build a retained neutral storage/invariant model

@@ -5063,10 +5063,9 @@ HTTP, UI, and MCP use the same transport-neutral list and citation methods. The
 dedicated UI now distinguishes exact versus unavailable rows, displays state,
 revision, commit, and generation identity, withholds totals for a gap, and
 opens cited bytes only through the new exact-range route. MCP adds the citation
-tool without reclassifying list output. The public migration is deliberately
-narrow: `compare_operation_callers` and Workbench Impact keep their legacy
-evidence reader until T30.6k and T30.6l, so neither silently inherits or claims
-the complete caller generation.
+tool without reclassifying list output. T30.6k and T30.6l subsequently moved
+comparison and Workbench Impact onto this same exact caller authority under
+their own two-sided and Investigation-composition fences.
 
 Acceptance covers current, missing, failed, and stale
 states; pre-read and result-time authorization loss; hidden/deleting
@@ -5184,8 +5183,144 @@ binding; bounded scan, page, hydration, citation, and retained-reference
 limits; exact immutable citation reads; HTTP/UI/MCP parity; and the full merge
 bar.
 
-Workbench Impact deliberately remains on its legacy caller reader until
-T30.6l. This static direct-syntax comparison establishes no runtime use,
-completeness, extraction accuracy, migration completion, decommission safety,
-production validation, or historical-publication retention bound.
+T30.6l subsequently composes this comparison through the current Workbench
+Revision and final Investigation fence. This static direct-syntax comparison
+establishes no runtime use, completeness, extraction accuracy, migration
+completion, decommission safety, production validation, or historical-
+publication retention bound.
 `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+### T30.6l · Workbench Impact caller integration
+
+**T30.6l ✅ · Workbench Impact caller integration** *(2026-08-01; needs
+T30.6k)* — moves the Workbench Where/Impact projection from its legacy caller
+reader to the shared exact Caller Map and caller-comparison authority. The
+versioned response and composite cursor advance to
+`workbench-impact-inventory-v2` and `workbench-impact-cursor-v2`; old cursors
+cannot be replayed into the new authority. Modify and retire compose one exact
+current endpoint generation, migrate composes the jointly fenced old and
+replacement generations, and add deliberately retains no caller stream.
+
+One request first authenticates and reads the selected current Investigation
+Revision and its immutable Change Brief. Every subordinate Atlas, caller,
+comparison, compatibility, field-reference, and resource-plane service keeps
+its own authorization and evidence/publication fences. After the complete
+page is assembled, Workbench rereads the Investigation as the final result
+fence: revocation/non-disclosure or a replaced current Revision
+returns the same not-found posture, while an unexpected change to the selected
+Revision/brief bytes conflicts. No caller row is therefore serialized under a
+stale Workbench authority merely because its repository remained visible.
+
+The constructor and production wiring reuse the already constructed exact
+Caller Map and comparison services. Comparison is explicitly built over that
+same Caller Map instance when fallback construction is required. Workbench
+does not allocate a second HMAC secret, publication reader, reverse-index
+cache, binding registry, citation cache, concurrency gate, or legacy
+coverage/attribution reader. Unknown, hidden, and deleting caller repositories
+remain non-disclosing before caller pointers, publication bytes, or
+repository-specific caches are touched.
+
+Caller envelopes now carry the exact `repository-overlay` generation and
+`matching_rows_state`. A current generation may carry its declaration, rows,
+groups, total, and subordinate cursor. `missing`, `failed`, and `stale`
+generations are `unavailable`: they carry no partial rows, groups,
+declaration-dependent numeric total, classification, or subordinate cursor.
+Migration comparison preserves the same rule for both sides; either
+unavailable side makes the whole comparison unavailable. Each gap is copied
+into Analysis scope as an explicit caller-generation capability and gap. It is
+never inserted into the focused-local extraction Coverage list, so local
+evidence coverage and repository-overlay publication authority cannot be
+mistaken for one another.
+
+An outer Workbench stream can continue after one subordinate caller stream has
+already completed. It no longer proves that completed stream by issuing
+another first-page list or comparison request. The exact service instead
+returns a transport-hidden signed authority token, bounded by the shared
+16 KiB token envelope and exposed only inside the opaque composite cursor,
+never as a distinct public field. It binds the
+normalized query, repository authorization projection and revision, exact
+generation/manifest/pair-set/publication-revision identity, snapshot state,
+and, for every bound publication, its non-repeating incarnation across one or
+both repositories.
+Later outer pages present that token only to the originating exact service,
+which reauthorizes and re-fences the full authority before returning a bounded
+generation-state confirmation. Confirmation creates no request binding,
+reverse-index build, row hydration, citation, or page-one response and cannot
+consume the shared eight-binding capacity. A restart, permission change,
+publication transition including `A → B → A`, or invalid signature conflicts
+and requires a new first Workbench page. Shared-registry
+eviction may still require the already bounded cold publication validation;
+the ticket adds no stronger unconditional zero-hash promise.
+
+The HMAC-authenticated composite cursor is rejected above 64 KiB in either
+encoded or decoded form and binds principal, current Workbench Revision digest, normalized
+filters, page size, every expected subordinate stream, its snapshot and hidden
+authority, and the existing Atlas/compatibility/resource digests. Its signature
+also prevents a client from skipping rows by declaring an unfinished stream
+complete and clearing its subordinate cursor. API pages
+remain 1–100 rows; the Workbench UI requests 25, mounts only the current server
+page, and keeps at most 500 cursor entries independently for Impact,
+implementation, and checklist navigation. At the 64 KiB cursor ceiling this
+is below 32 MiB of encoded text per history; How can retain its two histories
+together below 64 MiB before JavaScript overhead, while Where and How unmount
+instead of retaining all three. Exact caller pages retain the
+separately reviewed Caller Map transport posture: a maximum legal 100-row page
+can approach 100 MiB, so count is a finite bound rather than a small-response
+claim.
+
+Every Workbench caller and comparison occurrence renders through the shared
+exact-range citation component. The signed capability reauthorizes and reopens
+the same full publication, verifies immutable commit, path, Git object ID,
+complete blob digest, exact record, and byte range, and returns only those
+cited bytes. Workbench offers no generic whole-file fallback for an overlay
+row and grants no tree, directory, unrelated-path, focused-search, or
+focused-local evidence authority.
+
+Checklist derivation preserves deterministic human state across rotating
+transport capabilities. It reads at most five 100-row Impact pages and five
+100-row implementation pages, but canonicalizes each Impact page as it
+arrives, retains only its digest plus a deterministic top-1,000 compact
+suggestion accumulator, and does not keep five exact-caller response pages
+resident. Outer and subordinate
+cursors and every signed caller citation are removed before Impact page
+digests, caller evidence IDs, suggestion IDs, and Disposition currency are
+computed. Two reads of unchanged publications therefore produce the same
+checklist snapshot even when binding IDs, cursor tokens, and citation tokens
+rotate. Existing checklist ceilings remain: 1,000 suggestions, 32 evidence
+references per suggestion, 100 entries per page, a 64 KiB cursor, and a
+512 KiB mutation envelope. Hitting the five-page evidence ceiling remains an
+explicit truncation suggestion, never silent completeness.
+
+The UI distinguishes **Focused-local coverage** from current or unavailable
+**repository-overlay generation** state, displays publication state, revision,
+commit, and generation digest, and never renders `undefined` or zero for an
+unavailable total. Comparison shows both endpoint generations before any
+classification. Current empty exact pages still mean only that no retained
+direct-syntax row matched the filters; unavailable pages explicitly prohibit
+zero-caller and migration conclusions.
+
+The steady-state-cost pass found no new startup work: startup constructs the
+already shared exact services and empty caches but performs no caller scan,
+publication open, reverse-index build, Git read, content hash, store write,
+mirror lock, or child process for Workbench. A warm active subordinate page
+inherits T30.6j/T30.6k's bounded selected-record hydration and complete-
+publication identity sweeps. A completed subordinate stream performs only its
+signed confirmation path; locks remain limited to shared registry bookkeeping
+and are not held across publication validation, authorization, Git citation
+reads, Investigation confirmation, or transport encoding.
+
+Acceptance covers current and exact-empty caller generations; missing,
+failed, and stale single- and two-sided gaps; hidden repositories before cache
+touch; current-Revision replacement and final Investigation revocation;
+full-incarnation completed-stream transition refusal without a new binding;
+64 KiB composite cursor and stream-set validation; rotating-token checklist
+identity; exact-range citation UI/API parity; bounded 500-entry UI histories;
+closure fixtures; and the full merge bar.
+
+Workbench remains experimental/default-dark. Static caller rows, comparison
+classes, exact empty pages, typed gaps, exhausted pagination, and a fully
+Dispositioned checklist establish no runtime use, completeness, extraction
+accuracy, compatibility, migration completion, decommission safety,
+production validation, or historical-publication retention bound.
+`GATE2-V2` remains `NOT_ESTABLISHED`; T30.6m owns the next retention decision
+and changes no cleanup behavior.

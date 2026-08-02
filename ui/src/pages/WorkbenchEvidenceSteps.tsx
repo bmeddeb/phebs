@@ -22,10 +22,12 @@ import { SectionHelp } from '../components/SectionHelp'
 import { href } from '../router'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
+import ExactCallerCitation from './ExactCallerCitation'
 import type { WorkbenchEvidenceInput } from './workbenchEvidenceState'
 
 const evidencePageSize = 25
 const anchorLimit = 32
+const maxCursorHistory = 500
 interface EvidenceStepProps {
   available: boolean
   investigationID: string
@@ -137,7 +139,7 @@ export function WorkbenchWhereStep({
   }
   const next = () => {
     const nextCursor = page?.pagination.next_cursor
-    if (!nextCursor) return
+    if (!nextCursor || cursorHistory.length >= maxCursorHistory) return
     setCursorHistory((current) => [
       ...current.slice(0, pageIndex + 1),
       nextCursor,
@@ -249,6 +251,7 @@ export function WorkbenchWhereStep({
             label="impact evidence"
             pageIndex={pageIndex}
             complete={page.pagination.complete}
+            historyBoundReached={cursorHistory.length >= maxCursorHistory}
             onPrevious={() => setPageIndex((value) => Math.max(0, value - 1))}
             onNext={next}
           />
@@ -416,11 +419,14 @@ export function WorkbenchHowStep({
             label="implementation evidence"
             pageIndex={implementationPage}
             complete={implementation.pagination.complete}
+            historyBoundReached={
+              implementationCursors.length >= maxCursorHistory}
             onPrevious={() =>
               setImplementationPage((value) => Math.max(0, value - 1))}
             onNext={() => {
               const nextCursor = implementation.pagination.next_cursor
-              if (!nextCursor) return
+              if (!nextCursor ||
+                implementationCursors.length >= maxCursorHistory) return
               setImplementationCursors((current) => [
                 ...current.slice(0, implementationPage + 1),
                 nextCursor,
@@ -443,11 +449,13 @@ export function WorkbenchHowStep({
             label="checklist"
             pageIndex={checklistPage}
             complete={checklist.pagination.complete}
+            historyBoundReached={checklistCursors.length >= maxCursorHistory}
             onPrevious={() =>
               setChecklistPage((value) => Math.max(0, value - 1))}
             onNext={() => {
               const nextCursor = checklist.pagination.next_cursor
-              if (!nextCursor) return
+              if (!nextCursor ||
+                checklistCursors.length >= maxCursorHistory) return
               setChecklistCursors((current) => [
                 ...current.slice(0, checklistPage + 1),
                 nextCursor,
@@ -524,9 +532,11 @@ function AnalysisScope({
             />
           ))}
         </ScopeColumn>
-        <ScopeColumn title="Coverage">
+        <ScopeColumn title="Focused-local coverage">
           {scope.coverage.length === 0 ? (
-            <EvidenceEmpty>No coverage certificate was returned.</EvidenceEmpty>
+            <EvidenceEmpty>
+              No focused-local coverage certificate was returned.
+            </EvidenceEmpty>
           ) : scope.coverage.map((coverage) => (
             <ScopeRow
               key={`${coverage.capability}:${coverage.target}`}
@@ -641,36 +651,84 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
       {page.callers.map((caller, index) => (
         <EvidenceGroup
           key={`caller:${caller.selection.role}:${index}`}
-          title={`${humanize(caller.selection.role)} caller evidence`}
-          state={`${caller.total_matching_rows} matching`}
+          title={`${humanize(caller.selection.role)} repository-overlay callers`}
+          state={caller.matching_rows_state === 'unavailable'
+            ? `${caller.generation.state} · rows unavailable`
+            : `${caller.total_matching_rows ?? 'unknown'} exact matches`}
         >
-          {caller.resolved_callers.map((row, rowIndex) => (
-            <CallerEvidenceRow
-              key={`resolved:${row.source.assertion_id}:${rowIndex}`}
-              row={row}
-              label="resolved caller"
-            />
-          ))}
-          {caller.extractor_abstentions.map((row, rowIndex) => (
-            <CallerEvidenceRow
-              key={`abstention:${row.source.assertion_id}:${rowIndex}`}
-              row={row}
-              label="extractor abstention"
-            />
-          ))}
-          {caller.pagination.next_cursor && (
+          <CallerGenerationStatus
+            generation={caller.generation}
+            matchingRowsState={caller.matching_rows_state}
+          />
+          {caller.matching_rows_state === 'unavailable' ? (
             <EvidenceNotice>
-              Caller substream is partial on this page.
+              Caller rows and totals are unavailable. No partial rows, zero-
+              caller conclusion, completeness claim, migration classification,
+              or retirement-safety claim is shown.
             </EvidenceNotice>
+          ) : (
+            <>
+              {caller.resolved_callers.map((row, rowIndex) => (
+                <CallerEvidenceRow
+                  key={`resolved:${row.source.assertion_id}:${rowIndex}`}
+                  row={row}
+                  label="resolved caller"
+                />
+              ))}
+              {caller.extractor_abstentions.map((row, rowIndex) => (
+                <CallerEvidenceRow
+                  key={`abstention:${row.source.assertion_id}:${rowIndex}`}
+                  row={row}
+                  label="extractor abstention"
+                />
+              ))}
+              {caller.pagination.next_cursor && (
+                <EvidenceNotice>
+                  Caller substream is partial on this exact generation page.
+                </EvidenceNotice>
+              )}
+            </>
           )}
         </EvidenceGroup>
       ))}
       {page.comparison && (
         <EvidenceGroup
-          title="Migration comparison"
-          state={`${page.comparison.total_rows} rows`}
+          title="Repository-overlay migration comparison"
+          state={page.comparison.matching_rows_state === 'unavailable'
+            ? 'rows unavailable'
+            : `${page.comparison.total_rows ?? 'unknown'} exact rows`}
         >
-          {page.comparison.rows.map((row) => (
+          <div className={css({
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: '8px',
+            padding: '12px 16px',
+            borderBottom: `1px solid ${tok.innerSep}`,
+            '@media screen and (max-width: 680px)': {
+              gridTemplateColumns: '1fr',
+            },
+          })}>
+            <CallerGenerationStatus
+              label="Current endpoint"
+              generation={page.comparison.old.generation}
+              matchingRowsState={page.comparison.old.matching_rows_state}
+              compact
+            />
+            <CallerGenerationStatus
+              label="Replacement endpoint"
+              generation={page.comparison.replacement.generation}
+              matchingRowsState={page.comparison.replacement.matching_rows_state}
+              compact
+            />
+          </div>
+          {page.comparison.matching_rows_state === 'unavailable' ? (
+            <EvidenceNotice>
+              Comparison rows, totals, and classifications are unavailable
+              because at least one endpoint has no current complete caller
+              generation. This is not evidence of zero callers or migration
+              completion.
+            </EvidenceNotice>
+          ) : page.comparison.rows.map((row) => (
             <div key={row.key}>
               <div className={css(evidenceRowStyle(tok))}>
                 <EvidenceBadge tone={row.classification === 'unresolved'
@@ -1554,13 +1612,7 @@ function CallerEvidenceRow({
   const candidates = row.unit.candidates ?? []
   return (
     <div className={css(evidenceRowStyle(tok))}>
-      <SourceLink
-        repository={row.source.repository}
-        commit={row.source.commit}
-        path={row.source.path}
-        line={row.source.start_line}
-        endLine={row.source.end_line}
-      />
+      <ExactCallerCitation source={row.source} />
       <div className={css({ minWidth: 0 })}>
         <div className={css({
           display: 'flex',
@@ -1597,6 +1649,87 @@ function CallerEvidenceRow({
         )}
       </div>
     </div>
+  )
+}
+
+function CallerGenerationStatus({
+  generation,
+  matchingRowsState,
+  label = 'Caller evidence',
+  compact = false,
+}: {
+  generation: WorkbenchImpactPage['callers'][number]['generation']
+  matchingRowsState: 'exact' | 'unavailable'
+  label?: string
+  compact?: boolean
+}) {
+  const [css] = useStyletron()
+  const tok = usePhebsTokens()
+  const exact = matchingRowsState === 'exact'
+  return (
+    <section
+      data-testid="workbench-caller-generation"
+      data-generation-state={generation.state}
+      data-matching-rows-state={matchingRowsState}
+      className={css({
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        gap: '10px',
+        flexWrap: 'wrap',
+        padding: compact ? '9px 10px' : '11px 16px',
+        border: compact
+          ? `1px solid ${exact ? tok.statusGreen : tok.statusAmber}`
+          : 'none',
+        borderBottom: compact ? undefined : `1px solid ${tok.innerSep}`,
+        backgroundColor: tok.pageBg,
+      })}
+    >
+      <div className={css({ minWidth: 0 })}>
+        <div className={css({
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          flexWrap: 'wrap',
+        })}>
+          <EvidenceBadge tone={exact ? 'green' : 'amber'}>
+            {exact ? 'exact rows' : 'rows unavailable'}
+          </EvidenceBadge>
+          <span className={css(rowTitleStyle(tok))}>
+            {label} · repository-overlay generation
+          </span>
+        </div>
+        {generation.reason && (
+          <div className={css({
+            marginTop: '4px',
+            color: tok.textTertiary,
+            fontSize: '10px',
+            lineHeight: '15px',
+          })}>
+            {generation.reason}
+            {!exact && ' This is not evidence of zero callers.'}
+          </div>
+        )}
+      </div>
+      <div className={css({
+        color: tok.textTertiary,
+        fontFamily: FONTS.MONO,
+        fontSize: '9px',
+        lineHeight: '15px',
+        textAlign: 'right',
+        overflowWrap: 'anywhere',
+        '@media screen and (max-width: 560px)': { textAlign: 'left' },
+      })}>
+        <div>
+          {generation.state} · revision{' '}
+          {generation.publication_revision ?? 'unavailable'}
+        </div>
+        {generation.commit && <div>commit {shortDigest(generation.commit)}</div>}
+        {generation.generation_digest && (
+          <div>generation {shortDigest(generation.generation_digest)}</div>
+        )}
+      </div>
+    </section>
   )
 }
 
@@ -1672,12 +1805,14 @@ function PageControls({
   label,
   pageIndex,
   complete,
+  historyBoundReached = false,
   onPrevious,
   onNext,
 }: {
   label: string
   pageIndex: number
   complete: boolean
+  historyBoundReached?: boolean
   onPrevious: () => void
   onNext: () => void
 }) {
@@ -1706,12 +1841,18 @@ function PageControls({
       >
         Previous page
       </Button>
-      <span>Page {pageIndex + 1} · {complete ? 'stream complete' : 'more bounded rows'}</span>
+      <span>
+        Page {pageIndex + 1} · {complete
+          ? 'stream complete'
+          : historyBoundReached
+          ? 'cursor history bound reached'
+          : 'more bounded rows'}
+      </span>
       <Button
         type="button"
         size={BUTTON_SIZE.mini}
         kind={BUTTON_KIND.secondary}
-        disabled={complete}
+        disabled={complete || historyBoundReached}
         onClick={onNext}
       >
         Next page

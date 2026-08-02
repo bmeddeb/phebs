@@ -39,8 +39,28 @@ func (fake *workbenchImpactAPIFake) Read(
 		RevisionID:      request.RevisionID,
 		TicketKind:      store.ChangeBriefModify,
 		Atlas:           []WorkbenchAtlasImpact{},
-		Callers:         []WorkbenchCallerImpact{},
-		ResourcePlanes:  []ResourcePlaneSnapshot{},
+		Callers: []WorkbenchCallerImpact{{
+			Selection: store.ChangeBriefContractSelection{
+				Role:     store.ChangeBriefCurrent,
+				Protocol: "protobuf", Repository: "github.com/acme/contracts",
+				DeclarationLineage: "proto/cart.proto:shop.Cart",
+				CanonicalOperation: "/shop.Cart/Get",
+			},
+			Query: CallerMapQuery{Endpoint: CallerMapEndpoint{
+				Protocol: "protobuf", Repository: "github.com/acme/contracts",
+				Lineage: "proto/cart.proto:shop.Cart", Operation: "/shop.Cart/Get",
+			}},
+			Generation: CallerMapGeneration{
+				State: "current", Plane: exactCallerMapPlane,
+				Repository: "github.com/acme/contracts",
+			},
+			MatchingRowsState:    "exact",
+			ResolvedCallers:      []CallerMapRow{},
+			ExtractorAbstentions: []CallerMapRow{},
+			TotalMatchingRows:    callerMapTotal(0),
+			Pagination:           CallerMapPagination{Complete: true},
+		}},
+		ResourcePlanes: []ResourcePlaneSnapshot{},
 		AnalysisScope: WorkbenchAnalysisScope{
 			Coverage:     []WorkbenchImpactCoverage{},
 			Capabilities: []WorkbenchImpactCapability{},
@@ -179,6 +199,12 @@ func TestWorkbenchEvidenceHumaIsThinExactAndDefaultDark(t *testing.T) {
 			impactResponse.Body,
 			impact,
 		)
+	}
+	if body := impactResponse.Body.String(); !strings.Contains(body, `"schema_version":"workbench-impact-inventory-v2"`) ||
+		!strings.Contains(body, `"matching_rows_state":"exact"`) ||
+		!strings.Contains(body, `"plane":"repository-overlay"`) ||
+		strings.Contains(body, `"attribution_digest"`) {
+		t.Fatalf("impact exact transport contract = %s", body)
 	}
 
 	anchors := url.QueryEscape(`[{"repository":"example/client","commit":"` +

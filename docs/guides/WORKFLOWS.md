@@ -259,8 +259,9 @@ pair, after it builds the page, the service checks both complete-generation
 summaries in one store transaction, both final publication descriptors, and
 both permissions. This is one jointly fenced read, not two independently timed
 Caller Map requests.
-Workbench Impact remains on the legacy caller reader until T30.6l; its
-revision/evidence composition has not silently inherited this authority.
+T30.6l now composes this same exact authority through the current Workbench
+Revision; it does not reconstruct a second comparison or fall back to legacy
+caller evidence.
 
 The old and replacement panels each show `current`, `missing`, `failed`, or
 `stale`. Only two current generations produce comparison rows. If either side
@@ -483,13 +484,14 @@ an explicit unavailable state and issue no fallback evidence request.
 
 Where reads one current bounded impact page. Its **Analysis scope & gaps**
 panel stays adjacent to the source-first inventory and shows capability,
-coverage, and typed gap state before the rows. Atlas declarations,
+**Focused-local coverage**, and typed gap state before the rows. Overlay caller
+generation state is deliberately not a coverage certificate. Atlas declarations,
 implementations, name matches, extractor abstentions, exact callers,
 unit-attribution ambiguity, migration comparison classes, retained
 compatibility findings, affected-field references, and resource planes keep
 their service-defined classifications. Source links name the exact repository,
 commit, path, and line span and navigate to that immutable commit. Migration
-comparison sides retain their bounded old/replacement caller links;
+comparison sides retain bounded old/replacement exact-range caller citations;
 affected-field rows retain every visible evidence occurrence; and an enabled
 resource-plane relationship retains its subject, object, classification, and
 cited sources. The header counts evidence groups rather than mixing unlike row
@@ -498,10 +500,45 @@ resolution, ordering, comparison-level, and compatibility-run inputs are
 explicit server filters. **Next page** replaces the mounted rows with the
 opaque-cursor page; **Previous page** returns through the retained cursor path.
 An empty page says that it does not establish absence or completeness, and
-stale cursors restart from the first exact page.
+stale cursors restart from the first exact page. The API accepts 1–100 rows;
+the UI requests 25, mounts only that server page, and retains at most 500
+cursor entries for this stream. Reaching that local history bound disables
+forward paging rather than retaining an unbounded session.
 The panel's help availability is derived from the capability and coverage rows
 returned for that exact projection; the UI does not assume that dark readers
 are enabled.
+
+Modify and retire show one exact `repository-overlay` caller generation;
+migrate shows the jointly fenced old and replacement generations; add has no
+caller stream. Each generation displays `current`, `missing`, `failed`, or
+`stale` plus its publication revision, commit, and generation digest. Only
+`current` can report `matching_rows_state: exact`, rows, and a numeric total.
+The other states report `unavailable`, add an explicit Analysis-scope gap, and
+show no partial rows, comparison classes, subordinate cursor, or numeric zero.
+An exact empty current page means only that no retained static row matched the
+filters. An unavailable page is not evidence of zero callers, completeness,
+migration completion, or retirement safety.
+
+Caller and comparison occurrences are visibly labeled
+`repository-overlay`. **Read exact cited bytes** invokes the same signed
+authorization-first citation used by Caller Map and returns only the immutable
+commit/object/digest-verified byte range. There is intentionally no whole-file
+fallback for an overlay occurrence; ordinary Atlas, focused-local, field, and
+implementation citations keep their own separately typed source links.
+
+The opaque outer cursor is HMAC-authenticated, including every subordinate
+stream's complete/next state; changing an unfinished stream into a completed
+one is rejected rather than skipping its remaining rows.
+
+When another evidence stream requires a later outer page after a caller stream
+has finished, Workbench confirms the finished exact publication through a
+hidden signed full-incarnation authority token. It does not fetch page one
+again, mint another citation, or consume another exact caller request binding.
+Any caller transition, including same-name `A → B → A`, permission change, or
+process restart conflicts and offers a restart from the first exact page. The
+Investigation and selected Revision are checked again after all evidence is
+composed, so a mid-read Revision change or authorization loss cannot serialize
+the assembled result.
 
 How reads related implementation/history evidence and the deterministic
 checklist in parallel. Up to 32 optional source anchors may be supplied as
@@ -510,7 +547,7 @@ Related rows preserve selected versus review-candidate state, code role,
 selection rule, immutable source span, and bounded commit/diff detail.
 Capability failures and gaps stay visible rather than becoming guessed file
 recommendations. Only the current implementation page and current checklist
-page are mounted.
+page are mounted, and each navigation retains at most 500 cursor entries.
 
 Checklist suggestions are deterministic and never persisted. Their current or
 stale evidence state and immutable citations remain separate from the
@@ -526,6 +563,16 @@ supplies the current active Disposition, so a correction retry derives a new
 uses the same non-disclosing unavailable state. There is no comment,
 assignment, due date, priority, custom state, task, or implicit completion
 action.
+
+Opaque paging cursors and signed exact-caller citation tokens are transport
+capabilities, not checklist evidence identity. Checklist derivation removes
+them before hashing Impact pages, caller evidence, and suggestion IDs. The
+same exact publication therefore keeps the same suggestion and existing human
+Disposition current even when a request binding rotates. The checklist reads
+at most five 100-row Impact pages and five 100-row implementation pages,
+uses one deterministic top-1,000 suggestion accumulator with 32 evidence
+references per final suggestion, and pages at most 100 entries behind a
+64 KiB cursor.
 
 ## Provisional Change Workbench over published evidence
 
