@@ -24,12 +24,28 @@ evidence.
 - [T22.1 Thrift field-reference spike](../spike/t221/README.md)
 - [T23.1 Kafka topic-evidence spike](../spike/t231/README.md)
 - [T30.1 focused-index and shard-set spike](../spike/t301/README.md)
+- [T30.6m historical-publication retention decision and owner inventory](../spike/t306m/README.md)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
 maintained when a reproducibility defect is found, but they do not become
 current behavior documentation and do not inherit T11.1’s sealed status.
 Production packages must not import spike packages.
+
+The corrected T30.6m record separates its selected unbounded-retention posture
+for historical evidence and adjacent candidate/caller residue from the mixed
+evidence-pin lifecycles, the unchanged configured proof-bundle lifecycle,
+other unchanged owner lifecycles, and incidental growth in the eight durable
+job tables and exact 24-table Investigation/Workbench domain. It authorizes no
+cleanup. T30.6n owns bounded
+job reads and startup-migration repair. T30.6o owns the authorization-first
+status shell, fixed 52-component registry, zero-scan unavailable projection,
+and warning; T30.6p owns 21 core SurrealDB components, T30.6q owns the exact 24
+Investigation/Workbench tables, and T30.6r owns seven bounded derived store and
+filesystem components and completes the status surface. Database index
+bootstrap in T30.6p/T30.6q must be bounded and restart-resumable, and T30.6r
+directory scans must be bounded. None of these tickets changes deletion,
+configuration, or owner lifecycle semantics.
 
 ### Deterministic product fixtures
 

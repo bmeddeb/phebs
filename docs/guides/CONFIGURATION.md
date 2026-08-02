@@ -71,7 +71,7 @@ analysis_units:
 | `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |
-| `proof_bundles.retention`                   | *(disabled)*     | positive Go duration expires proof bundles after their latest materialization; omission or `"0"` keeps them indefinitely                                         |
+| `proof_bundles.retention`                   | *(disabled; effective `0`)* | positive Go duration expires proof bundles after their latest materialization, deleting the bundle and only its exact proof pins; omission or `"0"` keeps both indefinitely; bundle expiry deletes no extraction evidence |
 | `experimental.provisional_proto_extraction` | `false`          | development-only opt-in for the validation-gated readers described below; declarations/operation consumers retain provisional lineage                             |
 | `experimental.provisional_thrift_extraction` | `false`         | development-only opt-in for the T19 Thrift declaration and Go-consumer readers described below; same provisional repo/path lineage posture                         |
 | `experimental.provisional_thrift_field_extraction` | `false`   | independent development-only opt-in for T22's thriftrw and Apache Thrift field-reference reader over a committed root `index.scip`; neutral proof/report/MCP/UI surfaces remain experimental-dark |
@@ -81,6 +81,32 @@ analysis_units:
 | `connections[].url`                         | *(required by type)* | generic Git accepts remote clone URLs, absolute local paths, `file://`, or a quoted exact `~/...` path; local wildcards are never expanded                      |
 | `revisions`                                 | `{}`             | repo name → `rev:` selector → full `refs/heads/*` or `refs/tags/*`; at most 7 additional refs per repo (8 including implicit HEAD)                              |
 | `analysis_units`                            | `{}`             | repo name → one strict service scope; omitted repositories keep whole-repository behavior; restart after changing it                                           |
+
+### Historical publication retention
+
+There is no historical-publication retention key. T30.6m explicitly retains
+the current unbounded posture and changes no cleanup behavior; strict config
+validation therefore rejects guessed keys such as `publication_retention` or
+`retention.historical_publications`. The existing `proof_bundles.retention`
+key is narrower: a positive lifetime removes an expired immutable bundle and
+its exact `proof-bundle:<id>` pins. Bundle expiry deletes no extraction
+evidence; the independent evidence sweeper may later reclaim a newly unpinned
+superseded run only when that run is otherwise eligible. This key does not
+bound historical published scopes or the other retained owners.
+
+T30.6n will bound job-history reads and repair startup migration without
+deleting job history. T30.6o will add the authorization-first status shell,
+fixed 52-component registry, and unconditional warning; it initially reports
+every component as explicitly unavailable and performs no store or filesystem
+inventory scan. T30.6p will populate the 21 core SurrealDB components, T30.6q
+the exact 24 Investigation/Workbench tables, and T30.6r the seven derived
+store/filesystem components and thereby complete the status surface. Any
+supporting database index bootstrap in T30.6p or T30.6q must be bounded,
+restart-resumable, and nonblocking; every filesystem scan in T30.6r must be
+bounded. None of T30.6n–T30.6r adds deletion, changes an owner lifecycle, or
+adds retention configuration. A future bounded historical-publication policy
+requires a new ADR and configuration contract; omission and numeric zero are
+not reserved as destructive/default aliases for such a future key.
 
 
 ### Analysis units

@@ -102,8 +102,13 @@ consumption, T30.6f resolver-catalog lifecycle, T30.6g bounded resolver
 materialization, and T30.6h direct caller-leaf execution artifacts are also
 shipped; T30.6i atomic complete caller-generation publication, T30.6j
 authorized exact Caller Map reads, T30.6k exact caller comparison integration,
-and T30.6l exact Workbench Impact caller integration are shipped, and T30.6m
-historical-publication retention decision is next.
+T30.6l exact Workbench Impact caller integration, and T30.6m explicit
+unbounded historical-publication retention decision are shipped; T30.6n
+bounded job-history reads and startup-migration repair is next, followed by
+T30.6o authorization-first retention-status shell and capacity warning,
+T30.6p core SurrealDB retention collectors, T30.6q the exact 24-table
+Investigation/Workbench collector, and T30.6r derived-publication store and
+filesystem collectors completing the status surface.
 A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.

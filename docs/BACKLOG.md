@@ -12,10 +12,13 @@ source-lane classification, T30.6e focused local-evidence base-lane
 consumption, T30.6f resolver-catalog lifecycle, and T30.6g bounded resolver
 materialization, T30.6h direct caller-leaf execution, T30.6i atomic complete
 caller-generation publication, T30.6j authorized exact Caller Map reads, and
-T30.6k exact caller comparison integration and T30.6l exact Workbench Impact
-caller integration are shipped; T30.6m historical-publication retention
-decision is next.
-Completed Epics 0–24, Epic 29, T30.1–T30.6l, and P5 hardening are
+T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
+caller integration, and T30.6m explicit unbounded historical-publication
+retention decision are shipped; T30.6n bounded job-history reads and startup
+migration is next, followed by T30.6o's retention-status shell, T30.6p's core
+Surreal collectors, T30.6q's Investigation/Workbench collector, and T30.6r's
+derived store/filesystem collectors.
+Completed Epics 0–24, Epic 29, T30.1–T30.6m, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -25,7 +28,8 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6m · Historical-publication retention decision** is next. T30.6a–T30.6l
+**T30.6n · Bounded job-history reads and startup migration** is next.
+T30.6a–T30.6m
 now provide bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, the adapter-free immutable catalog
@@ -33,9 +37,15 @@ lifecycle, bounded gRPC/Thrift resolver materialization, independently durable
 direct caller-leaf artifacts, one atomic complete-generation authority,
 authorized exact Caller Map paging and citations, jointly fenced exact
 old/replacement comparison, and exact Workbench Revision composition over the
-same shared authority. T30.6m changes no cleanup behavior: it must select and
-retain either a precise bounded historical-publication policy or the current
-unbounded posture before T30.6n implements only that selected decision.
+same shared authority. T30.6m changes no cleanup behavior and explicitly
+selects unbounded retention. Review grounding expanded its original nine-group
+inventory to twelve: all eight durable job tables, the 24-table Investigation/
+Workbench graph, and proof bundles are independent retained owners too.
+T30.6n first bounds the job-history read and startup-migration paths that can
+stall before a status endpoint is reachable. T30.6o then adds only the
+authorization-first status shell, complete fixed registry/budget, and
+unconditional warning; T30.6p–T30.6r fill the core Surreal,
+Investigation/Workbench, and derived store/filesystem collectors in order.
 The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
@@ -51,10 +61,11 @@ drafted and unscheduled.
 
 T30.5 deliberately retains every exact published commit/unit/domain tuple for
 rollback; the existing evidence sweep does not collect a row while it remains
-`published`. Before Epic 30 closes, a separate reviewed follow-up must decide a
-bounded unpinned historical-publication policy (or explicitly retain the
-unbounded posture) without deleting pinned proof. T30.6m owns that decision and
-T30.6n implements only its selected posture.
+`published`. T30.6m explicitly retains that unbounded posture and authorizes no
+historical deletion. Before Epic 30 closes, T30.6n bounds job-history reads and
+legacy startup migration without deleting terminal diagnostics, and
+T30.6o–T30.6r deliver the warning and bounded cross-owner status in PR-sized
+layers without deleting pinned proof or other retained state.
 
 ### Post-T30.5 issue closure ✅ *(closed 2026-07-29)*
 
@@ -560,7 +571,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6m next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6n next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -994,29 +1005,134 @@ typed gap without rows, classifications, or numeric totals. Composite cursors,
 UI cursor history, checklist projection, and deterministic token-free
 suggestion identity are bounded and regression-covered.
 
-**T30.6m · Historical-publication retention decision** *(needs T30.6l)* —
-change no cleanup behavior. Build a retained neutral storage/invariant model
-and select in a dated ADR either an exact bounded policy or the current
-unbounded posture. A bounded selection must freeze count/age/byte dimension,
-per-repository/domain versus global scope, default/config surface, batch and
-sweep bounds, evidence/caller/catalog/artifact coverage, pin ownership,
-transaction and lease ordering, and restore-before-sweep behavior. An
-unbounded selection must require bounded retained-count/byte status plus an
-explicit capacity warning. The decision must also prove its selected
-implementation fits one PR; if a bounded selection crosses independent state
-owners, this ticket adds dependency-ordered implementation tickets before
-authorizing cleanup and T30.6n is not treated as an umbrella PR. AC: selected
-decision and escape hatch, implementation-size proof, pin/current/
-failed-replacement/backup matrix, neutral capacity receipt, Operations update,
-docs/static gates.
+**T30.6m ✅ · Historical-publication retention decision** *(2026-08-01; needs
+T30.6l)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306m--historical-publication-retention-decision).
+The current unbounded posture is selected explicitly, with no cleanup or
+configuration change. Review grounding corrected the initial nine-group model
+to twelve retained owner groups by adding all eight durable job tables, the
+24-table Investigation/Workbench graph, and proof bundles. Terminal job rows,
+Investigation histories and owner audit rows, default-retained proof bundles,
+historical/pinned/quarantined evidence, exact-scope attempts, durable pins,
+failed candidate-transition residue, caller rows, and incomplete-generation
+caller artifacts can accumulate under distinct lifecycles. Focused indexes and
+resolver publications keep their separately bounded transition contracts. The
+inventory does not select or justify incidental unbounded job or Investigation
+retention; it records the current behavior so later policy cannot erase it by
+accident. The proof-bundle owner already has an explicit positive-duration
+retention lever; its default is disabled, and it is not a general historical-
+publication policy.
+The correction preserves the unbounded decision but disproves the earlier
+claim that one read-only status PR covered the complete inventory, so T30.6n–
+T30.6r are separate tickets and none is a deletion umbrella.
 
-**T30.6n · Selected retention posture** *(needs T30.6m)* — implement only the
-posture selected and fully specified by T30.6m. A bounded selection adds its
-cap/age/byte, pin/unpin race, batch, active-lease, failed-replacement,
-backup/restore, and same-commit-unit tests. An unbounded selection performs no
-deletion and adds the required bounded status/capacity warning tests. Either
-path preserves pinned proof, active/current generations, immutable cited
-inputs, and latest failed-replacement diagnostics. Full merge bar.
+**T30.6n · Bounded job-history reads and startup migration** *(needs T30.6m)*
+— remove lifetime job count from ordinary read and restart cost without deleting
+or rewriting terminal history. Cover all eight durable tables:
+`connection_sync_job`, `indexing_job`, `repo_fetch_job`, `extraction_job`,
+`candidate_manifest_job`, `resolver_catalog_job`, `caller_leaf_job`, and
+`investigation_run_job`. `RepoStatuses` must scale with current repositories
+and their current/latest job projection, never with all historical indexing
+jobs. Public/internal job-history reads must be explicitly bounded or paged.
+Legacy pending/claim repair must use a durable versioned completion fence or an
+equivalently bounded active-row migration; both the first upgraded boot and
+steady-state store open must avoid scanning, sorting, or materializing terminal
+history. Preserve exact pending coalescing, active lease recovery, retry
+behavior, every terminal row and diagnostic, database backup/restore, and
+existing queue semantics. A prospective current-job projection, supporting
+index, or backfill must install and advance through bounded, restart-resumable
+work; neither first open nor steady state may synchronously index or backfill
+lifetime terminal history. Legacy latest state remains explicitly partial or
+unavailable until any bounded reconstruction completes. Add no terminal
+deletion, TTL, retention configuration, `/api/retention-status`, or cross-owner
+status surface. This is one PR because it is one queue subsystem, two lifetime-
+history consumers, one active-row migration fence, and table-driven eight-kind
+coverage. Cover large terminal histories, all eight kinds, bounded current-
+status cost, interrupted and idempotent migration, explicit partial bootstrap,
+and byte-for-byte/row-count proof that terminal history survives. Full merge
+bar.
+
+**T30.6o · Authorization-first retention-status shell and warning** *(needs
+T30.6n)* — add administrator-only `GET /api/retention-status`, the static
+`unbounded_historical_publication_retention` warning before `store.Open`, and
+the same warning in every response, including an empty installation.
+Authorization completes before any store, filesystem, or cache touch; denial
+consumes no inventory budget. Freeze the complete twelve-owner,
+fifty-two-component registry, a 64 KiB encoded response, independent
+`exact`/`lower_bound`/`unavailable` count and byte states, at most 4,096
+reported identities after one 4,097th sentinel per summary, and one explicitly
+selected/gated aggregate component-work allocation that reserves work for
+every component so an earlier component cannot starve a later one. Do not
+derive that aggregate by multiplying the per-summary cap without measurement.
+Every component and data-volume metric ships explicitly `unavailable`: this
+ticket performs zero store/filesystem inventory scans and never reports an
+exact zero. It is one PR because it owns one authorization/API envelope, one
+static warning site, one fixed registry/budget, and table-driven shape/size
+tests. Cover denial-before-work, empty installation, all component identifiers,
+fixed response size, unavailable-not-zero semantics, allocation/no-starvation,
+and pre-open warning ordering. Add no query index, writer/delete,
+backup/restore, retention configuration, corpus read, content hash, mirror
+lock, child work, or owner lifecycle mutation. Full merge bar.
+
+**T30.6p · Core Surreal retention collectors** *(needs T30.6o)* — populate the
+seven database-backed owner groups and 21 declared components for evidence
+publications/graph/shared atoms, extraction attempts, latest outcomes, the
+three evidence-pin namespaces, proof bundles, all eight durable job tables,
+and caller publication/admission/outcome rows. Preserve the shell's fixed
+shape, response cap, selected aggregate allocation, independent completeness,
+proof-retention disclosure, and non-combinable byte rules; the other 31
+components remain explicitly `unavailable`. The evidence collector
+owns its bounded cross-table current/historical/pinned/quarantined/sweep-
+backlog classification and distinct shared-atom accounting; the remaining
+tables use one shared bounded projection collector. Supporting indexes may
+install/backfill only through bounded, restart-resumable, non-blocking work;
+incomplete bootstrap reports `unavailable` or a labeled lower bound, never
+zero, and no first-open full-history build is allowed. This is one PR because
+it stays inside the store plane with one bespoke evidence query family, one
+generic table collector, and table-driven component coverage. Cover exact-
+under-cap, cap-plus-one, unavailable bootstrap/query failure, shared-atom
+deduplication, every status/namespace/table, and aggregate-budget enforcement.
+Add no deletion, retention configuration, owner writer/lifecycle mutation,
+filesystem inventory, or backup/restore change. Full merge bar.
+
+**T30.6q · Investigation/Workbench retention collector** *(needs T30.6p)* —
+populate the single 24-component Investigation/Workbench owner group,
+including immutable histories, mutable projections, Run/artifact ownership and
+release/override state, access/cursor state, review/Dossier, and Watch rows;
+`investigation_run_job` remains only in T30.6p's durable-job group. Report each
+table and owner-defined lifecycle partition independently so a missing or
+failed component remains visible; the seven derived components remain
+`unavailable`. Any supporting index follows the same bounded,
+restart-resumable, non-blocking install/backfill rule, with no synchronous
+lifetime scan at `store.Open`. This is one PR because it is one store domain,
+one lifecycle vocabulary, and a fixed 24-table registry over a shared bounded
+collector. Cover every exact schema table, owner/release/override partitions,
+partial bootstrap, cap-plus-one, aggregate-budget accounting, and absence of
+the separately counted job table. Add no artifact sweep wiring, deletion,
+retention configuration, owner writer/lifecycle mutation, or backup/restore
+change. Full merge bar.
+
+**T30.6r · Derived retention collectors and complete surface** *(needs
+T30.6q)* — populate the final four owner groups and seven components: candidate
+pointer/files, focused repo state/files, resolver pointer/package-owned files,
+and caller managed artifacts. Reconcile current store authority with
+noncurrent managed residue through point reads and already bounded lifecycle
+manifests/receipts; read or hash no member/leaf payload content. Report
+canonical receipt bytes only where already committed, apparent file bytes
+separately, and data-volume total/available as its own filesystem metric. Every
+directory walk is incremental and sentinel-stopped, with fixed descriptor,
+metadata-byte, stat, and aggregate observation budgets; no `os.ReadDir`-style
+whole-directory materialization, corpus walk, source read, or child work is
+allowed. After this ticket every one of the 52 registered components has an
+implemented collector, while runtime I/O or partial-bootstrap failures remain
+honestly `unavailable` rather than implying completeness. This is one PR
+because it owns four existing derived-publication packages behind one status
+adapter contract and one bounded filesystem-inventory primitive. Cover exact-
+under-cap, cap-plus-one, unreadable/missing roots, current-versus-residue
+classification, symlink/path hardening, descriptor release, aggregate budget,
+64 KiB response, and the complete registry. Add no cleanup, deletion,
+retention configuration, writer/lifecycle mutation, backup/restore change,
+mirror lock, or artifact repair. Full merge bar.
 
 ### T30.6 documentation updates
 
@@ -1033,8 +1149,9 @@ inputs, and latest failed-replacement diagnostics. Full merge bar.
   leaf, complete-generation, ownership, gap, and recovery behavior.
 - T30.6j–T30.6l update Operations and `docs/guides/WORKFLOWS.md` for
   authorization, citations, Caller Map, comparison, and Workbench composition.
-- T30.6m–T30.6n update Operations and backup/restore guidance with the selected
-  retention posture, and update `docs/guides/CONFIGURATION.md` whenever that
+- T30.6m–T30.6r update Operations and backup/restore guidance with the selected
+  retention posture, job-history/Investigation/proof ownership correction, and
+  bounded status contract. Update `docs/guides/CONFIGURATION.md` whenever that
   posture exposes configuration. `docs/MANUAL.md`, `docs/README.md`, roadmap,
   and active or completed backlog change whenever routing or ticket posture
   changes.
@@ -1042,7 +1159,7 @@ inputs, and latest failed-replacement diagnostics. Full merge bar.
   private operator report and all employer-specific identifiers, paths,
   measurements, code, hosts, and infrastructure remain outside the repository.
 
-**T30.7 · Scope-aware UI, operations, and epic demo** *(needs T30.6a–T30.6n)* —
+**T30.7 · Scope-aware UI, operations, and epic demo** *(needs T30.6a–T30.6r)* —
 show the active service unit and exact primary/supporting scope in Search,
 Contracts, Topics, Caller Map, Impact, and Workbench; distinguish focused
 search/local evidence from repository-overlay callers; render durable

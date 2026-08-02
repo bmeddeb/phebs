@@ -1,0 +1,570 @@
+{
+  "schema": "t306m-historical-retention-decision-v2",
+  "decision": "unbounded",
+  "cleanup_changed": false,
+  "reason": "No measured rollback depth justifies destructive default eviction of historical publications, and a generation count would not bound their physical bytes across durable evidence pins, caller leases, shared atoms, and independent database/filesystem owners. The adjacent proof-bundle owner remains under its existing configured lifecycle; this selection does not override it or justify unbounded job or Investigation/Workbench growth. Any new lifecycle or retention policy requires a separate decision.",
+  "escape_hatch": [
+    "monitor and expand or relocate server.data_dir",
+    "take a verified backup before a supported repository removal",
+    "supported repository removal reclaims derived files and makes non-quarantined unpinned evidence sweepable; pins and retention-quarantined evidence remain",
+    "retention-quarantined evidence has no supported deletion procedure in this release and requires a separately reviewed administrator resolution"
+  ],
+  "definitions": [
+    {
+      "term": "historical_evidence_scope",
+      "meaning": "a published exact repository/commit/unit/domain scope that is not the live current scope"
+    },
+    {
+      "term": "durable_pin",
+      "meaning": "any store-accepted evidence_pin retention owner, including proof, checkpoint, and Investigation state, restored with the database"
+    },
+    {
+      "term": "active_lease",
+      "meaning": "a process-local caller-publication lifetime guard, not a durable history pin"
+    },
+    {
+      "term": "backup_snapshot",
+      "meaning": "an external immutable copy that does not pin live installation state"
+    },
+    {
+      "term": "current",
+      "meaning": "state satisfying the complete live repository, unit, policy, pointer, and publication fences, not merely the newest timestamp"
+    },
+    {
+      "term": "decision_relation",
+      "meaning": "whether an owner is selected by the T30.6m unbounded-retention decision, has an unchanged existing/configured lifecycle, or is incidental growth requiring a separate decision"
+    }
+  ],
+  "owners": [
+    {
+      "name": "evidence_publications",
+      "scope": "repository/commit/unit/domain",
+      "components": [
+        "extraction_run",
+        "snapshot_evidence",
+        "assertion",
+        "evidence_atom"
+      ],
+      "decision_relation": "selected_t306m_unbounded_retention",
+      "retention": "historical published and pinned superseded runs are unbounded; quarantined runs require administrator resolution; sweep-eligible backlog remains until bounded maintenance drains it",
+      "protection": "live current scope, every durable evidence pin, and retention quarantine",
+      "backup_restore": "database export and restore retain runs, associations, assertions, atoms, and pins",
+      "count_metric": "all run statuses plus association, assertion, and distinct shared atom rows, partitioned as current/historical published, pinned, quarantined, and sweep backlog",
+      "byte_metric": "unavailable for physical database attribution",
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "extraction_attempts",
+      "scope": "repository/commit/unit/domain",
+      "components": [
+        "extraction_attempt"
+      ],
+      "decision_relation": "selected_t306m_unbounded_retention",
+      "retention": "exact-scope attempts are unbounded",
+      "protection": "attempt history for exact extraction scopes",
+      "backup_restore": "database export and restore retain attempts",
+      "count_metric": "attempt rows",
+      "byte_metric": "unavailable for physical database attribution",
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "extraction_outcomes",
+      "scope": "repository/domain",
+      "components": [
+        "extraction_domain_outcome"
+      ],
+      "decision_relation": "existing_owner_lifecycle_unchanged",
+      "retention": "latest-only per repository/domain",
+      "protection": "latest live-scope failure diagnostic",
+      "backup_restore": "database export imports outcomes; restore selectively clears candidate-control outcomes with candidate authority",
+      "count_metric": "outcome rows by disposition",
+      "byte_metric": "logical encoded receipt bytes; physical database attribution unavailable",
+      "bounds": [
+        {
+          "name": "receipt_bytes_per_outcome",
+          "value": 8192,
+          "unit": "bytes",
+          "kind": "enforced"
+        }
+      ],
+      "accumulating": false,
+      "deletion_authorized": false
+    },
+    {
+      "name": "evidence_pins",
+      "scope": "run/kind",
+      "components": [
+        "evidence_pin[kind=proof-bundle:\u003cbundle_id\u003e]",
+        "evidence_pin[kind=investigation-artifact:\u003cartifact_id\u003e]",
+        "evidence_pin[kind=\u003cother exact store-accepted value\u003e]"
+      ],
+      "decision_relation": "mixed_owner_lifecycles_not_selected_by_t306m",
+      "retention": "pin rows follow their owning existing lifecycle rather than an intrinsic global policy; proof pins accumulate while proof retention is disabled and a positive proof TTL releases only its exact namespace",
+      "protection": "proof, checkpoint, Investigation, and any other store-accepted owner lifecycle",
+      "backup_restore": "database export and restore retain every pin kind",
+      "count_metric": "pin rows and distinct pinned runs partitioned into proof-bundle, investigation-artifact, and other exact kind namespaces",
+      "byte_metric": "unavailable for physical database attribution",
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "proof_bundles",
+      "scope": "immutable bundle",
+      "components": [
+        "proof_bundle"
+      ],
+      "decision_relation": "configured_owner_lifecycle_unchanged",
+      "retention": "proof_bundles.retention defaults to disabled (empty or 0), so bundles accumulate; a positive TTL expires from latest successful materialization through the existing sweeper, which deletes the expired bundle and exactly its proof-bundle:\u003cbundle_id\u003e evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible",
+      "protection": "immutable bundle identity until its configured lifecycle expires it",
+      "backup_restore": "database export and restore retain bundles and their pins",
+      "count_metric": "bundle rows plus referenced-run counts; exact proof pin rows remain reported by the evidence_pins owner",
+      "byte_metric": "logical canonical content bytes; physical database attribution unavailable",
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "durable_job_history",
+      "scope": "queue-table/target/auto-id",
+      "components": [
+        "connection_sync_job",
+        "indexing_job",
+        "repo_fetch_job",
+        "candidate_manifest_job",
+        "extraction_job",
+        "resolver_catalog_job",
+        "caller_leaf_job",
+        "investigation_run_job"
+      ],
+      "decision_relation": "incidental_growth_requires_separate_decision",
+      "retention": "pending coalescing bounds only one pending target slot; claim releases that slot, and done, failed, and canceled rows have no deletion or pruning path",
+      "protection": "pending and active queue correctness; terminal history has no separately selected retention policy",
+      "backup_restore": "database export and restore retain job rows; startup legacy reconciliation currently reads all eight tables",
+      "count_metric": "rows partitioned by exact table and status",
+      "byte_metric": "unavailable for physical database attribution",
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "investigation_workbench_rows",
+      "scope": "investigation/revision/run/artifact/review/watch",
+      "components": [
+        "investigation",
+        "investigation_revision",
+        "investigation_change_brief",
+        "investigation_workbench_mutation",
+        "investigation_workbench_disposition",
+        "investigation_run",
+        "investigation_run_event",
+        "investigation_run_artifact",
+        "investigation_artifact_owner",
+        "investigation_artifact_owner_release",
+        "investigation_artifact_retention_override",
+        "investigation_decision",
+        "investigation_disposition",
+        "investigation_baseline_designation",
+        "investigation_grant",
+        "investigation_cursor",
+        "investigation_creation",
+        "investigation_consumer_snapshot",
+        "investigation_consumer_edge_ledger",
+        "investigation_review_projection",
+        "investigation_review_item",
+        "investigation_dossier",
+        "investigation_watch",
+        "investigation_watch_revision"
+      ],
+      "decision_relation": "incidental_growth_requires_separate_decision",
+      "retention": "semantic history and current projections have no aggregate or runtime-wired sweep; the package-local single-artifact sweep has no production caller and does not bound the other component tables",
+      "protection": "Investigation, Workbench, artifact-owner, review, dossier, authorization, and watch lifecycles",
+      "backup_restore": "database export and restore retain all component rows",
+      "count_metric": "rows partitioned by all 24 exact component tables and owner-specific lifecycle state; investigation_run_job is reported only under durable_job_history",
+      "byte_metric": "unavailable for physical database attribution",
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "candidate_artifacts",
+      "scope": "repository/generation",
+      "components": [
+        "candidate_manifest_publication",
+        "$DATA/candidates managed publication files"
+      ],
+      "decision_relation": "selected_t306m_unbounded_retention",
+      "retention": "one current authority; failed partial generation residue can accumulate until a later successful cleanup or repository removal",
+      "protection": "current store pointer; incomplete residue has no authority",
+      "backup_restore": "excluded and rebuilt",
+      "count_metric": "current and noncurrent managed manifest/member identities",
+      "byte_metric": "apparent file bytes",
+      "bounds": [
+        {
+          "name": "local_projection_artifacts_per_valid_publication",
+          "value": 16384,
+          "unit": "identities",
+          "kind": "enforced"
+        },
+        {
+          "name": "local_projection_content_bytes_per_valid_publication",
+          "value": 4294967296,
+          "unit": "bytes",
+          "kind": "enforced"
+        }
+      ],
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "focused_indexes",
+      "scope": "repository",
+      "components": [
+        "repo indexed analysis-unit/revision state",
+        "$DATA/index focused publication files"
+      ],
+      "decision_relation": "existing_owner_lifecycle_unchanged",
+      "retention": "current and reader transition only",
+      "protection": "current manifest and process-local reader references",
+      "backup_restore": "validated marker-free physical focused publications may be archived; restore re-fences authority and whole indexes otherwise rebuild",
+      "count_metric": "current manifest/member identities",
+      "byte_metric": "apparent file bytes",
+      "accumulating": false,
+      "deletion_authorized": false
+    },
+    {
+      "name": "resolver_catalogs",
+      "scope": "installation/repository",
+      "components": [
+        "resolver_catalog_publication",
+        "$DATA/resolver-catalogs package-owned files"
+      ],
+      "decision_relation": "existing_owner_lifecycle_unchanged",
+      "retention": "current replacement transition plus package-owned stages and residue; lifecycle inventories refuse at their operational scan bound",
+      "protection": "current store pointer",
+      "backup_restore": "validated marker-free physical publications may be archived, then authority is cleared and re-fenced",
+      "count_metric": "all package-owned installation-root entries and apparent bytes, with per-repository current manifest/member identities reported separately",
+      "byte_metric": "current canonical member bytes and all package-owned apparent file bytes reported separately",
+      "bounds": [
+        {
+          "name": "member_count_per_publication",
+          "value": 256,
+          "unit": "identities",
+          "kind": "enforced"
+        },
+        {
+          "name": "canonical_bytes_per_publication",
+          "value": 536870912,
+          "unit": "bytes",
+          "kind": "enforced"
+        },
+        {
+          "name": "catalog_root_inventory_scan_entries",
+          "value": 32768,
+          "unit": "identities",
+          "kind": "enforced_operational"
+        },
+        {
+          "name": "modeled_clean_replacement_disk_bytes",
+          "value": 1084227584,
+          "unit": "bytes",
+          "kind": "design"
+        }
+      ],
+      "accumulating": false,
+      "deletion_authorized": false
+    },
+    {
+      "name": "caller_rows",
+      "scope": "repository/generation/pair",
+      "components": [
+        "caller_generation_publication",
+        "caller_generation_admission",
+        "caller_leaf_outcome"
+      ],
+      "decision_relation": "selected_t306m_unbounded_retention",
+      "retention": "admissions and outcomes are unbounded across generations",
+      "protection": "current generation and latest live-generation terminal diagnostics",
+      "backup_restore": "database export contains rows, but restore deliberately clears caller pointers, admissions, and outcomes",
+      "count_metric": "generation publications, admissions, and pair outcomes",
+      "byte_metric": "canonical bytes from successful receipts where available",
+      "accumulating": true,
+      "deletion_authorized": false
+    },
+    {
+      "name": "caller_artifacts",
+      "scope": "repository/generation/pair",
+      "components": [
+        "$DATA/caller-leaves managed manifests and leaf artifacts"
+      ],
+      "decision_relation": "selected_t306m_unbounded_retention",
+      "retention": "successful incomplete-generation residue is unbounded until directory capacity refuses new work",
+      "protection": "current complete publication and active process-local leases",
+      "backup_restore": "only validated unambiguous marker-free complete bytes may be archived; historical coverage is not promised, incomplete residue is omitted, and restore clears authority",
+      "count_metric": "managed manifests and leaf artifacts",
+      "byte_metric": "canonical receipt bytes and apparent file bytes",
+      "bounds": [
+        {
+          "name": "repository_directory_entries",
+          "value": 65536,
+          "unit": "identities",
+          "kind": "enforced"
+        },
+        {
+          "name": "canonical_bytes_per_admitted_complete_generation",
+          "value": 536870912,
+          "unit": "bytes",
+          "kind": "enforced"
+        },
+        {
+          "name": "incomplete_cap_plus_one_success_bytes",
+          "value": 603979776,
+          "unit": "bytes",
+          "kind": "derived"
+        }
+      ],
+      "accumulating": true,
+      "deletion_authorized": false
+    }
+  ],
+  "growth": [
+    {
+      "historical_transitions": 1,
+      "evidence_admission_rows_per_domain": 25000,
+      "candidate_failed_transition_residue_sets": 1,
+      "caller_incomplete_generation_success_bytes": 603979776
+    },
+    {
+      "historical_transitions": 10,
+      "evidence_admission_rows_per_domain": 250000,
+      "candidate_failed_transition_residue_sets": 10,
+      "caller_incomplete_generation_success_bytes": 6039797760
+    },
+    {
+      "historical_transitions": 100,
+      "evidence_admission_rows_per_domain": 2500000,
+      "candidate_failed_transition_residue_sets": 100,
+      "caller_incomplete_generation_success_bytes": 60397977600
+    }
+  ],
+  "durable_job_growth": {
+    "default_resync_interval": "1h0m0s",
+    "assumptions": [
+      "365-day common year",
+      "default sync.resync_interval",
+      "one healthy continuously draining remote connection",
+      "each resync tick produces one connection_sync_job row and one indexing_job row per repository whether or not repository content changed",
+      "each modeled job reaches a terminal state before the next tick, so pending coalescing does not suppress the next row"
+    ],
+    "excluded_claims": [
+      "no time-to-degradation or capacity-exhaustion estimate",
+      "no aggregate downstream rate for repo_fetch_job, candidate_manifest_job, extraction_job, resolver_catalog_job, caller_leaf_job, or investigation_run_job"
+    ],
+    "points": [
+      {
+        "repositories": 1,
+        "resyncs_per_common_year": 8760,
+        "indexing_job_rows_per_common_year": 8760,
+        "connection_sync_job_rows_per_common_year": 8760
+      },
+      {
+        "repositories": 10,
+        "resyncs_per_common_year": 8760,
+        "indexing_job_rows_per_common_year": 87600,
+        "connection_sync_job_rows_per_common_year": 8760
+      },
+      {
+        "repositories": 100,
+        "resyncs_per_common_year": 8760,
+        "indexing_job_rows_per_common_year": 876000,
+        "connection_sync_job_rows_per_common_year": 8760
+      }
+    ]
+  },
+  "status_contract": {
+    "endpoint": "GET /api/retention-status",
+    "authorization": "administrator only",
+    "inventory_scope": "the twelve declared groups cover T30.6 publication and adjacent persisted domains, not every database table; audit, analytics, authentication, and other installation state retain their separately documented lifecycles",
+    "reported_identity_limit_per_summary": 4096,
+    "scan_identity_limit_per_summary": 4097,
+    "component_coverage": "every declared owner component; evidence_pin rows additionally partition into proof-bundle, investigation-artifact, and other exact kind namespaces",
+    "component_scan_allocation": "unresolved in T30.6m; T30.6o must select and gate a fixed-work allocation that cannot hide a later component behind an earlier component's growth while its initial shell performs zero inventory scans, then T30.6p through T30.6r populate collectors within that allocation",
+    "encoded_response_byte_limit": 65536,
+    "completeness_vocabulary": [
+      "exact",
+      "lower_bound",
+      "unavailable"
+    ],
+    "physical_database_bytes": {
+      "value": null,
+      "unit": "bytes",
+      "completeness": "unavailable"
+    },
+    "warning_code": "unbounded_historical_publication_retention",
+    "empty_sample": {
+      "scanned_identities": 0,
+      "count": {
+        "value": 0,
+        "unit": "identities",
+        "completeness": "exact"
+      },
+      "bytes": {
+        "value": 0,
+        "unit": "bytes",
+        "completeness": "exact"
+      },
+      "truncated": false,
+      "warning_code": "unbounded_historical_publication_retention"
+    },
+    "cap_plus_one_sample": {
+      "scanned_identities": 4097,
+      "count": {
+        "value": 4096,
+        "unit": "identities",
+        "completeness": "lower_bound"
+      },
+      "bytes": {
+        "value": 4294967296,
+        "unit": "bytes",
+        "completeness": "lower_bound"
+      },
+      "truncated": true,
+      "warning_code": "unbounded_historical_publication_retention"
+    },
+    "invalid_byte_metric_sample": {
+      "scanned_identities": 1,
+      "count": {
+        "value": 1,
+        "unit": "identities",
+        "completeness": "exact"
+      },
+      "bytes": {
+        "value": null,
+        "unit": "bytes",
+        "completeness": "unavailable"
+      },
+      "truncated": false,
+      "warning_code": "unbounded_historical_publication_retention"
+    }
+  },
+  "implementation_proof": {
+    "tickets": [
+      {
+        "ticket": "T30.6n",
+        "purpose": "bounded durable-job read paths and startup legacy-migration repair",
+        "changes": [
+          "replace RepoStatuses lifetime indexing-job materialization with bounded latest-per-live-repository work",
+          "stop both the first upgraded store Open and steady-state Open from loading and sorting terminal history across all eight job tables",
+          "permit schema or latest-projection work needed for bounded reads, with bounded resumable reconstruction of legacy latest state",
+          "report legacy latest state as explicitly partial or unavailable until bounded resumable reconstruction completes",
+          "cover terminal-history growth while preserving pending, active, retry, successor, and repository-removal behavior"
+        ],
+        "excluded": [
+          "job-row deletion or retention policy",
+          "cross-owner status or warning",
+          "first-open full-history index build or backfill"
+        ],
+        "fits_one_pr": true,
+        "size_proof": [
+          "one queue subsystem",
+          "two lifetime-history consumers",
+          "one active-row migration fence",
+          "table-driven coverage across all eight job kinds"
+        ]
+      },
+      {
+        "ticket": "T30.6o",
+        "purpose": "authorization-first retention-status shell, fixed registry and budgets, and unconditional warning",
+        "changes": [
+          "fixed registry and scan budgets for all twelve owners and fifty-two declared components",
+          "administrator-only fixed-shape retention status with independent completeness labels",
+          "administrator authorization completes before any store or filesystem inventory or cache touch; unauthorized requests consume none of the 52-component scan budget",
+          "all collectors report explicitly unavailable and perform zero inventory scans until their follow-up ticket lands",
+          "unconditional capacity warning before store.Open and in every status response",
+          "fixed-work component allocation, neutral cap-plus-one, and authorization tests"
+        ],
+        "excluded": [
+          "retained-owner writer, lifecycle, cleanup, or data mutations",
+          "evidence, proof, job, Investigation, manifest, or artifact deletion",
+          "new retention configuration",
+          "backup or restore mutation",
+          "store or filesystem inventory collectors and inventory-cache population"
+        ],
+        "fits_one_pr": true,
+        "size_proof": [
+          "fixed registry of twelve owners and fifty-two declared components",
+          "one fixed response, pre-inventory administrator authorization, and warning surface",
+          "one shared fixed-work budget and completeness model",
+          "table-driven registry, authorization, zero-scan, and response-bound coverage",
+          "no store or filesystem collector implementation"
+        ]
+      },
+      {
+        "ticket": "T30.6p",
+        "purpose": "bounded core SurrealDB retention-status collectors",
+        "changes": [
+          "bounded collectors for evidence_publications, extraction_attempts, extraction_outcomes, evidence_pins, proof_bundles, durable_job_history, and caller_rows",
+          "one bespoke evidence-graph classifier plus generic bounded SurrealDB table summaries",
+          "bounded, resumable, nonblocking install and backfill for any separately justified bounded-query index",
+          "replace only these seven owners' unavailable shell values with independently labeled exact, lower_bound, or unavailable summaries"
+        ],
+        "excluded": [
+          "Investigation/Workbench or filesystem publication collectors",
+          "retained-owner writer, lifecycle, cleanup, or data mutations",
+          "first-open full-history index build or backfill"
+        ],
+        "fits_one_pr": true,
+        "size_proof": [
+          "seven owners and twenty-one declared components",
+          "one bespoke evidence-graph classifier",
+          "one generic bounded SurrealDB table-summary path",
+          "table-driven bounds and completeness coverage",
+          "no filesystem adapters"
+        ]
+      },
+      {
+        "ticket": "T30.6q",
+        "purpose": "bounded Investigation and Workbench retention-status collector",
+        "changes": [
+          "bounded collector for investigation_workbench_rows across its exact twenty-four component tables and owner lifecycle state",
+          "bounded, resumable, nonblocking install and backfill for any separately justified bounded-query index",
+          "replace only the Investigation/Workbench owner's unavailable shell value with independently labeled exact, lower_bound, or unavailable summaries"
+        ],
+        "excluded": [
+          "other SurrealDB or filesystem publication collectors",
+          "Investigation/Workbench writer, lifecycle, cleanup, or data mutations",
+          "first-open full-history index build or backfill"
+        ],
+        "fits_one_pr": true,
+        "size_proof": [
+          "one owner and twenty-four exact component tables",
+          "one bounded generic table-summary path plus one owner-lifecycle classifier",
+          "table-driven exact-table, lifecycle-state, bounds, and completeness coverage"
+        ]
+      },
+      {
+        "ticket": "T30.6r",
+        "purpose": "bounded derived-publication authority and filesystem collectors completing retention status",
+        "changes": [
+          "bounded collectors for candidate_artifacts, focused_indexes, resolver_catalogs, and caller_artifacts",
+          "reconcile current store authority with candidate, focused-index, resolver-catalog, and caller-leaf filesystem inventories",
+          "bound every installation-root and repository-directory scan with explicit cap-plus-one and independently labeled completeness",
+          "replace the final four owners' unavailable shell values and complete the twelve-owner retention-status surface"
+        ],
+        "excluded": [
+          "publication writer, lifecycle, cleanup, or data mutations",
+          "unbounded directory walk or filesystem inventory",
+          "new retention configuration or deletion"
+        ],
+        "fits_one_pr": true,
+        "size_proof": [
+          "four owners and seven declared components",
+          "four fixed filesystem adapters plus bounded store-authority lookups",
+          "explicit directory-scan budgets and cap-plus-one behavior",
+          "table-driven authority, inventory-bound, and completeness coverage"
+        ]
+      }
+    ],
+    "fits_one_pr": false,
+    "downstream_gate": "T30.7 depends on completion through T30.6r",
+    "future_bounded_policy": "requires a new ADR plus separate evidence/pin, proof-bundle, durable-job, Investigation/Workbench, caller-row, caller-filesystem/lease, and restore-enablement tickets"
+  }
+}

@@ -4897,8 +4897,9 @@ queue-before-clear ordering, while a live exact admitted writer may replace
 only a commitment-invalid same-generation row and advances publication
 revision. A different commitment-valid result remains a conflict.
 Retained historical T30.6h pair
-artifacts still have no installation-wide disk-retention bound. T30.6m/T30.6n
-remain the explicit decision and implementation boundary for that posture.
+artifacts still have no installation-wide disk-retention bound. T30.6m records
+the explicit decision, T30.6n bounds job-history read/startup work, and
+T30.6o–T30.6r own the dependency-ordered status/warning follow-through.
 
 AC met: writer/schema identity and migration; exact outcome recomputation;
 partial and terminal invisibility; stale lease/authority rejection; same-HEAD
@@ -5324,3 +5325,176 @@ accuracy, compatibility, migration completion, decommission safety,
 production validation, or historical-publication retention bound.
 `GATE2-V2` remains `NOT_ESTABLISHED`; T30.6m owns the next retention decision
 and changes no cleanup behavior.
+
+### T30.6m · Historical-publication retention decision
+
+**T30.6m ✅ · Historical-publication retention decision** *(2026-08-01; needs
+T30.6l)* — selects the current unbounded posture explicitly and changes no
+cleanup behavior. Existing installations do not silently acquire a destructive
+keep-two, age, or byte default, and no historical-publication configuration key
+is added. Review grounding corrected the initial nine-group inventory to twelve
+retained owner groups; the selected unbounded posture is unchanged. No neutral
+evidence establishes a safe rollback depth, while a generation count cannot
+establish physical storage: one evidence run admits up to 25,000 association-
+plus-assertion rows, durable pins grow independently, atoms may be shared,
+caller readers hold process-local leases, and database allocation/compaction
+cannot be equated with canonical filesystem bytes. Terminal job history,
+Investigation/Workbench state, and default-retained proof bundles add three
+independent growth mechanisms that the first receipt omitted. Recording them
+does not select or justify incidental unbounded job or Investigation retention;
+it prevents a future policy from treating those rows as ownerless.
+
+The retained owner and invariant matrix is:
+
+| Owner | Current lifecycle/retention | Protection | Backup/restore |
+| --- | --- | --- | --- |
+| evidence publications | historical published and pinned-superseded runs remain; quarantined runs require administrator resolution; sweep-eligible and in-progress backlog remains until bounded maintenance drains it; all statuses, association/assertion rows, and distinct shared atoms are reported separately | the complete live-current fence, every durable `evidence_pin`, and retention quarantine | database restore retains the graph and pins |
+| extraction attempts | exact-scope attempts accumulate | exact extraction-scope history | restore retains attempts |
+| extraction outcomes | latest-only per repository/domain; each logical diagnostic receipt is capped at 8 KiB | the latest live-scope failure diagnostic | restore imports outcomes, then selectively clears candidate-control outcomes with candidate authority |
+| evidence pins | pin rows and the superseded evidence they protect accumulate according to each proof, Investigation, checkpoint, or other owner lifecycle | every store-accepted pin owner lifecycle | restore retains every pin kind; only its owning lifecycle may release it |
+| proof bundles | bundle rows and their proof-owned pins remain indefinitely by default; a positive `proof_bundles.retention` duration enables the existing bounded-batch expiry sweep | immutable bundle identity and exact proof pin namespace | database restore retains bundles and pins; configured expiry deletes one bundle and releases only its proof-owned pins before ordinary evidence GC |
+| durable job history | terminal rows accumulate across all eight job tables; pending-key coalescing bounds only in-flight identity, and repository removal cancels relevant pending work without deleting history | active claim/lease and retry state plus retained terminal diagnostics | database restore retains every job row; legacy startup repair must not materialize terminal history after T30.6n |
+| Investigation/Workbench graph | rows across 24 domain tables accumulate; immutable histories and mutable projections have no whole-domain or repository-removal collection, while individual RunArtifact collection is owner-gated | Investigation authorization, immutable correction/supersession history, artifact owners, releases, and overrides | raw database backup/restore retains the complete graph and Investigation-owned evidence pins |
+| candidate artifacts | authority is current-only, but failed partial generation files can accumulate without a root entry/byte cap until later successful cleanup or repository removal | current store pointer; incomplete residue has no authority | excluded and rebuilt |
+| focused indexes | current publication plus process-local reader transition only | current manifest and active mmap readers | filesystem discovery may archive validated marker-free physical publications; restore re-fences authority, and whole indexes otherwise rebuild |
+| resolver catalogs | current pointer plus bounded replacement transition and package-owned stages/residue; top-level installation-root inventory refuses after its enforced 32,768-entry operational scan threshold, but that is not a storage ceiling; the 1,034 MiB clean-replacement figure is only a design model | current store pointer | filesystem discovery may archive validated marker-free physical publications, then authority is cleared and re-fenced |
+| caller rows | current generation-publication pointers plus generation admissions and pair outcomes are retained; admissions and outcomes accumulate across generations | current generation and the latest live-generation terminal diagnostic | database export contains them, but restore deliberately clears pointers, admissions, and outcomes |
+| caller artifacts | current complete generation and successful incomplete-generation residue accumulate until directory capacity refuses work | current complete pointer and process-local active leases | validated, unambiguous, marker-free complete bytes may be archived, but historical coverage is not promised; incomplete residue is omitted and restore clears authority |
+
+“Current” means the complete live repository, commit, unit, policy, candidate,
+and publication fence—not the newest timestamp or merely
+`status=published`. A durable pin is any store-accepted `evidence_pin`
+retention owner—including proof, checkpoint, Investigation, and other pin
+kinds—and is restored with the database. A caller lease is a process-local
+file-lifetime guard. A backup snapshot is an external immutable copy, not a
+live retention owner. These terms are deliberately not collapsed into a
+generic pin. The latest failed replacement is also owner-specific: evidence
+retains its live exact-scope attempt plus latest-only domain outcome; caller
+retains current-generation terminal admission/outcomes only in the live
+installation, because restore clears that derived state before
+reconstruction. Proof-bundle retention is also owner-specific: omission or
+zero keeps bundles and their pins indefinitely, while a configured positive
+duration activates the existing bounded bundle sweep. That lever neither
+defines historical-publication retention nor releases Investigation,
+checkpoint, or other pin kinds.
+
+The restore order remains fail-closed. Precious database evidence and pins are
+imported and migrated before ordinary server maintenance starts. Candidate,
+resolver, and caller authority is then cleared or re-fenced according to its
+existing derived-state contract. No historical eligibility is inferred from a
+temporarily absent candidate or caller pointer, and this ticket adds no
+restore-time sweep. Existing repository deletion and current-publication
+retirement paths remain unchanged, but neither authorizes removal of a durable
+pin or retention-quarantined evidence. Repository removal also leaves terminal
+job history, proof bundles, and the Investigation/Workbench graph intact.
+
+The neutral receipt at `spike/t306m/results.json` records linear logical growth
+without inventing physical-byte attribution. One, ten, and one hundred
+maximum-admission historical transitions contribute 25,000, 250,000, and
+2,500,000 association-plus-assertion admission rows per evidence domain; the
+same number of incomplete cap-plus-one caller generations may retain 576 MiB,
+5.625 GiB, and 56.25 GiB of successful canonical leaf content. Shared atoms,
+database overhead, manifests, stages, and filesystem allocation are excluded
+and remain explicitly unavailable as one exact total. A separate default-rate
+receipt assumes one healthy continuously draining remote connection and a
+365-day common year: 1, 10, and 100 repositories generate 8,760, 87,600, and
+876,000 `indexing_job` rows, respectively, plus 8,760
+`connection_sync_job` rows. It makes no degradation-horizon or downstream-job
+rate claim.
+
+The original claim that one read-only T30.6n was proven sufficient is withdrawn.
+The missing job owner exposes unbounded work before an administrator could
+reach a status endpoint: `RepoStatuses` reads lifetime indexing history, and
+the legacy eight-table repair lists terminal history during store open.
+T30.6n therefore lands first as bounded job-history reads and startup
+migration. `RepoStatuses` must scale with current repositories/current job
+projection, public and internal history reads must be bounded or paged, and a
+durable versioned completion fence or equivalent bounded active-row migration
+must make both the first upgraded boot and steady-state open avoid scanning,
+sorting, or materializing terminal history. It preserves every row and
+diagnostic and adds no deletion, TTL, or retention configuration. Any current-
+job projection, index, or legacy reconstruction must install and advance in
+bounded restart-resumable work; legacy latest state is explicitly partial or
+unavailable until it completes, and first open never synchronously builds an
+index or backfills lifetime terminal history. Its one-PR proof is one queue
+subsystem, two lifetime-history consumers, one active-row migration fence, and
+table-driven coverage across the eight kinds.
+
+T30.6o then adds only the administrator-authorized
+`GET /api/retention-status` shell, the complete twelve-owner/fifty-two-
+component registry, and the unconditional
+`unbounded_historical_publication_retention` warning before `store.Open` and in
+every response. Authorization precedes any store, filesystem, or cache touch.
+The 64 KiB shape freezes independent completeness and the per-summary 4,096
+report/4,097 sentinel. T30.6o separately selects and gates one aggregate
+component-work allocation that prevents an early component from starving a
+later one; it does not multiply the per-summary cap into an unmeasured scan
+budget. Every component and data-volume metric remains explicitly
+`unavailable`; T30.6o performs zero inventory scans and never converts absence
+of a collector into exact zero. Its one-PR proof is one API/auth envelope, one
+warning site, one fixed registry/budget, and table-driven shape tests.
+
+T30.6p populates the seven core Surreal owner groups and 21 components:
+evidence publications/graph/shared atoms, attempts, outcomes, three pin
+namespaces, proof bundles, eight job tables, and three caller-row tables. One
+bounded cross-table evidence query family owns current/historical/pinned/
+quarantined/sweep-backlog and distinct-atom accounting; the remaining tables
+use one generic bounded projection collector. T30.6q separately populates the
+24 Investigation/Workbench tables and their owner-defined lifecycle
+partitions, excluding the already counted `investigation_run_job`. For both
+tickets, supporting indexes install/backfill only through bounded,
+restart-resumable, non-blocking work; partial bootstrap is unavailable or a
+labeled lower bound, and first open never builds an index across lifetime
+history. Their one-PR proofs are respectively one store-plane evidence/generic
+collector family and one fixed Investigation lifecycle/table family.
+
+T30.6r populates the remaining seven components across candidate, focused,
+resolver, and caller-artifact owners. It reconciles point-read store authority
+with bounded lifecycle manifests/receipts and filesystem identity/stat
+projections, uses incremental sentinel-stopped directory iteration plus fixed
+descriptor/metadata-byte/stat budgets, and reads or hashes no member/leaf
+payload content. It also reports data-volume total/available as a separate
+filesystem metric. Only after T30.6r does every registered component have an
+implemented collector; runtime I/O or incomplete bootstrap can still
+report `unavailable` and creates no completeness claim. Its one-PR proof is
+four existing derived-publication packages behind one status adapter and one
+bounded directory primitive.
+
+Across T30.6o–T30.6r, an earlier growing component cannot hide a later one;
+cap-plus-one is a lower bound, not a reason to scan further. Audit, analytics,
+authentication, and other installation state keep their separately documented
+lifecycles outside this endpoint's declared scope. These tickets add no owner
+writer, deletion, cleanup, backup/restore, retention configuration, corpus
+read, content hash, mirror lock, child process, or lifecycle mutation.
+
+The only unconditional live-capacity escape is to monitor and expand or
+relocate `server.data_dir`. Take a verified backup before supported repository
+removal. Removal reclaims derived files and makes non-quarantined unpinned
+evidence sweepable, but pins, retention-quarantined evidence, terminal job
+history, proof bundles, and Investigation/Workbench rows remain. A positive
+`proof_bundles.retention` duration is the documented owner-specific lever for
+expired bundles and their exact proof pins; it is not an installation-wide
+escape. Retention-quarantined evidence has no supported deletion procedure in
+this release and requires a separately reviewed administrator resolution.
+Never delete evidence rows, caller files, manifests, jobs, Investigation rows,
+bundles, or pins by hand. Any future bounded posture requires a new ADR and
+separate evidence/pin, terminal-job deletion/diagnostic, Investigation
+lifecycle/release, caller-row, caller-filesystem/lease, and restore-enablement
+tickets; none of T30.6n–T30.6r is a hidden deletion umbrella.
+
+The decision adds no startup, request, sync-tick, retry, publication, or
+maintenance work. Existing costs include the candidate-root reconciliation,
+lifetime job materialization in `RepoStatuses`, and the legacy all-job startup
+migration. T30.6n bounds the job paths without deleting their history; T30.6o
+emits its static warning before store open and publishes only the zero-scan
+unavailable shell, while T30.6p–T30.6r populate the bounded collectors in
+owner-plane order. The executable gate loads a fixed JSON receipt, checks the
+corrected twelve-owner inventory and every grouped component, validates
+exported outcome/candidate/resolver/caller capacity inputs and the retained T20
+evidence admission, and proves the separate 4,096-report/4,097-scan exact and
+cap-plus-one status model. It establishes no bounded retention,
+physical-database-byte, runtime-use, accuracy, completeness,
+migration-completion, production-validation, or decommission-safety claim.
+`GATE2-V2` remains `NOT_ESTABLISHED`; T30.6n owns job-read/startup containment,
+T30.6o owns the warning/status shell, and T30.6p–T30.6r own collector
+completion.

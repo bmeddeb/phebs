@@ -56,11 +56,34 @@ topic, consumer, attribution, and Workbench implementation evidence; binds a
 designated typed index to its real supporting path; and keys attempts, runs,
 coverage, and consumers by exact repository, indexed HEAD, unit digest, and
 domain. Legacy whole-repository evidence remains readable only in its empty-unit
-scope, and same-HEAD unit changes cannot reuse it. Exact historical
-commit/unit/domain publications are intentionally retained outside the current
-sweep, so Epic 30 still needs a reviewed bounded-unpinned retention decision
-(or an explicit decision to keep that unbounded posture); T30.6m selects it and
-T30.6n implements only the selected posture. T30.6a now emits one
+scope, and same-HEAD unit changes cannot reuse it. T30.6m now explicitly keeps
+exact historical commit/unit/domain publications, retention-quarantined
+evidence, attempts, failed candidate-transition residue, caller rows, and
+incomplete-generation caller artifacts unbounded; sweep backlog also occupies
+capacity until maintenance drains it. Durable pins accumulate according to
+their mixed owner lifecycles rather than one global policy. Review grounding
+expanded that inventory from nine to twelve grouped owners: terminal history
+in all eight job
+tables, the 24-table Investigation/Workbench graph, and default-retained proof
+bundles also accumulate. Proof bundles already expose a positive-duration TTL,
+but it defaults disabled and governs only that owner. Inventorying the job and
+Investigation groups records incidental current behavior; it does not select
+or justify that growth as a future policy. No neutral evidence
+justifies a destructive rollback depth, and a generation count would not bind
+bytes across pins, leases, and independent owners. T30.6n will first bound
+job-history reads and both first-upgrade and steady-state startup migration
+without scanning terminal history or deleting terminal diagnostics. T30.6o
+then adds the authorization-first status shell, complete 52-component registry
+and selected aggregate component-work allocation, and unconditional pre-store-
+open capacity warning while reporting every component unavailable and
+performing zero inventory scans. T30.6p fills
+the 21 core Surreal components, T30.6q fills the 24 Investigation/Workbench
+components, and T30.6r fills the seven derived store/filesystem components and
+completes the surface. T30.6p/T30.6q cannot move lifetime work into a
+synchronous index build or backfill during store open; T30.6r uses bounded
+incremental directory scans. Partial bootstrap or runtime I/O remains
+explicitly unavailable, never exact zero. None of T30.6n–T30.6r adds deletion,
+retention configuration, or owner lifecycle mutation. T30.6a now emits one
 non-authoritative, source-free, 64 KiB-capped extraction operation report per
 repository job. Shared queue, mirror-lock, pointer, and strict-open work is
 recorded once at job level; nested domains carry only frozen generic outcomes
@@ -118,11 +141,15 @@ aggregate-bounded domain scheduling, T30.6d candidate-v4 source-lane
 classification, T30.6e focused local-evidence base-lane consumption, and
 T30.6f resolver-catalog lifecycle, T30.6g bounded resolver materialization,
 T30.6h direct caller-leaf execution artifacts, T30.6i atomic complete
-caller-generation publication, T30.6j authorized exact Caller Map reads, and
-T30.6k exact caller comparison integration and T30.6l exact Workbench Impact
-caller integration are shipped; T30.6m historical-publication retention
-decision is next. T30.6g registers the
-ordered gRPC/Thrift resolver adapters and materializes one immutable catalog
+caller-generation publication, T30.6j authorized exact Caller Map reads,
+T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
+caller integration, and T30.6m historical-publication retention decision are
+shipped; T30.6n bounded job-history reads and startup migration is next,
+followed by the T30.6o status shell, T30.6p core Surreal collectors, T30.6q
+Investigation/Workbench collector, and T30.6r derived collectors. T30.7 waits
+for that complete sequence.
+T30.6g registers the ordered gRPC/Thrift resolver adapters and materializes one
+immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,
 `layout-snapshot.json`, and `generated-from-snapshot.json` inputs plus each
 mapped generated `base`-lane Go source required by resolver pack 1.1.0,
@@ -208,7 +235,8 @@ hidden signed full-incarnation authority token without relisting, minting
 citations, or creating a new request binding. Focused-local coverage remains a
 separate plane, and checklist identity excludes rotating cursors and citation
 tokens. Exact comparison and Workbench composition create no completeness,
-migration-completion, decommission-safety, or historical-retention claim.
+migration-completion, decommission-safety, or bounded historical-retention
+claim. T30.6m records the separate explicit unbounded capacity posture.
 A physical test-search overlay,
 test-source association, automatic unit discovery, SCIP generation,
 pack-specific recognizer expansion, and per-file parser degradation remain
