@@ -12,6 +12,8 @@ import { tokenize } from '../highlight'
 import { SearchIcon, CopyIcon, CheckIcon, OpenIcon, ChevronRight, ChevronDown } from '../icons'
 import { isAbortError, relTime, repoFilter, runeColumnToUTF16Offset, splitQueryTerms } from '../util'
 import RepositoryBrowser from '../RepositoryBrowser'
+import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
+import { analysisScopeFromRepoStatus } from '../components/analysisScope'
 
 type Phase = 'idle' | 'streaming' | 'stopped' | 'done' | 'error'
 
@@ -117,6 +119,113 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
     }
     return [...m.entries()]
   }, [files])
+
+  const scopePresentation = useMemo(() => {
+    const byName = new Map(repositories.map((repository) => [
+      repository.name,
+      repository,
+    ]))
+    const resultScopes = groups.flatMap(([name, resultFiles]) => {
+      const repository = byName.get(name)
+      if (!repository) return []
+      const resultCommits = new Set(resultFiles.map((file) => file.ref).filter(Boolean))
+      const scope = analysisScopeFromRepoStatus(repository)
+      // Search can target an explicit revision. Bind the presentation to the
+      // result revision when it is singular; omit commit authority rather
+      // than attaching the repository's current HEAD to a mixed-revision set.
+      scope.commit = resultCommits.size === 1
+        ? resultCommits.values().next().value
+        : undefined
+      return [scope]
+    })
+    if (groups.length > 0) {
+      const missingScopeCount = groups.length - resultScopes.length
+      return {
+        scopes: resultScopes,
+        gaps: missingScopeCount > 0 ? [{
+          state: repositoriesLoading ? 'processing' : 'unavailable',
+          code: repositoriesLoading
+            ? 'repository_status_loading'
+            : 'repository_status_unavailable',
+          reason: `${missingScopeCount} result ${missingScopeCount === 1 ? 'repository has' : 'repositories have'} no loaded scope projection${repositoriesLoading ? ' yet' : ''}.`,
+        }] : [],
+      }
+    }
+    if (phase !== 'done' || !urlQuery) return { scopes: [], gaps: [] }
+    if (repositoriesLoading) {
+      return {
+        scopes: [],
+        gaps: [{
+          state: 'processing',
+          code: 'repository_status_loading',
+          reason: 'The query is complete; its repository-scope projection is still loading.',
+        }],
+      }
+    }
+    if (repositoriesError) {
+      return {
+        scopes: [],
+        gaps: [{
+          state: 'unavailable',
+          code: 'repository_status_unavailable',
+          reason: 'The completed query has no loaded repository-scope authority.',
+        }],
+      }
+    }
+
+    const terms = splitQueryTerms(urlQuery)
+    const repositoryTerms = terms.filter((term) => /^-?repo:/.test(term))
+    const exactRepositoryByTerm = new Map(repositories.map((candidate) => [
+      repoFilter(candidate.name),
+      candidate,
+    ]))
+    const exactRepositories = repositoryTerms.map((term) =>
+      exactRepositoryByTerm.get(term))
+    if (exactRepositories.some((candidate) => !candidate)) {
+      return {
+        scopes: [],
+        gaps: [{
+          state: 'unavailable',
+          code: 'search_scope_filter_not_projectable',
+          reason: 'The completed zero-result query uses a repository filter that cannot be mapped exactly to the loaded repository-status projection.',
+        }],
+      }
+    }
+    const targets = repositoryTerms.length > 0
+      ? exactRepositories.filter((candidate) => candidate !== undefined)
+      : repositories
+    if (targets.length === 0) {
+      return {
+        scopes: [],
+        gaps: [{
+          state: 'empty',
+          code: 'no_visible_search_repositories',
+          reason: 'The completed query had no visible indexed repository scope.',
+        }],
+      }
+    }
+    const revisionFiltered = terms.some((term) => /^-?rev:/.test(term))
+    if (revisionFiltered) {
+      return {
+        scopes: [],
+        gaps: [{
+          state: 'unavailable',
+          code: 'search_revision_scope_not_projectable',
+          reason: 'The completed zero-result revision query has no result commit from which to project exact revision authority.',
+        }],
+      }
+    }
+    const indexedTargets = targets.filter((target) => target.indexed_commit_hash)
+    const unavailableCount = targets.length - indexedTargets.length
+    return {
+      scopes: indexedTargets.map(analysisScopeFromRepoStatus),
+      gaps: unavailableCount > 0 ? [{
+        state: 'unavailable',
+        code: 'search_index_scope_unavailable',
+        reason: `${unavailableCount} targeted ${unavailableCount === 1 ? 'repository has' : 'repositories have'} no current indexed commit from which to project exact search scope.`,
+      }] : [],
+    }
+  }, [groups, phase, repositories, repositoriesError, repositoriesLoading, urlQuery])
 
   // files reachable by keyboard: those in expanded groups, in render order
   const visible = useMemo(
@@ -297,6 +406,20 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
         repoCount={repoCount}
         showNavigation={visible.length > 0}
       />
+
+      {(scopePresentation.scopes.length > 0 || scopePresentation.gaps.length > 0) && (
+        <div className={css({ marginTop: '14px' })}>
+          <AnalysisScopePanel
+            id="search-analysis-scope"
+            scopes={scopePresentation.scopes}
+            gaps={scopePresentation.gaps}
+            eyebrow={groups.length > 0
+              ? 'Scope of the mounted results'
+              : 'Scope of the completed query'}
+            compact
+          />
+        </div>
+      )}
 
       <div className={css({
         display: 'flex',

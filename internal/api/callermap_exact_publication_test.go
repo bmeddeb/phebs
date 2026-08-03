@@ -49,6 +49,9 @@ type exactCallerAPIStore struct {
 	// the initial typed gap read and its result-time fence.
 	admissionAfterFirst *store.CallerGenerationAdmission
 	admissionReads      int
+	progress            store.CallerLeafOutcomeProgress
+	progressAfterFirst  *store.CallerLeafOutcomeProgress
+	progressReads       int
 	repoError           error
 
 	currentRevision         uint64
@@ -227,6 +230,17 @@ func (state *exactCallerAPIStore) GetCallerGenerationAdmission(
 	}
 	copyOfAdmission := *state.admission
 	return &copyOfAdmission, nil
+}
+
+func (state *exactCallerAPIStore) GetCallerLeafOutcomeProgress(
+	_ context.Context,
+	_ store.CallerGenerationIdentity,
+) (store.CallerLeafOutcomeProgress, error) {
+	state.progressReads++
+	if state.progressReads > 1 && state.progressAfterFirst != nil {
+		state.progress = *state.progressAfterFirst
+	}
+	return state.progress, nil
 }
 
 type exactCallerAPIFixture struct {
@@ -659,7 +673,20 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 	if page.MatchingRowsState != "exact" || page.Generation == nil ||
 		page.Generation.State != "current" || page.TotalMatchingRows == nil ||
 		*page.TotalMatchingRows != 3 ||
-		len(page.Rows) != 3 || page.Coverage != nil {
+		len(page.Rows) != 3 || page.Coverage != nil || page.Scope == nil ||
+		page.Scope.Repository != fixture.repository ||
+		page.Scope.Commit != fixture.commit ||
+		page.Scope.ScopePosture != "whole-repository" ||
+		page.Scope.AnalysisUnit != nil ||
+		page.Generation.RecordCounts == nil ||
+		page.Generation.RecordCounts.CandidateRecords != 1 ||
+		page.Generation.RecordCounts.BaseRecords != 1 ||
+		page.Generation.RecordCounts.ExcludedGoTestRecords != 0 ||
+		page.Generation.PartitionProgress == nil ||
+		page.Generation.PartitionProgress.State != "complete" ||
+		page.Generation.PartitionProgress.TotalPairCount == nil ||
+		*page.Generation.PartitionProgress.TotalPairCount != 1 ||
+		fixture.store.progressReads != 0 {
 		t.Fatalf("current exact page = %+v", page)
 	}
 	for _, call := range fixture.store.calls {
@@ -671,28 +698,34 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 	basePointer := fixture.store.publication
 	baseRevision := fixture.store.currentRevision
 	baseAdmission := fixture.store.admission
+	baseProgress := fixture.store.progress
 	for _, test := range []struct {
 		name         string
 		availability string
+		progress     string
 		configure    func()
 	}{
 		{
-			name: "missing", availability: "missing",
+			name: "missing", availability: "missing", progress: "unavailable",
 			configure: func() { fixture.store.publication = nil },
 		},
 		{
-			name: "terminal failure", availability: "failed",
+			name: "terminal failure", availability: "failed", progress: "complete",
 			configure: func() {
 				fixture.store.publication = nil
 				fixture.store.admission = &store.CallerGenerationAdmission{
 					Generation:  basePointer.Generation,
 					Disposition: store.CallerGenerationTerminalGenerationRefusal,
+					PairCount:   1,
 					RecordedAt:  time.Unix(4, 0).UTC(),
+				}
+				fixture.store.progress = store.CallerLeafOutcomeProgress{
+					SettledCount: 1, RefusedCount: 1,
 				}
 			},
 		},
 		{
-			name: "stale", availability: "stale",
+			name: "stale", availability: "stale", progress: "unavailable",
 			configure: func() { fixture.store.currentRevision = baseRevision + 1 },
 		},
 	} {
@@ -700,6 +733,7 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 			fixture.store.publication = basePointer
 			fixture.store.currentRevision = baseRevision
 			fixture.store.admission = baseAdmission
+			fixture.store.progress = baseProgress
 			test.configure()
 			gap, err := fixture.service.List(t.Context(), fixture.query, 100, "")
 			if err != nil {
@@ -709,6 +743,10 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 				gap.Generation.State != test.availability || len(gap.Rows) != 0 ||
 				gap.TotalMatchingRows != nil ||
 				!gap.Pagination.Complete || gap.Coverage != nil ||
+				gap.Scope == nil || gap.Scope.Repository != fixture.repository ||
+				gap.Generation.RecordCounts != nil ||
+				gap.Generation.PartitionProgress == nil ||
+				gap.Generation.PartitionProgress.State != test.progress ||
 				!strings.Contains(gap.Caveat, "totals and absence are unavailable") {
 				t.Fatalf("%s gap = %+v", test.name, gap)
 			}
@@ -717,6 +755,7 @@ func TestExactCallerMapReportsCurrentAndTypedGaps(t *testing.T) {
 	fixture.store.publication = basePointer
 	fixture.store.currentRevision = baseRevision
 	fixture.store.admission = baseAdmission
+	fixture.store.progress = baseProgress
 }
 
 func TestExactCallerMapRejectsGapTransitionAtResultFence(t *testing.T) {
@@ -750,6 +789,47 @@ func TestExactCallerMapRejectsGapTransitionAtResultFence(t *testing.T) {
 		page.MatchingRowsState != "unavailable" {
 		t.Fatalf("settled terminal gap = %+v", page)
 	}
+
+	fixture.store.admission = nil
+	fixture.store.admissionReads = 0
+	fixture.store.progress = store.CallerLeafOutcomeProgress{}
+	fixture.store.progressReads = 0
+	fixture.store.progressAfterFirst = &store.CallerLeafOutcomeProgress{
+		SettledCount: 1, SucceededCount: 1,
+	}
+	_, err = fixture.service.List(t.Context(), fixture.query, 100, "")
+	requireCatalogStatus(t, err, http.StatusConflict)
+	if fixture.store.progressReads != 2 {
+		t.Fatalf(
+			"gap result fence progress reads = %d, want 2",
+			fixture.store.progressReads,
+		)
+	}
+}
+
+func TestExactCallerMapReportsPartialPartitionProgressWithoutInventingTotal(
+	t *testing.T,
+) {
+	fixture := newExactCallerAPIFixture(t, 1)
+	fixture.store.publication = nil
+	fixture.store.admission = nil
+	fixture.store.progress = store.CallerLeafOutcomeProgress{
+		SettledCount: 1, SucceededCount: 1,
+	}
+
+	page, err := fixture.service.List(t.Context(), fixture.query, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Generation == nil || page.Generation.PartitionProgress == nil ||
+		page.Generation.PartitionProgress.State != "partial" ||
+		page.Generation.PartitionProgress.SettledPairCount != 1 ||
+		page.Generation.PartitionProgress.SucceededPairCount != 1 ||
+		page.Generation.PartitionProgress.RefusedPairCount != 0 ||
+		page.Generation.PartitionProgress.TotalPairCount != nil ||
+		page.Generation.RecordCounts != nil || fixture.store.progressReads != 2 {
+		t.Fatalf("partial caller partition page = %+v", page)
+	}
 }
 
 func TestExactCallerMapReportsSemanticArtifactFailureAsGap(t *testing.T) {
@@ -764,7 +844,10 @@ func TestExactCallerMapReportsSemanticArtifactFailureAsGap(t *testing.T) {
 	}
 	if page.Generation == nil || page.Generation.State != "failed" ||
 		page.MatchingRowsState != "unavailable" || len(page.Rows) != 0 ||
-		page.TotalMatchingRows != nil || page.Declaration != nil {
+		page.TotalMatchingRows != nil || page.Declaration != nil ||
+		page.Generation.RecordCounts == nil ||
+		page.Generation.RecordCounts.CandidateRecords != 1 ||
+		page.Generation.RecordCounts.BaseRecords != 1 {
 		t.Fatalf("semantic artifact gap = %+v", page)
 	}
 

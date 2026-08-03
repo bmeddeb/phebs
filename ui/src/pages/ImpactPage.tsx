@@ -17,6 +17,7 @@ import {
 } from '../api'
 import { ImpactIcon, OpenIcon } from '../icons'
 import { SectionHelp } from '../components/SectionHelp'
+import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { type GlossaryTermId } from '../glossary.generated'
 import { FONTS, usePhebsTokens } from '../theme'
 import { href, navigate } from '../router'
@@ -28,6 +29,11 @@ type FieldProtocol = 'protobuf' | 'thrift'
 const qualification = 'Build a bounded, evidence-backed report of resolved evidence, matching calls, and extractor abstentions for an operation, field, or contract change.'
 const protobufMaxFieldNumber = 536_870_911
 const thriftMaxFieldNumber = 32_767
+const supportedCoverageSchemas = new Set([
+  'coverage-certificate-v1',
+  'coverage-certificate-v2',
+  'coverage-certificate-v3',
+])
 
 export default function ImpactPage({
   params,
@@ -312,7 +318,7 @@ function ReportView({
   const tok = usePhebsTokens()
   const enabledCapabilities = useMemo(() => {
     const enabled = new Set(capabilities)
-    if (report.coverage.schema_version === 'coverage-certificate-v1') {
+    if (supportedCoverageSchemas.has(report.coverage.schema_version)) {
       enabled.add('coverage-certificate')
     }
     return enabled
@@ -330,6 +336,7 @@ function ReportView({
         </div>
       </section>
 
+      <CoverageSection report={report} enabledCapabilities={enabledCapabilities} />
       {report.compatibility && <CompatibilitySection report={report} />}
       <EvidenceSection
         title="Resolved evidence"
@@ -352,8 +359,6 @@ function ReportView({
         enabledCapabilities={enabledCapabilities}
         unresolved
       />
-      <CoverageSection report={report} enabledCapabilities={enabledCapabilities} />
-
       <div className={css({ border: `1px solid ${tok.cardBorder}`, padding: '12px 14px', marginTop: '20px', fontSize: '12px', lineHeight: '18px', color: tok.textSecondary })}>
         {report.caveat}
       </div>
@@ -476,21 +481,19 @@ function CoverageSection({
     .join(' · ')
   return (
     <section>
-      <SectionHeading
-        termId="analysis_scope_and_gaps"
+      <AnalysisScopePanel
+        id="impact-analysis-scope"
+        certificate={report.coverage}
         enabledCapabilities={enabledCapabilities}
-      >
-        Analysis scope &amp; gaps
-      </SectionHeading>
-      <div className={css({
-        fontSize: '12px',
-        lineHeight: '18px',
-        color: tok.textTertiary,
-        margin: '-4px 0 10px',
-      })}>
-        {report.coverage.repository_count} visible repositories · {report.coverage.domains.join(', ')}
-        {stateSummary ? ` · ${stateSummary}` : ''}
-      </div>
+        gaps={report.coverage_rows
+          .filter((row) => row.state !== 'covered')
+          .map((row) => ({
+            repository: row.repository,
+            domain: row.domain,
+            state: row.state,
+            reason: row.reason || row.failures?.join('; '),
+          }))}
+      />
       <div className={css({
         marginBottom: '12px',
         color: tok.textSecondary,
@@ -501,7 +504,6 @@ function CoverageSection({
         completeness, runtime-use, or safe-to-change score.
       </div>
       <details
-        data-testid="coverage-certificate-detail"
         className={css({
           border: `1px solid ${tok.cardBorder}`,
           color: tok.textTertiary,
@@ -520,11 +522,8 @@ function CoverageSection({
           ':hover': { color: tok.textPrimary, backgroundColor: tok.hoverFill },
           ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' },
         })}>
-          <span className={css({ fontWeight: 650 })}>Coverage certificate</span>
-          <SectionHelp
-            termId="coverage_certificate"
-            enabledCapabilities={enabledCapabilities}
-          />
+          <span className={css({ fontWeight: 650 })}>Domain coverage rows</span>
+          <span className={css({ color: tok.textTertiary })}>{stateSummary}</span>
           <span className={css({
             minWidth: 0,
             marginLeft: 'auto',

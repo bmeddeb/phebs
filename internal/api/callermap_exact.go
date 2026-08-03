@@ -138,6 +138,7 @@ type exactCallerBinding struct {
 	publication    callerexecute.PublicationBinding
 	declaration    ContractCatalogClaim
 	generation     CallerMapGeneration
+	scope          AnalysisScopeProjection
 	excludedGoTest int
 	comparison     *exactCallerComparisonBinding
 	uses           int
@@ -197,6 +198,7 @@ type exactCallerAuthority struct {
 	Snapshot           string                               `json:"snapshot"`
 	MatchingRowsState  string                               `json:"matching_rows_state"`
 	Generation         CallerMapGeneration                  `json:"generation"`
+	ScopeDigest        string                               `json:"scope_digest"`
 	ProjectionFailed   bool                                 `json:"projection_failed,omitempty"`
 	Publication        *callerexecute.PublicationDescriptor `json:"publication,omitempty"`
 }
@@ -337,14 +339,27 @@ func (service *exactCallerMapService) list(
 		createdAt: time.Now(), queryDigest: queryDigest, visibility: visibility,
 		indexKey: index.key, records: filtered,
 		publication: publicationBinding, declaration: declaration,
-		generation: service.generation(read),
+		generation: service.generation(read), scope: callerAnalysisScope(repository),
 	}
-	if read.Publication != nil {
-		for _, pair := range read.Publication.Pairs {
-			binding.excludedGoTest += pair.Receipt.ExcludedGoTestRecords
-		}
+	if read.Publication == nil {
+		return nil, huma.Error500InternalServerError(
+			"project caller generation counts",
+			errors.New("caller publication pair payload is unavailable"),
+		)
 	}
-	binding.generation.ExcludedGoTestRecords = binding.excludedGoTest
+	candidateRecords, excludedGoTest, err := exactCallerRecordCounts(read.Publication)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"project caller generation counts", err,
+		)
+	}
+	binding.excludedGoTest = excludedGoTest
+	binding.generation.ExcludedGoTestRecords = excludedGoTest
+	binding.generation.RecordCounts = &CallerMapRecordCounts{
+		CandidateRecords:      candidateRecords,
+		BaseRecords:           candidateRecords - excludedGoTest,
+		ExcludedGoTestRecords: excludedGoTest,
+	}
 	// Every serialized row carries a citation. Retain the same bounded request
 	// binding for citations even when the first page is also the final page;
 	// the compact token never embeds the potentially maximum-shaped generation
@@ -362,11 +377,18 @@ func (service *exactCallerMapService) list(
 		}
 		return nil, err
 	}
-	if err := service.confirm(ctx, read, query.Endpoint.Repository, visibility); err != nil {
+	confirmedRepository, err := service.confirmWithRepository(
+		ctx, read, query.Endpoint.Repository, visibility,
+	)
+	if err != nil || analysisScopeDigest(callerAnalysisScope(confirmedRepository)) !=
+		analysisScopeDigest(binding.scope) {
 		if binding.id != "" {
 			service.dropBinding(binding.id)
 		}
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+		return nil, exactCallerAuthorityConflict()
 	}
 	return page, nil
 }
@@ -428,9 +450,16 @@ func (service *exactCallerMapService) continuePage(
 	if err != nil {
 		return nil, err
 	}
-	if err := service.confirm(ctx, read, query.Endpoint.Repository, visibility); err != nil {
+	confirmedRepository, err := service.confirmWithRepository(
+		ctx, read, query.Endpoint.Repository, visibility,
+	)
+	if err != nil || analysisScopeDigest(callerAnalysisScope(confirmedRepository)) !=
+		analysisScopeDigest(binding.scope) {
 		service.dropBinding(binding.id)
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
+		return nil, exactCallerAuthorityConflict()
 	}
 	return page, nil
 }
@@ -494,6 +523,7 @@ func (service *exactCallerMapService) page(
 		Repository: binding.generation.Repository, Visibility: binding.visibility,
 		RepositoryRevision: repositoryRevision, Snapshot: snapshot,
 		MatchingRowsState: "exact", Generation: binding.generation,
+		ScopeDigest: analysisScopeDigest(binding.scope),
 		Publication: publication,
 	})
 	if err != nil {
@@ -507,6 +537,10 @@ func (service *exactCallerMapService) page(
 		Groups:            callerMapGroups(rows, query.Ordering),
 		TotalMatchingRows: callerMapTotal(len(binding.records)), Pagination: pagination,
 		Generation: &binding.generation, MatchingRowsState: "exact",
+		Scope: func() *AnalysisScopeProjection {
+			scope := cloneAnalysisScope(binding.scope)
+			return &scope
+		}(),
 		Caveat:         "Repository-overlay static source evidence only; a complete generation is not runtime use, completeness, migration completion, or decommissioning safety.",
 		exactSnapshot:  snapshot,
 		exactAuthority: authority,
@@ -522,9 +556,11 @@ func exactCallerPageSnapshot(binding *exactCallerBinding) string {
 		Publication callerexecute.PublicationBinding `json:"publication"`
 		Declaration ContractCatalogClaim             `json:"declaration"`
 		Generation  CallerMapGeneration              `json:"generation"`
+		Scope       AnalysisScopeProjection          `json:"scope"`
 	}{
 		Visibility: binding.visibility, Publication: binding.publication,
 		Declaration: binding.declaration, Generation: binding.generation,
+		Scope: binding.scope,
 	})
 }
 
@@ -568,7 +604,8 @@ func (service *exactCallerMapService) gapPage(
 		return nil, exactCallerAuthorityConflict()
 	}
 	return service.exactCallerGapPage(
-		query, queryDigest, visibility, revision, generation, false, publication,
+		query, queryDigest, visibility, revision, generation,
+		callerAnalysisScope(repository), false, publication,
 	)
 }
 
@@ -600,10 +637,23 @@ func (service *exactCallerMapService) projectionFailurePage(
 		)
 	}
 	generation := service.generation(read)
+	candidateRecords, excludedGoTest, err := exactCallerRecordCounts(read.Publication)
+	if err != nil {
+		return nil, huma.Error500InternalServerError(
+			"project failed caller generation counts", err,
+		)
+	}
+	generation.ExcludedGoTestRecords = excludedGoTest
+	generation.RecordCounts = &CallerMapRecordCounts{
+		CandidateRecords:      candidateRecords,
+		BaseRecords:           candidateRecords - excludedGoTest,
+		ExcludedGoTestRecords: excludedGoTest,
+	}
 	generation.State = string(callerexecute.PublicationFailed)
 	generation.Reason = "complete caller generation failed semantic projection validation"
 	return service.exactCallerGapPage(
-		query, queryDigest, visibility, revision, generation, true, publication,
+		query, queryDigest, visibility, revision, generation,
+		callerAnalysisScope(repository), true, publication,
 	)
 }
 
@@ -613,17 +663,19 @@ func (service *exactCallerMapService) exactCallerGapPage(
 	visibility VisibilityContext,
 	repositoryRevision uint64,
 	generation CallerMapGeneration,
+	scope AnalysisScopeProjection,
 	projectionFailed bool,
 	publication *callerexecute.PublicationDescriptor,
 ) (*CallerMapPage, error) {
 	snapshot := exactCallerGapSnapshot(
-		visibility, repositoryRevision, generation, publication,
+		visibility, repositoryRevision, generation, scope, publication,
 	)
 	authority, err := service.encodeExactAuthority(exactCallerAuthority{
 		Schema: exactCallerAuthorityVersion, QueryDigest: queryDigest,
 		Repository: generation.Repository, Visibility: visibility,
 		RepositoryRevision: repositoryRevision, Snapshot: snapshot,
 		MatchingRowsState: "unavailable", Generation: generation,
+		ScopeDigest:      analysisScopeDigest(scope),
 		ProjectionFailed: projectionFailed, Publication: publication,
 	})
 	if err != nil {
@@ -635,6 +687,10 @@ func (service *exactCallerMapService) exactCallerGapPage(
 		SchemaVersion: exactCallerMapSchemaVersion, Query: query,
 		Rows: []CallerMapRow{}, Pagination: CallerMapPagination{Complete: true},
 		Generation: &generation, MatchingRowsState: "unavailable",
+		Scope: func() *AnalysisScopeProjection {
+			cloned := cloneAnalysisScope(scope)
+			return &cloned
+		}(),
 		Caveat:         "Caller totals and absence are unavailable until one exact complete repository-overlay generation is current.",
 		exactSnapshot:  snapshot,
 		exactAuthority: authority,
@@ -645,14 +701,16 @@ func exactCallerGapSnapshot(
 	visibility VisibilityContext,
 	repositoryRevision uint64,
 	generation CallerMapGeneration,
+	scope AnalysisScopeProjection,
 	publication *callerexecute.PublicationDescriptor,
 ) string {
 	return digestJSON(struct {
 		Visibility         VisibilityContext                    `json:"visibility"`
 		RepositoryRevision uint64                               `json:"repository_revision"`
 		Generation         CallerMapGeneration                  `json:"generation"`
+		Scope              AnalysisScopeProjection              `json:"scope"`
 		Publication        *callerexecute.PublicationDescriptor `json:"publication,omitempty"`
-	}{visibility, repositoryRevision, generation, publication})
+	}{visibility, repositoryRevision, generation, scope, publication})
 }
 
 func exactCallerPublicationDescriptor(
@@ -773,12 +831,16 @@ func validExactCallerAuthority(authority exactCallerAuthority) bool {
 		authority.QueryDigest == "" || authority.Repository == "" ||
 		authority.Snapshot == "" ||
 		authority.Generation.Repository != authority.Repository ||
-		authority.Generation.Plane != exactCallerMapPlane {
+		authority.Generation.Plane != exactCallerMapPlane ||
+		!validAnalysisScopeDigest(authority.ScopeDigest) ||
+		!validCallerPartitionProgress(authority.Generation.PartitionProgress) ||
+		!validCallerRecordCounts(authority.Generation) {
 		return false
 	}
 	switch authority.MatchingRowsState {
 	case "exact":
 		return !authority.ProjectionFailed && authority.Publication != nil &&
+			authority.Generation.RecordCounts != nil &&
 			authority.Generation.State == string(callerexecute.PublicationCurrent) &&
 			validExactCallerPublicationDescriptor(
 				authority.Publication, authority.Repository,
@@ -791,6 +853,7 @@ func validExactCallerAuthority(authority exactCallerAuthority) bool {
 	case "unavailable":
 		if authority.ProjectionFailed {
 			return authority.Publication != nil &&
+				authority.Generation.RecordCounts != nil &&
 				authority.Generation.State == string(callerexecute.PublicationFailed) &&
 				validExactCallerPublicationDescriptor(
 					authority.Publication, authority.Repository,
@@ -867,6 +930,9 @@ func (service *exactCallerMapService) confirmWorkbenchCurrentCallerSnapshot(
 		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
 	}
 	generation := service.generation(read)
+	generation.RecordCounts = cloneCallerMapRecordCounts(
+		authority.Generation.RecordCounts,
+	)
 	generation.ExcludedGoTestRecords = authority.Generation.ExcludedGoTestRecords
 	if !reflect.DeepEqual(generation, authority.Generation) {
 		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
@@ -884,9 +950,13 @@ func (service *exactCallerMapService) confirmWorkbenchCurrentCallerSnapshot(
 	if revision != authority.RepositoryRevision {
 		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
 	}
+	scope := callerAnalysisScope(repository)
+	if analysisScopeDigest(scope) != authority.ScopeDigest {
+		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
+	}
 	return exactCallerSnapshotConfirmation{
 		Snapshot: authority.Snapshot, MatchingRowsState: "exact",
-		Generation: generation,
+		Generation: generation, Scope: cloneAnalysisScope(scope),
 	}, nil
 }
 
@@ -928,6 +998,9 @@ func (service *exactCallerMapService) confirmWorkbenchCallerGapSnapshot(
 			return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
 		}
 		generation = service.generation(read)
+		generation.RecordCounts = cloneCallerMapRecordCounts(
+			authority.Generation.RecordCounts,
+		)
 		generation.ExcludedGoTestRecords =
 			authority.Generation.ExcludedGoTestRecords
 		generation.State = string(callerexecute.PublicationFailed)
@@ -968,16 +1041,18 @@ func (service *exactCallerMapService) confirmWorkbenchCallerGapSnapshot(
 	if err != nil {
 		return exactCallerSnapshotConfirmation{}, err
 	}
+	scope := callerAnalysisScope(repository)
 	if revision != authority.RepositoryRevision ||
+		analysisScopeDigest(scope) != authority.ScopeDigest ||
 		exactCallerGapSnapshot(
-			authority.Visibility, revision, generation,
+			authority.Visibility, revision, generation, scope,
 			authority.Publication,
 		) != authority.Snapshot {
 		return exactCallerSnapshotConfirmation{}, exactCallerAuthorityConflict()
 	}
 	return exactCallerSnapshotConfirmation{
 		Snapshot: authority.Snapshot, MatchingRowsState: "unavailable",
-		Generation: generation,
+		Generation: generation, Scope: cloneAnalysisScope(scope),
 	}, nil
 }
 
@@ -1474,7 +1549,37 @@ func (service *exactCallerMapService) generation(
 	result.ResultCount = read.Summary.ResultCount
 	result.AbstentionCount = read.Summary.AbstentionCount
 	result.CanonicalBytes = read.Summary.CanonicalBytes
+	total := read.Summary.PairCount
+	result.PartitionProgress = &CallerMapPartitionProgress{
+		State: "complete", SettledPairCount: total,
+		SucceededPairCount: total, TotalPairCount: &total,
+	}
 	return result
+}
+
+func exactCallerRecordCounts(
+	publication *store.CallerGenerationPublication,
+) (int, int, error) {
+	if publication == nil {
+		return 0, 0, errors.New("caller publication is absent")
+	}
+	maximum := int(^uint(0) >> 1)
+	candidateRecords := 0
+	excludedGoTest := 0
+	for _, pair := range publication.Pairs {
+		candidate := pair.Pair.CandidateRecordCount
+		excluded := pair.Receipt.ExcludedGoTestRecords
+		if candidate < 0 || excluded < 0 || excluded > candidate ||
+			candidate > maximum-candidateRecords ||
+			excluded > maximum-excludedGoTest {
+			return 0, 0, errors.New(
+				"caller publication candidate counts are inconsistent",
+			)
+		}
+		candidateRecords += candidate
+		excludedGoTest += excluded
+	}
+	return candidateRecords, excludedGoTest, nil
 }
 
 func (service *exactCallerMapService) unavailableGeneration(
@@ -1488,7 +1593,38 @@ func (service *exactCallerMapService) unavailableGeneration(
 		generation.Reason = "complete caller generation " +
 			string(read.Availability)
 	}
+	generation.PartitionProgress = unavailableCallerPartitionProgress(read)
 	return generation
+}
+
+func unavailableCallerPartitionProgress(
+	read *callerexecute.PublicationRead,
+) *CallerMapPartitionProgress {
+	result := &CallerMapPartitionProgress{State: "unavailable"}
+	if read == nil || read.Progress == nil {
+		return result
+	}
+	progress := *read.Progress
+	if progress.SettledCount < 0 || progress.SucceededCount < 0 ||
+		progress.RefusedCount < 0 ||
+		progress.SucceededCount+progress.RefusedCount != progress.SettledCount {
+		return result
+	}
+	result.SettledPairCount = progress.SettledCount
+	result.SucceededPairCount = progress.SucceededCount
+	result.RefusedPairCount = progress.RefusedCount
+	if read.Admission != nil && read.Admission.PairCount >= progress.SettledCount {
+		total := read.Admission.PairCount
+		result.TotalPairCount = &total
+		if progress.SettledCount == total {
+			result.State = "complete"
+		} else {
+			result.State = "partial"
+		}
+	} else if progress.SettledCount > 0 {
+		result.State = "partial"
+	}
+	return result
 }
 
 func exactIndexKey(read *callerexecute.PublicationRead) string {

@@ -2,10 +2,10 @@
 
 [← User guide](../MANUAL.md)
 
-This guide covers public-corpus evaluations, the retained synthetic Workbench,
-search, repository browsing, SCIP and Git history, HTTP, and MCP. Experimental
-evidence remains subject to the explicit coverage and validation caveats in
-each workflow.
+This guide covers public-corpus evaluations, the neutral focused-service demo,
+the retained synthetic Workbench fixtures, search, repository browsing, SCIP
+and Git history, HTTP, and MCP. Experimental evidence remains subject to the
+explicit coverage and validation caveats in each workflow.
 
 ## OpenTelemetry microservices evaluation
 
@@ -31,9 +31,8 @@ absence.
 ## Thrift protocol-pack evaluation
 
 The repository includes `phebs-thrift-demo.yaml` as the Epic 19 Thrift
-evaluation over the public Jaeger corpus. Run it without the synthetic Atlas
-fixture that `make dev` injects (the fixture would override real catalog
-evidence):
+evaluation over the public Jaeger corpus. Run it without a synthetic Atlas
+fixture, which would override real catalog evidence:
 
 ```bash
 make ui bin/zoekt-git-index bin/phebs-focused-index bin/buf
@@ -400,21 +399,44 @@ The synthetic adapter also supplies the T21.13 MCP projection described in
 [Agents (MCP)](#agents-mcp). It calls this same service and the shared checklist mutation boundary;
 ordinary production startup still supplies neither service to MCP.
 
+## Neutral focused-service development cohort
+
+`make dev` and `make dev-api` bind one retained neutral Git bundle through the
+ordinary sync, focused-index, candidate, extraction, resolver, caller-leaf,
+complete-publication, and store-derived Workbench paths. The repository's
+active `orders-service` unit selects `service/orders`, its protobuf/generated
+supporting files, snapshot, and `go.mod`. It deliberately leaves an unrelated
+bulk needle and one real gRPC caller outside the focused shard. The former is
+absent from Search; the latter remains visible only through the separately
+labeled repository-overlay Caller Map generation. One `_test.go` file is
+classified and reported as excluded `go_test` evidence. Protobuf declarations,
+the in-unit registration, and Kafka producer/consumer facts are extracted from
+committed source rather than projected by a response fixture.
+
+The recipes explicitly clear the Investigation, Contract Atlas, synthetic
+Workbench, retained Workbench-closure, and Thrift-field fixture bindings. The
+Contracts and Workbench surfaces therefore use the same store-derived evidence
+and authorization fences as an ordinary provisional instance. Ordinary
+`phebs serve` remains unchanged and default-dark. The exact demo steps,
+fixture census, receipt, and non-claims are retained in the
+[T30.7 cohort README](../fixtures/t30.7-neutral-service/README.md).
+
 ## Synthetic Change Workbench shell
 
-`make dev` and `make dev-api` explicitly set
-`PHEBS_SYNTHETIC_WORKBENCH=1` alongside the documented synthetic Investigation
-and Contract Atlas fixtures. They also bind the retained
-`docs/fixtures/change-workbench/t2114-workbench-closure.bundle` through the
-ordinary sync, zoekt index, and provisional protobuf/Thrift extraction
-pipeline. The bundle has no `index.scip`; Kafka, Redis, document-store, SQL,
-and runtime readers are not enabled. Only the exact synthetic setting is
-accepted, and startup fails closed unless both fixture adapters and the
-Workbench service are available. The resulting authenticated
-`change-workbench` capability exposes the experimental `#/workbench` route and
-its conditional HTTP operations. Setting ordinary production configuration
-never enables it; this adapter does not satisfy the retained validation or
-pilot-continuation gate.
+The retained synthetic adapter is available to tests and deliberately explicit
+developer invocations. T30.7 removed it from `make dev` and `make dev-api`;
+those targets now exercise the real store-derived Workbench over one neutral
+focused repository. The historical adapter requires
+`PHEBS_SYNTHETIC_WORKBENCH=1`, the documented Investigation and Contract Atlas
+fixtures, and the retained
+`docs/fixtures/change-workbench/t2114-workbench-closure.bundle`. The bundle has
+no `index.scip`; Kafka, Redis, document-store, SQL, and runtime readers are not
+enabled. Startup fails closed unless both fixture adapters and the Workbench
+service are available. The resulting authenticated `change-workbench`
+capability exposes the experimental `#/workbench` route and its conditional
+HTTP operations. Setting ordinary production configuration never enables it;
+this adapter does not satisfy the retained validation or pilot-continuation
+gate.
 
 The Workbench home offers two read/write-safe entry paths:
 
@@ -595,7 +617,7 @@ The two paths are deliberately distinct:
 
 | Path | Catalog authority | Evidence source | Intended use |
 |---|---|---|---|
-| `make dev` / `make dev-api` | Synthetic Contract Atlas fixture | Retained synthetic fixtures plus the normal closure-repository pipeline | Deterministic UI and workflow demonstration |
+| Explicit historical synthetic adapter | Synthetic Contract Atlas fixture | Retained synthetic fixtures plus the normal closure-repository pipeline | Fixture conformance and regression tests |
 | `provisional_workbench` | Instance store-derived Contract Atlas | Ordinary repository sync/index/extraction publications | Bounded manual evaluation against real published evidence |
 
 Neither path satisfies production registration or the retained validation
@@ -606,11 +628,11 @@ must not become deterministic merge-bar fixtures or retained accuracy claims.
 
 ## Retained four-story closure walkthrough
 
-Start `make dev` with a fresh data directory, sign in, open
-**Change Workbench**, and use the committed synthetic repository selected by
-Contract Atlas. The fixture source separates `idl/proto`, `idl/thrift`, and
-`src`; its protobuf and Thrift services deliberately share a Search operation
-name.
+This is a retained historical-fixture walkthrough, not the T30.7 `make dev`
+cohort. Run the synthetic adapter explicitly, sign in, open **Change
+Workbench**, and use the committed synthetic repository selected by Contract
+Atlas. The fixture source separates `idl/proto`, `idl/thrift`, and `src`; its
+protobuf and Thrift services deliberately share a Search operation name.
 
 For each story, complete Why with human-owned intent, then use What as follows:
 
@@ -663,7 +685,14 @@ bare-operation query, not a declaration-proven logical-service roster.
 assign, not confirmed callers or failed runs. `Coverage certificate` is the
 deterministic receipt of which visible repository revisions and extractor
 domains were covered, stale, failed, processing, unsupported, or bounded; it
-is not an accuracy or completeness score. Epic 21 retains these semantics and
+is not an accuracy or completeness score. Current
+`coverage-certificate-v3` rows also carry the latest durable disposition,
+validated full or explicit schema-only bounded receipt, exact focused
+base/`go_test` accounting, and typed-input gaps. Outcome timestamps are not
+certificate identity. Retained v1/v2 proof bundles preserve their original
+canonical certificate bytes; when live v3 coverage emits `candidate_scope`,
+that object includes all six candidate/exclusion counters, including exact
+zeroes. Epic 21 retains these semantics and
 adds the **Analysis scope & gaps** summary. Its generated **Matching static
 evidence** help qualifies the narrower Matching call evidence section, and
 **Could not resolve** qualifies Extractor abstentions; neither changes the
@@ -1030,6 +1059,26 @@ subsequent Git commands run.
 Served at `/` from the binary. After setup/login, the main views are
 deep-linkable hash routes:
 
+Search, Contracts, Topics, Caller Map, Impact, and Workbench share the
+scope-aware **Analysis scope & gaps** panel. Expand one repository to inspect
+its active unit name, exact primary/supporting paths, typed-index posture,
+fresh/stale domain publications, durable disposition, and bounded receipt.
+Only one repository's paths are mounted at a time. Focused Search and local
+evidence are labeled separately from repository-overlay callers; an
+outside-unit caller is expected overlay evidence, not a focused-search result.
+Current caller generations show explicit base/excluded-`go_test` records and
+complete partition progress. A pre-publication generation may show `N/?`
+durably settled partitions, while caller rows and their total remain
+unavailable. Queue/claim/lock detail stays in operational logs.
+
+Empty and degraded states remain explicit rather than removing the panel. A
+zero-repository certificate says that it contains zero repository rows;
+Workbench separately says when it has no capability rows, no focused-local
+coverage, or no gaps in the bounded projection. A retained failure class stays
+visible beside a newer durable outcome. Legal null/omitted supporting paths
+render as an empty list, and an explicit gap remains neutral/amber unless it
+is a failure or terminal refusal.
+
 - **Search** (`#/search?q=…`) — the repository explorer always lists the
 repositories visible to the signed-in user, even before a search returns
 results. Select a repository, expand folders one level at a time, or open a
@@ -1055,7 +1104,9 @@ file across renames, map lines to commits, and render commit metadata,
 changed-file statistics, and bounded unified diffs.
 - **Repos** (`#/repos`) — sync/index state per repo (polled every 3 s),
 orphan flags, indexed commit, and administrator-only **Reindex** controls
-(a forced rebuild defeats the incremental short-circuit). The backing
+(a forced rebuild defeats the incremental short-circuit). The control names
+the focused unit it replaces, or says **whole repository** when no unit is
+committed. The backing
 `/api/repo-status` response also reports any committed analysis-unit name,
 digest, exact selected paths/counts, and search/typed-index postures.
 Configured repositories report `focused`: search and local evidence are
@@ -1389,7 +1440,7 @@ action in T21.13, and the adapter does not synthesize suggestions or conclusions
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `search_code`      | full query syntax from [Searching](#searching), including `context:` sets; returns files with line-numbered chunks and match ranges                                                                                                                                              |
 | `read_file`        | file content at the indexed revision; optional `start_line`/`end_line`; output over 200 KB is truncated (on a line boundary where one fits) with a `truncated` flag inviting a ranged re-read. Blobs over 10 MiB are rejected outright, like `/api/source`. |
-| `list_repos`       | every indexed repo with branch/visibility/index-time metadata                                                                                                                                                                                               |
+| `list_repos`       | every indexed repo with branch/visibility/index-time metadata plus the same active analysis-unit name, exact selected paths, search posture, and typed-index posture exposed by HTTP repository status                                                                                                                        |
 | `find_definitions` | precise SCIP definition for `{repo,path,line,character,ref?}`                                                                                                                                                                                               |
 | `find_references`  | precise SCIP references for the same position; maximum 500 locations with `truncated`                                                                                                                                                                       |
 | `hover`            | SCIP symbol, signature, documentation, and source range                                                                                                                                                                                                     |
@@ -1405,7 +1456,7 @@ action in T21.13, and the adapter does not synthesize suggestions or conclusions
 | `check_contract_compatibility` | envelope containing the pinned Buf `WIRE` conclusion plus stable affected-field identities, visible field-reference evidence, exact proof references, coverage, and invocation provenance |
 | `search_contract_operations` | bounded Contract Atlas discovery page with complete selectable protocol/repository/declaration-lineage/operation identities, coverage, and continuation cursor |
 | `get_contract_operation` | one protocol-qualified exact operation with request/response shapes, immutable declaration citation, related evidence, and coverage |
-| `list_operation_callers` | one authorized repository's exact complete-generation Caller Map page with typed unavailable states, source/unit ordering, direct-syntax rows and abstentions, exact totals, opaque citations, and revision-bound cursor |
+| `list_operation_callers` | one authorized repository's exact complete-generation Caller Map page with active focused/whole scope, repository-overlay plane, durable partition progress, base/`go_test` record counts when current, typed unavailable states, source/unit ordering, direct-syntax rows and abstentions, exact totals, opaque citations, and revision-bound cursor |
 | `read_operation_caller_citation` | reauthorize and return only one caller row's exact commit/object/digest-verified source byte range; grants no tree, directory, unrelated-path, or whole-file read |
 | `compare_operation_callers` | exact occurrence- or unit-level comparison of two authorized complete caller generations with typed whole-page gaps, evidence-qualified classifications, immutable exact-range citations, and a cursor bound to both full publication identities |
 | `preview_change_workbench` | side-effect-free shared-service preview of one plan; requires a named key with `investigation:write` because the returned digest can bind a later mutation |

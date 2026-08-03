@@ -61,10 +61,15 @@ phebs keeps evidence classes separate:
   call that contract.
 - **Unresolved candidate** — a supported call shape was found, but ambiguity or
   missing identity prevented a safe binding.
-- **Coverage certificate** — the repositories, revisions, extraction runs,
-  failures, exclusions, and unresolved counts that bound an answer.
+- **Coverage certificate** — the exact analysis scope, repositories,
+  revisions, extraction runs, durable outcomes and bounded receipts,
+  failures, exclusions, caller progress, and unresolved counts that bound an
+  answer.
 
-An empty result is meaningful only in the context of that coverage.
+An empty result is meaningful only in the context of that coverage. Current
+answers identify focused-local evidence separately from repository-overlay
+callers. Immutable proof bundles retain their original certificate bytes;
+live answers use the current versioned certificate shape.
 
 ## Five-minute local start
 
@@ -111,15 +116,15 @@ Open <http://127.0.0.1:3071>. The
 [workflow guide](./docs/guides/WORKFLOWS.md#opentelemetry-microservices-evaluation) also covers the
 Jaeger/Thrift and Kafka demo configurations.
 
-For the retained synthetic Contract Atlas, Caller Map, field-reference, and
-Change Workbench stories:
+For the retained neutral focused-service cohort—focused Search and local
+evidence beside repository-overlay callers and the store-derived Workbench:
 
 ```bash
 make dev
 ```
 
-These fixtures demonstrate product behavior. They are not public-corpus
-accuracy evidence.
+This cohort demonstrates product behavior through ordinary pipelines. It is
+not public-corpus accuracy evidence.
 
 ## Architecture
 

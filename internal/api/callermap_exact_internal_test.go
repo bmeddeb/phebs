@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
 	"github.com/bmeddeb/phebs/internal/callerleaf"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
@@ -34,6 +36,13 @@ type exactAuthorityGapStore struct {
 	summaryReads     int
 	visibilityChecks int
 	repositoryHook   func(string, int, *store.Repo)
+}
+
+func (state *exactAuthorityGapStore) LatestExtractionDomainOutcome(
+	context.Context,
+	store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	return nil, store.ErrNotFound
 }
 
 func (state *exactAuthorityGapStore) GetRepo(
@@ -128,6 +137,13 @@ func (*exactAuthorityGapStore) GetCallerGenerationAdmission(
 	store.CallerGenerationIdentity,
 ) (*store.CallerGenerationAdmission, error) {
 	return nil, store.ErrNotFound
+}
+
+func (*exactAuthorityGapStore) GetCallerLeafOutcomeProgress(
+	context.Context,
+	store.CallerGenerationIdentity,
+) (store.CallerLeafOutcomeProgress, error) {
+	return store.CallerLeafOutcomeProgress{}, nil
 }
 
 func newExactAuthorityGapServices(
@@ -363,7 +379,7 @@ func TestExactCallerGapAuthorityConfirmsWithoutTransportExposure(t *testing.T) {
 	}
 	if confirmation.Snapshot != page.exactSnapshot ||
 		confirmation.MatchingRowsState != "unavailable" ||
-		confirmation.Generation != *page.Generation {
+		!reflect.DeepEqual(confirmation.Generation, *page.Generation) {
 		t.Fatalf("gap confirmation = %+v, page = %+v", confirmation, page)
 	}
 	_, err = service.confirmWorkbenchCallerSnapshot(
@@ -438,13 +454,23 @@ func TestExactCallerAuthorityFitsMaximumPublicationIdentity(t *testing.T) {
 	binding, publication, generation := exactAuthorityMaxFixture(
 		t, repository, "a",
 	)
+	totalPairs := generation.PairCount
+	generation.PartitionProgress = &CallerMapPartitionProgress{
+		State: "complete", SettledPairCount: totalPairs,
+		SucceededPairCount: totalPairs, TotalPairCount: &totalPairs,
+	}
+	generation.RecordCounts = &CallerMapRecordCounts{}
+	scope := AnalysisScopeProjection{
+		Repository: repository, Commit: generation.Commit,
+		ScopePosture: "whole-repository",
+	}
 	snapshot := exactCallerPageSnapshot(&exactCallerBinding{
 		visibility: VisibilityContext{
 			Principal: "user:max", AuthorizationProvider: "max-v1",
 			PermissionSnapshot:         exactAuthorityDigest("b"),
 			VisibleRepositorySetDigest: exactAuthorityDigest("c"),
 		},
-		publication: binding, generation: generation,
+		publication: binding, generation: generation, scope: scope,
 	})
 	service := &exactCallerMapService{}
 	authority := exactCallerAuthority{
@@ -457,7 +483,8 @@ func TestExactCallerAuthorityFitsMaximumPublicationIdentity(t *testing.T) {
 		},
 		RepositoryRevision: generation.PublicationRevision,
 		Snapshot:           snapshot, MatchingRowsState: "exact",
-		Generation: generation, Publication: &publication,
+		Generation: generation, ScopeDigest: analysisScopeDigest(scope),
+		Publication: &publication,
 	}
 	if !validExactCallerAuthority(authority) {
 		t.Fatalf("maximum exact caller authority is invalid: %+v", authority)
@@ -468,6 +495,45 @@ func TestExactCallerAuthorityFitsMaximumPublicationIdentity(t *testing.T) {
 	}
 	if len(encoded) > callerMapCursorLimit {
 		t.Fatalf("maximum exact caller authority bytes = %d", len(encoded))
+	}
+}
+
+func TestCallerAnalysisScopeProjectionClonesExactFocusedPaths(t *testing.T) {
+	repository := "github.com/acme/monorepo"
+	state, err := (analysisunit.Scope{
+		Repository: repository, Name: "orders-api",
+		Primary: []string{"services/orders"},
+		Supporting: []string{
+			"api/orders.proto", "gen/orders/orders_grpc.pb.go",
+		},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection := callerAnalysisScope(store.Repo{
+		Name: repository, IndexedCommitHash: strings.Repeat("a", 40),
+		IndexedAnalysisUnit: state,
+	})
+	generation := CallerMapGeneration{
+		Repository: repository, Commit: strings.Repeat("a", 40),
+		UnitDigest: state.Digest,
+	}
+	if !validCallerAnalysisScope(projection, generation) ||
+		projection.ScopePosture != analysisunit.SearchIndexFocused ||
+		projection.AnalysisUnit == nil ||
+		!reflect.DeepEqual(
+			projection.AnalysisUnit.PrimaryPaths,
+			[]string{"services/orders"},
+		) || !reflect.DeepEqual(
+		projection.AnalysisUnit.SupportingPaths,
+		[]string{"api/orders.proto", "gen/orders/orders_grpc.pb.go"},
+	) {
+		t.Fatalf("focused caller analysis scope = %+v", projection)
+	}
+	state.PrimaryPaths[0] = "mutated"
+	if projection.AnalysisUnit.PrimaryPaths[0] != "services/orders" ||
+		!validAnalysisScopeDigest(analysisScopeDigest(projection)) {
+		t.Fatalf("caller analysis scope aliased repository state: %+v", projection)
 	}
 }
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -124,24 +126,161 @@ type CallerMapSource struct {
 }
 
 type CallerMapGeneration struct {
-	State                 string `json:"state"`
-	Reason                string `json:"reason,omitempty"`
-	Plane                 string `json:"plane"`
-	Repository            string `json:"repository"`
-	Commit                string `json:"commit,omitempty"`
-	UnitDigest            string `json:"unit_digest,omitempty"`
-	GenerationDigest      string `json:"generation_digest,omitempty"`
-	DeclarationSetDigest  string `json:"declaration_set_digest,omitempty"`
-	CandidateManifest     string `json:"candidate_manifest_digest,omitempty"`
-	ResolverManifest      string `json:"resolver_manifest_digest,omitempty"`
-	PairSetDigest         string `json:"pair_set_digest,omitempty"`
-	ManifestDigest        string `json:"manifest_digest,omitempty"`
-	PublicationRevision   uint64 `json:"publication_revision,omitempty"`
-	PairCount             int    `json:"pair_count,omitempty"`
-	ResultCount           int    `json:"result_count,omitempty"`
-	AbstentionCount       int    `json:"abstention_count,omitempty"`
-	CanonicalBytes        int64  `json:"canonical_bytes,omitempty"`
-	ExcludedGoTestRecords int    `json:"excluded_go_test_records,omitempty"`
+	State                 string                      `json:"state"`
+	Reason                string                      `json:"reason,omitempty"`
+	Plane                 string                      `json:"plane"`
+	Repository            string                      `json:"repository"`
+	Commit                string                      `json:"commit,omitempty"`
+	UnitDigest            string                      `json:"unit_digest,omitempty"`
+	GenerationDigest      string                      `json:"generation_digest,omitempty"`
+	DeclarationSetDigest  string                      `json:"declaration_set_digest,omitempty"`
+	CandidateManifest     string                      `json:"candidate_manifest_digest,omitempty"`
+	ResolverManifest      string                      `json:"resolver_manifest_digest,omitempty"`
+	PairSetDigest         string                      `json:"pair_set_digest,omitempty"`
+	ManifestDigest        string                      `json:"manifest_digest,omitempty"`
+	PublicationRevision   uint64                      `json:"publication_revision,omitempty"`
+	PairCount             int                         `json:"pair_count,omitempty"`
+	ResultCount           int                         `json:"result_count,omitempty"`
+	AbstentionCount       int                         `json:"abstention_count,omitempty"`
+	CanonicalBytes        int64                       `json:"canonical_bytes,omitempty"`
+	ExcludedGoTestRecords int                         `json:"excluded_go_test_records,omitempty"`
+	RecordCounts          *CallerMapRecordCounts      `json:"record_counts,omitempty"`
+	PartitionProgress     *CallerMapPartitionProgress `json:"partition_progress,omitempty"`
+}
+
+// CallerMapRecordCounts is present only when the complete publication's pair
+// payload was validated. Keeping the three values in one optional object lets
+// an exact zero remain distinguishable from an unavailable generation.
+type CallerMapRecordCounts struct {
+	CandidateRecords      int `json:"candidate_records"`
+	BaseRecords           int `json:"base_records"`
+	ExcludedGoTestRecords int `json:"excluded_go_test_records"`
+}
+
+// CallerMapPartitionProgress is a bounded, scalar projection over durable
+// caller-leaf outcomes. A missing total is deliberate: settled outcomes can
+// prove partial progress before admission has durably fixed the denominator,
+// but must not be presented as a complete generation.
+type CallerMapPartitionProgress struct {
+	State              string `json:"state" enum:"complete,partial,unavailable"`
+	SettledPairCount   int    `json:"settled_pair_count"`
+	SucceededPairCount int    `json:"succeeded_pair_count"`
+	RefusedPairCount   int    `json:"refused_pair_count"`
+	TotalPairCount     *int   `json:"total_pair_count,omitempty"`
+}
+
+// AnalysisScopeProjection names the repository search/local-evidence scope
+// separately from the repository-overlay caller plane. Exact selected paths
+// are bounded by analysisunit's frozen 128-path/64-KiB admission limits.
+type AnalysisScopeProjection struct {
+	Repository   string              `json:"repository"`
+	Commit       string              `json:"commit,omitempty"`
+	ScopePosture string              `json:"scope_posture"`
+	AnalysisUnit *analysisunit.State `json:"analysis_unit,omitempty"`
+}
+
+func callerAnalysisScope(repository store.Repo) AnalysisScopeProjection {
+	posture := analysisunit.SearchIndexWholeRepository
+	if repository.IndexedAnalysisUnit != nil {
+		posture = repository.IndexedAnalysisUnit.SearchIndexPosture
+	}
+	return AnalysisScopeProjection{
+		Repository:   repository.Name,
+		Commit:       repository.IndexedCommitHash,
+		ScopePosture: posture,
+		AnalysisUnit: analysisunit.CloneState(repository.IndexedAnalysisUnit),
+	}
+}
+
+func cloneAnalysisScope(scope AnalysisScopeProjection) AnalysisScopeProjection {
+	scope.AnalysisUnit = analysisunit.CloneState(scope.AnalysisUnit)
+	return scope
+}
+
+func analysisScopeDigest(scope AnalysisScopeProjection) string {
+	return digestJSON(scope)
+}
+
+func validAnalysisScopeDigest(value string) bool {
+	raw, ok := strings.CutPrefix(value, "sha256:")
+	if !ok || len(raw) != sha256.Size*2 {
+		return false
+	}
+	_, err := hex.DecodeString(raw)
+	return err == nil
+}
+
+func validCallerAnalysisScope(
+	scope AnalysisScopeProjection,
+	generation CallerMapGeneration,
+) bool {
+	if !validAnalysisScopeProjection(scope) ||
+		scope.Repository != generation.Repository ||
+		scope.Commit != generation.Commit {
+		return false
+	}
+	if scope.AnalysisUnit == nil {
+		return generation.UnitDigest == ""
+	}
+	return generation.UnitDigest == scope.AnalysisUnit.Digest
+}
+
+func validAnalysisScopeProjection(scope AnalysisScopeProjection) bool {
+	if scope.Repository == "" || scope.ScopePosture == "" {
+		return false
+	}
+	if scope.AnalysisUnit == nil {
+		return scope.ScopePosture == analysisunit.SearchIndexWholeRepository
+	}
+	return scope.AnalysisUnit.Validate(scope.Repository) == nil &&
+		scope.ScopePosture == scope.AnalysisUnit.SearchIndexPosture
+}
+
+func validCallerPartitionProgress(progress *CallerMapPartitionProgress) bool {
+	if progress == nil || progress.SettledPairCount < 0 ||
+		progress.SucceededPairCount < 0 || progress.RefusedPairCount < 0 ||
+		progress.SucceededPairCount > progress.SettledPairCount ||
+		progress.RefusedPairCount !=
+			progress.SettledPairCount-progress.SucceededPairCount {
+		return false
+	}
+	switch progress.State {
+	case "complete":
+		return progress.TotalPairCount != nil &&
+			*progress.TotalPairCount == progress.SettledPairCount
+	case "partial":
+		return progress.SettledPairCount > 0 &&
+			(progress.TotalPairCount == nil ||
+				*progress.TotalPairCount > progress.SettledPairCount)
+	case "unavailable":
+		return progress.TotalPairCount == nil &&
+			progress.SettledPairCount == 0
+	default:
+		return false
+	}
+}
+
+func validCallerRecordCounts(generation CallerMapGeneration) bool {
+	counts := generation.RecordCounts
+	if counts == nil {
+		return generation.ExcludedGoTestRecords == 0
+	}
+	return counts.CandidateRecords >= 0 && counts.BaseRecords >= 0 &&
+		counts.ExcludedGoTestRecords >= 0 &&
+		counts.BaseRecords <= counts.CandidateRecords &&
+		counts.ExcludedGoTestRecords ==
+			counts.CandidateRecords-counts.BaseRecords &&
+		generation.ExcludedGoTestRecords == counts.ExcludedGoTestRecords
+}
+
+func cloneCallerMapRecordCounts(
+	counts *CallerMapRecordCounts,
+) *CallerMapRecordCounts {
+	if counts == nil {
+		return nil
+	}
+	cloned := *counts
+	return &cloned
 }
 
 type CallerMapRow struct {
@@ -179,6 +318,7 @@ type CallerMapPage struct {
 	TotalMatchingRows *int                         `json:"total_matching_rows,omitempty"`
 	Pagination        CallerMapPagination          `json:"pagination"`
 	Generation        *CallerMapGeneration         `json:"generation,omitempty"`
+	Scope             *AnalysisScopeProjection     `json:"scope,omitempty"`
 	MatchingRowsState string                       `json:"matching_rows_state,omitempty"`
 	CoverageDigest    string                       `json:"coverage_digest,omitempty"`
 	AttributionDigest string                       `json:"attribution_digest,omitempty"`
@@ -203,6 +343,7 @@ type exactCallerSnapshotConfirmation struct {
 	Snapshot          string
 	MatchingRowsState string
 	Generation        CallerMapGeneration
+	Scope             AnalysisScopeProjection
 }
 
 type callerMapDetail struct {

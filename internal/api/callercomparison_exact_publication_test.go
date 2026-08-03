@@ -129,6 +129,16 @@ func (state *exactComparisonMultiStore) GetCallerGenerationAdmission(
 	return nil, store.ErrNotFound
 }
 
+func (state *exactComparisonMultiStore) GetCallerLeafOutcomeProgress(
+	ctx context.Context,
+	generation store.CallerGenerationIdentity,
+) (store.CallerLeafOutcomeProgress, error) {
+	if source := state.exactState(generation.Repository); source != nil {
+		return source.GetCallerLeafOutcomeProgress(ctx, generation)
+	}
+	return store.CallerLeafOutcomeProgress{}, store.ErrNotFound
+}
+
 func newExactCallerComparisonFixture(
 	t *testing.T,
 ) (*exactCallerAPIFixture, *api.CallerComparisonService) {

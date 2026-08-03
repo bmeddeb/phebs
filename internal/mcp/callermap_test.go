@@ -17,7 +17,12 @@ import (
 	"github.com/danielgtaylor/huma/v2"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/callerexecute"
+	"github.com/bmeddeb/phebs/internal/callerpublication"
+	"github.com/bmeddeb/phebs/internal/extract"
+	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -73,10 +78,24 @@ func (service exactEnvelopeCallerMapQueries) List(
 	page.Generation = &api.CallerMapGeneration{
 		State: "current", Plane: "repository-overlay",
 		Repository: query.Endpoint.Repository, Commit: callerToolCommit,
+		RecordCounts: &api.CallerMapRecordCounts{
+			CandidateRecords: 6, BaseRecords: 5, ExcludedGoTestRecords: 1,
+		},
+		PartitionProgress: &api.CallerMapPartitionProgress{
+			State: "complete", SettledPairCount: 1,
+			SucceededPairCount: 1, TotalPairCount: callerMapInt(1),
+		},
+	}
+	page.Generation.ExcludedGoTestRecords = 1
+	page.Scope = &api.AnalysisScopeProjection{
+		Repository: query.Endpoint.Repository, Commit: callerToolCommit,
+		ScopePosture: "whole-repository",
 	}
 	page.MatchingRowsState = "exact"
 	return page, nil
 }
+
+func callerMapInt(value int) *int { return &value }
 
 type schemaExactCallerMapQueries struct {
 	schemaCallerMapQueries
@@ -150,7 +169,7 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 	schemaDigests := map[string]string{
 		"search_contract_operations": "sha256:e2b2b80c7ebb5eeece8c6179b0e21a1b5676dee1ec3a481487f1984c93fbefc2",
 		"get_contract_operation":     "sha256:3a8bfc0a42ac27ffbfbd3e546892924a6cd8ec4ef6ab1fe7bb44a95ae4881af9",
-		"list_operation_callers":     "sha256:c4b6828e0870ce1c6151163cb86fe7ae02f3080644989ab54c2cb73e16f473ab",
+		"list_operation_callers":     "sha256:a9e05e3f4b02e4710bf02b37f568a6cb07cabe697d99ec71f9a3e9985eff5b74",
 		"compare_operation_callers":  "sha256:a6df9c83577b74080b819b88ee6c271fa7a3277cd16324cd8e025542a6edc22d",
 	}
 	for _, test := range []struct {
@@ -296,6 +315,7 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 					for _, field := range []string{
 						`"rows"`, `"pagination"`, `"coverage_digest"`,
 						`"attribution_digest"`, `"generation"`,
+						`"record_counts"`, `"partition_progress"`, `"scope"`,
 						`"matching_rows_state"`, `"caveat"`,
 					} {
 						if !strings.Contains(string(output), field) {
@@ -337,6 +357,93 @@ func TestCallerMapToolSchemasAndDarkRegistration(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestCallerMapMCPAcceptsProductionExactGapEnvelope(t *testing.T) {
+	const repository = callerToolContractA
+	unit, err := (analysisunit.Scope{
+		Repository: repository, Name: "orders-service",
+		Primary: []string{"idl/orders.proto"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A committed empty list and a decoded JSON null have the same semantic
+	// identity. Exercise the latter so MCP's schema cannot reject a state the
+	// product reader accepts.
+	unit.SupportingPaths = nil
+	evidence := &callerToolStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: callerToolCommit,
+			IndexedAnalysisUnit: unit,
+		}},
+		runs:        make(map[string]store.ExtractionRun),
+		assertions:  make(map[string][]store.Assertion),
+		resolutions: make(map[string]store.EvidenceResolution),
+	}
+	registry, err := callerexecute.NewRegistry(
+		[]extract.Extractor{gocaller.NewGRPC()},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publications := callerpublication.NewRegistry(t.TempDir())
+	t.Cleanup(func() { _ = publications.Close() })
+	reader, err := callerexecute.NewPublicationReader(
+		&exactGapCallerReadStore{callerToolStore: evidence},
+		registry,
+		publications,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := api.NewCallerMapService(api.Options{
+		Store: evidence, Evidence: evidence, CallerMapEnabled: true,
+		CallerReader: reader, DataDir: t.TempDir(),
+		Principal:             func(context.Context) string { return "user:agent" },
+		AuthorizationProvider: "t30.7-mcp-parity-v1",
+	})
+	if service == nil {
+		t.Fatal("exact Caller Map service is unavailable")
+	}
+
+	server := NewServer(Options{
+		Version: "test", ContractCatalog: schemaContractCatalogQueries{},
+		CallerMap: service,
+	})
+	serverTransport, clientTransport := sdk.NewInMemoryTransports()
+	go func() { _, _ = server.Connect(t.Context(), serverTransport, nil) }()
+	client := sdk.NewClient(
+		&sdk.Implementation{Name: "t30.7-mcp-parity", Version: "1"}, nil,
+	)
+	session, err := client.Connect(t.Context(), clientTransport, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = session.Close() })
+	page, result := callToolSession[api.CallerMapPage](
+		t,
+		session,
+		"list_operation_callers",
+		map[string]any{
+			"protocol": "protobuf", "repository": repository,
+			"declaration_lineage": callerToolLineageA,
+			"operation":           callerToolOperation,
+		},
+	)
+	if result.IsError {
+		t.Fatalf("exact Caller Map gap failed MCP output validation: %s", textContent(t, result))
+	}
+	if page.Scope == nil || page.Scope.Repository != repository ||
+		page.Scope.ScopePosture != analysisunit.SearchIndexFocused ||
+		page.Scope.AnalysisUnit == nil ||
+		page.Scope.AnalysisUnit.SupportingPaths != nil ||
+		page.Generation == nil || page.Generation.Repository != repository ||
+		page.Generation.PartitionProgress == nil ||
+		page.Generation.PartitionProgress.State != "unavailable" ||
+		page.MatchingRowsState != "unavailable" {
+		t.Fatalf("exact Caller Map gap lost production scope/progress: %+v", page)
 	}
 }
 
@@ -440,6 +547,91 @@ type callerToolStore struct {
 	writes      int
 }
 
+// exactGapCallerReadStore is the smallest real PublicationReader authority
+// that can prove the production Caller Map gap envelope through MCP. The
+// product reader, rather than a transport fixture, supplies scope and bounded
+// partition progress on this path.
+type exactGapCallerReadStore struct {
+	*callerToolStore
+}
+
+func (*exactGapCallerReadStore) GetCandidateManifestPublication(
+	context.Context,
+	string,
+) (*store.CandidateManifestPublication, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*exactGapCallerReadStore) GetResolverCatalogPublication(
+	context.Context,
+	string,
+) (*store.ResolverCatalogPublication, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*exactGapCallerReadStore) ResolverCatalogPublicationCurrent(
+	context.Context,
+	store.ResolverCatalogPublication,
+) (bool, error) {
+	return false, nil
+}
+
+func (*exactGapCallerReadStore) GetCallerGenerationPublication(
+	context.Context,
+	string,
+) (*store.CallerGenerationPublication, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*exactGapCallerReadStore) GetCallerGenerationPublicationSummary(
+	context.Context,
+	string,
+) (*store.CallerGenerationPublicationSummary, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*exactGapCallerReadStore) CallerGenerationPublicationSummaryCurrent(
+	context.Context,
+	store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	return false, nil
+}
+
+func (*exactGapCallerReadStore) CallerGenerationPublicationSummaryAuthorityCurrent(
+	context.Context,
+	store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	return false, nil
+}
+
+func (*exactGapCallerReadStore) CallerGenerationPublicationSummariesAuthorityCurrent(
+	context.Context,
+	[]store.CallerGenerationPublicationSummary,
+) (bool, error) {
+	return false, nil
+}
+
+func (*exactGapCallerReadStore) GetCallerGenerationAdmission(
+	context.Context,
+	store.CallerGenerationIdentity,
+) (*store.CallerGenerationAdmission, error) {
+	return nil, store.ErrNotFound
+}
+
+func (*exactGapCallerReadStore) GetCallerLeafOutcomeProgress(
+	context.Context,
+	store.CallerGenerationIdentity,
+) (store.CallerLeafOutcomeProgress, error) {
+	return store.CallerLeafOutcomeProgress{}, nil
+}
+
+func (s *callerToolStore) LatestExtractionDomainOutcome(
+	context.Context,
+	store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	return nil, store.ErrNotFound
+}
+
 func callerToolScope(repo, domain string) string {
 	return repo + "\x00" + domain
 }
@@ -451,6 +643,19 @@ func callerToolEvidenceScope(repo, runID, atomID string) string {
 func (s *callerToolStore) ListRepos(context.Context) ([]store.Repo, error) {
 	s.calls = append(s.calls, "list-repos")
 	return append([]store.Repo(nil), s.repos...), nil
+}
+
+func (s *callerToolStore) GetRepo(
+	_ context.Context,
+	repository string,
+) (*store.Repo, error) {
+	for _, repo := range s.repos {
+		if repo.Name == repository {
+			copyOfRepo := repo
+			return &copyOfRepo, nil
+		}
+	}
+	return nil, store.ErrNotFound
 }
 
 func (s *callerToolStore) LatestPublishedRun(

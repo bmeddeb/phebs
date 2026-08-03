@@ -1,10 +1,11 @@
 # T21.14 neutral Change Workbench closure
 
 This retained development-only fixture is one synthetic microservices
-monorepo. `make dev` binds its cloneable Git bundle through the normal sync,
-zoekt index, and provisional protobuf/Thrift extraction pipeline. The source
-tree keeps declarations under `idl/` and implementations and callers under
-`src/`.
+monorepo. Tests and an explicit historical-fixture invocation can bind its
+cloneable Git bundle through the normal sync, zoekt index, and provisional
+protobuf/Thrift extraction pipeline. T30.7 `make dev` uses the separate neutral
+focused-service cohort instead. The source tree keeps declarations under
+`idl/` and implementations and callers under `src/`.
 
 The corpus contains:
 
@@ -37,5 +38,5 @@ accuracy. External accuracy remains `NOT_ESTABLISHED`.
 `cmd/author` deterministically creates the two-commit bundle from the reviewed
 `repo/` tree. The bundle advertises both `HEAD` and `refs/heads/main`, so bare
 mirrors resolve the same default branch across supported Apple and Linux Git
-versions. Normal tests and `make dev` verify and consume the committed bundle;
-they do not re-author it.
+versions. Normal tests verify and consume the committed bundle; they do not
+re-author it.

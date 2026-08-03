@@ -75,22 +75,23 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 ## Current state
 
-**Single-node implementation complete through Epic 23; documentation Epic 24
-and provisional Workbench binding Epic 29 are complete (2026-07-28).** Search,
+**Single-node implementation is complete for Epics 0–24, provisional
+Workbench binding Epic 29, and service-scope Epic 30 (2026-08-02).** Search,
 repository browsing, authentication,
 permissions, audit/analytics, SCIP/history, stateless MCP, bounded `rev:`
 indexing, and backup/restore are shipped core behavior. Contract Atlas, Caller
 Map, Impact, Investigations/Workbench, Thrift-field, and Kafka evidence are
 implemented but remain experimental/default-dark; the Workbench's provisional
-store-derived binding creates no production registration. Epic 30 service-scope
-work is in progress: T30.1 recorded a focused-index spike GO without production
-behavior changes; T30.2 added strict analysis-unit configuration and committed
-state; T30.3 shipped manifest-bound focused physical indexing and exact focused
-backup/restore; T30.4 shipped the reusable streamed candidate manifest and
-fail-closed extraction admission; T30.5 shipped exact focused evidence
-publication. The post-T30.5 whole-search and focused-local candidate-replay
-issue gate closed on 2026-07-29. The separate large-monorepo design review is
-complete: T30.6 remains the target-bound caller-overlay umbrella, decomposed
+store-derived binding creates no production registration. Epic 30's
+service-scope program is complete: T30.1 recorded a focused-index spike GO
+without production behavior changes; T30.2 added strict analysis-unit
+configuration and committed state; T30.3 shipped manifest-bound focused
+physical indexing and exact focused backup/restore; T30.4 shipped the reusable
+streamed candidate manifest and fail-closed extraction admission; T30.5 shipped
+exact focused evidence publication. The post-T30.5 whole-search and
+focused-local candidate-replay issue gate closed on 2026-07-29. The separate
+large-monorepo design review is complete: T30.6 remains the target-bound
+caller-overlay umbrella, decomposed
 across PR-sized tickets for operational receipts, durable outcomes, aggregate
 scheduling, source-lane classification and consumption, catalog lifecycle and
 materialization, leaf execution and complete publication, authorized
@@ -109,7 +110,14 @@ authorization-first retention-status shell and capacity warning, and T30.6p's
 21 core SurrealDB retention collectors are also shipped. T30.6q's exact
 24-table Investigation/Workbench collector and T30.6r's bounded
 derived-publication store/filesystem collectors are shipped, completing the
-52-component retention-status surface; T30.7 is next.
+52-component retention-status surface. T30.7 closes the epic with scope-aware
+product surfaces, coverage-certificate v3 and durable domain receipts, exact
+caller record/progress summaries, HTTP/MCP scope parity, and a neutral
+ordinary-worker `make dev` cohort. Its post-review closure preserves retained
+v1/v2 proof bytes, validates the real exact Caller Map envelope through MCP,
+and keeps failure, explicit-gap, and zero/empty states visible. No product
+ticket is currently scheduled;
+Epics 25–28 remain unscheduled drafts.
 A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.

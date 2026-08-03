@@ -196,6 +196,7 @@ type WorkbenchCallerImpact struct {
 	Query                CallerMapQuery                     `json:"query"`
 	Declaration          *ContractCatalogClaim              `json:"declaration,omitempty"`
 	Generation           CallerMapGeneration                `json:"generation"`
+	Scope                *AnalysisScopeProjection           `json:"scope,omitempty"`
 	MatchingRowsState    string                             `json:"matching_rows_state" enum:"exact,unavailable"`
 	ResolvedCallers      []CallerMapRow                     `json:"resolved_callers"`
 	ExtractorAbstentions []CallerMapRow                     `json:"extractor_abstentions"`
@@ -920,6 +921,7 @@ func (service *WorkbenchImpactService) readWorkbenchCallerStream(
 		Query:                value.Query,
 		Declaration:          value.Declaration,
 		Generation:           *value.Generation,
+		Scope:                value.Scope,
 		MatchingRowsState:    value.MatchingRowsState,
 		ResolvedCallers:      resolved,
 		ExtractorAbstentions: abstentions,
@@ -1016,17 +1018,24 @@ func validateWorkbenchExactCallerPage(
 ) error {
 	if page == nil || page.SchemaVersion != exactCallerMapSchemaVersion ||
 		page.Query != normalizeCallerMapQuery(query) || page.Generation == nil ||
+		page.Scope == nil ||
 		page.exactSnapshot == "" || page.exactAuthority == "" ||
 		!stringIn(page.MatchingRowsState, "exact", "unavailable") ||
 		page.Coverage != nil || page.CoverageDigest != "" ||
 		page.AttributionDigest != "" ||
 		page.Generation.Plane != exactCallerMapPlane ||
-		page.Generation.Repository != query.Endpoint.Repository {
+		page.Generation.Repository != query.Endpoint.Repository ||
+		page.Scope.Repository != page.Generation.Repository ||
+		!validAnalysisScopeProjection(*page.Scope) ||
+		!validCallerRecordCounts(*page.Generation) ||
+		!validCallerPartitionProgress(page.Generation.PartitionProgress) {
 		return errors.New("caller map exact envelope is invalid")
 	}
 	switch page.MatchingRowsState {
 	case "exact":
 		if page.Generation.State != string(callerexecute.PublicationCurrent) ||
+			!validCallerAnalysisScope(*page.Scope, *page.Generation) ||
+			page.Generation.RecordCounts == nil ||
 			page.Declaration == nil || page.TotalMatchingRows == nil {
 			return errors.New("caller map exact envelope is inconsistent")
 		}

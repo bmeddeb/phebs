@@ -3,6 +3,7 @@ package extract
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -14,10 +15,139 @@ import (
 )
 
 type certificateRunSource struct {
-	runs      map[string]store.ExtractionRun
-	attempts  map[string]store.ExtractionAttempt
-	runErrors map[string]error
-	queried   []string
+	runs          map[string]store.ExtractionRun
+	attempts      map[string]store.ExtractionAttempt
+	outcomes      map[string]store.ExtractionDomainOutcome
+	runErrors     map[string]error
+	outcomeErrors map[string]error
+	queried       []string
+}
+
+type transitioningCertificateSource struct {
+	run            store.ExtractionRun
+	oldOutcome     store.ExtractionDomainOutcome
+	currentOutcome store.ExtractionDomainOutcome
+	settles        bool
+	outcomeReads   int
+}
+
+type atomicPublishingCertificateSource struct {
+	oldRun, currentRun         store.ExtractionRun
+	oldAttempt, currentAttempt store.ExtractionAttempt
+	oldOutcome, currentOutcome store.ExtractionDomainOutcome
+	publishAfter               int
+	reads                      int
+}
+
+type splitFailureCertificateSource struct {
+	run               store.ExtractionRun
+	staged, aborted   store.ExtractionAttempt
+	published, failed store.ExtractionDomainOutcome
+	failureCommitted  bool
+	calls             []string
+}
+
+func (source *atomicPublishingCertificateSource) current() bool {
+	source.reads++
+	// Publication commits after the configured point read, so every later
+	// read sees the new run, attempt, and outcome together.
+	return source.reads > source.publishAfter
+}
+
+func (source *atomicPublishingCertificateSource) LatestPublishedRun(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionRun, error) {
+	run := source.oldRun
+	if source.current() {
+		run = source.currentRun
+	}
+	return &run, nil
+}
+
+func (source *atomicPublishingCertificateSource) LatestExtractionAttempt(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
+	attempt := source.oldAttempt
+	if source.current() {
+		attempt = source.currentAttempt
+	}
+	return &attempt, nil
+}
+
+func (source *atomicPublishingCertificateSource) LatestExtractionDomainOutcome(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	outcome := source.oldOutcome
+	if source.current() {
+		outcome = source.currentOutcome
+	}
+	return &outcome, nil
+}
+
+func (source *splitFailureCertificateSource) LatestPublishedRun(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionRun, error) {
+	source.calls = append(source.calls, "run")
+	run := source.run
+	return &run, nil
+}
+
+func (source *splitFailureCertificateSource) LatestExtractionAttempt(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
+	source.calls = append(source.calls, "attempt")
+	attempt := source.aborted
+	if !source.failureCommitted {
+		attempt = source.staged
+		// Model the real split failure transition immediately after this
+		// point read: abort the attempt, then persist the failure outcome.
+		source.failureCommitted = true
+	}
+	return &attempt, nil
+}
+
+func (source *splitFailureCertificateSource) LatestExtractionDomainOutcome(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	source.calls = append(source.calls, "outcome")
+	outcome := source.published
+	if source.failureCommitted {
+		outcome = source.failed
+	}
+	return &outcome, nil
+}
+
+func (source *transitioningCertificateSource) LatestPublishedRun(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionRun, error) {
+	run := source.run
+	return &run, nil
+}
+
+func (source *transitioningCertificateSource) LatestExtractionAttempt(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionAttempt, error) {
+	return nil, store.ErrNotFound
+}
+
+func (source *transitioningCertificateSource) LatestExtractionDomainOutcome(
+	_ context.Context,
+	_ store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	source.outcomeReads++
+	outcome := source.oldOutcome
+	if source.settles && source.outcomeReads > 1 {
+		outcome = source.currentOutcome
+	}
+	return &outcome, nil
 }
 
 func certKey(repo, domain string) string { return repo + "\x00" + domain }
@@ -51,6 +181,22 @@ func (f *certificateRunSource) LatestExtractionAttempt(
 	return &copied, nil
 }
 
+func (f *certificateRunSource) LatestExtractionDomainOutcome(
+	_ context.Context,
+	scope store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	f.queried = append(f.queried, "outcome\x00"+certKey(scope.Repository, scope.Domain))
+	if err := f.outcomeErrors[certKey(scope.Repository, scope.Domain)]; err != nil {
+		return nil, err
+	}
+	outcome, ok := f.outcomes[certKey(scope.Repository, scope.Domain)]
+	if !ok || outcome.Scope != scope {
+		return nil, store.ErrNotFound
+	}
+	copied := outcome
+	return &copied, nil
+}
+
 func certRun(repo, domain, commit string, coverage store.CoverageManifest) store.ExtractionRun {
 	return store.ExtractionRun{
 		ID: "run-" + repo + "-" + domain, Repo: repo, Commit: commit,
@@ -63,6 +209,78 @@ func certAttempt(run store.ExtractionRun, status string) store.ExtractionAttempt
 	return store.ExtractionAttempt{
 		RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
 		UnitDigest: run.UnitDigest, Extractor: run.Extractor, Status: status,
+	}
+}
+
+func certOutcome(
+	t *testing.T,
+	scope store.ExtractionScope,
+	extractor string,
+	disposition store.DomainOutcomeDisposition,
+	fullReceipt bool,
+) store.ExtractionDomainOutcome {
+	t.Helper()
+	generation := store.ExtractionGenerationIdentity{
+		Extractor:        extractor,
+		InventoryPolicy:  "gitlink-boundary-v2",
+		DependencyDigest: "sha256:" + strings.Repeat("d", 64),
+	}
+	generation.Digest = store.ComputeExtractionGenerationDigest(generation)
+	receipt := `{"schema":"` + store.ExtractionOutcomeReceiptSchema + `"}`
+	if fullReceipt {
+		reason := OperationReasonFailed
+		switch disposition {
+		case store.DomainOutcomePublished:
+			reason = OperationReasonPublishedNonempty
+		case store.DomainOutcomeUnavailablePrerequisite:
+			reason = OperationReasonTypedInputAbsent
+		case store.DomainOutcomeTerminalGenerationRefusal:
+			reason = OperationReasonLimitRefusal
+		}
+		encoded, err := json.Marshal(ExtractionDomainOutcomeReceipt{
+			Schema: store.ExtractionOutcomeReceiptSchema,
+			Domain: scope.Domain, ExtractorVersion: extractor,
+			Disposition: disposition, Reason: reason,
+			Counts: ExtractionOperationDomainCounts{
+				CorpusFiles: 8, CandidateFiles: 5, ExcludedSourceFiles: 2,
+			},
+			Bytes:  ExtractionOperationDomainBytes{PlannedDeclared: 123},
+			Limits: certificateTestReceiptLimits(),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipt = string(encoded)
+	}
+	outcome := store.ExtractionDomainOutcome{
+		Scope: scope, Disposition: disposition, Generation: generation,
+		ReceiptSchema: store.ExtractionOutcomeReceiptSchema,
+		Receipt:       receipt, RecordedAt: time.Unix(1_700_000_000, 0).UTC(),
+	}
+	if disposition == store.DomainOutcomePublished {
+		outcome.RunID = "run-" + scope.Repository + "-" + scope.Domain
+	}
+	return outcome
+}
+
+func certificateTestReceiptLimits() ExtractionOperationDomainLimits {
+	return ExtractionOperationDomainLimits{
+		CorpusFiles:            100,
+		OpenedSourceAttempts:   400,
+		OpenedSourceFiles:      100,
+		OpenedSourceBytes:      1 << 20,
+		Facts:                  100,
+		SourceBlobBytes:        1 << 16,
+		TypedInputBytes:        1 << 16,
+		AggregateWallMS:        15 * 60 * 1000,
+		MirrorLockMS:           5 * 60 * 1000,
+		DomainWallMS:           5 * 60 * 1000,
+		AbortWallMS:            10 * 1000,
+		OutcomeWallMS:          1000,
+		MaxSerialDomains:       17,
+		SchedulerIdentityBytes: 1 << 16,
+		AggregateStagedRows:    100,
+		DomainStagedRows:       100,
 	}
 }
 
@@ -102,7 +320,7 @@ func TestCoverageCertificateDeterministicOverVisibleUniverse(t *testing.T) {
 	if !reflect.DeepEqual(first, second) {
 		t.Fatalf("two builds over equal state differ:\n%+v\n%+v", first, second)
 	}
-	if first.SchemaVersion != "coverage-certificate-v2" || !strings.HasPrefix(first.Digest, "sha256:") {
+	if first.SchemaVersion != "coverage-certificate-v3" || !strings.HasPrefix(first.Digest, "sha256:") {
 		t.Fatalf("schema/digest = %q %q", first.SchemaVersion, first.Digest)
 	}
 	if got, want := first.Domains, []string{"proto-contract", "scip-proto-field"}; !reflect.DeepEqual(got, want) {
@@ -163,27 +381,33 @@ func TestCoverageCertificateBindsFocusedUnitAndCandidateScope(t *testing.T) {
 	digestA := "sha256:" + strings.Repeat("a", 64)
 	digestB := "sha256:" + strings.Repeat("b", 64)
 	run := certRun("alpha", "proto-contract", commitA, store.CoverageManifest{
-		SourceScopeDigest:        digestA,
-		ScopePosture:             "focused-local",
-		CandidateManifestDigest:  digestB,
-		CandidatePlane:           "local",
-		ScopeCorpusFileCount:     3,
-		ScopeCorpusDeclaredBytes: 300,
-		ScopeCorpusDigest:        digestA,
-		PlannedFileCount:         2,
-		PlannedRequiredFileCount: 1,
-		PlannedDeclaredBytes:     200,
-		PlannedScopeDigest:       digestB,
-		TypedInputKind:           analysisunit.TypedIndexKindSCIP,
-		TypedInputPath:           "services/payments/index.scip",
-		TypedInputObjectID:       strings.Repeat("c", 40),
-		TypedInputDeclaredBytes:  100,
-		TypedInputDigest:         digestA,
-		TypedInputPresent:        true,
-		CorpusFileCount:          3,
-		CandidateFileCount:       1,
-		ReadFileCount:            2,
-		ReadBytes:                200,
+		SourceScopeDigest:           digestA,
+		ScopePosture:                "focused-local",
+		CandidateManifestDigest:     digestB,
+		CandidatePlane:              "local",
+		ScopeCorpusFileCount:        3,
+		ScopeCorpusDeclaredBytes:    300,
+		ScopeCorpusDigest:           digestA,
+		PlannedFileCount:            4,
+		PlannedRequiredFileCount:    1,
+		PlannedDeclaredBytes:        200,
+		PlannedScopeDigest:          digestB,
+		ExcludedSourceFileCount:     2,
+		ExcludedSourceRequiredCount: 1,
+		ExcludedSourceDeclaredBytes: 75,
+		ExcludedSCIPDocumentCount:   3,
+		ExcludedSCIPDefinitionCount: 4,
+		ExcludedSCIPOccurrenceCount: 5,
+		TypedInputKind:              analysisunit.TypedIndexKindSCIP,
+		TypedInputPath:              "services/payments/index.scip",
+		TypedInputObjectID:          strings.Repeat("c", 40),
+		TypedInputDeclaredBytes:     100,
+		TypedInputDigest:            digestA,
+		TypedInputPresent:           true,
+		CorpusFileCount:             3,
+		CandidateFileCount:          1,
+		ReadFileCount:               2,
+		ReadBytes:                   200,
 	})
 	run.UnitDigest = unitA.Digest
 	source := &certificateRunSource{
@@ -216,10 +440,37 @@ func TestCoverageCertificateBindsFocusedUnitAndCandidateScope(t *testing.T) {
 		covered.EvidenceScopePosture != "focused-local" ||
 		covered.CandidateScope == nil ||
 		covered.CandidateScope.ManifestDigest != digestB ||
-		covered.CandidateScope.PlannedFileCount != 2 ||
+		covered.CandidateScope.PlannedFileCount != 4 ||
+		covered.CandidateScope.BaseSourceFileCount == nil ||
+		*covered.CandidateScope.BaseSourceFileCount != 2 ||
+		covered.CandidateScope.ExcludedGoTestCount == nil ||
+		*covered.CandidateScope.ExcludedGoTestCount != 2 ||
+		covered.CandidateScope.ExcludedSourceFileCount != 2 ||
+		covered.CandidateScope.ExcludedSourceRequiredCount != 1 ||
+		covered.CandidateScope.ExcludedSourceDeclaredBytes != 75 ||
+		covered.CandidateScope.ExcludedSCIPDocumentCount != 3 ||
+		covered.CandidateScope.ExcludedSCIPDefinitionCount != 4 ||
+		covered.CandidateScope.ExcludedSCIPOccurrenceCount != 5 ||
 		covered.CandidateScope.TypedInput == nil ||
 		!covered.CandidateScope.TypedInput.Present {
 		t.Fatalf("focused run coverage = %+v", covered)
+	}
+	wholeLaneCoverage := run.Coverage
+	wholeLaneCoverage.ScopePosture = "repository-overlay"
+	wholeLaneCoverage.CandidatePlane = "caller"
+	wholeLaneCoverage.ExcludedSourceFileCount = 0
+	wholeLaneCoverage.ExcludedSourceRequiredCount = 0
+	wholeLaneCoverage.ExcludedSourceDeclaredBytes = 0
+	wholeLaneCoverage.ExcludedSCIPDocumentCount = 0
+	wholeLaneCoverage.ExcludedSCIPDefinitionCount = 0
+	wholeLaneCoverage.ExcludedSCIPOccurrenceCount = 0
+	wholeLaneScope, err := certificateCandidateScope(wholeLaneCoverage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wholeLaneScope.BaseSourceFileCount != nil ||
+		wholeLaneScope.ExcludedGoTestCount != nil {
+		t.Fatalf("repository-overlay coverage invented lane counts: %+v", wholeLaneScope)
 	}
 
 	other, err := BuildCoverageCertificate(
@@ -238,6 +489,507 @@ func TestCoverageCertificateBindsFocusedUnitAndCandidateScope(t *testing.T) {
 		other.Repositories[0].Runs[0].UnitDigest != unitB.Digest ||
 		other.Digest == focused.Digest {
 		t.Fatalf("different same-HEAD unit reused focused evidence: %+v", other)
+	}
+
+	legacyUnit := analysisunit.CloneState(unitB)
+	legacyUnit.SearchIndexPosture = analysisunit.SearchIndexWholeRepository
+	legacy, err := BuildCoverageCertificate(
+		context.Background(),
+		source,
+		[]store.Repo{{
+			Name: "alpha", IndexedCommitHash: commitA,
+			IndexedAnalysisUnit: legacyUnit,
+		}},
+		[]string{"proto-contract"},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if legacy.Repositories[0].ScopePosture != analysisunit.SearchIndexWholeRepository ||
+		legacy.Repositories[0].AnalysisUnit == nil {
+		t.Fatalf("legacy T30.2 scope posture was rewritten: %+v", legacy.Repositories[0])
+	}
+}
+
+func TestCoverageCertificateCandidateScopePreservesRetainedV2Shape(t *testing.T) {
+	legacyJSON := `{"manifest_digest":"sha256:` + strings.Repeat("a", 64) +
+		`","plane":"caller","corpus_file_count":3,"corpus_declared_bytes":30,` +
+		`"corpus_digest":"sha256:` + strings.Repeat("b", 64) +
+		`","planned_file_count":2,"planned_required_file_count":1,` +
+		`"planned_declared_bytes":20,"planned_digest":"sha256:` +
+		strings.Repeat("c", 64) + `"}`
+	var scope CertificateCandidateScope
+	if err := json.Unmarshal([]byte(legacyJSON), &scope); err != nil {
+		t.Fatal(err)
+	}
+	roundTrip, err := json.Marshal(scope)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(roundTrip) != legacyJSON {
+		t.Fatalf("retained candidate scope changed: %s", roundTrip)
+	}
+	certificate := &CoverageCertificate{
+		SchemaVersion: "coverage-certificate-v2",
+		Repositories: []CertificateRepository{{
+			Repository: "alpha",
+			Runs: []CertificateRun{{
+				Domain: "grpc-consumer", CandidateScope: &scope,
+			}},
+		}},
+	}
+	if err := certificate.ValidateCanonicalShape(); err != nil {
+		t.Fatalf("retained v2 candidate scope was rejected: %v", err)
+	}
+	certificate.SchemaVersion = certificateSchemaVersion
+	if err := certificate.ValidateCanonicalShape(); err == nil {
+		t.Fatal("v3 certificate accepted omitted exclusion counters")
+	}
+}
+
+func TestCoverageCertificateProjectsDurableDomainOutcomes(t *testing.T) {
+	dispositions := []store.DomainOutcomeDisposition{
+		store.DomainOutcomePublished,
+		store.DomainOutcomeUnavailablePrerequisite,
+		store.DomainOutcomeTerminalGenerationRefusal,
+		store.DomainOutcomeRetryableFailure,
+	}
+	for _, disposition := range dispositions {
+		t.Run(string(disposition), func(t *testing.T) {
+			domain := "proto-contract"
+			scope := store.ExtractionScope{
+				Repository: "alpha", Commit: commitA, Domain: domain,
+			}
+			outcome := certOutcome(
+				t, scope, domain+"@1.0.0", disposition, true,
+			)
+			source := &certificateRunSource{
+				outcomes: map[string]store.ExtractionDomainOutcome{
+					certKey(scope.Repository, domain): outcome,
+				},
+			}
+			if disposition == store.DomainOutcomePublished {
+				source.runs = map[string]store.ExtractionRun{
+					certKey(scope.Repository, domain): certRun(
+						scope.Repository, domain, scope.Commit,
+						store.CoverageManifest{},
+					),
+				}
+			}
+			certificate, err := BuildCoverageCertificate(
+				context.Background(), source,
+				[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+				[]string{domain},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := certificate.Repositories[0].Runs[0].Outcome
+			if got == nil || got.Disposition != disposition ||
+				got.GenerationDigest != outcome.Generation.Digest ||
+				got.Extractor != outcome.Generation.Extractor ||
+				got.ReceiptSchema != store.ExtractionOutcomeReceiptSchema ||
+				got.ReceiptState != "full" || got.Receipt == nil ||
+				got.Receipt.Domain != domain ||
+				got.Receipt.Disposition != disposition {
+				t.Fatalf("projected outcome = %+v", got)
+			}
+			encoded, err := json.Marshal(certificate)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(encoded), "recorded_at") ||
+				strings.Contains(string(encoded), outcome.RecordedAt.Format(time.RFC3339)) {
+				t.Fatalf("certificate leaked outcome time: %s", encoded)
+			}
+		})
+	}
+}
+
+func TestCoverageCertificateAcceptsRetryablePublishFailureReasons(t *testing.T) {
+	tests := []struct {
+		name   string
+		stats  corpusStats
+		facts  int
+		reason string
+	}{
+		{
+			name: "published nonempty",
+			stats: corpusStats{
+				candidateFileCount: 1,
+			},
+			facts:  1,
+			reason: OperationReasonPublishedNonempty,
+		},
+		{
+			name: "typed input absent",
+			stats: corpusStats{
+				candidateFileCount: 1,
+				typedInputKind:     analysisunit.TypedIndexKindSCIP,
+			},
+			reason: OperationReasonTypedInputAbsent,
+		},
+		{
+			name:   "no candidates",
+			stats:  corpusStats{},
+			reason: OperationReasonNoCandidates,
+		},
+		{
+			name: "published empty",
+			stats: corpusStats{
+				candidateFileCount: 1,
+			},
+			reason: OperationReasonPublishedEmpty,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			domain := "proto-contract"
+			scope := store.ExtractionScope{
+				Repository: "alpha", Commit: commitA, Domain: domain,
+			}
+			outcome := certOutcome(
+				t, scope, domain+"@1.0.0",
+				store.DomainOutcomeRetryableFailure, true,
+			)
+			var receipt ExtractionDomainOutcomeReceipt
+			if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			receipt.Reason = successfulOperationReason(test.stats, test.facts)
+			if receipt.Reason != test.reason {
+				t.Fatalf("writer reason = %q, want %q", receipt.Reason, test.reason)
+			}
+			encoded, err := json.Marshal(receipt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			outcome.Receipt = string(encoded)
+
+			certificate, err := BuildCoverageCertificate(
+				context.Background(),
+				&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+					certKey(scope.Repository, domain): outcome,
+				}},
+				[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+				[]string{domain},
+			)
+			if err != nil {
+				t.Fatalf("writer-compatible retryable receipt was rejected: %v", err)
+			}
+			got := certificate.Repositories[0].Runs[0].Outcome
+			if got == nil || got.Receipt == nil ||
+				got.Receipt.Reason != test.reason {
+				t.Fatalf("projected outcome = %+v", got)
+			}
+		})
+	}
+}
+
+func TestCoverageCertificateOutcomeSchemaOnlyReceiptIsExplicit(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	outcome := certOutcome(
+		t, scope, domain+"@1.0.0", store.DomainOutcomeRetryableFailure, false,
+	)
+	certificate, err := BuildCoverageCertificate(
+		context.Background(),
+		&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+			certKey(scope.Repository, domain): outcome,
+		}},
+		[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+		[]string{domain},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := certificate.Repositories[0].Runs[0].Outcome
+	if got == nil || got.ReceiptState != "schema_only" || got.Receipt != nil ||
+		got.ReceiptSchema != store.ExtractionOutcomeReceiptSchema {
+		t.Fatalf("schema-only outcome = %+v", got)
+	}
+}
+
+func TestCoverageCertificateOutcomeTimestampDoesNotChangeDigest(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	outcome := certOutcome(
+		t, scope, domain+"@1.0.0", store.DomainOutcomeRetryableFailure, true,
+	)
+	build := func(value store.ExtractionDomainOutcome) string {
+		t.Helper()
+		certificate, err := BuildCoverageCertificate(
+			context.Background(),
+			&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+				certKey(scope.Repository, domain): value,
+			}},
+			[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+			[]string{domain},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return certificate.Digest
+	}
+	baseline := build(outcome)
+	outcome.RecordedAt = outcome.RecordedAt.Add(24 * time.Hour)
+	if changed := build(outcome); changed != baseline {
+		t.Fatalf("outcome timestamp changed certificate digest: %s != %s", changed, baseline)
+	}
+}
+
+func TestCoverageCertificateRetriesAtomicPublicationTransition(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	run := certRun(scope.Repository, domain, scope.Commit, store.CoverageManifest{})
+	run.ID = "run-new"
+	oldOutcome := certOutcome(
+		t, scope, run.Extractor, store.DomainOutcomePublished, true,
+	)
+	oldOutcome.RunID = "run-old"
+	currentOutcome := oldOutcome
+	currentOutcome.RunID = run.ID
+
+	for _, test := range []struct {
+		name         string
+		publishAfter int
+	}{
+		{name: "publication after run read", publishAfter: 1},
+		{name: "publication after outcome read", publishAfter: 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			oldRun := run
+			oldRun.ID = "run-old"
+			oldAttempt := store.ExtractionAttempt{
+				RunID: oldRun.ID, Repo: scope.Repository, Commit: scope.Commit,
+				Domain: domain, Extractor: run.Extractor, Status: "published",
+			}
+			currentAttempt := oldAttempt
+			currentAttempt.RunID = run.ID
+			oldRetryable := certOutcome(
+				t, scope, run.Extractor,
+				store.DomainOutcomeRetryableFailure, true,
+			)
+			currentPublished := certOutcome(
+				t, scope, run.Extractor, store.DomainOutcomePublished, true,
+			)
+			currentPublished.RunID = run.ID
+			source := &atomicPublishingCertificateSource{
+				oldRun: oldRun, currentRun: run,
+				oldAttempt: oldAttempt, currentAttempt: currentAttempt,
+				oldOutcome: oldRetryable, currentOutcome: currentPublished,
+				publishAfter: test.publishAfter,
+			}
+			certificate, err := BuildCoverageCertificate(
+				context.Background(), source,
+				[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+				[]string{domain},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := certificate.Repositories[0].Runs[0]
+			if source.reads != 6 || got.RunID != run.ID || got.Outcome == nil ||
+				got.Outcome.Disposition != store.DomainOutcomePublished {
+				t.Fatalf(
+					"atomic point-read transition = %d reads / %+v",
+					source.reads, got,
+				)
+			}
+		})
+	}
+
+	t.Run("settles on the next coherent read", func(t *testing.T) {
+		source := &transitioningCertificateSource{
+			run: run, oldOutcome: oldOutcome, currentOutcome: currentOutcome,
+			settles: true,
+		}
+		certificate, err := BuildCoverageCertificate(
+			context.Background(), source,
+			[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+			[]string{domain},
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if source.outcomeReads != 2 ||
+			certificate.Repositories[0].Runs[0].Outcome == nil ||
+			certificate.Repositories[0].Runs[0].RunID != run.ID {
+			t.Fatalf(
+				"transition retry reads/result = %d / %+v",
+				source.outcomeReads, certificate.Repositories[0].Runs[0],
+			)
+		}
+	})
+
+	t.Run("persistent transition is a typed conflict", func(t *testing.T) {
+		source := &transitioningCertificateSource{
+			run: run, oldOutcome: oldOutcome, currentOutcome: currentOutcome,
+		}
+		_, err := BuildCoverageCertificate(
+			context.Background(), source,
+			[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+			[]string{domain},
+		)
+		if !errors.Is(err, store.ErrConflict) ||
+			source.outcomeReads != certificateDomainSnapshotAttempts {
+			t.Fatalf(
+				"persistent transition = %v after %d reads",
+				err, source.outcomeReads,
+			)
+		}
+	})
+}
+
+func TestCoverageCertificateDoesNotMixSplitFailureTransition(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	run := certRun(scope.Repository, domain, scope.Commit, store.CoverageManifest{})
+	published := certOutcome(
+		t, scope, run.Extractor, store.DomainOutcomePublished, true,
+	)
+	published.RunID = run.ID
+	failed := certOutcome(
+		t, scope, run.Extractor, store.DomainOutcomeRetryableFailure, true,
+	)
+	staged := certAttempt(run, "staged")
+	staged.RunID = "replacement-run"
+	aborted := staged
+	aborted.Status = "aborted"
+	source := &splitFailureCertificateSource{
+		run: run, staged: staged, aborted: aborted,
+		published: published, failed: failed,
+	}
+
+	certificate, err := BuildCoverageCertificate(
+		context.Background(), source,
+		[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+		[]string{domain},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := certificate.Repositories[0].Runs[0]
+	if !reflect.DeepEqual(source.calls, []string{"run", "outcome", "attempt"}) ||
+		got.LatestAttempt == nil || got.LatestAttempt.Status != "staged" ||
+		got.Outcome == nil || got.Outcome.Disposition != store.DomainOutcomePublished {
+		t.Fatalf("split failure point reads = %v / %+v", source.calls, got)
+	}
+}
+
+func TestCoverageCertificateRejectsInconsistentDomainOutcomeReceipt(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	baseline := certOutcome(
+		t, scope, domain+"@1.0.0", store.DomainOutcomeRetryableFailure, true,
+	)
+	mutateReceipt := func(
+		outcome *store.ExtractionDomainOutcome,
+		mutate func(*ExtractionDomainOutcomeReceipt),
+	) {
+		var receipt ExtractionDomainOutcomeReceipt
+		if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+			t.Fatal(err)
+		}
+		mutate(&receipt)
+		encoded, err := json.Marshal(receipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		outcome.Receipt = string(encoded)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*store.ExtractionDomainOutcome)
+	}{
+		{name: "domain", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			var receipt ExtractionDomainOutcomeReceipt
+			if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			receipt.Domain = "other"
+			encoded, _ := json.Marshal(receipt)
+			outcome.Receipt = string(encoded)
+		}},
+		{name: "extractor", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			var receipt ExtractionDomainOutcomeReceipt
+			if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			receipt.ExtractorVersion = "2.0.0"
+			encoded, _ := json.Marshal(receipt)
+			outcome.Receipt = string(encoded)
+		}},
+		{name: "disposition", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			var receipt ExtractionDomainOutcomeReceipt
+			if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			receipt.Disposition = store.DomainOutcomeTerminalGenerationRefusal
+			encoded, _ := json.Marshal(receipt)
+			outcome.Receipt = string(encoded)
+		}},
+		{name: "unknown field", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			outcome.Receipt = strings.TrimSuffix(outcome.Receipt, "}") + `,"diagnostic":"raw"}`
+		}},
+		{name: "reason incompatible with disposition", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			mutateReceipt(outcome, func(receipt *ExtractionDomainOutcomeReceipt) {
+				receipt.Reason = OperationReasonAlreadyCurrent
+			})
+		}},
+		{name: "opened files exceed attempts", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			mutateReceipt(outcome, func(receipt *ExtractionDomainOutcomeReceipt) {
+				receipt.Counts.OpenedSourceFiles = 1
+			})
+		}},
+		{name: "candidate and excluded files overlap", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			mutateReceipt(outcome, func(receipt *ExtractionDomainOutcomeReceipt) {
+				receipt.Counts.CandidateFiles = receipt.Counts.CorpusFiles - 1
+				receipt.Counts.ExcludedSourceFiles = 2
+			})
+		}},
+		{name: "excluded bytes exceed plan", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			mutateReceipt(outcome, func(receipt *ExtractionDomainOutcomeReceipt) {
+				receipt.Counts.ExcludedSourceFiles = 1
+				receipt.Bytes.ExcludedSourceDeclared =
+					receipt.Bytes.PlannedDeclared + 1
+			})
+		}},
+		{name: "zero frozen limit", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			mutateReceipt(outcome, func(receipt *ExtractionDomainOutcomeReceipt) {
+				receipt.Limits.DomainWallMS = 0
+			})
+		}},
+		{name: "generation digest", mutate: func(outcome *store.ExtractionDomainOutcome) {
+			outcome.Generation.Digest = "sha256:" + strings.Repeat("e", 64)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			outcome := baseline
+			test.mutate(&outcome)
+			_, err := BuildCoverageCertificate(
+				context.Background(),
+				&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+					certKey(scope.Repository, domain): outcome,
+				}},
+				[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+				[]string{domain},
+			)
+			if err == nil {
+				t.Fatal("inconsistent durable outcome entered a certificate")
+			}
+		})
 	}
 }
 

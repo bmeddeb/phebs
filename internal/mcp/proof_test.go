@@ -35,6 +35,13 @@ type proofToolStore struct {
 	calls       []string
 }
 
+func (s *proofToolStore) LatestExtractionDomainOutcome(
+	context.Context,
+	store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	return nil, store.ErrNotFound
+}
+
 func proofToolScope(repo, domain string) string { return repo + "\x00" + domain }
 
 func proofToolEvidenceScope(repo, runID, atomID string) string {

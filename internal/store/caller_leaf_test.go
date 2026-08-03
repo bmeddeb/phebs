@@ -90,6 +90,10 @@ func TestCallerLeafStoreLifecycle(t *testing.T) {
 		t.Fatal(err)
 	}
 	generation := callerGeneration(repository, commit, candidate, catalog)
+	progress, err := s.GetCallerLeafOutcomeProgress(ctx, generation)
+	if err != nil || progress != (store.CallerLeafOutcomeProgress{}) {
+		t.Fatalf("empty progress = %+v, %v", progress, err)
+	}
 
 	if _, err := s.EnqueuePending(ctx, store.JobCallerLeaf, repository, false); err != nil {
 		t.Fatal(err)
@@ -142,6 +146,17 @@ func TestCallerLeafStoreLifecycle(t *testing.T) {
 		outcomes[0].Disposition != store.CallerLeafSucceeded ||
 		outcomes[1].Disposition != store.CallerLeafTerminalGenerationRefusal {
 		t.Fatalf("outcomes = %+v, %v", outcomes, err)
+	}
+	progress, err = s.GetCallerLeafOutcomeProgress(ctx, generation)
+	if err != nil || progress.SettledCount != 2 ||
+		progress.SucceededCount != 1 || progress.RefusedCount != 1 {
+		t.Fatalf("settled progress = %+v, %v", progress, err)
+	}
+	otherGeneration := generation
+	otherGeneration.CallerPolicyDigest = candidateDigest('9')
+	progress, err = s.GetCallerLeafOutcomeProgress(ctx, otherGeneration)
+	if err != nil || progress != (store.CallerLeafOutcomeProgress{}) {
+		t.Fatalf("other-generation progress = %+v, %v", progress, err)
 	}
 
 	if err := s.SetJobStatus(ctx, *job, store.StatusDone, ""); err != nil {
@@ -254,6 +269,11 @@ func TestCallerLeafStoreLifecycle(t *testing.T) {
 	remaining, err := s.ListCallerLeafOutcomes(ctx, repairedGeneration)
 	if err != nil || len(remaining) != 1 || remaining[0].Pair.Domain != "thrift-caller" {
 		t.Fatalf("sibling outcome = %+v, %v", remaining, err)
+	}
+	progress, err = s.GetCallerLeafOutcomeProgress(ctx, repairedGeneration)
+	if err != nil || progress.SettledCount != 1 ||
+		progress.SucceededCount != 0 || progress.RefusedCount != 1 {
+		t.Fatalf("progress after clear = %+v, %v", progress, err)
 	}
 }
 

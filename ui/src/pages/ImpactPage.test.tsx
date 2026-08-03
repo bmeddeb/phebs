@@ -189,8 +189,9 @@ test('operation report preserves mode-specific vocabulary with accessible glossa
   expect(certificate.open).toBe(false)
   fireEvent.click(screen.getByText('Coverage certificate'))
   expect(certificate.open).toBe(true)
-  expect(screen.getByText('unsupported')).toBeTruthy()
-  expect(screen.getByText('no published evidence for this domain')).toBeTruthy()
+  expect(screen.getAllByText('unsupported').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('no published evidence for this domain').length)
+    .toBeGreaterThan(0)
   expect(screen.getByText(report.caveat)).toBeTruthy()
 
   const source = screen.getByRole('link', { name: /github.com\/acme\/cart-client\/client\/cart.go:27/ })

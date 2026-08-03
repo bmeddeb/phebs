@@ -83,7 +83,18 @@ const envelope: ProofBundleEnvelope = {
       consumer_published_runs: 1,
       truncated: ['producer:call-expr'],
     },
-    coverage: { schema_version: 'coverage-certificate-v1', domains: [], repository_count: 1, repositories: [], digest: 'sha256:z' },
+    coverage: {
+      schema_version: 'coverage-certificate-v1',
+      domains: [],
+      repository_count: 1,
+      repositories: [{
+        repository: 'example.com/app',
+        indexed_commit: 'c0ffee',
+        scip_index: 'absent',
+        runs: [],
+      }],
+      digest: 'sha256:z',
+    },
     extractor_versions: [],
     caveat: 'Source evidence only; never a completeness claim.',
   },
@@ -127,6 +138,8 @@ test('deep-linked topic renders census first with every citation', async () => {
   const usage = screen.getByTestId('topic-usage')
   // The census panel precedes the evidence sections in document order.
   expect(usage.firstElementChild?.getAttribute('data-testid')).toBe('unresolved-census')
+  expect(screen.getByTestId('analysis-scope-panel')).toBeTruthy()
+  expect(screen.getByText('Scope of this topic answer')).toBeTruthy()
 
   // A merged assertion cites every supporting site, not just the first.
   expect(screen.getByRole('link', { name: 'example.com/app/svc/producer.go:12' })).toBeTruthy()
@@ -142,6 +155,11 @@ test('zero published runs renders the no-run explanation, never affirmative zero
       ...envelope.bundle,
       assertions: [],
       evidence: [],
+      coverage: {
+        ...envelope.bundle.coverage,
+        repository_count: 0,
+        repositories: [],
+      },
       unresolved_census: {
         schema_version: 'kafka-topic-census-v1',
         producer: { ...zeroCensus },
@@ -156,6 +174,9 @@ test('zero published runs renders the no-run explanation, never affirmative zero
   const census = await screen.findByTestId('unresolved-census')
   expect(census.textContent).toContain('No Kafka extraction run has published')
   expect(census.textContent).not.toContain('could not be resolved from source')
+  expect(screen.getByText('0 repositories')).toBeTruthy()
+  fireEvent.click(screen.getByText('Coverage certificate'))
+  expect(screen.getByTestId('coverage-certificate-empty-universe')).toBeTruthy()
   expect(screen.getByText('No producer with a source-literal spelling of this topic is visible.')).toBeTruthy()
   expect(screen.getByText('No consumer with a source-literal spelling of this topic is visible.')).toBeTruthy()
 })

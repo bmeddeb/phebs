@@ -14,6 +14,7 @@ import {
 import { FONTS, usePhebsTokens } from '../theme'
 import { href, navigate } from '../router'
 import { isAbortError } from '../util'
+import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
 const qualification = 'Topic-centered source evidence: producers → topic → consumers. A topic is a source spelling — no cluster, environment, or runtime identity — and production topics are overwhelmingly configuration-driven, so unresolved sites dominate by design.'
 
@@ -137,6 +138,12 @@ export default function KafkaTopicsPage({ params }: { params: URLSearchParams })
       {bundle && !loading && (
         <div data-testid="topic-usage">
           {bundle.unresolved_census && <CensusPanel census={bundle.unresolved_census} />}
+          <AnalysisScopePanel
+            id="kafka-topic-analysis-scope"
+            certificate={bundle.coverage}
+            eyebrow="Scope of this topic answer"
+            compact
+          />
           <EvidenceTable
             title={`Producers of topic:${bundle.query.topic ?? ''}`}
             rows={producers}
@@ -150,11 +157,8 @@ export default function KafkaTopicsPage({ params }: { params: URLSearchParams })
             empty="No consumer with a source-literal spelling of this topic is visible."
           />
           <details className={css({ marginTop: '16px', fontSize: '12px', color: tok.textTertiary })}>
-            <summary>Coverage certificate and caveat (bundle {envelope?.id})</summary>
+            <summary>Bundle caveat ({envelope?.id})</summary>
             <p className={css({ maxWidth: '72ch' })}>{bundle.caveat}</p>
-            <pre className={css({ overflow: 'auto', fontFamily: FONTS.MONO, fontSize: '11px' })}>
-              {JSON.stringify(bundle.coverage, null, 2)}
-            </pre>
           </details>
         </div>
       )}

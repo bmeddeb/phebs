@@ -62,8 +62,10 @@ candidate-declared generated `base`-lane Go blob once during materialization;
 leaf execution never reopens that generated source. Direct caller-leaf
 execution now processes one exact `base`-lane domain/leaf pair at a time, opens
 no source outside that leaf, and durably retains results or per-record
-abstentions without making an incomplete generation visible. Complete
-partition publication and read integration remain later tickets.
+abstentions without making an incomplete generation visible. Atomic
+complete-generation publication, authorized Caller Map reads and comparison,
+and Workbench composition now consume that overlay; the shared scope panel
+labels it `repository-overlay` beside focused Search and local evidence.
 
 ## Evidence boundary
 

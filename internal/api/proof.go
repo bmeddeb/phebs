@@ -898,6 +898,11 @@ func readProofBundle(ctx context.Context, opts Options, id string) (*ProofBundle
 	if err := json.Unmarshal([]byte(record.Content), &bundle); err != nil {
 		return nil, huma.Error500InternalServerError("decode proof bundle", err)
 	}
+	if err := bundle.Coverage.ValidateCanonicalShape(); err != nil {
+		return nil, huma.Error500InternalServerError(
+			"stored proof bundle coverage is inconsistent", err,
+		)
+	}
 	canonical, err := json.Marshal(bundle)
 	if err != nil || string(canonical) != record.Content || bundle.SchemaVersion != proofBundleSchemaVersion {
 		return nil, huma.Error500InternalServerError("stored proof bundle is inconsistent")

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package demo.orders.v1;
+option go_package = "example.invalid/t307-neutral-service/gen/ordersv1;ordersv1";
+
+service Orders {
+  rpc Create(CreateOrderRequest) returns (CreateOrderResponse);
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+}
+
+message CreateOrderResponse {
+  string order_id = 1;
+}

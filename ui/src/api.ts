@@ -49,6 +49,37 @@ export interface IndexedRevision {
   commit: string
 }
 
+export interface AnalysisUnitTypedIndex {
+  kind: string
+  path: string
+}
+
+// Public committed analysis-unit state returned by /api/repo-status and by
+// result-bound scope projections. The selected paths are identities, never
+// source content.
+export interface AnalysisUnitState {
+  schema: string
+  name: string
+  digest: string
+  primary_paths: string[]
+  // Go encodes an omitted empty slice as null. Treat null and [] as the same
+  // committed empty selection instead of assuming every transport normalizes
+  // the representation.
+  supporting_paths: string[] | null
+  primary_path_count: number
+  supporting_path_count: number
+  search_index_posture: 'whole-repository' | 'focused'
+  typed_index_posture: string
+  typed_index?: AnalysisUnitTypedIndex
+}
+
+export interface AnalysisScopeProjection {
+  repository: string
+  commit?: string
+  scope_posture: 'whole-repository' | 'focused'
+  analysis_unit?: AnalysisUnitState
+}
+
 export interface RepoStatus {
   name: string
   clone_url: string
@@ -61,6 +92,7 @@ export interface RepoStatus {
   connections?: string[]
   last_index_job?: IndexJob
   last_index_job_state: 'exact' | 'unavailable'
+  analysis_unit?: AnalysisUnitState
 }
 
 export interface SourceFile {
@@ -354,6 +386,7 @@ export interface WorkbenchResourcePlane {
 export interface WorkbenchCallerImpact {
   selection: WorkbenchContractSelection
   query: CallerMapQuery
+  scope?: AnalysisScopeProjection
   generation: CallerMapGeneration
   matching_rows_state: 'exact' | 'unavailable'
   // Exact generation gaps deliberately omit the declaration and total. A
@@ -890,9 +923,115 @@ export interface ProofBundleEnvelope {
 export interface CoverageAttempt {
   run_id: string
   commit: string
+  unit_digest?: string
   extractor: string
   status: string
   failure?: string
+}
+
+export interface CoverageReceiptCounts {
+  corpus_files: number
+  candidate_files: number
+  excluded_source_files: number
+  excluded_scip_documents: number
+  excluded_scip_definitions: number
+  excluded_scip_occurrences: number
+  opened_source_attempts: number
+  opened_source_files: number
+  facts: number
+  atoms: number
+  assertions: number
+  unresolved: number
+  staged_chunks: number
+  staged_rows: number
+}
+
+export interface CoverageReceiptBytes {
+  planned_declared: number
+  excluded_source_declared: number
+  opened_source: number
+}
+
+export interface CoverageReceiptLimits {
+  corpus_files: number
+  opened_source_attempts: number
+  opened_source_files: number
+  opened_source_bytes: number
+  facts: number
+  source_blob_bytes: number
+  typed_input_bytes: number
+  aggregate_wall_ms: number
+  mirror_lock_ms: number
+  domain_wall_ms: number
+  abort_wall_ms: number
+  outcome_wall_ms: number
+  max_serial_domains: number
+  scheduler_identity_bytes: number
+  aggregate_staged_rows: number
+  domain_staged_rows: number
+}
+
+export type CoverageDomainDisposition =
+  | 'published'
+  | 'unavailable_prerequisite'
+  | 'terminal_generation_refusal'
+  | 'retryable_failure'
+
+export interface CoverageDomainOutcomeReceipt {
+  schema: string
+  domain: string
+  extractor_version: string
+  disposition: CoverageDomainDisposition
+  reason: string
+  inventory_ms: number
+  opened_source_ms: number
+  extractor_ms: number
+  staging_ms: number
+  counts: CoverageReceiptCounts
+  bytes: CoverageReceiptBytes
+  limits: CoverageReceiptLimits
+}
+
+export interface CoverageDomainOutcome {
+  disposition: CoverageDomainDisposition
+  generation_digest: string
+  extractor: string
+  candidate_control_failure?: boolean
+  receipt_schema: string
+  receipt_state: 'full' | 'schema_only'
+  receipt?: CoverageDomainOutcomeReceipt
+}
+
+export interface CoverageTypedInput {
+  kind: string
+  path?: string
+  object_id?: string
+  declared_bytes: number
+  digest?: string
+  present: boolean
+}
+
+export interface CoverageCandidateScope {
+  manifest_digest: string
+  plane: string
+  corpus_file_count: number
+  corpus_declared_bytes: number
+  corpus_digest: string
+  planned_file_count: number
+  planned_required_file_count: number
+  planned_declared_bytes: number
+  planned_digest: string
+  // Added by coverage-certificate-v3. Optional keeps retained v2 bundles
+  // readable without inventing zero-valued partition claims.
+  base_source_file_count?: number
+  excluded_go_test_file_count?: number
+  excluded_source_file_count?: number
+  excluded_source_required_count?: number
+  excluded_source_declared_bytes?: number
+  excluded_scip_document_count?: number
+  excluded_scip_definition_count?: number
+  excluded_scip_occurrence_count?: number
+  typed_input?: CoverageTypedInput
 }
 
 export interface CoverageRun {
@@ -901,6 +1040,7 @@ export interface CoverageRun {
   run_id?: string
   extractor?: string
   commit?: string
+  unit_digest?: string
   fresh: boolean
   protocols?: string[]
   failures?: string[]
@@ -919,12 +1059,27 @@ export interface CoverageRun {
   gitlink_digest?: string
   gitlink_sample_paths?: string[]
   gitlink_sample_truncated?: boolean
+  evidence_scope_posture?: string
+  candidate_scope?: CoverageCandidateScope
   latest_attempt?: CoverageAttempt
+  outcome?: CoverageDomainOutcome
+}
+
+export interface CoverageAnalysisUnit {
+  name: string
+  digest: string
+  primary_paths: string[]
+  supporting_paths: string[] | null
+  typed_index_posture: string
+  typed_index_kind?: string
+  typed_index_path?: string
 }
 
 export interface CoverageRepository {
   repository: string
   indexed_commit?: string
+  scope_posture?: 'whole-repository' | 'focused'
+  analysis_unit?: CoverageAnalysisUnit
   scip_index: string
   runs: CoverageRun[]
 }
@@ -1168,7 +1323,22 @@ export interface CallerMapGeneration {
   result_count?: number
   abstention_count?: number
   canonical_bytes?: number
+  record_counts?: {
+    candidate_records: number
+    base_records: number
+    excluded_go_test_records: number
+  }
+  // Retained for pre-T30.7 responses. Current exact generations publish the
+  // grouped record_counts object so explicit zeroes remain distinguishable
+  // from unavailable authority.
   excluded_go_test_records?: number
+  partition_progress?: {
+    state: 'complete' | 'partial' | 'unavailable'
+    settled_pair_count: number
+    succeeded_pair_count: number
+    refused_pair_count: number
+    total_pair_count?: number
+  }
 }
 
 export interface CallerMapCitation {
@@ -1212,6 +1382,7 @@ export interface CallerMapPage {
     complete: boolean
     next_cursor?: string
   }
+  scope?: AnalysisScopeProjection
   generation?: CallerMapGeneration
   matching_rows_state?: 'exact' | 'unavailable'
   coverage_digest?: string

@@ -26,6 +26,7 @@ const hoverBridgeMilliseconds = 120
 export interface SectionHelpProps {
   termId: GlossaryTermId
   enabledCapabilities: ReadonlySet<string>
+  triggerLabel?: string
 }
 
 interface Position {
@@ -33,7 +34,11 @@ interface Position {
   top: number
 }
 
-export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
+export function SectionHelp({
+  termId,
+  enabledCapabilities,
+  triggerLabel,
+}: SectionHelpProps) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [hovered, setHovered] = useState(false)
@@ -157,7 +162,7 @@ export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
       ref={dialogRef}
       id={id}
       role="dialog"
-      aria-label={`${term.label} help`}
+      aria-label={`${triggerLabel ?? term.label} help`}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
       onMouseEnter={openFromHover}
       onMouseLeave={scheduleHoverClose}
@@ -256,7 +261,7 @@ export function SectionHelp({ termId, enabledCapabilities }: SectionHelpProps) {
       <button
         ref={triggerRef}
         type="button"
-        aria-label={`Help for ${term.label}`}
+        aria-label={`Help for ${triggerLabel ?? term.label}`}
         aria-describedby={shortHelpId}
         aria-haspopup="dialog"
         aria-expanded={isOpen}

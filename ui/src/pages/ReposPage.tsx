@@ -116,7 +116,7 @@ export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
               ':hover': reindexingAll ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
             })}
           >
-            {reindexingAll ? 'Queuing…' : 'Reindex all'}
+            {reindexingAll ? 'Queuing all scopes…' : 'Reindex all scopes'}
           </button>
         )}
       </div>
@@ -158,6 +158,10 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
   const job = repo.last_index_job
   const running = !!job && !['done', 'failed', 'canceled'].includes(job.status)
   const reindexDisabled = running || repo.last_index_job_state === 'unavailable'
+  const replacementScope = repo.analysis_unit?.search_index_posture === 'focused'
+    ? `${repo.analysis_unit.name} unit`
+    : 'whole repository'
+  const reindexVerb = job?.status === 'failed' ? 'Retry' : 'Reindex'
   const cell = css({ height: '40px', padding: '0 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' })
   return (
     <tr className={css({ height: '40px', borderBottom: `1px solid ${tok.innerSep}`, ':last-child': { borderBottom: 'none' }, ':hover': { backgroundColor: tok.hoverFill } })}>
@@ -207,7 +211,10 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
             <button
               type="button"
               disabled={reindexDisabled}
-              title={repo.last_index_job_state === 'unavailable' ? 'Index job status unavailable' : undefined}
+              title={repo.last_index_job_state === 'unavailable'
+                ? `Index job status unavailable for ${replacementScope}`
+                : `${reindexVerb} ${replacementScope}`}
+              aria-label={`${reindexVerb} ${replacementScope}`}
               onClick={onReindex}
               className={css({
                 height: '26px',
@@ -225,7 +232,7 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
                 ':hover': reindexDisabled ? {} : { backgroundColor: tok.hoverFill, color: tok.textPrimary },
               })}
             >
-              {job?.status === 'failed' ? 'Retry' : 'Reindex'}
+              {reindexVerb} {replacementScope}
             </button>
           )}
         </div>

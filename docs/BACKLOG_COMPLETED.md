@@ -3587,12 +3587,249 @@ Production registration and every evidence/accuracy gate remain unchanged.
 
 ---
 
-## EPIC 30 — Service-scoped monorepo analysis *(in progress; completed tickets)*
+## EPIC 30 — Service-scoped monorepo analysis *(complete 2026-08-02)*
 
-Epic 30 makes one service inside a very large monorepository a first-class
-analysis unit while preserving a separate, target-bound repository overlay for
-caller evidence. Its production work remains active in the
-[backlog](./BACKLOG.md#epic-30--service-scoped-monorepo-analysis).
+Make one service inside a very large monorepository a first-class analysis
+unit without pretending that a path-filtered query makes a whole-repository
+index cheap. Contracts, Topics, source search, related implementation, and the
+Workbench operate on the focused unit. Caller Map and caller-backed Impact
+retain a bird's-eye repository view through a separate target-bound,
+partitioned relationship overlay over the same immutable commit.
+
+This is a single-node scale program. It precedes and does not authorize the P6
+distributed fleet profile.
+
+### Analysis-unit contract
+
+- `analysis-unit-v1` has one stable configuration identity: repository,
+  operator-chosen unit name, and a unit digest over canonical scope bytes.
+  Source commits are generation inputs, not part of that stable digest. An
+  indexed generation adds the complete ordered revision set; HEAD-bound
+  extraction and relationship generations add the authoritative HEAD commit.
+  The scope contains exact **primary roots** and exact **supporting files or
+  roots**. Supporting inputs cover only explicitly selected declaration,
+  generated-source, module/workspace metadata, attribution, and typed-index
+  artifacts; phebs does not execute a build, dependency query, generator, or
+  service-discovery command to infer them.
+- Paths are clean UTF-8 repository-relative Git paths. A directory admits its
+  descendants while preserving their complete original repository-relative
+  names. Empty, absolute, parent-traversing, backslash, duplicate, and
+  canonically overlapping entries fail startup. A selected path that is
+  absent or not a regular blob/directory at the indexed commit fails the unit
+  build rather than silently shrinking it.
+- The first version admits at most one active unit per repository per
+  instance. This keeps the canonical repository name, avoids duplicate
+  overlapping shards, and makes every unqualified search deterministic.
+  Changing unit name or scope bytes is an index/extraction generation change,
+  even when HEAD is unchanged. Multiple simultaneous units require a later
+  reviewed storage/query identity design.
+- Repositories without an analysis unit retain today's whole-repository
+  indexing and extraction behavior. A configured unit is never widened
+  automatically to make an extractor succeed.
+- The unit digest is part of committed index state and is stamped in zoekt
+  repository metadata. Search, startup reconciliation, cleanup, source,
+  coverage, evidence, Workbench snapshots, and opaque cursors fail closed on
+  a missing or mismatched digest. Repository visibility remains the
+  authorization boundary in v1; a unit grants no visibility beyond its
+  repository.
+
+### Revision-set matrix
+
+The same canonical scope is evaluated independently at every revision admitted
+by the existing T10.4 repository allowlist. Scope never follows a rename or
+widens to compensate for historical layout:
+
+| Revision lane | Scope evaluation | Missing selected path | Product behavior |
+|---|---|---|---|
+| Implicit `HEAD` | Resolve every exact file/root at the indexed HEAD commit | Refuse the complete index generation | Authoritative unqualified search plus all extraction/evidence |
+| Explicit branch/tag selector | Resolve the identical exact file/root set at that selector's peeled commit | Refuse the complete index generation; never publish a silently smaller historical scope | Search-only `rev:` lane; no extraction, coverage, proof, or Workbench evidence |
+| Same directory, different contents | Admit the regular descendants present under that selected directory at each commit | Not missing when the directory itself exists | Search reflects that revision's immutable contents under the same unit scope |
+| Scope bytes change | Re-evaluate every admitted revision even when all commits are unchanged | Any refusal leaves the previous complete generation visible | New unit digest and new index generation |
+| Revision set or peeled commit changes | Keep the unit digest; recompute the ordered revision-generation identity | Any refusal leaves the previous complete generation visible | New index generation; HEAD evidence changes only when HEAD changes |
+
+The index-generation digest is domain-separated over repository, unit digest,
+the ordered `(selector, shard branch, peeled commit)` set, and the focused
+builder policy generation. Extraction continues to bind `(repository, HEAD
+commit, unit digest, extractor generation)` and never inherits an explicit
+search revision.
+
+### Three partition layers
+
+- The **semantic service unit** is the operator's primary and supporting path
+  set. It is the only partition that defines focused product scope and keeps
+  one stable unit digest even if implementation details change.
+- **Physical zoekt shards** are size-driven outputs of the pinned
+  `index.Builder`, not service partitions. One unit may produce one or many
+  shards. Every shard carries the same repository name, original revision
+  set, unit digest, and index-generation digest plus a stable member ordinal
+  and expected member count. A separately checksummed shard-set manifest
+  commits the ordered `(ordinal, shard digest, shard metadata digest)` set.
+  Shards stage outside the visible set; the manifest becomes visible only
+  after every member is durable. The search wrapper validates the manifest,
+  exact repository-local membership, every content/metadata digest, and the
+  absence of an unexpected member before binding a query to that exact member
+  set. Validation may be reused only while the committed identity and every
+  already-bound manifest/member/sidecar identity agree. Warm queries inspect
+  only those repository-local identities: an undeclared added file cannot
+  enter the static reader, while exact-extra rejection remains mandatory on
+  cold admission and reconciliation. Shared-directory watcher timing and
+  another repository's transient shard state never grant or deny admission.
+  Per-shard metadata
+  agreement alone is insufficient: a missing member leaves the generation
+  unavailable rather than serving a valid-looking subset. Private build and
+  restore workspaces carry a process token, so reconciliation preserves
+  active same-process work and reclaims only prior-process
+  workspace/temporary-marker residue.
+- **Repository-overlay caller partitions** are bounded work units over
+  repository-wide caller candidates for one focused declaration set. They are
+  neither searchable shards nor independently visible evidence. A caller
+  partition may cite source outside the semantic unit without admitting that
+  source into focused search, Contracts, Topics, or local implementation
+  evidence.
+
+### Focused index and local evidence plane
+
+- `zoekt-git-index` has no service-root include contract, so passing a path
+  atom only narrows query results after the expensive whole repository has
+  already been indexed.
+- The selected implementation candidate is a phebs-owned child built from the
+  same module as the server. It streams the exact source commit's tree,
+  rejects paths outside the unit before blob content is opened, and adds only
+  admitted documents to the pinned upstream `index.Builder`. Shard repository
+  name, document paths, and branch versions remain the canonical repository,
+  original full paths, and original commits. The child retains the current OOM
+  isolation, bounded output, atomic replacement, and same-SHA reader/writer
+  requirements. Focused builder policy v2 sets zoekt's document limit to the
+  trusted reader's 64 MiB blob ceiling and preflights the same pinned content
+  classifier before `Add`: accepted text through the size limit is searchable,
+  while an oversized, binary, sub-trigram, or over-20,000-distinct-trigram
+  blob refuses the complete generation rather than being silently dropped.
+  The child retains path/blob plans without preloading the corpus. The pinned
+  builder holds only its current 64 MiB shard batch, with at most one
+  admitted-document overshoot, and flushes synchronously. The child requires
+  its measured out-of-unit counter to remain exactly zero and refuses any
+  control output beyond the matching 1 MiB reader envelope. Cancellation
+  during pre-child Git configuration remains `context.Canceled` rather than a
+  killed-process error that could be mistaken for OOM.
+- Search opens only the exact validated member descriptors in a static
+  no-watcher composite. One 10-second wall budget covers compilation,
+  starter-owned cold validation/materialization, zoekt execution, and
+  result-time identity checks. At most two cache-owned fills run at once. The
+  same exact-generation query joins an in-flight fill, and saturated cold work
+  queues behind those slots; every waiter uses its own query deadline, whose
+  expiry fails the query instead of returning a knowingly partial RepoSet. A
+  timed-out fill may continue for up to 10 minutes, a later query reuses its
+  completed exact binding, and shutdown cancels and joins the loaders. Stable
+  negative validation entries retry with bounded 250 ms–30 s exponential
+  backoff, while a fingerprint change retries immediately. JSON fan-out has a
+  fixed eight-worker ceiling and incrementally retains only the global top K;
+  SSE retains the shipped progressive per-shard, arrival-order contract under
+  one shared display ceiling. Both focused and whole-result paths recheck
+  current committed posture and revision, so a same-HEAD whole-to-focused
+  transition fails closed to a conservative short result. Cache pruning
+  retires deleted, unindexed, or whole-posture focused bindings after active
+  leases release.
+- A projected Git tree/commit is explicitly not the default fallback: its
+  synthetic commit would become the shard version and force provenance
+  rewriting across search, source, SCIP, history, evidence, and Workbench
+  readers. If the builder spike fails, implementation stops for a new ADR.
+- Focused extraction reads one reusable commit/unit candidate manifest rather
+  than independently retaining the complete repository inventory for every
+  domain. Contract declaration, field, topic, local consumer, attribution,
+  and Workbench implementation evidence publish under the unit digest.
+  Source reads still use original blob IDs from the canonical bare mirror.
+- A scoped typed-index input must declare and validate its own unit binding.
+  The current repository-root `index.scip` contract is not silently treated as
+  service-scoped merely because the search index is smaller.
+
+### Repository-wide relationship overlay
+
+- Caller Map does not require a whole-repository search shard. It requires a
+  trustworthy repository-wide source census and callers that resolve to the
+  focused declaration set.
+- One streamed tree census per source commit records total regular-file and
+  boundary counts/digests while writing only bounded candidate records into a
+  deterministic partition manifest. It never retains all repository paths in
+  memory and never weakens a refusal into partial coverage. Candidate policy,
+  partition count/ranges, source commit, blob IDs, extractor versions, and
+  manifest digest are immutable generation inputs.
+- Candidate assignment is exact. For normalized repository-relative path
+  `p`, compute
+  `H = SHA-256("phebs-caller-path-v1\0" || UTF8(p))`. Blob OID and declared
+  size are manifest identity inputs but do not affect `H`, so content changes
+  do not arbitrarily move an unchanged path between work partitions.
+  Planning begins at one initial hash-prefix bit depth frozen by T30.4.
+  Any bucket exceeding either the measured candidate-count limit or summed
+  declared-blob-byte limit splits by the next hash bit, recursively. A single
+  candidate exceeding the byte limit, or a bucket that cannot split at 256
+  bits, refuses the generation rather than weakening a bound.
+- Materialized non-empty leaf prefixes are prefix-free and disjoint, and are
+  numbered by ascending numeric hash-range lower bound. Candidate records
+  within a leaf are ordered by `(H, path UTF-8 bytes, blob OID)`. The initial
+  depth, both limits, domain separator, split rule, and record ordering are
+  manifest-policy fields; changing any of them creates a new policy
+  generation. Every admitted caller candidate belongs to exactly one leaf.
+- After the candidate manifest is durable, one bounded immutable
+  module/workspace/generated-resolution catalog is built for the same commit
+  and focused declaration-set digest. Partition source scans start only after
+  that catalog publishes, and every scan consumes its digest; partitions do
+  not independently rediscover module or generated-client identity.
+- A relationship request is bound to the focused declaration-set digest.
+  Partition jobs may read repository-wide caller candidates and the bounded
+  module/generated-resolution catalog needed for those declarations, but
+  emit only resolved edges, exact name matches, and extractor abstentions
+  relevant to that target set. This avoids materializing an unrelated
+  repository-global call graph.
+- Partition runs remain invisible until one generation transaction proves
+  every declared partition terminal at the same repository commit, unit
+  digest, declaration-set digest, candidate-manifest digest, and extractor
+  generation, plus the same resolver-catalog digest. Failure, cancellation,
+  stale HEAD, changed scope, or a missing partition leaves the previous
+  complete generation visible.
+- Caller Map pages merge the complete generation under the existing strict
+  paging and authorization rules. Citations outside the focused search index
+  open from the immutable Git mirror and are labeled as
+  `repository-overlay`; their presence does not imply that unrelated source
+  was indexed for search or local implementation analysis.
+- Topics remain focused-unit evidence in Epic 30. A future repository-global
+  topic inventory would need its own target and partition contract; the
+  Caller Map exception is not a generic authorization for every extractor to
+  scan globally.
+
+### Scale and trust boundary
+
+- Do not raise the current 200,000-file, 16 MiB retained-path, 512 MiB
+  distinct-read, 12,500-fact, or 15-minute single-run limits as the solution.
+  New manifests and partitions have separately measured hard bounds; every
+  page and coverage certificate discloses unit roots, global-overlay status,
+  candidate counts, partition completion, refusals, and stale state.
+- Deterministic tests use generated neutral repositories. Production and
+  manual evaluation consume ordinary synced commits and store-published
+  evidence; no Contract Atlas or Workbench fixture is required.
+- No employer repository name, path, code, schema, build metadata,
+  credential, host, measurement, or infrastructure enters source, tests,
+  retained records, logs, or documentation. Optional local evaluation is
+  operator-only and is never a merge-bar artifact.
+- No runtime-use, completeness, extraction-accuracy, migration-completion, or
+  decommission-safety claim follows from a complete unit or relationship
+  generation.
+
+### Documentation updates
+
+- `PLAN.md` records each production identity, publication, partition, and
+  compatibility decision in the same ticket that implements it.
+- `docs/guides/CONFIGURATION.md` owns the strict analysis-unit schema,
+  path/revision semantics, defaults, limits, and typed-index posture.
+- `docs/guides/OPERATIONS.md` owns build/publication diagnostics, reconciliation,
+  cleanup, backup/restore, failure recovery, retained-history storage posture,
+  and bounded operator verification.
+- `docs/guides/WORKFLOWS.md` owns the user-visible distinction between focused
+  search/local evidence and repository-overlay callers, including evidence
+  caveats and the end-to-end demo.
+- `docs/MANUAL.md`, `docs/README.md`, the roadmap, and the active/completed
+  backlog update when their routing, posture, sequencing, or ticket state
+  changes. Spike records under `spike/` retain decisions and measurements; they
+  never substitute for behavior documentation.
 
 ### T30.1 · Service-scope contract and focused-index spike
 
@@ -4087,6 +4324,49 @@ and active/completed backlog updates; full merge bar. This ticket does not
 establish a historical-publication storage bound, runtime use, completeness,
 extraction accuracy, migration completion, decommission safety, or production
 registration. T30.6 owns the target-bound all-partitions Caller Map generation.
+
+**T30.6 · Target-bound repository Caller Map generation** *(needs T30.4–T30.5;
+large-monorepo review and post-T30.5 issue repairs complete)* — retain one
+focused local-evidence plane and add one independently bounded relationship
+plane without raising the existing global extraction limits or building a
+whole-repository search index. The umbrella is split into the following
+dependency-ordered, one-PR tickets.
+
+### Post-T30.5 issue closure ✅ *(closed 2026-07-29)*
+
+This completed repair is a prerequisite, not T30.6 implementation.
+
+- **GitHub #2 · whole-repository generation handoff** — publish a durable exact
+  whole-shard receipt; make immediate HEAD, branch, tag, and revision-set
+  Search/Stream queries bind the committed generation without sleeps; never
+  leak or silently omit an old/mixed generation; recover or rebuild missing,
+  invalid, marker-covered, and pre-receipt publications; retain bounded,
+  non-latching validation and exact cleanup.
+- **GitHub #3 · focused-local candidate replay** — advance candidate
+  publication identity to v3 with exact per-domain in-unit projections; prove
+  repository bytes are read once, caller leaves remain one validation pass,
+  and replay is only `P_d` rather than `(D + 1) × B_repository`; keep
+  repository/caller planes unchanged; enforce descriptor stability, exact
+  coverage, aggregate projection bounds, crash recovery, and v2 replacement.
+- **Closure evidence** — repeated adversarial Search and Stream tests,
+  candidate and extraction cost instrumentation,
+  tamper/marker/reconciliation/migration fixtures, and the refreshed T30.4
+  receipt are retained. Full repository and race gates passed; detailed repair
+  commits `76f68f2` and `f74fd49` were pushed before evidence-backed closure of
+  GitHub issues #2 and #3. No merge into `main` is authorized by this section.
+
+#### Documentation updates
+
+- `PLAN.md` records the exact whole-search handoff, candidate-manifest-v3
+  projection contract, resource bounds, and T30.6 pause in dated decisions.
+- `docs/guides/OPERATIONS.md` owns publication-upgrade/recovery diagnostics and
+  the `B_repository + C_caller + ΣP` strict-open / `P_d` replay cost model.
+- `spike/t304/README.md` and `spike/t304/results.json` retain the refreshed
+  deterministic v3 measurement and distinguish its 16 MiB fixture gate from
+  the production aggregate projection ceiling.
+- `docs/ROADMAP.md`, the completed backlog, and retained issue receipts agree
+  on issue closure. The accepted monorepo review superseded only the sequencing
+  pause, not this repair record.
 
 ### T30.6a · Bounded extraction job receipts
 
@@ -4676,22 +4956,29 @@ The 1.0.0 → 1.1.0 pack cutover intentionally forces one catalog
 rematerialization and, after acceptance, one first caller-leaf generation for
 every indexed non-deleting repository with an enabled adapter.
 
-One repository-keyed `caller_leaf_job` executes canonical missing pairs one at
-a time while draining fast pairs within the same five-minute turn. Resolver
-publication atomically ensures its initial successor, and every outcome
-transaction is fenced by the live job lease, non-deleting
-repository HEAD/unit, exact candidate and resolver pointers, writer migration,
-and both control revisions while also ensuring the next pending turn. The
-store recomputes generation, pair, pair-set, outcome, and admission identity;
-rows are multi-generation and an exact success cannot be downgraded. A
-terminal pair leaves successful siblings intact but forces terminal aggregate
-admission, which T30.6i must reject.
+One repository-keyed `caller_leaf_job` settles canonical missing pairs. The
+2026-08-02 scheduling repair ends a turn after at most one source-reading pair
+has durably recorded its outcome; terminal no-content settlements may still
+drain in that turn. The already-ensured pending successor receives a fresh
+five-minute deadline and attempt-zero budget, and admission plus complete
+publication run in their own fresh turn after the final pair. Healthy bounded
+progress therefore cannot consume the shared three-attempt budget merely by
+starting another leaf late; only one pair that cannot finish inside a complete
+turn can exhaust it. Resolver publication atomically ensures the initial
+successor, and every outcome transaction is fenced by the live job lease,
+non-deleting repository HEAD/unit, exact candidate and resolver pointers,
+writer migration, and both control revisions while also ensuring the next
+pending turn. The store recomputes generation, pair, pair-set, outcome, and
+admission identity; rows are multi-generation and an exact success cannot be
+downgraded. A terminal pair leaves successful siblings intact but forces
+terminal aggregate admission, which T30.6i must reject.
 
-Each cold turn builds `O(D × L)` pair/outcome metadata, scans at most 65,536
-caller artifact names once, and replays each selected candidate member once per
-domain. Each admitted base record has one serial blob read capped by its exact
-declared size; each newly installed artifact is then opened and hashed once.
-No repository tree/corpus walk or all-leaf content materialization occurs.
+Each cold turn builds `O(D × L)` pair/outcome metadata and scans at most 65,536
+caller artifact names once. A source-reading turn replays one selected candidate
+member for one domain; a terminal no-content drain opens none. Each admitted
+base record has one serial blob read capped by its exact declared size; each
+newly installed artifact is then opened and hashed once. No repository
+tree/corpus walk or all-leaf content materialization occurs.
 
 Artifacts stream into a package-shaped stage and install under a
 repository-hash directory before their durable outcome. Empty pairs install a
@@ -5965,4 +6252,94 @@ Tests cover exact, cap-plus-one, aggregate and metadata limits, missing and
 invalid roots, current-versus-residue accounting, symlink/path hardening,
 descriptor release, localized failures, typed byte independence, data volume,
 complete-registry composition, authorization-before-I/O, and the encoded
-response ceiling. T30.7 is next.
+response ceiling. This completed T30.6r; T30.7 followed.
+
+### T30.6 documentation updates
+
+- Every T30.6 PR added its dated identity/publication/resource decision to
+  `PLAN.md` and updated the dependency/AC record without rewriting historical
+  decisions.
+- T30.6a–T30.6c updated `docs/guides/OPERATIONS.md`; T30.6b also updated
+  durable failure/outcome troubleshooting and backup/restore guidance.
+- T30.6d–T30.6e updated Operations and `docs/guides/CONFIGURATION.md` while
+  stating that source lane is neither semantic unit scope nor search
+  configuration; T30.6d also updated backup/restore guidance for candidate-v4
+  replacement.
+- T30.6f–T30.6i updated Operations and backup/restore guidance for catalog,
+  leaf, complete-generation, ownership, gap, and recovery behavior.
+- T30.6j–T30.6l updated Operations and `docs/guides/WORKFLOWS.md` for
+  authorization, citations, Caller Map, comparison, and Workbench composition.
+- T30.6m–T30.6r updated Operations and backup/restore guidance with the selected
+  retention posture, job-history/Investigation/proof ownership correction, and
+  bounded status contract. They updated `docs/guides/CONFIGURATION.md` whenever
+  that posture exposed configuration. `docs/MANUAL.md`, `docs/README.md`, the
+  roadmap, and the active or completed backlog changed whenever routing or
+  ticket posture changed.
+- Retained gates use generated neutral repositories and bounded receipts. The
+  private operator report and all employer-specific identifiers, paths,
+  measurements, code, hosts, and infrastructure remain outside the repository.
+
+### T30.7 · Scope-aware UI, operations, and epic demo
+
+**T30.7 ✅ · Scope-aware UI, operations, and epic demo** *(2026-08-02; needs
+T30.6a–T30.6r)* — closes Epic 30 by showing the active service unit and exact
+primary/supporting scope in Search, Contracts, Topics, Caller Map, Impact, and
+Workbench. The shared scope projection distinguishes focused search/local
+evidence from repository-overlay callers and places durable per-domain
+outcomes, bounded receipts, applicable base and excluded-`go_test` counts,
+partition progress, stale state, refusals, and typed-index gaps adjacent to
+results. Job-level queue and lock diagnostics remain operational logs, and
+reindex controls name the focused unit or whole repository they replace.
+
+Coverage certificate v3 carries the latest exact-generation durable outcome
+and canonical bounded receipt without making `recorded_at` part of certificate
+identity. Focused-local candidate scope exposes base and excluded-`go_test`
+source counts; whole-repository and repository-overlay scope omit lane counts
+their retained coverage cannot establish. Complete Caller Map generations
+expose optional exact record counts and bounded partition progress. Current
+generations reuse the loaded publication summary; pointerless first pages and
+their final fences use a bounded indexed aggregate over at most 16,384 durable
+leaf outcomes. Selected paths remain outside HMAC authorities: the signed
+authority carries only their SHA-256 scope commitment, and the bounded process
+binding retains the response projection. HTTP and MCP reuse the same cloned
+analysis-unit state, page, and certificate shapes.
+
+The neutral `make dev` cohort flows through ordinary sync, focused indexing,
+extraction, resolver, caller-leaf, and complete-publication workers. It indexes
+one service unit, admits an explicit `_test.go` exclusion, keeps an irrelevant
+bulk needle out of focused Search, publishes real focused protobuf and Kafka
+evidence, and displays an outside-unit gRPC caller only through the complete
+repository overlay. It enables the provisional store-derived Workbench and
+loads neither Contract Atlas nor synthetic Workbench evidence fixtures.
+Ordinary `serve` behavior is unchanged.
+
+The shared React panel mounts at most 24 repository summaries, materializes
+exact paths for only one expanded repository, keeps receipts collapsed, uses
+native labeled expansion controls, and stacks at 760 px. The ticket adds no
+physical test-search overlay or test toggle, automatic unit discovery,
+queue/lock product API, retention behavior, or production registration,
+accuracy, completeness, migration-completion, or decommission-safety claim.
+AC met: responsive, accessibility, bounded-DOM, API/MCP schema-parity,
+Operations/Workflows, end-to-end demo, and full merge-bar coverage.
+
+Post-implementation review closure *(2026-08-02)* preserves the distinction
+between publication disposition and completed-work receipt reason: a
+retryable publication failure may retain a successful extraction/staging
+reason without becoming published. Retained v1/v2 proof bundles use a
+version-aware canonical decoder and keep their immutable candidate-scope JSON
+bytes; every `candidate_scope` emitted by v3 carries all six new counters,
+including exact zeroes. The strict MCP Caller Map schema now covers the real
+exact service's complete scope and generation projection, including legal
+empty/null path lists, exact record counts, and partition progress, with a
+production-service conformance test instead of only a legacy fixture.
+
+The same closure keeps retained failure classes visible beside a later
+outcome, reuses the complete caller-generation scope panel in Workbench
+comparisons, preserves explicit zero-repository and empty Workbench states,
+keeps gaps non-success-colored, mounts `aria-controls` only with its target,
+and restores the T30.6h one-pair-per-turn completion receipt. Local validation
+is green for `ci-static`, the full Go suite, all 197 UI tests plus lint/build,
+the full race suite, docs checks, diff hygiene, the neutral ordinary-worker
+demo, and the zero-repository browser path. No review correction adds a query,
+write, lock, corpus/shard read, Git/blob read, child, cache, startup/sync work,
+retention behavior, or production evidence claim.

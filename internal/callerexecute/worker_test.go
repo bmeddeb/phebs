@@ -166,6 +166,29 @@ func (state *workerTestStore) ListCallerLeafOutcomes(
 ) ([]store.CallerLeafOutcome, error) {
 	return slices.Clone(state.outcomes), nil
 }
+func (state *workerTestStore) GetCallerLeafOutcomeProgress(
+	_ context.Context,
+	generation store.CallerGenerationIdentity,
+) (store.CallerLeafOutcomeProgress, error) {
+	progress := store.CallerLeafOutcomeProgress{}
+	for _, outcome := range state.outcomes {
+		if outcome.Generation.Repository != generation.Repository ||
+			outcome.Generation.Digest != generation.Digest {
+			continue
+		}
+		progress.SettledCount++
+		switch outcome.Disposition {
+		case store.CallerLeafSucceeded:
+			progress.SucceededCount++
+		case store.CallerLeafTerminalGenerationRefusal:
+			progress.RefusedCount++
+		default:
+			return store.CallerLeafOutcomeProgress{},
+				store.ErrInvalidCallerLeafState
+		}
+	}
+	return progress, nil
+}
 func (state *workerTestStore) RecordCallerGenerationAdmission(
 	_ context.Context,
 	_ store.Job,

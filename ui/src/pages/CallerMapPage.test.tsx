@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
@@ -268,6 +268,18 @@ function callerPage(
       result_count: rows.filter((row) => row.classification === 'resolved_caller').length,
       abstention_count: rows.filter((row) => row.classification === 'extractor_abstention').length,
       canonical_bytes: 4096,
+      record_counts: {
+        candidate_records: 7,
+        base_records: 6,
+        excluded_go_test_records: 1,
+      },
+      partition_progress: {
+        state: 'complete',
+        settled_pair_count: 3,
+        succeeded_pair_count: 3,
+        refused_pair_count: 0,
+        total_pair_count: 3,
+      },
     },
     matching_rows_state: 'exact',
     coverage_digest: coverage.digest,
@@ -369,6 +381,10 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   expect(screen.getByTestId('caller-map-generation').getAttribute('data-matching-rows-state'))
     .toBe('exact')
   expect(screen.getByText('Exact repository-overlay generation')).toBeTruthy()
+  expect(screen.getByText('7 candidates')).toBeTruthy()
+  expect(screen.getByText('6 base')).toBeTruthy()
+  expect(screen.getByText('1 excluded go_test')).toBeTruthy()
+  expect(screen.getByText(/3\/3 settled/)).toBeTruthy()
   expect(screen.getAllByText('Repository-overlay identity and byte span')).toHaveLength(3)
   expect(screen.queryByText('Evidence identity and byte span')).toBeNull()
   expect(screen.getByTestId('caller-map-page').getAttribute('data-responsive-layout'))
@@ -377,12 +393,21 @@ test('renders exact citations, ambiguity, unresolved queue, coverage, and mobile
   expect(screen.getByText('ambiguous')).toBeTruthy()
   expect(screen.getByText('unavailable')).toBeTruthy()
   expect(screen.getByText(/Needs review: unsupported receiver flow/)).toBeTruthy()
-  expect(screen.getByText(/replacement failed/)).toBeTruthy()
+  const scopeDetail = screen.getByTestId('coverage-certificate-detail') as HTMLDetailsElement
+  expect(scopeDetail.open).toBe(false)
+  fireEvent.click(screen.getByText('Coverage certificate'))
+  const sourceScope = screen.getByRole('button', { name: new RegExp(sourceRepo) })
+  fireEvent.click(sourceScope)
+  const sourceScopeID = sourceScope.getAttribute('aria-controls')
+  expect(sourceScopeID).not.toBeNull()
+  const sourceDetail = document.getElementById(sourceScopeID!)
+  expect(sourceDetail).not.toBeNull()
+  expect(within(sourceDetail!).getByText('stale publication')).toBeTruthy()
+  expect(within(sourceDetail!).getByText(/replacement failed/)).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: /github.com\/acme\/unsupported/ }))
+  expect(screen.queryByText(/replacement failed/)).toBeNull()
   expect(screen.getByText(/index unsupported/)).toBeTruthy()
-  expect(screen.getAllByText('stale').length).toBeGreaterThan(0)
-  expect(screen.getByText('stale · failed replacement')).toBeTruthy()
-  expect(screen.getAllByText('failed replacement').length).toBeGreaterThan(0)
-  expect(screen.getAllByText('not published / unsupported').length).toBeGreaterThan(0)
+  expect(screen.getAllByText('stale or unpublished').length).toBeGreaterThan(0)
   expect(screen.getByRole('link', { name: 'Compare replacement' }).getAttribute('href')).toBe(
     `#/compare-callers?old_protocol=protobuf&old_repository=${encodeURIComponent(contractRepo)}&old_lineage=${lineage}&old_operation=${encodeURIComponent(operation)}`,
   )

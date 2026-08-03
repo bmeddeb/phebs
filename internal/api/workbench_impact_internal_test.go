@@ -225,6 +225,11 @@ func (fake *impactCallerFake) List(
 		PairSetDigest:       "sha256:" + strings.Repeat("8", 64),
 		PublicationRevision: 1,
 	}
+	zero := 0
+	generation.PartitionProgress = &CallerMapPartitionProgress{
+		State: "complete", TotalPairCount: &zero,
+	}
+	generation.RecordCounts = &CallerMapRecordCounts{}
 	matchingState := "exact"
 	declaration := &ContractCatalogClaim{
 		AssertionID: "caller-declaration",
@@ -232,6 +237,10 @@ func (fake *impactCallerFake) List(
 	}
 	total := callerMapTotal(fake.pages * len(rows))
 	if state != string(callerexecute.PublicationCurrent) {
+		generation.RecordCounts = nil
+		generation.PartitionProgress = &CallerMapPartitionProgress{
+			State: "unavailable",
+		}
 		matchingState = "unavailable"
 		declaration = nil
 		total = nil
@@ -249,7 +258,11 @@ func (fake *impactCallerFake) List(
 		Pagination: CallerMapPagination{
 			Complete: complete, NextCursor: next,
 		},
-		Generation:        &generation,
+		Generation: &generation,
+		Scope: &AnalysisScopeProjection{
+			Repository: query.Endpoint.Repository,
+			Commit:     impactCommit, ScopePosture: "whole-repository",
+		},
 		MatchingRowsState: matchingState,
 		exactSnapshot:     snapshot,
 		exactAuthority:    authority,
@@ -292,7 +305,46 @@ func (fake *impactCallerFake) confirmWorkbenchCallerSnapshot(
 			State: state, Plane: exactCallerMapPlane,
 			Repository: query.Endpoint.Repository,
 		},
+		Scope: AnalysisScopeProjection{
+			Repository:   query.Endpoint.Repository,
+			ScopePosture: "whole-repository",
+		},
 	}, nil
+}
+
+func TestValidateWorkbenchCallerGapKeepsCurrentScopeSeparateFromMissingGeneration(
+	t *testing.T,
+) {
+	query := normalizeCallerMapQuery(CallerMapQuery{
+		Endpoint: CallerMapEndpoint{
+			Protocol: "grpc", Repository: "example.com/orders",
+			Operation: "/demo.Orders/Create",
+		},
+	})
+	page := &CallerMapPage{
+		SchemaVersion: exactCallerMapSchemaVersion,
+		Query:         query,
+		Rows:          []CallerMapRow{},
+		Groups:        []CallerMapGroup{},
+		Pagination:    CallerMapPagination{Complete: true},
+		Generation: &CallerMapGeneration{
+			State: "missing", Plane: exactCallerMapPlane,
+			Repository: query.Endpoint.Repository,
+			PartitionProgress: &CallerMapPartitionProgress{
+				State: "unavailable",
+			},
+		},
+		Scope: &AnalysisScopeProjection{
+			Repository: query.Endpoint.Repository,
+			Commit:     impactCommit, ScopePosture: "whole-repository",
+		},
+		MatchingRowsState: "unavailable",
+		exactSnapshot:     "missing-generation-snapshot",
+		exactAuthority:    "missing-generation-authority",
+	}
+	if err := validateWorkbenchExactCallerPage(page, query); err != nil {
+		t.Fatalf("current scope beside missing generation was rejected: %v", err)
+	}
 }
 
 type impactComparisonFake struct {

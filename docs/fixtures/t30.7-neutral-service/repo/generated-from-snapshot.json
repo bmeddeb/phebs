@@ -1,0 +1,10 @@
+{
+  "version": "t20-generated-from-v1",
+  "mappings": [
+    {
+      "generated_path": "gen/ordersv1/orders_grpc.pb.go",
+      "generator_relative_path": "api/orders.proto",
+      "declaration_path": "api/orders.proto"
+    }
+  ]
+}

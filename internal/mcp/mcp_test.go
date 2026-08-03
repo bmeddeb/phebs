@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -15,6 +16,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -99,7 +101,19 @@ func TestToolCalls(t *testing.T) {
 		}
 		return string(out)
 	}())
-	repo := store.Repo{Name: "example.com/demo", DefaultBranch: "main", IsPublic: true, IndexedCommitHash: indexedRef}
+	unit, err := (analysisunit.Scope{
+		Repository: "example.com/demo",
+		Name:       "payments-api",
+		Primary:    []string{"services/payments"},
+		Supporting: []string{"api/payments.proto"},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := store.Repo{
+		Name: "example.com/demo", DefaultBranch: "main", IsPublic: true,
+		IndexedCommitHash: indexedRef, IndexedAnalysisUnit: unit,
+	}
 	if err := phebssync.Mirror(t.Context(), "file://"+origin, phebssync.RepoDir(dataDir, repo.Name)); err != nil {
 		t.Fatal(err)
 	}
@@ -118,6 +132,12 @@ func TestToolCalls(t *testing.T) {
 		}
 		if len(out.Repos) != 1 || out.Repos[0].Name != "example.com/demo" {
 			t.Errorf("list_repos = %+v", out.Repos)
+		}
+		if got := out.Repos[0].AnalysisUnit; got == nil ||
+			got.Name != "payments-api" ||
+			!slices.Equal(got.PrimaryPaths, []string{"services/payments"}) ||
+			!slices.Equal(got.SupportingPaths, []string{"api/payments.proto"}) {
+			t.Errorf("list_repos analysis unit = %+v", got)
 		}
 	})
 

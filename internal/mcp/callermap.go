@@ -232,7 +232,7 @@ func callerMapPageOutputSchema() map[string]any {
 	return topLevelOutputSchema(
 		[]string{
 			"schema_version", "query", "rows", "pagination", "generation",
-			"matching_rows_state", "caveat",
+			"scope", "matching_rows_state", "caveat",
 		},
 		map[string]any{
 			"schema_version":      map[string]any{"type": "string"},
@@ -242,7 +242,8 @@ func callerMapPageOutputSchema() map[string]any {
 			"groups":              objectArraySchema(),
 			"total_matching_rows": map[string]any{"type": "integer"},
 			"pagination":          map[string]any{"type": "object"},
-			"generation":          map[string]any{"type": "object"},
+			"generation":          callerMapGenerationOutputSchema(),
+			"scope":               callerMapScopeOutputSchema(),
 			"matching_rows_state": map[string]any{"type": "string"},
 			"coverage_digest":     map[string]any{"type": "string"},
 			"attribution_digest":  map[string]any{"type": "string"},
@@ -250,6 +251,123 @@ func callerMapPageOutputSchema() map[string]any {
 			"caveat":              map[string]any{"type": "string"},
 		},
 	)
+}
+
+func callerMapGenerationOutputSchema() map[string]any {
+	stringProperty := map[string]any{"type": "string"}
+	integerProperty := map[string]any{"type": "integer"}
+	return map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             []string{"state", "plane", "repository"},
+		"properties": map[string]any{
+			"state":                     stringProperty,
+			"reason":                    stringProperty,
+			"plane":                     stringProperty,
+			"repository":                stringProperty,
+			"commit":                    stringProperty,
+			"unit_digest":               stringProperty,
+			"generation_digest":         stringProperty,
+			"declaration_set_digest":    stringProperty,
+			"candidate_manifest_digest": stringProperty,
+			"resolver_manifest_digest":  stringProperty,
+			"pair_set_digest":           stringProperty,
+			"manifest_digest":           stringProperty,
+			"publication_revision":      integerProperty,
+			"pair_count":                integerProperty,
+			"result_count":              integerProperty,
+			"abstention_count":          integerProperty,
+			"canonical_bytes":           integerProperty,
+			"excluded_go_test_records":  integerProperty,
+			"record_counts":             callerMapRecordCountsOutputSchema(),
+			"partition_progress":        callerMapPartitionProgressOutputSchema(),
+		},
+	}
+}
+
+func callerMapRecordCountsOutputSchema() map[string]any {
+	return map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required": []string{
+			"candidate_records", "base_records", "excluded_go_test_records",
+		},
+		"properties": map[string]any{
+			"candidate_records":        map[string]any{"type": "integer"},
+			"base_records":             map[string]any{"type": "integer"},
+			"excluded_go_test_records": map[string]any{"type": "integer"},
+		},
+	}
+}
+
+func callerMapPartitionProgressOutputSchema() map[string]any {
+	return map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required": []string{
+			"state", "settled_pair_count", "succeeded_pair_count",
+			"refused_pair_count",
+		},
+		"properties": map[string]any{
+			"state":                map[string]any{"type": "string"},
+			"settled_pair_count":   map[string]any{"type": "integer"},
+			"succeeded_pair_count": map[string]any{"type": "integer"},
+			"refused_pair_count":   map[string]any{"type": "integer"},
+			"total_pair_count":     map[string]any{"type": "integer"},
+		},
+	}
+}
+
+func callerMapScopeOutputSchema() map[string]any {
+	return map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required":             []string{"repository", "scope_posture"},
+		"properties": map[string]any{
+			"repository":    map[string]any{"type": "string"},
+			"commit":        map[string]any{"type": "string"},
+			"scope_posture": map[string]any{"type": "string"},
+			"analysis_unit": callerMapAnalysisUnitOutputSchema(),
+		},
+	}
+}
+
+func callerMapAnalysisUnitOutputSchema() map[string]any {
+	pathArray := func() map[string]any {
+		return map[string]any{
+			"type":  []string{"array", "null"},
+			"items": map[string]any{"type": "string"},
+		}
+	}
+	return map[string]any{
+		"type":                 "object",
+		"additionalProperties": false,
+		"required": []string{
+			"schema", "name", "digest", "primary_paths", "supporting_paths",
+			"primary_path_count", "supporting_path_count", "search_index_posture",
+			"typed_index_posture",
+		},
+		"properties": map[string]any{
+			"schema":                map[string]any{"type": "string"},
+			"name":                  map[string]any{"type": "string"},
+			"digest":                map[string]any{"type": "string"},
+			"primary_paths":         pathArray(),
+			"supporting_paths":      pathArray(),
+			"primary_path_count":    map[string]any{"type": "integer"},
+			"supporting_path_count": map[string]any{"type": "integer"},
+			"search_index_posture":  map[string]any{"type": "string"},
+			"typed_index_posture":   map[string]any{"type": "string"},
+			"typed_index": map[string]any{
+				"type":                 "object",
+				"additionalProperties": false,
+				"required":             []string{"kind", "path"},
+				"properties": map[string]any{
+					"kind": map[string]any{"type": "string"},
+					"path": map[string]any{"type": "string"},
+				},
+			},
+		},
+	}
 }
 
 func callerCitationOutputSchema() map[string]any {

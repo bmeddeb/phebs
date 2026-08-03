@@ -1,10 +1,10 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { Client } from 'styletron-engine-monolithic'
 import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import SearchPage from './SearchPage'
-import { runeColumnToUTF16Offset } from '../util'
+import { repoFilter, runeColumnToUTF16Offset } from '../util'
 import type { Chunk, FileResult, Range, RepoStatus, SearchResult, Stats, TreeEntry } from '../api'
 
 // streamSearch fake: tests drive the captured callbacks to simulate the SSE stream.
@@ -284,6 +284,113 @@ test('streaming: batches render incrementally while phase stays streaming', asyn
   expect(screen.getByTestId('streaming-skeleton')).toBeTruthy()
   expect(screen.getByText('index.ts')).toBeTruthy()
   expect(screen.getByText('github.com/b/two')).toBeTruthy()
+})
+
+test('search results expose their focused unit without mounting exact paths by default', async () => {
+  repositoryAPI.statuses = [{
+    ...repoStatus('github.com/a/one', aMain.ref),
+    analysis_unit: {
+      schema: 'analysis-unit-v1',
+      name: 'service-one',
+      digest: `sha256:${'a'.repeat(64)}`,
+      primary_paths: ['cmd/**'],
+      supporting_paths: ['pkg/**'],
+      primary_path_count: 1,
+      supporting_path_count: 1,
+      search_index_posture: 'focused',
+      typed_index_posture: 'repository-root-unbound',
+    },
+  }]
+  renderSearch()
+  await screen.findByRole('option', { name: 'github.com/a/one' })
+  await act(async () => stream.onBatch!(batch([aMain])))
+
+  expect(screen.getByTestId('analysis-scope-panel')).toBeTruthy()
+  expect(screen.getByText('service unit service-one')).toBeTruthy()
+  expect(screen.queryByText('cmd/**')).toBeNull()
+  const detail = screen.getByTestId('analysis-scope-detail')
+  fireEvent.click(within(detail).getByText('Exact repository scope'))
+  fireEvent.click(within(detail).getByRole('button', { name: /github.com\/a\/one/ }))
+  expect(screen.getByText('cmd/**')).toBeTruthy()
+  expect(screen.getByText(/does not widen focused source scope/)).toBeTruthy()
+})
+
+test('a zero-result query still exposes its exact focused repository scope', async () => {
+  repositoryAPI.statuses = [{
+    ...repoStatus('github.com/a/one', aMain.ref),
+    analysis_unit: {
+      schema: 'analysis-unit-v1',
+      name: 'service-one',
+      digest: `sha256:${'a'.repeat(64)}`,
+      primary_paths: ['cmd/**'],
+      supporting_paths: ['pkg/**'],
+      primary_path_count: 1,
+      supporting_path_count: 1,
+      search_index_posture: 'focused',
+      typed_index_posture: 'unit-bound',
+      typed_index: { kind: 'scip', path: 'pkg/index.scip' },
+    },
+  }]
+  const query = `${repoFilter('github.com/a/one')} outside-unit-needle`
+  renderSearch(`q=${encodeURIComponent(query)}`)
+  await screen.findByRole('option', { name: 'github.com/a/one' })
+  await act(async () => stream.onDone!({
+    match_count: 0,
+    file_count: 0,
+    duration_ms: 3,
+  }))
+
+  expect(screen.getByText(/No results for/)).toBeTruthy()
+  expect(screen.getByText('service unit service-one')).toBeTruthy()
+  expect(screen.getByText('1 focused')).toBeTruthy()
+  expect(screen.queryByText('cmd/**')).toBeNull()
+})
+
+test('a zero-result query reports an unprojectable repository filter as a gap', async () => {
+  repositoryAPI.statuses = [repoStatus('github.com/a/one', aMain.ref)]
+  renderSearch(`q=${encodeURIComponent('repo:acme outside-unit-needle')}`)
+  await screen.findByRole('option', { name: 'github.com/a/one' })
+  await act(async () => stream.onDone!({
+    match_count: 0,
+    file_count: 0,
+    duration_ms: 3,
+  }))
+
+  expect(screen.getByText('search_scope_filter_not_projectable')).toBeTruthy()
+  expect(screen.getByText(/cannot be mapped exactly/)).toBeTruthy()
+  expect(screen.queryByText('whole-repository scope')).toBeNull()
+})
+
+test('a zero-result query does not promote an unindexed repository to exact scope', async () => {
+  repositoryAPI.statuses = [repoStatus('github.com/a/one')]
+  const query = `${repoFilter('github.com/a/one')} outside-unit-needle`
+  renderSearch(`q=${encodeURIComponent(query)}`)
+  await screen.findByRole('option', { name: 'github.com/a/one' })
+  await act(async () => stream.onDone!({
+    match_count: 0,
+    file_count: 0,
+    duration_ms: 3,
+  }))
+
+  expect(screen.getByText('search_index_scope_unavailable')).toBeTruthy()
+  expect(screen.getByText(/no current indexed commit/)).toBeTruthy()
+  expect(screen.queryByText('whole-repository scope')).toBeNull()
+})
+
+test('a zero-result revision query reports that exact revision scope is unavailable', async () => {
+  repositoryAPI.statuses = [repoStatus('github.com/a/one', aMain.ref)]
+  const query = `${repoFilter('github.com/a/one')} rev:release outside-unit-needle`
+  renderSearch(`q=${encodeURIComponent(query)}`)
+  await screen.findByRole('option', { name: 'github.com/a/one' })
+  await act(async () => stream.onDone!({
+    match_count: 0,
+    file_count: 0,
+    duration_ms: 3,
+  }))
+
+  expect(screen.getByText('search_revision_scope_not_projectable')).toBeTruthy()
+  expect(screen.getByText(/no result commit/)).toBeTruthy()
+  expect(screen.queryByText('whole-repository scope')).toBeNull()
 })
 
 test('streaming skeleton unmounts when the stream completes', async () => {

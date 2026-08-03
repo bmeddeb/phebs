@@ -18,7 +18,7 @@ import {
   type WorkbenchImplementationAnchor,
   type WorkbenchImplementationPage,
 } from '../api'
-import { SectionHelp } from '../components/SectionHelp'
+import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 import { href } from '../router'
 import { FONTS, usePhebsTokens, type PhebsTokens } from '../theme'
 import { isAbortError } from '../util'
@@ -475,93 +475,45 @@ function AnalysisScope({
 }: {
   scope: WorkbenchImpactPage['analysis_scope']
 }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const enabledCapabilities = useMemo(() => {
-    const capabilities = new Set(
-      scope.capabilities
-        .filter((capability) =>
-          capability.state === 'enabled' ||
-          capability.state === 'available')
-        .map((capability) => capability.id),
-    )
-    if (scope.coverage.length > 0) {
-      capabilities.add('coverage-certificate')
-    }
-    return capabilities
-  }, [scope.capabilities, scope.coverage.length])
+  const statusRows = scope.capabilities.map((capability) => ({
+    label: capability.id,
+    state: capability.state,
+    detail: capability.reason,
+  }))
+  if (scope.capabilities.length === 0) {
+    statusRows.push({
+      label: 'Capabilities',
+      state: 'unavailable',
+      detail: 'No capability rows were returned.',
+    })
+  }
+  if (scope.coverage.length === 0) {
+    statusRows.push({
+      label: 'Focused-local coverage',
+      state: 'unavailable',
+      detail: 'No focused-local coverage certificate was returned.',
+    })
+  }
+  if (scope.gaps.length === 0) {
+    statusRows.push({
+      label: 'Explicit gaps',
+      state: 'none',
+      detail: 'No gaps were returned in this bounded projection.',
+    })
+  }
   return (
-    <section aria-labelledby="analysis-scope-heading" className={css(panelStyle(tok))}>
-      <div className={css(panelHeaderStyle(tok))}>
-        <span>
-          <span className={css(eyebrowStyle(tok))}>Authority before rows</span>
-          <span className={css({
-            display: 'flex',
-            gap: '7px',
-            alignItems: 'center',
-          })}>
-            <h3 id="analysis-scope-heading" className={css(panelTitleStyle())}>
-              Analysis scope &amp; gaps
-            </h3>
-            <SectionHelp
-              termId="analysis_scope_and_gaps"
-              enabledCapabilities={enabledCapabilities}
-            />
-          </span>
-        </span>
-        <EvidenceBadge tone={scope.gaps.length ? 'amber' : 'neutral'}>
-          {scope.gaps.length} gaps
-        </EvidenceBadge>
-      </div>
-      <div className={css({
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-        '@media screen and (max-width: 760px)': {
-          gridTemplateColumns: '1fr',
-        },
-      })}>
-        <ScopeColumn title="Capabilities">
-          {scope.capabilities.length === 0 ? (
-            <EvidenceEmpty>No capability rows were returned.</EvidenceEmpty>
-          ) : scope.capabilities.map((capability) => (
-            <ScopeRow
-              key={capability.id}
-              title={capability.id}
-              state={capability.state}
-              detail={capability.reason}
-            />
-          ))}
-        </ScopeColumn>
-        <ScopeColumn title="Focused-local coverage">
-          {scope.coverage.length === 0 ? (
-            <EvidenceEmpty>
-              No focused-local coverage certificate was returned.
-            </EvidenceEmpty>
-          ) : scope.coverage.map((coverage) => (
-            <ScopeRow
-              key={`${coverage.capability}:${coverage.target}`}
-              title={coverage.capability}
-              state={`${coverage.certificate.repository_count} repositories`}
-              detail={coverage.target}
-            />
-          ))}
-        </ScopeColumn>
-        <ScopeColumn title="Explicit gaps">
-          {scope.gaps.length === 0 ? (
-            <EvidenceEmpty>
-              No gaps were returned in this bounded projection.
-            </EvidenceEmpty>
-          ) : scope.gaps.map((gap, index) => (
-            <ScopeRow
-              key={`${gap.capability}:${gap.code}:${index}`}
-              title={gap.code}
-              state={gap.state}
-              detail={[gap.capability, gap.target].filter(Boolean).join(' · ')}
-            />
-          ))}
-        </ScopeColumn>
-      </div>
-    </section>
+    <AnalysisScopePanel
+      id="workbench-analysis-scope"
+      headingLevel={3}
+      certificates={scope.coverage.map((coverage) => coverage.certificate)}
+      statusRows={statusRows}
+      gaps={scope.gaps.map((gap) => ({
+        repository: gap.target,
+        domain: gap.capability,
+        state: gap.state,
+        code: gap.code,
+      }))}
+    />
   )
 }
 
@@ -656,15 +608,19 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
             ? `${caller.generation.state} · rows unavailable`
             : `${caller.total_matching_rows ?? 'unknown'} exact matches`}
         >
-          <CallerGenerationStatus
+          <CallerGenerationScope
+            id={`workbench-caller-scope-${index}`}
+            title="Caller evidence scope"
+            eyebrow="Focused declaration and repository-overlay caller planes"
+            scope={caller.scope}
             generation={caller.generation}
             matchingRowsState={caller.matching_rows_state}
           />
           {caller.matching_rows_state === 'unavailable' ? (
             <EvidenceNotice>
-              Caller rows and totals are unavailable. No partial rows, zero-
-              caller conclusion, completeness claim, migration classification,
-              or retirement-safety claim is shown.
+              Caller rows and totals are unavailable. This is not evidence of
+              zero callers. No partial rows, completeness claim, migration
+              classification, or retirement-safety claim is shown.
             </EvidenceNotice>
           ) : (
             <>
@@ -708,17 +664,19 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
               gridTemplateColumns: '1fr',
             },
           })}>
-            <CallerGenerationStatus
-              label="Current endpoint"
+            <CallerGenerationScope
+              id="workbench-comparison-current-scope"
+              title="Current endpoint"
+              eyebrow="Repository-overlay migration endpoint"
               generation={page.comparison.old.generation}
               matchingRowsState={page.comparison.old.matching_rows_state}
-              compact
             />
-            <CallerGenerationStatus
-              label="Replacement endpoint"
+            <CallerGenerationScope
+              id="workbench-comparison-replacement-scope"
+              title="Replacement endpoint"
+              eyebrow="Repository-overlay migration endpoint"
               generation={page.comparison.replacement.generation}
               matchingRowsState={page.comparison.replacement.matching_rows_state}
-              compact
             />
           </div>
           {page.comparison.matching_rows_state === 'unavailable' ? (
@@ -1652,84 +1610,42 @@ function CallerEvidenceRow({
   )
 }
 
-function CallerGenerationStatus({
+function CallerGenerationScope({
+  id,
   generation,
   matchingRowsState,
-  label = 'Caller evidence',
-  compact = false,
+  title,
+  eyebrow,
+  scope,
 }: {
+  id: string
   generation: WorkbenchImpactPage['callers'][number]['generation']
   matchingRowsState: 'exact' | 'unavailable'
-  label?: string
-  compact?: boolean
+  title: string
+  eyebrow: string
+  scope?: WorkbenchImpactPage['callers'][number]['scope']
 }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const exact = matchingRowsState === 'exact'
   return (
-    <section
+    <div
       data-testid="workbench-caller-generation"
       data-generation-state={generation.state}
       data-matching-rows-state={matchingRowsState}
-      className={css({
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        gap: '10px',
-        flexWrap: 'wrap',
-        padding: compact ? '9px 10px' : '11px 16px',
-        border: compact
-          ? `1px solid ${exact ? tok.statusGreen : tok.statusAmber}`
-          : 'none',
-        borderBottom: compact ? undefined : `1px solid ${tok.innerSep}`,
-        backgroundColor: tok.pageBg,
-      })}
     >
-      <div className={css({ minWidth: 0 })}>
-        <div className={css({
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          flexWrap: 'wrap',
-        })}>
-          <EvidenceBadge tone={exact ? 'green' : 'amber'}>
-            {exact ? 'exact rows' : 'rows unavailable'}
-          </EvidenceBadge>
-          <span className={css(rowTitleStyle(tok))}>
-            {label} · repository-overlay generation
-          </span>
-        </div>
-        {generation.reason && (
-          <div className={css({
-            marginTop: '4px',
-            color: tok.textTertiary,
-            fontSize: '10px',
-            lineHeight: '15px',
-          })}>
-            {generation.reason}
-            {!exact && ' This is not evidence of zero callers.'}
-          </div>
-        )}
-      </div>
-      <div className={css({
-        color: tok.textTertiary,
-        fontFamily: FONTS.MONO,
-        fontSize: '9px',
-        lineHeight: '15px',
-        textAlign: 'right',
-        overflowWrap: 'anywhere',
-        '@media screen and (max-width: 560px)': { textAlign: 'left' },
-      })}>
-        <div>
-          {generation.state} · revision{' '}
-          {generation.publication_revision ?? 'unavailable'}
-        </div>
-        {generation.commit && <div>commit {shortDigest(generation.commit)}</div>}
-        {generation.generation_digest && (
-          <div>generation {shortDigest(generation.generation_digest)}</div>
-        )}
-      </div>
-    </section>
+      <AnalysisScopePanel
+        id={id}
+        title={title}
+        eyebrow={eyebrow}
+        headingLevel={4}
+        scopes={scope ? [scope] : []}
+        repository={scope?.repository ?? generation.repository}
+        callerGeneration={generation}
+        statusRows={[{
+          label: 'Matching rows',
+          state: matchingRowsState,
+        }]}
+        compact
+      />
+    </div>
   )
 }
 
@@ -2035,70 +1951,6 @@ function EvidenceBadge({
     })}>
       {children}
     </span>
-  )
-}
-
-function ScopeColumn({
-  title,
-  children,
-}: {
-  title: string
-  children: React.ReactNode
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <div className={css({
-      minWidth: 0,
-      padding: '13px 16px',
-      borderRight: `1px solid ${tok.innerSep}`,
-    })}>
-      <h4 className={css({
-        margin: '0 0 8px',
-        color: tok.textTertiary,
-        fontFamily: FONTS.MONO,
-        fontSize: '9px',
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
-      })}>
-        {title}
-      </h4>
-      <div className={css({ display: 'grid', gap: '8px' })}>{children}</div>
-    </div>
-  )
-}
-
-function ScopeRow({
-  title,
-  state,
-  detail,
-}: {
-  title: string
-  state: string
-  detail?: string
-}) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  return (
-    <div>
-      <div className={css({
-        display: 'flex',
-        gap: '6px',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-      })}>
-        <span className={css(rowTitleStyle(tok))}>{title}</span>
-        <EvidenceBadge tone={
-          state === 'failed' || state === 'stale' ||
-          state === 'unsupported' || state === 'ambiguous'
-            ? 'amber'
-            : 'neutral'
-        }>
-          {humanize(state)}
-        </EvidenceBadge>
-      </div>
-      {detail && <div className={css(rowDetailStyle(tok))}>{detail}</div>}
-    </div>
   )
 }
 

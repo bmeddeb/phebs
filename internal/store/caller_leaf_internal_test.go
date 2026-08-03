@@ -316,6 +316,11 @@ func TestCallerLeafRestoreClearDoesNotDecodeMalformedRows(t *testing.T) {
 	) {
 		t.Fatalf("malformed caller admission = %v, want invalid state", err)
 	}
+	if _, err := s.GetCallerLeafOutcomeProgress(ctx, generation); !errors.Is(
+		err, ErrInvalidCallerLeafState,
+	) {
+		t.Fatalf("malformed caller progress = %v, want invalid state", err)
+	}
 	if err := s.ClearAllCallerLeafStateForRestore(ctx); err != nil {
 		t.Fatalf("raw restore clear: %v", err)
 	}

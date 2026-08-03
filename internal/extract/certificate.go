@@ -13,14 +13,22 @@ import (
 )
 
 // certificateSchemaVersion names the T13.3 per-answer coverage certificate.
-const certificateSchemaVersion = "coverage-certificate-v2"
+const certificateSchemaVersion = "coverage-certificate-v3"
+
+const certificateDomainSnapshotAttempts = 3
+
+var errCertificateDomainTransition = errors.New(
+	"extraction domain state changed while building coverage",
+)
 
 // RunSource is the narrow read surface the certificate builder consumes. It is
 // deliberately not the full EvidenceStore: the builder can look up published
-// evidence and the durable latest-attempt marker, and nothing else.
+// evidence, the durable latest-attempt marker, and the bounded latest domain
+// outcome, and nothing else.
 type RunSource interface {
 	LatestPublishedRun(ctx context.Context, scope store.ExtractionScope) (*store.ExtractionRun, error)
 	LatestExtractionAttempt(ctx context.Context, scope store.ExtractionScope) (*store.ExtractionAttempt, error)
+	LatestExtractionDomainOutcome(ctx context.Context, scope store.ExtractionScope) (*store.ExtractionDomainOutcome, error)
 }
 
 // CoverageCertificate is the per-answer honesty record: the caller's entire
@@ -93,22 +101,142 @@ type CertificateRun struct {
 	EvidenceScopePosture   string                     `json:"evidence_scope_posture,omitempty"`
 	CandidateScope         *CertificateCandidateScope `json:"candidate_scope,omitempty"`
 	LatestAttempt          *CertificateAttempt        `json:"latest_attempt,omitempty"`
+	Outcome                *CertificateDomainOutcome  `json:"outcome,omitempty"`
+}
+
+// CertificateDomainOutcome is the time-free public projection of one durable
+// latest domain outcome. GenerationDigest lets a consumer compare the record
+// with other generation authority without treating an exact-scope but retired
+// generation as current. The full receipt is decoded and cross-checked before
+// it enters a certificate; the encoder's defensive schema-only fallback stays
+// explicit rather than rendering zero-valued work as an exact receipt.
+type CertificateDomainOutcome struct {
+	Disposition             store.DomainOutcomeDisposition  `json:"disposition"`
+	GenerationDigest        string                          `json:"generation_digest"`
+	Extractor               string                          `json:"extractor"`
+	CandidateControlFailure bool                            `json:"candidate_control_failure,omitempty"`
+	ReceiptSchema           string                          `json:"receipt_schema"`
+	ReceiptState            string                          `json:"receipt_state"` // full | schema_only
+	Receipt                 *ExtractionDomainOutcomeReceipt `json:"receipt,omitempty"`
 }
 
 // CertificateCandidateScope discloses the exact candidate-manifest projection
 // used by one domain. Zero counts remain explicit inside this optional object;
 // absence means a readable legacy/direct-corpus run.
 type CertificateCandidateScope struct {
-	ManifestDigest       string                 `json:"manifest_digest"`
-	Plane                string                 `json:"plane"`
-	CorpusFileCount      int                    `json:"corpus_file_count"`
-	CorpusDeclaredBytes  int64                  `json:"corpus_declared_bytes"`
-	CorpusDigest         string                 `json:"corpus_digest"`
-	PlannedFileCount     int                    `json:"planned_file_count"`
-	PlannedRequiredCount int                    `json:"planned_required_file_count"`
-	PlannedDeclaredBytes int64                  `json:"planned_declared_bytes"`
-	PlannedDigest        string                 `json:"planned_digest"`
-	TypedInput           *CertificateTypedInput `json:"typed_input,omitempty"`
+	ManifestDigest              string                 `json:"manifest_digest"`
+	Plane                       string                 `json:"plane"`
+	CorpusFileCount             int                    `json:"corpus_file_count"`
+	CorpusDeclaredBytes         int64                  `json:"corpus_declared_bytes"`
+	CorpusDigest                string                 `json:"corpus_digest"`
+	PlannedFileCount            int                    `json:"planned_file_count"`
+	PlannedRequiredCount        int                    `json:"planned_required_file_count"`
+	PlannedDeclaredBytes        int64                  `json:"planned_declared_bytes"`
+	PlannedDigest               string                 `json:"planned_digest"`
+	BaseSourceFileCount         *int                   `json:"base_source_file_count,omitempty"`
+	ExcludedGoTestCount         *int                   `json:"excluded_go_test_file_count,omitempty"`
+	ExcludedSourceFileCount     int                    `json:"excluded_source_file_count"`
+	ExcludedSourceRequiredCount int                    `json:"excluded_source_required_count"`
+	ExcludedSourceDeclaredBytes int64                  `json:"excluded_source_declared_bytes"`
+	ExcludedSCIPDocumentCount   int                    `json:"excluded_scip_document_count"`
+	ExcludedSCIPDefinitionCount int                    `json:"excluded_scip_definition_count"`
+	ExcludedSCIPOccurrenceCount int                    `json:"excluded_scip_occurrence_count"`
+	TypedInput                  *CertificateTypedInput `json:"typed_input,omitempty"`
+
+	// legacyExclusionShape is set only while decoding a retained v1/v2
+	// certificate whose candidate scope predates the six explicit exclusion
+	// counters above. Keeping that wire shape lets immutable proof bundles
+	// round-trip byte-for-byte; newly built v3 certificates always emit every
+	// counter, including zero.
+	legacyExclusionShape bool
+}
+
+// MarshalJSON preserves the shipped v1/v2 candidate-scope shape when a
+// retained proof bundle is decoded, while keeping all six v3 counters
+// explicit for newly built certificates.
+func (scope CertificateCandidateScope) MarshalJSON() ([]byte, error) {
+	type current CertificateCandidateScope
+	if !scope.legacyExclusionShape {
+		return json.Marshal(current(scope))
+	}
+	return json.Marshal(struct {
+		ManifestDigest       string                 `json:"manifest_digest"`
+		Plane                string                 `json:"plane"`
+		CorpusFileCount      int                    `json:"corpus_file_count"`
+		CorpusDeclaredBytes  int64                  `json:"corpus_declared_bytes"`
+		CorpusDigest         string                 `json:"corpus_digest"`
+		PlannedFileCount     int                    `json:"planned_file_count"`
+		PlannedRequiredCount int                    `json:"planned_required_file_count"`
+		PlannedDeclaredBytes int64                  `json:"planned_declared_bytes"`
+		PlannedDigest        string                 `json:"planned_digest"`
+		TypedInput           *CertificateTypedInput `json:"typed_input,omitempty"`
+	}{
+		ManifestDigest:       scope.ManifestDigest,
+		Plane:                scope.Plane,
+		CorpusFileCount:      scope.CorpusFileCount,
+		CorpusDeclaredBytes:  scope.CorpusDeclaredBytes,
+		CorpusDigest:         scope.CorpusDigest,
+		PlannedFileCount:     scope.PlannedFileCount,
+		PlannedRequiredCount: scope.PlannedRequiredCount,
+		PlannedDeclaredBytes: scope.PlannedDeclaredBytes,
+		PlannedDigest:        scope.PlannedDigest,
+		TypedInput:           scope.TypedInput,
+	})
+}
+
+// UnmarshalJSON recognizes only the complete legacy omission. A partial
+// omission remains a non-canonical current shape and is rejected by the
+// caller's byte-exact round-trip check.
+func (scope *CertificateCandidateScope) UnmarshalJSON(data []byte) error {
+	type current CertificateCandidateScope
+	var decoded current
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	var presence struct {
+		ExcludedSourceFileCount     *json.RawMessage `json:"excluded_source_file_count"`
+		ExcludedSourceRequiredCount *json.RawMessage `json:"excluded_source_required_count"`
+		ExcludedSourceDeclaredBytes *json.RawMessage `json:"excluded_source_declared_bytes"`
+		ExcludedSCIPDocumentCount   *json.RawMessage `json:"excluded_scip_document_count"`
+		ExcludedSCIPDefinitionCount *json.RawMessage `json:"excluded_scip_definition_count"`
+		ExcludedSCIPOccurrenceCount *json.RawMessage `json:"excluded_scip_occurrence_count"`
+	}
+	if err := json.Unmarshal(data, &presence); err != nil {
+		return err
+	}
+	*scope = CertificateCandidateScope(decoded)
+	scope.legacyExclusionShape =
+		presence.ExcludedSourceFileCount == nil &&
+			presence.ExcludedSourceRequiredCount == nil &&
+			presence.ExcludedSourceDeclaredBytes == nil &&
+			presence.ExcludedSCIPDocumentCount == nil &&
+			presence.ExcludedSCIPDefinitionCount == nil &&
+			presence.ExcludedSCIPOccurrenceCount == nil
+	return nil
+}
+
+// ValidateCanonicalShape applies schema-version rules that cannot be
+// expressed by Go's JSON tags alone. Retained v1/v2 certificates may carry
+// the old candidate-scope shape; v3 must disclose every exclusion counter.
+func (certificate *CoverageCertificate) ValidateCanonicalShape() error {
+	if certificate == nil {
+		return errors.New("coverage certificate is nil")
+	}
+	if certificate.SchemaVersion != certificateSchemaVersion {
+		return nil
+	}
+	for _, repository := range certificate.Repositories {
+		for _, run := range repository.Runs {
+			if run.CandidateScope != nil &&
+				run.CandidateScope.legacyExclusionShape {
+				return fmt.Errorf(
+					"coverage certificate v3 candidate scope for %q/%q omits exclusion counters",
+					repository.Repository, run.Domain,
+				)
+			}
+		}
+	}
+	return nil
 }
 
 // CertificateTypedInput is the real-path typed parser receipt. Present=false
@@ -180,7 +308,7 @@ func BuildCoverageCertificate(
 					repo.Name, err,
 				)
 			}
-			entry.ScopePosture = "focused"
+			entry.ScopePosture = repo.IndexedAnalysisUnit.SearchIndexPosture
 			entry.AnalysisUnit = &CertificateAnalysisUnit{
 				Name:              repo.IndexedAnalysisUnit.Name,
 				Digest:            repo.IndexedAnalysisUnit.Digest,
@@ -195,36 +323,89 @@ func BuildCoverageCertificate(
 		}
 		for _, domain := range domainList {
 			scope := certificateExtractionScope(repo, domain)
-			run, err := source.LatestPublishedRun(ctx, scope)
-			published := err == nil
-			if err != nil && !errors.Is(err, store.ErrNotFound) {
-				return nil, fmt.Errorf("latest published run for %q/%q: %w", repo.Name, domain, err)
-			}
-			if published && (run == nil || run.ID == "" || run.Repo != repo.Name || run.Domain != domain ||
-				run.Status != "published" || run.Commit != scope.Commit ||
-				run.UnitDigest != scope.UnitDigest || run.Extractor == "") {
-				return nil, fmt.Errorf("published run for %q/%q is inconsistent", repo.Name, domain)
-			}
-			attempt, attemptErr := source.LatestExtractionAttempt(ctx, scope)
-			if errors.Is(attemptErr, store.ErrNotFound) {
-				attempt = nil
-			} else if attemptErr != nil {
-				return nil, fmt.Errorf("latest extraction attempt for %q/%q: %w", repo.Name, domain, attemptErr)
-			}
-			if attempt == nil && published {
-				attempt = &store.ExtractionAttempt{
-					RunID: run.ID, Repo: run.Repo, Commit: run.Commit, Domain: run.Domain,
-					UnitDigest: run.UnitDigest, Extractor: run.Extractor, Status: "published",
+			var (
+				run                *store.ExtractionRun
+				published          bool
+				certificateAttempt *CertificateAttempt
+				certificateOutcome *CertificateDomainOutcome
+			)
+			for snapshotAttempt := 0; ; snapshotAttempt++ {
+				var err error
+				run, err = source.LatestPublishedRun(ctx, scope)
+				published = err == nil
+				if err != nil && !errors.Is(err, store.ErrNotFound) {
+					return nil, fmt.Errorf(
+						"latest published run for %q/%q: %w",
+						repo.Name, domain, err,
+					)
 				}
-			}
-			certificateAttempt, err := validateCertificateAttempt(scope, attempt, run, published)
-			if err != nil {
-				return nil, err
+				if published && (run == nil || run.ID == "" ||
+					run.Repo != repo.Name || run.Domain != domain ||
+					run.Status != "published" || run.Commit != scope.Commit ||
+					run.UnitDigest != scope.UnitDigest || run.Extractor == "") {
+					return nil, fmt.Errorf(
+						"published run for %q/%q is inconsistent",
+						repo.Name, domain,
+					)
+				}
+				outcome, outcomeErr := source.LatestExtractionDomainOutcome(ctx, scope)
+				if errors.Is(outcomeErr, store.ErrNotFound) {
+					outcome = nil
+				} else if outcomeErr != nil {
+					return nil, fmt.Errorf(
+						"latest extraction domain outcome for %q/%q: %w",
+						repo.Name, domain, outcomeErr,
+					)
+				}
+				attempt, attemptErr := source.LatestExtractionAttempt(ctx, scope)
+				if errors.Is(attemptErr, store.ErrNotFound) {
+					attempt = nil
+				} else if attemptErr != nil {
+					return nil, fmt.Errorf(
+						"latest extraction attempt for %q/%q: %w",
+						repo.Name, domain, attemptErr,
+					)
+				}
+				if attempt == nil && published {
+					attempt = &store.ExtractionAttempt{
+						RunID: run.ID, Repo: run.Repo, Commit: run.Commit,
+						Domain: run.Domain, UnitDigest: run.UnitDigest,
+						Extractor: run.Extractor, Status: "published",
+					}
+				}
+				// Publication commits the run, published outcome, and latest
+				// attempt atomically, while failure first aborts the attempt and
+				// then records its non-published outcome. Reading run, outcome,
+				// then attempt makes either transition produce a real pre/post
+				// state or an identity mismatch that retries. Reading the attempt
+				// first could pair a pre-abort staged attempt with the later
+				// failure outcome.
+				certificateAttempt, err = validateCertificateAttempt(
+					scope, attempt, run, published,
+				)
+				if err == nil {
+					certificateOutcome, err = certificateDomainOutcome(
+						scope, outcome, run, published,
+					)
+				}
+				if !errors.Is(err, errCertificateDomainTransition) {
+					if err != nil {
+						return nil, err
+					}
+					break
+				}
+				if snapshotAttempt+1 >= certificateDomainSnapshotAttempts {
+					return nil, fmt.Errorf(
+						"coverage for %q/%q remained in transition after %d reads: %w",
+						repo.Name, domain, certificateDomainSnapshotAttempts,
+						store.ErrConflict,
+					)
+				}
 			}
 			if !published {
 				entry.Runs = append(entry.Runs, CertificateRun{
 					Domain: domain, Status: "unpublished", UnitDigest: scope.UnitDigest,
-					LatestAttempt: certificateAttempt,
+					LatestAttempt: certificateAttempt, Outcome: certificateOutcome,
 				})
 				continue
 			}
@@ -234,7 +415,13 @@ func BuildCoverageCertificate(
 			sort.Strings(failures)
 			fresh := run.Commit == repo.IndexedCommitHash &&
 				run.UnitDigest == scope.UnitDigest
-			candidateScope := certificateCandidateScope(run.Coverage)
+			candidateScope, err := certificateCandidateScope(run.Coverage)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"published run for %q/%q has invalid candidate scope: %w",
+					repo.Name, domain, err,
+				)
+			}
 			entry.Runs = append(entry.Runs, CertificateRun{
 				Domain: domain, Status: "published", RunID: run.ID,
 				Extractor: run.Extractor, Commit: run.Commit,
@@ -256,6 +443,7 @@ func BuildCoverageCertificate(
 				EvidenceScopePosture:   run.Coverage.ScopePosture,
 				CandidateScope:         candidateScope,
 				LatestAttempt:          certificateAttempt,
+				Outcome:                certificateOutcome,
 			})
 			for _, protocol := range protocols {
 				if !fresh {
@@ -294,20 +482,43 @@ func certificateExtractionScope(repo store.Repo, domain string) store.Extraction
 
 func certificateCandidateScope(
 	coverage store.CoverageManifest,
-) *CertificateCandidateScope {
+) (*CertificateCandidateScope, error) {
 	if coverage.CandidateManifestDigest == "" {
-		return nil
+		return nil, nil
+	}
+	if coverage.PlannedFileCount < 0 ||
+		coverage.ExcludedSourceFileCount < 0 ||
+		coverage.ExcludedSourceFileCount > coverage.PlannedFileCount ||
+		coverage.ExcludedSourceRequiredCount < 0 ||
+		coverage.ExcludedSourceRequiredCount > coverage.ExcludedSourceFileCount ||
+		coverage.ExcludedSourceDeclaredBytes < 0 ||
+		coverage.ExcludedSCIPDocumentCount < 0 ||
+		coverage.ExcludedSCIPDefinitionCount < 0 ||
+		coverage.ExcludedSCIPOccurrenceCount < 0 {
+		return nil, errors.New("candidate exclusion counts are inconsistent")
 	}
 	scope := &CertificateCandidateScope{
-		ManifestDigest:       coverage.CandidateManifestDigest,
-		Plane:                coverage.CandidatePlane,
-		CorpusFileCount:      coverage.ScopeCorpusFileCount,
-		CorpusDeclaredBytes:  coverage.ScopeCorpusDeclaredBytes,
-		CorpusDigest:         coverage.ScopeCorpusDigest,
-		PlannedFileCount:     coverage.PlannedFileCount,
-		PlannedRequiredCount: coverage.PlannedRequiredFileCount,
-		PlannedDeclaredBytes: coverage.PlannedDeclaredBytes,
-		PlannedDigest:        coverage.PlannedScopeDigest,
+		ManifestDigest:              coverage.CandidateManifestDigest,
+		Plane:                       coverage.CandidatePlane,
+		CorpusFileCount:             coverage.ScopeCorpusFileCount,
+		CorpusDeclaredBytes:         coverage.ScopeCorpusDeclaredBytes,
+		CorpusDigest:                coverage.ScopeCorpusDigest,
+		PlannedFileCount:            coverage.PlannedFileCount,
+		PlannedRequiredCount:        coverage.PlannedRequiredFileCount,
+		PlannedDeclaredBytes:        coverage.PlannedDeclaredBytes,
+		PlannedDigest:               coverage.PlannedScopeDigest,
+		ExcludedSourceFileCount:     coverage.ExcludedSourceFileCount,
+		ExcludedSourceRequiredCount: coverage.ExcludedSourceRequiredCount,
+		ExcludedSourceDeclaredBytes: coverage.ExcludedSourceDeclaredBytes,
+		ExcludedSCIPDocumentCount:   coverage.ExcludedSCIPDocumentCount,
+		ExcludedSCIPDefinitionCount: coverage.ExcludedSCIPDefinitionCount,
+		ExcludedSCIPOccurrenceCount: coverage.ExcludedSCIPOccurrenceCount,
+	}
+	if coverage.ScopePosture == "focused-local" && coverage.CandidatePlane == "local" {
+		base := coverage.PlannedFileCount - coverage.ExcludedSourceFileCount
+		excludedGoTest := coverage.ExcludedSourceFileCount
+		scope.BaseSourceFileCount = &base
+		scope.ExcludedGoTestCount = &excludedGoTest
 	}
 	if coverage.TypedInputKind != "" {
 		scope.TypedInput = &CertificateTypedInput{
@@ -319,7 +530,174 @@ func certificateCandidateScope(
 			Present:       coverage.TypedInputPresent,
 		}
 	}
-	return scope
+	return scope, nil
+}
+
+func certificateDomainOutcome(
+	scope store.ExtractionScope,
+	outcome *store.ExtractionDomainOutcome,
+	publishedRun *store.ExtractionRun,
+	published bool,
+) (*CertificateDomainOutcome, error) {
+	if outcome == nil {
+		return nil, nil
+	}
+	if err := outcome.Validate(); err != nil {
+		return nil, fmt.Errorf(
+			"latest extraction domain outcome for %q/%q is invalid: %w",
+			scope.Repository, scope.Domain, err,
+		)
+	}
+	if outcome.Scope != scope {
+		return nil, fmt.Errorf(
+			"latest extraction domain outcome for %q/%q has inconsistent scope",
+			scope.Repository, scope.Domain,
+		)
+	}
+	generationDigest := store.ComputeExtractionGenerationDigest(outcome.Generation)
+	if outcome.Generation.Digest != generationDigest {
+		return nil, fmt.Errorf(
+			"latest extraction domain outcome for %q/%q has inconsistent generation digest",
+			scope.Repository, scope.Domain,
+		)
+	}
+	if outcome.Disposition == store.DomainOutcomePublished &&
+		(!published || publishedRun == nil ||
+			outcome.RunID != publishedRun.ID ||
+			outcome.Generation.Extractor != publishedRun.Extractor) {
+		return nil, fmt.Errorf(
+			"%w: published extraction domain outcome for %q/%q does not match published evidence",
+			errCertificateDomainTransition, scope.Repository, scope.Domain,
+		)
+	}
+
+	projected := &CertificateDomainOutcome{
+		Disposition:             outcome.Disposition,
+		GenerationDigest:        generationDigest,
+		Extractor:               outcome.Generation.Extractor,
+		CandidateControlFailure: outcome.CandidateControlFailure,
+		ReceiptSchema:           outcome.ReceiptSchema,
+	}
+	schemaOnly := `{"schema":"` + store.ExtractionOutcomeReceiptSchema + `"}`
+	if outcome.Receipt == schemaOnly {
+		projected.ReceiptState = "schema_only"
+		return projected, nil
+	}
+
+	var receipt ExtractionDomainOutcomeReceipt
+	if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+		return nil, fmt.Errorf(
+			"latest extraction domain outcome for %q/%q has an invalid receipt: %w",
+			scope.Repository, scope.Domain, err,
+		)
+	}
+	canonical, err := json.Marshal(receipt)
+	if err != nil || string(canonical) != outcome.Receipt {
+		return nil, fmt.Errorf(
+			"latest extraction domain outcome for %q/%q has a non-canonical or unknown receipt shape",
+			scope.Repository, scope.Domain,
+		)
+	}
+	if receipt.Schema != store.ExtractionOutcomeReceiptSchema ||
+		receipt.Schema != outcome.ReceiptSchema ||
+		receipt.Domain != scope.Domain ||
+		receipt.ExtractorVersion != outcome.Generation.Extractor ||
+		receipt.Disposition != outcome.Disposition ||
+		!validOperationReason(receipt.Reason) ||
+		!validCertificateOutcomeReceipt(receipt) {
+		return nil, fmt.Errorf(
+			"latest extraction domain outcome for %q/%q has an inconsistent receipt",
+			scope.Repository, scope.Domain,
+		)
+	}
+	projected.ReceiptState = "full"
+	projected.Receipt = &receipt
+	return projected, nil
+}
+
+func validCertificateOutcomeReceipt(
+	receipt ExtractionDomainOutcomeReceipt,
+) bool {
+	if receipt.InventoryMS < 0 || receipt.OpenedSourceMS < 0 ||
+		receipt.ExtractorMS < 0 || receipt.StagingMS < 0 {
+		return false
+	}
+	counts := receipt.Counts
+	if counts.CorpusFiles < 0 || counts.CandidateFiles < 0 ||
+		counts.ExcludedSourceFiles < 0 || counts.ExcludedSCIPDocuments < 0 ||
+		counts.ExcludedSCIPDefinitions < 0 || counts.ExcludedSCIPOccurrences < 0 ||
+		counts.OpenedSourceAttempts < 0 || counts.OpenedSourceFiles < 0 ||
+		counts.Facts < 0 || counts.Atoms < 0 || counts.Assertions < 0 ||
+		counts.Unresolved < 0 || counts.StagedChunks < 0 || counts.StagedRows < 0 ||
+		counts.CandidateFiles > counts.CorpusFiles ||
+		counts.ExcludedSourceFiles > counts.CorpusFiles ||
+		counts.ExcludedSourceFiles >
+			counts.CorpusFiles-counts.CandidateFiles ||
+		counts.OpenedSourceFiles > counts.OpenedSourceAttempts ||
+		counts.ExcludedSCIPDefinitions > counts.ExcludedSCIPOccurrences ||
+		counts.ExcludedSCIPDocuments == 0 &&
+			(counts.ExcludedSCIPDefinitions != 0 ||
+				counts.ExcludedSCIPOccurrences != 0) {
+		return false
+	}
+	bytes := receipt.Bytes
+	if bytes.PlannedDeclared < 0 || bytes.ExcludedSourceDeclared < 0 ||
+		bytes.OpenedSource < 0 ||
+		bytes.ExcludedSourceDeclared > bytes.PlannedDeclared ||
+		counts.ExcludedSourceFiles == 0 && bytes.ExcludedSourceDeclared != 0 {
+		return false
+	}
+	limits := receipt.Limits
+	if limits.CorpusFiles <= 0 || limits.OpenedSourceAttempts <= 0 ||
+		limits.OpenedSourceFiles <= 0 || limits.OpenedSourceBytes <= 0 ||
+		limits.Facts <= 0 || limits.SourceBlobBytes <= 0 ||
+		limits.TypedInputBytes <= 0 || limits.AggregateWallMS <= 0 ||
+		limits.MirrorLockMS <= 0 || limits.DomainWallMS <= 0 ||
+		limits.AbortWallMS <= 0 || limits.OutcomeWallMS <= 0 ||
+		limits.MaxSerialDomains <= 0 || limits.SchedulerIdentityBytes <= 0 ||
+		limits.AggregateStagedRows <= 0 || limits.DomainStagedRows <= 0 ||
+		counts.CorpusFiles > limits.CorpusFiles ||
+		counts.OpenedSourceAttempts > limits.OpenedSourceAttempts ||
+		counts.OpenedSourceFiles > limits.OpenedSourceFiles ||
+		bytes.OpenedSource > limits.OpenedSourceBytes ||
+		counts.Facts > limits.Facts ||
+		counts.StagedRows > limits.DomainStagedRows ||
+		counts.StagedRows > limits.AggregateStagedRows {
+		return false
+	}
+	return validCertificateOutcomeReason(
+		receipt.Disposition, receipt.Reason,
+	)
+}
+
+func validCertificateOutcomeReason(
+	disposition store.DomainOutcomeDisposition,
+	reason string,
+) bool {
+	switch disposition {
+	case store.DomainOutcomePublished:
+		return reason == OperationReasonNoCandidates ||
+			reason == OperationReasonTypedInputAbsent ||
+			reason == OperationReasonPublishedEmpty ||
+			reason == OperationReasonPublishedNonempty
+	case store.DomainOutcomeUnavailablePrerequisite:
+		return reason == OperationReasonTypedInputAbsent
+	case store.DomainOutcomeTerminalGenerationRefusal:
+		return reason == OperationReasonLimitRefusal ||
+			reason == OperationReasonFailed
+	case store.DomainOutcomeRetryableFailure:
+		return reason == OperationReasonNotReady ||
+			reason == OperationReasonNoCandidates ||
+			reason == OperationReasonTypedInputAbsent ||
+			reason == OperationReasonPublishedEmpty ||
+			reason == OperationReasonPublishedNonempty ||
+			reason == OperationReasonAggregateBudget ||
+			reason == OperationReasonDomainBudget ||
+			reason == OperationReasonCanceled ||
+			reason == OperationReasonFailed
+	default:
+		return false
+	}
 }
 
 func validateCertificateAttempt(
@@ -348,8 +726,8 @@ func validateCertificateAttempt(
 		publishedRun.UnitDigest != attempt.UnitDigest ||
 		publishedRun.Extractor != attempt.Extractor) {
 		return nil, fmt.Errorf(
-			"published attempt for %q/%q does not match published evidence",
-			scope.Repository, scope.Domain,
+			"%w: published attempt for %q/%q does not match published evidence",
+			errCertificateDomainTransition, scope.Repository, scope.Domain,
 		)
 	}
 	result := &CertificateAttempt{

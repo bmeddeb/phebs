@@ -1,0 +1,4 @@
+This path represents unrelated monorepo bulk outside the configured service.
+Its sentinel must not appear in focused search results:
+
+T307_OUTSIDE_UNIT_BULK_NEEDLE

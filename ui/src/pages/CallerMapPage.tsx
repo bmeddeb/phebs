@@ -10,14 +10,13 @@ import {
   type CallerMapPage as CallerMapResponse,
   type CallerMapRow,
   type CallerMapUnitCandidate,
-  type CoverageCertificate,
-  type CoverageRun,
 } from '../api'
 import { ContractIcon, OpenIcon } from '../icons'
 import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ExactCallerCitation from './ExactCallerCitation'
+import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
 const pageSize = 100
 const maxCursorHistory = 500
@@ -264,6 +263,14 @@ export default function CallerMapPage({
       {!loading && page && (
         <>
           <GenerationStatus page={page} />
+          <AnalysisScopePanel
+            id="caller-map-analysis-scope"
+            certificate={page.coverage}
+            scopes={page.scope ? [page.scope] : []}
+            callerGeneration={page.generation}
+            eyebrow="Focused declarations and repository-overlay callers"
+            compact
+          />
           <PageProgress
             page={page}
             pageIndex={pageIndex}
@@ -279,7 +286,6 @@ export default function CallerMapPage({
             onPrevious={() => setPageIndex((current) => Math.max(0, current - 1))}
             onNext={nextPage}
           />
-          {page.coverage && <CoveragePanel certificate={page.coverage} />}
           <div className={css({
             marginTop: '14px',
             padding: '11px 13px',
@@ -1142,71 +1148,6 @@ function Pager({
   )
 }
 
-function CoveragePanel({ certificate }: { certificate: CoverageCertificate }) {
-  const [css] = useStyletron()
-  const tok = usePhebsTokens()
-  const runs = certificate.repositories.flatMap((repository) =>
-    repository.runs.map((run) => ({ repository: repository.repository, run })),
-  )
-  return (
-    <details
-      data-testid="caller-map-coverage"
-      className={css({
-        marginTop: '14px',
-        border: `1px solid ${tok.cardBorder}`,
-        backgroundColor: tok.pageBg,
-      })}
-    >
-      <summary className={css({
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: '10px',
-        padding: '11px 12px',
-        cursor: 'pointer',
-        backgroundColor: tok.bandBg,
-        color: tok.textSecondary,
-        fontSize: '11px',
-        ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '-2px' },
-      })}>
-        <span>Coverage certificate · {certificate.repository_count} visible repositories</span>
-        <span className={css({ fontFamily: FONTS.MONO })}>{shortID(certificate.digest)}</span>
-      </summary>
-      <div className={css({ overflowX: 'auto' })}>
-        <table className={css({
-          width: '100%',
-          borderCollapse: 'collapse',
-          fontSize: '10px',
-          lineHeight: '16px',
-        })}>
-          <thead>
-            <tr>
-              {['Repository', 'Domain', 'State', 'Assertions', 'Unresolved', 'Latest attempt'].map((label) => (
-                <th key={label} className={css(tableCellStyle(tok, true))}>{label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {runs.map(({ repository, run }) => (
-              <tr key={`${repository}\u0000${run.domain}`}>
-                <td className={css(tableCellStyle(tok))}>{repository}</td>
-                <td className={css({ ...tableCellStyle(tok), fontFamily: FONTS.MONO })}>{run.domain}</td>
-                <td className={css(tableCellStyle(tok))}><Chip tone={coverageTone(run)}>{coverageState(run)}</Chip></td>
-                <td className={css(tableCellStyle(tok))}>{run.assertion_count}</td>
-                <td className={css(tableCellStyle(tok))}>{run.unresolved_count}</td>
-                <td className={css(tableCellStyle(tok))}>
-                  {run.latest_attempt
-                    ? `${run.latest_attempt.status}${run.latest_attempt.failure ? ` · ${run.latest_attempt.failure}` : ''}`
-                    : 'none'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  )
-}
-
 function groupRows(rows: CallerMapRow[]): [string, CallerMapRow[]][] {
   const groups = new Map<string, CallerMapRow[]>()
   for (const row of rows) {
@@ -1241,29 +1182,6 @@ function sourceHref(source: {
     ref: source.commit,
     L: String(source.start_line),
   })
-}
-
-function coverageState(run: CoverageRun) {
-  // A published run that recorded extraction failures is not a clean green
-  // row: the failure classes are part of the coverage claim.
-  const failureSuffix = run.failures?.length
-    ? ` · ${run.failures.length} recorded failure${run.failures.length === 1 ? '' : 's'}`
-    : ''
-  if (run.latest_attempt?.failure && run.status === 'published') {
-    return `${run.fresh ? 'fresh' : 'stale'} · failed replacement${failureSuffix}`
-  }
-  if (run.status !== 'published') {
-    if (run.latest_attempt?.failure) return 'failed replacement'
-    return 'not published / unsupported'
-  }
-  return `${run.fresh ? 'fresh' : 'stale'}${failureSuffix}`
-}
-
-function coverageTone(run: CoverageRun): 'green' | 'amber' | 'red' | 'neutral' {
-  if (run.latest_attempt?.failure) return 'red'
-  if (run.status !== 'published' || !run.fresh) return 'amber'
-  if (run.failures?.length) return 'amber'
-  return 'green'
 }
 
 function unitTone(state: string): 'green' | 'amber' | 'neutral' {
@@ -1353,22 +1271,6 @@ function linkButtonStyle(tok: ReturnType<typeof usePhebsTokens>) {
     whiteSpace: 'nowrap',
     ':hover': { borderColor: tok.accent, color: tok.accent },
     ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '2px' },
-  } as const
-}
-
-function tableCellStyle(
-  tok: ReturnType<typeof usePhebsTokens>,
-  heading = false,
-) {
-  return {
-    padding: '8px 10px',
-    borderBottom: `1px solid ${tok.innerSep}`,
-    color: heading ? tok.textSecondary : tok.textTertiary,
-    backgroundColor: heading ? tok.bandBg : tok.pageBg,
-    fontWeight: heading ? 650 : 400,
-    textAlign: 'left',
-    verticalAlign: 'top',
-    whiteSpace: 'nowrap',
   } as const
 }
 

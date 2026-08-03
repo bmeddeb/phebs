@@ -46,6 +46,7 @@ const investigationID = '01JWORKBENCH00000000000000'
 const revisionID = 'rev_01JWORKBENCH00000000000000_000001'
 const repository = 'github.com/acme/contracts'
 const commit = 'a'.repeat(40)
+const unitDigest = `sha256:${'6'.repeat(64)}`
 const engine = new Client()
 
 function callerGeneration(
@@ -59,6 +60,7 @@ function callerGeneration(
     plane: 'repository-overlay',
     repository,
     commit: state === 'missing' ? undefined : commit,
+    unit_digest: state === 'missing' ? undefined : unitDigest,
     generation_digest: state === 'missing'
       ? undefined
       : `sha256:${'e'.repeat(64)}`,
@@ -68,6 +70,22 @@ function callerGeneration(
     pair_set_digest: `sha256:${'3'.repeat(64)}`,
     manifest_digest: `sha256:${'4'.repeat(64)}`,
     publication_revision: state === 'missing' ? undefined : 7,
+    record_counts: state === 'current'
+      ? {
+          candidate_records: 5,
+          base_records: 3,
+          excluded_go_test_records: 2,
+        }
+      : undefined,
+    partition_progress: state === 'current'
+      ? {
+          state: 'complete',
+          settled_pair_count: 2,
+          succeeded_pair_count: 2,
+          refused_pair_count: 0,
+          total_pair_count: 2,
+        }
+      : undefined,
   }
 }
 
@@ -91,6 +109,26 @@ function impactPage(
         canonical_operation: '/demo.v1.Catalog/Get',
       },
       query: {} as never,
+      scope: {
+        repository,
+        commit,
+        scope_posture: 'focused',
+        analysis_unit: {
+          schema: 'analysis-unit-v1',
+          name: 'catalog-service',
+          digest: unitDigest,
+          primary_paths: ['src/catalog/**'],
+          supporting_paths: ['proto/catalog.proto'],
+          primary_path_count: 1,
+          supporting_path_count: 1,
+          search_index_posture: 'focused',
+          typed_index_posture: 'unit-bound',
+          typed_index: {
+            kind: 'scip',
+            path: 'proto/catalog.proto',
+          },
+        },
+      },
       generation: callerGeneration(),
       matching_rows_state: 'exact',
       declaration: {
@@ -407,6 +445,31 @@ test('Where keeps gaps adjacent, reads exact overlay citations, and replaces pag
   expect(screen.getByText('reader_not_bound')).toBeTruthy()
   expect(screen.getByText('No runtime telemetry reader is bound.')).toBeTruthy()
   expect(screen.getByText('The bounded inventory read failed.')).toBeTruthy()
+  expect(screen.getByRole('heading', {
+    name: 'Caller evidence scope',
+  })).toBeTruthy()
+  expect(screen.getByText('service unit catalog-service')).toBeTruthy()
+  expect(screen.getByText('5 candidates')).toBeTruthy()
+  expect(screen.getByText('3 base')).toBeTruthy()
+  expect(screen.getByText(/2 excluded go_test/)).toBeTruthy()
+  expect(screen.getByText(/2\/2 settled/)).toBeTruthy()
+  const callerIdentity = screen.getByTestId('caller-generation-identity')
+  expect(callerIdentity.textContent).toContain(`commit ${commit}`)
+  expect(callerIdentity.textContent).toContain(`unit ${unitDigest}`)
+  expect(callerIdentity.textContent).toContain(`generation sha256:${'e'.repeat(64)}`)
+  expect(screen.queryByText('src/catalog/**')).toBeNull()
+  const callerScopeSection = screen.getByRole('heading', {
+    name: 'Caller evidence scope',
+  }).closest('section')
+  expect(callerScopeSection).not.toBeNull()
+  const callerScope = within(callerScopeSection as HTMLElement)
+  const callerScopeDetails = callerScope.getByTestId('analysis-scope-detail')
+  fireEvent.click(within(callerScopeDetails).getByText('Exact repository scope'))
+  fireEvent.click(within(callerScopeDetails).getByRole('button', {
+    name: new RegExp(repository),
+  }))
+  expect(callerScope.getByText('src/catalog/**')).toBeTruthy()
+  expect(callerScope.getByText('proto/catalog.proto')).toBeTruthy()
   expect(screen.getByText(/2 candidate units/)).toBeTruthy()
   expect(screen.getByText('stale')).toBeTruthy()
   expect(screen.getByText(`${repository}/src/callers/first.ts:42`)).toBeTruthy()
@@ -621,6 +684,14 @@ test('Where preserves comparison, field, and resource-plane source citations', a
   expect(screen.getByRole('button', { name: 'Read exact cited bytes' }))
     .toBeTruthy()
   expect(screen.getAllByTestId('workbench-caller-generation')).toHaveLength(2)
+  expect(screen.getAllByText('5 candidates')).toHaveLength(2)
+  expect(screen.getAllByText(/2\/2 settled/)).toHaveLength(2)
+  const endpointIdentities = screen.getAllByTestId('caller-generation-identity')
+  expect(endpointIdentities).toHaveLength(2)
+  for (const identity of endpointIdentities) {
+    expect(identity.textContent).toContain(`unit ${unitDigest}`)
+    expect(identity.textContent).toContain(`generation sha256:${'e'.repeat(64)}`)
+  }
   expect(screen.getAllByText('catalog-api → catalog-v1')).toHaveLength(2)
 })
 
@@ -701,6 +772,24 @@ test('Where exposes honest empty and cursor invalidation states with restart', a
   }))
   expect(await screen.findByText(/No evidence groups are visible/)).toBeTruthy()
   expect(api.fetchWorkbenchImpact).toHaveBeenCalledTimes(3)
+})
+
+test('Where preserves typed empty scope and zero-gap statements', async () => {
+  const page = emptyImpactPage()
+  page.analysis_scope = {
+    coverage: [],
+    capabilities: [],
+    gaps: [],
+  }
+  api.fetchWorkbenchImpact.mockResolvedValue(page)
+
+  render(<EvidenceHarness step="where" />)
+
+  expect(await screen.findByText('No capability rows were returned.')).toBeTruthy()
+  expect(screen.getByText('No focused-local coverage certificate was returned.'))
+    .toBeTruthy()
+  expect(screen.getByText('No gaps were returned in this bounded projection.'))
+    .toBeTruthy()
 })
 
 test('Where preserves non-disclosure when exact evidence becomes unavailable', async () => {

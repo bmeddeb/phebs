@@ -13,6 +13,7 @@ import (
 
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/investigation"
@@ -140,7 +141,7 @@ func NewServer(opts Options) *sdk.Server {
 
 	sdk.AddTool(s, &sdk.Tool{
 		Name:        "list_repos",
-		Description: "List every indexed repository with its metadata (name, branch, visibility, last index time).",
+		Description: "List every indexed repository with its metadata and active analysis-unit scope (name, exact primary/supporting paths, search posture, and typed-index posture when configured).",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, _ struct{}) (*sdk.CallToolResult, reposOut, error) {
 		repos, err := opts.Store.ListRepos(ctx)
 		if err != nil {
@@ -158,7 +159,8 @@ func NewServer(opts Options) *sdk.Server {
 			out.Repos = append(out.Repos, repoInfo{
 				Name: r.Name, DefaultBranch: r.DefaultBranch, WebURL: r.WebURL,
 				IsPublic: r.IsPublic, IsFork: r.IsFork, IsArchived: r.IsArchived,
-				IndexedAt: r.IndexedAt,
+				IndexedAt:    r.IndexedAt,
+				AnalysisUnit: analysisunit.CloneState(r.IndexedAnalysisUnit),
 			})
 		}
 		return nil, out, nil
@@ -474,13 +476,14 @@ type reposOut struct {
 }
 
 type repoInfo struct {
-	Name          string     `json:"name"`
-	DefaultBranch string     `json:"default_branch,omitempty"`
-	WebURL        string     `json:"web_url,omitempty"`
-	IsPublic      bool       `json:"is_public"`
-	IsFork        bool       `json:"is_fork"`
-	IsArchived    bool       `json:"is_archived"`
-	IndexedAt     *time.Time `json:"indexed_at,omitempty"`
+	Name          string              `json:"name"`
+	DefaultBranch string              `json:"default_branch,omitempty"`
+	WebURL        string              `json:"web_url,omitempty"`
+	IsPublic      bool                `json:"is_public"`
+	IsFork        bool                `json:"is_fork"`
+	IsArchived    bool                `json:"is_archived"`
+	IndexedAt     *time.Time          `json:"indexed_at,omitempty"`
+	AnalysisUnit  *analysisunit.State `json:"analysis_unit,omitempty"`
 }
 
 // readOut is read_file's result shape.

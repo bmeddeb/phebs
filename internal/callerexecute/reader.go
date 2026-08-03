@@ -57,7 +57,12 @@ type PublicationReadStore interface {
 	GetCallerGenerationAdmission(
 		context.Context, store.CallerGenerationIdentity,
 	) (*store.CallerGenerationAdmission, error)
+	GetCallerLeafOutcomeProgress(
+		context.Context, store.CallerGenerationIdentity,
+	) (store.CallerLeafOutcomeProgress, error)
 }
+
+var _ PublicationReadStore = (*store.Surreal)(nil)
 
 // PublicationBinding is the bounded immutable cursor input for reopening one
 // already exact-validated publication. It deliberately excludes the full pair
@@ -130,11 +135,17 @@ type PublicationRead struct {
 	Availability PublicationAvailability
 
 	ExpectedGeneration store.CallerGenerationIdentity
-	Resolver           *store.ResolverCatalogPublication
-	Publication        *store.CallerGenerationPublication
-	Summary            *store.CallerGenerationPublicationSummary
-	State              *callerpublication.State
-	Revision           uint64
+	// Admission and Progress are the exact pointerless-generation status
+	// observed by Open. A current publication derives complete Progress from
+	// its already-fenced summary and leaves Admission nil, avoiding another
+	// store read on the serving path.
+	Admission   *store.CallerGenerationAdmission
+	Progress    *store.CallerLeafOutcomeProgress
+	Resolver    *store.ResolverCatalogPublication
+	Publication *store.CallerGenerationPublication
+	Summary     *store.CallerGenerationPublicationSummary
+	State       *callerpublication.State
+	Revision    uint64
 
 	lease *callerpublication.Lease
 	once  sync.Once
@@ -623,6 +634,10 @@ func (reader *PublicationReader) acquire(
 	}
 
 	result.Availability = PublicationCurrent
+	progress := store.CallerLeafOutcomeProgress{
+		SettledCount: result.Summary.PairCount, SucceededCount: result.Summary.PairCount,
+	}
+	result.Progress = &progress
 	return result, nil
 }
 
@@ -672,7 +687,7 @@ func (reader *PublicationReader) classifyMissing(
 	)
 	switch {
 	case errors.Is(err, store.ErrNotFound):
-		return result, nil
+		admission = nil
 	case err != nil && deterministicPublicationReadFailure(err):
 		result.Availability = PublicationFailed
 		return result, nil
@@ -683,6 +698,21 @@ func (reader *PublicationReader) classifyMissing(
 	case admission.Disposition == store.CallerGenerationTerminalGenerationRefusal:
 		result.Availability = PublicationFailed
 	}
+	if admission != nil {
+		owned := *admission
+		result.Admission = &owned
+	}
+	progress, err := reader.state.GetCallerLeafOutcomeProgress(
+		ctx, result.ExpectedGeneration,
+	)
+	if err != nil {
+		if deterministicPublicationReadFailure(err) {
+			result.Availability = PublicationFailed
+			return result, nil
+		}
+		return nil, err
+	}
+	result.Progress = &progress
 	return result, nil
 }
 
@@ -908,7 +938,9 @@ func sameUnavailableRead(left, right *PublicationRead) bool {
 	return left.Availability == right.Availability &&
 		left.ExpectedGeneration == right.ExpectedGeneration &&
 		left.Revision == right.Revision &&
-		reflect.DeepEqual(left.Summary, right.Summary)
+		reflect.DeepEqual(left.Summary, right.Summary) &&
+		reflect.DeepEqual(left.Admission, right.Admission) &&
+		reflect.DeepEqual(left.Progress, right.Progress)
 }
 
 func cloneCallerGenerationPublication(
@@ -969,7 +1001,11 @@ func (read *PublicationRead) validate() error {
 	}
 	if serving && (read.Summary == nil || read.State == nil ||
 		read.Resolver == nil || read.Revision == 0 ||
-		read.Revision != read.Summary.PublicationRevision) {
+		read.Revision != read.Summary.PublicationRevision ||
+		read.Progress == nil ||
+		read.Progress.SettledCount != read.Summary.PairCount ||
+		read.Progress.SucceededCount != read.Summary.PairCount ||
+		read.Progress.RefusedCount != 0) {
 		return errors.New("caller publication serving read is incomplete")
 	}
 	if read.Publication != nil {

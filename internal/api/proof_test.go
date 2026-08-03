@@ -2,6 +2,8 @@ package api_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -36,6 +38,13 @@ type proofAPIStore struct {
 	onPut         func(store.ProofBundleRecord)
 	putConflicts  int
 	onPutConflict func()
+}
+
+func (s *proofAPIStore) LatestExtractionDomainOutcome(
+	context.Context,
+	store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	return nil, store.ErrNotFound
 }
 
 func proofScope(repo, domain string) string { return repo + "\x00" + domain }
@@ -493,6 +502,102 @@ func TestProofBundleAdminMemberIsolationAndReadReauthorization(t *testing.T) {
 	memberVisible = map[string]bool{}
 	if code, body, _ := getProof(t, member, "/api/proof_bundles/"+memberBundle.ID); code != http.StatusNotFound || strings.Contains(body, visibleRepo) {
 		t.Fatalf("revoked bundle read = %d %s", code, body)
+	}
+}
+
+func TestRetainedV2ProofBundleCandidateScopeRemainsReadable(t *testing.T) {
+	const (
+		repository = "github.com/allowed/retained-v2"
+		domain     = "grpc-consumer"
+	)
+	run := proofRun(repository, domain, "run-retained-v2")
+	run.Coverage.CandidateManifestDigest =
+		"sha256:" + strings.Repeat("1", 64)
+	run.Coverage.CandidatePlane = "caller"
+	run.Coverage.ScopePosture = "repository-overlay"
+	run.Coverage.ScopeCorpusDigest = "sha256:" + strings.Repeat("2", 64)
+	run.Coverage.PlannedScopeDigest = "sha256:" + strings.Repeat("3", 64)
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: run.Commit,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repository, domain): run,
+		},
+	}
+	handler := proofHandler(st, "user:member", nil)
+	code, body, current := getProof(
+		t, handler, "/api/get_extraction_coverage?domains="+domain,
+	)
+	if code != http.StatusOK {
+		t.Fatalf("create v3 bundle = %d %s", code, body)
+	}
+	currentRecord := st.bundles[current.ID]
+	for _, field := range []string{
+		`"excluded_source_file_count":0`,
+		`"excluded_source_required_count":0`,
+		`"excluded_source_declared_bytes":0`,
+		`"excluded_scip_document_count":0`,
+		`"excluded_scip_definition_count":0`,
+		`"excluded_scip_occurrence_count":0`,
+	} {
+		if !strings.Contains(currentRecord.Content, field) {
+			t.Fatalf("v3 candidate scope omitted %s: %s", field, currentRecord.Content)
+		}
+	}
+
+	legacyContent := strings.Replace(
+		currentRecord.Content,
+		`"schema_version":"coverage-certificate-v3"`,
+		`"schema_version":"coverage-certificate-v2"`,
+		1,
+	)
+	legacyCounters :=
+		`,"excluded_source_file_count":0` +
+			`,"excluded_source_required_count":0` +
+			`,"excluded_source_declared_bytes":0` +
+			`,"excluded_scip_document_count":0` +
+			`,"excluded_scip_definition_count":0` +
+			`,"excluded_scip_occurrence_count":0`
+	legacyContent = strings.Replace(legacyContent, legacyCounters, "", 1)
+	if strings.Contains(legacyContent, `"excluded_source_file_count"`) {
+		t.Fatalf("test fixture did not reproduce the v2 candidate shape: %s", legacyContent)
+	}
+	var legacy api.ProofBundle
+	if err := json.Unmarshal([]byte(legacyContent), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	legacy.Coverage.Digest = ""
+	canonicalCoverage, err := json.Marshal(legacy.Coverage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coverageSum := sha256.Sum256(canonicalCoverage)
+	legacy.Coverage.Digest = "sha256:" + hex.EncodeToString(coverageSum[:])
+	canonicalLegacy, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyRecord := currentRecord
+	legacyRecord.Content = string(canonicalLegacy)
+	legacyRecord.ID = store.ComputeProofBundleID(legacyRecord.Content)
+	st.bundles[legacyRecord.ID] = legacyRecord
+
+	code, body, retained := getProof(
+		t, handler, "/api/proof_bundles/"+legacyRecord.ID,
+	)
+	if code != http.StatusOK || retained.ID != legacyRecord.ID {
+		t.Fatalf("read retained v2 bundle = %d %s", code, body)
+	}
+	roundTrip, err := json.Marshal(retained.Bundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(roundTrip) != legacyRecord.Content {
+		t.Fatalf(
+			"retained v2 canonical bytes changed\n got: %s\nwant: %s",
+			roundTrip, legacyRecord.Content,
+		)
 	}
 }
 

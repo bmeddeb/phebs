@@ -27,6 +27,7 @@ import { href } from '../router'
 import { FONTS, usePhebsTokens } from '../theme'
 import { isAbortError } from '../util'
 import ContractDependencyMap from '../components/ContractDependencyMap'
+import { AnalysisScopePanel } from '../components/AnalysisScopePanel'
 
 interface CatalogFilters {
   repository: string
@@ -319,6 +320,14 @@ export default function ContractAtlasPage({
       )}
 
       {catalog && <CoverageStrip certificate={catalog.coverage} pagination={catalog.pagination} />}
+      {catalog && (
+        <AnalysisScopePanel
+          id="contract-atlas-analysis-scope"
+          certificate={catalog.coverage}
+          eyebrow="Scope of declared interfaces"
+          compact
+        />
+      )}
 
       <div
         data-testid="contract-atlas-workspace"
@@ -768,6 +777,14 @@ function OperationDetail({
 
         <ContractDependencyMap operation={operation} />
 
+        <AnalysisScopePanel
+          id="contract-operation-analysis-scope"
+          certificate={operation.coverage}
+          repository={operation.repository}
+          eyebrow="Scope of this operation"
+          headingLevel={3}
+          compact
+        />
         <CoverageDetails certificate={operation.coverage} />
         <div className={css({
           padding: '11px 12px',

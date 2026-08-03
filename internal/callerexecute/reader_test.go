@@ -33,6 +33,9 @@ type publicationReaderTestStore struct {
 	fullReads       int
 	summaryReads    int
 	resolverReads   int
+	progressValues  []store.CallerLeafOutcomeProgress
+	progressErr     error
+	progressReads   int
 }
 
 func (state *publicationReaderTestStore) GetCallerGenerationPublication(
@@ -65,6 +68,25 @@ func (state *publicationReaderTestStore) GetResolverCatalogPublication(
 	state.resolverReads++
 	state.mu.Unlock()
 	return state.workerTestStore.GetResolverCatalogPublication(ctx, repository)
+}
+
+func (state *publicationReaderTestStore) GetCallerLeafOutcomeProgress(
+	ctx context.Context,
+	generation store.CallerGenerationIdentity,
+) (store.CallerLeafOutcomeProgress, error) {
+	state.mu.Lock()
+	state.progressReads++
+	reads := state.progressReads
+	err := state.progressErr
+	values := state.progressValues
+	state.mu.Unlock()
+	if err != nil {
+		return store.CallerLeafOutcomeProgress{}, err
+	}
+	if len(values) > 0 {
+		return values[min(reads-1, len(values)-1)], nil
+	}
+	return state.workerTestStore.GetCallerLeafOutcomeProgress(ctx, generation)
 }
 
 func (state *publicationReaderTestStore) CallerGenerationPublicationSummaryCurrent(
@@ -150,7 +172,8 @@ func newHarnessPublicationReader(
 func TestPublicationReaderReturnsExactCurrentLeaseAndFinalFence(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
 	harness.settle(t)
-	reader := newHarnessPublicationReader(t, harness, harness.state)
+	state := &publicationReaderTestStore{workerTestStore: harness.state}
+	reader := newHarnessPublicationReader(t, harness, state)
 
 	read, err := reader.Open(t.Context(), harness.state.repo.Name)
 	if err != nil {
@@ -166,7 +189,11 @@ func TestPublicationReaderReturnsExactCurrentLeaseAndFinalFence(t *testing.T) {
 		read.Revision == 0 || read.Revision != read.Publication.PublicationRevision ||
 		read.Summary.PublicationRevision != read.Revision ||
 		read.Publication.Generation != read.ExpectedGeneration ||
-		read.Lease().State().Generation.Digest != read.ExpectedGeneration.Digest {
+		read.Lease().State().Generation.Digest != read.ExpectedGeneration.Digest ||
+		read.Admission != nil || read.Progress == nil ||
+		read.Progress.SettledCount != read.Summary.PairCount ||
+		read.Progress.SucceededCount != read.Summary.PairCount ||
+		read.Progress.RefusedCount != 0 || state.progressReads != 0 {
 		t.Fatalf("current publication read = %+v", read)
 	}
 	if current, err := reader.Current(t.Context(), read); err != nil || !current {
@@ -534,8 +561,15 @@ func TestPublicationReaderClassifiesMissingFailedAndStale(t *testing.T) {
 		reader := newHarnessPublicationReader(t, harness, harness.state)
 		read, err := reader.Open(t.Context(), harness.state.repo.Name)
 		if err != nil || read.Availability != PublicationMissing ||
-			read.Lease() != nil || read.ExpectedGeneration.Repository == "" {
+			read.Lease() != nil || read.ExpectedGeneration.Repository == "" ||
+			read.Admission != nil || read.Progress == nil ||
+			*read.Progress != (store.CallerLeafOutcomeProgress{}) {
 			t.Fatalf("missing read = %+v, %v", read, err)
+		}
+		if current, err := reader.UnavailableCurrent(
+			t.Context(), read,
+		); err != nil || !current {
+			t.Fatalf("unchanged missing fence = %t, %v", current, err)
 		}
 	})
 
@@ -555,8 +589,83 @@ func TestPublicationReaderClassifiesMissingFailedAndStale(t *testing.T) {
 		reader := newHarnessPublicationReader(t, harness, harness.state)
 		read, err := reader.Open(t.Context(), harness.state.repo.Name)
 		if err != nil || read.Availability != PublicationFailed ||
-			read.Lease() != nil {
+			read.Lease() != nil || read.Admission == nil ||
+			read.Progress == nil || read.Progress.SettledCount != 0 {
 			t.Fatalf("failed read = %+v, %v", read, err)
+		}
+	})
+
+	t.Run("progress transition", func(t *testing.T) {
+		harness := newWorkerHarness(t, 1)
+		state := &publicationReaderTestStore{
+			workerTestStore: harness.state,
+			progressValues: []store.CallerLeafOutcomeProgress{
+				{}, {SettledCount: 1, SucceededCount: 1},
+			},
+		}
+		reader := newHarnessPublicationReader(t, harness, state)
+		read, err := reader.Open(t.Context(), harness.state.repo.Name)
+		if err != nil || read.Availability != PublicationMissing ||
+			read.Progress == nil || read.Progress.SettledCount != 0 {
+			t.Fatalf("initial progress read = %+v, %v", read, err)
+		}
+		current, err := reader.UnavailableCurrent(t.Context(), read)
+		if err != nil || current || state.progressReads != 2 {
+			t.Fatalf(
+				"transitioned progress fence = %t, reads=%d, err=%v",
+				current, state.progressReads, err,
+			)
+		}
+	})
+
+	t.Run("admission transition without availability change", func(t *testing.T) {
+		harness := newWorkerHarness(t, 1)
+		current, err := harness.worker.currentAuthority(
+			t.Context(), harness.state.repo.Name,
+		)
+		if err != nil || current == nil {
+			t.Fatalf("current authority = %+v, %v", current, err)
+		}
+		harness.state.admission = &store.CallerGenerationAdmission{
+			Generation: current.stored, Disposition: store.CallerGenerationAdmitted,
+			RecordedAt: time.Now().UTC(),
+		}
+		reader := newHarnessPublicationReader(t, harness, harness.state)
+		read, err := reader.Open(t.Context(), harness.state.repo.Name)
+		if err != nil || read.Availability != PublicationMissing ||
+			read.Admission == nil {
+			t.Fatalf("initial admission read = %+v, %v", read, err)
+		}
+		harness.state.admission.RecordedAt =
+			harness.state.admission.RecordedAt.Add(time.Second)
+		currentResult, err := reader.UnavailableCurrent(t.Context(), read)
+		if err != nil || currentResult ||
+			read.Admission.RecordedAt.Equal(harness.state.admission.RecordedAt) {
+			t.Fatalf(
+				"transitioned admission fence = %t, read=%+v, current=%+v, err=%v",
+				currentResult, read.Admission, harness.state.admission, err,
+			)
+		}
+	})
+
+	t.Run("progress failures", func(t *testing.T) {
+		harness := newWorkerHarness(t, 1)
+		state := &publicationReaderTestStore{
+			workerTestStore: harness.state,
+			progressErr:     store.ErrInvalidCallerLeafState,
+		}
+		reader := newHarnessPublicationReader(t, harness, state)
+		read, err := reader.Open(t.Context(), harness.state.repo.Name)
+		if err != nil || read == nil ||
+			read.Availability != PublicationFailed || read.Progress != nil {
+			t.Fatalf("invalid progress = %+v, %v", read, err)
+		}
+
+		want := errors.New("progress store unavailable")
+		state.progressErr = want
+		read, err = reader.Open(t.Context(), harness.state.repo.Name)
+		if read != nil || !errors.Is(err, want) {
+			t.Fatalf("operational progress = %+v, %v", read, err)
 		}
 	})
 

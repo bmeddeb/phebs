@@ -193,6 +193,16 @@ type CallerLeafOutcome struct {
 	RecordedAt   time.Time                  `json:"recorded_at"`
 }
 
+// CallerLeafOutcomeProgress is the bounded scalar projection of all durable
+// pair outcomes for one exact caller generation. It deliberately carries no
+// pair descriptors or receipts, so product status reads cannot materialize up
+// to maxCallerGenerationPairs rows merely to report settlement progress.
+type CallerLeafOutcomeProgress struct {
+	SettledCount   int `json:"settled_count"`
+	SucceededCount int `json:"succeeded_count"`
+	RefusedCount   int `json:"refused_count"`
+}
+
 type CallerGenerationAdmissionDisposition string
 
 const (
@@ -223,6 +233,7 @@ type CallerLeafStore interface {
 	RecordCallerLeafOutcome(context.Context, Job, CallerLeafOutcome) error
 	GetCallerLeafOutcome(context.Context, CallerGenerationIdentity, CallerLeafPair) (*CallerLeafOutcome, error)
 	ListCallerLeafOutcomes(context.Context, CallerGenerationIdentity) ([]CallerLeafOutcome, error)
+	GetCallerLeafOutcomeProgress(context.Context, CallerGenerationIdentity) (CallerLeafOutcomeProgress, error)
 	RecordCallerGenerationAdmission(context.Context, Job, CallerGenerationAdmission, []CallerLeafPair) error
 	GetCallerGenerationAdmission(context.Context, CallerGenerationIdentity) (*CallerGenerationAdmission, error)
 	ListCallerGenerationAdmissions(context.Context, string) ([]CallerGenerationAdmission, error)
@@ -699,6 +710,67 @@ func (s *Surreal) ListCallerLeafOutcomes(ctx context.Context, generation CallerG
 		outcomes[index].Pair = normalizedPair
 	}
 	return outcomes, nil
+}
+
+// GetCallerLeafOutcomeProgress counts the exact generation inside SurrealDB
+// and returns one fixed-size row. The selected generation is bounded by the
+// frozen pair ceiling, while no pair payload, receipt, or artifact identity
+// crosses the WebSocket boundary.
+func (s *Surreal) GetCallerLeafOutcomeProgress(
+	ctx context.Context,
+	generation CallerGenerationIdentity,
+) (CallerLeafOutcomeProgress, error) {
+	prepared, err := prepareCallerGeneration(generation)
+	if err != nil {
+		return CallerLeafOutcomeProgress{}, fmt.Errorf(
+			"get caller leaf outcome progress: %w", err,
+		)
+	}
+	type progressRow struct {
+		CallerLeafOutcomeProgress
+		ShapeCount int `json:"shape_count"`
+	}
+	results, err := surrealdb.Query[[]progressRow](ctx, s.db, `
+SELECT
+	count() AS settled_count,
+	count(disposition = $succeeded) AS succeeded_count,
+	count(disposition = $refused) AS refused_count,
+	count(writer_schema = $writer_schema
+		AND generation.repository = $repository
+		AND generation.digest = $generation_digest
+		AND pair.digest != NONE) AS shape_count
+FROM caller_leaf_outcome
+WHERE repository = $repository AND generation_digest = $generation_digest
+GROUP ALL`, map[string]any{
+		"repository":        prepared.Repository,
+		"generation_digest": prepared.Digest,
+		"succeeded":         string(CallerLeafSucceeded),
+		"refused":           string(CallerLeafTerminalGenerationRefusal),
+		"writer_schema":     CallerLeafWriterSchema,
+	})
+	if err != nil {
+		return CallerLeafOutcomeProgress{}, fmt.Errorf(
+			"get caller leaf outcome progress: %w", err,
+		)
+	}
+	rows := firstDomainRows(results)
+	if len(rows) != 1 {
+		return CallerLeafOutcomeProgress{}, fmt.Errorf(
+			"get caller leaf outcome progress: %w", ErrInvalidCallerLeafState,
+		)
+	}
+	progress := rows[0].CallerLeafOutcomeProgress
+	if progress.SettledCount < 0 ||
+		progress.SettledCount > maxCallerGenerationPairs ||
+		progress.SucceededCount < 0 ||
+		progress.RefusedCount < 0 ||
+		progress.SucceededCount+progress.RefusedCount != progress.SettledCount ||
+		rows[0].ShapeCount != progress.SettledCount {
+		return CallerLeafOutcomeProgress{}, fmt.Errorf(
+			"get caller leaf outcome progress: %w", ErrInvalidCallerLeafState,
+		)
+	}
+	return progress, nil
 }
 
 type callerLeafOutcomeSummary struct {

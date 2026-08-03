@@ -30,6 +30,13 @@ type evidenceViewStore struct {
 	calls           []string
 }
 
+func (s *evidenceViewStore) LatestExtractionDomainOutcome(
+	context.Context,
+	store.ExtractionScope,
+) (*store.ExtractionDomainOutcome, error) {
+	return nil, store.ErrNotFound
+}
+
 func (s *evidenceViewStore) ListRepos(context.Context) ([]store.Repo, error) {
 	if s.onListRepos != nil {
 		s.onListRepos()

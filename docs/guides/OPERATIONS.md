@@ -667,7 +667,15 @@ no partial rows and sets `matching_rows_state: unavailable`; it omits the
 numeric total rather than serializing zero callers. Operational store or
 filesystem failures remain request errors rather than being collapsed into a
 gap. Pointerless gaps repeat the scalar authority/admission selection at the
-result fence. A deterministic cold-filesystem refusal is retained under its
+result fence. T30.7 also repeats the exact-generation leaf-outcome aggregate:
+the gap may disclose durable settled/succeeded/refused partition counts, with
+an admitted total when known, but still emits no caller rows or numeric caller
+total. Current generations derive complete partition progress and an explicit
+base/`go_test` record census from the already validated publication payload.
+The response carries the active focused/whole search scope separately from
+the repository-overlay caller generation; its signed authority commits only a
+fixed digest of that bounded scope, and final authorization recomputes it.
+A deterministic cold-filesystem refusal is retained under its
 exact generation/revision in an eight-entry reader cache, so its result fence
 and later no-op requests recheck scalar authority without hashing the complete
 publication again. A transition detected while continuing a cursor or reading a citation is
@@ -1457,9 +1465,9 @@ noncanonical JSON/NDJSON, partial/extra/duplicate member, digest mismatch,
 overlapping or unordered caller leaf, or special filesystem entry. Local
 contract, field, topic, consumer, attribution, and Workbench implementation
 domains consume only records whose manifest membership is inside the committed
-unit. A caller-plane domain remains visibly `repository-overlay` input pending
-T30.6's target-bound complete-generation replacement; its rows do not become
-focused search or local implementation evidence.
+unit. Caller-plane domains remain visibly `repository-overlay` input. Their
+independently complete T30.6 caller generations may cite outside-unit callers,
+but those rows do not become focused Search or local implementation evidence.
 
 The candidate manifest carries a designated typed-input envelope separately
 from ordinary source rows. For a focused repository, `typed_index.kind: scip`
@@ -1631,12 +1639,13 @@ precedes extractor execution. A failed run is aborted with a detached bounded
 context; its rows remain invisible, and an interrupted abort leaves them to
 the existing stale-run sweeper.
 
-##### Scheduled T30.6 operating sequence
+##### Completed T30.6 operating sequence
 
 The accepted large-monorepo review now has its bounded operational, outcome,
-scheduler, source-lane, resolver, caller-leaf, publication, and exact-consumer
-seams through T30.6l. An admitted `*_test.go` file remains searchable and participates
-in candidate planning when an enabled domain policy enumerates it, while direct
+scheduler, source-lane, resolver, caller-leaf, publication, exact-consumer,
+and retention/status seams through T30.6r. An admitted `*_test.go` file remains
+searchable and participates in candidate planning when an enabled domain
+policy enumerates it, while direct
 caller execution excludes its `go_test` lane. The public Caller Map now reads
 only the exact complete repository-overlay authority; caller comparison now
 uses that exact authority in one jointly fenced two-endpoint read, and
@@ -1672,6 +1681,73 @@ unconditional capacity warning. T30.6p now populates its 21 core SurrealDB
 components, T30.6q now populates the 24 Investigation/Workbench table
 components, and T30.6r now adds the final seven derived filesystem/store
 collectors plus installation capacity, completing the declared surface.
+
+##### Scope-aware result diagnostics
+
+T30.7 makes the existing authority visible next to product results. Search,
+Contracts, Topics, Caller Map, Impact, and Workbench now identify the active
+unit by name and disclose its exact primary and supporting paths. A focused
+repository has two deliberately different planes:
+
+- `focused` Search and `focused-local` declaration, topic, field, and
+  implementation evidence read only the selected unit;
+- `repository-overlay` Caller Map rows read the independently complete caller
+  generation and may therefore cite a caller outside the focused shard.
+
+Do not interpret an outside-unit caller as a Search leak or a widening of
+local evidence. The panel labels the plane before its rows. Exact paths are
+configuration identities, not source content; the UI mounts at most 24
+repository summaries and only one expanded path set at a time. MCP
+`list_repos` returns the same committed `analysis_unit` projection as
+`/api/repo-status`, while the MCP proof and Caller Map tools reuse the same
+coverage/page schemas as HTTP.
+
+Coverage certificates now use `coverage-certificate-v3`. Each domain row may
+include the latest durable disposition and either a validated full bounded
+receipt or `receipt_state: schema_only`. The latter is the writer's deliberate
+8-KiB fallback and means counts/timings are unavailable; it is not a zero-work
+receipt. A full receipt exposes generic reason, scalar phase times, counts,
+bytes, and limits only. Focused-local candidate scope also shows exact
+base-source and excluded `go_test` counts plus typed-input posture.
+Whole-repository and repository-overlay coverage omit those two lane counts
+because their retained coverage does not separate admitted test records. A stale publication,
+unavailable prerequisite, retryable failure, or terminal refusal remains
+visibly distinct from an exact fresh publication.
+
+The disposition, not the receipt reason, is authoritative for publication.
+When extraction and staging finish but publication fails transiently, a
+`retryable_failure` may retain `published_nonempty`, `published_empty`,
+`no_candidates`, or `typed_input_absent` as the bounded description of work
+already completed. Retained v1/v2 proof bundles keep their original canonical
+candidate-scope JSON, which omitted the six v3 candidate/exclusion counters;
+when a new v3 certificate emits `candidate_scope`, that object includes all
+six counters, including exact zeroes. Direct-corpus coverage may omit the
+candidate-scope object entirely.
+
+A current complete caller generation reports its validated record counts and
+`N/N` succeeded partitions without another database query. Before publication,
+the product may report a server-side scalar count over durable leaf outcomes.
+When aggregate admission has fixed the denominator it reports `N/N`; before
+that it reports `N/?`. It never serializes partial caller rows or turns an
+unknown total into zero. The initial pointerless read and final result fence
+each execute one indexed aggregate over at most 16,384 outcome rows and return
+one scalar row; a progress or admission transition produces `409`. Exact unit
+paths are not copied into signed authorities: tokens carry a fixed scope
+digest and the final authorization read recomputes it.
+
+Queue attempts, claimants, leases, mirror-lock timing, and per-job scheduling
+remain operational log/metrics diagnostics. They are intentionally absent
+from these result panels. Use the extraction-operation log and ordinary
+classified worker error when a product state needs queue-level diagnosis.
+In steady state the certificate adds one indexed latest-outcome lookup per
+visible repository/domain each time it is built; consumers that already
+perform a final certificate rebuild repeat that lookup. If publication or a
+split failure transition lands between the run, outcome, and attempt reads,
+the builder retries an identity mismatch at most twice more and otherwise
+returns one real pre/post-transition state rather than a mixed receipt. Search
+reuses its existing status request. No T30.7 result path adds a corpus/shard scan, Git/blob read,
+content hash, mirror/owner lock, child process, startup scan, sync-tick work,
+write, or retained cache.
 
 This sequence does not authorize a physical Go-test search overlay, optional
 test evidence, test-to-source association, build-system discovery, SCIP
@@ -2328,11 +2404,13 @@ For a bounded operator smoke over public, remote-HEAD evidence:
 This is a manual availability check only. Upstream HEADs and the resulting
 rows may drift; do not commit outputs, turn observations into an accuracy
 number, or use them as deterministic merge-bar input. `make dev` and
-`make dev-api` remain the fixture-backed deterministic demonstrations.
+`make dev-api` instead provide the retained neutral T30.7 focused-service
+cohort through the same store-derived path.
 
 ### Thrift field-zero development walkthrough
 
-`make dev` and `make dev-api` explicitly set
+This retained specialized walkthrough is no longer part of `make dev` or
+`make dev-api`. An explicit developer invocation may set
 `PHEBS_THRIFT_FIELD_DEMO_REPO` to the committed
 `docs/fixtures/thrift-field/t225-thrift-field-demo.bundle`. The server accepts
 only that clean absolute bundle name, adds it as a generic Git source, and
@@ -2341,11 +2419,11 @@ uses the ordinary sync → zoekt index → extraction path; it is not an HTTP or
 UI proof-logic adapter. Ordinary `phebs serve`, operator configuration, and
 release defaults remain unchanged and dark.
 
-To exercise the path:
+To exercise the path after starting that explicit invocation:
 
-1. Run `make dev`, use the logged first-run setup token if necessary, and wait
-   for the `t225-thrift-field-demo.bundle` repository to show an indexed
-   revision on **Repos**.
+1. Use the logged first-run setup token if necessary, and wait for the
+   `t225-thrift-field-demo.bundle` repository to show an indexed revision on
+   **Repos**.
 2. Open **Impact**, select **Field**, choose **Thrift**, and enter:
    `contract_scip_package_v1_5e8be5dc2df626800c5990885b6313c96246c7d7822864bb44be094edc1d7783`,
    `health.Meta_Health_Result`, and field number `0`.
@@ -2365,12 +2443,15 @@ it is not evidence of completeness, runtime use, compatibility, or extraction
 accuracy.
 
 Every query answer over this evidence cites a deterministic coverage
-certificate (`coverage-certificate-v1`): the caller's visible repositories
+certificate (`coverage-certificate-v3`): the caller's visible repositories
 with their indexed revisions, each domain's exact latest published run (run
 id, extractor, commit, freshness, protocols, complete source-scope counters and
-digest, unresolved/assertion/atom counts, and gitlink boundary state), its
-latest extraction attempt (id, input revision, extractor, status, and
-failure), and SCIP index availability.
+digest, candidate/exclusion accounting, unresolved/assertion/atom counts, and
+gitlink boundary state), its latest extraction attempt (id, input revision,
+extractor, status, and failure), latest durable outcome and bounded receipt,
+and SCIP index availability. Immutable retained proof bundles keep their
+original v1/v2 certificate bytes and remain readable through version-aware
+canonical decoding.
 
 Submodule pointers (gitlinks) are repository boundaries, not blobs of the
 containing repository: the trusted corpus walker records each one — a count,
@@ -2563,7 +2644,7 @@ used as an operation identity.
 
 Every claim-bearing row carries repository, exact extraction commit, path,
 byte and line spans, assertion id, run id, and atom id. Every response embeds
-the complete `coverage-certificate-v1` and its digest. The server first
+the complete `coverage-certificate-v3` and its digest. The server first
 filters the visible, non-deleting repository universe, reads only the exact
 published run ids in that certificate, and confirms the digest after
 projection. A concurrent publication is retried or returns `409`; revisions
@@ -2590,10 +2671,10 @@ surfaces, the Atlas is source evidence, not runtime topology or a completeness,
 compatibility, ownership, or accuracy conclusion.
 
 The Contracts navigation item and route appear only for an authenticated
-caller whose server advertises `contract-atlas`. Normal production obtains
-that capability only from the enabled provisional evidence service. For local
-UI demonstration, `make dev` and `make dev-api` explicitly set
-`PHEBS_CONTRACT_ATLAS_FIXTURE` to
+caller whose server advertises `contract-atlas`. Normal production and the
+T30.7 `make dev` cohort obtain that capability only from the enabled
+store-derived provisional evidence service. An explicit historical-fixture
+invocation may instead set `PHEBS_CONTRACT_ATLAS_FIXTURE` to
 `docs/fixtures/contracts/contract-atlas.json`. That validated adapter projects
 one synthetic service only onto the unique currently visible repository whose
 indexed commit equals the reviewed `repository_commit` in the fixture. Missing
@@ -2740,12 +2821,13 @@ Investigation workflow, core-view, or export route, and those surfaces return
 [PLAN.md](../../PLAN.md) and the Epic 16 tickets in
 [BACKLOG_COMPLETED.md](../BACKLOG_COMPLETED.md).
 
-For local demonstration only, `make dev` sets `PHEBS_INVESTIGATION_FIXTURES`
-to the five canonical synthetic files in `docs/fixtures/investigations/`,
-which binds the read-only `investigation-core-views` capability and the
-`#/investigations` page. These fixtures exercise presentation and conformance
-states; they are not published evidence, a released pack executor, a valid
-accuracy gate, or authority for external claims.
+For retained fixture tests or an explicit historical-fixture invocation,
+`PHEBS_INVESTIGATION_FIXTURES` may name the five canonical synthetic files in
+`docs/fixtures/investigations/`, which binds the read-only
+`investigation-core-views` capability and the `#/investigations` page. T30.7
+`make dev` does not bind them. These fixtures exercise presentation and
+conformance states; they are not published evidence, a released pack executor,
+a valid accuracy gate, or authority for external claims.
 
 Verify an exported canonical dossier file without a running phebs service:
 
@@ -2822,8 +2904,8 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned whole/focused zoekt and Buf children, bind synthetic Investigation/Contract Atlas fixtures, the retained neutral Change Workbench closure repo, the fixture-coupled Workbench, and the committed Thrift field-zero repo through normal sync/index/extraction; run with embedded UI |
-| `make dev-api`       | backend-only loop with the same children, explicit UI/Workbench fixtures, and Thrift field-zero repository (placeholder UI page, fast)                                           |
+| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle through ordinary focused indexing, extraction, resolver, caller-overlay, and store-derived Workbench paths; explicitly disable synthetic evidence fixtures; run with embedded UI |
+| `make dev-api`       | backend-only loop over the same neutral focused-service cohort and real evidence paths (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make clean`         | from a verified phebs checkout working directory, remove `phebs`, `coverage.out`, the three named `bin/` children, `ui/dist`, and reserved `dist/.build-*`, `dist/phebs-*`, and `dist/.phebs-*.tmp-*` outputs; preserve data, configuration, dependencies/caches, other `bin`/`dist` entries, and custom release roots outside those namespaces |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |

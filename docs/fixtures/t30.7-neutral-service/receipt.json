@@ -1,0 +1,35 @@
+{
+  "schema": "t30.7-neutral-service-demo-v1",
+  "repository": "example.invalid/t307-neutral-service",
+  "commit": "b7f443ed7e89dbaede855a6cfd30767bbe13dfbb",
+  "bundle_sha256": "sha256:4cbc49a956b913e63914d014d210a063febdf90f5265ddb09fde3c569b1a1461",
+  "bundle_bytes": 2833,
+  "authoring_command": [
+    "go",
+    "run",
+    "./docs/fixtures/t30.7-neutral-service/cmd/author"
+  ],
+  "analysis_unit": "orders-service",
+  "primary_paths": [
+    "service/orders"
+  ],
+  "supporting_paths": [
+    "api/orders.proto",
+    "gen/ordersv1/orders_grpc.pb.go",
+    "generated-from-snapshot.json",
+    "go.mod"
+  ],
+  "typed_index_posture": "repository-root-unbound",
+  "regular_files": 9,
+  "candidate_records": 8,
+  "base_lane_records": 7,
+  "go_test_lane_records": 1,
+  "focused_search_files": 7,
+  "grpc_operation": "/demo.orders.v1.Orders/Create",
+  "kafka_topic": "orders.created.v1",
+  "outside_overlay_caller": "consumers/external/caller.go",
+  "focused_search_needle": "T307_FOCUSED_SERVICE_NEEDLE",
+  "excluded_bulk_needle": "T307_OUTSIDE_UNIT_BULK_NEEDLE",
+  "test_only_topic": "orders.test-only.v1",
+  "observation": "Neutral retained demo input only; no completeness, runtime-use, migration-safety, retirement-safety, or extraction-accuracy claim."
+}

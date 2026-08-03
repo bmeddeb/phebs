@@ -1,7 +1,7 @@
 # phebs roadmap
 
-This is the current sequencing view. Exact acceptance criteria live in the
-[active backlog](./BACKLOG.md), completed implementation history lives in the
+This is the current sequencing view. Unscheduled draft acceptance criteria live
+in the [active backlog](./BACKLOG.md), completed implementation history lives in the
 [completed backlog](./BACKLOG_COMPLETED.md), and architecture decisions live in
 [PLAN.md](../PLAN.md).
 
@@ -19,16 +19,18 @@ phebs ships as a self-hosted, single-node Go application with:
 The contract-intelligence, Caller Map, Change Workbench, Thrift-field, and
 Kafka evidence stacks are implemented but remain experimental/default-dark.
 The Workbench can bind provisionally to real store-derived protobuf or Thrift
-evidence for development and pilot evaluation, while the synthetic demo cohort
-remains fixture-backed. Their retained external validation result is
+evidence for development and pilot evaluation. The legacy synthetic cohort
+remains fixture-backed, while Epic 30's neutral service cohort flows through
+ordinary sync, focused indexing, extraction, resolver, caller-leaf, and
+complete-publication workers. Their retained external validation result is
 `NOT_ESTABLISHED`; they do not establish runtime use, completeness,
 compatibility, migration completion, decommission safety, or extraction
 accuracy.
 
 ## Now
 
-Epic 30 is in progress to add service-scoped analysis for very large
-monorepositories. T30.1 froze the commit-bound analysis-unit contract and
+Epic 30 completed its single-node service-scoped analysis boundary on
+2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
 recorded GO after proving a focused zoekt child and exact shard-set validation
 over a neutral generated corpus. T30.2 now supplies strict repository-keyed
 analysis-unit configuration, canonical identity, revision-bound committed
@@ -188,7 +190,22 @@ T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
 caller integration, T30.6m historical-publication retention decision,
 T30.6n bounded job-history reads and startup migration, T30.6o's status shell,
 T30.6p core Surreal collectors, T30.6q's Investigation/Workbench collector,
-and T30.6r derived collectors are shipped. T30.7 is next.
+and T30.6r derived collectors are shipped. T30.7 closes the sequence with one
+shared scope panel across Search, Contracts, Topics, Caller Map, Impact, and
+Workbench; coverage-certificate v3 durable outcome receipts; exact caller
+record counts and bounded partition progress; authorization-fenced HTTP/MCP
+scope parity; and the neutral ordinary-worker epic demo. Focused search and
+local evidence remain `focused-local`, while complete callers remain the
+separately labeled `repository-overlay`; this UI/demo closure adds no physical
+test-search overlay, automatic unit discovery, production evidence
+registration, or new retention behavior.
+The post-implementation review closure keeps retained v1/v2 proof bundles
+byte-canonical, accepts the worker's legitimate pre-publication receipt
+reasons under retryable outcomes, validates the production exact Caller Map
+envelope through strict MCP output, and keeps legal null paths, retained
+failures, explicit gaps, and zero/empty product states visible. These are
+compatibility, transport, and presentation corrections; the request, worker,
+publication, retention, and steady-state cost boundaries above are unchanged.
 T30.6g registers the ordered gRPC/Thrift resolver adapters and materializes one
 immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,
@@ -316,8 +333,9 @@ target-bound source partitions run, and no caller generation becomes visible
 until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.
 
-Production evidence/pilot gating remains unchanged. Epics 25–28 are still
-unscheduled drafts in the [backlog](./BACKLOG.md). Epic 25 is an embedded
+Production evidence/pilot gating remains unchanged. No product ticket is
+currently scheduled. Epics 25–28 remain unscheduled drafts in the
+[backlog](./BACKLOG.md); none is an implicit next ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
 evidence proposal:
 committed PostgreSQL or MySQL schema-only dumps can independently supply

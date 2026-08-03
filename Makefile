@@ -35,22 +35,24 @@ dev: bin/zoekt-git-index bin/phebs-focused-index bin/buf ui ## boot phebs with e
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
-		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
-		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
-		PHEBS_WORKBENCH_CLOSURE_REPO=$(abspath docs/fixtures/change-workbench/t2114-workbench-closure.bundle) \
-		PHEBS_THRIFT_FIELD_DEMO_REPO=$(abspath docs/fixtures/thrift-field/t225-thrift-field-demo.bundle) \
-		PHEBS_SYNTHETIC_WORKBENCH=1 \
+		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle) \
+		PHEBS_INVESTIGATION_FIXTURES= \
+		PHEBS_CONTRACT_ATLAS_FIXTURE= \
+		PHEBS_WORKBENCH_CLOSURE_REPO= \
+		PHEBS_THRIFT_FIELD_DEMO_REPO= \
+		PHEBS_SYNTHETIC_WORKBENCH= \
 		go run -tags ui ./cmd/phebs serve $(ARGS)
 
 dev-api: bin/zoekt-git-index bin/phebs-focused-index bin/buf ## backend-only loop: no UI build, placeholder page
 	PHEBS_ZOEKT_GIT_INDEX=$(abspath bin/zoekt-git-index) \
 		PHEBS_FOCUSED_INDEX=$(abspath bin/phebs-focused-index) \
 		PHEBS_BUF=$(abspath bin/buf) \
-		PHEBS_INVESTIGATION_FIXTURES=$(abspath docs/fixtures/investigations) \
-		PHEBS_CONTRACT_ATLAS_FIXTURE=$(abspath docs/fixtures/contracts/contract-atlas.json) \
-		PHEBS_WORKBENCH_CLOSURE_REPO=$(abspath docs/fixtures/change-workbench/t2114-workbench-closure.bundle) \
-		PHEBS_THRIFT_FIELD_DEMO_REPO=$(abspath docs/fixtures/thrift-field/t225-thrift-field-demo.bundle) \
-		PHEBS_SYNTHETIC_WORKBENCH=1 \
+		PHEBS_T307_NEUTRAL_SERVICE_REPO=$(abspath docs/fixtures/t30.7-neutral-service/t307-neutral-service.bundle) \
+		PHEBS_INVESTIGATION_FIXTURES= \
+		PHEBS_CONTRACT_ATLAS_FIXTURE= \
+		PHEBS_WORKBENCH_CLOSURE_REPO= \
+		PHEBS_THRIFT_FIELD_DEMO_REPO= \
+		PHEBS_SYNTHETIC_WORKBENCH= \
 		go run ./cmd/phebs serve $(ARGS)
 
 validate-version:

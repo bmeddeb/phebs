@@ -12,11 +12,12 @@ a committed root `index.scip`. It exercises the production
 The index is an authored needle, not a completeness or accuracy measurement
 and not output from a real indexer. Its symbol follows the production shape
 independently checked by the T22.2 `scip-go` fixture. The authoring command is
-retained at `cmd/author`; normal tests and `make dev` only verify and consume
-the committed bytes.
+retained at `cmd/author`; normal tests and an explicit specialized developer
+invocation only verify and consume the committed bytes. T30.7 `make dev` does
+not bind this fixture.
 
 `t225-thrift-field-demo.bundle` is the cloneable, single-commit form used by
-`make dev`. The retained author command recreates both the deterministic index
-and a bundle advertising `HEAD` plus `refs/heads/main`, avoiding host-Git
-default-branch inference. `receipt.json` pins the repository commit, bundle
-and index bytes, question identity, and exact citation.
+that specialized walkthrough. The retained author command recreates both the
+deterministic index and a bundle advertising `HEAD` plus `refs/heads/main`,
+avoiding host-Git default-branch inference. `receipt.json` pins the repository
+commit, bundle and index bytes, question identity, and exact citation.

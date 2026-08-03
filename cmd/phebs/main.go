@@ -24,6 +24,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/callerexecute"
@@ -175,6 +176,15 @@ func serve(args []string) error {
 	cfg, rawConfig, err := loadServerConfig(*cfgPath)
 	if err != nil {
 		return err
+	}
+	if fixture := os.Getenv("PHEBS_T307_NEUTRAL_SERVICE_REPO"); fixture != "" {
+		if err := bindT307NeutralServiceDemo(cfg, fixture); err != nil {
+			return err
+		}
+		log.Printf(
+			"WARNING: neutral T30.7 focused-service demo enabled from %s; provisional evidence remains validation-gated",
+			fixture,
+		)
 	}
 	if fixture := os.Getenv("PHEBS_WORKBENCH_CLOSURE_REPO"); fixture != "" {
 		if err := bindSyntheticWorkbenchClosureDemo(cfg, fixture); err != nil {
@@ -1155,6 +1165,101 @@ func bindSyntheticWorkbenchClosureDemo(cfg *config.Config, fixture string) error
 	}
 	cfg.Experimental.ProvisionalProtoExtraction = true
 	cfg.Experimental.ProvisionalThriftExtraction = true
+	return nil
+}
+
+// bindT307NeutralServiceDemo is the make-dev-only bridge from one retained,
+// cloneable neutral repository into the ordinary focused-index, extraction,
+// resolver, caller-overlay, and store-derived Workbench pipelines. The bridge
+// is explicit so ordinary serve startup and production configuration remain
+// unchanged. Unlike the older demo bridges, it installs no projected API or
+// Workbench result fixture.
+func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
+	if fixture == "" {
+		return nil
+	}
+	if cfg == nil {
+		return errors.New("T30.7 neutral service demo requires server configuration")
+	}
+	if strings.TrimSpace(fixture) != fixture ||
+		!filepath.IsAbs(fixture) ||
+		filepath.Clean(fixture) != fixture ||
+		filepath.Base(fixture) != "t307-neutral-service.bundle" {
+		return errors.New(
+			"T30.7 neutral service demo must name the absolute clean t307-neutral-service.bundle path",
+		)
+	}
+	info, err := os.Stat(fixture)
+	if err != nil {
+		return fmt.Errorf("inspect T30.7 neutral service demo: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("T30.7 neutral service demo must be a regular bundle file")
+	}
+
+	repository, err := phebssync.RepoName(fixture)
+	if err != nil {
+		return fmt.Errorf("derive T30.7 neutral service repository: %w", err)
+	}
+	desiredUnit := analysisunit.Config{
+		Name:    "orders-service",
+		Primary: []string{"service/orders"},
+		Supporting: []string{
+			"api/orders.proto",
+			"gen/ordersv1/orders_grpc.pb.go",
+			"generated-from-snapshot.json",
+			"go.mod",
+		},
+	}
+	desiredCanonical, err := desiredUnit.Scope(repository).Canonical()
+	if err != nil {
+		return fmt.Errorf("validate T30.7 neutral service scope: %w", err)
+	}
+	if existing, ok := cfg.AnalysisUnits[repository]; ok {
+		existingCanonical, canonicalErr := existing.Scope(repository).Canonical()
+		if canonicalErr != nil || string(existingCanonical) != string(desiredCanonical) ||
+			existing.TypedIndex != nil {
+			return fmt.Errorf(
+				"T30.7 neutral service repository %q already has another analysis unit",
+				repository,
+			)
+		}
+	}
+
+	const connectionName = "t30-service-scope-demo"
+	alreadyConnected := false
+	for _, connection := range cfg.Connections {
+		if connection.Name == connectionName &&
+			(connection.Type != "git" || connection.URL != fixture) {
+			return fmt.Errorf(
+				"T30.7 neutral service demo connection %q already names another source",
+				connectionName,
+			)
+		}
+		if connection.URL == fixture {
+			if connection.Type != "git" {
+				return errors.New(
+					"T30.7 neutral service demo source is already bound to a non-git connection",
+				)
+			}
+			alreadyConnected = true
+		}
+	}
+
+	if !alreadyConnected {
+		cfg.Connections = append(cfg.Connections, config.Connection{
+			Name: connectionName,
+			Type: "git",
+			URL:  fixture,
+		})
+	}
+	if cfg.AnalysisUnits == nil {
+		cfg.AnalysisUnits = make(map[string]analysisunit.Config, 1)
+	}
+	cfg.AnalysisUnits[repository] = desiredUnit
+	cfg.Experimental.ProvisionalProtoExtraction = true
+	cfg.Experimental.ProvisionalKafkaExtraction = true
+	cfg.Experimental.ProvisionalWorkbench = true
 	return nil
 }
 
