@@ -29,18 +29,22 @@ The sequence is confirmed:
 
 | Input | Canonical digest |
 |---|---|
-| `../../internal/glossary/glossary.json` | `sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274` |
+| `../../internal/glossary/glossary.json` | `sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1` |
 | `scenarios.json` | `sha256:922034e9f9a3cb40ff0d602b27a0245795a45949b2e012c6f8d7f75f145120f4` |
 
 T21.4 promoted `glossary.json` without changing its canonical bytes or digest;
 it now lives under `internal/glossary` as the canonical versioned input for
-eight initial user terms. It records stable ids, short and expanded help,
+eight initial user terms. T30.7 later extended the Coverage certificate wire
+aliases to the shipped v2 and v3 schemas, deliberately advancing the promoted
+content digest from `sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274`
+to the value pinned above. It records stable ids, short and expanded help,
 evidence and authority boundaries, applicable modes and surfaces, wire
 aliases, and capability predicates. The binding terminology trace is:
 
 - `known_consumers` → **Matching static evidence**
 - `unresolved_candidates` → **Could not resolve**
-- `coverage-certificate-v1` / `coverage` → **Analysis scope & gaps**, with
+- `coverage-certificate-v1` / `coverage-certificate-v2` /
+  `coverage-certificate-v3` / `coverage` → **Analysis scope & gaps**, with
   **Coverage certificate** retained as the advanced deterministic receipt
 
 `contract.go` rejects unknown fields, unsafe or oversized UTF-8, duplicate

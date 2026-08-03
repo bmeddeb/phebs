@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	frozenGlossaryDigest = "sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274"
+	frozenGlossaryDigest = "sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1"
 	frozenScenarioDigest = "sha256:922034e9f9a3cb40ff0d602b27a0245795a45949b2e012c6f8d7f75f145120f4"
 )
 

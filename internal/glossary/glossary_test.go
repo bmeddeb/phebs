@@ -16,7 +16,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/glossary/genrepo"
 )
 
-const frozenDigest = "sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274"
+const frozenDigest = "sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1"
 
 func TestEmbeddedGlossaryAndGeneratedGoStayCanonical(t *testing.T) {
 	document, canonical, digest, err := glossary.LoadEmbedded()
