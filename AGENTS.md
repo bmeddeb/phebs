@@ -116,11 +116,15 @@ caller record/progress summaries, HTTP/MCP scope parity, and a neutral
 ordinary-worker `make dev` cohort. Its post-review closure preserves retained
 v1/v2 proof bytes, validates the real exact Caller Map envelope through MCP,
 and keeps failure, explicit-gap, and zero/empty states visible. T31.1 bounded
-pipeline diagnostics is the scheduled operational ticket; Epics 25–28 remain
-unscheduled drafts.
+pipeline diagnostics is the scheduled operational ticket. T32.1 freezes the
+selected microservice-first program: repositories remain shared physical
+source/search generations while many logical services become independent
+catalog, query, evidence, and workflow scopes. Runtime measurement starts only
+after T31.1; Epics 33–39 remain dependency-ordered drafts and Epics 25–28
+remain unscheduled.
 A physical Go-test search overlay,
-test-source association, extractor expansion, and automatic unit discovery
-remain separately reviewed future work.
+test-source association, extractor expansion, automatic authority adapters,
+and the distributed P6 profile remain separately reviewed future work.
 GATE2-V2 remains `NOT_ESTABLISHED`; no numeric public-corpus accuracy,
 completeness, migration-completion, or decommission-safety claim exists.
 

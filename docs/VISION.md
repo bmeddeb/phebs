@@ -21,6 +21,47 @@ catalogs declare identity and ownership, and telemetry records recent
 execution. phebs joins those inputs into a versioned, permission-aware decision
 artifact while preserving uncertainty and source provenance.
 
+### Microservices are the product boundary
+
+General code search is repository- and file-centered. phebs is intended to be
+service-centered: a repository is where source is stored and authorized, while
+a service is the unit engineers navigate, compare, change, and route to an
+owner. In a monorepo, one physical repository may contain thousands of
+services, shared libraries, generated trees, contracts, deployment
+descriptors, and unowned source.
+
+The product should let an authorized user select **All code** or one exact
+service and answer:
+
+- which source, contracts, generated inputs, and deployment/build identities
+  belong to that service;
+- which operations and topics it provides or uses;
+- which other services contain supported caller, producer, or consumer
+  evidence;
+- which relationships changed between exact snapshots;
+- which identities conflict or remain unmapped; and
+- which files, languages, constructs, or partitions were excluded, failed, or
+  remain stale.
+
+Services are logical views over shared repository generations. A service
+catalog may reconcile explicit operator configuration with committed build,
+catalog, or deployment authorities, but phebs does not silently equate a
+directory with a service. Shared source may belong to many services; unowned
+source remains visible as unowned rather than disappearing. Each service has
+independent currentness even when repository source, search shards, parsed
+observations, and relationship indexes are physically shared.
+
+Logical service identity is also separate from repository placement. The first
+program proves many services inside one monorepo, but its identities and
+associations must not hard-code one service to one repository; a later
+authority may place one logical service across multiple repositories without
+merging equal-looking names by guesswork.
+
+This is the core differentiation thesis: phebs combines code search with an
+evidence-backed service model and cross-service change workflows. A graph
+visualization is optional; exact identity, citations, coverage, unresolved
+states, and bounded publication are the product foundation.
+
 ## What counts as a contract?
 
 A contract is any named interface that couples independently owned software:
@@ -97,7 +138,7 @@ authoritative.
 
 | Existing system | Establishes | phebs adds |
 |---|---|---|
-| Code search | source occurrences | typed relationships, history, coverage, and attribution |
+| Code search | repository/file occurrences | first-class service scope, cross-service typed relationships, history, coverage, and attribution |
 | Build graph | possible dependency | evidence of the specific operation or primitive used |
 | Service catalog | declared identity and ownership | source-derived evidence and explicit conflicts |
 | Runtime telemetry | observed execution in a window | dormant/conditional candidates and immutable source context |
@@ -108,16 +149,22 @@ authoritative.
 
 1. Keep the shipped search, browsing, code-intelligence, security, and
    operational foundation dependable.
-2. Establish each evidence pack independently before promoting its claims.
-3. Productize recurring questions as
+2. Establish a versioned multi-service catalog and shared repository/search
+   generation so all-code and exact-service questions do not multiply physical
+   work by service count.
+3. Publish shared, bounded source observations and relationship indexes, then
+   project their resolved and unresolved results onto independently current
+   services.
+4. Establish each evidence pack independently before promoting its claims.
+5. Productize recurring questions as
    [Investigations](./INVESTIGATIONS.md), proof material, and comparable
    snapshots.
-4. Add daily change-assurance and ownership-routing workflows.
-5. Add deployment/runtime overlays without merging their provenance into
+6. Add daily change-assurance and ownership-routing workflows.
+7. Add deployment/runtime overlays without merging their provenance into
    static evidence.
-6. Add new contract families only when a narrow pack and validation design
+8. Add new contract families only when a narrow pack and validation design
    exist.
-7. Pursue deep control-flow and data-lineage semantics only after their ground
+9. Pursue deep control-flow and data-lineage semantics only after their ground
    truth is defensible.
 
 Current order and gates live only in [ROADMAP.md](./ROADMAP.md).

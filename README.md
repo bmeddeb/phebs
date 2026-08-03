@@ -47,6 +47,13 @@ executed in production.
 | Kafka topics | Find literal producers and consumers with a first-class unresolved-site census | Experimental, default-dark |
 | Change Workbench | Organize a change around Why, What, Where, and How with immutable evidence and human dispositions | Synthetic/development or explicitly capability-gated |
 
+Today a repository is either indexed whole or configured with one exact
+analysis unit. The focused path and repository-wide caller overlay are shipped
+foundations, but a first-class catalog containing many independently current
+services per repository is not implemented yet. The selected next product
+program makes services logical views over shared repository generations; see
+the [roadmap](./docs/ROADMAP.md#next-microservice-architecture-program).
+
 The experimental evidence packs currently understand committed protobuf/gRPC,
 Thrift, generated Go, SCIP field-reference, and Kafka source shapes. They are
 disabled in ordinary configuration and make no completeness or accuracy claim.

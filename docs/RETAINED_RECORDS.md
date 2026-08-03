@@ -113,11 +113,12 @@ semantics.
 
 - [Multi-unit large-monorepo exploration](./MULTI_UNIT_MONOREPO_EXPLORATION.md)
 
-This record preserves a possible future direction for thousands of logical
-services over shared repository search and relationship generations. It does
-not select an architecture, schedule a ticket, freeze a scale bound, or modify
-current behavior. Any adopted decision must land as a dated row in
-[PLAN.md](../PLAN.md) with corresponding roadmap and backlog work.
+This record preserves the discussion that informed the now-selected direction
+for thousands of logical services over shared repository search and
+relationship generations. The architecture decision is the dated
+microservice-first row in [PLAN.md](../PLAN.md); sequencing and draft tickets
+are in ROADMAP/BACKLOG. The retained discussion itself still freezes no scale
+bound, accuracy result, physical topology, or current behavior.
 
 ### Deterministic product fixtures
 

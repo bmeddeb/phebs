@@ -114,6 +114,7 @@ that selected the production partition bounds.
 
 The retained
 [multi-unit large-monorepo exploration](./MULTI_UNIT_MONOREPO_EXPLORATION.md)
-preserves an unscheduled discussion about service discovery, shared physical
-indexing, parse-once caller/Kafka observations, scheduling, and retention. It
-is not an ADR, active ticket, or scale claim.
+preserves the discussion that informed the selected microservice-first PLAN
+decision. Architecture and sequencing now live in PLAN, ROADMAP, and draft
+Epics 32–39; the retained record itself remains neither an ADR nor a scale
+claim.

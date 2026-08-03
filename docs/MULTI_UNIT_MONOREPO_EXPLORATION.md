@@ -1,12 +1,31 @@
 # Multi-unit large-monorepo exploration
 
-**Status:** exploratory discussion record · **Recorded:** 2026-08-03
+**Status:** retained exploratory input; product direction selected separately ·
+**Recorded:** 2026-08-03 · **Resolution recorded:** 2026-08-03
 
 This document preserves a design conversation for later continuation. It is
 not an ADR, active roadmap item, implementation plan, scale claim, or ticket
 authorization. [PLAN.md](../PLAN.md) remains the architecture and decision
 authority; [ROADMAP.md](./ROADMAP.md) and [BACKLOG.md](./BACKLOG.md) remain the
 sequencing authorities.
+
+## Resolution note
+
+The dated **Microservice-first product and system boundary** decision in
+[PLAN.md](../PLAN.md) now selects the central thesis from this discussion:
+services become first-class logical views over shared repository generations,
+and repository-sized work must not be multiplied by service count. The
+[roadmap](./ROADMAP.md#next-microservice-architecture-program) records what is
+already built, what remains missing, and the validation gates. Draft Epics
+32–39 in the [backlog](./BACKLOG.md)
+turn the possible sequence below into dependency-ordered program work.
+
+This resolution selects a product direction and program contract, not a
+physical search topology, service-discovery authority, numeric SLO, scale
+claim, accuracy result, or production registration. Those decisions remain
+behind Epic 32's measurements and the existing evidence/pilot gates. The
+questions and non-decisions below remain the historical state of this
+exploration when it was recorded.
 
 ## Question
 

@@ -27,6 +27,13 @@ complete-publication workers. Their retained external validation result is
 compatibility, migration completion, decommission safety, or extraction
 accuracy.
 
+The current service model is intentionally incomplete: one repository may be
+whole-repository or have one configured analysis unit, but it cannot yet expose
+thousands of independently current services. The selected product direction
+is now microservice-first. Repositories remain shared physical source/index
+generations; services become first-class catalog, search, relationship, and
+workflow scopes over those generations.
+
 ## Now
 
 T31.1 is the scheduled operational ticket. It adds bounded, source-free,
@@ -36,6 +43,9 @@ keeping diagnostic state outside evidence, proof, and publication identity.
 Startup analysis-unit posture remains always visible but now reports selected
 path counts rather than selected path strings. The ticket adds no store read,
 member reopen, directory scan, hash pass, or child solely for logging.
+Its first decision-bearing use is T32.2's whole-monorepo baseline. T32.1 first
+freezes the microservice program contract and validation matrix in the source
+of truth; no multi-service runtime behavior is implied by that planning ticket.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -376,8 +386,115 @@ Thrift extraction lane. The flag does not independently expose the evidence
 store, add a route or capability identifier, or permit a simultaneous
 synthetic/fixture catalog authority. It lets a pilot exercise Workbenches over
 real published evidence but changes no production registration, which stays
-behind the gates below. None of the remaining drafts is an implicit next
-ticket.
+behind the gates below. None of Epics 25–28 is an implicit next ticket; the
+microservice sequence below is the explicit direction after T31.1 and T32.1.
+
+## Next: microservice architecture program
+
+The program goal is not merely to index a large repository. It is to make
+services first-class without performing repository-sized work once per
+service. An authorized user must be able to search all code or one service,
+inspect that service's contracts and supported dependencies, follow
+cross-service evidence, compare exact snapshots, and see every ambiguity,
+failure, exclusion, stale partition, and unowned path that bounds the answer.
+
+The target steady-state cost is approximately:
+
+```text
+repository entries + distinct admitted source bytes + changed partitions
+  + emitted observations
+```
+
+It must not approach:
+
+```text
+service count × repository bytes
+```
+
+### Foundation already achieved
+
+| Foundation | What it establishes | What it does not establish |
+|---|---|---|
+| Whole-repository zoekt path and exact publication handoff | all-code indexing/search exists with immutable revision and shard/store fencing | that the target monorepo fits one node or one shard topology |
+| T30 focused analysis unit | exact primary/supporting paths, unit identity, focused shards, backup/restore, and scope-aware results | more than one service per repository |
+| Streamed candidate manifest | one bounded HEAD census with deterministic repository, local, and caller partitions | a reusable catalog containing thousands of services |
+| Resolver and caller-leaf pipeline | exact declaration catalog, target-bound partition work, complete atomic caller generations, and authorized reads | parse-once source observations or one join shared by every service |
+| Coverage, outcomes, proofs, and Workbench | explicit failed/stale/unavailable states and immutable evidence authority | validated accuracy, complete relationships, or multi-service currentness |
+| Retention-status and T31 diagnostics | bounded visibility into accumulated state and pipeline cost without source leakage | bounded deletion/GC or a large-monorepo operating envelope |
+
+### Required system capabilities
+
+| Capability | Required boundary |
+|---|---|
+| Service catalog | stable logical service keys separate from repository placements; many placements per repository; explicit authority; primary/supporting/shared/generated/typed/unowned roles; many-to-many path membership; conflicts and proposals never silently become truth |
+| Repository source/search generation | one streamed census and one selected physical topology per exact commit; all-code search plus service predicates inside the zoekt query |
+| Independent service state | desired and active commit/catalog/publication identity per service; one service's success or failure cannot relabel another |
+| Shared observations and resolver data | bounded source blobs parsed once per commit/policy; declaration namespaces and target-independent observations partitioned for reuse |
+| Cross-service relationships | caller and topic postings joined once by exact contract/topic identity, then projected to zero, one, or many services with unresolved states preserved |
+| Scheduling and lifecycle | generation-scoped bounded chunks, commit coalescing, fairness, leases, retry fences, progress, tombstones, pin-aware retention, and disk-pressure behavior |
+| Product surfaces | All code/service switcher, service inventory/detail, cross-service impact, comparison, coverage/gaps, operations, HTTP, and MCP parity |
+
+### Validation gates
+
+1. **Target whole-monorepo baseline:** after T31.1, run whole-repository search
+   first with provisional packs disabled, then candidate/extraction stages one
+   at a time. Freeze host ceilings and a query battery before the run; retain
+   only source-free measurements. Classify index, candidate, extraction,
+   relationship, and retention failures separately.
+2. **Neutral correctness oracle:** independently enumerate service membership,
+   shared/generated/unowned paths, rename/delete/conflict states, all-code and
+   per-service search results, cross-service callers/topics, partial
+   publication, authorization, and migration behavior.
+3. **Cardinality and cost:** generated 1,000- and 5,000-service profiles measure
+   catalog, scheduling, reader, descriptor, memory, disk, no-op, update, and
+   GC behavior. They are load tests, not target-corpus SLO evidence.
+4. **Search-topology equality:** if direct whole-repository indexing misses the
+   frozen envelope, compare bounded cohorts against whole-repository and
+   per-service oracles under broad queries, ranking ties, truncation, cold
+   mmap/FD pressure, and generation transitions before selecting cohorts.
+5. **Evidence quality:** every pack separately measures call-site extraction,
+   service attribution, and end-to-end service relationship precision/recall,
+   processing coverage, and unresolved behavior. `GATE2-V2` remains
+   `NOT_ESTABLISHED` until a permitted internal gate establishes a named scope.
+6. **Security and operations:** permissions precede service names, counts,
+   catalog data, relationships, and proof material; revocation, partial
+   failure, restart, restore, stale generations, retention, and disk pressure
+   fail closed under bounded work.
+7. **Workflow value:** a named migration/impact workflow must beat or
+   materially improve the independently captured manual inventory without
+   hiding correction, owner-routing, or operating cost.
+
+### Draft sequence
+
+- **Epic 32 — contract and validation:** freeze the v2 program, measure the
+  target whole repository, build the neutral authority/correctness profiles,
+  and select direct shards, cohorts, or a P6 escalation.
+- **Epic 33 — service catalog:** ship strict multi-service authority,
+  membership, independent state, v1 migration, authorized reads, and a service
+  directory.
+- **Epic 34 — shared search:** publish one exact repository search generation
+  under the selected topology and provide exact all-code/service-scoped query
+  parity.
+- **Epic 35 — bounded lifecycle:** add chunk scheduling, fairness, progress,
+  pin-aware retention/GC, recovery, and capacity controls before multiplying
+  high-cardinality artifacts.
+- **Epic 36 — shared source observations:** batch immutable Git reads, parse
+  supported source once, publish content-addressed partitions, and incrementally
+  invalidate only affected work.
+- **Epic 37 — relationship index:** publish declaration namespaces, caller and
+  Kafka postings, service projections, atomic roots, and authorized keyed
+  readers.
+- **Epic 38 — microservice product:** deliver service overview, dependency and
+  change-impact workflows, comparison, UI/API/MCP parity, and an end-to-end
+  neutral demo.
+- **Epic 39 — validation and release:** execute the neutral and authorized
+  target gates, close operating/security/workflow evidence, and make a separate
+  shadow/advisory release decision.
+
+Only T32.1 is a decision/documentation ticket before the T31.1 merge bar. The
+implementation sequence remains dependency-ordered, and every epic ends in a
+demoable state. Numeric release limits and the physical topology remain
+unselected until Epic 32 records their evidence.
 
 ## Gated product work
 
@@ -392,9 +509,9 @@ completeness or demo quality.
 
 ## On demand
 
-After Epic 30's single-node service-scope boundary, the next scale boundary is
-the P6 fleet profile. It is intentionally not scheduled until a real
-deployment requires it:
+After Epic 32 measures the target whole repository, P6 is the escape hatch only
+when the selected single-node topology cannot satisfy the frozen envelope or a
+real deployment requires distributed ownership. It remains unscheduled:
 
 - measure index size, memory, full-monorepo build time, and freshness on the
   target corpus;

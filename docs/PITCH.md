@@ -68,6 +68,13 @@ history, authentication, permissions, audit, OpenAPI, MCP, backup, and restore.
 The contract-evidence, Caller Map, proof, and Workbench implementations exist
 but remain experimental/default-dark or fixture-bound.
 
+The long-term product direction now makes many services per repository
+first-class over shared repository generations. That direction does not expand
+this proposal: the pilot still evaluates one exact Go/gRPC migration, one
+pinned source universe, and one independently measured workflow. Its scale
+checkpoint may inform the multi-service program, but it cannot by itself
+authorize a multi-service release or a scale claim.
+
 The retained external Go/gRPC validation campaign ended at a valid
 protocol-defined capacity stop before labeling or scoring. Its result is
 `NOT_ESTABLISHED`; no numeric accuracy claim exists. The terminal record is
