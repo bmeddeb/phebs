@@ -111,3 +111,9 @@ The retained
 [T30.4 candidate-planner measurement](../spike/t304/README.md) records the
 prospective local resource gates and deterministic publication observation
 that selected the production partition bounds.
+
+The retained
+[multi-unit large-monorepo exploration](./MULTI_UNIT_MONOREPO_EXPLORATION.md)
+preserves an unscheduled discussion about service discovery, shared physical
+indexing, parse-once caller/Kafka observations, scheduling, and retention. It
+is not an ADR, active ticket, or scale claim.

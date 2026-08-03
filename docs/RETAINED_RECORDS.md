@@ -109,6 +109,16 @@ separate cache or concurrency gate.
 None of these tickets changes deletion, configuration, or owner lifecycle
 semantics.
 
+### Exploratory discussion records
+
+- [Multi-unit large-monorepo exploration](./MULTI_UNIT_MONOREPO_EXPLORATION.md)
+
+This record preserves a possible future direction for thousands of logical
+services over shared repository search and relationship generations. It does
+not select an architecture, schedule a ticket, freeze a scale bound, or modify
+current behavior. Any adopted decision must land as a dated row in
+[PLAN.md](../PLAN.md) with corresponding roadmap and backlog work.
+
 ### Deterministic product fixtures
 
 - [Change Workbench closure fixture](./fixtures/change-workbench/README.md)
