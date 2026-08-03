@@ -315,6 +315,58 @@ test('search results expose their focused unit without mounting exact paths by d
   expect(screen.getByText(/does not widen focused source scope/)).toBeTruthy()
 })
 
+test('an explicit revision result does not inherit the current focused analysis unit', async () => {
+  const historicalRef = 'dddddddddddddddddddddddddddddddddddddddd'
+  repositoryAPI.statuses = [{
+    ...repoStatus('github.com/a/one', aMain.ref),
+    analysis_unit: {
+      schema: 'analysis-unit-v1',
+      name: 'service-one',
+      digest: `sha256:${'a'.repeat(64)}`,
+      primary_paths: ['cmd/**'],
+      supporting_paths: ['pkg/**'],
+      primary_path_count: 1,
+      supporting_path_count: 1,
+      search_index_posture: 'focused',
+      typed_index_posture: 'repository-root-unbound',
+    },
+  }]
+  renderSearch('q=foo+rev%3Arelease')
+  await screen.findByRole('option', { name: 'github.com/a/one' })
+  await act(async () => stream.onBatch!(batch([{ ...aMain, ref: historicalRef }])))
+
+  expect(screen.getByText('search_revision_scope_not_projectable')).toBeTruthy()
+  expect(screen.getByText(/current analysis unit is not projected across revisions/)).toBeTruthy()
+  expect(screen.queryByText('service unit service-one')).toBeNull()
+  expect(screen.queryByText('1 focused')).toBeNull()
+})
+
+test('an indexing transition does not relabel earlier results with the newer unit scope', async () => {
+  const newerIndexedRef = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+  repositoryAPI.statuses = [{
+    ...repoStatus('github.com/a/one', newerIndexedRef),
+    analysis_unit: {
+      schema: 'analysis-unit-v1',
+      name: 'service-two',
+      digest: `sha256:${'b'.repeat(64)}`,
+      primary_paths: ['services/two/**'],
+      supporting_paths: [],
+      primary_path_count: 1,
+      supporting_path_count: 0,
+      search_index_posture: 'focused',
+      typed_index_posture: 'repository-root-unbound',
+    },
+  }]
+  renderSearch()
+  await screen.findByRole('option', { name: 'github.com/a/one' })
+  await act(async () => stream.onBatch!(batch([aMain])))
+
+  expect(screen.getByText('search_revision_scope_not_projectable')).toBeTruthy()
+  expect(screen.getByText(new RegExp(aMain.ref))).toBeTruthy()
+  expect(screen.getByText(new RegExp(newerIndexedRef))).toBeTruthy()
+  expect(screen.queryByText('service unit service-two')).toBeNull()
+})
+
 test('a zero-result query still exposes its exact focused repository scope', async () => {
   repositoryAPI.statuses = [{
     ...repoStatus('github.com/a/one', aMain.ref),

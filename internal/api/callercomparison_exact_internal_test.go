@@ -223,12 +223,15 @@ func TestExactCallerComparisonAuthorityGenerationRestoresExcludedGoTests(
 		{name: "projection failure", projectionFailed: true, count: 29},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			generation := exactComparisonAuthorityGeneration(
+			generation, err := exactComparisonAuthorityGeneration(
 				&exactCallerMapService{},
 				read,
 				test.projectionFailed,
 				CallerMapGeneration{ExcludedGoTestRecords: test.count},
 			)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if generation.ExcludedGoTestRecords != test.count {
 				t.Fatalf(
 					"excluded Go-test records = %d, want %d",
@@ -237,6 +240,33 @@ func TestExactCallerComparisonAuthorityGenerationRestoresExcludedGoTests(
 				)
 			}
 		})
+	}
+}
+
+func TestExactCallerComparisonGenerationDeduplicatesDomainCopies(t *testing.T) {
+	publication := exactCallerCensusPublication()
+	read := &callerexecute.PublicationRead{
+		Availability: callerexecute.PublicationCurrent,
+		ExpectedGeneration: store.CallerGenerationIdentity{
+			Repository: "github.com/acme/two-caller-domains",
+		},
+		Publication: publication,
+	}
+	generation, err := exactComparisonGeneration(
+		&exactCallerMapService{}, read, false,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if generation.ExcludedGoTestRecords != 2 {
+		t.Fatalf("comparison caller record census = %+v", generation)
+	}
+
+	publication.Pairs[1].Receipt.ExcludedGoTestRecords++
+	if _, err := exactComparisonGeneration(
+		&exactCallerMapService{}, read, false,
+	); err == nil {
+		t.Fatal("comparison accepted disagreeing caller-domain leaf census")
 	}
 }
 

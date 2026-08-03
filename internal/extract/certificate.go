@@ -146,14 +146,16 @@ type CertificateCandidateScope struct {
 	// legacyExclusionShape is set only while decoding a retained v1/v2
 	// certificate whose candidate scope predates the six explicit exclusion
 	// counters above. Keeping that wire shape lets immutable proof bundles
-	// round-trip byte-for-byte; newly built v3 certificates always emit every
-	// counter, including zero.
+	// round-trip byte-for-byte. Newly built v3 certificates always emit those
+	// six counters, including zero; focused-local/local scopes additionally
+	// emit both source-lane counters.
 	legacyExclusionShape bool
 }
 
 // MarshalJSON preserves the shipped v1/v2 candidate-scope shape when a
-// retained proof bundle is decoded, while keeping all six v3 counters
-// explicit for newly built certificates.
+// retained proof bundle is decoded, while keeping all six universal v3
+// exclusion counters explicit for newly built certificates. The two optional
+// source-lane counters remain explicit only for focused-local/local scopes.
 func (scope CertificateCandidateScope) MarshalJSON() ([]byte, error) {
 	type current CertificateCandidateScope
 	if !scope.legacyExclusionShape {
@@ -217,7 +219,9 @@ func (scope *CertificateCandidateScope) UnmarshalJSON(data []byte) error {
 
 // ValidateCanonicalShape applies schema-version rules that cannot be
 // expressed by Go's JSON tags alone. Retained v1/v2 certificates may carry
-// the old candidate-scope shape; v3 must disclose every exclusion counter.
+// the old candidate-scope shape. V3 must disclose every universal exclusion
+// counter, and its two source-lane counters are required exactly for a
+// focused-local/local candidate projection.
 func (certificate *CoverageCertificate) ValidateCanonicalShape() error {
 	if certificate == nil {
 		return errors.New("coverage certificate is nil")
@@ -227,10 +231,30 @@ func (certificate *CoverageCertificate) ValidateCanonicalShape() error {
 	}
 	for _, repository := range certificate.Repositories {
 		for _, run := range repository.Runs {
-			if run.CandidateScope != nil &&
-				run.CandidateScope.legacyExclusionShape {
+			scope := run.CandidateScope
+			if scope == nil {
+				continue
+			}
+			if scope.legacyExclusionShape {
 				return fmt.Errorf(
 					"coverage certificate v3 candidate scope for %q/%q omits exclusion counters",
+					repository.Repository, run.Domain,
+				)
+			}
+			requiresSourceLanes :=
+				run.EvidenceScopePosture == "focused-local" &&
+					scope.Plane == "local"
+			hasBase := scope.BaseSourceFileCount != nil
+			hasExcludedGoTest := scope.ExcludedGoTestCount != nil
+			switch {
+			case requiresSourceLanes && (!hasBase || !hasExcludedGoTest):
+				return fmt.Errorf(
+					"coverage certificate v3 focused-local/local candidate scope for %q/%q omits source-lane counters",
+					repository.Repository, run.Domain,
+				)
+			case !requiresSourceLanes && (hasBase || hasExcludedGoTest):
+				return fmt.Errorf(
+					"coverage certificate v3 candidate scope for %q/%q carries source-lane counters outside focused-local/local",
 					repository.Repository, run.Domain,
 				)
 			}

@@ -601,6 +601,109 @@ func TestRetainedV2ProofBundleCandidateScopeRemainsReadable(t *testing.T) {
 	}
 }
 
+func TestProofBundleRejectsV3CandidateScopeSourceLaneShapeMutation(t *testing.T) {
+	const (
+		repository = "github.com/allowed/candidate-scope-v3"
+		domain     = "grpc-consumer"
+	)
+	digest := func(fill string) string {
+		return "sha256:" + strings.Repeat(fill, 64)
+	}
+	unit, err := (analysisunit.Config{
+		Name:    "service",
+		Primary: []string{"service"},
+	}).Scope(repository).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := proofRun(repository, domain, "run-candidate-scope-v3")
+	run.UnitDigest = unit.Digest
+	run.Coverage.CandidateManifestDigest = digest("1")
+	run.Coverage.CandidatePlane = "local"
+	run.Coverage.ScopePosture = "focused-local"
+	run.Coverage.ScopeCorpusFileCount = 1
+	run.Coverage.ScopeCorpusDeclaredBytes = 100
+	run.Coverage.ScopeCorpusDigest = digest("2")
+	run.Coverage.PlannedFileCount = 1
+	run.Coverage.PlannedRequiredFileCount = 1
+	run.Coverage.PlannedDeclaredBytes = 100
+	run.Coverage.PlannedScopeDigest = digest("3")
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: run.Commit,
+			IndexedAnalysisUnit: unit,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repository, domain): run,
+		},
+	}
+	handler := proofHandler(st, "user:member", nil)
+	code, body, current := getProof(
+		t, handler, "/api/get_extraction_coverage?domains="+domain,
+	)
+	if code != http.StatusOK {
+		t.Fatalf("create v3 bundle = %d %s", code, body)
+	}
+	currentRecord := st.bundles[current.ID]
+	mutations := []struct {
+		name   string
+		mutate func(*api.ProofBundle)
+	}{
+		{
+			name: "focused local omits base",
+			mutate: func(bundle *api.ProofBundle) {
+				bundle.Coverage.Repositories[0].Runs[0].CandidateScope.BaseSourceFileCount = nil
+			},
+		},
+		{
+			name: "focused local omits excluded go test",
+			mutate: func(bundle *api.ProofBundle) {
+				bundle.Coverage.Repositories[0].Runs[0].CandidateScope.ExcludedGoTestCount = nil
+			},
+		},
+		{
+			name: "repository overlay retains lane counts",
+			mutate: func(bundle *api.ProofBundle) {
+				run := &bundle.Coverage.Repositories[0].Runs[0]
+				run.EvidenceScopePosture = "repository-overlay"
+				run.CandidateScope.Plane = "caller"
+			},
+		},
+	}
+	for _, mutation := range mutations {
+		t.Run(mutation.name, func(t *testing.T) {
+			var bundle api.ProofBundle
+			if err := json.Unmarshal([]byte(currentRecord.Content), &bundle); err != nil {
+				t.Fatal(err)
+			}
+			mutation.mutate(&bundle)
+			bundle.Coverage.Digest = ""
+			canonicalCoverage, err := json.Marshal(bundle.Coverage)
+			if err != nil {
+				t.Fatal(err)
+			}
+			coverageSum := sha256.Sum256(canonicalCoverage)
+			bundle.Coverage.Digest =
+				"sha256:" + hex.EncodeToString(coverageSum[:])
+			canonicalBundle, err := json.Marshal(bundle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			mutatedRecord := currentRecord
+			mutatedRecord.Content = string(canonicalBundle)
+			mutatedRecord.ID = store.ComputeProofBundleID(mutatedRecord.Content)
+			st.bundles[mutatedRecord.ID] = mutatedRecord
+
+			code, body, _ := getProof(
+				t, handler, "/api/proof_bundles/"+mutatedRecord.ID,
+			)
+			if code != http.StatusInternalServerError {
+				t.Fatalf("mutated v3 bundle = %d %s", code, body)
+			}
+		})
+	}
+}
+
 func TestProofBundleRejectsSameHEADTypedDesignationDrift(t *testing.T) {
 	const (
 		repository = "github.com/allowed/proof-scope-race"

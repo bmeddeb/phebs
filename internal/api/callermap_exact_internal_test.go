@@ -25,6 +25,79 @@ import (
 const exactAuthorityTestLineage = "provisional_repo_path_v1_" +
 	"abababababababababababababababababababababababababababababababab"
 
+func exactCallerCensusPublication() *store.CallerGenerationPublication {
+	pair := store.CallerGenerationPairPublication{
+		Pair: store.CallerLeafPair{
+			Domain: "grpc-caller", ExtractorVersion: "1.5.0",
+			LeafAdapterVersion: callerleaf.LeafAdapterV1,
+			LeafOrdinal:        0, LeafPrefix: "00", LeafPrefixBits: 2,
+			CandidateMemberName:    "candidate-caller-000000.ndjson",
+			CandidateRecordCount:   5,
+			CandidateDeclaredBytes: 500,
+			CandidateContentBytes:  400,
+			CandidateContentDigest: exactAuthorityDigest("a"),
+			PairDigest:             exactAuthorityDigest("b"),
+		},
+		Receipt: store.CallerLeafArtifactReceipt{ExcludedGoTestRecords: 2},
+	}
+	copy := pair
+	copy.Pair.Domain = "thrift-caller"
+	copy.Pair.ExtractorVersion = "1.3.0"
+	copy.Pair.PairDigest = exactAuthorityDigest("c")
+	return &store.CallerGenerationPublication{
+		Pairs: []store.CallerGenerationPairPublication{pair, copy},
+	}
+}
+
+func TestExactCallerRecordCountsDeduplicateDomainCopies(t *testing.T) {
+	publication := exactCallerCensusPublication()
+	candidateRecords, excludedGoTestRecords, err :=
+		exactCallerRecordCounts(publication)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if candidateRecords != 5 || excludedGoTestRecords != 2 {
+		t.Fatalf(
+			"caller record census = candidate %d, excluded %d; want 5, 2",
+			candidateRecords, excludedGoTestRecords,
+		)
+	}
+}
+
+func TestExactCallerRecordCountsRejectDisagreeingDomainCopies(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		mutate func(*store.CallerGenerationPairPublication)
+	}{
+		{
+			name: "candidate count",
+			mutate: func(pair *store.CallerGenerationPairPublication) {
+				pair.Pair.CandidateRecordCount++
+			},
+		},
+		{
+			name: "excluded test count",
+			mutate: func(pair *store.CallerGenerationPairPublication) {
+				pair.Receipt.ExcludedGoTestRecords++
+			},
+		},
+		{
+			name: "leaf envelope",
+			mutate: func(pair *store.CallerGenerationPairPublication) {
+				pair.Pair.CandidateContentBytes++
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			publication := exactCallerCensusPublication()
+			test.mutate(&publication.Pairs[1])
+			if _, _, err := exactCallerRecordCounts(publication); err == nil {
+				t.Fatal("disagreeing domain copies were accepted")
+			}
+		})
+	}
+}
+
 type exactAuthorityGapStore struct {
 	store.Store
 	store.EvidenceStore

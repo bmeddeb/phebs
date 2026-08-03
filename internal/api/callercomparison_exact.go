@@ -434,7 +434,10 @@ func (s *CallerComparisonService) exactComparisonSource(
 		return exactCallerComparisonSource{},
 			huma.Error500InternalServerError("bind caller comparison generation", err)
 	}
-	generation := exactComparisonGeneration(s.exact, read, false)
+	generation, err := exactComparisonGeneration(s.exact, read, false)
+	if err != nil {
+		return exactCallerComparisonSource{}, err
+	}
 	return exactCallerComparisonSource{
 		visibility: visibility, indexKey: index.key,
 		publication: publication, declaration: declaration,
@@ -1386,12 +1389,18 @@ func (s *CallerComparisonService) buildExactCallerComparisonGapPage(
 	confirmedOld store.Repo,
 	confirmedReplacement store.Repo,
 ) (*CallerComparisonPage, error) {
-	oldGeneration := exactComparisonGeneration(
+	oldGeneration, err := exactComparisonGeneration(
 		s.exact, reads.old, oldProjectionFailed,
 	)
-	replacementGeneration := exactComparisonGeneration(
+	if err != nil {
+		return nil, err
+	}
+	replacementGeneration, err := exactComparisonGeneration(
 		s.exact, reads.replacement, replacementProjectionFailed,
 	)
+	if err != nil {
+		return nil, err
+	}
 	oldState := "unavailable"
 	if reads.old.Availability == callerexecute.PublicationCurrent &&
 		!oldProjectionFailed {
@@ -1725,12 +1734,18 @@ func (s *CallerComparisonService) confirmWorkbenchCurrentComparisonSnapshot(
 		return exactCallerComparisonSnapshotConfirmation{},
 			exactCallerComparisonAuthorityConflict()
 	}
-	oldGeneration := exactComparisonAuthorityGeneration(
+	oldGeneration, err := exactComparisonAuthorityGeneration(
 		s.exact, reads.old, false, authority.OldGeneration,
 	)
-	replacementGeneration := exactComparisonAuthorityGeneration(
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	replacementGeneration, err := exactComparisonAuthorityGeneration(
 		s.exact, reads.replacement, false, authority.ReplacementGeneration,
 	)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
 	if !reflect.DeepEqual(oldGeneration, authority.OldGeneration) ||
 		!reflect.DeepEqual(
 			replacementGeneration, authority.ReplacementGeneration,
@@ -1809,14 +1824,20 @@ func (s *CallerComparisonService) confirmWorkbenchComparisonGapSnapshot(
 		return exactCallerComparisonSnapshotConfirmation{},
 			exactCallerComparisonAuthorityConflict()
 	}
-	oldGeneration := exactComparisonAuthorityGeneration(
+	oldGeneration, err := exactComparisonAuthorityGeneration(
 		s.exact, reads.old, authority.OldProjectionFailed,
 		authority.OldGeneration,
 	)
-	replacementGeneration := exactComparisonAuthorityGeneration(
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
+	replacementGeneration, err := exactComparisonAuthorityGeneration(
 		s.exact, reads.replacement, authority.ReplacementProjectionFailed,
 		authority.ReplacementGeneration,
 	)
+	if err != nil {
+		return exactCallerComparisonSnapshotConfirmation{}, err
+	}
 	if !reflect.DeepEqual(oldGeneration, authority.OldGeneration) ||
 		!reflect.DeepEqual(
 			replacementGeneration, authority.ReplacementGeneration,
@@ -1914,7 +1935,7 @@ func exactComparisonGeneration(
 	service *exactCallerMapService,
 	read *callerexecute.PublicationRead,
 	projectionFailed bool,
-) CallerMapGeneration {
+) (CallerMapGeneration, error) {
 	generation := service.generation(read)
 	if projectionFailed {
 		generation.State = string(callerexecute.PublicationFailed)
@@ -1924,11 +1945,17 @@ func exactComparisonGeneration(
 		generation.Reason = "complete caller generation " + string(read.Availability)
 	}
 	if read != nil && read.Publication != nil {
-		for _, pair := range read.Publication.Pairs {
-			generation.ExcludedGoTestRecords += pair.Receipt.ExcludedGoTestRecords
+		_, excludedGoTest, err := exactCallerRecordCounts(
+			read.Publication,
+		)
+		if err != nil {
+			return CallerMapGeneration{}, huma.Error500InternalServerError(
+				"project caller comparison generation counts", err,
+			)
 		}
+		generation.ExcludedGoTestRecords = excludedGoTest
 	}
-	return generation
+	return generation, nil
 }
 
 func exactComparisonAuthorityGeneration(
@@ -1936,11 +1963,14 @@ func exactComparisonAuthorityGeneration(
 	read *callerexecute.PublicationRead,
 	projectionFailed bool,
 	authority CallerMapGeneration,
-) CallerMapGeneration {
-	generation := exactComparisonGeneration(service, read, projectionFailed)
+) (CallerMapGeneration, error) {
+	generation, err := exactComparisonGeneration(service, read, projectionFailed)
+	if err != nil {
+		return CallerMapGeneration{}, err
+	}
 	// Compact descriptor reopens deliberately avoid the full pair payload, so
 	// they cannot recompute this receipt-derived presentation count. The
 	// service-signed authority captured it from the original exact page.
 	generation.ExcludedGoTestRecords = authority.ExcludedGoTestRecords
-	return generation
+	return generation, nil
 }

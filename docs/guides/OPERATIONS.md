@@ -1694,6 +1694,13 @@ repository has two deliberately different planes:
 - `repository-overlay` Caller Map rows read the independently complete caller
   generation and may therefore cite a caller outside the focused shard.
 
+Search may reuse the current `/api/repo-status` analysis unit only when the
+result set names one revision equal to that status row's
+`indexed_commit_hash`. Explicit historical or mixed revisions, a missing
+result/indexed revision, and index/status transition skew produce a typed
+scope gap; the UI never relabels those results with the current unit digest or
+paths.
+
 Do not interpret an outside-unit caller as a Search leak or a widening of
 local evidence. The panel labels the plane before its rows. Exact paths are
 configuration identities, not source content; the UI mounts at most 24
@@ -1708,9 +1715,13 @@ receipt or `receipt_state: schema_only`. The latter is the writer's deliberate
 8-KiB fallback and means counts/timings are unavailable; it is not a zero-work
 receipt. A full receipt exposes generic reason, scalar phase times, counts,
 bytes, and limits only. Focused-local candidate scope also shows exact
-base-source and excluded `go_test` counts plus typed-input posture.
-Whole-repository and repository-overlay coverage omit those two lane counts
-because their retained coverage does not separate admitted test records. A stale publication,
+base-source and excluded `go_test` counts plus typed-input posture. In a v3
+certificate both lane fields are required, including explicit zeroes, exactly
+for `focused-local` evidence over a `local` candidate plane; any other
+posture/plane must omit both. Retained v1/v2 proof bundles keep their original
+version-aware canonical shape. Whole-repository and repository-overlay
+coverage omit those two lane counts because their retained coverage does not
+separate admitted test records. A stale publication,
 unavailable prerequisite, retryable failure, or terminal refusal remains
 visibly distinct from an exact fresh publication.
 
@@ -1734,6 +1745,14 @@ each execute one indexed aggregate over at most 16,384 outcome rows and return
 one scalar row; a progress or admission transition produces `409`. Exact unit
 paths are not copied into signed authorities: tokens carry a fixed scope
 digest and the final authorization read recomputes it.
+
+The complete publication repeats every candidate leaf once per enabled caller
+domain. Product record counts therefore census each immutable leaf ordinal
+once, verify that the repeated leaf envelope and candidate/excluded-`go_test`
+counts agree across domains, and reject an inconsistent publication instead
+of multiplying its counts. Comparison uses the same census. This remains one
+in-memory pass over at most 16,384 already-loaded pair rows and retains at most
+one bounded census entry per leaf; it adds no database query.
 
 Queue attempts, claimants, leases, mirror-lock timing, and per-job scheduling
 remain operational log/metrics diagnostics. They are intentionally absent

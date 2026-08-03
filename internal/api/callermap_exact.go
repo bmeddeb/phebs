@@ -1566,20 +1566,64 @@ func exactCallerRecordCounts(
 	maximum := int(^uint(0) >> 1)
 	candidateRecords := 0
 	excludedGoTest := 0
+	// Candidate-manifest validation assigns exactly one immutable leaf
+	// descriptor to each ordinal. Expected caller pairs repeat that descriptor
+	// once per enabled domain, so the ordinal is the cross-domain census key.
+	leaves := make(map[int]exactCallerLeafCensus)
 	for _, pair := range publication.Pairs {
 		candidate := pair.Pair.CandidateRecordCount
 		excluded := pair.Receipt.ExcludedGoTestRecords
-		if candidate < 0 || excluded < 0 || excluded > candidate ||
-			candidate > maximum-candidateRecords ||
+		if candidate < 0 || excluded < 0 || excluded > candidate {
+			return 0, 0, errors.New(
+				"caller publication candidate counts are inconsistent",
+			)
+		}
+		leaf, found := leaves[pair.Pair.LeafOrdinal]
+		if found {
+			if !sameExactCallerLeaf(leaf.pair, pair.Pair) ||
+				leaf.candidateRecords != candidate ||
+				leaf.excludedGoTestRecords != excluded {
+				return 0, 0, errors.New(
+					"caller publication domain copies disagree on candidate leaf census",
+				)
+			}
+			continue
+		}
+		if candidate > maximum-candidateRecords ||
 			excluded > maximum-excludedGoTest {
 			return 0, 0, errors.New(
 				"caller publication candidate counts are inconsistent",
 			)
 		}
+		leaves[pair.Pair.LeafOrdinal] = exactCallerLeafCensus{
+			pair:                  pair.Pair,
+			candidateRecords:      candidate,
+			excludedGoTestRecords: excluded,
+		}
 		candidateRecords += candidate
 		excludedGoTest += excluded
 	}
 	return candidateRecords, excludedGoTest, nil
+}
+
+type exactCallerLeafCensus struct {
+	pair                  store.CallerLeafPair
+	candidateRecords      int
+	excludedGoTestRecords int
+}
+
+// sameExactCallerLeaf compares the immutable candidate-manifest leaf
+// descriptor repeated once for every enabled caller domain. Domain-specific
+// adapter identity and pair digest are deliberately excluded.
+func sameExactCallerLeaf(left, right store.CallerLeafPair) bool {
+	return left.LeafOrdinal == right.LeafOrdinal &&
+		left.LeafPrefix == right.LeafPrefix &&
+		left.LeafPrefixBits == right.LeafPrefixBits &&
+		left.CandidateMemberName == right.CandidateMemberName &&
+		left.CandidateDeclaredBytes == right.CandidateDeclaredBytes &&
+		left.CandidateContentBytes == right.CandidateContentBytes &&
+		left.CandidateContentDigest == right.CandidateContentDigest &&
+		left.LeafAdapterVersion == right.LeafAdapterVersion
 }
 
 func (service *exactCallerMapService) unavailableGeneration(

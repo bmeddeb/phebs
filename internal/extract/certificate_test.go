@@ -547,6 +547,119 @@ func TestCoverageCertificateCandidateScopePreservesRetainedV2Shape(t *testing.T)
 	}
 }
 
+func TestCoverageCertificateV3CandidateScopeSourceLanePresence(t *testing.T) {
+	zero := 0
+	newCertificate := func(
+		schema, posture, plane string,
+		base, excludedGoTest *int,
+	) *CoverageCertificate {
+		return &CoverageCertificate{
+			SchemaVersion: schema,
+			Repositories: []CertificateRepository{{
+				Repository: "alpha",
+				Runs: []CertificateRun{{
+					Domain:               "grpc-consumer",
+					EvidenceScopePosture: posture,
+					CandidateScope: &CertificateCandidateScope{
+						Plane:               plane,
+						BaseSourceFileCount: base,
+						ExcludedGoTestCount: excludedGoTest,
+					},
+				}},
+			}},
+		}
+	}
+	tests := []struct {
+		name              string
+		schema            string
+		posture           string
+		plane             string
+		base              *int
+		excludedGoTest    *int
+		wantErr           bool
+		wantMarshalFields bool
+	}{
+		{
+			name:    "focused local carries explicit zeroes",
+			schema:  certificateSchemaVersion,
+			posture: "focused-local", plane: "local",
+			base: &zero, excludedGoTest: &zero,
+			wantMarshalFields: true,
+		},
+		{
+			name:    "focused local missing base",
+			schema:  certificateSchemaVersion,
+			posture: "focused-local", plane: "local",
+			excludedGoTest: &zero, wantErr: true,
+		},
+		{
+			name:    "focused local missing excluded go test",
+			schema:  certificateSchemaVersion,
+			posture: "focused-local", plane: "local",
+			base: &zero, wantErr: true,
+		},
+		{
+			name:    "focused local missing both",
+			schema:  certificateSchemaVersion,
+			posture: "focused-local", plane: "local",
+			wantErr: true,
+		},
+		{
+			name:    "repository overlay omits both",
+			schema:  certificateSchemaVersion,
+			posture: "repository-overlay", plane: "caller",
+		},
+		{
+			name:    "repository overlay carries base",
+			schema:  certificateSchemaVersion,
+			posture: "repository-overlay", plane: "caller",
+			base: &zero, wantErr: true,
+		},
+		{
+			name:    "repository overlay carries excluded go test",
+			schema:  certificateSchemaVersion,
+			posture: "repository-overlay", plane: "caller",
+			excludedGoTest: &zero, wantErr: true,
+		},
+		{
+			name:    "whole repository carries both",
+			schema:  certificateSchemaVersion,
+			posture: "whole-repository", plane: "repository",
+			base: &zero, excludedGoTest: &zero, wantErr: true,
+		},
+		{
+			name:    "retained v2 focused omission remains readable",
+			schema:  "coverage-certificate-v2",
+			posture: "focused-local", plane: "local",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			certificate := newCertificate(
+				test.schema, test.posture, test.plane,
+				test.base, test.excludedGoTest,
+			)
+			err := certificate.ValidateCanonicalShape()
+			if (err != nil) != test.wantErr {
+				t.Fatalf("ValidateCanonicalShape() error = %v, wantErr %t", err, test.wantErr)
+			}
+			encoded, marshalErr := json.Marshal(certificate.Repositories[0].Runs[0].CandidateScope)
+			if marshalErr != nil {
+				t.Fatal(marshalErr)
+			}
+			hasBase := strings.Contains(string(encoded), `"base_source_file_count":0`)
+			hasExcluded := strings.Contains(string(encoded), `"excluded_go_test_file_count":0`)
+			if test.wantMarshalFields && (!hasBase || !hasExcluded) {
+				t.Fatalf("focused-local/local zero counts were not explicit: %s", encoded)
+			}
+			if !test.wantErr && !test.wantMarshalFields &&
+				(hasBase || hasExcluded) {
+				t.Fatalf("non-focused or retained shape invented source-lane counts: %s", encoded)
+			}
+		})
+	}
+}
+
 func TestCoverageCertificateProjectsDurableDomainOutcomes(t *testing.T) {
 	dispositions := []store.DomainOutcomeDisposition{
 		store.DomainOutcomePublished,

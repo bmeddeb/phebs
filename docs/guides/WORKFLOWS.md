@@ -413,6 +413,13 @@ classified and reported as excluded `go_test` evidence. Protobuf declarations,
 the in-unit registration, and Kafka producer/consumer facts are extracted from
 committed source rather than projected by a response fixture.
 
+Search labels a result with that exact focused scope only when the result's
+single revision equals the loaded repository status `indexed_commit_hash`.
+An explicit historical `rev:`, mixed-revision response, missing revision, or
+indexing transition instead shows `search_revision_scope_not_projectable` (or
+`search_index_scope_unavailable` when no indexed revision is available) and
+does not attach the current analysis-unit digest or paths to those results.
+
 The recipes explicitly clear the Investigation, Contract Atlas, synthetic
 Workbench, retained Workbench-closure, and Thrift-field fixture bindings. The
 Contracts and Workbench surfaces therefore use the same store-derived evidence

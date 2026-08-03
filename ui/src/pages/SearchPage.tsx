@@ -125,31 +125,56 @@ export default function SearchPage({ params }: { params: URLSearchParams }) {
       repository.name,
       repository,
     ]))
-    const resultScopes = groups.flatMap(([name, resultFiles]) => {
-      const repository = byName.get(name)
-      if (!repository) return []
-      const resultCommits = new Set(resultFiles.map((file) => file.ref).filter(Boolean))
-      const scope = analysisScopeFromRepoStatus(repository)
-      // Search can target an explicit revision. Bind the presentation to the
-      // result revision when it is singular; omit commit authority rather
-      // than attaching the repository's current HEAD to a mixed-revision set.
-      scope.commit = resultCommits.size === 1
-        ? resultCommits.values().next().value
-        : undefined
-      return [scope]
-    })
     if (groups.length > 0) {
-      const missingScopeCount = groups.length - resultScopes.length
-      return {
-        scopes: resultScopes,
-        gaps: missingScopeCount > 0 ? [{
+      const scopes = []
+      const gaps = []
+      let missingScopeCount = 0
+      for (const [name, resultFiles] of groups) {
+        const repository = byName.get(name)
+        if (!repository) {
+          missingScopeCount++
+          continue
+        }
+        const resultCommits = new Set(resultFiles.map((file) => file.ref).filter(Boolean))
+        if (resultCommits.size !== 1) {
+          gaps.push({
+            state: 'unavailable',
+            code: 'search_revision_scope_not_projectable',
+            reason: resultCommits.size === 0
+              ? `${name} has no exact result revision from which to project repository scope.`
+              : `${name} spans multiple result revisions, so no single exact repository scope can be projected.`,
+          })
+          continue
+        }
+        const resultCommit = resultCommits.values().next().value
+        if (!repository.indexed_commit_hash) {
+          gaps.push({
+            state: 'unavailable',
+            code: 'search_index_scope_unavailable',
+            reason: `${name} has no current indexed commit from which to project exact search scope.`,
+          })
+          continue
+        }
+        if (resultCommit !== repository.indexed_commit_hash) {
+          gaps.push({
+            state: 'unavailable',
+            code: 'search_revision_scope_not_projectable',
+            reason: `${name} search results are bound to ${resultCommit}, while the loaded repository scope is bound to ${repository.indexed_commit_hash}; the current analysis unit is not projected across revisions.`,
+          })
+          continue
+        }
+        scopes.push(analysisScopeFromRepoStatus(repository))
+      }
+      if (missingScopeCount > 0) {
+        gaps.push({
           state: repositoriesLoading ? 'processing' : 'unavailable',
           code: repositoriesLoading
             ? 'repository_status_loading'
             : 'repository_status_unavailable',
           reason: `${missingScopeCount} result ${missingScopeCount === 1 ? 'repository has' : 'repositories have'} no loaded scope projection${repositoriesLoading ? ' yet' : ''}.`,
-        }] : [],
+        })
       }
+      return { scopes, gaps }
     }
     if (phase !== 'done' || !urlQuery) return { scopes: [], gaps: [] }
     if (repositoriesLoading) {

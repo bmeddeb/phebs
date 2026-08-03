@@ -6343,3 +6343,18 @@ the full race suite, docs checks, diff hygiene, the neutral ordinary-worker
 demo, and the zero-repository browser path. No review correction adds a query,
 write, lock, corpus/shard read, Git/blob read, child, cache, startup/sync work,
 retention behavior, or production evidence claim.
+
+Steady-state and regression review closure *(2026-08-03)* corrects three
+authority projections. Caller Map now counts a candidate leaf once rather
+than once per enabled caller domain, validates the repeated immutable leaf
+envelope and candidate/excluded-`go_test` counts, and applies the same census
+to comparison. Search projects the loaded current analysis unit only when the
+single result revision equals `indexed_commit_hash`; historical, mixed,
+missing, and transition-skewed revisions receive a typed scope gap instead.
+Coverage-certificate v3 requires both focused-local/local lane counters and
+forbids them on every other posture/plane while preserving retained v1/v2
+canonical bytes. Focused API/extract/UI suites, focused race coverage,
+lint/typecheck, and diff hygiene cover the corrections. The Caller Map read
+still scans at most 16,384 already-loaded pair rows and retains at most one
+bounded census entry per leaf; no correction adds a store query, write,
+corpus/shard or Git/blob read, child, startup/sync work, or retained cache.
