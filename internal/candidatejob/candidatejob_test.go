@@ -718,6 +718,75 @@ func TestWorkerRetryRepairsPublicationAndProviderStreamsBothPlanes(
 	}
 }
 
+func TestCandidateOperationReportsRebuildAndPointerOnlyWarmNoop(t *testing.T) {
+	t.Parallel()
+	dataDir, repository, commit := candidateGitFixture(t)
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+	}}
+	worker, _, err := New(dataDir, state, []extract.Extractor{
+		policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		},
+		policyExtractor{
+			domain: "grpc-caller", version: "caller-v1",
+			requiredSuffix: ".go",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var reports [][]byte
+	worker.OperationReports = func(report []byte) error {
+		reports = append(reports, slices.Clone(report))
+		return nil
+	}
+	created := time.Date(2026, 8, 3, 12, 0, 0, 0, time.UTC)
+	claimed := created.Add(9 * time.Second)
+	job := store.Job{
+		ID: "candidate_manifest_job:receipt", Kind: store.JobCandidate,
+		Target: repository, CreatedAt: created, ClaimedAt: &claimed,
+	}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if err := worker.Handle(t.Context(), job); err != nil {
+		t.Fatal(err)
+	}
+	if len(reports) != 2 {
+		t.Fatalf("reports = %d, want 2", len(reports))
+	}
+	var rebuild, warm CandidateOperationReport
+	if err := json.Unmarshal(reports[0], &rebuild); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(reports[1], &warm); err != nil {
+		t.Fatal(err)
+	}
+	if rebuild.Decision != "rebuild" || rebuild.Outcome != "done" ||
+		!rebuild.ManifestSummaryPresent || rebuild.QueueWaitMS != 9000 ||
+		rebuild.DeclaredSourceBytes <= 0 ||
+		rebuild.Planes.Repository.Records == 0 ||
+		rebuild.Planes.Caller.Records == 0 || rebuild.PeakSpoolBytes <= 0 ||
+		rebuild.ControlRevision == 0 {
+		t.Fatalf("rebuild receipt = %+v", rebuild)
+	}
+	if warm.Decision != "warm_noop" || warm.Outcome != "done" ||
+		warm.ManifestSummaryPresent || warm.ControlRevision == 0 {
+		t.Fatalf("warm receipt = %+v", warm)
+	}
+	for _, raw := range reports {
+		for _, forbidden := range []string{
+			"service/api.proto", "client/use.go", "notes.txt",
+		} {
+			if strings.Contains(string(raw), forbidden) {
+				t.Fatalf("candidate receipt leaked path %q: %s", forbidden, raw)
+			}
+		}
+	}
+}
+
 func TestExtractionProviderReplaysTwoFocusedDomainsWithoutRepositoryMembers(
 	t *testing.T,
 ) {
@@ -1917,6 +1986,7 @@ func TestProviderRefusesPartialStaleMalformedAndTamperedPublications(
 		stale := request
 		stale.Commit = strings.Repeat("a", len(commit))
 		if _, err := provider.OpenCandidateManifest(ctx, stale); err == nil ||
+			!errors.Is(err, extract.ErrCandidateManifestStale) ||
 			!strings.Contains(err.Error(), "does not match") {
 			t.Fatalf("stale commit error = %v", err)
 		}

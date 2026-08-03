@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"time"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/candidate"
@@ -86,13 +87,16 @@ func (policies *PolicySet) validate() error {
 
 // Worker plans and publishes one current candidate generation.
 type Worker struct {
-	dataDir      string
-	root         string
-	store        Store
-	policies     *PolicySet
-	fingerprints *controlFingerprintCache
-	open         func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
-	recover      func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
+	dataDir          string
+	root             string
+	store            Store
+	policies         *PolicySet
+	fingerprints     *controlFingerprintCache
+	open             func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
+	recover          func(context.Context, string, candidate.Expected) (*candidate.Publication, error)
+	Diagnostics      bool
+	OperationReports CandidateOperationSink
+	Now              func() time.Time
 }
 
 // PolicyDigest returns the complete current candidate-policy identity used by
@@ -162,8 +166,29 @@ func validateDataDir(dataDir string) error {
 }
 
 // Handle adapts candidate planning to store.Runner.
-func (worker *Worker) Handle(ctx context.Context, job store.Job) error {
-	if err := worker.handle(ctx, job); err != nil {
+func (worker *Worker) Handle(ctx context.Context, job store.Job) (result error) {
+	var now func() time.Time
+	if worker != nil {
+		now = worker.Now
+	}
+	diagnostics := worker != nil && (worker.Diagnostics || worker.OperationReports != nil)
+	operation := &candidateOperationRecorder{}
+	if diagnostics {
+		operation = newCandidateOperation(job, now)
+	}
+	if diagnostics {
+		defer func() {
+			outcome := "done"
+			if result != nil {
+				outcome = "failed"
+				if errors.Is(result, context.Canceled) || errors.Is(result, context.DeadlineExceeded) {
+					outcome = "canceled"
+				}
+			}
+			worker.emitOperation(operation.snapshot(outcome))
+		}()
+	}
+	if err := worker.handle(ctx, job, operation); err != nil {
 		return store.WithClass(
 			store.ClassExtract,
 			fmt.Errorf("candidate manifest %s: %w", job.Target, err),
@@ -172,7 +197,11 @@ func (worker *Worker) Handle(ctx context.Context, job store.Job) error {
 	return nil
 }
 
-func (worker *Worker) handle(ctx context.Context, job store.Job) error {
+func (worker *Worker) handle(
+	ctx context.Context,
+	job store.Job,
+	operation *candidateOperationRecorder,
+) error {
 	if worker == nil || worker.store == nil || worker.policies == nil ||
 		worker.fingerprints == nil || worker.open == nil ||
 		worker.recover == nil {
@@ -185,7 +214,9 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if err != nil {
 		return fmt.Errorf("mirror path: %w", err)
 	}
+	lockStarted := operation.timestamp()
 	unlock, err := repowork.LockContext(ctx, repoDir)
+	operation.report.MirrorLockWaitMS += candidateDurationMS(operation.timestamp().Sub(lockStarted))
 	if err != nil {
 		return fmt.Errorf("lock mirror: %w", err)
 	}
@@ -193,6 +224,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 
 	repository, err := worker.store.GetRepo(ctx, job.Target)
 	if errors.Is(err, store.ErrNotFound) {
+		operation.report.Decision = "not_ready"
 		worker.fingerprints.forget(job.Target)
 		return nil
 	}
@@ -202,7 +234,9 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if repository == nil {
 		return errors.New("repository store returned nil")
 	}
+	operation.bindRepository(repository)
 	if repository.Deleting || repository.IndexedCommitHash == "" {
+		operation.report.Decision = "not_ready"
 		worker.fingerprints.forget(repository.Name)
 		return nil
 	}
@@ -222,6 +256,7 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	if err != nil {
 		return err
 	}
+	operation.bindExpected(expected)
 	currentPointer, pointerErr := worker.store.GetCandidateManifestPublication(
 		ctx, repository.Name,
 	)
@@ -252,6 +287,8 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		}
 		persistedState = &state
 		persistedControlRevision = currentPointer.ControlRevision
+		operation.report.ControlRevision = currentPointer.ControlRevision
+		operation.report.ManifestDigest = currentPointer.ManifestDigest
 	}
 	repairNeeded := false
 	if persistedState != nil {
@@ -297,24 +334,30 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			// The guarded pointer and process-local file identities are
 			// unchanged. Re-publishing repairs a missing extraction fan-out
 			// without re-reading, hashing, or externally sorting any member.
+			operation.report.Decision = "warm_noop"
 			return worker.commitPublication(
 				ctx, repository, *persistedState, 0,
+				operation,
 			)
 		}
 		if !known {
 			// A cold worker establishes only a manifest/member-identity
 			// fingerprint. Actual extraction remains the strict first
 			// consumer; a later identity change forces the strict path below.
+			fingerprintStarted := operation.timestamp()
 			fingerprint, captureErr :=
 				candidate.CaptureControlFingerprintContext(
 					ctx, worker.root, *persistedState,
 				)
+			operation.report.FingerprintMS += candidateDurationMS(operation.timestamp().Sub(fingerprintStarted))
 			if captureErr == nil {
 				worker.fingerprints.remember(
 					*persistedState, fingerprint,
 				)
+				operation.report.Decision = "cold_reuse"
 				return worker.commitPublication(
 					ctx, repository, *persistedState, 0,
+					operation,
 				)
 			}
 			if err := ctx.Err(); err != nil {
@@ -333,14 +376,20 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			ctx, worker.root, reuseExpected,
 		); openErr == nil &&
 			(persistedState == nil || published.State() == *persistedState) {
+			operation.bindManifest(published.Manifest())
+			fingerprintStarted := operation.timestamp()
 			if err := worker.rememberFingerprint(
 				ctx, published.State(),
 			); err == nil {
+				operation.report.FingerprintMS += candidateDurationMS(operation.timestamp().Sub(fingerprintStarted))
+				operation.report.Decision = "marker_recovery"
 				return worker.commitPublication(
 					ctx, repository, published.State(),
 					nextControlRevision(persistedControlRevision),
+					operation,
 				)
 			}
+			operation.report.FingerprintMS += candidateDurationMS(operation.timestamp().Sub(fingerprintStarted))
 		}
 	}
 	if !hadMarker && persistedState != nil && controlReady {
@@ -349,14 +398,20 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 		if published, openErr := worker.open(
 			ctx, worker.root, reuseExpected,
 		); openErr == nil && published.State() == *persistedState {
+			operation.bindManifest(published.Manifest())
+			fingerprintStarted := operation.timestamp()
 			if err := worker.rememberFingerprint(
 				ctx, published.State(),
 			); err == nil {
+				operation.report.FingerprintMS += candidateDurationMS(operation.timestamp().Sub(fingerprintStarted))
+				operation.report.Decision = "repair"
 				return worker.commitPublication(
 					ctx, repository, published.State(),
 					nextControlRevision(persistedControlRevision),
+					operation,
 				)
 			}
+			operation.report.FingerprintMS += candidateDurationMS(operation.timestamp().Sub(fingerprintStarted))
 		}
 	}
 
@@ -366,26 +421,45 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 	}
 	defer func() { _ = os.RemoveAll(stage) }()
 
+	operation.report.Decision = "rebuild"
+	var buildMetrics *candidate.BuildMetrics
+	if operation.enabled {
+		buildMetrics = &candidate.BuildMetrics{}
+	}
 	manifest, err := candidate.Build(ctx, candidate.Request{
 		RepoDir: repoDir, OutputDir: stage,
 		Repository: repository.Name, Commit: repository.IndexedCommitHash,
 		Unit:     analysisunit.CloneState(repository.IndexedAnalysisUnit),
-		Policies: slices.Clone(worker.policies.policies),
+		Policies: slices.Clone(worker.policies.policies), Metrics: buildMetrics,
 	})
+	if buildMetrics != nil {
+		operation.report.TreeMS = candidateDurationMS(buildMetrics.TreeDuration)
+		operation.report.SpoolingMS = candidateDurationMS(buildMetrics.SpoolingDuration)
+		operation.report.ExternalSortMS = candidateDurationMS(buildMetrics.ExternalSortDuration)
+		operation.report.PeakSpoolBytes = buildMetrics.PeakSpoolBytes
+	}
 	if err != nil {
 		return fmt.Errorf("build: %w", err)
 	}
+	operation.bindManifest(manifest)
 	expected.ManifestDigest = manifest.Digest
+	operation.bindExpected(expected)
+	publishStarted := operation.timestamp()
 	state, err := candidate.PublishContext(ctx, worker.root, stage, expected)
+	operation.report.PublishMS += candidateDurationMS(operation.timestamp().Sub(publishStarted))
 	if err != nil {
 		return fmt.Errorf("publish files: %w", err)
 	}
+	fingerprintStarted := operation.timestamp()
 	if err := worker.rememberFingerprint(ctx, state); err != nil {
+		operation.report.FingerprintMS += candidateDurationMS(operation.timestamp().Sub(fingerprintStarted))
 		return fmt.Errorf("record publication control fingerprint: %w", err)
 	}
+	operation.report.FingerprintMS += candidateDurationMS(operation.timestamp().Sub(fingerprintStarted))
 	return worker.commitPublication(
 		ctx, repository, state,
 		nextControlRevision(persistedControlRevision),
+		operation,
 	)
 }
 
@@ -473,13 +547,16 @@ func (worker *Worker) commitPublication(
 	repository *store.Repo,
 	state candidate.State,
 	controlRevision uint64,
+	operation *candidateOperationRecorder,
 ) error {
 	publication, err := publicationFromState(state)
 	if err != nil {
 		return err
 	}
 	publication.ControlRevision = controlRevision
+	databaseStarted := operation.timestamp()
 	if err := worker.store.PublishCandidateManifest(ctx, publication); err != nil {
+		operation.report.DatabaseCommitMS += candidateDurationMS(operation.timestamp().Sub(databaseStarted))
 		if !errors.Is(err, store.ErrConflict) {
 			// Keep the marker installed. A retry can validate and reuse these
 			// exact bytes before repairing the database transition.
@@ -500,9 +577,18 @@ func (worker *Worker) commitPublication(
 			err,
 		)
 	}
+	operation.report.DatabaseCommitMS += candidateDurationMS(operation.timestamp().Sub(databaseStarted))
+	if controlRevision > 0 {
+		operation.report.ControlRevision = controlRevision
+	} else if operation.report.ControlRevision == 0 {
+		operation.report.ControlRevision = 1
+	}
+	markerStarted := operation.timestamp()
 	if err := candidate.FinishPublication(worker.root, repository.Name); err != nil {
+		operation.report.MarkerFinishMS += candidateDurationMS(operation.timestamp().Sub(markerStarted))
 		return fmt.Errorf("finish publication: %w", err)
 	}
+	operation.report.MarkerFinishMS += candidateDurationMS(operation.timestamp().Sub(markerStarted))
 	return nil
 }
 

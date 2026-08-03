@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -433,12 +434,10 @@ func serve(args []string) error {
 		if stateErr != nil {
 			return fmt.Errorf("analysis unit %s: %w", repository, stateErr)
 		}
-		log.Printf(
-			"analysis unit: repository=%q name=%q digest=%s primary=%q supporting=%q search_index=%s typed_index=%s",
-			repository, state.Name, state.Digest, state.PrimaryPaths,
-			state.SupportingPaths, state.SearchIndexPosture,
-			state.TypedIndexPosture,
-		)
+		logAnalysisUnitPosture(repository, state, exs)
+	}
+	if len(unitRepositories) == 0 {
+		logAnalysisUnitPosture("", nil, exs)
 	}
 	if queued, err := indexer.ReconcileAnalysisUnits(ctx, st, analysisUnits); err != nil {
 		return fmt.Errorf("reconcile analysis units: %w", err)
@@ -450,10 +449,10 @@ func serve(args []string) error {
 	}
 	runner := &store.Runner{Store: st, Kind: store.JobSync,
 		Handle:   phebssync.HandlerWithCallerLifecycle(cfg, st, callerPublications),
-		Interval: cfg.Sync.Interval()}
+		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 	runBackground(func() { runner.Run(ctx) })
 	fetchRunner := &store.Runner{Store: st, Kind: store.JobFetch, Handle: phebssync.FetchHandler(cfg, st),
-		Interval: cfg.Sync.Interval()}
+		Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 	runBackground(func() { fetchRunner.Run(ctx) })
 	if watched := phebssync.Watched(cfg); len(watched) > 0 {
 		log.Printf("watch mode: polling %d local repo(s)", len(watched))
@@ -507,10 +506,13 @@ func serve(args []string) error {
 		}
 		worker := &extract.Worker{
 			Repos: st, Evidence: st,
-			NewCorpus:  extract.GitCorpus(cfg.Server.DataDir),
-			Manifests:  manifestProvider,
-			Extractors: exs,
+			NewCorpus:        extract.GitCorpus(cfg.Server.DataDir),
+			Manifests:        manifestProvider,
+			Extractors:       exs,
+			Diagnostics:      cfg.Diagnostics.Extraction,
+			ExtractorDetails: cfg.Diagnostics.ExtractorDetails,
 		}
+		candidateWorker.Diagnostics = cfg.Diagnostics.Candidates
 		if err := enqueueCandidateBackfill(
 			ctx, st, candidateWorker.PolicyDigest(),
 		); err != nil {
@@ -530,6 +532,7 @@ func serve(args []string) error {
 			resolverRunner = &store.Runner{
 				Store: st, Kind: store.JobResolverCatalog,
 				Handle: resolverWorker.Handle, Interval: cfg.Sync.Interval(),
+				Diagnostics: cfg.Diagnostics.Jobs,
 			}
 		}
 		if callerRegistry.Enabled() {
@@ -546,15 +549,16 @@ func serve(args []string) error {
 			callerRunner = &store.Runner{
 				Store: st, Kind: store.JobCallerLeaf,
 				Handle: callerWorker.Handle, Interval: cfg.Sync.Interval(),
+				Diagnostics: cfg.Diagnostics.Jobs,
 			}
 		}
 		candidateRunner := &store.Runner{
 			Store: st, Kind: store.JobCandidate, Handle: candidateWorker.Handle,
-			Interval: cfg.Sync.Interval(),
+			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs,
 		}
 		runBackground(func() { candidateRunner.Run(ctx) })
 		exRunner := &store.Runner{Store: st, Kind: store.JobExtract, Handle: worker.Handle,
-			Interval: cfg.Sync.Interval()}
+			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		runBackground(func() { exRunner.Run(ctx) })
 		if resolverRunner != nil {
 			runBackground(func() { resolverRunner.Run(ctx) })
@@ -563,7 +567,9 @@ func serve(args []string) error {
 			runBackground(func() { callerRunner.Run(ctx) })
 		}
 		onIndexed = func(ctx context.Context, name, commit string) error {
-			return enqueueCandidateAfterIndex(ctx, st, name, commit)
+			return enqueueCandidateAfterIndex(
+				ctx, st, name, commit, cfg.Diagnostics.Candidates,
+			)
 		}
 	}
 	if lifetime := cfg.ProofBundles.RetentionFor(); lifetime > 0 {
@@ -599,7 +605,7 @@ func serve(args []string) error {
 			OnIndexed:     onIndexed,
 		}
 		ixRunner := &store.Runner{Store: st, Kind: store.JobIndex, Handle: ix.Handle,
-			Interval: cfg.Sync.Interval()}
+			Interval: cfg.Sync.Interval(), Diagnostics: cfg.Diagnostics.Jobs}
 		runBackground(func() { ixRunner.Run(ctx) })
 	}
 
@@ -1337,12 +1343,90 @@ func evidenceExtractors(
 	return extractors
 }
 
-func enqueueCandidateAfterIndex(ctx context.Context, st store.Store, repo, commit string) error {
+func enqueueCandidateAfterIndex(
+	ctx context.Context,
+	st store.Store,
+	repo, commit string,
+	diagnostics bool,
+) error {
 	if err := store.EnqueueUnlessInFlight(ctx, st, store.JobCandidate, repo); err != nil {
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("enqueue candidate planning for %s@%s: %w", repo, commit, err))
 	}
+	if diagnostics {
+		log.Printf(
+			"candidate queued repository=%q commit=%s cause=indexed force=false",
+			repo, commit,
+		)
+	}
 	return nil
+}
+
+type analysisUnitPostureDiagnostic struct {
+	Repository              string   `json:"repository,omitempty"`
+	Configured              bool     `json:"configured"`
+	UnitName                string   `json:"unit_name,omitempty"`
+	UnitDigest              string   `json:"unit_digest,omitempty"`
+	PrimaryPathCount        int      `json:"primary_path_count"`
+	SupportingPathCount     int      `json:"supporting_path_count"`
+	SearchPosture           string   `json:"search_posture"`
+	TypedIndexPosture       string   `json:"typed_index_posture"`
+	EnabledExtractorDomains []string `json:"enabled_extractor_domains"`
+	Recommendation          string   `json:"recommendation"`
+}
+
+func logAnalysisUnitPosture(
+	repository string,
+	state *analysisunit.State,
+	extractors []extract.Extractor,
+) {
+	report := analysisUnitPosture(repository, state, extractors)
+	data, err := json.Marshal(report)
+	if err != nil {
+		log.Printf("encode analysis unit posture: %v", err)
+		return
+	}
+	log.Printf("analysis unit posture: %s", data)
+}
+
+func analysisUnitPosture(
+	repository string,
+	state *analysisunit.State,
+	extractors []extract.Extractor,
+) analysisUnitPostureDiagnostic {
+	domains := make([]string, 0, len(extractors))
+	for _, extractor := range extractors {
+		domains = append(domains, extractor.Domain())
+	}
+	sort.Strings(domains)
+	report := analysisUnitPostureDiagnostic{
+		Repository: repository, EnabledExtractorDomains: domains,
+		SearchPosture:     analysisunit.SearchIndexWholeRepository,
+		TypedIndexPosture: analysisunit.TypedIndexRepositoryRootUnbound,
+		Recommendation:    "configure_analysis_unit_for_service_scope",
+	}
+	if state != nil {
+		report.Configured = true
+		report.UnitName = state.Name
+		report.UnitDigest = state.Digest
+		report.PrimaryPathCount = state.PrimaryPathCount
+		report.SupportingPathCount = state.SupportingPathCount
+		report.SearchPosture = state.SearchIndexPosture
+		report.TypedIndexPosture = state.TypedIndexPosture
+		report.Recommendation = "configuration_ready"
+		if len(domains) == 0 {
+			report.Recommendation = "enable_required_experimental_extractors"
+		} else if state.TypedIndexPosture == analysisunit.TypedIndexRepositoryRootUnbound {
+			for _, domain := range domains {
+				if domain == "grpc-caller" || domain == "thrift-caller" ||
+					domain == "scip-proto-field" || domain == "scip-thrift-field" {
+					report.Recommendation = "configure_unit_bound_scip_for_typed_domains"
+					break
+				}
+			}
+		}
+	}
+	return report
 }
 
 // enqueueCandidateBackfill closes the upgrade and restart gap for repositories

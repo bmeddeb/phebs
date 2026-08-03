@@ -23,6 +23,7 @@ import (
 
 	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/api"
 	"github.com/bmeddeb/phebs/internal/auth"
 	"github.com/bmeddeb/phebs/internal/codenav"
@@ -1395,12 +1396,50 @@ func TestEnqueueCandidateBackfillPropagatesEnqueueError(t *testing.T) {
 func TestEnqueueCandidateAfterIndexClassifiesEnqueueError(t *testing.T) {
 	want := errors.New("enqueue failed")
 	err := enqueueCandidateAfterIndex(t.Context(), &candidateBackfillStore{enqueueErr: want},
-		"example.com/live", "abc123")
+		"example.com/live", "abc123", false)
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want wrapped %v", err, want)
 	}
 	if class := store.Classify(err); class != store.ClassExtract {
 		t.Fatalf("class = %q, want %q", class, store.ClassExtract)
+	}
+}
+
+func TestAnalysisUnitPostureUsesCountsAndExcludesPaths(t *testing.T) {
+	state, err := (analysisunit.Scope{
+		Repository: "example.com/acme/mono", Name: "payments",
+		Primary: []string{"services/payments/src"},
+		Supporting: []string{
+			"contracts/payment.proto", "services/payments/index.scip",
+		},
+		TypedIndex: &analysisunit.TypedIndex{
+			Kind: analysisunit.TypedIndexKindSCIP,
+			Path: "services/payments/index.scip",
+		},
+	}).State()
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := analysisUnitPosture(
+		"example.com/acme/mono", state,
+		evidenceExtractors(true, false, false, false),
+	)
+	if !report.Configured || report.UnitName != "payments" ||
+		report.PrimaryPathCount != 1 || report.SupportingPathCount != 2 ||
+		report.SearchPosture != analysisunit.SearchIndexFocused ||
+		report.TypedIndexPosture != analysisunit.TypedIndexUnitBound ||
+		report.Recommendation != "configuration_ready" ||
+		len(report.EnabledExtractorDomains) != 4 {
+		t.Fatalf("posture = %+v", report)
+	}
+	raw, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range append(state.PrimaryPaths, state.SupportingPaths...) {
+		if strings.Contains(string(raw), path) {
+			t.Fatalf("posture leaked selected path %q: %s", path, raw)
+		}
 	}
 }
 

@@ -29,6 +29,14 @@ accuracy.
 
 ## Now
 
+T31.1 is the scheduled operational ticket. It adds bounded, source-free,
+component-specific pipeline receipts for generic durable jobs, candidate
+planning, extraction scheduling/outcomes, and fixed extractor counters while
+keeping diagnostic state outside evidence, proof, and publication identity.
+Startup analysis-unit posture remains always visible but now reports selected
+path counts rather than selected path strings. The ticket adds no store read,
+member reopen, directory scan, hash pass, or child solely for logging.
+
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
 recorded GO after proving a focused zoekt child and exact shard-set validation
@@ -333,9 +341,10 @@ target-bound source partitions run, and no caller generation becomes visible
 until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.
 
-Production evidence/pilot gating remains unchanged. No product ticket is
-currently scheduled. Epics 25–28 remain unscheduled drafts in the
-[backlog](./BACKLOG.md); none is an implicit next ticket. Epic 25 is an embedded
+Production evidence/pilot gating remains unchanged. T31.1 is the currently
+scheduled bounded pipeline-observability ticket. Epics 25–28 remain
+unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
+ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
 evidence proposal:
 committed PostgreSQL or MySQL schema-only dumps can independently supply

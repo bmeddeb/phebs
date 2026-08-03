@@ -34,6 +34,12 @@ sync:
 indexing:
   verbose: false          # opt-in parent/child index progress logs
 
+diagnostics:
+  jobs: false             # bounded queue lifecycle receipts for every worker
+  candidates: false       # index handoff and candidate-operation receipts
+  extraction: false       # preflight, scheduler, outcome, and operation receipts
+  extractor_details: false # fixed pack counters; requires extraction: true
+
 connections:
   - name: my-conn         # required; unique; [a-z0-9-]+
     type: github | gitlab | gitea | git
@@ -68,6 +74,10 @@ analysis_units:
 | `sync.poll_interval`                        | `15s`            | Go duration; job pollers wake with ±50 % jitter around it                                                                                                         |
 | `sync.resync_interval`                      | `1h`             | re-sync cadence for remote connections; `"0"` disables                                                                                                            |
 | `indexing.verbose`                          | `false`          | restart-bound opt-in for repository-prefixed index phases and `zoekt-git-index` stdout/stderr; child lines are split after 64 KiB and failure diagnostics retain only the newest 1 MiB |
+| `diagnostics.jobs`                          | `false`          | restart-bound bounded JSON lifecycle receipts (`claimed`, `started`, `done`, `yielded`, `requeued`, `failed`, or `released`) for every durable worker queue |
+| `diagnostics.candidates`                    | `false`          | restart-bound index-to-candidate handoff plus one bounded candidate-operation receipt with decision, phase timing, plane counts/bytes, typed-input posture, and logical spool peak |
+| `diagnostics.extraction`                    | `false`          | restart-bound extraction pointer/strict-open preflight, ordered scheduler/deferral, durable-outcome transition, phase, and final bounded operation receipts |
+| `diagnostics.extractor_details`             | `false`          | adds only fixed aggregate gRPC, Thrift, and Kafka counters to extraction-operation domains; requires `diagnostics.extraction: true` |
 | `webhook.secret`                            | *(empty)*        | enables `POST /api/webhook`; `${ENV}` expanded, fails closed on unset vars                                                                                        |
 | `audit.retention`                           | `2160h`          | audit events older than this are pruned twice a day; `"0"` keeps them forever                                                                                     |
 | `analytics.retention`                       | `8760h`          | local usage events older than this are pruned twice a day; `"0"` keeps them forever                                                                               |

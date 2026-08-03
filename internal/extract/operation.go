@@ -47,20 +47,21 @@ type ExtractionOperationSink func(report []byte) error
 // no field participates in freshness, publication, proof, or evidence
 // identity.
 type ExtractionOperationReport struct {
-	Schema                  string                      `json:"schema"`
-	Repository              string                      `json:"repository"`
-	IndexedHead             string                      `json:"indexed_head,omitempty"`
-	UnitDigest              string                      `json:"unit_digest,omitempty"`
-	CandidateManifestDigest string                      `json:"candidate_manifest_digest,omitempty"`
-	PolicyDigest            string                      `json:"policy_digest,omitempty"`
-	Attempt                 ExtractionOperationAttempt  `json:"attempt"`
-	QueueWaitMS             int64                       `json:"queue_wait_ms"`
-	MirrorLockWaitMS        int64                       `json:"mirror_lock_wait_ms"`
-	PointerWorkMS           int64                       `json:"pointer_work_ms"`
-	StrictOpenMS            int64                       `json:"strict_open_ms"`
-	TotalMS                 int64                       `json:"total_ms"`
-	Domains                 []ExtractionOperationDomain `json:"domains,omitempty"`
-	Truncated               bool                        `json:"truncated,omitempty"`
+	Schema                   string                      `json:"schema"`
+	Repository               string                      `json:"repository"`
+	IndexedHead              string                      `json:"indexed_head,omitempty"`
+	UnitDigest               string                      `json:"unit_digest,omitempty"`
+	CandidateManifestDigest  string                      `json:"candidate_manifest_digest,omitempty"`
+	CandidateControlRevision uint64                      `json:"candidate_control_revision,omitempty"`
+	PolicyDigest             string                      `json:"policy_digest,omitempty"`
+	Attempt                  ExtractionOperationAttempt  `json:"attempt"`
+	QueueWaitMS              int64                       `json:"queue_wait_ms"`
+	MirrorLockWaitMS         int64                       `json:"mirror_lock_wait_ms"`
+	PointerWorkMS            int64                       `json:"pointer_work_ms"`
+	StrictOpenMS             int64                       `json:"strict_open_ms"`
+	TotalMS                  int64                       `json:"total_ms"`
+	Domains                  []ExtractionOperationDomain `json:"domains,omitempty"`
+	Truncated                bool                        `json:"truncated,omitempty"`
 }
 
 // ExtractionOperationAttempt names the queue attempt without exposing the
@@ -75,19 +76,20 @@ type ExtractionOperationAttempt struct {
 // counts/bytes/limits, and a frozen generic completion reason. It never carries
 // source paths, content, samples, or raw extractor diagnostics.
 type ExtractionOperationDomain struct {
-	Domain           string                          `json:"domain"`
-	ExtractorVersion string                          `json:"extractor_version"`
-	Reason           string                          `json:"reason"`
-	InventoryMS      int64                           `json:"inventory_ms"`
-	OpenedSourceMS   int64                           `json:"opened_source_ms"`
-	ExtractorMS      int64                           `json:"extractor_ms"`
-	StagingMS        int64                           `json:"staging_ms"`
-	PublicationMS    int64                           `json:"publication_ms"`
-	AbortMS          int64                           `json:"abort_ms"`
-	CleanupMS        int64                           `json:"cleanup_ms"`
-	Counts           ExtractionOperationDomainCounts `json:"counts"`
-	Bytes            ExtractionOperationDomainBytes  `json:"bytes"`
-	Limits           ExtractionOperationDomainLimits `json:"limits"`
+	Domain               string                          `json:"domain"`
+	ExtractorVersion     string                          `json:"extractor_version"`
+	Reason               string                          `json:"reason"`
+	InventoryMS          int64                           `json:"inventory_ms"`
+	OpenedSourceMS       int64                           `json:"opened_source_ms"`
+	ExtractorMS          int64                           `json:"extractor_ms"`
+	StagingMS            int64                           `json:"staging_ms"`
+	PublicationMS        int64                           `json:"publication_ms"`
+	AbortMS              int64                           `json:"abort_ms"`
+	CleanupMS            int64                           `json:"cleanup_ms"`
+	Counts               ExtractionOperationDomainCounts `json:"counts"`
+	Bytes                ExtractionOperationDomainBytes  `json:"bytes"`
+	Limits               ExtractionOperationDomainLimits `json:"limits"`
+	ExtractorDiagnostics []sdk.DiagnosticCounter         `json:"extractor_diagnostics,omitempty"`
 }
 
 type ExtractionOperationDomainCounts struct {
@@ -152,15 +154,16 @@ type ExtractionDomainOutcomeReceipt struct {
 }
 
 type extractionOperationMinimal struct {
-	Schema                  string                     `json:"schema"`
-	Repository              string                     `json:"repository"`
-	IndexedHead             string                     `json:"indexed_head,omitempty"`
-	UnitDigest              string                     `json:"unit_digest,omitempty"`
-	CandidateManifestDigest string                     `json:"candidate_manifest_digest,omitempty"`
-	PolicyDigest            string                     `json:"policy_digest,omitempty"`
-	Attempt                 ExtractionOperationAttempt `json:"attempt"`
-	DomainCount             int                        `json:"domain_count"`
-	Truncated               bool                       `json:"truncated"`
+	Schema                   string                     `json:"schema"`
+	Repository               string                     `json:"repository"`
+	IndexedHead              string                     `json:"indexed_head,omitempty"`
+	UnitDigest               string                     `json:"unit_digest,omitempty"`
+	CandidateManifestDigest  string                     `json:"candidate_manifest_digest,omitempty"`
+	CandidateControlRevision uint64                     `json:"candidate_control_revision,omitempty"`
+	PolicyDigest             string                     `json:"policy_digest,omitempty"`
+	Attempt                  ExtractionOperationAttempt `json:"attempt"`
+	DomainCount              int                        `json:"domain_count"`
+	Truncated                bool                       `json:"truncated"`
 }
 
 type operationRecorder struct {
@@ -274,6 +277,12 @@ func (operation *operationRecorder) bindPolicy(digest string) {
 func (operation *operationRecorder) bindManifest(digest string) {
 	operation.mu.Lock()
 	operation.report.CandidateManifestDigest = digest
+	operation.mu.Unlock()
+}
+
+func (operation *operationRecorder) bindControlRevision(revision uint64) {
+	operation.mu.Lock()
+	operation.report.CandidateControlRevision = revision
 	operation.mu.Unlock()
 }
 
@@ -436,7 +445,10 @@ func (domain *domainOperationRecorder) capture(
 	domain.mu.Unlock()
 }
 
-func (domain *domainOperationRecorder) captureCoverage(coverage sdk.Coverage) {
+func (domain *domainOperationRecorder) captureCoverage(
+	coverage sdk.Coverage,
+	includeExtractorDetails bool,
+) {
 	if domain == nil {
 		return
 	}
@@ -447,7 +459,50 @@ func (domain *domainOperationRecorder) captureCoverage(coverage sdk.Coverage) {
 		coverage.ExcludedSCIPDefinitions
 	domain.report.Counts.ExcludedSCIPOccurrences =
 		coverage.ExcludedSCIPOccurrences
+	if includeExtractorDetails {
+		domain.report.ExtractorDiagnostics = boundedDiagnosticCounters(
+			coverage.Diagnostics,
+		)
+	}
 	domain.mu.Unlock()
+}
+
+func boundedDiagnosticCounters(
+	counters []sdk.DiagnosticCounter,
+) []sdk.DiagnosticCounter {
+	const maxCounters = 32
+	if len(counters) == 0 || len(counters) > maxCounters {
+		return nil
+	}
+	result := make([]sdk.DiagnosticCounter, 0, len(counters))
+	seen := make(map[string]struct{}, len(counters))
+	for _, counter := range counters {
+		if counter.Value < 0 || !validDiagnosticCounterName(counter.Name) {
+			return nil
+		}
+		if _, duplicate := seen[counter.Name]; duplicate {
+			return nil
+		}
+		seen[counter.Name] = struct{}{}
+		result = append(result, counter)
+	}
+	return result
+}
+
+func validDiagnosticCounterName(name string) bool {
+	if len(name) == 0 || len(name) > 64 {
+		return false
+	}
+	for index, current := range []byte(name) {
+		lowercase := current >= 'a' && current <= 'z'
+		digit := index > 0 && current >= '0' && current <= '9'
+		underscore := index > 0 && current == '_'
+		if lowercase || digit || underscore {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (domain *domainOperationRecorder) complete(reason string) {
@@ -620,8 +675,9 @@ func encodeExtractionOperation(
 	minimal := extractionOperationMinimal{
 		Schema: report.Schema, Repository: report.Repository,
 		IndexedHead: report.IndexedHead, UnitDigest: report.UnitDigest,
-		CandidateManifestDigest: report.CandidateManifestDigest,
-		PolicyDigest:            report.PolicyDigest, Attempt: report.Attempt,
+		CandidateManifestDigest:  report.CandidateManifestDigest,
+		CandidateControlRevision: report.CandidateControlRevision,
+		PolicyDigest:             report.PolicyDigest, Attempt: report.Attempt,
 		DomainCount: len(report.Domains), Truncated: true,
 	}
 	data, err = json.Marshal(minimal)
@@ -644,6 +700,9 @@ func (worker *Worker) emitOperationReport(report ExtractionOperationReport) {
 			extractionOperationDomainsTotal.WithLabelValues(domain.Reason).Inc()
 		}
 	}
+	if !worker.Diagnostics && worker.OperationReports == nil {
+		return
+	}
 	data, err := encodeExtractionOperation(report)
 	if err != nil {
 		log.Printf("encode extraction operation: %v", err)
@@ -663,7 +722,7 @@ func (worker *Worker) emitOperationReport(report ExtractionOperationReport) {
 			}
 		}()
 		if err := sink(data); err != nil {
-			log.Printf("extraction operation sink: %v", err)
+			log.Printf("extraction operation sink error (%T)", err)
 		}
 	}()
 }

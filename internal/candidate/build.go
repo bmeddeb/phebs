@@ -18,6 +18,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
@@ -39,6 +40,20 @@ type Request struct {
 	Commit     string
 	Unit       *analysisunit.State
 	Policies   []Policy
+	// Metrics is an optional source-free observer. Build updates only scalar
+	// timings and logical spool-byte accounting; it never adds a filesystem
+	// scan or changes publication identity.
+	Metrics *BuildMetrics
+}
+
+// BuildMetrics contains bounded candidate-planning diagnostics. Durations and
+// peak spool bytes are advisory and never participate in canonical output.
+type BuildMetrics struct {
+	TreeDuration         time.Duration
+	SpoolingDuration     time.Duration
+	ExternalSortDuration time.Duration
+	PeakSpoolBytes       int64
+	currentSpoolBytes    int64
 }
 
 type treeRecord struct {
@@ -69,6 +84,8 @@ type spool struct {
 	bits          int
 	count         int
 	declaredBytes int64
+	contentBytes  int64
+	metrics       *BuildMetrics
 }
 
 // candidatePathHash is a package-private test seam. Production always uses
@@ -80,6 +97,9 @@ func productionCallerPathHash(value string) [sha256.Size]byte {
 }
 
 func Build(ctx context.Context, request Request) (Manifest, error) {
+	if request.Metrics != nil {
+		*request.Metrics = BuildMetrics{}
+	}
 	if !safeRepository(request.Repository) || !gitobj.IsObjectID(request.Commit) {
 		return Manifest{}, errors.New("candidate build identity is invalid")
 	}
@@ -183,6 +203,10 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 		supportingPaths = request.Unit.SupportingPaths
 	}
 
+	treeStarted := time.Time{}
+	if request.Metrics != nil {
+		treeStarted = time.Now()
+	}
 	err = walkTree(ctx, request.RepoDir, request.Commit, func(current treeRecord) error {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -328,6 +352,7 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 				currentSpool = &spool{
 					path:   filepath.Join(spoolDir, "root-"+prefix+".ndjson"),
 					prefix: prefix, bits: InitialCallerPrefixBits,
+					metrics: request.Metrics,
 				}
 				callerSpools[prefix] = currentSpool
 			}
@@ -337,6 +362,9 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 		}
 		return nil
 	})
+	if request.Metrics != nil {
+		request.Metrics.TreeDuration += time.Since(treeStarted)
+	}
 	if err != nil {
 		return Manifest{}, err
 	}
@@ -367,9 +395,16 @@ func Build(ctx context.Context, request Request) (Manifest, error) {
 		}
 		projection.Members = members
 	}
+	externalSortStarted := time.Time{}
+	if request.Metrics != nil {
+		externalSortStarted = time.Now()
+	}
 	callerLeaves, err := planCallerLeaves(
 		ctx, spoolDir, request.OutputDir, request.Repository, generationDigest, callerSpools,
 	)
+	if request.Metrics != nil {
+		request.Metrics.ExternalSortDuration += time.Since(externalSortStarted)
+	}
 	if err != nil {
 		return Manifest{}, err
 	}
@@ -1018,6 +1053,13 @@ func (packer *artifactPacker) finish() ([]Artifact, error) {
 }
 
 func appendSpoolRecord(destination *spool, record Record) error {
+	started := time.Time{}
+	if destination.metrics != nil {
+		started = time.Now()
+		defer func() {
+			destination.metrics.SpoolingDuration += time.Since(started)
+		}()
+	}
 	if destination.count == math.MaxInt ||
 		record.DeclaredBytes > math.MaxInt64-destination.declaredBytes {
 		return errors.New("caller spool summary overflows")
@@ -1042,6 +1084,9 @@ func appendSpoolRecord(destination *spool, record Record) error {
 	}
 	destination.count++
 	destination.declaredBytes += record.DeclaredBytes
+	written := int64(len(payload) + 1)
+	destination.contentBytes += written
+	destination.metrics.addSpoolBytes(written)
 	return nil
 }
 
@@ -1089,7 +1134,7 @@ func planCallerLeaves(
 		leaves = append(leaves, CallerLeaf{
 			Artifact: member, Prefix: current.prefix, PrefixBits: current.bits,
 		})
-		if err := os.Remove(current.path); err != nil {
+		if err := removeSpool(current); err != nil {
 			return nil, err
 		}
 	}
@@ -1146,10 +1191,12 @@ func splitSpool(ctx context.Context, spoolDir string, current *spool, leaves *[]
 	left := &spool{
 		path:   filepath.Join(spoolDir, "split-"+current.prefix+"0.ndjson"),
 		prefix: current.prefix + "0", bits: current.bits + 1,
+		metrics: current.metrics,
 	}
 	right := &spool{
 		path:   filepath.Join(spoolDir, "split-"+current.prefix+"1.ndjson"),
 		prefix: current.prefix + "1", bits: current.bits + 1,
+		metrics: current.metrics,
 	}
 	if err := forEachSpoolRecord(ctx, current.path, func(record Record) error {
 		hashBytes, err := hex.DecodeString(record.Hash)
@@ -1164,7 +1211,7 @@ func splitSpool(ctx context.Context, spoolDir string, current *spool, leaves *[]
 	}); err != nil {
 		return err
 	}
-	if err := os.Remove(current.path); err != nil {
+	if err := removeSpool(current); err != nil {
 		return err
 	}
 	for _, child := range []*spool{left, right} {
@@ -1175,6 +1222,38 @@ func splitSpool(ctx context.Context, spoolDir string, current *spool, leaves *[]
 			return err
 		}
 	}
+	return nil
+}
+
+func (metrics *BuildMetrics) addSpoolBytes(delta int64) {
+	if metrics == nil || delta <= 0 {
+		return
+	}
+	metrics.currentSpoolBytes += delta
+	if metrics.currentSpoolBytes > metrics.PeakSpoolBytes {
+		metrics.PeakSpoolBytes = metrics.currentSpoolBytes
+	}
+}
+
+func (metrics *BuildMetrics) removeSpoolBytes(bytes int64) {
+	if metrics == nil || bytes <= 0 {
+		return
+	}
+	metrics.currentSpoolBytes -= bytes
+	if metrics.currentSpoolBytes < 0 {
+		metrics.currentSpoolBytes = 0
+	}
+}
+
+func removeSpool(current *spool) error {
+	if current == nil {
+		return errors.New("candidate spool is nil")
+	}
+	if err := os.Remove(current.path); err != nil {
+		return err
+	}
+	current.metrics.removeSpoolBytes(current.contentBytes)
+	current.contentBytes = 0
 	return nil
 }
 

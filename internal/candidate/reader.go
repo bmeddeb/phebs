@@ -43,8 +43,58 @@ type analysisUnitView struct {
 	whole      bool
 }
 
+type PublicationPlaneDiagnostics struct {
+	Records        int
+	Members        int
+	CanonicalBytes int64
+	DeclaredBytes  int64
+}
+
+type PublicationDiagnostics struct {
+	Repository         PublicationPlaneDiagnostics
+	Local              PublicationPlaneDiagnostics
+	Caller             PublicationPlaneDiagnostics
+	TypedConfigured    int
+	TypedPresent       int
+	TypedDeclaredBytes int64
+}
+
 func (publication *Publication) Manifest() Manifest {
 	return cloneManifest(publication.manifest)
+}
+
+// Diagnostics summarizes already validated manifest control data without
+// cloning its bounded member arrays or opening any member bytes.
+func (publication *Publication) Diagnostics() PublicationDiagnostics {
+	if publication == nil {
+		return PublicationDiagnostics{}
+	}
+	result := PublicationDiagnostics{}
+	add := func(destination *PublicationPlaneDiagnostics, member Artifact) {
+		destination.Records += member.RecordCount
+		destination.Members++
+		destination.CanonicalBytes += member.ContentBytes
+		destination.DeclaredBytes += member.DeclaredBytes
+	}
+	for _, member := range publication.manifest.RepositoryMembers {
+		add(&result.Repository, member)
+	}
+	for _, projection := range publication.manifest.LocalProjections {
+		for _, member := range projection.Members {
+			add(&result.Local, member)
+		}
+	}
+	for _, leaf := range publication.manifest.CallerLeaves {
+		add(&result.Caller, leaf.Artifact)
+	}
+	result.TypedConfigured = len(publication.manifest.TypedInputs)
+	for _, input := range publication.manifest.TypedInputs {
+		if input.Present {
+			result.TypedPresent++
+			result.TypedDeclaredBytes += input.DeclaredBytes
+		}
+	}
+	return result
 }
 
 func (publication *Publication) State() State {

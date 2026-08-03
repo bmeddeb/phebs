@@ -89,6 +89,14 @@ sync:
 indexing:
   verbose: false
 
+# Bounded source-free pipeline receipts. Each component is independently
+# opt-in and restart-bound. extractor_details requires extraction.
+diagnostics:
+  jobs: false
+  candidates: false
+  extraction: false
+  extractor_details: false
+
 # Push webhooks (T7.4). Empty leaves POST /api/webhook disabled.
 webhook:
   # Verifies X-Hub-Signature-256 payload signatures (GitHub and Gitea).

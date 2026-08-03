@@ -85,6 +85,28 @@ type serviceEntry struct {
 	lineage  string // provisional lineage id derived from stubPath
 }
 
+type diagnosticStats struct {
+	generatedStubsRecognized int64
+	firstPassReads           int64
+	secondPassReads          int64
+	registrationsFound       int64
+	callExpressionsInspected int64
+	callSitesFound           int64
+	ambiguousCalls           int64
+}
+
+func (stats diagnosticStats) counters() []sdk.DiagnosticCounter {
+	return []sdk.DiagnosticCounter{
+		{Name: "generated_stubs_recognized", Value: stats.generatedStubsRecognized},
+		{Name: "first_pass_reads", Value: stats.firstPassReads},
+		{Name: "second_pass_reads", Value: stats.secondPassReads},
+		{Name: "registrations_found", Value: stats.registrationsFound},
+		{Name: "call_expressions_inspected", Value: stats.callExpressionsInspected},
+		{Name: "call_sites_found", Value: stats.callSitesFound},
+		{Name: "ambiguous_calls", Value: stats.ambiguousCalls},
+	}
+}
+
 // lineageID reuses the T12.3 provisional recipe: file-scoped, machine-visibly
 // provisional until T13.2 promotes cross-repository contract lineage.
 func lineageID(repo, stubPath string) string {
@@ -92,10 +114,19 @@ func lineageID(repo, stubPath string) string {
 	return "provisional_repo_path_v1_" + hex.EncodeToString(h[:])
 }
 
-func (grpcGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
-	coverage := sdk.Coverage{Protocols: []string{
+func (grpcGo) Extract(
+	ctx context.Context,
+	corpus sdk.Corpus,
+	emit sdk.Emit,
+) (coverage sdk.Coverage, result error) {
+	coverage = sdk.Coverage{Protocols: []string{
 		"grpc-go", "lineage-provisional-repo-path-v1", "resolution-syntactic-v1",
 	}}
+	var diagnostics *diagnosticStats
+	if sdk.DiagnosticCountersEnabled(ctx) {
+		diagnostics = &diagnosticStats{}
+		defer func() { coverage.Diagnostics = diagnostics.counters() }()
+	}
 	index := &serviceIndex{
 		registerFunc: map[string][]*serviceEntry{},
 		methods:      map[string][]*serviceEntry{},
@@ -110,6 +141,10 @@ func (grpcGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sd
 		blob, err := corpus.Read(ctx, relPath)
 		if err != nil {
 			return err
+		}
+		if diagnostics != nil {
+			diagnostics.generatedStubsRecognized++
+			diagnostics.firstPassReads++
 		}
 		if len(blob.Content) > maxGoSourceBytes {
 			unresolved, err := emitFileGap(relPath, blob, "source_too_large", emit)
@@ -138,12 +173,15 @@ func (grpcGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sd
 		if err != nil {
 			return err
 		}
+		if diagnostics != nil {
+			diagnostics.secondPassReads++
+		}
 		if len(blob.Content) > maxGoSourceBytes {
 			unresolved, err := emitFileGap(relPath, blob, "source_too_large", emit)
 			coverage.UnresolvedCount += unresolved
 			return err
 		}
-		unresolved, err := scanFile(relPath, blob, index, emit)
+		unresolved, err := scanFile(relPath, blob, index, emit, diagnostics)
 		if err != nil {
 			return err
 		}
@@ -289,7 +327,13 @@ func emitFileGap(relPath string, blob sdk.Blob, reason string, emit sdk.Emit) (i
 // scanFile emits registration and call-site facts for one non-stub Go file.
 // Parse failures are honest abstentions (testdata and templates legitimately
 // contain invalid Go); they count as unresolved.
-func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit) (int, error) {
+func scanFile(
+	relPath string,
+	blob sdk.Blob,
+	index *serviceIndex,
+	emit sdk.Emit,
+	diagnostics *diagnosticStats,
+) (int, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, relPath, blob.Content, parser.SkipObjectResolution)
 	if err != nil {
@@ -345,6 +389,9 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 		if !ok {
 			return true
 		}
+		if diagnostics != nil {
+			diagnostics.callExpressionsInspected++
+		}
 		switch fun := call.Fun.(type) {
 		case *ast.Ident:
 			entries := index.registerFunc[fun.Name]
@@ -352,7 +399,13 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 				entry := entries[0]
 				emitSpan("REGISTERS_GRPC_SERVICE", entry.fqn, entry.lineage,
 					"grpcgo-register-v1", "derived", registerDetail(fun.Name), call)
+				if diagnostics != nil {
+					diagnostics.registrationsFound++
+				}
 			} else if len(entries) > 1 {
+				if diagnostics != nil {
+					diagnostics.ambiguousCalls++
+				}
 				emitUnresolved("UNRESOLVED_GRPC_REGISTRATION", fun.Name,
 					"grpcgo-register-ambiguous-v1", ambiguousRegisterDetail(fun.Name, len(entries)), call)
 			}
@@ -363,9 +416,15 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 				entry := registers[0]
 				emitSpan("REGISTERS_GRPC_SERVICE", entry.fqn, entry.lineage,
 					"grpcgo-register-v1", "derived", registerDetail(name), call)
+				if diagnostics != nil {
+					diagnostics.registrationsFound++
+				}
 				return true
 			}
 			if len(registers) > 1 {
+				if diagnostics != nil {
+					diagnostics.ambiguousCalls++
+				}
 				emitUnresolved("UNRESOLVED_GRPC_REGISTRATION", name,
 					"grpcgo-register-ambiguous-v1", ambiguousRegisterDetail(name, len(registers)), call)
 				return true
@@ -377,6 +436,9 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 			if len(services) > 1 {
 				// Ambiguous method name across services: syntactic resolution
 				// abstains rather than guesses.
+				if diagnostics != nil {
+					diagnostics.ambiguousCalls++
+				}
 				emitUnresolved("UNRESOLVED_GRPC_CALL", name, "grpcgo-call-ambiguous-v1",
 					ambiguousCallDetail(name, len(services)), call)
 				return true
@@ -384,6 +446,9 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 			entry := services[0]
 			emitSpan("CALLS_OPERATION", "/"+entry.fqn+"/"+name, entry.lineage,
 				"grpcgo-call-v1", "heuristic", callDetail(name), call)
+			if diagnostics != nil {
+				diagnostics.callSitesFound++
+			}
 		}
 		return true
 	})

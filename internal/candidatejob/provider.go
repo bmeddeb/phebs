@@ -234,8 +234,9 @@ func (provider *Provider) resolve(
 		state.PolicyDigest != provider.policies.digest ||
 		state.GenerationDigest != generation ||
 		state.Manifest != candidate.ManifestName(request.Repository) {
-		return candidate.State{}, candidate.Expected{}, 0, errors.New(
-			"candidate publication pointer does not match requested indexed generation",
+		return candidate.State{}, candidate.Expected{}, 0, fmt.Errorf(
+			"%w: candidate publication pointer does not match requested indexed generation",
+			extract.ErrCandidateManifestStale,
 		)
 	}
 	if candidate.IsPublishing(provider.root, request.Repository) {
@@ -369,6 +370,29 @@ func (manifest *manifestAdapter) CorpusFileCount() int {
 	return manifest.publication.Corpus().RegularCount
 }
 
+func (manifest *manifestAdapter) CandidateManifestDiagnostics() extract.CandidateManifestDiagnostics {
+	if manifest == nil || manifest.publication == nil {
+		return extract.CandidateManifestDiagnostics{}
+	}
+	source := manifest.publication.Diagnostics()
+	convert := func(
+		input candidate.PublicationPlaneDiagnostics,
+	) extract.CandidateManifestPlaneDiagnostics {
+		return extract.CandidateManifestPlaneDiagnostics{
+			Records: input.Records, Members: input.Members,
+			CanonicalBytes: input.CanonicalBytes,
+			DeclaredBytes:  input.DeclaredBytes,
+		}
+	}
+	return extract.CandidateManifestDiagnostics{
+		Repository: convert(source.Repository),
+		Local:      convert(source.Local), Caller: convert(source.Caller),
+		TypedConfigured:    source.TypedConfigured,
+		TypedPresent:       source.TypedPresent,
+		TypedDeclaredBytes: source.TypedDeclaredBytes,
+	}
+}
+
 func (manifest *manifestAdapter) GitlinkBoundaries() extract.CandidateManifestGitlinks {
 	if manifest == nil || manifest.publication == nil {
 		return extract.CandidateManifestGitlinks{Count: -1}
@@ -498,5 +522,6 @@ var _ extract.CandidateManifestIdentityProvider = (*Provider)(nil)
 var _ extract.CandidateManifestGenerationProvider = (*Provider)(nil)
 var _ extract.CandidateManifest = (*manifestAdapter)(nil)
 var _ extract.CandidateManifestControl = (*manifestAdapter)(nil)
+var _ extract.CandidateManifestDiagnosticsProvider = (*manifestAdapter)(nil)
 var _ extract.CandidateCallerPlan = (*callerPlanAdapter)(nil)
 var _ extract.CandidateManifestControl = (*callerPlanAdapter)(nil)

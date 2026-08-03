@@ -100,13 +100,17 @@ func effectiveDomainSchedulingLimits(
 }
 
 type scheduledDomain struct {
-	index         int
-	extractor     registeredExtractor
-	scope         store.ExtractionScope
-	generation    store.ExtractionGenerationIdentity
-	previousRunID string
-	attemptedAt   time.Time
-	retryable     bool
+	index               int
+	extractor           registeredExtractor
+	scope               store.ExtractionScope
+	generation          store.ExtractionGenerationIdentity
+	previousRunID       string
+	previousDisposition store.DomainOutcomeDisposition
+	attemptedAt         time.Time
+	retryable           bool
+	diagnosticState     string
+	typedApplicable     bool
+	typedPresent        bool
 }
 
 func scheduleDomains(domains []scheduledDomain) {

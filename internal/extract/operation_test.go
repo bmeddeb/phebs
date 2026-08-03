@@ -26,6 +26,41 @@ type operationClock struct {
 	step time.Duration
 }
 
+func TestCandidatePointerDiagnosticResult(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{name: "current", want: "current"},
+		{name: "missing", err: store.ErrNotFound, want: "missing"},
+		{name: "publication in progress", err: candidatepkg.ErrPublishing, want: "stale"},
+		{name: "generation mismatch", err: ErrCandidateManifestStale, want: "stale"},
+		{name: "integrity error", err: errors.New("invalid pointer"), want: "error"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := candidatePointerDiagnosticResult(test.err); got != test.want {
+				t.Fatalf("result = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestSchedulerUnavailableTypedInputKeepsExplicitFalse(t *testing.T) {
+	report := schedulerDiagnostic{Domains: []schedulerDomainDiagnostic{{
+		Domain: "grpc-caller", State: "unavailable_prerequisite",
+		TypedInputPresent: diagnosticBool(true, false),
+	}}}
+	raw, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"typed_input_present":false`) {
+		t.Fatalf("scheduler diagnostic omitted false posture: %s", raw)
+	}
+}
+
 func (clock *operationClock) Now() time.Time {
 	clock.mu.Lock()
 	defer clock.mu.Unlock()
@@ -147,12 +182,20 @@ func TestExtractionOperationPublishedAccountingAndFakeClock(t *testing.T) {
 				corpus sdk.Corpus,
 				emit sdk.Emit,
 			) (sdk.Coverage, error) {
+				if !sdk.DiagnosticCountersEnabled(ctx) {
+					return sdk.Coverage{}, errors.New("diagnostic counter request missing")
+				}
 				if err := emitUnit(
 					ctx, corpus, emit, unitFact("same.proto", "service"),
 				); err != nil {
 					return sdk.Coverage{}, err
 				}
-				return sdk.Coverage{Protocols: []string{"protobuf"}}, nil
+				return sdk.Coverage{
+					Protocols: []string{"protobuf"},
+					Diagnostics: []sdk.DiagnosticCounter{{
+						Name: "generated_stubs_recognized", Value: 1,
+					}},
+				}, nil
 			},
 		}
 		sink, read := captureOperationReport(t)
@@ -162,7 +205,7 @@ func TestExtractionOperationPublishedAccountingAndFakeClock(t *testing.T) {
 			Repos: readyRepoGetter(repository), Evidence: evidence,
 			NewCorpus:  operationCorpusFactory{counters: counters},
 			Extractors: []Extractor{extractor},
-			Now:        clock.Now, OperationReports: sink,
+			Now:        clock.Now, OperationReports: sink, ExtractorDetails: true,
 		}
 		err := worker.Handle(context.Background(), store.Job{
 			ID: "extraction_job:operation", Kind: store.JobExtract,
@@ -204,6 +247,11 @@ func TestExtractionOperationPublishedAccountingAndFakeClock(t *testing.T) {
 		domain.ExtractorVersion != "v1" ||
 		domain.Reason != OperationReasonPublishedNonempty {
 		t.Fatalf("domain identity/reason = %+v", domain)
+	}
+	if len(domain.ExtractorDiagnostics) != 1 ||
+		domain.ExtractorDiagnostics[0].Name != "generated_stubs_recognized" ||
+		domain.ExtractorDiagnostics[0].Value != 1 {
+		t.Fatalf("extractor diagnostics = %+v", domain.ExtractorDiagnostics)
 	}
 	if domain.InventoryMS <= 0 || domain.OpenedSourceMS <= 0 ||
 		domain.ExtractorMS <= 0 || domain.StagingMS <= 0 ||
@@ -319,7 +367,7 @@ func TestExtractionOperationReportsFocusedExclusions(t *testing.T) {
 		ExcludedSCIPOccurrences: 9,
 	}
 	domain.capture(corpus, nil)
-	domain.captureCoverage(coverage)
+	domain.captureCoverage(coverage, false)
 
 	report := domain.snapshot()
 	if report.Counts.ExcludedSourceFiles != 3 ||
@@ -788,6 +836,26 @@ func TestExtractionOperationGenericReasonsAndDiagnosticRedaction(t *testing.T) {
 		if bytes.Contains(raw, []byte(forbidden)) {
 			t.Fatalf("report leaked raw diagnostic %q: %s", forbidden, raw)
 		}
+	}
+}
+
+func TestExtractorDiagnosticCountersAreBoundedAndSourceFree(t *testing.T) {
+	domain := &domainOperationRecorder{report: ExtractionOperationDomain{}}
+	domain.captureCoverage(sdk.Coverage{Diagnostics: []sdk.DiagnosticCounter{
+		{Name: "generated_stubs_recognized", Value: 2},
+		{Name: "call_sites_found", Value: 0},
+	}}, true)
+	report := domain.snapshot()
+	if len(report.ExtractorDiagnostics) != 2 ||
+		report.ExtractorDiagnostics[0].Name != "generated_stubs_recognized" {
+		t.Fatalf("diagnostics = %+v", report.ExtractorDiagnostics)
+	}
+
+	domain.captureCoverage(sdk.Coverage{Diagnostics: []sdk.DiagnosticCounter{
+		{Name: "private/source.go", Value: 1},
+	}}, true)
+	if got := domain.snapshot().ExtractorDiagnostics; len(got) != 0 {
+		t.Fatalf("unsafe diagnostics retained: %+v", got)
 	}
 }
 

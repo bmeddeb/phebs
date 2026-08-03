@@ -65,6 +65,26 @@ type kafkaGo struct {
 	domain string
 }
 
+type diagnosticStats struct {
+	supportedLibraryImports int64
+	producerCallsInspected  int64
+	consumerCallsInspected  int64
+	resolvedTopics          int64
+	dynamicTopicAbstentions int64
+	testFilesSkipped        int64
+}
+
+func (stats diagnosticStats) counters() []sdk.DiagnosticCounter {
+	return []sdk.DiagnosticCounter{
+		{Name: "supported_library_imports", Value: stats.supportedLibraryImports},
+		{Name: "producer_calls_inspected", Value: stats.producerCallsInspected},
+		{Name: "consumer_calls_inspected", Value: stats.consumerCallsInspected},
+		{Name: "resolved_topics", Value: stats.resolvedTopics},
+		{Name: "dynamic_topic_abstentions", Value: stats.dynamicTopicAbstentions},
+		{Name: "test_files_skipped", Value: stats.testFilesSkipped},
+	}
+}
+
 func (k kafkaGo) Domain() string  { return k.domain }
 func (k kafkaGo) Version() string { return version }
 
@@ -75,8 +95,17 @@ func (k kafkaGo) Candidate(filePath string) bool {
 	return strings.HasSuffix(filePath, ".go")
 }
 
-func (k kafkaGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
-	coverage := sdk.Coverage{Protocols: []string{"kafka"}}
+func (k kafkaGo) Extract(
+	ctx context.Context,
+	corpus sdk.Corpus,
+	emit sdk.Emit,
+) (coverage sdk.Coverage, result error) {
+	coverage = sdk.Coverage{Protocols: []string{"kafka"}}
+	var diagnostics *diagnosticStats
+	if sdk.DiagnosticCountersEnabled(ctx) {
+		diagnostics = &diagnosticStats{}
+		defer func() { coverage.Diagnostics = diagnostics.counters() }()
+	}
 	repo := corpus.RepoName()
 	unresolved := make(map[string]struct{})
 	err := corpus.WalkFiles(ctx, func(relPath string) error {
@@ -91,6 +120,9 @@ func (k kafkaGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 		// production topic evidence (the jaeger v1 ingester's invented
 		// "morekuzambu" topic froze this exclusion).
 		if strings.HasSuffix(relPath, "_test.go") {
+			if diagnostics != nil {
+				diagnostics.testFilesSkipped++
+			}
 			return nil
 		}
 		if len(blob.Content) > maxGoSourceBytes {
@@ -108,8 +140,18 @@ func (k kafkaGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 		if len(aliases) == 0 {
 			return nil
 		}
-		scan := &fileScan{fset: fset, aliases: aliases}
+		if diagnostics != nil {
+			diagnostics.supportedLibraryImports += int64(len(aliases))
+		}
+		scan := &fileScan{
+			fset: fset, aliases: aliases,
+			collectDiagnostics: diagnostics != nil,
+		}
 		ast.Inspect(file, scan.visit)
+		if diagnostics != nil {
+			diagnostics.producerCallsInspected += scan.producerCallsInspected
+			diagnostics.consumerCallsInspected += scan.consumerCallsInspected
+		}
 		if err := k.emitEvidenceGroups(emit, repo, relPath, blob, scan.evidence); err != nil {
 			return err
 		}
@@ -117,8 +159,18 @@ func (k kafkaGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) 
 			if row.plane != k.plane {
 				continue
 			}
+			if diagnostics != nil {
+				diagnostics.dynamicTopicAbstentions++
+			}
 			if err := k.emitUnresolved(emit, relPath, blob, row, unresolved); err != nil {
 				return err
+			}
+		}
+		for _, row := range scan.evidence {
+			if row.plane == k.plane {
+				if diagnostics != nil {
+					diagnostics.resolvedTopics++
+				}
 			}
 		}
 		return nil
@@ -422,10 +474,13 @@ func defaultAlias(path string) string {
 }
 
 type fileScan struct {
-	fset        *token.FileSet
-	aliases     map[string]libraryImport
-	evidence    []topicEvidence
-	abstentions []topicAbstention
+	fset                   *token.FileSet
+	aliases                map[string]libraryImport
+	evidence               []topicEvidence
+	abstentions            []topicAbstention
+	producerCallsInspected int64
+	consumerCallsInspected int64
+	collectDiagnostics     bool
 }
 
 func (s *fileScan) visit(node ast.Node) bool {
@@ -536,14 +591,25 @@ func (s *fileScan) visitCall(call *ast.CallExpr) {
 		return
 	}
 	if selector.Sel.Name == "WriteMessages" {
+		if s.collectDiagnostics {
+			s.producerCallsInspected++
+		}
 		s.writeMessages(call)
 	}
 	sarama, saramaImports := s.saramaImport()
 	if saramaImports == 0 {
 		return
 	}
+	if selector.Sel.Name == "SendMessage" || selector.Sel.Name == "SendMessages" {
+		if s.collectDiagnostics {
+			s.producerCallsInspected++
+		}
+	}
 	switch selector.Sel.Name {
 	case "Consume":
+		if s.collectDiagnostics {
+			s.consumerCallsInspected++
+		}
 		// Heuristic by design (KD9): the receiver's type is not resolvable
 		// without type-checking, so a three-argument Consume in a
 		// sarama-importing file is treated as sarama's
@@ -557,6 +623,9 @@ func (s *fileScan) visitCall(call *ast.CallExpr) {
 		}
 		s.consumeSlice(call.Args[1], sarama)
 	case "ConsumePartition":
+		if s.collectDiagnostics {
+			s.consumerCallsInspected++
+		}
 		if len(call.Args) != 3 {
 			return
 		}

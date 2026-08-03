@@ -59,6 +59,8 @@ type Worker struct {
 	Extractors       []Extractor
 	Now              func() time.Time
 	OperationReports ExtractionOperationSink
+	Diagnostics      bool
+	ExtractorDetails bool
 
 	// schedulingLimits is a package-test seam that may only tighten the
 	// production caps. Runtime configuration cannot expand these bounds.
@@ -109,10 +111,16 @@ func (w *Worker) Handle(
 	// path consumes no mirror or candidate bytes, so returning against the
 	// prior complete generation cannot publish stale work.
 	pointerStarted := now()
+	preflight := extractionPreflightDiagnostic{Repository: job.Target}
 	current, pointerIdentity, currentErr := w.candidateManifestCurrent(
-		ctx, job.Target, extractors, operation, job.Force,
+		ctx, job.Target, extractors, operation, job.Force, &preflight,
 	)
 	operation.addPointerWork(nonnegativeDuration(pointerStarted, now()))
+	preflight.StrictOpenRequired = currentErr == nil && !current
+	if preflight.PointerResult == "" {
+		preflight.PointerResult = candidatePointerDiagnosticResult(currentErr)
+	}
+	w.logDiagnostic("extraction preflight", preflight)
 	if currentErr != nil {
 		operation.completeRemaining(operationReason(currentErr))
 		return store.WithClass(store.ClassExtract,
@@ -227,6 +235,9 @@ func (w *Worker) Handle(
 				fmt.Errorf("extract %s: validate candidate manifest: %w", repo.Name, err))
 		}
 		operation.bindManifest(candidateManifest.Identity())
+		if control, ok := candidateManifest.(CandidateManifestControl); ok {
+			operation.bindControlRevision(control.CandidateControlRevision())
+		}
 		if _, production := w.Manifests.(CandidateManifestGenerationProvider); production {
 			control, ok := candidateManifest.(CandidateManifestControl)
 			if !ok || control.CandidateControlRevision() == 0 {
@@ -242,6 +253,18 @@ func (w *Worker) Handle(
 				return nil
 			}
 		}
+		if w.Diagnostics {
+			strictOpen := extractionStrictOpenDiagnostic{
+				Repository: repo.Name, StrictOpenMS: operation.report.StrictOpenMS,
+			}
+			if control, ok := candidateManifest.(CandidateManifestControl); ok {
+				strictOpen.ControlRevision = control.CandidateControlRevision()
+			}
+			if provider, ok := candidateManifest.(CandidateManifestDiagnosticsProvider); ok {
+				strictOpen.Manifest = provider.CandidateManifestDiagnostics()
+			}
+			w.logDiagnostic("extraction strict open", strictOpen)
+		}
 	}
 
 	// Resolve the durable state of every configured domain before starting any
@@ -252,6 +275,10 @@ func (w *Worker) Handle(
 	var terminalErrs []error
 	continuationProgress := false
 	scheduled := make([]scheduledDomain, 0, len(extractors))
+	var nonRunnable []schedulerDomainDiagnostic
+	if w.Diagnostics {
+		nonRunnable = make([]schedulerDomainDiagnostic, 0, len(extractors))
+	}
 	for index, ex := range extractors {
 		domainOperation := operation.domain(index)
 		if err := mirrorCtx.Err(); err != nil {
@@ -268,9 +295,14 @@ func (w *Worker) Handle(
 		if generationErr != nil {
 			domainOperation.complete(operationReason(generationErr))
 			disposition, controlFailure := classifyDomainOutcome(generationErr)
+			if w.Diagnostics {
+				nonRunnable = append(nonRunnable, schedulerDomainDiagnostic{
+					Domain: ex.domain, State: string(disposition),
+				})
+			}
 			if recordErr := w.recordDomainOutcome(
 				mirrorCtx, scope, generation, disposition, controlFailure, "",
-				domainOperation,
+				domainOperation, "",
 			); recordErr != nil {
 				if errors.Is(recordErr, errStaleRun) {
 					operation.completeRemaining(OperationReasonStale)
@@ -304,6 +336,18 @@ func (w *Worker) Handle(
 				(!job.Force ||
 					latest.Disposition != store.DomainOutcomePublished) {
 				domainOperation.complete(OperationReasonAlreadyCurrent)
+				if w.Diagnostics {
+					nonRunnable = append(nonRunnable, schedulerDomainDiagnostic{
+						Domain: ex.domain, State: OperationReasonAlreadyCurrent,
+						TypedInputPresent: diagnosticBool(
+							typedApplicable, typedPresent,
+						),
+					})
+				}
+				w.logOutcome(
+					scope, latest.Generation, latest.Disposition,
+					OperationReasonAlreadyCurrent, latest.Disposition,
+				)
 				continue
 			}
 			if store.SameExtractionGeneration(latest.Generation, generation) {
@@ -317,10 +361,19 @@ func (w *Worker) Handle(
 		}
 		if scope.UnitDigest != "" && typedApplicable && !typedPresent {
 			domainOperation.complete(OperationReasonTypedInputAbsent)
+			if w.Diagnostics {
+				nonRunnable = append(nonRunnable, schedulerDomainDiagnostic{
+					Domain: ex.domain,
+					State: string(
+						store.DomainOutcomeUnavailablePrerequisite,
+					),
+					TypedInputPresent: diagnosticBool(true, false),
+				})
+			}
 			if err := w.recordDomainOutcome(
 				mirrorCtx, scope, generation,
 				store.DomainOutcomeUnavailablePrerequisite, false, "",
-				domainOperation,
+				domainOperation, outcomeDisposition(exactLatest),
 			); err != nil {
 				if errors.Is(err, errStaleRun) {
 					operation.completeRemaining(OperationReasonStale)
@@ -335,6 +388,10 @@ func (w *Worker) Handle(
 
 		task := scheduledDomain{
 			index: index, extractor: ex, scope: scope, generation: generation,
+			previousDisposition: outcomeDisposition(exactLatest),
+			diagnosticState:     "never_attempted",
+			typedApplicable:     typedApplicable,
+			typedPresent:        typedPresent,
 		}
 		if exactLatest != nil &&
 			(exactLatest.Disposition == store.DomainOutcomeRetryableFailure ||
@@ -378,12 +435,17 @@ func (w *Worker) Handle(
 				task.previousRunID = attempt.RunID
 				task.retryable = true
 				task.attemptedAt = attempt.StartedAt
+				task.diagnosticState = "retryable"
+				if exactLatest.Disposition == store.DomainOutcomePublished {
+					task.diagnosticState = "forced_rerun"
+				}
 			}
 		}
 		scheduled = append(scheduled, task)
 	}
 	scheduleDomains(scheduled)
 	scheduleErr := validateScheduledDomains(scheduled, limits)
+	w.logSchedule(repo.Name, scheduled, nonRunnable, domainWorkDeadline)
 
 	startedDomains := 0
 	stagedRows := 0
@@ -392,6 +454,10 @@ func (w *Worker) Handle(
 	if scheduleErr != nil {
 		deferred = append(deferred, scheduled...)
 		domainErrs = append(domainErrs, scheduleErr)
+		w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
+			Repository: repo.Name, Trigger: "scheduler_identity",
+			Position: 1, Remaining: len(scheduled),
+		})
 	}
 	for position, task := range scheduled {
 		if scheduleErr != nil {
@@ -399,6 +465,10 @@ func (w *Worker) Handle(
 		}
 		if err := ctx.Err(); err != nil {
 			domainErrs = append(domainErrs, err)
+			w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
+				Repository: repo.Name, Trigger: "canceled",
+				Position: position + 1, Remaining: len(scheduled) - position,
+			})
 			break
 		}
 		remainingStageRows := limits.MaxStagedRows - stagedRows
@@ -406,6 +476,21 @@ func (w *Worker) Handle(
 			time.Until(domainWorkDeadline) < limits.MinimumStartBudget ||
 			startedDomains >= limits.MaxSerialDomains ||
 			remainingStageRows <= 0 {
+			trigger := "mirror_deadline"
+			switch {
+			case ctx.Err() != nil:
+				trigger = "canceled"
+			case mirrorCtx.Err() == nil && time.Until(domainWorkDeadline) < limits.MinimumStartBudget:
+				trigger = "insufficient_time"
+			case mirrorCtx.Err() == nil && startedDomains >= limits.MaxSerialDomains:
+				trigger = "max_serial_domains"
+			case mirrorCtx.Err() == nil && remainingStageRows <= 0:
+				trigger = "aggregate_staged_rows"
+			}
+			w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
+				Repository: repo.Name, Trigger: trigger,
+				Position: position + 1, Remaining: len(scheduled) - position,
+			})
 			deferred = append(deferred, scheduled[position:]...)
 			domainErrs = append(domainErrs, errExtractionAggregateBudget)
 			break
@@ -427,7 +512,7 @@ func (w *Worker) Handle(
 			domainCtx, task.extractor, task.scope, corpus,
 			candidateManifest, inventoryPolicy, boundaries,
 			task.generation, domainOperation, domainStagedRows,
-			limits.AbortTimeout, &attempt,
+			limits.AbortTimeout, &attempt, task.previousDisposition,
 		)
 		cancelDomain()
 		startedDomains++
@@ -460,7 +545,7 @@ func (w *Worker) Handle(
 			if recordErr := w.recordDomainOutcome(
 				mirrorCtx, task.scope, task.generation,
 				disposition, controlFailure, attempt.runID,
-				domainOperation,
+				domainOperation, task.previousDisposition,
 			); recordErr != nil {
 				if errors.Is(recordErr, errStaleRun) {
 					operation.completeRemaining(OperationReasonStale)
@@ -504,7 +589,7 @@ func (w *Worker) Handle(
 		if recordErr := w.recordDomainOutcome(
 			aggregateCtx, task.scope, task.generation,
 			store.DomainOutcomeRetryableFailure, false, task.previousRunID,
-			domainOperation,
+			domainOperation, task.previousDisposition,
 		); recordErr != nil {
 			if errors.Is(recordErr, errStaleRun) {
 				operation.completeRemaining(OperationReasonStale)
@@ -537,6 +622,7 @@ func (w *Worker) candidateManifestCurrent(
 	extractors []registeredExtractor,
 	operation *operationRecorder,
 	force bool,
+	preflight *extractionPreflightDiagnostic,
 ) (bool, CandidateManifestPointerIdentity, error) {
 	generationProvider, generationOK := w.Manifests.(CandidateManifestGenerationProvider)
 	legacyProvider, legacyOK := w.Manifests.(CandidateManifestIdentityProvider)
@@ -545,6 +631,7 @@ func (w *Worker) candidateManifestCurrent(
 	}
 	repo, err := w.Repos.GetRepo(ctx, target)
 	if errors.Is(err, store.ErrNotFound) {
+		preflight.PointerResult = "missing"
 		operation.completeRemaining(OperationReasonNotReady)
 		return true, CandidateManifestPointerIdentity{}, nil
 	}
@@ -558,6 +645,7 @@ func (w *Worker) candidateManifestCurrent(
 	}
 	operation.bindRepository(repo)
 	if repo.Deleting || repo.IndexedCommitHash == "" {
+		preflight.PointerResult = "missing"
 		operation.completeRemaining(OperationReasonNotReady)
 		return true, CandidateManifestPointerIdentity{}, nil
 	}
@@ -578,10 +666,12 @@ func (w *Worker) candidateManifestCurrent(
 			ctx, request,
 		)
 		if identityErr != nil {
+			preflight.PointerResult = candidatePointerDiagnosticResult(identityErr)
 			return false, CandidateManifestPointerIdentity{},
 				fmt.Errorf("candidate manifest identity: %w", identityErr)
 		}
 		operation.bindManifest(identity)
+		preflight.PointerResult = "current"
 		inventoryPolicy, policyErr :=
 			candidateManifestInventoryPolicy(identity)
 		if policyErr != nil {
@@ -610,7 +700,9 @@ func (w *Worker) candidateManifestCurrent(
 				last.Coverage.CandidateManifestDigest != identity {
 				return false, CandidateManifestPointerIdentity{}, nil
 			}
+			preflight.SettledDomains++
 		}
+		preflight.SettledComplete = true
 		return true, CandidateManifestPointerIdentity{}, nil
 	}
 	identity, err := generationProvider.CandidateManifestGeneration(
@@ -618,6 +710,7 @@ func (w *Worker) candidateManifestCurrent(
 		request,
 	)
 	if err != nil {
+		preflight.PointerResult = candidatePointerDiagnosticResult(err)
 		return false, CandidateManifestPointerIdentity{},
 			fmt.Errorf("candidate manifest identity: %w", err)
 	}
@@ -627,6 +720,9 @@ func (w *Worker) candidateManifestCurrent(
 		return false, CandidateManifestPointerIdentity{}, errors.New(
 			"candidate manifest pointer identity is incomplete")
 	}
+	preflight.PointerResult = "current"
+	preflight.ControlRevision = identity.ControlRevision
+	operation.bindControlRevision(identity.ControlRevision)
 	operation.bindManifest(identity.ManifestDigest)
 	inventoryPolicy, err := candidateManifestInventoryPolicy(
 		identity.ManifestDigest,
@@ -663,7 +759,13 @@ func (w *Worker) candidateManifestCurrent(
 				identity.ControlRevision {
 			return false, identity, nil
 		}
+		preflight.SettledDomains++
+		w.logOutcome(
+			scope, latest.Generation, latest.Disposition,
+			OperationReasonAlreadyCurrent, latest.Disposition,
+		)
 	}
+	preflight.SettledComplete = true
 	return true, identity, nil
 }
 
@@ -804,6 +906,15 @@ func classifyDomainOutcome(
 	}
 }
 
+func outcomeDisposition(
+	outcome *store.ExtractionDomainOutcome,
+) store.DomainOutcomeDisposition {
+	if outcome == nil {
+		return ""
+	}
+	return outcome.Disposition
+}
+
 func (w *Worker) recordDomainOutcome(
 	ctx context.Context,
 	scope store.ExtractionScope,
@@ -812,6 +923,7 @@ func (w *Worker) recordDomainOutcome(
 	controlFailure bool,
 	runID string,
 	operation *domainOperationRecorder,
+	previous store.DomainOutcomeDisposition,
 ) error {
 	outcome := store.ExtractionDomainOutcome{
 		Scope:                   scope,
@@ -832,6 +944,9 @@ func (w *Worker) recordDomainOutcome(
 		return fmt.Errorf("%s: record %s outcome: %w",
 			scope.Domain, disposition, err)
 	}
+	w.logOutcome(
+		scope, generation, disposition, operation.snapshot().Reason, previous,
+	)
 	return nil
 }
 
@@ -891,7 +1006,7 @@ func (w *Worker) recordManifestOpenOutcomes(
 			store.ComputeExtractionGenerationDigest(generation)
 		if err := w.recordDomainOutcome(
 			ctx, extractionScope(repo, ex.domain), generation,
-			disposition, controlFailure, "", domainOperation,
+			disposition, controlFailure, "", domainOperation, "",
 		); err != nil {
 			if errors.Is(err, errStaleRun) {
 				operation.completeRemaining(OperationReasonStale)
@@ -993,6 +1108,7 @@ func (w *Worker) runOne(
 	maxStagedRows int,
 	abortBudget time.Duration,
 	attempt *domainRunAttempt,
+	previous store.DomainOutcomeDisposition,
 ) (err error) {
 	if scope.Repository != corpus.RepoName() ||
 		scope.Commit != corpus.Commit() ||
@@ -1064,7 +1180,9 @@ func (w *Worker) runOne(
 		operation.completeIfEmpty(operationReason(err))
 	}()
 
-	log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
+	if w.Diagnostics {
+		log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
+	}
 	inventoryStarted := operation.started()
 	if candidateManifest == nil {
 		err = verifiedCorpus.Inventory(ctx, ex.extractor.Candidate)
@@ -1080,11 +1198,13 @@ func (w *Worker) runOne(
 		// members must never create staged evidence or attempt markers.
 		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
 	}
-	log.Printf(
-		"extract %s: %s inventory complete: files=%d candidates=%d",
-		corpus.RepoName(), ex.domain,
-		verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
-	)
+	if w.Diagnostics {
+		log.Printf(
+			"extract %s: %s inventory complete: files=%d candidates=%d",
+			corpus.RepoName(), ex.domain,
+			verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
+		)
+	}
 	if err := beginRun(); err != nil {
 		return err
 	}
@@ -1093,19 +1213,23 @@ func (w *Worker) runOne(
 		ctx, w.Evidence, run.ID, corpus.RepoName(), corpus.Commit(),
 		ex.version, verifiedCorpus, operation, maxStagedRows,
 	)
-	log.Printf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
+	if w.Diagnostics {
+		log.Printf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
+	}
 	extractorStarted := operation.started()
-	coverage, extractErr := callExtractor(ctx, ex.extractor, verifiedCorpus, sink.Emit)
+	extractorCtx := ctx
+	if w.ExtractorDetails {
+		extractorCtx = sdk.WithDiagnosticCounters(ctx)
+	}
+	coverage, extractErr := callExtractor(
+		extractorCtx, ex.extractor, verifiedCorpus, sink.Emit,
+	)
 	operation.addExtractor(operation.elapsed(extractorStarted))
-	operation.captureCoverage(coverage)
+	operation.captureCoverage(coverage, w.ExtractorDetails)
 	closeResources()
 	if extractErr != nil {
 		return fmt.Errorf("%s: extract: %w", ex.domain, extractErr)
 	}
-	log.Printf(
-		"extract %s: %s extractor complete: facts=%d",
-		corpus.RepoName(), ex.domain, sink.factCount,
-	)
 	if err := sink.Finish(); err != nil {
 		return fmt.Errorf("%s: stage: %w", ex.domain, err)
 	}
@@ -1162,7 +1286,17 @@ func (w *Worker) runOne(
 		return fmt.Errorf("%s: publish: %w", ex.domain, err)
 	}
 	operation.addPublication(operation.elapsed(publicationStarted))
-	log.Printf("extract %s: %s published", corpus.RepoName(), ex.domain)
+	if w.Diagnostics {
+		operation.capture(verifiedCorpus, sink)
+		w.logDiagnostic("extractor complete", operation.snapshot())
+	}
+	w.logOutcome(
+		scope, generation, store.DomainOutcomePublished,
+		operation.snapshot().Reason, previous,
+	)
+	if w.Diagnostics {
+		log.Printf("extract %s: %s published", corpus.RepoName(), ex.domain)
+	}
 	return nil
 }
 

@@ -9,6 +9,19 @@ package sdk
 
 import "context"
 
+type diagnosticContextKey struct{}
+
+// WithDiagnosticCounters asks an extractor to return its fixed aggregate
+// operational counters. The default context keeps that accounting disabled.
+func WithDiagnosticCounters(ctx context.Context) context.Context {
+	return context.WithValue(ctx, diagnosticContextKey{}, true)
+}
+
+func DiagnosticCountersEnabled(ctx context.Context) bool {
+	enabled, _ := ctx.Value(diagnosticContextKey{}).(bool)
+	return enabled
+}
+
 // Corpus is the only input capability given to an extractor. Implementations
 // enumerate regular files at one immutable repository commit and return
 // individually bounded blobs. Extraction is deliberately streaming: after a
@@ -125,6 +138,15 @@ type Coverage struct {
 	ExcludedSCIPDocuments   int
 	ExcludedSCIPDefinitions int
 	ExcludedSCIPOccurrences int
+	// Diagnostics are optional fixed aggregate counters for operational
+	// zero-result diagnosis. They are never persisted as coverage identity and
+	// must not contain paths, samples, or arbitrary extractor text.
+	Diagnostics []DiagnosticCounter
+}
+
+type DiagnosticCounter struct {
+	Name  string `json:"name"`
+	Value int64  `json:"value"`
 }
 
 // Emit streams one fact to the trusted worker harness. The fact must cite the

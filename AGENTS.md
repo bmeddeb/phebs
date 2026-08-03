@@ -115,9 +115,9 @@ product surfaces, coverage-certificate v3 and durable domain receipts, exact
 caller record/progress summaries, HTTP/MCP scope parity, and a neutral
 ordinary-worker `make dev` cohort. Its post-review closure preserves retained
 v1/v2 proof bytes, validates the real exact Caller Map envelope through MCP,
-and keeps failure, explicit-gap, and zero/empty states visible. No product
-ticket is currently scheduled;
-Epics 25–28 remain unscheduled drafts.
+and keeps failure, explicit-gap, and zero/empty states visible. T31.1 bounded
+pipeline diagnostics is the scheduled operational ticket; Epics 25–28 remain
+unscheduled drafts.
 A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.

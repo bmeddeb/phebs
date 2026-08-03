@@ -43,7 +43,8 @@ func (f fakeCorpus) Read(_ context.Context, path string) (sdk.Blob, error) {
 func runExtractor(t *testing.T, extractor sdk.Extractor, files map[string]string) ([]sdk.Fact, sdk.Coverage) {
 	t.Helper()
 	var facts []sdk.Fact
-	coverage, err := extractor.Extract(context.Background(), fakeCorpus{files: files}, func(fact sdk.Fact) error {
+	ctx := sdk.WithDiagnosticCounters(context.Background())
+	coverage, err := extractor.Extract(ctx, fakeCorpus{files: files}, func(fact sdk.Fact) error {
 		facts = append(facts, fact)
 		return nil
 	})
@@ -159,6 +160,12 @@ func assertRows(t *testing.T, label, content string, facts []sdk.Fact, want []wa
 func TestSaramaProducerPlane(t *testing.T) {
 	files := map[string]string{"svc/kafka.go": saramaFixture}
 	facts, coverage := runExtractor(t, NewProducer(), files)
+	if diagnosticValue(coverage, "supported_library_imports") != 1 ||
+		diagnosticValue(coverage, "producer_calls_inspected") == 0 ||
+		diagnosticValue(coverage, "resolved_topics") == 0 ||
+		diagnosticValue(coverage, "dynamic_topic_abstentions") == 0 {
+		t.Fatalf("diagnostics = %+v", coverage.Diagnostics)
+	}
 	assertRows(t, "producer", saramaFixture, facts, []wantRow{
 		{"PRODUCES_TO_TOPIC", "topic:orders-v1", "derived", `"orders-v1"`, `"bindings":["literal"]`},
 		{"PRODUCES_TO_TOPIC", "topic:audit-v2", "derived", `auditTopic`, `"bindings":["same-file-const"]`},
@@ -173,6 +180,15 @@ func TestSaramaProducerPlane(t *testing.T) {
 	if coverage.UnresolvedCount != 3 {
 		t.Fatalf("producer UnresolvedCount = %d, want 3", coverage.UnresolvedCount)
 	}
+}
+
+func diagnosticValue(coverage sdk.Coverage, name string) int64 {
+	for _, counter := range coverage.Diagnostics {
+		if counter.Name == name {
+			return counter.Value
+		}
+	}
+	return -1
 }
 
 func TestSaramaConsumerPlane(t *testing.T) {
@@ -240,6 +256,9 @@ func TestTestFilesAndForeignFilesExcluded(t *testing.T) {
 		facts, coverage := runExtractor(t, extractor, files)
 		if len(facts) != 0 || coverage.UnresolvedCount != 0 {
 			t.Fatalf("%s: expected zero rows, got %+v", extractor.Domain(), facts)
+		}
+		if diagnosticValue(coverage, "test_files_skipped") != 1 {
+			t.Fatalf("%s diagnostics = %+v", extractor.Domain(), coverage.Diagnostics)
 		}
 	}
 }

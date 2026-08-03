@@ -106,7 +106,8 @@ func fixtureCorpus() memoryCorpus {
 func collect(t *testing.T, corpus memoryCorpus) ([]sdk.Fact, sdk.Coverage) {
 	t.Helper()
 	var facts []sdk.Fact
-	cov, err := New().Extract(context.Background(), corpus, func(f sdk.Fact) error {
+	ctx := sdk.WithDiagnosticCounters(context.Background())
+	cov, err := New().Extract(ctx, corpus, func(f sdk.Fact) error {
 		facts = append(facts, f)
 		return nil
 	})
@@ -118,6 +119,14 @@ func collect(t *testing.T, corpus memoryCorpus) ([]sdk.Fact, sdk.Coverage) {
 
 func TestExtractResolvesCallsRegistrationsAndAbstains(t *testing.T) {
 	facts, cov := collect(t, fixtureCorpus())
+	if diagnosticValue(cov, "generated_stubs_recognized") != 2 ||
+		diagnosticValue(cov, "first_pass_reads") != 2 ||
+		diagnosticValue(cov, "second_pass_reads") != 2 ||
+		diagnosticValue(cov, "registrations_found") != 1 ||
+		diagnosticValue(cov, "call_sites_found") != 2 ||
+		diagnosticValue(cov, "ambiguous_calls") == 0 {
+		t.Fatalf("diagnostics = %+v", cov.Diagnostics)
+	}
 
 	got := map[string]sdk.Fact{}
 	for _, f := range facts {
@@ -163,6 +172,27 @@ func TestExtractResolvesCallsRegistrationsAndAbstains(t *testing.T) {
 		if err := json.Unmarshal([]byte(f.Assertion.Detail), &detail); err != nil {
 			t.Fatalf("detail is not valid JSON: %q", f.Assertion.Detail)
 		}
+	}
+}
+
+func diagnosticValue(coverage sdk.Coverage, name string) int64 {
+	for _, counter := range coverage.Diagnostics {
+		if counter.Name == name {
+			return counter.Value
+		}
+	}
+	return -1
+}
+
+func TestDiagnosticCountersAreExplicitOptIn(t *testing.T) {
+	coverage, err := New().Extract(
+		context.Background(), fixtureCorpus(), func(sdk.Fact) error { return nil },
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(coverage.Diagnostics) != 0 {
+		t.Fatalf("diagnostics enabled without request: %+v", coverage.Diagnostics)
 	}
 }
 

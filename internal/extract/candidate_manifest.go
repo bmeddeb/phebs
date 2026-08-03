@@ -15,6 +15,12 @@ import (
 
 const candidateManifestInventoryPrefix = "candidate-manifest-v4-"
 
+// ErrCandidateManifestStale identifies a persisted pointer for another
+// indexed generation without conflating it with malformed control state.
+var ErrCandidateManifestStale = errors.New(
+	"candidate manifest pointer is stale",
+)
+
 // CandidateManifestDomain identifies the extractor and candidate-policy
 // generation the publication must contain. Candidate policies remain
 // separate from the extractor's Candidate predicate: the publication plans
@@ -96,6 +102,29 @@ type CandidateManifestGitlinks struct {
 	Digest          string
 	SamplePaths     []string
 	SampleTruncated bool
+}
+
+type CandidateManifestPlaneDiagnostics struct {
+	Records        int   `json:"records"`
+	Members        int   `json:"members"`
+	CanonicalBytes int64 `json:"canonical_bytes"`
+	DeclaredBytes  int64 `json:"declared_bytes"`
+}
+
+type CandidateManifestDiagnostics struct {
+	Repository         CandidateManifestPlaneDiagnostics `json:"repository"`
+	Local              CandidateManifestPlaneDiagnostics `json:"local"`
+	Caller             CandidateManifestPlaneDiagnostics `json:"caller"`
+	TypedConfigured    int                               `json:"typed_configured"`
+	TypedPresent       int                               `json:"typed_present"`
+	TypedDeclaredBytes int64                             `json:"typed_declared_bytes"`
+}
+
+// CandidateManifestDiagnosticsProvider is an optional scalar-only projection
+// used after a strict open. It must summarize already-loaded manifest control
+// data without opening member bytes or exposing paths.
+type CandidateManifestDiagnosticsProvider interface {
+	CandidateManifestDiagnostics() CandidateManifestDiagnostics
 }
 
 // CandidateManifest is already fully and strictly validated when Open

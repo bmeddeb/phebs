@@ -160,7 +160,8 @@ func (c *memoryCorpus) Read(_ context.Context, filePath string) (sdk.Blob, error
 func extractFacts(t *testing.T, corpus *memoryCorpus) ([]sdk.Fact, sdk.Coverage) {
 	t.Helper()
 	var facts []sdk.Fact
-	coverage, err := thriftgo.New().Extract(context.Background(), corpus, func(fact sdk.Fact) error {
+	ctx := sdk.WithDiagnosticCounters(context.Background())
+	coverage, err := thriftgo.New().Extract(ctx, corpus, func(fact sdk.Fact) error {
 		facts = append(facts, fact)
 		return nil
 	})
@@ -190,6 +191,14 @@ func TestRegistrationAndCallResolution(t *testing.T) {
 		},
 	}
 	facts, coverage := extractFacts(t, corpus)
+	if diagnosticValue(coverage, "generated_files_recognized") != 1 ||
+		diagnosticValue(coverage, "first_pass_reads") != 2 ||
+		diagnosticValue(coverage, "second_pass_reads") != 1 ||
+		diagnosticValue(coverage, "processor_identities") != 1 ||
+		diagnosticValue(coverage, "registrations_found") != 1 ||
+		diagnosticValue(coverage, "call_sites_found") != 1 {
+		t.Fatalf("diagnostics = %+v", coverage.Diagnostics)
+	}
 
 	if got := factObjects(facts, "REGISTERS_THRIFT_SERVICE"); !reflect.DeepEqual(got, []string{"agent.Agent"}) {
 		t.Fatalf("registrations = %v", got)
@@ -219,6 +228,15 @@ func TestRegistrationAndCallResolution(t *testing.T) {
 			}
 		}
 	}
+}
+
+func diagnosticValue(coverage sdk.Coverage, name string) int64 {
+	for _, counter := range coverage.Diagnostics {
+		if counter.Name == name {
+			return counter.Value
+		}
+	}
+	return -1
 }
 
 func TestAmbiguousGeneratedMethodAbstains(t *testing.T) {

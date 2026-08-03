@@ -96,6 +96,32 @@ type methodEntry struct {
 	wire  string // IDL wire method name, e.g. "emitBatch"
 }
 
+type diagnosticStats struct {
+	generatedFilesRecognized int64
+	firstPassReads           int64
+	secondPassReads          int64
+	processorIdentities      int64
+	clientIdentities         int64
+	registrationsFound       int64
+	callExpressionsInspected int64
+	callSitesFound           int64
+	ambiguousCalls           int64
+}
+
+func (stats diagnosticStats) counters() []sdk.DiagnosticCounter {
+	return []sdk.DiagnosticCounter{
+		{Name: "generated_files_recognized", Value: stats.generatedFilesRecognized},
+		{Name: "first_pass_reads", Value: stats.firstPassReads},
+		{Name: "second_pass_reads", Value: stats.secondPassReads},
+		{Name: "processor_identities", Value: stats.processorIdentities},
+		{Name: "client_identities", Value: stats.clientIdentities},
+		{Name: "registrations_found", Value: stats.registrationsFound},
+		{Name: "call_expressions_inspected", Value: stats.callExpressionsInspected},
+		{Name: "call_sites_found", Value: stats.callSitesFound},
+		{Name: "ambiguous_calls", Value: stats.ambiguousCalls},
+	}
+}
+
 // lineageID reuses the T12.3 provisional recipe: file-scoped, machine-visibly
 // provisional until cross-repository contract lineage is promoted.
 func lineageID(repo, stubPath string) string {
@@ -103,11 +129,20 @@ func lineageID(repo, stubPath string) string {
 	return "provisional_repo_path_v1_" + hex.EncodeToString(h[:])
 }
 
-func (thriftGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (sdk.Coverage, error) {
-	coverage := sdk.Coverage{Protocols: []string{
+func (thriftGo) Extract(
+	ctx context.Context,
+	corpus sdk.Corpus,
+	emit sdk.Emit,
+) (coverage sdk.Coverage, result error) {
+	coverage = sdk.Coverage{Protocols: []string{
 		"generated-name-anchored-v1", "lineage-provisional-repo-path-v1",
 		"resolution-syntactic-v1", "thrift-go",
 	}}
+	var diagnostics *diagnosticStats
+	if sdk.DiagnosticCountersEnabled(ctx) {
+		diagnostics = &diagnosticStats{}
+		defer func() { coverage.Diagnostics = diagnostics.counters() }()
+	}
 	index := &serviceIndex{
 		processorCtor: map[string][]*serviceEntry{},
 		methods:       map[string][]methodEntry{},
@@ -126,6 +161,9 @@ func (thriftGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (
 		if err != nil {
 			return err
 		}
+		if diagnostics != nil {
+			diagnostics.firstPassReads++
+		}
 		if len(blob.Content) > maxGoSourceBytes {
 			index.skip[relPath] = true
 			unresolved, err := emitFileGap(relPath, blob, "source_too_large", emit)
@@ -134,6 +172,9 @@ func (thriftGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (
 		}
 		if !isGeneratedThrift(blob.Content) {
 			return nil
+		}
+		if diagnostics != nil {
+			diagnostics.generatedFilesRecognized++
 		}
 		index.skip[relPath] = true
 		if err := indexGenerated(corpus.RepoName(), relPath, blob.Content, index); err != nil {
@@ -148,6 +189,14 @@ func (thriftGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (
 	if err != nil {
 		return coverage, err
 	}
+	if diagnostics != nil {
+		for _, identities := range index.processorCtor {
+			diagnostics.processorIdentities += int64(len(identities))
+		}
+		for _, identities := range index.methods {
+			diagnostics.clientIdentities += int64(len(identities))
+		}
+	}
 
 	// Pass 2: every non-generated Go file is re-read and scanned for
 	// registrations and call sites, citing the pass-2 blob.
@@ -159,7 +208,10 @@ func (thriftGo) Extract(ctx context.Context, corpus sdk.Corpus, emit sdk.Emit) (
 		if err != nil {
 			return err
 		}
-		unresolved, err := scanFile(relPath, blob, index, emit)
+		if diagnostics != nil {
+			diagnostics.secondPassReads++
+		}
+		unresolved, err := scanFile(relPath, blob, index, emit, diagnostics)
 		if err != nil {
 			return err
 		}
@@ -381,7 +433,13 @@ func emitFileGap(relPath string, blob sdk.Blob, reason string, emit sdk.Emit) (i
 // file. Parse failures are honest abstentions (testdata and templates
 // legitimately contain invalid Go); they count as unresolved. Oversized
 // files were already gapped in pass 1.
-func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit) (int, error) {
+func scanFile(
+	relPath string,
+	blob sdk.Blob,
+	index *serviceIndex,
+	emit sdk.Emit,
+	diagnostics *diagnosticStats,
+) (int, error) {
 	if len(blob.Content) > maxGoSourceBytes {
 		return emitFileGap(relPath, blob, "source_too_large", emit)
 	}
@@ -439,6 +497,9 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 		if !ok {
 			return true
 		}
+		if diagnostics != nil {
+			diagnostics.callExpressionsInspected++
+		}
 		callee := ""
 		switch fun := call.Fun.(type) {
 		case *ast.Ident:
@@ -453,7 +514,13 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 				entry := ctors[0]
 				emitSpan("REGISTERS_THRIFT_SERVICE", entry.fqn(), entry.lineage,
 					"thriftgo-register-v1", "derived", registerDetail(callee), call)
+				if diagnostics != nil {
+					diagnostics.registrationsFound++
+				}
 			} else {
+				if diagnostics != nil {
+					diagnostics.ambiguousCalls++
+				}
 				emitUnresolved("UNRESOLVED_THRIFT_REGISTRATION", callee,
 					"thriftgo-register-ambiguous-v1", ambiguousRegisterDetail(callee, len(ctors)), call)
 			}
@@ -472,11 +539,17 @@ func scanFile(relPath string, blob sdk.Blob, index *serviceIndex, emit sdk.Emit)
 			emitSpan("CALLS_OPERATION", "/"+method.entry.fqn()+"/"+method.wire,
 				method.entry.lineage, "thriftgo-call-v1", "heuristic",
 				callDetail(method.wire, callee), call)
+			if diagnostics != nil {
+				diagnostics.callSitesFound++
+			}
 		default:
 			// Ambiguous generated method name across services: syntactic
 			// resolution abstains rather than guesses. Emit one unresolved
 			// candidate edge per canonical operation so downstream queries do
 			// not need to reproduce the compiler's Go-name transformation.
+			if diagnostics != nil {
+				diagnostics.ambiguousCalls++
+			}
 			candidates := make(map[string]struct{}, len(methods))
 			for _, method := range methods {
 				operation := "/" + method.entry.fqn() + "/" + method.wire

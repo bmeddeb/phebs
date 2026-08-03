@@ -25,6 +25,11 @@ auth:
   api_key: secret
 indexing:
   verbose: true
+diagnostics:
+  jobs: true
+  candidates: true
+  extraction: true
+  extractor_details: true
 connections:
   - name: gh-me
     type: github
@@ -611,6 +616,41 @@ func TestIndexingVerboseIsExplicitOptIn(t *testing.T) {
 	}
 	if !cfg.Indexing.Verbose {
 		t.Fatal("explicit verbose indexing opt-in was ignored")
+	}
+}
+
+func TestDiagnosticsAreComponentSpecificExplicitOptIns(t *testing.T) {
+	cfg, err := Parse([]byte("{}"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Diagnostics.Jobs || cfg.Diagnostics.Candidates ||
+		cfg.Diagnostics.Extraction || cfg.Diagnostics.ExtractorDetails {
+		t.Fatalf("diagnostics enabled by default: %+v", cfg.Diagnostics)
+	}
+
+	cfg, err = Parse([]byte(`diagnostics:
+  jobs: true
+  candidates: true
+  extraction: true
+  extractor_details: true
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.Diagnostics.Jobs || !cfg.Diagnostics.Candidates ||
+		!cfg.Diagnostics.Extraction || !cfg.Diagnostics.ExtractorDetails {
+		t.Fatalf("diagnostics opt-ins were ignored: %+v", cfg.Diagnostics)
+	}
+}
+
+func TestExtractorDetailsRequireExtractionDiagnostics(t *testing.T) {
+	_, err := Parse([]byte("diagnostics:\n  extractor_details: true\n"))
+	if err == nil || !strings.Contains(
+		err.Error(),
+		"diagnostics.extractor_details requires diagnostics.extraction",
+	) {
+		t.Fatalf("error = %v", err)
 	}
 }
 

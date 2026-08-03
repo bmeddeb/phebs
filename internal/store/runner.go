@@ -24,6 +24,9 @@ type Runner struct {
 	MaxAttempts    int                                         // executions before a job is failed; default 3
 	Backoff        func(err error, attempts int) time.Duration // default DefaultBackoff (per-class)
 	Who            string                                      // claim owner label; default host-pid
+
+	Diagnostics      bool
+	LifecycleReports JobLifecycleSink
 }
 
 func (r *Runner) defaults() {
@@ -73,6 +76,7 @@ func (r *Runner) Run(ctx context.Context) {
 				}
 				break // drained, canceled, or store error; next poll retries
 			}
+			r.emitLifecycle("claimed", *job, 0, "claimed", nil)
 			r.execute(ctx, *job)
 		}
 	}
@@ -80,9 +84,11 @@ func (r *Runner) Run(ctx context.Context) {
 
 func (r *Runner) execute(ctx context.Context, job Job) {
 	if ctx.Err() != nil {
-		r.persist(job, "release claimed job", func(writeCtx context.Context) error {
+		if r.persist(job, "release claimed job", func(writeCtx context.Context) error {
 			return r.Store.ReleaseJob(writeCtx, job, "runner shutting down")
-		})
+		}) {
+			r.emitLifecycle("released", job, 0, "canceled", nil)
+		}
 		return
 	}
 	if !r.persist(job, "start job", func(writeCtx context.Context) error {
@@ -90,10 +96,13 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 	}) {
 		return
 	}
+	r.emitLifecycle("started", job, 0, "running", nil)
 	if ctx.Err() != nil {
-		r.persist(job, "release started job", func(writeCtx context.Context) error {
+		if r.persist(job, "release started job", func(writeCtx context.Context) error {
 			return r.Store.ReleaseJob(writeCtx, job, "runner shutting down")
-		})
+		}) {
+			r.emitLifecycle("released", job, 0, "canceled", nil)
+		}
 		return
 	}
 
@@ -124,7 +133,15 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}
 	}()
 
+	handleStarted := time.Time{}
+	if r.Diagnostics || r.LifecycleReports != nil {
+		handleStarted = time.Now()
+	}
 	err := r.Handle(handleCtx, job)
+	handleDuration := time.Duration(0)
+	if !handleStarted.IsZero() {
+		handleDuration = time.Since(handleStarted)
+	}
 	stopHandle()
 	hbErr := <-hbDone
 	if hbErr != nil {
@@ -148,12 +165,14 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 			return r.Store.SetJobStatus(writeCtx, job, StatusDone, "")
 		}) {
 			recordJob(r.Kind, "done")
+			r.emitLifecycle("done", job, handleDuration, "success", nil)
 		}
 	case ctx.Err() != nil:
 		if r.persist(job, "release canceled job", func(writeCtx context.Context) error {
 			return r.Store.ReleaseJob(writeCtx, job, ctx.Err().Error())
 		}) {
 			recordJob(r.Kind, "released")
+			r.emitLifecycle("released", job, handleDuration, "canceled", nil)
 		}
 	case IsTerminal(err):
 		log.Printf("runner %s: %s %s refused terminally: %v",
@@ -170,12 +189,14 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}) {
 			recordJob(r.Kind, "failed")
 			recordJobError(r.Kind, err)
+			r.emitLifecycle("failed", job, handleDuration, "terminal", nil)
 		}
 	case IsYield(err):
 		if r.persist(job, "yield job", func(writeCtx context.Context) error {
 			return r.Store.ReleaseJob(writeCtx, job, err.Error())
 		}) {
 			recordJob(r.Kind, "deferred")
+			r.emitLifecycle("yielded", job, handleDuration, "yield", nil)
 		}
 	case job.Attempts+1 >= r.MaxAttempts:
 		log.Printf("runner %s: %s %s failed permanently: %v", r.Who, job.Kind, job.Target, err)
@@ -191,13 +212,19 @@ func (r *Runner) execute(ctx context.Context, job Job) {
 		}) {
 			recordJob(r.Kind, "failed")
 			recordJobError(r.Kind, err)
+			r.emitLifecycle("failed", job, handleDuration, "attempts_exhausted", nil)
 		}
 	default:
+		var nextNotBefore time.Time
 		if r.persist(job, "requeue job", func(writeCtx context.Context) error {
-			return r.Store.RequeueJob(writeCtx, job, err.Error(), time.Now().UTC().Add(r.Backoff(err, job.Attempts+1)))
+			nextNotBefore = time.Now().UTC().Add(
+				r.Backoff(err, job.Attempts+1),
+			)
+			return r.Store.RequeueJob(writeCtx, job, err.Error(), nextNotBefore)
 		}) {
 			recordJob(r.Kind, "requeued")
 			recordJobError(r.Kind, err)
+			r.emitLifecycle("requeued", job, handleDuration, "retryable", &nextNotBefore)
 		}
 	}
 }

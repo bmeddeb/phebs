@@ -28,6 +28,7 @@ type Config struct {
 	Auth         Auth         `yaml:"auth"`
 	Sync         Sync         `yaml:"sync"`
 	Indexing     Indexing     `yaml:"indexing"`
+	Diagnostics  Diagnostics  `yaml:"diagnostics"`
 	Webhook      Webhook      `yaml:"webhook"`
 	Audit        Audit        `yaml:"audit"`
 	Analytics    Analytics    `yaml:"analytics"`
@@ -110,6 +111,16 @@ type Indexing struct {
 	// Verbose forwards child stdout/stderr and parent phase transitions to the
 	// phebs log. It is disabled by default because large builds can be noisy.
 	Verbose bool `yaml:"verbose"`
+}
+
+// Diagnostics controls bounded, source-free operational receipts. These
+// switches are restart-bound and independent of indexing.verbose because the
+// latter may forward substantial child-process output.
+type Diagnostics struct {
+	Jobs             bool `yaml:"jobs"`
+	Candidates       bool `yaml:"candidates"`
+	Extraction       bool `yaml:"extraction"`
+	ExtractorDetails bool `yaml:"extractor_details"`
 }
 
 // Webhook configures POST /api/webhook (T7.4).
@@ -504,6 +515,11 @@ func connectionLines(doc *yaml.Node) []int {
 
 func (c *Config) validate(lines []int) error {
 	var errs []error
+	if c.Diagnostics.ExtractorDetails && !c.Diagnostics.Extraction {
+		errs = append(errs, errors.New(
+			"diagnostics.extractor_details requires diagnostics.extraction",
+		))
+	}
 	fail := func(i int, format string, args ...any) {
 		line := 0
 		if i < len(lines) {

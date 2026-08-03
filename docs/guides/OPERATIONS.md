@@ -1162,13 +1162,63 @@ child output is discarded. Verbose mode does not change the indexed corpus,
 timeouts, retries, process isolation, or shard publication. Disable it again
 after diagnosis when indexing a noisy large repository.
 
+#### Pipeline diagnostics
+
+Candidate planning, extraction, resolver work, and caller-leaf turns use
+separate bounded diagnostics from the zoekt child. Enable only the components
+needed for a diagnosis and restart phebs:
+
+```yaml
+diagnostics:
+  jobs: true
+  candidates: true
+  extraction: true
+  extractor_details: true
+```
+
+`jobs` emits source-free JSON transitions for every durable queue with job
+identity, kind, target, attempt, eligibility-relative queue wait, handler
+duration, generic outcome, and the exact next retry gate when applicable.
+`candidates` logs the successful index handoff and one operation receipt per
+candidate job. The receipt distinguishes warm no-op, cold reuse, marker
+recovery, repair, rebuild, and not-ready decisions; separates mirror wait,
+tree walk, spooling/external sort, filesystem publication, control
+fingerprint, database transition, and marker cleanup; and reports only
+aggregate plane records/members/canonical bytes, declared source bytes,
+typed-input posture, and logical peak spool bytes. A warm no-op deliberately
+sets `manifest_summary_present=false` rather than reopening control or member
+bytes merely for logging.
+
+`extraction` emits pointer and strict-open preflight (including the observed
+settled-domain prefix and an explicit flag saying whether that count is
+complete), the ordered durable
+scheduler posture, exact deferral triggers, durable outcome transitions, and
+the existing capped operation receipt. Domain receipts include corpus and
+candidate files, open attempts/files/bytes, facts, unresolved rows, staged
+rows, phase timings, and the frozen limits that governed the turn. Enabling
+`extractor_details` adds at most 32 fixed nonnegative counters per domain;
+current gRPC/Thrift/Kafka packs report generated-input/pass/call/import/topic
+and abstention aggregates suitable for diagnosing a published-empty result.
+
+Every receipt is advisory and JSON-bounded. Reporting failure cannot change a
+job, retry, evidence publication, or candidate publication. Source paths,
+source samples, blob content, handler error text, credentials, and child
+stdout/stderr are excluded. Candidate spool peak accounting is maintained
+inline as files grow and retire; it performs no directory scan. Disable the
+switches after diagnosis to remove their formatting and counter overhead.
+Extraction phase, scheduler, completion, and outcome lines use the synchronous
+process logger while the repository mirror lock is held, so a slow log
+destination can extend that diagnostic turn. Keep the destination draining
+and enable these switches only for a bounded investigation.
+
 #### Analysis-unit state and rebuilds
 
-At startup, each configured `analysis_units` entry produces one
-repository-prefixed diagnostic containing the unit name, stable digest,
-primary/supporting path lists, and the exact search and typed-index postures.
-These are operator metadata only; no source, blob bytes, line excerpts, or
-credentials are logged. The configuration guide owns the
+At startup, phebs always emits one source-free analysis-unit posture receipt
+per configured entry, or one whole-repository receipt when none is configured.
+It contains the unit name and stable digest, primary/supporting path **counts**,
+the exact search and typed-index postures, enabled extractor domains, and a
+configuration recommendation. Selected path strings are intentionally not
+logged. The configuration guide owns the
 [strict schema and limits](./CONFIGURATION.md#analysis-units).
 
 The committed projection is available on authenticated
