@@ -8,12 +8,21 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 
+	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
 // certificateSchemaVersion names the T13.3 per-answer coverage certificate.
 const certificateSchemaVersion = "coverage-certificate-v3"
+
+// certificateMaxCorpusCensus bounds a receipt's corpus census. A
+// candidate-manifest run records the manifest's corpus census, which the
+// writer bounds by the candidate corpus ceiling rather than the walked
+// per-run corpus limit frozen into the receipt's own limits block, so the
+// receipt-side sanity bound must admit the larger writer contract.
+const certificateMaxCorpusCensus = candidatepkg.MaxCorpusEntries
 
 const certificateDomainSnapshotAttempts = 3
 
@@ -52,6 +61,55 @@ type CertificateRepository struct {
 	AnalysisUnit  *CertificateAnalysisUnit `json:"analysis_unit,omitempty"`
 	SCIPIndex     string                   `json:"scip_index"` // present | absent | unknown
 	Runs          []CertificateRun         `json:"runs"`
+
+	// legacyScopeShape is set only while decoding a retained v1 certificate
+	// whose repository entries predate scope_posture (added at T30.5 with the
+	// v2 bump). Keeping that wire shape lets immutable v1 proof bundles
+	// round-trip byte-for-byte; newly built v3 certificates always emit the
+	// posture.
+	legacyScopeShape bool
+}
+
+// MarshalJSON preserves the shipped v1 repository shape when a retained proof
+// bundle is decoded, while keeping scope_posture explicit for newly built
+// certificates.
+func (repository CertificateRepository) MarshalJSON() ([]byte, error) {
+	type current CertificateRepository
+	if !repository.legacyScopeShape {
+		return json.Marshal(current(repository))
+	}
+	return json.Marshal(struct {
+		Repository    string           `json:"repository"`
+		IndexedCommit string           `json:"indexed_commit,omitempty"`
+		SCIPIndex     string           `json:"scip_index"`
+		Runs          []CertificateRun `json:"runs"`
+	}{
+		Repository:    repository.Repository,
+		IndexedCommit: repository.IndexedCommit,
+		SCIPIndex:     repository.SCIPIndex,
+		Runs:          repository.Runs,
+	})
+}
+
+// UnmarshalJSON recognizes only the complete v1 omission. A repository entry
+// carrying any post-v1 field without scope_posture remains a non-canonical
+// current shape and is rejected by the caller's byte-exact round-trip check,
+// because the legacy marshal drops those fields.
+func (repository *CertificateRepository) UnmarshalJSON(data []byte) error {
+	type current CertificateRepository
+	var decoded current
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	var presence struct {
+		ScopePosture *json.RawMessage `json:"scope_posture"`
+	}
+	if err := json.Unmarshal(data, &presence); err != nil {
+		return err
+	}
+	*repository = CertificateRepository(decoded)
+	repository.legacyScopeShape = presence.ScopePosture == nil
+	return nil
 }
 
 // CertificateAnalysisUnit is the canonical public scope projection. It binds
@@ -111,13 +169,59 @@ type CertificateRun struct {
 // it enters a certificate; the encoder's defensive schema-only fallback stays
 // explicit rather than rendering zero-valued work as an exact receipt.
 type CertificateDomainOutcome struct {
-	Disposition             store.DomainOutcomeDisposition  `json:"disposition"`
-	GenerationDigest        string                          `json:"generation_digest"`
-	Extractor               string                          `json:"extractor"`
-	CandidateControlFailure bool                            `json:"candidate_control_failure,omitempty"`
-	ReceiptSchema           string                          `json:"receipt_schema"`
-	ReceiptState            string                          `json:"receipt_state"` // full | schema_only
-	Receipt                 *ExtractionDomainOutcomeReceipt `json:"receipt,omitempty"`
+	Disposition             store.DomainOutcomeDisposition `json:"disposition"`
+	GenerationDigest        string                         `json:"generation_digest"`
+	Extractor               string                         `json:"extractor"`
+	CandidateControlFailure bool                           `json:"candidate_control_failure,omitempty"`
+	ReceiptSchema           string                         `json:"receipt_schema"`
+	// ReceiptState is full | schema_only | legacy_exclusion_shape. The legacy
+	// state names a retained pre-T30.6e receipt whose excluded-source/SCIP
+	// counters are absent from the wire shape; its zero-filled Go values are
+	// a decode artifact, never a certificate claim.
+	ReceiptState string `json:"receipt_state"`
+	// Receipt carries the validated stored receipt bytes verbatim through a
+	// typed wrapper, so retained legacy bytes survive while HTTP OpenAPI keeps
+	// the concrete receipt object schema. For a current-shape receipt the raw
+	// bytes equal its canonical typed re-marshal.
+	Receipt *CertificateOutcomeReceipt `json:"receipt,omitempty"`
+}
+
+// CertificateOutcomeReceipt preserves an immutable receipt's original bytes
+// while retaining the exported typed fields used by generated HTTP schemas.
+// The private raw mirror is populated only by a validated projection or JSON
+// decode and is never an independent source of receipt semantics.
+type CertificateOutcomeReceipt struct {
+	ExtractionDomainOutcomeReceipt
+	raw json.RawMessage
+}
+
+func (receipt CertificateOutcomeReceipt) MarshalJSON() ([]byte, error) {
+	return receipt.canonicalBytes()
+}
+
+func (receipt *CertificateOutcomeReceipt) UnmarshalJSON(data []byte) error {
+	if receipt == nil {
+		return errors.New("certificate outcome receipt is nil")
+	}
+	var decoded ExtractionDomainOutcomeReceipt
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*receipt = CertificateOutcomeReceipt{
+		ExtractionDomainOutcomeReceipt: decoded,
+		raw:                            append(json.RawMessage(nil), data...),
+	}
+	return nil
+}
+
+func (receipt CertificateOutcomeReceipt) canonicalBytes() ([]byte, error) {
+	if len(receipt.raw) != 0 {
+		if !json.Valid(receipt.raw) {
+			return nil, errors.New("certificate outcome receipt raw JSON is invalid")
+		}
+		return append([]byte(nil), receipt.raw...), nil
+	}
+	return json.Marshal(receipt.ExtractionDomainOutcomeReceipt)
 }
 
 // CertificateCandidateScope discloses the exact candidate-manifest projection
@@ -218,19 +322,100 @@ func (scope *CertificateCandidateScope) UnmarshalJSON(data []byte) error {
 }
 
 // ValidateCanonicalShape applies schema-version rules that cannot be
-// expressed by Go's JSON tags alone. Retained v1/v2 certificates may carry
-// the old candidate-scope shape. V3 must disclose every universal exclusion
-// counter, and its two source-lane counters are required exactly for a
+// expressed by Go's JSON tags alone. V1 predates repository scope and
+// candidate projections. V2 requires repository scope but retains the old
+// candidate-scope shape. V3 must disclose every universal exclusion counter,
+// and its two source-lane counters are required exactly for a
 // focused-local/local candidate projection.
 func (certificate *CoverageCertificate) ValidateCanonicalShape() error {
 	if certificate == nil {
 		return errors.New("coverage certificate is nil")
 	}
-	if certificate.SchemaVersion != certificateSchemaVersion {
+	switch certificate.SchemaVersion {
+	case "coverage-certificate-v1":
+		for _, repository := range certificate.Repositories {
+			if !repository.legacyScopeShape {
+				return fmt.Errorf(
+					"coverage certificate v1 repository %q carries scope posture",
+					repository.Repository,
+				)
+			}
+			if repository.AnalysisUnit != nil {
+				return fmt.Errorf(
+					"coverage certificate v1 repository %q carries analysis-unit scope",
+					repository.Repository,
+				)
+			}
+			for _, run := range repository.Runs {
+				if run.UnitDigest != "" || run.EvidenceScopePosture != "" ||
+					run.CandidateScope != nil || run.Outcome != nil ||
+					run.LatestAttempt != nil && run.LatestAttempt.UnitDigest != "" {
+					return fmt.Errorf(
+						"coverage certificate v1 run %q/%q carries post-v1 scope or outcome state",
+						repository.Repository, run.Domain,
+					)
+				}
+			}
+		}
 		return nil
+	case "coverage-certificate-v2":
+		for _, repository := range certificate.Repositories {
+			if repository.legacyScopeShape {
+				return fmt.Errorf(
+					"coverage certificate v2 repository %q omits scope posture",
+					repository.Repository,
+				)
+			}
+			if !validCertificateScopePosture(repository.ScopePosture) {
+				return fmt.Errorf(
+					"coverage certificate v2 repository %q has invalid scope posture %q",
+					repository.Repository, repository.ScopePosture,
+				)
+			}
+			for _, run := range repository.Runs {
+				if run.Outcome != nil {
+					return fmt.Errorf(
+						"coverage certificate v2 run %q/%q carries a v3 outcome",
+						repository.Repository, run.Domain,
+					)
+				}
+				if run.CandidateScope != nil &&
+					!run.CandidateScope.legacyExclusionShape {
+					return fmt.Errorf(
+						"coverage certificate v2 candidate scope for %q/%q carries v3 counters",
+						repository.Repository, run.Domain,
+					)
+				}
+			}
+		}
+		return nil
+	case certificateSchemaVersion:
+		// Checked below.
+	default:
+		return fmt.Errorf(
+			"unsupported coverage certificate schema %q",
+			certificate.SchemaVersion,
+		)
 	}
 	for _, repository := range certificate.Repositories {
+		if repository.legacyScopeShape {
+			return fmt.Errorf(
+				"coverage certificate v3 repository %q omits scope posture",
+				repository.Repository,
+			)
+		}
+		if !validCertificateScopePosture(repository.ScopePosture) {
+			return fmt.Errorf(
+				"coverage certificate v3 repository %q has invalid scope posture %q",
+				repository.Repository, repository.ScopePosture,
+			)
+		}
 		for _, run := range repository.Runs {
+			if err := validateCertificateDomainOutcome(
+				repository.Repository, run,
+			); err != nil {
+				return err
+			}
 			scope := run.CandidateScope
 			if scope == nil {
 				continue
@@ -261,6 +446,93 @@ func (certificate *CoverageCertificate) ValidateCanonicalShape() error {
 		}
 	}
 	return nil
+}
+
+func validCertificateScopePosture(posture string) bool {
+	return posture == "whole-repository" || posture == "focused"
+}
+
+func validateCertificateDomainOutcome(
+	repository string,
+	run CertificateRun,
+) error {
+	outcome := run.Outcome
+	if outcome == nil {
+		return nil
+	}
+	fail := func(reason string) error {
+		return fmt.Errorf(
+			"coverage certificate v3 outcome for %q/%q %s",
+			repository, run.Domain, reason,
+		)
+	}
+	if !store.ValidDomainOutcomeDisposition(outcome.Disposition) {
+		return fail("has an unknown disposition")
+	}
+	if !validExtractionGenerationDigest(outcome.GenerationDigest) ||
+		strings.TrimSpace(outcome.Extractor) == "" ||
+		strings.TrimSpace(outcome.Extractor) != outcome.Extractor ||
+		len(outcome.Extractor) > 128 ||
+		outcome.ReceiptSchema != store.ExtractionOutcomeReceiptSchema {
+		return fail("has invalid generation or receipt identity")
+	}
+	if outcome.CandidateControlFailure &&
+		outcome.Disposition != store.DomainOutcomeTerminalGenerationRefusal {
+		return fail("marks a non-terminal candidate-control failure")
+	}
+	if outcome.Disposition == store.DomainOutcomePublished &&
+		(run.Status != "published" || run.Extractor != outcome.Extractor) {
+		return fail("does not match its published run")
+	}
+
+	switch outcome.ReceiptState {
+	case "schema_only":
+		if outcome.Receipt != nil {
+			return fail("carries receipt content in schema-only state")
+		}
+		return nil
+	case "full", "legacy_exclusion_shape":
+		if outcome.Receipt == nil {
+			return fail("omits receipt content")
+		}
+	default:
+		return fail("has an unknown receipt state")
+	}
+
+	receiptBytes, err := outcome.Receipt.canonicalBytes()
+	if err != nil {
+		return fail("has invalid receipt JSON")
+	}
+	receipt := outcome.Receipt.ExtractionDomainOutcomeReceipt
+	var canonical []byte
+	if outcome.ReceiptState == "full" {
+		canonical, err = json.Marshal(receipt)
+	} else {
+		canonical, err = marshalLegacyExclusionReceipt(receipt)
+	}
+	if err != nil || string(canonical) != string(receiptBytes) {
+		return fail("has a non-canonical receipt shape")
+	}
+	if receipt.Schema != store.ExtractionOutcomeReceiptSchema ||
+		receipt.Schema != outcome.ReceiptSchema ||
+		receipt.Domain != run.Domain ||
+		receipt.ExtractorVersion != outcome.Extractor ||
+		receipt.Disposition != outcome.Disposition ||
+		!validOperationReason(receipt.Reason) ||
+		!validCertificateOutcomeReceipt(receipt) {
+		return fail("has inconsistent receipt content")
+	}
+	return nil
+}
+
+func validExtractionGenerationDigest(value string) bool {
+	const prefix = "extraction_generation_v1_"
+	digest, ok := strings.CutPrefix(value, prefix)
+	if !ok || len(digest) != sha256.Size*2 {
+		return false
+	}
+	decoded, err := hex.DecodeString(digest)
+	return err == nil && prefix+hex.EncodeToString(decoded) == value
 }
 
 // CertificateTypedInput is the real-path typed parser receipt. Present=false
@@ -615,12 +887,28 @@ func certificateDomainOutcome(
 			scope.Repository, scope.Domain, err,
 		)
 	}
+	receiptState := "full"
 	canonical, err := json.Marshal(receipt)
-	if err != nil || string(canonical) != outcome.Receipt {
+	if err != nil {
 		return nil, fmt.Errorf(
 			"latest extraction domain outcome for %q/%q has a non-canonical or unknown receipt shape",
 			scope.Repository, scope.Domain,
 		)
+	}
+	if string(canonical) != outcome.Receipt {
+		// The excluded-source/SCIP counters were added at T30.6e under the
+		// unchanged v1 receipt schema, so a retained receipt that reproduces
+		// the exact pre-T30.6e wire shape is legitimate, not unknown. Byte
+		// equality against the legacy shape also proves every absent counter
+		// decoded as zero.
+		legacy, legacyErr := marshalLegacyExclusionReceipt(receipt)
+		if legacyErr != nil || string(legacy) != outcome.Receipt {
+			return nil, fmt.Errorf(
+				"latest extraction domain outcome for %q/%q has a non-canonical or unknown receipt shape",
+				scope.Repository, scope.Domain,
+			)
+		}
+		receiptState = "legacy_exclusion_shape"
 	}
 	if receipt.Schema != store.ExtractionOutcomeReceiptSchema ||
 		receipt.Schema != outcome.ReceiptSchema ||
@@ -634,9 +922,83 @@ func certificateDomainOutcome(
 			scope.Repository, scope.Domain,
 		)
 	}
-	projected.ReceiptState = "full"
-	projected.Receipt = &receipt
+	projected.ReceiptState = receiptState
+	projected.Receipt = &CertificateOutcomeReceipt{
+		ExtractionDomainOutcomeReceipt: receipt,
+		raw: json.RawMessage(
+			append([]byte(nil), outcome.Receipt...),
+		),
+	}
 	return projected, nil
+}
+
+// marshalLegacyExclusionReceipt reproduces the exact T30.6c-through-T30.6d
+// (pre-T30.6e) receipt wire shape: identical field order with the four
+// excluded-source/SCIP counters and the excluded-source declared bytes absent.
+// Limits never changed across the T30.6e boundary. The one-commit T30.6b era
+// additionally lacked nine limits fields and fails this shape too. Supporting
+// It would also require relaxing the positive-limits checks and remains
+// explicitly out of scope unless such vintage rows are actually retained.
+func marshalLegacyExclusionReceipt(
+	receipt ExtractionDomainOutcomeReceipt,
+) ([]byte, error) {
+	type legacyCounts struct {
+		CorpusFiles          int `json:"corpus_files"`
+		CandidateFiles       int `json:"candidate_files"`
+		OpenedSourceAttempts int `json:"opened_source_attempts"`
+		OpenedSourceFiles    int `json:"opened_source_files"`
+		Facts                int `json:"facts"`
+		Atoms                int `json:"atoms"`
+		Assertions           int `json:"assertions"`
+		Unresolved           int `json:"unresolved"`
+		StagedChunks         int `json:"staged_chunks"`
+		StagedRows           int `json:"staged_rows"`
+	}
+	type legacyBytes struct {
+		PlannedDeclared int64 `json:"planned_declared"`
+		OpenedSource    int64 `json:"opened_source"`
+	}
+	return json.Marshal(struct {
+		Schema           string                          `json:"schema"`
+		Domain           string                          `json:"domain"`
+		ExtractorVersion string                          `json:"extractor_version"`
+		Disposition      store.DomainOutcomeDisposition  `json:"disposition"`
+		Reason           string                          `json:"reason"`
+		InventoryMS      int64                           `json:"inventory_ms"`
+		OpenedSourceMS   int64                           `json:"opened_source_ms"`
+		ExtractorMS      int64                           `json:"extractor_ms"`
+		StagingMS        int64                           `json:"staging_ms"`
+		Counts           legacyCounts                    `json:"counts"`
+		Bytes            legacyBytes                     `json:"bytes"`
+		Limits           ExtractionOperationDomainLimits `json:"limits"`
+	}{
+		Schema:           receipt.Schema,
+		Domain:           receipt.Domain,
+		ExtractorVersion: receipt.ExtractorVersion,
+		Disposition:      receipt.Disposition,
+		Reason:           receipt.Reason,
+		InventoryMS:      receipt.InventoryMS,
+		OpenedSourceMS:   receipt.OpenedSourceMS,
+		ExtractorMS:      receipt.ExtractorMS,
+		StagingMS:        receipt.StagingMS,
+		Counts: legacyCounts{
+			CorpusFiles:          receipt.Counts.CorpusFiles,
+			CandidateFiles:       receipt.Counts.CandidateFiles,
+			OpenedSourceAttempts: receipt.Counts.OpenedSourceAttempts,
+			OpenedSourceFiles:    receipt.Counts.OpenedSourceFiles,
+			Facts:                receipt.Counts.Facts,
+			Atoms:                receipt.Counts.Atoms,
+			Assertions:           receipt.Counts.Assertions,
+			Unresolved:           receipt.Counts.Unresolved,
+			StagedChunks:         receipt.Counts.StagedChunks,
+			StagedRows:           receipt.Counts.StagedRows,
+		},
+		Bytes: legacyBytes{
+			PlannedDeclared: receipt.Bytes.PlannedDeclared,
+			OpenedSource:    receipt.Bytes.OpenedSource,
+		},
+		Limits: receipt.Limits,
+	})
 }
 
 func validCertificateOutcomeReceipt(
@@ -680,7 +1042,10 @@ func validCertificateOutcomeReceipt(
 		limits.AbortWallMS <= 0 || limits.OutcomeWallMS <= 0 ||
 		limits.MaxSerialDomains <= 0 || limits.SchedulerIdentityBytes <= 0 ||
 		limits.AggregateStagedRows <= 0 || limits.DomainStagedRows <= 0 ||
-		counts.CorpusFiles > limits.CorpusFiles ||
+		counts.CorpusFiles > certificateMaxCorpusCensus ||
+		counts.CandidateFiles > limits.CorpusFiles ||
+		counts.ExcludedSourceFiles >
+			limits.CorpusFiles-counts.CandidateFiles ||
 		counts.OpenedSourceAttempts > limits.OpenedSourceAttempts ||
 		counts.OpenedSourceFiles > limits.OpenedSourceFiles ||
 		bytes.OpenedSource > limits.OpenedSourceBytes ||
@@ -707,8 +1072,13 @@ func validCertificateOutcomeReason(
 	case store.DomainOutcomeUnavailablePrerequisite:
 		return reason == OperationReasonTypedInputAbsent
 	case store.DomainOutcomeTerminalGenerationRefusal:
+		// A mid-run budget refusal joined with an abort failure retains the
+		// budget reason the domain recorder had already completed with, so
+		// both budget reasons are durably recordable as terminal refusals.
 		return reason == OperationReasonLimitRefusal ||
-			reason == OperationReasonFailed
+			reason == OperationReasonFailed ||
+			reason == OperationReasonAggregateBudget ||
+			reason == OperationReasonDomainBudget
 	case store.DomainOutcomeRetryableFailure:
 		return reason == OperationReasonNotReady ||
 			reason == OperationReasonNoCandidates ||

@@ -450,7 +450,7 @@ function normalizeRepositories(
       unit: scope.analysis_unit ? {
         name: scope.analysis_unit.name,
         digest: scope.analysis_unit.digest,
-        primaryPaths: scope.analysis_unit.primary_paths,
+        primaryPaths: pathList(scope.analysis_unit.primary_paths),
         supportingPaths: pathList(scope.analysis_unit.supporting_paths),
         typedIndexPosture: scope.analysis_unit.typed_index_posture,
         typedIndexKind: scope.analysis_unit.typed_index?.kind,
@@ -731,12 +731,15 @@ function ReceiptSummary({
   state,
   receipt,
 }: {
-  state: 'full' | 'schema_only'
+  state: 'full' | 'schema_only' | 'legacy_exclusion_shape'
   receipt?: CoverageDomainOutcomeReceipt
 }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
-  if (state !== 'full' || !receipt) {
+  // legacy_exclusion_shape receipts carry full recorded counts and timings;
+  // only the excluded-source/SCIP counters predate their recording. They must
+  // render as disclosed work, not as an absent receipt.
+  if ((state !== 'full' && state !== 'legacy_exclusion_shape') || !receipt) {
     return (
       <div className={css({
         marginTop: '6px',

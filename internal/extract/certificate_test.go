@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
+
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -532,7 +534,7 @@ func TestCoverageCertificateCandidateScopePreservesRetainedV2Shape(t *testing.T)
 	certificate := &CoverageCertificate{
 		SchemaVersion: "coverage-certificate-v2",
 		Repositories: []CertificateRepository{{
-			Repository: "alpha",
+			Repository: "alpha", ScopePosture: "whole-repository",
 			Runs: []CertificateRun{{
 				Domain: "grpc-consumer", CandidateScope: &scope,
 			}},
@@ -556,7 +558,7 @@ func TestCoverageCertificateV3CandidateScopeSourceLanePresence(t *testing.T) {
 		return &CoverageCertificate{
 			SchemaVersion: schema,
 			Repositories: []CertificateRepository{{
-				Repository: "alpha",
+				Repository: "alpha", ScopePosture: "whole-repository",
 				Runs: []CertificateRun{{
 					Domain:               "grpc-consumer",
 					EvidenceScopePosture: posture,
@@ -639,6 +641,12 @@ func TestCoverageCertificateV3CandidateScopeSourceLanePresence(t *testing.T) {
 				test.schema, test.posture, test.plane,
 				test.base, test.excludedGoTest,
 			)
+			if test.schema == "coverage-certificate-v2" {
+				// V2 candidate scopes decode with the retained pre-counter
+				// wire-shape marker set.
+				certificate.Repositories[0].Runs[0].CandidateScope.
+					legacyExclusionShape = true
+			}
 			err := certificate.ValidateCanonicalShape()
 			if (err != nil) != test.wantErr {
 				t.Fatalf("ValidateCanonicalShape() error = %v, wantErr %t", err, test.wantErr)
@@ -702,10 +710,16 @@ func TestCoverageCertificateProjectsDurableDomainOutcomes(t *testing.T) {
 				got.GenerationDigest != outcome.Generation.Digest ||
 				got.Extractor != outcome.Generation.Extractor ||
 				got.ReceiptSchema != store.ExtractionOutcomeReceiptSchema ||
-				got.ReceiptState != "full" || got.Receipt == nil ||
-				got.Receipt.Domain != domain ||
-				got.Receipt.Disposition != disposition {
+				got.ReceiptState != "full" || got.Receipt == nil {
 				t.Fatalf("projected outcome = %+v", got)
+			}
+			var projectedReceipt ExtractionDomainOutcomeReceipt
+			receiptBytes, marshalErr := json.Marshal(got.Receipt)
+			if err := json.Unmarshal(receiptBytes, &projectedReceipt); err != nil ||
+				marshalErr != nil ||
+				projectedReceipt.Domain != domain ||
+				projectedReceipt.Disposition != disposition {
+				t.Fatalf("projected receipt = %s, %v / %v", receiptBytes, err, marshalErr)
 			}
 			encoded, err := json.Marshal(certificate)
 			if err != nil {
@@ -791,9 +805,15 @@ func TestCoverageCertificateAcceptsRetryablePublishFailureReasons(t *testing.T) 
 				t.Fatalf("writer-compatible retryable receipt was rejected: %v", err)
 			}
 			got := certificate.Repositories[0].Runs[0].Outcome
-			if got == nil || got.Receipt == nil ||
-				got.Receipt.Reason != test.reason {
+			if got == nil || got.Receipt == nil {
 				t.Fatalf("projected outcome = %+v", got)
+			}
+			var projectedReceipt ExtractionDomainOutcomeReceipt
+			receiptBytes, marshalErr := json.Marshal(got.Receipt)
+			if err := json.Unmarshal(receiptBytes, &projectedReceipt); err != nil ||
+				marshalErr != nil ||
+				projectedReceipt.Reason != test.reason {
+				t.Fatalf("projected receipt = %s, %v / %v", receiptBytes, err, marshalErr)
 			}
 		})
 	}
@@ -1522,5 +1542,474 @@ func TestCoverageCertificateRejectsInconsistentInput(t *testing.T) {
 				t.Fatal("inconsistent input built a certificate")
 			}
 		})
+	}
+}
+
+func TestCoverageCertificateAcceptsManifestCorpusCensusAboveWalkLimit(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	build := func(
+		t *testing.T,
+		corpusFiles, candidateFiles, excludedFiles int,
+	) (*CoverageCertificate, error) {
+		t.Helper()
+		outcome := certOutcome(
+			t, scope, domain+"@1.0.0",
+			store.DomainOutcomeRetryableFailure, true,
+		)
+		var receipt ExtractionDomainOutcomeReceipt
+		if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+			t.Fatal(err)
+		}
+		receipt.Counts.CorpusFiles = corpusFiles
+		receipt.Counts.CandidateFiles = candidateFiles
+		receipt.Counts.ExcludedSourceFiles = excludedFiles
+		encoded, err := json.Marshal(receipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		outcome.Receipt = string(encoded)
+		return BuildCoverageCertificate(
+			context.Background(),
+			&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+				certKey(scope.Repository, domain): outcome,
+			}},
+			[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+			[]string{domain},
+		)
+	}
+
+	// A candidate-manifest run records the manifest census, bounded by the
+	// candidate corpus ceiling, not by the walked per-run limit frozen into
+	// the receipt's limits block (100 in this fixture, 200,000 in production).
+	for _, boundary := range []struct {
+		name                         string
+		corpus, candidates, excluded int
+	}{
+		{"above walk census", 200_008, 5, 2},
+		{"exact corpus and walk ceilings", certificateMaxCorpusCensus, 100, 0},
+	} {
+		certificate, err := build(
+			t, boundary.corpus, boundary.candidates, boundary.excluded,
+		)
+		if err != nil {
+			t.Fatalf("%s was rejected: %v", boundary.name, err)
+		}
+		got := certificate.Repositories[0].Runs[0].Outcome
+		if got == nil || got.ReceiptState != "full" {
+			t.Fatalf("projected outcome = %+v", got)
+		}
+	}
+	if _, err := build(t, certificateMaxCorpusCensus+1, 5, 2); err == nil {
+		t.Fatal("census above the candidate corpus ceiling was accepted")
+	}
+	if _, err := build(t, certificateMaxCorpusCensus, 101, 0); err == nil {
+		t.Fatal("candidate count above the walked corpus ceiling was accepted")
+	}
+	if _, err := build(t, certificateMaxCorpusCensus, 100, 1); err == nil {
+		t.Fatal("candidate plus excluded counts above the walked corpus ceiling were accepted")
+	}
+}
+
+func TestCoverageCertificateAcceptsAbortJoinedBudgetTerminalReasons(t *testing.T) {
+	for _, reason := range []string{
+		OperationReasonAggregateBudget,
+		OperationReasonDomainBudget,
+	} {
+		t.Run(reason, func(t *testing.T) {
+			domain := "proto-contract"
+			scope := store.ExtractionScope{
+				Repository: "alpha", Commit: commitA, Domain: domain,
+			}
+			outcome := certOutcome(
+				t, scope, domain+"@1.0.0",
+				store.DomainOutcomeTerminalGenerationRefusal, true,
+			)
+			var receipt ExtractionDomainOutcomeReceipt
+			if err := json.Unmarshal([]byte(outcome.Receipt), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			// A mid-run budget refusal joined with an abort failure keeps the
+			// recorder's completed budget reason on a terminal disposition.
+			receipt.Reason = reason
+			encoded, err := json.Marshal(receipt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			outcome.Receipt = string(encoded)
+			certificate, err := BuildCoverageCertificate(
+				context.Background(),
+				&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+					certKey(scope.Repository, domain): outcome,
+				}},
+				[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+				[]string{domain},
+			)
+			if err != nil {
+				t.Fatalf("abort-joined %s terminal receipt was rejected: %v", reason, err)
+			}
+			got := certificate.Repositories[0].Runs[0].Outcome
+			if got == nil || got.Disposition != store.DomainOutcomeTerminalGenerationRefusal {
+				t.Fatalf("projected outcome = %+v", got)
+			}
+		})
+	}
+}
+
+func TestCoverageCertificateAcceptsRetainedLegacyExclusionReceipt(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	limits, err := json.Marshal(certificateTestReceiptLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Literal pre-T30.6e wire shape: identical field order with the four
+	// excluded-source/SCIP counters and excluded_source_declared absent,
+	// recorded under the unchanged v1 receipt schema.
+	legacyReceipt := `{"schema":"` + store.ExtractionOutcomeReceiptSchema +
+		`","domain":"` + domain +
+		`","extractor_version":"` + domain + `@1.0.0` +
+		`","disposition":"retryable_failure","reason":"failed",` +
+		`"inventory_ms":0,"opened_source_ms":0,"extractor_ms":0,"staging_ms":0,` +
+		`"counts":{"corpus_files":8,"candidate_files":5,` +
+		`"opened_source_attempts":6,"opened_source_files":5,"facts":3,` +
+		`"atoms":3,"assertions":3,"unresolved":0,"staged_chunks":1,` +
+		`"staged_rows":3},` +
+		`"bytes":{"planned_declared":123,"opened_source":77},` +
+		`"limits":` + string(limits) + `}`
+
+	build := func(receipt string) (*CoverageCertificate, error) {
+		outcome := certOutcome(
+			t, scope, domain+"@1.0.0",
+			store.DomainOutcomeRetryableFailure, false,
+		)
+		outcome.Receipt = receipt
+		return BuildCoverageCertificate(
+			context.Background(),
+			&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+				certKey(scope.Repository, domain): outcome,
+			}},
+			[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+			[]string{domain},
+		)
+	}
+
+	certificate, err := build(legacyReceipt)
+	if err != nil {
+		t.Fatalf("retained legacy receipt was rejected: %v", err)
+	}
+	got := certificate.Repositories[0].Runs[0].Outcome
+	if got == nil || got.ReceiptState != "legacy_exclusion_shape" ||
+		got.Receipt == nil || string(got.Receipt.raw) != legacyReceipt {
+		t.Fatalf("projected legacy outcome = %+v", got)
+	}
+	encoded, err := json.Marshal(certificate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"receipt_state":"legacy_exclusion_shape"`) ||
+		!strings.Contains(string(encoded), `"opened_source":77`) {
+		t.Fatalf("certificate does not disclose the verbatim legacy receipt: %s", encoded)
+	}
+
+	// A reordered legacy receipt is not the retained canonical shape.
+	tampered := strings.Replace(
+		legacyReceipt,
+		`"corpus_files":8,"candidate_files":5`,
+		`"candidate_files":5,"corpus_files":8`,
+		1,
+	)
+	if _, err := build(tampered); err == nil {
+		t.Fatal("reordered legacy receipt was accepted")
+	}
+	// A partial current shape (one modern counter present) is neither the
+	// current nor the legacy canonical shape.
+	partial := strings.Replace(
+		legacyReceipt,
+		`"candidate_files":5,`,
+		`"candidate_files":5,"excluded_source_files":0,`,
+		1,
+	)
+	if _, err := build(partial); err == nil {
+		t.Fatal("partially modern receipt was accepted")
+	}
+}
+
+func TestCoverageCertificateRejectsRetainedOutcomeReceiptMutation(t *testing.T) {
+	domain := "proto-contract"
+	scope := store.ExtractionScope{
+		Repository: "alpha", Commit: commitA, Domain: domain,
+	}
+	outcome := certOutcome(
+		t, scope, domain+"@1.0.0",
+		store.DomainOutcomeRetryableFailure, true,
+	)
+	certificate, err := BuildCoverageCertificate(
+		context.Background(),
+		&certificateRunSource{outcomes: map[string]store.ExtractionDomainOutcome{
+			certKey(scope.Repository, domain): outcome,
+		}},
+		[]store.Repo{{Name: scope.Repository, IndexedCommitHash: scope.Commit}},
+		[]string{domain},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := certificate.ValidateCanonicalShape(); err != nil {
+		t.Fatalf("writer-produced outcome was rejected: %v", err)
+	}
+	baseline, err := json.Marshal(certificate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mutations := []struct {
+		name   string
+		mutate func(*CertificateDomainOutcome)
+	}{
+		{
+			name: "reordered raw receipt",
+			mutate: func(projected *CertificateDomainOutcome) {
+				projected.Receipt.raw = []byte(strings.Replace(
+					string(projected.Receipt.raw),
+					`"schema":"phebs-extraction-domain-outcome-v1","domain":"proto-contract"`,
+					`"domain":"proto-contract","schema":"phebs-extraction-domain-outcome-v1"`,
+					1,
+				))
+			},
+		},
+		{
+			name: "unknown raw receipt field",
+			mutate: func(projected *CertificateDomainOutcome) {
+				projected.Receipt.raw = []byte(strings.TrimSuffix(
+					string(projected.Receipt.raw), "}",
+				) + `,"diagnostic":"mutated"}`)
+			},
+		},
+		{
+			name: "receipt state mismatch",
+			mutate: func(projected *CertificateDomainOutcome) {
+				projected.ReceiptState = "legacy_exclusion_shape"
+			},
+		},
+	}
+	for _, mutation := range mutations {
+		t.Run(mutation.name, func(t *testing.T) {
+			var mutated CoverageCertificate
+			if err := json.Unmarshal(baseline, &mutated); err != nil {
+				t.Fatal(err)
+			}
+			mutation.mutate(mutated.Repositories[0].Runs[0].Outcome)
+			if err := mutated.ValidateCanonicalShape(); err == nil {
+				t.Fatal("mutated retained outcome receipt was accepted")
+			}
+		})
+	}
+}
+
+func TestCertificateOutcomeReceiptRetainsHTTPObjectSchema(t *testing.T) {
+	registry := huma.NewMapRegistry(
+		"#/components/schemas/", huma.DefaultSchemaNamer,
+	)
+	schema := registry.Schema(
+		reflect.TypeOf(CertificateDomainOutcome{}), false,
+		"CertificateDomainOutcome",
+	)
+	receiptSchema := schema.Properties["receipt"]
+	if receiptSchema == nil {
+		t.Fatal("certificate outcome schema omitted receipt")
+	}
+	if receiptSchema.Ref != "" {
+		receiptSchema = registry.SchemaFromRef(receiptSchema.Ref)
+	}
+	if receiptSchema == nil {
+		t.Fatal("certificate outcome receipt schema reference did not resolve")
+	}
+	for _, field := range []string{
+		"schema", "domain", "extractor_version", "disposition", "reason",
+		"counts", "bytes", "limits",
+	} {
+		if receiptSchema.Properties[field] == nil {
+			t.Fatalf("certificate outcome receipt schema omitted %q", field)
+		}
+	}
+}
+
+func TestCoverageCertificateRepositoryPreservesRetainedV1Shape(t *testing.T) {
+	legacyRepository := `{"repository":"github.com/acme/v1",` +
+		`"indexed_commit":"` + commitA + `",` +
+		`"scip_index":"present","runs":[]}`
+	var repository CertificateRepository
+	if err := json.Unmarshal([]byte(legacyRepository), &repository); err != nil {
+		t.Fatal(err)
+	}
+	roundTrip, err := json.Marshal(repository)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(roundTrip) != legacyRepository {
+		t.Fatalf(
+			"retained v1 repository bytes changed\n got: %s\nwant: %s",
+			roundTrip, legacyRepository,
+		)
+	}
+
+	// The v1 shape stays confined to retained certificates: a v3 certificate
+	// whose repository omits scope_posture is rejected before any byte
+	// comparison can silently accept the omission.
+	legacyCertificate := `{"schema_version":"` + certificateSchemaVersion +
+		`","domains":["proto-contract"],"repository_count":1,` +
+		`"repositories":[` + legacyRepository + `],"digest":""}`
+	var certificate CoverageCertificate
+	if err := json.Unmarshal([]byte(legacyCertificate), &certificate); err != nil {
+		t.Fatal(err)
+	}
+	if err := certificate.ValidateCanonicalShape(); err == nil {
+		t.Fatal("v3 certificate without repository scope posture was accepted")
+	}
+
+	// A retained v1 certificate keeps its exact shape and validates as the
+	// readable legacy version.
+	v1Certificate := strings.Replace(
+		legacyCertificate,
+		`"schema_version":"`+certificateSchemaVersion+`"`,
+		`"schema_version":"coverage-certificate-v1"`,
+		1,
+	)
+	var retained CoverageCertificate
+	if err := json.Unmarshal([]byte(v1Certificate), &retained); err != nil {
+		t.Fatal(err)
+	}
+	if err := retained.ValidateCanonicalShape(); err != nil {
+		t.Fatalf("retained v1 certificate was rejected: %v", err)
+	}
+	v1RoundTrip, err := json.Marshal(retained)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(v1RoundTrip) != v1Certificate {
+		t.Fatalf(
+			"retained v1 certificate bytes changed\n got: %s\nwant: %s",
+			v1RoundTrip, v1Certificate,
+		)
+	}
+
+	// Repository scope was introduced with v2. Merely relabeling the v1 wire
+	// shape as v2 must not turn it into a readable retained certificate.
+	v2Certificate := strings.Replace(
+		v1Certificate,
+		`"schema_version":"coverage-certificate-v1"`,
+		`"schema_version":"coverage-certificate-v2"`,
+		1,
+	)
+	var malformedV2 CoverageCertificate
+	if err := json.Unmarshal([]byte(v2Certificate), &malformedV2); err != nil {
+		t.Fatal(err)
+	}
+	if err := malformedV2.ValidateCanonicalShape(); err == nil {
+		t.Fatal("v2 certificate without repository scope posture was accepted")
+	}
+
+	retained.SchemaVersion = "coverage-certificate-v4"
+	if err := retained.ValidateCanonicalShape(); err == nil {
+		t.Fatal("unknown coverage certificate schema was accepted")
+	}
+}
+
+func TestCoverageCertificateRejectsCrossVersionFields(t *testing.T) {
+	legacyScope := CertificateCandidateScope{legacyExclusionShape: true}
+	currentScope := CertificateCandidateScope{}
+	tests := []struct {
+		name        string
+		certificate *CoverageCertificate
+	}{
+		{
+			name: "v1 repository scope",
+			certificate: &CoverageCertificate{
+				SchemaVersion: "coverage-certificate-v1",
+				Repositories: []CertificateRepository{{
+					Repository: "alpha", ScopePosture: "whole-repository",
+				}},
+			},
+		},
+		{
+			name: "v1 run scope",
+			certificate: &CoverageCertificate{
+				SchemaVersion: "coverage-certificate-v1",
+				Repositories: []CertificateRepository{{
+					Repository: "alpha", legacyScopeShape: true,
+					Runs: []CertificateRun{{
+						Domain:     "grpc-consumer",
+						UnitDigest: "sha256:" + strings.Repeat("a", 64),
+					}},
+				}},
+			},
+		},
+		{
+			name: "v2 current candidate counters",
+			certificate: &CoverageCertificate{
+				SchemaVersion: "coverage-certificate-v2",
+				Repositories: []CertificateRepository{{
+					Repository: "alpha", ScopePosture: "whole-repository",
+					Runs: []CertificateRun{{
+						Domain: "grpc-consumer", CandidateScope: &currentScope,
+					}},
+				}},
+			},
+		},
+		{
+			name: "v2 empty scope posture",
+			certificate: &CoverageCertificate{
+				SchemaVersion: "coverage-certificate-v2",
+				Repositories: []CertificateRepository{{
+					Repository: "alpha",
+				}},
+			},
+		},
+		{
+			name: "v2 outcome",
+			certificate: &CoverageCertificate{
+				SchemaVersion: "coverage-certificate-v2",
+				Repositories: []CertificateRepository{{
+					Repository: "alpha", ScopePosture: "whole-repository",
+					Runs: []CertificateRun{{
+						Domain: "grpc-consumer", Outcome: &CertificateDomainOutcome{},
+					}},
+				}},
+			},
+		},
+		{
+			name: "v3 unknown scope posture",
+			certificate: &CoverageCertificate{
+				SchemaVersion: certificateSchemaVersion,
+				Repositories: []CertificateRepository{{
+					Repository: "alpha", ScopePosture: "unknown",
+				}},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := test.certificate.ValidateCanonicalShape(); err == nil {
+				t.Fatal("cross-version certificate shape was accepted")
+			}
+		})
+	}
+
+	validV2 := &CoverageCertificate{
+		SchemaVersion: "coverage-certificate-v2",
+		Repositories: []CertificateRepository{{
+			Repository: "alpha", ScopePosture: "whole-repository",
+			Runs: []CertificateRun{{
+				Domain: "grpc-consumer", CandidateScope: &legacyScope,
+			}},
+		}},
+	}
+	if err := validV2.ValidateCanonicalShape(); err != nil {
+		t.Fatalf("retained v2 shape was rejected: %v", err)
 	}
 }

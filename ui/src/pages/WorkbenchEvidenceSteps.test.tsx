@@ -441,6 +441,13 @@ test('Where keeps gaps adjacent, reads exact overlay citations, and replaces pag
   }).textContent).toContain(
     'what phebs examined, what evidence was available, and what remained unsupported or unresolved',
   )
+  // The served capability rows (contract-atlas enabled) reach the glossary
+  // help: the term must not claim its supporting capabilities are absent.
+  expect(screen.getByRole('dialog', {
+    name: 'Analysis scope & gaps help',
+  }).textContent).not.toContain(
+    'unavailable because no supporting contract or coverage capability is enabled',
+  )
   fireEvent.keyDown(document, { key: 'Escape' })
   expect(screen.getByText('reader_not_bound')).toBeTruthy()
   expect(screen.getByText('No runtime telemetry reader is bound.')).toBeTruthy()
@@ -448,6 +455,15 @@ test('Where keeps gaps adjacent, reads exact overlay citations, and replaces pag
   expect(screen.getByRole('heading', {
     name: 'Caller evidence scope',
   })).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', {
+    name: 'Help for Caller evidence scope',
+  }))
+  expect(screen.getByRole('dialog', {
+    name: 'Caller evidence scope help',
+  }).textContent).not.toContain(
+    'unavailable because no supporting contract or coverage capability is enabled',
+  )
+  fireEvent.keyDown(document, { key: 'Escape' })
   expect(screen.getByText('service unit catalog-service')).toBeTruthy()
   expect(screen.getByText('5 candidates')).toBeTruthy()
   expect(screen.getByText('3 base')).toBeTruthy()
@@ -749,6 +765,17 @@ test('Where renders an unavailable comparison without totals or classifications'
     .toBeTruthy()
   expect(screen.queryByText('0 exact rows')).toBeNull()
   expect(screen.queryByText('Old Only Evidence')).toBeNull()
+  for (const title of ['Current endpoint', 'Replacement endpoint']) {
+    fireEvent.click(screen.getByRole('button', {
+      name: `Help for ${title}`,
+    }))
+    expect(screen.getByRole('dialog', {
+      name: `${title} help`,
+    }).textContent).not.toContain(
+      'unavailable because no supporting contract or coverage capability is enabled',
+    )
+    fireEvent.keyDown(document, { key: 'Escape' })
+  }
 })
 
 test('Where exposes honest empty and cursor invalidation states with restart', async () => {

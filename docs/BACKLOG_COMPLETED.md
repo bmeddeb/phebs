@@ -6358,3 +6358,20 @@ lint/typecheck, and diff hygiene cover the corrections. The Caller Map read
 still scans at most 16,384 already-loaded pair rows and retains at most one
 bounded census entry per leaf; no correction adds a store query, write,
 corpus/shard or Git/blob read, child, startup/sync work, or retained cache.
+
+Final certificate and authority acceptance closure *(2026-08-03)* pins the
+writer-reachable retained states that review exposed. The receipt census may
+reach the 10-million-entry candidate-manifest ceiling, while candidate plus
+excluded records remain inside the per-run walk ceiling. Pre-T30.6e receipts
+retain their byte-exact exclusion shape without bypassing semantic validation
+or weakening the concrete HTTP receipt schema. V1 certificates retain the
+repository shape that predates scope posture and candidate scope; v2 requires
+scope posture and its pre-counter candidate shape; v3 requires current scope,
+counter, outcome, and receipt shapes. Cross-version hybrids, unknown schemas,
+and mutated retained receipt bytes are rejected. The same closure admits the
+writer's zero-of-N partial caller progress, restores served capability context
+to every Workbench caller card, and guards all hand-written strict Contract and
+Caller MCP output schemas, including nested objects. These are bounded
+validation, decode, rendering, documentation, and test corrections; they add
+no query, write, lock, corpus or Git/blob read, child, startup/sync work,
+publication change, or retained cache.

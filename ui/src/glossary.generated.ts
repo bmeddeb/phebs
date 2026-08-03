@@ -1,6 +1,6 @@
 // Code generated from internal/glossary/glossary.json; DO NOT EDIT.
 export const glossarySchemaVersion = "change-workbench-glossary-v1" as const
-export const glossaryDigest = "sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274" as const
+export const glossaryDigest = "sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1" as const
 
 export const glossaryCapabilities = [
   "caller-map-exact-identity",
@@ -121,7 +121,9 @@ export const glossaryTerms = [
       "workbench"
     ],
     "wireAliases": [
-      "coverage-certificate-v1"
+      "coverage-certificate-v1",
+      "coverage-certificate-v2",
+      "coverage-certificate-v3"
     ],
     "availability": {
       "requiresAll": [

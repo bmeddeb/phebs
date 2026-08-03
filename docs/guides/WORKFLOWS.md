@@ -720,7 +720,7 @@ glossary below is the complete documentation fallback.
 <!-- BEGIN GENERATED CHANGE WORKBENCH GLOSSARY -->
 #### Canonical Change Workbench glossary
 
-The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274`.
+The following help is generated from the reviewed `change-workbench-glossary-v1` source. Glossary digest: `sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1`.
 
 ##### Analysis scope & gaps
 

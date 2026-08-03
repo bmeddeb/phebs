@@ -1635,3 +1635,89 @@ func TestProofAPIDarkWithoutBundleStore(t *testing.T) {
 		}
 	}
 }
+
+func TestRetainedV1ProofBundleScopePostureRemainsReadable(t *testing.T) {
+	const (
+		repository = "github.com/allowed/retained-v1"
+		domain     = "grpc-consumer"
+	)
+	run := proofRun(repository, domain, "run-retained-v1")
+	st := &proofAPIStore{
+		repos: []store.Repo{{
+			Name: repository, IndexedCommitHash: run.Commit,
+		}},
+		runs: map[string]store.ExtractionRun{
+			proofScope(repository, domain): run,
+		},
+	}
+	handler := proofHandler(st, "user:member", nil)
+	code, body, current := getProof(
+		t, handler, "/api/get_extraction_coverage?domains="+domain,
+	)
+	if code != http.StatusOK {
+		t.Fatalf("create v3 bundle = %d %s", code, body)
+	}
+	currentRecord := st.bundles[current.ID]
+	if !strings.Contains(currentRecord.Content, `"scope_posture":"whole-repository"`) {
+		t.Fatalf("v3 repository omitted scope posture: %s", currentRecord.Content)
+	}
+
+	// Reproduce the retained v1 wire shape: the v1 schema string and no
+	// repository scope_posture, which T30.5 added with the v2 bump.
+	legacyContent := strings.Replace(
+		currentRecord.Content,
+		`"schema_version":"coverage-certificate-v3"`,
+		`"schema_version":"coverage-certificate-v1"`,
+		1,
+	)
+	legacyContent = strings.ReplaceAll(
+		legacyContent, `"scope_posture":"whole-repository",`, "",
+	)
+	if strings.Contains(legacyContent, `"scope_posture"`) {
+		t.Fatalf("test fixture did not reproduce the v1 repository shape: %s", legacyContent)
+	}
+	var legacy api.ProofBundle
+	if err := json.Unmarshal([]byte(legacyContent), &legacy); err != nil {
+		t.Fatal(err)
+	}
+	legacy.Coverage.Digest = ""
+	canonicalCoverage, err := json.Marshal(legacy.Coverage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	coverageSum := sha256.Sum256(canonicalCoverage)
+	legacy.Coverage.Digest = "sha256:" + hex.EncodeToString(coverageSum[:])
+	canonicalLegacy, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacyRecord := currentRecord
+	legacyRecord.Content = string(canonicalLegacy)
+	// The stored fixture itself must retain the v1 shape: without the legacy
+	// repository marshal the decode above would self-normalize and reinsert
+	// an empty scope_posture, silently turning this into a v3-shape test.
+	if strings.Contains(legacyRecord.Content, `"scope_posture"`) {
+		t.Fatalf(
+			"stored fixture reintroduced scope_posture: %s", legacyRecord.Content,
+		)
+	}
+	legacyRecord.ID = store.ComputeProofBundleID(legacyRecord.Content)
+	st.bundles[legacyRecord.ID] = legacyRecord
+
+	code, body, retained := getProof(
+		t, handler, "/api/proof_bundles/"+legacyRecord.ID,
+	)
+	if code != http.StatusOK || retained.ID != legacyRecord.ID {
+		t.Fatalf("read retained v1 bundle = %d %s", code, body)
+	}
+	roundTrip, err := json.Marshal(retained.Bundle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(roundTrip) != legacyRecord.Content {
+		t.Fatalf(
+			"retained v1 canonical bytes changed\n got: %s\nwant: %s",
+			roundTrip, legacyRecord.Content,
+		)
+	}
+}

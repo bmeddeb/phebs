@@ -2,7 +2,7 @@
 
 package glossary
 
-const Digest = "sha256:ce13b715607141f2833c8ade57b8aa552d89b68475c5884257972a7defcb3274"
+const Digest = "sha256:2fca7ebdb44cda1545bc03432bce23d66d73699b84ab82894768210091888ef1"
 
 const (
 	CapabilityCallerMapExactIdentity Capability = "caller-map-exact-identity"
@@ -86,7 +86,7 @@ var Terms = []Term{
 		AuthorityBoundary: "Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.",
 		Modes:             []Mode{"add", "migrate", "modify", "retire"},
 		Surfaces:          []Surface{"atlas", "impact", "manual", "mcp", "workbench"},
-		WireAliases:       []string{"coverage-certificate-v1"},
+		WireAliases:       []string{"coverage-certificate-v1", "coverage-certificate-v2", "coverage-certificate-v3"},
 		Availability: CapabilityPredicate{
 			RequiresAll:     []Capability{"coverage-certificate"},
 			RequiresAny:     []Capability{},

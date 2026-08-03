@@ -256,6 +256,46 @@ test('keeps exact paths behind one repository expansion while exposing v3 outcom
   expect(screen.getByText(/does not widen focused source scope/)).toBeTruthy()
 })
 
+test('renders retained legacy exclusion receipts as recorded work', () => {
+  const retained = JSON.parse(JSON.stringify(certificate)) as CoverageCertificate
+  retained.repository_count = 1
+  retained.repositories = [retained.repositories[0]]
+  retained.repositories[0].runs = [retained.repositories[0].runs[0]]
+  const outcome = retained.repositories[0].runs[0].outcome
+  if (!outcome) throw new Error('fixture outcome is missing')
+  outcome.receipt_state = 'legacy_exclusion_shape'
+  outcome.receipt = {
+    ...fullReceipt,
+    counts: {
+      corpus_files: 6,
+      candidate_files: 4,
+      opened_source_attempts: 4,
+      opened_source_files: 4,
+      facts: 3,
+      atoms: 3,
+      assertions: 2,
+      unresolved: 1,
+      staged_chunks: 1,
+      staged_rows: 3,
+    },
+    bytes: {
+      planned_declared: 1200,
+      opened_source: 1000,
+    },
+  }
+
+  renderPanel(<AnalysisScopePanel id="legacy-receipt" certificate={retained} />)
+  fireEvent.click(screen.getByText('Coverage certificate'))
+  fireEvent.click(screen.getByRole('button', { name: /github.com\/acme\/checkout/ }))
+
+  expect(screen.queryByText(/Schema-only bounded receipt/)).toBeNull()
+  fireEvent.click(screen.getByText('Bounded domain receipt'))
+  expect(screen.getByText('4 candidate files')).toBeTruthy()
+  expect(screen.getByText('4 opened source files')).toBeTruthy()
+  expect(screen.getByText('2 assertions')).toBeTruthy()
+  expect(screen.getByText('1000 opened bytes')).toBeTruthy()
+})
+
 test('bounds mounted repository summaries and reports omitted authority honestly', () => {
   const scopes: AnalysisScopeProjection[] = Array.from({ length: 25 }, (_, index) => ({
     repository: `github.com/acme/repository-${index.toString().padStart(2, '0')}`,
@@ -442,4 +482,36 @@ test('does not present unavailable caller progress as measured zeroes', () => {
   expect(screen.queryByText(/0\/\? settled/)).toBeNull()
   expect(screen.queryByText(/0 succeeded/)).toBeNull()
   expect(screen.queryByText(/0 refused/)).toBeNull()
+})
+
+test('normalizes a nullable transport primary-path selection defensively', () => {
+  const status = {
+    name: 'github.com/acme/null-primary',
+    clone_url: 'https://github.com/acme/null-primary.git',
+    orphaned: false,
+    last_index_job_state: 'unavailable',
+    analysis_unit: {
+      schema: 'analysis-unit-v1',
+      name: 'null-primary-service',
+      digest: `sha256:${'8'.repeat(64)}`,
+      // The transport schema admits null even though a valid focused state
+      // requires a non-empty primary selection.
+      primary_paths: null,
+      supporting_paths: null,
+      primary_path_count: 0,
+      supporting_path_count: 0,
+      search_index_posture: 'focused',
+      typed_index_posture: 'repository-root-unbound',
+    },
+  } satisfies RepoStatus
+  const scope = analysisScopeFromRepoStatus(status)
+
+  renderPanel(<AnalysisScopePanel id="null-primary-scope" scopes={[scope]} />)
+  const details = screen.getByTestId('analysis-scope-detail')
+  fireEvent.click(within(details).getByText('Exact repository scope'))
+  fireEvent.click(within(details).getByRole('button', {
+    name: /github.com\/acme\/null-primary/,
+  }))
+  expect(screen.getByText('Primary paths · 0')).toBeTruthy()
+  expect(screen.getByText('Supporting paths · 0')).toBeTruthy()
 })

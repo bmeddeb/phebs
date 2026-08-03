@@ -114,6 +114,7 @@ semantics.
 - [Change Workbench closure fixture](./fixtures/change-workbench/README.md)
 - [Investigation envelope fixtures](./fixtures/investigations/README.md)
 - [Thrift field-reference fixture](./fixtures/thrift-field/README.md)
+- [T30.7 neutral focused-service cohort](./fixtures/t30.7-neutral-service/README.md)
 
 Fixtures prove bounded software behavior. Synthetic or authored evidence is
 not public-corpus accuracy or completeness evidence.

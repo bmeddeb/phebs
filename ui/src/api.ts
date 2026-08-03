@@ -61,10 +61,9 @@ export interface AnalysisUnitState {
   schema: string
   name: string
   digest: string
-  primary_paths: string[]
-  // Go encodes an omitted empty slice as null. Treat null and [] as the same
-  // committed empty selection instead of assuming every transport normalizes
-  // the representation.
+  // The strict transport schema admits null. Valid focused committed state
+  // carries a non-empty array, while consumers normalize a defensive null.
+  primary_paths: string[] | null
   supporting_paths: string[] | null
   primary_path_count: number
   supporting_path_count: number
@@ -932,10 +931,12 @@ export interface CoverageAttempt {
 export interface CoverageReceiptCounts {
   corpus_files: number
   candidate_files: number
-  excluded_source_files: number
-  excluded_scip_documents: number
-  excluded_scip_definitions: number
-  excluded_scip_occurrences: number
+  // Absent on receipt_state 'legacy_exclusion_shape': receipts recorded
+  // before these counters existed keep their exact retained wire shape.
+  excluded_source_files?: number
+  excluded_scip_documents?: number
+  excluded_scip_definitions?: number
+  excluded_scip_occurrences?: number
   opened_source_attempts: number
   opened_source_files: number
   facts: number
@@ -948,7 +949,8 @@ export interface CoverageReceiptCounts {
 
 export interface CoverageReceiptBytes {
   planned_declared: number
-  excluded_source_declared: number
+  // Absent on receipt_state 'legacy_exclusion_shape'.
+  excluded_source_declared?: number
   opened_source: number
 }
 
@@ -998,7 +1000,7 @@ export interface CoverageDomainOutcome {
   extractor: string
   candidate_control_failure?: boolean
   receipt_schema: string
-  receipt_state: 'full' | 'schema_only'
+  receipt_state: 'full' | 'schema_only' | 'legacy_exclusion_shape'
   receipt?: CoverageDomainOutcomeReceipt
 }
 
@@ -1068,7 +1070,7 @@ export interface CoverageRun {
 export interface CoverageAnalysisUnit {
   name: string
   digest: string
-  primary_paths: string[]
+  primary_paths: string[] | null
   supporting_paths: string[] | null
   typed_index_posture: string
   typed_index_kind?: string

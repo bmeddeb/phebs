@@ -52,7 +52,7 @@
       "authority_boundary": "Invisible repositories are structurally unreachable to the builder and never appear in certificate bytes or counts.",
       "modes": ["add", "migrate", "modify", "retire"],
       "surfaces": ["atlas", "impact", "manual", "mcp", "workbench"],
-      "wire_aliases": ["coverage-certificate-v1"],
+      "wire_aliases": ["coverage-certificate-v1", "coverage-certificate-v2", "coverage-certificate-v3"],
       "availability": {
         "requires_all": ["coverage-certificate"],
         "requires_any": [],

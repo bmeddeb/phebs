@@ -1229,3 +1229,84 @@ func TestExactCallerGapOmitsUnknownTotalsAndLegacyDigests(t *testing.T) {
 		t.Fatalf("exact zero total was omitted: %s", raw)
 	}
 }
+
+func TestUnavailableCallerPartitionProgressAlwaysValidates(t *testing.T) {
+	admission := func(pairs int) *store.CallerGenerationAdmission {
+		return &store.CallerGenerationAdmission{PairCount: pairs}
+	}
+	progress := func(settled, succeeded, refused int) *store.CallerLeafOutcomeProgress {
+		return &store.CallerLeafOutcomeProgress{
+			SettledCount: settled, SucceededCount: succeeded, RefusedCount: refused,
+		}
+	}
+	tests := []struct {
+		name      string
+		read      *callerexecute.PublicationRead
+		wantState string
+	}{
+		{name: "nil read", read: nil, wantState: "unavailable"},
+		{
+			name:      "no progress",
+			read:      &callerexecute.PublicationRead{Admission: admission(3)},
+			wantState: "unavailable",
+		},
+		{
+			// The admitted-but-unsettled generation: partial at 0 of N is the
+			// honest gap-page progress and must pass the authority validator.
+			name: "admitted with zero settled",
+			read: &callerexecute.PublicationRead{
+				Progress: progress(0, 0, 0), Admission: admission(3),
+			},
+			wantState: "partial",
+		},
+		{
+			name: "admitted partially settled",
+			read: &callerexecute.PublicationRead{
+				Progress: progress(2, 1, 1), Admission: admission(3),
+			},
+			wantState: "partial",
+		},
+		{
+			name: "admitted fully settled",
+			read: &callerexecute.PublicationRead{
+				Progress: progress(3, 2, 1), Admission: admission(3),
+			},
+			wantState: "complete",
+		},
+		{
+			name: "settled without admission",
+			read: &callerexecute.PublicationRead{
+				Progress: progress(2, 2, 0),
+			},
+			wantState: "partial",
+		},
+		{
+			name: "unsettled without admission",
+			read: &callerexecute.PublicationRead{
+				Progress: progress(0, 0, 0),
+			},
+			wantState: "unavailable",
+		},
+		{
+			name: "inconsistent counts stay unavailable",
+			read: &callerexecute.PublicationRead{
+				Progress: progress(2, 2, 1), Admission: admission(3),
+			},
+			wantState: "unavailable",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := unavailableCallerPartitionProgress(test.read)
+			if result == nil || result.State != test.wantState {
+				t.Fatalf("emitted progress = %+v, want state %q", result, test.wantState)
+			}
+			if !validCallerPartitionProgress(result) {
+				t.Fatalf(
+					"emitter minted progress its own validator rejects: %+v",
+					result,
+				)
+			}
+		})
+	}
+}

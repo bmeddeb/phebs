@@ -249,9 +249,14 @@ func validCallerPartitionProgress(progress *CallerMapPartitionProgress) bool {
 		return progress.TotalPairCount != nil &&
 			*progress.TotalPairCount == progress.SettledPairCount
 	case "partial":
-		return progress.SettledPairCount > 0 &&
-			(progress.TotalPairCount == nil ||
-				*progress.TotalPairCount > progress.SettledPairCount)
+		// A known total admits zero settled pairs: an admitted generation
+		// whose leaves have not settled yet is honestly partial at 0 of N.
+		// Without a total, zero settled pairs carries no information and
+		// remains invalid.
+		if progress.TotalPairCount != nil {
+			return *progress.TotalPairCount > progress.SettledPairCount
+		}
+		return progress.SettledPairCount > 0
 	case "unavailable":
 		return progress.TotalPairCount == nil &&
 			progress.SettledPairCount == 0

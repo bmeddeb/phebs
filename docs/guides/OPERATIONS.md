@@ -670,7 +670,9 @@ gap. Pointerless gaps repeat the scalar authority/admission selection at the
 result fence. T30.7 also repeats the exact-generation leaf-outcome aggregate:
 the gap may disclose durable settled/succeeded/refused partition counts, with
 an admitted total when known, but still emits no caller rows or numeric caller
-total. Current generations derive complete partition progress and an explicit
+total. An admitted generation whose leaves have not settled yet honestly
+reports `partial` progress at zero of its admitted total; that shape is valid
+in the signed gap authority rather than a conflict. Current generations derive complete partition progress and an explicit
 base/`go_test` record census from the already validated publication payload.
 The response carries the active focused/whole search scope separately from
 the repository-overlay caller generation; its signed authority commits only a
@@ -1729,11 +1731,21 @@ The disposition, not the receipt reason, is authoritative for publication.
 When extraction and staging finish but publication fails transiently, a
 `retryable_failure` may retain `published_nonempty`, `published_empty`,
 `no_candidates`, or `typed_input_absent` as the bounded description of work
-already completed. Retained v1/v2 proof bundles keep their original canonical
-candidate-scope JSON, which omitted the six v3 candidate/exclusion counters;
-when a new v3 certificate emits `candidate_scope`, that object includes all
-six counters, including exact zeroes. Direct-corpus coverage may omit the
-candidate-scope object entirely.
+already completed. A terminal refusal reached through a mid-run budget stop
+joined with an abort failure keeps its `aggregate_budget` or `domain_budget`
+reason. A receipt recorded from T30.6c until the excluded-source/SCIP
+counters existed keeps its exact recorded bytes and is disclosed as
+`legacy_exclusion_shape` instead of being re-encoded or rejected (the
+one-commit T30.6b receipt shape, which also predates nine limits fields,
+remains out of scope), and a
+candidate-manifest census is valid up to the candidate corpus ceiling even
+above the walked per-run corpus limit frozen in the receipt's own limits
+block; candidate plus excluded records remain bounded by that walked limit.
+Retained v1 proof bundles predate the candidate-scope object, while retained
+v2 bundles keep their original canonical candidate-scope JSON, which omitted
+the six v3 candidate/exclusion counters. When a new v3 certificate emits
+`candidate_scope`, that object includes all six counters, including exact
+zeroes. Direct-corpus coverage may omit the candidate-scope object entirely.
 
 A current complete caller generation reports its validated record counts and
 `N/N` succeeded partitions without another database query. Before publication,

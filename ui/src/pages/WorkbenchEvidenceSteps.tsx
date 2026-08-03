@@ -475,6 +475,16 @@ function AnalysisScope({
 }: {
   scope: WorkbenchImpactPage['analysis_scope']
 }) {
+  // Glossary-help availability derives from the served capability rows, not
+  // only from certificate presence: enabled and available capabilities keep
+  // their term entries actionable even before any certificate loads.
+  const enabledCapabilities = useMemo(() => new Set(
+    scope.capabilities
+      .filter((capability) =>
+        capability.state === 'enabled' ||
+        capability.state === 'available')
+      .map((capability) => capability.id),
+  ), [scope.capabilities])
   const statusRows = scope.capabilities.map((capability) => ({
     label: capability.id,
     state: capability.state,
@@ -506,6 +516,7 @@ function AnalysisScope({
       id="workbench-analysis-scope"
       headingLevel={3}
       certificates={scope.coverage.map((coverage) => coverage.certificate)}
+      enabledCapabilities={enabledCapabilities}
       statusRows={statusRows}
       gaps={scope.gaps.map((gap) => ({
         repository: gap.target,
@@ -520,6 +531,16 @@ function AnalysisScope({
 function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
+  // Caller cards reuse the shared scope panel, whose glossary help derives
+  // term availability from served capability rows; without this the cards
+  // would render every capability-gated term as unavailable.
+  const enabledCapabilities = useMemo(() => new Set(
+    page.analysis_scope.capabilities
+      .filter((capability) =>
+        capability.state === 'enabled' ||
+        capability.state === 'available')
+      .map((capability) => capability.id),
+  ), [page.analysis_scope.capabilities])
   const groupCount = page.atlas.length +
     page.callers.length +
     (page.comparison ? 1 : 0) +
@@ -615,6 +636,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
             scope={caller.scope}
             generation={caller.generation}
             matchingRowsState={caller.matching_rows_state}
+            enabledCapabilities={enabledCapabilities}
           />
           {caller.matching_rows_state === 'unavailable' ? (
             <EvidenceNotice>
@@ -670,6 +692,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
               eyebrow="Repository-overlay migration endpoint"
               generation={page.comparison.old.generation}
               matchingRowsState={page.comparison.old.matching_rows_state}
+              enabledCapabilities={enabledCapabilities}
             />
             <CallerGenerationScope
               id="workbench-comparison-replacement-scope"
@@ -677,6 +700,7 @@ function ImpactInventory({ page }: { page: WorkbenchImpactPage }) {
               eyebrow="Repository-overlay migration endpoint"
               generation={page.comparison.replacement.generation}
               matchingRowsState={page.comparison.replacement.matching_rows_state}
+              enabledCapabilities={enabledCapabilities}
             />
           </div>
           {page.comparison.matching_rows_state === 'unavailable' ? (
@@ -1617,6 +1641,7 @@ function CallerGenerationScope({
   title,
   eyebrow,
   scope,
+  enabledCapabilities,
 }: {
   id: string
   generation: WorkbenchImpactPage['callers'][number]['generation']
@@ -1624,6 +1649,7 @@ function CallerGenerationScope({
   title: string
   eyebrow: string
   scope?: WorkbenchImpactPage['callers'][number]['scope']
+  enabledCapabilities?: ReadonlySet<string>
 }) {
   return (
     <div
@@ -1639,6 +1665,7 @@ function CallerGenerationScope({
         scopes={scope ? [scope] : []}
         repository={scope?.repository ?? generation.repository}
         callerGeneration={generation}
+        enabledCapabilities={enabledCapabilities}
         statusRows={[{
           label: 'Matching rows',
           state: matchingRowsState,
