@@ -149,9 +149,7 @@ func newHarnessPublicationReader(
 
 func TestPublicationReaderReturnsExactCurrentLeaseAndFinalFence(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	reader := newHarnessPublicationReader(t, harness, harness.state)
 
 	read, err := reader.Open(t.Context(), harness.state.repo.Name)
@@ -194,9 +192,7 @@ func TestPublicationReaderReturnsExactCurrentLeaseAndFinalFence(t *testing.T) {
 
 func TestPublicationReaderCurrentPairUsesOneJointFence(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	state := &publicationReaderTestStore{workerTestStore: harness.state}
 	reader := newHarnessPublicationReader(t, harness, state)
 	read, err := reader.Open(t.Context(), harness.state.repo.Name)
@@ -242,9 +238,7 @@ func TestPublicationReaderReopensBoundWarmPageWithoutPairPayloadRead(t *testing.
 		Domain: "proto-contract", RunID: "run-declarations",
 		GenerationDigest: harness.state.resolver.GenerationDigest,
 	}}
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 
 	coldReader := newHarnessPublicationReader(t, harness, harness.state)
 	cold, err := coldReader.Open(t.Context(), harness.state.repo.Name)
@@ -303,9 +297,7 @@ func TestPublicationReaderReopensCompactDescriptorWithoutPairPayloadRead(
 		Domain: "proto-contract", RunID: "run-compact-declarations",
 		GenerationDigest: harness.state.resolver.GenerationDigest,
 	}}
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	harness.state.publication.PublicationIncarnation = "sha256:" +
 		strings.Repeat("1", 64)
 
@@ -405,9 +397,7 @@ func TestPublicationReaderReopensCompactDescriptorWithoutPairPayloadRead(
 func TestPublicationReaderCompactDescriptorRejectsABAIncarnation(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
 	harness.state.resolver.SourceLanePolicy = "candidate-source-lane-base-v1"
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	harness.state.publication.PublicationIncarnation = "sha256:" +
 		strings.Repeat("1", 64)
 
@@ -492,9 +482,7 @@ func TestPublicationDescriptorValidatesIndependently(t *testing.T) {
 func TestPublicationReaderBoundReopenRejectsTransitionAndInvalidState(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
 	harness.state.resolver.SourceLanePolicy = "candidate-source-lane-base-v1"
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	coldReader := newHarnessPublicationReader(t, harness, harness.state)
 	cold, err := coldReader.Open(t.Context(), harness.state.repo.Name)
 	if err != nil {
@@ -574,9 +562,7 @@ func TestPublicationReaderClassifiesMissingFailedAndStale(t *testing.T) {
 
 	t.Run("stale pointer", func(t *testing.T) {
 		harness := newWorkerHarness(t, 1)
-		if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-			t.Fatal(err)
-		}
+		harness.settle(t)
 		harness.state.candidate.ControlRevision++
 		reader := newHarnessPublicationReader(t, harness, harness.state)
 		read, err := reader.Open(t.Context(), harness.state.repo.Name)
@@ -588,9 +574,7 @@ func TestPublicationReaderClassifiesMissingFailedAndStale(t *testing.T) {
 
 	t.Run("deterministically invalid pointer", func(t *testing.T) {
 		harness := newWorkerHarness(t, 1)
-		if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-			t.Fatal(err)
-		}
+		harness.settle(t)
 		state := &publicationReaderTestStore{
 			workerTestStore: harness.state,
 			exactErr:        store.ErrInvalidCallerGenerationPublication,
@@ -605,9 +589,7 @@ func TestPublicationReaderClassifiesMissingFailedAndStale(t *testing.T) {
 
 func TestPublicationReaderNeverReturnsLeaseAcrossTransition(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	state := &publicationReaderTestStore{
 		workerTestStore: harness.state,
 		authorityValues: []bool{true},
@@ -626,9 +608,7 @@ func TestPublicationReaderNeverReturnsLeaseAcrossTransition(t *testing.T) {
 
 func TestPublicationReaderPreservesOperationalFailures(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	want := errors.New("database unavailable")
 	state := &publicationReaderTestStore{
 		workerTestStore: harness.state,
@@ -644,9 +624,7 @@ func TestPublicationReaderPreservesOperationalFailures(t *testing.T) {
 
 func TestPublicationReaderNegativeCachesColdFilesystemFailure(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	if harness.state.publication == nil || len(harness.state.publication.Pairs) != 1 {
 		t.Fatalf("published fixture = %+v", harness.state.publication)
 	}
@@ -760,9 +738,7 @@ func TestPublicationReaderBoundsDistinctAdmissionFlights(t *testing.T) {
 
 func TestPublicationReaderRechecksFailureAfterRegisteringNewFlight(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	if harness.state.publication == nil {
 		t.Fatal("caller publication fixture is missing")
 	}

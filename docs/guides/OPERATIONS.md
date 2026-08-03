@@ -404,9 +404,16 @@ catalog publication atomically ensures a repository-keyed `caller_leaf_job`;
 startup also backfills indexed, non-deleting repositories with a current
 catalog. Each turn selects canonical missing pairs one at a time from the
 Cartesian product of every configured caller domain and every candidate-v4
-caller leaf, draining fast pairs beneath the same five-minute mirror-hold bound.
-The pair remains expected when that leaf contains no record for the domain and
-publishes a canonical empty artifact.
+caller leaf. Since the 2026-08-02 scheduling repair, a turn completes as soon
+as one replayed pair's outcome is durable: the already-ensured pending
+successor claims the remaining pairs, and because a successfully completed
+turn's successor starts at attempt zero, bounded per-pair progress is never
+reported as job failure and only a single pair that cannot finish inside one
+five-minute worker deadline can exhaust the three-attempt budget. Terminal
+refusals recorded without reading source still drain in one turn, and
+admission plus complete publication run in their own fresh turn after the
+last pair. The pair remains expected when that leaf contains no record for
+the domain and publishes a canonical empty artifact.
 
 Startup stage cleanup performs one bounded sorted read of the caller root
 (at most 65,536 entries) and one bounded sorted read of each package-shaped

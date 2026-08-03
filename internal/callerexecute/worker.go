@@ -455,13 +455,20 @@ func (worker *Worker) handle(ctx context.Context, job store.Job) error {
 			if outcome.Receipt == nil {
 				return worker.recoverGeneration(workCtx, job, current.stored)
 			}
-			if addErr := aggregate.Add(artifactReceipt(*outcome.Receipt)); addErr != nil {
-				if !errors.Is(addErr, callerleaf.ErrLimit) {
-					return withSuccessorRetry(addErr, successorQueued)
-				}
-				contentRefused = true
+			if addErr := aggregate.Add(artifactReceipt(*outcome.Receipt)); addErr != nil &&
+				!errors.Is(addErr, callerleaf.ErrLimit) {
+				return withSuccessorRetry(addErr, successorQueued)
 			}
 		}
+		// One replayed pair per turn: the outcome above is durable and
+		// executeAndRecordPair ensured the pending successor before touching
+		// any artifact, so completing this job now hands the remaining pairs
+		// a fresh worker deadline and attempt budget instead of starting the
+		// next leaf replay against whatever remains of this turn's. Terminal
+		// no-content refusals above still drain in one turn; the successor
+		// turn recomputes the aggregate from stored outcomes, so a pair that
+		// crossed the aggregate cap here refuses later pairs there.
+		return nil
 	}
 	outcomes = make([]store.CallerLeafOutcome, len(pairs))
 	for index := range pairs {

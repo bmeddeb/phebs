@@ -469,14 +469,43 @@ func newWorkerHarness(t *testing.T, leafCount int) workerHarness {
 	}
 }
 
+// settle drives Handle the way the runner's drain loop does. The T30.6h
+// schedule completes at most one replayed pair per turn, so a generation
+// needs one turn per pending pair, one settling turn for admission and
+// publication or repair, and a final turn that records no event to prove
+// quiescence.
+func (harness workerHarness) settle(t *testing.T) {
+	t.Helper()
+	for turn := 0; turn <= 2*len(harness.plan.leaves)+8; turn++ {
+		before := len(harness.state.events)
+		if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+			t.Fatal(err)
+		}
+		if len(harness.state.events) == before {
+			return
+		}
+	}
+	t.Fatal("caller generation did not settle within its turn budget")
+}
+
 func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
+	// Turn one replays the pair and returns; turn two admits and publishes.
+	// The accumulated mutation order across both turns is unchanged.
 	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := harness.state.events, []string{
-		"enqueue:false", "record:succeeded", "admission:admitted",
-		"enqueue:false", "publish",
+		"enqueue:false", "record:succeeded",
+	}; !slices.Equal(got, want) {
+		t.Fatalf("pair turn mutation order = %v, want %v", got, want)
+	}
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := harness.state.events, []string{
+		"enqueue:false", "record:succeeded", "enqueue:false",
+		"admission:admitted", "enqueue:false", "publish",
 	}; !slices.Equal(got, want) {
 		t.Fatalf("pair mutation order = %v, want %v", got, want)
 	}
@@ -510,9 +539,7 @@ func TestWorkerDurablySettlesPairThenAdmitsWarmGeneration(t *testing.T) {
 
 func TestWorkerQueuesBeforeClearingInvalidPairPayload(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	harness.state.summaryPayloadInvalid = true
 	before := len(harness.state.events)
 	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
@@ -531,13 +558,16 @@ func TestWorkerQueuesBeforeClearingInvalidPairPayload(t *testing.T) {
 func TestWorkerRecoversManifestBeforeStoreCommit(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
 	harness.state.publicationFailures = 1
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
 	if err := harness.worker.Handle(t.Context(), harness.job); err == nil ||
 		!store.IsSuccessorRetry(err) {
 		t.Fatalf("publication commit failure = %v, want successor retry", err)
 	}
 	if got, want := harness.state.events, []string{
-		"enqueue:false", "record:succeeded", "admission:admitted",
-		"enqueue:false", "publish-error",
+		"enqueue:false", "record:succeeded", "enqueue:false",
+		"admission:admitted", "enqueue:false", "publish-error",
 	}; !slices.Equal(got, want) {
 		t.Fatalf("failed publication order = %v, want %v", got, want)
 	}
@@ -570,9 +600,7 @@ func TestWorkerRecoversCommittedMarkerAcrossRegistryGenerationConflict(
 	t *testing.T,
 ) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	first := *harness.state.publication
 
 	nextDigest := "sha256:" + strings.Repeat("9", 64)
@@ -584,6 +612,9 @@ func TestWorkerRecoversCommittedMarkerAcrossRegistryGenerationConflict(
 	harness.state.admission = nil
 	harness.state.publicationLostAck = true
 	harness.state.events = nil
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
 	if err := harness.worker.Handle(t.Context(), harness.job); err == nil ||
 		!store.IsSuccessorRetry(err) {
 		t.Fatalf("lost publication acknowledgement = %v, want successor retry", err)
@@ -618,12 +649,7 @@ func TestWorkerRecoversCommittedMarkerAcrossRegistryGenerationConflict(
 
 func TestWorkerForceBypassesWarmValidationCache(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	receipt := artifactReceipt(*harness.state.outcomes[0].Receipt)
 	path, err := callerleaf.ArtifactPath(
 		harness.worker.root, harness.state.repo.Name, receipt,
@@ -657,9 +683,7 @@ func TestWorkerForceBypassesWarmValidationCache(t *testing.T) {
 
 func TestWorkerRepairsStateWithoutFileQueueBeforeClear(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	receipt := artifactReceipt(*harness.state.outcomes[0].Receipt)
 	path, err := callerleaf.ArtifactPath(
 		harness.worker.root, harness.state.repo.Name, receipt,
@@ -703,9 +727,7 @@ func TestWorkerRepairsStateWithoutFileQueueBeforeClear(t *testing.T) {
 
 func TestWorkerRepairsInvalidPairPayloadQueueBeforeClear(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	if harness.state.publication == nil {
 		t.Fatal("worker did not publish the complete generation")
 	}
@@ -737,9 +759,7 @@ func TestWorkerRepairsSameSizeCorruptArtifactQueueBeforeClear(t *testing.T) {
 			SourceLane: candidate.SourceLaneBase, Reason: "no_direct_caller",
 		})
 	}
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	receipt := artifactReceipt(*harness.state.outcomes[0].Receipt)
 	path, err := callerleaf.ArtifactPath(
 		harness.worker.root, harness.state.repo.Name, receipt,
@@ -800,9 +820,12 @@ func TestWorkerRecoversFileWithoutState(t *testing.T) {
 		if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
 			t.Fatal(err)
 		}
+		if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+			t.Fatal(err)
+		}
 		if got, want := harness.state.events, []string{
-			"enqueue:false", "record:succeeded", "admission:admitted",
-			"enqueue:false", "publish",
+			"enqueue:false", "record:succeeded", "enqueue:false",
+			"admission:admitted", "enqueue:false", "publish",
 		}; !slices.Equal(got, want) {
 			t.Fatalf("resume mutations = %v, want %v", got, want)
 		}
@@ -887,9 +910,12 @@ func TestWorkerRecoversFileWithoutState(t *testing.T) {
 		if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
 			t.Fatal(err)
 		}
+		if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+			t.Fatal(err)
+		}
 		if got, want := harness.state.events, []string{
 			"enqueue:false", "record:terminal_generation_refusal",
-			"admission:terminal_generation_refusal",
+			"enqueue:false", "admission:terminal_generation_refusal",
 		}; !slices.Equal(got, want) {
 			t.Fatalf("divergence mutations = %v, want %v", got, want)
 		}
@@ -978,7 +1004,7 @@ func TestWorkerRecoversFileWithoutState(t *testing.T) {
 	})
 }
 
-func TestWorkerPropagatesLaterOperationalFailureToEnsuredSuccessor(t *testing.T) {
+func TestWorkerFailingPairOwnsItsOwnTurnBudget(t *testing.T) {
 	harness := newWorkerHarness(t, 2)
 	failSecond := true
 	injected := errors.New("injected second-pair I/O failure")
@@ -988,9 +1014,11 @@ func TestWorkerPropagatesLaterOperationalFailureToEnsuredSuccessor(t *testing.T)
 		}
 		return nil
 	}
-	if err := harness.worker.Handle(t.Context(), harness.job); !errors.Is(err, injected) ||
-		store.IsTerminal(err) || !store.IsSuccessorRetry(err) {
-		t.Fatalf("later operational failure = %v, want retryable injected error", err)
+	// The first pair's turn completes successfully; the second pair fails in
+	// its own turn without an ensured successor, so the runner charges the
+	// failed attempt to that job alone rather than to the completed progress.
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
 	}
 	if len(harness.state.outcomes) != 1 || harness.state.admission != nil {
 		t.Fatalf("partial durable progress = outcomes %+v admission %+v", harness.state.outcomes, harness.state.admission)
@@ -998,10 +1026,15 @@ func TestWorkerPropagatesLaterOperationalFailureToEnsuredSuccessor(t *testing.T)
 	if got, want := harness.state.events, []string{"enqueue:false", "record:succeeded"}; !slices.Equal(got, want) {
 		t.Fatalf("partial mutation order = %v, want %v", got, want)
 	}
-	failSecond = false
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
+	if err := harness.worker.Handle(t.Context(), harness.job); !errors.Is(err, injected) ||
+		store.IsTerminal(err) || store.IsSuccessorRetry(err) {
+		t.Fatalf("later operational failure = %v, want plain retryable injected error", err)
 	}
+	if len(harness.state.outcomes) != 1 || harness.state.admission != nil {
+		t.Fatalf("failed turn persisted authority = outcomes %+v admission %+v", harness.state.outcomes, harness.state.admission)
+	}
+	failSecond = false
+	harness.settle(t)
 	if len(harness.state.outcomes) != 2 || harness.state.admission == nil ||
 		harness.state.admission.Disposition != store.CallerGenerationAdmitted {
 		t.Fatalf("successor completion = outcomes %+v admission %+v", harness.state.outcomes, harness.state.admission)
@@ -1089,6 +1122,9 @@ func TestWorkerPropagatesGenerationClearFailureAfterForcedSuccessor(t *testing.T
 func TestWorkerEnsuresSuccessorBeforeSettledAdmissionRetry(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
 	harness.state.admissionFailures = 1
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
 	if err := harness.worker.Handle(t.Context(), harness.job); err == nil ||
 		store.IsTerminal(err) || !store.IsSuccessorRetry(err) {
 		t.Fatalf("first admission write failure = %v, want retryable error", err)
@@ -1133,9 +1169,7 @@ func TestWorkerTerminalPairDoesNotSuppressSibling(t *testing.T) {
 			SourceLane: candidate.SourceLaneBase, Reason: "no_direct_caller",
 		})
 	}
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	if len(harness.state.outcomes) != 2 ||
 		harness.state.outcomes[0].Disposition != store.CallerLeafTerminalGenerationRefusal ||
 		harness.state.outcomes[1].Disposition != store.CallerLeafSucceeded {
@@ -1145,22 +1179,22 @@ func TestWorkerTerminalPairDoesNotSuppressSibling(t *testing.T) {
 		harness.state.admission.Disposition != store.CallerGenerationTerminalGenerationRefusal {
 		t.Fatalf("terminal admission = %+v", harness.state.admission)
 	}
-	if harness.provider.opens != 1 {
-		t.Fatalf("one draining claim opened the candidate plan %d times", harness.provider.opens)
+	// One replayed pair per turn: refusal turn, sibling turn, settling turn,
+	// and settle's final no-event turn short-circuits before the plan opens.
+	if harness.provider.opens != 3 {
+		t.Fatalf("per-pair turns opened the candidate plan %d times, want 3", harness.provider.opens)
 	}
 }
 
 func TestWorkerStopsContentWorkAfterFirstAggregateCrossing(t *testing.T) {
 	harness := newWorkerHarness(t, 3)
-	harness.worker.execute = func(_ context.Context, request ExecuteRequest) error {
-		if request.Pair.Identity.Leaf.Ordinal == 1 {
-			return errors.New("pause after first aggregate seed")
-		}
+	harness.worker.execute = func(context.Context, ExecuteRequest) error {
 		return nil
 	}
-	if err := harness.worker.Handle(t.Context(), harness.job); err == nil ||
-		store.IsTerminal(err) || !store.IsSuccessorRetry(err) {
-		t.Fatalf("aggregate seed pause = %v, want retryable error", err)
+	// One replayed pair per turn: the first turn durably seeds pair zero and
+	// completes without touching its siblings.
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
 	}
 	if len(harness.state.outcomes) != 1 || harness.state.outcomes[0].Receipt == nil {
 		t.Fatalf("aggregate seed outcomes = %+v", harness.state.outcomes)
@@ -1191,9 +1225,7 @@ func TestWorkerStopsContentWorkAfterFirstAggregateCrossing(t *testing.T) {
 			},
 		})
 	}
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	if executions != 1 {
 		t.Fatalf("post-cap source executions = %d, want 1 crossing pair only", executions)
 	}
@@ -1251,5 +1283,128 @@ func TestExpectedPairsRefusesUnrepresentablePairSetCapPlusOne(t *testing.T) {
 	})
 	if !errors.Is(err, callerleaf.ErrLimit) {
 		t.Fatalf("pair-set cap+1 = %v, want ErrLimit", err)
+	}
+}
+
+func TestWorkerEndsTurnAfterOneReplayedPair(t *testing.T) {
+	harness := newWorkerHarness(t, 2)
+	executions := 0
+	harness.worker.execute = func(context.Context, ExecuteRequest) error {
+		executions++
+		return nil
+	}
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if executions != 1 || len(harness.state.outcomes) != 1 {
+		t.Fatalf(
+			"first turn = %d executions, %d outcomes, want exactly one replayed pair",
+			executions, len(harness.state.outcomes),
+		)
+	}
+	if harness.state.admission != nil || harness.state.publication != nil {
+		t.Fatalf(
+			"first turn settled early: admission=%+v publication=%+v",
+			harness.state.admission, harness.state.publication,
+		)
+	}
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if executions != 2 || len(harness.state.outcomes) != 2 {
+		t.Fatalf(
+			"second turn = %d executions, %d outcomes, want the second pair alone",
+			executions, len(harness.state.outcomes),
+		)
+	}
+	harness.settle(t)
+	if executions != 2 {
+		t.Fatalf("settling turns replayed pairs: %d executions", executions)
+	}
+	if harness.state.admission == nil || harness.state.publication == nil {
+		t.Fatal("settling turn did not admit and publish")
+	}
+}
+
+func TestWorkerReplayDeadlineStaysRetryableWithoutSuccessorMark(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	fail := true
+	harness.worker.execute = func(context.Context, ExecuteRequest) error {
+		if fail {
+			return fmt.Errorf(
+				"read selected caller blob %q: %w",
+				"consumer/call.go", context.DeadlineExceeded,
+			)
+		}
+		return nil
+	}
+	err := harness.worker.Handle(t.Context(), harness.job)
+	if !errors.Is(err, context.DeadlineExceeded) || store.IsTerminal(err) ||
+		store.IsSuccessorRetry(err) {
+		t.Fatalf("worker deadline = %v, want plain retryable deadline error", err)
+	}
+	if len(harness.state.outcomes) != 0 || len(harness.state.events) != 0 {
+		t.Fatalf(
+			"expired turn persisted state: outcomes=%+v events=%v",
+			harness.state.outcomes, harness.state.events,
+		)
+	}
+	// The runner requeues the plain retryable error against this job's own
+	// attempt budget: a genuinely oversized pair exhausts attempts and fails,
+	// while a transient expiry replays with a fresh worker deadline.
+	fail = false
+	harness.settle(t)
+	if len(harness.state.outcomes) != 1 || harness.state.publication == nil {
+		t.Fatalf("retried pair did not settle: %+v", harness.state.outcomes)
+	}
+}
+
+func TestWorkerParentCancellationIsDistinctFromWorkerDeadline(t *testing.T) {
+	harness := newWorkerHarness(t, 1)
+	harness.worker.execute = func(ctx context.Context, _ ExecuteRequest) error {
+		return ctx.Err()
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	err := harness.worker.Handle(ctx, harness.job)
+	if !errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("canceled parent = %v, want context.Canceled", err)
+	}
+	if len(harness.state.outcomes) != 0 {
+		t.Fatalf("canceled turn persisted outcomes: %+v", harness.state.outcomes)
+	}
+}
+
+func TestWorkerRestartReusesDurableOutcomesWithoutReplay(t *testing.T) {
+	harness := newWorkerHarness(t, 2)
+	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
+		t.Fatal(err)
+	}
+	if len(harness.state.outcomes) != 1 {
+		t.Fatalf("first turn outcomes = %+v", harness.state.outcomes)
+	}
+	restarted, err := NewWorker(
+		harness.worker.dataDir, harness.state, harness.provider, harness.worker.registry,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restarted.resolve = harness.worker.resolve
+	replayed := map[int]int{}
+	restarted.execute = func(_ context.Context, request ExecuteRequest) error {
+		replayed[request.Pair.Identity.Leaf.Ordinal]++
+		return nil
+	}
+	restartedHarness := harness
+	restartedHarness.worker = restarted
+	restartedHarness.settle(t)
+	if replayed[0] != 0 || replayed[1] != 1 {
+		t.Fatalf("restart replay counts = %v, want only the pending pair once", replayed)
+	}
+	if harness.state.publication == nil || len(harness.state.outcomes) != 2 {
+		t.Fatalf(
+			"restarted worker did not complete: outcomes=%d publication=%v",
+			len(harness.state.outcomes), harness.state.publication != nil,
+		)
 	}
 }

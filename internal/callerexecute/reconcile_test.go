@@ -56,9 +56,7 @@ func TestReconcilePublicationsQueuesBeforeRetiringRuntimeExtractorDrift(
 	t *testing.T,
 ) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	if harness.state.publication == nil {
 		t.Fatal("worker did not publish the complete generation")
 	}
@@ -102,9 +100,7 @@ func TestReconcilePublicationsQueuesBeforeRetiringRuntimeExtractorDrift(
 
 func TestReconcilePublicationsRepairsInvalidPairPayload(t *testing.T) {
 	harness := newWorkerHarness(t, 1)
-	if err := harness.worker.Handle(t.Context(), harness.job); err != nil {
-		t.Fatal(err)
-	}
+	harness.settle(t)
 	if harness.state.publication == nil {
 		t.Fatal("worker did not publish the complete generation")
 	}

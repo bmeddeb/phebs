@@ -955,8 +955,11 @@ independently invisible pair artifacts with durable success/terminal outcomes
 and aggregate admission. Resolver packs now retain the exact generated-symbol
 projection needed by syntax-only direct execution; restart repair, transactional
 fan-out, frozen pair/generation limits, and cap+1 refusal preserve prior and
-sibling authority. T30.6i owns complete visibility, readers, leases, and exact
-archive/restore.
+sibling authority. The 2026-08-02 scheduling repair ends each job turn after
+one durably recorded replayed pair so accumulated multi-pair work can no
+longer expire the fixed worker deadline and burn the shared attempt budget
+(see the PLAN ADR row of the same date). T30.6i owns complete visibility,
+readers, leases, and exact archive/restore.
 
 **T30.6i ✅ · Atomic complete caller-generation publication** *(2026-07-31;
 needs T30.6h)* — completed and retained in the

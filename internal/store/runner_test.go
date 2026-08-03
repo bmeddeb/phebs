@@ -695,3 +695,61 @@ func TestRunnerTreatsHeartbeatReplacementAsPossiblyCommittedSuccessor(t *testing
 			st.statuses, st.successorFailures)
 	}
 }
+
+// T30.6h scheduling repair: a successor created by a successfully completed
+// turn starts with a fresh attempt budget, while a requeued failing job with
+// a pending successor still merges its attempts forward. Success resets the
+// chain; only consecutive failures on the same work can exhaust it.
+func TestSuccessorAfterDoneTurnStartsWithFreshAttemptBudget(t *testing.T) {
+	s := newRetentionTestStore(t)
+	ctx := t.Context()
+	if _, err := s.CreateJob(ctx, JobCallerLeaf, "github.com/acme/turns"); err != nil {
+		t.Fatal(err)
+	}
+	claim := func(wantAttempts int) Job {
+		t.Helper()
+		job, err := s.ClaimJob(ctx, JobCallerLeaf, "runner-test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if job.Attempts != wantAttempts {
+			t.Fatalf("claimed attempts = %d, want %d", job.Attempts, wantAttempts)
+		}
+		if err := s.SetJobStatus(ctx, *job, StatusRunning, ""); err != nil {
+			t.Fatal(err)
+		}
+		return *job
+	}
+
+	// Burn one attempt the way a deadline-expired replay turn does.
+	job := claim(0)
+	if err := s.RequeueJob(
+		ctx, job, "worker deadline", time.Now().UTC().Add(-time.Second),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	// The retried claim carries the burned attempt; completing that turn
+	// after ensuring a successor must not pass the count forward.
+	job = claim(1)
+	if _, err := s.EnsureJobSuccessor(ctx, job, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetJobStatus(ctx, job, StatusDone, ""); err != nil {
+		t.Fatal(err)
+	}
+	successor := claim(0)
+
+	// A failing turn that already ensured a successor still merges its
+	// incremented attempts into the pending row: the path a genuinely
+	// oversized pair uses to eventually exhaust its budget.
+	if _, err := s.EnsureJobSuccessor(ctx, successor, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.RequeueJob(
+		ctx, successor, "worker deadline", time.Now().UTC().Add(-time.Second),
+	); err != nil {
+		t.Fatal(err)
+	}
+	claim(1)
+}
