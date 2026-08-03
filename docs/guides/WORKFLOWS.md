@@ -1192,9 +1192,13 @@ populates 21 core SurrealDB components: evidence graph rows, extraction
 attempts and outcomes, three evidence-pin namespaces, proof bundles, all eight
 durable job tables, and the three caller-row tables. T30.6q now adds one
 aggregate count for each of the exact 24 Investigation/Workbench tables.
-Together they populate 45 components. The final seven derived components, both
-installation data-volume metrics, and every per-table
-`physical_database` byte metric remain `unavailable` with a null value. Byte
+T30.6r completes the remaining seven components with bounded candidate,
+focused, resolver, and caller authority/filesystem reconciliation and
+populates installation total/available capacity where the operating system
+supports the descriptor-bound filesystem-capacity primitive. Unsupported
+platforms retain typed unavailable capacity with a localized cause. All 52
+registered components now have collectors. Every per-component `physical_database` byte metric
+remains `unavailable` with a null value. Byte
 kinds are `logical_encoded`,
 `canonical_content`, `canonical_receipt`, `apparent_file`, and
 `physical_database`; multiple kinds can describe one component and must never
@@ -1253,10 +1257,45 @@ backfill, startup reconstruction, writer, or lifecycle work is added.
 
 Together T30.6p and T30.6q remain within 3,550 reported identities, 3,595
 scanned identities, 53 SurrealDB calls, and 45 localized operational events per
-authorized request. Concurrent authorized requests independently multiply
-these per-request ceilings because this surface adds no retention-specific
-cache or concurrency gate. T30.6r is next and will populate the final seven
-derived store/filesystem components.
+authorized request. T30.6r owns another 546 report/553 scan component slots.
+Its four bounded authority selections use at most nine further SurrealDB
+client calls, including the batched caller current-authority fence. That fence
+performs at most 312 bounded server-internal point reads—four for each of at
+most 78 authorities—plus its marker check. Its metadata-only filesystem plane
+reads 256-name directory batches under
+32,768/32,768/32,768/65,536 candidate/focused/resolver/caller entry ceilings,
+a 163,840-entry aggregate ceiling, 2,048 charged stats, 64 MiB of manifest
+metadata, 256 queued caller directories, and five
+simultaneous structural descriptors: at most three collector-retained handles
+plus up to two Go/platform directory-iterator duplicates or rooted traversal
+internals.
+The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
+conservative open-time `fstat` charges, and one conservative slot per name-batch
+(`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+Every returned raw name consumes the observation budget. Names are otherwise
+names-only; only recognized names receive explicit descriptor-rooted `Lstat`
+checks.
+The metadata allowance is aggregate I/O rather than a heap meter: serial
+caller parsing may retain 32 MiB of raw bytes beside its bounded decoded pair
+structure.
+Stable managed residue contributes apparent-file bytes; resolver canonical
+content and caller canonical receipts require matching store authority. The
+collector does not open or hash member, shard, or leaf payloads. A missing
+managed subroot under a verified data directory is exact zero, while invalid
+roots and partial work remain unavailable or lower-bound. At most nine
+localized T30.6r diagnostics bring the complete event ceiling to 54. Concurrent
+authorized requests independently multiply these per-request ceilings because
+this surface adds no retention-specific cache or concurrency gate.
+
+Resolver/caller canonical byte metrics additionally require the supported
+rooted nonblocking regular-file opener. Platforms without it retain typed
+unavailable canonical metrics while physical inventory continues. This is
+independent of the descriptor-bound filesystem-capacity primitive and its
+separate total/available-data-volume caveat.
+Canonical manifest lookup follows host filesystem path semantics: on a
+case-insensitive filesystem, a byte-case alias can validate canonical bytes
+while exact-spelling physical inventory ignores that alias. The metric kinds
+remain independent.
 
 The `proof_bundles` owner alone reports a non-null `retention_control`:
 `proof_bundles.retention`. Its `default_state` is derived from the effective
@@ -1267,9 +1306,8 @@ independent evidence sweep may later reclaim newly unpinned superseded
 evidence when otherwise eligible. Other owners report null. A
 non-administrator is rejected before the status source or any store,
 filesystem, or cache inventory work runs. The static startup warning is
-emitted before store open even if startup later fails; the populated T30.6p
-and T30.6q collectors and the later T30.6r collector do not change that
-authorization boundary.
+emitted before store open even if startup later fails; the populated T30.6p,
+T30.6q, and T30.6r collectors do not change that authorization boundary.
 
 `stream_search` emits Server-Sent Events: one `results` event per shard batch
 (same JSON shape as `/api/search`), then a final `done` event with aggregate

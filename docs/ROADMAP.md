@@ -80,24 +80,49 @@ concurrent random-ID inserts rather than a frozen snapshot. T30.6o now adds
 the administrator-only `phebs-retention-status-v1` status shell, complete
 52-component registry, fair 4,096-report/4,148-scan aggregate allocation, and
 unconditional pre-store-open capacity warning. Every endpoint response carries
-the warning header, and successful bodies repeat the code. Its fixed
-19,955-byte empty response preserves ordered non-combinable byte kinds and
-discloses the proof-bundle-only retention control. T30.6p now fills 21 core
+the warning header, and successful bodies repeat the code. Its zero-inventory
+shell fixture is 19,955 bytes and preserves ordered non-combinable byte kinds
+plus the proof-bundle-only retention control; live completed responses vary
+with observed numeric metrics and remain subject to the 64-KiB gate. T30.6p
+now fills 21 core
 Surreal components with bounded aggregate table/namespace totals. T30.6q now
 adds one aggregate row total for each of the exact 24
 Investigation/Workbench tables. Together they populate 45 components under
-3,550 report and 3,595 scan identities; the final seven derived components and
-both data-volume metrics remain unavailable. T30.6q uses one catalog preflight
+3,550 report and 3,595 scan identities. T30.6r now completes the remaining
+seven derived store/filesystem components through bounded metadata-only
+authority reconciliation. Resolver/caller canonical metrics require the
+supported rooted nonblocking regular-file opener and remain typed unavailable
+where it is absent; physical inventory continues. Independently, supported
+operating systems expose both installation data-volume metrics, while platforms
+without the capacity primitive retain typed unavailable capacity with a
+localized cause. T30.6q uses
+one catalog preflight
 that returns at most the 24 allowlisted table names and at most 24 direct
 bounded record-ID table scans—25 calls, or 53 together
-with T30.6p—with no new index, backfill, or startup reconstruction. T30.6r is
-next and completes the surface with bounded incremental directory scans.
-Concurrent authorized requests independently multiply the P+Q per-request
-bounds because this surface adds no retention-specific cache or concurrency
-gate. Runtime I/O remains explicitly unavailable, never exact zero. None of
-T30.6n–T30.6r adds deletion, retention configuration, or owner lifecycle
-mutation. T30.6a now emits one
-non-authoritative, source-free, 64 KiB-capped extraction operation report per
+with T30.6p—with no new index, backfill, or startup reconstruction. T30.6r
+adds at most nine further store client calls. Its one batched caller fence also
+performs at most 312 bounded server-internal point reads—four for each of at
+most 78 authorities—plus its marker check. Incremental directory scans are
+bounded to 163,840 aggregate entry observations, 2,048 charged stats, 64 MiB of
+manifest metadata I/O, 256 simultaneously queued caller directories, and five
+simultaneous structural descriptors—at most three
+collector-retained handles plus up to two Go/platform directory-iterator
+duplicates or rooted traversal internals. Manifest parsing is serial, with at
+most 32 MiB of caller raw bytes live beside its bounded decoded
+pair structure. All 52 components now have collectors; runtime I/O failures
+remain explicitly unavailable or lower-bound, never exact zero, with at most
+nine localized T30.6r diagnostics and 54 events across the complete surface.
+The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
+conservative open-time `fstat` charges, and one conservative slot per name-batch
+(`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+Directories are read in 256-name batches. Every returned raw name consumes the
+observation budget. Names are otherwise names-only; only recognized names
+receive explicit descriptor-rooted `Lstat` checks.
+Concurrent authorized requests independently multiply these per-request bounds
+because the surface adds no retention-specific cache or concurrency gate. None
+of T30.6n–T30.6r adds deletion, retention configuration, or owner lifecycle
+mutation. T30.6a now emits one non-authoritative, source-free, 64 KiB-capped
+extraction operation report per
 repository job. Shared queue, mirror-lock, pointer, and strict-open work is
 recorded once at job level; nested domains carry only frozen generic outcomes
 and bounded phase/count/byte/limit diagnostics. Report failure cannot affect
@@ -158,9 +183,8 @@ caller-generation publication, T30.6j authorized exact Caller Map reads,
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
 caller integration, T30.6m historical-publication retention decision,
 T30.6n bounded job-history reads and startup migration, T30.6o's status shell,
-T30.6p core Surreal collectors, and T30.6q's Investigation/Workbench collector
-are shipped; T30.6r derived collectors are next. T30.7 waits for that complete
-sequence.
+T30.6p core Surreal collectors, T30.6q's Investigation/Workbench collector,
+and T30.6r derived collectors are shipped. T30.7 is next.
 T30.6g registers the ordered gRPC/Thrift resolver adapters and materializes one
 immutable catalog
 from the exact candidate/declaration generation. It opens committed `go.mod`,

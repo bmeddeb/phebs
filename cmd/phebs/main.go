@@ -49,6 +49,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/recovery"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
+	"github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/search"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -708,11 +709,14 @@ func serve(args []string) error {
 			resyncNames = append(resyncNames, c.Name)
 		}
 	}
+	retentionStatus := retentionstatus.New(cfg.Server.DataDir, st)
 	apiOpts := api.Options{
 		Version: version,
 		Store:   st, Search: searcher, DataDir: cfg.Server.DataDir,
-		CodeNav:               codeNavigation,
-		RetentionStatusSource: api.NewStoreRetentionStatusSource(st, nil),
+		CodeNav: codeNavigation,
+		RetentionStatusSource: api.NewCompleteRetentionStatusSource(
+			st, retentionStatus, nil,
+		),
 		IsAdmin: func(ctx context.Context) bool {
 			principal, ok := auth.PrincipalFromContext(ctx)
 			return ok && principal.IsAdmin

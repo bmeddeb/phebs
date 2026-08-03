@@ -5457,8 +5457,10 @@ resolver, and caller-artifact owners. It reconciles point-read store authority
 with bounded lifecycle manifests/receipts and filesystem identity/stat
 projections, uses incremental sentinel-stopped directory iteration plus fixed
 descriptor/metadata-byte/stat budgets, and reads or hashes no member/leaf
-payload content. It also reports data-volume total/available as a separate
-filesystem metric. Only after T30.6r does every registered component have an
+payload content. Where the operating system supplies the supported
+descriptor-bound filesystem-capacity primitive, it also reports data-volume
+total/available as a separate filesystem metric; unsupported platforms retain typed
+unavailable capacity. Only after T30.6r does every registered component have an
 implemented collector; runtime I/O or incomplete bootstrap can still
 report `unavailable` and creates no completeness claim. Its one-PR proof is
 four existing derived-publication packages behind one status adapter and one
@@ -5469,7 +5471,9 @@ cap-plus-one is a lower bound, not a reason to scan further. Audit, analytics,
 authentication, and other installation state keep their separately documented
 lifecycles outside this endpoint's declared scope. These tickets add no owner
 writer, deletion, cleanup, backup/restore, retention configuration, corpus
-read, content hash, mirror lock, child process, or lifecycle mutation.
+read, payload/member/shard/leaf content hash, mirror lock, child process, or
+lifecycle mutation. Bounded manifest-metadata validation may recompute its
+metadata digest.
 
 The only unconditional live-capacity escape is to monitor and expand or
 relocate `server.data_dir`. Take a verified backup before supported repository
@@ -5839,3 +5843,119 @@ and allocation, every table and retained state, empty/exact/cap-plus-one
 results, partial catalog readiness, aggregate refusal, error localization,
 composed 45-populated/7-unavailable posture, and denial before either store
 collector. T30.6r is next and completes the final seven derived components.
+
+### T30.6r · Derived retention collectors and complete surface
+
+**T30.6r ✅ · Derived retention collectors and complete surface** *(2026-08-02;
+needs T30.6q)* — completes the frozen administrator-only
+`phebs-retention-status-v1` surface with the final four owners and seven
+components: candidate publication authority/files, focused indexed-unit
+repository state/files, resolver publication authority/package files, and
+managed caller manifests/leaves. The registry, authorization fence, response
+shape, 64-KiB ceiling, warning, and 4,096-report/4,148-scan aggregate
+allocation remain unchanged. T30.6r owns 546 report and 553 scan slots; all 52
+components now have implemented collectors. Runtime failures remain explicit
+`unavailable` or bounded `lower_bound` results and do not become zero. The
+20,766-byte maximum-shaped fixed-envelope regression remains below the hard
+cap; live response size varies with observed numeric values and is not inferred
+from the historical zero-inventory shell fixture.
+
+The store boundary accepts only candidate pointer, focused state, resolver
+pointer, and caller-artifact support requests. Each accepts 1–78 reported
+identities only with `scan = report + 1`; the aggregate is at most four
+requests, 312 selected rows, and 316 scanned rows. One four-name `INFO FOR DB`
+intersection proves table presence, three existing writer/migration-marker
+point checks prove candidate, resolver, and caller readiness, at most four
+direct primary-record-ID-ordered `LIMIT` queries select bounded authority, and
+one batched transaction re-fences current caller authority. That fence remains
+one client round trip but performs at most 312 bounded server-internal point
+reads—four for each of at most 78 caller authorities—plus its migration-marker
+check.
+The first three reads populate their store components. The caller read supplies
+bounded complete-publication authority for artifact reconciliation and is not
+a second registry component. Malformed, absent, retired-writer, or failed
+authority stays localized. Focused state bounds the raw repository-ID prefix
+before applying the schemaless analysis-unit predicate; a capped prefix with
+qualifying rows is partial/lower-bound, and a capped prefix with none is
+unavailable rather than false exact zero. This costs at most nine SurrealDB
+client calls per authorized T30.6r request; the complete T30.6p+q+r store path
+costs at most 62. No caller pair array, unrelated schemaless repository
+metadata, unprojected row payload, new index, schema definition, migration, or
+backfill crosses or supports this boundary.
+
+The filesystem collector first verifies that `server.data_dir` is a real,
+non-symlink directory. Candidate and focused components admit only their stable
+package publication filenames. Resolver inventory admits stable root
+publication files and regular files inside package-owned stage directories.
+Caller inventory admits valid repository directories and stable complete-
+manifest or leaf filenames; bounded parsing of store-authorized manifests
+separately proves canonical receipt coverage. Unrecognized top-level controls,
+foreign entries, symlinks, special files, and path-escaping entries never
+become managed identities; regular files inside a recognized package-owned
+resolver stage are the deliberate temporary-stage exception. Stable
+package-owned residue still contributes to the relevant
+file count and apparent bytes even when it has no current authority. Resolver
+canonical-content and caller canonical-receipt bytes come only from a matching
+bounded store-authorized manifest, so a residue filename cannot fabricate
+canonical bytes. Candidate member, focused shard, resolver member, and caller
+leaf payloads are never opened or hashed.
+
+Every directory is read incrementally in 256-name batches. One request may
+observe at most 32,768 candidate entries, 32,768 focused entries, 32,768
+resolver entries, and 65,536 caller entries, with a 163,840-entry aggregate
+ceiling, at most 2,048 charged stat operations, at most 64 MiB of manifest
+metadata, at most 256 queued caller repository directories, and at most five
+simultaneous structural descriptors: no more than three
+collector-retained handles plus up to two Go/platform directory-iterator
+duplicates or rooted traversal internals. Foreign entries consume the
+observation budgets. Each file component still returns only its
+non-transferable 78-report/79-scan summary. A consumed component sentinel is a
+truncated lower bound; a positive prefix stopped by another physical budget is
+a non-truncated lower bound; a zero-prefix partial scan is unavailable. Missing
+managed subroots beneath a verified real data directory are exact zero. An
+invalid, symlinked, special, or unreadable data root leaves filesystem and
+data-volume metrics unavailable while independent store results remain visible.
+The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
+conservative open-time `fstat` charges, and one conservative slot per name-batch
+(`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+Every returned raw name consumes the observation budget. Names are otherwise
+names-only; only recognized names receive explicit descriptor-rooted `Lstat`
+checks.
+
+The 64-MiB metadata allowance is an aggregate I/O budget, not a Go-heap meter.
+Manifest parsing is serial: one caller manifest may retain up to 32 MiB of raw
+bytes while allocating its separately bounded decoded pair structure; resolver
+raw metadata is capped at 1 MiB. Concurrent administrator requests multiply
+that one-at-a-time raw-plus-decoded heap work independently.
+
+Apparent file bytes, resolver canonical-content bytes, caller
+canonical-receipt bytes, and physical database bytes remain separate typed
+metrics. Resolver/caller canonical metrics require the supported rooted
+nonblocking regular-file opener; platforms without it retain typed unavailable
+canonical metrics while physical inventory continues. Independently, where
+the operating system supports the descriptor-bound filesystem-capacity
+primitive, installation total and available bytes come from that
+metadata for the verified data directory and are not converted into used
+bytes. Platforms without that primitive retain typed unavailable capacity with
+a localized cause. Every per-component physical-database byte metric remains
+unavailable; no logical/canonical/apparent value is relabeled as physical
+allocation or summed into a fabricated total. At most nine localized T30.6r
+diagnostics bring the complete p+q+r operational-event ceiling to 54 without
+hiding successful sibling metrics.
+
+The collectors are weakly consistent diagnostics rather than one atomic
+store/filesystem snapshot. They add no retention-specific cache or concurrency
+gate, so concurrent authorized requests independently multiply every query,
+descriptor, observation, stat, metadata, and response-memory ceiling.
+Administrator denial still precedes both store and filesystem collection.
+Startup allocates only the bounded collector and its four-entry policy map; it
+adds no retention I/O, query, scan, or child. Sync ticks, retries, no-ops,
+writers, publication transitions, and maintenance gain no work. The ticket
+takes no owner or mirror lock, starts no child, scans no corpus, mutates no
+artifact, and adds no repair, sweep,
+deletion, retention/configuration, backup/restore, writer, or lifecycle change.
+Tests cover exact, cap-plus-one, aggregate and metadata limits, missing and
+invalid roots, current-versus-residue accounting, symlink/path hardening,
+descriptor release, localized failures, typed byte independence, data volume,
+complete-registry composition, authorization-before-I/O, and the encoded
+response ceiling. T30.7 is next.

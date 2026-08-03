@@ -12,6 +12,7 @@ import (
 
 	"github.com/danielgtaylor/huma/v2"
 
+	derivedretention "github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -27,6 +28,7 @@ const (
 	RetentionStatusComponentCount              = 52
 	RetentionStatusCoreComponentCount          = 21
 	RetentionStatusInvestigationComponentCount = 24
+	RetentionStatusDerivedComponentCount       = 7
 
 	// RetentionStatusReportedIdentityLimit is the most identities one summary
 	// may represent exactly. The scan limit owns one cap-plus-one sentinel so a
@@ -155,6 +157,13 @@ var investigationRetentionOwnerIDs = map[string]struct{}{
 	"investigation_workbench_rows": {},
 }
 
+var derivedRetentionOwnerIDs = map[string]struct{}{
+	"candidate_artifacts": {},
+	"focused_indexes":     {},
+	"resolver_catalogs":   {},
+	"caller_artifacts":    {},
+}
+
 type retentionComponentCollector func(
 	context.Context,
 	[]store.RetentionComponentRequest,
@@ -216,6 +225,243 @@ func NewStoreRetentionStatusSource(
 		}
 		return investigation(ctx, status)
 	}
+}
+
+// NewDerivedRetentionStatusSource adapts the metadata-only T30.6r store and
+// filesystem collector into the final seven fixed-registry components. A
+// runtime observation failure stays localized to its component or metric;
+// malformed collector output and cancellation remain endpoint errors.
+func NewDerivedRetentionStatusSource(
+	source derivedretention.Source,
+	reportError RetentionStatusErrorReporter,
+) RetentionStatusSource {
+	if source == nil {
+		return func(context.Context, *RetentionStatus) error { return nil }
+	}
+	if reportError == nil {
+		reportError = defaultRetentionStatusErrorReporter
+	}
+	return func(ctx context.Context, status *RetentionStatus) error {
+		requests := make([]store.RetentionComponentRequest, 0, RetentionStatusDerivedComponentCount)
+		components := make(
+			map[store.RetentionComponent]*RetentionComponentStatus,
+			RetentionStatusDerivedComponentCount,
+		)
+		for ownerIndex := range status.Owners {
+			owner := &status.Owners[ownerIndex]
+			if _, selected := derivedRetentionOwnerIDs[owner.ID]; !selected {
+				continue
+			}
+			for componentIndex := range owner.Components {
+				component := &owner.Components[componentIndex]
+				id := store.RetentionComponent(component.ID)
+				if _, duplicate := components[id]; duplicate {
+					return fmt.Errorf("duplicate derived retention component %q", id)
+				}
+				components[id] = component
+				requests = append(requests, store.RetentionComponentRequest{
+					Component:          id,
+					ReportedIdentities: component.Allocation.ReportedIdentities,
+					ScanIdentities:     component.Allocation.ScanIdentities,
+				})
+			}
+		}
+		if len(requests) != RetentionStatusDerivedComponentCount {
+			return fmt.Errorf(
+				"derived retention component count %d is not %d",
+				len(requests), RetentionStatusDerivedComponentCount,
+			)
+		}
+
+		collection, err := source.CollectRetention(ctx, requests)
+		if err != nil {
+			return err
+		}
+		if len(collection.Components) != RetentionStatusDerivedComponentCount {
+			return fmt.Errorf(
+				"collector returned %d of %d derived retention components",
+				len(collection.Components), RetentionStatusDerivedComponentCount,
+			)
+		}
+		diagnosticCount := len(collection.DataVolume.Diagnostics)
+		for _, result := range collection.Components {
+			if result.Err != nil {
+				diagnosticCount++
+			}
+			diagnosticCount += len(result.Diagnostics)
+		}
+		if diagnosticCount > derivedretention.MaxLocalizedDiagnosticsPerRequest {
+			return fmt.Errorf(
+				"collector returned %d derived retention diagnostics above bound %d",
+				diagnosticCount,
+				derivedretention.MaxLocalizedDiagnosticsPerRequest,
+			)
+		}
+		seen := make(map[store.RetentionComponent]struct{}, len(collection.Components))
+		for _, result := range collection.Components {
+			component, exists := components[result.Component]
+			if !exists {
+				return fmt.Errorf(
+					"collector returned unknown derived retention component %q",
+					result.Component,
+				)
+			}
+			if _, duplicate := seen[result.Component]; duplicate {
+				return fmt.Errorf(
+					"collector returned duplicate derived retention component %q",
+					result.Component,
+				)
+			}
+			seen[result.Component] = struct{}{}
+			if result.Err != nil {
+				reportError(ctx, result.Component, result.Err)
+				for _, diagnostic := range result.Diagnostics {
+					if diagnostic == nil {
+						return errors.New("derived retention diagnostic has no error")
+					}
+					reportError(ctx, result.Component, diagnostic)
+				}
+				continue
+			}
+			if err := applyDerivedRetentionResult(component, result); err != nil {
+				return fmt.Errorf(
+					"derived retention component %q: %w",
+					result.Component, err,
+				)
+			}
+			for _, diagnostic := range result.Diagnostics {
+				if diagnostic == nil {
+					return errors.New("derived retention diagnostic has no error")
+				}
+				reportError(ctx, result.Component, diagnostic)
+			}
+		}
+		if len(seen) != len(requests) {
+			return fmt.Errorf(
+				"collector returned %d of %d derived retention components",
+				len(seen), len(requests),
+			)
+		}
+		for _, diagnostic := range collection.DataVolume.Diagnostics {
+			if diagnostic == nil {
+				return errors.New("derived retention diagnostic has no error")
+			}
+			reportError(
+				ctx,
+				store.RetentionComponent("data_volume"),
+				diagnostic,
+			)
+		}
+		if err := applyDerivedRetentionMetric(
+			&status.DataVolume.TotalBytes,
+			collection.DataVolume.TotalBytes,
+		); err != nil {
+			return fmt.Errorf("derived retention data-volume total: %w", err)
+		}
+		if err := applyDerivedRetentionMetric(
+			&status.DataVolume.AvailableBytes,
+			collection.DataVolume.AvailableBytes,
+		); err != nil {
+			return fmt.Errorf("derived retention data-volume available: %w", err)
+		}
+		return nil
+	}
+}
+
+// NewCompleteRetentionStatusSource composes all three independently bounded
+// collector planes in registry order: core store rows, Investigation rows,
+// then derived store/filesystem state.
+func NewCompleteRetentionStatusSource(
+	database store.RetentionStatusStore,
+	derived derivedretention.Source,
+	reportError RetentionStatusErrorReporter,
+) RetentionStatusSource {
+	databaseSource := NewStoreRetentionStatusSource(database, reportError)
+	derivedSource := NewDerivedRetentionStatusSource(derived, reportError)
+	return func(ctx context.Context, status *RetentionStatus) error {
+		if err := databaseSource(ctx, status); err != nil {
+			return err
+		}
+		return derivedSource(ctx, status)
+	}
+}
+
+func applyDerivedRetentionResult(
+	component *RetentionComponentStatus,
+	result derivedretention.ComponentResult,
+) error {
+	if component == nil {
+		return errors.New("component is nil")
+	}
+	component.ScannedIdentities = result.ScannedIdentities
+	component.Truncated = result.Truncated
+	if err := applyDerivedRetentionMetric(&component.Count, result.Count); err != nil {
+		return fmt.Errorf("count: %w", err)
+	}
+	if err := validateRetentionCountSummary(*component); err != nil {
+		return fmt.Errorf("count: %w", err)
+	}
+
+	seen := make(map[RetentionStatusByteKind]struct{}, len(result.ByteMetrics))
+	for _, observed := range result.ByteMetrics {
+		kind := RetentionStatusByteKind(observed.Kind)
+		if _, duplicate := seen[kind]; duplicate {
+			return fmt.Errorf("duplicate byte metric %q", kind)
+		}
+		seen[kind] = struct{}{}
+		var destination *RetentionStatusByteMetric
+		for metricIndex := range component.ByteMetrics {
+			metric := &component.ByteMetrics[metricIndex]
+			if metric.Kind == kind {
+				destination = metric
+				break
+			}
+		}
+		if destination == nil || kind == RetentionStatusBytePhysicalDatabase {
+			return fmt.Errorf("unexpected byte metric %q", kind)
+		}
+		metric := RetentionStatusMetric{
+			Value: destination.Value, Unit: destination.Unit,
+			Completeness: destination.Completeness,
+		}
+		if err := applyDerivedRetentionMetric(&metric, observed.Metric); err != nil {
+			return fmt.Errorf("byte metric %q: %w", kind, err)
+		}
+		destination.Value = metric.Value
+		destination.Unit = metric.Unit
+		destination.Completeness = metric.Completeness
+	}
+	return nil
+}
+
+func applyDerivedRetentionMetric(
+	destination *RetentionStatusMetric,
+	observed derivedretention.Metric,
+) error {
+	if destination == nil {
+		return errors.New("metric destination is nil")
+	}
+	completeness := RetentionStatusCompleteness(observed.Completeness)
+	switch completeness {
+	case RetentionStatusUnavailable:
+		if observed.Value != nil {
+			return errors.New("unavailable metric has a value")
+		}
+		destination.Value = nil
+	case RetentionStatusExact, RetentionStatusLowerBound:
+		if observed.Value == nil {
+			return errors.New("available metric has no value")
+		}
+		value := *observed.Value
+		if value < 0 {
+			return errors.New("available metric is negative")
+		}
+		destination.Value = &value
+	default:
+		return fmt.Errorf("unsupported completeness %q", observed.Completeness)
+	}
+	destination.Completeness = completeness
+	return nil
 }
 
 func newRetentionComponentStatusSource(

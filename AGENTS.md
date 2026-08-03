@@ -107,9 +107,9 @@ unbounded historical-publication retention decision are shipped; T30.6n
 bounded job-history reads and startup-migration repair, T30.6o's
 authorization-first retention-status shell and capacity warning, and T30.6p's
 21 core SurrealDB retention collectors are also shipped. T30.6q's exact
-24-table Investigation/Workbench collector is shipped; T30.6r's
-derived-publication store and filesystem collectors are next and complete the
-status surface.
+24-table Investigation/Workbench collector and T30.6r's bounded
+derived-publication store/filesystem collectors are shipped, completing the
+52-component retention-status surface; T30.7 is next.
 A physical Go-test search overlay,
 test-source association, extractor expansion, and automatic unit discovery
 remain separately reviewed future work.

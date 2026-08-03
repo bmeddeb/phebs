@@ -18,6 +18,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
+	"github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -258,14 +259,19 @@ func TestT306MFollowupSplit(t *testing.T) {
 		return reported, scanned
 	}
 	qReported, qScanned := allocationTotals("investigation_workbench_rows")
+	rReported, rScanned := allocationTotals(
+		"candidate_artifacts", "focused_indexes", "resolver_catalogs", "caller_artifacts",
+	)
 	pqReported, pqScanned := allocationTotals(
 		"evidence_publications", "extraction_attempts", "extraction_outcomes",
 		"evidence_pins", "proof_bundles", "durable_job_history", "caller_rows",
 		"investigation_workbench_rows",
 	)
 	if qReported != 1_894 || qScanned != 1_918 ||
+		rReported != StatusDerivedReportedIdentityAllocation ||
+		rScanned != StatusDerivedScanIdentityAllocation ||
 		pqReported != 3_550 || pqScanned != 3_595 {
-		t.Fatalf("T30.6q and combined allocations = %d/%d and %d/%d", qReported, qScanned, pqReported, pqScanned)
+		t.Fatalf("T30.6q, T30.6r, and combined allocations = %d/%d, %d/%d, and %d/%d", qReported, qScanned, rReported, rScanned, pqReported, pqScanned)
 	}
 	wantTickets := []struct {
 		name      string
@@ -300,9 +306,11 @@ func TestT306MFollowupSplit(t *testing.T) {
 		}},
 		{"T30.6r", []string{
 			"four owners and seven declared components",
-			"four fixed filesystem adapters plus bounded store-authority lookups",
-			"explicit directory-scan budgets and cap-plus-one behavior",
-			"table-driven authority, inventory-bound, and completeness coverage",
+			"four store-authority selections within 312/316 rows and nine client calls, including one caller fence with at most 312 bounded server-side point reads plus its marker check",
+			"four fixed metadata-only filesystem adapters within one 163,840-observation aggregate budget",
+			"production-linked stat, manifest-metadata, caller-directory batching, directory-name batch, and descriptor ceilings",
+			"production-linked nine-diagnostic and fifty-four complete-event ceilings",
+			"table-driven authority, residue, root-hardening, inventory-bound, byte-kind, and completeness coverage",
 		}},
 	}
 	if proof.FitsOnePR || len(proof.Tickets) != len(wantTickets) ||
@@ -333,8 +341,13 @@ func TestT306MFollowupSplit(t *testing.T) {
 		!slices.Contains(q.Changes, "missing tables and row-query failures remain localized while successful summaries are weakly consistent") ||
 		!slices.Contains(q.Changes, "per-request bounds have no retention-specific cache or concurrency gate, so concurrent authorized requests multiply them independently") ||
 		!slices.Contains(q.Excluded, "new query index, schema backfill, or first-open full-history reconstruction") ||
-		!slices.Contains(r.Changes, "bound every installation-root and repository-directory scan with explicit cap-plus-one and independently labeled completeness") ||
-		!slices.Contains(r.Excluded, "unbounded directory walk or filesystem inventory") {
+		!slices.Contains(r.Changes, "reconcile four bounded store-authority selections with candidate, focused-index, resolver-catalog, and caller-leaf filesystem inventories") ||
+		!slices.Contains(r.Changes, "use one four-table catalog intersection, three readiness point checks, four direct row reads, and one caller current-authority fence within nine T30.6r and sixty-two complete client calls; the caller fence performs at most 312 bounded server-side point reads plus its marker check") ||
+		!slices.Contains(r.Changes, "bound metadata-only filesystem work to 163,840 aggregate entry observations through names-only 256-name directory batches; every returned raw name consumes observation budget, while only recognized names receive explicit descriptor-rooted Lstats within 2,048 charged stats including conservative open-time fstat charges and one conservative Windows File.Stat error-classification slot per Readdirnames call; manifest metadata is capped at 64 MiB, caller-directory batching at 256, and physical descriptors at five (at most three collector-retained handles plus up to two platform directory-iterator duplicates or rooted-traversal internals)") ||
+		!slices.Contains(r.Changes, "label cap-plus-one, physical-budget, missing-root, and invalid-root completeness independently without inventing exact zero") ||
+		!slices.Contains(r.Changes, "localize at most nine T30.6r diagnostics and fifty-four complete-surface events without hiding successful sibling metrics") ||
+		!slices.Contains(r.Excluded, "unbounded directory walk or filesystem inventory") ||
+		!slices.Contains(r.Excluded, "member, shard, resolver payload, or caller leaf content reads and hashes") {
 		t.Fatalf("implementation boundaries = %+v", proof)
 	}
 }
@@ -376,6 +389,37 @@ func TestT306MStatusBoundAndWarning(t *testing.T) {
 	}
 	if ProofBundlePositiveLifetimeEffect != api.RetentionStatusProofBundlePositiveLifetimeEffect {
 		t.Fatal("retained and production proof-bundle lifetime effects disagree")
+	}
+	derived := contract.DerivedCollection
+	if StatusDerivedComponentCount != api.RetentionStatusDerivedComponentCount ||
+		derived.ComponentCount != StatusDerivedComponentCount ||
+		derived.ReportedIdentityAllocation != StatusDerivedReportedIdentityAllocation ||
+		derived.ScanIdentityAllocation != StatusDerivedScanIdentityAllocation ||
+		derived.StoreAuthorityRequests != StatusDerivedStoreRequestCount ||
+		derived.StoreReportedIdentityLimit != StatusDerivedStoreReportedIdentityLimit ||
+		derived.StoreScanIdentityLimit != StatusDerivedStoreScanIdentityLimit ||
+		derived.StoreCallLimit != StatusDerivedStoreCallLimit ||
+		derived.CompleteStoreCallLimit != StatusCompleteStoreCallLimit ||
+		derived.LocalizedDiagnosticLimit != retentionstatus.MaxLocalizedDiagnosticsPerRequest ||
+		derived.CompleteLocalizedDiagnosticLimit != StatusCompleteLocalizedEventLimit ||
+		derived.CandidateEntryObservationLimit != retentionstatus.CandidatePhysicalEntryObservationLimit ||
+		derived.FocusedEntryObservationLimit != retentionstatus.FocusedPhysicalEntryObservationLimit ||
+		derived.ResolverEntryObservationLimit != retentionstatus.ResolverPhysicalEntryObservationLimit ||
+		derived.CallerEntryObservationLimit != retentionstatus.CallerPhysicalEntryObservationLimit ||
+		derived.AggregateEntryObservationLimit != retentionstatus.AggregatePhysicalEntryObservationLimit ||
+		derived.AggregateStatOperationLimit != retentionstatus.AggregateStatOperationLimit ||
+		derived.AggregateManifestMetadataByteLimit != retentionstatus.AggregateManifestMetadataByteLimit ||
+		derived.MaxQueuedCallerDirectories != retentionstatus.MaxQueuedCallerRepositoryDirectories ||
+		derived.ReadDirBatchSize != retentionstatus.ReadDirBatchSize ||
+		retentionstatus.MaxSimultaneousDescriptors != 5 ||
+		derived.MaxSimultaneousDescriptors != retentionstatus.MaxSimultaneousDescriptors ||
+		derived.PayloadContentReads != 0 || derived.PayloadContentHashes != 0 ||
+		!strings.Contains(derived.CanonicalMetadataMetric, "rooted nonblocking regular-file opener") ||
+		!strings.Contains(derived.CanonicalMetadataMetric, "physical inventory continues") ||
+		!strings.Contains(derived.CanonicalMetadataMetric, "case-insensitive filesystems") ||
+		!strings.Contains(derived.DataVolumeMetric, "descriptor-bound") ||
+		!strings.Contains(derived.DataVolumeMetric, "otherwise unavailable") {
+		t.Fatalf("derived status contract = %+v", derived)
 	}
 	values := make([]int64, StatusScanIdentityLimit)
 	for index := range values {

@@ -67,12 +67,41 @@ most 80 selected IDs for the active table, returns at most the 24 fixed
 allowlisted catalog names, and adds no index or backfill.
 Missing tables and read failures remain localized, and successful summaries
 are weakly consistent. T30.6p plus T30.6q populate 45 components within
-3,550-report/3,595-scan and 53-query ceilings; physical database attribution,
-both data-volume metrics, and the final seven derived components remain
-unavailable. Concurrent authorized requests independently multiply the
-per-request query and identity bounds; this surface adds no separate cache or
-concurrency gate. T30.6r owns those bounded derived store/filesystem components
-and completes the status surface; its directory scans must remain bounded.
+3,550-report/3,595-scan and 53-query ceilings. T30.6r now owns the final seven
+components and completes all 52: four bounded authority selections accept at
+most 312 reported/316 scanned store rows behind one catalog query, three
+readiness point checks, four direct row reads, and one batched caller
+current-authority fence (nine client calls, or 62 across T30.6p+q+r). The fence
+performs at most 312 bounded server-internal point reads—four for each of at
+most 78 caller authorities—plus its marker check. Its
+metadata-only incremental filesystem inventory observes at most 32,768
+candidate, 32,768 focused, 32,768 resolver, and 65,536 caller
+entries—163,840 aggregate—with 256-name directory batches, 2,048 charged stats,
+64 MiB of manifest metadata, 256 queued caller directories, and five
+simultaneous structural descriptors: at most three collector-retained
+handles plus up to two Go/platform directory-iterator duplicates or rooted
+traversal internals. The metadata allowance is aggregate I/O rather than a heap
+meter: serial caller parsing may retain 32 MiB of raw bytes beside a bounded
+decoded pair structure. It reports stable managed residue/apparent bytes and
+store-authorized resolver/caller canonical bytes independently.
+The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
+conservative open-time `fstat` charges, and one conservative slot per name-batch
+(`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+Every returned raw name consumes the observation budget. Names are otherwise
+names-only; only recognized names receive explicit descriptor-rooted `Lstat`
+checks.
+Resolver/caller canonical metrics require the supported rooted nonblocking
+regular-file opener; platforms without it retain typed unavailable canonical
+metrics while physical inventory continues. Separately, on operating systems
+with the descriptor-bound filesystem-capacity primitive it also reports
+installation total/available capacity; platforms without that primitive retain
+typed unavailable capacity with a localized cause. Every physical-database byte
+metric remains unavailable. Invalid roots and partial work remain
+unavailable or lower-bound, never false exact zero. At most nine localized
+T30.6r diagnostics extend the complete p+q+r operational-event ceiling from 45
+to 54. Concurrent authorized requests independently multiply the per-request
+query, identity, descriptor, stat, and metadata bounds; this surface adds no
+separate cache or concurrency gate.
 None of these tickets changes deletion, configuration, or owner lifecycle
 semantics.
 

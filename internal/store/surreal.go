@@ -180,11 +180,15 @@ func (s *Surreal) applySchema(ctx context.Context) error {
 
 const candidateControlRevisionMigrationVersion = "t30.6b-candidate-control-v1"
 
+func candidateControlRevisionMigrationID() models.RecordID {
+	return models.NewRecordID("store_migration", "candidate_control_revision")
+}
+
 // migrateCandidateControlRevisions gives pre-T30.6b derived pointers their
 // initial durable control identity. The fixed completion row keeps steady-state
 // startup off the publication table.
 func (s *Surreal) migrateCandidateControlRevisions(ctx context.Context) error {
-	marker := models.NewRecordID("store_migration", "candidate_control_revision")
+	marker := candidateControlRevisionMigrationID()
 	results, err := surrealdb.Query[any](ctx, s.db, `
 BEGIN;
 LET $version = (SELECT version FROM $marker LIMIT 1)[0].version;

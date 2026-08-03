@@ -415,6 +415,32 @@
       "default_state": "disabled",
       "positive_lifetime_effect": "deletes the expired bundle and exactly its proof-bundle:\u003cbundle_id\u003e evidence pins but no extraction evidence; the independent evidence sweep may later reclaim newly unpinned superseded evidence when otherwise eligible"
     },
+    "derived_collection": {
+      "component_count": 7,
+      "reported_identity_allocation": 546,
+      "scan_identity_allocation": 553,
+      "store_authority_requests": 4,
+      "store_reported_identity_limit": 312,
+      "store_scan_identity_limit": 316,
+      "store_call_limit": 9,
+      "complete_store_call_limit": 62,
+      "localized_diagnostic_limit": 9,
+      "complete_localized_diagnostic_limit": 54,
+      "candidate_entry_observation_limit": 32768,
+      "focused_entry_observation_limit": 32768,
+      "resolver_entry_observation_limit": 32768,
+      "caller_entry_observation_limit": 65536,
+      "aggregate_entry_observation_limit": 163840,
+      "aggregate_stat_operation_limit": 2048,
+      "aggregate_manifest_metadata_byte_limit": 67108864,
+      "max_queued_caller_directories": 256,
+      "read_dir_batch_size": 256,
+      "max_simultaneous_descriptors": 5,
+      "payload_content_reads": 0,
+      "payload_content_hashes": 0,
+      "canonical_metadata_metric": "resolver and caller canonical byte metrics require a supported rooted nonblocking regular-file opener and are otherwise unavailable while physical inventory continues; lookup follows host path semantics, so byte-case aliases may validate canonical bytes on case-insensitive filesystems while exact-spelling physical inventory ignores them; metric kinds remain independent",
+      "data_volume_metric": "filesystem total and available bytes for the verified data directory where a descriptor-bound capacity primitive is supported; otherwise unavailable; no used-byte or cross-kind total"
+    },
     "empty_sample": {
       "scanned_identities": 0,
       "count": {
@@ -567,21 +593,30 @@
         "purpose": "bounded derived-publication authority and filesystem collectors completing retention status",
         "changes": [
           "bounded collectors for candidate_artifacts, focused_indexes, resolver_catalogs, and caller_artifacts",
-          "reconcile current store authority with candidate, focused-index, resolver-catalog, and caller-leaf filesystem inventories",
-          "bound every installation-root and repository-directory scan with explicit cap-plus-one and independently labeled completeness",
+          "reconcile four bounded store-authority selections with candidate, focused-index, resolver-catalog, and caller-leaf filesystem inventories",
+          "use one four-table catalog intersection, three readiness point checks, four direct row reads, and one caller current-authority fence within nine T30.6r and sixty-two complete client calls; the caller fence performs at most 312 bounded server-side point reads plus its marker check",
+          "bound raw focused-repository selection before the schemaless analysis-unit predicate and report a capped qualifying prefix as partial rather than exact",
+          "bound metadata-only filesystem work to 163,840 aggregate entry observations through names-only 256-name directory batches; every returned raw name consumes observation budget, while only recognized names receive explicit descriptor-rooted Lstats within 2,048 charged stats including conservative open-time fstat charges and one conservative Windows File.Stat error-classification slot per Readdirnames call; manifest metadata is capped at 64 MiB, caller-directory batching at 256, and physical descriptors at five (at most three collector-retained handles plus up to two platform directory-iterator duplicates or rooted-traversal internals)",
+          "report stable managed residue as apparent bytes, store-authorized resolver and caller canonical bytes where rooted nonblocking metadata opens are supported, and verified-directory total and available capacity where descriptor-bound capacity is supported, without payload reads or hashes",
+          "label cap-plus-one, physical-budget, missing-root, and invalid-root completeness independently without inventing exact zero",
+          "localize at most nine T30.6r diagnostics and fifty-four complete-surface events without hiding successful sibling metrics",
           "replace the final four owners' unavailable shell values and complete the twelve-owner retention-status surface"
         ],
         "excluded": [
           "publication writer, lifecycle, cleanup, or data mutations",
           "unbounded directory walk or filesystem inventory",
+          "member, shard, resolver payload, or caller leaf content reads and hashes",
+          "physical database byte attribution or cross-kind byte total",
           "new retention configuration or deletion"
         ],
         "fits_one_pr": true,
         "size_proof": [
           "four owners and seven declared components",
-          "four fixed filesystem adapters plus bounded store-authority lookups",
-          "explicit directory-scan budgets and cap-plus-one behavior",
-          "table-driven authority, inventory-bound, and completeness coverage"
+          "four store-authority selections within 312/316 rows and nine client calls, including one caller fence with at most 312 bounded server-side point reads plus its marker check",
+          "four fixed metadata-only filesystem adapters within one 163,840-observation aggregate budget",
+          "production-linked stat, manifest-metadata, caller-directory batching, directory-name batch, and descriptor ceilings",
+          "production-linked nine-diagnostic and fifty-four complete-event ceilings",
+          "table-driven authority, residue, root-hardening, inventory-bound, byte-kind, and completeness coverage"
         ]
       }
     ],

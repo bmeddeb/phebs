@@ -10,6 +10,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/config"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
+	"github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -36,6 +37,16 @@ const (
 	StatusComponentCount                      = 52
 	StatusAggregateReportedIdentityAllocation = StatusReportedIdentityLimit
 	StatusAggregateScanIdentityAllocation     = StatusAggregateReportedIdentityAllocation + StatusComponentCount
+	StatusDerivedComponentCount               = 7
+	StatusDerivedReportedIdentityAllocation   = StatusDerivedComponentCount * (StatusAggregateReportedIdentityAllocation / StatusComponentCount)
+	StatusDerivedScanIdentityAllocation       = StatusDerivedReportedIdentityAllocation + StatusDerivedComponentCount
+	StatusDerivedStoreRequestCount            = 4
+	StatusDerivedStoreReportedIdentityLimit   = StatusDerivedStoreRequestCount * (StatusAggregateReportedIdentityAllocation / StatusComponentCount)
+	StatusDerivedStoreScanIdentityLimit       = StatusDerivedStoreReportedIdentityLimit + StatusDerivedStoreRequestCount
+	StatusDerivedStoreCallLimit               = 9
+	StatusCompleteStoreCallLimit              = 62
+	StatusDatabaseLocalizedEventLimit         = 45
+	StatusCompleteLocalizedEventLimit         = StatusDatabaseLocalizedEventLimit + retentionstatus.MaxLocalizedDiagnosticsPerRequest
 
 	// EvidenceAdmissionRows is the exact association-plus-assertion ceiling
 	// retained by the T20 current-writer receipt. The T30.6m gate checks this
@@ -130,9 +141,37 @@ type StatusContract struct {
 	ByteMetricKinds                     []string               `json:"byte_metric_kinds"`
 	ByteMetricCombinationRule           string                 `json:"byte_metric_combination_rule"`
 	ProofBundleRetentionControl         StatusRetentionControl `json:"proof_bundle_retention_control"`
+	DerivedCollection                   DerivedStatusContract  `json:"derived_collection"`
 	EmptySample                         StatusSummary          `json:"empty_sample"`
 	CapPlusOneSample                    StatusSummary          `json:"cap_plus_one_sample"`
 	InvalidByteMetricSample             StatusSummary          `json:"invalid_byte_metric_sample"`
+}
+
+type DerivedStatusContract struct {
+	ComponentCount                     int    `json:"component_count"`
+	ReportedIdentityAllocation         int    `json:"reported_identity_allocation"`
+	ScanIdentityAllocation             int    `json:"scan_identity_allocation"`
+	StoreAuthorityRequests             int    `json:"store_authority_requests"`
+	StoreReportedIdentityLimit         int    `json:"store_reported_identity_limit"`
+	StoreScanIdentityLimit             int    `json:"store_scan_identity_limit"`
+	StoreCallLimit                     int    `json:"store_call_limit"`
+	CompleteStoreCallLimit             int    `json:"complete_store_call_limit"`
+	LocalizedDiagnosticLimit           int    `json:"localized_diagnostic_limit"`
+	CompleteLocalizedDiagnosticLimit   int    `json:"complete_localized_diagnostic_limit"`
+	CandidateEntryObservationLimit     int    `json:"candidate_entry_observation_limit"`
+	FocusedEntryObservationLimit       int    `json:"focused_entry_observation_limit"`
+	ResolverEntryObservationLimit      int    `json:"resolver_entry_observation_limit"`
+	CallerEntryObservationLimit        int    `json:"caller_entry_observation_limit"`
+	AggregateEntryObservationLimit     int    `json:"aggregate_entry_observation_limit"`
+	AggregateStatOperationLimit        int    `json:"aggregate_stat_operation_limit"`
+	AggregateManifestMetadataByteLimit int64  `json:"aggregate_manifest_metadata_byte_limit"`
+	MaxQueuedCallerDirectories         int    `json:"max_queued_caller_directories"`
+	ReadDirBatchSize                   int    `json:"read_dir_batch_size"`
+	MaxSimultaneousDescriptors         int    `json:"max_simultaneous_descriptors"`
+	PayloadContentReads                int    `json:"payload_content_reads"`
+	PayloadContentHashes               int    `json:"payload_content_hashes"`
+	CanonicalMetadataMetric            string `json:"canonical_metadata_metric"`
+	DataVolumeMetric                   string `json:"data_volume_metric"`
 }
 
 type ImplementationTicket struct {
@@ -322,6 +361,32 @@ func RetainedResults() Results {
 				DefaultState:           "disabled",
 				PositiveLifetimeEffect: ProofBundlePositiveLifetimeEffect,
 			},
+			DerivedCollection: DerivedStatusContract{
+				ComponentCount:                     StatusDerivedComponentCount,
+				ReportedIdentityAllocation:         StatusDerivedReportedIdentityAllocation,
+				ScanIdentityAllocation:             StatusDerivedScanIdentityAllocation,
+				StoreAuthorityRequests:             StatusDerivedStoreRequestCount,
+				StoreReportedIdentityLimit:         StatusDerivedStoreReportedIdentityLimit,
+				StoreScanIdentityLimit:             StatusDerivedStoreScanIdentityLimit,
+				StoreCallLimit:                     StatusDerivedStoreCallLimit,
+				CompleteStoreCallLimit:             StatusCompleteStoreCallLimit,
+				LocalizedDiagnosticLimit:           retentionstatus.MaxLocalizedDiagnosticsPerRequest,
+				CompleteLocalizedDiagnosticLimit:   StatusCompleteLocalizedEventLimit,
+				CandidateEntryObservationLimit:     retentionstatus.CandidatePhysicalEntryObservationLimit,
+				FocusedEntryObservationLimit:       retentionstatus.FocusedPhysicalEntryObservationLimit,
+				ResolverEntryObservationLimit:      retentionstatus.ResolverPhysicalEntryObservationLimit,
+				CallerEntryObservationLimit:        retentionstatus.CallerPhysicalEntryObservationLimit,
+				AggregateEntryObservationLimit:     retentionstatus.AggregatePhysicalEntryObservationLimit,
+				AggregateStatOperationLimit:        retentionstatus.AggregateStatOperationLimit,
+				AggregateManifestMetadataByteLimit: retentionstatus.AggregateManifestMetadataByteLimit,
+				MaxQueuedCallerDirectories:         retentionstatus.MaxQueuedCallerRepositoryDirectories,
+				ReadDirBatchSize:                   retentionstatus.ReadDirBatchSize,
+				MaxSimultaneousDescriptors:         retentionstatus.MaxSimultaneousDescriptors,
+				PayloadContentReads:                0,
+				PayloadContentHashes:               0,
+				CanonicalMetadataMetric:            "resolver and caller canonical byte metrics require a supported rooted nonblocking regular-file opener and are otherwise unavailable while physical inventory continues; lookup follows host path semantics, so byte-case aliases may validate canonical bytes on case-insensitive filesystems while exact-spelling physical inventory ignores them; metric kinds remain independent",
+				DataVolumeMetric:                   "filesystem total and available bytes for the verified data directory where a descriptor-bound capacity primitive is supported; otherwise unavailable; no used-byte or cross-kind total",
+			},
 			EmptySample:             SummarizeStatus(nil),
 			CapPlusOneSample:        SummarizeStatus(capPlusOne),
 			InvalidByteMetricSample: SummarizeStatus([]int64{-1}),
@@ -432,21 +497,30 @@ func RetainedResults() Results {
 					Purpose: "bounded derived-publication authority and filesystem collectors completing retention status",
 					Changes: []string{
 						"bounded collectors for candidate_artifacts, focused_indexes, resolver_catalogs, and caller_artifacts",
-						"reconcile current store authority with candidate, focused-index, resolver-catalog, and caller-leaf filesystem inventories",
-						"bound every installation-root and repository-directory scan with explicit cap-plus-one and independently labeled completeness",
+						"reconcile four bounded store-authority selections with candidate, focused-index, resolver-catalog, and caller-leaf filesystem inventories",
+						"use one four-table catalog intersection, three readiness point checks, four direct row reads, and one caller current-authority fence within nine T30.6r and sixty-two complete client calls; the caller fence performs at most 312 bounded server-side point reads plus its marker check",
+						"bound raw focused-repository selection before the schemaless analysis-unit predicate and report a capped qualifying prefix as partial rather than exact",
+						"bound metadata-only filesystem work to 163,840 aggregate entry observations through names-only 256-name directory batches; every returned raw name consumes observation budget, while only recognized names receive explicit descriptor-rooted Lstats within 2,048 charged stats including conservative open-time fstat charges and one conservative Windows File.Stat error-classification slot per Readdirnames call; manifest metadata is capped at 64 MiB, caller-directory batching at 256, and physical descriptors at five (at most three collector-retained handles plus up to two platform directory-iterator duplicates or rooted-traversal internals)",
+						"report stable managed residue as apparent bytes, store-authorized resolver and caller canonical bytes where rooted nonblocking metadata opens are supported, and verified-directory total and available capacity where descriptor-bound capacity is supported, without payload reads or hashes",
+						"label cap-plus-one, physical-budget, missing-root, and invalid-root completeness independently without inventing exact zero",
+						"localize at most nine T30.6r diagnostics and fifty-four complete-surface events without hiding successful sibling metrics",
 						"replace the final four owners' unavailable shell values and complete the twelve-owner retention-status surface",
 					},
 					Excluded: []string{
 						"publication writer, lifecycle, cleanup, or data mutations",
 						"unbounded directory walk or filesystem inventory",
+						"member, shard, resolver payload, or caller leaf content reads and hashes",
+						"physical database byte attribution or cross-kind byte total",
 						"new retention configuration or deletion",
 					},
 					FitsOnePR: true,
 					SizeProof: []string{
 						"four owners and seven declared components",
-						"four fixed filesystem adapters plus bounded store-authority lookups",
-						"explicit directory-scan budgets and cap-plus-one behavior",
-						"table-driven authority, inventory-bound, and completeness coverage",
+						"four store-authority selections within 312/316 rows and nine client calls, including one caller fence with at most 312 bounded server-side point reads plus its marker check",
+						"four fixed metadata-only filesystem adapters within one 163,840-observation aggregate budget",
+						"production-linked stat, manifest-metadata, caller-directory batching, directory-name batch, and descriptor ceilings",
+						"production-linked nine-diagnostic and fifty-four complete-event ceilings",
+						"table-driven authority, residue, root-hardening, inventory-bound, byte-kind, and completeness coverage",
 					},
 				},
 			},

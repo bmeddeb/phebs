@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/api"
+	"github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -40,6 +42,18 @@ func (fn investigationRetentionStoreFunc) CollectInvestigationRetention(
 	ctx context.Context,
 	requests []store.RetentionComponentRequest,
 ) ([]store.RetentionComponentResult, error) {
+	return fn(ctx, requests)
+}
+
+type derivedRetentionSourceFunc func(
+	context.Context,
+	[]store.RetentionComponentRequest,
+) (retentionstatus.Collection, error)
+
+func (fn derivedRetentionSourceFunc) CollectRetention(
+	ctx context.Context,
+	requests []store.RetentionComponentRequest,
+) (retentionstatus.Collection, error) {
 	return fn(ctx, requests)
 }
 
@@ -68,6 +82,22 @@ func exactRetentionResults(
 	results := make([]store.RetentionComponentResult, len(requests))
 	for index, request := range requests {
 		results[index].Component = request.Component
+	}
+	return results
+}
+
+func exactDerivedRetentionResults(
+	requests []store.RetentionComponentRequest,
+) []retentionstatus.ComponentResult {
+	results := make([]retentionstatus.ComponentResult, len(requests))
+	for index, request := range requests {
+		zero := int64(0)
+		results[index] = retentionstatus.ComponentResult{
+			Component: request.Component,
+			Count: retentionstatus.Metric{
+				Value: &zero, Completeness: retentionstatus.Exact,
+			},
+		}
 	}
 	return results
 }
@@ -578,6 +608,385 @@ func TestStoreRetentionStatusComposesCoreThenInvestigation(t *testing.T) {
 	}
 }
 
+func TestCompleteRetentionStatusComposesAllCollectorsAndDataVolume(t *testing.T) {
+	var calls []string
+	storeSource := retentionStatusStoreFuncs{
+		core: func(
+			_ context.Context,
+			requests []store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			calls = append(calls, "core")
+			results := exactRetentionResults(requests)
+			for index := range results {
+				switch results[index].Component {
+				case store.RetentionExtractionOutcome,
+					store.RetentionProofBundle,
+					store.RetentionCallerPublication,
+					store.RetentionCallerAdmission,
+					store.RetentionCallerLeafOutcome:
+					zero := int64(0)
+					results[index].Summary.Bytes = &zero
+				}
+			}
+			return results, nil
+		},
+		investigation: func(
+			_ context.Context,
+			requests []store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			calls = append(calls, "investigation")
+			return exactRetentionResults(requests), nil
+		},
+	}
+	derived := derivedRetentionSourceFunc(func(
+		_ context.Context,
+		requests []store.RetentionComponentRequest,
+	) (retentionstatus.Collection, error) {
+		calls = append(calls, "derived")
+		if len(requests) != api.RetentionStatusDerivedComponentCount {
+			t.Fatalf("derived requests = %d, want %d", len(requests), api.RetentionStatusDerivedComponentCount)
+		}
+		results := make([]retentionstatus.ComponentResult, len(requests))
+		for index, request := range requests {
+			zero := int64(0)
+			results[index] = retentionstatus.ComponentResult{
+				Component: request.Component,
+				Count: retentionstatus.Metric{
+					Value: &zero, Completeness: retentionstatus.Exact,
+				},
+			}
+			switch request.Component {
+			case store.RetentionCandidateFiles,
+				store.RetentionFocusedFiles,
+				store.RetentionResolverFiles:
+				results[index].ByteMetrics = []retentionstatus.ByteMetric{{
+					Kind:   retentionstatus.ApparentFile,
+					Metric: retentionstatus.Metric{Value: &zero, Completeness: retentionstatus.Exact},
+				}}
+			case store.RetentionResolverPublication:
+				results[index].ByteMetrics = []retentionstatus.ByteMetric{{
+					Kind:   retentionstatus.CanonicalContent,
+					Metric: retentionstatus.Metric{Value: &zero, Completeness: retentionstatus.Exact},
+				}}
+			case store.RetentionCallerArtifacts:
+				results[index].ByteMetrics = []retentionstatus.ByteMetric{
+					{Kind: retentionstatus.CanonicalReceipt, Metric: retentionstatus.Metric{Value: &zero, Completeness: retentionstatus.Exact}},
+					{Kind: retentionstatus.ApparentFile, Metric: retentionstatus.Metric{Value: &zero, Completeness: retentionstatus.Exact}},
+				}
+			}
+		}
+		total, available := int64(1_000_000), int64(400_000)
+		return retentionstatus.Collection{
+			Components: results,
+			DataVolume: retentionstatus.DataVolumeResult{
+				TotalBytes:     retentionstatus.Metric{Value: &total, Completeness: retentionstatus.Exact},
+				AvailableBytes: retentionstatus.Metric{Value: &available, Completeness: retentionstatus.Exact},
+			},
+		}, nil
+	})
+
+	status, encoded := getRetentionStatus(
+		t,
+		api.NewCompleteRetentionStatusSource(storeSource, derived, nil),
+	)
+	if !slices.Equal(calls, []string{"core", "investigation", "derived"}) {
+		t.Fatalf("collector order = %v, want core, Investigation, derived", calls)
+	}
+	populated := 0
+	for _, owner := range status.Owners {
+		for _, component := range owner.Components {
+			if component.Count.Value != nil {
+				populated++
+			}
+			for _, metric := range component.ByteMetrics {
+				if metric.Kind == api.RetentionStatusBytePhysicalDatabase &&
+					(metric.Value != nil || metric.Completeness != api.RetentionStatusUnavailable) {
+					t.Fatalf("physical metric %q = %+v, want unavailable", component.ID, metric)
+				}
+			}
+		}
+	}
+	if populated != api.RetentionStatusComponentCount {
+		t.Fatalf("populated components = %d, want %d", populated, api.RetentionStatusComponentCount)
+	}
+	if status.DataVolume.TotalBytes.Value == nil ||
+		*status.DataVolume.TotalBytes.Value != 1_000_000 ||
+		status.DataVolume.AvailableBytes.Value == nil ||
+		*status.DataVolume.AvailableBytes.Value != 400_000 {
+		t.Fatalf("data volume = %+v", status.DataVolume)
+	}
+	if len(encoded) > api.RetentionStatusResponseByteLimit {
+		t.Fatalf("complete response = %d bytes, limit %d", len(encoded), api.RetentionStatusResponseByteLimit)
+	}
+}
+
+func TestDerivedRetentionStatusPreservesPartialMetricsAndLocalizedFailures(t *testing.T) {
+	type reportedFailure struct {
+		component store.RetentionComponent
+		err       error
+	}
+	var failures []reportedFailure
+	notReady := fmt.Errorf("%w: candidate migration", store.ErrRetentionComponentUnavailable)
+	partialDiagnostic := errors.New("focused repository prefix exhausted")
+	volumeDiagnostic := errors.New("statfs total unavailable")
+	source := api.NewDerivedRetentionStatusSource(
+		derivedRetentionSourceFunc(func(
+			_ context.Context,
+			requests []store.RetentionComponentRequest,
+		) (retentionstatus.Collection, error) {
+			results := exactDerivedRetentionResults(requests)
+			for index := range results {
+				switch results[index].Component {
+				case store.RetentionCandidatePublication:
+					results[index].Err = notReady
+				case store.RetentionCandidateFiles:
+					count, apparent := int64(2), int64(99)
+					results[index].ScannedIdentities = 2
+					results[index].Count = retentionstatus.Metric{
+						Value: &count, Completeness: retentionstatus.Exact,
+					}
+					results[index].ByteMetrics = []retentionstatus.ByteMetric{{
+						Kind: retentionstatus.ApparentFile,
+						Metric: retentionstatus.Metric{
+							Value: &apparent, Completeness: retentionstatus.LowerBound,
+						},
+					}}
+				case store.RetentionFocusedRepositoryState:
+					count := int64(1)
+					results[index].ScannedIdentities = 1
+					results[index].Count = retentionstatus.Metric{
+						Value: &count, Completeness: retentionstatus.LowerBound,
+					}
+					results[index].Diagnostics = []error{partialDiagnostic}
+				case store.RetentionResolverPublication:
+					canonical := int64(123)
+					results[index].ByteMetrics = []retentionstatus.ByteMetric{{
+						Kind: retentionstatus.CanonicalContent,
+						Metric: retentionstatus.Metric{
+							Value: &canonical, Completeness: retentionstatus.Exact,
+						},
+					}}
+				case store.RetentionCallerArtifacts:
+					count := int64(requests[index].ReportedIdentities)
+					apparent := int64(555)
+					results[index].ScannedIdentities = requests[index].ScanIdentities
+					results[index].Count = retentionstatus.Metric{
+						Value: &count, Completeness: retentionstatus.LowerBound,
+					}
+					results[index].Truncated = true
+					results[index].ByteMetrics = []retentionstatus.ByteMetric{{
+						Kind: retentionstatus.ApparentFile,
+						Metric: retentionstatus.Metric{
+							Value: &apparent, Completeness: retentionstatus.LowerBound,
+						},
+					}}
+				}
+			}
+			available := int64(400_000)
+			return retentionstatus.Collection{
+				Components: results,
+				DataVolume: retentionstatus.DataVolumeResult{
+					TotalBytes: unavailableDerivedMetric(),
+					AvailableBytes: retentionstatus.Metric{
+						Value: &available, Completeness: retentionstatus.Exact,
+					},
+					Diagnostics: []error{volumeDiagnostic},
+				},
+			}, nil
+		}),
+		func(_ context.Context, component store.RetentionComponent, err error) {
+			failures = append(failures, reportedFailure{component: component, err: err})
+		},
+	)
+	status, _ := getRetentionStatus(t, source)
+
+	candidatePointer := retentionComponentByID(
+		t, status, string(store.RetentionCandidatePublication),
+	)
+	if candidatePointer.Count.Value != nil ||
+		candidatePointer.Count.Completeness != api.RetentionStatusUnavailable {
+		t.Fatalf("candidate pointer = %+v, want unavailable", candidatePointer)
+	}
+	candidateFiles := retentionComponentByID(
+		t, status, string(store.RetentionCandidateFiles),
+	)
+	if candidateFiles.Count.Value == nil || *candidateFiles.Count.Value != 2 ||
+		candidateFiles.Count.Completeness != api.RetentionStatusExact ||
+		candidateFiles.ByteMetrics[0].Value == nil ||
+		*candidateFiles.ByteMetrics[0].Value != 99 ||
+		candidateFiles.ByteMetrics[0].Completeness != api.RetentionStatusLowerBound {
+		t.Fatalf("candidate files = %+v", candidateFiles)
+	}
+	focused := retentionComponentByID(
+		t, status, string(store.RetentionFocusedRepositoryState),
+	)
+	if focused.Truncated || focused.ScannedIdentities != 1 ||
+		focused.Count.Value == nil || *focused.Count.Value != 1 ||
+		focused.Count.Completeness != api.RetentionStatusLowerBound {
+		t.Fatalf("partial focused state = %+v", focused)
+	}
+	caller := retentionComponentByID(
+		t, status, string(store.RetentionCallerArtifacts),
+	)
+	if !caller.Truncated ||
+		caller.Count.Value == nil ||
+		*caller.Count.Value != int64(caller.Allocation.ReportedIdentities) ||
+		caller.ByteMetrics[0].Value != nil ||
+		caller.ByteMetrics[0].Completeness != api.RetentionStatusUnavailable ||
+		caller.ByteMetrics[1].Value == nil ||
+		*caller.ByteMetrics[1].Value != 555 ||
+		caller.ByteMetrics[1].Completeness != api.RetentionStatusLowerBound {
+		t.Fatalf("caller artifacts = %+v", caller)
+	}
+	if status.DataVolume.TotalBytes.Value != nil ||
+		status.DataVolume.TotalBytes.Completeness != api.RetentionStatusUnavailable ||
+		status.DataVolume.AvailableBytes.Value == nil ||
+		*status.DataVolume.AvailableBytes.Value != 400_000 {
+		t.Fatalf("partial data volume = %+v", status.DataVolume)
+	}
+	if len(failures) != 3 ||
+		failures[0].component != store.RetentionCandidatePublication ||
+		!errors.Is(failures[0].err, store.ErrRetentionComponentUnavailable) ||
+		failures[1].component != store.RetentionFocusedRepositoryState ||
+		!errors.Is(failures[1].err, partialDiagnostic) ||
+		failures[2].component != store.RetentionComponent("data_volume") ||
+		!errors.Is(failures[2].err, volumeDiagnostic) {
+		t.Fatalf("reported derived failures = %+v", failures)
+	}
+}
+
+func TestDerivedRetentionStatusRejectsMalformedCollectorOutput(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func([]retentionstatus.ComponentResult, *retentionstatus.Collection)
+	}{
+		{
+			name: "omitted component",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				collection.Components = results[:len(results)-1]
+			},
+		},
+		{
+			name: "duplicate component",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				results[len(results)-1].Component = results[0].Component
+				collection.Components = results
+			},
+		},
+		{
+			name: "unknown component",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				results[len(results)-1].Component = "unknown"
+				collection.Components = results
+			},
+		},
+		{
+			name: "available metric without value",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				results[0].Count = retentionstatus.Metric{Completeness: retentionstatus.Exact}
+				collection.Components = results
+			},
+		},
+		{
+			name: "physical database byte metric",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				zero := int64(0)
+				results[0].ByteMetrics = []retentionstatus.ByteMetric{{
+					Kind: retentionstatus.ByteKind(api.RetentionStatusBytePhysicalDatabase),
+					Metric: retentionstatus.Metric{
+						Value: &zero, Completeness: retentionstatus.Exact,
+					},
+				}}
+				collection.Components = results
+			},
+		},
+		{
+			name: "nil diagnostic",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				results[0].Diagnostics = []error{nil}
+				collection.Components = results
+			},
+		},
+		{
+			name: "diagnostic bound",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				results[0].Diagnostics = make(
+					[]error, retentionstatus.MaxLocalizedDiagnosticsPerRequest+1,
+				)
+				for index := range results[0].Diagnostics {
+					results[0].Diagnostics[index] = errors.New("diagnostic")
+				}
+				collection.Components = results
+			},
+		},
+		{
+			name: "invalid data volume",
+			mutate: func(results []retentionstatus.ComponentResult, collection *retentionstatus.Collection) {
+				collection.Components = results
+				collection.DataVolume.TotalBytes = retentionstatus.Metric{
+					Completeness: retentionstatus.Exact,
+				}
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			source := api.NewDerivedRetentionStatusSource(
+				derivedRetentionSourceFunc(func(
+					_ context.Context,
+					requests []store.RetentionComponentRequest,
+				) (retentionstatus.Collection, error) {
+					results := exactDerivedRetentionResults(requests)
+					collection := retentionstatus.Collection{
+						Components: results,
+						DataVolume: retentionstatus.DataVolumeResult{
+							TotalBytes:     unavailableDerivedMetric(),
+							AvailableBytes: unavailableDerivedMetric(),
+						},
+					}
+					test.mutate(results, &collection)
+					return collection, nil
+				}),
+				nil,
+			)
+			handler := api.New(api.Options{
+				Version:               "test",
+				IsAdmin:               func(context.Context) bool { return true },
+				RetentionStatusSource: source,
+			})
+			recorder := httptest.NewRecorder()
+			handler.ServeHTTP(
+				recorder,
+				httptest.NewRequest(http.MethodGet, api.RetentionStatusPath, nil),
+			)
+			if recorder.Code != http.StatusInternalServerError {
+				t.Fatalf("status = %d (%s), want 500", recorder.Code, recorder.Body)
+			}
+		})
+	}
+}
+
+func unavailableDerivedMetric() retentionstatus.Metric {
+	return retentionstatus.Metric{Completeness: retentionstatus.Unavailable}
+}
+
+func retentionComponentByID(
+	t *testing.T,
+	status api.RetentionStatus,
+	id string,
+) api.RetentionComponentStatus {
+	t.Helper()
+	for _, owner := range status.Owners {
+		for _, component := range owner.Components {
+			if component.ID == id {
+				return component
+			}
+		}
+	}
+	t.Fatalf("retention component %q not found", id)
+	return api.RetentionComponentStatus{}
+}
+
 func TestInvestigationRetentionStatusLocalizesAndClassifiesFailures(t *testing.T) {
 	type reportedFailure struct {
 		component store.RetentionComponent
@@ -744,6 +1153,54 @@ func TestStoreRetentionStatusAuthorizationPrecedesBothCollectors(t *testing.T) {
 			"denied collector calls = core:%d Investigation:%d, want zero",
 			coreCalls,
 			investigationCalls,
+		)
+	}
+}
+
+func TestCompleteRetentionStatusAuthorizationPrecedesEveryCollector(t *testing.T) {
+	coreCalls, investigationCalls, derivedCalls := 0, 0, 0
+	storeSource := retentionStatusStoreFuncs{
+		core: func(
+			context.Context,
+			[]store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			coreCalls++
+			return nil, nil
+		},
+		investigation: func(
+			context.Context,
+			[]store.RetentionComponentRequest,
+		) ([]store.RetentionComponentResult, error) {
+			investigationCalls++
+			return nil, nil
+		},
+	}
+	derived := derivedRetentionSourceFunc(func(
+		context.Context,
+		[]store.RetentionComponentRequest,
+	) (retentionstatus.Collection, error) {
+		derivedCalls++
+		return retentionstatus.Collection{}, nil
+	})
+	handler := api.New(api.Options{
+		Version: "test",
+		IsAdmin: func(context.Context) bool { return false },
+		RetentionStatusSource: api.NewCompleteRetentionStatusSource(
+			storeSource, derived, nil,
+		),
+	})
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(
+		recorder,
+		httptest.NewRequest(http.MethodGet, api.RetentionStatusPath, nil),
+	)
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("status = %d (%s), want 403", recorder.Code, recorder.Body)
+	}
+	if coreCalls != 0 || investigationCalls != 0 || derivedCalls != 0 {
+		t.Fatalf(
+			"denied complete collector calls = core:%d Investigation:%d derived:%d, want zero",
+			coreCalls, investigationCalls, derivedCalls,
 		)
 	}
 }

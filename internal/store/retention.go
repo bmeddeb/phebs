@@ -10,10 +10,10 @@ import (
 	"github.com/surrealdb/surrealdb.go/pkg/models"
 )
 
-// RetentionComponent identifies one T30.6p/T30.6q database-backed component.
-// The values deliberately match the fixed API registry, but the store owns the
-// query allowlists so a caller cannot select an arbitrary SurrealDB table or
-// expression.
+// RetentionComponent identifies one fixed T30.6p-r status component. The
+// values deliberately match the API registry, but each collector owns a
+// closed allowlist so a caller cannot select an arbitrary SurrealDB table,
+// expression, or filesystem scope.
 type RetentionComponent string
 
 const (
@@ -54,6 +54,13 @@ const (
 	RetentionInvestigationDossier                   RetentionComponent = "investigation_dossier"
 	RetentionInvestigationWatch                     RetentionComponent = "investigation_watch"
 	RetentionInvestigationWatchRevision             RetentionComponent = "investigation_watch_revision"
+	RetentionCandidatePublication                   RetentionComponent = "candidate_manifest_publication"
+	RetentionCandidateFiles                         RetentionComponent = "$DATA/candidates managed publication files"
+	RetentionFocusedRepositoryState                 RetentionComponent = "repo indexed analysis-unit/revision state"
+	RetentionFocusedFiles                           RetentionComponent = "$DATA/index focused publication files"
+	RetentionResolverPublication                    RetentionComponent = "resolver_catalog_publication"
+	RetentionResolverFiles                          RetentionComponent = "$DATA/resolver-catalogs package-owned files"
+	RetentionCallerArtifacts                        RetentionComponent = "$DATA/caller-leaves managed manifests and leaf artifacts"
 )
 
 // RetentionComponentRequest gives one component its non-transferable share of

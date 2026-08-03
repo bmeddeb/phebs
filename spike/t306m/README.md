@@ -99,7 +99,7 @@ summed into those figures.
 
 ## Selected follow-up
 
-The corrected inventory requires five implementation PRs in dependency order:
+The corrected inventory was implemented through five dependency-ordered PRs:
 
 1. **T30.6n — bounded durable-job reads and startup migration repair.** Replace
    `/api/repo-status`'s lifetime `indexing_job` materialization with bounded
@@ -134,9 +134,11 @@ The corrected inventory requires five implementation PRs in dependency order:
    up to 24 direct, record-ID-ordered scans apply their physical limits. This
    needs no new query index, schema backfill, or first-open reconstruction.
 5. **T30.6r — derived-publication collectors.** Reconcile candidate, focused,
-   resolver, and caller store authority with bounded filesystem inventories,
-   replacing the final four `unavailable` owner summaries. Every installation-
-   root and repository-directory scan has an explicit cap-plus-one budget.
+   resolver, and caller store authority with bounded metadata-only filesystem
+   inventories, replacing the final four `unavailable` owner summaries and
+   completing installation capacity. Every installation-root and repository-
+   directory scan has explicit observation, stat, metadata, and cap-plus-one
+   budgets plus bounded queue batching and descriptor use.
 
 Each ticket has its own retained size proof: T30.6n stays within one queue
 subsystem and two consumers; T30.6o ships only the auth/warning/status shell,
@@ -148,8 +150,8 @@ beyond T30.6p's aggregate evidence-table summaries and T30.6q's aggregate
 owner-table summaries—or any unbounded bootstrap—must split again before
 implementation. The fixed v1 response exposes no lifecycle partition field, so
 T30.6p and T30.6q report aggregate physical rows rather than computing hidden
-classifiers. The five tickets do not fit one combined PR, and T30.7 depends
-on completion through T30.6r.
+classifiers. The five tickets did not fit one combined PR; their completion
+through T30.6r now satisfies T30.7's dependency.
 
 T30.6q owns registry indices 18–41. The first 22 Investigation/Workbench
 components reserve 79 reported identities plus one sentinel each, while
@@ -166,6 +168,51 @@ than one frozen cross-table snapshot. These are per-request bounds: the status
 surface adds no retention-specific cache or concurrency gate, so concurrent
 authorized requests multiply them independently.
 
+T30.6r owns seven components with 546 report and 553 scan slots. Its four
+store-authority selections accept at most 312 reported and 316 scanned rows.
+One fixed four-table catalog intersection, three readiness point checks, four
+direct row reads, and one batched caller current-authority fence cost at most
+nine client calls, or 62 across T30.6p+q+r. The fence performs at most 312
+bounded server-internal point reads—four for each of at most 78 authorities—
+plus its marker check. Focused state bounds the raw repository-ID
+prefix before applying the schemaless analysis-unit predicate; a capped prefix
+with qualifying rows is lower-bound and one with none is unavailable.
+
+The filesystem plane reads directories in 256-name batches and observes at
+most 32,768 candidate, 32,768 focused, 32,768 resolver, and 65,536 caller
+entries—163,840 aggregate. It charges at most 2,048 stats, reads at most 64 MiB
+of manifest metadata, queues at most 256 caller repository directories, and
+uses at most five structural descriptors: at most three
+collector-retained handles plus up to two Go/platform directory-iterator
+duplicates or rooted traversal internals. Stable managed residue counts toward
+apparent file bytes; resolver canonical-content and caller canonical-receipt
+bytes require matching bounded store authority.
+Candidate members, focused shards, resolver members, and caller leaves are
+never opened or hashed.
+The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
+conservative open-time `fstat` charges, and one conservative slot per name-batch
+(`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+Every returned raw name consumes the observation budget. Names are otherwise
+names-only; only recognized names receive explicit descriptor-rooted `Lstat`
+checks.
+The 64-MiB allowance is aggregate metadata I/O rather than a heap meter; caller
+manifests are parsed serially with up to 32 MiB of raw bytes live beside their
+bounded decoded pair structure.
+Missing managed subroots under a verified real data directory are exact zero;
+invalid roots and incomplete scans stay unavailable or lower-bound. On
+platforms with the rooted nonblocking regular-file opener, resolver/caller
+canonical byte reconciliation is available; platforms without it retain typed
+unavailable canonical metrics while physical inventory continues. Separately,
+supported operating systems expose descriptor-bound total and available
+filesystem bytes as capacity metrics, not a used-byte or cross-kind total;
+platforms without that primitive retain typed unavailable capacity. Physical
+database bytes remain unavailable. T30.6r localizes
+at most nine diagnostics, for at most 54 events across the complete surface.
+Canonical manifest lookup follows host filesystem path semantics: a byte-case
+alias on a case-insensitive filesystem may validate canonical bytes while the
+exact-spelling physical inventory ignores that alias. Those metric kinds remain
+independent.
+
 The neutral status sample reports at most 4,096 identities after observing one
 4,097th sentinel. That is a per-summary model, not a fabricated per-component
 implementation bound. T30.6o selects and gates a fixed-work allocation that
@@ -178,7 +225,10 @@ exact store-accepted kind namespaces. It must not list identities, disclose
 repository names, combine unlike logical/canonical/apparent/physical byte
 kinds, or mislabel logical rows/canonical bytes as physical SurrealDB bytes.
 
-Data-volume total/available space remains a separate filesystem metric. None of
+Data-volume total/available space is now populated from the verified data
+directory as a separate filesystem metric where the descriptor-bound capacity
+primitive is supported; unsupported platforms retain typed unavailable values.
+None of
 the five follow-ups adds cleanup, deletion, backup/restore mutation, a retention
 configuration alias, or retained-owner lifecycle/data mutations. T30.6p and
 T30.6q reuse existing bounded record and catalog paths without installing an

@@ -106,9 +106,12 @@ authorization and internal errors, while successful bodies also carry
 `warning_code`. T30.6p populates 21 core SurrealDB components with bounded
 aggregate per-table or per-pin-namespace row totals. T30.6q now populates one
 aggregate physical-row total for each of the exact 24
-Investigation/Workbench tables. Together they populate 45 components; the
-remaining seven derived components, both installation data-volume metrics,
-and per-component physical-database attribution stay explicitly unavailable.
+Investigation/Workbench tables. T30.6r completes the remaining seven derived
+components and, where the operating system supplies the supported
+descriptor-bound filesystem-capacity primitive, both installation data-volume metrics
+under the fixed budgets described below. Unsupported platforms retain typed
+unavailable capacity with a localized cause. Per-component physical-database
+attribution stays explicitly unavailable.
 The populated byte metrics remain logical encoded outcome-receipt bytes,
 canonical proof-content bytes, and canonical caller-receipt bytes; T30.6q
 adds counts but does not infer physical database bytes. Ordered `logical_encoded`,
@@ -152,16 +155,43 @@ additional events classified as `not_ready` or `query_error`. Together T30.6p
 and T30.6q stay within
 3,550-report, 3,595-scan, 53-call, and 45-event ceilings. The collector adds no
 query index, schema backfill, startup reconstruction, configuration, writer,
-or lifecycle work. These are per-request ceilings; concurrent authorized
-requests multiply them because this surface adds no retention-specific cache
-or concurrency gate. T30.6r is next and populates the seven derived
-store/filesystem components, completing the status surface; every filesystem
-scan in that ticket must be bounded. T30.6n–T30.6q add no deletion, change no
-owner lifecycle, and add no retention configuration; the same boundary governs
-T30.6r. A
-future bounded historical-publication policy requires a new ADR and
-configuration contract; omission and numeric zero are
-not reserved as destructive/default aliases for such a future key.
+or lifecycle work. T30.6r now populates the final seven derived components and,
+where the operating system supports the descriptor-bound filesystem-capacity
+primitive, the installation total/available metrics. Its four authority
+selections use at most nine store client calls; the one batched caller fence
+performs at most 312
+server-internal point reads—four for each of at most 78 authorities—plus its
+marker check. Incremental filesystem work is fixed at 163,840 entry
+observations, 2,048 charged stats, 64 MiB of manifest metadata, 256 queued
+caller directories, and five simultaneous structural descriptors:
+at most three collector-retained handles plus up to two Go/platform directory
+iterator duplicates or rooted traversal internals. Every returned raw name
+consumes the observation budget. Names are otherwise names-only; only
+recognized names receive explicit descriptor-rooted `Lstat` checks. These
+limits and the 256-name directory batch are implementation safety contracts,
+not configuration keys. T30.6r localizes at most nine diagnostics,
+bringing the complete status-path event ceiling to 54; neither is configurable.
+The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
+conservative open-time `fstat` charges, and one conservative slot per name-batch
+(`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+The metadata allowance is aggregate I/O, not a heap meter: one caller manifest
+at a time may retain up to 32 MiB of raw bytes beside its bounded decoded pair
+structure.
+`server.data_dir` selects the directory whose managed
+subroots and filesystem capacity are observed; it does not change component
+allocations or turn unreadable/partial inventory into exact zero. These are
+per-request ceilings; concurrent authorized requests multiply them because
+the surface adds no retention-specific cache or concurrency gate. T30.6n–T30.6r
+add no deletion, change no owner lifecycle, and add no retention configuration.
+On an operating system without the supported filesystem-capacity primitive,
+total and available bytes remain explicitly unavailable while component
+inventory continues.
+Resolver/caller canonical byte metrics have a separate platform fence: they
+require the supported rooted nonblocking regular-file opener and remain typed
+unavailable where it is absent, while physical component inventory continues.
+A future bounded historical-publication policy requires a new ADR and
+configuration contract; omission and numeric zero are not reserved as
+destructive/default aliases for such a future key.
 
 
 ### Analysis units

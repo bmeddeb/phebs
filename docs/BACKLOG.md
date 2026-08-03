@@ -15,10 +15,10 @@ caller-generation publication, T30.6j authorized exact Caller Map reads, and
 T30.6k exact caller comparison integration, T30.6l exact Workbench Impact
 caller integration, T30.6m explicit unbounded historical-publication
 retention decision, T30.6n bounded job-history reads and startup migration,
-T30.6o's retention-status shell, T30.6p's core Surreal collectors, and
-T30.6q's Investigation/Workbench collector are shipped; T30.6r's derived
-store/filesystem collectors are next.
-Completed Epics 0–24, Epic 29, T30.1–T30.6q, and P5 hardening are
+T30.6o's retention-status shell, T30.6p's core Surreal collectors,
+T30.6q's Investigation/Workbench collector, and T30.6r's derived
+store/filesystem collectors are shipped; T30.7 is next.
+Completed Epics 0–24, Epic 29, T30.1–T30.6r, and P5 hardening are
 retained in the [completed backlog](./BACKLOG_COMPLETED.md). Current posture
 and decision points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -28,7 +28,7 @@ PR-sized and dependency-ordered for a stacked workflow.
 
 ## Scheduled ticket
 
-**T30.6r · Derived retention collectors and complete surface** is next. T30.6a–T30.6q
+**T30.7 · Scope-aware UI, operations, and epic demo** is next. T30.6a–T30.6r
 now provide bounded operational receipts, durable exact-generation outcomes,
 aggregate/fair retry scheduling, strict path-derived candidate source lanes,
 focused base-lane evidence consumption, the adapter-free immutable catalog
@@ -45,7 +45,8 @@ stall before a status endpoint is reachable. T30.6o supplies the
 authorization-first status shell, complete fixed registry/budget, and
 unconditional warning. T30.6p now fills the 21 core Surreal components;
 T30.6q fills the exact 24-table Investigation/Workbench group, and T30.6r
-finishes the seven derived store/filesystem components.
+finishes the seven derived store/filesystem components and installation
+data-volume metrics under bounded metadata-only scans.
 The accepted
 large-monorepo review keeps T30.6 as the target-bound repository Caller Map
 umbrella, split across PR-sized tickets for operational receipts, durable
@@ -67,7 +68,7 @@ legacy startup migration without deleting terminal diagnostics;
 T30.6o delivers the warning and status shell, T30.6p populates its core
 Surreal layer, T30.6q populates the Investigation/Workbench group, and T30.6r
 finishes the bounded cross-owner status without deleting pinned proof or other
-retained state.
+retained state. T30.7 now owns the scope-aware UI and epic demo.
 
 ### Post-T30.5 issue closure ✅ *(closed 2026-07-29)*
 
@@ -573,7 +574,7 @@ byte-identical; every refusal lands in the frozen vocabulary; an output scan
 proves ACL credential tokens absent; no production code path changed and no
 pack registered.
 
-## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.6r next)*
+## Epic 30 · Service-scoped monorepo analysis *(in progress 2026-07-28 · T30.7 next)*
 
 Make one service inside a very large monorepository a first-class analysis
 unit without pretending that a path-filtered query makes a whole-repository
@@ -1089,27 +1090,15 @@ unavailable. No index, bootstrap, lifecycle partition, artifact sweep,
 deletion, retention configuration, owner mutation, or backup/restore behavior
 is added.
 
-**T30.6r · Derived retention collectors and complete surface** *(needs
-T30.6q)* — populate the final four owner groups and seven components: candidate
-pointer/files, focused repo state/files, resolver pointer/package-owned files,
-and caller managed artifacts. Reconcile current store authority with
-noncurrent managed residue through point reads and already bounded lifecycle
-manifests/receipts; read or hash no member/leaf payload content. Report
-canonical receipt bytes only where already committed, apparent file bytes
-separately, and data-volume total/available as its own filesystem metric. Every
-directory walk is incremental and sentinel-stopped, with fixed descriptor,
-metadata-byte, stat, and aggregate observation budgets; no `os.ReadDir`-style
-whole-directory materialization, corpus walk, source read, or child work is
-allowed. After this ticket every one of the 52 registered components has an
-implemented collector, while runtime I/O or partial-bootstrap failures remain
-honestly `unavailable` rather than implying completeness. This is one PR
-because it owns four existing derived-publication packages behind one status
-adapter contract and one bounded filesystem-inventory primitive. Cover exact-
-under-cap, cap-plus-one, unreadable/missing roots, current-versus-residue
-classification, symlink/path hardening, descriptor release, aggregate budget,
-64 KiB response, and the complete registry. Add no cleanup, deletion,
-retention configuration, writer/lifecycle mutation, backup/restore change,
-mirror lock, or artifact repair. Full merge bar.
+**T30.6r ✅ · Derived retention collectors and complete surface** *(needs
+T30.6q)* — completed and retained in the
+[completed backlog](./BACKLOG_COMPLETED.md#t306r--derived-retention-collectors-and-complete-surface).
+It populates the final four owner groups and seven components through bounded
+store authority reads and metadata-only incremental filesystem scans. The
+collector reports typed canonical/apparent bytes and installation total/
+available capacity independently, keeps physical database attribution
+unavailable, and completes all 52 registered components without adding any
+cleanup, retention, lifecycle, repair, or backup/restore mutation.
 
 ### T30.6 documentation updates
 
