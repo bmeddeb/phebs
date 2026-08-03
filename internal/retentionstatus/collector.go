@@ -357,11 +357,12 @@ func collectResolverCanonical(
 			firstErr = parseErr
 			break
 		}
-		if bytes > math.MaxInt64-canonical {
+		next, ok := addCanonicalBytes(canonical, bytes)
+		if !ok {
 			firstErr = errors.New("resolver canonical receipt total overflows int64")
 			break
 		}
-		canonical += bytes
+		canonical = next
 		matched++
 	}
 	firstErr = errors.Join(firstErr, directory.close())
@@ -478,11 +479,12 @@ func collectCallerCanonical(
 			}
 			break
 		}
-		if bytes > math.MaxInt64-canonical {
+		next, ok := addCanonicalBytes(canonical, bytes)
+		if !ok {
 			firstErr = errors.New("caller canonical receipt total overflows int64")
 			break
 		}
-		canonical += bytes
+		canonical = next
 		matched++
 	}
 	if firstErr != nil {
@@ -498,6 +500,13 @@ func collectCallerCanonical(
 		result.ByteMetrics[0].Metric = metric(canonical, LowerBound)
 	}
 	return result
+}
+
+func addCanonicalBytes(total, next int64) (int64, bool) {
+	if total < 0 || next < 0 || next > math.MaxInt64-total {
+		return 0, false
+	}
+	return total + next, true
 }
 
 func callerAuthorityMatches(

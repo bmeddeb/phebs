@@ -1264,7 +1264,7 @@ performs at most 312 bounded server-internal point reads—four for each of at
 most 78 authorities—plus its marker check. Its metadata-only filesystem plane
 reads 256-name directory batches under
 32,768/32,768/32,768/65,536 candidate/focused/resolver/caller entry ceilings,
-a 163,840-entry aggregate ceiling, 2,048 charged stats, 64 MiB of manifest
+a 163,840-entry aggregate ceiling, 4,096 charged stats, 64 MiB of manifest
 metadata, 256 queued caller directories, and five
 simultaneous structural descriptors: at most three collector-retained handles
 plus up to two Go/platform directory-iterator duplicates or rooted traversal
@@ -1272,6 +1272,10 @@ internals.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+The 78-report/79-scan slots allocate the response envelope rather than promise
+universal exactness. The 4,096-stat ceiling covers the regression-gated lean
+maximum allocation; recognized residue, nested stages, or the independent
+64-MiB metadata limit may still localize a lower-bound or unavailable metric.
 Every returned raw name consumes the observation budget. Names are otherwise
 names-only; only recognized names receive explicit descriptor-rooted `Lstat`
 checks.

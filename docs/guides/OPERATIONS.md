@@ -1848,7 +1848,9 @@ work is not 4,097 multiplied by 52: 4,096 report slots are split fairly, with
 79 reserved for each of the first 40 components and 78 for each of the last 12,
 plus one private sentinel each for a 4,148-scan aggregate. The zero-inventory
 T30.6o shell fixture is 19,955 bytes, and the maximum-shaped fixed envelope is
-20,766 bytes. A live completed response is not fixed at the shell-fixture size:
+20,922 bytes. The earlier 20,766-byte fixture was large but not maximal: an
+unavailable count with its full scan allocation encodes three additional bytes
+per component. A live completed response is not fixed at the shell-fixture size:
 its observed counts, typed byte metrics, and data-volume digit widths vary, and
 the encoder independently enforces the 64-KiB ceiling. At the T30.6o boundary
 every metric was `unavailable` and the shell performed zero store, filesystem,
@@ -1995,7 +1997,7 @@ opened or hashed.
 
 One authorized request reads directories in 256-name batches and observes at
 most 32,768 candidate entries, 32,768 focused entries, 32,768 resolver entries,
-and 65,536 caller entries—163,840 aggregate. It charges at most 2,048 stats,
+and 65,536 caller entries—163,840 aggregate. It charges at most 4,096 stats,
 reads at most 64 MiB of manifest metadata, queues at most 256 caller repository
 directories, and uses at most five simultaneous
 structural descriptors: at most three collector-retained handles plus up to two
@@ -2003,6 +2005,10 @@ Go/platform directory-iterator duplicates or rooted traversal internals.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+The 78-report/79-scan slots allocate the response envelope rather than promise
+universal exactness. The 4,096-stat ceiling covers the regression-gated lean
+maximum allocation; recognized residue, nested stages, or the independent
+64-MiB metadata limit may still localize a lower-bound or unavailable metric.
 Every returned raw name consumes the observation budget. Names are otherwise
 names-only; only recognized names receive explicit descriptor-rooted `Lstat`
 checks.

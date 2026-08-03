@@ -1,4 +1,4 @@
-//go:build !(aix || android || darwin || dragonfly || freebsd || ios || linux || openbsd)
+//go:build !(aix || android || darwin || dragonfly || freebsd || ios || linux)
 
 package retentionstatus
 

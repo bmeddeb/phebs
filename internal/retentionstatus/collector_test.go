@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/bmeddeb/phebs/internal/callerleaf"
+	"github.com/bmeddeb/phebs/internal/callerleafid"
 	"github.com/bmeddeb/phebs/internal/callerpublication"
 	"github.com/bmeddeb/phebs/internal/callerpublicationid"
 	"github.com/bmeddeb/phebs/internal/resolvercatalog"
@@ -333,7 +334,8 @@ func TestCollectorCallerCanonicalIsIndependentOfResidueAndStoreFailure(t *testin
 		}
 		caller := observed.Components[6]
 		canonical := findByteMetric(t, caller, CanonicalReceipt)
-		if canonical.Value == nil || *canonical.Value != 0 || canonical.Completeness != Exact ||
+		if canonical.Value == nil || authority.CanonicalBytes <= 0 ||
+			*canonical.Value != authority.CanonicalBytes || canonical.Completeness != Exact ||
 			caller.Count.Value == nil || *caller.Count.Value != 2 ||
 			findMetricValue(t, caller, ApparentFile) <= 7 {
 			t.Fatalf("caller receipt/residue result = %+v", caller)
@@ -384,6 +386,110 @@ func TestCollectorCallerCanonicalIsIndependentOfResidueAndStoreFailure(t *testin
 			t.Fatalf("extractor-mismatched caller result = %+v", caller)
 		}
 	})
+}
+
+func TestCollectorMaximumLeanAuthorityEnvelopeFitsStatBudget(t *testing.T) {
+	dataDir := t.TempDir()
+	collection := emptyDerivedStoreCollection()
+	var resolverCanonical int64
+	var callerCanonical int64
+	for index := range 78 {
+		_, resolverAuthority, canonical := installResolverFixtureForRepository(
+			t, dataDir, fmt.Sprintf("github.com/acme/resolver-%02d", index),
+		)
+		callerAuthority := installCallerManifestFixtureForRepository(
+			t, dataDir, fmt.Sprintf("github.com/acme/caller-%02d", index),
+		)
+		collection.ResolverAuthorities = append(
+			collection.ResolverAuthorities, resolverAuthority,
+		)
+		collection.CallerAuthorities = append(
+			collection.CallerAuthorities, callerAuthority,
+		)
+		resolverCanonical += canonical
+		callerCanonical += callerAuthority.CanonicalBytes
+	}
+
+	for _, root := range []string{
+		filepath.Join(dataDir, "candidates"),
+		filepath.Join(dataDir, "index"),
+	} {
+		if err := os.MkdirAll(root, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	prepareCandidateFiles(t, filepath.Join(dataDir, "candidates"), 79)
+	prepareFocusedFiles(t, filepath.Join(dataDir, "index"), 79)
+	prepareCallerFiles(t, filepath.Join(dataDir, "caller-leaves"), 1)
+
+	for index := range collection.Results {
+		collection.Results[index].Summary = store.RetentionComponentSummary{
+			ScannedIdentities: 78, ReportedIdentities: 78,
+		}
+	}
+	collection.CandidateAuthorities = make([]store.CandidateManifestPublication, 78)
+	collection.FocusedAuthorities = make([]store.RetentionFocusedRepositoryAuthority, 78)
+	collection.CallerScannedIdentities = 78
+	if AggregateStatOperationLimit < 3_484 {
+		t.Fatalf("stat operation limit = %d, want at least lean maximum 3484", AggregateStatOperationLimit)
+	}
+
+	collector := testCollectorAt(dataDir, collection)
+	collector.policy.aggregateStats = 3_484
+	active, peak := 0, 0
+	collector.hooks.descriptorDelta = func(delta int) {
+		active += delta
+		peak = max(peak, active)
+	}
+	observed, err := collector.CollectRetention(t.Context(), derivedRequests())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, index := range []int{1, 3, 5, 6} {
+		component := observed.Components[index]
+		if component.Count.Value == nil || *component.Count.Value != 78 ||
+			component.Count.Completeness != LowerBound || !component.Truncated {
+			t.Fatalf("maximum physical component %q = %+v", component.Component, component)
+		}
+	}
+	resolverMetric := findByteMetric(t, observed.Components[4], CanonicalContent)
+	callerMetric := findByteMetric(t, observed.Components[6], CanonicalReceipt)
+	if resolverMetric.Value == nil || *resolverMetric.Value != resolverCanonical ||
+		resolverMetric.Completeness != Exact || callerMetric.Value == nil ||
+		*callerMetric.Value != callerCanonical ||
+		callerMetric.Completeness != Exact {
+		t.Fatalf("maximum canonical metrics = resolver %+v caller %+v", resolverMetric, callerMetric)
+	}
+	if observed.DataVolume.TotalBytes.Completeness != Exact ||
+		observed.DataVolume.AvailableBytes.Completeness != Exact ||
+		active != 0 || peak > maxRetainedDescriptors {
+		t.Fatalf("maximum envelope data/descriptors = %+v/%d/%d", observed.DataVolume, active, peak)
+	}
+
+	collector = testCollectorAt(dataDir, collection)
+	collector.policy.aggregateStats = 3_483
+	observed, err = collector.CollectRetention(t.Context(), derivedRequests())
+	if err != nil {
+		t.Fatal(err)
+	}
+	callerMetric = findByteMetric(t, observed.Components[6], CanonicalReceipt)
+	if callerMetric.Value == nil || callerMetric.Completeness != LowerBound ||
+		!errors.Is(firstComponentError(observed.Components[6]), errStatBudget) ||
+		observed.DataVolume.TotalBytes.Completeness != Exact ||
+		observed.DataVolume.AvailableBytes.Completeness != Exact {
+		t.Fatalf("stat boundary caller/data = %+v/%+v", observed.Components[6], observed.DataVolume)
+	}
+}
+
+func TestAddCanonicalBytesRejectsOverflow(t *testing.T) {
+	if total, ok := addCanonicalBytes(math.MaxInt64-1, 1); !ok || total != math.MaxInt64 {
+		t.Fatalf("boundary addition = %d/%v", total, ok)
+	}
+	for _, values := range [][2]int64{{math.MaxInt64, 1}, {-1, 0}, {0, -1}} {
+		if total, ok := addCanonicalBytes(values[0], values[1]); ok || total != 0 {
+			t.Fatalf("invalid addition %v = %d/%v", values, total, ok)
+		}
+	}
 }
 
 func TestCollectorDataRootAndStatFSFailuresStayLocalized(t *testing.T) {
@@ -959,12 +1065,23 @@ func installResolverFixture(
 	dataDir string,
 ) (resolvercatalog.State, store.ResolverCatalogPublication, int64) {
 	t.Helper()
+	return installResolverFixtureForRepository(
+		t, dataDir, "github.com/acme/resolver",
+	)
+}
+
+func installResolverFixtureForRepository(
+	t *testing.T,
+	dataDir string,
+	repository string,
+) (resolvercatalog.State, store.ResolverCatalogPublication, int64) {
+	t.Helper()
 	root := filepath.Join(dataDir, "resolver-catalogs")
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		t.Fatal(err)
 	}
 	identity, err := resolvercatalog.NewIdentity(
-		"github.com/acme/resolver", strings.Repeat("1", 40), "",
+		repository, strings.Repeat("1", 40), "",
 		"sha256:"+strings.Repeat("a", 64), nil, nil,
 	)
 	if err != nil {
@@ -1036,9 +1153,20 @@ func installCallerManifestFixture(
 	dataDir string,
 ) store.CallerGenerationPublicationSummary {
 	t.Helper()
+	return installCallerManifestFixtureForRepository(
+		t, dataDir, "github.com/acme/caller",
+	)
+}
+
+func installCallerManifestFixtureForRepository(
+	t *testing.T,
+	dataDir string,
+	repository string,
+) store.CallerGenerationPublicationSummary {
+	t.Helper()
 	digest := func(char string) string { return "sha256:" + strings.Repeat(char, 64) }
 	generation, err := callerleaf.NewGenerationIdentity(callerleaf.GenerationIdentity{
-		Repository:               "github.com/acme/caller",
+		Repository:               repository,
 		HeadCommit:               strings.Repeat("1", 40),
 		DeclarationSetDigest:     digest("a"),
 		CandidateManifestDigest:  digest("b"),
@@ -1053,8 +1181,29 @@ func installCallerManifestFixture(
 	if err != nil {
 		t.Fatal(err)
 	}
+	pair, err := callerleaf.NewPairIdentity(
+		generation, "grpc-caller", "1.5.0", callerleaf.LeafDescriptor{
+			Name: "candidate-caller-000000.ndjson", Ordinal: 0,
+			Prefix: "00", PrefixBits: 2, RecordCount: 1,
+			DeclaredBytes: 256, ContentBytes: 128, ContentDigest: digest("f"),
+		},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, metadataDigest, err := callerleaf.MetadataFor(generation, pair)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentDigest := digest("0")
+	receipt := callerleaf.Receipt{
+		Name:        callerleafid.ArtifactName(pair.Digest, contentDigest),
+		RecordCount: 1, AbstentionCount: 1,
+		ContentBytes: 17, ContentDigest: contentDigest,
+		MetadataDigest: metadataDigest, StagingBytes: 17,
+	}
 	manifest, err := callerpublication.BuildManifest(
-		generation, []callerpublication.PairReceipt{},
+		generation, []callerpublication.PairReceipt{{Pair: pair, Receipt: receipt}},
 	)
 	if err != nil {
 		t.Fatal(err)

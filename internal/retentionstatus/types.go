@@ -17,10 +17,12 @@ const (
 	ResolverPhysicalEntryObservationLimit  = 32_768
 	CallerPhysicalEntryObservationLimit    = 65_536
 	AggregatePhysicalEntryObservationLimit = 163_840
-	AggregateStatOperationLimit            = 2_048
-	AggregateManifestMetadataByteLimit     = 64 << 20
-	MaxQueuedCallerRepositoryDirectories   = 256
-	ReadDirBatchSize                       = 256
+	// AggregateStatOperationLimit covers the lean all-component 79th-sentinel
+	// envelope while leaving residue and metadata degradation explicit.
+	AggregateStatOperationLimit          = 4_096
+	AggregateManifestMetadataByteLimit   = 64 << 20
+	MaxQueuedCallerRepositoryDirectories = 256
+	ReadDirBatchSize                     = 256
 	// MaxSimultaneousDescriptors includes Go's platform directory-iterator
 	// duplicates and rooted traversal handles in addition to the three handles
 	// retained directly by the collector.

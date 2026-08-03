@@ -685,12 +685,14 @@ func TestCompleteRetentionStatusComposesAllCollectorsAndDataVolume(t *testing.T)
 		}, nil
 	})
 
-	status, encoded := getRetentionStatus(
-		t,
-		api.NewCompleteRetentionStatusSource(storeSource, derived, nil),
-	)
+	source := api.NewCompleteRetentionStatusSource(storeSource, derived, nil)
+	status, encoded := getRetentionStatus(t, source)
 	if !slices.Equal(calls, []string{"core", "investigation", "derived"}) {
 		t.Fatalf("collector order = %v, want core, Investigation, derived", calls)
+	}
+	_, repeatedEncoded := getRetentionStatus(t, source)
+	if !bytes.Equal(encoded, repeatedEncoded) {
+		t.Fatal("complete retention status encoding is not deterministic")
 	}
 	populated := 0
 	for _, owner := range status.Owners {
@@ -717,6 +719,10 @@ func TestCompleteRetentionStatusComposesAllCollectorsAndDataVolume(t *testing.T)
 	}
 	if len(encoded) > api.RetentionStatusResponseByteLimit {
 		t.Fatalf("complete response = %d bytes, limit %d", len(encoded), api.RetentionStatusResponseByteLimit)
+	}
+	const wantCompleteEncodedBytes = 19_381
+	if len(encoded) != wantCompleteEncodedBytes {
+		t.Fatalf("complete encoded bytes = %d, want frozen %d", len(encoded), wantCompleteEncodedBytes)
 	}
 }
 
@@ -1451,14 +1457,11 @@ func TestRetentionStatusEncodedResponseIsFixedAndBounded(t *testing.T) {
 		for componentIndex := range first.Owners[ownerIndex].Components {
 			component := &first.Owners[ownerIndex].Components[componentIndex]
 			component.ScannedIdentities = component.Allocation.ScanIdentities
-			reported := int64(component.Allocation.ReportedIdentities)
-			component.Count = api.RetentionStatusMetric{Value: &reported, Unit: "identities", Completeness: api.RetentionStatusLowerBound}
 			for metricIndex := range component.ByteMetrics {
 				component.ByteMetrics[metricIndex].Value = &maximum
 				component.ByteMetrics[metricIndex].Unit = "bytes"
 				component.ByteMetrics[metricIndex].Completeness = api.RetentionStatusLowerBound
 			}
-			component.Truncated = true
 		}
 	}
 	first.DataVolume.TotalBytes = api.RetentionStatusMetric{Value: &maximum, Unit: "bytes", Completeness: api.RetentionStatusLowerBound}
@@ -1467,7 +1470,7 @@ func TestRetentionStatusEncodedResponseIsFixedAndBounded(t *testing.T) {
 		*status = first
 		return nil
 	})
-	const wantMaximumEncodedBytes = 20_766
+	const wantMaximumEncodedBytes = 20_922
 	if len(maximumEncoded) != wantMaximumEncodedBytes {
 		t.Fatalf("maximum encoded bytes = %d, want frozen %d", len(maximumEncoded), wantMaximumEncodedBytes)
 	}

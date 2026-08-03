@@ -1090,8 +1090,8 @@ unavailable. No index, bootstrap, lifecycle partition, artifact sweep,
 deletion, retention configuration, owner mutation, or backup/restore behavior
 is added.
 
-**T30.6r ✅ · Derived retention collectors and complete surface** *(needs
-T30.6q)* — completed and retained in the
+**T30.6r ✅ · Derived retention collectors and complete surface** *(2026-08-02;
+needs T30.6q)* — completed and retained in the
 [completed backlog](./BACKLOG_COMPLETED.md#t306r--derived-retention-collectors-and-complete-surface).
 It populates the final four owner groups and seven components through bounded
 store authority reads and metadata-only incremental filesystem scans. The

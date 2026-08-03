@@ -5688,10 +5688,11 @@ allocation. An unavailable count may disclose work already scanned but cannot
 claim truncation.
 
 The encoded-response hard limit is 65,536 bytes. The deterministic unavailable
-shell is exactly 19,955 Huma HTTP-body bytes; the same fixed envelope with
-counts at their report allocations and every typed byte metric at `MaxInt64`,
-all as lower bounds, is 20,766 bytes. Both are
-measured beneath the cap, and runtime validation refuses a malformed registry,
+shell is exactly 19,955 Huma HTTP-body bytes. The maximum validating fixed
+envelope—full scan allocations with unavailable counts, every typed component
+byte metric at `MaxInt64`, and both data-volume metrics at `MaxInt64`—is 20,922
+bytes. Both are measured beneath the cap, and runtime validation refuses a
+malformed registry,
 allocation, completeness state, or oversized response rather than widening
 the contract. Tests also cover denial-before-source, missing-admin fail-closed,
 the empty installation, every ordered identifier and byte kind,
@@ -5856,8 +5857,10 @@ shape, 64-KiB ceiling, warning, and 4,096-report/4,148-scan aggregate
 allocation remain unchanged. T30.6r owns 546 report and 553 scan slots; all 52
 components now have implemented collectors. Runtime failures remain explicit
 `unavailable` or bounded `lower_bound` results and do not become zero. The
-20,766-byte maximum-shaped fixed-envelope regression remains below the hard
-cap; live response size varies with observed numeric values and is not inferred
+exact all-52 composition fixture is byte-for-byte deterministic at 19,381
+bytes. The 20,922-byte maximum-shaped fixed-envelope regression remains below
+the hard cap; live response size varies with observed numeric values and is not
+inferred
 from the historical zero-inventory shell fixture.
 
 The store boundary accepts only candidate pointer, focused state, resolver
@@ -5903,7 +5906,7 @@ leaf payloads are never opened or hashed.
 Every directory is read incrementally in 256-name batches. One request may
 observe at most 32,768 candidate entries, 32,768 focused entries, 32,768
 resolver entries, and 65,536 caller entries, with a 163,840-entry aggregate
-ceiling, at most 2,048 charged stat operations, at most 64 MiB of manifest
+ceiling, at most 4,096 charged stat operations, at most 64 MiB of manifest
 metadata, at most 256 queued caller repository directories, and at most five
 simultaneous structural descriptors: no more than three
 collector-retained handles plus up to two Go/platform directory-iterator
@@ -5918,6 +5921,10 @@ data-volume metrics unavailable while independent store results remain visible.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+The 78-report/79-scan slots allocate the response envelope rather than promise
+universal exactness. The 4,096-stat ceiling covers the regression-gated lean
+maximum allocation; recognized residue, nested stages, or the independent
+64-MiB metadata limit may still localize a lower-bound or unavailable metric.
 Every returned raw name consumes the observation budget. Names are otherwise
 names-only; only recognized names receive explicit descriptor-rooted `Lstat`
 checks.

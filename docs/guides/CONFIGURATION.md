@@ -162,7 +162,7 @@ selections use at most nine store client calls; the one batched caller fence
 performs at most 312
 server-internal point reads—four for each of at most 78 authorities—plus its
 marker check. Incremental filesystem work is fixed at 163,840 entry
-observations, 2,048 charged stats, 64 MiB of manifest metadata, 256 queued
+observations, 4,096 charged stats, 64 MiB of manifest metadata, 256 queued
 caller directories, and five simultaneous structural descriptors:
 at most three collector-retained handles plus up to two Go/platform directory
 iterator duplicates or rooted traversal internals. Every returned raw name
@@ -174,6 +174,10 @@ bringing the complete status-path event ceiling to 54; neither is configurable.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+The 78-report/79-scan slots allocate the response envelope rather than promise
+universal exactness. The 4,096-stat ceiling covers the regression-gated lean
+maximum allocation; recognized residue, nested stages, or the independent
+64-MiB metadata limit may still localize a lower-bound or unavailable metric.
 The metadata allowance is aggregate I/O, not a heap meter: one caller manifest
 at a time may retain up to 32 MiB of raw bytes beside its bounded decoded pair
 structure.

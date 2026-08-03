@@ -76,7 +76,7 @@ performs at most 312 bounded server-internal point reads—four for each of at
 most 78 caller authorities—plus its marker check. Its
 metadata-only incremental filesystem inventory observes at most 32,768
 candidate, 32,768 focused, 32,768 resolver, and 65,536 caller
-entries—163,840 aggregate—with 256-name directory batches, 2,048 charged stats,
+entries—163,840 aggregate—with 256-name directory batches, 4,096 charged stats,
 64 MiB of manifest metadata, 256 queued caller directories, and five
 simultaneous structural descriptors: at most three collector-retained
 handles plus up to two Go/platform directory-iterator duplicates or rooted
@@ -87,6 +87,10 @@ store-authorized resolver/caller canonical bytes independently.
 The stat ceiling includes explicit descriptor-rooted `Lstat` checks,
 conservative open-time `fstat` charges, and one conservative slot per name-batch
 (`Readdirnames`) call for the Windows error-classification `File.Stat` fallback.
+The 78-report/79-scan slots allocate the response envelope rather than promise
+universal exactness. The 4,096-stat ceiling covers the regression-gated lean
+maximum allocation; recognized residue, nested stages, or the independent
+64-MiB metadata limit may still localize a lower-bound or unavailable metric.
 Every returned raw name consumes the observation budget. Names are otherwise
 names-only; only recognized names receive explicit descriptor-rooted `Lstat`
 checks.
