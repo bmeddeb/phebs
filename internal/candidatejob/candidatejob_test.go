@@ -787,6 +787,35 @@ func TestCandidateOperationReportsRebuildAndPointerOnlyWarmNoop(t *testing.T) {
 	}
 }
 
+func TestCandidateOperationSinkPanicIsAdvisory(t *testing.T) {
+	t.Parallel()
+	dataDir, repository, commit := candidateGitFixture(t)
+	state := &manifestStore{repository: &store.Repo{
+		Name: repository, IndexedCommitHash: commit,
+	}}
+	worker, _, err := New(dataDir, state, []extract.Extractor{
+		policyExtractor{
+			domain: "proto-contract", version: "proto-v1",
+			requiredSuffix: ".proto",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worker.OperationReports = func([]byte) error {
+		panic("diagnostic sink")
+	}
+	if err := worker.Handle(t.Context(), store.Job{
+		ID: "candidate_manifest_job:panic", Kind: store.JobCandidate,
+		Target: repository,
+	}); err != nil {
+		t.Fatalf("candidate result changed by diagnostic sink panic: %v", err)
+	}
+	if state.pointer == nil || state.pointer.ManifestDigest == "" {
+		t.Fatal("diagnostic sink panic prevented candidate publication")
+	}
+}
+
 func TestExtractionProviderReplaysTwoFocusedDomainsWithoutRepositoryMembers(
 	t *testing.T,
 ) {

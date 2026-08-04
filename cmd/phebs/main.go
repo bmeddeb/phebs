@@ -36,6 +36,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/config"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/extract"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/gocaller"
 	"github.com/bmeddeb/phebs/internal/extract/extractors/grpcgo"
@@ -1347,14 +1348,14 @@ func enqueueCandidateAfterIndex(
 	ctx context.Context,
 	st store.Store,
 	repo, commit string,
-	diagnostics bool,
+	diagnosticsEnabled bool,
 ) error {
 	if err := store.EnqueueUnlessInFlight(ctx, st, store.JobCandidate, repo); err != nil {
 		return store.WithClass(store.ClassExtract,
 			fmt.Errorf("enqueue candidate planning for %s@%s: %w", repo, commit, err))
 	}
-	if diagnostics {
-		log.Printf(
+	if diagnosticsEnabled {
+		diagnostics.Logf(
 			"candidate queued repository=%q commit=%s cause=indexed force=false",
 			repo, commit,
 		)
@@ -1383,10 +1384,10 @@ func logAnalysisUnitPosture(
 	report := analysisUnitPosture(repository, state, extractors)
 	data, err := json.Marshal(report)
 	if err != nil {
-		log.Printf("encode analysis unit posture: %v", err)
+		diagnostics.Logf("encode analysis unit posture: %v", err)
 		return
 	}
-	log.Printf("analysis unit posture: %s", data)
+	diagnostics.Logf("analysis unit posture: %s", data)
 }
 
 func analysisUnitPosture(

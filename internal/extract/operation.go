@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/gitobj"
 	"github.com/bmeddeb/phebs/internal/store"
@@ -705,24 +705,24 @@ func (worker *Worker) emitOperationReport(report ExtractionOperationReport) {
 	}
 	data, err := encodeExtractionOperation(report)
 	if err != nil {
-		log.Printf("encode extraction operation: %v", err)
+		diagnostics.Logf("encode extraction operation: %v", err)
 		return
 	}
 	sink := worker.OperationReports
 	if sink == nil {
 		sink = func(report []byte) error {
-			log.Printf("extraction operation: %s", report)
+			diagnostics.Logf("extraction operation: %s", report)
 			return nil
 		}
 	}
 	func() {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				log.Printf("extraction operation sink panic (%T)", recovered)
+				diagnostics.Logf("extraction operation sink panic (%T)", recovered)
 			}
 		}()
 		if err := sink(data); err != nil {
-			log.Printf("extraction operation sink error (%T)", err)
+			diagnostics.Logf("extraction operation sink error (%T)", err)
 		}
 	}()
 }

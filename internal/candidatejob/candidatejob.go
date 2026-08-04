@@ -376,7 +376,9 @@ func (worker *Worker) handle(
 			ctx, worker.root, reuseExpected,
 		); openErr == nil &&
 			(persistedState == nil || published.State() == *persistedState) {
-			operation.bindManifest(published.Manifest())
+			if operation.enabled {
+				operation.bindManifest(published.Manifest())
+			}
 			fingerprintStarted := operation.timestamp()
 			if err := worker.rememberFingerprint(
 				ctx, published.State(),
@@ -398,7 +400,9 @@ func (worker *Worker) handle(
 		if published, openErr := worker.open(
 			ctx, worker.root, reuseExpected,
 		); openErr == nil && published.State() == *persistedState {
-			operation.bindManifest(published.Manifest())
+			if operation.enabled {
+				operation.bindManifest(published.Manifest())
+			}
 			fingerprintStarted := operation.timestamp()
 			if err := worker.rememberFingerprint(
 				ctx, published.State(),

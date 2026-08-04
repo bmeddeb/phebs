@@ -146,3 +146,12 @@ func TestJobLifecycleReceiptCapDropsOversizedTarget(t *testing.T) {
 		t.Fatal("oversized job lifecycle receipt reached sink")
 	}
 }
+
+func TestJobLifecycleSinkPanicIsAdvisory(t *testing.T) {
+	runner := &Runner{LifecycleReports: func([]byte) error {
+		panic("diagnostic sink")
+	}}
+	runner.emitLifecycle("done", Job{
+		ID: "connection_sync_job:panic", Kind: JobSync, Target: "example.invalid/repo",
+	}, time.Second, "success", nil)
+}

@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"strings"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/analysisunit"
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/extract/sdk"
 	"github.com/bmeddeb/phebs/internal/store"
 )
@@ -120,7 +120,9 @@ func (w *Worker) Handle(
 	if preflight.PointerResult == "" {
 		preflight.PointerResult = candidatePointerDiagnosticResult(currentErr)
 	}
-	w.logDiagnostic("extraction preflight", preflight)
+	if w.Diagnostics {
+		w.logDiagnostic("extraction preflight", preflight)
+	}
 	if currentErr != nil {
 		operation.completeRemaining(operationReason(currentErr))
 		return store.WithClass(store.ClassExtract,
@@ -454,10 +456,12 @@ func (w *Worker) Handle(
 	if scheduleErr != nil {
 		deferred = append(deferred, scheduled...)
 		domainErrs = append(domainErrs, scheduleErr)
-		w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
-			Repository: repo.Name, Trigger: "scheduler_identity",
-			Position: 1, Remaining: len(scheduled),
-		})
+		if w.Diagnostics {
+			w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
+				Repository: repo.Name, Trigger: "scheduler_identity",
+				Position: 1, Remaining: len(scheduled),
+			})
+		}
 	}
 	for position, task := range scheduled {
 		if scheduleErr != nil {
@@ -465,10 +469,12 @@ func (w *Worker) Handle(
 		}
 		if err := ctx.Err(); err != nil {
 			domainErrs = append(domainErrs, err)
-			w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
-				Repository: repo.Name, Trigger: "canceled",
-				Position: position + 1, Remaining: len(scheduled) - position,
-			})
+			if w.Diagnostics {
+				w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
+					Repository: repo.Name, Trigger: "canceled",
+					Position: position + 1, Remaining: len(scheduled) - position,
+				})
+			}
 			break
 		}
 		remainingStageRows := limits.MaxStagedRows - stagedRows
@@ -487,10 +493,12 @@ func (w *Worker) Handle(
 			case mirrorCtx.Err() == nil && remainingStageRows <= 0:
 				trigger = "aggregate_staged_rows"
 			}
-			w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
-				Repository: repo.Name, Trigger: trigger,
-				Position: position + 1, Remaining: len(scheduled) - position,
-			})
+			if w.Diagnostics {
+				w.logDiagnostic("domain scheduler deferral", schedulerDeferralDiagnostic{
+					Repository: repo.Name, Trigger: trigger,
+					Position: position + 1, Remaining: len(scheduled) - position,
+				})
+			}
 			deferred = append(deferred, scheduled[position:]...)
 			domainErrs = append(domainErrs, errExtractionAggregateBudget)
 			break
@@ -1152,7 +1160,9 @@ func (w *Worker) runOne(
 			err = errors.Join(err, fmt.Errorf("%s: abort: %w", ex.domain, abortErr))
 		}
 		operation.addAbort(operation.elapsed(abortStarted))
-		log.Printf("extract %s: %s aborted: %v", corpus.RepoName(), ex.domain, err)
+		if w.Diagnostics {
+			diagnostics.Logf("extract %s: %s aborted", corpus.RepoName(), ex.domain)
+		}
 	}()
 
 	verifiedCorpus := newVerifiedCorpus(corpus)
@@ -1181,7 +1191,7 @@ func (w *Worker) runOne(
 	}()
 
 	if w.Diagnostics {
-		log.Printf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
+		diagnostics.Logf("extract %s: %s inventory started", corpus.RepoName(), ex.domain)
 	}
 	inventoryStarted := operation.started()
 	if candidateManifest == nil {
@@ -1199,7 +1209,7 @@ func (w *Worker) runOne(
 		return fmt.Errorf("%s: inventory corpus: %w", ex.domain, err)
 	}
 	if w.Diagnostics {
-		log.Printf(
+		diagnostics.Logf(
 			"extract %s: %s inventory complete: files=%d candidates=%d",
 			corpus.RepoName(), ex.domain,
 			verifiedCorpus.corpusFileCount, len(verifiedCorpus.candidates),
@@ -1214,7 +1224,7 @@ func (w *Worker) runOne(
 		ex.version, verifiedCorpus, operation, maxStagedRows,
 	)
 	if w.Diagnostics {
-		log.Printf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
+		diagnostics.Logf("extract %s: %s extractor started", corpus.RepoName(), ex.domain)
 	}
 	extractorStarted := operation.started()
 	extractorCtx := ctx
@@ -1295,7 +1305,7 @@ func (w *Worker) runOne(
 		operation.snapshot().Reason, previous,
 	)
 	if w.Diagnostics {
-		log.Printf("extract %s: %s published", corpus.RepoName(), ex.domain)
+		diagnostics.Logf("extract %s: %s published", corpus.RepoName(), ex.domain)
 	}
 	return nil
 }

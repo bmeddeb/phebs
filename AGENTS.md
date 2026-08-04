@@ -76,7 +76,8 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 ## Current state
 
 **Single-node implementation is complete for Epics 0–24, provisional
-Workbench binding Epic 29, and service-scope Epic 30 (2026-08-02).** Search,
+Workbench binding Epic 29, service-scope Epic 30, and bounded pipeline
+observability Epic 31 (2026-08-04).** Search,
 repository browsing, authentication,
 permissions, audit/analytics, SCIP/history, stateless MCP, bounded `rev:`
 indexing, and backup/restore are shipped core behavior. Contract Atlas, Caller
@@ -116,11 +117,11 @@ caller record/progress summaries, HTTP/MCP scope parity, and a neutral
 ordinary-worker `make dev` cohort. Its post-review closure preserves retained
 v1/v2 proof bytes, validates the real exact Caller Map envelope through MCP,
 and keeps failure, explicit-gap, and zero/empty states visible. T31.1 bounded
-pipeline diagnostics is the scheduled operational ticket. T32.1 freezes the
+pipeline diagnostics is complete. T32.1 is the scheduled closure for the
 selected microservice-first program: repositories remain shared physical
 source/search generations while many logical services become independent
-catalog, query, evidence, and workflow scopes. Runtime measurement starts only
-after T31.1; Epics 33–39 remain dependency-ordered drafts and Epics 25–28
+catalog, query, evidence, and workflow scopes. T32.2 runtime measurement starts
+only after T32.1; Epics 33–39 remain dependency-ordered drafts and Epics 25–28
 remain unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,

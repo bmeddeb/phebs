@@ -1075,18 +1075,25 @@ func appendSpoolRecord(destination *spool, record Record) error {
 	if err != nil {
 		return err
 	}
-	if _, err := file.Write(append(payload, '\n')); err != nil {
+	canonical := append(payload, '\n')
+	written, writeErr := file.Write(canonical)
+	if written > 0 {
+		destination.contentBytes += int64(written)
+		destination.metrics.addSpoolBytes(int64(written))
+	}
+	if writeErr != nil {
 		_ = file.Close()
-		return err
+		return writeErr
+	}
+	if written != len(canonical) {
+		_ = file.Close()
+		return io.ErrShortWrite
 	}
 	if err := file.Close(); err != nil {
 		return err
 	}
 	destination.count++
 	destination.declaredBytes += record.DeclaredBytes
-	written := int64(len(payload) + 1)
-	destination.contentBytes += written
-	destination.metrics.addSpoolBytes(written)
 	return nil
 }
 

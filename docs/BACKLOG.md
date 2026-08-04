@@ -1,18 +1,18 @@
 # phebs · active backlog
 
-T31.1 bounded pipeline diagnostics is the scheduled operational ticket.
-T32.1 freezes the selected microservice-first program and validation matrix as
-a documentation/decision ticket; T32.2 begins runtime measurement only after
-the T31.1 merge bar closes. Epics 33–39 are dependency-ordered program drafts,
-not implementation authorization. Epics 25–28 remain drafted and unscheduled;
-none is an implicit next ticket.
+T31.1 bounded pipeline diagnostics completed on 2026-08-04 and is retained in
+the completed backlog. T32.1 is the scheduled documentation/decision ticket
+that closes the selected microservice-first program and validation matrix;
+T32.2 begins runtime measurement only after its merge bar closes. Epics 33–39
+are dependency-ordered program drafts, not implementation authorization.
+Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
 operations guidance, and neutral ordinary-worker demo in T30.7. Its retained
 completion receipt also records the post-review compatibility closure:
 immutable v1/v2 proof bytes remain readable and the production exact Caller
 Map envelope is validated through the strict MCP boundary. Completed
-Epics 0–24, Epic 29, Epic 30, and P5 hardening are retained in the
+Epics 0–24, Epic 29, Epic 30, Epic 31, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -20,28 +20,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 31 · Bounded pipeline observability *(scheduled 2026-08-03)*
-
-Make the existing index → candidate → extraction → resolver/caller-leaf path
-diagnosable without turning logs into a second evidence or telemetry system.
-
-**T31.1 · Source-free pipeline receipts** — add independent restart-bound
-`diagnostics.jobs`, `diagnostics.candidates`, `diagnostics.extraction`, and
-`diagnostics.extractor_details` controls. AC: successful index handoff is
-visible; every durable runner reports claimed/started/terminal transitions
-with queue versus handler time; candidate jobs report warm/cold/recovery/
-repair/rebuild decisions, phase timing, plane counts/bytes, typed-input state,
-and inline logical spool peak without extra store/filesystem/member reads;
-extraction reports pointer/strict-open posture, ordered scheduling, exact
-deferral triggers, durable outcome transitions, expanded domain completion,
-and fixed gRPC/Thrift/Kafka zero-result counters; startup always reports the
-analysis-unit path counts/postures/domains/recommendation; paths, samples,
-content, credentials, raw handler errors, and child output remain excluded;
-all receipts are bounded and advisory; PLAN ADR, configuration, and operations
-guidance ship in the same PR; targeted, full, race, lint, and steady-state-cost
-gates pass.
-
-## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1 decision work; runtime measurement needs T31.1)*
+## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1 scheduled; T31.1 diagnostics complete)*
 
 Freeze the product and system contract before converting the current
 single-unit path into a multi-service implementation. The invariant is one

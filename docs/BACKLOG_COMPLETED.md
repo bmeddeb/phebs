@@ -6375,3 +6375,36 @@ Caller MCP output schemas, including nested objects. These are bounded
 validation, decode, rendering, documentation, and test corrections; they add
 no query, write, lock, corpus or Git/blob read, child, startup/sync work,
 publication change, or retained cache.
+
+## Epic 31 · Bounded pipeline observability ✅ 2026-08-04
+
+**T31.1 ✅ · Source-free pipeline receipts** *(2026-08-04)* — added independent
+restart-bound `diagnostics.jobs`, `diagnostics.candidates`,
+`diagnostics.extraction`, and `diagnostics.extractor_details` controls. Generic
+durable runners emit bounded persisted-transition receipts with
+eligibility-relative queue wait and handler time. The index handoff and
+candidate receipt distinguish warm no-op, cold reuse, marker recovery, repair,
+rebuild, and not-ready decisions while reporting phase timing, plane
+counts/bytes, typed-input posture, and inline logical spool peak. Extraction
+reports pointer/strict-open posture, ordered scheduling and exact deferrals,
+durable outcome transitions, domain completion, and fixed gRPC/Thrift/Kafka
+zero-result counters. Startup always emits analysis-unit path counts, exact
+postures/domains, and one recommendation without selected path strings.
+
+Review closure contains process-log panics at one synchronous advisory
+boundary, including index handoff and extraction phase lines, so reporting
+cannot alter queue, candidate, extraction, or publication state. Candidate
+recovery and repair do not evaluate or clone a manifest when diagnostics are
+off, extraction avoids disabled interface formatting, and spool peak accounting
+charges every byte reported written, including partial failed or short writes
+and bytes whose later close fails. No repair
+adds an asynchronous queue, retained buffer, store read, filesystem scan,
+member reopen, content hash, corpus/shard read, Git/blob read, or child process.
+
+Receipts exclude source paths and samples, blob content, credentials, child
+output, and raw handler errors; they remain outside freshness, evidence, proof,
+and publication identity. Configuration and Operations guidance document the
+independent defaults, bounds, cost fence, and synchronous mirror-lock posture.
+Targeted tests, full vet and golangci-lint, the uncached full Go suite, the race
+suite, docs checks, diff hygiene, and the steady-state-cost review form the
+completion gate.

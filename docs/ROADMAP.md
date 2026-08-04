@@ -36,16 +36,19 @@ workflow scopes over those generations.
 
 ## Now
 
-T31.1 is the scheduled operational ticket. It adds bounded, source-free,
-component-specific pipeline receipts for generic durable jobs, candidate
-planning, extraction scheduling/outcomes, and fixed extractor counters while
-keeping diagnostic state outside evidence, proof, and publication identity.
-Startup analysis-unit posture remains always visible but now reports selected
-path counts rather than selected path strings. The ticket adds no store read,
-member reopen, directory scan, hash pass, or child solely for logging.
-Its first decision-bearing use is T32.2's whole-monorepo baseline. T32.1 first
-freezes the microservice program contract and validation matrix in the source
-of truth; no multi-service runtime behavior is implied by that planning ticket.
+T31.1 completed on 2026-08-04. Bounded, source-free, component-specific
+pipeline receipts now cover generic durable jobs, candidate planning,
+extraction scheduling/outcomes, and fixed extractor counters while remaining
+outside evidence, proof, and publication identity. Startup analysis-unit
+posture reports selected path counts rather than selected path strings. The
+diagnostics add no store read, member reopen, directory scan, hash pass, or
+child solely for logging, and disabled recovery/repair paths retain no
+diagnostic manifest clone. Its first decision-bearing use remains T32.2's
+whole-monorepo baseline.
+
+T32.1 is now the scheduled decision/documentation closure. It freezes the
+microservice program contract and validation matrix across the source of truth;
+it adds no multi-service runtime behavior or scale claim.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -351,8 +354,9 @@ target-bound source partitions run, and no caller generation becomes visible
 until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.
 
-Production evidence/pilot gating remains unchanged. T31.1 is the currently
-scheduled bounded pipeline-observability ticket. Epics 25–28 remain
+Production evidence/pilot gating remains unchanged. T31.1 bounded pipeline
+observability is complete, and T32.1 is the currently scheduled decision and
+documentation closure. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -491,10 +495,10 @@ service count × repository bytes
   target gates, close operating/security/workflow evidence, and make a separate
   shadow/advisory release decision.
 
-Only T32.1 is a decision/documentation ticket before the T31.1 merge bar. The
-implementation sequence remains dependency-ordered, and every epic ends in a
-demoable state. Numeric release limits and the physical topology remain
-unselected until Epic 32 records their evidence.
+T32.1 is the next decision/documentation closure after the completed T31.1
+diagnostics. T32.2 then begins the dependency-ordered runtime measurement
+sequence, and every epic ends in a demoable state. Numeric release limits and
+the physical topology remain unselected until Epic 32 records their evidence.
 
 ## Gated product work
 

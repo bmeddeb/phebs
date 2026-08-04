@@ -3,10 +3,10 @@ package extract
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"time"
 
 	candidatepkg "github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -78,14 +78,14 @@ func (worker *Worker) logDiagnostic(label string, value any) {
 	}
 	data, err := json.Marshal(value)
 	if err != nil {
-		log.Printf("encode %s diagnostic: %v", label, err)
+		diagnostics.Logf("encode %s diagnostic: %v", label, err)
 		return
 	}
 	if len(data) > maxExtractionDiagnosticSize {
-		log.Printf("encode %s diagnostic: report exceeds %d bytes", label, maxExtractionDiagnosticSize)
+		diagnostics.Logf("encode %s diagnostic: report exceeds %d bytes", label, maxExtractionDiagnosticSize)
 		return
 	}
-	log.Printf("%s: %s", label, data)
+	diagnostics.Logf("%s: %s", label, data)
 }
 
 func (worker *Worker) logSchedule(

@@ -2,10 +2,10 @@ package candidatejob
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 
 	"github.com/bmeddeb/phebs/internal/candidate"
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 	"github.com/bmeddeb/phebs/internal/store"
 )
 
@@ -200,28 +200,28 @@ func (worker *Worker) emitOperation(report CandidateOperationReport) {
 	}
 	data, err := json.Marshal(report)
 	if err != nil {
-		log.Printf("encode candidate operation: %v", err)
+		diagnostics.Logf("encode candidate operation: %v", err)
 		return
 	}
 	if len(data) > MaxCandidateOperationSize {
-		log.Printf("encode candidate operation: report exceeds %d bytes", MaxCandidateOperationSize)
+		diagnostics.Logf("encode candidate operation: report exceeds %d bytes", MaxCandidateOperationSize)
 		return
 	}
 	sink := worker.OperationReports
 	if sink == nil {
 		sink = func(report []byte) error {
-			log.Printf("candidate operation: %s", report)
+			diagnostics.Logf("candidate operation: %s", report)
 			return nil
 		}
 	}
 	func() {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				log.Printf("candidate operation sink panic (%T)", recovered)
+				diagnostics.Logf("candidate operation sink panic (%T)", recovered)
 			}
 		}()
 		if err := sink(data); err != nil {
-			log.Printf("candidate operation sink error (%T)", err)
+			diagnostics.Logf("candidate operation sink error (%T)", err)
 		}
 	}()
 }

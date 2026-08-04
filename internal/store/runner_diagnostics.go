@@ -2,8 +2,9 @@ package store
 
 import (
 	"encoding/json"
-	"log"
 	"time"
+
+	"github.com/bmeddeb/phebs/internal/diagnostics"
 )
 
 const (
@@ -52,28 +53,28 @@ func (r *Runner) emitLifecycle(
 	}
 	data, err := json.Marshal(report)
 	if err != nil {
-		log.Printf("encode job lifecycle: %v", err)
+		diagnostics.Logf("encode job lifecycle: %v", err)
 		return
 	}
 	if len(data) > MaxJobLifecycleReportSize {
-		log.Printf("encode job lifecycle: report exceeds %d bytes", MaxJobLifecycleReportSize)
+		diagnostics.Logf("encode job lifecycle: report exceeds %d bytes", MaxJobLifecycleReportSize)
 		return
 	}
 	sink := r.LifecycleReports
 	if sink == nil {
 		sink = func(report []byte) error {
-			log.Printf("job lifecycle: %s", report)
+			diagnostics.Logf("job lifecycle: %s", report)
 			return nil
 		}
 	}
 	func() {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				log.Printf("job lifecycle sink panic (%T)", recovered)
+				diagnostics.Logf("job lifecycle sink panic (%T)", recovered)
 			}
 		}()
 		if err := sink(data); err != nil {
-			log.Printf("job lifecycle sink error (%T)", err)
+			diagnostics.Logf("job lifecycle sink error (%T)", err)
 		}
 	}()
 }
