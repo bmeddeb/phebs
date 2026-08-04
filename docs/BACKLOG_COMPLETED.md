@@ -6408,3 +6408,38 @@ independent defaults, bounds, cost fence, and synchronous mirror-lock posture.
 Targeted tests, full vet and golangci-lint, the uncached full Go suite, the race
 suite, docs checks, diff hygiene, and the steady-state-cost review form the
 completion gate.
+
+## Epic 32 · Microservice program contract and validation *(in progress)*
+
+**T32.1 ✅ · Microservice-first program contract** *(2026-08-04)* — selected
+services as the primary product scope over shared repository source/search
+generations without selecting a physical topology or adding runtime behavior.
+The dated PLAN decisions separate stable logical service identity from
+repository placement, require explicit commit-bound authority and independent
+service currentness, preserve whole-repository behavior and
+`analysis-unit-v1` through side-by-side migration, and reject repository-sized
+work multiplied by service count.
+
+VISION, ROADMAP, the active backlog, the current README posture, and the
+retained exploration now agree on the shipped foundation, missing catalog,
+shared-search, lifecycle, observation, relationship, and product capabilities;
+direct-shard, bounded-cohort, and P6 escape hatches; and dependency-ordered
+Epics 32–39. The validation matrix requires a preregistered source-free target
+baseline, an independent neutral correctness oracle, generated 1,000/5,000
+service load profiles, topology equality, pack-specific evidence quality,
+authorization/lifecycle gates, and measured workflow value before a narrow
+release decision.
+
+The authoritative pilot charter explicitly remains one exact Go/gRPC
+operation, one pinned monorepo source universe, and one independently measured
+workflow. Its approved measurements may inform private program gates but do
+not broaden pilot authority, select a general topology, establish an SLO, or
+authorize a multi-service release. The retained exploration remains historical
+input rather than an ADR, current behavior statement, or scale claim.
+
+This documentation/decision ticket adds no request, query, sync-tick,
+startup/restart, retry/no-op, publication-transition, store, filesystem,
+corpus/shard, Git/blob, lock, cache, memory, disk, child-process, or retained
+runtime work. Documentation links, formatting, source-of-truth consistency,
+and diff hygiene form its completion gate. T32.2 is the scheduled authorized
+whole-monorepo baseline.

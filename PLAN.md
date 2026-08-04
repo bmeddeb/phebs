@@ -43,11 +43,11 @@ retrieved verbatim). Everything else carries the session's substance.
   Map, Impact, and Workbench surfaces; coverage-certificate v3 and durable
   outcome receipts; exact caller record/progress summaries; HTTP/MCP scope
   parity; and a neutral ordinary-worker `make dev` cohort. T31.1 bounded
-  pipeline diagnostics completed on 2026-08-04 and supplies the measurement
-  prerequisite for T32.2's target-monorepo baseline. T32.1 is the scheduled
-  microservice-first program-contract closure. Epics 25–28 remain unscheduled drafts. Production
-  evidence registration remains gated and the distributed P6 fleet profile
-  remains demand-driven.
+  pipeline diagnostics and T32.1's microservice-first program-contract closure
+  completed on 2026-08-04. T32.2's authorized whole-monorepo baseline is
+  scheduled. Epics 25–28 remain unscheduled drafts. Production evidence
+  registration remains gated and the distributed P6 fleet profile remains
+  demand-driven.
 
 Use [docs/ROADMAP.md](./docs/ROADMAP.md) for current sequencing,
 [docs/BACKLOG.md](./docs/BACKLOG.md) for unscheduled draft acceptance criteria, and

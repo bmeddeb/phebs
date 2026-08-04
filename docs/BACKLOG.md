@@ -1,10 +1,9 @@
 # phebs · active backlog
 
-T31.1 bounded pipeline diagnostics completed on 2026-08-04 and is retained in
-the completed backlog. T32.1 is the scheduled documentation/decision ticket
-that closes the selected microservice-first program and validation matrix;
-T32.2 begins runtime measurement only after its merge bar closes. Epics 33–39
-are dependency-ordered program drafts, not implementation authorization.
+T31.1 bounded pipeline diagnostics and T32.1's microservice-first program
+contract completed on 2026-08-04 and are retained in the completed backlog.
+T32.2 is the scheduled authorized whole-monorepo baseline. Epics 33–39 are
+dependency-ordered program drafts, not implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -20,7 +19,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1 scheduled; T31.1 diagnostics complete)*
+## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1 complete 2026-08-04; T32.2 scheduled)*
 
 Freeze the product and system contract before converting the current
 single-unit path into a multi-service implementation. The invariant is one
@@ -40,14 +39,6 @@ count.
   accuracy result. Pack validation and pilot continuation remain separate.
 - Direct whole-repository shards, bounded cohorts, and P6 are alternatives to
   measure; none is selected by aspiration.
-
-**T32.1 · Microservice-first program contract** — record the dated PLAN
-decision; update VISION, ROADMAP, BACKLOG, current README posture, pilot scope
-guard, and the retained exploration resolution. AC: current achievements,
-missing capabilities, validation gates, program invariants, topology escape
-hatches, and Epics 32–39 agree across the source-of-truth documents; the
-bounded one-RPC pilot is not broadened; no runtime behavior or scale claim is
-added; documentation links and formatting gates pass.
 
 **T32.2 · Authorized whole-monorepo baseline** *(needs T31.1, T32.1)* —
 preregister the local host ceilings, exact repository commit, query battery,

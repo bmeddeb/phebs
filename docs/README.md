@@ -115,6 +115,6 @@ that selected the production partition bounds.
 The retained
 [multi-unit large-monorepo exploration](./MULTI_UNIT_MONOREPO_EXPLORATION.md)
 preserves the discussion that informed the selected microservice-first PLAN
-decision. Architecture and sequencing now live in PLAN, ROADMAP, and draft
-Epics 32–39; the retained record itself remains neither an ADR nor a scale
-claim.
+decision. Architecture and sequencing now live in PLAN, ROADMAP, active Epic
+32, and draft Epics 33–39; the retained record itself remains neither an ADR
+nor a scale claim.

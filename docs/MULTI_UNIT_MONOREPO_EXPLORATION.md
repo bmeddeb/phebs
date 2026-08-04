@@ -16,9 +16,9 @@ The dated **Microservice-first product and system boundary** decision in
 services become first-class logical views over shared repository generations,
 and repository-sized work must not be multiplied by service count. The
 [roadmap](./ROADMAP.md#next-microservice-architecture-program) records what is
-already built, what remains missing, and the validation gates. Draft Epics
-32–39 in the [backlog](./BACKLOG.md)
-turn the possible sequence below into dependency-ordered program work.
+already built, what remains missing, and the validation gates. Active Epic 32
+and draft Epics 33–39 in the [backlog](./BACKLOG.md) turn the possible sequence
+below into dependency-ordered program work.
 
 This resolution selects a product direction and program contract, not a
 physical search topology, service-discovery authority, numeric SLO, scale

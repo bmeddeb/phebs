@@ -24,6 +24,14 @@ one Go/gRPC contract in the company monorepo. It does not authorize a
 production dependency, automated enforcement, an API removal, or expansion
 to additional protocols or use cases.
 
+The selected microservice-first program and Epics 32–39 do not broaden this
+authority. The pilot remains one exact Go/gRPC operation, one pinned monorepo
+source universe, and one independently measured workflow. Its approved
+source-free operating measurements may inform the program's private target
+gates, but they cannot authorize a multi-service release, select a general
+topology, or establish a scale claim. This 2026-08-04 clarification grants no
+new pilot authority and therefore does not change charter version 0.2.
+
 The pilot answers one decision:
 
 > Does phebs produce a sufficiently accurate, reproducible, permission-safe,
