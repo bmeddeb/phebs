@@ -27,6 +27,8 @@ evidence.
 - [T30.6m historical-publication retention decision and owner inventory](../spike/t306m/README.md)
 - [T32.2 authorized whole-monorepo baseline protocol](../spike/t322/README.md)
   and [source-free receipt](../spike/t322/results.json)
+- [T32.3 neutral service-authority/correctness corpus](../spike/t323/README.md)
+  and [artifact receipt](../spike/t323/receipt.json)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
@@ -40,6 +42,14 @@ completed `results.json` from the 2026-08-04 authorized run. The receipt
 contains no target identity, source, query, path, host identity/profile,
 credential, or raw error. It grants no topology or scale decision and
 establishes no SLO.
+
+The T32.3 directory retains a five-revision neutral Git bundle, closed catalog
+inputs, independent exact membership/search/RPC/topic/currentness/tombstone
+oracles, and complete synthetic 1,000/5,000-service load profiles. Its
+authority-input schema is fixture vocabulary rather than a production catalog
+contract. Deterministic authoring tests pin every Git tree and artifact byte;
+the record selects no topology, target SLO, extraction accuracy, or production
+registration.
 
 The corrected T30.6m record separates its selected unbounded-retention posture
 for historical evidence and adjacent candidate/caller residue from the mixed

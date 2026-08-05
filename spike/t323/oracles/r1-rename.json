@@ -1,0 +1,243 @@
+{
+  "schema": "t323-independent-correctness-oracle-v1",
+  "revision": "r1-rename",
+  "memberships": [
+    {
+      "service_key": "svc.billing",
+      "path": "api/commerce.proto",
+      "role": "supporting"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "gen/commercev1/commerce_grpc.pb.go",
+      "role": "generated"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "services/payments",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "typed/commerce/index.scip",
+      "role": "typed"
+    },
+    {
+      "service_key": "svc.orders",
+      "path": "api/commerce.proto",
+      "role": "supporting"
+    },
+    {
+      "service_key": "svc.orders",
+      "path": "gen/commercev1/commerce_grpc.pb.go",
+      "role": "generated"
+    },
+    {
+      "service_key": "svc.orders",
+      "path": "services/orders",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.orders",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    },
+    {
+      "service_key": "svc.orders",
+      "path": "typed/commerce/index.scip",
+      "role": "typed"
+    },
+    {
+      "service_key": "svc.risk",
+      "path": "services/risk",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.risk",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    },
+    {
+      "service_key": "svc.shipping",
+      "path": "services/shipping",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.shipping",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    }
+  ],
+  "unowned_paths": [
+    "services/conflict-a/main.go",
+    "services/conflict-b/main.go",
+    "services/proposed/main.go",
+    "tools/unowned.go"
+  ],
+  "ambiguities": [
+    {
+      "service_key": "svc.conflicted",
+      "authority_ids": [
+        "build:conflict",
+        "operator:conflict"
+      ],
+      "paths": [
+        "services/conflict-a",
+        "services/conflict-b"
+      ],
+      "state": "conflict"
+    }
+  ],
+  "queries": [
+    {
+      "id": "all-contract",
+      "principal": "admin",
+      "scope": "all-code",
+      "expression": "T323_CENTRAL_CONTRACT",
+      "state": "exact",
+      "paths": [
+        "api/commerce.proto"
+      ]
+    },
+    {
+      "id": "all-shared",
+      "principal": "admin",
+      "scope": "all-code",
+      "expression": "T323_SHARED_TRACE",
+      "state": "exact",
+      "paths": [
+        "shared/trace/trace.go"
+      ]
+    },
+    {
+      "id": "all-unowned",
+      "principal": "admin",
+      "scope": "all-code",
+      "expression": "T323_UNOWNED_TOOL",
+      "state": "exact",
+      "paths": [
+        "tools/unowned.go"
+      ]
+    },
+    {
+      "id": "orders-provider",
+      "principal": "reader",
+      "scope": "service",
+      "service_key": "svc.orders",
+      "expression": "T323_ORDERS_PROVIDER",
+      "state": "exact",
+      "paths": [
+        "services/orders/service.go"
+      ]
+    },
+    {
+      "id": "payments-caller",
+      "principal": "reader",
+      "scope": "service",
+      "service_key": "svc.billing",
+      "expression": "T323_PAYMENTS_CALLER",
+      "state": "exact",
+      "paths": [
+        "services/payments/client.go"
+      ]
+    },
+    {
+      "id": "risk-admin",
+      "principal": "admin",
+      "scope": "service",
+      "service_key": "svc.risk",
+      "expression": "T323_RISK_PRIVATE",
+      "state": "exact",
+      "paths": [
+        "services/risk/private.go"
+      ]
+    },
+    {
+      "id": "risk-reader",
+      "principal": "reader",
+      "scope": "service",
+      "service_key": "svc.risk",
+      "expression": "T323_RISK_PRIVATE",
+      "state": "not_found",
+      "paths": null
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "rpc",
+      "identity": "/neutral.commerce.v1.Orders/Create",
+      "provider": "svc.orders",
+      "consumer": "svc.billing",
+      "evidence_paths": [
+        "services/orders/service.go",
+        "services/payments/client.go"
+      ],
+      "state": "resolved"
+    },
+    {
+      "kind": "topic",
+      "identity": "orders.created.v1",
+      "provider": "svc.orders",
+      "consumer": "svc.shipping",
+      "evidence_paths": [
+        "services/orders/kafka.go",
+        "services/shipping/consumer.go"
+      ],
+      "state": "resolved"
+    }
+  ],
+  "states": [
+    {
+      "service_key": "svc.billing",
+      "desired_revision": "r1-rename",
+      "active_revision": "r1-rename",
+      "catalog": "current",
+      "search": "current",
+      "relationships": "current"
+    },
+    {
+      "service_key": "svc.conflicted",
+      "desired_revision": "r1-rename",
+      "catalog": "conflict",
+      "search": "unavailable",
+      "relationships": "unavailable"
+    },
+    {
+      "service_key": "svc.orders",
+      "desired_revision": "r1-rename",
+      "active_revision": "r1-rename",
+      "catalog": "current",
+      "search": "current",
+      "relationships": "current"
+    },
+    {
+      "service_key": "svc.proposed",
+      "desired_revision": "r1-rename",
+      "catalog": "unavailable",
+      "search": "unavailable",
+      "relationships": "unavailable"
+    },
+    {
+      "service_key": "svc.risk",
+      "desired_revision": "r1-rename",
+      "active_revision": "r1-rename",
+      "catalog": "current",
+      "search": "current",
+      "relationships": "current"
+    },
+    {
+      "service_key": "svc.shipping",
+      "desired_revision": "r1-rename",
+      "active_revision": "r1-rename",
+      "catalog": "current",
+      "search": "current",
+      "relationships": "current"
+    }
+  ],
+  "tombstones": null
+}

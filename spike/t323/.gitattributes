@@ -1,0 +1,5 @@
+*.bundle binary
+catalogs/*.json linguist-generated=true
+oracles/*.json linguist-generated=true
+profiles/*.json linguist-generated=true
+receipt.json linguist-generated=true

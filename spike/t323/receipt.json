@@ -1,0 +1,110 @@
+{
+  "schema": "t323-neutral-corpus-receipt-v1",
+  "repository": "example.invalid/t323-neutral-services",
+  "bundle": {
+    "path": "t323-neutral-corpus.bundle",
+    "bytes": 6771,
+    "sha256": "sha256:05a1b845a2eaee1c6a2b0beda972aa0ea6ffe9cc636d886014887202728e2194"
+  },
+  "revisions": [
+    {
+      "revision": "r0-baseline",
+      "commit": "608f25174467e10db77a60f911ec545739a76b7c",
+      "tree": "80ce5a28baca2cd357bbfb46e28818a58041dcaa",
+      "regular_files": 15
+    },
+    {
+      "revision": "r1-rename",
+      "commit": "3f8eae89e178cfaa595526ecd0b33aea6ea3a966",
+      "tree": "d20a359c747074c2d280ec886daeee7da0fce5f4",
+      "regular_files": 15
+    },
+    {
+      "revision": "r2-split",
+      "commit": "382ffc83ba625b1c0464269f6d7f252db4991942",
+      "tree": "f6951e2dfaa3d91d601065e8de36cbdda26cb79b",
+      "regular_files": 15
+    },
+    {
+      "revision": "r3-merge-partial",
+      "commit": "f50bb9c0e3bdcfbc7c004141d837a2a784744b2f",
+      "tree": "5648a517f1db9950bc37bfb8eb89dc269ab2bd0c",
+      "regular_files": 15
+    },
+    {
+      "revision": "r4-removal",
+      "commit": "4ac5335893fc18a1243b60a005faa1f09268d858",
+      "tree": "c5de349b2503adb52557e777ca911d27531a78b6",
+      "regular_files": 14
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "catalogs/r0-baseline.json",
+      "bytes": 3884,
+      "sha256": "sha256:2da3dbc45d82b5bcb90c47ce6effc3f60ec6505e4cd3d285ce349f13e3ca3153"
+    },
+    {
+      "path": "catalogs/r1-rename.json",
+      "bytes": 3884,
+      "sha256": "sha256:66b7e7c64f15c04e780ec7ef281b523795cbc858766f803e55dcff933c7a5bf6"
+    },
+    {
+      "path": "catalogs/r2-split.json",
+      "bytes": 4670,
+      "sha256": "sha256:087ca170c5f0f98bb415d14ba3e089d808db500ffa3e6ec545bda5c61a46e29c"
+    },
+    {
+      "path": "catalogs/r3-merge-partial.json",
+      "bytes": 4871,
+      "sha256": "sha256:59e2978e6ec245d2c0f0ddc19e054da1e23681a883d99f2addc52a3d3d2389cf"
+    },
+    {
+      "path": "catalogs/r4-removal.json",
+      "bytes": 4396,
+      "sha256": "sha256:2c0353caf3e97699abe62091dfa94c796a1aba72a867bbdce917bd0506a3018f"
+    },
+    {
+      "path": "oracles/r0-baseline.json",
+      "bytes": 6158,
+      "sha256": "sha256:9699fb3abec768703f3d6cf8f7f81d2bfcdaf2079cab75ae91f090e11da31d45"
+    },
+    {
+      "path": "oracles/r1-rename.json",
+      "bytes": 5631,
+      "sha256": "sha256:da1fceb17840e8e12d81f75db183f74cd932ff57922255cee4782b633ff18417"
+    },
+    {
+      "path": "oracles/r2-split.json",
+      "bytes": 6761,
+      "sha256": "sha256:497f64e80dfead968eccafadbc879cd04088a74da4795f94e330774128dc10ce"
+    },
+    {
+      "path": "oracles/r3-merge-partial.json",
+      "bytes": 7037,
+      "sha256": "sha256:bdc6e71917a7d38fec21596df7a8935553192ee75c42076ea3cf45f7de5c67c2"
+    },
+    {
+      "path": "oracles/r4-removal.json",
+      "bytes": 6356,
+      "sha256": "sha256:0497460fd92f0121e1cab0084408e13f89b1e2696d8c0c034f225993cef96d0d"
+    },
+    {
+      "path": "profiles/services-1000.json",
+      "bytes": 1110924,
+      "sha256": "sha256:b5cee33ae43090b37bec421bb9af85148afd1672c9faf1c556b066873229701c"
+    },
+    {
+      "path": "profiles/services-5000.json",
+      "bytes": 5551129,
+      "sha256": "sha256:0f6c37471306daa2cbc59f6bf6e5b1464f5c186edb46778568d2ac020ffb1f3c"
+    }
+  ],
+  "claims": {
+    "synthetic": true,
+    "establishes_target_slo": false,
+    "establishes_accuracy": false,
+    "selects_topology": false,
+    "production_registration": false
+  }
+}

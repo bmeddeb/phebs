@@ -52,7 +52,11 @@ runtime behavior or a scale claim. T32.2's authorized whole-monorepo baseline
 completed on 2026-08-04. The source-free receipt at
 `spike/t322/results.json` records one completed private authorized run; it
 establishes no SLO and selects no topology. T32.3's neutral service-authority
-and correctness corpus is scheduled next.
+and correctness corpus completed on 2026-08-04 with five deterministic Git
+revisions, independent membership/search/relationship/currentness oracles, and
+complete 1,000/5,000-service load profiles. It selects neither a production
+catalog schema nor a topology or target SLO. T32.4's search-topology and cost
+spike is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -359,9 +363,9 @@ until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.
 
 Production evidence/pilot gating remains unchanged. T31.1 bounded pipeline
-observability, T32.1's program-contract closure, and T32.2's source-free
-whole-monorepo baseline are complete. T32.3 is the scheduled
-dependency-ordered ticket. Epics 25–28 remain
+observability, T32.1's program-contract closure, T32.2's source-free
+whole-monorepo baseline, and T32.3's neutral oracle are complete. T32.4 is the
+scheduled dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set

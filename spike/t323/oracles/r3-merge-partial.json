@@ -1,0 +1,298 @@
+{
+  "schema": "t323-independent-correctness-oracle-v1",
+  "revision": "r3-merge-partial",
+  "memberships": [
+    {
+      "service_key": "svc.billing",
+      "path": "api/commerce.proto",
+      "role": "supporting"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "gen/commercev1/commerce_grpc.pb.go",
+      "role": "generated"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "services/payments",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    },
+    {
+      "service_key": "svc.billing",
+      "path": "typed/commerce/index.scip",
+      "role": "typed"
+    },
+    {
+      "service_key": "svc.fulfillment",
+      "path": "services/fulfillment",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.fulfillment",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "api/commerce.proto",
+      "role": "supporting"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "gen/commercev1/commerce_grpc.pb.go",
+      "role": "generated"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "services/orders-api",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "typed/commerce/index.scip",
+      "role": "typed"
+    },
+    {
+      "service_key": "svc.risk",
+      "path": "services/risk",
+      "role": "primary"
+    },
+    {
+      "service_key": "svc.risk",
+      "path": "shared/trace/trace.go",
+      "role": "shared"
+    }
+  ],
+  "unowned_paths": [
+    "services/conflict-a/main.go",
+    "services/conflict-b/main.go",
+    "services/proposed/main.go",
+    "tools/unowned.go"
+  ],
+  "ambiguities": [
+    {
+      "service_key": "svc.conflicted",
+      "authority_ids": [
+        "build:conflict",
+        "operator:conflict"
+      ],
+      "paths": [
+        "services/conflict-a",
+        "services/conflict-b"
+      ],
+      "state": "conflict"
+    }
+  ],
+  "queries": [
+    {
+      "id": "all-contract",
+      "principal": "admin",
+      "scope": "all-code",
+      "expression": "T323_CENTRAL_CONTRACT",
+      "state": "exact",
+      "paths": [
+        "api/commerce.proto"
+      ]
+    },
+    {
+      "id": "all-shared",
+      "principal": "admin",
+      "scope": "all-code",
+      "expression": "T323_SHARED_TRACE",
+      "state": "exact",
+      "paths": [
+        "shared/trace/trace.go"
+      ]
+    },
+    {
+      "id": "all-unowned",
+      "principal": "admin",
+      "scope": "all-code",
+      "expression": "T323_UNOWNED_TOOL",
+      "state": "exact",
+      "paths": [
+        "tools/unowned.go"
+      ]
+    },
+    {
+      "id": "fulfillment-consumer",
+      "principal": "reader",
+      "scope": "service",
+      "service_key": "svc.fulfillment",
+      "expression": "T323_FULFILLMENT_CONSUMER",
+      "state": "exact",
+      "paths": [
+        "services/fulfillment/consumer.go"
+      ]
+    },
+    {
+      "id": "orders-api-provider",
+      "principal": "reader",
+      "scope": "service",
+      "service_key": "svc.orders-api",
+      "expression": "T323_ORDERS_API_PROVIDER",
+      "state": "exact",
+      "paths": [
+        "services/orders-api/service.go"
+      ]
+    },
+    {
+      "id": "payments-stale",
+      "principal": "reader",
+      "scope": "service",
+      "service_key": "svc.billing",
+      "expression": "T323_PAYMENTS_CALLER",
+      "state": "stale",
+      "paths": [
+        "services/payments/client.go"
+      ]
+    },
+    {
+      "id": "risk-admin",
+      "principal": "admin",
+      "scope": "service",
+      "service_key": "svc.risk",
+      "expression": "T323_RISK_PRIVATE",
+      "state": "exact",
+      "paths": [
+        "services/risk/private.go"
+      ]
+    },
+    {
+      "id": "risk-reader",
+      "principal": "reader",
+      "scope": "service",
+      "service_key": "svc.risk",
+      "expression": "T323_RISK_PRIVATE",
+      "state": "not_found",
+      "paths": null
+    }
+  ],
+  "relationships": [
+    {
+      "kind": "rpc",
+      "identity": "/neutral.commerce.v1.Orders/Create",
+      "provider": "svc.orders-api",
+      "consumer": "svc.billing",
+      "evidence_paths": [
+        "services/orders-api/service.go",
+        "services/payments/client.go"
+      ],
+      "state": "resolved"
+    },
+    {
+      "kind": "topic",
+      "identity": "orders.created.v1",
+      "provider": "svc.orders-api",
+      "consumer": "svc.fulfillment",
+      "evidence_paths": [
+        "services/orders-api/kafka.go",
+        "services/fulfillment/consumer.go"
+      ],
+      "state": "resolved"
+    }
+  ],
+  "states": [
+    {
+      "service_key": "svc.billing",
+      "desired_revision": "r3-merge-partial",
+      "active_revision": "r2-split",
+      "catalog": "current",
+      "search": "stale",
+      "relationships": "stale"
+    },
+    {
+      "service_key": "svc.conflicted",
+      "desired_revision": "r3-merge-partial",
+      "catalog": "conflict",
+      "search": "unavailable",
+      "relationships": "unavailable"
+    },
+    {
+      "service_key": "svc.fulfillment",
+      "desired_revision": "r3-merge-partial",
+      "active_revision": "r3-merge-partial",
+      "catalog": "current",
+      "search": "current",
+      "relationships": "partial"
+    },
+    {
+      "service_key": "svc.orders",
+      "desired_revision": "r3-merge-partial",
+      "catalog": "removed",
+      "search": "removed",
+      "relationships": "removed"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "desired_revision": "r3-merge-partial",
+      "active_revision": "r3-merge-partial",
+      "catalog": "current",
+      "search": "current",
+      "relationships": "current"
+    },
+    {
+      "service_key": "svc.orders-worker",
+      "desired_revision": "r3-merge-partial",
+      "catalog": "removed",
+      "search": "removed",
+      "relationships": "removed"
+    },
+    {
+      "service_key": "svc.proposed",
+      "desired_revision": "r3-merge-partial",
+      "catalog": "unavailable",
+      "search": "unavailable",
+      "relationships": "unavailable"
+    },
+    {
+      "service_key": "svc.risk",
+      "desired_revision": "r3-merge-partial",
+      "active_revision": "r3-merge-partial",
+      "catalog": "current",
+      "search": "current",
+      "relationships": "current"
+    },
+    {
+      "service_key": "svc.shipping",
+      "desired_revision": "r3-merge-partial",
+      "catalog": "removed",
+      "search": "removed",
+      "relationships": "removed"
+    }
+  ],
+  "tombstones": [
+    {
+      "service_key": "svc.orders",
+      "reason": "split",
+      "successors": [
+        "svc.orders-api",
+        "svc.orders-worker"
+      ]
+    },
+    {
+      "service_key": "svc.orders-worker",
+      "reason": "merge",
+      "successors": [
+        "svc.fulfillment"
+      ]
+    },
+    {
+      "service_key": "svc.shipping",
+      "reason": "merge",
+      "successors": [
+        "svc.fulfillment"
+      ]
+    }
+  ]
+}

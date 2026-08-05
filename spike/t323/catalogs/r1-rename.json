@@ -1,0 +1,166 @@
+{
+  "schema": "t323-neutral-authority-input-v1",
+  "revision": "r1-rename",
+  "records": [
+    {
+      "authority_id": "build:conflict",
+      "kind": "build",
+      "service_key": "svc.conflicted",
+      "display_name": "Conflicted Service",
+      "disposition": "conflicting",
+      "visibility": "none",
+      "placements": [
+        {
+          "path": "services/conflict-b",
+          "role": "primary"
+        }
+      ]
+    },
+    {
+      "authority_id": "build:proposal",
+      "kind": "build",
+      "service_key": "svc.proposed",
+      "display_name": "Proposed Service",
+      "disposition": "proposal",
+      "visibility": "none",
+      "placements": [
+        {
+          "path": "services/proposed",
+          "role": "primary"
+        }
+      ]
+    },
+    {
+      "authority_id": "operator:billing",
+      "kind": "operator",
+      "service_key": "svc.billing",
+      "display_name": "Payments",
+      "disposition": "accepted",
+      "visibility": "reader",
+      "placements": [
+        {
+          "path": "services/payments",
+          "role": "primary"
+        },
+        {
+          "path": "api/commerce.proto",
+          "role": "supporting"
+        },
+        {
+          "path": "gen/commercev1/commerce_grpc.pb.go",
+          "role": "generated"
+        },
+        {
+          "path": "shared/trace/trace.go",
+          "role": "shared"
+        },
+        {
+          "path": "typed/commerce/index.scip",
+          "role": "typed"
+        }
+      ]
+    },
+    {
+      "authority_id": "operator:conflict",
+      "kind": "operator",
+      "service_key": "svc.conflicted",
+      "display_name": "Conflicted Service",
+      "disposition": "conflicting",
+      "visibility": "none",
+      "placements": [
+        {
+          "path": "services/conflict-a",
+          "role": "primary"
+        }
+      ]
+    },
+    {
+      "authority_id": "operator:orders",
+      "kind": "operator",
+      "service_key": "svc.orders",
+      "display_name": "Orders",
+      "disposition": "accepted",
+      "visibility": "reader",
+      "placements": [
+        {
+          "path": "services/orders",
+          "role": "primary"
+        },
+        {
+          "path": "api/commerce.proto",
+          "role": "supporting"
+        },
+        {
+          "path": "gen/commercev1/commerce_grpc.pb.go",
+          "role": "generated"
+        },
+        {
+          "path": "shared/trace/trace.go",
+          "role": "shared"
+        },
+        {
+          "path": "typed/commerce/index.scip",
+          "role": "typed"
+        }
+      ]
+    },
+    {
+      "authority_id": "operator:risk",
+      "kind": "operator",
+      "service_key": "svc.risk",
+      "display_name": "Risk Console",
+      "disposition": "accepted",
+      "visibility": "restricted",
+      "placements": [
+        {
+          "path": "services/risk",
+          "role": "primary"
+        },
+        {
+          "path": "shared/trace/trace.go",
+          "role": "shared"
+        }
+      ]
+    },
+    {
+      "authority_id": "operator:shipping",
+      "kind": "operator",
+      "service_key": "svc.shipping",
+      "display_name": "Shipping",
+      "disposition": "accepted",
+      "visibility": "reader",
+      "placements": [
+        {
+          "path": "services/shipping",
+          "role": "primary"
+        },
+        {
+          "path": "shared/trace/trace.go",
+          "role": "shared"
+        }
+      ]
+    }
+  ],
+  "unowned_paths": [
+    "services/conflict-a/main.go",
+    "services/conflict-b/main.go",
+    "services/proposed/main.go",
+    "tools/unowned.go"
+  ],
+  "invalid": [
+    {
+      "case_id": "unsafe-parent-path",
+      "expected_reason": "unsafe_path",
+      "payload": {
+        "authority_id": "operator:malformed",
+        "service_key": "svc.malformed",
+        "placements": [
+          {
+            "path": "../escape",
+            "role": "primary"
+          }
+        ]
+      }
+    }
+  ]
+}
