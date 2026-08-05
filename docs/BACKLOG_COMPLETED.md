@@ -6957,7 +6957,8 @@ authority metadata, source evidence, and runtime relationships.
 
 Epic 33 is now implementation-complete and demoable through the ordinary
 worker cohort. T34.1 subsequently completed the immutable repository
-source/search generation, and T34.2 is scheduled next. No service relationship, runtime-use,
+source/search generation, and T34.2 subsequently completed the exact
+service-query compiler. No service relationship, runtime-use,
 completeness, extraction accuracy, target-scale/SLO, migration-completion,
 decommission-safety, or release claim is created; `GATE2-V2` remains
 `NOT_ESTABLISHED`.
@@ -7037,4 +7038,70 @@ Source/search files are derived and excluded from backup. No service query
 predicate, v2 reader, startup migration/repair, catalog/state activation,
 relationship, UI/API/MCP surface, scale/SLO, accuracy, completeness,
 migration-completion, decommission-safety, or release claim is created;
-`GATE2-V2` remains `NOT_ESTABLISHED`. T34.2 is scheduled next.
+`GATE2-V2` remains `NOT_ESTABLISHED`. T34.2 subsequently completed the exact
+service-query compiler; T34.3 is scheduled next.
+
+**T34.2 ✅ · Service query compiler** *(2026-08-05)* — added the pure
+production `servicequery` contract without switching the live v1 reader. One
+opaque prepared scope strict-validates the current catalog publication,
+repository-state summary, service lifecycle row, exact active catalog
+generation, and T34.1 direct search manifest. Current services resolve their
+active projection; an explicitly stale service resolves only its last complete
+active catalog and requires that catalog's source commit to equal the supplied
+search root's HEAD. A current root therefore cannot relabel prior active
+results. Unavailable, conflict, removed, missing, malformed, mismatched, and
+unprepared scopes refuse before a query exists.
+
+Initial composition is deliberately one repository-local service. More than
+one prepared scope returns a typed cross-repository refusal; no implicit first
+repository, cohort, or union exists. All accepted membership roles collapse
+to the sorted distinct path set. Shared paths remain present for every owning
+service, multiple roles on one path produce one predicate, and unowned paths
+never enter a service query. Compilation ANDs the user's parsed expression
+with an exact repository `RepoSet`, the selected indexed revision's exact
+zoekt branch, and one anchored, case-sensitive filename regexp per path. The
+path predicate therefore executes before ranking, match budgets, document
+truncation, and result conversion; there is no result-time service filter.
+
+The inherited per-service envelope limits each scope to 128 distinct paths and
+64 KiB of aggregate path bytes. Quoted exact-prefix patterns are separately
+bounded to 128 atoms and a conservative 132,608 encoded bytes; input
+expressions cap at 16 KiB. The closed
+`phebs-service-query-authority-v1` receipt binds expression digest,
+repository/service/incarnation/status, selector/branch/commit, current catalog
+generation and revision, active desired/source/catalog generations, service
+state and repository-summary digests/revisions, T34.1 source and search
+generation digests, direct topology, path digest/count/bytes, predicate
+atoms/bytes, and its own domain-separated digest. Canonical JSON revalidation
+detects any field mutation and provides the exact later cursor identity.
+
+Preparation decodes and validates an at-most-5-MiB current catalog once; when
+active equals current it reuses that verified decode, while an actually stale
+scope decodes the distinct at-most-5-MiB active catalog once. Reusing the
+opaque prepared scope for another query or indexed selector performs bounded
+expression parsing, at most 128 regexp compilations, and small receipt hashes.
+It performs no catalog decode, store call, Git/blob/source-member/shard read,
+child launch, write, lock, filesystem scan, or retained-cache mutation. Every
+request independently allocates its parsed query, path atoms, and sub-16-KiB
+receipt encoding; there is no process-wide cache or new concurrency gate.
+
+The retained `spike/t342` gate converts the independent T32.3 authority into
+the production catalog vocabulary and passes all 18 exact or explicitly stale
+service-search expectations across its five revisions through a real
+in-process zoekt reader. That covers rename, split, merge-partial, removal,
+primary/supporting/shared/generated/typed membership, and last-complete stale
+authority. A separate real-reader case supplies 100 matching out-of-service
+files with a total one-match/one-document budget and still returns only a
+service file, proving the predicate precedes ranking and truncation. Focused
+tests additionally pin tag/peeled-branch selection, regex escaping, maximum
+shape, role deduplication, authority tampering, source mismatch, unavailable
+state, and explicit multi-repository refusal.
+
+No live v2 reader, query endpoint, cursor transport, HTTP/MCP/UI surface,
+service activation, startup backfill, backup/restore change, relationship or
+evidence claim, target SLO/scale, accuracy/completeness, migration completion,
+decommission safety, or release authority is created. T34.3 owns strict
+runtime scope opening, final response fences, v1/v2 migration, real active
+generation transitions, interrupted publication/restore/rollback behavior,
+and active-reader retirement. `GATE2-V2` remains `NOT_ESTABLISHED`; T34.3 is
+scheduled next.

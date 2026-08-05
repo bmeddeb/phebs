@@ -70,8 +70,9 @@ desired/active/status/incarnation/tombstone state and bounded repository
 summary, T33.4's authorization-first paged HTTP/MCP inventory and exact
 detail, and T33.5's accessible service directory and neutral epic demo
 completed on 2026-08-05, closing Epic 33. T34.1's immutable repository
-source/search generation also completed on 2026-08-05. T34.2 service query
-compilation is scheduled next.
+source/search generation and T34.2's exact service-query compiler also
+completed on 2026-08-05. T34.3 publication migration/recovery is scheduled
+next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -385,9 +386,10 @@ trigger-gated. T32.5 then closed the conditional v2 implementation gate, and
 T33.1 completed the pure catalog contract, T33.2 ingests it with exact legacy
 migration, T33.3 supplies independent service lifecycle state, T33.4 exposes
 its authorization-first bounded HTTP/MCP reads, and T33.5 closes the epic with
-the accessible directory and neutral ordinary-worker demo. T34.1 now publishes
-the immutable repository source/search generation; T34.2 is the scheduled
-dependency-ordered ticket. Epics 25–28 remain
+the accessible directory and neutral ordinary-worker demo. T34.1 publishes
+the immutable repository source/search generation and T34.2 supplies the exact
+pre-ranking service compiler; T34.3 is the scheduled dependency-ordered
+ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -516,9 +518,10 @@ service count × repository bytes
   ingestion and v1 migration, T33.3 supplies independent service state, T33.4
   supplies authorized bounded HTTP/MCP reads, and T33.5 supplies the accessible
   source-free directory and neutral ordinary-worker demo.
-- **Epic 34 — shared search (T34.1 complete):** the immutable source/search
-  generation and direct physical root are published; T34.2 next adds exact
-  service predicates before the later migration/product tickets.
+- **Epic 34 — shared search (T34.1–T34.2 complete):** the immutable
+  source/search generation, direct physical root, and exact pre-ranking
+  service predicate compiler are complete; T34.3 next owns migration and
+  recovery before the product ticket.
 - **Epic 35 — bounded lifecycle:** add chunk scheduling, fairness, progress,
   pin-aware retention/GC, recovery, and capacity controls before multiplying
   high-cardinality artifacts.
