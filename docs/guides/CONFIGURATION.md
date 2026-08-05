@@ -408,9 +408,36 @@ state publication are consecutive transactions: a crash between them makes
 state reads unavailable until the exact startup/index retry repairs the point
 summary; it never serves a mixed catalog/state view.
 
-T33.3 registers no catalog HTTP, MCP, search, relationship, or product UI
-surface. Authorization-first reads belong to T33.4, real active physical
-generation transitions to T34.3, and retained-generation GC to T35.
+T33.4 registers authorization-first read surfaces over this state. HTTP
+`GET /api/services?repository=...` returns a service-key-ordered page and
+`GET /api/service?repository=...&service_key=...` returns exact detail; MCP
+provides the identical `list_services` and `get_service` projections. List
+pages default to 50 and cap at 100. Removed tombstones are excluded unless
+`include_removed=true`; optional `status` and `disposition` filters are closed
+to the catalog/lifecycle enums. List rows expose membership, role, and distinct
+path counts but no paths. Exact detail alone returns successors and membership
+triples, bounded by 128 distinct paths, 64 KiB of distinct path bytes, 640 role
+records, and the existing 4,000 aggregate-successor ceiling. Both transports
+cap responses at 1 MiB and cursors at 16 KiB.
+
+Each inventory request scans and verifies at most 500 service-key-ordered rows
+through the existing repository/key seek index, applies the optional filters
+in memory, and returns at most 100 services. A sparse filter may therefore
+return an empty page with a nonempty continuation. Follow the cursor until it
+is empty; an empty page does not prove that no later service matches. This
+bounded scan avoids both a retained-tombstone-wide filter query and new
+write-time status/disposition indexes.
+
+Repository authorization runs before filters, cursors, catalog/state counts,
+or memberships. Missing, deleting, and hidden repositories therefore share one
+not-found result. A cursor binds the permission projection, query/order/filter,
+catalog generation/revision, summary digest/revision, and last service
+key/incarnation; any authority, lifecycle, permission, or removal/re-add
+transition refuses continuation. Building a page or detail strict-decodes the
+admitted catalog once; the final response fence rereads only the catalog
+pointer and state summary. Neither surface reads Git, blobs, shards, or source
+content. T33.5 owns the product UI, T34.3 owns real active physical generation
+transitions, and T35 owns retained-generation GC.
 
 
 ### Provisional Change Workbench

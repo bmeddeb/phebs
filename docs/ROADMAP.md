@@ -67,8 +67,9 @@ registration or release. T33.1's strict canonical service-catalog contract
 and T33.2's exact ingestion, census binding, immutable publication,
 backup/restore, and v1 migration completed on 2026-08-04. T33.3's independent
 desired/active/status/incarnation/tombstone state and bounded repository
-summary completed on 2026-08-05 without product-surface registration; T33.4
-authorized reads are scheduled next.
+summary and T33.4's authorization-first paged HTTP/MCP inventory and exact
+detail completed on 2026-08-05; T33.5's accessible service directory and
+neutral epic demo are scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -380,8 +381,9 @@ whole-repository shards for the initial v2 path after the T32.2 direct baseline
 completed and all T32.3 neutral topology gates passed; cohorts and P6 remain
 trigger-gated. T32.5 then closed the conditional v2 implementation gate, and
 T33.1 completed the pure catalog contract, T33.2 ingests it with exact legacy
-migration, and T33.3 supplies independent service lifecycle state; T33.4 is
-the scheduled dependency-ordered ticket. Epics 25–28 remain
+migration, T33.3 supplies independent service lifecycle state, and T33.4
+exposes its authorization-first bounded HTTP/MCP reads; T33.5 is the scheduled
+dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -507,8 +509,9 @@ service count × repository bytes
   escalation.
 - **Epic 33 — service catalog:** T33.1 supplies the strict pure multi-service
   authority and membership contract, T33.2 supplies exact ingestion and v1
-  migration, and T33.3 supplies independent service state; next add authorized
-  reads and a service directory.
+  migration, T33.3 supplies independent service state, and T33.4 supplies
+  authorized bounded HTTP/MCP reads; next add the accessible service directory
+  and neutral epic demo.
 - **Epic 34 — shared search:** publish one exact repository search generation
   under the selected topology and provide exact all-code/service-scoped query
   parity.

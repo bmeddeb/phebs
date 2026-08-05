@@ -59,6 +59,9 @@ type Options struct {
 	ContractCatalog  ContractCatalogQueries
 	CallerMap        CallerMapQueries
 	CallerComparison CallerComparisonQueries
+	// ServiceDirectory is the same T33.4 store-backed service supplied to
+	// Huma. Nil keeps the tools undiscoverable.
+	ServiceDirectory ServiceDirectoryQueries
 	// Workbench and WorkbenchChecklist enable T21.13's synthetic/dark MCP
 	// annex only when both real shared services are present. Principal is the
 	// same authenticated identity projection used by Huma.
@@ -171,6 +174,7 @@ func NewServer(opts Options) *sdk.Server {
 	registerProofTools(s, opts)
 	registerCallerMapTools(s, opts)
 	registerCallerComparisonTool(s, opts)
+	registerServiceDirectoryTools(s, opts)
 	registerWorkbenchTools(s, opts)
 
 	return s

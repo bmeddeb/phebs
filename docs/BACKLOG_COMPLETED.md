@@ -6749,10 +6749,10 @@ authority survives while derived candidate, resolver, and caller pointers are
 still cleared and rebuilt. Focused unit/config, ingestion, immutable-version,
 stale-HEAD, failed-replacement, strict reopen, and real backup/restore tests
 cover the closure. T33.3 subsequently completed independent service
-incarnation/desired/active/removal state; T33.4 owns authorized reads. No HTTP,
-MCP, search, relationship, or UI catalog surface is registered, and no scale,
+incarnation/desired/active/removal state, and T33.4 added its authorized bounded
+HTTP/MCP reads. T33.2 itself registered no product surface and made no scale,
 SLO, accuracy, completeness, migration-completion, decommission-safety, or
-release claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
+release claim; `GATE2-V2` remains `NOT_ESTABLISHED`.
 
 **T33.3 ✅ · Independent service desired/active state** *(2026-08-05)* — added
 one strict current lifecycle row per repository-local service key and one
@@ -6821,8 +6821,77 @@ rename, split/merge, omission, removal/re-add incarnation, `A → B → A`, stal
 activation, and concurrent writers. The real backup/restore path retains and
 strict-opens exact desired/active identities, digests, revisions, timestamps,
 incarnations, tombstones, and summary state while derived candidate, resolver,
-and caller pointers remain rebuildable. T33.4 is scheduled next for
+and caller pointers remain rebuildable. T33.4 subsequently added
 authorization-first paged/detail HTTP and MCP reads. T34.3 still owns real
 physical active-generation transition validation. No product-surface, target
 scale/SLO, accuracy, completeness, migration-completion, decommission-safety,
 or release claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
+
+**T33.4 ✅ · Authorized catalog API and MCP** *(2026-08-05)* — added one
+shared `ServiceDirectoryService` for repository-scoped service inventory and
+exact detail. HTTP registers `GET /api/services` and `GET /api/service`; MCP
+registers `list_services` and `get_service`. The authenticated version response
+advertises `service-catalog-v2`. Both transports return the same exported Go
+types and call the same service, so MCP cannot reinterpret HTTP authorization,
+cursor, lifecycle, membership, or response semantics. T33.5 still owns the
+accessible directory UI and neutral epic demo.
+
+Every read resolves repository visibility and authorizes the requested
+repository before page-size, filter, cursor, catalog, state, count, or
+membership work. Missing, deleting, and unauthorized repositories use one
+fixed not-found shape, and a missing key beneath an authorized repository uses
+one fixed service-not-found shape. Tests pair hidden and absent repositories
+with deliberately invalid page/cursor inputs and prove that no catalog/state
+method runs. A final authorization recheck and store snapshot confirmation
+run before either transport returns.
+
+Inventory orders by exact service key, defaults to 50 rows, caps at 100, and
+excludes removed tombstones unless `include_removed=true`. Closed `status` and
+`disposition` filters execute after a bounded indexed seek. The store fetches
+at most 501 raw rows, scans and verifies at most 500, returns at most 101
+matches to the service, strict-opens the at-most-5-MiB current catalog once,
+and verifies every scanned row's semantic digest and service-local desired
+projection against that one retained decoded view. A sparse filter may return
+an empty page with a continuation rather than scanning retained tombstones
+without bound. A continuation seek point is the last returned or scanned
+service key plus incarnation; the store point-checks that anchor before the
+next range query, so removal/re-add cannot reuse a cursor. No new secondary
+index or steady-state write cost is added.
+
+The opaque cursor is capped at 16 KiB and strict-decodes closed JSON. It binds
+query/filter/order identity, principal, authorization provider, permission
+snapshot, visible-repository-set digest, catalog generation and control
+revision, repository-state summary digest and revision, and last
+key/incarnation. Filter, authorization, catalog, summary, activation, removal,
+or re-add transitions refuse continuation. The final store fence rereads only
+the catalog-current and repository-summary points; it does not decode the
+catalog a second time.
+
+List rows expose lifecycle identity, status, disposition, incarnation,
+desired/active source/catalog identities, row digest/revision/time, and exact
+membership, distinct-path, and per-role counts, but never membership paths.
+Exact detail reuses that row and alone adds successors plus the ordered
+membership triples. Detail enforces the inherited 128 distinct paths and
+64-KiB distinct-path-byte bounds, at most 640 role records, and the existing
+4,000 aggregate-successor ceiling. Inventory and detail both refuse encoded
+responses over 1 MiB. Repository metadata includes source/catalog identity,
+authority/override, source/accepted/unowned file counts, exact catalog and
+state revisions, lifecycle counts, and timestamps without returning canonical
+catalog bytes.
+
+Focused pure tests cover authorization ordering, hidden/absent parity, filter,
+authorization, summary, catalog, and incarnation cursor invalidation,
+list/detail type equality, strict output schemas, dark registration, capability
+discovery, page/cursor/response/path ceilings, and OpenAPI/MCP field parity.
+Live SurrealDB tests cover ordered filtered pages, exact projection detail,
+pointer/summary confirmation, and stale-incarnation seeks. Steady state adds no
+write, lock, Git/blob/shard read, child, source-content read, retained cache, or
+sync/startup work. Each request performs two repository authorization points;
+inventory or detail then performs one strict catalog open, one summary point,
+one bounded state query, and a final catalog-pointer/summary confirmation.
+Cursor continuation adds one anchor point. Memory is bounded by one admitted
+catalog plus 501 raw store rows and at most 101 retained matching projections;
+only exact detail retains bounded path strings. No UI, service-scoped search,
+relationship, target scale/SLO,
+accuracy, completeness, migration-completion, decommission-safety, or release
+claim is created; `GATE2-V2` remains `NOT_ESTABLISHED`.
