@@ -27,9 +27,11 @@ npm run dev
 ```
 
 Vite serves <http://127.0.0.1:5173> and proxies `/api` to
-<http://127.0.0.1:3070>. Hash routes (`#/search`, `#/repos`, and so on) allow
-the production UI to be served from the embedded static filesystem without a
-server-side route fallback.
+<http://127.0.0.1:3070>. Hash routes (`#/search`, `#/repos`, and
+`#/services?repository=...`, among others) allow the production UI to be
+served from the embedded static filesystem without a server-side route
+fallback. The Services route is repository-contextual and retains its filters,
+opaque cursor, removed opt-in, and selected service in the query string.
 
 ## Quality commands
 
@@ -76,6 +78,8 @@ Tests live beside the component or page they cover.
   pagination, or conclusion logic in a page.
 - Replace bounded pages rather than accumulating fleet-sized result sets in
   the DOM.
+- Keep service authority and lifecycle projections source-free: paths and
+  successors are catalog metadata, not source reads or runtime relationships.
 - Keep resolved evidence, name matches, unresolved candidates, coverage, and
   human records visually distinct.
 - Preserve exact repository/commit/path/span links.

@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -54,6 +55,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/resolvermaterialize"
 	"github.com/bmeddeb/phebs/internal/retentionstatus"
 	"github.com/bmeddeb/phebs/internal/search"
+	"github.com/bmeddeb/phebs/internal/servicecatalog"
 	"github.com/bmeddeb/phebs/internal/servicecatalogingest"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
@@ -68,6 +70,8 @@ const (
 	evidenceSweepMaxStepsPerPass = 64
 	evidenceStagedMaxAge         = 24 * time.Hour
 	proofSweepMaxBundlesPerPass  = 8
+	t335CatalogEncodedBytes      = 2801
+	t335CatalogEncodedSHA256     = "sha256:7c495f76ed5660cc7f00d58a3089a77da2ebb860c7a22af6a76218a031f66ff0"
 )
 
 func main() {
@@ -187,6 +191,16 @@ func serve(args []string) error {
 		log.Printf(
 			"WARNING: neutral T30.7 focused-service demo enabled from %s; provisional evidence remains validation-gated",
 			fixture,
+		)
+	}
+	if catalog := os.Getenv("PHEBS_T335_SERVICE_CATALOG"); catalog != "" {
+		fixture := os.Getenv("PHEBS_T307_NEUTRAL_SERVICE_REPO")
+		if err := bindT335ServiceDirectoryDemo(cfg, fixture, catalog); err != nil {
+			return err
+		}
+		log.Printf(
+			"WARNING: neutral T33.5 multi-service directory enabled from %s; catalog metadata establishes no relationship or accuracy claim",
+			catalog,
 		)
 	}
 	if fixture := os.Getenv("PHEBS_WORKBENCH_CLOSURE_REPO"); fixture != "" {
@@ -1310,6 +1324,92 @@ func bindT307NeutralServiceDemo(cfg *config.Config, fixture string) error {
 	cfg.Experimental.ProvisionalProtoExtraction = true
 	cfg.Experimental.ProvisionalKafkaExtraction = true
 	cfg.Experimental.ProvisionalWorkbench = true
+	return nil
+}
+
+// bindT335ServiceDirectoryDemo adds one reviewed operator catalog to the
+// already-bound T30.7 neutral repository. It is a make-dev-only configuration
+// bridge: catalog ingestion, lifecycle reconciliation, HTTP, MCP, and UI reads
+// still use the ordinary production services.
+func bindT335ServiceDirectoryDemo(
+	cfg *config.Config,
+	fixture, catalogPath string,
+) error {
+	if catalogPath == "" {
+		return nil
+	}
+	if cfg == nil {
+		return errors.New("T33.5 service directory demo requires server configuration")
+	}
+	if strings.TrimSpace(catalogPath) != catalogPath ||
+		!filepath.IsAbs(catalogPath) ||
+		filepath.Clean(catalogPath) != catalogPath ||
+		filepath.Base(catalogPath) != "t335-service-catalog.json" {
+		return errors.New(
+			"T33.5 service directory demo must name the absolute clean t335-service-catalog.json path",
+		)
+	}
+	info, err := os.Lstat(catalogPath)
+	if err != nil {
+		return fmt.Errorf("inspect T33.5 service directory catalog: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return errors.New("T33.5 service directory catalog must be a regular file")
+	}
+	if strings.TrimSpace(fixture) != fixture ||
+		!filepath.IsAbs(fixture) || filepath.Clean(fixture) != fixture ||
+		filepath.Base(fixture) != "t307-neutral-service.bundle" {
+		return errors.New("T33.5 service directory demo requires the exact T30.7 neutral bundle")
+	}
+	repository, err := phebssync.RepoName(fixture)
+	if err != nil {
+		return fmt.Errorf("derive T33.5 service directory repository: %w", err)
+	}
+	connected := false
+	for _, connection := range cfg.Connections {
+		if connection.Type == "git" && connection.URL == fixture {
+			connected = true
+			break
+		}
+	}
+	unit, unitBound := cfg.AnalysisUnits[repository]
+	if !connected || !unitBound || unit.Name != "orders-service" {
+		return errors.New("T33.5 service directory demo requires the bound T30.7 neutral cohort")
+	}
+	raw, err := os.ReadFile(catalogPath)
+	if err != nil {
+		return fmt.Errorf("read T33.5 service directory catalog: %w", err)
+	}
+	encodedDigest := fmt.Sprintf("sha256:%x", sha256.Sum256(raw))
+	if len(raw) != t335CatalogEncodedBytes ||
+		encodedDigest != t335CatalogEncodedSHA256 {
+		return fmt.Errorf(
+			"T33.5 service directory catalog does not match the retained bytes: got %d bytes and %s",
+			len(raw), encodedDigest,
+		)
+	}
+	catalog, err := servicecatalog.Decode(raw)
+	if err != nil {
+		return fmt.Errorf("validate T33.5 service directory catalog: %w", err)
+	}
+	desired := config.ServiceCatalog{
+		Kind: servicecatalog.AuthorityOperator, ID: "t335-demo",
+		Version: "v1", Path: catalogPath,
+	}
+	if catalog.Authority.Kind != desired.Kind || catalog.Authority.ID != desired.ID ||
+		catalog.Authority.Version != desired.Version {
+		return errors.New("T33.5 service directory catalog authority does not match its selection")
+	}
+	if existing, ok := cfg.ServiceCatalogs[repository]; ok && existing != desired {
+		return fmt.Errorf(
+			"T33.5 service directory repository %q already has another service catalog",
+			repository,
+		)
+	}
+	if cfg.ServiceCatalogs == nil {
+		cfg.ServiceCatalogs = make(map[string]config.ServiceCatalog, 1)
+	}
+	cfg.ServiceCatalogs[repository] = desired
 	return nil
 }
 

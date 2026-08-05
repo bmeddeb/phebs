@@ -67,9 +67,10 @@ registration or release. T33.1's strict canonical service-catalog contract
 and T33.2's exact ingestion, census binding, immutable publication,
 backup/restore, and v1 migration completed on 2026-08-04. T33.3's independent
 desired/active/status/incarnation/tombstone state and bounded repository
-summary and T33.4's authorization-first paged HTTP/MCP inventory and exact
-detail completed on 2026-08-05; T33.5's accessible service directory and
-neutral epic demo are scheduled next.
+summary, T33.4's authorization-first paged HTTP/MCP inventory and exact
+detail, and T33.5's accessible service directory and neutral epic demo
+completed on 2026-08-05, closing Epic 33. T34.1 repository source/search
+generation is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -381,9 +382,10 @@ whole-repository shards for the initial v2 path after the T32.2 direct baseline
 completed and all T32.3 neutral topology gates passed; cohorts and P6 remain
 trigger-gated. T32.5 then closed the conditional v2 implementation gate, and
 T33.1 completed the pure catalog contract, T33.2 ingests it with exact legacy
-migration, T33.3 supplies independent service lifecycle state, and T33.4
-exposes its authorization-first bounded HTTP/MCP reads; T33.5 is the scheduled
-dependency-ordered ticket. Epics 25–28 remain
+migration, T33.3 supplies independent service lifecycle state, T33.4 exposes
+its authorization-first bounded HTTP/MCP reads, and T33.5 closes the epic with
+the accessible directory and neutral ordinary-worker demo. T34.1 is the
+scheduled dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -507,11 +509,11 @@ service count × repository bytes
   measure the target whole repository, build the neutral
   authority/correctness profiles, and select direct shards, cohorts, or a P6
   escalation.
-- **Epic 33 — service catalog:** T33.1 supplies the strict pure multi-service
-  authority and membership contract, T33.2 supplies exact ingestion and v1
-  migration, T33.3 supplies independent service state, and T33.4 supplies
-  authorized bounded HTTP/MCP reads; next add the accessible service directory
-  and neutral epic demo.
+- **Epic 33 — service catalog (complete):** T33.1 supplies the strict pure
+  multi-service authority and membership contract, T33.2 supplies exact
+  ingestion and v1 migration, T33.3 supplies independent service state, T33.4
+  supplies authorized bounded HTTP/MCP reads, and T33.5 supplies the accessible
+  source-free directory and neutral ordinary-worker demo.
 - **Epic 34 — shared search:** publish one exact repository search generation
   under the selected topology and provide exact all-code/service-scoped query
   parity.

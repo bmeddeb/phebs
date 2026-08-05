@@ -1,0 +1,124 @@
+{
+  "schema": "phebs-service-catalog-v2",
+  "authority": {
+    "kind": "operator",
+    "id": "t335-demo",
+    "version": "v1"
+  },
+  "services": [
+    {
+      "key": "billing-control",
+      "display_name": "Billing control",
+      "disposition": "conflict",
+      "origin": "base",
+      "reason": "two neutral authority claims remain unresolved"
+    },
+    {
+      "key": "legacy-orders",
+      "display_name": "Legacy orders",
+      "disposition": "rejected",
+      "origin": "base",
+      "reason": "replaced by the stable orders API identity",
+      "successors": [
+        "orders-api"
+      ]
+    },
+    {
+      "key": "orders-api",
+      "display_name": "Orders API",
+      "disposition": "accepted",
+      "origin": "base"
+    },
+    {
+      "key": "orders-events",
+      "display_name": "Orders events",
+      "disposition": "accepted",
+      "origin": "base"
+    },
+    {
+      "key": "returns-proposal",
+      "display_name": "Returns proposal",
+      "disposition": "proposal",
+      "origin": "base",
+      "reason": "neutral candidate retained for directory-state demonstration"
+    }
+  ],
+  "memberships": [
+    {
+      "service_key": "billing-control",
+      "path": "bulk/irrelevant.txt",
+      "role": "primary",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-api",
+      "path": "service/orders",
+      "role": "primary",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-api",
+      "path": "api/orders.proto",
+      "role": "supporting",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-api",
+      "path": "gen/ordersv1/orders_grpc.pb.go",
+      "role": "supporting",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-api",
+      "path": "gen/ordersv1/orders_grpc.pb.go",
+      "role": "generated",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-api",
+      "path": "generated-from-snapshot.json",
+      "role": "shared",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-api",
+      "path": "go.mod",
+      "role": "shared",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-events",
+      "path": "service/orders/kafka.go",
+      "role": "primary",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-events",
+      "path": "api/orders.proto",
+      "role": "supporting",
+      "origin": "base"
+    },
+    {
+      "service_key": "orders-events",
+      "path": "go.mod",
+      "role": "shared",
+      "origin": "base"
+    },
+    {
+      "service_key": "returns-proposal",
+      "path": "consumers/external/caller.go",
+      "role": "primary",
+      "origin": "base"
+    }
+  ],
+  "unowned": [
+    {
+      "path": "bulk/irrelevant.txt",
+      "origin": "base"
+    },
+    {
+      "path": "consumers/external/caller.go",
+      "origin": "base"
+    }
+  ]
+}

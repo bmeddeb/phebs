@@ -436,8 +436,12 @@ key/incarnation; any authority, lifecycle, permission, or removal/re-add
 transition refuses continuation. Building a page or detail strict-decodes the
 admitted catalog once; the final response fence rereads only the catalog
 pointer and state summary. Neither surface reads Git, blobs, shards, or source
-content. T33.5 owns the product UI, T34.3 owns real active physical generation
-transitions, and T35 owns retained-generation GC.
+content. The capability-gated repository → Services directory now consumes
+these same bounded projections, retains its exact request in the hash route,
+and labels paths and successors as source-free catalog metadata. It adds no
+configuration key and never makes a runtime-relationship claim. T34.3 owns
+real active physical generation transitions, and T35 owns retained-generation
+GC.
 
 
 ### Provisional Change Workbench

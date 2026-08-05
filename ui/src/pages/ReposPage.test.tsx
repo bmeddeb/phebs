@@ -64,6 +64,31 @@ test('repo search actions use anchored full-name filters', async () => {
   expect(screen.queryByRole('button', { name: 'Reindex all scopes' })).toBeNull()
 })
 
+test('service directory links are capability-gated and preserve exact repository identity', async () => {
+  const dark = render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}>
+        <ReposPage />
+      </BaseProvider>
+    </StyletronProvider>,
+  )
+  await screen.findAllByTitle('Search in this repo')
+  expect(screen.queryByRole('link', { name: 'Services' })).toBeNull()
+  dark.unmount()
+
+  render(
+    <StyletronProvider value={engine}>
+      <BaseProvider theme={LightTheme}>
+        <ReposPage serviceDirectoryAvailable />
+      </BaseProvider>
+    </StyletronProvider>,
+  )
+  const links = await screen.findAllByRole('link', { name: 'Services' })
+  expect(decodeURIComponent(links[1].getAttribute('href') ?? '')).toBe(
+    '#/services?repository=github.com/two/shared',
+  )
+})
+
 test('legacy job state is unavailable rather than never indexed', async () => {
   render(
     <StyletronProvider value={engine}>

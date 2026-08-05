@@ -83,3 +83,10 @@ test('Workbench navigation is capability-gated and marks its route current', () 
   expect(link.getAttribute('href')).toBe('#/workbench')
   expect(link.getAttribute('aria-current')).toBe('page')
 })
+
+test('Service directory remains a repository sub-route', () => {
+  header(false, false, '/services')
+  const link = screen.getByRole('link', { name: 'Repos' })
+  expect(link.getAttribute('aria-current')).toBe('page')
+  expect(screen.queryByRole('link', { name: 'Services' })).toBeNull()
+})

@@ -13,6 +13,8 @@ import {
   fetchHover,
   fetchReferences,
   fetchRepoStatus,
+  fetchServiceDetail,
+  fetchServiceInventory,
   fetchSource,
   fetchWorkbenchChecklist,
   fetchWorkbenchImpact,
@@ -159,6 +161,34 @@ describe('request helpers', () => {
       credentials: 'same-origin',
       signal,
     })
+  })
+
+  it('encodes exact service inventory and detail identities', async () => {
+    const signal = new AbortController().signal
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ services: [] }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchServiceInventory({
+      repository: 'example.invalid/mono repo',
+      status: 'stale',
+      disposition: 'accepted',
+      include_removed: true,
+      page_size: 50,
+      cursor: 'next/page',
+    }, signal)
+    await fetchServiceDetail(
+      'example.invalid/mono repo', 'orders api', signal,
+    )
+    expect(fetchMock.mock.calls[0]).toEqual([
+      '/api/services?repository=example.invalid%2Fmono+repo&status=stale&disposition=accepted&include_removed=true&page_size=50&cursor=next%2Fpage',
+      { credentials: 'same-origin', signal },
+    ])
+    expect(fetchMock.mock.calls[1]).toEqual([
+      '/api/service?repository=example.invalid%2Fmono+repo&service_key=orders+api',
+      { credentials: 'same-origin', signal },
+    ])
   })
 
   it('includes immutable refs in source and lazy folder requests', async () => {
