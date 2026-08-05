@@ -5,7 +5,7 @@ import { Provider as StyletronProvider } from 'styletron-react'
 import { BaseProvider, LightTheme } from 'baseui'
 import SearchPage from './SearchPage'
 import { repoFilter, runeColumnToUTF16Offset } from '../util'
-import type { Chunk, FileResult, Range, RepoStatus, SearchResult, Stats, TreeEntry } from '../api'
+import type { Chunk, FileResult, Range, RepoStatus, SearchResult, SearchScopeReceipt, Stats, TreeEntry } from '../api'
 
 // streamSearch fake: tests drive the captured callbacks to simulate the SSE stream.
 type Callbacks = {
@@ -13,6 +13,8 @@ type Callbacks = {
   onBatch?: (r: SearchResult) => void
   onDone?: (s: Stats) => void
   onError?: (msg: string) => void
+  onScope?: (receipt: SearchScopeReceipt) => void
+  selectors?: { kind: string; repository?: string; serviceKey?: string }[]
 }
 const stream = vi.hoisted(() => ({} as Callbacks))
 const repositoryAPI = vi.hoisted(() => ({
@@ -51,9 +53,12 @@ vi.mock('../api', async (importOriginal) => ({
     onBatch: Callbacks['onBatch'],
     onDone: Callbacks['onDone'],
     onError: Callbacks['onError'],
+    selector: { kind: string; repository?: string; serviceKey?: string },
+    onScope: Callbacks['onScope'],
   ) => {
     stream.calls = [...(stream.calls ?? []), q]
-    Object.assign(stream, { onBatch, onDone, onError })
+    stream.selectors = [...(stream.selectors ?? []), selector]
+    Object.assign(stream, { onBatch, onDone, onError, onScope })
     return () => {}
   },
 }))
@@ -133,6 +138,8 @@ beforeEach(() => {
   delete stream.onBatch
   delete stream.onDone
   delete stream.onError
+  delete stream.onScope
+  stream.selectors = []
   stream.calls = []
   repositoryAPI.statusCalls = 0
   repositoryAPI.statusFailures = 0
@@ -546,6 +553,26 @@ test('facet rows toggle lang:/repo: terms into the query', async () => {
   expect(hash()).toBe('#/search?q=foo+lang:go')
   fireEvent.click(screen.getByText('one'))
   expect(hash()).toBe('#/search?q=foo+repo:"^github\\\\.com/a/one$"')
+})
+
+test('service deep link preserves query while switching scope and renders receipt posture', async () => {
+  renderSearch('q=needle&scope=service&repository=example.invalid%2Fmono&service_key=orders-api')
+  expect(stream.selectors).toEqual([{
+    kind: 'service', repository: 'example.invalid/mono', serviceKey: 'orders-api',
+  }])
+  await act(async () => stream.onScope!({
+    schema: 'phebs-search-scope-v1', kind: 'service',
+    repository: 'example.invalid/mono', service_key: 'orders-api',
+    service_status: 'stale',
+    membership_policy: 'accepted-roles-union-shared-included-unowned-excluded-v1',
+    expression_digest: 'sha256:expression', revisions: [{ repository: 'example.invalid/mono', commit: 'abc' }],
+    result_set_digest: 'sha256:results', result_files: 1, result_matches: 1,
+    digest: 'sha256:receipt',
+  }))
+  expect(screen.getByText(/stale · shared paths included · unowned paths excluded/)).toBeTruthy()
+  expect(decodeURIComponent(
+    screen.getByRole('link', { name: 'All code' }).getAttribute('href') ?? '',
+  )).toBe('#/search?q=needle')
 })
 
 test('submitting the current query starts a fresh search generation', async () => {

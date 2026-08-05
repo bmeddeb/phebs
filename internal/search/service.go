@@ -90,12 +90,17 @@ func (s *Searcher) SearchService(
 		); repairErr != nil {
 			bindErr = errors.Join(bindErr, repairErr)
 		}
-		return nil, fmt.Errorf("service search: bind reader: %w", bindErr)
+		return nil, fmt.Errorf(
+			"service search: %w: bind reader: %v", servicequery.ErrUnavailable, bindErr,
+		)
 	}
 	defer lease.release()
 	if !lease.matchesSearchDigest(searchGeneration.Digest) {
 		lease.invalidate()
-		return nil, fmt.Errorf("service search: reader lacks exact v2 generation binding")
+		return nil, fmt.Errorf(
+			"service search: %w: reader lacks exact v2 generation binding",
+			servicequery.ErrUnavailable,
+		)
 	}
 	s.clearWholeRepair(request.Repository)
 	if err := servicequery.ConfirmRuntimeScope(
@@ -108,6 +113,9 @@ func (s *Searcher) SearchService(
 		Scopes: []servicequery.PreparedScope{prepared},
 	})
 	if err != nil {
+		if errors.Is(err, servicequery.ErrInvalidExpression) {
+			return nil, fmt.Errorf("service search: %w", errors.Join(ErrInvalidQuery, err))
+		}
 		return nil, fmt.Errorf("service search: %w", err)
 	}
 	result, err := lease.searcher.Search(ctx, compiled.Query, opts.zoektWithin(ctx))
@@ -117,7 +125,9 @@ func (s *Searcher) SearchService(
 	currentRepo, repoErr := s.st.GetRepo(ctx, request.Repository)
 	if repoErr != nil || !lease.current(ctx, *currentRepo, true) {
 		lease.invalidate()
-		return nil, fmt.Errorf("service search: reader generation changed")
+		return nil, fmt.Errorf(
+			"service search: %w: reader generation changed", servicequery.ErrUnavailable,
+		)
 	}
 	if err := servicequery.ConfirmRuntimeScope(
 		ctx, s.indexDir, runtimeStore, opened,

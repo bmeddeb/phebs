@@ -101,15 +101,20 @@ func NewServer(opts Options) *sdk.Server {
 		Query        string `json:"query" jsonschema:"zoekt query syntax: plain terms AND together and patterns are regex; filters include repo: file: lang: sym: case:yes content: plus phebs' archived:/fork:/public:yes|no and context:<name> (named repo set); prefix any atom with - to negate"`
 		MaxMatches   int    `json:"max_matches,omitempty" jsonschema:"maximum files returned; default 50, cap 500"`
 		ContextLines int    `json:"context_lines,omitempty" jsonschema:"lines of context around each match; default 0, cap 10"`
+		Scope        string `json:"scope,omitempty" jsonschema:"all_code (default) or service"`
+		Repository   string `json:"repository,omitempty" jsonschema:"exact repository required for service scope"`
+		ServiceKey   string `json:"service_key,omitempty" jsonschema:"repository-local key required for service scope"`
 	}
 	sdk.AddTool(s, &sdk.Tool{
 		Name:        "search_code",
-		Description: "Search code across every indexed repository. Returns matched files with line-numbered content chunks and match ranges.",
+		Description: "Search All code or one exact service scope. Returns matched files, line-numbered chunks, and a digest-bound scope receipt; service scope includes accepted shared paths and excludes unowned paths.",
 	}, func(ctx context.Context, _ *sdk.CallToolRequest, in searchIn) (*sdk.CallToolResult, search.Result, error) {
 		if opts.Search == nil {
 			return nil, search.Result{}, errors.New("search unavailable: no index open")
 		}
-		res, err := opts.Search.Search(ctx, in.Query,
+		res, err := opts.Search.SearchScoped(ctx, search.ScopeSelector{
+			Kind: in.Scope, Repository: in.Repository, ServiceKey: in.ServiceKey,
+		}, in.Query,
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines})
 		if err != nil {
 			return nil, search.Result{}, err

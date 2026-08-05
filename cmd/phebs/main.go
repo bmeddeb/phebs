@@ -73,6 +73,8 @@ const (
 	proofSweepMaxBundlesPerPass  = 8
 	t335CatalogEncodedBytes      = 2801
 	t335CatalogEncodedSHA256     = "sha256:7c495f76ed5660cc7f00d58a3089a77da2ebb860c7a22af6a76218a031f66ff0"
+	t344CatalogEncodedBytes      = 3401
+	t344CatalogEncodedSHA256     = "sha256:3308dd76d476a1dde641c3d5e794ba25288b450f81d0abcb6ea0cd1a64719e94"
 )
 
 func main() {
@@ -202,6 +204,15 @@ func serve(args []string) error {
 		log.Printf(
 			"WARNING: neutral T33.5 multi-service directory enabled from %s; catalog metadata establishes no relationship or accuracy claim",
 			catalog,
+		)
+	}
+	if fixture, catalog := os.Getenv("PHEBS_T344_SERVICE_SEARCH_REPO"),
+		os.Getenv("PHEBS_T344_SERVICE_SEARCH_CATALOG"); fixture != "" || catalog != "" {
+		if err := bindT344ServiceSearchDemo(cfg, fixture, catalog); err != nil {
+			return err
+		}
+		log.Printf(
+			"WARNING: neutral T34.4 whole-repository service-search demo enabled; scope receipts establish no evidence, accuracy, or release claim",
 		)
 	}
 	if fixture := os.Getenv("PHEBS_WORKBENCH_CLOSURE_REPO"); fixture != "" {
@@ -1442,6 +1453,91 @@ func bindT335ServiceDirectoryDemo(
 			"T33.5 service directory repository %q already has another service catalog",
 			repository,
 		)
+	}
+	if cfg.ServiceCatalogs == nil {
+		cfg.ServiceCatalogs = make(map[string]config.ServiceCatalog, 1)
+	}
+	cfg.ServiceCatalogs[repository] = desired
+	return nil
+}
+
+// bindT344ServiceSearchDemo adds the retained T32.3 neutral corpus as a
+// separate whole-repository cohort. It deliberately does not attach an
+// analysis unit or enable an evidence pack: ordinary whole indexing, catalog
+// ingestion, activation, HTTP/MCP, and UI paths produce the demonstration.
+func bindT344ServiceSearchDemo(
+	cfg *config.Config,
+	fixture, catalogPath string,
+) error {
+	if fixture == "" && catalogPath == "" {
+		return nil
+	}
+	if cfg == nil || fixture == "" || catalogPath == "" {
+		return errors.New("T34.4 service-search demo requires server, bundle, and catalog")
+	}
+	for path, base := range map[string]string{
+		fixture:     "t323-neutral-corpus.bundle",
+		catalogPath: "t344-service-catalog.json",
+	} {
+		if strings.TrimSpace(path) != path || !filepath.IsAbs(path) ||
+			filepath.Clean(path) != path || filepath.Base(path) != base {
+			return fmt.Errorf("T34.4 service-search demo requires the absolute clean %s path", base)
+		}
+		info, err := os.Lstat(path)
+		if err != nil || !info.Mode().IsRegular() {
+			return fmt.Errorf("T34.4 service-search demo %s is missing or special", base)
+		}
+	}
+	repository, err := phebssync.RepoName(fixture)
+	if err != nil {
+		return fmt.Errorf("derive T34.4 service-search repository: %w", err)
+	}
+	if _, focused := cfg.AnalysisUnits[repository]; focused {
+		return errors.New("T34.4 service-search demo repository must remain whole-repository")
+	}
+	raw, err := os.ReadFile(catalogPath)
+	if err != nil {
+		return fmt.Errorf("read T34.4 service-search catalog: %w", err)
+	}
+	digest := fmt.Sprintf("sha256:%x", sha256.Sum256(raw))
+	if len(raw) != t344CatalogEncodedBytes || digest != t344CatalogEncodedSHA256 {
+		return fmt.Errorf(
+			"T34.4 service-search catalog differs from retained bytes: got %d and %s",
+			len(raw), digest,
+		)
+	}
+	catalog, err := servicecatalog.Decode(raw)
+	if err != nil {
+		return fmt.Errorf("validate T34.4 service-search catalog: %w", err)
+	}
+	desired := config.ServiceCatalog{
+		Kind: servicecatalog.AuthorityOperator, ID: "t344-demo",
+		Version: "v1", Path: catalogPath,
+	}
+	if catalog.Authority.Kind != desired.Kind || catalog.Authority.ID != desired.ID ||
+		catalog.Authority.Version != desired.Version {
+		return errors.New("T34.4 service-search catalog authority differs from selection")
+	}
+	if existing, ok := cfg.ServiceCatalogs[repository]; ok && existing != desired {
+		return fmt.Errorf("T34.4 service-search repository %q has another catalog", repository)
+	}
+	for _, connection := range cfg.Connections {
+		if connection.URL == fixture && connection.Type != "git" {
+			return errors.New("T34.4 service-search bundle is bound as a non-git source")
+		}
+		if connection.Name == "t34-service-search-demo" &&
+			(connection.Type != "git" || connection.URL != fixture) {
+			return errors.New("T34.4 service-search connection name is already in use")
+		}
+	}
+	connected := false
+	for _, connection := range cfg.Connections {
+		connected = connected || connection.Type == "git" && connection.URL == fixture
+	}
+	if !connected {
+		cfg.Connections = append(cfg.Connections, config.Connection{
+			Name: "t34-service-search-demo", Type: "git", URL: fixture,
+		})
 	}
 	if cfg.ServiceCatalogs == nil {
 		cfg.ServiceCatalogs = make(map[string]config.ServiceCatalog, 1)

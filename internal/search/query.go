@@ -8,6 +8,7 @@ package search
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"regexp"
@@ -17,6 +18,16 @@ import (
 
 	"github.com/bmeddeb/phebs/internal/store"
 )
+
+var ErrInvalidQuery = errors.New("invalid search query")
+
+func invalidQueryf(format string, args ...any) error {
+	return fmt.Errorf("%w: parse query: %s", ErrInvalidQuery, fmt.Sprintf(format, args...))
+}
+
+func invalidQueryWrap(err error) error {
+	return fmt.Errorf("%w: parse query: %v", ErrInvalidQuery, err)
+}
 
 // Compile parses raw and applies the pre-passes: `context:<name>` atoms
 // (T8.1) become a RepoSet of the named config-defined repo set, and repo
@@ -38,7 +49,7 @@ func compileQuery(ctx context.Context, st store.Store, contexts map[string][]str
 		return nil, "", err
 	}
 	if len(revisions) > 1 {
-		return nil, "", fmt.Errorf("parse query: exactly one rev: scope is allowed")
+		return nil, "", invalidQueryf("exactly one rev: scope is allowed")
 	}
 	// context: is phebs syntax, not zoekt's — extract it string-level
 	// before query.Parse ever sees it.
@@ -47,12 +58,12 @@ func compileQuery(ctx context.Context, st store.Store, contexts map[string][]str
 		return nil, "", err
 	}
 	if (len(ctxNames) > 0 || len(revisions) > 0) && strings.TrimSpace(rest) == "" {
-		return nil, "", fmt.Errorf("parse query: context:/rev: needs search terms alongside it")
+		return nil, "", invalidQueryf("context:/rev: needs search terms alongside it")
 	}
 
 	q, err := query.Parse(rest)
 	if err != nil {
-		return nil, "", fmt.Errorf("parse query: %w", err)
+		return nil, "", invalidQueryWrap(err)
 	}
 
 	// Rewrite each repo-metadata atom (fork:/archived:/public:) IN PLACE with
@@ -135,13 +146,13 @@ func extractRevisions(raw string) (names []string, rest string, err error) {
 			name := tok[len("rev:"):]
 			if !revisionQuerySelectorRE.MatchString(name) || strings.HasSuffix(name, "/") ||
 				strings.Contains(name, "//") || strings.Contains(name, "..") {
-				return nil, "", fmt.Errorf("parse query: rev: takes one bare revision selector, got %q", tok)
+				return nil, "", invalidQueryf("rev: takes one bare revision selector, got %q", tok)
 			}
 			names = append(names, name)
 		case strings.HasPrefix(tok, "-rev:"):
-			return nil, "", fmt.Errorf("parse query: -rev: is not supported (revisions are scopes, not predicates)")
+			return nil, "", invalidQueryf("-rev: is not supported (revisions are scopes, not predicates)")
 		case strings.HasPrefix(strings.TrimLeft(tok, "("), "rev:"):
-			return nil, "", fmt.Errorf("parse query: rev: cannot be grouped in parentheses, got %q", tok)
+			return nil, "", invalidQueryf("rev: cannot be grouped in parentheses, got %q", tok)
 		default:
 			kept = append(kept, tok)
 		}
@@ -161,15 +172,15 @@ func extractContexts(raw string) (names []string, rest string, err error) {
 		case strings.HasPrefix(tok, "context:"):
 			name := tok[len("context:"):]
 			if name == "" || strings.ContainsAny(name, "()") {
-				return nil, "", fmt.Errorf("parse query: context: takes a bare name, got %q", tok)
+				return nil, "", invalidQueryf("context: takes a bare name, got %q", tok)
 			}
 			names = append(names, name)
 		case strings.HasPrefix(tok, "-context:"):
-			return nil, "", fmt.Errorf("parse query: -context: is not supported (contexts are scopes, not predicates)")
+			return nil, "", invalidQueryf("-context: is not supported (contexts are scopes, not predicates)")
 		case strings.HasPrefix(strings.TrimLeft(tok, "("), "context:"):
 			// ponytail: rejects a regex atom literally starting "(context:"
 			// too — pathological; a loud error beats a silent mis-scope.
-			return nil, "", fmt.Errorf("parse query: context: cannot be grouped in parentheses, got %q", tok)
+			return nil, "", invalidQueryf("context: cannot be grouped in parentheses, got %q", tok)
 		default:
 			kept = append(kept, tok)
 		}

@@ -196,8 +196,9 @@ func clamp(v, def, max int) int {
 
 // Result is the wire shape of a search response.
 type Result struct {
-	Files []FileResult `json:"files"`
-	Stats Stats        `json:"stats"`
+	Files []FileResult  `json:"files"`
+	Stats Stats         `json:"stats"`
+	Scope *ScopeReceipt `json:"scope_receipt,omitempty"`
 }
 
 type FileResult struct {

@@ -969,6 +969,36 @@ ClaimJob context:backend
 deprecatedCall rev:release-1 repo:acme/api
 ```
 
+### All code and service scope
+
+Search defaults to **All code**, preserving the existing visible indexed
+repository scope. From a service detail page, **Search this service** opens the
+same query surface with an exact repository and service key. The selector
+preserves the query while switching scope; incomplete or malformed service
+deep links fall back to All code rather than guessing an identity.
+
+Service scope uses the accepted membership-role union for the service's exact
+active generation. Shared paths are included, explicit unowned paths are
+excluded, and proposal, conflict, removed, or unavailable identities cannot be
+searched. A stale service may use only its labeled last-complete active
+generation. It never falls back to All code or silently becomes current.
+
+Completed HTTP, SSE, MCP, and UI searches expose a
+`phebs-search-scope-v1` receipt. It binds the normalized scope policy, query
+digest, exact service authority when applicable, sorted emitted
+repository/commit/path citations, result counts, and receipt digest. The
+receipt proves which authority and citations produced the response; existing
+result limits mean it is not a claim that the citations exhaust the corpus.
+
+HTTP clients pass `scope=service&repository=…&service_key=…` to
+`/api/search` or `/api/stream_search`. MCP `search_code` accepts the same three
+fields. Omitting `scope` selects `all_code`; service-only fields are rejected
+on All code so a stale deep link cannot widen silently.
+Malformed queries or selectors return HTTP 400 through typed request errors;
+known service generation/state unavailability returns 409. Unexpected store,
+reader, or runtime faults remain HTTP 500 rather than being relabeled as an
+ordinary unavailable service.
+
 
 ### Revision scopes
 

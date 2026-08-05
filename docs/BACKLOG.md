@@ -8,9 +8,9 @@ catalog ingestion/v1 migration, T33.3 independent service state, T33.4
 authorized catalog reads, and T33.5's service directory/neutral demo are
 retained in the completed backlog, closing Epic 33. T34.1's immutable
 repository source/search generation, T34.2's exact service-query compiler,
-and T34.3's publication migration/recovery are also complete. T34.4 is the
-next scheduled ticket, and the remaining
-Epics 34–39 tickets stay
+T34.3's publication migration/recovery, and T34.4's shared search product/demo
+are also complete, closing Epic 34. T35.1 is the next scheduled ticket, and the remaining
+Epics 35–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -19,7 +19,7 @@ operations guidance, and neutral ordinary-worker demo in T30.7. Its retained
 completion receipt also records the post-review compatibility closure:
 immutable v1/v2 proof bytes remain readable and the production exact Caller
 Map envelope is validated through the strict MCP boundary. Completed
-Epics 0–24, Epics 29–33, T34.1–T34.3, and P5 hardening are retained in the
+Epics 0–24, Epics 29–34, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -27,23 +27,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 34 · Shared repository search with exact service scope *(T34.4 scheduled · T34.1–T34.3 complete)*
-
-Index repository content once under the topology selected by T32.5, while
-making All code and service-scoped search equally exact.
-
-**T34.4 · All code/service search product and demo** *(scheduled · needs T34.3)* — add
-one shared scope selector and scope receipt across UI, HTTP, and MCP. AC:
-service deep links, query preservation, exact result/citation scope, explicit
-shared/unowned behavior, stale/current transitions, mobile/accessibility, and
-an end-to-end neutral multi-service search demo; no evidence-pack promotion.
-
-## Epic 35 · Bounded scheduling, retention, and recovery *(draft · needs T32.5, Epic 33; blocks Epics 36–37)*
+## Epic 35 · Bounded scheduling, retention, and recovery *(T35.1 scheduled · needs T32.5, Epic 33; blocks Epics 36–37)*
 
 Prevent thousands of services and generations from multiplying unbounded job
 history, partial artifacts, or retained publications.
 
-**T35.1 · Generation-scoped chunk scheduler** — add bounded chunk identity,
+**T35.1 · Generation-scoped chunk scheduler** *(scheduled)* — add bounded chunk identity,
 fan-out pages, repository fairness, resource classes, per-repository tokens,
 commit coalescing, stale-worker fencing, and successor semantics. AC: one turn
 does bounded work; no queue transaction enumerates all services; never-run,

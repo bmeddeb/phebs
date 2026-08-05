@@ -20,6 +20,7 @@ import (
 	"github.com/bmeddeb/phebs/internal/codenav"
 	"github.com/bmeddeb/phebs/internal/compat"
 	"github.com/bmeddeb/phebs/internal/search"
+	"github.com/bmeddeb/phebs/internal/servicequery"
 	"github.com/bmeddeb/phebs/internal/store"
 	phebssync "github.com/bmeddeb/phebs/internal/sync"
 )
@@ -223,6 +224,9 @@ func New(opts Options) http.Handler {
 		Q            string `query:"q" required:"true" example:"phebsNeedle repo:foo lang:go"`
 		MaxMatches   int    `query:"max_matches" doc:"documents shown, default 50, cap 500"`
 		ContextLines int    `query:"context_lines" doc:"context lines per match, cap 10"`
+		Scope        string `query:"scope" enum:"all_code,service" default:"all_code" doc:"shared search scope"`
+		Repository   string `query:"repository" doc:"required only for service scope"`
+		ServiceKey   string `query:"service_key" doc:"required only for service scope"`
 	}
 	type searchOut struct {
 		Body *search.Result
@@ -231,11 +235,17 @@ func New(opts Options) http.Handler {
 		if opts.Search == nil {
 			return nil, huma.Error503ServiceUnavailable("search unavailable")
 		}
-		res, err := opts.Search.Search(ctx, in.Q,
+		res, err := opts.Search.SearchScoped(ctx, search.ScopeSelector{
+			Kind: in.Scope, Repository: in.Repository, ServiceKey: in.ServiceKey,
+		}, in.Q,
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines})
 		if err != nil {
-			if strings.Contains(err.Error(), "parse query") {
+			if errors.Is(err, search.ErrInvalidQuery) ||
+				errors.Is(err, search.ErrInvalidScopeSelector) {
 				return nil, huma.Error400BadRequest(err.Error())
+			}
+			if errors.Is(err, servicequery.ErrUnavailable) {
+				return nil, huma.Error409Conflict("search scope unavailable", err)
 			}
 			return nil, huma.Error500InternalServerError("search", err)
 		}
@@ -252,6 +262,7 @@ func New(opts Options) http.Handler {
 		Summary:     "Streamed search (SSE): `results` events per shard batch, then `done` with aggregate stats",
 	}, map[string]any{
 		"results": &search.Result{},
+		"scope":   &search.ScopeReceipt{},
 		"done":    &search.Stats{},
 		"error":   &streamErr{},
 	}, func(ctx context.Context, in *searchIn, send sse.Sender) {
@@ -259,13 +270,16 @@ func New(opts Options) http.Handler {
 			_ = send(sse.Message{Data: &streamErr{Message: "search unavailable"}})
 			return
 		}
-		stats, err := opts.Search.Stream(ctx, in.Q,
+		stats, scope, err := opts.Search.StreamScoped(ctx, search.ScopeSelector{
+			Kind: in.Scope, Repository: in.Repository, ServiceKey: in.ServiceKey,
+		}, in.Q,
 			search.Options{MaxMatches: in.MaxMatches, ContextLines: in.ContextLines},
 			func(r *search.Result) { _ = send(sse.Message{Data: r}) })
 		if err != nil {
 			_ = send(sse.Message{Data: &streamErr{Message: err.Error()}})
 			return
 		}
+		_ = send(sse.Message{Data: scope})
 		_ = send(sse.Message{Data: stats})
 	})
 

@@ -72,8 +72,29 @@ describe('streamSearch', () => {
   it('URL-encodes the query', () => {
     streamSearch('repo:a/b lang:Go "x y"', vi.fn(), vi.fn(), vi.fn())
     expect(last().url).toBe(
-      '/api/stream_search?q=repo%3Aa%2Fb%20lang%3AGo%20%22x%20y%22',
+      '/api/stream_search?q=repo%3Aa%2Fb+lang%3AGo+%22x+y%22&scope=all_code',
     )
+  })
+
+  it('encodes service scope and delivers its exact receipt', () => {
+    const onScope = vi.fn()
+    streamSearch(
+      'needle', vi.fn(), vi.fn(), vi.fn(),
+      { kind: 'service', repository: 'example.invalid/mono repo', serviceKey: 'orders/api' },
+      onScope,
+    )
+    expect(last().url).toBe(
+      '/api/stream_search?q=needle&scope=service&repository=example.invalid%2Fmono+repo&service_key=orders%2Fapi',
+    )
+    const receipt = {
+      schema: 'phebs-search-scope-v1', kind: 'service',
+      membership_policy: 'accepted-roles-union-shared-included-unowned-excluded-v1',
+      expression_digest: 'sha256:expression', revisions: [{ repository: 'r', commit: 'c' }],
+      result_set_digest: 'sha256:results', result_files: 1, result_matches: 2,
+      digest: 'sha256:receipt',
+    }
+    last().emit('scope', JSON.stringify(receipt))
+    expect(onScope).toHaveBeenCalledWith(receipt)
   })
 
   it('delivers parsed results batches to onBatch in order', () => {

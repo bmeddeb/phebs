@@ -7166,3 +7166,53 @@ one complete generation validation. No HTTP, MCP, UI, cursor, relationship,
 evidence, target SLO/scale, accuracy/completeness, migration-completion,
 decommission-safety, or release claim is created. `GATE2-V2` remains
 `NOT_ESTABLISHED`; T34.4 is scheduled next.
+
+**T34.4 ✅ · All code/service search product and demo** *(2026-08-05)* —
+closed Epic 34 with one shared product scope across React, HTTP, streamed SSE,
+and MCP. Omitted scope preserves All code. Exact service scope requires one
+repository and service key, uses only T34.3's active current or explicitly
+stale HEAD generation, and refuses rather than falling back to All code.
+Service-directory deep links, query-preserving scope links, keyboard labels,
+live lifecycle status, and narrow-layout wrapping expose the same contract.
+
+Every completed search returns a `phebs-search-scope-v1` receipt. All code
+names its visible-indexed-repositories policy; service scope names the accepted
+role union, includes shared placements, excludes explicit unowned paths, and
+embeds T34.2's exact service authority. Both bind the query digest, sorted
+emitted repository/commit/path citations, file/match counts, revisions, and a
+closed receipt digest. This identifies the response without claiming that an
+existing bounded/truncated result exhausts the corpus. Progressive All code
+streaming remains intact; receipt construction retains at most 500 citation
+identities and no result chunks. Service scope retains the prior bounded
+catalog/state/control reads, at most two catalog decodes for a stale service,
+128 predicate atoms, one reader lease, and final post-query fences.
+
+The neutral end-to-end cohort reuses the byte-pinned T32.3 bundle as a separate
+ordinary whole repository and adds a byte- and semantic-digest-pinned operator
+catalog. Its five lifecycle identities, thirteen memberships, six unowned
+placements, and primary/supporting/generated/typed/shared roles exercise the
+ordinary mirror, whole index, catalog ingestion, activation, HTTP/MCP, and UI
+paths. Startup rejects renamed, special, drifted, focused, or colliding input;
+it enables no analysis unit or experimental evidence flag. The retained
+[fixture receipt](./fixtures/t34.4-service-search/receipt.json) binds the exact
+6,771-byte bundle, final commit, 14-file census, and 3,401-byte catalog.
+
+Focused tests use a real Git/zoekt v2 publication to prove that All code and
+service scope return different exact citation sets, shared policy and service
+authority are digest-bound, and invalid selectors refuse. HTTP tests pin the
+SSE scope event, UI tests pin service deep links, query preservation,
+current/stale display, shared/unowned language, and production builds, while
+startup tests pin idempotence, whole-repository posture, dark evidence flags,
+and failure-before-mutation. Scope selection adds no Git read, source-member or
+shard hash, child, publication, startup, retry, or no-op work beyond the
+explicit demo cohort.
+
+Review closure replaced transport substring matching with typed invalid-query
+and invalid-selector errors. Only `servicequery.ErrUnavailable` maps to HTTP
+409; unexpected store/runtime/search faults remain 500. Focused API tests pin
+invalid query and selector 400s plus an internal service-store 500, while
+service-reader tests pin typed generation/fence unavailability.
+
+No evidence pack, relationship/runtime-use, extraction accuracy/completeness,
+target SLO/scale, migration-completion, decommission-safety, or release claim
+is created. `GATE2-V2` remains `NOT_ESTABLISHED`; T35.1 is scheduled next.

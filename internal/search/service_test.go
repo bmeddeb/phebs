@@ -202,8 +202,50 @@ func TestServiceSearchUsesExactV2PredicateAndFinalFence(t *testing.T) {
 	if _, err := searcher.SearchService(t.Context(), ServiceRequest{
 		Repository: fixture.store.repo.Name, ServiceKey: "orders",
 		Expression: "T343_NEEDLE", RevisionSelector: "HEAD",
-	}, Options{MaxMatches: 10}); err == nil {
-		t.Fatal("service search emitted a result after its final state fence changed")
+	}, Options{MaxMatches: 10}); !errors.Is(err, servicequery.ErrUnavailable) {
+		t.Fatalf("final state-fence error = %v", err)
+	}
+}
+
+func TestSharedSearchScopeReceiptDistinguishesAllCodeAndService(t *testing.T) {
+	fixture := buildServiceSearchFixture(t)
+	searcher, err := Open(fixture.indexDir, fixture.store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(searcher.Close)
+	allCode, err := searcher.SearchScoped(
+		t.Context(), ScopeSelector{Kind: ScopeAllCode}, "T343_NEEDLE",
+		Options{MaxMatches: 10},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(allCode.Files) != 2 || allCode.Scope == nil ||
+		allCode.Scope.Kind != ScopeAllCode || len(allCode.Scope.Revisions) != 1 ||
+		allCode.Scope.MembershipPolicy != allCodeMembershipPolicy ||
+		allCode.Scope.Digest != scopeReceiptDigest(*allCode.Scope) {
+		t.Fatalf("All code scoped result = %+v", allCode)
+	}
+	service, err := searcher.SearchScoped(t.Context(), ScopeSelector{
+		Kind: ScopeService, Repository: fixture.store.repo.Name, ServiceKey: "orders",
+	}, "T343_NEEDLE", Options{MaxMatches: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(service.Files) != 1 || service.Files[0].Path != "services/orders/main.go" ||
+		service.Scope == nil || service.Scope.Authority == nil ||
+		service.Scope.ServiceStatus != servicecatalog.StatusCurrent ||
+		service.Scope.MembershipPolicy != serviceMembershipPolicy ||
+		service.Scope.Authority.RepositorySearchGeneration != fixture.search.Digest ||
+		service.Scope.ResultSetDigest == allCode.Scope.ResultSetDigest ||
+		service.Scope.Digest != scopeReceiptDigest(*service.Scope) {
+		t.Fatalf("service scoped result = %+v", service)
+	}
+	if _, err := searcher.SearchScoped(t.Context(), ScopeSelector{
+		Kind: ScopeAllCode, Repository: fixture.store.repo.Name,
+	}, "T343_NEEDLE", Options{}); err == nil {
+		t.Fatal("All code selector accepted service identity fields")
 	}
 }
 
@@ -229,8 +271,8 @@ func TestServiceSearchRefusesInvalidV2WithoutLegacyFallback(t *testing.T) {
 	if _, err := searcher.SearchService(t.Context(), ServiceRequest{
 		Repository: fixture.store.repo.Name, ServiceKey: "orders",
 		Expression: "T343_NEEDLE", RevisionSelector: "HEAD",
-	}, Options{}); err == nil {
-		t.Fatal("service search fell back to the adjacent legacy whole receipt")
+	}, Options{}); !errors.Is(err, servicequery.ErrUnavailable) {
+		t.Fatalf("invalid v2 error = %v", err)
 	}
 }
 

@@ -1,0 +1,152 @@
+{
+  "schema": "phebs-service-catalog-v2",
+  "authority": {
+    "kind": "operator",
+    "id": "t344-demo",
+    "version": "v1"
+  },
+  "services": [
+    {
+      "key": "svc.conflicted",
+      "display_name": "Conflicted service",
+      "disposition": "conflict",
+      "origin": "base",
+      "reason": "two neutral authority claims remain unresolved"
+    },
+    {
+      "key": "svc.fulfillment",
+      "display_name": "Fulfillment",
+      "disposition": "accepted",
+      "origin": "base"
+    },
+    {
+      "key": "svc.orders-api",
+      "display_name": "Orders API",
+      "disposition": "accepted",
+      "origin": "base"
+    },
+    {
+      "key": "svc.proposed",
+      "display_name": "Proposed service",
+      "disposition": "proposal",
+      "origin": "base",
+      "reason": "neutral proposal has not been accepted"
+    },
+    {
+      "key": "svc.shipping",
+      "display_name": "Shipping",
+      "disposition": "rejected",
+      "origin": "base",
+      "reason": "replaced by fulfillment",
+      "successors": [
+        "svc.fulfillment"
+      ]
+    }
+  ],
+  "memberships": [
+    {
+      "service_key": "svc.conflicted",
+      "path": "services/conflict-a/main.go",
+      "role": "primary",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.fulfillment",
+      "path": "services/fulfillment",
+      "role": "primary",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.fulfillment",
+      "path": "shared/trace/trace.go",
+      "role": "shared",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.fulfillment",
+      "path": "go.mod",
+      "role": "shared",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "services/orders-api",
+      "role": "primary",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "api/commerce.proto",
+      "role": "supporting",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "gen/commercev1/commerce_grpc.pb.go",
+      "role": "generated",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "gen/commercev1/commerce_grpc.pb.go",
+      "role": "supporting",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "shared/trace/trace.go",
+      "role": "shared",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "typed/commerce/index.scip",
+      "role": "supporting",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "typed/commerce/index.scip",
+      "role": "typed",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.orders-api",
+      "path": "go.mod",
+      "role": "shared",
+      "origin": "base"
+    },
+    {
+      "service_key": "svc.proposed",
+      "path": "services/proposed/main.go",
+      "role": "primary",
+      "origin": "base"
+    }
+  ],
+  "unowned": [
+    {
+      "path": ".phebs/service-authority.json",
+      "origin": "base"
+    },
+    {
+      "path": "services/conflict-a/main.go",
+      "origin": "base"
+    },
+    {
+      "path": "services/conflict-b/main.go",
+      "origin": "base"
+    },
+    {
+      "path": "services/proposed/main.go",
+      "origin": "base"
+    },
+    {
+      "path": "services/risk/private.go",
+      "origin": "base"
+    },
+    {
+      "path": "tools/unowned.go",
+      "origin": "base"
+    }
+  ]
+}

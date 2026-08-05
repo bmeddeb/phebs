@@ -172,6 +172,7 @@ and freezes no independent scale bound, accuracy result, or current behavior.
 - [Investigation envelope fixtures](./fixtures/investigations/README.md)
 - [Thrift field-reference fixture](./fixtures/thrift-field/README.md)
 - [T30.7 neutral focused-service cohort](./fixtures/t30.7-neutral-service/README.md)
+- [T34.4 neutral All code/service-search cohort](./fixtures/t34.4-service-search/README.md)
 
 Fixtures prove bounded software behavior. Synthetic or authored evidence is
 not public-corpus accuracy or completeness evidence.
