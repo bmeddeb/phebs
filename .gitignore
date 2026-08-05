@@ -19,6 +19,12 @@ spike/t111/module-cache/
 spike/t111/out/
 /t111
 
+# T32.2 authorized target baseline: plans, observations, logs, and source stay
+# outside the repository. These entries are a final defense for an accidental
+# in-tree private workspace; only the reviewed source-free receipt is tracked.
+spike/t322/private/
+spike/t322/.private-*
+
 # T11.1 Gate 2: private one-shot ceremony artifacts, never committed
 spike/t111/labeling/g2-v*/
 spike/t111/labeling/.g2-v*.staging-*/

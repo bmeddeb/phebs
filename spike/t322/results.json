@@ -1,0 +1,607 @@
+{
+  "schema": "t322-authorized-whole-monorepo-baseline-v1",
+  "measured_on": "2026-08-04",
+  "phebs_commit": "ca1b5efcdb92af27da0ad5503d59dd48ee273513",
+  "run_commitment": "sha256:0267e76a7cd1193877a522bc02241596bd0e7dd4f0136b16ca671fa90eb97719",
+  "outcome": "completed",
+  "total_wall_ms": 2032150,
+  "clone_fetch": {
+    "posture": "measured",
+    "wall_ms": 177
+  },
+  "index": {
+    "outcome": "succeeded",
+    "wall_ms": 1686,
+    "peak_rss_bytes": 529367040,
+    "shard_bytes": 122630786,
+    "shard_count": 1,
+    "publication": "visible"
+  },
+  "restart": {
+    "outcome": "succeeded",
+    "wall_ms": 2117,
+    "already_current": true,
+    "index_child_runs": 0,
+    "shard_bytes_delta": 0,
+    "shard_mtime_changes": 0
+  },
+  "search": {
+    "outcome": "succeeded",
+    "query_count": 4,
+    "cold": {
+      "completed": 4,
+      "failed": 0,
+      "total_wall_ms": 186,
+      "max_wall_ms": 127
+    },
+    "warm": {
+      "completed": 4,
+      "failed": 0,
+      "total_wall_ms": 114,
+      "max_wall_ms": 61
+    },
+    "result_sets_equal": true
+  },
+  "candidate": {
+    "outcome": "succeeded",
+    "decision": "rebuild",
+    "queue_wait_ms": 12124,
+    "mirror_lock_wait_ms": 0,
+    "phases": {
+      "tree_ms": 84,
+      "spooling_ms": 49,
+      "external_sort_ms": 33,
+      "publish_ms": 88,
+      "fingerprint_ms": 0,
+      "database_commit_ms": 6,
+      "marker_finish_ms": 3
+    },
+    "peak_spool_bytes": 761730,
+    "total_ms": 329,
+    "declared_source_bytes": 68029211,
+    "repository_records": 2205,
+    "local_records": 0,
+    "caller_records": 2177
+  },
+  "extractions": [
+    {
+      "serial_ordinal": 1,
+      "domain": "proto-contract",
+      "outcome": "succeeded",
+      "reason": "published_nonempty",
+      "queue_wait_ms": 18722,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 75,
+      "phases": {
+        "inventory_ms": 6,
+        "opened_source_ms": 1133,
+        "extractor_ms": 6985,
+        "staging_ms": 7211,
+        "publication_ms": 40,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 6985,
+      "candidate_files": 29,
+      "opened_source_files": 29,
+      "opened_source_bytes": 196596,
+      "facts": 2285,
+      "unresolved": 0
+    },
+    {
+      "serial_ordinal": 2,
+      "domain": "grpc-consumer",
+      "outcome": "succeeded",
+      "reason": "published_empty",
+      "queue_wait_ms": 0,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 0,
+      "phases": {
+        "inventory_ms": 8,
+        "opened_source_ms": 82534,
+        "extractor_ms": 84442,
+        "staging_ms": 3,
+        "publication_ms": 5,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 84442,
+      "candidate_files": 2172,
+      "opened_source_files": 2172,
+      "opened_source_bytes": 45151048,
+      "facts": 0,
+      "unresolved": 0
+    },
+    {
+      "serial_ordinal": 3,
+      "domain": "scip-proto-field",
+      "outcome": "succeeded",
+      "reason": "published_nonempty",
+      "queue_wait_ms": 0,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 0,
+      "phases": {
+        "inventory_ms": 8,
+        "opened_source_ms": 1068,
+        "extractor_ms": 41021,
+        "staging_ms": 41565,
+        "publication_ms": 62,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 41021,
+      "candidate_files": 0,
+      "opened_source_files": 21,
+      "opened_source_bytes": 17771239,
+      "facts": 3689,
+      "unresolved": 0
+    },
+    {
+      "serial_ordinal": 4,
+      "domain": "grpc-caller",
+      "outcome": "succeeded",
+      "reason": "published_empty",
+      "queue_wait_ms": 0,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 0,
+      "phases": {
+        "inventory_ms": 10,
+        "opened_source_ms": 83161,
+        "extractor_ms": 84436,
+        "staging_ms": 4,
+        "publication_ms": 6,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 84436,
+      "candidate_files": 2177,
+      "opened_source_files": 2178,
+      "opened_source_bytes": 61665015,
+      "facts": 0,
+      "unresolved": 0
+    },
+    {
+      "serial_ordinal": 5,
+      "domain": "kafka-producer",
+      "outcome": "succeeded",
+      "reason": "published_nonempty",
+      "queue_wait_ms": 3891,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 43,
+      "phases": {
+        "inventory_ms": 10,
+        "opened_source_ms": 82625,
+        "extractor_ms": 84365,
+        "staging_ms": 28,
+        "publication_ms": 6,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 84365,
+      "candidate_files": 2172,
+      "opened_source_files": 2172,
+      "opened_source_bytes": 45151048,
+      "facts": 4,
+      "unresolved": 1
+    },
+    {
+      "serial_ordinal": 6,
+      "domain": "kafka-consumer",
+      "outcome": "succeeded",
+      "reason": "published_nonempty",
+      "queue_wait_ms": 0,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 0,
+      "phases": {
+        "inventory_ms": 9,
+        "opened_source_ms": 83131,
+        "extractor_ms": 84853,
+        "staging_ms": 29,
+        "publication_ms": 6,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 84853,
+      "candidate_files": 2172,
+      "opened_source_files": 2172,
+      "opened_source_bytes": 45151048,
+      "facts": 1,
+      "unresolved": 1
+    },
+    {
+      "serial_ordinal": 7,
+      "domain": "thrift-contract",
+      "outcome": "succeeded",
+      "reason": "published_nonempty",
+      "queue_wait_ms": 4394,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 56,
+      "phases": {
+        "inventory_ms": 5,
+        "opened_source_ms": 467,
+        "extractor_ms": 21645,
+        "staging_ms": 23445,
+        "publication_ms": 66,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 21645,
+      "candidate_files": 12,
+      "opened_source_files": 12,
+      "opened_source_bytes": 232342,
+      "facts": 3787,
+      "unresolved": 0
+    },
+    {
+      "serial_ordinal": 8,
+      "domain": "thrift-consumer",
+      "outcome": "succeeded",
+      "reason": "published_empty",
+      "queue_wait_ms": 0,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 0,
+      "phases": {
+        "inventory_ms": 7,
+        "opened_source_ms": 166194,
+        "extractor_ms": 169375,
+        "staging_ms": 5,
+        "publication_ms": 6,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 169375,
+      "candidate_files": 2172,
+      "opened_source_files": 2172,
+      "opened_source_bytes": 45151048,
+      "facts": 0,
+      "unresolved": 0
+    },
+    {
+      "serial_ordinal": 9,
+      "domain": "thrift-caller",
+      "outcome": "succeeded",
+      "reason": "published_empty",
+      "queue_wait_ms": 0,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 0,
+      "phases": {
+        "inventory_ms": 10,
+        "opened_source_ms": 170878,
+        "extractor_ms": 173411,
+        "staging_ms": 5,
+        "publication_ms": 7,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 173411,
+      "candidate_files": 2177,
+      "opened_source_files": 2178,
+      "opened_source_bytes": 61665015,
+      "facts": 0,
+      "unresolved": 0
+    },
+    {
+      "serial_ordinal": 10,
+      "domain": "scip-thrift-field",
+      "outcome": "succeeded",
+      "reason": "published_nonempty",
+      "queue_wait_ms": 10166,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 38,
+      "phases": {
+        "inventory_ms": 8,
+        "opened_source_ms": 2300,
+        "extractor_ms": 70018,
+        "staging_ms": 67938,
+        "publication_ms": 73,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 70018,
+      "candidate_files": 0,
+      "opened_source_files": 57,
+      "opened_source_bytes": 20110670,
+      "facts": 3851,
+      "unresolved": 0
+    }
+  ],
+  "recovery": {
+    "outcome": "succeeded",
+    "interrupted_phase": "candidate",
+    "wall_ms": 266631,
+    "prior_publication_preserved": true,
+    "eventual_current": true
+  },
+  "retention": {
+    "outcome": "succeeded",
+    "wall_ms": 50,
+    "components_observed": 52,
+    "unchanged_components": 36,
+    "changed": [
+      {
+        "component": "$DATA/candidates managed publication files",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 6,
+          "completeness": "exact"
+        },
+        "bytes": [
+          {
+            "kind": "apparent_file",
+            "before": {
+              "value": 0,
+              "completeness": "exact"
+            },
+            "after": {
+              "value": 1427533,
+              "completeness": "exact"
+            }
+          }
+        ]
+      },
+      {
+        "component": "$DATA/resolver-catalogs package-owned files",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 3,
+          "completeness": "exact"
+        },
+        "bytes": [
+          {
+            "kind": "apparent_file",
+            "before": {
+              "value": 0,
+              "completeness": "exact"
+            },
+            "after": {
+              "value": 77317,
+              "completeness": "exact"
+            }
+          }
+        ]
+      },
+      {
+        "component": "assertion",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 79,
+          "completeness": "lower_bound"
+        },
+        "bytes": []
+      },
+      {
+        "component": "caller_leaf_job",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 3,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "candidate_manifest_job",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 7,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "candidate_manifest_publication",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 1,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "connection_sync_job",
+        "count_before": {
+          "value": 1,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 8,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "evidence_atom",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 79,
+          "completeness": "lower_bound"
+        },
+        "bytes": []
+      },
+      {
+        "component": "extraction_attempt",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 4,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "extraction_domain_outcome",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 4,
+          "completeness": "exact"
+        },
+        "bytes": [
+          {
+            "kind": "logical_encoded",
+            "before": {
+              "value": 0,
+              "completeness": "exact"
+            },
+            "after": {
+              "value": 4277,
+              "completeness": "exact"
+            }
+          }
+        ]
+      },
+      {
+        "component": "extraction_job",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 6,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "extraction_run",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 4,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "indexing_job",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 6,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "resolver_catalog_job",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 9,
+          "completeness": "exact"
+        },
+        "bytes": []
+      },
+      {
+        "component": "resolver_catalog_publication",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 1,
+          "completeness": "exact"
+        },
+        "bytes": [
+          {
+            "kind": "canonical_content",
+            "before": {
+              "value": 0,
+              "completeness": "exact"
+            },
+            "after": {
+              "value": 71784,
+              "completeness": "exact"
+            }
+          }
+        ]
+      },
+      {
+        "component": "snapshot_evidence",
+        "count_before": {
+          "value": 0,
+          "completeness": "exact"
+        },
+        "count_after": {
+          "value": 79,
+          "completeness": "lower_bound"
+        },
+        "bytes": []
+      }
+    ],
+    "data_volume_before": {
+      "total_bytes": {
+        "value": 494384795648,
+        "completeness": "exact"
+      },
+      "available_bytes": {
+        "value": 54929707008,
+        "completeness": "exact"
+      }
+    },
+    "data_volume_after": {
+      "total_bytes": {
+        "value": 494384795648,
+        "completeness": "exact"
+      },
+      "available_bytes": {
+        "value": 53609529344,
+        "completeness": "exact"
+      }
+    }
+  },
+  "failures": [],
+  "teardown": {
+    "outcome": "retained_under_authorization",
+    "wall_ms": 150,
+    "source_copy_retained": true,
+    "derived_data_retained": false
+  },
+  "claims": {
+    "source_free": true,
+    "establishes_slo": false,
+    "establishes_accuracy": false,
+    "selects_topology": false,
+    "authorizes_multi_service_release": false
+  }
+}

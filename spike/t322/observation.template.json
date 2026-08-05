@@ -1,0 +1,108 @@
+{
+  "schema": "t322-source-free-observation-v1",
+  "measured_on": "<YYYY-MM-DD>",
+  "phebs_commit": "<exact-40-lowercase-hex-source-commit>",
+  "outcome": "<completed-or-stopped>",
+  "total_wall_ms": 0,
+  "clone_fetch": {"posture": "<excluded-or-measured>", "wall_ms": 0},
+  "index": {
+    "outcome": "<succeeded-failed-stopped-or-not_run>",
+    "wall_ms": 0,
+    "peak_rss_bytes": 0,
+    "shard_bytes": 0,
+    "shard_count": 0,
+    "publication": "<visible-unavailable-or-not_run>"
+  },
+  "restart": {
+    "outcome": "<succeeded-failed-stopped-or-not_run>",
+    "wall_ms": 0,
+    "already_current": false,
+    "index_child_runs": 0,
+    "shard_bytes_delta": 0,
+    "shard_mtime_changes": 0
+  },
+  "search": {
+    "outcome": "<succeeded-failed-stopped-or-not_run>",
+    "query_count": 0,
+    "cold": {"completed": 0, "failed": 0, "total_wall_ms": 0, "max_wall_ms": 0},
+    "warm": {"completed": 0, "failed": 0, "total_wall_ms": 0, "max_wall_ms": 0},
+    "result_sets_equal": false
+  },
+  "candidate": {
+    "outcome": "<succeeded-failed-stopped-or-not_run>",
+    "decision": "<warm_noop-cold_reuse-marker_recovery-repair-rebuild-or-not_ready>",
+    "queue_wait_ms": 0,
+    "mirror_lock_wait_ms": 0,
+    "phases": {
+      "tree_ms": 0,
+      "spooling_ms": 0,
+      "external_sort_ms": 0,
+      "publish_ms": 0,
+      "fingerprint_ms": 0,
+      "database_commit_ms": 0,
+      "marker_finish_ms": 0
+    },
+    "peak_spool_bytes": 0,
+    "total_ms": 0,
+    "declared_source_bytes": 0,
+    "repository_records": 0,
+    "local_records": 0,
+    "caller_records": 0
+  },
+  "extractions": [
+    {
+      "serial_ordinal": 1,
+      "domain": "<closed-public-domain-name>",
+      "outcome": "<succeeded-failed-stopped-or-not_run>",
+      "reason": "<closed-public-reason>",
+      "queue_wait_ms": 0,
+      "mirror_lock_wait_ms": 0,
+      "pointer_work_ms": 0,
+      "strict_open_ms": 0,
+      "phases": {
+        "inventory_ms": 0,
+        "opened_source_ms": 0,
+        "extractor_ms": 0,
+        "staging_ms": 0,
+        "publication_ms": 0,
+        "abort_ms": 0,
+        "cleanup_ms": 0
+      },
+      "total_ms": 0,
+      "candidate_files": 0,
+      "opened_source_files": 0,
+      "opened_source_bytes": 0,
+      "facts": 0,
+      "unresolved": 0
+    }
+  ],
+  "recovery": {
+    "outcome": "<succeeded-failed-stopped-or-not_run>",
+    "interrupted_phase": "<index-candidate-or-extraction>",
+    "wall_ms": 0,
+    "prior_publication_preserved": false,
+    "eventual_current": false
+  },
+  "retention": {
+    "outcome": "<succeeded-failed-stopped-or-not_run>",
+    "wall_ms": 0,
+    "components_observed": 52,
+    "unchanged_components": 52,
+    "changed": [],
+    "data_volume_before": {
+      "total_bytes": {"value": null, "completeness": "unavailable"},
+      "available_bytes": {"value": null, "completeness": "unavailable"}
+    },
+    "data_volume_after": {
+      "total_bytes": {"value": null, "completeness": "unavailable"},
+      "available_bytes": {"value": null, "completeness": "unavailable"}
+    }
+  },
+  "failures": [],
+  "teardown": {
+    "outcome": "<destroyed-or-retained_under_authorization>",
+    "wall_ms": 0,
+    "source_copy_retained": false,
+    "derived_data_retained": false
+  }
+}

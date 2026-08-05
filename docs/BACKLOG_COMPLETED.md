@@ -6409,7 +6409,7 @@ Targeted tests, full vet and golangci-lint, the uncached full Go suite, the race
 suite, docs checks, diff hygiene, and the steady-state-cost review form the
 completion gate.
 
-## Epic 32 · Microservice program contract and validation *(in progress)*
+## Epic 32 · Microservice program contract and validation *(T32.1–T32.2 complete)*
 
 **T32.1 ✅ · Microservice-first program contract** *(2026-08-04)* — selected
 services as the primary product scope over shared repository source/search
@@ -6441,5 +6441,18 @@ This documentation/decision ticket adds no request, query, sync-tick,
 startup/restart, retry/no-op, publication-transition, store, filesystem,
 corpus/shard, Git/blob, lock, cache, memory, disk, child-process, or retained
 runtime work. Documentation links, formatting, source-of-truth consistency,
-and diff hygiene form its completion gate. T32.2 is the scheduled authorized
-whole-monorepo baseline.
+and diff hygiene form its completion gate.
+
+**T32.2 ✅ · Authorized whole-monorepo baseline** *(2026-08-04)* — completed a
+private authorized whole-repository baseline against frozen host ceilings and
+emitted the source-free checked-in receipt at `spike/t322/results.json`. The
+14,669-byte receipt is pinned by SHA-256
+`d1ec7b658eef84d2974c50c66d6dca00160a412fd49154c1ad4e232baae695ad`. The
+run measured clone/fetch, index wall/RSS/shards, restart/already-current,
+cold/warm search, candidate rebuild, one-pack-at-a-time extraction for all ten
+domains, candidate-phase recovery with prior publication preserved, and
+retention-status deltas across all 52 components. Teardown retained the
+authorized source mirror and destroyed derived installation data. The receipt
+binds only an opaque run commitment and closed public scalars; it establishes
+no SLO, selects no topology, and authorizes no multi-service release. No
+production code changes.

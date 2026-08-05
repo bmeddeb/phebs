@@ -43,13 +43,16 @@ outside evidence, proof, and publication identity. Startup analysis-unit
 posture reports selected path counts rather than selected path strings. The
 diagnostics add no store read, member reopen, directory scan, hash pass, or
 child solely for logging, and disabled recovery/repair paths retain no
-diagnostic manifest clone. Its first decision-bearing use remains T32.2's
+diagnostic manifest clone. Its first decision-bearing use was T32.2's
 whole-monorepo baseline.
 
 T32.1 completed on 2026-08-04. It freezes the microservice program contract and
 validation matrix across the source of truth without adding multi-service
 runtime behavior or a scale claim. T32.2's authorized whole-monorepo baseline
-is now scheduled.
+completed on 2026-08-04. The source-free receipt at
+`spike/t322/results.json` records one completed private authorized run; it
+establishes no SLO and selects no topology. T32.3's neutral service-authority
+and correctness corpus is scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -356,8 +359,9 @@ until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.
 
 Production evidence/pilot gating remains unchanged. T31.1 bounded pipeline
-observability and T32.1's program-contract closure are complete; T32.2 is the
-currently scheduled source-free whole-monorepo baseline. Epics 25–28 remain
+observability, T32.1's program-contract closure, and T32.2's source-free
+whole-monorepo baseline are complete. T32.3 is the scheduled
+dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -497,9 +501,10 @@ service count × repository bytes
   shadow/advisory release decision.
 
 T32.1 completed the decision/documentation closure after T31.1 diagnostics.
-T32.2 is now the scheduled start of the dependency-ordered runtime measurement
-sequence, and every epic ends in a demoable state. Numeric release limits and
-the physical topology remain unselected until Epic 32 records their evidence.
+T32.2 completed the first dependency-ordered runtime measurement with a
+source-free receipt; every epic ends in a demoable state. Numeric release
+limits and the physical topology remain unselected until later Epic 32 tickets
+record their evidence.
 
 ## Gated product work
 

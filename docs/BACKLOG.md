@@ -2,8 +2,10 @@
 
 T31.1 bounded pipeline diagnostics and T32.1's microservice-first program
 contract completed on 2026-08-04 and are retained in the completed backlog.
-T32.2 is the scheduled authorized whole-monorepo baseline. Epics 33–39 are
-dependency-ordered program drafts, not implementation authorization.
+T32.2's authorized whole-monorepo baseline completed on 2026-08-04 with a
+source-free checked-in receipt. T32.3's neutral service-authority and
+correctness corpus is scheduled. Epics 33–39 are dependency-ordered program
+drafts, not implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
 monorepo program completed on 2026-08-02, including the scope-aware UI,
@@ -19,7 +21,7 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1 complete 2026-08-04; T32.2 scheduled)*
+## Epic 32 · Microservice program contract and validation *(drafted 2026-08-03 · T32.1–T32.2 complete 2026-08-04 · T32.3 scheduled)*
 
 Freeze the product and system contract before converting the current
 single-unit path into a multi-service implementation. The invariant is one
@@ -40,21 +42,8 @@ count.
 - Direct whole-repository shards, bounded cohorts, and P6 are alternatives to
   measure; none is selected by aspiration.
 
-**T32.2 · Authorized whole-monorepo baseline** *(needs T31.1, T32.1)* —
-preregister the local host ceilings, exact repository commit, query battery,
-failure classification, retained scalar fields, and stop/teardown behavior in
-the private authorized record; the checked-in report binds only an opaque run
-commitment and source-free scalars.
-Run whole-repository search indexing first with provisional packs disabled,
-then enable candidate planning and one extraction pack at a time. AC: record
-clone/fetch exclusion or cost, index wall/RSS/disk/shards, publication,
-restart/already-current, cold/warm representative search, candidate phase and
-spool, extraction phase/outcome, recovery, and retention-status deltas; every
-failure is classified as physical index, candidate, extraction, relationship,
-store/retention, or environment; the checked-in receipt is source-free and
-does not establish an SLO; no production code changes.
-
-**T32.3 · Neutral service-authority and correctness corpus** *(needs T32.1)*
+**T32.3 · Neutral service-authority and correctness corpus** *(scheduled;
+needs T32.1)*
 — generate a small independently-oracled monorepo containing distinct
 services, shared libraries, central contracts, generated and typed inputs,
 overlapping membership, unowned source, malformed/conflicting authority,

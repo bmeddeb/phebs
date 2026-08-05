@@ -1,0 +1,104 @@
+{
+  "schema": "t322-private-authorized-plan-v1",
+  "commitment_nonce": "<64-lowercase-hex-from-32-random-bytes>",
+  "frozen_at": "<RFC3339>",
+  "authorization": {
+    "approved_at": "<RFC3339>",
+    "expires_at": "<RFC3339-after-freeze>",
+    "approver": "<private>",
+    "custodian": "<private>"
+  },
+  "target": {
+    "repository": "<private>",
+    "commit": "<exact-40-or-64-lowercase-hex-git-object-id>",
+    "mirror_path": "<private-absolute-path>"
+  },
+  "artifact": {
+    "phebs_commit": "<exact-40-lowercase-hex-source-commit>",
+    "binary_sha256": "sha256:<64-lowercase-hex>",
+    "config_sha256": "sha256:<64-lowercase-hex>"
+  },
+  "host": {
+    "identifier": "<private>",
+    "operating_system": "<private>",
+    "architecture": "<private>",
+    "logical_cpus": 0,
+    "memory_bytes": 0,
+    "data_volume_available_bytes": 0
+  },
+  "ceilings": {
+    "total_wall_ms": 0,
+    "index_wall_ms": 0,
+    "index_peak_rss_bytes": 0,
+    "index_shard_bytes": 0,
+    "restart_wall_ms": 0,
+    "search_cold_max_wall_ms": 0,
+    "search_warm_max_wall_ms": 0,
+    "candidate_wall_ms": 0,
+    "candidate_peak_spool_bytes": 0,
+    "extraction_wall_ms": 0,
+    "recovery_wall_ms": 0,
+    "retention_wall_ms": 0,
+    "minimum_available_data_bytes": 0
+  },
+  "query_battery": [
+    {"id": "<private-id>", "class": "broad", "query": "<private>"},
+    {"id": "<private-id>", "class": "literal", "query": "<private>"},
+    {"id": "<private-id>", "class": "path", "query": "<private>"},
+    {"id": "<private-id>", "class": "symbol", "query": "<private>"}
+  ],
+  "clone_fetch_posture": "<excluded-or-measured>",
+  "expected_extraction_domains": ["<one-or-more-closed-public-domain-names>"],
+  "failure_classes": [
+    "physical_index",
+    "candidate",
+    "extraction",
+    "relationship",
+    "store_retention",
+    "environment"
+  ],
+  "retained_scalar_fields": [
+    "clone_fetch.posture",
+    "clone_fetch.wall_ms",
+    "index.wall_ms",
+    "index.peak_rss_bytes",
+    "index.shard_bytes",
+    "index.shard_count",
+    "index.publication",
+    "restart.wall_ms",
+    "restart.index_child_runs",
+    "restart.shard_bytes_delta",
+    "search.cold",
+    "search.warm",
+    "candidate.phases",
+    "candidate.peak_spool_bytes",
+    "extraction.phases",
+    "extraction.outcomes",
+    "recovery",
+    "retention.delta",
+    "failures",
+    "teardown"
+  ],
+  "phase_order": [
+    "clone_fetch",
+    "index",
+    "restart",
+    "search",
+    "candidate",
+    "extraction",
+    "recovery",
+    "retention",
+    "teardown"
+  ],
+  "stop_conditions": [
+    {"id": "<private-id>", "class": "environment", "condition": "<private>"}
+  ],
+  "teardown": {
+    "owner": "<private>",
+    "deadline": "<RFC3339>",
+    "procedure": "<private>"
+  },
+  "provisional_packs_off_for_index": true,
+  "one_extraction_pack_at_a_time": true,
+  "raw_artifacts_outside_repository": true
+}

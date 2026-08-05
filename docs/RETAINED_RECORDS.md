@@ -25,12 +25,21 @@ evidence.
 - [T23.1 Kafka topic-evidence spike](../spike/t231/README.md)
 - [T30.1 focused-index and shard-set spike](../spike/t301/README.md)
 - [T30.6m historical-publication retention decision and owner inventory](../spike/t306m/README.md)
+- [T32.2 authorized whole-monorepo baseline protocol](../spike/t322/README.md)
+  and [source-free receipt](../spike/t322/results.json)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
 maintained when a reproducibility defect is found, but they do not become
 current behavior documentation and do not inherit T11.1’s sealed status.
 Production packages must not import spike packages.
+
+The T32.2 directory retains the strict source-free receipt builder,
+invalid-until-completed templates, tests, private-run protocol, and the
+completed `results.json` from the 2026-08-04 authorized run. The receipt
+contains no target identity, source, query, path, host identity/profile,
+credential, or raw error. It grants no topology or scale decision and
+establishes no SLO.
 
 The corrected T30.6m record separates its selected unbounded-retention posture
 for historical evidence and adjacent candidate/caller residue from the mixed
