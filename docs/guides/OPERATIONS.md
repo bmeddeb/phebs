@@ -2495,7 +2495,48 @@ This is a manual availability check only. Upstream HEADs and the resulting
 rows may drift; do not commit outputs, turn observations into an accuracy
 number, or use them as deterministic merge-bar input. `make dev` and
 `make dev-api` instead provide the retained neutral T30.7 focused-service
-cohort through the same store-derived path.
+cohort and T33.5 companion catalog through the same ordinary store-derived
+paths.
+
+### Source-free service-directory walkthrough
+
+`make dev` and `make dev-api` select the exact retained
+`docs/fixtures/t33.5-service-directory/t335-service-catalog.json` for the
+T30.7 repository. Startup refuses a renamed, nonregular, mismatched-authority,
+or colliding selection. It then uses the normal bounded file reader, exact
+source census, immutable catalog publication, and service-state reconciler;
+it does not install UI/API response data. Ordinary `phebs serve` does not read
+or select this catalog.
+
+After the neutral repository reaches its indexed commit:
+
+1. Open **Repos**, choose **Services**, and confirm authority
+   `operator · t335-demo · v1` with five identities, seven accepted source
+   files, and two unowned source files.
+2. Inspect `orders-api` and `orders-events` for exact shared/supporting roles.
+   The directory reads catalog metadata only, not the bytes at those paths.
+3. Filter to conflict and proposal states. Enable removed identities to inspect
+   `legacy-orders`; its successor is authority lineage, not a runtime edge.
+4. Reload the exact detail route and exercise browser back/forward. A sparse
+   filtered page with **Next** means the 500-row scan bound was reached, not
+   that the remaining directory has no matches.
+
+If startup or the page refuses:
+
+- preserve the current catalog/state rows; do not delete them to force a
+  replacement;
+- inspect the bounded startup error or page problem, then correct the selected
+  fixture/config or wait for the repository's exact index reconciliation;
+- after a catalog/state transition, return through Repos or remove an old
+  cursor from the hash route rather than treating cursor refusal as empty; and
+- use **Retry** only for the current route. The page performs no polling and
+  aborts superseded requests.
+
+The retained counts and digests live in the
+[T33.5 receipt](../fixtures/t33.5-service-directory/receipt.json). This is a
+source-free authority/lifecycle demonstration, not evidence of runtime use,
+relationships, completeness, extraction accuracy, supported scale, migration
+completion, decommission safety, or release readiness.
 
 ### Thrift field-zero development walkthrough
 
@@ -2994,8 +3035,8 @@ is stopped. Kill -9 remains covered by the stale-heartbeat reaper.
 
 | Target               | Does                                                                                                                                                    |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle through ordinary focused indexing, extraction, resolver, caller-overlay, and store-derived Workbench paths; explicitly disable synthetic evidence fixtures; run with embedded UI |
-| `make dev-api`       | backend-only loop over the same neutral focused-service cohort and real evidence paths (placeholder UI page, fast)                                           |
+| `make dev`           | build UI + pinned whole/focused zoekt and Buf children; bind the retained neutral `orders-service` bundle and T33.5 service catalog through ordinary indexing, evidence, catalog, lifecycle, caller-overlay, and store-derived Workbench paths; explicitly disable synthetic response fixtures; run with embedded UI |
+| `make dev-api`       | backend-only loop over the same neutral focused-service/catalog cohort and real store-derived paths (placeholder UI page, fast)                                           |
 | `make build`         | version-stamped `./phebs` plus same-module `bin/zoekt-git-index`, `bin/phebs-focused-index`, and `bin/buf`; pass `VERSION=vX.Y.Z` for a release                                    |
 | `make clean`         | from a verified phebs checkout working directory, remove `phebs`, `coverage.out`, the three named `bin/` children, `ui/dist`, and reserved `dist/.build-*`, `dist/phebs-*`, and `dist/.phebs-*.tmp-*` outputs; preserve data, configuration, dependencies/caches, other `bin`/`dist` entries, and custom release roots outside those namespaces |
 | `make release`       | assemble a new host-native `dist/phebs-<version>-<target>` directory and canonical digest manifest; requires v-prefixed `VERSION`                       |

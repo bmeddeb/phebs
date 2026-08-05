@@ -5,7 +5,7 @@ import { Spinner } from 'baseui/spinner'
 import { fetchRepoStatus, postReindex } from '../api'
 import type { RepoStatus } from '../api'
 import { usePhebsTokens, FONTS } from '../theme'
-import { navigate } from '../router'
+import { href, navigate } from '../router'
 import { SearchIcon, CopyIcon, CheckIcon } from '../icons'
 import { isAbortError, relTime, repoFilter } from '../util'
 
@@ -13,7 +13,7 @@ import { isAbortError, relTime, repoFilter } from '../util'
 // transitions and the reindex buttons' effects show up within one cycle.
 const POLL_MS = 3000
 
-export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
+export default function ReposPage({ isAdmin = false, serviceDirectoryAvailable = false }: { isAdmin?: boolean; serviceDirectoryAvailable?: boolean }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const [repos, setRepos] = useState<RepoStatus[] | null>(null)
@@ -142,7 +142,7 @@ export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
             </thead>
             <tbody>
               {repos.map((r) => (
-                <Row key={r.name} repo={r} canReindex={isAdmin} onReindex={() => void reindex(r.name)} />
+                <Row key={r.name} repo={r} canReindex={isAdmin} canBrowseServices={serviceDirectoryAvailable} onReindex={() => void reindex(r.name)} />
               ))}
             </tbody>
           </table>
@@ -152,7 +152,7 @@ export default function ReposPage({ isAdmin = false }: { isAdmin?: boolean }) {
   )
 }
 
-function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: boolean; onReindex: () => void }) {
+function Row({ repo, canReindex, canBrowseServices, onReindex }: { repo: RepoStatus; canReindex: boolean; canBrowseServices: boolean; onReindex: () => void }) {
   const [css] = useStyletron()
   const tok = usePhebsTokens()
   const job = repo.last_index_job
@@ -199,6 +199,15 @@ function Row({ repo, canReindex, onReindex }: { repo: RepoStatus; canReindex: bo
       </td>
       <td className={cell}>
         <div className={css({ display: 'flex', gap: '4px', justifyContent: 'flex-end' })}>
+          {canBrowseServices && (
+            <a
+              href={href('/services', { repository: repo.name })}
+              title="Open service directory"
+              className={css({ height: '26px', display: 'inline-flex', alignItems: 'center', padding: '0 9px', borderRadius: '7px', backgroundColor: tok.fill, color: tok.textSecondary, textDecoration: 'none', fontSize: '12px', lineHeight: '16px', ':hover': { backgroundColor: tok.hoverFill, color: tok.textPrimary }, ':focus-visible': { outline: `2px solid ${tok.accent}`, outlineOffset: '1px' } })}
+            >
+              Services
+            </a>
+          )}
           <button
             type="button"
             title="Search in this repo"
