@@ -32,6 +32,7 @@ evidence.
 - [T32.4 search-topology and cost spike](../spike/t324/README.md)
   and [source-free measurement receipt](../spike/t324/results.json)
 - [T34.1 repository source/search generation gates](../spike/t341/README.md)
+- [T34.2 exact service-query compiler gate](../spike/t342/README.md)
 
 These directories preserve executable gates, locked inputs, synthetic
 fixtures, and decision tables used by their completed tickets. They may be
@@ -67,6 +68,14 @@ physical owners despite 5,000 logical memberships. Its second gate revalidates
 the T32.4 digest binding to T32.2's completed source-free target receipt and
 the retained direct-topology decision without reading private input. It adds
 no target timing, scale, accuracy, or release claim.
+
+The T34.2 directory applies the production compiler to all 18 exact/stale
+service-query expectations in T32.3's five-revision oracle through an
+in-process zoekt reader. It separately proves that one-result/one-match
+truncation cannot be consumed by 100 matching out-of-service files because
+the path predicate is inside the query. It retains no generated index or
+measurement and adds no target timing, scale, accuracy, migration, or release
+claim.
 
 The corrected T30.6m record separates its selected unbounded-retention posture
 for historical evidence and adjacent candidate/caller residue from the mixed

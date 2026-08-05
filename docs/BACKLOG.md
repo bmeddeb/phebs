@@ -7,8 +7,9 @@ registration or release. T33.1's canonical service-catalog contract, T33.2's
 catalog ingestion/v1 migration, T33.3 independent service state, T33.4
 authorized catalog reads, and T33.5's service directory/neutral demo are
 retained in the completed backlog, closing Epic 33. T34.1's immutable
-repository source/search generation is also complete. T34.2 is the next
-scheduled ticket, and the remaining Epics 34–39 tickets stay
+repository source/search generation and T34.2's exact service-query compiler
+are also complete. T34.3 is the next scheduled ticket, and the remaining
+Epics 34–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -17,7 +18,7 @@ operations guidance, and neutral ordinary-worker demo in T30.7. Its retained
 completion receipt also records the post-review compatibility closure:
 immutable v1/v2 proof bytes remain readable and the production exact Caller
 Map envelope is validated through the strict MCP boundary. Completed
-Epics 0–24, Epics 29–33, and P5 hardening are retained in the
+Epics 0–24, Epics 29–33, T34.1–T34.2, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -25,20 +26,12 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 34 · Shared repository search with exact service scope *(T34.2 scheduled · T34.1 complete)*
+## Epic 34 · Shared repository search with exact service scope *(T34.3 scheduled · T34.1–T34.2 complete)*
 
 Index repository content once under the topology selected by T32.5, while
 making All code and service-scoped search equally exact.
 
-**T34.2 · Service query compiler** *(scheduled · needs T34.1)* — compile one service's
-complete authorized placement membership into repository/cohort selection plus
-exact zoekt path predicates before ranking. AC: no result-time filtering;
-single- and multi-repository placement behavior remains explicit; equality to
-T32.3's oracle under broad queries, ties, truncation, branches/tags, shared and
-unowned paths, and catalog transitions; query/cursor authority binds exact
-source and catalog generations; bounded predicate bytes and complexity.
-
-**T34.3 · Search publication migration and recovery** *(needs T34.2)* —
+**T34.3 · Search publication migration and recovery** *(scheduled · needs T34.2)* —
 dual-read/single-write through v1/v2 transition, cut over only with an exact
 replacement, and retain fail-closed repair, backup/restore, repository removal,
 and active-reader behavior. AC: old whole/focused results are never relabeled
