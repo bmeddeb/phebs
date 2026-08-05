@@ -144,10 +144,10 @@ semantics.
 This record preserves the discussion that informed the now-selected direction
 for thousands of logical services over shared repository search and
 relationship generations. The architecture decision is the dated
-microservice-first row in [PLAN.md](../PLAN.md); sequencing, active Epic 32,
-and draft Epics 33–39 are in ROADMAP/BACKLOG. The retained discussion itself
-still freezes no scale bound, accuracy result, physical topology, or current
-behavior.
+microservice-first and T32.5 implementation-gate rows in
+[PLAN.md](../PLAN.md); completed Epic 32 and dependency-ordered Epics 33–39 are
+tracked in ROADMAP/BACKLOG. The retained discussion itself remains historical
+and freezes no independent scale bound, accuracy result, or current behavior.
 
 ### Deterministic product fixtures
 

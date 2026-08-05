@@ -1,7 +1,7 @@
 # Multi-unit large-monorepo exploration
 
-**Status:** retained exploratory input; product direction selected separately ·
-**Recorded:** 2026-08-03 · **Resolution recorded:** 2026-08-03
+**Status:** retained exploratory input; direction and v2 gate selected separately ·
+**Recorded:** 2026-08-03 · **Resolution completed:** 2026-08-04
 
 This document preserves a design conversation for later continuation. It is
 not an ADR, active roadmap item, implementation plan, scale claim, or ticket
@@ -16,16 +16,26 @@ The dated **Microservice-first product and system boundary** decision in
 services become first-class logical views over shared repository generations,
 and repository-sized work must not be multiplied by service count. The
 [roadmap](./ROADMAP.md#next-microservice-architecture-program) records what is
-already built, what remains missing, and the validation gates. Active Epic 32
-and draft Epics 33–39 in the [backlog](./BACKLOG.md) turn the possible sequence
-below into dependency-ordered program work.
+already built, what remains missing, and the validation gates. Completed Epic
+32 and dependency-ordered Epics 33–39 in the [backlog](./BACKLOG.md) turn the
+possible sequence below into program work.
 
-This resolution selects a product direction and program contract, not a
-physical search topology, service-discovery authority, numeric SLO, scale
-claim, accuracy result, or production registration. Those decisions remain
-behind Epic 32's measurements and the existing evidence/pilot gates. The
-questions and non-decisions below remain the historical state of this
-exploration when it was recorded.
+T32.4 subsequently selected direct shared whole-repository search for the
+initial path. The dated **T32.5 multi-service v2 implementation gate** in
+[PLAN.md](../PLAN.md) closed identity, authority precedence, roles,
+current/stale behavior, generation identity, side-by-side migration, initial
+admission limits, and explicit deferrals with a conditional implementation GO.
+It authorizes neither runtime registration nor release. The questions and
+non-decisions below remain the historical state of this exploration when it
+was recorded.
+
+For navigation, T32.5 resolves the seven questions below as follows: the first
+authority is explicit committed or operator-owned catalog input rather than an
+automatic target adapter; stale last-complete service reads remain visible and
+labeled; no extractor/client family expands; target population, commit
+frequency, SLO, and accuracy remain T39 gates; accepted catalog authority alone
+assigns path roles; the first milestone is single-node; and an all-services
+current claim remains unavailable until every included service is exact.
 
 ## Question
 

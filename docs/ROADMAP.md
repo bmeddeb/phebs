@@ -59,7 +59,12 @@ catalog schema nor a topology or target SLO. T32.4's source-free topology and
 cost spike completed on 2026-08-04: direct shared whole-repository shards are
 the initial v2 topology, service membership is compiled inside the exact
 revision-bound zoekt query, and bounded cohorts/P6 remain trigger-gated.
-T32.5's multi-service v2 gate is scheduled next.
+T32.5 completed on 2026-08-04 with a conditional implementation GO: it freezes
+the v2 identities, explicit authority precedence, membership roles,
+independent current/stale behavior, side-by-side migration, conservative
+initial admission caps, and named deferrals without authorizing runtime
+registration or release. T33.1's canonical service-catalog contract is
+scheduled next.
 
 Epic 30 completed its single-node service-scoped analysis boundary on
 2026-08-02. T30.1 froze the commit-bound analysis-unit contract and
@@ -366,10 +371,11 @@ until every declared partition publishes against the same complete set of
 commit, unit, declaration, manifest, catalog, and extractor digests.
 
 Production evidence/pilot gating remains unchanged. T31.1 bounded pipeline
-observability and T32.1–T32.4 are complete. T32.4 selected direct shared
+observability and Epic 32 are complete. T32.4 selected direct shared
 whole-repository shards for the initial v2 path after the T32.2 direct baseline
 completed and all T32.3 neutral topology gates passed; cohorts and P6 remain
-trigger-gated. T32.5 is the scheduled dependency-ordered ticket. Epics 25–28 remain
+trigger-gated. T32.5 then closed the conditional v2 implementation gate;
+T33.1 is the scheduled dependency-ordered ticket. Epics 25–28 remain
 unscheduled drafts in the [backlog](./BACKLOG.md); none is an implicit next
 ticket. Epic 25 is an embedded
 documentation-browser nice-to-have. Epic 26 is a spike-first SQL schema-set
@@ -432,7 +438,7 @@ service count × repository bytes
 
 | Foundation | What it establishes | What it does not establish |
 |---|---|---|
-| Whole-repository zoekt path and exact publication handoff | all-code indexing/search exists with immutable revision and shard/store fencing | that the target monorepo fits one node or one shard topology |
+| Whole-repository zoekt path and exact publication handoff | all-code indexing/search exists with immutable revision and shard/store fencing; T32.2 observed one target environment and T32.4 selected direct shards initially | a target SLO, general capacity limit, or guarantee for a different corpus/environment |
 | T30 focused analysis unit | exact primary/supporting paths, unit identity, focused shards, backup/restore, and scope-aware results | more than one service per repository |
 | Streamed candidate manifest | one bounded HEAD census with deterministic repository, local, and caller partitions | a reusable catalog containing thousands of services |
 | Resolver and caller-leaf pipeline | exact declaration catalog, target-bound partition work, complete atomic caller generations, and authorized reads | parse-once source observations or one join shared by every service |
@@ -453,25 +459,28 @@ service count × repository bytes
 
 ### Validation gates
 
-1. **Target whole-monorepo baseline:** after T31.1, run whole-repository search
-   first with provisional packs disabled, then candidate/extraction stages one
-   at a time. Freeze host ceilings and a query battery before the run; retain
-   only source-free measurements. Classify index, candidate, extraction,
-   relationship, and retention failures separately.
-2. **Neutral correctness oracle:** independently enumerate service membership,
+1. **Target whole-monorepo baseline (complete, T32.2):** the prospectively
+   frozen run exercised whole-repository search with provisional packs
+   disabled, then candidate/extraction stages one at a time. Its retained
+   source-free receipt classifies index, candidate, extraction, relationship,
+   and retention outcomes without becoming a target SLO.
+2. **Neutral correctness oracle (complete, T32.3):** independently enumerate service membership,
    shared/generated/unowned paths, rename/delete/conflict states, all-code and
    per-service search results, cross-service callers/topics, partial
    publication, authorization, and migration behavior.
-3. **Cardinality and cost:** generated 1,000- and 5,000-service profiles measure
-   catalog, scheduling, reader, descriptor, memory, disk, no-op, update, and
-   GC behavior. They are load tests, not target-corpus SLO evidence.
-4. **Search-topology equality:** if direct whole-repository indexing misses the
-   frozen envelope, compare bounded cohorts against whole-repository and
-   per-service oracles under broad queries, ranking ties, truncation, cold
-   mmap/FD pressure, and generation transitions before selecting cohorts.
-   T32.4 recorded that the trigger did not fire and selected direct shared
-   shards for the initial v2 path; this gate reopens only after a named limit
-   fails.
+3. **Cardinality and cost (initial evidence complete, final replay T39):**
+   generated 1,000- and 5,000-service profiles measured direct-search builds,
+   readers, descriptors, predicates, no-op comparison, and updates. Catalog,
+   scheduler, retention, and GC writers must replay their applicable profile
+   dimensions as they ship. These are load tests, not target-corpus SLO
+   evidence.
+4. **Search-topology equality (complete for the initial path, T32.4):** direct
+   whole-repository indexing met the frozen envelope and the neutral oracle,
+   so the cohort trigger did not fire. Bounded cohorts must prove equality
+   under broad queries, ranking ties, truncation, cold mmap/FD pressure, and
+   real generation transitions before any future selection. T34.3 owns those
+   direct-path transition/recovery tests; this gate reopens only after a named
+   limit fails.
 5. **Evidence quality:** every pack separately measures call-site extraction,
    service attribution, and end-to-end service relationship precision/recall,
    processing coverage, and unresolved behavior. `GATE2-V2` remains
@@ -484,11 +493,12 @@ service count × repository bytes
    materially improve the independently captured manual inventory without
    hiding correction, owner-routing, or operating cost.
 
-### Draft sequence
+### Program sequence
 
-- **Epic 32 — contract and validation:** freeze the v2 program, measure the
-  target whole repository, build the neutral authority/correctness profiles,
-  and select direct shards, cohorts, or a P6 escalation.
+- **Epic 32 — contract and validation (complete):** freeze the v2 program,
+  measure the target whole repository, build the neutral
+  authority/correctness profiles, and select direct shards, cohorts, or a P6
+  escalation.
 - **Epic 33 — service catalog:** ship strict multi-service authority,
   membership, independent state, v1 migration, authorized reads, and a service
   directory.
@@ -511,11 +521,13 @@ service count × repository bytes
   target gates, close operating/security/workflow evidence, and make a separate
   shadow/advisory release decision.
 
-T32.1 completed the decision/documentation closure after T31.1 diagnostics.
-T32.2 completed the first dependency-ordered runtime measurement with a
-source-free receipt; every epic ends in a demoable state. Numeric release
-limits and the physical topology remain unselected until later Epic 32 tickets
-record their evidence.
+T32.1 completed the decision/documentation closure after T31.1 diagnostics;
+T32.2–T32.4 supplied the source-free target observation, neutral oracle/load
+profiles, and direct shared-search selection. T32.5 closed Epic 32 with a
+conditional implementation GO and conservative admission/refusal caps below
+the largest synthetic envelope. Those caps are not release limits. Target
+operating limits, pack accuracy, workflow value, and any release decision
+remain T39 gates; every epic ends in a demoable state.
 
 ## Gated product work
 
@@ -530,9 +542,10 @@ completeness or demo quality.
 
 ## On demand
 
-After Epic 32 measures the target whole repository, P6 is the escape hatch only
-when the selected single-node topology cannot satisfy the frozen envelope or a
-real deployment requires distributed ownership. It remains unscheduled:
+Epic 32 measured the target whole repository and did not trigger P6. P6 remains
+the escape hatch only when the selected single-node topology later cannot
+satisfy a prospectively frozen envelope or a real deployment requires
+distributed ownership. It remains unscheduled:
 
 - measure index size, memory, full-monorepo build time, and freshness on the
   target corpus;

@@ -77,7 +77,8 @@ bare repos · Vite + React + TS + CodeMirror 6 in `ui/`, embedded in the binary.
 
 **Single-node implementation is complete for Epics 0–24, provisional
 Workbench binding Epic 29, service-scope Epic 30, and bounded pipeline
-observability Epic 31 (2026-08-04).** Search,
+observability Epic 31 (2026-08-04); Epic 32's multi-service v2 contract and
+validation gate is also complete.** Search,
 repository browsing, authentication,
 permissions, audit/analytics, SCIP/history, stateless MCP, bounded `rev:`
 indexing, and backup/restore are shipped core behavior. Contract Atlas, Caller
@@ -127,9 +128,12 @@ topology. T32.3's deterministic neutral service-authority/correctness corpus
 and 1,000/5,000-service load profiles completed on 2026-08-04 without selecting
 a production catalog schema or scale claim. T32.4's source-free topology spike
 selected direct shared whole-repository shards for the initial v2 path on
-2026-08-04; cohorts and P6 remain evidence-triggered escape hatches. T32.5's
-multi-service v2 gate is scheduled; Epics 33–39 remain dependency-ordered drafts and Epics
-25–28 remain unscheduled.
+2026-08-04; cohorts and P6 remain evidence-triggered escape hatches. T32.5
+recorded a conditional implementation GO with explicit authority, identity,
+migration, admission-limit, and deferral boundaries but no runtime or release
+authorization. T33.1's canonical service-catalog contract is scheduled; the
+remaining Epics 33–39 stay dependency-ordered drafts and Epics 25–28 remain
+unscheduled.
 A physical Go-test search overlay,
 test-source association, extractor expansion, automatic authority adapters,
 and the distributed P6 profile remain separately reviewed future work.

@@ -6409,7 +6409,7 @@ Targeted tests, full vet and golangci-lint, the uncached full Go suite, the race
 suite, docs checks, diff hygiene, and the steady-state-cost review form the
 completion gate.
 
-## Epic 32 · Microservice program contract and validation *(T32.1–T32.4 complete)*
+## Epic 32 · Microservice program contract and validation *(complete 2026-08-04)*
 
 **T32.1 ✅ · Microservice-first program contract** *(2026-08-04)* — selected
 services as the primary product scope over shared repository source/search
@@ -6522,3 +6522,102 @@ escalation trigger was met**. Reopening either alternative requires a named
 direct-topology failure and a newly frozen experiment. Synthetic ctags-disabled
 timings establish no target SLO, accuracy, scale limit, or release authority.
 Production packages do not import the spike and no runtime behavior changed.
+
+**T32.5 ✅ · Multi-service v2 gate** *(2026-08-04)* — recorded a
+**CONDITIONAL GO** for the dependency-ordered Epics 33–39 implementation while
+leaving runtime registration and release unauthorized. The dated PLAN decision
+freezes the implementation input rather than another fixture or production
+writer.
+
+Identity and authority are closed as follows:
+
+- a service is one repository-scoped stable logical key plus a nonrepeating
+  incarnation, never a display name, repository path, or mutable authority
+  record;
+- the repository identity retains its existing incarnation; a source
+  generation binds the exact revision set and streamed census, a search
+  generation binds that source to the direct physical root, and catalog,
+  service-desired, and capability-active generations add their exact authority
+  and complete-publication bindings instead of sharing one current bit;
+- a repository selects exactly one exact-commit committed or operator-owned
+  versioned base catalog. Multiple selected bases conflict. Explicit operator
+  overrides may change named records; detector, build, deployment, and
+  directory outputs remain proposals until accepted. Structural wire/path/
+  cycle/duplicate/limit violations reject the candidate catalog, while
+  well-formed semantic claims may remain explicit proposal, conflict, or
+  rejected records without invalidating unrelated accepted services;
+- membership is normalized by `(service key, canonical path, role)`.
+  `primary`, `supporting`, `shared`, `generated`, and `typed` are explicit
+  nonexclusive roles; `unowned` is the zero-accepted-membership repository
+  complement. No role or service identity is inferred from directory shape;
+- an authorized service may serve its last complete active generation only as
+  explicit `stale`, with desired and active identities. One named all-services
+  result is unavailable until every included service is exact against the same
+  source/catalog roots; sibling success cannot relabel a lagging service.
+
+All semantic generation IDs are domain-separated SHA-256 digests over closed
+canonical inputs. Store-minted nonrepeating incarnations and monotonic
+publication revisions are separate ABA fences; timestamps and equal endpoint
+values are never generation authority.
+
+The initial admission caps deliberately stay inside T32.3/T32.4's largest
+synthetic profile. Cost measurements were made on the retained Darwin arm64,
+Go 1.26.5, 10-logical-CPU environment; they do not become target SLOs.
+
+| Dimension | Initial cap | Retained maximum | Reserved below tested envelope |
+|---|---:|---:|---:|
+| Service records | 4,000 | 5,000 | 20% |
+| Membership triples | 20,000 | 25,000 | 20% |
+| Distinct membership-or-unowned paths | 12,000 | 15,750 paths; 15,751 file records including `go.mod` | 23.8% |
+| Accepted-service path fan-out | 20 | 25 | 20% |
+| Encoded and canonical catalog bytes | 5 MiB | 5,551,129 fixture bytes | 5.6% |
+
+Every dimension binds independently and is a fail-closed implementation
+boundary, not a supported-corpus claim. Per service, the existing
+`analysis-unit-v1` integrity envelope remains at most 128 selected paths, 64
+KiB aggregate selected-path bytes, 4,096 bytes per canonical path, and 128
+bytes for the key/name. T33.1 must test maximum-shape decode and canonical
+allocation and may lower, but not raise, these limits without another retained
+decision. The T32.3 profile wire remains fixture vocabulary; its byte count
+sizes only the closed source-free envelope and does not preselect the
+production catalog serialization.
+
+The seven retained exploration questions are all resolved or assigned:
+
+1. The initial authority is an explicit committed or operator-owned catalog;
+   no monorepo-specific automatic adapter is selected.
+2. A lagging service may remain explicitly stale at its last complete active
+   generation; it is excluded from a current aggregate.
+3. The first v2 program adds no language, RPC, or Kafka client family beyond
+   the already supported, separately gated Go shapes.
+4. T32.2 supplies only its source-free single-environment observation and
+   T32.3/T32.4 supply synthetic mechanics evidence. Target service population,
+   commit frequency, catch-up/query SLOs, and any higher caps remain T39 gates.
+5. Accepted authority alone assigns shared, generated, typed, declaration,
+   deployment, and unowned paths; proposals never guess ownership.
+6. The first milestone is single-node. Its immutable identities do not imply a
+   fleet protocol; cohorts and P6 reopen only after a named failure.
+7. Individual services may be exact or stale independently, while an
+   all-services-at-one-source claim is unavailable until every included
+   service is exact.
+
+The migration is side by side. With no v2 authority, whole-repository behavior
+is unchanged. A configured `analysis-unit-v1` deterministically imports as one
+service using its existing name, exact digest, primary/supporting paths, and
+typed designation; v1 authority remains readable until exact v2 replacements
+exist. T33.2 owns that ingestion. T33.3 owns independent incarnation/state;
+T34 owns direct shared search and real recovery transitions; T35 owns bounded
+scheduling, terminal-job/artifact retention, pin-aware GC, and disk pressure
+before high-cardinality relationship artifacts; T36–T37 own parse-once facts
+and relationship indexes; T38 owns product surfaces; and T39 owns
+target-specific authority, operating, evidence-quality, workflow-value, and
+release gates. Cross-repository service composition, automatic adapters,
+additional pack families, runtime overlays, incremental zoekt rebinding,
+cohorts, and P6 remain explicit deferrals.
+
+This decision-only ticket adds no request, query, startup/restart, sync tick,
+retry/no-op, publication transition, store or filesystem work, corpus/shard or
+Git/blob read, lock, cache, allocation, child process, schema, migration,
+writer, or retained runtime artifact. It establishes no SLO, accuracy,
+completeness, migration completion, decommission safety, or release claim;
+`GATE2-V2` remains `NOT_ESTABLISHED`.
