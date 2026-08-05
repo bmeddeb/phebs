@@ -3,8 +3,9 @@
 T31.1 bounded pipeline diagnostics and Epic 32's complete microservice v2
 contract/validation gate are retained in the completed backlog. T32.5 recorded
 a conditional implementation GO on 2026-08-04 without authorizing runtime
-registration or release. T33.1's canonical service-catalog contract is the
-next scheduled ticket; the remaining Epics 33–39 tickets stay
+registration or release. T33.1's pure canonical service-catalog contract is
+retained in the completed backlog; T33.2 catalog ingestion and v1 migration is
+the next scheduled ticket, and the remaining Epics 33–39 tickets stay
 dependency-ordered drafts, not implicit implementation authorization.
 Epics 25–28 remain drafted and unscheduled; none is an implicit next ticket.
 Epic 30's service-scoped
@@ -13,7 +14,7 @@ operations guidance, and neutral ordinary-worker demo in T30.7. Its retained
 completion receipt also records the post-review compatibility closure:
 immutable v1/v2 proof bytes remain readable and the production exact Caller
 Map envelope is validated through the strict MCP boundary. Completed
-Epics 0–24, Epics 29–32, and P5 hardening are retained in the
+Epics 0–24, Epics 29–32, T33.1, and P5 hardening are retained in the
 [completed backlog](./BACKLOG_COMPLETED.md). Current posture and decision
 points are summarized in [ROADMAP.md](./ROADMAP.md).
 
@@ -21,27 +22,14 @@ New work starts here only after its product boundary, dependencies, acceptance
 criteria, and dated [PLAN.md](../PLAN.md) decision are reviewed. Tickets remain
 PR-sized and dependency-ordered for a stacked workflow.
 
-## Epic 33 · Versioned service catalog and lifecycle *(T33.1 scheduled · needs completed T32.5)*
+## Epic 33 · Versioned service catalog and lifecycle *(T33.1 complete · T33.2 scheduled)*
 
 Make many services per repository durable, inspectable, and independently
 current before any high-cardinality relationship plane depends on them.
 
-**T33.1 · Canonical service-catalog contract** *(scheduled)* — implement the
-selected strict, versioned catalog input and pure validator. AC: stable logical
-service keys distinct from repository placement identities; normalized
-`(service, path, role)` membership with nonexclusive
-primary/supporting/shared/generated/typed roles and an exact unowned
-complement; one selected base authority, explicit override provenance, and
-proposal/conflict/rejected states; duplicate/unknown fields, unsafe paths,
-successor cycles, and same-service unsafe prefix overlaps fail without a
-partial catalog while exact many-to-many membership remains legal; T32.5's
-service, membership, distinct-path, fan-out, encoded/canonical-byte,
-per-service path, path-byte, and key limits are enforced before allocation
-grows past its dimension; canonical bytes/digest, maximum-shape allocation
-tests, and table-driven neutral fixtures.
-
-**T33.2 · Catalog ingestion and v1 migration** *(needs T33.1)* — bind each
-repository to the selected operator/committed authority, publish one immutable
+**T33.2 · Catalog ingestion and v1 migration** *(scheduled · needs completed
+T33.1)* — bind each repository to the selected operator/committed authority,
+publish one immutable
 commit-bound catalog, and import today's configured analysis unit as one
 semantically identical entry. AC: `analysis-unit-v1` digest preservation,
 side-by-side v2 namespaces, exact HEAD/catalog fencing, no generic directory
